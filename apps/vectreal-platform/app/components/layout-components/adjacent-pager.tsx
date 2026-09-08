@@ -43,7 +43,12 @@ function PagerLink({ link, direction }: PagerLinkProps) {
 			<p className="text-muted-foreground text-eyebrow">
 				{isPrevious ? 'Previous' : 'Next'}
 			</p>
-			<p className="text-body-sm font-medium opacity-50 transition-opacity duration-150 group-hover:opacity-100">
+			{/*
+			  A colour, not an opacity. At 50% the title composited to 3.71:1 and
+			  only reached full contrast on hover, which a keyboard or touch reader
+			  never triggers - so the resting state was the failing one.
+			*/}
+			<p className="text-muted-foreground group-hover:text-foreground text-body-sm font-medium transition-colors duration-150">
 				{link.title}
 			</p>
 		</Link>

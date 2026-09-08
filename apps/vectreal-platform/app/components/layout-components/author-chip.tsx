@@ -55,7 +55,10 @@ export function AuthorChip({ author, compact, className }: AuthorChipProps) {
 		<div className={cn('flex items-center gap-2 text-left', className)}>
 			<Avatar className="h-11 w-11">
 				{author.avatar ? (
-					<AvatarImage src={author.avatar} alt={author.name} />
+					// Decorative: the name is rendered as text right beside it, so an
+					// alt repeating it made the byline trigger announce "Moritz Moritz
+					// Founder".
+					<AvatarImage src={author.avatar} alt="" />
 				) : null}
 				<AvatarFallback>{initials(author.name)}</AvatarFallback>
 			</Avatar>

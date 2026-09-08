@@ -5,6 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
+
+import rehypeTableScroll from './mdx/rehype-table-scroll'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
@@ -111,6 +113,7 @@ export default defineConfig(({ command }) => {
 				rehypePlugins: [
 					[rehypePrettyCode, prettyCodeOptions],
 					rehypeSlug,
+					rehypeTableScroll,
 					[
 						rehypeAutolinkHeadings,
 						{

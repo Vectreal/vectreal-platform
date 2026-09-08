@@ -57,20 +57,26 @@ function DesktopNav({
 				{/* Center nav links */}
 				{navItems.length > 0 && (
 					<div className="relative flex items-center gap-0.5">
-						{navItems.map((item) => (
-							<Link
-								key={item.to}
-								to={item.to}
-								className={cn(
-									'relative z-10 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
-									isNavItemActive(item, pathname)
-										? 'text-foreground'
-										: 'text-muted-foreground hover:text-foreground'
-								)}
-							>
-								{item.label}
-							</Link>
-						))}
+						{navItems.map((item) => {
+							const isActive = isNavItemActive(item, pathname)
+							return (
+								<Link
+									key={item.to}
+									to={item.to}
+									// Colour alone cannot say "you are here": aria-current is
+									// what a screen reader reads it from.
+									aria-current={isActive ? 'page' : undefined}
+									className={cn(
+										'relative z-10 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+										isActive
+											? 'text-foreground'
+											: 'text-muted-foreground hover:text-foreground'
+									)}
+								>
+									{item.label}
+								</Link>
+							)
+						})}
 					</div>
 				)}
 

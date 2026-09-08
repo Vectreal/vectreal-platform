@@ -248,6 +248,14 @@ export default function NewsRoomArticlePage({
 	return (
 		<div className="container-page flex justify-center gap-0 py-16 lg:gap-12">
 			{/*
+			  One live region for both copy buttons, which share `copied`. The label
+			  swap inside a button is not announced unless the reader happens to be
+			  on it, so the confirmation reached nobody using a screen reader.
+			*/}
+			<p aria-live="polite" className="sr-only">
+				{copied ? 'Link copied to clipboard' : ''}
+			</p>
+			{/*
 			  `max-w-measure` is the whole point of this column. `mdx.module.css`
 			  says of `.docsContent` that it "fills the flex content column, no
 			  max-width", which on a wide screen ran a line of body copy past
