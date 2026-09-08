@@ -271,7 +271,8 @@ export const DOCS_PAGE_COPY = {
 	description:
 		'Platform guides for uploading, optimizing and publishing 3D scenes, and API reference for the open-source packages underneath.',
 	startHereHeading: 'Start here',
-	startHereDescription: 'In order. The last one ends with a published scene.',
+	startHereDescription:
+		'Read them in order. The last one ends with a published scene.',
 	packagesHeading: 'Packages',
 	packagesDescription:
 		'Published to npm and usable without a Vectreal account.',

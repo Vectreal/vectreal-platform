@@ -194,7 +194,9 @@ function PlanCard({
 					) : isFree ? (
 						<div>
 							<span className="text-h2 font-heading">$0</span>
-							<span className="text-muted-foreground text-body-sm ml-1">/month</span>
+							<span className="text-muted-foreground text-body-sm ml-1">
+								/month
+							</span>
 						</div>
 					) : (
 						<div>
@@ -257,7 +259,7 @@ function PlanCard({
 								className="w-full"
 								variant={highlighted ? 'default' : 'secondary'}
 							>
-{cta}
+								{cta}
 							</Button>
 						</Link>
 					) : (
@@ -269,7 +271,7 @@ function PlanCard({
 								className="w-full"
 								variant={highlighted ? 'default' : 'secondary'}
 							>
-{cta}
+								{cta}
 							</Button>
 						</Link>
 					)}

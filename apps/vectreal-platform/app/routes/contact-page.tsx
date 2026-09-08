@@ -151,8 +151,7 @@ const CONTACT_ROUTING = [
 	},
 	{
 		term: 'Partnerships',
-		definition:
-			'Agencies, platform partnerships, and ecosystem collaboration.'
+		definition: 'Agencies, platform partnerships, and ecosystem collaboration.'
 	}
 ] as const
 
@@ -221,7 +220,9 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
 					<BasicCard>
 						<CardHeader>
-							<CardTitle className="text-h3 font-heading">Send a message</CardTitle>
+							<CardTitle className="text-h3 font-heading">
+								Send a message
+							</CardTitle>
 							<CardDescription>
 								We usually respond within one business day.
 							</CardDescription>

@@ -45,14 +45,10 @@ const PageHero = ({
 			<div className="container-page pt-24 pb-16">
 				<div className="space-y-4">
 					{eyebrow && (
-						<p className="text-muted-foreground text-eyebrow">
-							{eyebrow}
-						</p>
+						<p className="text-muted-foreground text-eyebrow">{eyebrow}</p>
 					)}
 
-					<h1 className="text-headline font-heading max-w-4xl">
-						{heading}
-					</h1>
+					<h1 className="text-headline font-heading max-w-4xl">{heading}</h1>
 
 					{description && (
 						<p className="text-muted-foreground text-body-lg max-w-3xl">

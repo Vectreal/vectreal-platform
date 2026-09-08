@@ -112,7 +112,7 @@ export function AuthorCard({ author }: AuthorCardProps) {
 								href={author.linkedinUrl}
 								target="_blank"
 								rel="noreferrer"
-								className="text-label-xs mt-2 inline-block font-medium underline decoration-muted-foreground underline-offset-2 transition-colors duration-150 hover:decoration-orange"
+								className="text-label-xs decoration-muted-foreground hover:decoration-orange mt-2 inline-block font-medium underline underline-offset-2 transition-colors duration-150"
 							>
 								Connect on LinkedIn
 							</a>

@@ -78,7 +78,7 @@ export function FeatureCompareGrid() {
 								<tr className="bg-muted/30">
 									<td
 										colSpan={PLANS.length + 1}
-										className="py-2 pr-4 text-eyebrow"
+										className="text-eyebrow py-2 pr-4"
 									>
 										{label}
 									</td>

@@ -34,7 +34,8 @@ import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import {
 	ENTITLEMENT_DISPLAY_LABELS,
 	PAYMENT_TRUST_COPY,
-	PLAN_DISPLAY_NAMES
+	PLAN_DISPLAY_NAMES,
+	PRICING_PAGE_COPY
 } from '../../constants/product-copy'
 import {
 	getCheckoutOptions,
@@ -401,7 +402,18 @@ function BillingUpgradeContent({
 					</CardContent>
 				</Card>
 
-				<FeatureCompareGrid />
+				{/*
+				  FeatureCompareGrid no longer carries its own heading: on /pricing it
+				  sat inside a labelled section and produced two stacked H2s saying the
+				  same thing. Each caller names it now, so this one names it too rather
+				  than rendering an unlabelled table.
+				*/}
+				<section aria-labelledby="upgrade-comparison-heading">
+					<h2 id="upgrade-comparison-heading" className="text-h3 mb-6">
+						{PRICING_PAGE_COPY.comparisonHeading}
+					</h2>
+					<FeatureCompareGrid />
+				</section>
 			</div>
 
 			{/* Confirmation dialog - only shown for direct subscription updates (active plan) */}

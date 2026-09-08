@@ -192,14 +192,16 @@ export default function DocsIndexPage() {
 				</DocsSection>
 
 				<DocsSection heading="Operations" className="mt-20">
-					{[...pagesIn('operations'), ...pagesIn('contributing')].map((page) => (
-						<DocsRow
-							key={page.slug}
-							to={`/docs/${page.slug}`}
-							title={page.title}
-							{...(page.description ? { description: page.description } : {})}
-						/>
-					))}
+					{[...pagesIn('operations'), ...pagesIn('contributing')].map(
+						(page) => (
+							<DocsRow
+								key={page.slug}
+								to={`/docs/${page.slug}`}
+								title={page.title}
+								{...(page.description ? { description: page.description } : {})}
+							/>
+						)
+					)}
 				</DocsSection>
 
 				<div className="mt-16 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -207,7 +209,7 @@ export default function DocsIndexPage() {
 						{DOCS_PAGE_COPY.quickLinksLabel}
 					</span>
 					<a
-						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
+						className="text-body-sm decoration-muted-foreground hover:decoration-orange underline underline-offset-4 transition-colors duration-150"
 						href="https://github.com/Vectreal/vectreal-platform"
 						target="_blank"
 						rel="noopener noreferrer"
@@ -215,13 +217,13 @@ export default function DocsIndexPage() {
 						GitHub
 					</a>
 					<Link
-						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
+						className="text-body-sm decoration-muted-foreground hover:decoration-orange underline underline-offset-4 transition-colors duration-150"
 						to="/publisher"
 					>
 						Publisher
 					</Link>
 					<a
-						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
+						className="text-body-sm decoration-muted-foreground hover:decoration-orange underline underline-offset-4 transition-colors duration-150"
 						href="https://discord.gg/A9a3nPkZw7"
 						target="_blank"
 						rel="noopener noreferrer"
@@ -229,7 +231,7 @@ export default function DocsIndexPage() {
 						Discord
 					</a>
 					<Link
-						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
+						className="text-body-sm decoration-muted-foreground hover:decoration-orange underline underline-offset-4 transition-colors duration-150"
 						to="/changelog"
 					>
 						Changelog
