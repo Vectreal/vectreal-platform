@@ -1,19 +1,27 @@
-import { BookOpen, DollarSign, Mail, Newspaper, Rocket } from 'lucide-react'
+import { BookOpen, DollarSign, Mail, Newspaper } from 'lucide-react'
 
 import type { NavItem } from './types'
 
+/*
+  The marketing nav, and only marketing.
+
+  The publisher was in here, and it is the application rather than a page about
+  the product - so the site nav offered a signed-out visitor a tool instead of
+  the case for using it. It stays reachable where the funnel actually runs: the
+  home hero's primary call to action, the footer's product column, and the user
+  menu once someone is signed in.
+*/
 export const MARKETING_ITEMS: NavItem[] = [
-	{
-		label: 'Publisher',
-		to: '/publisher',
-		icon: <Rocket className="size-4" />
-	},
 	{
 		label: 'Pricing',
 		to: '/pricing',
 		icon: <DollarSign className="size-4" />
 	},
-	{ label: 'Docs', to: '/docs', icon: <BookOpen className="size-4" /> },
+	{
+		label: 'Documentation',
+		to: '/docs',
+		icon: <BookOpen className="size-4" />
+	},
 	{
 		label: 'Newsroom',
 		to: '/news-room',

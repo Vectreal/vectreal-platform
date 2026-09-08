@@ -141,7 +141,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<div>
 			<PageHero
-				heading="Launches, engineering notes, and the decisions behind them."
+				heading="Launches and engineering notes from building Vectreal."
 				description={`${totalArticles} articles on building, optimizing and publishing 3D for the web.`}
 				actions={
 					<>

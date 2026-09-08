@@ -2,6 +2,7 @@ import { Button } from '@shared/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { DocsScenePreview } from '../../components/docs/docs-scene-preview'
 import { PublicErrorBoundary } from '../../components/errors'
 import { PageHero } from '../../components/layout-components'
 import { DOCS_PAGE_COPY } from '../../constants/product-copy'
@@ -22,6 +23,21 @@ export function meta() {
   day it is added to the manifest, which is the only place a contributor is
   told to register one.
 */
+/*
+  The generated embed snippet, matching `docs/guides/publish-embed`. The `<style>`
+  block that guide ships alongside it is left out here and explained there: it
+  exists for flex parents, and repeating it without its three paragraphs of
+  reasoning would be copy without the caveat.
+*/
+const EMBED_SNIPPET = `<div class="vctrl-embed" style="width: 100%; height: 400px;">
+  <iframe
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=<key>"
+    style="width: 100%; height: 100%; border: 0;"
+    allow="autoplay; xr-spatial-tracking"
+    allowfullscreen
+  ></iframe>
+</div>`
+
 const pagesIn = (category: DocCategory) =>
 	docsPages
 		.filter((page) => page.category === category)
@@ -147,6 +163,33 @@ export default function DocsIndexPage() {
 			/>
 
 			<div className="container-page pb-40">
+				{/*
+				  The artifact and the code that produces it, side by side.
+
+				  The viewer on the left is the package the rows below teach you
+				  to install, running live. The snippet on the right is the embed
+				  markup from `docs/guides/publish-embed`, unabridged apart from
+				  the stylesheet that guide explains separately - so it is a real
+				  artifact rather than an illustration of one.
+				*/}
+				<section
+					aria-labelledby="what-you-make"
+					className="grid items-center gap-8 md:grid-cols-2"
+				>
+					<DocsScenePreview />
+					<div className="space-y-4">
+						<h2 id="what-you-make" className="text-h3 font-heading">
+							{DOCS_PAGE_COPY.previewHeading}
+						</h2>
+						<p className="text-muted-foreground text-body">
+							{DOCS_PAGE_COPY.previewDescription}
+						</p>
+						<pre className="ds-sunken text-label-xs overflow-x-auto rounded-xl p-4 font-mono leading-relaxed">
+							<code>{EMBED_SNIPPET}</code>
+						</pre>
+					</div>
+				</section>
+
 				{/*
 				  The one path most readers want, given weight the other sections
 				  do not get. The page previously offered four equal doors and made

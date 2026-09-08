@@ -291,6 +291,9 @@ export const DOCS_PAGE_COPY = {
 	startHereHeading: 'Start here',
 	startHereDescription:
 		'Read them in order. The last one ends with a published scene.',
+	previewHeading: 'What you are building toward',
+	previewDescription:
+		'That viewer is @vctrl/viewer, the package documented below. Publishing a scene gives you this snippet, and the scene renders wherever you paste it.',
 	packagesHeading: 'Packages',
 	packagesDescription: 'Open source, published to npm, and documented here.',
 	quickLinksLabel: 'Elsewhere'

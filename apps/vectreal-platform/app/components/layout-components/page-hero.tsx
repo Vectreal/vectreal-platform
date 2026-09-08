@@ -13,6 +13,11 @@ interface PageHeroProps {
  * (docs, contact, newsroom, pricing). Encodes the brand-aligned design spec in
  * one place - typography scale, description, and an actions slot.
  *
+ * The heading sits on the display rung, not headline. With the eyebrow gone and
+ * no imagery on most of these pages, the heading is the visual event at the top
+ * of the page, and the type is the instrument doing that job rather than a
+ * decoration added beside it.
+ *
  * There was a label above the heading, and every page passed its own name into
  * it, in caps. The nav already marks the current page and the H1 already says
  * what the page is, so it was the third statement of one fact. A reflexive
@@ -47,7 +52,7 @@ const PageHero = ({
 			*/}
 			<div className="container-page pt-24 pb-16">
 				<div className="space-y-4">
-					<h1 className="text-headline font-heading max-w-4xl">{heading}</h1>
+					<h1 className="text-display font-heading max-w-4xl">{heading}</h1>
 
 					{description && (
 						<p className="text-muted-foreground text-body-lg max-w-3xl">
