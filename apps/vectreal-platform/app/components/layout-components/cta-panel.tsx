@@ -9,7 +9,6 @@ interface CtaPanelProps {
 	heading: ReactNode
 	description?: ReactNode
 	/** Badges or similar, shown between the description and the actions. */
-	aside?: ReactNode
 	actions: ReactNode
 	className?: string
 }
@@ -27,7 +26,6 @@ export function CtaPanel({
 	eyebrow,
 	heading,
 	description,
-	aside,
 	actions,
 	className
 }: CtaPanelProps) {
@@ -45,10 +43,6 @@ export function CtaPanel({
 				<p className="text-muted-foreground max-w-2xl leading-relaxed">
 					{description}
 				</p>
-			) : null}
-
-			{aside ? (
-				<div className="flex flex-wrap items-center gap-1.5">{aside}</div>
 			) : null}
 
 			<div className="flex flex-wrap items-center gap-2">{actions}</div>

@@ -61,9 +61,17 @@ header component - that is what a system produces when nothing chose.
 **Copy**
 - "seamlessly", "robust", "powerful", "unlock the power of", "effortlessly",
   "get started today"
-- The negation pivot: "It's not just X, it's Y"
+- The negation pivot, in every spelling. "It's not just X, it's Y" is the
+  obvious one, but the same move hides in "X rather than Y", "X, not Y" and
+  "not X, but Y". It defines a thing by what it isn't, which reads as insight
+  and carries none. Say what the thing is.
 - The rule of three used as a rhythm: "Fast, simple, and reliable"
-- Em dashes used as a rhythmic crutch between clauses that wanted commas
+- A dash used as a rhythmic crutch between clauses that wanted a comma, a
+  conjunction, or a full stop. This covers the em dash, the en dash and the
+  spaced hyphen, which is the spelling this codebase actually uses: "the core
+  publishing workflow - no hidden fees" wants "without hidden fees". The dash
+  reads as a dramatic pause, and marketing copy that pauses dramatically in
+  every sentence is the tell.
 
 ## Ship instead
 

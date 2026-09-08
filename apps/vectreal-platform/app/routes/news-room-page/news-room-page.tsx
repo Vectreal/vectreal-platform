@@ -114,6 +114,13 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	return data({
 		articles,
+		/*
+		  The unfiltered total. `articles` above is already narrowed by query,
+		  category and tag, so a hero reading `${articles.length} articles` said
+		  "1 articles" on a single match and "0 articles" directly above the
+		  empty state.
+		*/
+		totalArticles: getNewsArticles().length,
 		categories: getNewsCategories(),
 		tags: getNewsTags(),
 		filters: {
@@ -137,7 +144,7 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
-	const { articles, categories, tags, filters } = loaderData
+	const { articles, totalArticles, categories, tags, filters } = loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const viewTrackedRef = useRef(false)
@@ -181,7 +188,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 			<PageHero
 				eyebrow="Newsroom"
 				heading="Launches, engineering notes, and the decisions behind them."
-				description={`${articles.length} articles on building, optimizing and publishing 3D for the web.`}
+				description={`${totalArticles} articles on building, optimizing and publishing 3D for the web.`}
 				actions={
 					<>
 						<Button asChild size="sm">

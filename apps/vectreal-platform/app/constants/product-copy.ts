@@ -251,13 +251,13 @@ export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 export const PRICING_PAGE_COPY = {
 	heading: 'Simple, transparent pricing for every workflow.',
 	description:
-		'Start for free. Upgrade when you need more. Every plan includes the core 3D publishing workflow - no hidden fees.',
+		'Start for free and upgrade when you need more. Every plan includes the core 3D publishing workflow without hidden fees.',
 	comparisonHeading: 'What each plan includes',
 	comparisonDescription:
 		'Every entitlement, across all four plans. Limits are per organization.',
 	enterpriseHeading: 'Enterprise',
 	enterpriseDescription:
-		'Set your own limits and get a dedicated support channel. Enterprise is a conversation rather than a checkout, so the shape of it is up to you.'
+		'Set your own limits and get a dedicated support channel. Tell us what you need and we will price it.'
 } as const
 
 // ---------------------------------------------------------------------------
@@ -447,7 +447,7 @@ export const LIMIT_DISPLAY_LABELS: Record<LimitKey, string> = {
 export const STORAGE_USAGE_LABEL = 'Scene storage'
 
 export const STORAGE_USAGE_HINT =
-	'What your scenes keep, not what visitors download: the editable copy, the published file, its thumbnail, and any baked shadow.'
+	'Counts the editable copy, the published file, its thumbnail, and any baked shadow. Visitor downloads do not count against it.'
 
 // ---------------------------------------------------------------------------
 // Upgrade success page: entitlement keys to highlight post-upgrade, in priority

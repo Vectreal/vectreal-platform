@@ -32,7 +32,7 @@ export const PUBLIC_SEO_PAGES = {
 	pricing: {
 		title: 'Pricing - Vectreal',
 		description:
-			'Simple, transparent pricing for every team. From hobbyists to enterprise studios - find the plan that fits your 3D publishing workflow.',
+			'Simple, transparent pricing for every workflow. Plans for hobbyists through enterprise studios, with every tier priced in the open.',
 		canonical: '/pricing'
 	},
 	newsroom: {

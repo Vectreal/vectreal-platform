@@ -38,6 +38,18 @@ const pagesIn = (category: DocCategory) =>
  * the raised "Start here" panel, and 4% is exactly what `.ds-raised` already
  * paints - so at 4% the three most important rows on the page had no hover
  * feedback at all while every row outside the panel did.
+ *
+ * Two things the row does NOT own, both learned the hard way:
+ *
+ * The divider belongs to the list, not the row. With `border-b last:border-b-0`
+ * on the row, wrapping rows in `<li>` made every row the last child of its own
+ * parent, so the rule fired on all of them and the Start here panel rendered
+ * with no dividers while the sections below kept theirs.
+ *
+ * The title states its colour. `globals.css` has `section p, section li {
+ * color: var(--muted-foreground) }` in `@layer base`, so a row inside a list
+ * inside a section inherits muted and the title renders the same colour as its
+ * own description.
  */
 function DocsRow({
 	to,
@@ -53,9 +65,11 @@ function DocsRow({
 	return (
 		<Link
 			to={to}
-			className="group border-border -mx-3 flex flex-col gap-1 rounded-xl border-b px-3 py-4 transition-colors duration-150 last:border-b-0 hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] sm:flex-row sm:items-baseline sm:gap-6"
+			className="group -mx-3 flex flex-col gap-1 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] sm:flex-row sm:items-baseline sm:gap-6"
 		>
-			<span className="text-h4 sm:w-56 sm:shrink-0">{title}</span>
+			<span className="text-h4 text-foreground sm:w-56 sm:shrink-0">
+				{title}
+			</span>
 			{description && (
 				<span className="text-muted-foreground text-body-sm flex-1">
 					{description}
@@ -89,7 +103,7 @@ function DocsSection({
 					<p className="text-muted-foreground text-body-sm">{description}</p>
 				)}
 			</div>
-			<div className="flex flex-col">{children}</div>
+			<div className="divide-border flex flex-col divide-y">{children}</div>
 		</section>
 	)
 }
@@ -98,7 +112,7 @@ export default function DocsIndexPage() {
 	const gettingStarted = pagesIn('getting-started')
 
 	return (
-		<div className="bg-background">
+		<main className="bg-background">
 			<PageHero
 				eyebrow="Documentation"
 				heading={DOCS_PAGE_COPY.heading}
@@ -142,7 +156,7 @@ export default function DocsIndexPage() {
 							{DOCS_PAGE_COPY.startHereDescription}
 						</p>
 					</div>
-					<ol className="flex flex-col">
+					<ol className="divide-border flex flex-col divide-y">
 						{gettingStarted.map((page) => (
 							<li key={page.slug}>
 								<DocsRow
@@ -238,6 +252,6 @@ export default function DocsIndexPage() {
 					</Link>
 				</div>
 			</div>
-		</div>
+		</main>
 	)
 }

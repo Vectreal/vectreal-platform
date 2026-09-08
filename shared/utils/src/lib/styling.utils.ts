@@ -73,6 +73,17 @@ const CONTAINER_SCALE = ['detail-panel', 'measure']
  * longer with a colour.
  *
  * `type-scale-adherence.spec.ts` pins this list against the stylesheet.
+ *
+ * Registering these has a second-order effect worth knowing before adding to
+ * the list: a colour that was previously being deleted beside a rung now
+ * survives. Two call sites changed behaviour when this landed, both correctly,
+ * neither deliberately - `ui/select.tsx` group headings moved from foreground
+ * to the muted colour their class had always asked for, and
+ * `home/section/section-label.tsx` started rendering its brand colour, which
+ * then had to be taken off 70% alpha to stay legible at 11px.
+ *
+ * So when a rung joins this list, grep for the rung name beside a `text-`
+ * colour and check what starts rendering.
  */
 const TYPE_SCALE_RUNGS = [
 	'display',

@@ -301,7 +301,7 @@ export default function NewsRoomArticlePage({
 						onClick={copyArticleLink}
 					>
 						<Copy className="mr-2 h-3.5 w-3.5" />
-						{copied ? 'Copied' : 'Copy Link'}
+						{copied ? 'Copied' : 'Copy link'}
 					</Button>
 				</div>
 
@@ -399,11 +399,17 @@ export default function NewsRoomArticlePage({
 					</div>
 
 					{headings.length > 0 && (
-						<div className="border-border/50 min-h-0 flex-1 border-t pt-5">
-							<p className="text-muted-foreground text-eyebrow mb-3">
+						<div className="border-border/50 flex min-h-0 flex-1 flex-col border-t pt-5">
+							<p className="text-muted-foreground text-eyebrow mb-3 shrink-0">
 								On this page
 							</p>
-							<ScrollArea className="h-full pr-2 pb-8">
+							{/*
+							  `flex-1 min-h-0` rather than `h-full`: `h-full` is 100% of
+							  the container, which already spends ~23px on the heading
+							  above, so the scroll viewport overhung the bottom of the
+							  sticky aside by exactly that much.
+							*/}
+							<ScrollArea className="min-h-0 flex-1 pr-2 pb-8">
 								<DocsPageToc headings={headings} activeId={activeId} />
 							</ScrollArea>
 						</div>

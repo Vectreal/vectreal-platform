@@ -48,7 +48,7 @@ export const Footer = () => {
 		'optimize once, ship everywhere.',
 		'clean meshes. predictable renders.',
 		'profiles first, polish second.',
-		'build pipelines, not bottlenecks.'
+		'pipelines that keep moving.'
 	]
 
 	return (
