@@ -14,15 +14,12 @@ import { ArrowRight, Check, CheckCircle2, ExternalLink } from 'lucide-react'
 import { useEffect } from 'react'
 import { data, Link, redirect, useLoaderData } from 'react-router'
 
-import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
-import {
-	ENTITLEMENT_DISPLAY_LABELS,
-	PLAN_DISPLAY_NAMES,
-	UPGRADE_FEATURE_HIGHLIGHT_KEYS
-} from '../../constants/product-copy'
+import { type Plan } from '../../constants/plan-config'
+import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
 import { getDbClient } from '../../db/client'
 import { orgSubscriptions } from '../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
+import { getUnlockedEntitlementLabels } from '../../lib/domain/billing/plan-upgrade-features'
 import { syncSubscriptionFromStripe } from '../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
@@ -52,26 +49,6 @@ function toValidPlan(value: string | null): Plan | null {
 	return value && (VALID_PLANS as string[]).includes(value)
 		? (value as Plan)
 		: null
-}
-
-function getUnlockedHighlights(
-	plan: PaidPlan,
-	basePlan: Plan = 'free'
-): string[] {
-	const baseEntitlements = PLAN_ENTITLEMENTS[basePlan]
-	const planEntitlements = PLAN_ENTITLEMENTS[plan]
-	return (UPGRADE_FEATURE_HIGHLIGHT_KEYS as readonly string[])
-		.filter((key) => {
-			const k = key as keyof typeof planEntitlements
-			return planEntitlements[k] && !baseEntitlements[k]
-		})
-		.map(
-			(key) =>
-				ENTITLEMENT_DISPLAY_LABELS[
-					key as keyof typeof ENTITLEMENT_DISPLAY_LABELS
-				] ?? key
-		)
-		.slice(0, 5)
 }
 
 // ---------------------------------------------------------------------------
@@ -272,7 +249,7 @@ export default function BillingUpgradeSuccessPage() {
 	// against free for new subscribers.
 	const basePlan: Plan = isTierUpgrade && validFromPlan ? validFromPlan : 'free'
 	const unlockedFeatures =
-		plan && !isPeriodSwitch ? getUnlockedHighlights(plan, basePlan) : []
+		plan && !isPeriodSwitch ? getUnlockedEntitlementLabels(basePlan, plan) : []
 
 	// Scenario-specific heading and subtitle
 	let title: string
