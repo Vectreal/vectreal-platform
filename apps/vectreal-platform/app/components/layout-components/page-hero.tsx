@@ -45,17 +45,17 @@ const PageHero = ({
 			<div className="container-page pt-24 pb-16">
 				<div className="space-y-4">
 					{eyebrow && (
-						<p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">
+						<p className="text-muted-foreground text-eyebrow">
 							{eyebrow}
 						</p>
 					)}
 
-					<h1 className="max-w-4xl text-4xl leading-[1.02] font-medium tracking-tight text-balance md:text-6xl">
+					<h1 className="text-headline max-w-4xl">
 						{heading}
 					</h1>
 
 					{description && (
-						<p className="text-muted-foreground max-w-3xl text-base leading-relaxed md:text-lg">
+						<p className="text-muted-foreground text-body-lg max-w-3xl">
 							{description}
 						</p>
 					)}
