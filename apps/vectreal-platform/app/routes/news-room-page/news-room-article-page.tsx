@@ -246,7 +246,7 @@ export default function NewsRoomArticlePage({
 	}
 
 	return (
-		<div className="container-page flex justify-center gap-0 py-16 lg:gap-12">
+		<div className="container-page flex justify-center gap-0 pt-16 pb-32 lg:gap-12">
 			{/*
 			  One live region for both copy buttons, which share `copied`. The label
 			  swap inside a button is not announced unless the reader happens to be
@@ -365,7 +365,9 @@ export default function NewsRoomArticlePage({
 
 				{related.length > 0 && (
 					<section className="mt-32">
-						<h2 className="text-h3 mb-6! ml-2">More from the newsroom</h2>
+						<h2 className="text-h3 font-heading mb-8">
+							More from the newsroom
+						</h2>
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
 								<ArticleCard key={item.slug} article={item} />

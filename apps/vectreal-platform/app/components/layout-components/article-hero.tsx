@@ -59,7 +59,7 @@ export function ArticleHero({
 		<BasicCard
 			as="header"
 			cardClassName={cn(
-				'vt-news-plate relative isolate overflow-hidden border-white/10 p-0',
+				'vt-news-plate relative isolate overflow-hidden p-0',
 				className
 			)}
 			cardStyle={{

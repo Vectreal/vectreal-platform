@@ -51,7 +51,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 			className={cn('group block', className)}
 		>
 			<BasicCard
-				cardClassName="vt-news-plate relative isolate overflow-hidden border-white/10 p-0"
+				cardClassName="vt-news-plate relative isolate overflow-hidden p-0"
 				cardStyle={{
 					backgroundColor: SCENE_SURFACE.background,
 					viewTransitionName: morph.card

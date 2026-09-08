@@ -19,8 +19,7 @@ import {
 	CardContent,
 	CardDescription,
 	CardFooter,
-	CardHeader,
-	CardTitle
+	CardHeader
 } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { Check, Minus } from 'lucide-react'
@@ -161,7 +160,15 @@ function PlanCard({
 		>
 			<CardHeader className="space-y-2">
 				<div className="flex items-center justify-between">
-					<CardTitle className="text-h3 font-heading">{name}</CardTitle>
+					{/*
+					  A real <h3>, not CardTitle. CardTitle renders a div, so plan names
+					  were styled text in a card row with no heading structure - and its
+					  `font-light tracking-wide` defaults are utilities against a rung in
+					  @layer components, so they won: every plan name rendered at weight
+					  300 and +0.025em while every other h3 on the site sat at 500 and
+					  -0.02em.
+					*/}
+					<h3 className="text-h3 font-heading">{name}</h3>
 					<div className="flex items-center gap-1.5">
 						{isActive && (
 							<Badge variant="secondary" className="text-xs">

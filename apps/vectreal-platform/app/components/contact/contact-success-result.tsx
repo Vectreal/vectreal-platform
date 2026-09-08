@@ -12,8 +12,14 @@ export function ContactSuccessResult({
 	notice,
 	onDismiss
 }: ContactSuccessResultProps) {
+	/*
+	  Fill only. InlineNotice does this same job without a border, and its
+	  docstring records that the border was removed for exactly this reason: a
+	  tinted panel already reads as a panel, and outlining it as well states the
+	  boundary twice.
+	*/
 	return (
-		<div className="border-success/50 bg-success/25 text-success-foreground/80 space-y-4 rounded-2xl border p-5">
+		<div className="bg-success/25 text-success-foreground/80 space-y-4 rounded-2xl p-5">
 			<div className="flex items-center gap-2 font-medium">
 				<CheckCircle2 className="h-5 w-5" />
 				Your message has been sent

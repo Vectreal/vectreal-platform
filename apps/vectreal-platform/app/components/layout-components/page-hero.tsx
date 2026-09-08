@@ -50,7 +50,14 @@ const PageHero = ({
 			  it should be designed against a real hero, and
 			  `rgb(var(--orange-rgb) / <alpha>)` is the spelling that works.
 			*/}
-			<div className="container-page pt-24 pb-16">
+			{/*
+			  On the rhythm: 128 above, 64 below. pt-24 was 96px, a value used
+			  nowhere else, and this hero is the most-seen block on the marketing
+			  surfaces. The asymmetry is the point - the space above separates the
+			  hero from the fixed nav, the space below joins it to the page it
+			  introduces.
+			*/}
+			<div className="container-page pt-32 pb-16">
 				<div className="space-y-4">
 					<h1 className="text-display font-heading max-w-4xl">{heading}</h1>
 

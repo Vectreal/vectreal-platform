@@ -34,7 +34,9 @@
 
 /*
  * Flat surface and the scrim gradient: stretch to the tweening box so the
- * hairline border stays on the edge and the gradient stays vertical.
+ * gradient stays vertical. This used to say "so the hairline border stays on
+ * the edge"; the plate carried border-white/10 with no border-width, so that
+ * border never painted and the comment described something nobody could see.
  */
 ::view-transition-old(.news-plate),
 ::view-transition-new(.news-plate) {

@@ -75,7 +75,7 @@ export default function PricingPage() {
 			  answers a different question and gets a much wider gap before it. An
 			  even `space-y` between all three said they were three peers.
 			*/}
-			<div className="container-page pb-40">
+			<div className="container-page pb-32">
 				{/*
 				  Three self-serve plans, not four cards. Enterprise has no price,
 				  no checkout and a different next step, so rendering it as a
@@ -112,7 +112,13 @@ export default function PricingPage() {
 
 				<section aria-labelledby="comparison-heading" className="mt-32">
 					<div className="mb-8 max-w-xl space-y-2">
-						<h2 id="comparison-heading" className="text-h2 font-heading">
+						{/*
+						  Same rung as the Enterprise heading above it. These are peer
+						  sections, and this one was a step louder - so the reference
+						  table read as more important than the conversion path beside
+						  it.
+						*/}
+						<h2 id="comparison-heading" className="text-h3 font-heading">
 							{PRICING_PAGE_COPY.comparisonHeading}
 						</h2>
 						<p className="text-muted-foreground text-body">

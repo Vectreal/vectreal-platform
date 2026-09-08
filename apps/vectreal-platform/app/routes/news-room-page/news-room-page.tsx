@@ -169,7 +169,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				}
 			/>
 
-			<div className="container-page pb-20">
+			<div className="container-page pb-32">
 				{/*
 				  One axis, not three.
 

@@ -11,7 +11,7 @@ export function ContactErrorResult({
 	onDismiss
 }: ContactErrorResultProps) {
 	return (
-		<div className="border-error-border bg-error-bg text-error-foreground space-y-4 rounded-2xl border p-5">
+		<div className="bg-error-bg text-error-foreground space-y-4 rounded-2xl p-5">
 			<div className="flex items-center gap-2 font-medium">
 				<AlertCircle className="h-5 w-5" />
 				We could not send your message

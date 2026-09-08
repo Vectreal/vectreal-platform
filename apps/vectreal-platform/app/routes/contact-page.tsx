@@ -213,7 +213,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 				description="Whether you need product support, a business plan discussion, or a partnership conversation, this form routes you straight to the right team."
 			/>
 
-			<div className="container-page pb-20">
+			<div className="container-page pb-32">
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
 					<BasicCard>
 						<CardHeader>

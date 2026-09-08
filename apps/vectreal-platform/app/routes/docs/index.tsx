@@ -167,7 +167,7 @@ export default function DocsIndexPage() {
 				}
 			/>
 
-			<div className="container-page pb-40">
+			<div className="container-page pb-32">
 				{/*
 				  The artifact and the code that produces it, side by side.
 
