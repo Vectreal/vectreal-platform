@@ -11,7 +11,7 @@ Duplicated rules drift, and this repo has the receipts.
 
 | Reference | Owns |
 | --- | --- |
-| [tokens.md](references/tokens.md) | Brand and semantic color, alpha, radius, the `--z-index-*` tiers, viewport height, the page measure |
+| [tokens.md](references/tokens.md) | Brand color and alpha, radius, the spacing rhythm, the `--z-index-*` tiers, viewport height, the page measure |
 | [elevation.md](references/elevation.md) | The `ds-*` ladder, and when a surface may carry a shadow |
 | [typography.md](references/typography.md) | The type scale, the faces, tooltip copy length |
 | [motion.md](references/motion.md) | Durations, easings, and when motion is allowed at all |
@@ -42,6 +42,8 @@ wrong form is wrong.
 | Motion added to decorate; a new animation with no `prefers-reduced-motion` guard | [motion.md](references/motion.md) |
 | A variant on a `ds-*` or `text-*` class silently emitting nothing | [enforcement.md](references/enforcement.md) |
 | A marketing surface that reads as templated: uniform cards, a pill above the H1, decorative gradient | [anti-ai-look.md](references/anti-ai-look.md) |
+| Two sections whose gap matches no other gap on the page; a new spacing value invented between two that exist | [tokens.md](references/tokens.md) |
+| A card that draws attention with colour rather than a step on the ladder | [elevation.md](references/elevation.md) |
 | Loading, empty and error states added after the happy path | designed together, always |
 | Accessibility retrofitted after review | keyboard, focus ring, contrast, labels from the start |
 

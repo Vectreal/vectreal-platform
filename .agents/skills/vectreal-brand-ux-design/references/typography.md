@@ -4,9 +4,33 @@ Owner of: the type scale, the faces, and tooltip copy length.
 
 ## The scale is the single source of truth
 
-`text-eyebrow`, `text-display`, `text-headline`, `text-h2`, `text-h3`,
-`text-h4`, `text-stat`, `text-body-lg`, `text-body`, `text-body-sm`,
-`text-label-xs`.
+| Rung | Size | Job |
+| --- | --- | --- |
+| `text-display` | `clamp(2.75rem, 6.4vw, 5.5rem)` | The one h1 on a marketing page |
+| `text-stat` | `clamp(3rem, 5.5vw, 4.25rem)` | A number that is the point of its block |
+| `text-headline` | `clamp(2rem, 4vw, 3.5rem)` | A section that opens like a page |
+| `text-h2` | `clamp(1.75rem, 2.8vw, 2.5rem)` | Peer sections down a page |
+| `text-h3` | `clamp(1.35rem, 2vw, 1.75rem)` | Blocks inside a section |
+| `text-h4` | `1rem` fixed | Labels a panel of fixed width |
+| `text-body-lg` | `1.125rem` | Hero and intro copy |
+| `text-body` | `1rem` | Ordinary prose |
+| `text-body-sm` | `0.875rem` | Dense UI, captions, table rows |
+| `text-label-xs` | `0.6875rem` | Micro-labels |
+| `text-eyebrow` | `0.6875rem` | `text-label-xs` plus uppercase and `--tracking-eyebrow` |
+
+Sizes are repeated here because a reference nobody can answer a question from
+sends the reader to the stylesheet, and the reader who opens the stylesheet
+stops consulting the reference. They are pinned by
+`tests/type-scale-adherence.spec.ts`, which parses `globals.css`.
+
+**Adding or removing a rung is never a CSS-only change.** Three files have to
+agree: the token and class in `globals.css`, the rung name in
+`TYPE_SCALE_RUNGS` (`shared/utils/src/lib/styling.utils.ts`), and the ESLint
+variant selector in `eslint.config.mts`. `TYPE_SCALE_RUNGS` is what registers
+the rungs with tailwind-merge; while it was missing them, `cn()` classified
+every `text-<rung>` as a colour, so a rung and a colour deleted each other and
+`sheet.tsx` and `drawer.tsx` shipped with `text-foreground` silently dropped.
+`tests/type-scale-adherence.spec.ts` pins the list against the stylesheet.
 
 The `--text-*` tokens are declared in plain `:root`, deliberately **not** in
 `@theme`. That is why Tailwind generates no `text-body` or `text-h2` utility and
@@ -59,19 +83,21 @@ declares.
 
 **Marketing headings: one display face, opt-in.**
 
-Not shipped yet — `--font-heading` does not exist in `globals.css` today, and no
-component references it. What follows is the decision record that governs the
-change when it lands, recorded here first so the implementation cannot quietly
-pick a different shape:
+Shipped. `--font-heading: 'Funnel Display Variable', sans-serif` is declared in
+`globals.css`, the face is imported from `@fontsource-variable/funnel-display`,
+and 13 files apply `font-heading`. To put the display face on a heading, write
+`font-heading` beside the rung — there is nothing to create.
+
+The three decisions that shape it, which still bind:
 
 1. **The token is `--font-heading`, never `--font-display`.** `--font-*` is a
    Tailwind namespace, so `--font-display` would generate a `font-display`
    utility that reads as the CSS `font-display` descriptor.
-2. **The face will attach to an opt-in utility, never to the rungs.** Baking a
+2. **The face attaches to an opt-in utility, never to the rungs.** Baking a
    `font-family` into `.text-display` or `.text-headline` inside
    `@layer components` would change every dashboard and publisher heading
    already on those rungs — `publisher/shell/drop-zone.tsx` uses `text-headline`
-   today. Marketing components are to apply `font-heading` *beside* the rung.
+   today. Marketing components apply `font-heading` *beside* the rung.
    Product UI stays on DM Sans.
 3. **Newsroom OG thumbnails stay on DM Sans.**
    `apps/vectreal-platform/scripts/gen-newsroom-thumbnails.ts` documents that
@@ -107,15 +133,15 @@ tabIndex of its own under `asChild`, and an `<svg>` is not a tab stop, so an ico
 handed straight to it cannot be reached or opened by keyboard at all.
 
 ```claims
-present  shared/components/src/styles/globals.css                              .text-display
-present  shared/components/src/styles/globals.css                              .text-headline
-present  shared/components/src/styles/globals.css                              .text-h4
-present  shared/components/src/styles/globals.css                              .text-body
-present  shared/components/src/styles/globals.css                              .text-body-sm
+present  shared/components/src/styles/globals.css                              .text-display {
+present  shared/components/src/styles/globals.css                              .text-headline {
+present  shared/components/src/styles/globals.css                              .text-h4 {
+present  shared/components/src/styles/globals.css                              .text-body {
+present  shared/components/src/styles/globals.css                              .text-body-sm {
 present  shared/components/src/styles/globals.css                              --text-body: 1rem
 present  eslint.config.mts                                                     h4|stat|body-lg|body-sm|body
 present  shared/components/src/styles/globals.css                              --text-display: clamp(2.75rem, 6.4vw, 5.5rem)
-present  shared/components/src/styles/globals.css                              --font-sans
+present  shared/components/src/styles/globals.css                              --font-sans: 'DM Sans Variable'
 present  shared/components/src/styles/globals.css                              --font-heading: 'Funnel Display Variable'
 present  apps/vectreal-platform/app/components/layout-components/page-hero.tsx  font-heading
 present  apps/vectreal-platform/app/routes/layouts/signin-layout.tsx            text-h2 font-heading

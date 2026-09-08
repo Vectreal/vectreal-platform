@@ -2,41 +2,46 @@
 
 How Vectreal's interface is put together, and where each rule is written down.
 
-This page states no rule of its own. Every rule has exactly one owner, listed
-below, and the owner is the only place it is allowed to be written — a rule
-restated in two files drifts, and then the two disagree with nobody noticing.
-What lives here is the reasoning that sits above the rules, and a map.
+Every rule has exactly one owner, listed below, and the owner is the only place
+it is written — a rule restated in two files drifts, and then the two disagree
+with nobody noticing. What lives here is the reasoning *above* the rules: why
+each one exists, and where to go for what it actually says. Where a principle
+below and a reference disagree on detail, the reference is right.
 
 ## Principles
 
-**Separate surfaces by value, not by outlines.** Depth comes from a small ladder
-of `--foreground` mixes that tracks the theme automatically, not from borders and
-shadows stacked by hand. A border is a deliberate signal, not the default way to
-bound a box.
+**Separate surfaces by value, not by outlines.** Depth is a property of the
+surface, so it should be expressed as one — a step on a ladder that tracks the
+theme, rather than a line drawn around a box. Borders are for edges that carry
+meaning. → [Elevation](.agents/skills/vectreal-brand-ux-design/references/elevation.md)
 
-**One place per name.** A token declared twice becomes self-referential — that is
-what once collapsed every corner in the app to square — and a rule written twice
-becomes two rules. This applies to CSS custom properties, to the class
-vocabulary, and to this documentation.
+**One place per name.** A name that exists twice will eventually mean two
+things. This applies to CSS custom properties, to the class vocabulary, and to
+this documentation. → [Tokens](.agents/skills/vectreal-brand-ux-design/references/tokens.md)
 
-**The scale is not a suggestion.** Sizes, tracking and leading travel together in
-one class. A component that hand-rolls a heading gets the size and loses
-everything else, and then drifts from the rung it was imitating.
+**The scale is not a suggestion.** A rung is a decision about size, weight,
+tracking and leading taken together; hand-rolling one keeps the size and loses
+the decision. Same for spacing: four steps a reader can feel beat nine they
+cannot. → [Typography](.agents/skills/vectreal-brand-ux-design/references/typography.md),
+[Tokens](.agents/skills/vectreal-brand-ux-design/references/tokens.md)
 
-**Motion earns its place.** If removing an animation would cost the reader no
-information about what just happened, it should not be there.
+**Motion earns its place.** Animation is a way of saying what just changed. If
+nothing changed, it is decoration, and decoration that moves is the kind a
+reader cannot turn off. → [Motion](.agents/skills/vectreal-brand-ux-design/references/motion.md)
 
 **Design the unhappy paths with the happy one.** Loading, empty, error and
-permission-denied states are part of the design, not a pass afterwards. Same for
-keyboard access, focus rings and contrast.
+permission-denied are states the product is actually in, not edge cases. Same
+for keyboard access, focus and contrast: retrofitted, they get the budget left
+over.
 
-**Look at it.** A design change closes with a screenshot in both themes at real
-breakpoints, never with a claim that it should work.
+**Look at it.** Design claims are cheap and design defects are visual. A change
+closes with a screenshot in both themes at real breakpoints.
+→ [Enforcement](.agents/skills/vectreal-brand-ux-design/references/enforcement.md)
 
-**Decide, then be consistent.** The things that make a site look machine-made are
-not particular colours or components; they are defaults nobody chose, applied
-uniformly. A choice you can state a reason for is the opposite of a template,
-even when it uses the same ingredients.
+**Decide, then be consistent.** What makes a site look machine-made is not
+particular colours or components; it is defaults nobody chose, applied evenly.
+A choice you can give a reason for is the opposite of a template, even when it
+uses the same ingredients. → [The look we are avoiding](.agents/skills/vectreal-brand-ux-design/references/anti-ai-look.md)
 
 ## Where the rules live
 
@@ -45,7 +50,7 @@ and humans can read as ordinary markdown:
 
 | Reference | Covers |
 | --- | --- |
-| [Tokens](.agents/skills/vectreal-brand-ux-design/references/tokens.md) | Brand and semantic color, alpha, radius, stacking tiers, viewport height, the page measure |
+| [Tokens](.agents/skills/vectreal-brand-ux-design/references/tokens.md) | Brand color and alpha, radius, the spacing rhythm, stacking tiers, viewport height, the page measure |
 | [Elevation](.agents/skills/vectreal-brand-ux-design/references/elevation.md) | The `ds-*` ladder, and when a surface may carry a shadow |
 | [Typography](.agents/skills/vectreal-brand-ux-design/references/typography.md) | The type scale, the faces, tooltip copy length |
 | [Motion](.agents/skills/vectreal-brand-ux-design/references/motion.md) | Durations, easings, reduced motion |
@@ -54,7 +59,7 @@ and humans can read as ordinary markdown:
 | [Evidence](.agents/skills/vectreal-brand-ux-design/references/evidence.md) | What these claims rest on, and which popular numbers are fabricated |
 
 [The skill itself](.agents/skills/vectreal-brand-ux-design/SKILL.md) is a router
-over those five, plus an index of failure modes keyed by symptom — the fastest
+over those seven, plus an index of failure modes keyed by symptom — the fastest
 way in when you know what looks wrong but not which rule governs it.
 
 ## What backs them up

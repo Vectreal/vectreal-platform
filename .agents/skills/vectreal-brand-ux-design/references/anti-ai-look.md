@@ -118,9 +118,10 @@ The evidence behind these claims, and the widely-repeated numbers that do not
 survive checking, are in [evidence.md](evidence.md).
 
 ```claims
-present  shared/components/src/styles/globals.css                                          --font-heading
+present  shared/components/src/styles/globals.css                                          --font-heading: 'Funnel Display Variable'
 present  shared/components/src/styles/globals.css                                          --tracking-eyebrow: 0.14em
 present  apps/vectreal-platform/app/components/layout-components/page-hero.tsx             container-page
-absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             md:text-6xl
-absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             tracking-[0.22em]
+absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             md:text-
+absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             tracking-[
+absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             animate-pulse
 ```

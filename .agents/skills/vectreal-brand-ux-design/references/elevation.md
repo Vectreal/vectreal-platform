@@ -4,7 +4,8 @@ Owner of: the `ds-*` ladder, and when a surface is allowed a shadow.
 
 ## The `ds-*` ladder
 
-Derived from one `--foreground` mix, so it tracks the theme automatically.
+Every step is `color-mix(in oklch, var(--foreground) N%, var(--background))`, so
+the whole ladder tracks the theme from one pair of tokens.
 
 - `ds-raised` (4%) — cards, table containers, anything sitting on the page
 - `ds-overlay` (8%) — popovers, menus, rows hovered on top of raised
@@ -18,9 +19,24 @@ Derived from one `--foreground` mix, so it tracks the theme automatically.
   background: call sites had drifted to 6%, 8%, 12% and 14%, so equivalent rows
   hovered to different values in the same view.
 
-The ladder self-corrects when it nests: raised inside raised steps up on its own,
-so a `Card` dropped onto a raised panel still has an edge. Same-class nesting
-only.
+The ladder self-corrects when it nests, so a `Card` dropped onto a raised panel
+still has an edge. Same-class nesting only, and the steps are:
+
+| Nesting | Mix |
+| --- | --- |
+| `.ds-raised` | 4% |
+| `.ds-raised .ds-raised` | 8% |
+| `.ds-raised .ds-raised .ds-raised`, `.ds-overlay .ds-overlay` | 12% |
+| `.ds-raised-interactive:hover` | 8% |
+| `.ds-overlay-interactive:hover` | 12% |
+
+That nesting rule is also how a component says "this one matters more" without
+reaching for colour: `BasicCard`'s `highlight` puts `ds-raised` on the wrapper
+and the card inside it resolves to 8%. It used to draw an orange bar instead.
+
+`ds-divider` is the one step that does **not** mix against `--background`. It is
+10% against `transparent`, because a hairline has to sit on whatever surface it
+divides rather than punching a hole in it.
 
 The ladder's own comment in `globals.css` states the intent: the system separates
 surfaces by **value, not by outlines**. That is the reason to reach for a `ds-*`

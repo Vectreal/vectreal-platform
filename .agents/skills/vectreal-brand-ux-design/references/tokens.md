@@ -1,7 +1,7 @@
 # Tokens
 
-Owner of: brand color, semantic color, surfaces, radius, stacking tiers,
-viewport height, page measure.
+Owner of: brand color, radius, spacing rhythm, stacking tiers, viewport height,
+page measure. Surfaces belong to [elevation.md](elevation.md).
 
 Source of truth: `shared/components/src/styles/globals.css`.
 
@@ -41,6 +41,35 @@ The rule is one place per name, not "never `@theme`". A name that belongs in
 The viewer package must not emit global theme tokens. `packages/viewer` owns a
 separate `--vctrl-*` namespace scoped to `.viewer`, deliberately outside the app
 theme, and resets `--radius-*` to `initial` so it cannot clobber a host app.
+
+## Spacing rhythm
+
+Four values, and a marketing page should need no others:
+
+| Step | Class | Separates |
+| --- | --- | --- |
+| 16px | `mt-4` / `gap-4` | Lines inside one block |
+| 32px | `mt-8` / `gap-8` | A heading from its content, blocks inside a section |
+| 64px | `mt-16` | Two sections that belong together |
+| 128px | `mt-32` | Two sections that do not |
+
+The point is not the numbers, it is that there are four of them. Rhythm is what
+a reader uses to tell "still the same idea" from "a new one", and a page using
+nine spacing values has no rhythm to read - it has nine near-identical gaps that
+each mean nothing. When a gap feels wrong, the answer is the next step up or
+down, not a new value between them.
+
+There is no `--space-*` token to reach for and there should not be. Spacing in
+markup is Tailwind's numeric scale, derived from the `--spacing` multiplier.
+`--space-4` and `--space-6` survive in `:root` only because `.container-page`
+reads them for its gutter; `--space-*` is a real Tailwind namespace but it backs
+`space-x-*` / `space-y-*`, so moving those two into `@theme` to "make them real"
+would mint a second child-margin scale beside the derived one. Ten other rungs
+were deleted for having no reader at all.
+
+Page padding is the one place this is currently inconsistent: the marketing
+routes use four different bottom values, and `page-hero`'s `pt-24` is off the
+scale entirely. Bring them onto it when you touch them.
 
 ## Radius
 
