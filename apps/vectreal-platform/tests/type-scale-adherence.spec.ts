@@ -15,6 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { cn, TYPE_SCALE_RUNGS } from '@shared/utils'
 import { describe, expect, it } from 'vitest'
 
 const UI_DIR = join(
@@ -23,6 +24,50 @@ const UI_DIR = join(
 )
 
 /** Rungs defined in `globals.css`. Anything else is hand-rolled. */
+/*
+  The rungs, as tailwind-merge sees them.
+
+  A rung is not a Tailwind utility, so tailwind-merge sorts it by shape and every
+  `text-<unknown>` lands in its `text-color` group. Before `TYPE_SCALE_RUNGS` was
+  registered, a rung and a colour deleted each other in both directions and the
+  losing class was removed from the DOM entirely - no stylesheet race to inspect,
+  nothing to notice. These pin the registration rather than the behaviour of
+  tailwind-merge itself.
+*/
+describe('a rung survives cn()', () => {
+	it('lists exactly the rungs the stylesheet defines', () => {
+		/*
+		  The list lives in `shared/utils` and the classes live in
+		  `shared/components`, which is the same two-file arrangement that rots
+		  for the tiers and the container scale.
+		*/
+		const css = readFileSync(join(UI_DIR, '../styles/globals.css'), 'utf8')
+		const defined = [
+			...new Set(
+				[...css.matchAll(/^\t+\.text-([a-z0-9-]+) \{$/gm)].map(
+					(match) => match[1]
+				)
+			)
+		]
+
+		expect([...TYPE_SCALE_RUNGS].sort()).toEqual(defined.sort())
+	})
+
+	it('keeps a rung and a colour together, in both orders', () => {
+		expect(cn('text-foreground text-h3')).toBe('text-foreground text-h3')
+		expect(cn('text-h3', 'text-muted-foreground')).toBe(
+			'text-h3 text-muted-foreground'
+		)
+	})
+
+	it('still resolves a rung against another rung and against a raw size', () => {
+		// The merge has to keep working as a merge: this is what would break if
+		// the rungs were registered as their own group instead of as font sizes.
+		expect(cn('text-h3', 'text-body')).toBe('text-body')
+		expect(cn('text-h3', 'text-sm')).toBe('text-sm')
+	})
+})
+
 const SCALE_CLASSES = [
 	'text-display',
 	'text-headline',

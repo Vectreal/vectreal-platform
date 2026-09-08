@@ -49,6 +49,45 @@ const Z_INDEX_TIERS = [
  */
 const CONTAINER_SCALE = ['detail-panel']
 
+/**
+ * The type scale declared as `.text-*` in `globals.css`, for the third time and
+ * the same reason.
+ *
+ * tailwind-merge sorts a class it does not recognise by shape, and every
+ * `text-<unknown>` falls into its `text-color` group. So a rung and a colour
+ * looked like the same property to it and deleted each other, in both
+ * directions: `cn('text-h3', 'text-muted-foreground')` returned only the
+ * colour, and `cn('text-foreground text-h3')` returned only the rung. The
+ * second form is live in `sheet.tsx` and `drawer.tsx`, which have been shipping
+ * with `text-foreground` silently dropped.
+ *
+ * That is worse than the z-index case rather than merely equal to it. There the
+ * loser kept its class and lost a race in the stylesheet; here the class is
+ * removed outright, so nothing in the DOM records that a rung was ever asked
+ * for.
+ *
+ * Registered as the `text` theme key, which is tailwind-merge's namespace for
+ * font sizes, rather than as a class group - the same argument the container
+ * scale makes above. It puts the rungs where `font-size` conflicts are already
+ * resolved, so a rung conflicts with another rung and with `text-sm`, and no
+ * longer with a colour.
+ *
+ * `type-scale-adherence.spec.ts` pins this list against the stylesheet.
+ */
+const TYPE_SCALE_RUNGS = [
+	'display',
+	'headline',
+	'h2',
+	'h3',
+	'h4',
+	'stat',
+	'body-lg',
+	'body',
+	'body-sm',
+	'label-xs',
+	'eyebrow'
+]
+
 /*
   The tiers stay a class group. `--z-index-*` is a Tailwind namespace, but
   tailwind-merge has no `z` theme key to hang them on, so the group is the only
@@ -57,7 +96,7 @@ const CONTAINER_SCALE = ['detail-panel']
 const twMerge = extendTailwindMerge({
 	extend: {
 		classGroups: { z: [{ z: Z_INDEX_TIERS }] },
-		theme: { container: CONTAINER_SCALE }
+		theme: { container: CONTAINER_SCALE, text: TYPE_SCALE_RUNGS }
 	}
 })
 
@@ -65,4 +104,4 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs))
 }
 
-export { CONTAINER_SCALE, Z_INDEX_TIERS }
+export { CONTAINER_SCALE, TYPE_SCALE_RUNGS, Z_INDEX_TIERS }
