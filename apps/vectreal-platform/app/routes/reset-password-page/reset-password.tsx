@@ -94,7 +94,7 @@ export default function ResetPasswordPage({
 
 	return (
 		<div className="w-full max-w-md">
-			<h1 className="text-h3 mb-2">Set a new password</h1>
+			<h1 className="text-h3 font-heading mb-2">Set a new password</h1>
 			<p className="text-muted-foreground mb-8 text-sm leading-relaxed">
 				Choose a new password for your account.
 			</p>

@@ -116,6 +116,11 @@ present  shared/components/src/styles/globals.css                              -
 present  eslint.config.mts                                                     h4|stat|body-lg|body-sm|body
 present  shared/components/src/styles/globals.css                              --text-display: clamp(2.75rem, 6.4vw, 5.5rem)
 present  shared/components/src/styles/globals.css                              --font-sans
+present  shared/components/src/styles/globals.css                              --font-heading: 'Funnel Display Variable'
+present  apps/vectreal-platform/app/components/layout-components/page-hero.tsx  font-heading
+present  apps/vectreal-platform/app/routes/layouts/signin-layout.tsx            text-h2 font-heading
+present  apps/vectreal-platform/app/routes/forgot-password-page/forgot-password.tsx  text-h3 font-heading
+present  apps/vectreal-platform/app/routes/reset-password-page/reset-password.tsx    text-h3 font-heading
 exists   apps/vectreal-platform/tests/tooltip-copy-length.spec.ts
 exists   apps/vectreal-platform/tests/type-scale-adherence.spec.ts
 exists   apps/vectreal-platform/app/components/info-tooltip.spec.tsx

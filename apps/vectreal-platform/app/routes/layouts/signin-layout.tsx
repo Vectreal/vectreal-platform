@@ -250,7 +250,7 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 							<div className="mx-auto flex max-w-md flex-col gap-8 py-16">
 								{isCredentialChoice && (
 									<div className="flex grow flex-col justify-end">
-										<h1 className="text-h2 mb-6">
+										<h1 className="text-h2 font-heading mb-6">
 											{isSignUp ? 'Sign Up' : 'Sign In'}
 										</h1>
 									</div>
