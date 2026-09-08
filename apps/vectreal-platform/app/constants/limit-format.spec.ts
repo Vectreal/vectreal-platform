@@ -1,4 +1,4 @@
-import { formatLimitValue } from './pricing-cards-section'
+import { formatLimitValue } from './limit-format'
 
 describe('formatLimitValue', () => {
 	it('formats storage_bytes_per_scene as MB', () => {
