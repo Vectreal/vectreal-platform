@@ -5,7 +5,14 @@ Owner of: the type scale, the faces, and tooltip copy length.
 ## The scale is the single source of truth
 
 `text-eyebrow`, `text-display`, `text-headline`, `text-h2`, `text-h3`,
-`text-h4`, `text-stat`, `text-body-lg`, `text-label-xs`.
+`text-h4`, `text-stat`, `text-body-lg`, `text-body`, `text-body-sm`,
+`text-label-xs`.
+
+The `--text-*` tokens are declared in plain `:root`, deliberately **not** in
+`@theme`. That is why Tailwind generates no `text-body` or `text-h2` utility and
+why each rung is a hand-written class in `@layer components` - which in turn is
+why a variant on one silently emits nothing. See
+[enforcement.md](enforcement.md) for the rule that guards it.
 
 Each class carries size, weight, tracking and leading together. Setting
 `style={{ fontSize: 'var(--text-headline)' }}` gets the size and none of the
@@ -21,12 +28,22 @@ from it.
 panels of a fixed width, so it should not track the viewport the way page
 headings do.
 
-### Known gap
+### Body copy is 16px, and product UI is not
 
-There is no plain body rung. Ordinary copy falls through to Tailwind's
-`text-sm` / `text-base`, and the ladder jumps from `--text-body-lg` (18px) to
-`--text-label-xs` (11px) with nothing between. Marketing surfaces hand-roll
-`text-base leading-relaxed md:text-lg` to fill it.
+`.text-body` is 16px and `.text-body-sm` is 14px. The ladder used to fall from
+18px straight to 11px, so ordinary paragraphs reached past the scale for
+Tailwind's `text-sm` and `text-base` - 466 call sites, each choosing its own
+leading.
+
+The rung is 16px even though the app's most common size by far is 14px, because
+14px is a density convention that belongs to the dashboard and the publisher,
+where a table row has to fit. Prose on a marketing page is read rather than
+scanned, and the rung a redesign migrates toward should be the readable one.
+
+**This is not a licence to migrate product UI.** Those `text-sm` call sites in
+the dashboard and publisher stay as they are until something deliberately moves
+them; sweeping them to 16px is a large visual change and is nobody's current
+task.
 
 ## Faces
 
@@ -93,6 +110,10 @@ handed straight to it cannot be reached or opened by keyboard at all.
 present  shared/components/src/styles/globals.css                              .text-display
 present  shared/components/src/styles/globals.css                              .text-headline
 present  shared/components/src/styles/globals.css                              .text-h4
+present  shared/components/src/styles/globals.css                              .text-body
+present  shared/components/src/styles/globals.css                              .text-body-sm
+present  shared/components/src/styles/globals.css                              --text-body: 1rem
+present  eslint.config.mts                                                     h4|stat|body-lg|body-sm|body
 present  shared/components/src/styles/globals.css                              --text-display: clamp(2.75rem, 6.4vw, 5.5rem)
 present  shared/components/src/styles/globals.css                              --font-sans
 exists   apps/vectreal-platform/tests/tooltip-copy-length.spec.ts

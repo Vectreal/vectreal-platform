@@ -182,6 +182,22 @@
 	--text-h4: 1rem;
 	--text-stat: clamp(3rem, 5.5vw, 4.25rem);
 	--text-body-lg: 1.125rem;
+	/*
+	  Body copy, and the rung the ladder was missing.
+
+	  Without it the scale fell from `--text-body-lg` (18px) to
+	  `--text-label-xs` (11px) with nothing between, so ordinary paragraphs
+	  reached past the scale for Tailwind's `text-sm` and `text-base` - 466 call
+	  sites across the app, and every one of them choosing its own leading.
+
+	  16px rather than the 14px the product UI settled into. 14px is a density
+	  convention that belongs to the dashboard and the publisher, where a table
+	  row has to fit; prose on a marketing page is read, not scanned, and the
+	  rung the redesign migrates toward should be the readable one. Product UI
+	  keeps `text-sm` until something deliberately moves it.
+	*/
+	--text-body: 1rem;
+	--text-body-sm: 0.875rem;
 	--text-label-xs: 0.6875rem;
 	--tracking-display: -0.038em;
 	--tracking-headline: -0.025em;
@@ -747,6 +763,21 @@
 	.text-body-lg {
 		font-size: var(--text-body-lg);
 		line-height: 1.6;
+		text-wrap: pretty;
+	}
+	.text-body {
+		font-size: var(--text-body);
+		line-height: 1.6;
+		text-wrap: pretty;
+	}
+	/*
+	  Secondary copy: article meta, captions, the line under a control. Tighter
+	  leading than `.text-body` because these run to one or two lines, where 1.6
+	  reads as a gap rather than as rhythm.
+	*/
+	.text-body-sm {
+		font-size: var(--text-body-sm);
+		line-height: 1.5;
 		text-wrap: pretty;
 	}
 	/*

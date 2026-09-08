@@ -16,7 +16,7 @@
  * hardcoded path and a hardcoded path is what the regression slipped past.
  */
 
-import { globSync } from 'node:fs'
+import { globSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { ESLint } from 'eslint'
@@ -243,6 +243,96 @@ describe('z-index must come from the named scale', () => {
 		*/
 		const messages = await messagesFor(
 			'export const A = "-z-50"\n' + "export const B = 'z-' + '90'\n"
+		)
+
+		expect(messages).toEqual([])
+	})
+})
+
+describe('design-system classes reject a variant', () => {
+	/*
+	  The rungs and the `ds-*` steps live in `@layer components`, so Tailwind
+	  never generates a utility for them and never composes a variant with one.
+	  `hover:text-h2` emits nothing at all: no build error, no lint error, just
+	  an element inheriting its parent's size. The selector is the only thing
+	  standing between that and production.
+
+	  The list is read out of `globals.css` rather than restated here, because
+	  restating it is how `text-h4` came to be missing from the selector while
+	  every other rung was covered - the class existed, the spec that listed the
+	  rungs knew about it, and the one regex that had to know did not. Deriving
+	  it means a new rung cannot be added without this test demanding the
+	  selector cover it too.
+	*/
+	const css = readFileSync(
+		resolve(ROOT, 'shared/components/src/styles/globals.css'),
+		'utf8'
+	)
+	/*
+	  `\t+` rather than `\t`: a rule nested one level deeper - inside a media
+	  query, the way `.container-page` already is in this same layer - would
+	  otherwise be skipped silently. Deduped because a rung with a media override
+	  is declared twice.
+	*/
+	const classesMatching = (pattern: RegExp) => [
+		...new Set([...css.matchAll(pattern)].map((match) => match[1]))
+	]
+	const RUNGS = classesMatching(/^\t+\.(text-[a-z0-9-]+) \{$/gm)
+	const SURFACES = classesMatching(/^\t+\.(ds-[a-z]+) \{$/gm)
+
+	it('finds the classes it is supposed to be guarding', () => {
+		/*
+		  Guards the two regexes above: without this, a change to the
+		  stylesheet's formatting empties the derived lists and every `it.each`
+		  below registers zero cases. Vitest's `.each` is a bare `forEach`, so an
+		  empty list is not an error - it is a silent pass.
+
+		  Exact counts rather than a floor. A floor is what let this guard drift:
+		  it read `>= 9` while the file defined 11, so two rungs could have gone
+		  missing with nothing going red. Adding a rung is meant to fail here, so
+		  that the ESLint selector is updated in the same change.
+		*/
+		expect(RUNGS).toContain('text-h4')
+		expect(RUNGS).toHaveLength(11)
+		expect(SURFACES).toHaveLength(4)
+	})
+
+	it.each([...RUNGS, ...SURFACES])('rejects hover:%s', async (className) => {
+		const messages = await messagesFor(
+			`export const A = () => <div className="hover:${className}" />\n`
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	it('rejects a variant carrying a bracket and a group', async () => {
+		/*
+		  `group-data-[viewport=false]/navigation-menu:ds-overlay`, one of the
+		  forms the rule's own comment records as having shipped. It is why the
+		  selector allows both a bracketed segment and a `/group` suffix between
+		  the variant name and the colon.
+
+		  Known gap, filed rather than fixed here: a variant that *begins* with a
+		  bracket - `[&_[cmdk-group-heading]]:text-label-xs`, the shape that
+		  shipped in `command` - is not matched at all, because the selector
+		  anchors on `[a-z]` after the start or a space. `type-scale-adherence`
+		  catches that shape by scanning source, but only under
+		  `shared/components/src/ui`.
+		*/
+		const messages = await messagesFor(
+			'export const A = () => (\n' +
+				'\t<div className="group-data-[viewport=false]/navigation-menu:ds-overlay" />\n)\n'
+		)
+
+		expect(messages).toHaveLength(1)
+	})
+
+	it('accepts the arbitrary-value form, which does compose', async () => {
+		const messages = await messagesFor(
+			'export const A = () => (\n' +
+				'\t<div className="hover:text-[length:var(--text-h2)]">\n' +
+				'\t\t<span className="text-h2 ds-raised" />\n' +
+				'\t</div>\n)\n'
 		)
 
 		expect(messages).toEqual([])

@@ -31,6 +31,8 @@ const SCALE_CLASSES = [
 	'text-h4',
 	'text-stat',
 	'text-body-lg',
+	'text-body',
+	'text-body-sm',
 	'text-label-xs',
 	'text-eyebrow'
 ]
