@@ -30,9 +30,7 @@ import {
 	FeatureCompareGrid,
 	PricingCardsSection
 } from '../../components/dashboard'
-import { PLAN_ENTITLEMENTS, type Plan } from '../../constants/plan-config'
 import {
-	ENTITLEMENT_DISPLAY_LABELS,
 	PAYMENT_TRUST_COPY,
 	PLAN_DISPLAY_NAMES
 } from '../../constants/product-copy'
@@ -41,6 +39,7 @@ import {
 	loadBillingDashboardData
 } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { resolveCheckoutGate } from '../../lib/domain/billing/checkout-kill-switch'
+import { getUnlockedEntitlementLabels } from '../../lib/domain/billing/plan-upgrade-features'
 
 import type {
 	BillingCheckoutOptions,
@@ -56,29 +55,6 @@ function formatCurrency(amountCents: number, currency: string) {
 		currency: currency.toUpperCase(),
 		maximumFractionDigits: 0
 	}).format(amountCents / 100)
-}
-
-function getUnlockedFeatures(
-	currentPlan: Plan,
-	selectedPlan: 'pro' | 'business'
-) {
-	if (currentPlan === selectedPlan) return []
-	const currentEntitlements = PLAN_ENTITLEMENTS[currentPlan]
-	const selectedEntitlements = PLAN_ENTITLEMENTS[selectedPlan]
-	const seen = new Set<string>()
-	return Object.keys(selectedEntitlements)
-		.filter((key) => {
-			const k = key as keyof typeof selectedEntitlements
-			return selectedEntitlements[k] && !currentEntitlements[k]
-		})
-		.map(
-			(key) =>
-				ENTITLEMENT_DISPLAY_LABELS[
-					key as keyof typeof ENTITLEMENT_DISPLAY_LABELS
-				] ?? key
-		)
-		.filter((label) => !seen.has(label) && !!seen.add(label))
-		.slice(0, 6)
 }
 
 function computeAnnualSavings(pricing: BillingCheckoutPeriods) {
@@ -182,7 +158,7 @@ function BillingUpgradeContent({
 		[planPricing]
 	)
 	const unlockedFeatures = useMemo(
-		() => getUnlockedFeatures(billing.plan, plan),
+		() => getUnlockedEntitlementLabels(billing.plan, plan),
 		[billing.plan, plan]
 	)
 

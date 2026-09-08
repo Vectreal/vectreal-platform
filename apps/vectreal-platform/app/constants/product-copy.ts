@@ -428,8 +428,11 @@ export const STORAGE_USAGE_HINT =
 	'What your scenes keep, not what visitors download: the editable copy, the published file, its thumbnail, and any baked shadow.'
 
 // ---------------------------------------------------------------------------
-// Upgrade success page: entitlement keys to highlight post-upgrade, in priority
-// order.
+// The entitlements worth leading with when an upgrade is described, in priority
+// order. Both billing pages show the same list, through
+// `getUnlockedEntitlementLabels`, and this orders it. It used to filter the
+// success page's copy of that list, which is how the two pages came to promise
+// different things: a key omitted here was sold before payment and absent after.
 // ---------------------------------------------------------------------------
 
 export const UPGRADE_FEATURE_HIGHLIGHT_KEYS: readonly EntitlementKey[] = [
