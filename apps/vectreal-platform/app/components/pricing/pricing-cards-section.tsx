@@ -139,10 +139,14 @@ function PlanCard({
 	return (
 		<BasicCard
 			highlight={isSelected || highlighted || undefined}
+			/*
+			  No bg-muted here. It was a second signal for the same thing highlight
+			  already says, and it is a utility while the ladder is a component
+			  class - so the recommended card left the ladder and rendered a plate
+			  its neighbours could not match. highlight now steps it to 8%.
+			*/
 			cardClassName={cn(
 				'transition-all',
-				isSelected && 'bg-muted',
-				highlighted && !isSelectMode && 'bg-muted',
 				// Dimmed when another plan is selected
 				isSelectMode && selectedPlan && !isSelected && 'opacity-60',
 				isSelectMode &&

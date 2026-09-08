@@ -11,26 +11,32 @@ interface BasicCardProps extends ComponentProps<'div'> {
 	 * than on it.
 	 */
 	cardStyle?: CSSProperties
+	/** Lifts this card one step up the elevation ladder. */
 	highlight?: boolean
 	as?: 'div' | 'article' | 'section' | 'header'
 }
 
-const getHighlightClasses = (highlight: boolean | undefined) => {
-	if (typeof highlight === 'boolean') {
-		return highlight ? 'h-1 group-hover:w-16' : 'hidden'
-	}
-	return 'h-px w-8'
-}
-
 /**
- * A `Card` with the brand highlight bar across its top edge.
+ * A `Card` that can sit one step higher than its neighbours.
  *
- * The card body is deliberately left to `Card`, which already carries
- * `ds-raised`. This wrapper used to override it with `bg-muted/75`,
- * `rounded-3xl` and `border-t-accent/25 border-l-accent/25` - a raw surface, a
- * radius outside the scale, and a drawn bevel - which re-introduced all three
- * anti-patterns on every card across newsroom and docs. The bevel had also
- * quietly turned grey when `--accent` became the neutral hover token.
+ * The card body is left to `Card`, which already carries `ds-raised`.
+ *
+ * There used to be a brand highlight bar across the top edge: a 4px orange
+ * strip, and behind it a blurred orange glow on `animate-pulse`. That is three
+ * separate problems on every card in the product. Two of them are on the
+ * doctrine's ban list by name - a coloured strip on a card edge, and a coloured
+ * glow - and the third was an infinite animation that no `prefers-reduced-
+ * motion` rule reached, because the block in `globals.css` is a hand-maintained
+ * allowlist and Tailwind's built-in `animate-pulse` was never added to it.
+ *
+ * The bar was also the only thing `highlight` did, and with `highlight`
+ * undefined it still drew a 1px orange stub - so every card in the product wore
+ * a piece of brand furniture nobody had asked for.
+ *
+ * Emphasis is a step on the ladder instead. `ds-raised` on the wrapper makes
+ * the `ds-raised` card inside it resolve to 8% rather than 4%, which is the
+ * ladder's own self-correcting nesting rule doing exactly the job it was
+ * written for. No new class, no colour, and it tracks the theme.
  */
 const BasicCard = ({
 	children,
@@ -41,25 +47,15 @@ const BasicCard = ({
 	as: Component = 'div',
 	...props
 }: BasicCardProps) => {
-	const highlightClasses = getHighlightClasses(highlight)
-
 	return (
 		<Component
-			className={cn('group relative overflow-hidden rounded-2xl', className)}
+			className={cn(
+				'group relative overflow-hidden rounded-2xl',
+				highlight && 'ds-raised',
+				className
+			)}
 			{...props}
 		>
-			<div
-				className={cn(
-					'bg-orange/60 absolute top-0 left-0 z-0 m-3 mt-0! h-2 animate-pulse rounded-full blur-xl transition-all md:m-6',
-					highlightClasses
-				)}
-			/>
-			<div
-				className={cn(
-					'bg-orange absolute top-0 left-0 z-10 m-3 mt-0! h-1 w-8 rounded-b-full transition-all md:m-6',
-					highlightClasses
-				)}
-			/>
 			<Card
 				className={cn('relative h-full rounded-2xl', cardClassName)}
 				style={cardStyle}
