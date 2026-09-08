@@ -59,13 +59,23 @@ export default function PricingPage() {
 			/>
 
 			{/*
+			  The rhythm comes from four values and nothing else: 16 inside a
+			  block, 32 from a heading to its content, 64 between sections that
+			  answer the same question, 128 between sections that do not.
+
+			  It had drifted to 138, 80 and 128 between peers, so the largest gap
+			  on the page sat between the hero and the first thing under it while
+			  two page-level sections were 48px apart - the spacing said the
+			  opposite of the structure.
+			*/}
+			{/*
 			  The rhythm is deliberately uneven. The plan row and the enterprise
 			  band are one thought - here is what you can buy, and here is what to
 			  do if none of it fits - so they sit close. The comparison table
 			  answers a different question and gets a much wider gap before it. An
 			  even `space-y` between all three said they were three peers.
 			*/}
-			<div className="container-page pb-32">
+			<div className="container-page pb-40">
 				{/*
 				  Three self-serve plans, not four cards. Enterprise has no price,
 				  no checkout and a different next step, so rendering it as a
@@ -80,10 +90,7 @@ export default function PricingPage() {
 					showEnterprise={false}
 				/>
 
-				<section
-					aria-labelledby="enterprise-heading"
-					className="border-border mt-12 border-t pt-8"
-				>
+				<section aria-labelledby="enterprise-heading" className="mt-16">
 					<div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
 						<div className="max-w-xl space-y-2">
 							<h2 id="enterprise-heading" className="text-h3 font-heading">

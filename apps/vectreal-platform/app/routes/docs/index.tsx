@@ -146,21 +146,20 @@ export default function DocsIndexPage() {
 				}
 			/>
 
-			<div className="container-page pt-4 pb-32">
+			<div className="container-page pb-40">
 				{/*
 				  The one path most readers want, given weight the other sections
 				  do not get. The page previously offered four equal doors and made
 				  the reader guess which one held their answer.
 
-				  Weight from position and a rule, not from a filled panel. A fill
-				  is the heaviest way to group three links, and it made the block
-				  read as a widget sitting on the page rather than as the page's
-				  own first section.
+				  Weight from position and space, not from a panel or a rule. A
+				  fill is the heaviest way to group three links; a rule above a
+				  section that already has air above it is a line carrying no
+				  information. A rule earns its place between repeated items in a
+				  list, where it separates equivalent things - which is exactly
+				  where the rows below still use one.
 				*/}
-				<section
-					aria-labelledby="start-here"
-					className="border-border border-t pt-8"
-				>
+				<section aria-labelledby="start-here" className="">
 					<div className="mb-4 max-w-xl space-y-1">
 						<h2 id="start-here" className="text-h3 font-heading">
 							{DOCS_PAGE_COPY.startHereHeading}
@@ -181,7 +180,7 @@ export default function DocsIndexPage() {
 					</div>
 				</section>
 
-				<DocsSection heading="Guides" className="mt-24">
+				<DocsSection heading="Guides" className="mt-32">
 					{pagesIn('guides').map((page) => (
 						<DocsRow
 							key={page.slug}
@@ -200,7 +199,7 @@ export default function DocsIndexPage() {
 				<DocsSection
 					heading={DOCS_PAGE_COPY.packagesHeading}
 					description={DOCS_PAGE_COPY.packagesDescription}
-					className="mt-24"
+					className="mt-32"
 				>
 					{pagesIn('packages').map((page) => (
 						<DocsRow
@@ -215,7 +214,7 @@ export default function DocsIndexPage() {
 					))}
 				</DocsSection>
 
-				<DocsSection heading="Operations" className="mt-24">
+				<DocsSection heading="Operations" className="mt-32">
 					{[...pagesIn('operations'), ...pagesIn('contributing')].map(
 						(page) => (
 							<DocsRow

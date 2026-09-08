@@ -295,7 +295,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 					</BasicCard>
 
 					<div className="space-y-6">
-						<section className="border-border border-t pt-6">
+						<section>
 							<CardHeader>
 								<CardTitle className="text-h4">Where this goes</CardTitle>
 							</CardHeader>
@@ -320,7 +320,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							</CardContent>
 						</section>
 
-						<section className="border-border border-t pt-6">
+						<section>
 							<CardHeader>
 								<CardTitle className="text-h4">Elsewhere</CardTitle>
 							</CardHeader>
