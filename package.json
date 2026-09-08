@@ -119,7 +119,7 @@
 		"@storybook/react-vite": "10.5.7",
 		"@swc-node/register": "^1.12.1",
 		"@swc/core": "1.15.47",
-		"@swc/helpers": "~0.5.18",
+		"@swc/helpers": "~0.5.23",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@tailwindcss/vite": "^4.3.3",
 		"@testing-library/dom": "10.4.1",
