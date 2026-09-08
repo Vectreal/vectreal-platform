@@ -240,7 +240,7 @@
 	  The scroll lives on a wrapper, not on the table. Putting `display: block`
 	  on the table itself also fixed the overflow, and cost every table in the
 	  docs and the newsroom its implicit ARIA role - rows and columns stopped
-	  existing for a screen reader. `mdx/rehype-table-scroll.mjs` emits the
+	  existing for a screen reader. The rehype plugin in `vite.config.ts` emits the
 	  wrapper; it is selected by data attribute because this is a CSS module and
 	  a class name here would be hashed.
 	*/

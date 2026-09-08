@@ -67,9 +67,9 @@ reads them for its gutter; `--space-*` is a real Tailwind namespace but it backs
 would mint a second child-margin scale beside the derived one. Ten other rungs
 were deleted for having no reader at all.
 
-Page padding is the one place this is currently inconsistent: the marketing
-routes use four different bottom values, and `page-hero`'s `pt-24` is off the
-scale entirely. Bring them onto it when you touch them.
+Page padding uses the same steps: the marketing routes close on `pb-32`, and
+`PageHero` opens on `pt-32 pb-16` - more space above to clear the fixed nav than
+below, where the hero joins the page it introduces.
 
 ## Radius
 

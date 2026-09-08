@@ -114,7 +114,7 @@ export default function NewsroomScenePreview({
 	loaderData
 }: Route.ComponentProps) {
 	return (
-		<div className="container-page pt-28 pb-12">
+		<div className="container-page pt-32 pb-16">
 			<h1 className="text-h3 mb-2">Newsroom scenes</h1>
 			<p className="text-muted-foreground mb-8 text-sm">
 				Dev only. Shuffle to explore seeds, then copy the number into that

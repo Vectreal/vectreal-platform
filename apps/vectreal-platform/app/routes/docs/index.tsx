@@ -242,8 +242,12 @@ export default function DocsIndexPage() {
 				  page disagreed with the sidebar and a sixth DocCategory would have
 				  compiled and silently never rendered.
 
-				  Packages is the one section with more to say than its label, so it
-				  is the one that reads its copy from the copy module.
+				  Every heading comes from the manifest, with no exceptions - Packages
+				  used to override it with a second label ("Packages" against the
+				  sidebar's "Package Reference"), which is the disagreement this was
+				  meant to end. It still adds a description, because that is copy the
+				  manifest does not carry rather than a competing name for the
+				  section.
 				*/}
 				{DOC_CATEGORY_ORDER.filter(
 					(category) => category !== 'getting-started'
@@ -254,11 +258,7 @@ export default function DocsIndexPage() {
 					return (
 						<DocsSection
 							key={category}
-							heading={
-								category === 'packages'
-									? DOCS_PAGE_COPY.packagesHeading
-									: DOC_CATEGORY_LABELS[category]
-							}
+							heading={DOC_CATEGORY_LABELS[category]}
 							{...(category === 'packages'
 								? { description: DOCS_PAGE_COPY.packagesDescription }
 								: {})}

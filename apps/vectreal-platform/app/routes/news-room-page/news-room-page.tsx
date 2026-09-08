@@ -123,11 +123,15 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	const { articles, totalArticles, latestSlug, categories, filters } =
 		loaderData
 	const navigation = useNavigation()
-	// The search is a GET Form, so submitting it is a full navigation. Without
-	// this the button gave no sign anything had happened until the page changed.
-	const isSearching =
-		navigation.state === 'loading' &&
-		navigation.location?.pathname === '/news-room'
+	/*
+	  The search is a GET Form, so submitting it is a full navigation and the
+	  button gave no sign anything had happened until the page changed.
+
+	  Keyed on formMethod, not on the destination. Every category chip is also a
+	  navigation to /news-room, so matching the pathname alone put the submit
+	  button into "Searching" and disabled it whenever someone clicked a topic.
+	*/
+	const isSearching = navigation.state === 'loading' && !!navigation.formMethod
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const viewTrackedRef = useRef(false)
@@ -259,14 +263,21 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							</p>
 							<div className="mt-4 flex flex-wrap items-center justify-center gap-2">
 								{/*
-								  Clears the search and keeps the category. The old link went
-								  to a bare /news-room, so recovering from one typo also threw
-								  away the topic the reader had chosen.
+								  Whichever filter is actually set is the one offered. With a
+								  query, clearing it keeps the topic - the old link went to a
+								  bare /news-room, so recovering from one typo threw away the
+								  category too. With no query there is nothing to clear, and
+								  the same link would have pointed at the page the reader is
+								  already on: a primary action that goes nowhere.
 								*/}
 								<Button size="sm" asChild>
-									<Link to={buildNewsRoomPath(filters, { query: '' })}>
-										Clear search
-									</Link>
+									{filters.query ? (
+										<Link to={buildNewsRoomPath(filters, { query: '' })}>
+											Clear search
+										</Link>
+									) : (
+										<Link to="/news-room">Show all articles</Link>
+									)}
 								</Button>
 								<Button variant="ghost" size="sm" asChild>
 									<Link to="/sign-up">Create free account</Link>

@@ -233,7 +233,7 @@ export default function NewsRoomArticlePage({
 
 	if (!ArticleComponent) {
 		return (
-			<div className="container-page max-w-4xl pt-28 pb-20 text-center">
+			<div className="container-page max-w-4xl pt-32 pb-16 text-center">
 				<h1 className="text-h3 font-heading mb-2">Article unavailable</h1>
 				<p className="text-muted-foreground mb-6">
 					This article could not be rendered right now.

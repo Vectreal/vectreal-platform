@@ -301,7 +301,6 @@ export const DOCS_PAGE_COPY = {
 	previewHeading: 'What you are building toward',
 	previewDescription:
 		'That viewer is @vctrl/viewer, the package documented below. Publishing a scene gives you this snippet, and the scene renders wherever you paste it.',
-	packagesHeading: 'Packages',
 	packagesDescription: 'Open source, published to npm, and documented here.',
 	quickLinksLabel: 'Elsewhere'
 } as const

@@ -6,12 +6,64 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
 
-import rehypeTableScroll from './mdx/rehype-table-scroll'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
+
+/**
+ * Wraps every MDX `<table>` in a focusable horizontal scroll container.
+ *
+ * Markdown emits a bare `<table>` with nothing to hang `overflow-x` on, and the
+ * stylesheet's first answer to that was `display: block` on the table itself.
+ * It stopped the page scrolling sideways - `/docs/packages/viewer` has tables
+ * needing 2202px inside a 343px column - and it cost every table in the docs
+ * and the newsroom its implicit ARIA role, so rows and columns stopped existing
+ * for a screen reader. The overflow fix removed the semantics the element was
+ * there for.
+ *
+ * A wrapper gives the scroll container somewhere to live and leaves the table a
+ * table. `tabIndex` sits on the wrapper because a scrollable region with no
+ * focusable descendant cannot be reached by keyboard at all (WCAG 2.1.1); it is
+ * unconditional because whether a given table overflows is a question about the
+ * viewport, which this build step cannot answer. `mdx.module.css` selects the
+ * wrapper by data attribute, since it is a CSS module and would hash a class
+ * name this cannot know.
+ *
+ * Inline rather than its own module: importing a `.ts` file from `vite.config`
+ * without an extension warns under `configLoader: 'native'`, and with one it
+ * needs `allowImportingTsExtensions` across the whole app tsconfig.
+ */
+interface HastNode {
+	type: string
+	tagName?: string
+	properties?: Record<string, unknown>
+	children?: HastNode[]
+}
+
+const rehypeTableScroll = () => (tree: HastNode) => {
+	const wrap = (node: HastNode): void => {
+		if (!node.children) return
+
+		node.children = node.children.map((child) => {
+			wrap(child)
+
+			if (child.type !== 'element' || child.tagName !== 'table') {
+				return child
+			}
+
+			return {
+				type: 'element',
+				tagName: 'div',
+				properties: { 'data-table-scroll': '', tabIndex: 0 },
+				children: [child]
+			}
+		})
+	}
+
+	wrap(tree)
+}
 
 const prettyCodeOptions = {
 	theme: 'github-dark',

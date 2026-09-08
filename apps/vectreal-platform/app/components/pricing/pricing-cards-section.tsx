@@ -353,7 +353,6 @@ export interface PricingCardsSectionProps {
 	period: 'monthly' | 'annual'
 	onPeriodChange: (period: 'monthly' | 'annual') => void
 	prices: BillingCheckoutOptions | null
-	/** Include the Enterprise card (default true) */
 	/** User's current plan - shows "Current plan" badge */
 	activePlan?: Plan
 	/** Plan currently selected for checkout - highlighted ring */
