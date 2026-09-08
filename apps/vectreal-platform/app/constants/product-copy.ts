@@ -15,7 +15,11 @@
  * dynamically. Point users to /pricing for current rates.
  */
 
-import { formatLimitCount, formatLimitValue } from './limit-format'
+import {
+	formatLimitCount,
+	formatLimitValue,
+	PUBLISHED_COPY_LOCALE
+} from './limit-format'
 import { PLAN_LIMITS } from './plan-config'
 
 import type { EntitlementKey, LimitKey, Plan } from './plan-config'
@@ -201,24 +205,26 @@ export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
 /*
   These sentences are English prose that reaches machine readers: `/llms.txt`
   renders them verbatim and they are the `description` of every schema.org
-  `Offer`. Neither is rendered for a person with a locale - `/llms.txt` and
-  `/pricing` render per request inside the container, and the pages in the
-  prerender list are rendered during `docker build` - and neither the image nor
-  the build stage declares a `LANG`. So an unpinned `toLocaleString` would let
-  the published number depend on a container default nobody chose.
-  `buildWebSiteJsonLd` already declares `inLanguage: 'en-US'`; this agrees.
-
-  Only one interpolated number groups its digits today (Business's 2,000
+  `Offer`. Both follow `PUBLISHED_COPY_LOCALE`, which is where the reasoning
+  lives. Only one interpolated number groups its digits today (Business's 2,000
   scenes), but every one of them would change numbering system outside a
   Latin-digit locale.
 */
-const OFFER_LOCALE = 'en-US'
 
-const limit = (plan: Plan, key: LimitKey) =>
-	formatLimitValue(key, PLAN_LIMITS[plan][key], OFFER_LOCALE)
+/**
+ * A plan limit, written the way published copy writes it.
+ *
+ * Exported because two published pages state these numbers in prose and used to
+ * type them by hand: `docs/guides/upload.mdx` and the `api-keys-101` article.
+ * Both are prerendered, so a plan change left them stating a number nobody
+ * served, and the claims blocks that guarded them could only pin that a literal
+ * existed somewhere in `plan-config.ts`, never which plan owned it.
+ */
+export const publishedLimit = (plan: Plan, key: LimitKey) =>
+	formatLimitValue(key, PLAN_LIMITS[plan][key], PUBLISHED_COPY_LOCALE)
 
 const count = (plan: Plan, key: LimitKey, noun: string) =>
-	formatLimitCount(key, PLAN_LIMITS[plan][key], noun, OFFER_LOCALE)
+	formatLimitCount(key, PLAN_LIMITS[plan][key], noun, PUBLISHED_COPY_LOCALE)
 
 /*
   The sentences stay hand-written. What moves into an interpolation is a number,
@@ -231,9 +237,9 @@ const count = (plan: Plan, key: LimitKey, noun: string) =>
   which is why that entry was already written differently by hand.
 */
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
-	free: `${count('free', 'scenes_total', 'scene')}, ${limit('free', 'storage_bytes_total')} storage, ${count('free', 'scenes_published_concurrent', 'concurrent published scene')}. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.`,
-	pro: `${count('pro', 'scenes_total', 'scene')}, ${limit('pro', 'storage_bytes_total')} storage, ${count('pro', 'scenes_published_concurrent', 'concurrent published scene')}, ${count('pro', 'projects_total', 'project')}. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.`,
-	business: `${count('business', 'scenes_total', 'scene')}, ${limit('business', 'storage_bytes_total')} storage, ${count('business', 'scenes_published_concurrent', 'concurrent published scene')}. Adds team collaboration with role-based access (up to ${count('business', 'org_seats', 'seat')}) and priority support.`,
+	free: `${count('free', 'scenes_total', 'scene')}, ${publishedLimit('free', 'storage_bytes_total')} storage, ${count('free', 'scenes_published_concurrent', 'concurrent published scene')}. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.`,
+	pro: `${count('pro', 'scenes_total', 'scene')}, ${publishedLimit('pro', 'storage_bytes_total')} storage, ${count('pro', 'scenes_published_concurrent', 'concurrent published scene')}, ${count('pro', 'projects_total', 'project')}. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.`,
+	business: `${count('business', 'scenes_total', 'scene')}, ${publishedLimit('business', 'storage_bytes_total')} storage, ${count('business', 'scenes_published_concurrent', 'concurrent published scene')}. Adds team collaboration with role-based access (up to ${count('business', 'org_seats', 'seat')}) and priority support.`,
 	enterprise:
 		'Unlimited scenes, published scenes, projects and seats, with storage sized to your needs. Adds a dedicated support channel. Custom pricing via sales.'
 }

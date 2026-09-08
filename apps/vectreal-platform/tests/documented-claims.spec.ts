@@ -106,11 +106,15 @@ const CLAIM_CARRYING_DOCS = [
 	*/
 	'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx',
 	/*
-	  Both of these state plan numbers in prose, hardcoded, with no link to
-	  `plan-config.ts`. Both are prerendered and public. They were accurate when
-	  written, which is the whole problem: nothing would have gone red if a plan
-	  changed underneath them, and nothing did go red through the audit that
-	  found four limits nobody measured and twelve entitlements nobody shipped.
+	  Both of these state plan numbers in prose, and both are prerendered and
+	  public. They used to hardcode those numbers with no link to
+	  `plan-config.ts`, which was the whole problem: nothing would have gone red
+	  if a plan changed underneath them, and nothing did go red through the audit
+	  that found four limits nobody measured and twelve entitlements nobody
+	  shipped. They render the numbers from the config now, so what is left here
+	  is what rendering cannot replace - that a server enforces the limit, and
+	  that Enterprise is still the plan holding `null` for the limit each page
+	  names, which is the one value both pages still write by hand.
 	*/
 	'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
 	'apps/vectreal-platform/app/routes/news-room-page/articles/04_api-keys-101.mdx'

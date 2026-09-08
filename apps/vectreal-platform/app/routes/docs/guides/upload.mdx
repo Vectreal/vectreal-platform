@@ -1,3 +1,5 @@
+import { publishedLimit } from '../../../constants/product-copy'
+
 # Uploading Models
 
 Everything you need to know about getting 3D files into the Vectreal Publisher.
@@ -39,17 +41,21 @@ The parser identifies the `.gltf` root and resolves all referenced `.bin` and te
 
 ## File size and limits
 
-The Publisher enforces your plan's maximum scene size: 50 MB on Free, 200 MB on Pro, 500 MB on Business, and a custom limit on Enterprise. While a scene is over the limit the Save button becomes **Optimize to Save**, the optimizer opens automatically, and the server rejects the save until the scene fits. Run optimization first for production-grade assets (see [Optimizing & Configuring](/docs/guides/optimize)).
+The Publisher enforces your plan's maximum scene size: {publishedLimit('free', 'storage_bytes_per_scene')} on Free, {publishedLimit('pro', 'storage_bytes_per_scene')} on Pro, {publishedLimit('business', 'storage_bytes_per_scene')} on Business, and a custom limit on Enterprise. While a scene is over the limit the Save button becomes **Optimize to Save**, the optimizer opens automatically, and the server rejects the save until the scene fits. Run optimization first for production-grade assets (see [Optimizing & Configuring](/docs/guides/optimize)).
 
 {/* claims
-  # The three sizes above, tied to the config, and to the gate that applies it.
-  # This page is prerendered, so a plan change would leave it stating numbers
-  # nobody serves.
-  present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: 50 * 1024 * 1024
-  present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: 200 * 1024 * 1024
-  present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: 500 * 1024 * 1024
+  # The three sizes above are read from PLAN_LIMITS now, so the claims that
+  # pinned their literals are gone. They could only prove a number appeared
+  # somewhere in plan-config.ts, never that this page attributed it to the right
+  # plan - exchanging two plans' values kept every one of them green.
+  #
+  # The fourth value is still a word. Enterprise formats as "Custom" and the
+  # sentence wants "a custom limit", so it stays hand-written - and this claim
+  # holds it, because enterprise is the only plan holding null for this key.
+  present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: null
 
-  # "the server rejects the save" is the load-bearing half of the sentence.
+  # What rendering cannot replace is the other half of the sentence: that a
+  # server actually refuses the save. These two stay for that.
   present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts   limitKey: 'storage_bytes_per_scene'
   present  apps/vectreal-platform/app/lib/domain/scene/scene-size-limit.ts   isSceneOverSizeLimit
 */}

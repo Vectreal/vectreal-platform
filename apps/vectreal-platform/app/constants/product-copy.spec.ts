@@ -6,9 +6,12 @@ import { PLAN_OFFER_DESCRIPTIONS } from './product-copy'
  * The four offer descriptions, pinned whole.
  *
  * Nothing guarded these numbers before. The `present` claims over
- * `plan-config.ts` pin `storage_bytes_per_scene` and `api_keys_per_org`, which
- * these sentences never mention, and a claim is a whole-file substring test
- * anyway: it pins a multiset of literals, never a mapping from plan to value.
+ * `plan-config.ts` pinned `storage_bytes_per_scene` and `api_keys_per_org`,
+ * which these sentences never mention, and a claim is a whole-file substring
+ * test anyway: it pins a multiset of literals, never a mapping from plan to
+ * value. All but two are gone now, for that reason. The survivors are the two
+ * `null`s: each of those pages still writes Enterprise's own value by hand,
+ * because it formats as "Custom" or "Unlimited" and neither fits the sentence.
  * The numbers are read from `PLAN_LIMITS` now, so the mapping cannot be wrong,
  * and this is the first thing that has ever asserted the sentences themselves.
  *
