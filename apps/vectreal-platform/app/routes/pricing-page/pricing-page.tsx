@@ -65,7 +65,7 @@ export default function PricingPage() {
 			  answers a different question and gets a much wider gap before it. An
 			  even `space-y` between all three said they were three peers.
 			*/}
-			<div className="container-page pb-24">
+			<div className="container-page pb-32">
 				{/*
 				  Three self-serve plans, not four cards. Enterprise has no price,
 				  no checkout and a different next step, so rendering it as a
@@ -82,7 +82,7 @@ export default function PricingPage() {
 
 				<section
 					aria-labelledby="enterprise-heading"
-					className="ds-raised mt-8 rounded-2xl p-6 md:p-8"
+					className="border-border mt-12 border-t pt-8"
 				>
 					<div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
 						<div className="max-w-xl space-y-2">
@@ -104,7 +104,7 @@ export default function PricingPage() {
 					</div>
 				</section>
 
-				<section aria-labelledby="comparison-heading" className="mt-24">
+				<section aria-labelledby="comparison-heading" className="mt-32">
 					<div className="mb-8 max-w-xl space-y-2">
 						<h2 id="comparison-heading" className="text-h2 font-heading">
 							{PRICING_PAGE_COPY.comparisonHeading}

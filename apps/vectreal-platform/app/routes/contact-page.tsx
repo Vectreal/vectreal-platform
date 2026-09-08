@@ -1,6 +1,5 @@
 import { usePostHog } from '@posthog/react'
 import {
-	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
@@ -296,7 +295,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 					</BasicCard>
 
 					<div className="space-y-6">
-						<Card className="rounded-2xl">
+						<section className="border-border border-t pt-6">
 							<CardHeader>
 								<CardTitle className="text-h4">Where this goes</CardTitle>
 							</CardHeader>
@@ -319,9 +318,9 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									))}
 								</dl>
 							</CardContent>
-						</Card>
+						</section>
 
-						<Card className="rounded-2xl">
+						<section className="border-border border-t pt-6">
 							<CardHeader>
 								<CardTitle className="text-h4">Elsewhere</CardTitle>
 							</CardHeader>
@@ -340,7 +339,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									We usually reply within one business day.
 								</p>
 							</CardContent>
-						</Card>
+						</section>
 					</div>
 				</div>
 			</div>

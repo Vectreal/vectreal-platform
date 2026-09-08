@@ -47,6 +47,12 @@ const pagesIn = (category: DocCategory) =>
  * parent, so the rule fired on all of them and the Start here panel rendered
  * with no dividers while the sections below kept theirs.
  *
+ * The hairline and the radius are on different elements, and they have to be. A
+ * border follows its own box's `border-radius`, so a rounded row with a
+ * `border-bottom` draws a divider that curves up at both ends and reads as a
+ * rounded underline rather than a rule between two items. The wrapper is square
+ * and owns the line; the link is rounded and owns the hover.
+ *
  * The title states its colour. `globals.css` has `section p, section li {
  * color: var(--muted-foreground) }` in `@layer base`, so a row inside a list
  * inside a section inherits muted and the title renders the same colour as its
@@ -64,24 +70,26 @@ function DocsRow({
 	aside?: string
 }) {
 	return (
-		<Link
-			to={to}
-			className="group -mx-3 flex flex-col gap-1 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] sm:flex-row sm:items-baseline sm:gap-6"
-		>
-			<span className="text-h4 text-foreground sm:w-56 sm:shrink-0">
-				{title}
-			</span>
-			{description && (
-				<span className="text-muted-foreground text-body-sm flex-1">
-					{description}
+		<div className="border-border border-b last:border-b-0">
+			<Link
+				to={to}
+				className="group -mx-3 flex flex-col gap-1 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] sm:flex-row sm:items-baseline sm:gap-6"
+			>
+				<span className="text-h4 text-foreground sm:w-56 sm:shrink-0">
+					{title}
 				</span>
-			)}
-			{aside && (
-				<code className="text-muted-foreground text-label-xs font-mono sm:shrink-0">
-					{aside}
-				</code>
-			)}
-		</Link>
+				{description && (
+					<span className="text-muted-foreground text-body-sm flex-1">
+						{description}
+					</span>
+				)}
+				{aside && (
+					<code className="text-muted-foreground text-label-xs font-mono sm:shrink-0">
+						{aside}
+					</code>
+				)}
+			</Link>
+		</div>
 	)
 }
 
@@ -104,7 +112,7 @@ function DocsSection({
 					<p className="text-muted-foreground text-body-sm">{description}</p>
 				)}
 			</div>
-			<div className="divide-border flex flex-col divide-y">{children}</div>
+			<div className="flex flex-col">{children}</div>
 		</section>
 	)
 }
@@ -138,15 +146,20 @@ export default function DocsIndexPage() {
 				}
 			/>
 
-			<div className="container-page pb-24">
+			<div className="container-page pt-4 pb-32">
 				{/*
 				  The one path most readers want, given weight the other sections
 				  do not get. The page previously offered four equal doors and made
 				  the reader guess which one held their answer.
+
+				  Weight from position and a rule, not from a filled panel. A fill
+				  is the heaviest way to group three links, and it made the block
+				  read as a widget sitting on the page rather than as the page's
+				  own first section.
 				*/}
 				<section
 					aria-labelledby="start-here"
-					className="ds-raised rounded-2xl p-6 md:p-8"
+					className="border-border border-t pt-8"
 				>
 					<div className="mb-4 max-w-xl space-y-1">
 						<h2 id="start-here" className="text-h3 font-heading">
@@ -156,22 +169,19 @@ export default function DocsIndexPage() {
 							{DOCS_PAGE_COPY.startHereDescription}
 						</p>
 					</div>
-					<ol className="divide-border flex flex-col divide-y">
+					<div className="flex flex-col">
 						{gettingStarted.map((page) => (
-							<li key={page.slug}>
-								<DocsRow
-									to={`/docs/${page.slug}`}
-									title={page.title}
-									{...(page.description
-										? { description: page.description }
-										: {})}
-								/>
-							</li>
+							<DocsRow
+								key={page.slug}
+								to={`/docs/${page.slug}`}
+								title={page.title}
+								{...(page.description ? { description: page.description } : {})}
+							/>
 						))}
-					</ol>
+					</div>
 				</section>
 
-				<DocsSection heading="Guides" className="mt-20">
+				<DocsSection heading="Guides" className="mt-24">
 					{pagesIn('guides').map((page) => (
 						<DocsRow
 							key={page.slug}
@@ -190,7 +200,7 @@ export default function DocsIndexPage() {
 				<DocsSection
 					heading={DOCS_PAGE_COPY.packagesHeading}
 					description={DOCS_PAGE_COPY.packagesDescription}
-					className="mt-20"
+					className="mt-24"
 				>
 					{pagesIn('packages').map((page) => (
 						<DocsRow
@@ -205,7 +215,7 @@ export default function DocsIndexPage() {
 					))}
 				</DocsSection>
 
-				<DocsSection heading="Operations" className="mt-20">
+				<DocsSection heading="Operations" className="mt-24">
 					{[...pagesIn('operations'), ...pagesIn('contributing')].map(
 						(page) => (
 							<DocsRow

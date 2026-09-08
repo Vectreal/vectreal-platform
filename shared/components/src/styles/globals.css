@@ -762,9 +762,18 @@
 		letter-spacing: var(--tracking-eyebrow);
 		text-transform: uppercase;
 	}
+	/*
+	  Display and headline sit at 400, not 500.
+
+	  Every rung used to be 500, so the scale had no weight contrast at all and
+	  hierarchy came from size alone. At the display rung's 44-88px, 500 reads as
+	  bold - the size is already carrying the emphasis, and the extra weight only
+	  adds mass. The headings that sit inside panels keep 500, where they have to
+	  hold their own against body copy at a similar size.
+	*/
 	.text-display {
 		font-size: var(--text-display);
-		font-weight: 500;
+		font-weight: 400;
 		line-height: 1.02;
 		letter-spacing: var(--tracking-display);
 		text-wrap: balance;
@@ -777,14 +786,14 @@
 	*/
 	.text-headline {
 		font-size: var(--text-headline);
-		font-weight: 500;
+		font-weight: 400;
 		line-height: 1.06;
 		letter-spacing: var(--tracking-headline);
 		text-wrap: balance;
 	}
 	.text-h2 {
 		font-size: var(--text-h2);
-		font-weight: 500;
+		font-weight: 450;
 		line-height: 1.1;
 		letter-spacing: var(--tracking-h2);
 		text-wrap: balance;

@@ -26,24 +26,24 @@ const PageHero = ({
 	className
 }: PageHeroProps) => {
 	return (
-		<div
-			className={cn(
-				'from-orange/10 relative isolate overflow-hidden bg-linear-to-b via-transparent to-transparent',
-				className
-			)}
-		>
+		<div className={cn('relative isolate overflow-hidden', className)}>
 			{/*
-			  There were two decorative radial accents here. They never rendered:
+			  And there is no gradient either. A brand-tinted wash sat behind all
+			  four page heads, carrying no information - the one place in the
+			  system where the accent was pure decoration, which is what "one
+			  accent, doing one job" exists to prevent. The heading is the thing
+			  the top of the page is for.
+
+			  There were also two decorative radial accents here. They never rendered:
 			  the colour was written `hsl(var(--orange)/0.14)`, but --orange is a
 			  hex rather than HSL channels, so the whole `radial-gradient()` failed
 			  to parse. Every hero has shipped without them.
 
 			  Removed rather than repaired. Making them work restores a look nobody
 			  reviewed - at their written strength they wash the panel brown and
-			  leave a step where the hero meets the page. The top fade above is the
-			  hero's actual accent. If a glow is wanted, it should be designed
-			  against a real hero, and `rgb(var(--orange-rgb) / <alpha>)` is the
-			  spelling that works.
+			  leave a step where the hero meets the page. If a glow is ever wanted,
+			  it should be designed against a real hero, and
+			  `rgb(var(--orange-rgb) / <alpha>)` is the spelling that works.
 			*/}
 			<div className="container-page pt-24 pb-16">
 				<div className="space-y-4">
