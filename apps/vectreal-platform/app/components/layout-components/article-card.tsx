@@ -40,7 +40,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
 						`${article.readingTimeMinutes} min read`
 					]}
 				/>
-				<h3 className="group-hover:text-orange line-clamp-3 leading-snug font-medium transition-colors">
+				<h3 className="underline decoration-transparent underline-offset-4 group-hover:decoration-orange line-clamp-3 leading-snug font-medium transition-colors">
 					{article.title}
 				</h3>
 				<p className="text-muted-foreground text-body-sm line-clamp-3">

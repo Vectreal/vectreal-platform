@@ -39,7 +39,7 @@ export function CtaPanel({
 		>
 			{eyebrow ? <p className="text-orange text-eyebrow">{eyebrow}</p> : null}
 
-			<h2 className="text-h3 max-w-2xl">{heading}</h2>
+			<h2 className="text-h3 font-heading max-w-2xl">{heading}</h2>
 
 			{description ? (
 				<p className="text-muted-foreground max-w-2xl leading-relaxed">

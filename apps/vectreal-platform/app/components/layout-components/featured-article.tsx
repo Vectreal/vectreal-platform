@@ -66,7 +66,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 					</p>
 
 					<h2
-						className="text-headline vt-news-text mb-3 max-w-[19ch] text-balance transition-opacity group-hover:opacity-85"
+						className="text-headline font-heading vt-news-text mb-3 max-w-[19ch] text-balance transition-opacity group-hover:opacity-85"
 						style={{
 							color: SCENE_SURFACE.text,
 							viewTransitionName: morph.title

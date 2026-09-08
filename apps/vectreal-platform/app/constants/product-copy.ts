@@ -269,10 +269,9 @@ export const PRICING_PAGE_COPY = {
 export const DOCS_PAGE_COPY = {
 	heading: 'From your first upload to a production embed.',
 	description:
-		'Platform guides for uploading, optimizing and publishing 3D scenes, and API reference for the four open-source packages underneath.',
+		'Platform guides for uploading, optimizing and publishing 3D scenes, and API reference for the open-source packages underneath.',
 	startHereHeading: 'Start here',
-	startHereDescription:
-		'Three pages, in order. The last one ends with a published scene.',
+	startHereDescription: 'In order. The last one ends with a published scene.',
 	packagesHeading: 'Packages',
 	packagesDescription:
 		'Published to npm and usable without a Vectreal account.',

@@ -38,7 +38,7 @@ export function ArticleRow({ article, className }: ArticleRowProps) {
 			</span>
 
 			<div className="order-1 md:order-none">
-				<h3 className="text-h4 group-hover:text-orange mb-1.5 transition-colors duration-150">
+				<h3 className="text-h4 mb-1.5 underline decoration-transparent underline-offset-4 transition-colors duration-150 group-hover:decoration-orange">
 					{article.title}
 				</h3>
 				<p className="text-muted-foreground text-body-sm line-clamp-2 max-w-[68ch]">

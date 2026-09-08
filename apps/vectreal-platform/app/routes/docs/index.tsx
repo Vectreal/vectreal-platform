@@ -33,6 +33,11 @@ const pagesIn = (category: DocCategory) =>
  * the single most recognisable templated-layout pattern, and it also told the
  * reader less than this does: a card showed a category, a row shows the page
  * they are actually looking for.
+ *
+ * The hover mixes 8%, the overlay step, not 4%. These rows also render inside
+ * the raised "Start here" panel, and 4% is exactly what `.ds-raised` already
+ * paints - so at 4% the three most important rows on the page had no hover
+ * feedback at all while every row outside the panel did.
  */
 function DocsRow({
 	to,
@@ -48,7 +53,7 @@ function DocsRow({
 	return (
 		<Link
 			to={to}
-			className="group border-border -mx-3 flex flex-col gap-1 rounded-xl border-b px-3 py-4 transition-colors duration-150 last:border-b-0 hover:bg-[color-mix(in_oklch,var(--foreground)_4%,var(--background))] sm:flex-row sm:items-baseline sm:gap-6"
+			className="group border-border -mx-3 flex flex-col gap-1 rounded-xl border-b px-3 py-4 transition-colors duration-150 last:border-b-0 hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] sm:flex-row sm:items-baseline sm:gap-6"
 		>
 			<span className="text-h4 sm:w-56 sm:shrink-0">{title}</span>
 			{description && (
@@ -178,7 +183,9 @@ export default function DocsIndexPage() {
 							key={page.slug}
 							to={`/docs/${page.slug}`}
 							title={page.title}
-							aside={`npm i ${page.title}`}
+							{...(page.title.startsWith('@vctrl/')
+								? { aside: `npm i ${page.title}` }
+								: {})}
 							{...(page.description ? { description: page.description } : {})}
 						/>
 					))}
@@ -200,7 +207,7 @@ export default function DocsIndexPage() {
 						{DOCS_PAGE_COPY.quickLinksLabel}
 					</span>
 					<a
-						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
 						href="https://github.com/Vectreal/vectreal-platform"
 						target="_blank"
 						rel="noopener noreferrer"
@@ -208,13 +215,13 @@ export default function DocsIndexPage() {
 						GitHub
 					</a>
 					<Link
-						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
 						to="/publisher"
 					>
 						Publisher
 					</Link>
 					<a
-						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
 						href="https://discord.gg/A9a3nPkZw7"
 						target="_blank"
 						rel="noopener noreferrer"
@@ -222,7 +229,7 @@ export default function DocsIndexPage() {
 						Discord
 					</a>
 					<Link
-						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						className="text-body-sm underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange"
 						to="/changelog"
 					>
 						Changelog

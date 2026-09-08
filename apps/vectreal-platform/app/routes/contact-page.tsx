@@ -130,9 +130,14 @@ export function meta(_: Route.MetaArgs) {
 /*
   Brand orange on a light card measures 2.88:1, below AA for body text, so the
   accent marks the link through its underline rather than by colouring the text.
+
+  The underline is `decoration-muted-foreground`, not `decoration-border`:
+  `--border` against `--card` is about 1.1:1, which removed the resting
+  affordance along with the colour and left a reader with no cue that the text
+  was a link at all.
 */
 const LINK_CLASS =
-	'text-body-sm block underline decoration-border underline-offset-4 transition-colors duration-150 hover:decoration-orange'
+	'text-body-sm block underline decoration-muted-foreground underline-offset-4 transition-colors duration-150 hover:decoration-orange'
 
 const CONTACT_ROUTING = [
 	{

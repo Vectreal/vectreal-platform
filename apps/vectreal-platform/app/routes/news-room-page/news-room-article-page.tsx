@@ -234,7 +234,7 @@ export default function NewsRoomArticlePage({
 	if (!ArticleComponent) {
 		return (
 			<div className="container-page max-w-4xl pt-28 pb-20 text-center">
-				<h1 className="mb-2 text-2xl font-medium">Article unavailable</h1>
+				<h1 className="text-h3 font-heading mb-2">Article unavailable</h1>
 				<p className="text-muted-foreground mb-6">
 					This article could not be rendered right now.
 				</p>
@@ -319,13 +319,6 @@ export default function NewsRoomArticlePage({
 				<CtaPanel
 					eyebrow="Built for makers shipping in 3D"
 					heading="Ready to publish your first interactive scene?"
-					aside={
-						<>
-							<Badge variant="secondary">No credit card required</Badge>
-							<Badge variant="secondary">Free plan available</Badge>
-							<Badge variant="secondary">Embed in minutes</Badge>
-						</>
-					}
 					actions={
 						<>
 							<Button asChild>

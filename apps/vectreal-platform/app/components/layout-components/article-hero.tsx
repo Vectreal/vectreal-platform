@@ -76,7 +76,7 @@ export function ArticleHero({
 				</p>
 
 				<h1
-					className="text-headline vt-news-text max-w-3xl text-balance"
+					className="text-headline font-heading vt-news-text max-w-3xl text-balance"
 					style={{ color: SCENE_SURFACE.text, viewTransitionName: morph.title }}
 				>
 					{title}
