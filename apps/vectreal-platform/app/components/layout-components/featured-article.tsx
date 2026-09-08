@@ -76,7 +76,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 					</h2>
 
 					<p
-						className="vt-news-text mb-4 line-clamp-2 max-w-[56ch] text-sm leading-relaxed md:text-base"
+						className="vt-news-text text-body mb-4 line-clamp-2 max-w-[56ch]"
 						style={{
 							color: SCENE_SURFACE.excerptText,
 							viewTransitionName: morph.excerpt
@@ -86,7 +86,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 					</p>
 
 					<p
-						className="vt-news-text text-xs"
+						className="vt-news-text text-label-xs"
 						style={{
 							color: SCENE_SURFACE.mutedText,
 							viewTransitionName: morph.meta

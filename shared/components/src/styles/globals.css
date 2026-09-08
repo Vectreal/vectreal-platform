@@ -532,6 +532,28 @@
 	  more of the canvas than the sidebar can afford.
 	*/
 	--container-detail-panel: 26rem;
+
+	/*
+	  The reading measure for long-form prose.
+
+	  40rem is roughly 72-78 characters of DM Sans at the body rung, inside the
+	  45-75 band that reading research keeps landing on. The newsroom article
+	  column had no measure at all - `mdx.module.css` says so in as many words
+	  ("fills the flex content column, no max-width") - so on a wide screen a line
+	  of body copy ran past 1200px and the eye lost its place on every return
+	  sweep.
+
+	  Named `measure`, the typographic term, and deliberately not `prose`:
+	  Tailwind ships its own `--max-width-prose` (65ch), so a `--container-prose`
+	  would put two namespaces behind one `max-w-prose` utility and leave which
+	  one wins to resolution order.
+
+	  Declared here rather than in `:root` because a utility must generate from
+	  it, and `CONTAINER_SCALE` in `shared/utils` has to list it too or
+	  `container-scale.spec.ts` fails: tailwind-merge cannot resolve
+	  `max-w-measure` against `max-w-4xl` without knowing the name.
+	*/
+	--container-measure: 40rem;
 }
 
 @layer base {

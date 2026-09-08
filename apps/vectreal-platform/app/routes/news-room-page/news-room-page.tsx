@@ -180,24 +180,19 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 		<div>
 			<PageHero
 				eyebrow="Newsroom"
-				heading="Learn about what's new and what's next at Vectreal."
-				description="Launches, engineering notes, and product decisions. Cleanly published from MDX."
+				heading="Launches, engineering notes, and the decisions behind them."
+				description={`${articles.length} articles on building, optimizing and publishing 3D for the web.`}
 				actions={
 					<>
 						<Button asChild size="sm">
-							<Link to="/sign-up">
-								Start free
+							<Link to={latestStoryPath} viewTransition>
+								Read the latest
 								<ArrowRight className="h-3.5 w-3.5" />
 							</Link>
 						</Button>
-						<Button variant="secondary" size="sm" asChild>
-							<Link to={latestStoryPath} viewTransition>
-								Read latest
-							</Link>
+						<Button variant="ghost" size="sm" asChild>
+							<Link to="/sign-up">Start free</Link>
 						</Button>
-						<Badge variant="secondary">
-							{articles.length} published stories
-						</Badge>
 					</>
 				}
 			/>
@@ -313,8 +308,8 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				<section id="news-feed" className="scroll-mt-24 space-y-4">
 					{articles.length === 0 ? (
 						<div className="ds-raised rounded-2xl p-8 text-center md:p-10">
-							<h2 className="mb-1 text-lg font-semibold">No matching posts</h2>
-							<p className="text-muted-foreground text-sm">
+							<h2 className="text-h3 font-heading mb-1">No matching posts</h2>
+							<p className="text-muted-foreground text-body-sm">
 								Try another topic or clear your filters.
 							</p>
 							<div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -333,7 +328,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							) : null}
 
 							{remainingArticles.length > 0 ? (
-								<div className="border-border/60 mt-10 border-t">
+								<div className="border-border mt-10 border-t">
 									{remainingArticles.map((article) => (
 										<ArticleRow key={article.slug} article={article} />
 									))}

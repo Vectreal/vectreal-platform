@@ -47,7 +47,7 @@ const Z_INDEX_TIERS = [
  * Only names the app declares. Tailwind's own `--container-*` defaults
  * (`w-md`, `max-w-xl`) are already in the built-in groups.
  */
-const CONTAINER_SCALE = ['detail-panel']
+const CONTAINER_SCALE = ['detail-panel', 'measure']
 
 /**
  * The type scale declared as `.text-*` in `globals.css`, for the third time and

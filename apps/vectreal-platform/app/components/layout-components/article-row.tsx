@@ -28,20 +28,20 @@ export function ArticleRow({ article, className }: ArticleRowProps) {
 			to={`/news-room/${article.slug}`}
 			viewTransition
 			className={cn(
-				'border-border/60 group grid items-baseline gap-x-6 gap-y-1 border-b py-5',
+				'border-border group grid items-baseline gap-x-6 gap-y-1 border-b py-5',
 				'grid-cols-1 md:grid-cols-[7rem_1fr_6rem]',
 				className
 			)}
 		>
-			<span className="text-muted-foreground order-2 text-xs tabular-nums md:order-none md:pt-0.5">
+			<span className="text-muted-foreground text-label-xs order-2 tabular-nums md:order-none md:pt-0.5">
 				{formatNewsDate(article.publishedAt)}
 			</span>
 
 			<div className="order-1 md:order-none">
-				<h3 className="group-hover:text-orange mb-1.5 text-lg leading-snug font-medium tracking-tight transition-colors">
+				<h3 className="text-h4 group-hover:text-orange mb-1.5 transition-colors duration-150">
 					{article.title}
 				</h3>
-				<p className="text-muted-foreground line-clamp-2 max-w-[68ch] text-sm leading-relaxed">
+				<p className="text-muted-foreground text-body-sm line-clamp-2 max-w-[68ch]">
 					{article.excerpt}
 				</p>
 			</div>

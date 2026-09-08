@@ -43,7 +43,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
 				<h3 className="group-hover:text-orange line-clamp-3 leading-snug font-medium transition-colors">
 					{article.title}
 				</h3>
-				<p className="text-muted-foreground line-clamp-3 text-sm">
+				<p className="text-muted-foreground text-body-sm line-clamp-3">
 					{article.excerpt}
 				</p>
 			</BasicCard>

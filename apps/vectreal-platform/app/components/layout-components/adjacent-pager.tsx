@@ -43,7 +43,7 @@ function PagerLink({ link, direction }: PagerLinkProps) {
 			<p className="text-muted-foreground text-eyebrow">
 				{isPrevious ? 'Previous' : 'Next'}
 			</p>
-			<p className="text-sm leading-snug font-medium opacity-50 transition-opacity group-hover:opacity-100">
+			<p className="text-body-sm font-medium opacity-50 transition-opacity duration-150 group-hover:opacity-100">
 				{link.title}
 			</p>
 		</Link>

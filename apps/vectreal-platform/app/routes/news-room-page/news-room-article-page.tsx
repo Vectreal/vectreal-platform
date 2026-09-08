@@ -246,8 +246,15 @@ export default function NewsRoomArticlePage({
 	}
 
 	return (
-		<div className="container-page flex gap-0 py-16">
-			<main className="min-w-0 flex-1 lg:px-8">
+		<div className="container-page flex justify-center gap-0 py-16 lg:gap-12">
+			{/*
+			  `max-w-measure` is the whole point of this column. `mdx.module.css`
+			  says of `.docsContent` that it "fills the flex content column, no
+			  max-width", which on a wide screen ran a line of body copy past
+			  1200px - roughly 140 characters, about twice the distance an eye
+			  reliably returns from.
+			*/}
+			<main className="max-w-measure w-full min-w-0">
 				<Button variant="ghost" asChild className="mb-6 -ml-2">
 					<Link to="/news-room" viewTransition>
 						<ChevronLeft className="mr-1 h-4 w-4" />
@@ -255,18 +262,11 @@ export default function NewsRoomArticlePage({
 					</Link>
 				</Button>
 
-				<div className="mt-4 mb-6 -ml-1 flex flex-wrap items-center justify-between gap-2 px-2 md:mt-16">
-					<div className="flex items-center gap-2">
-						<Badge variant="secondary">
-							{article.readingTimeMinutes} min read
-						</Badge>
-						{article.draft ? (
-							<Badge variant="secondary" className="uppercase">
-								Draft
-							</Badge>
-						) : null}
-					</div>
-				</div>
+				{article.draft ? (
+					<Badge variant="secondary" className="mt-4 mb-6 uppercase">
+						Draft
+					</Badge>
+				) : null}
 
 				<ArticleHero
 					slug={article.slug}
@@ -278,18 +278,31 @@ export default function NewsRoomArticlePage({
 					{...(article.heroImage ? { heroImage: article.heroImage } : {})}
 				/>
 
-				<p className="text-muted-foreground text-body-lg mt-6 max-w-3xl px-2 leading-relaxed">
+				<p className="text-muted-foreground text-body-lg mt-6">
 					{article.excerpt}
 				</p>
 
-				<div className="mb-8 flex flex-wrap items-center gap-3 pt-4 md:mb-16">
+				{/*
+				  Author, reading time and the share control live in the rail on
+				  large screens, where they stay reachable for the whole article
+				  instead of scrolling away in the first screenful. Below `lg`
+				  there is no rail, so they appear here instead - the same
+				  components, rendered once, in whichever place exists.
+				*/}
+				<div className="border-border mt-8 mb-12 flex flex-wrap items-center gap-3 border-t pt-6 lg:hidden">
 					<AuthorCard author={article.author} />
-					<div className="ml-auto flex items-center gap-2">
-						<Button variant="secondary" size="sm" onClick={copyArticleLink}>
-							<Copy className="mr-2 h-3.5 w-3.5" />
-							{copied ? 'Copied' : 'Copy Link'}
-						</Button>
-					</div>
+					<span className="text-muted-foreground text-body-sm">
+						{article.readingTimeMinutes} min read
+					</span>
+					<Button
+						variant="secondary"
+						size="sm"
+						className="ml-auto"
+						onClick={copyArticleLink}
+					>
+						<Copy className="mr-2 h-3.5 w-3.5" />
+						{copied ? 'Copied' : 'Copy Link'}
+					</Button>
 				</div>
 
 				<article
@@ -361,17 +374,47 @@ export default function NewsRoomArticlePage({
 				)}
 			</main>
 
+			{/*
+			  The rail. It used to hold only a table of contents and only above
+			  `xl`, which meant most desktop readers got a 256px empty gutter and
+			  the article's own metadata scrolled away after the first screenful.
+
+			  It now carries what a reader actually reaches for mid-article -
+			  who wrote this, how long it runs, a link to copy - with the
+			  contents below it. `dvh`, not `vh`: `100vh` is the large viewport
+			  and overhangs persistent browser chrome.
+			*/}
 			<aside
-				className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 xl:block"
-				aria-label="On this page"
+				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 lg:block"
+				aria-label="About this article"
 			>
-				<div className="border-border/50 h-full border-l pl-4">
-					<p className="text-muted-foreground mb-3 px-1 text-xs font-medium tracking-wider uppercase">
-						On this page
-					</p>
-					<ScrollArea className="h-[calc(100vh-8rem)] pr-2 pb-8">
-						<DocsPageToc headings={headings} activeId={activeId} />
-					</ScrollArea>
+				<div className="border-border/50 flex h-full flex-col gap-6 border-l pl-6">
+					<div className="space-y-3">
+						<AuthorCard author={article.author} />
+						<p className="text-muted-foreground text-body-sm">
+							{article.readingTimeMinutes} min read
+						</p>
+						<Button
+							variant="secondary"
+							size="sm"
+							className="w-full"
+							onClick={copyArticleLink}
+						>
+							<Copy className="mr-2 h-3.5 w-3.5" />
+							{copied ? 'Copied' : 'Copy link'}
+						</Button>
+					</div>
+
+					{headings.length > 0 && (
+						<div className="border-border/50 min-h-0 flex-1 border-t pt-5">
+							<p className="text-muted-foreground text-eyebrow mb-3">
+								On this page
+							</p>
+							<ScrollArea className="h-full pr-2 pb-8">
+								<DocsPageToc headings={headings} activeId={activeId} />
+							</ScrollArea>
+						</div>
+					)}
 				</div>
 			</aside>
 		</div>

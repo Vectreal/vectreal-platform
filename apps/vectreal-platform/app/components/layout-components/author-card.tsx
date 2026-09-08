@@ -104,7 +104,7 @@ export function AuthorCard({ author }: AuthorCardProps) {
 				<div className="flex flex-col gap-3">
 					<AuthorChip author={author} />
 					<div className="min-w-0 flex-1">
-						<p className="text-muted-foreground text-sm leading-relaxed">
+						<p className="text-muted-foreground text-body-sm">
 							{author.bio ?? 'Author at Vectreal.'}
 						</p>
 						{author.linkedinUrl ? (
