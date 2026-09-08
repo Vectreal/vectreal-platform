@@ -177,14 +177,21 @@ export default function DocsIndexPage() {
 					className="grid items-center gap-8 md:grid-cols-2"
 				>
 					<DocsScenePreview />
-					<div className="space-y-4">
+					{/* min-w-0 so the snippet's own scroll container can shrink; a grid
+					    item defaults to min-width: auto and would size to the code. */}
+					<div className="min-w-0 space-y-4">
 						<h2 id="what-you-make" className="text-h3 font-heading">
 							{DOCS_PAGE_COPY.previewHeading}
 						</h2>
 						<p className="text-muted-foreground text-body">
 							{DOCS_PAGE_COPY.previewDescription}
 						</p>
-						<pre className="ds-sunken text-label-xs overflow-x-auto rounded-xl p-4 font-mono leading-relaxed">
+						{/*
+						  Same four values as the `pre` rule in `styles/mdx.module.css`,
+						  which renders every code block on the pages this one links to.
+						  It was 11px here and 14px there.
+						*/}
+						<pre className="ds-sunken text-body-sm overflow-x-auto rounded-xl p-4 font-mono">
 							<code>{EMBED_SNIPPET}</code>
 						</pre>
 					</div>
@@ -202,7 +209,7 @@ export default function DocsIndexPage() {
 				  list, where it separates equivalent things - which is exactly
 				  where the rows below still use one.
 				*/}
-				<section aria-labelledby="start-here" className="">
+				<section aria-labelledby="start-here" className="mt-32">
 					<div className="mb-4 max-w-xl space-y-1">
 						<h2 id="start-here" className="text-h3 font-heading">
 							{DOCS_PAGE_COPY.startHereHeading}

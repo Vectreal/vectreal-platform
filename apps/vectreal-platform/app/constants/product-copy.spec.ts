@@ -66,16 +66,23 @@ describe('claims the copy makes about the plans', () => {
 	})
 
 	it('never claims less than a plan actually saves', () => {
-		// "up to" has to be an upper bound. The old hand-written "20%" was not:
-		// Pro saves 21%, so the badge understated its own best case.
+		/*
+		  "up to" has to be an upper bound. The old hand-written "20%" was not:
+		  Pro saves 21%, so the badge understated its own best case.
+
+		  The bound is checked against the same literal the test above pins, not
+		  against ANNUAL_DISCOUNT_CLAIM. Reading the number back out of the claim
+		  compares the derivation to itself - both sides move with the prices, so
+		  it holds for any input and fails for none. That is the tautology the
+		  comment above describes, and it grew back here.
+		*/
 		const best = Math.max(
 			...Object.values(PLAN_FALLBACK_PRICES).map(({ monthly, annualMonthly }) =>
 				Math.round((1 - annualMonthly / monthly) * 100)
 			)
 		)
-		const claimed = Number(ANNUAL_DISCOUNT_CLAIM.match(/(\d+)%/)?.[1])
 
-		expect(claimed).toBeGreaterThanOrEqual(best)
+		expect(21).toBeGreaterThanOrEqual(best)
 	})
 
 	it('shows every entitlement in the comparison grid', () => {

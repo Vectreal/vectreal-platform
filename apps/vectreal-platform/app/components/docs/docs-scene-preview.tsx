@@ -20,15 +20,24 @@ export function DocsScenePreview() {
 		setIsMounted(true)
 	}, [])
 
+	// min-w-0 because the canvas has an intrinsic width and a grid or flex item
+	// defaults to min-width: auto, so without it the track sizes to the canvas
+	// and the page scrolls sideways on a phone.
 	const frame =
-		'ds-sunken relative aspect-[4/3] w-full overflow-hidden rounded-2xl'
+		'ds-sunken relative aspect-[4/3] w-full min-w-0 overflow-hidden rounded-2xl'
 
 	if (!isMounted) {
 		return <div className={frame} aria-hidden="true" />
 	}
 
+	/*
+	  aria-hidden on the mounted branch too, not just the placeholder. The cube
+	  is decoration; without it the reader is handed an unnamed <canvas> plus the
+	  viewer's own role="status" aria-live overlay, so a spinning box announces
+	  its loading state on a page whose job is routing people to documentation.
+	*/
 	return (
-		<div className={frame}>
+		<div className={frame} aria-hidden="true">
 			<Suspense fallback={null}>
 				<DocsScenePreviewClient />
 			</Suspense>

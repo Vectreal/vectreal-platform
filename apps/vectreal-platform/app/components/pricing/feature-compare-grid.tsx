@@ -21,11 +21,26 @@ const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
 // Sub-components
 // ---------------------------------------------------------------------------
 
+/*
+  The word carries the meaning; the glyph decorates it.
+
+  Lucide marks an icon with no children aria-hidden, so a cell holding nothing
+  but a Check announced as empty - the whole matrix read as blank cells, and
+  granted was distinguishable only by shape and colour. The sr-only text fixes
+  both at once: it names the state for assistive tech and stops colour being the
+  sole carrier.
+*/
 function FeatureCheck({ granted }: { granted: boolean }) {
-	if (granted) {
-		return <Check className="text-primary mx-auto h-4 w-4" />
-	}
-	return <Minus className="text-muted-foreground mx-auto h-4 w-4" />
+	return (
+		<>
+			<span className="sr-only">{granted ? 'Included' : 'Not included'}</span>
+			{granted ? (
+				<Check className="text-primary mx-auto h-4 w-4" />
+			) : (
+				<Minus className="text-muted-foreground mx-auto h-4 w-4" />
+			)}
+		</>
+	)
 }
 
 function FeatureMatrixRow({
@@ -37,7 +52,9 @@ function FeatureMatrixRow({
 }) {
 	return (
 		<tr className="border-border border-b last:border-0">
-			<td className="py-3 pr-4 text-sm">{label}</td>
+			<th scope="row" className="text-body-sm py-3 pr-4 font-normal">
+				{label}
+			</th>
 			{plans.map(({ plan, granted }) => (
 				<td key={plan} className="py-3 text-center">
 					<FeatureCheck granted={granted} />
@@ -53,17 +70,34 @@ function FeatureMatrixRow({
 
 export function FeatureCompareGrid() {
 	return (
-		<section className="space-y-4">
-			<div className="overflow-x-auto">
+		<section>
+			{/*
+			  tabIndex on the scroll container, because it holds no focusable
+			  descendant of its own. Without it the table scrolls by mouse only, and
+			  the columns past 640px - Business and Enterprise - are unreachable by
+			  keyboard on any narrow screen.
+			*/}
+			<div
+				className="overflow-x-auto"
+				tabIndex={0}
+				role="region"
+				aria-label="Plan comparison"
+			>
 				<table className="w-full min-w-[640px] table-auto text-left">
+					<caption className="sr-only">
+						Entitlements by plan. Each row is a feature; each column is a plan.
+					</caption>
 					<thead>
 						<tr className="border-border border-b">
-							<th className="pr-4 pb-4 text-sm font-medium" />
+							<th scope="col" className="pr-4 pb-4">
+								<span className="sr-only">Feature</span>
+							</th>
 							{PLANS.map((plan) => (
 								<th
+									scope="col"
 									key={plan}
 									className={cn(
-										'pb-4 text-center text-sm font-semibold',
+										'text-body-sm pb-4 text-center font-medium',
 										PLAN_HIGHLIGHTED[plan] && 'text-primary'
 									)}
 								>
@@ -75,13 +109,14 @@ export function FeatureCompareGrid() {
 					<tbody>
 						{ENTITLEMENT_FEATURE_GROUPS.map(({ label, features }) => (
 							<React.Fragment key={label}>
-								<tr className="bg-muted/30">
-									<td
+								<tr className="ds-raised">
+									<th
+										scope="colgroup"
 										colSpan={PLANS.length + 1}
 										className="text-eyebrow py-2 pr-4"
 									>
 										{label}
-									</td>
+									</th>
 								</tr>
 								{features.map(({ key, label: featureLabel }) => {
 									const typedKey =

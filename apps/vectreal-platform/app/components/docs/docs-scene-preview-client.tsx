@@ -49,8 +49,14 @@ function ChromeCube() {
 			radius={0.22}
 			smoothness={8}
 		>
-			{/* Matte chrome: fully metallic, but rough enough to scatter rather than mirror. */}
-			<meshStandardMaterial metalness={1} roughness={0.38} color="#c8c8c8" />
+			{/*
+			  Not fully metallic. At metalness 1 the material has no diffuse
+			  component at all, so it renders as nothing but a reflection of the
+			  environment - and the studio preset is dark, which made the cube read
+			  as silver on the dark theme and as a black blob on the light one. Held
+			  below 1 it keeps a value of its own and reads the same in both.
+			*/}
+			<meshStandardMaterial metalness={0.6} roughness={0.32} color="#d4d6d8" />
 		</RoundedBox>
 	)
 }

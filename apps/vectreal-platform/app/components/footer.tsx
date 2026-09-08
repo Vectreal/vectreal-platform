@@ -173,7 +173,7 @@ export const Footer = () => {
 						</div>
 					</div>
 				</div>
-				<div className="relative flex w-full items-center justify-end py-4 max-sm:flex-col">
+				<div className="container-page relative flex items-center justify-end py-4 max-sm:flex-col">
 					<div className="flex grow items-center gap-4">
 						<Link
 							to="https://www.producthunt.com/products/vectreal?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-vectreal-platform"

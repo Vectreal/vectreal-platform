@@ -2,8 +2,7 @@ import { usePostHog } from '@posthog/react'
 import {
 	CardContent,
 	CardDescription,
-	CardHeader,
-	CardTitle
+	CardHeader
 } from '@shared/components/ui/card'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Mail } from 'lucide-react'
@@ -218,9 +217,14 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
 					<BasicCard>
 						<CardHeader>
-							<CardTitle className="text-h3 font-heading">
-								Send a message
-							</CardTitle>
+							{/*
+							  A real <h2>, not CardTitle. CardTitle renders a <div>, so all
+							  three section titles on this page were styled text and the page
+							  offered nothing below the h1 to navigate by. Its defaults also
+							  carry `capitalize`, which is what rendered this "Send A Message"
+							  after the copy was deliberately set in sentence case.
+							*/}
+							<h2 className="text-h3 font-heading">Send a message</h2>
 							<CardDescription>
 								We usually respond within one business day.
 							</CardDescription>
@@ -297,7 +301,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 					<div className="space-y-6">
 						<section>
 							<CardHeader>
-								<CardTitle className="text-h4">Where this goes</CardTitle>
+								<h2 className="text-h4">Where this goes</h2>
 							</CardHeader>
 							<CardContent>
 								{/*
@@ -322,7 +326,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 
 						<section>
 							<CardHeader>
-								<CardTitle className="text-h4">Elsewhere</CardTitle>
+								<h2 className="text-h4">Elsewhere</h2>
 							</CardHeader>
 							<CardContent className="space-y-3">
 								<Link className={LINK_CLASS} to="/pricing">

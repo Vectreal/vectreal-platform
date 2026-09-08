@@ -132,7 +132,14 @@ export default function DocsLayout() {
 							<BreadcrumbItem>
 								<BreadcrumbLink asChild>
 									<span>
-										<Link className="max-lg:hidden" to="/docs" viewTransition>
+										{/*
+										  max-xl, not max-lg. This link and the sheet trigger below
+										  are two spellings of one breadcrumb item and must never
+										  both render. The sheet moved to `xl:hidden` when it took
+										  over the table of contents; this did not follow, so
+										  1024-1279px read "Docs / Docs".
+										*/}
+										<Link className="max-xl:hidden" to="/docs" viewTransition>
 											Docs
 										</Link>
 
@@ -141,9 +148,18 @@ export default function DocsLayout() {
 											headings={headings}
 											activeId={activeId}
 										>
-											<span className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm font-medium">
+											{/*
+											  A real button. `SheetTrigger asChild` adds no tabIndex
+											  of its own, so a span here left the docs sidebar and
+											  the page contents reachable by mouse only - and below
+											  xl that is the entire navigation for the docs section.
+											*/}
+											<button
+												type="button"
+												className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm font-medium"
+											>
 												<Menu className="h-5 w-5" /> Docs
-											</span>
+											</button>
 										</DocsMobileNavigation>
 									</span>
 								</BreadcrumbLink>

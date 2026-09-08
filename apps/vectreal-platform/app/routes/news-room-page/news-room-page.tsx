@@ -139,7 +139,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	])
 
 	return (
-		<div>
+		<main>
 			<PageHero
 				heading="Launches and engineering notes from building Vectreal."
 				description={`${totalArticles} articles on building, optimizing and publishing 3D for the web.`}
@@ -274,7 +274,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					)}
 				</section>
 			</div>
-		</div>
+		</main>
 	)
 }
 

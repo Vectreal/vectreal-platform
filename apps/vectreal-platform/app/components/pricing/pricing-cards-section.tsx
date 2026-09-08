@@ -253,28 +253,26 @@ function PlanCard({
 			{/* CTA footer - hidden in select mode for current plan; otherwise shown */}
 			{!isSelectMode && (
 				<CardFooter>
-					{ctaHref ? (
-						<Link to={ctaHref} className="w-full">
-							<Button
-								className="w-full"
-								variant={highlighted ? 'default' : 'secondary'}
-							>
-								{cta}
-							</Button>
-						</Link>
-					) : (
+					{/*
+					  asChild, so this renders one <a> rather than a <button> nested
+					  inside one. The nested form was two tab stops for a single action
+					  and left the role ambiguous; the page's own enterprise CTA already
+					  had it right, so the two spellings disagreed on one route.
+					*/}
+					<Button
+						asChild
+						className="w-full"
+						variant={highlighted ? 'default' : 'secondary'}
+					>
 						<Link
-							to={`/dashboard/billing/upgrade?plan=${plan}&period=${period}`}
-							className="w-full"
+							to={
+								ctaHref ??
+								`/dashboard/billing/upgrade?plan=${plan}&period=${period}`
+							}
 						>
-							<Button
-								className="w-full"
-								variant={highlighted ? 'default' : 'secondary'}
-							>
-								{cta}
-							</Button>
+							{cta}
 						</Link>
-					)}
+					</Button>
 				</CardFooter>
 			)}
 			{isSelectMode && !isActive && isSelectable && (
@@ -319,6 +317,14 @@ function PlanCard({
 // PricingCardsSection (exported)
 // ---------------------------------------------------------------------------
 
+const PERIOD_BUTTON_CLASS =
+	'text-body-sm flex items-center rounded-lg px-4 py-1.5 font-medium transition-colors'
+
+const periodStateClass = (selected: boolean) =>
+	selected
+		? 'bg-background text-foreground'
+		: 'text-muted-foreground hover:text-foreground'
+
 const ALL_PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
 const PLANS_WITHOUT_ENTERPRISE: Plan[] = ['free', 'pro', 'business']
 
@@ -352,33 +358,45 @@ export function PricingCardsSection({
 
 	return (
 		<section>
-			{/* Billing period toggle */}
+			{/*
+			  aria-pressed carries the selection, because the fill alone cannot: a
+			  screen-reader user got two identically-named buttons and no way to tell
+			  which period the prices below belonged to.
+
+			  The track is a sunken well and the selected control sits at page level
+			  on top of it, so selection is a step on the ladder rather than a shadow
+			  on a page surface. Radii match: the control is one step tighter than the
+			  track it insets into.
+			*/}
 			<div className="mb-8 flex justify-center">
-				<div className="bg-muted flex items-center gap-1 rounded-2xl p-1">
+				<div
+					role="group"
+					aria-label="Billing period"
+					className="ds-sunken flex items-center gap-1 rounded-xl p-1"
+				>
 					<button
 						type="button"
+						aria-pressed={period === 'monthly'}
 						onClick={() => onPeriodChange('monthly')}
 						className={cn(
-							'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
-							period === 'monthly'
-								? 'bg-background text-foreground shadow-sm'
-								: 'text-muted-foreground hover:text-foreground'
+							PERIOD_BUTTON_CLASS,
+							periodStateClass(period === 'monthly')
 						)}
 					>
 						Monthly
 					</button>
 					<button
 						type="button"
+						aria-pressed={period === 'annual'}
 						onClick={() => onPeriodChange('annual')}
 						className={cn(
-							'flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
-							period === 'annual'
-								? 'bg-background text-foreground shadow-sm'
-								: 'text-muted-foreground hover:text-foreground'
+							PERIOD_BUTTON_CLASS,
+							'gap-1.5',
+							periodStateClass(period === 'annual')
 						)}
 					>
 						Annual
-						<Badge variant="secondary" className="text-xs">
+						<Badge variant="secondary" className="text-label-xs">
 							{ANNUAL_DISCOUNT_CLAIM}
 						</Badge>
 					</button>
