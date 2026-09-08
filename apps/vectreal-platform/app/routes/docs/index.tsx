@@ -69,7 +69,7 @@ export default function DocsIndexPage() {
 			/>
 
 			{/* Section cards */}
-			<div className="mx-auto max-w-7xl px-6 pb-20">
+			<div className="container-page pb-20">
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 					{DOCS_SECTIONS.map(({ icon: Icon, title, description, href }) => (
 						<Link key={href} to={href} className="group outline-none">

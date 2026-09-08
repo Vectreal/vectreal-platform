@@ -42,7 +42,7 @@ const PageHero = ({
 			  against a real hero, and `rgb(var(--orange-rgb) / <alpha>)` is the
 			  spelling that works.
 			*/}
-			<div className="mx-auto max-w-7xl px-6 pt-24 pb-16">
+			<div className="container-page pt-24 pb-16">
 				<div className="space-y-4">
 					{eyebrow && (
 						<p className="text-muted-foreground text-xs font-semibold tracking-[0.22em] uppercase">

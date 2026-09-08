@@ -115,7 +115,7 @@ export default function DocsLayout() {
 	const categoryPage = categorySlug ? getDocPage(categorySlug) : undefined
 
 	return (
-		<div className="mx-auto flex w-full max-w-7xl gap-0 px-4 pb-16">
+		<div className="container-page flex gap-0 pb-16">
 			<aside
 				className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 shrink-0 lg:block"
 				aria-label="Docs navigation"

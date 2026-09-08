@@ -60,7 +60,7 @@ export default function PricingPage() {
 				}
 			/>
 
-			<div className="mx-auto max-w-7xl space-y-20 px-6 py-16">
+			<div className="container-page space-y-20 py-16">
 				<PricingCardsSection
 					period={period}
 					onPeriodChange={setPeriod}
