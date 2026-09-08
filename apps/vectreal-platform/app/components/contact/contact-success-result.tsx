@@ -18,17 +18,17 @@ export function ContactSuccessResult({
 				<CheckCircle2 className="h-5 w-5" />
 				Your message has been sent
 			</div>
-			<p className="text-success-foreground/70 text-sm">
+			<p className="text-success-foreground/70 text-body-sm">
 				Thanks for reaching out. Our team will get back to you within one
 				business day.
 			</p>
 			{referenceCode ? (
-				<p className="text-success-foreground/70 text-sm">
+				<p className="text-success-foreground/70 text-body-sm">
 					Reference code: <span className="font-semibold">{referenceCode}</span>
 				</p>
 			) : null}
 			{notice ? (
-				<p className="text-warning-muted-foreground text-sm">{notice}</p>
+				<p className="text-warning-muted-foreground text-body-sm">{notice}</p>
 			) : null}
 			<Button type="button" variant="outline" onClick={onDismiss}>
 				Send another message

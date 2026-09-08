@@ -7,7 +7,7 @@ import {
 	CardTitle
 } from '@shared/components/ui/card'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { LifeBuoy, Mail, Sparkles, Users } from 'lucide-react'
+import { Mail } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { data, Link, useLoaderData, useNavigation } from 'react-router'
 
@@ -127,6 +127,30 @@ export function meta(_: Route.MetaArgs) {
 	return buildPageMeta(LEGAL_PAGE_SEO_BY_PATH['/contact'])
 }
 
+/*
+  Brand orange on a light card measures 2.88:1, below AA for body text, so the
+  accent marks the link through its underline rather than by colouring the text.
+*/
+const LINK_CLASS =
+	'text-body-sm block underline decoration-border underline-offset-4 transition-colors duration-150 hover:decoration-orange'
+
+const CONTACT_ROUTING = [
+	{
+		term: 'Support',
+		definition: 'Integration issues, bugs, or workflow questions.'
+	},
+	{
+		term: 'Sales',
+		definition:
+			'Business and enterprise questions, security review, and custom contracts.'
+	},
+	{
+		term: 'Partnerships',
+		definition:
+			'Agencies, platform partnerships, and ecosystem collaboration.'
+	}
+] as const
+
 export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const { source, isAuthenticated, turnstileSiteKey } =
 		useLoaderData<typeof loader>()
@@ -192,7 +216,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
 					<BasicCard>
 						<CardHeader>
-							<CardTitle className="text-2xl">Send a Message</CardTitle>
+							<CardTitle className="text-h3 font-heading">Send a message</CardTitle>
 							<CardDescription>
 								We usually respond within one business day.
 							</CardDescription>
@@ -269,61 +293,44 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 					<div className="space-y-6">
 						<Card className="rounded-2xl">
 							<CardHeader>
-								<CardTitle className="text-lg">
-									Routes to the right team
-								</CardTitle>
+								<CardTitle className="text-h4">Where this goes</CardTitle>
 							</CardHeader>
-							<CardContent className="space-y-4 text-sm">
-								<div className="flex items-start gap-3">
-									<LifeBuoy className="text-orange mt-0.5 h-4 w-4" />
-									<div>
-										<p className="font-medium">Support</p>
-										<p className="text-muted-foreground">
-											Integration issues, bugs, or workflow questions.
-										</p>
-									</div>
-								</div>
-								<div className="flex items-start gap-3">
-									<Sparkles className="text-orange mt-0.5 h-4 w-4" />
-									<div>
-										<p className="font-medium">Sales</p>
-										<p className="text-muted-foreground">
-											Business and enterprise questions, security review, and
-											custom contracts.
-										</p>
-									</div>
-								</div>
-								<div className="flex items-start gap-3">
-									<Users className="text-orange mt-0.5 h-4 w-4" />
-									<div>
-										<p className="font-medium">Partnerships</p>
-										<p className="text-muted-foreground">
-											Agencies, platform partnerships, and ecosystem
-											collaboration.
-										</p>
-									</div>
-								</div>
+							<CardContent>
+								{/*
+								  A definition list, not three icon-title-description
+								  rows. The icons were decorative, they were the
+								  vertical form of the icon-triplet pattern, and in
+								  brand orange they measured 2.88:1 on this card -
+								  under the 3:1 floor for a graphical object.
+								*/}
+								<dl className="space-y-4">
+									{CONTACT_ROUTING.map(({ term, definition }) => (
+										<div key={term}>
+											<dt className="text-body-sm font-medium">{term}</dt>
+											<dd className="text-muted-foreground text-body-sm">
+												{definition}
+											</dd>
+										</div>
+									))}
+								</dl>
 							</CardContent>
 						</Card>
 
 						<Card className="rounded-2xl">
 							<CardHeader>
-								<CardTitle className="text-lg">Quick links</CardTitle>
+								<CardTitle className="text-h4">Elsewhere</CardTitle>
 							</CardHeader>
-							<CardContent className="space-y-3 text-sm">
-								<Link className="text-orange block underline" to="/pricing">
+							<CardContent className="space-y-3">
+								<Link className={LINK_CLASS} to="/pricing">
 									View pricing and plans
 								</Link>
-								<Link className="text-orange block underline" to="/docs">
+								<Link className={LINK_CLASS} to="/docs">
 									Read integration docs
 								</Link>
-								<a
-									className="text-orange block underline"
-									href="mailto:info@vectreal.com"
-								>
+								<a className={LINK_CLASS} href="mailto:info@vectreal.com">
 									Email the team directly
 								</a>
-								<p className="text-muted-foreground flex items-center gap-2 pt-2 text-xs">
+								<p className="text-muted-foreground text-label-xs flex items-center gap-2 pt-2">
 									<Mail className="h-3.5 w-3.5" />
 									We usually reply within one business day.
 								</p>

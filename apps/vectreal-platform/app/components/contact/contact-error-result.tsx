@@ -16,7 +16,7 @@ export function ContactErrorResult({
 				<AlertCircle className="h-5 w-5" />
 				We could not send your message
 			</div>
-			<p className="text-sm">{error ?? 'Please try again in a moment.'}</p>
+			<p className="text-body-sm">{error ?? 'Please try again in a moment.'}</p>
 			<Button type="button" variant="outline" onClick={onDismiss}>
 				Try again
 			</Button>
