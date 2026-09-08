@@ -9,7 +9,10 @@ Derived from one `--foreground` mix, so it tracks the theme automatically.
 - `ds-raised` (4%) — cards, table containers, anything sitting on the page
 - `ds-overlay` (8%) — popovers, menus, rows hovered on top of raised
 - `ds-sunken` (2.5%) — wells and inputs that should recede
-- `ds-divider` — only where a divider carries meaning, never to draw a box
+- `ds-divider` — only where a divider carries meaning, never to draw a box.
+  Note it sets a **background-color**, not a border colour: it is the fill of a
+  hairline *element*, so putting it on a row alongside `border-b` tints the whole
+  row instead of its border. A border that needs a colour wants `border-border`.
 - `ds-raised-interactive` / `ds-overlay-interactive` — hover lifts exactly one
   step. Use these rather than pairing a `ds-*` class with a hand-written hover
   background: call sites had drifted to 6%, 8%, 12% and 14%, so equivalent rows

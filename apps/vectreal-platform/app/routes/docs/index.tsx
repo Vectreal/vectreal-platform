@@ -1,9 +1,10 @@
 import { Button } from '@shared/components/ui/button'
-import { CardContent, CardHeader, CardTitle } from '@shared/components/ui/card'
-import { ArrowRight, BookOpen, Code2, GitBranch, Rocket } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { BasicCard, PageHero } from '../../components/layout-components'
+import { PageHero } from '../../components/layout-components'
+import { DOCS_PAGE_COPY } from '../../constants/product-copy'
+import { docsPages, type DocCategory } from '../../lib/docs/docs-manifest'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
@@ -11,47 +12,97 @@ export function meta() {
 	return buildPageMeta(PUBLIC_SEO_PAGES.docs)
 }
 
-const DOCS_SECTIONS = [
-	{
-		icon: Rocket,
-		title: 'Getting Started',
-		description:
-			'Local setup, prerequisites, and your first 3D model walkthrough.',
-		href: '/docs/getting-started'
-	},
-	{
-		icon: BookOpen,
-		title: 'Guides',
-		description: 'Upload, optimize, publish, and embed 3D content end to end.',
-		href: '/docs/guides/upload'
-	},
-	{
-		icon: Code2,
-		title: 'Package Reference',
-		description:
-			'API docs for @vctrl/embed, @vctrl/viewer, @vctrl/hooks, and @vctrl/core.',
-		href: '/docs/packages/viewer'
-	},
-	{
-		icon: GitBranch,
-		title: 'Contributing',
-		description: 'Branching model, commit conventions, and PR process.',
-		href: '/docs/contributing'
-	}
-] as const
+/*
+  The page's structure is read out of the docs manifest rather than restated.
+
+  It used to hold its own DOCS_SECTIONS array of four categories, which meant
+  the landing page and the sidebar were two lists of the same thing and only one
+  of them was checked. Deriving it also means a new docs page appears here the
+  day it is added to the manifest, which is the only place a contributor is
+  told to register one.
+*/
+const pagesIn = (category: DocCategory) =>
+	docsPages
+		.filter((page) => page.category === category)
+		.sort((a, b) => a.order - b.order)
+
+/**
+ * One docs page as a directory row.
+ *
+ * Rows rather than cards. Four identical icon-over-title-over-one-line cards is
+ * the single most recognisable templated-layout pattern, and it also told the
+ * reader less than this does: a card showed a category, a row shows the page
+ * they are actually looking for.
+ */
+function DocsRow({
+	to,
+	title,
+	description,
+	aside
+}: {
+	to: string
+	title: string
+	description?: string
+	aside?: string
+}) {
+	return (
+		<Link
+			to={to}
+			className="group border-border -mx-3 flex flex-col gap-1 rounded-xl border-b px-3 py-4 transition-colors duration-150 last:border-b-0 hover:bg-[color-mix(in_oklch,var(--foreground)_4%,var(--background))] sm:flex-row sm:items-baseline sm:gap-6"
+		>
+			<span className="text-h4 sm:w-56 sm:shrink-0">{title}</span>
+			{description && (
+				<span className="text-muted-foreground text-body-sm flex-1">
+					{description}
+				</span>
+			)}
+			{aside && (
+				<code className="text-muted-foreground text-label-xs font-mono sm:shrink-0">
+					{aside}
+				</code>
+			)}
+		</Link>
+	)
+}
+
+function DocsSection({
+	heading,
+	description,
+	children,
+	className
+}: {
+	heading: string
+	description?: string
+	children: React.ReactNode
+	className?: string
+}) {
+	return (
+		<section className={className}>
+			<div className="mb-4 max-w-xl space-y-1">
+				<h2 className="text-h3 font-heading">{heading}</h2>
+				{description && (
+					<p className="text-muted-foreground text-body-sm">{description}</p>
+				)}
+			</div>
+			<div className="flex flex-col">{children}</div>
+		</section>
+	)
+}
 
 export default function DocsIndexPage() {
+	const gettingStarted = pagesIn('getting-started')
+
 	return (
 		<div className="bg-background">
 			<PageHero
 				eyebrow="Documentation"
-				heading="Everything you need to build with Vectreal."
-				description="From local dev setup to embedding 3D content in production - platform guides, package APIs, and architecture references."
+				heading={DOCS_PAGE_COPY.heading}
+				description={DOCS_PAGE_COPY.description}
 				actions={
 					<>
 						<Button asChild size="sm">
 							<Link to="/docs/getting-started">
-								Get started
+								Start here
 								<ArrowRight className="h-3.5 w-3.5" />
 							</Link>
 						</Button>
@@ -68,59 +119,114 @@ export default function DocsIndexPage() {
 				}
 			/>
 
-			{/* Section cards */}
-			<div className="container-page pb-20">
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-					{DOCS_SECTIONS.map(({ icon: Icon, title, description, href }) => (
-						<Link key={href} to={href} className="group outline-none">
-							<BasicCard className="h-full" highlight>
-								<CardHeader className="pb-2">
-									<div className="bg-orange/10 mb-3 flex h-9 w-9 items-center justify-center rounded-xl">
-										<Icon className="text-orange h-4.5 w-4.5" />
-									</div>
-									<CardTitle className="text-base font-medium">
-										{title}
-									</CardTitle>
-								</CardHeader>
-								<CardContent>
-									<p className="text-muted-foreground text-sm leading-relaxed">
-										{description}
-									</p>
-								</CardContent>
-							</BasicCard>
-						</Link>
-					))}
-				</div>
+			<div className="container-page pb-24">
+				{/*
+				  The one path most readers want, given weight the other sections
+				  do not get. The page previously offered four equal doors and made
+				  the reader guess which one held their answer.
+				*/}
+				<section
+					aria-labelledby="start-here"
+					className="ds-raised rounded-2xl p-6 md:p-8"
+				>
+					<div className="mb-4 max-w-xl space-y-1">
+						<h2 id="start-here" className="text-h3 font-heading">
+							{DOCS_PAGE_COPY.startHereHeading}
+						</h2>
+						<p className="text-muted-foreground text-body-sm">
+							{DOCS_PAGE_COPY.startHereDescription}
+						</p>
+					</div>
+					<ol className="flex flex-col">
+						{gettingStarted.map((page) => (
+							<li key={page.slug}>
+								<DocsRow
+									to={`/docs/${page.slug}`}
+									title={page.title}
+									{...(page.description
+										? { description: page.description }
+										: {})}
+								/>
+							</li>
+						))}
+					</ol>
+				</section>
 
-				{/* Quick links */}
-				<div className="mt-10 flex flex-wrap gap-2">
-					<span className="text-muted-foreground self-center text-xs font-medium">
-						Quick links
+				<DocsSection heading="Guides" className="mt-20">
+					{pagesIn('guides').map((page) => (
+						<DocsRow
+							key={page.slug}
+							to={`/docs/${page.slug}`}
+							title={page.title}
+							{...(page.description ? { description: page.description } : {})}
+						/>
+					))}
+				</DocsSection>
+
+				{/*
+				  The package rows carry their install line. It is the thing a
+				  reader on this section actually wants next, and it is real
+				  product rather than a description of it.
+				*/}
+				<DocsSection
+					heading={DOCS_PAGE_COPY.packagesHeading}
+					description={DOCS_PAGE_COPY.packagesDescription}
+					className="mt-20"
+				>
+					{pagesIn('packages').map((page) => (
+						<DocsRow
+							key={page.slug}
+							to={`/docs/${page.slug}`}
+							title={page.title}
+							aside={`npm i ${page.title}`}
+							{...(page.description ? { description: page.description } : {})}
+						/>
+					))}
+				</DocsSection>
+
+				<DocsSection heading="Operations" className="mt-20">
+					{[...pagesIn('operations'), ...pagesIn('contributing')].map((page) => (
+						<DocsRow
+							key={page.slug}
+							to={`/docs/${page.slug}`}
+							title={page.title}
+							{...(page.description ? { description: page.description } : {})}
+						/>
+					))}
+				</DocsSection>
+
+				<div className="mt-16 flex flex-wrap items-center gap-x-6 gap-y-2">
+					<span className="text-muted-foreground text-eyebrow">
+						{DOCS_PAGE_COPY.quickLinksLabel}
 					</span>
-					<Button asChild variant="outline" size="sm" className="h-7 text-xs">
-						<a
-							href="https://github.com/Vectreal/vectreal-platform"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							GitHub
-						</a>
-					</Button>
-					<Button asChild variant="outline" size="sm" className="h-7 text-xs">
-						<Link to="/publisher">Open Publisher</Link>
-					</Button>
-					<Button asChild variant="outline" size="sm" className="h-7 text-xs">
-						<a
-							href="https://discord.gg/A9a3nPkZw7"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							Discord
-						</a>
-					</Button>
-					<Button asChild variant="outline" size="sm" className="h-7 text-xs">
-						<Link to="/changelog">Changelog</Link>
-					</Button>
+					<a
+						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						href="https://github.com/Vectreal/vectreal-platform"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						GitHub
+					</a>
+					<Link
+						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						to="/publisher"
+					>
+						Publisher
+					</Link>
+					<a
+						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						href="https://discord.gg/A9a3nPkZw7"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						Discord
+					</a>
+					<Link
+						className="text-body-sm hover:text-orange underline-offset-4 hover:underline"
+						to="/changelog"
+					>
+						Changelog
+					</Link>
 				</div>
 			</div>
 		</div>

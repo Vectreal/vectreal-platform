@@ -261,6 +261,25 @@ export const PRICING_PAGE_COPY = {
 } as const
 
 // ---------------------------------------------------------------------------
+// Docs landing page
+// The page's structure is derived from `lib/docs/docs-manifest.ts`, which is
+// what the sidebar reads too, so only the page's own prose lives here.
+// ---------------------------------------------------------------------------
+
+export const DOCS_PAGE_COPY = {
+	heading: 'From your first upload to a production embed.',
+	description:
+		'Platform guides for uploading, optimizing and publishing 3D scenes, and API reference for the four open-source packages underneath.',
+	startHereHeading: 'Start here',
+	startHereDescription:
+		'Three pages, in order. The last one ends with a published scene.',
+	packagesHeading: 'Packages',
+	packagesDescription:
+		'Published to npm and usable without a Vectreal account.',
+	quickLinksLabel: 'Elsewhere'
+} as const
+
+// ---------------------------------------------------------------------------
 // Entitlement display labels
 // Canonical human-readable label for each entitlement key.
 // Used in: feature comparison grid, upgrade flow unlocked-features list,
