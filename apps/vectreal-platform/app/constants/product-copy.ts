@@ -168,7 +168,13 @@ export const PLAN_CTA_HREF: Record<Plan, string | null> = {
 	enterprise: '/contact'
 }
 
-// Which plan card to visually highlight as "Most popular".
+/*
+  Which plan card carries the recommendation.
+
+  Labelled "Recommended", not "Most popular". Popularity is a claim about other
+  customers that nothing here measures; a recommendation is a statement Vectreal
+  can actually stand behind.
+*/
 export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
 	free: false,
 	pro: true,
@@ -246,9 +252,12 @@ export const PRICING_PAGE_COPY = {
 	heading: 'Simple, transparent pricing for every workflow.',
 	description:
 		'Start for free. Upgrade when you need more. Every plan includes the core 3D publishing workflow - no hidden fees.',
-	enterpriseHeading: 'Need a custom setup?',
+	comparisonHeading: 'What each plan includes',
+	comparisonDescription:
+		'Every entitlement, across all four plans. Limits are per organization.',
+	enterpriseHeading: 'Enterprise',
 	enterpriseDescription:
-		'Enterprise plans set your limits to whatever you need and add a dedicated support channel. Talk to us.'
+		'Set your own limits and get a dedicated support channel. Enterprise is a conversation rather than a checkout, so the shape of it is up to you.'
 } as const
 
 // ---------------------------------------------------------------------------

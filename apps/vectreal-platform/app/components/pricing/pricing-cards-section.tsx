@@ -24,7 +24,7 @@ import {
 	CardTitle
 } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-import { Check, Minus, Zap } from 'lucide-react'
+import { Check, Minus } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { formatLimitValue } from '../../constants/limit-format'
@@ -159,7 +159,7 @@ function PlanCard({
 		>
 			<CardHeader className="space-y-2">
 				<div className="flex items-center justify-between">
-					<CardTitle className="text-xl">{name}</CardTitle>
+					<CardTitle className="text-h3 font-heading">{name}</CardTitle>
 					<div className="flex items-center gap-1.5">
 						{isActive && (
 							<Badge variant="secondary" className="text-xs">
@@ -171,9 +171,18 @@ function PlanCard({
 								Selected
 							</Badge>
 						)}
+						{/*
+						  "Recommended" rather than "Most popular": popularity is a
+						  claim about other customers that nothing here measures.
+
+						  Deliberately not brand orange. White on #fc6c18 measures
+						  2.88:1, below even the 3:1 large-text floor, and the
+						  accent's job is interactive state rather than decoration.
+						  The card's highlight bar already carries the brand mark.
+						*/}
 						{highlighted && !isSelectMode && (
 							<Badge className="bg-primary text-primary-foreground">
-								Most popular
+								Recommended
 							</Badge>
 						)}
 					</div>
@@ -181,20 +190,20 @@ function PlanCard({
 				<CardDescription>{tagline}</CardDescription>
 				<div className="pt-2">
 					{isEnterprise ? (
-						<p className="text-2xl font-medium">Custom</p>
+						<p className="text-h2 font-heading">Custom</p>
 					) : isFree ? (
 						<div>
-							<span className="text-4xl">$0</span>
-							<span className="text-muted-foreground ml-1 text-sm">/month</span>
+							<span className="text-h2 font-heading">$0</span>
+							<span className="text-muted-foreground text-body-sm ml-1">/month</span>
 						</div>
 					) : (
 						<div>
 							{displayAmountCents !== null ? (
 								<div className="flex items-end gap-2">
-									<span className="text-4xl font-medium">
+									<span className="text-h2 font-heading">
 										{formatCurrency(displayAmountCents, liveCurrency)}
 									</span>
-									<span className="text-muted-foreground mb-1 text-sm">
+									<span className="text-muted-foreground text-body-sm mb-1">
 										/month
 									</span>
 									{period === 'annual' && savingsPct && savingsPct > 0 && (
@@ -205,19 +214,19 @@ function PlanCard({
 								</div>
 							) : (
 								<div className="flex items-end gap-2">
-									<span className="text-4xl font-medium">
+									<span className="text-h2 font-heading">
 										$
 										{period === 'annual'
 											? (staticAnnualMonthlyPrice ?? staticMonthlyPrice)
 											: staticMonthlyPrice}
 									</span>
-									<span className="text-muted-foreground mb-1 text-sm">
+									<span className="text-muted-foreground text-body-sm mb-1">
 										/month
 									</span>
 								</div>
 							)}
 							{period === 'annual' && liveAnnualAmountCents !== null && (
-								<p className="text-muted-foreground mt-1 text-xs">
+								<p className="text-muted-foreground text-label-xs mt-1">
 									{formatCurrency(liveAnnualAmountCents, liveCurrency)} billed
 									annually
 								</p>
@@ -229,7 +238,10 @@ function PlanCard({
 
 			<CardContent className="flex-1 space-y-3">
 				{HIGHLIGHTED_LIMITS.map(({ key, label, format }) => (
-					<div key={key} className="flex items-center justify-between text-sm">
+					<div
+						key={key}
+						className="text-body-sm flex items-center justify-between"
+					>
 						<span className="text-muted-foreground">{label}</span>
 						<span className="font-medium">{format(limits[key])}</span>
 					</div>
@@ -245,8 +257,7 @@ function PlanCard({
 								className="w-full"
 								variant={highlighted ? 'default' : 'secondary'}
 							>
-								{highlighted && <Zap className="mr-2 h-4 w-4" />}
-								{cta}
+{cta}
 							</Button>
 						</Link>
 					) : (
@@ -258,8 +269,7 @@ function PlanCard({
 								className="w-full"
 								variant={highlighted ? 'default' : 'secondary'}
 							>
-								{highlighted && <Zap className="mr-2 h-4 w-4" />}
-								{cta}
+{cta}
 							</Button>
 						</Link>
 					)}

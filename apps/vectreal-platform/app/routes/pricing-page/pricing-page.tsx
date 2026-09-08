@@ -1,10 +1,8 @@
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { Separator } from '@shared/components/ui/separator'
 import { useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
-import { BasicCard, PageHero } from '../../components/layout-components'
+import { PageHero } from '../../components/layout-components'
 import {
 	FeatureCompareGrid,
 	PricingCardsSection
@@ -47,49 +45,76 @@ export default function PricingPage() {
 
 	return (
 		<main>
+			{/*
+			  The hero carried three pill badges - "4 Plans", "Free to start",
+			  "Cancel anytime" - directly under the H1. A pill row below the
+			  heading and a set of three parallel phrases are both named tells,
+			  and these earned removal twice over by restating what the
+			  description above them and the cards below them already say.
+			*/}
 			<PageHero
 				eyebrow="Pricing"
 				heading={PRICING_PAGE_COPY.heading}
 				description={PRICING_PAGE_COPY.description}
-				actions={
-					<>
-						<Badge variant="secondary">4 Plans</Badge>
-						<Badge variant="secondary">Free to start</Badge>
-						<Badge variant="secondary">Cancel anytime</Badge>
-					</>
-				}
 			/>
 
-			<div className="container-page space-y-20 py-16">
+			{/*
+			  The rhythm is deliberately uneven. The plan row and the enterprise
+			  band are one thought - here is what you can buy, and here is what to
+			  do if none of it fits - so they sit close. The comparison table
+			  answers a different question and gets a much wider gap before it. An
+			  even `space-y` between all three said they were three peers.
+			*/}
+			<div className="container-page pb-24">
+				{/*
+				  Three self-serve plans, not four cards. Enterprise has no price,
+				  no checkout and a different next step, so rendering it as a
+				  fourth identical column made the row read as uniform and told the
+				  reader less than the band below does. The page was already
+				  carrying that band, so Enterprise had been presented twice.
+				*/}
 				<PricingCardsSection
 					period={period}
 					onPeriodChange={setPeriod}
 					prices={prices}
+					showEnterprise={false}
 				/>
 
-				<Separator />
-
-				<FeatureCompareGrid />
-
-				{/* Enterprise CTA */}
-				<BasicCard as="section" cardClassName="p-6 text-left md:p-8">
-					<h2 className="text-2xl font-medium">
-						{PRICING_PAGE_COPY.enterpriseHeading}
-					</h2>
-					<p className="text-muted-foreground max-w-lg">
-						{PRICING_PAGE_COPY.enterpriseDescription}
-					</p>
-					<div className="flex justify-start gap-4">
-						<Link to="/contact">
-							<Button size="lg">Contact sales</Button>
-						</Link>
-						<Link to="/docs">
-							<Button size="lg" variant="secondary">
-								Read the docs
+				<section
+					aria-labelledby="enterprise-heading"
+					className="ds-raised mt-8 rounded-2xl p-6 md:p-8"
+				>
+					<div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+						<div className="max-w-xl space-y-2">
+							<h2 id="enterprise-heading" className="text-h3 font-heading">
+								{PRICING_PAGE_COPY.enterpriseHeading}
+							</h2>
+							<p className="text-muted-foreground text-body">
+								{PRICING_PAGE_COPY.enterpriseDescription}
+							</p>
+						</div>
+						<div className="flex shrink-0 flex-wrap gap-3">
+							<Button asChild>
+								<Link to="/contact">Talk to us</Link>
 							</Button>
-						</Link>
+							<Button variant="secondary" asChild>
+								<Link to="/docs">Read the docs</Link>
+							</Button>
+						</div>
 					</div>
-				</BasicCard>
+				</section>
+
+				<section aria-labelledby="comparison-heading" className="mt-24">
+					<div className="mb-8 max-w-xl space-y-2">
+						<h2 id="comparison-heading" className="text-h2 font-heading">
+							{PRICING_PAGE_COPY.comparisonHeading}
+						</h2>
+						<p className="text-muted-foreground text-body">
+							{PRICING_PAGE_COPY.comparisonDescription}
+						</p>
+					</div>
+					<FeatureCompareGrid />
+				</section>
 			</div>
 		</main>
 	)
