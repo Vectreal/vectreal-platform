@@ -12,12 +12,20 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+/*
+  All eleven rungs, in scale order. The list used to hold seven, so the two body
+  rungs, `.text-h4` and `.text-stat` could drift with nothing rendering them.
+*/
 const TYPE = [
+	['text-stat', 'Stat'],
 	['text-display', 'Display'],
 	['text-headline', 'Headline'],
 	['text-h2', 'Heading 2'],
 	['text-h3', 'Heading 3'],
+	['text-h4', 'Heading 4'],
 	['text-body-lg', 'Body large'],
+	['text-body', 'Body'],
+	['text-body-sm', 'Body small'],
 	['text-label-xs', 'Label xs'],
 	['text-eyebrow', 'Eyebrow']
 ] as const
@@ -31,6 +39,42 @@ export const Typography: Story = {
 						.{cls}
 					</p>
 					<p className={cls}>{label}</p>
+				</div>
+			))}
+		</div>
+	)
+}
+
+const FACE_RUNGS = [
+	'text-display',
+	'text-headline',
+	'text-h2',
+	'text-h3'
+] as const
+
+/**
+ * The display face is opt-in, and this is the only place you can see it.
+ *
+ * `--font-heading` is Funnel Display, and it is deliberately *not* baked into
+ * the rungs: `.text-display` and `.text-headline` are worn by dashboard and
+ * publisher headings too - `publisher/shell/drop-zone.tsx` uses `text-headline`
+ * - and putting a family on the rung would change all of them. Marketing
+ * components write `font-heading` beside the rung instead.
+ *
+ * So a rung on its own renders DM Sans, which is correct and looks like a bug
+ * if you have only ever seen the marketing pages. Both halves are here so the
+ * difference is visible rather than surprising.
+ */
+export const HeadingFace: Story = {
+	render: () => (
+		<div className="space-y-6">
+			{FACE_RUNGS.map((cls) => (
+				<div key={cls} className="space-y-1">
+					<p className="text-muted-foreground text-label-xs font-mono">
+						.{cls}
+					</p>
+					<p className={cls}>Body face, no opt-in</p>
+					<p className={`${cls} font-heading`}>Heading face, font-heading</p>
 				</div>
 			))}
 		</div>
