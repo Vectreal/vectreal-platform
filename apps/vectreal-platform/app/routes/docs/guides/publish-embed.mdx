@@ -51,15 +51,20 @@ To create a key with your own name, description or expiry instead:
 1. Go to [Dashboard → API Keys](/dashboard/api-keys).
 2. Click **New API Key**.
 3. Select the project(s) the key should have access to.
-4. Copy the key while it is shown.
+4. Copy the key while it is shown. The list only keeps the last four characters.
 
-> The API Keys list shows only the last four characters, so copy the key while it is shown.
->
-> A key created or rotated from now on is also recoverable: its value is stored encrypted alongside the hash, and the **Embed** section of a published scene reads it back to fill the snippet in.
->
-> That does **not** cover every key. Four cases have nothing to give back: a key created before that column existed, a revoked key (revoking clears the stored value on purpose), an expired key (its value survives but the picker will not offer it), and every key at once if the server's `EMBED_TOKEN_ENCRYPTION_KEY` is ever changed. Where a picker is on screen it shows those keys greyed out with the reason - but the Embed section only exists on a **published** scene, and only for a project owner or admin, so it is not always somewhere you can look.
->
-> Do not rotate a key just to recover it. Rotation issues a fresh secret and refuses the old one from that moment, so it breaks every embed still carrying the previous value. Rotate a live key you cannot read back; create a replacement for one that is revoked or expired, because rotation refuses both.
+A key created or rotated from now on is also recoverable: its value is stored encrypted alongside the hash, and the **Embed** section of a published scene reads it back to fill the snippet in.
+
+Four kinds of key have nothing to give back:
+
+- one created before that column existed
+- a revoked key, because revoking clears the stored value on purpose
+- an expired key, whose value survives but which the picker will not offer
+- every key at once, if the server's `EMBED_TOKEN_ENCRYPTION_KEY` is ever changed
+
+Where a picker is on screen it greys those out with the reason. But the Embed section exists only on a **published** scene, and only for a project owner or admin, so it is not always somewhere you can look.
+
+> **Do not rotate a key just to recover it.** Rotation issues a fresh secret and refuses the old one from that moment, so it breaks every embed still carrying the previous value. Rotate a live key you cannot read back; create a replacement for one that is revoked or expired, because rotation refuses both.
 
 ### Replacing a key you want out of circulation
 
