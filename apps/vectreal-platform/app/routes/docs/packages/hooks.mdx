@@ -228,15 +228,21 @@ into `texturesOptimization`. Pass it as `ModelOptimizer#compressTextures`'s
 |---|---|
 | `react` | `^18 \|\| ^19` |
 
-> `three` is a **peer dependency** of `@vctrl/hooks`, and of `@vctrl/viewer`, so you install it yourself. **Declare it explicitly** in your own project's `package.json` to guarantee a single shared instance: Three.js uses global singletons internally and duplicate instances produce subtle rendering bugs.
->
-> ```bash
-> npm install three
-> # or
-> pnpm add three
-> ```
->
-> Let your package manager resolve the version against the declared peer range rather than pinning one here.
+> **Declare `three` explicitly** in your own `package.json`. Three.js uses global
+> singletons internally, so two copies produce rendering bugs that are hard to
+> trace back to their cause.
+
+It is a peer dependency of both `@vctrl/hooks` and `@vctrl/viewer`, so you
+install it yourself:
+
+```bash
+npm install three
+# or
+pnpm add three
+```
+
+Let your package manager resolve the version against the declared peer range
+rather than pinning one here.
 
 ---
 

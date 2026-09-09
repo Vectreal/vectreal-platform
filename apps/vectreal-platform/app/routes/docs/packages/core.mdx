@@ -12,7 +12,19 @@ npm install @vctrl/core
 pnpm add @vctrl/core
 ```
 
-> **Texture compression is encoder-injectable.** `@vctrl/core` runs in Node.js, browsers, and edge runtimes. In Node.js it uses [Sharp](https://sharp.pixelplumbing.com) when you install it (`npm install sharp`); Sharp is an optional add-on, not a hard dependency. Elsewhere, pass your own `TextureCompressOptions.encoder`, so Sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based one as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use. With no encoder and no Sharp, `compressTextures` falls back to a basic optimization.
+> **Texture compression is encoder-injectable.** Nothing here hard-depends on
+> Sharp.
+
+`@vctrl/core` runs in Node.js, browsers and edge runtimes, and picks its encoder
+to match:
+
+- **Node.js** uses [Sharp](https://sharp.pixelplumbing.com) if you install it
+  (`npm install sharp`). It is an optional add-on.
+- **Anywhere else**, pass your own `TextureCompressOptions.encoder` and Sharp is
+  never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based one as
+  `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`,
+  and exports it for direct use.
+- **With neither**, `compressTextures` falls back to a basic optimization.
 
 ---
 

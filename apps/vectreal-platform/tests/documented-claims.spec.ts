@@ -95,6 +95,19 @@ const skillFiles = readdirSync(SKILLS_DIR)
  * page here is a visible diff, and so is removing one.
  */
 const CLAIM_CARRYING_DOCS = [
+	/*
+	  The design skill is a router; its rules live in `references/`, and only
+	  `SKILL.md` is globbed above. Without these entries the split would have
+	  moved every design claim out of enforcement in one commit, which is the
+	  opposite of what the split was for.
+	*/
+	'.agents/skills/vectreal-brand-ux-design/references/tokens.md',
+	'.agents/skills/vectreal-brand-ux-design/references/elevation.md',
+	'.agents/skills/vectreal-brand-ux-design/references/typography.md',
+	'.agents/skills/vectreal-brand-ux-design/references/motion.md',
+	'.agents/skills/vectreal-brand-ux-design/references/enforcement.md',
+	'.agents/skills/vectreal-brand-ux-design/references/anti-ai-look.md',
+	'.agents/skills/vectreal-brand-ux-design/references/evidence.md',
 	'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx',
 	/*
 	  The SDK page's Security section makes the load-bearing claims about what a

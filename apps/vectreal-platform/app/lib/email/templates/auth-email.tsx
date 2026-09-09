@@ -246,7 +246,7 @@ export function AuthEmail({
 							</Link>
 							<span style={s.dot}> · </span>
 							<Link href={`${BASE_URL}/news-room`} style={s.footerLink}>
-								News Room
+								Newsroom
 							</Link>
 							<span style={s.dot}> · </span>
 							<Link href={`${BASE_URL}/contact`} style={s.footerLink}>

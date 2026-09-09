@@ -7,7 +7,6 @@
  * ─────
  * period / onPeriodChange   – controlled billing-period state
  * prices                    – live Stripe prices (nullable when unavailable)
- * showEnterprise            – renders the Enterprise card (default true)
  * activePlan                – the user's current plan; shown as "Current plan"
  * selectedPlan              – card shown as selected/highlighted
  * onSelectPlan              – when provided, cards are interactive selectors
@@ -17,18 +16,18 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
+	Card,
 	CardContent,
 	CardDescription,
 	CardFooter,
-	CardHeader,
-	CardTitle
+	CardHeader
 } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-import { Check, Minus, Zap } from 'lucide-react'
+import { Check, Minus } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { formatLimitValue } from '../../../constants/limit-format'
-import { PLAN_LIMITS, type Plan } from '../../../constants/plan-config'
+import { formatLimitValue } from '../../constants/limit-format'
+import { PLAN_LIMITS, type Plan } from '../../constants/plan-config'
 import {
 	ANNUAL_DISCOUNT_CLAIM,
 	LIMIT_DISPLAY_LABELS,
@@ -39,10 +38,9 @@ import {
 	PLAN_FALLBACK_PRICES,
 	PLAN_HIGHLIGHTED,
 	PLAN_TAGLINES
-} from '../../../constants/product-copy'
-import { BasicCard } from '../../layout-components'
+} from '../../constants/product-copy'
 
-import type { BillingCheckoutOptions } from '../../../lib/domain/dashboard/dashboard-types'
+import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 
 // ---------------------------------------------------------------------------
 // Limit display config — labels and formatting both come from constants
@@ -72,8 +70,21 @@ interface PlanCardProps {
 	selectablePlans?: Plan[]
 }
 
+/*
+  The locale is pinned, not left to resolve.
+
+  `undefined` means "the runtime default", and the runtime differs on the two
+  sides of hydration: the container declares no LANG, so the server formats one
+  way and the visitor's browser formats another. Every price on the page is then
+  a hydration mismatch for anyone outside the container's default locale.
+  `product-copy.ts` pins OFFER_LOCALE for the same reason and writes the
+  reasoning out at length; this is the same decision at a call site that missed
+  it.
+*/
+const PRICE_LOCALE = 'en-US'
+
 function formatCurrency(amountCents: number, currency: string) {
-	return new Intl.NumberFormat(undefined, {
+	return new Intl.NumberFormat(PRICE_LOCALE, {
 		style: 'currency',
 		currency: currency.toUpperCase(),
 		maximumFractionDigits: 0
@@ -97,7 +108,6 @@ function PlanCard({
 	const highlighted = PLAN_HIGHLIGHTED[plan]
 	const fallbackPrices = PLAN_FALLBACK_PRICES[plan]
 
-	const isEnterprise = plan === 'enterprise'
 	const isFree = plan === 'free'
 	const isPaid = plan === 'pro' || plan === 'business'
 	const isActive = plan === activePlan
@@ -137,12 +147,17 @@ function PlanCard({
 	const isSelectable = !isSelectMode || isSelectableInSelectMode
 
 	return (
-		<BasicCard
-			highlight={isSelected || highlighted || undefined}
-			cardClassName={cn(
-				'transition-all',
-				isSelected && 'bg-muted',
-				highlighted && !isSelectMode && 'bg-muted',
+		<Card
+			className={cn(
+				'group relative h-full overflow-hidden rounded-2xl transition-all',
+				/*
+				  The recommended and selected card sits one step up the ladder.
+				  `ds-overlay` is declared after `ds-raised` at the same specificity,
+				  so it wins on a Card that already carries `ds-raised`. It used to be
+				  `bg-muted`, a utility rather than a rung, so the card people are
+				  meant to choose rendered a plate its neighbours could not match.
+				*/
+				(isSelected || highlighted) && 'ds-overlay',
 				// Dimmed when another plan is selected
 				isSelectMode && selectedPlan && !isSelected && 'opacity-60',
 				isSelectMode &&
@@ -150,7 +165,6 @@ function PlanCard({
 					isSelectable &&
 					'cursor-pointer hover:opacity-100'
 			)}
-			className="flex flex-col"
 			onClick={
 				isSelectMode && !isActive && isSelectable
 					? () => onSelectPlan(plan)
@@ -159,7 +173,15 @@ function PlanCard({
 		>
 			<CardHeader className="space-y-2">
 				<div className="flex items-center justify-between">
-					<CardTitle className="text-xl">{name}</CardTitle>
+					{/*
+					  A real <h3>, not CardTitle. CardTitle renders a div, so plan names
+					  were styled text in a card row with no heading structure - and its
+					  `font-light tracking-wide` defaults are utilities against a rung in
+					  @layer components, so they won: every plan name rendered at weight
+					  300 and +0.025em while every other h3 on the site sat at 500 and
+					  -0.02em.
+					*/}
+					<h3 className="text-h3 font-heading">{name}</h3>
 					<div className="flex items-center gap-1.5">
 						{isActive && (
 							<Badge variant="secondary" className="text-xs">
@@ -171,30 +193,40 @@ function PlanCard({
 								Selected
 							</Badge>
 						)}
+						{/*
+						  "Recommended" rather than "Most popular": popularity is a
+						  claim about other customers that nothing here measures.
+
+						  Deliberately not brand orange. White on #fc6c18 measures
+						  2.88:1, below even the 3:1 large-text floor, and the
+						  accent's job is interactive state rather than decoration. The
+						  card marks itself by sitting a step up the elevation ladder,
+						  which is what `highlight` now does.
+						*/}
 						{highlighted && !isSelectMode && (
 							<Badge className="bg-primary text-primary-foreground">
-								Most popular
+								Recommended
 							</Badge>
 						)}
 					</div>
 				</div>
 				<CardDescription>{tagline}</CardDescription>
 				<div className="pt-2">
-					{isEnterprise ? (
-						<p className="text-2xl font-medium">Custom</p>
-					) : isFree ? (
+					{isFree ? (
 						<div>
-							<span className="text-4xl">$0</span>
-							<span className="text-muted-foreground ml-1 text-sm">/month</span>
+							<span className="text-h2 font-heading">$0</span>
+							<span className="text-muted-foreground text-body-sm ml-1">
+								/month
+							</span>
 						</div>
 					) : (
 						<div>
 							{displayAmountCents !== null ? (
 								<div className="flex items-end gap-2">
-									<span className="text-4xl font-medium">
+									<span className="text-h2 font-heading">
 										{formatCurrency(displayAmountCents, liveCurrency)}
 									</span>
-									<span className="text-muted-foreground mb-1 text-sm">
+									<span className="text-muted-foreground text-body-sm mb-1">
 										/month
 									</span>
 									{period === 'annual' && savingsPct && savingsPct > 0 && (
@@ -205,19 +237,19 @@ function PlanCard({
 								</div>
 							) : (
 								<div className="flex items-end gap-2">
-									<span className="text-4xl font-medium">
+									<span className="text-h2 font-heading">
 										$
 										{period === 'annual'
 											? (staticAnnualMonthlyPrice ?? staticMonthlyPrice)
 											: staticMonthlyPrice}
 									</span>
-									<span className="text-muted-foreground mb-1 text-sm">
+									<span className="text-muted-foreground text-body-sm mb-1">
 										/month
 									</span>
 								</div>
 							)}
 							{period === 'annual' && liveAnnualAmountCents !== null && (
-								<p className="text-muted-foreground mt-1 text-xs">
+								<p className="text-muted-foreground text-label-xs mt-1">
 									{formatCurrency(liveAnnualAmountCents, liveCurrency)} billed
 									annually
 								</p>
@@ -229,7 +261,10 @@ function PlanCard({
 
 			<CardContent className="flex-1 space-y-3">
 				{HIGHLIGHTED_LIMITS.map(({ key, label, format }) => (
-					<div key={key} className="flex items-center justify-between text-sm">
+					<div
+						key={key}
+						className="text-body-sm flex items-center justify-between"
+					>
 						<span className="text-muted-foreground">{label}</span>
 						<span className="font-medium">{format(limits[key])}</span>
 					</div>
@@ -239,30 +274,26 @@ function PlanCard({
 			{/* CTA footer - hidden in select mode for current plan; otherwise shown */}
 			{!isSelectMode && (
 				<CardFooter>
-					{ctaHref ? (
-						<Link to={ctaHref} className="w-full">
-							<Button
-								className="w-full"
-								variant={highlighted ? 'default' : 'secondary'}
-							>
-								{highlighted && <Zap className="mr-2 h-4 w-4" />}
-								{cta}
-							</Button>
-						</Link>
-					) : (
+					{/*
+					  asChild, so this renders one <a> rather than a <button> nested
+					  inside one. The nested form was two tab stops for a single action
+					  and left the role ambiguous; the page's own enterprise CTA already
+					  had it right, so the two spellings disagreed on one route.
+					*/}
+					<Button
+						asChild
+						className="w-full"
+						variant={highlighted ? 'default' : 'secondary'}
+					>
 						<Link
-							to={`/dashboard/billing/upgrade?plan=${plan}&period=${period}`}
-							className="w-full"
+							to={
+								ctaHref ??
+								`/dashboard/billing/upgrade?plan=${plan}&period=${period}`
+							}
 						>
-							<Button
-								className="w-full"
-								variant={highlighted ? 'default' : 'secondary'}
-							>
-								{highlighted && <Zap className="mr-2 h-4 w-4" />}
-								{cta}
-							</Button>
+							{cta}
 						</Link>
-					)}
+					</Button>
 				</CardFooter>
 			)}
 			{isSelectMode && !isActive && isSelectable && (
@@ -276,11 +307,7 @@ function PlanCard({
 						}}
 					>
 						{isSelected && <Check className="mr-2 h-4 w-4" />}
-						{isSelected
-							? 'Selected'
-							: isEnterprise
-								? 'Contact sales'
-								: `Select ${name}`}
+						{isSelected ? 'Selected' : `Select ${name}`}
 					</Button>
 				</CardFooter>
 			)}
@@ -299,7 +326,7 @@ function PlanCard({
 					</Button>
 				</CardFooter>
 			)}
-		</BasicCard>
+		</Card>
 	)
 }
 
@@ -307,15 +334,26 @@ function PlanCard({
 // PricingCardsSection (exported)
 // ---------------------------------------------------------------------------
 
-const ALL_PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
-const PLANS_WITHOUT_ENTERPRISE: Plan[] = ['free', 'pro', 'business']
+const PERIOD_BUTTON_CLASS =
+	'text-body-sm flex items-center rounded-lg px-4 py-1.5 font-medium transition-colors'
+
+const periodStateClass = (selected: boolean) =>
+	selected
+		? 'bg-background text-foreground'
+		: 'text-muted-foreground hover:text-foreground'
+
+/*
+  Enterprise is not a card. It has no price to show and no self-serve checkout,
+  so it gets its own band below the grid on /pricing where it can say "tell us
+  what you need". A `showEnterprise` prop used to switch a fourth card on; both
+  call sites passed false, so every branch behind it was unreachable.
+*/
+const PRICING_CARD_PLANS: Plan[] = ['free', 'pro', 'business']
 
 export interface PricingCardsSectionProps {
 	period: 'monthly' | 'annual'
 	onPeriodChange: (period: 'monthly' | 'annual') => void
 	prices: BillingCheckoutOptions | null
-	/** Include the Enterprise card (default true) */
-	showEnterprise?: boolean
 	/** User's current plan - shows "Current plan" badge */
 	activePlan?: Plan
 	/** Plan currently selected for checkout - highlighted ring */
@@ -330,58 +368,76 @@ export function PricingCardsSection({
 	period,
 	onPeriodChange,
 	prices,
-	showEnterprise = true,
 	activePlan,
 	selectedPlan,
 	onSelectPlan,
 	selectablePlans
 }: PricingCardsSectionProps) {
-	const plans = showEnterprise ? ALL_PLANS : PLANS_WITHOUT_ENTERPRISE
-
 	return (
-		<section>
-			{/* Billing period toggle */}
+		<section aria-labelledby="plans-heading">
+			{/*
+			  Visually hidden, because the design runs the cards straight off the
+			  hero on /pricing and the grid needs no title to be understood by
+			  sight. It still needs one in the outline: without it both routes that
+			  render this component went h1 straight to the h3 plan names.
+			*/}
+			<h2 id="plans-heading" className="sr-only">
+				Plans
+			</h2>
+			{/*
+			  aria-pressed carries the selection, because the fill alone cannot: a
+			  screen-reader user got two identically-named buttons and no way to tell
+			  which period the prices below belonged to.
+
+			  The track is a sunken well and the selected control sits at page level
+			  on top of it, so selection is a step on the ladder rather than a shadow
+			  on a page surface. Radii match: the control is one step tighter than the
+			  track it insets into.
+			*/}
 			<div className="mb-8 flex justify-center">
-				<div className="bg-muted flex items-center gap-1 rounded-2xl p-1">
+				<div
+					role="group"
+					aria-label="Billing period"
+					className="ds-sunken flex items-center gap-1 rounded-xl p-1"
+				>
 					<button
 						type="button"
+						aria-pressed={period === 'monthly'}
 						onClick={() => onPeriodChange('monthly')}
 						className={cn(
-							'rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
-							period === 'monthly'
-								? 'bg-background text-foreground shadow-sm'
-								: 'text-muted-foreground hover:text-foreground'
+							PERIOD_BUTTON_CLASS,
+							periodStateClass(period === 'monthly')
 						)}
 					>
 						Monthly
 					</button>
 					<button
 						type="button"
+						aria-pressed={period === 'annual'}
 						onClick={() => onPeriodChange('annual')}
 						className={cn(
-							'flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium transition-all',
-							period === 'annual'
-								? 'bg-background text-foreground shadow-sm'
-								: 'text-muted-foreground hover:text-foreground'
+							PERIOD_BUTTON_CLASS,
+							'gap-1.5',
+							periodStateClass(period === 'annual')
 						)}
 					>
 						Annual
-						<Badge variant="secondary" className="text-xs">
+						<Badge variant="secondary" className="text-label-xs">
 							{ANNUAL_DISCOUNT_CLAIM}
 						</Badge>
 					</button>
 				</div>
 			</div>
 
-			<div
-				className={cn(
-					'grid gap-6',
-					plans.length === 4
-						? 'sm:grid-cols-2 xl:grid-cols-4'
-						: 'sm:grid-cols-3'
-				)}
-			>
-				{plans.map((plan) => (
+			{/*
+			  Three across at md, not at sm. At 640px three columns leave 139px of
+			  content inside each card, and the price row needs about 174px - so
+			  the annual discount badge was clipped by the card's own
+			  overflow-hidden and the limit rows ran their label into their value.
+			  The four-column branch this replaced could not be reached.
+			*/}
+			<div className="grid gap-6 md:grid-cols-3">
+				{PRICING_CARD_PLANS.map((plan) => (
 					<PlanCard
 						key={plan}
 						plan={plan}

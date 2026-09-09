@@ -17,6 +17,7 @@ import {
 	type ContactActionData,
 	type ContactInquiryType
 } from '../../lib/domain/contact/contact-shared'
+import { InlineNotice } from '../layout-components'
 import { TurnstileWidget } from '../turnstile-widget'
 
 interface ContactFormProps {
@@ -28,6 +29,8 @@ interface ContactFormProps {
 	turnstileToken: string | null
 	onTurnstileSuccess: (token: string) => void
 	onTurnstileError: () => void
+	/** True once the widget has reported an error or expiry. */
+	turnstileFailed: boolean
 	turnstileResetNonce: number
 	isSubmitting: boolean
 	actionData?: ContactActionData
@@ -42,6 +45,7 @@ export function ContactForm({
 	turnstileToken,
 	onTurnstileSuccess,
 	onTurnstileError,
+	turnstileFailed,
 	turnstileResetNonce,
 	isSubmitting,
 	actionData,
@@ -79,7 +83,7 @@ export function ContactForm({
 						placeholder="Jane Doe"
 					/>
 					{actionData?.fieldErrors?.name ? (
-						<p className="text-destructive text-sm">
+						<p className="text-destructive text-body-sm">
 							{actionData.fieldErrors.name}
 						</p>
 					) : null}
@@ -97,7 +101,7 @@ export function ContactForm({
 						placeholder="you@company.com"
 					/>
 					{actionData?.fieldErrors?.email ? (
-						<p className="text-destructive text-sm">
+						<p className="text-destructive text-body-sm">
 							{actionData.fieldErrors.email}
 						</p>
 					) : null}
@@ -119,7 +123,7 @@ export function ContactForm({
 				</Select>
 				<input type="hidden" name="inquiryType" value={inquiryType} />
 				{actionData?.fieldErrors?.inquiryType ? (
-					<p className="text-destructive text-sm">
+					<p className="text-destructive text-body-sm">
 						{actionData.fieldErrors.inquiryType}
 					</p>
 				) : null}
@@ -136,11 +140,11 @@ export function ContactForm({
 					placeholder="Tell us about your use case, current blockers, and timeline."
 				/>
 				{actionData?.fieldErrors?.message ? (
-					<p className="text-destructive text-sm">
+					<p className="text-destructive text-body-sm">
 						{actionData.fieldErrors.message}
 					</p>
 				) : (
-					<p className="text-muted-foreground text-xs">
+					<p className="text-muted-foreground text-label-xs">
 						No sensitive credentials or private keys, please.
 					</p>
 				)}
@@ -153,6 +157,26 @@ export function ContactForm({
 				onError={onTurnstileError}
 			/>
 
+			{/*
+			  Turnstile runs `interaction-only`, so in the normal case it renders
+			  nothing at all. That is fine until it is blocked or errors: the submit
+			  button then stays disabled forever with no widget, no message and no
+			  reason, and the only working path off the page is an email address
+			  styled as an aside. Say what happened and point at it.
+			*/}
+			<div role="status" className="empty:hidden">
+				{turnstileFailed && (
+					<InlineNotice tone="warning">
+						Verification could not load, which is usually an extension or a
+						network blocking it. Reload to try again, or email{' '}
+						<a href="mailto:info@vectreal.com" className="underline">
+							info@vectreal.com
+						</a>{' '}
+						directly.
+					</InlineNotice>
+				)}
+			</div>
+
 			<div className="flex flex-wrap items-center gap-3">
 				<Button
 					type="submit"
@@ -164,7 +188,7 @@ export function ContactForm({
 				>
 					{isSubmitting ? 'Sending...' : 'Send message'}
 				</Button>
-				<p className="text-muted-foreground text-sm">
+				<p className="text-muted-foreground text-body-sm">
 					Prefer direct email?{' '}
 					<a href="mailto:info@vectreal.com" className="underline">
 						info@vectreal.com

@@ -19,9 +19,17 @@ describe('isNavItemActive', () => {
 		expect(isNavItemActive(item('/docs'), '/pricing')).toBe(false)
 	})
 
-	it('marks the publisher item active from the publisher', () => {
-		const publisher = MARKETING_ITEMS.find((i) => i.to === '/publisher')
-		expect(publisher).toBeDefined()
-		expect(isNavItemActive(publisher!, '/publisher/abc123')).toBe(true)
+	it('carries only marketing destinations', () => {
+		/*
+		  The publisher used to sit here, and it is the application rather than a
+		  page about the product. This asserts the boundary rather than the
+		  absence of one route, so adding the next tool to the site nav fails
+		  here too.
+		*/
+		const MARKETING_ROUTES = ['/pricing', '/docs', '/news-room', '/contact']
+
+		expect(MARKETING_ITEMS.map((navItem) => navItem.to).sort()).toEqual(
+			[...MARKETING_ROUTES].sort()
+		)
 	})
 })

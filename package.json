@@ -11,6 +11,7 @@
 	},
 	"dependencies": {
 		"@fontsource-variable/dm-sans": "^5.3.0",
+		"@fontsource-variable/funnel-display": "^5.3.0",
 		"@gltf-transform/core": "catalog:",
 		"@gltf-transform/extensions": "catalog:",
 		"@gltf-transform/functions": "catalog:",

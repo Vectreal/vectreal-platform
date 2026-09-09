@@ -1,7 +1,7 @@
+import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
-import BasicCard from './basic-card'
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
@@ -28,10 +28,10 @@ interface FeaturedArticleProps {
  * bottom scrim, text over it. Fixed dark surface because the scene is
  * near-white hairlines and would vanish on a light-theme card.
  *
- * It is built on the same `BasicCard` as the hero rather than a hand-rolled
+ * It is built on the same `Card` as the hero rather than a hand-rolled
  * bordered `Link`, so "matches the article hero" is structural instead of two
  * class lists that have to be kept in step by hand. The `Link` wraps the card
- * because `BasicCard` renders a block element, not an anchor.
+ * because `Card` renders a block element, not an anchor.
  *
  * Every layer carries a `view-transition-name` so clicking through morphs this
  * card into the article hero rather than cross-fading to it. The scene and the
@@ -50,23 +50,23 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 			viewTransition
 			className={cn('group block', className)}
 		>
-			<BasicCard
-				cardClassName="vt-news-plate relative isolate overflow-hidden border-white/10 p-0"
-				cardStyle={{
+			<Card
+				className="group vt-news-plate relative isolate h-full overflow-hidden rounded-2xl p-0"
+				style={{
 					backgroundColor: SCENE_SURFACE.background,
 					viewTransitionName: morph.card
 				}}
 			>
 				<div className="relative z-20 flex min-h-[19rem] flex-col justify-end p-6 md:min-h-[24rem] md:p-9">
 					<p
-						className="text-orange text-eyebrow vt-news-text mb-3"
+						className="text-muted-foreground text-eyebrow vt-news-text mb-3"
 						style={{ viewTransitionName: morph.eyebrow }}
 					>
 						{article.category} · Featured
 					</p>
 
 					<h2
-						className="text-headline vt-news-text mb-3 max-w-[19ch] text-balance transition-opacity group-hover:opacity-85"
+						className="text-headline font-heading vt-news-text mb-3 max-w-[19ch] text-balance transition-opacity group-hover:opacity-85"
 						style={{
 							color: SCENE_SURFACE.text,
 							viewTransitionName: morph.title
@@ -76,7 +76,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 					</h2>
 
 					<p
-						className="vt-news-text mb-4 line-clamp-2 max-w-[56ch] text-sm leading-relaxed md:text-base"
+						className="vt-news-text text-body mb-4 line-clamp-2 max-w-[56ch]"
 						style={{
 							color: SCENE_SURFACE.excerptText,
 							viewTransitionName: morph.excerpt
@@ -86,7 +86,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 					</p>
 
 					<p
-						className="vt-news-text text-xs"
+						className="vt-news-text text-label-xs"
 						style={{
 							color: SCENE_SURFACE.mutedText,
 							viewTransitionName: morph.meta
@@ -118,7 +118,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 						style={{ viewTransitionName: morph.scene }}
 					/>
 				) : null}
-			</BasicCard>
+			</Card>
 		</Link>
 	)
 }

@@ -1,8 +1,8 @@
+import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
 import { ArticleMeta } from './article-meta'
-import BasicCard from './basic-card'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 
 import type { NewsArticle } from '../../lib/news/news-manifest'
@@ -32,7 +32,12 @@ interface ArticleCardProps {
 export function ArticleCard({ article, className }: ArticleCardProps) {
 	return (
 		<Link to={`/news-room/${article.slug}`} viewTransition className="group">
-			<BasicCard cardClassName={cn('flex flex-col gap-3 p-5', className)}>
+			<Card
+				className={cn(
+					'group relative h-full gap-3 overflow-hidden rounded-2xl p-5',
+					className
+				)}
+			>
 				<ArticleMeta
 					category={article.category}
 					items={[
@@ -40,13 +45,13 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
 						`${article.readingTimeMinutes} min read`
 					]}
 				/>
-				<h3 className="group-hover:text-orange line-clamp-3 leading-snug font-medium transition-colors">
+				<h3 className="text-h4 decoration-muted-foreground group-hover:decoration-orange line-clamp-3 underline underline-offset-4 transition-colors">
 					{article.title}
 				</h3>
-				<p className="text-muted-foreground line-clamp-3 text-sm">
+				<p className="text-muted-foreground text-body-sm line-clamp-3">
 					{article.excerpt}
 				</p>
-			</BasicCard>
+			</Card>
 		</Link>
 	)
 }

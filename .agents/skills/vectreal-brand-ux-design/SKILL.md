@@ -5,217 +5,66 @@ description: 'Use for any change a user can see in Vectreal: component styling, 
 
 # Vectreal Brand UX Design
 
-## Tokens: the three that are most often confused
+This file is a router. Each rule has exactly one owner below; read the reference
+that covers what you are about to change rather than working from this page.
+Duplicated rules drift, and this repo has the receipts.
 
-| Want                                                      | Use                                                    | Never                                               |
-| --------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
-| The brand color                                           | `--orange` (`#fc6c18`), or `bg-orange` / `text-orange` | `--accent`, `--primary`                             |
-| Brand at partial alpha                                    | `rgb(var(--orange-rgb) / <alpha>)`                     | `hsl(var(--orange)/…)`, `color-mix` with `--orange` |
-| Hover/focus background for menus, options, ghost controls | `--accent`                                             | a hand-picked gray                                  |
+| Reference | Owns |
+| --- | --- |
+| [tokens.md](references/tokens.md) | Brand color and alpha, radius, the spacing rhythm, the `--z-index-*` tiers, viewport height, the page measure |
+| [elevation.md](references/elevation.md) | The `ds-*` ladder, and when a surface may carry a shadow |
+| [typography.md](references/typography.md) | The type scale, the faces, tooltip copy length |
+| [motion.md](references/motion.md) | Durations, easings, and when motion is allowed at all |
+| [enforcement.md](references/enforcement.md) | The ESLint rules, the design specs, claims blocks, the Tailwind scanning hazard, how to verify in a browser |
+| [anti-ai-look.md](references/anti-ai-look.md) | What marketing surfaces must not look like, and what to do instead |
+| [evidence.md](references/evidence.md) | What the design claims rest on, and which popular numbers are fabricated |
 
-`--accent` is **not** the brand. It is the hover/focus background, near-white in
-light mode and dark gray in dark mode. It used to point at `--orange`, which made
-every dropdown item and ghost hover a solid brand block. `--primary` is not the
-brand either.
+## The one answer worth inlining
 
-`--orange` is a hex, so there is no valid inline alpha form. `hsl(var(--orange)/0.14)`
-was tried once and silently killed a gradient for months; `color-mix` degrades to
-solid brand orange where lightningcss emits its no-alpha fallback. Use
-`--orange-rgb` and keep the two in sync.
+The brand color is `--orange` (`#fc6c18`). It is **not** `--accent`, which is the
+hover/focus background, and not `--primary`. At partial alpha it is
+`rgb(var(--orange-rgb) / <alpha>)` and never `hsl(var(--orange)/…)`, which fails
+to parse against a hex and takes the whole declaration down with it, silently.
 
-Do not declare the same Tailwind theme key in both `:root` and `@theme`. The
-viewer package must not emit global theme tokens.
+That is the summary because it is the question asked most often.
+[tokens.md](references/tokens.md) owns the rule, the lookup table, and why each
+wrong form is wrong.
 
-## Elevation: the `ds-*` ladder
+## Failure modes, and who owns the fix
 
-Derived from one `--foreground` mix, so it tracks the theme automatically.
-
-- `ds-raised` (4%) - cards, table containers, anything sitting on the page
-- `ds-overlay` (8%) - popovers, menus, rows hovered on top of raised
-- `ds-sunken` (2.5%) - wells and inputs that should recede
-- `ds-divider` - only where a divider carries meaning, never to draw a box
-- `ds-raised-interactive` / `ds-overlay-interactive` - hover lifts exactly one
-  step. Use these rather than pairing a `ds-*` class with a hand-written hover
-  background: call sites had drifted to 6%, 8%, 12% and 14%, so equivalent rows
-  hovered to different values in the same view.
-
-The ladder self-corrects when it nests: raised inside raised steps up on its own,
-so a `Card` dropped onto a raised panel still has an edge. Same-class nesting
-only.
-
-## Type scale
-
-`text-eyebrow`, `text-display`, `text-headline`, `text-h2`, `text-h3`, `text-h4`,
-`text-stat`, `text-body-lg`, `text-label-xs`. These are the single source of
-truth. Setting `style={{ fontSize: 'var(--text-headline)' }}` gets the size and
-none of the weight, tracking or leading, which is why `text-headline` exists.
-
-## Stacking: the `--z-index-*` tiers
-
-Named tiers in `globals.css`, each with a comment saying what belongs there.
-They generate the matching utilities, so a call site names a layer instead of
-picking a number.
-
-| Tier               | Value | What sits there                                                                                         |
-| ------------------ | ----- | ------------------------------------------------------------------------------------------------------- |
-| `z-page-chrome`    | 20    | Chrome owned by one route: the docs breadcrumb bar, the internal preview overlay, a sticky summary card |
-| `z-nav`            | 50    | Site chrome fixed for the whole session: desktop and mobile nav, consent banner                         |
-| `z-overlay`        | 50    | Radix's portal layer: dialog, alert dialog, sheet, drawer, menus, popovers, hover cards                 |
-| `z-above-nav`      | 60    | Must cover the nav: the route loading bar, an embed viewer gone fullscreen                              |
-| `z-tooltip`        | 80    | Tooltips, above the overlay layer so they still show inside a dialog                                    |
-| `z-overlay-raised` | 100   | One overlay that has to clear another                                                                   |
-| `z-select`         | 120   | The select listbox, top of the ladder                                                                   |
-
-The nav and the overlay layer tie at 50 deliberately. Both land in the root
-stacking context, and Radix portals its overlays to the end of the document
-body, so the tie resolves in their favor. That is also why the publisher shell
-keeps every surface of its own below 50, in its own ladder in
-`shell-layout.ts`: at or above it they paint over confirmation modals.
-
-Below 50 is component-local ordering and stays a plain number. Giving it a tier
-name would claim a relationship with the site chrome that it does not have.
-
-## Tooltip copy: 140 characters
-
-`TooltipContent` is `max-w-80` at `text-xs`, so 140 characters is three lines
-and a glance. Past that a tooltip becomes a paragraph hanging over the control
-the reader was trying to use; one optimization-catalog entry had reached 367
-characters, nine lines of it.
-
-`apps/vectreal-platform/tests/tooltip-copy-length.spec.ts` enforces the ceiling
-over every tooltip string in `app/`. It reads source rather than a render tree,
-so it only sees string literals, and a new prop name carrying help text has to
-be added to its `ATTRIBUTES` list.
-
-When copy no longer fits, the answer is a visible caption beside the control,
-the way the embed options panel resolved it, not a taller tooltip. Several
-controls already have that slot: the optimization catalog gives every step a
-`description` rendered under its label, so the tooltip only has to carry what
-the caption does not.
-
-The trigger is a real `<button>`, not the icon. Radix's `TooltipTrigger` adds no
-tabIndex of its own under `asChild`, and an `<svg>` is not a tab stop, so an
-icon handed straight to it cannot be reached or opened by keyboard at all.
-
-## Motion
-
-Durations: `--duration-instant` 80ms, `--duration-fast` 150ms, `--duration-base`
-250ms, `--duration-slow` 400ms, `--duration-cinematic` 700ms.
-Easing: `--ease-out`, `--ease-in-out`, `--ease-spring`.
-
-Motion communicates state change, focus shift, and hierarchy. Respect
-`prefers-reduced-motion`. Do not animate to decorate.
-
-## Rules already enforced by ESLint
-
-`eslint.config.mts` fails the build on these, so read the message rather than
-guessing. Each rule carries a comment explaining the failure it prevents.
-
-1. **Tailwind variants on `ds-*` or `text-*` classes.** They live in
-   `@layer components` and are not registered utilities, so a variant attaches to
-   nothing and Tailwind emits no rule at all. It fails silently. Use an arbitrary
-   utility instead.
-2. **Raw hex in a Tailwind arbitrary value.** Use a token. Where a literal is
-   genuinely correct, such as depicting someone else's interface, hoist it to a
-   named constant with a comment saying why.
-3. **`className` built by template literal or `+`.** Use `cn()`. It merges
-   conflicting Tailwind classes so a caller can override a default, and drops
-   falsy values instead of rendering `undefined` as a class. Pass the parts as
-   separate arguments; pre-joining them inside `cn()` defeats it.
-4. **Inline `<svg>`.** Extract to `shared/components/src/assets/icons` as a named
-   component. A component that exists to draw a graphic rather than an icon
-   disables the rule on the line with a reason.
-5. **A z-index at or above 50, and every escape hatch below it.** 50 is where
-   the site nav and Radix's portal layer live, in the root stacking context, so
-   a number there is competing with them and needs a tier name. Tailwind v4
-   spells the escape hatch three ways and all three are rejected: the bracket,
-   the `z-` custom-property shorthand in parentheses, and a leading `!`.
-   This is the rule the route loading bar needed: it and the header were both
-   fixed to the top of the viewport at 50, nothing recorded that they
-   overlapped, and DOM order decided the bar painted underneath, on every
-   navigation.
-
-## Viewport height
-
-Size full-viewport surfaces with `h-dvh` / `min-h-dvh`, or `h-svh` where a shell
-owns the height and scrolls its own content, as `dashboard-layout.tsx` does.
-
-Never Tailwind's screen-height utilities. They compile to `100vh`, the _large_
-viewport, which overhangs persistent mobile browser chrome: bottom-anchored UI
-goes behind the bar and the page is left scrolled with no way back when a canvas
-holds `touch-action: none`.
-
-## Tailwind scans more than markup
-
-`globals.css` declares `@source '../../../../'`, the repository root, so any
-string that looks like a utility is compiled into the bundle whether or not it
-was ever meant to render.
-
-Specs, config files and markdown are excluded, so prose in this file and in a
-README costs nothing. Comments and strings inside `.ts` and `.tsx` are still
-scanned, and cannot be excluded, because those files also hold the real markup.
-A JSDoc example, a commented-out block of JSX, and plain English both ways: the
-word "ordinal" in a sentence about clip ids compiles to Tailwind's `ordinal`
-utility. Roughly fifteen rules in the bundle today come from comments alone.
-
-So the rule survives where it still bites: do not name a utility in a code
-comment unless the file actually uses it.
-
-## Verify in a browser, not in your head
-
-Design changes close with a screenshot, not a claim. Use the preview tools:
-`preview_start` with `{name: "vectreal-platform"}`, then `read_page`,
-`resize_window` for responsive and dark mode, and `computer` for a screenshot.
-The quality bar for marketing UI is high, and the only way to know a gradient,
-a hover step or a snap point survived is to look at it.
-
-## Anti-patterns
-
-| Anti-pattern                                        | Replacement                                           |
-| --------------------------------------------------- | ----------------------------------------------------- |
-| `--accent` or `--primary` used to mean "brand"      | `--orange` / `bg-orange` / `text-orange`              |
-| Alpha applied to `--orange` inline                  | `rgb(var(--orange-rgb) / <alpha>)`                    |
-| Hand-written hover background beside a `ds-*` class | `ds-raised-interactive` / `ds-overlay-interactive`    |
-| Font size set inline from a `--text-*` token        | The matching `text-*` class                           |
-| Loading, empty and error states added last          | Designed with the happy path                          |
-| Accessibility retrofitted after review              | Keyboard, focus ring, contrast, labels from the start |
+| Symptom | Owner |
+| --- | --- |
+| `--accent` or `--primary` used to mean "brand"; alpha applied to `--orange` inline | [tokens.md](references/tokens.md) |
+| A z-index picked as a number; a full-viewport surface sized with a screen-height utility | [tokens.md](references/tokens.md) |
+| A hand-written hover background beside a `ds-*` class; a shadow on a page surface | [elevation.md](references/elevation.md) |
+| Font size set inline from a `--text-*` token; a heading hand-rolled as `text-4xl md:text-6xl` | [typography.md](references/typography.md) |
+| A tooltip that has become a paragraph | [typography.md](references/typography.md) |
+| Motion added to decorate; a new animation with no `prefers-reduced-motion` guard | [motion.md](references/motion.md) |
+| A variant on a `ds-*` or `text-*` class silently emitting nothing | [enforcement.md](references/enforcement.md) |
+| A marketing surface that reads as templated: uniform cards, a pill above the H1, decorative gradient | [anti-ai-look.md](references/anti-ai-look.md) |
+| Two sections whose gap matches no other gap on the page; a new spacing value invented between two that exist | [tokens.md](references/tokens.md) |
+| A card that draws attention with colour rather than a step on the ladder | [elevation.md](references/elevation.md) |
+| Loading, empty and error states added after the happy path | designed together, always |
+| Accessibility retrofitted after review | keyboard, focus ring, contrast, labels from the start |
 
 ## Source of truth
 
-- `shared/components/src/styles/globals.css` (read the comments; several record
-  an afternoon someone already lost)
+- `shared/components/src/styles/globals.css` — read the comments; several record
+  an afternoon someone already lost
 - `shared/components/src/ui/`
 - `eslint.config.mts`, the `no-restricted-syntax` block
 - `apps/vectreal-platform/app/components/`
 
-## Verified claims
-
-Executed by `apps/vectreal-platform/tests/documented-claims.spec.ts` on every
-CI run. The `absent` line is the load-bearing one: it fails the build the day
+The `absent` line below is the load-bearing one: it fails the build the day
 someone points `--accent` back at the brand.
 
 ```claims
 present  shared/components/src/styles/globals.css                              --orange: #fc6c18
 present  shared/components/src/styles/globals.css                              --orange-rgb: 252 108 24
 absent   shared/components/src/styles/globals.css                              --accent: var(--orange)
-present  shared/components/src/styles/globals.css                              --duration-fast: 150ms
-present  shared/components/src/styles/globals.css                              --duration-cinematic: 700ms
-present  shared/components/src/styles/globals.css                              .ds-raised-interactive
-present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
-present  shared/components/src/styles/globals.css                              .ds-divider
-present  shared/components/src/styles/globals.css                              .text-headline
-present  shared/components/src/styles/globals.css                              @source '../../../../'
-present  shared/components/src/styles/globals.css                              @source not '../../../../**/*.md'
-present  shared/utils/src/lib/styling.utils.ts                                 extendTailwindMerge
-present  shared/components/src/styles/globals.css                              --z-index-nav: 50
-present  shared/components/src/styles/globals.css                              --z-index-overlay: 50
-present  shared/components/src/styles/globals.css                              --z-index-above-nav: 60
-present  shared/components/src/styles/globals.css                              --z-index-select: 120
-present  eslint.config.mts                                                     z-index outside the named scale
-exists   apps/vectreal-platform/tests/documented-claims.spec.ts
-exists   apps/vectreal-platform/tests/tooltip-copy-length.spec.ts
-exists   apps/vectreal-platform/app/components/info-tooltip.spec.tsx
-present  eslint.config.mts                                                     Build className with cn()
-present  eslint.config.mts                                                     Inline SVG
-present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh
+exists   .agents/skills/vectreal-brand-ux-design/references/tokens.md
+exists   .agents/skills/vectreal-brand-ux-design/references/elevation.md
+exists   .agents/skills/vectreal-brand-ux-design/references/typography.md
+exists   .agents/skills/vectreal-brand-ux-design/references/motion.md
+exists   .agents/skills/vectreal-brand-ux-design/references/enforcement.md
 ```

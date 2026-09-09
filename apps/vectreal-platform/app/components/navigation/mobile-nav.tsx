@@ -11,7 +11,7 @@ import {
 } from '@shared/components/ui/sheet'
 import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
 	ExternalLink,
 	Home,
@@ -37,6 +37,11 @@ interface MobileNavProps {
 	className?: string
 }
 
+/*
+  Six staggered spring-slides on every drawer open, and nothing guarded them.
+  Reduced motion means the items are simply there - not the same slide played
+  faster, which is still the movement the setting asks us not to make.
+*/
 const drawerItemVariants = {
 	hidden: { opacity: 0, x: 24 },
 	visible: (i: number) => ({
@@ -51,6 +56,11 @@ const drawerItemVariants = {
 	})
 }
 
+const staticDrawerItemVariants = {
+	hidden: { opacity: 1, x: 0 },
+	visible: { opacity: 1, x: 0 }
+}
+
 function MobileNav({
 	user,
 	navItems,
@@ -61,6 +71,10 @@ function MobileNav({
 }: MobileNavProps) {
 	const { pathname } = useLocation()
 	const isMobile = useIsMobile()
+	const prefersReducedMotion = useReducedMotion()
+	const itemVariants = prefersReducedMotion
+		? staticDrawerItemVariants
+		: drawerItemVariants
 	const [drawerOpen, setDrawerOpen] = useState(false)
 
 	// Close drawer on route change
@@ -193,16 +207,21 @@ function MobileNav({
 								<motion.div
 									key={item.to}
 									custom={i}
-									variants={drawerItemVariants}
+									variants={itemVariants}
 									initial="hidden"
 									animate="visible"
 								>
 									<Link
 										to={item.to}
+										aria-current={isActive ? 'page' : undefined}
 										className={cn(
 											'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+											// The active item was orange on orange-tinted white:
+											// 2.88:1, and it is the only marker of the current
+											// page in the drawer. The tint stays as the surface
+											// signal; the label takes a colour that can be read.
 											isActive
-												? 'bg-orange/10 text-orange'
+												? 'bg-orange/10 text-foreground'
 												: 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
 										)}
 									>
@@ -221,7 +240,7 @@ function MobileNav({
 						{!isHomePage && (
 							<>
 								<div className="flex items-center justify-between px-3">
-									<span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+									<span className="text-muted-foreground text-eyebrow">
 										Theme
 									</span>
 									<ThemeToggleButton />

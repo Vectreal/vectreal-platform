@@ -34,8 +34,15 @@ export const PLATFORM_TAGLINE =
 export const PLATFORM_SHORT_DESCRIPTION =
 	'Vectreal lets developers and teams upload 3D models, run automated optimization pipelines, compose scenes, and publish them as embeddable iframes or via REST API. The viewer requires no WebGL framework on the embedding page.'
 
+/*
+  The most-read string in the product: it is DEFAULT_DESCRIPTION and the home
+  page's meta description. It used to stack two parallel triplets - "creating,
+  sharing, and exploring" then "upload, optimize, and publish" - which is the
+  rhythm rather than the content doing the work, and "exploring" named nothing
+  the product does. One enumeration, of the pipeline that actually exists.
+*/
 export const PLATFORM_SOCIAL_DESCRIPTION =
-	'Vectreal is your platform for creating, sharing, and exploring 3D scenes. Upload, optimize, and publish 3D content in seconds.'
+	'Upload a 3D model, optimize it, and publish it as an embed you can paste into any page. Open-source viewer, no WebGL framework required.'
 
 // ---------------------------------------------------------------------------
 // Supported upload formats
@@ -172,7 +179,13 @@ export const PLAN_CTA_HREF: Record<Plan, string | null> = {
 	enterprise: '/contact'
 }
 
-// Which plan card to visually highlight as "Most popular".
+/*
+  Which plan card carries the recommendation.
+
+  Labelled "Recommended", not "Most popular". Popularity is a claim about other
+  customers that nothing here measures; a recommendation is a statement Vectreal
+  can actually stand behind.
+*/
 export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
 	free: false,
 	pro: true,
@@ -192,8 +205,24 @@ export const PLAN_FALLBACK_PRICES: Partial<
 	business: { monthly: 79, annualMonthly: 63 }
 }
 
-// Annual billing toggle badge copy.
-export const ANNUAL_DISCOUNT_CLAIM = 'Save up to 20%'
+/*
+  Annual billing toggle badge copy, derived rather than written.
+
+  It was the string 'Save up to 20%', and the same screen computed 21% from the
+  same numbers: `pricing-cards-section` derives each plan's real discount and
+  renders it on the card, so Pro could read "Save 21%" beside a toggle claiming
+  "up to 20%". Pro saves 21% and Business 20%, so "up to" was understating its
+  own best case.
+
+  Computed from the fallback prices, which are the documented reference for what
+  a plan costs. `product-copy.spec.ts` pins the two together, so changing a price
+  without the claim following fails rather than quietly contradicting a card.
+*/
+export const ANNUAL_DISCOUNT_CLAIM = `Save up to ${Math.max(
+	...Object.values(PLAN_FALLBACK_PRICES).map(({ monthly, annualMonthly }) =>
+		Math.round((1 - annualMonthly / monthly) * 100)
+	)
+)}%`
 
 // Trust copy displayed near checkout CTAs.
 export const PAYMENT_TRUST_COPY = 'Secured by Stripe · Cancel anytime'
@@ -249,12 +278,37 @@ export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 // ---------------------------------------------------------------------------
 
 export const PRICING_PAGE_COPY = {
-	heading: 'Simple, transparent pricing for every workflow.',
+	heading: 'Start free. Pay when your scenes go live.',
 	description:
-		'Start for free. Upgrade when you need more. Every plan includes the core 3D publishing workflow - no hidden fees.',
-	enterpriseHeading: 'Need a custom setup?',
+		'Start for free and upgrade when you need more. Every plan includes the core 3D publishing workflow without hidden fees.',
+	comparisonHeading: 'What each plan includes',
+	comparisonDescription:
+		'Every entitlement, across all four plans. Limits are per organization.',
+	// The "every entitlement" claim above is pinned by product-copy.spec.ts,
+	// which fails when an entitlement key is added without a row in the grid.
+	enterpriseHeading: 'Enterprise',
 	enterpriseDescription:
-		'Enterprise plans set your limits to whatever you need and add a dedicated support channel. Talk to us.'
+		'Set your own limits and get a dedicated support channel. Tell us what you need and we will price it.'
+} as const
+
+// ---------------------------------------------------------------------------
+// Docs landing page
+// The page's structure is derived from `lib/docs/docs-manifest.ts`, which is
+// what the sidebar reads too, so only the page's own prose lives here.
+// ---------------------------------------------------------------------------
+
+export const DOCS_PAGE_COPY = {
+	heading: 'From your first upload to a production embed.',
+	description:
+		'Platform guides for uploading, optimizing and publishing 3D scenes, and API reference for the open-source packages underneath.',
+	startHereHeading: 'Start here',
+	startHereDescription:
+		'Read them in order. The last one ends with a published scene.',
+	previewHeading: 'What you are building toward',
+	previewDescription:
+		'That viewer is @vctrl/viewer, the package documented below. Publishing a scene gives you this snippet, and the scene renders wherever you paste it.',
+	packagesDescription: 'Open source, published to npm, and documented here.',
+	quickLinksLabel: 'Elsewhere'
 } as const
 
 // ---------------------------------------------------------------------------
@@ -336,7 +390,7 @@ export const ENTITLEMENT_FEATURE_GROUPS: Array<{
 		]
 	},
 	{
-		label: 'Organisation',
+		label: 'Organization',
 		features: [
 			{
 				key: 'org_multi_member',
@@ -425,7 +479,7 @@ export const LIMIT_DISPLAY_LABELS: Record<LimitKey, string> = {
 export const STORAGE_USAGE_LABEL = 'Scene storage'
 
 export const STORAGE_USAGE_HINT =
-	'What your scenes keep, not what visitors download: the editable copy, the published file, its thumbnail, and any baked shadow.'
+	'Counts the editable copy, the published file, its thumbnail, and any baked shadow. Visitor downloads do not count against it.'
 
 // ---------------------------------------------------------------------------
 // Upgrade success page: entitlement keys to highlight post-upgrade, in priority

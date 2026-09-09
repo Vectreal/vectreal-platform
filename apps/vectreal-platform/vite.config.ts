@@ -5,15 +5,99 @@ import tailwindcss from '@tailwindcss/vite'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypePrettyCode from 'rehype-pretty-code'
 import rehypeSlug from 'rehype-slug'
+
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
+/**
+ * Wraps every MDX `<table>` in a focusable horizontal scroll container.
+ *
+ * Markdown emits a bare `<table>` with nothing to hang `overflow-x` on, and the
+ * stylesheet's first answer to that was `display: block` on the table itself.
+ * It stopped the page scrolling sideways - `/docs/packages/viewer` has tables
+ * needing 2202px inside a 343px column - and it cost every table in the docs
+ * and the newsroom its implicit ARIA role, so rows and columns stopped existing
+ * for a screen reader. The overflow fix removed the semantics the element was
+ * there for.
+ *
+ * A wrapper gives the scroll container somewhere to live and leaves the table a
+ * table. `tabIndex` sits on the wrapper because a scrollable region with no
+ * focusable descendant cannot be reached by keyboard at all (WCAG 2.1.1); it is
+ * unconditional because whether a given table overflows is a question about the
+ * viewport, which this build step cannot answer. `mdx.module.css` selects the
+ * wrapper by data attribute, since it is a CSS module and would hash a class
+ * name this cannot know.
+ *
+ * Inline rather than its own module: importing a `.ts` file from `vite.config`
+ * without an extension warns under `configLoader: 'native'`, and with one it
+ * needs `allowImportingTsExtensions` across the whole app tsconfig.
+ */
+interface HastNode {
+	type: string
+	tagName?: string
+	properties?: Record<string, unknown>
+	children?: HastNode[]
+}
+
+const rehypeTableScroll = () => (tree: HastNode) => {
+	const wrap = (node: HastNode): void => {
+		if (!node.children) return
+
+		node.children = node.children.map((child) => {
+			wrap(child)
+
+			if (child.type !== 'element' || child.tagName !== 'table') {
+				return child
+			}
+
+			return {
+				type: 'element',
+				tagName: 'div',
+				properties: { 'data-table-scroll': '', tabIndex: 0 },
+				children: [child]
+			}
+		})
+	}
+
+	wrap(tree)
+}
+
 const prettyCodeOptions = {
-	theme: 'github-dark',
-	keepBackground: true
+	/*
+	  Two themes, and the plate is ours.
+
+	  A single dark theme with `keepBackground` put an inline `#24292e` on every
+	  block, so a code sample was a dark slab on a light page and ignored the
+	  elevation ladder entirely - and it silently won over any colour the
+	  stylesheet set, which is how plaintext blocks ended up near-black on near
+	  black. Shiki now emits `--shiki-light` / `--shiki-dark` per token, the
+	  stylesheet picks one, and the surface stays `ds-sunken` in both themes -
+	  the same plate the hand-written snippet on the docs index uses.
+
+	  Both halves are the high-contrast variants. The stock GitHub themes are
+	  drawn for a pure white or pure black editor, and on the `ds-sunken` plate
+	  their weakest tokens measured 3.28:1 light and 4.00:1 dark - both under the
+	  4.5:1 floor, and both on comments, which is where a code sample puts the
+	  sentence explaining itself.
+	*/
+	theme: {
+		light: 'github-light-high-contrast',
+		dark: 'github-dark-high-contrast'
+	},
+	keepBackground: false,
+	/*
+	  Bare fences go through shiki too.
+	  A ```` ``` ```` with no language was skipped, so it came out without the
+	  `tabindex` shiki puts on every block it renders - and a code block that
+	  scrolls sideways with no focusable descendant cannot be read by keyboard at
+	  all (WCAG 2.1.1). It also missed the `pre[data-theme]` border. Routing them
+	  through plaintext fixes both, at the option rather than at a later plugin
+	  that would overwrite what shiki already set correctly.
+	*/
+	defaultLang: { block: 'plaintext' }
 }
 
 const reactCompilerEnvVar = 'VITE_EXPERIMENTAL_REACT_COMPILER'
@@ -111,6 +195,7 @@ export default defineConfig(({ command }) => {
 				rehypePlugins: [
 					[rehypePrettyCode, prettyCodeOptions],
 					rehypeSlug,
+					rehypeTableScroll,
 					[
 						rehypeAutolinkHeadings,
 						{

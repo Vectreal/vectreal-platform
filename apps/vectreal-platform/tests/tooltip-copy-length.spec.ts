@@ -1,8 +1,9 @@
 /**
  * Tooltip copy has to fit in the tooltip.
  *
- * `TooltipContent` is `max-w-80` at `text-xs`: 320px of 12px DM Sans, minus
- * `px-3` either side. Measured in the browser against that exact box, real
+ * Tooltips are `text-xs` and capped at `max-w-80` by their call sites - the
+ * primitive itself sets only `w-fit` - so the box the budget assumes is 320px
+ * of 12px DM Sans, minus `px-3` either side. Measured in the browser against that exact box, real
  * English prose wraps to three lines at 140 characters and to four in the
  * 150s. A tooltip is a glance, not a paragraph, so 140 is the ceiling.
  *

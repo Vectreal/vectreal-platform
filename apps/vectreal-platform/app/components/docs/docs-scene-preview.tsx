@@ -1,0 +1,81 @@
+import { Component, lazy, Suspense, useEffect, useState } from 'react'
+
+import type { ReactNode } from 'react'
+
+const DocsScenePreviewClient = lazy(() => import('./docs-scene-preview-client'))
+
+/**
+ * Mount gate for the docs viewer.
+ *
+ * Two separate reasons, both load-bearing. The viewer needs a DOM, so it cannot
+ * render during SSR - hence the mounted flag rather than a plain dynamic import.
+ * And Three.js and the viewer are a large payload for a page whose job is to
+ * route people to documentation, so it is lazy and never blocks first paint.
+ * There is no model file on top of that: the subject is generated geometry,
+ * which is the other half of the same decision.
+ *
+ * The placeholder holds the same box at every stage, so the surrounding layout
+ * does not shift when the viewer arrives.
+ */
+export function DocsScenePreview() {
+	const [isMounted, setIsMounted] = useState(false)
+
+	useEffect(() => {
+		setIsMounted(true)
+	}, [])
+
+	// min-w-0 because the canvas has an intrinsic width and a grid or flex item
+	// defaults to min-width: auto, so without it the track sizes to the canvas
+	// and the page scrolls sideways on a phone.
+	const frame =
+		'ds-sunken relative aspect-[4/3] w-full min-w-0 overflow-hidden rounded-2xl'
+
+	if (!isMounted) {
+		return <div className={frame} aria-hidden="true" />
+	}
+
+	/*
+	  aria-hidden on the mounted branch too, not just the placeholder. The cube
+	  is decoration; without it the reader is handed an unnamed <canvas> plus the
+	  viewer's own role="status" aria-live overlay, so a spinning box announces
+	  its loading state on a page whose job is routing people to documentation.
+	*/
+	return (
+		<div className={frame} aria-hidden="true">
+			<PreviewErrorBoundary>
+				<Suspense fallback={null}>
+					<DocsScenePreviewClient />
+				</Suspense>
+			</PreviewErrorBoundary>
+		</div>
+	)
+}
+
+/**
+ * Keeps a failed cube from taking the page with it.
+ *
+ * The viewer has no WebGL capability check anywhere, so on a device without it
+ * - or with hardware acceleration switched off - R3F's `<Canvas>` throws during
+ * render. Nothing stood between that and the route, so the entire docs index
+ * was replaced by an error screen because a decoration could not draw. A failed
+ * chunk fetch did the same.
+ *
+ * Falling back to nothing is right here precisely because the cube is
+ * decoration: the frame around it keeps its shape, and the reader loses a
+ * picture rather than the page they came for. A route boundary cannot do this
+ * job - by the time it runs, the route is already gone.
+ */
+class PreviewErrorBoundary extends Component<
+	{ children: ReactNode },
+	{ failed: boolean }
+> {
+	state = { failed: false }
+
+	static getDerivedStateFromError() {
+		return { failed: true }
+	}
+
+	render() {
+		return this.state.failed ? null : this.props.children
+	}
+}

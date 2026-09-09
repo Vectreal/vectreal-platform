@@ -172,7 +172,7 @@ export default defineConfig(tseslint.configs.recommended, [
 					  `hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]`.
 					*/
 					selector:
-						'Literal[value=/(^|\\s)[a-z][a-z0-9-]*(\\[[^\\]]*\\])?(\\/[a-z-]+)?:(ds-(raised|overlay|sunken|divider)|text-(display|headline|h2|h3|stat|body-lg|eyebrow|label-xs))/]',
+						'Literal[value=/(^|\\s)[a-z][a-z0-9-]*(\\[[^\\]]*\\])?(\\/[a-z-]+)?:(ds-(raised|overlay|sunken|divider)|text-(display|headline|h2|h3|h4|stat|body-lg|body-sm|body|eyebrow|label-xs))/]',
 					message:
 						'Tailwind variants cannot be applied to ds-* or text-* design-system classes: they are @layer components rules, not utilities, so this generates nothing. Use an arbitrary value, e.g. hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))].'
 				},

@@ -26,12 +26,12 @@ export function ConsentBanner() {
 					animate={{ y: 0, opacity: 1 }}
 					exit={{ y: 80, opacity: 0 }}
 					transition={{ duration: 0.25, ease: 'easeOut' }}
-					className="ds-overlay z-nav fixed right-0 bottom-0 left-0 border-t px-4 py-4 shadow-lg backdrop-blur-sm sm:px-6"
+					className="ds-overlay z-nav fixed right-0 bottom-0 left-0 border-t py-4 shadow-lg backdrop-blur-sm"
 					role="dialog"
 					aria-modal="false"
 					aria-label="Cookie consent"
 				>
-					<div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+					<div className="container-page flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
 						<p className="flex-1 text-sm leading-relaxed text-balance">
 							We use cookies and similar technologies to operate our platform
 							and, with your consent, to understand how you use it. Read our{' '}

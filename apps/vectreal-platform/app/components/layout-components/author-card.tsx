@@ -104,7 +104,7 @@ export function AuthorCard({ author }: AuthorCardProps) {
 				<div className="flex flex-col gap-3">
 					<AuthorChip author={author} />
 					<div className="min-w-0 flex-1">
-						<p className="text-muted-foreground text-sm leading-relaxed">
+						<p className="text-muted-foreground text-body-sm">
 							{author.bio ?? 'Author at Vectreal.'}
 						</p>
 						{author.linkedinUrl ? (
@@ -112,7 +112,7 @@ export function AuthorCard({ author }: AuthorCardProps) {
 								href={author.linkedinUrl}
 								target="_blank"
 								rel="noreferrer"
-								className="text-orange text-label-xs mt-2 inline-block font-medium hover:underline"
+								className="text-label-xs decoration-muted-foreground hover:decoration-orange mt-2 inline-block font-medium underline underline-offset-2 transition-colors duration-150"
 							>
 								Connect on LinkedIn
 							</a>

@@ -16,8 +16,8 @@ export const SlimFooter = () => {
 	const { setPreferencesOpen } = useConsent()
 
 	return (
-		<footer className="border-border/50 bg-background/80 w-full border-t px-6 py-4 backdrop-blur-sm">
-			<div className="text-foreground/70 mx-auto flex max-w-7xl flex-col items-center justify-center gap-2 text-center text-sm md:flex-row md:gap-4">
+		<footer className="border-border/50 bg-background/80 w-full border-t py-4 backdrop-blur-sm">
+			<div className="text-foreground/70 container-page flex flex-col items-center justify-center gap-2 text-center text-sm md:flex-row md:gap-4">
 				<span>© {new Date().getFullYear()} Vectreal. All rights reserved.</span>
 				<span>·</span>
 				<Link to="/privacy-policy">Privacy Policy</Link>
@@ -48,13 +48,13 @@ export const Footer = () => {
 		'optimize once, ship everywhere.',
 		'clean meshes. predictable renders.',
 		'profiles first, polish second.',
-		'build pipelines, not bottlenecks.'
+		'pipelines that keep moving.'
 	]
 
 	return (
 		<>
-			<footer className="border-border/50 bg-background w-full overflow-hidden border-t border-b px-6 pb-8 backdrop-blur-sm">
-				<div className="mx-auto flex max-w-7xl flex-col gap-16 py-32">
+			<footer className="border-border/50 bg-background w-full overflow-hidden border-t border-b pb-8">
+				<div className="container-page flex flex-col gap-16 py-32">
 					<div className="space-y-3 md:w-1/2">
 						<div className="w-40">
 							<VectrealLogoAnimated animated className="h-auto w-full" />
@@ -115,7 +115,7 @@ export const Footer = () => {
 									<Link to="/about">About Us</Link>
 								</li>
 								<li className="text-foreground list-item">
-									<Link to="/news-room">News Room</Link>
+									<Link to="/news-room">Newsroom</Link>
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/contact">Contact Us</Link>
@@ -173,7 +173,7 @@ export const Footer = () => {
 						</div>
 					</div>
 				</div>
-				<div className="relative flex w-full items-center justify-end py-4 max-sm:flex-col">
+				<div className="container-page relative flex items-center justify-end py-4 max-sm:flex-col">
 					<div className="flex grow items-center gap-4">
 						<Link
 							to="https://www.producthunt.com/products/vectreal?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-vectreal-platform"

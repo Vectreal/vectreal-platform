@@ -175,10 +175,19 @@
 		opacity: 0.75;
 	}
 
+	/*
+	  Code is foreground, not orange.
+
+	  Orange is the brand and the interactive accent; it was never a syntax
+	  colour, and it cannot carry text at this size. Measured on the light theme
+	  it ran 2.64:1 inline and 2.71:1 in blocks, against a 4.5:1 floor - so every
+	  code sample in the documentation was failing, which is most of what the
+	  documentation is. The mono face and the chip already mark code as code.
+	*/
 	:not(pre) > code {
 		@apply rounded font-mono text-sm;
 		background: var(--color-muted);
-		color: var(--color-orange);
+		color: var(--color-foreground);
 		padding: 0.125rem 0.375rem;
 	}
 
@@ -188,20 +197,44 @@
 	  out: the `ds-*` classes live in `@layer components` and are not Tailwind
 	  utilities, so `@apply` cannot reach them.
 	*/
+	/*
+	  These four values are the same block the docs landing page renders by hand
+	  in `routes/docs/index.tsx`, which sits one click away. They were 11px/16px
+	  there and 14px/18px here, so one code block changed shape as the reader
+	  moved between two pages of the same section. Size and leading are spelled
+	  out rather than applied, because `.text-body-sm` is in `@layer components`
+	  and `@apply` cannot reach it - the same reason the background is written
+	  out below instead of using `ds-sunken`. Change one, change both.
+	*/
 	pre {
-		@apply overflow-x-auto rounded-xl font-mono text-sm;
+		@apply overflow-x-auto rounded-xl font-mono;
+		font-size: var(--text-body-sm);
+		line-height: 1.5;
 		background-color: color-mix(
 			in oklch,
 			var(--color-foreground) 2.5%,
 			var(--color-background)
 		);
-		padding: 1.125rem;
+		padding: 1rem;
 	}
 
 	pre code {
 		background: transparent;
-		color: var(--color-orange);
 		padding: 0;
+	}
+
+	/*
+	  Token colours follow the site theme.
+
+	  Shiki emits both themes' colours per token as custom properties; this picks
+	  the light one, and the `:global(.dark)` rule below picks the other. Setting
+	  a single `color` on `pre code` here instead is what made plaintext blocks
+	  unreadable: an untokenised block has no per-span colour to override it, so
+	  it took the page foreground and sat on shiki's dark inline background at
+	  1.35:1.
+	*/
+	pre span {
+		color: var(--shiki-light);
 	}
 
 	pre[data-theme] {
@@ -209,8 +242,30 @@
 			color-mix(in oklch, var(--color-foreground) 8%, transparent);
 	}
 
+	/*
+	  Tables scroll rather than push the page sideways.
+
+	  `w-full` does not stop a table exceeding its min-content width. On
+	  `/docs/packages/viewer` eight of twelve tables cannot fit a 375px viewport
+	  - the widest needs 2202px against 343px of available column - so the page
+	  itself scrolled horizontally and the article text went with it.
+
+	  The scroll lives on a wrapper, not on the table. Putting `display: block`
+	  on the table itself also fixed the overflow, and cost every table in the
+	  docs and the newsroom its implicit ARIA role - rows and columns stopped
+	  existing for a screen reader. The rehype plugin in `vite.config.ts` emits the
+	  wrapper; it is selected by data attribute because this is a CSS module and
+	  a class name here would be hashed.
+	*/
+	[data-table-scroll] {
+		max-width: 100%;
+		overflow-x: auto;
+	}
+
 	table {
-		@apply w-full border-collapse text-sm;
+		@apply border-collapse text-sm;
+		width: max-content;
+		min-width: 100%;
 
 		th {
 			@apply px-3 py-2 text-left font-semibold;
@@ -252,4 +307,15 @@
 /* Docs layout MDX (fills the flex content column, no max-width) ─────────── */
 .docsContent {
 	@apply flex flex-col gap-8;
+}
+
+/*
+  The dark half of the shiki pair. It lives outside the scoping block because it
+  needs `.dark` as an ancestor, and `.dark` is a global class the module cannot
+  reach from inside a nested rule.
+*/
+:global(.dark) .root pre span,
+:global(.dark) .docsContent pre span,
+:global(.dark) .newsroomContent pre span {
+	color: var(--shiki-dark);
 }

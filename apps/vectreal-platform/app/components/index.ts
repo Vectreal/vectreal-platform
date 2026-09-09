@@ -1,6 +1,7 @@
 export * from './dashboard'
 export * from './home'
 export * from './layout-components'
+export * from './pricing'
 export * from './publisher'
 export * from './radio-accordion'
 export * from './footer'

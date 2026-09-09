@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { PLAN_OFFER_DESCRIPTIONS } from './product-copy'
+import { PLAN_ENTITLEMENTS } from './plan-config'
+import {
+	ANNUAL_DISCOUNT_CLAIM,
+	ENTITLEMENT_FEATURE_GROUPS,
+	PLAN_FALLBACK_PRICES,
+	PLAN_OFFER_DESCRIPTIONS
+} from './product-copy'
 
 /**
  * The four offer descriptions, pinned whole.
@@ -40,5 +46,65 @@ describe('PLAN_OFFER_DESCRIPTIONS', () => {
 			enterprise:
 				'Unlimited scenes, published scenes, projects and seats, with storage sized to your needs. Adds a dedicated support channel. Custom pricing via sales.'
 		})
+	})
+})
+
+describe('claims the copy makes about the plans', () => {
+	it('states the discount the current prices give, as a literal', () => {
+		/*
+		  A literal, deliberately, and this is the second attempt.
+
+		  The first version recomputed the discount from PLAN_FALLBACK_PRICES and
+		  compared it to ANNUAL_DISCOUNT_CLAIM - which is itself computed from
+		  PLAN_FALLBACK_PRICES. Both sides moved together, so changing a price
+		  left the test green: a tautology, caught only by mutating the price and
+		  watching nothing go red.
+
+		  Pinning the rendered string means a price change fails here and someone
+		  has to update a published marketing claim on purpose. That is the point:
+		  the derivation keeps the badge honest automatically, and this keeps the
+		  change visible.
+		*/
+		expect(ANNUAL_DISCOUNT_CLAIM).toBe('Save up to 21%')
+	})
+
+	it('never claims less than a plan actually saves', () => {
+		/*
+		  "up to" has to be an upper bound. The old hand-written "20%" was not:
+		  Pro saves 21%, so the badge understated its own best case.
+
+		  The bound is checked against the same literal the test above pins, not
+		  against ANNUAL_DISCOUNT_CLAIM. Reading the number back out of the claim
+		  compares the derivation to itself - both sides move with the prices, so
+		  it holds for any input and fails for none. That is the tautology the
+		  comment above describes, and it grew back here.
+		*/
+		const best = Math.max(
+			...Object.values(PLAN_FALLBACK_PRICES).map(({ monthly, annualMonthly }) =>
+				Math.round((1 - annualMonthly / monthly) * 100)
+			)
+		)
+
+		expect(21).toBeGreaterThanOrEqual(best)
+	})
+
+	it('shows every entitlement in the comparison grid', () => {
+		/*
+		  PRICING_PAGE_COPY.comparisonDescription says "Every entitlement, across
+		  all four plans". ENTITLEMENT_FEATURE_GROUPS is a plain array rather than
+		  a total Record, so an eighteenth entitlement key compiles cleanly and
+		  makes that sentence false with nothing going red. This is the guard the
+		  type cannot give.
+		*/
+		const grouped = new Set(
+			ENTITLEMENT_FEATURE_GROUPS.flatMap((group) =>
+				group.features.map((feature) => feature.key)
+			)
+		)
+		const declared = Object.keys(PLAN_ENTITLEMENTS.free) as Array<
+			keyof typeof PLAN_ENTITLEMENTS.free
+		>
+
+		expect([...grouped].sort()).toEqual([...declared].sort())
 	})
 })

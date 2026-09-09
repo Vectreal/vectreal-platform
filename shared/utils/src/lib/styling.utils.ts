@@ -47,7 +47,60 @@ const Z_INDEX_TIERS = [
  * Only names the app declares. Tailwind's own `--container-*` defaults
  * (`w-md`, `max-w-xl`) are already in the built-in groups.
  */
-const CONTAINER_SCALE = ['detail-panel']
+const CONTAINER_SCALE = ['detail-panel', 'measure']
+
+/**
+ * The type scale declared as `.text-*` in `globals.css`, for the third time and
+ * the same reason.
+ *
+ * tailwind-merge sorts a class it does not recognise by shape, and every
+ * `text-<unknown>` falls into its `text-color` group. So a rung and a colour
+ * looked like the same property to it and deleted each other, in both
+ * directions: `cn('text-h3', 'text-muted-foreground')` returned only the
+ * colour, and `cn('text-foreground text-h3')` returned only the rung. The
+ * second form was live in `sheet.tsx` and `drawer.tsx`, which shipped with
+ * `text-foreground` silently dropped until this registration landed.
+ *
+ * That is worse than the z-index case rather than merely equal to it. There the
+ * loser kept its class and lost a race in the stylesheet; here the class is
+ * removed outright, so nothing in the DOM records that a rung was ever asked
+ * for.
+ *
+ * Registered as the `text` theme key, which is tailwind-merge's namespace for
+ * font sizes, rather than as a class group - the same argument the container
+ * scale makes above. It puts the rungs where `font-size` conflicts are already
+ * resolved, so a rung conflicts with another rung and with `text-sm`, and no
+ * longer with a colour.
+ *
+ * `type-scale-adherence.spec.ts` pins this list against the stylesheet.
+ *
+ * Registering these has a second-order effect worth knowing before adding to
+ * the list: a colour that was previously being deleted beside a rung now
+ * survives. Seven call sites pair a rung with a text colour, and three changed
+ * behaviour when this landed - all correctly, none deliberately.
+ * `ui/select.tsx` group headings moved from foreground to the muted colour
+ * their class had always asked for. `home/section/section-label.tsx` started
+ * rendering its brand colour, which then had to come off 70% alpha to stay
+ * legible at 11px. And `layout-components/article-meta.tsx` moved to muted on
+ * every newsroom card, row, hero and article header - the widest-reaching of
+ * the three, and the one nobody noticed.
+ *
+ * So when a rung joins this list, grep for the rung name beside a `text-`
+ * colour and check what starts rendering.
+ */
+const TYPE_SCALE_RUNGS = [
+	'display',
+	'headline',
+	'h2',
+	'h3',
+	'h4',
+	'stat',
+	'body-lg',
+	'body',
+	'body-sm',
+	'label-xs',
+	'eyebrow'
+]
 
 /*
   The tiers stay a class group. `--z-index-*` is a Tailwind namespace, but
@@ -57,7 +110,7 @@ const CONTAINER_SCALE = ['detail-panel']
 const twMerge = extendTailwindMerge({
 	extend: {
 		classGroups: { z: [{ z: Z_INDEX_TIERS }] },
-		theme: { container: CONTAINER_SCALE }
+		theme: { container: CONTAINER_SCALE, text: TYPE_SCALE_RUNGS }
 	}
 })
 
@@ -65,4 +118,4 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs))
 }
 
-export { CONTAINER_SCALE, Z_INDEX_TIERS }
+export { CONTAINER_SCALE, TYPE_SCALE_RUNGS, Z_INDEX_TIERS }

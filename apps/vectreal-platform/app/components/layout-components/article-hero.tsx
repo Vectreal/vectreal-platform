@@ -1,7 +1,7 @@
+import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 
 import { ArticleMeta } from './article-meta'
-import BasicCard from './basic-card'
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
@@ -38,9 +38,9 @@ interface ArticleHeroProps {
  *
  * The `view-transition-name`s pair this header with the listing's featured
  * card, so arriving from the newsroom index grows the card into the hero
- * instead of cross-fading. The names sit on `cardStyle`, which BasicCard
- * forwards to the inner `Card` - the element that actually carries the
- * background, border and radius. See `lib/news/article-view-transition.ts`.
+ * instead of cross-fading. The names sit on the card's own `style`, on the
+ * element that carries the background and radius. See
+ * `lib/news/article-view-transition.ts`.
  */
 export function ArticleHero({
 	slug,
@@ -56,27 +56,26 @@ export function ArticleHero({
 	const morph = newsroomMorphNames(slug)
 
 	return (
-		<BasicCard
-			as="header"
-			cardClassName={cn(
-				'vt-news-plate relative isolate overflow-hidden border-white/10 p-0',
+		<Card
+			className={cn(
+				'group vt-news-plate relative isolate h-full overflow-hidden rounded-2xl p-0',
 				className
 			)}
-			cardStyle={{
+			style={{
 				backgroundColor: SCENE_SURFACE.background,
 				viewTransitionName: morph.card
 			}}
 		>
 			<div className="relative z-20 flex min-h-[20rem] flex-col justify-end p-6 md:min-h-[26rem] md:p-9">
 				<p
-					className="text-orange text-eyebrow vt-news-text mb-3"
+					className="text-muted-foreground text-eyebrow vt-news-text mb-3"
 					style={{ viewTransitionName: morph.eyebrow }}
 				>
 					{category}
 				</p>
 
 				<h1
-					className="text-headline vt-news-text max-w-3xl text-balance"
+					className="text-headline font-heading vt-news-text max-w-3xl text-balance"
 					style={{ color: SCENE_SURFACE.text, viewTransitionName: morph.title }}
 				>
 					{title}
@@ -116,6 +115,6 @@ export function ArticleHero({
 					style={{ viewTransitionName: morph.scene }}
 				/>
 			) : null}
-		</BasicCard>
+		</Card>
 	)
 }

@@ -366,17 +366,6 @@ export function getNewsCategories(): string[] {
 	).sort((a, b) => a.localeCompare(b))
 }
 
-export function getNewsTags(): string[] {
-	const tags = new Set<string>()
-	for (const article of allArticles) {
-		for (const tag of article.tags) {
-			tags.add(tag)
-		}
-	}
-
-	return Array.from(tags).sort((a, b) => a.localeCompare(b))
-}
-
 export function getAdjacentNewsArticles(slug: string): {
 	previous?: NewsArticle
 	next?: NewsArticle

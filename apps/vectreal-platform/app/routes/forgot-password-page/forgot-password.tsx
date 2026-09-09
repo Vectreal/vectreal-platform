@@ -118,7 +118,7 @@ export default function ForgotPassword() {
 	return (
 		<div className="w-full max-w-md">
 			<motion.div {...authPanelEntrance}>
-				<h1 className="text-h3 mb-2">Forgot your password?</h1>
+				<h1 className="text-h3 font-heading mb-2">Forgot your password?</h1>
 				<p className="text-muted-foreground mb-8 text-sm leading-relaxed">
 					Enter your account email and we'll send you a reset link.
 				</p>
