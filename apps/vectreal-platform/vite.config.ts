@@ -66,8 +66,28 @@ const rehypeTableScroll = () => (tree: HastNode) => {
 }
 
 const prettyCodeOptions = {
-	theme: 'github-dark',
-	keepBackground: true,
+	/*
+	  Two themes, and the plate is ours.
+
+	  A single dark theme with `keepBackground` put an inline `#24292e` on every
+	  block, so a code sample was a dark slab on a light page and ignored the
+	  elevation ladder entirely - and it silently won over any colour the
+	  stylesheet set, which is how plaintext blocks ended up near-black on near
+	  black. Shiki now emits `--shiki-light` / `--shiki-dark` per token, the
+	  stylesheet picks one, and the surface stays `ds-sunken` in both themes -
+	  the same plate the hand-written snippet on the docs index uses.
+
+	  Both halves are the high-contrast variants. The stock GitHub themes are
+	  drawn for a pure white or pure black editor, and on the `ds-sunken` plate
+	  their weakest tokens measured 3.28:1 light and 4.00:1 dark - both under the
+	  4.5:1 floor, and both on comments, which is where a code sample puts the
+	  sentence explaining itself.
+	*/
+	theme: {
+		light: 'github-light-high-contrast',
+		dark: 'github-dark-high-contrast'
+	},
+	keepBackground: false,
 	/*
 	  Bare fences go through shiki too.
 	  A ```` ``` ```` with no language was skipped, so it came out without the

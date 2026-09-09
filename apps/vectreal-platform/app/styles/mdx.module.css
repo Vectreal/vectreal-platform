@@ -220,8 +220,21 @@
 
 	pre code {
 		background: transparent;
-		color: var(--color-foreground);
 		padding: 0;
+	}
+
+	/*
+	  Token colours follow the site theme.
+
+	  Shiki emits both themes' colours per token as custom properties; this picks
+	  the light one, and the `:global(.dark)` rule below picks the other. Setting
+	  a single `color` on `pre code` here instead is what made plaintext blocks
+	  unreadable: an untokenised block has no per-span colour to override it, so
+	  it took the page foreground and sat on shiki's dark inline background at
+	  1.35:1.
+	*/
+	pre span {
+		color: var(--shiki-light);
 	}
 
 	pre[data-theme] {
@@ -294,4 +307,15 @@
 /* Docs layout MDX (fills the flex content column, no max-width) ─────────── */
 .docsContent {
 	@apply flex flex-col gap-8;
+}
+
+/*
+  The dark half of the shiki pair. It lives outside the scoping block because it
+  needs `.dark` as an ancestor, and `.dark` is a global class the module cannot
+  reach from inside a nested rule.
+*/
+:global(.dark) .root pre span,
+:global(.dark) .docsContent pre span,
+:global(.dark) .newsroomContent pre span {
+	color: var(--shiki-dark);
 }
