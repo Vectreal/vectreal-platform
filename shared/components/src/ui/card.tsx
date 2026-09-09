@@ -27,11 +27,26 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
 	)
 }
 
+/*
+  `text-h4`, the panel-heading rung, and nothing else.
+
+  The base used to be `text-xl font-light tracking-wide capitalize`, and all
+  four of those were doing damage. `capitalize` made a copy decision in CSS:
+  every card title in the product rendered title-cased, so "Send a message"
+  reached the reader as "Send A Message" with the article capitalised, and no
+  amount of editing the string could change it. `font-light` (300) and
+  `tracking-wide` (+0.025em) are utilities, so they beat whichever rung a caller
+  passed from `@layer components` - a title asking for `text-h3` got h3's size
+  with 300 weight and positive tracking, the opposite of that rung's spec.
+
+  `text-xl` was merely off-scale, and is the one a caller could already
+  override.
+*/
 function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
 	return (
 		<div
 			data-slot="card-title"
-			className={cn('text-xl font-light tracking-wide capitalize', className)}
+			className={cn('text-h4', className)}
 			{...props}
 		/>
 	)

@@ -197,9 +197,25 @@ Reinstall before trusting any test result on a dependency-regression bug.
 
 ## Gates
 
+Formatting is a gate and it is the one most often missed, because nothing local
+prompts for it:
+
 ```bash
-pnpm nx run-many --target=typecheck,lint -p vctrl/core,vctrl/hooks,vctrl/viewer,vectreal-platform
+npx prettier --check .
 ```
+
+CI runs exactly that, repo-wide, at `.github/workflows/ci-quality.yaml`. It has
+failed a branch nine files at a time after a session of otherwise-green
+typecheck, lint and test runs - a class-string edit reorders under the Tailwind
+plugin, and nothing else notices.
+
+```bash
+pnpm nx run-many --target=typecheck,lint -p vctrl/core,vctrl/hooks,vctrl/viewer,vectreal-platform,shared/utils,shared/components
+```
+
+**Six projects, not four.** `shared/utils` and `shared/components` lint on their
+own and are missing from the obvious command; an import-order error in a spec
+under `shared/` passed a four-project run and failed CI.
 
 ```bash
 npx vitest run --root .
@@ -256,6 +272,7 @@ Executed by `apps/vectreal-platform/tests/documented-claims.spec.ts` on every
 CI run.
 
 ```claims
+present  .github/workflows/ci-quality.yaml                    prettier --check
 exists   .agents/hooks/skills-plan-gate.mjs
 present  .claude/settings.json                                  skills-plan-gate.mjs
 present  .github/workflows/ci-quality.yaml                     build-ci
