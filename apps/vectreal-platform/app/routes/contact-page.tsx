@@ -1,5 +1,6 @@
 import { usePostHog } from '@posthog/react'
 import {
+	Card,
 	CardContent,
 	CardDescription,
 	CardHeader
@@ -15,7 +16,7 @@ import {
 	ContactSuccessResult
 } from '../components/contact'
 import { PublicErrorBoundary } from '../components/errors'
-import { BasicCard, PageHero } from '../components/layout-components'
+import { PageHero } from '../components/layout-components'
 import {
 	CONTACT_SOURCE_VALUES,
 	type ContactActionData,
@@ -218,7 +219,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 
 			<div className="container-page pb-32">
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-					<BasicCard>
+					<Card className="group relative h-full overflow-hidden rounded-2xl">
 						<CardHeader>
 							{/*
 							  A real <h2>, not CardTitle. CardTitle renders a <div>, so all
@@ -300,7 +301,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 								)}
 							</AnimatePresence>
 						</CardContent>
-					</BasicCard>
+					</Card>
 
 					<div className="space-y-6">
 						<section>

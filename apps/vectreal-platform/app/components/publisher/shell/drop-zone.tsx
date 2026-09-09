@@ -1,5 +1,6 @@
 import { useAcceptPattern } from '@shared/components/hooks/use-accept-pattern'
 import { Button } from '@shared/components/ui/button'
+import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 import {
@@ -12,8 +13,6 @@ import {
 import { ComponentProps, SyntheticEvent, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Link } from 'react-router'
-
-import BasicCard from '../../layout-components/basic-card'
 
 declare module 'react' {
 	interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
@@ -84,7 +83,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 									Choose Files
 								</Button>
 							) : (
-								<BasicCard highlight>
+								<Card className="group ds-overlay relative h-full overflow-hidden rounded-2xl">
 									<div
 										className={cn(
 											'relative flex h-full flex-col items-center justify-center rounded-lg p-4 transition-all duration-300',
@@ -128,7 +127,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 											Choose Files
 										</Button>
 									</div>
-								</BasicCard>
+								</Card>
 							)}
 							<div
 								className="flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center"

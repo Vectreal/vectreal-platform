@@ -1,7 +1,7 @@
+import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 
 import { ArticleMeta } from './article-meta'
-import BasicCard from './basic-card'
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
@@ -38,9 +38,9 @@ interface ArticleHeroProps {
  *
  * The `view-transition-name`s pair this header with the listing's featured
  * card, so arriving from the newsroom index grows the card into the hero
- * instead of cross-fading. The names sit on `cardStyle`, which BasicCard
- * forwards to the inner `Card` - the element that actually carries the
- * background, border and radius. See `lib/news/article-view-transition.ts`.
+ * instead of cross-fading. The names sit on the card's own `style`, on the
+ * element that carries the background and radius. See
+ * `lib/news/article-view-transition.ts`.
  */
 export function ArticleHero({
 	slug,
@@ -56,13 +56,12 @@ export function ArticleHero({
 	const morph = newsroomMorphNames(slug)
 
 	return (
-		<BasicCard
-			as="header"
-			cardClassName={cn(
-				'vt-news-plate relative isolate overflow-hidden p-0',
+		<Card
+			className={cn(
+				'group vt-news-plate relative isolate h-full overflow-hidden rounded-2xl p-0',
 				className
 			)}
-			cardStyle={{
+			style={{
 				backgroundColor: SCENE_SURFACE.background,
 				viewTransitionName: morph.card
 			}}
@@ -116,6 +115,6 @@ export function ArticleHero({
 					style={{ viewTransitionName: morph.scene }}
 				/>
 			) : null}
-		</BasicCard>
+		</Card>
 	)
 }

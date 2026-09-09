@@ -16,6 +16,7 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
+	Card,
 	CardContent,
 	CardDescription,
 	CardFooter,
@@ -38,7 +39,6 @@ import {
 	PLAN_HIGHLIGHTED,
 	PLAN_TAGLINES
 } from '../../constants/product-copy'
-import { BasicCard } from '../layout-components'
 
 import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 
@@ -147,16 +147,17 @@ function PlanCard({
 	const isSelectable = !isSelectMode || isSelectableInSelectMode
 
 	return (
-		<BasicCard
-			highlight={isSelected || highlighted || undefined}
-			/*
-			  No bg-muted here. It was a second signal for the same thing highlight
-			  already says, and it is a utility while the ladder is a component
-			  class - so the recommended card left the ladder and rendered a plate
-			  its neighbours could not match. highlight now steps it to 8%.
-			*/
-			cardClassName={cn(
-				'transition-all',
+		<Card
+			className={cn(
+				'group relative h-full overflow-hidden rounded-2xl transition-all',
+				/*
+				  The recommended and selected card sits one step up the ladder.
+				  `ds-overlay` is declared after `ds-raised` at the same specificity,
+				  so it wins on a Card that already carries `ds-raised`. It used to be
+				  `bg-muted`, a utility rather than a rung, so the card people are
+				  meant to choose rendered a plate its neighbours could not match.
+				*/
+				(isSelected || highlighted) && 'ds-overlay',
 				// Dimmed when another plan is selected
 				isSelectMode && selectedPlan && !isSelected && 'opacity-60',
 				isSelectMode &&
@@ -164,7 +165,6 @@ function PlanCard({
 					isSelectable &&
 					'cursor-pointer hover:opacity-100'
 			)}
-			className="flex flex-col"
 			onClick={
 				isSelectMode && !isActive && isSelectable
 					? () => onSelectPlan(plan)
@@ -326,7 +326,7 @@ function PlanCard({
 					</Button>
 				</CardFooter>
 			)}
-		</BasicCard>
+		</Card>
 	)
 }
 

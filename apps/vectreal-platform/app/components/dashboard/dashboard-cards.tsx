@@ -1,4 +1,5 @@
 import {
+	Card,
 	CardContent,
 	CardDescription,
 	CardFooter,
@@ -10,8 +11,6 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { ChevronRight } from 'lucide-react'
 import { FC, PropsWithChildren, type ReactNode } from 'react'
 import { Link } from 'react-router'
-
-import { BasicCard } from '../layout-components'
 
 /**
  * Dashboard Card Variants using CVA for unified styling
@@ -82,7 +81,12 @@ const DashboardCard: FC<DashboardCardProps> = ({
 			viewTransition
 			state={navigationState}
 		>
-			<BasicCard highlight={highlight}>
+			<Card
+				className={cn(
+					'group relative h-full overflow-hidden rounded-2xl',
+					highlight && 'ds-overlay'
+				)}
+			>
 				<CardHeader className={cardHeaderVariants({ variant })}>
 					<span className="grow space-y-1 overflow-hidden">
 						<div className="flex items-center gap-2">
@@ -109,7 +113,7 @@ const DashboardCard: FC<DashboardCardProps> = ({
 						</div>
 					</CardFooter>
 				)}
-			</BasicCard>
+			</Card>
 		</Link>
 	)
 }

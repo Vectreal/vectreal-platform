@@ -1,7 +1,7 @@
+import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
-import BasicCard from './basic-card'
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
@@ -28,10 +28,10 @@ interface FeaturedArticleProps {
  * bottom scrim, text over it. Fixed dark surface because the scene is
  * near-white hairlines and would vanish on a light-theme card.
  *
- * It is built on the same `BasicCard` as the hero rather than a hand-rolled
+ * It is built on the same `Card` as the hero rather than a hand-rolled
  * bordered `Link`, so "matches the article hero" is structural instead of two
  * class lists that have to be kept in step by hand. The `Link` wraps the card
- * because `BasicCard` renders a block element, not an anchor.
+ * because `Card` renders a block element, not an anchor.
  *
  * Every layer carries a `view-transition-name` so clicking through morphs this
  * card into the article hero rather than cross-fading to it. The scene and the
@@ -50,9 +50,9 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 			viewTransition
 			className={cn('group block', className)}
 		>
-			<BasicCard
-				cardClassName="vt-news-plate relative isolate overflow-hidden p-0"
-				cardStyle={{
+			<Card
+				className="group vt-news-plate relative isolate h-full overflow-hidden rounded-2xl p-0"
+				style={{
 					backgroundColor: SCENE_SURFACE.background,
 					viewTransitionName: morph.card
 				}}
@@ -118,7 +118,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 						style={{ viewTransitionName: morph.scene }}
 					/>
 				) : null}
-			</BasicCard>
+			</Card>
 		</Link>
 	)
 }

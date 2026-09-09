@@ -1,6 +1,5 @@
+import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-
-import BasicCard from './basic-card'
 
 import type { ReactNode } from 'react'
 
@@ -32,10 +31,11 @@ export function CtaPanel({
 	className
 }: CtaPanelProps) {
 	return (
-		<BasicCard
-			as="section"
-			cardClassName="flex flex-col gap-4 p-6 md:p-8"
-			className={cn(className)}
+		<Card
+			className={cn(
+				'group relative h-full gap-4 overflow-hidden rounded-2xl p-6 md:p-8',
+				className
+			)}
 		>
 			<h2 className="text-h3 font-heading max-w-2xl">{heading}</h2>
 
@@ -46,6 +46,6 @@ export function CtaPanel({
 			) : null}
 
 			<div className="flex flex-wrap items-center gap-2">{actions}</div>
-		</BasicCard>
+		</Card>
 	)
 }
