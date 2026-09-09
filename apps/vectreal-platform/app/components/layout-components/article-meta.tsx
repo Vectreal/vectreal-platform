@@ -20,7 +20,7 @@ interface ArticleMetaProps {
  * was `text-primary` - which is plain foreground, so the accent it was reaching
  * for never appeared.
  *
- * It is not orange either. `#fc6c18` measures 2.61:1 behind 11px text on a light
+ * It is not orange either. `#fc6c18` measures 2.88:1 behind 11px text on a light
  * card, under the 4.5:1 AA floor, and the same element renders on both a light
  * card and a dark hero plate - so colouring it by surface would make one label
  * look like two. The category reads as meta, in the meta colour.

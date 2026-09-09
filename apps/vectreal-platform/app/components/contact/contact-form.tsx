@@ -164,16 +164,18 @@ export function ContactForm({
 			  reason, and the only working path off the page is an email address
 			  styled as an aside. Say what happened and point at it.
 			*/}
-			{turnstileFailed && (
-				<InlineNotice tone="warning">
-					Verification could not load, which is usually an extension or a
-					network blocking it. Reload to try again, or email{' '}
-					<a href="mailto:info@vectreal.com" className="underline">
-						info@vectreal.com
-					</a>{' '}
-					directly.
-				</InlineNotice>
-			)}
+			<div role="status" className="empty:hidden">
+				{turnstileFailed && (
+					<InlineNotice tone="warning">
+						Verification could not load, which is usually an extension or a
+						network blocking it. Reload to try again, or email{' '}
+						<a href="mailto:info@vectreal.com" className="underline">
+							info@vectreal.com
+						</a>{' '}
+						directly.
+					</InlineNotice>
+				)}
+			</div>
 
 			<div className="flex flex-wrap items-center gap-3">
 				<Button

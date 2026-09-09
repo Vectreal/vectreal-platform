@@ -52,9 +52,11 @@ raised card is the ladder plus a second, contradictory depth cue. Overlays are
 the legitimate exception: a dialog or popover floats over arbitrary content and
 value alone does not separate it.
 
-There is no `--shadow-*` token scale. Roughly 44 call sites use raw Tailwind
-`shadow-sm` / `-md` / `-lg` / `-xl`, almost all in `shared/components/src/ui/`
-and the publisher. Introducing a scale is a filed catalogue row, not a thing to
+There is no `--shadow-*` token scale. Raw Tailwind `shadow-sm` / `-md` / `-lg`
+/ `-xl` is used across a few dozen call sites, almost all in
+`shared/components/src/ui/` and the publisher. (A census is deliberately not
+given here: the last one said 44 and was wrong within a month, and the number is
+not what the rule turns on.) Introducing a scale is a filed catalogue row, not a thing to
 do in passing — but the rule above governs any *new* surface today.
 
 `rounded-2xl shadow-lg p-6` is the untouched shadcn card default and is banned on
@@ -66,7 +68,8 @@ marketing surfaces by [anti-ai-look.md](anti-ai-look.md).
 its reasoning are in [enforcement.md](enforcement.md); what belongs here is the
 replacement:
 `hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]`, the
-arbitrary-utility form `navigation-menu.tsx` uses.
+arbitrary-utility form `routes/docs/index.tsx` uses. (`navigation-menu.tsx`
+writes the same value as a `group-data-[…]` variant rather than a `hover:` one.)
 
 ```claims
 present  shared/components/src/styles/globals.css                              .ds-raised-interactive

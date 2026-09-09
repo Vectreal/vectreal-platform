@@ -58,8 +58,8 @@ const CONTAINER_SCALE = ['detail-panel', 'measure']
  * looked like the same property to it and deleted each other, in both
  * directions: `cn('text-h3', 'text-muted-foreground')` returned only the
  * colour, and `cn('text-foreground text-h3')` returned only the rung. The
- * second form is live in `sheet.tsx` and `drawer.tsx`, which have been shipping
- * with `text-foreground` silently dropped.
+ * second form was live in `sheet.tsx` and `drawer.tsx`, which shipped with
+ * `text-foreground` silently dropped until this registration landed.
  *
  * That is worse than the z-index case rather than merely equal to it. There the
  * loser kept its class and lost a race in the stylesheet; here the class is
@@ -76,11 +76,14 @@ const CONTAINER_SCALE = ['detail-panel', 'measure']
  *
  * Registering these has a second-order effect worth knowing before adding to
  * the list: a colour that was previously being deleted beside a rung now
- * survives. Two call sites changed behaviour when this landed, both correctly,
- * neither deliberately - `ui/select.tsx` group headings moved from foreground
- * to the muted colour their class had always asked for, and
- * `home/section/section-label.tsx` started rendering its brand colour, which
- * then had to be taken off 70% alpha to stay legible at 11px.
+ * survives. Seven call sites pair a rung with a text colour, and three changed
+ * behaviour when this landed - all correctly, none deliberately.
+ * `ui/select.tsx` group headings moved from foreground to the muted colour
+ * their class had always asked for. `home/section/section-label.tsx` started
+ * rendering its brand colour, which then had to come off 70% alpha to stay
+ * legible at 11px. And `layout-components/article-meta.tsx` moved to muted on
+ * every newsroom card, row, hero and article header - the widest-reaching of
+ * the three, and the one nobody noticed.
  *
  * So when a rung joins this list, grep for the rung name beside a `text-`
  * colour and check what starts rendering.

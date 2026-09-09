@@ -67,7 +67,17 @@ const rehypeTableScroll = () => (tree: HastNode) => {
 
 const prettyCodeOptions = {
 	theme: 'github-dark',
-	keepBackground: true
+	keepBackground: true,
+	/*
+	  Bare fences go through shiki too.
+	  A ```` ``` ```` with no language was skipped, so it came out without the
+	  `tabindex` shiki puts on every block it renders - and a code block that
+	  scrolls sideways with no focusable descendant cannot be read by keyboard at
+	  all (WCAG 2.1.1). It also missed the `pre[data-theme]` border. Routing them
+	  through plaintext fixes both, at the option rather than at a later plugin
+	  that would overwrite what shiki already set correctly.
+	*/
+	defaultLang: { block: 'plaintext' }
 }
 
 const reactCompilerEnvVar = 'VITE_EXPERIMENTAL_REACT_COMPILER'

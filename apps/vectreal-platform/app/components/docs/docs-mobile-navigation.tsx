@@ -40,8 +40,8 @@ export function DocsMobileNavigation({
 	  existed in neither. The tree nav has no such gap, which is what makes this
 	  an oversight rather than a decision.
 
-	  Widening that rail to `lg` instead would also have closed it, and cost 44%
-	  of the reading column: measured at 1024px the article drops from 720px to
+	  Widening that rail to `lg` instead would also have closed it, and cost 39%
+	  of the reading column: measured at 1024px the article drops from 656px to
 	  400px once two 256px rails are up. The sheet costs a click and no width.
 	*/
 	return (

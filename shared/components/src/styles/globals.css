@@ -768,8 +768,10 @@
 	  Every rung used to be 500, so the scale had no weight contrast at all and
 	  hierarchy came from size alone. At the display rung's 44-88px, 500 reads as
 	  bold - the size is already carrying the emphasis, and the extra weight only
-	  adds mass. The headings that sit inside panels keep 500, where they have to
-	  hold their own against body copy at a similar size.
+	  adds mass. `.text-h2` takes 450, the rung where a heading is still large
+	  enough that 500 reads heavy but small enough that 400 goes soft. The
+	  headings that sit inside panels keep 500, where they have to hold their own
+	  against body copy at a similar size.
 	*/
 	.text-display {
 		font-size: var(--text-display);

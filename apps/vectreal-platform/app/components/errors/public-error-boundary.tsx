@@ -51,7 +51,7 @@ export function PublicErrorBoundary() {
 	}
 
 	return (
-		<div className="flex min-h-[calc(100dvh-5rem)] items-center justify-center p-6">
+		<main className="flex min-h-[calc(100dvh-5rem)] items-center justify-center p-6">
 			<div className="ds-raised w-full max-w-lg rounded-2xl p-8 text-center">
 				<div className="bg-destructive/10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
 					<AlertCircle
@@ -82,6 +82,6 @@ export function PublicErrorBoundary() {
 					)}
 				</div>
 			</div>
-		</div>
+		</main>
 	)
 }

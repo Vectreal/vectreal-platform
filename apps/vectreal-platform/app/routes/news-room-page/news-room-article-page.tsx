@@ -246,7 +246,7 @@ export default function NewsRoomArticlePage({
 	}
 
 	return (
-		<div className="container-page flex justify-center gap-0 pt-16 pb-32 lg:gap-12">
+		<div className="container-page flex justify-center gap-0 pt-16 pb-32 lg:gap-16">
 			{/*
 			  One live region for both copy buttons, which share `copied`. The label
 			  swap inside a button is not announced unless the reader happens to be
@@ -297,7 +297,7 @@ export default function NewsRoomArticlePage({
 				  there is no rail, so they appear here instead - the same
 				  components, rendered once, in whichever place exists.
 				*/}
-				<div className="border-border mt-8 mb-12 flex flex-wrap items-center gap-3 border-t pt-6 lg:hidden">
+				<div className="border-border mt-8 mb-16 flex flex-wrap items-center gap-3 border-t pt-8 lg:hidden">
 					<AuthorCard author={article.author} />
 					<span className="text-muted-foreground text-body-sm">
 						{article.readingTimeMinutes} min read

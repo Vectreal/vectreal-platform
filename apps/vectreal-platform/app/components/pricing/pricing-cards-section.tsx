@@ -199,8 +199,9 @@ function PlanCard({
 
 						  Deliberately not brand orange. White on #fc6c18 measures
 						  2.88:1, below even the 3:1 large-text floor, and the
-						  accent's job is interactive state rather than decoration.
-						  The card's highlight bar already carries the brand mark.
+						  accent's job is interactive state rather than decoration. The
+						  card marks itself by sitting a step up the elevation ladder,
+						  which is what `highlight` now does.
 						*/}
 						{highlighted && !isSelectMode && (
 							<Badge className="bg-primary text-primary-foreground">
@@ -373,7 +374,16 @@ export function PricingCardsSection({
 	selectablePlans
 }: PricingCardsSectionProps) {
 	return (
-		<section>
+		<section aria-labelledby="plans-heading">
+			{/*
+			  Visually hidden, because the design runs the cards straight off the
+			  hero on /pricing and the grid needs no title to be understood by
+			  sight. It still needs one in the outline: without it both routes that
+			  render this component went h1 straight to the h3 plan names.
+			*/}
+			<h2 id="plans-heading" className="sr-only">
+				Plans
+			</h2>
 			{/*
 			  aria-pressed carries the selection, because the fill alone cannot: a
 			  screen-reader user got two identically-named buttons and no way to tell

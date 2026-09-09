@@ -196,7 +196,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				*/}
 				<section
 					aria-label="Filter articles"
-					className="mb-8 flex flex-wrap items-center justify-between gap-4 md:mb-10"
+					className="mb-8 flex flex-wrap items-center justify-between gap-4"
 				>
 					<div className="flex flex-wrap items-center gap-1">
 						<Button
@@ -204,7 +204,12 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							size="sm"
 							asChild
 						>
-							<Link to={buildNewsRoomPath(filters, { category: '' })}>All</Link>
+							<Link
+								to={buildNewsRoomPath(filters, { category: '' })}
+								aria-current={filters.category ? undefined : 'true'}
+							>
+								All
+							</Link>
 						</Button>
 						{categories.map((topic) => (
 							<Button
@@ -236,11 +241,18 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								className="text-body-sm placeholder:text-muted-foreground w-40 bg-transparent md:w-48"
 							/>
 						</label>
+						{/*
+						  Not disabled while searching. Disabling the element that has
+						  focus moves focus to the body, so the reader lands above the
+						  results they asked for. The label change is the pending signal,
+						  and it announces because the button keeps focus. Re-submitting
+						  a GET is harmless - the router aborts the in-flight navigation.
+						*/}
 						<Button
 							type="submit"
 							variant="ghost"
 							size="sm"
-							disabled={isSearching}
+							aria-busy={isSearching}
 						>
 							{isSearching ? 'Searching' : 'Search'}
 						</Button>
@@ -291,7 +303,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							) : null}
 
 							{remainingArticles.length > 0 ? (
-								<div className="border-border mt-10 border-t">
+								<div className="border-border mt-16 border-t">
 									{remainingArticles.map((article) => (
 										<ArticleRow key={article.slug} article={article} />
 									))}

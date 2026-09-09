@@ -105,7 +105,7 @@ surface renders light and dark, so a shared component changed for one is
 unverified until seen in the other.
 
 ```claims
-present  eslint.config.mts                                                     z-index outside the named scale
+present  eslint.config.mts                                                     Use a tier from globals.css (z-page-chrome
 present  eslint.config.mts                                                     Build className with cn()
 present  eslint.config.mts                                                     Inline SVG
 present  shared/components/src/styles/globals.css                              @source '../../../../'

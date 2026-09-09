@@ -33,10 +33,21 @@ uses forty times an hour does not want a spring.
 
 ## Reduced motion
 
-Respect `prefers-reduced-motion` — every marketing component that animates calls
-`useReducedMotion()` and passes `undefined` variants rather than animating, and
-the CSS keyframe animations are disabled under a `prefers-reduced-motion` block
-in `globals.css`. Match that; do not ship a new animation without the guard.
+Respect `prefers-reduced-motion`. The rule: a Framer component calls
+`useReducedMotion()` and passes static variants rather than animating, and a CSS
+keyframe animation is added to the `prefers-reduced-motion` block in
+`globals.css`.
+
+That block is a hand-maintained **allowlist of class names**, not a blanket
+rule, which is the part that keeps being missed. Anything not listed in it keeps
+animating — including every Tailwind built-in, which is how `animate-pulse` ran
+indefinitely on every card in the product until it was removed. Adding a
+keyframe animation means adding it there in the same change.
+
+The codebase does not yet hold the line everywhere. `home/filetype-carousel.tsx`
+animates with no guard in the file, and `.animate-loading-bar` and
+`.animate-loading-shimmer` are used by `global-navigation-loader.tsx` while
+sitting outside the block. Treat those as debt to match, not as precedent.
 
 ## Two vocabularies exist
 

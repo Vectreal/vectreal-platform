@@ -119,8 +119,14 @@ export function FeatureCompareGrid() {
 						{ENTITLEMENT_FEATURE_GROUPS.map(({ label, features }) => (
 							<React.Fragment key={label}>
 								<tr className="ds-raised">
+									{/*
+									  No scope. This header labels the rows beneath it, and
+									  `colgroup` scopes to a column group - it told assistive
+									  tech that "Publishing" describes the plan columns. All the
+									  groups share one tbody, so `rowgroup` would be wrong too
+									  without splitting it.
+									*/}
 									<th
-										scope="colgroup"
 										colSpan={PLANS.length + 1}
 										className="text-eyebrow sticky left-0 py-2 pr-4"
 									>

@@ -233,8 +233,8 @@
 	  Tables scroll rather than push the page sideways.
 
 	  `w-full` does not stop a table exceeding its min-content width. On
-	  `/docs/packages/viewer` seven of twelve tables cannot fit a 375px viewport
-	  - the widest needs 709px against 343px of available column - so the page
+	  `/docs/packages/viewer` eight of twelve tables cannot fit a 375px viewport
+	  - the widest needs 2202px against 343px of available column - so the page
 	  itself scrolled horizontally and the article text went with it.
 
 	  The scroll lives on a wrapper, not on the table. Putting `display: block`

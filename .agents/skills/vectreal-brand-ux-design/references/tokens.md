@@ -138,7 +138,7 @@ present  shared/components/src/styles/globals.css                              -
 present  shared/components/src/styles/globals.css                              --z-index-overlay: 50
 present  shared/components/src/styles/globals.css                              --z-index-above-nav: 60
 present  shared/components/src/styles/globals.css                              --z-index-select: 120
-present  shared/components/src/styles/globals.css                              .container-page
+present  shared/components/src/styles/globals.css                              max-width: var(--container-max);
 present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh
 present  shared/utils/src/lib/styling.utils.ts                                 CONTAINER_SCALE
 ```

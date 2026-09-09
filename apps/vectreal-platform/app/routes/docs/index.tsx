@@ -196,7 +196,10 @@ export default function DocsIndexPage() {
 						  which renders every code block on the pages this one links to.
 						  It was 11px here and 14px there.
 						*/}
-						<pre className="ds-sunken text-body-sm overflow-x-auto rounded-xl p-4 font-mono">
+						<pre
+							tabIndex={0}
+							className="ds-sunken text-body-sm overflow-x-auto rounded-xl p-4 font-mono"
+						>
 							<code>{EMBED_SNIPPET}</code>
 						</pre>
 					</div>

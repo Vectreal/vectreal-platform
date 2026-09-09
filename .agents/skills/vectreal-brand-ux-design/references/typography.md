@@ -85,7 +85,7 @@ declares.
 
 Shipped. `--font-heading: 'Funnel Display Variable', sans-serif` is declared in
 `globals.css`, the face is imported from `@fontsource-variable/funnel-display`,
-and 13 files apply `font-heading`. To put the display face on a heading, write
+and 14 files apply `font-heading`. To put the display face on a heading, write
 `font-heading` beside the rung — there is nothing to create.
 
 The three decisions that shape it, which still bind:
@@ -112,7 +112,7 @@ decision - see [anti-ai-look.md](anti-ai-look.md).
 
 ## Tooltip copy: 140 characters
 
-`TooltipContent` is `max-w-80` at `text-xs`, so 140 characters is three lines and
+Tooltips are `text-xs` and capped at `max-w-80` by their call sites (`TooltipContent` itself sets only `w-fit`), so 140 characters is three lines and
 a glance. Past that a tooltip becomes a paragraph hanging over the control the
 reader was trying to use; one optimization-catalog entry had reached 367
 characters, nine lines of it.
