@@ -29,7 +29,7 @@ cta: https://vectreal.com/publisher
 sceneImage: "/assets/images/newsroom/scene-3d-on-a-shopify-product-page.webp"
 ---
 
-You have a model of a product and a Shopify product page. There are three places the model can go, and they cost a file upload, a paste, and a theme edit.
+You have a model of a product and a Shopify product page. There are three places the model can go, each one easier to work with than the next one.
 
 <video src="/assets/images/newsroom/12/shopify-gallery-glb.mp4" autoPlay muted loop playsInline aria-label="A shop product gallery showing a still product photo, which gives way to the same product as a 3D model being turned by hand, then returns to the photo."></video>
 
@@ -38,8 +38,6 @@ You have a model of a product and a Shopify product page. There are three places
 | The product media gallery | Shopify's own viewer | A GLB uploaded as product media |
 | Any section below the product details | Your Vectreal embed | A Custom Liquid section holding an iframe |
 | The product media gallery, with your viewer in it | Your Vectreal embed | An edit to the theme's Liquid |
-
-I ran the first two in a test store. The third I have only read my way to, and I say so again in that section, because it is the one people want and it is the one I have not done.
 
 ## Slot one: hand Shopify's gallery a GLB
 
@@ -89,7 +87,13 @@ Then copy the snippet out of the Publisher's **Embed** section and paste it in w
 
 Copy it rather than retyping it. The panel fills in the project, the scene and a real key, and a key pasted by hand into that `src` with quotes around it closes the attribute at the first quote, so the browser requests an empty token and the embed answers `404` with nothing to say why.
 
-The `height` is a plain inline style, so change it once it is in. The stylesheet above it earns its place on the **block** specifically: Horizon renders a Custom Liquid block into a bare `<div>` and lays it out as a flex item, and a flex item sizes to its content, so `width: 100%` inside it resolves against the 300px every iframe defaults to. The scene comes out 300px wide in a full-width section, and nothing you change inside the snippet's own box fixes it, because the element that needs fixing is the one Shopify wrapped around it. The Custom Liquid **section** carries a class and sizing of its own and never had the problem. The rule sits in an anonymous cascade layer and skips any parent the theme marked up, so where your theme has an opinion about that element, your theme wins.
+### A little explanation concerning the code block above
+The `height` is a plain inline style, so change it once it’s in. 
+>`height:400px` inside the `style="..."` text, not the text in `<style/>` brackets
+
+For non-developers: You should be able to use the snippet as is, and it should work fine on shopify and other websites (If not, shoot me a message or ask an AI, which should be even quicker to help you). If you are a bit more technically inclined, below a short explanation why the `style` snippet is needed.
+
+>The stylesheet above it belongs to the **block**. Horizon renders a Custom Liquid block into a bare `<div>` and lays it out as a flex item. A flex item sizes to its content, so `width: 100%` inside it resolves against the 300px every iframe defaults to. The scene comes out 300px wide in a full-width section. The Custom Liquid **section** carries its own class and sizing and never had the problem. The rule sits in an anonymous cascade layer and skips any parent the theme marked up, so your theme wins if it has an opinion about that element.
 
 ![A Shopify theme editor with a Custom Liquid block selected, its code panel open beside the storefront preview, where the 3D scene fills the left half of a split section on the product page.](/assets/images/newsroom/12/custom-liquid-section.webp)
 
@@ -191,3 +195,4 @@ The useful part is that both come out of the same scene. You upload the model on
 The third slot is worth it when the gallery is the whole point and Shopify's viewer is not enough: a configurator, or a scene that has to react to the rest of the page. That is a project, on one store, by somebody who edits Liquid. It is also the thing I most want to test next, and when I have, it gets its own write-up rather than a section here.
 
 Either way you need the file first. Upload a model to the [Publisher](https://vectreal.com/publisher), let it optimize, and export the Draco-compressed GLB. That single file is the whole of slot one, the starting point of slot two, and what the third one reaches for out of Shopify's own CDN.
+
