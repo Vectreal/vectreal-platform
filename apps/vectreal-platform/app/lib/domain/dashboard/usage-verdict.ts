@@ -13,6 +13,9 @@ import type { LimitKey } from '../../../constants/plan-config'
  *   five rails reading "No limit" are furniture.
  * - An account that is blocked needs the remedy first, because it arrived here
  *   from a refusal.
+ * - An account whose only full reading is a plan-shaped cap needs to be told
+ *   nothing. That is the state of every free organization from signup, and a
+ *   headline about it is a permanent announcement of a fact that never changes.
  * - An account near a limit needs to know *which*, because the remedy differs:
  *   storage is optimized, scenes are deleted, published slots are freed, and
  *   projects cannot be fixed at all except by changing plan.
@@ -21,12 +24,20 @@ import type { LimitKey } from '../../../constants/plan-config'
  * page. On free, `projects_total` is 1 and a project is created at signup, so
  * `readUsage(1, 1)` scores critical for every free organization from the moment
  * it exists. Reported as pressure it makes the page cry wolf permanently, which
- * is the same defect the dashboard band had. It is not pressure; it is the
- * shape of the plan, and it says so in different words.
+ * is the same defect the dashboard band had.
+ *
+ * It first got its own `plan` tone, which was the same mistake in a quieter
+ * voice: "Free includes one project" led the page for every free organization
+ * forever, whatever the other four readings said, and its remedy - "more
+ * projects need a larger plan" - is an upsell wearing a remedy's clothes on a
+ * page where nothing is wrong. A plan-shaped cap is not a verdict. It is
+ * reported by its own row, which reads "At the limit - 1 / 1" without an alarm,
+ * and it is kept out of the ranking so it cannot outrank a reading that does
+ * need action.
  */
 
 export type UsageVerdictTone =
-	'empty' | 'unlimited' | 'blocked' | 'near' | 'plan' | 'clear'
+	'empty' | 'unlimited' | 'blocked' | 'near' | 'clear'
 
 export interface UsageReadingInput {
 	key: LimitKey
@@ -94,7 +105,21 @@ export function describeUsageVerdict(
 		}
 	}
 
-	if (readings.every((reading) => reading.current === 0)) {
+	/*
+		"Nothing yet" has to ignore the project every account is born with.
+
+		`initializeUserDefaults` creates "My Project" at signup, so `projects_total`
+		is never 0 and a plain `every(current === 0)` was false for every
+		organization that has ever existed - making this branch unreachable and
+		hiding the one message written for a first visit. The spec passed because
+		its fixture used `projects_total: 0`, contradicting the comment directly
+		above it.
+	*/
+	if (
+		readings.every(
+			(reading) => reading.current === 0 || isPlanShapedCap(reading)
+		)
+	) {
 		return {
 			tone: 'empty',
 			headline: 'Nothing stored yet.',
@@ -129,20 +154,17 @@ export function describeUsageVerdict(
 		}
 	}
 
-	const capped = limited.find(isPlanShapedCap)
+	/*
+		"Nothing needs your attention" rather than "nothing is close to a limit".
 
-	if (capped) {
-		return {
-			tone: 'plan',
-			headline: `${planLabel} includes one ${capped.label.toLowerCase().replace(/s$/, '')}.`,
-			remedy: REMEDIES[capped.key] ?? null,
-			bindingKey: capped.key
-		}
-	}
-
+		A free organization sits at 1 of 1 projects permanently, so the second
+		sentence would contradict a row on the same screen reading "At the limit".
+		The first is true in both cases and is the answer the page exists to give:
+		a cap you cannot act on needs no attention.
+	*/
 	return {
 		tone: 'clear',
-		headline: 'Nothing is close to a limit.',
+		headline: 'Nothing needs your attention.',
 		remedy: null,
 		bindingKey: null
 	}
