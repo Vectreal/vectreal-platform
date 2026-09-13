@@ -12,6 +12,7 @@ import { Link, useLocation } from 'react-router'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
+import { describeDashboardOperationRequirement } from '../../lib/domain/dashboard/dashboard-operations'
 
 export interface ProjectCardData {
 	id: string
@@ -144,7 +145,7 @@ export function ProjectCard({
 					</DropdownMenuItem>
 					{!canDelete ? (
 						<p className="text-muted-foreground px-2 py-1.5 text-xs">
-							Only organization owners can delete a project.
+							{describeDashboardOperationRequirement('project:delete')}
 						</p>
 					) : null}
 				</DropdownMenuContent>

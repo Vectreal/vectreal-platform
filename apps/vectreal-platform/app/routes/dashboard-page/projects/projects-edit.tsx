@@ -53,6 +53,7 @@ import {
 	planDeleteConfirmation,
 	toProjectRef
 } from '../../../lib/domain/dashboard/dashboard-confirmation'
+import { describeDashboardOperationRequirement } from '../../../lib/domain/dashboard/dashboard-operations'
 import { validateAllowedDomainInput } from '../../../lib/domain/embed/embed-domain-policy'
 import {
 	getProject,
@@ -485,7 +486,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 						</Button>
 						{!canDelete ? (
 							<p className="text-muted-foreground text-xs">
-								Only organization owners can delete a project.
+								{describeDashboardOperationRequirement('project:delete')}
 							</p>
 						) : null}
 					</section>
