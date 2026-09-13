@@ -44,7 +44,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useFetcher } from 'react-router'
 
-import type { User } from '@supabase/supabase-js'
+import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
 
 interface SidebarLinkItem {
 	title: string
@@ -96,13 +96,13 @@ const quickLinks: SidebarLinkItem[] = [
 ]
 
 interface DashboardSidebarContentProps {
-	user: User | null
+	actor: DashboardActor
 	sidebarProjects: Array<{ id: string; name: string; organizationId: string }>
 	plan: string
 }
 
 const DashboardSidebarContent = ({
-	user,
+	actor,
 	sidebarProjects,
 	plan
 }: DashboardSidebarContentProps) => {
@@ -117,12 +117,13 @@ const DashboardSidebarContent = ({
 		}
 	}
 
-	const userImageSrc = user?.user_metadata?.avatar_url || ''
-	const userName =
-		user?.user_metadata?.full_name ||
-		user?.user_metadata?.name ||
-		user?.email ||
-		'User'
+	/*
+	  The `full_name ?? name ?? email` fallback used to be spelled here and again
+	  in the layout's PostHog call, from the same raw metadata bag. It is resolved
+	  once on the server now, so this reads a name rather than deriving one.
+	*/
+	const userImageSrc = actor.avatarUrl ?? ''
+	const userName = actor.name
 	const userInitial = userName.charAt(0).toUpperCase()
 	const accountTier = plan.charAt(0).toUpperCase() + plan.slice(1)
 

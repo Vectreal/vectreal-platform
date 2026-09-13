@@ -70,7 +70,6 @@ export interface ProjectRow {
 	 * which made every empty project report as updated today - a date the system
 	 * invented rather than recorded.
 	 */
-	createdAt: Date | null
 	updatedAt: Date | null
 }
 
