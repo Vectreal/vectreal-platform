@@ -1,38 +1,15 @@
-import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { ArrowRight, Pencil, Play } from 'lucide-react'
 import { Link } from 'react-router'
 
+import { RelativeEditTime } from './relative-time'
+import { SceneStatusTag } from './scene-status'
 import { SceneThumbnail } from './scene-thumbnail'
 
-export interface ResumeScene {
-	id: string
-	projectId: string
-	name: string
-	status: string
-	thumbnailUrl: null | string
-	updatedAt: Date | string
-	projectName: string
-}
+import type { SceneSummary } from './scene-card'
 
 interface DashboardOverviewProps {
-	resumeScene: ResumeScene | null
-}
-
-function formatEdited(updatedAt: Date | string) {
-	const date = updatedAt instanceof Date ? updatedAt : new Date(updatedAt)
-	const minutes = Math.floor((Date.now() - date.getTime()) / 60_000)
-
-	if (minutes < 1) return 'edited just now'
-	if (minutes < 60) return `edited ${minutes} min ago`
-	if (minutes < 1440) return `edited ${Math.floor(minutes / 60)}h ago`
-	if (minutes < 43_200) return `edited ${Math.floor(minutes / 1440)}d ago`
-
-	return `edited ${date.toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric'
-	})}`
+	resumeScene: SceneSummary | null
 }
 
 /**
@@ -43,7 +20,7 @@ function formatEdited(updatedAt: Date | string) {
  * this page is asked is "what was I doing?", and answering it takes one card
  * rather than four counts.
  */
-function ResumeBand({ scene }: { scene: ResumeScene }) {
+function ResumeBand({ scene }: { scene: SceneSummary }) {
 	return (
 		<section className="ds-raised overflow-hidden rounded-2xl">
 			<div className="grid gap-5 p-5 sm:grid-cols-[minmax(0,14rem)_1fr] sm:items-center">
@@ -57,12 +34,10 @@ function ResumeBand({ scene }: { scene: ResumeScene }) {
 				*/}
 				<div className="relative">
 					<SceneThumbnail src={scene.thumbnailUrl} />
-					<Badge
-						variant={scene.status === 'published' ? 'default' : 'secondary'}
-						className="absolute top-2 left-2 capitalize shadow-sm"
-					>
-						{scene.status}
-					</Badge>
+					<SceneStatusTag
+						status={scene.status}
+						className="bg-background/70 text-foreground absolute top-2 left-2 rounded-lg px-2 py-0.5 backdrop-blur-sm"
+					/>
 				</div>
 
 				<div className="min-w-0 space-y-3">
@@ -71,7 +46,7 @@ function ResumeBand({ scene }: { scene: ResumeScene }) {
 						<h2 className="text-h3 truncate">{scene.name}</h2>
 						<p className="text-muted-foreground truncate text-sm">
 							{scene.projectName ? `${scene.projectName} · ` : ''}
-							{formatEdited(scene.updatedAt)}
+							<RelativeEditTime updatedAt={scene.updatedAt} inline />
 						</p>
 					</div>
 
