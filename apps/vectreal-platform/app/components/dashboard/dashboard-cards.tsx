@@ -7,54 +7,36 @@ import {
 	CardTitle
 } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
-import { cva, type VariantProps } from 'class-variance-authority'
 import { ChevronRight } from 'lucide-react'
 import { FC, PropsWithChildren, type ReactNode } from 'react'
 import { Link } from 'react-router'
 
 /**
- * Dashboard Card Variants using CVA for unified styling
+ * A card that links somewhere, used by the organizations list.
+ *
+ * It used to declare a `variant` of `default | compact | detailed` and an
+ * `interactive` boolean. No call site ever passed either, and `default` and
+ * `compact` compiled to the same string in both of the CVA blocks that read
+ * them, so of the six declared combinations one was reachable and two were
+ * indistinguishable. What is left needs no CVA.
+ *
+ * `highlight` is real - `organizations.tsx` passes it for an organization the
+ * viewer owns - so it stays, implemented the way `elevation.md` describes
+ * rather than by stacking a second ladder class on the same element. The step
+ * goes on the wrapper and the `ds-raised` `Card` inside it resolves to 8% by
+ * the ladder's nesting rule. It mattered: `ds-*` are `@layer components`
+ * classes and are not registered with tailwind-merge (`styling.utils.ts`
+ * registers `z`, `container` and `text` only), so `cn('ds-raised', 'ds-overlay')`
+ * emitted both and left stylesheet order to pick the winner.
  */
-const dashboardCardVariants = cva('block group/card', {
-	variants: {
-		variant: {
-			default: '',
-			compact: '',
-			detailed: ''
-		},
-		interactive: {
-			true: 'transition-transform hover:scale-[1.02] active:scale-[0.98]',
-			false: ''
-		}
-	},
-	defaultVariants: {
-		variant: 'default',
-		interactive: true
-	}
-})
-
-const cardHeaderVariants = cva('relative flex items-center', {
-	variants: {
-		variant: {
-			default: 'gap-4',
-			compact: 'gap-4',
-			detailed: 'gap-4 flex-col items-start'
-		}
-	},
-	defaultVariants: {
-		variant: 'default'
-	}
-})
-
-interface DashboardCardProps
-	extends PropsWithChildren, VariantProps<typeof dashboardCardVariants> {
+interface DashboardCardProps extends PropsWithChildren {
 	linkTo: string
 	title: string
 	description: string
 	icon: ReactNode
 	id: string
+	/** Lifts the card one step, for the organization the viewer owns. */
 	highlight?: boolean
-	showId?: boolean
 	className?: string
 	/** Optional data to pass for optimistic header updates */
 	navigationState?: import('../../types/dashboard').NavigationState
@@ -67,9 +49,6 @@ const DashboardCard: FC<DashboardCardProps> = ({
 	icon,
 	id,
 	highlight = true,
-	showId = true,
-	variant = 'default',
-	interactive = true,
 	className,
 	navigationState,
 	children
@@ -77,17 +56,12 @@ const DashboardCard: FC<DashboardCardProps> = ({
 	return (
 		<Link
 			to={linkTo}
-			className={cn(dashboardCardVariants({ variant, interactive }), className)}
+			className={cn('group/card block', highlight && 'ds-raised', className)}
 			viewTransition
 			state={navigationState}
 		>
-			<Card
-				className={cn(
-					'group relative h-full overflow-hidden rounded-2xl',
-					highlight && 'ds-overlay'
-				)}
-			>
-				<CardHeader className={cardHeaderVariants({ variant })}>
+			<Card className="group relative h-full overflow-hidden rounded-2xl">
+				<CardHeader className="relative flex items-center gap-4">
 					<span className="grow space-y-1 overflow-hidden">
 						<div className="flex items-center gap-2">
 							<span className="text-muted-foreground group-hover/card:text-foreground transition-colors">
@@ -101,24 +75,18 @@ const DashboardCard: FC<DashboardCardProps> = ({
 							{description}
 						</CardDescription>
 					</span>
-					{variant !== 'detailed' && (
-						<ChevronRight className="text-muted-foreground h-4 w-4 shrink-0 transition-transform group-hover/card:translate-x-1" />
-					)}
+					<ChevronRight className="text-muted-foreground h-4 w-4 shrink-0 transition-transform group-hover/card:translate-x-1" />
 				</CardHeader>
 				{children && <CardContent>{children}</CardContent>}
-				{showId && (
-					<CardFooter>
-						<div className="flex w-full items-center justify-between gap-4">
-							<code className="text-muted-foreground truncate text-xs">
-								{id}
-							</code>
-						</div>
-					</CardFooter>
-				)}
+				<CardFooter>
+					<div className="flex w-full items-center justify-between gap-4">
+						<code className="text-muted-foreground truncate text-xs">{id}</code>
+					</div>
+				</CardFooter>
 			</Card>
 		</Link>
 	)
 }
 
 export default DashboardCard
-export { dashboardCardVariants, type DashboardCardProps }
+export { type DashboardCardProps }

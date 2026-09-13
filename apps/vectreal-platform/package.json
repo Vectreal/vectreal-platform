@@ -36,7 +36,6 @@
 		"sonner": "^2.0.8",
 		"stripe": "^20.4.1",
 		"@posthog/react": "^1.10.3",
-		"class-variance-authority": "^0.7.1",
 		"@tanstack/react-table": "^9.1.2",
 		"three": "catalog:",
 		"posthog-js": "^1.414.0",

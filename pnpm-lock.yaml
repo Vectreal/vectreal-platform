@@ -621,9 +621,6 @@ importers:
       '@vctrl/viewer':
         specifier: workspace:*
         version: link:../../build/packages/vctrl/viewer
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
       compression:
         specifier: ^1.8.1
         version: 1.8.1
