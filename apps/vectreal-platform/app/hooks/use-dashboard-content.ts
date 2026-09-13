@@ -272,6 +272,21 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 				}
 			}
 
+			case 'usage': {
+				const config = DASHBOARD_CONTENT.usage
+				const breadcrumbs: BreadcrumbItem[] = [
+					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+					{ label: config.title, isLast: true }
+				]
+
+				return {
+					title: config.title,
+					description: config.description,
+					actionVariant: config.actionVariant,
+					breadcrumbs
+				}
+			}
+
 			case 'billing': {
 				const config = DASHBOARD_CONTENT.billing
 				const breadcrumbs: BreadcrumbItem[] = [

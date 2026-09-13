@@ -1,4 +1,4 @@
-import { count, eq, sql } from 'drizzle-orm'
+import { count, desc, eq, max, sql, sum } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
@@ -7,8 +7,10 @@ import {
 	assets,
 	folders,
 	projects,
+	sceneAssets,
 	sceneFolders,
 	scenePublished,
+	sceneSettings,
 	scenes
 } from '../../../db/schema'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
@@ -19,7 +21,12 @@ import type {
 	BillingCheckoutOption,
 	BillingCheckoutOptions,
 	BillingLoaderData,
-	BillingSettingsData
+	BillingSettingsData,
+	AssetTypeUsage,
+	HeaviestScene,
+	LargestAsset,
+	OrgUsage,
+	ProjectUsage
 } from '../dashboard/dashboard-types'
 
 const BILLING_PLANS = new Set(['pro', 'business'])
@@ -138,9 +145,7 @@ export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
  * creation worked fine. Two saved queries were not worth a meter that disagrees
  * with the guard beside it.
  */
-export async function loadOrgUsage(
-	organizationId: string
-): Promise<BillingSettingsData['usage']> {
+export async function loadOrgUsage(organizationId: string): Promise<OrgUsage> {
 	const db = getDbClient()
 
 	const [
@@ -254,6 +259,214 @@ export async function loadOrgUsage(
 	}
 }
 
+/**
+ * Where an organization's space and scenes actually are, project by project.
+ *
+ * The five figures `loadOrgUsage` returns say how much is used. They cannot say
+ * what is using it, which is the question anyone opens a usage page with -
+ * "340 of 500 MB" is only actionable once you know which project holds the 340.
+ *
+ * Project, not scene, and deliberately: this is the cut that reconciles with
+ * the quota. Storage walks `assets -> folders -> projects`, where an asset has
+ * exactly one folder and a folder exactly one project, so every asset is
+ * counted once and these figures sum to the organization total.
+ *
+ * `loadHeaviestScenes` answers the other half through `scene_assets`, and its
+ * figures deliberately do not sum, because that join is many-to-many. Both cuts
+ * are real; they answer different questions and only one of them can agree with
+ * the quota.
+ *
+ * Three reads rather than one join. Storage walks `assets -> folders ->
+ * projects` and scenes group on `scenes.projectId`; joining both at once would
+ * multiply every asset row by that project's scene count and inflate the sums.
+ * The project list is read separately so a project with nothing in it still
+ * appears - an empty project is a real answer to "where is my space going".
+ */
+export async function loadProjectUsageBreakdown(
+	organizationId: string
+): Promise<ProjectUsage[]> {
+	const db = getDbClient()
+
+	const [projectRows, storageRows, sceneRows] = await Promise.all([
+		db
+			.select({ id: projects.id, name: projects.name })
+			.from(projects)
+			.where(eq(projects.organizationId, organizationId)),
+		db
+			.select({
+				projectId: folders.projectId,
+				bytes: sum(assets.fileSize)
+			})
+			.from(assets)
+			.innerJoin(folders, eq(folders.id, assets.folderId))
+			.innerJoin(projects, eq(projects.id, folders.projectId))
+			.where(eq(projects.organizationId, organizationId))
+			.groupBy(folders.projectId),
+		db
+			.select({
+				projectId: scenes.projectId,
+				sceneCount: count(scenes.id),
+				lastChangedAt: max(scenes.updatedAt)
+			})
+			.from(scenes)
+			.innerJoin(projects, eq(projects.id, scenes.projectId))
+			.where(eq(projects.organizationId, organizationId))
+			.groupBy(scenes.projectId)
+	])
+
+	const bytesByProject = new Map(
+		storageRows.map((row) => [row.projectId, Number(row.bytes ?? 0)])
+	)
+	const scenesByProject = new Map(sceneRows.map((row) => [row.projectId, row]))
+
+	return projectRows
+		.map((project) => ({
+			id: project.id,
+			name: project.name,
+			storageBytes: bytesByProject.get(project.id) ?? 0,
+			sceneCount: scenesByProject.get(project.id)?.sceneCount ?? 0,
+			lastChangedAt:
+				scenesByProject.get(project.id)?.lastChangedAt?.toISOString() ?? null
+		}))
+		.sort((a, b) => b.storageBytes - a.storageBytes)
+}
+
+/**
+ * What kind of file the space is going into.
+ *
+ * The single most useful cut for anyone whose storage is filling up, because
+ * the answer is almost always textures and the fix for textures is different
+ * from the fix for geometry. `assets.type` is a real column with five values,
+ * so this is a group-by rather than a guess.
+ */
+export async function loadStorageByAssetType(
+	organizationId: string
+): Promise<AssetTypeUsage[]> {
+	const db = getDbClient()
+
+	const rows = await db
+		.select({
+			type: assets.type,
+			bytes: sum(assets.fileSize),
+			fileCount: count(assets.id)
+		})
+		.from(assets)
+		.innerJoin(folders, eq(folders.id, assets.folderId))
+		.innerJoin(projects, eq(projects.id, folders.projectId))
+		.where(eq(projects.organizationId, organizationId))
+		.groupBy(assets.type)
+
+	return rows
+		.map((row) => ({
+			type: row.type,
+			storageBytes: Number(row.bytes ?? 0),
+			fileCount: row.fileCount
+		}))
+		.sort((a, b) => b.storageBytes - a.storageBytes)
+}
+
+/**
+ * The heaviest individual files, so "something needs optimizing" has a subject.
+ *
+ * Ten is enough to see a pattern and short enough to read. Whether any of them
+ * is *unusually* large is decided by the caller against
+ * `storage_bytes_per_scene`, which is the honest reference: a single file
+ * taking a quarter of what an entire scene is allowed is worth a look, and that
+ * number already exists and already varies by plan. Inventing a threshold, or
+ * storing a configurable one in a table with no write path, would both be worse.
+ */
+export async function loadLargestAssets(
+	organizationId: string,
+	limit = 10
+): Promise<LargestAsset[]> {
+	const db = getDbClient()
+
+	const rows = await db
+		.select({
+			id: assets.id,
+			name: assets.name,
+			type: assets.type,
+			fileSize: assets.fileSize,
+			projectId: projects.id,
+			projectName: projects.name
+		})
+		.from(assets)
+		.innerJoin(folders, eq(folders.id, assets.folderId))
+		.innerJoin(projects, eq(projects.id, folders.projectId))
+		.where(eq(projects.organizationId, organizationId))
+		.orderBy(desc(assets.fileSize))
+		.limit(limit)
+
+	return rows.map((row) => ({
+		id: row.id,
+		name: row.name,
+		type: row.type,
+		storageBytes: row.fileSize ?? 0,
+		projectId: row.projectId,
+		projectName: row.projectName
+	}))
+}
+
+/**
+ * The scenes carrying the most weight, which is the unit anyone can act on.
+ *
+ * A project total says where to look; a scene is what you open in the publisher
+ * and optimize. The join runs `assets -> scene_assets -> scene_settings ->
+ * scenes`, which is a real many-to-many: `scene_assets` exists so two scenes can
+ * share one texture, and `garbageCollectUnreferencedAssets` is what removes an
+ * asset once no scene references it any more.
+ *
+ * That sharing is why these figures do not sum to the organization total, and
+ * the page says so rather than leaving it to look like a rounding bug. A shared
+ * asset is counted against every scene referencing it, because the question
+ * here is "how heavy is this scene to load", not "how much disk would deleting
+ * it free". The org total walks `assets -> folders -> projects` instead and
+ * counts each asset exactly once, which is the right answer to the quota
+ * question and the wrong one to this.
+ */
+export async function loadHeaviestScenes(
+	organizationId: string,
+	limit = 8
+): Promise<HeaviestScene[]> {
+	const db = getDbClient()
+
+	const rows = await db
+		.select({
+			id: scenes.id,
+			name: scenes.name,
+			projectId: scenes.projectId,
+			projectName: projects.name,
+			updatedAt: scenes.updatedAt,
+			bytes: sum(assets.fileSize),
+			assetCount: count(assets.id)
+		})
+		.from(sceneAssets)
+		.innerJoin(sceneSettings, eq(sceneSettings.id, sceneAssets.sceneSettingsId))
+		.innerJoin(scenes, eq(scenes.id, sceneSettings.sceneId))
+		.innerJoin(assets, eq(assets.id, sceneAssets.assetId))
+		.innerJoin(projects, eq(projects.id, scenes.projectId))
+		.where(eq(projects.organizationId, organizationId))
+		.groupBy(
+			scenes.id,
+			scenes.name,
+			scenes.projectId,
+			projects.name,
+			scenes.updatedAt
+		)
+		.orderBy(desc(sum(assets.fileSize)))
+		.limit(limit)
+
+	return rows.map((row) => ({
+		id: row.id,
+		name: row.name,
+		projectId: row.projectId,
+		projectName: row.projectName,
+		storageBytes: Number(row.bytes ?? 0),
+		assetCount: row.assetCount,
+		updatedAt: row.updatedAt.toISOString()
+	}))
+}
+
 export async function loadBillingDashboardData(
 	request: Request,
 	options: { includeCheckoutOptions?: boolean } = {}
@@ -279,19 +492,20 @@ export async function loadBillingDashboardData(
 
 	const { plan, billingState } = await getOrgSubscription(organizationId)
 
-	// `loadOrgUsage` fetches what it counts now, so the two queries that used to
-	// feed it from the caller's whole membership set are gone with it.
-	const [usage, checkoutOptions] = await Promise.all([
-		loadOrgUsage(organizationId),
-		includeCheckoutOptions ? getCheckoutOptions() : Promise.resolve(undefined)
-	])
+	/*
+	  No usage here. It moved to `/dashboard/usage`, which loads it itself, so
+	  the billing page stopped paying for five counting queries it no longer
+	  renders.
+	*/
+	const checkoutOptions = includeCheckoutOptions
+		? await getCheckoutOptions()
+		: undefined
 
 	const billing: BillingSettingsData = {
 		plan,
 		billingState,
 		currentPeriodEnd: subRow?.currentPeriodEnd?.toISOString() ?? null,
-		trialEnd: subRow?.trialEnd?.toISOString() ?? null,
-		usage
+		trialEnd: subRow?.trialEnd?.toISOString() ?? null
 	}
 
 	const loaderData: BillingLoaderData = {

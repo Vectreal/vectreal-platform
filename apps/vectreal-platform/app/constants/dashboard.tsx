@@ -31,6 +31,7 @@ export const DASHBOARD_ROUTES = {
 	ORGANIZATIONS: '/dashboard/organizations',
 	ORGANIZATION_DETAIL: (organizationId: string) =>
 		`/dashboard/organizations/${organizationId}`,
+	USAGE: '/dashboard/usage',
 	BILLING: '/dashboard/billing',
 	BILLING_UPGRADE: '/dashboard/billing/upgrade',
 	BILLING_UPGRADE_SUCCESS: '/dashboard/billing/upgrade-success',
@@ -100,6 +101,18 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		title: 'Organization',
 		description: 'Organization details and member access',
 		loadingTitle: 'Organization',
+		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		actionVariant: undefined
+	},
+	/*
+	  Consumption, not money. It used to be a panel on billing and a band on the
+	  overview, so the same five readings answered a question neither page was
+	  asking.
+	*/
+	usage: {
+		title: 'Usage',
+		description: 'What this workspace is using, against what your plan allows',
+		loadingTitle: 'Usage',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},

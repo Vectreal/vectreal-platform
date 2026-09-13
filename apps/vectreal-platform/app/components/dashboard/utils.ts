@@ -47,6 +47,7 @@ export const isValidDashboardView = (view: string): view is DashboardView => {
 		'projects',
 		'api-keys',
 		'organizations',
+		'usage',
 		'billing',
 		'settings'
 	]
@@ -94,6 +95,7 @@ export const getTitleContent = (view: DashboardView): TitleContent | null => {
 		projects: 'project-list',
 		'api-keys': 'api-keys',
 		organizations: 'organizations',
+		usage: 'usage',
 		billing: 'billing',
 		settings: 'settings'
 	}
@@ -243,6 +245,11 @@ export const getRouteContext = (
 		(projectId === 'upgrade-canceled' || projectId === 'checkout-canceled')
 	) {
 		return 'billing-checkout-canceled'
+	}
+
+	// Usage route
+	if (view === 'usage') {
+		return 'usage'
 	}
 
 	// Billing route

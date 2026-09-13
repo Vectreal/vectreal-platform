@@ -227,6 +227,7 @@ export default [
 					'./routes/dashboard-page/organizations.$organizationId.tsx'
 				)
 			]),
+			route('usage', './routes/dashboard-page/usage.tsx'),
 			route('billing', './routes/dashboard-page/billing.tsx'),
 			route('billing/upgrade', './routes/dashboard-page/billing-upgrade.tsx'),
 			route(

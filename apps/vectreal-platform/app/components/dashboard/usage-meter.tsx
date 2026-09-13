@@ -30,7 +30,21 @@ export function readUsage(current: number, limit: null | number): UsageReading {
 		return { unlimited: true, percent: 0, level: 'ok' }
 	}
 
+	/*
+	  A limit of one, met, is the shape of the plan rather than pressure.
+
+	  Free allows a single project and creates it at signup, so every free
+	  organization sits at 1 of 1 from the moment it exists; `org_seats` is the
+	  same. Scored as critical it paints a permanent red bar nobody can clear,
+	  which is what made the dashboard band cry wolf at every new account. The
+	  reading is still full - a second project really is refused - so the figure
+	  and the rail are honest; only the alarm is wrong.
+	*/
 	const percent = Math.min(Math.round((current / limit) * 100), 100)
+
+	if (limit === 1) {
+		return { unlimited: false, percent, level: 'ok' }
+	}
 
 	return {
 		unlimited: false,
@@ -150,6 +164,17 @@ export function UsageMeter({
 		)
 	}
 
+	/*
+	  What is left, which is the question. "4 / 10" makes a reader do the
+	  subtraction, and the whole reason to open this page is to find out whether
+	  there is room for the next thing.
+	*/
+	const remainingLabel = unlimited
+		? 'No limit'
+		: current >= (limit ?? 0)
+			? 'At the limit'
+			: `${format((limit ?? 0) - current)} left`
+
 	return (
 		<div className={cn('ds-sunken space-y-3 rounded-xl p-4', className)}>
 			<p className="text-muted-foreground text-eyebrow flex items-center gap-1.5">
@@ -175,6 +200,11 @@ export function UsageMeter({
 				</span>
 			</p>
 			{bar}
+			<p
+				className={cn('text-xs', LEVEL_TEXT[level] || 'text-muted-foreground')}
+			>
+				{remainingLabel}
+			</p>
 		</div>
 	)
 }
