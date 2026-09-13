@@ -30,16 +30,13 @@ import {
 	Pencil,
 	RefreshCw,
 	Trash2,
-	XCircle,
-	Eye,
-	Rocket,
-	ArrowRight
+	XCircle
 } from 'lucide-react'
 import { memo } from 'react'
 import { Link, useLocation } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
-import { SceneThumbnail } from './scene-thumbnail'
+import { SceneStatusTag } from './scene-status'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 import { useClipboardCopy } from '../../hooks/use-clipboard-copy'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
@@ -51,6 +48,7 @@ import {
 } from '../../lib/domain/auth/api-key-lifecycle'
 import { describeDashboardOperationRequirement } from '../../lib/domain/dashboard/dashboard-operations'
 
+import type { SceneStatus } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'
 
 /**
@@ -167,28 +165,6 @@ export function createProjectColumns({
 	]
 }
 
-/**
- * Scene table columns
- */
-export interface SceneRow {
-	id: string
-	name: string
-	description?: string
-	projectId: string
-	projectName: string
-	/** Where the scene sits in its project. Null is the project root. */
-	folderId?: string | null
-	status: string
-	thumbnailUrl?: string
-	updatedAt: Date
-}
-
-interface SceneColumnsOptions {
-	onMoveItem?: (row: SceneRow) => void
-	onDeleteItem?: (row: SceneRow) => void
-	isActionsDisabled?: boolean
-}
-
 export interface ContentRow {
 	id: string
 	type: 'scene' | 'folder'
@@ -197,7 +173,8 @@ export interface ContentRow {
 	projectId: string
 	projectName: string
 	folderId?: string | null
-	status?: string
+	/** Scenes only. `scenes.status` is an enum column, so this is its union. */
+	status?: SceneStatus
 	/** Folders only: contained scenes plus subfolders. Drives the delete tier. */
 	childCount?: number
 	updatedAt: Date
@@ -210,206 +187,6 @@ interface ContentColumnsOptions {
 	pendingItemIds?: ReadonlySet<string>
 	isActionsDisabled?: boolean
 }
-
-/**
- * A factory rather than a module constant so the recent-scenes table can offer
- * the same row actions as every other table. It used to be navigation-only, so
- * `/dashboard` was the one place where deleting a scene meant selecting it
- * first.
- */
-export function createSceneColumns(
-	options: SceneColumnsOptions = {}
-): ColumnDef<SceneRow>[] {
-	return [
-		createCheckboxColumn<SceneRow>(),
-		{
-			accessorKey: 'name',
-			header: ({ column }) => (
-				<SortableHeader column={column}>Name</SortableHeader>
-			),
-			cell: ({ row }) => (
-				<Link
-					to={`/dashboard/projects/${row.original.projectId}/${row.original.id}`}
-					state={{
-						name: row.original.name,
-						description: row.original.description || undefined,
-						projectName: row.original.projectName,
-						type: 'scene' as const
-					}}
-					viewTransition
-					className="group flex items-center gap-2.5 font-medium"
-				>
-					{/*
-				  `SceneRow` has carried `thumbnailUrl` all along and no column ever
-				  rendered it, so every scene looked the same in the list.
-				*/}
-					<SceneThumbnail src={row.original.thumbnailUrl} size="sm" />
-					<span className="group-hover:underline">{row.getValue('name')}</span>
-				</Link>
-			)
-		},
-		{
-			accessorKey: 'description',
-			header: 'Description',
-			cell: ({ row }) => (
-				<span className="text-muted-foreground line-clamp-1 text-sm">
-					{row.getValue('description') || 'No description'}
-				</span>
-			)
-		},
-		{
-			accessorKey: 'projectName',
-			header: ({ column }) => (
-				<SortableHeader column={column}>Project</SortableHeader>
-			),
-			cell: ({ row }) => (
-				<span className="text-muted-foreground text-sm">
-					{row.getValue('projectName')}
-				</span>
-			)
-		},
-		{
-			accessorKey: 'status',
-			header: ({ column }) => (
-				<SortableHeader column={column}>Status</SortableHeader>
-			),
-			cell: ({ row }) => {
-				const status = row.getValue('status') as string
-				return (
-					<Badge variant={status === 'published' ? 'default' : 'secondary'}>
-						{status}
-					</Badge>
-				)
-			}
-		},
-		{
-			accessorKey: 'updatedAt',
-			header: ({ column }) => (
-				<SortableHeader column={column}>Last Updated</SortableHeader>
-			),
-			cell: ({ row }) => {
-				const date = row.getValue('updatedAt') as Date
-				return (
-					<span className="text-muted-foreground text-sm">
-						{new Date(date).toLocaleDateString('en-US', {
-							month: 'short',
-							day: 'numeric',
-							year: 'numeric'
-						})}
-					</span>
-				)
-			}
-		},
-		{
-			id: 'actions',
-			cell: ({ row }) => (
-				<SceneActionsCell
-					row={row.original}
-					onMoveItem={options.onMoveItem}
-					onDeleteItem={options.onDeleteItem}
-					isActionsDisabled={options.isActionsDisabled}
-				/>
-			)
-		}
-	]
-}
-
-const SceneActionsCell = memo(function SceneActionsCell({
-	row,
-	onMoveItem,
-	onDeleteItem,
-	isActionsDisabled
-}: {
-	row: SceneRow
-} & SceneColumnsOptions) {
-	const isClientMounted = useIsClientMounted()
-
-	const trigger = (
-		<Button
-			variant="ghost"
-			size="sm"
-			aria-label="Scene actions"
-			disabled={!isClientMounted || isActionsDisabled}
-		>
-			<Ellipsis className="h-4 w-4" />
-		</Button>
-	)
-
-	return (
-		<div className="flex items-center justify-end gap-1">
-			{isClientMounted ? (
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuItem asChild>
-							<Link
-								to={`/dashboard/projects/${row.projectId}/${row.id}`}
-								state={{
-									name: row.name,
-									description: row.description || undefined,
-									projectName: row.projectName,
-									type: 'scene' as const
-								}}
-								viewTransition
-								className="flex w-full items-center gap-2"
-							>
-								<ArrowRight className="mr-2 h-4 w-4" />
-								Go to Scene Details
-							</Link>
-						</DropdownMenuItem>
-						<DropdownMenuItem asChild>
-							<Link
-								to={`/publisher/${row.id}`}
-								viewTransition
-								className="flex w-full items-center gap-2"
-							>
-								<Rocket className="mr-2 h-4 w-4" />
-								Edit in Publisher
-							</Link>
-						</DropdownMenuItem>
-						<DropdownMenuItem asChild>
-							<Link
-								to={`/preview/${row.projectId}/${row.id}`}
-								state={{
-									name: row.name,
-									description: row.description || undefined,
-									projectName: row.projectName,
-									type: 'scene' as const
-								}}
-								viewTransition
-								className="flex w-full items-center gap-2"
-							>
-								<Eye className="mr-2 h-4 w-4" />
-								Preview Scene
-							</Link>
-						</DropdownMenuItem>
-						{onMoveItem ? (
-							<DropdownMenuItem
-								disabled={isActionsDisabled}
-								onClick={() => onMoveItem(row)}
-							>
-								<FolderInput className="mr-2 h-4 w-4" />
-								Move to...
-							</DropdownMenuItem>
-						) : null}
-						{onDeleteItem ? (
-							<DropdownMenuItem
-								disabled={isActionsDisabled}
-								onClick={() => onDeleteItem(row)}
-								className={DESTRUCTIVE_MENU_ITEM}
-							>
-								<Trash2 className="mr-2 h-4 w-4" />
-								Delete
-							</DropdownMenuItem>
-						) : null}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			) : (
-				trigger
-			)}
-		</div>
-	)
-})
 
 interface ContentActionsCellProps {
 	row: ContentRow
@@ -691,13 +468,18 @@ export function createContentColumns(
 			header: ({ column }) => (
 				<SortableHeader column={column}>Type</SortableHeader>
 			),
-			cell: ({ row }) => (
-				<Badge variant="secondary">
-					{row.original.type === 'folder'
-						? 'Folder'
-						: row.original.status || 'Scene'}
-				</Badge>
-			)
+			/*
+			  A folder is a kind of thing; a scene's status is a state of one. One
+			  grey pill said those were the same sort of fact and left every scene
+			  status looking alike, archived included. The scene half speaks the
+			  vocabulary `SceneStatusTag` owns.
+			*/
+			cell: ({ row }) =>
+				row.original.type === 'folder' ? (
+					<Badge variant="secondary">Folder</Badge>
+				) : (
+					<SceneStatusTag status={row.original.status ?? 'draft'} />
+				)
 		},
 		{
 			accessorKey: 'updatedAt',

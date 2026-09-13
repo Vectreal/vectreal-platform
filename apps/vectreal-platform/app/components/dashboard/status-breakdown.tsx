@@ -1,5 +1,7 @@
 import { cn } from '@shared/utils'
 
+import { SCENE_STATUS_DOT } from './scene-status'
+
 export interface SceneStatusCounts {
 	published: number
 	draft: number
@@ -7,22 +9,16 @@ export interface SceneStatusCounts {
 }
 
 /*
-  One accent and two weights of neutral - not three colours.
-
-  Published leads because it is the state that costs a quota slot and the one
-  users scan for, so it gets the brand accent. Draft and archived are the same
-  hue at decreasing strength, which is what "less live" should look like.
-
-  Green was wrong here: publishing is a state, not a success, and nothing else
-  in the app says published-is-green - the scene table distinguishes them with
-  `Badge` default vs secondary. A colour that appears in one component and
-  nowhere else is a dialect, not a system.
+	The order is the reading order, and it is keyed to `SCENE_STATUS_DOT` so a
+	fourth status cannot be added to the vocabulary and silently never appear in
+	a project's breakdown. The colours themselves belong to that module, which
+	owns why they are what they are.
 */
-const STATUS_STYLES = [
-	{ key: 'published', label: 'published', dot: 'bg-orange' },
-	{ key: 'draft', label: 'draft', dot: 'bg-muted-foreground/60' },
-	{ key: 'archived', label: 'archived', dot: 'bg-muted-foreground/30' }
-] as const
+const STATUS_ORDER = [
+	'published',
+	'draft',
+	'archived'
+] as const satisfies readonly (keyof typeof SCENE_STATUS_DOT)[]
 
 interface StatusBreakdownProps {
 	counts: SceneStatusCounts
@@ -43,16 +39,16 @@ export function StatusBreakdown({
 	verbose,
 	className
 }: StatusBreakdownProps) {
-	const visible = STATUS_STYLES.filter(
+	const visible = STATUS_ORDER.filter(
 		// Archived is noise until it exists; draft and published always show, so
 		// an all-draft project still reads as "0 published".
-		(status) => counts[status.key] > 0 || status.key !== 'archived'
+		(status) => counts[status] > 0 || status !== 'archived'
 	)
 
 	const total = counts.published + counts.draft + counts.archived
 	if (total === 0) {
 		return (
-			<span className={cn('text-muted-foreground text-xs', className)}>
+			<span className={cn('text-muted-foreground text-label-xs', className)}>
 				No scenes yet
 			</span>
 		)
@@ -61,19 +57,22 @@ export function StatusBreakdown({
 	return (
 		<div
 			className={cn(
-				'text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs',
+				'text-muted-foreground text-label-xs flex flex-wrap items-center gap-x-3 gap-y-1',
 				className
 			)}
 		>
 			{visible.map((status) => (
-				<span key={status.key} className="flex items-center gap-1.5">
+				<span key={status} className="flex items-center gap-1.5">
 					<span
-						className={cn('size-1.5 shrink-0 rounded-full', status.dot)}
+						className={cn(
+							'size-1.5 shrink-0 rounded-full',
+							SCENE_STATUS_DOT[status]
+						)}
 						aria-hidden="true"
 					/>
-					<span className="tabular-nums">{counts[status.key]}</span>
-					{verbose ? <span>{status.label}</span> : null}
-					<span className="sr-only">{status.label}</span>
+					<span className="tabular-nums">{counts[status]}</span>
+					{verbose ? <span className="capitalize">{status}</span> : null}
+					<span className="sr-only">{status}</span>
 				</span>
 			))}
 		</div>

@@ -1,20 +1,10 @@
 import { useSetAtom } from 'jotai/react'
-import { useMemo } from 'react'
 import { data, Link } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
-import {
-	createSceneColumns,
-	DashboardOverview,
-	DataTable,
-	type SceneRow
-} from '../../components/dashboard'
+import { DashboardOverview, SceneCard } from '../../components/dashboard'
 import { DashboardSkeleton } from '../../components/skeletons'
-import { useDashboardMutationStatus } from '../../hooks/use-dashboard-mutations'
-import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
-import { loadOrgUsage } from '../../lib/domain/billing/billing-dashboard-loader.server'
-import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
 import { toSceneRef } from '../../lib/domain/dashboard/dashboard-confirmation'
 import { getRecentScenes } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
@@ -27,61 +17,47 @@ import {
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 
 	const userProjects = await getUserProjects(user.id)
-
-	// Fetch scenes for all projects using batch query (eliminates N+1 problem)
 	const projectIds = userProjects.map(({ project }) => project.id)
 	const scenesByProject = await getProjectsScenes(projectIds, user.id)
-
-	// Flatten scenes map to array
 	const scenes = Array.from(scenesByProject.values()).flat()
 
-	const recentScenes = getRecentScenes(scenes, 10)
-	const mostRecentScene = recentScenes[0]
-
-	/*
-	  `loadOrgUsage` counts for itself. It used to take the projects and scenes
-	  above, which come from `getUserProjects` and span every organization the
-	  viewer belongs to, so three of its five figures were measured across all of
-	  them against one organization's limits. The two extra reads here are the
-	  price of the meter matching the guard beside it.
-	*/
-	const organizationId = userWithDefaults.organization.id
-	const [usage, { plan }] = await Promise.all([
-		loadOrgUsage(organizationId),
-		getOrgSubscription(organizationId)
-	])
-
-	const projectNamesById = Object.fromEntries(
+	const projectNamesById = new Map(
 		userProjects.map(({ project }) => [project.id, project.name])
 	)
 
-	return data(
-		{
-			projects: userProjects,
-			recentScenes,
-			usage,
-			plan,
-			overview: {
-				/* The scene to offer as "jump back in". */
-				resumeScene: mostRecentScene
-					? {
-							id: mostRecentScene.id,
-							projectId: mostRecentScene.projectId,
-							name: mostRecentScene.name,
-							status: mostRecentScene.status,
-							thumbnailUrl: mostRecentScene.thumbnailUrl,
-							updatedAt: mostRecentScene.updatedAt,
-							projectName: projectNamesById[mostRecentScene.projectId] ?? ''
-						}
-					: null
-			}
-		},
-		{ headers }
-	)
+	/*
+	  The project name is resolved here rather than shipped as the whole project
+	  list for the page to look through. The page renders a name per card; it was
+	  being sent every project the viewer can reach, in full, to find them.
+	*/
+	const recentScenes = getRecentScenes(scenes, 10).map((scene) => ({
+		id: scene.id,
+		name: scene.name,
+		projectId: scene.projectId,
+		projectName: projectNamesById.get(scene.projectId) ?? 'Unknown',
+		folderId: scene.folderId,
+		status: scene.status,
+		thumbnailUrl: scene.thumbnailUrl,
+		updatedAt: scene.updatedAt
+	}))
+
+	/*
+	  The resumed scene is the most recent one, so shipping the list plus a
+	  pointer into it meant the page received the same scene twice and subtracted
+	  it back out on the client. The split is a fact about the data, not a layout
+	  choice: one scene to pick up, and the rest.
+
+	  `usage` and `plan` were loaded here until the usage route took the band
+	  away, and stayed behind because a field that is returned and never read
+	  breaks nothing. That cost every visit to this page five counting queries
+	  and a subscription read for figures it no longer renders.
+	*/
+	const [resumeScene = null, ...alsoRecent] = recentScenes
+
+	return data({ resumeScene, alsoRecent }, { headers })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -113,94 +89,58 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
-	const { projects, recentScenes, overview } = loaderData
+	const { alsoRecent, resumeScene } = loaderData
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 	const setMoveDialog = useSetAtom(moveDialogAtom)
-	const { isBusy: isTableBusy } = useDashboardMutationStatus()
-	const sceneTableState = useDashboardTableState({
-		namespace: 'dashboard-scenes'
-	})
-
-	const sceneTableData: SceneRow[] = recentScenes.map((scene) => {
-		const sceneProject = projects.find(
-			({ project }) => project.id === scene.projectId
-		)
-		return {
-			id: scene.id,
-			name: scene.name,
-			description: scene.description ?? undefined,
-			projectId: scene.projectId,
-			projectName: sceneProject?.project.name || 'Unknown',
-			// Carried so `toSceneRef` reports the real location. This used to be
-			// hardcoded to null at the delete call site.
-			folderId: scene.folderId,
-			status: scene.status,
-			thumbnailUrl: scene.thumbnailUrl ?? undefined,
-			updatedAt: scene.updatedAt
-		}
-	})
-
-	const sceneColumns = useMemo(
-		() =>
-			createSceneColumns({
-				isActionsDisabled: isTableBusy,
-				onMoveItem: (row) => {
-					setMoveDialog({
-						open: true,
-						items: [toSceneRef(row)],
-						projectId: row.projectId
-					})
-				},
-				onDeleteItem: (row) => {
-					setDeleteDialog({ open: true, items: [toSceneRef(row)] })
-				}
-			}),
-		[isTableBusy, setDeleteDialog, setMoveDialog]
-	)
 
 	return (
 		<div className="space-y-8 p-6">
-			<DashboardOverview resumeScene={overview.resumeScene} />
+			<DashboardOverview resumeScene={resumeScene} />
 
-			{sceneTableData.length > 0 ? (
+			{alsoRecent.length > 0 ? (
 				<section className="space-y-4">
 					<div className="flex flex-wrap items-center justify-between gap-2">
-						<h3 className="text-muted-foreground text-eyebrow">Recent work</h3>
+						<h2 className="text-h4">Recent work</h2>
 						<Link
 							to="/dashboard/projects"
 							className="text-muted-foreground hover:text-foreground text-xs"
 						>
-							View all projects →
+							All projects
 						</Link>
 					</div>
+
 					{/*
-					  No bulk Move here. This table spans every project, and a move is
-					  intra-project by design, so a multi-project selection has no single
-					  valid destination. Move lives on the row menu, where the project is
-					  unambiguous.
+					  Cards, not the seven-column table this used to be.
+
+					  The question this page is asked is "which one was I working on",
+					  and it is answered by recognising a picture. A table answered a
+					  different question - compare these on seven axes - with select
+					  checkboxes and a bulk-delete bar, on the surface that exists to get
+					  someone back into work. It did render the thumbnail, at 36px in the
+					  name cell, which is an icon rather than the thing itself.
+
+					  Move stays on the card menu rather than becoming a bulk action:
+					  this list spans every project and a move is intra-project, so a
+					  multi-project selection has no single valid destination.
 					*/}
-					<DataTable
-						columns={sceneColumns}
-						data={sceneTableData}
-						isUpdating={isTableBusy}
-						disableSelectionActions={isTableBusy}
-						searchKey="name"
-						searchPlaceholder="Search recent scenes..."
-						searchValue={sceneTableState.searchValue}
-						onSearchValueChange={sceneTableState.setSearchValue}
-						sorting={sceneTableState.sorting}
-						onSortingChange={sceneTableState.onSortingChange}
-						pagination={sceneTableState.pagination}
-						onPaginationChange={sceneTableState.onPaginationChange}
-						rowSelection={sceneTableState.rowSelection}
-						onRowSelectionChange={sceneTableState.onRowSelectionChange}
-						onDelete={(selectedRows) => {
-							setDeleteDialog({
-								open: true,
-								items: (selectedRows as SceneRow[]).map(toSceneRef)
-							})
-						}}
-					/>
+					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+						{alsoRecent.map((scene) => (
+							<SceneCard
+								key={scene.id}
+								scene={scene}
+								onMove={() =>
+									setMoveDialog({
+										open: true,
+										items: [toSceneRef(scene)],
+										projectId: scene.projectId
+									})
+								}
+								onDelete={() =>
+									setDeleteDialog({ open: true, items: [toSceneRef(scene)] })
+								}
+							/>
+						))}
+					</div>
 				</section>
 			) : null}
 			{/*

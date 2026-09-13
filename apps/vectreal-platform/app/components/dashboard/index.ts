@@ -10,6 +10,7 @@ export { FolderPicker, type FolderPickerOption } from './folder-picker'
 export { InlineEditableMetadataField } from './inline-editable-metadata-field'
 export { default as LogoSidebar } from './logo-sidebar'
 export { MoveItemsDialog } from './move-items-dialog'
+export { SceneCard, type SceneSummary } from './scene-card'
 export { ProjectCard, type ProjectCardData } from './project-card'
 export { ProjectMultiSelect, type ProjectOption } from './project-multi-select'
 export {
@@ -17,6 +18,8 @@ export {
 	type ProjectBrowseItem,
 	type StatusFilter
 } from './projects-browser'
+export { RelativeEditTime, formatRelativeEdit } from './relative-time'
+export { SceneStatusTag, SCENE_STATUS_DOT } from './scene-status'
 export { SceneThumbnail } from './scene-thumbnail'
 export { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 export {
