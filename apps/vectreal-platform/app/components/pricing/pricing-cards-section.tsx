@@ -181,7 +181,7 @@ function PlanCard({
 					  300 and +0.025em while every other h3 on the site sat at 500 and
 					  -0.02em.
 					*/}
-					<h3 className="text-h3 font-heading">{name}</h3>
+					<h3 className="text-h3">{name}</h3>
 					<div className="flex items-center gap-1.5">
 						{isActive && (
 							<Badge variant="secondary" className="text-xs">
@@ -214,7 +214,7 @@ function PlanCard({
 				<div className="pt-2">
 					{isFree ? (
 						<div>
-							<span className="text-h2 font-heading">$0</span>
+							<span className="text-h2">$0</span>
 							<span className="text-muted-foreground text-body-sm ml-1">
 								/month
 							</span>
@@ -223,7 +223,7 @@ function PlanCard({
 						<div>
 							{displayAmountCents !== null ? (
 								<div className="flex items-end gap-2">
-									<span className="text-h2 font-heading">
+									<span className="text-h2">
 										{formatCurrency(displayAmountCents, liveCurrency)}
 									</span>
 									<span className="text-muted-foreground text-body-sm mb-1">
@@ -237,7 +237,7 @@ function PlanCard({
 								</div>
 							) : (
 								<div className="flex items-end gap-2">
-									<span className="text-h2 font-heading">
+									<span className="text-h2">
 										$
 										{period === 'annual'
 											? (staticAnnualMonthlyPrice ?? staticMonthlyPrice)

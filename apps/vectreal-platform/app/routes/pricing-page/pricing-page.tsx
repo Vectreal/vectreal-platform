@@ -92,7 +92,7 @@ export default function PricingPage() {
 				<section aria-labelledby="enterprise-heading" className="mt-16">
 					<div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
 						<div className="max-w-xl space-y-2">
-							<h2 id="enterprise-heading" className="text-h3 font-heading">
+							<h2 id="enterprise-heading" className="text-h3">
 								{PRICING_PAGE_COPY.enterpriseHeading}
 							</h2>
 							<p className="text-muted-foreground text-body">
@@ -118,7 +118,7 @@ export default function PricingPage() {
 						  table read as more important than the conversion path beside
 						  it.
 						*/}
-						<h2 id="comparison-heading" className="text-h3 font-heading">
+						<h2 id="comparison-heading" className="text-h3">
 							{PRICING_PAGE_COPY.comparisonHeading}
 						</h2>
 						<p className="text-muted-foreground text-body">

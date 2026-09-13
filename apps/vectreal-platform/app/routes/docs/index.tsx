@@ -128,7 +128,7 @@ function DocsSection({
 	return (
 		<section className={className}>
 			<div className="mb-4 max-w-xl space-y-1">
-				<h2 className="text-h3 font-heading">{heading}</h2>
+				<h2 className="text-h3">{heading}</h2>
 				{description && (
 					<p className="text-muted-foreground text-body-sm">{description}</p>
 				)}
@@ -185,7 +185,7 @@ export default function DocsIndexPage() {
 					{/* min-w-0 so the snippet's own scroll container can shrink; a grid
 					    item defaults to min-width: auto and would size to the code. */}
 					<div className="min-w-0 space-y-4">
-						<h2 id="what-you-make" className="text-h3 font-heading">
+						<h2 id="what-you-make" className="text-h3">
 							{DOCS_PAGE_COPY.previewHeading}
 						</h2>
 						<p className="text-muted-foreground text-body">
@@ -219,7 +219,7 @@ export default function DocsIndexPage() {
 				*/}
 				<section aria-labelledby="start-here" className="mt-32">
 					<div className="mb-4 max-w-xl space-y-1">
-						<h2 id="start-here" className="text-h3 font-heading">
+						<h2 id="start-here" className="text-h3">
 							{DOCS_PAGE_COPY.startHereHeading}
 						</h2>
 						<p className="text-muted-foreground text-body-sm">
