@@ -10,4 +10,8 @@ export { DetailPanelSection } from './detail-panel-section'
 export { FeaturedArticle } from './featured-article'
 export { InlineNotice } from './inline-notice'
 export { default as PageHero } from './page-hero'
+export {
+	DestructiveAction,
+	DestructiveActionButton
+} from './destructive-action'
 export { StatGrid, StatTile } from './stat-tile'

@@ -168,15 +168,21 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 }
 
 /**
- * User-facing reason a role cannot perform an operation.
+ * Who may perform an operation, as a sentence.
  *
- * Lives next to the table so the copy cannot drift from the rule. Surfaced in
- * disabled-affordance tooltips as well as in thrown errors - a disabled button
- * with no explanation is the failure this replaces.
+ * The half of a denial that does not need to know who is asking, which is the
+ * half a disabled control can use: a row in a table knows it may not be
+ * deleted, not what role the viewer holds.
+ *
+ * It exists because three components were writing this sentence out by hand -
+ * `project-card.tsx`, `table-columns.tsx` and `projects-edit.tsx` all carried
+ * "Only organization owners can delete a project." - while the table that
+ * decides the answer sat one import away. Three copies of a rule is one rule
+ * and two chances to disagree with it, and the day `project:delete` admits
+ * admins, the copies keep saying owners.
  */
-export function describeDashboardOperationDenial(
-	operation: DashboardOperation,
-	role: MembershipRole
+export function describeDashboardOperationRequirement(
+	operation: DashboardOperation
 ): string {
 	const allowed = DASHBOARD_OPERATION_ROLES[operation]
 	const who =
@@ -184,7 +190,26 @@ export function describeDashboardOperationDenial(
 			? 'Only organization owners'
 			: 'Only organization owners and admins'
 
-	return `${who} can ${OPERATION_SUBJECTS[operation]}. Your role is ${role}.`
+	return `${who} can ${OPERATION_SUBJECTS[operation]}.`
+}
+
+/**
+ * User-facing reason a role cannot perform an operation.
+ *
+ * Lives next to the table so the copy cannot drift from the rule. Thrown by
+ * `DashboardPermissionError`; a caller that has no role to name wants
+ * `describeDashboardOperationRequirement` instead.
+ *
+ * The docblock here used to claim this was "surfaced in disabled-affordance
+ * tooltips as well as in thrown errors". It was not, and had never been - the
+ * only callers were the error constructor and this module's spec, while the
+ * affordances it named wrote their own sentence.
+ */
+export function describeDashboardOperationDenial(
+	operation: DashboardOperation,
+	role: MembershipRole
+): string {
+	return `${describeDashboardOperationRequirement(operation)} Your role is ${role}.`
 }
 
 /** The delete operation for a given entity type. */

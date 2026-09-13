@@ -26,7 +26,7 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Textarea } from '@shared/components/ui/textarea'
-import { Save, Trash2 } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -44,6 +44,10 @@ import {
 	isListScopedProjectEditPath,
 	isProjectEditPath
 } from '../../../components/dashboard/utils'
+import {
+	DestructiveAction,
+	DestructiveActionButton
+} from '../../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
 import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
 import { useRouteDrawer } from '../../../hooks/use-route-drawer'
@@ -53,6 +57,7 @@ import {
 	planDeleteConfirmation,
 	toProjectRef
 } from '../../../lib/domain/dashboard/dashboard-confirmation'
+import { describeDashboardOperationRequirement } from '../../../lib/domain/dashboard/dashboard-operations'
 import { validateAllowedDomainInput } from '../../../lib/domain/embed/embed-domain-policy'
 import {
 	getProject,
@@ -468,27 +473,22 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					  so a delete button inside would save the project on the way to
 					  destroying it.
 					*/}
-					<section className="border-destructive/40 mt-8 space-y-3 rounded-2xl border p-4">
-						<h3 className="text-destructive text-h4">Danger zone</h3>
-						<p className="text-muted-foreground text-sm">
-							Deleting this project removes every scene, folder and published
-							embed inside it.
-						</p>
-						<Button
-							type="button"
-							variant="destructive"
+					<DestructiveAction
+						className="mt-8"
+						description="Deleting this project removes every scene, folder and published embed inside it."
+						note={
+							!canDelete
+								? describeDashboardOperationRequirement('project:delete')
+								: undefined
+						}
+					>
+						<DestructiveActionButton
 							disabled={!canDelete}
 							onClick={() => setDeleteDialogOpen(true)}
 						>
-							<Trash2 className="mr-2 h-4 w-4" />
 							Delete project
-						</Button>
-						{!canDelete ? (
-							<p className="text-muted-foreground text-xs">
-								Only organization owners can delete a project.
-							</p>
-						) : null}
-					</section>
+						</DestructiveActionButton>
+					</DestructiveAction>
 
 					<ConfirmDestructiveDialog
 						open={deleteDialogOpen}

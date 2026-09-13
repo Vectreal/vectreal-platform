@@ -49,6 +49,7 @@ import {
 	type ApiKeyLifecycleRow,
 	type ApiKeyState
 } from '../../lib/domain/auth/api-key-lifecycle'
+import { describeDashboardOperationRequirement } from '../../lib/domain/dashboard/dashboard-operations'
 
 import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'
 
@@ -478,7 +479,7 @@ const ProjectActionsCell = memo(function ProjectActionsCell({
 						</DropdownMenuItem>
 						{!row.canDelete ? (
 							<p className="text-muted-foreground px-2 py-1.5 text-xs">
-								Only organization owners can delete a project.
+								{describeDashboardOperationRequirement('project:delete')}
 							</p>
 						) : null}
 					</DropdownMenuContent>
