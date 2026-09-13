@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 
 import { SceneShareDrawer } from './scene-share-drawer'
 import { DetailPanelSection } from '../../layout-components'
+import { SCENE_STATUS_DOT } from '../scene-status'
 
 import type { ScenePublishStateResponse } from '../../../types/api'
 
@@ -106,16 +107,21 @@ export function ScenePublishPanel({
 		>
 			<p className="flex items-center gap-2 pt-1">
 				{/*
-				  The one piece of colour. Brand orange for a draft, because a draft is
-				  the state with something to do about it; `--success` once it is live,
-				  which is the token the rest of the app already uses to mean "this
-				  worked".
+				  One vocabulary for a scene's status, from `scene-status.tsx`.
+
+				  This painted a draft in brand orange, on the argument that a draft is
+				  the state with something to do about it. The dashboard had settled
+				  the opposite way: `--orange` identifies Vectreal and marks what to do
+				  next, and a scene's status is neither, so `--success` means live and
+				  not-live is neutral. Until now the same scene wore a neutral dot on
+				  the dashboard and an orange one on its own page - the last surface
+				  still disagreeing.
 				*/}
 				<span
 					aria-hidden
 					className={cn(
 						'size-2 shrink-0 rounded-full',
-						isPublished ? 'bg-success' : 'bg-orange'
+						SCENE_STATUS_DOT[isPublished ? 'published' : 'draft']
 					)}
 				/>
 				<span className="text-h4 text-foreground">

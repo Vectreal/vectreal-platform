@@ -181,14 +181,23 @@ describe('a published scene', () => {
 describe('the status dot', () => {
 	it('is the only thing carrying colour, and it changes with the state', () => {
 		/*
-		  Brand orange for a draft, because that is the state with something to do
-		  about it; the success token once it is live. The card itself stays on the
-		  same raised step as its neighbours - a tinted surface would read as an
-		  alert on a page where nothing is wrong.
+		  The success token once it is live, neutral until then - the vocabulary
+		  `scene-status.tsx` owns for every surface. This asserted `bg-orange` for a
+		  draft while the dashboard drew the same scene neutral, which is how one
+		  scene came to wear two colours.
+
+		  Literals on both sides, not `SCENE_STATUS_DOT[...]`: deriving the
+		  expectation from the constant passes for any contents of it, including
+		  one that paints both states the same.
+
+		  Brand orange is absent by assertion, not by omission. The card itself
+		  stays on the same raised step as its neighbours - a tinted surface would
+		  read as an alert on a page where nothing is wrong.
 		*/
 		const draft = renderPanel(DRAFT)
 		const draftDot = draft.container.querySelector('span[aria-hidden]')
-		expect(draftDot?.className).toContain('bg-orange')
+		expect(draftDot?.className).toContain('bg-muted-foreground/60')
+		expect(draftDot?.className).not.toContain('bg-orange')
 		draft.unmount()
 
 		const live = renderPanel(PUBLISHED)
