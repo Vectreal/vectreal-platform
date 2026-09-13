@@ -1,17 +1,9 @@
-import { Button } from '@shared/components/ui/button'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger
-} from '@shared/components/ui/dropdown-menu'
-import { cn } from '@shared/utils'
-import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
+import { DropdownMenuItem } from '@shared/components/ui/dropdown-menu'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Link, useLocation } from 'react-router'
 
-import { SceneThumbnail } from './scene-thumbnail'
+import { EntityCard } from './entity-card'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
-import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 import { describeDashboardOperationRequirement } from '../../lib/domain/dashboard/dashboard-operations'
 
 export interface ProjectCardData {
@@ -37,9 +29,15 @@ interface ProjectCardProps {
 	canDelete?: boolean
 }
 
+/*
+	Null means the project has no scenes, and `StatusBreakdown` above already
+	says so. This used to answer "No scenes yet" as well, so an empty project
+	said it twice - once as a fact about its scenes and once as a fact about a
+	date it does not have. A date formatter with no date has nothing to say.
+*/
 function formatUpdated(updatedAt: Date | null) {
 	if (!updatedAt) {
-		return 'No scenes yet'
+		return null
 	}
 
 	const days = Math.floor((Date.now() - updatedAt.getTime()) / 86_400_000)
@@ -57,9 +55,10 @@ function formatUpdated(updatedAt: Date | null) {
 /**
  * A project at a glance.
  *
- * The card carries what the table could not: a thumbnail borrowed from the
- * project's most recent scene, and how its scenes divide across draft and
- * published. Both come from data the loader already had in hand.
+ * What is particular to a project: the thumbnail is borrowed from its most
+ * recent scene, the state line is how its scenes divide across draft and
+ * published, and the menu edits or deletes the project. The card around all of
+ * that is `EntityCard`, shared with scenes.
  */
 export function ProjectCard({
 	project,
@@ -67,61 +66,19 @@ export function ProjectCard({
 	onDelete,
 	canDelete = false
 }: ProjectCardProps) {
-	const isClientMounted = useIsClientMounted()
 	const location = useLocation()
 
 	return (
-		<div className={cn('group/card relative', className)}>
-			<Link
-				to={`/dashboard/projects/${project.id}`}
-				viewTransition
-				className="ds-raised-interactive block overflow-hidden rounded-2xl"
-			>
-				<SceneThumbnail src={project.thumbnailUrl} className="rounded-none" />
-
-				<div className="space-y-2 p-4">
-					<div className="min-w-0">
-						<p className="truncate font-medium">{project.name}</p>
-						<p className="text-muted-foreground truncate text-xs">
-							{project.organizationName}
-						</p>
-					</div>
-
-					<StatusBreakdown counts={project.counts} />
-
-					<p className="text-muted-foreground text-label-xs">
-						{formatUpdated(project.updatedAt)}
-					</p>
-				</div>
-			</Link>
-
-			{/*
-			  Outside the card link rather than inside it: nesting an anchor in an
-			  anchor is invalid, and the browser resolves it by dropping one of them.
-
-			  A menu rather than the bare pencil this used to be: the card had no way
-			  to delete a project at all, and two hover-revealed icon buttons in one
-			  corner is already crowded before adding a destructive one.
-			*/}
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button
-						variant="ghost"
-						size="icon"
-						disabled={!isClientMounted}
-						aria-label={`Actions for ${project.name}`}
-						/*
-						  Always present, on its own scrim. This used to be `opacity-0`
-						  until hover, sitting bare on the thumbnail - against a light
-						  image it was invisible even while hovered, and hover-reveal has
-						  no touch equivalent, so on a tablet the menu was unreachable.
-						*/
-						className="bg-background/70 hover:bg-background focus-visible:bg-background data-[state=open]:bg-background absolute top-2 right-2 backdrop-blur-sm transition-colors"
-					>
-						<Ellipsis className="size-4" />
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end">
+		<EntityCard
+			className={className}
+			to={`/dashboard/projects/${project.id}`}
+			title={project.name}
+			subtitle={project.organizationName}
+			thumbnailUrl={project.thumbnailUrl}
+			status={<StatusBreakdown counts={project.counts} />}
+			footer={formatUpdated(project.updatedAt)}
+			menuItems={
+				<>
 					<DropdownMenuItem asChild>
 						<Link
 							// Carries the list's view and filters - see the table's edit link.
@@ -148,8 +105,8 @@ export function ProjectCard({
 							{describeDashboardOperationRequirement('project:delete')}
 						</p>
 					) : null}
-				</DropdownMenuContent>
-			</DropdownMenu>
-		</div>
+				</>
+			}
+		/>
 	)
 }
