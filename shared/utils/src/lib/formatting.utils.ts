@@ -48,3 +48,20 @@ export const formatFileSize = (bytes: number | null | undefined): string => {
 
 	return `${rendered} ${FILE_SIZE_UNITS[index]}`
 }
+
+/**
+ * A count and the thing counted, agreeing in number.
+ *
+ * The one implementation. There were four, all the same expression written by
+ * hand - `dashboard-confirmation.ts` kept a private one, the move dialog and
+ * the scene details sheet each inlined it, and the dashboard header did not,
+ * which is why a project holding one folder read "1 folders". That reading was
+ * the normal case rather than an edge: production is organizations with one
+ * project each.
+ *
+ * English regular plurals only, which is every noun the product counts:
+ * folders, scenes, projects, items, assets. A noun that does not take `-s`
+ * needs a different function, not a special case in this one.
+ */
+export const pluralize = (count: number, singular: string): string =>
+	`${count} ${singular}${count === 1 ? '' : 's'}`

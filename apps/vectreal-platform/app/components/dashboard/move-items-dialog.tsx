@@ -7,6 +7,7 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '@shared/components/ui/dialog'
+import { pluralize } from '@shared/utils'
 import { Info, Loader2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useFetcher } from 'react-router'
@@ -44,8 +45,8 @@ function describeItems(items: DashboardEntityRef[]): string {
 	const folders = items.filter((item) => item.type === 'folder').length
 	const scenes = items.length - folders
 	const parts: string[] = []
-	if (folders > 0) parts.push(`${folders} folder${folders === 1 ? '' : 's'}`)
-	if (scenes > 0) parts.push(`${scenes} scene${scenes === 1 ? '' : 's'}`)
+	if (folders > 0) parts.push(pluralize(folders, 'folder'))
+	if (scenes > 0) parts.push(pluralize(scenes, 'scene'))
 
 	return parts.join(' and ')
 }

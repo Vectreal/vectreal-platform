@@ -1,4 +1,4 @@
-import { formatFileSize } from '@shared/utils'
+import { formatFileSize, pluralize } from '@shared/utils'
 
 import { SceneAssetsSection } from './scene-assets-section'
 import { SceneMetricsSection } from './scene-metrics-section'
@@ -19,7 +19,7 @@ function describeContents(details: SceneDetailsSummary): string {
 		return 'No linked assets'
 	}
 
-	const assets = `${details.assetCount} ${details.assetCount === 1 ? 'asset' : 'assets'}`
+	const assets = pluralize(details.assetCount, 'asset')
 	/*
 	  `formatFileSize` does not take a null yet - the unification that widens it
 	  stacks on top of this branch - so the size is dropped rather than printed as

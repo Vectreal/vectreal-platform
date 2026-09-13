@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { formatFileSize } from './formatting.utils'
+import { formatFileSize, pluralize } from './formatting.utils'
 
 const KB = 1024
 const MB = 1024 * KB
@@ -61,5 +61,18 @@ describe('formatFileSize', () => {
 		expect(formatFileSize(null)).toBe('-')
 		expect(formatFileSize(undefined)).toBe('-')
 		expect(formatFileSize(Number.NaN)).toBe('-')
+	})
+})
+
+describe('pluralize', () => {
+	it('keeps the singular at exactly one', () => {
+		expect(pluralize(1, 'folder')).toBe('1 folder')
+		expect(pluralize(1, 'scene')).toBe('1 scene')
+	})
+
+	it('pluralizes everything else, zero included', () => {
+		expect(pluralize(0, 'folder')).toBe('0 folders')
+		expect(pluralize(2, 'folder')).toBe('2 folders')
+		expect(pluralize(11, 'item')).toBe('11 items')
 	})
 })

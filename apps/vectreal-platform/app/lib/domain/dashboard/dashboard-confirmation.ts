@@ -8,6 +8,8 @@
  * forges the state it sends still meets the stricter server verdict.
  */
 
+import { pluralize } from '@shared/utils'
+
 import type { DashboardEntityType } from './dashboard-operations'
 
 /**
@@ -100,10 +102,6 @@ export function requiresTypedConfirmation(
 		(ref) =>
 			ref.type === 'project' || isPublishedScene(ref) || isNonEmptyFolder(ref)
 	)
-}
-
-function pluralize(count: number, singular: string): string {
-	return `${count} ${singular}${count === 1 ? '' : 's'}`
 }
 
 function capConsequences(consequences: string[]): string[] {

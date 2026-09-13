@@ -4,6 +4,7 @@
  * Replaces complex nested logic with clean switch-based routing
  */
 
+import { pluralize } from '@shared/utils'
 import { useMemo } from 'react'
 import { useLocation, useMatches, useNavigation } from 'react-router'
 
@@ -20,6 +21,31 @@ import {
 	type DynamicHeaderContent,
 	type NavigationState
 } from '../types/dashboard'
+
+/**
+ * What a container holds, for the line under its name.
+ *
+ * One sentence for a project and a folder, because it answers one question.
+ * They had two: a project read `3 items • 1 folders • 2 scenes`, stating the
+ * sum of its own two parts and agreeing with neither, and a folder read
+ * `1 items in Acme`, naming a project the breadcrumb directly above already
+ * names. Every organization in production holds one project, so the singular
+ * was the normal reading rather than an edge case.
+ *
+ * Nothing to count returns nothing: the page's own empty state says the
+ * container is empty, and it says it with somewhere to go next.
+ */
+function describeContainer(
+	folderCount: number,
+	sceneCount: number
+): string | undefined {
+	const parts: string[] = []
+
+	if (folderCount > 0) parts.push(pluralize(folderCount, 'folder'))
+	if (sceneCount > 0) parts.push(pluralize(sceneCount, 'scene'))
+
+	return parts.length > 0 ? parts.join(' • ') : undefined
+}
 
 /**
  * Main dashboard content hook that provides header and breadcrumb data
@@ -180,8 +206,6 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 			case 'folder-detail':
 				if (folder?.folder && folder?.project) {
-					const totalItems =
-						(folder.subfolders?.length || 0) + (folder.scenes?.length || 0)
 					const folderPath =
 						folder.folderPath && folder.folderPath.length > 0
 							? folder.folderPath
@@ -218,7 +242,10 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 						title: folder.folder.name,
 						description:
 							folder.folder.description ||
-							`${totalItems} items in ${folder.project.name}`,
+							describeContainer(
+								folder.subfolders?.length || 0,
+								folder.scenes?.length || 0
+							),
 						actionVariant: ACTION_VARIANT.FOLDER_DETAIL,
 						breadcrumbs
 					}
@@ -227,11 +254,6 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 			case 'project-detail':
 				if (project?.project) {
-					const totalItems =
-						(project.folders?.length || 0) + (project.scenes?.length || 0)
-					const folderCount = project.folders?.length || 0
-					const sceneCount = project.scenes?.length || 0
-
 					const breadcrumbs: BreadcrumbItem[] = [
 						{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
 						{ label: 'Projects', to: DASHBOARD_ROUTES.PROJECTS },
@@ -240,7 +262,10 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 					return {
 						title: project.project.name,
-						description: `${totalItems} items • ${folderCount} folders • ${sceneCount} scenes`,
+						description: describeContainer(
+							project.folders?.length || 0,
+							project.scenes?.length || 0
+						),
 						actionVariant: ACTION_VARIANT.PROJECT_DETAIL,
 						breadcrumbs
 					}
