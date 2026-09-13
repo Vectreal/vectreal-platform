@@ -59,12 +59,14 @@ function Harness({
 	data = ROWS,
 	pageSize = 10,
 	onSelectionChange,
-	getRowCanSelect
+	getRowCanSelect,
+	selectable = true
 }: {
 	data?: Row[]
 	pageSize?: number
 	onSelectionChange?: (rows: Row[]) => void
 	getRowCanSelect?: (row: Row) => boolean
+	selectable?: boolean
 } = {}) {
 	const [search, setSearch] = useState('')
 	const [sorting, setSorting] = useState<SortingState>([])
@@ -90,8 +92,12 @@ function Harness({
 			onSortingChange={(u) => setSorting((prev) => apply(u, prev))}
 			pagination={pagination}
 			onPaginationChange={(u) => setPagination((prev) => apply(u, prev))}
-			rowSelection={rowSelection}
-			onRowSelectionChange={(u) => setRowSelection((prev) => apply(u, prev))}
+			rowSelection={selectable ? rowSelection : undefined}
+			onRowSelectionChange={
+				selectable
+					? (u) => setRowSelection((prev) => apply(u, prev))
+					: undefined
+			}
 			onSelectionChange={onSelectionChange}
 			getRowCanSelect={getRowCanSelect}
 		/>
@@ -147,6 +153,24 @@ describe('DataTable on the v9 legacy layer', () => {
 		const rows = screen.getAllByRole('row').slice(1)
 		expect(within(rows[1]).getByRole('checkbox')).toBeDisabled()
 		expect(within(rows[0]).getByRole('checkbox')).not.toBeDisabled()
+	})
+
+	/*
+		`/dashboard/api-keys` wires no bulk action - revoke and rotate are per-key -
+		but the selection props were required, so it rendered a checkbox per row and
+		a "0 of N row(s) selected" counter that nothing could ever act on. Their
+		absence is now the answer to whether a table has selection at all.
+	*/
+	it('says nothing about selection when it offers none', () => {
+		render(<Harness selectable={false} />)
+
+		expect(screen.queryByText(/row\(s\) selected/)).toBeNull()
+	})
+
+	it('still reports the count when selection can lead somewhere', () => {
+		render(<Harness />)
+
+		expect(screen.getByText(/0 of 3 row\(s\) selected/)).toBeTruthy()
 	})
 
 	it('paginates', () => {

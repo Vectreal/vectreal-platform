@@ -1075,8 +1075,12 @@ export function ApiKeyNameCell({ row }: { row: ApiKeyRow }) {
 export function createApiKeyColumns(
 	options: ApiKeyColumnsOptions
 ): ColumnDef<ApiKeyRow>[] {
+	/*
+	  No checkbox column. This page wires no bulk action - revoke and rotate are
+	  per-key and each opens its own confirmation - so a selected row had nothing
+	  that could act on it.
+	*/
 	return [
-		createCheckboxColumn<ApiKeyRow>(),
 		{
 			accessorKey: 'name',
 			header: ({ column }) => (
