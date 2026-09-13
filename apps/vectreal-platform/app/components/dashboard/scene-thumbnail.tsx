@@ -6,8 +6,6 @@ interface SceneThumbnailProps {
 	/** `scenes.thumbnailUrl` - an internal API path, and often null. */
 	src?: null | string
 	className?: string
-	/** Rendered at card size by default; `sm` suits table rows. */
-	size?: 'sm' | 'md'
 }
 
 /**
@@ -19,22 +17,14 @@ interface SceneThumbnailProps {
  * treated identically - by the time the image 404s the reason no longer matters
  * to the person looking at it.
  */
-export function SceneThumbnail({
-	src,
-	className,
-	size = 'md'
-}: SceneThumbnailProps) {
+export function SceneThumbnail({ src, className }: SceneThumbnailProps) {
 	const [failed, setFailed] = useState(false)
 	const showPlaceholder = !src || failed
 
 	return (
 		<div
 			className={cn(
-				// `shrink-0` because the small variant sits in a flex row beside a
-				// scene name of arbitrary length, and a flex item shrinks by default -
-				// a long name squeezed the thumbnail out of square.
-				'ds-sunken relative shrink-0 overflow-hidden',
-				size === 'sm' ? 'size-9 rounded-lg' : 'aspect-video w-full rounded-xl',
+				'ds-sunken relative aspect-video w-full shrink-0 overflow-hidden rounded-xl',
 				className
 			)}
 		>
@@ -52,12 +42,7 @@ export function SceneThumbnail({
 					className="flex h-full w-full items-center justify-center"
 					aria-hidden="true"
 				>
-					<Box
-						className={cn(
-							'text-muted-foreground/50',
-							size === 'sm' ? 'size-4' : 'size-7'
-						)}
-					/>
+					<Box className="text-muted-foreground/50 size-7" />
 				</div>
 			) : (
 				<img
