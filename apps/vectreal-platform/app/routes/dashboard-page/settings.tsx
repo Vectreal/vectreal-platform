@@ -120,12 +120,10 @@ const ACCOUNT_DELETION_PLAN: DashboardConfirmationPlan = {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
 	const themeMode = parseThemeCookieHeader(request.headers.get('Cookie'))
 
 	const loaderData: SettingsLoaderData = {
-		user,
 		userWithDefaults,
 		themeMode
 	}

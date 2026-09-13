@@ -6,7 +6,7 @@ import {
 } from '@shared/components/ui/empty'
 import { useSetAtom } from 'jotai/react'
 import { FolderSearch } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/project'
@@ -30,8 +30,7 @@ import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboar
 import {
 	deleteDialogAtom,
 	moveDialogAtom,
-	renameDialogAtom,
-	selectedRowsAtom
+	renameDialogAtom
 } from '../../../lib/stores/dashboard-management-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -64,7 +63,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	return data(
 		{
-			user,
 			project,
 			folders: folders.map((folder) => ({
 				...folder,
@@ -102,7 +100,6 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/err
 const ProjectPage = () => {
 	const location = useLocation()
 	const { project, folders, scenes } = useLoaderData<typeof loader>()
-	const setSelectedRows = useSetAtom(selectedRowsAtom)
 	const { isBusy: isTableBusy, pendingIds } = useDashboardMutationStatus()
 	const setRenameDialog = useSetAtom(renameDialogAtom)
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
@@ -178,13 +175,6 @@ const ProjectPage = () => {
 		[isTableBusy, pendingIds, setDeleteDialog, setMoveDialog, setRenameDialog]
 	)
 
-	useEffect(() => {
-		setSelectedRows([])
-		return () => {
-			setSelectedRows([])
-		}
-	}, [setSelectedRows])
-
 	if (!shouldRenderProjectTable) {
 		return <Outlet />
 	}
@@ -228,9 +218,6 @@ const ProjectPage = () => {
 								open: true,
 								items: (selectedRows as ContentRow[]).map(toContentRef)
 							})
-						}}
-						onSelectionChange={(selectedRows) => {
-							setSelectedRows((selectedRows as ContentRow[]).map(toContentRef))
 						}}
 						getRowCanSelect={() => true}
 					/>

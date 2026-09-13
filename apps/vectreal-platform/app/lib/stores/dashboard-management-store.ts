@@ -53,7 +53,6 @@ const defaultMoveDialogState: DashboardMoveDialogState = {
 	projectId: null
 }
 
-const selectedRowsAtom = atom<DashboardEntityRef[]>([])
 const createFolderDialogAtom = atom<DashboardCreateFolderDialogState>(
 	defaultCreateFolderDialogState
 )
@@ -66,7 +65,6 @@ const deleteDialogAtom = atom<DashboardDeleteDialogState>(
 const moveDialogAtom = atom<DashboardMoveDialogState>(defaultMoveDialogState)
 
 export {
-	selectedRowsAtom,
 	createFolderDialogAtom,
 	renameDialogAtom,
 	deleteDialogAtom,

@@ -1,8 +1,3 @@
-import type {
-	OrganizationStats,
-	ProjectStats,
-	SceneStats
-} from './dashboard-stats.server'
 import type { Plan, BillingState } from '../../../constants/plan-config'
 import type {
 	organizationMemberships,
@@ -32,28 +27,23 @@ export interface ProjectWithOrganization {
 }
 
 /**
- * Loader data for dashboard index page
+ * The signed-in person, as the dashboard chrome draws them.
+ *
+ * Four fields, because four are read: the sidebar wants a name, an avatar and
+ * an initial, and PostHog wants an id and an email. The layout used to ship the
+ * whole Supabase `User`, and a layout's payload is serialized into every route
+ * beneath it - so `identities`, `app_metadata`, `user_metadata`,
+ * `email_confirmed_at` and `aud` reached the browser on every page of the
+ * dashboard, for two readers that wanted a name and an id.
+ *
+ * `name` is resolved on the server rather than at the two call sites that each
+ * spelled the `full_name ?? name ?? email` fallback by hand.
  */
-export interface DashboardLoaderData {
-	user: User
-	userWithDefaults: UserWithDefaults
-	organizations: OrganizationWithMembership[]
-	projects: ProjectWithOrganization[]
-	scenes: Array<typeof scenes.$inferSelect>
-	projectStats: ProjectStats
-	sceneStats: SceneStats
-	recentProjects: ProjectWithOrganization[]
-	recentScenes: Array<typeof scenes.$inferSelect>
-}
-
-/**
- * Loader data for organizations page
- */
-export interface OrganizationsLoaderData {
-	user: User
-	userWithDefaults: UserWithDefaults
-	organizations: OrganizationWithMembership[]
-	organizationStats: OrganizationStats
+export interface DashboardActor {
+	id: string
+	email: string | null
+	name: string
+	avatarUrl: string | null
 }
 
 export interface OrganizationMemberWithUser {
@@ -77,31 +67,6 @@ export interface OrganizationDetailLoaderData {
 		orgRoles: boolean
 	}
 	isReadOnlyBillingState: boolean
-}
-
-/**
- * Loader data for projects page
- */
-export interface ProjectsLoaderData {
-	user: User
-	userWithDefaults: UserWithDefaults
-	organizations: OrganizationWithMembership[]
-	projects: ProjectWithOrganization[]
-	scenes: Array<typeof scenes.$inferSelect>
-	projectCreationCapabilities: Record<
-		string,
-		{
-			canCreate: boolean
-			canEdit: boolean
-			canDelete: boolean
-			projectsTotal: number
-			projectsLimit: number | null
-			quotaExceeded: boolean
-			plan: Plan | null
-			upgradeTo: Plan | null
-		}
-	>
-	sceneStats: SceneStats
 }
 
 /**
@@ -146,7 +111,6 @@ export interface SceneLoaderData {
  * Loader data for settings page
  */
 export interface SettingsLoaderData {
-	user: User
 	userWithDefaults: UserWithDefaults
 	themeMode: 'system' | 'light' | 'dark'
 }
@@ -159,7 +123,6 @@ export interface BillingSettingsData {
 	billingState: BillingState
 	currentPeriodEnd: string | null
 	trialEnd: string | null
-	hasStripeCustomer: boolean
 	usage: {
 		scenesTotal: number
 		sceneLimit: number | null
@@ -194,30 +157,6 @@ export interface BillingCheckoutPeriods {
 }
 
 export interface BillingLoaderData {
-	user: User
-	userWithDefaults: UserWithDefaults
 	billing: BillingSettingsData
 	checkoutOptions?: BillingCheckoutOptions
-}
-
-/**
- * Loader data for new project page
- */
-export interface ProjectNewLoaderData {
-	user: User
-	userWithDefaults: UserWithDefaults
-	organizations: OrganizationWithMembership[]
-	projectCreationCapabilities: Record<
-		string,
-		{
-			canCreate: boolean
-			canEdit: boolean
-			canDelete: boolean
-			projectsTotal: number
-			projectsLimit: number | null
-			quotaExceeded: boolean
-			plan: Plan | null
-			upgradeTo: Plan | null
-		}
-	>
 }

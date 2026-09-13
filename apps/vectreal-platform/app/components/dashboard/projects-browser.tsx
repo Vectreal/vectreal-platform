@@ -56,7 +56,6 @@ function toProjectRow(item: ProjectBrowseItem): ProjectRow {
 		canDelete: item.canDelete,
 		sceneCount: item.sceneCount,
 		counts: item.counts,
-		createdAt: item.updatedAt,
 		updatedAt: item.updatedAt
 	}
 }

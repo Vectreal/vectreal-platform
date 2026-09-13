@@ -41,7 +41,6 @@ import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
-import { buildDashboardCapabilities } from '../../lib/domain/dashboard/dashboard-capabilities'
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import {
@@ -50,6 +49,7 @@ import {
 } from '../../lib/navigation/dashboard-route-behavior'
 import { buildMeta } from '../../lib/seo'
 
+import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export const meta: MetaFunction = () =>
@@ -80,13 +80,31 @@ export async function loader({ request }: Route.LoaderArgs) {
 		? await getOrgSubscription(primaryOrgId)
 		: { plan: 'free' as const }
 
-	// Role-only, deliberately without project quota: every dashboard route needs
-	// to know what the user may do, but only the projects routes gate on quota,
-	// and looking it up here would cost two round trips per organization on
-	// every dashboard page.
-	const capabilities = buildDashboardCapabilities(orgs)
+	/*
+	  Four fields of the actor, not the actor.
 
-	return data({ user, sidebarProjects, plan, capabilities }, { headers })
+	  A layout's payload is serialized into every route beneath it, so the whole
+	  Supabase `User` was reaching the browser on every dashboard page - with
+	  `identities`, both metadata bags, `email_confirmed_at` and `aud` - to feed
+	  a sidebar that wants a name and an avatar and a PostHog call that wants an
+	  id and an email.
+
+	  `capabilities` went the same way and was simpler: `buildDashboardCapabilities`
+	  ran on every dashboard request and nothing has ever read the result. The
+	  three routes that need it build their own, which is why nobody noticed.
+	*/
+	const actor: DashboardActor = {
+		id: user.id,
+		email: user.email ?? null,
+		name:
+			(user.user_metadata?.full_name as string | undefined) ||
+			(user.user_metadata?.name as string | undefined) ||
+			user.email ||
+			'User',
+		avatarUrl: (user.user_metadata?.avatar_url as string | undefined) ?? null
+	}
+
+	return data({ actor, sidebarProjects, plan }, { headers })
 }
 
 /**
@@ -116,13 +134,13 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
  */
 
 const DashboardLayout = () => {
-	const { user, sidebarProjects, plan } = useLoaderData<typeof loader>()
+	const { actor, sidebarProjects, plan } = useLoaderData<typeof loader>()
 	const { consent } = useConsent()
 	const posthog = usePostHog()
 	const location = useLocation()
 	const navigation = useNavigation()
 	const revalidator = useRevalidator()
-	useAuthResumeRevalidation({ enabled: Boolean(user) })
+	useAuthResumeRevalidation({ enabled: true })
 	const fetchers = useFetchers()
 	const [sidebarOpen, setSidebarOpen] = useState(true)
 
@@ -236,9 +254,9 @@ const DashboardLayout = () => {
 	return (
 		<Provider>
 			<PostHogIdentify
-				userId={user.id}
-				email={user.email}
-				name={user.user_metadata?.full_name as string | undefined}
+				userId={actor.id}
+				email={actor.email ?? undefined}
+				name={actor.name}
 			/>
 			{/*
 				  The shell owns the viewport height so the inset can scroll its own
@@ -253,7 +271,7 @@ const DashboardLayout = () => {
 			>
 				<LogoSidebar>
 					<DashboardSidebarContent
-						user={user}
+						actor={actor}
 						sidebarProjects={sidebarProjects}
 						plan={plan}
 					/>

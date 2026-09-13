@@ -16,11 +16,7 @@ import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { loadOrgUsage } from '../../lib/domain/billing/billing-dashboard-loader.server'
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
 import { toSceneRef } from '../../lib/domain/dashboard/dashboard-confirmation'
-import {
-	computeProjectStats,
-	computeSceneStats,
-	getRecentScenes
-} from '../../lib/domain/dashboard/dashboard-stats.server'
+import { getRecentScenes } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserProjects } from '../../lib/domain/project/project-repository.server'
 import { getProjectsScenes } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import {
@@ -44,8 +40,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const scenes = Array.from(scenesByProject.values()).flat()
 
 	const recentScenes = getRecentScenes(scenes, 10)
-	const projectStats = computeProjectStats(userProjects)
-	const sceneStats = computeSceneStats(scenes)
 	const mostRecentScene = recentScenes[0]
 
 	/*
@@ -72,14 +66,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			usage,
 			plan,
 			overview: {
-				kpis: {
-					totalProjects: projectStats.total,
-					totalScenes: sceneStats.total,
-					publishedScenes: sceneStats.byStatus.published,
-					draftScenes: sceneStats.byStatus.draft
-				},
-				// The scene to offer as "jump back in". Computed here before, and
-				// returned, but nothing ever read it.
+				/* The scene to offer as "jump back in". */
 				resumeScene: mostRecentScene
 					? {
 							id: mostRecentScene.id,

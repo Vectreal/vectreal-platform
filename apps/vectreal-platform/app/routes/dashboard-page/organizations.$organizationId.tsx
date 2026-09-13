@@ -187,8 +187,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Organization ID is required', { status: 400 })
 	}
 
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	const { user, headers } = await loadAuthenticatedUser(request)
 
 	let detail
 	try {
@@ -209,7 +208,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	return data(
 		{
 			user,
-			userWithDefaults,
 			organization: detail.organization,
 			membership: detail.membership,
 			members,

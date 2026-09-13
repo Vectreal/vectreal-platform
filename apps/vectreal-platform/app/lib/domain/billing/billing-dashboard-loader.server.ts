@@ -257,7 +257,11 @@ export async function loadOrgUsage(
 export async function loadBillingDashboardData(
 	request: Request,
 	options: { includeCheckoutOptions?: boolean } = {}
-): Promise<{ loaderData: BillingLoaderData; headers: HeadersInit }> {
+): Promise<{
+	loaderData: BillingLoaderData
+	actorId: string
+	headers: HeadersInit
+}> {
 	const { includeCheckoutOptions = true } = options
 	const { user, userWithDefaults, headers } =
 		await loadAuthenticatedUser(request)
@@ -267,8 +271,7 @@ export async function loadBillingDashboardData(
 	const [subRow] = await db
 		.select({
 			currentPeriodEnd: orgSubscriptions.currentPeriodEnd,
-			trialEnd: orgSubscriptions.trialEnd,
-			stripeCustomerId: orgSubscriptions.stripeCustomerId
+			trialEnd: orgSubscriptions.trialEnd
 		})
 		.from(orgSubscriptions)
 		.where(eq(orgSubscriptions.organizationId, organizationId))
@@ -288,13 +291,10 @@ export async function loadBillingDashboardData(
 		billingState,
 		currentPeriodEnd: subRow?.currentPeriodEnd?.toISOString() ?? null,
 		trialEnd: subRow?.trialEnd?.toISOString() ?? null,
-		hasStripeCustomer: !!subRow?.stripeCustomerId,
 		usage
 	}
 
 	const loaderData: BillingLoaderData = {
-		user,
-		userWithDefaults,
 		billing
 	}
 
@@ -304,6 +304,7 @@ export async function loadBillingDashboardData(
 
 	return {
 		loaderData,
+		actorId: user.id,
 		headers
 	}
 }

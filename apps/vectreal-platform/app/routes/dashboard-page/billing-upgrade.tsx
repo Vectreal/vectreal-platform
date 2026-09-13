@@ -77,9 +77,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		})
 	)
 
-	const { loaderData, headers } = await loadBillingDashboardData(request, {
-		includeCheckoutOptions: false
-	})
+	const { loaderData, actorId, headers } = await loadBillingDashboardData(
+		request,
+		{
+			includeCheckoutOptions: false
+		}
+	)
 
 	/*
 	  The same rule the action enforces, from the same module. This used to
@@ -89,7 +92,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	*/
 	const checkoutGatePromise = resolveCheckoutGate(
 		(context as PostHogContext).posthog,
-		loaderData.user.id
+		actorId
 	)
 
 	const [checkoutOptions, checkoutGate] = await Promise.all([
