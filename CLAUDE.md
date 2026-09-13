@@ -18,9 +18,12 @@ section exists.
 
 `.agents/hooks/` keeps this table in front of you: `skills-remind.mjs` lists the
 skills this session has not used yet, and `skills-plan-gate.mjs` refuses
-`ExitPlanMode` until `vectreal-iterative-delivery` has run. Neither can block on
-an error: an unreadable transcript or a bad payload lets work continue. The gate
-denies only when it can positively see the skill did not run.
+`ExitPlanMode` until `vectreal-iterative-delivery` has run and the plan carries a
+`## Work items` table naming the Notion **Vectreal Work Items** rows it moves
+(the skill's Work items section has the query and the table shape). Neither can
+block on an error: an unreadable transcript or a bad payload lets work continue.
+The gate denies only when it can positively see the skill did not run or the
+plan was written without the heading.
 
 ## Before you edit product code
 

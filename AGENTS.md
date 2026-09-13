@@ -10,8 +10,10 @@ Use agent skills available and helpful for the task at hand. When working on the
 
 These are not merely suggested: `.agents/hooks/` (wired from
 `.claude/settings.json`) reminds you which of them you have not used yet, and
-refuses to let you leave plan mode until `vectreal-iterative-delivery` has run.
-Neither hook can block on an error. See the Skills section of `CLAUDE.md`.
+refuses to let you leave plan mode until `vectreal-iterative-delivery` has run
+and the plan names the Notion Vectreal Work Items rows it moves under a
+`## Work items` heading. Neither hook can block on an error. See the Skills
+section of `CLAUDE.md`.
 
 <!-- nx configuration start-->
 <!-- Leave the start & end comments to automatically receive updates. -->
