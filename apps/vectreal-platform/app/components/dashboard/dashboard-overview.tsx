@@ -1,31 +1,9 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { useSetAtom } from 'jotai/react'
 import { ArrowRight, Pencil, Play } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { SceneThumbnail } from './scene-thumbnail'
-import {
-	hasUsagePressure,
-	readUsage,
-	UsageMeter,
-	UsageMeterGrid
-} from './usage-meter'
-import {
-	PLAN_DISPLAY_NAMES,
-	STORAGE_USAGE_HINT,
-	LIMIT_DISPLAY_LABELS,
-	STORAGE_USAGE_LABEL
-} from '../../constants/product-copy'
-import {
-	buildUpgradeModalState,
-	upgradeModalAtom
-} from '../../lib/stores/upgrade-modal-store'
-
-import type { Plan } from '../../constants/plan-config'
-import type { BillingSettingsData } from '../../lib/domain/dashboard/dashboard-types'
-
-const MB = 1024 * 1024
 
 export interface ResumeScene {
 	id: string
@@ -39,8 +17,6 @@ export interface ResumeScene {
 
 interface DashboardOverviewProps {
 	resumeScene: ResumeScene | null
-	usage: BillingSettingsData['usage']
-	plan: Plan
 }
 
 function formatEdited(updatedAt: Date | string) {
@@ -145,94 +121,6 @@ function FirstSceneBand() {
 }
 
 /**
- * Usage against plan limits.
- *
- * Four counts with no denominators is what this replaces: a free user at 10 of
- * 10 scenes found out about the limit by hitting an error. The upgrade action
- * appears only under pressure, so it reads as a response to something rather
- * than as a permanent advertisement.
- */
-function AccountHealthBand({
-	usage,
-	plan
-}: {
-	usage: BillingSettingsData['usage']
-	plan: Plan
-}) {
-	const setUpgradeModal = useSetAtom(upgradeModalAtom)
-
-	const readings = [
-		readUsage(usage.scenesTotal, usage.sceneLimit),
-		readUsage(usage.publishedScenes, usage.publishedSceneLimit),
-		readUsage(usage.projectsTotal, usage.projectsLimit),
-		readUsage(usage.storageBytesTotal, usage.storageLimit)
-	]
-
-	return (
-		<section className="ds-raised space-y-4 rounded-2xl p-5">
-			<div className="flex flex-wrap items-center justify-between gap-2">
-				<div className="flex items-center gap-2">
-					<h2 className="text-muted-foreground text-eyebrow">Plan usage</h2>
-					<Badge variant="secondary">{PLAN_DISPLAY_NAMES[plan] ?? plan}</Badge>
-				</div>
-
-				<div className="flex items-center gap-3">
-					{hasUsagePressure(readings) ? (
-						<Button
-							size="sm"
-							variant="secondary"
-							onClick={() =>
-								setUpgradeModal(
-									buildUpgradeModalState({
-										plan,
-										message:
-											'You are close to a limit on this plan. Upgrading raises them.',
-										actionAttempted: 'dashboard_usage_band'
-									})
-								)
-							}
-						>
-							Upgrade
-						</Button>
-					) : null}
-					<Link
-						to="/dashboard/billing"
-						className="text-muted-foreground hover:text-foreground text-xs"
-					>
-						Billing
-					</Link>
-				</div>
-			</div>
-
-			<UsageMeterGrid>
-				<UsageMeter
-					label={LIMIT_DISPLAY_LABELS.scenes_total}
-					current={usage.scenesTotal}
-					limit={usage.sceneLimit}
-				/>
-				<UsageMeter
-					label={LIMIT_DISPLAY_LABELS.scenes_published_concurrent}
-					current={usage.publishedScenes}
-					limit={usage.publishedSceneLimit}
-				/>
-				<UsageMeter
-					label={LIMIT_DISPLAY_LABELS.projects_total}
-					current={usage.projectsTotal}
-					limit={usage.projectsLimit}
-				/>
-				<UsageMeter
-					label={STORAGE_USAGE_LABEL}
-					hint={STORAGE_USAGE_HINT}
-					current={usage.storageBytesTotal}
-					limit={usage.storageLimit}
-					format={(value) => `${Math.round(value / MB)} MB`}
-				/>
-			</UsageMeterGrid>
-		</section>
-	)
-}
-
-/**
  * The dashboard's opening view.
  *
  * Replaces four raw counts beside a decorative panel. The counts had no
@@ -240,17 +128,8 @@ function AccountHealthBand({
  * was near a limit, and the panel was a blurred gradient plus a docs link
  * occupying a third of the page's prime area.
  */
-export function DashboardOverview({
-	resumeScene,
-	usage,
-	plan
-}: DashboardOverviewProps) {
-	return (
-		<div className="space-y-4">
-			{resumeScene ? <ResumeBand scene={resumeScene} /> : <FirstSceneBand />}
-			<AccountHealthBand usage={usage} plan={plan} />
-		</div>
-	)
+export function DashboardOverview({ resumeScene }: DashboardOverviewProps) {
+	return resumeScene ? <ResumeBand scene={resumeScene} /> : <FirstSceneBand />
 }
 
 export default DashboardOverview

@@ -123,18 +123,76 @@ export interface BillingSettingsData {
 	billingState: BillingState
 	currentPeriodEnd: string | null
 	trialEnd: string | null
-	usage: {
-		scenesTotal: number
-		sceneLimit: number | null
-		publishedScenes: number
-		publishedSceneLimit: number | null
-		projectsTotal: number
-		projectsLimit: number | null
-		foldersTotal: number
-		foldersLimit: number | null
-		storageBytesTotal: number
-		storageLimit: number | null
-	}
+}
+
+/**
+ * What an organization is consuming, against what its plan allows.
+ *
+ * Read by `/dashboard/usage` and by nothing else. It used to be a member of
+ * `BillingSettingsData`, which put five counting queries on the billing page's
+ * critical path for readings that page no longer renders.
+ */
+/**
+ * One project's share of what the organization is consuming.
+ *
+ * `lastChangedAt` is the newest `updatedAt` across the project's scenes, and is
+ * null for a project that holds none - which reads as "never" rather than as
+ * today's date, the mistake `ProjectRow` documents having made.
+ */
+export interface ProjectUsage {
+	id: string
+	name: string
+	storageBytes: number
+	sceneCount: number
+	lastChangedAt: string | null
+}
+
+/** Storage grouped by what kind of file it is. */
+export interface AssetTypeUsage {
+	type: 'texture' | 'material' | 'model' | 'environment' | 'other'
+	storageBytes: number
+	fileCount: number
+}
+
+/**
+ * One scene and what it costs to load.
+ *
+ * `storageBytes` is what the scene references, not what it exclusively owns:
+ * `scene_assets` is many-to-many so a shared texture counts against every scene
+ * using it. These therefore do not sum to the organization's storage total,
+ * which counts each asset once.
+ */
+export interface HeaviestScene {
+	id: string
+	name: string
+	projectId: string
+	projectName: string
+	storageBytes: number
+	assetCount: number
+	updatedAt: string
+}
+
+/** One heavy file, with enough to find it again. */
+export interface LargestAsset {
+	id: string
+	name: string
+	type: AssetTypeUsage['type']
+	storageBytes: number
+	projectId: string
+	projectName: string
+}
+
+export interface OrgUsage {
+	scenesTotal: number
+	sceneLimit: number | null
+	publishedScenes: number
+	publishedSceneLimit: number | null
+	projectsTotal: number
+	projectsLimit: number | null
+	foldersTotal: number
+	foldersLimit: number | null
+	storageBytesTotal: number
+	storageLimit: number | null
 }
 
 export interface BillingCheckoutOptions {

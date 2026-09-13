@@ -1,6 +1,5 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import { useSetAtom } from 'jotai/react'
 import {
 	AlertTriangle,
 	ArrowUpRight,
@@ -14,18 +13,8 @@ import { useFetcher } from 'react-router'
 import { Link } from 'react-router'
 
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
-import {
-	PLAN_DISPLAY_NAMES,
-	STORAGE_USAGE_HINT,
-	LIMIT_DISPLAY_LABELS,
-	STORAGE_USAGE_LABEL
-} from '../../../constants/product-copy'
-import {
-	buildUpgradeModalState,
-	upgradeModalAtom
-} from '../../../lib/stores/upgrade-modal-store'
+import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
 import { InlineNotice } from '../../layout-components/inline-notice'
-import { hasUsagePressure, readUsage, UsageMeter } from '../usage-meter'
 
 import type { BillingState } from '../../../constants/plan-config'
 import type { BillingSettingsData } from '../../../lib/domain/dashboard/dashboard-types'
@@ -119,9 +108,8 @@ interface BillingSettingsSectionProps {
 export function BillingSettingsSection({
 	billing
 }: BillingSettingsSectionProps) {
-	const { plan, billingState, currentPeriodEnd, trialEnd, usage } = billing
+	const { plan, billingState, currentPeriodEnd, trialEnd } = billing
 	const portalFetcher = useFetcher()
-	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 
 	const stateConfig = BILLING_STATE_CONFIG[billingState]
 	const StateIcon = stateConfig.icon
@@ -140,22 +128,6 @@ export function BillingSettingsSection({
 			: currentPeriodEnd
 				? new Date(currentPeriodEnd)
 				: null
-
-	/*
-	  Same pressure reading as the dashboard band, from the same function.
-
-	  This page listed its meters and drew attention to none of them, so the one
-	  at 96% looked exactly like the one at 4%. The nudge appears only when
-	  something is actually close to a limit, which is what makes it worth
-	  reading when it does.
-	*/
-	const isUnderPressure = hasUsagePressure([
-		readUsage(usage.scenesTotal, usage.sceneLimit),
-		readUsage(usage.publishedScenes, usage.publishedSceneLimit),
-		readUsage(usage.projectsTotal, usage.projectsLimit),
-		readUsage(usage.foldersTotal, usage.foldersLimit),
-		readUsage(usage.storageBytesTotal, usage.storageLimit)
-	])
 
 	const handleOpenPortal = () => {
 		portalFetcher.submit({}, { method: 'POST', action: '/api/billing/portal' })
@@ -269,96 +241,16 @@ export function BillingSettingsSection({
 			</section>
 
 			{/*
-			  Five readings, each shown once, and each measured.
-
-			  Scenes, Projects and Published were rendered twice - as tiles at the
-			  top and again as rows below - so a third of the page repeated itself
-			  while the storage figure got a single line.
-
-			  There were seven readings and two groups, "what you keep" and "what
-			  you serve". The serving side is gone: embed bandwidth, preview loads
-			  and API requests were all read from counters nothing increments, so
-			  all three showed zero against a plan number forever. With one group
-			  left, the split and its eyebrows had nothing to separate.
+			  Usage is not here any more. Five readings answering "how much am I
+			  using" sat on the page that answers "what am I paying", and four of
+			  them again on the page for getting back to work. They have their own
+			  route now, and this is the door to it.
 			*/}
-			<section className="ds-raised space-y-5 rounded-2xl p-5">
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<h3 className="text-muted-foreground text-eyebrow">
-						Usage against your plan
-					</h3>
-					{isUnderPressure && !isEnterprise ? (
-						<Button
-							size="sm"
-							variant="secondary"
-							onClick={() =>
-								setUpgradeModal(
-									buildUpgradeModalState({
-										plan,
-										message:
-											'You are close to a limit on this plan. Upgrading raises them.',
-										actionAttempted: 'billing_usage_panel'
-									})
-								)
-							}
-						>
-							Upgrade
-						</Button>
-					) : null}
-				</div>
-
-				{/*
-				  Every meter here is measured from rows that exist. A second column
-				  used to sit beside this one headed "Served" - embed bandwidth,
-				  preview loads and API requests - all three backed by counters
-				  nothing has ever incremented, so all three rendered `0 / limit`
-				  forever. The limits behind them are gone, so the grouping and its
-				  eyebrows went with them.
-
-				  One column, not the two-column grid the pair of groups needed.
-				  Five cells across two columns leave the last meter alone beside an
-				  empty one, and the row variant drops its rail entirely on an
-				  unlimited limit (`usage-meter.tsx`), which in a grid row would show
-				  as a gap under whichever neighbour still had one. A list has
-				  neither problem.
-				*/}
-				<div className="space-y-3">
-					<UsageMeter
-						variant="row"
-						label={LIMIT_DISPLAY_LABELS.scenes_total}
-						current={usage.scenesTotal}
-						limit={usage.sceneLimit}
-					/>
-					<UsageMeter
-						variant="row"
-						label={LIMIT_DISPLAY_LABELS.scenes_published_concurrent}
-						current={usage.publishedScenes}
-						limit={usage.publishedSceneLimit}
-					/>
-					<UsageMeter
-						variant="row"
-						label={LIMIT_DISPLAY_LABELS.projects_total}
-						current={usage.projectsTotal}
-						limit={usage.projectsLimit}
-					/>
-					<UsageMeter
-						variant="row"
-						label={LIMIT_DISPLAY_LABELS.folders_total}
-						current={usage.foldersTotal}
-						limit={usage.foldersLimit}
-					/>
-					<UsageMeter
-						variant="row"
-						label={`${STORAGE_USAGE_LABEL} (MB)`}
-						hint={STORAGE_USAGE_HINT}
-						current={Math.round(usage.storageBytesTotal / (1024 * 1024))}
-						limit={
-							usage.storageLimit !== null
-								? Math.round(usage.storageLimit / (1024 * 1024))
-								: null
-						}
-					/>
-				</div>
-			</section>
+			<div className="px-1">
+				<Button variant="ghost" size="sm" asChild>
+					<Link to={DASHBOARD_ROUTES.USAGE}>View usage</Link>
+				</Button>
+			</div>
 
 			<div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
 				<nav className="text-muted-foreground flex items-center gap-1.5 text-xs">

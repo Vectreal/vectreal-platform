@@ -113,7 +113,7 @@ export function HydrateFallback() {
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
-	const { projects, recentScenes, overview, usage, plan } = loaderData
+	const { projects, recentScenes, overview } = loaderData
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 	const setMoveDialog = useSetAtom(moveDialogAtom)
 	const { isBusy: isTableBusy } = useDashboardMutationStatus()
@@ -160,11 +160,7 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<div className="space-y-8 p-6">
-			<DashboardOverview
-				resumeScene={overview.resumeScene}
-				usage={usage}
-				plan={plan}
-			/>
+			<DashboardOverview resumeScene={overview.resumeScene} />
 
 			{sceneTableData.length > 0 ? (
 				<section className="space-y-4">
