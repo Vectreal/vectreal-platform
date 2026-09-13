@@ -262,7 +262,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				<section id="news-feed" className="scroll-mt-24 space-y-4">
 					{articles.length === 0 ? (
 						<div className="ds-raised rounded-2xl p-8 text-center md:p-10">
-							<h2 className="text-h3 font-heading mb-1">No matching posts</h2>
+							<h2 className="text-h3 mb-1">No matching posts</h2>
 							{/*
 							  Echo the query back. "No matching posts" alone leaves the
 							  reader checking the field to see what was actually searched.

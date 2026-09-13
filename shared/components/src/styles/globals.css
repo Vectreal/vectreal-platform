@@ -385,14 +385,20 @@
 	--font-sans: 'DM Sans Variable', sans-serif;
 
 	/*
-	  The marketing heading face, applied by the `font-heading` utility and never
-	  by a rung.
+	  The heading face. Every heading rung carries it; no call site opts in.
 
-	  Baking a family into `.text-display` or `.text-headline` would change every
-	  dashboard and publisher heading already sitting on those rungs -
-	  `publisher/shell/drop-zone.tsx` uses `text-headline` today - so a marketing
-	  component writes `font-heading` beside the rung and product UI keeps DM
-	  Sans.
+	  It used to be an opt-in utility written beside a rung, and the comment here
+	  explained why: baking it in "would change every dashboard and publisher
+	  heading already sitting on those rungs". That was true, and it was the
+	  point - it was recording the scope of the marketing rebuild that introduced
+	  the face, not a decision that the product should look different. Read as a
+	  rule it held for four more phases of work, and the dashboard was the only
+	  signed-in surface still on DM Sans while sign-in and both password routes,
+	  which are equally product, had opted in.
+
+	  A rung owns size, weight, tracking and leading. There was never a reason
+	  for the family to be the one property a caller had to remember, and nine
+	  dashboard headings are what forgetting looks like.
 
 	  Named `--font-heading` rather than `--font-display`: `--font-*` is a
 	  Tailwind namespace, so the latter would generate a `font-display` utility
@@ -820,6 +826,7 @@
 	  against body copy at a similar size.
 	*/
 	.text-display {
+		font-family: var(--font-heading);
 		font-size: var(--text-display);
 		font-weight: 400;
 		line-height: 1.02;
@@ -833,6 +840,7 @@
 	  leading or tracking that go with it.
 	*/
 	.text-headline {
+		font-family: var(--font-heading);
 		font-size: var(--text-headline);
 		font-weight: 400;
 		line-height: 1.06;
@@ -840,6 +848,7 @@
 		text-wrap: balance;
 	}
 	.text-h2 {
+		font-family: var(--font-heading);
 		font-size: var(--text-h2);
 		font-weight: 450;
 		line-height: 1.1;
@@ -847,18 +856,21 @@
 		text-wrap: balance;
 	}
 	.text-h3 {
+		font-family: var(--font-heading);
 		font-size: var(--text-h3);
 		font-weight: 500;
 		line-height: 1.18;
 		letter-spacing: var(--tracking-h3);
 	}
 	.text-h4 {
+		font-family: var(--font-heading);
 		font-size: var(--text-h4);
 		font-weight: 500;
 		line-height: 1.3;
 		letter-spacing: var(--tracking-h4);
 	}
 	.text-stat {
+		font-family: var(--font-heading);
 		font-size: var(--text-stat);
 		font-weight: 500;
 		line-height: 1;

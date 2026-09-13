@@ -59,7 +59,7 @@ const PageHero = ({
 			*/}
 			<div className="container-page pt-32 pb-16">
 				<div className="space-y-4">
-					<h1 className="text-display font-heading max-w-4xl">{heading}</h1>
+					<h1 className="text-display max-w-4xl">{heading}</h1>
 
 					{description && (
 						<p className="text-muted-foreground text-body-lg max-w-3xl">

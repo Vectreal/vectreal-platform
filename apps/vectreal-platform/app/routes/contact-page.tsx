@@ -228,7 +228,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							  carry `capitalize`, which is what rendered this "Send A Message"
 							  after the copy was deliberately set in sentence case.
 							*/}
-							<h2 className="text-h3 font-heading">Send a message</h2>
+							<h2 className="text-h3">Send a message</h2>
 							<CardDescription>
 								We usually respond within one business day.
 							</CardDescription>

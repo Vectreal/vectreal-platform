@@ -81,24 +81,28 @@ which is inline critical CSS whose whole purpose is to apply before the main
 stylesheet is parsed and so cannot read a custom property that stylesheet
 declares.
 
-**Marketing headings: one display face, opt-in.**
+**All headings: one display face, carried by the rung.**
 
-Shipped. `--font-heading: 'Funnel Display Variable', sans-serif` is declared in
+`--font-heading: 'Funnel Display Variable', sans-serif` is declared in
 `globals.css`, the face is imported from `@fontsource-variable/funnel-display`,
-and 14 files apply `font-heading`. To put the display face on a heading, write
-`font-heading` beside the rung — there is nothing to create.
+and every heading rung applies it. To put the display face on a heading, put the
+heading on a rung. There is nothing to opt into.
 
-The three decisions that shape it, which still bind:
+The three decisions that shape it:
 
 1. **The token is `--font-heading`, never `--font-display`.** `--font-*` is a
    Tailwind namespace, so `--font-display` would generate a `font-display`
    utility that reads as the CSS `font-display` descriptor.
-2. **The face attaches to an opt-in utility, never to the rungs.** Baking a
-   `font-family` into `.text-display` or `.text-headline` inside
-   `@layer components` would change every dashboard and publisher heading
-   already on those rungs — `publisher/shell/drop-zone.tsx` uses `text-headline`
-   today. Marketing components apply `font-heading` *beside* the rung.
-   Product UI stays on DM Sans.
+2. **The rung owns the family, alongside size, weight, tracking and leading.**
+   This reversed an earlier rule, and the reversal is the instructive part. The
+   face began as an opt-in utility because the marketing rebuild that introduced
+   it did not want to change the dashboard and publisher in the same change —
+   a sensible scope boundary, written down here as "Product UI stays on DM
+   Sans", which then read as design law for four more phases. It was never a
+   decision anyone made, and the file contradicted itself: `signin-layout` and
+   both password routes are product UI and had opted in. The dashboard was the
+   only signed-in surface still on the body face, and its nine headings got
+   there by never being told.
 3. **Newsroom OG thumbnails stay on DM Sans.**
    `apps/vectreal-platform/scripts/gen-newsroom-thumbnails.ts` documents that
    sharp cannot load a fontsource woff2 and resolves the face by *system* font
@@ -143,10 +147,9 @@ present  eslint.config.mts                                                     h
 present  shared/components/src/styles/globals.css                              --text-display: clamp(2.75rem, 6.4vw, 5.5rem)
 present  shared/components/src/styles/globals.css                              --font-sans: 'DM Sans Variable'
 present  shared/components/src/styles/globals.css                              --font-heading: 'Funnel Display Variable'
-present  apps/vectreal-platform/app/components/layout-components/page-hero.tsx  font-heading
-present  apps/vectreal-platform/app/routes/layouts/signin-layout.tsx            text-h2 font-heading
-present  apps/vectreal-platform/app/routes/forgot-password-page/forgot-password.tsx  text-h3 font-heading
-present  apps/vectreal-platform/app/routes/reset-password-page/reset-password.tsx    text-h3 font-heading
+present  shared/components/src/styles/globals.css                              font-family: var(--font-heading);
+absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx  font-heading
+absent   apps/vectreal-platform/app/routes/layouts/signin-layout.tsx            font-heading
 exists   apps/vectreal-platform/tests/tooltip-copy-length.spec.ts
 exists   apps/vectreal-platform/tests/type-scale-adherence.spec.ts
 exists   apps/vectreal-platform/app/components/info-tooltip.spec.tsx

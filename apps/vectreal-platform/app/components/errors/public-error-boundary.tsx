@@ -64,7 +64,7 @@ export function PublicErrorBoundary() {
 						Error {statusCode}
 					</p>
 				) : null}
-				<h1 className="text-h3 font-heading mt-1">{title}</h1>
+				<h1 className="text-h3 mt-1">{title}</h1>
 				<p className="text-muted-foreground text-body-sm mt-2">{message}</p>
 
 				<div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">

@@ -53,6 +53,33 @@ describe('a rung survives cn()', () => {
 		expect([...TYPE_SCALE_RUNGS].sort()).toEqual(defined.sort())
 	})
 
+	/*
+		The heading face belongs to the rung, and nothing else may carry it.
+
+		It began as an opt-in utility written beside a rung, because the marketing
+		rebuild that introduced the face did not want to change the dashboard in the
+		same commit. That scope note was recorded as a rule, and the dashboard spent
+		four more phases as the only signed-in surface on the body face while
+		sign-in and both password routes had opted in.
+
+		Both halves are asserted. A heading rung missing the family is a heading
+		that silently falls back to body text; a body rung gaining it is the same
+		mistake pointed the other way.
+	*/
+	it('puts the display face on every heading rung and no other', () => {
+		const css = readFileSync(join(UI_DIR, '../styles/globals.css'), 'utf8')
+
+		const withFace = [
+			...css.matchAll(
+				/^\t+\.text-([a-z0-9-]+) \{\n\t+font-family: var\(--font-heading\);/gm
+			)
+		].map((match) => match[1])
+
+		expect(withFace.sort()).toEqual(
+			['display', 'h2', 'h3', 'h4', 'headline', 'stat'].sort()
+		)
+	})
+
 	it('keeps a rung and a colour together, in both orders', () => {
 		expect(cn('text-foreground text-h3')).toBe('text-foreground text-h3')
 		expect(cn('text-h3', 'text-muted-foreground')).toBe(

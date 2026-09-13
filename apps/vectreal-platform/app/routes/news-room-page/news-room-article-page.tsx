@@ -234,7 +234,7 @@ export default function NewsRoomArticlePage({
 	if (!ArticleComponent) {
 		return (
 			<div className="container-page max-w-4xl pt-32 pb-16 text-center">
-				<h1 className="text-h3 font-heading mb-2">Article unavailable</h1>
+				<h1 className="text-h3 mb-2">Article unavailable</h1>
 				<p className="text-muted-foreground mb-6">
 					This article could not be rendered right now.
 				</p>
@@ -364,9 +364,7 @@ export default function NewsRoomArticlePage({
 
 				{related.length > 0 && (
 					<section className="mt-32">
-						<h2 className="text-h3 font-heading mb-8">
-							More from the newsroom
-						</h2>
+						<h2 className="text-h3 mb-8">More from the newsroom</h2>
 						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 							{related.map((item) => (
 								<ArticleCard key={item.slug} article={item} />
