@@ -3,21 +3,20 @@ import { Skeleton } from '@shared/components/ui/skeleton'
 /**
  * Skeleton loader for the billing page.
  *
- * Mirrors `BillingSettingsSection`: the plan panel, then the usage panel as one
- * column of five rows. The route had no loading state at all, so a slow
- * subscription lookup left the page blank until it resolved.
+ * Mirrors `BillingSettingsSection`: the plan panel, and the actions beside it.
  *
- * It said "two meter columns" and drew seven meters across them until this
- * change. #811 deleted three meters and the panel became a single list - for
- * the reason the section states, that five cells across two columns leave the
- * last one alone beside an empty cell - and the skeleton kept promising the old
- * shape. A skeleton is a claim about the page behind it, and this one had been
- * wrong for longer than it was right.
+ * It has now been wrong twice, both times the same way. It said "two meter
+ * columns" and drew seven meters until #811 deleted three and the panel became
+ * one list; then it drew that list of five until #857 moved usage to its own
+ * route, leaving billing with a "View usage" link and no meters at all. Each
+ * time it went on promising a shape that was no longer behind it, because
+ * nothing fails when a panel changes and its skeleton does not.
  *
- * `organizations-skeleton.tsx` records the same failure being fixed there,
- * which is the tell that nothing keeps these two files honest. Anyone changing
- * a panel's shape has to remember its skeleton by hand; the only real defence
- * is keeping the skeleton simple enough to be obviously right.
+ * So it is structural now - the panel and its controls, not a count of rows
+ * inside them. The durable answer is the one `usage-skeleton.tsx` uses: render
+ * the page's own components in a loading state, so the skeleton cannot disagree
+ * with a layout it does not restate. Billing's remaining panel has no such
+ * component to borrow yet, which is the work left here.
  */
 export function BillingSkeleton() {
 	return (
@@ -38,24 +37,6 @@ export function BillingSkeleton() {
 							style={{ animationDelay: '140ms' }}
 						/>
 					</div>
-				</div>
-			</section>
-
-			<section className="ds-raised space-y-5 rounded-2xl p-5">
-				<Skeleton className="h-3 w-40" />
-				<div className="space-y-3">
-					{Array.from({ length: 5 }, (_, index) => (
-						<div key={index} className="space-y-1.5">
-							<Skeleton
-								className="h-3 w-full"
-								style={{ animationDelay: `${index * 60}ms` }}
-							/>
-							<Skeleton
-								className="h-1 w-full"
-								style={{ animationDelay: `${index * 60 + 30}ms` }}
-							/>
-						</div>
-					))}
 				</div>
 			</section>
 		</div>

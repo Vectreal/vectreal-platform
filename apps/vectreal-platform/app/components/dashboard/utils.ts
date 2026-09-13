@@ -146,6 +146,10 @@ export const extractRouteData = (
 		if ('organization' in loaderData && 'members' in loaderData) {
 			routeData.organizationDetail = loaderData as OrganizationDetailLoaderData
 		}
+		// Check for usage data: the verdict is what the header renders
+		if ('verdict' in loaderData && 'readings' in loaderData) {
+			routeData.usage = loaderData as RouteDataResult['usage']
+		}
 	}
 
 	return routeData

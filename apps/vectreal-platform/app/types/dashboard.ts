@@ -109,6 +109,12 @@ export interface RouteDataResult {
 	folder?: FolderLoaderData
 	scene?: SceneLoaderData
 	organizationDetail?: OrganizationDetailLoaderData
+	usage?: UsageLoaderData
+}
+
+/** Only the part of the usage loader the header reads. */
+export interface UsageLoaderData {
+	verdict: { headline: string }
 }
 
 /**

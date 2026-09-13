@@ -37,7 +37,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 	const routeContext = getRouteContext(location.pathname, routeParams)
 
 	// Extract typed data from route loaders
-	const { project, folder, scene, organizationDetail } =
+	const { project, folder, scene, organizationDetail, usage } =
 		extractRouteData(matches)
 
 	const content = useMemo(() => {
@@ -104,6 +104,26 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 		// Generate content based on loaded route context
 		switch (routeContext) {
+			/*
+			  The verdict is this page's description. It states what is true of the
+			  route right now - "Nothing needs your attention", "Scene storage is
+			  close to its limit" - which is what the slot is for, where the static
+			  sentence it replaces only restated the title.
+			*/
+			case 'usage':
+				if (usage) {
+					return {
+						title: DASHBOARD_CONTENT.usage.title,
+						description: usage.verdict.headline,
+						actionVariant: DASHBOARD_CONTENT.usage.actionVariant,
+						breadcrumbs: [
+							{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
+							{ label: DASHBOARD_CONTENT.usage.title, isLast: true }
+						]
+					}
+				}
+				break
+
 			case 'organization-detail':
 				if (organizationDetail) {
 					const breadcrumbs: BreadcrumbItem[] = [
@@ -413,7 +433,8 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 		scene,
 		organizationDetail,
 		navigation.state,
-		navigation.location
+		navigation.location,
+		usage
 	])
 
 	return content
