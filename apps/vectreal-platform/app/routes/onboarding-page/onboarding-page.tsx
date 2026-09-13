@@ -89,7 +89,7 @@ const PillGroup = ({
 						'rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150',
 						active
 							? 'text-orange border-[rgb(var(--orange-rgb)/0.6)] bg-[rgb(var(--orange-rgb)/0.12)]'
-							: 'text-primary/55 hover:border-primary/25 hover:text-primary/80 border-primary/12 bg-primary/4'
+							: 'ds-sunken text-muted-foreground hover:text-foreground border-border'
 					)}
 				>
 					{opt.label}
@@ -286,7 +286,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 								className="absolute inset-0 flex flex-col justify-center px-10 pb-8"
 							>
 								{/* Step counter */}
-								<p className="text-primary/25 mb-4 text-[10px] font-semibold tracking-[0.2em] uppercase">
+								<p className="text-muted-foreground mb-4 text-[10px] font-semibold tracking-[0.2em] uppercase">
 									{String(currentStep + 1).padStart(2, '0')} /{' '}
 									{String(STEPS.length).padStart(2, '0')}
 								</p>
@@ -299,7 +299,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 								</h1>
 
 								{/* Tagline */}
-								<p className="text-primary/50 mb-8 text-sm leading-relaxed">
+								<p className="text-muted-foreground mb-8 text-sm leading-relaxed">
 									{step.tagline}
 								</p>
 

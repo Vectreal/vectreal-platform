@@ -139,13 +139,13 @@ const OrganizationsPage = () => {
 					>
 						<div className="space-y-2">
 							<div className="flex items-center justify-between">
-								<span className="text-primary/60 text-sm">Role</span>
+								<span className="text-muted-foreground text-sm">Role</span>
 								<Badge variant="default">
 									{primaryOrganization.membership.role}
 								</Badge>
 							</div>
 							<div className="flex items-center justify-between">
-								<span className="text-primary/60 text-sm">Created</span>
+								<span className="text-muted-foreground text-sm">Created</span>
 								<span className="text-sm">
 									{new Date(
 										primaryOrganization.organization.createdAt
@@ -189,7 +189,7 @@ const OrganizationsPage = () => {
 							>
 								<div className="space-y-2">
 									<div className="flex items-center justify-between">
-										<span className="text-primary/60 text-sm">Role</span>
+										<span className="text-muted-foreground text-sm">Role</span>
 										<Badge
 											variant={
 												membership.role === 'owner'
@@ -203,7 +203,7 @@ const OrganizationsPage = () => {
 										</Badge>
 									</div>
 									<div className="flex items-center justify-between">
-										<span className="text-primary/60 text-sm">Owner</span>
+										<span className="text-muted-foreground text-sm">Owner</span>
 										<span className="text-sm">
 											{organization.ownerId === membership.userId
 												? 'You'

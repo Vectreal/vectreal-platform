@@ -134,7 +134,7 @@ export function FolderPicker({
 									</span>
 								) : null}
 								{value === null ? (
-									<Check className="text-primary ml-2 size-4" />
+									<Check className="text-foreground ml-2 size-4" />
 								) : null}
 							</CommandItem>
 
@@ -164,7 +164,7 @@ export function FolderPicker({
 										</span>
 									) : null}
 									{value === option.id ? (
-										<Check className="text-primary ml-2 size-4" />
+										<Check className="text-foreground ml-2 size-4" />
 									) : null}
 								</CommandItem>
 							))}

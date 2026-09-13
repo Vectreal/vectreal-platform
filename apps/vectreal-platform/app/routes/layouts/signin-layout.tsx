@@ -65,9 +65,9 @@ const SignupModel = () => {
 					are in `@layer base` now, so a utility beats them on layer order
 					alone and the markers were doing nothing.
 				*/}
-				<p className="text-body-lg text-primary/75 text-right font-extralight">
+				<p className="text-body-lg text-muted-foreground text-right font-extralight">
 					Join our community and start creating amazing{' '}
-					<strong className="text-primary">
+					<strong className="text-foreground">
 						3D experiences with Vectreal.
 					</strong>
 				</p>
@@ -395,7 +395,7 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 											<Link
 												viewTransition
 												to="/privacy-policy"
-												className="hover:text-primary underline"
+												className="hover:text-foreground underline"
 											>
 												Privacy Policy
 											</Link>{' '}
@@ -403,7 +403,7 @@ const SigninLayout = ({ loaderData }: Route.ComponentProps) => {
 											<Link
 												viewTransition
 												to="/terms-of-service"
-												className="hover:text-primary underline"
+												className="hover:text-foreground underline"
 											>
 												Terms of Service
 											</Link>

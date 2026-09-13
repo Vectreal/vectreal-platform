@@ -30,7 +30,7 @@ export const DashboardHeader = memo(() => {
 					  other heading does.
 					*/}
 						<h1 className="text-h2">{title}</h1>
-						<span className="text-primary/50">{description}</span>
+						<span className="text-muted-foreground">{description}</span>
 					</div>
 
 					{actionVariant && <DashboardActions variant={actionVariant} />}

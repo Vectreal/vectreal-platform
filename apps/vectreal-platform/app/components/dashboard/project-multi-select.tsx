@@ -163,7 +163,7 @@ export function ProjectMultiSelect({
 											</div>
 										</div>
 										{isSelected && (
-											<Check className="text-primary ml-auto size-4" />
+											<Check className="text-foreground ml-auto size-4" />
 										)}
 									</CommandItem>
 								)

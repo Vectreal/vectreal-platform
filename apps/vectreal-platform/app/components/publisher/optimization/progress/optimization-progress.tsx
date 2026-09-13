@@ -74,7 +74,7 @@ export const OptimizationProgress: FC<OptimizationProgressProps> = ({
 						style={{ animationDuration: '2s', animationDelay: '0.4s' }}
 					/>
 					<div className="border-primary/20 bg-primary/10 relative flex h-10 w-10 items-center justify-center rounded-full border">
-						<Sparkles className="text-primary h-5 w-5" />
+						<Sparkles className="text-foreground h-5 w-5" />
 					</div>
 				</div>
 				<p className="text-sm font-medium">Processing your scene</p>

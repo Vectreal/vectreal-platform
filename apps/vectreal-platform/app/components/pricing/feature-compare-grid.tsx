@@ -35,7 +35,7 @@ function FeatureCheck({ granted }: { granted: boolean }) {
 		<>
 			<span className="sr-only">{granted ? 'Included' : 'Not included'}</span>
 			{granted ? (
-				<Check className="text-primary mx-auto h-4 w-4" />
+				<Check className="text-foreground mx-auto h-4 w-4" />
 			) : (
 				<Minus className="text-muted-foreground mx-auto h-4 w-4" />
 			)}
@@ -107,7 +107,7 @@ export function FeatureCompareGrid() {
 									key={plan}
 									className={cn(
 										'text-body-sm pb-4 text-center font-medium',
-										PLAN_HIGHLIGHTED[plan] && 'text-primary'
+										PLAN_HIGHLIGHTED[plan] && 'text-foreground'
 									)}
 								>
 									{PLAN_DISPLAY_NAMES[plan]}

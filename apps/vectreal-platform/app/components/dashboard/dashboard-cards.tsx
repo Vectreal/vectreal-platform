@@ -90,10 +90,10 @@ const DashboardCard: FC<DashboardCardProps> = ({
 				<CardHeader className={cardHeaderVariants({ variant })}>
 					<span className="grow space-y-1 overflow-hidden">
 						<div className="flex items-center gap-2">
-							<span className="text-primary/60 group-hover/card:text-primary transition-colors">
+							<span className="text-muted-foreground group-hover/card:text-foreground transition-colors">
 								{icon}
 							</span>
-							<CardTitle className="group-hover/card:text-primary transition-colors">
+							<CardTitle className="group-hover/card:text-foreground transition-colors">
 								{title}
 							</CardTitle>
 						</div>
@@ -102,14 +102,16 @@ const DashboardCard: FC<DashboardCardProps> = ({
 						</CardDescription>
 					</span>
 					{variant !== 'detailed' && (
-						<ChevronRight className="text-primary/60 h-4 w-4 shrink-0 transition-transform group-hover/card:translate-x-1" />
+						<ChevronRight className="text-muted-foreground h-4 w-4 shrink-0 transition-transform group-hover/card:translate-x-1" />
 					)}
 				</CardHeader>
 				{children && <CardContent>{children}</CardContent>}
 				{showId && (
 					<CardFooter>
 						<div className="flex w-full items-center justify-between gap-4">
-							<code className="text-primary/25 truncate text-xs">{id}</code>
+							<code className="text-muted-foreground truncate text-xs">
+								{id}
+							</code>
 						</div>
 					</CardFooter>
 				)}

@@ -18,7 +18,7 @@ const CenteredSpinner = ({
 			<LoadingSpinner />
 			<motion.span
 				key="loading-text"
-				className="text-primary/75 text-center font-light"
+				className="text-muted-foreground text-center font-light"
 				initial={{ opacity: 0 }}
 				animate={{ opacity: 1 }}
 				exit={{ opacity: 0 }}

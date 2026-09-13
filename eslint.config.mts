@@ -135,7 +135,7 @@ export default defineConfig(tseslint.configs.recommended, [
 	/*
 	  Design-system adherence.
 
-	  Both rules encode a failure this consolidation actually hit, more than once
+	  Every rule here encodes a failure this codebase actually hit, more than once
 	  each, and that nothing else catches.
 	*/
 	{
@@ -175,6 +175,32 @@ export default defineConfig(tseslint.configs.recommended, [
 						'Literal[value=/(^|\\s)[a-z][a-z0-9-]*(\\[[^\\]]*\\])?(\\/[a-z-]+)?:(ds-(raised|overlay|sunken|divider)|text-(display|headline|h2|h3|h4|stat|body-lg|body-sm|body|eyebrow|label-xs))/]',
 					message:
 						'Tailwind variants cannot be applied to ds-* or text-* design-system classes: they are @layer components rules, not utilities, so this generates nothing. Use an arbitrary value, e.g. hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))].'
+				},
+				{
+					/*
+					  `text-primary`, which is not a colour.
+
+					  `--primary` is the fill behind a solid button, and its text pair
+					  is `--primary-foreground`. It is not an accent and never has
+					  been: light resolves it to `#171717` against `--foreground`'s
+					  `#0a0a0a`, and dark resolves *both* to `#fafafa`. So
+					  `text-primary` renders as body text in one theme and is
+					  byte-identical to it in the other, which is why it spread to 33
+					  call sites - it always looks right, and the name reads like "the
+					  main text colour".
+
+					  Two files already explain this in a comment
+					  (`layout-components/article-meta.tsx`, `dashboard/usage-meter.tsx`)
+					  and the count kept climbing, which is the evidence that a comment
+					  cannot hold it. Emphasis is `text-foreground`, secondary text is
+					  `text-muted-foreground`, and the brand is `--orange`.
+
+					  `bg-primary`, `border-primary` and `text-primary-foreground` are
+					  untouched: a fill is the job this token actually has.
+					*/
+					selector: 'Literal[value=/(^|\\s|:)text-primary(\\/\\d+)?(\\s|$)/]',
+					message:
+						'text-primary is not a colour: --primary is a button fill and resolves to plain foreground here (identical to --foreground in dark). Use text-foreground for emphasis, text-muted-foreground for secondary text, or text-orange for the brand.'
 				},
 				{
 					/*

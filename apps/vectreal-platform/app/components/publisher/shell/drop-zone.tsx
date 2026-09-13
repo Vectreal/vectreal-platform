@@ -100,7 +100,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 												className={cn(
 													'h-10 w-10 transition-all duration-300',
 													isDragActive
-														? 'text-primary'
+														? 'text-foreground'
 														: 'text-muted-foreground'
 												)}
 											/>
