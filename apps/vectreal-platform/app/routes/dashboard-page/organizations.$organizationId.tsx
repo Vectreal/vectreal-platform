@@ -470,7 +470,12 @@ export default function OrganizationDetailPage({
 		organization,
 		membership,
 		members,
-		projectsTotal,
+		/*
+		  `projectsTotal` stays in the loader and is not read here: the header
+		  description is built from it in `use-dashboard-content.ts`, which reads
+		  this route's loader data directly. Destructuring it again is what put
+		  the same number on the page twice.
+		*/
 		billing,
 		entitlements,
 		isReadOnlyBillingState,
@@ -543,55 +548,37 @@ export default function OrganizationDetailPage({
 				</Alert>
 			)}
 
-			<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Current role</CardDescription>
-						<CardTitle className="text-base">
-							<Badge variant={membershipVariant(membership.role)}>
-								{membership.role}
-							</Badge>
-						</CardTitle>
-					</CardHeader>
-				</Card>
+			{/*
+			  No stat band. This page is for administering an organization -
+			  renaming it, inviting and removing people, changing a role, deleting
+			  it - and four cards of read-only figures above that work were a
+			  dashboard-shaped header rather than anything someone came here for.
 
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Plan</CardDescription>
-						<CardTitle className="flex items-center gap-2 text-base capitalize">
-							<Shield className="h-4 w-4" />
-							{billing.plan}
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<Badge
-							variant={statusVariantFromBillingState(billing.billingState)}
-						>
-							{billing.billingState}
-						</Badge>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Members</CardDescription>
-						<CardTitle className="flex items-center gap-2 text-base">
-							<Users className="h-4 w-4" />
-							{members.length}
-						</CardTitle>
-					</CardHeader>
-				</Card>
-
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Projects</CardDescription>
-						<CardTitle className="flex items-center gap-2 text-base">
-							<Building2 className="h-4 w-4" />
-							{projectsTotal}
-						</CardTitle>
-					</CardHeader>
-				</Card>
-			</div>
+			  Each was already stated: `Current role` is the viewer's own row in
+			  the members table below, with the same badge; `Members` and
+			  `Projects` are the header's description line, which
+			  `use-dashboard-content.ts` owns for this page the way it does for a
+			  project and a folder. That left one fact stated nowhere else, so it
+			  stays as a line rather than a band - and only its state is worth a
+			  badge, because a plan name is not a warning.
+			*/}
+			<p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+				<Shield className="h-4 w-4 shrink-0" />
+				<span>
+					<span className="capitalize">{billing.plan}</span> plan
+				</span>
+				{/*
+				  `none` is the absence of a subscription, not a state to report, and
+				  it is what every free organization holds - so the badge rendered the
+				  word "none" beside "Free plan" on all 24 of them. A badge is for
+				  something worth stopping at.
+				*/}
+				{billing.billingState === 'none' ? null : (
+					<Badge variant={statusVariantFromBillingState(billing.billingState)}>
+						{billing.billingState}
+					</Badge>
+				)}
+			</p>
 
 			<Card>
 				<CardHeader>
