@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { PLAN_ENTITLEMENTS } from './plan-config'
 import {
 	ANNUAL_DISCOUNT_CLAIM,
+	ENTITLEMENT_DISPLAY_LABELS,
 	ENTITLEMENT_FEATURE_GROUPS,
 	PLAN_FALLBACK_PRICES,
 	PLAN_OFFER_DESCRIPTIONS
@@ -106,5 +107,28 @@ describe('claims the copy makes about the plans', () => {
 		>
 
 		expect([...grouped].sort()).toEqual([...declared].sort())
+	})
+})
+
+/*
+  `getUnlockedEntitlementLabels` maps keys straight onto these labels, so two
+  keys sharing one would render the same row twice on both billing pages. That
+  is not hypothetical: `optimization_preset_low` and `_medium` carried
+  byte-identical labels until #809 deleted the second, and the upgrade page
+  dedupped at render time because of it. Asserting uniqueness here is cheaper
+  than defending against it there, and it is the reason that dedup is gone.
+*/
+describe('ENTITLEMENT_DISPLAY_LABELS', () => {
+	it('gives every entitlement a label of its own', () => {
+		const counts = new Map<string, number>()
+		for (const label of Object.values(ENTITLEMENT_DISPLAY_LABELS)) {
+			counts.set(label, (counts.get(label) ?? 0) + 1)
+		}
+
+		const shared = [...counts]
+			.filter(([, count]) => count > 1)
+			.map(([label]) => label)
+
+		expect(shared).toEqual([])
 	})
 })
