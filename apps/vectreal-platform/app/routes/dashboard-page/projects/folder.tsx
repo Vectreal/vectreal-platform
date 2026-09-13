@@ -1,27 +1,9 @@
-import {
-	Empty,
-	EmptyContent,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle
-} from '@shared/components/ui/empty'
-import { useSetAtom } from 'jotai/react'
-import { FolderSearch } from 'lucide-react'
-import { useMemo } from 'react'
 import { data } from 'react-router'
 
 import { Route } from './+types/folder'
-import {
-	DataTable,
-	createContentColumns,
-	type ContentRow
-} from '../../../components/dashboard'
-import { FolderContentSkeleton } from '../../../components/skeletons'
-import { useDashboardMutationStatus } from '../../../hooks/use-dashboard-mutations'
-import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
+import { ContentListing } from '../../../components/dashboard'
+import { ContentListingSkeleton } from '../../../components/skeletons'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
-import { toContentRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import {
 	getChildFolders,
@@ -31,11 +13,6 @@ import {
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
-import {
-	deleteDialogAtom,
-	moveDialogAtom,
-	renameDialogAtom
-} from '../../../lib/stores/dashboard-management-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -107,141 +84,22 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 }
 
 export function HydrateFallback() {
-	return <FolderContentSkeleton />
+	return <ContentListingSkeleton />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
 const FolderPage = ({ loaderData }: Route.ComponentProps) => {
 	const { project, subfolders, scenes } = loaderData
-	const { isBusy: isTableBusy, pendingIds } = useDashboardMutationStatus()
-	const setRenameDialog = useSetAtom(renameDialogAtom)
-	const setDeleteDialog = useSetAtom(deleteDialogAtom)
-	const setMoveDialog = useSetAtom(moveDialogAtom)
-	const projectId = project.id
-	const tableState = useDashboardTableState({
-		namespace: 'folder-content'
-	})
-
-	const folderContent = {
-		subfolders,
-		scenes
-	}
-
-	const contentRows = useMemo<ContentRow[]>(() => {
-		const folderRows: ContentRow[] = subfolders.map((subfolder) => ({
-			id: subfolder.id,
-			type: 'folder',
-			name: subfolder.name,
-			description: subfolder.description || undefined,
-			projectId,
-			projectName: project.name,
-			childCount: subfolder.childCount,
-			updatedAt: subfolder.updatedAt
-		}))
-
-		const sceneRows: ContentRow[] = scenes.map((scene) => ({
-			id: scene.id,
-			type: 'scene',
-			name: scene.name,
-			description: scene.description || undefined,
-			projectId: scene.projectId,
-			projectName: project.name,
-			folderId: scene.folderId,
-			status: scene.status,
-			updatedAt: scene.updatedAt
-		}))
-
-		return [...folderRows, ...sceneRows]
-	}, [subfolders, scenes, projectId, project.name])
-
-	const contentColumns = useMemo(
-		() =>
-			createContentColumns({
-				pendingItemIds: pendingIds,
-				isActionsDisabled: isTableBusy,
-				onRenameItem: (row) => {
-					setRenameDialog({
-						open: true,
-						item: toContentRef(row),
-						name: row.name
-					})
-				},
-				onMoveItem: (row) => {
-					setMoveDialog({
-						open: true,
-						items: [toContentRef(row)],
-						projectId: row.projectId
-					})
-				},
-				onDeleteItem: (row) => {
-					setDeleteDialog({
-						open: true,
-						items: [toContentRef(row)]
-					})
-				}
-			}),
-		[isTableBusy, pendingIds, setDeleteDialog, setMoveDialog, setRenameDialog]
-	)
 
 	return (
-		<>
-			<div className="space-y-6 p-6">
-				{folderContent.subfolders.length > 0 ||
-				folderContent.scenes.length > 0 ? (
-					<DataTable
-						columns={contentColumns}
-						data={contentRows}
-						isUpdating={isTableBusy}
-						disableSelectionActions={isTableBusy}
-						searchKey="name"
-						searchPlaceholder="Search content..."
-						searchValue={tableState.searchValue}
-						onSearchValueChange={tableState.setSearchValue}
-						sorting={tableState.sorting}
-						onSortingChange={tableState.onSortingChange}
-						pagination={tableState.pagination}
-						onPaginationChange={tableState.onPaginationChange}
-						rowSelection={tableState.rowSelection}
-						onRowSelectionChange={tableState.onRowSelectionChange}
-						onRename={(selectedRow) => {
-							setRenameDialog({
-								open: true,
-								item: toContentRef(selectedRow),
-								name: selectedRow.name
-							})
-						}}
-						onMove={(selectedRows) => {
-							setMoveDialog({
-								open: true,
-								items: (selectedRows as ContentRow[]).map(toContentRef),
-								projectId
-							})
-						}}
-						onDelete={(selectedRows) => {
-							setDeleteDialog({
-								open: true,
-								items: (selectedRows as ContentRow[]).map(toContentRef)
-							})
-						}}
-						getRowCanSelect={() => true}
-					/>
-				) : (
-					<Empty>
-						<EmptyMedia>
-							<FolderSearch className="text-muted-foreground mx-auto h-12 w-12" />
-						</EmptyMedia>
-						<EmptyHeader>
-							<EmptyTitle>Folder is empty</EmptyTitle>
-							<EmptyDescription>
-								This folder does not contain any subfolders or scenes yet.
-							</EmptyDescription>
-						</EmptyHeader>
-						<EmptyContent></EmptyContent>
-					</Empty>
-				)}
-			</div>
-		</>
+		<ContentListing
+			folders={subfolders}
+			scenes={scenes}
+			projectId={project.id}
+			projectName={project.name}
+			namespace="folder-content"
+		/>
 	)
 }
 

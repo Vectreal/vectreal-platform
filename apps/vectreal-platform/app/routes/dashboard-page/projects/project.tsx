@@ -1,25 +1,9 @@
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia
-} from '@shared/components/ui/empty'
-import { useSetAtom } from 'jotai/react'
-import { FolderSearch } from 'lucide-react'
-import { useMemo } from 'react'
-import { data, Outlet, useLoaderData, useLocation } from 'react-router'
+import { data, Outlet, useLocation } from 'react-router'
 
 import { Route } from './+types/project'
-import {
-	DataTable,
-	createContentColumns,
-	type ContentRow
-} from '../../../components/dashboard'
-import { ProjectContentSkeleton } from '../../../components/skeletons'
-import { useDashboardMutationStatus } from '../../../hooks/use-dashboard-mutations'
-import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
+import { ContentListing } from '../../../components/dashboard'
+import { ContentListingSkeleton } from '../../../components/skeletons'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
-import { toContentRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import {
 	getRootSceneFolders,
@@ -27,11 +11,6 @@ import {
 	getSceneFolderChildCounts
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
-import {
-	deleteDialogAtom,
-	moveDialogAtom,
-	renameDialogAtom
-} from '../../../lib/stores/dashboard-management-store'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 
@@ -92,147 +71,38 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 }
 
 export function HydrateFallback() {
-	return <ProjectContentSkeleton />
+	return <ContentListingSkeleton />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
-const ProjectPage = () => {
+const ProjectPage = ({ loaderData }: Route.ComponentProps) => {
 	const location = useLocation()
-	const { project, folders, scenes } = useLoaderData<typeof loader>()
-	const { isBusy: isTableBusy, pendingIds } = useDashboardMutationStatus()
-	const setRenameDialog = useSetAtom(renameDialogAtom)
-	const setDeleteDialog = useSetAtom(deleteDialogAtom)
-	const setMoveDialog = useSetAtom(moveDialogAtom)
-	const projectId = project.id
-	const tableState = useDashboardTableState({
-		namespace: 'project-content'
-	})
+	const { project, folders, scenes } = loaderData
 
-	const projectContent = {
-		folders,
-		scenes
-	}
+	/*
+	  The folder and scene routes are children of this one, so this component
+	  stays mounted while they render and must yield the page to the outlet. The
+	  edit route is the exception: it opens as a drawer over the listing.
+	*/
+	const projectBasePath = `/dashboard/projects/${project.id}`
+	const shouldRenderListing =
+		location.pathname === projectBasePath ||
+		location.pathname === `${projectBasePath}/edit`
 
-	const projectBasePath = `/dashboard/projects/${projectId}`
-	const isProjectRootRoute = location.pathname === projectBasePath
-	const isProjectEditRoute = location.pathname === `${projectBasePath}/edit`
-	const shouldRenderProjectTable = isProjectRootRoute || isProjectEditRoute
-
-	const contentRows = useMemo<ContentRow[]>(() => {
-		const folderRows: ContentRow[] = folders.map((folder) => ({
-			id: folder.id,
-			type: 'folder',
-			name: folder.name,
-			description: folder.description || undefined,
-			projectId,
-			projectName: project.name,
-			childCount: folder.childCount,
-			updatedAt: folder.updatedAt
-		}))
-
-		const sceneRows: ContentRow[] = scenes.map((scene) => ({
-			id: scene.id,
-			type: 'scene',
-			name: scene.name,
-			description: scene.description || undefined,
-			projectId: scene.projectId,
-			projectName: project.name,
-			folderId: scene.folderId,
-			status: scene.status,
-			updatedAt: scene.updatedAt
-		}))
-
-		return [...folderRows, ...sceneRows]
-	}, [folders, scenes, projectId, project.name])
-
-	const contentColumns = useMemo(
-		() =>
-			createContentColumns({
-				pendingItemIds: pendingIds,
-				isActionsDisabled: isTableBusy,
-				onRenameItem: (row) => {
-					setRenameDialog({
-						open: true,
-						item: toContentRef(row),
-						name: row.name
-					})
-				},
-				onMoveItem: (row) => {
-					setMoveDialog({
-						open: true,
-						items: [toContentRef(row)],
-						projectId: row.projectId
-					})
-				},
-				onDeleteItem: (row) => {
-					setDeleteDialog({
-						open: true,
-						items: [toContentRef(row)]
-					})
-				}
-			}),
-		[isTableBusy, pendingIds, setDeleteDialog, setMoveDialog, setRenameDialog]
-	)
-
-	if (!shouldRenderProjectTable) {
+	if (!shouldRenderListing) {
 		return <Outlet />
 	}
 
 	return (
 		<>
-			<div className="space-y-6 p-6">
-				{projectContent.folders.length > 0 ||
-				projectContent.scenes.length > 0 ? (
-					<DataTable
-						columns={contentColumns}
-						data={contentRows}
-						isUpdating={isTableBusy}
-						disableSelectionActions={isTableBusy}
-						searchKey="name"
-						searchPlaceholder="Search content..."
-						searchValue={tableState.searchValue}
-						onSearchValueChange={tableState.setSearchValue}
-						sorting={tableState.sorting}
-						onSortingChange={tableState.onSortingChange}
-						pagination={tableState.pagination}
-						onPaginationChange={tableState.onPaginationChange}
-						rowSelection={tableState.rowSelection}
-						onRowSelectionChange={tableState.onRowSelectionChange}
-						onRename={(selectedRow) => {
-							setRenameDialog({
-								open: true,
-								item: toContentRef(selectedRow),
-								name: selectedRow.name
-							})
-						}}
-						onMove={(selectedRows) => {
-							setMoveDialog({
-								open: true,
-								items: (selectedRows as ContentRow[]).map(toContentRef),
-								projectId
-							})
-						}}
-						onDelete={(selectedRows) => {
-							setDeleteDialog({
-								open: true,
-								items: (selectedRows as ContentRow[]).map(toContentRef)
-							})
-						}}
-						getRowCanSelect={() => true}
-					/>
-				) : (
-					<Empty>
-						<EmptyMedia>
-							<FolderSearch className="text-muted-foreground h-24 w-24" />
-						</EmptyMedia>
-						<EmptyHeader>No content yet</EmptyHeader>
-						<EmptyDescription>
-							Start by creating your first scene or folder.
-						</EmptyDescription>
-					</Empty>
-				)}
-			</div>
+			<ContentListing
+				folders={folders}
+				scenes={scenes}
+				projectId={project.id}
+				projectName={project.name}
+				namespace="project-content"
+			/>
 			<Outlet />
 		</>
 	)
