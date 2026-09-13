@@ -48,7 +48,7 @@
 		"@hookform/resolvers": "^5.7.1",
 		"react-hook-form": "^7.85.0",
 		"zod": "^4.4.3",
-		"sharp": "^0.35.3",
+		"sharp": "^0.35.4",
 		"@react-router/express": "8.3.0",
 		"compression": "^1.8.1",
 		"express": "^5.2.1",
