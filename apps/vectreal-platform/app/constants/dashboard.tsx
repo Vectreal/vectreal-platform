@@ -53,8 +53,9 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		// Not "Recent Activity": there is no activity or audit log behind this
 		// page. It is scenes ordered by `updatedAt`, plus plan usage.
 		title: 'Overview',
-		description:
-			'Pick up where you left off, and see how much of your plan you are using.',
+		// One job now. Usage moved to its own route, so this page is what it was
+		// always for: getting back to the thing you were doing.
+		description: 'Pick up where you left off.',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.DASHBOARD
 	},
@@ -118,7 +119,9 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	},
 	billing: {
 		title: 'Billing & Plans',
-		description: 'Manage subscriptions, usage, and plan upgrades',
+		// Money. Consumption is `/dashboard/usage` and this page links to it, so
+		// the three nouns this used to name are one question again.
+		description: 'Your plan, and how it is paid for',
 		loadingTitle: 'Billing & Plans',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined

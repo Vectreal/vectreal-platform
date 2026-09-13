@@ -1,11 +1,5 @@
 import { Badge } from '@shared/components/ui/badge'
 import {
-	Card,
-	CardDescription,
-	CardHeader,
-	CardTitle
-} from '@shared/components/ui/card'
-import {
 	Empty,
 	EmptyDescription,
 	EmptyHeader,
@@ -21,7 +15,6 @@ import { DashboardCard } from '../../components/dashboard'
 import { OrganizationsSkeleton } from '../../components/skeletons'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
-import { computeOrganizationStats } from '../../lib/domain/dashboard/dashboard-stats.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 
 import type { ShouldRevalidateFunction } from 'react-router'
@@ -32,16 +25,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Fetch organizations
 	const organizations = await getUserOrganizations(user.id)
 
-	// Compute stats server-side
-	const organizationStats = computeOrganizationStats(organizations)
-
-	return data(
-		{
-			organizations,
-			organizationStats
-		},
-		{ headers }
-	)
+	return data({ organizations }, { headers })
 }
 
 /**
@@ -68,7 +52,7 @@ export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors
 
 const OrganizationsPage = () => {
 	const location = useLocation()
-	const { organizations, organizationStats } = useLoaderData<typeof loader>()
+	const { organizations } = useLoaderData<typeof loader>()
 	const isOrganizationsRootRoute = /^\/dashboard\/organizations\/?$/.test(
 		location.pathname
 	)
@@ -85,79 +69,27 @@ const OrganizationsPage = () => {
 		return { byRole }
 	}, [organizations])
 
-	// Get primary organization (first owned org)
-	const primaryOrganization = useMemo(() => {
-		return (
-			organizations.find(({ membership }) => membership.role === 'owner') ||
-			null
-		)
-	}, [organizations])
-
 	if (!isOrganizationsRootRoute) {
 		return <Outlet />
 	}
 
 	return (
 		<div className="space-y-6 p-6">
-			<div className="grid gap-4 md:grid-cols-3">
-				<Card>
-					<CardHeader className="pb-2">
-						<CardDescription>Total organizations</CardDescription>
-						<CardTitle>{organizationStats.total}</CardTitle>
-					</CardHeader>
-				</Card>
-				<Card>
-					<CardHeader className="pb-2">
-						<CardDescription>Owner memberships</CardDescription>
-						<CardTitle>{organizationStats.owned}</CardTitle>
-					</CardHeader>
-				</Card>
-				<Card>
-					<CardHeader className="pb-2">
-						<CardDescription>Admin memberships</CardDescription>
-						<CardTitle>{organizationStats.admin}</CardTitle>
-					</CardHeader>
-				</Card>
-			</div>
+			{/*
+			  One list, and no counts above it.
 
-			{primaryOrganization && (
-				<section className="space-y-3">
-					<h2 className="text-h4">Primary organization</h2>
-					<DashboardCard
-						title={primaryOrganization.organization.name}
-						description="Your default workspace and ownership context"
-						linkTo={DASHBOARD_ROUTES.ORGANIZATION_DETAIL(
-							primaryOrganization.organization.id
-						)}
-						icon={<Building2 className="h-5 w-5" />}
-						id={primaryOrganization.organization.id}
-						navigationState={{
-							name: primaryOrganization.organization.name,
-							description: 'Organization details'
-						}}
-					>
-						<div className="space-y-2">
-							<div className="flex items-center justify-between">
-								<span className="text-muted-foreground text-sm">Role</span>
-								<Badge variant="default">
-									{primaryOrganization.membership.role}
-								</Badge>
-							</div>
-							<div className="flex items-center justify-between">
-								<span className="text-muted-foreground text-sm">Created</span>
-								<span className="text-sm">
-									{new Date(
-										primaryOrganization.organization.createdAt
-									).toLocaleDateString()}
-								</span>
-							</div>
-						</div>
-					</DashboardCard>
-				</section>
-			)}
+			  Three stat cards - total, owner memberships, admin memberships - sat
+			  directly on top of the list they were counting. Counting a list
+			  rendered beneath you is not a second fact, and on a single-organization
+			  account they read 1, 1, 0 above one row.
 
-			<section className="space-y-3">
-				<h2 className="text-h4">All organizations</h2>
+			  "Primary organization" went with them. It drew the same organization a
+			  second time, in a second card, with different words - and the concept
+			  was invented here: it meant "the first organization you own, by array
+			  order", which is not something the product has. The list already marks
+			  an owned organization by lifting it a step.
+			*/}
+			<section>
 				{organizations.length === 0 ? (
 					<Empty>
 						<EmptyHeader>

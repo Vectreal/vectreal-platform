@@ -5,6 +5,7 @@ import { data, Link, useLoaderData } from 'react-router'
 
 import { Route } from './+types/usage'
 import { UsageMeter, UsageMeterGrid } from '../../components/dashboard'
+import { DetailPanelSection } from '../../components/layout-components'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import {
 	LIMIT_DISPLAY_LABELS,
@@ -214,11 +215,7 @@ const UsagePage = () => {
 			</section>
 
 			{heaviest.length > 0 ? (
-				<section className="ds-raised space-y-4 rounded-2xl p-5">
-					<h2 className="text-muted-foreground text-eyebrow">
-						Heaviest scenes
-					</h2>
-
+				<DetailPanelSection surface="raised" title="Heaviest scenes">
 					{/*
 					  The actionable unit. A project total says where to look, a file
 					  says what is fat, but a scene is the thing you open in the
@@ -268,7 +265,7 @@ const UsagePage = () => {
 						A file used by more than one scene counts toward each of them, so
 						these do not add up to the total above.
 					</p>
-				</section>
+				</DetailPanelSection>
 			) : null}
 
 			{/*
@@ -282,11 +279,7 @@ const UsagePage = () => {
 			  alone.
 			*/}
 			{byProject.length > 0 ? (
-				<section className="ds-raised space-y-4 rounded-2xl p-5">
-					<h2 className="text-muted-foreground text-eyebrow">
-						Where it is going
-					</h2>
-
+				<DetailPanelSection surface="raised" title="Where it is going">
 					<ul className="space-y-3">
 						{byProject.map((project) => {
 							const mb = Math.round(project.storageBytes / MB)
@@ -329,13 +322,11 @@ const UsagePage = () => {
 							)
 						})}
 					</ul>
-				</section>
+				</DetailPanelSection>
 			) : null}
 
 			{byType.length > 0 ? (
-				<section className="ds-raised space-y-4 rounded-2xl p-5">
-					<h2 className="text-muted-foreground text-eyebrow">By file type</h2>
-
+				<DetailPanelSection surface="raised" title="By file type">
 					{/*
 					  The cut that changes what you do about it. Textures are usually
 					  most of the weight and the fix for a texture - resize, recompress
@@ -359,13 +350,11 @@ const UsagePage = () => {
 							</li>
 						))}
 					</ul>
-				</section>
+				</DetailPanelSection>
 			) : null}
 
 			{largest.length > 0 ? (
-				<section className="ds-raised space-y-4 rounded-2xl p-5">
-					<h2 className="text-muted-foreground text-eyebrow">Largest files</h2>
-
+				<DetailPanelSection surface="raised" title="Largest files">
 					{/*
 					  "Unusually large" is measured against `storage_bytes_per_scene`,
 					  not against a number invented here. One file taking a quarter of
@@ -420,7 +409,7 @@ const UsagePage = () => {
 							MB a single scene may hold on {PLAN_DISPLAY_NAMES[plan]}.
 						</p>
 					) : null}
-				</section>
+				</DetailPanelSection>
 			) : null}
 
 			{/*
