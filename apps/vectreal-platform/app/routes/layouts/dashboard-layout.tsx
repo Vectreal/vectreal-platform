@@ -30,6 +30,7 @@ import {
 	LogoSidebar
 } from '../../components/dashboard'
 import {
+	BillingSkeleton,
 	DashboardSkeleton,
 	FolderContentSkeleton,
 	OrganizationsSkeleton,
@@ -235,6 +236,7 @@ const DashboardLayout = () => {
 
 		if (path === '/dashboard') return <DashboardSkeleton />
 		if (path === '/dashboard/organizations') return <OrganizationsSkeleton />
+		if (path === '/dashboard/billing') return <BillingSkeleton />
 		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
 		if (willBeProjectDetail) return <ProjectContentSkeleton />
 		if (willBeFolderDetail) return <FolderContentSkeleton />
