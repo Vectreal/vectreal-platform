@@ -157,13 +157,78 @@ itself the symptom.
 
 ## Scope discipline
 
-Out-of-scope findings become a catalogue row (Notion **Vectreal Work Items**) or
-a GitHub issue. They never become lines in the diff and never become a report
+Out-of-scope findings become a catalogue row (see Work items below) or a
+GitHub issue. They never become lines in the diff and never become a report
 handed back for triage. Say plainly in the PR what was filed rather than fixed,
 and why.
 
 Deliver the whole scope that was asked for. If part is blocked, finish everything
 else in full and say what was left out. Scaling the work down is the user's call.
+
+## Work items
+
+The catalogue is Notion **Vectreal Work Items**, data source
+`collection://0d587ec5-ca95-4bd0-91c4-2dc25560ec14`. A row's Status is a claim
+about `main`, and only `main` moves it: In review means the PR is open, Shipped
+means the merge commit exists. A green suite is neither.
+
+Nothing in the loop owned the close until 2026-09-13, when eight rows in the
+sellable-artifact lane still read In review a week after their PRs merged, and
+the lane read as a backlog it was not. The fix is the same one the root cause
+gets: the state lives in an artifact the loop already produces, the plan, and
+the gate that ends plan mode checks for it.
+
+**Plan.** Before presenting a plan, query the open rows and match them against
+the scope:
+
+```
+SELECT url, Name, Status, Priority, Track, Link
+FROM "collection://0d587ec5-ca95-4bd0-91c4-2dc25560ec14"
+WHERE Status NOT IN ('Shipped', 'Dropped')
+```
+
+Read every row the scope names or overlaps, and verify its claim against `main`
+before planning on it. A row `main` has already answered is closed on the spot:
+Status Shipped, Evidence naming the file and the PR that did it. That is the
+cheapest close there is and the one most often skipped, which is how the lane
+grew.
+
+The plan ends with a `## Work items` table. `skills-plan-gate.mjs` refuses
+`ExitPlanMode` while the plan file has no such heading; a scope with no matching
+row writes the heading over the single line `none`.
+
+| Row | Now | After this PR |
+| --- | --- | --- |
+| [The publisher accepts a hotspot asset URL the server will reject](https://app.notion.com/3d0384e63e678199b234e6d041bcaf9f) | Next / Not started | Shipped |
+| [Restrict hotspot payloadUrl to assets the platform serves](https://app.notion.com/3d0384e63e67816e885ae29b33e839bf) | Later / Not started | untouched, named because it shares the parser |
+
+**Start.** On the first edit, rows the plan will implement move to In progress
+with the branch URL in Link.
+
+**Close.** When the loop returns clean and the PR is open, every row the diff
+implements moves to In review with Link set to the PR and Evidence written in
+the catalogue's own form, `Shipped in PR #NNN (sha), D Mon YYYY.` followed by
+the file, symbol or test that proves it. Prepend to the existing Evidence
+rather than replacing it; the reasoning the row accumulated is why it was
+filed. On merge the row moves to Shipped. A row the PR implements only partly
+stays open, and its Evidence says what landed and what did not.
+
+The PR body carries the same table under "Work items" with the final state, so
+review reads rows and diff together.
+
+**File.** An out-of-scope finding becomes a new row with Surface, Track,
+Priority and Effort set, and an Evidence sentence naming the PR it was found in
+and the file that shows it. Search the open rows first: the second row for one
+defect is the cost the plan step exists to avoid.
+
+The status sequence, and what each step needs:
+
+```
+plan  ──▶  In progress  ──▶  In review  ──▶  Shipped
+ table      first edit,      loop clean,      merge commit,
+ in plan    Link = branch    Link = PR,       Evidence names it
+                             Evidence written
+```
 
 ## Git rules
 
@@ -274,6 +339,10 @@ CI run.
 ```claims
 present  .github/workflows/ci-quality.yaml                    prettier --check
 exists   .agents/hooks/skills-plan-gate.mjs
+present  .agents/hooks/skills-plan-gate.mjs                   planCarriesWorkItems
+present  .agents/hooks/skills-invoked.mjs                     export function planCarriesWorkItems
+present  .github/pull_request_template.md                     ## Work items
+exists   apps/vectreal-platform/tests/agent-hooks.spec.ts
 present  .claude/settings.json                                  skills-plan-gate.mjs
 present  .github/workflows/ci-quality.yaml                     build-ci
 present  .github/pull_request_template.md                       Root cause
