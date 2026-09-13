@@ -26,6 +26,19 @@ import type { ReactNode } from 'react'
  * directly on the page. Inside a panel that is already raised, leave it plain:
  * the ladder steps up on nesting, and a raised block inside a raised drawer
  * reads as a second frame around content that needed none.
+ *
+ * Two things legitimately still hand-roll `ds-raised … rounded-2xl p-5`, and
+ * naming them saves the next person re-deriving the difference:
+ *
+ * - **A container** holding several of these as plain sections, which is what
+ *   `scene-facts-panel` and `scene-summary-bar` are.
+ * - **A hero** that leads a page and has no section title of its own - the plan
+ *   panel on billing, the verdict on the usage route. Both put a `text-h3` or a
+ *   figure where a title would go, so giving them one would be saying it twice.
+ *
+ * Anything with a title above a block of content is this component, and the
+ * usage route shipped five hand-rolled copies before someone noticed - the same
+ * shape this file was extracted to end.
  */
 
 interface DetailPanelSectionProps {
