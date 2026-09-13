@@ -52,15 +52,21 @@ function highlightRank(key: EntitlementKey): number {
 }
 
 /**
- * The labels to show for an upgrade, ordered and capped.
+ * Every entitlement `to` grants that `from` does not, ordered, uncapped.
  *
  * A downgrade and a move to the same plan both gain nothing, so both return
- * `[]` from the delta itself rather than from a special case.
+ * `[]` from the delta itself rather than from a special case. Asking this in
+ * the other direction gives what a move gives up, which is what
+ * `plan-change-outcome` does.
  *
- * `entitlements` exists so a test can supply a table with more gained keys than
- * the cap. The shipped config cannot: its largest delta is five.
+ * Uncapped because a cap belongs to a display, not to a fact, and one caller
+ * needs the fact: a list of what a plan change takes away may not quietly stop
+ * at six.
+ *
+ * `entitlements` exists so a test can supply a table with more keys than the
+ * cap below. The shipped config cannot: its largest delta is five.
  */
-export function getUnlockedEntitlementLabels(
+export function getEntitlementDeltaLabels(
 	from: Plan,
 	to: Plan,
 	entitlements: EntitlementTable = PLAN_ENTITLEMENTS
@@ -72,5 +78,16 @@ export function getUnlockedEntitlementLabels(
 		.filter((key) => after[key] && !before[key])
 		.sort((a, b) => highlightRank(a) - highlightRank(b))
 		.map((key) => ENTITLEMENT_DISPLAY_LABELS[key])
-		.slice(0, UPGRADE_FEATURE_DISPLAY_LIMIT)
+}
+
+/** The same list as an upgrade page shows it: ordered, and capped at six. */
+export function getUnlockedEntitlementLabels(
+	from: Plan,
+	to: Plan,
+	entitlements: EntitlementTable = PLAN_ENTITLEMENTS
+): string[] {
+	return getEntitlementDeltaLabels(from, to, entitlements).slice(
+		0,
+		UPGRADE_FEATURE_DISPLAY_LIMIT
+	)
 }

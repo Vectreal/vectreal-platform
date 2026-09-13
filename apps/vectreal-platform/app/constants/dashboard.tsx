@@ -107,17 +107,26 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},
+	/*
+	  Neutral for the same reason as the confirmation below, and because this
+	  chrome is also the parent breadcrumb of that page: a reader moving down
+	  read "Upgrade" twice in the trail above a card saying otherwise.
+	*/
 	'billing-checkout': {
-		title: 'Upgrade',
+		title: 'Change Plan',
 		description: 'Choose a plan and continue to secure payment',
-		loadingTitle: 'Upgrade',
+		loadingTitle: 'Change Plan',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},
+	/*
+	  Neutral on purpose: this route confirms every direct plan change, including
+	  one that moves down. The card below names the specific change.
+	*/
 	'billing-checkout-success': {
-		title: 'Upgrade Confirmed',
-		description: 'Your upgrade is on the way and syncing now',
-		loadingTitle: 'Upgrade Confirmed',
+		title: 'Plan Change Confirmed',
+		description: 'Your new plan is syncing now',
+		loadingTitle: 'Plan Change Confirmed',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},

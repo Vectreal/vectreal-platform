@@ -10,16 +10,20 @@ import {
 } from '@shared/components/ui/card'
 import { Separator } from '@shared/components/ui/separator'
 import { eq } from 'drizzle-orm'
-import { ArrowRight, Check, CheckCircle2, ExternalLink } from 'lucide-react'
+import {
+	ArrowRight,
+	Check,
+	CheckCircle2,
+	ExternalLink,
+	Minus
+} from 'lucide-react'
 import { useEffect } from 'react'
 import { data, Link, redirect, useLoaderData } from 'react-router'
 
-import { type Plan } from '../../constants/plan-config'
-import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
 import { getDbClient } from '../../db/client'
 import { orgSubscriptions } from '../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
-import { getUnlockedEntitlementLabels } from '../../lib/domain/billing/plan-upgrade-features'
+import { describePlanChange } from '../../lib/domain/billing/plan-change-outcome'
 import { syncSubscriptionFromStripe } from '../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
@@ -28,28 +32,6 @@ import { getStripeClient } from '../../lib/stripe.server'
 import type { Route } from './+types/billing-upgrade-success'
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-type PaidPlan = Extract<Plan, 'pro' | 'business'>
-
-const VALID_PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function isPaidPlan(planId: string | null): planId is PaidPlan {
-	return planId === 'pro' || planId === 'business'
-}
-
-function toValidPlan(value: string | null): Plan | null {
-	return value && (VALID_PLANS as string[]).includes(value)
-		? (value as Plan)
-		: null
-}
 
 // ---------------------------------------------------------------------------
 // Server: checkout session sync
@@ -228,6 +210,20 @@ export default function BillingUpgradeSuccessPage() {
 		useLoaderData<typeof loader>()
 	const posthog = usePostHog()
 
+	/*
+	  Which way this change points, and what to say about it, are decided in one
+	  place. This page used to take the word "upgrade" from `isDirectUpdate`,
+	  which says which code path Stripe took and nothing about direction, so a
+	  move down the ladder is announced as a gain and offered
+	  "All features are available immediately" while three of them leave.
+	*/
+	const outcome = describePlanChange({
+		planId,
+		billingPeriod,
+		fromPlan,
+		isDirectUpdate
+	})
+
 	useEffect(() => {
 		if (!planId) return
 		posthog?.capture('plan_upgrade_completed', {
@@ -237,42 +233,10 @@ export default function BillingUpgradeSuccessPage() {
 		})
 	}, [planId, fromPlan, billingPeriod, posthog])
 
-	const plan = isPaidPlan(planId) ? planId : null
-	const planLabel = plan ? PLAN_DISPLAY_NAMES[plan] : null
-
-	const validFromPlan = toValidPlan(fromPlan)
-	const isPeriodSwitch = isDirectUpdate && fromPlan === planId
-	const isTierUpgrade =
-		isDirectUpdate && !isPeriodSwitch && validFromPlan !== null
-
-	// For unlocked features: compare against previous plan on upgrades,
-	// against free for new subscribers.
-	const basePlan: Plan = isTierUpgrade && validFromPlan ? validFromPlan : 'free'
-	const unlockedFeatures =
-		plan && !isPeriodSwitch ? getUnlockedEntitlementLabels(basePlan, plan) : []
-
-	// Scenario-specific heading and subtitle
-	let title: string
-	let subtitle: string
-	if (isPeriodSwitch && planLabel) {
-		const periodLabel = billingPeriod === 'annual' ? 'annual' : 'monthly'
-		title = `Switched to ${periodLabel} billing`
-		subtitle =
-			billingPeriod === 'annual'
-				? `Your ${planLabel} subscription is now billed once per year.`
-				: `Your ${planLabel} subscription is now billed monthly.`
-	} else if (planLabel) {
-		title = isDirectUpdate
-			? `Upgraded to ${planLabel}`
-			: `Welcome to ${planLabel}!`
-		subtitle = isDirectUpdate
-			? 'All features are available immediately.'
-			: 'Your plan is now active and all features are available immediately.'
-	} else {
-		title = "Payment received - you're all set"
-		subtitle =
-			'Your subscription is being activated and will be ready momentarily.'
-	}
+	const { planLabel, title, subtitle, gained, lost, reducedLimits } = outcome
+	const isPeriodSwitch = outcome.kind === 'period_switch'
+	// A direct move between two tiers: the only case with a prior plan to name.
+	const isTierChange = outcome.fromPlan !== null
 
 	return (
 		<div className="mx-auto w-full max-w-lg p-6">
@@ -295,21 +259,19 @@ export default function BillingUpgradeSuccessPage() {
 				</CardHeader>
 
 				{/* Transition pill - shown for tier upgrades and period switches */}
-				{(isTierUpgrade || isPeriodSwitch) && (
+				{(isTierChange || isPeriodSwitch) && (
 					<CardContent className="pt-0 pb-4">
 						<div className="bg-muted/60 border-border/40 flex items-center justify-center gap-3 rounded-lg border px-4 py-3">
 							<span className="text-muted-foreground text-sm">
-								{isTierUpgrade
-									? validFromPlan
-										? PLAN_DISPLAY_NAMES[validFromPlan]
-										: 'Previous plan'
+								{isTierChange
+									? (outcome.fromPlanLabel ?? 'Previous plan')
 									: billingPeriod === 'annual'
 										? 'Monthly'
 										: 'Annual'}
 							</span>
 							<ArrowRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
 							<span className="text-foreground text-sm font-medium">
-								{isTierUpgrade
+								{isTierChange
 									? planLabel
 									: billingPeriod === 'annual'
 										? 'Annual'
@@ -320,14 +282,14 @@ export default function BillingUpgradeSuccessPage() {
 				)}
 
 				{/* Unlocked features - only for tier changes, not period switches */}
-				{unlockedFeatures.length > 0 && (
+				{gained.length > 0 && (
 					<CardContent className="space-y-3 pt-0">
 						<Separator />
 						<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-							{isTierUpgrade ? 'Newly unlocked' : "What's now available"}
+							{isTierChange ? 'Newly unlocked' : "What's now available"}
 						</p>
 						<ul className="space-y-2">
-							{unlockedFeatures.map((feature) => (
+							{gained.map((feature) => (
 								<li key={feature} className="flex items-start gap-2 text-sm">
 									<Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
 									<span>{feature}</span>
@@ -337,6 +299,39 @@ export default function BillingUpgradeSuccessPage() {
 						<p className="text-muted-foreground text-xs">
 							Manage invoices and payment methods any time in billing settings.
 						</p>
+					</CardContent>
+				)}
+
+				{/*
+				  What the change takes away. Nothing renders this today, so a
+				  reader moving down gets a transition pill and no word about the
+				  entitlements and quotas leaving with it.
+				*/}
+				{(lost.length > 0 || reducedLimits.length > 0) && (
+					<CardContent className="space-y-3 pt-0">
+						<Separator />
+						<p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+							No longer included
+						</p>
+						<ul className="space-y-2">
+							{lost.map((feature) => (
+								<li key={feature} className="flex items-start gap-2 text-sm">
+									<Minus className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+									<span>{feature}</span>
+								</li>
+							))}
+							{reducedLimits.map((limit) => (
+								<li key={limit.key} className="flex items-start gap-2 text-sm">
+									<Minus className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+									<span>
+										{limit.label}{' '}
+										<span className="text-muted-foreground">
+											{limit.from} to {limit.to}
+										</span>
+									</span>
+								</li>
+							))}
+						</ul>
 					</CardContent>
 				)}
 

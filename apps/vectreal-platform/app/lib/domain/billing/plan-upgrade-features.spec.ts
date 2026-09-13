@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import {
+	getEntitlementDeltaLabels,
 	getUnlockedEntitlementLabels,
 	UPGRADE_FEATURE_DISPLAY_LIMIT
 } from './plan-upgrade-features'
@@ -10,10 +11,7 @@ import {
 	PLAN_ENTITLEMENTS,
 	type EntitlementKey
 } from '../../../constants/plan-config'
-import {
-	ENTITLEMENT_DISPLAY_LABELS,
-	UPGRADE_FEATURE_HIGHLIGHT_KEYS
-} from '../../../constants/product-copy'
+import { UPGRADE_FEATURE_HIGHLIGHT_KEYS } from '../../../constants/product-copy'
 
 /**
  * One owner for what an upgrade unlocks.
@@ -89,11 +87,43 @@ describe('getUnlockedEntitlementLabels', () => {
 		const labels = getUnlockedEntitlementLabels('free', 'pro', table)
 
 		expect(labels).toHaveLength(6)
-		expect(labels.slice(0, UPGRADE_FEATURE_HIGHLIGHT_KEYS.length)).toEqual(
-			UPGRADE_FEATURE_HIGHLIGHT_KEYS.map(
-				(key) => ENTITLEMENT_DISPLAY_LABELS[key]
-			)
-		)
+		/*
+			Written out rather than mapped from the highlight list. Deriving both
+			sides from that constant passes for any contents of it, including none:
+			emptying it to `[]` left the whole repository green.
+		*/
+		expect(labels.slice(0, 4)).toEqual([
+			'Remove Vectreal branding',
+			'Multi-member workspace',
+			'Role-based access',
+			'Priority support'
+		])
+	})
+
+	/*
+		Nothing pinned this list's contents, and it now orders two answers rather
+		than one: what a change gains, and what it takes away.
+	*/
+	it('leads with the four entitlements worth leading with', () => {
+		expect(UPGRADE_FEATURE_HIGHLIGHT_KEYS).toEqual([
+			'embed_branding_removal',
+			'org_multi_member',
+			'org_roles',
+			'support_priority'
+		])
+	})
+
+	/*
+		The cap belongs to the upgrade display. A list of what a plan change takes
+		away is not a highlight reel and may not quietly stop at six, so the
+		uncapped delta is a separate export rather than an option on this one.
+	*/
+	it('leaves the uncapped delta uncapped, which a loss disclosure needs', () => {
+		const table = { ...PLAN_ENTITLEMENTS, free: every(false), pro: every(true) }
+		const labels = getEntitlementDeltaLabels('free', 'pro', table)
+
+		expect(labels.length).toBeGreaterThan(UPGRADE_FEATURE_DISPLAY_LIMIT)
+		expect(labels).toHaveLength(KEYS.length)
 	})
 })
 
@@ -110,6 +140,7 @@ describe('the answer both billing pages give', () => {
 
 	const UPGRADE = '../../../routes/dashboard-page/billing-upgrade.tsx'
 	const SUCCESS = '../../../routes/dashboard-page/billing-upgrade-success.tsx'
+	const OUTCOME = './plan-change-outcome.ts'
 
 	/*
 		The trailing paren matters: the import alone satisfies the bare name, so
@@ -119,8 +150,16 @@ describe('the answer both billing pages give', () => {
 		expect(source(UPGRADE)).toContain('getUnlockedEntitlementLabels(')
 	})
 
-	it('is asked for by the page that confirms it', () => {
-		expect(source(SUCCESS)).toContain('getUnlockedEntitlementLabels(')
+	/*
+		The page that confirms the purchase reads `plan-change-outcome`, which asks
+		this module for both halves of the delta - what the new plan adds, and the
+		same question reversed for what it takes away. That module is plain and a
+		spec calls it directly, so its argument order is proven there against real
+		output instead of against the text of a call, which is why no source
+		assertion for it survives below.
+	*/
+	it('is asked for by the module the confirmation page reads', () => {
+		expect(source(OUTCOME)).toContain('getUnlockedEntitlementLabels(')
 	})
 
 	/*
@@ -144,15 +183,12 @@ describe('the answer both billing pages give', () => {
 		expect(source(UPGRADE)).toContain(
 			'getUnlockedEntitlementLabels(billing.plan, plan)'
 		)
-		expect(source(SUCCESS)).toContain(
-			'getUnlockedEntitlementLabels(basePlan, plan)'
-		)
 	})
 
-	it('is imported from this module by both', () => {
-		const specifier = "from '../../lib/domain/billing/plan-upgrade-features'"
-
-		expect(source(UPGRADE)).toContain(specifier)
-		expect(source(SUCCESS)).toContain(specifier)
+	it('is imported from this module by both callers', () => {
+		expect(source(UPGRADE)).toContain(
+			"from '../../lib/domain/billing/plan-upgrade-features'"
+		)
+		expect(source(OUTCOME)).toContain("from './plan-upgrade-features'")
 	})
 })
