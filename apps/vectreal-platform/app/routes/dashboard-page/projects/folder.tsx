@@ -242,7 +242,7 @@ const FolderPage = ({ loaderData }: Route.ComponentProps) => {
 				) : (
 					<Empty>
 						<EmptyMedia>
-							<FolderSearch className="text-primary/60 mx-auto h-12 w-12" />
+							<FolderSearch className="text-muted-foreground mx-auto h-12 w-12" />
 						</EmptyMedia>
 						<EmptyHeader>
 							<EmptyTitle>Folder is empty</EmptyTitle>

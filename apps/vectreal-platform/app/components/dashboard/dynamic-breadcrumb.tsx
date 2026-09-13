@@ -126,7 +126,7 @@ export const DynamicBreadcrumb = memo(() => {
 			>
 				{isLoading ? (
 					<Breadcrumb className="no-scrollbar overflow-x-auto">
-						<BreadcrumbList className="text-primary/75 flex-nowrap gap-1 whitespace-nowrap">
+						<BreadcrumbList className="flex-nowrap gap-1 whitespace-nowrap">
 							<BreadcrumbItem>
 								<Skeleton className="h-4 w-20" />
 							</BreadcrumbItem>
@@ -150,7 +150,7 @@ export const DynamicBreadcrumb = memo(() => {
 					// One line, scrolled rather than wrapped: a wrapping trail would
 					// change the height of the bar and push the content down.
 					<Breadcrumb className="no-scrollbar overflow-x-auto">
-						<BreadcrumbList className="text-primary/75 flex-nowrap gap-1 whitespace-nowrap">
+						<BreadcrumbList className="flex-nowrap gap-1 whitespace-nowrap">
 							{renderedBreadcrumbs.map((item, index) => {
 								const isFirst = index === 0
 								const showSeparator = !isFirst
@@ -166,9 +166,7 @@ export const DynamicBreadcrumb = memo(() => {
 											{isEllipsis ? (
 												<BreadcrumbEllipsis />
 											) : item.isLast ? (
-												<BreadcrumbPage className="text-primary">
-													{item.label}
-												</BreadcrumbPage>
+												<BreadcrumbPage>{item.label}</BreadcrumbPage>
 											) : item.to ? (
 												<BreadcrumbLink asChild>
 													<Link

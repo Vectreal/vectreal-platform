@@ -307,10 +307,10 @@ export default function MockShopEmbedClient({
 				}
 				disabled={!embedReady}
 				className={cn(
-					'border-primary/10 bg-background/30 absolute right-3 bottom-3 z-10 flex items-center gap-2 rounded-full border px-3.5 py-2 text-[11px] font-medium tracking-[0.08em] uppercase backdrop-blur-sm transition-all duration-200',
+					'border-border bg-background/30 absolute right-3 bottom-3 z-10 flex items-center gap-2 rounded-full border px-3.5 py-2 text-[11px] font-medium tracking-[0.08em] uppercase backdrop-blur-sm transition-all duration-200',
 					interactiveMode
-						? 'border-primary/20 text-primary/80 hover:text-primary'
-						: 'text-primary/50 hover:border-primary/20 hover:text-primary/90',
+						? 'border-border text-foreground'
+						: 'text-muted-foreground hover:border-border hover:text-foreground',
 					!embedReady && 'pointer-events-none opacity-0',
 					shouldUseMobileOverlay && 'hidden md:flex'
 				)}

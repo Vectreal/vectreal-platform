@@ -62,7 +62,7 @@ const RadioAccordionItem = <T extends string>(
 					className={cn(
 						'text-sm font-medium transition-colors duration-300',
 						isSelected
-							? 'text-primary'
+							? 'text-foreground'
 							: 'text-muted-foreground group-hover:text-foreground'
 					)}
 				>

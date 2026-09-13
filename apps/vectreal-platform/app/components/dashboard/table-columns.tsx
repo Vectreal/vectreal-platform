@@ -106,7 +106,7 @@ export function createProjectColumns({
 					viewTransition
 					className="group flex items-center gap-2 font-medium hover:underline"
 				>
-					<FolderOpen className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
+					<FolderOpen className="text-muted-foreground group-hover:text-foreground h-4 w-4 transition-colors" />
 					{row.getValue('name')}
 				</Link>
 			)
@@ -662,9 +662,9 @@ export function createContentColumns(
 						className="group flex items-center gap-2 font-medium hover:underline"
 					>
 						{isFolder ? (
-							<FolderOpen className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
+							<FolderOpen className="text-muted-foreground group-hover:text-foreground h-4 w-4 transition-colors" />
 						) : (
-							<Box className="text-primary/60 group-hover:text-primary h-4 w-4 transition-colors" />
+							<Box className="text-muted-foreground group-hover:text-foreground h-4 w-4 transition-colors" />
 						)}
 						{row.getValue('name')}
 						{isUpdating && (

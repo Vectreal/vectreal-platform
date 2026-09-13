@@ -963,7 +963,7 @@ const CameraControlsSettingsPanel = memo(() => {
 											>
 												<span className="flex items-center gap-1.5">
 													{cameraEntry.cameraId === resolvedDefaultCameraId && (
-														<Pin className="text-primary h-3 w-3 shrink-0" />
+														<Pin className="text-foreground h-3 w-3 shrink-0" />
 													)}
 													{cameraEntry.name || 'Unnamed Camera'}
 													{hotspotNameByCameraId[cameraEntry.cameraId] && (

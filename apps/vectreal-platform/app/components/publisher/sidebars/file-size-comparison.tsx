@@ -56,7 +56,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					transition={{ duration: 0.4, delay: 0.15 }}
 				>
 					{showReduction && (
-						<span className="text-primary text-sm leading-none font-semibold">
+						<span className="text-foreground text-sm leading-none font-semibold">
 							-{reductionPercent}%
 						</span>
 					)}
@@ -74,7 +74,7 @@ export const FileSizeComparison: FC<FileSizeComparisonProps> = ({
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.5, delay: 0.2 }}
 				>
-					<div className="text-primary text-3xl font-medium tracking-tight">
+					<div className="text-foreground text-3xl font-medium tracking-tight">
 						{formatValue(currentFileSize)}
 					</div>
 					<div className="text-muted-foreground text-sm">After</div>

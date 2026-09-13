@@ -53,7 +53,7 @@ export function hasUsagePressure(readings: UsageReading[]) {
   Warning is `--warning` (amber), not `--orange`.
 
   The billing page used the brand colour to mean "approaching your limit", which
-  is the same mistake as the newsroom's `text-primary`-as-accent: reaching for a
+  is the same mistake as the newsroom's `text-foreground`-as-accent: reaching for a
   colour that already means something else. Orange is the brand, and it is used
   below to mark the state a user cares about - it cannot also mean "careful".
   Only these two semantic tokens appear here, and only for their semantics.

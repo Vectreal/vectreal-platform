@@ -240,11 +240,11 @@ export default function BillingUpgradeSuccessPage() {
 
 	return (
 		<div className="mx-auto w-full max-w-lg p-6">
-			<Card className="border-primary/20 from-background to-primary/5 overflow-hidden bg-gradient-to-b">
+			<Card>
 				<CardHeader className="items-center space-y-4 pb-4 text-center">
 					{/* Success icon */}
 					<div className="bg-primary/10 flex h-16 w-16 items-center justify-center rounded-full">
-						<CheckCircle2 className="text-primary h-8 w-8" />
+						<CheckCircle2 className="text-foreground h-8 w-8" />
 					</div>
 
 					<div className="space-y-1.5">
@@ -291,7 +291,7 @@ export default function BillingUpgradeSuccessPage() {
 						<ul className="space-y-2">
 							{gained.map((feature) => (
 								<li key={feature} className="flex items-start gap-2 text-sm">
-									<Check className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+									<Check className="text-foreground mt-0.5 h-4 w-4 shrink-0" />
 									<span>{feature}</span>
 								</li>
 							))}

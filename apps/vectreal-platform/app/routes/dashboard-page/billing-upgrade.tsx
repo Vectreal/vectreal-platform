@@ -277,7 +277,7 @@ function BillingUpgradeContent({
 					</div>
 				)}
 
-				<Card className="border-primary/20 bg-muted/75 z-page-chrome sticky top-0 left-0 w-full py-0 shadow-lg backdrop-blur-md">
+				<Card className="bg-muted/75 z-page-chrome sticky top-0 left-0 w-full py-0 shadow-lg backdrop-blur-md">
 					<CardContent className="space-y-3 p-4">
 						{checkoutError && (
 							<div className="bg-destructive/5 border-destructive/20 flex items-start gap-2 rounded-lg border p-3">
@@ -427,7 +427,7 @@ function BillingUpgradeContent({
 							</div>
 						)}
 						{billingPeriod === 'annual' && annualSavings && selectedPrice && (
-							<div className="text-primary font-medium">
+							<div className="font-medium">
 								Save{' '}
 								{formatCurrency(
 									annualSavings.yearlySavingsCents,
