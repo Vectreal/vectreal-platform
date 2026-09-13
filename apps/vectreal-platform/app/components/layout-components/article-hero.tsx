@@ -58,7 +58,16 @@ export function ArticleHero({
 	return (
 		<Card
 			className={cn(
-				'group vt-news-plate relative isolate h-full overflow-hidden rounded-2xl p-0',
+				/*
+				  No `h-full`. This composition was copied from `featured-article.tsx`,
+				  where the card is a grid cell and stretching to the row is the point.
+				  Here the parent is `main`, a flex item of the article's own column
+				  container - so its height is definite and equal to the whole article.
+				  `height: 100%` of that made the hero 12,326px tall on a normal post,
+				  with the cover image stretched over the entire page behind the text.
+				  The height belongs to the content box below, which sets it.
+				*/
+				'group vt-news-plate relative isolate overflow-hidden rounded-2xl p-0',
 				className
 			)}
 			style={{
