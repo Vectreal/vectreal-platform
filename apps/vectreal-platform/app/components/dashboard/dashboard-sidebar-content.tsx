@@ -35,6 +35,7 @@ import {
 	Settings,
 	Folder,
 	FolderOpen,
+	Gauge,
 	LayoutDashboard,
 	ArrowUpCircleIcon
 } from 'lucide-react'
@@ -49,12 +50,25 @@ interface SidebarLinkItem {
 	icon: typeof List
 }
 
-// Menu items
+/*
+	Things you tune occasionally, as opposed to the work itself.
+
+	"Projects" used to lead this group and meant the list page, while the group
+	directly above was also called Projects and listed three of them. One word,
+	two meanings, adjacent - so the list page moved into that group as "All
+	projects", where it reads as the rest of what is already there.
+
+	Usage joins it rather than the account menu because of when it is needed: an
+	upload refused for storage sends someone looking for it immediately, and
+	hunting through a menu labelled with your own name is the wrong place to be
+	sent. Billing, Organizations and Settings stay in that menu - they are
+	account-level and that is where people look for account-level things.
+*/
 const manageLinks: SidebarLinkItem[] = [
 	{
-		title: 'Projects',
-		url: '/dashboard/projects',
-		icon: FolderOpen
+		title: 'Usage',
+		url: '/dashboard/usage',
+		icon: Gauge
 	},
 	{
 		title: 'API Keys',
@@ -173,6 +187,19 @@ const DashboardSidebarContent = ({
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							)}
+
+							<SidebarMenuItem>
+								<SidebarMenuButton onClick={handleSidebarClose} asChild>
+									<Link
+										viewTransition
+										to="/dashboard/projects"
+										aria-label="Go to all projects"
+									>
+										<FolderOpen />
+										<span>All projects</span>
+									</Link>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
