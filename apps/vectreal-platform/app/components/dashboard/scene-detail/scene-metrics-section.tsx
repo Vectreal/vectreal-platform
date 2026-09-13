@@ -36,6 +36,7 @@ interface SceneMetricsSectionProps {
 	 * own container.
 	 */
 	headingLevel?: 'h2' | 'h3'
+	className?: string
 }
 
 /**
@@ -55,10 +56,15 @@ interface SceneMetricsSectionProps {
  */
 export function SceneMetricsSection({
 	details,
-	headingLevel = 'h2'
+	headingLevel = 'h2',
+	className
 }: SceneMetricsSectionProps) {
 	return (
-		<DetailPanelSection title="Scene Metrics" headingLevel={headingLevel}>
+		<DetailPanelSection
+			title="Scene Metrics"
+			headingLevel={headingLevel}
+			className={className}
+		>
 			<StatGrid>
 				<StatTile label="Size" value={formatFileSize(details.fileSizeBytes)} />
 				<StatTile label="Assets" value={details.assetCount} />

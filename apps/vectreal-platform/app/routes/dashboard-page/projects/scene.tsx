@@ -7,9 +7,8 @@ import { Route } from './+types/scene'
 import CenteredSpinner from '../../../components/centered-spinner'
 import {
 	InlineEditableMetadataField,
-	SceneFactsPanel,
-	ScenePreviewOverlay,
-	SceneSummaryBar
+	SceneAside,
+	ScenePreviewOverlay
 } from '../../../components/dashboard'
 import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
@@ -240,7 +239,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				  landmark and every route renders inside it, so a `main` here is a
 				  second one nested in the first - which HTML forbids and axe reports
 				  as `landmark-no-duplicate-main`. This element is a layout column,
-				  and the column beside it is the `aside` that `SceneFactsPanel` draws.
+				  and the column beside it is the `aside` that `SceneAside` draws.
 				*/}
 				<div className="flex flex-col gap-4 xl:min-h-0">
 					{model.status === 'error' ? (
@@ -360,26 +359,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 
 				{/*
-				  Two hosts, one for each side of `xl`, and exactly one of them is
-				  ever visible. The aside is the column; the summary bar is what a
-				  viewport with no column gets - two figures and two doors, because
-				  flowing the full asset list into the page is what made it taller
-				  than the shell could scroll.
+				  One host. This was two, with identical prop lists and one hidden by
+				  CSS at every width, which mounted two publish panels and two delete
+				  buttons on every scene page.
 				*/}
-				<SceneFactsPanel
-					details={sceneDetails}
-					assetData={sceneData?.assetData}
-					sceneId={sceneState.id}
-					projectId={project.id}
-					publishState={publishState}
-					publisherPath={publisherPath}
-					onPublish={openPublisherForPublishing}
-					deleteRef={deleteRef}
-					canDelete={canDeleteScene}
-					onDeleted={handleDeleted}
-				/>
-				<SceneSummaryBar
-					className="xl:hidden"
+				<SceneAside
 					details={sceneDetails}
 					assetData={sceneData?.assetData}
 					sceneId={sceneState.id}
