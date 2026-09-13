@@ -5,7 +5,7 @@ import { InlineEditableMetadataField } from './inline-editable-metadata-field'
 import { ProjectCard } from './project-card'
 import { SceneThumbnail } from './scene-thumbnail'
 import { StatusBreakdown } from './status-breakdown'
-import { UsageMeter, UsageMeterGrid } from './usage-meter'
+import { UsageMeter } from './usage-meter'
 import {
 	STORAGE_USAGE_HINT,
 	STORAGE_USAGE_LABEL
@@ -39,7 +39,7 @@ const MB = 1024 * 1024
 export const UsageMeters: Story = {
 	render: () => (
 		<div className="ds-raised space-y-6 rounded-2xl p-6">
-			<UsageMeterGrid>
+			<div className="grid gap-3 sm:grid-cols-2">
 				<UsageMeter label="Scenes" current={4} limit={10} />
 				<UsageMeter label="Published" current={8} limit={10} />
 				<UsageMeter label="Projects" current={1} limit={1} />
@@ -49,7 +49,7 @@ export const UsageMeters: Story = {
 					current={12}
 					limit={null}
 				/>
-			</UsageMeterGrid>
+			</div>
 
 			<div className="max-w-sm space-y-3">
 				<UsageMeter
