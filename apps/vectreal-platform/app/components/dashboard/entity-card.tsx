@@ -9,7 +9,6 @@ import { Ellipsis } from 'lucide-react'
 import { Link, type To } from 'react-router'
 
 import { SceneThumbnail } from './scene-thumbnail'
-import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
 import type { ReactNode } from 'react'
 
@@ -54,8 +53,6 @@ export function EntityCard({
 	menuItems,
 	className
 }: EntityCardProps) {
-	const isClientMounted = useIsClientMounted()
-
 	return (
 		<div className={cn('group/card relative', className)}>
 			<Link
@@ -104,7 +101,16 @@ export function EntityCard({
 						<Button
 							variant="ghost"
 							size="icon"
-							disabled={!isClientMounted}
+							/*
+							  Never `disabled` until hydration, the way the table's action
+							  cells are. `Button` renders `disabled` as
+							  `pointer-events: none`, and this trigger is a sibling laid
+							  over a link that fills the whole card - so a disabled one
+							  does not merely fail to open the menu, it hands the tap to
+							  the card and navigates. Enabled, it absorbs the tap and does
+							  nothing until its handler is attached, which is what every
+							  control on a hydrating page does anyway.
+							*/
 							aria-label={`Actions for ${title}`}
 							/*
 							  Always present, on its own scrim. This used to be `opacity-0`
