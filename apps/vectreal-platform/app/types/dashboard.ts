@@ -62,15 +62,25 @@ export interface NavigationState {
 
 export interface TitleContent {
 	title: string
-	description: string
+	description?: string
 }
 
 /**
  * Configuration for dashboard content with loading states
  */
+/*
+	`description` is optional because some pages answer themselves.
+
+	It was required, so every route had to supply one, and four of them paid the
+	tax in words: "Project details" under Project, "Folder contents" under
+	Folder, "Scene details" under Scene. A subtitle that restates its own title
+	is read first and says nothing, and on a phone it costs two lines above the
+	content. A required field cannot express "this page needs no gloss", so it
+	got filled with noise instead.
+*/
 export interface DashboardContentConfig {
 	title: string
-	description: string
+	description?: string
 	actionVariant?: ACTION_VARIANT
 	loadingTitle?: string | ReactNode
 	loadingDescription?: string | ReactNode
@@ -78,7 +88,7 @@ export interface DashboardContentConfig {
 
 export interface DynamicHeaderContent {
 	title: string | ReactNode
-	description: string | ReactNode
+	description?: string | ReactNode
 	actionVariant?: ACTION_VARIANT
 	breadcrumbs?: BreadcrumbItem[]
 	isLoading?: boolean

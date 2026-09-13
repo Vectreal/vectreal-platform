@@ -103,9 +103,15 @@ export const getTitleContent = (view: DashboardView): TitleContent | null => {
 	const routeContext = routeContextMap[view]
 	const config = DASHBOARD_CONTENT[routeContext]
 
+	/*
+		`description` passes through absent rather than becoming `''`. The empty
+		string rendered the same - both are falsy - but it turned "this page needs
+		no gloss" into "this page has a blank one", which is a different claim to
+		the next reader.
+	*/
 	return {
 		title: config?.title || '',
-		description: config?.description || ''
+		description: config?.description
 	}
 }
 

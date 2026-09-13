@@ -30,7 +30,14 @@ export const DashboardHeader = memo(() => {
 					  other heading does.
 					*/}
 						<h1 className="text-h2">{title}</h1>
-						<span className="text-muted-foreground">{description}</span>
+						{/*
+						  Only when there is one. Rendered unconditionally, a route with
+						  nothing to add still contributed an empty span, and `space-y-2`
+						  still spaced it.
+						*/}
+						{description ? (
+							<span className="text-muted-foreground">{description}</span>
+						) : null}
 					</div>
 
 					{actionVariant && <DashboardActions variant={actionVariant} />}
