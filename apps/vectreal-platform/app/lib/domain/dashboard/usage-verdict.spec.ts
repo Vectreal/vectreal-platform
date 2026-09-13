@@ -56,7 +56,9 @@ describe('describeUsageVerdict', () => {
 		const verdict = describeUsageVerdict(
 			[
 				{ key: 'scenes_total', label: 'Scenes', current: 0, limit: 10 },
-				{ key: 'projects_total', label: 'Projects', current: 0, limit: 1 }
+				// 1, not 0: every account is created with a project at signup, so a
+				// fixture at 0 tests a state that cannot exist.
+				{ key: 'projects_total', label: 'Projects', current: 1, limit: 1 }
 			],
 			'Free'
 		)
@@ -68,15 +70,26 @@ describe('describeUsageVerdict', () => {
 	/*
 		The same account one project in, which is where every free organization
 		lives permanently. It is genuinely capped - a second project is refused -
-		but it is the shape of the plan rather than something the reader let
-		happen, and the remedy says so instead of implying they can tidy up.
-	*/
-	it('reports a limit of one as the plan, not as pressure', () => {
-		const verdict = describeUsageVerdict(free(), 'Free')
+		but nothing about it needs attention, because nothing can be done about it
+		and it will read the same tomorrow.
 
-		expect(verdict.tone).toBe('plan')
-		expect(verdict.headline).toBe('Free includes one project.')
-		expect(verdict.remedy).toMatch(/nothing here frees one/)
+		This had its own `plan` tone and headline, "Free includes one project",
+		which meant every free organization was led by a sentence about a fact
+		that never changes, whatever the other readings said. The cap is reported
+		by its own row instead.
+	*/
+	it('does not lead with a cap the reader cannot act on', () => {
+		// Something stored, so this is not the empty case - the cap is the only
+		// full reading and it is still not what the page leads with.
+		const verdict = describeUsageVerdict(
+			free({ scenes: 6, storage: 121 }),
+			'Free'
+		)
+
+		expect(verdict.tone).toBe('clear')
+		expect(verdict.headline).toBe('Nothing needs your attention.')
+		expect(verdict.remedy).toBeNull()
+		expect(verdict.bindingKey).toBeNull()
 	})
 
 	/*

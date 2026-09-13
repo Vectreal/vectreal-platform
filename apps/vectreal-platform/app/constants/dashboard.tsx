@@ -78,17 +78,14 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	},
 	'project-detail': {
 		title: 'Project',
-		description: 'Project details',
 		actionVariant: ACTION_VARIANT.PROJECT_DETAIL
 	},
 	'folder-detail': {
 		title: 'Folder',
-		description: 'Folder contents',
 		actionVariant: ACTION_VARIANT.FOLDER_DETAIL
 	},
 	'scene-detail': {
 		title: 'Scene',
-		description: 'Scene details',
 		actionVariant: ACTION_VARIANT.SCENE_DETAIL
 	},
 	organizations: {
@@ -112,9 +109,18 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	*/
 	usage: {
 		title: 'Usage',
-		description: 'What this workspace is using, against what your plan allows',
+		/*
+		  No description. `description` is optional, and this route answers itself
+		  one line further down: the verdict card states the actual situation in a
+		  specific sentence ("Scene storage is close to its limit"), which a generic
+		  one above it can only weaken by being read first.
+		*/
 		loadingTitle: 'Usage',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
+		/*
+		  No `loadingDescription` either. It drew a skeleton bar during navigation
+		  for a subtitle that then never arrived, so the header promised a line and
+		  took it away - a skeleton is a claim about what is coming.
+		*/
 		actionVariant: undefined
 	},
 	billing: {

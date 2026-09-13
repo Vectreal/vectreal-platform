@@ -36,7 +36,8 @@ import {
 	OrganizationsSkeleton,
 	ProjectContentSkeleton,
 	ProjectsGridSkeleton,
-	SceneDetailsSkeleton
+	SceneDetailsSkeleton,
+	UsageSkeleton
 } from '../../components/skeletons'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
@@ -237,6 +238,7 @@ const DashboardLayout = () => {
 		if (path === '/dashboard') return <DashboardSkeleton />
 		if (path === '/dashboard/organizations') return <OrganizationsSkeleton />
 		if (path === '/dashboard/billing') return <BillingSkeleton />
+		if (path === '/dashboard/usage') return <UsageSkeleton />
 		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
 		if (willBeProjectDetail) return <ProjectContentSkeleton />
 		if (willBeFolderDetail) return <FolderContentSkeleton />

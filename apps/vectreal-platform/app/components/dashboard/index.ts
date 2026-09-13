@@ -24,7 +24,8 @@ export { SceneThumbnail } from './scene-thumbnail'
 export { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 export {
 	UsageMeter,
-	UsageMeterGrid,
+	UsageMeterList,
+	UsageMeterRowSkeleton,
 	readUsage,
 	hasUsagePressure
 } from './usage-meter'
