@@ -1,9 +1,9 @@
-import { Button } from '@shared/components/ui/button'
 import { useMemo, useState } from 'react'
 
 import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
 import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
 import { planDeleteConfirmation } from '../../../lib/domain/dashboard/dashboard-confirmation'
+import { DestructiveActionButton } from '../../layout-components'
 import { ConfirmDestructiveDialog } from '../../shared/confirm-destructive-dialog'
 
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
@@ -28,9 +28,9 @@ interface SceneDeleteButtonProps {
  * opens onto nothing reachable, because Radix will not focus a disabled item.
  *
  * A ghost with muted text is what is left: present, findable, and not competing
- * with Preview or with the doors above it. It turns destructive on hover and on
- * focus, so the colour arrives with the intent rather than sitting on the page
- * advertising danger.
+ * with Preview or with the doors above it. That treatment is now
+ * `DestructiveActionButton`, shared with the three other surfaces that destroy
+ * something - the reasoning above is why it looks the way it does.
  *
  * A role that cannot delete gets nothing rather than a disabled control. There
  * is no explanation to attach it to and nothing for them to do about it.
@@ -62,15 +62,13 @@ export function SceneDeleteButton({
 			  bundle lands this looks live and does nothing. It is the only path to
 			  deleting a scene from this page.
 			*/}
-			<Button
-				variant="ghost"
-				size="sm"
+			<DestructiveActionButton
 				disabled={!isClientMounted || isDeleting}
 				onClick={() => setDeleteDialogOpen(true)}
-				className="text-muted-foreground hover:text-destructive focus-visible:text-destructive w-full"
+				className="w-full"
 			>
 				Delete scene
-			</Button>
+			</DestructiveActionButton>
 
 			<ConfirmDestructiveDialog
 				open={deleteDialogOpen}

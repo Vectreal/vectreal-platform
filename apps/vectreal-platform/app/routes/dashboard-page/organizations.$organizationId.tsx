@@ -5,7 +5,6 @@ import {
 	Card,
 	CardContent,
 	CardDescription,
-	CardFooter,
 	CardHeader,
 	CardTitle
 } from '@shared/components/ui/card'
@@ -31,7 +30,6 @@ import {
 	Calendar,
 	Crown,
 	Shield,
-	Trash2,
 	Users
 } from 'lucide-react'
 import { useState } from 'react'
@@ -43,6 +41,10 @@ import {
 import { z, ZodError } from 'zod'
 
 import { Route } from './+types/organizations.$organizationId'
+import {
+	DestructiveAction,
+	DestructiveActionButton
+} from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { isBillingStateReadOnly } from '../../constants/plan-config'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
@@ -772,40 +774,38 @@ export default function OrganizationDetailPage({
 				</CardContent>
 			</Card>
 
+			{/*
+			  Leaving is not destroying. It sat beside deletion in one destructive
+			  card, both full-width, so the reversible action - re-invite and you are
+			  back - wore the same warning as the one that ends the organization. The
+			  confirmation tiers already told them apart: acknowledge against typed.
+			*/}
 			<Card>
-				<CardHeader>
-					<CardTitle className="text-destructive">Danger zone</CardTitle>
-					<CardDescription>
-						Destructive organization actions are protected by your role.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="grid gap-3 md:grid-cols-2">
+				<CardContent className="space-y-4">
 					<Button
-						className="w-full"
 						type="button"
 						variant="outline"
+						size="sm"
 						disabled={isReadOnlyBillingState}
 						onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
 					>
 						Leave organization
 					</Button>
 
-					<Button
-						className="w-full"
-						type="button"
-						variant="destructive"
-						disabled={!canDeleteOrg || isReadOnlyBillingState}
-						onClick={() =>
-							setPendingAction(deleteOrganizationAction(organization.name))
-						}
+					<DestructiveAction
+						description="Deleting this organization removes it and everything scoped to it."
+						note="Organization deletion is only available when no projects remain."
 					>
-						<Trash2 className="mr-2 h-4 w-4" />
-						Delete organization
-					</Button>
+						<DestructiveActionButton
+							disabled={!canDeleteOrg || isReadOnlyBillingState}
+							onClick={() =>
+								setPendingAction(deleteOrganizationAction(organization.name))
+							}
+						>
+							Delete organization
+						</DestructiveActionButton>
+					</DestructiveAction>
 				</CardContent>
-				<CardFooter className="text-muted-foreground text-xs">
-					Organization deletion is only available when no projects remain.
-				</CardFooter>
 			</Card>
 
 			{pendingAction ? (

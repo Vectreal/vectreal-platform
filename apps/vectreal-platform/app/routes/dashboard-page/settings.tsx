@@ -25,7 +25,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { AlertTriangle, Save, Settings2, Shield, UserRound } from 'lucide-react'
+import { Save, Settings2, Shield, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -44,6 +44,10 @@ import { z, ZodError } from 'zod'
 
 import { Route } from './+types/settings'
 import { useConsent } from '../../components/consent/consent-context'
+import {
+	DestructiveAction,
+	DestructiveActionButton
+} from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { applyTheme, isForceDarkRoute } from '../../components/theme'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
@@ -487,24 +491,15 @@ export default function SettingsPage({
 			</Card>
 
 			<Card>
-				<CardHeader>
-					<CardTitle className="text-destructive flex items-center gap-2">
-						<AlertTriangle className="h-5 w-5" />
-						Danger zone
-					</CardTitle>
-					<CardDescription>
-						Permanently remove your account and all related data.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<Button
-						type="button"
-						variant="destructive"
-						disabled={isDeleteSubmitting}
-						onClick={() => setDeleteModalOpen(true)}
-					>
-						Delete account
-					</Button>
+				<CardContent>
+					<DestructiveAction description="Permanently remove your account and all related data.">
+						<DestructiveActionButton
+							disabled={isDeleteSubmitting}
+							onClick={() => setDeleteModalOpen(true)}
+						>
+							Delete account
+						</DestructiveActionButton>
+					</DestructiveAction>
 				</CardContent>
 			</Card>
 		</div>
