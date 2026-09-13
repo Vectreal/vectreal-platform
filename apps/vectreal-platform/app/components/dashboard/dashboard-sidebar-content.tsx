@@ -25,9 +25,7 @@ import {
 } from '@shared/components/ui/sidebar'
 import {
 	ArrowRight,
-	BoxesIcon,
 	Building,
-	ChartColumn,
 	ChevronsUpDown,
 	CreditCard,
 	HelpCircle,
@@ -35,7 +33,6 @@ import {
 	List,
 	LogOut,
 	Settings,
-	SquareStack,
 	Folder,
 	FolderOpen,
 	LayoutDashboard,
@@ -48,9 +45,8 @@ import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
 
 interface SidebarLinkItem {
 	title: string
-	url?: string
+	url: string
 	icon: typeof List
-	disabled?: boolean
 }
 
 // Menu items
@@ -64,21 +60,6 @@ const manageLinks: SidebarLinkItem[] = [
 		title: 'API Keys',
 		url: '/dashboard/api-keys',
 		icon: KeyRound
-	},
-	{
-		title: 'Assets',
-		icon: BoxesIcon,
-		disabled: true // TODO: Implement asset management
-	},
-	{
-		title: 'Presets',
-		icon: SquareStack,
-		disabled: true // TODO: Implement presets management
-	},
-	{
-		title: 'Analytics',
-		icon: ChartColumn,
-		disabled: true
 	}
 ]
 
@@ -201,38 +182,16 @@ const DashboardSidebarContent = ({
 					<SidebarGroupContent>
 						<SidebarMenu>
 							{manageLinks.map((item) => (
-								<SidebarMenuItem
-									key={item.title}
-									aria-disabled={item.disabled}
-									className={
-										item.disabled
-											? 'pointer-events-none cursor-not-allowed opacity-50'
-											: ''
-									}
-								>
-									<SidebarMenuButton
-										disabled={item.disabled}
-										onClick={handleSidebarClose}
-										asChild
-									>
-										{item.disabled || !item.url ? (
-											<div>
-												<item.icon />
-												<span>{item.title}</span>
-												<span className="text-muted-foreground ml-auto text-xs">
-													Coming soon
-												</span>
-											</div>
-										) : (
-											<Link
-												viewTransition
-												to={item.url}
-												aria-label={`Go to ${item.title}`}
-											>
-												<item.icon />
-												<span>{item.title}</span>
-											</Link>
-										)}
+								<SidebarMenuItem key={item.title}>
+									<SidebarMenuButton onClick={handleSidebarClose} asChild>
+										<Link
+											viewTransition
+											to={item.url}
+											aria-label={`Go to ${item.title}`}
+										>
+											<item.icon />
+											<span>{item.title}</span>
+										</Link>
 									</SidebarMenuButton>
 								</SidebarMenuItem>
 							))}

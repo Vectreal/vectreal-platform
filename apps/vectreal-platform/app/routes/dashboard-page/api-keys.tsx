@@ -516,8 +516,6 @@ function OrgApiKeysTable({
 				onSortingChange={tableState.onSortingChange}
 				pagination={tableState.pagination}
 				onPaginationChange={tableState.onPaginationChange}
-				rowSelection={tableState.rowSelection}
-				onRowSelectionChange={tableState.onRowSelectionChange}
 			/>
 		</div>
 	)

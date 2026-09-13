@@ -56,8 +56,14 @@ interface DataTableProps<TData extends RowData> {
 	onSortingChange: (updater: Updater<SortingState>) => void
 	pagination: PaginationState
 	onPaginationChange: (updater: Updater<PaginationState>) => void
-	rowSelection: RowSelectionState
-	onRowSelectionChange: (updater: Updater<RowSelectionState>) => void
+	/*
+	  Optional, and their absence is the answer to "does this table have
+	  selection". `/dashboard/api-keys` was required to pass them while wiring no
+	  bulk handler, so it drew a checkbox per row and a "0 of 12 row(s) selected"
+	  counter for a selection nothing could ever act on.
+	*/
+	rowSelection?: RowSelectionState
+	onRowSelectionChange?: (updater: Updater<RowSelectionState>) => void
 	onDelete?: (selectedRows: TData[]) => void
 	onRename?: (row: TData) => void
 	onMove?: (selectedRows: TData[]) => void
@@ -115,7 +121,7 @@ export function DataTable<TData extends RowData>({
 		state: {
 			sorting,
 			columnFilters,
-			rowSelection,
+			rowSelection: rowSelection ?? {},
 			pagination
 		}
 	})
@@ -289,10 +295,19 @@ export function DataTable<TData extends RowData>({
 			</div>
 
 			<div className="flex flex-col-reverse items-center justify-between gap-4 md:flex-row">
-				<div className="text-muted-foreground text-sm">
-					{table.getFilteredSelectedRowModel().rows.length} of{' '}
-					{table.getFilteredRowModel().rows.length} row(s) selected
-				</div>
+				{/*
+				  Only where a selection can lead somewhere. The same predicate gates
+				  the action bar above, so a table either offers selection and says
+				  what is selected, or does neither.
+				*/}
+				{onRowSelectionChange ? (
+					<div className="text-muted-foreground text-sm">
+						{table.getFilteredSelectedRowModel().rows.length} of{' '}
+						{table.getFilteredRowModel().rows.length} row(s) selected
+					</div>
+				) : (
+					<span />
+				)}
 				<div className="flex items-center gap-2 max-md:w-full max-md:justify-between">
 					<Button
 						variant="outline"

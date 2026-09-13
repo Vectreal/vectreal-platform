@@ -59,7 +59,10 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	},
 	'project-list': {
 		title: 'Projects',
-		description: 'Manage your projects and workspace environments',
+		// Not "workspace environments". No such thing exists in the product: the
+		// only environment settings are the publisher's HDRI lighting panel, which
+		// belongs to a scene and is not reachable from here.
+		description: 'Your projects across every organization you belong to',
 		loadingTitle: <Skeleton className="h-6 w-1/3" />,
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.PROJECT_LIST
@@ -139,7 +142,9 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	},
 	settings: {
 		title: 'Settings',
-		description: 'Manage your account settings and preferences',
+		// Named, rather than "your account settings and preferences", which is the
+		// title again in more words. These are the three things the page holds.
+		description: 'Your display name, theme, and cookie choices',
 		loadingTitle: 'Settings',
 		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined

@@ -3,9 +3,21 @@ import { Skeleton } from '@shared/components/ui/skeleton'
 /**
  * Skeleton loader for the billing page.
  *
- * Mirrors `BillingSettingsSection`: the plan panel, then the usage panel with
- * its two meter columns. The route had no loading state at all, so a slow
+ * Mirrors `BillingSettingsSection`: the plan panel, then the usage panel as one
+ * column of five rows. The route had no loading state at all, so a slow
  * subscription lookup left the page blank until it resolved.
+ *
+ * It said "two meter columns" and drew seven meters across them until this
+ * change. #811 deleted three meters and the panel became a single list - for
+ * the reason the section states, that five cells across two columns leave the
+ * last one alone beside an empty cell - and the skeleton kept promising the old
+ * shape. A skeleton is a claim about the page behind it, and this one had been
+ * wrong for longer than it was right.
+ *
+ * `organizations-skeleton.tsx` records the same failure being fixed there,
+ * which is the tell that nothing keeps these two files honest. Anyone changing
+ * a panel's shape has to remember its skeleton by hand; the only real defence
+ * is keeping the skeleton simple enough to be obviously right.
  */
 export function BillingSkeleton() {
 	return (
@@ -31,29 +43,17 @@ export function BillingSkeleton() {
 
 			<section className="ds-raised space-y-5 rounded-2xl p-5">
 				<Skeleton className="h-3 w-40" />
-				<div className="grid gap-x-10 gap-y-6 md:grid-cols-2">
-					{[4, 3].map((meters, column) => (
-						<div key={column} className="space-y-3">
+				<div className="space-y-3">
+					{Array.from({ length: 5 }, (_, index) => (
+						<div key={index} className="space-y-1.5">
 							<Skeleton
-								className="h-3 w-16"
-								style={{ animationDelay: `${column * 120}ms` }}
+								className="h-3 w-full"
+								style={{ animationDelay: `${index * 60}ms` }}
 							/>
-							{Array.from({ length: meters }, (_, index) => (
-								<div key={index} className="space-y-1.5">
-									<Skeleton
-										className="h-3 w-full"
-										style={{
-											animationDelay: `${column * 120 + index * 60}ms`
-										}}
-									/>
-									<Skeleton
-										className="h-1 w-full"
-										style={{
-											animationDelay: `${column * 120 + index * 60 + 30}ms`
-										}}
-									/>
-								</div>
-							))}
+							<Skeleton
+								className="h-1 w-full"
+								style={{ animationDelay: `${index * 60 + 30}ms` }}
+							/>
 						</div>
 					))}
 				</div>
