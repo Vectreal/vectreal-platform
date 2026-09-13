@@ -32,9 +32,8 @@ import {
 import {
 	BillingSkeleton,
 	DashboardSkeleton,
-	FolderContentSkeleton,
 	OrganizationsSkeleton,
-	ProjectContentSkeleton,
+	ContentListingSkeleton,
 	ProjectsGridSkeleton,
 	SceneDetailsSkeleton,
 	UsageSkeleton
@@ -240,8 +239,8 @@ const DashboardLayout = () => {
 		if (path === '/dashboard/billing') return <BillingSkeleton />
 		if (path === '/dashboard/usage') return <UsageSkeleton />
 		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
-		if (willBeProjectDetail) return <ProjectContentSkeleton />
-		if (willBeFolderDetail) return <FolderContentSkeleton />
+		if (willBeProjectDetail || willBeFolderDetail)
+			return <ContentListingSkeleton />
 		if (willBeSceneDetail) return <SceneDetailsSkeleton /> // Scene details can be variable, so we show a spinner instead of a skeleton
 
 		// Default skeleton
