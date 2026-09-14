@@ -473,6 +473,8 @@ export async function loadBillingDashboardData(
 ): Promise<{
 	loaderData: BillingLoaderData
 	actorId: string
+	/** So a caller can load more for this organization without re-resolving it. */
+	organizationId: string
 	headers: HeadersInit
 }> {
 	const { includeCheckoutOptions = true } = options
@@ -530,6 +532,7 @@ export async function loadBillingDashboardData(
 	return {
 		loaderData,
 		actorId: user.id,
+		organizationId,
 		headers
 	}
 }

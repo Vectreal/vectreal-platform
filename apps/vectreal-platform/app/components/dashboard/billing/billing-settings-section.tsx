@@ -14,9 +14,11 @@ import { Link, useFetcher } from 'react-router'
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
 import { describeBillingSituation } from '../../../lib/domain/billing/billing-situation'
+import { NEXT_PLAN_UP } from '../../../lib/domain/billing/plan-fit'
 import { InlineNotice } from '../../layout-components/inline-notice'
 
-import type { BillingState, Plan } from '../../../constants/plan-config'
+import type { BillingState } from '../../../constants/plan-config'
+import type { PlanFit } from '../../../lib/domain/billing/plan-fit'
 import type { BillingSettingsData } from '../../../lib/domain/dashboard/dashboard-types'
 
 /**
@@ -55,34 +57,14 @@ const BILLING_STATE_BADGE: Record<
 	}
 }
 
-/**
- * The plan this one's owner can move up to, if any.
- *
- * This was `plan === 'pro' ? 'business' : 'pro'`, which is a ladder written as a
- * ternary and wrong at the top of it: a Business organization's own button
- * deep-linked to `?plan=pro`, so the app proposed a downgrade to its largest
- * customers. Business has nothing above it that can be bought here - Enterprise
- * is a conversation, and gets its own button - so it names no plan.
- *
- * **That stops this page proposing the downgrade; it does not yet stop the
- * downgrade.** `billing-upgrade.tsx` resolves a missing `plan` parameter to
- * `'pro'`, so the destination still arrives with Pro selected for a Business
- * reader - the route has no neutral state to open on. Giving it one belongs to
- * that page, along with the confirm dialog that draws `Business -> Pro` as an
- * ordinary arrow and the checkout action that never compares the two plans.
- * Filed, and named in this PR.
- */
-const NEXT_PLAN_UP: Partial<Record<Plan, Plan>> = {
-	free: 'pro',
-	pro: 'business'
-}
-
 interface BillingSettingsSectionProps {
 	billing: BillingSettingsData
+	planFit: PlanFit
 }
 
 export function BillingSettingsSection({
-	billing
+	billing,
+	planFit
 }: BillingSettingsSectionProps) {
 	const { billingState, hasBillingAccount } = billing
 	const portalFetcher = useFetcher()
@@ -224,7 +206,14 @@ export function BillingSettingsSection({
 							<Button size="sm" variant={isPaid ? 'ghost' : 'default'} asChild>
 								<Link to={changePlanPath}>
 									<ArrowUpRight className="size-3.5" />
-									{isPaid ? 'View plans' : 'Upgrade'}
+									{/*
+									  Names the destination once the page has given a reason
+									  to go there. "Upgrade" is a category; "Upgrade to Pro"
+									  is the thing the rows above just described.
+									*/}
+									{planFit.nextPlanLabel
+										? `${isPaid ? 'Move to' : 'Upgrade to'} ${planFit.nextPlanLabel}`
+										: 'View plans'}
 								</Link>
 							</Button>
 						)}
@@ -235,6 +224,47 @@ export function BillingSettingsSection({
 						)}
 					</div>
 				</div>
+
+				{/*
+				  Whether this plan still fits, in the reader's own numbers.
+
+				  The page's question is "am I on the right plan", and a plan name
+				  with a button answers it for nobody. Only readings actually under
+				  pressure appear, so an organization with room gets one sentence
+				  saying so rather than a five-row comparison grid it has to read to
+				  learn that nothing is wrong.
+				*/}
+				{planFit.headline ? (
+					<p className="text-muted-foreground text-sm">{planFit.headline}</p>
+				) : null}
+
+				{planFit.rows.length > 0 ? (
+					<dl className="space-y-2">
+						{planFit.rows.map((row) => (
+							<div
+								key={row.key}
+								className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm"
+							>
+								<dt className="text-muted-foreground">{row.label}</dt>
+								<dd className="flex items-baseline gap-2 tabular-nums">
+									<span className={row.atLimit ? 'font-medium' : undefined}>
+										{row.usedLabel} of {row.limitLabel}
+									</span>
+									{/*
+									  The next plan's number sits beside the current one rather
+									  than in a column of its own: one row, read left to right,
+									  is the whole comparison a reader needs to make.
+									*/}
+									{row.nextLimitLabel ? (
+										<span className="text-muted-foreground">
+											&rarr; {row.nextLimitLabel} on {planFit.nextPlanLabel}
+										</span>
+									) : null}
+								</dd>
+							</div>
+						))}
+					</dl>
+				) : null}
 
 				{/*
 				  Say what is behind the button.
