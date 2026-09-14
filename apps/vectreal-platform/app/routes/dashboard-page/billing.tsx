@@ -17,7 +17,7 @@ const BillingPage = () => {
 	const { billing } = useLoaderData<typeof loader>()
 
 	return (
-		<div className="py-6">
+		<div className="space-y-8 py-6">
 			<BillingSettingsSection billing={billing} />
 		</div>
 	)

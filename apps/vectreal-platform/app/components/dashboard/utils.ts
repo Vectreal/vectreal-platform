@@ -150,6 +150,15 @@ export const extractRouteData = (
 		if ('verdict' in loaderData && 'readings' in loaderData) {
 			routeData.usage = loaderData as RouteDataResult['usage']
 		}
+		/*
+		  Billing: the header turns these four fields into the page's one line.
+		  The organization detail loader also carries a `billing` key, so that one
+		  is excluded by name rather than by relying on the switch below never
+		  asking for it on that route.
+		*/
+		if ('billing' in loaderData && !('organization' in loaderData)) {
+			routeData.billing = loaderData as RouteDataResult['billing']
+		}
 	}
 
 	return routeData

@@ -484,7 +484,8 @@ export async function loadBillingDashboardData(
 	const [subRow] = await db
 		.select({
 			currentPeriodEnd: orgSubscriptions.currentPeriodEnd,
-			trialEnd: orgSubscriptions.trialEnd
+			trialEnd: orgSubscriptions.trialEnd,
+			stripeCustomerId: orgSubscriptions.stripeCustomerId
 		})
 		.from(orgSubscriptions)
 		.where(eq(orgSubscriptions.organizationId, organizationId))
@@ -505,7 +506,17 @@ export async function loadBillingDashboardData(
 		plan,
 		billingState,
 		currentPeriodEnd: subRow?.currentPeriodEnd?.toISOString() ?? null,
-		trialEnd: subRow?.trialEnd?.toISOString() ?? null
+		trialEnd: subRow?.trialEnd?.toISOString() ?? null,
+		/*
+		  Whether the portal can be opened at all, which is the only thing the
+		  page needs to know and exactly what `/api/billing/portal` requires: a
+		  Stripe customer, not a plan and not a billing state. The id itself does
+		  not leave the server - it is not the page's business and it identifies
+		  the customer in Stripe.
+		*/
+		hasBillingAccount:
+			subRow?.stripeCustomerId !== null &&
+			subRow?.stripeCustomerId !== undefined
 	}
 
 	const loaderData: BillingLoaderData = {
