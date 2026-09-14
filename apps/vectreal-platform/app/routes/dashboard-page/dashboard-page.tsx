@@ -94,7 +94,7 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 	const setMoveDialog = useSetAtom(moveDialogAtom)
 
 	return (
-		<div className="space-y-8 p-6">
+		<div className="space-y-8 py-6">
 			<DashboardOverview resumeScene={resumeScene} />
 
 			{alsoRecent.length > 0 ? (

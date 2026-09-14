@@ -20,7 +20,7 @@ import { Skeleton } from '@shared/components/ui/skeleton'
  */
 export function BillingSkeleton() {
 	return (
-		<div className="space-y-4 p-6" role="status" aria-label="Loading billing">
+		<div className="space-y-4 py-6" role="status" aria-label="Loading billing">
 			<section className="ds-raised rounded-2xl p-5">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 					<div className="space-y-2">

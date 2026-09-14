@@ -11,7 +11,7 @@ import { SkeletonDataTable } from './skeleton-data-table'
  */
 export function ContentListingSkeleton() {
 	return (
-		<div className="p-6">
+		<div className="py-6">
 			<SkeletonDataTable rows={6} />
 		</div>
 	)

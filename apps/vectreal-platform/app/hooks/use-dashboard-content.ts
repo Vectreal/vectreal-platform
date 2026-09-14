@@ -15,6 +15,7 @@ import {
 	parseRouteParams
 } from '../components/dashboard'
 import { DASHBOARD_CONTENT, DASHBOARD_ROUTES } from '../constants/dashboard'
+import { PLAN_DISPLAY_NAMES } from '../constants/product-copy'
 import {
 	ACTION_VARIANT,
 	type BreadcrumbItem,
@@ -23,28 +24,30 @@ import {
 } from '../types/dashboard'
 
 /**
- * What a container holds, for the line under its name.
+ * What something holds, for the line under its name.
  *
- * One sentence for a project and a folder, because it answers one question.
- * They had two: a project read `3 items • 1 folders • 2 scenes`, stating the
- * sum of its own two parts and agreeing with neither, and a folder read
- * `1 items in Acme`, naming a project the breadcrumb directly above already
- * names. Every organization in production holds one project, so the singular
- * was the normal reading rather than an edge case.
+ * One sentence per page, because it answers one question. A project read
+ * `3 items • 1 folders • 2 scenes`, stating the sum of its own two parts and
+ * agreeing with neither; a folder read `1 items in Acme`, naming a project the
+ * breadcrumb directly above already names; an organization read
+ * `1 members • 1 projects`. Every organization in production holds one project
+ * and most hold one member, so the singular is the normal reading rather than
+ * an edge case.
  *
- * Nothing to count returns nothing: the page's own empty state says the
- * container is empty, and it says it with somewhere to go next.
+ * A variadic list rather than fixed arguments because there are now three
+ * callers and they count different things. Zero parts are dropped rather than
+ * printed: an empty container's own empty state says so, and says it with
+ * somewhere to go next, and nothing at all is better under a title than
+ * `0 members`.
  */
-function describeContainer(
-	folderCount: number,
-	sceneCount: number
+function describeCounts(
+	...parts: readonly (readonly [number, string])[]
 ): string | undefined {
-	const parts: string[] = []
+	const said = parts
+		.filter(([count]) => count > 0)
+		.map(([count, noun]) => pluralize(count, noun))
 
-	if (folderCount > 0) parts.push(pluralize(folderCount, 'folder'))
-	if (sceneCount > 0) parts.push(pluralize(sceneCount, 'scene'))
-
-	return parts.length > 0 ? parts.join(' • ') : undefined
+	return said.length > 0 ? said.join(' • ') : undefined
 }
 
 /**
@@ -161,9 +164,21 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 						{ label: organizationDetail.organization.name, isLast: true }
 					]
 
+					/*
+					  The plan belongs on this line rather than in a tile or a lone
+					  paragraph below the title. It is a fact about the organization
+					  the way the two counts are, and every fact about the
+					  organization now reads in one place.
+					*/
+					const orgCounts = describeCounts(
+						[organizationDetail.members.length, 'member'],
+						[organizationDetail.projectsTotal, 'project']
+					)
+					const planLabel = `${PLAN_DISPLAY_NAMES[organizationDetail.billing.plan]} plan`
+
 					return {
 						title: organizationDetail.organization.name,
-						description: `${organizationDetail.members.length} members • ${organizationDetail.projectsTotal} projects`,
+						description: orgCounts ? `${orgCounts} • ${planLabel}` : planLabel,
 						actionVariant: undefined,
 						breadcrumbs
 					}
@@ -242,9 +257,9 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 						title: folder.folder.name,
 						description:
 							folder.folder.description ||
-							describeContainer(
-								folder.subfolders?.length || 0,
-								folder.scenes?.length || 0
+							describeCounts(
+								[folder.subfolders?.length || 0, 'folder'],
+								[folder.scenes?.length || 0, 'scene']
 							),
 						actionVariant: ACTION_VARIANT.FOLDER_DETAIL,
 						breadcrumbs
@@ -262,9 +277,9 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 					return {
 						title: project.project.name,
-						description: describeContainer(
-							project.folders?.length || 0,
-							project.scenes?.length || 0
+						description: describeCounts(
+							[project.folders?.length || 0, 'folder'],
+							[project.scenes?.length || 0, 'scene']
 						),
 						actionVariant: ACTION_VARIANT.PROJECT_DETAIL,
 						breadcrumbs

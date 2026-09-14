@@ -20,7 +20,7 @@ export const DashboardHeader = memo(() => {
 
 	return (
 		actionVariant !== ACTION_VARIANT.SCENE_DETAIL && (
-			<div className="space-y-8 p-6">
+			<div className="space-y-8 py-6">
 				<div className="flex grow flex-col items-start justify-between gap-4 md:flex-row">
 					<div className="space-y-2">
 						{/*

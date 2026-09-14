@@ -229,7 +229,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		  From `xl` up the height is real - two columns share the shell's row and
 		  each owns its own overflow - so it is taken back there and only there.
 		*/
-		<div className="px-5 pt-1 pb-5 xl:h-full xl:overflow-hidden xl:px-6">
+		<div className="pt-1 pb-5 xl:h-full xl:overflow-hidden">
 			{sceneState.thumbnailUrl ? (
 				<link rel="preload" as="image" href={sceneState.thumbnailUrl} />
 			) : null}

@@ -16,22 +16,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow
-} from '@shared/components/ui/table'
-import {
-	AlertCircle,
-	Building2,
-	Calendar,
-	Crown,
-	Shield,
-	Users
-} from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { useState } from 'react'
 import { data, Form as RemixForm, useSubmit } from 'react-router'
 import {
@@ -154,21 +139,6 @@ function deleteOrganizationAction(
 		},
 		fields: { intent: 'delete-organization' }
 	}
-}
-
-function statusVariantFromBillingState(
-	billingState: string
-): 'default' | 'secondary' | 'destructive' | 'outline' {
-	if (billingState === 'active' || billingState === 'trialing') {
-		return 'default'
-	}
-	if (billingState === 'past_due' || billingState === 'unpaid') {
-		return 'destructive'
-	}
-	if (billingState === 'canceled') {
-		return 'outline'
-	}
-	return 'secondary'
 }
 
 function membershipVariant(
@@ -470,8 +440,17 @@ export default function OrganizationDetailPage({
 		organization,
 		membership,
 		members,
-		projectsTotal,
-		billing,
+		/*
+		  `projectsTotal` stays in the loader and is not read here: the header
+		  description is built from it in `use-dashboard-content.ts`, which reads
+		  this route's loader data directly. Destructuring it again is what put
+		  the same number on the page twice.
+		*/
+		/*
+		  `billing` stays in the loader and is not read here: the plan is part of
+		  the header description, built in `use-dashboard-content.ts` from this
+		  route's loader data. A read-only billing state has its own alert above.
+		*/
 		entitlements,
 		isReadOnlyBillingState,
 		user
@@ -485,6 +464,20 @@ export default function OrganizationDetailPage({
 	})
 	const canManageMembers = canManageOrg && entitlements.orgMultiMember
 	const canManageRoles = canManageOrg && entitlements.orgRoles
+
+	const [nameDraft, setNameDraft] = useState(organization.name)
+	const isNameDirty = nameDraft.trim() !== organization.name
+
+	/*
+	  Whether the Actions column can hold anything at all. Role editing needs the
+	  entitlement; removal needs someone other than yourself to remove. On a free
+	  single-member organization - which is every organization in production -
+	  neither is ever true, so the column drew a heading over four empty cells.
+	*/
+	const hasMemberActions =
+		!isReadOnlyBillingState &&
+		(canManageRoles ||
+			(canManageMembers && members.some((m) => m.user.id !== user.id)))
 
 	/*
 	  All three of these used to be bare submit buttons: one click removed a
@@ -519,7 +512,15 @@ export default function OrganizationDetailPage({
 			: undefined
 
 	return (
-		<div className="space-y-6 p-6">
+		/*
+		  Three steps on this page and no others: 8px inside a block (a label and
+		  its control), 16px between blocks inside a card, 32px between the cards.
+		  It had eight distinct values - 2, 4, 6, 8, 12, 16 and 24 - and two
+		  different section rhythms, which is the "nine near-identical gaps that
+		  each mean nothing" `tokens.md` describes. A gap that feels wrong steps up
+		  or down; it does not get a new value between two that exist.
+		*/
+		<div className="space-y-8 py-6">
 			{actionError && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />
@@ -543,107 +544,91 @@ export default function OrganizationDetailPage({
 				</Alert>
 			)}
 
-			<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Current role</CardDescription>
-						<CardTitle className="text-base">
-							<Badge variant={membershipVariant(membership.role)}>
-								{membership.role}
-							</Badge>
-						</CardTitle>
-					</CardHeader>
-				</Card>
+			{/*
+			  No stat band, and no plan line either. This page opened with four
+			  read-only cards - role, plan, members, projects - above the three
+			  things anyone comes here to do: rename the organization, manage who
+			  is in it, leave or delete it.
 
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Plan</CardDescription>
-						<CardTitle className="flex items-center gap-2 text-base capitalize">
-							<Shield className="h-4 w-4" />
-							{billing.plan}
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<Badge
-							variant={statusVariantFromBillingState(billing.billingState)}
-						>
-							{billing.billingState}
-						</Badge>
-					</CardContent>
-				</Card>
+			  Each was already stated, or now is. `Current role` is the viewer's
+			  own row in the members table below, with the same badge. Members,
+			  projects and the plan are the header's description line, which
+			  `use-dashboard-content.ts` owns for this page the way it does for a
+			  project and a folder. A lone paragraph restating the plan under the
+			  title was the same mistake one size smaller.
+			*/}
 
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Members</CardDescription>
-						<CardTitle className="flex items-center gap-2 text-base">
-							<Users className="h-4 w-4" />
-							{members.length}
-						</CardTitle>
-					</CardHeader>
-				</Card>
+			{/*
+			  No icon beside the title, and no subtitle. `Manage core metadata for
+			  this organization` said what `Organization details` above it and
+			  `Organization name` below it already said, and a building glyph next to
+			  the word "Organization" is decoration - `anti-ai-look.md` names every
+			  section built from the same icon-title-description header as the tell.
 
-				<Card>
-					<CardHeader className="space-y-0 pb-2">
-						<CardDescription>Projects</CardDescription>
-						<CardTitle className="flex items-center gap-2 text-base">
-							<Building2 className="h-4 w-4" />
-							{projectsTotal}
-						</CardTitle>
-					</CardHeader>
-				</Card>
-			</div>
-
+			  The field and its control share a row from `sm` up. Stacked, one text
+			  input took 570px of a phone screen.
+			*/}
 			<Card>
 				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Building2 className="h-5 w-5" />
-						Organization details
-					</CardTitle>
-					<CardDescription>
-						Manage core metadata for this organization.
-					</CardDescription>
+					<CardTitle>Organization details</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					<RemixForm method="post" className="space-y-4">
+					{/*
+					  Remounts on a successful rename, which resets the draft below to
+					  the name that came back from the server.
+					*/}
+					<RemixForm
+						key={organization.name}
+						method="post"
+						className="flex flex-col gap-4 sm:flex-row sm:items-end"
+					>
 						<AuthenticityTokenInput />
 						<input type="hidden" name="intent" value="update-name" />
-						<label className="text-sm font-medium">Organization name</label>
-						<Input
-							name="name"
-							defaultValue={organization.name}
-							disabled={!canManageOrg || isReadOnlyBillingState}
-						/>
-						{actionIntent === 'update-name' && fieldErrors?.name && (
-							<p className="text-destructive text-sm">{fieldErrors.name}</p>
-						)}
-						<Button
-							type="submit"
-							disabled={!canManageOrg || isReadOnlyBillingState}
-						>
-							Save organization name
-						</Button>
+						<div className="min-w-0 flex-1 space-y-2">
+							<label
+								htmlFor="organization-name"
+								className="text-sm font-medium"
+							>
+								Organization name
+							</label>
+							<Input
+								id="organization-name"
+								name="name"
+								value={nameDraft}
+								onChange={(event) => setNameDraft(event.target.value)}
+								disabled={!canManageOrg || isReadOnlyBillingState}
+							/>
+						</div>
+						{/*
+						  Only once the name differs. This was a filled button sitting
+						  there permanently - the single loudest element on a page whose
+						  least-used action it is, and enabled for a no-op every time
+						  nobody had typed anything.
+						*/}
+						{isNameDirty && canManageOrg && !isReadOnlyBillingState ? (
+							<Button type="submit">Save</Button>
+						) : null}
 					</RemixForm>
+					{actionIntent === 'update-name' && fieldErrors?.name && (
+						<p className="text-destructive text-sm">{fieldErrors.name}</p>
+					)}
 
-					<div className="text-muted-foreground flex items-center gap-2 text-sm">
-						<Calendar className="h-4 w-4" />
+					<p className="text-muted-foreground text-xs">
 						Created {new Date(organization.createdAt).toLocaleDateString()}
-					</div>
+					</p>
 				</CardContent>
 			</Card>
 
 			<Card>
 				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Users className="h-5 w-5" />
-						Members
-					</CardTitle>
+					<CardTitle>Members</CardTitle>
 					<CardDescription>
 						Invite collaborators and manage access by role.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					{canManageMembers && !isReadOnlyBillingState && (
-						<RemixForm method="post" className="grid gap-3 md:grid-cols-4">
+						<RemixForm method="post" className="grid gap-4 md:grid-cols-4">
 							<AuthenticityTokenInput />
 							<input type="hidden" name="intent" value="invite-member" />
 							<Input
@@ -675,102 +660,110 @@ export default function OrganizationDetailPage({
 						</Alert>
 					)}
 
-					<div className="rounded-lg border">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead>Email</TableHead>
-									<TableHead>Role</TableHead>
-									<TableHead className="text-right">Actions</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{members.map((member) => {
-									const isCurrentUser = member.user.id === user.id
-									return (
-										<TableRow key={member.membership.id}>
-											<TableCell className="font-medium">
-												<div className="flex items-center gap-2">
-													{member.user.name}
-													{member.membership.role === 'owner' && (
-														<Crown className="h-4 w-4 text-amber-500" />
-													)}
-												</div>
-											</TableCell>
-											<TableCell>{member.user.email}</TableCell>
-											<TableCell>
-												<Badge
-													variant={membershipVariant(member.membership.role)}
-												>
-													{member.membership.role}
-												</Badge>
-											</TableCell>
-											<TableCell>
-												<div className="flex justify-end gap-2">
-													{canManageRoles && !isReadOnlyBillingState && (
-														<RemixForm method="post" className="flex gap-2">
-															<AuthenticityTokenInput />
-															<input
-																type="hidden"
-																name="intent"
-																value="update-role"
-															/>
-															<input
-																type="hidden"
-																name="targetUserId"
-																value={member.user.id}
-															/>
-															<Select
-																name="role"
-																defaultValue={member.membership.role}
-															>
-																<SelectTrigger className="h-8 w-28">
-																	<SelectValue />
-																</SelectTrigger>
-																<SelectContent>
-																	<SelectItem value="member">Member</SelectItem>
-																	<SelectItem value="admin">Admin</SelectItem>
-																	{membership.role === 'owner' && (
-																		<SelectItem value="owner">Owner</SelectItem>
-																	)}
-																</SelectContent>
-															</Select>
-															<Button size="sm" type="submit" variant="outline">
-																Save
-															</Button>
-														</RemixForm>
-													)}
+					{/*
+					  Rows, not a `Table`. Four columns of member data could not fit
+					  375px, so the table scrolled sideways inside the card - a second
+					  scroller on a page that already has one, with the email column
+					  cut off mid-address. A table earns its chrome when there are
+					  columns to compare down; this list is a handful of people, and
+					  production organizations hold exactly one.
 
-													{canManageMembers &&
-														!isReadOnlyBillingState &&
-														!isCurrentUser && (
-															<Button
-																size="sm"
-																variant="destructive"
-																type="button"
-																onClick={() =>
-																	setPendingAction(
-																		removeMemberAction(
-																			member.user.id,
-																			member.user.name ||
-																				member.user.email ||
-																				'this member'
-																		)
-																	)
-																}
-															>
-																Remove
-															</Button>
-														)}
-												</div>
-											</TableCell>
-										</TableRow>
-									)
-								})}
-							</TableBody>
-						</Table>
-					</div>
+					  The crown is gone with it. It marked the owner beside a badge
+					  that says "owner" on the same row, and it did so in
+					  `text-amber-500` - a raw palette step with no token behind it,
+					  the only colour on the page outside the system.
+					*/}
+					<ul className="divide-border divide-y overflow-hidden rounded-xl border">
+						{members.map((member) => {
+							const isCurrentUser = member.user.id === user.id
+
+							return (
+								<li
+									key={member.membership.id}
+									className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4"
+								>
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-medium">
+											{member.user.name}
+											{isCurrentUser ? (
+												<span className="text-muted-foreground font-normal">
+													{' '}
+													(you)
+												</span>
+											) : null}
+										</p>
+										<p className="text-muted-foreground truncate text-xs">
+											{member.user.email}
+										</p>
+									</div>
+
+									<Badge variant={membershipVariant(member.membership.role)}>
+										{member.membership.role}
+									</Badge>
+
+									{hasMemberActions ? (
+										<div className="flex flex-wrap items-center gap-2">
+											{canManageRoles && !isReadOnlyBillingState && (
+												<RemixForm method="post" className="flex gap-2">
+													<AuthenticityTokenInput />
+													<input
+														type="hidden"
+														name="intent"
+														value="update-role"
+													/>
+													<input
+														type="hidden"
+														name="targetUserId"
+														value={member.user.id}
+													/>
+													<Select
+														name="role"
+														defaultValue={member.membership.role}
+													>
+														<SelectTrigger className="h-8 w-28">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="member">Member</SelectItem>
+															<SelectItem value="admin">Admin</SelectItem>
+															{membership.role === 'owner' && (
+																<SelectItem value="owner">Owner</SelectItem>
+															)}
+														</SelectContent>
+													</Select>
+													<Button size="sm" type="submit" variant="outline">
+														Save
+													</Button>
+												</RemixForm>
+											)}
+
+											{canManageMembers &&
+												!isReadOnlyBillingState &&
+												!isCurrentUser && (
+													<Button
+														size="sm"
+														variant="destructive"
+														type="button"
+														onClick={() =>
+															setPendingAction(
+																removeMemberAction(
+																	member.user.id,
+																	member.user.name ||
+																		member.user.email ||
+																		'this member'
+																)
+															)
+														}
+													>
+														Remove
+													</Button>
+												)}
+										</div>
+									) : null}
+								</li>
+							)
+						})}
+					</ul>
 				</CardContent>
 			</Card>
 
@@ -781,20 +774,40 @@ export default function OrganizationDetailPage({
 			  confirmation tiers already told them apart: acknowledge against typed.
 			*/}
 			<Card>
-				<CardContent className="space-y-4">
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						disabled={isReadOnlyBillingState}
-						onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
-					>
-						Leave organization
-					</Button>
+				<CardContent className="space-y-8">
+					{/*
+					  Both exits read the same way - a sentence, then its control -
+					  which is the shape `DestructiveAction` exists to hold and the one
+					  `settings.tsx` uses. Leaving was a bare button above all of this,
+					  so the card opened with a control that explained nothing and then
+					  offered an explanation before its own control.
 
+					  They stay told apart by the control, not by the frame: leaving is
+					  an outline button because you can be invited back, deleting is the
+					  quiet ghost every destroying surface in the app shares.
+					*/}
+					<DestructiveAction description="Leaving gives up your own access. An owner or admin can invite you back.">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							disabled={isReadOnlyBillingState}
+							onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
+						>
+							Leave organization
+						</Button>
+					</DestructiveAction>
+
+					{/*
+					  "and everything scoped to it" contradicted the note directly
+					  below it: deletion needs the organization to be empty of
+					  projects, so there is no scene or folder left to remove. What it
+					  does end is the organization and every membership in it, which
+					  is what the confirmation dialog has always said.
+					*/}
 					<DestructiveAction
-						description="Deleting this organization removes it and everything scoped to it."
-						note="Organization deletion is only available when no projects remain."
+						description="Deleting the organization ends it for every member."
+						note="Only possible once no projects remain."
 					>
 						<DestructiveActionButton
 							disabled={!canDeleteOrg || isReadOnlyBillingState}

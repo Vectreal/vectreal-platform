@@ -9,7 +9,7 @@ import { Skeleton } from '@shared/components/ui/skeleton'
  */
 export function ProjectsGridSkeleton() {
 	return (
-		<div className="space-y-4 p-6" role="status" aria-label="Loading projects">
+		<div className="space-y-4 py-6" role="status" aria-label="Loading projects">
 			<div className="flex flex-wrap items-center gap-2">
 				<Skeleton className="h-10 min-w-48 flex-1 rounded-xl" />
 				<Skeleton className="h-10 w-36 rounded-xl" />

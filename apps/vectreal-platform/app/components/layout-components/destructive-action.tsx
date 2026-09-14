@@ -87,6 +87,16 @@ export function DestructiveActionButton({
 			size="sm"
 			className={cn(
 				'text-muted-foreground hover:text-destructive focus-visible:text-destructive',
+				/*
+				  Pulled back by its own horizontal padding. A bordered control aligns
+				  to the eye by its box; a borderless one aligns by its text, and
+				  `size="sm"`'s 12px of padding read as an indent against the sentence
+				  directly above it - measured at every call site, because all four put
+				  this button under copy that starts at the container's content edge.
+				  Only the hover fill extends past that edge, which is what a ghost
+				  control does everywhere else.
+				*/
+				'-ml-3',
 				className
 			)}
 			{...props}

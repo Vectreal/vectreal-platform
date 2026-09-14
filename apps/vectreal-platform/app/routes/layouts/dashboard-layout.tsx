@@ -309,7 +309,21 @@ const DashboardLayout = () => {
 						</div>
 					</div>
 
-					<div className="row-start-2 min-h-0 overflow-y-auto">
+					{/*
+					  `container-page` here, on the scroller, rather than in each route.
+					  It owns the measure and the gutter together - 80rem centred, 16px
+					  of gutter stepping to 24px at 48rem - and every route body and the
+					  header sit inside it, so they cannot disagree about either. Before
+					  this the dashboard had no measure at all: at 1600px the
+					  organization name input was ~1200px wide for a 15-character value,
+					  and each body chose its own `p-6`.
+
+					  On the scroller and not a wrapper inside it because this element
+					  already has a definite height from the grid row, which is what
+					  `scene.tsx`'s `xl:h-full` resolves against. A new box in that chain
+					  would have collapsed it.
+					*/}
+					<div className="container-page row-start-2 min-h-0 overflow-y-auto">
 						{!(isSceneDetailRoute && willBePublisherRoute) &&
 							!(isSceneDetailRoute || willBeSceneDetail) && <DashboardHeader />}
 						{isContentNavigationLoading && !willBeOverlayRoute ? (

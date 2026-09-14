@@ -10,7 +10,7 @@ import { Skeleton } from '@shared/components/ui/skeleton'
 export function OrganizationsSkeleton() {
 	return (
 		<div
-			className="space-y-6 p-6"
+			className="space-y-6 py-6"
 			role="status"
 			aria-label="Loading organizations"
 		>
