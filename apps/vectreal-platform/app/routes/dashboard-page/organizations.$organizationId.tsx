@@ -520,7 +520,7 @@ export default function OrganizationDetailPage({
 		  each mean nothing" `tokens.md` describes. A gap that feels wrong steps up
 		  or down; it does not get a new value between two that exist.
 		*/
-		<div className="space-y-8 p-6">
+		<div className="space-y-8 py-6">
 			{actionError && (
 				<Alert variant="destructive">
 					<AlertCircle className="h-4 w-4" />

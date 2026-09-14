@@ -641,7 +641,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 
 	if (organizations.length === 0) {
 		return (
-			<div className="space-y-6 p-6">
+			<div className="space-y-6 py-6">
 				<Empty>
 					<EmptyMedia>
 						<KeyRound className="text-muted-foreground h-24 w-24" />
@@ -703,7 +703,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<>
-			<div className="space-y-6 p-6">
+			<div className="space-y-6 py-6">
 				{organizations.length === 1 ? (
 					/*
 					  A section heading over the table, matching every other dashboard

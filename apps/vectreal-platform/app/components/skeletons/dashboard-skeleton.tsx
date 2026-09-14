@@ -12,7 +12,11 @@ import { SkeletonDataTable } from './skeleton-data-table'
  */
 export function DashboardSkeleton() {
 	return (
-		<div className="space-y-8 p-6" role="status" aria-label="Loading dashboard">
+		<div
+			className="space-y-8 py-6"
+			role="status"
+			aria-label="Loading dashboard"
+		>
 			<div className="space-y-4">
 				{/* Resume band: thumbnail beside title, meta and actions. */}
 				<section className="ds-raised rounded-2xl p-5">

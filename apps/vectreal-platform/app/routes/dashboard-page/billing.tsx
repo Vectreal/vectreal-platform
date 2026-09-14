@@ -22,7 +22,7 @@ const BillingPage = () => {
 	const { billing } = useLoaderData<typeof loader>()
 
 	return (
-		<div className="p-6">
+		<div className="py-6">
 			<BillingSettingsSection billing={billing} />
 		</div>
 	)

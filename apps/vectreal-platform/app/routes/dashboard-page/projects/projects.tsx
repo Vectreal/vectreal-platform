@@ -311,7 +311,7 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 
 	return (
 		<>
-			<div className="p-6">
+			<div className="py-6">
 				{projectItems.length > 0 ? (
 					<ProjectsBrowser
 						items={projectItems}

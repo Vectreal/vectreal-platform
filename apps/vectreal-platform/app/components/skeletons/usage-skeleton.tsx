@@ -23,7 +23,7 @@ import { UsageMeterList, UsageMeterRowSkeleton } from '../dashboard/usage-meter'
  */
 export function UsageSkeleton() {
 	return (
-		<div className="space-y-4 p-6" role="status" aria-label="Loading usage">
+		<div className="space-y-4 py-6" role="status" aria-label="Loading usage">
 			<section className="ds-raised space-y-4 rounded-2xl p-5">
 				<Skeleton className="h-7 w-64" />
 				<UsageMeterList>

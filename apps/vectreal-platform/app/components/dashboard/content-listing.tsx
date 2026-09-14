@@ -149,7 +149,7 @@ export function ContentListing({
 	)
 
 	return (
-		<div className="space-y-6 p-6">
+		<div className="space-y-6 py-6">
 			{contentRows.length > 0 ? (
 				<DataTable
 					columns={contentColumns}
