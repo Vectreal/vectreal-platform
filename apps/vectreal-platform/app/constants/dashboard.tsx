@@ -125,11 +125,18 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	},
 	billing: {
 		title: 'Billing & Plans',
-		// Money. Consumption is `/dashboard/usage` and this page links to it, so
-		// the three nouns this used to name are one question again.
-		description: 'Your plan, and how it is paid for',
+		/*
+		  No description, for the reason `usage` above has none: the page answers
+		  itself. `describeBillingSituation` states the actual situation - "Nothing
+		  is being charged", "Renews Oct 12, 2026", "A payment failed" - and the
+		  static line it replaces promised "your plan, and how it is paid for"
+		  above a page that has never named a charge for anybody.
+
+		  No `loadingDescription` either. It drew a skeleton bar during navigation
+		  for a sentence that was a constant three lines above it, which is a claim
+		  that something is being fetched when nothing is.
+		*/
 		loadingTitle: 'Billing & Plans',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},
 	/*

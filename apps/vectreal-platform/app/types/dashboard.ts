@@ -4,6 +4,7 @@
  */
 
 import type {
+	BillingLoaderData,
 	FolderLoaderData,
 	OrganizationDetailLoaderData,
 	ProjectLoaderData,
@@ -110,6 +111,18 @@ export interface RouteDataResult {
 	scene?: SceneLoaderData
 	organizationDetail?: OrganizationDetailLoaderData
 	usage?: UsageLoaderData
+	/*
+	  The billing loader's own type, not a narrowed copy of it the way
+	  `UsageLoaderData` above is. It already exists and already says
+	  `billing: BillingSettingsData`; declaring a second interface of the same
+	  name in this file gave two types one name for no gain.
+
+	  The header turns those four fields into the page's one line itself, rather
+	  than the loader shipping a verdict as usage does: usage computes one from
+	  five readings it had to query anyway, and this is a pure function over
+	  data the loader already returns.
+	*/
+	billing?: BillingLoaderData
 }
 
 /** Only the part of the usage loader the header reads. */

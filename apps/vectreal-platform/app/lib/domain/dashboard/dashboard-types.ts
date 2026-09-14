@@ -123,6 +123,15 @@ export interface BillingSettingsData {
 	billingState: BillingState
 	currentPeriodEnd: string | null
 	trialEnd: string | null
+	/**
+	 * Whether this organization has a Stripe customer, and so a portal to open.
+	 *
+	 * Not the same question as "is it on a paid plan". A canceled subscription
+	 * keeps its customer, and its invoices, payment method and receipts stay
+	 * reachable - which is what the portal is for and what a canceling customer
+	 * most often comes back needing.
+	 */
+	hasBillingAccount: boolean
 }
 
 /**

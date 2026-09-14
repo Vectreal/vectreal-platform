@@ -16,6 +16,7 @@ import {
 } from '../components/dashboard'
 import { DASHBOARD_CONTENT, DASHBOARD_ROUTES } from '../constants/dashboard'
 import { PLAN_DISPLAY_NAMES } from '../constants/product-copy'
+import { describeBillingSituation } from '../lib/domain/billing/billing-situation'
 import {
 	ACTION_VARIANT,
 	type BreadcrumbItem,
@@ -66,7 +67,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 	const routeContext = getRouteContext(location.pathname, routeParams)
 
 	// Extract typed data from route loaders
-	const { project, folder, scene, organizationDetail, usage } =
+	const { project, folder, scene, organizationDetail, usage, billing } =
 		extractRouteData(matches)
 
 	const content = useMemo(() => {
@@ -356,7 +357,21 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 
 				return {
 					title: config.title,
-					description: config.description,
+					/*
+					  The situation is this page's description, for the reason usage's
+					  verdict is: the slot states what is true of the route right now.
+					  The static sentence it replaces promised "how it is paid for"
+					  above a page that never named a charge, and read identically to
+					  an account paying nothing and one whose card had just been
+					  declined.
+
+					  `config` carries no description to fall back to, deliberately.
+					  Before the loader resolves there is no situation to report, and
+					  a generic line in the slot is what this replaced.
+					*/
+					description: billing
+						? describeBillingSituation(billing.billing).headline
+						: undefined,
 					actionVariant: config.actionVariant,
 					breadcrumbs
 				}
@@ -474,7 +489,8 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 		organizationDetail,
 		navigation.state,
 		navigation.location,
-		usage
+		usage,
+		billing
 	])
 
 	return content
