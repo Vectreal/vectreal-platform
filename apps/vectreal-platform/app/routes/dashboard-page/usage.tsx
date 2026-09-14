@@ -221,7 +221,7 @@ const UsagePage = () => {
 	const rest = readings.filter((r) => r.key !== verdict.bindingKey)
 
 	return (
-		<div className="space-y-4 py-6">
+		<div className="space-y-8 py-6">
 			{/*
 			  The verdict, then its evidence, then everything else.
 

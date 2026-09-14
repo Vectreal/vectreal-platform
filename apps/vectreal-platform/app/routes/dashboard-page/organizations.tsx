@@ -74,7 +74,7 @@ const OrganizationsPage = () => {
 	}
 
 	return (
-		<div className="space-y-6 py-6">
+		<div className="space-y-8 py-6">
 			{/*
 			  One list, and no counts above it.
 
