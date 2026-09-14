@@ -27,8 +27,9 @@ const NO_URLS: TextureThumbnailUrls = {}
  * **Why object URLs rather than `data:` URLs.** The thumbnails were base64
  * strings built one byte at a time - about 1.5 seconds for those three textures
  * on every recomputation - and a 14 MB PNG became a 19 MB attribute in the DOM.
- * An object URL references the bytes where they already are, costs no copy, and
- * is a few dozen characters.
+ * An object URL is a few dozen characters and costs one native copy of the
+ * bytes into the Blob, held until the URL is revoked; for that scene, about
+ * 27 MB for as long as the page is open.
  *
  * Created in an effect, not a memo, because each URL must be revoked. A memo
  * cannot own a cleanup, and StrictMode runs effect cleanups between its two

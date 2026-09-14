@@ -91,6 +91,24 @@ describe('useTextureThumbnailUrls', () => {
 		expect(revoked).toEqual(expect.arrayContaining(first))
 	})
 
+	it('never hands back a URL it has already revoked, under StrictMode', () => {
+		/*
+		  StrictMode runs an effect's cleanup between its two setups in
+		  development. A version that made the URLs in a memo and revoked them in
+		  an effect passes every test above - and under StrictMode returns URLs its
+		  own first cleanup already revoked, which renders as broken images.
+		*/
+		const { result } = renderHook(() => useTextureThumbnailUrls(PNG), {
+			reactStrictMode: true
+		})
+
+		const inUse = Object.values(result.current)
+		expect(inUse.length).toBeGreaterThan(0)
+		for (const url of inUse) {
+			expect(revoked).not.toContain(url)
+		}
+	})
+
 	it('returns nothing before the scene has loaded', () => {
 		const { result } = renderHook(() => useTextureThumbnailUrls(undefined))
 
