@@ -2,14 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle
-} from '@shared/components/ui/card'
-import {
 	Form,
 	FormControl,
 	FormField,
@@ -25,7 +17,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { Save, Settings2, Shield, UserRound } from 'lucide-react'
+import { Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import {
@@ -46,7 +38,8 @@ import { Route } from './+types/settings'
 import { useConsent } from '../../components/consent/consent-context'
 import {
 	DestructiveAction,
-	DestructiveActionButton
+	DestructiveActionButton,
+	DetailPanelSection
 } from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { applyTheme, isForceDarkRoute } from '../../components/theme'
@@ -370,138 +363,114 @@ export default function SettingsPage({
 				}}
 			/>
 
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<UserRound className="h-5 w-5" />
-						User profile
-					</CardTitle>
-					<CardDescription>
-						Manage your account identity details.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<Form {...profileForm}>
-						<RemixForm method="post" className="space-y-4">
-							<AuthenticityTokenInput />
-							<input type="hidden" name="intent" value="profile" />
-
-							<FormField
-								control={profileForm.control}
-								name="name"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Display name</FormLabel>
-										<FormControl>
-											<Input {...field} name="name" placeholder="Jane Doe" />
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormItem>
-								<FormLabel>Email</FormLabel>
-								<FormControl>
-									<Input
-										value={loaderData.userWithDefaults.user.email}
-										readOnly
-										disabled
-									/>
-								</FormControl>
-							</FormItem>
-
-							<Button type="submit" className="w-full sm:w-auto">
-								<Save className="mr-2 h-4 w-4" />
-								Save profile
-							</Button>
-						</RemixForm>
-					</Form>
-				</CardContent>
-			</Card>
-
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Settings2 className="h-5 w-5" />
-						Preferences
-					</CardTitle>
-					<CardDescription>
-						Set your dashboard and visual preferences.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
+			<DetailPanelSection
+				surface="raised"
+				headingLevel="h2"
+				title="User profile"
+				description="Manage your account identity details."
+			>
+				<Form {...profileForm}>
 					<RemixForm method="post" className="space-y-4">
 						<AuthenticityTokenInput />
-						<input type="hidden" name="intent" value="preferences" />
-						<input type="hidden" name="themeMode" value={themeMode} />
+						<input type="hidden" name="intent" value="profile" />
 
-						<div className="space-y-2">
-							<label className="text-sm font-medium">Theme</label>
-							<Select value={themeMode} onValueChange={handleThemeModeChange}>
-								<SelectTrigger>
-									<SelectValue placeholder="Select theme" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="system">System</SelectItem>
-									<SelectItem value="light">Light</SelectItem>
-									<SelectItem value="dark">Dark</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
+						<FormField
+							control={profileForm.control}
+							name="name"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Display name</FormLabel>
+									<FormControl>
+										<Input {...field} name="name" placeholder="Jane Doe" />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 
-						<Button
-							type="submit"
-							variant="outline"
-							className="w-full sm:w-auto"
-						>
-							Save preferences
+						<FormItem>
+							<FormLabel>Email</FormLabel>
+							<FormControl>
+								<Input
+									value={loaderData.userWithDefaults.user.email}
+									readOnly
+									disabled
+								/>
+							</FormControl>
+						</FormItem>
+
+						<Button type="submit" className="w-full sm:w-auto">
+							<Save className="mr-2 h-4 w-4" />
+							Save profile
 						</Button>
 					</RemixForm>
-				</CardContent>
-				<CardFooter className="text-muted-foreground justify-between text-xs">
+				</Form>
+			</DetailPanelSection>
+
+			<DetailPanelSection
+				surface="raised"
+				headingLevel="h2"
+				title="Preferences"
+				description="Set your dashboard and visual preferences."
+			>
+				<RemixForm method="post" className="space-y-4">
+					<AuthenticityTokenInput />
+					<input type="hidden" name="intent" value="preferences" />
+					<input type="hidden" name="themeMode" value={themeMode} />
+
+					<div className="space-y-2">
+						<label className="text-sm font-medium">Theme</label>
+						<Select value={themeMode} onValueChange={handleThemeModeChange}>
+							<SelectTrigger>
+								<SelectValue placeholder="Select theme" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="system">System</SelectItem>
+								<SelectItem value="light">Light</SelectItem>
+								<SelectItem value="dark">Dark</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					<Button type="submit" variant="outline" className="w-full sm:w-auto">
+						Save preferences
+					</Button>
+				</RemixForm>
+				<div className="text-muted-foreground flex justify-between text-xs">
 					<span>Theme is persisted with a secure cookie.</span>
 					<Badge variant="secondary">Personal</Badge>
-				</CardFooter>
-			</Card>
+				</div>
+			</DetailPanelSection>
 
-			<Card>
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
-						<Shield className="h-5 w-5" />
-						Privacy &amp; cookies
-					</CardTitle>
-					<CardDescription>
-						Review and update your cookie and tracking preferences.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => setPreferencesOpen(true)}
-					>
-						Manage cookie preferences
-					</Button>
-				</CardContent>
-				<CardFooter className="text-muted-foreground justify-between text-xs">
+			<DetailPanelSection
+				surface="raised"
+				headingLevel="h2"
+				title="Privacy &amp; cookies"
+				description="Review and update your cookie and tracking preferences."
+			>
+				<Button
+					type="button"
+					variant="outline"
+					onClick={() => setPreferencesOpen(true)}
+				>
+					Manage cookie preferences
+				</Button>
+				<div className="text-muted-foreground flex justify-between text-xs">
 					<span>Changes apply immediately across all sessions.</span>
 					<Badge variant="secondary">Personal</Badge>
-				</CardFooter>
-			</Card>
+				</div>
+			</DetailPanelSection>
 
-			<Card>
-				<CardContent>
-					<DestructiveAction description="Permanently remove your account and all related data.">
-						<DestructiveActionButton
-							disabled={isDeleteSubmitting}
-							onClick={() => setDeleteModalOpen(true)}
-						>
-							Delete account
-						</DestructiveActionButton>
-					</DestructiveAction>
-				</CardContent>
-			</Card>
+			<DetailPanelSection surface="raised">
+				<DestructiveAction description="Permanently remove your account and all related data.">
+					<DestructiveActionButton
+						disabled={isDeleteSubmitting}
+						onClick={() => setDeleteModalOpen(true)}
+					>
+						Delete account
+					</DestructiveActionButton>
+				</DestructiveAction>
+			</DetailPanelSection>
 		</div>
 	)
 }

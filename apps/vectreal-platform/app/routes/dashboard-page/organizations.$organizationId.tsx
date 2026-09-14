@@ -1,13 +1,6 @@
 import { Alert, AlertDescription } from '@shared/components/ui/alert'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle
-} from '@shared/components/ui/card'
 import { Input } from '@shared/components/ui/input'
 import {
 	Select,
@@ -28,7 +21,8 @@ import { z, ZodError } from 'zod'
 import { Route } from './+types/organizations.$organizationId'
 import {
 	DestructiveAction,
-	DestructiveActionButton
+	DestructiveActionButton,
+	DetailPanelSection
 } from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { isBillingStateReadOnly } from '../../constants/plan-config'
@@ -568,99 +562,95 @@ export default function OrganizationDetailPage({
 			  The field and its control share a row from `sm` up. Stacked, one text
 			  input took 570px of a phone screen.
 			*/}
-			<Card>
-				<CardHeader>
-					<CardTitle>Organization details</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					{/*
+			<DetailPanelSection
+				surface="raised"
+				headingLevel="h2"
+				title="Organization details"
+				contentClassName="space-y-4"
+			>
+				{/*
 					  Remounts on a successful rename, which resets the draft below to
 					  the name that came back from the server.
 					*/}
-					<RemixForm
-						key={organization.name}
-						method="post"
-						className="flex flex-col gap-4 sm:flex-row sm:items-end"
-					>
-						<AuthenticityTokenInput />
-						<input type="hidden" name="intent" value="update-name" />
-						<div className="min-w-0 flex-1 space-y-2">
-							<label
-								htmlFor="organization-name"
-								className="text-sm font-medium"
-							>
-								Organization name
-							</label>
-							<Input
-								id="organization-name"
-								name="name"
-								value={nameDraft}
-								onChange={(event) => setNameDraft(event.target.value)}
-								disabled={!canManageOrg || isReadOnlyBillingState}
-							/>
-						</div>
-						{/*
+				<RemixForm
+					key={organization.name}
+					method="post"
+					className="flex flex-col gap-4 sm:flex-row sm:items-end"
+				>
+					<AuthenticityTokenInput />
+					<input type="hidden" name="intent" value="update-name" />
+					<div className="min-w-0 flex-1 space-y-2">
+						<label htmlFor="organization-name" className="text-sm font-medium">
+							Organization name
+						</label>
+						<Input
+							id="organization-name"
+							name="name"
+							value={nameDraft}
+							onChange={(event) => setNameDraft(event.target.value)}
+							disabled={!canManageOrg || isReadOnlyBillingState}
+						/>
+					</div>
+					{/*
 						  Only once the name differs. This was a filled button sitting
 						  there permanently - the single loudest element on a page whose
 						  least-used action it is, and enabled for a no-op every time
 						  nobody had typed anything.
 						*/}
-						{isNameDirty && canManageOrg && !isReadOnlyBillingState ? (
-							<Button type="submit">Save</Button>
-						) : null}
+					{isNameDirty && canManageOrg && !isReadOnlyBillingState ? (
+						<Button type="submit">Save</Button>
+					) : null}
+				</RemixForm>
+				{actionIntent === 'update-name' && fieldErrors?.name && (
+					<p className="text-destructive text-sm">{fieldErrors.name}</p>
+				)}
+
+				<p className="text-muted-foreground text-xs">
+					Created {new Date(organization.createdAt).toLocaleDateString()}
+				</p>
+			</DetailPanelSection>
+
+			<DetailPanelSection
+				surface="raised"
+				headingLevel="h2"
+				title="Members"
+				description="Invite collaborators and manage access by role."
+				contentClassName="space-y-4"
+			>
+				{canManageMembers && !isReadOnlyBillingState && (
+					<RemixForm method="post" className="grid gap-4 md:grid-cols-4">
+						<AuthenticityTokenInput />
+						<input type="hidden" name="intent" value="invite-member" />
+						<Input
+							className="md:col-span-2"
+							name="email"
+							type="email"
+							placeholder="member@example.com"
+						/>
+						<Select name="role" defaultValue="member">
+							<SelectTrigger>
+								<SelectValue placeholder="Role" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="member">Member</SelectItem>
+								{entitlements.orgRoles && (
+									<SelectItem value="admin">Admin</SelectItem>
+								)}
+							</SelectContent>
+						</Select>
+						<Button type="submit">Invite member</Button>
 					</RemixForm>
-					{actionIntent === 'update-name' && fieldErrors?.name && (
-						<p className="text-destructive text-sm">{fieldErrors.name}</p>
-					)}
+				)}
 
-					<p className="text-muted-foreground text-xs">
-						Created {new Date(organization.createdAt).toLocaleDateString()}
-					</p>
-				</CardContent>
-			</Card>
+				{!entitlements.orgMultiMember && (
+					<Alert>
+						<AlertDescription>
+							Multi-member collaboration is not available on this plan.
+						</AlertDescription>
+					</Alert>
+				)}
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Members</CardTitle>
-					<CardDescription>
-						Invite collaborators and manage access by role.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					{canManageMembers && !isReadOnlyBillingState && (
-						<RemixForm method="post" className="grid gap-4 md:grid-cols-4">
-							<AuthenticityTokenInput />
-							<input type="hidden" name="intent" value="invite-member" />
-							<Input
-								className="md:col-span-2"
-								name="email"
-								type="email"
-								placeholder="member@example.com"
-							/>
-							<Select name="role" defaultValue="member">
-								<SelectTrigger>
-									<SelectValue placeholder="Role" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="member">Member</SelectItem>
-									{entitlements.orgRoles && (
-										<SelectItem value="admin">Admin</SelectItem>
-									)}
-								</SelectContent>
-							</Select>
-							<Button type="submit">Invite member</Button>
-						</RemixForm>
-					)}
-
-					{!entitlements.orgMultiMember && (
-						<Alert>
-							<AlertDescription>
-								Multi-member collaboration is not available on this plan.
-							</AlertDescription>
-						</Alert>
-					)}
-
-					{/*
+				{/*
 					  Rows, not a `Table`. Four columns of member data could not fit
 					  375px, so the table scrolled sideways inside the card - a second
 					  scroller on a page that already has one, with the email column
@@ -673,99 +663,98 @@ export default function OrganizationDetailPage({
 					  `text-amber-500` - a raw palette step with no token behind it,
 					  the only colour on the page outside the system.
 					*/}
-					<ul className="divide-border divide-y overflow-hidden rounded-xl border">
-						{members.map((member) => {
-							const isCurrentUser = member.user.id === user.id
+				<ul className="divide-border divide-y overflow-hidden rounded-xl border">
+					{members.map((member) => {
+						const isCurrentUser = member.user.id === user.id
 
-							return (
-								<li
-									key={member.membership.id}
-									className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4"
-								>
-									<div className="min-w-0 flex-1">
-										<p className="truncate font-medium">
-											{member.user.name}
-											{isCurrentUser ? (
-												<span className="text-muted-foreground font-normal">
-													{' '}
-													(you)
-												</span>
-											) : null}
-										</p>
-										<p className="text-muted-foreground truncate text-xs">
-											{member.user.email}
-										</p>
-									</div>
+						return (
+							<li
+								key={member.membership.id}
+								className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4"
+							>
+								<div className="min-w-0 flex-1">
+									<p className="truncate font-medium">
+										{member.user.name}
+										{isCurrentUser ? (
+											<span className="text-muted-foreground font-normal">
+												{' '}
+												(you)
+											</span>
+										) : null}
+									</p>
+									<p className="text-muted-foreground truncate text-xs">
+										{member.user.email}
+									</p>
+								</div>
 
-									<Badge variant={membershipVariant(member.membership.role)}>
-										{member.membership.role}
-									</Badge>
+								<Badge variant={membershipVariant(member.membership.role)}>
+									{member.membership.role}
+								</Badge>
 
-									{hasMemberActions ? (
-										<div className="flex flex-wrap items-center gap-2">
-											{canManageRoles && !isReadOnlyBillingState && (
-												<RemixForm method="post" className="flex gap-2">
-													<AuthenticityTokenInput />
-													<input
-														type="hidden"
-														name="intent"
-														value="update-role"
-													/>
-													<input
-														type="hidden"
-														name="targetUserId"
-														value={member.user.id}
-													/>
-													<Select
-														name="role"
-														defaultValue={member.membership.role}
-													>
-														<SelectTrigger className="h-8 w-28">
-															<SelectValue />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="member">Member</SelectItem>
-															<SelectItem value="admin">Admin</SelectItem>
-															{membership.role === 'owner' && (
-																<SelectItem value="owner">Owner</SelectItem>
-															)}
-														</SelectContent>
-													</Select>
-													<Button size="sm" type="submit" variant="outline">
-														Save
-													</Button>
-												</RemixForm>
-											)}
+								{hasMemberActions ? (
+									<div className="flex flex-wrap items-center gap-2">
+										{canManageRoles && !isReadOnlyBillingState && (
+											<RemixForm method="post" className="flex gap-2">
+												<AuthenticityTokenInput />
+												<input
+													type="hidden"
+													name="intent"
+													value="update-role"
+												/>
+												<input
+													type="hidden"
+													name="targetUserId"
+													value={member.user.id}
+												/>
+												<Select
+													name="role"
+													defaultValue={member.membership.role}
+												>
+													<SelectTrigger className="h-8 w-28">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="member">Member</SelectItem>
+														<SelectItem value="admin">Admin</SelectItem>
+														{membership.role === 'owner' && (
+															<SelectItem value="owner">Owner</SelectItem>
+														)}
+													</SelectContent>
+												</Select>
+												<Button size="sm" type="submit" variant="outline">
+													Save
+												</Button>
+											</RemixForm>
+										)}
 
-											{canManageMembers &&
-												!isReadOnlyBillingState &&
-												!isCurrentUser && (
-													<Button
-														size="sm"
-														variant="destructive"
-														type="button"
-														onClick={() =>
-															setPendingAction(
-																removeMemberAction(
-																	member.user.id,
-																	member.user.name ||
-																		member.user.email ||
-																		'this member'
-																)
+										{canManageMembers &&
+											!isReadOnlyBillingState &&
+											!isCurrentUser && (
+												<Button
+													size="sm"
+													variant="destructive"
+													type="button"
+													onClick={() =>
+														setPendingAction(
+															removeMemberAction(
+																member.user.id,
+																member.user.name ||
+																	member.user.email ||
+																	'this member'
 															)
-														}
-													>
-														Remove
-													</Button>
-												)}
-										</div>
-									) : null}
-								</li>
-							)
-						})}
-					</ul>
-				</CardContent>
-			</Card>
+														)
+													}
+												>
+													Remove
+												</Button>
+											)}
+									</div>
+								) : null}
+							</li>
+						)
+					})}
+				</ul>
+			</DetailPanelSection>
 
 			{/*
 			  Leaving is not destroying. It sat beside deletion in one destructive
@@ -773,9 +762,8 @@ export default function OrganizationDetailPage({
 			  back - wore the same warning as the one that ends the organization. The
 			  confirmation tiers already told them apart: acknowledge against typed.
 			*/}
-			<Card>
-				<CardContent className="space-y-8">
-					{/*
+			<DetailPanelSection surface="raised" contentClassName="space-y-8">
+				{/*
 					  Both exits read the same way - a sentence, then its control -
 					  which is the shape `DestructiveAction` exists to hold and the one
 					  `settings.tsx` uses. Leaving was a bare button above all of this,
@@ -786,40 +774,39 @@ export default function OrganizationDetailPage({
 					  an outline button because you can be invited back, deleting is the
 					  quiet ghost every destroying surface in the app shares.
 					*/}
-					<DestructiveAction description="Leaving gives up your own access. An owner or admin can invite you back.">
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							disabled={isReadOnlyBillingState}
-							onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
-						>
-							Leave organization
-						</Button>
-					</DestructiveAction>
+				<DestructiveAction description="Leaving gives up your own access. An owner or admin can invite you back.">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={isReadOnlyBillingState}
+						onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
+					>
+						Leave organization
+					</Button>
+				</DestructiveAction>
 
-					{/*
+				{/*
 					  "and everything scoped to it" contradicted the note directly
 					  below it: deletion needs the organization to be empty of
 					  projects, so there is no scene or folder left to remove. What it
 					  does end is the organization and every membership in it, which
 					  is what the confirmation dialog has always said.
 					*/}
-					<DestructiveAction
-						description="Deleting the organization ends it for every member."
-						note="Only possible once no projects remain."
+				<DestructiveAction
+					description="Deleting the organization ends it for every member."
+					note="Only possible once no projects remain."
+				>
+					<DestructiveActionButton
+						disabled={!canDeleteOrg || isReadOnlyBillingState}
+						onClick={() =>
+							setPendingAction(deleteOrganizationAction(organization.name))
+						}
 					>
-						<DestructiveActionButton
-							disabled={!canDeleteOrg || isReadOnlyBillingState}
-							onClick={() =>
-								setPendingAction(deleteOrganizationAction(organization.name))
-							}
-						>
-							Delete organization
-						</DestructiveActionButton>
-					</DestructiveAction>
-				</CardContent>
-			</Card>
+						Delete organization
+					</DestructiveActionButton>
+				</DestructiveAction>
+			</DetailPanelSection>
 
 			{pendingAction ? (
 				<ConfirmDestructiveDialog
