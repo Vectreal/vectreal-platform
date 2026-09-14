@@ -6,7 +6,7 @@ import {
 } from '@shared/components/ui/sidebar'
 import { Provider } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
 	data,
 	Outlet,
@@ -29,25 +29,13 @@ import {
 	DynamicBreadcrumb,
 	LogoSidebar
 } from '../../components/dashboard'
-import {
-	BillingSkeleton,
-	DashboardSkeleton,
-	OrganizationsSkeleton,
-	ContentListingSkeleton,
-	ProjectsGridSkeleton,
-	SceneDetailsSkeleton,
-	UsageSkeleton
-} from '../../components/skeletons'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
-import {
-	isDashboardOverlayPath,
-	shouldRevalidateWithinScope
-} from '../../lib/navigation/dashboard-route-behavior'
+import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
 import { buildMeta } from '../../lib/seo'
 
 import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
@@ -150,7 +138,6 @@ const DashboardLayout = () => {
 		if (!orgId) return
 		posthog?.group('organization', orgId, { plan })
 	}, [orgId, plan])
-	const [showSkeleton, setShowSkeleton] = useState(false)
 
 	const handleSidebarOpenChange = (open: boolean) => {
 		setSidebarOpen(open)
@@ -161,34 +148,19 @@ const DashboardLayout = () => {
 		navigation.location?.pathname === location.pathname
 	const isContentNavigationLoading =
 		navigation.state === 'loading' && !isSearchParamOnlyNavigation
-	const isBackgroundRefreshing =
-		!isContentNavigationLoading &&
-		(revalidator.state !== 'idle' ||
-			fetchers.some((fetcher) => fetcher.state !== 'idle'))
-
-	// Smart skeleton display logic:
-	// - Skip on back/forward navigation (browser buttons)
-	// - Only show after 200ms delay to avoid flicker on fast loads
-	useEffect(() => {
-		if (!isContentNavigationLoading) {
-			setShowSkeleton(false)
-			return
-		}
-
-		// Delay skeleton display by 200ms to avoid flicker on fast navigations
-		const timer = setTimeout(() => {
-			if (isContentNavigationLoading) {
-				setShowSkeleton(true)
-			}
-		}, 200)
-
-		return () => clearTimeout(timer)
-	}, [isContentNavigationLoading])
+	/*
+	  Any work in flight, including a route change. This used to exclude a
+	  content navigation, because the skeleton was the signal for that one - with
+	  the skeleton gone the page holds its previous content, so without this a
+	  slow route change showed nothing but a 1px bar at the top of the viewport.
+	*/
+	const isLoadingAnything =
+		isContentNavigationLoading ||
+		revalidator.state !== 'idle' ||
+		fetchers.some((fetcher) => fetcher.state !== 'idle')
 
 	const path = navigation.location?.pathname || ''
 
-	// Helper to extract dashboard project subroutes
-	const projectDetailRegex = /^\/dashboard\/projects\/([^/]+)$/
 	// Both drawer shapes: the nested one, and the list-scoped
 	// `/dashboard/projects/edit/:projectId`, which `sceneDetailRegex` below
 	// would otherwise claim as a scene.
@@ -206,14 +178,7 @@ const DashboardLayout = () => {
 
 	const willBeNewProjectCreation = newProjectRegex.test(path)
 	const willBeProjectEditRoute = projectEditRegex.test(path)
-	const willBeDashboardOverlayRoute = isDashboardOverlayPath(path)
 	const willBePublisherRoute = publisherRegex.test(path)
-	const willBeOverlayRoute =
-		willBeNewProjectCreation ||
-		willBeProjectEditRoute ||
-		willBeDashboardOverlayRoute ||
-		willBePublisherRoute
-
 	const willBeFolderDetail =
 		folderDetailRegex.test(path) &&
 		!willBeProjectEditRoute &&
@@ -223,31 +188,6 @@ const DashboardLayout = () => {
 		!willBeProjectEditRoute &&
 		!willBeFolderDetail &&
 		!willBeNewProjectCreation
-	const willBeProjectDetail =
-		projectDetailRegex.test(path) &&
-		!willBeProjectEditRoute &&
-		!willBeFolderDetail &&
-		!willBeSceneDetail &&
-		!willBeNewProjectCreation
-
-	// Determine which skeleton to show based on navigation location
-	const getNavigationSkeleton = () => {
-		if (!showSkeleton) return null
-
-		if (path === '/dashboard') return <DashboardSkeleton />
-		if (path === '/dashboard/organizations') return <OrganizationsSkeleton />
-		if (path === '/dashboard/billing') return <BillingSkeleton />
-		if (path === '/dashboard/usage') return <UsageSkeleton />
-		if (path === '/dashboard/projects') return <ProjectsGridSkeleton />
-		if (willBeProjectDetail || willBeFolderDetail)
-			return <ContentListingSkeleton />
-		if (willBeSceneDetail) return <SceneDetailsSkeleton /> // Scene details can be variable, so we show a spinner instead of a skeleton
-
-		// Default skeleton
-		// return <CenteredSpinner text="Loading..." />
-	}
-
-	const skeleton = useMemo(getNavigationSkeleton, [showSkeleton, path])
 
 	/*
 	  One store per mount. Jotai creates it here, so dashboard UI state
@@ -303,7 +243,7 @@ const DashboardLayout = () => {
 							*/}
 						<div className="flex min-w-0 flex-1 items-center gap-2">
 							<DynamicBreadcrumb />
-							{isBackgroundRefreshing && (
+							{isLoadingAnything && (
 								<Loader2 className="text-muted-foreground h-3.5 w-3.5 shrink-0 animate-spin" />
 							)}
 						</div>
@@ -326,11 +266,20 @@ const DashboardLayout = () => {
 					<div className="container-page row-start-2 min-h-0 overflow-y-auto">
 						{!(isSceneDetailRoute && willBePublisherRoute) &&
 							!(isSceneDetailRoute || willBeSceneDetail) && <DashboardHeader />}
-						{isContentNavigationLoading && !willBeOverlayRoute ? (
-							skeleton
-						) : (
-							<Outlet />
-						)}
+						{/*
+						  Always the outlet. A client-side navigation keeps the page
+						  that is already on screen until the new loader resolves,
+						  which is React Router's own behaviour and costs nothing to
+						  get - the previous route's component simply stays mounted.
+
+						  This used to swap in a skeleton after 200ms. Blanking a
+						  correct page to grey bars is a step backwards from holding
+						  it: the data on screen is real until the moment it is
+						  replaced. Progress is reported by `GlobalNavigationLoader`
+						  at the top of the viewport and by the spinner beside the
+						  breadcrumb above.
+						*/}
+						<Outlet />
 					</div>
 				</SidebarInset>
 			</SidebarProvider>

@@ -3,7 +3,6 @@ import { data, Link } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
 import { DashboardOverview, SceneCard } from '../../components/dashboard'
-import { DashboardSkeleton } from '../../components/skeletons'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { toSceneRef } from '../../lib/domain/dashboard/dashboard-confirmation'
 import { getRecentScenes } from '../../lib/domain/dashboard/dashboard-stats.server'
@@ -80,10 +79,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	}
 
 	return defaultShouldRevalidate
-}
-
-export function HydrateFallback() {
-	return <DashboardSkeleton />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'

@@ -2,7 +2,6 @@ import { data, Outlet, useLocation } from 'react-router'
 
 import { Route } from './+types/project'
 import { ContentListing } from '../../../components/dashboard'
-import { ContentListingSkeleton } from '../../../components/skeletons'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import {
@@ -68,10 +67,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		actionResult,
 		defaultShouldRevalidate
 	})
-}
-
-export function HydrateFallback() {
-	return <ContentListingSkeleton />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'

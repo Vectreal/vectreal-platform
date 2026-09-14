@@ -12,7 +12,6 @@ import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/organizations'
 import { DashboardCard } from '../../components/dashboard'
-import { OrganizationsSkeleton } from '../../components/skeletons'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
@@ -44,10 +43,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	return false
 }
 
-export function HydrateFallback() {
-	return <OrganizationsSkeleton />
-}
-
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const OrganizationsPage = () => {
@@ -74,7 +69,7 @@ const OrganizationsPage = () => {
 	}
 
 	return (
-		<div className="space-y-6 py-6">
+		<div className="space-y-8 py-6">
 			{/*
 			  One list, and no counts above it.
 
