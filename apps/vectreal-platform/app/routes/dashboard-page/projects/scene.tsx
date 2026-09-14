@@ -13,6 +13,7 @@ import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
 import { useAppColorScheme } from '../../../hooks/use-app-color-scheme'
 import { useSceneMetadata } from '../../../hooks/use-scene-metadata'
+import { useTextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { toSceneRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { resolveSceneMembership } from '../../../lib/domain/dashboard/dashboard-permissions.server'
@@ -146,6 +147,13 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	const model = useLoadModel()
 	const { file, sceneData, load } = model
+	/*
+	  Thumbnails are resolved here, where the bytes already live in hook state, and
+	  only the URLs go down. Passing `assetData` itself through props froze the
+	  tab for 40 seconds in development: React's render logging walks changed
+	  props, and it reached every byte. See `useTextureThumbnailUrls`.
+	*/
+	const textureUrls = useTextureThumbnailUrls(sceneData?.assetData)
 	const sceneSource = useMemo(
 		() =>
 			sceneId
@@ -360,7 +368,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 				*/}
 				<SceneAside
 					details={sceneDetails}
-					assetData={sceneData?.assetData}
+					textureUrls={textureUrls}
 					sceneId={sceneState.id}
 					projectId={project.id}
 					publishState={publishState}

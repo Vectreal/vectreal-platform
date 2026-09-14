@@ -4,12 +4,12 @@ import { SceneAssetsSection } from './scene-assets-section'
 import { SceneMetricsSection } from './scene-metrics-section'
 import { SceneSurfaceDrawer } from './scene-surface-drawer'
 
-import type { SerializedSceneAssetDataMap } from '../../../types/api'
+import type { TextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
 import type { SceneDetailsSummary } from '../../../types/dashboard'
 
 interface SceneDetailsSheetProps {
 	details: SceneDetailsSummary
-	assetData?: SerializedSceneAssetDataMap | null
+	textureUrls?: TextureThumbnailUrls
 	className?: string
 }
 
@@ -43,7 +43,7 @@ function describeContents(details: SceneDetailsSummary): string {
  */
 export function SceneDetailsSheet({
 	details,
-	assetData,
+	textureUrls,
 	className
 }: SceneDetailsSheetProps) {
 	return (
@@ -56,7 +56,7 @@ export function SceneDetailsSheet({
 			<SceneMetricsSection details={details} headingLevel="h3" />
 			<SceneAssetsSection
 				assets={details.assets}
-				assetData={assetData}
+				textureUrls={textureUrls}
 				headingLevel="h3"
 			/>
 		</SceneSurfaceDrawer>

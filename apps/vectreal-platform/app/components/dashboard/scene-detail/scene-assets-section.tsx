@@ -8,7 +8,7 @@ import {
 	SceneAssetListItem
 } from '../scene-asset-list-item'
 
-import type { SerializedSceneAssetDataMap } from '../../../types/api'
+import type { TextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
 import type { SceneAssetSummary } from '../../../types/dashboard'
 
 /** Rows shown before the list asks to be expanded. */
@@ -16,7 +16,8 @@ const COLLAPSED_LIMIT = 6
 
 interface SceneAssetsSectionProps {
 	assets: SceneAssetSummary[]
-	assetData?: SerializedSceneAssetDataMap | null
+	/** A thumbnail URL per image asset. Never the bytes - see `useTextureThumbnailUrls`. */
+	textureUrls?: TextureThumbnailUrls
 	/** `h2` in the aside, `h3` under the details sheet's own title. */
 	headingLevel?: 'h2' | 'h3'
 	className?: string
@@ -32,7 +33,7 @@ interface SceneAssetsSectionProps {
  */
 export function SceneAssetsSection({
 	assets,
-	assetData,
+	textureUrls,
 	headingLevel = 'h2',
 	className
 }: SceneAssetsSectionProps) {
@@ -48,10 +49,10 @@ export function SceneAssetsSection({
 			new Map(
 				assets.map((asset) => [
 					asset.id,
-					buildAssetListItemProps(asset, assetData)
+					buildAssetListItemProps(asset, textureUrls)
 				])
 			),
-		[assets, assetData]
+		[assets, textureUrls]
 	)
 
 	return (
@@ -71,7 +72,7 @@ export function SceneAssetsSection({
 							key={asset.id}
 							className="ds-raised"
 							{...(assetPropsById.get(asset.id) ||
-								buildAssetListItemProps(asset, assetData))}
+								buildAssetListItemProps(asset, textureUrls))}
 						/>
 					))}
 
@@ -93,7 +94,7 @@ export function SceneAssetsSection({
 										key={asset.id}
 										className="ds-raised"
 										{...(assetPropsById.get(asset.id) ||
-											buildAssetListItemProps(asset, assetData))}
+											buildAssetListItemProps(asset, textureUrls))}
 									/>
 								))}
 							</motion.div>
