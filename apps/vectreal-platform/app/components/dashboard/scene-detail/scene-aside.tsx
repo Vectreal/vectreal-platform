@@ -7,14 +7,14 @@ import { SceneMetricsSection } from './scene-metrics-section'
 import { ScenePublishPanel } from './scene-publish-panel'
 import { StatGrid, StatTile } from '../../layout-components'
 
+import type { TextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import type { ScenePublishStateResponse } from '../../../types/api'
-import type { SerializedSceneAssetDataMap } from '../../../types/api'
 import type { SceneDetailsSummary } from '../../../types/dashboard'
 
 interface SceneAsideProps {
 	details: SceneDetailsSummary
-	assetData?: SerializedSceneAssetDataMap | null
+	textureUrls?: TextureThumbnailUrls
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
@@ -51,9 +51,9 @@ interface SceneAsideProps {
  * `scene-summary-bar.spec.tsx` pinned that the bar did not render it - but the
  * page mounted `SceneFactsPanel` beside it regardless, `hidden` rather than
  * unmounted, so the list was in the document at every width already. The
- * thumbnails are `data:` URIs built from asset bytes the page has loaded
- * anyway, so this is DOM and decode, never a request. What the split did cost
- * was real: two publish panels and two delete buttons per page.
+ * thumbnails are object URLs over asset bytes the page has loaded anyway, so
+ * this is DOM and decode, never a request. What the split did cost was real:
+ * two publish panels and two delete buttons per page.
  *
  * The breakpoint stays in CSS deliberately. Choosing a host in JavaScript would
  * need the viewport at render time, which is the hydration flip `mobile-nav.tsx`
@@ -61,7 +61,7 @@ interface SceneAsideProps {
  */
 export function SceneAside({
 	details,
-	assetData,
+	textureUrls,
 	sceneId,
 	projectId,
 	publishState,
@@ -129,7 +129,7 @@ export function SceneAside({
 			<SceneDetailsSheet
 				className="xl:hidden"
 				details={details}
-				assetData={assetData}
+				textureUrls={textureUrls}
 			/>
 
 			<SceneMetricsSection className="hidden xl:block" details={details} />
@@ -141,7 +141,7 @@ export function SceneAside({
 			*/}
 			<SceneAssetsSection
 				assets={details.assets}
-				assetData={assetData}
+				textureUrls={textureUrls}
 				className="hidden min-h-0 overflow-y-auto xl:flex"
 			/>
 

@@ -1,8 +1,7 @@
 import { Badge } from '@shared/components/ui/badge'
 import { cn, formatFileSize } from '@shared/utils'
-import { toSerializedAssetBytes } from '@vctrl/core'
 
-import type { SerializedSceneAssetDataMap } from '../../types/api'
+import type { TextureThumbnailUrls } from '../../hooks/use-texture-thumbnail-urls'
 import type { SceneAssetSummary } from '../../types/dashboard'
 
 type TextureAssetProps = {
@@ -19,49 +18,22 @@ type OtherAssetProps = {
 
 export type SceneAssetListItemProps = TextureAssetProps | OtherAssetProps
 
-function bytesToBase64(bytes: Uint8Array): string {
-	let binary = ''
-	for (let index = 0; index < bytes.length; index += 1) {
-		binary += String.fromCharCode(bytes[index])
-	}
-	return btoa(binary)
-}
-
-/**
- * Derives a preview data URL for a texture asset from serialized asset bytes.
- * Accepts number[]/Uint8Array/base64 payloads via toSerializedAssetBytes.
- */
-function resolveTextureUrl(
-	asset: SceneAssetSummary,
-	assetData: SerializedSceneAssetDataMap | null | undefined
-): string | undefined {
-	if (asset.type !== 'texture' || !assetData?.[asset.id]) {
-		return undefined
-	}
-
-	const entry = assetData[asset.id]
-	if (!entry?.mimeType) {
-		return undefined
-	}
-
-	const bytes = toSerializedAssetBytes(entry)
-	if (bytes.length === 0) {
-		return undefined
-	}
-
-	return `data:${entry.mimeType};base64,${bytesToBase64(bytes)}`
-}
-
 /**
  * Builds typed props for SceneAssetListItem, enforcing that textureUrl
  * is present and required when the asset is of type 'texture'.
+ *
+ * Takes a URL per asset rather than the asset's bytes. The bytes used to be
+ * passed down to here and base64-encoded one character at a time on every
+ * recomputation; the page now makes one object URL per image and this only
+ * looks it up. See `useTextureThumbnailUrls` for why bytes must not travel
+ * through props at all.
  */
 export function buildAssetListItemProps(
 	asset: SceneAssetSummary,
-	assetData?: SerializedSceneAssetDataMap | null
+	textureUrls?: TextureThumbnailUrls
 ): TextureAssetProps | OtherAssetProps {
-	if (asset.type === 'texture' && assetData) {
-		const textureUrl = resolveTextureUrl(asset, assetData)
+	if (asset.type === 'texture') {
+		const textureUrl = textureUrls?.[asset.id]
 		if (textureUrl) {
 			return {
 				asset: asset as SceneAssetSummary & { type: 'texture' },
