@@ -159,36 +159,6 @@ const DashboardLayout = () => {
 		revalidator.state !== 'idle' ||
 		fetchers.some((fetcher) => fetcher.state !== 'idle')
 
-	const path = navigation.location?.pathname || ''
-
-	// Both drawer shapes: the nested one, and the list-scoped
-	// `/dashboard/projects/edit/:projectId`, which `sceneDetailRegex` below
-	// would otherwise claim as a scene.
-	const projectEditRegex =
-		/^\/dashboard\/projects\/(?:([^/]+)\/edit|edit\/([^/]+))$/
-	const folderDetailRegex = /^\/dashboard\/projects\/([^/]+)\/folder\/([^/]+)$/
-	const sceneDetailRegex = /^\/dashboard\/projects\/([^/]+)\/([^/]+)$/
-	const newProjectRegex = /^\/dashboard\/projects\/new$/
-	const publisherRegex = /\/publisher/
-
-	const isSceneDetailRoute =
-		sceneDetailRegex.test(location.pathname) &&
-		!projectEditRegex.test(location.pathname) &&
-		!folderDetailRegex.test(location.pathname)
-
-	const willBeNewProjectCreation = newProjectRegex.test(path)
-	const willBeProjectEditRoute = projectEditRegex.test(path)
-	const willBePublisherRoute = publisherRegex.test(path)
-	const willBeFolderDetail =
-		folderDetailRegex.test(path) &&
-		!willBeProjectEditRoute &&
-		!willBeNewProjectCreation
-	const willBeSceneDetail =
-		sceneDetailRegex.test(path) &&
-		!willBeProjectEditRoute &&
-		!willBeFolderDetail &&
-		!willBeNewProjectCreation
-
 	/*
 	  One store per mount. Jotai creates it here, so dashboard UI state
 	  (selection, dialogs, the upgrade modal) starts empty on every entry
@@ -264,8 +234,24 @@ const DashboardLayout = () => {
 					  would have collapsed it.
 					*/}
 					<div className="container-page row-start-2 min-h-0 overflow-y-auto">
-						{!(isSceneDetailRoute && willBePublisherRoute) &&
-							!(isSceneDetailRoute || willBeSceneDetail) && <DashboardHeader />}
+						{/*
+						  Unconditionally. `DashboardHeader` already returns nothing when
+						  its action variant is `SCENE_DETAIL`, so the scene page - which
+						  draws its own heading - suppressed it twice.
+
+						  Six regexes and five flags lived here to make that second
+						  decision, re-deriving what `getRouteContext` resolves to a typed
+						  union and what the header then resolves again from its own data.
+						  The condition was also self-cancelling:
+						  `!(isSceneDetailRoute && willBePublisherRoute) &&
+						  !(isSceneDetailRoute || willBeSceneDetail)` reduces to the second
+						  clause alone, so the publisher regex never decided anything.
+
+						  Found by mutating it: pointing the route comparison at
+						  `folder-detail` changed nothing on a scene page, because the
+						  component had been deciding all along.
+						*/}
+						<DashboardHeader />
 						{/*
 						  Always the outlet. A client-side navigation keeps the page
 						  that is already on screen until the new loader resolves,
