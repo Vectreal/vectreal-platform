@@ -15,6 +15,7 @@ import {
 	parseRouteParams
 } from '../components/dashboard'
 import { DASHBOARD_CONTENT, DASHBOARD_ROUTES } from '../constants/dashboard'
+import { PLAN_DISPLAY_NAMES } from '../constants/product-copy'
 import {
 	ACTION_VARIANT,
 	type BreadcrumbItem,
@@ -163,12 +164,21 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 						{ label: organizationDetail.organization.name, isLast: true }
 					]
 
+					/*
+					  The plan belongs on this line rather than in a tile or a lone
+					  paragraph below the title. It is a fact about the organization
+					  the way the two counts are, and every fact about the
+					  organization now reads in one place.
+					*/
+					const orgCounts = describeCounts(
+						[organizationDetail.members.length, 'member'],
+						[organizationDetail.projectsTotal, 'project']
+					)
+					const planLabel = `${PLAN_DISPLAY_NAMES[organizationDetail.billing.plan]} plan`
+
 					return {
 						title: organizationDetail.organization.name,
-						description: describeCounts(
-							[organizationDetail.members.length, 'member'],
-							[organizationDetail.projectsTotal, 'project']
-						),
+						description: orgCounts ? `${orgCounts} • ${planLabel}` : planLabel,
 						actionVariant: undefined,
 						breadcrumbs
 					}

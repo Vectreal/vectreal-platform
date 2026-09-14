@@ -24,14 +24,7 @@ import {
 	TableHeader,
 	TableRow
 } from '@shared/components/ui/table'
-import {
-	AlertCircle,
-	Building2,
-	Calendar,
-	Crown,
-	Shield,
-	Users
-} from 'lucide-react'
+import { AlertCircle, Building2, Calendar, Crown, Users } from 'lucide-react'
 import { useState } from 'react'
 import { data, Form as RemixForm, useSubmit } from 'react-router'
 import {
@@ -154,21 +147,6 @@ function deleteOrganizationAction(
 		},
 		fields: { intent: 'delete-organization' }
 	}
-}
-
-function statusVariantFromBillingState(
-	billingState: string
-): 'default' | 'secondary' | 'destructive' | 'outline' {
-	if (billingState === 'active' || billingState === 'trialing') {
-		return 'default'
-	}
-	if (billingState === 'past_due' || billingState === 'unpaid') {
-		return 'destructive'
-	}
-	if (billingState === 'canceled') {
-		return 'outline'
-	}
-	return 'secondary'
 }
 
 function membershipVariant(
@@ -476,7 +454,11 @@ export default function OrganizationDetailPage({
 		  this route's loader data directly. Destructuring it again is what put
 		  the same number on the page twice.
 		*/
-		billing,
+		/*
+		  `billing` stays in the loader and is not read here: the plan is part of
+		  the header description, built in `use-dashboard-content.ts` from this
+		  route's loader data. A read-only billing state has its own alert above.
+		*/
 		entitlements,
 		isReadOnlyBillingState,
 		user
@@ -490,6 +472,17 @@ export default function OrganizationDetailPage({
 	})
 	const canManageMembers = canManageOrg && entitlements.orgMultiMember
 	const canManageRoles = canManageOrg && entitlements.orgRoles
+
+	/*
+	  Whether the Actions column can hold anything at all. Role editing needs the
+	  entitlement; removal needs someone other than yourself to remove. On a free
+	  single-member organization - which is every organization in production -
+	  neither is ever true, so the column drew a heading over four empty cells.
+	*/
+	const hasMemberActions =
+		!isReadOnlyBillingState &&
+		(canManageRoles ||
+			(canManageMembers && members.some((m) => m.user.id !== user.id)))
 
 	/*
 	  All three of these used to be bare submit buttons: one click removed a
@@ -549,36 +542,18 @@ export default function OrganizationDetailPage({
 			)}
 
 			{/*
-			  No stat band. This page is for administering an organization -
-			  renaming it, inviting and removing people, changing a role, deleting
-			  it - and four cards of read-only figures above that work were a
-			  dashboard-shaped header rather than anything someone came here for.
+			  No stat band, and no plan line either. This page opened with four
+			  read-only cards - role, plan, members, projects - above the three
+			  things anyone comes here to do: rename the organization, manage who
+			  is in it, leave or delete it.
 
-			  Each was already stated: `Current role` is the viewer's own row in
-			  the members table below, with the same badge; `Members` and
-			  `Projects` are the header's description line, which
+			  Each was already stated, or now is. `Current role` is the viewer's
+			  own row in the members table below, with the same badge. Members,
+			  projects and the plan are the header's description line, which
 			  `use-dashboard-content.ts` owns for this page the way it does for a
-			  project and a folder. That left one fact stated nowhere else, so it
-			  stays as a line rather than a band - and only its state is worth a
-			  badge, because a plan name is not a warning.
+			  project and a folder. A lone paragraph restating the plan under the
+			  title was the same mistake one size smaller.
 			*/}
-			<p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-				<Shield className="h-4 w-4 shrink-0" />
-				<span>
-					<span className="capitalize">{billing.plan}</span> plan
-				</span>
-				{/*
-				  `none` is the absence of a subscription, not a state to report, and
-				  it is what every free organization holds - so the badge rendered the
-				  word "none" beside "Free plan" on all 24 of them. A badge is for
-				  something worth stopping at.
-				*/}
-				{billing.billingState === 'none' ? null : (
-					<Badge variant={statusVariantFromBillingState(billing.billingState)}>
-						{billing.billingState}
-					</Badge>
-				)}
-			</p>
 
 			<Card>
 				<CardHeader>
@@ -594,8 +569,11 @@ export default function OrganizationDetailPage({
 					<RemixForm method="post" className="space-y-4">
 						<AuthenticityTokenInput />
 						<input type="hidden" name="intent" value="update-name" />
-						<label className="text-sm font-medium">Organization name</label>
+						<label htmlFor="organization-name" className="text-sm font-medium">
+							Organization name
+						</label>
 						<Input
+							id="organization-name"
 							name="name"
 							defaultValue={organization.name}
 							disabled={!canManageOrg || isReadOnlyBillingState}
@@ -669,7 +647,9 @@ export default function OrganizationDetailPage({
 									<TableHead>Name</TableHead>
 									<TableHead>Email</TableHead>
 									<TableHead>Role</TableHead>
-									<TableHead className="text-right">Actions</TableHead>
+									{hasMemberActions && (
+										<TableHead className="text-right">Actions</TableHead>
+									)}
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -693,65 +673,75 @@ export default function OrganizationDetailPage({
 													{member.membership.role}
 												</Badge>
 											</TableCell>
-											<TableCell>
-												<div className="flex justify-end gap-2">
-													{canManageRoles && !isReadOnlyBillingState && (
-														<RemixForm method="post" className="flex gap-2">
-															<AuthenticityTokenInput />
-															<input
-																type="hidden"
-																name="intent"
-																value="update-role"
-															/>
-															<input
-																type="hidden"
-																name="targetUserId"
-																value={member.user.id}
-															/>
-															<Select
-																name="role"
-																defaultValue={member.membership.role}
-															>
-																<SelectTrigger className="h-8 w-28">
-																	<SelectValue />
-																</SelectTrigger>
-																<SelectContent>
-																	<SelectItem value="member">Member</SelectItem>
-																	<SelectItem value="admin">Admin</SelectItem>
-																	{membership.role === 'owner' && (
-																		<SelectItem value="owner">Owner</SelectItem>
-																	)}
-																</SelectContent>
-															</Select>
-															<Button size="sm" type="submit" variant="outline">
-																Save
-															</Button>
-														</RemixForm>
-													)}
-
-													{canManageMembers &&
-														!isReadOnlyBillingState &&
-														!isCurrentUser && (
-															<Button
-																size="sm"
-																variant="destructive"
-																type="button"
-																onClick={() =>
-																	setPendingAction(
-																		removeMemberAction(
-																			member.user.id,
-																			member.user.name ||
-																				member.user.email ||
-																				'this member'
-																		)
-																	)
-																}
-															>
-																Remove
-															</Button>
+											{hasMemberActions && (
+												<TableCell>
+													<div className="flex justify-end gap-2">
+														{canManageRoles && !isReadOnlyBillingState && (
+															<RemixForm method="post" className="flex gap-2">
+																<AuthenticityTokenInput />
+																<input
+																	type="hidden"
+																	name="intent"
+																	value="update-role"
+																/>
+																<input
+																	type="hidden"
+																	name="targetUserId"
+																	value={member.user.id}
+																/>
+																<Select
+																	name="role"
+																	defaultValue={member.membership.role}
+																>
+																	<SelectTrigger className="h-8 w-28">
+																		<SelectValue />
+																	</SelectTrigger>
+																	<SelectContent>
+																		<SelectItem value="member">
+																			Member
+																		</SelectItem>
+																		<SelectItem value="admin">Admin</SelectItem>
+																		{membership.role === 'owner' && (
+																			<SelectItem value="owner">
+																				Owner
+																			</SelectItem>
+																		)}
+																	</SelectContent>
+																</Select>
+																<Button
+																	size="sm"
+																	type="submit"
+																	variant="outline"
+																>
+																	Save
+																</Button>
+															</RemixForm>
 														)}
-												</div>
-											</TableCell>
+
+														{canManageMembers &&
+															!isReadOnlyBillingState &&
+															!isCurrentUser && (
+																<Button
+																	size="sm"
+																	variant="destructive"
+																	type="button"
+																	onClick={() =>
+																		setPendingAction(
+																			removeMemberAction(
+																				member.user.id,
+																				member.user.name ||
+																					member.user.email ||
+																					'this member'
+																			)
+																		)
+																	}
+																>
+																	Remove
+																</Button>
+															)}
+													</div>
+												</TableCell>
+											)}
 										</TableRow>
 									)
 								})}
@@ -768,20 +758,40 @@ export default function OrganizationDetailPage({
 			  confirmation tiers already told them apart: acknowledge against typed.
 			*/}
 			<Card>
-				<CardContent className="space-y-4">
-					<Button
-						type="button"
-						variant="outline"
-						size="sm"
-						disabled={isReadOnlyBillingState}
-						onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
-					>
-						Leave organization
-					</Button>
+				<CardContent className="space-y-6">
+					{/*
+					  Both exits read the same way - a sentence, then its control -
+					  which is the shape `DestructiveAction` exists to hold and the one
+					  `settings.tsx` uses. Leaving was a bare button above all of this,
+					  so the card opened with a control that explained nothing and then
+					  offered an explanation before its own control.
 
+					  They stay told apart by the control, not by the frame: leaving is
+					  an outline button because you can be invited back, deleting is the
+					  quiet ghost every destroying surface in the app shares.
+					*/}
+					<DestructiveAction description="Leaving gives up your own access. An owner or admin can invite you back.">
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							disabled={isReadOnlyBillingState}
+							onClick={() => setPendingAction(LEAVE_ORGANIZATION_ACTION)}
+						>
+							Leave organization
+						</Button>
+					</DestructiveAction>
+
+					{/*
+					  "and everything scoped to it" contradicted the note directly
+					  below it: deletion needs the organization to be empty of
+					  projects, so there is no scene or folder left to remove. What it
+					  does end is the organization and every membership in it, which
+					  is what the confirmation dialog has always said.
+					*/}
 					<DestructiveAction
-						description="Deleting this organization removes it and everything scoped to it."
-						note="Organization deletion is only available when no projects remain."
+						description="Deleting the organization ends it for every member."
+						note="Only possible once no projects remain."
 					>
 						<DestructiveActionButton
 							disabled={!canDeleteOrg || isReadOnlyBillingState}
