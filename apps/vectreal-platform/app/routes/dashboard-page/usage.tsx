@@ -10,7 +10,11 @@ import {
 import { data, Link, useLoaderData } from 'react-router'
 
 import { Route } from './+types/usage'
-import { UsageMeter, UsageMeterList } from '../../components/dashboard'
+import {
+	RelativeTime,
+	UsageMeter,
+	UsageMeterList
+} from '../../components/dashboard'
 import { DetailPanelSection } from '../../components/layout-components'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import {
@@ -47,21 +51,6 @@ const MB = 1024 * 1024
   setting nobody can set. Filed rather than faked.
 */
 const HEAVY_SHARE_OF_SCENE = 0.25
-
-/** Relative where it is recent, absolute once it stops being news. */
-function formatChanged(iso: string) {
-	const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
-
-	if (days < 1) return 'today'
-	if (days === 1) return 'yesterday'
-	if (days < 30) return `${days} days ago`
-
-	return new Date(iso).toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric'
-	})
-}
 
 /**
  * The five readings, as plain data.
@@ -357,7 +346,7 @@ const UsagePage = () => {
 													? '1 file'
 													: `${scene.assetCount} files`}
 												{' \u00b7 '}
-												changed {formatChanged(scene.updatedAt)}
+												changed <RelativeTime at={scene.updatedAt} />
 											</span>
 										</span>
 										<span className="shrink-0 text-xs font-medium tabular-nums">
@@ -420,9 +409,14 @@ const UsagePage = () => {
 													<Progress value={share} className="h-1" />
 												)}
 												<p className="text-muted-foreground text-xs">
-													{project.lastChangedAt
-														? `Last changed ${formatChanged(project.lastChangedAt)}`
-														: 'Nothing in it yet'}
+													{project.lastChangedAt ? (
+														<>
+															Last changed{' '}
+															<RelativeTime at={project.lastChangedAt} />
+														</>
+													) : (
+														'Nothing in it yet'
+													)}
 												</p>
 											</li>
 										)

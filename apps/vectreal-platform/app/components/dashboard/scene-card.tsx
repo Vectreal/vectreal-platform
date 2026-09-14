@@ -2,7 +2,7 @@ import { DropdownMenuItem } from '@shared/components/ui/dropdown-menu'
 import { FolderInput, Trash2 } from 'lucide-react'
 
 import { EntityCard } from './entity-card'
-import { RelativeEditTime } from './relative-time'
+import { RelativeTime } from './relative-time'
 import { SceneStatusTag } from './scene-status'
 
 import type { SceneStatus } from '../../lib/domain/dashboard/dashboard-confirmation'
@@ -57,7 +57,11 @@ export function SceneCard({
 			subtitle={scene.projectName}
 			thumbnailUrl={scene.thumbnailUrl}
 			status={<SceneStatusTag status={scene.status} />}
-			footer={<RelativeEditTime updatedAt={scene.updatedAt} />}
+			footer={
+				<>
+					Edited <RelativeTime at={scene.updatedAt} />
+				</>
+			}
 			menuItems={
 				onMove || onDelete ? (
 					<>
