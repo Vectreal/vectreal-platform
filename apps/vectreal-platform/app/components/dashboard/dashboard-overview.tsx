@@ -2,7 +2,7 @@ import { Button } from '@shared/components/ui/button'
 import { ArrowRight, Pencil, Play } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { RelativeEditTime } from './relative-time'
+import { RelativeTime } from './relative-time'
 import { SceneStatusTag } from './scene-status'
 import { SceneThumbnail } from './scene-thumbnail'
 
@@ -46,7 +46,7 @@ function ResumeBand({ scene }: { scene: SceneSummary }) {
 						<h2 className="text-h3 truncate">{scene.name}</h2>
 						<p className="text-muted-foreground truncate text-sm">
 							{scene.projectName ? `${scene.projectName} · ` : ''}
-							<RelativeEditTime updatedAt={scene.updatedAt} inline />
+							edited <RelativeTime at={scene.updatedAt} />
 						</p>
 					</div>
 

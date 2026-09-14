@@ -36,6 +36,7 @@ import { memo } from 'react'
 import { Link, useLocation } from 'react-router'
 
 import { createCheckboxColumn, SortableHeader } from './data-table'
+import { RelativeTime } from './relative-time'
 import { SceneStatusTag } from './scene-status'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
 import { useClipboardCopy } from '../../hooks/use-clipboard-copy'
@@ -577,11 +578,12 @@ interface ApiKeyColumnsOptions {
  * old key and being refused right now.
  */
 /**
- * How long until a deadline, in the same register as `formatRelativeTime`.
+ * How long until a deadline. The one forward-looking phrase on the dashboard.
  *
- * A separate function rather than a sign flip on that one: it reads dates in
- * the past and answers "3d ago", and feeding it a future date produces a
- * negative that formats as "0m ago". The two are not the same sentence.
+ * Deliberately not `formatRelativeTime`, which reads backwards and answers
+ * "3d ago": feeding it a future date produces a negative that formats as
+ * "0 min ago". The two are not the same sentence, which is why the shared
+ * owner in `relative-time.tsx` is the past tense only.
  */
 function formatRelativeDeadline(deadline: Date | null): string {
 	if (!deadline) return 'soon'
@@ -607,8 +609,8 @@ function isUnusedSinceRotation(row: ApiKeyRow): boolean {
  * A table row in the shape `api-key-lifecycle` reads.
  *
  * The dates are re-wrapped rather than passed through: loader data reaches this
- * file after serialization, and `formatRelativeTime` below has always guarded
- * the same way.
+ * file after serialization, and `RelativeTime` guards the same way at the two
+ * cells that render one.
  */
 export function toLifecycleRow(row: ApiKeyRow): ApiKeyLifecycleRow {
 	return {
@@ -640,22 +642,6 @@ function getApiKeyStatus(row: ApiKeyRow) {
 	return API_KEY_STATUS_PRESENTATION[
 		resolveApiKeyState(toLifecycleRow(row), new Date())
 	]
-}
-
-function formatRelativeTime(date: Date | null): string {
-	if (!date) return 'Never'
-
-	const now = new Date()
-	const diff = now.getTime() - new Date(date).getTime()
-	const seconds = Math.floor(diff / 1000)
-	const minutes = Math.floor(seconds / 60)
-	const hours = Math.floor(minutes / 60)
-	const days = Math.floor(hours / 24)
-
-	if (days > 0) return `${days}d ago`
-	if (hours > 0) return `${hours}h ago`
-	if (minutes > 0) return `${minutes}m ago`
-	return 'Just now'
 }
 
 /**
@@ -968,11 +954,20 @@ export function createApiKeyColumns(
 			cell: ({ row }) => (
 				<div className="flex flex-col">
 					<span className="text-muted-foreground text-sm">
-						{formatRelativeTime(row.original.lastUsedAt)}
+						{row.original.lastUsedAt ? (
+							<RelativeTime at={row.original.lastUsedAt} />
+						) : (
+							'Never'
+						)}
 					</span>
 					{isUnusedSinceRotation(row.original) && (
 						<span className="text-warning text-xs">
-							Unused since rotating {formatRelativeTime(row.original.rotatedAt)}
+							Unused since rotating{' '}
+							{row.original.rotatedAt ? (
+								<RelativeTime at={row.original.rotatedAt} />
+							) : (
+								'never'
+							)}
 						</span>
 					)}
 				</div>

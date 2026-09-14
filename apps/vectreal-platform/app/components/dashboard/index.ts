@@ -23,7 +23,7 @@ export {
 	type ProjectBrowseItem,
 	type StatusFilter
 } from './projects-browser'
-export { RelativeEditTime, formatRelativeEdit } from './relative-time'
+export { RelativeTime, formatRelativeTime } from './relative-time'
 export { SceneStatusTag, SCENE_STATUS_DOT } from './scene-status'
 export { SceneThumbnail } from './scene-thumbnail'
 export { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
