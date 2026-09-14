@@ -12,7 +12,6 @@ import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/organizations'
 import { DashboardCard } from '../../components/dashboard'
-import { OrganizationsSkeleton } from '../../components/skeletons'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
@@ -42,10 +41,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 	// Otherwise don't revalidate - data is cached
 	return false
-}
-
-export function HydrateFallback() {
-	return <OrganizationsSkeleton />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'

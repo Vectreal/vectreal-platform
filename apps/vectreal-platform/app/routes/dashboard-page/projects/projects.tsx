@@ -19,7 +19,6 @@ import {
 	type StatusFilter
 } from '../../../components/dashboard'
 import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
-import { ProjectsGridSkeleton } from '../../../components/skeletons'
 import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
@@ -128,10 +127,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		defaultShouldRevalidate,
 		scopePrefix: '/dashboard/projects'
 	})
-}
-
-export function HydrateFallback() {
-	return <ProjectsGridSkeleton />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'

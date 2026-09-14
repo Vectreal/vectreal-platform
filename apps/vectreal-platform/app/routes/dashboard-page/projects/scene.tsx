@@ -4,7 +4,6 @@ import { useCallback, useMemo } from 'react'
 import { data, useNavigate } from 'react-router'
 
 import { Route } from './+types/scene'
-import CenteredSpinner from '../../../components/centered-spinner'
 import {
 	InlineEditableMetadataField,
 	SceneAside,
@@ -135,10 +134,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		actionResult,
 		defaultShouldRevalidate
 	})
-}
-
-export function HydrateFallback() {
-	return <CenteredSpinner text="Loading scene..." />
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
