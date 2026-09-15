@@ -148,6 +148,22 @@ export async function updateOrganizationName(
 	return updatedOrganization
 }
 
+/**
+ * The seats counting against `org_seats`: every membership, owner included.
+ *
+ * Shared by the guard that refuses the next invitation and the page that shows
+ * an organization what it is using, so both count the same rows.
+ */
+export async function countOrganizationMembers(
+	organizationId: string
+): Promise<number> {
+	const [row] = await db
+		.select({ total: count() })
+		.from(organizationMemberships)
+		.where(eq(organizationMemberships.organizationId, organizationId))
+	return row?.total ?? 0
+}
+
 export async function inviteOrganizationMember(
 	organizationId: string,
 	actorUserId: string,
@@ -177,13 +193,7 @@ export async function inviteOrganizationMember(
 	await assertWithinQuota({
 		organizationId,
 		limitKey: 'org_seats',
-		measure: async () => {
-			const [row] = await db
-				.select({ total: count() })
-				.from(organizationMemberships)
-				.where(eq(organizationMemberships.organizationId, organizationId))
-			return row?.total ?? 0
-		},
+		measure: () => countOrganizationMembers(organizationId),
 		message: ({ limit }) =>
 			`Seat limit reached for your plan (${limit}). Remove a member or upgrade to invite more.`
 	})

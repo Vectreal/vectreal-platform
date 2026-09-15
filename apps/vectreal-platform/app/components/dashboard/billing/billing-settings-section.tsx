@@ -12,12 +12,14 @@ import { useEffect } from 'react'
 import { Link, useFetcher } from 'react-router'
 
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
+import {
+	getPurchasableUpgrade,
+	type BillingState
+} from '../../../constants/plan-config'
 import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
 import { describeBillingSituation } from '../../../lib/domain/billing/billing-situation'
-import { NEXT_PLAN_UP } from '../../../lib/domain/billing/plan-fit'
 import { InlineNotice } from '../../layout-components/inline-notice'
 
-import type { BillingState } from '../../../constants/plan-config'
 import type { PlanFit } from '../../../lib/domain/billing/plan-fit'
 import type { BillingSettingsData } from '../../../lib/domain/dashboard/dashboard-types'
 
@@ -96,7 +98,7 @@ export function BillingSettingsSection({
 	*/
 	const isEnterprise = effectivePlan === 'enterprise'
 
-	const nextPlanUp = NEXT_PLAN_UP[effectivePlan]
+	const nextPlanUp = getPurchasableUpgrade(effectivePlan)
 	const changePlanPath = nextPlanUp
 		? `${DASHBOARD_ROUTES.BILLING_UPGRADE}?plan=${nextPlanUp}`
 		: DASHBOARD_ROUTES.BILLING_UPGRADE
