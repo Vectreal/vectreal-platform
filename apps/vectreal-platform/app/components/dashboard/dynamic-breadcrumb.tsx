@@ -14,7 +14,6 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator
 } from '@shared/components/ui/breadcrumb'
-import { Skeleton } from '@shared/components/ui/skeleton'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Fragment, memo, useMemo } from 'react'
 import { Link } from 'react-router'
@@ -93,23 +92,21 @@ const getBreadcrumbNavigationState = (
  * Shows skeleton during loading and animates transitions
  */
 export const DynamicBreadcrumb = memo(() => {
-	const { breadcrumbs, isLoading } = useDashboardHeaderData()
+	const { breadcrumbs } = useDashboardHeaderData()
 	const renderedBreadcrumbs = useMemo(
 		() => (breadcrumbs ? collapseLogicalBreadcrumbs(breadcrumbs) : []),
 		[breadcrumbs]
 	)
 
-	// No breadcrumbs to render (even when not loading)
-	if (!isLoading && (!breadcrumbs || breadcrumbs.length === 0)) {
+	// Nothing to render: the committed route carries no trail.
+	if (!breadcrumbs || breadcrumbs.length === 0) {
 		return null
 	}
 
-	// Create a stable key that changes between loading and loaded states
-	const contentKey = isLoading
-		? 'breadcrumb-loading'
-		: renderedBreadcrumbs
-				.map((item) => ('kind' in item ? item.key : item.to || item.label))
-				.join('-') || 'empty'
+	const contentKey =
+		renderedBreadcrumbs
+			.map((item) => ('kind' in item ? item.key : item.to || item.label))
+			.join('-') || 'empty'
 
 	return (
 		<AnimatePresence mode="wait" initial={false}>
@@ -124,72 +121,50 @@ export const DynamicBreadcrumb = memo(() => {
 					ease: 'easeOut'
 				}}
 			>
-				{isLoading ? (
-					<Breadcrumb className="no-scrollbar overflow-x-auto">
-						<BreadcrumbList className="flex-nowrap gap-1 whitespace-nowrap">
-							<BreadcrumbItem>
-								<Skeleton className="h-4 w-20" />
-							</BreadcrumbItem>
-							<BreadcrumbSeparator />
-							<BreadcrumbItem>
-								<Skeleton
-									className="h-4 w-16"
-									style={{ animationDelay: '90ms' }}
-								/>
-							</BreadcrumbItem>
-							<BreadcrumbSeparator />
-							<BreadcrumbItem>
-								<Skeleton
-									className="h-4 w-24"
-									style={{ animationDelay: '180ms' }}
-								/>
-							</BreadcrumbItem>
-						</BreadcrumbList>
-					</Breadcrumb>
-				) : (
-					// One line, scrolled rather than wrapped: a wrapping trail would
-					// change the height of the bar and push the content down.
-					<Breadcrumb className="no-scrollbar overflow-x-auto">
-						<BreadcrumbList className="flex-nowrap gap-1 whitespace-nowrap">
-							{renderedBreadcrumbs.map((item, index) => {
-								const isFirst = index === 0
-								const showSeparator = !isFirst
-								const isEllipsis = 'kind' in item
-								const key = isEllipsis
-									? item.key
-									: `${item.to || item.label}-${index}`
+				{/*
+				  One line, scrolled rather than wrapped: a wrapping trail would
+				  change the height of the bar and push the content down.
+				*/}
+				<Breadcrumb className="no-scrollbar overflow-x-auto">
+					<BreadcrumbList className="flex-nowrap gap-1 whitespace-nowrap">
+						{renderedBreadcrumbs.map((item, index) => {
+							const isFirst = index === 0
+							const showSeparator = !isFirst
+							const isEllipsis = 'kind' in item
+							const key = isEllipsis
+								? item.key
+								: `${item.to || item.label}-${index}`
 
-								return (
-									<Fragment key={key}>
-										{showSeparator && <BreadcrumbSeparator />}
-										<BreadcrumbItem>
-											{isEllipsis ? (
-												<BreadcrumbEllipsis />
-											) : item.isLast ? (
-												<BreadcrumbPage>{item.label}</BreadcrumbPage>
-											) : item.to ? (
-												<BreadcrumbLink asChild>
-													<Link
-														viewTransition
-														to={item.to}
-														state={getBreadcrumbNavigationState(
-															item.to,
-															item.label
-														)}
-													>
-														{item.label}
-													</Link>
-												</BreadcrumbLink>
-											) : (
-												<BreadcrumbPage>{item.label}</BreadcrumbPage>
-											)}
-										</BreadcrumbItem>
-									</Fragment>
-								)
-							})}
-						</BreadcrumbList>
-					</Breadcrumb>
-				)}
+							return (
+								<Fragment key={key}>
+									{showSeparator && <BreadcrumbSeparator />}
+									<BreadcrumbItem>
+										{isEllipsis ? (
+											<BreadcrumbEllipsis />
+										) : item.isLast ? (
+											<BreadcrumbPage>{item.label}</BreadcrumbPage>
+										) : item.to ? (
+											<BreadcrumbLink asChild>
+												<Link
+													viewTransition
+													to={item.to}
+													state={getBreadcrumbNavigationState(
+														item.to,
+														item.label
+													)}
+												>
+													{item.label}
+												</Link>
+											</BreadcrumbLink>
+										) : (
+											<BreadcrumbPage>{item.label}</BreadcrumbPage>
+										)}
+									</BreadcrumbItem>
+								</Fragment>
+							)
+						})}
+					</BreadcrumbList>
+				</Breadcrumb>
 			</motion.div>
 		</AnimatePresence>
 	)

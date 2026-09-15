@@ -83,8 +83,6 @@ export interface DashboardContentConfig {
 	title: string
 	description?: string
 	actionVariant?: ACTION_VARIANT
-	loadingTitle?: string | ReactNode
-	loadingDescription?: string | ReactNode
 }
 
 export interface DynamicHeaderContent {
@@ -92,7 +90,6 @@ export interface DynamicHeaderContent {
 	description?: string | ReactNode
 	actionVariant?: ACTION_VARIANT
 	breadcrumbs?: BreadcrumbItem[]
-	isLoading?: boolean
 }
 
 export interface RouteParams {

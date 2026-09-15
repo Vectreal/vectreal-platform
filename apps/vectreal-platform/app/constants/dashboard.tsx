@@ -1,5 +1,3 @@
-import { Skeleton } from '@shared/components/ui/skeleton'
-
 import {
 	ACTION_VARIANT,
 	type DashboardContentConfig,
@@ -46,7 +44,6 @@ export const DASHBOARD_ROUTES = {
 
 /**
  * Unified dashboard content configuration by route context
- * Includes both loaded and optimistic (loading) state content
  */
 export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	dashboard: {
@@ -56,7 +53,6 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		// One job now. Usage moved to its own route, so this page is what it was
 		// always for: getting back to the thing you were doing.
 		description: 'Pick up where you left off.',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.DASHBOARD
 	},
 	'project-list': {
@@ -65,15 +61,11 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		// only environment settings are the publisher's HDRI lighting panel, which
 		// belongs to a scene and is not reachable from here.
 		description: 'Your projects across every organization you belong to',
-		loadingTitle: <Skeleton className="h-6 w-1/3" />,
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.PROJECT_LIST
 	},
 	'api-keys': {
 		title: 'API Keys',
 		description: 'Manage project-scoped API keys for preview and embed access',
-		loadingTitle: <Skeleton className="h-6 w-1/3" />,
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.API_KEYS_LIST
 	},
 	'project-detail': {
@@ -91,15 +83,11 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	organizations: {
 		title: 'Organizations',
 		description: 'Manage your organizations and teams',
-		loadingTitle: 'Organizations',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: ACTION_VARIANT.ORG_LIST
 	},
 	'organization-detail': {
 		title: 'Organization',
 		description: 'Organization details and member access',
-		loadingTitle: 'Organization',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},
 	/*
@@ -115,12 +103,6 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		  specific sentence ("Scene storage is close to its limit"), which a generic
 		  one above it can only weaken by being read first.
 		*/
-		loadingTitle: 'Usage',
-		/*
-		  No `loadingDescription` either. It drew a skeleton bar during navigation
-		  for a subtitle that then never arrived, so the header promised a line and
-		  took it away - a skeleton is a claim about what is coming.
-		*/
 		actionVariant: undefined
 	},
 	billing: {
@@ -131,12 +113,7 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		  is being charged", "Renews Oct 12, 2026", "A payment failed" - and the
 		  static line it replaces promised "your plan, and how it is paid for"
 		  above a page that has never named a charge for anybody.
-
-		  No `loadingDescription` either. It drew a skeleton bar during navigation
-		  for a sentence that was a constant three lines above it, which is a claim
-		  that something is being fetched when nothing is.
 		*/
-		loadingTitle: 'Billing & Plans',
 		actionVariant: undefined
 	},
 	/*
@@ -147,8 +124,6 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	'billing-checkout': {
 		title: 'Change Plan',
 		description: 'Choose a plan and continue to secure payment',
-		loadingTitle: 'Change Plan',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},
 	/*
@@ -158,15 +133,11 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	'billing-checkout-success': {
 		title: 'Plan Change Confirmed',
 		description: 'Your new plan is syncing now',
-		loadingTitle: 'Plan Change Confirmed',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},
 	'billing-checkout-canceled': {
 		title: 'Upgrade Paused',
 		description: 'No charge was made and your plan is unchanged',
-		loadingTitle: 'Upgrade Paused',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	},
 	settings: {
@@ -174,8 +145,6 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		// Named, rather than "your account settings and preferences", which is the
 		// title again in more words. These are the three things the page holds.
 		description: 'Your display name, theme, and cookie choices',
-		loadingTitle: 'Settings',
-		loadingDescription: <Skeleton className="h-4 w-1/3" />,
 		actionVariant: undefined
 	}
 } as const
