@@ -142,7 +142,7 @@ export function SceneAside({
 			<SceneAssetsSection
 				assets={details.assets}
 				textureUrls={textureUrls}
-				className="hidden min-h-0 overflow-y-auto xl:flex"
+				className="hidden min-h-0 flex-col overflow-y-auto xl:flex"
 			/>
 
 			{/*
