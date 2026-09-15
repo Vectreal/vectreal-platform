@@ -4,6 +4,7 @@ import {
 	SidebarProvider,
 	SidebarTrigger
 } from '@shared/components/ui/sidebar'
+import { cn } from '@shared/utils'
 import { Provider } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -15,6 +16,7 @@ import {
 	useLoaderData,
 	useLocation,
 	useNavigation,
+	useParams,
 	useRevalidator,
 	type MetaFunction
 } from 'react-router'
@@ -127,6 +129,7 @@ const DashboardLayout = () => {
 	const { consent } = useConsent()
 	const posthog = usePostHog()
 	const location = useLocation()
+	const { projectId, sceneId } = useParams()
 	const navigation = useNavigation()
 	const revalidator = useRevalidator()
 	useAuthResumeRevalidation({ enabled: true })
@@ -148,6 +151,8 @@ const DashboardLayout = () => {
 		navigation.location?.pathname === location.pathname
 	const isContentNavigationLoading =
 		navigation.state === 'loading' && !isSearchParamOnlyNavigation
+	const isSceneDetailsRoute = projectId && sceneId
+
 	/*
 	  Any work in flight, including a route change. This used to exclude a
 	  content navigation, because the skeleton was the signal for that one - with
@@ -219,21 +224,12 @@ const DashboardLayout = () => {
 						</div>
 					</div>
 
-					{/*
-					  `container-page` here, on the scroller, rather than in each route.
-					  It owns the measure and the gutter together - 80rem centred, 16px
-					  of gutter stepping to 24px at 48rem - and every route body and the
-					  header sit inside it, so they cannot disagree about either. Before
-					  this the dashboard had no measure at all: at 1600px the
-					  organization name input was ~1200px wide for a 15-character value,
-					  and each body chose its own `p-6`.
-
-					  On the scroller and not a wrapper inside it because this element
-					  already has a definite height from the grid row, which is what
-					  `scene.tsx`'s `xl:h-full` resolves against. A new box in that chain
-					  would have collapsed it.
-					*/}
-					<div className="container-page row-start-2 min-h-0 overflow-y-auto">
+					<div
+						className={cn(
+							'row-start-2 min-h-0 overflow-y-auto px-4',
+							!isSceneDetailsRoute && 'container-page'
+						)}
+					>
 						{/*
 						  Unconditionally. `DashboardHeader` already returns nothing when
 						  its action variant is `SCENE_DETAIL`, so the scene page - which
