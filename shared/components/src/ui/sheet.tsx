@@ -47,9 +47,24 @@ function SheetContent({
 	className,
 	children,
 	side = 'right',
+	showCloseButton = true,
 	...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
 	side?: 'top' | 'right' | 'bottom' | 'left'
+	/**
+	 * The same switch `DialogContent` and `DrawerContent` already take.
+	 *
+	 * Sheet was the one overlay without it, so the sidebar hid this button with
+	 * an arbitrary variant on the content that set every direct child button to
+	 * display none. That only holds while the close stays a direct child and
+	 * the rule reaches the page; where it did not, the corner button landed on
+	 * top of the sidebar's logo row and read as a remove action on it. A caller
+	 * that lays out its own close says so here instead.
+	 *
+	 * (The class is deliberately not spelled out: Tailwind scans comments, and
+	 * naming it here would keep the rule compiled.)
+	 */
+	showCloseButton?: boolean
 }) {
 	return (
 		<SheetPortal>
@@ -71,10 +86,12 @@ function SheetContent({
 				{...props}
 			>
 				{children}
-				<SheetPrimitive.Close className={OVERLAY_CLOSE_CLASSNAME}>
-					<XIcon className="size-4" />
-					<span className="sr-only">Close</span>
-				</SheetPrimitive.Close>
+				{showCloseButton && (
+					<SheetPrimitive.Close className={OVERLAY_CLOSE_CLASSNAME}>
+						<XIcon className="size-4" />
+						<span className="sr-only">Close</span>
+					</SheetPrimitive.Close>
+				)}
 			</SheetPrimitive.Content>
 		</SheetPortal>
 	)
