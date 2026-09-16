@@ -1,5 +1,5 @@
 {
-	"version": "0.25.1",
+	"version": "1.0.0",
 	"name": "@vctrl/embed",
 	"description": "Framework-agnostic JavaScript SDK for controlling Vectreal embedded 3D scene previews via postMessage.",
 	"bugs": {
