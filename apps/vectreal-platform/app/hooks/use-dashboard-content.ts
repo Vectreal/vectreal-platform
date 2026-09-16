@@ -6,12 +6,11 @@
 
 import { pluralize } from '@shared/utils'
 import { useMemo } from 'react'
-import { useLocation, useMatches, useNavigation } from 'react-router'
+import { useLocation, useMatches } from 'react-router'
 
 import {
 	extractRouteData,
 	getRouteContext,
-	identifyDrawerRoute,
 	parseRouteParams
 } from '../components/dashboard'
 import { DASHBOARD_CONTENT, DASHBOARD_ROUTES } from '../constants/dashboard'
@@ -20,8 +19,7 @@ import { describeBillingSituation } from '../lib/domain/billing/billing-situatio
 import {
 	ACTION_VARIANT,
 	type BreadcrumbItem,
-	type DynamicHeaderContent,
-	type NavigationState
+	type DynamicHeaderContent
 } from '../types/dashboard'
 
 /**
@@ -59,7 +57,6 @@ function describeCounts(
  */
 export const useDashboardHeaderData = (): DynamicHeaderContent => {
 	const location = useLocation()
-	const navigation = useNavigation()
 	const matches = useMatches()
 
 	// Parse current route
@@ -71,66 +68,20 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 		extractRouteData(matches)
 
 	const content = useMemo(() => {
-		// Skip optimistic updates for drawer routes to prevent flickering
-
-		const isDashboardRootRoute = (pathname: string) => pathname === '/dashboard'
-
-		// Handle optimistic updates during navigation (skip for drawer routes)
-		if (
-			navigation.state === 'loading' &&
-			navigation.location &&
-			navigation.location.pathname !== location.pathname &&
-			!isDashboardRootRoute(location.pathname) &&
-			!identifyDrawerRoute(location.pathname) &&
-			!identifyDrawerRoute(navigation.location.pathname)
-		) {
-			const nextRouteContext = getRouteContext(
-				navigation.location.pathname,
-				parseRouteParams(navigation.location.pathname)
-			)
-			const nextConfig = DASHBOARD_CONTENT[nextRouteContext]
-			const navState = navigation.location.state as NavigationState | null
-
-			// Use navigation state for instant updates (passed from DashboardCards)
-			if (navState?.name) {
-				const fallbackDescription =
-					nextConfig.loadingDescription || nextConfig.description
-				const itemDescription =
-					navState.description ||
-					(navState.projectName
-						? `${navState.type === 'scene' ? 'Scene' : 'Folder'} in ${navState.projectName}`
-						: fallbackDescription)
-
-				// Determine action variant from navigation state
-				let actionVariant = nextConfig.actionVariant
-				switch (navState.type) {
-					case 'scene':
-						actionVariant = ACTION_VARIANT.SCENE_DETAIL
-						break
-					case 'folder':
-						actionVariant = ACTION_VARIANT.FOLDER_DETAIL
-						break
-					case 'project':
-						actionVariant = ACTION_VARIANT.PROJECT_DETAIL
-						break
-				}
-
-				return {
-					title: navState.name,
-					description: itemDescription,
-					actionVariant,
-					isLoading: true
-				}
-			}
-
-			// Use optimistic route context for static routes
-			return {
-				title: nextConfig.loadingTitle || nextConfig.title,
-				description: nextConfig.loadingDescription || nextConfig.description,
-				actionVariant: nextConfig.actionVariant,
-				isLoading: true
-			}
-		}
+		/*
+		  The chrome follows the committed route, never the pending one. This
+		  used to read `navigation.location` while a navigation was in flight
+		  and render the destination's header over the page that was still on
+		  screen, which is the header doing the opposite of what
+		  `dashboard-layout.tsx` already decided for the page body: hold what is
+		  on screen until the new loader resolves, rather than swap to something
+		  else mid-flight. A route the header has no entry for (the publisher,
+		  which lives outside this switch entirely) fell through to the
+		  dashboard's own header and briefly replaced a suppressed scene header
+		  with a visible one, shifting the whole layout for the length of the
+		  navigation. The header is part of the page that holds; it does not get
+		  a separate rule.
+		*/
 
 		// Generate content based on loaded route context
 		switch (routeContext) {
@@ -487,8 +438,6 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 		folder,
 		scene,
 		organizationDetail,
-		navigation.state,
-		navigation.location,
 		usage,
 		billing
 	])
