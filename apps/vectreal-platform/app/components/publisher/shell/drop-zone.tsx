@@ -10,7 +10,13 @@ import {
 	FolderUp,
 	Upload
 } from 'lucide-react'
-import { ComponentProps, SyntheticEvent, useCallback } from 'react'
+import {
+	ChangeEvent,
+	ComponentProps,
+	SyntheticEvent,
+	useCallback,
+	useRef
+} from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Link } from 'react-router'
 
@@ -39,6 +45,22 @@ interface Props {
 export const DropZone = ({ isMobile, onUpload }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 
+	/*
+	  Two inputs, because a model arrives in two shapes and one element cannot
+	  offer both. A `.glb` is one self-contained file. A `.gltf` is a document
+	  plus its buffers and textures, which is a directory.
+
+	  `webkitdirectory` is not a hint, it replaces the dialog: the browser shows
+	  a directory chooser and ignores `accept` entirely. This component carried
+	  it on its only input, so the button reading "Choose Files" opened a folder
+	  picker that could not select a file, and the single-file case - the one
+	  every exporter produces by default, and the one the guides show - was
+	  unreachable by clicking. Dropping still worked, which is why it survived:
+	  anyone who tested it dragged the file in.
+	*/
+	const fileInputRef = useRef<HTMLInputElement>(null)
+	const directoryInputRef = useRef<HTMLInputElement>(null)
+
 	const handleDrop = useCallback(
 		(files: File[]) => {
 			if (files.length === 0) {
@@ -50,11 +72,40 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 		[onUpload]
 	)
 
-	const { getRootProps, getInputProps, isDragActive } = useDropzone({
-		onDrop: handleDrop
-	})
+	const handleSelected = useCallback(
+		(event: ChangeEvent<HTMLInputElement>) => {
+			const files = Array.from(event.target.files ?? [])
 
-	const { onClick, ...containerProps } = getRootProps<ComponentProps<'div'>>()
+			/*
+			  Cleared so the same path can be chosen twice. A file input fires no
+			  change event when the selection is identical, so after any failure -
+			  a model over the size limit, a format the optimizer refuses - picking
+			  the same file again did nothing at all.
+			*/
+			event.target.value = ''
+
+			if (files.length === 0) {
+				return
+			}
+
+			void onUpload(files as InputFileOrDirectory)
+		},
+		[onUpload]
+	)
+
+	const { getRootProps, isDragActive } = useDropzone({ onDrop: handleDrop })
+
+	/*
+	  The container keeps the drag handlers and loses the click. Dropzone's own
+	  click opens the input it manages; the two below are opened by name, so a
+	  click on the card means the common case rather than whichever input
+	  happened to be rendered.
+	*/
+	const { onClick: _dropzoneClick, ...containerProps } =
+		getRootProps<ComponentProps<'div'>>()
+
+	const openFilePicker = () => fileInputRef.current?.click()
+	const openDirectoryPicker = () => directoryInputRef.current?.click()
 
 	const stopDropzoneTrigger = (event: SyntheticEvent) => {
 		event.stopPropagation()
@@ -76,11 +127,19 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 					</header>
 					<div className="flex flex-col gap-4">
 						{/* <div className="flex flex-col gap-4 md:flex-row lg:grid lg:grid-cols-[2fr_1fr]"> */}
-						<div className="flex h-full flex-col gap-4" onClick={onClick}>
+						<div
+							className="flex h-full flex-col gap-4"
+							onClick={openFilePicker}
+						>
 							{isMobile ? (
+								/*
+								  No folder option here. iOS and Android have no directory
+								  picker to open, so offering one would be a button that does
+								  nothing on the devices this branch exists for.
+								*/
 								<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
 									<Upload className="h-4 w-4" />
-									Choose Files
+									Choose a file
 								</Button>
 							) : (
 								<Card className="group ds-overlay relative h-full overflow-hidden rounded-2xl">
@@ -124,8 +183,29 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 
 										<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
 											<Upload className="h-4 w-4" />
-											Choose Files
+											Choose a file
 										</Button>
+
+										{/*
+										  The second shape, named for when it applies rather than
+										  as an equal alternative. A reader with a `.glb` never
+										  needs this; a reader with a `.gltf` cannot proceed
+										  without it, and nothing else on this screen would tell
+										  them so.
+										*/}
+										<button
+											type="button"
+											onClick={(event) => {
+												stopDropzoneTrigger(event)
+												openDirectoryPicker()
+											}}
+											className="text-muted-foreground hover:text-foreground mt-3 text-sm underline underline-offset-4"
+										>
+											Choose a folder instead
+										</button>
+										<p className="text-muted-foreground mt-1 text-xs">
+											A .gltf needs the folder holding its textures and .bin
+										</p>
 									</div>
 								</Card>
 							)}
@@ -192,12 +272,31 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 					</div>
 				</div>
 
+				{/*
+				  `multiple` on the file input as well, so someone who keeps a `.gltf`
+				  beside its `.bin` and textures can select them together without
+				  reaching for the folder picker at all.
+				*/}
 				<input
-					{...getInputProps()}
+					ref={fileInputRef}
+					type="file"
+					multiple
+					accept={acceptPattern}
+					onChange={handleSelected}
+					className="hidden"
+					tabIndex={-1}
+					aria-hidden="true"
+				/>
+				<input
+					ref={directoryInputRef}
+					type="file"
 					webkitdirectory="true"
 					directory="true"
 					multiple
-					accept={acceptPattern}
+					onChange={handleSelected}
+					className="hidden"
+					tabIndex={-1}
+					aria-hidden="true"
 				/>
 			</div>
 		</div>
