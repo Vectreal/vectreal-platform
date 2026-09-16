@@ -24,16 +24,21 @@ Anything else is rejected with "Unsupported model format". Convert other formats
 
 Drag one or more files directly onto the upload area. The model loads as soon as the files are parsed.
 
+### File picker
+
+Click the upload area, or **Choose a file**, to open the system file picker. Select your model, and any files it references, together.
+
 ### Folder picker
 
-Click the upload area to open the system picker. It selects a whole folder rather than individual files, so put the model and everything it references in one directory first.
+Use **Choose a folder instead** when the model references files you would rather not select one by one. This opens a directory chooser, and everything in the folder is read.
 
 ### glTF bundles (folder upload)
 
 glTF separates geometry, binaries, and textures into multiple files. To upload a full bundle:
 
 1. Drag the **entire folder** onto the upload area, or
-2. Click the upload area and pick the containing folder.
+2. Choose a folder instead, and pick the containing folder, or
+3. Select the `.gltf` and its `.bin` and texture files together in the file picker.
 
 The parser identifies the `.gltf` root and resolves all referenced `.bin` and texture files automatically.
 
