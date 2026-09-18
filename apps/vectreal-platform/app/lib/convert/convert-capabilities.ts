@@ -32,18 +32,22 @@ import {
  */
 
 /**
- * Formats the loader accepts that a converter page must still not offer.
+ * What a converter page may read.
  *
- * This is product policy rather than capability, which is why it is written out
- * rather than derived. USDZ import is broken - the loader hands a zip archive
- * to a glTF reader - so a `usdz-to-glb` page would greet a stranger with a
- * parse error. It returns to the source set when that is fixed, not before.
+ * Derived with nothing subtracted. There used to be a `SOURCES_WITHHELD` list
+ * here holding `usdz`, on the grounds that the loader accepted it while being
+ * unable to read it, so a `usdz-to-glb` page would greet a stranger with a
+ * parse error. The owner says `canImport: false` now, which is the same fact
+ * stated where it belongs - so this file subtracting it again would be a second
+ * statement of the format set, which is exactly what the owner exists to end.
+ *
+ * A format that becomes readable arrives here on its own. If one ever needs
+ * withholding for a reason that is genuinely product policy rather than
+ * capability, that list comes back - but "the loader cannot read it" is never
+ * that reason.
  */
-const SOURCES_WITHHELD: readonly ConvertFormat[] = ['usdz']
-
-/** What a converter page may read. */
 export const CONVERTER_SOURCE_FORMATS: readonly ConvertFormat[] =
-	IMPORTABLE_FORMAT_IDS.filter((id) => !SOURCES_WITHHELD.includes(id))
+	IMPORTABLE_FORMAT_IDS
 
 /**
  * What a converter page may write, in the order the index reads them.

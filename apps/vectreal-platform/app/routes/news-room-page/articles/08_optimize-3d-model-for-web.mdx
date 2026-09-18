@@ -259,7 +259,7 @@ The final 3.1 MB file loads in under two seconds on standard broadband and under
 
 One factor the size table above does not include: the choice of input format before any optimization pass runs. Some formats carry structural overhead that limits how much gltf-transform can compress.
 
-GLB is the right starting point for any web optimization pass. It is binary-packed and self-contained, with all external texture and buffer references resolved into a single file. Multi-file glTF (JSON + separate texture files) should be packed to GLB before optimizing. USDZ needs conversion to GLB first; OBJ, FBX and STL do not, because the loader converts them to glTF on the way in.
+GLB is the right starting point for any web optimization pass. It is binary-packed and self-contained, with all external texture and buffer references resolved into a single file. Multi-file glTF (JSON + separate texture files) should be packed to GLB before optimizing. OBJ, FBX and STL need no conversion step of their own, because the loader converts them to glTF on the way in. USDZ is the exception in the other direction: it is something the Publisher writes, not something it reads.
 
 The distinction between glTF and GLB, what each actually contains, and why it matters for the optimization step is covered in [glTF vs GLB: what actually matters when you ship to the web](https://vectreal.com/news-room/gltf-vs-glb-what-actually-matters).
 

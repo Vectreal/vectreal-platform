@@ -115,7 +115,7 @@ async function loadError(files: File[]): Promise<StructuredLoadError> {
 }
 
 describe('a single model reaches the loader for its format', () => {
-	it.each(['model.glb', 'model.usdz', 'part.stl', 'part.fbx'])(
+	it.each(['model.glb', 'part.stl', 'part.fbx'])(
 		'sends %s to the binary loader',
 		async (name) => {
 			const { ctx, loadToThreeJS, loadGLTFWithAssetsToThreeJS } = context()
@@ -134,9 +134,6 @@ describe('a single model reaches the loader for its format', () => {
 		expect((await loadModelFromFiles([file('model.glb')], ctx)).file.type).toBe(
 			'glb'
 		)
-		expect(
-			(await loadModelFromFiles([file('model.usdz')], ctx)).file.type
-		).toBe('usdz')
 		expect((await loadModelFromFiles([file('part.stl')], ctx)).file.type).toBe(
 			'stl'
 		)
@@ -151,17 +148,13 @@ describe('a single model reaches the loader for its format', () => {
 	  and the visitor was told their GLB was not a supported model - by the code
 	  standing in front of a loader that lower-cases and would have read it.
 	*/
-	it.each([
-		'MODEL.GLB',
-		'Model.Glb',
-		'scene.GLTF',
-		'Scene.USDZ',
-		'PART.STL',
-		'Part.Fbx'
-	])('accepts %s, whatever case the extension is written in', async (name) => {
-		const { ctx } = context()
-		await expect(loadModelFromFiles([file(name)], ctx)).resolves.toBeTruthy()
-	})
+	it.each(['MODEL.GLB', 'Model.Glb', 'scene.GLTF', 'PART.STL', 'Part.Fbx'])(
+		'accepts %s, whatever case the extension is written in',
+		async (name) => {
+			const { ctx } = context()
+			await expect(loadModelFromFiles([file(name)], ctx)).resolves.toBeTruthy()
+		}
+	)
 })
 
 describe('a bundle reaches the loader with its siblings', () => {
@@ -239,18 +232,38 @@ describe('a selection that is not one model is refused, and says why', () => {
 		expect(error.message).toContain('two.gltf')
 	})
 
-	it('refuses a GLB beside a USDZ', async () => {
+	it('refuses a GLB beside an FBX', async () => {
 		/*
 		  Named formats rather than "any two models", because this is the guard
-		  the mutation gate drives: removing `usdz` from `MODEL_FORMATS` has to
+		  the mutation gate drives: removing `fbx` from `MODEL_FORMATS` has to
 		  redden the dispatch, the accept pattern AND this guard. With only
 		  `glb` + `gltf` here it stayed green, which would have meant the guard
 		  was reading something other than the owner and nobody would have known.
+
+		  This pair used to be `glb` + `usdz`. USDZ stopped being importable, so
+		  it stopped being a second model - which is the case below.
 		*/
-		const error = await loadError([file('one.glb'), file('two.usdz')])
+		const error = await loadError([file('one.glb'), file('two.fbx')])
 
 		expect(error.code).toBe('multiple_models')
-		expect(error.message).toContain('two.usdz')
+		expect(error.message).toContain('two.fbx')
+	})
+
+	it('does not count a USDZ as a second model', async () => {
+		/*
+		  The other side of `canImport: false`. A USDZ beside a GLB is not an
+		  ambiguous selection any more, because only one of the two is something
+		  the loader can read - so the GLB loads instead of the visitor being told
+		  to pick one.
+		*/
+		const { ctx } = context()
+
+		const loaded = await loadModelFromFiles(
+			[file('one.glb'), file('two.usdz')],
+			ctx
+		)
+
+		expect(loaded.file.name).toBe('one.glb')
 	})
 
 	it('counts an upper-case model among the multiple', async () => {
@@ -279,6 +292,22 @@ describe('a selection that is not one model is refused, and says why', () => {
 
 		expect(error.code).toBe('unsupported_format')
 		expect(error.message).toContain('notes.txt')
+	})
+
+	it('refuses a USDZ on its own, in front of the loader', async () => {
+		/*
+		  THE DEFECT THIS CLOSES. The owner advertised USDZ import and there is no
+		  USDZ reader, so `readDocument` handed a zip archive to glTF-Transform and
+		  the visitor was told to check their file was a valid glTF - about a file
+		  that was never glTF and that the site had just offered to read.
+
+		  Refused here, ahead of the loader, so the message is about the format
+		  rather than about whatever the zip did to a parser.
+		*/
+		const error = await loadError([file('chair.usdz')])
+
+		expect(error.code).toBe('unsupported_format')
+		expect(error.message).toContain('chair.usdz')
 	})
 
 	it('refuses an empty selection', async () => {
@@ -336,10 +365,19 @@ describe('the optimizer is ingested with glTF bytes, whatever was dropped', () =
 		)
 	})
 
-	it('ingests nothing for a USDZ, which is a zip', async () => {
+	it('never reaches the optimizer with a USDZ, because it never loads', async () => {
+		/*
+		  This used to assert that the ingest was skipped for a USDZ that had
+		  loaded. Nothing loads now: the refusal happens in front of the loader,
+		  so the optimizer is unreachable rather than skipped. Kept, because the
+		  claim it protects is the same one - a zip archive must never reach a
+		  glTF reader - and this is now where that is decided.
+		*/
 		const { withOptimizer, loadFromGlbBuffer } = context()
 
-		await loadModelFromFiles([file('model.usdz')], withOptimizer)
+		await expect(
+			loadModelFromFiles([file('model.usdz')], withOptimizer)
+		).rejects.toBeTruthy()
 
 		expect(loadFromGlbBuffer).not.toHaveBeenCalled()
 	})

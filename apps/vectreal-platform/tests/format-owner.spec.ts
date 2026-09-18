@@ -166,34 +166,55 @@ describe('only one module enumerates the accepted formats', () => {
 		}
 	})
 
-	it('the upload guide lists exactly the formats the loader accepts', () => {
-		/*
-		  ACCEPTANCE, NOT DECLARATION. This is the page that told readers for
-		  years to convert OBJ, FBX and STL away before uploading, while the
-		  loader read all three. Its own claims block pins that the owner
-		  *declares* those formats; only this can say the table matches what the
-		  owner actually accepts, which is the sentence a reader acts on.
+	/*
+	  Every page that prints a "Supported formats" table, and what it is for.
 
-		  Mutation gates, executed: setting `canImport: false` on any format
-		  reddens this and leaves every claim on the page green, which is the
-		  case it exists for; adding a row to the table without adding the format
-		  reddens it too.
+	  ACCEPTANCE, NOT DECLARATION. `upload.mdx` told readers for years to convert
+	  OBJ, FBX and STL away before uploading, while the loader read all three. A
+	  claims block can pin that the owner *declares* a format; only this can say
+	  the table matches what the owner actually accepts, which is the sentence a
+	  reader acts on.
+
+	  Three pages rather than one, because the same drift happened to all of them
+	  and only `upload.mdx` was gated. The two added here each carried a USDZ row
+	  promising "limited support" for an import that threw on every file.
+
+	  Mutation gates, executed: flipping `canImport` on any format reddens all
+	  three and leaves every claims block on those pages green, which is the case
+	  this exists for; adding a row without adding the format reddens it too.
+	*/
+	it.each([
+		'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
+		'apps/vectreal-platform/app/routes/docs/getting-started/first-model.mdx',
+		'apps/vectreal-platform/app/routes/news-room-page/articles/02_the-vectreal-publisher-walkthrough.mdx'
+	])('%s lists exactly the formats the loader accepts', (path) => {
+		const page = readFileSync(resolve(ROOT, path), 'utf8')
+
+		/*
+		  Anchored to the heading, so an unrelated table on the same page cannot
+		  be read as a format list, and stopped at the blank line that ends the
+		  table. `**glTF**` and `glTF` both occur across these three.
 		*/
-		const guide = readFileSync(
-			resolve(ROOT, 'apps/vectreal-platform/app/routes/docs/guides/upload.mdx'),
-			'utf8'
-		)
+		const table =
+			/(?:#+\s*|\*\*)Supported formats\**:?\**\s*\n+((?:\|.*\n)+)/.exec(page)
 
-		const listed = [...guide.matchAll(/^\|\s\*\*(\w+)\*\*\s\|/gm)].map(
-			(match) => match[1].toLowerCase()
-		)
+		expect(
+			table,
+			`${path} has no "Supported formats" table to check`
+		).not.toBeNull()
+
+		const listed = [
+			...table![1].matchAll(/^\|\s\*{0,2}([A-Za-z]+)\*{0,2}\s\|/gm)
+		]
+			.map((match) => match[1].toLowerCase())
+			.filter((name) => name !== 'format')
 
 		/*
-		  Compared as sets. The owner's declaration order is dispatch precedence
-		  - `gltf` leads so a folder holding a `.gltf` beside a `.glb` reads as
-		  the bundle - and a docs table's order is editorial. Asserting the order
-		  would redden this page for a reordering made about folder-drop
-		  disambiguation, which is not a claim the page makes.
+		  Compared as sets. The owner's declaration order is dispatch precedence -
+		  `gltf` leads so a folder holding a `.gltf` beside a `.glb` reads as the
+		  bundle - and a docs table's order is editorial. Asserting the order would
+		  redden these pages for a reordering made about folder-drop
+		  disambiguation, which is not a claim they make.
 		*/
 		expect([...listed].sort()).toEqual(
 			IMPORTABLE_FORMAT_LABELS.map((label) => label.toLowerCase()).sort()

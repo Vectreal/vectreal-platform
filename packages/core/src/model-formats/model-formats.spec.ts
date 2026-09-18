@@ -77,12 +77,27 @@ describe('a file name resolves to at most one format', () => {
 		'MODEL.GLB',
 		'Model.Glb',
 		'scene.GLTF',
-		'Scene.UsdZ',
 		'UPPER.CASE.NAME.GLB'
 	])('reads %s whatever case it is written in', (fileName) => {
 		expect(modelFormatForFileName(fileName)).not.toBeNull()
 		expect(isImportableFileName(fileName)).toBe(true)
 	})
+
+	/*
+	  A format the owner knows and the loader cannot read. `modelFormatForFileName`
+	  does not consult `canImport` and must not start: the dispatch still needs to
+	  identify a USDZ in order to refuse it by name rather than handing it to a
+	  glTF reader and reporting whatever that throws. The two answers pull apart
+	  here and nowhere else, which is why this is its own case rather than a row
+	  removed from the list above.
+	*/
+	it.each(['Scene.UsdZ', 'model.usdz', 'MODEL.USDZ'])(
+		'identifies %s but does not offer to import it',
+		(fileName) => {
+			expect(modelFormatForFileName(fileName)?.id).toBe('usdz')
+			expect(isImportableFileName(fileName)).toBe(false)
+		}
+	)
 
 	/*
 	  `glb`, `gltf` and `USDZ` are the regression: `split('.').pop()` on a name
@@ -159,7 +174,7 @@ describe('the derived sets agree with the declarations they come from', () => {
 		[
 			'importable',
 			() => IMPORTABLE_FORMAT_IDS,
-			['gltf', 'glb', 'usdz', 'stl', 'fbx', 'obj']
+			['gltf', 'glb', 'stl', 'fbx', 'obj']
 		],
 		['exportable', () => EXPORTABLE_FORMAT_IDS, ['gltf', 'glb', 'usdz']],
 		['bundle', () => BUNDLE_FORMAT_IDS, ['gltf', 'obj']]

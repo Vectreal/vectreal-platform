@@ -53,7 +53,7 @@ export interface ModelFile {
 	model: Object3D
 	/** Animation clips carried by the model. Absent or empty when it has none. */
 	animations?: AnimationClip[]
-	/** The file type/format of the model (GLTF, GLB, USDZ) */
+	/** The file type/format of the model (glTF, GLB, STL, FBX, OBJ). */
 	type: ModelFileTypes
 	/** The original filename of the model */
 	name: string
@@ -68,7 +68,7 @@ export interface ModelFile {
  * and they all go through the single `load(source)` entry point.
  */
 export type ModelSource =
-	/** Files or folders picked by the user (GLTF + assets, GLB, or USDZ). */
+	/** Files or folders picked by the user (glTF + assets, GLB, STL, FBX, OBJ). */
 	| { kind: 'files'; files: InputFileOrDirectory }
 	/**
 	 * A scene payload the caller already has in memory (route aggregate, IDB

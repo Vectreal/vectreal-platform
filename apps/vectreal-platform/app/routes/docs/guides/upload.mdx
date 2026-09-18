@@ -12,14 +12,16 @@ Everything you need to know about getting 3D files into the Vectreal Publisher.
 |---|---|---|
 | **glTF** | `.gltf` + `.bin` + textures | Preferred - full material and animation support |
 | **GLB** | `.glb` | Self-contained binary glTF. Single file, easiest to share. |
-| **USDZ** | `.usdz` | Limited support - textures and some material types may not render correctly. Work in progress. |
 | **STL** | `.stl` | Geometry only. An STL carries no materials, no scene graph and no textures, so it arrives untextured by definition. |
 | **FBX** | `.fbx` | Textures are usually embedded in the file and come through. An FBX that references images beside it instead arrives untextured. |
 | **OBJ** | `.obj` + `.mtl` + textures | A bundle, like glTF: the materials live in the `.mtl` and the images beside that. Upload the folder, not the one file. |
 
 STL, FBX and OBJ are read through three.js and converted to glTF before anything else sees them, so what you optimize and publish is a glTF either way. To convert a file without publishing it, see [Converting Between Formats](/docs/guides/convert).
 
-Anything else is rejected with "Unsupported model format".
+Anything else is rejected with "Unsupported model format", USDZ included. The
+Publisher can *write* a USDZ - that is what the [USDZ converter
+pages](/docs/guides/convert) offer - but it cannot read one, and it says so up
+front rather than failing part way through a parse.
 
 ---
 
@@ -92,7 +94,7 @@ The Publisher enforces your plan's maximum scene size: {publishedLimit('free', '
 
 | Error | Likely cause | Resolution |
 |---|---|---|
-| "Unsupported model format. Upload one of: glTF, GLB, USDZ, STL, FBX, OBJ." | File extension not in the supported list | Convert to one of the formats in the table above |
+| "Unsupported model format. Upload one of: glTF, GLB, STL, FBX, OBJ." | File extension not in the supported list | Convert to one of the formats in the table above |
 | "Model references missing assets. Upload the full model folder (including textures/buffers) and retry." | Uploaded `.gltf` without the associated `.bin`/textures | Upload the full folder as a bundle |
 
 ---
