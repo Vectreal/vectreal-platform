@@ -130,6 +130,14 @@ const CLAIM_CARRYING_DOCS = [
 	  names, which is the one value both pages still write by hand.
 	*/
 	'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
+	/*
+	  The converter page states which pairs exist and which targets cannot, and
+	  both are decisions made elsewhere: the pair manifest and the owner's
+	  `canExport`. Listing it here is what makes its claims run at all - the
+	  block was written first and sat inert, which is the same failure as a test
+	  that cannot go red, in the file whose whole job is to stop that.
+	*/
+	'apps/vectreal-platform/app/routes/docs/guides/convert.mdx',
 	'apps/vectreal-platform/app/routes/news-room-page/articles/04_api-keys-101.mdx'
 ]
 

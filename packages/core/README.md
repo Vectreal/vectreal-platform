@@ -23,6 +23,8 @@ pnpm add @vctrl/core
 | `ModelLoader`       | `@vctrl/core/model-loader`    | Load model files into glTF-Transform `Document` or Three.js scenes                                |
 | `ModelOptimizer`    | `@vctrl/core/model-optimizer` | Run optimization passes and export optimized output                                               |
 | `ModelExporter`     | `@vctrl/core/model-exporter`  | Export `Document` or Three.js objects to GLB or GLTF                                              |
+| Model formats       | `@vctrl/core/model-formats`   | The accepted format set, and every question about it: `MODEL_FORMATS`, `modelFormatForFileName`, `isImportableFileName`, `modelAcceptPattern` |
+| Dropped selections  | `@vctrl/core/model-loader`    | What a reference inside a model means: `selectionKey`, `referenceIn`, `referenceKeyIn`            |
 | Scene asset helpers | `@vctrl/core`                 | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
 
 ---
@@ -50,14 +52,20 @@ const sceneResult = await loader.loadToThreeJS('model.glb')
 
 | Method                                                    | Description                                           |
 | --------------------------------------------------------- | ----------------------------------------------------- |
-| `loadFromFile(input)`                                     | Load from file path in Node or browser `File`         |
-| `loadFromBuffer(buffer, fileName)`                        | Load from `Uint8Array` data                           |
+| `loadFromFile(input, assetFiles?)`                        | Load from a file path in Node or a browser `File`. `assetFiles` are the files that arrived beside it, so a dropped OBJ finds its `.mtl` and textures instead of rendering grey |
+| `loadFromBuffer(buffer, fileName, siblings?)`             | Load from `Uint8Array` data                           |
 | `loadGLTFWithAssets(...)` / `loadGLTFWithFileAssets(...)` | Load GLTF with external resources                     |
 | `documentToThreeJS(document, modelResult)`                | Convert glTF-Transform `Document` to a Three.js scene |
-| `loadToThreeJS(input)`                                    | Load and convert to Three.js scene                    |
+| `parseGLTFJsonToThreeJS(json, assets)`                    | Parse glTF JSON straight to Three.js, for a saved scene |
+| `loadToThreeJS(input, assetFiles?)`                       | Load and convert to Three.js scene                    |
 | `loadGLTFWithAssetsToThreeJS(...)`                        | GLTF plus assets directly to Three.js                 |
-| `isSupportedFormat(fileName)`                             | Validate extension support                            |
-| `getSupportedExtensions()`                                | Return supported extensions                           |
+
+Asking which formats are accepted is `@vctrl/core/model-formats`, not the
+loader. `isSupportedFormat` and `getSupportedExtensions` were removed for that
+reason: they were a second statement of the set, and they disagreed with the
+first one on casing, so `MODEL.GLB` was rejected by the guard in front of a
+loader that would have read it. Use `isImportableFileName(fileName)` or
+`modelFormatForFileName(fileName)`.
 
 `documentToThreeJS` requires both the `Document` and the original `ModelLoadResult` metadata object:
 
@@ -262,7 +270,7 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 | -------------------------------------------- | ---------------------------------------------------------- |
 | `exportDocumentGLB(document)`                | Export a glTF-Transform `Document` to GLB                  |
 | `exportDocumentGLBDraco(document, options?)` | Export a `Document` to GLB with Draco geometry compression |
-| `exportDocumentGLTF(document)`               | Export a `Document` to GLTF JSON and assets                |
+| `exportDocumentGLTF(document, options?)`     | Export a `Document` to GLTF JSON and assets. `options.draco` runs the same compression as `exportDocumentGLBDraco`, but note the nesting differs: there, the whole `options` argument is the Draco options |
 | `exportThreeJSGLB(object)`                   | Export a Three.js object to GLB                            |
 | `exportThreeJSUSDZ(object)`                  | Export a Three.js object to USDZ                           |
 | `exportThreeJSGLTF(object)`                  | Export a Three.js object to GLTF JSON and assets           |

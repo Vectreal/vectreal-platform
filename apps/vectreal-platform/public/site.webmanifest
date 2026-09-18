@@ -1,7 +1,7 @@
 {
   "name": "Vectreal Core - Your Online 3D Optimizing Toolkit | React 3D Viewer & Hooks",
   "short_name": "Vectreal Core",
-  "description": "Vectreal Core: Open-source React components and hooks for seamless 3D model integration. Optimize and view GLTF, GLB, OBJ, USDZ models easily. Start your 3D web journey today!",
+  "description": "Upload a 3D model, optimize it, and publish it as an embed you can paste into any page. Open-source viewer, no WebGL framework required.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#141414",
