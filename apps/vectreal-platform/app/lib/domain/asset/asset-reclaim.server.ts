@@ -125,6 +125,16 @@ export async function reclaimUploadBatch(params: {
  * `reclaimUploadBatch`. It runs off a successful save, which is the only
  * in-band trigger available without a scheduler.
  *
+ * WHAT THAT COSTS, because "no scheduler" reads as a detail and is not one.
+ * The trigger is a successful save *of the same project*, so a project that is
+ * never saved again never sweeps: its orphans are permanent. They stay in the
+ * organization's storage quota too - `uploadSceneAssets` measures every asset
+ * row the organization owns, and an orphan is a row - so the bytes are charged
+ * for indefinitely against a file nothing can reach. Moving this onto a
+ * schedule is filed, not fixed; the scheduled run would be the existing
+ * `purge-orphaned-assets` script rather than this function, which is bounded
+ * for the inline case it was written for.
+ *
  * Bounded, because a mature project's asset folder holds thousands of rows - a
  * dev database already has 597 in one folder - and this runs inline on a
  * routine save. The bound is only safe because the page is drawn from rows the

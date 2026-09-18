@@ -277,6 +277,14 @@
 				"command": "pnpm exec tsx scripts/purge-orphaned-assets.ts"
 			}
 		},
+		"backfill-asset-names": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/backfill-asset-names.ts"
+			}
+		},
 		"email-preview": {
 			"executor": "nx:run-commands",
 			"options": {

@@ -12,6 +12,13 @@ export {
 	resolutionKey,
 	selectionKey
 } from './dropped-selection'
+/*
+  Which files a glTF says it needs. Named because the platform's asset backfill
+  has to ask the same question of a saved scene that the loader asks of a
+  dropped one, and answering it twice is how the stored name and the resolved
+  name came to disagree in the first place.
+*/
+export { referencedUris } from './referenced-assets'
 export { isMissingAssetsError, missingAssetsError } from './missing-assets'
 /*
   Named rather than `export *`: the dispatch in `@vctrl/hooks` needs to ask
