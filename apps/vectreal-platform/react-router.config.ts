@@ -1,3 +1,7 @@
+import {
+	CONVERT_INDEX_PATH,
+	convertPairPaths
+} from './app/lib/convert/convert-pairs'
 import { docsPages } from './app/lib/docs/docs-manifest'
 import { getNewsPrerenderPaths } from './app/lib/news/news-prerender-paths'
 
@@ -9,6 +13,8 @@ const DOCS_PRERENDER_PATHS = [
 ]
 
 const NEWS_PRERENDER_PATHS = getNewsPrerenderPaths()
+
+const CONVERT_PRERENDER_PATHS = [CONVERT_INDEX_PATH, ...convertPairPaths()]
 
 const STATIC_PRERENDER_PATHS = [
 	'/',
@@ -36,7 +42,8 @@ const STATIC_PRERENDER_PATHS = [
 	  "this is the canonical site" rather than toward `Disallow: /`.
 	*/
 	...NEWS_PRERENDER_PATHS,
-	...DOCS_PRERENDER_PATHS
+	...DOCS_PRERENDER_PATHS,
+	...CONVERT_PRERENDER_PATHS
 ]
 
 export default {

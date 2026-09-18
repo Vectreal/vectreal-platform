@@ -113,6 +113,21 @@ export default [
 			)
 		]),
 
+		// Format-pair converters. One indexable page per pair, paths derived from
+		// the manifest in app/lib/convert/convert-pairs.ts, which also feeds the
+		// prerender list, the sitemap and /llms.txt.
+		//
+		// The layout wraps the index too, unlike /docs where the landing page sits
+		// outside it: the docs landing page is a full-width directory of a section
+		// with its own hero, while /convert is the first rung of the same rail its
+		// pair pages use and should carry it.
+		...prefix('convert', [
+			layout('./routes/layouts/convert-layout.tsx', [
+				index('./routes/convert-page/convert-index.tsx'),
+				route(':pair', './routes/convert-page/convert.$pair.tsx')
+			])
+		]),
+
 		// News room page
 		layout('./routes/layouts/news-room-layout.tsx', [
 			route('news-room', './routes/news-room-page/news-room-page.tsx'),
@@ -141,6 +156,7 @@ export default [
 				// Guides
 				...prefix('guides', [
 					route('upload', './routes/docs/guides/upload.mdx'),
+					route('convert', './routes/docs/guides/convert.mdx'),
 					route('optimize', './routes/docs/guides/optimize.mdx'),
 					route('publish-embed', './routes/docs/guides/publish-embed.mdx'),
 					route('embed-sdk', './routes/docs/guides/embed-sdk.mdx')

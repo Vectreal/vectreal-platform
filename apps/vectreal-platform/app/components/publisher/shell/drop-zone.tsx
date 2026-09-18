@@ -1,4 +1,4 @@
-import { useAcceptPattern } from '@shared/components/hooks/use-accept-pattern'
+import { useModelFileInputs } from '@shared/components/hooks/use-model-file-inputs'
 import { Button } from '@shared/components/ui/button'
 import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
@@ -10,23 +10,17 @@ import {
 	FolderUp,
 	Upload
 } from 'lucide-react'
-import {
-	ChangeEvent,
-	ComponentProps,
-	SyntheticEvent,
-	useCallback,
-	useRef
-} from 'react'
+import { ComponentProps, SyntheticEvent, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Link } from 'react-router'
+import { toast } from 'sonner'
 
-declare module 'react' {
-	interface InputHTMLAttributes<T> extends HTMLAttributes<T> {
-		// extends React's HTMLAttributes
-		directory?: string
-		webkitdirectory?: string
-	}
-}
+import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
+import {
+	fetchSampleModel,
+	sampleModelById
+} from '../../../lib/samples/sample-models'
+import { SampleTiles } from '../../layout-components/sample-tiles'
 
 interface Props {
 	isMobile?: boolean
@@ -45,21 +39,16 @@ interface Props {
 export const DropZone = ({ isMobile, onUpload }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 
-	/*
-	  Two inputs, because a model arrives in two shapes and one element cannot
-	  offer both. A `.glb` is one self-contained file. A `.gltf` is a document
-	  plus its buffers and textures, which is a directory.
-
-	  `webkitdirectory` is not a hint, it replaces the dialog: the browser shows
-	  a directory chooser and ignores `accept` entirely. This component carried
-	  it on its only input, so the button reading "Choose Files" opened a folder
-	  picker that could not select a file, and the single-file case - the one
-	  every exporter produces by default, and the one the guides show - was
-	  unreachable by clicking. Dropping still worked, which is why it survived:
-	  anyone who tested it dragged the file in.
-	*/
-	const fileInputRef = useRef<HTMLInputElement>(null)
-	const directoryInputRef = useRef<HTMLInputElement>(null)
+	/* `useModelFileInputs` owns why there are two of these. */
+	const {
+		fileInputRef,
+		directoryInputRef,
+		inputProps,
+		openFilePicker,
+		openDirectoryPicker
+	} = useModelFileInputs((files) => {
+		void onUpload(files as InputFileOrDirectory)
+	})
 
 	const handleDrop = useCallback(
 		(files: File[]) => {
@@ -72,23 +61,18 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 		[onUpload]
 	)
 
-	const handleSelected = useCallback(
-		(event: ChangeEvent<HTMLInputElement>) => {
-			const files = Array.from(event.target.files ?? [])
+	const openSample = useCallback(
+		async (id: string) => {
+			const sample = sampleModelById(id)
+			if (!sample) return
 
-			/*
-			  Cleared so the same path can be chosen twice. A file input fires no
-			  change event when the selection is identical, so after any failure -
-			  a model over the size limit, a format the optimizer refuses - picking
-			  the same file again did nothing at all.
-			*/
-			event.target.value = ''
-
-			if (files.length === 0) {
-				return
+			try {
+				await onUpload([await fetchSampleModel(sample)] as InputFileOrDirectory)
+			} catch {
+				toast.error(
+					'The sample could not be opened. Try your own file instead.'
+				)
 			}
-
-			void onUpload(files as InputFileOrDirectory)
 		},
 		[onUpload]
 	)
@@ -103,9 +87,6 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 	*/
 	const { onClick: _dropzoneClick, ...containerProps } =
 		getRootProps<ComponentProps<'div'>>()
-
-	const openFilePicker = () => fileInputRef.current?.click()
-	const openDirectoryPicker = () => directoryInputRef.current?.click()
 
 	const stopDropzoneTrigger = (event: SyntheticEvent) => {
 		event.stopPropagation()
@@ -136,11 +117,26 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 								  No folder option here. iOS and Android have no directory
 								  picker to open, so offering one would be a button that does
 								  nothing on the devices this branch exists for.
+
+								  The samples do belong here, and were missed when they were
+								  added: this branch is the entire publisher for a phone, so
+								  leaving them in the desktop card meant the people least
+								  likely to have a .glb to hand were the only ones never
+								  offered one.
 								*/
-								<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
-									<Upload className="h-4 w-4" />
-									Choose a file
-								</Button>
+								<div className="flex flex-col items-start gap-6">
+									<Button className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 transition-all duration-300">
+										<Upload className="h-4 w-4" />
+										Choose a file
+									</Button>
+
+									<SampleTiles
+										className="w-full text-left"
+										label="Nothing to hand?"
+										onOpen={(id) => void openSample(id)}
+										onBeforeOpen={stopDropzoneTrigger}
+									/>
+								</div>
 							) : (
 								<Card className="group ds-overlay relative h-full overflow-hidden rounded-2xl">
 									<div
@@ -206,6 +202,26 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 										<p className="text-muted-foreground mt-1 text-xs">
 											A .gltf needs the folder holding its textures and .bin
 										</p>
+
+										{/*
+										  Something to open when you have nothing to open.
+
+										  The publisher's whole value is visible only with a model
+										  in it, and until now the only way to see any of it was to
+										  already have one - which is a poor trade for someone
+										  deciding whether this is worth their file. Two models
+										  rather than one, because the optimization passes do
+										  different jobs: the rocket is two thirds geometry and the
+										  bike is half textures across fifty images, so each one
+										  makes a different pass look like it is working. The split
+										  is measured; see `sample-models.ts`.
+										*/}
+										<SampleTiles
+											className="mt-8 w-full max-w-md"
+											label="Nothing to hand?"
+											onOpen={(id) => void openSample(id)}
+											onBeforeOpen={stopDropzoneTrigger}
+										/>
 									</div>
 								</Card>
 							)}
@@ -282,7 +298,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 					type="file"
 					multiple
 					accept={acceptPattern}
-					onChange={handleSelected}
+					{...inputProps}
 					className="hidden"
 					tabIndex={-1}
 					aria-hidden="true"
@@ -293,7 +309,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 					webkitdirectory="true"
 					directory="true"
 					multiple
-					onChange={handleSelected}
+					{...inputProps}
 					className="hidden"
 					tabIndex={-1}
 					aria-hidden="true"

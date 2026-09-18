@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { SUPPORTED_FORMAT_NAMES } from '../../constants/product-copy'
+
 interface Step {
 	index: number
 	title: string
@@ -31,7 +33,7 @@ const STEPS: Step[] = [
 		index: 0,
 		title: 'Upload',
 		icon: Upload,
-		body: 'Drag & drop your model — GLB, glTF, USDZ, USDA. Processing starts instantly.'
+		body: `Drag & drop your model - ${SUPPORTED_FORMAT_NAMES.join(', ')}. Processing starts instantly.`
 	},
 	{
 		index: 1,
@@ -62,12 +64,37 @@ const stageTransition = { duration: 0.5, ease: easeOut }
 // Per-step graphics
 // ---------------------------------------------------------------------------
 
-const FORMAT_CHIPS = [
-	{ label: '.GLB', x: '-128%', y: '-70%', delay: 0.5 },
-	{ label: '.GLTF', x: '128%', y: '-40%', delay: 0.65 },
-	{ label: '.USDZ', x: '-120%', y: '75%', delay: 0.8 },
-	{ label: '.OBJ', x: '125%', y: '70%', delay: 0.95 }
+/**
+ * Four chips, not six: this is a drift animation around a drop target and the
+ * positions are hand-placed. The set is read from the owner rather than typed
+ * out, so a chip can never name a format the loader does not read - which is
+ * what `.USDA` was here, and in the step copy above, for as long as this
+ * component has existed.
+ */
+const CHIP_POSITIONS = [
+	{ x: '-128%', y: '-70%', delay: 0.5 },
+	{ x: '128%', y: '-40%', delay: 0.65 },
+	{ x: '-120%', y: '75%', delay: 0.8 },
+	{ x: '125%', y: '70%', delay: 0.95 }
 ]
+
+/*
+  Driven by the labels, not by the positions. Mapping the four fixed positions
+  and reading `SUPPORTED_FORMAT_NAMES[index]` throws at module scope the day the
+  importable set drops below four, and a throw at module scope takes the home
+  page down rather than the chip.
+
+  The same name the copy above uses. This read `IMPORTABLE_FORMAT_LABELS`
+  straight from the owner while the sentence at the top of the file read
+  `SUPPORTED_FORMAT_NAMES`: one array, two spellings, fifty lines apart, which
+  is the shape the owner module exists to end.
+*/
+const FORMAT_CHIPS = SUPPORTED_FORMAT_NAMES.slice(0, CHIP_POSITIONS.length).map(
+	(label, index) => ({
+		...CHIP_POSITIONS[index],
+		label: `.${label.toUpperCase()}`
+	})
+)
 
 function UploadGraphic() {
 	return (

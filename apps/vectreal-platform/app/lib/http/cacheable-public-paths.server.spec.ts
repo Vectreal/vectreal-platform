@@ -10,6 +10,11 @@ import {
 	CDN_PROTECTED_PREFIXES,
 	normalizePathForCachePolicy
 } from './cdn-cache-policy.server'
+import {
+	CONVERT_INDEX_PATH,
+	CONVERT_PAIRS,
+	convertPairPath
+} from '../convert/convert-pairs'
 
 function req(url: string, headers: Record<string, string> = {}): Request {
 	return new Request(url, { headers })
@@ -29,7 +34,11 @@ describe('exported allowlist sources', () => {
 	it('exposes the raw path list and prefixes for the parity guard', () => {
 		expect(CACHEABLE_PUBLIC_PATH_LIST).toContain('/')
 		expect(CACHEABLE_PUBLIC_PATH_LIST).toContain('/about')
-		expect(CACHEABLE_PUBLIC_PATH_PREFIXES).toEqual(['/docs', '/news-room'])
+		expect(CACHEABLE_PUBLIC_PATH_PREFIXES).toEqual([
+			'/convert',
+			'/docs',
+			'/news-room'
+		])
 	})
 })
 
@@ -133,6 +142,28 @@ describe('isAnonymousCacheableRequest', () => {
 		expect(
 			isAnonymousCacheableRequest(req('https://x.test/preview/fullscreen/p/s'))
 		).toBe(false)
+	})
+
+	/*
+	  Every converter page, derived from the manifest rather than spelled out.
+	  These are the family the CDN allowlist exists for: prerendered, anonymous,
+	  in the sitemap, and the one surface whose whole job is to be crawled. They
+	  were served uncached from a single origin region until `/convert` joined
+	  the prefix list.
+	*/
+	it('caches the converter index and every pair page', () => {
+		expect(
+			isAnonymousCacheableRequest(req(`https://x.test${CONVERT_INDEX_PATH}`))
+		).toBe(true)
+
+		for (const pair of CONVERT_PAIRS) {
+			expect(
+				isAnonymousCacheableRequest(
+					req(`https://x.test${convertPairPath(pair)}`)
+				),
+				`${pair.slug} is not anonymously cacheable`
+			).toBe(true)
+		}
 	})
 
 	it('caches nested docs/news-room prefixes', () => {

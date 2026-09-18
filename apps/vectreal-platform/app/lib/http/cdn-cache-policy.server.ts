@@ -19,7 +19,7 @@ export const CDN_PUBLIC_EXACT_PATHS = [
 ] as const
 
 /** Public route families that remain cacheable for anonymous GET requests. */
-export const CDN_PUBLIC_PREFIXES = ['/docs', '/news-room'] as const
+export const CDN_PUBLIC_PREFIXES = ['/convert', '/docs', '/news-room'] as const
 
 /**
  * Protected/app route families that must stay fail-closed (non-public cache).
