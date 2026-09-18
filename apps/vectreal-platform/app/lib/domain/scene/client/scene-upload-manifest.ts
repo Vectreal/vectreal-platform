@@ -73,7 +73,22 @@ export const buildSceneUploadFileDescriptor = (
 	const bytes = toUint8Array(data)
 	const normalizedBytes = bytes ? new Uint8Array(bytes) : null
 	const normalizedName = normalizeAssetUri(fileName)
-	const baseFileName = normalizedName.split('/').pop() || normalizedName
+	/*
+	  THE WHOLE URI, NOT ITS LAST SEGMENT. A stored asset used to be named by its
+	  basename while the saved glTF kept the folder URIs it was written with, so
+	  `body/diffuse.png` and `wheels/diffuse.png` became one stored `diffuse.png`
+	  and both URIs resolved to it on reload: a chair whose wheels wore the
+	  body's texture, saved, reported as success, and reproducible forever after.
+	  That is the same defect the dropped-selection rule was written to end, one
+	  frame over, and keeping the folder is what closes it.
+
+	  Nothing downstream needs this flattened. The storage object path strips the
+	  separators itself (`asset-object-path.ts`), and a scene saved before this
+	  still loads: its assets keep their flat names and the loader's name-only
+	  rung answers a foldered URI with them, which is the rule that frame has
+	  always relied on.
+	*/
+	const storedFileName = normalizedName
 	const mimeFromDocument = imageMimeLookup
 		? Array.from(buildAssetLookupKeys(normalizedName)).reduce<
 				string | undefined
@@ -97,8 +112,8 @@ export const buildSceneUploadFileDescriptor = (
 	const fileData: BlobPart = normalizedBytes ?? (data as BlobPart)
 
 	return {
-		file: new File([fileData], baseFileName, { type: mimeType }),
-		fileName: baseFileName,
+		file: new File([fileData], storedFileName, { type: mimeType }),
+		fileName: storedFileName,
 		kind,
 		mimeType
 	}

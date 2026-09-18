@@ -322,11 +322,41 @@ export const executeSceneSaveOrchestrator = async ({
 				imageMimeLookup
 			)
 
-			if (existingAssets?.[descriptor.fileName]) {
+			/*
+			  MATCHED BY NAME, AND ONLY BY NAME. A basename pass lived here for one
+			  round, so that the first save after stored assets started carrying
+			  their folders would not re-upload every texture under its new name.
+			  It reasoned that a name only nominates a candidate and the hash
+			  decides - but the hash proves the bytes are right, never that the
+			  row is, and identical bytes across folders are ordinary: a flat
+			  normal map, a 1x1 white PNG, a zero-filled `.bin`.
+
+			  What it cost: the server never renames a reused row
+			  (`asset-storage.server.ts`), so a scene that reused `diffuse.png`
+			  for `body/diffuse.png` while writing a fresh `wheels/diffuse.png`
+			  is left half-flat and half-foldered - and in that state a
+			  folderless key, which ranks last in every scope, can never win the
+			  name-only rung again. Both materials then load the wheels texture,
+			  saved and reported as success, which is verbatim the defect
+			  `buildSceneUploadFileDescriptor` exists to end. Two names
+			  nominating one row could also put the same id in `sceneAssetIds`
+			  twice, which fails the save outright - not at `scene_assets`'
+			  composite primary key, which never gets the chance, but at
+			  `assertAssetsBelongToProject`, where a repeated id makes the
+			  selected rows fewer than the ids asked for and the save reports
+			  "One or more uploaded assets are missing".
+
+			  So the re-upload stays. It is the same cost as editing a texture,
+			  paid once per scene, and it keeps every stored name equal to the
+			  URI that resolves it.
+			*/
+			const existing = existingAssets?.[descriptor.fileName]
+
+			if (existing) {
 				const bytes = new Uint8Array(await descriptor.file.arrayBuffer())
 				const hash = await hashBytes(bytes)
-				if (hash === existingAssets[descriptor.fileName].contentHash) {
-					return existingAssets[descriptor.fileName].assetId
+				if (hash === existing.contentHash) {
+					return existing.assetId
 				}
 			}
 

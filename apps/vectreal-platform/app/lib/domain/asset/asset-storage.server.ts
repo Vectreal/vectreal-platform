@@ -14,6 +14,7 @@ import {
 	sql
 } from 'drizzle-orm'
 
+import { assetObjectPath } from './asset-object-path'
 import { getDbClient } from '../../../db/client'
 import {
 	assets,
@@ -254,12 +255,6 @@ function getErrorMessage(error: unknown): string {
 }
 
 /**
- * Uploads extracted GLTF assets for a scene and persists asset metadata.
- *
- * Existing assets are reused when filename + content hash match, so repeated
- * saves avoid unnecessary uploads.
- */
-/**
  * The organization whose storage allowance these bytes count against.
  *
  * Resolved from the project the assets are being written into, not from the
@@ -279,6 +274,12 @@ async function getProjectOrganizationId(projectId: string): Promise<string> {
 	return row.organizationId
 }
 
+/**
+ * Uploads extracted GLTF assets for a scene and persists asset metadata.
+ *
+ * Existing assets are reused when filename + content hash match, so repeated
+ * saves avoid unnecessary uploads.
+ */
 export async function uploadSceneAssets(
 	sceneId: string,
 	userId: string,
@@ -377,7 +378,13 @@ export async function uploadSceneAssets(
 		}
 
 		const assetId = randomUUID()
-		const filePath = `scenes/${sceneId}/assets/${assetId}/${fileName}`
+		/*
+		  `name` and `originalFileName` keep the path the asset sat at, which is
+		  what the loader matches a glTF's URI against when the scene is read
+		  back; only the object key is sanitized. The rule lives in a pure module
+		  because this one cannot be imported by a test.
+		*/
+		const filePath = assetObjectPath(sceneId, assetId, fileName)
 
 		try {
 			// Upload first, then persist DB row to avoid dangling records.
@@ -504,12 +511,6 @@ export async function downloadAssets(
 
 	return results
 }
-
-/**
- * Deletes assets from both storage and database records.
- *
- * Missing assets are treated as non-fatal and logged as warnings.
- */
 
 /**
  * Narrows a set of asset ids to the ones nothing points at any more.
@@ -659,6 +660,11 @@ export async function selectUnreferencedAssetIdsInFolder(params: {
 	return rows.map((row) => row.id)
 }
 
+/**
+ * Deletes assets from both storage and database records.
+ *
+ * Missing assets are treated as non-fatal and logged as warnings.
+ */
 export async function deleteAssets(assetIds: string[]): Promise<void> {
 	await ensureStorageBucketOnce()
 
