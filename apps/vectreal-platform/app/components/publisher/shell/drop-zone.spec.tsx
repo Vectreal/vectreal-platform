@@ -13,6 +13,7 @@
  */
 
 import { render, screen } from '@testing-library/react'
+import { modelAcceptPattern } from '@vctrl/core/model-formats'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -54,8 +55,14 @@ describe('choosing a model', () => {
 		const { fileInput } = renderDropZone()
 
 		expect(fileInput).toBeDefined()
-		// `accept` is only honored by a dialog that is not a directory chooser.
-		expect(fileInput?.getAttribute('accept')).toContain('.glb')
+		/*
+		  `accept` is only honored by a dialog that is not a directory chooser, and
+		  it must be the format owner's answer rather than a list of its own. This
+		  used to assert `toContain('.glb')`, which held for any pattern naming GLB
+		  - including the hand-written one that also offered `.usda`, a format no
+		  loader has ever read.
+		*/
+		expect(fileInput?.getAttribute('accept')).toBe(modelAcceptPattern())
 	})
 
 	it('still offers an input that opens a directory dialog', () => {
@@ -114,10 +121,29 @@ describe('choosing a model', () => {
 		const { fileInput } = renderDropZone()
 		const file = new File(['glb'], 'chair.glb', { type: 'model/gltf-binary' })
 
+		/*
+		  The value is seeded and backed by a real setter, and that is the whole
+		  test. Asserting `value === ''` against an untouched input passed whether
+		  or not the handler cleared anything - jsdom starts a file input at `''`
+		  - so this could not fail, which was confirmed by deleting the assignment
+		  and watching it stay green. jsdom also refuses a direct write to a file
+		  input's value, hence the defined property rather than `fileInput.value =`.
+		*/
+		let value = 'C:\\fakepath\\chair.glb'
+		Object.defineProperty(fileInput, 'value', {
+			configurable: true,
+			get: () => value,
+			set: (next: string) => {
+				value = next
+			}
+		})
 		Object.defineProperty(fileInput, 'files', {
 			configurable: true,
 			value: [file]
 		})
+
+		expect(fileInput?.value).not.toBe('')
+
 		fileInput?.dispatchEvent(new Event('change', { bubbles: true }))
 
 		expect(fileInput?.value).toBe('')

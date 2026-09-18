@@ -7,7 +7,7 @@ import {
 import { Button } from '@shared/components/ui/button'
 import { formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { SlidersHorizontal, X } from 'lucide-react'
+import { SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, type FC } from 'react'
 import { Link } from 'react-router'
 
@@ -115,7 +115,17 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		>
 			{/* No background of its own — DynamicSidebar's panel supplies the surface. */}
 			<div className="flex min-h-0 flex-1 flex-col">
-				<div className="border-shell-border-soft shrink-0 border-b px-5 py-4">
+				{/*
+				  `pr-16` reserves the corner for the close button the drawer draws
+				  itself. This header used to carry a second one: `showMobileHeader`
+				  is false, so `DynamicSidebar` skips its `DrawerHeader` and this
+				  panel draws its own - but `DrawerContent` still renders the built-in
+				  close, so the sheet showed two X buttons a few pixels apart, both
+				  gated on the same `closeDisabled`. The built-in stays because it is
+				  the shared one and carries the sr-only "Close" the hand-rolled one
+				  never had.
+				*/}
+				<div className="border-shell-border-soft shrink-0 border-b px-5 py-4 pr-16">
 					<div className="flex items-start justify-between gap-2">
 						<motion.div
 							initial={{ opacity: 0, y: 10 }}
@@ -135,16 +145,6 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 								{drawerDescription}
 							</p>
 						</motion.div>
-						{!isBlockingClose && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className="publisher-shell-focus shrink-0"
-								onClick={() => onOpenChange(false)}
-							>
-								<X className="h-4 w-4" />
-							</Button>
-						)}
 					</div>
 				</div>
 
@@ -198,7 +198,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 									<Accordion type="single" collapsible className="space-y-3">
 										<AccordionItem
 											value="advanced"
-											className="bg-shell-surface-soft/50 rounded-2xl px-4 shadow-sm"
+											className="bg-shell-surface-soft/50 rounded-xl px-4 shadow-sm"
 										>
 											<AccordionTrigger className="py-3">
 												<div className="flex items-center gap-2.5 text-left">

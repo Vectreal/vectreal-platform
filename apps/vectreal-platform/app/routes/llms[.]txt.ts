@@ -5,6 +5,12 @@ import {
 	PLATFORM_TAGLINE,
 	SUPPORTED_FORMAT_NAMES
 } from '../constants/product-copy'
+import {
+	CONVERT_INDEX_COPY,
+	CONVERT_INDEX_PATH,
+	CONVERT_PAIRS,
+	convertPairPath
+} from '../lib/convert/convert-pairs'
 import { docsPages } from '../lib/docs/docs-manifest'
 import { getNewsArticles } from '../lib/news/news-manifest'
 
@@ -36,6 +42,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
 			(article) =>
 				`- [${article.title}](${origin}/news-room/${article.slug}): ${article.excerpt}`
 		)
+
+	// Derived from the pair manifest, so a converter that exists is listed and
+	// one that does not cannot be.
+	const convertLines = [
+		`- [${CONVERT_INDEX_COPY.title}](${origin}${CONVERT_INDEX_PATH}): ${CONVERT_INDEX_COPY.description}`,
+		...CONVERT_PAIRS.map(
+			(pair) =>
+				`- [${pair.title}](${origin}${convertPairPath(pair)}): ${pair.description}`
+		)
+	]
 
 	const packageLines = OPEN_SOURCE_PACKAGES.map(
 		(pkg) => `- [${pkg.name}](${pkg.npm}): ${pkg.description}`
@@ -73,6 +89,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		`- [About](${origin}/about): Company information`,
 		`- [Contact](${origin}/contact): Support and inquiries`,
 		`- [Changelog](${origin}/changelog): Release history`,
+		'',
+		'## Converters',
+		...convertLines,
 		'',
 		'## Documentation',
 		...docsLinks,

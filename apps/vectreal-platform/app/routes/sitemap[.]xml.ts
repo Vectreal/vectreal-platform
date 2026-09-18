@@ -1,4 +1,9 @@
 import {
+	CONVERT_INDEX_PATH,
+	CONVERT_PAIRS,
+	convertPairPath
+} from '../lib/convert/convert-pairs'
+import {
 	isCanonicalDeployment,
 	resolveDeploymentOrigin
 } from '../lib/deployment-origin'
@@ -164,7 +169,29 @@ export async function loader() {
 		priority: '0.6'
 	}))
 
-	const allEntries = [...staticEntries, ...newsEntries, ...docsEntries]
+	// ── 4. Format-pair converters ───────────────────────────────────────────
+	// Derived, never hand-listed: the manifest is the only place a pair exists.
+	// The index leads, because it is what the footer links and what every pair
+	// page links back to, so it is the entry point a crawler reaches first.
+	const convertEntries: SitemapEntry[] = [
+		{
+			path: CONVERT_INDEX_PATH,
+			changefreq: 'monthly' as const,
+			priority: '0.8'
+		},
+		...CONVERT_PAIRS.map((pair) => ({
+			path: convertPairPath(pair),
+			changefreq: 'monthly' as const,
+			priority: '0.8'
+		}))
+	]
+
+	const allEntries = [
+		...staticEntries,
+		...newsEntries,
+		...docsEntries,
+		...convertEntries
+	]
 
 	const xml = buildXml(allEntries, origin)
 
