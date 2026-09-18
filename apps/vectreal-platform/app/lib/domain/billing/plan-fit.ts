@@ -1,5 +1,6 @@
 import { formatLimitValue } from '../../../constants/limit-format'
 import {
+	getPurchasableUpgrade,
 	PLAN_LIMITS,
 	type LimitKey,
 	type Plan
@@ -37,25 +38,12 @@ import type { OrgUsage } from '../dashboard/dashboard-types'
  * plans hold rather than as something the reader has let happen.
  */
 
-/**
- * The plan that can be bought from inside the product.
- *
- * Enterprise is a conversation rather than a checkout, so nothing sits above
- * Business here. This replaced `plan === 'pro' ? 'business' : 'pro'`, a ladder
- * written as a ternary and wrong at the top of it: a Business organization was
- * offered `?plan=pro`, the app proposing a downgrade to its largest customers.
- */
-export const NEXT_PLAN_UP: Partial<Record<Plan, Plan>> = {
-	free: 'pro',
-	pro: 'business'
-}
-
 /*
 	At or above this share of a limit, a reading is worth a reader's attention.
 	The same 80% the usage page uses - two pages disagreeing about what "nearly
 	full" means would be worse than either number being wrong.
 */
-const TIGHT_AT = 0.8
+export const TIGHT_AT = 0.8
 
 export interface PlanFitRow {
 	key: LimitKey
@@ -98,7 +86,34 @@ interface Reading {
 	format: (value: number | null) => string
 }
 
+/**
+ * What an organization is using, keyed by the limit each figure counts against.
+ *
+ * The one mapping from `OrgUsage`'s field names to limit keys, read by the
+ * readings below and by the upgrade page's usage column, so the two cannot pair
+ * a figure with the wrong limit. Bytes stay raw; `formatLimitValue` owns units.
+ */
+export function usageByLimit(
+	usage: OrgUsage
+): Partial<Record<LimitKey, number>> {
+	return {
+		projects_total: usage.projectsTotal,
+		scenes_total: usage.scenesTotal,
+		scenes_published_concurrent: usage.publishedScenes,
+		storage_bytes_total: usage.storageBytesTotal,
+		folders_total: usage.foldersTotal
+	}
+}
+
 function buildReadings(usage: OrgUsage): Reading[] {
+	const used = usageByLimit(usage) as Record<
+		| 'projects_total'
+		| 'scenes_total'
+		| 'scenes_published_concurrent'
+		| 'storage_bytes_total'
+		| 'folders_total',
+		number
+	>
 	const count =
 		(key: LimitKey) =>
 		(value: number | null): string =>
@@ -108,35 +123,35 @@ function buildReadings(usage: OrgUsage): Reading[] {
 		{
 			key: 'projects_total',
 			label: LIMIT_DISPLAY_LABELS.projects_total,
-			used: usage.projectsTotal,
+			used: used.projects_total,
 			limit: usage.projectsLimit,
 			format: count('projects_total')
 		},
 		{
 			key: 'scenes_total',
 			label: LIMIT_DISPLAY_LABELS.scenes_total,
-			used: usage.scenesTotal,
+			used: used.scenes_total,
 			limit: usage.sceneLimit,
 			format: count('scenes_total')
 		},
 		{
 			key: 'scenes_published_concurrent',
 			label: LIMIT_DISPLAY_LABELS.scenes_published_concurrent,
-			used: usage.publishedScenes,
+			used: used.scenes_published_concurrent,
 			limit: usage.publishedSceneLimit,
 			format: count('scenes_published_concurrent')
 		},
 		{
 			key: 'storage_bytes_total',
 			label: STORAGE_USAGE_LABEL,
-			used: usage.storageBytesTotal,
+			used: used.storage_bytes_total,
 			limit: usage.storageLimit,
 			format: count('storage_bytes_total')
 		},
 		{
 			key: 'folders_total',
 			label: LIMIT_DISPLAY_LABELS.folders_total,
-			used: usage.foldersTotal,
+			used: used.folders_total,
 			limit: usage.foldersLimit,
 			format: count('folders_total')
 		}
@@ -144,7 +159,7 @@ function buildReadings(usage: OrgUsage): Reading[] {
 }
 
 export function describePlanFit(usage: OrgUsage, plan: Plan): PlanFit {
-	const nextPlan = NEXT_PLAN_UP[plan] ?? null
+	const nextPlan = getPurchasableUpgrade(plan)
 	const nextPlanLabel = nextPlan ? PLAN_DISPLAY_NAMES[nextPlan] : null
 
 	/*

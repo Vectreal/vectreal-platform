@@ -25,7 +25,8 @@ import {
 	isBillingStateDowngradedToFree,
 	isBillingStateReadOnly,
 	PLAN_ENTITLEMENTS,
-	PLAN_LIMITS
+	PLAN_LIMITS,
+	RECOMMENDED_UPGRADE
 } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgEntitlementOverrides } from '../../../db/schema/billing/org-entitlement-overrides'
@@ -208,14 +209,9 @@ export async function getQuotaLimit(
 
 /**
  * Returns the recommended upgrade path from the current effective plan.
- * Returns null when already on enterprise.
+ * Returns null when already on enterprise. The ladder itself is
+ * `RECOMMENDED_UPGRADE` in `plan-config.ts`, where a component can read it too.
  */
 export function getRecommendedUpgrade(currentPlan: Plan): Plan | null {
-	const upgradePath: Record<Plan, Plan | null> = {
-		free: 'pro',
-		pro: 'business',
-		business: 'enterprise',
-		enterprise: null
-	}
-	return upgradePath[currentPlan]
+	return RECOMMENDED_UPGRADE[currentPlan]
 }

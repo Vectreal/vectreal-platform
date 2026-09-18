@@ -247,6 +247,26 @@ export interface CreateApiKeyParams {
 }
 
 /**
+ * The keys counting against `api_keys_per_org`: every key not revoked.
+ *
+ * One measure for the guard that refuses the next key and for the page that
+ * shows an organization how many it holds, so the two cannot disagree about
+ * what counts - an expired key still counts, because the guard has never
+ * excluded one.
+ */
+export async function countLiveApiKeys(
+	organizationId: string
+): Promise<number> {
+	const [row] = await db
+		.select({ total: count() })
+		.from(apiKeys)
+		.where(
+			and(eq(apiKeys.organizationId, organizationId), isNull(apiKeys.revokedAt))
+		)
+	return row?.total ?? 0
+}
+
+/**
  * Create a new API key
  * @returns The created key details with the plaintext key. Also stored, encrypted,
  * on the row itself, so the embed panel can offer this key again later.
@@ -268,18 +288,7 @@ export async function createApiKey(
 	await assertWithinQuota({
 		organizationId,
 		limitKey: 'api_keys_per_org',
-		measure: async () => {
-			const [row] = await db
-				.select({ total: count() })
-				.from(apiKeys)
-				.where(
-					and(
-						eq(apiKeys.organizationId, organizationId),
-						isNull(apiKeys.revokedAt)
-					)
-				)
-			return row?.total ?? 0
-		},
+		measure: () => countLiveApiKeys(organizationId),
 		message: ({ limit }) =>
 			`API key limit reached for your plan (${limit}). Revoke a key or upgrade to create more.`
 	})
