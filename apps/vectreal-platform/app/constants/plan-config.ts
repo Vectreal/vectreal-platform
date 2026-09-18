@@ -293,6 +293,39 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 	}
 }
 
+/**
+ * The plan each plan moves up to. One ladder for the whole product.
+ *
+ * There were two. `getRecommendedUpgrade` held this map inside
+ * `entitlement-service.server.ts`, where no component could import it, so the
+ * billing page wrote its own - first as `plan === 'pro' ? 'business' : 'pro'`,
+ * which sent Business to Pro, and then as a second map that disagreed with the
+ * first at Business. Every refusal the server raises names a plan from this one;
+ * every button a page draws should too.
+ */
+export const RECOMMENDED_UPGRADE: Record<Plan, Plan | null> = {
+	free: 'pro',
+	pro: 'business',
+	business: 'enterprise',
+	enterprise: null
+}
+
+/**
+ * The next plan up, when it is one that can be bought here.
+ *
+ * `null` for Business, whose next plan is Enterprise: the reader is sent to talk
+ * to someone rather than to a checkout that cannot sell it.
+ *
+ * `isPaidPlan` rather than a membership test on `PURCHASABLE_PLANS`, because it
+ * narrows: the return type is `PaidPlan`, so a caller cannot pass the result to
+ * checkout without the compiler having already agreed it is sellable. It also
+ * absorbs the `null` case, since it tests for a string before anything else.
+ */
+export function getPurchasableUpgrade(plan: Plan): PaidPlan | null {
+	const next = RECOMMENDED_UPGRADE[plan]
+	return isPaidPlan(next) ? next : null
+}
+
 /** Billing states that downgrade effective access to free-tier plan baselines. */
 export const BILLING_STATES_DOWNGRADED_TO_FREE: ReadonlySet<BillingState> =
 	new Set(['canceled', 'incomplete', 'incomplete_expired'])
