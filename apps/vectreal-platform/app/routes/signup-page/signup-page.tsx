@@ -32,6 +32,7 @@ import { Route } from './+types/signup-page'
 import { AuthErrorBoundary } from '../../components/errors'
 import { getReferralAttribution } from '../../lib/domain/analytics/referral-attribution'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
+import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
 import { classifySignupFailure } from '../../lib/domain/auth/signup-failure'
 import {
 	validateSignup,
@@ -76,13 +77,6 @@ interface SignupActionData {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const getSafeNext = (request: Request) => {
-	const url = new URL(request.url)
-	const next = url.searchParams.get('next')
-	if (!next || !next.startsWith('/')) return '/dashboard'
-	return next
-}
 
 // ─── Action ───────────────────────────────────────────────────────────────────
 
@@ -252,12 +246,28 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 		data: { user }
 	} = await client.auth.getUser()
 
-	if (user) return redirect(getSafeNext(request), { headers })
+	if (user)
+		return redirect(
+			getSafeNextPath(new URL(request.url).searchParams.get('next')),
+			{ headers }
+		)
 
 	const url = new URL(request.url)
 	const accountDeleted = url.searchParams.get('account_deleted') === 'true'
 	const sceneSaved = url.searchParams.get('scene_saved') === 'true'
-	const nextPath = url.searchParams.get('next') ?? null
+	/*
+	  The publisher restore URL embedded in `next`, forwarded to the component for
+	  the 'Open Publisher' button.
+
+	  Offered only when the whitelist accepts it unchanged. `getSafeNextPath`
+	  answers a hostile value with `/dashboard`, which is the right answer for a
+	  redirect and the wrong one for a button labelled "Open Publisher" - and a
+	  raw value here would render `//evil.com/x` as a disguised off-site link on
+	  the sign-in page.
+	*/
+	const rawNext = url.searchParams.get('next')
+	const nextPath =
+		rawNext && getSafeNextPath(rawNext) === rawNext ? rawNext : null
 
 	return data({ accountDeleted, sceneSaved, nextPath }, { headers })
 }
