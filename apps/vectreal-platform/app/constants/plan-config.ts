@@ -14,6 +14,54 @@
 
 export type Plan = 'free' | 'pro' | 'business' | 'enterprise'
 
+/**
+ * The plans a customer can buy without talking to us.
+ *
+ * `enterprise` is a `Plan` and is deliberately absent: it is sales-led, and
+ * checkout must refuse it.
+ *
+ * Fourteen places used to restate this pair, in six shapes - a Set, two arrays,
+ * a return type, a `useState` parameter, five inline comparisons and a cast -
+ * and three of them carried a comment saying they mirrored one of the others.
+ * A mirror is not an owner. `enterprise` becoming self-serve had to be
+ * remembered in fourteen places, and the cast in `pricing-cards-section` would
+ * not have complained about being wrong.
+ */
+export type PaidPlan = Extract<Plan, 'pro' | 'business'>
+
+/*
+  Total by construction: a member added to `PaidPlan` and not listed here fails
+  to compile, which is what keeps the type and the runtime list in step. This is
+  the same device `DASHBOARD_OPERATION_ROLES` uses for the permission table.
+*/
+const PURCHASABLE: Record<PaidPlan, true> = {
+	pro: true,
+	business: true
+}
+
+export const PURCHASABLE_PLANS = Object.keys(PURCHASABLE) as readonly PaidPlan[]
+
+/*
+  A Set, not `in` and not the record itself.
+
+  `in` and plain property access walk the prototype chain, so `'toString' in
+  PURCHASABLE` is true. That is the exact hole #878 closed on the canceled page,
+  where `?plan=toString` found a truthy label and rendered a function body. A
+  Set has no prototype entries, so this stays a validator for untrusted input
+  rather than becoming the same trap one layer down.
+*/
+const PURCHASABLE_LOOKUP: ReadonlySet<string> = new Set(PURCHASABLE_PLANS)
+
+/**
+ * Whether a value names a plan checkout sells.
+ *
+ * Takes `unknown` because most callers are validating something from outside
+ * the app: a search parameter, a JSON body, Stripe price metadata.
+ */
+export function isPaidPlan(value: unknown): value is PaidPlan {
+	return typeof value === 'string' && PURCHASABLE_LOOKUP.has(value)
+}
+
 export type BillingState =
 	| 'none'
 	| 'trialing'

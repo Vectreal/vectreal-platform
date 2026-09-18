@@ -7,6 +7,7 @@ import {
 	PUBLISHED_COPY_LOCALE
 } from '../../../constants/limit-format'
 import {
+	isPaidPlan,
 	PLAN_ENTITLEMENTS,
 	PLAN_LIMITS,
 	type LimitKey,
@@ -131,12 +132,10 @@ export function describePlanChange({
 	isDirectUpdate: boolean
 }): PlanChangeOutcome {
 	/*
-		Only the two plans checkout sells, matching `ALLOWED_PLANS` in
-		`routes/api/billing/checkout.ts`. A confirmation naming `free` or
+		Only the plans checkout sells. A confirmation naming `free` or
 		`enterprise` describes a purchase that cannot have happened here.
 	*/
-	const plan: Plan | null =
-		planId === 'pro' || planId === 'business' ? planId : null
+	const plan: Plan | null = isPaidPlan(planId) ? planId : null
 	const planLabel = plan ? PLAN_DISPLAY_NAMES[plan] : null
 
 	const isPeriodSwitch = isDirectUpdate && fromPlan === planId
