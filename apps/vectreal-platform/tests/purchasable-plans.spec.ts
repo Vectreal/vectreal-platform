@@ -1,4 +1,4 @@
-import { lstatSync, readdirSync, readFileSync } from 'node:fs'
+import { lstatSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -19,6 +19,10 @@ import type { Plan } from '../app/constants/plan-config'
   `PURCHASABLE` is: a hand-written array would go on compiling while silently
   no longer covering every plan, and then the loops below would quietly test
   less than they claim.
+
+  That failure surfaces under `nx typecheck`, not `nx test`: Vitest transpiles
+  without type-checking, so a fifth plan leaves this file green while it silently
+  covers four of five until the other gate runs.
 */
 const EVERY_PLAN = Object.keys({
 	free: true,
@@ -107,7 +111,28 @@ describe('which plans can be bought', () => {
   cannot catch a fifteenth: `plan === 'pro' || plan === 'business'` compiles
   perfectly. Only reading the source does.
 
-  WHAT THIS DOES NOT COVER, so nobody reads it as a proof it is not:
+  Every pattern below requires the CONNECTIVE that makes the two plans a set:
+  a comma inside brackets, a union pipe, a `||`, or a bare case fallthrough.
+  Proximity is deliberately not enough. An earlier version allowed up to 80
+  characters between the two comparisons, and that flagged four shapes this
+  repo already writes, none of which claim the plans form a set:
+
+    const isPro = plan === 'pro'          // per-tier booleans, the idiom in
+    const isBusiness = plan === 'business' // pricing-cards-section.tsx
+
+    plan === 'pro' ? 'Pro' : plan === 'business' ? 'Business' : 'Free'
+
+    case 'pro': return PRO_SEATS
+    case 'business': return BUSINESS_SEATS
+
+    if (plan === 'pro') { ... } if (route === 'business') { ... }
+
+  The chained ternary is the clearest case. A restatement says the two plans are
+  the SAME in some respect; a ternary says they are different and maps each to
+  its own value. The remedy this guard demands, "import isPaidPlan", cannot even
+  be applied to it, which is the tell that it was never a restatement.
+
+  WHAT THIS DOES NOT COVER, so nobody reads it as proof it is not:
 
   - Unquoted keys. `interface X { pro: T; business: T }` states the pair and no
     regex here can tell it from any other object. That shape is held instead by
@@ -115,6 +140,7 @@ describe('which plans can be bought', () => {
     `BillingCheckoutOptions` and `PLAN_FALLBACK_PRICES` now do.
   - The complement. `Exclude<Plan, 'free' | 'enterprise'>` is the same set with
     neither word in it.
+  - Comments and string literals, which are read as if they were code.
   - `.mdx` route modules, `*.spec.ts`, and anything outside `app/`. Spec files
     are excluded deliberately: fixtures legitimately name both plans.
 
@@ -127,19 +153,29 @@ const APP_DIR = join(__dirname, '..', 'app')
 
 const OWNER = 'app/constants/plan-config.ts'
 
+/** An operand a plan comparison can be written against, e.g. `subscription.plan`. */
+const OPERAND = String.raw`[\w.?[\]]+`
+
 /*
   The four-plan ladder is a different fact - every plan, in order - and several
-  modules state it legitimately.
+  modules state it legitimately. It is removed before the patterns run.
 
-  The gaps are bounded rather than forbidden, because the ladder is written both
-  as a literal sequence and as a chain of comparisons, and Prettier wraps the
-  latter across lines at 80 columns. `asPlan` in `billing-limit-error.ts` is the
-  live example. An earlier version of this file only stripped the literal form
-  while the comparison pattern below hunted comparisons, so a correct ladder
-  check sat one rename away from being reported as a restatement.
+  Two exact alternatives, never a loose gap. The ladder appears both as a
+  literal sequence and as a chain of comparisons that Prettier wraps across
+  lines, and `asPlan` in `billing-limit-error.ts` is the live example of the
+  second. A first repair allowed 80 arbitrary characters between each pair of
+  literals, which anchored on the earliest 'free' in a file and could delete
+  around 240 characters of unrelated code along with the ladder, hiding any
+  restatement inside it. It was already swallowing a function signature in
+  `stripe-subscription-sync.server.ts`.
 */
-const FULL_LADDER =
-	/'free'[\s\S]{0,80}?'pro'[\s\S]{0,80}?'business'[\s\S]{0,80}?'enterprise'/g
+const FULL_LADDER = new RegExp(
+	[
+		String.raw`'free'\s*[,|]\s*'pro'\s*[,|]\s*'business'\s*[,|]\s*'enterprise'`,
+		String.raw`'free'\s*\|\|\s*${OPERAND}\s*===\s*'pro'\s*\|\|\s*${OPERAND}\s*===\s*'business'\s*\|\|\s*${OPERAND}\s*===\s*'enterprise'`
+	].join('|'),
+	'g'
+)
 
 interface Restatement {
 	readonly name: string
@@ -149,14 +185,19 @@ interface Restatement {
 }
 
 const RESTATEMENTS: readonly Restatement[] = [
+	/*
+	  Bracket context, but not necessarily the first two elements: requiring
+	  adjacency to the bracket let `['free', 'pro', 'business']` through. The
+	  bracket is what keeps a two-argument call, `f('pro', 'business')`, out.
+	*/
 	{
 		name: "a list literal, ['pro', 'business']",
-		pattern: /\[\s*'pro'\s*,\s*'business'\s*[,\]]/,
-		example: "const ALLOWED = new Set(['pro', 'business'])"
+		pattern: /\[[^\]]{0,60}'pro'\s*,\s*'business'/,
+		example: "const ALLOWED = new Set(['free', 'pro', 'business'])"
 	},
 	{
 		name: "a list literal in reverse, ['business', 'pro']",
-		pattern: /\[\s*'business'\s*,\s*'pro'\s*[,\]]/,
+		pattern: /\[[^\]]{0,60}'business'\s*,\s*'pro'/,
 		example: "const ALLOWED: Plan[] = ['business', 'pro']"
 	},
 	{
@@ -169,23 +210,50 @@ const RESTATEMENTS: readonly Restatement[] = [
 		pattern: /'business'\s*\|\s*'pro'/,
 		example: "let p: 'business' | 'pro'"
 	},
+	/*
+	  The `||` is required, not merely allowed. It is what turns two comparisons
+	  into a claim that the plans form one set, and its absence is what makes the
+	  per-tier booleans above legitimate. The operand between them lets Prettier
+	  wrap the line, which it does at 80 columns.
+	*/
 	{
-		name: "a pair of comparisons, === 'pro' ... === 'business'",
-		pattern: /===\s*'pro'[\s\S]{0,80}?===\s*'business'/,
+		name: "a disjunction, === 'pro' || === 'business'",
+		pattern: new RegExp(
+			String.raw`===\s*'pro'\s*\|\|\s*${OPERAND}\s*===\s*'business'`
+		),
 		example:
 			"const ok =\n\tsubscription.plan === 'pro' ||\n\tsubscription.plan === 'business'"
 	},
 	{
-		name: "a pair of comparisons in reverse, === 'business' ... === 'pro'",
-		pattern: /===\s*'business'[\s\S]{0,80}?===\s*'pro'/,
+		name: "a disjunction in reverse, === 'business' || === 'pro'",
+		pattern: new RegExp(
+			String.raw`===\s*'business'\s*\|\|\s*${OPERAND}\s*===\s*'pro'`
+		),
 		example: "const ok = plan === 'business' || plan === 'pro'"
 	},
+	/*
+	  Whitespace only between the two cases, so this is true fallthrough. Allowing
+	  any short body made `case 'pro': return PRO_SEATS` read as a set.
+	*/
 	{
 		name: 'switch cases falling through pro into business',
-		pattern: /case\s*'pro'\s*:[\s\S]{0,40}?case\s*'business'\s*:/,
-		example: "switch (p) {\n\tcase 'pro':\n\tcase 'business':\n\t\treturn true\n}"
+		pattern: /case\s*'pro'\s*:\s*case\s*'business'\s*:/,
+		example:
+			"switch (p) {\n\tcase 'pro':\n\tcase 'business':\n\t\treturn true\n}"
 	}
 ]
+
+/**
+ * The whole verdict for one file's text, so the walker and the tests below
+ * exercise the same code rather than two copies of it.
+ */
+function restatementsIn(source: string): string[] {
+	const stripped = source.replace(FULL_LADDER, '')
+
+	return RESTATEMENTS.filter(({ pattern }) => pattern.test(stripped)).map(
+		({ name }) => name
+	)
+}
 
 function sourceFiles(dir: string): string[] {
 	return readdirSync(dir).flatMap((entry) => {
@@ -194,15 +262,16 @@ function sourceFiles(dir: string): string[] {
 		const full = join(dir, entry)
 
 		/*
-		  lstat, so a symlinked directory is not recursed into. statSync follows
-		  links, which would loop forever on a cycle and throw ENOENT on a broken
-		  one, taking this spec down with an error instead of a verdict.
+		  lstat, so a symlinked DIRECTORY is not recursed into: statSync follows
+		  links, which would loop forever on a cycle. A symlinked file is still
+		  read, because nothing about a link makes its contents exempt.
 		*/
 		const stats = lstatSync(full)
-		if (stats.isSymbolicLink()) return []
 		if (stats.isDirectory()) return sourceFiles(full)
+		if (stats.isSymbolicLink() && !statSync(full).isFile()) return []
 
-		return /\.(tsx?|mts|cts)$/.test(entry) && !/\.spec\.tsx?$/.test(entry)
+		return /\.(tsx?|mts|cts)$/.test(entry) &&
+			!/\.spec\.(tsx?|mts|cts)$/.test(entry)
 			? [full]
 			: []
 	})
@@ -216,12 +285,8 @@ describe('nothing restates which plans can be bought', () => {
 			const path = relative(join(__dirname, '..'), file).replace(/\\/g, '/')
 			if (path === OWNER) continue
 
-			const source = readFileSync(file, 'utf8').replace(FULL_LADDER, '')
-
-			for (const { name, pattern } of RESTATEMENTS) {
-				if (pattern.test(source)) {
-					offenders.push(`${path} restates it as ${name}`)
-				}
+			for (const name of restatementsIn(readFileSync(file, 'utf8'))) {
+				offenders.push(`${path} restates it as ${name}`)
 			}
 		}
 
@@ -232,34 +297,99 @@ describe('nothing restates which plans can be bought', () => {
 	})
 
 	/*
-	  Every pattern carries its own example and is checked against it, so a
-	  pattern added to the list is tested by construction. The previous version
-	  walked a separate samples array and indexed into this one positionally: a
-	  fourth pattern that could never match anything would have stayed green,
-	  which is the defect this whole file exists to prevent.
+	  Every pattern carries its own example and is checked through the same
+	  strip the guard applies, so a pattern whose example happens to contain the
+	  ladder cannot pass here while being unfireable in the walker.
+
+	  The previous version walked a separate samples array and indexed into this
+	  one positionally: a pattern that could never match anything would have
+	  stayed green, which is the defect this whole file exists to prevent.
 	*/
 	it.each(RESTATEMENTS.map((r) => [r.name, r] as const))(
-		'the pattern for %s can actually fire',
-		(_name, restatement) => {
-			expect(restatement.pattern.test(restatement.example)).toBe(true)
+		'the pattern for %s fires through the real strip',
+		(name, restatement) => {
+			expect(restatementsIn(restatement.example)).toContain(name)
 		}
 	)
 
-	it('exempts the full plan ladder, written either way', () => {
-		const ladders = [
-			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']",
-			"type Plan = 'free' | 'pro' | 'business' | 'enterprise'",
+	it.each([
+		[
+			'a list',
+			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']"
+		],
+		['a union', "type Plan = 'free' | 'pro' | 'business' | 'enterprise'"],
+		[
+			'a wrapped Set',
+			"const VALID = new Set([\n\t'free',\n\t'pro',\n\t'business',\n\t'enterprise'\n])"
+		],
+		[
+			'a comparison chain',
 			"if (\n\tvalue === 'free' ||\n\tvalue === 'pro' ||\n\tvalue === 'business' ||\n\tvalue === 'enterprise'\n) {"
 		]
+	])('exempts the full plan ladder written as %s', (_shape, ladder) => {
+		expect(restatementsIn(ladder)).toEqual([])
+	})
 
-		for (const ladder of ladders) {
-			const stripped = ladder.replace(FULL_LADDER, '')
-			const fired = RESTATEMENTS.filter(({ pattern }) => pattern.test(stripped))
-
-			expect(
-				fired.map(({ name }) => name),
-				`The ladder "${ladder.slice(0, 40)}..." was read as a restatement`
-			).toEqual([])
+	/*
+	  Each of these fires without the strip, so the exemption above is doing work
+	  rather than passing vacuously.
+	*/
+	it.each([
+		[
+			'a list',
+			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']"
+		],
+		['a union', "type Plan = 'free' | 'pro' | 'business' | 'enterprise'"],
+		[
+			'a comparison chain',
+			"if (\n\tvalue === 'free' ||\n\tvalue === 'pro' ||\n\tvalue === 'business' ||\n\tvalue === 'enterprise'\n) {"
+		]
+	])(
+		'would flag the ladder written as %s if it were not exempt',
+		(_s, ladder) => {
+			expect(RESTATEMENTS.some(({ pattern }) => pattern.test(ladder))).toBe(
+				true
+			)
 		}
+	)
+
+	/*
+	  The four shapes this repo already writes that say nothing about the plans
+	  forming a set. Each was flagged by the proximity-based version.
+	*/
+	it.each([
+		[
+			'per-tier booleans',
+			"const isFree = plan === 'free'\nconst isPro = plan === 'pro'\nconst isBusiness = plan === 'business'"
+		],
+		[
+			'a chained ternary',
+			"const label = plan === 'pro' ? 'Pro' : plan === 'business' ? 'Business' : 'Free'"
+		],
+		[
+			'switch cases with distinct bodies',
+			"switch (p) {\n\tcase 'pro':\n\t\treturn PRO_SEATS\n\tcase 'business':\n\t\treturn BUSINESS_SEATS\n}"
+		],
+		[
+			'two unrelated comparisons',
+			"if (plan === 'pro') {\n\tgo()\n}\nif (route === 'business') {\n\tstop()\n}"
+		]
+	])('does not flag %s', (_shape, source) => {
+		expect(restatementsIn(source)).toEqual([])
+	})
+
+	/*
+	  The strip must not swallow unrelated code between a distant 'free' and a
+	  distant 'enterprise', which is how a genuine restatement could hide inside
+	  an exempted region.
+	*/
+	it('still sees a restatement sitting between free and enterprise', () => {
+		const source = [
+			"const fallback: Plan = 'free'",
+			"export type Paid = 'pro' | 'business'",
+			"const soldBySales = ['enterprise']"
+		].join('\n')
+
+		expect(restatementsIn(source)).toContain("a type union, 'pro' | 'business'")
 	})
 })

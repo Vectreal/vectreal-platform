@@ -121,8 +121,7 @@ function PlanCard({
 		? selectablePlans.includes(plan)
 		: true
 
-	const livePricing =
-		isPaid && prices ? prices[plan] : null
+	const livePricing = isPaid && prices ? prices[plan] : null
 	const liveMonthlyAmountCents = livePricing?.monthly?.amountCents ?? null
 	const liveAnnualAmountCents = livePricing?.annual?.amountCents ?? null
 	const liveCurrency =
