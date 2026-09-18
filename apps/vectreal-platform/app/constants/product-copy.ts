@@ -8,12 +8,15 @@
  *
  * Rule: keep every claim here checkable against code. Plan and limit shapes come
  * from ./plan-config, and the offer descriptions read its values rather than
- * restating them; supported formats come from the loader and the file-input
- * accept pattern. Do not inline any of these strings in components.
+ * restating them; the accepted format set comes from `@vctrl/core/model-formats`
+ * and is read here rather than restated. Do not inline any of these strings in
+ * components.
  *
  * Prices are intentionally absent: they are Stripe-managed and loaded
  * dynamically. Point users to /pricing for current rates.
  */
+
+import { IMPORTABLE_FORMAT_LABELS } from '@vctrl/core/model-formats'
 
 import {
 	formatLimitCount,
@@ -46,17 +49,24 @@ export const PLATFORM_SOCIAL_DESCRIPTION =
 
 // ---------------------------------------------------------------------------
 // Supported upload formats
-// Source: shared/components/src/hooks/use-accept-pattern.ts
-//         packages/core/src/model-loader/model-loader.ts
-// Do not claim support for formats not listed here.
 // ---------------------------------------------------------------------------
 
-// NOTE: `.usda` is in the file-input accept pattern but the loader's
-// ModelFileTypes enum is gltf | glb | usdz only, so a .usda upload is rejected
-// with "Unsupported model format". It is therefore not claimed here.
-
-// Short format names for use in prose (e.g. "GLB, glTF, USDZ")
-export const SUPPORTED_FORMAT_NAMES = ['GLB', 'glTF', 'USDZ'] as const
+/**
+ * Short format names for use in prose, read from the owner.
+ *
+ * THIS WAS THE LAST HAND-MAINTAINED STATEMENT OF THE ACCEPTED SET, and the
+ * warning that used to sit here pointed the wrong way. It said "do not claim
+ * support for formats not listed here", written when the risk was
+ * over-claiming; by the time STL, FBX and OBJ loaded, the risk was the
+ * opposite, and this array still read `['GLB', 'glTF', 'USDZ']`. It feeds the
+ * sitewide meta keywords, `/llms.txt`, the home page and a schema.org
+ * `featureList`, so three formats the product reads were absent from every
+ * machine-readable description of it - in the same sitemap as the converter
+ * pages that read them.
+ *
+ * Adding a format to `MODEL_FORMATS` now moves all of that with no edit here.
+ */
+export const SUPPORTED_FORMAT_NAMES = IMPORTABLE_FORMAT_LABELS
 
 // ---------------------------------------------------------------------------
 // Open-source packages
@@ -132,7 +142,7 @@ export const OPEN_SOURCE_PACKAGES = [
 // honors them. That is a commitment to keep, not a claim this file can check -
 // which is also why the SLA hours came out of the labels.
 export const PLATFORM_FEATURE_LIST = [
-	'Upload GLB, glTF, and USDZ 3D models',
+	`Upload ${SUPPORTED_FORMAT_NAMES.join(', ')} 3D models`,
 	'Automated 3D model optimization with Draco compression',
 	'Maximum quality, Balanced, and Smallest optimization presets',
 	'Embeddable 3D viewer via iframe, with no WebGL framework required on the embedding page',

@@ -23,6 +23,10 @@ export default defineConfig({
 		lib: {
 			entry: {
 				index: path.resolve(import.meta.dirname, 'src/index.ts'),
+				'model-formats': path.resolve(
+					import.meta.dirname,
+					'src/model-formats/index.ts'
+				),
 				'model-loader': path.resolve(
 					import.meta.dirname,
 					'src/model-loader/index.ts'

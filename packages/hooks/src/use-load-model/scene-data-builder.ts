@@ -1,14 +1,11 @@
-import { buildAssetLookupKeys, normalizeAssetUri } from '@vctrl/core'
+import { normalizeAssetUri } from '@vctrl/core'
+import {
+	missingAssetsError,
+	referenceIn,
+	selectionKey
+} from '@vctrl/core/model-loader'
 
 import type { SerializedSceneAssetDataMap, ServerSceneData } from '@vctrl/core'
-
-const safeNormalizeAssetUri = (value: string): string => {
-	try {
-		return normalizeAssetUri(value)
-	} catch {
-		return value
-	}
-}
 
 export const collectReferencedUris = (gltfJson: unknown): Set<string> => {
 	const referencedUris = new Set<string>()
@@ -43,7 +40,15 @@ export const buildSceneDataFromLocalFiles = async (
 	) as ServerSceneData['gltfJson']
 	const referencedUris = collectReferencedUris(gltfJson)
 	const assetData: SerializedSceneAssetDataMap = {}
-	const fileLookup = new Map<string, File>()
+	/*
+	  The selection, keyed the one way `@vctrl/core` keys one: where each file
+	  sat in what the visitor dropped. What this replaced was a lookup table
+	  holding every spelling of every file, ending in the bare basename - so two
+	  files called `diffuse.png` in sibling folders were one entry, and the
+	  payload uploaded one image under both URIs while the viewer beside it
+	  showed the right two.
+	*/
+	const selection = new Map<string, File>()
 	const fileBytesCache = new Map<File, Uint8Array>()
 	const matchedFiles = new Set<File>()
 
@@ -56,26 +61,21 @@ export const buildSceneDataFromLocalFiles = async (
 	}
 
 	for (const assetFile of assetFiles) {
-		for (const key of buildAssetLookupKeys(assetFile.name)) {
-			fileLookup.set(key, assetFile)
-		}
-		if (assetFile.webkitRelativePath) {
-			for (const key of buildAssetLookupKeys(assetFile.webkitRelativePath)) {
-				fileLookup.set(key, assetFile)
-			}
-		}
+		selection.set(selectionKey(assetFile), assetFile)
 	}
 
+	const modelPath = selectionKey(gltfFile)
 	const missingUris: string[] = []
 
 	for (const uri of referencedUris) {
-		const normalizedUri = safeNormalizeAssetUri(uri)
-		const basename = normalizedUri.split('/').pop() || normalizedUri
-
-		const matchedFile =
-			fileLookup.get(uri) ||
-			fileLookup.get(normalizedUri) ||
-			fileLookup.get(basename)
+		/*
+		  The lookup is in the dropped frame; the spelling written out below is
+		  the server's. `assetData` is keyed by the normalized URI and each entry
+		  names itself the same way, because that is what the upload manifest and
+		  every reader of a saved scene expect.
+		*/
+		const normalizedUri = normalizeAssetUri(uri)
+		const matchedFile = referenceIn(selection, uri, modelPath)
 
 		if (!matchedFile) {
 			missingUris.push(uri)
@@ -92,7 +92,7 @@ export const buildSceneDataFromLocalFiles = async (
 	}
 
 	if (missingUris.length > 0) {
-		throw new Error(
+		throw missingAssetsError(
 			`Scene payload is missing required referenced assets: ${missingUris.slice(0, 5).join(', ')}`
 		)
 	}
@@ -100,7 +100,7 @@ export const buildSceneDataFromLocalFiles = async (
 	for (const [index, assetFile] of assetFiles.entries()) {
 		if (matchedFiles.has(assetFile)) continue
 
-		const normalizedName = safeNormalizeAssetUri(assetFile.name)
+		const normalizedName = normalizeAssetUri(assetFile.name)
 		const basename = normalizedName.split('/').pop() || normalizedName
 		const bytes = await getFileBytes(assetFile)
 		assetData[`extra-${index}-${basename}`] = {

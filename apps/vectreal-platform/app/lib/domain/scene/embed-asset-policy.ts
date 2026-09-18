@@ -123,7 +123,7 @@ export function buildEmbedAssetRefs(
 
 /**
  * The filename is forced to end in `.glb` because the client hands it to
- * `ModelLoader.getFileType`, which throws on an extension it does not
+ * `ModelLoader`, whose `formatFor` throws on an extension it does not
  * recognize. Publishing has always written `<base>.glb`, but a stored name is
  * data and a crash here would take the whole embed down.
  */

@@ -132,6 +132,18 @@ export class ModelExporter {
 	 * @param options - Draco compression options
 	 * @returns Promise resolving to the export result
 	 */
+	private async dracoCompressedClone(
+		document: Document,
+		options: DracoOptions
+	): Promise<Document> {
+		await this.ensureDracoEncoderRegistered()
+
+		const workingDoc = cloneDocument(document)
+		await workingDoc.transform(draco(options))
+
+		return workingDoc
+	}
+
 	public async exportDocumentGLBDraco(
 		document: Document,
 		options: DracoOptions = {}
@@ -140,11 +152,8 @@ export class ModelExporter {
 		this.emitProgress('Exporting to Draco-compressed GLB format', 0)
 
 		try {
-			await this.ensureDracoEncoderRegistered()
-
 			this.emitProgress('Compressing geometry', 25)
-			const workingDoc = cloneDocument(document)
-			await workingDoc.transform(draco(options))
+			const workingDoc = await this.dracoCompressedClone(document, options)
 
 			this.emitProgress('Serializing document', 60)
 			const binaryDoc = await this.io.writeBinary(workingDoc)
@@ -171,18 +180,36 @@ export class ModelExporter {
 	/**
 	 * Export a glTF-Transform document as GLTF JSON with separate assets.
 	 *
+	 * `draco` compresses geometry first, on a clone, so the caller's document is
+	 * left in whatever state it was already in.
+	 *
+	 * DRACO IS NOT A GLB FEATURE, and this method not offering it was read as
+	 * saying so. `KHR_draco_mesh_compression` is a document extension; the only
+	 * thing `exportDocumentGLBDraco` does that is GLB-specific is call
+	 * `writeBinary` at the end. Writing the same compressed document as glTF puts
+	 * the compressed buffer views in the `.bin` sidecar and is equally valid, so
+	 * the restriction was in this API's shape rather than in the format, and a
+	 * converter reading the shape as the rule offered Draco on one page out of
+	 * four.
+	 *
 	 * @param document - The glTF-Transform document
+	 * @param options - `draco` to compress geometry before serializing
 	 * @returns Promise resolving to the export result
 	 */
 	public async exportDocumentGLTF(
-		document: Document
+		document: Document,
+		options: { draco?: DracoOptions } = {}
 	): Promise<GLTFExportResult> {
 		const startTime = Date.now()
 		this.emitProgress('Exporting to GLTF format', 0)
 
 		try {
+			const source = options.draco
+				? await this.dracoCompressedClone(document, options.draco)
+				: document
+
 			this.emitProgress('Serializing document', 25)
-			const jsonDoc = await this.io.writeJSON(document)
+			const jsonDoc = await this.io.writeJSON(source)
 
 			this.emitProgress('Processing assets', 75)
 			const assets = new Map<string, Uint8Array>()

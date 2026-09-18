@@ -22,15 +22,48 @@ import {
 	loadDracoModule
 } from '../draco/load-draco-module'
 import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
-import { buildAssetLookupKeys } from '../scene-asset'
+import { modelFormatForFileName, type ModelFormat } from '../model-formats'
+import { missingAssetsError } from './missing-assets'
 import { OperationProgress } from '../types'
 import { getThreeDracoLoader } from './draco-three-loader'
+import { referenceIn, selectionKey } from './dropped-selection'
+import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
+import { threeSourceBridge } from './three-source-bridges'
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
 
+import type { ModelSiblings } from './three-source-bridges'
 import type { AnimationClip, Object3D } from 'three'
 
 const DEFAULT_DRACO_DECODER_PATH = '/draco/'
+
+const EMPTY_SIBLINGS: ModelSiblings = new Map()
+
+/**
+ * The files beside a model, each under one key: where it sits in the selection.
+ *
+ * One entry per file, not one per way of naming it. Keying a file under both
+ * its name and its path made the map disagree with itself - the same `.mtl`
+ * appeared twice and was parsed and concatenated twice for every folder anyone
+ * dropped - and it did not help resolution either, because deciding *which*
+ * file a reference means is a lookup question, which `siblingFor` now answers
+ * against one canonical key per file.
+ *
+ * Lower-cased and forward-slashed, for the reason `modelFormatForFileName`
+ * lower-cases: a reference that differs only in case, or only in separator, is
+ * the same file on every platform anyone drops from.
+ */
+async function siblingsFromFiles(
+	files: readonly File[]
+): Promise<ModelSiblings> {
+	const siblings = new Map<string, Uint8Array>()
+
+	for (const file of files) {
+		siblings.set(selectionKey(file), new Uint8Array(await file.arrayBuffer()))
+	}
+
+	return siblings
+}
 
 /**
  * Universal 3D model loader service.
@@ -87,21 +120,33 @@ export class ModelLoader {
 	/**
 	 * Load a model from a file path (Node.js) or File object (browser).
 	 */
-	public async loadFromFile(input: string | File): Promise<ModelLoadResult> {
+	public async loadFromFile(
+		input: string | File,
+		assetFiles: readonly File[] = []
+	): Promise<ModelLoadResult> {
 		if (typeof input === 'string') {
-			return this.loadFromFilePath(input)
+			return this.loadFromFilePath(input, assetFiles)
 		} else {
-			return this.loadFromFileObject(input)
+			return this.loadFromFileObject(input, assetFiles)
 		}
 	}
 
 	/**
 	 * Load a model from a file path (Node.js environment).
 	 *
+	 * Takes the siblings too, because the caller cannot tell which branch of
+	 * `loadFromFile` it landed on: passing a path and a material library used
+	 * to hand the bridge an empty map, so the identical call converted an OBJ
+	 * textured from a `File` and grey from a path, with nothing reported.
+	 *
 	 * @param filePath - Path to the model file
+	 * @param assetFiles - The files the model refers to, if any came with it
 	 * @returns Promise resolving to the loaded model result
 	 */
-	private async loadFromFilePath(filePath: string): Promise<ModelLoadResult> {
+	private async loadFromFilePath(
+		filePath: string,
+		assetFiles: readonly File[] = []
+	): Promise<ModelLoadResult> {
 		const startTime = Date.now()
 		this.emitProgress('Loading model from file', 0, filePath)
 
@@ -112,23 +157,27 @@ export class ModelLoader {
 
 			const buffer = await fs.readFile(filePath)
 			const fileName = path.basename(filePath)
-			const fileType = this.getFileType(fileName)
+			const format = this.formatFor(fileName)
 
 			this.emitProgress('Parsing model data', 50)
 
-			await this.ensureDracoDecoderRegistered()
-			const document = await this.io.readBinary(new Uint8Array(buffer))
-			stripDecodedDracoExtension(document)
+			const { document, glbBytes } = await this.readDocument(
+				new Uint8Array(buffer),
+				format,
+				await siblingsFromFiles(assetFiles),
+				fileName.toLowerCase()
+			)
 			const loadTime = Date.now() - startTime
 
 			this.emitProgress('Model loaded successfully', 100)
 
 			return {
 				data: document,
-				type: fileType,
+				type: format.id,
 				size: buffer.byteLength,
 				name: fileName,
-				loadTime
+				loadTime,
+				glbBytes
 			}
 		} catch (error) {
 			throw new Error(`Failed to load model from file ${filePath}: ${error}`, {
@@ -143,29 +192,36 @@ export class ModelLoader {
 	 * @param file - The File object to load
 	 * @returns Promise resolving to the loaded model result
 	 */
-	private async loadFromFileObject(file: File): Promise<ModelLoadResult> {
+	private async loadFromFileObject(
+		file: File,
+		assetFiles: readonly File[] = []
+	): Promise<ModelLoadResult> {
 		const startTime = Date.now()
 		this.emitProgress('Loading model from File object', 0, file.name)
 
 		try {
-			const fileType = this.getFileType(file.name)
+			const format = this.formatFor(file.name)
 			const buffer = await file.arrayBuffer()
 
 			this.emitProgress('Parsing model data', 50)
 
-			await this.ensureDracoDecoderRegistered()
-			const document = await this.io.readBinary(new Uint8Array(buffer))
-			stripDecodedDracoExtension(document)
+			const { document, glbBytes } = await this.readDocument(
+				new Uint8Array(buffer),
+				format,
+				await siblingsFromFiles(assetFiles),
+				selectionKey(file)
+			)
 			const loadTime = Date.now() - startTime
 
 			this.emitProgress('Model loaded successfully', 100)
 
 			return {
 				data: document,
-				type: fileType,
+				type: format.id,
 				size: buffer.byteLength,
 				name: file.name,
-				loadTime
+				loadTime,
+				glbBytes
 			}
 		} catch (error) {
 			throw new Error(`Failed to load model from File object: ${error}`, {
@@ -183,29 +239,34 @@ export class ModelLoader {
 	 */
 	public async loadFromBuffer(
 		buffer: Uint8Array,
-		fileName: string
+		fileName: string,
+		siblings: ModelSiblings = EMPTY_SIBLINGS
 	): Promise<ModelLoadResult> {
 		const startTime = Date.now()
 		this.emitProgress('Loading model from buffer', 0)
 
 		try {
-			const fileType = this.getFileType(fileName)
+			const format = this.formatFor(fileName)
 
 			this.emitProgress('Parsing model data', 50)
 
-			await this.ensureDracoDecoderRegistered()
-			const document = await this.io.readBinary(buffer)
-			stripDecodedDracoExtension(document)
+			const { document, glbBytes } = await this.readDocument(
+				buffer,
+				format,
+				siblings,
+				fileName.toLowerCase()
+			)
 			const loadTime = Date.now() - startTime
 
 			this.emitProgress('Model loaded successfully', 100)
 
 			return {
 				data: document,
-				type: fileType,
+				type: format.id,
 				size: buffer.byteLength,
 				name: fileName,
-				loadTime
+				loadTime,
+				glbBytes
 			}
 		} catch (error) {
 			throw new Error(`Failed to load model from buffer: ${error}`, {
@@ -218,16 +279,27 @@ export class ModelLoader {
 	 * Load GLTF model with additional assets.
 	 *
 	 * @param gltfBuffer - The GLTF JSON data
-	 * @param assets - Additional asset files (textures, buffers)
+	 * @param assets - Additional asset files (textures, buffers), each under one
+	 *   key: where it sits in the selection, as `selectionKey` spells it
 	 * @param fileName - Original file name
 	 * @param isNestedCall - Internal flag to prevent progress reset when called from loadGLTFWithFileAssets
+	 * @param modelPath - Where the glTF itself sits in that same selection. A
+	 *   reference is written relative to the model, and the keys are relative to
+	 *   what was dropped; this is what connects the two frames. Omitting it is
+	 *   safe for a single-folder selection and switches the cross-folder guard
+	 *   off entirely: a bare name has no root, so nothing in the selection is
+	 *   anyone else's and every sibling in every dropped folder is readable.
+	 *   The one caller here, `loadGLTFWithFileAssets`, always passes
+	 *   `selectionKey(gltfFile)`; `loadFromBuffer` reaches the same rule through a
+	 *   three.js bridge with a bare name, and so always loads that way.
 	 * @returns Promise resolving to the loaded model result
 	 */
 	public async loadGLTFWithAssets(
 		gltfBuffer: Uint8Array,
 		assets: Map<string, Uint8Array>,
 		fileName: string,
-		isNestedCall = false
+		isNestedCall = false,
+		modelPath = ''
 	): Promise<ModelLoadResult> {
 		const startTime = Date.now()
 
@@ -253,6 +325,21 @@ export class ModelLoader {
 				progressOffset + 25 * progressScale
 			)
 
+			// Helper function to check if a URI is a data URL
+			const isDataUrl = (uri: string): boolean => {
+				return uri.startsWith('data:')
+			}
+
+			/*
+			  ONE LOOKUP ANSWERS BOTH QUESTIONS BELOW. Validation and resolution
+			  were separate rules - five spellings checked here, twelve built
+			  further down - so a reference could pass the check and still come
+			  back grey from the parse, with the load reporting success either
+			  way. `referenceIn` owns what a reference means; asking it twice
+			  cannot disagree with itself.
+			*/
+			const bytesFor = (uri: string) => referenceIn(assets, uri, modelPath)
+
 			// Validate that referenced images exist in assets
 			if (gltfJson.images) {
 				const missingImages: string[] = []
@@ -260,23 +347,11 @@ export class ModelLoader {
 				gltfJson.images.forEach((image, index: number) => {
 					// Check if image has a URI reference
 					if (image.uri) {
-						// Skip validation for data URLs - they are embedded in the GLTF itself
-						if (image.uri.startsWith('data:')) {
-							return
-						}
-						const imageName = decodeURIComponent(image.uri)
-						const basename = imageName.split('/').pop() || imageName
+						// A data URL is the image; there is no file to go looking for.
+						if (isDataUrl(image.uri)) return
 
-						// Check multiple possible asset key variations
-						const hasAsset =
-							assets.has(imageName) ||
-							assets.has(basename) ||
-							assets.has(image.uri) ||
-							assets.has(imageName.replace(/^\.\//, '')) || // Remove ./ prefix
-							assets.has(basename.replace(/^\.\//, ''))
-
-						if (!hasAsset) {
-							missingImages.push(`Image ${index}: ${imageName}`)
+						if (!bytesFor(image.uri)) {
+							missingImages.push(`Image ${index}: ${image.uri}`)
 						}
 					} else if (
 						typeof image.bufferView !== 'number' ||
@@ -289,101 +364,90 @@ export class ModelLoader {
 
 				if (missingImages.length > 0) {
 					const availableAssets = Array.from(assets.keys()).join(', ')
-					throw new Error(
+					throw missingAssetsError(
 						`Missing required image files:\n${missingImages.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`
 					)
 				}
 			}
 
-			// Helper function to check if a URI is a data URL
-			const isDataUrl = (uri: string): boolean => {
-				return uri.startsWith('data:')
+			/*
+			  AND THE BUFFERS, WHICH MATTER MORE. Only images were checked, so a
+			  `.gltf` dropped without its `.bin` fell through to `io.readJSON`
+			  and failed there as a parse error - which reached the reader as
+			  "Check it is a valid glTF." about a file that is perfectly valid
+			  and merely incomplete. That is the commonest incomplete bundle
+			  there is, and it was the one shape the refusal could not name.
+
+			  A buffer with no `uri` is the GLB binary chunk and has no file to
+			  go looking for, the same way an image with a `bufferView` has none.
+			*/
+			if (gltfJson.buffers) {
+				const missingBuffers: string[] = []
+
+				/*
+				  ONLY THE BUFFERS THE DOCUMENT ACTUALLY READS. Checking every
+				  declaration refused documents that load perfectly well: an
+				  unreferenced buffer, a `byteLength: 0` buffer some exporters
+				  emit, and anything the reader was never going to open. The
+				  question is "will this load fail for want of a file", and a
+				  buffer no `bufferView` points at cannot make it fail.
+				*/
+				const usedBuffers = new Set(
+					(gltfJson.bufferViews ?? []).map((view) => view.buffer)
+				)
+
+				gltfJson.buffers.forEach((buffer, index: number) => {
+					if (!usedBuffers.has(index)) return
+					if (typeof buffer.uri !== 'string') return
+					if (isDataUrl(buffer.uri)) return
+
+					if (!bytesFor(buffer.uri)) {
+						missingBuffers.push(`Buffer ${index}: ${buffer.uri}`)
+					}
+				})
+
+				if (missingBuffers.length > 0) {
+					const availableAssets = Array.from(assets.keys()).join(', ')
+					throw missingAssetsError(
+						`Missing required buffer files:\n${missingBuffers.join('\n')}\n\nAvailable assets: ${availableAssets || '(none)'}`
+					)
+				}
 			}
 
-			// Create resource map for glTF-Transform
+			/*
+			  One entry per reference the glTF actually makes, resolved through
+			  the owner. What this replaced poured every asset in under its own
+			  name, its basename, and every decoded variation of both, then
+			  cross-matched twelve ways - and the unconditional basename entries
+			  at the end meant two files called `diffuse.png` in sibling folders
+			  each overwrote the other's URI. Both materials got whichever was
+			  written last, and the load reported success.
+			*/
 			const resources = new Map<string, Uint8Array>()
 
 			// Add main GLTF file
 			resources.set('model.gltf', gltfBuffer)
 
-			// Build a comprehensive resource map based on what the GLTF actually references
-			// First, collect all URI references from the GLTF
-			const referencedUris = new Set<string>()
+			for (const uri of referencedUris(gltfJson)) {
+				const bytes = bytesFor(uri)
+				if (!bytes) continue
 
-			// Collect image URIs (skip data URLs as they are embedded)
-			if (gltfJson.images) {
-				gltfJson.images.forEach((image) => {
-					if (image.uri && !isDataUrl(image.uri)) {
-						referencedUris.add(image.uri)
-						// Also add decoded version
-						referencedUris.add(decodeURIComponent(image.uri))
-					}
-				})
-			}
+				/*
+				  ONE ENTRY, UNDER THE URI EXACTLY AS THE GLTF WRITES IT. The reader
+				  looks this map up with `jsonDoc.resources[imageDef.uri]` and
+				  nothing else; glTF-Transform's `decodeURIComponent` calls are in
+				  its filesystem resolver, which `readJSON` never reaches.
 
-			// Collect buffer URIs (for .bin files, skip data URLs)
-			if (gltfJson.buffers) {
-				gltfJson.buffers.forEach((buffer) => {
-					if (buffer.uri && !isDataUrl(buffer.uri)) {
-						referencedUris.add(buffer.uri)
-						referencedUris.add(decodeURIComponent(buffer.uri))
-					}
-				})
-			}
-
-			// Now map each asset to all possible URIs it might match
-			for (const [name, data] of assets.entries()) {
-				const basename = name.split('/').pop() || name
-				const decodedName = decodeURIComponent(name)
-				const decodedBasename = decodedName.split('/').pop() || decodedName
-
-				// Create a list of possible keys for this asset
-				const possibleKeys = new Set([
-					name,
-					basename,
-					decodedName,
-					decodedBasename,
-					`./${basename}`,
-					`./${decodedBasename}`
-				])
-
-				// Add this asset under any URI that matches any of its possible keys
-				for (const uri of referencedUris) {
-					const uriBasename = uri.split('/').pop() || uri
-					const decodedUri = decodeURIComponent(uri)
-					const decodedUriBasename = decodedUri.split('/').pop() || decodedUri
-
-					// Check if this URI matches this asset
-					if (
-						possibleKeys.has(uri) ||
-						possibleKeys.has(uriBasename) ||
-						possibleKeys.has(decodedUri) ||
-						possibleKeys.has(decodedUriBasename) ||
-						uri === basename ||
-						uri === decodedBasename ||
-						uriBasename === basename ||
-						uriBasename === decodedBasename ||
-						decodedUri === basename ||
-						decodedUri === decodedBasename ||
-						decodedUriBasename === basename ||
-						decodedUriBasename === decodedBasename
-					) {
-						// Add under the exact URI used in the GLTF
-						resources.set(uri, data)
-						// Also add under common variations
-						resources.set(decodedUri, data)
-					}
-				}
-
-				// Also add under the original name and common variations as fallback
-				resources.set(name, data)
-				resources.set(basename, data)
-				if (decodedName !== name) {
-					resources.set(decodedName, data)
-				}
-				if (decodedBasename !== basename) {
-					resources.set(decodedBasename, data)
-				}
+				  A second entry under the decoded spelling was written here "in
+				  case it does not", and it was the fourth key space in one lookup:
+				  case- and separator-sensitive but percent-decoding, the opposite
+				  fold from `resolutionKey`. So `wood%20grain.png`'s decoded alias
+				  overwrote the entry belonging to a *different* image genuinely
+				  named `wood grain.png`, and the reader bound bytes that `bytesFor`
+				  had not chosen - silently, because validation asks `bytesFor`,
+				  which was right.
+				*/
+				resources.set(uri, bytes)
 			}
 
 			this.emitProgress(
@@ -448,17 +512,21 @@ export class ModelLoader {
 			// Read GLTF file
 			const gltfBuffer = new Uint8Array(await gltfFile.arrayBuffer())
 
-			// Read asset files - normalize filenames to handle different path separators
+			/*
+			  One key per file: where it sits in the selection, exactly as
+			  `siblingsFromFiles` keys the three.js formats. Keying a file under
+			  its name as well made the map disagree with itself - two files
+			  called `diffuse.png` in sibling folders were one entry before
+			  anything downstream got a chance to tell them apart - and it did
+			  not help resolution either, because deciding which file a
+			  reference means is a lookup question.
+			*/
 			const assetMap = new Map<string, Uint8Array>()
 			for (const file of assetFiles) {
-				const buffer = new Uint8Array(await file.arrayBuffer())
-				// Store both the original filename and just the basename
-				assetMap.set(file.name, buffer)
-				// Also store with just the basename in case GLTF uses relative paths
-				const basename = file.name.split('/').pop() || file.name
-				if (basename !== file.name) {
-					assetMap.set(basename, buffer)
-				}
+				assetMap.set(
+					selectionKey(file),
+					new Uint8Array(await file.arrayBuffer())
+				)
 			}
 
 			this.emitProgress('Processing GLTF with assets', 50)
@@ -467,37 +535,14 @@ export class ModelLoader {
 				gltfBuffer,
 				assetMap,
 				gltfFile.name,
-				true
+				true,
+				selectionKey(gltfFile)
 			)
 		} catch (error) {
 			throw new Error(`Failed to load GLTF with file assets: ${error}`, {
 				cause: error
 			})
 		}
-	}
-
-	/**
-	 * Validate if a file type is supported.
-	 *
-	 * @param fileName - The file name to check
-	 * @returns True if the file type is supported
-	 */
-	public isSupportedFormat(fileName: string): boolean {
-		try {
-			this.getFileType(fileName)
-			return true
-		} catch {
-			return false
-		}
-	}
-
-	/**
-	 * Get supported file extensions.
-	 *
-	 * @returns Array of supported file extensions
-	 */
-	public getSupportedExtensions(): string[] {
-		return Object.values(ModelFileTypes)
 	}
 
 	/**
@@ -542,7 +587,8 @@ export class ModelLoader {
 							type: modelResult.type,
 							size: modelResult.size,
 							name: modelResult.name,
-							loadTime: modelResult.loadTime
+							loadTime: modelResult.loadTime,
+							glbBytes: modelResult.glbBytes
 						})
 					},
 					(error) => {
@@ -592,17 +638,36 @@ export class ModelLoader {
 			]
 		)
 
-		const urlMap = new Map<string, string>()
 		let totalSize = 0
+		for (const bytes of assets.values()) totalSize += bytes.byteLength
 
-		for (const [name, bytes] of assets.entries()) {
-			totalSize += bytes.byteLength
-			const objectUrl = URL.createObjectURL(
-				new Blob([bytes as Uint8Array<ArrayBuffer>])
-			)
-			for (const key of buildAssetLookupKeys(name)) {
-				urlMap.set(key, objectUrl)
+		/*
+		  KEYED BY THE URI THE LOADER WILL ASK FOR, RESOLVED THROUGH THE OWNER.
+		  `loader.parse(text, '')` gives three.js an empty base, so
+		  `LoaderUtils.resolveURL` hands the modifier the URI exactly as the glTF
+		  writes it - which makes one entry per reference the whole map.
+
+		  What this replaced poured every spelling of every asset name in - whole
+		  name, normalized, bare basename - and let the last writer win, so two
+		  assets called `diffuse.png` in sibling folders each overwrote the
+		  other. The editor reads the same scene through `loadGLTFWithAssets` and
+		  got it right; this is the route the published embed and the dashboard
+		  viewer take, so the defect was visible to everyone except the person
+		  who could fix it. `referencedAssetNames` is the rule, in a pure module
+		  because nothing here can be reached without a DOM.
+		*/
+		const urlMap = new Map<string, string>()
+		const objectUrlFor = new Map<string, string>()
+
+		for (const [uri, name] of referencedAssetNames(gltfJson, assets.keys())) {
+			let objectUrl = objectUrlFor.get(name)
+			if (objectUrl === undefined) {
+				objectUrl = URL.createObjectURL(
+					new Blob([assets.get(name) as Uint8Array<ArrayBuffer>])
+				)
+				objectUrlFor.set(name, objectUrl)
 			}
+			urlMap.set(uri, objectUrl)
 		}
 
 		const manager = new LoadingManager()
@@ -649,11 +714,17 @@ export class ModelLoader {
 	/**
 	 * Load a model and convert to Three.js scene (browser environment).
 	 * This is a convenience method that combines loading and Three.js conversion.
+	 *
+	 * `assetFiles` are the files that arrived beside the model. Only a bundle
+	 * read through three.js uses them - an OBJ and its `.mtl` today - and the
+	 * glTF family takes its own path, `loadGLTFWithAssetsToThreeJS`, because
+	 * glTF-Transform resolves those references itself.
 	 */
 	public async loadToThreeJS(
-		input: string | File
+		input: string | File,
+		assetFiles: readonly File[] = []
 	): Promise<ThreeJSModelResult> {
-		const modelResult = await this.loadFromFile(input)
+		const modelResult = await this.loadFromFile(input, assetFiles)
 		return this.documentToThreeJS(modelResult.data, modelResult)
 	}
 
@@ -668,19 +739,73 @@ export class ModelLoader {
 		return this.documentToThreeJS(modelResult.data, modelResult)
 	}
 
-	private getFileType(fileName: string): ModelFileTypes {
-		const extension = fileName.toLowerCase().split('.').pop()
+	/**
+	 * The one place a file name becomes a format, for this class.
+	 *
+	 * The switch this replaced was a second statement of the accepted set, and
+	 * it disagreed with `findByExtension` in `@vctrl/hooks` on casing - that one
+	 * matched raw, so `MODEL.GLB` was refused as unsupported before this class
+	 * ever saw it, by code standing in front of a loader that reads it fine.
+	 */
+	private formatFor(fileName: string): ModelFormat {
+		const format = modelFormatForFileName(fileName)
 
-		switch (extension) {
-			case 'gltf':
-				return ModelFileTypes.gltf
-			case 'glb':
-				return ModelFileTypes.glb
-			case 'usdz':
-				return ModelFileTypes.usdz
-			default:
-				throw new Error(`Unsupported file type: ${extension}`)
+		if (!format?.canImport) {
+			/*
+			  Names the file, not a derived extension. It printed
+			  `split('.').pop()`, which renders as "Unsupported file type: " with
+			  nothing after the colon for a name like `model.` - the one case where
+			  a reader most needs to be told what was wrong with what they picked.
+			*/
+			throw new Error(`Unsupported file type: ${fileName}`)
 		}
+
+		return format
+	}
+
+	/**
+	 * A file's bytes, as a glTF-Transform document.
+	 *
+	 * Every load path ended in the same three lines - register Draco, read the
+	 * binary, strip the decoded extension - and each one handed the file's own
+	 * bytes to a reader that only understands the glTF family. That is the
+	 * assumption a format like STL breaks: there is no glTF anywhere in the
+	 * file, so it is parsed by three.js and re-serialized as GLB before the
+	 * document pipeline sees it. Doing it here rather than at the drop zone is
+	 * what keeps `@vctrl/core` from advertising a format it cannot read.
+	 *
+	 * `glbBytes` comes back only for a bridged format, and it is the conversion
+	 * output. Callers hand it to the optimizer in place of the file, whose bytes
+	 * are not glTF. The glTF family deliberately returns nothing: its file is
+	 * already the GLB to ingest, and re-serializing one would discard whatever
+	 * it arrived compressed as.
+	 */
+	private async readDocument(
+		bytes: Uint8Array,
+		format: ModelFormat,
+		siblings: ModelSiblings = EMPTY_SIBLINGS,
+		modelPath = ''
+	): Promise<{ document: Document; glbBytes?: Uint8Array }> {
+		const bridge = threeSourceBridge(format.id)
+		let glbBytes: Uint8Array | undefined
+
+		if (bridge) {
+			/*
+			  Dynamic, like the three.js loaders themselves: the exporter carries
+			  `GLTFExporter` and JSZip, and nothing that reads a GLB needs either.
+			*/
+			const { ModelExporter } = await import('../model-exporter')
+			const exported = await new ModelExporter().exportThreeJSGLB(
+				await bridge(bytes, siblings, modelPath)
+			)
+			glbBytes = exported.data
+		}
+
+		await this.ensureDracoDecoderRegistered()
+		const document = await this.io.readBinary(glbBytes ?? bytes)
+		stripDecodedDracoExtension(document)
+
+		return { document, glbBytes }
 	}
 
 	private emitProgress(

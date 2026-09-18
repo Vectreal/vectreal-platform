@@ -17,6 +17,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 // Export all base types first (single source of truth)
 export * from './types'
 
+// The accepted-format set. Pure data with no imports; see the module header.
+export * from './model-formats'
+
 // Export all core services
 export * from './model-loader'
 export * from './model-optimizer'

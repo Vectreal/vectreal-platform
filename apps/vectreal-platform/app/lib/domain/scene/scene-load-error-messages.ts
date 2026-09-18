@@ -1,3 +1,5 @@
+import { IMPORTABLE_FORMAT_LABELS } from '@vctrl/core/model-formats'
+
 import type { StructuredLoadError } from '@vctrl/hooks/use-load-model'
 
 /**
@@ -13,7 +15,13 @@ export function getUploadLoadErrorMessage(
 		case 'missing_assets':
 			return 'Model references missing assets. Upload the full model folder (including textures/buffers) and retry.'
 		case 'unsupported_format':
-			return 'Unsupported model format. Upload a .gltf, .glb, or .usdz file.'
+			/*
+			  Read from the owner rather than written out. It named three of the
+			  six formats that would have worked, so the message sent people away
+			  with a file the loader reads - and `docs/guides/upload.mdx` quoted
+			  it verbatim, which is how one stale sentence became two.
+			*/
+			return `Unsupported model format. Upload one of: ${IMPORTABLE_FORMAT_LABELS.join(', ')}.`
 		case 'multiple_models':
 			return 'Multiple models found. Upload one model at a time.'
 		case 'quota_exceeded':

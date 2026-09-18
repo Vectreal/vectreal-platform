@@ -5,6 +5,7 @@ import {
 	normalizeSceneInteractions,
 	normalizeAssetUri
 } from '@vctrl/core'
+import { missingAssetsError } from '@vctrl/core/model-loader'
 
 import type {
 	CameraProps,
@@ -130,7 +131,7 @@ function validateReferencedAssets(
 	}
 
 	if (missingUris.length > 0) {
-		throw new Error(
+		throw missingAssetsError(
 			`Scene payload is missing required referenced assets: ${missingUris.slice(0, 5).join(', ')}`
 		)
 	}
