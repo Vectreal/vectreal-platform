@@ -27,6 +27,7 @@ import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { Route } from './+types/signin-page'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
+import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
 import {
 	AUTH_ERROR_MESSAGES,
 	classifySigninFailure,
@@ -82,17 +83,6 @@ function validateSignin(formData: FormData) {
 
 	const data = { email, password } as UserInput
 	return { errors, data }
-}
-
-const getSafeNext = (request: Request) => {
-	const requestUrl = new URL(request.url)
-	const next = requestUrl.searchParams.get('next')
-
-	if (!next || !next.startsWith('/')) {
-		return '/dashboard'
-	}
-
-	return next
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -173,7 +163,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		})
 
 		const additionalHeaders = new Headers(headers)
-		const next = getSafeNext(request)
+		const next = getSafeNextPath(new URL(request.url).searchParams.get('next'))
 
 		return redirect(next, {
 			headers: additionalHeaders
@@ -233,7 +223,10 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	} = await client.auth.getUser()
 
 	if (user) {
-		return redirect(getSafeNext(request), { headers })
+		return redirect(
+			getSafeNextPath(new URL(request.url).searchParams.get('next')),
+			{ headers }
+		)
 	}
 
 	// Check if this is a scene preservation flow
@@ -244,8 +237,19 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 		rawAuthError && rawAuthError in AUTH_ERROR_MESSAGES
 			? (rawAuthError as AuthErrorCode)
 			: null
-	/** The publisher restore URL embedded in `next`, forwarded to the component for the 'Open Publisher' button. */
-	const nextPath = url.searchParams.get('next') ?? null
+	/*
+	  The publisher restore URL embedded in `next`, forwarded to the component for
+	  the 'Open Publisher' button.
+
+	  Offered only when the whitelist accepts it unchanged. `getSafeNextPath`
+	  answers a hostile value with `/dashboard`, which is the right answer for a
+	  redirect and the wrong one for a button labelled "Open Publisher" - and a
+	  raw value here would render `//evil.com/x` as a disguised off-site link on
+	  the sign-in page.
+	*/
+	const rawNext = url.searchParams.get('next')
+	const nextPath =
+		rawNext && getSafeNextPath(rawNext) === rawNext ? rawNext : null
 
 	return data(
 		{
@@ -335,7 +339,14 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 				</Alert>
 			)}
 
-			<Form className="w-full" method="post" action="/sign-in">
+			{/*
+			  No `action`: react-router copies `location.search` onto a submission
+			  only when the form names no action of its own, and this form needs the
+			  `?next=` it was opened with to survive the POST. Naming the route
+			  explicitly - even naming this same route - drops it, and the visitor
+			  lands on `/dashboard` with their unsaved scene stranded in IndexedDB.
+			*/}
+			<Form className="w-full" method="post">
 				<AuthenticityTokenInput />
 				<input
 					type="hidden"
