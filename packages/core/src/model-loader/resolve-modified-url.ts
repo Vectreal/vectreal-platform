@@ -1,31 +1,20 @@
-import { normalizeAssetUri } from '../scene-asset'
-
 /**
- * Resolves a GLTFLoader-requested URL to a pre-registered object URL.
- * Tries the raw URL, the normalized URI (decoded, ./ stripped), and the
- * basename. Unknown URLs (data:, blob:, absolute) pass through untouched.
+ * Resolves a URL the GLTFLoader asked for to a pre-registered object URL.
+ *
+ * A DIRECT LOOKUP, because the map is keyed by the URI the loader will ask
+ * for. `parseGLTFJsonToThreeJS` builds it from `referencedAssetNames`, one
+ * entry per reference the glTF actually makes, so there is nothing left for a
+ * second or third spelling to find.
+ *
+ * It used to try the raw URL, then the decoded one, then the bare basename,
+ * against a map holding every spelling of every asset name. Both ends guessing
+ * is what let two files called `diffuse.png` in sibling folders answer for one
+ * another on the route the published embed takes.
+ *
+ * Anything not registered passes through untouched, which is what a `data:`,
+ * `blob:` or absolute URL needs.
  */
 export const resolveModifiedUrl = (
 	urlMap: Map<string, string>,
 	url: string
-): string => {
-	if (url.startsWith('data:') || url.startsWith('blob:')) {
-		return url
-	}
-
-	const direct = urlMap.get(url)
-	if (direct) return direct
-
-	let normalized: string
-	try {
-		normalized = normalizeAssetUri(url)
-	} catch {
-		return url
-	}
-
-	const byNormalized = urlMap.get(normalized)
-	if (byNormalized) return byNormalized
-
-	const basename = normalized.split('/').pop() || normalized
-	return urlMap.get(basename) ?? url
-}
+): string => urlMap.get(url) ?? url

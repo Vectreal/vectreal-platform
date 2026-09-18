@@ -194,7 +194,7 @@ describe('embed asset policy', () => {
 		})
 
 		/**
-		 * The client hands this filename to `ModelLoader.getFileType`, which throws
+		 * The client hands this filename to `ModelLoader`, whose `formatFor` throws
 		 * on an extension it does not recognize. A stored name is data, and a
 		 * crash there would take down the whole embed.
 		 */

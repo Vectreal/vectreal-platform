@@ -14,6 +14,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
+import { IMPORTABLE_FORMAT_IDS } from '@vctrl/core/model-formats'
 import { ModelFileTypes } from '@vctrl/core/model-loader'
 
 import {
@@ -23,12 +24,15 @@ import {
 	StructuredLoadError
 } from './types'
 
-/** Model formats the loader accepts. */
-export const supportedFileTypes: ModelFileTypes[] = [
-	ModelFileTypes.gltf,
-	ModelFileTypes.glb,
-	ModelFileTypes.usdz
-]
+/**
+ * Model formats the loader accepts, reported on `useLoadModel`'s return.
+ *
+ * It was a hand-maintained array restating the three ids - one of the nine
+ * independent statements of a set nothing kept in agreement. It is now read
+ * from the owner. The export stays because it is part of `@vctrl/hooks`'
+ * published return type, and no app code reads it.
+ */
+export const supportedFileTypes: ModelFileTypes[] = [...IMPORTABLE_FORMAT_IDS]
 
 /**
  * The four states a load can be in. Building them here rather than spreading

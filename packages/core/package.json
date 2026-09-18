@@ -39,6 +39,11 @@
 			"import": "./index.es.js",
 			"require": "./index.cjs.js"
 		},
+		"./model-formats": {
+			"types": "./model-formats/index.d.ts",
+			"import": "./model-formats.es.js",
+			"require": "./model-formats.cjs.js"
+		},
 		"./model-loader": {
 			"types": "./model-loader/index.d.ts",
 			"import": "./model-loader.es.js",

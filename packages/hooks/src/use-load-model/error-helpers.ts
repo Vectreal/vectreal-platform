@@ -1,3 +1,5 @@
+import { isMissingAssetsError } from '@vctrl/core/model-loader'
+
 import { StructuredLoadError } from './types'
 
 /**
@@ -48,14 +50,19 @@ export const normalizeLocalLoadError = (
 ): StructuredLoadError => {
 	if (isStructuredLoadError(error)) return error
 
-	const message = toErrorMessage(error)
-	const derivedCode = message.includes('missing required referenced assets')
-		? 'missing_assets'
-		: code
+	/*
+	  THE MARKER, NOT THE SENTENCE. This read `message.includes('missing
+	  required referenced assets')`, which is the scene payload builder's
+	  wording. The glTF loader refuses with `Missing required image files:`, so
+	  its refusal never reached `missing_assets` and the reader was told to
+	  check that a valid folder was a valid glTF, while the copy naming the real
+	  problem sat unreachable in every surface that writes it.
+	*/
+	const derivedCode = isMissingAssetsError(error) ? 'missing_assets' : code
 
 	return createStructuredLoadError({
 		code: derivedCode,
-		message,
+		message: toErrorMessage(error),
 		recoverable: true,
 		source: 'local-upload',
 		cause: error,
@@ -71,7 +78,17 @@ export const normalizeServerLoadError = (
 
 	const message = toErrorMessage(error)
 
-	let code: StructuredLoadError['code'] = 'server_load_failed'
+	/*
+	  A SAVED SCENE CAN BE INCOMPLETE TOO. `resolve-scene-payload` refuses a
+	  manifest that omits a referenced asset, and that refusal used to land here
+	  as `server_load_failed` - so the dashboard said "a server or network issue.
+	  Retry in a moment." about a payload that will never load however many times
+	  it is fetched. The sentence that names the real problem, and the repair,
+	  was one `case` away and unreachable.
+	*/
+	let code: StructuredLoadError['code'] = isMissingAssetsError(error)
+		? 'missing_assets'
+		: 'server_load_failed'
 	if (message.includes('Server responded with 404')) {
 		code = 'not_found'
 	} else if (

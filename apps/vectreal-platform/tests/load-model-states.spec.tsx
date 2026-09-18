@@ -154,7 +154,17 @@ describe('useLoadModel state', () => {
 		vi.unstubAllGlobals()
 	})
 
-	it('lets the newer load win when two overlap', async () => {
+	it('lets the newer load win when two overlap, and tells the loser', async () => {
+		/*
+		  The `status` half of this was already asserted and was the whole of it,
+		  which made the test a statement that a retired load is indistinguishable
+		  from a winning one - green, and holding the defect in place.
+
+		  Both still resolve `ready`, deliberately: the loser did parse a real
+		  model and a caller may want it. What it must not do is claim to describe
+		  what is on screen, and `stillCurrent` is the only thing that separates
+		  the two.
+		*/
 		const { result } = renderHook(() => useLoadModel())
 
 		const [first, second] = await act(() =>
@@ -166,7 +176,34 @@ describe('useLoadModel state', () => {
 
 		expect(first.status).toBe('ready')
 		expect(second.status).toBe('ready')
+
+		expect(first.stillCurrent()).toBe(false)
+		expect(second.stillCurrent()).toBe(true)
+
 		await waitFor(() => expect(result.current.file?.name).toBe('second.glb'))
+	})
+
+	it('reports a load retired by reset as no longer current', async () => {
+		/*
+		  `reset` claims a token of its own, so "the user cleared the model" and
+		  "a newer file replaced it" are the same answer to the caller. Before
+		  this, a caller running its own counter had to remember to bump it from
+		  its reset path too, and the converter page did not - so pressing
+		  "Convert another" while a drop was still in flight put the source back
+		  after the stage had been emptied.
+		*/
+		const { result } = renderHook(() => useLoadModel())
+
+		const outcome = await act(async () => {
+			const pending = result.current.load({
+				kind: 'files',
+				files: [file('first.glb')]
+			})
+			result.current.reset()
+			return pending
+		})
+
+		expect(outcome.stillCurrent()).toBe(false)
 	})
 
 	it('clears the model on reset', async () => {

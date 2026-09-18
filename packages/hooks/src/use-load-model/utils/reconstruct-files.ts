@@ -19,6 +19,34 @@ import { PERSISTED_BAKE_FILENAME, toSerializedAssetBytes } from '@vctrl/core'
 import type { InputFileOrDirectory, ServerSceneData } from '../types'
 
 /**
+ * The file name a saved scene's glTF arrives as.
+ *
+ * A SCENE TITLE IS NOT A FILE NAME, and making it into one takes more than
+ * removing separators. Nothing validates `meta.name`, so a title reaches here
+ * however the visitor typed it, and two shapes of it break the load outright:
+ *
+ * `Chair / v2` produced the key `chair / v2.gltf`, and the loader reads a key
+ * containing a separator as a path - the model appeared to sit in a folder
+ * called `chair `, and every asset carrying its own folder fell outside that
+ * scope. Harmless while stored assets were flat, because a folderless key is in
+ * every scope; giving them their folders is what made it bite.
+ *
+ * Replacing the separator with `_` then manufactured the second shape: `./v2`
+ * became `._v2.gltf`, and `modelFormatForFileName` refuses any basename
+ * starting with `._` as a macOS AppleDouble sidecar. So the scene failed to
+ * load from its title alone again, one route over, through the fix for the
+ * first. A leading dot has no other use here either - it is a hidden file on
+ * every platform this ships to, and the title is also spent as a download name.
+ *
+ * Exported because the byte gate has to name the model the same way the loader
+ * will; two spellings of this rule is how the first defect got in.
+ */
+export function sceneGltfFileName(title: string | undefined): string {
+	const name = (title ?? '').replace(/[\\/]+/g, '_').replace(/^\.+/, '')
+	return name ? `${name}.gltf` : 'scene.gltf'
+}
+
+/**
  * Reconstructs GLTF and asset files from scene data received from the server.
  *
  * This function converts the server's scene data format (GLTF JSON + binary assets)
@@ -84,9 +112,7 @@ export function reconstructGltfFiles(
 	const gltfJsonString = JSON.stringify(data.gltfJson)
 	const gltfBlob = new Blob([gltfJsonString], { type: 'model/gltf+json' })
 
-	// Determine filename from metadata or use default
-	const sceneName = data.meta?.name
-	const gltfFileName = sceneName ? `${sceneName}.gltf` : 'scene.gltf'
+	const gltfFileName = sceneGltfFileName(data.meta?.name)
 
 	const gltfFile = new File([gltfBlob], gltfFileName, {
 		type: 'model/gltf+json'

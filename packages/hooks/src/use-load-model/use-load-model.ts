@@ -34,6 +34,7 @@ import {
 import {
 	LoadedModel,
 	ModelSource,
+	LoadOutcome,
 	ModelState,
 	UseLoadModelReturn
 } from './types'
@@ -95,9 +96,25 @@ function useLoadModel<
 	stateRef.current = state
 
 	const load = useCallback(
-		async (source: ModelSource): Promise<ModelState> => {
+		async (source: ModelSource): Promise<LoadOutcome> => {
 			const token = ++loadTokenRef.current
 			const isCurrent = () => loadTokenRef.current === token
+
+			/*
+			  The same token the state writes are gated on, handed to the caller.
+
+			  Without it a retired load resolves to a `ready` state that is
+			  byte-identical to the winner's, so every caller acting on the value
+			  rather than on the rendered state had to run a second clock of its
+			  own - and two of them did, differently. `isCurrent` is not captured
+			  as a boolean because the question outlives this function: a caller
+			  that then encodes or exports has awaits of its own, and a drop can
+			  land inside any of them.
+			*/
+			const outcome = (next: ModelState): LoadOutcome => ({
+				...next,
+				stillCurrent: isCurrent
+			})
 			// Only an upload is an attempt to *add* a model; a scene source replaces
 			// the one on screen, so its failure has to be visible as one rather than
 			// leaving the previous scene's geometry under the new scene's name.
@@ -140,7 +157,9 @@ function useLoadModel<
 							? await loadModelFromSceneData(source, context)
 							: await loadModelFromServer(source, context)
 
-				return published ?? commit(readyModelState(source.kind, loaded))
+				return outcome(
+					published ?? commit(readyModelState(source.kind, loaded))
+				)
 			} catch (error) {
 				const structured =
 					source.kind === 'files'
@@ -153,7 +172,7 @@ function useLoadModel<
 				// onto an open scene reports the problem; it does not clear the model
 				// the user was working on.
 				commit(modelOnScreen ?? errorModelState(source.kind, structured))
-				return errorModelState(source.kind, structured)
+				return outcome(errorModelState(source.kind, structured))
 			}
 		},
 		[modelLoader]

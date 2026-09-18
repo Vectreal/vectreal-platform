@@ -34,8 +34,14 @@ export type {
 } from '@vctrl/core'
 
 /**
- * Type representing the input for file/folder uploads.
- * Can be either File objects or FileSystemDirectoryHandle for folder drag-and-drop.
+ * What the loader accepts as a user's selection.
+ *
+ * NOT the drag-and-drop path, which this was called for years. A folder dropped
+ * on a page arrives as plain `File` objects - react-dropzone has already walked
+ * it - and `expandDirectories` claims the path each one carries. The
+ * `FileSystemDirectoryHandle` branch is for a caller that opened
+ * `showDirectoryPicker()` itself and has a handle rather than files, which is a
+ * real capability and the reason the union is wider than `File[]`.
  */
 export type InputFileOrDirectory = (File | FileSystemDirectoryHandle)[]
 
@@ -128,6 +134,32 @@ export type ModelState =
 	  })
 
 /**
+ * What `load` resolves to: the state it produced, and whether it still counts.
+ *
+ * A LOAD THAT LOST IS INDISTINGUISHABLE FROM ONE THAT WON, without this. The
+ * hook retires a superseded load's *state* by token, so it can never overwrite
+ * the model that replaced it - but the promise still resolves, with a `ready`
+ * state carrying a real `ModelFile`, byte-identical to the winner's. A caller
+ * acting on the resolved value rather than on the rendered state therefore had
+ * no way to tell the two apart, and every one of them had to keep a second
+ * clock of its own to compensate. Two already did, differently: a monotonic
+ * counter on the converter page and an effect-cleanup flag in `useSceneModel`.
+ *
+ * `stillCurrent` is that clock, published once. It reads the same token
+ * `setState` is gated on, so it stays truthful at any later point - including
+ * after awaits the loader knows nothing about, which is what a caller that
+ * exports or encodes the result actually needs. `reset()` claims a token too,
+ * so a load in flight when the user clears the model also reports false.
+ *
+ * It answers about *this* load, so hold the resolved value and ask it again
+ * rather than caching the boolean.
+ */
+export type LoadOutcome = ModelState & {
+	/** Whether this load is still the newest one, asked now. */
+	stillCurrent: () => boolean
+}
+
+/**
  * A model parsed into Three.js, plus whatever scene payload produced it.
  * Internal hand-off between the per-source loaders and the hook.
  */
@@ -192,8 +224,9 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
 	 * A newer `load` supersedes an older one, so an in-flight load can never
 	 * overwrite the state of the load that replaced it. The superseded call
 	 * still resolves, with the state it would have produced, so a caller that
-	 * acts on the result rather than on the state should check that its load is
-	 * still the current one.
+	 * acts on the result rather than on the state must ask `stillCurrent()`
+	 * before writing anything down - and ask it again after any further await,
+	 * because a drop can land during an encode as easily as during a parse.
 	 *
 	 * @example
 	 * ```tsx
@@ -203,7 +236,7 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
 	 * await model.load({ kind: 'server', sceneId: 'abc-123' })
 	 * ```
 	 */
-	load: (source: ModelSource) => Promise<ModelState>
+	load: (source: ModelSource) => Promise<LoadOutcome>
 	/**
 	 * Reset the model loading state and clear any loaded models.
 	 */

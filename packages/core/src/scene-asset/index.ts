@@ -7,9 +7,31 @@ export { normalizeCameraSettings } from './normalize-camera-settings'
  *
  * - Decodes URL-encoded characters (e.g. `%20` -> space).
  * - Removes a leading `./` so lookups can match both forms.
+ *
+ * A NAME IT CANNOT DECODE IS RETURNED AS IT CAME. `decodeURIComponent` throws
+ * `URIError` on any malformed escape, and a lone `%` is malformed - so a file
+ * called `50% roughness.png` took the whole load down. It reached the reader as
+ * "Check it is a valid glTF." about a folder that was entirely valid, because
+ * the throw escaped into `loadGltfModel`'s catch and became `gltf_load_failed`.
+ *
+ * The rule belongs here rather than at the call sites. There are ten of them,
+ * two had grown their own `try`/`catch` returning the input untouched, and the other
+ * eight had not - and one of the guarded files still reached the unguarded path
+ * first, through `buildAssetLookupKeys`. That one is worth naming because it is
+ * why encoding the URI correctly did not save you: the raw `File.name` off the
+ * disk is normalized too, so the crash never needed the glTF to be at fault.
+ *
+ * Returning the input is not a fallback that hides a problem. A name that is
+ * not percent-encoded is already the name; it simply fails to match a reference
+ * that was encoded, which is a miss rather than a crash.
  */
-export const normalizeAssetUri = (value: string): string =>
-	decodeURIComponent(value).replace(/^\.\//, '')
+export const normalizeAssetUri = (value: string): string => {
+	try {
+		return decodeURIComponent(value).replace(/^\.\//, '')
+	} catch {
+		return value.replace(/^\.\//, '')
+	}
+}
 
 /**
  * Builds equivalent lookup keys for a referenced asset path.
@@ -18,6 +40,14 @@ export const normalizeAssetUri = (value: string): string =>
  * - original incoming value
  * - normalized path
  * - basename only
+ *
+ * THE SERVER FRAME, and only it. A saved scene's assets are now stored under
+ * the same folder URIs its glTF writes, so the `normalized` key is what connects
+ * the two ends and the basename key carries the scenes saved before that: their
+ * names are flat against a glTF full of folders, and nothing else reaches them. A dropped selection is the opposite case and
+ * has its own owner, `dropped-selection.ts`, which refuses a reference two
+ * files answer equally instead of taking whichever was written last. Reaching
+ * for this one from a drop path is how that defect got in.
  */
 export const buildAssetLookupKeys = (fileName: string): Set<string> => {
 	const normalized = normalizeAssetUri(fileName)
