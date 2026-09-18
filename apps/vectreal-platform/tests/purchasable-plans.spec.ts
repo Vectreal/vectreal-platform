@@ -141,6 +141,15 @@ describe('which plans can be bought', () => {
   - The complement. `Exclude<Plan, 'free' | 'enterprise'>` is the same set with
     neither word in it.
   - Comments and string literals, which are read as if they were code.
+  - Double-quoted and backtick literals. Prettier's `singleQuote: true` rewrites
+    the first into range on every CI run, so that shape is closed by the
+    formatter rather than by this guard. Backticks are never normalized.
+  - `Array.of('pro', 'business')`, set construction without brackets. Requiring
+    the bracket is what keeps an arbitrary two-argument call out, and that trade
+    is worth more than this one shape.
+  - The ladder written price-descending, and the enterprise-side subset
+    `['pro', 'business', 'enterprise']`. Both are flagged although neither is a
+    restatement, and both fail the tell: `isPaidPlan` replaces neither.
   - `.mdx` route modules, `*.spec.ts`, and anything outside `app/`. Spec files
     are excluded deliberately: fixtures legitimately name both plans.
 
@@ -153,8 +162,24 @@ const APP_DIR = join(__dirname, '..', 'app')
 
 const OWNER = 'app/constants/plan-config.ts'
 
-/** An operand a plan comparison can be written against, e.g. `subscription.plan`. */
-const OPERAND = String.raw`[\w.?[\]]+`
+/**
+ * An operand a plan comparison is written against: `plan`,
+ * `subscription.plan`, `resolvePlan(org)`.
+ *
+ * Unbounded in length, and every use below backreferences it so that BOTH
+ * comparisons must be against the same expression. That is what makes this a
+ * set test rather than two adjacent tests, and it is a far better filter than
+ * limiting the distance between them: a bounded gap let `plan === 'pro' ||
+ * isTrial) return route === 'business'` through as a match, and simultaneously
+ * broke the ladder exemption for the 22 comparisons in `app/` whose operand is
+ * longer than 40 characters.
+ *
+ * No quote, which is load-bearing: the ladder strip is safe to delete a matched
+ * region only because no quoted literal can survive inside one, so a
+ * restatement cannot hide in an exempted span. No `=`, so an operand cannot
+ * swallow the comparison operator that follows it.
+ */
+const OPERAND = String.raw`[\w.?[\]()!]+`
 
 /*
   The four-plan ladder is a different fact - every plan, in order - and several
@@ -172,7 +197,8 @@ const OPERAND = String.raw`[\w.?[\]]+`
 const FULL_LADDER = new RegExp(
 	[
 		String.raw`'free'\s*[,|]\s*'pro'\s*[,|]\s*'business'\s*[,|]\s*'enterprise'`,
-		String.raw`'free'\s*\|\|\s*${OPERAND}\s*===\s*'pro'\s*\|\|\s*${OPERAND}\s*===\s*'business'\s*\|\|\s*${OPERAND}\s*===\s*'enterprise'`
+		String.raw`(?<pos>${OPERAND})\s*===\s*'free'\s*\|\|\s*\k<pos>\s*===\s*'pro'\s*\|\|\s*\k<pos>\s*===\s*'business'\s*\|\|\s*\k<pos>\s*===\s*'enterprise'`,
+		String.raw`(?<neg>${OPERAND})\s*!==\s*'free'\s*&&\s*\k<neg>\s*!==\s*'pro'\s*&&\s*\k<neg>\s*!==\s*'business'\s*&&\s*\k<neg>\s*!==\s*'enterprise'`
 	].join('|'),
 	'g'
 )
@@ -219,7 +245,7 @@ const RESTATEMENTS: readonly Restatement[] = [
 	{
 		name: "a disjunction, === 'pro' || === 'business'",
 		pattern: new RegExp(
-			String.raw`===\s*'pro'\s*\|\|\s*${OPERAND}\s*===\s*'business'`
+			String.raw`(?<p>${OPERAND})\s*===\s*'pro'\s*\|\|\s*\k<p>\s*===\s*'business'`
 		),
 		example:
 			"const ok =\n\tsubscription.plan === 'pro' ||\n\tsubscription.plan === 'business'"
@@ -227,7 +253,7 @@ const RESTATEMENTS: readonly Restatement[] = [
 	{
 		name: "a disjunction in reverse, === 'business' || === 'pro'",
 		pattern: new RegExp(
-			String.raw`===\s*'business'\s*\|\|\s*${OPERAND}\s*===\s*'pro'`
+			String.raw`(?<b>${OPERAND})\s*===\s*'business'\s*\|\|\s*\k<b>\s*===\s*'pro'`
 		),
 		example: "const ok = plan === 'business' || plan === 'pro'"
 	},
@@ -237,9 +263,34 @@ const RESTATEMENTS: readonly Restatement[] = [
 	*/
 	{
 		name: 'switch cases falling through pro into business',
-		pattern: /case\s*'pro'\s*:\s*case\s*'business'\s*:/,
+		pattern: /case\s*'pro'\s*:\s*(?:\/\/[^\n]*\n\s*)*case\s*'business'\s*:/,
 		example:
 			"switch (p) {\n\tcase 'pro':\n\tcase 'business':\n\t\treturn true\n}"
+	},
+	{
+		name: 'switch cases falling through business into pro',
+		pattern: /case\s*'business'\s*:\s*(?:\/\/[^\n]*\n\s*)*case\s*'pro'\s*:/,
+		example:
+			"switch (p) {\n\tcase 'business':\n\tcase 'pro':\n\t\treturn true\n}"
+	},
+	/*
+	  The same claim negated. `!isPaidPlan(plan)` is a direct replacement, which
+	  is the tell that this is a restatement rather than two separate tests, and
+	  the repo already writes `!==` plan guards.
+	*/
+	{
+		name: "a negated pair, !== 'pro' && !== 'business'",
+		pattern: new RegExp(
+			String.raw`(?<np>${OPERAND})\s*!==\s*'pro'\s*&&\s*\k<np>\s*!==\s*'business'`
+		),
+		example: "if (plan !== 'pro' && plan !== 'business') return null"
+	},
+	{
+		name: "a negated pair in reverse, !== 'business' && !== 'pro'",
+		pattern: new RegExp(
+			String.raw`(?<nb>${OPERAND})\s*!==\s*'business'\s*&&\s*\k<nb>\s*!==\s*'pro'`
+		),
+		example: "if (plan !== 'business' && plan !== 'pro') return null"
 	}
 ]
 
@@ -268,7 +319,18 @@ function sourceFiles(dir: string): string[] {
 		*/
 		const stats = lstatSync(full)
 		if (stats.isDirectory()) return sourceFiles(full)
-		if (stats.isSymbolicLink() && !statSync(full).isFile()) return []
+
+		if (stats.isSymbolicLink()) {
+			/*
+			  statSync throws ENOENT on a broken link, which would take this spec
+			  down with an error rather than a verdict.
+			*/
+			try {
+				if (!statSync(full).isFile()) return []
+			} catch {
+				return []
+			}
+		}
 
 		return /\.(tsx?|mts|cts)$/.test(entry) &&
 			!/\.spec\.(tsx?|mts|cts)$/.test(entry)
@@ -341,6 +403,10 @@ describe('nothing restates which plans can be bought', () => {
 		],
 		['a union', "type Plan = 'free' | 'pro' | 'business' | 'enterprise'"],
 		[
+			'a wrapped Set',
+			"const VALID = new Set([\n\t'free',\n\t'pro',\n\t'business',\n\t'enterprise'\n])"
+		],
+		[
 			'a comparison chain',
 			"if (\n\tvalue === 'free' ||\n\tvalue === 'pro' ||\n\tvalue === 'business' ||\n\tvalue === 'enterprise'\n) {"
 		]
@@ -373,9 +439,75 @@ describe('nothing restates which plans can be bought', () => {
 		[
 			'two unrelated comparisons',
 			"if (plan === 'pro') {\n\tgo()\n}\nif (route === 'business') {\n\tstop()\n}"
+		],
+		/*
+		  These four reached one comparison from the other across an intervening
+		  expression, back when the operand between them was any 40 characters
+		  rather than a backreference. Different subjects are not a set claim.
+		*/
+		[
+			'a comparison reached across a return',
+			"if (plan === 'pro' || isTrial) return route === 'business'"
+		],
+		[
+			'a comparison reached across a block',
+			"if (plan === 'pro' || x) { run() } if (kind === 'business') stop()"
+		],
+		[
+			'a comparison reached across a ternary',
+			"return plan === 'pro' || isTrial ? mode === 'business' : false"
+		],
+		[
+			'a negated comparison reached across a statement',
+			"assert(plan !== 'pro' && ok); assert(kind !== 'business')"
+		],
+		/*
+		  An array whose members happen to sit next to each other. `'pro'` and
+		  `'business'` are adjacent here by alphabetical accident, which is why
+		  the bracket budget stays tight rather than spanning a long list.
+		*/
+		[
+			'an unrelated list that happens to place them together',
+			"const BADGES = ['alpha', 'beta', 'community', 'edu', 'nonprofit', 'oss', 'partner', 'pro', 'business']"
 		]
 	])('does not flag %s', (_shape, source) => {
 		expect(restatementsIn(source)).toEqual([])
+	})
+
+	/*
+	  The ladder exemption must not depend on how long the operand is. A bounded
+	  gap broke exactly here: the ladder stopped being exempt while the
+	  disjunction pattern kept firing, so a correct four-plan check was reported
+	  as a restatement. 22 of the 870 string comparisons under app/ already use
+	  an operand longer than 40 characters.
+	*/
+	it('exempts the ladder however long its operand is', () => {
+		const ladder = [
+			'if (',
+			"\tuserWithDefaults.organization.subscription.plan === 'free' ||",
+			"\tuserWithDefaults.organization.subscription.plan === 'pro' ||",
+			"\tuserWithDefaults.organization.subscription.plan === 'business' ||",
+			"\tuserWithDefaults.organization.subscription.plan === 'enterprise'",
+			') {'
+		].join('\n')
+
+		expect(restatementsIn(ladder)).toEqual([])
+	})
+
+	/*
+	  And the restatement must still be caught at the same length, which a
+	  bounded gap also broke, in the opposite direction.
+	*/
+	it('still flags a restatement written against a long operand', () => {
+		const source = [
+			'const paid =',
+			"\tuserWithDefaults.organization.subscription.plan === 'pro' ||",
+			"\tuserWithDefaults.organization.subscription.plan === 'business'"
+		].join('\n')
+
+		expect(restatementsIn(source)).toContain(
+			"a disjunction, === 'pro' || === 'business'"
+		)
 	})
 
 	/*
