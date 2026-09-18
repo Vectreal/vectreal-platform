@@ -75,7 +75,9 @@ sat filed and untouched from the day before. Narrow was right; deep was wrong.
 1. **One PR, one sentence, no "and".** If the description needs a conjunction it
    is two PRs. #735's needed five.
 2. **If the diff touches a file the scope line did not name**, stop. Either
-   rename the scope out loud, or file the finding and leave the file alone.
+   rename the scope out loud, or file the finding and leave the file alone. A
+   fault this change itself caused is not drift: fix it and widen the scope line
+   to say where it reached.
 
 ## The loop, which is never skipped
 
@@ -87,10 +89,28 @@ is the whole list. A comment that is merely less precise than it could be is not
 a finding - leave it. Reviewers asked to audit prose will always return
 something, so the loop only terminates if the bar is behavior.
 
-**A review round may not grow the diff.** A finding in a file the change does not
-already touch, a test for a gap that predates the change, a rewrite of code that
-was already reviewed: all of these are catalogue rows, not edits. A round that
-adds files or tests has created its own next round.
+**A round fixes what the change caused and files what it merely found.** The test
+is authorship, not file membership. A fault this diff introduced is part of the
+change rather than growth, and it gets fixed wherever the fix has to land,
+including in a file the diff had not touched yet. A fault that predates the diff
+stays a catalogue row even when it sits in a file the diff already edits.
+
+| Finding | Round |
+| --- | --- |
+| This change introduced it, made it reachable, or its scope promised it and it is not done | Fix it. Which file the fix lands in does not matter |
+| It predates this change: an old gap, an untested branch, code already reviewed | Catalogue row |
+| It is a decision or a capability: a product call, a new format, behavior the scope never promised | Catalogue row, even when this change is what raised the question |
+
+Authorship still terminates. The set of faults one change introduced is finite
+and shrinks every round, so admitting them converges; pre-existing work and new
+capability are unbounded, and that is what the rule was always protecting
+against. A fix admitted this way is read by the next round like any other line.
+
+**A round that files more than a handful has misclassified.** Twenty-five filed
+items is the signature of file membership deciding again. Read the list back and
+ask of each row whether this change caused it: what it caused gets fixed now, in
+this diff, however small. A one-line fault of our own making is the cheapest edit
+that will ever exist, and filing it pays a row's overhead to keep a bug.
 
 **Two consecutive rounds that produce only comment rewrites means stop.** That is
 the signature of reviewing your own writing rather than the code, and it does not
@@ -161,6 +181,10 @@ Out-of-scope findings become a catalogue row (see Work items below) or a
 GitHub issue. They never become lines in the diff and never become a report
 handed back for triage. Say plainly in the PR what was filed rather than fixed,
 and why.
+
+Out of scope means the change did not cause it. A fault of our own making is in
+scope by definition, whatever file it turned up in, and a row filed for one is a
+bug shipped with paperwork attached.
 
 Deliver the whole scope that was asked for. If part is blocked, finish everything
 else in full and say what was left out. Scaling the work down is the user's call.
@@ -323,7 +347,9 @@ tests fail, say so with the output; if a step was skipped, say that.
 | Review round skipped because the change looks small | Run the loop; #735's worst defect was in a 3-line hook |
 | The loop run on a change with no behavior in question | The gate is the review; one pass, then ship |
 | A round's findings are rewrites of the previous round's comments | Stop. Prose has no clean state; only behavior does |
-| A round fixes a pre-existing gap it happened to notice | Catalogue row. The round may not grow the diff |
+| A round fixes a pre-existing gap it happened to notice | Catalogue row. The change did not cause it |
+| A fault the change caused, filed because the fix needs an untouched file | Fix it. Authorship decides, not file membership |
+| A round files twenty-five items | Re-read them asking what caused each; most are ours |
 | Test written after the guard, never mutated | Mutate the line, watch it go red |
 | Third patch of one symptom | Find the cause |
 | Reviewers and fixers running concurrently | Phase barrier |
