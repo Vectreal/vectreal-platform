@@ -1,9 +1,11 @@
 import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
-import { useMemo } from 'react'
 
 import { BeforeAfter, MetricRow, formatCount } from './metric-row'
-import { FileSizeComparison } from '../../sidebars/file-size-comparison'
+import {
+	describeSizeChange,
+	FileSizeComparison
+} from '../../../layout-components/file-size-comparison'
 
 import type { resolveSceneMetrics } from '../../../../lib/domain/scene'
 import type { SimplificationOutcome } from '../model'
@@ -24,28 +26,10 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 	dracoReport,
 	simplificationOutcome
 }) => {
-	const { reductionPercent, deltaLabel } = useMemo(() => {
-		const before = resolvedMetrics.sceneBytes.initial
-		const after = resolvedMetrics.sceneBytes.current
-
-		if (typeof before !== 'number' || typeof after !== 'number') {
-			return { reductionPercent: null, deltaLabel: null }
-		}
-
-		const delta = before - after
-		return {
-			reductionPercent:
-				before > 0 && after < before
-					? Math.round((delta / before) * 100)
-					: null,
-			deltaLabel:
-				delta > 0
-					? `${formatFileSize(delta)} smaller`
-					: delta < 0
-						? `${formatFileSize(Math.abs(delta))} larger`
-						: 'No size change'
-		}
-	}, [resolvedMetrics.sceneBytes])
+	const { reductionPercent, deltaLabel } = describeSizeChange(
+		resolvedMetrics.sceneBytes.initial,
+		resolvedMetrics.sceneBytes.current
+	)
 
 	return (
 		<motion.div
@@ -54,9 +38,11 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -8 }}
 			transition={{ duration: 0.3 }}
-			className="publisher-shell-nested space-y-1 rounded-xl px-4 pt-3 pb-1"
+			className="publisher-shell-nested rounded-xl p-4"
 		>
-			<p className="text-muted-foreground text-eyebrow">Optimization result</p>
+			<p className="text-muted-foreground text-eyebrow mb-1">
+				Optimization result
+			</p>
 
 			<FileSizeComparison
 				sizeInfo={sizeInfo}
@@ -64,7 +50,14 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 				deltaLabel={deltaLabel}
 			/>
 
-			<div className="space-y-2 pb-3 text-xs">
+			{/*
+			  A rule and a real gap, because this is the breakdown and everything
+			  above it is the summary. Both are label-left/value-right rows of the
+			  same shape, so at 4px apart the two bars and the four metrics read as
+			  one undifferentiated list of six - which is what made a panel with
+			  ordinary padding still look crammed.
+			*/}
+			<div className="border-border/60 mt-4 space-y-2 border-t pt-4 text-xs">
 				{/* Draco leads: it is usually the largest single saving. */}
 				{dracoReport ? (
 					<MetricRow label="Geometry (Draco)">

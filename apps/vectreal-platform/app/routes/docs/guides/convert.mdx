@@ -1,0 +1,110 @@
+# Converting Between Formats
+
+The converter pages turn one 3D format into another in your browser. Nothing is
+uploaded, no account is needed, and the file never leaves the machine.
+
+They exist because the Publisher answers a different question. The Publisher is
+where you optimize a model, set its camera and publish it as an embed. A
+converter page does one thing: read the file you have, write the file you need.
+
+---
+
+## What converts to what
+
+Every pair has its own page, at `/convert/<from>-to-<to>`. The index at
+[/convert](/convert) lists them all.
+
+| From | To |
+|---|---|
+| GLB | glTF, USDZ |
+| glTF | GLB, USDZ |
+| STL | GLB, glTF, USDZ |
+| FBX | GLB, glTF, USDZ |
+| OBJ | GLB, glTF, USDZ |
+
+STL, FBX and OBJ are read through three.js and converted to glTF before anything
+else sees them, which is why they can be a source for every target.
+
+**There is no "to STL", no "to FBX" and no "to OBJ."** GLB, glTF and USDZ are
+the whole target list, and the reasons differ: three.js ships no FBX writer at
+all; its `OBJExporter` writes geometry without the material library, so a page
+offering it would hand people half a model; and STL carries no materials, scene
+graph or textures, so converting *to* it discards everything but the mesh.
+`canExport` in [`@vctrl/core/model-formats`](/docs/packages/core) records the
+decision for each, and a test refuses any pair whose endpoints fall outside it,
+so a target that cannot be written cannot get a page.
+
+USDZ is absent as a *source*, separately from all of that: it is withheld while
+its import path is unreliable, so no `usdz-to-glb` page is published. The
+Publisher reads uploads through the same loader, so a USDZ fares no better
+there; see [Uploading Models](/docs/guides/upload).
+
+---
+
+## Bundles
+
+A glTF and an OBJ are manifests that point at files beside them, so bring the
+whole set rather than the one file you clicked:
+
+- **glTF** - the `.gltf`, its `.bin`, and its textures. The `.bin` holds the
+  geometry, so a glTF without it is not a model at all and the conversion stops.
+- **OBJ** - the `.obj`, its `.mtl`, and the images the `.mtl` names. Worth
+  bringing rather than required: an OBJ on its own converts fine and comes back
+  grey.
+
+Drop the folder, or use **Choose a folder**. Both routes record where each file
+sat, so two textures with the same name in different subfolders stay apart.
+
+A reference that genuinely matches two files equally is never guessed at, and
+what happens next depends on the format. A glTF stops, and says the bundle is
+incomplete rather than that the file is broken. An OBJ carries on: the material
+keeps its colour and the conversion finishes.
+
+---
+
+## Options
+
+Each page offers only what its target can carry, and a USDZ page offers
+nothing: USDZ leaves through a different exporter that neither pass can reach,
+so every page targeting it converts straight through with no options to set.
+
+- **Compress geometry (Draco)** - shrinks meshes, often by most of the file.
+  Needs a viewer from the last few years.
+- **Recompress textures as WebP** - usually the biggest saving, and every
+  texture keeps its resolution.
+
+The result panel shows the before and after size, so you can see what an option
+bought before downloading.
+
+---
+
+## Next steps
+
+- [Uploading Models](/docs/guides/upload) - the formats the Publisher reads, and
+  what each one carries
+- [Optimizing & Configuring](/docs/guides/optimize) - what to do with the model
+  once it is in
+- [@vctrl/core](/docs/packages/core) - the format owner, if you are building on
+  the packages rather than using the site
+
+{/*
+```claims
+  # The pairs this page's table names, against the manifest that generates them.
+  # A pair added or removed there has to move this table, which is the drift
+  # every other format claim on this site had already suffered.
+  present  apps/vectreal-platform/app/lib/convert/convert-pairs.ts   slug: 'glb-to-gltf'
+  present  apps/vectreal-platform/app/lib/convert/convert-pairs.ts   slug: 'gltf-to-glb'
+  present  apps/vectreal-platform/app/lib/convert/convert-pairs.ts   slug: 'stl-to-glb'
+  present  apps/vectreal-platform/app/lib/convert/convert-pairs.ts   slug: 'fbx-to-glb'
+  present  apps/vectreal-platform/app/lib/convert/convert-pairs.ts   slug: 'obj-to-glb'
+
+  # The capability claims, pinned to the values rather than the identifiers. The
+  # first draft of this block cited `SOURCES_WITHHELD` alone, which stays
+  # present as long as the declaration exists - emptying it would publish the
+  # usdz page this page says is withheld, with every claim still green.
+  present  apps/vectreal-platform/app/lib/convert/convert-capabilities.ts   SOURCES_WITHHELD: readonly ConvertFormat[] = ['usdz']
+  present  packages/core/src/model-formats/model-formats.ts   id: 'stl',
+  present  packages/core/src/model-formats/model-formats.ts   id: 'fbx',
+  present  packages/core/src/model-formats/model-formats.ts   id: 'obj',
+```
+*/}

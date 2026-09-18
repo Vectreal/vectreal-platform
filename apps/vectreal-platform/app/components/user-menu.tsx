@@ -17,6 +17,8 @@ import { User } from '@supabase/supabase-js'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
+import { CONVERT_INDEX_PATH } from '../lib/convert/convert-pairs'
+
 interface UserMenuProps {
 	user: User
 	className?: string
@@ -106,6 +108,19 @@ export function UserMenu({
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={() => handleMenuItemClick('/publisher')}>
 					Publisher
+				</DropdownMenuItem>
+				{/*
+				  Beside the publisher, because this group is the tools and the
+				  converters are one. `nav-items.tsx` keeps tools out of the marketing
+				  nav and names this menu as where the publisher stays reachable once
+				  someone is signed in; the converters were reachable from the footer
+				  and nowhere else, which left a signed-in visitor with no route to
+				  them at all.
+				*/}
+				<DropdownMenuItem
+					onClick={() => handleMenuItemClick(CONVERT_INDEX_PATH)}
+				>
+					Converters
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 

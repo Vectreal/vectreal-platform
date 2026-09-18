@@ -1,16 +1,33 @@
 'use client'
 
 import { Card } from '@shared/components/ui/card'
+import { MODEL_FORMATS, type ModelFormatId } from '@vctrl/core/model-formats'
 import { motion } from 'framer-motion'
 
-const fileTypes = [
-	{ name: '.GLB', description: 'glTF Binary format' },
-	{ name: '.GLTF', description: 'GL Transmission Format' },
-	{ name: 'DRACO', description: 'glTF (with Draco compression)' },
-	{ name: '.FBX', description: 'Autodesk FBX format' },
-	{ name: '.OBJ', description: 'Wavefront Object format' },
-	{ name: '.USDZ', description: 'Universal Scene Description format' }
-]
+/**
+ * What each format is, for the one visitor in ten who does not already know.
+ *
+ * Keyed by format id so the carousel cannot advertise something the loader does
+ * not read, and cannot omit something it does. Both happened: `.FBX` and `.OBJ`
+ * were filed as false claims for years and are true now, while STL - which has
+ * loaded since this changeset - was missing, and `DRACO` sat in the list as a
+ * sixth format although it is a compression scheme applied to glTF.
+ */
+const FORMAT_DESCRIPTIONS: Record<ModelFormatId, string> = {
+	glb: 'glTF Binary format',
+	gltf: 'GL Transmission Format',
+	usdz: 'Universal Scene Description format',
+	stl: 'Stereolithography format',
+	fbx: 'Autodesk FBX format',
+	obj: 'Wavefront Object format'
+}
+
+const fileTypes = MODEL_FORMATS.filter((format) => format.canImport).map(
+	(format) => ({
+		name: `.${format.label.toUpperCase()}`,
+		description: FORMAT_DESCRIPTIONS[format.id]
+	})
+)
 
 // Doubling the content array for seamless looping
 const loopedFileTypes = [...fileTypes, ...fileTypes]

@@ -8,7 +8,13 @@ export { AuthorChip } from './author-chip'
 export { CtaPanel } from './cta-panel'
 export { DetailPanelSection } from './detail-panel-section'
 export { FeaturedArticle } from './featured-article'
+export {
+	describeSizeChange,
+	FileSizeComparison,
+	type FileSizeComparisonSizeInfo
+} from './file-size-comparison'
 export { InlineNotice } from './inline-notice'
+export { SampleTiles } from './sample-tiles'
 export { default as PageHero } from './page-hero'
 export {
 	DestructiveAction,

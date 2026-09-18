@@ -11,6 +11,10 @@ import { useConsent } from './consent/consent-context'
 import { ShimmerRotatingText } from './shimmer-rotating-text'
 import { isForceDarkRoute } from './theme'
 import { ThemeToggleButton } from './theme-toggle-button'
+import {
+	CONVERT_INDEX_COPY,
+	CONVERT_INDEX_PATH
+} from '../lib/convert/convert-pairs'
 
 export const SlimFooter = () => {
 	const { setPreferencesOpen } = useConsent()
@@ -72,6 +76,19 @@ export const Footer = () => {
 							<ul className="flex flex-col gap-4">
 								<li className="text-foreground list-item">
 									<Link to="/publisher">Publisher</Link>
+								</li>
+								{/*
+								  One link, not one per pair. Without a link from a crawled page
+								  the converters are orphans and an orphan does not get
+								  discovered, but this column is one of five in a grid that stops
+								  at `xl:grid-cols-5` and cannot hold a row per format pair. The
+								  index carries them instead, and it is in the sitemap and
+								  /llms.txt in its own right.
+								*/}
+								<li className="text-foreground list-item">
+									<Link to={CONVERT_INDEX_PATH}>
+										{CONVERT_INDEX_COPY.title}
+									</Link>
 								</li>
 								<li className="text-foreground list-item">
 									<Link to="/pricing">Pricing</Link>

@@ -125,13 +125,23 @@ export const docsPages: DocPage[] = [
 		version: 'latest'
 	},
 	{
+		slug: 'guides/convert',
+		title: 'Converting Between Formats',
+		description:
+			'Which format pairs have a page, why some targets cannot exist, and what a bundle needs.',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/convert.mdx',
+		category: 'guides',
+		order: 1,
+		version: 'latest'
+	},
+	{
 		slug: 'guides/optimize',
 		title: 'Optimizing & Configuring',
 		description:
 			'Quality presets, texture compression, mesh simplification, lighting, and camera settings.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/optimize.mdx',
 		category: 'guides',
-		order: 1,
+		order: 2,
 		version: 'latest'
 	},
 	{
@@ -142,7 +152,7 @@ export const docsPages: DocPage[] = [
 		sourcePath:
 			'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx',
 		category: 'guides',
-		order: 2,
+		order: 3,
 		version: 'latest'
 	},
 	{
@@ -152,7 +162,7 @@ export const docsPages: DocPage[] = [
 			'Control embedded 3D scenes from your page: camera switching, scroll interactions, event callbacks, and the raw postMessage protocol.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/embed-sdk.mdx',
 		category: 'guides',
-		order: 3,
+		order: 4,
 		version: 'latest'
 	},
 
