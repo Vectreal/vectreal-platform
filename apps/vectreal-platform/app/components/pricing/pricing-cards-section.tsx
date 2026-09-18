@@ -111,7 +111,7 @@ function PlanCard({
 	const cta = PLAN_CTA[plan]
 	const ctaHref = PLAN_CTA_HREF[plan]
 	const highlighted = PLAN_HIGHLIGHTED[plan]
-	const fallbackPrices = PLAN_FALLBACK_PRICES[plan]
+	const fallbackPrices = isPaidPlan(plan) ? PLAN_FALLBACK_PRICES[plan] : null
 
 	const isFree = plan === 'free'
 	const isPaid = isPaidPlan(plan)

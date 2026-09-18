@@ -33,13 +33,41 @@ export type PaidPlan = Extract<Plan, 'pro' | 'business'>
   Total by construction: a member added to `PaidPlan` and not listed here fails
   to compile, which is what keeps the type and the runtime list in step. This is
   the same device `DASHBOARD_OPERATION_ROLES` uses for the permission table.
+
+  Three things about this literal are load-bearing, and none are obvious:
+
+  1. It must stay a FRESH literal annotated in place. Excess-property checking is
+     what rejects a key outside `PaidPlan`, and it only applies to a literal
+     assigned directly to the annotation. Routing it through an intermediate
+     variable, a spread, or `satisfies Partial<Record<Plan, true>>` all compile
+     clean and would put `enterprise` into `PURCHASABLE_PLANS`, which is to say
+     into what checkout agrees to sell. `purchasable-plans.spec.ts` asserts the
+     exact contents, so the test is the backstop here, not the compiler.
+  2. The value type is the literal `true`, not `boolean`. `Object.keys` returns a
+     key whatever its value is, so under `boolean` someone could write
+     `pro: false` meaning "not purchasable" and still have it sold.
+  3. Key order is the order the plans render in. `PRICING_CARD_PLANS` spreads
+     this list after `free`, so writing Business first reorders the pricing grid
+     away from ascending price.
+
+  This module deliberately imports nothing. `PRICING_CARD_PLANS` spreads
+  `PURCHASABLE_PLANS` at module scope, so putting `plan-config` into an import
+  cycle turns that spread into a `ReferenceError` at module initialization,
+  which is an SSR crash on /pricing rather than a type error.
 */
 const PURCHASABLE: Record<PaidPlan, true> = {
 	pro: true,
 	business: true
 }
 
-export const PURCHASABLE_PLANS = Object.keys(PURCHASABLE) as readonly PaidPlan[]
+/*
+  Frozen because `readonly` is erased at runtime. Without it this is a live
+  array that a caller could push onto, leaving the list and the Set below
+  disagreeing about the one fact this module exists to own.
+*/
+export const PURCHASABLE_PLANS = Object.freeze(
+	Object.keys(PURCHASABLE)
+) as readonly PaidPlan[]
 
 /*
   A Set, not `in` and not the record itself.
