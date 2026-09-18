@@ -2,6 +2,7 @@
  * Visual panel components for each onboarding step.
  * Lazy-loads the R3F welcome scene so no Three.js code is imported server-side.
  */
+import { IMPORTABLE_FORMAT_LABELS } from '@vctrl/core/model-formats'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, Code2, Upload, Zap } from 'lucide-react'
 import {
@@ -131,7 +132,8 @@ export const WelcomeVisual: ComponentType = () => {
 }
 
 export const UploadVisual: ComponentType = () => {
-	const formats = ['GLB', 'glTF', 'OBJ', 'USDZ', 'FBX']
+	/* Read from the owner: this list was missing STL, which loads. */
+	const formats = IMPORTABLE_FORMAT_LABELS
 
 	return (
 		<div className="relative flex h-full w-full items-center justify-center overflow-hidden p-8">
@@ -182,9 +184,7 @@ export const UploadVisual: ComponentType = () => {
 							<p className="text-sm font-semibold text-white/75">
 								Drop your 3D model here
 							</p>
-							<p className="mt-1 text-xs text-white/35">
-								GLB, glTF, OBJ, USDZ, FBX
-							</p>
+							<p className="mt-1 text-xs text-white/35">{formats.join(', ')}</p>
 						</div>
 					</motion.div>
 

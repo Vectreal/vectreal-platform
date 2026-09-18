@@ -135,7 +135,7 @@ Open [http://localhost:4200](http://localhost:4200).
 The documented end-to-end workflow is:
 
 1. Open the Publisher at [https://vectreal.com/publisher](https://vectreal.com/publisher).
-2. Upload a GLB, glTF bundle, or USDZ model.
+2. Upload a model: GLB, a glTF bundle, USDZ, STL, FBX, or an OBJ with its `.mtl` and textures.
 3. Adjust quality, lighting, and camera settings.
 4. Save the scene to your account.
 5. Publish it to generate a stable embed URL.

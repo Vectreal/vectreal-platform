@@ -20,7 +20,7 @@ pnpm add @vctrl/hooks
 
 | Hook | Import path | Description |
 |---|---|---|
-| `useLoadModel` | `@vctrl/hooks/use-load-model` | Load and parse GLTF/GLB/USDZ files from file lists or dropped directories |
+| `useLoadModel` | `@vctrl/hooks/use-load-model` | Load and parse every format `@vctrl/core/model-formats` marks importable, from a file list, a dropped folder or a saved scene. `supportedFileTypes` on the return value is that list |
 | `useOptimizeModel` | `@vctrl/hooks/use-optimize-model` | Run glTF-Transform optimizations on loaded models |
 | `useExportModel` | `@vctrl/hooks/use-export-model` | Export the current scene to GLB or glTF |
 
@@ -70,13 +70,18 @@ error as usual. Branch on what `load` returns to react to an upload that did
 not take; `reset()` is how you clear a model deliberately.
 
 A newer `load` supersedes an older one, so a slow response can never overwrite
-the load that replaced it.
+the load that replaced it. The superseded call still resolves, with the state it
+would have produced, so a caller acting on the resolved value rather than on the
+rendered state asks `stillCurrent()` before writing anything down - and asks it
+again after any further await, because a drop can land during an encode as
+easily as during a parse. `reset()` claims a token too, so a load in flight when
+the user clears the model also reports `false`.
 
 ### Sources
 
 | `kind` | Fields | Use |
 |---|---|---|
-| `files` | `files: (File \| FileSystemDirectoryHandle)[]` | A user upload: GLB, USDZ, or glTF with its sibling assets |
+| `files` | `files: (File \| FileSystemDirectoryHandle)[]` | A user upload: a single model, or a bundle with the siblings it refers to. A dropped folder arrives here as plain `File`s; the handle branch is for a caller that opened `showDirectoryPicker()` itself |
 | `scene-data` | `sceneData: ServerScenePayload`, `sceneId?`, `parseMode?` | A payload you already hold. Binary assets may be referenced rather than inlined; the loader fetches them |
 | `server` | `sceneId: string`, `serverOptions?`, `parseMode?` | Fetch a scene from the API by id |
 
@@ -101,7 +106,8 @@ files so the optimizer can ingest exactly what the viewer renders.
 | `sceneData` | `ServerSceneData \| undefined` | The resolved payload, for scene sources |
 | `progress` | `number` | Progress value from 0-100 |
 | `source` | `'files' \| 'scene-data' \| 'server' \| null` | What the current state came from |
-| `load(source)` | `Promise<ModelState>` | Load a model; resolves to the terminal state |
+| `load(source)` | `Promise<LoadOutcome>` | Load a model; resolves to the terminal state plus `stillCurrent()` |
+| `supportedFileTypes` | `ModelFileTypes[]` | Every format the loader accepts, from `@vctrl/core/model-formats` |
 | `reset` | `() => void` | Clear the current model and retire any load in flight |
 | `optimizer` | `OptimizerIntegrationReturn<true> \| null` | Populated when hook is called with `useOptimizeModel()` |
 

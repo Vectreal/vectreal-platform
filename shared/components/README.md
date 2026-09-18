@@ -8,8 +8,8 @@ This package primarily re-exports shadcn-based UI primitives with project-specif
 
 ### Hooks
 
-- `useAcceptPattern(isMobileDefault?)`
 - `useIsMobile(initial?)`
+- `useModelFileInputs(onFiles)`
 
 ### UI
 
@@ -50,13 +50,25 @@ export function Example() {
 ```
 
 ```tsx
-import { useAcceptPattern } from '@shared/components'
+import { useModelFileInputs } from '@shared/components'
 
-function UploadInput() {
-	const accept = useAcceptPattern()
-	return <input type="file" accept={accept} />
+function UploadInput({ onFiles }: { onFiles: (files: File[]) => void }) {
+	const { fileInputRef, inputProps, openFilePicker } =
+		useModelFileInputs(onFiles)
+
+	return (
+		<>
+			<input ref={fileInputRef} type="file" hidden multiple {...inputProps} />
+			<button onClick={openFilePicker}>Choose a model</button>
+		</>
+	)
 }
 ```
+
+`useAcceptPattern` was documented here and is not in this package: the accept
+pattern is derived from the model-format owner in `@vctrl/core`, and a UI kit
+that cannot depend on the domain is exactly why it had drifted into an
+independent list of extensions. It lives in the platform app now.
 
 ## Notes
 

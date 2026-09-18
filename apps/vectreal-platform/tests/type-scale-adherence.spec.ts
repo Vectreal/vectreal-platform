@@ -260,6 +260,73 @@ describe('type scale adherence', () => {
 		}
 	})
 
+	/*
+	  A rung that does not exist emits nothing, and nothing is silent.
+
+	  `text-h1` is the one everybody reaches for, because `h2`, `h3` and `h4` are
+	  all real and the ladder above them is named `headline` and `display`. It
+	  shipped on the converter page's H1 and survived typecheck, lint and the
+	  whole suite; a screenshot caught it, rendering at body size.
+
+	  The scan is deliberately narrow. A general "is this a real `text-*` class"
+	  rule would have to enumerate every colour token and every Tailwind size, and
+	  would fail on something new the week after it was written. This asks a
+	  smaller question with no false positives: a class *shaped* like a rung has
+	  to be one.
+	*/
+	describe('a rung-shaped class is a real rung', () => {
+		const SOURCE_ROOTS = [
+			join(dirname(fileURLToPath(import.meta.url)), '../app'),
+			join(UI_DIR, '..')
+		]
+
+		/** `text-<rung stem>` with any suffix: the shape, not the spelling. */
+		const RUNG_SHAPED =
+			/\btext-(?:display|headline|stat|body|label|eyebrow|h\d+)(?:-[a-z0-9]+)*\b/g
+
+		function sourceFiles(root: string): string[] {
+			return readdirSync(root, { recursive: true, encoding: 'utf8' })
+				.filter((name) => /\.tsx?$/.test(name))
+				.map((name) => join(root, name))
+		}
+
+		it('uses no rung the stylesheet does not define', () => {
+			const offenders: string[] = []
+
+			for (const root of SOURCE_ROOTS) {
+				for (const file of sourceFiles(root)) {
+					// Comments are stripped for the same reason as the variant rule
+					// below: this very block names the broken class in prose.
+					const source = readFileSync(file, 'utf8')
+						.replace(/\/\*[\s\S]*?\*\//g, '')
+						.replace(/\/\/[^\n]*/g, '')
+
+					for (const [match] of source.matchAll(RUNG_SHAPED)) {
+						if (SCALE_CLASSES.includes(match)) continue
+						offenders.push(`${file.split('/').slice(-2).join('/')}: ${match}`)
+					}
+				}
+			}
+
+			expect(
+				offenders,
+				`these classes look like type-scale rungs and define no CSS:\n${offenders.join('\n')}`
+			).toEqual([])
+		})
+
+		it('reads enough rung-shaped classes that the rule above is not vacuous', () => {
+			const found = SOURCE_ROOTS.flatMap((root) =>
+				sourceFiles(root).flatMap((file) => [
+					...readFileSync(file, 'utf8').matchAll(RUNG_SHAPED)
+				])
+			).map(([match]) => match)
+
+			// A scan that silently stopped reading files would pass the rule above
+			// while covering nothing at all.
+			expect(new Set(found).size).toBeGreaterThan(5)
+		})
+	})
+
 	it('never reaches a rung through a variant', () => {
 		/*
 		  The failure this exists for is silent, which is what makes it worth a
