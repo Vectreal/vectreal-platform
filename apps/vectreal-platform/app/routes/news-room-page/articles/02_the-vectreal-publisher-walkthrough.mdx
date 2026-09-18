@@ -3,7 +3,7 @@ title: "From Upload to Embed - The Vectreal Publisher Walkthrough"
 slug: "the-vectreal-publisher-walkthrough"
 excerpt: "A practical step-by-step guide to the Vectreal Publisher workflow, from first upload to production embed."
 publishedAt: "2026-04-07"
-updatedAt: "2026-07-28"
+updatedAt: "2026-09-18"
 category: "guides"
 tags:
 - "publisher"
@@ -47,8 +47,11 @@ Drag your 3D file onto the Publisher canvas. The parser identifies the format, r
 | GLB | `.glb` | Self-contained binary glTF - easiest to share, single file |
 | glTF | `.gltf` + `.bin` + textures | Full material and animation support; preferred format |
 | USDZ | `.usdz` | Limited support - textures and some material types may not render correctly. Work in progress. |
+| STL | `.stl` | Geometry only - no materials, no textures, by the nature of the format |
+| FBX | `.fbx` | Textures usually travel inside the file; one that references images beside it arrives untextured |
+| OBJ | `.obj` + `.mtl` + textures | A bundle, like glTF - upload the folder rather than the single file |
 
-Those three are the whole list. OBJ, FBX and STL do not load, so convert to glTF or GLB first.
+*Updated: this article originally said those first three were the whole list and that OBJ, FBX and STL do not load. They load now, read through three.js and converted to glTF before anything else sees them.*
 
 **glTF bundles:** glTF separates geometry, binaries, and textures into multiple files. To upload a full bundle, drag the **entire folder** onto the upload area, or select all files at once in the file picker. The parser identifies the `.gltf` root and resolves all referenced `.bin` and texture files automatically.
 
@@ -58,7 +61,7 @@ There are no hard file size limits enforced in the Publisher UI, though very lar
 
 | Error | Likely cause | Fix |
 |---|---|---|
-| "Unsupported file format" | Extension not in the supported list | Convert to GLB or glTF |
+| "Unsupported model format" | Extension not in the supported list | Convert to one of the formats above |
 | "Failed to parse file" | Corrupt file or missing references | Verify the file opens in a local viewer |
 | "Missing binary or texture" | Uploaded `.gltf` without `.bin`/textures | Upload the full folder as a bundle |
 

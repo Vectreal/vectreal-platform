@@ -3,7 +3,7 @@ title: "The Problem With 3D on the Web - And Why We Built Vectreal"
 slug: "launch-article"
 excerpt: "Why publishing 3D on the web is still too hard, and the open workflow Vectreal is building to fix it."
 publishedAt: "2026-04-03"
-updatedAt: "2026-07-28"
+updatedAt: "2026-09-18"
 category: "releases"
 tags:
 - "open-source"
@@ -136,7 +136,7 @@ Browser-side React hooks for the 3D pipeline - the runtime counterpart to `@vctr
 
 Three primary hooks:
 
-- **`useLoadModel`** - parse glTF, GLB, and USDZ files from file lists, dropped directories, or server endpoints. Supports both context mode (via `ModelProvider`) and direct mode.
+- **`useLoadModel`** - parse glTF, GLB, USDZ, STL, FBX and OBJ files from file lists, dropped directories, or server endpoints. Supports both context mode (via `ModelProvider`) and direct mode.
 - **`useOptimizeModel`** - run glTF-Transform optimization passes: mesh simplification, deduplication, quantization, normals normalization, and texture compression.
 - **`useExportModel`** - export the current scene to `.glb` or a zipped glTF bundle.
 

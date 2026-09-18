@@ -26,7 +26,8 @@ It is a **pnpm + Nx monorepo** containing:
 There is no PRD directory. Productization decisions live in code, and these files are the source of truth:
 
 - plans, tiers, entitlement keys, limit keys, billing states → [`apps/vectreal-platform/app/constants/plan-config.ts`](../apps/vectreal-platform/app/constants/plan-config.ts)
-- user-facing product claims, plan copy, supported formats → [`apps/vectreal-platform/app/constants/product-copy.ts`](../apps/vectreal-platform/app/constants/product-copy.ts)
+- user-facing product claims and plan copy → [`apps/vectreal-platform/app/constants/product-copy.ts`](../apps/vectreal-platform/app/constants/product-copy.ts)
+- **which 3D formats are accepted** → [`packages/core/src/model-formats/model-formats.ts`](../packages/core/src/model-formats/model-formats.ts), and nowhere else. This line used to point at `product-copy.ts`, so anyone following it edited the copy and never touched the owner - which is the exact failure the owner module exists to end. `SUPPORTED_FORMAT_NAMES` is derived from it now, and the accept pattern, the converter pages, the docs list and the schema.org `featureList` all follow from the same table.
 - role → operation authorization → [`apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts`](../apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts)
 - cookies and consent categories → [`apps/vectreal-platform/app/lib/consent/consent-cookie.ts`](../apps/vectreal-platform/app/lib/consent/consent-cookie.ts)
 - analytics events → the `capture` call sites themselves; there is no separate registry
