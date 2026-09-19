@@ -115,10 +115,18 @@ class SceneSettingsService {
 		const assetIds = sceneAssetRows.map((row) => row.assetId)
 		if (assetIds.length === 0) return {}
 
+		/*
+		  Ordered, because the loop below keys by `asset.name` and a name is not
+		  unique: a save whose garbage collection failed leaves the superseded row
+		  beside its replacement. Unordered, which hash survived was whichever row
+		  Postgres happened to return last, so the same scene could reuse an asset
+		  on one save and re-upload it on the next with nothing having changed.
+		*/
 		const assetRecords = await this.db
 			.select({ id: assets.id, name: assets.name, metadata: assets.metadata })
 			.from(assets)
 			.where(inArray(assets.id, assetIds))
+			.orderBy(assets.createdAt, assets.id)
 
 		const result: Record<string, { assetId: string; contentHash: string }> = {}
 		for (const asset of assetRecords) {

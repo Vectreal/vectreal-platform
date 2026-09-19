@@ -28,6 +28,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { planSceneAssetNameBackfill } from '../app/lib/domain/asset/asset-name-backfill'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
 
 const png = (marker: number) =>
@@ -172,6 +173,48 @@ describe('which stored asset a save reuses', () => {
 
 		expect(saved.sceneAssetIds).toEqual(['old-5', expect.any(String)])
 		expect(saved.sceneAssetIds).not.toContain(contentHash)
+	})
+
+	it('reuses what it re-uploaded once the backfill has renamed the rows', async () => {
+		/*
+		  The two cases above are the before and after of the same scene. This is
+		  the claim that connects them: the rename the backfill script plans is
+		  exactly the one that turns the first into the second.
+
+		  Without it, each half is gated and the thing they exist for is not - the
+		  backfill could emit renames that look right and still leave the save
+		  uploading, which is the entire cost it was written to remove.
+		*/
+		const bytes = png(9)
+		type Stored = Record<string, { assetId: string; contentHash: string }>
+		const legacy: Stored = {
+			'diffuse.png': { assetId: 'old-9', contentHash: await sha256(bytes) }
+		}
+		const document = { images: [{ uri: 'body/diffuse.png' }] }
+		const assets = new Map([['body/diffuse.png', bytes]])
+
+		expect((await runSave(legacy, assets)).uploaded).toEqual([
+			'body/diffuse.png'
+		])
+
+		const plan = planSceneAssetNameBackfill({
+			gltfJson: document,
+			assetRows: Object.entries(legacy).map(([name, row]) => ({
+				id: row.assetId,
+				name
+			}))
+		})
+
+		const backfilled: Stored = {}
+		for (const [name, row] of Object.entries(legacy)) {
+			const rename = plan.renames.find((entry) => entry.assetId === row.assetId)
+			backfilled[rename?.to ?? name] = row
+		}
+
+		const saved = await runSave(backfilled, assets)
+
+		expect(saved.uploaded).toEqual([])
+		expect(saved.sceneAssetIds).toContain('old-9')
 	})
 
 	it('re-uploads a stored asset whose name matches but whose bytes changed', async () => {
