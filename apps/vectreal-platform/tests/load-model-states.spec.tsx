@@ -13,6 +13,18 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { describe, expect, it, vi } from 'vitest'
 
+/*
+  Holds one named file inside the loader so a third load can start while it is
+  still in flight. Hoisted because the module mock below is.
+*/
+const inFlight = vi.hoisted(() => {
+	let release = () => {}
+	const parked = new Promise<void>((resolve) => {
+		release = resolve
+	})
+	return { blocks: 'slow.glb', parked, release: () => release() }
+})
+
 vi.mock('@vctrl/core/model-loader', async () => {
 	const actual = await vi.importActual<
 		typeof import('@vctrl/core/model-loader')
@@ -22,7 +34,8 @@ vi.mock('@vctrl/core/model-loader', async () => {
 		...actual,
 		ModelLoader: class {
 			onProgress() {}
-			async loadToThreeJS() {
+			async loadToThreeJS(file: File) {
+				if (file?.name === inFlight.blocks) await inFlight.parked
 				return { scene: { name: 'scene' } }
 			}
 			async loadGLTFWithAssetsToThreeJS() {
@@ -125,6 +138,49 @@ describe('useLoadModel state', () => {
 		await waitFor(() => {
 			expect(result.current.status).toBe('ready')
 			expect(result.current.file?.name).toBe('model.glb')
+		})
+	})
+
+	it('keeps the model on screen when a drop fails while another is loading', async () => {
+		/*
+		  THE DEFECT. `modelOnScreen` was read from the current state and required
+		  `ready` - but a load commits a blanking `loading` state on its way in, so
+		  a third load starting while the second was still parsing saw `loading`,
+		  captured nothing, and its failure committed an error state that took the
+		  first model off the screen.
+
+		  The case above is the same promise with no overlap, and it passed
+		  throughout: the promise held only while the visitor did one thing at a
+		  time, which is not when dropping the wrong file is easy.
+		*/
+		const { result } = renderHook(() => useLoadModel())
+
+		await act(() =>
+			result.current.load({ kind: 'files', files: [file('model.glb')] })
+		)
+
+		// B parks inside the loader, so the hook is mid-load, not idle.
+		let slow: Promise<unknown> = Promise.resolve()
+		await act(async () => {
+			slow = result.current.load({
+				kind: 'files',
+				files: [file('slow.glb')]
+			})
+			await Promise.resolve()
+		})
+
+		await act(() =>
+			result.current.load({ kind: 'files', files: [file('notes.txt')] })
+		)
+
+		await waitFor(() => {
+			expect(result.current.status).toBe('ready')
+			expect(result.current.file?.name).toBe('model.glb')
+		})
+
+		inFlight.release()
+		await act(async () => {
+			await slow
 		})
 	})
 

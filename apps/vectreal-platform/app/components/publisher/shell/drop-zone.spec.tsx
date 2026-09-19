@@ -14,6 +14,7 @@
 
 import { render, screen } from '@testing-library/react'
 import { modelAcceptPattern } from '@vctrl/core/model-formats'
+import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -63,6 +64,28 @@ describe('choosing a model', () => {
 		  loader has ever read.
 		*/
 		expect(fileInput?.getAttribute('accept')).toBe(modelAcceptPattern())
+	})
+
+	it('names every format that needs its folder, not just glTF', () => {
+		/*
+		  THE DEFECT. This line said "A .gltf needs the folder holding its textures
+		  and .bin" and was hand-written, while OBJ became both importable and a
+		  bundle in the same changeset. An OBJ dropped here on its own therefore
+		  lost its materials and came back grey, with nothing on the page having
+		  said to bring the folder.
+
+		  Asserted against `BUNDLE_FORMAT_IDS` rather than against the two
+		  extensions spelled out, so the day a third bundle is declared this fails
+		  instead of quietly under-reporting - which is the failure it is replacing.
+		*/
+		renderDropZone()
+
+		const hint = screen.getByText(/needs the folder/i).textContent ?? ''
+
+		expect(BUNDLE_FORMAT_IDS.length).toBeGreaterThan(1)
+		for (const id of BUNDLE_FORMAT_IDS) {
+			expect(hint).toContain(`.${modelFormat(id).extension}`)
+		}
 	})
 
 	it('still offers an input that opens a directory dialog', () => {

@@ -60,7 +60,7 @@ import {
 import { SampleTiles } from '../layout-components/sample-tiles'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
-import type { ModelFile } from '@vctrl/hooks/use-load-model'
+import type { LoadOutcome, ModelFile } from '@vctrl/hooks/use-load-model'
 
 interface Props {
 	pair: ConvertPair
@@ -476,7 +476,39 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  repo already paid for once: the value is read before the state it
 			  describes has been committed.
 			*/
-			const loaded = await load({ kind: 'files', files })
+			/*
+			  ADOPTED WHEN THE MODEL REACHES THE STAGE, NOT WHEN `load` RESOLVES.
+			  The loader publishes as soon as it has parsed, then awaits the
+			  optimizer ingest, so resolving happens one ingest later. Adopting on
+			  the resolved value left a window - seconds, on a large model - where
+			  the viewer and `{file.name}` showed the new model while `source.bytes`,
+			  the size comparison and a live Download button all still described the
+			  old one. `stillCurrent()` cannot help: inside that window the new load
+			  genuinely is the current one. The two moments had to become one.
+
+			  Still guarded, and still in one call to `adoptSource`: publishing is
+			  not a promise that this load won, only that it got as far as the
+			  screen.
+			*/
+			let adopted = false
+			const adopt = (state: LoadOutcome) => {
+				adopted = true
+				const referenced = state.file?.sourcePackageBytes ?? 0
+				adoptSource(
+					files,
+					referenced || measuredBytes(files),
+					state.stillCurrent
+				)
+			}
+
+			const loaded = await load(
+				{ kind: 'files', files },
+				{
+					onPublish: (published) => {
+						if (published.stillCurrent()) adopt(published)
+					}
+				}
+			)
 			const refused = loaded.status === 'error'
 
 			/*
@@ -544,13 +576,12 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					  (`run-optimization-pass`, `use-scene-size-initializer`) treat
 					  it as a breakdown, which is what the names mean.
 					*/
-					const referenced = loaded.file?.sourcePackageBytes ?? 0
-
-					adoptSource(
-						files,
-						referenced || measuredBytes(files),
-						loaded.stillCurrent
-					)
+					/*
+					  Only if `publish` never fired. A source that resolves without
+					  publishing still has to be adopted, and adopting twice would
+					  clear the conversions the first adoption just made room for.
+					*/
+					if (!adopted) adopt(loaded)
 				}
 			}
 
@@ -722,6 +753,18 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	*/
 	const openInPublisher = async () => {
 		if (!file) return
+		/*
+		  The handoff asks the same question every other await on this page asks,
+		  and used to be the one place that did not. Both values it writes with -
+		  `file` and `baseFileName` - are render-closure captures, and it awaits
+		  twice: once to serialize the document, once to navigate. A drop landing
+		  in either gap wrote whatever `prepareGltfDocument` found at that moment
+		  into a draft named after the model the visitor had pressed the button
+		  for, and the publisher opened on the mixture.
+		*/
+		const startedFrom = stageLoad.current
+		const stillOurs = () => startedFrom?.() ?? false
+
 		setIsHandingOff(true)
 
 		try {
@@ -739,6 +782,17 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 			if (!draftId) {
 				toast.error('That model could not be handed over. Try the publisher.')
+				return
+			}
+
+			/*
+			  Checked after the document is written rather than only before it.
+			  The draft is harmless where it lies - `use-scene-draft` only reads
+			  one it is sent to by id - so the cost of abandoning it here is a row
+			  nobody opens, against handing someone the wrong model.
+			*/
+			if (!stillOurs()) {
+				toast.error('A newer file replaced that one. Press the button again.')
 				return
 			}
 
@@ -778,8 +832,20 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  every figure printed around it was another.
 			*/
 			const startedFrom = stageLoad.current
+			const stillOurs = () => startedFrom?.() ?? false
 			const store = (conversion: Conversion) => {
-				if (!startedFrom?.()) return
+				if (!stillOurs()) {
+					/*
+					  Said out loud, because the same event on the `prepare` path
+					  already is. Declining here used to be a bare `return`: the
+					  spinner ran to the end, the panel filed nothing, and the page
+					  said nothing - so the visitor watched a conversion finish and
+					  produce no download, with no way to tell that their newer drop
+					  was the reason.
+					*/
+					toast.error('A newer file replaced that one. Press Convert again.')
+					return
+				}
 
 				setConversions((current) =>
 					storeConversion(current, currentKey, conversion, KEPT_CONVERSIONS)
@@ -813,6 +879,15 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				return
 			}
 
+			/*
+			  Read without a currency check of its own, deliberately. `prepare`
+			  answers that question on both of its slow paths - after the re-read
+			  and again after the texture pass - and returns null, which the
+			  `!model` branch above has already turned into a message and a return.
+			  A guard here was written and then removed: no mutation could redden a
+			  test for it, because the only window it covers is the microtask
+			  between `await prepare()` resolving and this line.
+			*/
 			const document = optimizer?._getDocument()
 
 			if (!document) {
@@ -1087,7 +1162,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 							<button
 								type="button"
 								onClick={startOver}
-								disabled={isConverting}
+								/*
+								  `isHandingOff` as well as `isConverting`. "Convert
+								  another" clears the source the publisher draft is
+								  built from, so pressing it during "Opening the
+								  publisher" emptied the model mid-serialization.
+								*/
+								disabled={isConverting || isHandingOff}
 								className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4 transition-colors disabled:opacity-50"
 							>
 								Convert another

@@ -33,6 +33,7 @@ import {
 } from './state'
 import {
 	LoadedModel,
+	LoadOptions,
 	ModelSource,
 	LoadOutcome,
 	ModelState,
@@ -95,8 +96,31 @@ function useLoadModel<
 	const stateRef = useRef(state)
 	stateRef.current = state
 
+	/*
+	  The last model that reached the screen, which is not what `state` holds
+	  once a second load is in flight.
+
+	  `modelOnScreen` used to read `stateRef.current` and require `ready`. A load
+	  commits `loadingModelState` on the way in, which blanks the file - so with
+	  A on screen, a slow B in flight and then a bad C, C read `loading`, took
+	  null, and its failure committed an error state that took A off the screen.
+	  The promise directly above `modelOnScreen` - that a failed load costs the
+	  visitor nothing - held only while no other load overlapped it, which is
+	  exactly when dropping the wrong file is easiest.
+
+	  Written from `commit` as well as during render because the two answer at
+	  different times: `commit` is synchronous, so a load starting in the same
+	  tick as the previous one's success still sees it, while the render pass
+	  catches `replaceModel`, which swaps the file without going through `load`.
+	*/
+	const lastReadyRef = useRef<ModelState | null>(null)
+	if (state.status === 'ready') lastReadyRef.current = state
+
 	const load = useCallback(
-		async (source: ModelSource): Promise<LoadOutcome> => {
+		async (
+			source: ModelSource,
+			options?: LoadOptions
+		): Promise<LoadOutcome> => {
 			const token = ++loadTokenRef.current
 			const isCurrent = () => loadTokenRef.current === token
 
@@ -119,12 +143,13 @@ function useLoadModel<
 			// the one on screen, so its failure has to be visible as one rather than
 			// leaving the previous scene's geometry under the new scene's name.
 			const modelOnScreen =
-				source.kind === 'files' && stateRef.current.status === 'ready'
-					? stateRef.current
-					: null
+				source.kind === 'files' ? lastReadyRef.current : null
 
 			const commit = (next: ModelState): ModelState => {
-				if (isCurrent()) setState(next)
+				if (isCurrent()) {
+					if (next.status === 'ready') lastReadyRef.current = next
+					setState(next)
+				}
 				return next
 			}
 
@@ -137,6 +162,12 @@ function useLoadModel<
 				optimizer: optimizerRef.current,
 				publish: (loaded: LoadedModel) => {
 					published = commit(readyModelState(source.kind, loaded))
+					/*
+					  The same instant the viewer changes, so a caller can move what
+					  it prints with the stage rather than an optimizer ingest later.
+					  Guarded, because a retired load must not describe the page.
+					*/
+					if (isCurrent()) options?.onPublish?.(outcome(published))
 				},
 				onProgress: (progress: number) => {
 					if (isCurrent()) {
@@ -181,6 +212,10 @@ function useLoadModel<
 	const reset = useCallback(() => {
 		// Claiming a token retires any in-flight load along with the state.
 		loadTokenRef.current += 1
+		// Nothing is on screen after this, so a later failure has nothing to
+		// restore - without it, clearing the model and then failing a drop would
+		// bring the cleared model back.
+		lastReadyRef.current = null
 		setState(emptyModelState)
 	}, [])
 

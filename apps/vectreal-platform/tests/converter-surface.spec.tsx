@@ -38,6 +38,7 @@
 import { formatFileSize } from '@shared/utils'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useSyncExternalStore } from 'react'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ConverterSurface } from '../app/components/convert/converter-surface'
@@ -56,6 +57,8 @@ interface LoaderFile {
 }
 
 interface Pending {
+	/** Puts the model on the stage, leaving `load` unresolved. */
+	publish: (file: LoaderFile) => void
 	resolve: (file: LoaderFile) => void
 	reject: (error: { code: string; message: string }) => void
 }
@@ -100,6 +103,18 @@ const settle = (index: number, file: LoaderFile) =>
 	pending[index]?.resolve(file)
 
 /**
+ * Puts a load's model on the stage without letting `load` resolve.
+ *
+ * This is the real gap, not a contrivance: the loaders publish as soon as they
+ * have parsed and then await the optimizer ingest, so on a large model the
+ * viewer changes seconds before `load` comes back. Everything the page prints
+ * around the stage is written by the caller, and this is the only way to ask
+ * what it says while the two disagree.
+ */
+const reachStage = (index: number, file: LoaderFile) =>
+	pending[index]?.publish(file)
+
+/**
  * Refuses the load that is `index`, the way the hook does: the model already on
  * screen is left exactly where it is, and only the outcome carries the failure.
  */
@@ -122,7 +137,13 @@ function blockPasses() {
 }
 
 const optimizer = {
-	_getDocument: () => ({}),
+	/*
+	  A spy, not a plain arrow. Whether the optimizer is read *at all* after a
+	  newer drop is the assertion for the guard in front of it - `store`'s own
+	  guard keeps the wrong bytes off the page but cannot say the encode was
+	  skipped.
+	*/
+	_getDocument: vi.fn(() => ({})),
 	texturesOptimization: vi.fn(async () => {
 		if (passBlock) await passBlock
 	})
@@ -141,25 +162,41 @@ function resetContext() {
 			latestToken += 1
 			publish({ status: 'empty', file: null })
 		},
-		load: (source: { files: File[] }) => {
+		load: (
+			source: { files: File[] },
+			options?: { onPublish?: (outcome: Record<string, unknown>) => void }
+		) => {
 			loadCalls.push(source.files)
 
 			const token = ++latestToken
 			const stillCurrent = () => latestToken === token
 
 			return new Promise((resolve) => {
+				const reachStage = (file: LoaderFile) => {
+					/*
+					  Committed only while current: that asymmetry is the contract,
+					  and it is the whole reason the caller needs `stillCurrent`
+					  rather than reading `status`.
+					*/
+					if (!stillCurrent()) return
+					publish({ status: 'ready', file })
+					options?.onPublish?.({
+						status: 'ready',
+						file,
+						error: null,
+						stillCurrent
+					})
+				}
+
 				pending.push({
+					publish: reachStage,
 					resolve: (file) => {
 						/*
-						  Committed only while current, and resolved either way: that
-						  asymmetry is the contract, and it is the whole reason the
-						  caller needs `stillCurrent` rather than reading `status`.
-
-						  `publish` happens before the promise settles, the way the
+						  Publishing happens before the promise settles, the way the
 						  real hook does, which is why the Convert button can render
 						  before the drop that produced it has finished adopting.
 						*/
-						if (stillCurrent()) publish({ status: 'ready', file })
+						reachStage(file)
 						resolve({ status: 'ready', file, error: null, stillCurrent })
 					},
 					reject: (error) =>
@@ -215,10 +252,35 @@ vi.mock('../app/components/consent/consent-context', () => ({
 	useConsent: () => ({ consent: { analytics: false } })
 }))
 
-vi.mock('react-router', () => ({ useNavigate: () => async () => undefined }))
+const navigated: string[] = []
+vi.mock('react-router', () => ({
+	useNavigate: () => async (to: string) => {
+		navigated.push(to)
+	}
+}))
+
+/** Holds the publisher handoff open, the way a large document would. */
+let draftBlock: Promise<void> | null = null
+let releaseDraft: () => void = () => undefined
+
+function blockDraft() {
+	draftBlock = new Promise<void>((resolve) => {
+		releaseDraft = () => {
+			draftBlock = null
+			resolve()
+		}
+	})
+}
+
+vi.mock('../app/lib/domain/scene/client/scene-draft-persistence', () => ({
+	persistPendingSceneDraftOrchestrator: async () => {
+		if (draftBlock) await draftBlock
+		return 'draft-1'
+	}
+}))
 
 vi.mock('../app/hooks/scene-loader/use-scene-document-export', () => ({
-	usePrepareGltfDocument: () => async () => null
+	usePrepareGltfDocument: () => async () => ({ data: {}, assets: new Map() })
 }))
 
 vi.mock('../app/lib/samples/sample-models', () => ({
@@ -276,7 +338,18 @@ beforeEach(() => {
 	exportBlock = null
 	passBlock = null
 	latestToken = 0
+	draftBlock = null
+	navigated.length = 0
 	optimizer.texturesOptimization.mockClear()
+	optimizer._getDocument.mockClear()
+	/*
+	  The toast spies are module-level and were never cleared, so a message
+	  raised by one test still satisfied `toHaveBeenCalledWith` in the next. Two
+	  mutations survived on that alone - the assertion was reading another test's
+	  output.
+	*/
+	vi.mocked(toast.error).mockClear()
+	vi.mocked(toast.success).mockClear()
 	resetContext()
 })
 
@@ -594,5 +667,195 @@ describe('a destructive pass is not credited to a document that never had it', (
 		await waitFor(() =>
 			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
 		)
+	})
+})
+
+describe('the page describes the model that is on the stage', () => {
+	it('moves the figures with the viewer, not an ingest later', async () => {
+		/*
+		  THE DEFECT. The loader publishes as soon as it has parsed and then awaits
+		  the optimizer ingest, while the surface adopted only once `load`
+		  resolved. Between the two the stage showed the new model and every figure
+		  around it - the byte count, the size comparison, a live Download button -
+		  still described the old one. On a large model that window is seconds, and
+		  `stillCurrent()` cannot close it: inside it the new load genuinely is the
+		  current one.
+
+		  `reachStage` is exactly that window: published, not resolved.
+		*/
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 5_200_000 }))
+
+		/*
+		  Read off the row rather than with `findByText`. Before a conversion
+		  exists the size is a sibling text node of the name inside one paragraph,
+		  so no single element holds it on its own - which is also why the name and
+		  the size are asserted together here: they are one claim about one file,
+		  and the defect is that they disagree.
+		*/
+		const fileRow = async (name: string) =>
+			(await screen.findByText(name)).closest('p')!
+
+		expect((await fileRow('chair.gltf')).textContent).toContain(
+			formatFileSize(5_200_000)
+		)
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		reachStage(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 1_000 })
+		)
+
+		const row = await fileRow('second.gltf')
+		await waitFor(() =>
+			expect(row.textContent).toContain(formatFileSize(1_000))
+		)
+		expect(row.textContent).not.toContain(formatFileSize(5_200_000))
+	})
+
+	it('says so when a finished conversion is filed too late', async () => {
+		/*
+		  `store` declining used to be a bare `return`, while the same event on
+		  the `prepare` path raised a toast. The visitor watched the spinner run to
+		  the end and produce no download, with nothing said about why.
+		*/
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		blockExports()
+		exported.data = new Uint8Array(1_000)
+		fireEvent.click(convertButton())
+
+		// A newer file lands while the encode is still running.
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+
+		releaseExport()
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+	})
+
+	it('does not read the optimizer for a model that has been replaced', async () => {
+		/*
+		  `_getDocument()` hands back whatever the optimizer holds *now*, which
+		  after a newer drop is the new model - so a conversion that reached it
+		  late would encode the new model's bytes under the old model's name.
+
+		  What stops that is `prepare`, which asks about currency again after the
+		  texture pass and returns null, so the encode is never begun. This pins
+		  that: removing that second check reddens this case. A guard in front of
+		  the read here was written and removed instead of kept - no mutation
+		  could redden a test for it, because `prepare` covers every path that
+		  reaches it.
+		*/
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		/*
+		  A pass has to be ticked for there to be a slow await to land inside, and
+		  ticking one makes Convert re-read the document first - so the pass only
+		  starts once that re-read settles.
+		*/
+		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+
+		blockPasses()
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await waitFor(() =>
+			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
+		)
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(3))
+		settle(2, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+
+		optimizer._getDocument.mockClear()
+		releasePass()
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(optimizer._getDocument).not.toHaveBeenCalled()
+	})
+})
+
+describe('the handoff to the publisher', () => {
+	const openButton = () => screen.getByRole('button', { name: /publisher/i })
+
+	it('does not hand over a model the visitor has replaced', async () => {
+		/*
+		  `openInPublisher` consulted no currency at all: two awaits, and both the
+		  file and the name it writes with are render-closure captures. A drop
+		  landing in either gap wrote whatever the exporter found at that moment
+		  into a draft named after the model the visitor had pressed the button
+		  for.
+		*/
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		blockDraft()
+		fireEvent.click(openButton())
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+
+		releaseDraft()
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press the button again.'
+			)
+		)
+		expect(navigated).toEqual([])
+	})
+
+	it('cannot be cleared out from under itself', async () => {
+		/*
+		  "Convert another" clears the source the draft is being built from, and
+		  was disabled during `isConverting` but not during `isHandingOff` - so it
+		  was pressable in exactly the window where pressing it empties the model
+		  mid-serialization.
+		*/
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		blockDraft()
+		fireEvent.click(openButton())
+
+		const startOver = await screen.findByRole('button', {
+			name: /convert another/i
+		})
+		await waitFor(() => expect(startOver).toBeDisabled())
+
+		releaseDraft()
 	})
 })
