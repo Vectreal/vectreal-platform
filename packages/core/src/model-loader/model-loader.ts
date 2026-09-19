@@ -71,7 +71,6 @@ async function siblingsFromFiles(
  * This class provides comprehensive model loading capabilities for:
  * - GLTF files
  * - GLB files
- * - USDZ files (basic support)
  *
  * Designed for both Node.js server and browser environments.
  */

@@ -218,9 +218,15 @@ const loadBinaryModel = async (
 	// The model is on screen from here on, so nothing below may fail the load.
 	publish(loaded)
 
-	// USDZ files are ZIP archives - loadFromGlbBuffer validates GLB magic bytes
-	// and throws for any non-GLB binary. Skip optimizer loading for USDZ.
-	if (optimizer && fileType !== ModelFileTypes.usdz) {
+	/*
+	  The `fileType !== usdz` guard that used to stand here is gone with the
+	  reason for it. A USDZ is a zip archive and `loadFromGlbBuffer` validates GLB
+	  magic bytes, so ingesting one threw - but the owner says `canImport: false`
+	  now, so `findImportableModels` never admits a USDZ and this line is not
+	  reachable with one. Keeping the guard would have claimed a case that cannot
+	  occur, which is the shape CLAUDE.md forbids.
+	*/
+	if (optimizer) {
 		await ingestIntoOptimizer(async () => {
 			const buffer = convertedGlb ?? new Uint8Array(await file.arrayBuffer())
 			await optimizer.loadFromGlbBuffer(buffer)

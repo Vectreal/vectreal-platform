@@ -34,10 +34,12 @@ graph or textures, so converting *to* it discards everything but the mesh.
 decision for each, and a test refuses any pair whose endpoints fall outside it,
 so a target that cannot be written cannot get a page.
 
-USDZ is absent as a *source*, separately from all of that: it is withheld while
-its import path is unreliable, so no `usdz-to-glb` page is published. The
-Publisher reads uploads through the same loader, so a USDZ fares no better
-there; see [Uploading Models](/docs/guides/upload).
+USDZ is absent as a *source* for the same reason, not a separate one: there is
+no USDZ reader, so `canImport` is false and no `usdz-to-glb` page is published.
+The Publisher reads uploads through the same loader, so a USDZ is refused there
+too rather than failing part way; see [Uploading Models](/docs/guides/upload).
+USDZ remains a *target* - writing one works, and that is what the `to USDZ`
+pages offer.
 
 ---
 
@@ -98,11 +100,13 @@ bought before downloading.
   present  apps/vectreal-platform/app/lib/convert/convert-pairs.ts   slug: 'fbx-to-glb'
   present  apps/vectreal-platform/app/lib/convert/convert-pairs.ts   slug: 'obj-to-glb'
 
-  # The capability claims, pinned to the values rather than the identifiers. The
-  # first draft of this block cited `SOURCES_WITHHELD` alone, which stays
-  # present as long as the declaration exists - emptying it would publish the
-  # usdz page this page says is withheld, with every claim still green.
-  present  apps/vectreal-platform/app/lib/convert/convert-capabilities.ts   SOURCES_WITHHELD: readonly ConvertFormat[] = ['usdz']
+  # The capability claims, pinned to the values rather than the identifiers. This
+  # block used to cite a `SOURCES_WITHHELD` list holding 'usdz'. That list is
+  # gone: the owner says `canImport: false`, so nothing needs subtracting, and
+  # the claim moved to the field the decision actually lives in. Flipping it back
+  # publishes the usdz-to-glb page this page says does not exist, and reddens
+  # here.
+  present  packages/core/src/model-formats/model-formats.ts   canImport: false,
   present  packages/core/src/model-formats/model-formats.ts   id: 'stl',
   present  packages/core/src/model-formats/model-formats.ts   id: 'fbx',
   present  packages/core/src/model-formats/model-formats.ts   id: 'obj',

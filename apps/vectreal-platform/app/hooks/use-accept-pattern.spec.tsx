@@ -64,14 +64,14 @@ describe('the accept pattern is the format owner, rendered', () => {
 		const parts = result.current.split(',')
 
 		/*
-		  Members, not substrings. `.usdz` is inside the media type
-		  `model/vnd.usdz+zip`, so a `toContain` on the whole string passed even
-		  with the extension removed - on the one format where the extension
-		  matters most, since iOS is the entire reason USDZ is offered.
+		  Members, not substrings, because an extension can hide inside a media
+		  type: `.usdz` sits inside `model/vnd.usdz+zip`, so a `toContain` over the
+		  whole string passed even with the extension removed. USDZ is no longer
+		  offered at all - it is asserted absent below - but the trap it exposed
+		  applies to every row here.
 		*/
 		expect(parts).toContain('.glb')
 		expect(parts).toContain('.gltf')
-		expect(parts).toContain('.usdz')
 		expect(parts).toContain('.stl')
 		expect(parts).toContain('.fbx')
 		expect(parts).toContain('.obj')
@@ -79,7 +79,7 @@ describe('the accept pattern is the format owner, rendered', () => {
 		expect(parts).toContain('.mtl')
 	})
 
-	it('claims no format the owner does not have', () => {
+	it('claims no format the loader cannot read', () => {
 		const { result } = renderHook(() => useAcceptPattern(false))
 
 		/*
@@ -93,7 +93,18 @@ describe('the accept pattern is the format owner, rendered', () => {
 		  being deleted, which is the whole point of the pair of tests: this one
 		  falls as a format lands, and that one catches it if it lands here
 		  without a loader behind it.
+
+		  `.usdz` went the other way, and is the first to do so: it was offered
+		  for as long as this file has existed, and there has never been a USDZ
+		  reader behind it. It is asserted on `parts` rather than on the whole
+		  string for the reason the test above records - the extension is a
+		  substring of `model/vnd.usdz+zip`, so `not.toContain` over the string
+		  passes while the picker still offers it.
 		*/
+		const parts = result.current.split(',')
+
+		expect(parts).not.toContain('.usdz')
+		expect(parts).not.toContain('model/vnd.usdz+zip')
 		expect(result.current).not.toContain('.usda')
 		expect(result.current).not.toContain('.3mf')
 	})

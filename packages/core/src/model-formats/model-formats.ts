@@ -103,16 +103,28 @@ export const MODEL_FORMATS: readonly ModelFormat[] = [
 	},
 	{
 		/*
-		  Import is listed because the loader dispatches on it and the product
-		  offers it; it is also known to be broken, since `loadFromBuffer` hands a
-		  zip archive to a glTF reader. That is tracked on its own and is not this
-		  module's to decide - recording the dispatch honestly is.
+		  `canImport: false` because there is no USDZ reader. `threeSourceBridge`
+		  answers `null` for it, so `readDocument` hands a zip archive to
+		  glTF-Transform's `WebIO` and it throws - every time, for every file.
+
+		  This flag used to be `true`, on the reasoning that the loader dispatched
+		  on it and the product offered it, with the breakage tracked elsewhere.
+		  That stopped being tenable once every claim surface derived from this
+		  module: one field advertised the import on the file picker, in the meta
+		  keywords, in `/llms.txt`, in the schema.org `featureList`, on the home
+		  page and in the onboarding visual, and a visitor who accepted the offer
+		  got a parse error blaming their file. A format the loader cannot read is
+		  not an import, whatever the dispatch table says.
+
+		  `canExport` stays true and is unaffected: `exportThreeJSUSDZ` works, and
+		  writing a USDZ is what the convert pages offer. The day a reader exists,
+		  this flips back and every surface above follows it.
 		*/
 		id: 'usdz',
 		extension: 'usdz',
 		label: 'USDZ',
 		mimeTypes: ['model/vnd.usdz+zip'],
-		canImport: true,
+		canImport: false,
 		canExport: true,
 		isBundle: false,
 		siblingExtensions: []
@@ -131,10 +143,10 @@ export const MODEL_FORMATS: readonly ModelFormat[] = [
 		  and offering "to STL" would be offering that silently. Revisiting it
 		  means deciding whether that trade is worth a page, not waiting on
 		  three.js. It is also the first format here whose flags disagree, which is
-		  what puts real data behind the exportable/importable split. Not behind
-		  the `canImport` skip in `modelAcceptPattern`, which is still
-		  unreachable from the real declarations - every format here is
-		  importable, as the note on that function says.
+		  what puts real data behind the exportable/importable split. USDZ is the
+		  mirror of it - exportable and not importable - and between them they
+		  make the `canImport` skip in `modelAcceptPattern` reachable from the
+		  real declarations, which it was not when this note was written.
 		*/
 		id: 'stl',
 		extension: 'stl',
@@ -325,11 +337,13 @@ export function isImportableFileName(fileName: string): boolean {
  * failure it is trying to prevent.
  *
  * Takes the format list as an argument only so a test can drive the two rules
- * inside it. The `canImport` skip is not reachable from the real declarations
- * today, because every format is importable, so a test over `MODEL_FORMATS`
- * alone would leave it unprotected. The de-duplication is reachable: two
- * formats carry siblings and their image extensions overlap exactly, because
- * OBJ arrives with an MTL and images that glTF also names.
+ * inside it. Both are now reachable from the real declarations: USDZ is
+ * exportable and not importable, so the `canImport` skip drops it from the
+ * picker, and the de-duplication fires because two formats carry siblings whose
+ * image extensions overlap exactly - OBJ arrives with an MTL and images that
+ * glTF also names. The argument stays, because a test that drives the rules
+ * directly keeps failing for one reason rather than for whichever declaration
+ * happened to change.
  */
 export function modelAcceptPattern(
 	formats: readonly ModelFormat[] = MODEL_FORMATS
