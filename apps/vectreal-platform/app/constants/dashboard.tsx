@@ -123,7 +123,12 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	*/
 	'billing-checkout': {
 		title: 'Change Plan',
-		description: 'Choose a plan and continue to secure payment',
+		/*
+		  No description. It read "choose a plan and continue to secure payment"
+		  above a page where payment has been shut behind a kill switch since the
+		  route was built; the panel below says what the change would do and
+		  whether it can be bought now.
+		*/
 		actionVariant: undefined
 	},
 	/*
@@ -135,9 +140,14 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		description: 'Your new plan is syncing now',
 		actionVariant: undefined
 	},
+	/*
+	  Neutral, like its two siblings above were made. "Upgrade Paused" named a
+	  state nothing is in - the reader left a Stripe checkout and nothing was
+	  suspended - and assumed a direction checkout does not guarantee.
+	*/
 	'billing-checkout-canceled': {
-		title: 'Upgrade Paused',
-		description: 'No charge was made and your plan is unchanged',
+		title: 'Plan Unchanged',
+		description: 'No charge was made',
 		actionVariant: undefined
 	},
 	settings: {
