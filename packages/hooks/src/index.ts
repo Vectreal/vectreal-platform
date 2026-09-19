@@ -25,6 +25,7 @@ export { createBrowserTextureEncoder } from './use-optimize-model/utils'
 
 // Re-export types for convenience
 export type {
+	LoadOptions,
 	LoadOutcome,
 	ModelFile,
 	ModelSource,

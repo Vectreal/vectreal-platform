@@ -2,6 +2,7 @@ export { default as useLoadModel } from './use-load-model'
 export {
 	type InputFileOrDirectory,
 	type LoadedModel,
+	type LoadOptions,
 	type LoadOutcome,
 	type ModelFile,
 	type ModelSource,

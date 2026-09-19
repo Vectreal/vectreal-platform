@@ -2,6 +2,7 @@ import { useModelFileInputs } from '@shared/components/hooks/use-model-file-inpu
 import { Button } from '@shared/components/ui/button'
 import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
+import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 import {
 	Book,
@@ -36,6 +37,20 @@ interface Props {
  * screen, and a load in flight is the shell's loading surface, not a spinner in
  * here.
  */
+/*
+  Which formats arrive as a folder rather than a file, read from the owner.
+
+  This line used to name `.gltf` alone, and OBJ became a bundle in the same
+  changeset that made it importable - so an OBJ dropped here on its own lost its
+  materials and came back grey, while the sentence above the button said nothing
+  about it. `isBundle` is a property of the format, so the sentence is derived
+  from it rather than maintained beside it: the next bundle appears here on the
+  day it is declared.
+*/
+const BUNDLE_HINT = `A ${BUNDLE_FORMAT_IDS.map(
+	(id) => `.${modelFormat(id).extension}`
+).join(' or ')} needs the folder holding everything it points at`
+
 export const DropZone = ({ isMobile, onUpload }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 
@@ -200,7 +215,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 											Choose a folder instead
 										</button>
 										<p className="text-muted-foreground mt-1 text-xs">
-											A .gltf needs the folder holding its textures and .bin
+											{BUNDLE_HINT}
 										</p>
 
 										{/*

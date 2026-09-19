@@ -159,6 +159,31 @@ export type LoadOutcome = ModelState & {
 	stillCurrent: () => boolean
 }
 
+/** Optional hooks into a load, for callers that need more than its result. */
+export interface LoadOptions {
+	/**
+	 * Called the moment the parsed model reaches the screen.
+	 *
+	 * WHY THIS EXISTS, AND WHY `await load(...)` IS NOT THE SAME MOMENT. The
+	 * loaders publish as soon as the model is parsed and then await the
+	 * optimizer ingest, so `load` resolves one ingest *after* the viewer changed.
+	 * A caller that adopts on the resolved value therefore shows model B on the
+	 * stage while everything it prints around it - the file name, the byte
+	 * count, a size comparison, a live download button - still describes model A,
+	 * for as long as ingesting B takes.
+	 *
+	 * `stillCurrent` cannot close that window: during it, B genuinely is the
+	 * current load. The gap is between published and adopted, so the fix is to
+	 * make those one event.
+	 *
+	 * Optional, and additive: a caller that does not pass it behaves exactly as
+	 * before. Delaying the publish instead would have closed the same gap by
+	 * making the viewer wait on work it does not need, which is the trade this
+	 * deliberately does not make.
+	 */
+	onPublish?: (outcome: LoadOutcome) => void
+}
+
 /**
  * A model parsed into Three.js, plus whatever scene payload produced it.
  * Internal hand-off between the per-source loaders and the hook.
@@ -236,7 +261,7 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
 	 * await model.load({ kind: 'server', sceneId: 'abc-123' })
 	 * ```
 	 */
-	load: (source: ModelSource) => Promise<LoadOutcome>
+	load: (source: ModelSource, options?: LoadOptions) => Promise<LoadOutcome>
 	/**
 	 * Reset the model loading state and clear any loaded models.
 	 */
