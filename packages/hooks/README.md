@@ -81,6 +81,26 @@ again after any further await, because a drop can land during an encode as
 easily as during a parse. `reset()` claims a token too, so a load in flight when
 the user clears the model also reports `false`.
 
+Resolving is not the same moment as reaching the screen. The loaders publish the
+parsed model first and then await the optimizer ingest, so `load` resolves one
+ingest after the viewer changed. A caller that adopts on the resolved value
+therefore keeps printing the previous model's name and byte figures around the
+new one for as long as that ingest takes, and `stillCurrent()` cannot close the
+window, because during it the new load genuinely is the current one. Pass
+`onPublish` to adopt when the stage changes instead:
+
+```tsx
+await load({ kind: 'files', files }, {
+	onPublish: (published) => {
+		if (published.stillCurrent()) adopt(published)
+	}
+})
+```
+
+It receives the same `LoadOutcome` the promise resolves to, carrying its own
+`stillCurrent()`, and a load that was superseded before it published never calls
+it at all.
+
 ### Sources
 
 | `kind`       | Fields                                                        | Use                                                                                              |
@@ -110,7 +130,7 @@ files so the optimizer can ingest exactly what the viewer renders.
 | `sceneData`    | `ServerSceneData \| undefined`                    | The resolved payload, for scene sources                           |
 | `progress`     | `number`                                          | Progress value from 0 to 100                                      |
 | `source`       | `'files' \| 'scene-data' \| 'server' \| null`     | What the current state came from                                  |
-| `load(source)` | `Promise<LoadOutcome>`                            | Load a model; resolves to the terminal state plus `stillCurrent()` |
+| `load(source, options?)` | `Promise<LoadOutcome>`                  | Load a model; resolves to the terminal state plus `stillCurrent()`. `options.onPublish` fires earlier, when the model reaches the screen |
 | `supportedFileTypes` | `ModelFileTypes[]`                          | Every format the loader accepts, from `@vctrl/core/model-formats` |
 | `reset`        | `() => void`                                      | Clear the current model and retire any load in flight             |
 | `optimizer`    | `OptimizerIntegrationReturn<true> \| null`        | Populated when the hook is called with `useOptimizeModel()`       |
