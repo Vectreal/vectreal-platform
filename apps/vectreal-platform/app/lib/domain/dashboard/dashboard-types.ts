@@ -1,4 +1,8 @@
-import type { Plan, BillingState } from '../../../constants/plan-config'
+import type {
+	Plan,
+	PaidPlan,
+	BillingState
+} from '../../../constants/plan-config'
 import type {
 	organizationMemberships,
 	organizations,
@@ -204,10 +208,16 @@ export interface OrgUsage {
 	storageLimit: number | null
 }
 
-export interface BillingCheckoutOptions {
-	pro: BillingCheckoutPeriods
-	business: BillingCheckoutPeriods
-}
+/*
+  Keyed by `PaidPlan` rather than naming the two plans again. "The plans that
+  have a price to fetch" is the same fact as "the plans checkout sells", and
+  writing the keys out made it the fifteenth place that stated it.
+
+  Being a total Record is the point: a new paid plan now fails to compile here
+  and at both literals that build one, rather than silently shipping a checkout
+  with no price for it.
+*/
+export type BillingCheckoutOptions = Record<PaidPlan, BillingCheckoutPeriods>
 
 export interface BillingCheckoutOption {
 	priceId: string

@@ -14,6 +14,82 @@
 
 export type Plan = 'free' | 'pro' | 'business' | 'enterprise'
 
+/**
+ * The plans a customer can buy without talking to us.
+ *
+ * `enterprise` is a `Plan` and is deliberately absent: it is sales-led, and
+ * checkout must refuse it.
+ *
+ * Fourteen places used to restate this pair, in six shapes - a Set, two arrays,
+ * a return type, a `useState` parameter, five inline comparisons and a cast -
+ * and three of them carried a comment saying they mirrored one of the others.
+ * A mirror is not an owner. `enterprise` becoming self-serve had to be
+ * remembered in fourteen places, and the cast in `pricing-cards-section` would
+ * not have complained about being wrong.
+ */
+export type PaidPlan = Extract<Plan, 'pro' | 'business'>
+
+/*
+  Total by construction: a member added to `PaidPlan` and not listed here fails
+  to compile, which is what keeps the type and the runtime list in step. This is
+  the same device `DASHBOARD_OPERATION_ROLES` uses for the permission table.
+
+  Three things about this literal are load-bearing, and none are obvious:
+
+  1. It must stay a FRESH literal annotated in place. Excess-property checking is
+     what rejects a key outside `PaidPlan`, and it only applies to a literal
+     assigned directly to the annotation. Routing it through an intermediate
+     variable, a spread, or `satisfies Partial<Record<Plan, true>>` all compile
+     clean and would put `enterprise` into `PURCHASABLE_PLANS`, which is to say
+     into what checkout agrees to sell. `purchasable-plans.spec.ts` asserts the
+     exact contents, so the test is the backstop here, not the compiler.
+  2. The value type is the literal `true`, not `boolean`. `Object.keys` returns a
+     key whatever its value is, so under `boolean` someone could write
+     `pro: false` meaning "not purchasable" and still have it sold.
+  3. Key order is the order the plans render in. `PRICING_CARD_PLANS` spreads
+     this list after `free`, so writing Business first reorders the pricing grid
+     away from ascending price.
+
+  This module deliberately imports nothing. `PRICING_CARD_PLANS` spreads
+  `PURCHASABLE_PLANS` at module scope, so putting `plan-config` into an import
+  cycle turns that spread into a `ReferenceError` at module initialization,
+  which is an SSR crash on /pricing rather than a type error.
+*/
+const PURCHASABLE: Record<PaidPlan, true> = {
+	pro: true,
+	business: true
+}
+
+/*
+  Frozen because `readonly` is erased at runtime. Without it this is a live
+  array that a caller could push onto, leaving the list and the Set below
+  disagreeing about the one fact this module exists to own.
+*/
+export const PURCHASABLE_PLANS = Object.freeze(
+	Object.keys(PURCHASABLE)
+) as readonly PaidPlan[]
+
+/*
+  A Set, not `in` and not the record itself.
+
+  `in` and plain property access walk the prototype chain, so `'toString' in
+  PURCHASABLE` is true. That is the exact hole #878 closed on the canceled page,
+  where `?plan=toString` found a truthy label and rendered a function body. A
+  Set has no prototype entries, so this stays a validator for untrusted input
+  rather than becoming the same trap one layer down.
+*/
+const PURCHASABLE_LOOKUP: ReadonlySet<string> = new Set(PURCHASABLE_PLANS)
+
+/**
+ * Whether a value names a plan checkout sells.
+ *
+ * Takes `unknown` because most callers are validating something from outside
+ * the app: a search parameter, a JSON body, Stripe price metadata.
+ */
+export function isPaidPlan(value: unknown): value is PaidPlan {
+	return typeof value === 'string' && PURCHASABLE_LOOKUP.has(value)
+}
+
 export type BillingState =
 	| 'none'
 	| 'trialing'

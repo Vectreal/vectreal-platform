@@ -5,7 +5,7 @@
  *
  * Request body (JSON):
  *   {
- *     planId: 'pro' | 'business',  // target plan
+ *     planId: PaidPlan,           // target plan
  *     priceId: string,             // Stripe Price ID for the selected plan/period
  *     billingPeriod: 'monthly' | 'annual'
  *   }
@@ -31,6 +31,11 @@ import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { Route } from './+types/checkout'
+import {
+	isPaidPlan,
+	PURCHASABLE_PLANS,
+	type PaidPlan
+} from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
@@ -51,7 +56,6 @@ import type { PostHogContext } from '../../../lib/posthog/posthog-middleware'
 // Constants
 // ---------------------------------------------------------------------------
 
-const ALLOWED_PLANS: ReadonlySet<string> = new Set(['pro', 'business'])
 const ALLOWED_BILLING_PERIODS: ReadonlySet<string> = new Set([
 	'monthly',
 	'annual'
@@ -89,18 +93,17 @@ function getBillingPeriod(price: Stripe.Price): 'monthly' | 'annual' | null {
 	return null
 }
 
-function resolvePlanFromPrice(price: Stripe.Price): string | null {
+function resolvePlanFromPrice(price: Stripe.Price): PaidPlan | null {
 	const metadataPlan = price.metadata?.vectreal_plan
-	if (typeof metadataPlan === 'string' && ALLOWED_PLANS.has(metadataPlan)) {
+	if (isPaidPlan(metadataPlan)) {
 		return metadataPlan
 	}
 
-	if (
-		isStripeProduct(price.product) &&
-		typeof price.product.metadata.vectreal_plan === 'string' &&
-		ALLOWED_PLANS.has(price.product.metadata.vectreal_plan)
-	) {
-		return price.product.metadata.vectreal_plan
+	const productPlan = isStripeProduct(price.product)
+		? price.product.metadata.vectreal_plan
+		: null
+	if (isPaidPlan(productPlan)) {
+		return productPlan
 	}
 
 	return null
@@ -171,9 +174,9 @@ export async function action({
 	const { planId, priceId, billingPeriod } = body
 
 	// Validate inputs
-	if (typeof planId !== 'string' || !ALLOWED_PLANS.has(planId)) {
+	if (!isPaidPlan(planId)) {
 		return ApiResponse.badRequest(
-			`planId must be one of: ${[...ALLOWED_PLANS].join(', ')}`
+			`planId must be one of: ${PURCHASABLE_PLANS.join(', ')}`
 		)
 	}
 

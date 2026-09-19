@@ -31,6 +31,11 @@ import {
 	PricingCardsSection
 } from '../../components/pricing'
 import {
+	isPaidPlan,
+	PURCHASABLE_PLANS,
+	type PaidPlan
+} from '../../constants/plan-config'
+import {
 	PAYMENT_TRUST_COPY,
 	PLAN_DISPLAY_NAMES,
 	PRICING_PAGE_COPY
@@ -143,11 +148,13 @@ function BillingUpgradeContent({
 	const checkoutEnabled = serverCheckoutEnabled && (clientFlagEnabled ?? true)
 
 	const requestedPlan = searchParams.get('plan')
-	const initialPlan = requestedPlan === 'business' ? 'business' : 'pro'
+	const initialPlan: PaidPlan = isPaidPlan(requestedPlan)
+		? requestedPlan
+		: 'pro'
 	const initialPeriod =
 		searchParams.get('period') === 'annual' ? 'annual' : 'monthly'
 
-	const [plan, setPlan] = useState<'pro' | 'business'>(initialPlan)
+	const [plan, setPlan] = useState<PaidPlan>(initialPlan)
 	const [billingPeriod, setBillingPeriod] =
 		useState<BillingPeriod>(initialPeriod)
 	const [confirmOpen, setConfirmOpen] = useState(false)
@@ -261,9 +268,9 @@ function BillingUpgradeContent({
 					prices={checkoutOptions}
 					activePlan={billing.plan}
 					selectedPlan={plan}
-					selectablePlans={['pro', 'business']}
+					selectablePlans={PURCHASABLE_PLANS}
 					onSelectPlan={(nextPlan) => {
-						if (nextPlan === 'pro' || nextPlan === 'business') {
+						if (isPaidPlan(nextPlan)) {
 							setPlan(nextPlan)
 						}
 					}}
