@@ -103,6 +103,16 @@ describe('with a live Stripe price', () => {
 		expect(formatPrice(2900, 'usd')).toBe('$29')
 	})
 
+	/*
+	  The minor unit belongs to the currency. Stripe quotes JPY in whole yen, so
+	  2,950 is two thousand nine hundred and fifty yen, not 29.50 - which is what
+	  a fixed divide by 100 made of it, and what testing wholeness against 100
+	  would have kept making of it.
+	*/
+	it('reads the minor unit off the currency, not off a hundred', () => {
+		expect(formatPrice(2950, 'jpy')).toBe('¥2,950')
+	})
+
 	it('names the yearly saving from the live figures', () => {
 		expect(describeAnnualSaving('pro', LIVE)).toBe('$72')
 	})

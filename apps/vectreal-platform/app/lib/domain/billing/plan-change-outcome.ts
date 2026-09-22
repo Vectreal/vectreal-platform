@@ -144,7 +144,7 @@ export function describePlanChange({
 		What the reader is compared against. This is not the same question as
 		what the arrow shows, and conflating them was a bug: `isDirectUpdate`
 		says which code path Stripe took, not whether there was a prior plan.
-		`checkout.ts` sends everything that is not `active` - `past_due`,
+		`checkout.ts` sends everything `planChangeAppliesImmediately` refuses - `past_due`,
 		`trialing` - down the hosted-Checkout path carrying its real `from_plan`,
 		so gating the comparison on the path told a past-due Business org buying
 		Pro that it was welcome and had gained something.

@@ -147,7 +147,8 @@ describe('describePlanChange', () => {
 
 	/*
 		The hosted-Checkout path is not "no prior plan". `checkout.ts` takes the
-		in-place branch only when `billingState === 'active'`; a `past_due` or
+		in-place branch only when `planChangeAppliesImmediately` says so, which
+		needs an `active` state and both Stripe ids; a `past_due` or
 		`trialing` Business org falls through to hosted Checkout carrying
 		`from_plan: 'business'`. Comparing on the code path instead of on the two
 		plans greeted that reader with "Welcome to Pro!" and a list of what they

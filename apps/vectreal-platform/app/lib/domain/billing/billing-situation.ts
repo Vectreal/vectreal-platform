@@ -1,3 +1,4 @@
+import { DASHBOARD_LOCALE } from '../../../constants/limit-format'
 import {
 	BILLING_STATES_DOWNGRADED_TO_FREE,
 	type BillingState,
@@ -61,13 +62,19 @@ import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
  */
 export function planChangeAppliesImmediately(input: {
 	billingState: BillingState
-	stripeSubscriptionId: string | null
-	stripeCustomerId: string | null
+	stripeSubscriptionId: string | null | undefined
+	stripeCustomerId: string | null | undefined
 }): boolean {
+	/*
+	  `!= null` catches undefined too, which is what the route's original
+	  condition did. A missing column and a null one are the same absence here,
+	  and a predicate that is stricter than the code it replaced is a change
+	  nobody asked for.
+	*/
 	return (
 		input.billingState === 'active' &&
-		input.stripeSubscriptionId !== null &&
-		input.stripeCustomerId !== null
+		input.stripeSubscriptionId != null &&
+		input.stripeCustomerId != null
 	)
 }
 
@@ -92,7 +99,8 @@ export interface BillingSituationInput {
 /**
  * The dashboard's one spelling for an absolute date.
  *
- * `en-US` and not the machine default, which is what this line used to pass.
+ * `DASHBOARD_LOCALE` and not the machine default, which is what this line used
+ * to pass. It was a fourth inline `'en-US'` until the constant got an owner.
  * Every dashboard page is server-rendered, so an unpinned locale is formatted
  * once by the container and again by the browser, and the two disagree wherever
  * the reader is not American - a hydration mismatch that swaps the date under
@@ -105,7 +113,7 @@ export interface BillingSituationInput {
  * happens to agree on the value.
  */
 function formatDate(value: string): string {
-	return new Date(value).toLocaleDateString('en-US', {
+	return new Date(value).toLocaleDateString(DASHBOARD_LOCALE, {
 		month: 'short',
 		day: 'numeric',
 		year: 'numeric'

@@ -246,13 +246,12 @@ const OWNER = 'app/constants/plan-config.ts'
  * set test rather than two adjacent tests, and it is a far better filter than
  * limiting the distance between them: a bounded gap let `plan === 'pro' ||
  * isTrial) return route === 'business'` through as a match, and simultaneously
- * broke the ladder exemption for the 22 comparisons in `app/` whose operand is
- * longer than 40 characters.
+ * stopped the four-plan ladder matching for the 22 comparisons in `app/` whose
+ * operand is longer than 40 characters.
  *
- * No quote, which is load-bearing: the ladder strip is safe to delete a matched
- * region only because no quoted literal can survive inside one, so a
- * restatement cannot hide in an exempted span. No `=`, so an operand cannot
- * swallow the comparison operator that follows it.
+ * No quote, so an operand cannot reach across a string literal and pair two
+ * comparisons that are not adjacent. No `=`, so it cannot swallow the
+ * comparison operator that follows it.
  */
 const OPERAND = String.raw`[\w.?[\]()!]+`
 
@@ -445,9 +444,9 @@ describe('nothing restates which plans can be bought', () => {
 	})
 
 	/*
-	  Every pattern carries its own example and is checked through the same
-	  strip the guard applies, so a pattern whose example happens to contain the
-	  ladder cannot pass here while being unfireable in the walker.
+	  Every pattern carries its own example and is checked through
+	  `restatementsIn`, the same function the walker runs, so a pattern that
+	  could never fire cannot sit here looking like a guard.
 
 	  The previous version walked a separate samples array and indexed into this
 	  one positionally: a pattern that could never match anything would have
@@ -592,11 +591,17 @@ describe('nothing restates which plans can be bought', () => {
 	})
 
 	/*
-	  The strip must not swallow unrelated code between a distant 'free' and a
-	  distant 'enterprise', which is how a genuine restatement could hide inside
-	  an exempted region.
+	  Four plan literals scattered across a file are not a ladder, and the pair
+	  sitting among them is still a restatement.
+
+	  This began as proof that the ladder exemption could not swallow a genuine
+	  restatement lying between a distant 'free' and a distant 'enterprise'.
+	  There is no exemption now - the ladder is itself an offence - so what it
+	  holds today is the other half: the ladder patterns need their literals
+	  adjacent, so these three unrelated lines are not reported as a ladder,
+	  while the union on the middle line is reported as a pair.
 	*/
-	it('still sees a restatement sitting between free and enterprise', () => {
+	it('reads scattered plan literals as a pair, not as a ladder', () => {
 		const source = [
 			"const fallback: Plan = 'free'",
 			"export type Paid = 'pro' | 'business'",
@@ -604,5 +609,8 @@ describe('nothing restates which plans can be bought', () => {
 		].join('\n')
 
 		expect(restatementsIn(source)).toContain("a type union, 'pro' | 'business'")
+		expect(restatementsIn(source)).not.toContain(
+			'the full ladder as a list or union'
+		)
 	})
 })

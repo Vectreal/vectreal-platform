@@ -71,14 +71,6 @@ export interface PlanFit {
 	headline: string | null
 }
 
-/*
-	The dashboard's one spelling for a number, matching `billing-situation.ts`.
-	Business allows 2,000 scenes and 5,000 folders, and digit grouping differs by
-	locale - so an unpinned format is rendered one way by the container and
-	another by the browser, which is a hydration mismatch on a server-rendered
-	page.
-*/
-
 interface Reading {
 	key: LimitKey
 	label: string

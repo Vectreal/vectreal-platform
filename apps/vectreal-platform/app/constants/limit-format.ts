@@ -46,6 +46,12 @@ export const PUBLISHED_COPY_LOCALE = 'en-US'
  * declared their own `DASHBOARD_LOCALE`, and both feed the same
  * `formatLimitValue`, so the same limit could have been printed two ways on one
  * screen.
+ *
+ * Pinned rather than left to resolve, which is what `undefined` does: it means
+ * the runtime default, and the runtime differs across hydration. The container
+ * declares no LANG, so the server groups digits one way and the reader's
+ * browser another, and Business's 2,000 scenes and 5,000 folders are a
+ * hydration mismatch for anyone outside the container's default.
  */
 export const DASHBOARD_LOCALE = 'en-US'
 

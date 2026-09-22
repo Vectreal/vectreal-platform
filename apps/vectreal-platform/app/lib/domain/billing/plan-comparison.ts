@@ -50,12 +50,6 @@ import {
  * confirmation page uses, so no ordering has to be written down twice.
  */
 
-/*
-	Pinned for the reason `plan-fit.ts` pins it: Business allows 2,000 scenes, and
-	digit grouping differs between the container rendering this page and a
-	browser outside the US.
-*/
-
 export type LimitChange = 'raised' | 'lowered'
 
 export interface PlanComparisonRow {
@@ -206,6 +200,33 @@ export function comparePlans(
 	  raise it was how the page told an organization sitting at its limit that it
 	  had room.
 	*/
+	/*
+	  Strictly past, and only on a limit that is coming down.
+
+	  `atLimit` means full, which is `>= 1` and right for the plan held: an
+	  organization using all 20 of its projects is blocked. "Would go over" is a
+	  different question and needs `>`, because an organization that exactly
+	  fits the target still fits it. Reusing `atLimit` told every Business
+	  organization with one member that moving to Pro "would put Team seats over
+	  the limit" - Business allows ten seats, Pro allows one, and one member sits
+	  at exactly one.
+
+	  The `lowered` filter is part of what "over" means rather than a guard: only
+	  a limit coming down can put a reader past it. No plan pair reaches it today
+	  - to be past a raised limit you would have to be past the lower one first,
+	  which enforcement prevents - so no test pins it, and dropping it leaves the
+	  suite green. It is one line and it is the definition; the alternative is a
+	  rule that is merely accidentally right.
+	*/
+	const over = changed
+		.filter((row) => row.change === 'lowered')
+		.filter(
+			(row) =>
+				isRefusalReason(row.key, from) &&
+				(used[row.key] ?? 0) > bound(PLAN_LIMITS[to][row.key])
+		)
+		.map((row) => row.label)
+
 	const full = PLAN_CARD_LIMIT_KEYS.filter(
 		(key) =>
 			isRefusalReason(key, from) &&
@@ -216,7 +237,7 @@ export function comparePlans(
 		fromLabel,
 		toLabel,
 		isReduction,
-		...describeWhy({ fromLabel, toLabel, isReduction, rows, full }),
+		...describeWhy({ fromLabel, toLabel, isReduction, rows, full, over }),
 		rows,
 		gained,
 		lost
@@ -233,7 +254,8 @@ function describeWhy({
 	toLabel,
 	isReduction,
 	rows,
-	full
+	full,
+	over
 }: {
 	fromLabel: string
 	toLabel: string
@@ -241,6 +263,8 @@ function describeWhy({
 	rows: PlanComparisonRow[]
 	/** Labels of every limit already full on the plan held, not only changed ones. */
 	full: string[]
+	/** Labels of every limit this organization is strictly past on the target. */
+	over: string[]
 }): Pick<PlanComparison, 'title' | 'detail'> {
 	if (isReduction) {
 		/*
@@ -255,8 +279,6 @@ function describeWhy({
 		  where they are close, which is what this comment used to claim while
 		  everything was measured against the plan held.
 		*/
-		const over = rows.filter((row) => row.atLimit).map((row) => row.label)
-
 		if (over.length > 0) {
 			return {
 				title: `Moving to ${toLabel} would put ${joinLabels(

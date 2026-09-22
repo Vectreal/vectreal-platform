@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { PLAN_LIMITS, type LimitKey, type Plan } from './plan-config'
+import {
+	getPurchasableUpgrade,
+	PLAN_LIMITS,
+	RECOMMENDED_UPGRADE,
+	type LimitKey,
+	type Plan
+} from './plan-config'
 
 /**
  * The plan ladder, asserted as a mapping rather than as a set of literals.
@@ -109,5 +115,59 @@ describe('the plan ladder', () => {
 		)
 
 		expect(inversions).toEqual([])
+	})
+})
+
+/**
+ * Where each plan points next, and which of those a reader can actually buy.
+ *
+ * Two questions that look like one, which is how they came to be answered by
+ * two maps that disagreed at Business. `RECOMMENDED_UPGRADE` is the whole
+ * ladder and names Enterprise; `getPurchasableUpgrade` stops where checkout
+ * does. Every quota refusal the server raises carries a plan from the first,
+ * and every upgrade button a page draws comes from the second.
+ *
+ * Expectations are literals. Deriving them from the map under test would pass
+ * for any contents of it.
+ */
+describe('the upgrade ladder', () => {
+	it('points each plan at the next one up, and enterprise at nothing', () => {
+		expect(RECOMMENDED_UPGRADE).toEqual({
+			free: 'pro',
+			pro: 'business',
+			business: 'enterprise',
+			enterprise: null
+		})
+	})
+
+	/*
+	  The load-bearing row is Business. Its next plan is Enterprise, which
+	  checkout cannot sell, so the honest answer for a purchasable upgrade is
+	  nothing - the reader is sent to a conversation rather than to a checkout
+	  that would refuse them. The billing page's button used to read
+	  `plan === 'pro' ? 'business' : 'pro'`, which offered Business a downgrade
+	  to Pro.
+	*/
+	it('offers nothing to buy above Business', () => {
+		expect(getPurchasableUpgrade('free')).toBe('pro')
+		expect(getPurchasableUpgrade('pro')).toBe('business')
+		expect(getPurchasableUpgrade('business')).toBeNull()
+		expect(getPurchasableUpgrade('enterprise')).toBeNull()
+	})
+
+	/*
+	  Every step is upward. A ladder whose entries pointed sideways or down
+	  would still be a total record and would still typecheck; this is what
+	  notices.
+	*/
+	it('never points at a plan below the one it is for', () => {
+		for (const plan of PLAN_LADDER) {
+			const next = RECOMMENDED_UPGRADE[plan]
+			if (next === null) continue
+
+			expect(PLAN_LADDER.indexOf(next)).toBeGreaterThan(
+				PLAN_LADDER.indexOf(plan)
+			)
+		}
 	})
 })

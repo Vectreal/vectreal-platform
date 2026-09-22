@@ -48,20 +48,36 @@ export interface PlanPrice {
 	produced one way on the server and another in the reader's browser, and
 	every price becomes a hydration mismatch.
 
-	Whole amounts print without cents, and only whole amounts. Both copies
-	forced `maximumFractionDigits: 0`, which is right for the $29 and $79 the
-	plans cost today and silently wrong for anything else: a Stripe price of
+	Whole amounts print without their minor unit, and only whole amounts. Both
+	copies forced `maximumFractionDigits: 0`, which is right for the $29 and $79
+	the plans cost today and silently wrong for anything else: a Stripe price of
 	$29.99 was shown as "$30", a figure nobody would be charged.
-*/
-export function formatPrice(amountCents: number, currency: string): string {
-	const isWholeAmount = amountCents % 100 === 0
 
-	return new Intl.NumberFormat(DASHBOARD_LOCALE, {
+	The minor unit is asked of the currency rather than assumed to be 1/100.
+	Stripe quotes zero-decimal currencies like JPY in whole units and
+	three-decimal ones like BHD in thousandths, so a fixed divide by 100 turns
+	2,950 yen into 29.50 - the old code did that too, and testing wholeness
+	against 100 would have kept doing it. `resolvedOptions` reads the digits
+	Intl itself uses for the currency, so the two always agree.
+*/
+export function formatPrice(
+	amountCents: number,
+	currency: string,
+	locale: string = DASHBOARD_LOCALE
+): string {
+	const format = new Intl.NumberFormat(locale, {
+		style: 'currency',
+		currency: currency.toUpperCase()
+	})
+	const minorUnits = 10 ** (format.resolvedOptions().maximumFractionDigits ?? 2)
+	const isWholeAmount = amountCents % minorUnits === 0
+
+	return new Intl.NumberFormat(locale, {
 		style: 'currency',
 		currency: currency.toUpperCase(),
-		minimumFractionDigits: isWholeAmount ? 0 : 2,
-		maximumFractionDigits: isWholeAmount ? 0 : 2
-	}).format(amountCents / 100)
+		minimumFractionDigits: isWholeAmount ? 0 : undefined,
+		maximumFractionDigits: isWholeAmount ? 0 : undefined
+	}).format(amountCents / minorUnits)
 }
 
 export function resolvePlanPrice(

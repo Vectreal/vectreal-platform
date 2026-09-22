@@ -168,7 +168,7 @@ describe('Business to Pro', () => {
 	*/
 	it('names what is already past the target, before the money moves', () => {
 		const comparison = comparePlans('business', 'pro', {
-			used: { scenes_total: 500 }
+			used: { scenes_total: 500, org_seats: 1 }
 		})
 
 		expect(comparison.title).toBe(
@@ -185,11 +185,42 @@ describe('Business to Pro', () => {
 	*/
 	it('says only that there is less room when everything still fits', () => {
 		const comparison = comparePlans('business', 'pro', {
-			used: { scenes_total: 50 }
+			used: { scenes_total: 50, org_seats: 1 }
 		})
 
 		expect(comparison.title).toBe('Pro has less room than Business.')
-		expect(comparison.rows.some((row) => row.atLimit)).toBe(false)
+	})
+
+	/*
+	  Exactly at the target's allowance is not past it.
+
+	  The page always sends `org_seats`, counted by `countOrganizationMembers`,
+	  and Pro allows one seat. A solo Business organization therefore sits at
+	  exactly 1 of 1, and the first version of this warning used `atLimit`, which
+	  is `>= 1` - so every solo Business reader was told a move to Pro "would put
+	  Team seats over the limit" while they fit it exactly. Omitting `org_seats`
+	  from the fixtures above is what hid it.
+	*/
+	it('does not call a reader over a limit they exactly fit', () => {
+		const comparison = comparePlans('business', 'pro', {
+			used: { org_seats: 1, scenes_total: 200, projects_total: 20 }
+		})
+
+		expect(comparison.title).toBe('Pro has less room than Business.')
+	})
+
+	/*
+	  One more than it allows is past it, which is the boundary either side of
+	  the case above.
+	*/
+	it('counts one past the allowance as over', () => {
+		const comparison = comparePlans('business', 'pro', {
+			used: { org_seats: 2, scenes_total: 50 }
+		})
+
+		expect(comparison.title).toBe(
+			'Moving to Pro would put Team seats over the limit.'
+		)
 	})
 })
 

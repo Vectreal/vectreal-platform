@@ -247,6 +247,20 @@ function BillingUpgradeContent() {
 		window.location.href = checkoutFetcher.data.data.redirectUrl
 	}, [checkoutFetcher.state, checkoutFetcher.data])
 
+	/*
+	  Cleared when the page is shown again, which is the common way back from
+	  Stripe: the browser restores this page from bfcache with React state
+	  intact, and the effect above does not re-run because its dependencies have
+	  not changed. Without this the reader returns to a panel whose only action
+	  reads "Opening Stripe" and is disabled for good, with nothing on screen
+	  suggesting a reload.
+	*/
+	useEffect(() => {
+		const clear = () => setIsRedirecting(false)
+		window.addEventListener('pageshow', clear)
+		return () => window.removeEventListener('pageshow', clear)
+	}, [])
+
 	const checkoutError =
 		checkoutFetcher.state === 'idle' &&
 		checkoutFetcher.data &&
@@ -366,12 +380,19 @@ function BillingUpgradeContent() {
 						value={target ?? ''}
 						onValueChange={(value) => {
 							/*
-							  Radix clears the value when the active item is pressed
-							  again, and `isPaidPlan` rather than a cast because the
-							  handler takes a bare string: the narrowing is the only
-							  thing standing between a Radix value and a plan id.
+							  Radix sends an empty string when the active item is
+							  pressed again, and that is taken as "no target" rather
+							  than swallowed. It is the only way back for an
+							  organization with a single target: a Business reader
+							  who opens Pro to see what it costs would otherwise be
+							  left contemplating a downgrade with no control to undo
+							  it.
+
+							  `isPaidPlan` rather than a cast, because the handler
+							  receives a bare string and the narrowing is the only
+							  thing between a Radix value and a plan id.
 							*/
-							if (isPaidPlan(value)) setTarget(value)
+							setTarget(isPaidPlan(value) ? value : null)
 						}}
 						className="ds-sunken h-10 w-full rounded-xl p-1"
 						aria-label="Plan"
@@ -391,10 +412,12 @@ function BillingUpgradeContent() {
 				{target && price && targetLabel ? (
 					<>
 						<div className="space-y-1">
-							{/* Named only when no switch above already names it. */}
-							{targets.length > 1 ? null : (
-								<p className="text-h4">{targetLabel}</p>
-							)}
+							{/*
+							  The switch above names the target, for one option as
+							  well as for two, so nothing names it twice. This used
+							  to print the name whenever there was a single target,
+							  back when a single target meant no switch was drawn.
+							*/}
 							<p className="tabular-nums">
 								<span className="text-stat">{price.perMonthLabel}</span>
 								<span className="text-muted-foreground text-sm">
