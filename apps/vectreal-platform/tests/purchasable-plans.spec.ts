@@ -23,6 +23,11 @@ import type { Plan } from '../app/constants/plan-config'
   That failure surfaces under `nx typecheck`, not `nx test`: Vitest transpiles
   without type-checking, so a fifth plan leaves this file green while it silently
   covers four of five until the other gate runs.
+
+  `plan-config` now exports `ALL_PLANS`, which is the same list. This does not
+  import it, deliberately: an expectation that reads the value it checks cannot
+  disagree with it. The owner is for production code; a test states its
+  expectation itself.
 */
 const EVERY_PLAN = Object.keys({
 	free: true,
@@ -181,28 +186,6 @@ const OWNER = 'app/constants/plan-config.ts'
  */
 const OPERAND = String.raw`[\w.?[\]()!]+`
 
-/*
-  The four-plan ladder is a different fact - every plan, in order - and several
-  modules state it legitimately. It is removed before the patterns run.
-
-  Two exact alternatives, never a loose gap. The ladder appears both as a
-  literal sequence and as a chain of comparisons that Prettier wraps across
-  lines, and `asPlan` in `billing-limit-error.ts` is the live example of the
-  second. A first repair allowed 80 arbitrary characters between each pair of
-  literals, which anchored on the earliest 'free' in a file and could delete
-  around 240 characters of unrelated code along with the ladder, hiding any
-  restatement inside it. It was already swallowing a function signature in
-  `stripe-subscription-sync.server.ts`.
-*/
-const FULL_LADDER = new RegExp(
-	[
-		String.raw`'free'\s*[,|]\s*'pro'\s*[,|]\s*'business'\s*[,|]\s*'enterprise'`,
-		String.raw`(?<pos>${OPERAND})\s*===\s*'free'\s*\|\|\s*\k<pos>\s*===\s*'pro'\s*\|\|\s*\k<pos>\s*===\s*'business'\s*\|\|\s*\k<pos>\s*===\s*'enterprise'`,
-		String.raw`(?<neg>${OPERAND})\s*!==\s*'free'\s*&&\s*\k<neg>\s*!==\s*'pro'\s*&&\s*\k<neg>\s*!==\s*'business'\s*&&\s*\k<neg>\s*!==\s*'enterprise'`
-	].join('|'),
-	'g'
-)
-
 interface Restatement {
 	readonly name: string
 	readonly pattern: RegExp
@@ -291,6 +274,43 @@ const RESTATEMENTS: readonly Restatement[] = [
 			String.raw`(?<nb>${OPERAND})\s*!==\s*'business'\s*&&\s*\k<nb>\s*!==\s*'pro'`
 		),
 		example: "if (plan !== 'business' && plan !== 'pro') return null"
+	},
+	/*
+	  The full four-plan ladder. This used to be an exemption: the three patterns
+	  below were subtracted from a file before the patterns above ran, because
+	  several modules stated the ladder legitimately and none of them had an
+	  owner to read it from. `ALL_PLANS` and `isPlan` are that owner now, so the
+	  same three shapes are detection rather than exemption.
+
+	  `[,|]` covers the list and the union at once, and `\s` spans the newlines
+	  Prettier introduces, so a wrapped `new Set([...])` is the same match. The
+	  two comparison alternatives carry a backreference for the same reason the
+	  pair patterns above do: the operand must be the same expression on every
+	  limb, or four unrelated comparisons that happen to name four plans would
+	  read as one ladder.
+	*/
+	{
+		name: 'the full ladder as a list or union',
+		pattern:
+			/'free'\s*[,|]\s*'pro'\s*[,|]\s*'business'\s*[,|]\s*'enterprise'/,
+		example:
+			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']"
+	},
+	{
+		name: 'the full ladder as an === chain',
+		pattern: new RegExp(
+			String.raw`(?<pos>${OPERAND})\s*===\s*'free'\s*\|\|\s*\k<pos>\s*===\s*'pro'\s*\|\|\s*\k<pos>\s*===\s*'business'\s*\|\|\s*\k<pos>\s*===\s*'enterprise'`
+		),
+		example:
+			"if (\n\tvalue === 'free' ||\n\tvalue === 'pro' ||\n\tvalue === 'business' ||\n\tvalue === 'enterprise'\n) {"
+	},
+	{
+		name: 'the full ladder as a !== chain',
+		pattern: new RegExp(
+			String.raw`(?<neg>${OPERAND})\s*!==\s*'free'\s*&&\s*\k<neg>\s*!==\s*'pro'\s*&&\s*\k<neg>\s*!==\s*'business'\s*&&\s*\k<neg>\s*!==\s*'enterprise'`
+		),
+		example:
+			"if (\n\tp !== 'free' &&\n\tp !== 'pro' &&\n\tp !== 'business' &&\n\tp !== 'enterprise'\n) {"
 	}
 ]
 
@@ -299,9 +319,7 @@ const RESTATEMENTS: readonly Restatement[] = [
  * exercise the same code rather than two copies of it.
  */
 function restatementsIn(source: string): string[] {
-	const stripped = source.replace(FULL_LADDER, '')
-
-	return RESTATEMENTS.filter(({ pattern }) => pattern.test(stripped)).map(
+	return RESTATEMENTS.filter(({ pattern }) => pattern.test(source)).map(
 		({ name }) => name
 	)
 }
@@ -368,54 +386,52 @@ describe('nothing restates which plans can be bought', () => {
 	  stayed green, which is the defect this whole file exists to prevent.
 	*/
 	it.each(RESTATEMENTS.map((r) => [r.name, r] as const))(
-		'the pattern for %s fires through the real strip',
+		'the pattern for %s fires through the real walker',
 		(name, restatement) => {
 			expect(restatementsIn(restatement.example)).toContain(name)
 		}
 	)
 
-	it.each([
-		[
-			'a list',
-			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']"
-		],
-		['a union', "type Plan = 'free' | 'pro' | 'business' | 'enterprise'"],
-		[
-			'a wrapped Set',
-			"const VALID = new Set([\n\t'free',\n\t'pro',\n\t'business',\n\t'enterprise'\n])"
-		],
-		[
-			'a comparison chain',
-			"if (\n\tvalue === 'free' ||\n\tvalue === 'pro' ||\n\tvalue === 'business' ||\n\tvalue === 'enterprise'\n) {"
-		]
-	])('exempts the full plan ladder written as %s', (_shape, ladder) => {
-		expect(restatementsIn(ladder)).toEqual([])
-	})
-
 	/*
-	  Each of these fires without the strip, so the exemption above is doing work
-	  rather than passing vacuously.
+	  The full ladder, in the four shapes this repo has actually written it.
+
+	  These were exemptions until `ALL_PLANS` and `isPlan` existed to read it
+	  from: the ladder is a real fact and a module stating it had nowhere else to
+	  go. Now it has an owner, so every shape is flagged, and each case names the
+	  ladder pattern rather than merely asserting a non-empty list - a case that
+	  only ever matched the `'pro' | 'business'` pair inside it would otherwise
+	  pass while proving nothing about the ladder.
 	*/
 	it.each([
 		[
 			'a list',
-			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']"
+			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']",
+			'the full ladder as a list or union'
 		],
-		['a union', "type Plan = 'free' | 'pro' | 'business' | 'enterprise'"],
+		[
+			'a union',
+			"type Plan = 'free' | 'pro' | 'business' | 'enterprise'",
+			'the full ladder as a list or union'
+		],
 		[
 			'a wrapped Set',
-			"const VALID = new Set([\n\t'free',\n\t'pro',\n\t'business',\n\t'enterprise'\n])"
+			"const VALID = new Set([\n\t'free',\n\t'pro',\n\t'business',\n\t'enterprise'\n])",
+			'the full ladder as a list or union'
 		],
 		[
 			'a comparison chain',
-			"if (\n\tvalue === 'free' ||\n\tvalue === 'pro' ||\n\tvalue === 'business' ||\n\tvalue === 'enterprise'\n) {"
+			"if (\n\tvalue === 'free' ||\n\tvalue === 'pro' ||\n\tvalue === 'business' ||\n\tvalue === 'enterprise'\n) {",
+			'the full ladder as an === chain'
+		],
+		[
+			'a negated chain',
+			"if (\n\tp !== 'free' &&\n\tp !== 'pro' &&\n\tp !== 'business' &&\n\tp !== 'enterprise'\n) {",
+			'the full ladder as a !== chain'
 		]
 	])(
-		'would flag the ladder written as %s if it were not exempt',
-		(_s, ladder) => {
-			expect(RESTATEMENTS.some(({ pattern }) => pattern.test(ladder))).toBe(
-				true
-			)
+		'flags the full plan ladder written as %s',
+		(_shape, ladder, expected) => {
+			expect(restatementsIn(ladder)).toContain(expected)
 		}
 	)
 
@@ -475,13 +491,13 @@ describe('nothing restates which plans can be bought', () => {
 	})
 
 	/*
-	  The ladder exemption must not depend on how long the operand is. A bounded
-	  gap broke exactly here: the ladder stopped being exempt while the
-	  disjunction pattern kept firing, so a correct four-plan check was reported
-	  as a restatement. 22 of the 870 string comparisons under app/ already use
-	  an operand longer than 40 characters.
+	  Detection must not depend on how long the operand is, in either direction.
+	  A bounded gap broke exactly here once: the ladder stopped matching while
+	  the two-plan disjunction kept firing, so one correct four-plan check was
+	  reported as the wrong thing. 22 of the 870 string comparisons under app/
+	  already use an operand longer than 40 characters.
 	*/
-	it('exempts the ladder however long its operand is', () => {
+	it('flags the ladder however long its operand is', () => {
 		const ladder = [
 			'if (',
 			"\tuserWithDefaults.organization.subscription.plan === 'free' ||",
@@ -491,7 +507,7 @@ describe('nothing restates which plans can be bought', () => {
 			') {'
 		].join('\n')
 
-		expect(restatementsIn(ladder)).toEqual([])
+		expect(restatementsIn(ladder)).toContain('the full ladder as an === chain')
 	})
 
 	/*

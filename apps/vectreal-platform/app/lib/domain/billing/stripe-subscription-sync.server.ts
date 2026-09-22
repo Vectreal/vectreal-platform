@@ -19,7 +19,11 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
-import { type BillingState, type Plan } from '../../../constants/plan-config'
+import {
+	isPlan,
+	type BillingState,
+	type Plan
+} from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { reportServerError } from '../../observability/report-server-error.server'
@@ -65,29 +69,22 @@ export function resolvePlanFromSubscription(
 	subscription: Stripe.Subscription,
 	fallbackPlan: Plan = 'free'
 ): Plan {
-	const VALID_PLANS: ReadonlySet<string> = new Set([
-		'free',
-		'pro',
-		'business',
-		'enterprise'
-	])
-
 	const firstItem = subscription.items?.data?.[0]
 	if (!firstItem) return fallbackPlan
 
 	// Check price metadata first
 	const pricePlan = (firstItem.price as Stripe.Price | undefined)?.metadata
 		?.vectreal_plan
-	if (pricePlan && VALID_PLANS.has(pricePlan)) {
-		return pricePlan as Plan
+	if (isPlan(pricePlan)) {
+		return pricePlan
 	}
 
 	// Then check product metadata (product may be expanded or just an ID)
 	const product = (firstItem.price as Stripe.Price | undefined)?.product
 	if (product && typeof product !== 'string') {
 		const productPlan = (product as Stripe.Product).metadata?.vectreal_plan
-		if (productPlan && VALID_PLANS.has(productPlan)) {
-			return productPlan as Plan
+		if (isPlan(productPlan)) {
+			return productPlan
 		}
 	}
 

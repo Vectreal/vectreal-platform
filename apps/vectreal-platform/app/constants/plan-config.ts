@@ -14,6 +14,53 @@
 
 export type Plan = 'free' | 'pro' | 'business' | 'enterprise'
 
+/*
+  Every plan, in ladder order, and the predicate that recognizes one.
+
+  Built the same way as the purchasable pair below, deliberately: two devices
+  for one shape would be two things to learn. The same three properties are
+  load-bearing here - a fresh annotated literal so excess-property checking can
+  reject a non-plan, the literal `true` rather than `boolean` so a key cannot be
+  listed and disabled, and key order, which is the order plans are compared in.
+
+  `asPlan` in `billing-limit-error.ts` and a `Set` rebuilt on every call inside
+  `resolvePlanFromSubscription` each restated this, and each then cast the
+  result back to `Plan` because a comparison chain does not narrow an unknown
+  string. The predicate narrows, so those casts are gone.
+*/
+const EVERY_PLAN: Record<Plan, true> = {
+	free: true,
+	pro: true,
+	business: true,
+	enterprise: true
+}
+
+/*
+  A non-empty tuple, not `readonly Plan[]`, because `planEnum` in
+  `db/schema/billing/subscriptions.ts` reads this and Drizzle's `pgEnum` takes
+  `[string, ...string[]]`. One cast at the owner buys the database enum and the
+  TypeScript union stating the ladder once between them; that schema used to
+  carry a comment promising it was "kept in sync with plan-config.ts", which is
+  a mirror rather than an owner.
+*/
+export const ALL_PLANS = Object.freeze(Object.keys(EVERY_PLAN)) as readonly [
+	Plan,
+	...Plan[]
+]
+
+const PLAN_LOOKUP: ReadonlySet<string> = new Set(ALL_PLANS)
+
+/**
+ * Whether an untrusted value names a plan.
+ *
+ * A `Set` for the same reason `isPaidPlan` uses one: `in` and plain property
+ * access walk the prototype chain, so `'toString' in EVERY_PLAN` is true. That
+ * is the hole #878 closed on the canceled page.
+ */
+export function isPlan(value: unknown): value is Plan {
+	return typeof value === 'string' && PLAN_LOOKUP.has(value)
+}
+
 /**
  * The plans a customer can buy without talking to us.
  *

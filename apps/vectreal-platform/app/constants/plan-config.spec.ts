@@ -23,6 +23,15 @@ import { PLAN_LIMITS, type LimitKey, type Plan } from './plan-config'
  * twenty-five folders and nothing inverts, so that swap still passes.
  */
 
+/*
+	Written out here, deliberately, and never `ALL_PLANS`.
+
+	The first assertion below compares this list against `Object.keys(PLAN_LIMITS)`.
+	Sourcing both sides from the owner would make that comparison an identity and
+	it could never fail, which is the one thing this file exists to prevent. The
+	guard in `tests/purchasable-plans.spec.ts` does not reach here - its walker
+	skips `*.spec.*` - so nothing pushes this toward the owner either.
+*/
 const PLAN_LADDER: readonly Plan[] = ['free', 'pro', 'business', 'enterprise']
 
 /** `null` is "unlimited" or "custom", so it is the top of the ladder, not zero. */
