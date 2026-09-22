@@ -58,7 +58,19 @@ export interface PlanComparisonRow {
 	fromLabel: string
 	toLabel: string
 	change: LimitChange
-	/** Nearly full or full on the current plan - the reason the reader is here. */
+	/**
+	 * Nearly full, and full, against the limit that binds after this change.
+	 *
+	 * The plan held on a raise, which is the pressure the change relieves and
+	 * the reason the reader is here. The target on a reduction, which is the
+	 * pressure the change would create: measuring a downgrade against the plan
+	 * held reports a Business organization as comfortable while it is about to
+	 * stop fitting.
+	 *
+	 * `atLimit` is `>=`, so it means at or past, not past. The reduction
+	 * headline asks a stricter question and computes its own answer: an
+	 * organization that exactly fits the target still fits it.
+	 */
 	isTight: boolean
 	atLimit: boolean
 }
