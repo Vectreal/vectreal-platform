@@ -176,6 +176,11 @@ export interface LoadOptions {
 	 * current load. The gap is between published and adopted, so the fix is to
 	 * make those one event.
 	 *
+	 * **Called only for a load that is still the current one**, so there is
+	 * nothing to re-check on entry. What can still go stale is whatever the
+	 * callback goes on to do, so hold the outcome and ask its `stillCurrent()`
+	 * again after an await of its own.
+	 *
 	 * Optional, and additive: a caller that does not pass it behaves exactly as
 	 * before. Delaying the publish instead would have closed the same gap by
 	 * making the viewer wait on work it does not need, which is the trade this
