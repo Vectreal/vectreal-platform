@@ -56,7 +56,7 @@ describe('Free to Pro', () => {
 	it('says nothing is full when nothing is', () => {
 		const comparison = comparePlans('free', 'pro')
 
-		expect(comparison.title).toBe('Pro raises every limit on Free.')
+		expect(comparison.title).toBe('Every limit that changes goes up on Pro.')
 		expect(comparison.detail).toBe('Nothing on Free is full yet.')
 	})
 })
@@ -133,7 +133,7 @@ describe('what counts as the reason', () => {
 		})
 
 		expect(comparison.rows.every((row) => !row.isTight)).toBe(true)
-		expect(comparison.title).toBe('Pro raises every limit on Free.')
+		expect(comparison.title).toBe('Every limit that changes goes up on Pro.')
 	})
 })
 

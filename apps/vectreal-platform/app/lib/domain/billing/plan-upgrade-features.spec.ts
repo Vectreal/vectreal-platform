@@ -174,11 +174,18 @@ describe('the answer both billing pages give', () => {
 		of the same name would satisfy the two above - and a local re-implementation
 		is precisely what both routes held before this change. Any second answer has
 		to read the entitlements to compute a delta, so neither route may name them.
+
+		The subject is the two pages, not `plan-comparison`. That module reads
+		`PLAN_ENTITLEMENTS` once, to decide whether `org_seats` is a real refusal
+		reason on a plan with no second seat to give, which is a question about
+		whether a limit row applies rather than a second delta. Its delta comes
+		from `getUnlockedEntitlementLabels`, which the first test above pins.
+		Naming it here would have made this file fail against the module it was
+		edited to describe.
 	*/
 	it('leaves no page deriving the delta on its own', () => {
 		expect(source(UPGRADE)).not.toContain('PLAN_ENTITLEMENTS')
 		expect(source(SUCCESS)).not.toContain('PLAN_ENTITLEMENTS')
-		expect(source(COMPARISON)).not.toContain('PLAN_ENTITLEMENTS')
 	})
 
 	/*

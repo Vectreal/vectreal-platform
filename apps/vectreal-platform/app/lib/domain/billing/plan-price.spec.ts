@@ -43,7 +43,9 @@ describe('without a live Stripe price', () => {
 		expect(resolvePlanPrice('pro', 'monthly', NO_LIVE_PRICES)).toEqual({
 			perMonthLabel: '$29',
 			billedLabel: null,
-			priceId: null
+			priceId: null,
+			perMonthCents: 2900,
+			currency: 'usd'
 		})
 	})
 
@@ -51,7 +53,9 @@ describe('without a live Stripe price', () => {
 		expect(resolvePlanPrice('business', 'annual', NO_LIVE_PRICES)).toEqual({
 			perMonthLabel: '$63',
 			billedLabel: '$756 billed yearly',
-			priceId: null
+			priceId: null,
+			perMonthCents: 6300,
+			currency: 'usd'
 		})
 	})
 
@@ -78,7 +82,9 @@ describe('with a live Stripe price', () => {
 		expect(resolvePlanPrice('pro', 'annual', LIVE)).toEqual({
 			perMonthLabel: '$23',
 			billedLabel: '$276 billed yearly',
-			priceId: 'price_pro_y'
+			priceId: 'price_pro_y',
+			perMonthCents: 2300,
+			currency: 'usd'
 		})
 	})
 

@@ -87,15 +87,30 @@ interface Reading {
 }
 
 /**
+ * The limits `OrgUsage` actually carries a figure for.
+ *
+ * `Extract`, not a bare union, so renaming a key in `LimitKey` fails to compile
+ * here rather than silently dropping a reading. The remaining two, `org_seats`
+ * and `api_keys_per_org`, are counted by their own queries and are added by the
+ * caller that has them.
+ */
+export type MeasuredLimitKey = Extract<
+	LimitKey,
+	| 'projects_total'
+	| 'scenes_total'
+	| 'scenes_published_concurrent'
+	| 'storage_bytes_total'
+	| 'folders_total'
+>
+
+/**
  * What an organization is using, keyed by the limit each figure counts against.
  *
  * The one mapping from `OrgUsage`'s field names to limit keys, read by the
  * readings below and by the upgrade page's usage column, so the two cannot pair
  * a figure with the wrong limit. Bytes stay raw; `formatLimitValue` owns units.
  */
-export function usageByLimit(
-	usage: OrgUsage
-): Partial<Record<LimitKey, number>> {
+export function usageByLimit(usage: OrgUsage): Record<MeasuredLimitKey, number> {
 	return {
 		projects_total: usage.projectsTotal,
 		scenes_total: usage.scenesTotal,
@@ -106,14 +121,7 @@ export function usageByLimit(
 }
 
 function buildReadings(usage: OrgUsage): Reading[] {
-	const used = usageByLimit(usage) as Record<
-		| 'projects_total'
-		| 'scenes_total'
-		| 'scenes_published_concurrent'
-		| 'storage_bytes_total'
-		| 'folders_total',
-		number
-	>
+	const used = usageByLimit(usage)
 	const count =
 		(key: LimitKey) =>
 		(value: number | null): string =>
