@@ -7,7 +7,11 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { describeAnnualSaving, resolvePlanPrice } from './plan-price'
+import {
+	describeAnnualSaving,
+	formatPrice,
+	resolvePlanPrice
+} from './plan-price'
 
 import type { BillingCheckoutOptions } from '../dashboard/dashboard-types'
 
@@ -86,6 +90,17 @@ describe('with a live Stripe price', () => {
 			perMonthCents: 2300,
 			currency: 'usd'
 		})
+	})
+
+	/*
+	  A price that is not a whole number of dollars prints its cents. Both copies
+	  of this formatter forced `maximumFractionDigits: 0`, which is right for the
+	  $29 and $79 the plans cost today and shows a $29.99 Stripe price as "$30" -
+	  a figure nobody would be charged.
+	*/
+	it('shows cents when the price has them, and not when it does not', () => {
+		expect(formatPrice(2999, 'usd')).toBe('$29.99')
+		expect(formatPrice(2900, 'usd')).toBe('$29')
 	})
 
 	it('names the yearly saving from the live figures', () => {

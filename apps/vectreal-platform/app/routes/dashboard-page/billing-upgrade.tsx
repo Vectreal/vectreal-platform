@@ -25,7 +25,7 @@ import {
 
 import { Route } from './+types/billing-upgrade'
 import { InlineNotice } from '../../components/layout-components/inline-notice'
-import { isPaidPlan } from '../../constants/plan-config'
+import { isPaidPlan, type PaidPlan } from '../../constants/plan-config'
 import {
 	PAYMENT_TRUST_COPY,
 	PLAN_DISPLAY_NAMES
@@ -51,7 +51,6 @@ import {
 } from '../../lib/domain/billing/plan-price'
 import { countOrganizationMembers } from '../../lib/domain/organization/organization-repository.server'
 
-import type { Plan } from '../../constants/plan-config'
 import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'
 
@@ -184,7 +183,13 @@ function BillingUpgradeContent() {
 	const checkoutEnabled = serverCheckoutEnabled && (clientFlagEnabled ?? true)
 
 	const targets = getPlanChangeTargets(effectivePlan)
-	const [target, setTarget] = useState<Plan | null>(() =>
+	/*
+	  `PaidPlan`, not `Plan`. `resolveInitialTarget` and `getPlanChangeTargets`
+	  both answer in purchasable plans, so anything wider here would have to be
+	  narrowed again before it could be priced or sold - which is what the
+	  `target` line below used to do.
+	*/
+	const [target, setTarget] = useState<PaidPlan | null>(() =>
 		resolveInitialTarget(effectivePlan, searchParams.get('plan'))
 	)
 	const [period, setPeriod] = useState<BillingPeriod>(
@@ -192,15 +197,14 @@ function BillingUpgradeContent() {
 	)
 	const [confirmOpen, setConfirmOpen] = useState(false)
 
-	const paidTarget = isPaidPlan(target) ? target : null
 	const comparison = target
 		? comparePlans(effectivePlan, target, { used })
 		: null
-	const price = paidTarget
-		? resolvePlanPrice(paidTarget, period, checkoutOptions)
+	const price = target
+		? resolvePlanPrice(target, period, checkoutOptions)
 		: null
-	const annualSaving = paidTarget
-		? describeAnnualSaving(paidTarget, checkoutOptions)
+	const annualSaving = target
+		? describeAnnualSaving(target, checkoutOptions)
 		: null
 
 	/*
@@ -209,13 +213,28 @@ function BillingUpgradeContent() {
 	*/
 	const canBuy = checkoutEnabled && price?.priceId != null
 
-	// Whether this selection will skip Stripe's hosted checkout and update the
-	// subscription in place - mirrors the server-side route decision.
-	const isDirectUpdate = billing.billingState === 'active'
+	/*
+	  Whether this selection skips Stripe's hosted checkout and updates the
+	  subscription in place. The loader ran the same predicate the route
+	  branches on; this page used to re-derive it from `billingState` alone and
+	  could promise an immediate prorated change before sending the reader to a
+	  checkout page.
+	*/
+	const isDirectUpdate = billing.changesApplyImmediately
 
 	useEffect(() => {
 		posthog?.capture('billing_upgrade_viewed', { plan: billing.plan })
 	}, [posthog, billing.plan])
+
+	/*
+	  Held across the redirect, because the fetcher does not stay busy for it.
+	  The response arrives, the fetcher returns to `idle`, and the assignment
+	  below starts a full-page navigation that takes as long as it takes - and
+	  for that whole stretch `isSubmitting` was false, so the button read
+	  "Continue to payment" and accepted a second click, opening a second
+	  checkout session.
+	*/
+	const [isRedirecting, setIsRedirecting] = useState(false)
 
 	useEffect(() => {
 		if (
@@ -224,6 +243,7 @@ function BillingUpgradeContent() {
 		) {
 			return
 		}
+		setIsRedirecting(true)
 		window.location.href = checkoutFetcher.data.data.redirectUrl
 	}, [checkoutFetcher.state, checkoutFetcher.data])
 
@@ -242,17 +262,17 @@ function BillingUpgradeContent() {
 	}, [checkoutError])
 
 	const submitCheckout = () => {
-		if (!paidTarget || !price?.priceId) return
+		if (!target || !price?.priceId) return
 		setConfirmOpen(false)
 		posthog?.capture('plan_upgrade_started', {
 			from_plan: billing.plan,
-			to_plan: paidTarget,
+			to_plan: target,
 			billing_period: period,
 			trigger: searchParams.get('trigger') ?? 'settings'
 		})
 		checkoutFetcher.submit(
 			JSON.stringify({
-				planId: paidTarget,
+				planId: target,
 				priceId: price.priceId,
 				billingPeriod: period
 			}),
@@ -264,7 +284,7 @@ function BillingUpgradeContent() {
 		)
 	}
 
-	const isSubmitting = checkoutFetcher.state !== 'idle'
+	const isSubmitting = checkoutFetcher.state !== 'idle' || isRedirecting
 	const targetLabel = target ? PLAN_DISPLAY_NAMES[target] : null
 
 	return (
@@ -333,13 +353,25 @@ function BillingUpgradeContent() {
 				aria-label="Your decision"
 				className="ds-raised space-y-5 rounded-2xl p-5 lg:col-start-2 lg:row-start-2"
 			>
-				{targets.length > 1 || target === null ? (
+				{/*
+				  Always mounted, never conditioned on how many targets there are.
+				  It used to unmount once a single-target organization had chosen
+				  its one target: a Business reader clicking Pro watched the control
+				  disappear under the cursor, leaving a downgrade selected and
+				  nothing to undo it with short of a reload.
+				*/}
+				{targets.length > 0 ? (
 					<ToggleGroup
 						type="single"
 						value={target ?? ''}
 						onValueChange={(value) => {
-							// Radix clears the value when the active item is pressed again.
-							if (value) setTarget(value as Plan)
+							/*
+							  Radix clears the value when the active item is pressed
+							  again, and `isPaidPlan` rather than a cast because the
+							  handler takes a bare string: the narrowing is the only
+							  thing standing between a Radix value and a plan id.
+							*/
+							if (isPaidPlan(value)) setTarget(value)
 						}}
 						className="ds-sunken h-10 w-full rounded-xl p-1"
 						aria-label="Plan"
@@ -356,7 +388,7 @@ function BillingUpgradeContent() {
 					</ToggleGroup>
 				) : null}
 
-				{paidTarget && price && targetLabel ? (
+				{target && price && targetLabel ? (
 					<>
 						<div className="space-y-1">
 							{/* Named only when no switch above already names it. */}
@@ -404,7 +436,7 @@ function BillingUpgradeContent() {
 						) : null}
 
 						{checkoutError ? (
-							<InlineNotice tone="error" className="text-sm">
+							<InlineNotice tone="error" role="alert" className="text-sm">
 								{checkoutError}
 							</InlineNotice>
 						) : null}

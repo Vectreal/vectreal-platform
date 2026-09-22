@@ -41,8 +41,9 @@ function product(metadata: Record<string, string>): Stripe.Product {
 
 describe('which plan a price sells', () => {
 	it('reads the plan off the price', () => {
-		expect(resolvePlanFromPrice(price({ metadata: { vectreal_plan: 'pro' } })))
-			.toBe('pro')
+		expect(
+			resolvePlanFromPrice(price({ metadata: { vectreal_plan: 'pro' } }))
+		).toBe('pro')
 	})
 
 	it('falls back to the product when the price says nothing', () => {
@@ -83,6 +84,22 @@ describe('which plan a price sells', () => {
 		expect(
 			resolvePlanFromPrice(price({ metadata: { vectreal_plan: 'free' } }))
 		).toBeNull()
+	})
+
+	/*
+	  The price loses only when its own value is not a plan we sell. Without
+	  this case the two branches are never both exercised on one price, and the
+	  order they run in is the whole rule.
+	*/
+	it('falls through to the product when the price names a plan it cannot sell', () => {
+		expect(
+			resolvePlanFromPrice(
+				price({
+					metadata: { vectreal_plan: 'enterprise' },
+					product: product({ vectreal_plan: 'business' })
+				})
+			)
+		).toBe('business')
 	})
 
 	it('refuses a value that is not a plan at all', () => {

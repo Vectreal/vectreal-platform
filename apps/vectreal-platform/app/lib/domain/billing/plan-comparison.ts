@@ -3,7 +3,10 @@ import {
 	getEntitlementDeltaLabels,
 	getUnlockedEntitlementLabels
 } from './plan-upgrade-features'
-import { formatLimitValue } from '../../../constants/limit-format'
+import {
+	DASHBOARD_LOCALE,
+	formatLimitValue
+} from '../../../constants/limit-format'
 import {
 	PLAN_ENTITLEMENTS,
 	PLAN_LIMITS,
@@ -52,7 +55,6 @@ import {
 	digit grouping differs between the container rendering this page and a
 	browser outside the US.
 */
-const DASHBOARD_LOCALE = 'en-US'
 
 export type LimitChange = 'raised' | 'lowered'
 
@@ -96,6 +98,23 @@ function shareOf(value: number | undefined, limit: number | null): number {
 /** `null` is unlimited, the top of the range rather than zero. */
 function bound(value: number | null): number {
 	return value === null ? Number.POSITIVE_INFINITY : value
+}
+
+/**
+ * The limit that actually constrains this reading once the change is made.
+ *
+ * The smaller of the two, which is the plan held on a raise and the target on a
+ * reduction. Measuring pressure against the plan held is right when the change
+ * relieves it - that is the reason the reader is here. On a reduction it is the
+ * wrong question and gave the wrong answer: a Business organization holding 500
+ * scenes is nowhere near Business's 2,000, so every row read as comfortable
+ * while the page offered a move to Pro's 200. The table showed `2,000 -> 200`
+ * and nothing said they were already over it.
+ */
+function bindingLimit(key: LimitKey, from: Plan, to: Plan): number | null {
+	const fromLimit = PLAN_LIMITS[from][key]
+	const toLimit = PLAN_LIMITS[to][key]
+	return bound(toLimit) < bound(fromLimit) ? toLimit : fromLimit
 }
 
 /**
@@ -146,10 +165,10 @@ export function comparePlans(
 				: 'lowered',
 		isTight:
 			isRefusalReason(key, from) &&
-			shareOf(used[key], PLAN_LIMITS[from][key]) >= TIGHT_AT,
+			shareOf(used[key], bindingLimit(key, from, to)) >= TIGHT_AT,
 		atLimit:
 			isRefusalReason(key, from) &&
-			shareOf(used[key], PLAN_LIMITS[from][key]) >= 1
+			shareOf(used[key], bindingLimit(key, from, to)) >= 1
 	}))
 
 	/*
@@ -163,8 +182,8 @@ export function comparePlans(
 			.filter((row) => row.isTight)
 			.sort(
 				(a, b) =>
-					shareOf(used[b.key], PLAN_LIMITS[from][b.key]) -
-					shareOf(used[a.key], PLAN_LIMITS[from][a.key])
+					shareOf(used[b.key], bindingLimit(b.key, from, to)) -
+					shareOf(used[a.key], bindingLimit(a.key, from, to))
 			),
 		...changed.filter((row) => !row.isTight)
 	]
@@ -225,10 +244,28 @@ function describeWhy({
 }): Pick<PlanComparison, 'title' | 'detail'> {
 	if (isReduction) {
 		/*
-		  Stated as a fact about the plans, not a warning about the reader. Whether
-		  they fit inside it is theirs to read from the rows, which carry their own
-		  numbers where they are close.
+		  What is already past the target's allowance is named, because it is the
+		  one fact a reader cannot recover from the table: the row shows both
+		  numbers but not which side of them this organization sits on, and the
+		  change is prorated and immediate.
+
+		  Below that it stays a fact about the plans rather than a warning about
+		  the reader. `atLimit` is measured against the binding limit, so on a
+		  reduction it is the target's - the rows genuinely do carry the numbers
+		  where they are close, which is what this comment used to claim while
+		  everything was measured against the plan held.
 		*/
+		const over = rows.filter((row) => row.atLimit).map((row) => row.label)
+
+		if (over.length > 0) {
+			return {
+				title: `Moving to ${toLabel} would put ${joinLabels(
+					over
+				)} over the limit.`,
+				detail: null
+			}
+		}
+
 		return {
 			title: `${toLabel} has less room than ${fromLabel}.`,
 			detail: null
@@ -241,10 +278,16 @@ function describeWhy({
 		  and its two API keys is blocked twice, and naming one of them sends the
 		  reader away believing the other is fine.
 		*/
+		/*
+		  Phrased so nothing has to agree with the label. These are plural nouns
+		  - Projects, Scenes, API keys - and the verb used to agree with how many
+		  of them were listed, so one full limit printed "Projects is full on
+		  Free." Counting labels cannot answer a question about the noun, and
+		  `Storage` and `Max scene size` are singular in the same list, so there
+		  is no count that would be right for all of them.
+		*/
 		return {
-			title: `${joinLabels(full)} ${
-				full.length === 1 ? 'is' : 'are'
-			} full on ${fromLabel}.`,
+			title: `No room left for ${joinLabels(full)} on ${fromLabel}.`,
 			detail: null
 		}
 	}
@@ -279,6 +322,15 @@ function describeWhy({
  * says what it costs them rather than hiding the option.
  */
 export function getPlanChangeTargets(current: Plan): readonly PaidPlan[] {
+	/*
+	  Nothing for enterprise. Its plan is a contract invoiced off-platform, and
+	  `/api/billing/checkout` now refuses it outright, so offering a toggle here
+	  would draw a control whose only outcome is a rejection. Business still sees
+	  Pro: checkout sells that move, the portal offers it anyway, and the page
+	  says what it costs them.
+	*/
+	if (current === 'enterprise') return []
+
 	return PURCHASABLE_PLANS.filter((plan) => plan !== current)
 }
 

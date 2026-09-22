@@ -1,3 +1,4 @@
+import { DASHBOARD_LOCALE } from '../../../constants/limit-format'
 import { type PaidPlan } from '../../../constants/plan-config'
 import { PLAN_FALLBACK_PRICES } from '../../../constants/product-copy'
 
@@ -38,15 +39,28 @@ export interface PlanPrice {
 }
 
 /*
-	`en-US` rather than the machine default, which is what this used to pass. The
-	page is server-rendered, so an unpinned currency format is produced by the
-	container and again by the browser.
+	The one currency formatter. `pricing-cards-section` held a byte-identical
+	copy under the name `formatCurrency`, with its own locale constant and its
+	own paragraph explaining the same decision.
+
+	`DASHBOARD_LOCALE` rather than the machine default: the page is
+	server-rendered, the container declares no LANG, so an unpinned format is
+	produced one way on the server and another in the reader's browser, and
+	every price becomes a hydration mismatch.
+
+	Whole amounts print without cents, and only whole amounts. Both copies
+	forced `maximumFractionDigits: 0`, which is right for the $29 and $79 the
+	plans cost today and silently wrong for anything else: a Stripe price of
+	$29.99 was shown as "$30", a figure nobody would be charged.
 */
 export function formatPrice(amountCents: number, currency: string): string {
-	return new Intl.NumberFormat('en-US', {
+	const isWholeAmount = amountCents % 100 === 0
+
+	return new Intl.NumberFormat(DASHBOARD_LOCALE, {
 		style: 'currency',
 		currency: currency.toUpperCase(),
-		maximumFractionDigits: 0
+		minimumFractionDigits: isWholeAmount ? 0 : 2,
+		maximumFractionDigits: isWholeAmount ? 0 : 2
 	}).format(amountCents / 100)
 }
 
@@ -59,7 +73,9 @@ export function resolvePlanPrice(
 
 	if (live) {
 		const perMonthCents =
-			period === 'monthly' ? live.amountCents : Math.round(live.amountCents / 12)
+			period === 'monthly'
+				? live.amountCents
+				: Math.round(live.amountCents / 12)
 
 		return {
 			perMonthLabel: formatPrice(perMonthCents, live.currency),

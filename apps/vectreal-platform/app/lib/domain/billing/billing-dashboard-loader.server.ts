@@ -1,5 +1,6 @@
 import { count, desc, eq, max, sql, sum } from 'drizzle-orm'
 
+import { planChangeAppliesImmediately } from './billing-situation'
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
 import {
 	getBillingPeriod,
@@ -32,7 +33,6 @@ import type {
 	OrgUsage,
 	ProjectUsage
 } from '../dashboard/dashboard-types'
-
 
 export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
 	const stripe = getStripeClient()
@@ -439,7 +439,8 @@ export async function loadBillingDashboardData(
 		.select({
 			currentPeriodEnd: orgSubscriptions.currentPeriodEnd,
 			trialEnd: orgSubscriptions.trialEnd,
-			stripeCustomerId: orgSubscriptions.stripeCustomerId
+			stripeCustomerId: orgSubscriptions.stripeCustomerId,
+			stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId
 		})
 		.from(orgSubscriptions)
 		.where(eq(orgSubscriptions.organizationId, organizationId))
@@ -470,7 +471,12 @@ export async function loadBillingDashboardData(
 		*/
 		hasBillingAccount:
 			subRow?.stripeCustomerId !== null &&
-			subRow?.stripeCustomerId !== undefined
+			subRow?.stripeCustomerId !== undefined,
+		changesApplyImmediately: planChangeAppliesImmediately({
+			billingState,
+			stripeSubscriptionId: subRow?.stripeSubscriptionId ?? null,
+			stripeCustomerId: subRow?.stripeCustomerId ?? null
+		})
 	}
 
 	const loaderData: BillingLoaderData = {

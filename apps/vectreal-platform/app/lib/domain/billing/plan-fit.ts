@@ -1,4 +1,7 @@
-import { formatLimitValue } from '../../../constants/limit-format'
+import {
+	DASHBOARD_LOCALE,
+	formatLimitValue
+} from '../../../constants/limit-format'
 import {
 	getPurchasableUpgrade,
 	PLAN_LIMITS,
@@ -75,7 +78,6 @@ export interface PlanFit {
 	another by the browser, which is a hydration mismatch on a server-rendered
 	page.
 */
-const DASHBOARD_LOCALE = 'en-US'
 
 interface Reading {
 	key: LimitKey
@@ -110,7 +112,9 @@ export type MeasuredLimitKey = Extract<
  * readings below and by the upgrade page's usage column, so the two cannot pair
  * a figure with the wrong limit. Bytes stay raw; `formatLimitValue` owns units.
  */
-export function usageByLimit(usage: OrgUsage): Record<MeasuredLimitKey, number> {
+export function usageByLimit(
+	usage: OrgUsage
+): Record<MeasuredLimitKey, number> {
 	return {
 		projects_total: usage.projectsTotal,
 		scenes_total: usage.scenesTotal,

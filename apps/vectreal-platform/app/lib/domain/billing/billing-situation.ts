@@ -43,6 +43,34 @@ import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
  * place a client can reach.
  */
 
+/**
+ * Whether a plan change is applied in place rather than through Stripe's
+ * hosted checkout.
+ *
+ * All three conditions, in one place, because two places had two answers. The
+ * checkout route requires a subscription id, a customer id and an `active`
+ * state: with them it updates the subscription and prorates, without them it
+ * opens a hosted checkout so payment details can be re-entered. The upgrade
+ * page re-derived it from `billingState` alone, under a comment saying it
+ * "mirrors the server-side route decision", so an organization holding an
+ * `active` row with no Stripe subscription was promised an immediate prorated
+ * change and sent to a checkout page instead.
+ *
+ * The page cannot run this itself: the two ids do not leave the server, and
+ * should not. The loader runs it and ships the answer.
+ */
+export function planChangeAppliesImmediately(input: {
+	billingState: BillingState
+	stripeSubscriptionId: string | null
+	stripeCustomerId: string | null
+}): boolean {
+	return (
+		input.billingState === 'active' &&
+		input.stripeSubscriptionId !== null &&
+		input.stripeCustomerId !== null
+	)
+}
+
 export interface BillingSituation {
 	/** The page's one-line answer, for the header description. */
 	headline: string

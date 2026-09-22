@@ -36,6 +36,19 @@
  */
 export const PUBLISHED_COPY_LOCALE = 'en-US'
 
+/**
+ * The locale the signed-in product formats its numbers with.
+ *
+ * Separate from `PUBLISHED_COPY_LOCALE` and the same value today: that one is
+ * about pages rendered for a machine, this one about a dashboard rendered for a
+ * person, and the day either follows the reader the other should not move with
+ * it. What it is not is two constants: `plan-fit` and `plan-comparison` each
+ * declared their own `DASHBOARD_LOCALE`, and both feed the same
+ * `formatLimitValue`, so the same limit could have been printed two ways on one
+ * screen.
+ */
+export const DASHBOARD_LOCALE = 'en-US'
+
 export function formatLimitValue(
 	key: string,
 	v: number | null,

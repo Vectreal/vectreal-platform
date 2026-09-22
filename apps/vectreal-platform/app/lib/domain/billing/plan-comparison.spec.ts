@@ -81,7 +81,7 @@ describe('a reader who arrived because something is full', () => {
 			used: { projects_total: 1 }
 		})
 
-		expect(comparison.title).toBe('Projects is full on Free.')
+		expect(comparison.title).toBe('No room left for Projects on Free.')
 		/* The table beneath says what Pro does about it; a sentence would repeat it. */
 		expect(comparison.detail).toBeNull()
 	})
@@ -118,7 +118,7 @@ describe('a reader who arrived because something is full', () => {
 			comparePlans('free', 'pro', {
 				used: { projects_total: 1, api_keys_per_org: 2 }
 			}).title
-		).toBe('Projects and API keys are full on Free.')
+		).toBe('No room left for Projects and API keys on Free.')
 	})
 })
 
@@ -154,6 +154,43 @@ describe('Business to Pro', () => {
 		])
 		expect(comparison.rows.every((row) => row.change === 'lowered')).toBe(true)
 	})
+
+	/*
+	  The fact a reader cannot get from the table. Business allows 2,000 scenes
+	  and Pro allows 200, so an organization holding 500 is comfortable today and
+	  over the cap the moment the change goes through - and the change is
+	  prorated and immediate.
+
+	  Pressure used to be measured against the plan held, always. 500 of 2,000 is
+	  not tight, so every row read as comfortable, the page printed "Pro has less
+	  room than Business." and the reader had to do the arithmetic themselves
+	  from a row that said `2,000 -> 200`.
+	*/
+	it('names what is already past the target, before the money moves', () => {
+		const comparison = comparePlans('business', 'pro', {
+			used: { scenes_total: 500 }
+		})
+
+		expect(comparison.title).toBe(
+			'Moving to Pro would put Scenes over the limit.'
+		)
+		expect(
+			comparison.rows.find((row) => row.key === 'scenes_total')?.atLimit
+		).toBe(true)
+	})
+
+	/*
+	  And the reading that still fits is not dressed up as a problem: 50 scenes
+	  clears Pro's 200 with room, so the plain statement about the plans stands.
+	*/
+	it('says only that there is less room when everything still fits', () => {
+		const comparison = comparePlans('business', 'pro', {
+			used: { scenes_total: 50 }
+		})
+
+		expect(comparison.title).toBe('Pro has less room than Business.')
+		expect(comparison.rows.some((row) => row.atLimit)).toBe(false)
+	})
 })
 
 describe('where a reader can go from here', () => {
@@ -161,7 +198,14 @@ describe('where a reader can go from here', () => {
 		expect(getPlanChangeTargets('free')).toEqual(['pro', 'business'])
 		expect(getPlanChangeTargets('pro')).toEqual(['business'])
 		expect(getPlanChangeTargets('business')).toEqual(['pro'])
-		expect(getPlanChangeTargets('enterprise')).toEqual(['pro', 'business'])
+		/*
+		  Nothing for enterprise. That plan is a contract invoiced off-platform
+		  and carries no Stripe subscription, so a self-serve move down would
+		  have opened a second subscription beside it. `/api/billing/checkout`
+		  refuses it, and this stops the page drawing a control for a move the
+		  server will reject.
+		*/
+		expect(getPlanChangeTargets('enterprise')).toEqual([])
 	})
 
 	it('opens on the plan asked for, when it is one they can move to', () => {

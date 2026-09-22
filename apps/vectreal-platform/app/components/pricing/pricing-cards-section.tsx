@@ -44,6 +44,7 @@ import {
 	PLAN_HIGHLIGHTED,
 	PLAN_TAGLINES
 } from '../../constants/product-copy'
+import { formatPrice } from '../../lib/domain/billing/plan-price'
 
 import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 
@@ -86,15 +87,6 @@ interface PlanCardProps {
   reasoning out at length; this is the same decision at a call site that missed
   it.
 */
-const PRICE_LOCALE = 'en-US'
-
-function formatCurrency(amountCents: number, currency: string) {
-	return new Intl.NumberFormat(PRICE_LOCALE, {
-		style: 'currency',
-		currency: currency.toUpperCase(),
-		maximumFractionDigits: 0
-	}).format(amountCents / 100)
-}
 
 function PlanCard({
 	plan,
@@ -228,7 +220,7 @@ function PlanCard({
 							{displayAmountCents !== null ? (
 								<div className="flex items-end gap-2">
 									<span className="text-h2">
-										{formatCurrency(displayAmountCents, liveCurrency)}
+										{formatPrice(displayAmountCents, liveCurrency)}
 									</span>
 									<span className="text-muted-foreground text-body-sm mb-1">
 										/month
@@ -254,7 +246,7 @@ function PlanCard({
 							)}
 							{period === 'annual' && liveAnnualAmountCents !== null && (
 								<p className="text-muted-foreground text-label-xs mt-1">
-									{formatCurrency(liveAnnualAmountCents, liveCurrency)} billed
+									{formatPrice(liveAnnualAmountCents, liveCurrency)} billed
 									annually
 								</p>
 							)}

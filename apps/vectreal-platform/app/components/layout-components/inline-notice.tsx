@@ -12,6 +12,15 @@ interface InlineNoticeProps {
 	tone?: keyof typeof TONE_CLASSES
 	children: ReactNode
 	className?: string
+	/**
+	 * Announce this notice when it appears.
+	 *
+	 * Opt-in, because most of these are rendered with the page and qualify a
+	 * control that is already read out. A notice that appears in answer to
+	 * something the reader just did is the other case, and silence there means a
+	 * failed payment attempt is announced to nobody.
+	 */
+	role?: 'alert' | 'status'
 }
 
 /**
@@ -26,10 +35,12 @@ interface InlineNoticeProps {
 export function InlineNotice({
 	tone = 'warning',
 	children,
-	className
+	className,
+	role
 }: InlineNoticeProps) {
 	return (
 		<div
+			role={role}
 			className={cn(
 				'rounded-xl px-3 py-2 text-xs',
 				TONE_CLASSES[tone],

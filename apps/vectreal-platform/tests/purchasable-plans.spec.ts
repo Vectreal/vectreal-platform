@@ -3,7 +3,12 @@ import { join, relative } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { isPaidPlan, PURCHASABLE_PLANS } from '../app/constants/plan-config'
+import {
+	ALL_PLANS,
+	isPaidPlan,
+	isPlan,
+	PURCHASABLE_PLANS
+} from '../app/constants/plan-config'
 
 import type { Plan } from '../app/constants/plan-config'
 
@@ -24,10 +29,10 @@ import type { Plan } from '../app/constants/plan-config'
   without type-checking, so a fifth plan leaves this file green while it silently
   covers four of five until the other gate runs.
 
-  `plan-config` now exports `ALL_PLANS`, which is the same list. This does not
-  import it, deliberately: an expectation that reads the value it checks cannot
-  disagree with it. The owner is for production code; a test states its
-  expectation itself.
+  `plan-config` exports `ALL_PLANS`, the same list, and this file asserts it
+  below. What it does not do is let `ALL_PLANS` stand in for this literal: an
+  expectation that reads the value it checks cannot disagree with it. The owner
+  is the subject here, never the yardstick.
 */
 const EVERY_PLAN = Object.keys({
 	free: true,
@@ -105,6 +110,71 @@ describe('which plans can be bought', () => {
 		'isPrototypeOf'
 	])('does not treat %s as a plan', (inherited) => {
 		expect(isPaidPlan(inherited)).toBe(false)
+	})
+})
+
+describe('which plans exist', () => {
+	/*
+	  Mutation gate, verified: reorder the keys of EVERY_PLAN in plan-config and
+	  this goes red.
+
+	  Order is asserted, not just membership, and that is the load-bearing half.
+	  `ALL_PLANS` feeds `pgEnum('plan', ALL_PLANS)`, so its order is the order of
+	  the Postgres enum, and it orders the columns of the pricing compare grid.
+	  Both would move silently together under a membership-only test.
+	*/
+	it('lists every plan, cheapest first', () => {
+		expect([...ALL_PLANS]).toEqual(['free', 'pro', 'business', 'enterprise'])
+	})
+
+	/*
+	  Mutation gate, verified: drop the Object.freeze in plan-config and this
+	  goes red. `readonly` is erased at runtime, and a caller pushing onto this
+	  would leave the list and PLAN_LOOKUP disagreeing.
+	*/
+	it('cannot be mutated by a caller', () => {
+		expect(Object.isFrozen(ALL_PLANS)).toBe(true)
+	})
+
+	it('recognizes every plan that exists, and nothing else', () => {
+		for (const plan of EVERY_PLAN) {
+			expect(isPlan(plan)).toBe(true)
+		}
+
+		expect(isPlan('starter')).toBe(false)
+		expect(isPlan('')).toBe(false)
+		expect(isPlan(null)).toBe(false)
+		expect(isPlan(undefined)).toBe(false)
+		expect(isPlan(0)).toBe(false)
+	})
+
+	/*
+	  The same hole #878 closed, asserted for the same reason isPaidPlan asserts
+	  it. isPlan now backs `asPlan`, which reads a value derived from a URL, and
+	  both Stripe metadata reads in stripe-subscription-sync.
+
+	  Mutation gate, verified: change PLAN_LOOKUP.has(value) to `value in
+	  EVERY_PLAN` and all six of these go red.
+	*/
+	it.each([
+		'toString',
+		'constructor',
+		'hasOwnProperty',
+		'valueOf',
+		'__proto__',
+		'isPrototypeOf'
+	])('does not treat %s as a plan', (inherited) => {
+		expect(isPlan(inherited)).toBe(false)
+	})
+
+	/*
+	  Every purchasable plan is a plan. The two owners are built from separate
+	  records, so nothing but this stops them describing different worlds.
+	*/
+	it('agrees with the purchasable list about what a plan is', () => {
+		for (const paid of PURCHASABLE_PLANS) {
+			expect(isPlan(paid)).toBe(true)
+		}
 	})
 })
 
@@ -291,10 +361,8 @@ const RESTATEMENTS: readonly Restatement[] = [
 	*/
 	{
 		name: 'the full ladder as a list or union',
-		pattern:
-			/'free'\s*[,|]\s*'pro'\s*[,|]\s*'business'\s*[,|]\s*'enterprise'/,
-		example:
-			"const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']"
+		pattern: /'free'\s*[,|]\s*'pro'\s*[,|]\s*'business'\s*[,|]\s*'enterprise'/,
+		example: "const PLANS: Plan[] = ['free', 'pro', 'business', 'enterprise']"
 	},
 	{
 		name: 'the full ladder as an === chain',
@@ -372,7 +440,7 @@ describe('nothing restates which plans can be bought', () => {
 
 		expect(
 			offenders,
-			`Import isPaidPlan or PURCHASABLE_PLANS from ${OWNER} instead:\n${offenders.join('\n')}`
+			`Read it from ${OWNER} instead - isPaidPlan/PURCHASABLE_PLANS for the pair, isPlan/ALL_PLANS for the full ladder:\n${offenders.join('\n')}`
 		).toEqual([])
 	})
 
@@ -428,12 +496,9 @@ describe('nothing restates which plans can be bought', () => {
 			"if (\n\tp !== 'free' &&\n\tp !== 'pro' &&\n\tp !== 'business' &&\n\tp !== 'enterprise'\n) {",
 			'the full ladder as a !== chain'
 		]
-	])(
-		'flags the full plan ladder written as %s',
-		(_shape, ladder, expected) => {
-			expect(restatementsIn(ladder)).toContain(expected)
-		}
-	)
+	])('flags the full plan ladder written as %s', (_shape, ladder, expected) => {
+		expect(restatementsIn(ladder)).toContain(expected)
+	})
 
 	/*
 	  The four shapes this repo already writes that say nothing about the plans

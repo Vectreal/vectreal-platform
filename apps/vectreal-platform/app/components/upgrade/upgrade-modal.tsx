@@ -154,14 +154,13 @@ export function UpgradeModal() {
 	  the plan-change page, which picks a sensible target itself when none was
 	  asked for.
 	*/
-	const upgradeHref =
-		isPaidPlan(state.upgradeTo)
-			? `${DASHBOARD_ROUTES.BILLING_UPGRADE}?plan=${state.upgradeTo}`
-			: state.upgradeTo === 'enterprise'
-				? '/contact'
-				: state.reason === 'plan_inactive'
-					? DASHBOARD_ROUTES.BILLING
-					: DASHBOARD_ROUTES.BILLING_UPGRADE
+	const upgradeHref = isPaidPlan(state.upgradeTo)
+		? `${DASHBOARD_ROUTES.BILLING_UPGRADE}?plan=${state.upgradeTo}`
+		: state.upgradeTo === 'enterprise'
+			? '/contact'
+			: state.reason === 'plan_inactive'
+				? DASHBOARD_ROUTES.BILLING
+				: DASHBOARD_ROUTES.BILLING_UPGRADE
 
 	const upgradeLabel = upgradeToLabel
 		? state.upgradeTo === 'enterprise'

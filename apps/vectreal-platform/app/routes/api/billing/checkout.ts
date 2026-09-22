@@ -30,13 +30,11 @@ import { ApiResponse } from '@shared/utils'
 import { eq } from 'drizzle-orm'
 
 import { Route } from './+types/checkout'
-import {
-	isPaidPlan,
-	PURCHASABLE_PLANS
-} from '../../../constants/plan-config'
+import { isPaidPlan, PURCHASABLE_PLANS } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { planChangeAppliesImmediately } from '../../../lib/domain/billing/billing-situation'
 import {
 	CHECKOUT_GATE_DENIAL,
 	resolveCheckoutGate
@@ -62,7 +60,6 @@ const ALLOWED_BILLING_PERIODS: ReadonlySet<string> = new Set([
 	'monthly',
 	'annual'
 ])
-
 
 // ---------------------------------------------------------------------------
 // Action
@@ -180,6 +177,22 @@ export async function action({
 	const { plan: currentPlan, billingState } =
 		await getOrgSubscription(organizationId)
 
+	/*
+	  An enterprise organization cannot buy its way down from here.
+
+	  Its plan is a contract, and it carries no Stripe subscription, so this
+	  route would have taken the hosted-checkout branch and opened a SECOND
+	  subscription beside the one that is invoiced off-platform. Checkout
+	  validated only that the requested plan was purchasable, never against the
+	  plan already held, so the page's offer was the only thing keeping this
+	  shut - and a page is not a guard.
+	*/
+	if (currentPlan === 'enterprise') {
+		return ApiResponse.badRequest(
+			'Enterprise plans are changed by talking to us, not through checkout'
+		)
+	}
+
 	const stripe = getStripeClient()
 	const selectedPrice = await stripe.prices.retrieve(priceId, {
 		expand: ['product']
@@ -212,10 +225,11 @@ export async function action({
 	// subscription (which would cause double-billing) and enables proration.
 	// Only `active` qualifies - past_due / trialing / etc. fall through to
 	// the hosted Checkout flow where payment details can be re-entered.
-	const isActiveSub =
-		existingSub?.stripeSubscriptionId != null &&
-		existingSub?.stripeCustomerId != null &&
-		billingState === 'active'
+	const isActiveSub = planChangeAppliesImmediately({
+		billingState,
+		stripeSubscriptionId: existingSub?.stripeSubscriptionId ?? null,
+		stripeCustomerId: existingSub?.stripeCustomerId ?? null
+	})
 
 	if (isActiveSub) {
 		// Retrieve the existing subscription - needed only for the item ID.
