@@ -69,12 +69,41 @@ export function getBillingPeriod(
 }
 
 /**
- * The plan this price sells, or nothing.
+ * The plan written on a Stripe price, by whatever rule the caller accepts.
  *
  * Price metadata first, then the product's. A price can override its product,
- * which is how a promotional price for the same product is sold as the same
- * plan; falling back the other way would let a product-level default silently
- * win over a deliberate per-price value.
+ * which is how a promotional price for the same product is still sold as the
+ * same plan; falling back the other way would let a product-level default
+ * quietly win over a deliberate per-price value. A value the caller does not
+ * accept does not stop the search - it is treated as not an answer, so a
+ * mistagged price can still be resolved from its product.
+ *
+ * The acceptance rule is the caller's because the two callers accept different
+ * sets, and that is the only thing that differed between the three copies of
+ * this search. Checkout will only sell a `PaidPlan`; the webhook sync records
+ * whatever plan an organization is actually on, including `free` and
+ * `enterprise`. The third copy, in `resolvePlanFromSubscription`, reached the
+ * product through a bare `typeof !== 'string'` and a cast, so a deleted product
+ * was taken as readable and only an optional chain kept it from throwing.
+ */
+export function resolvePlanMetadata<T extends string>(
+	price: Stripe.Price,
+	accept: (value: unknown) => value is T
+): T | null {
+	const onPrice = price.metadata?.vectreal_plan
+	if (accept(onPrice)) {
+		return onPrice
+	}
+
+	const onProduct = isStripeProduct(price.product)
+		? price.product.metadata?.vectreal_plan
+		: null
+
+	return accept(onProduct) ? onProduct : null
+}
+
+/**
+ * The plan this price sells, or nothing.
  *
  * `isPaidPlan` rather than a membership test, so the return type is `PaidPlan`
  * and an unrecognized or non-purchasable `vectreal_plan` value - including
@@ -82,17 +111,5 @@ export function getBillingPeriod(
  * checkout would then try to sell.
  */
 export function resolvePlanFromPrice(price: Stripe.Price): PaidPlan | null {
-	const metadataPlan = price.metadata?.vectreal_plan
-	if (isPaidPlan(metadataPlan)) {
-		return metadataPlan
-	}
-
-	const productPlan = isStripeProduct(price.product)
-		? price.product.metadata.vectreal_plan
-		: null
-	if (isPaidPlan(productPlan)) {
-		return productPlan
-	}
-
-	return null
+	return resolvePlanMetadata(price, isPaidPlan)
 }

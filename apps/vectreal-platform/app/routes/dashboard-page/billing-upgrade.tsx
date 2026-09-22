@@ -463,7 +463,14 @@ function BillingUpgradeContent() {
 						  to click. Once taken, the way back is the quiet link under the
 						  price rather than a second offer.
 						*/}
-						{period === 'monthly' && annualSaving ? (
+						{/*
+						  Only while there is something to buy. The saving is computed
+						  from the prices on screen, which include the fallback, so it
+						  rendered above "can't be bought here right now" and offered a
+						  discount with no way to take it - the default state locally
+						  and wherever the checkout gate is shut.
+						*/}
+						{period === 'monthly' && annualSaving && canBuy ? (
 							<button
 								type="button"
 								onClick={() => setPeriod('annual')}
@@ -481,6 +488,16 @@ function BillingUpgradeContent() {
 								{checkoutError}
 							</InlineNotice>
 						) : null}
+
+						{/*
+						  The button is disabled the moment it is pressed, which drops
+						  focus to the body and tells a screen reader nothing. The label
+						  change alone is not announced, so the one state the redirect
+						  flag exists to communicate was communicated only visually.
+						*/}
+						<p className="sr-only" role="status">
+							{isSubmitting ? 'Opening the payment page.' : ''}
+						</p>
 
 						{canBuy ? (
 							<div className="space-y-2">
@@ -658,20 +675,30 @@ function BillingUpgradeContent() {
 				<DialogContent className="max-w-sm">
 					<DialogHeader>
 						<DialogTitle>Change to {targetLabel}?</DialogTitle>
-						<DialogDescription>
-							Your subscription changes immediately. Unused time on the current
-							period is prorated onto your next invoice.
+						{/*
+						  The reduction sits inside the description rather than beside
+						  it. Radix announces `DialogDescription` with the title and
+						  nothing else, so what the reader lost was the one consequence
+						  never read out before they confirmed something immediate and
+						  prorated.
+						*/}
+						<DialogDescription asChild>
+							<div className="space-y-2">
+								<p>
+									Your subscription changes immediately. Unused time on the
+									current period is prorated onto your next invoice.
+								</p>
+								{comparison?.isReduction ? (
+									<InlineNotice tone="warning" className="text-sm">
+										{comparison.title}
+										{comparison.lost.length > 0
+											? ` It does not include ${comparison.lost.join(', ')}.`
+											: ''}
+									</InlineNotice>
+								) : null}
+							</div>
 						</DialogDescription>
 					</DialogHeader>
-
-					{comparison?.isReduction ? (
-						<InlineNotice tone="warning" className="text-sm">
-							{comparison.title}
-							{comparison.lost.length > 0
-								? ` It does not include ${comparison.lost.join(', ')}.`
-								: ''}
-						</InlineNotice>
-					) : null}
 
 					{price ? (
 						<p className="text-sm tabular-nums">

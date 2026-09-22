@@ -6,6 +6,7 @@ import {
 	loadBillingDashboardData,
 	loadOrgUsage
 } from '../../lib/domain/billing/billing-dashboard-loader.server'
+import { describeBillingSituation } from '../../lib/domain/billing/billing-situation'
 import { describePlanFit } from '../../lib/domain/billing/plan-fit'
 
 /**
@@ -27,10 +28,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const usage = await loadOrgUsage(organizationId)
 
+	/*
+	  The effective plan, never the stored one, which is the rule
+	  `BillingSettingsSection` states and this loader did not follow. A canceled
+	  or incomplete paid organization keeps `pro` in the row and is entitled to
+	  `free`, so the section headed itself Free and printed Pro's allowances
+	  beneath it, with a button offering the move to Business.
+	*/
+	const { effectivePlan } = describeBillingSituation(loaderData.billing)
+
 	return data(
 		{
 			...loaderData,
-			planFit: describePlanFit(usage, loaderData.billing.plan)
+			planFit: describePlanFit(usage, effectivePlan)
 		},
 		{ headers }
 	)

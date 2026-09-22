@@ -148,6 +148,32 @@ export type BillingState =
 	| 'incomplete'
 	| 'incomplete_expired'
 
+/*
+  Every billing state, the same device as `EVERY_PLAN` above and for the same
+  reason: `billingStateEnum` in `db/schema/billing/subscriptions.ts` restated
+  all nine under a comment saying it was "kept in sync" with this file, which is
+  what a mirror says. A state added to the union and not to the enum compiles,
+  and then Postgres rejects every row carrying it.
+
+  Order is the Postgres enum's order, so it is not free to change.
+*/
+const EVERY_BILLING_STATE: Record<BillingState, true> = {
+	none: true,
+	trialing: true,
+	active: true,
+	past_due: true,
+	unpaid: true,
+	canceled: true,
+	paused: true,
+	incomplete: true,
+	incomplete_expired: true
+}
+
+/** A non-empty tuple, because Drizzle's `pgEnum` takes `[string, ...string[]]`. */
+export const ALL_BILLING_STATES = Object.freeze(
+	Object.keys(EVERY_BILLING_STATE)
+) as readonly [BillingState, ...BillingState[]]
+
 // ---------------------------------------------------------------------------
 // Entitlements
 // ---------------------------------------------------------------------------

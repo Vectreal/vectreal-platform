@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	ALL_BILLING_STATES,
 	getPurchasableUpgrade,
 	PLAN_LIMITS,
 	RECOMMENDED_UPGRADE,
@@ -169,5 +170,33 @@ describe('the upgrade ladder', () => {
 				PLAN_LADDER.indexOf(plan)
 			)
 		}
+	})
+})
+
+/**
+ * Every billing state, in the order the Postgres enum declares them.
+ *
+ * Written out rather than read from `ALL_BILLING_STATES`, for the reason
+ * `PLAN_LADDER` above is: an expectation taken from the value it checks cannot
+ * disagree with it. `billingStateEnum` reads the owner, so the order here is
+ * the order of a Postgres type and reordering it is a migration, not an edit.
+ */
+describe('the billing states', () => {
+	it('lists all nine, in the order the database declares', () => {
+		expect([...ALL_BILLING_STATES]).toEqual([
+			'none',
+			'trialing',
+			'active',
+			'past_due',
+			'unpaid',
+			'canceled',
+			'paused',
+			'incomplete',
+			'incomplete_expired'
+		])
+	})
+
+	it('cannot be mutated by a caller', () => {
+		expect(Object.isFrozen(ALL_BILLING_STATES)).toBe(true)
 	})
 })
