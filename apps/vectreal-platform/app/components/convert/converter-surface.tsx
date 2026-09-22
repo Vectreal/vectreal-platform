@@ -486,9 +486,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  old one. `stillCurrent()` cannot help: inside that window the new load
 			  genuinely is the current one. The two moments had to become one.
 
-			  Still guarded, and still in one call to `adoptSource`: publishing is
-			  not a promise that this load won, only that it got as far as the
-			  screen.
+			  No currency check on the way in, and still one call to
+			  `adoptSource`: the loader calls `onPublish` only for a load that is
+			  still the current one, so a check here could never be false, and the
+			  outer `loaded.stillCurrent()` below already covers the resolved path.
+			  What goes stale is everything after, which is why `state.stillCurrent`
+			  is handed to `adoptSource` to be recorded as `stageLoad` rather than
+			  read as a boolean here.
 			*/
 			let adopted = false
 			const adopt = (state: LoadOutcome) => {
@@ -501,14 +505,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				)
 			}
 
-			const loaded = await load(
-				{ kind: 'files', files },
-				{
-					onPublish: (published) => {
-						if (published.stillCurrent()) adopt(published)
-					}
-				}
-			)
+			const loaded = await load({ kind: 'files', files }, { onPublish: adopt })
 			const refused = loaded.status === 'error'
 
 			/*
