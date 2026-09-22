@@ -28,13 +28,11 @@
 
 import { ApiResponse } from '@shared/utils'
 import { eq } from 'drizzle-orm'
-import Stripe from 'stripe'
 
 import { Route } from './+types/checkout'
 import {
 	isPaidPlan,
-	PURCHASABLE_PLANS,
-	type PaidPlan
+	PURCHASABLE_PLANS
 } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
@@ -44,6 +42,10 @@ import {
 	resolveCheckoutGate
 } from '../../../lib/domain/billing/checkout-kill-switch'
 import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
+import {
+	getBillingPeriod,
+	resolvePlanFromPrice
+} from '../../../lib/domain/billing/stripe-price-plan'
 import { syncSubscriptionFromStripe } from '../../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
@@ -61,53 +63,6 @@ const ALLOWED_BILLING_PERIODS: ReadonlySet<string> = new Set([
 	'annual'
 ])
 
-function isStripeProduct(
-	product: Stripe.Price['product']
-): product is Stripe.Product {
-	return (
-		typeof product === 'object' &&
-		product !== null &&
-		!('deleted' in product && product.deleted === true)
-	)
-}
-
-function getBillingPeriod(price: Stripe.Price): 'monthly' | 'annual' | null {
-	if (!price.recurring) {
-		return null
-	}
-
-	if (
-		price.recurring.interval === 'month' &&
-		price.recurring.interval_count === 1
-	) {
-		return 'monthly'
-	}
-
-	if (
-		price.recurring.interval === 'year' &&
-		price.recurring.interval_count === 1
-	) {
-		return 'annual'
-	}
-
-	return null
-}
-
-function resolvePlanFromPrice(price: Stripe.Price): PaidPlan | null {
-	const metadataPlan = price.metadata?.vectreal_plan
-	if (isPaidPlan(metadataPlan)) {
-		return metadataPlan
-	}
-
-	const productPlan = isStripeProduct(price.product)
-		? price.product.metadata.vectreal_plan
-		: null
-	if (isPaidPlan(productPlan)) {
-		return productPlan
-	}
-
-	return null
-}
 
 // ---------------------------------------------------------------------------
 // Action

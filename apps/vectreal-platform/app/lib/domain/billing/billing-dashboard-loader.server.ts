@@ -1,8 +1,11 @@
 import { count, desc, eq, max, sql, sum } from 'drizzle-orm'
-import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
-import { isPaidPlan, type PaidPlan } from '../../../constants/plan-config'
+import {
+	getBillingPeriod,
+	isStripeProduct,
+	resolvePlanFromPrice
+} from './stripe-price-plan'
 import { getDbClient } from '../../../db/client'
 import {
 	assets,
@@ -30,53 +33,6 @@ import type {
 	ProjectUsage
 } from '../dashboard/dashboard-types'
 
-function isStripeProduct(
-	product: Stripe.Price['product']
-): product is Stripe.Product {
-	return (
-		typeof product === 'object' &&
-		product !== null &&
-		!('deleted' in product && product.deleted === true)
-	)
-}
-
-function getBillingPeriod(price: Stripe.Price): 'monthly' | 'annual' | null {
-	if (!price.recurring) {
-		return null
-	}
-
-	if (
-		price.recurring.interval === 'month' &&
-		price.recurring.interval_count === 1
-	) {
-		return 'monthly'
-	}
-
-	if (
-		price.recurring.interval === 'year' &&
-		price.recurring.interval_count === 1
-	) {
-		return 'annual'
-	}
-
-	return null
-}
-
-function resolvePlanFromPrice(price: Stripe.Price): PaidPlan | null {
-	const metadataPlan = price.metadata?.vectreal_plan
-	if (isPaidPlan(metadataPlan)) {
-		return metadataPlan
-	}
-
-	const productPlan = isStripeProduct(price.product)
-		? price.product.metadata.vectreal_plan
-		: null
-	if (isPaidPlan(productPlan)) {
-		return productPlan
-	}
-
-	return null
-}
 
 export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
 	const stripe = getStripeClient()
