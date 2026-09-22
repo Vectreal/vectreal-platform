@@ -53,31 +53,30 @@ export interface PlanPrice {
 	the plans cost today and silently wrong for anything else: a Stripe price of
 	$29.99 was shown as "$30", a figure nobody would be charged.
 
-	The minor unit is asked of the currency rather than assumed to be 1/100.
-	Stripe quotes zero-decimal currencies like JPY in whole units and
-	three-decimal ones like BHD in thousandths, so a fixed divide by 100 turns
-	2,950 yen into 29.50 - the old code did that too, and testing wholeness
-	against 100 would have kept doing it. `resolvedOptions` reads the digits
-	Intl itself uses for the currency, so the two always agree.
+	Hundredths, because that is what this account is paid in.
+
+	Deriving the divisor from the currency was tried and reverted. Stripe's
+	minor unit is not CLDR's: JPY arrives in whole yen and BHD in thousandths,
+	which a fixed 100 gets wrong, but HUF and ISK have zero decimal places in
+	CLDR and are still sent multiplied by 100, which the derived version got
+	wrong in the opposite direction and by a factor of a hundred. Getting both
+	right needs Stripe's own table of special cases, and there is no second
+	currency here to justify carrying one: the fallback prices are USD and the
+	live prices come from one account that sells in USD.
 */
 export function formatPrice(
 	amountCents: number,
 	currency: string,
 	locale: string = DASHBOARD_LOCALE
 ): string {
-	const format = new Intl.NumberFormat(locale, {
-		style: 'currency',
-		currency: currency.toUpperCase()
-	})
-	const minorUnits = 10 ** (format.resolvedOptions().maximumFractionDigits ?? 2)
-	const isWholeAmount = amountCents % minorUnits === 0
+	const isWholeAmount = amountCents % 100 === 0
 
 	return new Intl.NumberFormat(locale, {
 		style: 'currency',
 		currency: currency.toUpperCase(),
-		minimumFractionDigits: isWholeAmount ? 0 : undefined,
-		maximumFractionDigits: isWholeAmount ? 0 : undefined
-	}).format(amountCents / minorUnits)
+		minimumFractionDigits: isWholeAmount ? 0 : 2,
+		maximumFractionDigits: isWholeAmount ? 0 : 2
+	}).format(amountCents / 100)
 }
 
 export function resolvePlanPrice(

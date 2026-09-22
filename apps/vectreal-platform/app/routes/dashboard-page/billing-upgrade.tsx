@@ -256,7 +256,20 @@ function BillingUpgradeContent() {
 	  suggesting a reload.
 	*/
 	useEffect(() => {
-		const clear = () => setIsRedirecting(false)
+		/*
+		  `persisted` only, because `pageshow` follows `load` on every navigation
+		  and this listener is installed at mount, which can be before `load`
+		  finishes. An unguarded handler could therefore fire while the checkout
+		  redirect assigned above is still in flight and re-enable the button the
+		  flag exists to hold shut.
+
+		  This page is served `no-store`, so Chrome and Firefox decline to
+		  bfcache it and reset the state by re-fetching anyway; what is left is
+		  Safari, which does restore it.
+		*/
+		const clear = (event: PageTransitionEvent) => {
+			if (event.persisted) setIsRedirecting(false)
+		}
 		window.addEventListener('pageshow', clear)
 		return () => window.removeEventListener('pageshow', clear)
 	}, [])
@@ -381,18 +394,23 @@ function BillingUpgradeContent() {
 						onValueChange={(value) => {
 							/*
 							  Radix sends an empty string when the active item is
-							  pressed again, and that is taken as "no target" rather
-							  than swallowed. It is the only way back for an
-							  organization with a single target: a Business reader
-							  who opens Pro to see what it costs would otherwise be
-							  left contemplating a downgrade with no control to undo
-							  it.
+							  pressed again, and it is swallowed rather than taken as
+							  "no target".
+
+							  Clearing was tried and reverted. The no-target header
+							  reads "Business is the largest plan you can buy here",
+							  which is written for the two readers who reach it by
+							  default, so letting a Free reader clear their selection
+							  answered a question they had not asked and took the
+							  price, the table and the button with it. The one
+							  affordance most likely to be pressed as "yes, this one"
+							  was the one that blanked the panel.
 
 							  `isPaidPlan` rather than a cast, because the handler
 							  receives a bare string and the narrowing is the only
 							  thing between a Radix value and a plan id.
 							*/
-							setTarget(isPaidPlan(value) ? value : null)
+							if (isPaidPlan(value)) setTarget(value)
 						}}
 						className="ds-sunken h-10 w-full rounded-xl p-1"
 						aria-label="Plan"

@@ -193,14 +193,6 @@ export function comparePlans(
 		lost.length > 0 || rows.some((row) => row.change === 'lowered')
 
 	/*
-	  What is full is a fact about the plan held, so it is read from every limit
-	  on it rather than from the rows, which hold only the ones this target
-	  changes. A limit that is full and identical on both plans is still full,
-	  and answering "nothing is full yet" because the target does not happen to
-	  raise it was how the page told an organization sitting at its limit that it
-	  had room.
-	*/
-	/*
 	  Strictly past, and only on a limit that is coming down.
 
 	  `atLimit` means full, which is `>= 1` and right for the plan held: an
@@ -227,6 +219,14 @@ export function comparePlans(
 		)
 		.map((row) => row.label)
 
+	/*
+	  What is full is a fact about the plan held, so it is read from every limit
+	  on it rather than from the rows, which hold only the ones this target
+	  changes. A limit that is full and identical on both plans is still full,
+	  and answering "nothing is full yet" because the target does not happen to
+	  raise it was how the page told an organization sitting at its limit that it
+	  had room.
+	*/
 	const full = PLAN_CARD_LIMIT_KEYS.filter(
 		(key) =>
 			isRefusalReason(key, from) &&
