@@ -27,7 +27,12 @@ import { Check, Minus } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { formatLimitValue } from '../../constants/limit-format'
-import { PLAN_LIMITS, type Plan } from '../../constants/plan-config'
+import {
+	isPaidPlan,
+	PLAN_LIMITS,
+	PURCHASABLE_PLANS,
+	type Plan
+} from '../../constants/plan-config'
 import {
 	ANNUAL_DISCOUNT_CLAIM,
 	LIMIT_DISPLAY_LABELS,
@@ -67,7 +72,7 @@ interface PlanCardProps {
 	/** Called when the card CTA is clicked in select mode */
 	onSelectPlan?: (plan: Plan) => void
 	/** In select mode, only these plans can be actively selected */
-	selectablePlans?: Plan[]
+	selectablePlans?: readonly Plan[]
 }
 
 /*
@@ -106,18 +111,17 @@ function PlanCard({
 	const cta = PLAN_CTA[plan]
 	const ctaHref = PLAN_CTA_HREF[plan]
 	const highlighted = PLAN_HIGHLIGHTED[plan]
-	const fallbackPrices = PLAN_FALLBACK_PRICES[plan]
+	const fallbackPrices = isPaidPlan(plan) ? PLAN_FALLBACK_PRICES[plan] : null
 
 	const isFree = plan === 'free'
-	const isPaid = plan === 'pro' || plan === 'business'
+	const isPaid = isPaidPlan(plan)
 	const isActive = plan === activePlan
 	const isSelected = selectedPlan !== undefined ? plan === selectedPlan : false
 	const isSelectableInSelectMode = selectablePlans
 		? selectablePlans.includes(plan)
 		: true
 
-	const livePricing =
-		isPaid && prices ? prices[plan as 'pro' | 'business'] : null
+	const livePricing = isPaid && prices ? prices[plan] : null
 	const liveMonthlyAmountCents = livePricing?.monthly?.amountCents ?? null
 	const liveAnnualAmountCents = livePricing?.annual?.amountCents ?? null
 	const liveCurrency =
@@ -348,7 +352,12 @@ const periodStateClass = (selected: boolean) =>
   what you need". A `showEnterprise` prop used to switch a fourth card on; both
   call sites passed false, so every branch behind it was unreachable.
 */
-const PRICING_CARD_PLANS: Plan[] = ['free', 'pro', 'business']
+/*
+  Free, then whatever can be bought. Enterprise is absent because it is not on
+  `PURCHASABLE_PLANS`: it is sales-led, and it has its own row in the comparison
+  grid below rather than a card with a price on it.
+*/
+const PRICING_CARD_PLANS: readonly Plan[] = ['free', ...PURCHASABLE_PLANS]
 
 export interface PricingCardsSectionProps {
 	period: 'monthly' | 'annual'
@@ -361,7 +370,7 @@ export interface PricingCardsSectionProps {
 	/** If provided, cards become interactive selectors */
 	onSelectPlan?: (plan: Plan) => void
 	/** In select mode, limit selectable plans */
-	selectablePlans?: Plan[]
+	selectablePlans?: readonly Plan[]
 }
 
 export function PricingCardsSection({

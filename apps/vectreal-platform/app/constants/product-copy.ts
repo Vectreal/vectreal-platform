@@ -25,7 +25,7 @@ import {
 } from './limit-format'
 import { PLAN_LIMITS } from './plan-config'
 
-import type { EntitlementKey, LimitKey, Plan } from './plan-config'
+import type { EntitlementKey, LimitKey, PaidPlan, Plan } from './plan-config'
 
 // ---------------------------------------------------------------------------
 // Platform description strings
@@ -208,8 +208,20 @@ export const PLAN_HIGHLIGHTED: Record<Plan, boolean> = {
 // Keep in sync with the Stripe product configuration.
 // ---------------------------------------------------------------------------
 
-export const PLAN_FALLBACK_PRICES: Partial<
-	Record<Plan, { monthly: number; annualMonthly: number }>
+/*
+  Keyed by `PaidPlan`, not `Partial<Record<Plan, ...>>`.
+
+  "Which plans have a self-serve price" is the same fact as "which plans
+  checkout sells": Free is absent because it costs nothing and Enterprise
+  because it is sales-led, which are exactly the owner's two exclusions.
+
+  `Partial` also made the values optional, so `ANNUAL_DISCOUNT_CLAIM` below
+  destructures `monthly` and `annualMonthly` off something the type says may be
+  undefined. A total Record makes both halves true.
+*/
+export const PLAN_FALLBACK_PRICES: Record<
+	PaidPlan,
+	{ monthly: number; annualMonthly: number }
 > = {
 	pro: { monthly: 29, annualMonthly: 23 },
 	business: { monthly: 79, annualMonthly: 63 }

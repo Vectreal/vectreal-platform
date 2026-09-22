@@ -8,36 +8,23 @@ import {
 import { ArrowRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 
-import { type Plan } from '../../constants/plan-config'
+import { isPaidPlan } from '../../constants/plan-config'
 import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
-/*
-  The plans a canceled checkout can name.
-
-  Mirrors `ALLOWED_PLANS` in `routes/api/billing/checkout.ts`, which builds the
-  cancel URL this page reads back, and is kept local for the same reason that
-  one is: both validate input arriving from outside the app, and sharing one
-  list would tie a payment guard to a page's copy.
-*/
-const CANCELABLE_PLANS: readonly Plan[] = ['pro', 'business']
-
-/*
-  Matched against that list rather than cast to a key.
-
-  Stripe returns whatever the cancel URL carried, and the reader can edit it. A
-  cast plus `?? null` looks like a guard and is not one: every object inherits
-  `toString`, so `?plan=toString` found a truthy "label" and the button rendered
-  a function body.
-*/
-function resolveCanceledPlan(value: string | null): Plan | null {
-	return CANCELABLE_PLANS.find((plan) => plan === value) ?? null
-}
-
 export default function BillingUpgradeCanceledPage() {
 	const [searchParams] = useSearchParams()
-	const plan = resolveCanceledPlan(searchParams.get('plan'))
+
+	/*
+	  Validated, not cast to a key. Stripe returns whatever the cancel URL
+	  carried and the reader can edit it, so `?plan=toString` used to find a
+	  truthy "label" here and render a function body. `isPaidPlan` is the same
+	  list checkout validates against, so a parameter naming anything else is
+	  simply not a plan this page can have arrived from.
+	*/
+	const requested = searchParams.get('plan')
+	const plan = isPaidPlan(requested) ? requested : null
 	const planLabel = plan ? PLAN_DISPLAY_NAMES[plan] : null
 
 	const upgradeHref = plan

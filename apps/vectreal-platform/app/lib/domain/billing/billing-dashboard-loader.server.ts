@@ -2,6 +2,7 @@ import { count, desc, eq, max, sql, sum } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
+import { isPaidPlan, type PaidPlan } from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import {
 	assets,
@@ -28,8 +29,6 @@ import type {
 	OrgUsage,
 	ProjectUsage
 } from '../dashboard/dashboard-types'
-
-const BILLING_PLANS = new Set(['pro', 'business'])
 
 function isStripeProduct(
 	product: Stripe.Price['product']
@@ -63,20 +62,17 @@ function getBillingPeriod(price: Stripe.Price): 'monthly' | 'annual' | null {
 	return null
 }
 
-function resolvePlanFromPrice(price: Stripe.Price): 'pro' | 'business' | null {
+function resolvePlanFromPrice(price: Stripe.Price): PaidPlan | null {
 	const metadataPlan = price.metadata?.vectreal_plan
-	if (metadataPlan === 'pro' || metadataPlan === 'business') {
+	if (isPaidPlan(metadataPlan)) {
 		return metadataPlan
 	}
 
-	if (
-		isStripeProduct(price.product) &&
-		typeof price.product.metadata.vectreal_plan === 'string'
-	) {
-		const productPlan = price.product.metadata.vectreal_plan
-		if (productPlan === 'pro' || productPlan === 'business') {
-			return productPlan
-		}
+	const productPlan = isStripeProduct(price.product)
+		? price.product.metadata.vectreal_plan
+		: null
+	if (isPaidPlan(productPlan)) {
+		return productPlan
 	}
 
 	return null
@@ -98,7 +94,7 @@ export async function getCheckoutOptions(): Promise<BillingCheckoutOptions> {
 
 	for (const price of prices.data) {
 		const plan = resolvePlanFromPrice(price)
-		if (!plan || !BILLING_PLANS.has(plan)) {
+		if (!plan) {
 			continue
 		}
 
