@@ -58,7 +58,7 @@ function Uploader() {
 
 ### One entry point, one state
 
-`load(source)` handles every way a model arrives, and the hook's state is a
+`load` handles every way a model arrives, and the hook's state is a
 discriminated union on `status`. `status === 'ready'` and a non-null `file` are
 the same fact, so there is no separate loading flag to fall out of step with
 what is on screen.
@@ -81,25 +81,27 @@ again after any further await, because a drop can land during an encode as
 easily as during a parse. `reset()` claims a token too, so a load in flight when
 the user clears the model also reports `false`.
 
-Resolving is not the same moment as reaching the screen. The loaders publish the
-parsed model first and then await the optimizer ingest, so `load` resolves one
-ingest after the viewer changed. A caller that adopts on the resolved value
-therefore keeps printing the previous model's name and byte figures around the
-new one for as long as that ingest takes, and `stillCurrent()` cannot close the
-window, because during it the new load genuinely is the current one. Pass
-`onPublish` to adopt when the stage changes instead:
+Resolving is not the same moment as reaching the screen. With an optimizer
+attached, the loaders publish the parsed model first and then await its ingest,
+so `load` resolves one ingest after the viewer changed. A caller that adopts on
+the resolved value therefore keeps printing the previous model's name and byte
+figures around the new one for as long as that ingest takes, and
+`stillCurrent()` cannot close the window, because during it the new load
+genuinely is the current one. Pass `onPublish` to adopt when the stage changes
+instead:
 
 ```tsx
 await load({ kind: 'files', files }, {
-	onPublish: (published) => {
-		if (published.stillCurrent()) adopt(published)
-	}
+	onPublish: (published) => adopt(published)
 })
 ```
 
-It receives the same `LoadOutcome` the promise resolves to, carrying its own
-`stillCurrent()`, and a load that was superseded before it published never calls
-it at all.
+It receives the same `LoadOutcome` the promise resolves to, carrying the same
+`stillCurrent()`. A load superseded before it published never calls it at all,
+so there is nothing to re-check on entry; ask again only after an await of your
+own, for the reason above. Where there is no ingest to wait on (no optimizer
+attached, or a scene source that has none), publishing and resolving are the
+same moment and `onPublish` gains nothing.
 
 ### Sources
 
