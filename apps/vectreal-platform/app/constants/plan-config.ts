@@ -14,6 +14,53 @@
 
 export type Plan = 'free' | 'pro' | 'business' | 'enterprise'
 
+/*
+  Every plan, in ladder order, and the predicate that recognizes one.
+
+  Built the same way as the purchasable pair below, deliberately: two devices
+  for one shape would be two things to learn. The same three properties are
+  load-bearing here - a fresh annotated literal so excess-property checking can
+  reject a non-plan, the literal `true` rather than `boolean` so a key cannot be
+  listed and disabled, and key order, which is the order plans are compared in.
+
+  `asPlan` in `billing-limit-error.ts` and a `Set` rebuilt on every call inside
+  `resolvePlanFromSubscription` each restated this, and each then cast the
+  result back to `Plan` because a comparison chain does not narrow an unknown
+  string. The predicate narrows, so those casts are gone.
+*/
+const EVERY_PLAN: Record<Plan, true> = {
+	free: true,
+	pro: true,
+	business: true,
+	enterprise: true
+}
+
+/*
+  A non-empty tuple, not `readonly Plan[]`, because `planEnum` in
+  `db/schema/billing/subscriptions.ts` reads this and Drizzle's `pgEnum` takes
+  `[string, ...string[]]`. One cast at the owner buys the database enum and the
+  TypeScript union stating the ladder once between them; that schema used to
+  carry a comment promising it was "kept in sync with plan-config.ts", which is
+  a mirror rather than an owner.
+*/
+export const ALL_PLANS = Object.freeze(Object.keys(EVERY_PLAN)) as readonly [
+	Plan,
+	...Plan[]
+]
+
+const PLAN_LOOKUP: ReadonlySet<string> = new Set(ALL_PLANS)
+
+/**
+ * Whether an untrusted value names a plan.
+ *
+ * A `Set` for the same reason `isPaidPlan` uses one: `in` and plain property
+ * access walk the prototype chain, so `'toString' in EVERY_PLAN` is true. That
+ * is the hole #878 closed on the canceled page.
+ */
+export function isPlan(value: unknown): value is Plan {
+	return typeof value === 'string' && PLAN_LOOKUP.has(value)
+}
+
 /**
  * The plans a customer can buy without talking to us.
  *
@@ -100,6 +147,32 @@ export type BillingState =
 	| 'paused'
 	| 'incomplete'
 	| 'incomplete_expired'
+
+/*
+  Every billing state, the same device as `EVERY_PLAN` above and for the same
+  reason: `billingStateEnum` in `db/schema/billing/subscriptions.ts` restated
+  all nine under a comment saying it was "kept in sync" with this file, which is
+  what a mirror says. A state added to the union and not to the enum compiles,
+  and then Postgres rejects every row carrying it.
+
+  Order is the Postgres enum's order, so it is not free to change.
+*/
+const EVERY_BILLING_STATE: Record<BillingState, true> = {
+	none: true,
+	trialing: true,
+	active: true,
+	past_due: true,
+	unpaid: true,
+	canceled: true,
+	paused: true,
+	incomplete: true,
+	incomplete_expired: true
+}
+
+/** A non-empty tuple, because Drizzle's `pgEnum` takes `[string, ...string[]]`. */
+export const ALL_BILLING_STATES = Object.freeze(
+	Object.keys(EVERY_BILLING_STATE)
+) as readonly [BillingState, ...BillingState[]]
 
 // ---------------------------------------------------------------------------
 // Entitlements
@@ -291,6 +364,39 @@ export const PLAN_LIMITS: Record<Plan, Record<LimitKey, number | null>> = {
 		org_seats: null, // Custom
 		api_keys_per_org: null // Unlimited
 	}
+}
+
+/**
+ * The plan each plan moves up to. One ladder for the whole product.
+ *
+ * There were two. `getRecommendedUpgrade` held this map inside
+ * `entitlement-service.server.ts`, where no component could import it, so the
+ * billing page wrote its own - first as `plan === 'pro' ? 'business' : 'pro'`,
+ * which sent Business to Pro, and then as a second map that disagreed with the
+ * first at Business. Every refusal the server raises names a plan from this one;
+ * every button a page draws should too.
+ */
+export const RECOMMENDED_UPGRADE: Record<Plan, Plan | null> = {
+	free: 'pro',
+	pro: 'business',
+	business: 'enterprise',
+	enterprise: null
+}
+
+/**
+ * The next plan up, when it is one that can be bought here.
+ *
+ * `null` for Business, whose next plan is Enterprise: the reader is sent to talk
+ * to someone rather than to a checkout that cannot sell it.
+ *
+ * `isPaidPlan` rather than a membership test on `PURCHASABLE_PLANS`, because it
+ * narrows: the return type is `PaidPlan`, so a caller cannot pass the result to
+ * checkout without the compiler having already agreed it is sellable. It also
+ * absorbs the `null` case, since it tests for a string before anything else.
+ */
+export function getPurchasableUpgrade(plan: Plan): PaidPlan | null {
+	const next = RECOMMENDED_UPGRADE[plan]
+	return isPaidPlan(next) ? next : null
 }
 
 /** Billing states that downgrade effective access to free-tier plan baselines. */

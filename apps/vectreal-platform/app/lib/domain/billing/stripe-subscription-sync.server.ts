@@ -19,7 +19,12 @@
 import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
-import { type BillingState, type Plan } from '../../../constants/plan-config'
+import { resolvePlanMetadata } from './stripe-price-plan'
+import {
+	isPlan,
+	type BillingState,
+	type Plan
+} from '../../../constants/plan-config'
 import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { reportServerError } from '../../observability/report-server-error.server'
@@ -61,37 +66,34 @@ export function mapStripeStatusToBillingState(
  *   2. `vectreal_plan` metadata on the product attached to the price.
  *   3. Fall back to the provided `fallbackPlan` (existing DB value or `'free'`).
  */
+function firstPrice(
+	subscription: Stripe.Subscription
+): Stripe.Price | undefined {
+	return (
+		(subscription.items?.data?.[0]?.price as Stripe.Price | undefined) ??
+		undefined
+	)
+}
+
 export function resolvePlanFromSubscription(
 	subscription: Stripe.Subscription,
 	fallbackPlan: Plan = 'free'
 ): Plan {
-	const VALID_PLANS: ReadonlySet<string> = new Set([
-		'free',
-		'pro',
-		'business',
-		'enterprise'
-	])
+	const price = firstPrice(subscription)
+	if (!price) return fallbackPlan
 
-	const firstItem = subscription.items?.data?.[0]
-	if (!firstItem) return fallbackPlan
+	/*
+	  The search belongs to `stripe-price-plan`; only the acceptance rule is
+	  this module's. It records the plan an organization is actually on, so it
+	  takes any `Plan` - `free` and `enterprise` included - where checkout takes
+	  only the two it can sell.
 
-	// Check price metadata first
-	const pricePlan = (firstItem.price as Stripe.Price | undefined)?.metadata
-		?.vectreal_plan
-	if (pricePlan && VALID_PLANS.has(pricePlan)) {
-		return pricePlan as Plan
-	}
-
-	// Then check product metadata (product may be expanded or just an ID)
-	const product = (firstItem.price as Stripe.Price | undefined)?.product
-	if (product && typeof product !== 'string') {
-		const productPlan = (product as Stripe.Product).metadata?.vectreal_plan
-		if (productPlan && VALID_PLANS.has(productPlan)) {
-			return productPlan as Plan
-		}
-	}
-
-	return fallbackPlan
+	  This used to be a third copy of that search, and reached the product
+	  through `typeof product !== 'string'` and a cast. A deleted product is an
+	  object, so it passed both and was read as a live one; nothing but the
+	  optional chain on `.metadata` stopped it throwing inside the webhook.
+	*/
+	return resolvePlanMetadata(price, isPlan) ?? fallbackPlan
 }
 
 // ---------------------------------------------------------------------------

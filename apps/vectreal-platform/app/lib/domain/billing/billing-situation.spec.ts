@@ -13,7 +13,10 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { describeBillingSituation } from './billing-situation'
+import {
+	describeBillingSituation,
+	planChangeAppliesImmediately
+} from './billing-situation'
 
 import type { BillingSituationInput } from './billing-situation'
 
@@ -320,6 +323,56 @@ describe('the plan actually in force', () => {
 				describeBillingSituation({ ...ACTIVE, billingState: state })
 					.effectivePlan
 			).toBe('pro')
+		}
+	)
+})
+
+/**
+ * Which of the two things a plan change does.
+ *
+ * All three conditions are asserted separately because the page states the
+ * answer to the reader in a confirmation dialog before they pay: an in-place
+ * prorated change, or a trip through Stripe's hosted checkout. The page used to
+ * decide this for itself from `billingState` alone, so an `active` row with no
+ * Stripe subscription promised proration and delivered a checkout page.
+ */
+describe('whether a plan change applies immediately', () => {
+	const COMPLETE = {
+		billingState: 'active' as const,
+		stripeSubscriptionId: 'sub_1',
+		stripeCustomerId: 'cus_1'
+	}
+
+	it('does when there is an active subscription to change', () => {
+		expect(planChangeAppliesImmediately(COMPLETE)).toBe(true)
+	})
+
+	/*
+	  Each condition alone, so none of the three can be dropped without a named
+	  test going red. `billingState` is the one the page used to read by itself.
+	*/
+	it('does not without a subscription id', () => {
+		expect(
+			planChangeAppliesImmediately({ ...COMPLETE, stripeSubscriptionId: null })
+		).toBe(false)
+	})
+
+	it('does not without a customer id', () => {
+		expect(
+			planChangeAppliesImmediately({ ...COMPLETE, stripeCustomerId: null })
+		).toBe(false)
+	})
+
+	/*
+	  past_due and trialing carry a subscription and still fall through to
+	  hosted checkout, where payment details can be re-entered.
+	*/
+	it.each(['none', 'trialing', 'past_due', 'unpaid', 'canceled'] as const)(
+		'does not while billing is %s',
+		(billingState) => {
+			expect(planChangeAppliesImmediately({ ...COMPLETE, billingState })).toBe(
+				false
+			)
 		}
 	)
 })

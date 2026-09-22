@@ -141,13 +141,20 @@ describe('the answer both billing pages give', () => {
 	const UPGRADE = '../../../routes/dashboard-page/billing-upgrade.tsx'
 	const SUCCESS = '../../../routes/dashboard-page/billing-upgrade-success.tsx'
 	const OUTCOME = './plan-change-outcome.ts'
+	const COMPARISON = './plan-comparison.ts'
 
 	/*
 		The trailing paren matters: the import alone satisfies the bare name, so
 		without it this passes for a route that no longer calls anything.
+
+		The upgrade page asks through `plan-comparison`, which states the whole
+		change - limits, gains and losses - rather than the gains alone. It is the
+		same shape as the confirmation page reaching this module through
+		`plan-change-outcome`, so both links of the chain are asserted.
 	*/
 	it('is asked for by the page that sells the upgrade', () => {
-		expect(source(UPGRADE)).toContain('getUnlockedEntitlementLabels(')
+		expect(source(UPGRADE)).toContain('comparePlans(')
+		expect(source(COMPARISON)).toContain('getUnlockedEntitlementLabels(')
 	})
 
 	/*
@@ -167,6 +174,14 @@ describe('the answer both billing pages give', () => {
 		of the same name would satisfy the two above - and a local re-implementation
 		is precisely what both routes held before this change. Any second answer has
 		to read the entitlements to compute a delta, so neither route may name them.
+
+		The subject is the two pages, not `plan-comparison`. That module reads
+		`PLAN_ENTITLEMENTS` once, to decide whether `org_seats` is a real refusal
+		reason on a plan with no second seat to give, which is a question about
+		whether a limit row applies rather than a second delta. Its delta comes
+		from `getUnlockedEntitlementLabels`, which the first test above pins.
+		Naming it here would have made this file fail against the module it was
+		edited to describe.
 	*/
 	it('leaves no page deriving the delta on its own', () => {
 		expect(source(UPGRADE)).not.toContain('PLAN_ENTITLEMENTS')
@@ -179,16 +194,25 @@ describe('the answer both billing pages give', () => {
 		show nothing, which is the quietest regression available here. Brittle to a
 		variable rename on purpose - that fails loudly and is fixed in a second.
 	*/
+	/*
+		Pinned at both hops. The page must pass the plan held and then the plan
+		chosen; the comparison must hand them on in that order. Swapped at either,
+		every upgrade gains nothing and the page shows nothing, which is the
+		quietest regression available here. `plan-comparison.spec.ts` proves the
+		same direction against real output.
+	*/
 	it('is asked in the direction the buyer is travelling', () => {
-		expect(source(UPGRADE)).toContain(
-			'getUnlockedEntitlementLabels(billing.plan, plan)'
+		expect(source(UPGRADE)).toContain('comparePlans(effectivePlan, target')
+		expect(source(COMPARISON)).toContain(
+			'getUnlockedEntitlementLabels(from, to)'
 		)
 	})
 
 	it('is imported from this module by both callers', () => {
 		expect(source(UPGRADE)).toContain(
-			"from '../../lib/domain/billing/plan-upgrade-features'"
+			"from '../../lib/domain/billing/plan-comparison'"
 		)
+		expect(source(COMPARISON)).toContain("from './plan-upgrade-features'")
 		expect(source(OUTCOME)).toContain("from './plan-upgrade-features'")
 	})
 })

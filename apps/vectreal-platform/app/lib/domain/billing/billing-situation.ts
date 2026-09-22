@@ -1,3 +1,4 @@
+import { DASHBOARD_LOCALE } from '../../../constants/limit-format'
 import {
 	BILLING_STATES_DOWNGRADED_TO_FREE,
 	type BillingState,
@@ -43,6 +44,40 @@ import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
  * place a client can reach.
  */
 
+/**
+ * Whether a plan change is applied in place rather than through Stripe's
+ * hosted checkout.
+ *
+ * All three conditions, in one place, because two places had two answers. The
+ * checkout route requires a subscription id, a customer id and an `active`
+ * state: with them it updates the subscription and prorates, without them it
+ * opens a hosted checkout so payment details can be re-entered. The upgrade
+ * page re-derived it from `billingState` alone, under a comment saying it
+ * "mirrors the server-side route decision", so an organization holding an
+ * `active` row with no Stripe subscription was promised an immediate prorated
+ * change and sent to a checkout page instead.
+ *
+ * The page cannot run this itself: the two ids do not leave the server, and
+ * should not. The loader runs it and ships the answer.
+ */
+export function planChangeAppliesImmediately(input: {
+	billingState: BillingState
+	stripeSubscriptionId: string | null | undefined
+	stripeCustomerId: string | null | undefined
+}): boolean {
+	/*
+	  `!= null` catches undefined too, which is what the route's original
+	  condition did. A missing column and a null one are the same absence here,
+	  and a predicate that is stricter than the code it replaced is a change
+	  nobody asked for.
+	*/
+	return (
+		input.billingState === 'active' &&
+		input.stripeSubscriptionId != null &&
+		input.stripeCustomerId != null
+	)
+}
+
 export interface BillingSituation {
 	/** The page's one-line answer, for the header description. */
 	headline: string
@@ -64,7 +99,8 @@ export interface BillingSituationInput {
 /**
  * The dashboard's one spelling for an absolute date.
  *
- * `en-US` and not the machine default, which is what this line used to pass.
+ * `DASHBOARD_LOCALE` and not the machine default, which is what this line used
+ * to pass. It was a fourth inline `'en-US'` until the constant got an owner.
  * Every dashboard page is server-rendered, so an unpinned locale is formatted
  * once by the container and again by the browser, and the two disagree wherever
  * the reader is not American - a hydration mismatch that swaps the date under
@@ -77,7 +113,7 @@ export interface BillingSituationInput {
  * happens to agree on the value.
  */
 function formatDate(value: string): string {
-	return new Date(value).toLocaleDateString('en-US', {
+	return new Date(value).toLocaleDateString(DASHBOARD_LOCALE, {
 		month: 'short',
 		day: 'numeric',
 		year: 'numeric'

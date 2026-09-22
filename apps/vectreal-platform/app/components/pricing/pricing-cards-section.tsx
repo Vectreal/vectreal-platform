@@ -26,7 +26,10 @@ import { cn } from '@shared/utils'
 import { Check, Minus } from 'lucide-react'
 import { Link } from 'react-router'
 
-import { formatLimitValue } from '../../constants/limit-format'
+import {
+	formatLimitValue,
+	PUBLISHED_COPY_LOCALE
+} from '../../constants/limit-format'
 import {
 	isPaidPlan,
 	PLAN_LIMITS,
@@ -44,6 +47,7 @@ import {
 	PLAN_HIGHLIGHTED,
 	PLAN_TAGLINES
 } from '../../constants/product-copy'
+import { formatPrice } from '../../lib/domain/billing/plan-price'
 
 import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 
@@ -73,27 +77,6 @@ interface PlanCardProps {
 	onSelectPlan?: (plan: Plan) => void
 	/** In select mode, only these plans can be actively selected */
 	selectablePlans?: readonly Plan[]
-}
-
-/*
-  The locale is pinned, not left to resolve.
-
-  `undefined` means "the runtime default", and the runtime differs on the two
-  sides of hydration: the container declares no LANG, so the server formats one
-  way and the visitor's browser formats another. Every price on the page is then
-  a hydration mismatch for anyone outside the container's default locale.
-  `product-copy.ts` pins OFFER_LOCALE for the same reason and writes the
-  reasoning out at length; this is the same decision at a call site that missed
-  it.
-*/
-const PRICE_LOCALE = 'en-US'
-
-function formatCurrency(amountCents: number, currency: string) {
-	return new Intl.NumberFormat(PRICE_LOCALE, {
-		style: 'currency',
-		currency: currency.toUpperCase(),
-		maximumFractionDigits: 0
-	}).format(amountCents / 100)
 }
 
 function PlanCard({
@@ -228,7 +211,11 @@ function PlanCard({
 							{displayAmountCents !== null ? (
 								<div className="flex items-end gap-2">
 									<span className="text-h2">
-										{formatCurrency(displayAmountCents, liveCurrency)}
+										{formatPrice(
+											displayAmountCents,
+											liveCurrency,
+											PUBLISHED_COPY_LOCALE
+										)}
 									</span>
 									<span className="text-muted-foreground text-body-sm mb-1">
 										/month
@@ -254,8 +241,12 @@ function PlanCard({
 							)}
 							{period === 'annual' && liveAnnualAmountCents !== null && (
 								<p className="text-muted-foreground text-label-xs mt-1">
-									{formatCurrency(liveAnnualAmountCents, liveCurrency)} billed
-									annually
+									{formatPrice(
+										liveAnnualAmountCents,
+										liveCurrency,
+										PUBLISHED_COPY_LOCALE
+									)}{' '}
+									billed annually
 								</p>
 							)}
 						</div>

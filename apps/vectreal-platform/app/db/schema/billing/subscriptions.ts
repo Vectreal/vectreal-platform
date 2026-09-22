@@ -9,33 +9,27 @@ import {
 } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
+import { ALL_BILLING_STATES, ALL_PLANS } from '../../../constants/plan-config'
 import { organizations } from '../core/organizations'
 import { isOrganizationAdmin, isOrganizationMember } from '../rls'
 
 /**
- * Canonical plan identifiers - kept in sync with app/constants/plan-config.ts
+ * Canonical plan identifiers.
+ *
+ * Read from `plan-config.ts` rather than restated. This used to say it was
+ * "kept in sync" with that module, which is what a mirror says: nothing made
+ * the two agree, and a plan added to one would have been accepted by the
+ * TypeScript union while the Postgres type rejected every row carrying it.
  */
-export const planEnum = pgEnum('plan', [
-	'free',
-	'pro',
-	'business',
-	'enterprise'
-])
+export const planEnum = pgEnum('plan', ALL_PLANS)
 
 /**
- * Subscription lifecycle states - kept in sync with app/constants/plan-config.ts
+ * Subscription lifecycle states.
+ *
+ * Read from `plan-config.ts`, for the reason given above: this carried the same
+ * "kept in sync" comment, and nothing made it true.
  */
-export const billingStateEnum = pgEnum('billing_state', [
-	'none',
-	'trialing',
-	'active',
-	'past_due',
-	'unpaid',
-	'canceled',
-	'paused',
-	'incomplete',
-	'incomplete_expired'
-])
+export const billingStateEnum = pgEnum('billing_state', ALL_BILLING_STATES)
 
 /**
  * One subscription record per organisation.

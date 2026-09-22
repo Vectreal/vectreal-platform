@@ -1,4 +1,4 @@
-import { type Plan } from '../../../../constants/plan-config'
+import { isPlan, type Plan } from '../../../../constants/plan-config'
 
 export interface BillingQuotaPayload {
 	limitKey?: string
@@ -88,16 +88,7 @@ export function createBillingLimitErrorFromResponse(
 }
 
 function asPlan(value: string | null | undefined): Plan | null {
-	if (
-		value === 'free' ||
-		value === 'pro' ||
-		value === 'business' ||
-		value === 'enterprise'
-	) {
-		return value
-	}
-
-	return null
+	return isPlan(value) ? value : null
 }
 
 export function toUpgradeModalPayload(error: BillingLimitError): {

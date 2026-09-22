@@ -15,6 +15,8 @@ import { AlertTriangle, Lock, TrendingUp, Zap } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router'
 
+import { DASHBOARD_ROUTES } from '../../constants/dashboard'
+import { isPaidPlan } from '../../constants/plan-config'
 import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
 import { upgradeModalAtom } from '../../lib/stores/upgrade-modal-store'
 
@@ -125,11 +127,48 @@ export function UpgradeModal() {
 		(state.actionAttempted === 'optimization_run' ||
 			state.actionAttempted === 'scene_publish')
 
-	// Build the upgrade destination: settings page with plan pre-selected, or pricing
-	const upgradeHref =
-		state.upgradeTo && state.upgradeTo !== 'enterprise'
-			? `/dashboard/billing/upgrade?plan=${state.upgradeTo}`
-			: '/pricing'
+	/*
+	  One door, and it stays in the product.
+
+	  This offered two: "Upgrade to X" to the upgrade route, and beside it "View
+	  all plans" to `/pricing`, the marketing page written for an anonymous
+	  visitor - its Free card's call to action is "Sign up". Every refusal in the
+	  app led half its readers out of the dashboard to read about signing up for
+	  an account they already have. The upgrade route now shows every plan they
+	  can move to, so the second door had nowhere to go that the first does not.
+
+	  A Business organization is recommended Enterprise, which checkout does not
+	  sell, and this sent it to `/pricing` as well. Enterprise is a conversation,
+	  so it goes to the people who have it.
+	*/
+	/*
+	  Every refusal leads somewhere. `upgradeTo` is absent on more paths than it
+	  is present - a `plan_inactive` 402 carries no target, and neither does a
+	  refusal the server raised without naming a plan - and the footer then held
+	  "Maybe later" alone: a dialog that says the reader cannot continue and
+	  offers no way to change that.
+
+	  An inactive plan is not an upgrade problem. Nothing about buying a larger
+	  plan fixes a payment that did not go through, so that one door opens on
+	  billing, where the portal and the invoices are. Everything else opens on
+	  the plan-change page, which picks a sensible target itself when none was
+	  asked for.
+	*/
+	const upgradeHref = isPaidPlan(state.upgradeTo)
+		? `${DASHBOARD_ROUTES.BILLING_UPGRADE}?plan=${state.upgradeTo}`
+		: state.upgradeTo === 'enterprise'
+			? '/contact'
+			: state.reason === 'plan_inactive'
+				? DASHBOARD_ROUTES.BILLING
+				: DASHBOARD_ROUTES.BILLING_UPGRADE
+
+	const upgradeLabel = upgradeToLabel
+		? state.upgradeTo === 'enterprise'
+			? 'Talk to us about Enterprise'
+			: `Upgrade to ${upgradeToLabel}`
+		: state.reason === 'plan_inactive'
+			? 'Go to billing'
+			: 'See your options'
 
 	return (
 		<Dialog open={state.open} onOpenChange={handleOpenChange}>
@@ -177,21 +216,12 @@ export function UpgradeModal() {
 							Maybe later
 						</Button>
 					)}
-					<div className="flex gap-2">
-						<Link to="/pricing" onClick={closeModal}>
-							<Button variant="outline" size="sm">
-								View all plans
-							</Button>
+					<Button size="sm" className="gap-1.5" asChild>
+						<Link to={upgradeHref} onClick={closeModal}>
+							<Zap className="h-3.5 w-3.5" />
+							{upgradeLabel}
 						</Link>
-						{upgradeToLabel && (
-							<Link to={upgradeHref} onClick={closeModal}>
-								<Button size="sm" className="gap-1.5">
-									<Zap className="h-3.5 w-3.5" />
-									Upgrade to {upgradeToLabel}
-								</Button>
-							</Link>
-						)}
-					</div>
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

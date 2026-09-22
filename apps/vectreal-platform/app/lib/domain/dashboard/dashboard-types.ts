@@ -136,6 +136,16 @@ export interface BillingSettingsData {
 	 * most often comes back needing.
 	 */
 	hasBillingAccount: boolean
+	/**
+	 * Whether a plan change is applied in place and prorated, rather than sent
+	 * through Stripe's hosted checkout.
+	 *
+	 * Computed by `planChangeAppliesImmediately`, the same function the checkout
+	 * route branches on, because the page states in a confirmation dialog which
+	 * of the two is about to happen. It reads the two Stripe ids, which do not
+	 * leave the server, so the answer is shipped rather than the inputs.
+	 */
+	changesApplyImmediately: boolean
 }
 
 /**
