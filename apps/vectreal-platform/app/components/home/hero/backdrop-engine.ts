@@ -58,7 +58,7 @@ void main(){
   o = step(bayer4(cell + vec2(2.0, 1.0)), gb / (ga + gb)) > 0.5 ? uLight : uGrain;
 }`
 
-const FOLDED = '(max-width: 1099px)'
+const FOLDED = '(max-width: 899px)'
 
 export function createBackdropEngine(
 	el: BackdropElements,
