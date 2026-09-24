@@ -97,19 +97,6 @@ export class ServerCommunicationService {
 	}
 
 	/**
-	 * Creates default server options with required endpoint.
-	 * Merges provided options with defaults.
-	 */
-	static createDefaultServerOptions(
-		serverOptions?: ServerOptions
-	): ServerOptions & Required<Pick<ServerOptions, 'endpoint'>> {
-		return {
-			endpoint: '/api/optimize-textures',
-			...serverOptions
-		}
-	}
-
-	/**
 	 * Creates request headers for server communication.
 	 * Includes authentication token if apiKey is provided.
 	 */
