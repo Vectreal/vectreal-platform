@@ -165,10 +165,7 @@ export const ProductWindow = () => {
 								}}
 								hidden={one !== view && one !== previous}
 								aria-hidden={one !== view}
-								className={cn(
-									'[grid-area:1/1]',
-									one === view && 'z-1'
-								)}
+								className={cn('[grid-area:1/1]', one === view && 'z-1')}
 							>
 								<img
 									src={shotPath(one, 'light')}
