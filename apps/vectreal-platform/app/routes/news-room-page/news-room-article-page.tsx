@@ -297,7 +297,7 @@ export default function NewsRoomArticlePage({
 				  there is no rail, so they appear here instead - the same
 				  components, rendered once, in whichever place exists.
 				*/}
-				<div className="border-border mt-8 mb-16 flex flex-wrap items-center gap-3 border-t pt-8 lg:hidden">
+				<div className="mt-16 mb-16 flex flex-wrap items-center gap-3 lg:hidden">
 					<AuthorCard author={article.author} />
 					<span className="text-muted-foreground text-body-sm">
 						{article.readingTimeMinutes} min read
@@ -388,7 +388,7 @@ export default function NewsRoomArticlePage({
 				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 lg:block"
 				aria-label="About this article"
 			>
-				<div className="border-border/50 flex h-full flex-col gap-6 border-l pl-6">
+				<div className="flex h-full flex-col gap-6 pl-6">
 					<div className="space-y-3">
 						<AuthorCard author={article.author} />
 						<p className="text-muted-foreground text-body-sm">
@@ -406,7 +406,7 @@ export default function NewsRoomArticlePage({
 					</div>
 
 					{headings.length > 0 && (
-						<div className="border-border/50 flex min-h-0 flex-1 flex-col border-t pt-5">
+						<div className="flex min-h-0 flex-1 flex-col pt-4">
 							<p className="text-muted-foreground text-eyebrow mb-3 shrink-0">
 								On this page
 							</p>

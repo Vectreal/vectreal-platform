@@ -57,7 +57,7 @@ export const Footer = () => {
 
 	return (
 		<>
-			<footer className="border-border/50 bg-background w-full overflow-hidden border-t border-b pb-8">
+			<footer className="bg-background w-full overflow-hidden pb-8">
 				<div className="container-page flex flex-col gap-16 py-32">
 					<div className="space-y-3 md:w-1/2">
 						<div className="w-40">
@@ -243,7 +243,7 @@ export const Footer = () => {
 						</div>
 
 						{showThemeToggle && (
-							<div className="border-border/50 flex items-center border-l pl-3">
+							<div className="flex items-center pl-3">
 								<ThemeToggleButton />
 							</div>
 						)}

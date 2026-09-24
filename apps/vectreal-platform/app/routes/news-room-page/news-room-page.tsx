@@ -303,7 +303,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							) : null}
 
 							{remainingArticles.length > 0 ? (
-								<div className="border-border mt-16 border-t">
+								<div className="mt-16 flex flex-col gap-2">
 									{remainingArticles.map((article) => (
 										<ArticleRow key={article.slug} article={article} />
 									))}

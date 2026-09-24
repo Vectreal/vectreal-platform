@@ -72,8 +72,6 @@
 
 	h2 {
 		@apply text-xl font-light tracking-wide capitalize;
-		border-left: 2px solid var(--color-orange);
-		padding-left: 1rem;
 		margin-top: 4rem !important;
 		scroll-margin-top: 6.5rem;
 	}
@@ -155,24 +153,23 @@
 		opacity: 1;
 	}
 
+	/* A section break is space, not a rule: the next heading already says a new part starts. */
 	hr {
 		border: none;
-		height: 1px;
-		/* background: linear-gradient(
-			to right,
-			transparent,
-			color-mix(in oklch, var(--color-foreground) 30%, transparent),
-			transparent
-		); */
-		background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
+		height: 0;
+		margin-block: 1rem;
 	}
 
+	/* A quote sits in a sunken well, `ds-sunken` written out as `pre` explains. */
 	blockquote {
-		border-left: 2px solid
-			color-mix(in oklch, var(--color-orange) 50%, transparent);
-		padding-left: 1rem;
+		@apply rounded-xl;
+		padding: 1rem 1.25rem;
+		background-color: color-mix(
+			in oklch,
+			var(--color-foreground) 2.5%,
+			var(--color-background)
+		);
 		font-style: italic;
-		opacity: 0.75;
 	}
 
 	/*
@@ -237,11 +234,6 @@
 		color: var(--shiki-light);
 	}
 
-	pre[data-theme] {
-		border: 1px solid
-			color-mix(in oklch, var(--color-foreground) 8%, transparent);
-	}
-
 	/*
 	  Tables scroll rather than push the page sideways.
 
@@ -262,26 +254,51 @@
 		overflow-x: auto;
 	}
 
+	/*
+	  Rows are told apart by fill, not rules, the same as the pricing matrix:
+	  the header sits on the raised step and every other row on the sunken one,
+	  written out for the reason `pre` gives above. Separate borders, because a
+	  collapsed table ignores the radius that rounds each band's ends.
+	*/
 	table {
-		@apply border-collapse text-sm;
+		@apply text-sm;
+		border-collapse: separate;
+		border-spacing: 0;
 		width: max-content;
 		min-width: 100%;
 
 		th {
 			@apply px-3 py-2 text-left font-semibold;
-			border-bottom: 1px solid
-				color-mix(in oklch, var(--color-foreground) 10%, transparent);
+			background-color: color-mix(
+				in oklch,
+				var(--color-foreground) 4%,
+				var(--color-background)
+			);
 		}
 
 		td {
 			@apply px-3 py-2;
-			border-bottom: 1px solid
-				color-mix(in oklch, var(--color-foreground) 10%, transparent);
 			opacity: 0.9;
 		}
 
-		tr:last-child td {
-			border-bottom: none;
+		tbody tr:nth-child(even) td {
+			background-color: color-mix(
+				in oklch,
+				var(--color-foreground) 2.5%,
+				var(--color-background)
+			);
+		}
+
+		th:first-child,
+		td:first-child {
+			border-start-start-radius: var(--radius-lg);
+			border-end-start-radius: var(--radius-lg);
+		}
+
+		th:last-child,
+		td:last-child {
+			border-start-end-radius: var(--radius-lg);
+			border-end-end-radius: var(--radius-lg);
 		}
 	}
 

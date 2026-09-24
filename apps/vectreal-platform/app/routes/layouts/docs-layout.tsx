@@ -212,7 +212,7 @@ export default function DocsLayout() {
 					<Outlet />
 				</article>
 
-				<div className="border-border/60 mt-12 flex flex-col gap-5 border-t pt-6">
+				<div className="mt-16 flex flex-col gap-5">
 					<div className="flex items-center justify-between gap-3">
 						{previous ? (
 							<Button variant="ghost" asChild className="h-10 px-3 py-2">
@@ -288,7 +288,7 @@ export default function DocsLayout() {
 				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 xl:block"
 				aria-label="On this page"
 			>
-				<div className="border-border/50 h-full border-l pl-4">
+				<div className="h-full pl-4">
 					<p className="text-muted-foreground text-eyebrow mb-3 px-1">
 						On this page
 					</p>
