@@ -2,6 +2,7 @@ import { cn } from '@shared/utils'
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 
+import { DocsTocProvider } from '../../components/docs/docs-toc-context'
 import { Footer } from '../../components/footer'
 import { Navigation } from '../../components/navigation'
 import { GlobalNavVisibilityProvider } from '../../components/navigation/global-nav-visibility'
@@ -38,10 +39,12 @@ const Layout = () => {
 		<CurrentUserProvider>
 			<GlobalNavVisibilityProvider onHiddenChange={setNavHiddenAtRuntime}>
 				<SiteStructuredData />
-				<div className={cn(!showNav && 'hidden')}>
-					<Navigation />
-				</div>
-				<Outlet />
+				<DocsTocProvider>
+					<div className={cn(!showNav && 'hidden')}>
+						<Navigation />
+					</div>
+					<Outlet />
+				</DocsTocProvider>
 				{chrome.footer && <Footer />}
 			</GlobalNavVisibilityProvider>
 		</CurrentUserProvider>
