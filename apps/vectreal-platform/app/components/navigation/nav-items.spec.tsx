@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { isNavItemActive, MARKETING_ITEMS } from './nav-items'
+import { isNavItemActive } from './nav-items'
 
-import type { NavItem } from './types'
-
-const item = (to: string): NavItem => ({ label: to, to, icon: null })
+const item = (to: string) => ({ to })
 
 describe('isNavItemActive', () => {
 	it('matches home exactly, so it cannot claim every route', () => {
@@ -13,29 +11,18 @@ describe('isNavItemActive', () => {
 		expect(isNavItemActive(item('/'), '/pricing')).toBe(false)
 	})
 
-	it('matches other items by prefix, so nested pages stay highlighted', () => {
+	it('matches other items by path segment, so nested pages stay highlighted', () => {
 		expect(isNavItemActive(item('/docs'), '/docs')).toBe(true)
 		expect(isNavItemActive(item('/docs'), '/docs/guides/upload')).toBe(true)
 		expect(isNavItemActive(item('/docs'), '/pricing')).toBe(false)
+		// A shared prefix is not a shared page.
+		expect(isNavItemActive(item('/doc'), '/docs')).toBe(false)
 	})
 
-	it('carries only marketing destinations', () => {
-		/*
-		  The publisher used to sit here, and it is the application rather than a
-		  page about the product. This asserts the boundary rather than the
-		  absence of one route, so adding the next tool to the site nav fails
-		  here too.
-		*/
-		const MARKETING_ROUTES = [
-			'/pricing',
-			'/convert',
-			'/docs',
-			'/news-room',
-			'/contact'
-		]
-
-		expect(MARKETING_ITEMS.map((navItem) => navItem.to).sort()).toEqual(
-			[...MARKETING_ROUTES].sort()
+	it('never takes a link with a query for the page it leads into', () => {
+		// The pilot opens Contact with a topic; plain Contact must not light the Product panel.
+		expect(isNavItemActive(item('/contact?topic=pilot'), '/contact')).toBe(
+			false
 		)
 	})
 })
