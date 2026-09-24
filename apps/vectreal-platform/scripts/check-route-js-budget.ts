@@ -1,6 +1,6 @@
 /**
  * Fails the build when a public route's first-load JavaScript grows past its
- * budget, or when three.js reaches it statically.
+ * budget, or when three.js or the newsroom articles reach it statically.
  *
  * Run by `build-ci`, right after the build, so CI enforces it on every PR.
  *
@@ -30,11 +30,13 @@ const ASSETS = path.resolve(
 	'../../../build/apps/vectreal-platform/client/assets'
 )
 
-/** Route id, as `app/routes.tsx` gives it, and its budget in KB gzipped. Measured: 289, 354, 363. */
+/** Route id, as `app/routes.tsx` gives it, and its budget in KB gzipped. Measured: 289, 354, 363, 366, 362. */
 const BUDGETS_KB: Record<string, number> = {
 	'home-index': 300,
 	'routes/layouts/convert-layout': 370,
-	'routes/pricing-page/pricing-page': 380
+	'routes/pricing-page/pricing-page': 380,
+	'routes/contact-page': 385,
+	'routes/docs/index': 380
 }
 
 /*
@@ -56,8 +58,12 @@ function routeModules() {
 	return routes
 }
 
-/** A string only three.js's renderer contains: its presence means three is on the first load. */
-const THREE_MARKER = 'WebGLRenderer'
+/** What must never be on these first loads, each by a string only it emits. */
+const FORBIDDEN: Record<string, string> = {
+	'three.js': 'WebGLRenderer',
+	// The newsroom manifest's eager glob keeps each article's path as a key, so this means every article body came along.
+	'the newsroom articles': 'news-room-page/articles/'
+}
 
 const STATIC_IMPORT = /(?:from|import)\s*"\.\/([^"]+\.js)"/g
 
@@ -87,11 +93,12 @@ function main() {
 		}
 		const closure = staticClosure(files, path.basename(module))
 		let bytes = 0
-		let three: string | null = null
+		const found = new Map<string, string>()
 		for (const file of closure) {
 			const source = readFileSync(path.join(ASSETS, file))
 			bytes += gzipSync(source).length
-			if (!three && source.includes(THREE_MARKER)) three = file
+			for (const [what, marker] of Object.entries(FORBIDDEN))
+				if (!found.has(what) && source.includes(marker)) found.set(what, file)
 		}
 		const kb = Math.round(bytes / 1024)
 		console.log(
@@ -99,8 +106,8 @@ function main() {
 		)
 		if (kb > budget)
 			failures.push(`${route}: ${kb} KB gz is over its ${budget} KB budget`)
-		if (three)
-			failures.push(`${route}: three.js is on its first load, via ${three}`)
+		for (const [what, file] of found)
+			failures.push(`${route}: ${what} on its first load, via ${file}`)
 	}
 
 	if (failures.length) {
