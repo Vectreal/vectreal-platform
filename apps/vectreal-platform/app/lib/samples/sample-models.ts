@@ -91,17 +91,35 @@ export function sampleModelById(id: string): SampleModel | null {
  * Fetches a sample as a `File`, ready for the same load path a dropped file
  * takes. Nothing about it is special-cased downstream: it is a real GLB going
  * through the real loader, which is the only version worth offering.
+ *
+ * Read as a stream so `onProgress` can say how far it is, from 0 to 1. The
+ * camera is 18 MB, and on a slow connection a click with nothing after it
+ * reads as a click that missed. Measured against `bytes` rather than
+ * `Content-Length`: the stream delivers the file as it is on disk, while a
+ * compressed response's header counts what crossed the wire.
  */
-export async function fetchSampleModel(sample: SampleModel): Promise<File> {
+export async function fetchSampleModel(
+	sample: SampleModel,
+	onProgress?: (fraction: number) => void
+): Promise<File> {
 	const response = await fetch(sample.url)
 
-	if (!response.ok) {
+	if (!response.ok || !response.body) {
 		throw new Error(`Sample fetch failed: ${response.status}`)
 	}
 
-	return new File([await response.blob()], sample.fileName, {
-		type: 'model/gltf-binary'
-	})
+	const reader = response.body.getReader()
+	const chunks: Uint8Array<ArrayBuffer>[] = []
+	let received = 0
+	for (;;) {
+		const { done, value } = await reader.read()
+		if (done) break
+		chunks.push(value)
+		received += value.byteLength
+		onProgress?.(Math.min(received / sample.bytes, 1))
+	}
+
+	return new File(chunks, sample.fileName, { type: 'model/gltf-binary' })
 }
 
 /**

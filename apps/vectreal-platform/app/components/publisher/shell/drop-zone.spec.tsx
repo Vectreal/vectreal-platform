@@ -12,13 +12,15 @@
  * cannot serve both.
  */
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { modelAcceptPattern } from '@vctrl/core/model-formats'
 import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { MemoryRouter, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DropZone } from './drop-zone'
+import { useSampleDownload } from '../../../hooks/use-sample-download'
+import { sampleModelById } from '../../../lib/samples/sample-models'
 
 beforeEach(() => {
 	/* jsdom has no matchMedia; `useAcceptPattern` reads it through `useIsMobile`. */
@@ -30,10 +32,19 @@ beforeEach(() => {
 	}))
 })
 
+/** The drop zone as the shell renders it, holding the sample download above it. */
+function ShellDropZone({
+	onUpload
+}: {
+	onUpload: (files: unknown) => Promise<unknown>
+}) {
+	return <DropZone onUpload={onUpload} sampleDownload={useSampleDownload()} />
+}
+
 function renderDropZone(onUpload = vi.fn().mockResolvedValue(undefined)) {
 	const view = render(
 		<MemoryRouter>
-			<DropZone onUpload={onUpload} />
+			<ShellDropZone onUpload={onUpload} />
 		</MemoryRouter>
 	)
 
@@ -173,6 +184,107 @@ describe('choosing a model', () => {
 	})
 })
 
+/** A response body that hands over `chunks`, each only once `gate` lets it through. */
+function bodyOf(chunks: Uint8Array[], gate = () => Promise.resolve()) {
+	return {
+		getReader: () => ({
+			read: async () => {
+				await gate()
+				return chunks.length
+					? { done: false, value: chunks.shift() }
+					: { done: true, value: undefined }
+			}
+		})
+	}
+}
+
+/*
+  A sample is a real download, 18 MB for the camera, and a click with nothing
+  after it reads on a slow connection as a click that missed. The tile says
+  how far it is until the publisher's own loading surface takes over.
+*/
+describe('a sample on its way down', () => {
+	/** Half the rocket arrives at once; the rest waits for the returned release. */
+	function holdRocketHalfway() {
+		let release = () => {}
+		const held = new Promise<void>((resolve) => (release = resolve))
+		const rocketHalf = new Uint8Array(
+			Math.ceil((sampleModelById('rocket')?.bytes ?? 0) / 2)
+		)
+		let reads = 0
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			body: bodyOf([rocketHalf, new Uint8Array(4)], () =>
+				reads++ === 0 ? Promise.resolve() : held
+			)
+		})
+		return () => release()
+	}
+
+	it('shows how far it is, takes no second click, and hands the file over', async () => {
+		const release = holdRocketHalfway()
+		const { onUpload } = renderDropZone()
+		const rocket = screen.getAllByRole('button', { name: /Rocket/ })[0]
+
+		fireEvent.click(rocket)
+		await waitFor(() =>
+			expect(rocket.textContent).toContain('Downloading, 50%')
+		)
+		expect(rocket.getAttribute('aria-busy')).toBe('true')
+		expect(screen.getByText('Downloading Rocket')).toBeTruthy()
+
+		fireEvent.click(rocket)
+		fireEvent.click(screen.getAllByRole('button', { name: /Camera/ })[0])
+		expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+
+		release()
+		await waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1))
+		await waitFor(() => expect(rocket.getAttribute('aria-busy')).toBeNull())
+	})
+
+	it('still says so after the shell swaps the drop zone out and back', async () => {
+		/*
+		  What a link naming a sample does: taking the param off the URL
+		  revalidates the publisher, whose loading surface replaces this screen
+		  for a moment while the download runs on.
+		*/
+		const release = holdRocketHalfway()
+		const onUpload = vi.fn().mockResolvedValue(undefined)
+		function Shell({ shown }: { shown: boolean }) {
+			const sampleDownload = useSampleDownload()
+			return shown ? (
+				<DropZone onUpload={onUpload} sampleDownload={sampleDownload} />
+			) : null
+		}
+		const view = render(
+			<MemoryRouter>
+				<Shell shown />
+			</MemoryRouter>
+		)
+		fireEvent.click(screen.getAllByRole('button', { name: /Rocket/ })[0])
+		await waitFor(() =>
+			expect(screen.getByText('Downloading Rocket')).toBeTruthy()
+		)
+
+		view.rerender(
+			<MemoryRouter>
+				<Shell shown={false} />
+			</MemoryRouter>
+		)
+		view.rerender(
+			<MemoryRouter>
+				<Shell shown />
+			</MemoryRouter>
+		)
+
+		const rocket = screen.getAllByRole('button', { name: /Rocket/ })[0]
+		expect(rocket.getAttribute('aria-busy')).toBe('true')
+		expect(rocket.textContent).toContain('Downloading, 50%')
+		release()
+		await waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1))
+	})
+})
+
 /*
   The home page's "open the camera" link names a sample in the URL, so the
   publisher opens it on arrival through the same path a tile click takes.
@@ -186,7 +298,7 @@ describe('a sample named by the link', () => {
 		const onUpload = vi.fn().mockResolvedValue(undefined)
 		render(
 			<MemoryRouter initialEntries={[`/publisher${search}`]}>
-				<DropZone onUpload={onUpload} />
+				<ShellDropZone onUpload={onUpload} />
 				<LocationProbe />
 			</MemoryRouter>
 		)
@@ -197,7 +309,7 @@ describe('a sample named by the link', () => {
 		// `fetchSampleModel` reads only these two; jsdom's Blob cannot go through Node's Response.
 		globalThis.fetch = vi
 			.fn()
-			.mockResolvedValue({ ok: true, blob: async () => new Blob(['glTF']) })
+			.mockResolvedValue({ ok: true, body: bodyOf([new Uint8Array(4)]) })
 	})
 
 	it('opens that sample and takes the param off the URL', async () => {

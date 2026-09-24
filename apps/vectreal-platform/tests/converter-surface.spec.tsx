@@ -291,13 +291,32 @@ vi.mock('../app/hooks/scene-loader/use-scene-document-export', () => ({
 	usePrepareGltfDocument: () => async () => ({ data: {}, assets: new Map() })
 }))
 
+/** Holds a sample's download open until a test lets it finish. */
+let sampleBlock: Promise<void> | null = null
+
 vi.mock('../app/lib/samples/sample-models', () => ({
-	sampleModelById: () => null,
-	fetchSampleModel: async () => new File([''], 'sample.glb')
+	sampleModelById: (id: string) =>
+		id === 'rocket' ? { id: 'rocket', label: 'Rocket', bytes: 1 } : null,
+	fetchSampleModel: async () => {
+		if (sampleBlock) await sampleBlock
+		return new File([''], 'sample.glb')
+	}
 }))
 
+/* A probe for what the page hands the tiles: which sample, if any, is on its way down. */
 vi.mock('../app/components/layout-components/sample-tiles', () => ({
-	SampleTiles: () => null
+	SampleTiles: (props: {
+		onOpen: (id: string) => void
+		download?: { id: string } | null
+	}) => (
+		<button
+			type="button"
+			data-downloading={props.download?.id ?? ''}
+			onClick={() => props.onOpen('rocket')}
+		>
+			sample
+		</button>
+	)
 }))
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
@@ -355,6 +374,7 @@ beforeEach(() => {
 	passBlock = null
 	latestToken = 0
 	draftBlock = null
+	sampleBlock = null
 	navigated.length = 0
 	optimizer.texturesOptimization.mockClear()
 	optimizer._getDocument.mockClear()
@@ -369,6 +389,22 @@ beforeEach(() => {
 	capture.mockClear()
 	consentState.analytics = false
 	resetContext()
+})
+
+describe('a sample on its way down', () => {
+	it('tells the tiles which sample is downloading', async () => {
+		let release = () => {}
+		sampleBlock = new Promise<void>((resolve) => (release = resolve))
+		render(<ConverterSurface pair={convertPairBySlug('glb-to-gltf')!} />)
+		const tiles = screen.getByRole('button', { name: 'sample' })
+
+		fireEvent.click(tiles)
+
+		await waitFor(() =>
+			expect(tiles.getAttribute('data-downloading')).toBe('rocket')
+		)
+		release()
+	})
 })
 
 describe('the size a conversion is measured against', () => {

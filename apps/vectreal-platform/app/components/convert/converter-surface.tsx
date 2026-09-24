@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { usePrepareGltfDocument } from '../../hooks/scene-loader/use-scene-document-export'
+import { useSampleDownload } from '../../hooks/use-sample-download'
 import { useTrackedHeight } from '../../hooks/use-tracked-height'
 import {
 	SOURCES_THAT_ARE_BUNDLES,
@@ -51,10 +52,6 @@ import {
 	buildConvertModelResultProps
 } from '../../lib/domain/analytics/convert-events'
 import { persistPendingSceneDraftOrchestrator } from '../../lib/domain/scene/client/scene-draft-persistence'
-import {
-	fetchSampleModel,
-	sampleModelById
-} from '../../lib/samples/sample-models'
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 import { useConsent } from '../consent/consent-context'
 import { DitherGrain } from '../layout-components/dither-grain'
@@ -635,12 +632,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		noKeyboard: true
 	})
 
+	const { download: sampleDownload, openSample } = useSampleDownload()
 	const loadSample = async (id: string) => {
-		const sample = sampleModelById(id)
-		if (!sample) return
-
 		try {
-			await ingest([await fetchSampleModel(sample)])
+			await openSample(id, (file) => ingest([file]))
 		} catch {
 			toast.error('The sample could not be loaded. Try your own file instead.')
 		}
@@ -1129,6 +1124,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 												className="lg:w-md"
 												label="Or open one of these"
 												onOpen={loadSample}
+												download={sampleDownload}
 											/>
 										)}
 									</>
