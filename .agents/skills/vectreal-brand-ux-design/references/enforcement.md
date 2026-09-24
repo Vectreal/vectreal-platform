@@ -100,9 +100,8 @@ Design changes close with a screenshot, not a claim. Use the preview tools:
 The quality bar for marketing UI is high, and the only way to know a gradient, a
 hover step or a snap point survived is to look at it.
 
-Check both themes. Only `/` and `/home` are force-dark; every other marketing
-surface renders light and dark, so a shared component changed for one is
-unverified until seen in the other.
+Check both themes. Every surface renders light and dark, so a shared component
+changed for one is unverified until seen in the other.
 
 ```claims
 present  eslint.config.mts                                                     Use a tier from globals.css (z-page-chrome

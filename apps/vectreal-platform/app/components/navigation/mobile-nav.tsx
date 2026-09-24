@@ -237,17 +237,11 @@ function MobileNav({
 
 					{/* Bottom actions */}
 					<div className="flex flex-col gap-2 pt-4 pb-2">
-						{!isHomePage && (
-							<>
-								<div className="flex items-center justify-between px-3">
-									<span className="text-muted-foreground text-eyebrow">
-										Theme
-									</span>
-									<ThemeToggleButton />
-								</div>
-								<Separator className="bg-border/50 my-2" />
-							</>
-						)}
+						<div className="flex items-center justify-between px-3">
+							<span className="text-muted-foreground text-eyebrow">Theme</span>
+							<ThemeToggleButton />
+						</div>
+						<Separator className="bg-border/50 my-2" />
 
 						<div className="flex items-center gap-2 px-3">
 							<Link

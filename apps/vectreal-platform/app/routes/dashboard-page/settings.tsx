@@ -42,7 +42,7 @@ import {
 	DetailPanelSection
 } from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
-import { applyTheme, isForceDarkRoute } from '../../components/theme'
+import { applyTheme } from '../../components/theme'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { cancelStripeSubscriptionsForOrganization } from '../../lib/domain/billing/stripe-subscription-sync.server'
 import {
@@ -339,7 +339,7 @@ export default function SettingsPage({
 		if (actionIntent === 'preferences' && actionSuccess) {
 			if (actionThemeMode) {
 				setThemeMode(actionThemeMode)
-				applyTheme(actionThemeMode, isForceDarkRoute(window.location.pathname))
+				applyTheme(actionThemeMode)
 			}
 		}
 	}, [actionIntent, actionSuccess, actionThemeMode])

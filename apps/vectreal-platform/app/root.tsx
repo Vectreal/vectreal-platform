@@ -1,6 +1,5 @@
 import { usePostHog } from '@posthog/react'
 import { Toaster } from '@shared/components/ui/sonner'
-import { cn } from '@shared/utils'
 import { useEffect, type ReactNode } from 'react'
 import {
 	data,
@@ -10,7 +9,6 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
-	useLoaderData,
 	useLocation,
 	useRouteError
 } from 'react-router'
@@ -21,11 +19,7 @@ import { ConsentBanner } from './components/consent/consent-banner'
 import { ConsentProvider } from './components/consent/consent-context'
 import { ConsentPreferencesDialog } from './components/consent/consent-preferences-dialog'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
-import {
-	isForceDarkRoute,
-	ThemeController,
-	ThemeScript
-} from './components/theme'
+import { ThemeController, ThemeScript } from './components/theme'
 import { shouldRenderConsentUi } from './lib/consent/consent-surfaces'
 import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
 import { useErrorReport } from './lib/observability/use-error-report'
@@ -49,15 +43,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Keep liveness checks isolated from session and database dependencies.
 	if (pathname === '/health') {
 		return {
-			csrf: '',
-			forceDarkTheme: false
+			csrf: ''
 		}
 	}
 
-	// forceDarkTheme is route-derived (not per-visitor), so it stays cache-safe.
-	// The visitor's own theme preference is read from the cookie client-side by
-	// ThemeScript, never baked into this (CDN-cached) HTML.
-	const forceDarkTheme = isForceDarkRoute(pathname)
+	// The visitor's theme is read from the cookie client-side by ThemeScript,
+	// never baked into this (CDN-cached) HTML.
 
 	// Anonymous-cacheable responses must carry NO per-visitor state. The CSRF
 	// cookie/token is per-visitor, and remix-utils omits its Set-Cookie for
@@ -66,16 +57,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// responses; the root loader revalidates into those before any POST.
 	if (isAnonymousCacheableRequest(request)) {
 		return {
-			csrf: '',
-			forceDarkTheme
+			csrf: ''
 		}
 	}
 
 	const [csrf, cookieHeader] = await commitValidCsrfToken(request)
 
 	const loaderData = {
-		csrf,
-		forceDarkTheme
+		csrf
 	}
 
 	const responseHeaders = new Headers()
@@ -145,11 +134,6 @@ export function Layout({ children }: { children: ReactNode }) {
 	  ignores an absent error, so the normal render path is unaffected.
 	*/
 	useErrorReport(error)
-	const rootLoaderData = useLoaderData<RootLoader>()
-	// Only route-derived force-dark is known at render time; the visitor's own
-	// preference is applied before paint by ThemeScript (reads the cookie), so it
-	// is never baked into this CDN-cached HTML.
-	const forceDarkTheme = Boolean(rootLoaderData?.forceDarkTheme)
 
 	if (error) {
 		// Extract error message safely
@@ -168,7 +152,7 @@ export function Layout({ children }: { children: ReactNode }) {
 					<Meta />
 					<Links />
 					<CriticalStyles />
-					<ThemeScript forceDark={forceDarkTheme} />
+					<ThemeScript />
 				</head>
 				<body>
 					<div className="error">
@@ -184,19 +168,14 @@ export function Layout({ children }: { children: ReactNode }) {
 	}
 
 	return (
-		<html
-			lang="en"
-			suppressHydrationWarning
-			className={cn(forceDarkTheme && 'dark')}
-			style={{ colorScheme: forceDarkTheme ? 'dark' : 'light' }}
-		>
+		<html lang="en" suppressHydrationWarning style={{ colorScheme: 'light' }}>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<Meta />
 				<Links />
 				<CriticalStyles />
-				<ThemeScript forceDark={forceDarkTheme} />
+				<ThemeScript />
 			</head>
 			<body>
 				<ThemeController />

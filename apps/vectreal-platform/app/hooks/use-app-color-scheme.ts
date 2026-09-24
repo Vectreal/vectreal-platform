@@ -6,9 +6,8 @@ import { useEffect, useState } from 'react'
  *
  * Read off `<html class="dark">` rather than the `theming` cookie, because the
  * class is where every input has already been resolved: the cookie's
- * `light | dark | system`, the OS preference behind `system`, and the
- * force-dark routes in `isForceDarkRoute`. Sampling the cookie would reproduce
- * two of those three and get the third wrong.
+ * `light | dark | system` and the OS preference behind `system`. Sampling the
+ * cookie alone would get `system` wrong.
  *
  * Observed rather than sampled once, so flipping the theme toggle moves the
  * viewer with the page around it instead of leaving it on the scheme it
