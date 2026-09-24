@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
 	SAFE_NEXT_PATH_PREFIXES,
 	getSafeNextPath,
-	buildSigninErrorRedirect
+	buildSigninErrorRedirect,
+	newAccountDestination
 } from './auth-redirect.server'
 
 describe('getSafeNextPath', () => {
@@ -88,5 +89,23 @@ describe('buildSigninErrorRedirect', () => {
 	it('encodes error code and next path into sign-in URL', () => {
 		const url = buildSigninErrorRedirect('missing_code', '/dashboard')
 		expect(url).toBe('/sign-in?error=missing_code&next=%2Fdashboard')
+	})
+})
+
+describe('newAccountDestination', () => {
+	it('sends a new account to plain onboarding when it was headed for the dashboard', () => {
+		expect(newAccountDestination('/dashboard')).toBe('/onboarding')
+	})
+
+	it('does not nest onboarding inside itself', () => {
+		expect(newAccountDestination('/onboarding')).toBe('/onboarding')
+	})
+
+	it('carries any other destination through onboarding, intact', () => {
+		const draft = '/publisher?restore_draft=1&draft_id=abc'
+		const url = new URL(newAccountDestination(draft), 'https://x.test')
+
+		expect(url.pathname).toBe('/onboarding')
+		expect(url.searchParams.get('next')).toBe(draft)
 	})
 })

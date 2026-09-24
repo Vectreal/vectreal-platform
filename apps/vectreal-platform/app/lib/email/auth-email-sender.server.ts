@@ -1,6 +1,7 @@
 import { render } from '@react-email/render'
 import { createElement } from 'react'
 
+import { buildConfirmLink } from './auth-confirm-link'
 import { getResendClient, resolveFromEmail } from './resend.server'
 import {
 	AuthEmail,
@@ -43,8 +44,6 @@ const CONFIRM_TYPE_BY_ACTION: Partial<Record<CanonicalEmailAction, string>> = {
 	invite: 'invite'
 }
 
-const AUTH_CONFIRM_PATH = '/auth/confirm'
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -81,34 +80,6 @@ function getDisplayName(payload: AuthHookPayload): string {
 	const username = payload.user.user_metadata?.username?.trim()
 	if (username) return username
 	return 'there'
-}
-
-function resolveNextPath(redirectTo: string | undefined): string | null {
-	if (!redirectTo) return null
-	try {
-		const parsed = new URL(redirectTo)
-		if (parsed.pathname.startsWith('/')) {
-			const next = `${parsed.pathname}${parsed.search}${parsed.hash}`
-			return next === '/' ? null : next
-		}
-	} catch {
-		if (redirectTo.startsWith('/')) return redirectTo
-	}
-	return null
-}
-
-function buildConfirmLink(args: {
-	siteUrl: string
-	tokenHash: string
-	type: string
-	redirectTo?: string
-}): string {
-	const url = new URL(AUTH_CONFIRM_PATH, args.siteUrl)
-	url.searchParams.set('token_hash', args.tokenHash)
-	url.searchParams.set('type', args.type)
-	const next = resolveNextPath(args.redirectTo)
-	if (next) url.searchParams.set('next', next)
-	return url.toString()
 }
 
 function resolveTokenHash(

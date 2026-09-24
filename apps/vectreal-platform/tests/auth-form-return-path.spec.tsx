@@ -18,9 +18,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Outlet, createRoutesStub } from 'react-router'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import SigninPage from '../app/routes/signin-page/signin-page'
+import SignupPage from '../app/routes/signup-page/signup-page'
 
 const DRAFT_NEXT = '/publisher?restore_draft=1&draft_id=abc'
 
@@ -86,5 +87,66 @@ describe('the sign-in form keeps its return path', () => {
 
 		const url = submitted() as string
 		expect(new URL(url).searchParams.get('next')).toBe(DRAFT_NEXT)
+	})
+})
+
+/*
+  The sign-up form had the same literal action, `action="/sign-up"`, so a
+  visitor who chose to create an account instead of signing in lost the draft
+  the same way, one form over.
+*/
+describe('the sign-up form keeps its return path', () => {
+	it('submits to a URL that still carries next', async () => {
+		// jsdom has none, and the sign-up form measures its fields.
+		vi.stubGlobal(
+			'ResizeObserver',
+			class {
+				observe() {}
+				unobserve() {}
+				disconnect() {}
+			}
+		)
+		const submitted: { url: string | null } = { url: null }
+		const Stub = createRoutesStub([
+			{
+				path: '/sign-up',
+				Component: () => (
+					<Outlet context={{ turnstileToken: null, hasTurnstile: false }} />
+				),
+				children: [
+					{
+						index: true,
+						Component: SignupPage as never,
+						loader: () => ({
+							accountDeleted: false,
+							sceneSaved: false,
+							nextPath: null
+						}),
+						action: ({ request }: { request: Request }) => {
+							submitted.url = request.url
+							return null
+						}
+					}
+				]
+			}
+		])
+
+		render(
+			<AuthenticityTokenProvider token="test-csrf-token">
+				<Stub
+					initialEntries={[`/sign-up?next=${encodeURIComponent(DRAFT_NEXT)}`]}
+				/>
+			</AuthenticityTokenProvider>
+		)
+
+		const submitButton = await screen.findByRole('button', {
+			name: /create account/i
+		})
+		fireEvent.submit(submitButton.closest('form') as HTMLFormElement)
+
+		await waitFor(() => expect(submitted.url).not.toBeNull())
+		expect(new URL(submitted.url as string).searchParams.get('next')).toBe(
+			DRAFT_NEXT
+		)
 	})
 })

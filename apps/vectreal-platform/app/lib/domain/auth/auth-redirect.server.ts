@@ -39,6 +39,25 @@ export function getSafeNextPath(next: string | null): string {
 	return '/dashboard'
 }
 
+/**
+ * Where a brand-new account goes: through onboarding, carrying the place it
+ * was headed so onboarding can send it on when it finishes.
+ *
+ * The one rule for all three ways an account is born - the OAuth callback,
+ * the email confirmation link, and a signup confirmed on the spot. Only the
+ * callback used to carry `next`; the email path sent every new account to a
+ * bare `/onboarding`, so a visitor told their publisher scene was saved and
+ * waiting finished onboarding on the dashboard with the draft stranded in
+ * IndexedDB.
+ *
+ * `next` must already be resolved by `getSafeNextPath`.
+ */
+export function newAccountDestination(next: string): string {
+	return next === '/dashboard' || next === '/onboarding'
+		? '/onboarding'
+		: `/onboarding?next=${encodeURIComponent(next)}`
+}
+
 /*
   `AuthErrorCode`, not `string`. Sign-in resolves `?error=` against
   `AUTH_ERROR_MESSAGES`, and a code absent from that table resolves to null - so

@@ -196,6 +196,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 				new URL(request.url).origin
 			)
 			confirmPendingUrl.searchParams.set('email', normalizedEmail)
+			confirmPendingUrl.searchParams.set(
+				'next',
+				getSafeNextPath(new URL(request.url).searchParams.get('next'))
+			)
 			return redirect(confirmPendingUrl.toString(), {
 				headers: new Headers(headers)
 			})

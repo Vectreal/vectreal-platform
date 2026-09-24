@@ -32,7 +32,10 @@ import { Route } from './+types/signup-page'
 import { AuthErrorBoundary } from '../../components/errors'
 import { getReferralAttribution } from '../../lib/domain/analytics/referral-attribution'
 import { captureServerEvent } from '../../lib/domain/analytics/server-events.server'
-import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
+import {
+	getSafeNextPath,
+	newAccountDestination
+} from '../../lib/domain/auth/auth-redirect.server'
 import { classifySignupFailure } from '../../lib/domain/auth/signup-failure'
 import {
 	validateSignup,
@@ -126,13 +129,15 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 	const { client, headers } = await createSupabaseClient(request)
 
-	// Build emailRedirectTo with referral attribution so confirm.ts can read it
-	const origin = new URL(request.url).origin
-	const confirmUrl = new URL(`${origin}/auth/confirm`)
-	confirmUrl.searchParams.set('type', 'signup')
-	confirmUrl.searchParams.set('next', '/onboarding')
-	if (referrer) confirmUrl.searchParams.set('referrer', referrer)
-	if (utmSource) confirmUrl.searchParams.set('utm_source', utmSource)
+	/*
+	  Where the visitor was headed when they chose to sign up: the publisher's
+	  draft-restore URL when they came from "sign in to save". It is the
+	  `emailRedirectTo` itself - the destination, which the email sender turns
+	  into the confirmation link's `next` (`auth-confirm-link.ts` owns that
+	  contract) - and onboarding sends them on to it.
+	*/
+	const next = getSafeNextPath(new URL(request.url).searchParams.get('next'))
+	const emailRedirectTo = new URL(next, new URL(request.url).origin).toString()
 
 	let signupData: Awaited<ReturnType<typeof client.auth.signUp>>['data']
 	let signupError: Awaited<ReturnType<typeof client.auth.signUp>>['error']
@@ -150,9 +155,19 @@ export async function action({ request, context }: Route.ActionArgs) {
 				  part - and `''` is not nullish, so storing it would silently kill
 				  every `??` fallback written for exactly this case.
 				*/
-				data: { ...(name && { name }), tos_accepted_at: tosAcceptedAt },
+				/*
+				  Attribution rides the account: it is what `confirm.ts` reads when
+				  it reports the signup, because nothing on a URL survives the email
+				  round trip except the destination.
+				*/
+				data: {
+					...(name && { name }),
+					tos_accepted_at: tosAcceptedAt,
+					...(referrer && { referrer }),
+					...(utmSource && { utm_source: utmSource })
+				},
 				captchaToken,
-				emailRedirectTo: confirmUrl.toString()
+				emailRedirectTo
 			}
 		})
 		signupData = response.data
@@ -173,7 +188,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 	if (signupData?.user) {
 		// If Supabase already confirmed the user (local dev with enable_confirmations=false),
-		// skip the confirm-pending gate and go straight to onboarding.
+		// skip the confirm-pending gate and go straight on.
 		if (signupData.user.email_confirmed_at) {
 			const posthog = (context as PostHogContext).posthog
 			captureServerEvent(posthog, request, signupData.user.id, {
@@ -184,7 +199,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 					utm_source: utmSource || undefined
 				}
 			})
-			return redirect('/onboarding', { headers: new Headers(headers) })
+			return redirect(newAccountDestination(next), {
+				headers: new Headers(headers)
+			})
 		}
 
 		const confirmPendingUrl = new URL(
@@ -192,8 +209,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			new URL(request.url).origin
 		)
 		confirmPendingUrl.searchParams.set('email', normalizedEmail)
-		if (referrer) confirmPendingUrl.searchParams.set('referrer', referrer)
-		if (utmSource) confirmPendingUrl.searchParams.set('utm_source', utmSource)
+		confirmPendingUrl.searchParams.set('next', next)
 		return redirect(confirmPendingUrl.toString(), {
 			headers: new Headers(headers)
 		})
@@ -444,12 +460,13 @@ const SignupPage = ({ loaderData, actionData }: Route.ComponentProps) => {
 				)}
 			</AnimatePresence>
 
-			<Form
-				method="post"
-				action="/sign-up"
-				aria-label="Sign up form"
-				noValidate
-			>
+			{/*
+			  No `action`, for the reason the sign-in form has none: react-router
+			  copies `location.search` onto a submission only when the form names no
+			  action of its own, and the action needs the `?next=` this page was
+			  opened with.
+			*/}
+			<Form method="post" aria-label="Sign up form" noValidate>
 				<AuthenticityTokenInput />
 				<input
 					type="hidden"
