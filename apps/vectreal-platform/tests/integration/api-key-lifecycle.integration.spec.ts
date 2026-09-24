@@ -18,6 +18,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { eq } from 'drizzle-orm'
+import postgres from 'postgres'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 type Schema = typeof import('../../app/db/schema')
@@ -236,32 +237,61 @@ describe('api key rotation', () => {
 		  plaintext that authorizes nothing - presented as the new live key.
 		*/
 		/*
-		  Establish two pooled connections before racing. postgres.js opens them
-		  lazily, so the second caller spends its first moments on a connect-and-
-		  auth handshake while the first completes all four of its round trips on
-		  the already-warm socket. The second then reads the secret the first just
-		  wrote, its compare-and-swap matches, and both report success - which is
-		  not the guard failing, it is the race never happening.
+		  The race is forced, not hoped for. Nothing about two concurrent
+		  promises guarantees that order: when one finishes first, the second
+		  legitimately rotates the secret the first just wrote, both succeed,
+		  and the guard never runs. Warming pooled connections first made that
+		  rarer, not impossible, and the test went red in CI on that alone.
 
-		  This test passed for a while on nothing but luck: enough earlier queries
-		  happened to leave two sockets warm. Removing a couple of queries
-		  elsewhere in the suite was enough to undo that and turn the assertion
-		  red, which is how the dependency surfaced.
-
-		  `reserve()` waits for an established connection rather than inferring one
-		  from a query that happens to need it, so this states the precondition
-		  instead of relying on a side effect.
+		  So a transaction of the test's own holds the row locked, on a client
+		  of its own so the app's pool is untouched. Both rotations read freely
+		  (a plain select does not wait on a row lock), then block at their
+		  update. Once Postgres shows both waiting, the lock is released: one
+		  update lands, and the other, under read committed, re-checks its where
+		  clause against the committed row, finds a `hashedKey` it did not read,
+		  and updates nothing.
 		*/
-		const pool = (
-			db as unknown as { $client: { reserve(): Promise<{ release(): void }> } }
-		).$client
-		const reserved = await Promise.all([pool.reserve(), pool.reserve()])
-		reserved.forEach((connection) => connection.release())
+		const lock = postgres(process.env.DATABASE_URL as string, {
+			max: 1,
+			prepare: false
+		})
+		// Assigned inside the try, and read only when it did not throw.
+		let rotations!: Promise<
+			PromiseSettledResult<Awaited<ReturnType<typeof rotateApiKey>>>[]
+		>
+		try {
+			await lock`begin`
+			await lock`select id from api_keys where id = ${apiKeyId} for update`
 
-		const results = await Promise.allSettled([
-			rotateApiKey({ apiKeyId, userId: ownerId }),
-			rotateApiKey({ apiKeyId, userId: ownerId })
-		])
+			rotations = Promise.allSettled([
+				rotateApiKey({ apiKeyId, userId: ownerId }),
+				rotateApiKey({ apiKeyId, userId: ownerId })
+			])
+
+			const deadline = Date.now() + 3_000
+			for (;;) {
+				/*
+				  Inside a transaction Postgres answers pg_stat_activity from a
+				  snapshot taken on first access, so without clearing it every poll
+				  reads the moment before the rotations arrived.
+				*/
+				await lock`select pg_stat_clear_snapshot()`
+				const [{ waiting }] = await lock<{ waiting: number }[]>`
+					select count(*)::int as waiting from pg_stat_activity
+					where wait_event_type = 'Lock' and query ilike 'update "api_keys"%'
+				`
+				if (waiting === 2) break
+				if (Date.now() > deadline) {
+					throw new Error(`Only ${waiting} rotation(s) reached the update`)
+				}
+				await new Promise((resolve) => setTimeout(resolve, 20))
+			}
+		} finally {
+			await lock`rollback`
+			await lock.end()
+		}
+
+		const results = await rotations
 
 		const winners = results.filter(
 			(
