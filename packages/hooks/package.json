@@ -29,7 +29,7 @@
 	},
 	"license": "AGPL-3.0-only",
 	"types": "./index.d.ts",
-	"main": "./index.cjs.js",
+	"main": "./index.cjs",
 	"module": "./index.es.js",
 	"type": "module",
 	"publishConfig": {
@@ -40,22 +40,22 @@
 		".": {
 			"types": "./index.d.ts",
 			"import": "./index.es.js",
-			"require": "./index.cjs.js"
+			"require": "./index.cjs"
 		},
 		"./use-load-model": {
 			"types": "./use-load-model/index.d.ts",
 			"import": "./use-load-model.es.js",
-			"require": "./use-load-model.cjs.js"
+			"require": "./use-load-model.cjs"
 		},
 		"./use-export-model": {
 			"types": "./use-export-model/index.d.ts",
 			"import": "./use-export-model.es.js",
-			"require": "./use-export-model.cjs.js"
+			"require": "./use-export-model.cjs"
 		},
 		"./use-optimize-model": {
 			"types": "./use-optimize-model/index.d.ts",
 			"import": "./use-optimize-model.es.js",
-			"require": "./use-optimize-model.cjs.js"
+			"require": "./use-optimize-model.cjs"
 		}
 	},
 	"peerDependencies": {
