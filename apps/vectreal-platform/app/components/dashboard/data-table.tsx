@@ -163,7 +163,7 @@ export function DataTable<TData extends RowData>({
 							placeholder={searchPlaceholder}
 							value={searchValue}
 							onChange={(event) => onSearchValueChange(event.target.value)}
-							className="ds-sunken h-10 rounded-xl border-0 pl-9 shadow-none focus-visible:ring-2"
+							className="h-10 rounded-xl pl-9 focus-visible:ring-2"
 						/>
 					</div>
 				)}

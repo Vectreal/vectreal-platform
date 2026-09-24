@@ -4,6 +4,7 @@ import { Route } from './+types/callback'
 import { captureServerEvent } from '../../../lib/domain/analytics/server-events.server'
 import {
 	buildSigninErrorRedirect,
+	newAccountDestination,
 	getSafeNextPath
 } from '../../../lib/domain/auth/auth-redirect.server'
 import { initializeUserDefaults } from '../../../lib/domain/user/user-repository.server'
@@ -85,14 +86,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		})
 	}
 
-	// Send ALL new users through onboarding, not just those arriving at /dashboard.
-	// Preserve next so onboarding can redirect to the original deep-link destination after completion.
-	if (userWithDefaults.isNewUser && next !== '/onboarding') {
-		const onboardingUrl =
-			next === '/dashboard'
-				? '/onboarding'
-				: `/onboarding?next=${encodeURIComponent(next)}`
-		return redirect(onboardingUrl, { headers: new Headers(headers) })
+	if (userWithDefaults.isNewUser) {
+		return redirect(newAccountDestination(next), {
+			headers: new Headers(headers)
+		})
 	}
 
 	return redirect(next, { headers: new Headers(headers) })

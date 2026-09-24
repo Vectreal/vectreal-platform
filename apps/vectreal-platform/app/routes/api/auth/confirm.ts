@@ -5,7 +5,8 @@ import { Route } from './+types/confirm'
 import { captureServerEvent } from '../../../lib/domain/analytics/server-events.server'
 import {
 	buildSigninErrorRedirect,
-	getSafeNextPath
+	getSafeNextPath,
+	newAccountDestination
 } from '../../../lib/domain/auth/auth-redirect.server'
 import { createSupabaseClient } from '../../../lib/supabase.server'
 
@@ -31,16 +32,20 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 				)
 			}
 			if (type === 'signup' && data.user) {
-				const referrer = searchParams.get('referrer') || undefined
-				const utm_source = searchParams.get('utm_source') || undefined
+				// Stored on the account at signup; a link cannot carry it here.
+				const { referrer, utm_source } = data.user.user_metadata ?? {}
 				const posthog = (context as PostHogContext).posthog
 				captureServerEvent(posthog, request, data.user.id, {
 					name: 'user_signed_up',
-					props: { method: 'email', referrer, utm_source }
+					props: {
+						method: 'email',
+						referrer: referrer || undefined,
+						utm_source: utm_source || undefined
+					}
 				})
 			}
 
-			const destination = type === 'signup' ? '/onboarding' : next
+			const destination = type === 'signup' ? newAccountDestination(next) : next
 			return redirect(destination, { headers })
 		}
 

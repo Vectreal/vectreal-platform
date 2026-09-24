@@ -84,12 +84,13 @@ const PillGroup = ({
 				<button
 					key={opt.value}
 					type="button"
+					aria-pressed={active}
 					onClick={() => onChange(active ? '' : opt.value)}
 					className={cn(
 						'rounded-full border px-4 py-1.5 text-sm font-medium transition-all duration-150',
 						active
 							? 'text-orange border-[rgb(var(--orange-rgb)/0.6)] bg-[rgb(var(--orange-rgb)/0.12)]'
-							: 'ds-sunken text-muted-foreground hover:text-foreground border-border'
+							: 'ds-field text-muted-foreground hover:text-foreground border-transparent'
 					)}
 				>
 					{opt.label}
@@ -248,7 +249,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 				</div>
 
 				{/* ── Right panel: content + nav ──────────────────────────────── */}
-				<div className="border-border/20 bg-background flex w-full flex-col border-l md:flex-2">
+				<div className="bg-background flex w-full flex-col md:flex-2">
 					{/* Header */}
 					<header className="flex shrink-0 items-center justify-between px-10 pt-8 pb-6">
 						<Link to="/" aria-label="Home">
@@ -269,7 +270,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 					</header>
 
 					{/* Mobile visual band */}
-					<div className="border-border/20 bg-muted/5 mx-10 mb-6 h-48 shrink-0 overflow-hidden rounded-2xl border md:hidden">
+					<div className="ds-raised mx-10 mb-6 h-48 shrink-0 overflow-hidden rounded-2xl md:hidden">
 						<WelcomeVisual />
 					</div>
 

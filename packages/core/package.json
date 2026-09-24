@@ -25,7 +25,7 @@
 	},
 	"license": "AGPL-3.0-only",
 	"types": "./index.d.ts",
-	"main": "./index.cjs.js",
+	"main": "./index.cjs",
 	"module": "./index.es.js",
 	"type": "module",
 	"sideEffects": false,
@@ -37,27 +37,27 @@
 		".": {
 			"types": "./index.d.ts",
 			"import": "./index.es.js",
-			"require": "./index.cjs.js"
+			"require": "./index.cjs"
 		},
 		"./model-formats": {
 			"types": "./model-formats/index.d.ts",
 			"import": "./model-formats.es.js",
-			"require": "./model-formats.cjs.js"
+			"require": "./model-formats.cjs"
 		},
 		"./model-loader": {
 			"types": "./model-loader/index.d.ts",
 			"import": "./model-loader.es.js",
-			"require": "./model-loader.cjs.js"
+			"require": "./model-loader.cjs"
 		},
 		"./model-optimizer": {
 			"types": "./model-optimizer/index.d.ts",
 			"import": "./model-optimizer.es.js",
-			"require": "./model-optimizer.cjs.js"
+			"require": "./model-optimizer.cjs"
 		},
 		"./model-exporter": {
 			"types": "./model-exporter/index.d.ts",
 			"import": "./model-exporter.es.js",
-			"require": "./model-exporter.cjs.js"
+			"require": "./model-exporter.cjs"
 		}
 	},
 	"peerDependencies": {

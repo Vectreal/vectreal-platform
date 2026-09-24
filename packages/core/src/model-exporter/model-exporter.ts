@@ -47,6 +47,16 @@ const DEFAULT_DRACO_PATH = '/draco/'
  * `saveToFile` is Node-only; the rest run in the browser (Draco/USDZ export
  * specifically require one).
  */
+/**
+ * The longest edge, in pixels, of any texture written into a USDZ.
+ *
+ * three.js's `USDZExporter` re-encodes every texture as a PNG or JPEG and
+ * scales it down to this, by default and silently. Passed explicitly so the
+ * value is ours: the converter pages tell a reader their textures come out at
+ * most this size, and a change of three.js default must not make that untrue.
+ */
+export const USDZ_MAX_TEXTURE_SIZE = 1024
+
 export class ModelExporter {
 	private io: WebIO
 	private threeExporter: GLTFExporter
@@ -302,7 +312,9 @@ export class ModelExporter {
 			const exporter = new USDZExporter()
 
 			this.emitProgress('Serializing Three.js scene', 40)
-			const result = await exporter.parseAsync(object)
+			const result = await exporter.parseAsync(object, {
+				maxTextureSize: USDZ_MAX_TEXTURE_SIZE
+			})
 
 			this.emitProgress('Finalizing USDZ binary', 90)
 			const binary = new Uint8Array(result)

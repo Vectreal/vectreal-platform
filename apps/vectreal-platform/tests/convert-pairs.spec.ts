@@ -14,6 +14,7 @@
  * /llms.txt drifting apart from each other, which is how `/pricing` and the
  * static sitemap block already disagree elsewhere in this repo.
  */
+import { USDZ_MAX_TEXTURE_SIZE } from '@vctrl/core/model-exporter'
 import { MODEL_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { describe, expect, it } from 'vitest'
 
@@ -31,7 +32,8 @@ import {
 	CONVERT_PAIRS,
 	OPTIONS_BY_TARGET,
 	articleFor,
-	TARGETS_THAT_INFLATE,
+	TARGETS_WITH_UNREADABLE_SIZE,
+	USDZ_RESULT_NOTE,
 	convertOptionsFor,
 	convertPairBySlug,
 	convertPairPaths,
@@ -82,22 +84,36 @@ describe('the pair manifest only describes conversions we can perform', () => {
 
 	/*
 	  A 13 MB GLB came back as a 40 MB USDZ with nothing on the page to explain
-	  it, because USDZ stores textures uncompressed. A download several times the
-	  size of the upload reads as a broken conversion, and the reader has no way
-	  to tell that it is not.
+	  it, and the 18 MB camera sample as 4.4 MB: the writer re-encodes textures
+	  and stores geometry uncompressed, so the size moves either way. A download
+	  that far from the upload reads as a broken conversion, and the reader has
+	  no way to tell that it is not.
 
 	  The rule is stated over the target format rather than over the one slug, so
 	  a second USDZ pair inherits it instead of shipping the same silence again.
 	*/
-	it('warns on every pair whose target inflates the file', () => {
+	/*
+	  The note promises a texture size, and the writer is what keeps it. The
+	  copy module cannot import the constant (it is reachable from the build
+	  config, which must not load `@vctrl/*`), so the two are held together here.
+	*/
+	it('states the texture cap the USDZ writer applies', () => {
+		expect(USDZ_RESULT_NOTE).toContain(
+			`at most ${USDZ_MAX_TEXTURE_SIZE} pixels across`
+		)
+	})
+
+	it('explains the size on every pair whose target rewrites it', () => {
 		for (const pair of CONVERT_PAIRS) {
-			if (!(TARGETS_THAT_INFLATE as readonly string[]).includes(pair.to)) {
+			if (
+				!(TARGETS_WITH_UNREADABLE_SIZE as readonly string[]).includes(pair.to)
+			) {
 				continue
 			}
 
 			expect(
 				pair.note,
-				`${pair.slug} writes ${pair.to}, which inflates, and says nothing about it`
+				`${pair.slug} writes ${pair.to}, whose size cannot be read from the source, and says nothing about it`
 			).toBeTruthy()
 		}
 	})
@@ -135,7 +151,7 @@ describe('the pair manifest only describes conversions we can perform', () => {
 	it('keeps at least one inflating target, so that rule is not vacuous', () => {
 		expect(
 			CONVERT_PAIRS.filter((pair) =>
-				(TARGETS_THAT_INFLATE as readonly string[]).includes(pair.to)
+				(TARGETS_WITH_UNREADABLE_SIZE as readonly string[]).includes(pair.to)
 			).length
 		).toBeGreaterThan(0)
 	})

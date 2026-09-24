@@ -21,6 +21,9 @@ interface ArticleRowProps {
  * itself, not on every row.
  *
  * The date column is tabular-nums so the rail stays optically straight.
+ *
+ * Each row is a raised surface that lifts one step on hover, which is what
+ * says it is a link; the title is not underlined as well.
  */
 export function ArticleRow({ article, className }: ArticleRowProps) {
 	return (
@@ -28,7 +31,7 @@ export function ArticleRow({ article, className }: ArticleRowProps) {
 			to={`/news-room/${article.slug}`}
 			viewTransition
 			className={cn(
-				'border-border group grid items-baseline gap-x-6 gap-y-1 border-b py-5',
+				'ds-raised-interactive grid items-baseline gap-x-6 gap-y-1 rounded-2xl px-6 py-5',
 				'grid-cols-1 md:grid-cols-[7rem_1fr_6rem]',
 				className
 			)}
@@ -38,9 +41,7 @@ export function ArticleRow({ article, className }: ArticleRowProps) {
 			</span>
 
 			<div className="order-1 md:order-none">
-				<h3 className="text-h4 decoration-muted-foreground group-hover:decoration-orange mb-1.5 underline underline-offset-4 transition-colors duration-150">
-					{article.title}
-				</h3>
+				<h3 className="text-h4 mb-1.5">{article.title}</h3>
 				<p className="text-muted-foreground text-body-sm line-clamp-2 max-w-[68ch]">
 					{article.excerpt}
 				</p>

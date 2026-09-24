@@ -23,6 +23,10 @@ import { Route } from './+types/confirm-pending'
 import { AuthErrorBoundary } from '../components/errors'
 import { useResendCooldown } from '../hooks/use-resend-cooldown'
 import { clearReferralAttribution } from '../lib/domain/analytics/referral-attribution'
+import {
+	getSafeNextPath,
+	newAccountDestination
+} from '../lib/domain/auth/auth-redirect.server'
 import { resendCooldownFor } from '../lib/domain/auth/resend-cooldown'
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { recordRateLimitAttempt } from '../lib/http/rate-limit.server'
@@ -62,23 +66,24 @@ export async function loader({ request }: Route.LoaderArgs) {
 		data: { user }
 	} = await client.auth.getUser()
 
+	const url = new URL(request.url)
+	const next = getSafeNextPath(url.searchParams.get('next'))
+
 	// Already confirmed - send straight to onboarding (first-time) or dashboard
 	// (the onboarding page is idempotent; existing users skip through it quickly)
 	if (user?.email_confirmed_at) {
-		return redirect('/onboarding', { headers })
+		return redirect(newAccountDestination(next), { headers })
 	}
 
-	const url = new URL(request.url)
 	const email = url.searchParams.get('email') ?? ''
-	const referrer = url.searchParams.get('referrer') ?? ''
-	const utm_source = url.searchParams.get('utm_source') ?? ''
 
 	/*
-	  No `next`. It was carried into loader data that nothing read, while the
-	  resend action hardcodes `/onboarding` as the confirmation destination - so
-	  the screen looked like it honoured a return path and did not.
+	  `next` rides through this screen into the resent confirmation link. It
+	  was once carried into loader data that nothing read while the resend
+	  hardcoded `/onboarding`, so the screen looked like it honoured a return
+	  path and did not; the resend now rebuilds the link with it.
 	*/
-	return data({ email, referrer, utm_source }, { headers })
+	return data({ email, next }, { headers })
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -119,24 +124,22 @@ export async function action({ request }: Route.ActionArgs) {
 	const captchaToken =
 		typeof turnstileToken === 'string' ? turnstileToken : undefined
 
-	// Rebuild emailRedirectTo with referral params so the resent confirmation
-	// link preserves attribution through to confirm.ts.
-	const origin = new URL(request.url).origin
-	const confirmUrl = new URL(`${origin}/auth/confirm`)
-	confirmUrl.searchParams.set('type', 'signup')
-	confirmUrl.searchParams.set('next', '/onboarding')
-	const referrer = formData.get('referrer')
-	const utm_source = formData.get('utm_source')
-	if (typeof referrer === 'string' && referrer)
-		confirmUrl.searchParams.set('referrer', referrer)
-	if (typeof utm_source === 'string' && utm_source)
-		confirmUrl.searchParams.set('utm_source', utm_source)
+	/*
+	  The destination, not a confirmation URL: the email sender builds the link
+	  and makes this its `next` (`auth-confirm-link.ts`). The referral
+	  attribution the first send recorded is on the account already.
+	*/
+	const next = formData.get('next')
+	const emailRedirectTo = new URL(
+		getSafeNextPath(typeof next === 'string' ? next : null),
+		new URL(request.url).origin
+	).toString()
 
 	const { client, headers } = await createSupabaseClient(request)
 	const { error } = await client.auth.resend({
 		type: 'signup',
 		email: email.trim().toLowerCase(),
-		options: { captchaToken, emailRedirectTo: confirmUrl.toString() }
+		options: { captchaToken, emailRedirectTo }
 	})
 
 	if (error) {
@@ -163,7 +166,7 @@ function maskEmail(email: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ConfirmPending() {
-	const { email, referrer, utm_source } = useLoaderData<typeof loader>()
+	const { email, next } = useLoaderData<typeof loader>()
 	const fetcher = useFetcher<ActionData>()
 	const { turnstileToken, hasTurnstile } = useOutletContext<AuthLayoutContext>()
 
@@ -261,12 +264,7 @@ export default function ConfirmPending() {
 					<fetcher.Form method="post">
 						<AuthenticityTokenInput />
 						<input type="hidden" name="email" value={email} />
-						{referrer && (
-							<input type="hidden" name="referrer" value={referrer} />
-						)}
-						{utm_source && (
-							<input type="hidden" name="utm_source" value={utm_source} />
-						)}
+						<input type="hidden" name="next" value={next} />
 						{turnstileToken && (
 							<input
 								type="hidden"

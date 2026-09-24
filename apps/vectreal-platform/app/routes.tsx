@@ -201,6 +201,10 @@ export default [
 		'preview/fullscreen/:projectId/:sceneId/',
 		'./routes/embed-page/legacy-embed-redirect.ts'
 	),
+	route('privacy', './routes/legal-short-link.ts', {
+		id: 'privacy-short-link'
+	}),
+	route('terms', './routes/legal-short-link.ts', { id: 'terms-short-link' }),
 
 	// Dashboard - each route handles its own data loading
 	...prefix('dashboard', [

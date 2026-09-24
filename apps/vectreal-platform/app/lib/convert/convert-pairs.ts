@@ -47,14 +47,27 @@ export const CONVERT_INDEX_COPY = {
 } as const
 
 /**
- * Targets whose output is materially larger than the source, so a page for one
- * has to say so before the reader downloads it.
+ * Targets whose output size cannot be read from the source, so a page for one
+ * has to say why before the reader wonders whether the conversion broke.
  *
- * USDZ is the only member today and the reason the rule exists: it stores
- * textures uncompressed, so a 13 MB GLB came back as 40 MB with nothing on the
- * page to explain it.
+ * USDZ is the only member today. Its writer re-encodes every texture as a PNG
+ * or JPEG no more than `USDZ_MAX_TEXTURE_SIZE` across and stores geometry
+ * uncompressed, so the result moves both ways: a 13 MB GLB with many small
+ * textures came back as 40 MB, and the 18 MB camera sample, nine 4K textures,
+ * as 4.4 MB. This rule once read "materially larger", and the note it produced
+ * said two to three times - true of the first file, false of the second.
  */
-export const TARGETS_THAT_INFLATE = ['usdz'] as const
+export const TARGETS_WITH_UNREADABLE_SIZE = ['usdz'] as const
+
+/**
+ * What every USDZ result carries, said once so the pages cannot drift apart.
+ *
+ * The 1024 is `USDZ_MAX_TEXTURE_SIZE` in `@vctrl/core`, restated because this
+ * module is reachable from the build config and must not import `@vctrl/*`;
+ * `convert-pairs.spec.ts` fails if the two disagree.
+ */
+export const USDZ_RESULT_NOTE =
+	'USDZ carries each texture as a PNG or JPEG at most 1024 pixels across, and its geometry uncompressed, so the result can be much smaller or much larger than what you dropped in.'
 
 /**
  * A format id, as it appears in a URL slug.
@@ -193,7 +206,7 @@ export interface ConvertPair {
 	 *
 	 * NEVER AN INSTRUCTION. This renders *after* a conversion, so telling
 	 * someone what to drop here is telling them too late - and it is the second
-	 * time that happened. The first put "USDZ stores textures uncompressed" on
+	 * time that happened. The first put a USDZ size warning on
 	 * an empty stage before anything had been dropped; the fix moved the field
 	 * to the result, and three OBJ notes were then written opening with "Bring
 	 * the .mtl and the texture images along with the .obj", which the empty
@@ -226,12 +239,11 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		description:
 			'Convert a GLB file to USDZ in your browser. No account, no upload, no watermark.',
 		/*
-		  Measured, not estimated: a 13 MB GLB came back as a 40 MB USDZ. USDZ
-		  carries its textures as uncompressed images, so anything the GLB had
-		  Draco-compressed or stored as JPEG expands. Someone converting a large
-		  model will otherwise assume the conversion went wrong.
+		  Measured, both directions: a 13 MB GLB came back as a 40 MB USDZ, and
+		  the 18 MB camera sample as 4.4 MB. Either surprises someone who
+		  expected the size to carry over.
 		*/
-		note: 'USDZ stores textures uncompressed, so the result is normally two to three times the size of what you dropped in.'
+		note: USDZ_RESULT_NOTE
 	},
 	{
 		slug: 'gltf-to-glb',
@@ -252,7 +264,7 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		title: 'glTF to USDZ converter',
 		description:
 			'Convert a glTF file and its textures to USDZ, in your browser. No account, no upload, no watermark.',
-		note: 'USDZ stores textures uncompressed, so the result is normally two to three times the size of what you dropped in.'
+		note: USDZ_RESULT_NOTE
 	},
 	{
 		slug: 'stl-to-glb',
@@ -353,7 +365,7 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		  is what makes AR placement come out at the right size. A file that
 		  misdeclares its unit is the case where that shows.
 		*/
-		note: 'USDZ stores textures uncompressed, so the result is normally two to three times the size of what you dropped in. AR Quick Look places a model at real size, and that size comes from the unit the FBX declares.'
+		note: `${USDZ_RESULT_NOTE} AR Quick Look places a model at real size, and that size comes from the unit the FBX declares.`
 	},
 	{
 		slug: 'obj-to-glb',
@@ -392,7 +404,7 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		title: 'OBJ to USDZ converter',
 		description:
 			'Convert an OBJ file and its textures to USDZ in your browser. No account, no upload, no watermark.',
-		note: 'Without the .mtl and the texture images, an OBJ carries no materials at all - so a result that is correct but grey means they did not come along with it. USDZ also stores textures uncompressed, so a textured result is normally larger than what you dropped in.'
+		note: `Without the .mtl and the texture images, an OBJ carries no materials at all - so a result that is correct but grey means they did not come along with it. ${USDZ_RESULT_NOTE}`
 	}
 ]
 

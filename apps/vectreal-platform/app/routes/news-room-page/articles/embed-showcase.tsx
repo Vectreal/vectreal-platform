@@ -21,8 +21,6 @@
  */
 import { useEffect, useRef, useState } from 'react'
 
-import { SCENE_SURFACE } from '../../../lib/newsroom-thumbnail/palette'
-
 interface EmbedShowcaseProps {
 	src: string
 	label?: string
@@ -68,16 +66,10 @@ export default function EmbedShowcase({
 	}, [shouldLoad])
 
 	return (
-		<figure
-			className="my-6 overflow-hidden rounded-xl border border-white/10 shadow-xl"
-			style={{ backgroundColor: SCENE_SURFACE.background }}
-		>
+		<figure className="ds-raised my-6 overflow-hidden rounded-xl">
 			{label && (
-				<div className="border-b border-white/10 px-4 py-2">
-					<span
-						className="font-mono text-xs"
-						style={{ color: SCENE_SURFACE.mutedText }}
-					>
+				<div className="px-4 py-2">
+					<span className="text-muted-foreground font-mono text-xs">
 						{label}
 					</span>
 				</div>
@@ -95,8 +87,7 @@ export default function EmbedShowcase({
 				) : (
 					<div
 						aria-hidden
-						className="flex h-full w-full items-center justify-center text-xs"
-						style={{ color: SCENE_SURFACE.faintText }}
+						className="text-muted-foreground flex h-full w-full items-center justify-center text-xs"
 					>
 						Loading interactive scene…
 					</div>
@@ -104,10 +95,7 @@ export default function EmbedShowcase({
 			</div>
 
 			{caption && (
-				<figcaption
-					className="border-t border-white/10 px-4 py-2 text-xs"
-					style={{ color: SCENE_SURFACE.mutedText }}
-				>
+				<figcaption className="text-muted-foreground px-4 py-2 text-xs">
 					{caption}
 				</figcaption>
 			)}

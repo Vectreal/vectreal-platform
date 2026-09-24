@@ -150,7 +150,7 @@ export function ProjectsBrowser({
 						placeholder="Search projects..."
 						value={tableState.searchValue}
 						onChange={(event) => tableState.setSearchValue(event.target.value)}
-						className="ds-sunken h-10 rounded-xl border-0 pl-9 shadow-none focus-visible:ring-2"
+						className="h-10 rounded-xl pl-9 focus-visible:ring-2"
 					/>
 				</div>
 
@@ -165,7 +165,7 @@ export function ProjectsBrowser({
 					>
 						<SelectTrigger
 							aria-label="Filter by organization"
-							className="ds-sunken h-10 rounded-xl border-0 shadow-none"
+							className="h-10 rounded-xl"
 						>
 							<SelectValue />
 						</SelectTrigger>
@@ -186,7 +186,7 @@ export function ProjectsBrowser({
 				>
 					<SelectTrigger
 						aria-label="Filter by scene status"
-						className="ds-sunken h-10 rounded-xl border-0 shadow-none"
+						className="h-10 rounded-xl"
 					>
 						<SelectValue />
 					</SelectTrigger>

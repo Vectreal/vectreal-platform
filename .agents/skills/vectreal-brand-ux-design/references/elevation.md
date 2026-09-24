@@ -9,7 +9,16 @@ the whole ladder tracks the theme from one pair of tokens.
 
 - `ds-raised` (4%) — cards, table containers, anything sitting on the page
 - `ds-overlay` (8%) — popovers, menus, rows hovered on top of raised
-- `ds-sunken` (2.5%) — wells and inputs that should recede
+- `ds-sunken` (2.5%) — wells that should recede, such as code blocks
+- `ds-field` — a form field's surface: 6% foreground over *whatever it sits
+  on*, not mixed against the page, because fields sit on dialogs and shell
+  panels too and `ds-sunken` cannot go below the page. `Input`, `Textarea` and
+  `SelectTrigger` carry it themselves, with a transparent border that only
+  `aria-invalid` colours: a field is identified by its surface, not a drawn
+  box, so a call site adds neither. The exception is a field inside a block
+  that is already its surface, such as the hotspot position input in a
+  `publisher-shell-nested` block, which passes `bg-transparent` so the tint
+  does not stack.
 - `ds-divider` — only where a divider carries meaning, never to draw a box.
   Note it sets a **background-color**, not a border colour: it is the fill of a
   hairline *element*, so putting it on a row alongside `border-b` tints the whole
@@ -76,4 +85,11 @@ present  shared/components/src/styles/globals.css                              .
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
 present  shared/components/src/styles/globals.css                              .ds-divider
 present  shared/components/src/styles/globals.css                              .ds-sunken
+present  shared/components/src/styles/globals.css                              .ds-field
+present  shared/components/src/ui/input.tsx                                    ds-field
+present  shared/components/src/ui/textarea.tsx                                 ds-field
+present  shared/components/src/ui/select.tsx                                   ds-field
+absent   shared/components/src/ui/input.tsx                                    border-input
+absent   shared/components/src/ui/textarea.tsx                                 border-input
+absent   shared/components/src/ui/select.tsx                                   border-input
 ```

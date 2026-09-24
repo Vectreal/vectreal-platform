@@ -14,7 +14,14 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 const LADDER = [
-	['ds-sunken', 'Wells. Inputs, and blocks that recede from their container.'],
+	[
+		'ds-sunken',
+		'Wells. Code blocks, and blocks that recede from their container.'
+	],
+	[
+		'ds-field',
+		'Form fields. A tint over whatever they sit on, so they read on any surface.'
+	],
 	['ds-raised', 'The default panel. Cards, tables, sidebars.'],
 	['ds-overlay', 'Above a raised surface. Menus, popovers, rows on a panel.']
 ] as const
@@ -44,8 +51,11 @@ export const Nested: Story = {
 			<div className="ds-overlay mb-2 rounded-xl p-3">
 				<p className="text-sm">ds-overlay row</p>
 			</div>
-			<div className="ds-sunken rounded-xl p-3">
+			<div className="ds-sunken mb-2 rounded-xl p-3">
 				<p className="text-sm">ds-sunken well</p>
+			</div>
+			<div className="ds-field rounded-lg px-3 py-2">
+				<p className="text-sm">ds-field</p>
 			</div>
 		</div>
 	)

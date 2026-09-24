@@ -43,7 +43,14 @@ export default defineConfig({
 			},
 			name: '@vctrl/hooks',
 			formats: ['es', 'cjs'],
-			fileName: (format, entry) => `${entry}.${format}.js`
+			/*
+			  `.cjs` for CommonJS, not `.cjs.js`. The package is `"type": "module"`
+			  and Node reads module type from the extension, so a `.js` file is ESM
+			  whatever its name says: every `require` entry used to load as ESM and
+			  fail. The viewer names its output this way for the same reason.
+			*/
+			fileName: (format, entry) =>
+				format === 'cjs' ? `${entry}.cjs` : `${entry}.${format}.js`
 		},
 
 		rolldownOptions: {

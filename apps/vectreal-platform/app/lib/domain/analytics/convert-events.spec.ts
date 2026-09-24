@@ -8,7 +8,10 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { buildConvertModelReceivedProps } from './convert-events'
+import {
+	buildConvertModelReceivedProps,
+	buildConvertModelResultProps
+} from './convert-events'
 
 const FBX_TO_GLB = { slug: 'fbx-to-glb', from: 'fbx', to: 'glb' } as const
 
@@ -201,5 +204,32 @@ describe('the reported format is the model, not whatever came first', () => {
 		)
 
 		expect(props.file_format).toBe('3ds')
+	})
+})
+
+describe('a conversion result is reported with what it achieved', () => {
+	const pair = { slug: 'glb-to-gltf', from: 'glb', to: 'gltf' } as const
+
+	it('carries the sizes and their ratio', () => {
+		expect(
+			buildConvertModelResultProps(pair, [], 4_000_000, 1_000_000)
+		).toMatchObject({
+			pair: 'glb-to-gltf',
+			source_bytes: 4_000_000,
+			result_bytes: 1_000_000,
+			size_ratio: 0.25
+		})
+	})
+
+	it('sorts the options, so the same ticks read as the same set', () => {
+		expect(
+			buildConvertModelResultProps(pair, ['webp', 'draco'], 1, 1).options
+		).toEqual(['draco', 'webp'])
+	})
+
+	it('reports no ratio when the source size is unknown', () => {
+		expect(
+			buildConvertModelResultProps(pair, [], null, 1_000).size_ratio
+		).toBeNull()
 	})
 })
