@@ -65,7 +65,7 @@ function DesktopNav({
 					scrolled ? 'py-2.5' : 'py-4'
 				)}
 			>
-				<div className="flex min-w-0 items-center gap-6">
+				<div className="flex shrink-0 items-center">
 					<Link
 						to="/"
 						className="flex shrink-0 items-center py-1"
@@ -76,12 +76,14 @@ function DesktopNav({
 							colored
 						/>
 					</Link>
-					{onDocs && <DocsBreadcrumb pathname={pathname} />}
 				</div>
 
-				<div className="flex shrink-0 items-center gap-6">
-					{!onDocs && (
-						<div className="flex items-center gap-0.5">
+				<div className="flex min-w-0 items-center gap-6">
+					{/* The trail takes the marketing links' place, beside the actions: next to the logo its baseline reads as off, since the wordmark sits low. */}
+					{onDocs ? (
+						<DocsBreadcrumb pathname={pathname} />
+					) : (
+						<div className="flex shrink-0 items-center gap-0.5">
 							<NavPanels sections={NAV.panels} pathname={pathname} />
 							{NAV.links.map((item) => {
 								const isActive = isNavItemActive(item, pathname)
@@ -105,7 +107,7 @@ function DesktopNav({
 						</div>
 					)}
 
-					<div className="flex items-center gap-1">
+					<div className="flex shrink-0 items-center gap-1">
 						{!user && !isAuthPage && (
 							<Button asChild variant="ghost" size="sm" className="rounded-xl">
 								<Link to={NAV.signIn.to}>{NAV.signIn.label}</Link>

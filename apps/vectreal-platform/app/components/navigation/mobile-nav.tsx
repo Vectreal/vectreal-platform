@@ -110,7 +110,7 @@ function MobileNav({
 				aria-label="Main navigation"
 			>
 				<div className="flex w-full items-center justify-between gap-2">
-					<div className="flex min-w-0 items-center gap-3">
+					<div className="flex shrink-0 items-center">
 						<Link
 							to="/"
 							className="flex shrink-0 items-center px-3 py-1"
@@ -121,10 +121,10 @@ function MobileNav({
 								colored
 							/>
 						</Link>
-						{onDocs && <DocsBreadcrumb pathname={pathname} compact />}
 					</div>
 
-					<div className="flex items-center gap-1">
+					<div className="flex min-w-0 items-center gap-1">
+						{onDocs && <DocsBreadcrumb pathname={pathname} compact />}
 						{!user && !isAuthPage && (
 							<Button asChild size="sm" variant="ghost" className="rounded-xl">
 								<Link to={NAV.signIn.to}>{NAV.signIn.label}</Link>
