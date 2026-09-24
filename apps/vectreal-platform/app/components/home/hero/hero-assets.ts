@@ -1,5 +1,6 @@
 import foldPosterUrl from '../../../assets/home/camera-drawing-fold.webp?url'
 import sheetPosterUrl from '../../../assets/home/camera-drawing-sheet.webp?url'
+import objectUrl from '../../../assets/home/camera-object-sheet.webp?url'
 import shadowUrl from '../../../assets/home/camera-shadow.webp?url'
 
 /**
@@ -28,3 +29,9 @@ export const HERO_POSTERS = {
 } as const
 
 export const HERO_SHADOW_URL = shadowUrl
+
+/**
+ * The camera rendered, shadow and all, in the sheet poster's exact framing, so
+ * the two can be laid over each other. Baked with the posters.
+ */
+export const HERO_OBJECT_URL = objectUrl

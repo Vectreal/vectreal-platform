@@ -328,7 +328,8 @@ export default function HeroStageClient({
 				Object.assign(window, {
 					__heroBake: {
 						shadow: engine.bakedShadowPng,
-						poster: engine.posterPng
+						poster: engine.posterPng,
+						object: engine.objectPng
 					}
 				})
 				return

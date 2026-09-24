@@ -30,6 +30,7 @@ import {
 	HERO_SOURCE_SAMPLE_ID,
 	publisherSampleHref
 } from '../../../lib/samples/sample-models'
+import { inUnitOf } from '../format-bytes'
 
 import type { HeroStageElements } from './hero-stage-client'
 
@@ -39,13 +40,6 @@ const HERO = HOME_PAGE_COPY.hero
 const COPY = HOME_PAGE_COPY.stage
 
 const count = new Intl.NumberFormat('en-US')
-
-/** A byte count in the unit its total is shown in, so a counter never switches from MB to KB as it lands. */
-function inUnitOf(bytes: number, total: number) {
-	return total >= 1_048_576
-		? { value: (bytes / 1_048_576).toFixed(1), unit: 'MB' }
-		: { value: String(Math.round(bytes / 1024)), unit: 'KB' }
-}
 
 /*
   Set on the section by the server, so the first paint already has the poster in
