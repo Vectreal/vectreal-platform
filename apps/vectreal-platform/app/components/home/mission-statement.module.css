@@ -1,0 +1,60 @@
+/*
+  Three sheets in one box, tilted back and turned, the way a layer diagram
+  shows a stack: each sheet lies on its own plane and the planes rise off one
+  another, so every one stays in view. Closed, they lie on one another and only
+  the top shows; apart, each rises one gap above the one under it, the file at
+  the bottom and the page on top.
+*/
+.stack {
+	--gap: clamp(72px, 9vw, 136px);
+	perspective: 2400px;
+	padding-block: 26% 4%;
+}
+.scene {
+	position: relative;
+	width: 68%;
+	margin-inline: auto;
+	aspect-ratio: 1.6;
+	transform-style: preserve-3d;
+	transform: rotateX(56deg) rotateZ(-30deg);
+}
+.layer {
+	position: absolute;
+	inset: 0;
+	border-radius: 1rem;
+	background: color-mix(in oklch, var(--foreground) 5%, transparent);
+	transform: translateZ(0);
+	transition: transform var(--duration-cinematic) var(--ease-out);
+}
+.stack[data-apart] .layer {
+	transform: translateZ(calc(var(--i) * var(--gap)));
+}
+/* The top sheet is the page itself: opaque, so the drawings under it read as under. */
+.front {
+	background: var(--background);
+	box-shadow: 0 32px 64px -32px
+		color-mix(in oklch, var(--foreground) 30%, transparent);
+}
+.art {
+	position: absolute;
+	inset: 6% 8% 18%;
+	display: flex;
+	align-items: center;
+}
+.art > * {
+	width: 100%;
+}
+/* At the front edge: the sheet above covers the back of each one, never its front. */
+.label {
+	position: absolute;
+	bottom: 0.75rem;
+	left: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+	.layer {
+		transition: none;
+	}
+}

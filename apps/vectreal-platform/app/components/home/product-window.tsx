@@ -6,9 +6,18 @@ import {
 } from '@shared/components/ui/tabs'
 import { cn } from '@shared/utils'
 import { ArrowRight } from 'lucide-react'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import {
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+	type CSSProperties
+} from 'react'
 import { Link } from 'react-router'
 
+import { ProductPageSketch } from './product-page-sketch'
+import PRODUCT_SHOTS from './product-shots.json'
+import { ProductStage, type FrameRect } from './product-stage'
 import styles from './product-window.module.css'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import { dissolveIn } from '../../lib/dither/dither'
@@ -32,11 +41,16 @@ const VIEW_ORDER: ProductView[] = ['prepare', 'manage', 'embed']
 const isProductView = (value: string): value is ProductView =>
 	value in COPY.views
 
+/* Where the live camera stands in each screenshot, as the capture recorded it. A view not yet captured borrows Prepare's box. */
+const SHOTS: { prepare: FrameRect; manage?: FrameRect } = PRODUCT_SHOTS
+
 /*
-  Captured from the running app by `scripts/capture-home-product-shots.ts`, one
-  per theme, and replaced in place when the interface moves. The page shows the
-  capture that matches the theme it is in, so a dark page never flashes a white
-  screenshot.
+  Prepare and Manage are screenshots, captured from the running app by
+  `scripts/capture-home-product-shots.ts`, one per theme, and replaced in place
+  when the interface moves. The page shows the capture that matches the theme
+  it is in, so a dark page never flashes a white screenshot. The capture also
+  records where the live camera stands in each (`product-shots.json`). Embed
+  is not a screenshot: it is a shop's page, which no screenshot of ours shows.
 */
 const shotPath = (view: ProductView, theme: 'light' | 'dark') =>
 	`/assets/images/product/${view}-${theme}.webp`
@@ -76,6 +90,38 @@ export const ProductWindow = () => {
 	const windowRef = useRef<HTMLDivElement>(null)
 	const shots = useRef<Partial<Record<ProductView, HTMLDivElement | null>>>({})
 	const cancelDissolve = useRef(() => {})
+	const sceneRef = useRef<HTMLDivElement>(null)
+	const embedSlotRef = useRef<HTMLDivElement>(null)
+	const [embedSlot, setEmbedSlot] = useState<FrameRect | null>(null)
+
+	// The product page is laid out by CSS, so its gallery is measured, as a share of the frame.
+	useLayoutEffect(() => {
+		const scene = sceneRef.current
+		const slot = embedSlotRef.current
+		if (!scene || !slot) return
+		const measure = () => {
+			const frame = scene.getBoundingClientRect()
+			const box = slot.getBoundingClientRect()
+			if (!frame.width || !frame.height) return
+			setEmbedSlot({
+				x: (box.left - frame.left) / frame.width,
+				y: (box.top - frame.top) / frame.height,
+				w: box.width / frame.width,
+				h: box.height / frame.height
+			})
+		}
+		measure()
+		const observer = new ResizeObserver(measure)
+		observer.observe(scene)
+		return () => observer.disconnect()
+	}, [])
+
+	const stagePlace: FrameRect =
+		view === 'embed'
+			? (embedSlot ?? SHOTS.prepare)
+			: view === 'manage'
+				? (SHOTS.manage ?? SHOTS.prepare)
+				: SHOTS.prepare
 
 	const switchTo = (next: string) => {
 		if (!isProductView(next) || next === view) return
@@ -153,35 +199,58 @@ export const ProductWindow = () => {
 			>
 				<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:gap-3">
 					{/* Concentric with the window: its 28px corner less the padding between them. */}
-					<div className="grid overflow-hidden rounded-xl md:rounded-lg">
+					<div
+						ref={sceneRef}
+						className="relative grid overflow-hidden rounded-xl md:rounded-lg"
+					>
 						{VIEW_ORDER.map((one) => (
 							<div
 								key={one}
 								ref={(node) => {
 									shots.current[one] = node
 								}}
-								hidden={one !== view && one !== previous}
 								aria-hidden={one !== view}
-								className={cn('[grid-area:1/1]', one === view && 'z-1')}
+								// Invisible rather than hidden: the product page's gallery is measured while it waits.
+								className={cn(
+									'[grid-area:1/1]',
+									one === view ? 'z-1' : one !== previous && 'invisible'
+								)}
 							>
-								<img
-									src={shotPath(one, 'light')}
-									alt={`The ${COPY.views[one].label} view in the Vectreal app`}
-									width={1200}
-									height={750}
-									loading="lazy"
-									className="block h-auto w-full dark:hidden"
-								/>
-								<img
-									src={shotPath(one, 'dark')}
-									alt={`The ${COPY.views[one].label} view in the Vectreal app`}
-									width={1200}
-									height={750}
-									loading="lazy"
-									className="hidden h-auto w-full dark:block"
-								/>
+								{one === 'embed' ? (
+									<ProductPageSketch
+										gallery={
+											<div ref={embedSlotRef} className="absolute inset-0" />
+										}
+									/>
+								) : (
+									<>
+										<img
+											src={shotPath(one, 'light')}
+											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
+											width={1200}
+											height={750}
+											loading="lazy"
+											className="block h-auto w-full dark:hidden"
+										/>
+										<img
+											src={shotPath(one, 'dark')}
+											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
+											width={1200}
+											height={750}
+											loading="lazy"
+											className="hidden h-auto w-full dark:block"
+										/>
+									</>
+								)}
 							</div>
 						))}
+						<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
+							<ProductStage
+								visible={!offscreen}
+								place={stagePlace}
+								hint={view === 'embed'}
+							/>
+						</div>
 					</div>
 
 					<div className="flex flex-col gap-6 pb-2">
@@ -195,14 +264,17 @@ export const ProductWindow = () => {
 									value={one}
 									className={cn(
 										// The shared trigger's pill states are forced (`!`), so they are cleared the same way; the row styles live in the module.
-										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto justify-start border-0 px-4 py-3 text-left shadow-none data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent',
+										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-1 border-0 px-3 py-3 text-left shadow-none data-[state=active]:bg-transparent! data-[state=active]:shadow-none lg:flex-row lg:items-center lg:gap-0 lg:px-4 dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent',
 										styles.view
 									)}
 								>
 									<span className="text-eyebrow tabular-nums">
 										{String(index + 1).padStart(2, '0')}
 									</span>
-									<span className="text-h4 ml-3">{COPY.views[one].label}</span>
+									{/* Three to a row on a phone: the number sits over the label there, since side by side they do not fit. */}
+									<span className="text-h4 lg:ml-3">
+										{COPY.views[one].label}
+									</span>
 									<span
 										className={styles.fill}
 										aria-hidden="true"

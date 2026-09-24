@@ -12,6 +12,8 @@
  *   as line coverage in the alpha channel, one per framing, because the wide
  *   sheet and the folded card frame the model differently.
  * - `camera-shadow.webp`: the directional shadow as a density image.
+ * - `camera-object-sheet.webp`: the rendered camera, shadow and all, in the
+ *   sheet drawing's exact framing, so the page can lay one over the other.
  *
  * Then prints each poster's ink bounds. Those go into `HERO_POSTERS` in
  * `app/components/home/hero/hero-assets.ts` by hand: the plot travels across
@@ -105,13 +107,21 @@ async function main() {
 				timeout: 120_000
 			})
 
-			const { poster, shadow } = await page.evaluate(() => {
+			const { poster, shadow, object } = await page.evaluate(() => {
 				const bake = (
 					window as unknown as {
-						__heroBake: { poster: () => string; shadow: () => string | null }
+						__heroBake: {
+							poster: () => string
+							shadow: () => string | null
+							object: () => string
+						}
 					}
 				).__heroBake
-				return { poster: bake.poster(), shadow: bake.shadow() }
+				return {
+					poster: bake.poster(),
+					shadow: bake.shadow(),
+					object: bake.object()
+				}
 			})
 
 			const file = `camera-drawing-${framing.name}.webp`
@@ -125,6 +135,12 @@ async function main() {
 					.webp({ quality: 90 })
 					.toFile(path.join(OUTPUT_DIR, 'camera-shadow.webp'))
 				console.log('  wrote camera-shadow.webp')
+				// Only the sheet framing: the page lays it over that drawing alone, at most a few hundred pixels wide.
+				await sharp(fromDataUrl(object))
+					.resize({ width: 1200 })
+					.webp({ quality: 82, alphaQuality: 90 })
+					.toFile(path.join(OUTPUT_DIR, 'camera-object-sheet.webp'))
+				console.log('  wrote camera-object-sheet.webp')
 			}
 			await context.close()
 		}

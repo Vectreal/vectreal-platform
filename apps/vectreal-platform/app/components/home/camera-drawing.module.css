@@ -1,0 +1,26 @@
+.drawing,
+.object {
+	aspect-ratio: var(--crop-aspect);
+}
+.drawing {
+	background: currentColor;
+	mask-image: var(--drawing);
+	mask-repeat: no-repeat;
+	mask-size: var(--crop-w) var(--crop-h);
+	mask-position: var(--crop-x) var(--crop-y);
+}
+.pencil {
+	opacity: 0.16;
+}
+.object {
+	position: relative;
+	overflow: hidden;
+}
+.object img {
+	position: absolute;
+	left: var(--crop-left);
+	top: var(--crop-top);
+	width: var(--crop-w);
+	max-width: none;
+	height: auto;
+}

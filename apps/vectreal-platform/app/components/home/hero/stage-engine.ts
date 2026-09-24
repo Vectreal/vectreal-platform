@@ -24,16 +24,20 @@ import { BAYER4_GLSL, DITHER_CELL_PX } from '../../../lib/dither/dither'
 export interface StageElements {
 	stage: HTMLElement
 	frame: HTMLElement
-	copy: HTMLElement
 	canvas: HTMLCanvasElement
-	dims: SVGSVGElement
-	scale: HTMLElement
+	/** Text set beside the stage: where the model reaches under it, it dissolves. */
+	copy?: HTMLElement
+	/** Where the drawing's dimension lines go, and its scale note. A stage without them draws none. */
+	dims?: SVGSVGElement
+	scale?: HTMLElement
 }
 
 export interface StageOptions {
 	reducedMotion: boolean
 	/** Bake mode: draw the elevation only, whole and unfaded, for a screenshot. */
 	posterMode?: boolean
+	/** Dissolve the model into the page in a band at the stage's top and bottom edges. On by default. */
+	edgeFade?: boolean
 }
 
 /*
@@ -167,7 +171,7 @@ function cssColor(probe: CanvasRenderingContext2D, css: string): THREE.Vector3 {
 }
 
 export function createStageEngine(el: StageElements, options: StageOptions) {
-	const { reducedMotion, posterMode = false } = options
+	const { reducedMotion, posterMode = false, edgeFade = true } = options
 	const renderer = new THREE.WebGLRenderer({
 		canvas: el.canvas,
 		antialias: true,
@@ -513,6 +517,8 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		camera.lookAt(target)
 	}
 
+	/* Bake mode draws the drawing alone, except while baking the rendered object. */
+	let bakingObject = false
 	function frame() {
 		if (!model || !rtN) return
 		controls.update()
@@ -525,13 +531,14 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		ground.visible = true
 		renderer.setRenderTarget(null)
 		renderer.clear()
-		if (!posterMode) renderer.render(scene, camera)
+		if (!posterMode || bakingObject) renderer.render(scene, camera)
 		renderer.autoClear = false
 		renderer.render(quadScene, passCam)
 		renderer.autoClear = true
 		listeners.frame?.()
 	}
 	let raf = 0
+	let disposed = false
 	function request() {
 		if (!raf)
 			raf = requestAnimationFrame(() => {
@@ -557,34 +564,23 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		const style = getComputedStyle(el.stage)
 		frameZoom = parseFloat(style.getPropertyValue('--frame-zoom')) || 1
 		frameY = parseFloat(style.getPropertyValue('--frame-y')) || 0
-		const box = el.frame.getBoundingClientRect()
-		const cx = box.left + box.width / 2 - rect.left
-		const cy = box.top + box.height / 2 - rect.top
-		camera.zoom = ((matchPoster ? frameZoom : 1) * box.height) / h
-		camera.setViewOffset(
-			w,
-			h,
-			w / 2 - cx,
-			h / 2 - cy + box.height * (matchPoster ? frameY : 0),
-			w,
-			h
-		)
-		camera.updateProjectionMatrix()
+		fitCamera()
 
 		// Where the model reaches under the copy it dissolves, over the same zone the poster's mask fades.
-		const copy = el.copy.getBoundingClientRect()
+		const copy = el.copy?.getBoundingClientRect()
 		const beside =
+			!!copy &&
 			!posterMode &&
 			copy.bottom > rect.top + 1 &&
 			copy.right < rect.left + w / 2
-		const copyRight = copy.right - rect.left
+		const copyRight = (copy?.right ?? 0) - rect.left
 		const dpr = renderer.getPixelRatio()
 		uniforms.uFade.value.set(
 			beside ? (copyRight - 24) * dpr : -1,
 			beside ? (copyRight + 96) * dpr : -1
 		)
 		uniforms.uCell.value = DITHER_CELL_PX * dpr
-		uniforms.uVFade.value = posterMode ? 0 : 40 * dpr // a tight band: the frame, not a vignette
+		uniforms.uVFade.value = posterMode || !edgeFade ? 0 : 40 * dpr // a tight band: the frame, not a vignette
 		uniforms.uRes.value.set(w * dpr, h * dpr)
 
 		const ss = Math.min(2, 4096 / (w * dpr))
@@ -602,11 +598,38 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		request()
 	}
 
+	/*
+	  Points the camera at the frame box: zoomed so the model's sphere spans it,
+	  and offset so the sphere's center sits on the box's. Apart from resize, so a
+	  frame that moves can be followed each frame without rebuilding any buffer.
+	*/
+	function fitCamera() {
+		const rect = el.stage.getBoundingClientRect()
+		const w = Math.ceil(rect.width)
+		const h = Math.ceil(rect.height)
+		if (!w || !h) return
+		const box = el.frame.getBoundingClientRect()
+		const cx = box.left + box.width / 2 - rect.left
+		const cy = box.top + box.height / 2 - rect.top
+		// A poster's framing is set by its height. A sphere is round, so without one it fits the box's shorter side.
+		const span = matchPoster
+			? frameZoom * box.height
+			: Math.min(box.width, box.height)
+		camera.zoom = span / h
+		camera.setViewOffset(
+			w,
+			h,
+			w / 2 - cx,
+			h / 2 - cy + box.height * (matchPoster ? frameY : 0),
+			w,
+			h
+		)
+		camera.updateProjectionMatrix()
+	}
+
 	/* Dimension lines, measured off the model's real bounds and projected into the sheet. */
 	function drawDims() {
 		if (!bounds) return
-		const svg = el.dims
-		svg.innerHTML = ''
 		const w = el.stage.clientWidth
 		const h = el.stage.clientHeight
 		const p = (v: THREE.Vector3) => {
@@ -658,7 +681,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 					: `<text x="${mx - 10}" y="${my}" text-anchor="middle" transform="rotate(-90 ${mx - 10} ${my})">${label}</text>`
 		}
 		// Numbers only: nothing from the file itself is written here.
-		svg.innerHTML = markup
+		if (el.dims) el.dims.innerHTML = markup
 
 		// The sweep front spans the model's projected width plus the 16px the loading front overhangs by.
 		let x0 = Infinity
@@ -679,6 +702,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 
 		// Scale, honestly: CSS pixels at 96 dpi against the model's real length. A small object is drawn larger than life, and a drawing says so the other way round: 2:1, not 1:0.5.
 		const pxLen = (Math.hypot(bx - ax, by - ay) * 0.2646) / 1000
+		if (!el.scale) return
 		if (real > 0.01 && real < 50) {
 			const r = real / pxLen
 			el.scale.textContent =
@@ -793,6 +817,30 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		return running
 	}
 
+	/* The frame's box out of the canvas, as a PNG data URL: what the bakes save. */
+	function cropToFrame() {
+		const canvas = el.canvas.getBoundingClientRect()
+		const box = el.frame.getBoundingClientRect()
+		const k = el.canvas.width / canvas.width
+		const crop = document.createElement('canvas')
+		crop.width = Math.round(box.width * k)
+		crop.height = Math.round(box.height * k)
+		crop
+			.getContext('2d')!
+			.drawImage(
+				el.canvas,
+				(box.left - canvas.left) * k,
+				(box.top - canvas.top) * k,
+				crop.width,
+				crop.height,
+				0,
+				0,
+				crop.width,
+				crop.height
+			)
+		return crop.toDataURL('image/png')
+	}
+
 	const listeners: { frame?: () => void } = {}
 	const loader = new GLTFLoader()
 	const draco = new DRACOLoader()
@@ -819,6 +867,12 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		) {
 			// Parsed first: a file that will not parse must leave the model on stage, and its framing, as they were.
 			const gltf = await loader.parseAsync(buffer, '')
+			// Torn down while it parsed: placing it now would build render targets on a renderer that is gone.
+			if (disposed) {
+				release(gltf.scene)
+				bakedShadow?.dispose()
+				return
+			}
 			running?.cancel()
 			matchPoster = poster
 			const size = new THREE.Box3()
@@ -828,8 +882,8 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			turned = false
 			uniforms.uReveal.value = 0
 			controls.enabled = false
-			el.dims.removeAttribute('data-gone')
-			el.scale.removeAttribute('data-gone')
+			el.dims?.removeAttribute('data-gone')
+			el.scale?.removeAttribute('data-gone')
 			place(gltf.scene, bakedShadow)
 			resize()
 			frame()
@@ -841,8 +895,8 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 				const u = uniforms.uReveal
 				const turn = () => {
 					turned = true
-					el.dims.setAttribute('data-gone', '')
-					el.scale.setAttribute('data-gone', '')
+					el.dims?.setAttribute('data-gone', '')
+					el.scale?.setAttribute('data-gone', '')
 					// Yours the moment it is an object: the turn runs, but a grab takes over from it.
 					controls.target.copy(target)
 					controls.update()
@@ -879,6 +933,11 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 				)
 			})
 		},
+		/** Refits the camera to the frame box where it is now: for a frame that moves while the stage keeps its size. */
+		fit() {
+			fitCamera()
+			request()
+		},
 		/** The camera's azimuth from the drawing's face, for the backdrop's light to follow. */
 		azimuth: () => (turned ? controls.getAzimuthalAngle() - side : 0),
 		onFrame(listener: () => void) {
@@ -889,28 +948,20 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		/** Bake mode only: the drawing inside the frame, as a PNG data URL whose alpha is the line coverage. */
 		posterPng() {
 			frame()
-			const canvas = el.canvas.getBoundingClientRect()
-			const box = el.frame.getBoundingClientRect()
-			const k = el.canvas.width / canvas.width
-			const crop = document.createElement('canvas')
-			crop.width = Math.round(box.width * k)
-			crop.height = Math.round(box.height * k)
-			crop
-				.getContext('2d')!
-				.drawImage(
-					el.canvas,
-					(box.left - canvas.left) * k,
-					(box.top - canvas.top) * k,
-					crop.width,
-					crop.height,
-					0,
-					0,
-					crop.width,
-					crop.height
-				)
-			return crop.toDataURL('image/png')
+			return cropToFrame()
+		},
+		/** Bake mode only: the rendered object in the drawing's exact framing, so the two can be laid over each other. */
+		objectPng() {
+			const reveal = uniforms.uReveal.value
+			uniforms.uReveal.value = 1.02 // past the sweep: nothing inked, nothing erased
+			bakingObject = true
+			frame()
+			bakingObject = false
+			uniforms.uReveal.value = reveal
+			return cropToFrame()
 		},
 		dispose() {
+			disposed = true
 			running?.cancel()
 			cancelAnimationFrame(raf)
 			themeObserver.disconnect()
