@@ -22,6 +22,7 @@ import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useOptimizationDrawerFlow, usePublisherScene } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
+import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
 import {
@@ -136,6 +137,8 @@ const OverlayControls = ({
 			(navigation.state === 'loading' &&
 				Boolean(navigation.location?.pathname?.startsWith('/publisher')))
 	})
+	// Here rather than in the drop zone, which a revalidation unmounts mid-download: see its `sampleDownload`.
+	const sampleDownload = useSampleDownload()
 
 	/*
 	  Waiting for an upload: there is nothing to frame yet, so the site nav stands
@@ -321,7 +324,11 @@ const OverlayControls = ({
 	if (showSiteNav) {
 		return (
 			<div className="relative flex min-h-0 flex-1 flex-col">
-				<DropZone isMobile={isMobile} onUpload={uploadFiles} />
+				<DropZone
+					isMobile={isMobile}
+					onUpload={uploadFiles}
+					sampleDownload={sampleDownload}
+				/>
 			</div>
 		)
 	}

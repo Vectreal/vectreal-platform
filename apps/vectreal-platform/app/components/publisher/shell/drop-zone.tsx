@@ -23,17 +23,22 @@ import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
-import {
-	fetchSampleModel,
-	PUBLISHER_SAMPLE_PARAM,
-	sampleModelById
-} from '../../../lib/samples/sample-models'
+import { type SampleDownloader } from '../../../hooks/use-sample-download'
+import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
 import { SampleTiles } from '../../layout-components/sample-tiles'
 
 interface Props {
 	isMobile?: boolean
 	/** Loads the dropped files and takes care of everything a new scene needs. */
 	onUpload: (files: InputFileOrDirectory) => Promise<unknown>
+	/**
+	 * The sample download, owned by the shell rather than by this screen. A
+	 * link that names a sample takes the param off the URL, and that navigation
+	 * revalidates the publisher, which shows its loading surface and unmounts
+	 * this one while the download runs on. Held in here, the state went with it
+	 * and the tiles came back idle and clickable halfway through 18 MB.
+	 */
+	sampleDownload: SampleDownloader
 }
 
 /**
@@ -58,7 +63,7 @@ const BUNDLE_HINT = `A ${BUNDLE_FORMAT_IDS.map(
 	(id) => `.${modelFormat(id).extension}`
 ).join(' or ')} needs the folder holding everything it points at`
 
-export const DropZone = ({ isMobile, onUpload }: Props) => {
+export const DropZone = ({ isMobile, onUpload, sampleDownload }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 
 	/* `useModelFileInputs` owns why there are two of these. */
@@ -83,20 +88,20 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 		[onUpload]
 	)
 
+	const { download, openSample: downloadSample } = sampleDownload
 	const openSample = useCallback(
 		async (id: string) => {
-			const sample = sampleModelById(id)
-			if (!sample) return
-
 			try {
-				await onUpload([await fetchSampleModel(sample)] as InputFileOrDirectory)
+				await downloadSample(id, (file) =>
+					onUpload([file] as InputFileOrDirectory)
+				)
 			} catch {
 				toast.error(
 					'The sample could not be opened. Try your own file instead.'
 				)
 			}
 		},
-		[onUpload]
+		[downloadSample, onUpload]
 	)
 
 	/*
@@ -179,6 +184,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 										label="Nothing to hand?"
 										onOpen={(id) => void openSample(id)}
 										onBeforeOpen={stopDropzoneTrigger}
+										download={download}
 									/>
 								</div>
 							) : (
@@ -265,6 +271,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 											label="Nothing to hand?"
 											onOpen={(id) => void openSample(id)}
 											onBeforeOpen={stopDropzoneTrigger}
+											download={download}
 										/>
 									</div>
 								</Card>

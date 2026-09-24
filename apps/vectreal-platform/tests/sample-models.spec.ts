@@ -9,11 +9,12 @@ import { readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { readGlbContents } from '../app/lib/samples/glb-contents'
 import {
 	HERO_MODEL,
+	fetchSampleModel,
 	HERO_SOURCE_SAMPLE_ID,
 	SAMPLE_MODELS,
 	sampleModelById
@@ -98,5 +99,44 @@ describe('sample models', () => {
 			)
 			expect(HERO_MODEL.bytes).toBeLessThan(HERO_MODEL.sourceBytes)
 		})
+	})
+})
+
+/*
+  The download reports how far it is, so a tile can show it. Progress is
+  measured against the declared size, which is the size on disk, and the file
+  that arrives is every chunk the stream delivered.
+*/
+describe('fetching a sample', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals()
+	})
+
+	it('reports progress against its size and delivers every byte', async () => {
+		const chunks = [new Uint8Array(2), new Uint8Array(6)]
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue({
+				ok: true,
+				body: {
+					getReader: () => ({
+						read: async () =>
+							chunks.length
+								? { done: false, value: chunks.shift() }
+								: { done: true, value: undefined }
+					})
+				}
+			})
+		)
+		const progress: number[] = []
+
+		const file = await fetchSampleModel(
+			{ ...SAMPLE_MODELS[0], bytes: 8 },
+			(fraction) => progress.push(fraction)
+		)
+
+		expect(progress).toEqual([0.25, 1])
+		expect(file.size).toBe(8)
+		expect(file.name).toBe(SAMPLE_MODELS[0].fileName)
 	})
 })
