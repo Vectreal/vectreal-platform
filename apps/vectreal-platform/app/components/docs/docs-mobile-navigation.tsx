@@ -45,7 +45,7 @@ export function DocsMobileNavigation({
 	  400px once two 256px rails are up. The sheet costs a click and no width.
 	*/
 	return (
-		<div className="flex items-center justify-between gap-3 xl:hidden">
+		<div className="flex min-w-0 items-center justify-between gap-3 xl:hidden">
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetTrigger asChild>{children}</SheetTrigger>
 				<SheetContent side="left" className="w-[90vw] max-w-sm">

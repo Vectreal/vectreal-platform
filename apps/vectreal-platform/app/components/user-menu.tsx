@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { CONVERT_INDEX_PATH } from '../lib/convert/convert-pairs'
+import { ACCOUNT } from '../lib/navigation/site-map'
 
 interface UserMenuProps {
 	user: User
@@ -25,6 +26,41 @@ interface UserMenuProps {
 	size?: 'sm' | 'md'
 	onLogout: () => void
 	sceneDetailsHref?: string
+}
+
+/** What to greet the reader by: their first name, else their email. */
+export const userFirstName = (user: User) =>
+	user.user_metadata?.full_name?.split(' ').at(0) ||
+	user.user_metadata?.name?.split(' ').at(0) ||
+	user.email
+
+export function UserAvatar({
+	user,
+	size = 'md',
+	className
+}: {
+	user: User
+	size?: 'sm' | 'md'
+	className?: string
+}) {
+	return (
+		<Avatar
+			className={cn(
+				'rounded-lg',
+				size === 'sm' ? 'h-7 w-7' : 'h-8 w-8',
+				className
+			)}
+		>
+			<AvatarImage
+				className="rounded-lg"
+				src={user.user_metadata?.avatar_url || ''}
+				alt={user.user_metadata?.full_name || 'User Avatar'}
+			/>
+			<AvatarFallback className="rounded-lg">
+				{user.user_metadata?.full_name?.charAt(0) || 'U'}
+			</AvatarFallback>
+		</Avatar>
+	)
 }
 
 /**
@@ -39,8 +75,6 @@ export function UserMenu({
 }: UserMenuProps) {
 	const navigate = useNavigate()
 	const [isClientMounted, setIsClientMounted] = useState(false)
-	const userImageSrc = user?.user_metadata?.avatar_url || ''
-	const userInitial = user.user_metadata?.full_name?.charAt(0) || 'U'
 
 	useEffect(() => {
 		setIsClientMounted(true)
@@ -50,31 +84,7 @@ export function UserMenu({
 		await navigate(to, { viewTransition: true })
 	}
 
-	const avatar = (
-		<Avatar
-			className={cn(
-				'rounded-lg',
-				{
-					'h-7 w-7 rounded-lg': size === 'sm',
-					'h-8 w-8': size === 'md' || !size
-				},
-				className
-			)}
-		>
-			<AvatarImage
-				className={cn('rounded-lg', {
-					'rounded-lg': size === 'sm'
-				})}
-				src={userImageSrc}
-				alt={user.user_metadata?.full_name || 'User Avatar'}
-			/>
-			<AvatarFallback
-				className={cn('rounded-lg', { 'rounded-lg': size === 'sm' })}
-			>
-				{userInitial}
-			</AvatarFallback>
-		</Avatar>
-	)
+	const avatar = <UserAvatar user={user} size={size} className={className} />
 
 	if (!isClientMounted) {
 		return (
@@ -98,25 +108,12 @@ export function UserMenu({
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="bottom" className="ml-4 min-w-64 capitalize">
-				<DropdownMenuLabel>
-					Hey,{' '}
-					{user.user_metadata?.full_name?.split(' ').at(0) ||
-						user.user_metadata?.name?.split(' ').at(0) ||
-						user.email}
-					!
-				</DropdownMenuLabel>
+				<DropdownMenuLabel>Hey, {userFirstName(user)}!</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={() => handleMenuItemClick('/publisher')}>
 					Publisher
 				</DropdownMenuItem>
-				{/*
-				  Beside the publisher, because this group is the tools and the
-				  converters are one. `nav-items.tsx` keeps tools out of the marketing
-				  nav and names this menu as where the publisher stays reachable once
-				  someone is signed in; the converters were reachable from the footer
-				  and nowhere else, which left a signed-in visitor with no route to
-				  them at all.
-				*/}
+				{/* Beside the publisher, because this group is the tools and the converters are one. */}
 				<DropdownMenuItem
 					onClick={() => handleMenuItemClick(CONVERT_INDEX_PATH)}
 				>
@@ -124,9 +121,6 @@ export function UserMenu({
 				</DropdownMenuItem>
 				<DropdownMenuSeparator />
 
-				<DropdownMenuItem onClick={() => handleMenuItemClick('/dashboard')}>
-					Dashboard
-				</DropdownMenuItem>
 				{sceneDetailsHref ? (
 					<DropdownMenuItem
 						onClick={() => handleMenuItemClick(sceneDetailsHref)}
@@ -134,21 +128,14 @@ export function UserMenu({
 						Scene Details
 					</DropdownMenuItem>
 				) : null}
-				<DropdownMenuItem
-					onClick={() => handleMenuItemClick('/dashboard/projects')}
-				>
-					Projects
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					onClick={() => handleMenuItemClick('/dashboard/organizations')}
-				>
-					Organizations
-				</DropdownMenuItem>
-				<DropdownMenuItem
-					onClick={() => handleMenuItemClick('/dashboard/settings')}
-				>
-					Settings
-				</DropdownMenuItem>
+				{ACCOUNT.map((link) => (
+					<DropdownMenuItem
+						key={link.to}
+						onClick={() => handleMenuItemClick(link.to)}
+					>
+						{link.label}
+					</DropdownMenuItem>
+				))}
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={onLogout}>Log Out</DropdownMenuItem>
 			</DropdownMenuContent>

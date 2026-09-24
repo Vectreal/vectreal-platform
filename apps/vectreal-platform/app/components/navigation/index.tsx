@@ -1,10 +1,10 @@
 import { usePostHog } from '@posthog/react'
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useFetcher, useLocation } from 'react-router'
 
 import DesktopNav from './desktop-nav'
 import MobileNav from './mobile-nav'
-import { MARKETING_ITEMS } from './nav-items'
+import { useScrolledPast } from './use-scrolled-past'
 import { useCurrentUser } from '../../hooks/use-current-user'
 
 function isAuthPath(pathname: string): boolean {
@@ -31,6 +31,8 @@ export const Navigation = () => {
 
 	const isHomePage = pathname === '/' || pathname === '/home'
 	const isAuthPage = isAuthPath(pathname)
+	const topMarker = useRef<HTMLDivElement>(null)
+	const scrolled = useScrolledPast(topMarker)
 
 	const handleLogout = useCallback(async () => {
 		posthog?.reset()
@@ -42,20 +44,26 @@ export const Navigation = () => {
 
 	return (
 		<>
+			{/* The top of the page: once it is out of view, content is running under the bars. */}
+			<div
+				ref={topMarker}
+				aria-hidden="true"
+				className="pointer-events-none absolute top-0 left-0 h-2 w-px"
+			/>
 			<DesktopNav
-				className="hidden md:flex"
+				className="hidden md:block"
 				user={user}
-				navItems={MARKETING_ITEMS}
 				onLogout={handleLogout}
 				isAuthPage={isAuthPage}
+				scrolled={scrolled}
 			/>
 			<MobileNav
 				className="flex md:hidden"
 				user={user}
-				navItems={MARKETING_ITEMS}
 				onLogout={handleLogout}
 				isHomePage={isHomePage}
 				isAuthPage={isAuthPage}
+				scrolled={scrolled}
 			/>
 		</>
 	)
