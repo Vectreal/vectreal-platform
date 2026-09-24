@@ -19,7 +19,10 @@ const BARREL = resolve(
 	import.meta.dirname,
 	'../app/components/layout-components/index.ts'
 )
-const MANIFEST = resolve(import.meta.dirname, '../app/lib/news/news-manifest.ts')
+const MANIFEST = resolve(
+	import.meta.dirname,
+	'../app/lib/news/news-manifest.ts'
+)
 
 function resolveModule(from: string, specifier: string): string | null {
 	const base = resolve(dirname(from), specifier)
