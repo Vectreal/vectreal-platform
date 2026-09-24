@@ -448,16 +448,28 @@
 	.br {
 		bottom: 16px;
 	}
+	/*
+	  Four full-width rows on a six-column track: the file, its three counts,
+	  what it weighed against what it weighs now, and the status. Auto columns
+	  hugged their values and stacked seven rows down the left edge.
+	*/
 	.readout {
 		--v-size: 20px;
 		padding: 0;
 		margin: 0 24px 44px;
-		grid-template-columns: repeat(2, auto);
-		justify-content: start;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		column-gap: clamp(12px, 4vw, 16px);
+	}
+	.count {
+		grid-column: span 2;
+	}
+	.original,
+	.size {
+		grid-column: span 3;
 	}
 	.file,
 	.status {
-		grid-column: span 2;
+		grid-column: 1 / -1;
 	}
 	.status {
 		justify-self: start;
@@ -468,6 +480,18 @@
 	}
 	.scale {
 		display: none;
+	}
+}
+
+/* A folded sheet wide enough to hold every figure on one line does, between the file and the status. */
+@media (min-width: 560px) and (max-width: 1099px) {
+	.readout {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+	.count,
+	.original,
+	.size {
+		grid-column: auto;
 	}
 }
 

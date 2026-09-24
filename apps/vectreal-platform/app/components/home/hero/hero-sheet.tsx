@@ -361,15 +361,15 @@ function Readout({ store }: { store: HeroStore }) {
 				<Cell label={COPY.readouts.file} className={styles.file}>
 					<span className={styles.value}>{readout.fileName}</span>
 				</Cell>
-				<Cell label={COPY.readouts.materials}>
+				<Cell label={COPY.readouts.materials} className={styles.count}>
 					<span className={styles.value}>
 						{count.format(readout.materials)}
 					</span>
 				</Cell>
-				<Cell label={COPY.readouts.vertices}>
+				<Cell label={COPY.readouts.vertices} className={styles.count}>
 					<span className={styles.value}>{count.format(readout.vertices)}</span>
 				</Cell>
-				<Cell label={COPY.readouts.textures}>
+				<Cell label={COPY.readouts.textures} className={styles.count}>
 					<span className={styles.value}>{count.format(readout.textures)}</span>
 				</Cell>
 				{original && (
@@ -393,7 +393,7 @@ function SizeCell({ store }: { store: HeroStore }) {
 	const got = inUnitOf(shown, total)
 	const of = inUnitOf(total, total)
 	return (
-		<Cell label={COPY.readouts.size}>
+		<Cell label={COPY.readouts.size} className={styles.size}>
 			<span
 				className={styles.value}
 				data-done={shown >= total ? '' : undefined}
