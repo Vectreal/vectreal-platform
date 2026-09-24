@@ -12,10 +12,10 @@
  * cannot serve both.
  */
 
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { modelAcceptPattern } from '@vctrl/core/model-formats'
 import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DropZone } from './drop-zone'
@@ -170,5 +170,51 @@ describe('choosing a model', () => {
 		fileInput?.dispatchEvent(new Event('change', { bubbles: true }))
 
 		expect(fileInput?.value).toBe('')
+	})
+})
+
+/*
+  The home page's "open the camera" link names a sample in the URL, so the
+  publisher opens it on arrival through the same path a tile click takes.
+*/
+describe('a sample named by the link', () => {
+	function LocationProbe() {
+		return <output data-testid="search">{useLocation().search}</output>
+	}
+
+	function renderAt(search: string) {
+		const onUpload = vi.fn().mockResolvedValue(undefined)
+		render(
+			<MemoryRouter initialEntries={[`/publisher${search}`]}>
+				<DropZone onUpload={onUpload} />
+				<LocationProbe />
+			</MemoryRouter>
+		)
+		return onUpload
+	}
+
+	beforeEach(() => {
+		// `fetchSampleModel` reads only these two; jsdom's Blob cannot go through Node's Response.
+		globalThis.fetch = vi
+			.fn()
+			.mockResolvedValue({ ok: true, blob: async () => new Blob(['glTF']) })
+	})
+
+	it('opens that sample and takes the param off the URL', async () => {
+		const onUpload = renderAt('?sample=rocket')
+
+		await waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1))
+		const [files] = onUpload.mock.calls[0] as [File[]]
+		expect(files[0].name).toBe('rocket.glb')
+		expect(screen.getByTestId('search').textContent).toBe('')
+	})
+
+	it('opens nothing for a sample it does not know', async () => {
+		const onUpload = renderAt('?sample=not-a-sample')
+
+		await waitFor(() =>
+			expect(screen.getByTestId('search').textContent).toBe('')
+		)
+		expect(onUpload).not.toHaveBeenCalled()
 	})
 })

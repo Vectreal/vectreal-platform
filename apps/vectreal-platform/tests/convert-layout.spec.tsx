@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The converter family has one header and one rail, and both follow the URL.
+ * The converter family has one header and one switcher, and both follow the URL.
  *
  * The pair pages shipped without either: each rendered a bare heading of its
  * own and linked to no sibling, so `/convert/glb-to-gltf` and
@@ -73,24 +73,27 @@ describe('the converter layout heads the page from the path', () => {
 	})
 })
 
-describe('the rail reaches every converter from every pair page', () => {
+describe('every pair page reaches every converter', () => {
+	/*
+	  Across the page, not inside the switcher. The switcher offers only the
+	  current source's targets, so the chooser under the converter is what keeps
+	  every pair one link from every pair; this is the invariant, wherever on the
+	  page it is kept.
+	*/
 	it.each(CONVERT_PAIRS.map(convertPairPath))(
 		'links all of them from %s',
 		async (pathname) => {
-			renderAt(pathname)
+			const { container } = renderAt(pathname)
+			await screen.findByRole('navigation', { name: 'Converters' })
 
-			const rail = await screen.findByRole('navigation', {
-				name: 'Converters'
-			})
-
+			const hrefs = [...container.querySelectorAll('a')].map((link) =>
+				link.getAttribute('href')
+			)
 			for (const pair of CONVERT_PAIRS) {
-				const href = convertPairPath(pair)
 				expect(
-					[...rail.querySelectorAll('a')].map((link) =>
-						link.getAttribute('href')
-					),
-					`${pathname} does not link ${href}`
-				).toContain(href)
+					hrefs,
+					`${pathname} does not link ${convertPairPath(pair)}`
+				).toContain(convertPairPath(pair))
 			}
 		}
 	)
@@ -99,8 +102,10 @@ describe('the rail reaches every converter from every pair page', () => {
 		const open = CONVERT_PAIRS[0]
 		renderAt(convertPairPath(open))
 
-		const rail = await screen.findByRole('navigation', { name: 'Converters' })
-		const current = [...rail.querySelectorAll('[aria-current="page"]')]
+		const switcher = await screen.findByRole('navigation', {
+			name: 'Converters'
+		})
+		const current = [...switcher.querySelectorAll('[aria-current="page"]')]
 
 		expect(current).toHaveLength(1)
 		expect(current[0].getAttribute('href')).toBe(convertPairPath(open))
@@ -109,10 +114,14 @@ describe('the rail reaches every converter from every pair page', () => {
 	it('leads back to the index from every pair page', async () => {
 		for (const pair of CONVERT_PAIRS) {
 			const view = renderAt(convertPairPath(pair))
-			const rail = await screen.findByRole('navigation', { name: 'Converters' })
+			const switcher = await screen.findByRole('navigation', {
+				name: 'Converters'
+			})
 
 			expect(
-				[...rail.querySelectorAll('a')].map((link) => link.getAttribute('href'))
+				[...switcher.querySelectorAll('a')].map((link) =>
+					link.getAttribute('href')
+				)
 			).toContain(CONVERT_INDEX_PATH)
 
 			view.unmount()
@@ -122,11 +131,12 @@ describe('the rail reaches every converter from every pair page', () => {
 
 describe('the index is the chooser, so it carries the links itself', () => {
 	/*
-	  The rail is suppressed there on purpose. This is the pair of assertions
-	  that keeps that from quietly becoming "the index links nothing": the rail
-	  must be absent AND every conversion must still be one click away.
+	  The switcher is suppressed there on purpose. This is the pair of
+	  assertions that keeps that from quietly becoming "the index links
+	  nothing": the switcher must be absent AND every conversion must still be
+	  one click away.
 	*/
-	it('renders no rail', async () => {
+	it('renders no switcher', async () => {
 		renderAt(CONVERT_INDEX_PATH)
 
 		await screen.findByRole('heading', { level: 1 })

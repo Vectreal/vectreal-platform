@@ -79,8 +79,8 @@ const CONTAINER_SCALE = ['detail-panel', 'measure']
  * survives. Seven call sites pair a rung with a text colour, and three changed
  * behaviour when this landed - all correctly, none deliberately.
  * `ui/select.tsx` group headings moved from foreground to the muted colour
- * their class had always asked for. `home/section/section-label.tsx` started
- * rendering its brand colour, which then had to come off 70% alpha to stay
+ * their class had always asked for. The old home page's section label (since
+ * deleted) started rendering its brand colour, which then had to come off 70% alpha to stay
  * legible at 11px. And `layout-components/article-meta.tsx` moved to muted on
  * every newsroom card, row, hero and article header - the widest-reaching of
  * the three, and the one nobody noticed.

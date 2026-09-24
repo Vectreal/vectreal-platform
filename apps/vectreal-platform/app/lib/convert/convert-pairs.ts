@@ -177,7 +177,11 @@ export interface ConvertPair {
 	/** How the source format is written in prose and headings. */
 	fromLabel: string
 	toLabel: string
-	/** `<title>` and H1. Kept close to the query on purpose. */
+	/**
+	 * `<title>`, kept close to the query on purpose. The H1 says the same from
+	 * the two labels, so it can change them in place; the layout spec holds the
+	 * two equal.
+	 */
 	title: string
 	/** Meta description and the page's opening line. */
 	description: string

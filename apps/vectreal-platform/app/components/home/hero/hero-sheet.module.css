@@ -1,0 +1,481 @@
+@reference '../../../../../../shared/components/src/styles/globals.css';
+
+/*
+  The hero is a drawing sheet: one grid that fills the fold. Copy and stage share
+  the first row, the readout owns the second, so nothing can overlap and nothing
+  can be pushed out of the fold. The stage alone runs full-bleed; the content
+  keeps the page measure (`.container-page`), so the headline, the nav's logo and
+  every section below start on one line.
+
+  A drafting frame holds it together: the content edges, the nav's bottom edge
+  (`--frame-top`) and a line above the fold's edge (`--frame-bottom`). The nav
+  rests on the frame rather than stacking a second row under it. Registration
+  marks sit on the four crossings and the figure label runs along the bottom
+  line, where a drawing keeps its title block.
+
+  This file is the single owner of where the model is framed. The frame box is
+  placed here, by CSS, so the server-rendered poster is in the right place at
+  first paint; the stage engine reads the box back rather than computing it.
+*/
+
+.outer {
+	/* The gutter is measured on the section, so it has to be a container. */
+	container-type: inline-size;
+	position: relative;
+}
+
+.sheet {
+	--gutter: max(
+		var(--space-6),
+		calc((100cqw - var(--container-max)) / 2 + var(--space-6))
+	);
+	--copy-w: 30rem;
+	--frame-top: 64px; /* the nav's bottom edge: the nav sits on the frame's top rule */
+	--frame-bottom: 32px;
+	/* The backdrop's two inks. The engine reads them as tokens, so the fold (which drops the sheet's surface) keeps them. */
+	--hero-pool: var(--background);
+	--hero-grain: color-mix(in oklch, var(--foreground) 7%, var(--background));
+
+	position: relative;
+	/* Its own stacking context, so the backdrop at z-index -1 paints over the sheet's surface rather than under it. */
+	isolation: isolate;
+	display: grid;
+	grid-template-columns: minmax(340px, var(--copy-w)) minmax(0, 1fr);
+	/* The fold is the viewport's height but never shorter than the copy: on a short window the sheet grows and the readout moves down, rather than the copy running into it. */
+	grid-template-rows: minmax(min-content, 1fr) auto;
+	column-gap: clamp(32px, 4vw, 80px);
+	min-height: clamp(620px, 100dvh, 1200px);
+	/* The stage starts 56px below the top rule, so the nav keeps clear air and the model its size. */
+	padding: calc(var(--frame-top) + 56px) var(--gutter)
+		calc(var(--frame-bottom) + 40px);
+}
+:global(.dark) .sheet {
+	--hero-pool: color-mix(in oklch, var(--foreground) 7%, var(--background));
+	--hero-grain: color-mix(in oklch, var(--foreground) 9%, var(--background));
+}
+
+/*
+  The sheet's bottom edge dissolves into the page instead of ending on a line:
+  a band of the sheet's own surface below it, masked by the dither ramp the
+  component passes in as `--sheet-edge`.
+*/
+.sheet::after {
+	content: '';
+	position: absolute;
+	inset: 100% 0 auto;
+	height: 24px;
+	background: inherit;
+	mask-image: var(--sheet-edge);
+	mask-size: 8px 24px;
+	mask-repeat: repeat-x;
+	pointer-events: none;
+}
+
+.backdrop {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	z-index: -1;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity var(--duration-cinematic) var(--ease-out);
+}
+.backdrop[data-ready] {
+	opacity: 1;
+}
+
+/* margin-block counts toward the row's min-content, so on a short window the copy keeps air above the readout; centered in a tall one, it changes nothing. */
+.copy {
+	grid-area: 1 / 1;
+	align-self: center;
+	position: relative;
+	z-index: 2;
+	margin-block: 24px;
+}
+
+.figure {
+	display: contents;
+}
+
+/* The stage spans the whole fold, edge to edge. */
+.stage {
+	--frame-zoom: 1.12;
+	--frame-y: 0.03;
+
+	grid-area: 1 / 1 / 2 / 3;
+	margin-inline: calc(-1 * var(--gutter));
+	min-height: 0;
+	position: relative;
+	container-type: size;
+	overflow: hidden;
+}
+
+/*
+  The frame: a 4:3 box as tall as the stage allows, centered in the room right of
+  the copy but never so far right it leaves the window. On a narrower screen that
+  pushes it under the copy, and the dissolve takes over there. The copy's right
+  edge and the readout's right edge sit symmetrically in the gutters, so their
+  midpoint is (stage width + copy width) / 2 whatever the gutter is.
+*/
+.frame {
+	--box: min(100cqh, 75cqw);
+	--cx: min(
+		calc((100cqw + var(--copy-w)) / 2),
+		calc(100cqw - var(--box) * 0.56)
+	);
+
+	position: absolute;
+	top: calc((100cqh - var(--box)) / 2);
+	left: calc(var(--cx) - var(--box) * 2 / 3);
+	height: var(--box);
+	aspect-ratio: 4 / 3;
+	pointer-events: none;
+}
+
+/*
+  Everything drawn on the stage besides the live canvas (the poster, the
+  dimensions) fades out where it reaches under the copy. The shader dithers the
+  live frame; these follow with the same zone as a plain fade.
+*/
+.art {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	mask-image: linear-gradient(
+		to right,
+		transparent calc(var(--gutter) + var(--copy-w) - 24px),
+		black calc(var(--gutter) + var(--copy-w) + 96px)
+	);
+}
+
+/*
+  The poster: the line drawing as a mask, filled with the ink color, so one
+  asset serves both themes. It is there from the first paint, in pencil, and the
+  plot inks it left to right as the model's bytes arrive. The front and the ink
+  travel only across the drawing (`--ink-*`, measured when the poster was baked).
+*/
+.poster,
+.pencil {
+	position: absolute;
+	inset: 0;
+	background: var(--foreground);
+	mask-image: var(--poster);
+	mask-size: 100% 100%;
+	transition: opacity var(--duration-base);
+}
+.pencil {
+	opacity: 0.16;
+}
+.frame {
+	/* The poster and its ink bounds come in per framing from the component; the fold picks its own below. */
+	--poster: var(--poster-sheet);
+	--ink-l: var(--ink-l-sheet);
+	--ink-r: var(--ink-r-sheet);
+	--ink-t: var(--ink-t-sheet);
+	--ink-b: var(--ink-b-sheet);
+	--plot: 0;
+	--at: calc(
+		(var(--ink-l) + var(--plot) * (var(--ink-r) - var(--ink-l))) * 100%
+	);
+}
+.poster {
+	clip-path: inset(0 calc(100% - var(--at)) 0 0);
+}
+/* Once the live canvas has drawn the model, it is the drawing; the poster steps aside. */
+.stage:not([data-phase='poster']) .poster,
+.stage:not([data-phase='poster']) .pencil {
+	opacity: 0;
+}
+
+.front {
+	position: absolute;
+	top: calc(var(--ink-t) * 100% - 16px);
+	bottom: calc((1 - var(--ink-b)) * 100% - 16px);
+	left: var(--at);
+	width: 1px;
+	background: var(--orange);
+	opacity: 0;
+	transition: opacity var(--duration-slow) var(--ease-out);
+}
+.stage[data-receiving] .front {
+	opacity: 1;
+}
+
+/* Sized explicitly: an absolutely positioned SVG keeps its 300 by 150 default under inset: 0. */
+.canvas {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+.stage[data-turnable] .canvas {
+	cursor: grab;
+}
+.stage[data-turnable] .canvas:active {
+	cursor: grabbing;
+}
+
+.dims {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+	transition: opacity 500ms;
+}
+.dims[data-gone] {
+	opacity: 0;
+}
+.dims line {
+	stroke: var(--muted-foreground);
+	stroke-width: 1;
+	vector-effect: non-scaling-stroke;
+}
+.dims text {
+	fill: var(--muted-foreground);
+	font: 500 11px var(--font-sans);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	opacity: 0;
+	animation: fade 400ms 800ms forwards;
+}
+/* `draw` is written by the engine into the SVG, outside the module's scoping. */
+.dims :global(.draw) {
+	stroke-dasharray: var(--len);
+	stroke-dashoffset: var(--len);
+	animation: draw 1100ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+@keyframes draw {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+@keyframes fade {
+	to {
+		opacity: 1;
+	}
+}
+
+/* The figure's label and scale share one row on the bottom rule, where a drawing keeps its title block; the top rule is the nav's. */
+.meta {
+	position: absolute;
+	bottom: calc(var(--frame-bottom) - 6px);
+	right: calc(var(--gutter) + 24px);
+	display: flex;
+	flex-direction: row-reverse;
+	gap: 24px;
+	pointer-events: none;
+	color: var(--muted-foreground);
+}
+.scale {
+	transition: opacity 500ms;
+}
+.scale[data-gone] {
+	opacity: 0;
+}
+
+.mark {
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	margin: -8px; /* center each mark on its crossing */
+	color: color-mix(in oklch, var(--foreground) 30%, transparent);
+	transition: color var(--duration-fast);
+}
+.sheet[data-dragging] .mark {
+	color: var(--orange);
+}
+.tl,
+.bl {
+	left: var(--gutter);
+}
+.tr,
+.br {
+	right: var(--gutter);
+}
+.tl,
+.tr {
+	top: var(--frame-top);
+}
+.bl,
+.br {
+	bottom: var(--frame-bottom);
+}
+
+/* The readout: an eyebrow over a number. Type and alignment are the whole structure, no rules and no box. */
+.readout {
+	--v-size: clamp(20px, 1.8vw, 28px);
+
+	grid-area: 2 / 1 / 3 / 3;
+	padding-top: 24px;
+	display: grid;
+	grid-template-columns: repeat(6, auto) minmax(0, 1fr);
+	column-gap: 40px;
+	row-gap: 20px;
+	align-items: end;
+}
+.label {
+	display: block;
+	margin-bottom: 8px;
+	color: var(--muted-foreground);
+}
+/* Line height leaves room for descenders: the ellipsis needs overflow hidden, and at 1 it clipped the g in .glb. */
+.value {
+	display: block;
+	font-family: var(--font-heading);
+	font-weight: 500;
+	font-size: var(--v-size);
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.value small {
+	font-size: 0.62em;
+	letter-spacing: 0;
+	color: var(--muted-foreground);
+	margin-left: 0.2em;
+}
+.original .value {
+	color: var(--muted-foreground);
+}
+/* While loading the size reads "got / total"; when the last byte lands the total folds away into the figure it now equals. */
+.of {
+	display: inline-block;
+	vertical-align: bottom;
+	overflow: hidden;
+	max-width: 5em;
+	transition:
+		max-width 500ms var(--ease-out),
+		opacity 300ms;
+}
+.value[data-done] .of {
+	max-width: 0;
+	opacity: 0;
+}
+.status {
+	justify-self: end;
+	text-align: right;
+	min-width: 0;
+}
+/* The status is smaller type in a box as tall as a value line, so its label sits on the same row as the others. */
+.status .value {
+	font-family: var(--font-sans);
+	font-size: 14px;
+	letter-spacing: 0;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	height: calc(var(--v-size) * 1.2);
+}
+.dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: color-mix(in oklch, var(--foreground) 30%, transparent);
+	flex-shrink: 0;
+	transition: background var(--duration-base);
+}
+.value[data-live] .dot {
+	background: var(--orange);
+}
+
+/* Every screen below 1100px folds to the same thing: copy, then the figure as a card with the readout inside it. */
+@media (max-width: 1099px) {
+	.sheet {
+		display: block;
+		min-height: 0;
+		/* Full width, so the grain reaches the screen's edge; the padding centers a 688px column. */
+		padding: 104px max(var(--space-4), calc((100% - 688px) / 2)) 48px;
+		background: none;
+	}
+	.sheet::after {
+		content: none;
+	}
+	.copy {
+		margin-block: 0;
+	}
+	.figure {
+		display: block;
+		position: relative;
+		margin-top: 40px;
+		border-radius: var(--radius-2xl, 20px);
+		overflow: hidden;
+	}
+	.stage {
+		--frame-zoom: 1;
+		--frame-y: 0;
+		margin-inline: 0;
+		aspect-ratio: 4 / 3;
+	}
+	.frame {
+		--cx: 50cqw;
+		--poster: var(--poster-fold);
+		--ink-l: var(--ink-l-fold);
+		--ink-r: var(--ink-r-fold);
+		--ink-t: var(--ink-t-fold);
+		--ink-b: var(--ink-b-fold);
+	}
+	.art {
+		mask-image: none;
+	}
+	.meta {
+		top: 20px;
+		bottom: auto;
+		left: 44px;
+		right: 44px;
+		flex-direction: row;
+	}
+	.mark {
+		margin: 0;
+	}
+	.tl,
+	.bl {
+		left: 16px;
+	}
+	.tr,
+	.br {
+		right: 16px;
+	}
+	.tl,
+	.tr {
+		top: 16px;
+	}
+	.bl,
+	.br {
+		bottom: 16px;
+	}
+	.readout {
+		--v-size: 20px;
+		padding: 0;
+		margin: 0 24px 44px;
+		grid-template-columns: repeat(2, auto);
+		justify-content: start;
+	}
+	.file,
+	.status {
+		grid-column: span 2;
+	}
+	.status {
+		justify-self: start;
+		text-align: left;
+	}
+	.status .value {
+		justify-content: flex-start;
+	}
+	.scale {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dims :global(.draw),
+	.dims text {
+		animation: none;
+		stroke-dashoffset: 0;
+		opacity: 1;
+	}
+}

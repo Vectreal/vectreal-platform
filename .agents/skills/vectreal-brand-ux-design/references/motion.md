@@ -44,20 +44,21 @@ animating — including every Tailwind built-in, which is how `animate-pulse` ra
 indefinitely on every card in the product until it was removed. Adding a
 keyframe animation means adding it there in the same change.
 
-The codebase does not yet hold the line everywhere. `home/filetype-carousel.tsx`
-animates with no guard in the file, and `.animate-loading-bar` and
+The codebase does not yet hold the line everywhere. `.animate-loading-bar` and
 `.animate-loading-shimmer` are used by `global-navigation-loader.tsx` while
-sitting outside the block. Treat those as debt to match, not as precedent.
+sitting outside the block. Treat that as debt to match, not as precedent.
 
-## Two vocabularies exist
+## One vocabulary
 
-`shared/components/src/motion/variants.ts` hardcodes its own durations and
-easing rather than reading the CSS tokens, because Framer cannot read a custom
-property. The numbers agree with `--ease-out` but are stated twice.
+The tokens above are the only motion vocabulary. A shared Framer variants module
+used to restate them with its own numbers; its only consumers were the old home
+page, and it went with them.
 
-It has exactly two consumers, both in `app/components/home/`. Unifying the two
-vocabularies is a filed catalogue row scoped to the home page, not something to
-attempt from an unrelated change.
+Framer cannot read a custom property, so a Framer component that needs a
+duration or an easing writes the value of the matching token where it uses it:
+`[0.16, 1, 0.3, 1]` for `--ease-out`, `0.25` for `--duration-base`. Write the
+token's name beside the number so the next reader can check one against the
+other.
 
 ```claims
 present  shared/components/src/styles/globals.css                              --duration-instant: 80ms

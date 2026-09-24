@@ -453,6 +453,28 @@ export default defineConfig(tseslint.configs.recommended, [
 		}
 	},
 	{
+		// The product-shot capture and home-hero bake scripts drive a browser with
+		// Playwright. They are run by hand against a local stack and never
+		// imported by the app, so
+		// Playwright is a tool of the repository, satisfied by the root
+		// devDependency, and not something the app depends on. Declaring it would
+		// list a test runner among the server's runtime dependencies.
+		files: ['apps/vectreal-platform/package.json'],
+		rules: {
+			'@nx/dependency-checks': [
+				'error',
+				{
+					...dependencyCheckOptions,
+					ignoredFiles: [
+						...dependencyCheckOptions.ignoredFiles,
+						'{projectRoot}/scripts/capture-home-product-shots.ts',
+						'{projectRoot}/scripts/bake-home-hero.ts'
+					]
+				}
+			]
+		}
+	},
+	{
 		// @vctrl/embed imports only types from @vctrl/viewer, and vite-plugin-dts
 		// inlines them into the emitted declarations. A consumer of the SDK needs
 		// nothing from the viewer at runtime or at type-check time, so declaring

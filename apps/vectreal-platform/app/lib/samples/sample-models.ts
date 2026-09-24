@@ -1,5 +1,6 @@
-import bikePreviewUrl from '../../assets/models/bike-preview.webp?url'
-import bikeUrl from '../../assets/models/bike.glb?url'
+import cameraPreviewUrl from '../../assets/models/camera-preview.webp?url'
+import cameraSourceUrl from '../../assets/models/camera-source.glb?url'
+import cameraUrl from '../../assets/models/camera.glb?url'
 import rocketPreviewUrl from '../../assets/models/rocket-preview.webp?url'
 import rocketUrl from '../../assets/models/rocket-v3.glb?url'
 
@@ -11,19 +12,23 @@ import rocketUrl from '../../assets/models/rocket-v3.glb?url'
  * sample can only demonstrate one of them. These were picked by measuring the
  * split rather than by eye:
  *
- *   rocket-v3.glb   0.92 MB total, 0.31 MB of it textures (34%), 2 images
- *   bike.glb       12.54 MB total, 6.15 MB of it textures (49%), 50 images
+ *   rocket-v3.glb       0.92 MB total,  0.31 MB of it textures (34%), 2 images
+ *   camera-source.glb  17.89 MB total, 17.24 MB of it textures (96%), 9 images
  *
- * So the rocket is two thirds geometry and shows what Draco is for, and the bike
- * is half textures across fifty images and shows what WebP is for. Running the
- * wrong pass on either is the instructive half: it is how someone learns the
- * passes are not interchangeable.
+ * So the rocket is two thirds geometry and shows what Draco is for, and the
+ * camera is nearly all texture, nine 4K JPEGs, and shows what WebP is for.
+ * Running the wrong pass on either is the instructive half: it is how someone
+ * learns the passes are not interchangeable.
+ *
+ * The camera is also the model the home page draws, untouched: the same file
+ * the hero's "Original" figure describes, so what a visitor opens here is what
+ * the page said it started from.
  *
  * `sample-models.spec.ts` pins `bytes` against the files on disk, because a
  * figure shown in the UI beside a download is a claim.
  *
  * The URLs are Vite `?url` imports, so the bytes are fetched on click and never
- * on load. That matters for the 13 MB one.
+ * on load. That matters for the 18 MB one.
  *
  * WHY EACH ONE ALSO CARRIES A PICTURE. Offering a 3D model as underlined text
  * is asking someone to click a thing they cannot see, on a page whose entire
@@ -59,15 +64,24 @@ export const SAMPLE_MODELS: SampleModel[] = [
 		previewUrl: rocketPreviewUrl
 	},
 	{
-		id: 'bike',
-		url: bikeUrl,
-		fileName: 'bike.glb',
-		label: 'Bike',
-		bytes: 13_145_828,
-		hint: '50 textures',
-		previewUrl: bikePreviewUrl
+		id: 'camera',
+		url: cameraSourceUrl,
+		fileName: 'camera.glb',
+		label: 'Camera',
+		bytes: 18_758_168,
+		hint: 'nine 4K textures',
+		previewUrl: cameraPreviewUrl
 	}
 ]
+
+/** The camera sample: the hero model before optimization. */
+export const HERO_SOURCE_SAMPLE_ID = 'camera'
+
+/** The publisher's search param that opens a sample on arrival, so a plain link can hand someone a model. */
+export const PUBLISHER_SAMPLE_PARAM = 'sample'
+
+export const publisherSampleHref = (id: string) =>
+	`/publisher?${PUBLISHER_SAMPLE_PARAM}=${encodeURIComponent(id)}`
 
 export function sampleModelById(id: string): SampleModel | null {
 	return SAMPLE_MODELS.find((sample) => sample.id === id) ?? null
@@ -89,3 +103,35 @@ export async function fetchSampleModel(sample: SampleModel): Promise<File> {
 		type: 'model/gltf-binary'
 	})
 }
+
+/**
+ * The model the home page draws: Poly Haven's Camera_01, CC0.
+ *
+ * The optimized file, which is what the hero downloads. Its source is the
+ * camera in `SAMPLE_MODELS`: that one is untouched, so the converter and the
+ * publisher have something to show on it, and this one would show almost
+ * nothing.
+ *
+ * WHAT WAS DONE TO IT. The 4k source was packed into one GLB with the strap
+ * removed, and the maker's engravings (brand, model and serial number) painted
+ * out of its color, normal and ARM maps, each JPEG re-saved at its original byte
+ * size so the "before" is not inflated by the edit. That is `camera-source.glb`.
+ * It was then run through the publisher's Balanced preset (1024px WebP at 80,
+ * Draco) on 2026-09-24, which produced this file.
+ *
+ * `sample-models.spec.ts` reads every figure here back from the files,
+ * `sourceBytes` included, so the hero's before and after cannot drift from what
+ * the sample and the served file weigh.
+ */
+export const HERO_MODEL = {
+	url: cameraUrl,
+	fileName: 'camera.glb',
+	/** What the page downloads. Pinned by the spec. */
+	bytes: 946_600,
+	/** The same model before the Balanced preset: the camera sample. Pinned by the spec. */
+	sourceBytes: 18_758_168,
+	/** As `@vctrl/core` reports the served file. Pinned by the spec. */
+	contents: { vertices: 17_702, materials: 4, textures: 9 },
+	/** Which face the line drawing shows. */
+	view: 'Front elevation'
+} as const

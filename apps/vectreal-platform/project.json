@@ -269,6 +269,22 @@
 				"command": "pnpm exec tsx scripts/gen-newsroom-thumbnails.ts"
 			}
 		},
+		"capture-product-shots": {
+			"executor": "nx:run-commands",
+			"outputs": ["{projectRoot}/public/assets/images/product"],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/capture-home-product-shots.ts"
+			}
+		},
+		"bake-home-hero": {
+			"executor": "nx:run-commands",
+			"outputs": ["{projectRoot}/app/assets/home"],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/bake-home-hero.ts"
+			}
+		},
 		"purge-orphaned-assets": {
 			"executor": "nx:run-commands",
 			"cache": false,

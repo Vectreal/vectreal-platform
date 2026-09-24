@@ -26,7 +26,13 @@ describe('isNavItemActive', () => {
 		  absence of one route, so adding the next tool to the site nav fails
 		  here too.
 		*/
-		const MARKETING_ROUTES = ['/pricing', '/docs', '/news-room', '/contact']
+		const MARKETING_ROUTES = [
+			'/pricing',
+			'/convert',
+			'/docs',
+			'/news-room',
+			'/contact'
+		]
 
 		expect(MARKETING_ITEMS.map((navItem) => navItem.to).sort()).toEqual(
 			[...MARKETING_ROUTES].sort()

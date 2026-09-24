@@ -1,0 +1,46 @@
+@reference '../../../../../shared/components/src/styles/globals.css';
+
+/*
+  A view in the list is a rounded row. The active one sits a step up the
+  elevation ladder, and while the window cycles, its surface fills a second
+  step from left to right over the dwell: the fill is the clock, drawn in
+  elevation rather than a line. Once the reader has taken over, it stands full.
+*/
+.view {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	/* Concentric with the window, like the screenshot: 28px less the 12px padding. */
+	border-radius: var(--radius-lg);
+}
+.view[data-state='active'] {
+	background: color-mix(in oklch, var(--foreground) 4%, transparent);
+}
+.view:not([data-state='active']):hover {
+	background: color-mix(in oklch, var(--foreground) 3%, transparent);
+}
+.fill {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background: color-mix(in oklch, var(--foreground) 4%, transparent);
+	transform-origin: left;
+	transform: scaleX(0);
+}
+.view[data-state='active'] .fill {
+	transform: scaleX(1);
+}
+.window[data-cycling] .view[data-state='active'] .fill {
+	animation: dwell var(--dwell) linear forwards;
+}
+.window[data-paused] .view[data-state='active'] .fill {
+	animation-play-state: paused;
+}
+@keyframes dwell {
+	from {
+		transform: scaleX(0);
+	}
+	to {
+		transform: scaleX(1);
+	}
+}
