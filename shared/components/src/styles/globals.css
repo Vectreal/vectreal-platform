@@ -253,7 +253,13 @@
 	*/
 	--space-4: 1rem;
 	--space-6: 1.5rem;
-	--container-max: 80rem;
+	/*
+	  90rem, up from 80rem. At 80 the home hero's copy sat 344px in from each
+	  edge of a 1920 window while its model grew with the window's height, and
+	  on a 16-inch laptop the two touched. The measure is one line through every
+	  page, so it widens everywhere rather than in one section.
+	*/
+	--container-max: 90rem;
 
 	/* Sidebar tokens */
 	--sidebar: oklch(0.985 0 0);
@@ -924,7 +930,7 @@
 
 	/* ---- Layout ---- */
 	/*
-	  The page measure. `--container-max` is 80rem, the same as `max-w-7xl`, which
+	  The page measure. `--container-max` replaced `max-w-7xl`, which
 	  was hardcoded at 15 sites — each of them then choosing its own gutter, so a
 	  hero at `px-6` sat above a body at `px-4` and the content jogged sideways at
 	  the seam. The gutter belongs to the measure, not to the caller.
