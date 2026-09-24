@@ -763,6 +763,21 @@
 		);
 	}
 
+	/*
+	  A form field's surface, which is how a field is told apart instead of a
+	  drawn box.
+
+	  A tint over whatever the field sits on, not a step mixed against the page.
+	  Fields sit on the page, on raised cards, on dialogs and sheets (which are
+	  the page's own colour) and on publisher shell panels, and `ds-sunken`
+	  cannot go below the page it mixes against: on a dialog it was 2.5% from
+	  its surface, 1.5% inside a card, and less than that on a shell panel. The
+	  same mechanism as `.publisher-shell-nested`, for the same reason.
+	*/
+	.ds-field {
+		background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+	}
+
 	/* Only where a divider genuinely carries meaning. Never to draw a box. */
 	.ds-divider {
 		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);

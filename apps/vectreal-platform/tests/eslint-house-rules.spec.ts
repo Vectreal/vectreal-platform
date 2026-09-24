@@ -294,7 +294,7 @@ describe('design-system classes reject a variant', () => {
 		*/
 		expect(RUNGS).toContain('text-h4')
 		expect(RUNGS).toHaveLength(11)
-		expect(SURFACES).toHaveLength(4)
+		expect(SURFACES).toHaveLength(5)
 	})
 
 	it.each([...RUNGS, ...SURFACES])('rejects hover:%s', async (className) => {
