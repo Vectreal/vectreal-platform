@@ -25,39 +25,24 @@ const reloadResult = () =>
 	)
 
 /*
-  Literal colors, deliberately outside the token system.
+  The window is drawn in the page's own materials: it sits on the raised step
+  of the elevation ladder, the result in a sunken well inside it, and the code
+  is grayscale with one accent. It used to be a Tokyo Night editor in literal
+  colors, fixed dark: once the page followed the reader's theme, its blue cast
+  was the only hue on the page besides the brand orange, and it clashed.
 
-  The panel is a picture of someone else's interface: macOS window controls
-  and a Tokyo Night editor. An editor theme does not change with the page it is
-  shown on, so the panel stays dark in both site themes, and tokenizing these
-  would be the bug, not the fix. Naming them says so, and gives the lint rule
-  something to allowlist.
-
-  The string color is the one exception: it is the brand orange, so the
-  package name is the thing the eye lands on.
+  The strings keep the brand orange, so the package names are what the eye
+  lands on. The window controls are an inactive window's gray, for the same
+  reason: three more colors would compete with it.
 */
-const WINDOW_CONTROLS = {
-	close: '#ff5f57',
-	minimize: '#febc2e',
-	zoom: '#28c840'
-} as const
-
-const EDITOR = {
-	background: '#1a1b26',
-	/** Tokyo Night's darker panel, under the editor: the result sits below the code the way a preview pane does. */
-	panel: '#16161e',
-	text: '#c0caf5',
-	comment: '#9aa5ce',
-	keyword: '#7aa2f7',
-	component: '#e0af68',
-	attribute: '#9ece6a'
-} as const
-
 const Comment = ({ children }: { children: string }) => (
-	<span style={{ color: EDITOR.comment }}>{children}</span>
+	<span className="text-muted-foreground">{children}</span>
 )
 const Keyword = ({ children }: { children: string }) => (
-	<span style={{ color: EDITOR.keyword }}>{children}</span>
+	<span className="text-muted-foreground">{children}</span>
+)
+const Name = ({ children }: { children: string }) => (
+	<span className="text-foreground font-medium">{children}</span>
 )
 const Str = ({ children }: { children: string }) => (
 	<span className="text-orange">{children}</span>
@@ -84,12 +69,11 @@ const Code = () => (
 		<Str>{" '@vctrl/viewer'\n"}</Str>
 		<Keyword>{'import'}</Keyword>
 		<Str>{" '@vctrl/viewer/css'\n\n"}</Str>
-		<Keyword>{'export function'}</Keyword>{' '}
-		<span style={{ color: EDITOR.component }}>{'ProductView'}</span>
+		<Keyword>{'export function'}</Keyword> <Name>{'ProductView'}</Name>
 		{'() {\n  '}
 		<Keyword>{'const'}</Keyword>
 		{' { scene } = '}
-		<span style={{ color: EDITOR.keyword }}>{'useGLTF'}</span>
+		<Name>{'useGLTF'}</Name>
 		{'('}
 		<Str>{"'/camera.glb'"}</Str>
 		{', '}
@@ -97,8 +81,8 @@ const Code = () => (
 		{')\n  '}
 		<Keyword>{'return'}</Keyword>
 		{' <'}
-		<span style={{ color: EDITOR.component }}>{'VectrealViewer'}</span>
-		<span style={{ color: EDITOR.attribute }}>{' model'}</span>
+		<Name>{'VectrealViewer'}</Name>
+		<Keyword>{' model'}</Keyword>
 		{'={scene} />\n}'}
 	</code>
 )
@@ -124,10 +108,7 @@ const Result = () => {
 	}
 
 	const drawing = (
-		<div
-			className="flex h-full items-center justify-center p-10"
-			style={{ color: EDITOR.comment }}
-		>
+		<div className="text-muted-foreground absolute inset-0 flex items-center justify-center p-10">
 			<CameraDrawing className="w-full max-w-sm opacity-40" />
 		</div>
 	)
@@ -136,33 +117,33 @@ const Result = () => {
 		<div
 			role="region"
 			aria-label={COPY.result.label}
-			className="relative aspect-16/10 lg:aspect-auto lg:h-full"
-			style={{ background: EDITOR.panel }}
+			// Edge to edge in its half: the window's own corners round it, so it needs no margin or radius of its own.
+			className="ds-sunken relative aspect-16/10 lg:aspect-auto"
 		>
-			<span
-				className="text-label-xs absolute top-4 left-6"
-				style={{ color: EDITOR.comment }}
-			>
+			<span className="text-label-xs text-muted-foreground absolute top-4 left-5">
 				{COPY.result.label}
 			</span>
 			{state === 'running' ? (
 				<StageBoundary onError={() => setState('failed')}>
 					<Suspense fallback={drawing}>
-						<SnippetResult />
+						{/* Out of flow: the viewer fills its container, so in flow it would size the well it sits in, and the row with it. */}
+						<div className="absolute inset-0">
+							<SnippetResult />
+						</div>
 					</Suspense>
 				</StageBoundary>
 			) : (
 				<>
 					{drawing}
-					<button
+					<Button
 						type="button"
+						size="sm"
 						onClick={run}
-						className="text-body-sm focus-visible:ring-orange absolute right-4 bottom-4 inline-flex items-center gap-2 rounded-full px-4 py-2 transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none"
-						style={{ color: EDITOR.background, background: EDITOR.text }}
+						className="absolute right-4 bottom-4 rounded-full"
 					>
 						<Play className="size-3.5" aria-hidden="true" />
 						{state === 'failed' ? COPY.result.failed : COPY.result.run}
-					</button>
+					</Button>
 				</>
 			)}
 		</div>
@@ -170,29 +151,17 @@ const Result = () => {
 }
 
 const CodeWindow = () => (
-	<div
-		className="overflow-hidden rounded-2xl"
-		style={{ background: EDITOR.background, color: EDITOR.text }}
-	>
-		<div className="flex items-center gap-2 px-4 py-4">
-			<span
-				className="size-3 rounded-full"
-				style={{ background: WINDOW_CONTROLS.close }}
-			/>
-			<span
-				className="size-3 rounded-full"
-				style={{ background: WINDOW_CONTROLS.minimize }}
-			/>
-			<span
-				className="size-3 rounded-full"
-				style={{ background: WINDOW_CONTROLS.zoom }}
-			/>
-			<span className="text-label-xs ml-2" style={{ color: EDITOR.comment }}>
-				product-view.tsx
-			</span>
-		</div>
-		{/* Side by side from lg, the way a playground sets code and its output; stacked below that. */}
-		<div className="grid lg:grid-cols-2">
+	// Split the way a playground is, from lg: the editor with its title bar on the left, its output the full height of the right half. Stacked below that.
+	<div className="ds-raised text-foreground grid overflow-hidden rounded-2xl lg:grid-cols-2">
+		<div className="min-w-0">
+			<div className="flex items-center gap-2 px-4 py-4" aria-hidden="true">
+				<span className="bg-foreground/15 size-3 rounded-full" />
+				<span className="bg-foreground/15 size-3 rounded-full" />
+				<span className="bg-foreground/15 size-3 rounded-full" />
+				<span className="text-label-xs text-muted-foreground ml-2">
+					product-view.tsx
+				</span>
+			</div>
 			<pre
 				tabIndex={0}
 				role="region"
@@ -201,8 +170,8 @@ const CodeWindow = () => (
 			>
 				<Code />
 			</pre>
-			<Result />
 		</div>
+		<Result />
 	</div>
 )
 
