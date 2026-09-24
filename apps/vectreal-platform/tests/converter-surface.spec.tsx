@@ -246,10 +246,18 @@ vi.mock('@vctrl/core/model-exporter', () => ({
 	}
 }))
 
-vi.mock('posthog-js/react', () => ({ usePostHog: () => undefined }))
+/*
+  Analytics are off unless a test turns them on, as a visitor who ignored the
+  banner has them. The capture spy is shared, and cleared before each test.
+*/
+const { capture, consentState } = vi.hoisted(() => ({
+	capture: vi.fn(),
+	consentState: { analytics: false }
+}))
+vi.mock('posthog-js/react', () => ({ usePostHog: () => ({ capture }) }))
 
 vi.mock('../app/components/consent/consent-context', () => ({
-	useConsent: () => ({ consent: { analytics: false } })
+	useConsent: () => ({ consent: consentState })
 }))
 
 const navigated: string[] = []
@@ -350,6 +358,8 @@ beforeEach(() => {
 	*/
 	vi.mocked(toast.error).mockClear()
 	vi.mocked(toast.success).mockClear()
+	capture.mockClear()
+	consentState.analytics = false
 	resetContext()
 })
 
@@ -857,5 +867,101 @@ describe('the handoff to the publisher', () => {
 		await waitFor(() => expect(startOver).toBeDisabled())
 
 		releaseDraft()
+	})
+})
+
+describe('the funnel continues past arrival', () => {
+	/*
+	  Arrival was the only event, so the converter could say which formats
+	  people brought and never whether they left with anything.
+	*/
+	const captured = (event: string) =>
+		capture.mock.calls
+			.filter(([name]) => name === event)
+			.map(([, props]) => props)
+
+	it('reports a finished conversion with its sizes', async () => {
+		consentState.analytics = true
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 5_200_000 }))
+		await screen.findByTestId('stage')
+
+		exported.data = new Uint8Array(4_500_000)
+		fireEvent.click(convertButton())
+
+		await waitFor(() =>
+			expect(captured('convert_model_converted')).toEqual([
+				expect.objectContaining({
+					pair: 'gltf-to-glb',
+					source_bytes: 5_200_000,
+					result_bytes: 4_500_000
+				})
+			])
+		)
+	})
+
+	it('reports the download, from the page it is saved on', async () => {
+		consentState.analytics = true
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		exported.data = new Uint8Array(1_000_000)
+		fireEvent.click(convertButton())
+		fireEvent.click(await screen.findByRole('button', { name: /^Download/ }))
+
+		expect(captured('convert_model_downloaded')).toEqual([
+			expect.objectContaining({ pair: 'gltf-to-glb', result_bytes: 1_000_000 })
+		])
+	})
+
+	it('does not count a conversion that a newer drop replaced', async () => {
+		consentState.analytics = true
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 }))
+		await screen.findByTestId('stage')
+
+		blockExports()
+		exported.data = new Uint8Array(500_000)
+		fireEvent.click(convertButton())
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000_000 })
+		)
+		releaseExport()
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(captured('convert_model_converted')).toEqual([])
+	})
+
+	it('sends nothing without analytics consent', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		exported.data = new Uint8Array(1_000)
+		fireEvent.click(convertButton())
+		fireEvent.click(await screen.findByRole('button', { name: /^Download/ }))
+
+		expect(capture).not.toHaveBeenCalled()
 	})
 })

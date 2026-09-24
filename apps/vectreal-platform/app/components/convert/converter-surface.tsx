@@ -45,7 +45,10 @@ import {
 	convertRecipeKey,
 	storeConversion
 } from '../../lib/convert/convert-recipe'
-import { buildConvertModelReceivedProps } from '../../lib/domain/analytics/convert-events'
+import {
+	buildConvertModelReceivedProps,
+	buildConvertModelResultProps
+} from '../../lib/domain/analytics/convert-events'
 import { persistPendingSceneDraftOrchestrator } from '../../lib/domain/scene/client/scene-draft-persistence'
 import {
 	fetchSampleModel,
@@ -847,6 +850,18 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				setConversions((current) =>
 					storeConversion(current, currentKey, conversion, KEPT_CONVERSIONS)
 				)
+
+				if (consentRef.current?.analytics) {
+					posthog?.capture(
+						'convert_model_converted',
+						buildConvertModelResultProps(
+							pair,
+							activeOptions,
+							source?.bytes ?? null,
+							conversion.bytes.byteLength
+						)
+					)
+				}
 			}
 
 			if (!model) {
@@ -937,6 +952,18 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	const handleDownload = () => {
 		if (!result) return
 		fileSaver.saveAs(new Blob([new Uint8Array(result.bytes)]), result.fileName)
+
+		if (consentRef.current?.analytics) {
+			posthog?.capture(
+				'convert_model_downloaded',
+				buildConvertModelResultProps(
+					pair,
+					activeOptions,
+					source?.bytes ?? null,
+					result.bytes.byteLength
+				)
+			)
+		}
 	}
 
 	const isReady = status === 'ready' && Boolean(file)

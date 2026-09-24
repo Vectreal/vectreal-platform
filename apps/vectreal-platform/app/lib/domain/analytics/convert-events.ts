@@ -133,3 +133,49 @@ export function buildConvertModelReceivedProps(
 		file_count: files.length
 	}
 }
+
+/**
+ * What a visitor left with: a conversion that finished, and one they saved.
+ *
+ * Arrival alone stops the funnel at the drop, so it answers which formats
+ * people bring and not whether they got anything out. These two carry what
+ * arrival cannot: the options ticked, and the sizes before and after, which
+ * say whether the page did what it promised for that file.
+ *
+ * `convert_model_converted` fires when a result is filed, so a conversion a
+ * newer drop superseded is not counted. `convert_model_downloaded` carries its
+ * own pair, because the surface stays mounted across a pair switch and the page
+ * a file was dropped on can differ from the one it is saved from.
+ *
+ * The same consent caveat as arrival applies: rates among consenting visitors,
+ * never counts.
+ */
+export interface ConvertModelResultProps {
+	pair: string
+	from: string
+	to: string
+	/** The options ticked for this conversion, sorted, so equal sets compare equal. */
+	options: string[]
+	/** What the loader measured for the source; null when it measured nothing. */
+	source_bytes: number | null
+	result_bytes: number
+	/** result / source, so 0.25 is a quarter of the size; null without a source size. */
+	size_ratio: number | null
+}
+
+export function buildConvertModelResultProps(
+	pair: Pick<ConvertPair, 'slug' | 'from' | 'to'>,
+	options: readonly string[],
+	sourceBytes: number | null,
+	resultBytes: number
+): ConvertModelResultProps {
+	return {
+		pair: pair.slug,
+		from: pair.from,
+		to: pair.to,
+		options: [...options].sort(),
+		source_bytes: sourceBytes,
+		result_bytes: resultBytes,
+		size_ratio: sourceBytes ? resultBytes / sourceBytes : null
+	}
+}
