@@ -56,7 +56,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 /*
-  The heading, the description and the rail live in `convert-layout`, which
+  The heading, the description and the format switcher live in `convert-layout`, which
   derives them from the same manifest this route's loader reads. What is left
   here is the surface.
 
@@ -69,7 +69,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   this comment was the record of a render site that no longer existed. It has
   been deleted; `CONVERT_TARGET_COPY` is where that sentence lives now.
 
-  A LOADED MODEL SURVIVES A PAIR SWITCH, and that is the point of the rail.
+  A LOADED MODEL SURVIVES A PAIR SWITCH, and that is the point of the switcher.
   Moving from `/convert/glb-to-gltf` to `/convert/glb-to-usdz` changes only the
   param, so this component and the `ModelProvider` below it stay mounted: the
   model stays on the stage and the download button retargets. Someone converting

@@ -11,8 +11,7 @@ const DocsScenePreviewClient = lazy(() => import('./docs-scene-preview-client'))
  * render during SSR - hence the mounted flag rather than a plain dynamic import.
  * And Three.js and the viewer are a large payload for a page whose job is to
  * route people to documentation, so it is lazy and never blocks first paint.
- * There is no model file on top of that: the subject is generated geometry,
- * which is the other half of the same decision.
+ * The model rides in that same lazy chunk's wake, and is kept to 120 KB.
  *
  * The placeholder holds the same box at every stage, so the surrounding layout
  * does not shift when the viewer arrives.
@@ -35,9 +34,9 @@ export function DocsScenePreview() {
 	}
 
 	/*
-	  aria-hidden on the mounted branch too, not just the placeholder. The cube
+	  aria-hidden on the mounted branch too, not just the placeholder. The model
 	  is decoration; without it the reader is handed an unnamed <canvas> plus the
-	  viewer's own role="status" aria-live overlay, so a spinning box announces
+	  viewer's own role="status" aria-live overlay, so a spinning model announces
 	  its loading state on a page whose job is routing people to documentation.
 	*/
 	return (
@@ -52,7 +51,7 @@ export function DocsScenePreview() {
 }
 
 /**
- * Keeps a failed cube from taking the page with it.
+ * Keeps a failed preview from taking the page with it.
  *
  * The viewer has no WebGL capability check anywhere, so on a device without it
  * - or with hardware acceleration switched off - R3F's `<Canvas>` throws during
@@ -60,7 +59,7 @@ export function DocsScenePreview() {
  * was replaced by an error screen because a decoration could not draw. A failed
  * chunk fetch did the same.
  *
- * Falling back to nothing is right here precisely because the cube is
+ * Falling back to nothing is right here precisely because the model is
  * decoration: the frame around it keeps its shape, and the reader loses a
  * picture rather than the page they came for. A route boundary cannot do this
  * job - by the time it runs, the route is already gone.

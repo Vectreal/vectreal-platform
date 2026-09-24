@@ -23,7 +23,7 @@ import {
 	formatLimitValue,
 	PUBLISHED_COPY_LOCALE
 } from './limit-format'
-import { PLAN_LIMITS } from './plan-config'
+import { ALL_PLANS, PLAN_ENTITLEMENTS, PLAN_LIMITS } from './plan-config'
 
 import type { EntitlementKey, LimitKey, PaidPlan, Plan } from './plan-config'
 
@@ -31,11 +31,17 @@ import type { EntitlementKey, LimitKey, PaidPlan, Plan } from './plan-config'
 // Platform description strings
 // ---------------------------------------------------------------------------
 
+/*
+  The position these three carry, and the home page argues: companies that sell
+  physical products, putting the 3D files they already have on their own site,
+  with developers as the second reader. Configurators are not named here,
+  because they are built per pilot rather than shipped.
+*/
 export const PLATFORM_TAGLINE =
-	'Web platform for uploading, optimizing, and publishing 3D models as embeddable scenes.'
+	'Your products in 3D on your own website: prepare the files you have, embed them on any page, and manage every model in one place.'
 
 export const PLATFORM_SHORT_DESCRIPTION =
-	'Vectreal lets developers and teams upload 3D models, run automated optimization pipelines, compose scenes, and publish them as embeddable iframes or via REST API. The viewer requires no WebGL framework on the embedding page.'
+	'Vectreal takes the 3D files a company already has, optimizes them for the browser, and publishes them as embeds on any website, with a dashboard for projects, scenes, team roles, API keys and allowed domains. The optimizer and format converters run in the browser with no account, and the viewer and embed SDK are open source on npm. The viewer needs no WebGL framework on the embedding page.'
 
 /*
   The most-read string in the product: it is DEFAULT_DESCRIPTION and the home
@@ -45,7 +51,7 @@ export const PLATFORM_SHORT_DESCRIPTION =
   the product does. One enumeration, of the pipeline that actually exists.
 */
 export const PLATFORM_SOCIAL_DESCRIPTION =
-	'Upload a 3D model, optimize it, and publish it as an embed you can paste into any page. Open-source viewer, no WebGL framework required.'
+	'Start from the 3D files you already have. Vectreal prepares them for the browser, embeds them on any page you own, and keeps track of every model. Open source.'
 
 // ---------------------------------------------------------------------------
 // Supported upload formats
@@ -331,6 +337,144 @@ export const DOCS_PAGE_COPY = {
 		'That viewer is @vctrl/viewer, the package documented below. Publishing a scene gives you this snippet, and the scene renders wherever you paste it.',
 	packagesDescription: 'Open source, published to npm, and documented here.',
 	quickLinksLabel: 'Elsewhere'
+} as const
+
+// ---------------------------------------------------------------------------
+// Home page
+//
+// Written for two readers: a company that sells physical products and wants
+// them in 3D on its own site, and a developer who wants the open-source
+// pieces. Every capability named here ships today. Configurators do not, which
+// is why they appear only inside the pilot offer, as something built per
+// project.
+// ---------------------------------------------------------------------------
+
+/** The contact page's `topic` for a pilot: it preselects a sales inquiry and asks the pilot's questions. */
+export const PILOT_CONTACT_TOPIC = 'pilot'
+
+/** Where every pilot call to action on the site points. */
+export const PILOT_CONTACT_HREF = `/contact?topic=${PILOT_CONTACT_TOPIC}`
+
+/** What the contact form asks when it was opened from a pilot call to action. */
+export const PILOT_CONTACT_PROMPT =
+	'About a pilot: tell us what you sell, which 3D or CAD files you have, and where the product views should live.'
+
+/*
+  The lowest plan that lets a whole team in with roles (`ALL_PLANS` is in
+  ladder order), read from the entitlements rather than named, so the home page stops naming the wrong plan
+  the day that moves.
+*/
+const TEAM_PLAN =
+	ALL_PLANS.find(
+		(plan) =>
+			PLAN_ENTITLEMENTS[plan].org_multi_member &&
+			PLAN_ENTITLEMENTS[plan].org_roles
+	) ?? 'enterprise'
+
+export const HOME_PAGE_COPY = {
+	hero: {
+		heading: 'Show your products in 3D.',
+		lead: 'Start from the 3D files you already have. Vectreal prepares them for the browser and embeds them on any page you own, with a dashboard that keeps track of every model.',
+		primaryCta: 'Start a pilot project',
+		secondaryCta: 'Try it on your own file',
+		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
+		sampleCta: 'No file at hand? Open this camera in the publisher'
+	},
+	stage: {
+		figure: 'Fig 01',
+		/** The label once the drawing has turned into the object. */
+		liveView: 'Live view',
+		/** A dropped file's face is not known, so it is only ever an elevation. */
+		droppedView: 'Elevation',
+		readouts: {
+			file: 'File',
+			materials: 'Materials',
+			vertices: 'Vertices',
+			textures: 'Textures',
+			original: 'Original',
+			size: 'Size',
+			status: 'Status'
+		},
+		status: {
+			loading: 'Loading',
+			drawn: 'Drawn from the file',
+			rendering: 'Rendering',
+			live: 'Live. Drag to turn',
+			dragging: 'Release to draw your file',
+			optimizing: 'Optimizing your file',
+			unsupported: 'That file type cannot be drawn here',
+			failed: 'That file could not be drawn'
+		},
+		openInPublisher: 'Open in the publisher'
+	},
+	product: {
+		heading: 'The product, as it is today',
+		lead: 'Three parts of one workflow, each one live today.',
+		views: {
+			prepare: {
+				label: 'Prepare',
+				body: `Upload ${SUPPORTED_FORMAT_NAMES.join(', ')}. Pick a preset, compare before and after, and download the result without an account.`,
+				link: 'Open the optimizer'
+			},
+			manage: {
+				label: 'Manage',
+				body: `Projects, folders and scenes in one place, with API keys and allowed domains for every embed. From the ${PLAN_DISPLAY_NAMES[TEAM_PLAN]} plan up, your whole team works in it, and owners, admins and members each get the actions their role allows.`,
+				link: 'Compare plans'
+			},
+			embed: {
+				label: 'Embed',
+				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
+				link: 'See the embed guide'
+			}
+		}
+	},
+	mission: {
+		label: 'Why we build this',
+		statement:
+			'Most companies that make physical products already have 3D files. Very few can put them on their own website without an agency, an enterprise platform or a plugin that keeps their data. Vectreal is the open path from the file you have to a product page that loads fast, and we build it in public.',
+		signature: 'Moritz Becker, founder'
+	},
+	pilot: {
+		heading: 'Founding clients',
+		lead: 'We are looking for the first companies to build with, and we will put in the work to make it count for both sides.',
+		blocks: [
+			{
+				title: 'Who it is for',
+				body: 'Companies that sell physical products, such as furniture, machines or consumer goods, and have CAD or 3D exports they want on their own site.'
+			},
+			{
+				title: 'What we do',
+				body: 'We prepare your files, build the product viewer or configurator into your site, and host and manage it in Vectreal. Configurators are built per project today. What we learn from the first ones becomes part of the product.'
+			},
+			{
+				title: 'What we ask',
+				body: 'Permission to publish the project as a case study, and your honest feedback. In return you get founding-client terms.'
+			}
+		],
+		team: 'A small team in Germany. You work directly with the people who build the product.',
+		cta: 'Talk to us about a pilot'
+	},
+	openSource: {
+		heading: 'Open source, down to the viewer',
+		lead: 'The platform and every package are published under AGPL-3.0. Read the code, run it yourself, or send a pull request.',
+		repositoryUrl: 'https://github.com/Vectreal/vectreal-platform',
+		discordUrl: 'https://discord.gg/A9a3nPkZw7',
+		repositoryCta: 'View on GitHub',
+		discordCta: 'Join the Discord',
+		contributingCta: 'How to contribute'
+	},
+	closing: {
+		companies: {
+			title: 'For companies',
+			body: 'Tell us about your products and we will tell you honestly whether a pilot makes sense.',
+			cta: 'Start a pilot project'
+		},
+		developers: {
+			title: 'For developers',
+			body: 'The optimizer and converters run in your browser with no account, and the packages are on npm.',
+			cta: 'Read the docs'
+		}
+	}
 } as const
 
 // ---------------------------------------------------------------------------

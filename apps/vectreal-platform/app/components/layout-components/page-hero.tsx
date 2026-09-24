@@ -1,6 +1,8 @@
 import { cn } from '@shared/utils'
 import { type ReactNode } from 'react'
 
+import { DitherGrain } from './dither-grain'
+
 interface PageHeroProps {
 	heading: ReactNode
 	description?: ReactNode
@@ -57,6 +59,13 @@ const PageHero = ({
 			  hero from the fixed nav, the space below joins it to the page it
 			  introduces.
 			*/}
+			{/*
+			  The home hero's grain, still, rising from the left behind the
+			  heading: every marketing page opens in the material the home page
+			  opens in. It is texture in the page's own foreground, not a color,
+			  so it is not the brand wash removed above coming back.
+			*/}
+			<DitherGrain origin="left" />
 			<div className="container-page pt-32 pb-16">
 				<div className="space-y-4">
 					<h1 className="text-display max-w-4xl">{heading}</h1>

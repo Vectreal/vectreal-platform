@@ -342,6 +342,14 @@ function loadedFile(over: Partial<LoaderFile> = {}): LoaderFile {
 }
 
 beforeEach(() => {
+	// jsdom has none. The stage's animated height needs one, and nothing here reads it.
+	vi.stubGlobal(
+		'ResizeObserver',
+		class {
+			observe() {}
+			disconnect() {}
+		}
+	)
 	exported.data = new Uint8Array(0)
 	exportBlock = null
 	passBlock = null

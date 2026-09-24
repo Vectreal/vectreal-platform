@@ -11,14 +11,21 @@ import {
 	FolderUp,
 	Upload
 } from 'lucide-react'
-import { ComponentProps, SyntheticEvent, useCallback } from 'react'
+import {
+	ComponentProps,
+	SyntheticEvent,
+	useCallback,
+	useEffect,
+	useRef
+} from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
 import {
 	fetchSampleModel,
+	PUBLISHER_SAMPLE_PARAM,
 	sampleModelById
 } from '../../../lib/samples/sample-models'
 import { SampleTiles } from '../../layout-components/sample-tiles'
@@ -91,6 +98,28 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 		},
 		[onUpload]
 	)
+
+	/*
+	  A link can name a sample (`publisherSampleHref`), for someone arriving from
+	  a page that showed them one. The param is taken off the URL as the sample
+	  opens, so a reload lands here empty rather than downloading it again. The
+	  ref is for StrictMode, which mounts this twice and would open it twice.
+	*/
+	const [searchParams, setSearchParams] = useSearchParams()
+	const linkedSample = searchParams.get(PUBLISHER_SAMPLE_PARAM)
+	const openedLinkedSample = useRef(false)
+	useEffect(() => {
+		if (!linkedSample || openedLinkedSample.current) return
+		openedLinkedSample.current = true
+		setSearchParams(
+			(params) => {
+				params.delete(PUBLISHER_SAMPLE_PARAM)
+				return params
+			},
+			{ replace: true, preventScrollReset: true }
+		)
+		void openSample(linkedSample)
+	}, [linkedSample, openSample, setSearchParams])
 
 	const { getRootProps, isDragActive } = useDropzone({ onDrop: handleDrop })
 
@@ -227,7 +256,7 @@ export const DropZone = ({ isMobile, onUpload }: Props) => {
 										  deciding whether this is worth their file. Two models
 										  rather than one, because the optimization passes do
 										  different jobs: the rocket is two thirds geometry and the
-										  bike is half textures across fifty images, so each one
+										  camera is nearly all texture, nine 4K images, so each one
 										  makes a different pass look like it is working. The split
 										  is measured; see `sample-models.ts`.
 										*/}

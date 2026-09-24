@@ -26,6 +26,7 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { usePrepareGltfDocument } from '../../hooks/scene-loader/use-scene-document-export'
+import { useTrackedHeight } from '../../hooks/use-tracked-height'
 import {
 	SOURCES_THAT_ARE_BUNDLES,
 	bundleSourceCopy,
@@ -56,6 +57,8 @@ import {
 } from '../../lib/samples/sample-models'
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 import { useConsent } from '../consent/consent-context'
+import { DitherGrain } from '../layout-components/dither-grain'
+import { DitherSwap } from '../layout-components/dither-swap'
 import {
 	describeSizeChange,
 	FileSizeComparison
@@ -263,9 +266,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  A slow turntable, because every model has a bad side and the default camera
 	  finds it.
 
-	  Both samples are longer than they are wide, and the viewer's default camera
-	  looks straight down that axis - so a rocket arrives as a circle with four
-	  fins and a bike as a handlebar. The obvious fix, handing the viewer a camera
+	  A sample can be longer than it is wide, and the viewer's default camera
+	  looks straight down that axis - so the rocket arrives as a circle with four
+	  fins. The obvious fix, handing the viewer a camera
 	  position, is the wrong lever and has now been tried twice: `initializeCamera`
 	  applies the given camera and `Bounds` then frames from it, so a position
 	  meant as "stand to the side" reads as "stand here", and the model lands
@@ -599,7 +602,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		[load, pair, bundleCopy, posthog]
 	)
 
-	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+	const { getRootProps, getInputProps, isDragActive, rootRef } = useDropzone({
 		onDrop: ingest,
 		/*
 		  NO `accept`, for any source. react-dropzone does not warn about a file
@@ -967,9 +970,21 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	const isReady = status === 'ready' && Boolean(file)
+	const stageBox = useTrackedHeight(rootRef)
 
 	return (
-		<div>
+		/*
+		  One column until there is a model. Then, on a wide screen, the stage
+		  keeps the room and everything about the file stands beside it, so the
+		  model, the button and the reading are one glance instead of a stage
+		  the width of the page with its controls below the fold.
+		*/
+		<div
+			className={cn(
+				isReady &&
+					'lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-x-12'
+			)}
+		>
 			{/*
 			  `ds-sunken` rather than a dashed border: the ladder separates surfaces
 			  by value, and a dashed rectangle is the single most recognisable
@@ -993,95 +1008,136 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  defaults to `min-width: auto`, so without it the column sizes to the
 			  canvas and the page scrolls sideways on a phone.
 			*/}
-			<section
-				{...getRootProps()}
-				aria-label={`${pair.fromLabel} to ${pair.toLabel} converter`}
+			{/*
+			  The surface is drawn by this wrapper, which follows the stage's
+			  height rather than taking it, so the stage grows and shrinks instead
+			  of jumping: when a model replaces the invitation, and when switching
+			  source trades the samples for a folder button. The stage sits on its
+			  bottom edge, where its invitation is anchored, and never shrinks to
+			  the wrapper, or the height it reports would be the one it was given.
+			*/}
+			<div
 				className={cn(
-					'ds-sunken relative w-full min-w-0 overflow-hidden rounded-2xl transition-shadow',
-					isReady && file && 'aspect-[4/3] sm:aspect-[16/10]',
-					isDragActive && 'ring-2 ring-[rgb(var(--orange-rgb))] ring-inset'
+					'ds-sunken flex min-w-0 flex-col justify-end overflow-hidden rounded-2xl',
+					stageBox?.animate &&
+						'transition-[height] duration-(--duration-slow) ease-(--ease-out) motion-reduce:transition-none'
 				)}
+				style={{ height: stageBox?.height }}
 			>
-				<input {...getInputProps()} />
+				<section
+					{...getRootProps()}
+					aria-label={`${pair.fromLabel} to ${pair.toLabel} converter`}
+					className={cn(
+						'relative isolate w-full min-w-0 shrink-0 overflow-hidden rounded-2xl transition-shadow',
+						isReady && file && 'aspect-[4/3] sm:aspect-[16/10]',
+						isDragActive && 'ring-2 ring-[rgb(var(--orange-rgb))] ring-inset'
+					)}
+				>
+					<input {...getInputProps()} />
 
-				{isReady && file ? (
-					<ClientVectrealViewer
-						model={file.model}
-						theme="system"
-						className="h-full w-full"
-						boundsOptions={STAGE_BOUNDS}
-						controlsOptions={stageControls}
-					/>
-				) : (
-					/*
+					{isReady && file ? (
+						<ClientVectrealViewer
+							model={file.model}
+							theme="system"
+							className="h-full w-full"
+							boundsOptions={STAGE_BOUNDS}
+							controlsOptions={stageControls}
+						/>
+					) : (
+						/*
 					  Anchored bottom-left rather than centred. A centred glyph over
 					  centred copy over a centred outline button is the stock empty
 					  state; putting the invitation where a caption would sit leaves
 					  the stage reading as a stage, which is what it becomes one
 					  second later.
 					*/
-					<div className="flex min-h-[17rem] flex-col justify-end p-6 sm:min-h-[20rem] sm:p-8">
-						{status === 'loading' ? (
-							<p
-								aria-live="polite"
-								className="text-muted-foreground flex items-center gap-2 text-sm"
+						/*
+					  On a wide screen the invitation keeps the bottom-left and the
+					  samples take the bottom-right, so the stage's full width is a
+					  composition rather than a caption with empty space beside it.
+					  The grain is the page's own, rising from the right; it belongs
+					  to the empty stage and goes when a model arrives.
+
+					  What it offers depends on the source, samples for GLB and a
+					  folder for a glTF bundle, so switching source dissolves the new
+					  offer in rather than cutting to it. The grain stays put: it is
+					  the stage, not the offer.
+					*/
+						<>
+							<DitherGrain origin="right" />
+							<DitherSwap
+								as="div"
+								value={pair.from}
+								className="grid min-h-[17rem] content-end gap-8 p-6 sm:min-h-[20rem] sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
 							>
-								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-								Reading your {pair.fromLabel}, {Math.round(progress)}%
-							</p>
-						) : (
-							<>
-								<p className="text-h3 text-foreground max-w-sm">
-									Drop{' '}
-									{bundleCopy
-										? bundleCopy.dropTarget
-										: `${articleFor(pair.fromLabel)} ${pair.fromLabel} file`}{' '}
-									here
-								</p>
-								{/*
+								{status === 'loading' ? (
+									<p
+										aria-live="polite"
+										className="text-muted-foreground flex items-center gap-2 text-sm"
+									>
+										<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+										Reading your {pair.fromLabel}, {Math.round(progress)}%
+									</p>
+								) : (
+									<>
+										<div>
+											<p className="text-h3 text-foreground max-w-sm">
+												Drop{' '}
+												{bundleCopy
+													? bundleCopy.dropTarget
+													: `${articleFor(pair.fromLabel)} ${pair.fromLabel} file`}{' '}
+												here
+											</p>
+											{/*
 								  The only line here, and only for a bundle source: the one
 								  thing someone needs to know before they drop. Everything else
 								  the old empty state said - read in your browser, no upload, no
 								  account - the page heading two inches away says already.
 								*/}
-								{bundleCopy && (
-									<p className="text-muted-foreground text-body-sm mt-4 max-w-md">
-										{bundleCopy.instruction}
-									</p>
-								)}
+											{bundleCopy && (
+												<p className="text-muted-foreground text-body-sm mt-4 max-w-md">
+													{bundleCopy.instruction}
+												</p>
+											)}
 
-								<div className="mt-8 flex flex-wrap items-center gap-2">
-									<Button onClick={openFilePicker}>
-										{bundleCopy
-											? bundleCopy.chooseLabel
-											: `Choose ${articleFor(pair.fromLabel)} ${pair.fromLabel} file`}
-									</Button>
-									{isBundle && (
-										<Button variant="outline" onClick={openDirectoryPicker}>
-											<FolderUp className="h-4 w-4" aria-hidden />
-											Choose a folder
-										</Button>
-									)}
-								</div>
+											<div className="mt-8 flex flex-wrap items-center gap-2">
+												<Button onClick={openFilePicker}>
+													{bundleCopy
+														? bundleCopy.chooseLabel
+														: `Choose ${articleFor(pair.fromLabel)} ${pair.fromLabel} file`}
+												</Button>
+												{isBundle && (
+													<Button
+														variant="outline"
+														onClick={openDirectoryPicker}
+													>
+														<FolderUp className="h-4 w-4" aria-hidden />
+														Choose a folder
+													</Button>
+												)}
+											</div>
+										</div>
 
-								{/*
+										{/*
 								  Samples are GLB, so they are offered where GLB is what the
 								  page reads. Building a glTF bundle at runtime to sample the
 								  glTF pages would be a fixture pretending to be a file
 								  somebody exported.
 								*/}
-								{pair.from === 'glb' && (
-									<SampleTiles
-										className="mt-8"
-										label="Or open one of these"
-										onOpen={loadSample}
-									/>
+										{pair.from === 'glb' && (
+											<SampleTiles
+												className="lg:w-md"
+												label="Or open one of these"
+												onOpen={loadSample}
+											/>
+										)}
+									</>
 								)}
-							</>
-						)}
-					</div>
-				)}
-			</section>
+							</DitherSwap>
+						</>
+					)}
+				</section>
+			</div>
 
 			{/*
 			  Outside the stage, because a refusal has to be sayable in both of
@@ -1128,9 +1184,48 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			)}
 
 			{isReady && file && (
-				<>
+				<div className="mt-8 flex flex-col gap-8 lg:col-start-2 lg:row-start-1 lg:mt-0">
+					{/*
+					  Two steps, not one. Download used to mean "apply the passes,
+					  re-encode, and put a file in your downloads folder", so the one
+					  number anybody converting a model wants - what it achieved - was
+					  discoverable only by finding the file afterwards. Convert produces
+					  the bytes and shows the reading; Download saves bytes that already
+					  exist, so it is instant and cannot fail.
+					*/}
+					{/*
+					  Two weights. `Convert another` is a reset that
+					  throws the loaded model away, not a peer of the primary action, and
+					  standing it immediately left of a solid button made a near-invisible
+					  ghost the thing you read just before the one you press. It sits with
+					  the file it would discard instead, and the primary gets a row of
+					  its own.
+					*/}
+					<div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
+						<p className="text-muted-foreground min-w-0 text-sm">
+							<span className="text-foreground truncate font-medium">
+								{file.name}
+							</span>
+							{source && <> · {formatFileSize(source.bytes)}</>}
+						</p>
+						<button
+							type="button"
+							onClick={startOver}
+							/*
+							  `isHandingOff` as well as `isConverting`. "Convert
+							  another" clears the source the publisher draft is
+							  built from, so pressing it during "Opening the
+							  publisher" emptied the model mid-serialization.
+							*/
+							disabled={isConverting || isHandingOff}
+							className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4 transition-colors disabled:opacity-50"
+						>
+							Convert another
+						</button>
+					</div>
+
 					{options.length > 0 && (
-						<fieldset className="mt-8">
+						<fieldset>
 							<legend className="text-muted-foreground text-eyebrow mb-3">
 								Before you download
 							</legend>
@@ -1159,61 +1254,24 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						</fieldset>
 					)}
 
-					{/*
-					  Two steps, not one. Download used to mean "apply the passes,
-					  re-encode, and put a file in your downloads folder", so the one
-					  number anybody converting a model wants - what it achieved - was
-					  discoverable only by finding the file afterwards. Convert produces
-					  the bytes and shows the reading; Download saves bytes that already
-					  exist, so it is instant and cannot fail.
-					*/}
-					{/*
-					  Two weights, one at each end. `Convert another` is a reset that
-					  throws the loaded model away, not a peer of the primary action, and
-					  standing it immediately left of a solid button made a near-invisible
-					  ghost the thing you read just before the one you press. It sits with
-					  the file it would discard instead, and the primary anchors the row
-					  on its own.
-					*/}
-					<div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-						<div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-							<p className="text-muted-foreground min-w-0 text-sm">
-								<span className="text-foreground truncate font-medium">
-									{file.name}
-								</span>
-								{source && <> · {formatFileSize(source.bytes)}</>}
-							</p>
-							<button
-								type="button"
-								onClick={startOver}
-								/*
-								  `isHandingOff` as well as `isConverting`. "Convert
-								  another" clears the source the publisher draft is
-								  built from, so pressing it during "Opening the
-								  publisher" emptied the model mid-serialization.
-								*/
-								disabled={isConverting || isHandingOff}
-								className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4 transition-colors disabled:opacity-50"
-							>
-								Convert another
-							</button>
-						</div>
-
-						{result ? (
-							<Button onClick={handleDownload}>
-								<Download className="h-4 w-4" aria-hidden />
-								Download {pair.toLabel}
-								{downloadContainer(result.fileName, pair.to)}
-							</Button>
-						) : (
-							<Button onClick={runConversion} disabled={isConverting}>
-								{isConverting && (
-									<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-								)}
-								Convert to {pair.toLabel}
-							</Button>
-						)}
-					</div>
+					{result ? (
+						<Button onClick={handleDownload} className="self-start">
+							<Download className="h-4 w-4" aria-hidden />
+							Download {pair.toLabel}
+							{downloadContainer(result.fileName, pair.to)}
+						</Button>
+					) : (
+						<Button
+							onClick={runConversion}
+							disabled={isConverting}
+							className="self-start"
+						>
+							{isConverting && (
+								<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+							)}
+							Convert to {pair.toLabel}
+						</Button>
+					)}
 
 					{result && (
 						/*
@@ -1221,7 +1279,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						  rather than a well you put something into. The stage above is the
 						  well.
 						*/
-						<div className="ds-raised mt-8 rounded-2xl p-6">
+						<div className="ds-raised rounded-2xl p-6">
 							<p className="text-muted-foreground text-eyebrow mb-1">
 								{pair.fromLabel} to {pair.toLabel}
 							</p>
@@ -1243,7 +1301,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						</div>
 					)}
 
-					<p className="text-muted-foreground text-body-sm mt-8">
+					<p className="text-muted-foreground text-body-sm">
 						<button
 							type="button"
 							onClick={openInPublisher}
@@ -1256,7 +1314,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						</button>{' '}
 						to shrink it further or set the camera.
 					</p>
-				</>
+				</div>
 			)}
 		</div>
 	)
