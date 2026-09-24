@@ -15,8 +15,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Navigation } from './index'
 import { NAV } from '../../lib/navigation/site-map'
 
+const session = vi.hoisted(() => ({
+	user: null as null | { email: string; user_metadata: Record<string, string> }
+}))
 vi.mock('../../hooks/use-current-user', () => ({
-	useCurrentUser: () => ({ user: null })
+	useCurrentUser: () => ({ user: session.user })
 }))
 vi.mock('@posthog/react', () => ({ usePostHog: () => null }))
 vi.mock('../theme-toggle-button', () => ({ ThemeToggleButton: () => null }))
@@ -51,14 +54,27 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+	session.user = null
+	logoutAction.mockClear()
 	vi.unstubAllGlobals()
 	vi.restoreAllMocks()
 })
 
+/** The logout route's action, so a test can see a log out was asked for. */
+const logoutAction = vi.fn(() => null)
+
 function renderAt(path: string) {
-	const Stub = createRoutesStub([{ path: '*', Component: Navigation }])
+	const Stub = createRoutesStub([
+		{ path: '*', Component: Navigation },
+		{ path: '/auth/logout', action: logoutAction }
+	])
 	return render(<Stub initialEntries={[path]} />)
 }
+
+const phoneBar = () =>
+	screen
+		.getAllByRole('navigation', { name: 'Main navigation' })
+		.find((nav) => !nav.className.includes('md:block')) as HTMLElement
 
 const desktopBar = () =>
 	screen
@@ -327,15 +343,53 @@ describe('the site nav', () => {
 
 	it('names the page on the phone bar rather than drawing a second menu button', () => {
 		renderAt('/docs/guides/upload')
-		const phoneBar = screen
-			.getAllByRole('navigation', { name: 'Main navigation' })
-			.find((nav) => !nav.className.includes('md:block')) as HTMLElement
-		const picker = within(phoneBar).getByRole('button', {
+		const picker = within(phoneBar()).getByRole('button', {
 			name: /Docs pages, current:/
 		})
 		expect(picker.textContent).toContain('Uploading Models')
 		// Only the site menu's button may carry a menu icon.
-		expect(phoneBar.querySelectorAll('.lucide-menu')).toHaveLength(1)
+		expect(phoneBar().querySelectorAll('.lucide-menu')).toHaveLength(1)
+	})
+
+	it('gives a signed-out phone one menu, with the way in inside it', () => {
+		renderAt('/pricing')
+		const bar = within(phoneBar())
+		expect(bar.queryByRole('link', { name: NAV.signIn.label })).toBeNull()
+		fireEvent.click(bar.getByRole('button', { name: 'Open menu' }))
+		const drawer = within(screen.getByRole('dialog'))
+		expect(
+			drawer.getByRole('link', { name: NAV.signIn.label }).getAttribute('href')
+		).toBe('/sign-in')
+		expect(
+			drawer.getByRole('link', { name: NAV.getStarted.label })
+		).toBeTruthy()
+	})
+
+	it('makes the avatar the signed-in phone menu, with the account inside it', async () => {
+		session.user = {
+			email: 'ada@example.com',
+			user_metadata: { full_name: 'Ada Lovelace' }
+		}
+		renderAt('/pricing')
+		const bar = within(phoneBar())
+		// One control: no account dropdown beside a site menu.
+		expect(bar.queryByRole('button', { name: 'Open user menu' })).toBeNull()
+		expect(bar.getAllByRole('button')).toHaveLength(1)
+		expect(phoneBar().querySelectorAll('.lucide-menu')).toHaveLength(0)
+		const trigger = bar.getByRole('button', { name: 'Open menu and account' })
+		// The avatar, showing the initial while no picture has loaded.
+		expect(within(trigger).getByText('A')).toBeTruthy()
+		fireEvent.click(trigger)
+		const drawer = within(screen.getByRole('dialog'))
+		expect(drawer.getByText('Ada')).toBeTruthy()
+		expect(
+			drawer.getByRole('link', { name: 'Settings' }).getAttribute('href')
+		).toBe('/dashboard/settings')
+		expect(drawer.queryByRole('link', { name: NAV.signIn.label })).toBeNull()
+
+		fireEvent.click(drawer.getByRole('button', { name: 'Log out' }))
+		expect(screen.queryByRole('dialog')).toBeNull()
+		await vi.waitFor(() => expect(logoutAction).toHaveBeenCalledOnce())
 	})
 
 	it('shows the marketing links everywhere else', () => {

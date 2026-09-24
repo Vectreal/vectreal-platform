@@ -10,7 +10,12 @@
 import { matchPath } from 'react-router'
 import { describe, expect, it } from 'vitest'
 
-import { FOOTER, NAV, type SiteLink } from '../app/lib/navigation/site-map'
+import {
+	ACCOUNT,
+	FOOTER,
+	NAV,
+	type SiteLink
+} from '../app/lib/navigation/site-map'
 import routes from '../app/routes'
 
 import type { RouteConfigEntry } from '@react-router/dev/routes'
@@ -46,9 +51,12 @@ const footerLinks: SiteLink[] = FOOTER.sections.flatMap(
 
 describe('the site map', () => {
 	it('links only to pages that exist', () => {
-		const internal = [...navLinks, ...navActions, ...footerLinks].filter(
-			(link) => !link.external
-		)
+		const internal = [
+			...navLinks,
+			...navActions,
+			...footerLinks,
+			...ACCOUNT
+		].filter((link) => !link.external)
 		for (const link of internal)
 			expect(isRoute(pathOf(link)), link.to).toBe(true)
 	})

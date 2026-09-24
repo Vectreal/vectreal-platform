@@ -123,6 +123,14 @@ export const NAV = {
 	getStarted: { label: 'Get started', to: PUBLISHER.to }
 } as const
 
+/** A signed-in reader's own places: the account menu on a desktop, the top of the drawer on a phone. */
+export const ACCOUNT: readonly SiteLink[] = [
+	{ label: 'Dashboard', to: '/dashboard' },
+	{ label: 'Projects', to: '/dashboard/projects' },
+	{ label: 'Organizations', to: '/dashboard/organizations' },
+	{ label: 'Settings', to: '/dashboard/settings' }
+]
+
 export const FOOTER = {
 	tagline: PLATFORM_TAGLINE,
 	sections: [

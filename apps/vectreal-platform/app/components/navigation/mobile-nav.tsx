@@ -10,15 +10,15 @@ import {
 } from '@shared/components/ui/sheet'
 import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
-import { LayoutDashboard, MenuIcon } from 'lucide-react'
+import { MenuIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 
 import { isNavItemActive } from './nav-items'
-import { NAV, type SiteLink } from '../../lib/navigation/site-map'
+import { ACCOUNT, NAV, type SiteLink } from '../../lib/navigation/site-map'
 import { DocsBreadcrumb, isDocsPath } from '../docs/docs-breadcrumb'
 import { ThemeToggleButton } from '../theme-toggle-button'
-import { UserMenu } from '../user-menu'
+import { UserAvatar, userFirstName } from '../user-menu'
 
 interface MobileNavProps {
 	user: User | null
@@ -64,7 +64,12 @@ const DrawerLink = ({
 /**
  * The phone's bar and drawer. The bar settles the way the desktop bar does;
  * the drawer lists the same site map the desktop panels and the footer read,
- * grouped the same way, with the way in on top.
+ * grouped the same way, with the reader's own block on top: their account
+ * when signed in, the way in when not.
+ *
+ * The bar has one menu control. Signed in it is the avatar, which opens this
+ * drawer rather than a dropdown of its own, so a docs page does not show the
+ * docs picker, an account menu and a site menu side by side.
  */
 function MobileNav({
 	user,
@@ -125,23 +130,22 @@ function MobileNav({
 
 					<div className="flex min-w-0 items-center gap-1">
 						{onDocs && <DocsBreadcrumb pathname={pathname} compact />}
-						{!user && !isAuthPage && (
-							<Button asChild size="sm" variant="ghost" className="rounded-xl">
-								<Link to={NAV.signIn.to}>{NAV.signIn.label}</Link>
-							</Button>
-						)}
-
-						{user && <UserMenu user={user} onLogout={onLogout} />}
-
 						<Button
-							variant="ghost"
+							variant={user ? 'secondary' : 'ghost'}
 							size="icon"
-							className="rounded-xl"
+							className="shrink-0 rounded-xl"
 							onClick={() => setDrawerOpen((o) => !o)}
-							aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
+							// The avatar says "account" to a sighted reader; the name has to say it to everyone else.
+							aria-label={
+								drawerOpen
+									? 'Close menu'
+									: user
+										? 'Open menu and account'
+										: 'Open menu'
+							}
 							aria-expanded={drawerOpen}
 						>
-							<MenuIcon />
+							{user ? <UserAvatar user={user} /> : <MenuIcon />}
 						</Button>
 					</div>
 				</div>
@@ -169,21 +173,42 @@ function MobileNav({
 
 					<div className="px-4 pt-2">
 						{user ? (
-							<Button
-								asChild
-								variant="secondary"
-								className="w-full rounded-xl"
-								size="lg"
-							>
-								<Link to="/dashboard">
-									<LayoutDashboard className="size-4" />
-									Dashboard
-								</Link>
-							</Button>
+							<section aria-label="Account">
+								<div className="flex items-center gap-3 px-3">
+									<UserAvatar user={user} />
+									<div className="min-w-0">
+										<p className="truncate text-sm font-medium">
+											{userFirstName(user)}
+										</p>
+										<p className="text-muted-foreground text-body-sm truncate">
+											{user.email}
+										</p>
+									</div>
+								</div>
+								<ul className="mt-3 flex flex-col">
+									{ACCOUNT.map((link) => (
+										<li key={link.to}>
+											<DrawerLink link={link} pathname={pathname} />
+										</li>
+									))}
+								</ul>
+							</section>
 						) : (
-							<Button asChild className="w-full rounded-xl" size="lg">
-								<Link to={NAV.getStarted.to}>{NAV.getStarted.label}</Link>
-							</Button>
+							<div className="flex flex-col gap-2">
+								<Button asChild className="w-full rounded-xl" size="lg">
+									<Link to={NAV.getStarted.to}>{NAV.getStarted.label}</Link>
+								</Button>
+								{!isAuthPage && (
+									<Button
+										asChild
+										variant="secondary"
+										className="w-full rounded-xl"
+										size="lg"
+									>
+										<Link to={NAV.signIn.to}>{NAV.signIn.label}</Link>
+									</Button>
+								)}
+							</div>
 						)}
 					</div>
 
@@ -215,6 +240,21 @@ function MobileNav({
 						<span className="text-muted-foreground text-eyebrow">Theme</span>
 						<ThemeToggleButton />
 					</div>
+					{user && (
+						<div className="px-4 pb-8">
+							<Button
+								variant="ghost"
+								className="text-muted-foreground w-full justify-start rounded-xl px-3"
+								onClick={() => {
+									// Closed at once, as the dropdown it replaces closed on select: a drawer left open over the request invites a second tap.
+									setDrawerOpen(false)
+									onLogout()
+								}}
+							>
+								Log out
+							</Button>
+						</div>
+					)}
 				</SheetContent>
 			</Sheet>
 		</>
