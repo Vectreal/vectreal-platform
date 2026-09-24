@@ -425,7 +425,9 @@ export const HOME_PAGE_COPY = {
 			embed: {
 				label: 'Embed',
 				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
-				link: 'See the embed guide'
+				link: 'See the embed guide',
+				/** The address bar of the product page the view shows the camera on: anyone's shop, not one we name. */
+				pageAddress: 'your-shop.com/products/camera'
 			}
 		}
 	},
@@ -433,7 +435,13 @@ export const HOME_PAGE_COPY = {
 		label: 'Why we build this',
 		statement:
 			'Most companies that make physical products already have 3D files. Very few can put them on their own website without an agency, an enterprise platform or a plugin that keeps their data. Vectreal is the open path from the file you have to a product page that loads fast, and we build it in public.',
-		signature: 'Moritz Becker, founder'
+		signature: 'Moritz Becker, founder',
+		/** The figure beside the statement: one file, pulled apart into the path it takes. Back to front. */
+		layers: {
+			file: 'The file you have',
+			prepared: 'Prepared for the web',
+			page: 'On your product page'
+		}
 	},
 	pilot: {
 		heading: 'Founding clients',
@@ -453,6 +461,8 @@ export const HOME_PAGE_COPY = {
 			}
 		],
 		team: 'A small team in Germany. You work directly with the people who build the product.',
+		/** Over the third drawing: the case study the pilot ends in. */
+		caseStudyLabel: 'Case study',
 		cta: 'Talk to us about a pilot'
 	},
 	openSource: {
@@ -462,7 +472,14 @@ export const HOME_PAGE_COPY = {
 		discordUrl: 'https://discord.gg/A9a3nPkZw7',
 		repositoryCta: 'View on GitHub',
 		discordCta: 'Join the Discord',
-		contributingCta: 'How to contribute'
+		contributingCta: 'How to contribute',
+		packagesLabel: 'Packages',
+		/** The pane under the snippet, which runs it. */
+		result: {
+			label: 'Result',
+			run: 'Run this code',
+			failed: 'It would not run in this browser. Try again'
+		}
 	},
 	closing: {
 		companies: {
