@@ -1,51 +1,50 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
-import { ditherFadeDownMask } from '../../lib/dither/dither'
+import { DITHER_CELL_PX, DITHER_DISSOLVE_FRAMES } from '../../lib/dither/dither'
 
-/** Height of the dithered edge that leads a wipe. */
-const EDGE_PX = 160
-/** A wipe's pace, so a tall heading takes longer than a short one, within a range that reads as a wipe and never drags. */
-const PX_PER_MS = 0.25
-const MIN_MS = 1600
-const MAX_MS = 2400
-/** Everything else fades, starting once the headings are under way, one after another. */
-const FADE_MS = 1400
-const FADE_DELAY_MS = 350
-const FADE_STAGGER_MS = 140
+/** How far a block travels to its seat. */
+const TRAVEL_PX = 20
+/** How far it runs past the seat before it settles back: the detent. */
+const OVERSHOOT_PX = 2
+/** One block's whole arrival; the overshoot lands at `SEAT_AT` of it. */
+const DURATION_MS = 520
+const SEAT_AT = 0.68
+/** Blocks arrive one after another, in document order. */
+const STAGGER_MS = 70
 
-const EDGE = ditherFadeDownMask(EDGE_PX)
-const MASK_KEYS = ['image', 'size', 'repeat', 'position'] as const
+// `--ease-out`, for the approach; the settle back is a short ease-in-out.
+const EASE_OUT = 'cubic-bezier(0.16, 1, 0.3, 1)'
+const EASE_IN_OUT = 'cubic-bezier(0.4, 0, 0.2, 1)'
 
-function setMask(el: HTMLElement, top: number) {
-	const mask = {
-		image: `linear-gradient(#000, #000), ${EDGE}`,
-		size: `100% ${Math.max(0, top)}px, 8px ${EDGE_PX}px`,
-		repeat: 'no-repeat, repeat-x',
-		position: `0 0, 0 ${top}px`
-	}
+const MASK_SIZE = `${4 * DITHER_CELL_PX}px ${4 * DITHER_CELL_PX}px`
+
+function setFrame(el: HTMLElement, k: number) {
 	for (const prefix of ['', '-webkit-']) {
-		for (const key of MASK_KEYS)
-			el.style.setProperty(`${prefix}mask-${key}`, mask[key])
+		el.style.setProperty(`${prefix}mask-image`, DITHER_DISSOLVE_FRAMES[k])
+		el.style.setProperty(`${prefix}mask-size`, MASK_SIZE)
 	}
 }
 
-function clearMask(el: HTMLElement) {
+function clearFrame(el: HTMLElement) {
 	for (const prefix of ['', '-webkit-']) {
-		for (const key of MASK_KEYS) el.style.removeProperty(`${prefix}mask-${key}`)
+		el.style.removeProperty(`${prefix}mask-image`)
+		el.style.removeProperty(`${prefix}mask-size`)
 	}
 }
-
-const inOut = (k: number) =>
-	k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2
 
 /**
- * Reveals a section the first time it scrolls into view.
+ * Seats a section's blocks the first time it scrolls into view.
  *
- * Its elements say how, with `data-reveal`. The large type (`"wipe"`) is
- * uncovered by a dithered edge travelling down it, the same ramp the hero's
- * sheet dissolves into the page with, so the page arrives in its own material.
- * Everything else (`"fade"`: body text, the product and code windows) simply
- * fades in after it: a wipe across a big plane reads as a curtain, not a detail.
+ * Each element marked `data-reveal` travels a short way up, runs a couple of
+ * pixels past its place and settles back: a detent, so it reads as clicking
+ * into position rather than drifting in. While it travels it resolves from the
+ * page's grain, the hero's 4 by 4 matrix, and turns solid exactly as it seats,
+ * so the grain is the click and not a curtain drawn across it. The whole
+ * section lands in about half a second.
+ *
+ * `motion.md` calls arrival motion on scroll decoration. The user asked for it
+ * on the home page knowingly, as they accepted the hero's drift: a decision for
+ * this page, not a precedent.
  *
  * Once, and only below the fold. A section already on screen when the page
  * hydrates is never hidden, so server-rendered content cannot flash out and
@@ -60,14 +59,11 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 		if (root.getBoundingClientRect().top < window.innerHeight) return
 
-		const wipes = [
-			...root.querySelectorAll<HTMLElement>('[data-reveal="wipe"]')
-		]
-		const fades = [
-			...root.querySelectorAll<HTMLElement>('[data-reveal="fade"]')
-		]
-		for (const el of wipes) setMask(el, -EDGE_PX)
-		for (const el of fades) el.style.opacity = '0'
+		const blocks = [...root.querySelectorAll<HTMLElement>('[data-reveal]')]
+		for (const el of blocks) {
+			setFrame(el, 0)
+			el.style.transform = `translateY(${TRAVEL_PX}px)`
+		}
 
 		const frames: number[] = []
 		const animations: Animation[] = []
@@ -76,40 +72,64 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 				if (!entry.isIntersecting) return
 				observer.disconnect()
 
-				for (const [i, el] of wipes.entries()) {
-					const distance = el.offsetHeight + EDGE_PX * 2
-					const duration = Math.min(
-						Math.max(distance / PX_PER_MS, MIN_MS),
-						MAX_MS
-					)
-					const t0 = performance.now()
-					const step = (t: number) => {
-						const k = Math.min((t - t0) / duration, 1)
-						setMask(el, -EDGE_PX + distance * inOut(k))
-						if (k < 1) frames[i] = requestAnimationFrame(step)
-						else clearMask(el)
+				// Jumped past, by an anchor or a fling, or motion was turned off
+				// since the page loaded: seat it at once.
+				if (
+					entry.boundingClientRect.bottom < 0 ||
+					window.matchMedia('(prefers-reduced-motion: reduce)').matches
+				) {
+					for (const el of blocks) {
+						clearFrame(el)
+						el.style.transform = ''
 					}
-					frames[i] = requestAnimationFrame(step)
+					return
 				}
 
-				for (const [i, el] of fades.entries()) {
-					const animation = el.animate([{ opacity: 0 }, { opacity: 1 }], {
-						duration: FADE_MS,
-						delay: FADE_DELAY_MS + i * FADE_STAGGER_MS,
-						easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-						fill: 'forwards'
-					})
+				for (const [i, el] of blocks.entries()) {
+					const delay = i * STAGGER_MS
+					const animation = el.animate(
+						[
+							{
+								transform: `translateY(${TRAVEL_PX}px)`,
+								easing: EASE_OUT
+							},
+							{
+								transform: `translateY(${-OVERSHOOT_PX}px)`,
+								offset: SEAT_AT,
+								easing: EASE_IN_OUT
+							},
+							{ transform: 'translateY(0)' }
+						],
+						{ duration: DURATION_MS, delay, fill: 'both' }
+					)
 					animations.push(animation)
-					animation.finished
-						.then(() => {
-							el.style.opacity = ''
-							animation.cancel()
-						})
-						.catch(() => {})
+					el.style.transform = ''
+
+					// The grain resolves over the approach and is solid at the seat.
+					const seatMs = DURATION_MS * SEAT_AT
+					const t0 = performance.now() + delay
+					const step = (t: number) => {
+						const k = Math.max(
+							0,
+							Math.min(Math.floor(((t - t0) / seatMs) * 16), 16)
+						)
+						if (k < 16) {
+							setFrame(el, k)
+							frames[i] = requestAnimationFrame(step)
+						} else clearFrame(el)
+					}
+					frames[i] = requestAnimationFrame(step)
+
+					animation.finished.then(() => animation.cancel()).catch(() => {})
 				}
 			},
-			// A little into the viewport, so the reveal is seen rather than finished below the edge.
-			{ rootMargin: '0px 0px -12% 0px' }
+			/*
+			  A little into the viewport at the bottom, so the arrival is seen
+			  rather than finished below the edge. Unbounded at the top: a
+			  section scrolled past in one jump never crosses the viewport, so
+			  with a plain root it stayed hidden for good.
+			*/
+			{ rootMargin: '100000px 0px -12% 0px' }
 		)
 		observer.observe(root)
 
@@ -117,8 +137,10 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 			observer.disconnect()
 			for (const frame of frames) cancelAnimationFrame(frame)
 			for (const animation of animations) animation.cancel()
-			for (const el of wipes) clearMask(el)
-			for (const el of fades) el.style.opacity = ''
+			for (const el of blocks) {
+				clearFrame(el)
+				el.style.transform = ''
+			}
 		}
 	}, [])
 

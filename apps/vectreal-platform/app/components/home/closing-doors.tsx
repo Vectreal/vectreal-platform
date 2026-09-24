@@ -22,18 +22,15 @@ export const ClosingDoors = () => (
 		{DOORS.map((door) => (
 			<div key={door.title} className="flex flex-col gap-4">
 				<span className="ds-divider h-px w-full" aria-hidden="true" />
-				<h2 className="text-h3 pt-4" data-reveal="wipe">
+				<h2 className="text-h3 pt-4" data-reveal>
 					{door.title}
 				</h2>
-				<p
-					className="text-muted-foreground text-body max-w-md"
-					data-reveal="fade"
-				>
+				<p className="text-muted-foreground text-body max-w-md" data-reveal>
 					{door.body}
 				</p>
 				<Link
 					to={door.to}
-					data-reveal="fade"
+					data-reveal
 					className="text-foreground text-body-sm inline-flex w-fit items-center gap-1 underline-offset-4 hover:underline"
 				>
 					{door.cta}

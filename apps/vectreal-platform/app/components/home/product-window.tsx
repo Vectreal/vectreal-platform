@@ -129,20 +129,17 @@ export const ProductWindow = () => {
 			className="gap-8"
 		>
 			<div className="max-w-xl">
-				<h2 id="product-heading" className="text-h2" data-reveal="wipe">
+				<h2 id="product-heading" className="text-h2" data-reveal>
 					{COPY.heading}
 				</h2>
-				<p
-					className="text-muted-foreground text-body-lg mt-4"
-					data-reveal="fade"
-				>
+				<p className="text-muted-foreground text-body-lg mt-4" data-reveal>
 					{COPY.lead}
 				</p>
 			</div>
 
 			<div
 				ref={windowRef}
-				data-reveal="fade"
+				data-reveal
 				className={cn('ds-raised rounded-2xl p-2 md:p-3', styles.window)}
 				style={{ '--dwell': `${DWELL_MS}ms` } as CSSProperties}
 				data-cycling={cycling ? '' : undefined}
