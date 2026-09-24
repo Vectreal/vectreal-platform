@@ -124,4 +124,8 @@ present  apps/vectreal-platform/app/components/layout-components/page-hero.tsx  
 absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             md:text-
 absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             tracking-[
 absent   apps/vectreal-platform/app/components/layout-components/page-hero.tsx             animate-pulse
+absent   apps/vectreal-platform/app/routes/home-page/home-page.tsx                         StatRing
+absent   apps/vectreal-platform/app/routes/home-page/home-page.tsx                         animate-pulse
+absent   apps/vectreal-platform/app/routes/home-page/home-page.tsx                         hbr.org
+present  apps/vectreal-platform/app/components/home/hero/hero-store.ts                      HERO_MODEL.contents
 ```

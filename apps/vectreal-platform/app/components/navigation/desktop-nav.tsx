@@ -45,74 +45,88 @@ function DesktopNav({
 			  this exact failure as the reason the class exists.
 			*/}
 			<div className="container-page z-10 flex items-center justify-between gap-1">
-				{/* Logo */}
+				{/*
+				  The logo sits alone on the content edge, where the page's
+				  headline starts; the links join the actions on the right rather
+				  than floating in the middle.
+				*/}
 				<Link
 					to="/"
-					className="flex shrink-0 items-center px-3 py-1"
+					className="flex shrink-0 items-center py-1"
 					aria-label="Home"
 				>
 					<VectrealLogoAnimated className="text-muted-foreground h-6" colored />
 				</Link>
 
-				{/* Center nav links */}
-				{navItems.length > 0 && (
-					<div className="relative flex items-center gap-0.5">
-						{navItems.map((item) => {
-							const isActive = isNavItemActive(item, pathname)
-							return (
-								<Link
-									key={item.to}
-									to={item.to}
-									// Colour alone cannot say "you are here": aria-current is
-									// what a screen reader reads it from.
-									aria-current={isActive ? 'page' : undefined}
-									className={cn(
-										'relative z-10 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
-										isActive
-											? 'text-foreground'
-											: 'text-muted-foreground hover:text-foreground'
-									)}
+				<div className="flex items-center gap-6">
+					{navItems.length > 0 && (
+						<div className="relative flex items-center gap-0.5">
+							{navItems.map((item) => {
+								const isActive = isNavItemActive(item, pathname)
+								return (
+									<Link
+										key={item.to}
+										to={item.to}
+										// Color alone cannot say "you are here": aria-current is
+										// what a screen reader reads it from.
+										aria-current={isActive ? 'page' : undefined}
+										className={cn(
+											'relative z-10 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+											isActive
+												? 'text-foreground'
+												: 'text-muted-foreground hover:text-foreground'
+										)}
+									>
+										{item.label}
+									</Link>
+								)
+							})}
+						</div>
+					)}
+
+					<div className="flex shrink-0 items-center gap-1">
+						{!user && !isAuthPage && (
+							<>
+								<Button
+									asChild
+									variant="ghost"
+									size="sm"
+									className="rounded-xl"
 								>
-									{item.label}
+									<Link to="/sign-up">
+										<LogIn className="size-4" />
+										Sign In
+									</Link>
+								</Button>
+							</>
+						)}
+
+						{!user && (
+							<Button asChild size="sm" className="rounded-xl">
+								<Link to="/publisher">
+									<Rocket className="size-4" />
+									Get Started
 								</Link>
-							)
-						})}
+							</Button>
+						)}
+
+						{user && (
+							<>
+								<Button
+									asChild
+									variant="ghost"
+									size="sm"
+									className="rounded-xl"
+								>
+									<Link to="/dashboard">
+										<LayoutDashboard className="size-4" />
+										Dashboard
+									</Link>
+								</Button>
+								<UserMenu user={user} onLogout={onLogout} />
+							</>
+						)}
 					</div>
-				)}
-
-				{/* Right actions */}
-				<div className="flex shrink-0 items-center gap-1">
-					{!user && !isAuthPage && (
-						<>
-							<Button asChild variant="ghost" size="sm" className="rounded-xl">
-								<Link to="/sign-up">
-									<LogIn className="size-4" />
-									Sign In
-								</Link>
-							</Button>
-						</>
-					)}
-
-					{!user && (
-						<Button asChild size="sm" className="rounded-xl">
-							<Link to="/publisher">
-								<Rocket className="size-4" />
-								Get Started
-							</Link>
-						</Button>
-					)}
-
-					{user && (
-						<>
-							<Button asChild variant="ghost" size="sm" className="rounded-xl">
-								<Link to="/dashboard">
-									<LayoutDashboard className="size-4" />
-									Dashboard
-								</Link>
-							</Button>
-							<UserMenu user={user} onLogout={onLogout} />
-						</>
-					)}
 				</div>
 			</div>
 		</nav>

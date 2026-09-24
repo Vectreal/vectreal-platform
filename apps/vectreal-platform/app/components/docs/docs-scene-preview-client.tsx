@@ -1,31 +1,31 @@
-import { RoundedBox } from '@react-three/drei'
+import { Center, useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { VectrealViewer } from '@vctrl/viewer'
 import { useRef } from 'react'
 
-import type { Mesh } from 'three'
+import rocketUrl from '../../assets/models/rocket-balanced.glb?url'
+
+import type { Group } from 'three'
 
 /**
- * A rounded cube in matte chrome, rendered by the real viewer.
+ * The rocket sample, rendered by the real viewer.
  *
  * The docs index had no imagery, and every generic answer to that - an
  * illustration, a gradient, a stock render - is on the list of things that make
  * a page read as machine-made. This is the actual `@vctrl/viewer` the rows
- * beside it teach you to install, lighting a real material in a real scene, and
- * the reader can drag it.
+ * beside it teach you to install, rendering a real model, and the reader can
+ * drag it.
  *
- * Geometry rather than a model file, deliberately. A GLB would be the more
- * honest subject, and it also costs a network request and a parse on a page
- * whose job is to route people to documentation; `RoundedBox` is generated in
- * the browser and weighs nothing.
- *
- * Worth stating plainly: an abstract spinning shape sits closer to the
- * "decorative 3D" tell than a real product model would. What keeps it on the
- * right side of that line is that it is the product doing the rendering and the
- * reader can interact with it - not a picture of a viewer, the viewer.
+ * It was a generated chrome cube, chosen to spare the page a model download,
+ * and an abstract spinning shape is the decorative-3D tell with a viewer behind
+ * it. The rocket is the product's own sample, put through the publisher's
+ * Balanced preset (`rocket-v3.glb`, 966,224 bytes, to 121,540 with Draco and
+ * 1024px WebP), so the download is small and is itself what the docs describe.
  */
-function ChromeCube() {
-	const meshRef = useRef<Mesh>(null)
+function Rocket() {
+	const ref = useRef<Group>(null)
+	// Draco-compressed, decoded by the copy the app serves rather than a CDN's.
+	const { scene } = useGLTF(rocketUrl, '/draco/')
 
 	/*
 	  Rotation is skipped outright under `prefers-reduced-motion`, rather than
@@ -37,27 +37,27 @@ function ChromeCube() {
 		window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 	useFrame((_, delta) => {
-		if (prefersReducedMotion || !meshRef.current) return
-		meshRef.current.rotation.y += delta * 0.25
-		meshRef.current.rotation.x += delta * 0.08
+		if (prefersReducedMotion || !ref.current) return
+		ref.current.rotation.z += delta * 0.4
 	})
 
 	return (
-		<RoundedBox
-			ref={meshRef}
-			args={[1.4, 1.4, 1.4]}
-			radius={0.22}
-			smoothness={8}
-		>
-			{/*
-			  Not fully metallic. At metalness 1 the material has no diffuse
-			  component at all, so it renders as nothing but a reflection of the
-			  environment - and the studio preset is dark, which made the cube read
-			  as silver on the dark theme and as a black blob on the light one. Held
-			  below 1 it keeps a value of its own and reads the same in both.
-			*/}
-			<meshStandardMaterial metalness={0.6} roughness={0.32} color="#d4d6d8" />
-		</RoundedBox>
+		/*
+		  In flight across the frame, lower left to upper right: tilted 45
+		  degrees in the view, turned side-on (the file points its length, z, at
+		  the camera, which shows a rocket as a circle with fins), and rolling
+		  about that length the way a rocket spins. Centered, so the roll is about
+		  its middle rather than the origin it was modelled at.
+		*/
+		<group rotation={[0, 0, Math.PI / 4]}>
+			<group rotation={[0, Math.PI / 2, 0]}>
+				<group ref={ref}>
+					<Center>
+						<primitive object={scene} />
+					</Center>
+				</group>
+			</group>
+		</group>
 	)
 }
 
@@ -65,11 +65,12 @@ export default function DocsScenePreviewClient() {
 	return (
 		<VectrealViewer
 			className="h-full w-full"
-			envOptions={{ preset: 'studio-key' }}
+			// A chrome model shows its environment, not a color of its own: the key preset left it a black silhouette.
+			envOptions={{ preset: 'studio-natural' }}
 			shadowsOptions={{ enabled: false }}
-			boundsOptions={{ margin: 1.4 }}
+			boundsOptions={{ margin: 1.05 }}
 		>
-			<ChromeCube />
+			<Rocket />
 		</VectrealViewer>
 	)
 }

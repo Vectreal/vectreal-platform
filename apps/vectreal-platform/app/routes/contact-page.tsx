@@ -8,7 +8,13 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Mail } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { data, Link, useLoaderData, useNavigation } from 'react-router'
+import {
+	data,
+	Link,
+	useLoaderData,
+	useNavigation,
+	useSearchParams
+} from 'react-router'
 
 import {
 	ContactErrorResult,
@@ -17,6 +23,10 @@ import {
 } from '../components/contact'
 import { PublicErrorBoundary } from '../components/errors'
 import { PageHero } from '../components/layout-components'
+import {
+	PILOT_CONTACT_PROMPT,
+	PILOT_CONTACT_TOPIC
+} from '../constants/product-copy'
 import {
 	CONTACT_SOURCE_VALUES,
 	type ContactActionData,
@@ -161,7 +171,11 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 	const posthog = usePostHog()
 	const navigation = useNavigation()
 
-	const initialInquiryType = typedActionData?.fields?.inquiryType ?? 'support'
+	// A pilot is a sales conversation with its own questions, not an inquiry type of its own.
+	const [searchParams] = useSearchParams()
+	const isPilot = searchParams.get('topic') === PILOT_CONTACT_TOPIC
+	const initialInquiryType =
+		typedActionData?.fields?.inquiryType ?? (isPilot ? 'sales' : 'support')
 	const [inquiryType, setInquiryType] =
 		useState<InquiryType>(initialInquiryType)
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -230,6 +244,9 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							*/}
 							<h2 className="text-h3">Send a message</h2>
 							<CardDescription>
+								{isPilot && (
+									<span className="block">{PILOT_CONTACT_PROMPT}</span>
+								)}
 								We usually respond within one business day.
 							</CardDescription>
 						</CardHeader>

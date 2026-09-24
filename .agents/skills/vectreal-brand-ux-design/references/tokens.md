@@ -52,8 +52,11 @@ Four values, and a marketing page should need no others:
 | 32px | `mt-8` / `gap-8` | A heading from its content, blocks inside a section |
 | 64px | `mt-16` | Two sections that belong together |
 | 128px | `mt-32` | Two sections that do not |
+| 192px | `lg:mt-48` | Two sections that do not, on a wide marketing page |
 
-The point is not the numbers, it is that there are four of them. Rhythm is what
+The point is not the numbers, it is that there are few of them. The fifth step
+exists only at `lg`, for marketing pages whose sections are tall enough that 128
+read as cramped between them (the home page, 2026-09-24). Rhythm is what
 a reader uses to tell "still the same idea" from "a new one", and a page using
 nine spacing values has no rhythm to read - it has nine near-identical gaps that
 each mean nothing. When a gap feels wrong, the answer is the next step up or
