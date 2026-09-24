@@ -48,9 +48,11 @@ export interface DynamicSidebarProps {
 	/** Whether to render the built-in mobile drawer header. */
 	showMobileHeader?: boolean
 	/**
-	 * When true, the desktop panel renders a built-in header bar with title, description,
-	 * and a close button. Use for sidebars that don't supply their own header inside children
-	 * (e.g. PublishSidebar whose header is identical in both contexts).
+	 * When true, the desktop panel renders a built-in header bar with title and
+	 * description, and its close button sits in that bar. Use for sidebars that
+	 * don't supply their own header inside children (e.g. PublishSidebar whose
+	 * header is identical in both contexts). Without it the close button still
+	 * renders, in the panel's top-right corner, as the mobile drawer's does.
 	 */
 	showDesktopHeader?: boolean
 	children: ReactNode
@@ -138,6 +140,28 @@ export const DynamicSidebar = ({
 	const variants = direction === 'left' ? leftVariants : rightVariants
 	const positionClass = direction === 'left' ? 'left-0' : 'right-0'
 
+	/*
+	  One close button whichever header the panel has. It used to exist only
+	  inside `showDesktopHeader`, and the optimization panel draws its own header,
+	  so once its hand-rolled button was removed for doubling the mobile drawer's
+	  built-in one, the desktop panel had no way out at all. Without the built-in
+	  header it takes the corner the drawer's own close takes.
+	*/
+	const closeButton = !closeDisabled && (
+		<button
+			type="button"
+			aria-label="Close"
+			className={cn(
+				OVERLAY_CLOSE_APPEARANCE,
+				'publisher-shell-focus',
+				!showDesktopHeader && 'absolute top-4 right-4'
+			)}
+			onClick={handleClose}
+		>
+			<X className="size-4" />
+		</button>
+	)
+
 	return (
 		// Absolute, not fixed: the publisher stage is the positioning ancestor, so
 		// the panel is inset within the canvas and never rides over the header or
@@ -183,23 +207,12 @@ export const DynamicSidebar = ({
 										</p>
 									)}
 								</div>
-								{!closeDisabled && (
-									<button
-										type="button"
-										aria-label="Close"
-										className={cn(
-											OVERLAY_CLOSE_APPEARANCE,
-											'publisher-shell-focus'
-										)}
-										onClick={handleClose}
-									>
-										<X className="size-4" />
-									</button>
-								)}
+								{closeButton}
 							</div>
 						)}
 
 						<div className="flex min-h-0 flex-1 flex-col">{children}</div>
+						{!showDesktopHeader && closeButton}
 					</motion.div>
 				)}
 			</AnimatePresence>
