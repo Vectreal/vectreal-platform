@@ -331,7 +331,7 @@ export const DOCS_PAGE_COPY = {
 		'Platform guides for uploading, optimizing and publishing 3D scenes, and API reference for the open-source packages underneath.',
 	startHereHeading: 'Start here',
 	startHereDescription:
-		'Read them in order. The last one ends with a published scene.',
+		'No install and no account: open the publisher and follow along.',
 	previewHeading: 'What you are building toward',
 	previewDescription:
 		'That viewer is @vctrl/viewer, the package documented below. Publishing a scene gives you this snippet, and the scene renders wherever you paste it.',

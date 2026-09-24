@@ -1,0 +1,34 @@
+# Run It Yourself
+
+This section walks you through setting up the Vectreal Platform monorepo locally and running the full dev stack for the first time.
+
+## Prerequisites
+
+| Tool | Version | Notes |
+|---|---|---|
+| Node.js | 22.22 or later | Required by `engines` in the root `package.json` |
+| pnpm | 10 or later | Pinned via `packageManager` in the root `package.json` |
+| Docker | Latest | Required for the local Supabase stack |
+| Supabase CLI | Bundled | Installed by `pnpm install`; a global install is not supported |
+
+## Repository structure
+
+```
+vectreal-platform/
+├── apps/vectreal-platform/   # Main platform app
+├── packages/
+│   ├── viewer/               # @vctrl/viewer
+│   ├── hooks/                # @vctrl/hooks
+│   ├── core/                 # @vctrl/core
+│   └── embed/                # @vctrl/embed
+├── shared/
+│   ├── components/           # Shared UI component library
+│   └── utils/                # Shared utilities
+└── terraform/                # Infrastructure as code (Cloudflare)
+```
+
+## Next steps
+
+- [Installation](/docs/self-hosting/installation) - clone, install, and configure environment variables
+- [Your First Model](/docs/getting-started) - upload and publish a 3D model end-to-end
+- [Package Reference](/docs/packages/viewer) - package APIs behind these workflows

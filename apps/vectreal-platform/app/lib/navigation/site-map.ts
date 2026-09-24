@@ -90,8 +90,10 @@ export const SITE_SECTIONS = {
 		label: 'Docs',
 		links: [
 			DOCS,
+			// The browser's start and guides, then running it yourself. The packages and the embed SDK are the Open source column's.
 			{ label: 'Getting started', to: '/docs/getting-started' },
-			{ label: 'Guides', to: '/docs/guides/upload' }
+			{ label: 'Guides', to: '/docs/guides/upload' },
+			{ label: 'Run it yourself', to: '/docs/self-hosting' }
 		]
 	},
 	company: {

@@ -286,7 +286,7 @@ export const DropZone = ({ isMobile, onUpload, sampleDownload }: Props) => {
 									asChild
 									className="hover:bg-orange/50 flex h-auto w-full grow items-center justify-start gap-3 rounded-xl p-3"
 								>
-									<Link to="/docs/getting-started/first-model" viewTransition>
+									<Link to="/docs/getting-started" viewTransition>
 										<div className="bg-muted flex h-8 w-8 items-center justify-center rounded-md">
 											<Book className="h-4 w-4" />
 										</div>

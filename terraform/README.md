@@ -17,7 +17,7 @@ DNS records additionally require `cloudflare_zone_id` to be set.
 
 ### What Terraform does NOT manage
 
-- Fly.io apps and deployments (see `apps/vectreal-platform/fly.toml` and the [Deployment docs](https://vectreal.com/docs/operations/deployment))
+- Fly.io apps and deployments (see `apps/vectreal-platform/fly.toml` and the [Deployment docs](https://vectreal.com/docs/self-hosting/deployment))
 - Supabase project, database, and storage
 - Application secrets (synced to Fly.io by `scripts/setup-fly-secrets.sh`)
 

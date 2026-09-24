@@ -48,7 +48,7 @@ pnpm nx dev vectreal-platform
 # Open http://localhost:4200
 ```
 
-See [`apps/vectreal-platform/README.md`](apps/vectreal-platform/README.md) and the [Installation guide](https://vectreal.com/docs/getting-started/installation) for deeper setup, package workflows, and troubleshooting.
+See [`apps/vectreal-platform/README.md`](apps/vectreal-platform/README.md) and the [Installation guide](https://vectreal.com/docs/self-hosting/installation) for deeper setup, package workflows, and troubleshooting.
 
 ---
 

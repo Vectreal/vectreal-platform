@@ -50,10 +50,10 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 
 | Section                                                        | What you will find                                              |
 | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| [Getting Started](https://vectreal.com/docs/getting-started)   | Local setup, prerequisites, and a first-model walkthrough       |
+| [Getting Started](https://vectreal.com/docs/getting-started)   | Your first model in the publisher, with no install or account   |
 | [Guides](https://vectreal.com/docs/guides/upload)              | Upload, optimize, publish, and embed workflows                  |
 | [Package Reference](https://vectreal.com/docs/packages/viewer) | API docs for `@vctrl/viewer`, `@vctrl/hooks`, `@vctrl/core`, and `@vctrl/embed` |
-| [Operations](https://vectreal.com/docs/operations/deployment)  | Fly.io deployment, Terraform, and CI/CD                          |
+| [Run It Yourself](https://vectreal.com/docs/self-hosting)      | Local setup, Fly.io deployment, Terraform, and CI/CD             |
 | [Contributing](https://vectreal.com/docs/contributing)         | Branching, commits, testing, and PR process                     |
 
 ## Workflows And Package Reference
@@ -65,11 +65,11 @@ Use these links to move between product workflows and the package APIs behind th
 | [Uploading Models](https://vectreal.com/docs/guides/upload)              | [@vctrl/hooks](https://vectreal.com/docs/packages/hooks)                                                             | [packages/hooks/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/hooks/README.md)                                                                                                                 |
 | [Optimizing & Configuring](https://vectreal.com/docs/guides/optimize)    | [@vctrl/hooks](https://vectreal.com/docs/packages/hooks), [@vctrl/viewer](https://vectreal.com/docs/packages/viewer) | [packages/hooks/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/hooks/README.md), [packages/viewer/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/viewer/README.md) |
 | [Publishing & Embedding](https://vectreal.com/docs/guides/publish-embed) | [@vctrl/viewer](https://vectreal.com/docs/packages/viewer), [@vctrl/core](https://vectreal.com/docs/packages/core)   | [packages/viewer/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/viewer/README.md), [packages/core/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/packages/core/README.md)   |
-| [Deployment](https://vectreal.com/docs/operations/deployment)            | [@vctrl/core](https://vectreal.com/docs/packages/core)                                                               | [app/routes/docs/operations/deployment.mdx](https://github.com/Vectreal/vectreal-platform/blob/main/apps/vectreal-platform/app/routes/docs/operations/deployment.mdx)                                                        |
+| [Deployment](https://vectreal.com/docs/self-hosting/deployment)            | [@vctrl/core](https://vectreal.com/docs/packages/core)                                                               | [app/routes/docs/self-hosting/deployment.mdx](https://github.com/Vectreal/vectreal-platform/blob/main/apps/vectreal-platform/app/routes/docs/self-hosting/deployment.mdx)                                                        |
 
 ## Local Development
 
-The local setup below matches the platform documentation in [Installation](https://vectreal.com/docs/getting-started/installation).
+The local setup below matches the platform documentation in [Installation](https://vectreal.com/docs/self-hosting/installation).
 
 ### 1. Clone the repository
 
@@ -141,7 +141,7 @@ The documented end-to-end workflow is:
 5. Publish it to generate a stable embed URL.
 6. Copy the iframe snippet into your application.
 
-Full walkthrough: [Your First Model](https://vectreal.com/docs/getting-started/first-model).
+Full walkthrough: [Your First Model](https://vectreal.com/docs/getting-started).
 
 ## Architecture Overview
 
@@ -197,7 +197,7 @@ pnpm nx run vectreal-platform:supabase-db-push-staging
 pnpm nx run vectreal-platform:supabase-db-push-prod
 ```
 
-High-level deployment docs: [https://vectreal.com/docs/operations/deployment](https://vectreal.com/docs/operations/deployment)  
+High-level deployment docs: [https://vectreal.com/docs/self-hosting/deployment](https://vectreal.com/docs/self-hosting/deployment)  
 Canonical infrastructure details: [terraform/README.md](https://github.com/Vectreal/vectreal-platform/blob/main/terraform/README.md)
 
 ## Contributing

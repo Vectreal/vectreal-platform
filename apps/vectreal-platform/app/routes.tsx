@@ -141,18 +141,21 @@ export default [
 		...prefix('docs', [
 			// Docs landing page - full-width hero, outside the sidebar layout
 			index('./routes/docs/index.tsx'),
+			// Pages that moved when the docs split into two audiences: 301s, see `docs-moved.ts`.
+			route('getting-started/first-model', './routes/docs/docs-moved.ts', {
+				id: 'docs-moved-first-model'
+			}),
+			route('getting-started/installation', './routes/docs/docs-moved.ts', {
+				id: 'docs-moved-installation'
+			}),
+			route('operations/deployment', './routes/docs/docs-moved.ts', {
+				id: 'docs-moved-deployment'
+			}),
 			layout('./routes/layouts/docs-layout.tsx', [
-				// Getting Started
-				...prefix('getting-started', [
-					index('./routes/docs/getting-started/index.mdx', {
-						id: 'docs-getting-started-index'
-					}),
-					route(
-						'installation',
-						'./routes/docs/getting-started/installation.mdx'
-					),
-					route('first-model', './routes/docs/getting-started/first-model.mdx')
-				]),
+				// Getting Started: the browser's first page
+				route('getting-started', './routes/docs/getting-started/index.mdx', {
+					id: 'docs-getting-started-index'
+				}),
 				// Guides
 				...prefix('guides', [
 					route('upload', './routes/docs/guides/upload.mdx'),
@@ -168,9 +171,13 @@ export default [
 					route('hooks', './routes/docs/packages/hooks.mdx'),
 					route('core', './routes/docs/packages/core.mdx')
 				]),
-				// Operations
-				...prefix('operations', [
-					route('deployment', './routes/docs/operations/deployment.mdx')
+				// Run It Yourself
+				...prefix('self-hosting', [
+					index('./routes/docs/self-hosting/index.mdx', {
+						id: 'docs-self-hosting-index'
+					}),
+					route('installation', './routes/docs/self-hosting/installation.mdx'),
+					route('deployment', './routes/docs/self-hosting/deployment.mdx')
 				]),
 				// Contributing
 				route('contributing', './routes/docs/contributing.mdx'),

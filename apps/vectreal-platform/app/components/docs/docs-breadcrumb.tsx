@@ -11,7 +11,7 @@ import { Link } from 'react-router'
 
 import { DocsMobileNavigation } from './docs-mobile-navigation'
 import { useDocsToc } from './docs-toc-context'
-import { DOC_CATEGORY_LABELS, getDocPage } from '../../lib/docs/docs-manifest'
+import { getDocTrail } from '../../lib/docs/docs-manifest'
 
 /**
  * Whether a path is a docs page: the nav is the docs bar there. The pages
@@ -45,13 +45,8 @@ export function DocsBreadcrumb({
 }) {
 	const { headings, activeId } = useDocsToc()
 	const slug = pathname.replace(/^\/docs\/?/, '').replace(/\/$/, '')
-	const page = getDocPage(slug)
-	const categorySlug = slug.split('/').filter(Boolean)[0] as
-		keyof typeof DOC_CATEGORY_LABELS | undefined
-	const categoryLabel = categorySlug
-		? DOC_CATEGORY_LABELS[categorySlug]
-		: undefined
-	const categoryPage = categorySlug ? getDocPage(categorySlug) : undefined
+	const { page, categoryLabel, categoryStart } = getDocTrail(slug)
+	const showTitle = Boolean(page?.title && page.title !== categoryLabel)
 
 	const sheet = (label: string) => (
 		<DocsMobileNavigation
@@ -90,19 +85,22 @@ export function DocsBreadcrumb({
 					<>
 						<BreadcrumbSeparator />
 						<BreadcrumbItem>
-							{categoryPage ? (
+							{categoryStart && categoryStart.slug !== slug ? (
 								<BreadcrumbLink asChild>
-									<Link to={`/docs/${categorySlug}`} viewTransition>
+									<Link to={`/docs/${categoryStart.slug}`} viewTransition>
 										{categoryLabel}
 									</Link>
 								</BreadcrumbLink>
+							) : showTitle ? (
+								// On its first page the category is where the reader already is: text, and the title after it is the current page.
+								<span>{categoryLabel}</span>
 							) : (
 								<BreadcrumbPage>{categoryLabel}</BreadcrumbPage>
 							)}
 						</BreadcrumbItem>
 					</>
 				)}
-				{page?.title && page.title !== categoryLabel && (
+				{page && showTitle && (
 					<>
 						<BreadcrumbSeparator />
 						<BreadcrumbItem className="min-w-0">
