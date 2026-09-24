@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 
 import type {
 	PaginationState,
@@ -45,7 +45,6 @@ export function useDashboardTableState({
 }: UseDashboardTableStateOptions): DashboardTableStateResult {
 	const [searchParams, setSearchParams] = useSearchParams()
 
-	const qKey = `${namespace}-q`
 	const pageKey = `${namespace}-page`
 	const pageSizeKey = `${namespace}-pageSize`
 	const sortKey = `${namespace}-sort`
@@ -54,7 +53,22 @@ export function useDashboardTableState({
 
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
-	const searchValue = searchParams.get(qKey) ?? ''
+	/*
+	  Search lives in state, not in the URL like the sort and the page.
+
+	  It is free text, and whatever is in the URL is recorded everywhere the URL
+	  goes: every pageview PostHog captures (the embed-token redaction knows only
+	  `token=`), browser history, the next request's Referer, and each access
+	  log on the way. On the API keys page the obvious thing to type is a live
+	  key. The filtering is all client-side, so the URL was buying a search that
+	  survives a reload, and nothing a loader reads.
+
+	  It is kept against the path it was typed on. A folder is a new URL but the
+	  same mounted table, and the URL used to clear the box on the way there.
+	*/
+	const { pathname } = useLocation()
+	const [search, setSearch] = useState({ pathname, value: '' })
+	const searchValue = search.pathname === pathname ? search.value : ''
 
 	const sorting = useMemo<SortingState>(() => {
 		const sortId = searchParams.get(sortKey)
@@ -85,28 +99,16 @@ export function useDashboardTableState({
 
 	const setSearchValue = useCallback(
 		(value: string) => {
-			const trimmedValue = value.trim()
-			const isSameSearchValue = trimmedValue
-				? searchValue === value
-				: searchValue === ''
-			const isAlreadyOnFirstPage = pagination.pageIndex === 0
-
-			if (isSameSearchValue && isAlreadyOnFirstPage) {
-				return
-			}
+			setSearch({ pathname, value })
+			if (pagination.pageIndex === 0) return
 
 			setSearchParams((prevParams) => {
 				const nextParams = new URLSearchParams(prevParams)
-				if (trimmedValue) {
-					nextParams.set(qKey, value)
-				} else {
-					nextParams.delete(qKey)
-				}
 				nextParams.set(pageKey, '1')
 				return nextParams
 			})
 		},
-		[pagination.pageIndex, pageKey, qKey, searchValue, setSearchParams]
+		[pagination.pageIndex, pageKey, pathname, setSearchParams]
 	)
 
 	const onSortingChange = useCallback(
@@ -180,8 +182,8 @@ export function useDashboardTableState({
 	/*
 	  The layout choice lives in the URL with the rest of the table state rather
 	  than in component state or localStorage: it survives reload and back
-	  navigation for the same reason the search term does, and a shared link
-	  arrives showing what the sender was looking at.
+	  navigation with the sort and the page, and a shared link arrives showing
+	  what the sender was looking at. The search is the exception, above.
 	*/
 	const view: DashboardView =
 		searchParams.get(viewKey) === 'table'
