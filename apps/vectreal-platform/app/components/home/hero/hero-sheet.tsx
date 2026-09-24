@@ -3,6 +3,7 @@ import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { ArrowRight } from 'lucide-react'
 import {
+	Fragment,
 	lazy,
 	Suspense,
 	useEffect,
@@ -183,7 +184,13 @@ export function HeroSheet() {
 
 				<div ref={copyRef} className={styles.copy}>
 					<h1 id="home-heading" className="text-display">
-						{HERO.heading}
+						{/* The space keeps the lines apart in the text itself, for copy and search. */}
+						{HERO.heading.map((line, i) => (
+							<Fragment key={line}>
+								{i > 0 && ' '}
+								<span className="block">{line}</span>
+							</Fragment>
+						))}
 					</h1>
 					<p className="text-muted-foreground text-body-lg mt-8 max-w-xl">
 						{HERO.lead}

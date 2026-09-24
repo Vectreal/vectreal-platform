@@ -124,7 +124,7 @@ holds `touch-action: none`.
 ## Page measure
 
 `.container-page` owns the page width and its gutter together: `--container-max`
-(80rem) with `padding-inline` stepping up at 48rem.
+(90rem) with `padding-inline` stepping up at 48rem.
 
 The gutter belongs to the measure, not to the caller. `max-w-7xl` was hardcoded
 at fifteen sites, each choosing its own padding, so a hero at `px-6` sat above a

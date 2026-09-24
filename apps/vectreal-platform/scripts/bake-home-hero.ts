@@ -27,7 +27,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const OUTPUT_DIR = path.resolve(scriptDir, '../app/assets/home')
 const BASE_URL = process.env.BAKE_BASE_URL ?? 'http://localhost:4200'
 
-// The wide sheet, and the folded card below 1100px. The frame's size follows from the layout.
+// The wide sheet, and the folded card below 900px. The frame's size follows from the layout.
 const FRAMINGS = [
 	{ name: 'sheet', viewport: { width: 1600, height: 1000 } },
 	{ name: 'fold', viewport: { width: 720, height: 1000 } }

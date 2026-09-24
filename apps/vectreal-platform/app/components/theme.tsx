@@ -7,13 +7,14 @@ import {
 	type ThemeMode
 } from '../lib/theme/theme-cookie'
 
-/** Routes that always render dark regardless of the visitor's preference. */
-export function isForceDarkRoute(pathname: string): boolean {
-	return pathname === '/' || pathname === '/home'
-}
+/*
+  Every route follows the visitor's theme. The home page used to force dark,
+  back when its surfaces were built for dark only; the rebuilt page is
+  designed in both.
+*/
 
-function resolveIsDark(mode: ThemeMode, forceDark: boolean): boolean {
-	if (forceDark || mode === 'dark') return true
+function resolveIsDark(mode: ThemeMode): boolean {
+	if (mode === 'dark') return true
 	if (mode === 'system' && typeof window !== 'undefined') {
 		return window.matchMedia('(prefers-color-scheme: dark)').matches
 	}
@@ -21,9 +22,9 @@ function resolveIsDark(mode: ThemeMode, forceDark: boolean): boolean {
 }
 
 /** Apply a theme to the document root. Safe to call on the client only. */
-export function applyTheme(mode: ThemeMode, forceDark: boolean): void {
+export function applyTheme(mode: ThemeMode): void {
 	if (typeof document === 'undefined') return
-	const isDark = resolveIsDark(mode, forceDark)
+	const isDark = resolveIsDark(mode)
 	const root = document.documentElement
 	root.classList.toggle('dark', isDark)
 	root.style.colorScheme = isDark ? 'dark' : 'light'
@@ -33,17 +34,15 @@ export function applyTheme(mode: ThemeMode, forceDark: boolean): void {
  * Blocking pre-paint script that applies the visitor's own cookie theme before
  * first paint. Because it reads document.cookie at load time (not a value baked
  * into the HTML), CDN-cached anonymous HTML still renders each visitor's own
- * theme with no flash. `forceDark` is route-derived, so it is cache-safe to
- * embed as a literal.
+ * theme with no flash.
  */
-export function ThemeScript({ forceDark }: { forceDark: boolean }) {
+export function ThemeScript() {
 	const script = `(() => {
   const root = document.documentElement;
-  const forceDark = ${JSON.stringify(forceDark)};
   const match = document.cookie.match(/(?:^|;\\s*)${THEME_COOKIE_NAME}=([^;]*)/);
   const mode = match ? decodeURIComponent(match[1]) : 'system';
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const isDark = forceDark || mode === 'dark' || (mode === 'system' && prefersDark);
+  const isDark = mode === 'dark' || (mode === 'system' && prefersDark);
   root.classList.toggle('dark', isDark);
   root.style.colorScheme = isDark ? 'dark' : 'light';
 })();`
@@ -52,24 +51,23 @@ export function ThemeScript({ forceDark }: { forceDark: boolean }) {
 }
 
 /**
- * Post-hydration controller: re-applies the cookie theme on route change (so
- * force-dark routes toggle correctly) and follows the OS setting while in
+ * Post-hydration controller: re-reads the cookie theme on route change, since
+ * a toggle elsewhere may have written it, and follows the OS setting while in
  * `system` mode.
  */
 export function ThemeController() {
 	const { pathname } = useLocation()
 
 	useEffect(() => {
-		const forceDark = isForceDarkRoute(pathname)
 		const mode = readThemeCookie()
-		applyTheme(mode, forceDark)
+		applyTheme(mode)
 
-		if (forceDark || mode !== 'system') {
+		if (mode !== 'system') {
 			return
 		}
 
 		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-		const handleChange = () => applyTheme('system', false)
+		const handleChange = () => applyTheme('system')
 		mediaQuery.addEventListener('change', handleChange)
 
 		return () => mediaQuery.removeEventListener('change', handleChange)

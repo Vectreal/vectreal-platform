@@ -19,15 +19,15 @@ const COPY = HOME_PAGE_COPY.pilot
 export const PilotOffer = () => (
 	<div className="flex flex-col gap-16">
 		<div className="max-w-2xl">
-			<h2 id="pilot-heading" className="text-headline" data-reveal="wipe">
+			<h2 id="pilot-heading" className="text-headline" data-reveal>
 				{COPY.heading}
 			</h2>
-			<p className="text-muted-foreground text-body-lg mt-8" data-reveal="fade">
+			<p className="text-muted-foreground text-body-lg mt-8" data-reveal>
 				{COPY.lead}
 			</p>
 		</div>
 
-		<div className="grid gap-8 lg:grid-cols-[1fr_1.4fr_1fr]" data-reveal="fade">
+		<div className="grid gap-8 lg:grid-cols-[1fr_1.4fr_1fr]" data-reveal>
 			{COPY.blocks.map((block) => (
 				<div key={block.title} className="flex flex-col gap-4">
 					<span className="ds-divider h-px w-full" aria-hidden="true" />
@@ -39,7 +39,7 @@ export const PilotOffer = () => (
 
 		<div
 			className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between"
-			data-reveal="fade"
+			data-reveal
 		>
 			<p className="text-foreground text-body max-w-md">{COPY.team}</p>
 			<Button asChild size="lg" className="w-full sm:w-fit">

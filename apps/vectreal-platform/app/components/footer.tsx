@@ -5,11 +5,10 @@ import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-l
 import { XLogo } from '@shared/components/assets/icons/x-logo'
 import { YoutubeLogo } from '@shared/components/assets/icons/youtube-logo'
 import { motion } from 'framer-motion'
-import { Link, useLocation } from 'react-router'
+import { Link } from 'react-router'
 
 import { useConsent } from './consent/consent-context'
 import { ShimmerRotatingText } from './shimmer-rotating-text'
-import { isForceDarkRoute } from './theme'
 import { ThemeToggleButton } from './theme-toggle-button'
 import {
 	CONVERT_INDEX_COPY,
@@ -42,11 +41,6 @@ export const SlimFooter = () => {
 
 export const Footer = () => {
 	const { setPreferencesOpen } = useConsent()
-	const { pathname } = useLocation()
-
-	// Hide the toggle on routes that force dark (home), where it would be inert.
-	const showThemeToggle = !isForceDarkRoute(pathname)
-
 	const whispers = [
 		'latency low. fidelity high.',
 		'optimize once, ship everywhere.',
@@ -242,11 +236,9 @@ export const Footer = () => {
 							</Link>
 						</div>
 
-						{showThemeToggle && (
-							<div className="flex items-center pl-3">
-								<ThemeToggleButton />
-							</div>
-						)}
+						<div className="flex items-center pl-3">
+							<ThemeToggleButton />
+						</div>
 					</div>
 
 					<ShimmerRotatingText

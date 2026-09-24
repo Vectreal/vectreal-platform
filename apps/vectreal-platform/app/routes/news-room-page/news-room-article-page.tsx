@@ -12,11 +12,11 @@ import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { PublicErrorBoundary } from '../../components/errors'
 import {
 	AdjacentPager,
-	ArticleCard,
-	ArticleHero,
 	AuthorCard,
 	CtaPanel
 } from '../../components/layout-components'
+import { ArticleCard } from '../../components/layout-components/article-card'
+import { ArticleHero } from '../../components/layout-components/article-hero'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	getAdjacentNewsArticles,

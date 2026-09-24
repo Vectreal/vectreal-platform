@@ -10,14 +10,14 @@ const COPY = HOME_PAGE_COPY.mission
  */
 export const MissionStatement = () => (
 	<figure className="max-w-4xl">
-		<p className="text-eyebrow text-muted-foreground" data-reveal="fade">
+		<p className="text-eyebrow text-muted-foreground" data-reveal>
 			{COPY.label}
 		</p>
-		<blockquote className="text-h3 mt-8 max-w-3xl" data-reveal="wipe">
+		<blockquote className="text-h3 mt-8 max-w-3xl" data-reveal>
 			{COPY.statement}
 		</blockquote>
 		<figcaption
-			data-reveal="fade"
+			data-reveal
 			className="text-muted-foreground text-body-sm mt-8 flex items-center gap-4"
 		>
 			<span className="ds-divider h-px w-8" aria-hidden="true" />

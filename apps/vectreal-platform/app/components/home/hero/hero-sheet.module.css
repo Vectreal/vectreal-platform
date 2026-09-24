@@ -29,7 +29,9 @@
 		var(--space-6),
 		calc((100cqw - var(--container-max)) / 2 + var(--space-6))
 	);
-	--copy-w: 30rem;
+	/* Fluid, so a landscape tablet keeps the sheet; the grid column and every frame calculation read this one value. */
+	--copy-w: clamp(20rem, 42cqw, 34rem);
+	--gap: clamp(32px, 4vw, 80px);
 	--frame-top: 64px; /* the nav's bottom edge: the nav sits on the frame's top rule */
 	--frame-bottom: 32px;
 	/* The backdrop's two inks. The engine reads them as tokens, so the fold (which drops the sheet's surface) keeps them. */
@@ -40,10 +42,10 @@
 	/* Its own stacking context, so the backdrop at z-index -1 paints over the sheet's surface rather than under it. */
 	isolation: isolate;
 	display: grid;
-	grid-template-columns: minmax(340px, var(--copy-w)) minmax(0, 1fr);
+	grid-template-columns: var(--copy-w) minmax(0, 1fr);
 	/* The fold is the viewport's height but never shorter than the copy: on a short window the sheet grows and the readout moves down, rather than the copy running into it. */
 	grid-template-rows: minmax(min-content, 1fr) auto;
-	column-gap: clamp(32px, 4vw, 80px);
+	column-gap: var(--gap);
 	min-height: clamp(620px, 100dvh, 1200px);
 	/* The stage starts 56px below the top rule, so the nav keeps clear air and the model its size. */
 	padding: calc(var(--frame-top) + 56px) var(--gutter)
@@ -92,6 +94,15 @@
 	position: relative;
 	z-index: 2;
 	margin-block: 24px;
+	container-type: inline-size;
+}
+/*
+  The headline is three sentences set one to a line, and the breaks are the
+  design, so the type yields to the column rather than a sentence breaking:
+  its longest line needs about 7.6 times the type size.
+*/
+.copy h1 {
+	font-size: min(var(--text-display), 12.5cqi);
 }
 
 .figure {
@@ -112,16 +123,30 @@
 }
 
 /*
-  The frame: a 4:3 box as tall as the stage allows, centered in the room right of
-  the copy but never so far right it leaves the window. On a narrower screen that
-  pushes it under the copy, and the dissolve takes over there. The copy's right
-  edge and the readout's right edge sit symmetrically in the gutters, so their
-  midpoint is (stage width + copy width) / 2 whatever the gutter is.
+  The frame: a 4:3 box centered in the room right of the copy, but never so far
+  right it leaves the window. The room runs from the copy's column, plus the
+  gap, to the right gutter, and the gutters are equal, so its midpoint is
+  (stage width + copy width + gap) / 2 whatever the gutter is.
+*/
+/*
+  The box is also held to the room: the model's drawn width (its ink, measured
+  when the poster was baked) never exceeds the space right of the copy, less
+  `--clear` on each side. Sized by height alone it grew with a tall window
+  while the copy stayed put, and at 1728 by 1117 the two touched.
 */
 .frame {
-	--box: min(100cqh, 75cqw);
+	--clear: 48px;
+	--room: calc(100cqw - 2 * var(--gutter) - var(--copy-w) - var(--gap));
+	--box: min(
+		100cqh,
+		75cqw,
+		calc(
+			(var(--room) - 2 * var(--clear)) * 3 /
+				(4 * (var(--ink-r-sheet) - var(--ink-l-sheet)))
+		)
+	);
 	--cx: min(
-		calc((100cqw + var(--copy-w)) / 2),
+		calc((100cqw + var(--copy-w) + var(--gap)) / 2),
 		calc(100cqw - var(--box) * 0.56)
 	);
 
@@ -312,7 +337,7 @@
 	grid-template-columns: repeat(6, auto) minmax(0, 1fr);
 	column-gap: 40px;
 	row-gap: 20px;
-	align-items: end;
+	align-items: start;
 }
 .label {
 	display: block;
@@ -360,7 +385,13 @@
 	text-align: right;
 	min-width: 0;
 }
-/* The status is smaller type in a box as tall as a value line, so its label sits on the same row as the others. */
+/*
+  The status is smaller type in a box at least as tall as a value line, so its
+  label sits on the same row as the others. It wraps rather than clipping: it
+  gets whatever the six figures leave, which near the fold is less than its
+  longest message. The readout aligns its cells at the top, so a second line
+  grows down and the labels stay in one row.
+*/
 .status .value {
 	font-family: var(--font-sans);
 	font-size: 14px;
@@ -369,7 +400,8 @@
 	align-items: center;
 	justify-content: flex-end;
 	gap: 8px;
-	height: calc(var(--v-size) * 1.2);
+	white-space: normal;
+	min-height: calc(var(--v-size) * 1.2);
 }
 .dot {
 	width: 6px;
@@ -383,13 +415,13 @@
 	background: var(--orange);
 }
 
-/* Every screen below 1100px folds to the same thing: copy, then the figure as a card with the readout inside it. */
-@media (max-width: 1099px) {
+/* Every screen below 900px folds to the same thing: copy, then the figure as a card with the readout inside it. */
+@media (max-width: 899px) {
 	.sheet {
 		display: block;
 		min-height: 0;
-		/* Full width, so the grain reaches the screen's edge; the padding centers a 688px column. */
-		padding: 104px max(var(--space-4), calc((100% - 688px) / 2)) 48px;
+		/* The page's own gutter, so the folded card is as wide as every section below it. */
+		padding: 104px var(--space-4) 48px;
 		background: none;
 	}
 	.sheet::after {
@@ -412,6 +444,8 @@
 		aspect-ratio: 4 / 3;
 	}
 	.frame {
+		/* No copy beside it, so no room to hold it to. */
+		--box: min(100cqh, 75cqw);
 		--cx: 50cqw;
 		--poster: var(--poster-fold);
 		--ink-l: var(--ink-l-fold);
@@ -449,49 +483,68 @@
 		bottom: 16px;
 	}
 	/*
-	  Four full-width rows on a six-column track: the file, its three counts,
-	  what it weighed against what it weighs now, and the status. Auto columns
-	  hugged their values and stacked seven rows down the left edge.
+	  Folded, the readout is a spec sheet in two columns: the file and its
+	  status on the first line, what it weighed and what it weighs now on the
+	  second, the left side set left and the right side set right. The three
+	  counts close it as one quiet line, value first. A grid of five equal
+	  cells read as clutter, and the status sat alone under it.
 	*/
 	.readout {
 		--v-size: 20px;
 		padding: 0;
-		margin: 0 24px 44px;
+		margin: 0 24px 40px;
 		grid-template-columns: repeat(6, minmax(0, 1fr));
-		column-gap: clamp(12px, 4vw, 16px);
+		column-gap: 16px;
+		row-gap: 20px;
 	}
-	.count {
-		grid-column: span 2;
+	.file,
+	.original {
+		grid-column: 1 / 4;
 	}
-	.original,
+	.status,
 	.size {
-		grid-column: span 3;
+		grid-column: 4 / 7;
+		justify-self: end;
+		text-align: right;
 	}
 	.file,
 	.status {
-		grid-column: 1 / -1;
+		grid-row: 1;
 	}
-	.status {
-		justify-self: start;
-		text-align: left;
+	.original,
+	.size {
+		grid-row: 2;
 	}
-	.status .value {
-		justify-content: flex-start;
+	.count {
+		--v-size: 15px;
+		grid-row: 3;
+		grid-column: span 2;
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+		margin-top: -4px;
+	}
+	.count:nth-child(3) {
+		justify-self: center;
+	}
+	.count:nth-child(4) {
+		justify-self: end;
+	}
+	.count .label {
+		order: 1;
+		margin: 0;
+		text-transform: lowercase;
+		letter-spacing: 0;
+		font-size: 13px;
 	}
 	.scale {
 		display: none;
 	}
 }
 
-/* A folded sheet wide enough to hold every figure on one line does, between the file and the status. */
-@media (min-width: 560px) and (max-width: 1099px) {
-	.readout {
-		grid-template-columns: repeat(5, minmax(0, 1fr));
-	}
-	.count,
-	.original,
-	.size {
-		grid-column: auto;
+@media (min-width: 48rem) and (max-width: 899px) {
+	.sheet {
+		padding-inline: var(--space-6);
 	}
 }
 

@@ -6,12 +6,9 @@ import { data, Form, Link, useNavigation } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
 import { PublicErrorBoundary } from '../../components/errors'
-import {
-	ArticleRow,
-	CtaPanel,
-	FeaturedArticle,
-	PageHero
-} from '../../components/layout-components'
+import { CtaPanel, PageHero } from '../../components/layout-components'
+import { ArticleRow } from '../../components/layout-components/article-row'
+import { FeaturedArticle } from '../../components/layout-components/featured-article'
 import {
 	getNewsArticles,
 	getNewsCategories

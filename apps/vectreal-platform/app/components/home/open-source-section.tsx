@@ -99,18 +99,15 @@ export const OpenSourceSection = () => (
 	<div className="grid items-start gap-16 lg:grid-cols-2">
 		<div className="flex flex-col gap-8">
 			<div>
-				<h2 id="open-source-heading" className="text-h2" data-reveal="wipe">
+				<h2 id="open-source-heading" className="text-h2" data-reveal>
 					{COPY.heading}
 				</h2>
-				<p
-					className="text-muted-foreground text-body-lg mt-4"
-					data-reveal="fade"
-				>
+				<p className="text-muted-foreground text-body-lg mt-4" data-reveal>
 					{COPY.lead}
 				</p>
 			</div>
 
-			<ul className="flex flex-col" data-reveal="fade">
+			<ul className="flex flex-col" data-reveal>
 				{OPEN_SOURCE_PACKAGES.map((pkg) => (
 					<li key={pkg.name} className="flex flex-col gap-1 py-4">
 						<Link
@@ -126,7 +123,7 @@ export const OpenSourceSection = () => (
 				))}
 			</ul>
 
-			<div className="flex flex-wrap gap-4" data-reveal="fade">
+			<div className="flex flex-wrap gap-4" data-reveal>
 				<Button asChild>
 					<a href={COPY.repositoryUrl} target="_blank" rel="noreferrer">
 						<GithubLogo className="size-4" />
@@ -146,7 +143,7 @@ export const OpenSourceSection = () => (
 			</div>
 		</div>
 
-		<div data-reveal="fade">
+		<div data-reveal>
 			<CodeWindow />
 		</div>
 	</div>
