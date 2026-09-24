@@ -325,6 +325,19 @@ describe('the site nav', () => {
 		expect(bar.queryByRole('link', { name: 'Pricing' })).toBeNull()
 	})
 
+	it('names the page on the phone bar rather than drawing a second menu button', () => {
+		renderAt('/docs/guides/upload')
+		const phoneBar = screen
+			.getAllByRole('navigation', { name: 'Main navigation' })
+			.find((nav) => !nav.className.includes('md:block')) as HTMLElement
+		const picker = within(phoneBar).getByRole('button', {
+			name: /Docs pages, current:/
+		})
+		expect(picker.textContent).toContain('Uploading Models')
+		// Only the site menu's button may carry a menu icon.
+		expect(phoneBar.querySelectorAll('.lucide-menu')).toHaveLength(1)
+	})
+
 	it('shows the marketing links everywhere else', () => {
 		renderAt('/pricing')
 		const bar = within(desktopBar())

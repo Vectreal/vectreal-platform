@@ -6,7 +6,7 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator
 } from '@shared/components/ui/breadcrumb'
-import { Menu } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { DocsMobileNavigation } from './docs-mobile-navigation'
@@ -30,7 +30,10 @@ export function isDocsPath(pathname: string) {
  * it renders on the server with everything else in the bar.
  *
  * Below `xl`, the first crumb opens the docs sheet, the tree and the page's
- * contents, since neither rail is on screen there.
+ * contents, since neither rail is on screen there. It is a picker, not a
+ * menu: it names where the reader is and carries the chevron the nav's own
+ * panels do. On a phone the site menu's button sits beside it, and two menu
+ * icons side by side read as the same control twice.
  */
 export function DocsBreadcrumb({
 	pathname,
@@ -50,7 +53,7 @@ export function DocsBreadcrumb({
 		: undefined
 	const categoryPage = categorySlug ? getDocPage(categorySlug) : undefined
 
-	const sheet = (
+	const sheet = (label: string) => (
 		<DocsMobileNavigation
 			pathname={pathname}
 			headings={headings}
@@ -59,14 +62,17 @@ export function DocsBreadcrumb({
 			{/* A real button: `SheetTrigger asChild` adds no tabIndex of its own, and below xl this is the docs' whole navigation. */}
 			<button
 				type="button"
-				className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm font-medium"
+				className="text-muted-foreground hover:text-foreground inline-flex min-w-0 items-center gap-1 text-sm font-medium"
 			>
-				<Menu className="size-4" aria-hidden="true" /> Docs
+				<span className="sr-only">Docs pages, current: </span>
+				<span className="truncate">{label}</span>
+				<ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
 			</button>
 		</DocsMobileNavigation>
 	)
 
-	if (compact) return sheet
+	// The phone bar has room for one crumb, so it is the page the reader is on.
+	if (compact) return sheet(page?.title ?? categoryLabel ?? 'Docs')
 
 	return (
 		<Breadcrumb aria-label="Docs breadcrumb" className="min-w-0">
@@ -78,7 +84,7 @@ export function DocsBreadcrumb({
 							Docs
 						</Link>
 					</BreadcrumbLink>
-					<span className="xl:hidden">{sheet}</span>
+					<span className="xl:hidden">{sheet('Docs')}</span>
 				</BreadcrumbItem>
 				{categoryLabel && (
 					<>
