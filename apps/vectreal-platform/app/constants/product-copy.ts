@@ -373,8 +373,9 @@ const TEAM_PLAN =
 
 export const HOME_PAGE_COPY = {
 	hero: {
-		heading: 'Show your products in 3D.',
-		lead: 'Start from the 3D files you already have. Vectreal prepares them for the browser and embeds them on any page you own, with a dashboard that keeps track of every model.',
+		/** One sentence per line, set as written: the breaks are part of the headline. */
+		heading: ['Your product.', 'Every angle.', 'On your own site.'],
+		lead: 'Drop in the 3D file you already have. Vectreal makes it fast enough for any product page.',
 		primaryCta: 'Start a pilot project',
 		secondaryCta: 'Try it on your own file',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
