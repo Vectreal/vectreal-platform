@@ -261,8 +261,14 @@ export default function NewsRoomArticlePage({
 			  max-width", which on a wide screen ran a line of body copy past
 			  1200px - roughly 140 characters, about twice the distance an eye
 			  reliably returns from.
+
+			  `self-start`, so it is not stretched to the row. A stretched flex item
+			  has a definite height, the whole article's, and every `h-full` inside
+			  it resolved to that: first the hero, 12,326px tall with its image
+			  over the entire page, then the closing call to action. Each was
+			  patched by taking its `h-full` away; this is the cause.
 			*/}
-			<main className="max-w-measure w-full min-w-0">
+			<main className="max-w-measure w-full min-w-0 self-start">
 				<Button variant="ghost" asChild className="mb-6 -ml-2">
 					<Link to="/news-room" viewTransition>
 						<ChevronLeft className="mr-1 h-4 w-4" />

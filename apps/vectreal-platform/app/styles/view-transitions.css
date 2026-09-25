@@ -33,6 +33,17 @@
 }
 
 /*
+ * The rest of the page on the morph's clock. At the default 250ms the article
+ * had fully arrived around a card still flying to its place. `:has` reads the
+ * page being shown, which carries a plate on either end of the morph.
+ */
+:root:has(.vt-news-plate)::view-transition-old(root),
+:root:has(.vt-news-plate)::view-transition-new(root) {
+	animation-duration: var(--duration-slow);
+	animation-timing-function: var(--ease-out);
+}
+
+/*
  * Flat surface and the scrim gradient: stretch to the tweening box so the
  * gradient stays vertical. This used to say "so the hairline border stays on
  * the edge"; the plate carried border-white/10 with no border-width, so that
