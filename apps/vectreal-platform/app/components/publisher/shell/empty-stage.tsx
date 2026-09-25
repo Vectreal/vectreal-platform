@@ -12,8 +12,12 @@ import { toast } from 'sonner'
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
 import { type SampleDownloader } from '../../../hooks/use-sample-download'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
+import { RelativeTime } from '../../dashboard/relative-time'
+import { SceneThumbnail } from '../../dashboard/scene-thumbnail'
 import { DitherGrain } from '../../layout-components/dither-grain'
 import { SampleTiles } from '../../layout-components/sample-tiles'
+
+import type { SceneSummary } from '../../dashboard/scene-card'
 
 interface Props {
 	isMobile?: boolean
@@ -27,6 +31,8 @@ interface Props {
 	 * and the tiles came back idle and clickable halfway through 18 MB.
 	 */
 	sampleDownload: SampleDownloader
+	/** The signed-in user's latest scenes, from the loader; none signed out. */
+	recentScenes?: readonly SceneSummary[]
 }
 
 /*
@@ -56,7 +62,12 @@ const BUNDLE_HINT = `A ${BUNDLE_FORMAT_IDS.map(
  * not a dialog: a dialog would trap focus and catch the drop on a page with
  * nothing else on it.
  */
-export const EmptyStage = ({ isMobile, onUpload, sampleDownload }: Props) => {
+export const EmptyStage = ({
+	isMobile,
+	onUpload,
+	sampleDownload,
+	recentScenes = []
+}: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 
 	/* `useModelFileInputs` owns why there are two of these. */
@@ -137,62 +148,154 @@ export const EmptyStage = ({ isMobile, onUpload, sampleDownload }: Props) => {
 			{...getRootProps({ role: 'region' })}
 			aria-label="Empty stage"
 			className={cn(
-				'relative isolate flex h-full w-full items-center justify-center overflow-hidden p-4 transition-shadow',
+				'relative isolate h-full w-full overflow-hidden transition-shadow',
 				isDragActive && 'ring-2 ring-[rgb(var(--orange-rgb))] ring-inset'
 			)}
 		>
 			<DitherGrain origin="right" />
 
-			<div className="ds-overlay w-full max-w-md rounded-2xl p-6 sm:p-8">
-				<h1 className="text-h3">
-					{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
-				</h1>
-				<p className="text-muted-foreground text-body-sm mt-2">
-					It opens right here in your browser, and nothing leaves your device
-					until you save.
-				</p>
-
-				<div className="mt-6 flex flex-wrap items-center gap-2">
-					<Button onClick={openFilePicker}>
-						<Upload className="h-4 w-4" aria-hidden />
-						Choose a file
-					</Button>
-					{/*
-					  No folder option on a phone. iOS and Android have no directory
-					  picker to open, so offering one would be a button that does
-					  nothing on the devices this branch exists for.
-					*/}
-					{!isMobile && (
-						<Button variant="outline" onClick={openDirectoryPicker}>
-							<FolderUp className="h-4 w-4" aria-hidden />
-							Choose a folder
-						</Button>
-					)}
-				</div>
-				{!isMobile && (
-					<p className="text-muted-foreground mt-3 text-xs">{BUNDLE_HINT}</p>
-				)}
-
+			{/*
+			  The column scrolls, not the stage, so the grain and the drop ring stay
+			  put. `my-auto` in it rather than a centered flex box: on a short stage
+			  the content can outgrow it, and a centered box taller than its
+			  container loses its top where no scroll reaches it.
+			*/}
+			<div className="absolute inset-0 flex flex-col overflow-y-auto p-4 sm:p-8">
 				{/*
-				  Something to open when you have nothing to open. Two models rather
-				  than one, because the optimization passes do different jobs: the
-				  rocket is two thirds geometry and the camera is nearly all texture,
-				  so each one makes a different pass look like it is working. The
-				  split is measured; see `sample-models.ts`.
+				  The stage waiting for a model: the invitation centered where the
+				  model will land, and what there is to open laid out below it, on
+				  the stage itself. It was a text column beside a card, which is how
+				  a landing page opens, and it made the editor read as one.
 				*/}
-				<SampleTiles
-					className="mt-8"
-					label="Or open a sample"
-					onOpen={(id) => void openSample(id)}
-					download={download}
-				/>
+				<div className="mx-auto my-auto flex w-full max-w-5xl flex-col items-center gap-14 py-4">
+					<div className="flex flex-col items-center text-center">
+						<h1 className="text-h2">
+							{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
+						</h1>
+						<p className="text-muted-foreground text-body-lg mt-4 max-w-md">
+							It opens right here in your browser, and nothing leaves your
+							device until you save.
+						</p>
 
-				<Link
-					to="/docs/getting-started"
-					className="text-muted-foreground hover:text-foreground mt-6 inline-block text-sm underline underline-offset-4"
-				>
-					How the publisher works
-				</Link>
+						<div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+							<Button size="lg" onClick={openFilePicker}>
+								<Upload className="h-4 w-4" aria-hidden />
+								Choose a file
+							</Button>
+							{/*
+							  No folder option on a phone. iOS and Android have no directory
+							  picker to open, so offering one would be a button that does
+							  nothing on the devices this branch exists for.
+							*/}
+							{!isMobile && (
+								<Button
+									size="lg"
+									variant="outline"
+									onClick={openDirectoryPicker}
+								>
+									<FolderUp className="h-4 w-4" aria-hidden />
+									Choose a folder
+								</Button>
+							)}
+						</div>
+						{!isMobile && (
+							<p className="text-muted-foreground mt-3 text-xs">
+								{BUNDLE_HINT}
+							</p>
+						)}
+					</div>
+
+					{/*
+					  Two shelves of one kind of tile, your scenes and the samples: the
+					  same two-column grid, full width on a phone and side by side where
+					  both fit. A list of your scenes beside two picture tiles read as
+					  two unrelated things of unequal weight. Up to four scenes, two
+					  rows, so the shelf holds its shape whatever the count.
+					*/}
+					<div className="flex w-full flex-wrap items-start justify-center gap-x-10 gap-y-8">
+						{/*
+						  Before the samples: someone with work of their own is more likely
+						  back for it than for a demo model.
+
+						  Held while a sample downloads, like the tiles: the download
+						  outlives a navigation inside the publisher and would load the
+						  sample over the scene just opened.
+						*/}
+						{recentScenes.length > 0 && (
+							<div className="w-full sm:w-92">
+								<p
+									id="recent-scenes-label"
+									className="text-muted-foreground text-eyebrow mb-3"
+								>
+									Pick up where you left off
+								</p>
+								<ul
+									aria-labelledby="recent-scenes-label"
+									className="grid grid-cols-2 gap-4"
+								>
+									{recentScenes.map((scene) => (
+										<li key={scene.id}>
+											<Link
+												to={`/publisher/${scene.id}`}
+												aria-disabled={download ? true : undefined}
+												onClick={(event) => {
+													if (download) event.preventDefault()
+												}}
+												className={cn(
+													'block h-full rounded-xl p-3 transition-[background-color,opacity]',
+													download
+														? 'ds-raised cursor-default opacity-50'
+														: 'ds-raised-interactive'
+												)}
+											>
+												<SceneThumbnail
+													src={scene.thumbnailUrl}
+													className="mb-3 aspect-4/3 rounded-lg"
+												/>
+												<span className="text-foreground block truncate text-sm font-medium">
+													{scene.name}
+												</span>
+												<span className="text-muted-foreground block truncate text-xs">
+													{scene.projectName}
+												</span>
+												{/*
+												  Third line, as the sample tiles have one, so the two
+												  shelves end level; in the dashboard's own words.
+												*/}
+												<span className="text-muted-foreground/70 block truncate text-xs">
+													Edited <RelativeTime at={scene.updatedAt} />
+												</span>
+											</Link>
+										</li>
+									))}
+								</ul>
+							</div>
+						)}
+
+						{/*
+						  Something to open when you have nothing to open. Two models rather
+						  than one, because the optimization passes do different jobs: the
+						  rocket is two thirds geometry and the camera is nearly all texture,
+						  so each one makes a different pass look like it is working. The
+						  split is measured; see `sample-models.ts`.
+
+						  The same width as the scenes shelf, so the tiles match.
+						*/}
+						<SampleTiles
+							className="w-full sm:w-92"
+							label="Or open a sample"
+							onOpen={(id) => void openSample(id)}
+							download={download}
+						/>
+					</div>
+
+					<Link
+						to="/docs/getting-started"
+						className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4"
+					>
+						How the publisher works
+					</Link>
+				</div>
 			</div>
 
 			{/*

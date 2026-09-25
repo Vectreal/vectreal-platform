@@ -14,12 +14,14 @@ import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidat
 import { getQuotaLimit } from '../../lib/domain/billing/entitlement-service.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import {
+	getRecentScenesForUser,
 	getScene,
 	getSceneFolder
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { buildSceneManifest } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getOrCreateDefaultOrganization } from '../../lib/domain/user/user-repository.server'
+import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildMeta } from '../../lib/seo'
 import { hasSupabaseAuthCookie } from '../../lib/sessions/supabase-auth-cookie'
 import {
@@ -91,6 +93,23 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		: Promise.resolve(null)
 
 	const sceneId = params.sceneId?.trim() || null
+
+	/*
+	  Offered on the empty stage, so only where there is one: signed in, with no
+	  scene in the URL. Concurrent with the queries below, like the size limit.
+
+	  A convenience, so a failure costs the list and not the page. The catch is
+	  attached here rather than at the await: the promise sits unawaited while
+	  the scene queries run, and a rejection with no handler by then is an
+	  unhandled rejection, which ends the server process.
+	*/
+	const recentScenesPromise =
+		!sceneId && user?.id
+			? getRecentScenesForUser(user.id, 4).catch((error: unknown) => {
+					reportServerError(error, { request })
+					return []
+				})
+			: Promise.resolve([])
 	let projectId: string | null = null
 	let currentProjectName: string | null = null
 	let currentFolderId: string | null = null
@@ -150,7 +169,10 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		}
 	}
 
-	const maxSceneBytes = await maxSceneBytesPromise
+	const [maxSceneBytes, recentScenes] = await Promise.all([
+		maxSceneBytesPromise,
+		recentScenesPromise
+	])
 
 	const loaderData = {
 		isMobileRequest,
@@ -165,7 +187,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		},
 		sceneManifest,
 		publishedMeta,
-		maxSceneBytes
+		maxSceneBytes,
+		recentScenes
 	}
 
 	return data(loaderData as PublisherLoaderData, { headers })
