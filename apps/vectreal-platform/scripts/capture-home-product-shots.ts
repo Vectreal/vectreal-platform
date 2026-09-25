@@ -44,7 +44,7 @@ import {
 } from '../app/lib/theme/theme-cookie'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
-const OUTPUT_DIR = path.resolve(scriptDir, '../public/assets/images/product')
+const OUTPUT_DIR = path.resolve(scriptDir, '../app/assets/home/product')
 const STAGES_FILE = path.resolve(
 	scriptDir,
 	'../app/components/home/product-shots.json'

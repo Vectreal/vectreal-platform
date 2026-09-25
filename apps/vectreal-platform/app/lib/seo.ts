@@ -32,7 +32,7 @@ const DEFAULT_TITLE =
 	'Vectreal - Your platform for creating and sharing 3D scenes.'
 const DEFAULT_DESCRIPTION = PLATFORM_SOCIAL_DESCRIPTION
 const DEFAULT_KEYWORDS = `3D, scenes, platform, Vectreal, create, share, ${SUPPORTED_FORMAT_NAMES.join(', ')}, 3D model optimization, embeddable 3D viewer`
-// TODO: replace with a 1200x630 PNG at public/assets/images/og-default.png for summary_large_image cards.
+// TODO: replace with a 1200x630 PNG at public/media/images/og-default.png for summary_large_image cards.
 // Until then the 512x512 icon is used, which requires DEFAULT_TWITTER_CARD = 'summary'.
 const DEFAULT_OG_IMAGE = '/android-chrome-512x512.png'
 const DEFAULT_OG_IMAGE_ALT = 'Vectreal platform'

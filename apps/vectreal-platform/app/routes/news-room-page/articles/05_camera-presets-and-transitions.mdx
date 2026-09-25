@@ -14,11 +14,11 @@ author:
     name: "Moritz Becker"
     role: "Founder at Vectreal"
     bio: "Building open infrastructure for practical 3D on the web."
-    avatar: "/assets/images/author-image.jpeg"
+    avatar: "/media/images/author-image.jpeg"
     linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
-coverImage: "/assets/images/newsroom/og-camera-presets-and-transitions.webp"
+coverImage: "/media/images/newsroom/og-camera-presets-and-transitions.webp"
 draft: false
-sceneImage: "/assets/images/newsroom/scene-camera-presets-and-transitions.webp"
+sceneImage: "/media/images/newsroom/scene-camera-presets-and-transitions.webp"
 ---
 
 {/* ## Blog Summary (80–120 words)
@@ -33,11 +33,11 @@ Your scene loads. The visitor sees the model from a corner-of-the-room angle tha
           in #FC6C18 with a small "Camera 1 / 2 / 3" label in DM Sans.
           Subtle Vectreal "V" mark bottom-right.
    Size: 1200×630, webp, <120 KB. No human figures.
-   Output: /public/assets/images/newsroom/05/og-camera-presets-and-transitions.webp */}
+   Output: /public/media/images/newsroom/05/og-camera-presets-and-transitions.webp */}
 
 {/* ASSET BRIEF - Thumbnail (thumbnail-camera-presets-and-transitions.webp)
    1:1 crop derived from cover; 600×600, webp, <60 KB.
-   Output: /public/assets/images/newsroom/05/thumbnail-camera-presets-and-transitions.webp */}
+   Output: /public/media/images/newsroom/05/thumbnail-camera-presets-and-transitions.webp */}
 
 import EmbedShowcase from './embed-showcase'
 
@@ -65,7 +65,7 @@ This is the lever, and Vectreal gives you a full keyboard for it.
 
 ### What Ships Today - The Camera System in One Table
 
-![Vectreal camera system overview - Manager, Settings, Transition, Controls](/assets/images/newsroom/05/01-camera-system-overview.svg)
+![Vectreal camera system overview - Manager, Settings, Transition, Controls](/media/images/newsroom/05/01-camera-system-overview.svg)
 
 {/* ASSET BRIEF - Camera System Overview Diagram (01-camera-system-overview.svg)
    Purpose: Visual map of the four sidebar sections in the Compose tab.
@@ -76,7 +76,7 @@ This is the lever, and Vectreal gives you a full keyboard for it.
      4. "Camera Controls" - toggle icons: Zoom, Auto Rotate; speed sliders.
    Style: Same flat vector treatment as Article 04 diagrams.
      #FC6C18 accents on icons; #EAEAEA text on #0a0a0a.
-   Output: /public/assets/images/newsroom/05/01-camera-system-overview.svg */}
+   Output: /public/media/images/newsroom/05/01-camera-system-overview.svg */}
 
 | Section | What it does | Where the visitor feels it |
 |---|---|---|
@@ -91,7 +91,7 @@ These four panels, working together, are the difference between "loaded a 3D fil
 
 ### Camera Manager - The Concept Most Teams Skip
 
-![Camera Manager - multi-camera dropdown, add, rename, delete](/assets/images/newsroom/05/02-camera-manager.jpeg)
+![Camera Manager - multi-camera dropdown, add, rename, delete](/media/images/newsroom/05/02-camera-manager.jpeg)
 
 {/* ASSET BRIEF - Camera Manager Screenshot (02-camera-manager.jpeg)
    Source: Live capture of the Compose sidebar, Camera Controls panel,
@@ -102,7 +102,7 @@ These four panels, working together, are the difference between "loaded a 3D fil
      so the named cameras are visible.
    State: Hover state on Add button optional.
    Resolution: Retina, 2400 px wide, exported at 1200 px webp/jpeg.
-   Output: /public/assets/images/newsroom/05/02-camera-manager.jpeg */}
+   Output: /public/media/images/newsroom/05/02-camera-manager.jpeg */}
 
 The single largest quality jump comes from saving more than one camera. Most embeds ship with the default angle the file imported with - usually a corner-of-the-room shot that the modeler set up for working, not for showing.
 
@@ -134,7 +134,7 @@ If you only had time to set up one extra camera, **set up Hero**. The first fram
   caption="Default camera at FOV 50°. Drag the model to feel the natural perspective. The camera system described in this article drives every Vectreal embed."
   height={440}
 />
-![Field of View comparison - 30°, 50°, 90° on the same model](/assets/images/newsroom/05/03-fov-comparison.jpeg)
+![Field of View comparison - 30°, 50°, 90° on the same model](/media/images/newsroom/05/03-fov-comparison.jpeg)
 
 {/* ASSET BRIEF - FOV Comparison Image (03-fov-comparison.jpeg)
    Purpose: Three side-by-side renders of the same model at three FOVs.
@@ -143,7 +143,7 @@ If you only had time to set up one extra camera, **set up Hero**. The first fram
    Each labeled with the FOV value below the render.
    Background: Brand dark surface; subtle gradient or floor shadow OK.
    Crop: Three equal-width tiles in a single image, 1200x600 final.
-   Output: /public/assets/images/newsroom/05/03-fov-comparison.jpeg */}
+   Output: /public/media/images/newsroom/05/03-fov-comparison.jpeg */}
 
 The Vectreal Publisher exposes **three per-camera field-of-view presets**. This number is doing more work than most teams realize.
 
@@ -161,7 +161,7 @@ If you need an arbitrary angle rather than one of the three, set `fov` per camer
 
 ### Camera Transitions - Where "Polished" and "Jittery" Diverge
 
-![Three transition types - Instant, Linear, Smart object-avoidance](/assets/images/newsroom/05/04-transition-types.svg)
+![Three transition types - Instant, Linear, Smart object-avoidance](/media/images/newsroom/05/04-transition-types.svg)
 
 {/* ASSET BRIEF - Transition Types Diagram (04-transition-types.svg)
    Purpose: Show the three transition behaviors visually.
@@ -173,7 +173,7 @@ If you need an arbitrary angle rather than one of the three, set `fov` per camer
         (a cube/sphere shape) sitting between the two cameras. Use
         #FC6C18 for the active arc.
    Annotations: Tiny labels under each - "Cut", "Lerp", "Path-aware".
-   Output: /public/assets/images/newsroom/05/04-transition-types.svg */}
+   Output: /public/media/images/newsroom/05/04-transition-types.svg */}
 
 When the visitor (or your app code) switches from one camera to another, three behaviors are available.
 
@@ -237,7 +237,7 @@ Smart is the option to turn on when your scene has geometry between your cameras
 
 ### Camera Controls - The Layer That Decides How "Good" Dragging Feels
 
-![Camera Controls panel - zoom, auto-rotate, speeds, vertical limit](/assets/images/newsroom/05/05-camera-controls.jpeg)
+![Camera Controls panel - zoom, auto-rotate, speeds, vertical limit](/media/images/newsroom/05/05-camera-controls.jpeg)
 
 {/* ASSET BRIEF - Camera Controls Screenshot (05-camera-controls.jpeg)
    Source: Live capture of the Camera Controls block in the Compose
@@ -247,7 +247,7 @@ Smart is the option to turn on when your scene has geometry between your cameras
      and the expanded Advanced section showing Movement Smoothness
      (damping factor) and Vertical Limit sliders.
    Crop: Sidebar segment only.
-   Output: /public/assets/images/newsroom/05/05-camera-controls.jpeg */}
+   Output: /public/media/images/newsroom/05/05-camera-controls.jpeg */}
 
 Two toggles and a handful of sliders, but each one shifts how the embed feels in the visitor's hands.
 

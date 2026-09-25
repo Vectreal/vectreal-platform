@@ -33,9 +33,9 @@ const ARTICLES_DIR = path.resolve(
 )
 const PUBLIC_IMAGES_DIR = path.resolve(
 	scriptDir,
-	'../public/assets/images/newsroom'
+	'../public/media/images/newsroom'
 )
-const PUBLIC_IMAGE_URL_PREFIX = '/assets/images/newsroom'
+const PUBLIC_IMAGE_URL_PREFIX = '/media/images/newsroom'
 const BASE_URL = 'https://vectreal.com/news-room'
 
 const FONT_FAMILY = 'DM Sans'

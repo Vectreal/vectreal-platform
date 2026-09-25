@@ -19,6 +19,10 @@ import { ProductPageSketch } from './product-page-sketch'
 import PRODUCT_SHOTS from './product-shots.json'
 import { ProductStage, type FrameRect } from './product-stage'
 import styles from './product-window.module.css'
+import manageDarkUrl from '../../assets/home/product/manage-dark.webp?url'
+import manageLightUrl from '../../assets/home/product/manage-light.webp?url'
+import prepareDarkUrl from '../../assets/home/product/prepare-dark.webp?url'
+import prepareLightUrl from '../../assets/home/product/prepare-light.webp?url'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import { dissolveIn } from '../../lib/dither/dither'
 import { entersFunnel } from '../../lib/navigation/site-map'
@@ -48,13 +52,20 @@ const SHOTS: { prepare: FrameRect; manage?: FrameRect } = PRODUCT_SHOTS
 /*
   Prepare and Manage are screenshots, captured from the running app by
   `scripts/capture-home-product-shots.ts`, one per theme, and replaced in place
-  when the interface moves. The page shows the capture that matches the theme
+  when the interface moves. Imported rather than served from public, so each
+  capture's URL carries a hash of its content: a fixed name under /assets was
+  cached for a year at the edge and on every device, and a recapture never
+  reached anyone who had seen the last one. The page shows the capture that matches the theme
   it is in, so a dark page never flashes a white screenshot. The capture also
   records where the live camera stands in each (`product-shots.json`). Embed
   is not a screenshot: it is a shop's page, which no screenshot of ours shows.
 */
-const shotPath = (view: ProductView, theme: 'light' | 'dark') =>
-	`/assets/images/product/${view}-${theme}.webp`
+const SHOT_URLS = {
+	prepare: { light: prepareLightUrl, dark: prepareDarkUrl },
+	manage: { light: manageLightUrl, dark: manageDarkUrl }
+} as const
+const shotPath = (view: 'prepare' | 'manage', theme: 'light' | 'dark') =>
+	SHOT_URLS[view][theme]
 
 /** How long the dissolve between two screenshots takes, one mask frame per step. */
 const DISSOLVE_MS = 400

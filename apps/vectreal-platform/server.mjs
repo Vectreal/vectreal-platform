@@ -86,6 +86,63 @@ app.use((req, res, next) => {
 	next()
 })
 
+/*
+  Two kinds of static file, told apart by where they live.
+
+  /assets is Vite's: every file in it is named for its content, so it is
+  immutable for a year, here and at Cloudflare's edge (terraform/cloudflare.tf,
+  Rule 1). Nothing else may live there. public/assets used to, and its files
+  kept their names when their content changed, so a recaptured screenshot
+  stayed cached for a year at the edge and on every device that had seen the
+  old one. tests/public-assets-namespace.spec.ts keeps that folder from coming
+  back.
+
+  /media holds the files that keep their name, served fresh for five minutes,
+  which Cloudflare respects (Rule 2), so an edit reaches everyone within that.
+*/
+const MEDIA_DIR = path.join(CLIENT_DIR, 'media')
+
+/**
+ * Every file /media serves that public/assets used to, by the path it had
+ * there, collected once at boot like the prerendered routes above.
+ *
+ * For links already shared under the old paths: an article's OG image in a
+ * post, say. A lookup rather than a path built from the request, so the
+ * Location header only ever carries a path this server wrote, and a stream of
+ * made-up paths costs no filesystem call.
+ */
+function collectMovedMedia(dir, base) {
+	const moved = new Map()
+	if (!existsSync(dir)) return moved
+
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const rel = `${base}/${entry.name}`
+		if (entry.isDirectory()) {
+			for (const [from, to] of collectMovedMedia(
+				path.join(dir, entry.name),
+				rel
+			)) {
+				moved.set(from, to)
+			}
+		} else if (entry.isFile()) {
+			moved.set(`/assets${rel}`, `/media${rel}`)
+		}
+	}
+
+	return moved
+}
+
+const MOVED_MEDIA = new Map([
+	...collectMovedMedia(path.join(MEDIA_DIR, 'images'), '/images'),
+	...collectMovedMedia(path.join(MEDIA_DIR, 'models'), '/models')
+])
+
+app.use((req, res, next) => {
+	const target = MOVED_MEDIA.get(req.path)
+	if (!target) return next()
+	res.redirect(301, target)
+})
+
 app.use(
 	'/assets',
 	express.static(path.join(CLIENT_DIR, 'assets'), {
@@ -93,6 +150,7 @@ app.use(
 		maxAge: '1y'
 	})
 )
+app.use('/media', express.static(MEDIA_DIR, { maxAge: '5m', redirect: false }))
 app.use(express.static(CLIENT_DIR, { redirect: false }))
 app.use(morgan('tiny'))
 

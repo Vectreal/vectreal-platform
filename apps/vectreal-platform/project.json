@@ -263,7 +263,7 @@
 		},
 		"gen-thumbnails": {
 			"executor": "nx:run-commands",
-			"outputs": ["{projectRoot}/public/assets/images/newsroom"],
+			"outputs": ["{projectRoot}/public/media/images/newsroom"],
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"command": "pnpm exec tsx scripts/gen-newsroom-thumbnails.ts"
@@ -271,7 +271,7 @@
 		},
 		"capture-product-shots": {
 			"executor": "nx:run-commands",
-			"outputs": ["{projectRoot}/public/assets/images/product"],
+			"outputs": ["{projectRoot}/app/assets/home/product"],
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"command": "pnpm exec tsx scripts/capture-home-product-shots.ts"
