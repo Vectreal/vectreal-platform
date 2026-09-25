@@ -102,6 +102,15 @@ app.use((req, res, next) => {
 */
 const MEDIA_DIR = path.join(CLIENT_DIR, 'media')
 
+/* A path too long to stat is not a file either: an error here would be a 500. */
+const isFile = (file) => {
+	try {
+		return statSync(file).isFile()
+	} catch {
+		return false
+	}
+}
+
 /*
   Where public/assets lived, for links already shared: an article's OG image
   in a post, say. Only for a file that exists under /media, so the Location
@@ -113,10 +122,7 @@ app.use(['/assets/images', '/assets/models'], (req, res, next) => {
 		req.path
 	)
 	const file = path.join(CLIENT_DIR, target)
-	if (
-		!file.startsWith(MEDIA_DIR + path.sep) ||
-		!statSync(file, { throwIfNoEntry: false })?.isFile()
-	) {
+	if (!file.startsWith(MEDIA_DIR + path.sep) || !isFile(file)) {
 		return next()
 	}
 	res.redirect(301, target)
