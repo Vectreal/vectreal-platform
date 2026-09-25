@@ -43,6 +43,7 @@ const ruleExpression = (description: string) => {
 }
 const PUBLIC_RULE =
 	'Public allowlist pages (GET only) — respect origin cache headers'
+const FAIL_CLOSED_RULE = 'Fail-closed: bypass cache for everything else'
 
 describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 	it('references every exact allowlist path in the Terraform config', () => {
@@ -76,6 +77,25 @@ describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 		expect(
 			missing,
 			`prefixes missing from cloudflare.tf: ${missing.join(', ')}`
+		).toEqual([])
+	})
+
+	/*
+	  When several rules match, the later one's settings win, so a prefix the
+	  public rule caches and the fail-closed rule does not exclude is bypassed
+	  after all.
+	*/
+	it('excludes every public prefix from the fail-closed rule', () => {
+		const failClosed = ruleExpression(FAIL_CLOSED_RULE)
+		const missing = CDN_PUBLIC_PREFIXES.filter(
+			(prefix) =>
+				!failClosed.includes(
+					`starts_with(http.request.uri.path, ${quoted(prefix)})`
+				)
+		)
+		expect(
+			missing,
+			`prefixes the fail-closed rule would still bypass: ${missing.join(', ')}`
 		).toEqual([])
 	})
 

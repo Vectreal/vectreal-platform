@@ -2,7 +2,7 @@ import { createRequestHandler } from '@react-router/express'
 import compression from 'compression'
 import express from 'express'
 import morgan from 'morgan'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 /**
@@ -113,7 +113,10 @@ app.use(['/assets/images', '/assets/models'], (req, res, next) => {
 		req.path
 	)
 	const file = path.join(CLIENT_DIR, target)
-	if (!file.startsWith(MEDIA_DIR + path.sep) || !existsSync(file)) {
+	if (
+		!file.startsWith(MEDIA_DIR + path.sep) ||
+		!statSync(file, { throwIfNoEntry: false })?.isFile()
+	) {
 		return next()
 	}
 	res.redirect(301, target)
@@ -126,7 +129,7 @@ app.use(
 		maxAge: '1y'
 	})
 )
-app.use('/media', express.static(MEDIA_DIR, { maxAge: '5m' }))
+app.use('/media', express.static(MEDIA_DIR, { maxAge: '5m', redirect: false }))
 app.use(express.static(CLIENT_DIR, { redirect: false }))
 app.use(morgan('tiny'))
 

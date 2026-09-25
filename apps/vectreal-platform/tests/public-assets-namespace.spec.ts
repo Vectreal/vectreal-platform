@@ -25,13 +25,11 @@ describe('the /assets namespace', () => {
 		expect(existsSync(join(PUBLIC_DIR, 'assets'))).toBe(false)
 	})
 
-	it('is named by no article, whose images now live under /media', () => {
+	it('is named by no article, whose files now live under /media', () => {
 		const stale = readdirSync(ARTICLES_DIR)
 			.filter((file) => file.endsWith('.mdx'))
 			.filter((file) =>
-				/\/assets\/(images|models)\//.test(
-					readFileSync(join(ARTICLES_DIR, file), 'utf8')
-				)
+				/\/assets\//.test(readFileSync(join(ARTICLES_DIR, file), 'utf8'))
 			)
 		expect(stale).toEqual([])
 	})
