@@ -1,33 +1,33 @@
 # Your First Model
 
-End-to-end walkthrough: upload a 3D file, optimize it in the Publisher, save it to your account, publish it, and embed it on a page.
+Open a model in the Publisher, optimize it, and publish it to a page. It runs in your browser: there is nothing to install, and you need an account only when you save.
 
 ---
 
 ## What you'll need
 
-- A 3D file - GLB, glTF + bin + textures, STL, FBX, or OBJ + mtl + textures
-- A Vectreal account (create one at `/sign-up`)
-
-> **No account needed to try the Publisher.** Anonymous sessions allow you to upload and configure a model - you'll be prompted to save when you create an account.
-
----
-
-## Step 1 - Open the Publisher
-
-Navigate to [/publisher](/publisher) (or click **Publisher** in the top navigation).
-
-The publisher opens with an empty canvas and an upload prompt.
+- Nothing to start with. The Publisher has two sample models ready.
+- Your own 3D file, when you want to use one: GLB, glTF + bin + textures, STL, FBX, or OBJ + mtl + textures
+- A Vectreal account, to save, publish and embed. Trying, optimizing and downloading need none.
 
 ---
 
-## Step 2 - Upload a model
+## Step 1 - Open the Publisher with a sample
 
-Drag your 3D file onto the upload area, or click it to open the system file picker.
+Go to [/publisher](/publisher). Under **Nothing to hand?**, pick a sample:
+
+- **Rocket** is mostly geometry, so it shows what geometry compression does.
+- **Camera** carries nine 4K textures, so it shows what texture compression does.
+
+The tile shows how much of the model has downloaded, then the model opens in the viewport. To go straight there, [open the rocket](/publisher?sample=rocket).
+
+---
+
+## Step 2 - Or upload your own model
+
+Drag your 3D file onto the upload area, or click **Choose a file**.
 
 **glTF bundles**: a `.gltf` comes with a `.bin` and its textures. Drag the whole folder onto the upload area, or use **Choose a folder instead** to pick it.
-
-The model will appear in the 3D viewport once parsed. The loading indicator shows parsing progress.
 
 **Supported formats**
 
@@ -43,45 +43,52 @@ STL, FBX and OBJ are converted to glTF on the way in, so what you optimize and p
 
 ---
 
-## Step 3 - Optimize & configure
+## Step 3 - Optimize
 
-Use the **right sidebar** to adjust:
+The card at the bottom right of the stage shows the scene's size and how long it takes to load on 4G. Click that line to open **Optimize Scene** on the left.
 
-- **Quality preset** - Maximum quality, Balanced, or Smallest (controls texture resize and compression quality; mesh simplification stays off unless you enable it in the advanced panel)
-- **Lighting** - environment preset, intensity, and shadow settings
-- **Camera** - field of view, captured view, auto rotate
+- Pick **Maximum quality**, **Balanced** or **Smallest**, then **Apply Optimizations**.
+- Mesh simplification stays off unless you turn it on under **Advanced controls**.
 
-Changes apply to the viewport in real time.
-
----
-
-## Step 4 - Save the scene
-
-Click **Save** in the publisher header.
-
-- If you're signed in, the scene is saved to your account immediately.
-- If you're anonymous, you'll be prompted to sign in or create an account. Your configuration is preserved.
-
-After saving, the scene appears in your [Dashboard](/dashboard).
+The size on the card updates when the pass finishes. Close the panel with the **X** in its corner.
 
 ---
 
-## Step 5 - Publish the scene
+## Step 4 - Set up the scene
 
-From the dashboard, open the scene and click **Publish** in the publish sidebar.
+The toolbar on the left opens one panel each for **Environment**, **Shadows**, **Camera**, **Interaction** and **Hotspots**. Changes apply to the viewport as you make them.
 
-Publishing transitions the scene from **draft** to **published** and generates a stable embed URL.
+Want the file rather than a published scene? Open the publish panel (Step 6) and use **Download** to export GLB, glTF, Draco-compressed GLB or USDZ. No account needed.
 
 ---
 
-## Step 6 - Embed on a page
+## Step 5 - Save the scene
 
-After publishing, copy the embed snippet from the **Embed** section in the publish sidebar.
+- If you're signed in, click **Save** in the header and the scene is saved to your account. The location picker beside the scene name chooses its project and folder first.
+- If you're not, the same button reads **Sign In to Save**. It takes you to sign in or create an account, and the scene is kept in this browser and comes back when you return.
 
-The snippet looks like:
+Saved scenes appear in your [Dashboard](/dashboard).
+
+---
+
+## Step 6 - Publish the scene
+
+Click the card at the bottom right of the stage to open **Scene Info & Publish**. Once the scene has been saved, the panel has a **Publish** section: publish from there and confirm.
+
+Publishing saves your latest changes first, moves the scene from **draft** to **published**, and gives it a stable embed URL.
+
+---
+
+## Step 7 - Embed on a page
+
+The **Embed** section of the same panel has the snippet. It looks like:
 
 ```html
-<div style="width: 100%; max-width: 100%; height: 400px;">
+<style>
+  /* Lets the embed fill a bare flex parent, such as a Shopify Custom Liquid block. */
+  @layer { div:not([class]):not([style]):has(> .vctrl-embed) { flex-grow: 1; } }
+</style>
+<div class="vctrl-embed" style="width: 100%; max-width: 100%; height: 400px;">
   <iframe
     src="https://vectreal.com/embed/<projectId>/<sceneId>?token=vctrl_your_key_here"
     style="width: 100%; height: 100%; border: 0;"
@@ -91,7 +98,7 @@ The snippet looks like:
 </div>
 ```
 
-Paste this into any HTML page. The embedded viewer loads your published model.
+Paste all of it into any HTML page, the `<style>` block included. The embedded viewer loads your published model. [Publishing & Embedding](/docs/guides/publish-embed#why-the-snippet-ships-a-stylesheet) explains the stylesheet.
 
 > A **preview API key** is required for external iframe access, and the embedding site must be on the **owning project's** allowed domain list - the list belongs to the project, not to the key, so every key scoped to that project shares it. A project with an empty list rejects every external host. Create a key in [Dashboard → API Keys](/dashboard/api-keys) and set the domains in [Dashboard → Projects](/dashboard/projects).
 
@@ -102,11 +109,4 @@ Paste this into any HTML page. The embedded viewer loads your published model.
 - [Uploading Models](/docs/guides/upload) - format details and multi-file bundles
 - [Optimizing & Configuring](/docs/guides/optimize) - all publisher settings explained
 - [Publishing & Embedding](/docs/guides/publish-embed) - API keys, domain allowlists, embed options
-
----
-
-## Related package references
-
-- [@vctrl/hooks](/docs/packages/hooks)
-- [@vctrl/viewer](/docs/packages/viewer)
-- [@vctrl/core](/docs/packages/core)
+- Building it into your own code? Start with the [Embed SDK](/docs/guides/embed-sdk) and the packages behind the Publisher.

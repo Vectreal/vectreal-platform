@@ -10,11 +10,12 @@ import type { Group } from 'three'
 /**
  * The rocket sample, rendered by the real viewer.
  *
- * The docs index had no imagery, and every generic answer to that - an
- * illustration, a gradient, a stock render - is on the list of things that make
- * a page read as machine-made. This is the actual `@vctrl/viewer` the rows
- * beside it teach you to install, rendering a real model, and the reader can
- * drag it.
+ * Shown on the `@vctrl/viewer` docs page, so it is the component that page
+ * documents, running, rather than a picture of it. It used to decorate the
+ * docs index, where it competed with the choice that page asks for. Every
+ * generic answer to imagery - an illustration, a gradient, a stock render - is
+ * on the list of things that make a page read as machine-made; this renders a
+ * real model, and the reader can drag it.
  *
  * It was a generated chrome cube, chosen to spare the page a model download,
  * and an abstract spinning shape is the decorative-3D tell with a viewer behind

@@ -9,8 +9,8 @@ const DocsScenePreviewClient = lazy(() => import('./docs-scene-preview-client'))
  *
  * Two separate reasons, both load-bearing. The viewer needs a DOM, so it cannot
  * render during SSR - hence the mounted flag rather than a plain dynamic import.
- * And Three.js and the viewer are a large payload for a page whose job is to
- * route people to documentation, so it is lazy and never blocks first paint.
+ * And Three.js and the viewer are a large payload for a page that is mostly
+ * text, so it is lazy and never blocks first paint.
  * The model rides in that same lazy chunk's wake, and is kept to 120 KB.
  *
  * The placeholder holds the same box at every stage, so the surrounding layout
@@ -27,7 +27,7 @@ export function DocsScenePreview() {
 	// defaults to min-width: auto, so without it the track sizes to the canvas
 	// and the page scrolls sideways on a phone.
 	const frame =
-		'ds-sunken relative aspect-[4/3] w-full min-w-0 overflow-hidden rounded-2xl'
+		'ds-sunken relative aspect-video w-full min-w-0 overflow-hidden rounded-2xl'
 
 	if (!isMounted) {
 		return <div className={frame} aria-hidden="true" />
@@ -37,7 +37,7 @@ export function DocsScenePreview() {
 	  aria-hidden on the mounted branch too, not just the placeholder. The model
 	  is decoration; without it the reader is handed an unnamed <canvas> plus the
 	  viewer's own role="status" aria-live overlay, so a spinning model announces
-	  its loading state on a page whose job is routing people to documentation.
+	  its loading state on a page the reader came to read.
 	*/
 	return (
 		<div className={frame} aria-hidden="true">
