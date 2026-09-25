@@ -1,5 +1,5 @@
 {
-	"version": "0.25.1",
+	"version": "1.0.0",
 	"name": "@vctrl/core",
 	"description": "vctrl/core is the foundational package providing isomorphic 3D model processing capabilities. It contains the core classes for loading, optimizing, and exporting 3D models using glTF-Transform and Three.js, and runs in Node.js, browsers and Web Workers alike.",
 	"bugs": {

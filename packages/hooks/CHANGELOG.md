@@ -1,5 +1,49 @@
 # Changelog
 
+## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.25.1...hooks-v1.0.0) (2026-09-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** `OptimizationStats` fields are renamed. `vertices` -> `verticesCount`, `triangles` -> `primitivesCount`, `materials` -> `materialsCount`, `textures` -> `textureBytes`, `meshes` -> `meshBytes`. `texturesCount`, `meshesCount` and `textureResolutions` are unchanged.
+* **publisher:** `@vctrl/core` makes `ModelOptimizer.ensureModelLoaded` private (`hasModel()` answers the same question) and widens `ExportResult` to include `USDZExportResult`, which an exhaustive consumer switch will notice. `@vctrl/hooks` drops `info` from `OptimizationState`; `useOptimizeModel` still returns it, derived.
+* **hooks:** `ShadowsProps` is a plain interface rather than a union discriminated on `type`, so a consumer still passing `type: 'accumulative'` is passing an unknown property.
+* **publisher:** `@vctrl/viewer` reads `ao` off the shadow options directly rather than only when they were tagged accumulative, so a consumer passing `{ enabled: true, ao: true }` gains the ambient-occlusion pass and its per-frame cost.
+* **publisher:** `@vctrl/core` removes `GridProps`, `ShadowType`, `ShadowTypePropBase`, `ContactShadowProps`, `AccumulativeShadowsProps`, `ExportOptions`, `ExportModelOptions`, `ModifiedTextureResources` and `OptimizationStats.nodes`; `exportThreeJSGLB` takes only the object; `optimizeAll` compresses textures unless `textures: false`. `@vctrl/viewer` removes the `gridOptions` prop, `SceneGrid` and `defaultGridOptions`, and renames `defaultShadowOptions` to `defaultShadowsOptions`. `@vctrl/hooks` replaces `load(files)`, `loadFromData` and `loadFromServer` with a single `load(source)`, replaces `isFileLoading` with a `status` union, and removes the `on`/`off` event bus along with `EventTypes`, `EventHandler`, `LoadData`, `SceneLoadOptions` and `SceneDataLoadOptions`.
+
+### Features
+
+* **core,hooks:** the loader reads six formats and resolves every reference through one rule ([#882](https://github.com/Vectreal/vectreal-platform/issues/882)) ([7b52540](https://github.com/Vectreal/vectreal-platform/commit/7b52540233c8258da852be6d3d4374c119e09b16))
+* **scene:** a saved scene stores each asset under the name its glTF uses ([#883](https://github.com/Vectreal/vectreal-platform/issues/883)) ([b0f98cc](https://github.com/Vectreal/vectreal-platform/commit/b0f98cc965d67d8afe77cae1ef432adb54b572ac))
+* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
+* **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
+
+
+### Bug Fixes
+
+* **convert:** the page describes the model that is on the stage ([#891](https://github.com/Vectreal/vectreal-platform/issues/891)) ([c2376d9](https://github.com/Vectreal/vectreal-platform/commit/c2376d974f6e7ec16ba6984836fc069059ff2153))
+* **core:** count meshes instead of weighing them ([#783](https://github.com/Vectreal/vectreal-platform/issues/783)) ([9000982](https://github.com/Vectreal/vectreal-platform/commit/900098243213a7e8eb862a77f34ef113c21acb19))
+* **core:** the loader stops claiming it can read USDZ ([#890](https://github.com/Vectreal/vectreal-platform/issues/890)) ([2a3770c](https://github.com/Vectreal/vectreal-platform/commit/2a3770c7039638cf8dee8f80a4da141c00e7a0c3))
+* **embed:** serve embeds the published GLB instead of the editor's assets ([#734](https://github.com/Vectreal/vectreal-platform/issues/734)) ([e5a0bf5](https://github.com/Vectreal/vectreal-platform/commit/e5a0bf5a77d1288abe08303ec5b547416a0ffd32))
+* **hooks:** keep a failed upload from hiding a failed scene load ([5e9676f](https://github.com/Vectreal/vectreal-platform/commit/5e9676f01f61aa53ab74ec3e3fb2d78283fe7045))
+* **publisher:** a failed load costs nothing ([90cf7be](https://github.com/Vectreal/vectreal-platform/commit/90cf7be0f81dbc9e897192c4333f85ec06cf7d25))
+* **publisher:** apply a saved scene once, not on every revalidation ([d903e6d](https://github.com/Vectreal/vectreal-platform/commit/d903e6db95d6876f1c369042fffc8cb5dd6ae860))
+* **publisher:** one answer to which scene is open ([cbcc863](https://github.com/Vectreal/vectreal-platform/commit/cbcc8632e8137e9aba446293367d6d90f1796146))
+* signup return path, search leak, field surfaces and quick wins ([#897](https://github.com/Vectreal/vectreal-platform/issues/897)) ([c3111d8](https://github.com/Vectreal/vectreal-platform/commit/c3111d84b3980d1daf0b7aaa3f4169693051c853))
+
+
+### Code Refactoring
+
+* **core:** name every metric field by its unit ([#784](https://github.com/Vectreal/vectreal-platform/issues/784)) ([2f7c7d3](https://github.com/Vectreal/vectreal-platform/commit/2f7c7d377a7bfb51199663ad1648895867ebc447))
+* **publisher:** leave each write to the one place that owns it ([0b04d08](https://github.com/Vectreal/vectreal-platform/commit/0b04d08075d455d3a963be1553d2f2e52d5c61dc))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 1.0.0
+
 ## [0.25.1](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.25.0...hooks-v0.25.1) (2026-08-08)
 
 
