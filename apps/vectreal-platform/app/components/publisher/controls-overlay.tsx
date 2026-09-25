@@ -338,9 +338,7 @@ const OverlayControls = ({
 			  is what keeps them from spilling over the header.
 			*/}
 			<div className="relative flex min-h-0 flex-1 flex-col">
-				{surface === 'viewer' ? (
-					children
-				) : surface === 'empty' ? (
+				{surface === 'empty' ? (
 					<EmptyStage
 						isMobile={isMobile}
 						onUpload={uploadFiles}
@@ -348,10 +346,22 @@ const OverlayControls = ({
 						recentScenes={recentScenes}
 					/>
 				) : (
-					<PublisherSurfaceFallback
-						surface={surface}
-						onRetry={retrySceneLoad}
-					/>
+					/*
+					  One fade as the stage leaves the empty state, on a box that stays
+					  mounted from the loading screen to the model, so it runs once
+					  however many hands the load passes through. It is not positioned,
+					  so the floating chrome below still anchors to this row.
+					*/
+					<div className="animate-fade-in flex min-h-0 flex-1 flex-col">
+						{surface === 'viewer' ? (
+							children
+						) : (
+							<PublisherSurfaceFallback
+								surface={surface}
+								onRetry={retrySceneLoad}
+							/>
+						)}
+					</div>
 				)}
 
 				{showSceneChrome && (

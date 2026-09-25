@@ -1,13 +1,10 @@
-import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
-import { SpinnerWrapper } from '@shared/components/ui/spinner-wrapper'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
-import CenteredSpinner from '../../components/centered-spinner'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
+import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
@@ -53,54 +50,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 // coalesce a continuous pointer drag into a single re-bake, short enough that
 // the commit feels immediate once the user lets go.
 const SHADOW_LIGHT_COMMIT_DEBOUNCE_MS = 80
-
-const LOADING_MESSAGES = [
-	'Preparing the Publisher...',
-	'Adjusting the lighting...',
-	'Cleaning the lenses...',
-	'Loading geometry data...',
-	'Calibrating the viewer...'
-]
-
-const LoadingScreen = memo(() => {
-	const [loadingMessage, setLoadingMessage] = useState('Initializing...')
-
-	useEffect(() => {
-		let messageIndex = 0
-		let interval: ReturnType<typeof setInterval> | undefined
-
-		const timeout = setTimeout(() => {
-			interval = setInterval(() => {
-				messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length
-				setLoadingMessage(LOADING_MESSAGES[messageIndex])
-			}, 6000)
-		}, 3000)
-
-		return () => {
-			if (interval) clearInterval(interval)
-			clearTimeout(timeout)
-		}
-	}, [])
-
-	return (
-		<SpinnerWrapper>
-			<LoadingSpinner />
-			<AnimatePresence mode="wait">
-				<motion.div
-					key={loadingMessage}
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					transition={{ duration: 0.5 }}
-				>
-					<p className="text-muted-foreground mt-4 text-center">
-						{loadingMessage}
-					</p>
-				</motion.div>
-			</AnimatePresence>
-		</SpinnerWrapper>
-	)
-})
 
 /**
  * The publisher's canvas.
@@ -234,12 +183,12 @@ const PublisherPage = () => {
 
 	return (
 		<div className="z-0 grow overflow-clip">
-			<motion.div
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ duration: 0.4 }}
-				className="bg-muted/50 relative flex h-full w-full"
-			>
+			{/*
+			  No entrance of its own: the shell fades the stage in once as it leaves
+			  the empty state. A fade here ran again when the loading surface handed
+			  over to this one, dipping the spinner out and back mid-load.
+			*/}
+			<div className="bg-muted/50 relative flex h-full w-full">
 				<ClientVectrealViewer
 					model={file?.model}
 					cameraOptions={cameraOptions}
@@ -273,17 +222,17 @@ const PublisherPage = () => {
 					normalizationOptions={normalization}
 					boundsOptions={bounds}
 					loadingThumbnail={loadingThumbnail}
-					loader={<LoadingScreen />}
+					loader={<PublisherLoading />}
 					onScreenshotCaptureReady={registerSceneScreenshotCapture}
 					onCameraSnapshotCaptureReady={registerSceneCameraSnapshotCapture}
 					onCommandExecutorReady={registerCommandExecutor}
 					onRawDiagonalComputed={setRawDiagonal}
 					onInteractionEvent={handleInteractionEvent}
-					fallback={<CenteredSpinner text="Loading Publisher..." />}
+					fallback={<PublisherLoading />}
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
-			</motion.div>
+			</div>
 		</div>
 	)
 }

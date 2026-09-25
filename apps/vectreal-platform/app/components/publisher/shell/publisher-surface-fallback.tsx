@@ -1,8 +1,8 @@
 import { Button } from '@shared/components/ui/button'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 
+import { PublisherLoading } from './publisher-loading'
 import { getUploadLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
-import CenteredSpinner from '../../centered-spinner'
 
 import type { PublisherSurface } from '../../../lib/publisher/publisher-surface'
 
@@ -22,7 +22,12 @@ export function PublisherSurfaceFallback({ surface, onRetry }: Props) {
 	const { error } = useModelContext()
 
 	if (surface === 'loading') {
-		return <CenteredSpinner text="Loading Scene..." />
+		// The viewer's own ground, so handing over to it changes nothing on screen.
+		return (
+			<div className="bg-muted/50 grow">
+				<PublisherLoading />
+			</div>
+		)
 	}
 
 	return (

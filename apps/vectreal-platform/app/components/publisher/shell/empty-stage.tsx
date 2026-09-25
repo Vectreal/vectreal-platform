@@ -4,12 +4,13 @@ import { cn } from '@shared/utils'
 import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 import { FolderUp, Upload } from 'lucide-react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
+import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
 import { type SampleDownloader } from '../../../hooks/use-sample-download'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
 import { RelativeTime } from '../../dashboard/relative-time'
@@ -49,6 +50,29 @@ const BUNDLE_HINT = `A ${BUNDLE_FORMAT_IDS.map(
 	(id) => `.${modelFormat(id).extension}`
 ).join(' or ')} needs the folder holding everything it points at`
 
+/*
+  Whether the stage has come in once already in this page's life. Set in an
+  effect, so only the browser ever sets it: the server renders the entrance
+  every time, and the first client render agrees with it.
+*/
+let stageHasArrived = false
+
+/**
+ * Where a group comes in, in reading order: the invitation, what opens it,
+ * your scenes, the samples, the way to the docs. A stage that arrives all at
+ * once hands the eye five things at the same moment.
+ */
+const ARRIVAL_STEP_MS = 110
+/*
+  The first group waits for the grain behind it, which can only paint once the
+  page is running: content landing on a bare stage and the ground arriving
+  under it afterwards read as two things loading rather than one arriving.
+*/
+const ARRIVAL_LEAD_MS = 200
+const arrivalDelay = (step: number) => ({
+	animationDelay: `${ARRIVAL_LEAD_MS + step * ARRIVAL_STEP_MS}ms`
+})
+
 /**
  * The publisher's stage with nothing on it yet.
  *
@@ -69,6 +93,32 @@ export const EmptyStage = ({
 	recentScenes = []
 }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
+
+	/*
+	  Once per page load. Coming back here from a scene, or remounting while a
+	  sample downloads (see `sampleDownload`), shows a stage already seen, and
+	  playing its entrance again would only slow the way out of it.
+	*/
+	const [arriving] = useState(() => !stageHasArrived)
+	useEffect(() => {
+		stageHasArrived = true
+	}, [])
+	const arrive = arriving ? 'animate-arrive' : undefined
+	/*
+	  The text arrives from the server's HTML; the controls wait until they can
+	  respond. Drawn at first paint, a tile looked ready while the page was still
+	  loading its code, and a click on it before then did nothing at all: in
+	  development that window is 242 modules long, seconds on a cold start. So
+	  they stay hidden, and out of the tab order, until hydration, and the
+	  entrance says they are ready. Only on the arriving mount: any later one
+	  renders in a page already running.
+	*/
+	const isClientMounted = useIsClientMounted()
+	const arriveWhenReady = arriving
+		? isClientMounted
+			? 'animate-arrive'
+			: 'invisible'
+		: undefined
 
 	/* `useModelFileInputs` owns why there are two of these. */
 	const {
@@ -169,15 +219,27 @@ export const EmptyStage = ({
 				*/}
 				<div className="mx-auto my-auto flex w-full max-w-5xl flex-col items-center gap-14 py-4">
 					<div className="flex flex-col items-center text-center">
-						<h1 className="text-h2">
+						<h1 className={cn('text-h2', arrive)} style={arrivalDelay(0)}>
 							{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
 						</h1>
-						<p className="text-muted-foreground text-body-lg mt-4 max-w-md">
+						<p
+							className={cn(
+								'text-muted-foreground text-body-lg mt-4 max-w-md',
+								arrive
+							)}
+							style={arrivalDelay(0)}
+						>
 							It opens right here in your browser, and nothing leaves your
 							device until you save.
 						</p>
 
-						<div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+						<div
+							className={cn(
+								'mt-8 flex flex-wrap items-center justify-center gap-2',
+								arriveWhenReady
+							)}
+							style={arrivalDelay(1)}
+						>
 							<Button size="lg" onClick={openFilePicker}>
 								<Upload className="h-4 w-4" aria-hidden />
 								Choose a file
@@ -199,7 +261,13 @@ export const EmptyStage = ({
 							)}
 						</div>
 						{!isMobile && (
-							<p className="text-muted-foreground mt-3 text-xs">
+							<p
+								className={cn(
+									'text-muted-foreground mt-3 text-xs',
+									arriveWhenReady
+								)}
+								style={arrivalDelay(1)}
+							>
 								{BUNDLE_HINT}
 							</p>
 						)}
@@ -222,7 +290,10 @@ export const EmptyStage = ({
 						  sample over the scene just opened.
 						*/}
 						{recentScenes.length > 0 && (
-							<div className="w-full sm:w-92">
+							<div
+								className={cn('w-full sm:w-92', arriveWhenReady)}
+								style={arrivalDelay(2)}
+							>
 								<p
 									id="recent-scenes-label"
 									className="text-muted-foreground text-eyebrow mb-3"
@@ -281,17 +352,25 @@ export const EmptyStage = ({
 
 						  The same width as the scenes shelf, so the tiles match.
 						*/}
-						<SampleTiles
-							className="w-full sm:w-92"
-							label="Or open a sample"
-							onOpen={(id) => void openSample(id)}
-							download={download}
-						/>
+						<div
+							className={cn('w-full sm:w-92', arriveWhenReady)}
+							style={arrivalDelay(recentScenes.length > 0 ? 3 : 2)}
+						>
+							<SampleTiles
+								label="Or open a sample"
+								onOpen={(id) => void openSample(id)}
+								download={download}
+							/>
+						</div>
 					</div>
 
 					<Link
 						to="/docs/getting-started"
-						className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4"
+						className={cn(
+							'text-muted-foreground hover:text-foreground text-sm underline underline-offset-4',
+							arriveWhenReady
+						)}
+						style={arrivalDelay(recentScenes.length > 0 ? 4 : 3)}
 					>
 						How the publisher works
 					</Link>
