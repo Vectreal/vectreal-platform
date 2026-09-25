@@ -33,7 +33,7 @@ export function CtaPanel({
 	return (
 		<Card
 			className={cn(
-				'group relative h-full gap-4 overflow-hidden rounded-2xl p-6 md:p-8',
+				'group relative gap-4 overflow-hidden rounded-2xl p-6 md:p-8',
 				className
 			)}
 		>

@@ -61,11 +61,9 @@ export function ArticleHero({
 				/*
 				  No `h-full`. This composition was copied from `featured-article.tsx`,
 				  where the card is a grid cell and stretching to the row is the point.
-				  Here the parent is `main`, a flex item of the article's own column
-				  container - so its height is definite and equal to the whole article.
-				  `height: 100%` of that made the hero 12,326px tall on a normal post,
-				  with the cover image stretched over the entire page behind the text.
-				  The height belongs to the content box below, which sets it.
+				  Here the parent is the article's `main`, and the height belongs to
+				  the content box below, which sets it. (`main` stretched once, and
+				  `height: 100%` of it made this hero 12,326px tall; see its comment.)
 				*/
 				'group vt-news-plate relative isolate overflow-hidden rounded-2xl p-0',
 				className
@@ -84,7 +82,13 @@ export function ArticleHero({
 				</p>
 
 				<h1
-					className="text-headline vt-news-text max-w-3xl text-balance"
+					/*
+					  The listing card's measure, not a wider one. The title morphs from
+					  that card, and type never scales mid-flight: at two widths the two
+					  snapshots wrapped differently, three lines against two, and
+					  cross-faded into a doubled headline for the whole flight.
+					*/
+					className="text-headline vt-news-text max-w-[19ch] text-balance"
 					style={{ color: SCENE_SURFACE.text, viewTransitionName: morph.title }}
 				>
 					{title}

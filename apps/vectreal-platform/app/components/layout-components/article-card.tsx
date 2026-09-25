@@ -1,4 +1,3 @@
-import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
@@ -31,27 +30,30 @@ interface ArticleCardProps {
  */
 export function ArticleCard({ article, className }: ArticleCardProps) {
 	return (
-		<Link to={`/news-room/${article.slug}`} viewTransition className="group">
-			<Card
-				className={cn(
-					'group relative h-full gap-3 overflow-hidden rounded-2xl p-5',
-					className
-				)}
-			>
-				<ArticleMeta
-					category={article.category}
-					items={[
-						formatNewsDate(article.publishedAt),
-						`${article.readingTimeMinutes} min read`
-					]}
-				/>
-				<h3 className="text-h4 decoration-muted-foreground group-hover:decoration-orange line-clamp-3 underline underline-offset-4 transition-colors">
-					{article.title}
-				</h3>
-				<p className="text-muted-foreground text-body-sm line-clamp-3">
-					{article.excerpt}
-				</p>
-			</Card>
+		/*
+		  The card lifts one step on the elevation ladder when hovered, as every
+		  other card that is a link does. Its title used to be underlined as
+		  well, a second, louder way of saying the same thing.
+		*/
+		<Link
+			to={`/news-room/${article.slug}`}
+			viewTransition
+			className={cn(
+				'ds-raised-interactive text-card-foreground flex h-full flex-col gap-3 overflow-hidden rounded-2xl p-5',
+				className
+			)}
+		>
+			<ArticleMeta
+				category={article.category}
+				items={[
+					formatNewsDate(article.publishedAt),
+					`${article.readingTimeMinutes} min read`
+				]}
+			/>
+			<h3 className="text-h4 line-clamp-3">{article.title}</h3>
+			<p className="text-muted-foreground text-body-sm line-clamp-3">
+				{article.excerpt}
+			</p>
 		</Link>
 	)
 }
