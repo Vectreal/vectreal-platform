@@ -1,0 +1,24 @@
+/*
+  On a phone the terms scroll up under the pinned frame. Proximity snap gives
+  each term a resting place just below it, with the term before it gone behind
+  the frame. The first of those is where the frame pins and the last is where
+  it lets go, so the snap points are the stages. Proximity, so it only pulls
+  near a point and the rest of the page scrolls free.
+
+  The frame's bottom is its pinned top, 68px (16px under the 52px mobile nav),
+  plus its height, 16:10 of the page's width inside the gutters. A term rests
+  the gap between terms, 48px, below that. From `sm` the frame stands beside
+  the terms, so nothing snaps.
+*/
+@media (width < 40rem) {
+	:global(html):has(.term) {
+		scroll-snap-type: y proximity;
+	}
+
+	.term {
+		scroll-snap-align: start;
+		scroll-margin-top: calc(
+			4.25rem + (100vw - 2 * var(--space-4)) * 0.625 + 3rem
+		);
+	}
+}
