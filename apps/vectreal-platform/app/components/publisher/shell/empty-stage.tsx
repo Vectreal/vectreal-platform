@@ -155,108 +155,123 @@ export const EmptyStage = ({
 
 			{/*
 			  The column scrolls, not the stage, so the grain and the drop ring stay
-			  put. `my-auto` in it rather than a centred flex box: with recent
-			  scenes the panel can outgrow a short stage, and a centred box taller
-			  than its container loses its top where no scroll reaches it.
+			  put. `my-auto` in it rather than a centred flex box: on a short stage
+			  the content can outgrow it, and a centred box taller than its
+			  container loses its top where no scroll reaches it.
 			*/}
-			<div className="absolute inset-0 flex flex-col items-center overflow-y-auto p-4">
-				<div className="ds-overlay my-auto w-full max-w-md rounded-2xl p-6 sm:p-8">
-					<h1 className="text-h3">
-						{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
-					</h1>
-					<p className="text-muted-foreground text-body-sm mt-2">
-						It opens right here in your browser, and nothing leaves your device
-						until you save.
-					</p>
+			<div className="absolute inset-0 flex flex-col overflow-y-auto p-4 sm:p-8">
+				{/*
+				  Two columns from `lg`: what to do on the left, set on the stage
+				  itself, and what to open on the right, in one panel over the grain.
+				  A single card holding all of it left the stage empty around a
+				  crowded column.
+				*/}
+				<div className="mx-auto my-auto grid w-full max-w-md items-center gap-10 lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-20">
+					<div>
+						<h1 className="text-h2">
+							{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
+						</h1>
+						<p className="text-muted-foreground text-body-lg mt-4 max-w-md">
+							It opens right here in your browser, and nothing leaves your
+							device until you save.
+						</p>
 
-					<div className="mt-6 flex flex-wrap items-center gap-2">
-						<Button onClick={openFilePicker}>
-							<Upload className="h-4 w-4" aria-hidden />
-							Choose a file
-						</Button>
-						{/*
-					  No folder option on a phone. iOS and Android have no directory
-					  picker to open, so offering one would be a button that does
-					  nothing on the devices this branch exists for.
-					*/}
-						{!isMobile && (
-							<Button variant="outline" onClick={openDirectoryPicker}>
-								<FolderUp className="h-4 w-4" aria-hidden />
-								Choose a folder
+						<div className="mt-8 flex flex-wrap items-center gap-2">
+							<Button size="lg" onClick={openFilePicker}>
+								<Upload className="h-4 w-4" aria-hidden />
+								Choose a file
 							</Button>
-						)}
-					</div>
-					{!isMobile && (
-						<p className="text-muted-foreground mt-3 text-xs">{BUNDLE_HINT}</p>
-					)}
-
-					{/*
-				  Before the samples: someone with work of their own is more likely
-				  back for it than for a demo model. Rows draw no box at rest; the
-				  interactive step is the panel's own 8%, lifting one step on hover.
-
-				  Held while a sample downloads, like the tiles: the download
-				  outlives a navigation inside the publisher and would load the
-				  sample over the scene just opened.
-				*/}
-					{recentScenes.length > 0 && (
-						<div className="mt-8">
-							<p
-								id="recent-scenes-label"
-								className="text-muted-foreground text-eyebrow mb-2"
-							>
-								Pick up where you left off
-							</p>
-							<ul aria-labelledby="recent-scenes-label" className="-mx-2">
-								{recentScenes.map((scene) => (
-									<li key={scene.id}>
-										<Link
-											to={`/publisher/${scene.id}`}
-											aria-disabled={download ? true : undefined}
-											onClick={(event) => {
-												if (download) event.preventDefault()
-											}}
-											className="ds-overlay-interactive flex items-center gap-3 rounded-xl px-2 py-1.5"
-										>
-											<SceneThumbnail
-												src={scene.thumbnailUrl}
-												className="aspect-square size-10 rounded-lg [&_svg]:size-4"
-											/>
-											<span className="min-w-0">
-												<span className="text-foreground block truncate text-sm font-medium">
-													{scene.name}
-												</span>
-												<span className="text-muted-foreground block truncate text-xs">
-													{scene.projectName}
-												</span>
-											</span>
-										</Link>
-									</li>
-								))}
-							</ul>
+							{/*
+							  No folder option on a phone. iOS and Android have no directory
+							  picker to open, so offering one would be a button that does
+							  nothing on the devices this branch exists for.
+							*/}
+							{!isMobile && (
+								<Button
+									size="lg"
+									variant="outline"
+									onClick={openDirectoryPicker}
+								>
+									<FolderUp className="h-4 w-4" aria-hidden />
+									Choose a folder
+								</Button>
+							)}
 						</div>
-					)}
+						{!isMobile && (
+							<p className="text-muted-foreground mt-3 text-xs">
+								{BUNDLE_HINT}
+							</p>
+						)}
 
-					{/*
-				  Something to open when you have nothing to open. Two models rather
-				  than one, because the optimization passes do different jobs: the
-				  rocket is two thirds geometry and the camera is nearly all texture,
-				  so each one makes a different pass look like it is working. The
-				  split is measured; see `sample-models.ts`.
-				*/}
-					<SampleTiles
-						className="mt-8"
-						label="Or open a sample"
-						onOpen={(id) => void openSample(id)}
-						download={download}
-					/>
+						<Link
+							to="/docs/getting-started"
+							className="text-muted-foreground hover:text-foreground mt-10 inline-block text-sm underline underline-offset-4"
+						>
+							How the publisher works
+						</Link>
+					</div>
 
-					<Link
-						to="/docs/getting-started"
-						className="text-muted-foreground hover:text-foreground mt-6 inline-block text-sm underline underline-offset-4"
-					>
-						How the publisher works
-					</Link>
+					<div className="ds-overlay rounded-2xl p-5 sm:p-6">
+						{/*
+						  Before the samples: someone with work of their own is more likely
+						  back for it than for a demo model. Rows draw no box at rest; the
+						  interactive step is the panel's own 8%, lifting one step on hover.
+
+						  Held while a sample downloads, like the tiles: the download
+						  outlives a navigation inside the publisher and would load the
+						  sample over the scene just opened.
+						*/}
+						{recentScenes.length > 0 && (
+							<div className="mb-8">
+								<p
+									id="recent-scenes-label"
+									className="text-muted-foreground text-eyebrow mb-2"
+								>
+									Pick up where you left off
+								</p>
+								<ul aria-labelledby="recent-scenes-label" className="-mx-2">
+									{recentScenes.map((scene) => (
+										<li key={scene.id}>
+											<Link
+												to={`/publisher/${scene.id}`}
+												aria-disabled={download ? true : undefined}
+												onClick={(event) => {
+													if (download) event.preventDefault()
+												}}
+												className="ds-overlay-interactive flex items-center gap-3 rounded-xl px-2 py-1.5"
+											>
+												<SceneThumbnail
+													src={scene.thumbnailUrl}
+													className="aspect-square size-10 rounded-lg [&_svg]:size-4"
+												/>
+												<span className="min-w-0">
+													<span className="text-foreground block truncate text-sm font-medium">
+														{scene.name}
+													</span>
+													<span className="text-muted-foreground block truncate text-xs">
+														{scene.projectName}
+													</span>
+												</span>
+											</Link>
+										</li>
+									))}
+								</ul>
+							</div>
+						)}
+
+						{/*
+						  Something to open when you have nothing to open. Two models rather
+						  than one, because the optimization passes do different jobs: the
+						  rocket is two thirds geometry and the camera is nearly all texture,
+						  so each one makes a different pass look like it is working. The
+						  split is measured; see `sample-models.ts`.
+						*/}
+						<SampleTiles
+							label="Or open a sample"
+							onOpen={(id) => void openSample(id)}
+							download={download}
+						/>
+					</div>
 				</div>
 			</div>
 
