@@ -18,8 +18,20 @@ export const CDN_PUBLIC_EXACT_PATHS = [
 	'/llms.txt'
 ] as const
 
-/** Public route families that remain cacheable for anonymous GET requests. */
-export const CDN_PUBLIC_PREFIXES = ['/convert', '/docs', '/news-room'] as const
+/**
+ * Public route families that remain cacheable for anonymous GET requests.
+ *
+ * `/media/` is not a route family but the static files that keep their name
+ * when their content changes (see `server.mjs`). It is here so Cloudflare
+ * respects the five minutes the origin gives them, rather than bypassing the
+ * cache or, as under `/assets/`, holding them for a year.
+ */
+export const CDN_PUBLIC_PREFIXES = [
+	'/convert',
+	'/docs',
+	'/news-room',
+	'/media/'
+] as const
 
 /**
  * Protected/app route families that must stay fail-closed (non-public cache).

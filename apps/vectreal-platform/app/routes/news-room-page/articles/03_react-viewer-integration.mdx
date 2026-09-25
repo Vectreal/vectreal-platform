@@ -14,11 +14,11 @@ author:
     name: "Moritz Becker"
     role: "Founder at Vectreal"
     bio: "Building open infrastructure for practical 3D on the web."
-    avatar: "/assets/images/author-image.jpeg"
+    avatar: "/media/images/author-image.jpeg"
     linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
-coverImage: "/assets/images/newsroom/og-react-viewer-integration.webp"
+coverImage: "/media/images/newsroom/og-react-viewer-integration.webp"
 draft: false
-sceneImage: "/assets/images/newsroom/scene-react-viewer-integration.webp"
+sceneImage: "/media/images/newsroom/scene-react-viewer-integration.webp"
 ---
 
 {/* ## Blog Summary (80–120 words)
@@ -26,13 +26,13 @@ sceneImage: "/assets/images/newsroom/scene-react-viewer-integration.webp"
 You have a published Vectreal scene and a React app. You want them to meet - properly, in production, without breaking SSR or dragging in a render-blocking 3D bundle. This guide takes you from `npm install` to a working `<VectrealViewer />` in your codebase, through the SSR-safe pattern that keeps hydration clean, the five props you will actually reach for, and the production checklist for shipping with confidence. By the end you will have a viewer wired to your published scene URL, lazy-loaded, fallback-ready, and tuned for the way your team builds. */}
 
 {/*
-COVER IMAGE BRIEF - /assets/images/newsroom/03/og-react-viewer-integration.webp
+COVER IMAGE BRIEF - /media/images/newsroom/03/og-react-viewer-integration.webp
 Aspect ratio: 1200x630 (Open Graph standard).
 Composition: Split frame. Left side, code editor with a clean snippet of the VectrealViewer import and JSX render. Right side, a rendered 3D scene inside a stylized browser chrome. Brand orange (#FC6C18) accent on the active line in the editor and on the viewer's loading ring. Background: deep black (#0a0a0a). Font: DM Sans for any overlaid title.
 Overlaid title text: "React Viewer Integration".
 Mood: precise, modern, builder-focused - not playful.
 
-THUMBNAIL BRIEF - /assets/images/newsroom/thumbnail-react-viewer-integration.webp
+THUMBNAIL BRIEF - /media/images/newsroom/thumbnail-react-viewer-integration.webp
 Aspect ratio: 4:3 (used in cards on the newsroom index).
 Same visual language as cover, cropped tighter on the JSX snippet so it reads at small sizes. No overlaid text - let the index page render the title.
 */}
@@ -47,7 +47,7 @@ This guide takes you from a fresh React project to a viewer rendering in product
 
 {/*
 HERO IMAGE BRIEF - inline, top of "Why This Guide Exists"
-Filename: /assets/images/newsroom/react-viewer-integration/hero-viewer-in-app.webp
+Filename: /media/images/newsroom/react-viewer-integration/hero-viewer-in-app.webp
 Width: 1600px, aspect 16:9.
 Content: A laptop-style screenshot mockup of a real React product UI (sidebar nav, header, content area). Inside the content area, the VectrealViewer renders a clean glTF model - preferably the same demo model used in the Publisher walkthrough so readers recognize it. The viewer's controls (orbit, environment toggle) are visible at the bottom edge.
 Style: Light/dark variant pair would be nice; default is dark to match brand.
@@ -92,7 +92,7 @@ pnpm add @vctrl/viewer @vctrl/hooks three
 
 {/*
 GIF BRIEF - Step 1 install animation
-Filename: /assets/images/newsroom/react-viewer-integration/step-1-install.gif
+Filename: /media/images/newsroom/react-viewer-integration/step-1-install.gif
 Dimensions: 1200x400, ≤ 1.5MB.
 Content: A terminal screen-recording of the pnpm add command running, showing the resolution of all three packages and a successful exit. Use the brand orange for the cursor. Loop with a 2-second pause at the end.
 Optional alt: a static screenshot if GIF weight is a concern.
@@ -126,7 +126,7 @@ That's the whole core. Everything that follows is layered on top.
 
 {/*
 SCREENSHOT BRIEF - Step 2 result
-Filename: /assets/images/newsroom/react-viewer-integration/step-2-minimum-viewer.webp
+Filename: /media/images/newsroom/react-viewer-integration/step-2-minimum-viewer.webp
 Dimensions: 1600x900.
 Content: Browser window showing the minimal viewer rendering a model - neutral environment, default camera, clean orbit controls visible. Add a small annotation arrow pointing to the orbit control hint icon with the label "default OrbitControls included".
 */}
@@ -229,7 +229,7 @@ This pattern is what the Vectreal Platform itself uses internally to render the 
 
 {/*
 DIAGRAM BRIEF - SSR data-flow diagram
-Filename: /assets/images/newsroom/react-viewer-integration/step-4-ssr-flow.svg
+Filename: /media/images/newsroom/react-viewer-integration/step-4-ssr-flow.svg
 Format: SVG, brand colors (#0a0a0a background, #FC6C18 accent on active path, #EAEAEA for nodes).
 Content: A simple horizontal flow. Left to right: "Server Render" → "ViewerClient returns null" → "Client Hydrate" → "lazy() loads chunk" → "useLoadModel loads the scene" → "VectrealViewer renders".
 Style: Each step is a rounded rectangle. Arrows are thin and brand orange. No clipart, no icons inside the boxes - just the labels in DM Sans.
@@ -314,7 +314,7 @@ Choose `'1k'` for fast loads and `'4k'` for hero pages where visual fidelity mat
 
 {/*
 COMPARISON IMAGE BRIEF - five-prop visual reference
-Filename: /assets/images/newsroom/react-viewer-integration/step-5-prop-grid.webp
+Filename: /media/images/newsroom/react-viewer-integration/step-5-prop-grid.webp
 Dimensions: 1600x900 (or a 2x2 grid version at 1600x1600).
 Content: A grid showing the same model rendered with four different prop combinations:
   Tile 1 - default (no envOptions, no theme override)
@@ -359,7 +359,7 @@ import { ErrorBoundary } from 'react-error-boundary'
 
 {/*
 SCREENSHOT BRIEF - production checklist visual
-Filename: /assets/images/newsroom/react-viewer-integration/step-6-loading-thumbnail.webp
+Filename: /media/images/newsroom/react-viewer-integration/step-6-loading-thumbnail.webp
 Dimensions: 1600x900.
 Content: A side-by-side. Left: viewer container with no loadingThumbnail set - empty grey box, awkward gap during load. Right: viewer container with loadingThumbnail set - blurred preview crossfading into the loaded model. Label both panels clearly. Use a horizontal divider with the brand orange.
 */}

@@ -15,10 +15,7 @@ import { describe, expect, it } from 'vitest'
 
 import PRODUCT_SHOTS from './product-shots.json'
 
-const SHOTS_DIR = resolve(
-	import.meta.dirname,
-	'../../../public/assets/images/product'
-)
+const SHOTS_DIR = resolve(import.meta.dirname, '../../assets/home/product')
 const CAPTURED = ['prepare', 'manage'] as const
 
 describe('the product window captures', () => {

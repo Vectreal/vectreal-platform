@@ -37,7 +37,8 @@ describe('exported allowlist sources', () => {
 		expect(CACHEABLE_PUBLIC_PATH_PREFIXES).toEqual([
 			'/convert',
 			'/docs',
-			'/news-room'
+			'/news-room',
+			'/media/'
 		])
 	})
 })

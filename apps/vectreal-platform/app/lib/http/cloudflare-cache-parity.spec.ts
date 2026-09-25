@@ -24,6 +24,26 @@ const tf = readFileSync(tfPath, 'utf8')
 // below search for the escaped form to reflect what's actually written.
 const quoted = (value: string) => `\\"${value}\\"`
 
+/*
+  The expression of the rule with this description. A prefix found anywhere in
+  the file proved nothing: the fail-closed rule names every public prefix too,
+  in order to exclude it, so one dropped from the public rule still matched.
+*/
+const ruleExpression = (description: string) => {
+	const lines = tf.split('\n')
+	const at = lines.findIndex((line) =>
+		line.includes(`description = "${description}"`)
+	)
+	const expression = lines
+		.slice(at + 1)
+		.find((line) => line.trim().startsWith('expression'))
+	if (at < 0 || !expression)
+		throw new Error(`no rule described "${description}"`)
+	return expression
+}
+const PUBLIC_RULE =
+	'Public allowlist pages (GET only) — respect origin cache headers'
+
 describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 	it('references every exact allowlist path in the Terraform config', () => {
 		const missing = CDN_PUBLIC_EXACT_PATHS.filter(
@@ -45,10 +65,13 @@ describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 		).toEqual([])
 	})
 
-	it('references every prefix rule in the Terraform config', () => {
+	it('references every prefix rule in the public rule itself', () => {
+		const publicRule = ruleExpression(PUBLIC_RULE)
 		const missing = CDN_PUBLIC_PREFIXES.filter(
 			(prefix) =>
-				!tf.includes(`starts_with(http.request.uri.path, ${quoted(prefix)})`)
+				!publicRule.includes(
+					`starts_with(http.request.uri.path, ${quoted(prefix)})`
+				)
 		)
 		expect(
 			missing,

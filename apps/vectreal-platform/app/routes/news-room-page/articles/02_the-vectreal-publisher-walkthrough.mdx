@@ -15,11 +15,11 @@ author:
     name: "Moritz Becker"
     role: "Founder at Vectreal"
     bio: "Building open infrastructure for practical 3D on the web."
-    avatar: "/assets/images/author-image.jpeg"
+    avatar: "/media/images/author-image.jpeg"
     linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
-coverImage: "/assets/images/newsroom/og-the-vectreal-publisher-walkthrough.webp"
+coverImage: "/media/images/newsroom/og-the-vectreal-publisher-walkthrough.webp"
 draft: false
-sceneImage: "/assets/images/newsroom/scene-the-vectreal-publisher-walkthrough.webp"
+sceneImage: "/media/images/newsroom/scene-the-vectreal-publisher-walkthrough.webp"
 ---
 
 {/* ## Blog Summary (80–120 words)
@@ -36,7 +36,7 @@ If you want to follow along, grab any GLB or glTF file you have on hand. If you 
 
 ### Step 1 - Upload
 
-![Uploading a model](/assets/images/newsroom/02/01-publisher-upload.jpeg)
+![Uploading a model](/media/images/newsroom/02/01-publisher-upload.jpeg)
 
 Drag your 3D file onto the Publisher canvas. The parser identifies the format, resolves any external references, and loads the model into the viewport.
 
@@ -68,7 +68,7 @@ There are no hard file size limits enforced in the Publisher UI, though very lar
 
 ### Step 2 - Optimize
 
-![Optimizing a model](/assets/images/newsroom/02/02-publisher-optimize.jpeg)
+![Optimizing a model](/media/images/newsroom/02/02-publisher-optimize.jpeg)
 
 Once your model is in the viewport, the right sidebar shows the quality presets. These are the fastest way to reduce file size for web delivery.
 
@@ -96,7 +96,7 @@ For server-side optimization (via `@vctrl/core`), Sharp is used for texture comp
 
 ### Step 3 - Configure
 
-![Composing the scene](/assets/images/newsroom/02/03-publisher-compose.jpeg)
+![Composing the scene](/media/images/newsroom/02/03-publisher-compose.jpeg)
 
 Beyond file size, the Publisher gives you full control over how the scene looks and behaves.
 
@@ -124,7 +124,7 @@ Grid controls are currently not active in the viewer render flow. This section w
 
 ### Step 4 - Save the Scene
 
-![Dashboard view](/assets/images/newsroom/02/04-dashboard-recent.jpeg)
+![Dashboard view](/media/images/newsroom/02/04-dashboard-recent.jpeg)
 
 Click **Save** in the Publisher header.
 
@@ -139,7 +139,7 @@ To load a different model, start from [vectreal.com/publisher](https://vectreal.
 
 ### Step 5 - Publish
 
-![Publishing a scene](/assets/images/newsroom/02/05-publisher-publish.jpeg)
+![Publishing a scene](/media/images/newsroom/02/05-publisher-publish.jpeg)
 
 From the Dashboard, open the scene. In the **Publish** sidebar section, click **Publish**.
 
@@ -153,7 +153,7 @@ To revert, click **Unpublish**. The embed URL becomes inaccessible to external p
 
 ### Step 6 - Set Up a Preview API Key
 
-![Managing API Keys](/assets/images/newsroom/02/06-dashboard-api-keys.jpeg)
+![Managing API Keys](/media/images/newsroom/02/06-dashboard-api-keys.jpeg)
 
 External iframe embeds require a **preview API key** scoped to the project that owns the scene. This is how Vectreal ensures scenes can only be embedded by authorized principals - not hotlinked by arbitrary sites.
 
@@ -181,7 +181,7 @@ Requests from unlisted domains receive a `403 Forbidden` response. The allowlist
 
 ### Step 7 - Embed
 
-![Embedding a scene](/assets/images/newsroom/02/07-publisher-embed.jpeg)
+![Embedding a scene](/media/images/newsroom/02/07-publisher-embed.jpeg)
 
 Copy the embed snippet from the **Embed** section in the publish sidebar or from the scene detail page in the Dashboard.
 

@@ -86,6 +86,39 @@ app.use((req, res, next) => {
 	next()
 })
 
+/*
+  Two kinds of static file, told apart by where they live.
+
+  /assets is Vite's: every file in it is named for its content, so it is
+  immutable for a year, here and at Cloudflare's edge (terraform/cloudflare.tf,
+  Rule 1). Nothing else may live there. public/assets used to, and its files
+  kept their names when their content changed, so a recaptured screenshot
+  stayed cached for a year at the edge and on every device that had seen the
+  old one. tests/public-assets-namespace.spec.ts keeps that folder from coming
+  back.
+
+  /media holds the files that keep their name, served fresh for five minutes,
+  which Cloudflare respects (Rule 2), so an edit reaches everyone within that.
+*/
+const MEDIA_DIR = path.join(CLIENT_DIR, 'media')
+
+/*
+  Where public/assets lived, for links already shared: an article's OG image
+  in a post, say. Only for a file that exists under /media, so the Location
+  header never carries a path the request made up.
+*/
+app.use(['/assets/images', '/assets/models'], (req, res, next) => {
+	const target = path.posix.join(
+		req.baseUrl.replace('/assets', '/media'),
+		req.path
+	)
+	const file = path.join(CLIENT_DIR, target)
+	if (!file.startsWith(MEDIA_DIR + path.sep) || !existsSync(file)) {
+		return next()
+	}
+	res.redirect(301, target)
+})
+
 app.use(
 	'/assets',
 	express.static(path.join(CLIENT_DIR, 'assets'), {
@@ -93,6 +126,7 @@ app.use(
 		maxAge: '1y'
 	})
 )
+app.use('/media', express.static(MEDIA_DIR, { maxAge: '5m' }))
 app.use(express.static(CLIENT_DIR, { redirect: false }))
 app.use(morgan('tiny'))
 

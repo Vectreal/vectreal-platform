@@ -14,11 +14,11 @@ author:
     name: "Moritz Becker"
     role: "Founder at Vectreal"
     bio: "Building open infrastructure for practical 3D on the web."
-    avatar: "/assets/images/author-image.jpeg"
+    avatar: "/media/images/author-image.jpeg"
     linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
-coverImage: "/assets/images/newsroom/og-api-keys-101.webp"
+coverImage: "/media/images/newsroom/og-api-keys-101.webp"
 draft: false
-sceneImage: "/assets/images/newsroom/scene-api-keys-101.webp"
+sceneImage: "/media/images/newsroom/scene-api-keys-101.webp"
 ---
 
 {/* ## Blog Summary (80–120 words)
@@ -34,12 +34,12 @@ You are about to ship a Vectreal embed to production. Your security reviewer wan
           domain allowlist boundary. Subtle Vectreal "V" mark bottom-right.
           DM Sans for any text. No human figures, no stock photography.
    Size: 1200×630, webp, <120 KB.
-   Output: /public/assets/images/newsroom/04/og-api-keys-101.webp
+   Output: /public/media/images/newsroom/04/og-api-keys-101.webp
    ───────────────────────────────────────────── */}
 
 {/* ASSET BRIEF - Thumbnail (thumbnail-api-keys-101.webp)
    1:1 crop derived from cover; 600×600, webp, <60 KB.
-   Output: /public/assets/images/newsroom/04/thumbnail-api-keys-101.webp */}
+   Output: /public/media/images/newsroom/04/thumbnail-api-keys-101.webp */}
 
 import { publishedLimit } from '../../../constants/product-copy'
 
@@ -67,7 +67,7 @@ If that map is enough, jump to [Three rotation patterns that match real deployme
 
 ### What an API Key Is, in One Diagram
 
-![Vectreal API key boundaries - organization, project subset, allowlisted domains](/assets/images/newsroom/04/01-key-scope-diagram.svg)
+![Vectreal API key boundaries - organization, project subset, allowlisted domains](/media/images/newsroom/04/01-key-scope-diagram.svg)
 
 {/* ASSET BRIEF - Scope Diagram (01-key-scope-diagram.svg)
    Purpose: Show the layered scope of a Vectreal API key.
@@ -82,7 +82,7 @@ If that map is enough, jump to [Three rotation patterns that match real deployme
      the allowlist boundary, captioned "Bearer header passes here".
    Colors: Surface #0a0a0a, primary #FC6C18, text #EAEAEA. No gradients.
    Style: Flat geometric, DM Sans labels, vector - must scale at any width.
-   Output: /public/assets/images/newsroom/04/01-key-scope-diagram.svg */}
+   Output: /public/media/images/newsroom/04/01-key-scope-diagram.svg */}
 
 A Vectreal API key is **not** a single shared secret that unlocks the whole platform. Three layers stack on top of each other:
 
@@ -98,7 +98,7 @@ The first two layers live on the key itself. The third layer lives on the projec
 
 ### Creating a Key - Step by Step
 
-![Create API Key drawer - name, organization, projects, expiration](/assets/images/newsroom/04/02-create-key-drawer.jpeg)
+![Create API Key drawer - name, organization, projects, expiration](/media/images/newsroom/04/02-create-key-drawer.jpeg)
 
 {/* ASSET BRIEF - Create Drawer Screenshot (02-create-key-drawer.jpeg)
    Source: Live capture of /dashboard/api-keys/new in a logged-in state.
@@ -110,7 +110,7 @@ The first two layers live on the key itself. The third layer lives on the projec
    Crop: Drawer + a sliver of the page behind for context. Hide any unrelated
      dashboard data - no real keys, no real org IDs.
    Resolution: Retina, 2400 px wide, exported at 1200 px webp/jpeg.
-   Output: /public/assets/images/newsroom/04/02-create-key-drawer.jpeg */}
+   Output: /public/media/images/newsroom/04/02-create-key-drawer.jpeg */}
 
 From the dashboard:
 
@@ -123,7 +123,7 @@ From the dashboard:
 
 When you click **Create API Key**, the platform generates a token and shows you the full plaintext **exactly once** in a one-time dialog.
 
-![One-time key reveal dialog with copy-to-clipboard](/assets/images/newsroom/04/03-one-time-reveal.jpeg)
+![One-time key reveal dialog with copy-to-clipboard](/media/images/newsroom/04/03-one-time-reveal.jpeg)
 
 {/* ASSET BRIEF - One-Time Key Reveal (03-one-time-reveal.jpeg)
    Source: Capture of the "API Key Created Successfully" dialog after
@@ -134,7 +134,7 @@ When you click **Create API Key**, the platform generates a token and shows you 
      a real token), the copy button, and the "Next Steps" panel with the
      `Authorization: Bearer vctrl_…` snippet.
    Crop: Dialog only against a slightly dimmed dashboard backdrop.
-   Output: /public/assets/images/newsroom/04/03-one-time-reveal.jpeg */}
+   Output: /public/media/images/newsroom/04/03-one-time-reveal.jpeg */}
 
 Treat that screen as the only chance you will get. After you close it the platform retains a hashed copy and a four-character preview (`…aB7Q`); the plaintext is no longer recoverable. If you misplace it, you create a new key and revoke the old one.
 
@@ -166,7 +166,7 @@ That last point matters for one practical reason: a casual leak - a key showing 
 
 ### Three Rotation Patterns That Match Real Deployments
 
-![Three deployment shapes mapped to rotation cadence](/assets/images/newsroom/04/04-rotation-patterns.svg)
+![Three deployment shapes mapped to rotation cadence](/media/images/newsroom/04/04-rotation-patterns.svg)
 
 {/* ASSET BRIEF - Rotation Patterns Diagram (04-rotation-patterns.svg)
    Purpose: Visualize the three deployment shapes covered in this section.
@@ -179,7 +179,7 @@ That last point matters for one practical reason: a casual leak - a key showing 
         own key chip; arrow shows revocation isolation.
    Style: Same flat vector treatment as the scope diagram. #FC6C18
      accents only on active elements; rest #EAEAEA on #0a0a0a.
-   Output: /public/assets/images/newsroom/04/04-rotation-patterns.svg */}
+   Output: /public/media/images/newsroom/04/04-rotation-patterns.svg */}
 
 Most teams ship one of three shapes. Pick the one closest to you and the rotation cadence falls out.
 
