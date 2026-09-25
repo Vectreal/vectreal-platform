@@ -2,7 +2,7 @@ import { createRequestHandler } from '@react-router/express'
 import compression from 'compression'
 import express from 'express'
 import morgan from 'morgan'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 
 /**
@@ -102,29 +102,44 @@ app.use((req, res, next) => {
 */
 const MEDIA_DIR = path.join(CLIENT_DIR, 'media')
 
-/* A path too long to stat is not a file either: an error here would be a 500. */
-const isFile = (file) => {
-	try {
-		return statSync(file).isFile()
-	} catch {
-		return false
+/**
+ * Every file /media serves that public/assets used to, by the path it had
+ * there, collected once at boot like the prerendered routes above.
+ *
+ * For links already shared under the old paths: an article's OG image in a
+ * post, say. A lookup rather than a path built from the request, so the
+ * Location header only ever carries a path this server wrote, and a stream of
+ * made-up paths costs no filesystem call.
+ */
+function collectMovedMedia(dir, base) {
+	const moved = new Map()
+	if (!existsSync(dir)) return moved
+
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const rel = `${base}/${entry.name}`
+		if (entry.isDirectory()) {
+			for (const [from, to] of collectMovedMedia(
+				path.join(dir, entry.name),
+				rel
+			)) {
+				moved.set(from, to)
+			}
+		} else if (entry.isFile()) {
+			moved.set(`/assets${rel}`, `/media${rel}`)
+		}
 	}
+
+	return moved
 }
 
-/*
-  Where public/assets lived, for links already shared: an article's OG image
-  in a post, say. Only for a file that exists under /media, so the Location
-  header never carries a path the request made up.
-*/
-app.use(['/assets/images', '/assets/models'], (req, res, next) => {
-	const target = path.posix.join(
-		req.baseUrl.replace('/assets', '/media'),
-		req.path
-	)
-	const file = path.join(CLIENT_DIR, target)
-	if (!file.startsWith(MEDIA_DIR + path.sep) || !isFile(file)) {
-		return next()
-	}
+const MOVED_MEDIA = new Map([
+	...collectMovedMedia(path.join(MEDIA_DIR, 'images'), '/images'),
+	...collectMovedMedia(path.join(MEDIA_DIR, 'models'), '/models')
+])
+
+app.use((req, res, next) => {
+	const target = MOVED_MEDIA.get(req.path)
+	if (!target) return next()
 	res.redirect(301, target)
 })
 
