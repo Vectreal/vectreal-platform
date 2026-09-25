@@ -3,6 +3,7 @@ import { ContentType, HttpStatusCode } from '@vctrl/core'
 import { assets, sceneSettings } from '../db/schema'
 
 import type { ProcessState, SceneMetaState } from './publisher-config'
+import type { SceneSummary } from '../components/dashboard/scene-card'
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
 import type {
@@ -274,6 +275,8 @@ export interface PublisherLoaderData {
 	readonly sceneManifest: SceneManifestResponse | null
 	readonly publishedMeta: PublishedSceneMetaResponse | null
 	readonly maxSceneBytes: number | null
+	/** Signed in with no scene open: the scenes to offer on the empty stage. Empty otherwise. */
+	readonly recentScenes: readonly SceneSummary[]
 }
 
 // ============================================================================

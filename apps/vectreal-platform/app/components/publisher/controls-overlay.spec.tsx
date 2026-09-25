@@ -41,7 +41,18 @@ vi.mock('./optimization/optimization-drawer', () => ({
 	default: probe('optimization-drawer')
 }))
 vi.mock('./preview-camera-controls', () => ({ default: probe('camera') }))
-vi.mock('./shell/empty-stage', () => ({ EmptyStage: probe('empty-stage') }))
+vi.mock('./shell/empty-stage', () => ({
+	EmptyStage: ({
+		recentScenes
+	}: {
+		recentScenes: readonly { id: string }[]
+	}) => (
+		<div
+			data-testid="empty-stage"
+			data-recent={recentScenes.map((scene) => scene.id).join(',')}
+		/>
+	)
+}))
 vi.mock('./shell/preview-mode-badge', () => ({
 	PreviewModeBadge: probe('preview-badge')
 }))
@@ -88,7 +99,17 @@ const loaderData: PublisherLoaderData = {
 	currentLocation: null as never,
 	sceneManifest: null,
 	publishedMeta: null,
-	maxSceneBytes: null
+	maxSceneBytes: null,
+	recentScenes: [
+		{
+			id: 'scene-1',
+			name: 'Chair',
+			projectId: 'project-1',
+			projectName: 'Shop',
+			status: 'draft',
+			updatedAt: '2026-09-25T00:00:00.000Z'
+		}
+	]
 }
 
 function renderShell() {
@@ -122,7 +143,8 @@ describe('the publisher shell', () => {
 
 		const header = await screen.findByTestId('header')
 		expect(header.dataset.sceneControls).toBe('false')
-		expect(screen.getByTestId('empty-stage')).toBeTruthy()
+		// The loader's recent scenes reach the stage that offers them.
+		expect(screen.getByTestId('empty-stage').dataset.recent).toBe('scene-1')
 		for (const id of SCENE_CHROME) {
 			expect(screen.queryByTestId(id), id).toBeNull()
 		}

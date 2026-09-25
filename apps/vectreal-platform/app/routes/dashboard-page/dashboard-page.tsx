@@ -5,9 +5,7 @@ import { Route } from './+types/dashboard-page'
 import { DashboardOverview, SceneCard } from '../../components/dashboard'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { toSceneRef } from '../../lib/domain/dashboard/dashboard-confirmation'
-import { getRecentScenes } from '../../lib/domain/dashboard/dashboard-stats.server'
-import { getUserProjects } from '../../lib/domain/project/project-repository.server'
-import { getProjectsScenes } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { getRecentScenesForUser } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import {
 	deleteDialogAtom,
 	moveDialogAtom
@@ -18,30 +16,7 @@ import type { ShouldRevalidateFunction } from 'react-router'
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 
-	const userProjects = await getUserProjects(user.id)
-	const projectIds = userProjects.map(({ project }) => project.id)
-	const scenesByProject = await getProjectsScenes(projectIds, user.id)
-	const scenes = Array.from(scenesByProject.values()).flat()
-
-	const projectNamesById = new Map(
-		userProjects.map(({ project }) => [project.id, project.name])
-	)
-
-	/*
-	  The project name is resolved here rather than shipped as the whole project
-	  list for the page to look through. The page renders a name per card; it was
-	  being sent every project the viewer can reach, in full, to find them.
-	*/
-	const recentScenes = getRecentScenes(scenes, 10).map((scene) => ({
-		id: scene.id,
-		name: scene.name,
-		projectId: scene.projectId,
-		projectName: projectNamesById.get(scene.projectId) ?? 'Unknown',
-		folderId: scene.folderId,
-		status: scene.status,
-		thumbnailUrl: scene.thumbnailUrl,
-		updatedAt: scene.updatedAt
-	}))
+	const recentScenes = await getRecentScenesForUser(user.id, 10)
 
 	/*
 	  The resumed scene is the most recent one, so shipping the list plus a

@@ -31,6 +31,7 @@ import {
 	validateSceneMove
 } from '../../dashboard/folder-move'
 
+import type { SceneSummary } from '../../../../components/dashboard/scene-card'
 import type {
 	SceneLocationFolderOption,
 	SceneMetadataUpdateInput
@@ -77,6 +78,44 @@ async function verifyProjectAccess(
 	if (result.length === 0) {
 		throw new Error('User does not have access to this project')
 	}
+}
+
+/** A recent scene as a list renders it, with the folder a move or delete needs. */
+export type RecentScene = SceneSummary & { folderId: string | null }
+
+/**
+ * The scenes this user touched last, across every organization they belong to.
+ *
+ * Read by the dashboard's recent work and by the publisher's empty stage, so
+ * the two lists are the same list. The membership join is the whole
+ * authorization: RLS is inert for app traffic, so without it this would list
+ * any scene in the database. Sorted and cut in SQL, because the publisher asks
+ * on every signed-in open and wants five, not every scene the user can reach.
+ */
+export async function getRecentScenesForUser(
+	userId: string,
+	limit: number
+): Promise<RecentScene[]> {
+	return await db
+		.select({
+			id: scenes.id,
+			name: scenes.name,
+			projectId: scenes.projectId,
+			projectName: projects.name,
+			folderId: scenes.folderId,
+			status: scenes.status,
+			thumbnailUrl: scenes.thumbnailUrl,
+			updatedAt: scenes.updatedAt
+		})
+		.from(scenes)
+		.innerJoin(projects, eq(projects.id, scenes.projectId))
+		.innerJoin(
+			organizationMemberships,
+			eq(organizationMemberships.organizationId, projects.organizationId)
+		)
+		.where(eq(organizationMemberships.userId, userId))
+		.orderBy(desc(scenes.updatedAt))
+		.limit(limit)
 }
 
 export async function getProjectsScenes(

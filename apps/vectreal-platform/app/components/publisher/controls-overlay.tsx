@@ -51,6 +51,7 @@ const OverlayControls = ({
 	sceneManifest,
 	publishedMeta,
 	maxSceneBytes,
+	recentScenes,
 	children
 }: PublisherLoaderData & { children: ReactNode }) => {
 	const navigate = useNavigate()
@@ -344,6 +345,7 @@ const OverlayControls = ({
 						isMobile={isMobile}
 						onUpload={uploadFiles}
 						sampleDownload={sampleDownload}
+						recentScenes={recentScenes}
 					/>
 				) : (
 					<PublisherSurfaceFallback

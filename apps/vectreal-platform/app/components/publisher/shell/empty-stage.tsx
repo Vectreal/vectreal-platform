@@ -12,8 +12,11 @@ import { toast } from 'sonner'
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
 import { type SampleDownloader } from '../../../hooks/use-sample-download'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
+import { SceneThumbnail } from '../../dashboard/scene-thumbnail'
 import { DitherGrain } from '../../layout-components/dither-grain'
 import { SampleTiles } from '../../layout-components/sample-tiles'
+
+import type { SceneSummary } from '../../dashboard/scene-card'
 
 interface Props {
 	isMobile?: boolean
@@ -27,6 +30,8 @@ interface Props {
 	 * and the tiles came back idle and clickable halfway through 18 MB.
 	 */
 	sampleDownload: SampleDownloader
+	/** The signed-in user's latest scenes, from the loader; none signed out. */
+	recentScenes?: readonly SceneSummary[]
 }
 
 /*
@@ -56,7 +61,12 @@ const BUNDLE_HINT = `A ${BUNDLE_FORMAT_IDS.map(
  * not a dialog: a dialog would trap focus and catch the drop on a page with
  * nothing else on it.
  */
-export const EmptyStage = ({ isMobile, onUpload, sampleDownload }: Props) => {
+export const EmptyStage = ({
+	isMobile,
+	onUpload,
+	sampleDownload,
+	recentScenes = []
+}: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 
 	/* `useModelFileInputs` owns why there are two of these. */
@@ -137,62 +147,117 @@ export const EmptyStage = ({ isMobile, onUpload, sampleDownload }: Props) => {
 			{...getRootProps({ role: 'region' })}
 			aria-label="Empty stage"
 			className={cn(
-				'relative isolate flex h-full w-full items-center justify-center overflow-hidden p-4 transition-shadow',
+				'relative isolate h-full w-full overflow-hidden transition-shadow',
 				isDragActive && 'ring-2 ring-[rgb(var(--orange-rgb))] ring-inset'
 			)}
 		>
 			<DitherGrain origin="right" />
 
-			<div className="ds-overlay w-full max-w-md rounded-2xl p-6 sm:p-8">
-				<h1 className="text-h3">
-					{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
-				</h1>
-				<p className="text-muted-foreground text-body-sm mt-2">
-					It opens right here in your browser, and nothing leaves your device
-					until you save.
-				</p>
+			{/*
+			  The column scrolls, not the stage, so the grain and the drop ring stay
+			  put. `my-auto` in it rather than a centred flex box: with recent
+			  scenes the panel can outgrow a short stage, and a centred box taller
+			  than its container loses its top where no scroll reaches it.
+			*/}
+			<div className="absolute inset-0 flex flex-col items-center overflow-y-auto p-4">
+				<div className="ds-overlay my-auto w-full max-w-md rounded-2xl p-6 sm:p-8">
+					<h1 className="text-h3">
+						{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
+					</h1>
+					<p className="text-muted-foreground text-body-sm mt-2">
+						It opens right here in your browser, and nothing leaves your device
+						until you save.
+					</p>
 
-				<div className="mt-6 flex flex-wrap items-center gap-2">
-					<Button onClick={openFilePicker}>
-						<Upload className="h-4 w-4" aria-hidden />
-						Choose a file
-					</Button>
-					{/*
+					<div className="mt-6 flex flex-wrap items-center gap-2">
+						<Button onClick={openFilePicker}>
+							<Upload className="h-4 w-4" aria-hidden />
+							Choose a file
+						</Button>
+						{/*
 					  No folder option on a phone. iOS and Android have no directory
 					  picker to open, so offering one would be a button that does
 					  nothing on the devices this branch exists for.
 					*/}
+						{!isMobile && (
+							<Button variant="outline" onClick={openDirectoryPicker}>
+								<FolderUp className="h-4 w-4" aria-hidden />
+								Choose a folder
+							</Button>
+						)}
+					</div>
 					{!isMobile && (
-						<Button variant="outline" onClick={openDirectoryPicker}>
-							<FolderUp className="h-4 w-4" aria-hidden />
-							Choose a folder
-						</Button>
+						<p className="text-muted-foreground mt-3 text-xs">{BUNDLE_HINT}</p>
 					)}
-				</div>
-				{!isMobile && (
-					<p className="text-muted-foreground mt-3 text-xs">{BUNDLE_HINT}</p>
-				)}
 
-				{/*
+					{/*
+				  Before the samples: someone with work of their own is more likely
+				  back for it than for a demo model. Rows draw no box at rest; the
+				  interactive step is the panel's own 8%, lifting one step on hover.
+
+				  Held while a sample downloads, like the tiles: the download
+				  outlives a navigation inside the publisher and would load the
+				  sample over the scene just opened.
+				*/}
+					{recentScenes.length > 0 && (
+						<div className="mt-8">
+							<p
+								id="recent-scenes-label"
+								className="text-muted-foreground text-eyebrow mb-2"
+							>
+								Pick up where you left off
+							</p>
+							<ul aria-labelledby="recent-scenes-label" className="-mx-2">
+								{recentScenes.map((scene) => (
+									<li key={scene.id}>
+										<Link
+											to={`/publisher/${scene.id}`}
+											aria-disabled={download ? true : undefined}
+											onClick={(event) => {
+												if (download) event.preventDefault()
+											}}
+											className="ds-overlay-interactive flex items-center gap-3 rounded-xl px-2 py-1.5"
+										>
+											<SceneThumbnail
+												src={scene.thumbnailUrl}
+												className="aspect-square size-10 rounded-lg [&_svg]:size-4"
+											/>
+											<span className="min-w-0">
+												<span className="text-foreground block truncate text-sm font-medium">
+													{scene.name}
+												</span>
+												<span className="text-muted-foreground block truncate text-xs">
+													{scene.projectName}
+												</span>
+											</span>
+										</Link>
+									</li>
+								))}
+							</ul>
+						</div>
+					)}
+
+					{/*
 				  Something to open when you have nothing to open. Two models rather
 				  than one, because the optimization passes do different jobs: the
 				  rocket is two thirds geometry and the camera is nearly all texture,
 				  so each one makes a different pass look like it is working. The
 				  split is measured; see `sample-models.ts`.
 				*/}
-				<SampleTiles
-					className="mt-8"
-					label="Or open a sample"
-					onOpen={(id) => void openSample(id)}
-					download={download}
-				/>
+					<SampleTiles
+						className="mt-8"
+						label="Or open a sample"
+						onOpen={(id) => void openSample(id)}
+						download={download}
+					/>
 
-				<Link
-					to="/docs/getting-started"
-					className="text-muted-foreground hover:text-foreground mt-6 inline-block text-sm underline underline-offset-4"
-				>
-					How the publisher works
-				</Link>
+					<Link
+						to="/docs/getting-started"
+						className="text-muted-foreground hover:text-foreground mt-6 inline-block text-sm underline underline-offset-4"
+					>
+						How the publisher works
+					</Link>
+				</div>
 			</div>
 
 			{/*

@@ -12,7 +12,13 @@
  * cannot serve both.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within
+} from '@testing-library/react'
 import { modelAcceptPattern } from '@vctrl/core/model-formats'
 import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { MemoryRouter, useLocation } from 'react-router'
@@ -21,6 +27,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EmptyStage } from './empty-stage'
 import { useSampleDownload } from '../../../hooks/use-sample-download'
 import { sampleModelById } from '../../../lib/samples/sample-models'
+
+import type { ComponentProps } from 'react'
 
 beforeEach(() => {
 	/* jsdom has no matchMedia; `useAcceptPattern` reads it through `useIsMobile`. */
@@ -337,6 +345,103 @@ describe('a sample on its way down', () => {
   The home page's "open the camera" link names a sample in the URL, so the
   publisher opens it on arrival through the same path a tile click takes.
 */
+/*
+  Signed in, the stage also offers the scenes the user worked on last, so
+  getting back to one does not mean a trip through the dashboard.
+*/
+describe('recent scenes', () => {
+	function renderWith(
+		recentScenes: ComponentProps<typeof EmptyStage>['recentScenes']
+	) {
+		function Stage() {
+			return (
+				<EmptyStage
+					onUpload={vi.fn()}
+					sampleDownload={useSampleDownload()}
+					recentScenes={recentScenes}
+				/>
+			)
+		}
+		render(
+			<MemoryRouter>
+				<Stage />
+			</MemoryRouter>
+		)
+	}
+
+	it('links each one to its scene in the publisher', () => {
+		renderWith([
+			{
+				id: 'scene-1',
+				name: 'Chair',
+				projectId: 'project-1',
+				projectName: 'Shop',
+				status: 'draft',
+				updatedAt: '2026-09-25T00:00:00.000Z'
+			},
+			{
+				id: 'scene-2',
+				name: 'Lamp',
+				projectId: 'project-1',
+				projectName: 'Shop',
+				status: 'published',
+				thumbnailUrl: '/api/scenes/scene-2/thumbnail',
+				updatedAt: '2026-09-24T00:00:00.000Z'
+			}
+		])
+
+		const list = screen.getByRole('list', {
+			name: 'Pick up where you left off'
+		})
+		const links = within(list).getAllByRole('link')
+		expect(links.map((link) => link.getAttribute('href'))).toEqual([
+			'/publisher/scene-1',
+			'/publisher/scene-2'
+		])
+		expect(links[0].textContent).toContain('Chair')
+		expect(links[0].textContent).toContain('Shop')
+	})
+
+	it('opens none while a sample is still downloading', () => {
+		function LocationProbe() {
+			return <output data-testid="path">{useLocation().pathname}</output>
+		}
+		render(
+			<MemoryRouter initialEntries={['/publisher']}>
+				<EmptyStage
+					onUpload={vi.fn()}
+					sampleDownload={{
+						download: { id: 'rocket', percent: 50 },
+						openSample: vi.fn()
+					}}
+					recentScenes={[
+						{
+							id: 'scene-1',
+							name: 'Chair',
+							projectId: 'project-1',
+							projectName: 'Shop',
+							status: 'draft',
+							updatedAt: '2026-09-25T00:00:00.000Z'
+						}
+					]}
+				/>
+				<LocationProbe />
+			</MemoryRouter>
+		)
+
+		const link = screen.getByRole('link', { name: /Chair/ })
+		expect(link.getAttribute('aria-disabled')).toBe('true')
+		fireEvent.click(link)
+		expect(screen.getByTestId('path').textContent).toBe('/publisher')
+	})
+
+	it('offers nothing when there are none, rather than an empty heading', () => {
+		renderWith([])
+
+		expect(screen.queryByText('Pick up where you left off')).toBeNull()
+	})
+})
+
 describe('a sample named by the link', () => {
 	function LocationProbe() {
 		return <output data-testid="search">{useLocation().search}</output>
