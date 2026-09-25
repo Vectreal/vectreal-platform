@@ -6,7 +6,7 @@ import { useLocation, Link } from 'react-router'
 
 import { isNavItemActive } from './nav-items'
 import { NavPanels } from './nav-panels'
-import { NAV } from '../../lib/navigation/site-map'
+import { NAV, entersFunnel } from '../../lib/navigation/site-map'
 import { DocsBreadcrumb, isDocsPath } from '../docs/docs-breadcrumb'
 import { UserMenu } from '../user-menu'
 
@@ -91,6 +91,7 @@ function DesktopNav({
 									<Link
 										key={item.to}
 										to={item.to}
+										viewTransition={entersFunnel(item.to)}
 										// Color alone cannot say "you are here": aria-current is what a screen reader reads it from.
 										aria-current={isActive ? 'page' : undefined}
 										className={cn(
@@ -116,7 +117,12 @@ function DesktopNav({
 
 						{!user && (
 							<Button asChild size="sm" className="rounded-xl">
-								<Link to={NAV.getStarted.to}>{NAV.getStarted.label}</Link>
+								<Link
+									to={NAV.getStarted.to}
+									viewTransition={entersFunnel(NAV.getStarted.to)}
+								>
+									{NAV.getStarted.label}
+								</Link>
 							</Button>
 						)}
 

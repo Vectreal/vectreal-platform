@@ -795,7 +795,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			}
 
 			await navigate(
-				`/publisher?restore_draft=1&draft_id=${encodeURIComponent(draftId)}`
+				`/publisher?restore_draft=1&draft_id=${encodeURIComponent(draftId)}`,
+				{ viewTransition: true }
 			)
 		} catch {
 			toast.error('That model could not be handed over. Try the publisher.')

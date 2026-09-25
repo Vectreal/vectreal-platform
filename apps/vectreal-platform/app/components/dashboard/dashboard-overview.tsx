@@ -52,7 +52,7 @@ function ResumeBand({ scene }: { scene: SceneSummary }) {
 
 					<div className="flex flex-wrap items-center gap-2">
 						<Button size="sm" asChild>
-							<Link to={`/publisher/${scene.id}`}>
+							<Link to={`/publisher/${scene.id}`} viewTransition>
 								<Pencil className="size-3.5" />
 								Open in publisher
 							</Link>
@@ -86,7 +86,7 @@ function FirstSceneBand() {
 				link, and an embed snippet for your site.
 			</p>
 			<Button className="mt-6" asChild>
-				<Link to="/publisher">
+				<Link to="/publisher" viewTransition>
 					Upload a model
 					<ArrowRight className="size-4" />
 				</Link>

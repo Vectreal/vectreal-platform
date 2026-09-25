@@ -51,6 +51,12 @@ const DrawerLink = ({
 			{link.label}
 		</a>
 	) : (
+		/*
+		  No crossfade into a funnel from here, unlike the desktop nav: the drawer
+		  closes once the new page has committed, which is inside the crossfade,
+		  so it sat frozen over the fading page and then vanished. Its own slide
+		  out is the motion on a phone.
+		*/
 		<Link
 			to={link.to}
 			aria-current={isNavItemActive(link, pathname) ? 'page' : undefined}

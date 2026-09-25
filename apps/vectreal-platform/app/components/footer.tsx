@@ -8,7 +8,12 @@ import { Link } from 'react-router'
 
 import { useConsent } from './consent/consent-context'
 import { ThemeToggleButton } from './theme-toggle-button'
-import { COMMUNITY, FOOTER, type SiteLink } from '../lib/navigation/site-map'
+import {
+	COMMUNITY,
+	FOOTER,
+	entersFunnel,
+	type SiteLink
+} from '../lib/navigation/site-map'
 
 const SOCIAL = [
 	{ label: 'GitHub', href: COMMUNITY.github, Icon: GithubMark },
@@ -27,7 +32,11 @@ const FooterLink = ({ link }: { link: SiteLink }) =>
 			{link.label}
 		</a>
 	) : (
-		<Link to={link.to} className={LINK_CLASS}>
+		<Link
+			to={link.to}
+			viewTransition={entersFunnel(link.to)}
+			className={LINK_CLASS}
+		>
 			{link.label}
 		</Link>
 	)

@@ -204,6 +204,7 @@ export function HeroSheet() {
 					</div>
 					<Link
 						to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
+						viewTransition
 						className="text-muted-foreground hover:text-foreground text-body-sm mt-5 inline-flex w-fit items-center gap-1 underline-offset-4 transition-colors hover:underline"
 					>
 						{HERO.sampleCta}
@@ -286,7 +287,7 @@ function OwnFileCta({
 	if (!canHandOff) {
 		return (
 			<Button asChild size="lg" variant="secondary">
-				<Link to="/publisher" onClick={onTry}>
+				<Link to="/publisher" viewTransition onClick={onTry}>
 					{HERO.secondaryCta}
 				</Link>
 			</Button>

@@ -21,6 +21,7 @@ import { ProductStage, type FrameRect } from './product-stage'
 import styles from './product-window.module.css'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import { dissolveIn } from '../../lib/dither/dither'
+import { entersFunnel } from '../../lib/navigation/site-map'
 
 const COPY = HOME_PAGE_COPY.product
 
@@ -296,6 +297,7 @@ export const ProductWindow = () => {
 								</p>
 								<Link
 									to={VIEW_LINKS[one]}
+									viewTransition={entersFunnel(VIEW_LINKS[one])}
 									className="text-foreground text-body-sm inline-flex w-fit items-center gap-1 underline-offset-4 hover:underline"
 								>
 									{COPY.views[one].link}

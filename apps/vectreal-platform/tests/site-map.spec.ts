@@ -14,6 +14,7 @@ import {
 	ACCOUNT,
 	FOOTER,
 	NAV,
+	entersFunnel,
 	type SiteLink
 } from '../app/lib/navigation/site-map'
 
@@ -61,5 +62,29 @@ describe('the site map', () => {
 	it('signs in at sign-in, and starts at the publisher', () => {
 		expect(NAV.signIn.to).toBe('/sign-in')
 		expect(NAV.getStarted.to).toBe('/publisher')
+	})
+})
+
+describe('which links crossfade into a tool', () => {
+	it('takes the publisher and the converters, at any depth or query', () => {
+		for (const to of [
+			'/publisher',
+			'/publisher/3c101785',
+			'/publisher?sample=rocket',
+			'/convert',
+			'/convert/obj-to-glb'
+		]) {
+			expect(entersFunnel(to), to).toBe(true)
+		}
+	})
+
+	it('leaves every other page, and a path that only starts the same, as a cut', () => {
+		for (const to of ['/pricing', '/docs', '/publishers', '/converter', '/']) {
+			expect(entersFunnel(to), to).toBe(false)
+		}
+	})
+
+	it('leads the nav in from its way in', () => {
+		expect(entersFunnel(NAV.getStarted.to)).toBe(true)
 	})
 })

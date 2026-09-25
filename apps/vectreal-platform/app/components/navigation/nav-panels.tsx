@@ -13,6 +13,7 @@ import { Link, useLocation } from 'react-router'
 
 import { isNavItemActive } from './nav-items'
 import { dissolveIn } from '../../lib/dither/dither'
+import { entersFunnel } from '../../lib/navigation/site-map'
 
 import type { SiteLink, SiteSection } from '../../lib/navigation/site-map'
 
@@ -279,6 +280,7 @@ function PanelLink({
 	) : (
 		<Link
 			to={link.to}
+			viewTransition={entersFunnel(link.to)}
 			aria-current={isNavItemActive(link, pathname) ? 'page' : undefined}
 			onClick={onClick}
 			onAuxClick={onAuxClick}

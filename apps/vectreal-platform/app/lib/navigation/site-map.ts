@@ -117,6 +117,19 @@ export const SITE_SECTIONS = {
 	}
 } as const satisfies Record<string, SiteSection>
 
+/*
+  Whether a link leads into one of the two funnels, which is where the site
+  crossfades into a tool rather than cutting to it. React Router takes a view
+  transition per navigation, not per destination, so every renderer of site
+  links asks this rather than each deciding for itself.
+*/
+export function entersFunnel(to: string): boolean {
+	return [PUBLISHER.to, CONVERTERS.to].some(
+		(path) =>
+			to === path || to.startsWith(`${path}/`) || to.startsWith(`${path}?`)
+	)
+}
+
 /** The marketing nav: two panels, two plain links, and the two ways in. */
 export const NAV = {
 	panels: [SITE_SECTIONS.product, SITE_SECTIONS.openSource],
