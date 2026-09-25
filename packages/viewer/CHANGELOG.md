@@ -14,7 +14,6 @@
 * **hotspots:** let a hotspot say something ([#831](https://github.com/Vectreal/vectreal-platform/issues/831)) ([d4c9b3d](https://github.com/Vectreal/vectreal-platform/commit/d4c9b3d1d38d3cdd6e2e268b5e9732d3ad7b2970))
 * **publisher:** point a hotspot's camera at its hotspot, and keep it pointed there ([#771](https://github.com/Vectreal/vectreal-platform/issues/771)) ([c36077c](https://github.com/Vectreal/vectreal-platform/commit/c36077c8201046df5fdb48d3082c7afcb2a1c806))
 * **viewer:** give hotspots one renderer, and wire it to every surface ([#764](https://github.com/Vectreal/vectreal-platform/issues/764)) ([dc17722](https://github.com/Vectreal/vectreal-platform/commit/dc1772291aab666c396b165667fdafce2f1ee409))
-* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
 * **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
 * **viewer:** render scene hotspots ([#755](https://github.com/Vectreal/vectreal-platform/issues/755)) ([64eebc1](https://github.com/Vectreal/vectreal-platform/commit/64eebc114220b92331603e2ac758aa3026735adb))
 

@@ -12,7 +12,6 @@
 
 * **embed:** author-controlled info popover, plan-gated Vectreal mark ([#828](https://github.com/Vectreal/vectreal-platform/issues/828)) ([d557acb](https://github.com/Vectreal/vectreal-platform/commit/d557acb55ae04f878ee30838052accb3b76767e1))
 * **hotspots:** let a hotspot say something ([#831](https://github.com/Vectreal/vectreal-platform/issues/831)) ([d4c9b3d](https://github.com/Vectreal/vectreal-platform/commit/d4c9b3d1d38d3cdd6e2e268b5e9732d3ad7b2970))
-* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
 * **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
 
 

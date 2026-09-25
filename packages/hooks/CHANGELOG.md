@@ -15,7 +15,6 @@
 
 * **core,hooks:** the loader reads six formats and resolves every reference through one rule ([#882](https://github.com/Vectreal/vectreal-platform/issues/882)) ([7b52540](https://github.com/Vectreal/vectreal-platform/commit/7b52540233c8258da852be6d3d4374c119e09b16))
 * **scene:** a saved scene stores each asset under the name its glTF uses ([#883](https://github.com/Vectreal/vectreal-platform/issues/883)) ([b0f98cc](https://github.com/Vectreal/vectreal-platform/commit/b0f98cc965d67d8afe77cae1ef432adb54b572ac))
-* **viewer:** play glTF animation clips ([035b217](https://github.com/Vectreal/vectreal-platform/commit/035b217448803f9008d136f1c12836189d0c2898))
 * **viewer:** play glTF animation clips ([11ff088](https://github.com/Vectreal/vectreal-platform/commit/11ff0880eb32ef0bda03196fe74de4955452d2f1))
 
 
