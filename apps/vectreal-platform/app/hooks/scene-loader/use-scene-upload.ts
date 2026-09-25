@@ -68,8 +68,8 @@ export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 			// of it runs until there is a model to replace it with, so a folder with
 			// two models in it, or with none, costs nothing.
 			//
-			// A drop always starts a new unsaved scene: the drop zone is only on
-			// screen when there is no scene open, so there is nothing to merge with.
+			// A drop always starts a new unsaved scene: the stage only takes a drop
+			// while it is empty, so there is nothing to merge with.
 			// Both IndexedDB snapshots are keyed per tab rather than per model, and
 			// the clear is awaited so it cannot land after the snapshot below and
 			// leave re-optimization without its pristine baseline.

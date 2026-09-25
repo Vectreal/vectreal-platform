@@ -1,15 +1,48 @@
 import {
 	hasSceneMetaChanged,
 	hasUnsavedSceneChanges,
+	isSaveActionBlocked,
 	resolveSaveAvailability
 } from '.'
 
 import type { SceneSettings } from '@vctrl/core'
 
 describe('scene save state', () => {
+	it('blocks save with nothing on the stage, ahead of every other reason', () => {
+		for (const userId of [undefined, 'user-1']) {
+			for (const isSceneOverSizeLimit of [false, true]) {
+				for (const hasChanges of [false, true]) {
+					expect(
+						resolveSaveAvailability({
+							hasModel: false,
+							userId,
+							isSceneOverSizeLimit,
+							hasChanges
+						})
+					).toEqual({ canSave: false, reason: 'no-model' })
+				}
+			}
+		}
+	})
+
+	it('lets a Save control refuse every reason but a missing account', () => {
+		expect(isSaveActionBlocked({ canSave: true, reason: 'ready' })).toBe(false)
+		expect(isSaveActionBlocked({ canSave: false, reason: 'no-user' })).toBe(
+			false
+		)
+		for (const reason of [
+			'no-model',
+			'no-unsaved-changes',
+			'requires-size-reduction'
+		] as const) {
+			expect(isSaveActionBlocked({ canSave: false, reason }), reason).toBe(true)
+		}
+	})
+
 	it('blocks save with no user', () => {
 		expect(
 			resolveSaveAvailability({
+				hasModel: true,
 				userId: undefined,
 				isSceneOverSizeLimit: false,
 				hasChanges: true
@@ -20,6 +53,7 @@ describe('scene save state', () => {
 	it('requires size reduction when over the limit', () => {
 		expect(
 			resolveSaveAvailability({
+				hasModel: true,
 				userId: 'user-1',
 				isSceneOverSizeLimit: true,
 				hasChanges: true
@@ -30,6 +64,7 @@ describe('scene save state', () => {
 	it('returns ready when live dirty state is true', () => {
 		expect(
 			resolveSaveAvailability({
+				hasModel: true,
 				userId: 'user-1',
 				isSceneOverSizeLimit: false,
 				hasChanges: true
@@ -40,6 +75,7 @@ describe('scene save state', () => {
 	it('reports no-unsaved-changes when under limit with no changes', () => {
 		expect(
 			resolveSaveAvailability({
+				hasModel: true,
 				userId: 'user-1',
 				isSceneOverSizeLimit: false,
 				hasChanges: false

@@ -17,9 +17,17 @@ describe('routePageChrome', () => {
 		}
 	})
 
-	it('keeps the nav on the empty publisher, where it stands in for the header', () => {
-		expect(routePageChrome('/publisher')).toEqual({ nav: true, footer: false })
-		expect(routePageChrome('/publisher/')).toEqual({ nav: true, footer: false })
+	/*
+	  The empty publisher is the editor with nothing in it, under the same
+	  header, so it drops the nav from the first paint like every scene route.
+	  It used to keep it and hide it at runtime once a model arrived.
+	*/
+	it('drops the nav on the empty publisher too', () => {
+		expect(routePageChrome('/publisher')).toEqual({ nav: false, footer: false })
+		expect(routePageChrome('/publisher/')).toEqual({
+			nav: false,
+			footer: false
+		})
 	})
 
 	/*

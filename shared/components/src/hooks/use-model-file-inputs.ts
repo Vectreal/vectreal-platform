@@ -26,8 +26,8 @@ declare module 'react' {
  * surfaces that use it - the publisher's empty state and a converter page -
  * agree on the input mechanics and on almost nothing else: different callbacks,
  * different accept sources, different copy, different layout, one has a mobile
- * branch and a whole-card click target, the other renders a viewer and its own
- * loading and error states. A component taking ten props to reconcile that
+ * branch and a welcome panel, the other renders a viewer and its own loading
+ * and error states. A component taking ten props to reconcile that
  * would be harder to read than either caller. So the part that is genuinely one
  * thing is one thing, and the rest stays written out.
  */

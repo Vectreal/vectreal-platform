@@ -104,8 +104,7 @@ export default [
 
 		// Publisher. Nested here, rather than in its own top-level branch, so the
 		// nav survives navigating into it instead of being torn down and rebuilt.
-		// It suppresses the footer (and, once there is a scene to frame, the nav)
-		// through routePageChrome.
+		// It suppresses the nav and the footer through routePageChrome.
 		layout('./routes/layouts/publisher-layout.tsx', [
 			route(
 				'publisher/:sceneId?',

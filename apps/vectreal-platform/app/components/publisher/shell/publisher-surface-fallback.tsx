@@ -7,7 +7,7 @@ import CenteredSpinner from '../../centered-spinner'
 import type { PublisherSurface } from '../../../lib/publisher/publisher-surface'
 
 interface Props {
-	surface: Exclude<PublisherSurface, 'drop-zone' | 'viewer'>
+	surface: Exclude<PublisherSurface, 'empty' | 'viewer'>
 	/** Reloads the scene the route points at. */
 	onRetry: () => void
 }

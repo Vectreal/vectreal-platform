@@ -1,11 +1,9 @@
 import { cn } from '@shared/utils'
-import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 
 import { DocsTocProvider } from '../../components/docs/docs-toc-context'
 import { Footer } from '../../components/footer'
 import { Navigation } from '../../components/navigation'
-import { GlobalNavVisibilityProvider } from '../../components/navigation/global-nav-visibility'
 import { SiteStructuredData } from '../../components/site-structured-data'
 import { CurrentUserProvider } from '../../hooks/use-current-user'
 import { routePageChrome } from '../../lib/navigation/page-chrome'
@@ -31,22 +29,17 @@ import { routePageChrome } from '../../lib/navigation/page-chrome'
 const Layout = () => {
 	const { pathname } = useLocation()
 	const chrome = routePageChrome(pathname)
-	const [navHiddenAtRuntime, setNavHiddenAtRuntime] = useState(false)
-
-	const showNav = chrome.nav && !navHiddenAtRuntime
 
 	return (
 		<CurrentUserProvider>
-			<GlobalNavVisibilityProvider onHiddenChange={setNavHiddenAtRuntime}>
-				<SiteStructuredData />
-				<DocsTocProvider>
-					<div className={cn(!showNav && 'hidden')}>
-						<Navigation />
-					</div>
-					<Outlet />
-				</DocsTocProvider>
-				{chrome.footer && <Footer />}
-			</GlobalNavVisibilityProvider>
+			<SiteStructuredData />
+			<DocsTocProvider>
+				<div className={cn(!chrome.nav && 'hidden')}>
+					<Navigation />
+				</div>
+				<Outlet />
+			</DocsTocProvider>
+			{chrome.footer && <Footer />}
 		</CurrentUserProvider>
 	)
 }

@@ -2,7 +2,7 @@
 /**
  * The only way into the product that is not a drag.
  *
- * Every entry point in the app converges on this screen, and it held a single
+ * Every entry point in the app converges on this stage, and it held a single
  * file input carrying `webkitdirectory`. That attribute does not filter a
  * dialog, it replaces it: the browser opens a directory chooser and ignores
  * `accept`. So the button reading "Choose Files" could not choose a file, and
@@ -18,7 +18,7 @@ import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { MemoryRouter, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DropZone } from './drop-zone'
+import { EmptyStage } from './empty-stage'
 import { useSampleDownload } from '../../../hooks/use-sample-download'
 import { sampleModelById } from '../../../lib/samples/sample-models'
 
@@ -32,19 +32,30 @@ beforeEach(() => {
 	}))
 })
 
-/** The drop zone as the shell renders it, holding the sample download above it. */
-function ShellDropZone({
-	onUpload
+/** The empty stage as the shell renders it, holding the sample download above it. */
+function ShellStage({
+	onUpload,
+	isMobile
 }: {
 	onUpload: (files: unknown) => Promise<unknown>
+	isMobile?: boolean
 }) {
-	return <DropZone onUpload={onUpload} sampleDownload={useSampleDownload()} />
+	return (
+		<EmptyStage
+			isMobile={isMobile}
+			onUpload={onUpload}
+			sampleDownload={useSampleDownload()}
+		/>
+	)
 }
 
-function renderDropZone(onUpload = vi.fn().mockResolvedValue(undefined)) {
+function renderStage(
+	onUpload = vi.fn().mockResolvedValue(undefined),
+	isMobile?: boolean
+) {
 	const view = render(
 		<MemoryRouter>
-			<ShellDropZone onUpload={onUpload} />
+			<ShellStage onUpload={onUpload} isMobile={isMobile} />
 		</MemoryRouter>
 	)
 
@@ -64,7 +75,7 @@ function renderDropZone(onUpload = vi.fn().mockResolvedValue(undefined)) {
 
 describe('choosing a model', () => {
 	it('offers an input that opens a file dialog', () => {
-		const { fileInput } = renderDropZone()
+		const { fileInput } = renderStage()
 
 		expect(fileInput).toBeDefined()
 		/*
@@ -89,7 +100,7 @@ describe('choosing a model', () => {
 		  extensions spelled out, so the day a third bundle is declared this fails
 		  instead of quietly under-reporting - which is the failure it is replacing.
 		*/
-		renderDropZone()
+		renderStage()
 
 		const hint = screen.getByText(/needs the folder/i).textContent ?? ''
 
@@ -100,13 +111,13 @@ describe('choosing a model', () => {
 	})
 
 	it('still offers an input that opens a directory dialog', () => {
-		const { directoryInput } = renderDropZone()
+		const { directoryInput } = renderStage()
 
 		expect(directoryInput).toBeDefined()
 	})
 
 	it('opens the file dialog from the primary button, not the directory one', () => {
-		const { fileInput, directoryInput } = renderDropZone()
+		const { fileInput, directoryInput } = renderStage()
 
 		const openedFile = vi.fn()
 		const openedDirectory = vi.fn()
@@ -120,7 +131,7 @@ describe('choosing a model', () => {
 	})
 
 	it('opens the directory dialog only from the folder control', () => {
-		const { fileInput, directoryInput } = renderDropZone()
+		const { fileInput, directoryInput } = renderStage()
 
 		const openedFile = vi.fn()
 		const openedDirectory = vi.fn()
@@ -134,7 +145,7 @@ describe('choosing a model', () => {
 	})
 
 	it('uploads the chosen file', () => {
-		const { fileInput, onUpload } = renderDropZone()
+		const { fileInput, onUpload } = renderStage()
 		const file = new File(['glb'], 'chair.glb', { type: 'model/gltf-binary' })
 
 		Object.defineProperty(fileInput, 'files', {
@@ -147,12 +158,49 @@ describe('choosing a model', () => {
 	})
 
 	/*
+	  Dropped beside the welcome panel rather than on it: the stage is the
+	  target, so a file let go anywhere on it opens. Dropping on the region
+	  itself would pass wherever the handlers lived.
+	*/
+	it('takes a drop anywhere on the stage, not only on the panel', async () => {
+		const { onUpload } = renderStage()
+		const file = new File(['glb'], 'chair.glb', { type: 'model/gltf-binary' })
+		const stage = screen.getByRole('region', { name: 'Empty stage' })
+		const panel = screen.getByRole('heading', { level: 1 }).parentElement
+		const besideThePanel = Array.from(stage.children).find(
+			(child) => child !== panel && !(child instanceof HTMLInputElement)
+		)
+		expect(besideThePanel).toBeDefined()
+
+		fireEvent.drop(besideThePanel as Element, {
+			dataTransfer: {
+				files: [file],
+				items: [{ kind: 'file', type: file.type, getAsFile: () => file }],
+				types: ['Files']
+			}
+		})
+
+		await waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1))
+		const [files] = onUpload.mock.calls[0] as [File[]]
+		expect(files[0].name).toBe('chair.glb')
+	})
+
+	it('offers no folder picker on a phone, which has none to open', () => {
+		renderStage(undefined, true)
+
+		expect(screen.getByRole('button', { name: /choose a file/i })).toBeTruthy()
+		expect(
+			screen.queryByRole('button', { name: /choose a folder/i })
+		).toBeNull()
+	})
+
+	/*
 	  A file input fires no change event when the selection is identical, so
 	  without clearing the value a second attempt at the same model after a
 	  refusal did nothing at all.
 	*/
 	it('clears its value so the same file can be chosen again', () => {
-		const { fileInput } = renderDropZone()
+		const { fileInput } = renderStage()
 		const file = new File(['glb'], 'chair.glb', { type: 'model/gltf-binary' })
 
 		/*
@@ -223,7 +271,7 @@ describe('a sample on its way down', () => {
 
 	it('shows how far it is, takes no second click, and hands the file over', async () => {
 		const release = holdRocketHalfway()
-		const { onUpload } = renderDropZone()
+		const { onUpload } = renderStage()
 		const rocket = screen.getAllByRole('button', { name: /Rocket/ })[0]
 
 		fireEvent.click(rocket)
@@ -242,7 +290,7 @@ describe('a sample on its way down', () => {
 		await waitFor(() => expect(rocket.getAttribute('aria-busy')).toBeNull())
 	})
 
-	it('still says so after the shell swaps the drop zone out and back', async () => {
+	it('still says so after the shell swaps the stage out and back', async () => {
 		/*
 		  What a link naming a sample does: taking the param off the URL
 		  revalidates the publisher, whose loading surface replaces this screen
@@ -253,7 +301,7 @@ describe('a sample on its way down', () => {
 		function Shell({ shown }: { shown: boolean }) {
 			const sampleDownload = useSampleDownload()
 			return shown ? (
-				<DropZone onUpload={onUpload} sampleDownload={sampleDownload} />
+				<EmptyStage onUpload={onUpload} sampleDownload={sampleDownload} />
 			) : null
 		}
 		const view = render(
@@ -298,7 +346,7 @@ describe('a sample named by the link', () => {
 		const onUpload = vi.fn().mockResolvedValue(undefined)
 		render(
 			<MemoryRouter initialEntries={[`/publisher${search}`]}>
-				<ShellDropZone onUpload={onUpload} />
+				<ShellStage onUpload={onUpload} />
 				<LocationProbe />
 			</MemoryRouter>
 		)

@@ -29,22 +29,22 @@ front rather than failing part way through a parse.
 
 ### Drag and drop
 
-Drag one or more files directly onto the upload area. The model loads as soon as the files are parsed.
+Drag one or more files anywhere onto the Publisher's empty stage. The model loads as soon as the files are parsed.
 
 ### File picker
 
-Click the upload area, or **Choose a file**, to open the system file picker. Select your model, and any files it references, together.
+Click **Choose a file** in the welcome panel to open the system file picker. Select your model, and any files it references, together.
 
 ### Folder picker
 
-Use **Choose a folder instead** when the model references files you would rather not select one by one. This opens a directory chooser, and everything in the folder is read.
+Use **Choose a folder** when the model references files you would rather not select one by one. This opens a directory chooser, and everything in the folder is read. The button is not offered on a narrow screen, since phones have no directory chooser.
 
 ### glTF bundles (folder upload)
 
 glTF separates geometry, binaries, and textures into multiple files. To upload a full bundle:
 
-1. Drag the **entire folder** onto the upload area, or
-2. Choose a folder instead, and pick the containing folder, or
+1. Drag the **entire folder** onto the stage, or
+2. Use **Choose a folder**, and pick the containing folder, or
 3. Select the `.gltf` and its `.bin` and texture files together in the file picker.
 
 The parser identifies the `.gltf` root and resolves all referenced `.bin` and texture files automatically.
@@ -101,7 +101,7 @@ The Publisher enforces your plan's maximum scene size: {publishedLimit('free', '
 
 ## Starting a new upload
 
-The upload area is only rendered while no model is loaded, so there is no drop target inside a scene that already has one. Open the Publisher without a scene (`/publisher`) to upload a new file. Swapping the model inside an existing scene is not supported.
+The stage takes a drop only while it is empty, so there is no drop target inside a scene that already has a model. Open the Publisher without a scene (`/publisher`) to upload a new file. Swapping the model inside an existing scene is not supported.
 
 ---
 

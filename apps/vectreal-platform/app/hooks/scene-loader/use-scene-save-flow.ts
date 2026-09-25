@@ -35,6 +35,7 @@ export const useSceneSaveFlow = ({
 	actions
 }: UseSceneSaveFlowArgs) => {
 	const {
+		hasModel,
 		userId,
 		currentSceneId,
 		setCurrentSceneId,
@@ -463,11 +464,12 @@ export const useSceneSaveFlow = ({
 	const saveAvailability: SaveAvailabilityState = useMemo(
 		() =>
 			resolveSaveAvailability({
+				hasModel,
 				userId,
 				isSceneOverSizeLimit: sceneOverSizeLimit,
 				hasChanges
 			}),
-		[userId, sceneOverSizeLimit, hasChanges]
+		[hasModel, userId, sceneOverSizeLimit, hasChanges]
 	)
 
 	return {

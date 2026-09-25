@@ -144,6 +144,23 @@ describe('usePublisherScene', () => {
 		expect(upload.latest().saveAvailability.canSave).toBe(true)
 	})
 
+	/* Parsing counts as nothing on the stage: the panel is open by then, and signed out its Save would keep an empty draft. */
+	it('offers nothing to save until a model is on the stage, parsing included', () => {
+		for (const status of ['empty', 'loading'] as const) {
+			modelContext.status = status
+			try {
+				const stage = open(null, null)
+
+				expect(stage.latest().saveAvailability, status).toEqual({
+					canSave: false,
+					reason: 'no-model'
+				})
+			} finally {
+				modelContext.status = 'ready'
+			}
+		}
+	})
+
 	it('gives a scene saved without settings a baseline, so an edit is savable', () => {
 		const scene = open('scene-1', createManifest(null))
 

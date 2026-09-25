@@ -157,6 +157,7 @@ export function usePublisherScene({
 
 	const { saveSceneSettings, saveAvailability } = useSceneSaveFlow({
 		scenePersistence: {
+			hasModel: status === 'ready',
 			userId,
 			currentSceneId,
 			setCurrentSceneId,

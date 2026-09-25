@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { DynamicSidebar, ToolSidebar } from '.'
 import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
-import { DropZone } from './shell/drop-zone'
+import { EmptyStage } from './shell/empty-stage'
 import { PreviewModeBadge } from './shell/preview-mode-badge'
 import { PublishCard } from './shell/publish-card'
 import { PublisherHeader } from './shell/publisher-header'
@@ -35,7 +35,6 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 import { PublisherLoaderData } from '../../types/api'
-import { useHideGlobalNav } from '../navigation/global-nav-visibility'
 
 /**
  * The publisher shell: a three-row grid of header, canvas stage, and footer.
@@ -137,20 +136,15 @@ const OverlayControls = ({
 			(navigation.state === 'loading' &&
 				Boolean(navigation.location?.pathname?.startsWith('/publisher')))
 	})
-	// Here rather than in the drop zone, which a revalidation unmounts mid-download: see its `sampleDownload`.
+	// Here rather than in the empty stage, which a revalidation unmounts mid-download: see its `sampleDownload`.
 	const sampleDownload = useSampleDownload()
-
 	/*
-	  Waiting for an upload: there is nothing to frame yet, so the site nav stands
-	  in for the header. Everywhere else the publisher owns the top of the
-	  viewport, so the nav (owned by nav-layout) steps aside.
-
-	  `routePageChrome` already covers this for `/publisher/:sceneId` at SSR. The
-	  case only this can catch is a model dropped at `/publisher`, which swaps the
-	  nav for the header without navigating.
+	  The rail, the publish card, the sidebars and the header's scene controls
+	  act on a scene, so an empty stage has none of them: nothing on screen is a
+	  control that cannot do anything yet. The header itself stays, carrying the
+	  way home and the account, as it does in every state.
 	*/
-	const showSiteNav = surface === 'drop-zone'
-	useHideGlobalNav(!showSiteNav)
+	const showSceneChrome = surface !== 'empty'
 
 	const sceneDetailsHref =
 		sceneId && projectId
@@ -319,20 +313,6 @@ const OverlayControls = ({
 		[setProcessState]
 	)
 
-	// Pre-upload with no scene: the site nav (kept mounted by nav-layout) stands
-	// in for the header, and the stage chrome has nothing to show.
-	if (showSiteNav) {
-		return (
-			<div className="relative flex min-h-0 flex-1 flex-col">
-				<DropZone
-					isMobile={isMobile}
-					onUpload={uploadFiles}
-					sampleDownload={sampleDownload}
-				/>
-			</div>
-		)
-	}
-
 	return (
 		<>
 			<PublisherHeader
@@ -347,6 +327,7 @@ const OverlayControls = ({
 				publishedAt={publishedAt}
 				isPreviewMode={isPreviewMode}
 				actionsDisabled={arePublisherActionsDisabled}
+				showSceneControls={showSceneChrome}
 			/>
 
 			{/*
@@ -358,6 +339,12 @@ const OverlayControls = ({
 			<div className="relative flex min-h-0 flex-1 flex-col">
 				{surface === 'viewer' ? (
 					children
+				) : surface === 'empty' ? (
+					<EmptyStage
+						isMobile={isMobile}
+						onUpload={uploadFiles}
+						sampleDownload={sampleDownload}
+					/>
 				) : (
 					<PublisherSurfaceFallback
 						surface={surface}
@@ -365,45 +352,49 @@ const OverlayControls = ({
 					/>
 				)}
 
-				<ToolSidebar user={user} isMobile={isMobile} />
+				{showSceneChrome && (
+					<>
+						<ToolSidebar user={user} isMobile={isMobile} />
 
-				<PublishCard
-					sceneBytes={currentSceneBytes}
-					isSceneSizeLoading={isSceneSizeLoading}
-					statusText={optimizerStatusText}
-					isPublished={Boolean(publishedAt)}
-					onOpenPublishPanel={handleOpenPublishPanel}
-					onOpenOptimization={handleOpenOptimizationDrawer}
-					disabled={arePublisherActionsDisabled}
-				/>
+						<PublishCard
+							sceneBytes={currentSceneBytes}
+							isSceneSizeLoading={isSceneSizeLoading}
+							statusText={optimizerStatusText}
+							isPublished={Boolean(publishedAt)}
+							onOpenPublishPanel={handleOpenPublishPanel}
+							onOpenOptimization={handleOpenOptimizationDrawer}
+							disabled={arePublisherActionsDisabled}
+						/>
 
-				<DynamicSidebar
-					open={showPublishPanel}
-					onOpenChange={handlePublishPanelChange}
-					zIndexClassName={PUBLISHER_LAYER.sidebar}
-					isMobile={isMobile}
-					direction="right"
-					title="Scene Info & Publish"
-					description="Save, publish, and embed your latest scene."
-					showDesktopHeader
-				>
-					<PublishSidebarProvider value={publishSidebarValue}>
-						<PublishSidebarContent />
-					</PublishSidebarProvider>
-				</DynamicSidebar>
+						<DynamicSidebar
+							open={showPublishPanel}
+							onOpenChange={handlePublishPanelChange}
+							zIndexClassName={PUBLISHER_LAYER.sidebar}
+							isMobile={isMobile}
+							direction="right"
+							title="Scene Info & Publish"
+							description="Save, publish, and embed your latest scene."
+							showDesktopHeader
+						>
+							<PublishSidebarProvider value={publishSidebarValue}>
+								<PublishSidebarContent />
+							</PublishSidebarProvider>
+						</DynamicSidebar>
 
-				<OptimizationDrawer
-					open={isOptimizationDrawerOpen}
-					onOpenChange={handleOptimizationDrawerChange}
-					isOverSizeLimit={requiresSizeReduction}
-					maxSceneBytes={maxSceneBytes}
-					dashboardHref={sceneDetailsHref ?? '/dashboard'}
-					isMobile={isMobile}
-				/>
+						<OptimizationDrawer
+							open={isOptimizationDrawerOpen}
+							onOpenChange={handleOptimizationDrawerChange}
+							isOverSizeLimit={requiresSizeReduction}
+							maxSceneBytes={maxSceneBytes}
+							dashboardHref={sceneDetailsHref ?? '/dashboard'}
+							isMobile={isMobile}
+						/>
 
-				<PreviewModeBadge />
+						<PreviewModeBadge />
 
-				<PreviewCameraControls />
+						<PreviewCameraControls />
+					</>
+				)}
 			</div>
 		</>
 	)

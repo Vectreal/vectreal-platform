@@ -44,4 +44,31 @@ describe('SaveButton', () => {
 		expect(screen.getByRole('button')).toHaveTextContent(/^Save$/)
 		expect(screen.getByRole('button')).toBeEnabled()
 	})
+
+	/*
+	  The header is up before anything is loaded. Signed out, "Sign In to Save"
+	  over an empty stage sent the visitor to sign in carrying an empty draft.
+	*/
+	it('offers nothing to save before a model is on the stage, signed out too', () => {
+		const signedOut = (saveAvailability: SaveAvailabilityState) => (
+			<SaveButton
+				sceneId={null}
+				saveLocationTarget={{
+					targetProjectId: undefined,
+					targetFolderId: null
+				}}
+				saveAvailability={saveAvailability}
+				saveSceneSettings={vi.fn()}
+			/>
+		)
+		const view = render(signedOut({ canSave: false, reason: 'no-model' }))
+
+		expect(screen.getByRole('button')).toHaveTextContent(/^Save$/)
+		expect(screen.getByRole('button')).toBeDisabled()
+
+		view.rerender(signedOut({ canSave: false, reason: 'no-user' }))
+
+		expect(screen.getByRole('button')).toHaveTextContent('Sign In to Save')
+		expect(screen.getByRole('button')).toBeEnabled()
+	})
 })

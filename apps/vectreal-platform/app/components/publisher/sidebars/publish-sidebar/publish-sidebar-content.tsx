@@ -7,6 +7,7 @@ import { useAtomValue } from 'jotai/react'
 import { Code, Globe, Save, Sparkles } from 'lucide-react'
 
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
+import { isSaveActionBlocked } from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
@@ -69,9 +70,7 @@ const PublishSidebarContent: FC = () => {
 		onRequireAuth,
 		saveSceneSettings
 	})
-	const isSaveDisabled = userId
-		? isSaving || !saveAvailability?.canSave
-		: isSaving
+	const isSaveDisabled = isSaving || isSaveActionBlocked(saveAvailability)
 
 	const sizeDeltaLabel = getSizeDeltaLabel(viewModel.sizeDeltaBytes)
 	const currentSceneBytes = viewModel.publishMetricSizeInfo.currentSceneBytes
@@ -139,6 +138,7 @@ const PublishSidebarContent: FC = () => {
 									type="button"
 									size="sm"
 									className="w-full"
+									disabled={isSaveActionBlocked(saveAvailability)}
 									onClick={() => void onRequireAuth?.()}
 								>
 									Sign In or Sign Up to Save

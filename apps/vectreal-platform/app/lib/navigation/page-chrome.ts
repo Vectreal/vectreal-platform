@@ -6,14 +6,15 @@
  * paint one way on the server and another after hydration, which is the class of
  * bug this module exists to prevent.
  *
- * The publisher is the only route family that suppresses chrome. It never shows
- * the footer, and it hands the top of the viewport to `PublisherHeader` as soon
- * as there is a scene to frame. With no scene id there is nothing to frame yet,
- * so the marketing nav stands in.
+ * The publisher is the only route family that suppresses chrome: every path
+ * under it hands the top of the viewport to `PublisherHeader` and shows no
+ * footer.
  *
- * `/publisher` with a model loaded but no scene id is the one case the URL cannot
- * express — that transition happens without navigating. It is handled at runtime
- * by `useHideGlobalNav`, which may only ever hide.
+ * It used to keep the nav at `/publisher` itself, where an empty publisher was
+ * a separate drop screen, and dropping a file swapped that screen for the
+ * editor without navigating. The URL could not express the swap, so a runtime
+ * channel hid the nav after paint. The empty state is a state of the editor
+ * now, which is what lets the URL alone decide again.
  */
 
 export interface PageChrome {
@@ -24,11 +25,10 @@ export interface PageChrome {
 const PUBLISHER_PATH = '/publisher'
 
 export function routePageChrome(pathname: string): PageChrome {
-	if (pathname === PUBLISHER_PATH || pathname === `${PUBLISHER_PATH}/`) {
-		return { nav: true, footer: false }
-	}
-
-	if (pathname.startsWith(`${PUBLISHER_PATH}/`)) {
+	if (
+		pathname === PUBLISHER_PATH ||
+		pathname.startsWith(`${PUBLISHER_PATH}/`)
+	) {
 		return { nav: false, footer: false }
 	}
 
