@@ -117,6 +117,7 @@ export function DitherGrain({ origin, className }: DitherGrainProps) {
 					}
 				}
 			}
+			canvas.dataset.painted = ''
 		}
 
 		const resize = new ResizeObserver(paint)
@@ -132,13 +133,23 @@ export function DitherGrain({ origin, className }: DitherGrainProps) {
 		}
 	}, [origin])
 
-	// A canvas keeps its intrinsic height under top and bottom, so a box sizes it and it fills the box.
+	/*
+	  A canvas keeps its intrinsic height under top and bottom, so a box sizes it
+	  and it fills the box.
+
+	  Hidden until the first paint, then faded in. It can only paint once the
+	  page is running, a beat after the content it sits behind has been drawn
+	  from the server's HTML, and it used to land all at once in that beat.
+	*/
 	return (
 		<div
 			aria-hidden="true"
 			className={cn('pointer-events-none absolute inset-0 -z-1', className)}
 		>
-			<canvas ref={ref} className="block size-full" />
+			<canvas
+				ref={ref}
+				className="block size-full opacity-0 transition-opacity duration-(--duration-cinematic) ease-(--ease-out) data-painted:opacity-100 motion-reduce:transition-none"
+			/>
 		</div>
 	)
 }

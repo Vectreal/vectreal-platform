@@ -486,3 +486,53 @@ describe('a sample named by the link', () => {
 		expect(onUpload).not.toHaveBeenCalled()
 	})
 })
+
+describe('before the page is running', () => {
+	/*
+	  A sample tile drawn from the server's HTML looked ready while the page was
+	  still loading its code, and a click on it then did nothing, so it took
+	  several. A fresh module each time: the stage arrives once per page load,
+	  and an earlier test's mount has already had its arrival.
+	*/
+	async function freshStage() {
+		vi.resetModules()
+		const { EmptyStage: Stage } = await import('./empty-stage')
+		return (
+			<MemoryRouter>
+				<Stage
+					onUpload={vi.fn()}
+					sampleDownload={{ download: null, openSample: vi.fn() }}
+				/>
+			</MemoryRouter>
+		)
+	}
+
+	const controlsIn = (root: ParentNode) =>
+		Array.from(root.querySelectorAll('button')).filter((button) =>
+			/Choose a file|Rocket|Camera/.test(button.textContent ?? '')
+		)
+
+	it('draws the invitation from the server but holds the controls back', async () => {
+		const { renderToString } = await import('react-dom/server')
+		const html = renderToString(await freshStage())
+		const page = new DOMParser().parseFromString(html, 'text/html')
+
+		expect(page.querySelector('h1')?.closest('.invisible')).toBeNull()
+		const controls = controlsIn(page)
+		expect(controls).toHaveLength(3)
+		for (const control of controls) {
+			expect(control.closest('.invisible')).not.toBeNull()
+		}
+	})
+
+	it('brings the controls in once it can answer them', async () => {
+		const { container } = render(await freshStage())
+
+		const controls = controlsIn(container)
+		expect(controls).toHaveLength(3)
+		for (const control of controls) {
+			expect(control.closest('.invisible')).toBeNull()
+			expect(control.closest('.animate-arrive')).not.toBeNull()
+		}
+	})
+})

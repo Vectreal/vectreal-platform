@@ -1035,6 +1035,34 @@
 	}
 }
 
+/*
+  Entrances, run once from first paint. CSS rather than Framer because the
+  surfaces using them are server-rendered, and a Framer entrance starts hidden
+  and waits for hydration. `backwards` holds the first frame through an
+  `animation-delay`, so siblings can come in one after another, and lets go at
+  the end rather than pinning a transform on the element for good.
+*/
+@keyframes arrive {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+}
+
+.animate-arrive {
+	animation: arrive var(--duration-cinematic) var(--ease-out) backwards;
+}
+
+.animate-fade-in {
+	animation: fade-in var(--duration-slow) var(--ease-out) backwards;
+}
+
 .animate-loading-bar {
 	animation: loading-bar 2s ease-in-out;
 }
@@ -1048,7 +1076,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.animate-skeleton-pulse {
+	.animate-skeleton-pulse,
+	.animate-arrive,
+	.animate-fade-in {
 		animation: none;
 	}
 }
