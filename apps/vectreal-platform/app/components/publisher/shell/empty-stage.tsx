@@ -156,13 +156,13 @@ export const EmptyStage = ({
 
 			{/*
 			  The column scrolls, not the stage, so the grain and the drop ring stay
-			  put. `my-auto` in it rather than a centred flex box: on a short stage
-			  the content can outgrow it, and a centred box taller than its
+			  put. `my-auto` in it rather than a centered flex box: on a short stage
+			  the content can outgrow it, and a centered box taller than its
 			  container loses its top where no scroll reaches it.
 			*/}
 			<div className="absolute inset-0 flex flex-col overflow-y-auto p-4 sm:p-8">
 				{/*
-				  The stage waiting for a model: the invitation centred where the
+				  The stage waiting for a model: the invitation centered where the
 				  model will land, and what there is to open laid out below it, on
 				  the stage itself. It was a text column beside a card, which is how
 				  a landing page opens, and it made the editor read as one.
