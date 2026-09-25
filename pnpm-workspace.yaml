@@ -26,9 +26,26 @@ catalog:
   jszip: ^3.10.1
   meshoptimizer: ^1.2.0
   postprocessing: ^6.39.4
+  # Exact, not a range: the override below applies this to every peer, and a
+  # range would let 19.2.8 and a newer 19.x both satisfy it again.
+  react: 19.2.8
+  react-dom: 19.2.8
   three: ^0.185.1
   vite: ^8.2.1
   vite-plugin-dts: 5.0.3
+
+# One React for the whole graph, not only for the manifests that name it.
+#
+# A package that takes React as a peer (Radix, React Three Fiber, drei) gets
+# the importer's copy only when that importer declares it; shared/components
+# uses Radix without declaring react-dom, so pnpm installed the peer itself,
+# at whatever was newest. When React 19.3.0 shipped, a lockfile regeneration
+# (a Dependabot bump of morgan, #849) put a second react-dom in the browser
+# bundle beside the app's 19.2.8: 14 KB on every route, and portals rendered
+# by a React DOM other than the one rendering the page.
+overrides:
+  react: 'catalog:'
+  react-dom: 'catalog:'
 
 onlyBuiltDependencies:
   - '@swc/core'
