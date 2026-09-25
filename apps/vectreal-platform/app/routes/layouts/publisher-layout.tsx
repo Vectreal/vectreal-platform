@@ -105,7 +105,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	*/
 	const recentScenesPromise =
 		!sceneId && user?.id
-			? getRecentScenesForUser(user.id, 5).catch((error: unknown) => {
+			? getRecentScenesForUser(user.id, 4).catch((error: unknown) => {
 					reportServerError(error, { request })
 					return []
 				})

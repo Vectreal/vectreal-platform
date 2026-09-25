@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
 import { type SampleDownloader } from '../../../hooks/use-sample-download'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
+import { RelativeTime } from '../../dashboard/relative-time'
 import { SceneThumbnail } from '../../dashboard/scene-thumbnail'
 import { DitherGrain } from '../../layout-components/dither-grain'
 import { SampleTiles } from '../../layout-components/sample-tiles'
@@ -161,13 +162,13 @@ export const EmptyStage = ({
 			*/}
 			<div className="absolute inset-0 flex flex-col overflow-y-auto p-4 sm:p-8">
 				{/*
-				  Two columns from `lg`: what to do on the left, set on the stage
-				  itself, and what to open on the right, in one panel over the grain.
-				  A single card holding all of it left the stage empty around a
-				  crowded column.
+				  The stage waiting for a model: the invitation centred where the
+				  model will land, and what there is to open laid out below it, on
+				  the stage itself. It was a text column beside a card, which is how
+				  a landing page opens, and it made the editor read as one.
 				*/}
-				<div className="mx-auto my-auto grid w-full max-w-md items-center gap-10 lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-20">
-					<div>
+				<div className="mx-auto my-auto flex w-full max-w-5xl flex-col items-center gap-14 py-4">
+					<div className="flex flex-col items-center text-center">
 						<h1 className="text-h2">
 							{isDragActive ? 'Drop to open it' : 'Drop a 3D file anywhere'}
 						</h1>
@@ -176,7 +177,7 @@ export const EmptyStage = ({
 							device until you save.
 						</p>
 
-						<div className="mt-8 flex flex-wrap items-center gap-2">
+						<div className="mt-8 flex flex-wrap items-center justify-center gap-2">
 							<Button size="lg" onClick={openFilePicker}>
 								<Upload className="h-4 w-4" aria-hidden />
 								Choose a file
@@ -202,34 +203,36 @@ export const EmptyStage = ({
 								{BUNDLE_HINT}
 							</p>
 						)}
-
-						<Link
-							to="/docs/getting-started"
-							className="text-muted-foreground hover:text-foreground mt-10 inline-block text-sm underline underline-offset-4"
-						>
-							How the publisher works
-						</Link>
 					</div>
 
-					<div className="ds-overlay rounded-2xl p-5 sm:p-6">
+					{/*
+					  Two shelves of one kind of tile, your scenes and the samples: the
+					  same two-column grid, full width on a phone and side by side where
+					  both fit. A list of your scenes beside two picture tiles read as
+					  two unrelated things of unequal weight. Up to four scenes, two
+					  rows, so the shelf holds its shape whatever the count.
+					*/}
+					<div className="flex w-full flex-wrap items-start justify-center gap-x-10 gap-y-8">
 						{/*
 						  Before the samples: someone with work of their own is more likely
-						  back for it than for a demo model. Rows draw no box at rest; the
-						  interactive step is the panel's own 8%, lifting one step on hover.
+						  back for it than for a demo model.
 
 						  Held while a sample downloads, like the tiles: the download
 						  outlives a navigation inside the publisher and would load the
 						  sample over the scene just opened.
 						*/}
 						{recentScenes.length > 0 && (
-							<div className="mb-8">
+							<div className="w-full sm:w-92">
 								<p
 									id="recent-scenes-label"
-									className="text-muted-foreground text-eyebrow mb-2"
+									className="text-muted-foreground text-eyebrow mb-3"
 								>
 									Pick up where you left off
 								</p>
-								<ul aria-labelledby="recent-scenes-label" className="-mx-2">
+								<ul
+									aria-labelledby="recent-scenes-label"
+									className="grid grid-cols-2 gap-4"
+								>
 									{recentScenes.map((scene) => (
 										<li key={scene.id}>
 											<Link
@@ -238,19 +241,29 @@ export const EmptyStage = ({
 												onClick={(event) => {
 													if (download) event.preventDefault()
 												}}
-												className="ds-overlay-interactive flex items-center gap-3 rounded-xl px-2 py-1.5"
+												className={cn(
+													'block h-full rounded-xl p-3 transition-[background-color,opacity]',
+													download
+														? 'ds-raised cursor-default opacity-50'
+														: 'ds-raised-interactive'
+												)}
 											>
 												<SceneThumbnail
 													src={scene.thumbnailUrl}
-													className="aspect-square size-10 rounded-lg [&_svg]:size-4"
+													className="mb-3 aspect-4/3 rounded-lg"
 												/>
-												<span className="min-w-0">
-													<span className="text-foreground block truncate text-sm font-medium">
-														{scene.name}
-													</span>
-													<span className="text-muted-foreground block truncate text-xs">
-														{scene.projectName}
-													</span>
+												<span className="text-foreground block truncate text-sm font-medium">
+													{scene.name}
+												</span>
+												<span className="text-muted-foreground block truncate text-xs">
+													{scene.projectName}
+												</span>
+												{/*
+												  Third line, as the sample tiles have one, so the two
+												  shelves end level; in the dashboard's own words.
+												*/}
+												<span className="text-muted-foreground/70 block truncate text-xs">
+													Edited <RelativeTime at={scene.updatedAt} />
 												</span>
 											</Link>
 										</li>
@@ -265,13 +278,23 @@ export const EmptyStage = ({
 						  rocket is two thirds geometry and the camera is nearly all texture,
 						  so each one makes a different pass look like it is working. The
 						  split is measured; see `sample-models.ts`.
+
+						  The same width as the scenes shelf, so the tiles match.
 						*/}
 						<SampleTiles
+							className="w-full sm:w-92"
 							label="Or open a sample"
 							onOpen={(id) => void openSample(id)}
 							download={download}
 						/>
 					</div>
+
+					<Link
+						to="/docs/getting-started"
+						className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-4"
+					>
+						How the publisher works
+					</Link>
 				</div>
 			</div>
 

@@ -55,10 +55,10 @@ export const SampleTiles: FC<Props> = ({
 								// `h-full`: the captions are different lengths and one wraps to a
 								// second line at 375px, which left the two tiles different
 								// heights in a two-column grid.
-								'ds-raised group relative block h-full w-full rounded-xl p-3 text-left transition-[background-color,opacity]',
-								download
-									? 'cursor-default'
-									: 'hover:bg-[color-mix(in_oklch,var(--foreground)_6%,var(--background))]',
+								'group relative block h-full w-full rounded-xl p-3 text-left transition-[background-color,opacity]',
+								// The ladder's own hover step, as the publisher's scene tiles beside
+								// these use; flat while a download holds them.
+								download ? 'ds-raised cursor-default' : 'ds-raised-interactive',
 								download && !isDownloading && 'opacity-50'
 							)}
 						>

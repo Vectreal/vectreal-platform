@@ -400,6 +400,9 @@ describe('recent scenes', () => {
 		])
 		expect(links[0].textContent).toContain('Chair')
 		expect(links[0].textContent).toContain('Shop')
+		expect(links[0].querySelector('time')?.getAttribute('dateTime')).toBe(
+			'2026-09-25T00:00:00.000Z'
+		)
 	})
 
 	it('opens none while a sample is still downloading', () => {

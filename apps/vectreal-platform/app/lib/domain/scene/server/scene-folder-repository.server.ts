@@ -90,7 +90,7 @@ export type RecentScene = SceneSummary & { folderId: string | null }
  * the two lists are the same list. The membership join is the whole
  * authorization: RLS is inert for app traffic, so without it this would list
  * any scene in the database. Sorted and cut in SQL, because the publisher asks
- * on every signed-in open and wants five, not every scene the user can reach.
+ * on every signed-in open and wants four, not every scene the user can reach.
  */
 export async function getRecentScenesForUser(
 	userId: string,
