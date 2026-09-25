@@ -328,14 +328,9 @@ export const PRICING_PAGE_COPY = {
 export const DOCS_PAGE_COPY = {
 	heading: 'From your first upload to a production embed.',
 	description:
-		'Platform guides for uploading, optimizing and publishing 3D scenes, and API reference for the open-source packages underneath.',
-	startHereHeading: 'Start here',
-	startHereDescription:
-		'No install and no account: open the publisher and follow along.',
-	previewHeading: 'What you are building toward',
-	previewDescription:
-		'That viewer is @vctrl/viewer, the package documented below. Publishing a scene gives you this snippet, and the scene renders wherever you paste it.',
-	packagesDescription: 'Open source, published to npm, and documented here.',
+		'Try the publisher with a sample model, with nothing to install and no account. Or build on the open-source packages underneath.',
+	publisherCta: 'Open the publisher',
+	rocketSampleCta: 'Open the publisher with the rocket sample',
 	quickLinksLabel: 'Elsewhere'
 } as const
 
@@ -488,8 +483,8 @@ export const HOME_PAGE_COPY = {
 			cta: 'Start a pilot project'
 		},
 		developers: {
-			title: 'For developers',
-			body: 'The optimizer and converters run in your browser with no account, and the packages are on npm.',
+			title: 'For developers and 3D artists',
+			body: 'Try the publisher in your browser with a sample model, no account needed. The packages behind it are on npm.',
 			cta: 'Read the docs'
 		}
 	}
