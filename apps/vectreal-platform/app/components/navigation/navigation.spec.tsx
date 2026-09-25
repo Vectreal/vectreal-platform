@@ -341,6 +341,26 @@ describe('the site nav', () => {
 		expect(bar.queryByRole('link', { name: 'Pricing' })).toBeNull()
 	})
 
+	it('files a page under its category, not under its URL', () => {
+		// The embed SDK lives at a guides URL and is read with the packages.
+		renderAt('/docs/guides/embed-sdk')
+		const trail = within(
+			within(desktopBar()).getByRole('navigation', { name: 'Docs breadcrumb' })
+		)
+		expect(trail.getByText('Packages and SDK')).toBeTruthy()
+		expect(trail.queryByText('Guides')).toBeNull()
+	})
+
+	it('takes the category crumb to its first page', () => {
+		renderAt('/docs/packages/viewer')
+		const trail = within(
+			within(desktopBar()).getByRole('navigation', { name: 'Docs breadcrumb' })
+		)
+		expect(
+			trail.getByRole('link', { name: 'Packages and SDK' }).getAttribute('href')
+		).toBe('/docs/guides/embed-sdk')
+	})
+
 	it('names the page on the phone bar rather than drawing a second menu button', () => {
 		renderAt('/docs/guides/upload')
 		const picker = within(phoneBar()).getByRole('button', {

@@ -185,7 +185,7 @@ describe('only one module enumerates the accepted formats', () => {
 	*/
 	it.each([
 		'apps/vectreal-platform/app/routes/docs/guides/upload.mdx',
-		'apps/vectreal-platform/app/routes/docs/getting-started/first-model.mdx',
+		'apps/vectreal-platform/app/routes/docs/getting-started/index.mdx',
 		'apps/vectreal-platform/app/routes/news-room-page/articles/02_the-vectreal-publisher-walkthrough.mdx'
 	])('%s lists exactly the formats the loader accepts', (path) => {
 		const page = readFileSync(resolve(ROOT, path), 'utf8')

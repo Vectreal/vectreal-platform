@@ -149,7 +149,7 @@ Deployed to **Fly.io** (region `fra`) via GitHub Actions. The workflow builds th
 | Staging    | `vectreal-platform-staging` | `fly.staging.toml` | Push to `main`             |
 | Production | `vectreal-platform`         | `fly.toml`         | Manual `workflow_dispatch` |
 
-See the [Deployment docs](https://vectreal.com/docs/operations/deployment) or [`../../terraform/README.md`](../../terraform/README.md) for the full infrastructure reference.
+See the [Deployment docs](https://vectreal.com/docs/self-hosting/deployment) or [`../../terraform/README.md`](../../terraform/README.md) for the full infrastructure reference.
 
 ---
 

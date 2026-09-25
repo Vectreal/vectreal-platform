@@ -19,7 +19,7 @@ cd vectreal-platform
 pnpm install
 ```
 
-Every dependency is declared in the root `package.json`, so a single install covers all apps and packages. Internal packages resolve through TypeScript path mappings rather than pnpm workspace links.
+`pnpm-workspace.yaml` makes every app and package a workspace member, so one install at the repository root covers them all. Each one declares its own dependencies, and internal packages (`workspace:*`) resolve to their local source.
 
 ---
 
@@ -115,6 +115,6 @@ pnpm nx show project vectreal-platform --web
 
 ## Next steps
 
-- [Your First Model](/docs/getting-started/first-model) - upload, optimize, and publish a 3D model
+- [Your First Model](/docs/getting-started) - upload, optimize, and publish a 3D model
 - [Guides](/docs/guides/upload) - deep-dive into individual platform features
 - [Package Reference](/docs/packages/viewer) - jump to `@vctrl/viewer`, `@vctrl/hooks`, `@vctrl/core`, and `@vctrl/embed` APIs

@@ -318,7 +318,7 @@ requires Node.js 22.22 or later.
 
 ## Related docs
 
-- [Deployment](https://vectreal.com/docs/operations/deployment)
+- [Deployment](https://vectreal.com/docs/self-hosting/deployment)
 - [Publishing & Embedding](https://vectreal.com/docs/guides/publish-embed)
 - [@vctrl/hooks](https://vectreal.com/docs/packages/hooks)
 

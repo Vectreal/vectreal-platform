@@ -11,12 +11,12 @@ import { DocsTreeNav } from '../../components/docs/docs-tree-nav'
 import { PublicErrorBoundary } from '../../components/errors'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
-	DOC_CATEGORY_LABELS,
 	GITHUB_REPO,
 	GITHUB_DEFAULT_BRANCH,
 	editOnGithubUrl,
 	getAdjacentDocPages,
-	getDocPage
+	getDocPage,
+	getDocTrail
 } from '../../lib/docs/docs-manifest'
 import { buildPageMeta, getRootMeta, SITE_URL } from '../../lib/seo'
 import {
@@ -33,20 +33,18 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 		const slug = args.location.pathname
 			.replace(/^\/docs\/?/, '')
 			.replace(/\/$/, '')
-		const page = getDocPage(slug)
-
-		const slugParts = slug.split('/').filter(Boolean)
-		const categorySlug = slugParts[0] as
-			keyof typeof DOC_CATEGORY_LABELS | undefined
-		const categoryLabel = categorySlug
-			? DOC_CATEGORY_LABELS[categorySlug]
-			: undefined
+		const { page, categoryLabel, categoryStart } = getDocTrail(slug)
 
 		const breadcrumbItems = [
 			{ name: 'Home', item: SITE_URL },
 			{ name: 'Docs', item: `${SITE_URL}/docs` },
-			...(categoryLabel && categorySlug !== slug
-				? [{ name: categoryLabel, item: `${SITE_URL}/docs/${categorySlug}` }]
+			...(categoryLabel && categoryStart && categoryStart.slug !== slug
+				? [
+						{
+							name: categoryLabel,
+							item: `${SITE_URL}/docs/${categoryStart.slug}`
+						}
+					]
 				: []),
 			...(page && page.title !== categoryLabel ? [{ name: page.title }] : [])
 		]
