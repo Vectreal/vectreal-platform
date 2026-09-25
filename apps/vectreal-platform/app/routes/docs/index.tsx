@@ -107,7 +107,7 @@ export default function DocsIndexPage() {
 						  "Start here", and it opened repo setup.
 						*/}
 						<Button asChild size="sm">
-							<Link to="/publisher">
+							<Link to="/publisher" viewTransition>
 								{DOCS_PAGE_COPY.publisherCta}
 								<ArrowRight className="h-3.5 w-3.5" />
 							</Link>
@@ -141,6 +141,7 @@ export default function DocsIndexPage() {
 									/* The publisher with a model already on its way, so there is nothing to hand over first. */
 									<Link
 										to={publisherSampleHref('rocket')}
+										viewTransition
 										className="text-body-sm text-foreground decoration-orange mt-4 inline-flex items-center gap-1.5 underline-offset-4 hover:underline"
 									>
 										{DOCS_PAGE_COPY.rocketSampleCta}

@@ -211,7 +211,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 	}, [navigate, project.id])
 
 	const openPublisherForPublishing = useCallback(() => {
-		navigate(publisherPath)
+		navigate(publisherPath, { viewTransition: true })
 	}, [navigate, publisherPath])
 
 	const retrySceneLoad = useCallback(() => {
