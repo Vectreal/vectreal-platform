@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
+import { isSaveActionBlocked } from '../../lib/domain/scene'
 import { isSavingAtom } from '../../lib/stores/publisher-config-store'
 
 import type { SaveAvailabilityState } from '../../lib/domain/scene'
@@ -63,9 +64,8 @@ const SaveButton = ({
 		saveSceneSettings
 	})
 
-	const isSaveDisabled = userId
-		? forceDisabled || isSaving || !saveAvailability.canSave
-		: forceDisabled || isSaving
+	const isSaveDisabled =
+		forceDisabled || isSaving || isSaveActionBlocked(saveAvailability)
 
 	const saveVisual = justSaved
 		? {
@@ -79,29 +79,35 @@ const SaveButton = ({
 					label: 'Saving...',
 					icon: <LoaderCircle size={16} className="inline animate-spin" />
 				}
-			: !userId
+			: saveAvailability.reason === 'no-model'
 				? {
-						key: 'auth',
-						label: 'Sign In to Save',
+						key: 'no-model',
+						label: 'Save',
 						icon: <CircleFadingArrowUp size={16} className="inline" />
 					}
-				: saveAvailability.reason === 'requires-size-reduction'
+				: !userId
 					? {
-							key: 'reduce-size',
-							label: 'Optimize to Save',
-							icon: <Sparkles size={16} className="inline animate-pulse" />
+							key: 'auth',
+							label: 'Sign In to Save',
+							icon: <CircleFadingArrowUp size={16} className="inline" />
 						}
-					: saveAvailability.reason === 'no-unsaved-changes'
+					: saveAvailability.reason === 'requires-size-reduction'
 						? {
-								key: 'saved',
-								label: 'Saved',
-								icon: <Cloud size={16} className="inline" />
+								key: 'reduce-size',
+								label: 'Optimize to Save',
+								icon: <Sparkles size={16} className="inline animate-pulse" />
 							}
-						: {
-								key: 'ready',
-								label: 'Save',
-								icon: <CircleFadingArrowUp size={16} className="inline" />
-							}
+						: saveAvailability.reason === 'no-unsaved-changes'
+							? {
+									key: 'saved',
+									label: 'Saved',
+									icon: <Cloud size={16} className="inline" />
+								}
+							: {
+									key: 'ready',
+									label: 'Save',
+									icon: <CircleFadingArrowUp size={16} className="inline" />
+								}
 
 	/**
 	 * The swap is a keyed remount with a CSS enter animation rather than an

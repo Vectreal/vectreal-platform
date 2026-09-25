@@ -3,12 +3,12 @@ import type { ModelState } from '@vctrl/hooks/use-load-model'
 /**
  * What the publisher shows. Exactly one of these is true at any moment.
  *
- * - `drop-zone`: nothing to show and nowhere to get it from, so ask for a file.
+ * - `empty`: nothing to show and nowhere to get it from, so the stage asks for a file.
  * - `loading`: a model is on its way.
  * - `viewer`: a model is on screen.
  * - `error`: the load that should have produced a model failed.
  */
-export type PublisherSurface = 'drop-zone' | 'loading' | 'viewer' | 'error'
+export type PublisherSurface = 'empty' | 'loading' | 'viewer' | 'error'
 
 interface PublisherSurfaceInput {
 	/** The loader's status. */
@@ -31,7 +31,7 @@ interface PublisherSurfaceInput {
  * the editor chrome at the same time.
  *
  * The route decides what "no model" means. On the base route it is an
- * invitation, and a rejected file leaves the drop zone standing with a toast
+ * invitation, and a rejected file leaves the empty stage standing with a toast
  * saying why. On a scene route there is nothing to upload into, so the same
  * absence is either a load on its way or one that failed.
  */
@@ -41,8 +41,8 @@ export function resolvePublisherSurface({
 	isNavigating = false
 }: PublisherSurfaceInput): PublisherSurface {
 	if (status === 'ready') return 'viewer'
-	if (status === 'error') return hasScene ? 'error' : 'drop-zone'
+	if (status === 'error') return hasScene ? 'error' : 'empty'
 	if (status === 'loading' || isNavigating) return 'loading'
 
-	return hasScene ? 'loading' : 'drop-zone'
+	return hasScene ? 'loading' : 'empty'
 }

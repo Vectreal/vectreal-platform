@@ -5,14 +5,14 @@ import { resolvePublisherSurface } from './publisher-surface'
 describe('resolvePublisherSurface', () => {
 	it('asks for a file only when there is no scene to show', () => {
 		expect(resolvePublisherSurface({ status: 'empty', hasScene: false })).toBe(
-			'drop-zone'
+			'empty'
 		)
 	})
 
-	it('never shows the drop zone once a scene is being shown', () => {
+	it('never shows the empty stage once a scene is being shown', () => {
 		for (const status of ['empty', 'loading', 'ready', 'error'] as const) {
 			expect(resolvePublisherSurface({ status, hasScene: true })).not.toBe(
-				'drop-zone'
+				'empty'
 			)
 		}
 	})
@@ -23,9 +23,9 @@ describe('resolvePublisherSurface', () => {
 		)
 	})
 
-	it('keeps a rejected upload on the drop zone, where the next attempt happens', () => {
+	it('keeps a rejected upload on the empty stage, where the next attempt happens', () => {
 		expect(resolvePublisherSurface({ status: 'error', hasScene: false })).toBe(
-			'drop-zone'
+			'empty'
 		)
 	})
 

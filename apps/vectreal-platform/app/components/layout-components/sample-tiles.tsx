@@ -3,7 +3,7 @@ import { cn, formatFileSize } from '@shared/utils'
 import { SAMPLE_MODELS, sampleModelById } from '../../lib/samples/sample-models'
 
 import type { SampleDownload } from '../../hooks/use-sample-download'
-import type { FC, SyntheticEvent } from 'react'
+import type { FC } from 'react'
 
 interface Props {
 	/** Called with the sample's id. Both surfaces load it the same way. */
@@ -11,11 +11,6 @@ interface Props {
 	/** What the row of tiles is for, said once above them. */
 	label: string
 	className?: string
-	/**
-	 * Runs before `onOpen`. The publisher's drop zone makes its whole card a
-	 * click target, so a tile inside it has to stop the event reaching that.
-	 */
-	onBeforeOpen?: (event: SyntheticEvent) => void
 	/** The sample on its way down, from `useSampleDownload`: its tile shows how far, and neither takes a second click. */
 	download?: SampleDownload
 }
@@ -23,7 +18,7 @@ interface Props {
 /**
  * Two models you can open, shown rather than described.
  *
- * Both the converter's empty state and the publisher's drop zone used to offer
+ * Both the converter's empty state and the publisher's empty stage used to offer
  * these as a sentence - "Nothing to hand? Open Rocket (944 KB, mostly geometry)
  * or Bike (13 MB, 50 textures)." That asks someone to click a thing they cannot
  * see, in more words than the thing itself would take, on a product whose
@@ -37,7 +32,6 @@ export const SampleTiles: FC<Props> = ({
 	onOpen,
 	label,
 	className,
-	onBeforeOpen,
 	download = null
 }) => (
 	<div className={className}>
@@ -53,8 +47,7 @@ export const SampleTiles: FC<Props> = ({
 							// Not `disabled`: that would drop keyboard focus off the tile that was just pressed.
 							aria-disabled={download ? true : undefined}
 							aria-busy={isDownloading || undefined}
-							onClick={(event) => {
-								onBeforeOpen?.(event)
+							onClick={() => {
 								if (download) return
 								onOpen(sample.id)
 							}}

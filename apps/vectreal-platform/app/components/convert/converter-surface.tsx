@@ -243,13 +243,13 @@ const STAGE_BOUNDS = { margin: 0.9 }
  * never heard of, which promises not to upload your file, gives you a download
  * and no way to check it. Seeing the model appear is the check.
  *
- * Deliberately not the publisher's `DropZone`, which is its empty state and
- * reads like one: it links the first-model guide and promises files stay put
- * "until you choose to publish". A stranger who searched "gltf to glb" wants a
- * file back, and both are answers to a question they did not ask. What this
- * does borrow from it is the two-input arrangement, for the reason recorded
- * there: `webkitdirectory` replaces the dialog rather than extending it, so one
- * input cannot offer both a file and a folder.
+ * Deliberately not the publisher's `EmptyStage`, which is the start of an
+ * editor and reads like one: it offers the publisher walkthrough and promises
+ * files stay put "until you save". A stranger who searched "gltf to glb" wants
+ * a file back, and both are answers to a question they did not ask. What this
+ * does share with it is the two-input arrangement, for the reason
+ * `useModelFileInputs` records: `webkitdirectory` replaces the dialog rather
+ * than extending it, so one input cannot offer both a file and a folder.
  */
 export const ConverterSurface: FC<Props> = ({ pair }) => {
 	const { load, file, status, progress, optimizer, reset } = useModelContext()

@@ -56,10 +56,10 @@ const FACE_RUNGS = [
  * The display face is opt-in, and this is the only place you can see it.
  *
  * `--font-heading` is Funnel Display, and it is deliberately *not* baked into
- * the rungs: `.text-display` and `.text-headline` are worn by dashboard and
- * publisher headings too - `publisher/shell/drop-zone.tsx` uses `text-headline`
- * - and putting a family on the rung would change all of them. Marketing
- * components write `font-heading` beside the rung instead.
+ * the rungs: `.text-display` and `.text-headline` are worn by headings that
+ * keep the body face too - `layout-components/page-hero.tsx` uses
+ * `text-display` - and putting a family on the rung would change all of them.
+ * Marketing components write `font-heading` beside the rung instead.
  *
  * So a rung on its own renders DM Sans, which is correct and looks like a bug
  * if you have only ever seen the marketing pages. Both halves are here so the
