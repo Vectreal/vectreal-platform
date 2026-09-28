@@ -11,8 +11,16 @@
  * correct posture for a third-party context.
  */
 
-const CONSENT_FREE_PREFIXES = ['/embed/'] as const
+const CONSENT_FREE_SECTIONS = ['/embed'] as const
 
+/*
+  Matched as a whole section, and case-insensitively, the way React Router
+  matches the routes that render there: `embed/*` also answers bare `/embed`
+  and `/EMBED/...`, and both render inside the customer's iframe.
+*/
 export function shouldRenderConsentUi(pathname: string): boolean {
-	return !CONSENT_FREE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+	const path = pathname.toLowerCase()
+	return !CONSENT_FREE_SECTIONS.some(
+		(section) => path === section || path.startsWith(`${section}/`)
+	)
 }

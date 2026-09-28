@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { UNSAFE_ErrorResponseImpl as ErrorResponseImpl } from 'react-router'
 import { describe, expect, it } from 'vitest'
 
 import { CRITICAL_FLOWS, criticalFlowsForPathname } from './critical-flows'
@@ -142,19 +143,64 @@ describe('buildErrorReport', () => {
 		expect(report?.error.message).toBe('500 Boom')
 	})
 
-	it('unwraps the real error a route response is carrying', () => {
+	/*
+	  React Router builds these itself, with an `Error` inside, for a request it
+	  cannot route. Unwrapping that error before applying the floor reported
+	  about 62,000 scanner probes for `/.env` and `/wp-content/` in September
+	  2026. Built with the real class so the shape cannot drift from the router's.
+	*/
+	it.each([
+		[404, 'Not Found', 'No route matches URL "/.env"'],
+		[405, 'Method Not Allowed', 'You made a POST request to "/"']
+	])(
+		'drops the router’s own %i on the server, despite the error it wraps',
+		(status, statusText, message) => {
+			expect(
+				buildErrorReport(
+					new ErrorResponseImpl(status, statusText, new Error(message), true),
+					server
+				)
+			).toBeNull()
+		}
+	)
+
+	/*
+	  In the browser the router only builds these from our own code: a fetcher
+	  aimed at a route with no action, a form posting to a page without one.
+	*/
+	it('reports the router’s own 405 in the browser, as the error it wraps', () => {
 		const report = buildErrorReport(
-			{
-				status: 404,
-				statusText: 'Not Found',
-				data: null,
-				internal: false,
-				error: new Error('the loader actually threw')
-			},
+			new ErrorResponseImpl(
+				405,
+				'Method Not Allowed',
+				new Error('You made a POST request to "/pricing"'),
+				true
+			),
+			{ source: 'client-boundary' }
+		)
+		expect(report?.error.message).toBe('You made a POST request to "/pricing"')
+		expect(report?.properties.route_status).toBe(405)
+	})
+
+	it('still drops a deliberate 404 in the browser', () => {
+		expect(
+			buildErrorReport(new ErrorResponseImpl(404, 'Not Found', null), {
+				source: 'client-boundary'
+			})
+		).toBeNull()
+	})
+
+	it('unwraps the real error a 500 response is carrying', () => {
+		const report = buildErrorReport(
+			new ErrorResponseImpl(
+				500,
+				'Internal Server Error',
+				new Error('the loader actually threw')
+			),
 			server
 		)
 		expect(report?.error.message).toBe('the loader actually threw')
-		expect(report?.properties.route_status).toBe(404)
+		expect(report?.properties.route_status).toBe(500)
 	})
 
 	it('marks a funnel path as on the critical path', () => {

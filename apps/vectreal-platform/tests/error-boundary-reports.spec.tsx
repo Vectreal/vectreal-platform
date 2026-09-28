@@ -134,6 +134,32 @@ describe('a rendered boundary reports', () => {
 		expect(posthog.captureException).not.toHaveBeenCalled()
 	})
 
+	// The public site has one not-found page, whatever threw the 404.
+	it('shows the public site’s not-found page for a 404, unreported', async () => {
+		const posthog = fakePostHog()
+		const Stub = createRoutesStub([
+			{
+				path: '/docs/moved-away',
+				loader() {
+					throw new Response('Not Found', { status: 404 })
+				},
+				Component: () => null,
+				ErrorBoundary: PublicErrorBoundary
+			}
+		])
+
+		render(
+			<PostHogProvider client={posthog}>
+				<Stub initialEntries={['/docs/moved-away']} />
+			</PostHogProvider>
+		)
+
+		expect(
+			await screen.findByText('This page does not exist')
+		).toBeInTheDocument()
+		expect(posthog.captureException).not.toHaveBeenCalled()
+	})
+
 	/*
 	  One failure, one event, under StrictMode's double-invoked mount effect.
 	  The predecessor called `captureException` during render, which made every

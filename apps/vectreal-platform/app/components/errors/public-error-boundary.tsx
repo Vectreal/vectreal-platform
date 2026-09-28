@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react'
 import { isRouteErrorResponse, Link, useRouteError } from 'react-router'
 
 import { useErrorReport } from '../../lib/observability/use-error-report'
+import { NotFound } from '../not-found'
 
 /**
  * The error state for the public marketing routes.
@@ -29,14 +30,19 @@ export function PublicErrorBoundary() {
 	let message = 'Please try again in a moment.'
 	let isRetryable = true
 
+	/*
+	  The same not-found page the site-wide `*` route renders, whether the URL
+	  matched no route or a loader threw 404 for a record it could not find.
+	  `/docs` still has its own, from `docs-not-found.tsx`.
+	*/
+	if (isRouteErrorResponse(error) && error.status === 404) {
+		return <NotFound />
+	}
+
 	if (isRouteErrorResponse(error)) {
 		statusCode = error.status
 
-		if (error.status === 404) {
-			title = 'Page not found'
-			message = 'That page has moved or never existed.'
-			isRetryable = false
-		} else if (error.status === 403) {
+		if (error.status === 403) {
 			title = 'Access denied'
 			message = 'You do not have permission to view this page.'
 			isRetryable = false
