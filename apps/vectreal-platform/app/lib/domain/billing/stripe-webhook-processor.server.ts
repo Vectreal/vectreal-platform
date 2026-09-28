@@ -26,7 +26,6 @@
  */
 
 import { eq } from 'drizzle-orm'
-import { PostHog } from 'posthog-node'
 import Stripe from 'stripe'
 
 import {
@@ -39,6 +38,7 @@ import { getDbClient } from '../../../db/client'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { billingWebhookEvents } from '../../../db/schema/billing/webhook-events'
 import { reportServerError } from '../../observability/report-server-error.server'
+import { getPosthogClient } from '../../posthog/posthog-client.server'
 import {
 	getStripeClient,
 	resolveStripeWebhookSecret
@@ -51,20 +51,31 @@ import {
 /**
  * Fires a single server-side PostHog event from within webhook processing.
  * Non-critical - analytics failure is swallowed so it never blocks billing logic.
+ *
+ * Through the shared client, which is off in development unless switched on.
+ * This built a client of its own from the token, so a local server replaying
+ * Stripe webhooks reported into the production project.
  */
 async function captureWebhookAnalyticsEvent(
 	distinctId: string,
 	eventName: string,
 	properties: Record<string, unknown>
 ): Promise<void> {
-	const token = process.env.VITE_PUBLIC_POSTHOG_TOKEN
-	const host = process.env.VITE_PUBLIC_POSTHOG_HOST
-	if (!token || !host) return
+	const client = getPosthogClient()
+	if (!client) return
 
-	const client = new PostHog(token, { host, flushAt: 1, flushInterval: 0 })
+	/*
+	  Sent now rather than queued: the shared client batches on a ten-second
+	  interval and is only drained on `beforeExit`, which a SIGTERM from Fly
+	  never fires. `shutdown()` would drain it, but it would also stop the
+	  client every other caller shares.
+
+	  Not awaited. With PostHog unreachable its retries run for most of a minute,
+	  long enough for Stripe to give up on the webhook and redeliver it. It
+	  sends in a request of its own and never rejects.
+	*/
 	try {
-		client.capture({ distinctId, event: eventName, properties })
-		await client.shutdown()
+		void client.captureImmediate({ distinctId, event: eventName, properties })
 	} catch {
 		// Non-critical
 	}

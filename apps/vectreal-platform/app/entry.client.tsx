@@ -11,6 +11,7 @@ import { hydrateRoot } from 'react-dom/client'
 import { HydratedRouter } from 'react-router/dom'
 
 import { readConsentCookie } from './lib/consent/consent-cookie'
+import { isPosthogEnabled } from './lib/posthog/posthog-enabled'
 import { redactEmbedTokenFromProperties } from './lib/posthog/redact-embed-token'
 
 /*
@@ -44,8 +45,10 @@ import { redactEmbedTokenFromProperties } from './lib/posthog/redact-embed-token
 */
 try {
 	if (
-		!import.meta.env.DEV ||
-		import.meta.env.VITE_PUBLIC_POSTHOG_ENABLED === 'true'
+		isPosthogEnabled({
+			dev: import.meta.env.DEV,
+			flag: import.meta.env.VITE_PUBLIC_POSTHOG_ENABLED
+		})
 	) {
 		posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN, {
 			api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,

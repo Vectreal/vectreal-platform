@@ -1,5 +1,7 @@
 import { PostHog } from 'posthog-node'
 
+import { isPosthogEnabled } from './posthog-enabled'
+
 /**
  * The process-wide `posthog-node` client, and the only one.
  *
@@ -8,16 +10,27 @@ import { PostHog } from 'posthog-node'
  * intervals and two shutdown hooks over one project - and an exception captured
  * on a client nobody shuts down is an exception that never leaves the machine.
  *
- * Returns `null` when PostHog is not configured, which is the normal state of a
- * local dev environment. Every caller has to handle that, and none of them may
- * treat it as an error: analytics being off is not a reason for a request to
- * fail.
+ * Returns `null` when PostHog is switched off for this build (see
+ * `isPosthogEnabled`) or not configured. Every caller has to handle that, and
+ * none of them may treat it as an error: analytics being off is not a reason
+ * for a request to fail.
  */
 
 let sharedPosthogClient: null | PostHog = null
 let shutdownHookRegistered = false
 
 export function getPosthogClient(): null | PostHog {
+	const enabled = isPosthogEnabled({
+		// Optional: the tsx maintenance scripts reach this with no Vite, where
+		// `import.meta.env` does not exist, and a throw here would abort them
+		// from inside the catch block that was reporting their error.
+		dev: import.meta.env?.DEV === true,
+		flag: process.env.VITE_PUBLIC_POSTHOG_ENABLED
+	})
+	if (!enabled) {
+		return null
+	}
+
 	const token = process.env.VITE_PUBLIC_POSTHOG_TOKEN
 	const host = process.env.VITE_PUBLIC_POSTHOG_HOST
 
