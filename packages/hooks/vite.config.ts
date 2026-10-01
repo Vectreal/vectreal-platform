@@ -22,9 +22,6 @@ export default defineConfig({
 	build: {
 		emptyOutDir: true,
 		reportCompressedSize: true,
-		// commonjsOptions: {
-		// 	transformMixedEsModules: true
-		// },
 		lib: {
 			entry: {
 				index: path.resolve(import.meta.dirname, 'src/index.ts'),
@@ -42,15 +39,10 @@ export default defineConfig({
 				)
 			},
 			name: '@vctrl/hooks',
-			formats: ['es', 'cjs'],
-			/*
-			  `.cjs` for CommonJS, not `.cjs.js`. The package is `"type": "module"`
-			  and Node reads module type from the extension, so a `.js` file is ESM
-			  whatever its name says: every `require` entry used to load as ESM and
-			  fail. The viewer names its output this way for the same reason.
-			*/
-			fileName: (format, entry) =>
-				format === 'cjs' ? `${entry}.cjs` : `${entry}.${format}.js`
+			// ES modules only: Node.js 20.19, 22.12 and later `require()` them too,
+			// so a CommonJS copy would only add a second instance of each module.
+			formats: ['es'],
+			fileName: (_format, entry) => `${entry}.js`
 		},
 
 		rolldownOptions: {

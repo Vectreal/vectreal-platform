@@ -26,7 +26,7 @@ Two integration paths are available:
 npm install @vctrl/embed
 ```
 
-Or include the UMD build from an npm CDN before your page code. The entry point uses named exports, so the global is a namespace object: use `new VectrealEmbed.VectrealEmbed(iframe)` instead of the `import` in Step 3. For production, pin a version (`@vctrl/embed@<version>`) and add a Subresource Integrity hash for it.
+Or load the script-tag build from an npm CDN before your page code. It defines one global, `VectrealEmbed`, a namespace object holding the entry point's named exports: use `new VectrealEmbed.VectrealEmbed(iframe)` instead of the `import` in Step 3. For production, pin a version (`@vctrl/embed@<version>`) and add a Subresource Integrity hash for it.
 
 ```html
 <script src="https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js"></script>
@@ -323,6 +323,9 @@ present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts const HEX_COLOR
 present packages/viewer/src/types/viewer-interactions.ts type: 'hotspot_activated'
 present packages/embed/src/protocol.ts hotspots?: EmbedHotspotDescriptor[]
+present packages/embed/vite.config.ts format: 'iife'
+present packages/embed/vite.config.ts entryFileNames: 'vectreal-embed.umd.js'
+present apps/vectreal-platform/app/lib/domain/embed/embed-snippet.ts 'https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js'
 present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts resolveHotspotMarkers(hotspots).map
 present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const THEMES: readonly EmbedViewerTheme[] = ['light', 'dark', 'system']
 present apps/vectreal-platform/app/lib/domain/embed/embed-viewer-theme.ts const DEFAULT_EMBED_THEME: EmbedViewerTheme = 'system'

@@ -28,7 +28,6 @@
 	},
 	"license": "AGPL-3.0-only",
 	"main": "./index.js",
-	"module": "./index.js",
 	"types": "./index.d.ts",
 	"type": "module",
 	"publishConfig": {
@@ -38,13 +37,11 @@
 	"exports": {
 		".": {
 			"types": "./index.d.ts",
-			"import": "./index.js",
-			"require": "./index.cjs"
+			"default": "./index.js"
 		},
 		"./hotspots": {
 			"types": "./hotspots.d.ts",
-			"import": "./hotspots.js",
-			"require": "./hotspots.cjs"
+			"default": "./hotspots.js"
 		},
 		"./css": "./style.css"
 	},
