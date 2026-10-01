@@ -294,8 +294,9 @@ Configures the [@react-three/drei `Environment`](https://github.com/pmndrs/drei#
 Drei's `Bounds` is deliberately kept from writing them.
 
 `fit` is accepted for API compatibility but ignored: `SceneBounds` always passes
-`fit={false}` to Drei's `Bounds` because `SceneCamera` drives fitting imperatively
-via `bounds.reset().fit()`.
+`fit={false}` to Drei's `Bounds` because `SceneCamera` frames the first view
+itself. That framing uses `margin`, and it is applied in one step, so `maxDuration`
+does not animate it.
 
 ```tsx
 <VectrealViewer
