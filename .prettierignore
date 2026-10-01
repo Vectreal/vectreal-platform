@@ -55,3 +55,8 @@ skills-lock.json
 # whole change exists to remove.
 *.md
 *.mdx
+
+# The image-to-3D runtime's local virtualenv and pytest cache: third-party
+# files that `uv run` creates on a developer machine, gitignored there too.
+/apps/img-to-3d-runtime/.venv/
+/apps/img-to-3d-runtime/.pytest_cache/
