@@ -1,0 +1,29 @@
+[project]
+name = "vectreal-img-to-3d-runtime"
+version = "0.2.0"
+description = "Image-to-3D generation on Modal, for Vectreal's internal tooling"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+# Must equal `WEB_PACKAGES` in img_to_3d_runtime/config.py, which is what the
+# web image installs; tests/test_packaging.py compares them. The GPU image's
+# packages are declared in img_to_3d_runtime/infra.py only: they are CUDA
+# builds that never install on a developer machine or a CI runner.
+web = [
+    "fastapi[standard]~=0.142",
+    "python-multipart~=0.0.32",
+    "pydantic~=2.13",
+]
+
+[dependency-groups]
+dev = [
+    "modal~=1.6.0",
+    "numpy~=2.3",
+    "pytest~=9.1",
+    "httpx2~=2.13",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
