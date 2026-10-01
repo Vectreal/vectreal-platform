@@ -1,0 +1,49 @@
+# Deploys apps/img-to-3d-runtime to Modal.
+#
+# Needs MODAL_TOKEN_ID and MODAL_TOKEN_SECRET in the GitHub "production"
+# environment (terraform/scripts/setup-modal-secrets.sh --github). Until they
+# exist this job fails at the deploy step, after the tests have run.
+name: CD - Deploy Image-to-3D Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/img-to-3d-runtime/**'
+      - '.github/workflows/cd-img-to-3d-runtime-production.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-img-to-3d-runtime-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Modal
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: apps/img-to-3d-runtime
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Test
+        run: uv run --frozen --extra web --group dev pytest
+
+      # --directory changes into the project first, so the module path is
+      # relative to apps/img-to-3d-runtime. The June draft passed the path from
+      # the repo root again and pointed at a file that does not exist.
+      - name: Deploy
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: uv run --frozen --group dev modal deploy -m img_to_3d_runtime.app
