@@ -32,6 +32,9 @@ vi.mock('@shared/components/hooks/use-mobile', () => ({
 	useIsMobile: () => false
 }))
 vi.mock('posthog-js', () => ({ default: { reset: vi.fn() } }))
+vi.mock('remix-utils/csrf/react', () => ({
+	useAuthenticityToken: () => 'csrf-token'
+}))
 
 vi.mock('./index', () => ({
 	ToolSidebar: probe('tool-sidebar'),
@@ -43,13 +46,16 @@ vi.mock('./optimization/optimization-drawer', () => ({
 vi.mock('./preview-camera-controls', () => ({ default: probe('camera') }))
 vi.mock('./shell/empty-stage', () => ({
 	EmptyStage: ({
-		recentScenes
+		recentScenes,
+		imgTo3d
 	}: {
 		recentScenes: readonly { id: string }[]
+		imgTo3d?: unknown
 	}) => (
 		<div
 			data-testid="empty-stage"
 			data-recent={recentScenes.map((scene) => scene.id).join(',')}
+			data-generate={imgTo3d ? 'true' : 'false'}
 		/>
 	)
 }))
@@ -98,6 +104,7 @@ const loaderData: PublisherLoaderData = {
 	sceneManifest: null,
 	publishedMeta: null,
 	maxSceneBytes: null,
+	imgTo3dEnabled: false,
 	recentScenes: [
 		{
 			id: 'scene-1',
@@ -110,12 +117,12 @@ const loaderData: PublisherLoaderData = {
 	]
 }
 
-function renderShell() {
+function renderShell(overrides: Partial<PublisherLoaderData> = {}) {
 	const Stub = createRoutesStub([
 		{
 			path: '/publisher',
 			Component: () => (
-				<OverlayControls {...loaderData}>
+				<OverlayControls {...loaderData} {...overrides}>
 					<div data-testid="viewer" />
 				</OverlayControls>
 			)
@@ -147,6 +154,20 @@ describe('the publisher shell', () => {
 		for (const id of SCENE_CHROME) {
 			expect(screen.queryByTestId(id), id).toBeNull()
 		}
+	})
+
+	it('offers image-to-3D generation only to an account the loader let in', async () => {
+		renderShell()
+		expect((await screen.findByTestId('empty-stage')).dataset.generate).toBe(
+			'false'
+		)
+	})
+
+	it('hands the stage the generation panel when the loader allows it', async () => {
+		renderShell({ imgTo3dEnabled: true })
+		expect((await screen.findByTestId('empty-stage')).dataset.generate).toBe(
+			'true'
+		)
 	})
 
 	it('brings the scene controls with the model, under the same header', async () => {
