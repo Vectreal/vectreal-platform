@@ -124,6 +124,9 @@ const useExportModel = (
 				if (binary) {
 					// Export as GLB
 					const result = await exporter.exportDocumentGLB(jsonDocument)
+
+					if (!download) return result
+
 					fileSaver.saveAs(
 						new Blob([new Uint8Array(result.data)]),
 						`${baseFileName}.glb`
