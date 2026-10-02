@@ -3,6 +3,8 @@ import * as path from 'path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
+import { manifestExternals } from '../../vite.library.mts'
+
 export default defineConfig({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/embed',
@@ -11,7 +13,8 @@ export default defineConfig({
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
-		})
+		}),
+		manifestExternals(import.meta.dirname)
 	],
 
 	build: {

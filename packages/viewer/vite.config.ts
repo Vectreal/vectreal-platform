@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
+import { manifestExternals } from '../../vite.library.mts'
+
 export default defineConfig({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/viewer',
@@ -15,7 +17,8 @@ export default defineConfig({
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
-		})
+		}),
+		manifestExternals(import.meta.dirname)
 	],
 
 	build: {
@@ -35,18 +38,6 @@ export default defineConfig({
 			formats: ['es'],
 			fileName: (_format, entry) => `${entry}.js`,
 			cssFileName: 'style'
-		},
-		rolldownOptions: {
-			// External packages that should not be bundled into the library.
-			external: [
-				'react',
-				'react-dom',
-				'three',
-				'@react-three/fiber',
-				'@react-three/drei',
-				'n8ao',
-				'postprocessing'
-			]
 		}
 	}
 })
