@@ -128,9 +128,17 @@ function toError(value: unknown): Error {
  * that makes teams stop reading their exception feed. Anything at 500 or above
  * is reported, because a deliberate 500 is still something being wrong.
  *
- * A route error response that wraps a real error (`error.error`, which React
- * Router sets when a loader threw rather than returned) is reported as that
- * inner error, so the stack survives.
+ * A route error response that wraps an `Error` of its own is one React Router
+ * built itself, for a request it could not route (`getInternalRouterError`: no
+ * route matches, no action, no loader). Whether that is a defect depends on who
+ * built the request. The browser router only builds requests from our own
+ * links, forms and fetchers, so there it is our bug and is reported. On the
+ * server almost all of them are scanners probing `/.env` or posting to `/`, so
+ * they fall under the floor. The cost is a form of ours posted before
+ * hydration to a route with no action: dropped on the server, and reported
+ * from the browser once the same form is submitted after hydration. At 500 and
+ * above the wrapped error is reported in place of the response, so its stack
+ * survives.
  */
 export function buildErrorReport(
 	error: unknown,
@@ -142,21 +150,18 @@ export function buildErrorReport(
 	if (isRouteErrorResponse(error)) {
 		routeStatus = error.status
 		/*
-		  Read off the shape rather than the type. React Router's
-		  `ErrorResponseImpl` carries the original error here when a loader threw
-		  rather than returned, but the exported `ErrorResponse` type does not
-		  declare the field - so this is a narrowing of what is actually there,
-		  not a cast that claims something stronger.
+		  Read off the shape rather than the type: `ErrorResponseImpl` sets this
+		  field, but the exported `ErrorResponse` type does not declare it - so
+		  this is a narrowing of what is actually there, not a cast that claims
+		  something stronger.
 		*/
-		const thrown = (error as { error?: unknown }).error
-		if (thrown instanceof Error) {
-			reportable = thrown
-		} else {
-			if (error.status < 500) return null
-			reportable = new Error(
-				`${error.status} ${error.statusText || 'Error'}`.trim()
-			)
-		}
+		const wrapped = (error as { error?: unknown }).error
+		const builtByOurCode = wrapped instanceof Error && source !== 'server'
+		if (error.status < 500 && !builtByOurCode) return null
+		reportable =
+			wrapped instanceof Error
+				? wrapped
+				: new Error(`${error.status} ${error.statusText || 'Error'}`.trim())
 	}
 
 	const criticalFlows =

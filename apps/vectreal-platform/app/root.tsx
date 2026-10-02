@@ -19,6 +19,7 @@ import { ConsentBanner } from './components/consent/consent-banner'
 import { ConsentProvider } from './components/consent/consent-context'
 import { ConsentPreferencesDialog } from './components/consent/consent-preferences-dialog'
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
+import { RouteErrorState, routeErrorMeta } from './components/not-found'
 import { ThemeController, ThemeScript } from './components/theme'
 import { shouldRenderConsentUi } from './lib/consent/consent-surfaces'
 import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
@@ -31,9 +32,13 @@ import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
 import './styles/view-transitions.css'
 
-export const meta: MetaFunction = () => [
-	...buildMeta([], undefined, { canonical: '/' })
-]
+/*
+  When an error is caught here, this is the only meta the page gets: React
+  Router stops at the boundary route, so without the check it inherited the
+  home page's canonical and `index`.
+*/
+export const meta: MetaFunction = ({ error }) =>
+	error ? routeErrorMeta(error) : buildMeta([], undefined, { canonical: '/' })
 
 export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
 
@@ -136,31 +141,23 @@ export function Layout({ children }: { children: ReactNode }) {
 	useErrorReport(error)
 
 	if (error) {
-		// Extract error message safely
-		let errorMessage = 'An unexpected error occurred'
-		if (error instanceof Error) {
-			errorMessage = error.message
-		} else if (typeof error === 'string') {
-			errorMessage = error
-		} else if (error && typeof error === 'object') {
-			errorMessage = JSON.stringify(error, null, 2)
-		}
-
 		return (
-			<html lang="en" className="dark" style={{ colorScheme: 'dark' }}>
+			<html
+				lang="en"
+				className="dark"
+				style={{ colorScheme: 'dark' }}
+				suppressHydrationWarning
+			>
 				<head>
+					<meta charSet="utf-8" />
+					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<Meta />
 					<Links />
 					<CriticalStyles />
 					<ThemeScript />
 				</head>
 				<body>
-					<div className="error">
-						<h1>Something went wrong</h1>
-						<pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-							{errorMessage}
-						</pre>
-					</div>
+					<RouteErrorState error={error} />
 					<Scripts />
 				</body>
 			</html>
@@ -205,21 +202,7 @@ export function Layout({ children }: { children: ReactNode }) {
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 	useErrorReport(error)
 
-	let errorMessage = 'An unexpected error occurred'
-	if (error instanceof Error) {
-		errorMessage = error.message
-	} else if (typeof error === 'string') {
-		errorMessage = error
-	}
-
-	return (
-		<div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8">
-			<h1 className="text-2xl font-semibold">Something went wrong</h1>
-			<pre className="text-muted-foreground max-w-lg text-sm break-words whitespace-pre-wrap">
-				{errorMessage}
-			</pre>
-		</div>
-	)
+	return <RouteErrorState error={error} />
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {

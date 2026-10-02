@@ -23,6 +23,7 @@ import {
 } from '../components/contact'
 import { PublicErrorBoundary } from '../components/errors'
 import { PageHero } from '../components/layout-components'
+import { routeErrorMeta } from '../components/not-found'
 import {
 	PILOT_CONTACT_PROMPT,
 	PILOT_CONTACT_TOPIC
@@ -132,7 +133,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 	})
 }
 
-export function meta(_: Route.MetaArgs) {
+export function meta({ error }: Route.MetaArgs) {
+	if (error) return routeErrorMeta(error)
 	return buildPageMeta(LEGAL_PAGE_SEO_BY_PATH['/contact'])
 }
 

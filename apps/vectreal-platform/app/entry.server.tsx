@@ -72,9 +72,11 @@ export function handleDataRequest(
  * Every unhandled server-side error, in one place.
  *
  * React Router calls this for loader, action, resource-route and
- * document-render failures. It does *not* call it for a thrown `Response` that
- * carries no underlying error, so deliberate 404s and 403s never arrive here -
- * the framework filters them before we see them.
+ * document-render failures. It skips a thrown `Response` that carries no
+ * underlying error, so a loader's deliberate 404 never arrives here. Its own
+ * 404 for an unmatched URL and 405 for a missing action do arrive, because it
+ * wraps an `Error` in both: `buildErrorReport` drops them by status, and the
+ * site-wide `*` route means an unmatched URL rarely reaches this at all.
  *
  * Exporting this replaces React Router's built-in handler, which logged to
  * stdout and did nothing else. `reportServerError` keeps the log.

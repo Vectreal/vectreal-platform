@@ -9,6 +9,7 @@ import { PublicErrorBoundary } from '../../components/errors'
 import { CtaPanel, PageHero } from '../../components/layout-components'
 import { ArticleRow } from '../../components/layout-components/article-row'
 import { FeaturedArticle } from '../../components/layout-components/featured-article'
+import { routeErrorMeta } from '../../components/not-found'
 import {
 	getNewsArticles,
 	getNewsCategories
@@ -105,7 +106,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	})
 }
 
-export function meta(_: Route.MetaArgs) {
+export function meta({ error }: Route.MetaArgs) {
+	if (error) return routeErrorMeta(error)
 	return buildPageMeta({
 		...PUBLIC_SEO_PAGES.newsroom,
 		structuredData: buildCollectionPageJsonLd({

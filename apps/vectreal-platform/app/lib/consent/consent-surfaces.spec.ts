@@ -15,6 +15,14 @@ describe('shouldRenderConsentUi', () => {
 		expect(shouldRenderConsentUi('/embed/anything/at-all')).toBe(false)
 	})
 
+	// The embed 404 answers these too, and it renders inside the iframe.
+	it.each(['/embed', '/embed/', '/EMBED/a/b/c', '/Embed/p1'])(
+		'suppresses it for %s, as the router matches it',
+		(pathname) => {
+			expect(shouldRenderConsentUi(pathname)).toBe(false)
+		}
+	)
+
 	it('renders it on ordinary marketing and app routes', () => {
 		for (const pathname of [
 			'/',

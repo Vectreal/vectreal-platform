@@ -183,7 +183,11 @@ export default [
 				// Docs fallback for unknown nested pages
 				route('*', './routes/docs/docs-not-found.tsx')
 			])
-		])
+		]),
+
+		// Everything else. Must stay: without a match React Router reports each
+		// miss as an exception, see `not-found-page.tsx`.
+		route('*', './routes/not-found-page.tsx')
 	]),
 
 	// First-run onboarding (standalone page, no nav layout)
@@ -193,6 +197,9 @@ export default [
 	layout('./routes/layouts/embed-layout.tsx', [
 		route('embed/:projectId/:sceneId', './routes/embed-page/embed-scene.tsx')
 	]),
+	// A malformed embed URL renders inside somebody's iframe, so its 404 must
+	// not fall through to the site-wide one and bring the site nav with it.
+	route('embed/*', './routes/embed-page/embed-not-found.tsx'),
 
 	// Internal preview: session only, reachable from the dashboard
 	layout('./routes/layouts/preview-layout.tsx', [

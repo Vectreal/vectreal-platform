@@ -1,30 +1,21 @@
-import { ApiResponse } from '@shared/utils'
-import {
-	data,
-	isRouteErrorResponse,
-	Outlet,
-	useRouteError,
-	type MetaFunction
-} from 'react-router'
+import { data, Outlet, useRouteError, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/embed-layout'
-import { EmbedRefusal } from '../../components/scene-embed/embed-refusal'
+import { EmbedErrorState } from '../../components/scene-embed/embed-error-state'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { hasEntitlement } from '../../lib/domain/billing/entitlement-service.server'
 import {
 	resolveEmbedBranding,
 	shouldShowVectrealBranding
 } from '../../lib/domain/embed/embed-branding-policy'
+import { embedRefusal } from '../../lib/domain/embed/embed-refusal'
 import {
 	EMBED_RESPONSE_HEADERS,
-	mergeEmbedResponseHeaders,
-	withEmbedResponseHeaders
+	mergeEmbedResponseHeaders
 } from '../../lib/domain/embed/embed-response-headers'
-import {
-	parseSceneRouteParams,
-	SCENE_ROUTE_PARAM_ERRORS
-} from '../../lib/domain/scene/scene-route-params'
+import { parseSceneRouteParams } from '../../lib/domain/scene/scene-route-params'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { embedErrorKind } from '../../lib/errors/error-state-copy'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 import { buildMeta } from '../../lib/seo'
 
@@ -48,9 +39,7 @@ export const meta: MetaFunction = () =>
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const parsedParams = parseSceneRouteParams(params)
 	if (!parsedParams.ok) {
-		return withEmbedResponseHeaders(
-			ApiResponse.badRequest(SCENE_ROUTE_PARAM_ERRORS[parsedParams.reason])
-		)
+		throw embedRefusal('not_available', 400)
 	}
 
 	const { projectId, sceneId } = parsedParams.value
@@ -61,7 +50,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		Boolean(request.headers.get('authorization')?.trim())
 
 	if (!hasTokenCredential) {
-		return withEmbedResponseHeaders(ApiResponse.notFound('Scene not found'))
+		throw embedRefusal('not_available')
 	}
 
 	const authResult = await validatePreviewApiKeyForProject({
@@ -71,36 +60,25 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	if (!authResult.ok) {
 		if (authResult.error === 'rate_limited') {
-			return withEmbedResponseHeaders(
-				ApiResponse.error('Too many requests', 429)
-			)
+			throw embedRefusal('busy')
 		}
 		if (authResult.error === 'domain_not_allowed') {
 			/*
-			  Thrown, not returned. A returned `Response` is data to React Router:
-			  no boundary runs, the document renders at 403 with a payload nothing
-			  reads, and the viewer boots into a spinner and then a generic "unable
-			  to load" with a Retry that retries nothing. Throwing is what puts the
-			  explanation on screen.
-
 			  Safe to explain, unlike every other refusal here. This one is only
 			  reached after a live key matched this project, so the caller has
 			  already proved they hold it - and it fires before the scene is looked
 			  up, so it discloses nothing about whether that scene exists. The
 			  others stay a flat 404 for exactly that reason.
 			*/
-			throw data(
-				{ reason: 'domain_not_allowed' as const },
-				{ status: 403, headers: EMBED_RESPONSE_HEADERS }
-			)
+			throw embedRefusal('domain_not_allowed')
 		}
 
-		return withEmbedResponseHeaders(ApiResponse.notFound('Scene not found'))
+		throw embedRefusal('not_available')
 	}
 
 	const previewScene = await getPublishedScenePreview(projectId, sceneId)
 	if (!previewScene) {
-		return withEmbedResponseHeaders(ApiResponse.notFound('Scene not found'))
+		throw embedRefusal('not_available')
 	}
 
 	/*
@@ -154,46 +132,26 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 }
 
 /**
- * The refusal an owner can act on, rendered instead of a broken viewer.
+ * Every embed failure, rendered inside the customer's iframe.
  *
- * Only `domain_not_allowed` gets a message; anything else falls through to the
- * generic boundary, because the other refusals are the ones that must not say
- * which of them happened.
+ * It no longer re-throws to the root, whose boundary is the marketing site's
+ * error page: that would load our nav-free hero, and its links, into somebody
+ * else's page. Refusals the loader threw on purpose stay unreported, because
+ * the status floor in `buildErrorReport` drops every response below 500; a
+ * real fault is reported.
  *
- * The thrown response carries the headers itself, from the same constant the
- * success path uses. `headers` above does also run for a boundary route -
- * React Router slices the matches through the boundary inclusively - so the
- * two agree rather than one standing in for the other.
+ * Retrying reloads the iframe, which is the whole embed.
  */
 export function ErrorBoundary() {
 	const error = useRouteError()
-	const isRefusal =
-		isRouteErrorResponse(error) &&
-		error.status === 403 &&
-		error.data?.reason === 'domain_not_allowed'
+	useErrorReport(error)
 
-	/*
-	  Called unconditionally, because a boundary is a component and the hook
-	  cannot move inside an `if` - and passed `undefined` for the refusal, which
-	  the hook documents as reporting nothing.
-
-	  That distinction is the point rather than a way around the ratchet. A
-	  refused domain is a decision this route made on purpose, and the site that
-	  triggers it will trigger it on every page load; reporting it would fill the
-	  exception feed with the one failure already visible on screen. Anything
-	  else reaching here is a real error and is reported before it is re-thrown.
-	*/
-	useErrorReport(isRefusal ? undefined : error)
-
-	if (isRefusal) {
-		return <EmbedRefusal reason="domain_not_allowed" />
-	}
-
-	/*
-	  Re-thrown so the root boundary renders it. This route only knows how to
-	  explain one thing; the rest are not its to present.
-	*/
-	throw error
+	return (
+		<EmbedErrorState
+			kind={embedErrorKind(error)}
+			onRetry={() => window.location.reload()}
+		/>
+	)
 }
 
 /**

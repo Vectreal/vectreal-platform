@@ -1,9 +1,10 @@
 import { Button } from '@shared/components/ui/button'
 import { ArrowRight } from 'lucide-react'
-import { Link } from 'react-router'
+import { Link, type MetaArgs } from 'react-router'
 
 import { PublicErrorBoundary } from '../../components/errors'
 import { PageHero } from '../../components/layout-components'
+import { routeErrorMeta } from '../../components/not-found'
 import { DOCS_PAGE_COPY } from '../../constants/product-copy'
 import {
 	DOC_AUDIENCES,
@@ -15,7 +16,8 @@ import { publisherSampleHref } from '../../lib/samples/sample-models'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
-export function meta() {
+export function meta({ error }: MetaArgs) {
+	if (error) return routeErrorMeta(error)
 	return buildPageMeta(PUBLIC_SEO_PAGES.docs)
 }
 

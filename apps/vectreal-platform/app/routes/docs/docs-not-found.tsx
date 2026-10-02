@@ -1,68 +1,57 @@
 import { Button } from '@shared/components/ui/button'
-import { AlertCircle, ArrowLeft, BookOpen } from 'lucide-react'
-import { data, Link } from 'react-router'
+import { data, Link, useLocation } from 'react-router'
 
-const CANONICAL_PAGES = [
-	{ to: '/docs/guides/upload', label: 'Guides: Upload' },
-	{ to: '/docs/guides/optimize', label: 'Guides: Optimize' },
-	{ to: '/docs/guides/publish-embed', label: 'Guides: Publish and Embed' },
-	{ to: '/docs/packages/viewer', label: 'Package Reference' }
-]
+import { ErrorState } from '../../components/error-state'
+import { notFoundMeta } from '../../components/not-found'
+import { PUBLIC_ERROR_COPY } from '../../lib/errors/error-state-copy'
 
+/**
+ * An unknown page under `/docs`.
+ *
+ * Returned rather than thrown, unlike the site-wide 404, so the docs layout
+ * and its sidebar stay on screen: a reader who mistyped a docs URL is one
+ * click from the page they meant. Inset, because that layout already owns the
+ * page's `<main>`.
+ */
 export function loader() {
 	return data(null, { status: 404 })
 }
 
+/*
+  Its own, because a leaf without meta inherits the docs layout's, which marks
+  every docs URL indexable and canonical to itself.
+*/
+export const meta = notFoundMeta
+
 export default function DocsNotFoundPage() {
+	const { pathname } = useLocation()
+	const copy = PUBLIC_ERROR_COPY.not_found
+
 	return (
-		<div className="container-page flex min-h-[50dvh] items-center justify-center py-16">
-			<div className="ds-raised w-full max-w-2xl rounded-2xl p-8">
-				<div className="mb-5 flex items-center gap-3">
-					<div className="bg-destructive/10 rounded-full p-2">
-						<AlertCircle
-							className="text-destructive h-5 w-5"
-							aria-hidden="true"
-						/>
-					</div>
-					<p className="text-muted-foreground text-sm font-medium">Error 404</p>
-				</div>
-
-				<h1 className="text-foreground text-h3">
-					Documentation page not found
-				</h1>
-				<p className="text-muted-foreground mt-3 max-w-xl text-sm leading-relaxed">
-					This docs URL does not map to a published page yet. Try the docs home
-					or jump to one of the canonical guide pages below.
-				</p>
-
-				<div className="mt-6 flex flex-wrap gap-3">
-					<Button asChild variant="default">
+		<ErrorState
+			size="inset"
+			heading="This docs page does not exist"
+			description={
+				<>
+					Nothing lives at{' '}
+					<code className="text-foreground break-all">{pathname}</code>.{' '}
+					{copy.description}
+				</>
+			}
+			actions={
+				<>
+					<Button asChild>
 						<Link to="/docs" viewTransition>
-							<BookOpen className="mr-2 h-4 w-4" aria-hidden="true" />
-							Documentation Home
+							Documentation home
 						</Link>
 					</Button>
-					<Button asChild variant="secondary">
+					<Button asChild variant="ghost">
 						<Link to="/docs/getting-started" viewTransition>
-							<ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-							Getting Started
+							Getting started
 						</Link>
 					</Button>
-				</div>
-
-				<div className="mt-6 grid gap-2 text-sm sm:grid-cols-2">
-					{CANONICAL_PAGES.map((page) => (
-						<Link
-							key={page.to}
-							to={page.to}
-							viewTransition
-							className="ds-raised-interactive text-muted-foreground hover:text-foreground rounded-xl px-3 py-2"
-						>
-							{page.label}
-						</Link>
-					))}
-				</div>
-			</div>
-		</div>
+				</>
+			}
+		/>
 	)
 }

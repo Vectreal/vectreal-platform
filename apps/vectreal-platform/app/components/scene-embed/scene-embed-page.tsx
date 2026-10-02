@@ -1,7 +1,7 @@
-import { Button } from '@shared/components/ui/button'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { EmbedErrorState } from './embed-error-state'
 import SceneEmbedInfoPopover from './scene-embed-info-popover'
 import SceneEmbedViewer from './scene-embed-viewer'
 import { useSceneEmbedScene } from './use-scene-embed-scene'
@@ -185,26 +185,10 @@ const SceneEmbedPage = ({
 
 	if (loadError && !file?.model) {
 		return (
-			<div className="bg-background flex h-dvh w-full items-center justify-center p-6">
-				<div className="border-border bg-card w-full max-w-lg space-y-4 rounded-2xl border p-6">
-					<h1 className="text-lg font-semibold">
-						Unable to Load Scene Preview
-					</h1>
-					<p className="text-muted-foreground text-sm">{loadError.message}</p>
-					<div className="flex gap-2">
-						<Button type="button" onClick={() => void retrySceneLoad()}>
-							Retry
-						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => window.history.back()}
-						>
-							Go Back
-						</Button>
-					</div>
-				</div>
-			</div>
+			<EmbedErrorState
+				kind="load_failed"
+				onRetry={() => void retrySceneLoad()}
+			/>
 		)
 	}
 
