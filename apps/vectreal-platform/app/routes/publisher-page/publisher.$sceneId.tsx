@@ -59,7 +59,12 @@ const SHADOW_LIGHT_COMMIT_DEBOUNCE_MS = 80
  * branch here to disagree with it.
  */
 const PublisherPage = () => {
-	const { file } = useModelContext()
+	const loadedModel = useModelContext()
+	const { file } = loadedModel
+	// An optimization pass swaps the rendered object but keeps the load, so the
+	// viewer keeps the camera and framing where the user left them.
+	const modelKey =
+		loadedModel.status === 'ready' ? loadedModel.loadId : undefined
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const {
@@ -191,6 +196,7 @@ const PublisherPage = () => {
 			<div className="bg-muted/50 relative flex h-full w-full">
 				<ClientVectrealViewer
 					model={file?.model}
+					modelKey={modelKey}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
 					envOptions={environment}

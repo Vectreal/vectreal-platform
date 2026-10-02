@@ -125,6 +125,13 @@ export type ModelState =
 			file: ModelFile
 			error: null
 			source: ModelSourceKind
+			/**
+			 * Which load put this model on screen. A new load mints a new id;
+			 * swapping in an optimized rendition of the same model (`replaceModel`)
+			 * keeps it. A viewer passes it as `modelKey`, so an optimization pass
+			 * never reads as a new model and the camera stays where it is.
+			 */
+			loadId: number
 	  })
 	| (ModelStateShape & {
 			status: 'error'

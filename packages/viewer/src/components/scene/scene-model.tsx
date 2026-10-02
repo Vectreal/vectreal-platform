@@ -20,6 +20,8 @@ import {
 	Vector3
 } from 'three'
 
+import { useModelFrame, type ModelKey } from './model-frame'
+
 import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
@@ -39,6 +41,13 @@ interface ModelProps {
 	 * The 3D object (three.js `Object3D`) to render in the scene.
 	 */
 	object: Object3D
+	/**
+	 * Which model `object` renders. A new `object` under the same key is a new
+	 * rendition of the same model, such as an optimization pass's output, and
+	 * keeps the measured size and the camera where they are. Defaults to the
+	 * object itself.
+	 */
+	modelKey?: ModelKey
 	/**
 	 * The callback function to execute when creating a screenshot of the model after loading.
 	 */
@@ -182,6 +191,7 @@ const buildScreenshotDataUrl = async (
 const SceneModel = memo((props: ModelProps) => {
 	const {
 		object,
+		modelKey,
 		cameraOptions,
 		onScreenshot,
 		onScreenshotCaptureReady,
@@ -198,10 +208,8 @@ const SceneModel = memo((props: ModelProps) => {
 		scene: state.scene
 	}))
 
-	const rawDiagonal = useMemo(() => {
-		const box = new Box3().setFromObject(object)
-		return box.getSize(new Vector3()).length()
-	}, [object])
+	const frame = useModelFrame(object, modelKey)
+	const rawDiagonal = frame?.rawDiagonal ?? 0
 
 	const normalizedScale = useMemo(
 		() => resolveNormalizedScale(rawDiagonal, normalizationOptions),
@@ -437,8 +445,13 @@ const SceneModel = memo((props: ModelProps) => {
 		})
 	}, [gl, object])
 
-	// Refit when normalization toggles or a new object loads while normalization is already on.
-	// Skips the initial mount when normalization is off so SceneCamera can handle first framing.
+	// Refit when normalization toggles, or a new model loads while normalization
+	// is already on. Keyed on the frame rather than the object: a rendition of the
+	// same model (an optimization pass) must leave the camera where the user put
+	// it. Skips the initial mount when normalization is off so SceneCamera can
+	// handle first framing.
+	const objectRef = useRef(object)
+	objectRef.current = object
 	const mountedRef = useRef(false)
 	useEffect(() => {
 		const isFirstMount = !mountedRef.current
@@ -446,8 +459,8 @@ const SceneModel = memo((props: ModelProps) => {
 		if (isFirstMount && !normalizationOptions?.enabled) return
 		// Framing only — near/far are handled dynamically by the useFrame above, so
 		// rescaling/normalization no longer leaves stale clipping planes behind.
-		bounds.refresh(object).fit()
-	}, [bounds, normalizationOptions?.enabled, object])
+		bounds.refresh(objectRef.current).fit()
+	}, [bounds, normalizationOptions?.enabled, frame])
 
 	useEffect(() => {
 		onScreenshotCaptureReady?.(captureScreenshot)

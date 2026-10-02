@@ -24,3 +24,4 @@ export {
 export { default as SceneModel } from './scene-model'
 export { default as ScenePostProcessing } from './scene-postprocessing'
 export { default as SceneShadows, defaultShadowsOptions } from './scene-shadows'
+export type { ModelKey } from './model-frame'

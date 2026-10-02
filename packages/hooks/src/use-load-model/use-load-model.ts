@@ -161,7 +161,7 @@ function useLoadModel<
 				modelLoader,
 				optimizer: optimizerRef.current,
 				publish: (loaded: LoadedModel) => {
-					published = commit(readyModelState(source.kind, loaded))
+					published = commit(readyModelState(source.kind, loaded, token))
 					/*
 					  The same instant the viewer changes, so a caller can move what
 					  it prints with the stage rather than an optimizer ingest later.
@@ -189,7 +189,7 @@ function useLoadModel<
 							: await loadModelFromServer(source, context)
 
 				return outcome(
-					published ?? commit(readyModelState(source.kind, loaded))
+					published ?? commit(readyModelState(source.kind, loaded, token))
 				)
 			} catch (error) {
 				const structured =
@@ -219,14 +219,28 @@ function useLoadModel<
 		setState(emptyModelState)
 	}, [])
 
-	const replaceModel = useCallback((file: LoadedModel['file']) => {
-		setState((prev) => (prev.status === 'ready' ? { ...prev, file } : prev))
-	}, [])
+	/*
+	  Swaps in a new rendition of the model one load put on screen, and only that
+	  load's. An optimization pass outlives a load started while it runs, and its
+	  result arriving afterwards would otherwise replace the newer model with the
+	  older one's output, under the newer load's id.
+	*/
+	const replaceModel = useCallback(
+		(file: LoadedModel['file'], forLoadId: number) => {
+			setState((prev) =>
+				prev.status === 'ready' && prev.loadId === forLoadId
+					? { ...prev, file }
+					: prev
+			)
+		},
+		[]
+	)
 
 	const optimizerIntegration = useOptimizerIntegration(
 		optimizer,
 		replaceModel,
 		state.file,
+		state.status === 'ready' ? state.loadId : null,
 		modelLoader
 	)
 

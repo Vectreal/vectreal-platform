@@ -38,7 +38,7 @@ import {
 	useMemo,
 	useState
 } from 'react'
-import { AnimationClip, Box3, Object3D, Vector3 } from 'three'
+import { AnimationClip, Object3D } from 'three'
 
 import { AnimationControls, Canvas, Overlay } from './components'
 import {
@@ -53,6 +53,7 @@ import {
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useHeldExecutor } from './hooks/use-held-executor'
 import { useViewerLoading } from './hooks/use-viewer-loading'
@@ -90,6 +91,15 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
 	 */
 	model?: Object3D
+
+	/**
+	 * Which model `model` renders, when the caller can say so. A new `model`
+	 * under the same key is a new rendition of the same model, such as an
+	 * optimization pass's output: the camera, the framing and the centering stay
+	 * exactly where they are. A new key is a new model and is framed afresh.
+	 * Defaults to the object's identity, so every new object counts as a new model.
+	 */
+	modelKey?: ModelKey
 
 	/**
 	 * Animation clips belonging to `model`, as parsed from the same glTF.
@@ -382,6 +392,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const {
 		// Content
 		children,
+		modelKey,
 		animations,
 		animationOptions,
 		// Container & appearance
@@ -543,23 +554,16 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	  passive effect - would frame the model against the previous centering offset
 	  on a model swap.
 
-	  Keyed on `model` alone, exactly as `SceneModel` keys its own measurement, and
-	  that is load-bearing rather than incidental. `Box3.setFromObject` does not
-	  walk up to refresh ancestors, so it reads whatever scale the model is already
-	  mounted under. Re-measuring when the normalization *options* change would
-	  therefore measure an already-scaled model and derive a different scale from
-	  the one `SceneModel` holds. The two agree today only because the sole control
-	  toggles `enabled` - disabled resolves to 1 whatever the input, and enabling
-	  happens from a scale of 1 - so a min/max control added later would break it
-	  silently. Measuring once per model removes the coincidence.
+	  Measured once per model through `useModelFrame`, the same rule `SceneModel`
+	  uses with the same key, and that is load-bearing rather than incidental.
+	  `Box3.setFromObject` does not walk up to refresh ancestors, so it reads
+	  whatever scale the model is already mounted under. Re-measuring when the
+	  normalization *options* change would therefore measure an already-scaled
+	  model and derive a different scale from the one `SceneModel` holds; so would
+	  re-measuring a new rendition of the same model, whose bounds an optimization
+	  pass can nudge. One measurement per model removes both.
 	*/
-	const rawDiagonal = useMemo(
-		() =>
-			model
-				? new Box3().setFromObject(model).getSize(new Vector3()).length()
-				: 0,
-		[model]
-	)
+	const rawDiagonal = useModelFrame(model, modelKey)?.rawDiagonal ?? 0
 
 	const centerCacheKey = useMemo(
 		() => resolveNormalizedScale(rawDiagonal, normalizationOptions),
@@ -739,6 +743,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											object={model}
+											modelKey={modelKey}
 											enableShadows={shadowsEnabled}
 											normalizationOptions={normalizationOptions}
 											onRawDiagonalComputed={onRawDiagonalComputed}

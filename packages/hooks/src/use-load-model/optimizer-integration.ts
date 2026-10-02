@@ -18,8 +18,10 @@ import type { useOptimizeModel } from '../use-optimize-model'
  */
 export function useOptimizerIntegration(
 	instance: ReturnType<typeof useOptimizeModel> | undefined,
-	replaceModel: (file: ModelFile) => void,
+	replaceModel: (file: ModelFile, forLoadId: number) => void,
 	file: ModelFile | null,
+	/** The load whose model a pass started from, so its result lands only there. */
+	loadId: number | null,
 	modelLoader: ModelLoader
 ): OptimizerIntegrationReturn<boolean> {
 	const applyOptimization = useCallback(
@@ -30,6 +32,12 @@ export function useOptimizerIntegration(
 		) => {
 			if (!instance) {
 				console.warn('Optimizer is not available')
+				return
+			}
+			// Captured with this callback, so a load that starts while the pass
+			// runs cannot receive its result.
+			if (loadId === null) {
+				console.warn('No loaded model to apply the optimization to')
 				return
 			}
 
@@ -55,21 +63,24 @@ export function useOptimizerIntegration(
 
 				const result = await modelLoader.loadToThreeJS(optimizedFile)
 
-				replaceModel({
-					model: result.scene,
-					// Re-read from the optimized model rather than carrying the
-					// previous clips over: optimization can legitimately change
-					// what survives, and a stale clip would be bound against a
-					// scene graph that no longer matches it.
-					animations: result.animations,
-					type: ModelFileTypes.glb,
-					name: optimizedFile.name
-				})
+				replaceModel(
+					{
+						model: result.scene,
+						// Re-read from the optimized model rather than carrying the
+						// previous clips over: optimization can legitimately change
+						// what survives, and a stale clip would be bound against a
+						// scene graph that no longer matches it.
+						animations: result.animations,
+						type: ModelFileTypes.glb,
+						name: optimizedFile.name
+					},
+					loadId
+				)
 			} catch (error) {
 				console.error('Optimization failed:', error)
 			}
 		},
-		[instance, modelLoader, file, replaceModel]
+		[instance, modelLoader, file, loadId, replaceModel]
 	)
 
 	if (!instance) return null as OptimizerIntegrationReturn<boolean>
