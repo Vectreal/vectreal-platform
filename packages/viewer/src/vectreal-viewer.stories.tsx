@@ -84,22 +84,16 @@ const occlusionMaterial = new MeshStandardMaterial({
 	color: '#e4e4e7',
 	roughness: 0.6
 })
-for (const [size, position] of [
-	[
-		[1.6, 0.4, 1.6],
-		[0, 0.2, 0]
-	],
-	[
-		[0.8, 0.8, 0.8],
-		[0, 0.8, 0]
-	],
-	[
-		[0.4, 0.4, 0.4],
-		[0.5, 0.6, 0.5]
-	]
-] as const) {
-	const block = new Mesh(new BoxGeometry(...size), occlusionMaterial)
-	block.position.set(...position)
+for (const { width, height, y, offset } of [
+	{ width: 1.6, height: 0.4, y: 0.2, offset: 0 },
+	{ width: 0.8, height: 0.8, y: 0.8, offset: 0 },
+	{ width: 0.4, height: 0.4, y: 0.6, offset: 0.5 }
+]) {
+	const block = new Mesh(
+		new BoxGeometry(width, height, width),
+		occlusionMaterial
+	)
+	block.position.set(offset, y, offset)
 	occlusionModel.add(block)
 }
 
