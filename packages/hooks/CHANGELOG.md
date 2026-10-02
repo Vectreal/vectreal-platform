@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v1.0.0...hooks-v2.0.0) (2026-10-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* @vctrl/core, @vctrl/hooks, @vctrl/viewer and @vctrl/embed ship ES modules only. The .cjs files and the "require" export condition are removed; bundlers and import are unaffected. CommonJS callers need Node.js 20.19 / 22.12 or later, where require() loads ES modules, or a dynamic import(). Import through the package entry points: hooks and core no longer ship *.es.js file names. The embed script-tag file is now an IIFE with the same VectrealEmbed global and the same URL.
+
+### Features
+
+* ship [@vctrl](https://github.com/vctrl) packages as ESM only ([#915](https://github.com/Vectreal/vectreal-platform/issues/915)) ([debe4b0](https://github.com/Vectreal/vectreal-platform/commit/debe4b08b8426e5151f19f03a0135d4a9493a8e4))
+
+
+### Bug Fixes
+
+* **viewer:** externalize every import of a declared dependency ([#919](https://github.com/Vectreal/vectreal-platform/issues/919)) ([3385845](https://github.com/Vectreal/vectreal-platform/commit/33858459692e2bd25ea7dc8befae2479fcba9675))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 2.0.0
+
 ## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v0.25.1...hooks-v1.0.0) (2026-09-25)
 
 

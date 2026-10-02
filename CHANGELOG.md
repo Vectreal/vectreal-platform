@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v1.0.0...workspace-v2.0.0) (2026-10-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **viewer:** supersample at rest and stop drawing once converged ([#920](https://github.com/Vectreal/vectreal-platform/issues/920))
+* @vctrl/core, @vctrl/hooks, @vctrl/viewer and @vctrl/embed ship ES modules only. The .cjs files and the "require" export condition are removed; bundlers and import are unaffected. CommonJS callers need Node.js 20.19 / 22.12 or later, where require() loads ES modules, or a dynamic import(). Import through the package entry points: hooks and core no longer ship *.es.js file names. The embed script-tag file is now an IIFE with the same VectrealEmbed global and the same URL.
+
+### Features
+
+* **img-to-3d-runtime:** a commercially licensable TRELLIS.2 runtime on Modal 1.6 ([#914](https://github.com/Vectreal/vectreal-platform/issues/914)) ([234b54f](https://github.com/Vectreal/vectreal-platform/commit/234b54fce85588e3e006f3f1b8cd34fd7fa8ac0b))
+* ship [@vctrl](https://github.com/vctrl) packages as ESM only ([#915](https://github.com/Vectreal/vectreal-platform/issues/915)) ([debe4b0](https://github.com/Vectreal/vectreal-platform/commit/debe4b08b8426e5151f19f03a0135d4a9493a8e4))
+* **viewer:** supersample at rest and stop drawing once converged ([#920](https://github.com/Vectreal/vectreal-platform/issues/920)) ([cf8c528](https://github.com/Vectreal/vectreal-platform/commit/cf8c52850f6c34a7c5dfb59862b6acddba3c674b))
+
+
+### Bug Fixes
+
+* **embed:** each end of the embed channel listens only to the other ([#923](https://github.com/Vectreal/vectreal-platform/issues/923)) ([fd18bd3](https://github.com/Vectreal/vectreal-platform/commit/fd18bd3bc34f5b4a693a08a7a711fd3fa630fd87))
+* **errors:** real 404s and one designed state for every public and embed error ([#918](https://github.com/Vectreal/vectreal-platform/issues/918)) ([109c845](https://github.com/Vectreal/vectreal-platform/commit/109c8454785f00f0f06b5796520afe9d981589bf))
+* **posthog:** keep local machines out of the production project ([#922](https://github.com/Vectreal/vectreal-platform/issues/922)) ([857bf47](https://github.com/Vectreal/vectreal-platform/commit/857bf47a291163c696f93b1a027c1e3d3718456a))
+* **viewer:** externalize every import of a declared dependency ([#919](https://github.com/Vectreal/vectreal-platform/issues/919)) ([3385845](https://github.com/Vectreal/vectreal-platform/commit/33858459692e2bd25ea7dc8befae2479fcba9675))
+* **viewer:** frame a newly loaded model before its first view is read ([#917](https://github.com/Vectreal/vectreal-platform/issues/917)) ([12a79de](https://github.com/Vectreal/vectreal-platform/commit/12a79def1d6b81145c7a4824a5face0f29850324))
+
 ## [1.0.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v0.25.1...workspace-v1.0.0) (2026-09-25)
 
 
