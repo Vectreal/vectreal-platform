@@ -317,7 +317,9 @@ function DrillDownView({
 	const { depth, parentTitle } = useContext(DrillDownPositionContext)
 	const sectionRef = useRef<HTMLElement>(null)
 
-	useEffect(() => {
+	// A layout effect, so focus arrives in the commit that shows the view. A
+	// passive one left a frame where the view was on screen and focus on the page.
+	useLayoutEffect(() => {
 		const intent = takeFocusIntent()
 		const section = sectionRef.current
 		if (!intent || !section) return
