@@ -1,8 +1,10 @@
+import { atom } from 'jotai'
 import { atomWithReset } from 'jotai/utils'
 
 import {
 	DEFAULT_PRESET_ID,
-	optimizationPresets
+	optimizationPresets,
+	originalPreset
 } from '../../constants/optimizations'
 
 import type {
@@ -13,7 +15,9 @@ import type {
 
 const optimizationInitialState: OptimizationState = {
 	optimizations: optimizationPresets[DEFAULT_PRESET_ID],
-	optimizationPreset: DEFAULT_PRESET_ID
+	optimizationPreset: DEFAULT_PRESET_ID,
+	sourceSettings: originalPreset,
+	derivedFrom: originalPreset
 }
 
 const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
@@ -38,6 +42,14 @@ const optimizationAtom = atomWithReset<OptimizationState>(
 	optimizationInitialState
 )
 
+/**
+ * The settings that describe the document on screen, which is what a save, a
+ * draft and the publish-time Draco repack must act on.
+ */
+const documentOptimizationsAtom = atom(
+	(get) => get(optimizationAtom).derivedFrom
+)
+
 const optimizationRuntimeAtom = atomWithReset<SceneOptimizationRuntimeState>(
 	optimizationRuntimeInitialState
 )
@@ -47,6 +59,7 @@ const optimizationModalAtom = atomWithReset<SceneOptimizationModalState>(
 )
 
 export {
+	documentOptimizationsAtom,
 	optimizationModalAtom,
 	optimizationModalInitialState,
 	optimizationAtom,

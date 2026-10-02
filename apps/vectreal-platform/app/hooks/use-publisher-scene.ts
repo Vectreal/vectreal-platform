@@ -21,8 +21,8 @@ import {
 	sceneMetaAtom
 } from '../lib/stores/publisher-config-store'
 import {
-	optimizationRuntimeAtom,
-	optimizationAtom
+	documentOptimizationsAtom,
+	optimizationRuntimeAtom
 } from '../lib/stores/scene-optimization-store'
 import { sceneViewerSettingsAtom } from '../lib/stores/scene-settings-store'
 
@@ -72,15 +72,14 @@ export function usePublisherScene({
 
 	const openSceneId = sceneManifest ? sceneId : null
 
-	const { isRestoringDraft, persistPendingSceneDraft, snapshotOriginalModel } =
-		useSceneDraft()
+	const { isRestoringDraft, persistPendingSceneDraft } = useSceneDraft()
 	const { retry: retrySceneLoad } = useSceneSource({
 		routeSceneId: sceneId,
 		openSceneId,
 		sceneManifest,
 		isRestoringDraft
 	})
-	const { uploadFiles } = useSceneUpload({ snapshotOriginalModel })
+	const { uploadFiles } = useSceneUpload()
 
 	const [currentSceneId, setCurrentSceneId] = useAtom(currentSceneIdAtom)
 	const [sceneMetaState, setSceneMetaState] = useAtom(sceneMetaAtom)
@@ -93,7 +92,9 @@ export function usePublisherScene({
 	const [lastSavedSceneId, setLastSavedSceneId] = useAtom(lastSavedSceneIdAtom)
 	const setProcess = useSetAtom(processAtom)
 	const viewerSettings = useAtomValue(sceneViewerSettingsAtom)
-	const { optimizations: optimizationSettings } = useAtomValue(optimizationAtom)
+	// What the document on screen was derived from, not the panel's unapplied
+	// edits: a save describes the document it uploads.
+	const optimizationSettings = useAtomValue(documentOptimizationsAtom)
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)

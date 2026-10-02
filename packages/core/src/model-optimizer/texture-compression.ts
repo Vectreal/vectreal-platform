@@ -55,6 +55,29 @@ const SHARP_SPECIFIER = 'sharp'
  * Run texture compression on a loaded document.
  * Returns the list of applied optimization labels to append.
  */
+
+/**
+ * Some or all textures could not be compressed. The ones that could were
+ * replaced; the rest are left as they were. The counts are what a caller needs
+ * to tell a partial result, which still stands, from one where nothing changed.
+ */
+export class TextureCompressionError extends Error {
+	readonly failed: number
+	readonly total: number
+
+	constructor(failed: number, total: number, message: string) {
+		super(message)
+		this.name = 'TextureCompressionError'
+		this.failed = failed
+		this.total = total
+	}
+
+	/** True when at least one texture was compressed. */
+	get isPartial(): boolean {
+		return this.failed < this.total
+	}
+}
+
 export async function runTextureCompression(
 	document: Document,
 	options: TextureCompressOptions,
@@ -128,7 +151,9 @@ export async function runTextureCompression(
 		const failureSummary = failures
 			.map((failure) => `#${failure.index}: ${failure.reason}`)
 			.join('; ')
-		throw new Error(
+		throw new TextureCompressionError(
+			failures.length,
+			textures.length,
 			`Texture compression failed for ${failures.length} of ${textures.length} textures. ${failureSummary}`
 		)
 	}

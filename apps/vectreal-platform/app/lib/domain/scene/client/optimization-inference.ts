@@ -1,4 +1,7 @@
-import { optimizationPresets } from '../../../../constants/optimizations'
+import {
+	optimizationPresets,
+	originalPreset
+} from '../../../../constants/optimizations'
 
 import type {
 	OptimizationPreset,
@@ -44,6 +47,32 @@ function entryMatches(candidate: unknown, preset: unknown): boolean {
 	return true
 }
 
+/** Whether two sets of settings produce the same optimization. */
+export const optimizationsMatch = (
+	a: Optimizations,
+	b: Optimizations
+): boolean => {
+	// The union of both sides' keys, so an optimization one side is missing
+	// entirely and one it has spare are both differences. Settings saved before
+	// a step existed hit the first case.
+	const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<
+		keyof Optimizations
+	>
+
+	return [...keys].every((key) => entryMatches(a[key], b[key]))
+}
+
+/**
+ * The settings that describe the document a pass with `settings` produces from
+ * a source that already embodies `sourceSettings`. Running nothing leaves the
+ * source itself, which is the untouched upload only when the source is one.
+ */
+export const resolveDerivedSettings = (
+	settings: Optimizations,
+	sourceSettings: Optimizations
+): Optimizations =>
+	optimizationsMatch(settings, originalPreset) ? sourceSettings : settings
+
 /**
  * Works out which preset a set of optimizations corresponds to, or `custom`
  * when it corresponds to none.
@@ -60,19 +89,9 @@ export const inferOptimizationPreset = (
 		[PresetId, Optimizations]
 	>
 
-	const match = entries.find(([, preset]) => {
-		// The union of both sides' keys, so an optimization the candidate is
-		// missing entirely and one it has spare are both differences. Settings
-		// saved before a step existed hit the first case.
-		const keys = new Set([
-			...Object.keys(optimizations),
-			...Object.keys(preset)
-		]) as Set<keyof Optimizations>
-
-		return [...keys].every((key) =>
-			entryMatches(optimizations[key], preset[key])
-		)
-	})
+	const match = entries.find(([, preset]) =>
+		optimizationsMatch(optimizations, preset)
+	)
 
 	return match?.[0] ?? 'custom'
 }

@@ -1,3 +1,8 @@
+import {
+	SupersededError,
+	TextureCompressionError
+} from '@vctrl/core/model-optimizer'
+import { toast } from 'sonner'
 import { beforeEach, vi } from 'vitest'
 
 import { LOAD_GEOMETRY_STEP, PREPARE_STEP, SYNC_STEP } from './model'
@@ -11,18 +16,11 @@ import type { Optimizations } from '@vctrl/core'
 const { runGeometryOptimizationsInWorker } = vi.hoisted(() => ({
 	runGeometryOptimizationsInWorker: vi.fn()
 }))
-const { loadOriginalSceneModel } = vi.hoisted(() => ({
-	loadOriginalSceneModel: vi.fn()
-}))
 
 vi.mock('./utils/geometry-worker', () => ({
 	OPTIMIZATION_STEP_TIMEOUT_MS: 90_000,
 	MODEL_SYNC_TIMEOUT_MS: 60_000,
 	runGeometryOptimizationsInWorker
-}))
-
-vi.mock('../../../lib/persistence/pending-scene-idb', () => ({
-	loadOriginalSceneModel
 }))
 
 vi.mock('sonner', () => ({
@@ -41,6 +39,15 @@ const onlyEnable = (keys: Array<keyof Optimizations>): Optimizations => {
 	}
 	return next
 }
+
+/** Records which model operations ran, in order. */
+const callOrder: string[] = []
+const recorded =
+	<T>(name: string, value: T) =>
+	async () => {
+		callOrder.push(name)
+		return value
+	}
 
 /** Records the checklist calls in order so sequencing can be asserted. */
 function createStepsSpy() {
@@ -66,19 +73,18 @@ function createDeps(
 	const steps = createStepsSpy()
 	const runtime: SceneOptimizationRuntimeState[] = []
 
-	const model: OptimizationPassDeps['model'] = {
-		reset: vi.fn(),
-		loadFromServerSceneData: vi.fn().mockResolvedValue(undefined),
-		loadFromGlbBuffer: vi.fn().mockResolvedValue(undefined),
-		getModel: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3])),
-		texturesOptimization: vi.fn().mockResolvedValue(undefined),
-		applyOptimization: vi.fn().mockResolvedValue(undefined),
+	const model = {
+		restoreSource: vi.fn(recorded('restoreSource', undefined)),
+		loadFromGlbBuffer: vi.fn(recorded('loadFromGlbBuffer', undefined)),
+		getModel: vi.fn(recorded('getModel', new Uint8Array([1, 2, 3]))),
+		texturesOptimization: vi.fn(recorded('texturesOptimization', undefined)),
+		applyOptimization: vi.fn(recorded('applyOptimization', undefined)),
 		...overrides
-	}
+	} satisfies OptimizationPassDeps['model']
 
 	const deps: OptimizationPassDeps = {
-		fromOriginal: false,
 		optimizations,
+		isCurrent: () => true,
 		steps: steps.controller,
 		model,
 		baseline: {
@@ -103,12 +109,12 @@ function createDeps(
 
 beforeEach(() => {
 	vi.clearAllMocks()
+	callOrder.length = 0
 	runGeometryOptimizationsInWorker.mockResolvedValue({
 		buffer: new Uint8Array([9]),
 		appliedOptimizations: ['deduplication'],
 		dracoReport: undefined
 	})
-	loadOriginalSceneModel.mockResolvedValue(null)
 })
 
 describe('runOptimizationPass', () => {
@@ -145,7 +151,7 @@ describe('runOptimizationPass', () => {
 			{ preserveBaseline: true }
 		)
 		expect(model.applyOptimization).toHaveBeenCalledOnce()
-		expect(result.documentChanged).toBe(true)
+		expect(result.succeeded).toBe(true)
 	})
 
 	it('skips the worker entirely when only textures are enabled', async () => {
@@ -155,7 +161,7 @@ describe('runOptimizationPass', () => {
 
 		expect(runGeometryOptimizationsInWorker).not.toHaveBeenCalled()
 		expect(model.texturesOptimization).toHaveBeenCalledOnce()
-		expect(result.documentChanged).toBe(true)
+		expect(result.succeeded).toBe(true)
 	})
 
 	// Whichever phase runs first has to close out preparation, or the row spins
@@ -180,23 +186,27 @@ describe('runOptimizationPass', () => {
 		expect(steps.calls.at(-1)).toBe('reset')
 	})
 
-	it('reloads the pristine scene first when switching presets', async () => {
-		loadOriginalSceneModel.mockResolvedValue({ sceneData: { scene: 1 } })
-		const { deps, model } = createDeps(onlyEnable(['dedup']))
-		deps.fromOriginal = true
+	// Every result is the original plus this pass's settings, so nothing may
+	// touch the document before the original is back.
+	it('restores the original before any step runs', async () => {
+		const { deps } = createDeps(onlyEnable(['dedup', 'texture']))
 
 		await runOptimizationPass(deps)
 
-		expect(model.reset).toHaveBeenCalledOnce()
-		expect(model.loadFromServerSceneData).toHaveBeenCalledWith({ scene: 1 })
+		expect(callOrder[0]).toBe('restoreSource')
+		expect(callOrder.filter((call) => call === 'restoreSource')).toHaveLength(1)
 	})
 
-	it('optimizes from current state when stacking a pass', async () => {
-		const { deps, model } = createDeps(onlyEnable(['dedup']))
+	// The restore replaced the document, so the viewer must catch up even when
+	// the settings run nothing, which is how a user gets back to the original.
+	it('syncs the viewer when no step is enabled', async () => {
+		const { deps, model } = createDeps(onlyEnable([]))
 
-		await runOptimizationPass(deps)
+		const result = await runOptimizationPass(deps)
 
-		expect(model.reset).not.toHaveBeenCalled()
+		expect(model.restoreSource).toHaveBeenCalledOnce()
+		expect(model.applyOptimization).toHaveBeenCalledOnce()
+		expect(result.succeeded).toBe(true)
 	})
 
 	it('optimizes anyway when the baseline size cannot be measured', async () => {
@@ -218,7 +228,7 @@ describe('runOptimizationPass', () => {
 
 		const result = await runOptimizationPass(deps)
 
-		expect(result.documentChanged).toBe(true)
+		expect(result.succeeded).toBe(true)
 		expect(model.applyOptimization).toHaveBeenCalled()
 		// The spinner stops even though the number never arrived.
 		expect(runtime.some((state) => state.isSceneSizeLoading === false)).toBe(
@@ -262,9 +272,20 @@ describe('runOptimizationPass', () => {
 
 		const result = await runOptimizationPass(deps)
 
-		expect(result).toEqual({ documentChanged: false, dracoReport: null })
+		expect(result).toEqual({ succeeded: false, dracoReport: null })
 		expect(steps.calls).toContain('reset')
 		expect(steps.calls).not.toContain('settleAll')
+	})
+
+	// A failed pass leaves a partial document behind, and a save exports the
+	// document, so the original goes back on screen instead.
+	it('shows the original after a failure', async () => {
+		runGeometryOptimizationsInWorker.mockRejectedValue(new Error('boom'))
+		const { deps } = createDeps(onlyEnable(['dedup']))
+
+		await runOptimizationPass(deps)
+
+		expect(callOrder.slice(-2)).toEqual(['restoreSource', 'applyOptimization'])
 	})
 
 	it('always clears the pending flag, including on failure', async () => {
@@ -276,15 +297,100 @@ describe('runOptimizationPass', () => {
 		expect(runtime.at(-1)).toMatchObject({ isPending: false })
 	})
 
-	// Nothing was optimized, so re-syncing the viewer would be pointless work.
-	it('does not sync the viewer when the model could not be exported', async () => {
-		const { deps, model } = createDeps(onlyEnable(['dedup']), {
+	// Skipping the phase would leave a result these settings do not produce.
+	it('fails when the model cannot be exported for the geometry steps', async () => {
+		const { deps } = createDeps(onlyEnable(['dedup', 'texture']), {
 			getModel: vi.fn().mockResolvedValue(null)
 		})
 
 		const result = await runOptimizationPass(deps)
 
-		expect(result.documentChanged).toBe(false)
+		expect(result.succeeded).toBe(false)
+		expect(callOrder).not.toContain('texturesOptimization')
+	})
+
+	it('fails when no texture could be compressed', async () => {
+		const { deps } = createDeps(onlyEnable(['texture']), {
+			texturesOptimization: vi
+				.fn()
+				.mockRejectedValue(new TextureCompressionError(9, 9, 'all failed'))
+		})
+
+		expect((await runOptimizationPass(deps)).succeeded).toBe(false)
+	})
+
+	// Some textures replaced and the rest left as uploaded is still a result
+	// made from the original, so it stands.
+	it('succeeds when only some textures could not be compressed', async () => {
+		const { deps } = createDeps(onlyEnable(['texture']), {
+			texturesOptimization: vi
+				.fn()
+				.mockRejectedValue(new TextureCompressionError(2, 9, 'two failed'))
+		})
+
+		expect((await runOptimizationPass(deps)).succeeded).toBe(true)
+	})
+
+	// The optimizer is shared: a pass that outlives its scene must leave the
+	// next scene's document, viewer and baseline alone.
+	it('stops before touching the optimizer once its scene is replaced', async () => {
+		const { deps, model } = createDeps(onlyEnable(['dedup', 'texture']))
+		runGeometryOptimizationsInWorker.mockImplementation(async () => {
+			deps.isCurrent = () => false
+			return {
+				buffer: new Uint8Array([9]),
+				appliedOptimizations: [],
+				dracoReport: undefined
+			}
+		})
+
+		const result = await runOptimizationPass(deps)
+
+		expect(result.succeeded).toBe(false)
+		expect(model.loadFromGlbBuffer).not.toHaveBeenCalled()
+		expect(model.texturesOptimization).not.toHaveBeenCalled()
 		expect(model.applyOptimization).not.toHaveBeenCalled()
+		expect(model.restoreSource).toHaveBeenCalledOnce()
+	})
+
+	it('does not sync a texture result into a scene that replaced its own', async () => {
+		const { deps, model } = createDeps(onlyEnable(['texture']), {
+			texturesOptimization: vi.fn(async () => {
+				deps.isCurrent = () => false
+			})
+		})
+
+		const result = await runOptimizationPass(deps)
+
+		expect(result.succeeded).toBe(false)
+		expect(model.applyOptimization).not.toHaveBeenCalled()
+	})
+
+	it('does not compress textures for a scene that replaced its own', async () => {
+		const { deps, model } = createDeps(onlyEnable(['dedup', 'texture']), {
+			loadFromGlbBuffer: vi.fn(async () => {
+				deps.isCurrent = () => false
+			})
+		})
+
+		await runOptimizationPass(deps)
+
+		expect(model.texturesOptimization).not.toHaveBeenCalled()
+	})
+
+	// A newer load has started but not yet replaced the source, so the pass
+	// still reads as current; the optimizer already belongs to that load.
+	it('stays silent when the optimizer refuses a stale commit', async () => {
+		const { deps, model } = createDeps(onlyEnable(['dedup']), {
+			loadFromGlbBuffer: vi.fn(async () => {
+				throw new SupersededError()
+			})
+		})
+
+		const result = await runOptimizationPass(deps)
+
+		expect(result.succeeded).toBe(false)
+		expect(toast.error).not.toHaveBeenCalled()
+		expect(model.restoreSource).toHaveBeenCalledOnce()
 	})
 })

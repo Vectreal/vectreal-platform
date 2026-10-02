@@ -16,7 +16,7 @@ import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scen
 import { shouldShowInfoPopover } from '../../../../../lib/domain/scene/scene-presentation'
 import { hasUnsavedChangesAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
-	optimizationAtom,
+	documentOptimizationsAtom,
 	optimizationRuntimeAtom
 } from '../../../../../lib/stores/scene-optimization-store'
 import { presentationAtom } from '../../../../../lib/stores/scene-settings-store'
@@ -54,7 +54,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const navigate = useNavigate()
 	const revalidator = useRevalidator()
 	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
-	const { optimizations } = useAtomValue(optimizationAtom)
+	// The settings the document was derived from decide the publish-time
+	// Draco repack, not edits in the panel that were never applied.
+	const optimizations = useAtomValue(documentOptimizationsAtom)
 	const { dracoReport } = useAtomValue(optimizationRuntimeAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)

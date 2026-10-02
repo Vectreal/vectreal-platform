@@ -9,6 +9,7 @@ import {
 	referenceIn,
 	selectionKey
 } from '@vctrl/core/model-loader'
+import { SupersededError } from '@vctrl/core/model-optimizer'
 
 import {
 	createStructuredLoadError,
@@ -184,7 +185,7 @@ const loadBinaryModel = async (
 	file: File,
 	siblings: File[],
 	fileType: ModelFileTypes,
-	{ modelLoader, optimizer, publish }: LoadContext
+	{ modelLoader, optimizer, publish, mayIngest }: LoadContext
 ): Promise<LoadedModel> => {
 	let loaded: LoadedModel
 	/*
@@ -227,8 +228,9 @@ const loadBinaryModel = async (
 	  occur, which is the shape CLAUDE.md forbids.
 	*/
 	if (optimizer) {
-		await ingestIntoOptimizer(async () => {
+		await ingestIntoOptimizer(mayIngest, async (ensureCurrent) => {
 			const buffer = convertedGlb ?? new Uint8Array(await file.arrayBuffer())
+			ensureCurrent()
 			await optimizer.loadFromGlbBuffer(buffer)
 		})
 	}
@@ -239,7 +241,7 @@ const loadBinaryModel = async (
 const loadGltfModel = async (
 	gltfFile: File,
 	otherFiles: File[],
-	{ modelLoader, optimizer, publish }: LoadContext
+	{ modelLoader, optimizer, publish, mayIngest }: LoadContext
 ): Promise<LoadedModel> => {
 	let loaded: LoadedModel
 
@@ -274,14 +276,17 @@ const loadGltfModel = async (
 
 	if (optimizer) {
 		await ingestIntoOptimizer(
-			async () => {
+			mayIngest,
+			async (ensureCurrent) => {
 				try {
 					const localSceneData = await buildSceneDataFromLocalFiles(
 						gltfFile,
 						otherFiles
 					)
+					ensureCurrent()
 					await optimizer.loadFromServerSceneData(localSceneData)
 				} catch (optimizerError) {
+					if (optimizerError instanceof SupersededError) throw optimizerError
 					console.warn(
 						'Failed to initialize optimizer from source GLTF payload; trying direct asset load.',
 						optimizerError
@@ -319,6 +324,7 @@ const loadGltfModel = async (
 						if (bytes) assetMap.set(uri, bytes)
 					}
 
+					ensureCurrent()
 					await optimizer.loadFromGLTFWithAssets(gltfBytes, assetMap)
 				}
 			},

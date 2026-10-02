@@ -10,13 +10,16 @@ Quality presets apply a combination of Draco geometry compression, duplicate rem
 
 | Preset | Texture resolution | Texture quality | Use when |
 |---|---|---|---|
+| **Original** | Unchanged | Unchanged | You want the model exactly as uploaded |
 | **Maximum quality** | 2K WebP | 90% | High-fidelity previews and final renders |
 | **Balanced** | 1K WebP | 80% | Recommended for most web experiences |
 | **Smallest** | 512px WebP | 70% | Smallest file size, mobile and low-end hardware |
 
-All three presets share the same geometry pipeline: duplicate removal and Draco compression, both always on. They differ only in texture resolution and quality. Mesh simplification and vertex quantization are off in every preset - simplification is destructive and opt-in from the advanced panel, and quantization is redundant because Draco quantizes vertex attributes itself.
+The three optimizing presets share the same geometry pipeline: duplicate removal and Draco compression, both on. They differ only in texture resolution and quality. **Original** runs nothing, Draco included, so the published file is your upload as it is. Mesh simplification and vertex quantization are off in every preset - simplification is destructive and opt-in from the advanced panel, and quantization is redundant because Draco quantizes vertex attributes itself.
 
-Preset changes update the current optimized output for the scene. Until scene version history ships, treat optimization changes as mutable scene edits.
+Every preset is made from your original upload, never from the result of the previous one, so you can switch between them freely and pick **Original** to get the upload back. Choosing a preset applies it straight away; edits in the advanced panel apply when you press **Apply changes**. Saving stores the result of the preset in effect.
+
+A scene that was saved optimized does not keep its original upload, so when you reopen it, presets start from the saved version and the first choice reads **Saved version**.
 
 ---
 

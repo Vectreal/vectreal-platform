@@ -1,4 +1,7 @@
+import { SupersededError } from '@vctrl/core/model-optimizer'
+
 import { serializeSceneAssetData } from './scene-draft-serialization'
+import { originalPreset } from '../../../../constants/optimizations'
 import { savePendingSceneDraft } from '../../../persistence/pending-scene-idb'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -10,6 +13,10 @@ interface PersistPendingSceneDraftParams {
 	sceneMetaState: SceneMetaState
 	currentSettings: SceneSettings
 	optimizationSettings: Optimizations | null
+	/** The original the document was derived from, so a restore keeps it. */
+	sourceGlb: Uint8Array | null
+	/** What `sourceGlb` already embodies, so a restore does not mislabel it. */
+	sourceSettings?: Optimizations | null
 	/** Byte size of the optimized scene, used to restore save-availability on hydration. */
 	optimizedSceneBytes?: number | null
 	/** Byte size of the raw client scene, used to restore save-availability on hydration. */
@@ -22,6 +29,8 @@ export const persistPendingSceneDraftOrchestrator = async ({
 	sceneMetaState,
 	currentSettings,
 	optimizationSettings,
+	sourceGlb,
+	sourceSettings,
 	optimizedSceneBytes,
 	clientSceneBytes
 }: PersistPendingSceneDraftParams): Promise<string | false> => {
@@ -58,7 +67,71 @@ export const persistPendingSceneDraftOrchestrator = async ({
 		sceneMeta: sceneMetaState,
 		sceneData,
 		optimizationSettings,
+		sourceGlb,
+		sourceSettings,
 		optimizedSceneBytes,
 		clientSceneBytes
 	})
+}
+
+/**
+ * What a restored draft's document was derived from, and what its source
+ * already embodies.
+ *
+ * A draft states both. Older drafts do not: one carrying an original was
+ * written from an upload, one without settings (the converter's) is its own
+ * original, and one with settings but no original has only its own document as
+ * a source, which already embodies those settings.
+ */
+export const resolveRestoredDraftOptimization = ({
+	optimizationSettings,
+	sourceGlb,
+	sourceSettings
+}: {
+	optimizationSettings: Optimizations | null
+	sourceGlb: Uint8Array | null | undefined
+	sourceSettings?: Optimizations | null
+}): { sourceSettings: Optimizations; derivedFrom: Optimizations } => {
+	const derivedFrom = optimizationSettings ?? originalPreset
+	return {
+		sourceSettings:
+			sourceSettings ?? (sourceGlb ? originalPreset : derivedFrom),
+		derivedFrom
+	}
+}
+
+/**
+ * States a restored draft's original on the optimizer, so later passes start
+ * from it rather than from the optimized version the draft loaded as.
+ *
+ * Only while the draft's load is the newest: otherwise the original would
+ * become the source of whatever model replaced it. Best effort, because the
+ * draft is on screen either way and the rest of its restore must still run;
+ * without its original, later passes start from the restored version.
+ *
+ * Resolves `true` when the draft's original could not be stated for a load
+ * that is still current, so the caller describes the source as the restored
+ * version instead (`resolveRestoredDraftOptimization` with no original).
+ */
+export const restoreDraftSource = async ({
+	sourceGlb,
+	isCurrent,
+	setSource
+}: {
+	sourceGlb: Uint8Array | null
+	isCurrent: () => boolean
+	setSource: (bytes: Uint8Array) => Promise<void>
+}): Promise<boolean> => {
+	if (!sourceGlb || !isCurrent()) return false
+	try {
+		await setSource(sourceGlb)
+		return false
+	} catch (error) {
+		// A newer model owns the optimizer; it has nothing to report.
+		if (error instanceof SupersededError) return false
+		console.warn('Could not restore the draft original:', error)
+		// Asked again: the failure took an await, and the draft may have been
+		// replaced on screen meanwhile.
+		return isCurrent()
+	}
 }

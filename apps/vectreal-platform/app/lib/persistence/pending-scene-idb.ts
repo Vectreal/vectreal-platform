@@ -1,16 +1,19 @@
 import { openDB } from 'idb'
 
 import type {
-	OriginalSceneModel,
 	PendingSceneDraft,
-	SaveOriginalSceneModelInput,
 	SavePendingSceneDraftInput
 } from '../../types/pending-scene'
 
 /** Database and object-store names for publisher pending drafts. */
 const PENDING_SCENE_DB_NAME = 'vectreal-publisher'
 const PENDING_SCENE_STORE_NAME = 'pending-scenes'
-const ORIGINAL_SCENE_STORE_NAME = 'original-scenes'
+/**
+ * Version 2 added a store of each tab's original upload, which re-optimization
+ * reloaded. The original now lives in the optimizer itself, so version 3
+ * deletes the store and every copy left in it.
+ */
+const RETIRED_ORIGINAL_SCENE_STORE_NAME = 'original-scenes'
 
 /**
  * Session key used to keep one draft id per browser tab.
@@ -62,8 +65,8 @@ export const getTabDraftId = () => {
  * Writes an explicit draft id into sessionStorage for this tab.
  *
  * Used after restoring a cross-tab draft (OAuth redirect) to re-anchor the
- * tab so that subsequent IDB lookups (e.g. `loadOriginalSceneModel`) resolve
- * to the correct entries saved by the originating tab.
+ * tab, so that clearing the draft after a save finds the entry the
+ * originating tab wrote.
  */
 export const setTabDraftId = (id: string): void => {
 	if (!isClient()) return
@@ -72,23 +75,20 @@ export const setTabDraftId = (id: string): void => {
 
 /** Opens (or creates) the IndexedDB database used for pending drafts. */
 const getPendingSceneDB = async () => {
-	return openDB(PENDING_SCENE_DB_NAME, 2, {
-		upgrade(db, oldVersion) {
+	return openDB(PENDING_SCENE_DB_NAME, 3, {
+		upgrade(db) {
 			if (!db.objectStoreNames.contains(PENDING_SCENE_STORE_NAME)) {
 				db.createObjectStore(PENDING_SCENE_STORE_NAME, { keyPath: 'id' })
 			}
-			if (
-				oldVersion < 2 &&
-				!db.objectStoreNames.contains(ORIGINAL_SCENE_STORE_NAME)
-			) {
-				db.createObjectStore(ORIGINAL_SCENE_STORE_NAME, { keyPath: 'id' })
+			if (db.objectStoreNames.contains(RETIRED_ORIGINAL_SCENE_STORE_NAME)) {
+				db.deleteObjectStore(RETIRED_ORIGINAL_SCENE_STORE_NAME)
 			}
 		}
 	})
 }
 
 /**
- * Deletes expired entries from all IDB stores to keep storage bounded.
+ * Deletes expired drafts to keep storage bounded.
  *
  * Runs before read/write operations instead of relying on background tasks.
  */
@@ -99,24 +99,18 @@ const deleteExpiredDrafts = async () => {
 
 	const now = Date.now()
 	const db = await getPendingSceneDB()
+	const tx = db.transaction(PENDING_SCENE_STORE_NAME, 'readwrite')
+	let cursor = await tx.objectStore(PENDING_SCENE_STORE_NAME).openCursor()
 
-	for (const storeName of [
-		PENDING_SCENE_STORE_NAME,
-		ORIGINAL_SCENE_STORE_NAME
-	]) {
-		const tx = db.transaction(storeName, 'readwrite')
-		let cursor = await tx.objectStore(storeName).openCursor()
-
-		while (cursor) {
-			const entry = cursor.value as { expiresAt?: number }
-			if (!entry?.expiresAt || entry.expiresAt <= now) {
-				await cursor.delete()
-			}
-			cursor = await cursor.continue()
+	while (cursor) {
+		const entry = cursor.value as { expiresAt?: number }
+		if (!entry?.expiresAt || entry.expiresAt <= now) {
+			await cursor.delete()
 		}
-
-		await tx.done
+		cursor = await cursor.continue()
 	}
+
+	await tx.done
 }
 
 /**
@@ -145,6 +139,8 @@ export const savePendingSceneDraft = async (
 			sceneMeta: input.sceneMeta,
 			sceneData: input.sceneData,
 			optimizationSettings: input.optimizationSettings,
+			sourceGlb: input.sourceGlb,
+			sourceSettings: input.sourceSettings ?? null,
 			optimizedSceneBytes: input.optimizedSceneBytes ?? null,
 			clientSceneBytes: input.clientSceneBytes ?? null
 		}
@@ -207,98 +203,5 @@ export const clearPendingSceneDraft = async (): Promise<void> => {
 		await db.delete(PENDING_SCENE_STORE_NAME, getTabDraftId())
 	} catch (error) {
 		console.warn('[pending-scene-idb] failed to clear draft', error)
-	}
-}
-
-/**
- * Persists the original un-optimized scene snapshot immediately after a local
- * file upload so the optimization pipeline can reload from it on every run.
- *
- * Returns the draft id string on success, or `false` on failure.
- */
-export const saveOriginalSceneModel = async (
-	input: SaveOriginalSceneModelInput
-): Promise<string | false> => {
-	if (!isClient()) {
-		return false
-	}
-
-	try {
-		await deleteExpiredDrafts()
-		const db = await getPendingSceneDB()
-		const now = Date.now()
-		const id = getTabDraftId()
-		const entry: OriginalSceneModel = {
-			id,
-			createdAt: now,
-			expiresAt: now + PENDING_SCENE_TTL_MS,
-			sceneData: input.sceneData
-		}
-		await db.put(ORIGINAL_SCENE_STORE_NAME, entry)
-		return id
-	} catch (error) {
-		console.warn(
-			'[pending-scene-idb] failed to save original scene model',
-			error
-		)
-		return false
-	}
-}
-
-/**
- * Loads the original un-optimized scene snapshot from IndexedDB.
- *
- * When `draftId` is provided the lookup uses that id directly, enabling a
- * newly opened OAuth tab to find the entry saved by the originating tab.
- *
- * Returns `null` when no valid entry is available.
- */
-export const loadOriginalSceneModel = async (
-	draftId?: string | null
-): Promise<OriginalSceneModel | null> => {
-	if (!isClient()) {
-		return null
-	}
-
-	try {
-		await deleteExpiredDrafts()
-		const db = await getPendingSceneDB()
-		const resolvedId = draftId ?? getTabDraftId()
-		const entry = (await db.get(ORIGINAL_SCENE_STORE_NAME, resolvedId)) as
-			OriginalSceneModel | undefined
-
-		if (!entry) {
-			return null
-		}
-
-		if (!entry.expiresAt || entry.expiresAt <= Date.now()) {
-			await db.delete(ORIGINAL_SCENE_STORE_NAME, entry.id)
-			return null
-		}
-
-		return entry
-	} catch (error) {
-		console.warn(
-			'[pending-scene-idb] failed to load original scene model',
-			error
-		)
-		return null
-	}
-}
-
-/** Clears the active tab's original scene snapshot. */
-export const clearOriginalSceneModel = async (): Promise<void> => {
-	if (!isClient()) {
-		return
-	}
-
-	try {
-		const db = await getPendingSceneDB()
-		await db.delete(ORIGINAL_SCENE_STORE_NAME, getTabDraftId())
-	} catch (error) {
-		console.warn(
-			'[pending-scene-idb] failed to clear original scene model',
-			error
-		)
 	}
 }

@@ -52,3 +52,23 @@ describe('restoring a draft applies its settings', () => {
 		)
 	})
 })
+
+describe('restoring a draft states its original', () => {
+	// Its behavior is `restoreDraftSource`'s own spec; this pins that the
+	// restore asks about its own load, and only once the load is ready.
+	it('for the load it made', () => {
+		// On screen, not newest: a failed newer drop leaves the draft there.
+		expect(source).toContain('isCurrent: result.stillOnScreen')
+		expect(source.indexOf("result.status !== 'ready'")).toBeLessThan(
+			source.indexOf('await restoreDraftSource(')
+		)
+	})
+
+	// Its labels would otherwise claim an original the optimizer never got.
+	it('describes the source as the restored version when that failed', () => {
+		expect(source).toContain('if (missedOriginal) {')
+		expect(source).toMatch(
+			/resolveRestoredDraftOptimization\(\{\s*\.\.\.draft,\s*sourceGlb: null,\s*sourceSettings: null/
+		)
+	})
+})

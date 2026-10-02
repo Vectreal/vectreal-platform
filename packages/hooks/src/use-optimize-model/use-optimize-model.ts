@@ -234,14 +234,12 @@ const useOptimizeModel = () => {
 			try {
 				// Explicit rather than inferred from `meta`: this is also the
 				// fresh-model load path, where re-deriving the baseline is correct.
-				const baseline = options?.preserveBaseline
-					? optimizerRef.current.getBaseline()
-					: null
-
-				await optimizerRef.current.loadFromBuffer(buffer)
-
-				if (baseline) {
-					optimizerRef.current.setBaseline(baseline)
+				// A derivation keeps the baseline and is dropped by the core if
+				// another model was loaded while it was parsed.
+				if (options?.preserveBaseline) {
+					await optimizerRef.current.replaceDocument(buffer)
+				} else {
+					await optimizerRef.current.loadFromBuffer(buffer)
 				}
 
 				// Always written, never conditionally: this optimizer instance is
@@ -261,6 +259,55 @@ const useOptimizeModel = () => {
 				throw err
 			}
 		},
+		[]
+	)
+
+	/**
+	 * Puts the model back exactly as it was loaded, dropping every optimization
+	 * since. Start each pass here and its result depends only on the original
+	 * and that pass's settings, never on what ran before it.
+	 */
+	const restoreSource = useCallback(async (): Promise<void> => {
+		dispatch({ type: 'LOAD_START' })
+		try {
+			await optimizerRef.current.restoreSource()
+			const report = await optimizerRef.current.getReport()
+			dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+		} catch (err) {
+			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+			throw err
+		}
+	}, [])
+
+	/**
+	 * States the original of a model that was loaded already optimized, such as
+	 * a restored draft, so later passes start from it. The document on screen
+	 * is unchanged; the report's baseline moves to the original.
+	 */
+	const setSource = useCallback(async (bytes: Uint8Array): Promise<void> => {
+		// Not ready while the source is replaced, like every other operation
+		// here, so no pass can start from the source being retired.
+		dispatch({ type: 'LOAD_START' })
+		try {
+			await optimizerRef.current.setSource(bytes)
+		} catch (err) {
+			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+			throw err
+		}
+		// Rejects only if the source was not stated: once it was, a report
+		// that fails says nothing about the source, and a caller relabeling
+		// it as not stated would describe a source the optimizer does not hold.
+		try {
+			const report = await optimizerRef.current.getReport()
+			dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+		} catch (err) {
+			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+		}
+	}, [])
+
+	/** The model as it was loaded, as GLB bytes, or null before a load. */
+	const getSource = useCallback(
+		(): Uint8Array | null => optimizerRef.current.getBaseline().source,
 		[]
 	)
 
@@ -506,6 +553,12 @@ const useOptimizeModel = () => {
 		loadFromGlbBuffer,
 
 		loadFromGLTFWithAssets,
+
+		restoreSource,
+
+		setSource,
+
+		getSource,
 
 		/**
 		 * Retrieves the current model as a binary Uint8Array in glTF (.glb) format.

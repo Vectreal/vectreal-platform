@@ -28,10 +28,16 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
 
-type LoadResult = {
+export type LoadResult = {
 	document: Document
 	originalSize: number
 	originalReport: InspectReport
+	/**
+	 * The model as loaded, as GLB bytes the optimizer owns. Every derivation
+	 * starts again from these, so they are copied rather than shared: a caller
+	 * that later transfers its buffer to a worker would otherwise detach them.
+	 */
+	sourceBytes: Uint8Array
 }
 
 type ProgressEmitter = (operation: string, progress: number) => void
@@ -105,7 +111,12 @@ export async function loadFromBuffer(
 		normalizeURIs(document)
 		emitProgress('Model loaded successfully', 100)
 
-		return { document, originalSize, originalReport }
+		return {
+			document,
+			originalSize,
+			originalReport,
+			sourceBytes: buffer.slice()
+		}
 	} catch (error) {
 		throw new Error(`Failed to load model from buffer: ${error}`, {
 			cause: error
@@ -150,7 +161,7 @@ export async function loadFromJSON(
 	io: WebIO,
 	emitProgress: ProgressEmitter,
 	normalizeURIs: NormalizeURIs,
-	exportFn: () => Promise<Uint8Array>
+	exportFn: (document: Document) => Promise<Uint8Array>
 ): Promise<LoadResult> {
 	emitProgress('Loading model from JSON document', 0)
 
@@ -159,10 +170,10 @@ export async function loadFromJSON(
 		stripDecodedDracoExtension(document)
 		const originalReport = inspect(document)
 		normalizeURIs(document)
-		const binary = await exportFn()
+		const binary = await exportFn(document)
 		const originalSize = binary.byteLength
 
-		return { document, originalSize, originalReport }
+		return { document, originalSize, originalReport, sourceBytes: binary }
 	} catch (error) {
 		throw new Error(`Failed to load model from JSON document: ${error}`, {
 			cause: error
@@ -180,7 +191,7 @@ export async function loadFromGLTFWithAssets(
 	io: WebIO,
 	emitProgress: ProgressEmitter,
 	normalizeURIs: NormalizeURIs,
-	exportFn: () => Promise<Uint8Array>
+	exportFn: (document: Document) => Promise<Uint8Array>
 ): Promise<LoadResult> {
 	emitProgress('Loading model from GLTF with assets', 0)
 

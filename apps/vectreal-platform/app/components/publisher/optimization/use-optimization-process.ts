@@ -1,16 +1,22 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useMemo } from 'react'
 
 import { resolveSimplificationOutcome } from './model/simplification-outcome'
 import { runOptimizationPass } from './run-optimization-pass'
+import { useLatestWins } from './use-latest-wins'
 import { useOptimizationSteps } from './use-optimization-steps'
 import { useSceneSizeCalculator } from './utils'
-import { resolveSceneMetrics } from '../../../lib/domain/scene'
+import {
+	resolveDerivedSettings,
+	resolveSceneMetrics
+} from '../../../lib/domain/scene'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
+
+import type { Optimizations } from '@vctrl/core'
 
 export type SizeInfo = {
 	initialSceneBytes?: number | null
@@ -30,6 +36,12 @@ export type SizeInfo = {
  * hook only assembles its dependencies and exposes the results the drawer
  * renders.
  */
+/** A choice of settings, bound to the source it was made for. */
+interface DeriveRequest {
+	settings: Optimizations
+	source: Uint8Array | null
+}
+
 export const useOptimizationProcess = () => {
 	const { optimizer, file } = useModelContext(true)
 	const {
@@ -37,8 +49,8 @@ export const useOptimizationProcess = () => {
 		isPreparing,
 		texturesOptimization,
 		applyOptimization,
-		reset,
-		loadFromServerSceneData,
+		restoreSource,
+		getSource,
 		loadFromGlbBuffer,
 		getModel,
 		info,
@@ -46,6 +58,7 @@ export const useOptimizationProcess = () => {
 	} = optimizer
 
 	const { optimizations: plannedOptimizations } = useAtomValue(optimizationAtom)
+	const setOptimizationState = useSetAtom(optimizationAtom)
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
@@ -83,18 +96,22 @@ export const useOptimizationProcess = () => {
 		typeof optimizationRuntime.optimizedSceneBytes === 'number' ||
 		(latestSceneStats?.appliedOptimizations?.length ?? 0) > 0
 
-	const runPass = useCallback(
-		async (fromOriginal: boolean): Promise<boolean> => {
-			if (isPending || isPreparing || !isReady) return false
+	/**
+	 * Makes the document `source` plus `settings`, in one pass, as long as
+	 * `source` is still the optimizer's source. A new load replaces the source,
+	 * so a choice made for the previous scene, or a pass that settles after the
+	 * scene changed, never describes the scene that replaced it.
+	 */
+	const derivePass = useCallback(
+		async ({ settings, source }: DeriveRequest): Promise<void> => {
+			if (isPreparing || !isReady || getSource() !== source) return
 
-			const { documentChanged, dracoReport } = await runOptimizationPass({
-				fromOriginal,
-				documentMayBeOptimized: hasCompletedOptimizationPass,
-				optimizations: plannedOptimizations,
+			const result = await runOptimizationPass({
+				optimizations: settings,
+				isCurrent: () => getSource() === source,
 				steps: stepsController,
 				model: {
-					reset,
-					loadFromServerSceneData,
+					restoreSource,
 					loadFromGlbBuffer,
 					getModel,
 					texturesOptimization,
@@ -112,21 +129,24 @@ export const useOptimizationProcess = () => {
 				setRuntime: setOptimizationRuntime
 			})
 
-			if (documentChanged) {
-				void refreshOptimizedSizeInfo(dracoReport)
-			}
+			if (getSource() !== source) return
 
-			return documentChanged
+			// A failed pass puts the source back on screen, so the source is what
+			// describes the document then.
+			setOptimizationState((prev) => ({
+				...prev,
+				derivedFrom: result.succeeded
+					? resolveDerivedSettings(settings, prev.sourceSettings)
+					: prev.sourceSettings
+			}))
+			void refreshOptimizedSizeInfo(result.dracoReport)
 		},
 		[
-			isPending,
 			isPreparing,
 			isReady,
-			hasCompletedOptimizationPass,
-			plannedOptimizations,
+			getSource,
 			stepsController,
-			reset,
-			loadFromServerSceneData,
+			restoreSource,
 			loadFromGlbBuffer,
 			getModel,
 			texturesOptimization,
@@ -139,14 +159,27 @@ export const useOptimizationProcess = () => {
 			report?.stats.textureBytes.before,
 			calculateSceneBytes,
 			setOptimizationRuntime,
+			setOptimizationState,
 			refreshOptimizedSizeInfo
 		]
 	)
 
-	// Re-running a preset reloads the pristine scene first, so passes never
-	// silently chain. "Optimize further" deliberately stacks on current state.
-	const handleOptimizeClick = useCallback(() => runPass(true), [runPass])
-	const handleStackOptimizeClick = useCallback(() => runPass(false), [runPass])
+	// Choosing presets faster than a pass runs derives the last one once more,
+	// never each one in between.
+	const deriveLatest = useLatestWins(derivePass)
+
+	/** Makes the document the current source plus `settings`. */
+	const derive = useCallback(
+		(settings: Optimizations) =>
+			deriveLatest({ settings, source: getSource() }),
+		[deriveLatest, getSource]
+	)
+
+	/** Applies what the panel shows, for edits made in the advanced controls. */
+	const applyPlanned = useCallback(
+		() => derive(plannedOptimizations),
+		[derive, plannedOptimizations]
+	)
 
 	const resolvedMetrics = useMemo(
 		() =>
@@ -232,7 +265,7 @@ export const useOptimizationProcess = () => {
 		hasCompletedOptimizationPass,
 		sizeInfo,
 		optimizingStep,
-		handleOptimizeClick,
-		handleStackOptimizeClick
+		derive,
+		applyPlanned
 	}
 }

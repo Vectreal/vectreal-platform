@@ -21,6 +21,7 @@
  *    those paths are gated where they live, not here.
  */
 import { missingAssetsError } from '@vctrl/core/model-loader'
+import { SupersededError } from '@vctrl/core/model-optimizer'
 import { describe, expect, it, vi } from 'vitest'
 
 import { loadModelFromFiles } from './file-loaders'
@@ -86,7 +87,8 @@ function context() {
 		/* Ingestion is opt-in: most cases below are about dispatch alone. */
 		optimizer: undefined,
 		publish,
-		onProgress: vi.fn()
+		onProgress: vi.fn(),
+		mayIngest: () => true
 	} as unknown as LoadContext
 
 	const withOptimizer = {
@@ -380,6 +382,135 @@ describe('the optimizer is ingested with glTF bytes, whatever was dropped', () =
 		).rejects.toBeTruthy()
 
 		expect(loadFromGlbBuffer).not.toHaveBeenCalled()
+	})
+})
+
+// Every fallback import claims the optimizer again, so retrying a load the
+// optimizer refused as superseded would take it back from the newer model.
+describe('a superseded ingest is not retried', () => {
+	it('runs neither glTF fallback once the optimizer refused the load', async () => {
+		const { ctx } = context()
+		const optimizer = {
+			loadFromServerSceneData: vi.fn(async () => {
+				throw new SupersededError()
+			}),
+			loadFromGLTFWithAssets: vi.fn(async () => undefined),
+			load: vi.fn(async () => undefined)
+		}
+
+		await loadModelFromFiles(
+			[file('scene.gltf', JSON.stringify({ asset: { version: '2.0' } }))],
+			{ ...ctx, optimizer } as unknown as LoadContext
+		)
+
+		expect(optimizer.loadFromServerSceneData).toHaveBeenCalledOnce()
+		expect(optimizer.loadFromGLTFWithAssets).not.toHaveBeenCalled()
+		expect(optimizer.load).not.toHaveBeenCalled()
+	})
+})
+
+// Ingesting claims the optimizer, so a load retired while it parsed must
+// leave the optimizer to the model that replaced it.
+describe('a retired load is not ingested', () => {
+	it('leaves the optimizer alone once a newer load started', async () => {
+		const { withOptimizer, loadFromGlbBuffer } = context()
+
+		await loadModelFromFiles([file('model.glb')], {
+			...withOptimizer,
+			mayIngest: () => false
+		})
+
+		expect(loadFromGlbBuffer).not.toHaveBeenCalled()
+	})
+
+	// The file is read before the optimizer is reached; a newer load can
+	// start during that read.
+	it('stops a GLB retired while its bytes were read', async () => {
+		const { withOptimizer, loadFromGlbBuffer } = context()
+		let current = true
+		const glb = file('model.glb')
+		Object.defineProperty(glb, 'arrayBuffer', {
+			value: async () => {
+				current = false
+				return new ArrayBuffer(0)
+			}
+		})
+
+		await loadModelFromFiles([glb], {
+			...withOptimizer,
+			mayIngest: () => current
+		})
+
+		expect(loadFromGlbBuffer).not.toHaveBeenCalled()
+	})
+
+	/**
+	 * A glTF whose given read, once the model is published, stands for a newer
+	 * load starting: reads before the publish are the load's own.
+	 */
+	function gltfRetiredOn(read: 'text' | 'arrayBuffer') {
+		const { ctx } = context()
+		let published = false
+		let current = true
+		const gltf = file(
+			'scene.gltf',
+			JSON.stringify({ asset: { version: '2.0' } })
+		)
+		const original = gltf[read].bind(gltf)
+		Object.defineProperty(gltf, read, {
+			value: async () => {
+				if (published) current = false
+				return original()
+			}
+		})
+		return {
+			gltf,
+			ctx: {
+				...ctx,
+				publish: () => {
+					published = true
+				},
+				mayIngest: () => current
+			}
+		}
+	}
+
+	it('stops a glTF retired while its scene data was built', async () => {
+		const { gltf, ctx } = gltfRetiredOn('text')
+		const optimizer = {
+			loadFromServerSceneData: vi.fn(async () => undefined),
+			loadFromGLTFWithAssets: vi.fn(async () => undefined),
+			load: vi.fn(async () => undefined)
+		}
+
+		await loadModelFromFiles([gltf], {
+			...ctx,
+			optimizer
+		} as unknown as LoadContext)
+
+		expect(optimizer.loadFromServerSceneData).not.toHaveBeenCalled()
+		expect(optimizer.loadFromGLTFWithAssets).not.toHaveBeenCalled()
+		expect(optimizer.load).not.toHaveBeenCalled()
+	})
+
+	it('stops the asset fallback retired while it read the files', async () => {
+		const { gltf, ctx } = gltfRetiredOn('arrayBuffer')
+		const optimizer = {
+			loadFromServerSceneData: vi.fn(async () => {
+				throw new Error('broken scene data')
+			}),
+			loadFromGLTFWithAssets: vi.fn(async () => undefined),
+			load: vi.fn(async () => undefined)
+		}
+
+		await loadModelFromFiles([gltf], {
+			...ctx,
+			optimizer
+		} as unknown as LoadContext)
+
+		expect(optimizer.loadFromServerSceneData).toHaveBeenCalledOnce()
+		expect(optimizer.loadFromGLTFWithAssets).not.toHaveBeenCalled()
+		expect(optimizer.load).not.toHaveBeenCalled()
 	})
 })
 

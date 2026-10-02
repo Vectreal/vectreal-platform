@@ -1,4 +1,8 @@
-import { DEFAULT_PRESET_ID } from '../../../../constants/optimizations'
+import { optimizationsMatch } from './optimization-inference'
+import {
+	DEFAULT_PRESET_ID,
+	originalPreset
+} from '../../../../constants/optimizations'
 
 import type { SceneManifestResponse } from '../../../../types/api'
 import type {
@@ -49,7 +53,9 @@ export const executeOptimizationStateHydration = ({
 		setOptimizationState((prev) => ({
 			...prev,
 			optimizationPreset: DEFAULT_PRESET_ID,
-			optimizations: defaultOptimizations
+			optimizations: defaultOptimizations,
+			sourceSettings: originalPreset,
+			derivedFrom: originalPreset
 		}))
 
 		setOptimizationRuntime({
@@ -64,10 +70,27 @@ export const executeOptimizationStateHydration = ({
 
 	const inferredPreset = inferOptimizationPreset(persistedOptimizationSettings)
 
+	// The saved document is the only source a reopened scene has, and it
+	// already embodies the settings it was saved with: a save stores the
+	// settings that produced its document. Only a scene saved as the original
+	// is the untouched upload.
+	//
+	// Scenes saved before that rule may carry settings no pass applied. They
+	// read as a saved version, which costs nothing: their document is lossless,
+	// and they keep the publish-time Draco they had.
+	const sourceSettings = optimizationsMatch(
+		persistedOptimizationSettings,
+		originalPreset
+	)
+		? originalPreset
+		: persistedOptimizationSettings
+
 	setOptimizationState((prev) => ({
 		...prev,
 		optimizationPreset: inferredPreset,
-		optimizations: persistedOptimizationSettings
+		optimizations: persistedOptimizationSettings,
+		sourceSettings,
+		derivedFrom: sourceSettings
 	}))
 
 	setOptimizationRuntime((prev) => ({
