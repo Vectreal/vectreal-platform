@@ -86,7 +86,7 @@ const toolSidebarStateAtom = selectAtom(
  * *selected*. It is never null, it defaults to `environment` before the author
  * has opened anything, and closing a drawer flips `showSidebar` while leaving it
  * exactly where it was. So a scene affordance that reads it directly stays live
- * after the tool that owns it has closed - the tool rail stops highlighting the
+ * after the tool that owns it has closed - the tool bar stops highlighting the
  * button while the canvas goes on offering the tool's gizmo.
  *
  * That predicate already existed twice, written by hand: the rail's own
@@ -114,7 +114,49 @@ const hasUnsavedChangesAtom = selectAtom(
 )
 
 // Editor mode atoms - not persisted, reset on each session
-const isPreviewModeAtom = atom(false)
+
+/**
+ * Preview mode, read-only from outside: `enterPreviewModeAtom` and
+ * `exitPreviewModeAtom` are its only writers.
+ *
+ * Entering closes every panel and remembers what was open; exiting puts it
+ * back. Both halves live here, beside the state they change, which is what
+ * lets the tool bar enter preview from any tool.
+ */
+const previewModeStateAtom = atom<{
+	active: boolean
+	returnTo: null | Pick<
+		ProcessState,
+		'mode' | 'activeComposeTool' | 'showSidebar' | 'showPublishPanel'
+	>
+}>({ active: false, returnTo: null })
+
+const isPreviewModeAtom = atom((get) => get(previewModeStateAtom).active)
+
+const enterPreviewModeAtom = atom(null, (get, set) => {
+	if (get(previewModeStateAtom).active) return
+	const { mode, activeComposeTool, showSidebar, showPublishPanel } =
+		get(processAtom)
+	set(previewModeStateAtom, {
+		active: true,
+		returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel }
+	})
+	set(processAtom, (prev) => ({
+		...prev,
+		showSidebar: false,
+		showPublishPanel: false
+	}))
+})
+
+const exitPreviewModeAtom = atom(null, (get, set) => {
+	const { active, returnTo } = get(previewModeStateAtom)
+	if (!active) return
+	set(previewModeStateAtom, { active: false, returnTo: null })
+	if (returnTo) {
+		set(processAtom, (prev) => ({ ...prev, ...returnTo }))
+	}
+})
+
 const isClickToPlaceActiveAtom = atom(false)
 const arePublisherActionsDisabledAtom = atom((get) => get(isPreviewModeAtom))
 const canEditCameraSettingsAtom = atom(
@@ -136,6 +178,8 @@ export {
 	isSavingAtom,
 	hasUnsavedChangesAtom,
 	isPreviewModeAtom,
+	enterPreviewModeAtom,
+	exitPreviewModeAtom,
 	isClickToPlaceActiveAtom,
 	arePublisherActionsDisabledAtom,
 	canEditCameraSettingsAtom,

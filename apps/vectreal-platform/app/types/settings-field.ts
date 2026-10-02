@@ -1,17 +1,15 @@
-import type { ValueMapping } from '../lib/utils/value-mapping'
+import type { ValueMapping } from '@shared/utils'
 
 /**
- * Shared field configuration for inspector slider settings.
- * Single source of truth - import from here in all constants files.
+ * One slider setting in a publisher panel, rendered by `FieldSlider`.
+ * `Key` names the setting it writes, so a panel can type its own keys.
  */
-export interface FieldConfig {
-	key: string
+export interface FieldConfig<Key extends string = string> {
+	key: Key
 	label: string
 	min: number
 	max: number
 	step: number
-	tooltip: string
 	formatValue?: (value: number) => string
 	valueMapping?: ValueMapping
-	unit?: string
 }

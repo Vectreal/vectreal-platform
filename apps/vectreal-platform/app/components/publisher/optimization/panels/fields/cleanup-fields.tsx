@@ -1,5 +1,4 @@
-import { SettingToggle } from '../../../settings-components'
-import { getOptimizationDefinition } from '../../model'
+import { StepBlock, StepToggle } from './optimization-step'
 import { useOptimizationSettings } from '../../use-optimization-settings'
 
 import type { FC } from 'react'
@@ -16,26 +15,20 @@ export const CleanupFields: FC = () => {
 	const isDracoEnabled = Boolean(optimizations.draco?.enabled)
 
 	return (
-		<div className="bg-shell-surface-soft/50 space-y-4 rounded-xl p-4 shadow-sm">
-			{CLEANUP_KEYS.map((key) => {
-				const definition = getOptimizationDefinition(key)
-				const isSupersededByDraco = key === 'quantize' && isDracoEnabled
-
-				return (
-					<SettingToggle
-						key={key}
-						enabled={Boolean(optimizations[key]?.enabled)}
-						onToggle={(enabled) => update(key, { enabled })}
-						title={definition.title}
-						description={
-							isSupersededByDraco
-								? 'Handled by geometry compression — not needed separately'
-								: definition.description
-						}
-						info={definition.tooltip}
-					/>
-				)
-			})}
-		</div>
+		<StepBlock>
+			{CLEANUP_KEYS.map((key) => (
+				<StepToggle
+					key={key}
+					step={key}
+					checked={Boolean(optimizations[key]?.enabled)}
+					onCheckedChange={(enabled) => update(key, { enabled })}
+					description={
+						key === 'quantize' && isDracoEnabled
+							? 'Handled by geometry compression, not needed separately.'
+							: undefined
+					}
+				/>
+			))}
+		</StepBlock>
 	)
 }

@@ -826,6 +826,19 @@
 			var(--background)
 		);
 	}
+	/*
+	  The resting surface of a control (the Slider track, a Toggle).
+	  A tint over whatever the control sits on, for the reason `ds-field` is:
+	  controls sit on the page, on dialogs and on publisher shell panels, and a
+	  step mixed against `--background` would sit below a shell panel.
+	*/
+	.ds-field-interactive {
+		background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+	.ds-field-interactive:hover {
+		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+	}
 
 	/* ---- Type scale (single source of truth) ---- */
 	.text-eyebrow {

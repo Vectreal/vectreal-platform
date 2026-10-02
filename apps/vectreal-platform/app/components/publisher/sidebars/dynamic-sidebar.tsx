@@ -9,7 +9,7 @@ import { OVERLAY_CLOSE_APPEARANCE } from '@shared/components/ui/overlay-close'
 import { cn } from '@shared/utils'
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { X } from 'lucide-react'
-import { useCallback, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, type ReactNode } from 'react'
 
 // ---------------------------------------------------------------------------
 // Animation variants
@@ -26,6 +26,22 @@ const rightVariants: Variants = {
 	visible: { opacity: 1, x: 0 },
 	exit: { opacity: 0, x: '100%' }
 }
+
+// ---------------------------------------------------------------------------
+// Canvas reach
+// ---------------------------------------------------------------------------
+
+/*
+  Whether the panel is the mobile bottom sheet. The sheet is modal and covers
+  the stage, so while it is open nothing on the 3D canvas can be touched, and a
+  panel must not offer or describe an action that happens there (placing a
+  marker, dragging it). Decided here because this is where the sheet is
+  chosen; a panel measuring the window itself could disagree with it.
+*/
+const CoversCanvasContext = createContext(false)
+
+/** True inside the mobile sheet, where the canvas cannot be reached. */
+export const useSidebarCoversCanvas = () => useContext(CoversCanvasContext)
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,6 +73,11 @@ export interface DynamicSidebarProps {
 	showDesktopHeader?: boolean
 	children: ReactNode
 	className?: string
+	/**
+	 * Classes for the desktop container the panel is inset within, for a panel
+	 * that has to clear other stage chrome (the tool bar).
+	 */
+	containerClassName?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +96,8 @@ export const DynamicSidebar = ({
 	showMobileHeader = true,
 	showDesktopHeader = false,
 	children,
-	className
+	className,
+	containerClassName
 }: DynamicSidebarProps) => {
 	const handleClose = useCallback(() => onOpenChange(false), [onOpenChange])
 
@@ -101,19 +123,22 @@ export const DynamicSidebar = ({
 			>
 				<DrawerContent
 					showCloseButton={!closeDisabled}
-					className="flex max-h-[95svh] flex-col"
-					onOpenAutoFocus={(e) => {
-						// Explicitly move focus into the first interactive element inside
-						// the drawer so screen readers announce the new context.
-						e.preventDefault()
-						const container = e.currentTarget
-						if (!(container instanceof HTMLElement)) {
-							return
+					/*
+					  A fixed height rather than the content's. Drill-down views differ a
+					  lot in length, and a sheet sized to each one moved its top edge on
+					  every step, uncovering and covering the model. Platform sheets do
+					  the same: they rest at set heights and scroll what does not fit,
+					  which every publisher sheet already does inside its body.
+					*/
+					className="flex h-[60svh] flex-col"
+					onOpenAutoFocus={(event) => {
+						// Focus the sheet itself, which announces it by its title. The
+						// first control inside can be a tooltip trigger, and a tooltip
+						// opens on focus, so it showed without anyone asking for it.
+						event.preventDefault()
+						if (event.currentTarget instanceof HTMLElement) {
+							event.currentTarget.focus()
 						}
-						const first = container.querySelector<HTMLElement>(
-							'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-						)
-						first?.focus()
 					}}
 				>
 					{/*
@@ -130,7 +155,11 @@ export const DynamicSidebar = ({
 						</DrawerHeader>
 					)}
 
-					<div className="flex min-h-0 flex-1 flex-col">{children}</div>
+					<div className="flex min-h-0 flex-1 flex-col">
+						<CoversCanvasContext.Provider value={true}>
+							{children}
+						</CoversCanvasContext.Provider>
+					</div>
 				</DrawerContent>
 			</Drawer>
 		)
@@ -173,7 +202,8 @@ export const DynamicSidebar = ({
 				positionClass,
 				{
 					'px-0': !open
-				}
+				},
+				containerClassName
 			)}
 		>
 			<AnimatePresence mode="wait">

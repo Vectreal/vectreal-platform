@@ -1,16 +1,16 @@
-import { Accordion, AccordionContent } from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
 import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import { formatFileSize } from '@shared/utils'
 import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import { Code, Globe, Save, Sparkles } from 'lucide-react'
+import { Code, Globe, Save } from 'lucide-react'
+import { useState } from 'react'
 
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
 import { isSaveActionBlocked } from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
-import { AccordionItem, AccordionTrigger } from '../accordion-components'
 import { sidebarContentVariants } from '../animation'
+import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
 import { usePublishSidebarContext } from './publish-sidebar-context'
 import { DeliverySummary } from './sections/delivery-summary'
 import { EmbedOptions } from './sections/embed-options'
@@ -38,20 +38,10 @@ const getSizeDeltaLabel = (deltaBytes?: number | null) => {
 }
 
 /**
- * The publish sidebar's body. It takes no props.
- *
- * It had two booleans, `hideHeader` and `showSceneInfo`, and its one consumer
- * always passed both, so neither could ever be false and every branch reading
- * them was unreachable. `hideHeader` guarded a second panel header that
- * `DynamicSidebar` already renders for the desktop panel and the mobile sheet
- * alike; `showSceneInfo` guarded the delivery summary and the two size figures
- * it needs.
- *
- * A prop with one caller and one value is not configuration - it is a claim
- * that the component supports a mode nobody has ever rendered, which someone
- * eventually has to read the whole tree to disprove.
+ * The publish sidebar's body: the delivery summary and preview at the top,
+ * then the Download, Publish and Embed views. It reads everything from
+ * `PublishSidebarContext`; the panel header is `DynamicSidebar`'s.
  */
-
 const PublishSidebarContent: FC = () => {
 	const {
 		sceneId,
@@ -64,6 +54,7 @@ const PublishSidebarContent: FC = () => {
 		saveSceneSettings
 	} = usePublishSidebarContext()
 	const isSaving = useAtomValue(isSavingAtom)
+	const [path, setPath] = useState<string[]>([])
 	const { handleSaveScene } = usePublisherSaveAction({
 		sceneId: sceneId ?? null,
 		userId,
@@ -87,47 +78,32 @@ const PublishSidebarContent: FC = () => {
 				animate="animate"
 				exit="exit"
 				key="publish-sidebar"
+				// One column owns the sidebar's gutter and rhythm, so every view
+				// lines up with the delivery summary at the top.
+				className="p-4"
 			>
-				{/*
-				  One column owns the sidebar's gutter and rhythm. The sections used
-				  to each carry their own padding, which had drifted to six different
-				  vertical values and two different left edges, so the top half of the
-				  sidebar did not line up with the accordion below it.
-				*/}
-				<div className="flex flex-col gap-3 p-4">
-					<DeliverySummary
-						sceneBytes={currentSceneBytes}
-						sizeReductionPercent={viewModel.sizeReductionPercent}
-						sizeDeltaLabel={sizeDeltaLabel}
-						onOpenOptimization={onOpenOptimizationDrawer}
-					/>
+				<DrillDown
+					path={path}
+					onPathChange={setPath}
+					rootTitle="Scene Info & Publish"
+				>
+					<DrillDownView id="root" className="space-y-3">
+						<DeliverySummary
+							sceneBytes={currentSceneBytes}
+							sizeReductionPercent={viewModel.sizeReductionPercent}
+							sizeDeltaLabel={sizeDeltaLabel}
+							onOpenOptimization={onOpenOptimizationDrawer}
+						/>
 
-					{canAccessPublishFeatures && <ScenePreview />}
+						{canAccessPublishFeatures && <ScenePreview />}
 
-					<Accordion type="single" collapsible className="flex flex-col gap-3">
 						{/*
 						  First in the list because it comes first in the workflow: what
-						  ships is decided here, before anything below it matters.
+						  ships is decided there, before anything below it matters.
 						*/}
-						<AccordionItem value="optimize">
-							<AccordionTrigger>
-								<Sparkles />
-								Optimization
-							</AccordionTrigger>
-							<AccordionContent>
-								<OptimizationOptions />
-							</AccordionContent>
-						</AccordionItem>
+						<OptimizationOptions />
 
-						<AccordionItem value="save">
-							<AccordionTrigger>
-								<Save />
-								Download
-							</AccordionTrigger>
-							<AccordionContent>
-								<SaveOptions />
-							</AccordionContent>
-						</AccordionItem>
+						<DrillDownTrigger to="download" icon={<Save />} label="Download" />
 
 						{!isAuthenticated && (
 							<div>
@@ -180,35 +156,45 @@ const PublishSidebarContent: FC = () => {
 
 						{canAccessPublishFeatures && (
 							<>
-								<AccordionItem value="publish">
-									<AccordionTrigger>
-										<Globe />
-										Publish
-									</AccordionTrigger>
-									<AccordionContent>
-										<PublishOptions
-											sceneId={sceneId}
-											publishState={publishState}
-											saveSceneSettings={saveSceneSettings}
-										/>
-									</AccordionContent>
-								</AccordionItem>
-
+								<DrillDownTrigger
+									to="publish"
+									icon={<Globe />}
+									label="Publish"
+									summary={
+										publishState.status === 'published' ? 'Published' : 'Draft'
+									}
+								/>
 								{publishState.status === 'published' && (
-									<AccordionItem value="embed">
-										<AccordionTrigger>
-											<Code />
-											Embed
-										</AccordionTrigger>
-										<AccordionContent>
-											<EmbedOptions sceneId={sceneId} projectId={projectId} />
-										</AccordionContent>
-									</AccordionItem>
+									<DrillDownTrigger to="embed" icon={<Code />} label="Embed" />
 								)}
 							</>
 						)}
-					</Accordion>
-				</div>
+					</DrillDownView>
+
+					<DrillDownView
+						id="download"
+						title="Download"
+						caption="Export the optimized model for use in other applications."
+					>
+						<SaveOptions />
+					</DrillDownView>
+
+					{canAccessPublishFeatures && (
+						<DrillDownView id="publish" title="Publish">
+							<PublishOptions
+								sceneId={sceneId}
+								publishState={publishState}
+								saveSceneSettings={saveSceneSettings}
+							/>
+						</DrillDownView>
+					)}
+
+					{canAccessPublishFeatures && publishState.status === 'published' && (
+						<DrillDownView id="embed" title="Embed">
+							<EmbedOptions sceneId={sceneId} projectId={projectId} />
+						</DrillDownView>
+					)}
+				</DrillDown>
 			</motion.div>
 		</div>
 	)

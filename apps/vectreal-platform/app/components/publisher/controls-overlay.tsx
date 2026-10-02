@@ -2,7 +2,7 @@ import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
-import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
@@ -10,11 +10,11 @@ import { DynamicSidebar, ToolSidebar } from '.'
 import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
 import { EmptyStage } from './shell/empty-stage'
-import { PreviewModeBadge } from './shell/preview-mode-badge'
 import { PublishCard } from './shell/publish-card'
 import { PublisherHeader } from './shell/publisher-header'
 import { PublisherSurfaceFallback } from './shell/publisher-surface-fallback'
 import { PUBLISHER_LAYER } from './shell/shell-layout'
+import { ToolBar } from './shell/tool-bar'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
@@ -256,24 +256,6 @@ const OverlayControls = ({
 		]
 	)
 
-	useEffect(() => {
-		if (!isPreviewMode) {
-			return
-		}
-
-		setProcessState((prev) => {
-			if (!prev.showSidebar && !prev.showPublishPanel) {
-				return prev
-			}
-
-			return {
-				...prev,
-				showSidebar: false,
-				showPublishPanel: false
-			}
-		})
-	}, [isPreviewMode, setProcessState])
-
 	const handleOpenPublishPanel = useCallback(() => {
 		setProcessState((prev) => {
 			if (prev.showPublishPanel && !prev.showSidebar) {
@@ -333,7 +315,7 @@ const OverlayControls = ({
 
 			{/*
 			  Row 2. This is the positioning ancestor for every piece of floating
-			  canvas chrome — the tool rail, the publish card, the preview
+			  canvas chrome — the tool bar, the publish card, the preview
 			  controls, and both sidebars all anchor to it with `absolute`, which
 			  is what keeps them from spilling over the header.
 			*/}
@@ -366,7 +348,9 @@ const OverlayControls = ({
 
 				{showSceneChrome && (
 					<>
-						<ToolSidebar user={user} isMobile={isMobile} />
+						<ToolBar />
+
+						<ToolSidebar isMobile={isMobile} />
 
 						<PublishCard
 							sceneBytes={currentSceneBytes}
@@ -401,8 +385,6 @@ const OverlayControls = ({
 							dashboardHref={sceneDetailsHref ?? '/dashboard'}
 							isMobile={isMobile}
 						/>
-
-						<PreviewModeBadge />
 
 						<PreviewCameraControls />
 					</>

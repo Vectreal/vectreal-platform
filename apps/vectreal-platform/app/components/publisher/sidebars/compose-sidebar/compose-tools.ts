@@ -8,7 +8,7 @@ import {
 
 import { CameraControlsSettings } from './camera-controls-settings'
 import { EnvironmentSettings } from './environment-settings'
-import HotspotsSettings from './hotspots-settings-panel'
+import { HotspotsSettings } from './hotspot-settings'
 import InteractionControlsSettings from './interaction-controls-settings-panel'
 import { ShadowSettings } from './shadow-settings'
 

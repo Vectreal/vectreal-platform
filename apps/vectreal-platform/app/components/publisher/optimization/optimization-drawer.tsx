@@ -1,14 +1,8 @@
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger
-} from '@shared/components/ui/accordion'
 import { Button } from '@shared/components/ui/button'
 import { formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SlidersHorizontal } from 'lucide-react'
-import { useEffect, useMemo, type FC } from 'react'
+import { useEffect, useMemo, useState, type FC } from 'react'
 import { Link } from 'react-router'
 
 import { OptimizeButton } from './optimize-button'
@@ -22,6 +16,11 @@ import { useOptimizationProcess } from './use-optimization-process'
 import { useOptimizationSettings } from './use-optimization-settings'
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import { PUBLISHER_LAYER } from '../shell/shell-layout'
+import {
+	DrillDown,
+	DrillDownTrigger,
+	DrillDownView
+} from '../sidebars/drill-down'
 import { DynamicSidebar } from '../sidebars/dynamic-sidebar'
 
 interface OptimizationDrawerProps {
@@ -41,6 +40,12 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	dashboardHref,
 	isMobile
 }) => {
+	// Starts at the root each time the drawer opens.
+	const [advancedPath, setAdvancedPath] = useState<string[]>([])
+	useEffect(() => {
+		if (!open) setAdvancedPath([])
+	}, [open])
+
 	const { optimizationPreset } = useOptimizationSettings()
 	const {
 		info,
@@ -161,66 +166,50 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 								transition={{ duration: 0.2 }}
 								className="space-y-3 px-5 py-4"
 							>
-								<AnimatePresence mode="wait">
-									{hasCompletedOptimizationPass ? (
-										<OptimizationResults
-											key="post-opt-metrics"
-											sizeInfo={sizeInfo}
-											resolvedMetrics={resolvedMetrics}
-											dracoReport={dracoReport}
-											simplificationOutcome={simplificationOutcome}
-										/>
-									) : (
-										<PreOptimizationSummary
-											key="pre-opt-metrics"
-											primitivesCount={info?.initial.primitivesCount}
-											texturesCount={info?.initial.texturesCount}
-											sizeInfo={sizeInfo}
-										/>
-									)}
-								</AnimatePresence>
-
-								<SceneNormalizationNotice />
-
-								<motion.section
-									initial={{ opacity: 0, y: 6 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.2, delay: 0.02 }}
+								<DrillDown
+									path={advancedPath}
+									onPathChange={setAdvancedPath}
+									rootTitle="Optimize Scene"
 								>
-									<PresetPanel />
-								</motion.section>
+									<DrillDownView id="root" className="space-y-3">
+										<AnimatePresence mode="wait">
+											{hasCompletedOptimizationPass ? (
+												<OptimizationResults
+													key="post-opt-metrics"
+													sizeInfo={sizeInfo}
+													resolvedMetrics={resolvedMetrics}
+													dracoReport={dracoReport}
+													simplificationOutcome={simplificationOutcome}
+												/>
+											) : (
+												<PreOptimizationSummary
+													key="pre-opt-metrics"
+													primitivesCount={info?.initial.primitivesCount}
+													texturesCount={info?.initial.texturesCount}
+													sizeInfo={sizeInfo}
+												/>
+											)}
+										</AnimatePresence>
 
-								<motion.section
-									initial={{ opacity: 0, y: 6 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.2, delay: 0.08 }}
-								>
-									<Accordion type="single" collapsible className="space-y-3">
-										<AccordionItem
-											value="advanced"
-											className="bg-shell-surface-soft/50 rounded-xl px-4 shadow-sm"
-										>
-											<AccordionTrigger className="py-3">
-												<div className="flex items-center gap-2.5 text-left">
-													<SlidersHorizontal className="text-muted-foreground h-4 w-4 shrink-0" />
-													<div>
-														<p className="text-sm font-semibold">
-															Advanced controls
-														</p>
-														<p className="text-muted-foreground text-xs">
-															Fine-tune compression, textures, and geometry.
-														</p>
-													</div>
-												</div>
-											</AccordionTrigger>
-											<AccordionContent>
-												<div className="pb-2">
-													<AdvancedPanel />
-												</div>
-											</AccordionContent>
-										</AccordionItem>
-									</Accordion>
-								</motion.section>
+										<SceneNormalizationNotice />
+
+										<PresetPanel />
+
+										<DrillDownTrigger
+											to="advanced"
+											icon={<SlidersHorizontal />}
+											label="Advanced controls"
+										/>
+									</DrillDownView>
+
+									<DrillDownView
+										id="advanced"
+										title="Advanced controls"
+										caption="Fine-tune compression, textures and geometry."
+									>
+										<AdvancedPanel />
+									</DrillDownView>
+								</DrillDown>
 							</motion.div>
 						)}
 					</AnimatePresence>

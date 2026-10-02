@@ -8,7 +8,7 @@ import {
 	DialogTitle
 } from '@shared/components/ui/dialog'
 import { Separator } from '@shared/components/ui/separator'
-import { Switch } from '@shared/components/ui/switch'
+import { Toggle } from '@shared/components/ui/toggle'
 import { useState } from 'react'
 
 import { useConsent } from './consent-context'
@@ -29,18 +29,14 @@ function CategoryRow({
 	onCheckedChange
 }: CategoryRowProps) {
 	return (
-		<div className="flex items-start justify-between gap-4 py-3">
-			<div className="min-w-0 flex-1">
-				<p className="text-sm font-medium">{label}</p>
-				<p className="text-muted-foreground mt-0.5 text-xs">{description}</p>
-			</div>
-			<Switch
-				checked={checked}
-				onCheckedChange={onCheckedChange}
-				disabled={disabled}
-				aria-label={`Toggle ${label}`}
-			/>
-		</div>
+		<Toggle
+			className="py-3"
+			label={label}
+			description={description}
+			checked={checked}
+			onCheckedChange={onCheckedChange}
+			disabled={disabled}
+		/>
 	)
 }
 

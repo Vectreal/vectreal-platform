@@ -8,31 +8,25 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
+import { Slider, type SliderPreset } from '@shared/components/ui/slider'
+import { Toggle } from '@shared/components/ui/toggle'
+import {
+	ToggleGroup,
+	ToggleGroupItem
+} from '@shared/components/ui/toggle-group'
+import { valueMappings } from '@shared/utils'
 import {
 	EnvironmentKey,
 	EnvironmentProps,
 	EnvironmentResolution
 } from '@vctrl/core'
 import { useAtom } from 'jotai/react'
-import { useCallback } from 'react'
+import { Image as ImageIcon } from 'lucide-react'
+import { useCallback, useState } from 'react'
 
 import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
-import { valueMappings } from '../../../../../lib/utils/value-mapping'
-import {
-	EnhancedSettingSlider,
-	PresetButton,
-	SettingToggle,
-	ToggleButtonGroup
-} from '../../../settings-components'
-import { PresetButtonGroup } from '../../preset-button-group'
-import {
-	SidebarSection,
-	SidebarSectionContent,
-	SettingRow,
-	SettingGroup
-} from '../../sidebar-section'
-
-import type { ToggleButtonGroupOption } from '../../../settings-components'
+import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
+import { SettingGroup } from '../../sidebar-section'
 
 const ENVIRONMENT_PRESETS: EnvironmentKey[] = [
 	'nature-moonlit',
@@ -64,42 +58,31 @@ const GROUPED_ENVIRONMENT_PRESETS = ENVIRONMENT_PRESETS.reduce(
 	{} as Record<string, EnvironmentKey[]>
 )
 
-const RESOLUTION_OPTIONS: ToggleButtonGroupOption<EnvironmentResolution>[] = [
-	{ value: '1k', label: '1k' },
-	{ value: '4k', label: '4k' }
-]
+const RESOLUTION_OPTIONS: EnvironmentResolution[] = ['1k', '4k']
 
-const LIGHTING_OPTIONS: ToggleButtonGroupOption<number>[] = [
+const LIGHTING_PRESETS: SliderPreset[] = [
 	{ value: 0.3, label: 'Dim' },
 	{ value: 1, label: 'Normal' },
 	{ value: 2.5, label: 'Bright' }
 ]
 
-const BG_BLUR_OPTIONS: ToggleButtonGroupOption<number>[] = [
+const BG_BLUR_PRESETS: SliderPreset[] = [
 	{ value: 0, label: 'Sharp' },
 	{ value: 0.3, label: 'Soft' },
 	{ value: 0.8, label: 'Blurred' }
 ]
 
-const BG_BRIGHTNESS_OPTIONS: ToggleButtonGroupOption<number>[] = [
+const BG_BRIGHTNESS_PRESETS: SliderPreset[] = [
+	// Not 0: the value is read with `|| 1`, so a stored 0 would come back as 1.
 	{ value: 0.001, label: 'Off' },
 	{ value: 1, label: 'Normal' },
 	{ value: 2, label: 'Bright' }
 ]
 
-function getClosestValue(
-	options: ToggleButtonGroupOption<number>[],
-	current: number
-): number {
-	return options.reduce((closest, o) =>
-		Math.abs(o.value - current) < Math.abs(closest.value - current)
-			? o
-			: closest
-	).value
-}
-
 const EnvironmentSettings = () => {
 	const [environment, setEnvironment] = useAtom(environmentAtom)
+	const [path, setPath] = useState<string[]>([])
+
 	const handleEnvironmentChange = useCallback(
 		(
 			key: keyof EnvironmentProps,
@@ -114,21 +97,17 @@ const EnvironmentSettings = () => {
 	)
 
 	return (
-		<SidebarSection
-			title="HDR Environment"
-			tooltip="Controls scene lighting and background, affecting reflections and model appearance."
-		>
-			<SidebarSectionContent>
-				{/* HDR Preset */}
-				<SettingGroup label="HDR Preset">
-					<div className="grid grid-cols-[4fr_1fr] gap-2">
+		<DrillDown path={path} onPathChange={setPath} rootTitle="Environment">
+			<DrillDownView id="root">
+				<SettingGroup label="HDR preset">
+					<div className="grid grid-cols-[1fr_auto] gap-2">
 						<Select
 							value={environment.preset}
 							onValueChange={(value) => {
 								handleEnvironmentChange('preset', value as EnvironmentKey)
 							}}
 						>
-							<SelectTrigger className="w-full capitalize">
+							<SelectTrigger className="w-full min-w-0 capitalize">
 								<SelectValue placeholder="Select Environment Preset" />
 							</SelectTrigger>
 							<SelectContent>
@@ -152,170 +131,95 @@ const EnvironmentSettings = () => {
 							</SelectContent>
 						</Select>
 
-						<div className="flex shrink-0 items-center gap-1">
-							{RESOLUTION_OPTIONS.map((res) => {
-								const isActive = environment.environmentResolution === res.value
-
-								return (
-									<PresetButton
-										key={res.value}
-										label={res.label}
-										isActive={isActive}
-										className="w-full"
-										onClick={() =>
-											handleEnvironmentChange(
-												'environmentResolution',
-												res.value
-											)
-										}
-									/>
-								)
-							})}
-						</div>
+						<ToggleGroup
+							type="single"
+							aria-label="Environment resolution"
+							value={environment.environmentResolution}
+							onValueChange={(value) => {
+								if (value) {
+									handleEnvironmentChange(
+										'environmentResolution',
+										value as EnvironmentResolution
+									)
+								}
+							}}
+							className="w-auto"
+						>
+							{RESOLUTION_OPTIONS.map((resolution) => (
+								<ToggleGroupItem key={resolution} value={resolution}>
+									{resolution}
+								</ToggleGroupItem>
+							))}
+						</ToggleGroup>
 					</div>
 				</SettingGroup>
 
-				{/* Lighting Strength */}
-				<SettingRow>
-					<PresetButtonGroup
-						label="Lighting Strength"
-						sliderChildren={
-							<EnhancedSettingSlider
-								id="environment-intensity"
-								sliderProps={{
-									min: 0,
-									max: 5,
-									step: 0.01,
-									value: environment.environmentIntensity || 1,
-									onChange: (value) =>
-										handleEnvironmentChange('environmentIntensity', value)
-								}}
-								label="Lighting Strength"
-								tooltip="Controls how bright the environment map appears, affecting lighting and reflections."
-								labelProps={{
-									low: '0 - Off',
-									high: '5 - Very Bright'
-								}}
-								formatValue={(value) => value.toFixed(2)}
-								valueMapping={valueMappings.quadratic}
-								allowDirectInput={true}
-							/>
-						}
-					>
-						<ToggleButtonGroup
-							options={LIGHTING_OPTIONS}
-							value={getClosestValue(
-								LIGHTING_OPTIONS,
-								environment.environmentIntensity || 1
-							)}
-							onChange={(value) =>
-								handleEnvironmentChange('environmentIntensity', value)
-							}
-							className="w-full"
-						/>
-					</PresetButtonGroup>
-				</SettingRow>
-
-				{/* Background Toggle */}
-				<SettingToggle
-					enabled={!!environment.background}
-					onToggle={(enabled) =>
-						setEnvironment((prev) => ({
-							...prev,
-							background: enabled
-						}))
+				<Slider
+					label="Lighting"
+					min={0}
+					max={5}
+					step={0.01}
+					mapping={valueMappings.quadratic}
+					presets={LIGHTING_PRESETS}
+					value={environment.environmentIntensity || 1}
+					onValueChange={(value) =>
+						handleEnvironmentChange('environmentIntensity', value)
 					}
-					title="Show as background"
-					description="Display the environment map as the background of the scene."
-					info="This will set the environment map as the background of the scene, allowing it to be visible behind the model."
 				/>
 
-				{/* Background Blur */}
-				{environment.background && (
-					<SettingRow>
-						<PresetButtonGroup
-							label="Background Blur"
-							sliderChildren={
-								<EnhancedSettingSlider
-									id="environment-blur"
-									sliderProps={{
-										min: 0,
-										max: 1,
-										step: 0.01,
-										value: environment.backgroundBlurriness || 0,
-										onChange: (value) =>
-											handleEnvironmentChange('backgroundBlurriness', value)
-									}}
-									label="Background Blur"
-									tooltip="Controls the blurriness of the background when environment is visible."
-									labelProps={{
-										low: '0 - Sharp',
-										high: '1 - Fully Blurred'
-									}}
-									formatValue={(value) => value.toFixed(2)}
-									allowDirectInput={true}
-								/>
-							}
-						>
-							<ToggleButtonGroup
-								options={BG_BLUR_OPTIONS}
-								value={getClosestValue(
-									BG_BLUR_OPTIONS,
-									environment.backgroundBlurriness || 0
-								)}
-								onChange={(value) =>
-									handleEnvironmentChange('backgroundBlurriness', value)
-								}
-								className="w-full"
-							/>
-						</PresetButtonGroup>
-					</SettingRow>
-				)}
+				<DrillDownTrigger
+					to="background"
+					icon={<ImageIcon />}
+					label="Background"
+					summary={environment.background ? 'Shown' : 'Hidden'}
+				/>
+			</DrillDownView>
 
-				{/* Background Brightness */}
-				{environment.background && (
-					<SettingRow>
-						<PresetButtonGroup
-							label="Background Brightness"
-							sliderChildren={
-								<EnhancedSettingSlider
-									id="background-intensity"
-									sliderProps={{
-										min: 0,
-										max: 3,
-										step: 0.01,
-										value: environment.backgroundIntensity || 1,
-										onChange: (value) =>
-											handleEnvironmentChange('backgroundIntensity', value)
-									}}
-									label="Background Brightness"
-									tooltip="Controls the brightness of the background when environment is visible."
-									labelProps={{
-										low: '0 - Off',
-										high: '3 - Very Bright'
-									}}
-									formatValue={(value) => value.toFixed(2)}
-									valueMapping={valueMappings.quadratic}
-									allowDirectInput={true}
-								/>
-							}
-						>
-							<ToggleButtonGroup
-								options={BG_BRIGHTNESS_OPTIONS}
-								value={getClosestValue(
-									BG_BRIGHTNESS_OPTIONS,
-									environment.backgroundIntensity || 1
-								)}
-								onChange={(value) =>
-									handleEnvironmentChange('backgroundIntensity', value)
-								}
-								className="w-full"
-							/>
-						</PresetButtonGroup>
-					</SettingRow>
-				)}
-			</SidebarSectionContent>
-		</SidebarSection>
+			<DrillDownView
+				id="background"
+				title="Background"
+				caption="Show the environment map behind the model, and how it looks there."
+			>
+				<div className="grid grid-cols-3 gap-2">
+					<Toggle
+						layout="tile"
+						label="Show"
+						icon={<ImageIcon />}
+						checked={!!environment.background}
+						onCheckedChange={(enabled) =>
+							handleEnvironmentChange('background', enabled)
+						}
+					/>
+				</div>
+
+				<Slider
+					label="Blur"
+					min={0}
+					max={1}
+					step={0.01}
+					presets={BG_BLUR_PRESETS}
+					disabled={!environment.background}
+					value={environment.backgroundBlurriness || 0}
+					onValueChange={(value) =>
+						handleEnvironmentChange('backgroundBlurriness', value)
+					}
+				/>
+
+				<Slider
+					label="Brightness"
+					min={0}
+					max={3}
+					step={0.01}
+					mapping={valueMappings.quadratic}
+					presets={BG_BRIGHTNESS_PRESETS}
+					disabled={!environment.background}
+					value={environment.backgroundIntensity || 1}
+					onValueChange={(value) =>
+						handleEnvironmentChange('backgroundIntensity', value)
+					}
+				/>
+			</DrillDownView>
+		</DrillDown>
 	)
 }
 

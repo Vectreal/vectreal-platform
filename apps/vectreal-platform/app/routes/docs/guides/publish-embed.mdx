@@ -31,7 +31,7 @@ It is independent of **Show scene info**: switching the info button off does not
 The badge is resolved from the plan of the organization that owns the scene, at the moment the embed document loads rather than when the scene was published. An upgrade therefore takes effect on the next embed load, not the next scene save. It follows the plan that is actually in effect, so a paid subscription that has lapsed is served as a free one and the badge returns.
 
 {/* claims
-present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx title="Show scene info"
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Show scene info"
 present apps/vectreal-platform/app/constants/plan-config.ts embed_branding_removal: false
 present apps/vectreal-platform/app/lib/domain/embed/embed-branding-policy.ts return !decision.granted
 */}

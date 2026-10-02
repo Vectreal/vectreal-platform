@@ -1,4 +1,8 @@
 import { Button } from '@shared/components/ui/button'
+import {
+	ChoiceList,
+	type ChoiceListOption
+} from '@shared/components/ui/choice-list'
 import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
@@ -6,45 +10,36 @@ import { Archive, Box, Download, FileAxis3d, Smartphone } from 'lucide-react'
 import { useState, type FC } from 'react'
 import { toast } from 'sonner'
 
-import { Option, RadioAccordion } from '../../../../radio-accordion'
 import { itemVariants } from '../../animation'
 
 type ExportFormat = 'glb' | 'gltf' | 'glb-draco' | 'usdz'
-// | 'obj';
 
-const EXPORT_OPTIONS: Option<ExportFormat>[] = [
+const EXPORT_OPTIONS: ChoiceListOption<ExportFormat>[] = [
 	{
-		id: 'glb',
+		value: 'glb',
 		label: 'GLB (Binary)',
-		description:
-			'Single binary file format, optimized for web and most 3D platforms',
-		icon: <FileAxis3d className="h-4 w-4" />
+		detail: 'A single binary file, the format the web and most 3D tools read.',
+		icon: <FileAxis3d />
 	},
 	{
-		id: 'gltf',
+		value: 'gltf',
 		label: 'GLTF (ZIP)',
-		description:
-			'JSON-based format with separate assets, ideal for debugging and editing',
-		icon: <Box className="h-4 w-4" />
+		detail: 'JSON with its assets beside it, easiest to inspect and edit.',
+		icon: <Box />
 	},
 	{
-		id: 'glb-draco',
+		value: 'glb-draco',
 		label: 'GLB (Draco-compressed)',
-		description:
-			'Smallest download — geometry compressed with Draco, single binary file',
-		icon: <Archive className="h-4 w-4" />
+		detail:
+			'The smallest download: geometry compressed with Draco, in one binary file.',
+		icon: <Archive />
 	},
 	{
-		id: 'usdz',
+		value: 'usdz',
 		label: 'USDZ',
-		description: 'For AR Quick Look on iOS and macOS devices',
-		icon: <Smartphone className="h-4 w-4" />
+		detail: 'For AR Quick Look on iOS and macOS.',
+		icon: <Smartphone />
 	}
-	// {
-	// 	value: 'obj',
-	// 	label: 'OBJ',
-	// 	desc: 'Legacy format, wide support'
-	// }
 ]
 
 function handleExportSuccess() {
@@ -65,24 +60,7 @@ export const SaveOptions: FC = () => {
 		handleThreeUsdzExport
 	} = useExportModel(handleExportSuccess, handleExportError)
 
-	function handleFormatChange(value: Option<ExportFormat>) {
-		if (value.id === format) {
-			return
-		}
-
-		setFormat(value.id)
-	}
-
-	const selectedFormatOption = EXPORT_OPTIONS.find(
-		(option) => option.id === format
-	)
-
 	const handleDownload = () => {
-		if (!selectedFormatOption) {
-			toast.error('Please select a valid export format.')
-			return
-		}
-
 		if (!optimizer?.isReady) {
 			toast.error(
 				'Model is still preparing. Try downloading again in a moment.'
@@ -90,7 +68,7 @@ export const SaveOptions: FC = () => {
 			return
 		}
 
-		if (selectedFormatOption.id === 'usdz') {
+		if (format === 'usdz') {
 			if (!file) {
 				toast.error('Model not loaded or optimization failed.')
 				return
@@ -106,40 +84,28 @@ export const SaveOptions: FC = () => {
 			return
 		}
 
-		if (selectedFormatOption.id === 'glb') {
+		if (format === 'glb') {
 			handleDocumentGltfExport(document, file, true)
-		} else if (selectedFormatOption.id === 'gltf') {
+		} else if (format === 'gltf') {
 			handleDocumentGltfExport(document, file, false)
-		} else if (selectedFormatOption.id === 'glb-draco') {
+		} else if (format === 'glb-draco') {
 			handleDocumentGlbDracoExport(document, file)
 		}
 	}
 
 	return (
 		<motion.div variants={itemVariants} className="flex flex-col gap-3 pb-4">
-			<div className="space-y-3">
-				{/*
-				  No heading of its own: the accordion trigger above already says
-				  "Download", and a second title inside it was a third section-header
-				  shape competing with the two the sidebar actually uses.
-				*/}
-				<p className="text-muted-foreground text-xs">
-					Export your optimized 3D model for use in other applications
-				</p>
+			<ChoiceList
+				aria-label="Export format"
+				options={EXPORT_OPTIONS}
+				value={format}
+				onValueChange={setFormat}
+			/>
 
-				<RadioAccordion
-					label="Export Format"
-					description="Choose the format for downloading your 3D model."
-					selectedOption={selectedFormatOption}
-					onSelectPreset={handleFormatChange}
-					options={EXPORT_OPTIONS}
-				/>
-
-				<Button onClick={handleDownload} variant="outline" className="w-full">
-					<Download className="h-4 w-4" />
-					Download
-				</Button>
-			</div>
+			<Button onClick={handleDownload} variant="outline" className="w-full">
+				<Download className="h-4 w-4" />
+				Download
+			</Button>
 		</motion.div>
 	)
 }

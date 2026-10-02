@@ -65,7 +65,7 @@ export function SceneDeleteButton({
 			<DestructiveActionButton
 				disabled={!isClientMounted || isDeleting}
 				onClick={() => setDeleteDialogOpen(true)}
-				className="w-full"
+				layout="block"
 			>
 				Delete scene
 			</DestructiveActionButton>

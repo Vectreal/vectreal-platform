@@ -1,7 +1,5 @@
 import type { FieldConfig } from '../../../../../types/settings-field'
 
-export type { FieldConfig }
-
 // ─── Accumulative shadow fields ──────────────────────────────────────────────
 
 // "Darkness" drives the bake light's ambient fill (drei RandomizedLight.ambient),
@@ -33,7 +31,6 @@ export const SHADOW_PRIMARY_FIELDS: FieldConfig[] = [
 		min: 0,
 		max: 1,
 		step: 0.01,
-		tooltip: 'Overall shadow strength.',
 		formatValue: (value) => value.toFixed(2)
 	},
 	{
@@ -42,8 +39,6 @@ export const SHADOW_PRIMARY_FIELDS: FieldConfig[] = [
 		min: 0,
 		max: 1,
 		step: 0.01,
-		tooltip:
-			'How deep the shadow core gets. Higher reduces ambient fill under the model for a darker, more solid shadow.',
 		formatValue: (value) => `${Math.round(value * 100)}%`
 	},
 	{
@@ -54,8 +49,6 @@ export const SHADOW_PRIMARY_FIELDS: FieldConfig[] = [
 		min: 0,
 		max: 3,
 		step: 0.05,
-		tooltip:
-			'Shadow softness. Higher values create softer, more diffuse edges.',
 		formatValue: (value) => value.toFixed(2)
 	}
 ]
@@ -124,8 +117,6 @@ export const SHADOW_ADVANCED_FIELDS: FieldConfig[] = [
 		min: 1,
 		max: 12,
 		step: 0.1,
-		tooltip:
-			'Size of the shadow projection plane, as a multiple of the model size. Keep large enough to avoid clipping the shadow.',
 		formatValue: (value) => value.toFixed(1)
 	},
 	{
@@ -137,8 +128,6 @@ export const SHADOW_ADVANCED_FIELDS: FieldConfig[] = [
 		min: 0.85,
 		max: 1.1,
 		step: 0.01,
-		tooltip:
-			'Nudges the auto cutoff. The threshold is calibrated to the environment; lower it to deepen the shadow, raise it if the ground hazes.',
 		formatValue: (value) => `${Math.round(value * 100)}%`
 	}
 ]
@@ -153,8 +142,6 @@ export const SHADOW_AO_INTENSITY_FIELD: FieldConfig = {
 	min: 0.5,
 	max: 4,
 	step: 0.1,
-	tooltip:
-		'How dark the ambient occlusion darkens crevices and contact gaps on the model.',
 	formatValue: (value) => value.toFixed(1)
 }
 
@@ -170,7 +157,6 @@ export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
 		min: 0,
 		max: 1,
 		step: 0.01,
-		tooltip: 'How dark the ground shadow is.',
 		formatValue: (value) => value.toFixed(2)
 	},
 	{
@@ -179,8 +165,6 @@ export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
 		min: 0.5,
 		max: 8,
 		step: 0.1,
-		tooltip:
-			'Blur of the ground shadow. Higher is softer and hides the model surface detail.',
 		formatValue: (value) => value.toFixed(1)
 	},
 	{
@@ -189,7 +173,6 @@ export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
 		min: 1,
 		max: 4,
 		step: 0.1,
-		tooltip: 'How far the ground shadow spreads out from under the model.',
 		formatValue: (value) => value.toFixed(1)
 	},
 	{
@@ -198,8 +181,6 @@ export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
 		min: 0.05,
 		max: 1.5,
 		step: 0.05,
-		tooltip:
-			'How far up from the floor the shadow reaches. Lower is tighter and more accurate; higher reaches up the model for a broad grounding pool.',
 		formatValue: (value) => `${Math.round(value * 100)}%`
 	}
 ]

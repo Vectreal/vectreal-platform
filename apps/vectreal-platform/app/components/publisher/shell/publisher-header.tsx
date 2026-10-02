@@ -64,7 +64,7 @@ export const PublisherHeader: FC<PublisherHeaderProps> = ({
 
 	// The header is positioned with a z-index, which makes it a stacking context:
 	// everything inside is capped at the header's own level. Sitting below the
-	// tool rail meant the location dropdown painted behind the rail no matter how
+	// tool bar meant the location dropdown painted behind the bar no matter how
 	// high its own z-index went.
 	return (
 		<header

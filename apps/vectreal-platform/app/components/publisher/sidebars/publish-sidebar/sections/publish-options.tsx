@@ -1,3 +1,4 @@
+import { Toggle } from '@shared/components/ui/toggle'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
@@ -25,7 +26,6 @@ import {
 } from '../../../../../lib/stores/upgrade-modal-store'
 import { InlineNotice } from '../../../../layout-components'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
-import { SettingToggle } from '../../../settings-components'
 import { itemVariants } from '../../animation'
 import { SidebarSection, SidebarSectionContent } from '../../sidebar-section'
 
@@ -235,10 +235,10 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			*/}
 			<SidebarSection title="Viewer">
 				<SidebarSectionContent>
-					<SettingToggle
-						enabled={shouldShowInfoPopover(presentation)}
-						onToggle={handleToggleInfoPopover}
-						title="Show scene info"
+					<Toggle
+						checked={shouldShowInfoPopover(presentation)}
+						onCheckedChange={handleToggleInfoPopover}
+						label="Show scene info"
 						description="Adds an info button to the viewer, opening this scene's name and description. Applies to embeds and preview links as soon as you save."
 					/>
 				</SidebarSectionContent>

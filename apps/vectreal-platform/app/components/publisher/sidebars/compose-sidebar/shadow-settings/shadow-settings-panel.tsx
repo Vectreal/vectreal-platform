@@ -1,10 +1,17 @@
+import { Toggle } from '@shared/components/ui/toggle'
 import {
-	Collapsible,
-	CollapsibleContent
-} from '@shared/components/ui/collapsible'
-import { Label } from '@shared/components/ui/label'
-import { Switch } from '@shared/components/ui/switch'
+	ToggleGroup,
+	ToggleGroupItem
+} from '@shared/components/ui/toggle-group'
 import { useAtom } from 'jotai/react'
+import {
+	Circle,
+	Contrast,
+	Pause,
+	SlidersHorizontal,
+	Sun,
+	SunDim
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
@@ -19,77 +26,18 @@ import {
 	type ShadowPreset
 } from './constants'
 import { shadowsAtom } from '../../../../../lib/stores/scene-settings-store'
-import { InfoTooltip } from '../../../../info-tooltip'
 import { InlineNotice } from '../../../../layout-components'
-import {
-	EnhancedSettingSlider,
-	SettingToggle,
-	ToggleButtonGroup
-} from '../../../settings-components'
-import { CollapsibleSectionTrigger } from '../../accordion-components'
-import {
-	SettingGroup,
-	SidebarSection,
-	SidebarSectionContent
-} from '../../sidebar-section'
+import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
+import { FieldSlider } from '../../field-slider'
+import { SettingGroup } from '../../sidebar-section'
 
-/**
- * The presets as `ToggleButtonGroup` wants them.
- *
- * The grid these replaced expressed "active" as a solid `bg-primary` fill — a
- * fourth selection language in the compose panels, and the same defect as the
- * hotspot row this change started from. `description` was a `title=` hover
- * tooltip, invisible on touch and to the keyboard; as `subLabel` it is simply
- * on screen.
- */
-const PRESET_OPTIONS: ToggleButtonGroupOption<string>[] = SHADOW_PRESETS.map(
-	(preset) => ({
-		value: preset.id,
-		label: preset.label,
-		subLabel: preset.description
-	})
-)
-
-import type { FieldConfig } from '../../../../../types/settings-field'
-import type { ToggleButtonGroupOption } from '../../../settings-components'
 import type { ShadowsProps } from '@vctrl/core'
-
-interface ShadowFieldProps {
-	field: FieldConfig
-	idPrefix: string
-	value: number
-	onChange: (key: string, value: number) => void
-}
-
-const ShadowField = ({
-	field,
-	idPrefix,
-	value,
-	onChange
-}: ShadowFieldProps) => (
-	<EnhancedSettingSlider
-		id={`${idPrefix}-${field.key}`}
-		sliderProps={{
-			min: field.min,
-			max: field.max,
-			step: field.step,
-			value: value ?? field.min,
-			onChange: (v) => onChange(field.key, v)
-		}}
-		label={field.label}
-		tooltip={field.tooltip}
-		labelProps={{ low: `${field.min}`, high: `${field.max}` }}
-		formatValue={field.formatValue}
-		valueMapping={field.valueMapping}
-		allowDirectInput
-	/>
-)
 
 const COMMIT_DELAY_MS = 250
 
 const ShadowSettingsPanel = () => {
 	const [shadows, setShadows] = useAtom(shadowsAtom)
-	const [advancedOpen, setAdvancedOpen] = useState(false)
+	const [path, setPath] = useState<string[]>([])
 
 	// Local draft so dragging a slider stays responsive without re-baking the
 	// accumulative shadow on every tick (each prop change resets the bake and
@@ -118,20 +66,24 @@ const ShadowSettingsPanel = () => {
 		[setShadows]
 	)
 
+	/**
+	 * Commits at once, dropping any pending slider commit. For a click rather
+	 * than a drag (a switch, a preset), so there is no per-tick re-bake to
+	 * debounce, and a preset sets several params in one snappy re-bake.
+	 */
+	const commitNow = useCallback(
+		(next: ShadowsProps) => {
+			if (commitTimer.current) clearTimeout(commitTimer.current)
+			setDraft(next)
+			setShadows(next)
+		},
+		[setShadows]
+	)
+
 	const shadowsEnabled = draft.enabled ?? false
 
-	const handleToggleShadows = (enabled: boolean) => {
-		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const next = { ...draft, enabled }
-		setDraft(next)
-		setShadows(next)
-	}
-
-	// Presets set several params at once, so commit immediately (no per-tick
-	// debounce) for a single, snappy re-bake.
-	const handleApplyPreset = (preset: ShadowPreset) => {
-		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const next: ShadowsProps = {
+	const handleApplyPreset = (preset: ShadowPreset) =>
+		commitNow({
 			...draft,
 			opacity: preset.values.opacity,
 			light: {
@@ -140,53 +92,25 @@ const ShadowSettingsPanel = () => {
 				radius: preset.values.light.radius,
 				position: preset.values.light.position
 			}
-		}
-		setDraft(next)
-		setShadows(next)
-	}
+		})
 
-	// Boolean toggles commit immediately — a single click, not a drag, so there is
-	// no per-tick re-bake to debounce.
-	const handleToggleAo = (value: boolean) => {
-		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const next: ShadowsProps = {
+	const handleToggleAo = (value: boolean) =>
+		commitNow({
 			...draft,
 			ao: value,
 			// Seed a sensible strength the first time AO is turned on so its slider
 			// (min 0.5) isn't left below range on scenes saved before AO existed.
 			...(value && draft.aoIntensity == null ? { aoIntensity: 1.4 } : {})
-		}
-		setDraft(next)
-		setShadows(next)
-	}
+		})
 
-	const handleToggleAoAtRest = (value: boolean) => {
-		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const next: ShadowsProps = { ...draft, aoAtRest: value }
-		setDraft(next)
-		setShadows(next)
-	}
+	const activePreset = SHADOW_PRESETS.find(
+		(preset) =>
+			preset.values.opacity === draft.opacity &&
+			preset.values.light.ambient === draft.light?.ambient &&
+			preset.values.light.radius === draft.light?.radius
+	)
 
-	// The ground (contact) shadow's enabled flag is nested under `contact`.
-	const handleToggleContact = (value: boolean) => {
-		if (commitTimer.current) clearTimeout(commitTimer.current)
-		const next: ShadowsProps = {
-			...draft,
-			contact: { ...draft.contact, enabled: value }
-		}
-		setDraft(next)
-		setShadows(next)
-	}
-
-	const activePresetId =
-		SHADOW_PRESETS.find(
-			(preset) =>
-				preset.values.opacity === draft.opacity &&
-				preset.values.light.ambient === draft.light?.ambient &&
-				preset.values.light.radius === draft.light?.radius
-		)?.id ?? null
-
-	const handleFieldChange = (key: string, value: number | string) => {
+	const handleFieldChange = (key: string, value: number) => {
 		// "Darkness" is a virtual control: it drives the bake light's ambient fill
 		// (inverted — more darkness = less fill = a deeper shadow core).
 		if (key === SHADOW_DARKNESS_KEY) {
@@ -194,7 +118,7 @@ const ShadowSettingsPanel = () => {
 				...draft,
 				light: {
 					...draft.light,
-					ambient: darknessToAmbient(value as number)
+					ambient: darknessToAmbient(value)
 				}
 			})
 			return
@@ -250,141 +174,154 @@ const ShadowSettingsPanel = () => {
 		return (draft[key as keyof ShadowsProps] as number) ?? 0
 	}
 
-	return (
-		/*
-		  Titleless on purpose. `DynamicSidebar` already draws "Shadows" and the
-		  tool's description above this panel, so a section of the same name printed
-		  the word twice - the defect the Hotspots panel was rebuilt to remove.
-		  The master switch is a setting rather than section chrome, so it says so.
-		*/
-		<SidebarSection>
-			<SidebarSectionContent>
-				<SettingToggle
-					enabled={shadowsEnabled}
-					onToggle={handleToggleShadows}
-					title="Cast shadows"
-					description="Ground the model with a directional shadow."
-					info="Configure shadow quality in your scene."
-				/>
+	const contactEnabled = draft.contact?.enabled ?? false
+	const aoEnabled = draft.ao ?? false
 
-				{!shadowsEnabled && (
+	return (
+		<DrillDown path={path} onPathChange={setPath} rootTitle="Shadows">
+			<DrillDownView id="root">
+				<div className="grid grid-cols-3 gap-2">
+					<Toggle
+						layout="tile"
+						label="Cast shadows"
+						icon={<SunDim />}
+						checked={shadowsEnabled}
+						onCheckedChange={(enabled) => commitNow({ ...draft, enabled })}
+					/>
+				</div>
+
+				{shadowsEnabled ? (
+					<>
+						<SettingGroup
+							label="Preset"
+							description="Sets opacity, darkness, softness and light angle together."
+						>
+							<ToggleGroup
+								type="single"
+								aria-label="Shadow preset"
+								value={activePreset?.id ?? ''}
+								onValueChange={(id) => {
+									const preset = SHADOW_PRESETS.find((entry) => entry.id === id)
+									if (preset) handleApplyPreset(preset)
+								}}
+							>
+								{SHADOW_PRESETS.map((preset) => (
+									<ToggleGroupItem key={preset.id} value={preset.id}>
+										{preset.label}
+									</ToggleGroupItem>
+								))}
+							</ToggleGroup>
+						</SettingGroup>
+
+						<div className="space-y-2">
+							<DrillDownTrigger
+								to="directional"
+								icon={<Sun />}
+								label="Directional shadow"
+								summary={activePreset?.label ?? 'Custom'}
+							/>
+							<DrillDownTrigger
+								to="ground"
+								icon={<Circle />}
+								label="Ground shadow"
+								summary={contactEnabled ? 'On' : 'Off'}
+							/>
+							<DrillDownTrigger
+								to="advanced"
+								icon={<SlidersHorizontal />}
+								label="Advanced"
+								summary={aoEnabled ? 'AO on' : undefined}
+							/>
+						</div>
+					</>
+				) : (
 					<InlineNotice tone="neutral">
 						Turn on shadows to configure their quality.
 					</InlineNotice>
 				)}
+			</DrillDownView>
 
-				{shadowsEnabled && (
-					<div className="space-y-4">
-						<SettingGroup label="Presets">
-							<ToggleButtonGroup
-								options={PRESET_OPTIONS}
-								isActive={(id) => activePresetId === id}
-								onChange={(id) => {
-									const preset = SHADOW_PRESETS.find((entry) => entry.id === id)
-									if (preset) handleApplyPreset(preset)
-								}}
-							/>
-						</SettingGroup>
+			<DrillDownView
+				id="directional"
+				title="Directional shadow"
+				caption="The baked shadow cast by the scene light. Drag the light handle in the scene to change its angle."
+			>
+				{SHADOW_PRIMARY_FIELDS.map((field) => (
+					<FieldSlider
+						key={field.key}
+						field={field}
+						value={getFieldValue(field.key)}
+						onChange={handleFieldChange}
+					/>
+				))}
+			</DrillDownView>
 
-						<SettingGroup label="Directional shadow">
-							{SHADOW_PRIMARY_FIELDS.map((field) => (
-								<ShadowField
-									key={field.key}
-									field={field}
-									idPrefix="shadow"
-									value={getFieldValue(field.key)}
-									onChange={handleFieldChange}
-								/>
-							))}
-						</SettingGroup>
+			<DrillDownView
+				id="ground"
+				title="Ground shadow"
+				caption="A soft pool under the model, independent of the light, so it stays grounded."
+			>
+				<div className="grid grid-cols-3 gap-2">
+					<Toggle
+						layout="tile"
+						label="Ground shadow"
+						icon={<Circle />}
+						checked={contactEnabled}
+						// The ground shadow's enabled flag is nested under `contact`.
+						onCheckedChange={(enabled) =>
+							commitNow({ ...draft, contact: { ...draft.contact, enabled } })
+						}
+					/>
+				</div>
+				{SHADOW_CONTACT_FIELDS.map((field) => (
+					<FieldSlider
+						key={field.key}
+						field={field}
+						disabled={!contactEnabled}
+						value={getFieldValue(field.key)}
+						onChange={handleFieldChange}
+					/>
+				))}
+			</DrillDownView>
 
-						<SettingGroup
-							label="Ground shadow"
-							action={
-								<div className="flex items-center gap-2">
-									<InfoTooltip content="A soft pool under the model approximating the ambient occlusion it casts on the floor. Independent of the light, so it stays grounded." />
-									<Switch
-										id="shadow-ground-toggle"
-										aria-label="Enable ground shadow"
-										checked={draft.contact?.enabled ?? false}
-										onCheckedChange={handleToggleContact}
-									/>
-								</div>
-							}
-						>
-							{(draft.contact?.enabled ?? false) &&
-								SHADOW_CONTACT_FIELDS.map((field) => (
-									<ShadowField
-										key={field.key}
-										field={field}
-										idPrefix="shadow-contact"
-										value={getFieldValue(field.key)}
-										onChange={handleFieldChange}
-									/>
-								))}
-						</SettingGroup>
-
-						<Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-							<CollapsibleSectionTrigger isOpen={advancedOpen}>
-								Advanced
-							</CollapsibleSectionTrigger>
-							<CollapsibleContent className="space-y-4 pt-3">
-								{SHADOW_ADVANCED_FIELDS.map((field) => (
-									<ShadowField
-										key={field.key}
-										field={field}
-										idPrefix="shadow-adv"
-										value={getFieldValue(field.key)}
-										onChange={handleFieldChange}
-									/>
-								))}
-
-								<div className="flex items-center justify-between gap-2">
-									<div className="flex items-center gap-2">
-										<Label htmlFor="shadow-ao-toggle" className="text-sm">
-											Ambient occlusion
-										</Label>
-										<InfoTooltip content="Darkens crevices and tight gaps on the model itself. Costs GPU on every frame while the view moves. Best for hero shots." />
-									</div>
-									<Switch
-										id="shadow-ao-toggle"
-										checked={draft.ao ?? false}
-										onCheckedChange={handleToggleAo}
-									/>
-								</div>
-
-								{(draft.ao ?? false) && (
-									<>
-										<ShadowField
-											field={SHADOW_AO_INTENSITY_FIELD}
-											idPrefix="shadow-adv"
-											value={getFieldValue(SHADOW_AO_INTENSITY_FIELD.key)}
-											onChange={handleFieldChange}
-										/>
-										<div className="flex items-center justify-between gap-2">
-											<div className="flex items-center gap-2">
-												<Label
-													htmlFor="shadow-ao-at-rest-toggle"
-													className="text-sm"
-												>
-													AO only when still
-												</Label>
-												<InfoTooltip content="Skips occlusion while the view moves, so orbiting costs nothing extra. It returns once the view stops." />
-											</div>
-											<Switch
-												id="shadow-ao-at-rest-toggle"
-												checked={draft.aoAtRest ?? false}
-												onCheckedChange={handleToggleAoAtRest}
-											/>
-										</div>
-									</>
-								)}
-							</CollapsibleContent>
-						</Collapsible>
-					</div>
-				)}
-			</SidebarSectionContent>
-		</SidebarSection>
+			<DrillDownView
+				id="advanced"
+				title="Advanced"
+				caption="Ambient occlusion darkens crevices on the model and costs GPU while the view moves; 'Only when still' skips it during orbiting."
+			>
+				{SHADOW_ADVANCED_FIELDS.map((field) => (
+					<FieldSlider
+						key={field.key}
+						field={field}
+						value={getFieldValue(field.key)}
+						onChange={handleFieldChange}
+					/>
+				))}
+				<div className="grid grid-cols-3 gap-2">
+					<Toggle
+						layout="tile"
+						label="Ambient occlusion"
+						icon={<Contrast />}
+						checked={aoEnabled}
+						onCheckedChange={handleToggleAo}
+					/>
+					<Toggle
+						layout="tile"
+						label="Only when still"
+						icon={<Pause />}
+						disabled={!aoEnabled}
+						checked={draft.aoAtRest ?? false}
+						onCheckedChange={(aoAtRest) => commitNow({ ...draft, aoAtRest })}
+					/>
+				</div>
+				<FieldSlider
+					field={SHADOW_AO_INTENSITY_FIELD}
+					disabled={!aoEnabled}
+					value={getFieldValue(SHADOW_AO_INTENSITY_FIELD.key)}
+					onChange={handleFieldChange}
+				/>
+			</DrillDownView>
+		</DrillDown>
 	)
 }
 
