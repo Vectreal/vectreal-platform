@@ -172,6 +172,8 @@ describe('routes that own the public boundary', () => {
 	const OWNS_PUBLIC_BOUNDARY =
 		/PublicErrorBoundary as ErrorBoundary|ErrorBoundary\s*=\s*PublicErrorBoundary/
 
+	const EXPORTS_META = /export (const|function) meta\b/
+
 	type RouteEntry = { file: string; children?: RouteEntry[] }
 
 	// Each boundary-owning route with its ancestors, nearest first. Root is
@@ -207,16 +209,27 @@ describe('routes that own the public boundary', () => {
 	it.each(chains.map((chain) => [chain[0], chain]))(
 		'%s keeps an error out of the index',
 		async (_, chain) => {
-			let routeMeta: ((args: unknown) => unknown) | undefined
-			for (const file of chain) {
-				routeMeta = (
-					(await import(join(appDir, file))) as {
-						meta?: (args: unknown) => unknown
-					}
-				).meta
-				if (routeMeta) break
-			}
+			/*
+			  Found by source, then only that module imported: loading the whole
+			  layout chain to ask each one took longer than a test may under CI
+			  coverage.
+			*/
+			const owner = chain.find((file) =>
+				EXPORTS_META.test(readFileSync(join(appDir, file), 'utf8'))
+			)
+			const routeMeta = owner
+				? (
+						(await import(join(appDir, owner))) as {
+							meta?: (args: unknown) => unknown
+						}
+					).meta
+				: undefined
 			// Nothing below root exports meta: root's error branch answers.
+			if (!owner) return
+			expect(
+				routeMeta,
+				`${owner} exports meta in a form this missed`
+			).toBeTypeOf('function')
 			if (!routeMeta) return
 
 			for (const error of [
@@ -236,6 +249,7 @@ describe('routes that own the public boundary', () => {
 				expect(tags).toContain('noindex, nofollow')
 				expect(tags).not.toContain('canonical')
 			}
-		}
+		},
+		30_000
 	)
 })
