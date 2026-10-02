@@ -17,8 +17,10 @@ import {
 } from 'three'
 
 import { cameraSelectionSignature } from './camera-selection-signature'
+import { applyInitialFraming } from './initial-framing'
 
 import type { CameraSelectionSignature } from './camera-selection-signature'
+import type { InitialFramingControls } from './initial-framing'
 import type {
 	ViewerCommand,
 	ViewerCommandExecutor,
@@ -327,6 +329,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 	const { camera: sceneCamera } = useThree()
 	const invalidate = useThree((state) => state.invalidate)
+	const getThreeState = useThree((state) => state.get)
 	const controls = useThree((state) => state.controls) as
 		| {
 				target?: Vector3
@@ -512,9 +515,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				sceneTransition
 			)
 			applyCameraInstantly(selection)
-
-			if (boundsEnabled) bounds.refresh().reset()
-			else bounds.refresh().clip()
+			// Read from the store rather than this render's `controls`: this runs
+			// from a timeout, and the fit's target is lost if it lands on a closure
+			// captured before OrbitControls registered.
+			applyInitialFraming(
+				bounds,
+				sceneCamera,
+				getThreeState().controls as InitialFramingControls | null,
+				boundsEnabled
+			)
 
 			if (!hasInitialFramingCompleted.current) {
 				isWaitingForStableFrame.current = true
@@ -542,6 +551,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			boundsEnabled,
 			cameras,
 			controls?.target,
+			getThreeState,
 			sceneTransition
 		]
 	)

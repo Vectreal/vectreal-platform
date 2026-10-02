@@ -138,9 +138,15 @@ hand-editing.
 It reads imports, not bundler config, so a package that deliberately bundles a dependency
 has to say so. `packages/viewer` bundles `@vctrl/core` and `@shared/*`, and
 `packages/embed` uses `@vctrl/viewer` only for types that `vite-plugin-dts` inlines; both
-are listed as `ignoredDependencies` in `eslint.config.mts` with the reason. Anything
-externalized in a `vite.config.ts` is the opposite case and must be declared: that is what
-a consumer installs.
+are listed as `ignoredDependencies` in `eslint.config.mts` with the reason.
+
+The opposite direction is enforced by the build. The published `@vctrl/*` configs never
+list externals by hand: `manifestExternals` in `vite.library.mts` externalizes exactly what `dependencies` and
+`peerDependencies` declare, subpaths included, and fails the build when a declared package
+is inlined anyway or a `require` shim appears. A hand-written exact-name list is how
+`@vctrl/viewer@1.0.0` shipped React's JSX runtime inlined: `react/jsx-runtime` is not
+`react`. Declare a package to keep it out of the build; anything undeclared, or only a
+`devDependency`, is bundled.
 
 ## Platform App Architecture (`apps/vectreal-platform/`)
 

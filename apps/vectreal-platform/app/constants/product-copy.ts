@@ -104,7 +104,7 @@ export const OPEN_SOURCE_PACKAGES = [
 	{
 		name: '@vctrl/embed',
 		description:
-			'Framework-agnostic JavaScript SDK for controlling Vectreal embedded 3D scenes from any web page. Includes CDN UMD build.',
+			'Framework-agnostic JavaScript SDK for controlling Vectreal embedded 3D scenes from any web page. Includes a CDN script-tag build.',
 		npm: 'https://www.npmjs.com/package/@vctrl/embed',
 		docs: 'https://vectreal.com/docs/guides/embed-sdk'
 	}

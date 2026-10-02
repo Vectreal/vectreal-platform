@@ -8,6 +8,8 @@
  *   4. npm install @vctrl/viewer from the local registry (the real tarball).
  *   5. Build the consumer (catches packaging / unresolved-import regressions).
  *   6. Serve it and run Playwright (catches render-time runtime crashes).
+ *   7. Run the same Playwright spec against `vite dev`, whose dependency
+ *      pre-bundling is a different path from the build.
  *
  * Everything is torn down on exit. Nothing touches the public npm registry or
  * the developer's global npm config.
@@ -183,6 +185,47 @@ async function publishPackage(
 	})
 }
 
+// Start `vite <args>` in the consumer, bound to loopback with a fixed port.
+// Vite's own entry runs under this node rather than through `npx`, which would
+// put it a process below the one cleanup kills and leave it serving.
+function serve(
+	consumerDir: string,
+	consumerEnv: NodeJS.ProcessEnv,
+	args: string[]
+) {
+	const server: ChildProcess = spawn(
+		process.execPath,
+		[
+			join(consumerDir, 'node_modules', 'vite', 'bin', 'vite.js'),
+			...args,
+			'--strictPort',
+			'--host',
+			'127.0.0.1'
+		],
+		{
+			cwd: consumerDir,
+			env: { ...process.env, ...consumerEnv },
+			stdio: 'inherit'
+		}
+	)
+	onCleanup(() => server.kill('SIGKILL'))
+}
+
+// Playwright + browsers live in the workspace root install, so run it there.
+function runPlaywright(baseURL: string, ci: boolean) {
+	return run(
+		'pnpm',
+		[
+			'exec',
+			'playwright',
+			'test',
+			'--config',
+			join(here, '..', 'playwright.config.ts')
+		],
+		{ env: { E2E_BASE_URL: baseURL, ...(ci ? { CI: 'true' } : {}) } }
+	)
+}
+
 async function main() {
 	const ci = process.argv.includes('--ci')
 	const tmpRoot = mkdtempSync(join(tmpdir(), 'vctrl-viewer-e2e-'))
@@ -228,45 +271,29 @@ async function main() {
 	await run('npx', ['vite', 'build'], { cwd: consumerDir, env: consumerEnv })
 
 	const previewPort = await getFreePort()
-	const baseURL = `http://127.0.0.1:${previewPort}`
-	log(`serving consumer preview at ${baseURL}`)
-	const preview: ChildProcess = spawn(
-		'npx',
-		[
-			'vite',
-			'preview',
-			'--port',
-			String(previewPort),
-			'--strictPort',
-			'--host',
-			'127.0.0.1'
-		],
-		{
-			cwd: consumerDir,
-			env: { ...process.env, ...consumerEnv },
-			stdio: 'inherit',
-			shell: process.platform === 'win32'
-		}
-	)
-	onCleanup(() => preview.kill('SIGKILL'))
-	await waitForHttp(baseURL)
+	const previewURL = `http://127.0.0.1:${previewPort}`
+	log(`serving consumer preview at ${previewURL}`)
+	serve(consumerDir, consumerEnv, ['preview', '--port', String(previewPort)])
+	await waitForHttp(previewURL)
 
-	log('running Playwright against the published-package render')
-	// Playwright + browsers live in the workspace root install, so run it there.
-	await run(
-		'pnpm',
-		[
-			'exec',
-			'playwright',
-			'test',
-			'--config',
-			join(here, '..', 'playwright.config.ts')
-		],
-		{ env: { E2E_BASE_URL: baseURL, ...(ci ? { CI: 'true' } : {}) } }
-	)
+	log('running Playwright against the built consumer')
+	await runPlaywright(previewURL, ci)
+
+	// The dev server is a separate gate, not a repeat of the one above. It
+	// pre-bundles installed dependencies with its own optimizer, and that is
+	// where @vctrl/viewer@1.0.0 failed: an inlined CommonJS JSX runtime called
+	// `require("react")` in the browser. `vite build` handled the same file.
+	const devPort = await getFreePort()
+	const devURL = `http://127.0.0.1:${devPort}`
+	log(`serving consumer dev server at ${devURL}`)
+	serve(consumerDir, consumerEnv, ['--port', String(devPort)])
+	await waitForHttp(devURL)
+
+	log('running Playwright against the dev server')
+	await runPlaywright(devURL, ci)
 
 	log(
-		'e2e passed: @vctrl/viewer + @vctrl/hooks install, bundle, and render cleanly ✓'
+		'e2e passed: @vctrl/viewer + @vctrl/hooks install, bundle, and render cleanly, built and in dev ✓'
 	)
 }
 

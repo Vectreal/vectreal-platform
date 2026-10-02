@@ -1,0 +1,41 @@
+{
+	"name": "img-to-3d-runtime",
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"sourceRoot": "apps/img-to-3d-runtime",
+	"projectType": "application",
+	"tags": ["scope:infra"],
+	"targets": {
+		"test": {
+			"executor": "nx:run-commands",
+			"cache": true,
+			"inputs": ["default"],
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime --frozen --extra web --group dev pytest"
+			}
+		},
+		"modal-serve": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime --frozen --group dev modal serve -m img_to_3d_runtime.app"
+			}
+		},
+		"modal-deploy": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime --frozen --group dev modal deploy -m img_to_3d_runtime.app"
+			}
+		},
+		"modal-check": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime --frozen --group dev modal run -m img_to_3d_runtime.checks"
+			}
+		},
+		"modal-logs": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "uv run --directory apps/img-to-3d-runtime --frozen --group dev modal app logs vectreal-img-to-3d-runtime"
+			}
+		}
+	}
+}

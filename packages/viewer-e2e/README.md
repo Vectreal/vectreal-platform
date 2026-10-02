@@ -22,9 +22,15 @@ regression that unit tests and Storybook miss:
 3. Scaffolds a throwaway Vite + React consumer app from `src/consumer-template`
    into a temp dir and `npm install`s `@vctrl/viewer` (plus peer deps) **from
    the local registry** (no monorepo path aliases, the real tarball).
-4. Builds the consumer (fails on any packaging / unresolved-import regression).
+4. Builds the consumer with Vite 8 (fails on any packaging / unresolved-import
+   regression).
 5. Serves the build and runs Playwright (`tests/viewer-render.spec.ts`), which
    asserts the viewer mounts and reports no render-time crash.
+6. Starts `vite dev` on the same consumer and runs the same spec again. The dev
+   server pre-bundles installed packages with its own optimizer, a different
+   path from the build: `@vctrl/viewer@1.0.0` built and rendered fine but threw
+   `Calling require for "react"` in dev, because its output carried an inlined
+   CommonJS JSX runtime.
 
 Everything (registry storage, temp consumer) lives under the OS temp dir and is
 wiped on exit. The developer's global npm config and the public registry are

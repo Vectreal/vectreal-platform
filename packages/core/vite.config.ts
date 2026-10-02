@@ -3,6 +3,8 @@ import * as path from 'path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
+import { manifestExternals } from '../../vite.library.mts'
+
 export default defineConfig({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/core',
@@ -12,7 +14,8 @@ export default defineConfig({
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
-		})
+		}),
+		manifestExternals(import.meta.dirname)
 	],
 
 	// Configuration for building your library.
@@ -41,35 +44,10 @@ export default defineConfig({
 				)
 			},
 			name: '@vctrl/core',
-			formats: ['es', 'cjs'],
-			/*
-			  `.cjs` for CommonJS, not `.cjs.js`. The package is `"type": "module"`
-			  and Node reads module type from the extension, so a `.js` file is ESM
-			  whatever its name says: every `require` entry used to load as ESM and
-			  fail. The viewer names its output this way for the same reason.
-			*/
-			fileName: (format, entry) =>
-				format === 'cjs' ? `${entry}.cjs` : `${entry}.${format}.js`
-		},
-
-		rolldownOptions: {
-			// External packages that should not be bundled into your library.
-			external: [
-				'three',
-				'file-saver',
-				'jszip',
-				'sharp',
-				'meshoptimizer',
-				'@gltf-transform/core',
-				'@gltf-transform/functions',
-				'@gltf-transform/extensions'
-			],
-			output: {
-				globals: {
-					three: 'THREE',
-					sharp: 'sharp'
-				}
-			}
+			// ES modules only: Node.js 20.19, 22.12 and later `require()` them too,
+			// so a CommonJS copy would only add a second instance of each module.
+			formats: ['es'],
+			fileName: (_format, entry) => `${entry}.js`
 		}
 	}
 })
