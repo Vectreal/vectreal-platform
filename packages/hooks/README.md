@@ -14,6 +14,8 @@ npm install @vctrl/hooks
 pnpm add @vctrl/hooks
 ```
 
+**Module format:** ES modules only. Import it from any bundler or browser.
+
 ---
 
 ## Hooks overview

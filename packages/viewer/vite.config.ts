@@ -22,10 +22,6 @@ export default defineConfig({
 		emptyOutDir: true,
 		reportCompressedSize: true,
 		cssCodeSplit: false,
-		commonjsOptions: {
-			transformMixedEsModules: true
-		},
-
 		lib: {
 			entry: {
 				index: path.resolve(import.meta.dirname, 'src/index.ts'),
@@ -34,13 +30,11 @@ export default defineConfig({
 				hotspots: path.resolve(import.meta.dirname, 'src/hotspots.ts')
 			},
 			name: '@vctrl/viewer',
-			// Spelled out rather than taking the default, which appends the format
-			// to every name: `index.js` and `index.cjs` are what `exports` already
-			// points at, and renaming them would break every installed consumer.
-			fileName: (format, entry) => `${entry}.${format === 'es' ? 'js' : 'cjs'}`,
-			cssFileName: 'style',
-			// Don't forget to update your package.json as well.
-			formats: ['es', 'cjs']
+			// ES modules only: Node.js 20.19, 22.12 and later `require()` them too,
+			// so a CommonJS copy would only add a second instance of each module.
+			formats: ['es'],
+			fileName: (_format, entry) => `${entry}.js`,
+			cssFileName: 'style'
 		},
 		rolldownOptions: {
 			// External packages that should not be bundled into the library.

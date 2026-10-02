@@ -5,8 +5,6 @@
 
 A ready-to-use React component for rendering and interacting with 3D models. Built on top of [Three.js](https://threejs.org) and [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction).
 
-> This package is still in active development. Breaking changes may occur before the first major release.
-
 ---
 
 ## Installation
@@ -16,6 +14,8 @@ npm install @vctrl/viewer
 # or
 pnpm add @vctrl/viewer
 ```
+
+**Module format:** ES modules only. Import it from any bundler or browser.
 
 ---
 

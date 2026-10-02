@@ -1,10 +1,11 @@
 /**
- * CDN URL for the `@vctrl/embed` UMD build used by the generated SDK snippet.
+ * CDN URL for the `@vctrl/embed` script-tag build used by the generated SDK
+ * snippet.
  *
  * This used to point at `cdn.vectreal.com`, a host that has never existed - no
  * DNS record for it is provisioned in `terraform/cloudflare.tf` and nothing
- * uploads build output to a CDN. The UMD bundle only ever ships inside the npm
- * tarball, so the snippet serves it from an npm CDN instead.
+ * uploads build output to a CDN. The script-tag build only ever ships inside
+ * the npm tarball, so the snippet serves it from an npm CDN instead.
  *
  * Deliberately unversioned: unpkg resolves the bare specifier to the latest
  * published version, so there is no version here to drift out of step with
@@ -296,7 +297,7 @@ ${EMBED_PARENT_FIX}
 
 <!-- 3. Control it -->
 <script>
-  // The UMD build exposes named exports on the global, so the class is
+  // The script-tag build exposes named exports on the global, so the class is
   // reached as VectrealEmbed.VectrealEmbed.
   const embed = new VectrealEmbed.VectrealEmbed(
     document.getElementById('vectreal-scene')

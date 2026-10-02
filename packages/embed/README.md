@@ -11,7 +11,9 @@ Framework-agnostic JavaScript SDK for controlling Vectreal embedded 3D scene pre
 npm install @vctrl/embed
 ```
 
-**CDN (UMD, no bundler needed):** the package ships a UMD build that any npm CDN can serve. Because the entry point uses named exports, the global is a namespace object and the class is `VectrealEmbed.VectrealEmbed`.
+**Module format:** ES modules, plus the script-tag build below. Import it from any bundler, browser or Node.js; `require()` also loads it on Node.js 20.19, 22.12 and later.
+
+**CDN (script tag, no bundler needed):** the package also ships a classic script that any npm CDN can serve. It defines one global, `VectrealEmbed`, a namespace object holding the entry point's named exports, so the class is `VectrealEmbed.VectrealEmbed`. The file keeps the name `vectreal-embed.umd.js` from when it was a UMD build, so existing snippets keep working.
 
 ```html
 <script src="https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js"></script>

@@ -138,6 +138,15 @@ const CLAIM_CARRYING_DOCS = [
 	  that cannot go red, in the file whose whole job is to stop that.
 	*/
 	'apps/vectreal-platform/app/routes/docs/guides/convert.mdx',
+	/*
+	  Each package page tells an installer what module format they get. The
+	  manifest decides that, so the page names the two fields that would change
+	  first if a CommonJS build came back.
+	*/
+	'apps/vectreal-platform/app/routes/docs/packages/core.mdx',
+	'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
+	'apps/vectreal-platform/app/routes/docs/packages/viewer.mdx',
+	'apps/vectreal-platform/app/routes/docs/packages/embed.mdx',
 	'apps/vectreal-platform/app/routes/news-room-page/articles/04_api-keys-101.mdx'
 ]
 
