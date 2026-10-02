@@ -1,8 +1,6 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { EffectComposer, ToneMapping } from '@react-three/postprocessing'
 import { VectrealViewer } from '@vctrl/viewer'
-import { ToneMappingMode } from 'postprocessing'
 import { useEffect, useRef } from 'react'
 
 import rocket from '../../assets/models/rocket-v3.glb?url'
@@ -50,13 +48,6 @@ const Model = ({ url, pointer }: ModelProps) => {
 				<group rotation={[0, 0, -Math.PI / 4 - Math.PI / 2]}>
 					<group rotation={[0, -Math.PI / 2, 0]}>
 						<primitive object={scene} />
-
-						<EffectComposer>
-							<ToneMapping
-								toneMappingMode={ToneMappingMode.ACES_FILMIC}
-								adaptionRate={1}
-							/>
-						</EffectComposer>
 					</group>
 				</group>
 			</group>

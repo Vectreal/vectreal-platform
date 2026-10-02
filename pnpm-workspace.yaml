@@ -20,7 +20,6 @@ catalog:
   '@nx/vite': 23.1.1
   '@react-three/drei': ^10.7.8
   '@react-three/fiber': ^9.7.0
-  '@react-three/postprocessing': ^3.0.4
   '@vitejs/plugin-react': ^6.0.5
   file-saver: ^2.0.5
   jszip: ^3.10.1

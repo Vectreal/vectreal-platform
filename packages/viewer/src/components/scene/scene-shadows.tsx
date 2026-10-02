@@ -73,6 +73,9 @@ export const defaultShadowsOptions: ShadowsProps = {
 	// shadow only (see scene-postprocessing.tsx).
 	ao: false,
 	aoIntensity: 1.4,
+	// Draw AO only once the view is still. Off: AO staying put while orbiting
+	// reads better than it dropping out and settling back in.
+	aoAtRest: false,
 	// Soft contact/ground shadow under the directional bake (drei ContactShadows),
 	// approximating ground ambient occlusion. Baked once. Opt-in; tuned via blur
 	// (softness) and opacity (darkness).

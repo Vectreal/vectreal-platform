@@ -49,7 +49,6 @@
 		"@react-router/node": "8.3.0",
 		"@react-three/drei": "catalog:",
 		"@react-three/fiber": "catalog:",
-		"@react-three/postprocessing": "catalog:",
 		"@supabase/ssr": "^0.12.4",
 		"@supabase/supabase-js": "^2.112.2",
 		"@tanstack/react-table": "^9.1.2",

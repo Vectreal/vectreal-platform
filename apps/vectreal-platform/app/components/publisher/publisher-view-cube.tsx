@@ -1,7 +1,4 @@
 import { GizmoHelper, GizmoViewcube } from '@react-three/drei'
-import { useAtomValue } from 'jotai/react'
-
-import { shadowsAtom } from '../../lib/stores/scene-settings-store'
 
 /**
  * Orientation cube for the publisher's editing canvas — click a face to snap the
@@ -9,27 +6,18 @@ import { shadowsAtom } from '../../lib/stores/scene-settings-store'
  * published viewer package stays slim; rendered inside the viewer's Canvas as a
  * child via PublisherEditorScene.
  */
-export const PublisherViewCube = () => {
-	const shadows = useAtomValue(shadowsAtom)
-	// drei's Hud re-renders the whole scene at renderPriority 1, which would
-	// clobber the AO EffectComposer (also priority 1) the viewer mounts when AO is
-	// on. At priority 2 the Hud skips that scene re-render and just overlays the
-	// cube on top of the composed frame. Mirror the viewer's AO gate so the cube
-	// and postprocessing coexist; without AO there's no composer, so 1 is correct.
-	const aoEnabled = (shadows?.enabled ?? false) && (shadows?.ao ?? false)
-
-	return (
-		<GizmoHelper
-			alignment="bottom-left"
-			margin={[72, 72]}
-			renderPriority={aoEnabled ? 2 : 1}
-		>
-			<GizmoViewcube
-				color="#f4f4f5"
-				textColor="#52525b"
-				strokeColor="#d4d4d8"
-				hoverColor="#fbbf24"
-			/>
-		</GizmoHelper>
-	)
-}
+export const PublisherViewCube = () => (
+	// drei's Hud re-renders the whole scene itself at renderPriority 1, which
+	// would clobber the viewer's composer (also priority 1, and mounted whenever
+	// post-processing is on, which the publisher never turns off). At priority 2
+	// the Hud skips that scene render and overlays the cube on the composed
+	// frame; the composer redraws its converged image under it while at rest.
+	<GizmoHelper alignment="bottom-left" margin={[72, 72]} renderPriority={2}>
+		<GizmoViewcube
+			color="#f4f4f5"
+			textColor="#52525b"
+			strokeColor="#d4d4d8"
+			hoverColor="#fbbf24"
+		/>
+	</GizmoHelper>
+)

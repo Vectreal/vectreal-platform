@@ -288,10 +288,16 @@ export interface ShadowsProps extends ThreeAccumulativeShadowsProps {
 	cutoffScale?: number
 	/**
 	 * Enables screen-space ambient occlusion (N8AO) so the model self-occludes in
-	 * crevices and tight gaps. This reintroduces a postprocessing composer and runs
-	 * every rendered frame, so it is opt-in. Defaults to false.
+	 * crevices and tight gaps. It runs on every frame while the view moves and
+	 * settles once it is still, so it is opt-in. Defaults to false.
 	 */
 	ao?: boolean
+	/**
+	 * Draws the ambient occlusion only once the view is still, so orbiting costs
+	 * nothing extra. The occlusion drops out during motion and settles back in
+	 * when it stops. Only used when {@link ao} is enabled. Defaults to false.
+	 */
+	aoAtRest?: boolean
 	/**
 	 * A soft contact/ground shadow (drei `ContactShadows`) layered under the
 	 * directional accumulative bake. It approximates the ambient occlusion the

@@ -3,6 +3,7 @@ import { fn } from 'storybook/test'
 import {
 	AnimationClip,
 	BoxGeometry,
+	Group,
 	Mesh,
 	MeshStandardMaterial,
 	NumberKeyframeTrack,
@@ -16,7 +17,11 @@ import {
 	InfoPopoverText,
 	InfoPopoverTrigger
 } from './components'
-import { defaultControlsOptions, defaultEnvOptions } from './components/scene'
+import {
+	defaultControlsOptions,
+	defaultEnvOptions,
+	defaultShadowsOptions
+} from './components/scene'
 import VectrealViewer from './vectreal-viewer'
 
 import type { VectrealViewerProps } from './vectreal-viewer'
@@ -67,6 +72,69 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+/**
+ * Stacked blocks give ambient occlusion creases to darken and a footprint for
+ * the ground bake, so both read at the opening view. One instance per story,
+ * built at module scope: a stable identity for the same reason as the animated
+ * model below, and never one object in two stories' scenes, since an Object3D
+ * can only have one parent.
+ */
+const createOcclusionModel = () => {
+	const model = new Group()
+	model.name = 'OcclusionBlocks'
+	const material = new MeshStandardMaterial({
+		color: '#e4e4e7',
+		roughness: 0.6
+	})
+	for (const { width, height, y, offset } of [
+		{ width: 1.6, height: 0.4, y: 0.2, offset: 0 },
+		{ width: 0.8, height: 0.8, y: 0.8, offset: 0 },
+		{ width: 0.4, height: 0.4, y: 0.6, offset: 0.5 }
+	]) {
+		const block = new Mesh(new BoxGeometry(width, height, width), material)
+		block.position.set(offset, y, offset)
+		model.add(block)
+	}
+	return model
+}
+
+// The captured frame depends on how many frames the AO and the edge
+// accumulation have run by the time Chromatic shoots, which is wall-clock
+// time, so every build would diff. Same reason as the animated story below.
+const timeDependentCapture = { chromatic: { disableSnapshot: true } }
+
+/**
+ * Shadows with N8AO on. At rest the AO noise settles as frames accumulate;
+ * compare a still frame with one mid-orbit. Set `aoAtRest` in the shadow
+ * options to skip AO while orbiting.
+ */
+export const AmbientOcclusion: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createOcclusionModel(),
+		shadowsOptions: { ...defaultShadowsOptions, enabled: true, ao: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * The same scene with AO held for rest: orbiting costs nothing extra, and the
+ * occlusion drops out while moving and settles back in once the view stops.
+ */
+export const AmbientOcclusionAtRest: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createOcclusionModel(),
+		shadowsOptions: {
+			...defaultShadowsOptions,
+			enabled: true,
+			ao: true,
+			aoAtRest: true
+		}
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
 
 /**
  * Built in code rather than loaded from a fixture: there is no animated model

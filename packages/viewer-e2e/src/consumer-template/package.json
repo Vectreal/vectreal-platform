@@ -10,7 +10,6 @@
 	"dependencies": {
 		"@react-three/drei": "^10.0.7",
 		"@react-three/fiber": "^9.1.2",
-		"@react-three/postprocessing": "^3.0.4",
 		"@vctrl/hooks": "latest",
 		"@vctrl/viewer": "latest",
 		"postprocessing": "^6.37.3",

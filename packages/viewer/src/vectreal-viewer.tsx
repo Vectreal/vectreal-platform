@@ -128,8 +128,12 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	enableViewportRendering?: boolean
 
 	/**
-	 * Whether to enable postprocessing effects.
-	 * Disabling this can significantly reduce GPU usage.
+	 * Whether the viewer renders through its composer: ambient occlusion, and
+	 * supersampling that converges while the camera is still, after which a
+	 * still viewer draws nothing until something changes. Disable it to render
+	 * the scene directly with hardware MSAA, for instance when `children` bring
+	 * their own `EffectComposer`. Whether the canvas itself is multisampled is
+	 * fixed when it is created, from this prop's value at that time.
 	 * Default: true
 	 */
 	enablePostProcessing?: boolean
@@ -642,8 +646,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		Boolean(loader)
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
-	// AO is gated on shadows being enabled so toggling shadows off also tears
-	// down the AO composer.
+	// AO is gated on shadows being enabled so toggling shadows off also turns
+	// AO off.
 	const aoEnabled = shadowsEnabled && (shadowsOptions?.ao ?? false)
 	return (
 		<Suspense fallback={loader}>
@@ -679,20 +683,29 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				// shadow from its RandomizedLight, so the realtime filter just needs to
 				// be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
 				shadows={shadowsEnabled ? 'percentage' : false}
-				gl={{ antialias: false, powerPreference: 'low-power' }}
+				// The composer antialiases inside its own buffers and presents a
+				// full-screen quad, so a multisampled canvas would only cost memory
+				// (four samples of color and depth at full size). Without the composer
+				// the renderer draws the scene straight to the canvas and needs it.
+				// Read once, when the context is created.
+				gl={{
+					antialias: !enablePostProcessing,
+					powerPreference: 'low-power'
+				}}
 			>
 				<Suspense fallback={null}>
 					{hasContent && (
 						<>
 							<SceneEnvironment {...envOptions} />
 							{/* <Perf /> */}
-							{enablePostProcessing ? (
-								<ScenePostProcessing
-									ao={aoEnabled}
-									aoIntensity={shadowsOptions?.aoIntensity}
-									model={model}
-								/>
-							) : null}
+							<ScenePostProcessing
+								enabled={enablePostProcessing}
+								ao={aoEnabled}
+								aoIntensity={shadowsOptions?.aoIntensity}
+								aoAtRest={shadowsOptions?.aoAtRest}
+								model={model}
+								active={animation.status.active}
+							/>
 							<SceneControls
 								{...controlsOptions}
 								enabledOverride={controlsEnabledOverride}
@@ -709,10 +722,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										}
 									: {})}
 							/>
-							{/* <SceneToneMapping
-								mapping={toneMappingOptions?.mapping}
-								exposure={toneMappingOptions?.exposure}
-								/> */}
 							<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 								<SceneCamera
 									{...cameraOptions}
