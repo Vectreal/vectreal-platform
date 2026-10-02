@@ -297,10 +297,8 @@ describe('a host can focus a hotspot the way a click would', () => {
 
 	it('is registered with the viewer, which routes the command to it', () => {
 		expect(layer).toContain("command.type === 'focus_hotspot'")
-		expect(viewer).toContain(
-			'onCommandExecutorReady={handleSceneHotspotsExecutorReady}'
-		)
-		expect(viewer).toContain("case 'focus_hotspot':")
+		expect(viewer).toContain('onCommandExecutorReady={hotspotLayer.register}')
+		expect(viewer).toMatch(/case 'focus_hotspot':\s*hotspotLayer\.execute/)
 	})
 })
 

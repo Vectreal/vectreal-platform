@@ -15,6 +15,8 @@ npm install @vctrl/embed
 {/* claims
 present packages/embed/package.json "type": "module"
 absent packages/embed/package.json "require"
+present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (acceptsCommandsRef.current && parentOriginRef.current) {
+present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (pinsOrigin) flushOutboundQueue(event.origin)
 */}
 
 **CDN (script tag):** the package also ships a classic script that any npm CDN can serve. It defines one global, `VectrealEmbed`, a namespace object holding the entry point's named exports, so the class is reached as `VectrealEmbed.VectrealEmbed`. The file keeps the name `vectreal-embed.umd.js` from when it was a UMD build, so existing snippets keep working.
@@ -42,7 +44,7 @@ const embed = new VectrealEmbed(iframeElement, options?)
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `iframeOrigin` | `string` | Detected from `iframe.src` | Override the expected iframe origin for postMessage security. |
-| `readyTimeout` | `number` | `15000` | Milliseconds before `ready()` rejects. |
+| `readyTimeout` | `number` | `15000` | Milliseconds before `ready()` rejects if the scene has not loaded. Queued commands still run once it does. |
 
 The constructor throws when it cannot determine a target origin, which happens when
 `iframeOrigin` is omitted and the iframe's `src` is empty or unparseable. Construct the

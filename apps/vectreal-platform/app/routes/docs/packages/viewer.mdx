@@ -33,6 +33,8 @@ present packages/viewer/src/vectreal-viewer.tsx type: 'hotspot_activated',
 present packages/viewer/src/components/scene/scene-animation.tsx type: 'animation_state_changed',
 present packages/viewer/src/components/scene/scene-animation.tsx type: 'animation_clip_finished',
 exists packages/viewer/vitest.config.ts
+present packages/viewer/src/hooks/use-held-executor.ts heldRef.current.set(command.type, command)
+present packages/viewer/src/components/scene/scene-camera.tsx if (!isFramed) return
 */}
 
 ---
@@ -355,6 +357,8 @@ This is useful when building camera authoring tools or when you need to persist 
 
 `onCommandExecutorReady(executor)` receives a `ViewerCommandExecutor` with `execute(command)`.
 
+Commands can be sent as soon as the executor arrives. One the scene cannot run yet, because the model is still loading or the viewer is out of view (the canvas mounts only near the viewport), is held and runs once it can. Of several held commands of one type, only the last one runs.
+
 Current commands:
 
 | Command | Payload | Effect |
@@ -371,7 +375,7 @@ Current commands:
 
 | Event | Payload | Meaning |
 |---|---|---|
-| `viewer_ready` | none | Viewer runtime is ready to accept commands |
+| `viewer_ready` | none | The camera has framed the model and takes commands. Emitted again when the canvas remounts or the camera settings change |
 | `initial_framing_completed` | `{ cameraId: string \| null }` | Initial framing and stabilization completed |
 | `camera_changed` | `{ cameraId: string }` | Active camera changed |
 | `hotspot_activated` | `{ hotspotId: string; cameraId: string \| null }` | A visitor activated a hotspot |

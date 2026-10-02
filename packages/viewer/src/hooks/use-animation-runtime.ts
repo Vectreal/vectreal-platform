@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+
+import { useHeldExecutor } from './use-held-executor'
 
 import type { AnimationPlaybackStatus } from '../components/scene'
 import type {
@@ -51,7 +53,7 @@ export function useAnimationRuntime({
 	options,
 	hasContent
 }: UseAnimationRuntimeOptions): AnimationRuntime {
-	const executorRef = useRef<null | ViewerCommandExecutor>(null)
+	const runtime = useHeldExecutor()
 	const [status, setStatus] = useState<AnimationPlaybackStatus>(IDLE_STATUS)
 
 	useEffect(() => {
@@ -60,7 +62,7 @@ export function useAnimationRuntime({
 
 	const registerExecutor = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
-			executorRef.current = executor
+			runtime.register(executor)
 
 			// Reset on unregister, which is the runtime going away: the canvas
 			// unmounted on scroll, the author disabled animation, or the clips
@@ -72,23 +74,19 @@ export function useAnimationRuntime({
 			// moving-geometry fallback indefinitely.
 			if (!executor) setStatus(IDLE_STATUS)
 		},
-		[]
+		[runtime]
 	)
 
-	const forwardCommand = useCallback((command: ViewerCommand) => {
-		executorRef.current?.execute(command)
-	}, [])
-
 	const toggle = useCallback(() => {
-		executorRef.current?.execute({
+		runtime.execute({
 			type: 'set_animation_playing',
 			playing: !status.playing
 		})
-	}, [status.playing])
+	}, [runtime, status.playing])
 
 	const restart = useCallback(() => {
-		executorRef.current?.execute({ type: 'restart_animation' })
-	}, [])
+		runtime.execute({ type: 'restart_animation' })
+	}, [runtime])
 
 	const hasClips = Boolean(animations && animations.length > 0)
 	const shouldMount = hasClips && Boolean(options?.enabled)
@@ -99,7 +97,7 @@ export function useAnimationRuntime({
 		showControls: shouldMount && Boolean(options?.showControls),
 		registerExecutor,
 		setStatus,
-		forwardCommand,
+		forwardCommand: runtime.execute,
 		toggle,
 		restart
 	}

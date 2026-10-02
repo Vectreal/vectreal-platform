@@ -82,6 +82,8 @@ export class VectrealEmbed {
 		[key: string]: unknown
 	}> = []
 	private isReady = false
+	// A frame announces readiness to every ping, and pings can cross.
+	private hasEmittedReady = false
 	private boundListener: (event: MessageEvent<unknown>) => void
 	private pingIntervalId: number | null = null
 
@@ -393,6 +395,8 @@ export class VectrealEmbed {
 			case 'viewer_ready':
 				this.isReady = true
 				this.flushPendingCommands()
+				if (this.hasEmittedReady) break
+				this.hasEmittedReady = true
 				this.emit('viewer_ready', undefined as void)
 				break
 			case 'model_loaded':

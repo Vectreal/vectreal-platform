@@ -6,7 +6,7 @@
  * origin check alone let a second embed's `pong` land on the first instance:
  * its `ready()` resolved with the other scene's id, cameras and hotspots.
  */
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { VectrealEmbed } from './embed'
 import { HOSTED_PREVIEW_VIEWER_SOURCE } from './protocol'
@@ -36,6 +36,21 @@ function pong(from: HTMLIFrameElement, sceneId: string) {
 	)
 }
 
+function viewerReady(from: HTMLIFrameElement) {
+	window.dispatchEvent(
+		new MessageEvent('message', {
+			origin: ORIGIN,
+			source: from.contentWindow,
+			data: {
+				source: HOSTED_PREVIEW_VIEWER_SOURCE,
+				type: 'viewer_event',
+				sceneId: 'scene-a',
+				event: { type: 'viewer_ready' }
+			}
+		})
+	)
+}
+
 afterEach(() => {
 	document.body.replaceChildren()
 })
@@ -59,6 +74,24 @@ describe('VectrealEmbed message source', () => {
 		pong(other, 'scene-b')
 
 		await expect(embed.ready()).rejects.toThrow(/did not become ready/)
+		embed.destroy()
+	})
+})
+
+describe('VectrealEmbed readiness', () => {
+	// The frame answers every ping, and a ping can cross its answer.
+	it('tells its listeners once, however often the frame announces it', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onReady = vi.fn()
+		embed.on('viewer_ready', onReady)
+
+		pong(own, 'scene-a')
+		viewerReady(own)
+		pong(own, 'scene-a')
+		viewerReady(own)
+
+		expect(onReady).toHaveBeenCalledTimes(1)
 		embed.destroy()
 	})
 })

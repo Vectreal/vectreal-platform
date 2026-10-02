@@ -174,6 +174,11 @@ Based on [@react-three/drei OrbitControls](https://github.com/pmndrs/drei#orbitc
 
 `onCommandExecutorReady(executor)` gives you a `ViewerCommandExecutor` with `execute(command)`.
 
+Commands can be sent as soon as the executor arrives. One the scene cannot run yet, because
+the model is still loading or the viewer is out of view (the canvas mounts only near the
+viewport), is held and runs once it can. Of several held commands of one type, only the
+last one runs.
+
 Current commands:
 
 | Command                | Payload                                                                                            | Effect                                              |
@@ -191,7 +196,7 @@ of them:
 
 | Event                       | Payload                        | Meaning                                     |
 | --------------------------- | ------------------------------ | ------------------------------------------- |
-| `viewer_ready`              | none                           | Viewer runtime is ready to accept commands  |
+| `viewer_ready` | none | The camera has framed the model and takes commands. Emitted again when the canvas remounts or the camera settings change |
 | `initial_framing_completed` | `{ cameraId: string \| null }` | Initial framing and stabilization completed |
 | `camera_changed`            | `{ cameraId: string }`         | Active camera changed                       |
 | `hotspot_activated` | `{ hotspotId: string; cameraId: string \| null }` | A visitor activated a hotspot |
