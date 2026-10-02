@@ -70,7 +70,7 @@ script-tag build from [Installation](#installation) and create the SDK with
 | Option         | Type     | Default                         | Description                                      |
 | -------------- | -------- | ------------------------------- | ------------------------------------------------ |
 | `iframeOrigin` | `string` | Auto-detected from `iframe.src` | Expected iframe origin for postMessage security. |
-| `readyTimeout` | `number` | `15000`                         | ms before `ready()` rejects.                     |
+| `readyTimeout` | `number` | `15000` | ms before `ready()` rejects if the scene has not loaded. Queued commands still run once it does. |
 
 ### What you can control
 

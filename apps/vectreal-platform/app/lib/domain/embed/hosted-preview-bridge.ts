@@ -107,6 +107,15 @@ export function useHostedPreviewBridge({
 	const camerasRef = useRef(cameras)
 	const hotspotsRef = useRef(hotspots)
 	const initialCommandsFiredRef = useRef(false)
+	/*
+	  Whether the viewer accepts commands, which is what a pong tells the SDK:
+	  it marks itself ready on the pong and flushes every command it queued.
+	  The pong used to go out as soon as this listener existed, while the scene
+	  was still loading, so those commands reached no viewer and were dropped.
+	*/
+	const acceptsCommandsRef = useRef(false)
+	// Whether the canvas has mounted once since the viewer registered.
+	const cameraLayerMountedRef = useRef(false)
 
 	useEffect(() => {
 		camerasRef.current = cameras
@@ -243,25 +252,86 @@ export function useHostedPreviewBridge({
 		[executeInteraction]
 	)
 
+	/*
+	  Readiness goes straight to a known parent, never through the outbound
+	  queue: a queued `viewer_ready` could be flushed after the viewer that
+	  sent it had gone, and the SDK would flush its commands into nothing.
+	  The pong goes first, so the SDK has the scene's cameras and hotspots
+	  before `viewer_ready` resolves its `ready()`. Every pinging SDK gets
+	  both, since a `ready()` already waiting resolves only on the second;
+	  the SDK ignores a `viewer_ready` it has already had.
+	*/
+	const announceReady = useCallback(
+		(replyOrigin: string) => {
+			sendPong(replyOrigin)
+			window.parent.postMessage(
+				{
+					source: HOSTED_PREVIEW_VIEWER_SOURCE,
+					type: 'viewer_event',
+					sceneId,
+					event: { type: 'viewer_ready' }
+				} satisfies HostedPreviewOutgoingMessage,
+				replyOrigin
+			)
+		},
+		[sceneId, sendPong]
+	)
+
 	const onInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
-			postMessageToParent({
-				source: HOSTED_PREVIEW_VIEWER_SOURCE,
-				type: 'viewer_event',
-				sceneId,
-				event
-			})
-
+			/*
+			  The viewer emits `viewer_ready` each time its camera layer comes
+			  up, which waits for the frame to come near the viewport. The page
+			  hears readiness from `onCommandExecutorReady` instead.
+			*/
 			if (event.type !== 'viewer_ready') {
+				postMessageToParent({
+					source: HOSTED_PREVIEW_VIEWER_SOURCE,
+					type: 'viewer_event',
+					sceneId,
+					event
+				})
 				return
 			}
 
-			// Apply URL param initial commands once, before interaction sweep.
+			// The first mount already ran everything the page sent, in order.
+			// A remount resets the camera, so the scroll position is applied
+			// again to put it back.
+			if (!cameraLayerMountedRef.current) {
+				cameraLayerMountedRef.current = true
+				return
+			}
+
+			activeScrollInteractionIdsRef.current.clear()
+
+			if (lastScrollProgressRef.current !== null) {
+				applyScrollProgress(lastScrollProgressRef.current)
+			}
+		},
+		[applyScrollProgress, postMessageToParent, sceneId]
+	)
+
+	const onCommandExecutorReady = useCallback(
+		(executor: null | ViewerCommandExecutor) => {
+			executorRef.current = executor
+			acceptsCommandsRef.current = executor !== null
+
+			if (!executor) {
+				activeScrollInteractionIdsRef.current.clear()
+				return
+			}
+			cameraLayerMountedRef.current = false
+
+			/*
+			  The viewer holds a command its scene cannot run yet and runs it
+			  once it can, keeping the latest of each kind. So the author's
+			  defaults go in now, before the page is told it may send its own:
+			  a camera the page asks for then replaces them rather than being
+			  replaced by them.
+			*/
 			if (!initialCommandsFiredRef.current && initialCommands?.length) {
 				initialCommandsFiredRef.current = true
-				for (const command of initialCommands) {
-					executorRef.current?.execute(command)
-				}
+				for (const command of initialCommands) executor.execute(command)
 			}
 
 			sortedInteractionsRef.current.forEach((interaction, index) => {
@@ -278,24 +348,16 @@ export function useHostedPreviewBridge({
 				executeInteraction(interaction, index)
 			})
 
+			// A scroll position the page sent while the scene loaded found no
+			// viewer to run it.
 			activeScrollInteractionIdsRef.current.clear()
-
 			if (lastScrollProgressRef.current !== null) {
 				applyScrollProgress(lastScrollProgressRef.current)
 			}
-		},
-		[applyScrollProgress, executeInteraction, postMessageToParent, sceneId]
-	)
 
-	const onCommandExecutorReady = useCallback(
-		(executor: null | ViewerCommandExecutor) => {
-			executorRef.current = executor
-
-			if (!executor) {
-				activeScrollInteractionIdsRef.current.clear()
-			}
+			if (parentOriginRef.current) announceReady(parentOriginRef.current)
 		},
-		[]
+		[announceReady, applyScrollProgress, executeInteraction, initialCommands]
 	)
 
 	useEffect(() => {
@@ -317,16 +379,15 @@ export function useHostedPreviewBridge({
 			if (event.source !== window.parent) return
 			if (!isHostedPreviewIncomingMessage(event.data)) return
 
-			if (!parentOriginRef.current && event.origin && event.origin !== 'null') {
-				parentOriginRef.current = event.origin
-				flushOutboundQueue(event.origin)
-			}
+			const pinsOrigin =
+				!parentOriginRef.current && !!event.origin && event.origin !== 'null'
+			if (pinsOrigin) parentOriginRef.current = event.origin
 
 			switch (event.data.type) {
 				case 'ping':
-					// Reply immediately with pong so VectrealEmbed.ready() can resolve.
-					if (parentOriginRef.current) {
-						sendPong(parentOriginRef.current)
+					// Unanswered until the viewer accepts commands; the SDK pings again.
+					if (acceptsCommandsRef.current && parentOriginRef.current) {
+						announceReady(parentOriginRef.current)
 					}
 					break
 				case 'viewer_command':
@@ -339,6 +400,9 @@ export function useHostedPreviewBridge({
 					applyHostMessage(event.data.message)
 					break
 			}
+
+			// After the reply, so queued events reach a page that knows the scene.
+			if (pinsOrigin) flushOutboundQueue(event.origin)
 		}
 
 		window.addEventListener('message', handleMessage)
@@ -346,7 +410,7 @@ export function useHostedPreviewBridge({
 		return () => {
 			window.removeEventListener('message', handleMessage)
 		}
-	}, [applyHostMessage, applyScrollProgress, flushOutboundQueue, sendPong])
+	}, [applyHostMessage, applyScrollProgress, announceReady, flushOutboundQueue])
 
 	return {
 		onCommandExecutorReady,

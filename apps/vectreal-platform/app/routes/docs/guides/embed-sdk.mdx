@@ -94,7 +94,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 ></iframe>
 ```
 
-`?camera`, `?autoRotate` and `?transition` apply once, on `viewer_ready`. `?theme` and the three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
+`?camera`, `?autoRotate` and `?transition` apply once, when the viewer loads and before `ready()` resolves, so a camera your page asks for afterwards replaces the one in the URL. `?theme` and the three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
 
 None of them persists to the stored scene configuration.
 
@@ -120,7 +120,7 @@ other origin are dropped.
 
 | Method | Signature | Description |
 |---|---|---|
-| `ready` | `() => Promise<EmbedReadyInfo>` | Resolves when the viewer emits `viewer_ready`. Returns `{ sceneId, cameras, hotspots }`. |
+| `ready` | `() => Promise<EmbedReadyInfo>` | Resolves once the scene has loaded and the viewer accepts commands, wherever the frame sits on the page. Returns `{ sceneId, cameras, hotspots }` for that scene. |
 | `activateCamera` | `(cameraId: string) => void` | Switch to a named camera. |
 | `focusHotspot` | `(hotspotId: string) => void` | Reveal a hotspot's content and fly its camera. Sets rather than toggles, so calling it twice does not close the card; there is no close command. |
 | `setTransition` | `(options: SetTransitionOptions) => void` | Override transition type for subsequent camera switches. |
@@ -148,7 +148,7 @@ or sending a host message. `destroy()` discards anything still queued.
 
 | Event type | Payload | When |
 |---|---|---|
-| `viewer_ready` | `void` | The viewer command surface is registered and ready. |
+| `viewer_ready` | `void` | The viewer accepts commands. Emitted once per `VectrealEmbed`. |
 | `model_loaded` | `void` | The model has finished loading and initial framing is complete. Fires once per load. |
 | `camera_changed` | `{ cameraId: string }` | The active camera changed. |
 | `hotspot_activated` | `{ hotspotId: string, cameraId: string \| null }` | A visitor clicked a marker. `cameraId` is `null` for one that only reveals content. Not emitted for your own `focusHotspot` call. |
@@ -325,6 +325,11 @@ present packages/viewer/src/types/viewer-interactions.ts type: 'hotspot_activate
 present packages/embed/src/protocol.ts hotspots?: EmbedHotspotDescriptor[]
 present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (event.source !== window.parent) return
 present packages/embed/src/embed.ts if (event.source !== this.iframe.contentWindow) return
+present packages/embed/src/embed.ts if (this.hasEmittedReady) break
+present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (acceptsCommandsRef.current && parentOriginRef.current) {
+present packages/viewer/src/vectreal-viewer.tsx const cameraLayer = useHeldExecutor()
+present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (parentOriginRef.current) announceReady(parentOriginRef.current)
+present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (pinsOrigin) flushOutboundQueue(event.origin)
 present packages/embed/src/embed.ts if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) {
 present packages/embed/vite.config.ts format: 'iife'
 present packages/embed/vite.config.ts entryFileNames: 'vectreal-embed.umd.js'

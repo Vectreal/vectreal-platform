@@ -6,7 +6,7 @@ import {
 	CameraTransitionEasing,
 	CameraTransitionType
 } from '@vctrl/core'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
 	CatmullRomCurve3,
 	Euler,
@@ -340,6 +340,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 	const initializedCameraPosition = useRef(false)
 	const hasInitialFramingCompleted = useRef(false)
+	/*
+	  The same moment as the ref above, as state, so the executor can wait for
+	  it. A camera command run before framing is overwritten by the framing
+	  itself; the viewer holds commands until this layer registers.
+	*/
+	const [isFramed, setIsFramed] = useState(false)
 	const isWaitingForStableFrame = useRef(false)
 	const stableFrameCount = useRef(0)
 	const previousCameraPosition = useRef<Vector3 | null>(null)
@@ -494,6 +500,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	)
 
 	useEffect(() => {
+		if (!isFramed) return
+
 		// Expose the smallest imperative runtime surface possible so app layers can
 		// drive viewer state without reaching into camera internals.
 		onCommandExecutorReady?.({ execute: executeViewerCommand })
@@ -502,7 +510,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		return () => {
 			onCommandExecutorReady?.(null)
 		}
-	}, [executeViewerCommand, onCommandExecutorReady, onInteractionEvent])
+	}, [
+		executeViewerCommand,
+		isFramed,
+		onCommandExecutorReady,
+		onInteractionEvent
+	])
 
 	const initializeCamera = useCallback(
 		(sceneCamera: PerspectiveCamera) => {
@@ -561,6 +574,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			initializedCameraPosition.current = false
 			hasInitialFramingCompleted.current = false
 			isWaitingForStableFrame.current = false
+			setIsFramed(false)
 			return
 		}
 		if (initializedCameraPosition.current) return
@@ -696,6 +710,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		if (stabilizationTimedOut || stabilizationFrameLimitReached) {
 			hasInitialFramingCompleted.current = true
 			isWaitingForStableFrame.current = false
+			setIsFramed(true)
 			onInteractionEvent?.({
 				type: 'initial_framing_completed',
 				cameraId: previousSelectionKey.current
@@ -751,6 +766,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		if (stableFrameCount.current >= 2) {
 			hasInitialFramingCompleted.current = true
 			isWaitingForStableFrame.current = false
+			setIsFramed(true)
 			onInteractionEvent?.({
 				type: 'initial_framing_completed',
 				cameraId: previousSelectionKey.current
