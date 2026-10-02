@@ -5,8 +5,6 @@
 
 A ready-to-use React component for rendering and interacting with 3D models. Built on top of [Three.js](https://threejs.org) and [React Three Fiber](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction).
 
-> This package is still in active development. Breaking changes may occur before the first major release.
-
 ---
 
 ## Installation
@@ -16,6 +14,8 @@ npm install @vctrl/viewer
 # or
 pnpm add @vctrl/viewer
 ```
+
+**Module format:** ES modules only. Import it from any bundler or browser.
 
 ---
 
@@ -296,8 +296,9 @@ Configures the [@react-three/drei `Environment`](https://github.com/pmndrs/drei#
 Drei's `Bounds` is deliberately kept from writing them.
 
 `fit` is accepted for API compatibility but ignored: `SceneBounds` always passes
-`fit={false}` to Drei's `Bounds` because `SceneCamera` drives fitting imperatively
-via `bounds.reset().fit()`.
+`fit={false}` to Drei's `Bounds` because `SceneCamera` frames the first view
+itself. That framing uses `margin`, and it is applied in one step, so `maxDuration`
+does not animate it.
 
 ```tsx
 <VectrealViewer
