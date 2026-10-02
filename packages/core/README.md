@@ -243,8 +243,8 @@ the texture set.
 - `originalSize`, `optimizedSize`
 - `compressionRatio` as `originalSize / optimizedSize`
 - `appliedOptimizations`
-- `stats` before and after metrics for vertices, triangles, materials, texture size in bytes (`textures`), texture asset count (`texturesCount`), `textureResolutions`, and mesh payload size in bytes (`meshes`)
-- `draco`, a `DracoCompressionReport`, only when a Draco measurement has been recorded. Draco compression is deferred until write time, so `stats.meshes` always reflects uncompressed geometry
+- `stats`, before/after metrics: `verticesCount`, `primitivesCount`, `materialsCount`, `meshesCount`, `meshBytes` (mesh payload size in bytes), `texturesCount`, `textureBytes`, and `textureResolutions`
+- `draco`, a `DracoCompressionReport`, only when a Draco measurement has been recorded. Draco compression is deferred until write time, so `stats.meshBytes` always reflects uncompressed geometry
 
 ```ts
 const report = await optimizer.getReport()
@@ -315,7 +315,7 @@ export async function POST(request: Request) {
 or Node.js. Loading it with `require()` needs Node.js 20.19, 22.12 or later, with the
 `instanceof` caveat under Installation.
 
-`sharp` is an **optional** dependency, not a hard requirement. Install it yourself (`npm install sharp`; this workspace tracks `^0.35.3`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, supply your own `encoder` instead.
+`sharp` is an **optional** dependency, not a hard requirement. Install it yourself (`npm install sharp`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, supply your own `encoder` instead.
 
 ---
 

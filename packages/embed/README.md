@@ -38,23 +38,30 @@ For production, pin a version (`@vctrl/embed@<version>`) and add a [Subresource 
 		allowfullscreen
 	></iframe>
 </div>
-
-<script type="module">
-	import { VectrealEmbed } from '@vctrl/embed'
-
-	const embed = new VectrealEmbed(document.getElementById('vectreal-scene'))
-
-	const { cameras, hotspots } = await embed.ready()
-	console.log('Available cameras:', cameras)
-	console.log('Hotspots a visitor can see:', hotspots)
-
-	embed.on('camera_changed', ({ cameraId }) => {
-		console.log('Camera changed to:', cameraId)
-	})
-
-	embed.activateCamera('detail')
-</script>
 ```
+
+Then, in your app code (a bundler such as Vite or webpack resolves the package name):
+
+```ts
+import { VectrealEmbed } from '@vctrl/embed'
+
+const iframe = document.getElementById('vectreal-scene') as HTMLIFrameElement
+const embed = new VectrealEmbed(iframe)
+
+const { cameras, hotspots } = await embed.ready()
+console.log('Available cameras:', cameras)
+console.log('Hotspots a visitor can see:', hotspots)
+
+embed.on('camera_changed', ({ cameraId }) => {
+	console.log('Camera changed to:', cameraId)
+})
+
+embed.activateCamera('detail')
+```
+
+A browser cannot resolve `'@vctrl/embed'` on its own, so without a bundler, load the
+script-tag build from [Installation](#installation) and create the SDK with
+`new VectrealEmbed.VectrealEmbed(...)` instead of the `import`.
 
 ## API
 
