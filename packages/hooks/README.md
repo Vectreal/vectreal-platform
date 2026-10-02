@@ -240,8 +240,8 @@ function ExportButton({ file }: { file: ModelFile | null }) {
 | `handleDocumentGlbDracoExport(document, file)`                 | Export a `Document` to `.glb` with Draco geometry compression          |
 
 `binary = true` writes `.glb`; `binary = false` writes a zipped `.gltf` package. Pass
-`download = false` to `handleDocumentGltfExport` to get the `GLTFExportResult` back
-instead of saving a file.
+`download = false` to `handleDocumentGltfExport` to get the export back instead of saving a
+file: a `GLBExportResult` when `binary` is true, a `GLTFExportResult` otherwise.
 
 ---
 
