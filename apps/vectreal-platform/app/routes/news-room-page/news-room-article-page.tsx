@@ -17,6 +17,7 @@ import {
 } from '../../components/layout-components'
 import { ArticleCard } from '../../components/layout-components/article-card'
 import { ArticleHero } from '../../components/layout-components/article-hero'
+import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	getAdjacentNewsArticles,
@@ -61,14 +62,14 @@ export async function loader({ params }: Route.LoaderArgs) {
 	})
 }
 
-export function meta({ loaderData }: Route.MetaArgs) {
-	if (!loaderData) {
-		return buildPageMeta({
-			title: 'Article not found - Vectreal',
-			description: 'This news article is no longer available.',
-			canonical: '/news-room'
-		})
-	}
+export function meta({ error, loaderData }: Route.MetaArgs) {
+	/*
+	  A missing article renders the site 404, so it gets the 404's meta. It
+	  used to stay indexable with a canonical pointing at `/news-room`, which
+	  told search engines this URL was a copy of the listing.
+	*/
+	if (error) return routeErrorMeta(error)
+	if (!loaderData) return notFoundMeta()
 
 	const title = `${loaderData.article.title} - Vectreal Newsroom`
 	const description = loaderData.article.excerpt

@@ -2,13 +2,12 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { ApiResponse } from '@shared/utils'
 import { describe, expect, it } from 'vitest'
 
+import { embedRefusal } from './embed-refusal'
 import {
 	EMBED_RESPONSE_HEADERS,
-	mergeEmbedResponseHeaders,
-	withEmbedResponseHeaders
+	mergeEmbedResponseHeaders
 } from './embed-response-headers'
 
 /**
@@ -20,83 +19,61 @@ import {
 
 const ORIGINAL = Object.entries(EMBED_RESPONSE_HEADERS)
 
+/*
+  What a document actually goes out with: the loader's thrown or returned
+  `data(...)` puts its headers into `loaderHeaders`, and the route's `headers`
+  export merges them. Driven through both halves, for every refusal the loader
+  throws and for the success path.
+*/
+function sentHeaders(init: ResponseInit | null) {
+	return mergeEmbedResponseHeaders(new Headers(init?.headers))
+}
+
+const EVERY_RESPONSE = [
+	['a 404', embedRefusal('not_available').init],
+	['a malformed URL', embedRefusal('not_available', 400).init],
+	['a refused domain', embedRefusal('domain_not_allowed').init],
+	['a rate limit', embedRefusal('busy').init],
+	['the scene', { headers: EMBED_RESPONSE_HEADERS }]
+] as const
+
 describe('embed response headers', () => {
-	it('tells crawlers not to index, whatever the status', () => {
-		const responses = [
-			ApiResponse.notFound('Scene not found'),
-			ApiResponse.forbidden('Forbidden'),
-			ApiResponse.error('Too many requests', 429),
-			ApiResponse.badRequest('Bad request'),
-			new Response('ok', { status: 200 })
-		]
-
-		for (const response of responses) {
-			const wrapped = withEmbedResponseHeaders(response)
-
-			expect(
-				wrapped.headers.get('X-Robots-Tag'),
-				`status ${wrapped.status} is indexable`
-			).toBe('noindex, nofollow')
-		}
+	it.each(EVERY_RESPONSE)('keep %s out of search indexes', (_, init) => {
+		expect(sentHeaders(init).get('X-Robots-Tag')).toBe('noindex, nofollow')
 	})
 
-	it('keeps every declared header on every status', () => {
+	it.each(EVERY_RESPONSE)('carry every declared header on %s', (_, init) => {
 		for (const [name, value] of ORIGINAL) {
-			const wrapped = withEmbedResponseHeaders(
-				ApiResponse.notFound('Scene not found')
-			)
-
-			expect(wrapped.headers.get(name), `${name} is missing`).toBe(value)
+			expect(sentHeaders(init).get(name), `${name} is missing`).toBe(value)
 		}
 	})
 
 	it('never lets an embed response be stored', () => {
-		const wrapped = withEmbedResponseHeaders(new Response('ok'))
-
-		expect(wrapped.headers.get('Cache-Control')).toBe('no-store')
+		expect(
+			sentHeaders(embedRefusal('not_available').init).get('Cache-Control')
+		).toBe('no-store')
 	})
 
 	it('does not send a full tokenized URL to another origin', () => {
-		const wrapped = withEmbedResponseHeaders(new Response('ok'))
-
 		/*
 		  Matching the browser default rather than tightening past it. The point
 		  is that a laxer policy introduced later cannot silently start attaching
 		  a tokenized URL to requests leaving the page.
 		*/
-		expect(wrapped.headers.get('Referrer-Policy')).toBe(
-			'strict-origin-when-cross-origin'
-		)
-	})
-
-	it('preserves the status and body it was handed', async () => {
-		const wrapped = withEmbedResponseHeaders(
-			new Response('scene payload', { status: 418 })
-		)
-
-		expect(wrapped.status).toBe(418)
-		expect(await wrapped.text()).toBe('scene payload')
-	})
-
-	it('keeps headers the response already carried', () => {
-		const response = new Response('ok', {
-			headers: { 'Set-Cookie': 'session=abc' }
-		})
-
-		expect(withEmbedResponseHeaders(response).headers.get('Set-Cookie')).toBe(
-			'session=abc'
-		)
+		expect(
+			sentHeaders(embedRefusal('not_available').init).get('Referrer-Policy')
+		).toBe('strict-origin-when-cross-origin')
 	})
 
 	/*
 	  The half the rest of this file cannot see.
 
-	  Everything above proves the helper returns the right `Response`. None of it
-	  proves the browser receives one: for a document route, React Router builds
+	  Everything above proves what the two halves produce together. None of it
+	  proves the browser receives it: for a document route, React Router builds
 	  the HTTP response with `getDocumentHeaders`, which for a module without a
 	  `headers` export keeps only `Set-Cookie` from the loader and discards the
 	  rest. This PR's first draft did exactly that - a correct helper, wired into
-	  a route that threw its output away, with all seven assertions above passing.
+	  a route that threw its output away, with every assertion above passing.
 
 	  So the invariant is between the two halves: anything that builds these
 	  headers in a loader has to export `headers` as well, or it is setting them
@@ -120,7 +97,7 @@ describe('embed response headers', () => {
 			.map((file) => ({ file, source: readFileSync(file, 'utf8') }))
 			.filter(
 				({ source }) =>
-					source.includes('withEmbedResponseHeaders') ||
+					source.includes('embedRefusal') ||
 					source.includes('EMBED_RESPONSE_HEADERS')
 			)
 
@@ -148,18 +125,6 @@ describe('embed response headers', () => {
 				).toBe(true)
 			}
 		)
-	})
-
-	it('overrides a weaker value rather than appending to it', () => {
-		// `set`, not `append`. Two Cache-Control values would let the permissive
-		// one win depending on who parses it.
-		const response = new Response('ok', {
-			headers: { 'Cache-Control': 'public, max-age=86400' }
-		})
-
-		expect(
-			withEmbedResponseHeaders(response).headers.get('Cache-Control')
-		).toBe('no-store')
 	})
 })
 

@@ -1,5 +1,6 @@
 import { data, useRouteError } from 'react-router'
 
+import { EmbedErrorState } from '../../components/scene-embed/embed-error-state'
 import { mergeEmbedResponseHeaders } from '../../lib/domain/embed/embed-response-headers'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 import { buildMeta } from '../../lib/seo'
@@ -37,14 +38,7 @@ export const meta = () =>
 	})
 
 function EmbedNotFound() {
-	return (
-		<main className="bg-background flex h-dvh w-full flex-col items-center justify-center gap-2 p-6 text-center">
-			<h1 className="text-h4">This embed is not available</h1>
-			<p className="text-muted-foreground text-body-sm">
-				Check the embed code on this page.
-			</p>
-		</main>
-	)
+	return <EmbedErrorState kind="not_available" />
 }
 
 export default EmbedNotFound

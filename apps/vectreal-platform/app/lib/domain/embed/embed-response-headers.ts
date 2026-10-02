@@ -41,26 +41,6 @@ export const EMBED_RESPONSE_HEADERS: Readonly<Record<string, string>> = {
 }
 
 /**
- * Re-issues `response` carrying the headers above.
- *
- * Applied to every return from the embed loader, not only the successful one.
- * A 404 for an unpublished scene and a 403 for a disallowed domain are just as
- * indexable as a 200, and they are the ones a crawler is most likely to reach.
- */
-export function withEmbedResponseHeaders(response: Response): Response {
-	const headers = new Headers(response.headers)
-
-	for (const [name, value] of Object.entries(EMBED_RESPONSE_HEADERS)) {
-		headers.set(name, value)
-	}
-
-	return new Response(response.body, {
-		status: response.status,
-		headers
-	})
-}
-
-/**
  * The headers a rendered `/embed` document goes out with, given whatever the
  * route's loader attached.
  *
@@ -75,8 +55,7 @@ export function withEmbedResponseHeaders(response: Response): Response {
  * `set` in a loop, not a spread of `Object.fromEntries`. That lowercases every
  * name, so `cache-control` does not overwrite `Cache-Control`: both keys reach
  * the record, `new Headers` fills by append, and every embed response goes out
- * saying `no-store, no-store`. This is the same reason
- * `withEmbedResponseHeaders` sets rather than appends.
+ * saying `no-store, no-store`.
  */
 export function mergeEmbedResponseHeaders(loaderHeaders: Headers): Headers {
 	const merged = new Headers(EMBED_RESPONSE_HEADERS)

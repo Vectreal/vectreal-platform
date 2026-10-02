@@ -43,12 +43,21 @@ describe('root Layout, when an error reaches it', () => {
 		expect(await screen.findByText('This page does not exist')).toBeTruthy()
 	})
 
-	it('names the status of any other response, never its JSON', async () => {
+	it('says access is refused for a 403, never its JSON', async () => {
 		renderRootError(data({ secret: 'payload' }, { status: 403 }))
-		expect(await screen.findByText('Something went wrong')).toBeTruthy()
-		expect(document.body.textContent).toContain('403')
+		expect(
+			await screen.findByText('You do not have access to this page')
+		).toBeTruthy()
 		expect(document.body.textContent).not.toContain('payload')
 		expect(document.body.textContent).not.toContain('"status"')
+	})
+
+	it('never shows an exception message', async () => {
+		renderRootError(new Error('at db/client.ts:12 token=abc'))
+		expect(
+			await screen.findByText('Something went wrong on our side')
+		).toBeTruthy()
+		expect(document.body.textContent).not.toContain('db/client.ts')
 	})
 })
 
@@ -61,10 +70,15 @@ describe('root meta', () => {
 		}
 	}
 
-	it('keeps a 404 out of the index and points it nowhere', () => {
-		expect(
-			robotsAndCanonical(new ErrorResponseImpl(404, 'Not Found', null))
-		).toEqual({ robots: 'noindex, nofollow', canonical: false })
+	it.each([
+		new ErrorResponseImpl(404, 'Not Found', null),
+		new ErrorResponseImpl(403, 'Forbidden', null),
+		new Error('boom')
+	])('keeps %o out of the index and points it nowhere', (error) => {
+		expect(robotsAndCanonical(error)).toEqual({
+			robots: 'noindex, nofollow',
+			canonical: false
+		})
 	})
 
 	it('still marks a normal page canonical to home', () => {

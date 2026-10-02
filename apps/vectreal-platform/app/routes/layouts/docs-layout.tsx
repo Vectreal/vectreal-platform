@@ -9,6 +9,7 @@ import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { usePublishDocsToc } from '../../components/docs/docs-toc-context'
 import { DocsTreeNav } from '../../components/docs/docs-tree-nav'
 import { PublicErrorBoundary } from '../../components/errors'
+import { routeErrorMeta } from '../../components/not-found'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	GITHUB_REPO,
@@ -30,6 +31,8 @@ import type { RootLoader } from '../../root'
 
 export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 	(() => {
+		if (args.error) return routeErrorMeta(args.error)
+
 		const slug = args.location.pathname
 			.replace(/^\/docs\/?/, '')
 			.replace(/\/$/, '')
@@ -112,7 +115,15 @@ export default function DocsLayout() {
 			</aside>
 
 			<main className="min-w-0 flex-1 lg:px-8">
-				<article ref={contentRef} className={cn('mt-24', styles.docsContent)}>
+				{/*
+				  Prose styles only for a page the manifest knows. They style bare
+				  elements, so anything else here, such as the not-found state, had
+				  its buttons turned into orange prose links.
+				*/}
+				<article
+					ref={contentRef}
+					className={cn('mt-24', page && styles.docsContent)}
+				>
 					<Outlet />
 				</article>
 

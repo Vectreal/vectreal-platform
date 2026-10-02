@@ -161,6 +161,48 @@ describe('a rendered boundary reports', () => {
 	})
 
 	/*
+	  Every other public state, through the same boundary. An exception's
+	  message never reaches the page; a loader's own string copy does.
+	*/
+	it.each([
+		[
+			'a 403',
+			() => {
+				throw new Response('Ask whoever shared it.', { status: 403 })
+			},
+			'You do not have access to this page',
+			'Ask whoever shared it.'
+		],
+		[
+			'an exception',
+			() => {
+				throw new Error('at db/client.ts:12 token=abc')
+			},
+			'Something went wrong on our side',
+			undefined
+		]
+	])('shows the designed state for %s', async (_, loader, heading, detail) => {
+		const Stub = createRoutesStub([
+			{
+				path: '/',
+				loader,
+				Component: () => null,
+				ErrorBoundary: PublicErrorBoundary
+			}
+		])
+
+		render(
+			<PostHogProvider client={fakePostHog()}>
+				<Stub initialEntries={['/']} />
+			</PostHogProvider>
+		)
+
+		expect(await screen.findByText(heading)).toBeInTheDocument()
+		if (detail) expect(screen.getByText(detail)).toBeInTheDocument()
+		expect(document.body.textContent).not.toContain('db/client.ts')
+	})
+
+	/*
 	  One failure, one event, under StrictMode's double-invoked mount effect.
 	  The predecessor called `captureException` during render, which made every
 	  re-render another event for the same failure.

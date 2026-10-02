@@ -4,6 +4,7 @@ import { data, Link, useLoaderData } from 'react-router'
 
 import { PublicErrorBoundary } from '../../components/errors'
 import { PageHero } from '../../components/layout-components'
+import { routeErrorMeta } from '../../components/not-found'
 import {
 	FeatureCompareGrid,
 	PricingCardsSection
@@ -32,7 +33,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 }
 
-export function meta(_: Route.MetaArgs) {
+export function meta({ error }: Route.MetaArgs) {
+	if (error) return routeErrorMeta(error)
 	return buildPageMeta(PUBLIC_SEO_PAGES.pricing)
 }
 
