@@ -201,7 +201,15 @@ describe('the shared client', () => {
 	it('is the only module that loads posthog-node as a value', () => {
 		expect(
 			others
-				.filter(({ file, source }) => loadsPosthogNode(file, source))
+				/*
+				  The substring first: a module cannot name the package without
+				  it, and parsing all of app/ into ASTs took longer than a test
+				  may under CI coverage.
+				*/
+				.filter(
+					({ file, source }) =>
+						source.includes('posthog-node') && loadsPosthogNode(file, source)
+				)
 				.map(({ file }) => show(file))
 		).toEqual([])
 	})
