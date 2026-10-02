@@ -49,20 +49,21 @@ describe('the centering offset is re-measured when the model rescales', () => {
 		// Taking the diagonal from `SceneModel`'s callback would put it a render
 		// behind the scale `SceneModel` already applied, and `bounds.fit()` would
 		// frame a model swap against the previous centering offset.
-		expect(source).toContain('setFromObject(model)')
+		expect(source).toContain('useModelFrame(model, modelKey)')
 		expect(source).not.toContain('setRawDiagonal')
 	})
 
 	it('measures once per model, not per normalization change', () => {
 		// `Box3.setFromObject` reads whatever scale the model is already mounted
 		// under, so re-measuring when the options change would derive a scale
-		// different from the one `SceneModel` holds.
+		// different from the one `SceneModel` holds. `model-frame.spec.ts` covers
+		// the once-per-model rule itself.
 		const measurement = source.slice(
-			source.indexOf('const rawDiagonal = useMemo('),
+			source.indexOf('const rawDiagonal ='),
 			source.indexOf('const centerCacheKey = useMemo(')
 		)
 
-		expect(measurement).toContain('[model]')
+		expect(measurement).toContain('useModelFrame(model, modelKey)')
 		expect(measurement).not.toContain('normalizationOptions')
 	})
 })

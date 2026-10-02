@@ -59,12 +59,14 @@ export const loadingModelState = (
 
 export const readyModelState = (
 	source: ModelSourceKind,
-	loaded: LoadedModel
+	loaded: LoadedModel,
+	loadId: number
 ): ModelState => ({
 	status: 'ready',
 	file: loaded.file,
 	error: null,
 	source,
+	loadId,
 	progress: 100,
 	sceneId: loaded.sceneId,
 	sceneData: loaded.sceneData
