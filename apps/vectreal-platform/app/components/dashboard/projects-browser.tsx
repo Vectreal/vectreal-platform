@@ -209,19 +209,19 @@ export function ProjectsBrowser({
 							tableState.setView(value as DashboardView)
 						}
 					}}
-					className="ds-sunken h-10 rounded-xl p-1"
+					className="h-10 w-fit"
 				>
 					<ToggleGroupItem
 						value="grid"
 						aria-label="Grid view"
-						className="size-8 rounded-lg first:rounded-l-lg last:rounded-r-lg"
+						className="size-8 flex-none px-0"
 					>
 						<LayoutGrid className="size-4" />
 					</ToggleGroupItem>
 					<ToggleGroupItem
 						value="table"
 						aria-label="Table view"
-						className="size-8 rounded-lg first:rounded-l-lg last:rounded-r-lg"
+						className="size-8 flex-none px-0"
 					>
 						<Rows3 className="size-4" />
 					</ToggleGroupItem>

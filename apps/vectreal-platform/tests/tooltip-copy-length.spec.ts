@@ -92,8 +92,10 @@ describe('tooltip copy', () => {
 
 	it('finds the tooltip strings it is meant to be guarding', () => {
 		// A collector that silently matches nothing is a green test that checks
-		// nothing, which is the only way this rule can fail quietly.
-		expect(copy.length).toBeGreaterThan(40)
+		// nothing, which is the only way this rule can fail quietly. The floor
+		// dropped from 40 when the publisher's per-slider and per-toggle tooltips
+		// gave way to one caption per drill-down view; 15 remain.
+		expect(copy.length).toBeGreaterThan(10)
 	})
 
 	it('stays within three lines of the tooltip box', () => {

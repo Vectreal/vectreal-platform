@@ -1,12 +1,11 @@
+import { valueMappings } from '@shared/utils'
+
 import {
 	defaultCameraOptions,
 	defaultControlsOptions
 } from '../../../../../constants/viewer-defaults'
-import { valueMappings } from '../../../../../lib/utils/value-mapping'
 
 import type { FieldConfig } from '../../../../../types/settings-field'
-
-export type { FieldConfig }
 
 /**
  * Camera controls field configurations
@@ -19,7 +18,6 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		min: 0.1,
 		max: 10,
 		step: 0.1,
-		tooltip: 'Speed at which the camera auto-rotates.',
 		formatValue: (value) => value.toFixed(1),
 		valueMapping: valueMappings.quadratic
 	},
@@ -29,8 +27,6 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		min: 0.01,
 		max: 1,
 		step: 0.01,
-		tooltip:
-			'How smoothly the camera decelerates. Lower values feel floatier; higher values feel snappier.',
 		formatValue: (value) => value.toFixed(2)
 	},
 	{
@@ -39,7 +35,6 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		min: 0.1,
 		max: 5,
 		step: 0.1,
-		tooltip: 'Speed at which zooming in/out occurs.',
 		formatValue: (value) => value.toFixed(1),
 		valueMapping: valueMappings.quadratic
 	},
@@ -49,7 +44,6 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		min: 0.1,
 		max: 3,
 		step: 0.1,
-		tooltip: 'Speed of manual camera rotation.',
 		formatValue: (value) => value.toFixed(1)
 	},
 	{
@@ -58,7 +52,6 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		min: 0.1,
 		max: 3,
 		step: 0.1,
-		tooltip: 'Speed of camera panning.',
 		formatValue: (value) => value.toFixed(1)
 	},
 	{
@@ -67,24 +60,7 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		min: 0,
 		max: Math.PI,
 		step: 0.01,
-		tooltip:
-			'How far down the camera can orbit. Lower values keep the camera above the horizon.',
 		formatValue: (value) => `${((value * 180) / Math.PI).toFixed(0)}°`
-	}
-]
-
-/**
- * Camera field configurations
- */
-export const CAMERA_FIELDS: FieldConfig[] = [
-	{
-		key: 'fov',
-		label: 'Field of View',
-		min: 20,
-		max: 120,
-		step: 1,
-		tooltip: 'Camera field of view in degrees.',
-		formatValue: (value) => `${value.toFixed(0)}°`
 	}
 ]
 

@@ -110,44 +110,51 @@ export const SettingRow = memo(
 
 SettingRow.displayName = 'SettingRow'
 
-/**
- * Layout wrapper for preset/button groups.
- * Provides consistent spacing and label styling for toggle button groups.
- */
+/** The one caption style in publisher panels: a group's or a view's sentence. */
+export const PanelCaption = ({ children }: { children: ReactNode }) => (
+	<p className="text-muted-foreground text-xs">{children}</p>
+)
 
 interface SettingGroupProps {
 	label: string
-	description?: string
-	/**
-	 * A control for the group as a whole, on the label row.
-	 *
-	 * The row was already a `justify-between` wrapping a single child — a slot
-	 * drawn and never wired, which is why Shadow's per-group switches sat in
-	 * hand-rolled rows beside it instead.
-	 */
+	/** The id of the control the label names, when there is a single one. */
+	htmlFor?: string
+	description?: ReactNode
+	/** The setting's current value, read out at the end of the label row. */
+	value?: ReactNode
+	/** A control for the group as a whole, at the end of the label row. */
 	action?: ReactNode
 	children: ReactNode
 	className?: string
 }
 
+/** A labelled group of controls, with an optional caption, value and action. */
 export const SettingGroup = memo(
 	({
 		label,
+		htmlFor,
 		description,
+		value,
 		action,
 		children,
 		className = ''
 	}: SettingGroupProps) => (
 		<div className={cn('space-y-2', className)}>
 			<div className="flex items-center justify-between gap-2">
-				<label className="text-muted-foreground text-xs font-medium">
+				<label
+					htmlFor={htmlFor}
+					className="text-muted-foreground text-xs font-medium"
+				>
 					{label}
 				</label>
+				{value !== undefined && (
+					<span className="text-muted-foreground text-xs font-medium tabular-nums">
+						{value}
+					</span>
+				)}
 				{action}
 			</div>
-			{description && (
-				<p className="text-muted-foreground/75 text-xs">{description}</p>
-			)}
+			{description && <PanelCaption>{description}</PanelCaption>}
 			{children}
 		</div>
 	)

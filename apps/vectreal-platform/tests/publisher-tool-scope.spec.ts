@@ -24,14 +24,15 @@ const APP = join(import.meta.dirname, '..', 'app')
 /**
  * The two places the raw field is legitimate.
  *
- * The store derives `openComposeToolAtom` from it, and the tool rail needs to
+ * The store derives `openComposeToolAtom` from it, and the tool bar needs to
  * know which panel to title and render once one is open - a different question
  * from whether anything is open, which the rail also asks, through the derived
  * atom like everyone else.
  */
 const MAY_READ_RAW = [
 	'lib/stores/publisher-config-store.ts',
-	'components/publisher/sidebars/tool-sidebar.tsx'
+	// The tool bar opens tools, and toggles one closed when it is pressed again.
+	'components/publisher/shell/tool-bar.tsx'
 ]
 
 function sourceFiles(dir: string, found: string[] = []): string[] {

@@ -66,6 +66,12 @@ interface DestructiveActionButtonProps extends React.ComponentProps<
 	typeof Button
 > {
 	children: ReactNode
+	/**
+	 * `inline` (the default) sits under copy and aligns by its text. `block`
+	 * spans a column of full-width surfaces, such as the scene page's aside,
+	 * and aligns by its box like they do.
+	 */
+	layout?: 'inline' | 'block'
 }
 
 /**
@@ -78,6 +84,7 @@ interface DestructiveActionButtonProps extends React.ComponentProps<
 export function DestructiveActionButton({
 	className,
 	children,
+	layout = 'inline',
 	...props
 }: DestructiveActionButtonProps) {
 	return (
@@ -88,15 +95,14 @@ export function DestructiveActionButton({
 			className={cn(
 				'text-muted-foreground hover:text-destructive focus-visible:text-destructive',
 				/*
-				  Pulled back by its own horizontal padding. A bordered control aligns
-				  to the eye by its box; a borderless one aligns by its text, and
-				  `size="sm"`'s 12px of padding read as an indent against the sentence
-				  directly above it - measured at every call site, because all four put
-				  this button under copy that starts at the container's content edge.
-				  Only the hover fill extends past that edge, which is what a ghost
-				  control does everywhere else.
+				  A bordered control aligns to the eye by its box; a borderless one
+				  aligns by its text. Under copy, `size="sm"`'s 12px of padding read as
+				  an indent against the sentence above, so the inline button is pulled
+				  back by it and only its hover fill passes the content edge. In a
+				  column of full-width surfaces the box is what lines up, and the same
+				  pull shifted it 12px out of line with them.
 				*/
-				'-ml-3',
+				layout === 'inline' ? '-ml-3' : 'w-full',
 				className
 			)}
 			{...props}

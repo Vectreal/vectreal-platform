@@ -123,10 +123,10 @@ const SaveButton = ({
 	return (
 		<Button
 			variant="ghost"
-			// Icon-only where the header is tight, labelled once there is room.
+			// Labelled at every width: an icon alone could not say which of four
+			// states (save, saved, sign in, optimize first) the button is in.
 			className={cn(
-				'flex items-center justify-center gap-0 rounded-xl px-0',
-				'sm:justify-start sm:gap-2.5 sm:px-4',
+				'flex items-center justify-start gap-2 rounded-xl px-3 sm:gap-2.5 sm:px-4',
 				justSaved && 'text-emerald-500 dark:text-emerald-400'
 			)}
 			aria-label={saveVisual.label}
@@ -144,7 +144,7 @@ const SaveButton = ({
 					{saveVisual.icon}
 				</span>
 			</span>
-			<span className="hidden min-w-0 flex-1 overflow-hidden text-left sm:grid">
+			<span className="grid min-w-0 flex-1 overflow-hidden text-left">
 				<span key={saveVisual.key} className={cn('truncate', contentAnimation)}>
 					{saveVisual.label}
 				</span>

@@ -26,8 +26,8 @@ export const PUBLISHER_LAYER = {
 	card: 'z-10',
 	/** Preview-mode camera controls, bottom-center of the stage. */
 	previewControls: 'z-20',
-	/** Compose tool rail, top-left of the stage. */
-	toolRail: 'z-30',
+	/** Tool bar, top-left of the stage. */
+	toolBar: 'z-30',
 	/** Sliding panels: publish sidebar, compose sidebar, optimization drawer. */
 	sidebar: 'z-40',
 	/** Header row. Above the sidebars so its location dropdown is never clipped. */
@@ -37,7 +37,7 @@ export const PUBLISHER_LAYER = {
 /**
  * Distance every floating surface keeps from the edge of the canvas stage.
  *
- * One value so the tool rail, the publish card, and the preview controls all
+ * One value so the tool bar, the publish card, and the preview controls all
  * share a margin, and nothing sits a few pixels off from its neighbours.
  */
 export const PUBLISHER_EDGE_INSET = 'm-3'
@@ -48,3 +48,12 @@ export const PUBLISHER_EDGE_INSET = 'm-3'
  * Tailwind's spacing-3.
  */
 export const PUBLISHER_EDGE_INSET_PX = 12
+
+/**
+ * Insets for a panel that opens on the left of the stage, under the tool bar,
+ * so it keeps the same 12px (`PUBLISHER_EDGE_INSET`) from every neighbor:
+ * the bar above, the stage's left and bottom edges. The top is the bar's own
+ * inset (12px), plus its height (a 36px trigger inside 4px of padding and a
+ * 1px border on each side, so 46px), plus the 12px gap: 70px.
+ */
+export const PUBLISHER_BELOW_TOOL_BAR = 'pt-17.5 pb-3 pl-3'

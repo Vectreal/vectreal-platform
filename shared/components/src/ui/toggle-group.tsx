@@ -2,89 +2,87 @@
 
 import * as ToggleGroupPrimitive from '@radix-ui/react-toggle-group'
 import { cn } from '@shared/utils'
-import { type VariantProps } from 'class-variance-authority'
 import * as React from 'react'
 
-import { toggleVariants } from './toggle'
+import { ActiveIndicator } from './active-indicator'
 
-const ToggleGroupContext = React.createContext<
-	VariantProps<typeof toggleVariants>
->({
-	size: 'default',
-	variant: 'default'
-})
+/** What a segment needs to know to carry the sliding fill. */
+interface ToggleGroupSelection {
+	layoutId: string
+	selected: string | undefined
+}
 
+const ToggleGroupSelectionContext =
+	React.createContext<ToggleGroupSelection | null>(null)
+
+/**
+ * A segmented control: one track, one segment filled.
+ *
+ * The selected segment fills with `--foreground` and its label inverts, the
+ * same "on" as `Toggle` and the fill of `Slider`. That is a value change rather
+ * than a hue, so the selection reads without color vision. The old segment
+ * marked "on" with `bg-accent`, which is the hover token and was nearly
+ * invisible over its track in light mode.
+ *
+ * The track is `ds-field`, a tint over whatever the group sits on, so the
+ * same group works on the page, in a dialog and on a publisher shell panel.
+ * Callers lay out the segments (a grid for many short options) through
+ * `className`; they do not restyle the surface.
+ *
+ * In a single-select group whose value is known, the fill is one
+ * `ActiveIndicator` that slides to the selected segment. Anywhere it is not
+ * known (a multiple-select group, or one left uncontrolled) each segment that
+ * is on fills in place instead.
+ */
 function ToggleGroup({
 	className,
-	variant,
-	size,
 	children,
 	...props
-}: React.ComponentProps<typeof ToggleGroupPrimitive.Root> &
-	VariantProps<typeof toggleVariants>) {
+}: React.ComponentProps<typeof ToggleGroupPrimitive.Root>) {
+	const layoutId = React.useId()
+	const selected = props.type === 'single' ? props.value : undefined
+	const selection = React.useMemo(
+		() => ({ layoutId, selected }),
+		[layoutId, selected]
+	)
 	return (
-		<ToggleGroupPrimitive.Root
-			data-slot="toggle-group"
-			data-variant={variant}
-			data-size={size}
-			className={cn(
-				'group/toggle-group flex w-fit items-center rounded-md data-[variant=outline]:shadow-xs',
-				className
-			)}
-			{...props}
-		>
-			<ToggleGroupContext.Provider value={{ variant, size }}>
+		<ToggleGroupSelectionContext.Provider value={selection}>
+			<ToggleGroupPrimitive.Root
+				data-slot="toggle-group"
+				className={cn('ds-field flex w-full gap-1 rounded-xl p-1', className)}
+				{...props}
+			>
 				{children}
-			</ToggleGroupContext.Provider>
-		</ToggleGroupPrimitive.Root>
+			</ToggleGroupPrimitive.Root>
+		</ToggleGroupSelectionContext.Provider>
 	)
 }
 
 function ToggleGroupItem({
 	className,
 	children,
-	variant,
-	size,
 	...props
-}: React.ComponentProps<typeof ToggleGroupPrimitive.Item> &
-	VariantProps<typeof toggleVariants>) {
-	const context = React.useContext(ToggleGroupContext)
-
+}: React.ComponentProps<typeof ToggleGroupPrimitive.Item>) {
+	const selection = React.useContext(ToggleGroupSelectionContext)
+	const slides = selection?.selected !== undefined
 	return (
 		<ToggleGroupPrimitive.Item
 			data-slot="toggle-group-item"
-			data-variant={context.variant || variant}
-			data-size={context.size || size}
 			className={cn(
-				toggleVariants({
-					variant: context.variant || variant,
-					size: context.size || size
-				}),
-				'min-w-0 flex-1 shrink-0 rounded-none shadow-none first:rounded-l-md last:rounded-r-md focus:z-10 focus-visible:z-10 data-[variant=outline]:border-l-0 data-[variant=outline]:first:border-l',
-				/*
-				  The selected segment, as a step on the surface ladder.
-
-				  `toggleVariants` marks "on" with `bg-accent`, and `--accent` is the
-				  hover background - oklch(0.97) in light mode. Every group in the
-				  dashboard sits on a `ds-sunken` track, which mixes to nearly the same
-				  value, so in light mode the selected option could not be seen at all:
-				  the projects view switch and the plan switch read as two identical,
-				  unpressed labels. The chosen segment now rises to the page's own
-				  background, against a well 2.5% darker than it.
-
-				  Value alone, with no shadow: `elevation.md` reserves those for
-				  portalled overlays, and a track is not one. `TabsTrigger` does carry
-				  one, but that is the untouched shadcn default rather than a decision
-				  to copy.
-
-				  Dark mode takes 10% of the foreground instead, because a plain
-				  background swap is near-invisible over a 2.5% well on a phone.
-				*/
-				'data-[state=on]:bg-background dark:data-[state=on]:bg-foreground/10',
+				'text-muted-foreground hover:text-foreground relative isolate inline-flex min-h-8 min-w-8 flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-medium whitespace-nowrap',
+				'transition-colors duration-150 motion-reduce:transition-none',
+				'data-[state=on]:text-background',
+				!slides && 'data-[state=on]:bg-foreground',
+				'focus-visible:outline-ring focus-visible:outline-2 focus-visible:outline-offset-1',
+				'disabled:pointer-events-none disabled:opacity-50',
+				"[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className
 			)}
 			{...props}
 		>
+			{slides && selection.selected === props.value && (
+				<ActiveIndicator layoutId={selection.layoutId} />
+			)}
 			{children}
 		</ToggleGroupPrimitive.Item>
 	)

@@ -6,7 +6,6 @@
 	"dependencies": {
 		"@marsidev/react-turnstile": "^1.5.5",
 		"@gltf-transform/core": "catalog:",
-		"@radix-ui/react-accordion": "^1.2.20",
 		"@react-router/dev": "8.3.0",
 		"@react-router/node": "8.3.0",
 		"@react-three/drei": "catalog:",

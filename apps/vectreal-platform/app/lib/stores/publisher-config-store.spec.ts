@@ -4,7 +4,7 @@
  * This exists because the answer was written by hand three times and one copy
  * got it wrong: the hotspot editor asked `activeComposeTool === 'hotspots'` and
  * kept its gizmo, its click-to-select and its click-to-place alive after the
- * author had closed the drawer - the tool rail stopped highlighting the button
+ * author had closed the drawer - the tool bar stopped highlighting the button
  * while the canvas went on offering the tool. A scene tool has to be scoped to
  * its tool, so the predicate lives in one place and is pinned here.
  */
@@ -12,6 +12,9 @@ import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
 import {
+	enterPreviewModeAtom,
+	exitPreviewModeAtom,
+	isPreviewModeAtom,
 	openComposeToolAtom,
 	processAtom,
 	processInitialState
@@ -77,6 +80,65 @@ describe('openComposeToolAtom', () => {
 			...previous,
 			activeComposeTool: 'shadow'
 		}))
+
+		expect(store.get(openComposeToolAtom)).toBe('shadow')
+	})
+})
+
+/**
+ * Preview mode can be entered from anywhere, so leaving it has to put the
+ * publisher back the way the author had it. It used to reopen the Camera tool
+ * whatever had been open, because the only way in was the Camera tool.
+ */
+describe('preview mode', () => {
+	it('closes every panel on the way in', () => {
+		const store = storeWith({
+			mode: 'compose',
+			activeComposeTool: 'hotspots',
+			showSidebar: true
+		})
+
+		store.set(enterPreviewModeAtom)
+
+		expect(store.get(isPreviewModeAtom)).toBe(true)
+		expect(store.get(processAtom).showSidebar).toBe(false)
+		expect(store.get(processAtom).showPublishPanel).toBe(false)
+	})
+
+	it('reopens the tool that was open before', () => {
+		const store = storeWith({
+			mode: 'compose',
+			activeComposeTool: 'hotspots',
+			showSidebar: true
+		})
+
+		store.set(enterPreviewModeAtom)
+		store.set(exitPreviewModeAtom)
+
+		expect(store.get(isPreviewModeAtom)).toBe(false)
+		expect(store.get(openComposeToolAtom)).toBe('hotspots')
+	})
+
+	it('reopens the publish panel when that was what was open', () => {
+		const store = storeWith({ showPublishPanel: true })
+
+		store.set(enterPreviewModeAtom)
+		store.set(exitPreviewModeAtom)
+
+		expect(store.get(processAtom).showPublishPanel).toBe(true)
+	})
+
+	it('keeps the first snapshot when entered twice', () => {
+		const store = storeWith({
+			mode: 'compose',
+			activeComposeTool: 'shadow',
+			showSidebar: true
+		})
+
+		store.set(enterPreviewModeAtom)
+		// A second entry sees the closed panels and must not record them.
+		store.set(enterPreviewModeAtom)
+		store.set(exitPreviewModeAtom)
 
 		expect(store.get(openComposeToolAtom)).toBe('shadow')
 	})

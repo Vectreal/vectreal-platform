@@ -1,25 +1,19 @@
-import { Label } from '@shared/components/ui/label'
+import {
+	ToggleGroup,
+	ToggleGroupItem
+} from '@shared/components/ui/toggle-group'
 
-import { SettingToggle, ToggleButtonGroup } from '../../../settings-components'
-import { getOptimizationDefinition } from '../../model'
+import { StepBlock, StepToggle } from './optimization-step'
+import { PanelCaption, SettingGroup } from '../../../sidebars/sidebar-section'
 import { useOptimizationSettings } from '../../use-optimization-settings'
 
-import type { ToggleButtonGroupOption } from '../../../settings-components'
 import type { FC } from 'react'
 
 type DracoMethod = 'edgebreaker' | 'sequential'
 
-const METHOD_OPTIONS: ToggleButtonGroupOption<DracoMethod>[] = [
-	{
-		value: 'edgebreaker',
-		label: 'Smallest',
-		subLabel: 'Best compression'
-	},
-	{
-		value: 'sequential',
-		label: 'Sequential',
-		subLabel: 'Keeps vertex order'
-	}
+const METHOD_OPTIONS: { value: DracoMethod; label: string }[] = [
+	{ value: 'edgebreaker', label: 'Smallest' },
+	{ value: 'sequential', label: 'Keep vertex order' }
 ]
 
 /**
@@ -28,38 +22,43 @@ const METHOD_OPTIONS: ToggleButtonGroupOption<DracoMethod>[] = [
  */
 export const GeometryCompressionField: FC = () => {
 	const { optimizations, update } = useOptimizationSettings()
-	const definition = getOptimizationDefinition('draco')
 	const draco = optimizations.draco
 	const isEnabled = Boolean(draco?.enabled)
 
 	return (
-		<div className="bg-shell-surface-soft/50 space-y-4 rounded-xl p-4 shadow-sm">
-			<SettingToggle
-				enabled={isEnabled}
-				onToggle={(enabled) => update('draco', { enabled })}
-				title={definition.title}
-				description={definition.description}
-				info={definition.tooltip}
+		<StepBlock>
+			<StepToggle
+				step="draco"
+				checked={isEnabled}
+				onCheckedChange={(enabled) => update('draco', { enabled })}
 			/>
 
 			{isEnabled && (
 				<>
-					<div className="space-y-2">
-						<Label className="text-sm font-semibold">Compression method</Label>
-						<ToggleButtonGroup
-							options={METHOD_OPTIONS}
-							isActive={(value) => (draco?.method ?? 'edgebreaker') === value}
-							onChange={(method) => update('draco', { method })}
-						/>
-					</div>
+					<SettingGroup label="Compression method">
+						<ToggleGroup
+							type="single"
+							aria-label="Compression method"
+							value={draco?.method ?? 'edgebreaker'}
+							onValueChange={(method) => {
+								if (method) update('draco', { method: method as DracoMethod })
+							}}
+						>
+							{METHOD_OPTIONS.map((option) => (
+								<ToggleGroupItem key={option.value} value={option.value}>
+									{option.label}
+								</ToggleGroupItem>
+							))}
+						</ToggleGroup>
+					</SettingGroup>
 
-					<p className="text-muted-foreground text-xs leading-relaxed">
+					<PanelCaption>
 						Compression is applied when you publish, so the scene you edit stays
 						at full precision. Vertex quantization is switched off because Draco
 						does its own.
-					</p>
+					</PanelCaption>
 				</>
 			)}
-		</div>
+		</StepBlock>
 	)
 }

@@ -15,13 +15,14 @@ import { getDefaultStore } from 'jotai'
 import { describe, expect, it, beforeEach } from 'vitest'
 
 import HotspotsSettingsPanel from './hotspots-settings-panel'
-import { MAX_HOTSPOT_BODY_LENGTH } from '../../../../lib/domain/scene/hotspot-urls'
-import { isClickToPlaceActiveAtom } from '../../../../lib/stores/publisher-config-store'
+import { MAX_HOTSPOT_BODY_LENGTH } from '../../../../../lib/domain/scene/hotspot-urls'
+import { isClickToPlaceActiveAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
 	hotspotsAtom
-} from '../../../../lib/stores/scene-settings-store'
+} from '../../../../../lib/stores/scene-settings-store'
+import { DynamicSidebar } from '../../dynamic-sidebar'
 
 import type { HotspotDefinition } from '@vctrl/core'
 
@@ -85,10 +86,23 @@ const announcement = () =>
 const handleFor = (name: string) =>
 	screen.getByRole('button', { name: `Reorder ${name}` })
 
+/** The buttons that open a marker, one per row in the list. */
 const rowTriggers = () =>
 	screen
 		.getAllByRole('button')
-		.filter((element) => element.hasAttribute('aria-expanded'))
+		.filter((element) =>
+			element.getAttribute('data-drill-down-trigger')?.startsWith('hotspot:')
+		)
+
+/**
+ * Opens one of the selected marker's groups (Content, Appearance, Position)
+ * and waits for it: the outgoing view finishes leaving before the next one
+ * mounts, so the fields are not there synchronously.
+ */
+const openView = async (name: string) => {
+	fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name}`) }))
+	await screen.findByRole('heading', { name })
+}
 
 beforeEach(() => {
 	store.set(hotspotsAtom, [])
@@ -105,9 +119,10 @@ describe('HotspotsSettingsPanel arming', () => {
 	 * only the hotspot, which would have left the sidebar quietly disagreeing
 	 * with the canvas about where a viewpoint points.
 	 */
-	it('turns the hotspot’s own camera when an axis is typed', () => {
+	it('turns the hotspot’s own camera when an axis is typed', async () => {
 		arrange()
 		render(<HotspotsSettingsPanel />)
+		await openView('Position')
 
 		act(() => {
 			fireEvent.change(screen.getByLabelText('X position'), {
@@ -126,9 +141,10 @@ describe('HotspotsSettingsPanel arming', () => {
 	 * input on that same keystroke. The field now keeps the string it is being
 	 * given, so an entry that is not yet a number can sit there until it is one.
 	 */
-	it('lets an axis be cleared and retyped as a negative', () => {
+	it('lets an axis be cleared and retyped as a negative', async () => {
 		arrange()
 		render(<HotspotsSettingsPanel />)
+		await openView('Position')
 
 		const field = screen.getByLabelText('X position') as HTMLInputElement
 
@@ -150,13 +166,14 @@ describe('HotspotsSettingsPanel arming', () => {
 		['a lone minus', '-'],
 		['a trailing decimal point', '1.'],
 		['an empty well', '']
-	])('does not write the old number back over %s', (_label, entry) => {
+	])('does not write the old number back over %s', async (_label, entry) => {
 		// A `type="number"` input reports `""` for any entry that is not yet a
 		// number, these three included - which is exactly why the old handler,
 		// bailing on `NaN`, let React restore the previous digits on that
 		// keystroke. What matters is that the well does not refill itself.
 		arrange()
 		render(<HotspotsSettingsPanel />)
+		await openView('Position')
 
 		const field = screen.getByLabelText('X position') as HTMLInputElement
 
@@ -173,9 +190,10 @@ describe('HotspotsSettingsPanel arming', () => {
 		expect(store.get(hotspotsAtom)[0].worldPosition[0]).toBe(1)
 	})
 
-	it('commits a decimal typed through a trailing point', () => {
+	it('commits a decimal typed through a trailing point', async () => {
 		arrange()
 		render(<HotspotsSettingsPanel />)
+		await openView('Position')
 
 		const field = screen.getByLabelText('X position') as HTMLInputElement
 
@@ -187,9 +205,10 @@ describe('HotspotsSettingsPanel arming', () => {
 		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([1.5, 2, 3])
 	})
 
-	it('leaves the committed position alone while the entry is incomplete', () => {
+	it('leaves the committed position alone while the entry is incomplete', async () => {
 		arrange()
 		render(<HotspotsSettingsPanel />)
+		await openView('Position')
 
 		act(() => {
 			fireEvent.change(screen.getByLabelText('X position'), {
@@ -200,9 +219,10 @@ describe('HotspotsSettingsPanel arming', () => {
 		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([1, 2, 3])
 	})
 
-	it('shows the committed position again after an abandoned entry', () => {
+	it('shows the committed position again after an abandoned entry', async () => {
 		arrange()
 		render(<HotspotsSettingsPanel />)
+		await openView('Position')
 
 		const field = screen.getByLabelText('X position') as HTMLInputElement
 
@@ -274,12 +294,49 @@ describe('HotspotsSettingsPanel arming', () => {
 	})
 })
 
+/**
+ * The mobile sheet is modal and covers the stage, so nothing can be placed on
+ * the model while it is open. The panel must not offer it there.
+ */
+describe('HotspotsSettingsPanel in the mobile sheet', () => {
+	const renderIn = (isMobile: boolean) =>
+		render(
+			<DynamicSidebar
+				open
+				onOpenChange={() => undefined}
+				isMobile={isMobile}
+				title="Hotspots"
+			>
+				<HotspotsSettingsPanel />
+			</DynamicSidebar>
+		)
+
+	it('offers placing on the model beside the canvas', async () => {
+		arrange()
+		renderIn(false)
+
+		expect(
+			await screen.findByRole('switch', { name: 'Place on model' })
+		).toBeTruthy()
+	})
+
+	it('leaves placing on the model out of the sheet', async () => {
+		arrange()
+		renderIn(true)
+
+		await screen.findByRole('switch', { name: 'Visible' })
+		expect(screen.queryByRole('switch', { name: 'Place on model' })).toBeNull()
+		expect(screen.getByText(/needs a wider screen/)).toBeTruthy()
+	})
+})
+
 describe('HotspotsSettingsPanel selection', () => {
 	/**
-	 * Being open is being selected. Nothing else marks the row, so a disclosure
-	 * that does not reach the atom leaves the canvas gizmo pointed elsewhere.
+	 * Opening a marker is selecting it. Nothing else marks the row, so a view
+	 * that opened without reaching the atom would leave the canvas gizmo
+	 * pointed elsewhere.
 	 */
-	it('selects the hotspot whose row is expanded', () => {
+	it('selects the hotspot whose row is opened', async () => {
 		store.set(hotspotsAtom, sequence(2))
 		render(<HotspotsSettingsPanel />)
 
@@ -288,24 +345,79 @@ describe('HotspotsSettingsPanel selection', () => {
 		})
 
 		expect(store.get(activeHotspotIdAtom)).toBe(sequence(2)[1].id)
+		expect(
+			await screen.findByRole('heading', { name: 'Marker 2' })
+		).toBeTruthy()
 	})
 
-	it('opens at most one row at a time', () => {
+	/**
+	 * The first level is derived from the atom the canvas also writes, so a
+	 * marker clicked in the scene opens here without touching the panel.
+	 */
+	it('opens the marker the canvas selects', async () => {
 		store.set(hotspotsAtom, sequence(3))
 		render(<HotspotsSettingsPanel />)
 
 		act(() => {
-			fireEvent.click(rowTriggers()[0])
-		})
-		act(() => {
-			fireEvent.click(rowTriggers()[2])
+			store.set(activeHotspotIdAtom, sequence(3)[2].id)
 		})
 
 		expect(
-			rowTriggers().filter(
-				(trigger) => trigger.getAttribute('aria-expanded') === 'true'
-			)
-		).toHaveLength(1)
+			await screen.findByRole('heading', { name: 'Marker 3' })
+		).toBeTruthy()
+	})
+
+	/**
+	 * A marker opened from its row and then swapped for another on the canvas:
+	 * Back belongs to the marker now on screen, not the row first opened.
+	 */
+	it('goes back to the row of the marker the canvas switched to', async () => {
+		store.set(hotspotsAtom, sequence(2))
+		render(<HotspotsSettingsPanel />)
+		act(() => {
+			fireEvent.click(rowTriggers()[0])
+		})
+		await screen.findByRole('heading', { name: 'Marker 1' })
+
+		act(() => {
+			store.set(activeHotspotIdAtom, sequence(2)[1].id)
+		})
+		await screen.findByRole('heading', { name: 'Marker 2' })
+		fireEvent.click(screen.getByRole('button', { name: 'Back to Hotspots' }))
+
+		await screen.findByRole('heading', { name: 'Markers' })
+		expect(document.activeElement).toBe(rowTriggers()[1])
+	})
+
+	it('opens a marker at its top when the canvas comes back to it', async () => {
+		store.set(hotspotsAtom, sequence(2))
+		store.set(activeHotspotIdAtom, sequence(2)[0].id)
+		render(<HotspotsSettingsPanel />)
+		await openView('Content')
+
+		act(() => {
+			store.set(activeHotspotIdAtom, sequence(2)[1].id)
+		})
+		await screen.findByRole('heading', { name: 'Marker 2' })
+		act(() => {
+			store.set(activeHotspotIdAtom, sequence(2)[0].id)
+		})
+
+		expect(
+			await screen.findByRole('heading', { name: 'Marker 1' })
+		).toBeTruthy()
+		expect(screen.queryByRole('heading', { name: 'Content' })).toBeNull()
+	})
+
+	it('deselects the marker when its view is left', async () => {
+		store.set(hotspotsAtom, sequence(2))
+		store.set(activeHotspotIdAtom, sequence(2)[0].id)
+		render(<HotspotsSettingsPanel />)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Back to Hotspots' }))
+
+		expect(store.get(activeHotspotIdAtom)).toBeNull()
+		expect(await screen.findByRole('heading', { name: 'Markers' })).toBeTruthy()
 	})
 
 	/**
@@ -320,10 +432,11 @@ describe('HotspotsSettingsPanel selection', () => {
 		expect(screen.getByRole('heading', { name: 'Markers' })).toBeTruthy()
 	})
 
-	it('offers the asset field only for a preset that needs one', () => {
+	it('offers the asset field only for a preset that needs one', async () => {
 		store.set(hotspotsAtom, [{ ...hotspot, sequenceIndex: 0 }])
 		store.set(activeHotspotIdAtom, hotspot.id)
 		const { rerender } = render(<HotspotsSettingsPanel />)
+		await openView('Appearance')
 
 		expect(screen.queryByLabelText('Asset URL')).toBeNull()
 
@@ -339,16 +452,17 @@ describe('HotspotsSettingsPanel selection', () => {
 })
 
 describe('HotspotsSettingsPanel content', () => {
-	const openEditor = () => {
+	const openEditor = async () => {
 		store.set(hotspotsAtom, [hotspot])
 		store.set(activeHotspotIdAtom, hotspot.id)
 		render(<HotspotsSettingsPanel />)
+		await openView('Content')
 	}
 
 	const stored = () => store.get(hotspotsAtom)[0]
 
-	it('writes body text onto the marker being edited', () => {
-		openEditor()
+	it('writes body text onto the marker being edited', async () => {
+		await openEditor()
 
 		fireEvent.change(screen.getByLabelText('Marker body'), {
 			target: { value: 'Cast in one piece.' }
@@ -366,12 +480,13 @@ describe('HotspotsSettingsPanel content', () => {
 	 * against a null column would report the scene changed on every load and
 	 * offer a save that changes nothing.
 	 */
-	it('leaves the field unset when the author clears it', () => {
+	it('leaves the field unset when the author clears it', async () => {
 		store.set(hotspotsAtom, [
 			{ ...hotspot, body: 'Said something.', linkUrl: 'https://a.test' }
 		])
 		store.set(activeHotspotIdAtom, hotspot.id)
 		render(<HotspotsSettingsPanel />)
+		await openView('Content')
 
 		fireEvent.change(screen.getByLabelText('Marker body'), {
 			target: { value: '' }
@@ -384,8 +499,8 @@ describe('HotspotsSettingsPanel content', () => {
 		expect(stored().linkUrl).toBeUndefined()
 	})
 
-	it('caps the body at the length the save parser will accept', () => {
-		openEditor()
+	it('caps the body at the length the save parser will accept', async () => {
+		await openEditor()
 
 		expect(screen.getByLabelText('Marker body').getAttribute('maxlength')).toBe(
 			String(MAX_HOTSPOT_BODY_LENGTH)
@@ -397,8 +512,8 @@ describe('HotspotsSettingsPanel content', () => {
 	 * naming an array index, which names neither the marker nor the field. So
 	 * the panel has to say it where the field is.
 	 */
-	it('marks a link the save would refuse', () => {
-		openEditor()
+	it('marks a link the save would refuse', async () => {
+		await openEditor()
 		const field = screen.getByLabelText('Marker link')
 
 		fireEvent.change(field, { target: { value: 'http://a.test' } })
@@ -411,8 +526,8 @@ describe('HotspotsSettingsPanel content', () => {
 		)
 	})
 
-	it('says nothing about an https link, or about no link at all', () => {
-		openEditor()
+	it('says nothing about an https link, or about no link at all', async () => {
+		await openEditor()
 		const field = screen.getByLabelText('Marker link')
 
 		expect(screen.queryByText(/must start with https/i)).toBeNull()
@@ -423,8 +538,8 @@ describe('HotspotsSettingsPanel content', () => {
 		expect(screen.queryByText(/must start with https/i)).toBeNull()
 	})
 
-	it('stops complaining once the link is cleared again', () => {
-		openEditor()
+	it('stops complaining once the link is cleared again', async () => {
+		await openEditor()
 		const field = screen.getByLabelText('Marker link')
 
 		fireEvent.change(field, { target: { value: 'javascript:alert(1)' } })

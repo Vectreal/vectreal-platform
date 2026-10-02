@@ -7,4 +7,3 @@ export {
 	SettingRow,
 	SettingGroup
 } from './sidebar-section'
-export { PresetButtonGroup } from './preset-button-group'

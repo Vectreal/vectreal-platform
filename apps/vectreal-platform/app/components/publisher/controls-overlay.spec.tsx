@@ -34,7 +34,7 @@ vi.mock('@shared/components/hooks/use-mobile', () => ({
 vi.mock('posthog-js', () => ({ default: { reset: vi.fn() } }))
 
 vi.mock('./index', () => ({
-	ToolSidebar: probe('tool-rail'),
+	ToolSidebar: probe('tool-sidebar'),
 	DynamicSidebar: probe('publish-sidebar')
 }))
 vi.mock('./optimization/optimization-drawer', () => ({
@@ -53,9 +53,7 @@ vi.mock('./shell/empty-stage', () => ({
 		/>
 	)
 }))
-vi.mock('./shell/preview-mode-badge', () => ({
-	PreviewModeBadge: probe('preview-badge')
-}))
+vi.mock('./shell/tool-bar', () => ({ ToolBar: probe('tool-bar') }))
 vi.mock('./shell/publish-card', () => ({ PublishCard: probe('publish-card') }))
 vi.mock('./shell/publisher-header', () => ({
 	PublisherHeader: ({ showSceneControls }: { showSceneControls: boolean }) => (
@@ -127,7 +125,8 @@ function renderShell() {
 }
 
 const SCENE_CHROME = [
-	'tool-rail',
+	'tool-bar',
+	'tool-sidebar',
 	'publish-card',
 	'publish-sidebar',
 	'optimization-drawer'

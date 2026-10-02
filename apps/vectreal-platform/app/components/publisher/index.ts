@@ -1,6 +1,5 @@
 export { default as ControlsOverlay } from './controls-overlay'
 export { default as SaveButton } from './save-button'
-export * from './settings-components'
 export * from './sidebars'
 export * from './scene-name-and-location'
 export { PublisherHeader } from './shell/publisher-header'

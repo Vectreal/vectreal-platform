@@ -412,15 +412,11 @@ function BillingUpgradeContent() {
 							*/
 							if (isPaidPlan(value)) setTarget(value)
 						}}
-						className="ds-sunken h-10 w-full rounded-xl p-1"
+						className="h-10"
 						aria-label="Plan"
 					>
 						{targets.map((plan) => (
-							<ToggleGroupItem
-								key={plan}
-								value={plan}
-								className="h-8 rounded-lg first:rounded-l-lg last:rounded-r-lg"
-							>
+							<ToggleGroupItem key={plan} value={plan}>
 								{PLAN_DISPLAY_NAMES[plan]}
 							</ToggleGroupItem>
 						))}
