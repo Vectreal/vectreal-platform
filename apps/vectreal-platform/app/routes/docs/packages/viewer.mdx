@@ -54,7 +54,7 @@ function App() {
 | `className` | `string` | No | Additional CSS classes for the viewer container |
 | `theme` | `'light' \| 'dark' \| 'system'` | No | Viewer theme, default is `system` |
 | `enableViewportRendering` | `boolean` | No | Render only while in viewport (default `true`) |
-| `enablePostProcessing` | `boolean` | No | Toggle postprocessing effects (default `true`) |
+| `enablePostProcessing` | `boolean` | No | Render through the viewer's composer: ambient occlusion, and edge smoothing that converges once the camera stops. Set `false` when `children` bring their own `EffectComposer`. Whether the canvas is multisampled follows this value when the canvas is created. Default `true` |
 | `boundsOptions` | `BoundsProps` | No | Scene bounds/framing behavior |
 | `cameraOptions` | `CameraProps` | No | Perspective camera configuration |
 | `controlsOptions` | `ControlsProps` | No | OrbitControls configuration |
@@ -88,6 +88,8 @@ function App() {
 ### Notes on content source
 
 `model` is optional because you can also render scene content via `children`. With neither, nothing renders.
+
+A still viewer stops drawing. Once the camera stops it renders a few dozen extra frames to smooth edges and settle ambient occlusion, then draws nothing until something changes. Moving objects are detected on their own, so `children` that animate in `useFrame` keep rendering. A child that changes only a material, a uniform or a texture must call `invalidate()` from `useThree`, the same contract React Three Fiber sets for on-demand rendering.
 
 The editor affordances exist for editing surfaces such as the Publisher: `shadowLightEditable`, `staticShadowBake`, `bakedShadow`, `onShadowBakeReady`, `onShadowLightChange`, and the hotspot four above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them.
 
@@ -253,8 +255,9 @@ Viewer defaults:
 | `color` | `'#000000'` |
 | `ao` | `false` |
 | `aoIntensity` | `1.4` |
+| `aoAtRest` | `false` |
 
-`alphaTest` is not a discard threshold. In Drei's `SoftShadowMaterial` the shadow alpha is `max(0, 1 - planeBrightness / alphaTest) * opacity`, so it sits between the shadowed and lit brightness of the bake plane. Shadow depth is driven by `light.ambient`, not by `alphaTest`. `ao` enables screen-space crevice occlusion (N8AO), which runs every rendered frame and is opt-in for that reason.
+`alphaTest` is not a discard threshold. In Drei's `SoftShadowMaterial` the shadow alpha is `max(0, 1 - planeBrightness / alphaTest) * opacity`, so it sits between the shadowed and lit brightness of the bake plane. Shadow depth is driven by `light.ambient`, not by `alphaTest`. `ao` enables screen-space crevice occlusion (N8AO). It costs GPU time on every frame while the view moves and settles once it is still, which is why it is opt-in. `aoAtRest` draws it only once the view is still, so orbiting costs nothing extra; the occlusion then drops out during motion and settles back in afterwards.
 
 Nested light defaults (`shadowsOptions.light`):
 

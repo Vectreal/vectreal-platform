@@ -51,7 +51,7 @@
 	"dependencies": {
 		"@react-three/drei": "catalog:",
 		"@react-three/fiber": "catalog:",
-		"@react-three/postprocessing": "catalog:",
+		"n8ao": "^1.10.1",
 		"postprocessing": "catalog:"
 	},
 	"peerDependencies": {

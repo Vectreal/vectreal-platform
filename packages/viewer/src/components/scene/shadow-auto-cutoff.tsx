@@ -103,6 +103,7 @@ const ShadowAutoCutoff = ({
 	temporal
 }: ShadowAutoCutoffProps) => {
 	const gl = useThree((state) => state.gl)
+	const invalidate = useThree((state) => state.invalidate)
 	const calibratedRef = useRef(false)
 
 	useEffect(() => {
@@ -138,6 +139,9 @@ const ShadowAutoCutoff = ({
 			ALPHA_TEST_MAX,
 			Math.max(ALPHA_TEST_MIN, litBrightness * cutoffScale)
 		)
+		// A material edit moves nothing in the scene graph, so without this a
+		// viewer already converging at rest would keep the uncalibrated shadow.
+		invalidate()
 	})
 
 	return null

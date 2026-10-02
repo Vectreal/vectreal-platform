@@ -160,6 +160,13 @@ const ShadowSettingsPanel = () => {
 		setShadows(next)
 	}
 
+	const handleToggleAoAtRest = (value: boolean) => {
+		if (commitTimer.current) clearTimeout(commitTimer.current)
+		const next: ShadowsProps = { ...draft, aoAtRest: value }
+		setDraft(next)
+		setShadows(next)
+	}
+
 	// The ground (contact) shadow's enabled flag is nested under `contact`.
 	const handleToggleContact = (value: boolean) => {
 		if (commitTimer.current) clearTimeout(commitTimer.current)
@@ -337,7 +344,7 @@ const ShadowSettingsPanel = () => {
 										<Label htmlFor="shadow-ao-toggle" className="text-sm">
 											Ambient occlusion
 										</Label>
-										<InfoTooltip content="Darkens crevices and tight gaps on the model itself. Higher quality, but it runs every frame, so it costs GPU. Best for hero shots." />
+										<InfoTooltip content="Darkens crevices and tight gaps on the model itself. Costs GPU on every frame while the view moves. Best for hero shots." />
 									</div>
 									<Switch
 										id="shadow-ao-toggle"
@@ -347,12 +354,30 @@ const ShadowSettingsPanel = () => {
 								</div>
 
 								{(draft.ao ?? false) && (
-									<ShadowField
-										field={SHADOW_AO_INTENSITY_FIELD}
-										idPrefix="shadow-adv"
-										value={getFieldValue(SHADOW_AO_INTENSITY_FIELD.key)}
-										onChange={handleFieldChange}
-									/>
+									<>
+										<ShadowField
+											field={SHADOW_AO_INTENSITY_FIELD}
+											idPrefix="shadow-adv"
+											value={getFieldValue(SHADOW_AO_INTENSITY_FIELD.key)}
+											onChange={handleFieldChange}
+										/>
+										<div className="flex items-center justify-between gap-2">
+											<div className="flex items-center gap-2">
+												<Label
+													htmlFor="shadow-ao-at-rest-toggle"
+													className="text-sm"
+												>
+													AO only when still
+												</Label>
+												<InfoTooltip content="Skips occlusion while the view moves, so orbiting costs nothing extra. It returns once the view stops." />
+											</div>
+											<Switch
+												id="shadow-ao-at-rest-toggle"
+												checked={draft.aoAtRest ?? false}
+												onCheckedChange={handleToggleAoAtRest}
+											/>
+										</div>
+									</>
 								)}
 							</CollapsibleContent>
 						</Collapsible>

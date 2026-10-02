@@ -3,6 +3,7 @@ import { fn } from 'storybook/test'
 import {
 	AnimationClip,
 	BoxGeometry,
+	Group,
 	Mesh,
 	MeshStandardMaterial,
 	NumberKeyframeTrack,
@@ -16,7 +17,11 @@ import {
 	InfoPopoverText,
 	InfoPopoverTrigger
 } from './components'
-import { defaultControlsOptions, defaultEnvOptions } from './components/scene'
+import {
+	defaultControlsOptions,
+	defaultEnvOptions,
+	defaultShadowsOptions
+} from './components/scene'
 import VectrealViewer from './vectreal-viewer'
 
 import type { VectrealViewerProps } from './vectreal-viewer'
@@ -67,6 +72,66 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+/**
+ * Stacked blocks give ambient occlusion creases to darken and a footprint for
+ * the ground bake, so both read at the opening view. Module scope for the same
+ * identity reason as the animated model below.
+ */
+const occlusionModel = new Group()
+occlusionModel.name = 'OcclusionBlocks'
+const occlusionMaterial = new MeshStandardMaterial({
+	color: '#e4e4e7',
+	roughness: 0.6
+})
+for (const [size, position] of [
+	[
+		[1.6, 0.4, 1.6],
+		[0, 0.2, 0]
+	],
+	[
+		[0.8, 0.8, 0.8],
+		[0, 0.8, 0]
+	],
+	[
+		[0.4, 0.4, 0.4],
+		[0.5, 0.6, 0.5]
+	]
+] as const) {
+	const block = new Mesh(new BoxGeometry(...size), occlusionMaterial)
+	block.position.set(...position)
+	occlusionModel.add(block)
+}
+
+/**
+ * Shadows with N8AO on. At rest the AO noise settles as frames accumulate;
+ * compare a still frame with one mid-orbit. Set `aoAtRest` in the shadow
+ * options to skip AO while orbiting.
+ */
+export const AmbientOcclusion: Story = {
+	args: {
+		model: occlusionModel,
+		shadowsOptions: { ...defaultShadowsOptions, enabled: true, ao: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * The same scene with AO held for rest: orbiting costs nothing extra, and the
+ * occlusion drops out while moving and settles back in once the view stops.
+ */
+export const AmbientOcclusionAtRest: Story = {
+	args: {
+		model: occlusionModel,
+		shadowsOptions: {
+			...defaultShadowsOptions,
+			enabled: true,
+			ao: true,
+			aoAtRest: true
+		}
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
 
 /**
  * Built in code rather than loaded from a fixture: there is no animated model

@@ -92,6 +92,7 @@ export const defaultShadowsOptions: ShadowsProps = {
 	// rendered frame, so the default is the zero-idle-cost baked shadow only.
 	ao: false,
 	aoIntensity: 1.4,
+	aoAtRest: false,
 	// Soft contact/ground shadow (drei ContactShadows) approximating ground AO.
 	// Opt-in; baked once. Tuned via blur (softness) and opacity (darkness).
 	contact: {

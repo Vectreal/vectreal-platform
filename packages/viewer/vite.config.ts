@@ -50,7 +50,7 @@ export default defineConfig({
 				'three',
 				'@react-three/fiber',
 				'@react-three/drei',
-				'@react-three/postprocessing',
+				'n8ao',
 				'postprocessing'
 			]
 		}

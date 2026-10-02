@@ -16,6 +16,7 @@ import {
 	Object3D,
 	PerspectiveCamera,
 	Sphere,
+	Texture,
 	Vector3
 } from 'three'
 
@@ -24,6 +25,14 @@ import type {
 	SceneScreenshotOptions
 } from '../../types/viewer-types'
 import type { CameraProps, NormalizationOptions } from '@vctrl/core'
+
+/**
+ * Anisotropic filtering keeps textures sharp on surfaces seen at a glancing
+ * angle, which a product orbit shows constantly. glTF has no field for it, so
+ * loaders leave three's default of 1. Eight taps is where the visible gain
+ * flattens out; hardware caps it lower on some devices.
+ */
+const TEXTURE_ANISOTROPY = 8
 
 interface ModelProps {
 	/**
@@ -404,6 +413,29 @@ const SceneModel = memo((props: ModelProps) => {
 			}
 		})
 	}, [enableShadows, object])
+
+	useLayoutEffect(() => {
+		const anisotropy = Math.min(
+			TEXTURE_ANISOTROPY,
+			gl.capabilities.getMaxAnisotropy()
+		)
+		object.traverse((child) => {
+			if (!(child instanceof Mesh)) return
+			const materials = Array.isArray(child.material)
+				? child.material
+				: [child.material]
+			for (const material of materials) {
+				for (const value of Object.values(material)) {
+					if (!(value instanceof Texture) || value.anisotropy >= anisotropy)
+						continue
+					value.anisotropy = anisotropy
+					// Sampler state is set on upload; a texture already on the GPU
+					// (the same model shown again) has to be re-uploaded to take it.
+					value.needsUpdate = true
+				}
+			}
+		})
+	}, [gl, object])
 
 	// Refit when normalization toggles or a new object loads while normalization is already on.
 	// Skips the initial mount when normalization is off so SceneCamera can handle first framing.
