@@ -354,7 +354,12 @@ export class VectrealEmbed {
 			return
 		}
 
-		// Validate the message origin matches our iframe
+		/*
+		  Only our own iframe. Every Vectreal embed on a page shares one
+		  origin, so the origin alone would let a second embed's pong and
+		  events land here, carrying its scene's cameras and hotspots.
+		*/
+		if (event.source !== this.iframe.contentWindow) return
 		if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) {
 			return
 		}

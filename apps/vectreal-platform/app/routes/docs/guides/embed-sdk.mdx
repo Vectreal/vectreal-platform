@@ -303,7 +303,7 @@ If you prefer zero dependencies, you can implement the protocol directly. Both s
 
 ## Security
 
-- **Origin validation** - the bridge accepts messages only from the first origin that successfully contacts it. The SDK uses `new URL(iframe.src).origin` as `targetOrigin` automatically; never `'*'`.
+- **Origin validation** - each end listens only to the other. The preview obeys messages only from the page that embeds it, and replies only to that page's origin, pinned from the first SDK message the page sends; messages from other frames and windows are dropped. The SDK accepts messages only from its own iframe, so several embeds on one page never answer for each other, and it sends to and checks `new URL(iframe.src).origin` unless you pass `iframeOrigin`. Both checks are per window, not per script: code running inside your page, including a browser extension's, speaks as your page. A page with an opaque origin (opened from `file://`, or sandboxed without `allow-same-origin`) gets no replies, so the SDK never becomes ready there. Serve the page over http(s).
 - **What the key is** - in an embed, a preview key is public by design. It travels in the iframe `src`, so it is in the page source of every site that embeds your scene, and no placement changes that for an iframe: the frame cannot set request headers. Treat the embedded key as an identifier, not a credential. Server-to-server calls are the exception - those can send it as `Authorization: Bearer` and keep it off the page entirely.
 - **What restricts it** - the owning project's allowed domain list, checked against `Referer`/`Origin` on every request. Two things to know about it. It is browser-enforced rather than an authorization boundary: a non-browser client sets those headers freely, so anyone holding the key can read the published scenes it points at. And your own host is exempt - a request whose referer is the Vectreal app itself is allowed whatever the list says, which is why testing an embed from the dashboard proves nothing about your domains.
 - **What it cannot do** - a preview key is read-only and reaches published scenes only. It cannot modify your scenes or project data, and requests carrying one are refused on every mutating endpoint - including the editor payload, which is refused even on a read.
@@ -323,6 +323,9 @@ present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts const HEX_COLOR
 present packages/viewer/src/types/viewer-interactions.ts type: 'hotspot_activated'
 present packages/embed/src/protocol.ts hotspots?: EmbedHotspotDescriptor[]
+present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (event.source !== window.parent) return
+present packages/embed/src/embed.ts if (event.source !== this.iframe.contentWindow) return
+present packages/embed/src/embed.ts if (this.targetOrigin !== '*' && event.origin !== this.targetOrigin) {
 present packages/embed/vite.config.ts format: 'iife'
 present packages/embed/vite.config.ts entryFileNames: 'vectreal-embed.umd.js'
 present apps/vectreal-platform/app/lib/domain/embed/embed-snippet.ts 'https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js'

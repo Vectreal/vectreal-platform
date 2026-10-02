@@ -124,7 +124,8 @@ export function useHostedPreviewBridge({
 
 	const postMessageToParent = useCallback(
 		(message: HostedPreviewOutgoingMessage) => {
-			if (typeof window === 'undefined' || !window.parent) {
+			// Top-level, as /preview is, there is no page to tell.
+			if (typeof window === 'undefined' || window.parent === window) {
 				return
 			}
 
@@ -303,16 +304,22 @@ export function useHostedPreviewBridge({
 		}
 
 		const handleMessage = (event: MessageEvent<unknown>) => {
-			// Establish (or confirm) trusted parent origin from the first valid message.
-			if (event.origin && event.origin !== 'null') {
-				if (!parentOriginRef.current) {
-					parentOriginRef.current = event.origin
-					flushOutboundQueue(event.origin)
-				}
-			}
+			/*
+			  Only the page embedding this frame may drive it. Other frames and
+			  windows can post here too, and an origin does not tell them apart
+			  from the parent, so the sender is compared first. The origin is
+			  then pinned from the parent's first protocol message, never from
+			  noise, because it is where every reply goes: the scene's cameras,
+			  hotspots and events. A parent whose origin is opaque (`'null'`,
+			  e.g. a sandboxed or file:// page) can still drive the viewer but
+			  cannot be replied to.
+			*/
+			if (event.source !== window.parent) return
+			if (!isHostedPreviewIncomingMessage(event.data)) return
 
-			if (!isHostedPreviewIncomingMessage(event.data)) {
-				return
+			if (!parentOriginRef.current && event.origin && event.origin !== 'null') {
+				parentOriginRef.current = event.origin
+				flushOutboundQueue(event.origin)
 			}
 
 			switch (event.data.type) {
