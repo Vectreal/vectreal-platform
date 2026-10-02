@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
+import { manifestExternals } from '../../vite.library.mts'
+
 export default defineConfig({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/hooks',
@@ -14,7 +16,8 @@ export default defineConfig({
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
-		})
+		}),
+		manifestExternals(import.meta.dirname)
 	],
 
 	// Configuration for building your library.
@@ -43,32 +46,6 @@ export default defineConfig({
 			// so a CommonJS copy would only add a second instance of each module.
 			formats: ['es'],
 			fileName: (_format, entry) => `${entry}.js`
-		},
-
-		rolldownOptions: {
-			// External packages that should not be bundled into your library.
-			// @vctrl/core (and its subpaths) is externalized so consumers share a
-			// single published copy instead of bundling it (which also pulled core's
-			// node-only deps like sharp into this browser package).
-			external: [
-				'react',
-				'react-dom',
-				'three',
-				'react/jsx-runtime',
-				'file-saver',
-				'jszip',
-				// @vctrl/core externalizes @gltf-transform/core, so bundling a
-				// second copy here would give consumers two Document classes and
-				// break every instanceof across the two packages.
-				/^@gltf-transform\/core(\/.*)?$/,
-				/^@vctrl\/core(\/.*)?$/
-			],
-			output: {
-				globals: {
-					react: 'React',
-					'react-dom': 'ReactDOM'
-				}
-			}
 		}
 	}
 })

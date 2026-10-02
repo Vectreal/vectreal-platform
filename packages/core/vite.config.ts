@@ -3,6 +3,8 @@ import * as path from 'path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
+import { manifestExternals } from '../../vite.library.mts'
+
 export default defineConfig({
 	root: import.meta.dirname,
 	cacheDir: '../../node_modules/.vite/packages/@vctrl/core',
@@ -12,7 +14,8 @@ export default defineConfig({
 		dts({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
-		})
+		}),
+		manifestExternals(import.meta.dirname)
 	],
 
 	// Configuration for building your library.
@@ -45,26 +48,6 @@ export default defineConfig({
 			// so a CommonJS copy would only add a second instance of each module.
 			formats: ['es'],
 			fileName: (_format, entry) => `${entry}.js`
-		},
-
-		rolldownOptions: {
-			// External packages that should not be bundled into your library.
-			external: [
-				'three',
-				'file-saver',
-				'jszip',
-				'sharp',
-				'meshoptimizer',
-				'@gltf-transform/core',
-				'@gltf-transform/functions',
-				'@gltf-transform/extensions'
-			],
-			output: {
-				globals: {
-					three: 'THREE',
-					sharp: 'sharp'
-				}
-			}
 		}
 	}
 })
