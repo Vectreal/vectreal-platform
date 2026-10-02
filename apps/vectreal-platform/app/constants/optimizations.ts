@@ -4,7 +4,7 @@ import type { Optimizations } from '@vctrl/core'
 /**
  * Preset pipelines, ordered from most faithful to smallest.
  *
- * Two rules hold across all of them:
+ * Two rules hold across every preset that optimizes (all but `original`):
  *
  * - **Draco is always on.** It is the largest geometry saving available and,
  *   unlike simplification, it does not change topology. It is applied at
@@ -25,6 +25,24 @@ const sharedGeometry = {
 	simplification: { enabled: false, ratio: 0.5, error: 0.005 },
 	draco: { enabled: true, method: 'edgebreaker' }
 } as const satisfies Omit<Optimizations, 'texture'>
+
+/**
+ * Runs nothing, so the scene is exactly as uploaded. Every other preset is
+ * derived from the same original, so choosing this is how a user gets back to
+ * it after any pass. Draco is off too: it is the one step that would still
+ * change the published file.
+ */
+export const originalPreset: Optimizations = {
+	...sharedGeometry,
+	dedup: { enabled: false },
+	draco: { ...sharedGeometry.draco, enabled: false },
+	texture: {
+		enabled: false,
+		resize: [2048, 2048],
+		quality: 90,
+		targetFormat: 'webp'
+	}
+}
 
 export const qualityPreset: Optimizations = {
 	...sharedGeometry,
@@ -57,10 +75,15 @@ export const smallestPreset: Optimizations = {
 }
 
 export const optimizationPresets: Record<PresetId, Optimizations> = {
+	original: originalPreset,
 	quality: qualityPreset,
 	balanced: balancedPreset,
 	smallest: smallestPreset
 }
 
-/** The preset a scene starts on, and the fallback when nothing is persisted. */
-export const DEFAULT_PRESET_ID: PresetId = 'balanced'
+/**
+ * The preset a scene starts on, and the fallback when nothing is persisted:
+ * the document as it is. Staging anything else would show a preset as chosen
+ * that never ran, and choosing it again would do nothing.
+ */
+export const DEFAULT_PRESET_ID: PresetId = 'original'

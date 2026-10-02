@@ -16,4 +16,12 @@ export interface LoadContext {
 	optimizer: Optimizer
 	publish: (loaded: LoadedModel) => void
 	onProgress: (progress: number) => void
+	/**
+	 * Whether this load's model is the one on screen, which is the only model
+	 * the optimizer may hold. Not whether it is the newest load: a newer drop
+	 * that fails puts this load's model back, and it must still reach the
+	 * optimizer, while a load retired before it published never may. Call it
+	 * right before each optimizer call, which claims the optimizer.
+	 */
+	mayIngest: () => boolean
 }

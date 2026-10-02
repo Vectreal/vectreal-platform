@@ -140,7 +140,7 @@ export const loadModelFromSceneData = async (
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
 	const { sceneId, sceneData: payload, parseMode } = source
-	const { modelLoader, optimizer, publish, onProgress } = ctx
+	const { modelLoader, optimizer, publish, onProgress, mayIngest } = ctx
 
 	if (payload.publishedModel) {
 		return loadPublishedSceneModel(
@@ -237,7 +237,7 @@ export const loadModelFromSceneData = async (
 	publish(loaded)
 
 	if (optimizer) {
-		await ingestIntoOptimizer(() =>
+		await ingestIntoOptimizer(mayIngest, () =>
 			optimizer.loadFromServerSceneData(sceneData)
 		)
 	}

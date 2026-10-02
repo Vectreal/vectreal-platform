@@ -17,8 +17,10 @@ import type { Optimizations } from '@vctrl/core'
  * continuing to highlight the card the user started from.
  */
 export function useOptimizationSettings() {
-	const [{ optimizations, optimizationPreset }, setState] =
-		useAtom(optimizationAtom)
+	const [
+		{ optimizations, optimizationPreset, sourceSettings, derivedFrom },
+		setState
+	] = useAtom(optimizationAtom)
 
 	const commit = useCallback(
 		(next: Optimizations) =>
@@ -60,10 +62,20 @@ export function useOptimizationSettings() {
 		() => ({
 			optimizations,
 			optimizationPreset,
+			sourceSettings,
+			derivedFrom,
 			update,
 			commit,
 			selectPreset
 		}),
-		[optimizations, optimizationPreset, update, commit, selectPreset]
+		[
+			optimizations,
+			optimizationPreset,
+			sourceSettings,
+			derivedFrom,
+			update,
+			commit,
+			selectPreset
+		]
 	)
 }

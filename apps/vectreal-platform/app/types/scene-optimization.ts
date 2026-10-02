@@ -1,8 +1,11 @@
 import type { SceneStatsData } from './api'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
 
-/** Presets the user can pick. Every one of these has an entry in `optimizationPresets`. */
-export type PresetId = 'quality' | 'balanced' | 'smallest'
+/**
+ * Presets the user can pick. Every one of these has an entry in
+ * `optimizationPresets`. `original` runs nothing: the scene as uploaded.
+ */
+export type PresetId = 'original' | 'quality' | 'balanced' | 'smallest'
 
 /**
  * What the panel displays as selected. `custom` is not a preset you can pick —
@@ -13,8 +16,24 @@ export type PresetId = 'quality' | 'balanced' | 'smallest'
 export type OptimizationPreset = PresetId | 'custom'
 
 export interface OptimizationState {
+	/** The settings the panel shows, which the next pass will apply. */
 	optimizations: Optimizations
 	optimizationPreset: OptimizationPreset
+	/**
+	 * What the optimizer's source already embodies, so what re-deriving from it
+	 * starts with. The `original` preset for an upload, whose source is the
+	 * model as uploaded. For a scene that was saved optimized without its
+	 * original, the settings it was saved with: that saved document is the only
+	 * source there is, and calling it "original" would be false.
+	 */
+	sourceSettings: Optimizations
+	/**
+	 * The settings the document on screen was derived from: what a save, a
+	 * draft and the publish-time Draco repack describe. Never the panel's
+	 * unapplied edits. It starts as `sourceSettings`, because the document is
+	 * the source until a pass runs, and returns to it when a pass fails.
+	 */
+	derivedFrom: Optimizations
 }
 
 export interface SceneOptimizationRuntimeState {

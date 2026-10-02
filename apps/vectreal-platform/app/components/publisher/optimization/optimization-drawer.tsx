@@ -7,7 +7,7 @@ import { Link } from 'react-router'
 
 import { OptimizeButton } from './optimize-button'
 import { AdvancedPanel } from './panels/advanced-panel'
-import { PresetPanel } from './panels/preset-panel'
+import { PRESET_META, PresetPanel } from './panels/preset-panel'
 import { OptimizationProgress } from './progress/optimization-progress'
 import { OptimizationResults } from './results/optimization-results'
 import { PreOptimizationSummary } from './results/pre-optimization-summary'
@@ -15,6 +15,11 @@ import { SceneNormalizationNotice } from './scene-normalization-notice'
 import { useOptimizationProcess } from './use-optimization-process'
 import { useOptimizationSettings } from './use-optimization-settings'
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
+import { originalPreset } from '../../../constants/optimizations'
+import {
+	optimizationsMatch,
+	resolveDerivedSettings
+} from '../../../lib/domain/scene'
 import { PUBLISHER_LAYER } from '../shell/shell-layout'
 import {
 	DrillDown,
@@ -46,7 +51,8 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		if (!open) setAdvancedPath([])
 	}, [open])
 
-	const { optimizationPreset } = useOptimizationSettings()
+	const { optimizations, optimizationPreset, sourceSettings, derivedFrom } =
+		useOptimizationSettings()
 	const {
 		info,
 		dracoReport,
@@ -55,11 +61,30 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		sizeInfo,
 		isPending,
 		hasCompletedOptimizationPass,
-		handleOptimizeClick,
-		handleStackOptimizeClick,
+		derive,
+		applyPlanned,
 		isOptimizerPreparing,
 		optimizingStep
 	} = useOptimizationProcess()
+
+	// The document on screen is not what the panel shows: nothing has been
+	// derived yet, or the advanced controls were edited since.
+	const hasUnappliedSettings = !optimizationsMatch(
+		resolveDerivedSettings(optimizations, sourceSettings),
+		derivedFrom
+	)
+	const applyLabel =
+		optimizationPreset === 'custom'
+			? 'Apply changes'
+			: `Apply ${PRESET_META[optimizationPreset].label}`
+
+	// A scene saved optimized without its original: the saved document is the
+	// only source, and every preset starts from it.
+	const startsFromSavedVersion = !optimizationsMatch(
+		sourceSettings,
+		originalPreset
+	)
+	const isUnoptimized = optimizationsMatch(derivedFrom, originalPreset)
 
 	// Soft-gate: only an in-progress optimization blocks closing. Being over the
 	// size limit keeps save disabled (server 402 is the hard backstop) but never
@@ -92,15 +117,22 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 			return `${current} exceeds your plan's ${formatFileSize(maxSceneBytes)} max scene size. Optimize to get under ${formatFileSize(maxSceneBytes)} to save.`
 		}
 
-		return 'Adjust options and run another optimization pass.'
-	}, [isOverSizeLimit, maxSceneBytes, isPending, sizeInfo.currentSceneBytes])
+		if (startsFromSavedVersion) {
+			return 'Each preset is made from the saved version of this scene.'
+		}
+		return isUnoptimized
+			? 'Not optimized yet. Pick a preset to make it from your original.'
+			: 'Each preset is made from your original, so you can switch freely.'
+	}, [
+		isUnoptimized,
+		startsFromSavedVersion,
+		isOverSizeLimit,
+		maxSceneBytes,
+		isPending,
+		sizeInfo.currentSceneBytes
+	])
 
 	const resolvedDashboardHref = dashboardHref ?? DASHBOARD_ROUTES.DASHBOARD
-	// Over the limit, "Continue to Composition" points away from the only action
-	// that unblocks saving, so an already-optimized scene that is still too large
-	// keeps the single-action layout and re-optimizing stays the primary CTA.
-	const shouldShowCompletionActions =
-		!isPending && hasCompletedOptimizationPass && !isOverSizeLimit
 
 	return (
 		<DynamicSidebar
@@ -193,7 +225,10 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 
 										<SceneNormalizationNotice />
 
-										<PresetPanel />
+										<PresetPanel
+											onChoose={derive}
+											sourceIsSaved={startsFromSavedVersion}
+										/>
 
 										<DrillDownTrigger
 											to="advanced"
@@ -222,15 +257,17 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
 							</Button>
 						) : null}
-						{shouldShowCompletionActions ? (
-							<>
-								<OptimizeButton
-									onOptimize={handleOptimizeClick}
-									onStackOptimize={handleStackOptimizeClick}
-									isPending={isPending}
-									mode="optimize-more"
-									isPreparing={isOptimizerPreparing}
-								/>
+						{hasUnappliedSettings || isPending ? (
+							<OptimizeButton
+								onOptimize={applyPlanned}
+								isPending={isPending}
+								label={applyLabel}
+								isPreparing={isOptimizerPreparing}
+							/>
+						) : (
+							// Over the limit, leaving points away from the only action that
+							// unblocks saving, so it is not offered.
+							!isOverSizeLimit && (
 								<Button
 									type="button"
 									className="grow"
@@ -238,19 +275,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 								>
 									Continue to Composition
 								</Button>
-							</>
-						) : (
-							<div className="w-full sm:w-[18rem]">
-								<OptimizeButton
-									onOptimize={handleOptimizeClick}
-									onStackOptimize={handleStackOptimizeClick}
-									isPending={isPending}
-									mode={
-										hasCompletedOptimizationPass ? 'optimize-more' : 'apply'
-									}
-									isPreparing={isOptimizerPreparing}
-								/>
-							</div>
+							)
 						)}
 					</div>
 				</div>

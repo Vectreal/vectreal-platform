@@ -164,6 +164,13 @@ export type ModelState =
 export type LoadOutcome = ModelState & {
 	/** Whether this load is still the newest one, asked now. */
 	stillCurrent: () => boolean
+	/**
+	 * Whether this load's model is the one on screen, asked now. Differs from
+	 * `stillCurrent` after a newer drop fails: that drop is the newest load,
+	 * but it puts this load's model back. It is the model the optimizer holds,
+	 * so ask this before acting on the optimizer for this load.
+	 */
+	stillOnScreen: () => boolean
 }
 
 /** Optional hooks into a load, for callers that need more than its result. */

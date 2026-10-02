@@ -83,6 +83,11 @@ again after any further await, because a drop can land during an encode as
 easily as during a parse. `reset()` claims a token too, so a load in flight when
 the user clears the model also reports `false`.
 
+Newest is not always what is on screen. A dropped file that fails to load puts
+the previous model back, so the previous load is no longer the newest but its
+model is the one shown, and the one the optimizer holds. Before acting on the
+optimizer for a load, ask `stillOnScreen()` instead.
+
 Resolving is not the same moment as reaching the screen. With an optimizer
 attached, the loaders publish the parsed model first and then await its ingest,
 so `load` resolves one ingest after the viewer changed. A caller that adopts on
@@ -134,7 +139,7 @@ files so the optimizer can ingest exactly what the viewer renders.
 | `sceneData`    | `ServerSceneData \| undefined`                    | The resolved payload, for scene sources                           |
 | `progress`     | `number`                                          | Progress value from 0 to 100                                      |
 | `source`       | `'files' \| 'scene-data' \| 'server' \| null`     | What the current state came from                                  |
-| `load(source, options?)` | `Promise<LoadOutcome>`                  | Load a model; resolves to the terminal state plus `stillCurrent()`. `options.onPublish` fires earlier, when the model reaches the screen |
+| `load(source, options?)` | `Promise<LoadOutcome>`                  | Load a model; resolves to the terminal state plus `stillCurrent()` and `stillOnScreen()`. `options.onPublish` fires earlier, when the model reaches the screen |
 | `supportedFileTypes` | `ModelFileTypes[]`                          | Every format the loader accepts, from `@vctrl/core/model-formats` |
 | `reset`        | `() => void`                                      | Clear the current model and retire any load in flight             |
 | `optimizer`    | `OptimizerIntegrationReturn<true> \| null`        | Populated when the hook is called with `useOptimizeModel()`       |

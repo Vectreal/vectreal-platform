@@ -775,7 +775,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					thumbnailUrl: ''
 				},
 				currentSettings,
-				optimizationSettings: null
+				optimizationSettings: null,
+				// Converted, never optimized: the document is its own original.
+				sourceGlb: null
 			})
 
 			if (!draftId) {

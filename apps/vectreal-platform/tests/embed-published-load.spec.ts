@@ -88,6 +88,7 @@ function buildContext() {
 		modelLoader: { loadToThreeJS },
 		optimizer: undefined,
 		publish: (loaded: LoadedModel) => published.push(loaded),
+		mayIngest: () => true,
 		onProgress: () => {}
 	} as unknown as LoadContext
 

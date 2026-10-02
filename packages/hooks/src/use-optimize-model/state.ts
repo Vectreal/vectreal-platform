@@ -1,3 +1,5 @@
+import { SupersededError } from '@vctrl/core/model-optimizer'
+
 import { Action, OptimizationState } from './types'
 
 /**
@@ -30,6 +32,9 @@ export const reducer = (
 				report: action.payload.report
 			}
 		case 'LOAD_ERROR':
+			// A superseded operation changed nothing, and the newer one that
+			// superseded it owns `loading` until it settles.
+			if (action.payload instanceof SupersededError) return state
 			return { ...state, loading: false, error: action.payload }
 		case 'RESET':
 			return { ...initialState }

@@ -32,8 +32,7 @@ const { modelContext, sceneDraft, sceneUpload } = vi.hoisted(() => ({
 	},
 	sceneDraft: {
 		isRestoringDraft: false,
-		persistPendingSceneDraft: vi.fn(),
-		snapshotOriginalModel: vi.fn()
+		persistPendingSceneDraft: vi.fn()
 	},
 	sceneUpload: { uploadFiles: vi.fn() }
 }))

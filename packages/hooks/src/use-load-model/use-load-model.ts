@@ -78,6 +78,8 @@ function useLoadModel<
 	// load that has been superseded (or reset) can never overwrite the current
 	// model, and callers never need their own `cancelled` flag.
 	const loadTokenRef = useRef(0)
+	// The load whose model is on screen, or 0; see `LoadContext.mayIngest`.
+	const onScreenRef = useRef(0)
 
 	const modelLoader = useMemo(() => {
 		const loader = new ModelLoader()
@@ -135,19 +137,28 @@ function useLoadModel<
 			  that then encodes or exports has awaits of its own, and a drop can
 			  land inside any of them.
 			*/
+			const isOnScreen = () => onScreenRef.current === token
 			const outcome = (next: ModelState): LoadOutcome => ({
 				...next,
-				stillCurrent: isCurrent
+				stillCurrent: isCurrent,
+				stillOnScreen: isOnScreen
 			})
 			// Only an upload is an attempt to *add* a model; a scene source replaces
 			// the one on screen, so its failure has to be visible as one rather than
 			// leaving the previous scene's geometry under the new scene's name.
 			const modelOnScreen =
 				source.kind === 'files' ? lastReadyRef.current : null
+			const modelOnScreenLoad = onScreenRef.current
 
-			const commit = (next: ModelState): ModelState => {
+			// `owner` is the load whose model `next` shows: this one, except when
+			// a failure puts the previous model back.
+			const commit = (next: ModelState, owner = token): ModelState => {
 				if (isCurrent()) {
-					if (next.status === 'ready') lastReadyRef.current = next
+					if (next.status === 'ready') {
+						lastReadyRef.current = next
+						onScreenRef.current = owner
+					}
+					if (next.status === 'error') onScreenRef.current = 0
 					setState(next)
 				}
 				return next
@@ -160,6 +171,7 @@ function useLoadModel<
 			const context: LoadContext = {
 				modelLoader,
 				optimizer: optimizerRef.current,
+				mayIngest: isOnScreen,
 				publish: (loaded: LoadedModel) => {
 					published = commit(readyModelState(source.kind, loaded, token))
 					/*
@@ -202,7 +214,8 @@ function useLoadModel<
 				// A load that fails takes nothing with it. Dropping the wrong file
 				// onto an open scene reports the problem; it does not clear the model
 				// the user was working on.
-				commit(modelOnScreen ?? errorModelState(source.kind, structured))
+				if (modelOnScreen) commit(modelOnScreen, modelOnScreenLoad)
+				else commit(errorModelState(source.kind, structured))
 				return outcome(errorModelState(source.kind, structured))
 			}
 		},
@@ -212,6 +225,8 @@ function useLoadModel<
 	const reset = useCallback(() => {
 		// Claiming a token retires any in-flight load along with the state.
 		loadTokenRef.current += 1
+		// No load may ingest a model that is no longer on screen.
+		onScreenRef.current = 0
 		// Nothing is on screen after this, so a later failure has nothing to
 		// restore - without it, clearing the model and then failing a drop would
 		// bring the cleared model back.

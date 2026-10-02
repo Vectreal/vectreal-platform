@@ -5,7 +5,10 @@ import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
-import { balancedPreset } from '../../../constants/optimizations'
+import {
+	balancedPreset,
+	originalPreset
+} from '../../../constants/optimizations'
 import { usePrepareGltfDocument } from '../../../hooks/scene-loader/use-scene-document-export'
 import { persistPendingSceneDraftOrchestrator } from '../../../lib/domain/scene/client/scene-draft-persistence'
 import { sceneViewerSettingsAtom } from '../../../lib/stores/scene-settings-store'
@@ -13,6 +16,7 @@ import { runOptimizationPass } from '../../publisher/optimization/run-optimizati
 import { resolvePublishedSceneBytes } from '../../publisher/optimization/utils'
 
 import type { OptimizationStepsController } from '../../publisher/optimization/use-optimization-steps'
+import type { Optimizations } from '@vctrl/core'
 
 export type OwnFileOutcome =
 	| {
@@ -91,6 +95,7 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 		name: string
 		originalBytes: number
 		bytes: number
+		derivedFrom: Optimizations
 	} | null>(null)
 
 	useEffect(() => {
@@ -112,9 +117,9 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 				const originalBytes =
 					loaded.file.sourcePackageBytes ??
 					files.reduce((sum, one) => sum + one.size, 0)
-				const { dracoReport } = await runOptimizationPass({
-					fromOriginal: false,
+				const { succeeded, dracoReport } = await runOptimizationPass({
 					optimizations: balancedPreset,
+					isCurrent: loaded.stillCurrent,
 					steps: NO_CHECKLIST,
 					model: optimizer,
 					baseline: {
@@ -135,7 +140,14 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 				const bytes =
 					resolvePublishedSceneBytes(working.byteLength, dracoReport) ??
 					working.byteLength
-				prepared.current = { name: loaded.file.name, originalBytes, bytes }
+				prepared.current = {
+					name: loaded.file.name,
+					originalBytes,
+					bytes,
+					// A failed pass leaves the original on screen, and the hand-off
+					// has to say which one the publisher is getting.
+					derivedFrom: succeeded ? balancedPreset : originalPreset
+				}
 				const buffer = working.buffer.slice(
 					working.byteOffset,
 					working.byteOffset + working.byteLength
@@ -165,8 +177,10 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 							thumbnailUrl: ''
 						},
 						currentSettings,
-						// So the publisher opens on Balanced, already applied, at the size the sheet showed.
-						optimizationSettings: balancedPreset,
+						// So the publisher opens on what was applied, at the size the sheet showed.
+						optimizationSettings: done.derivedFrom,
+						// And can still make any other preset from the visitor's original.
+						sourceGlb: latest.current.optimizer.getSource(),
 						optimizedSceneBytes: done.bytes,
 						clientSceneBytes: done.originalBytes
 					})
