@@ -184,7 +184,7 @@ Current commands:
 
 ### Events
 
-`onInteractionEvent(event)` receives a `ViewerInteractionEvent`. The runtime emits three
+`onInteractionEvent(event)` receives a `ViewerInteractionEvent`. The runtime emits six
 of them:
 
 | Event                       | Payload                        | Meaning                                     |
@@ -192,6 +192,9 @@ of them:
 | `viewer_ready`              | none                           | Viewer runtime is ready to accept commands  |
 | `initial_framing_completed` | `{ cameraId: string \| null }` | Initial framing and stabilization completed |
 | `camera_changed`            | `{ cameraId: string }`         | Active camera changed                       |
+| `hotspot_activated` | `{ hotspotId: string; cameraId: string \| null }` | A visitor activated a hotspot |
+| `animation_state_changed` | `{ playing: boolean; activeClipId: string \| null; complete: boolean }` | Animation playback started, stopped or advanced |
+| `animation_clip_finished` | `{ clipId: string }` | One animation clip ran to its end |
 
 `ViewerInteractionEvent` also declares `model_loaded` and `auto_rotate_changed`. Both
 belong to the union a handler has to narrow, and neither is emitted by the current
@@ -494,10 +497,13 @@ export default function App() {
 pnpm nx build vctrl/viewer
 pnpm nx lint vctrl/viewer
 pnpm nx typecheck vctrl/viewer
+pnpm nx test vctrl/viewer
 ```
 
-The viewer has no unit-test target. Its behavior is covered by the Playwright suite
-in `packages/viewer-e2e`.
+`pnpm nx test vctrl/viewer` runs the unit specs beside the source in `src/`. The
+published package is covered separately by the Playwright suite in
+`packages/viewer-e2e`, which installs it into a clean Vite app and renders it both
+built and under `vite dev`.
 
 The viewer's stories live in the workspace-wide Storybook, alongside the shared
 design system:

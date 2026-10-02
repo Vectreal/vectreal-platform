@@ -147,6 +147,11 @@ const CLAIM_CARRYING_DOCS = [
 	'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
 	'apps/vectreal-platform/app/routes/docs/packages/viewer.mdx',
 	'apps/vectreal-platform/app/routes/docs/packages/embed.mdx',
+	/*
+	  The guide names publisher controls by their on-screen labels, which are
+	  strings in components the page cannot see change.
+	*/
+	'apps/vectreal-platform/app/routes/docs/guides/optimize.mdx',
 	'apps/vectreal-platform/app/routes/news-room-page/articles/04_api-keys-101.mdx'
 ]
 
