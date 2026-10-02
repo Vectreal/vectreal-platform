@@ -18,6 +18,7 @@ on:
       - 'main'
     paths:
       - 'apps/vectreal-platform/**'
+      - 'apps/img-to-3d-runtime/**'
       - 'packages/core/**'
       - 'packages/embed/**'
       - 'packages/hooks/**'
@@ -81,6 +82,14 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # apps/img-to-3d-runtime is a Python project whose `test` target runs
+      # pytest through uv, and `nx affected` reaches it like any other project.
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/img-to-3d-runtime/uv.lock
 
       - name: Resolve affected range
         id: affected-range

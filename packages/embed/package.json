@@ -22,9 +22,7 @@
 		"url": "git+https://github.com/Vectreal/vectreal-platform.git"
 	},
 	"license": "AGPL-3.0-only",
-	"main": "./index.cjs",
-	"module": "./index.js",
-	"browser": "./vectreal-embed.umd.js",
+	"main": "./index.js",
 	"types": "./index.d.ts",
 	"type": "module",
 	"sideEffects": false,
@@ -35,8 +33,7 @@
 	"exports": {
 		".": {
 			"types": "./index.d.ts",
-			"import": "./index.js",
-			"require": "./index.cjs"
+			"default": "./index.js"
 		}
 	},
 	"devDependencies": {

@@ -14,8 +14,6 @@ A ready-to-use React component for rendering and interacting with 3D models. Bui
   </figcaption>
 </figure>
 
-> This package is still in active development. Breaking changes may occur before the first major release.
-
 ---
 
 ## Installation
@@ -25,6 +23,13 @@ npm install @vctrl/viewer
 # or
 pnpm add @vctrl/viewer
 ```
+
+**Module format:** ES modules only. Import it from any bundler or browser.
+
+{/* claims
+present packages/viewer/package.json "type": "module"
+absent packages/viewer/package.json "require"
+*/}
 
 ---
 
@@ -215,7 +220,7 @@ Configures the [@react-three/drei `Environment`](https://github.com/pmndrs/drei#
 
 `clip` is `false` because near/far planes are managed per frame in `SceneModel`, so Drei's `Bounds` is deliberately kept from writing them.
 
-`fit` is accepted for API compatibility but ignored: `SceneBounds` always passes `fit={false}` to Drei's `Bounds` because `SceneCamera` drives fitting imperatively via `bounds.reset().fit()`.
+`fit` is accepted for API compatibility but ignored: `SceneBounds` always passes `fit={false}` to Drei's `Bounds` because `SceneCamera` frames the first view itself. That framing uses `margin`, and it is applied in one step, so `maxDuration` does not animate it.
 
 Example:
 

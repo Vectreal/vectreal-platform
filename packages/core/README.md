@@ -12,6 +12,8 @@ npm install @vctrl/core
 pnpm add @vctrl/core
 ```
 
+**Module format:** ES modules only. Import it from any bundler, browser or Node.js. `require()` also loads it on Node.js 20.19, 22.12 and later, but three.js and glTF-Transform then load as ES modules too, separately from a `require('three')` of your own, so their objects fail each other's `instanceof` checks. Use `import` when you pass those objects in.
+
 > **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the sharp constructor API: `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.
 
 ---
@@ -309,8 +311,9 @@ export async function POST(request: Request) {
 
 ## Requirements
 
-`@vctrl/core` declares no `engines` field. The Vectreal workspace it is developed in
-requires Node.js 22.22 or later.
+`@vctrl/core` runs wherever ES modules load: any current bundler, browser, Web Worker
+or Node.js. Loading it with `require()` needs Node.js 20.19, 22.12 or later, with the
+`instanceof` caveat under Installation.
 
 `sharp` is an **optional** dependency, not a hard requirement. Install it yourself (`npm install sharp`; this workspace tracks `^0.35.3`) to enable native server-side texture compression. When `sharp` is not installed, `compressTextures()` falls back to basic glTF-Transform optimization (deduplication and pruning). In the browser, supply your own `encoder` instead.
 
