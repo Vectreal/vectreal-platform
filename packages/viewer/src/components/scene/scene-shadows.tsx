@@ -209,13 +209,17 @@ const DEFAULT_METRICS: ModelMetrics = {
  * box: the plane follows the horizontal footprint, while the light distance and
  * shadow camera follow the overall size. Using one shared max-dimension instead
  * makes the shadow read too small under tall models and too large under flat
- * ones. Returns unit metrics until measured.
+ * ones. Returns unit metrics until this model is measured, including right
+ * after a swap, so nothing sized from the previous model reads as measured.
  */
 const useModelMetrics = (
 	model?: Object3D,
 	normalizationOptions?: NormalizationOptions
 ): ModelMetrics => {
-	const [metrics, setMetrics] = useState<ModelMetrics>(DEFAULT_METRICS)
+	const [measurement, setMeasurement] = useState<{
+		model: Object3D
+		metrics: ModelMetrics
+	} | null>(null)
 
 	const normalizationEnabled = normalizationOptions?.enabled ?? false
 	const normalizationMinSize = normalizationOptions?.minSize
@@ -230,12 +234,15 @@ const useModelMetrics = (
 		const footprint = Math.max(size.x, size.z)
 		const radius = 0.5 * Math.hypot(size.x, size.y, size.z)
 		if (footprint > 0 && radius > 0 && Number.isFinite(radius)) {
-			setMetrics({
-				footprint,
-				radius,
-				height: size.y,
-				vertexCount: computeModelFingerprint(model),
-				measured: true
+			setMeasurement({
+				model,
+				metrics: {
+					footprint,
+					radius,
+					height: size.y,
+					vertexCount: computeModelFingerprint(model),
+					measured: true
+				}
 			})
 		}
 		// Normalization is a dependency because it rescales the model from an
@@ -244,7 +251,9 @@ const useModelMetrics = (
 		// bake signature built from them) is in model-size units and goes stale.
 	}, [model, normalizationEnabled, normalizationMinSize, normalizationMaxSize])
 
-	return metrics
+	return measurement && measurement.model === model
+		? measurement.metrics
+		: DEFAULT_METRICS
 }
 
 interface ShadowBakeCaptureProps {
@@ -562,7 +571,7 @@ const SceneShadows = memo(
 
 		return (
 			<>
-				{contactShadow}
+				{measured && contactShadow}
 
 				{usePersistedBake && bakedShadow ? (
 					// Load-time fast path: render the stored bake, no recomputation.
@@ -574,7 +583,10 @@ const SceneShadows = memo(
 							color={options.color ?? '#000000'}
 						/>
 					</Suspense>
-				) : (
+				) : measured ? (
+					// Not before: drei bakes on mount, so a bake sized from the
+					// placeholder metrics is thrown away when the real ones land.
+					// A static bake blocks the main thread for its whole length.
 					<>
 						{bake}
 
@@ -584,7 +596,7 @@ const SceneShadows = memo(
 							temporal={temporal ?? true}
 						/>
 					</>
-				)}
+				) : null}
 
 				{/* Mounted in both branches so a save can either persist a fresh live
 				    bake or confirm the stored one is still valid (avoiding re-upload). */}
