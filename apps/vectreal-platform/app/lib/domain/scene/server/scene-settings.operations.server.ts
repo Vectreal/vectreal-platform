@@ -35,6 +35,7 @@ import {
 	getOrCreateDefaultProject,
 	userExists
 } from '../../user/user-repository.server'
+import { readGlbExtensionsUsed } from '../glb-header'
 import { isSceneOverSizeLimit } from '../scene-size-limit'
 
 import type { EntitlementKey } from '../../../../constants/plan-config'
@@ -522,7 +523,8 @@ export async function uploadPublishedGlb(
 					fileName: file.name || 'scene.glb',
 					data: bytes,
 					mimeType: file.type || 'model/gltf-binary',
-					type: 'buffer'
+					type: 'buffer',
+					metadata: { gltfExtensionsUsed: readGlbExtensionsUsed(bytes) }
 				}
 			],
 			request.requestId

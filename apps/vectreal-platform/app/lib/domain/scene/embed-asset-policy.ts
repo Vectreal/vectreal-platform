@@ -1,6 +1,8 @@
 import { PERSISTED_BAKE_FILENAME } from '@vctrl/core'
 
-import type { SceneAssetRef, SceneAssetRefMap } from '@vctrl/core'
+import { DRACO_EXTENSION } from './glb-header'
+
+import type { PublishedModelRef, SceneAssetRefMap } from '@vctrl/core'
 
 /**
  * The single owner of "what may an external embed fetch?".
@@ -32,6 +34,8 @@ export interface PublishedModelRow {
 	fileName: string | null
 	mimeType: string | null
 	byteSize: number | null
+	/** The extensions the GLB declares, recorded on upload; null if unknown. */
+	extensionsUsed?: readonly string[] | null
 }
 
 /**
@@ -122,6 +126,20 @@ export function buildEmbedAssetRefs(
 }
 
 /**
+ * The extensions a published GLB declared, as `uploadPublishedGlb` recorded
+ * them in the asset row's metadata. Null for a GLB uploaded before that, or
+ * metadata in any other shape: an unknown answer, never a guessed one.
+ */
+export function extensionsUsedFromMetadata(metadata: unknown): string[] | null {
+	const recorded = (metadata as { gltfExtensionsUsed?: unknown } | null)
+		?.gltfExtensionsUsed
+	return Array.isArray(recorded) &&
+		recorded.every((name) => typeof name === 'string')
+		? recorded
+		: null
+}
+
+/**
  * The filename is forced to end in `.glb` because the client hands it to
  * `ModelLoader`, whose `formatFor` throws on an extension it does not
  * recognize. Publishing has always written `<base>.glb`, but a stored name is
@@ -130,7 +148,7 @@ export function buildEmbedAssetRefs(
 export function buildPublishedModelRef(
 	published: PublishedModelRow,
 	buildAssetUrl: (assetId: string) => string
-): SceneAssetRef {
+): PublishedModelRef {
 	const storedName = published.fileName?.trim()
 	const fileName =
 		storedName && storedName.toLowerCase().endsWith('.glb')
@@ -141,6 +159,9 @@ export function buildPublishedModelRef(
 		url: buildAssetUrl(published.assetId),
 		fileName,
 		mimeType: published.mimeType ?? GLB_MIME_TYPE,
-		byteSize: published.byteSize ?? null
+		byteSize: published.byteSize ?? null,
+		...(published.extensionsUsed
+			? { usesDraco: published.extensionsUsed.includes(DRACO_EXTENSION) }
+			: {})
 	}
 }

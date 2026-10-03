@@ -19,7 +19,7 @@ import { fetchManifestAssetData } from './utils/fetch-manifest-assets'
 import type { LoadContext } from './load-context'
 import type {
 	ApiEnvelope,
-	SceneAssetRef,
+	PublishedModelRef,
 	ServerScenePayload
 } from '@vctrl/core'
 
@@ -73,7 +73,7 @@ const PUBLISHED_MODEL_KEY = '__vctrl_published_model__'
 const loadPublishedSceneModel = async (
 	sceneId: string | undefined,
 	payload: ServerScenePayload,
-	publishedModel: SceneAssetRef,
+	publishedModel: PublishedModelRef,
 	{ modelLoader, publish, onProgress }: LoadContext,
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
@@ -81,7 +81,11 @@ const loadPublishedSceneModel = async (
 	// its wasm and the worker it compiles in are all independent of the model's
 	// bytes, and fetching them after the GLB arrived put them in series. A
 	// failure here resurfaces, with its context, in the parse that needs it.
-	modelLoader.prepareDracoDecoder().catch(() => {})
+	// Unknown counts as needed: GLBs published before the flag was recorded
+	// say nothing either way.
+	if (publishedModel.usesDraco !== false) {
+		modelLoader.prepareDracoDecoder().catch(() => {})
+	}
 
 	const fetched = await fetchManifestAssetData(
 		{ ...(payload.assetRefs ?? {}), [PUBLISHED_MODEL_KEY]: publishedModel },

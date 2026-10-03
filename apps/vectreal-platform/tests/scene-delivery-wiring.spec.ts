@@ -108,3 +108,28 @@ describe('signed embed assets', () => {
 		)
 	})
 })
+
+describe('the published GLB upload', () => {
+	const operations = read(
+		'lib/domain/scene/server/scene-settings.operations.server.ts'
+	)
+	const preview = read(
+		'lib/domain/scene/server/scene-preview-repository.server.ts'
+	)
+
+	it('records the extensions the GLB declares', () => {
+		const upload = operations.slice(
+			operations.indexOf('export async function uploadPublishedGlb(')
+		)
+		expect(upload).toMatch(
+			/^[\s\S]{0,1500}?metadata: \{ gltfExtensionsUsed: readGlbExtensionsUsed\(bytes\) \}/
+		)
+	})
+
+	it('hands those extensions to the manifest', () => {
+		expect(preview).toContain('publishedAssetMetadata: assets.metadata')
+		expect(preview).toContain(
+			'extensionsUsed: extensionsUsedFromMetadata(preview.publishedAssetMetadata)'
+		)
+	})
+})

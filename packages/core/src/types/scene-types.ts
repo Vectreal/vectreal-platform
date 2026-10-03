@@ -485,6 +485,15 @@ export interface SceneAssetRef {
 /** Asset reference map keyed by asset identifier. */
 export type SceneAssetRefMap = Record<string, SceneAssetRef>
 
+/** The published GLB an embed loads, with what is known about it up front. */
+export interface PublishedModelRef extends SceneAssetRef {
+	/**
+	 * Whether the GLB needs the Draco decoder. Read from the GLB when it is
+	 * uploaded; absent for one published before that was recorded.
+	 */
+	usesDraco?: boolean
+}
+
 /** Optional scene metadata payload persisted with scene settings. */
 export interface SceneMetaData {
 	name?: string
@@ -517,7 +526,7 @@ export interface ServerScenePayload {
 	 * null and {@link assetRefs} carries only assets that live outside the GLB
 	 * (today: the persisted shadow bake).
 	 */
-	publishedModel?: SceneAssetRef | null
+	publishedModel?: PublishedModelRef | null
 }
 
 /** Resolved scene data contract consumed by loaders and viewer clients. */

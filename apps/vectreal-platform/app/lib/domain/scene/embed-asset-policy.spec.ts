@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	buildEmbedAssetRefs,
 	buildPublishedModelRef,
+	extensionsUsedFromMetadata,
 	isEmbedServableAssetId,
 	selectEmbedServableAssets,
 	type EmbedAssetRow
@@ -247,5 +248,56 @@ describe('embed asset policy', () => {
 				).mimeType
 			).toBe('model/gltf-binary')
 		})
+	})
+})
+
+describe('whether the published GLB needs the Draco decoder', () => {
+	const row = {
+		assetId: PUBLISHED_ASSET_ID,
+		fileName: 'shoe.glb',
+		mimeType: 'model/gltf-binary',
+		byteSize: 812345
+	}
+	const url = (assetId: string) => `/assets/${assetId}`
+
+	it('says so when the upload recorded the Draco extension', () => {
+		const metadata = {
+			gltfExtensionsUsed: ['KHR_draco_mesh_compression', 'KHR_materials_ior']
+		}
+		const ref = buildPublishedModelRef(
+			{ ...row, extensionsUsed: extensionsUsedFromMetadata(metadata) },
+			url
+		)
+		expect(ref.usesDraco).toBe(true)
+	})
+
+	it('says not when the upload recorded no Draco', () => {
+		const ref = buildPublishedModelRef(
+			{
+				...row,
+				extensionsUsed: extensionsUsedFromMetadata({ gltfExtensionsUsed: [] })
+			},
+			url
+		)
+		expect(ref.usesDraco).toBe(false)
+	})
+
+	it('says nothing for a GLB uploaded before it was recorded', () => {
+		for (const metadata of [null, {}, { gltfExtensionsUsed: null }]) {
+			const ref = buildPublishedModelRef(
+				{ ...row, extensionsUsed: extensionsUsedFromMetadata(metadata) },
+				url
+			)
+			expect(ref).not.toHaveProperty('usesDraco')
+		}
+	})
+
+	it('reads only a list of names as recorded', () => {
+		expect(
+			extensionsUsedFromMetadata({ gltfExtensionsUsed: [1, 'KHR_x'] })
+		).toBeNull()
+		expect(
+			extensionsUsedFromMetadata({ gltfExtensionsUsed: 'KHR_draco' })
+		).toBeNull()
 	})
 })

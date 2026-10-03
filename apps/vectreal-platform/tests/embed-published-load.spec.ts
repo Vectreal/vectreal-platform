@@ -155,6 +155,25 @@ describe('published-GLB embed load', () => {
 		expect(loadToThreeJS).not.toHaveBeenCalled()
 	})
 
+	it('leaves the Draco decoder alone for a GLB recorded as not needing it', async () => {
+		stubFetch(
+			embedManifest({
+				publishedModel: {
+					url: MODEL_URL,
+					fileName: 'blue-vans-shoe.glb',
+					mimeType: 'model/gltf-binary',
+					byteSize: GLB_BYTES.byteLength,
+					usesDraco: false
+				}
+			})
+		)
+		const { ctx, prepareDracoDecoder } = buildContext()
+
+		await loadModelFromServer(source, ctx)
+
+		expect(prepareDracoDecoder).not.toHaveBeenCalled()
+	})
+
 	it('warms the Draco decoder before the model has downloaded', async () => {
 		const order: string[] = []
 		stubFetch(embedManifest())

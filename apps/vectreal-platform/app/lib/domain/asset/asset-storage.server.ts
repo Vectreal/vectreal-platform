@@ -43,6 +43,8 @@ export interface GLTFAssetData {
 	data: Uint8Array
 	mimeType: string
 	type: 'buffer' | 'image'
+	/** Facts about the bytes, recorded on the row a new upload creates. */
+	metadata?: Record<string, unknown>
 }
 
 const db = getDbClient()
@@ -409,6 +411,7 @@ export async function uploadSceneAssets(
 				fileSize: asset.data.byteLength,
 				mimeType: asset.mimeType,
 				metadata: {
+					...asset.metadata,
 					sceneId,
 					originalFileName: fileName,
 					assetType: asset.type,
