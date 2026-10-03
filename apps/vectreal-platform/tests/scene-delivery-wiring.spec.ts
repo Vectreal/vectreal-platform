@@ -161,3 +161,11 @@ describe('the /embed document', () => {
 		expect(route).toContain('initialManifest={manifest}')
 	})
 })
+
+describe('the /embed document head', () => {
+	it('carries the preloads for the manifest it serves', () => {
+		expect(read('routes/embed-page/embed-scene.tsx')).toContain(
+			'{manifest && <EmbedResourceHints manifest={manifest} />}'
+		)
+	})
+})

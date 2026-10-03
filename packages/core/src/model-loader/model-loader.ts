@@ -35,7 +35,8 @@ import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
 import type { ModelSiblings } from './three-source-bridges'
 import type { AnimationClip, Object3D } from 'three'
 
-const DEFAULT_DRACO_DECODER_PATH = '/draco/'
+/** Where the Draco decoder is served from unless a caller says otherwise. */
+export const DRACO_DECODER_PATH = '/draco/'
 
 const EMPTY_SIBLINGS: ModelSiblings = new Map()
 
@@ -82,8 +83,7 @@ export class ModelLoader {
 
 	constructor(options?: { dracoDecoderPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
-		this.dracoDecoderPath =
-			options?.dracoDecoderPath ?? DEFAULT_DRACO_DECODER_PATH
+		this.dracoDecoderPath = options?.dracoDecoderPath ?? DRACO_DECODER_PATH
 	}
 
 	/**
