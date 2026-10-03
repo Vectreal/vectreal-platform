@@ -16,8 +16,16 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { usePublisherScene } from './use-publisher-scene'
 import { PublisherViewerCaptureProvider } from '../components/publisher/publisher-viewer-capture-context'
+import { originalPreset, smallestPreset } from '../constants/optimizations'
 import { defaultBoundsOptions } from '../constants/viewer-defaults'
-import { hasUnsavedChangesAtom } from '../lib/stores/publisher-config-store'
+import {
+	hasUnsavedChangesAtom,
+	lastSavedSceneIdAtom
+} from '../lib/stores/publisher-config-store'
+import {
+	keptOriginalAtom,
+	optimizationAtom
+} from '../lib/stores/scene-optimization-store'
 import { boundsAtom } from '../lib/stores/scene-settings-store'
 
 import type { SaveAvailabilityState } from '../lib/domain/scene'
@@ -28,7 +36,9 @@ const { modelContext, sceneDraft, sceneUpload } = vi.hoisted(() => ({
 	modelContext: {
 		status: 'ready',
 		load: vi.fn().mockResolvedValue({ status: 'idle' }),
-		reset: vi.fn()
+		reset: vi.fn(),
+		// The upload a just-saved scene still holds as its source.
+		optimizer: { getSource: () => new Uint8Array([1, 2, 3]) }
 	},
 	sceneDraft: {
 		isRestoringDraft: false,
@@ -67,7 +77,8 @@ const createManifest = (
 	assetRefs: null,
 	assets: null,
 	settings,
-	settingsUpdatedAt: null
+	settingsUpdatedAt: null,
+	source: null
 })
 
 interface SaveSample {
@@ -97,10 +108,12 @@ function Probe({ samples, sceneId, sceneManifest }: ProbeProps) {
 /** Opens the publisher and records what it reported on every render. */
 function open(
 	sceneId: null | string,
-	sceneManifest: SceneManifestResponse | null
+	sceneManifest: SceneManifestResponse | null,
+	seed?: (store: ReturnType<typeof createStore>) => void
 ) {
 	const samples: SaveSample[] = []
 	const store = createStore()
+	seed?.(store)
 
 	render(
 		<Provider store={store}>
@@ -167,6 +180,96 @@ describe('usePublisherScene', () => {
 
 		act(() =>
 			scene.store.set(boundsAtom, { ...defaultBoundsOptions, margin: 2.5 })
+		)
+
+		expect(scene.latest().saveAvailability.canSave).toBe(true)
+	})
+
+	it('never fetches back the original a first save just kept', () => {
+		const savedJustNow = {
+			keep: true,
+			stored: null,
+			saved: true,
+			unreadable: false
+		}
+		const scene = open(
+			'scene-1',
+			{
+				...createManifest({ bounds: defaultBoundsOptions }),
+				source: {
+					assetId: 'original-1',
+					url: '/api/scenes/scene-1/assets/original-1',
+					fileName: 'source.glb',
+					mimeType: 'model/gltf-binary',
+					byteSize: 3
+				}
+			},
+			(store) => {
+				store.set(lastSavedSceneIdAtom, 'scene-1')
+				store.set(keptOriginalAtom, savedJustNow)
+			}
+		)
+
+		expect(scene.store.get(keptOriginalAtom)).toEqual(savedJustNow)
+	})
+
+	// The first save leaves the upload loaded: the optimizer's source is still
+	// the original, whatever the saved settings say. Reading it as the saved
+	// version would hide the original, and the next save would drop it.
+	it("keeps a just-saved scene's upload as its original", () => {
+		const scene = open(
+			'scene-1',
+			{
+				...createManifest({ bounds: defaultBoundsOptions }),
+				stats: {
+					optimizationSettings: smallestPreset
+				} as SceneManifestResponse['stats'],
+				source: {
+					assetId: 'original-1',
+					url: '/api/scenes/scene-1/assets/original-1',
+					fileName: 'source.glb',
+					mimeType: 'model/gltf-binary',
+					byteSize: 3
+				}
+			},
+			(store) => {
+				store.set(lastSavedSceneIdAtom, 'scene-1')
+				store.set(keptOriginalAtom, {
+					keep: true,
+					stored: null,
+					saved: true,
+					unreadable: false
+				})
+				store.set(optimizationAtom, (prev) => ({
+					...prev,
+					sourceSettings: originalPreset,
+					derivedFrom: smallestPreset
+				}))
+			}
+		)
+
+		expect(scene.store.get(optimizationAtom).sourceSettings).toBe(
+			originalPreset
+		)
+		expect(scene.latest().saveAvailability.canSave).toBe(false)
+	})
+
+	it('offers a save once the author lets go of a kept original', () => {
+		const scene = open('scene-1', {
+			...createManifest({ bounds: defaultBoundsOptions }),
+			source: {
+				assetId: 'original-1',
+				url: '/api/scenes/scene-1/assets/original-1',
+				fileName: 'source.glb',
+				mimeType: 'model/gltf-binary',
+				byteSize: 3
+			}
+		})
+
+		expect(scene.latest().saveAvailability.canSave).toBe(false)
+
+		act(() =>
+			scene.store.set(keptOriginalAtom, (prev) => ({ ...prev, keep: false }))
 		)
 
 		expect(scene.latest().saveAvailability.canSave).toBe(true)

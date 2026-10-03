@@ -141,6 +141,7 @@ export const savePendingSceneDraft = async (
 			optimizationSettings: input.optimizationSettings,
 			sourceGlb: input.sourceGlb,
 			sourceSettings: input.sourceSettings ?? null,
+			keepOriginal: input.keepOriginal ?? true,
 			optimizedSceneBytes: input.optimizedSceneBytes ?? null,
 			clientSceneBytes: input.clientSceneBytes ?? null
 		}

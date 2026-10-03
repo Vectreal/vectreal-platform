@@ -1,3 +1,4 @@
+import { formatFileSize } from '@shared/utils'
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { toast } from 'sonner'
 
@@ -8,10 +9,16 @@ import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
 } from './scene-upload-manifest'
-import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
+import {
+	BillingLimitError,
+	createBillingLimitErrorFromResponse,
+	isBillingLimitError
+} from '../../billing/client/billing-limit-error'
+import { SOURCE_MODEL_FILENAME } from '../scene-asset-roles'
 import { buildDefaultCameraSignature } from '../scene-camera'
 
 import type { SaveProgressEvent } from './scene-save-progress'
+import type { SourceToSave } from './scene-source-to-save'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { SceneSettings } from '@vctrl/core'
 import type { ShadowBakeResult } from '@vctrl/viewer'
@@ -54,6 +61,8 @@ interface ExecuteSceneSaveOrchestratorParams {
 	captureSceneThumbnail: () => Promise<null | string>
 	captureShadowBake?: () => Promise<ShadowBakeResult | null>
 	onProgress?: (event: SaveProgressEvent) => void
+	/** What the save does with the scene's original. Keeps none when left out. */
+	source?: SourceToSave
 }
 
 /** The scene document's key, the same name `existingAssets` lists it under. */
@@ -70,6 +79,54 @@ const extractThumbnailAssetId = (
 	// Anchor to the end so only the final `/thumbnail/<id>` segment is taken.
 	const match = thumbnailUrl.match(/\/thumbnail\/([^/?#]+)$/)
 	return match ? match[1] : null
+}
+
+/** The original a save left the scene keeping, and where it is read back. */
+export interface KeptOriginalRef {
+	assetId: string
+	url: string
+}
+
+type ExistingAssets = Record<string, { assetId: string; contentHash: string }>
+
+/** What a save does with the original once the server has said what it holds. */
+type SettledSource =
+	| { kind: 'none' }
+	| { kind: 'linked'; assetId: string; byteSize: number }
+	| { kind: 'upload'; bytes: Uint8Array }
+
+/**
+ * Re-links a stored original only while the scene still links it, which is
+ * what `existingAssets` lists. On a move to another project the server reuses
+ * nothing, and another session may have dropped the original meanwhile: then
+ * it is sent again from the stored copy. When that cannot be read the save
+ * stops, because saving without it would unlink the original for good.
+ */
+const settleSource = async (
+	source: SourceToSave,
+	existingAssets: ExistingAssets | undefined
+): Promise<SettledSource> => {
+	if (source.kind !== 'linked') return source
+
+	const linked = existingAssets?.[SOURCE_MODEL_FILENAME]
+	if (linked) {
+		return {
+			kind: 'linked',
+			assetId: linked.assetId,
+			byteSize: source.source.byteSize ?? 0
+		}
+	}
+
+	const response = await fetch(source.source.url).catch(() => null)
+	if (!response?.ok) {
+		throw new Error(
+			'The kept original could not be read, so nothing was saved. Try again, or turn off "Keep the original" to save without it.'
+		)
+	}
+	return {
+		kind: 'upload',
+		bytes: new Uint8Array(await response.arrayBuffer())
+	}
 }
 
 const toJsonOrThrow = async (response: Response) => {
@@ -105,9 +162,13 @@ export const executeSceneSaveOrchestrator = async ({
 	prepareGltfDocumentForUpload,
 	captureSceneThumbnail,
 	captureShadowBake,
-	onProgress
+	onProgress,
+	source = { kind: 'none' }
 }: ExecuteSceneSaveOrchestratorParams): Promise<
-	SaveSceneOrchestratorResult | { unchanged: true }
+	(SaveSceneOrchestratorResult | { unchanged: true }) & {
+		/** The original the scene now keeps, or null when it keeps none. */
+		keptOriginal: KeptOriginalRef | null
+	}
 > => {
 	if (!userId) {
 		throw new Error('No user ID provided for saving settings')
@@ -153,8 +214,8 @@ export const executeSceneSaveOrchestrator = async ({
 
 	const preparedSceneId = prepared.sceneId as string
 	const preparedProjectId = prepared.projectId as string | undefined
-	const existingAssets = prepared.existingAssets as
-		Record<string, { assetId: string; contentHash: string }> | undefined
+	const existingAssets = prepared.existingAssets as ExistingAssets | undefined
+	const settledSource = await settleSource(source, existingAssets)
 
 	const gltfData = (gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
 	const imageMimeLookup = buildImageMimeLookup(gltfData)
@@ -194,6 +255,21 @@ export const executeSceneSaveOrchestrator = async ({
 			preview: null
 		}
 	})
+	if (settledSource.kind !== 'none') {
+		onProgress?.({
+			type: 'file-added',
+			file: {
+				key: SOURCE_MODEL_FILENAME,
+				group: 'original',
+				name: 'Original model',
+				bytes:
+					settledSource.kind === 'upload'
+						? settledSource.bytes.byteLength
+						: settledSource.byteSize,
+				preview: null
+			}
+		})
+	}
 
 	/** Uploads one file, reporting its progress under `key`. */
 	const uploadFile = async (key: string, body: FormData) => {
@@ -379,9 +455,11 @@ export const executeSceneSaveOrchestrator = async ({
 		options?.maxConcurrentAssetUploads ?? MAX_CONCURRENT_ASSET_UPLOADS
 
 	const hashBytes = async (bytes: Uint8Array): Promise<string> => {
+		// The view, not `.buffer`: a view into a larger buffer would hash bytes
+		// that are not the file's.
 		const hashBuffer = await crypto.subtle.digest(
 			'SHA-256',
-			bytes.buffer as ArrayBuffer
+			bytes as Uint8Array<ArrayBuffer>
 		)
 		return Array.from(new Uint8Array(hashBuffer))
 			.map((b) => b.toString(16).padStart(2, '0'))
@@ -507,6 +585,69 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 	sceneAssetIds.push(gltfAssetId)
 
+	// The original is linked apart from the model's assets, so it is never
+	// loaded as part of the model. A stored one is re-linked without sending
+	// it; a source whose bytes the server already holds is not sent either.
+	let sourceAssetId: string | null = null
+	if (settledSource.kind === 'linked') {
+		sourceAssetId = settledSource.assetId
+		onProgress?.({
+			type: 'file-done',
+			key: SOURCE_MODEL_FILENAME,
+			reused: true
+		})
+	} else if (settledSource.kind === 'upload') {
+		const existingSource = existingAssets?.[SOURCE_MODEL_FILENAME]
+		if (
+			existingSource &&
+			(await hashBytes(settledSource.bytes)) === existingSource.contentHash
+		) {
+			sourceAssetId = existingSource.assetId
+			onProgress?.({
+				type: 'file-done',
+				key: SOURCE_MODEL_FILENAME,
+				reused: true
+			})
+		} else {
+			const uploadSourceFormData = new FormData()
+			uploadSourceFormData.append('action', 'upload-scene-asset')
+			uploadSourceFormData.append('requestId', requestId)
+			uploadSourceFormData.append('sceneId', preparedSceneId)
+			if (preparedProjectId) {
+				uploadSourceFormData.append('projectId', preparedProjectId)
+			}
+			if (options?.targetProjectId) {
+				uploadSourceFormData.append('targetProjectId', options.targetProjectId)
+			}
+			uploadSourceFormData.append('kind', 'buffer')
+			uploadSourceFormData.append(
+				'file',
+				new File(
+					[settledSource.bytes as Uint8Array<ArrayBuffer>],
+					SOURCE_MODEL_FILENAME,
+					{
+						type: 'model/gltf-binary'
+					}
+				)
+			)
+			const uploadedSource = await uploadFile(
+				SOURCE_MODEL_FILENAME,
+				uploadSourceFormData
+			).catch((error: unknown) => {
+				// Keeping the original is on by default, so a limit it alone hits
+				// would otherwise read as the scene not fitting at all.
+				if (!isBillingLimitError(error)) throw error
+				throw new BillingLimitError({
+					reason: error.reason,
+					status: error.status,
+					quota: error.quota,
+					message: `${error.message} Keeping the original adds ${formatFileSize(settledSource.bytes.byteLength)}; turn off "Keep the original" to save without it.`
+				})
+			})
+			sourceAssetId = uploadedSource.assetId as string
+		}
+	}
+
 	// Link the persisted shadow bake into the scene's asset set so the server
 	// downloads it into the manifest (base64-inlined alongside the model assets)
 	// and every surface loads it in parallel, with no separate request.
@@ -542,6 +683,9 @@ export const executeSceneSaveOrchestrator = async ({
 	formData.append('settings', JSON.stringify(settingsForSave))
 	formData.append('meta', JSON.stringify(sceneMetaForSave))
 	formData.append('sceneAssetIds', JSON.stringify(sceneAssetIds))
+	if (sourceAssetId) {
+		formData.append('sourceAssetId', sourceAssetId)
+	}
 	formData.append('optimizationSettings', JSON.stringify(optimizationSettings))
 
 	if (typeof options?.initialSceneBytes === 'number') {
@@ -555,6 +699,14 @@ export const executeSceneSaveOrchestrator = async ({
 	if (optimizationReport && options?.includeOptimizationReport !== false) {
 		formData.append('optimizationReport', JSON.stringify(optimizationReport))
 	}
+
+	// The same address the publisher's manifest gives a scene asset.
+	const keptOriginal: KeptOriginalRef | null = sourceAssetId
+		? {
+				assetId: sourceAssetId,
+				url: `/api/scenes/${preparedSceneId}/assets/${sourceAssetId}`
+			}
+		: null
 
 	onProgress?.({ type: 'committing' })
 	console.info('[scene-settings] save request started', {
@@ -578,11 +730,12 @@ export const executeSceneSaveOrchestrator = async ({
 	onProgress?.({ type: 'saved', unchanged: Boolean(data.unchanged) })
 
 	if (data.unchanged) {
-		return { unchanged: true }
+		return { unchanged: true, keptOriginal }
 	}
 
 	return {
 		...data,
-		sceneMeta: sceneMetaForSave
+		sceneMeta: sceneMetaForSave,
+		keptOriginal
 	}
 }

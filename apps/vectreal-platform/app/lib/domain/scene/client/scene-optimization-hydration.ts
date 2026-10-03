@@ -33,6 +33,12 @@ interface ExecuteOptimizationStateHydrationParams {
 	) => void
 	optimizationRuntimeInitialState: SceneOptimizationRuntimeState
 	defaultOptimizations: Optimizations
+	/**
+	 * The optimizer already holds this scene's source: a scene this tab just
+	 * saved, whose upload is still loaded. What the source and the document
+	 * embody is then known here, not inferred from the saved settings.
+	 */
+	isSourceLoaded?: boolean
 }
 
 export const executeOptimizationStateHydration = ({
@@ -42,7 +48,8 @@ export const executeOptimizationStateHydration = ({
 	setOptimizationState,
 	setOptimizationRuntime,
 	optimizationRuntimeInitialState,
-	defaultOptimizations
+	defaultOptimizations,
+	isSourceLoaded = false
 }: ExecuteOptimizationStateHydrationParams) => {
 	const persistedOptimizationSettings = manifest?.stats?.optimizationSettings
 	const latestSceneStats = manifest?.stats ?? null
@@ -54,8 +61,9 @@ export const executeOptimizationStateHydration = ({
 			...prev,
 			optimizationPreset: DEFAULT_PRESET_ID,
 			optimizations: defaultOptimizations,
-			sourceSettings: originalPreset,
-			derivedFrom: originalPreset
+			...(isSourceLoaded
+				? {}
+				: { sourceSettings: originalPreset, derivedFrom: originalPreset })
 		}))
 
 		setOptimizationRuntime({
@@ -89,8 +97,7 @@ export const executeOptimizationStateHydration = ({
 		...prev,
 		optimizationPreset: inferredPreset,
 		optimizations: persistedOptimizationSettings,
-		sourceSettings,
-		derivedFrom: sourceSettings
+		...(isSourceLoaded ? {} : { sourceSettings, derivedFrom: sourceSettings })
 	}))
 
 	setOptimizationRuntime((prev) => ({

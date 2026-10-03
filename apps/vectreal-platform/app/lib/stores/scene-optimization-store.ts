@@ -8,6 +8,7 @@ import {
 } from '../../constants/optimizations'
 
 import type {
+	KeptOriginalState,
 	SceneOptimizationModalState,
 	OptimizationState,
 	SceneOptimizationRuntimeState
@@ -54,12 +55,23 @@ const optimizationRuntimeAtom = atomWithReset<SceneOptimizationRuntimeState>(
 	optimizationRuntimeInitialState
 )
 
+const keptOriginalInitialState: KeptOriginalState = {
+	keep: true,
+	stored: null,
+	saved: false,
+	unreadable: false
+}
+
+const keptOriginalAtom = atom<KeptOriginalState>(keptOriginalInitialState)
+
 const optimizationModalAtom = atomWithReset<SceneOptimizationModalState>(
 	optimizationModalInitialState
 )
 
 export {
 	documentOptimizationsAtom,
+	keptOriginalAtom,
+	keptOriginalInitialState,
 	optimizationModalAtom,
 	optimizationModalInitialState,
 	optimizationAtom,

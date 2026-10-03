@@ -14,7 +14,8 @@ import type {
 	SceneAssetRecord,
 	SceneAssetRefMap,
 	SceneEmbedManifestResponse,
-	SceneManifestResponse
+	SceneManifestResponse,
+	SceneSourceRef
 } from '../../../../types/api'
 
 const GLTF_JSON_MIME_TYPE = 'model/gltf+json'
@@ -39,6 +40,21 @@ export function toAssetRefs(
 	}
 
 	return refs
+}
+
+/** The kept original as a fetchable ref, kept out of the model's refs. */
+export function toSourceRef(
+	asset: SceneAssetRecord | null,
+	buildAssetUrl: (assetId: string) => string
+): SceneSourceRef | null {
+	if (!asset) return null
+	return {
+		assetId: asset.id,
+		url: buildAssetUrl(asset.id),
+		fileName: asset.name,
+		mimeType: asset.mimeType ?? 'application/octet-stream',
+		byteSize: asset.fileSize ?? null
+	}
 }
 
 export async function buildSceneManifest(
@@ -73,7 +89,8 @@ export async function buildSceneManifest(
 			gltfJson: null,
 			assetRefs: null,
 			assets: null,
-			settingsUpdatedAt: null
+			settingsUpdatedAt: null,
+			source: null
 		}
 	}
 
@@ -87,7 +104,8 @@ export async function buildSceneManifest(
 		assets: settingsData.assets ?? null,
 		settingsUpdatedAt: settingsData.settingsUpdatedAt
 			? settingsData.settingsUpdatedAt.toISOString()
-			: null
+			: null,
+		source: toSourceRef(settingsData.sourceAsset, buildAssetUrl)
 	}
 }
 

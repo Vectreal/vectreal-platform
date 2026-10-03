@@ -44,6 +44,15 @@ describe('restoring a draft applies its settings', () => {
 		expect(source).toContain('{ isSavedBaseline: false }')
 	})
 
+	it("gives back the author's choice about the original", () => {
+		// Without it a restored draft keeps the original the author turned off,
+		// and the save stores it against their storage.
+		expect(source).toContain('keep: draft.keepOriginal ?? true')
+		expect(source.indexOf("result.status !== 'ready'")).toBeLessThan(
+			source.indexOf('keep: draft.keepOriginal ?? true')
+		)
+	})
+
 	it('applies them only once the model actually loaded', () => {
 		// Applying before the `status !== 'ready'` bail would leave the atoms
 		// describing a scene the viewer never got.

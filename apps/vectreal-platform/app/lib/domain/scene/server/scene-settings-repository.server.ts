@@ -11,6 +11,7 @@ import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
 } from '../../../../types/api'
+import { SCENE_ASSET_ROLE } from '../scene-asset-roles'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
 
 import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
@@ -74,14 +75,21 @@ export async function getSceneSettingsWithAssetsRow(
 	if (!settings) return null
 
 	const sceneAssetsData = await tx
-		.select({ asset: assets })
+		.select({ asset: assets, usageType: sceneAssets.usageType })
 		.from(sceneAssets)
 		.innerJoin(assets, eq(sceneAssets.assetId, assets.id))
 		.where(eq(sceneAssets.sceneSettingsId, settings.id))
 
+	// The one place links are read, so the kept original is told apart here
+	// and no reader downstream can take it for part of the model.
 	return {
 		settings,
-		assets: sceneAssetsData.map((sa) => sa.asset)
+		assets: sceneAssetsData
+			.filter((sa) => sa.usageType !== SCENE_ASSET_ROLE.source)
+			.map((sa) => sa.asset),
+		sourceAsset:
+			sceneAssetsData.find((sa) => sa.usageType === SCENE_ASSET_ROLE.source)
+				?.asset ?? null
 	}
 }
 
@@ -93,16 +101,22 @@ function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
 	}
 }
 
-export async function getSceneAssetIds(
+/** What a scene links: every asset, and which of them is its kept original. */
+export async function getSceneAssetLinks(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string
-): Promise<string[]> {
-	const assets = await tx
-		.select({ assetId: sceneAssets.assetId })
+): Promise<{ assetIds: string[]; sourceAssetId: string | null }> {
+	const links = await tx
+		.select({ assetId: sceneAssets.assetId, usageType: sceneAssets.usageType })
 		.from(sceneAssets)
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 
-	return assets.map((asset) => asset.assetId)
+	return {
+		assetIds: links.map((link) => link.assetId),
+		sourceAssetId:
+			links.find((link) => link.usageType === SCENE_ASSET_ROLE.source)
+				?.assetId ?? null
+	}
 }
 
 export async function upsertSceneSettings(
@@ -127,29 +141,41 @@ export async function upsertSceneSettings(
 export async function linkSceneAssets(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string,
-	assetIds: string[]
+	assetIds: string[],
+	sourceAssetId: string | null = null
 ) {
-	if (assetIds.length === 0) return
-
-	await tx.insert(sceneAssets).values(
-		assetIds.map((assetId) => ({
+	const links = [
+		...assetIds.map((assetId) => ({
 			sceneSettingsId,
 			assetId,
-			usageType: 'gltf-asset'
-		}))
-	)
+			usageType: SCENE_ASSET_ROLE.model
+		})),
+		...(sourceAssetId
+			? [
+					{
+						sceneSettingsId,
+						assetId: sourceAssetId,
+						usageType: SCENE_ASSET_ROLE.source
+					}
+				]
+			: [])
+	]
+	if (links.length === 0) return
+
+	await tx.insert(sceneAssets).values(links)
 }
 
 export async function replaceSceneAssets(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string,
-	assetIds: string[]
+	assetIds: string[],
+	sourceAssetId: string | null = null
 ) {
 	await tx
 		.delete(sceneAssets)
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 
-	await linkSceneAssets(tx, sceneSettingsId, assetIds)
+	await linkSceneAssets(tx, sceneSettingsId, assetIds, sourceAssetId)
 }
 
 // ---------------------------------------------------------------------------

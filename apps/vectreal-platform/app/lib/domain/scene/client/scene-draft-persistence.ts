@@ -17,6 +17,8 @@ interface PersistPendingSceneDraftParams {
 	sourceGlb: Uint8Array | null
 	/** What `sourceGlb` already embodies, so a restore does not mislabel it. */
 	sourceSettings?: Optimizations | null
+	/** Whether the author chose to keep the original on save; kept when unsaid. */
+	keepOriginal?: boolean
 	/** Byte size of the optimized scene, used to restore save-availability on hydration. */
 	optimizedSceneBytes?: number | null
 	/** Byte size of the raw client scene, used to restore save-availability on hydration. */
@@ -31,6 +33,7 @@ export const persistPendingSceneDraftOrchestrator = async ({
 	optimizationSettings,
 	sourceGlb,
 	sourceSettings,
+	keepOriginal,
 	optimizedSceneBytes,
 	clientSceneBytes
 }: PersistPendingSceneDraftParams): Promise<string | false> => {
@@ -69,6 +72,7 @@ export const persistPendingSceneDraftOrchestrator = async ({
 		optimizationSettings,
 		sourceGlb,
 		sourceSettings,
+		keepOriginal,
 		optimizedSceneBytes,
 		clientSceneBytes
 	})

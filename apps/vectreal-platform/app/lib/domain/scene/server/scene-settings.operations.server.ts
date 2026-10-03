@@ -603,6 +603,7 @@ export async function saveSceneSettings(
 				meta: validationResult.meta,
 				settings: validationResult.settings,
 				sceneAssetIds: validationResult.sceneAssetIds,
+				sourceAssetId: request.sourceAssetId,
 				optimizationReport: request.optimizationReport,
 				optimizationSettings: request.optimizationSettings,
 				initialSceneBytes: request.initialSceneBytes,

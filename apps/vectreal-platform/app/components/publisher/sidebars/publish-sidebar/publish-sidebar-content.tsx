@@ -11,6 +11,7 @@ import { isSaveActionBlocked } from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
 import { sidebarContentVariants } from '../animation'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
+import { KeepOriginalToggle } from './keep-original-toggle'
 import { usePublishSidebarContext } from './publish-sidebar-context'
 import { DeliverySummary } from './sections/delivery-summary'
 import { EmbedOptions } from './sections/embed-options'
@@ -102,6 +103,9 @@ const PublishSidebarContent: FC = () => {
 						  ships is decided there, before anything below it matters.
 						*/}
 						<OptimizationOptions />
+
+						{/* Beside the optimization, which is what makes an original worth keeping. */}
+						{isAuthenticated && <KeepOriginalToggle />}
 
 						<DrillDownTrigger to="download" icon={<Save />} label="Download" />
 

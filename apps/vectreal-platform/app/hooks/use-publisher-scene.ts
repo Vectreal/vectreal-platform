@@ -1,5 +1,5 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { useCallback } from 'react'
 import { useRevalidator } from 'react-router'
 
@@ -11,6 +11,11 @@ import { useSceneUpload } from './scene-loader/use-scene-upload'
 import { usePublisherViewerCapture } from '../components/publisher/publisher-viewer-capture-context'
 import { OPENING_VIEW_CAPTURE_OPTIONS } from '../components/publisher/shell/use-opening-view'
 import { createSceneRequestId as createRequestId } from '../lib/domain/scene/client/scene-request-id'
+import {
+	recordSavedOriginal,
+	resolveSourceToSave,
+	wouldKeepOriginal
+} from '../lib/domain/scene/client/scene-source-to-save'
 import { clearPendingSceneDraft } from '../lib/persistence/pending-scene-idb'
 import {
 	currentSceneIdAtom,
@@ -22,10 +27,13 @@ import {
 } from '../lib/stores/publisher-config-store'
 import {
 	documentOptimizationsAtom,
+	keptOriginalAtom,
+	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../lib/stores/scene-optimization-store'
 import { sceneViewerSettingsAtom } from '../lib/stores/scene-settings-store'
 
+import type { KeptOriginalRef } from '../lib/domain/scene/client/scene-save-orchestrator'
 import type { SceneManifestResponse } from '../types/api'
 import type { SceneSettings } from '@vctrl/core'
 
@@ -153,6 +161,35 @@ export function usePublisherScene({
 	 * against yet. That is the baseline being unknown, not the scene being dirty,
 	 * and without this the publisher armed the navigation guard on every open.
 	 */
+	const store = useStore()
+	// Read when a save starts, not at render: the pass that loads a stored
+	// original changes these between renders.
+	const resolveSource = useCallback(() => {
+		const { keep, stored } = store.get(keptOriginalAtom)
+		const { sourceSettings, derivedFrom } = store.get(optimizationAtom)
+		return resolveSourceToSave({
+			keep,
+			stored,
+			sourceSettings,
+			derivedFrom,
+			source: optimizer?.getSource() ?? null
+		})
+	}, [store, optimizer])
+	const recordSavedSource = useCallback(
+		(kept: KeptOriginalRef | null) =>
+			store.set(keptOriginalAtom, (prev) => recordSavedOriginal(prev, kept)),
+		[store]
+	)
+	const keptOriginal = useAtomValue(keptOriginalAtom)
+	const { sourceSettings, derivedFrom } = useAtomValue(optimizationAtom)
+	const hasUnsavedOriginalChoice =
+		wouldKeepOriginal({
+			...keptOriginal,
+			sourceSettings,
+			derivedFrom,
+			source: optimizer?.getSource() ?? null
+		}) !== keptOriginal.saved
+
 	const isAwaitingSavedBaseline =
 		openSceneId !== null && lastSavedSettings === null
 
@@ -171,7 +208,8 @@ export function usePublisherScene({
 			setLastSavedSceneMeta,
 			lastSavedSceneId,
 			setLastSavedSceneId,
-			suppressDirtyDetection: status === 'loading' || isAwaitingSavedBaseline
+			suppressDirtyDetection: status === 'loading' || isAwaitingSavedBaseline,
+			hasUnsavedOriginalChoice
 		},
 		optimizationState: {
 			optimizationSettings,
@@ -189,7 +227,9 @@ export function usePublisherScene({
 			createRequestId,
 			prepareGltfDocumentForUpload,
 			captureSceneThumbnail,
-			captureShadowBake
+			captureShadowBake,
+			resolveSource,
+			recordSavedSource
 		}
 	})
 
