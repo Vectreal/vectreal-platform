@@ -34,9 +34,9 @@ describe('live shadow bakes', () => {
 		expect(shadows).toContain(': { ...DEFAULT_METRICS, sized: true }')
 	})
 
-	it('read a previous model as unmeasured', () => {
+	it('read a previous model as unmeasured, at its own size', () => {
 		expect(shadows).toMatch(
-			/measurement && measurement\.model === model\s*\? measurement\.metrics/
+			/measurement\.model === model\s*\? measurement\.metrics\s*: \{ \.\.\.measurement\.metrics, measured: false, sized: false \}/
 		)
 	})
 })

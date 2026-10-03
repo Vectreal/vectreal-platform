@@ -217,8 +217,10 @@ const DEFAULT_METRICS: ModelMetrics = {
  * box: the plane follows the horizontal footprint, while the light distance and
  * shadow camera follow the overall size. Using one shared max-dimension instead
  * makes the shadow read too small under tall models and too large under flat
- * ones. Returns unit metrics until this model is measured, including right
- * after a swap, so nothing sized from the previous model reads as measured.
+ * ones. Returns unit metrics until the first model is measured. Right after a
+ * swap it keeps the previous model's figures, so a stored bake's plane holds
+ * its size, but marks them unmeasured and unsized, so nothing reads them as
+ * this model's.
  */
 const useModelMetrics = (
 	model?: Object3D,
@@ -262,9 +264,10 @@ const useModelMetrics = (
 	}, [model, normalizationEnabled, normalizationMinSize, normalizationMaxSize])
 
 	if (!model) return { ...DEFAULT_METRICS, sized: true }
-	return measurement && measurement.model === model
+	if (!measurement) return DEFAULT_METRICS
+	return measurement.model === model
 		? measurement.metrics
-		: DEFAULT_METRICS
+		: { ...measurement.metrics, measured: false, sized: false }
 }
 
 interface ShadowBakeCaptureProps {
