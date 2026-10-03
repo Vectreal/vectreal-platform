@@ -1,9 +1,13 @@
-import { Environment } from '@react-three/drei'
-import { EnvironmentMap, EnvironmentProps, EnvironmentType } from '@vctrl/core'
+import { Environment, useEnvironment } from '@react-three/drei'
+import {
+	DEFAULT_ENVIRONMENT_PRESET,
+	EnvironmentProps,
+	resolveEnvironmentFiles
+} from '@vctrl/core'
 import { memo } from 'react'
 
 export const defaultEnvOptions = {
-	preset: 'studio-natural',
+	preset: DEFAULT_ENVIRONMENT_PRESET,
 	background: false,
 	backgroundIntensity: 1,
 	environmentIntensity: 1,
@@ -11,40 +15,34 @@ export const defaultEnvOptions = {
 	backgroundBlurriness: 0.5
 } satisfies EnvironmentProps
 
-const buildEnvUrl = ({ id, type, resolution }: EnvironmentMap) => {
-	const urlId = id.replaceAll('-', '_')
-	const presetName = `${urlId}_${resolution}`
-	const baseUrl = `https://storage.googleapis.com/environment-maps/${type}/`
-	return `${baseUrl}${presetName}.hdr`
+/**
+ * Starts downloading and decoding a scene's environment map before the scene
+ * mounts, into the same loader cache `SceneEnvironment` reads from.
+ *
+ * The map is otherwise requested only once the model has loaded and the
+ * scene renders, which put a multi-megabyte fetch and its decode in series
+ * after the model's.
+ */
+export const preloadEnvironmentFiles = (files: string | string[]) => {
+	useEnvironment.preload({ files })
 }
 
 /**
  * SceneEnvironment component that sets up the environment for a scene.
  */
 const SceneEnvironment = memo((props: EnvironmentProps) => {
+	const environment = { ...defaultEnvOptions, ...props }
 	const {
-		preset,
-		environmentResolution,
 		background,
 		backgroundBlurriness,
 		backgroundIntensity,
 		environmentIntensity,
-		scene,
-		files
-	} = {
-		...defaultEnvOptions,
-		...props
-	}
-
-	const url = buildEnvUrl({
-		id: preset,
-		type: preset?.split('-')[0] as EnvironmentType,
-		resolution: environmentResolution ?? '1k'
-	})
+		scene
+	} = environment
 
 	return (
 		<Environment
-			files={files ?? url}
+			files={resolveEnvironmentFiles(environment)}
 			background={background}
 			backgroundBlurriness={backgroundBlurriness}
 			backgroundIntensity={backgroundIntensity}
