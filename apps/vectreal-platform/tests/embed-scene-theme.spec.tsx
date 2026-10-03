@@ -30,7 +30,6 @@ vi.mock('../app/components/viewer/client-vectreal-viewer', () => ({
 vi.mock('../app/components/scene-embed/use-scene-embed-scene', () => ({
 	useSceneEmbedScene: () => ({
 		file: { model: {} },
-		isLoadingScene: false,
 		sceneData: {} as ServerSceneData,
 		loadError: null,
 		retrySceneLoad: () => Promise.resolve()

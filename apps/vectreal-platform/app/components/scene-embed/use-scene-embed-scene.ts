@@ -20,7 +20,7 @@ export function useSceneEmbedScene({
 }: UseSceneEmbedSceneParams) {
 	const [searchParams] = useSearchParams()
 	const model = useLoadModel()
-	const { file, sceneData, status, error, load } = model
+	const { file, sceneData, error, load } = model
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const trackedPreviewKeysRef = useRef(new Set<string>())
@@ -67,7 +67,6 @@ export function useSceneEmbedScene({
 
 	return {
 		file,
-		isLoadingScene: status === 'loading',
 		sceneData,
 		loadError: error,
 		retrySceneLoad

@@ -11,7 +11,6 @@ import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
 import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
-import CenteredSpinner from '../centered-spinner'
 
 import type {
 	VectrealViewerProps,
@@ -123,11 +122,10 @@ const SceneEmbedPage = ({
 	theme,
 	showsVectrealBranding = false
 }: SceneEmbedPageProps) => {
-	const { file, isLoadingScene, sceneData, loadError, retrySceneLoad } =
-		useSceneEmbedScene({
-			sceneId,
-			projectId
-		})
+	const { file, sceneData, loadError, retrySceneLoad } = useSceneEmbedScene({
+		sceneId,
+		projectId
+	})
 	const initialCommands = useInitialCommands()
 	const hotspotPresentation = useHotspotPresentation()
 	const embedTheme = useEmbedViewerTheme()
@@ -178,10 +176,6 @@ const SceneEmbedPage = ({
 		() => (sceneData?.camera?.cameras ?? []).filter(isSceneCamera),
 		[sceneData?.camera?.cameras]
 	)
-
-	if (isLoadingScene && !file?.model) {
-		return <CenteredSpinner className="h-dvh" text="Loading scene..." />
-	}
 
 	if (loadError && !file?.model) {
 		return (

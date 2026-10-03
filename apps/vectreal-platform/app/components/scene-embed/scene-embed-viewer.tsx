@@ -147,7 +147,16 @@ const SceneEmbedViewer = memo(
 					theme={theme}
 					onCommandExecutorReady={onCommandExecutorReady}
 					onInteractionEvent={onInteractionEvent}
-					loader={<CenteredSpinner text="Preparing scene..." />}
+					/*
+					  Mounted while the model is still downloading, so the viewer's
+					  code, its WebGL context and the environment map load alongside
+					  it; the loader says which of the two waits it is.
+					*/
+					loader={
+						<CenteredSpinner
+							text={file?.model ? 'Preparing scene...' : 'Loading scene...'}
+						/>
+					}
 					fallback={<CenteredSpinner text="Loading scene..." />}
 				/>
 			</div>
