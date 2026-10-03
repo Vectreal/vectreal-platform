@@ -41,7 +41,7 @@ export default function OnboardingWelcomeScene() {
 			<VectrealViewer
 				theme="dark"
 				controlsOptions={{ enabled: false }}
-				envOptions={{ preset: 'night-city' }}
+				envOptions={{ preset: 'studio-soft' }}
 				shadowsOptions={{ enabled: false }}
 				boundsOptions={{ margin: 0.9 }}
 			>
