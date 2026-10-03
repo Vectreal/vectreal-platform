@@ -121,7 +121,14 @@ describe('a signed asset request', () => {
 	})
 
 	it('is refused, downloading nothing, with a tampered signature', async () => {
-		const response = await get(signedPath().replace(/sig=./, 'sig=A'))
+		const signed = signedPath()
+		const tampered = signed.replace(
+			/sig=(.)/,
+			(_, first: string) => `sig=${first === 'A' ? 'B' : 'A'}`
+		)
+		expect(tampered).not.toBe(signed)
+
+		const response = await get(tampered)
 
 		expect(response.status).toBe(404)
 		expect(downloadAsset).not.toHaveBeenCalled()
