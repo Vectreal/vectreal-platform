@@ -149,10 +149,15 @@ export async function buildEmbedSceneManifest(
  * The settings half of an embed manifest, which depends on nothing but the
  * scene id. Split out so the `/embed` document can read it alongside the
  * publication instead of after it.
+ *
+ * A failed read throws rather than reading as "no settings": a manifest built
+ * from that would render the published model with default lighting and no
+ * shadow, where a failure lets the caller fall back or report it.
  */
 export function readEmbedSceneSettings(sceneId: string) {
 	return sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
-		includeGltfJson: false
+		includeGltfJson: false,
+		readErrors: 'throw'
 	})
 }
 
