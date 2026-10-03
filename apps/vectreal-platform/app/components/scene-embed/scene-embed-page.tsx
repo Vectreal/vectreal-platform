@@ -215,6 +215,13 @@ const SceneEmbedPage = ({
 			<SceneEmbedViewer
 				file={file}
 				sceneData={sceneData}
+				// A scene that names no environment is lit by the default, which
+				// `{}` asks for; an absent manifest says nothing yet.
+				environment={
+					initialManifest
+						? (initialManifest.settings?.environment ?? {})
+						: undefined
+				}
 				onCommandExecutorReady={onCommandExecutorReady}
 				onInteractionEvent={onInteractionEvent}
 				hotspotPresentation={hotspotPresentation}

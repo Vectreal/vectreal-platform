@@ -8,6 +8,7 @@ import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
 import type { EmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
 import type { EmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
+import type { EnvironmentProps } from '@vctrl/core'
 import type { ModelFile, ServerSceneData } from '@vctrl/hooks/use-load-model'
 import type { VectrealViewerProps, ViewerLoadingThumbnail } from '@vctrl/viewer'
 import type { ReactNode } from 'react'
@@ -52,6 +53,12 @@ export interface SceneEmbedViewerProps {
 	 * wrapper's `dark`.
 	 */
 	theme: EmbedViewerTheme
+	/**
+	 * The scene's environment while its data is still loading, from a
+	 * manifest the page already has, so the viewer can start on the
+	 * environment map alongside the model. `sceneData` wins once it exists.
+	 */
+	environment?: EnvironmentProps
 	onCommandExecutorReady?: VectrealViewerProps['onCommandExecutorReady']
 	onInteractionEvent?: VectrealViewerProps['onInteractionEvent']
 }
@@ -74,6 +81,7 @@ const SceneEmbedViewer = memo(
 		hotspotPresentation,
 		branding,
 		theme,
+		environment,
 		onCommandExecutorReady,
 		onInteractionEvent
 	}: SceneEmbedViewerProps) => {
@@ -108,7 +116,7 @@ const SceneEmbedViewer = memo(
 					boundsOptions={sceneData?.bounds}
 					cameraOptions={sceneData?.camera}
 					controlsOptions={sceneData?.controls}
-					envOptions={sceneData?.environment}
+					envOptions={sceneData ? sceneData.environment : environment}
 					normalizationOptions={sceneData?.normalization}
 					/*
 					  Straight from the scene's own settings, and never with

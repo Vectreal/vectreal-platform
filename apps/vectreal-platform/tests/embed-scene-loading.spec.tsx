@@ -62,4 +62,35 @@ describe('an embed that is still loading its scene', () => {
 
 		expect(screen.getByText('Preparing scene...')).toBeTruthy()
 	})
+
+	it('hands the viewer the manifest’s environment before the model arrives', () => {
+		captured.length = 0
+		loadState.current = { file: null }
+		const manifest = {
+			sceneId: 's',
+			meta: null,
+			publishedModel: {
+				url: '/m.glb',
+				fileName: 'm.glb',
+				mimeType: 'model/gltf-binary',
+				byteSize: 1
+			},
+			assetRefs: {},
+			settings: { environment: { preset: 'studio-soft' as const } },
+			settingsUpdatedAt: null
+		}
+		render(
+			<SceneEmbedPage projectId="p" sceneId="s" initialManifest={manifest} />
+		)
+		expect(captured.at(-1)?.envOptions).toEqual({ preset: 'studio-soft' })
+
+		render(
+			<SceneEmbedPage
+				projectId="p"
+				sceneId="s"
+				initialManifest={{ ...manifest, settings: null }}
+			/>
+		)
+		expect(captured.at(-1)?.envOptions).toEqual({})
+	})
 })
