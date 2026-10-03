@@ -25,7 +25,7 @@ const viewer = readFileSync(
 describe('shader warm-up', () => {
 	it('compiles for the buffer the composer draws the scene into', () => {
 		expect(composer).toMatch(
-			/warmUpShaders\(\s*gl,\s*scene,\s*camera,\s*current\.pipeline\.composer\.inputBuffer\s*\)/
+			/warmUpScene\(\s*gl,\s*scene,\s*camera,\s*current\.pipeline\.composer\.inputBuffer,\s*\(\) => cancelled\s*\)/
 		)
 	})
 

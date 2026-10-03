@@ -1,14 +1,19 @@
+import {
+	BufferGeometry,
+	Mesh,
+	MeshStandardMaterial,
+	Scene,
+	Texture
+} from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { warmUpShaders } from './shader-warmup'
+import {
+	collectSceneTextures,
+	uploadTexturesInSlices,
+	warmUpShaders
+} from './shader-warmup'
 
-import type {
-	Camera,
-	Material,
-	Scene,
-	WebGLRenderTarget,
-	WebGLRenderer
-} from 'three'
+import type { Camera, Material, WebGLRenderTarget, WebGLRenderer } from 'three'
 
 const composerBuffer = {
 	name: 'composer input'
@@ -101,5 +106,99 @@ describe('warmUpShaders', () => {
 		const warming = warmUpShaders(renderer.gl, scene, camera, null)
 		renderer.dispose(renderer.materials[0])
 		expect(await settles(warming)).toBe(true)
+	})
+})
+
+describe('texture uploads during the warm-up', () => {
+	/** Tasks the uploader handed back to the browser, run one at a time below. */
+	let tasks: Array<() => void>
+
+	beforeEach(() => {
+		tasks = []
+		vi.stubGlobal('setTimeout', (task: () => void) => tasks.push(task))
+	})
+
+	afterEach(() => {
+		vi.unstubAllGlobals()
+	})
+
+	/** Lets the browser run one task, then everything that task awaited. */
+	const runOneTask = async () => {
+		tasks.shift()?.()
+		for (let i = 0; i < 5; i++) await Promise.resolve()
+	}
+
+	const texture = (version = 1) =>
+		({ isTexture: true, image: {}, version }) as unknown as Texture
+
+	const uploadingRenderer = (uploadedVersions = new Map<Texture, number>()) => {
+		const uploads: Texture[] = []
+		const gl = {
+			properties: {
+				get: (t: Texture) => ({ __version: uploadedVersions.get(t) })
+			},
+			initTexture: (t: Texture) => uploads.push(t)
+		} as unknown as WebGLRenderer
+		return { gl, uploads }
+	}
+
+	it('collects each texture a scene samples once', () => {
+		const map = new Texture()
+		const normalMap = new Texture()
+		const scene = new Scene()
+		scene.add(
+			new Mesh(
+				new BufferGeometry(),
+				new MeshStandardMaterial({ map, normalMap })
+			),
+			new Mesh(new BufferGeometry(), new MeshStandardMaterial({ map }))
+		)
+		expect(collectSceneTextures(scene)).toEqual([map, normalMap])
+	})
+
+	it('uploads one texture per task, so the browser runs between them', async () => {
+		const { gl, uploads } = uploadingRenderer()
+		const textures = [texture(), texture(), texture()]
+
+		const uploading = uploadTexturesInSlices(gl, textures, () => false)
+		expect(uploads).toHaveLength(0)
+		for (const count of [1, 2, 3]) {
+			await runOneTask()
+			expect(uploads).toHaveLength(count)
+		}
+		await uploading
+		expect(uploads).toEqual(textures)
+	})
+
+	it('skips a texture already on the GPU at its current version', async () => {
+		const done = texture(3)
+		const stale = texture(4)
+		const { gl, uploads } = uploadingRenderer(
+			new Map([
+				[done, 3],
+				[stale, 3]
+			])
+		)
+
+		const uploading = uploadTexturesInSlices(gl, [done, stale], () => false)
+		await runOneTask()
+		await uploading
+		expect(uploads).toEqual([stale])
+	})
+
+	it('stops once the warm-up is cancelled', async () => {
+		const { gl, uploads } = uploadingRenderer()
+		let cancelled = false
+
+		const uploading = uploadTexturesInSlices(
+			gl,
+			[texture(), texture()],
+			() => cancelled
+		)
+		await runOneTask()
+		cancelled = true
+		await runOneTask()
+		await uploading
+		expect(uploads).toHaveLength(1)
 	})
 })

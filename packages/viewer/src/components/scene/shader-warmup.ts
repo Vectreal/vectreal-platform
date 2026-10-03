@@ -1,7 +1,9 @@
 import type {
 	Camera,
 	Material,
+	Mesh,
 	Scene,
+	Texture,
 	WebGLRenderTarget,
 	WebGLRenderer
 } from 'three'
@@ -11,6 +13,54 @@ const POLL_INTERVAL_MS = 10
 
 interface MaterialProperties {
 	currentProgram?: { isReady(): boolean }
+}
+
+interface TextureProperties {
+	__version?: number
+}
+
+/** Every texture the scene's meshes sample, once each. */
+export const collectSceneTextures = (scene: Scene): Texture[] => {
+	const textures = new Set<Texture>()
+	scene.traverse((object) => {
+		const material = (object as Mesh).material
+		if (!material) return
+		for (const entry of Array.isArray(material) ? material : [material]) {
+			for (const value of Object.values(entry)) {
+				if ((value as Texture | null)?.isTexture) textures.add(value as Texture)
+			}
+		}
+	})
+	return [...textures]
+}
+
+/** Gives the browser a turn: a frame of the loader, a click, a paint. */
+const yieldToMain = () =>
+	new Promise<void>((resolve) => {
+		setTimeout(resolve, 0)
+	})
+
+/**
+ * Uploads textures to the GPU one per task.
+ *
+ * `compile` builds programs but uploads nothing, so every `texImage2D` - and
+ * the mipmaps behind it - otherwise landed in the first frame, all in one
+ * task. One upload is still one task, but the browser runs between them.
+ */
+export const uploadTexturesInSlices = async (
+	gl: WebGLRenderer,
+	textures: readonly Texture[],
+	isCancelled: () => boolean
+): Promise<void> => {
+	for (const texture of textures) {
+		const uploaded =
+			(gl.properties.get(texture) as TextureProperties).__version ===
+			texture.version
+		if (uploaded || !texture.image) continue
+		await yieldToMain()
+		if (isCancelled()) return
+		gl.initTexture(texture)
+	}
 }
 
 /**
@@ -66,4 +116,20 @@ export const warmUpShaders = (
 		}
 		poll()
 	})
+}
+
+/**
+ * Everything the first frame of a scene would otherwise do on the main thread
+ * in one go: compile its programs, then upload its textures.
+ */
+export const warmUpScene = async (
+	gl: WebGLRenderer,
+	scene: Scene,
+	camera: Camera,
+	target: WebGLRenderTarget | null,
+	isCancelled: () => boolean
+): Promise<void> => {
+	await warmUpShaders(gl, scene, camera, target)
+	if (isCancelled()) return
+	await uploadTexturesInSlices(gl, collectSceneTextures(scene), isCancelled)
 }

@@ -31,7 +31,7 @@ import {
 	type FramePlan,
 	type RenderActivity
 } from './render-activity'
-import { warmUpShaders } from './shader-warmup'
+import { warmUpScene } from './shader-warmup'
 
 interface ScenePostProcessingProps {
 	/**
@@ -375,11 +375,12 @@ const ViewerComposer = ({
 		const current = live.current
 		if (!current) return
 		let cancelled = false
-		void warmUpShaders(
+		void warmUpScene(
 			gl,
 			scene,
 			camera,
-			current.pipeline.composer.inputBuffer
+			current.pipeline.composer.inputBuffer,
+			() => cancelled
 		).then(() => {
 			if (cancelled) return
 			warmed.current = { model }
