@@ -67,7 +67,7 @@ export default function DocsScenePreviewClient() {
 		<VectrealViewer
 			className="h-full w-full"
 			// A chrome model shows its environment, not a color of its own: the key preset left it a black silhouette.
-			envOptions={{ preset: 'studio-natural' }}
+			envOptions={{ preset: 'studio-soft' }}
 			shadowsOptions={{ enabled: false }}
 			boundsOptions={{ margin: 1.05 }}
 		>

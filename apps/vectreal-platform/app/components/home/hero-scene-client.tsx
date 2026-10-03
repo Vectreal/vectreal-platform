@@ -81,7 +81,7 @@ const HeroSceneClient = ({ vertical }: HeroSceneClientProps) => {
 				theme="dark"
 				loader={<CenteredSpinner text="Loading model..." />}
 				controlsOptions={{ enabled: false }}
-				envOptions={{ preset: 'studio-key' }}
+				envOptions={{ preset: 'studio-soft' }}
 				shadowsOptions={{ enabled: false }}
 				boundsOptions={{ margin: 0.9 }}
 			>
