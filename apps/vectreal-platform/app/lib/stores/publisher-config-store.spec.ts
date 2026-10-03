@@ -19,6 +19,7 @@ import {
 	processAtom,
 	processInitialState
 } from './publisher-config-store'
+import { cameraAtom, selectedCameraIdAtom } from './scene-settings-store'
 
 import type { ProcessState } from '../../types/publisher-config'
 
@@ -141,5 +142,55 @@ describe('preview mode', () => {
 		store.set(exitPreviewModeAtom)
 
 		expect(store.get(openComposeToolAtom)).toBe('shadow')
+	})
+
+	describe('camera', () => {
+		const sceneWithHotspotCamera = () => {
+			const store = createStore()
+			store.set(cameraAtom, (prev) => ({
+				...prev,
+				cameras: [
+					{ cameraId: 'front', name: 'Front' },
+					{ cameraId: 'side', name: 'Side' },
+					{ cameraId: 'hotspot-camera-1790000000000-a1b2', name: 'Knob' }
+				]
+			}))
+			// The author left the editor on a hotspot's camera.
+			store.set(selectedCameraIdAtom, 'hotspot-camera-1790000000000-a1b2')
+			return store
+		}
+
+		it('starts on the default camera, as a visitor would', () => {
+			const store = sceneWithHotspotCamera()
+
+			store.set(enterPreviewModeAtom)
+
+			expect(store.get(selectedCameraIdAtom)).toBe('front')
+		})
+
+		it("puts the editor's camera back on the way out", () => {
+			const store = sceneWithHotspotCamera()
+
+			store.set(enterPreviewModeAtom)
+			// The visitor picks another camera while previewing.
+			store.set(selectedCameraIdAtom, 'side')
+			store.set(exitPreviewModeAtom)
+
+			expect(store.get(selectedCameraIdAtom)).toBe(
+				'hotspot-camera-1790000000000-a1b2'
+			)
+		})
+
+		it("keeps the editor's camera when entered twice", () => {
+			const store = sceneWithHotspotCamera()
+
+			store.set(enterPreviewModeAtom)
+			store.set(enterPreviewModeAtom)
+			store.set(exitPreviewModeAtom)
+
+			expect(store.get(selectedCameraIdAtom)).toBe(
+				'hotspot-camera-1790000000000-a1b2'
+			)
+		})
 	})
 })
