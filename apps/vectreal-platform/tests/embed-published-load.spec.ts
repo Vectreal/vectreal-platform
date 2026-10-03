@@ -128,7 +128,7 @@ describe('published-GLB embed load', () => {
 		expect(calls.some((call) => call.method === 'POST')).toBe(false)
 	})
 
-	it('requests exactly the published GLB and the bake', async () => {
+	it('requests the published GLB alone, leaving the bake to the viewer', async () => {
 		const calls = stubFetch(embedManifest())
 		const { ctx } = buildContext()
 
@@ -137,9 +137,8 @@ describe('published-GLB embed load', () => {
 		const assetCalls = calls
 			.filter((call) => call.url !== MANIFEST_URL)
 			.map((call) => call.url)
-			.sort()
 
-		expect(assetCalls).toEqual([BAKE_URL, MODEL_URL].sort())
+		expect(assetCalls).toEqual([MODEL_URL])
 	})
 
 	it('parses the GLB bytes once, without the editor document round trip', async () => {
@@ -207,17 +206,18 @@ describe('published-GLB embed load', () => {
 		expect(published).toHaveLength(1)
 	})
 
-	it('makes the bake bytes available as scene asset data', async () => {
+	it('hands the viewer the bake by reference, and no model bytes', async () => {
 		stubFetch(embedManifest())
 		const { ctx } = buildContext()
 
 		const loaded = await loadModelFromServer(source, ctx)
-		const entries = Object.values(loaded.sceneData?.assetData ?? {})
 
-		expect(entries.map((entry) => entry.fileName)).toEqual(['shadow-bake.png'])
+		expect(
+			Object.values(loaded.sceneData?.assetRefs ?? {}).map((ref) => ref.url)
+		).toEqual([BAKE_URL])
 		// The GLB rides in the asset map only while it is fetched; it must not
 		// leak into the data the viewer sees.
-		expect(entries).toHaveLength(1)
+		expect(loaded.sceneData?.assetData).toEqual({})
 	})
 
 	it('loads a scene that has no shadow bake', async () => {

@@ -87,8 +87,10 @@ const loadPublishedSceneModel = async (
 		modelLoader.prepareDracoDecoder().catch(() => {})
 	}
 
+	// The model alone. The bake is left in `assetRefs` for the viewer to load by
+	// URL: fetched here, the model's parse waited on it.
 	const fetched = await fetchManifestAssetData(
-		{ ...(payload.assetRefs ?? {}), [PUBLISHED_MODEL_KEY]: publishedModel },
+		{ [PUBLISHED_MODEL_KEY]: publishedModel },
 		{
 			headers: assetHeaders,
 			onProgress: (fraction) => onProgress(Math.round(fraction * 60))

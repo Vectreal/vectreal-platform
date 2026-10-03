@@ -85,11 +85,15 @@ const SceneEmbedViewer = memo(
 			[sceneData?.shadows]
 		)
 
-		// The persisted bake from the scene's inlined asset data, so a scene renders
-		// its stored shadow alongside the model instead of re-baking on load.
+		// The persisted bake, so a scene renders its stored shadow alongside the
+		// model instead of re-baking on load.
 		const bakedShadow = useMemo(
-			() => resolveBakedShadowSource(shadowsOptions, sceneData?.assetData),
-			[shadowsOptions, sceneData?.assetData]
+			() =>
+				resolveBakedShadowSource(shadowsOptions, {
+					assetData: sceneData?.assetData,
+					assetRefs: sceneData?.assetRefs
+				}),
+			[shadowsOptions, sceneData?.assetData, sceneData?.assetRefs]
 		)
 
 		return (

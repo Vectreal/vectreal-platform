@@ -544,6 +544,12 @@ export interface ServerSceneData extends SceneSettings {
 	gltfJson: ExtendedGLTFDocument | null
 	/** Binary asset data keyed by asset identifier. */
 	assetData: SerializedSceneAssetDataMap
+	/**
+	 * Assets the scene references by URL instead of carrying as bytes. On a
+	 * published scene that is the persisted shadow bake, which the viewer loads
+	 * itself, so it neither delays the model nor round-trips through base64.
+	 */
+	assetRefs?: SceneAssetRefMap
 }
 
 export interface TextureOptimization
