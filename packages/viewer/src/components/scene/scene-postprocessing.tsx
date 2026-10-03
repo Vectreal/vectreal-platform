@@ -8,7 +8,7 @@ import {
 	ToneMappingEffect,
 	ToneMappingMode
 } from 'postprocessing'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
 	Box3,
 	type Camera,
@@ -329,10 +329,16 @@ const ViewerComposer = ({
 	// (disposal empties the pass list). Built and disposed in one effect
 	// rather than memoized, so an effect re-run (StrictMode, a hidden-then-shown
 	// Activity) builds a fresh chain instead of keeping the emptied one.
+	//
+	// A layout effect, because R3F subscribes `useFrame` in one: a passive
+	// effect left a frame between the two, drawn straight to the canvas. That
+	// frame compiled every material for the canvas's output, and the next
+	// compiled them all again for the composer's linear buffer, blocking the
+	// main thread twice while the loader was on screen.
 	const live = useRef<{ pipeline: Pipeline; activity: RenderActivity } | null>(
 		null
 	)
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const pipeline = createPipeline(gl, scene, camera, ao, aoAtRest)
 		if (pipeline.aoPass) {
 			Object.assign(pipeline.aoPass.configuration, aoConfigRef.current)
