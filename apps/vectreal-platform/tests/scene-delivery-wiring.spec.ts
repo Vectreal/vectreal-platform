@@ -56,3 +56,19 @@ describe('the embed asset route', () => {
 		)
 	})
 })
+
+describe('the Draco decoder', () => {
+	const server = readFileSync(
+		join(import.meta.dirname, '..', 'server.mjs'),
+		'utf8'
+	)
+
+	it('is cached for a day, ahead of the uncached static fallback', () => {
+		const draco = server.indexOf("app.use(\n\t'/draco',")
+		expect(draco).toBeGreaterThan(-1)
+		expect(server.slice(draco)).toMatch(/^[\s\S]{0,200}?maxAge: '1d'/)
+		expect(draco).toBeLessThan(
+			server.indexOf('app.use(express.static(CLIENT_DIR, { redirect: false }))')
+		)
+	})
+})

@@ -151,6 +151,15 @@ app.use(
 	})
 )
 app.use('/media', express.static(MEDIA_DIR, { maxAge: '5m', redirect: false }))
+// The Draco decoder keeps its file names across three.js upgrades, so it gets a
+// day rather than a year; purge /draco/* at the edge after replacing it.
+app.use(
+	'/draco',
+	express.static(path.join(CLIENT_DIR, 'draco'), {
+		maxAge: '1d',
+		redirect: false
+	})
+)
 app.use(express.static(CLIENT_DIR, { redirect: false }))
 app.use(morgan('tiny'))
 
