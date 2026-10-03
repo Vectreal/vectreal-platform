@@ -1,6 +1,9 @@
 import { atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 
+import { cameraAtom, selectedCameraIdAtom } from './scene-settings-store'
+import { resolveDefaultSceneCameraId } from '../domain/scene/scene-camera'
+
 import type { SceneCurrentLocation } from '../../types/api'
 import type { ProcessState, SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
@@ -122,6 +125,10 @@ const hasUnsavedChangesAtom = selectAtom(
  * Entering closes every panel and remembers what was open; exiting puts it
  * back. Both halves live here, beside the state they change, which is what
  * lets the tool bar enter preview from any tool.
+ *
+ * The camera is part of that. Preview shows the scene as a visitor first sees
+ * it, so it starts on the default camera, and the editor's camera (often a
+ * hotspot's, which the preview picker does not list) comes back on exit.
  */
 const previewModeStateAtom = atom<{
 	active: boolean
@@ -129,7 +136,8 @@ const previewModeStateAtom = atom<{
 		ProcessState,
 		'mode' | 'activeComposeTool' | 'showSidebar' | 'showPublishPanel'
 	>
-}>({ active: false, returnTo: null })
+	returnToCameraId: null | string
+}>({ active: false, returnTo: null, returnToCameraId: null })
 
 const isPreviewModeAtom = atom((get) => get(previewModeStateAtom).active)
 
@@ -139,22 +147,30 @@ const enterPreviewModeAtom = atom(null, (get, set) => {
 		get(processAtom)
 	set(previewModeStateAtom, {
 		active: true,
-		returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel }
+		returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel },
+		returnToCameraId: get(selectedCameraIdAtom)
 	})
 	set(processAtom, (prev) => ({
 		...prev,
 		showSidebar: false,
 		showPublishPanel: false
 	}))
+	const defaultCameraId = resolveDefaultSceneCameraId(get(cameraAtom).cameras)
+	if (defaultCameraId) set(selectedCameraIdAtom, defaultCameraId)
 })
 
 const exitPreviewModeAtom = atom(null, (get, set) => {
-	const { active, returnTo } = get(previewModeStateAtom)
+	const { active, returnTo, returnToCameraId } = get(previewModeStateAtom)
 	if (!active) return
-	set(previewModeStateAtom, { active: false, returnTo: null })
+	set(previewModeStateAtom, {
+		active: false,
+		returnTo: null,
+		returnToCameraId: null
+	})
 	if (returnTo) {
 		set(processAtom, (prev) => ({ ...prev, ...returnTo }))
 	}
+	if (returnToCameraId) set(selectedCameraIdAtom, returnToCameraId)
 })
 
 const isClickToPlaceActiveAtom = atom(false)
