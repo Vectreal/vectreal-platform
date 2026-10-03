@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v2.0.0...workspace-v2.1.0) (2026-10-03)
+
+
+### Features
+
+* **dashboard:** redesign the landing page around a dithered opening band ([#935](https://github.com/Vectreal/vectreal-platform/issues/935)) ([9f809c1](https://github.com/Vectreal/vectreal-platform/commit/9f809c1a7aeaedf80a432982e2a1f564ad4c1fa8))
+* **publisher:** keep a scene's original on save ([#939](https://github.com/Vectreal/vectreal-platform/issues/939)) ([17a702a](https://github.com/Vectreal/vectreal-platform/commit/17a702a4b5e277f7e0177fa94e526d8c214cf8b3))
+* **publisher:** open a hotspot's linked camera in the Camera tool ([#937](https://github.com/Vectreal/vectreal-platform/issues/937)) ([d007fe8](https://github.com/Vectreal/vectreal-platform/commit/d007fe8e296f74b778ebf79f6e8c815949a5e4b9))
+* **publisher:** redesign controls, tool bar and drill-down panels ([#926](https://github.com/Vectreal/vectreal-platform/issues/926)) ([65cb34a](https://github.com/Vectreal/vectreal-platform/commit/65cb34a07d0da5a2e6fb3d16d528ffcc32adcd48))
+* **publisher:** show what a save is doing in an upload panel ([#934](https://github.com/Vectreal/vectreal-platform/issues/934)) ([8c75b92](https://github.com/Vectreal/vectreal-platform/commit/8c75b92f0353b45b8379b9c5c11501d227991b33))
+
+
+### Bug Fixes
+
+* **embed:** no command is lost before the viewer can run it ([#924](https://github.com/Vectreal/vectreal-platform/issues/924)) ([c69a3b1](https://github.com/Vectreal/vectreal-platform/commit/c69a3b1b6a727387f62f9450dd14e5701d51189e))
+* **hooks:** return the GLB result when download is false ([#925](https://github.com/Vectreal/vectreal-platform/issues/925)) ([daed31e](https://github.com/Vectreal/vectreal-platform/commit/daed31ee804868b6ceda7d1e81b42bcb2d20e2ae))
+* **optimization:** derive every result from the original ([#929](https://github.com/Vectreal/vectreal-platform/issues/929)) ([dd0d291](https://github.com/Vectreal/vectreal-platform/commit/dd0d2916cc402893234c7e7aafe2e0536311d859))
+* **optimization:** never record a pass into a scene opened while it ran ([#931](https://github.com/Vectreal/vectreal-platform/issues/931)) ([7d67240](https://github.com/Vectreal/vectreal-platform/commit/7d672408f88cd7e34cf187658cd6eac700380de7))
+* **publisher:** open preview on the default camera and restore the editor's on exit ([#936](https://github.com/Vectreal/vectreal-platform/issues/936)) ([d0dcd3f](https://github.com/Vectreal/vectreal-platform/commit/d0dcd3f62e71b214fe647768b02258679c2f5930))
+* **publisher:** say that picking a preset applies it and Save keeps it ([#932](https://github.com/Vectreal/vectreal-platform/issues/932)) ([18abce1](https://github.com/Vectreal/vectreal-platform/commit/18abce1f1909564cb054b74be2f9d50f423d91ae))
+* **viewer:** keep the camera still when an optimization swaps the model ([#928](https://github.com/Vectreal/vectreal-platform/issues/928)) ([3185d1d](https://github.com/Vectreal/vectreal-platform/commit/3185d1df46b1d9c6372cacb6d2f8bf43847b6b68))
+
 ## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v1.0.0...workspace-v2.0.0) (2026-10-02)
 
 

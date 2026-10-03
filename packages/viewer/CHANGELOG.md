@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.0.0...viewer-v2.1.0) (2026-10-03)
+
+
+### Bug Fixes
+
+* **embed:** no command is lost before the viewer can run it ([#924](https://github.com/Vectreal/vectreal-platform/issues/924)) ([c69a3b1](https://github.com/Vectreal/vectreal-platform/commit/c69a3b1b6a727387f62f9450dd14e5701d51189e))
+* **viewer:** keep the camera still when an optimization swaps the model ([#928](https://github.com/Vectreal/vectreal-platform/issues/928)) ([3185d1d](https://github.com/Vectreal/vectreal-platform/commit/3185d1df46b1d9c6372cacb6d2f8bf43847b6b68))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/core bumped to 2.1.0
+
 ## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v1.0.0...viewer-v2.0.0) (2026-10-02)
 
 
