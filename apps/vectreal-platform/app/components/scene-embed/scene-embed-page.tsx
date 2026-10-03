@@ -1,5 +1,5 @@
 import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 import { EmbedErrorState } from './embed-error-state'
@@ -160,13 +160,30 @@ const SceneEmbedPage = ({
 
 	// The embed SDK bridge and the chrome both need these, so they chain rather
 	// than compete for the viewer's single callback slot.
+	const [viewerExecutor, setViewerExecutor] =
+		useState<null | ViewerCommandExecutor>(null)
 	const onCommandExecutorReady = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
 			executorRef.current = executor
-			bridgeRef.current.onCommandExecutorReady?.(executor)
+			setViewerExecutor(executor)
 		},
 		[]
 	)
+
+	/*
+	  The bridge reads a registered executor as "the scene is ready": it answers
+	  the host page's ping with the scene's cameras and hotspots, and runs the
+	  author's `viewer_ready` interactions. The viewer now mounts while the
+	  scene is still loading, and registers before any of those exist, so the
+	  bridge is told only once the scene data has arrived. Keyed on whether it
+	  has, not on its identity, so the bridge hears of each executor once.
+	*/
+	const hasSceneData = Boolean(sceneData)
+	useEffect(() => {
+		if (!hasSceneData || !viewerExecutor) return
+		bridgeRef.current.onCommandExecutorReady?.(viewerExecutor)
+		return () => bridgeRef.current.onCommandExecutorReady?.(null)
+	}, [hasSceneData, viewerExecutor])
 
 	const onInteractionEvent = useCallback((event: ViewerInteractionEvent) => {
 		if (event.type === 'camera_changed') {
