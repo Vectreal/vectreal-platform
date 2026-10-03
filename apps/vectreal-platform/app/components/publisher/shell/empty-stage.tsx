@@ -9,7 +9,9 @@ import { useDropzone } from 'react-dropzone'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 
+import { GenerateFromImage } from './generate-from-image'
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
+import { type ImgTo3dGeneration } from '../../../hooks/use-img-to-3d-generation'
 import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
 import { type SampleDownloader } from '../../../hooks/use-sample-download'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
@@ -34,6 +36,11 @@ interface Props {
 	sampleDownload: SampleDownloader
 	/** The signed-in user's latest scenes, from the loader; none signed out. */
 	recentScenes?: readonly SceneSummary[]
+	/**
+	 * Image-to-3D generation, present only when the loader's gate let this
+	 * account in. Owned by the shell for the reason `sampleDownload` is.
+	 */
+	imgTo3d?: ImgTo3dGeneration
 }
 
 /*
@@ -90,7 +97,8 @@ export const EmptyStage = ({
 	isMobile,
 	onUpload,
 	sampleDownload,
-	recentScenes = []
+	recentScenes = [],
+	imgTo3d
 }: Props) => {
 	const acceptPattern = useAcceptPattern(isMobile)
 
@@ -272,6 +280,13 @@ export const EmptyStage = ({
 							</p>
 						)}
 					</div>
+
+					{imgTo3d && (
+						<GenerateFromImage
+							generation={imgTo3d}
+							className={cn('max-w-xl', arriveWhenReady)}
+						/>
+					)}
 
 					{/*
 					  Two shelves of one kind of tile, your scenes and the samples: the

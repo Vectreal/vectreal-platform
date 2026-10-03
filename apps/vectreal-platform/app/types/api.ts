@@ -277,6 +277,8 @@ export interface PublisherLoaderData {
 	readonly maxSceneBytes: number | null
 	/** Signed in with no scene open: the scenes to offer on the empty stage. Empty otherwise. */
 	readonly recentScenes: readonly SceneSummary[]
+	/** Signed in with no scene open, and allowed to generate a model from an image. */
+	readonly imgTo3dEnabled: boolean
 }
 
 // ============================================================================

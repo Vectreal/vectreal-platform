@@ -12,6 +12,7 @@ import { PublisherViewerCaptureProvider } from '../../components/publisher/publi
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { getQuotaLimit } from '../../lib/domain/billing/entitlement-service.server'
+import { isImgTo3dEnabledFor } from '../../lib/domain/img-to-3d/img-to-3d-access.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import {
 	getRecentScenesForUser,
@@ -84,8 +85,11 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	// Resolve the org's per-scene size limit concurrently with the scene queries
 	// below (rather than serially after them) so it never adds latency to the hot
 	// publisher-load path.
-	const maxSceneBytesPromise: Promise<number | null> = user?.id
-		? getOrCreateDefaultOrganization(user.id).then((organization) =>
+	const organizationPromise = user?.id
+		? getOrCreateDefaultOrganization(user.id)
+		: null
+	const maxSceneBytesPromise: Promise<number | null> = organizationPromise
+		? organizationPromise.then((organization) =>
 				getQuotaLimit(organization.id, 'storage_bytes_per_scene').then(
 					({ limit }) => limit
 				)
@@ -93,6 +97,19 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		: Promise.resolve(null)
 
 	const sceneId = params.sceneId?.trim() || null
+
+	/*
+	  Generating from an image is offered on the empty stage, so it is only
+	  asked about there. The routes ask the same question themselves; this only
+	  decides whether the panel is drawn. The gate never throws: anything but an
+	  explicit yes from the flag is a no.
+	*/
+	const imgTo3dEnabledPromise: Promise<boolean> =
+		!sceneId && user && organizationPromise
+			? organizationPromise.then((organization) =>
+					isImgTo3dEnabledFor(user, organization.id)
+				)
+			: Promise.resolve(false)
 
 	/*
 	  Offered on the empty stage, so only where there is one: signed in, with no
@@ -169,9 +186,10 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		}
 	}
 
-	const [maxSceneBytes, recentScenes] = await Promise.all([
+	const [maxSceneBytes, recentScenes, imgTo3dEnabled] = await Promise.all([
 		maxSceneBytesPromise,
-		recentScenesPromise
+		recentScenesPromise,
+		imgTo3dEnabledPromise
 	])
 
 	const loaderData = {
@@ -188,7 +206,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		sceneManifest,
 		publishedMeta,
 		maxSceneBytes,
-		recentScenes
+		recentScenes,
+		imgTo3dEnabled
 	}
 
 	return data(loaderData as PublisherLoaderData, { headers })
