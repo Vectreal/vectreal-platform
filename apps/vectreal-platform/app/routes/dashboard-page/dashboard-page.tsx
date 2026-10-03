@@ -2,9 +2,18 @@ import { useSetAtom } from 'jotai/react'
 import { data, Link } from 'react-router'
 
 import { Route } from './+types/dashboard-page'
-import { DashboardOverview, SceneCard } from '../../components/dashboard'
+import {
+	DashboardOverview,
+	NewSceneTile,
+	SceneCard
+} from '../../components/dashboard'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { toSceneRef } from '../../lib/domain/dashboard/dashboard-confirmation'
+import { getDashboardFactsForUser } from '../../lib/domain/dashboard/dashboard-facts-repository.server'
+import {
+	buildTidbits,
+	pickTidbit
+} from '../../lib/domain/dashboard/dashboard-tidbits'
 import { getRecentScenesForUser } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import {
 	deleteDialogAtom,
@@ -16,7 +25,10 @@ import type { ShouldRevalidateFunction } from 'react-router'
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, headers } = await loadAuthenticatedUser(request)
 
-	const recentScenes = await getRecentScenesForUser(user.id, 10)
+	const [recentScenes, facts] = await Promise.all([
+		getRecentScenesForUser(user.id, 10),
+		getDashboardFactsForUser(user.id)
+	])
 
 	/*
 	  The resumed scene is the most recent one, so shipping the list plus a
@@ -30,8 +42,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 	  and a subscription read for figures it no longer renders.
 	*/
 	const [resumeScene = null, ...alsoRecent] = recentScenes
+	const tidbit = pickTidbit(buildTidbits(facts))
 
-	return data({ resumeScene, alsoRecent }, { headers })
+	return data({ resumeScene, alsoRecent, tidbit }, { headers })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -59,18 +72,25 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
 
 const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
-	const { alsoRecent, resumeScene } = loaderData
+	const { alsoRecent, resumeScene, tidbit } = loaderData
 	const setDeleteDialog = useSetAtom(deleteDialogAtom)
 	const setMoveDialog = useSetAtom(moveDialogAtom)
 
 	return (
-		<div className="space-y-8 py-6">
-			<DashboardOverview resumeScene={resumeScene} />
+		<div className="space-y-8 pb-6">
+			<DashboardOverview resumeScene={resumeScene} tidbit={tidbit} />
 
-			{alsoRecent.length > 0 ? (
+			{/*
+			  Shown from the first scene on, not from the second. With one scene the
+			  grid holds only the new-scene tile, and that is the point: the page
+			  that used to end at the resume card now always says what comes next.
+			*/}
+			{resumeScene ? (
 				<section className="space-y-4">
 					<div className="flex flex-wrap items-center justify-between gap-2">
-						<h2 className="text-h4">Recent work</h2>
+						<h2 className="text-h4">
+							{alsoRecent.length > 0 ? 'Recent work' : 'Next up'}
+						</h2>
 						<Link
 							to="/dashboard/projects"
 							className="text-muted-foreground hover:text-foreground text-xs"
@@ -94,6 +114,7 @@ const DashboardPage = ({ loaderData }: Route.ComponentProps) => {
 					  multi-project selection has no single valid destination.
 					*/}
 					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+						<NewSceneTile />
 						{alsoRecent.map((scene) => (
 							<SceneCard
 								key={scene.id}
