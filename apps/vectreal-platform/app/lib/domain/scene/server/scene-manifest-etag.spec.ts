@@ -30,7 +30,8 @@ describe('buildSceneManifestEtag', () => {
 		const settingsUpdatedAt = '2026-07-03T10:00:00.000Z'
 		const publication = {
 			assetId: 'glb-1',
-			publishedAt: new Date('2026-07-03T09:00:00.000Z')
+			publishedAt: new Date('2026-07-03T09:00:00.000Z'),
+			assetUrlsExpireAt: null
 		}
 
 		it('never shares a tag with the session manifest', () => {
@@ -42,7 +43,8 @@ describe('buildSceneManifestEtag', () => {
 		it('changes on a republish that saved no settings', () => {
 			const republished = {
 				assetId: 'glb-2',
-				publishedAt: new Date('2026-07-03T11:00:00.000Z')
+				publishedAt: new Date('2026-07-03T11:00:00.000Z'),
+				assetUrlsExpireAt: null
 			}
 			expect(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, republished)
@@ -56,6 +58,14 @@ describe('buildSceneManifestEtag', () => {
 			}
 			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, again)).not.toBe(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, publication)
+			)
+		})
+
+		it('changes when its signed asset URLs roll over', () => {
+			const signed = { ...publication, assetUrlsExpireAt: 1_800_000_000 }
+			const next = { ...publication, assetUrlsExpireAt: 1_800_003_600 }
+			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, next)).not.toBe(
+				buildSceneManifestEtag('s1', settingsUpdatedAt, signed)
 			)
 		})
 	})

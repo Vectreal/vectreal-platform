@@ -162,14 +162,35 @@ resource "cloudflare_ruleset" "cache_rules" {
     }
   }
 
-  # Rule 3 — Fail-closed catch-all: everything not matched above is never
+  # Rule 3 — Signed embed assets: the published GLB, shadow bake and loading
+  # thumbnail of an embed, addressed by a URL that an authorized manifest
+  # signed (embed-asset-signature.server.ts). The URL carries no key and is
+  # shared by every visitor in the same hour, and the origin answers
+  # `public, s-maxage` for exactly as long as the signature stays valid.
+  # The cache key keeps the query string, so the signature is part of it.
+  rules {
+    description = "Signed embed assets — respect origin cache headers"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and (starts_with(http.request.uri.path, \"/api/scenes/\") and http.request.uri.path contains \"/assets/\" and http.request.uri.query contains \"sig=\" and http.request.method eq \"GET\")"
+    action      = "set_cache_settings"
+    action_parameters {
+      cache = true
+      edge_ttl {
+        mode = "respect_origin"
+      }
+      browser_ttl {
+        mode = "respect_origin"
+      }
+    }
+  }
+
+  # Rule 4 — Fail-closed catch-all: everything not matched above is never
   # edge-cached, regardless of origin headers. This includes protected route
   # families from the shared policy, including /dashboard/* (billing, settings,
   # projects, organizations), /publisher/*, /preview/*, /onboarding, /api/*,
   # and /auth/* plus any future route that is not explicitly public-allowlisted.
   rules {
     description = "Fail-closed: bypass cache for everything else"
-    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\") and not ((http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/_.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/convert\") or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\") or starts_with(http.request.uri.path, \"/media/\") or starts_with(http.request.uri.path, \"/draco/\")) and http.request.method eq \"GET\")"
+    expression  = "((http.host eq \"vectreal.com\") or (http.host eq \"www.vectreal.com\") or (http.host eq \"staging.vectreal.com\")) and not starts_with(http.request.uri.path, \"/assets/\") and not ((http.request.uri.path in {\"/\" \"/home\" \"/about\" \"/changelog\" \"/code-of-conduct\" \"/privacy-policy\" \"/terms-of-service\" \"/imprint\" \"/robots.txt\" \"/sitemap.xml\" \"/llms.txt\" \"/_.data\" \"/home.data\" \"/about.data\" \"/changelog.data\" \"/code-of-conduct.data\" \"/privacy-policy.data\" \"/terms-of-service.data\" \"/imprint.data\"} or starts_with(http.request.uri.path, \"/convert\") or starts_with(http.request.uri.path, \"/docs\") or starts_with(http.request.uri.path, \"/news-room\") or starts_with(http.request.uri.path, \"/media/\") or starts_with(http.request.uri.path, \"/draco/\")) and http.request.method eq \"GET\") and not (starts_with(http.request.uri.path, \"/api/scenes/\") and http.request.uri.path contains \"/assets/\" and http.request.uri.query contains \"sig=\" and http.request.method eq \"GET\")"
     action      = "set_cache_settings"
     action_parameters {
       cache = false

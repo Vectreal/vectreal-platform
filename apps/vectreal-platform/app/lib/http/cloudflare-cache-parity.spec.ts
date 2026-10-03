@@ -44,6 +44,13 @@ const ruleExpression = (description: string) => {
 const PUBLIC_RULE =
 	'Public allowlist pages (GET only) — respect origin cache headers'
 const FAIL_CLOSED_RULE = 'Fail-closed: bypass cache for everything else'
+const SIGNED_ASSET_RULE = 'Signed embed assets — respect origin cache headers'
+
+/** The rule's own condition, after the host guard every rule shares. */
+const signedAssetCondition = () => {
+	const expression = ruleExpression(SIGNED_ASSET_RULE)
+	return expression.slice(expression.indexOf(') and (') + ') and '.length, -1)
+}
 
 describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 	it('references every exact allowlist path in the Terraform config', () => {
@@ -116,5 +123,28 @@ describe('Cloudflare cache ruleset parity with the TS allowlist', () => {
 			protectedInPublicRule,
 			`protected prefixes should not be public-cache allowlisted: ${protectedInPublicRule.join(', ')}`
 		).toEqual([])
+	})
+
+	it('caches only asset requests that carry a signature', () => {
+		const condition = signedAssetCondition()
+		expect(condition).toContain(
+			`starts_with(http.request.uri.path, ${quoted('/api/scenes/')})`
+		)
+		expect(condition).toContain(
+			`http.request.uri.path contains ${quoted('/assets/')}`
+		)
+		expect(condition).toContain(
+			`http.request.uri.query contains ${quoted('sig=')}`
+		)
+	})
+
+	/*
+	  Rules are applied in order and the later one wins, so a signed asset the
+	  fail-closed rule did not exclude would be bypassed after all.
+	*/
+	it('excludes exactly the signed assets from the fail-closed rule', () => {
+		expect(ruleExpression(FAIL_CLOSED_RULE)).toContain(
+			`and not ${signedAssetCondition()}`
+		)
 	})
 })

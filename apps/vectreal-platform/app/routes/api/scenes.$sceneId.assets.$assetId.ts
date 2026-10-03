@@ -9,6 +9,10 @@ import {
 } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import {
+	getAssetSigningSecret,
+	verifySignedAsset
+} from '../../lib/domain/embed/embed-asset-signature.server'
+import {
 	isEmbedServableAssetId,
 	selectEmbedServableAssets
 } from '../../lib/domain/scene/embed-asset-policy'
@@ -79,11 +83,12 @@ function withNoStoreHeaders(init?: HeadersInit): Headers {
 function assetResponse(
 	data: Uint8Array,
 	mimeType: string,
-	extraHeaders?: HeadersInit
+	extraHeaders?: HeadersInit,
+	cacheControl = ASSET_CACHE_CONTROL
 ): Response {
 	const headers = new Headers(extraHeaders)
 	headers.set('Content-Type', sanitizeMimeType(mimeType))
-	headers.set('Cache-Control', ASSET_CACHE_CONTROL)
+	headers.set('Cache-Control', cacheControl)
 	headers.set('X-Content-Type-Options', 'nosniff')
 	headers.set('Content-Security-Policy', 'sandbox')
 	return new Response(new Blob([Buffer.from(data)]), { status: 200, headers })
@@ -106,6 +111,48 @@ async function serveEmbedAsset(
 	}
 }
 
+/**
+ * An asset addressed by a signed URL from an embed manifest.
+ *
+ * The signature is the authorization: the manifest that handed it out already
+ * checked the key, the domain and the publication. So this reads no key and no
+ * scene, which is what lets the response be public and cached at the edge for
+ * as long as the URL stays valid.
+ */
+async function serveSignedAsset(
+	request: Request,
+	target: { sceneId: string; assetId: string },
+	query: { exp: string | null; sig: string | null }
+): Promise<Response> {
+	const secret = getAssetSigningSecret()
+	const check = secret
+		? verifySignedAsset(target, query, secret, Date.now())
+		: null
+
+	if (!check?.ok) {
+		return new Response('Asset not found', {
+			status: 404,
+			headers: withNoStoreHeaders()
+		})
+	}
+
+	try {
+		const assetData = await downloadAsset(target.assetId)
+		return assetResponse(
+			assetData.data,
+			assetData.mimeType,
+			undefined,
+			`public, max-age=${check.secondsLeft}, s-maxage=${check.secondsLeft}`
+		)
+	} catch (error) {
+		reportServerError(error, { request, properties: target })
+		return new Response('Failed to load asset', {
+			status: 500,
+			headers: withNoStoreHeaders()
+		})
+	}
+}
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const sceneId = params.sceneId?.trim()
 	const assetId = params.assetId?.trim()
@@ -118,6 +165,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	}
 
 	const url = new URL(request.url)
+
+	if (url.searchParams.has('sig')) {
+		return serveSignedAsset(
+			request,
+			{ sceneId, assetId },
+			{ exp: url.searchParams.get('exp'), sig: url.searchParams.get('sig') }
+		)
+	}
+
 	const isPreviewRequest = url.searchParams.get('preview') === '1'
 
 	// Token credential present means the caller is using an API key (embedded

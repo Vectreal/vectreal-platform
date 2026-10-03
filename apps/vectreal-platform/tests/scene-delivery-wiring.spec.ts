@@ -28,12 +28,18 @@ describe('embed key use', () => {
 describe('the embed manifest ETag', () => {
 	const route = read('routes/api/scenes.$sceneId.ts')
 
-	it('is keyed on the publication the manifest describes', () => {
+	it("is keyed on the publication and its URLs' expiry", () => {
 		expect(route).toMatch(
-			/publication = \{\s*assetId: previewScene\.publishedAssetId,\s*publishedAt: previewScene\.publishedAt\s*\}/
+			/\{\s*assetId: previewScene\.publishedAssetId,\s*publishedAt: previewScene\.publishedAt,\s*assetUrlsExpireAt: embedAssetUrls\.expiresAt\s*\}/
 		)
 		expect(route).toMatch(
 			/buildSceneManifestEtag\(\s*sceneId,\s*manifest\.settingsUpdatedAt,\s*publication\s*\)/
+		)
+	})
+
+	it('signs asset URLs for an embed manifest only', () => {
+		expect(route).toMatch(
+			/const embedAssetUrls = previewScene\s*\?\s*createEmbedAssetUrls\(/
 		)
 	})
 })
@@ -69,6 +75,36 @@ describe('the Draco decoder', () => {
 		expect(server.slice(draco)).toMatch(/^[\s\S]{0,200}?maxAge: '1d'/)
 		expect(draco).toBeLessThan(
 			server.indexOf('app.use(express.static(CLIENT_DIR, { redirect: false }))')
+		)
+	})
+})
+
+describe('signed embed assets', () => {
+	const route = read('routes/api/scenes.$sceneId.assets.$assetId.ts')
+
+	it('are answered before any key or session lookup', () => {
+		const signed = route.indexOf("if (url.searchParams.has('sig')) {")
+		expect(signed).toBeGreaterThan(-1)
+		expect(signed).toBeLessThan(
+			route.indexOf('await validatePreviewApiKeyForProject(')
+		)
+		expect(signed).toBeLessThan(route.indexOf('await getAuthUser(request)'))
+	})
+
+	it('are verified before anything is downloaded', () => {
+		const handler = route.slice(
+			route.indexOf('async function serveSignedAsset(')
+		)
+		expect(handler.indexOf('verifySignedAsset(')).toBeGreaterThan(-1)
+		expect(handler.indexOf('if (!check?.ok) {')).toBeGreaterThan(-1)
+		expect(handler.indexOf('if (!check?.ok) {')).toBeLessThan(
+			handler.indexOf('await downloadAsset(')
+		)
+	})
+
+	it('are publicly cacheable for exactly as long as they stay valid', () => {
+		expect(route).toContain(
+			'`public, max-age=${check.secondsLeft}, s-maxage=${check.secondsLeft}`'
 		)
 	})
 })
