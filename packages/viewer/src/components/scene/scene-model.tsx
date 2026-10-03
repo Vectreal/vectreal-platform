@@ -49,6 +49,11 @@ interface ModelProps {
 	 */
 	modelKey?: ModelKey
 	/**
+	 * Drawn in place of `object`. `object` stays mounted, hidden, so everything
+	 * that measures or raycasts it in world space still finds it in place.
+	 */
+	displayedObject?: Object3D
+	/**
 	 * The callback function to execute when creating a screenshot of the model after loading.
 	 */
 	onScreenshot?: (dataUrl: string) => void
@@ -191,6 +196,7 @@ const buildScreenshotDataUrl = async (
 const SceneModel = memo((props: ModelProps) => {
 	const {
 		object,
+		displayedObject,
 		modelKey,
 		cameraOptions,
 		onScreenshot,
@@ -209,6 +215,10 @@ const SceneModel = memo((props: ModelProps) => {
 	}))
 
 	const frame = useModelFrame(object, modelKey)
+	const drawnObjects = useMemo(
+		() => (displayedObject ? [object, displayedObject] : [object]),
+		[object, displayedObject]
+	)
 	const rawDiagonal = frame?.rawDiagonal ?? 0
 
 	const normalizedScale = useMemo(
@@ -233,7 +243,7 @@ const SceneModel = memo((props: ModelProps) => {
 
 	useEffect(() => {
 		clipSphereDirtyRef.current = true
-	}, [object, normalizedScale])
+	}, [drawnObjects, normalizedScale])
 
 	useFrame(() => {
 		const perspectiveCamera = camera as PerspectiveCamera
@@ -404,46 +414,40 @@ const SceneModel = memo((props: ModelProps) => {
 	)
 
 	useLayoutEffect(() => {
-		if (!enableShadows) {
-			object.traverse((child) => {
+		for (const drawn of drawnObjects) {
+			drawn.traverse((child) => {
 				if (child instanceof Mesh) {
-					child.castShadow = false
-					child.receiveShadow = false
+					child.castShadow = enableShadows
+					child.receiveShadow = enableShadows
 				}
 			})
-			return
 		}
-
-		object.traverse((child) => {
-			if (child instanceof Mesh) {
-				child.castShadow = true
-				child.receiveShadow = true
-			}
-		})
-	}, [enableShadows, object])
+	}, [enableShadows, drawnObjects])
 
 	useLayoutEffect(() => {
 		const anisotropy = Math.min(
 			TEXTURE_ANISOTROPY,
 			gl.capabilities.getMaxAnisotropy()
 		)
-		object.traverse((child) => {
-			if (!(child instanceof Mesh)) return
-			const materials = Array.isArray(child.material)
-				? child.material
-				: [child.material]
-			for (const material of materials) {
-				for (const value of Object.values(material)) {
-					if (!(value instanceof Texture) || value.anisotropy >= anisotropy)
-						continue
-					value.anisotropy = anisotropy
-					// Sampler state is set on upload; a texture already on the GPU
-					// (the same model shown again) has to be re-uploaded to take it.
-					value.needsUpdate = true
+		for (const drawn of drawnObjects) {
+			drawn.traverse((child) => {
+				if (!(child instanceof Mesh)) return
+				const materials = Array.isArray(child.material)
+					? child.material
+					: [child.material]
+				for (const material of materials) {
+					for (const value of Object.values(material)) {
+						if (!(value instanceof Texture) || value.anisotropy >= anisotropy)
+							continue
+						value.anisotropy = anisotropy
+						// Sampler state is set on upload; a texture already on the GPU
+						// (the same model shown again) has to be re-uploaded to take it.
+						value.needsUpdate = true
+					}
 				}
-			}
-		})
-	}, [gl, object])
+			})
+		}
+	}, [gl, drawnObjects])
 
 	// Refit when normalization toggles, or a new model loads while normalization
 	// is already on. Keyed on the frame rather than the object: a rendition of the
@@ -477,7 +481,10 @@ const SceneModel = memo((props: ModelProps) => {
 			scale={normalizedScale}
 			dispose={null}
 		>
-			<primitive object={object} />
+			<group visible={!displayedObject}>
+				<primitive object={object} />
+			</group>
+			{displayedObject && <primitive object={displayedObject} />}
 		</group>
 	)
 })

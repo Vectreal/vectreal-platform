@@ -1,11 +1,19 @@
 import type { SceneSourceRef, SceneStatsData } from './api'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
+import type { Object3D } from 'three'
 
 /**
  * Presets the user can pick. Every one of these has an entry in
  * `optimizationPresets`. `original` runs nothing: the scene as uploaded.
  */
 export type PresetId = 'original' | 'quality' | 'balanced' | 'smallest'
+
+/** The source shown in place of the optimized model while it is held. */
+export interface ComparedModel {
+	model: Object3D
+	/** The untouched upload, rather than a saved, optimized version. */
+	isOriginal: boolean
+}
 
 /** The scene's original, kept beside its optimized model. */
 export interface KeptOriginalState {
