@@ -48,10 +48,8 @@ describe('the embed document head', () => {
 			'/draco/draco_decoder.wasm',
 			'https://storage.googleapis.com/environment-maps/studio/studio_natural_1k.hdr'
 		]) {
-			expect(head).toMatch(
-				new RegExp(
-					`<link rel="preload" href="${href}" as="fetch" crossorigin=""`
-				)
+			expect(head).toContain(
+				`<link rel="preload" href="${href}" as="fetch" crossorigin=""`
 			)
 		}
 		expect(head).toContain(
