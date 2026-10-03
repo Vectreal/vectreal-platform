@@ -78,21 +78,28 @@ function stubFetch(manifestBody: unknown, manifestStatus = 200) {
 
 function buildContext() {
 	const published: LoadedModel[] = []
-	// Typed on the parameter so the File assertion below has something to read.
-	const loadToThreeJS = vi.fn(async (_file: File) => ({
+	const parseGLBToThreeJS = vi.fn(async (_bytes: Uint8Array) => ({
 		scene: { name: 'three-scene' },
 		animations: []
 	}))
+	const loadToThreeJS = vi.fn()
+	const prepareDracoDecoder = vi.fn(async () => {})
 
 	const ctx = {
-		modelLoader: { loadToThreeJS },
+		modelLoader: { parseGLBToThreeJS, loadToThreeJS, prepareDracoDecoder },
 		optimizer: undefined,
 		publish: (loaded: LoadedModel) => published.push(loaded),
 		mayIngest: () => true,
 		onProgress: () => {}
 	} as unknown as LoadContext
 
-	return { ctx, loadToThreeJS, published }
+	return {
+		ctx,
+		parseGLBToThreeJS,
+		loadToThreeJS,
+		prepareDracoDecoder,
+		published
+	}
 }
 
 const source: Extract<ModelSource, { kind: 'server' }> = {
@@ -135,20 +142,37 @@ describe('published-GLB embed load', () => {
 		expect(assetCalls).toEqual([BAKE_URL, MODEL_URL].sort())
 	})
 
-	it('hands the loader a File carrying the GLB bytes, name and mime type', async () => {
+	it('parses the GLB bytes once, without the editor document round trip', async () => {
 		stubFetch(embedManifest())
-		const { ctx, loadToThreeJS } = buildContext()
+		const { ctx, parseGLBToThreeJS, loadToThreeJS } = buildContext()
 
 		await loadModelFromServer(source, ctx)
 
-		expect(loadToThreeJS).toHaveBeenCalledTimes(1)
-		const [file] = loadToThreeJS.mock.calls[0]
-
-		expect(file.name).toBe('blue-vans-shoe.glb')
-		expect(file.type).toBe('model/gltf-binary')
-		expect(Array.from(new Uint8Array(await file.arrayBuffer()))).toEqual(
+		expect(parseGLBToThreeJS).toHaveBeenCalledTimes(1)
+		expect(Array.from(parseGLBToThreeJS.mock.calls[0][0])).toEqual(
 			Array.from(GLB_BYTES)
 		)
+		expect(loadToThreeJS).not.toHaveBeenCalled()
+	})
+
+	it('warms the Draco decoder before the model has downloaded', async () => {
+		const order: string[] = []
+		stubFetch(embedManifest())
+		const { ctx, prepareDracoDecoder } = buildContext()
+		prepareDracoDecoder.mockImplementation(async () => {
+			order.push('decoder')
+		})
+		const fetchMock = vi.mocked(fetch)
+		const originalFetch = fetchMock.getMockImplementation()!
+		fetchMock.mockImplementation(async (url, init) => {
+			if (url === MODEL_URL) order.push('model')
+			return originalFetch(url, init)
+		})
+
+		await loadModelFromServer(source, ctx)
+
+		expect(order.indexOf('decoder')).toBeGreaterThan(-1)
+		expect(order.indexOf('decoder')).toBeLessThan(order.indexOf('model'))
 	})
 
 	it('keeps settings and meta while reporting no glTF document', async () => {

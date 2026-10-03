@@ -77,6 +77,12 @@ const loadPublishedSceneModel = async (
 	{ modelLoader, publish, onProgress }: LoadContext,
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
+	// Started before the download rather than after it: the decoder's script,
+	// its wasm and the worker it compiles in are all independent of the model's
+	// bytes, and fetching them after the GLB arrived put them in series. A
+	// failure here resurfaces, with its context, in the parse that needs it.
+	modelLoader.prepareDracoDecoder().catch(() => {})
+
 	const fetched = await fetchManifestAssetData(
 		{ ...(payload.assetRefs ?? {}), [PUBLISHED_MODEL_KEY]: publishedModel },
 		{
@@ -105,15 +111,8 @@ const loadPublishedSceneModel = async (
 
 	onProgress(70)
 
-	const modelBytes = toSerializedAssetBytes(modelEntry)
-	const blobBytes = new Uint8Array(modelBytes.byteLength)
-	blobBytes.set(modelBytes)
-	const blob = new Blob([blobBytes], { type: publishedModel.mimeType })
-
-	// The same entry point a dropped `.glb` takes, so the Draco decoder is
-	// attached exactly as it is everywhere else.
-	const result = await modelLoader.loadToThreeJS(
-		new File([blob], publishedModel.fileName, { type: publishedModel.mimeType })
+	const result = await modelLoader.parseGLBToThreeJS(
+		toSerializedAssetBytes(modelEntry)
 	)
 
 	const loaded: LoadedModel = {
