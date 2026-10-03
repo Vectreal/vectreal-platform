@@ -1,11 +1,13 @@
 import { useAtomValue, useSetAtom } from 'jotai/react'
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useEffect } from 'react'
 
 import { ComposeSidebar } from './compose-sidebar'
 import { getComposeToolDefinition } from './compose-sidebar/compose-tools'
 import { DynamicSidebar } from './dynamic-sidebar'
 import {
 	arePublisherActionsDisabledAtom,
+	cameraToolOpenRequestAtom,
+	openComposeToolAtom,
 	processAtom,
 	toolSidebarStateAtom
 } from '../../../lib/stores/publisher-config-store'
@@ -30,6 +32,16 @@ export const ToolSidebar = memo(({ isMobile = false }: ToolSidebarProps) => {
 	)
 	const setProcessState = useSetAtom(processAtom)
 	const activeToolDefinition = getComposeToolDefinition(activeComposeTool)
+
+	// A request to open the Camera tool on one camera belongs to the opening
+	// that made it. Dropped once the Camera tool is not the open tool, so a
+	// switch away before its panel mounts cannot leave it for a later visit.
+	const setCameraToolOpenRequest = useSetAtom(cameraToolOpenRequestAtom)
+	const isCameraToolOpen =
+		useAtomValue(openComposeToolAtom) === 'camera-controls'
+	useEffect(() => {
+		if (!isCameraToolOpen) setCameraToolOpenRequest(null)
+	}, [isCameraToolOpen, setCameraToolOpenRequest])
 
 	const handleOpenChange = useCallback(
 		(open: boolean) => {

@@ -173,6 +173,28 @@ const exitPreviewModeAtom = atom(null, (get, set) => {
 	if (returnToCameraId) set(selectedCameraIdAtom, returnToCameraId)
 })
 
+/**
+ * A camera the Camera tool should open on, left by a link from another tool
+ * and taken by the Camera tool's panel as it mounts.
+ */
+const cameraToolOpenRequestAtom = atom<null | string>(null)
+
+/**
+ * Switches to the Camera tool drilled into one camera, with the view moved to
+ * it, so a camera another tool points at is edited where cameras are edited.
+ */
+const openCameraInCameraToolAtom = atom(null, (_get, set, cameraId: string) => {
+	set(selectedCameraIdAtom, cameraId)
+	set(cameraToolOpenRequestAtom, cameraId)
+	set(processAtom, (prev) => ({
+		...prev,
+		mode: 'compose',
+		activeComposeTool: 'camera-controls',
+		showSidebar: true,
+		showPublishPanel: false
+	}))
+})
+
 const isClickToPlaceActiveAtom = atom(false)
 const arePublisherActionsDisabledAtom = atom((get) => get(isPreviewModeAtom))
 const canEditCameraSettingsAtom = atom(
@@ -196,6 +218,8 @@ export {
 	isPreviewModeAtom,
 	enterPreviewModeAtom,
 	exitPreviewModeAtom,
+	cameraToolOpenRequestAtom,
+	openCameraInCameraToolAtom,
 	isClickToPlaceActiveAtom,
 	arePublisherActionsDisabledAtom,
 	canEditCameraSettingsAtom,

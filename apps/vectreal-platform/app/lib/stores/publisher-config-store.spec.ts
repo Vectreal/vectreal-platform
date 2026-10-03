@@ -13,8 +13,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	enterPreviewModeAtom,
+	cameraToolOpenRequestAtom,
 	exitPreviewModeAtom,
 	isPreviewModeAtom,
+	openCameraInCameraToolAtom,
 	openComposeToolAtom,
 	processAtom,
 	processInitialState
@@ -192,5 +194,27 @@ describe('preview mode', () => {
 				'hotspot-camera-1790000000000-a1b2'
 			)
 		})
+	})
+})
+
+/**
+ * A hotspot's linked camera is edited in the Camera tool, so the link has to
+ * land there with that camera in view, whatever was open before.
+ */
+describe('openCameraInCameraToolAtom', () => {
+	it('opens the Camera tool on that camera, with the view moved to it', () => {
+		const store = storeWith({
+			mode: 'compose',
+			activeComposeTool: 'hotspots',
+			showSidebar: true,
+			showPublishPanel: true
+		})
+
+		store.set(openCameraInCameraToolAtom, 'hotspot-camera-1')
+
+		expect(store.get(openComposeToolAtom)).toBe('camera-controls')
+		expect(store.get(processAtom).showPublishPanel).toBe(false)
+		expect(store.get(selectedCameraIdAtom)).toBe('hotspot-camera-1')
+		expect(store.get(cameraToolOpenRequestAtom)).toBe('hotspot-camera-1')
 	})
 })
