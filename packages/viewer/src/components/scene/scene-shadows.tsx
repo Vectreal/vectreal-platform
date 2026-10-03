@@ -191,6 +191,12 @@ interface ModelMetrics {
 	vertexCount: number
 	/** False until the model has actually been measured (values are real, not defaults). */
 	measured: boolean
+	/**
+	 * True once these figures are final: the model was measured, could not be
+	 * (no geometry), or there is no model and the subject is the viewer's
+	 * children. A live bake waits for this rather than `measured`.
+	 */
+	sized: boolean
 }
 
 const DEFAULT_METRICS: ModelMetrics = {
@@ -198,7 +204,8 @@ const DEFAULT_METRICS: ModelMetrics = {
 	radius: 1,
 	height: 1,
 	vertexCount: 0,
-	measured: false
+	measured: false,
+	sized: false
 }
 
 /**
@@ -233,24 +240,27 @@ const useModelMetrics = (
 		const size = new Box3().setFromObject(model).getSize(new Vector3())
 		const footprint = Math.max(size.x, size.z)
 		const radius = 0.5 * Math.hypot(size.x, size.y, size.z)
-		if (footprint > 0 && radius > 0 && Number.isFinite(radius)) {
-			setMeasurement({
-				model,
-				metrics: {
-					footprint,
-					radius,
-					height: size.y,
-					vertexCount: computeModelFingerprint(model),
-					measured: true
-				}
-			})
-		}
+		const measurable = footprint > 0 && radius > 0 && Number.isFinite(radius)
+		setMeasurement({
+			model,
+			metrics: measurable
+				? {
+						footprint,
+						radius,
+						height: size.y,
+						vertexCount: computeModelFingerprint(model),
+						measured: true,
+						sized: true
+					}
+				: { ...DEFAULT_METRICS, sized: true }
+		})
 		// Normalization is a dependency because it rescales the model from an
 		// ancestor group: the object identity is unchanged, but every figure
 		// derived here (plane size, light distance, shadow-camera extent, and the
 		// bake signature built from them) is in model-size units and goes stale.
 	}, [model, normalizationEnabled, normalizationMinSize, normalizationMaxSize])
 
+	if (!model) return { ...DEFAULT_METRICS, sized: true }
 	return measurement && measurement.model === model
 		? measurement.metrics
 		: DEFAULT_METRICS
@@ -345,7 +355,7 @@ const SceneShadows = memo(
 		onShadowBakeReady,
 		...props
 	}: SceneShadowsProps) => {
-		const { footprint, radius, height, vertexCount, measured } =
+		const { footprint, radius, height, vertexCount, measured, sized } =
 			useModelMetrics(model, normalizationOptions)
 		const apiRef = useRef<React.ComponentRef<
 			typeof AccumulativeShadows
@@ -571,7 +581,7 @@ const SceneShadows = memo(
 
 		return (
 			<>
-				{measured && contactShadow}
+				{sized && contactShadow}
 
 				{usePersistedBake && bakedShadow ? (
 					// Load-time fast path: render the stored bake, no recomputation.
@@ -583,7 +593,7 @@ const SceneShadows = memo(
 							color={options.color ?? '#000000'}
 						/>
 					</Suspense>
-				) : measured ? (
+				) : sized ? (
 					// Not before: drei bakes on mount, so a bake sized from the
 					// placeholder metrics is thrown away when the real ones land.
 					// A static bake blocks the main thread for its whole length.

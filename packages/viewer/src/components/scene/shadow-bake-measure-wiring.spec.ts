@@ -19,9 +19,19 @@ const shadows = readFileSync(
 )
 
 describe('live shadow bakes', () => {
-	it('mount only once the model is measured', () => {
-		expect(shadows).toMatch(/\) : measured \? \([\s\S]*?\{bake\}/)
-		expect(shadows).toContain('{measured && contactShadow}')
+	it('mount only once the model is sized', () => {
+		expect(shadows).toMatch(/\) : sized \? \([\s\S]*?\{bake\}/)
+		expect(shadows).toContain('{sized && contactShadow}')
+	})
+
+	it('treat a viewer of children alone as sized', () => {
+		expect(shadows).toContain(
+			'if (!model) return { ...DEFAULT_METRICS, sized: true }'
+		)
+	})
+
+	it('treat a model with no measurable bounds as sized', () => {
+		expect(shadows).toContain(': { ...DEFAULT_METRICS, sized: true }')
 	})
 
 	it('read a previous model as unmeasured', () => {
