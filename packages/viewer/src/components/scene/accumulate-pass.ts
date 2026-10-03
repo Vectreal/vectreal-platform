@@ -37,11 +37,13 @@ void main() {
 /**
  * The final pass of the viewer's composer. Owns the presented image:
  *
- * - `present()`: draw this frame's input straight to the canvas (motion).
+ * - `present()`: draw this frame's input to the canvas (motion), keeping it
+ *   as the history so a redraw shows the last frame presented.
  * - `accumulate(sample)`: fold this frame's input into the running average,
  *   then draw the average to the canvas (at rest, jittered).
- * - `presentHistory()`: redraw the converged average without rendering the
- *   scene, for when something else draws onto the same canvas each frame.
+ * - `presentHistory()`: redraw the last presented frame without rendering
+ *   the scene, for when something else draws onto the same canvas each frame:
+ *   at rest, or while a new model's shaders compile.
  *
  * Averaging happens after tone mapping, in linear half-float: resolving
  * display-referred values is what keeps bright edges from aliasing.
@@ -84,7 +86,7 @@ export class AccumulatePass extends Pass {
 		this.sample = sample
 	}
 
-	/** Redraws the last converged average onto the canvas. */
+	/** Redraws the last presented frame onto the canvas. */
 	presentHistory(renderer: WebGLRenderer) {
 		this.draw(renderer, this.read.texture, this.read.texture, 1, null)
 	}
@@ -97,7 +99,8 @@ export class AccumulatePass extends Pass {
 		const output = this.renderToScreen ? null : inputBuffer
 
 		if (this.mode === 'present') {
-			this.draw(renderer, input, input, 1, output)
+			this.draw(renderer, input, input, 1, this.read)
+			this.draw(renderer, this.read.texture, this.read.texture, 1, output)
 			return
 		}
 
