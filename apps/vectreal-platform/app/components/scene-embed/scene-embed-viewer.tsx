@@ -125,7 +125,6 @@ const SceneEmbedViewer = memo(
 					showHotspotMarkers={hotspotPresentation?.showMarkers}
 					revealHotspotContent={hotspotPresentation?.revealContent}
 					shadowsOptions={shadowsOptions}
-					staticShadowBake
 					bakedShadow={bakedShadow}
 					loadingThumbnail={loadingThumbnail}
 					popover={
