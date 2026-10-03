@@ -1,6 +1,7 @@
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { toast } from 'sonner'
 
+import { postFormWithProgress } from './post-form-with-progress'
 import { createFileFromDataUrl } from './scene-draft-serialization'
 import { planThumbnailForSave } from './scene-thumbnail-save'
 import {
@@ -10,6 +11,7 @@ import {
 import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
 import { buildDefaultCameraSignature } from '../scene-camera'
 
+import type { SaveProgressEvent } from './scene-save-progress'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { SceneSettings } from '@vctrl/core'
 import type { ShadowBakeResult } from '@vctrl/viewer'
@@ -51,7 +53,11 @@ interface ExecuteSceneSaveOrchestratorParams {
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: () => Promise<null | string>
 	captureShadowBake?: () => Promise<ShadowBakeResult | null>
+	onProgress?: (event: SaveProgressEvent) => void
 }
+
+/** The scene document's key, the same name `existingAssets` lists it under. */
+const SCENE_DOCUMENT_KEY = 'scene.gltf'
 
 // Pulls the asset id out of an internal thumbnail URL
 // (`/api/scenes/:sceneId/thumbnail/:assetId`). Used to re-link the current
@@ -98,7 +104,8 @@ export const executeSceneSaveOrchestrator = async ({
 	createRequestId,
 	prepareGltfDocumentForUpload,
 	captureSceneThumbnail,
-	captureShadowBake
+	captureShadowBake,
+	onProgress
 }: ExecuteSceneSaveOrchestratorParams): Promise<
 	SaveSceneOrchestratorResult | { unchanged: true }
 > => {
@@ -106,6 +113,7 @@ export const executeSceneSaveOrchestrator = async ({
 		throw new Error('No user ID provided for saving settings')
 	}
 
+	onProgress?.({ type: 'preparing' })
 	const requestId = createRequestId()
 	const gltfJsonToSend = await prepareGltfDocumentForUpload()
 	if (!gltfJsonToSend) {
@@ -147,6 +155,63 @@ export const executeSceneSaveOrchestrator = async ({
 	const preparedProjectId = prepared.projectId as string | undefined
 	const existingAssets = prepared.existingAssets as
 		Record<string, { assetId: string; contentHash: string }> | undefined
+
+	const gltfData = (gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
+	const imageMimeLookup = buildImageMimeLookup(gltfData)
+	const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
+	const assetDescriptors =
+		gltfAssets instanceof Map
+			? Array.from(gltfAssets.entries()).map(([fileName, data]) =>
+					buildSceneUploadFileDescriptor(fileName, data, imageMimeLookup)
+				)
+			: []
+	const gltfBytes = new Uint8Array(
+		await new Blob([JSON.stringify(gltfData)], {
+			type: 'model/gltf+json'
+		}).arrayBuffer()
+	)
+
+	// Listed before anything uploads, so the total is known from the start.
+	for (const descriptor of assetDescriptors) {
+		onProgress?.({
+			type: 'file-added',
+			file: {
+				key: descriptor.fileName,
+				group: 'model',
+				name: descriptor.fileName,
+				bytes: descriptor.file.size,
+				preview: descriptor.kind === 'image' ? descriptor.file : null
+			}
+		})
+	}
+	onProgress?.({
+		type: 'file-added',
+		file: {
+			key: SCENE_DOCUMENT_KEY,
+			group: 'model',
+			name: SCENE_DOCUMENT_KEY,
+			bytes: gltfBytes.byteLength,
+			preview: null
+		}
+	})
+
+	/** Uploads one file, reporting its progress under `key`. */
+	const uploadFile = async (key: string, body: FormData) => {
+		try {
+			const uploaded = await toJsonOrThrow(
+				await postFormWithProgress(
+					`/api/scenes/${preparedSceneId}`,
+					body,
+					(fraction) => onProgress?.({ type: 'file-progress', key, fraction })
+				)
+			)
+			onProgress?.({ type: 'file-done', key, reused: false })
+			return uploaded
+		} catch (error) {
+			onProgress?.({ type: 'file-failed', key })
+			throw error
+		}
+	}
 
 	// The thumbnail is the placeholder shown while the scene loads, so it has to
 	// match the frame the default camera opens on. Comparing the signature rather
@@ -193,13 +258,21 @@ export const executeSceneSaveOrchestrator = async ({
 			}
 			uploadThumbnailFormData.append('kind', 'image')
 			uploadThumbnailFormData.append('file', thumbnailFile)
+			onProgress?.({
+				type: 'file-added',
+				file: {
+					key: SCENE_THUMBNAIL_FILENAME,
+					group: 'preview',
+					name: 'Thumbnail',
+					bytes: thumbnailFile.size,
+					preview: thumbnailFile
+				}
+			})
 
 			try {
-				const uploadedThumbnail = await toJsonOrThrow(
-					await fetch(`/api/scenes/${preparedSceneId}`, {
-						method: 'POST',
-						body: uploadThumbnailFormData
-					})
+				const uploadedThumbnail = await uploadFile(
+					SCENE_THUMBNAIL_FILENAME,
+					uploadThumbnailFormData
 				)
 
 				sceneMetaForSave = {
@@ -260,12 +333,20 @@ export const executeSceneSaveOrchestrator = async ({
 					}
 					uploadBakeFormData.append('kind', 'image')
 					uploadBakeFormData.append('file', bakeFile)
+					onProgress?.({
+						type: 'file-added',
+						file: {
+							key: PERSISTED_BAKE_FILENAME,
+							group: 'preview',
+							name: 'Baked shadow',
+							bytes: bakeFile.size,
+							preview: bakeFile
+						}
+					})
 
-					const uploadedBake = await toJsonOrThrow(
-						await fetch(`/api/scenes/${preparedSceneId}`, {
-							method: 'POST',
-							body: uploadBakeFormData
-						})
+					const uploadedBake = await uploadFile(
+						PERSISTED_BAKE_FILENAME,
+						uploadBakeFormData
 					)
 
 					bakedShadowAssetId = uploadedBake.assetId as string
@@ -308,93 +389,83 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 
 	const sceneAssetIds: string[] = []
-	const gltfData = (gltfJsonToSend as { data?: unknown }).data ?? gltfJsonToSend
-	const imageMimeLookup = buildImageMimeLookup(gltfData)
 
-	const gltfAssets = (gltfJsonToSend as { assets?: unknown }).assets
-	if (gltfAssets instanceof Map) {
-		const gltfAssetEntries = Array.from(gltfAssets.entries())
+	const uploadAsset = async (descriptor: (typeof assetDescriptors)[number]) => {
+		/*
+		  MATCHED BY NAME, AND ONLY BY NAME. A basename pass lived here for one
+		  round, so that the first save after stored assets started carrying
+		  their folders would not re-upload every texture under its new name.
+		  It reasoned that a name only nominates a candidate and the hash
+		  decides - but the hash proves the bytes are right, never that the
+		  row is, and identical bytes across folders are ordinary: a flat
+		  normal map, a 1x1 white PNG, a zero-filled `.bin`.
 
-		const uploadAsset = async ([fileName, data]: [string, unknown]) => {
-			const descriptor = buildSceneUploadFileDescriptor(
-				fileName,
-				data,
-				imageMimeLookup
-			)
+		  What it cost: the server never renames a reused row
+		  (`asset-storage.server.ts`), so a scene that reused `diffuse.png`
+		  for `body/diffuse.png` while writing a fresh `wheels/diffuse.png`
+		  is left half-flat and half-foldered - and in that state a
+		  folderless key, which ranks last in every scope, can never win the
+		  name-only rung again. Both materials then load the wheels texture,
+		  saved and reported as success, which is verbatim the defect
+		  `buildSceneUploadFileDescriptor` exists to end. Two names
+		  nominating one row could also put the same id in `sceneAssetIds`
+		  twice, which fails the save outright - not at `scene_assets`'
+		  composite primary key, which never gets the chance, but at
+		  `assertAssetsBelongToProject`, where a repeated id makes the
+		  selected rows fewer than the ids asked for and the save reports
+		  "One or more uploaded assets are missing".
 
-			/*
-			  MATCHED BY NAME, AND ONLY BY NAME. A basename pass lived here for one
-			  round, so that the first save after stored assets started carrying
-			  their folders would not re-upload every texture under its new name.
-			  It reasoned that a name only nominates a candidate and the hash
-			  decides - but the hash proves the bytes are right, never that the
-			  row is, and identical bytes across folders are ordinary: a flat
-			  normal map, a 1x1 white PNG, a zero-filled `.bin`.
+		  So the re-upload stays. It is the same cost as editing a texture,
+		  paid once per scene, and it keeps every stored name equal to the
+		  URI that resolves it.
+		*/
+		const existing = existingAssets?.[descriptor.fileName]
 
-			  What it cost: the server never renames a reused row
-			  (`asset-storage.server.ts`), so a scene that reused `diffuse.png`
-			  for `body/diffuse.png` while writing a fresh `wheels/diffuse.png`
-			  is left half-flat and half-foldered - and in that state a
-			  folderless key, which ranks last in every scope, can never win the
-			  name-only rung again. Both materials then load the wheels texture,
-			  saved and reported as success, which is verbatim the defect
-			  `buildSceneUploadFileDescriptor` exists to end. Two names
-			  nominating one row could also put the same id in `sceneAssetIds`
-			  twice, which fails the save outright - not at `scene_assets`'
-			  composite primary key, which never gets the chance, but at
-			  `assertAssetsBelongToProject`, where a repeated id makes the
-			  selected rows fewer than the ids asked for and the save reports
-			  "One or more uploaded assets are missing".
-
-			  So the re-upload stays. It is the same cost as editing a texture,
-			  paid once per scene, and it keeps every stored name equal to the
-			  URI that resolves it.
-			*/
-			const existing = existingAssets?.[descriptor.fileName]
-
-			if (existing) {
-				const bytes = new Uint8Array(await descriptor.file.arrayBuffer())
-				const hash = await hashBytes(bytes)
-				if (hash === existing.contentHash) {
-					return existing.assetId
-				}
-			}
-
-			const uploadAssetFormData = new FormData()
-			uploadAssetFormData.append('action', 'upload-scene-asset')
-			uploadAssetFormData.append('requestId', requestId)
-			uploadAssetFormData.append('sceneId', preparedSceneId)
-			if (preparedProjectId) {
-				uploadAssetFormData.append('projectId', preparedProjectId)
-			}
-			if (options?.targetProjectId) {
-				uploadAssetFormData.append('targetProjectId', options.targetProjectId)
-			}
-			uploadAssetFormData.append('kind', descriptor.kind)
-			uploadAssetFormData.append('file', descriptor.file)
-
-			const uploadedAsset = await toJsonOrThrow(
-				await fetch(`/api/scenes/${preparedSceneId}`, {
-					method: 'POST',
-					body: uploadAssetFormData
+		if (existing) {
+			const bytes = new Uint8Array(await descriptor.file.arrayBuffer())
+			const hash = await hashBytes(bytes)
+			if (hash === existing.contentHash) {
+				onProgress?.({
+					type: 'file-done',
+					key: descriptor.fileName,
+					reused: true
 				})
-			)
-
-			return uploadedAsset.assetId as string
+				return existing.assetId
+			}
 		}
 
-		for (
-			let start = 0;
-			start < gltfAssetEntries.length;
-			start += maxConcurrentAssetUploads
-		) {
-			const chunk = gltfAssetEntries.slice(
-				start,
-				start + maxConcurrentAssetUploads
-			)
-			const chunkAssetIds = await Promise.all(chunk.map(uploadAsset))
-			sceneAssetIds.push(...chunkAssetIds)
+		const uploadAssetFormData = new FormData()
+		uploadAssetFormData.append('action', 'upload-scene-asset')
+		uploadAssetFormData.append('requestId', requestId)
+		uploadAssetFormData.append('sceneId', preparedSceneId)
+		if (preparedProjectId) {
+			uploadAssetFormData.append('projectId', preparedProjectId)
 		}
+		if (options?.targetProjectId) {
+			uploadAssetFormData.append('targetProjectId', options.targetProjectId)
+		}
+		uploadAssetFormData.append('kind', descriptor.kind)
+		uploadAssetFormData.append('file', descriptor.file)
+
+		const uploadedAsset = await uploadFile(
+			descriptor.fileName,
+			uploadAssetFormData
+		)
+
+		return uploadedAsset.assetId as string
+	}
+
+	for (
+		let start = 0;
+		start < assetDescriptors.length;
+		start += maxConcurrentAssetUploads
+	) {
+		const chunk = assetDescriptors.slice(
+			start,
+			start + maxConcurrentAssetUploads
+		)
+		const chunkAssetIds = await Promise.all(chunk.map(uploadAsset))
+		sceneAssetIds.push(...chunkAssetIds)
 	}
 
 	const uploadGltfFile = async (bytes: Uint8Array): Promise<string> => {
@@ -410,30 +481,24 @@ export const executeSceneSaveOrchestrator = async ({
 		}
 		uploadGltfFormData.append(
 			'file',
-			new File([bytes.buffer as ArrayBuffer], 'scene.gltf', {
+			new File([bytes.buffer as ArrayBuffer], SCENE_DOCUMENT_KEY, {
 				type: 'model/gltf+json'
 			})
 		)
-		const uploadedGltf = await toJsonOrThrow(
-			await fetch(`/api/scenes/${preparedSceneId}`, {
-				method: 'POST',
-				body: uploadGltfFormData
-			})
+		const uploadedGltf = await uploadFile(
+			SCENE_DOCUMENT_KEY,
+			uploadGltfFormData
 		)
 		return uploadedGltf.assetId as string
 	}
 
-	const gltfBlob = new Blob([JSON.stringify(gltfData)], {
-		type: 'model/gltf+json'
-	})
-	const gltfBytes = new Uint8Array(await gltfBlob.arrayBuffer())
-
 	let gltfAssetId: string
-	const existingGltf = existingAssets?.['scene.gltf']
+	const existingGltf = existingAssets?.[SCENE_DOCUMENT_KEY]
 	if (existingGltf) {
 		const hash = await hashBytes(gltfBytes)
 		if (hash === existingGltf.contentHash) {
 			gltfAssetId = existingGltf.assetId
+			onProgress?.({ type: 'file-done', key: SCENE_DOCUMENT_KEY, reused: true })
 		} else {
 			gltfAssetId = await uploadGltfFile(gltfBytes)
 		}
@@ -491,6 +556,7 @@ export const executeSceneSaveOrchestrator = async ({
 		formData.append('optimizationReport', JSON.stringify(optimizationReport))
 	}
 
+	onProgress?.({ type: 'committing' })
 	console.info('[scene-settings] save request started', {
 		requestId,
 		sceneId: currentSceneId || null
@@ -508,6 +574,8 @@ export const executeSceneSaveOrchestrator = async ({
 		sceneId: data.sceneId || preparedSceneId || null,
 		unchanged: Boolean(data.unchanged)
 	})
+
+	onProgress?.({ type: 'saved', unchanged: Boolean(data.unchanged) })
 
 	if (data.unchanged) {
 		return { unchanged: true }

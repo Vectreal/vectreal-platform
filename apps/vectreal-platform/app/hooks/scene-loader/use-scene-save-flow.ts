@@ -21,6 +21,7 @@ import {
 	maxSceneBytesAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
+import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
 import { isSceneCurrentLocation } from '../../types/api'
 
 import type { UseSceneSaveFlowArgs } from './contracts'
@@ -71,6 +72,7 @@ export const useSceneSaveFlow = ({
 
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
+	const dispatchSaveProgress = useSetAtom(dispatchSaveProgressAtom)
 	const maxSceneBytes = useAtomValue(maxSceneBytesAtom)
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
@@ -222,12 +224,20 @@ export const useSceneSaveFlow = ({
 						createRequestId,
 						prepareGltfDocumentForUpload,
 						captureSceneThumbnail,
-						captureShadowBake
+						captureShadowBake,
+						onProgress: dispatchSaveProgress
 					})
 				} catch (error) {
 					console.error('Failed to save scene settings:', {
 						sceneId: currentSceneId || null,
 						error
+					})
+					dispatchSaveProgress({
+						type: 'failed',
+						message:
+							error instanceof Error
+								? error.message
+								: 'The save did not complete.'
 					})
 					throw error
 				}
@@ -251,6 +261,7 @@ export const useSceneSaveFlow = ({
 			createRequestId,
 			currentSceneId,
 			currentSettings,
+			dispatchSaveProgress,
 			lastSavedSceneMeta,
 			sceneMetaState,
 			optimizationSettings,

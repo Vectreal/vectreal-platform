@@ -1,4 +1,5 @@
 import { useIsMobile } from '@shared/components/hooks/use-mobile'
+import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
@@ -9,11 +10,12 @@ import { toast } from 'sonner'
 import { DynamicSidebar, ToolSidebar } from '.'
 import OptimizationDrawer from './optimization/optimization-drawer'
 import PreviewCameraControls from './preview-camera-controls'
+import { SaveProgressPanel } from './save-progress/save-progress-panel'
 import { EmptyStage } from './shell/empty-stage'
 import { PublishCard } from './shell/publish-card'
 import { PublisherHeader } from './shell/publisher-header'
 import { PublisherSurfaceFallback } from './shell/publisher-surface-fallback'
-import { PUBLISHER_LAYER } from './shell/shell-layout'
+import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell/shell-layout'
 import { ToolBar } from './shell/tool-bar'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
@@ -22,6 +24,7 @@ import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useOptimizationDrawerFlow, usePublisherScene } from '../../hooks'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
+import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
@@ -206,6 +209,15 @@ const OverlayControls = ({
 		navigate(authPath)
 	}, [persistPendingSceneDraft, openSceneId, navigate])
 
+	// The save panel's Retry runs the same save the header's Save button does.
+	const { handleSaveScene } = usePublisherSaveAction({
+		sceneId,
+		userId: user?.id,
+		saveLocationTarget,
+		onRequireAuth: handleRequireAuthForSave,
+		saveSceneSettings
+	})
+
 	const publishSidebarViewModel = useMemo(
 		() =>
 			buildPublishSidebarViewModel({
@@ -352,15 +364,27 @@ const OverlayControls = ({
 
 						<ToolSidebar isMobile={isMobile} />
 
-						<PublishCard
-							sceneBytes={currentSceneBytes}
-							isSceneSizeLoading={isSceneSizeLoading}
-							statusText={optimizerStatusText}
-							isPublished={Boolean(publishedAt)}
-							onOpenPublishPanel={handleOpenPublishPanel}
-							onOpenOptimization={handleOpenOptimizationDrawer}
-							disabled={arePublisherActionsDisabled}
-						/>
+						<div
+							className={cn(
+								// Only the surfaces in the column take the pointer: the card
+								// keeps its space while preview hides it, and the canvas
+								// under that space must stay draggable.
+								'pointer-events-none absolute top-0 right-0 bottom-0 flex w-60 flex-col justify-end gap-2',
+								PUBLISHER_EDGE_INSET,
+								PUBLISHER_LAYER.card
+							)}
+						>
+							<SaveProgressPanel onRetry={() => void handleSaveScene()} />
+							<PublishCard
+								sceneBytes={currentSceneBytes}
+								isSceneSizeLoading={isSceneSizeLoading}
+								statusText={optimizerStatusText}
+								isPublished={Boolean(publishedAt)}
+								onOpenPublishPanel={handleOpenPublishPanel}
+								onOpenOptimization={handleOpenOptimizationDrawer}
+								disabled={arePublisherActionsDisabled}
+							/>
+						</div>
 
 						<DynamicSidebar
 							open={showPublishPanel}
