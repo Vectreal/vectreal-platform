@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/core-v2.0.0...core-v2.1.0) (2026-10-03)
+
+
+### Bug Fixes
+
+* **optimization:** derive every result from the original ([#929](https://github.com/Vectreal/vectreal-platform/issues/929)) ([dd0d291](https://github.com/Vectreal/vectreal-platform/commit/dd0d2916cc402893234c7e7aafe2e0536311d859))
+
 ## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/core-v1.0.0...core-v2.0.0) (2026-10-02)
 
 
