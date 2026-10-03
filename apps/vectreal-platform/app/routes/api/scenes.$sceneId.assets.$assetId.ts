@@ -3,7 +3,10 @@ import { LoaderFunctionArgs } from 'react-router'
 
 import { getDbClient } from '../../db/client'
 import { sceneAssets, sceneSettings } from '../../db/schema'
-import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
+import {
+	downloadAsset,
+	downloadAssetFromRow
+} from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import {
 	isEmbedServableAssetId,
@@ -86,6 +89,23 @@ function assetResponse(
 	return new Response(new Blob([Buffer.from(data)]), { status: 200, headers })
 }
 
+async function serveEmbedAsset(
+	request: Request,
+	ids: { sceneId: string; assetId: string },
+	download: () => Promise<{ data: Uint8Array; mimeType: string }>
+): Promise<Response> {
+	try {
+		const assetData = await download()
+		return assetResponse(assetData.data, assetData.mimeType)
+	} catch (error) {
+		reportServerError(error, { request, properties: ids })
+		return new Response('Failed to load asset', {
+			status: 500,
+			headers: withNoStoreHeaders()
+		})
+	}
+}
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const sceneId = params.sceneId?.trim()
 	const assetId = params.assetId?.trim()
@@ -143,6 +163,21 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		}
 
 		/*
+		  The published GLB is servable by definition, and it is the request
+		  every embed makes, so it skips the settings transaction below - which
+		  exists only to learn the bake's id - and is downloaded from the asset
+		  row the preview query already joined.
+		*/
+		const { publishedAssetFilePath: filePath, publishedAssetName: name } =
+			previewScene
+		if (assetId === previewScene.publishedAssetId && filePath && name) {
+			const mimeType = previewScene.publishedAssetMimeType
+			return serveEmbedAsset(request, { sceneId, assetId }, () =>
+				downloadAssetFromRow({ id: assetId, filePath, mimeType, name })
+			)
+		}
+
+		/*
 		  The servable set is computed by the same module the embed manifest
 		  builds its refs from. This gate used to be an equality against
 		  `publishedAssetId` alone - an id `uploadPublishedGlb` never links into
@@ -166,19 +201,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			})
 		}
 
-		try {
-			const assetData = await downloadAsset(assetId)
-			return assetResponse(assetData.data, assetData.mimeType)
-		} catch (error) {
-			reportServerError(error, {
-				request,
-				properties: { sceneId, assetId }
-			})
-			return new Response('Failed to load asset', {
-				status: 500,
-				headers: withNoStoreHeaders()
-			})
-		}
+		return serveEmbedAsset(request, { sceneId, assetId }, () =>
+			downloadAsset(assetId)
+		)
 	}
 
 	// Session branch: handles both plain authenticated requests and cookie-

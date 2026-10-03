@@ -22,7 +22,8 @@ export async function getPublishedScenePreview(
 			publishedAt: scenePublished.publishedAt,
 			publishedAssetSizeBytes: assets.fileSize,
 			publishedAssetName: assets.name,
-			publishedAssetMimeType: assets.mimeType
+			publishedAssetMimeType: assets.mimeType,
+			publishedAssetFilePath: assets.filePath
 		})
 		.from(scenes)
 		.innerJoin(scenePublished, eq(scenePublished.sceneId, scenes.id))

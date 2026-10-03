@@ -436,6 +436,14 @@ export async function uploadSceneAssets(
 	return results
 }
 
+/** The columns a download needs, for a caller that already selected them. */
+export interface DownloadableAssetRow {
+	id: string
+	filePath: string
+	mimeType: string | null
+	name: string
+}
+
 /**
  * Downloads a single asset payload and returns bytes + metadata for response use.
  */
@@ -444,8 +452,6 @@ export async function downloadAsset(assetId: string): Promise<{
 	mimeType: string
 	fileName: string
 }> {
-	await ensureStorageBucketOnce()
-
 	const [asset] = await db
 		.select()
 		.from(assets)
@@ -455,6 +461,19 @@ export async function downloadAsset(assetId: string): Promise<{
 	if (!asset) {
 		throw new Error(`Asset not found: ${assetId}`)
 	}
+
+	return downloadAssetFromRow(asset)
+}
+
+/** `downloadAsset` without the row lookup. */
+export async function downloadAssetFromRow(
+	asset: DownloadableAssetRow
+): Promise<{
+	data: Uint8Array
+	mimeType: string
+	fileName: string
+}> {
+	await ensureStorageBucketOnce()
 
 	const storage = getStorageClient()
 
@@ -474,7 +493,7 @@ export async function downloadAsset(assetId: string): Promise<{
 		}
 	} catch (error) {
 		throw new Error(
-			`Failed to download asset ${assetId}: ${getErrorMessage(error)}`,
+			`Failed to download asset ${asset.id}: ${getErrorMessage(error)}`,
 			error instanceof Error ? { cause: error } : undefined
 		)
 	}

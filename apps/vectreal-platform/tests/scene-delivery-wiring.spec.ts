@@ -37,3 +37,22 @@ describe('the embed manifest ETag', () => {
 		)
 	})
 })
+
+describe('the embed asset route', () => {
+	const route = read('routes/api/scenes.$sceneId.assets.$assetId.ts')
+
+	it('serves the published GLB before reading any settings', () => {
+		const fastPath = route.indexOf(
+			'if (assetId === previewScene.publishedAssetId && filePath && name) {'
+		)
+		expect(fastPath).toBeGreaterThan(
+			route.indexOf('await getPublishedScenePreview(projectId, sceneId)')
+		)
+		expect(fastPath).toBeLessThan(
+			route.indexOf('sceneSettingsService.getSceneSettingsWithAssetRefs')
+		)
+		expect(route.slice(fastPath)).toMatch(
+			/^[\s\S]{0,300}?downloadAssetFromRow\(\{ id: assetId, filePath, mimeType, name \}\)/
+		)
+	})
+})
