@@ -12,11 +12,17 @@
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { getDefaultStore } from 'jotai'
-import { describe, expect, it, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, beforeEach } from 'vitest'
 
 import HotspotsSettingsPanel from './hotspots-settings-panel'
 import { MAX_HOTSPOT_BODY_LENGTH } from '../../../../../lib/domain/scene/hotspot-urls'
-import { isClickToPlaceActiveAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	cameraToolOpenRequestAtom,
+	isClickToPlaceActiveAtom,
+	openComposeToolAtom,
+	processAtom,
+	processInitialState
+} from '../../../../../lib/stores/publisher-config-store'
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
@@ -799,5 +805,37 @@ describe('HotspotsSettingsPanel ordering', () => {
 			['Marker 1', 0],
 			['Marker 3', 1]
 		])
+	})
+})
+
+/**
+ * The linked camera is edited in the Camera tool, so the marker offers the way
+ * there rather than a second set of camera controls.
+ */
+describe('HotspotsSettingsPanel linked camera', () => {
+	// The default store outlives each test, and the link writes beyond the panel.
+	afterEach(() => {
+		store.set(cameraToolOpenRequestAtom, null)
+		store.set(processAtom, processInitialState)
+	})
+
+	it('sends the author to the Camera tool to edit the linked camera', () => {
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		fireEvent.click(screen.getByRole('button', { name: /Open in Camera tool/ }))
+
+		expect(store.get(openComposeToolAtom)).toBe('camera-controls')
+		expect(store.get(cameraToolOpenRequestAtom)).toBe('hotspot-camera-1')
+	})
+
+	it('offers no Camera tool link for a marker without a camera', () => {
+		arrange()
+		store.set(hotspotsAtom, [{ ...hotspot, linkedCameraId: undefined }])
+		render(<HotspotsSettingsPanel />)
+
+		expect(
+			screen.queryByRole('button', { name: /Open in Camera tool/ })
+		).toBeNull()
 	})
 })

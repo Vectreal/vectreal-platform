@@ -1,3 +1,4 @@
+import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import {
 	Select,
@@ -12,8 +13,9 @@ import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import {
+	ArrowUpRight,
 	Crosshair,
 	Eye,
 	Layers,
@@ -30,7 +32,10 @@ import {
 	isAllowedHotspotLinkUrl,
 	MAX_HOTSPOT_BODY_LENGTH
 } from '../../../../../lib/domain/scene/hotspot-urls'
-import { isClickToPlaceActiveAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	isClickToPlaceActiveAtom,
+	openCameraInCameraToolAtom
+} from '../../../../../lib/stores/publisher-config-store'
 import { cameraAtom } from '../../../../../lib/stores/scene-settings-store'
 import { InlineNotice } from '../../../../layout-components'
 import { DrillDownTrigger } from '../../drill-down'
@@ -59,6 +64,10 @@ const STYLE_PRESET_OPTIONS: { value: HotspotStylePreset; label: string }[] = [
 export function MarkerOverview({ hotspot }: MarkerViewProps) {
 	const edits = useHotspotEdits()
 	const { cameras = [] } = useAtomValue(cameraAtom)
+	const openCameraInCameraTool = useSetAtom(openCameraInCameraToolAtom)
+	const linkedCamera = cameras.find(
+		(entry) => entry.cameraId === hotspot.linkedCameraId
+	)
 	const [isClickToPlaceActive, setIsClickToPlaceActive] = useAtom(
 		isClickToPlaceActiveAtom
 	)
@@ -130,6 +139,20 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 			<SettingGroup
 				label="Linked camera"
 				description="Viewers transition to this camera when they click the marker."
+				action={
+					linkedCamera && (
+						// The camera is edited in the Camera tool, where cameras are.
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => openCameraInCameraTool(linkedCamera.cameraId)}
+							className="publisher-shell-focus -my-1 h-7 gap-1.5 px-2"
+						>
+							Open in Camera tool
+							<ArrowUpRight aria-hidden className="size-3.5" />
+						</Button>
+					)
+				}
 			>
 				<Select
 					value={hotspot.linkedCameraId ?? 'none'}
