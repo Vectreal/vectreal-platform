@@ -15,6 +15,7 @@ import {
 } from 'drizzle-orm'
 
 import { assetObjectPath } from './asset-object-path'
+import { MAX_STORED_FILE_BYTES } from '../../../constants/utility-constants'
 import { getDbClient } from '../../../db/client'
 import {
 	assets,
@@ -90,7 +91,7 @@ async function ensureStorageBucket() {
 			STORAGE_BUCKET,
 			{
 				public: false,
-				fileSizeLimit: 104857600
+				fileSizeLimit: MAX_STORED_FILE_BYTES
 			}
 		)
 

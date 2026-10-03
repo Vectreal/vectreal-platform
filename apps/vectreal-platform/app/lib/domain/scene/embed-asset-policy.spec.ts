@@ -8,6 +8,7 @@ import {
 	selectEmbedServableAssets,
 	type EmbedAssetRow
 } from './embed-asset-policy'
+import { SOURCE_MODEL_FILENAME } from './scene-asset-roles'
 
 /**
  * The production shape that broke embeds: `scene_published.asset_id` is written
@@ -110,6 +111,25 @@ describe('embed asset policy', () => {
 				`${assetId} is an editor asset and must not be servable`
 			).toBe(false)
 		}
+	})
+
+	// A scene can keep the original its model was optimized from. It is the
+	// author's full-quality source and never part of what an embed shows, so it
+	// must stay unservable even when a crafted save names it as the bake.
+	it('never serves a kept original, even one declared as the bake', () => {
+		const original: EmbedAssetRow = {
+			id: 'original-id',
+			name: SOURCE_MODEL_FILENAME,
+			mimeType: 'model/gltf-binary',
+			fileSize: 38_000_000
+		}
+		const servable = selectEmbedServableAssets({
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: [...SCENE_ASSETS, original],
+			bakedShadowAssetId: original.id
+		})
+
+		expect(isEmbedServableAssetId(original.id, servable)).toBe(false)
 	})
 
 	it('references only the bake, never the source buffers or textures', () => {

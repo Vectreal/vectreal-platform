@@ -207,6 +207,14 @@ export class SceneSettingsParser {
 					return sceneAssetIds
 				}
 
+				const sourceAssetId = this.parseSourceAssetId(
+					requestData,
+					sceneAssetIds
+				)
+				if (sourceAssetId instanceof Response) {
+					return sourceAssetId
+				}
+
 				return {
 					action,
 					requestId,
@@ -217,6 +225,7 @@ export class SceneSettingsParser {
 					meta,
 					settings,
 					sceneAssetIds,
+					sourceAssetId,
 					gltfJson: undefined,
 					optimizationReport: optimizationReport || undefined,
 					optimizationSettings: optimizationSettings || undefined,
@@ -934,6 +943,32 @@ export class SceneSettingsParser {
 		}
 
 		return normalizedIds
+	}
+
+	/**
+	 * The kept original, optional. It is linked under its own role, so it must
+	 * not also arrive as one of the model's assets: one asset cannot be linked
+	 * twice to one scene, and it would be served as part of the model.
+	 */
+	private static parseSourceAssetId(
+		requestData: Record<string, unknown>,
+		sceneAssetIds: string[]
+	): string | undefined | Response {
+		const raw = requestData.sourceAssetId
+		if (raw === undefined || raw === null || raw === '') return undefined
+
+		if (typeof raw !== 'string' || !UUID_REGEX.test(raw.trim())) {
+			return ApiResponse.badRequest('sourceAssetId must be a valid UUID')
+		}
+
+		const sourceAssetId = raw.trim()
+		if (sceneAssetIds.includes(sourceAssetId)) {
+			return ApiResponse.badRequest(
+				'sourceAssetId must not also be one of sceneAssetIds'
+			)
+		}
+
+		return sourceAssetId
 	}
 
 	private static parsePublishedAssetId(

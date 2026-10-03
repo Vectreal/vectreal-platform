@@ -9,6 +9,7 @@ import {
 	CircleAlert,
 	CloudCheck,
 	File as FileIcon,
+	History,
 	Image as ImageIcon,
 	RotateCw,
 	SlidersHorizontal,
@@ -50,6 +51,7 @@ const useStateChange = () =>
 
 const GROUP_META: Record<SaveFileGroup, { label: string; icon: ReactNode }> = {
 	model: { label: 'Model', icon: <Box /> },
+	original: { label: 'Original', icon: <History /> },
 	preview: { label: 'Preview', icon: <ImageIcon /> }
 }
 

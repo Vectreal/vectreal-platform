@@ -8,7 +8,7 @@
  */
 
 /** The groups that hold files. The settings are one step, not files. */
-export type SaveFileGroup = 'model' | 'preview'
+export type SaveFileGroup = 'model' | 'original' | 'preview'
 
 export interface SaveFile {
 	/** Unique within one save. */
@@ -154,7 +154,7 @@ export interface SaveProgressSummary {
 	groups: SaveGroupSummary[]
 }
 
-const GROUP_ORDER: SaveFileGroup[] = ['model', 'preview']
+const GROUP_ORDER: SaveFileGroup[] = ['model', 'original', 'preview']
 
 const groupState = (files: SavePanelFile[]): SaveGroupSummary['state'] => {
 	if (files.some((file) => file.state === 'failed')) return 'failed'

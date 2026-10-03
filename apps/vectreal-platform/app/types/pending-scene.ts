@@ -25,6 +25,11 @@ export interface PendingSceneDraft {
 	 * drafts written before it existed.
 	 */
 	sourceSettings?: Optimizations | null
+	/**
+	 * Whether the author chose to keep the original on save. Absent on drafts
+	 * written before the choice existed, which read as the default, kept.
+	 */
+	keepOriginal?: boolean
 	/** Byte size of the optimized scene at the time of persisting. Restored on draft hydration to re-enable saving without re-optimizing. */
 	optimizedSceneBytes?: number | null
 	/** Byte size of the raw client scene at the time of persisting. */
@@ -50,6 +55,11 @@ export interface SavePendingSceneDraftInput {
 	 * drafts written before it existed.
 	 */
 	sourceSettings?: Optimizations | null
+	/**
+	 * Whether the author chose to keep the original on save. Absent on drafts
+	 * written before the choice existed, which read as the default, kept.
+	 */
+	keepOriginal?: boolean
 	/** Byte size of the optimized scene at the time of persisting. */
 	optimizedSceneBytes?: number | null
 	/** Byte size of the raw client scene at the time of persisting. */

@@ -58,7 +58,8 @@ const persist = () =>
 		currentSettings,
 		optimizationSettings: null,
 		sourceGlb,
-		sourceSettings: smallestPreset
+		sourceSettings: smallestPreset,
+		keepOriginal: false
 	})
 
 const persistedSettings = async () => {
@@ -128,7 +129,8 @@ describe('persistPendingSceneDraftOrchestrator', () => {
 
 		expect(savePendingSceneDraft.mock.calls[0]?.[0]).toMatchObject({
 			sourceGlb,
-			sourceSettings: smallestPreset
+			sourceSettings: smallestPreset,
+			keepOriginal: false
 		})
 	})
 })

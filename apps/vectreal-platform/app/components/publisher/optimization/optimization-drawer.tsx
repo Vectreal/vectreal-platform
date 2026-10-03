@@ -1,7 +1,8 @@
 import { Button } from '@shared/components/ui/button'
 import { formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { SlidersHorizontal } from 'lucide-react'
+import { useAtomValue } from 'jotai/react'
+import { LoaderCircle, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useState, type FC } from 'react'
 import { Link } from 'react-router'
 
@@ -17,9 +18,11 @@ import { useOptimizationSettings } from './use-optimization-settings'
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import { originalPreset } from '../../../constants/optimizations'
 import {
+	derivesFromSavedVersion,
 	optimizationsMatch,
 	resolveDerivedSettings
 } from '../../../lib/domain/scene'
+import { keptOriginalAtom } from '../../../lib/stores/scene-optimization-store'
 import { PUBLISHER_LAYER } from '../shell/shell-layout'
 import {
 	DrillDown,
@@ -60,12 +63,13 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		resolvedMetrics,
 		sizeInfo,
 		isPending,
+		isLoadingOriginal,
 		hasCompletedOptimizationPass,
 		derive,
 		applyPlanned,
 		isOptimizerPreparing,
 		optimizingStep
-	} = useOptimizationProcess()
+	} = useOptimizationProcess({ isOpen: open })
 
 	// The document on screen is not what the panel shows: nothing has been
 	// derived yet, or the advanced controls were edited since.
@@ -78,12 +82,12 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 			? 'Apply changes'
 			: `Apply ${PRESET_META[optimizationPreset].label}`
 
-	// A scene saved optimized without its original: the saved document is the
-	// only source, and every preset starts from it.
-	const startsFromSavedVersion = !optimizationsMatch(
-		sourceSettings,
-		originalPreset
-	)
+	const { stored, unreadable } = useAtomValue(keptOriginalAtom)
+	const startsFromSavedVersion = derivesFromSavedVersion({
+		stored,
+		unreadable,
+		sourceSettings
+	})
 	const isUnoptimized = optimizationsMatch(derivedFrom, originalPreset)
 
 	// Soft-gate: only an in-progress optimization blocks closing. Being over the
@@ -189,6 +193,24 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 					<AnimatePresence mode="wait">
 						{isPending ? (
 							<OptimizationProgress key="processing" steps={optimizingStep} />
+						) : isLoadingOriginal ? (
+							<motion.div
+								key="loading-original"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.2 }}
+								role="status"
+								className="flex items-center gap-3 px-5 py-6"
+							>
+								<LoaderCircle className="text-muted-foreground size-4 shrink-0 motion-safe:animate-spin" />
+								<div className="space-y-0.5">
+									<p className="text-sm font-medium">Loading your original</p>
+									<p className="text-muted-foreground text-xs">
+										Every preset is made from it, at full quality.
+									</p>
+								</div>
+							</motion.div>
 						) : (
 							<motion.div
 								key="config"
@@ -263,6 +285,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 								isPending={isPending}
 								label={applyLabel}
 								isPreparing={isOptimizerPreparing}
+								disabled={isLoadingOriginal}
 							/>
 						) : (
 							// Over the limit, leaving points away from the only action that

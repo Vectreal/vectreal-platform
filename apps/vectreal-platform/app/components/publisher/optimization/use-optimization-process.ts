@@ -1,21 +1,24 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useMemo } from 'react'
+import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { resolveSimplificationOutcome } from './model/simplification-outcome'
 import { runOptimizationPass } from './run-optimization-pass'
 import { useLatestWins } from './use-latest-wins'
 import { useOptimizationSteps } from './use-optimization-steps'
 import { useSceneSizeCalculator } from './utils'
+import { originalPreset } from '../../../constants/optimizations'
 import {
 	resolveDerivedSettings,
 	resolveSceneMetrics
 } from '../../../lib/domain/scene'
 import {
+	keptOriginalAtom,
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
 
+import type { SceneSourceRef } from '../../../types/api'
 import type { Optimizations } from '@vctrl/core'
 
 export type SizeInfo = {
@@ -49,7 +52,14 @@ interface DeriveRequest {
 	source: Uint8Array | null
 }
 
-export const useOptimizationProcess = () => {
+interface OptimizationProcessOptions {
+	/** Whether the drawer is open, which is when a kept original loads. */
+	isOpen: boolean
+}
+
+export const useOptimizationProcess = ({
+	isOpen
+}: OptimizationProcessOptions) => {
 	const model = useModelContext(true)
 	const { optimizer, file, isLatestLoad } = model
 	const loadId = model.status === 'ready' ? model.loadId : null
@@ -60,6 +70,7 @@ export const useOptimizationProcess = () => {
 		applyOptimization,
 		restoreSource,
 		getSource,
+		setSource,
 		loadFromGlbBuffer,
 		getModel,
 		info,
@@ -68,6 +79,7 @@ export const useOptimizationProcess = () => {
 
 	const { optimizations: plannedOptimizations } = useAtomValue(optimizationAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
+	const store = useStore()
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
@@ -186,6 +198,72 @@ export const useOptimizationProcess = () => {
 	// never each one in between.
 	const deriveLatest = useLatestWins(derivePass)
 
+	/**
+	 * A reopened scene's kept original becomes the source while the drawer is
+	 * open, before any choice can be made: the drawer shows it loading in place
+	 * of the presets until it has loaded or failed. It waits for the optimizer
+	 * to be ready, since `setSource` cannot replace a document still being
+	 * taken in. A failed download leaves passes on the saved version and is
+	 * tried again the next time the drawer opens.
+	 */
+	const { stored, unreadable } = useAtomValue(keptOriginalAtom)
+	const loadingOriginalRef = useRef<SceneSourceRef | null>(null)
+	useEffect(() => {
+		if (!isOpen) {
+			if (unreadable) {
+				store.set(keptOriginalAtom, (prev) => ({ ...prev, unreadable: false }))
+			}
+			return
+		}
+		if (!stored || unreadable || loadId === null) return
+		if (isPreparing || !isReady) return
+		// `setSource` itself re-renders the optimizer not ready, then ready.
+		if (loadingOriginalRef.current === stored) return
+		loadingOriginalRef.current = stored
+		// Another scene, or the same one stated anew, may be loading by now;
+		// only the load still in flight may state the source.
+		const isOwner = () =>
+			isLatestLoad(loadId) && loadingOriginalRef.current === stored
+
+		void (async () => {
+			try {
+				const response = await fetch(stored.url)
+				if (!response.ok) throw new Error(`HTTP ${response.status}`)
+				const bytes = new Uint8Array(await response.arrayBuffer())
+				if (!isOwner()) return
+				await setSource(bytes)
+				if (!isOwner()) return
+				setOptimizationState((prev) => ({
+					...prev,
+					sourceSettings: originalPreset
+				}))
+				store.set(keptOriginalAtom, (prev) => ({ ...prev, stored: null }))
+			} catch (error) {
+				// The original stays stored, so a save keeps linking it.
+				console.warn('[optimization] the kept original did not load', error)
+				if (isOwner()) {
+					store.set(keptOriginalAtom, (prev) => ({ ...prev, unreadable: true }))
+				}
+			} finally {
+				if (loadingOriginalRef.current === stored) {
+					loadingOriginalRef.current = null
+				}
+			}
+		})()
+	}, [
+		isOpen,
+		stored,
+		unreadable,
+		loadId,
+		isPreparing,
+		isReady,
+		isLatestLoad,
+		setSource,
+		setOptimizationState,
+		store
+	])
+	const isLoadingOriginal = isOpen && stored !== null && !unreadable
+
 	/** Makes the document the current source plus `settings`. */
 	const derive = useCallback(
 		(settings: Optimizations) =>
@@ -277,6 +355,7 @@ export const useOptimizationProcess = () => {
 		simplificationOutcome,
 		resolvedMetrics,
 		isPending,
+		isLoadingOriginal,
 		isOptimizerPreparing: isPreparing,
 		isOptimizerReady: isReady,
 		hasImproved: resolvedMetrics.hasImproved,

@@ -22,6 +22,7 @@ import {
 } from '../../lib/stores/publisher-config-store'
 import {
 	documentOptimizationsAtom,
+	keptOriginalAtom,
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../lib/stores/scene-optimization-store'
@@ -41,6 +42,7 @@ export function useSceneDraft() {
 	const currentSettings = useAtomValue(sceneViewerSettingsAtom)
 	const documentOptimizations = useAtomValue(documentOptimizationsAtom)
 	const { sourceSettings } = useAtomValue(optimizationAtom)
+	const { keep: keepOriginal } = useAtomValue(keptOriginalAtom)
 	const optimizationRuntime = useAtomValue(optimizationRuntimeAtom)
 
 	/**
@@ -57,6 +59,7 @@ export function useSceneDraft() {
 				optimizationSettings: documentOptimizations,
 				sourceGlb: optimizer.getSource(),
 				sourceSettings,
+				keepOriginal,
 				optimizedSceneBytes: optimizationRuntime.optimizedSceneBytes,
 				clientSceneBytes: optimizationRuntime.clientSceneBytes
 			}),
@@ -64,6 +67,7 @@ export function useSceneDraft() {
 			currentSettings,
 			documentOptimizations,
 			sourceSettings,
+			keepOriginal,
 			file,
 			optimizer,
 			optimizationRuntime.clientSceneBytes,
@@ -99,6 +103,7 @@ function useRestorePendingDraft(): boolean {
 	const setLastSavedSceneMeta = useSetAtom(lastSavedSceneMetaAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const setKeptOriginal = useSetAtom(keptOriginalAtom)
 
 	// Captured once: the effect below clears these parameters when it is done.
 	const [draftId] = useState(() => {
@@ -200,6 +205,11 @@ function useRestorePendingDraft(): boolean {
 				// what was just restored as the last-saved state would make the
 				// unsaved-changes check report nothing to save.
 				applySceneSettings(draft.sceneData, { isSavedBaseline: false })
+				// The author's choice about the original survives the sign-in too.
+				setKeptOriginal((previous) => ({
+					...previous,
+					keep: draft.keepOriginal ?? true
+				}))
 
 				setSceneMetaState(draft.sceneMeta)
 				setLastSavedSceneMeta(draft.sceneMeta)

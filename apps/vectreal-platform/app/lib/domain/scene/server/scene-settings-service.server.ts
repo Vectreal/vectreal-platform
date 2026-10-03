@@ -5,7 +5,7 @@ import { updateSceneMetadata } from './scene-folder-repository.server'
 import { compareAssetIds } from './scene-settings-assets.server'
 import {
 	getHotspotsBySceneSettingsId,
-	getSceneAssetIds,
+	getSceneAssetLinks,
 	getSceneSettingsBySceneId,
 	getSceneSettingsWithAssetsRow,
 	replaceHotspots,
@@ -144,6 +144,8 @@ class SceneSettingsService {
 	async saveSceneSettingsFromAssetIds(
 		params: Omit<SaveSceneSettingsParams, 'gltfJson'> & {
 			sceneAssetIds: string[]
+			/** The kept original. Left out, any original the scene had is unlinked. */
+			sourceAssetId?: string | null
 		}
 	) {
 		const {
@@ -155,13 +157,19 @@ class SceneSettingsService {
 			meta,
 			settings,
 			sceneAssetIds,
+			sourceAssetId = null,
 			optimizationReport,
 			optimizationSettings,
 			initialSceneBytes,
 			currentSceneBytes
 		} = params
+		// Every id the scene will link, the original included, so dropping the
+		// original reads as a change and leaves it to the GC below.
+		const linkedAssetIds = sourceAssetId
+			? [...sceneAssetIds, sourceAssetId]
+			: sceneAssetIds
 
-		await this.assertAssetsBelongToProject(sceneAssetIds, projectId)
+		await this.assertAssetsBelongToProject(linkedAssetIds, projectId)
 
 		const saveResult = await this.db.transaction(async (tx) => {
 			const scene = await this.ensureSceneExists(tx, {
@@ -181,9 +189,10 @@ class SceneSettingsService {
 				)
 
 			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
-			const existingAssetIds = existingSettings
-				? await getSceneAssetIds(tx, existingSettings.id)
-				: []
+			const existingLinks = existingSettings
+				? await getSceneAssetLinks(tx, existingSettings.id)
+				: { assetIds: [], sourceAssetId: null }
+			const existingAssetIds = existingLinks.assetIds
 			const existingHotspots = existingSettings
 				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
 				: []
@@ -191,7 +200,11 @@ class SceneSettingsService {
 			const settingsChanged = existingSettings
 				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
 				: true
-			const assetsChanged = compareAssetIds(sceneAssetIds, existingAssetIds)
+			// The same ids can still change roles: a model asset kept as the
+			// original, or the reverse, has to be relinked.
+			const assetsChanged =
+				compareAssetIds(linkedAssetIds, existingAssetIds) ||
+				existingLinks.sourceAssetId !== sourceAssetId
 
 			if (
 				existingSettings &&
@@ -204,7 +217,7 @@ class SceneSettingsService {
 
 			// Assets this scene no longer links (superseded bake/thumbnail, textures
 			// dropped by a model change). Candidates for GC once the new links commit.
-			const newAssetIdSet = new Set(sceneAssetIds)
+			const newAssetIdSet = new Set(linkedAssetIds)
 			const removedAssetIds = existingAssetIds.filter(
 				(id) => !newAssetIdSet.has(id)
 			)
@@ -216,7 +229,12 @@ class SceneSettingsService {
 			})
 
 			if (!existingSettings || assetsChanged) {
-				await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds)
+				await replaceSceneAssets(
+					tx,
+					savedSettings.id,
+					sceneAssetIds,
+					sourceAssetId
+				)
 			}
 
 			// Always sync hotspots - the client is authoritative on the full list.
@@ -406,6 +424,7 @@ class SceneSettingsService {
 			settings: rowToSceneSettings(settings, hotspots),
 			settingsUpdatedAt: settings.updatedAt ?? null,
 			assets: sceneAssetsData,
+			sourceAsset: result.sourceAsset,
 			gltfJson
 		}
 	}

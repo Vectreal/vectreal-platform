@@ -1,3 +1,5 @@
+import type { KeptOriginalRef } from '../../lib/domain/scene/client/scene-save-orchestrator'
+import type { SourceToSave } from '../../lib/domain/scene/client/scene-source-to-save'
 import type { SceneStatsData } from '../../types/api'
 import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
@@ -32,6 +34,8 @@ export interface ScenePersistenceState {
 	 * yet.
 	 */
 	suppressDirtyDetection: boolean
+	/** The author changed whether the scene keeps its original since the last save. */
+	hasUnsavedOriginalChoice: boolean
 }
 
 export interface SceneOptimizationSaveState {
@@ -56,6 +60,14 @@ export interface SceneSaveFlowActions {
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: () => Promise<null | string>
 	captureShadowBake: () => Promise<ShadowBakeResult | null>
+	/** What this save does with the scene's original, read when it starts. */
+	resolveSource: () => SourceToSave
+	/**
+	 * Records what a save did with the original: the new baseline for the
+	 * choice, and where the server now holds it. A save that kept none leaves
+	 * nothing to re-link: the old one is unlinked and reclaimed.
+	 */
+	recordSavedSource: (kept: KeptOriginalRef | null) => void
 }
 
 export interface UseSceneSaveFlowArgs {

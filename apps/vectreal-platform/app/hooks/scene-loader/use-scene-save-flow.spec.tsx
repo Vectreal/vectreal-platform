@@ -13,12 +13,19 @@ import type { SaveSceneResult } from '../../types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
 import type { SceneSettings } from '@vctrl/core'
 
-const { mockSetAtom, mockExecuteSceneSaveOrchestrator, dispatchSaveProgress } =
-	vi.hoisted(() => ({
-		mockSetAtom: vi.fn(),
-		mockExecuteSceneSaveOrchestrator: vi.fn(),
-		dispatchSaveProgress: vi.fn()
-	}))
+const {
+	mockSetAtom,
+	mockExecuteSceneSaveOrchestrator,
+	dispatchSaveProgress,
+	resolveSource,
+	recordSavedSource
+} = vi.hoisted(() => ({
+	mockSetAtom: vi.fn(),
+	mockExecuteSceneSaveOrchestrator: vi.fn(),
+	dispatchSaveProgress: vi.fn(),
+	resolveSource: vi.fn(),
+	recordSavedSource: vi.fn()
+}))
 
 vi.mock('jotai/react', async () => {
 	const actual =
@@ -73,18 +80,21 @@ interface HarnessApi {
 	setCurrentSettings: (settings: SceneSettings) => void
 	getLastSavedSettings: () => SceneSettings | null
 	getHasUnsavedChanges: () => boolean
+	openScene: (sceneId: string) => void
 }
 
 interface SceneSaveFlowHarnessProps {
 	apiRef: { current: HarnessApi | null }
 	initialCurrentSettings: SceneSettings
 	initialLastSavedSettings: SceneSettings | null
+	hasUnsavedOriginalChoice?: boolean
 }
 
 function SceneSaveFlowHarness({
 	apiRef,
 	initialCurrentSettings,
-	initialLastSavedSettings
+	initialLastSavedSettings,
+	hasUnsavedOriginalChoice = false
 }: SceneSaveFlowHarnessProps) {
 	const [currentSettings, setCurrentSettings] = useState(initialCurrentSettings)
 	const [sceneMetaState, setSceneMetaState] = useState(sceneMeta)
@@ -96,7 +106,9 @@ function SceneSaveFlowHarness({
 		'scene-1'
 	)
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-	const [, setCurrentSceneIdState] = useState<string | null>('scene-1')
+	const [currentSceneId, setCurrentSceneIdState] = useState<string | null>(
+		'scene-1'
+	)
 	const [optimizationRuntime, setOptimizationRuntime] =
 		useState<SceneOptimizationRuntimeState>({
 			isPending: false,
@@ -114,7 +126,7 @@ function SceneSaveFlowHarness({
 	const scenePersistence: ScenePersistenceState = {
 		hasModel: true,
 		userId: 'user-1',
-		currentSceneId: 'scene-1',
+		currentSceneId,
 		setCurrentSceneId: setCurrentSceneIdState,
 		currentSettings,
 		sceneMetaState,
@@ -125,7 +137,8 @@ function SceneSaveFlowHarness({
 		setLastSavedSceneMeta,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		suppressDirtyDetection: false
+		suppressDirtyDetection: false,
+		hasUnsavedOriginalChoice
 	}
 
 	const { saveSceneSettings } = useSceneSaveFlow({
@@ -146,7 +159,9 @@ function SceneSaveFlowHarness({
 			createRequestId: () => 'request-1',
 			prepareGltfDocumentForUpload: vi.fn().mockResolvedValue(null),
 			captureSceneThumbnail: vi.fn().mockResolvedValue(null),
-			captureShadowBake: vi.fn().mockResolvedValue(null)
+			captureShadowBake: vi.fn().mockResolvedValue(null),
+			resolveSource,
+			recordSavedSource
 		}
 	})
 
@@ -155,12 +170,16 @@ function SceneSaveFlowHarness({
 			saveSceneSettings: () => saveSceneSettings(),
 			setCurrentSettings,
 			getLastSavedSettings: () => lastSavedSettings,
-			getHasUnsavedChanges: () => hasUnsavedChanges
+			getHasUnsavedChanges: () => hasUnsavedChanges,
+			openScene: setCurrentSceneIdState
 		}
 	}, [apiRef, hasUnsavedChanges, lastSavedSettings, saveSceneSettings])
 
 	return null
 }
+
+const renderHarnessWith = (props: SceneSaveFlowHarnessProps) =>
+	render(<SceneSaveFlowHarness {...props} />)
 
 const renderHarness = () => {
 	const apiRef: { current: HarnessApi | null } = { current: null }
@@ -179,6 +198,7 @@ describe('useSceneSaveFlow', () => {
 		mockSetAtom.mockImplementation((atom: unknown) =>
 			atom === dispatchSaveProgressAtom ? dispatchSaveProgress : vi.fn()
 		)
+		resolveSource.mockReturnValue({ kind: 'none' })
 	})
 
 	afterEach(() => {
@@ -259,5 +279,127 @@ describe('useSceneSaveFlow', () => {
 			expect(apiRef.current?.getLastSavedSettings()).toEqual(preSaveSettings)
 			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
 		})
+	})
+
+	it('sends the original the save resolves to, and records it', async () => {
+		const linked = {
+			kind: 'linked',
+			source: { assetId: 'original-1', url: '/a', fileName: 'source.glb' }
+		}
+		const keptOriginal = {
+			assetId: 'original-2',
+			url: '/api/scenes/s1/assets/original-2'
+		}
+		resolveSource.mockReturnValue(linked)
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({
+			unchanged: true,
+			keptOriginal
+		})
+		const apiRef = renderHarness()
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
+			expect.objectContaining({ source: linked })
+		)
+		expect(recordSavedSource).toHaveBeenCalledWith(keptOriginal)
+	})
+
+	it('records nothing about the original once another scene has opened', async () => {
+		let finish: (result: unknown) => void = () => {}
+		mockExecuteSceneSaveOrchestrator.mockReturnValue(
+			new Promise((resolve) => (finish = resolve))
+		)
+		const apiRef = renderHarness()
+
+		let saving: Promise<unknown> = Promise.resolve()
+		act(() => {
+			saving = apiRef.current?.saveSceneSettings() ?? saving
+		})
+		act(() => apiRef.current?.openScene('scene-2'))
+		await act(async () => {
+			finish({ unchanged: true, keptOriginal: null })
+			await saving
+		})
+
+		expect(recordSavedSource).not.toHaveBeenCalled()
+	})
+
+	it('reports a choice about the original as unsaved again when the save fails', async () => {
+		mockExecuteSceneSaveOrchestrator.mockRejectedValue(new Error('offline'))
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings,
+			hasUnsavedOriginalChoice: true
+		})
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings().catch(() => {})
+		})
+
+		expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+	})
+
+	it('reports nothing unsaved after a failed save that had nothing to save', async () => {
+		mockExecuteSceneSaveOrchestrator.mockRejectedValue(new Error('offline'))
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings
+		})
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings().catch(() => {})
+		})
+
+		expect(apiRef.current?.getHasUnsavedChanges()).toBe(false)
+	})
+
+	it('records nothing about the original when the save fails', async () => {
+		mockExecuteSceneSaveOrchestrator.mockRejectedValue(new Error('offline'))
+		const apiRef = renderHarness()
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings().catch(() => {})
+		})
+
+		expect(recordSavedSource).not.toHaveBeenCalled()
+	})
+
+	// Keeping the original or not is part of what a save stores, so changing
+	// that choice has to make the scene savable on its own.
+	it('counts a changed choice about the original as an unsaved change', async () => {
+		const settings = createSettings(1)
+		const render = (hasUnsavedOriginalChoice: boolean) => {
+			const apiRef: { current: HarnessApi | null } = { current: null }
+			const view = renderHarnessWith({
+				apiRef,
+				initialCurrentSettings: settings,
+				initialLastSavedSettings: settings,
+				hasUnsavedOriginalChoice
+			})
+			return { apiRef, view }
+		}
+
+		const unchanged = render(false)
+		await waitFor(() =>
+			expect(unchanged.apiRef.current?.getHasUnsavedChanges()).toBe(false)
+		)
+		unchanged.view.unmount()
+
+		const changed = render(true)
+		await waitFor(() =>
+			expect(changed.apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
 	})
 })

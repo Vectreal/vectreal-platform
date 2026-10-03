@@ -49,7 +49,8 @@ export const useSceneSaveFlow = ({
 		setLastSavedSceneMeta,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		suppressDirtyDetection
+		suppressDirtyDetection,
+		hasUnsavedOriginalChoice
 	} = scenePersistence
 	const {
 		optimizationSettings,
@@ -67,13 +68,20 @@ export const useSceneSaveFlow = ({
 		createRequestId,
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
-		captureShadowBake
+		captureShadowBake,
+		resolveSource,
+		recordSavedSource
 	} = actions
 
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
 	const dispatchSaveProgress = useSetAtom(dispatchSaveProgressAtom)
 	const maxSceneBytes = useAtomValue(maxSceneBytesAtom)
+	// What the dirty check last said, for a failed save to put back.
+	const hasChangesRef = useRef(false)
+	// The open scene when a save settles, which may not be the one it saved.
+	const currentSceneIdRef = useRef(currentSceneId)
+	currentSceneIdRef.current = currentSceneId
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
@@ -210,8 +218,10 @@ export const useSceneSaveFlow = ({
 
 			const saveToken = Symbol('scene-save')
 			const savePromise = (async () => {
+				const source = resolveSource()
+				const savedSceneId = currentSceneId
 				try {
-					return await executeSceneSaveOrchestrator({
+					const result = await executeSceneSaveOrchestrator({
 						userId,
 						currentSceneId,
 						currentSettings,
@@ -225,8 +235,15 @@ export const useSceneSaveFlow = ({
 						prepareGltfDocumentForUpload,
 						captureSceneThumbnail,
 						captureShadowBake,
-						onProgress: dispatchSaveProgress
+						onProgress: dispatchSaveProgress,
+						source
 					})
+					// What it kept describes the scene it saved. Another scene opened
+					// meanwhile has its own original, which this must not overwrite.
+					if (currentSceneIdRef.current === savedSceneId) {
+						recordSavedSource(result.keptOriginal)
+					}
+					return result
 				} catch (error) {
 					console.error('Failed to save scene settings:', {
 						sceneId: currentSceneId || null,
@@ -267,6 +284,8 @@ export const useSceneSaveFlow = ({
 			optimizationSettings,
 			optimizationReport,
 			prepareGltfDocumentForUpload,
+			recordSavedSource,
+			resolveSource,
 			userId
 		]
 	)
@@ -316,6 +335,11 @@ export const useSceneSaveFlow = ({
 				})
 			} catch (error) {
 				setOptimisticSaveBaseline(null)
+				// The flag was cleared up front. Dropping the baseline brings back
+				// edits it covered, but the sync only runs when the dirty check
+				// changes, and a pending choice about the original kept it from
+				// changing at all, so the check's own answer is written back.
+				setHasUnsavedChanges(hasChangesRef.current)
 				throw error
 			}
 
@@ -438,6 +462,7 @@ export const useSceneSaveFlow = ({
 
 	const hasChanges = useMemo(
 		() =>
+			(!suppressDirtyDetection && hasUnsavedOriginalChoice) ||
 			hasUnsavedSceneChanges({
 				suppressDirtyDetection,
 				currentSettings,
@@ -452,6 +477,7 @@ export const useSceneSaveFlow = ({
 			}),
 		[
 			suppressDirtyDetection,
+			hasUnsavedOriginalChoice,
 			currentSettings,
 			effectiveLastSavedSettings,
 			sceneMetaState,
@@ -463,6 +489,8 @@ export const useSceneSaveFlow = ({
 			latestSceneStats
 		]
 	)
+
+	hasChangesRef.current = hasChanges
 
 	useEffect(() => {
 		if (suppressDirtyDetection) {

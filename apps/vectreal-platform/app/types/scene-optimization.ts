@@ -1,4 +1,4 @@
-import type { SceneStatsData } from './api'
+import type { SceneSourceRef, SceneStatsData } from './api'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
 
 /**
@@ -6,6 +6,29 @@ import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
  * `optimizationPresets`. `original` runs nothing: the scene as uploaded.
  */
 export type PresetId = 'original' | 'quality' | 'balanced' | 'smallest'
+
+/** The scene's original, kept beside its optimized model. */
+export interface KeptOriginalState {
+	/** The author's choice: whether a save keeps the original. */
+	keep: boolean
+	/**
+	 * The original the server already holds, until it is loaded into the
+	 * optimizer. Reopening a scene does not fetch it: the first optimization
+	 * pass does, and a save before that re-links it by id.
+	 */
+	stored: SceneSourceRef | null
+	/**
+	 * Whether the scene as last saved keeps an original. The save baseline for
+	 * the choice: changing it is an unsaved change like any other.
+	 */
+	saved: boolean
+	/**
+	 * The last attempt to read the stored original failed, so passes derive
+	 * from the saved version. It stays stored and linked all the same, and the
+	 * next choice tries again.
+	 */
+	unreadable: boolean
+}
 
 /**
  * What the panel displays as selected. `custom` is not a preset you can pick —

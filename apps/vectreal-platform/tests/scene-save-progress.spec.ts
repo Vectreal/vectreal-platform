@@ -20,6 +20,7 @@ import type {
 	SavePanelState,
 	SaveProgressEvent
 } from '../app/lib/domain/scene/client/scene-save-progress'
+import type { SourceToSave } from '../app/lib/domain/scene/client/scene-source-to-save'
 
 const png = (marker: number) =>
 	new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, marker])
@@ -40,14 +41,19 @@ interface Api {
 	/** The connection drops while this file uploads. */
 	dropUpload?: string
 	unchanged?: boolean
+	/** What downloading the stored original answers; unreadable when absent. */
+	storedOriginal?: Uint8Array<ArrayBuffer>
 }
 
 const runSave = async (
 	assets: Map<string, Uint8Array>,
 	api: Api = {},
-	thumbnail: string | null = null
+	thumbnail: string | null = null,
+	source?: SourceToSave
 ) => {
 	const events: SaveProgressEvent[] = []
+	const uploadedNames: string[] = []
+	let commit: FormData | null = null
 	let nextId = 0
 
 	stubSceneApi(async (form) => {
@@ -63,11 +69,27 @@ const runSave = async (
 			const file = form.get('file') as File
 			if (api.failUpload?.name === file.name) return api.failUpload.response
 			if (api.dropUpload === file.name) throw new TypeError('network')
+			uploadedNames.push(file.name)
 			nextId += 1
 			return ok({ assetId: `id-${nextId}` })
 		}
+		commit = form
 		return ok({ sceneId: 's1', unchanged: api.unchanged ?? false })
 	})
+	// The one request without a form: downloading a stored original.
+	const sceneApi = globalThis.fetch
+	vi.stubGlobal(
+		'fetch',
+		vi.fn((url: string, init?: RequestInit) =>
+			init
+				? sceneApi(url, init)
+				: Promise.resolve(
+						api.storedOriginal
+							? new Response(api.storedOriginal)
+							: new Response(null, { status: 404 })
+					)
+		)
+	)
 
 	const result = executeSceneSaveOrchestrator({
 		userId: 'u1',
@@ -84,10 +106,16 @@ const runSave = async (
 			assets
 		}),
 		captureSceneThumbnail: async () => thumbnail,
-		onProgress: (event) => events.push(event)
+		onProgress: (event) => events.push(event),
+		source
 	})
 
-	return { result, events }
+	return {
+		result,
+		events,
+		uploadedNames,
+		commitForm: () => commit as FormData | null
+	}
 }
 
 const fold = (events: SaveProgressEvent[]) =>
@@ -304,5 +332,141 @@ describe('what a save reports', () => {
 		})
 
 		await expect(result).rejects.toBeInstanceOf(BillingLimitError)
+	})
+
+	describe('the original', () => {
+		const original = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0])
+
+		it('uploads it apart from the model and commits it as the original', async () => {
+			const { result, events, uploadedNames, commitForm } = await runSave(
+				new Map([['a.png', png(1)]]),
+				{},
+				null,
+				{ kind: 'upload', bytes: original }
+			)
+			await result
+
+			expect(uploadedNames).toContain('source.glb')
+			expect(added(events)).toContainEqual(
+				expect.objectContaining({ key: 'source.glb', group: 'original' })
+			)
+			const form = commitForm() as FormData
+			const modelIds = JSON.parse(form.get('sceneAssetIds') as string)
+			expect(form.get('sourceAssetId')).toEqual(expect.any(String))
+			expect(modelIds).not.toContain(form.get('sourceAssetId'))
+		})
+
+		it('sends nothing for an original the server already holds', async () => {
+			const { result, events, uploadedNames, commitForm } = await runSave(
+				new Map(),
+				{
+					existingAssets: {
+						'source.glb': {
+							assetId: 'original-1',
+							contentHash: await sha256(original)
+						}
+					}
+				},
+				null,
+				{ kind: 'upload', bytes: original }
+			)
+			await result
+
+			expect(uploadedNames).not.toContain('source.glb')
+			expect(events).toContainEqual({
+				type: 'file-done',
+				key: 'source.glb',
+				reused: true
+			})
+			expect(commitForm()?.get('sourceAssetId')).toBe('original-1')
+		})
+
+		const storedOriginal: SourceToSave = {
+			kind: 'linked',
+			source: {
+				assetId: 'original-2',
+				url: '/api/scenes/s0/assets/original-2',
+				fileName: 'source.glb',
+				mimeType: 'model/gltf-binary',
+				byteSize: 38
+			}
+		}
+
+		it('re-links a stored original the scene still links, without sending it', async () => {
+			const { result, uploadedNames, commitForm } = await runSave(
+				new Map(),
+				{
+					existingAssets: {
+						'source.glb': { assetId: 'original-2', contentHash: 'h' }
+					},
+					storedOriginal: original
+				},
+				null,
+				storedOriginal
+			)
+
+			expect((await result).keptOriginal).toEqual({
+				assetId: 'original-2',
+				url: '/api/scenes/s1/assets/original-2'
+			})
+			expect(uploadedNames).not.toContain('source.glb')
+			expect(commitForm()?.get('sourceAssetId')).toBe('original-2')
+		})
+
+		it('sends a stored original again when the scene no longer links it', async () => {
+			const { result, uploadedNames, commitForm } = await runSave(
+				new Map(),
+				{ storedOriginal: original },
+				null,
+				storedOriginal
+			)
+
+			const { keptOriginal } = await result
+			expect(uploadedNames).toContain('source.glb')
+			expect(commitForm()?.get('sourceAssetId')).toBe(keptOriginal?.assetId)
+			expect(keptOriginal?.assetId).not.toBe('original-2')
+		})
+
+		it('stops the save when a stored original the scene no longer links cannot be read', async () => {
+			const { result, commitForm } = await runSave(
+				new Map(),
+				{},
+				null,
+				storedOriginal
+			)
+
+			await expect(result).rejects.toThrow('kept original could not be read')
+			// Committing without it would unlink the original for good.
+			expect(commitForm()).toBeNull()
+		})
+
+		it('names the original when it alone hits the storage limit', async () => {
+			const { result } = await runSave(
+				new Map(),
+				{
+					failUpload: {
+						name: 'source.glb',
+						response: Response.json(
+							{ success: false, error: 'Storage limit reached' },
+							{ status: 403 }
+						)
+					}
+				},
+				null,
+				{ kind: 'upload', bytes: original }
+			)
+
+			const error = await result.catch((caught: unknown) => caught)
+			expect(error).toBeInstanceOf(BillingLimitError)
+			expect((error as Error).message).toMatch(/turn off "Keep the original"/)
+		})
+
+		it('commits no original when the save keeps none', async () => {
+			const { result, events, commitForm } = await runSave(new Map(), {})
+			await result
+
+			expect(commitForm()?.has('sourceAssetId')).toBe(false)
+			expect(added(events).map((file) => file.group)).not.toContain('original')
+		})
 	})
 })

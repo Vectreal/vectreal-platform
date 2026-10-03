@@ -4,9 +4,9 @@
  * persists it. It must follow the document: set by a pass that produced it, and
  * cleared by one that failed, because a failed pass puts the original back.
  */
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useOptimizationProcess } from './use-optimization-process'
 import {
@@ -15,6 +15,7 @@ import {
 	smallestPreset
 } from '../../../constants/optimizations'
 import {
+	keptOriginalAtom,
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
@@ -37,22 +38,47 @@ vi.mock('./utils', () => ({
 }))
 
 /** The optimizer's source; a new load replaces it with a new array. */
-const optimizerSource = vi.hoisted(() => ({ current: new Uint8Array([1]) }))
+const optimizerSource = vi.hoisted(() => ({
+	current: new Uint8Array([1]) as Uint8Array
+}))
 /** The loader's newest load; opening another scene starts one at once. */
 const loads = vi.hoisted(() => ({ latest: 1 }))
+/** The load the hook last rendered with. */
+const renderedLoad = vi.hoisted(() => ({ id: 1 }))
+/** Whether the optimization drawer is open. */
+const drawer = vi.hoisted(() => ({ open: true }))
+/** Whether the optimizer holds a model; `setSource` takes it out while loading. */
+const optimizerReady = vi.hoisted(() => ({ current: true }))
+/** Re-renders the hook under test, as the optimizer's own state change does. */
+const rerenderHook = vi.hoisted(() => ({ current: () => {} }))
+/**
+ * Stating the original replaces the optimizer's source with those bytes. Like
+ * the real one, it renders the optimizer not ready while it loads and resolves
+ * before the render that shows it ready again.
+ */
+const setSource = vi.hoisted(() =>
+	vi.fn(async (bytes: Uint8Array) => {
+		optimizerReady.current = false
+		rerenderHook.current()
+		await Promise.resolve()
+		optimizerSource.current = bytes
+		optimizerReady.current = true
+	})
+)
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
 	useModelContext: () => ({
 		status: 'ready',
-		loadId: 1,
+		loadId: renderedLoad.id,
 		isLatestLoad: (loadId: number) => loadId === loads.latest,
 		file: null,
 		optimizer: {
-			isReady: true,
+			isReady: optimizerReady.current,
 			isPreparing: false,
 			report: null,
 			info: null,
-			getSource: () => optimizerSource.current
+			getSource: () => optimizerSource.current,
+			setSource
 		}
 	})
 }))
@@ -62,7 +88,11 @@ function renderProcess() {
 	const wrapper = ({ children }: { children: ReactNode }) => (
 		<Provider store={store}>{children}</Provider>
 	)
-	const { result } = renderHook(() => useOptimizationProcess(), { wrapper })
+	const { result, rerender } = renderHook(
+		() => useOptimizationProcess({ isOpen: drawer.open }),
+		{ wrapper }
+	)
+	rerenderHook.current = () => rerender()
 	return {
 		result,
 		/**
@@ -82,7 +112,10 @@ beforeEach(() => {
 	runOptimizationPass.mockReset()
 	refreshOptimizedSizeInfo.mockReset()
 	optimizerSource.current = new Uint8Array([1])
+	optimizerReady.current = true
 	loads.latest = 1
+	renderedLoad.id = 1
+	drawer.open = true
 })
 
 describe('useOptimizationProcess', () => {
@@ -307,5 +340,162 @@ describe('useOptimizationProcess', () => {
 
 		openAnotherScene()
 		expect(isCurrent()).toBe(false)
+	})
+
+	describe('a kept original on the server', () => {
+		const stored = {
+			assetId: 'original-1',
+			url: '/api/scenes/s1/assets/original-1',
+			fileName: 'source.glb',
+			mimeType: 'model/gltf-binary',
+			byteSize: 3
+		}
+		const keptAs = (ref: typeof stored | null) => ({
+			keep: true,
+			stored: ref,
+			saved: true,
+			unreadable: false
+		})
+		/** Answers each download when the spec says so, in any order. */
+		const holdDownloads = () => {
+			const responders: ((response: Response) => void)[] = []
+			const fetchSpy = vi.fn(
+				() => new Promise<Response>((resolve) => responders.push(resolve))
+			)
+			vi.stubGlobal('fetch', fetchSpy)
+			return { fetchSpy, responders }
+		}
+		const settle = () =>
+			act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+
+		afterEach(() => {
+			vi.unstubAllGlobals()
+			setSource.mockClear()
+		})
+
+		it('becomes the source when the drawer opens, before any choice', async () => {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async () => new Response(new Uint8Array([7, 7, 7])))
+			)
+			let sourceAtPass: Uint8Array | null = null
+			runOptimizationPass.mockImplementation(async () => {
+				sourceAtPass = optimizerSource.current
+				return { succeeded: true, dracoReport: null }
+			})
+			const { result, store } = renderProcess()
+			store.set(optimizationAtom, (prev) => ({
+				...prev,
+				sourceSettings: smallestPreset
+			}))
+			act(() => store.set(keptOriginalAtom, keptAs(stored)))
+
+			await waitFor(() => expect(store.get(keptOriginalAtom).stored).toBeNull())
+			expect(setSource).toHaveBeenCalledWith(new Uint8Array([7, 7, 7]))
+			expect(store.get(optimizationAtom).sourceSettings).toBe(originalPreset)
+			expect(result.current.isLoadingOriginal).toBe(false)
+
+			await act(() => result.current.derive(balancedPreset))
+			expect(sourceAtPass).toEqual(new Uint8Array([7, 7, 7]))
+		})
+
+		it('shows the original loading until it has loaded, downloading it once', async () => {
+			const { fetchSpy, responders } = holdDownloads()
+			const { result, store } = renderProcess()
+			act(() => store.set(keptOriginalAtom, keptAs(stored)))
+			// The model goes through a readiness change while it downloads.
+			optimizerReady.current = false
+			act(() => rerenderHook.current())
+			optimizerReady.current = true
+			act(() => rerenderHook.current())
+
+			expect(fetchSpy).toHaveBeenCalledOnce()
+			expect(result.current.isLoadingOriginal).toBe(true)
+			await act(async () => {
+				responders[0](new Response(new Uint8Array([7, 7, 7])))
+			})
+			await waitFor(() => expect(result.current.isLoadingOriginal).toBe(false))
+		})
+
+		it('never loads while the drawer is closed', () => {
+			const { fetchSpy } = holdDownloads()
+			drawer.open = false
+			const { result, store } = renderProcess()
+			act(() => store.set(keptOriginalAtom, keptAs(stored)))
+
+			expect(fetchSpy).not.toHaveBeenCalled()
+			expect(result.current.isLoadingOriginal).toBe(false)
+		})
+
+		it('waits for the optimizer to be ready before loading', () => {
+			const { fetchSpy } = holdDownloads()
+			optimizerReady.current = false
+			const { store } = renderProcess()
+			act(() => store.set(keptOriginalAtom, keptAs(stored)))
+			expect(fetchSpy).not.toHaveBeenCalled()
+
+			optimizerReady.current = true
+			act(() => rerenderHook.current())
+
+			expect(fetchSpy).toHaveBeenCalledOnce()
+		})
+
+		it('falls back to the saved version when it cannot be read, and tries again on the next opening', async () => {
+			vi.spyOn(console, 'warn').mockImplementation(() => {})
+			const fetchSpy = vi.fn(async () => new Response(null, { status: 500 }))
+			vi.stubGlobal('fetch', fetchSpy)
+			const { result, store } = renderProcess()
+			act(() => store.set(keptOriginalAtom, keptAs(stored)))
+
+			await waitFor(() =>
+				expect(store.get(keptOriginalAtom).unreadable).toBe(true)
+			)
+			expect(store.get(keptOriginalAtom).stored).toBe(stored)
+			expect(result.current.isLoadingOriginal).toBe(false)
+			expect(setSource).not.toHaveBeenCalled()
+
+			drawer.open = false
+			act(() => rerenderHook.current())
+			drawer.open = true
+			act(() => rerenderHook.current())
+
+			await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
+		})
+
+		it('never states an older original after a newer one has loaded', async () => {
+			const { responders } = holdDownloads()
+			const { store } = renderProcess()
+			act(() => store.set(keptOriginalAtom, keptAs(stored)))
+			// The scene hydrates again and states its original anew.
+			act(() => store.set(keptOriginalAtom, keptAs({ ...stored })))
+
+			await act(async () => {
+				responders[1](new Response(new Uint8Array([2, 2, 2])))
+			})
+			await settle()
+			await act(async () => {
+				responders[0](new Response(new Uint8Array([1, 1, 1])))
+			})
+			await settle()
+
+			expect(setSource).toHaveBeenCalledOnce()
+			expect(optimizerSource.current).toEqual(new Uint8Array([2, 2, 2]))
+		})
+
+		it("never states a closed scene's original", async () => {
+			const { responders } = holdDownloads()
+			const { store } = renderProcess()
+			act(() => store.set(keptOriginalAtom, keptAs(stored)))
+
+			loads.latest = 2
+			renderedLoad.id = 2
+			act(() => store.set(keptOriginalAtom, keptAs(null)))
+			await act(async () => {
+				responders[0](new Response(new Uint8Array([7, 7, 7])))
+			})
+			await settle()
+
+			expect(setSource).not.toHaveBeenCalled()
+		})
 	})
 })

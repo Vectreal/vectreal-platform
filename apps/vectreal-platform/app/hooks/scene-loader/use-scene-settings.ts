@@ -20,6 +20,8 @@ import {
 	sceneMetaInitialState
 } from '../../lib/stores/publisher-config-store'
 import {
+	keptOriginalAtom,
+	keptOriginalInitialState,
 	optimizationAtom,
 	optimizationInitialState,
 	optimizationRuntimeAtom,
@@ -163,6 +165,7 @@ export function useResetSceneState() {
 	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const setKeptOriginal = useSetAtom(keptOriginalAtom)
 	const setSceneMetaState = useSetAtom(sceneMetaAtom)
 	const setLastSavedSettings = useSetAtom(lastSavedSettingsAtom)
 	const setLastSavedSceneMeta = useSetAtom(lastSavedSceneMetaAtom)
@@ -188,6 +191,7 @@ export function useResetSceneState() {
 		setRawModelDiagonal(0)
 		setOptimizationState(optimizationInitialState)
 		setOptimizationRuntime(optimizationRuntimeInitialState)
+		setKeptOriginal(keptOriginalInitialState)
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
@@ -201,6 +205,7 @@ export function useResetSceneState() {
 		setEnv,
 		setHotspots,
 		setInteractions,
+		setKeptOriginal,
 		setLastSavedSceneId,
 		setLastSavedSceneMeta,
 		setLastSavedSettings,
