@@ -53,6 +53,16 @@ describe('shader warm-up', () => {
 		expect(composer).toContain('accumulatePass.present(keepHistory)')
 	})
 
+	it('reports the warm-up done once the model is marked warmed', () => {
+		expect(composer).toMatch(
+			/\.then\(\(\) => \{\s*if \(cancelled\) return\s*warmed\.current = \{ model \}\s*onShadersReadyRef\.current\?\.\(\)/
+		)
+		expect(composer).toContain('onShadersReadyRef.current = onShadersReady')
+		expect(composer).toMatch(
+			/<ViewerComposer[\s\S]*?onShadersReady=\{onShadersReady\}[\s\S]*?\/>/
+		)
+	})
+
 	it('holds the loader until the first warm-up finishes', () => {
 		expect(viewer).toContain('onShadersReady={handleShadersReady}')
 		expect(viewer).toContain(

@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	collectSceneTextures,
 	uploadTexturesInSlices,
+	warmUpScene,
 	warmUpShaders
 } from './shader-warmup'
 
@@ -109,17 +110,39 @@ describe('warmUpShaders', () => {
 	})
 })
 
+describe('warmUpScene', () => {
+	it('settles when the context is lost mid-compile, so the viewer still draws', async () => {
+		const renderer = fakeRenderer()
+		const gl = {
+			...renderer.gl,
+			compile: () => {
+				throw new TypeError('context lost')
+			}
+		} as unknown as WebGLRenderer
+
+		await expect(
+			warmUpScene(gl, new Scene(), camera, null, () => false)
+		).resolves.toBeUndefined()
+		expect(renderer.bound()).toBeNull()
+	})
+})
+
 describe('texture uploads during the warm-up', () => {
 	/** Tasks the uploader handed back to the browser, run one at a time below. */
 	let tasks: Array<() => void>
+	/** The clock the uploader budgets against; each upload advances it. */
+	let now: number
 
 	beforeEach(() => {
 		tasks = []
+		now = 0
 		vi.stubGlobal('setTimeout', (task: () => void) => tasks.push(task))
+		vi.spyOn(performance, 'now').mockImplementation(() => now)
 	})
 
 	afterEach(() => {
 		vi.unstubAllGlobals()
+		vi.restoreAllMocks()
 	})
 
 	/** Lets the browser run one task, then everything that task awaited. */
@@ -131,13 +154,19 @@ describe('texture uploads during the warm-up', () => {
 	const texture = (version = 1) =>
 		({ isTexture: true, image: {}, version }) as unknown as Texture
 
-	const uploadingRenderer = (uploadedVersions = new Map<Texture, number>()) => {
+	const uploadingRenderer = (
+		uploadedVersions = new Map<Texture, number>(),
+		uploadMs = 10
+	) => {
 		const uploads: Texture[] = []
 		const gl = {
 			properties: {
 				get: (t: Texture) => ({ __version: uploadedVersions.get(t) })
 			},
-			initTexture: (t: Texture) => uploads.push(t)
+			initTexture: (t: Texture) => {
+				uploads.push(t)
+				now += uploadMs
+			}
 		} as unknown as WebGLRenderer
 		return { gl, uploads }
 	}
@@ -156,7 +185,20 @@ describe('texture uploads during the warm-up', () => {
 		expect(collectSceneTextures(scene)).toEqual([map, normalMap])
 	})
 
-	it('uploads one texture per task, so the browser runs between them', async () => {
+	it('shares a task between uploads that fit in one slice', async () => {
+		const { gl, uploads } = uploadingRenderer(new Map(), 2)
+		const textures = [texture(), texture(), texture(), texture(), texture()]
+
+		const uploading = uploadTexturesInSlices(gl, textures, () => false)
+		expect(uploads).toHaveLength(0)
+		await runOneTask()
+		expect(uploads).toHaveLength(4)
+		await runOneTask()
+		await uploading
+		expect(uploads).toEqual(textures)
+	})
+
+	it('gives a slow upload a task of its own, so the browser runs between them', async () => {
 		const { gl, uploads } = uploadingRenderer()
 		const textures = [texture(), texture(), texture()]
 

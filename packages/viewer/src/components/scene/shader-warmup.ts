@@ -34,6 +34,9 @@ export const collectSceneTextures = (scene: Scene): Texture[] => {
 	return [...textures]
 }
 
+/** How long one task may spend uploading before the browser gets a turn. */
+const UPLOAD_SLICE_MS = 8
+
 /** Gives the browser a turn: a frame of the loader, a click, a paint. */
 const yieldToMain = () =>
 	new Promise<void>((resolve) => {
@@ -41,24 +44,31 @@ const yieldToMain = () =>
 	})
 
 /**
- * Uploads textures to the GPU one per task.
+ * Uploads textures to the GPU in tasks of about `UPLOAD_SLICE_MS` each.
  *
  * `compile` builds programs but uploads nothing, so every `texImage2D` - and
  * the mipmaps behind it - otherwise landed in the first frame, all in one
- * task. One upload is still one task, but the browser runs between them.
+ * task. A large texture still takes a task of its own, but the browser runs
+ * between tasks. Small ones share a task: browsers delay nested timers by at
+ * least 4 ms, so one task per texture made a model with many textures slow to
+ * appear however cheap its uploads were.
  */
 export const uploadTexturesInSlices = async (
 	gl: WebGLRenderer,
 	textures: readonly Texture[],
 	isCancelled: () => boolean
 ): Promise<void> => {
+	let sliceStart = Number.NEGATIVE_INFINITY
 	for (const texture of textures) {
 		const uploaded =
 			(gl.properties.get(texture) as TextureProperties).__version ===
 			texture.version
 		if (uploaded || !texture.image) continue
-		await yieldToMain()
-		if (isCancelled()) return
+		if (performance.now() - sliceStart >= UPLOAD_SLICE_MS) {
+			await yieldToMain()
+			if (isCancelled()) return
+			sliceStart = performance.now()
+		}
 		gl.initTexture(texture)
 	}
 }
@@ -121,6 +131,10 @@ export const warmUpShaders = (
 /**
  * Everything the first frame of a scene would otherwise do on the main thread
  * in one go: compile its programs, then upload its textures.
+ *
+ * Never rejects. The viewer draws nothing until this settles, and a lost
+ * context makes `compile` throw, so a failure only gives the work back to the
+ * first frame, where it ran before the warm-up existed.
  */
 export const warmUpScene = async (
 	gl: WebGLRenderer,
@@ -129,7 +143,11 @@ export const warmUpScene = async (
 	target: WebGLRenderTarget | null,
 	isCancelled: () => boolean
 ): Promise<void> => {
-	await warmUpShaders(gl, scene, camera, target)
-	if (isCancelled()) return
-	await uploadTexturesInSlices(gl, collectSceneTextures(scene), isCancelled)
+	try {
+		await warmUpShaders(gl, scene, camera, target)
+		if (isCancelled()) return
+		await uploadTexturesInSlices(gl, collectSceneTextures(scene), isCancelled)
+	} catch {
+		return
+	}
 }
