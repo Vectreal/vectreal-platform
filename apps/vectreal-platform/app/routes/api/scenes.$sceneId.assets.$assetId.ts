@@ -120,15 +120,25 @@ async function serveEmbedAsset(
  * checked the key, the domain and the publication. So this reads no key and no
  * scene, which is what lets the response be public and cached at the edge for
  * as long as the URL stays valid.
+ *
+ * GET only: the edge caches GETs, and any other method would download the
+ * whole asset at the origin on every request.
  */
 async function serveSignedAsset(
 	request: Request,
 	target: { sceneId: string; assetId: string },
-	search: string
+	url: URL
 ): Promise<Response> {
+	if (request.method !== 'GET') {
+		return new Response(null, {
+			status: 405,
+			headers: withNoStoreHeaders({ Allow: 'GET' })
+		})
+	}
+
 	const secret = getAssetSigningSecret()
 	const check = secret
-		? verifySignedAsset(target, search, secret, Date.now())
+		? verifySignedAsset(target, url, secret, Date.now())
 		: null
 
 	if (!check?.ok) {
@@ -177,7 +187,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const url = new URL(request.url)
 
 	if (url.searchParams.has('sig')) {
-		return serveSignedAsset(request, { sceneId, assetId }, url.search)
+		return serveSignedAsset(request, { sceneId, assetId }, url)
 	}
 
 	const isPreviewRequest = url.searchParams.get('preview') === '1'

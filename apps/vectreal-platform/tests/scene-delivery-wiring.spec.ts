@@ -104,7 +104,7 @@ describe('signed embed assets', () => {
 
 	it('verify the whole query the route received', () => {
 		expect(route).toContain(
-			'return serveSignedAsset(request, { sceneId, assetId }, url.search)'
+			'return serveSignedAsset(request, { sceneId, assetId }, url)'
 		)
 	})
 

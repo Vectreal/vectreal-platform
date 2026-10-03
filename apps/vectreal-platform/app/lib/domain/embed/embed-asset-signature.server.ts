@@ -74,27 +74,34 @@ function secretFingerprint(secret: string): string {
 		.slice(0, 8)
 }
 
+const signedAssetPath = ({ sceneId, assetId }: SignedAssetTarget) =>
+	`/api/scenes/${sceneId}/assets/${assetId}`
+
 export function buildSignedAssetUrl(
 	target: SignedAssetTarget,
 	secret: string,
 	nowMs: number
 ): string {
 	const query = signedQuery(target, signedAssetExpiry(nowMs), secret)
-	return `/api/scenes/${target.sceneId}/assets/${target.assetId}?${query}`
+	return `${signedAssetPath(target)}?${query}`
 }
 
 /**
- * Accepts only the exact query `buildSignedAssetUrl` wrote. The edge caches by
+ * Accepts only the exact URL `buildSignedAssetUrl` wrote. The edge caches by
  * the full URL, so any other spelling of a valid signature (an added
- * parameter, a reordered one, a padded number) would be a fresh cache key,
- * and a way to send every request to the origin.
+ * parameter, a reordered one, a padded number, an encoded space or a trailing
+ * slash on the path) would be a fresh cache key, and a way to send every
+ * request to the origin.
  */
 export function verifySignedAsset(
 	target: SignedAssetTarget,
-	search: string,
+	{ pathname, search }: { pathname: string; search: string },
 	secret: string,
 	nowMs: number
 ): SignedAssetCheck {
+	if (pathname !== signedAssetPath(target)) {
+		return { ok: false, reason: 'invalid' }
+	}
 	const query = new URLSearchParams(search)
 	const exp = query.get('exp')
 	const expiry = Number(exp)

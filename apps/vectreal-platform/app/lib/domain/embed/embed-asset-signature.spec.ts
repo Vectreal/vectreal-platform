@@ -14,6 +14,16 @@ const at = (iso: string) => new Date(iso).getTime()
 
 /** Reads an emitted URL the way the asset route will. */
 const searchOf = (url: string) => new URL(url, 'https://vectreal.test').search
+const requestOf = (url: string) => {
+	const { pathname, search } = new URL(url, 'https://vectreal.test')
+	return { pathname, search }
+}
+
+/** A query presented at the path `target` is served from. */
+const presentedAt = (
+	{ sceneId, assetId }: { sceneId: string; assetId: string },
+	search: string
+) => ({ pathname: `/api/scenes/${sceneId}/assets/${assetId}`, search })
 
 const withParams = (
 	search: string,
@@ -49,13 +59,13 @@ describe('signed embed asset URLs', () => {
 	})
 
 	it('are accepted for the asset they were signed for', () => {
-		const check = verifySignedAsset(target, searchOf(url), SECRET, issuedAt)
+		const check = verifySignedAsset(target, requestOf(url), SECRET, issuedAt)
 		expect(check).toEqual({ ok: true, secondsLeft: 6600 })
 	})
 
 	it('are refused once expired', () => {
 		const later = signedAssetExpiry(issuedAt) * 1000
-		expect(verifySignedAsset(target, searchOf(url), SECRET, later)).toEqual({
+		expect(verifySignedAsset(target, requestOf(url), SECRET, later)).toEqual({
 			ok: false,
 			reason: 'expired'
 		})
@@ -66,7 +76,7 @@ describe('signed embed asset URLs', () => {
 		expect(
 			verifySignedAsset(
 				{ ...target, assetId: 'bake-1' },
-				query,
+				presentedAt({ ...target, assetId: 'bake-1' }, query),
 				SECRET,
 				issuedAt
 			)
@@ -74,7 +84,7 @@ describe('signed embed asset URLs', () => {
 		expect(
 			verifySignedAsset(
 				{ ...target, sceneId: 'scene-2' },
-				query,
+				presentedAt({ ...target, sceneId: 'scene-2' }, query),
 				SECRET,
 				issuedAt
 			)
@@ -85,7 +95,9 @@ describe('signed embed asset URLs', () => {
 		const extended = withParams(searchOf(url), (params) =>
 			params.set('exp', String(Number(params.get('exp')) + 86_400))
 		)
-		expect(verifySignedAsset(target, extended, SECRET, issuedAt)).toEqual({
+		expect(
+			verifySignedAsset(target, presentedAt(target, extended), SECRET, issuedAt)
+		).toEqual({
 			ok: false,
 			reason: 'invalid'
 		})
@@ -93,7 +105,7 @@ describe('signed embed asset URLs', () => {
 
 	it('are refused under another secret', () => {
 		expect(
-			verifySignedAsset(target, searchOf(url), 'other-secret', issuedAt)
+			verifySignedAsset(target, requestOf(url), 'other-secret', issuedAt)
 		).toEqual({ ok: false, reason: 'invalid' })
 	})
 
@@ -101,14 +113,28 @@ describe('signed embed asset URLs', () => {
 		const query = searchOf(url)
 		const unsigned = withParams(query, (params) => params.delete('sig'))
 		const undated = withParams(query, (params) => params.set('exp', 'soon'))
-		expect(verifySignedAsset(target, unsigned, SECRET, issuedAt)).toEqual({
+		expect(
+			verifySignedAsset(target, presentedAt(target, unsigned), SECRET, issuedAt)
+		).toEqual({
 			ok: false,
 			reason: 'malformed'
 		})
-		expect(verifySignedAsset(target, undated, SECRET, issuedAt)).toEqual({
+		expect(
+			verifySignedAsset(target, presentedAt(target, undated), SECRET, issuedAt)
+		).toEqual({
 			ok: false,
 			reason: 'malformed'
 		})
+	})
+
+	it('are accepted only at the path they were issued for', () => {
+		const { search } = requestOf(url)
+		const path = presentedAt(target, search).pathname
+		for (const pathname of [`${path}/`, `${path}%20`, `${path}%09`]) {
+			expect(
+				verifySignedAsset(target, { pathname, search }, SECRET, issuedAt)
+			).toEqual({ ok: false, reason: 'invalid' })
+		}
 	})
 
 	it('are accepted only in the spelling they were issued in', () => {
@@ -121,7 +147,14 @@ describe('signed embed asset URLs', () => {
 			`?exp=${params.get('exp')}&sig=${params.get('sig')}=`
 		]
 		for (const respelled of respellings) {
-			expect(verifySignedAsset(target, respelled, SECRET, issuedAt)).toEqual({
+			expect(
+				verifySignedAsset(
+					target,
+					presentedAt(target, respelled),
+					SECRET,
+					issuedAt
+				)
+			).toEqual({
 				ok: false,
 				reason: 'invalid'
 			})
@@ -147,7 +180,7 @@ describe('the URLs an embed manifest hands out', () => {
 		const url = urls.buildAssetUrl('glb-1')
 
 		expect(
-			verifySignedAsset(target, searchOf(url), SECRET, params.nowMs)
+			verifySignedAsset(target, requestOf(url), SECRET, params.nowMs)
 		).toMatchObject({ ok: true })
 	})
 
