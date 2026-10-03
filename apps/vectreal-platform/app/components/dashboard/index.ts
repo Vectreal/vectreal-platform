@@ -2,7 +2,7 @@ export { DashboardActions } from './dashboard-actions'
 export { default as DashboardCard } from './dashboard-cards'
 export { DashboardHeader } from './dashboard-header'
 export { DashboardManagementDialogs } from './dashboard-management-dialogs'
-export { DashboardOverview } from './dashboard-overview'
+export { DashboardOverview, NewSceneTile } from './dashboard-overview'
 export { default as DashboardSidebarContent } from './dashboard-sidebar-content'
 export { DataTable, SortableHeader, createCheckboxColumn } from './data-table'
 export {

@@ -224,13 +224,23 @@ const DashboardLayout = () => {
 						</div>
 					</div>
 
-					<div
-						className={cn(
-							'row-start-2 min-h-0 overflow-y-auto px-4',
-							!isSceneDetailsRoute && 'container-page'
-						)}
-					>
-						{/*
+					{/*
+					  The scroller spans the whole inset and the page measure sits
+					  inside it, rather than the scroller being the measure. As one
+					  element, nothing a page drew could reach past the measure's
+					  gutter, so the overview's dither stopped short of the inset's
+					  edge. `@container` lets a page bleed to exactly this width.
+					  The scene page sizes itself from this row's height at `xl`, so
+					  its wrapper carries that height on.
+					*/}
+					<div className="@container row-start-2 min-h-0 overflow-x-clip overflow-y-auto">
+						<div
+							className={cn(
+								'px-4',
+								isSceneDetailsRoute ? 'h-full' : 'container-page'
+							)}
+						>
+							{/*
 						  Unconditionally. `DashboardHeader` already returns nothing when
 						  its action variant is `SCENE_DETAIL`, so the scene page - which
 						  draws its own heading - suppressed it twice.
@@ -247,8 +257,8 @@ const DashboardLayout = () => {
 						  `folder-detail` changed nothing on a scene page, because the
 						  component had been deciding all along.
 						*/}
-						<DashboardHeader />
-						{/*
+							<DashboardHeader />
+							{/*
 						  Always the outlet. A client-side navigation keeps the page
 						  that is already on screen until the new loader resolves,
 						  which is React Router's own behaviour and costs nothing to
@@ -261,7 +271,8 @@ const DashboardLayout = () => {
 						  at the top of the viewport and by the spinner beside the
 						  breadcrumb above.
 						*/}
-						<Outlet />
+							<Outlet />
+						</div>
 					</div>
 				</SidebarInset>
 			</SidebarProvider>
