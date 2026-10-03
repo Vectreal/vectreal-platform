@@ -16,6 +16,7 @@ import {
 	isEmbedServableAssetId,
 	selectEmbedServableAssets
 } from '../../lib/domain/scene/embed-asset-policy'
+import { shouldShowLoadingThumbnail } from '../../lib/domain/scene/scene-presentation'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
@@ -247,7 +248,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		const servable = selectEmbedServableAssets({
 			publishedAssetId: previewScene.publishedAssetId,
 			sceneAssets: settingsData?.assets ?? [],
-			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId
+			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId,
+			showsLoadingThumbnail: shouldShowLoadingThumbnail(
+				settingsData?.settings?.presentation
+			)
 		})
 
 		if (!isEmbedServableAssetId(assetId, servable)) {

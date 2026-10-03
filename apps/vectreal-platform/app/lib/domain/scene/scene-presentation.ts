@@ -18,9 +18,10 @@ import type { ScenePresentationSettings } from '@vctrl/core'
  * `shouldShowInfoPopover` reads this field to decide what a published scene
  * renders.
  *
- * Returns `undefined` for anything that is not an object, and drops a
- * `showInfoPopover` that is not a boolean rather than coercing it: `"false"` is
- * a string, and coercion would turn the author's off into an on.
+ * Returns `undefined` for anything that is not an object or carries no field
+ * it understands, and drops a field that is not a boolean rather than
+ * coercing it: `"false"` is a string, and coercion would turn the author's off
+ * into an on.
  *
  * Dropped means "not written", not "cleared". Drizzle omits `undefined` from
  * the SET clause, so a scene that already stores `false` keeps it when a
@@ -39,13 +40,16 @@ export function normalizePresentationSettings(
 		return undefined
 	}
 
-	const { showInfoPopover } = presentation as ScenePresentationSettings
-
-	if (typeof showInfoPopover !== 'boolean') {
-		return undefined
+	const { showInfoPopover, showLoadingThumbnail } =
+		presentation as ScenePresentationSettings
+	const normalized: ScenePresentationSettings = {
+		...(typeof showInfoPopover === 'boolean' ? { showInfoPopover } : {}),
+		...(typeof showLoadingThumbnail === 'boolean'
+			? { showLoadingThumbnail }
+			: {})
 	}
 
-	return { showInfoPopover }
+	return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
 /**
@@ -60,4 +64,14 @@ export function shouldShowInfoPopover(
 	presentation: ScenePresentationSettings | undefined
 ): boolean {
 	return presentation?.showInfoPopover !== false
+}
+
+/**
+ * Whether an embed shows the scene's saved thumbnail while it loads. Absent
+ * means not shown; see `ScenePresentationSettings.showLoadingThumbnail`.
+ */
+export function shouldShowLoadingThumbnail(
+	presentation: ScenePresentationSettings | undefined | null
+): boolean {
+	return presentation?.showLoadingThumbnail === true
 }

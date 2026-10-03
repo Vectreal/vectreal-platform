@@ -1,3 +1,4 @@
+import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
@@ -11,6 +12,7 @@ import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
 import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
+import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
 import type { SceneEmbedManifestResponse } from '../../types/api'
 import type {
@@ -180,6 +182,16 @@ const SceneEmbedPage = ({
 		executorRef.current?.execute({ type: 'activate_camera', cameraId })
 	}, [])
 
+	// From the manifest the document carried until the scene data exists, so
+	// the thumbnail is up from the first paint rather than after the model.
+	const loadingThumbnail = useMemo(() => {
+		const refs = sceneData?.assetRefs ?? initialManifest?.assetRefs ?? {}
+		const thumbnail = Object.values(refs).find(
+			(ref) => ref.fileName === SCENE_THUMBNAIL_FILENAME
+		)
+		return toViewerLoadingThumbnail(thumbnail?.url)
+	}, [sceneData?.assetRefs, initialManifest?.assetRefs])
+
 	const sceneCameras = useMemo(
 		() => (sceneData?.camera?.cameras ?? []).filter(isSceneCamera),
 		[sceneData?.camera?.cameras]
@@ -215,6 +227,7 @@ const SceneEmbedPage = ({
 			<SceneEmbedViewer
 				file={file}
 				sceneData={sceneData}
+				loadingThumbnail={loadingThumbnail}
 				// A scene that names no environment is lit by the default, which
 				// `{}` asks for; an absent manifest says nothing yet.
 				environment={

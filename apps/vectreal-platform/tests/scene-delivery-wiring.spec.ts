@@ -169,3 +169,14 @@ describe('the /embed document head', () => {
 		)
 	})
 })
+
+describe('the loading thumbnail', () => {
+	it('is servable to an embed only where its author showed it', () => {
+		expect(read('lib/domain/scene/server/scene-manifest.server.ts')).toContain(
+			'showsLoadingThumbnail: shouldShowLoadingThumbnail(settings?.presentation)'
+		)
+		expect(read('routes/api/scenes.$sceneId.assets.$assetId.ts')).toMatch(
+			/showsLoadingThumbnail: shouldShowLoadingThumbnail\(\s*settingsData\?\.settings\?\.presentation\s*\)/
+		)
+	})
+})

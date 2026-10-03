@@ -93,4 +93,38 @@ describe('an embed that is still loading its scene', () => {
 		)
 		expect(captured.at(-1)?.envOptions).toEqual({})
 	})
+
+	it('shows the thumbnail the manifest serves behind the loader', () => {
+		captured.length = 0
+		loadState.current = { file: null }
+		render(
+			<SceneEmbedPage
+				projectId="p"
+				sceneId="s"
+				initialManifest={{
+					sceneId: 's',
+					meta: null,
+					publishedModel: {
+						url: '/m.glb',
+						fileName: 'm.glb',
+						mimeType: 'model/gltf-binary',
+						byteSize: 1
+					},
+					assetRefs: {
+						'thumb-1': {
+							url: '/api/scenes/s/assets/thumb-1?exp=1&sig=c',
+							fileName: 'scene-thumbnail.webp',
+							mimeType: 'image/webp',
+							byteSize: 4
+						}
+					},
+					settings: null,
+					settingsUpdatedAt: null
+				}}
+			/>
+		)
+		expect(captured.at(-1)?.loadingThumbnail?.src).toBe(
+			'/api/scenes/s/assets/thumb-1?exp=1&sig=c'
+		)
+	})
 })

@@ -301,3 +301,48 @@ describe('whether the published GLB needs the Draco decoder', () => {
 		).toBeNull()
 	})
 })
+
+describe('the loading thumbnail', () => {
+	const thumbnail = SCENE_ASSETS.find(
+		(asset) => asset.name === 'scene-thumbnail.webp'
+	)!
+	const url = (assetId: string) => `/assets/${assetId}`
+
+	it('is servable and referenced once the author shows it', () => {
+		const servable = selectEmbedServableAssets({
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: SCENE_ASSETS,
+			showsLoadingThumbnail: true
+		})
+		expect(isEmbedServableAssetId(thumbnail.id, servable)).toBe(true)
+		expect(
+			buildEmbedAssetRefs(servable, SCENE_ASSETS, url)[thumbnail.id]
+		).toEqual({
+			url: `/assets/${thumbnail.id}`,
+			fileName: 'scene-thumbnail.webp',
+			mimeType: thumbnail.mimeType,
+			byteSize: thumbnail.fileSize
+		})
+	})
+
+	it('stays private while the author has not', () => {
+		const servable = selectEmbedServableAssets({
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: SCENE_ASSETS
+		})
+		expect(isEmbedServableAssetId(thumbnail.id, servable)).toBe(false)
+		expect(buildEmbedAssetRefs(servable, SCENE_ASSETS, url)).not.toHaveProperty(
+			thumbnail.id
+		)
+	})
+
+	it('is nothing for a scene that has no thumbnail linked', () => {
+		expect(
+			selectEmbedServableAssets({
+				publishedAssetId: PUBLISHED_ASSET_ID,
+				sceneAssets: SCENE_ASSETS.filter((asset) => asset !== thumbnail),
+				showsLoadingThumbnail: true
+			}).thumbnailAssetId
+		).toBeNull()
+	})
+})

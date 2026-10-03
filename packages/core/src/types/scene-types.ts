@@ -433,6 +433,15 @@ export interface ScenePresentationSettings {
 	 * be the one that changes nothing for them.
 	 */
 	showInfoPopover?: boolean
+	/**
+	 * Whether an embed shows the scene's saved thumbnail behind its loader
+	 * until the 3D scene is ready.
+	 *
+	 * Absent means not shown: it is the last-saved thumbnail, which an author
+	 * opts into showing on a public page, and scenes saved before this field
+	 * existed showed none.
+	 */
+	showLoadingThumbnail?: boolean
 }
 
 /**

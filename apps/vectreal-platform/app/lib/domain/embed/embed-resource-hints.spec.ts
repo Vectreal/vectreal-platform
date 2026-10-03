@@ -32,7 +32,8 @@ describe('resolveEmbedResourceHints', () => {
 		expect(first).toEqual({
 			href: '/api/scenes/s1/assets/glb-1?exp=1&sig=a',
 			as: 'fetch',
-			fetchPriority: 'high'
+			fetchPriority: 'high',
+			crossOrigin: 'anonymous'
 		})
 	})
 
@@ -88,7 +89,27 @@ describe('resolveEmbedResourceHints', () => {
 		expect(resolveEmbedResourceHints(bake).preload).toContainEqual({
 			href: '/api/scenes/s1/assets/bake-1?exp=1&sig=b',
 			as: 'image',
-			fetchPriority: 'low'
+			fetchPriority: 'low',
+			crossOrigin: 'anonymous'
+		})
+	})
+
+	it('preloads the loading thumbnail first-class, as the plain image it is', () => {
+		const withThumbnail = manifest({
+			assetRefs: {
+				'thumb-1': {
+					url: '/api/scenes/s1/assets/thumb-1?exp=1&sig=c',
+					fileName: 'scene-thumbnail.webp',
+					mimeType: 'image/webp',
+					byteSize: 4
+				}
+			}
+		})
+		expect(resolveEmbedResourceHints(withThumbnail).preload).toContainEqual({
+			href: '/api/scenes/s1/assets/thumb-1?exp=1&sig=c',
+			as: 'image',
+			fetchPriority: 'high',
+			crossOrigin: null
 		})
 	})
 })

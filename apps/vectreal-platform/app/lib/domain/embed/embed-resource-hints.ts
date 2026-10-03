@@ -1,4 +1,8 @@
-import { DRACO_DECODER_PATH, resolveEnvironmentFiles } from '@vctrl/core'
+import {
+	DRACO_DECODER_PATH,
+	resolveEnvironmentFiles,
+	SCENE_THUMBNAIL_FILENAME
+} from '@vctrl/core'
 
 import type { SceneEmbedManifestResponse } from '../../../types/api'
 
@@ -6,6 +10,11 @@ export interface EmbedPreload {
 	href: string
 	as: 'fetch' | 'image'
 	fetchPriority: 'high' | 'low' | 'auto'
+	/**
+	 * The CORS mode of the request the preload stands in for: `anonymous` for
+	 * the loaders' fetches and texture images, none for a plain `<img>`.
+	 */
+	crossOrigin: 'anonymous' | null
 }
 
 export interface EmbedResourceHints {
@@ -27,7 +36,12 @@ export function resolveEmbedResourceHints(
 	manifest: SceneEmbedManifestResponse
 ): EmbedResourceHints {
 	const preload: EmbedPreload[] = [
-		{ href: manifest.publishedModel.url, as: 'fetch', fetchPriority: 'high' }
+		{
+			href: manifest.publishedModel.url,
+			as: 'fetch',
+			fetchPriority: 'high',
+			crossOrigin: 'anonymous'
+		}
 	]
 
 	const environment = resolveEnvironmentFiles(
@@ -37,7 +51,12 @@ export function resolveEmbedResourceHints(
 		? environment
 		: [environment]
 	for (const href of environmentFiles) {
-		preload.push({ href, as: 'fetch', fetchPriority: 'auto' })
+		preload.push({
+			href,
+			as: 'fetch',
+			fetchPriority: 'auto',
+			crossOrigin: 'anonymous'
+		})
 	}
 
 	// Only for a model known to need it. A preload nothing uses costs the
@@ -48,13 +67,22 @@ export function resolveEmbedResourceHints(
 			preload.push({
 				href: `${DRACO_DECODER_PATH}${file}`,
 				as: 'fetch',
-				fetchPriority: 'auto'
+				fetchPriority: 'auto',
+				crossOrigin: 'anonymous'
 			})
 		}
 	}
 
 	for (const ref of Object.values(manifest.assetRefs)) {
-		preload.push({ href: ref.url, as: 'image', fetchPriority: 'low' })
+		// The thumbnail is the first thing painted, by a plain `<img>`; the bake
+		// is a texture three loads in CORS mode once the scene renders.
+		const isThumbnail = ref.fileName === SCENE_THUMBNAIL_FILENAME
+		preload.push({
+			href: ref.url,
+			as: 'image',
+			fetchPriority: isThumbnail ? 'high' : 'low',
+			crossOrigin: isThumbnail ? null : 'anonymous'
+		})
 	}
 
 	const preconnect = [

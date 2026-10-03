@@ -1,5 +1,6 @@
 import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 
+import { shouldShowLoadingThumbnail } from '../scene-presentation'
 import { sceneSettingsService } from './scene-settings-service.server'
 import { reportServerError } from '../../../observability/report-server-error.server'
 import {
@@ -186,7 +187,8 @@ export async function composeEmbedSceneManifest(
 	const servable = selectEmbedServableAssets({
 		publishedAssetId: published.assetId,
 		sceneAssets: settingsData.assets ?? [],
-		bakedShadowAssetId: settings?.shadows?.baked?.assetId
+		bakedShadowAssetId: settings?.shadows?.baked?.assetId,
+		showsLoadingThumbnail: shouldShowLoadingThumbnail(settings?.presentation)
 	})
 
 	return {
