@@ -316,8 +316,9 @@ export async function runOptimizationPass(
 		steps.settleAll()
 	} catch (error) {
 		// The scene it ran for is gone; the optimizer belongs to the next one.
-		// The core refuses a stale commit as soon as a newer load starts,
-		// before that load replaces the source `isCurrent` compares.
+		// A new load fails `isCurrent` at once. The core also refuses a stale
+		// commit when another caller claims the optimizer without a load: a
+		// reset, or a restore or replacement of its document.
 		if (
 			error instanceof SupersededError ||
 			error instanceof SupersededPass ||

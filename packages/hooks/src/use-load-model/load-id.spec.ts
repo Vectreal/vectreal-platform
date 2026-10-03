@@ -49,6 +49,38 @@ const readyLoadId = (state: { status: string; loadId?: number }) => {
 	return state.loadId
 }
 
+describe('isLatestLoad', () => {
+	it('stops answering for a load once another one starts', async () => {
+		const { result } = renderHook(() => useLoadModel(fakeOptimizer))
+		await loadScene(result.current.load)
+		const loadedId = readyLoadId(result.current) as number
+		expect(result.current.isLatestLoad(loadedId)).toBe(true)
+
+		// Asked before the newer load publishes, so its model is not yet the one
+		// on screen: the question is which load is newest, not which is shown.
+		loader.publishes = false
+		let newer: Promise<unknown> = Promise.resolve()
+		act(() => {
+			newer = result.current.load({
+				kind: 'scene-data',
+				sceneData: {} as never
+			})
+			expect(result.current.isLatestLoad(loadedId)).toBe(false)
+		})
+		await act(() => newer)
+	})
+
+	it('stops answering for a load once the model is reset', async () => {
+		const { result } = renderHook(() => useLoadModel(fakeOptimizer))
+		await loadScene(result.current.load)
+		const loadedId = readyLoadId(result.current) as number
+
+		act(() => result.current.reset())
+
+		expect(result.current.isLatestLoad(loadedId)).toBe(false)
+	})
+})
+
 describe('loadId', () => {
 	it('keeps the id when an optimization swaps in a new rendition', async () => {
 		vi.spyOn(ModelLoader.prototype, 'loadToThreeJS').mockResolvedValue({

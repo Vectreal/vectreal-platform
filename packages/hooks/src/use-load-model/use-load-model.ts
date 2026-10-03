@@ -251,6 +251,11 @@ function useLoadModel<
 		[]
 	)
 
+	const isLatestLoad = useCallback(
+		(loadId: number) => loadTokenRef.current === loadId,
+		[]
+	)
+
 	const optimizerIntegration = useOptimizerIntegration(
 		optimizer,
 		replaceModel,
@@ -264,6 +269,7 @@ function useLoadModel<
 		supportedFileTypes,
 		load,
 		reset,
+		isLatestLoad,
 		optimizer: optimizerIntegration
 	} as UseLoadModelReturn<T extends undefined ? false : true>
 }

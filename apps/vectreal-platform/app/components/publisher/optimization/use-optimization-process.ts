@@ -36,14 +36,23 @@ export type SizeInfo = {
  * hook only assembles its dependencies and exposes the results the drawer
  * renders.
  */
-/** A choice of settings, bound to the source it was made for. */
+/** A choice of settings, bound to the scene it was made for. */
 interface DeriveRequest {
 	settings: Optimizations
+	/**
+	 * The load that put the scene on screen. Opening another scene starts a new
+	 * load at once, while its source only replaces this one once it is ingested,
+	 * and the new scene's state is hydrated in between.
+	 */
+	loadId: number | null
+	/** Changes without a new load when a restored draft states its original. */
 	source: Uint8Array | null
 }
 
 export const useOptimizationProcess = () => {
-	const { optimizer, file } = useModelContext(true)
+	const model = useModelContext(true)
+	const { optimizer, file, isLatestLoad } = model
+	const loadId = model.status === 'ready' ? model.loadId : null
 	const {
 		isReady,
 		isPreparing,
@@ -81,8 +90,7 @@ export const useOptimizationProcess = () => {
 			optimizer,
 			file ?? null,
 			isReady,
-			report?.stats.textureBytes.after,
-			setOptimizationRuntime
+			report?.stats.textureBytes.after
 		)
 
 	// `optimizedSceneBytes` only ever describes a pass run in this browser
@@ -97,18 +105,27 @@ export const useOptimizationProcess = () => {
 		(latestSceneStats?.appliedOptimizations?.length ?? 0) > 0
 
 	/**
-	 * Makes the document `source` plus `settings`, in one pass, as long as
-	 * `source` is still the optimizer's source. A new load replaces the source,
-	 * so a choice made for the previous scene, or a pass that settles after the
-	 * scene changed, never describes the scene that replaced it.
+	 * Makes the document `source` plus `settings`, in one pass, as long as the
+	 * scene it was asked for is still open. A choice made for the previous scene,
+	 * or a pass that settles after the scene changed, never describes the scene
+	 * that replaced it.
 	 */
 	const derivePass = useCallback(
-		async ({ settings, source }: DeriveRequest): Promise<void> => {
-			if (isPreparing || !isReady || getSource() !== source) return
+		async ({ settings, loadId, source }: DeriveRequest): Promise<void> => {
+			const isCurrent = () =>
+				loadId !== null && isLatestLoad(loadId) && getSource() === source
+			if (isPreparing || !isReady || !isCurrent()) return
+
+			// Every figure the pass records lands after an await, and the scene
+			// it describes may have closed by then. The next scene's hydration
+			// resets the runtime, so nothing is lost by dropping these.
+			const writeRuntime: typeof setOptimizationRuntime = (update) => {
+				if (isCurrent()) setOptimizationRuntime(update)
+			}
 
 			const result = await runOptimizationPass({
 				optimizations: settings,
-				isCurrent: () => getSource() === source,
+				isCurrent,
 				steps: stepsController,
 				model: {
 					restoreSource,
@@ -126,10 +143,10 @@ export const useOptimizationProcess = () => {
 					reportTextureBytesBefore: report?.stats.textureBytes.before,
 					calculateSceneBytes
 				},
-				setRuntime: setOptimizationRuntime
+				setRuntime: writeRuntime
 			})
 
-			if (getSource() !== source) return
+			if (!isCurrent()) return
 
 			// A failed pass puts the source back on screen, so the source is what
 			// describes the document then.
@@ -139,11 +156,12 @@ export const useOptimizationProcess = () => {
 					? resolveDerivedSettings(settings, prev.sourceSettings)
 					: prev.sourceSettings
 			}))
-			void refreshOptimizedSizeInfo(result.dracoReport)
+			void refreshOptimizedSizeInfo(result.dracoReport, writeRuntime)
 		},
 		[
 			isPreparing,
 			isReady,
+			isLatestLoad,
 			getSource,
 			stepsController,
 			restoreSource,
@@ -171,8 +189,8 @@ export const useOptimizationProcess = () => {
 	/** Makes the document the current source plus `settings`. */
 	const derive = useCallback(
 		(settings: Optimizations) =>
-			deriveLatest({ settings, source: getSource() }),
-		[deriveLatest, getSource]
+			deriveLatest({ settings, loadId, source: getSource() }),
+		[deriveLatest, loadId, getSource]
 	)
 
 	/** Applies what the panel shows, for edits made in the advanced controls. */

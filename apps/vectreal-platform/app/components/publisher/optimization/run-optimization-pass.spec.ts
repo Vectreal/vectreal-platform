@@ -378,8 +378,9 @@ describe('runOptimizationPass', () => {
 		expect(model.texturesOptimization).not.toHaveBeenCalled()
 	})
 
-	// A newer load has started but not yet replaced the source, so the pass
-	// still reads as current; the optimizer already belongs to that load.
+	// Another caller can claim the optimizer without a load (a reset, or a
+	// restore or replacement of its document); the pass hears of it only from
+	// the core.
 	it('stays silent when the optimizer refuses a stale commit', async () => {
 		const { deps, model } = createDeps(onlyEnable(['dedup']), {
 			loadFromGlbBuffer: vi.fn(async () => {

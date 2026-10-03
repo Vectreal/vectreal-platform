@@ -286,6 +286,18 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
 	 */
 	reset: () => void
 	/**
+	 * Whether no load has started, and no `reset()` has run, since the load
+	 * that minted `loadId`. Unlike the rendered state, it changes the moment
+	 * `load` is called, so work started for one model can stop before anything
+	 * the caller hydrates for the next one is overwritten.
+	 *
+	 * It answers which load is newest, not which model is on screen: a `files`
+	 * load that fails and puts the previous model back still counts as newer,
+	 * so the restored model's `loadId` answers false from then on. Ask
+	 * `stillOnScreen()` on a load's outcome for the model shown.
+	 */
+	isLatestLoad: (loadId: number) => boolean
+	/**
 	 * Optimizer integration object.
 	 * - When optimizer is provided: Contains full optimization methods and state
 	 * - When no optimizer: null
