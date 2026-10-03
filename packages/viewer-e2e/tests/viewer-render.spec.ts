@@ -49,12 +49,52 @@ test('viewer mounts without a runtime crash', async ({ page }) => {
 	// package actually draws when it gets them - and that the two markers a
 	// visitor must never see are not among them.
 	const markers = page.locator('.vctrl-viewer-hotspot')
-	await expect(markers).toHaveCount(1)
+	await expect(markers).toHaveCount(2)
 	await expect(page.getByRole('img', { name: 'Public marker' })).toBeVisible()
 	await expect(page.getByLabel('Internal marker')).toHaveCount(0)
 	await expect(page.getByLabel('Hidden marker')).toHaveCount(0)
 
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
+})
+
+test('a visitor can leave the camera a hotspot flew them to', async ({
+	page
+}) => {
+	await page.goto('/')
+	await page.waitForFunction(
+		() => window.__VIEWER_E2E__?.status === 'mounted',
+		undefined,
+		{ timeout: 15000 }
+	)
+
+	const marker = page.getByRole('button', { name: 'Camera marker' })
+	const back = page.getByRole('button', { name: 'Back to scene view' })
+
+	// No way back is offered where there is nothing to come back from.
+	await expect(back).toHaveCount(0)
+
+	await marker.click()
+	await expect(back).toBeVisible()
+	await expect(page.getByRole('status')).toHaveText('Viewing Camera marker')
+
+	// An open card claims the first Escape; the view stays where it is.
+	await expect(marker).toHaveAttribute('aria-expanded', 'true')
+	await page.keyboard.press('Escape')
+	await expect(marker).toHaveAttribute('aria-expanded', 'false')
+	await expect(back).toBeVisible()
+
+	// The second leaves the hotspot's camera.
+	await page.keyboard.press('Escape')
+	await expect(back).toHaveCount(0)
+	await expect(page.getByRole('status')).toHaveText('Back to scene view')
+
+	// And the control does the same, taking the hotspot's card with it: the
+	// card describes a place the visitor is no longer standing at.
+	await marker.click()
+	await expect(marker).toHaveAttribute('aria-expanded', 'true')
+	await back.click()
+	await expect(back).toHaveCount(0)
+	await expect(marker).toHaveAttribute('aria-expanded', 'false')
 })
 
 declare global {

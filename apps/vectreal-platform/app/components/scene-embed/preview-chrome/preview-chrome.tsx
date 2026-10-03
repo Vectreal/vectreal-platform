@@ -16,6 +16,8 @@ export interface PreviewChromeProps {
 	backTo: string
 	cameras: CameraSwitcherOption[]
 	activeCameraId: null | string
+	/** Names the view while a hotspot's camera, off the list, holds it. */
+	activeHotspotName: null | string
 	onSelectCamera: (cameraId: string) => void
 }
 
@@ -35,6 +37,7 @@ const PreviewChrome = ({
 	backTo,
 	cameras,
 	activeCameraId,
+	activeHotspotName,
 	onSelectCamera
 }: PreviewChromeProps) => {
 	const navigate = useNavigate()
@@ -109,6 +112,7 @@ const PreviewChrome = ({
 								<CameraSwitcherPill
 									cameras={cameras}
 									activeCameraId={activeCameraId}
+									offListLabel={activeHotspotName}
 									onSelect={onSelectCamera}
 								/>
 							</motion.div>

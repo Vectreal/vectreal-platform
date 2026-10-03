@@ -14,6 +14,8 @@ interface OverlayProps {
 	popover?: React.ReactNode
 	/** Playback controls, when the scene author has opted into them. */
 	animationControls?: React.ReactNode
+	/** The way back from a hotspot's camera. */
+	sceneViewReturn?: React.ReactNode
 	loader?: React.ReactNode
 	loadingThumbnail?: ViewerLoadingThumbnail
 }
@@ -23,6 +25,7 @@ const Overlay = ({
 	onLoaderFadeOutComplete,
 	popover,
 	animationControls,
+	sceneViewReturn,
 	loader,
 	loadingThumbnail
 }: OverlayProps) => {
@@ -83,6 +86,7 @@ const Overlay = ({
 			  stacking whatever the source order was.
 			*/}
 			{showChrome && animationControls}
+			{showChrome && sceneViewReturn}
 			{showChrome && popover}
 		</>
 	)

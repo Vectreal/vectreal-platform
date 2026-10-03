@@ -9,6 +9,10 @@ import {
 	defaultPresentationOptions,
 	defaultShadowsOptions
 } from '../../constants/viewer-defaults'
+import {
+	isPairedHotspotCamera,
+	resolveDefaultSceneCameraId
+} from '../domain/scene/scene-camera'
 
 import type {
 	BoundsProps,
@@ -42,7 +46,78 @@ const presentationAtom = atom<ScenePresentationSettings>(
 )
 const rawModelDiagonalAtom = atom<number>(0)
 const hotspotsAtom = atom<HotspotDefinition[]>([])
+
 const activeHotspotIdAtom = atom<string | null>(null)
+
+/**
+ * Looking through a hotspot's camera in the Camera tool is a mode the author
+ * steps into and out of: closing the tool puts back the camera from before.
+ *
+ * Editing a hotspot never enters it. Placing a marker writes its camera's
+ * target, and the viewer applies an edit to the camera it is looking through
+ * at once, so standing on that camera while placing jerked the view on every
+ * click and drag.
+ */
+interface HotspotCameraMode {
+	returnToCameraId: string
+}
+
+const hotspotCameraModeAtom = atom<HotspotCameraMode | null>(null)
+
+/**
+ * Leaves the mode, putting back the camera it was entered from. A camera
+ * deleted in the meantime gives way to the scene's default.
+ */
+const exitHotspotCameraAtom = atom(null, (get, set) => {
+	const mode = get(hotspotCameraModeAtom)
+	if (!mode) return
+
+	const cameras = get(cameraAtom).cameras
+	const stillThere = cameras?.some(
+		(entry) => entry.cameraId === mode.returnToCameraId
+	)
+	set(hotspotCameraModeAtom, null)
+	set(
+		selectedCameraIdAtom,
+		stillThere
+			? mode.returnToCameraId
+			: (resolveDefaultSceneCameraId(cameras) ?? mode.returnToCameraId)
+	)
+})
+
+/**
+ * Picking a camera in the Camera tool. A hotspot's camera enters the mode,
+ * keeping the first return camera across hops, so closing the tool puts the
+ * author back; a scene camera is a choice that stays, and ends the mode where
+ * it is.
+ */
+const selectCameraAtom = atom(null, (get, set, cameraId: string) => {
+	const camera = get(cameraAtom).cameras?.find(
+		(entry) => entry.cameraId === cameraId
+	)
+	// The minted id identifies a hotspot camera saved before the tag existed,
+	// and keeps an untagged scene camera a hotspot happens to link a scene
+	// camera.
+	if (camera && isPairedHotspotCamera(camera)) {
+		set(hotspotCameraModeAtom, {
+			returnToCameraId:
+				get(hotspotCameraModeAtom)?.returnToCameraId ??
+				get(selectedCameraIdAtom)
+		})
+	} else {
+		set(hotspotCameraModeAtom, null)
+	}
+	set(selectedCameraIdAtom, cameraId)
+})
+
+/**
+ * Starts a scene with nothing selected and no mode, without putting back a
+ * camera from the scene that came before.
+ */
+const resetHotspotEditingAtom = atom(null, (_get, set) => {
+	set(hotspotCameraModeAtom, null)
+	set(activeHotspotIdAtom, null)
+})
 // Persisted shadow bake resolved from the loaded scene manifest (a data URL +
 // signature), or null when the scene has none. Set during hydration so the viewer
 // can render the stored shadow instead of recomputing the bake.
@@ -78,6 +153,10 @@ const sceneViewerSettingsAtom = atom(
 export {
 	// Vectreal viewer settings atoms
 	activeHotspotIdAtom,
+	exitHotspotCameraAtom,
+	hotspotCameraModeAtom,
+	resetHotspotEditingAtom,
+	selectCameraAtom,
 	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,

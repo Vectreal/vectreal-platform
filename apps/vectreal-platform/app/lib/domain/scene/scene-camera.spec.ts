@@ -4,7 +4,8 @@ import {
 	isLastSceneCamera,
 	isPairedHotspotCamera,
 	isSceneCamera,
-	resolveDefaultSceneCameraId
+	resolveDefaultSceneCameraId,
+	resolveHotspotViewName
 } from './scene-camera'
 
 describe('isSceneCamera', () => {
@@ -244,5 +245,29 @@ describe('isPairedHotspotCamera', () => {
 
 	it('claims nothing when there is no id and no tag', () => {
 		expect(isPairedHotspotCamera({})).toBe(false)
+	})
+})
+
+describe('resolveHotspotViewName', () => {
+	const hotspots = [
+		{ name: 'Handle', linkedCameraId: 'hotspot-camera-a' },
+		{ name: '  ', linkedCameraId: 'hotspot-camera-b' },
+		{ name: 'Label' }
+	]
+
+	it('names the hotspot whose camera the view is on', () => {
+		expect(resolveHotspotViewName(hotspots, 'hotspot-camera-a')).toBe('Handle')
+	})
+
+	it('falls back for a hotspot with no name', () => {
+		expect(resolveHotspotViewName(hotspots, 'hotspot-camera-b')).toBe(
+			'Unnamed Hotspot'
+		)
+	})
+
+	it('is null on a camera no hotspot links, and before any is known', () => {
+		expect(resolveHotspotViewName(hotspots, 'front')).toBeNull()
+		expect(resolveHotspotViewName(hotspots, null)).toBeNull()
+		expect(resolveHotspotViewName(undefined, 'hotspot-camera-a')).toBeNull()
 	})
 })

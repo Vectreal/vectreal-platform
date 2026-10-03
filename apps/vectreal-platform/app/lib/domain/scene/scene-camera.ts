@@ -75,6 +75,23 @@ export const isPairedHotspotCamera = (entry: CameraLike): boolean =>
 		entry.cameraId !== undefined &&
 		PAIRED_HOTSPOT_CAMERA_ID.test(entry.cameraId))
 
+/**
+ * The name of the hotspot whose camera the view stands on, or null.
+ *
+ * For the camera switchers, which list scene cameras only: while a marker has
+ * flown the view to its own camera, this is what they call the view instead
+ * of claiming one of their entries is active.
+ */
+export function resolveHotspotViewName(
+	hotspots:
+		readonly { linkedCameraId?: string; name: string }[] | null | undefined,
+	cameraId: null | string
+): null | string {
+	if (!cameraId) return null
+	const hotspot = hotspots?.find((entry) => entry.linkedCameraId === cameraId)
+	return hotspot ? hotspot.name.trim() || 'Unnamed Hotspot' : null
+}
+
 export function resolveDefaultSceneCamera<Entry extends CameraLike>(
 	cameras: Entry[] | null | undefined
 ): Entry | null {

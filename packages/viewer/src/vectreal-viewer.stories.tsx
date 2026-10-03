@@ -491,6 +491,58 @@ export const HotspotOcclusion: Story = {
 	)
 }
 
+/**
+ * Click either marker: the view flies to that hotspot's camera, and "Back to
+ * scene view" appears at the top. It returns to the scene camera you clicked
+ * from, however many markers you hopped through, and Escape inside the viewer
+ * does the same once any open card is closed.
+ */
+export const HotspotCameraReturn: Story = {
+	args: {
+		hotspots: [
+			{
+				...base('front-face', 'Front face', [0, 0.15, 0.7]),
+				body: 'The camera moves in close; the way back is at the top.',
+				linkedCameraId: 'front-face-camera'
+			},
+			{
+				...base('top-face', 'Top face', [0, 0.7, 0]),
+				linkedCameraId: 'top-face-camera'
+			}
+		],
+		cameraOptions: {
+			cameras: [
+				{
+					cameraId: 'scene',
+					name: 'Scene',
+					initial: true,
+					position: [2.4, 1.6, 3.6],
+					target: [0, 0, 0]
+				},
+				{
+					cameraId: 'front-face-camera',
+					name: 'Front face',
+					kind: 'hotspot',
+					position: [0, 0.2, 2.2]
+				},
+				{
+					cameraId: 'top-face-camera',
+					name: 'Top face',
+					kind: 'hotspot',
+					position: [0.1, 2.4, 0.4]
+				}
+			]
+		}
+	},
+	/*
+	  Storybook's global `argTypesRegex` hands every `on*` prop an action, and
+	  a passed `onHotspotSelect` makes a marker select instead of fly its
+	  camera. Dropped here so the markers behave as they do for a visitor.
+	*/
+	render: ({ onHotspotSelect: _select, ...args }, context) =>
+		hotspotRender?.(args, context)
+}
+
 export const WithPopover: Story = {
 	args: {
 		popover: (

@@ -9,7 +9,10 @@ import VectrealEmbedBadge from './vectreal-embed-badge'
 import { resolveEmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
 import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
-import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
+import {
+	isSceneCamera,
+	resolveHotspotViewName
+} from '../../lib/domain/scene/scene-camera'
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
 import CenteredSpinner from '../centered-spinner'
 
@@ -30,6 +33,12 @@ export interface SceneEmbedViewerControl {
 	 */
 	cameras: { cameraId: string; name?: null | string }[]
 	activeCameraId: null | string
+	/**
+	 * The hotspot whose camera the view stands on, so a switcher that lists
+	 * scene cameras only can say where the view is instead of claiming one of
+	 * them. Null on a scene camera.
+	 */
+	activeHotspotName: null | string
 	activateCamera: (cameraId: string) => void
 }
 
@@ -236,6 +245,10 @@ const SceneEmbedPage = ({
 			{chrome?.({
 				cameras: sceneCameras,
 				activeCameraId,
+				activeHotspotName: resolveHotspotViewName(
+					sceneData?.hotspots,
+					activeCameraId
+				),
 				activateCamera
 			})}
 		</div>

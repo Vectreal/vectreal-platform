@@ -22,6 +22,7 @@ import {
 	hotspotsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
 
 import type { CameraProps, HotspotDefinition } from '@vctrl/core'
 
@@ -81,6 +82,7 @@ export function useHotspotEdits() {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const setSelectedId = useSetAtom(activeHotspotIdAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
+	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
 
 	const update = useCallback(
 		(id: string, patch: Partial<HotspotDefinition>) => {
@@ -93,14 +95,27 @@ export function useHotspotEdits() {
 		[setHotspots]
 	)
 
-	const add = useCallback(() => {
+	/**
+	 * The new hotspot's camera starts where the editor is standing, so the
+	 * hotspot is a real viewpoint from the moment it exists rather than a camera
+	 * that only swings the pivot until someone sets it.
+	 *
+	 * The scene is read after the capture, not closed over: an edit landing
+	 * while the capture is in flight would otherwise be overwritten.
+	 */
+	const add = useCallback(async () => {
+		const snapshot = await requestSceneCameraSnapshot()
 		const ids = mintHotspotIds()
-		const next = addHotspot({ camera, hotspots }, ids)
+		const next = addHotspot(
+			{ camera: store.get(cameraAtom), hotspots: store.get(hotspotsAtom) },
+			ids,
+			snapshot ? { position: snapshot.position, fov: snapshot.fov } : undefined
+		)
 
 		setHotspots(next.hotspots)
 		setCamera(next.camera)
 		setSelectedId(ids.hotspotId)
-	}, [camera, hotspots, setCamera, setHotspots, setSelectedId])
+	}, [requestSceneCameraSnapshot, setCamera, setHotspots, setSelectedId, store])
 
 	/**
 	 * Deleting renumbers what is left.

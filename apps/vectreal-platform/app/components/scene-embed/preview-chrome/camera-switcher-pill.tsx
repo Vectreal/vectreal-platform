@@ -17,6 +17,12 @@ export interface CameraSwitcherPillProps {
 	cameras: CameraSwitcherOption[]
 	activeCameraId: null | string
 	onSelect: (cameraId: string) => void
+	/**
+	 * What the view is called while it stands on a camera this list does not
+	 * hold - a hotspot's, reached by clicking its marker. Without it the pill
+	 * would fall back to the first camera and claim that one was active.
+	 */
+	offListLabel?: null | string
 	className?: string
 }
 
@@ -43,6 +49,7 @@ const CameraSwitcherPill = ({
 	cameras,
 	activeCameraId,
 	onSelect,
+	offListLabel,
 	className
 }: CameraSwitcherPillProps) => {
 	const [isListOpen, setIsListOpen] = useState(false)
@@ -57,19 +64,29 @@ const CameraSwitcherPill = ({
 		return index >= 0 ? index : 0
 	}, [cameras, activeCameraId])
 
+	// A camera the viewer reported that is not in the list. Only a reported one:
+	// before the first event the fallback above is the honest guess.
+	const isOffList =
+		activeCameraId !== null &&
+		!cameras.some((camera) => camera.cameraId === activeCameraId)
+
 	const activeCamera = activeIndex >= 0 ? cameras[activeIndex] : null
 
 	const cycle = useCallback(
 		(direction: -1 | 1) => {
 			if (!cameras.length) return
 
-			const currentIndex = activeIndex >= 0 ? activeIndex : 0
-			const nextIndex =
-				(currentIndex + direction + cameras.length) % cameras.length
+			// Off the list, each arrow steps onto it from its own end: next is the
+			// first camera, previous the last.
+			const nextIndex = isOffList
+				? direction === 1
+					? 0
+					: cameras.length - 1
+				: (activeIndex + direction + cameras.length) % cameras.length
 
 			onSelect(cameras[nextIndex].cameraId)
 		},
-		[activeIndex, cameras, onSelect]
+		[activeIndex, cameras, isOffList, onSelect]
 	)
 
 	const handleSelect = useCallback(
@@ -80,9 +97,12 @@ const CameraSwitcherPill = ({
 		[onSelect]
 	)
 
-	const isCyclable = cameras.length > 1
+	// With one camera, the arrows still lead back onto it from off the list.
+	const isCyclable = cameras.length > 1 || (isOffList && cameras.length > 0)
 	const hasList = cameras.length > LIST_THRESHOLD
-	const activeName = activeCamera?.name || 'Unnamed Camera'
+	const activeName = isOffList
+		? offListLabel || 'Hotspot view'
+		: activeCamera?.name || 'Unnamed Camera'
 
 	const label = (
 		<>
@@ -90,7 +110,7 @@ const CameraSwitcherPill = ({
 			<span className="truncate" aria-live="polite">
 				{activeName}
 			</span>
-			{isCyclable ? (
+			{isCyclable && !isOffList ? (
 				<span className="text-muted-foreground text-[11px] tabular-nums">
 					{activeIndex + 1}/{cameras.length}
 				</span>
@@ -134,7 +154,7 @@ const CameraSwitcherPill = ({
 					>
 						<div role="listbox" aria-label="Cameras">
 							{cameras.map((camera, index) => {
-								const isActive = index === activeIndex
+								const isActive = !isOffList && index === activeIndex
 								return (
 									<button
 										key={camera.cameraId}

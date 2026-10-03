@@ -22,6 +22,20 @@ const cameraNameForHotspot = (hotspotName: string): string =>
 	`${hotspotName || 'Unnamed Hotspot'} Camera`
 
 /**
+ * Where a new hotspot's camera stands: the editor's view as the hotspot was
+ * added.
+ *
+ * Position and field of view only, never a target or a rotation. The hotspot
+ * is placed after it is added, and a camera with no target of its own is aimed
+ * at its hotspot wherever that ends up (`resolveHotspotCameraTargets`); a
+ * captured target would keep it looking at the middle of the model.
+ */
+export interface HotspotCameraPose {
+	position: [number, number, number]
+	fov: number
+}
+
+/**
  * Mints a hotspot together with the camera it owns, already linked.
  *
  * `kind` is what every ownership test below keys off, and a camera minted
@@ -30,7 +44,8 @@ const cameraNameForHotspot = (hotspotName: string): string =>
  */
 export function addHotspot(
 	state: CameraHotspotState,
-	ids: { hotspotId: string; cameraId: string }
+	ids: { hotspotId: string; cameraId: string },
+	pose?: HotspotCameraPose
 ): CameraHotspotState {
 	const hotspot: HotspotDefinition = {
 		id: ids.hotspotId,
@@ -52,7 +67,8 @@ export function addHotspot(
 					cameraId: ids.cameraId,
 					kind: 'hotspot',
 					name: cameraNameForHotspot(hotspot.name),
-					fov: 60
+					fov: pose?.fov ?? 60,
+					...(pose ? { position: pose.position } : {})
 				}
 			]
 		},
@@ -117,9 +133,13 @@ const resolveOwnedHotspotCameraId = (
  * at it any more, and it shows up in the camera picker under the name of a
  * hotspot that no longer uses it. Dropping it keeps that list honest.
  *
- * Only while it is still empty, though. Once someone has framed it with "Set
- * camera to current view" it holds work, and relinking is not the moment to
- * throw that away — the author can point a hotspot back at it later.
+ * Only while nobody has framed it, though. Once someone has with "Set camera
+ * to current view" it holds work, and relinking is not the moment to throw
+ * that away; the author can point a hotspot back at it later.
+ *
+ * Framing is a rotation or a target, which "Set camera to current view" always
+ * writes. A position alone is the pose a hotspot is minted with
+ * (`HotspotCameraPose`), which is a default nobody chose.
  */
 const resolveStrandedHotspotCameraId = (
 	hotspots: readonly HotspotDefinition[],
@@ -131,9 +151,7 @@ const resolveStrandedHotspotCameraId = (
 
 	const camera = cameras?.find((c) => c.cameraId === ownedId)
 	const isFramed =
-		camera?.position !== undefined ||
-		camera?.rotation !== undefined ||
-		camera?.target !== undefined
+		camera?.rotation !== undefined || camera?.target !== undefined
 
 	return isFramed ? undefined : ownedId
 }
