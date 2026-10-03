@@ -16,6 +16,7 @@ import {
 } from 'react'
 import { Box3, Mesh, Object3D, type Texture, Vector3 } from 'three'
 
+import LoadFailureBoundary from '../load-failure-boundary'
 import SceneBakedShadow from './scene-baked-shadow'
 import ShadowAutoCutoff from './shadow-auto-cutoff'
 import {
@@ -222,7 +223,7 @@ const DEFAULT_METRICS: ModelMetrics = {
  * its size, but marks them unmeasured and unsized, so nothing reads them as
  * this model's.
  */
-const useModelMetrics = (
+export const useModelMetrics = (
 	model?: Object3D,
 	normalizationOptions?: NormalizationOptions
 ): ModelMetrics => {
@@ -583,6 +584,10 @@ const SceneShadows = memo(
 				),
 			[bakedShadow, bakeOptions, bakeBasis, measured]
 		)
+		// A stored bake whose image failed to load gives way to a live bake.
+		const [failedBakeUrl, setFailedBakeUrl] = useState<string | null>(null)
+		const showsPersistedBake =
+			usePersistedBake && bakedShadow?.url !== failedBakeUrl
 
 		if (!options.enabled) return null
 
@@ -602,16 +607,21 @@ const SceneShadows = memo(
 			<>
 				{sized && contactShadow}
 
-				{usePersistedBake && bakedShadow ? (
+				{showsPersistedBake && bakedShadow ? (
 					// Load-time fast path: render the stored bake, no recomputation.
-					<Suspense fallback={null}>
-						<SceneBakedShadow
-							url={bakedShadow.url}
-							planeScale={planeScale}
-							opacity={options.opacity ?? defaultShadowsOptions.opacity!}
-							color={options.color ?? '#000000'}
-						/>
-					</Suspense>
+					<LoadFailureBoundary
+						key={bakedShadow.url}
+						onError={() => setFailedBakeUrl(bakedShadow.url)}
+					>
+						<Suspense fallback={null}>
+							<SceneBakedShadow
+								url={bakedShadow.url}
+								planeScale={planeScale}
+								opacity={options.opacity ?? defaultShadowsOptions.opacity!}
+								color={options.color ?? '#000000'}
+							/>
+						</Suspense>
+					</LoadFailureBoundary>
 				) : sized ? (
 					// Not before: drei bakes on mount, so a bake sized from the
 					// placeholder metrics is thrown away when the real ones land.
@@ -634,7 +644,7 @@ const SceneShadows = memo(
 						apiRef={apiRef}
 						signature={bakeSignature}
 						basis={bakeBasis}
-						persistedBake={usePersistedBake ? bakedShadow : undefined}
+						persistedBake={showsPersistedBake ? bakedShadow : undefined}
 						onReady={onShadowBakeReady}
 					/>
 				)}

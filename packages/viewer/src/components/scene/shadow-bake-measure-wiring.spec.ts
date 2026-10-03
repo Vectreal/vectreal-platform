@@ -48,9 +48,19 @@ describe('a persisted bake', () => {
 		)
 	})
 
+	it('gives way to a live bake when its image fails to load', () => {
+		expect(shadows).toMatch(
+			/<LoadFailureBoundary\s*key=\{bakedShadow\.url\}\s*onError=\{\(\) => setFailedBakeUrl\(bakedShadow\.url\)\}\s*>\s*<Suspense fallback=\{null\}>\s*<SceneBakedShadow/
+		)
+		expect(shadows).toMatch(
+			/const showsPersistedBake =\s*usePersistedBake && bakedShadow\?\.url !== failedBakeUrl/
+		)
+		expect(shadows).toContain('{showsPersistedBake && bakedShadow ? (')
+	})
+
 	it('is captured for a save with the basis it was validated against', () => {
 		expect(shadows).toContain(
-			'persistedBake={usePersistedBake ? bakedShadow : undefined}'
+			'persistedBake={showsPersistedBake ? bakedShadow : undefined}'
 		)
 		expect(shadows).toContain('basis={bakeBasis}')
 		expect(shadows).toMatch(
