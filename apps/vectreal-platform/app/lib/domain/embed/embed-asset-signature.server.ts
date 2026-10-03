@@ -11,8 +11,10 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
  *
  * The URL carries no key and expires on an hour boundary, so every visitor of a
  * scene in the same hour asks for the same URL, and Cloudflare can serve it.
- * The cost is revocation lag: a revoked key stops getting new URLs at once, and
- * the ones already handed out keep working until they expire, two hours at most.
+ * The cost is revocation lag. A URL works for anyone holding it until it
+ * expires, two hours at most, and nothing checked when it was issued is checked
+ * again: a revoked key, a narrowed domain list, an unpublished or deleted
+ * scene all stop new URLs at once and leave the issued ones working.
  */
 
 const SIGNING_SECRET_ENV = 'EMBED_ASSET_SIGNING_SECRET'
@@ -50,32 +52,58 @@ function signature(
 		.digest()
 }
 
+function signedQuery(
+	target: SignedAssetTarget,
+	expiry: number,
+	secret: string
+): string {
+	return new URLSearchParams({
+		exp: String(expiry),
+		sig: signature(target, expiry, secret).toString('base64url')
+	}).toString()
+}
+
+/**
+ * Identifies the secret without revealing it, so URLs signed under a rotated
+ * secret read as a different version.
+ */
+function secretFingerprint(secret: string): string {
+	return createHmac('sha256', secret)
+		.update('embed-asset-url-version')
+		.digest('base64url')
+		.slice(0, 8)
+}
+
 export function buildSignedAssetUrl(
 	target: SignedAssetTarget,
 	secret: string,
 	nowMs: number
 ): string {
-	const expiry = signedAssetExpiry(nowMs)
-	const params = new URLSearchParams({
-		exp: String(expiry),
-		sig: signature(target, expiry, secret).toString('base64url')
-	})
-	return `/api/scenes/${target.sceneId}/assets/${target.assetId}?${params}`
+	const query = signedQuery(target, signedAssetExpiry(nowMs), secret)
+	return `/api/scenes/${target.sceneId}/assets/${target.assetId}?${query}`
 }
 
+/**
+ * Accepts only the exact query `buildSignedAssetUrl` wrote. The edge caches by
+ * the full URL, so any other spelling of a valid signature (an added
+ * parameter, a reordered one, a padded number) would be a fresh cache key,
+ * and a way to send every request to the origin.
+ */
 export function verifySignedAsset(
 	target: SignedAssetTarget,
-	query: { exp: string | null; sig: string | null },
+	search: string,
 	secret: string,
 	nowMs: number
 ): SignedAssetCheck {
-	const expiry = Number(query.exp)
-	if (!query.sig || !Number.isSafeInteger(expiry)) {
+	const query = new URLSearchParams(search)
+	const exp = query.get('exp')
+	const expiry = Number(exp)
+	if (!exp || !query.get('sig') || !Number.isSafeInteger(expiry)) {
 		return { ok: false, reason: 'malformed' }
 	}
 
-	const expected = signature(target, expiry, secret)
-	const given = Buffer.from(query.sig, 'base64url')
+	const expected = Buffer.from(signedQuery(target, expiry, secret))
+	const given = Buffer.from(search.replace(/^\?/, ''))
 	if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
 		return { ok: false, reason: 'invalid' }
 	}
@@ -89,11 +117,12 @@ export function verifySignedAsset(
 export interface EmbedAssetUrls {
 	buildAssetUrl: (assetId: string) => string
 	/**
-	 * When the URLs stop working, in epoch seconds, or null for URLs that do
-	 * not expire. A manifest that is revalidated by ETag has to fold this into
-	 * its tag, or a 304 would keep URLs alive in the browser past their expiry.
+	 * Changes whenever URLs built now would differ from earlier ones: at expiry,
+	 * and when the secret is rotated. Null for URLs that never change. A
+	 * manifest revalidated by ETag folds this into its tag, or a 304 would keep
+	 * URLs alive in the browser that no longer work.
 	 */
-	expiresAt: number | null
+	version: string | null
 }
 
 /**
@@ -114,7 +143,7 @@ export function createEmbedAssetUrls(params: {
 		return {
 			buildAssetUrl: (assetId) =>
 				buildSignedAssetUrl({ sceneId, assetId }, secret, nowMs),
-			expiresAt: signedAssetExpiry(nowMs)
+			version: `${signedAssetExpiry(nowMs)}.${secretFingerprint(secret)}`
 		}
 	}
 
@@ -124,6 +153,6 @@ export function createEmbedAssetUrls(params: {
 			if (token) query.set('token', token)
 			return `/api/scenes/${sceneId}/assets/${assetId}?${query}`
 		},
-		expiresAt: null
+		version: null
 	}
 }

@@ -2,8 +2,8 @@
 export interface ManifestPublication {
 	assetId: string
 	publishedAt: Date
-	/** When the manifest's signed asset URLs expire, if they are signed. */
-	assetUrlsExpireAt: number | null
+	/** The version of the manifest's signed asset URLs, if they are signed. */
+	assetUrlsVersion: string | null
 }
 
 /**
@@ -17,8 +17,9 @@ export interface ManifestPublication {
  * manifest pointing at the previous GLB, which publishing had already
  * garbage-collected.
  *
- * Signed asset URLs expire, so their expiry is in the tag as well: otherwise a
- * 304 would keep a manifest in the browser after its URLs stopped working.
+ * Signed asset URLs expire, and stop working when the signing secret is
+ * rotated, so their version is in the tag as well: otherwise a 304 would keep
+ * a manifest in the browser after its URLs stopped working.
  *
  * The publication also keeps the embed and session manifests for one scene in
  * separate cache entries. They carry different fields from the same
@@ -32,6 +33,6 @@ export function buildSceneManifestEtag(
 ): string | null {
 	if (!settingsUpdatedAt) return null
 	if (!publication) return `W/"scene-${sceneId}-${settingsUpdatedAt}"`
-	const { assetId, publishedAt, assetUrlsExpireAt } = publication
-	return `W/"scene-embed-${sceneId}-${settingsUpdatedAt}-${assetId}-${publishedAt.toISOString()}-${assetUrlsExpireAt ?? 'unsigned'}"`
+	const { assetId, publishedAt, assetUrlsVersion } = publication
+	return `W/"scene-embed-${sceneId}-${settingsUpdatedAt}-${assetId}-${publishedAt.toISOString()}-${assetUrlsVersion ?? 'unsigned'}"`
 }

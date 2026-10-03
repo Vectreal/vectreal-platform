@@ -4,6 +4,7 @@ import { LoaderFunctionArgs } from 'react-router'
 import { getDbClient } from '../../db/client'
 import { sceneAssets, sceneSettings } from '../../db/schema'
 import {
+	AssetNotFoundError,
 	downloadAsset,
 	downloadAssetFromRow
 } from '../../lib/domain/asset/asset-storage.server'
@@ -123,11 +124,11 @@ async function serveEmbedAsset(
 async function serveSignedAsset(
 	request: Request,
 	target: { sceneId: string; assetId: string },
-	query: { exp: string | null; sig: string | null }
+	search: string
 ): Promise<Response> {
 	const secret = getAssetSigningSecret()
 	const check = secret
-		? verifySignedAsset(target, query, secret, Date.now())
+		? verifySignedAsset(target, search, secret, Date.now())
 		: null
 
 	if (!check?.ok) {
@@ -146,6 +147,14 @@ async function serveSignedAsset(
 			`public, max-age=${check.secondsLeft}, s-maxage=${check.secondsLeft}`
 		)
 	} catch (error) {
+		// A republish deletes the previous GLB while URLs naming it are still
+		// valid. That is expected, not a fault.
+		if (error instanceof AssetNotFoundError) {
+			return new Response('Asset not found', {
+				status: 404,
+				headers: withNoStoreHeaders()
+			})
+		}
 		reportServerError(error, { request, properties: target })
 		return new Response('Failed to load asset', {
 			status: 500,
@@ -168,11 +177,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const url = new URL(request.url)
 
 	if (url.searchParams.has('sig')) {
-		return serveSignedAsset(
-			request,
-			{ sceneId, assetId },
-			{ exp: url.searchParams.get('exp'), sig: url.searchParams.get('sig') }
-		)
+		return serveSignedAsset(request, { sceneId, assetId }, url.search)
 	}
 
 	const isPreviewRequest = url.searchParams.get('preview') === '1'

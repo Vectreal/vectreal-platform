@@ -76,7 +76,7 @@ async function buildInlineEmbedManifest(
 ): Promise<SceneEmbedManifestResponse | null> {
 	const { projectId, sceneId, previewScene, settingsData, token } = params
 	const assetUrls = createEmbedAssetUrls({ sceneId, projectId, token })
-	if (assetUrls.expiresAt === null && !token) return null
+	if (assetUrls.version === null && !token) return null
 
 	try {
 		if (settingsData instanceof EmbedSettingsReadFailure) {

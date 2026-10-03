@@ -31,7 +31,7 @@ describe('buildSceneManifestEtag', () => {
 		const publication = {
 			assetId: 'glb-1',
 			publishedAt: new Date('2026-07-03T09:00:00.000Z'),
-			assetUrlsExpireAt: null
+			assetUrlsVersion: null
 		}
 
 		it('never shares a tag with the session manifest', () => {
@@ -44,7 +44,7 @@ describe('buildSceneManifestEtag', () => {
 			const republished = {
 				assetId: 'glb-2',
 				publishedAt: new Date('2026-07-03T11:00:00.000Z'),
-				assetUrlsExpireAt: null
+				assetUrlsVersion: null
 			}
 			expect(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, republished)
@@ -61,9 +61,9 @@ describe('buildSceneManifestEtag', () => {
 			)
 		})
 
-		it('changes when its signed asset URLs roll over', () => {
-			const signed = { ...publication, assetUrlsExpireAt: 1_800_000_000 }
-			const next = { ...publication, assetUrlsExpireAt: 1_800_003_600 }
+		it('changes when its signed asset URLs change version', () => {
+			const signed = { ...publication, assetUrlsVersion: '1800000000.aaaa' }
+			const next = { ...publication, assetUrlsVersion: '1800000000.bbbb' }
 			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, next)).not.toBe(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, signed)
 			)

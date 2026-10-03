@@ -450,6 +450,13 @@ export interface DownloadableAssetRow {
 /**
  * Downloads a single asset payload and returns bytes + metadata for response use.
  */
+export class AssetNotFoundError extends Error {
+	constructor(assetId: string) {
+		super(`Asset not found: ${assetId}`)
+		this.name = 'AssetNotFoundError'
+	}
+}
+
 export async function downloadAsset(assetId: string): Promise<{
 	data: Uint8Array
 	mimeType: string
@@ -462,7 +469,7 @@ export async function downloadAsset(assetId: string): Promise<{
 		.limit(1)
 
 	if (!asset) {
-		throw new Error(`Asset not found: ${assetId}`)
+		throw new AssetNotFoundError(assetId)
 	}
 
 	return downloadAssetFromRow(asset)

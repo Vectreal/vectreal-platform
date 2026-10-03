@@ -30,7 +30,7 @@ describe('the embed manifest ETag', () => {
 
 	it("is keyed on the publication and its URLs' expiry", () => {
 		expect(route).toMatch(
-			/\{\s*assetId: previewScene\.publishedAssetId,\s*publishedAt: previewScene\.publishedAt,\s*assetUrlsExpireAt: embedAssetUrls\.expiresAt\s*\}/
+			/\{\s*assetId: previewScene\.publishedAssetId,\s*publishedAt: previewScene\.publishedAt,\s*assetUrlsVersion: embedAssetUrls\.version\s*\}/
 		)
 		expect(route).toMatch(
 			/buildSceneManifestEtag\(\s*sceneId,\s*manifest\.settingsUpdatedAt,\s*publication\s*\)/
@@ -99,6 +99,28 @@ describe('signed embed assets', () => {
 		expect(handler.indexOf('if (!check?.ok) {')).toBeGreaterThan(-1)
 		expect(handler.indexOf('if (!check?.ok) {')).toBeLessThan(
 			handler.indexOf('await downloadAsset(')
+		)
+	})
+
+	it('verify the whole query the route received', () => {
+		expect(route).toContain(
+			'return serveSignedAsset(request, { sceneId, assetId }, url.search)'
+		)
+	})
+
+	it('answer an asset deleted by a republish with a quiet 404', () => {
+		const handler = route.slice(
+			route.indexOf('async function serveSignedAsset('),
+			route.indexOf('export async function loader(')
+		)
+		const notFound = handler.indexOf(
+			'if (error instanceof AssetNotFoundError) {'
+		)
+		expect(notFound).toBeGreaterThan(-1)
+		expect(notFound).toBeLessThan(handler.indexOf('reportServerError('))
+		expect(handler.slice(notFound)).toMatch(/^[^}]*status: 404/)
+		expect(read('lib/domain/asset/asset-storage.server.ts')).toMatch(
+			/if \(!asset\) \{\s*throw new AssetNotFoundError\(assetId\)/
 		)
 	})
 

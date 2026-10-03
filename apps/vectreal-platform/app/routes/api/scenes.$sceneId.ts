@@ -344,7 +344,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				? {
 						assetId: previewScene.publishedAssetId,
 						publishedAt: previewScene.publishedAt,
-						assetUrlsExpireAt: embedAssetUrls.expiresAt
+						assetUrlsVersion: embedAssetUrls.version
 					}
 				: null
 
