@@ -24,3 +24,16 @@ describe('embed key use', () => {
 		)
 	})
 })
+
+describe('the embed manifest ETag', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+
+	it('is keyed on the publication the manifest describes', () => {
+		expect(route).toMatch(
+			/publication = \{\s*assetId: previewScene\.publishedAssetId,\s*publishedAt: previewScene\.publishedAt\s*\}/
+		)
+		expect(route).toMatch(
+			/buildSceneManifestEtag\(\s*sceneId,\s*manifest\.settingsUpdatedAt,\s*publication\s*\)/
+		)
+	})
+})

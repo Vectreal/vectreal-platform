@@ -22,9 +22,12 @@ import {
 	updateSceneMetadata
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import {
+	buildSceneManifestEtag,
+	type ManifestPublication
+} from '../../lib/domain/scene/server/scene-manifest-etag'
+import {
 	buildEmbedSceneManifest,
-	buildSceneManifest,
-	buildSceneManifestEtag
+	buildSceneManifest
 } from '../../lib/domain/scene/server/scene-manifest.server'
 import {
 	getPublishedScenePreview,
@@ -301,6 +304,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		}
 
 		let publishedModelRow: PublishedModelRow | null = null
+		let publication: ManifestPublication | null = null
 
 		if (authContext.mode === 'apiKey') {
 			const previewScene = await getPublishedScenePreview(
@@ -311,6 +315,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 			}
 			publishedModelRow = toPublishedModelRow(previewScene)
+			publication = {
+				assetId: previewScene.publishedAssetId,
+				publishedAt: previewScene.publishedAt
+			}
 		} else {
 			const scene = await getScene(sceneId, authContext.userId)
 			if (!scene || scene.projectId !== previewProjectId) {
@@ -339,7 +347,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			const etag = buildSceneManifestEtag(
 				sceneId,
 				manifest.settingsUpdatedAt,
-				publishedModelRow ? 'embed' : 'session'
+				publication
 			)
 
 			if (etag && request.headers.get('If-None-Match') === etag) {

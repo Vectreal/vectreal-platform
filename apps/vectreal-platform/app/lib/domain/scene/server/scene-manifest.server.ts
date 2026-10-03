@@ -178,22 +178,3 @@ export async function buildEmbedSceneManifest(
 			: null
 	}
 }
-
-/**
- * Returns a weak ETag for the scene manifest based on the scene ID and the
- * timestamp of the last settings save. Returns null when no timestamp is
- * available so callers can skip caching headers entirely.
- *
- * `shape` keeps the embed and session manifests for one scene in separate
- * cache entries. They carry different fields from the same `settingsUpdatedAt`,
- * so a shared tag would let one be served in place of the other.
- */
-export function buildSceneManifestEtag(
-	sceneId: string,
-	settingsUpdatedAt: string | null,
-	shape: 'session' | 'embed' = 'session'
-): string | null {
-	if (!settingsUpdatedAt) return null
-	const prefix = shape === 'embed' ? 'scene-embed' : 'scene'
-	return `W/"${prefix}-${sceneId}-${settingsUpdatedAt}"`
-}
