@@ -142,6 +142,7 @@ files so the optimizer can ingest exactly what the viewer renders.
 | `load(source, options?)` | `Promise<LoadOutcome>`                  | Load a model; resolves to the terminal state plus `stillCurrent()` and `stillOnScreen()`. `options.onPublish` fires earlier, when the model reaches the screen |
 | `supportedFileTypes` | `ModelFileTypes[]`                          | Every format the loader accepts, from `@vctrl/core/model-formats` |
 | `reset`        | `() => void`                                      | Clear the current model and retire any load in flight             |
+| `isLatestLoad(loadId)` | `boolean`                                 | Whether no load or reset has started since the one that minted `loadId` (the ready state carries it). Changes the moment `load` is called, before anything renders. Newest, not on screen: a failed `files` load that puts the previous model back still counts |
 | `optimizer`    | `OptimizerIntegrationReturn<true> \| null`        | Populated when the hook is called with `useOptimizeModel()`       |
 
 ### Error codes

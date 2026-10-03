@@ -53,8 +53,7 @@ export function useSceneSizeCalculator(
 	optimizer: Optimizer,
 	file: ModelFile | null,
 	isReady: boolean,
-	reportTexturesAfter: number | undefined,
-	setOptimizationRuntime: UpdateRuntime
+	reportTexturesAfter: number | undefined
 ) {
 	const { handleDocumentGltfExport } = useExportModel()
 
@@ -101,9 +100,15 @@ export function useSceneSizeCalculator(
 	 * actually be published. The measured projection is the honest figure for
 	 * the headline size and the plan size gate; the uncompressed export is kept
 	 * alongside it as `workingSceneBytes`.
+	 * @param writeRuntime Records the result. The caller's, because the
+	 * measurement is slow and only the caller knows whether its scene is still
+	 * open when it lands.
 	 */
 	const refreshOptimizedSizeInfo = useCallback(
-		async (dracoReport?: DracoCompressionReport | null) => {
+		async (
+			dracoReport: DracoCompressionReport | null,
+			writeRuntime: UpdateRuntime
+		) => {
 			// Deliberately does not raise `isSceneSizeLoading` to cover this window.
 			// `useSceneSizeInitializer` force-clears that flag whenever
 			// `clientSceneBytes` is a number and keeps the flag in its own dep array,
@@ -126,7 +131,7 @@ export function useSceneSizeCalculator(
 				dracoReport
 			)
 
-			setOptimizationRuntime((prev) => ({
+			writeRuntime((prev) => ({
 				...prev,
 				optimizedSceneBytes: publishedSceneBytes,
 				workingSceneBytes,
@@ -138,12 +143,7 @@ export function useSceneSizeCalculator(
 							: null
 			}))
 		},
-		[
-			calculateOptimizedTextureBytes,
-			calculateSceneBytes,
-			reportTexturesAfter,
-			setOptimizationRuntime
-		]
+		[calculateOptimizedTextureBytes, calculateSceneBytes, reportTexturesAfter]
 	)
 
 	return {
