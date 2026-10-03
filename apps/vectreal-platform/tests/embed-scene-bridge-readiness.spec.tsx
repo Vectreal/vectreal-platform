@@ -65,4 +65,21 @@ describe('the embed bridge', () => {
 		rerender(<SceneEmbedPage projectId="p" sceneId="s" />)
 		expect(bridgeCalls).toEqual([executor])
 	})
+
+	it('is not re-announced for new scene data, and is withdrawn when the scene goes', () => {
+		bridgeCalls.length = 0
+		const sceneData = () =>
+			({ gltfJson: null, assetData: {} }) as ServerSceneData
+		loadState.current = { sceneData: sceneData() }
+		const { rerender } = render(<SceneEmbedPage projectId="p" sceneId="s" />)
+		expect(bridgeCalls).toEqual([executor])
+
+		loadState.current = { sceneData: sceneData() }
+		rerender(<SceneEmbedPage projectId="p" sceneId="s" />)
+		expect(bridgeCalls).toEqual([executor])
+
+		loadState.current = { sceneData: undefined }
+		rerender(<SceneEmbedPage projectId="p" sceneId="s" />)
+		expect(bridgeCalls).toEqual([executor, null])
+	})
 })
