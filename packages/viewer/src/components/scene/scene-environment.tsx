@@ -22,9 +22,16 @@ export const defaultEnvOptions = {
  * The map is otherwise requested only once the model has loaded and the
  * scene renders, which put a multi-megabyte fetch and its decode in series
  * after the model's.
+ *
+ * drei refuses to preload some maps the scene itself loads fine, gainmaps
+ * among them, by throwing. Those are simply not prefetched.
  */
 export const preloadEnvironmentFiles = (files: string | string[]) => {
-	useEnvironment.preload({ files })
+	try {
+		useEnvironment.preload({ files })
+	} catch {
+		return
+	}
 }
 
 /**
