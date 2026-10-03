@@ -40,3 +40,22 @@ describe('live shadow bakes', () => {
 		)
 	})
 })
+
+describe('a persisted bake', () => {
+	it('is chosen by the validity rule, with its basis', () => {
+		expect(shadows).toMatch(
+			/const usePersistedBake = useMemo\([\s\S]*?isPersistedBakeValid\(bakedShadow, bakeOptions, \{\s*\.\.\.bakeBasis,\s*measured\s*\}\)/
+		)
+	})
+
+	it('is captured for a save with the basis it was validated against', () => {
+		expect(shadows).toContain(
+			'persistedBake={usePersistedBake ? bakedShadow : undefined}'
+		)
+		expect(shadows).toContain('basis={bakeBasis}')
+		expect(shadows).toMatch(
+			/persisted\.basis\s*\?\s*\{\s*dataUrl: null,\s*signature: persisted\.signature,\s*basis: persisted\.basis\s*\}\s*:\s*\{ dataUrl: null, \.\.\.liveRef\.current \}/
+		)
+		expect(shadows).toContain('return { dataUrl, ...liveRef.current }')
+	})
+})

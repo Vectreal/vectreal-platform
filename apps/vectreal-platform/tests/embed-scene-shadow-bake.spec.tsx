@@ -16,6 +16,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import SceneEmbedViewer from '../app/components/scene-embed/scene-embed-viewer'
 
+import type { ServerSceneData } from '@vctrl/hooks/use-load-model'
 import type { VectrealViewerProps } from '@vctrl/viewer'
 
 const captured: VectrealViewerProps[] = []
@@ -33,5 +34,55 @@ describe('the published scene’s shadow bake', () => {
 		const props = captured.at(-1)
 		if (!props) throw new Error('the viewer was never rendered')
 		expect(props.staticShadowBake).toBeFalsy()
+	})
+
+	describe('stored with the basis it was baked on', () => {
+		const basis = { footprint: 1.2, radius: 0.9, vertexCount: 18_432 }
+		const bakeRef = {
+			url: '/api/scenes/s1/assets/bake-1?exp=1&sig=abc',
+			fileName: 'shadow-bake.png',
+			mimeType: 'image/png',
+			byteSize: 4
+		}
+		const sceneData = (withBasis: boolean) =>
+			({
+				gltfJson: null,
+				assetData: {},
+				assetRefs: { 'bake-1': bakeRef },
+				shadows: {
+					enabled: true,
+					baked: {
+						assetId: 'bake-1',
+						signature: 'sig',
+						...(withBasis ? { basis } : {})
+					}
+				}
+			}) as unknown as ServerSceneData
+
+		it('hands the viewer that basis, so the published model cannot void it', () => {
+			render(
+				<SceneEmbedViewer
+					file={null}
+					sceneData={sceneData(true)}
+					theme="system"
+				/>
+			)
+			expect(captured.at(-1)?.bakedShadow).toEqual({
+				url: bakeRef.url,
+				signature: 'sig',
+				basis
+			})
+		})
+
+		it('hands over no basis for a bake saved before it was recorded', () => {
+			render(
+				<SceneEmbedViewer
+					file={null}
+					sceneData={sceneData(false)}
+					theme="system"
+				/>
+			)
+			expect(captured.at(-1)?.bakedShadow).not.toHaveProperty('basis')
+		})
 	})
 })

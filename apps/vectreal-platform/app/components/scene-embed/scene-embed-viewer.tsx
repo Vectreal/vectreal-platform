@@ -87,14 +87,19 @@ const SceneEmbedViewer = memo(
 
 		// The persisted bake, so a scene renders its stored shadow alongside the
 		// model instead of re-baking on load.
-		const bakedShadow = useMemo(
-			() =>
-				resolveBakedShadowSource(shadowsOptions, {
-					assetData: sceneData?.assetData,
-					assetRefs: sceneData?.assetRefs
-				}),
-			[shadowsOptions, sceneData?.assetData, sceneData?.assetRefs]
-		)
+		//
+		// Validated against the basis it was baked on rather than this model,
+		// which is the Draco-compressed GLB on a published scene and can never
+		// reproduce the editor model's vertex count. Settings changes still
+		// invalidate it.
+		const bakedShadow = useMemo(() => {
+			const source = resolveBakedShadowSource(shadowsOptions, {
+				assetData: sceneData?.assetData,
+				assetRefs: sceneData?.assetRefs
+			})
+			const basis = shadowsOptions.baked?.basis
+			return source && basis ? { ...source, basis } : source
+		}, [shadowsOptions, sceneData?.assetData, sceneData?.assetRefs])
 
 		return (
 			<div className={cn('relative h-full w-full', className)}>

@@ -426,15 +426,20 @@ export const executeSceneSaveOrchestrator = async ({
 					)
 
 					bakedShadowAssetId = uploadedBake.assetId as string
-					bakedRef = { assetId: bakedShadowAssetId, signature: bake.signature }
+					bakedRef = {
+						assetId: bakedShadowAssetId,
+						signature: bake.signature,
+						basis: bake.basis
+					}
 				}
 			} else if (
 				bake &&
 				currentShadows.baked &&
 				currentShadows.baked.signature === bake.signature
 			) {
-				// Stored bake is still valid for the current inputs: keep and relink it.
-				bakedRef = currentShadows.baked
+				// Stored bake is still valid for the current inputs: keep and relink it,
+				// recording the basis it was validated against if it had none.
+				bakedRef = { ...currentShadows.baked, basis: bake.basis }
 				bakedShadowAssetId = currentShadows.baked.assetId
 			}
 		} catch (error) {

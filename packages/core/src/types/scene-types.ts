@@ -224,6 +224,25 @@ export interface BakedShadowRef {
 	assetId: string
 	/** Bake signature the texture was captured with. */
 	signature: string
+	/**
+	 * The model measurements the signature was computed from. Absent on bakes
+	 * saved before it was recorded.
+	 */
+	basis?: BakeBasis
+}
+
+/**
+ * The model measurements a shadow bake was computed against.
+ *
+ * Stored because the model an embed loads cannot reproduce them: publishing
+ * Draco-compresses the GLB, and Draco's weld changes the vertex count, so a
+ * signature recomputed from the published model never matched the one the
+ * publisher saved, and every embed of a Draco-published scene re-baked.
+ */
+export interface BakeBasis {
+	footprint: number
+	radius: number
+	vertexCount: number
 }
 
 /**

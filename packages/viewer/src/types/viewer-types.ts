@@ -1,3 +1,5 @@
+import type { BakeBasis } from '@vctrl/core'
+
 export interface SceneScreenshotOptions {
 	width?: number
 	height?: number
@@ -37,6 +39,8 @@ export type SceneScreenshotCapture = (
 export interface ShadowBakeResult {
 	dataUrl: string | null
 	signature: string
+	/** The model measurements {@link signature} was computed from. */
+	basis: BakeBasis
 }
 
 /**
@@ -49,6 +53,14 @@ export interface BakedShadow {
 	url: string
 	/** Bake signature the texture was captured with. */
 	signature: string
+	/**
+	 * The model measurements the signature was computed from. When given, the
+	 * bake is validated against these instead of the loaded model, for a
+	 * surface whose model is a compressed copy of the one it was baked on (see
+	 * {@link BakeBasis}). Leave it out where the loaded model may genuinely
+	 * have changed since the bake, as in an editor.
+	 */
+	basis?: BakeBasis
 }
 
 /**

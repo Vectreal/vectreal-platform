@@ -22,12 +22,13 @@ import {
 	captureShadowDensity,
 	computeBakeSignature,
 	computeModelFingerprint,
+	isPersistedBakeValid,
 	PERSISTED_BAKE_RESOLUTION
 } from './shadow-bake'
 import ShadowLightGizmo from './shadow-light-gizmo'
 
 import type { BakedShadow, ShadowBakeCapture } from '../../types/viewer-types'
-import type { NormalizationOptions, ShadowsProps } from '@vctrl/core'
+import type { BakeBasis, NormalizationOptions, ShadowsProps } from '@vctrl/core'
 
 // Accumulative shadows: high-quality baked soft shadows for a static subject.
 // The shadow is baked into the receiving plane's UV space from the
@@ -268,9 +269,12 @@ const useModelMetrics = (
 
 interface ShadowBakeCaptureProps {
 	apiRef: RefObject<ComponentRef<typeof AccumulativeShadows> | null>
+	/** Signature of the live bake inputs, measured on the loaded model. */
 	signature: string
-	/** True when the persisted bake is being rendered (no live bake to capture). */
-	usingPersistedBake: boolean
+	/** The loaded model's measurements, which {@link signature} is computed from. */
+	basis: BakeBasis
+	/** The persisted bake being rendered instead of a live one, if any. */
+	persistedBake?: BakedShadow
 	onReady?: (capture: ShadowBakeCapture | null) => void
 }
 
@@ -291,22 +295,31 @@ interface ShadowBakeCaptureProps {
 const ShadowBakeCapture = ({
 	apiRef,
 	signature,
-	usingPersistedBake,
+	basis,
+	persistedBake,
 	onReady
 }: ShadowBakeCaptureProps) => {
 	const gl = useThree((state) => state.gl)
 	// Keep the latest values without re-registering the capture each render.
-	const signatureRef = useRef(signature)
-	signatureRef.current = signature
-	const usingPersistedBakeRef = useRef(usingPersistedBake)
-	usingPersistedBakeRef.current = usingPersistedBake
+	const liveRef = useRef({ signature, basis })
+	liveRef.current = { signature, basis }
+	const persistedBakeRef = useRef(persistedBake)
+	persistedBakeRef.current = persistedBake
 
 	useEffect(() => {
 		if (!onReady) return
 		const capture: ShadowBakeCapture = async () => {
-			// Persisted bake is already valid for the current inputs: keep it.
-			if (usingPersistedBakeRef.current) {
-				return { dataUrl: null, signature: signatureRef.current }
+			// Persisted bake is already valid for the current inputs: keep it, with
+			// the basis it was validated against.
+			const persisted = persistedBakeRef.current
+			if (persisted) {
+				return persisted.basis
+					? {
+							dataUrl: null,
+							signature: persisted.signature,
+							basis: persisted.basis
+						}
+					: { dataUrl: null, ...liveRef.current }
 			}
 			const api = apiRef.current
 			// Only a fully accumulated live bake is worth persisting.
@@ -324,7 +337,7 @@ const ShadowBakeCapture = ({
 				PERSISTED_BAKE_RESOLUTION
 			)
 			if (!dataUrl) return null
-			return { dataUrl, signature: signatureRef.current }
+			return { dataUrl, ...liveRef.current }
 		}
 		onReady(capture)
 		return () => onReady(null)
@@ -517,29 +530,22 @@ const SceneShadows = memo(
 			radius
 		])
 
-		// Signature of the current bake inputs. A persisted bake is reused only while
+		// The bake inputs a signature covers. A persisted bake is reused only while
 		// it still matches; any change to the light/frames/scale/alphaTest/colorBlend/
 		// model re-bakes live (and the next save re-persists). Uses `options.frames`
-		// (the full count, not the drag-preview reduction). Memoized so it isn't
-		// re-serialized + re-hashed on every render.
-		const bakeSignature = useMemo(
-			() =>
-				computeBakeSignature(
-					{
-						light: options.light,
-						frames: options.frames,
-						scale: options.scale,
-						resolution: options.resolution,
-						alphaTest: options.alphaTest,
-						colorBlend: options.colorBlend,
-						cutoffScale: options.cutoffScale
-					},
-					footprint,
-					radius,
-					vertexCount
-				),
-			// Depend on primitive inputs, not the freshly-spread `options`/`options.light`
-			// objects, so the memo actually holds across unrelated re-renders.
+		// (the full count, not the drag-preview reduction). Memoized on primitive
+		// inputs, not the freshly-spread `options`/`options.light` objects, so the
+		// signatures below are not re-serialized and re-hashed on every render.
+		const bakeOptions = useMemo(
+			() => ({
+				light: options.light,
+				frames: options.frames,
+				scale: options.scale,
+				resolution: options.resolution,
+				alphaTest: options.alphaTest,
+				colorBlend: options.colorBlend,
+				cutoffScale: options.cutoffScale
+			}),
 			[
 				options.frames,
 				options.scale,
@@ -552,17 +558,27 @@ const SceneShadows = memo(
 				options.light.ambient,
 				options.light.amount,
 				options.light.intensity,
-				options.light.bias,
-				footprint,
-				radius,
-				vertexCount
+				options.light.bias
 			]
 		)
-		// Use the persisted bake when one exists and either the model isn't measured
-		// yet (render it optimistically rather than spawn the expensive live bake we
-		// are trying to avoid) or its signature still matches the measured inputs.
-		const usePersistedBake = Boolean(
-			bakedShadow && (!measured || bakedShadow.signature === bakeSignature)
+		const bakeBasis = useMemo(
+			() => ({ footprint, radius, vertexCount }),
+			[footprint, radius, vertexCount]
+		)
+		const bakeSignature = useMemo(
+			() => computeBakeSignature(bakeOptions, footprint, radius, vertexCount),
+			[bakeOptions, footprint, radius, vertexCount]
+		)
+		const usePersistedBake = useMemo(
+			() =>
+				Boolean(
+					bakedShadow &&
+					isPersistedBakeValid(bakedShadow, bakeOptions, {
+						...bakeBasis,
+						measured
+					})
+				),
+			[bakedShadow, bakeOptions, bakeBasis, measured]
 		)
 
 		if (!options.enabled) return null
@@ -614,7 +630,8 @@ const SceneShadows = memo(
 					<ShadowBakeCapture
 						apiRef={apiRef}
 						signature={bakeSignature}
-						usingPersistedBake={usePersistedBake}
+						basis={bakeBasis}
+						persistedBake={usePersistedBake ? bakedShadow : undefined}
 						onReady={onShadowBakeReady}
 					/>
 				)}
