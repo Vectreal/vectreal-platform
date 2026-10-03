@@ -118,11 +118,11 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		}
 
 		if (startsFromSavedVersion) {
-			return 'Each preset is made from the saved version of this scene.'
+			return 'Each preset is made from the saved version of this scene and applies as soon as you pick it. Save keeps the one you chose.'
 		}
 		return isUnoptimized
-			? 'Not optimized yet. Pick a preset to make it from your original.'
-			: 'Each preset is made from your original, so you can switch freely.'
+			? 'Not optimized yet. Picking a preset applies it from your original right away. Save keeps it.'
+			: 'Each preset is made from your original and applies as soon as you pick it, so you can switch freely. Save keeps the one you chose.'
 	}, [
 		isUnoptimized,
 		startsFromSavedVersion,
