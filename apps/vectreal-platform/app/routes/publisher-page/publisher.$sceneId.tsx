@@ -11,6 +11,7 @@ import {
 	sceneMetaAtom,
 	openComposeToolAtom
 } from '../../lib/stores/publisher-config-store'
+import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
 import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
@@ -65,6 +66,9 @@ const PublisherPage = () => {
 	// viewer keeps the camera and framing where the user left them.
 	const modelKey =
 		loadedModel.status === 'ready' ? loadedModel.loadId : undefined
+	// A held comparison only changes what is drawn: the camera, framing,
+	// shadows, animation and hotspots keep following the loaded model.
+	const comparedModel = useAtomValue(comparedModelAtom)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const {
@@ -197,6 +201,7 @@ const PublisherPage = () => {
 				<ClientVectrealViewer
 					model={file?.model}
 					modelKey={modelKey}
+					displayedModel={comparedModel?.model}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
 					envOptions={environment}
@@ -238,6 +243,16 @@ const PublisherPage = () => {
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
+				{comparedModel && (
+					<p
+						role="status"
+						className="ds-overlay pointer-events-none absolute top-16 left-1/2 z-10 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-medium"
+					>
+						{comparedModel.isOriginal
+							? 'Showing the original'
+							: 'Showing the saved version'}
+					</p>
+				)}
 			</div>
 		</div>
 	)

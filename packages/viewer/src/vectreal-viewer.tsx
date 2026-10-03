@@ -102,6 +102,17 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	modelKey?: ModelKey
 
 	/**
+	 * Draws this object in place of `model` without changing what the scene is
+	 * about: `model` stays mounted, hidden, and framing, normalization, shadow
+	 * sizing, animation and hotspots keep reading it, so swapping this in and out
+	 * leaves all of them as they were. Shadows are cast by what is drawn. Used to
+	 * show another rendition of the same model for a moment, such as the
+	 * original beside an optimized result. The displayed object is not animated:
+	 * playback stays bound to `model`.
+	 */
+	displayedModel?: Object3D
+
+	/**
 	 * Animation clips belonging to `model`, as parsed from the same glTF.
 	 * Without these no animation runtime is mounted.
 	 */
@@ -393,6 +404,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		// Content
 		children,
 		modelKey,
+		displayedModel,
 		animations,
 		animationOptions,
 		// Container & appearance
@@ -743,6 +755,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											object={model}
+											displayedObject={displayedModel}
 											modelKey={modelKey}
 											enableShadows={shadowsEnabled}
 											normalizationOptions={normalizationOptions}
@@ -752,6 +765,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								</Center>
 								<SceneShadows
 									model={model}
+									displayedModel={displayedModel}
 									normalizationOptions={normalizationOptions}
 									{...shadowsOptions}
 									isModelAnimating={animation.status.active}
