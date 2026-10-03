@@ -4,8 +4,10 @@ import { getDbClient } from '../../../../db/client'
 import { assets } from '../../../../db/schema/project/assets'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { scenes } from '../../../../db/schema/project/scenes'
-
-import type { PublishedModelRow } from '../embed-asset-policy'
+import {
+	extensionsUsedFromMetadata,
+	type PublishedModelRow
+} from '../embed-asset-policy'
 
 const db = getDbClient()
 
@@ -22,7 +24,9 @@ export async function getPublishedScenePreview(
 			publishedAt: scenePublished.publishedAt,
 			publishedAssetSizeBytes: assets.fileSize,
 			publishedAssetName: assets.name,
-			publishedAssetMimeType: assets.mimeType
+			publishedAssetMimeType: assets.mimeType,
+			publishedAssetFilePath: assets.filePath,
+			publishedAssetMetadata: assets.metadata
 		})
 		.from(scenes)
 		.innerJoin(scenePublished, eq(scenePublished.sceneId, scenes.id))
@@ -53,6 +57,7 @@ export function toPublishedModelRow(
 		assetId: preview.publishedAssetId,
 		fileName: preview.publishedAssetName,
 		mimeType: preview.publishedAssetMimeType,
-		byteSize: preview.publishedAssetSizeBytes
+		byteSize: preview.publishedAssetSizeBytes,
+		extensionsUsed: extensionsUsedFromMetadata(preview.publishedAssetMetadata)
 	}
 }

@@ -12,7 +12,7 @@ import {
 	type WebGLRenderer
 } from 'three'
 
-import type { ShadowsProps } from '@vctrl/core'
+import type { BakeBasis, ShadowsProps } from '@vctrl/core'
 
 /**
  * Resolution (px, square) of the persisted shadow-density PNG. Independent of the
@@ -100,6 +100,41 @@ export const computeBakeSignature = (
 		`lb:${light.bias}`
 	].join('|')
 	return `v2:${fnv1aHex(canonical)}`
+}
+
+/** The settings a bake signature covers. */
+export type BakeSignatureOptions = Parameters<typeof computeBakeSignature>[0]
+
+/**
+ * Whether a persisted bake still shows what a live bake would.
+ *
+ * With a stored basis, the bake is checked against the measurements it was
+ * baked on, so only a change to the shadow settings invalidates it. Without
+ * one, it is checked against the loaded model - and trusted until that model
+ * is measured, rather than spawning the very live bake the stored one exists
+ * to avoid.
+ */
+export const isPersistedBakeValid = (
+	baked: { signature: string; basis?: BakeBasis },
+	options: BakeSignatureOptions,
+	model: BakeBasis & { measured: boolean }
+): boolean => {
+	if (baked.basis) {
+		const { footprint, radius, vertexCount } = baked.basis
+		return (
+			computeBakeSignature(options, footprint, radius, vertexCount) ===
+			baked.signature
+		)
+	}
+	if (!model.measured) return true
+	return (
+		computeBakeSignature(
+			options,
+			model.footprint,
+			model.radius,
+			model.vertexCount
+		) === baked.signature
+	)
 }
 
 const DENSITY_VERTEX = /* glsl */ `

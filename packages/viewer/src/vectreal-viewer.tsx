@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
-import { resolveNormalizedScale } from '@vctrl/core'
+import { resolveEnvironmentFiles, resolveNormalizedScale } from '@vctrl/core'
 import {
 	AnimationSettings,
 	BoundsProps,
@@ -54,6 +54,7 @@ import {
 	SceneShadows
 } from './components/scene'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
+import { preloadEnvironmentFiles } from './components/scene/scene-environment'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useHeldExecutor } from './hooks/use-held-executor'
 import { useViewerLoading } from './hooks/use-viewer-loading'
@@ -438,6 +439,18 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const hasContent = !!(model || children)
 
+	// Prefetched as soon as a surface says which environment it wants, which
+	// can be long before there is content to light: the map is otherwise only
+	// requested once the model has loaded and the scene mounts. A surface that
+	// has not decided yet prefetches nothing rather than the default.
+	const environmentFiles = envOptions
+		? resolveEnvironmentFiles(envOptions)
+		: null
+	const environmentFilesKey = environmentFiles && String(environmentFiles)
+	useEffect(() => {
+		if (environmentFiles) preloadEnvironmentFiles(environmentFiles)
+	}, [environmentFilesKey])
+
 	// Bounds-based camera framing is the fallback for scenes without saved camera positions.
 	// Explicit boundsOptions.enable overrides this inference.
 	const boundsEnabled =
@@ -446,6 +459,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			: !cameraOptions?.cameras?.some((c) => c.position != null)
 	const [isInitialFramingComplete, setIsInitialFramingComplete] =
 		useState(false)
+	// Latched on the first compile: a later model swap keeps the previous frame
+	// up while it compiles, and must not bring the loader back.
+	const [areShadersReady, setAreShadersReady] = useState(false)
 	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
 		null | boolean
 	>(null)
@@ -471,6 +487,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	useEffect(() => {
 		if (!hasContent) {
 			setIsInitialFramingComplete(false)
+			setAreShadersReady(false)
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
@@ -480,6 +497,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const handleInitialFramingComplete = useCallback(() => {
 		setIsInitialFramingComplete(true)
+	}, [])
+
+	const handleShadersReady = useCallback(() => {
+		setAreShadersReady(true)
 	}, [])
 
 	const { forwardCommand: forwardAnimationCommand } = animation
@@ -630,9 +651,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		}
 	}, [executeViewerCommand, onCommandExecutorReady])
 
+	// Without the composer nothing compiles ahead of the first frame, so there
+	// is nothing to wait for.
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
-		isInitialFramingComplete,
+		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
 		Boolean(loader)
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
@@ -695,6 +718,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								aoAtRest={shadowsOptions?.aoAtRest}
 								model={model}
 								active={animation.status.active}
+								onShadersReady={handleShadersReady}
 							/>
 							<SceneControls
 								{...controlsOptions}

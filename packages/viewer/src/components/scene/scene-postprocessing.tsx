@@ -8,7 +8,7 @@ import {
 	ToneMappingEffect,
 	ToneMappingMode
 } from 'postprocessing'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
 	Box3,
 	type Camera,
@@ -31,6 +31,7 @@ import {
 	type FramePlan,
 	type RenderActivity
 } from './render-activity'
+import { warmUpScene } from './shader-warmup'
 
 interface ScenePostProcessingProps {
 	/**
@@ -55,6 +56,11 @@ interface ScenePostProcessingProps {
 	 * not show, such as morph-target animation.
 	 */
 	active?: boolean
+	/**
+	 * Called once the scene's shaders have compiled and the first frame can be
+	 * drawn without stalling. The viewer keeps its loader up until then.
+	 */
+	onShadersReady?: () => void
 }
 
 /**
@@ -248,7 +254,7 @@ const createPipeline = (
 		composer,
 		aoPass,
 		accumulatePass,
-		render(delta: number, plan: FramePlan) {
+		render(delta: number, plan: FramePlan, keepHistory: boolean) {
 			jittering = plan.kind === 'accumulate'
 			if (plan.kind === 'accumulate') {
 				jitter[0] = plan.offset[0]
@@ -258,7 +264,7 @@ const createPipeline = (
 				// A change the camera did not cause leaves N8AO's camera check
 				// satisfied; tell it its accumulated AO is stale.
 				if (aoPass) aoPass.needsFrame = true
-				accumulatePass.present()
+				accumulatePass.present(keepHistory)
 			}
 			if (aoPass) aoPass.enabled = !aoAtRest || jittering
 			if (smaaPass) {
@@ -301,9 +307,10 @@ const ViewerComposer = ({
 	aoAtRest,
 	aoIntensity,
 	model,
-	active
+	active,
+	onShadersReady
 }: Required<Pick<ScenePostProcessingProps, 'ao' | 'aoAtRest' | 'aoIntensity'>> &
-	Pick<ScenePostProcessingProps, 'model' | 'active'>) => {
+	Pick<ScenePostProcessingProps, 'model' | 'active' | 'onShadersReady'>) => {
 	const gl = useThree((state) => state.gl)
 	const scene = useThree((state) => state.scene)
 	const camera = useThree((state) => state.camera)
@@ -329,10 +336,16 @@ const ViewerComposer = ({
 	// (disposal empties the pass list). Built and disposed in one effect
 	// rather than memoized, so an effect re-run (StrictMode, a hidden-then-shown
 	// Activity) builds a fresh chain instead of keeping the emptied one.
+	//
+	// A layout effect, because R3F subscribes `useFrame` in one: a passive
+	// effect left a frame between the two, drawn straight to the canvas. That
+	// frame compiled every material for the canvas's output, and the next
+	// compiled them all again for the composer's linear buffer, blocking the
+	// main thread twice while the loader was on screen.
 	const live = useRef<{ pipeline: Pipeline; activity: RenderActivity } | null>(
 		null
 	)
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const pipeline = createPipeline(gl, scene, camera, ao, aoAtRest)
 		if (pipeline.aoPass) {
 			Object.assign(pipeline.aoPass.configuration, aoConfigRef.current)
@@ -347,6 +360,37 @@ const ViewerComposer = ({
 	useEffect(() => {
 		live.current?.pipeline.composer.setSize(size.width, size.height)
 	}, [size.width, size.height, dpr])
+
+	// Which model's shaders are compiled. The frame loop draws nothing until it
+	// matches the model on screen: drawing sooner would compile on the main
+	// thread, which is the freeze this exists to prevent. A swapped model keeps
+	// the previous frame up meanwhile, since an undrawn canvas keeps showing it.
+	const modelRef = useRef(model)
+	modelRef.current = model
+	const warmed = useRef<{ model?: Object3D } | null>(null)
+	const onShadersReadyRef = useRef(onShadersReady)
+	onShadersReadyRef.current = onShadersReady
+
+	useEffect(() => {
+		const current = live.current
+		if (!current) return
+		let cancelled = false
+		void warmUpScene(
+			gl,
+			scene,
+			camera,
+			current.pipeline.composer.inputBuffer,
+			() => cancelled
+		).then(() => {
+			if (cancelled) return
+			warmed.current = { model }
+			onShadersReadyRef.current?.()
+			invalidate()
+		})
+		return () => {
+			cancelled = true
+		}
+	}, [model, camera, gl, scene, invalidate])
 
 	useEffect(() => {
 		const aoPass = live.current?.pipeline.aoPass
@@ -372,6 +416,13 @@ const ViewerComposer = ({
 		}
 		const { pipeline, activity } = live.current
 
+		if (!warmed.current || warmed.current.model !== modelRef.current) {
+			if (state.internal.priority > 1) {
+				pipeline.accumulatePass.presentHistory(state.gl)
+			}
+			return
+		}
+
 		state.scene.updateMatrixWorld()
 		state.camera.updateMatrixWorld()
 		state.gl.getDrawingBufferSize(bufferSize)
@@ -386,7 +437,8 @@ const ViewerComposer = ({
 		})
 
 		if (plan.kind !== 'converged') {
-			pipeline.render(delta, plan)
+			// The history is redrawn only under another renderer's frame.
+			pipeline.render(delta, plan, state.internal.priority > 1)
 			return
 		}
 
@@ -413,7 +465,8 @@ const ScenePostProcessing = ({
 	aoAtRest = false,
 	aoIntensity = 1.4,
 	model,
-	active
+	active,
+	onShadersReady
 }: ScenePostProcessingProps) => (
 	<>
 		<RendererToneMapping />
@@ -424,6 +477,7 @@ const ScenePostProcessing = ({
 				aoIntensity={aoIntensity}
 				model={model}
 				active={active}
+				onShadersReady={onShadersReady}
 			/>
 		)}
 	</>

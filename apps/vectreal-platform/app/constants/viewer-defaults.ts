@@ -60,7 +60,8 @@ export const defaultControlsOptions: ControlsProps = {
   publisher toggle is an opt-out.
 */
 export const defaultPresentationOptions: ScenePresentationSettings = {
-	showInfoPopover: true
+	showInfoPopover: true,
+	showLoadingThumbnail: false
 }
 
 export const defaultEnvOptions: EnvironmentProps = {

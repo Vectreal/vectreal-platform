@@ -19,7 +19,7 @@ import { fetchManifestAssetData } from './utils/fetch-manifest-assets'
 import type { LoadContext } from './load-context'
 import type {
 	ApiEnvelope,
-	SceneAssetRef,
+	PublishedModelRef,
 	ServerScenePayload
 } from '@vctrl/core'
 
@@ -73,12 +73,24 @@ const PUBLISHED_MODEL_KEY = '__vctrl_published_model__'
 const loadPublishedSceneModel = async (
 	sceneId: string | undefined,
 	payload: ServerScenePayload,
-	publishedModel: SceneAssetRef,
+	publishedModel: PublishedModelRef,
 	{ modelLoader, publish, onProgress }: LoadContext,
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
+	// Started before the download rather than after it: the decoder's script,
+	// its wasm and the worker it compiles in are all independent of the model's
+	// bytes, and fetching them after the GLB arrived put them in series. A
+	// failure here resurfaces, with its context, in the parse that needs it.
+	// Unknown counts as needed: GLBs published before the flag was recorded
+	// say nothing either way.
+	if (publishedModel.usesDraco !== false) {
+		modelLoader.prepareDracoDecoder().catch(() => {})
+	}
+
+	// The model alone. The bake is left in `assetRefs` for the viewer to load by
+	// URL: fetched here, the model's parse waited on it.
 	const fetched = await fetchManifestAssetData(
-		{ ...(payload.assetRefs ?? {}), [PUBLISHED_MODEL_KEY]: publishedModel },
+		{ [PUBLISHED_MODEL_KEY]: publishedModel },
 		{
 			headers: assetHeaders,
 			onProgress: (fraction) => onProgress(Math.round(fraction * 60))
@@ -105,15 +117,8 @@ const loadPublishedSceneModel = async (
 
 	onProgress(70)
 
-	const modelBytes = toSerializedAssetBytes(modelEntry)
-	const blobBytes = new Uint8Array(modelBytes.byteLength)
-	blobBytes.set(modelBytes)
-	const blob = new Blob([blobBytes], { type: publishedModel.mimeType })
-
-	// The same entry point a dropped `.glb` takes, so the Draco decoder is
-	// attached exactly as it is everywhere else.
-	const result = await modelLoader.loadToThreeJS(
-		new File([blob], publishedModel.fileName, { type: publishedModel.mimeType })
+	const result = await modelLoader.parseGLBToThreeJS(
+		toSerializedAssetBytes(modelEntry)
 	)
 
 	const loaded: LoadedModel = {

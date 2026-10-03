@@ -3,30 +3,34 @@ import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { embedManifestToScenePayload } from '../../lib/domain/scene/client/embed-manifest-payload'
 import { buildPreviewSceneEndpoint } from '../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../lib/domain/scene/client/use-scene-model'
 import { useConsent } from '../consent/consent-context'
 
+import type { SceneEmbedManifestResponse } from '../../types/api'
 import type { ModelSource } from '@vctrl/hooks/use-load-model'
 
 interface UseSceneEmbedSceneParams {
 	sceneId?: string
 	projectId?: string
+	initialManifest?: SceneEmbedManifestResponse | null
 }
 
 export function useSceneEmbedScene({
 	sceneId,
-	projectId
+	projectId,
+	initialManifest
 }: UseSceneEmbedSceneParams) {
 	const [searchParams] = useSearchParams()
 	const model = useLoadModel()
-	const { file, sceneData, status, error, load } = model
+	const { file, sceneData, error, load } = model
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const trackedPreviewKeysRef = useRef(new Set<string>())
 
 	const token = searchParams.get('token')?.trim() || undefined
-	const sceneSource = useMemo<ModelSource | null>(() => {
+	const serverSource = useMemo<ModelSource | null>(() => {
 		if (!sceneId || !projectId) {
 			return null
 		}
@@ -42,11 +46,29 @@ export function useSceneEmbedScene({
 		}
 	}, [projectId, sceneId, token])
 
+	/*
+	  The manifest the document carried, loaded as it stands: no manifest
+	  request, and no key sent as a header with the asset requests, which is
+	  what lets them reuse the document's preloads.
+	*/
+	const sceneSource = useMemo<ModelSource | null>(() => {
+		if (!sceneId || !initialManifest) return serverSource
+
+		return {
+			kind: 'scene-data',
+			sceneId,
+			sceneData: embedManifestToScenePayload(initialManifest),
+			parseMode: 'direct'
+		}
+	}, [initialManifest, sceneId, serverSource])
+
 	useSceneModel(model, sceneSource)
 
+	// Always from the server: the document's manifest signs its asset URLs for
+	// an hour or two, and a retry in a tab left open longer would replay them.
 	const retrySceneLoad = useCallback(() => {
-		if (sceneSource) void load(sceneSource)
-	}, [load, sceneSource])
+		if (serverSource) void load(serverSource)
+	}, [load, serverSource])
 
 	useEffect(() => {
 		if (!consent?.analytics || !sceneData || !sceneId || !projectId) {
@@ -67,7 +89,6 @@ export function useSceneEmbedScene({
 
 	return {
 		file,
-		isLoadingScene: status === 'loading',
 		sceneData,
 		loadError: error,
 		retrySceneLoad

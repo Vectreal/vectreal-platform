@@ -8,6 +8,7 @@ import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
 import type { EmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
 import type { EmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
+import type { EnvironmentProps } from '@vctrl/core'
 import type { ModelFile, ServerSceneData } from '@vctrl/hooks/use-load-model'
 import type { VectrealViewerProps, ViewerLoadingThumbnail } from '@vctrl/viewer'
 import type { ReactNode } from 'react'
@@ -52,6 +53,12 @@ export interface SceneEmbedViewerProps {
 	 * wrapper's `dark`.
 	 */
 	theme: EmbedViewerTheme
+	/**
+	 * The scene's environment while its data is still loading, from a
+	 * manifest the page already has, so the viewer can start on the
+	 * environment map alongside the model. `sceneData` wins once it exists.
+	 */
+	environment?: EnvironmentProps
 	onCommandExecutorReady?: VectrealViewerProps['onCommandExecutorReady']
 	onInteractionEvent?: VectrealViewerProps['onInteractionEvent']
 }
@@ -74,6 +81,7 @@ const SceneEmbedViewer = memo(
 		hotspotPresentation,
 		branding,
 		theme,
+		environment,
 		onCommandExecutorReady,
 		onInteractionEvent
 	}: SceneEmbedViewerProps) => {
@@ -85,12 +93,21 @@ const SceneEmbedViewer = memo(
 			[sceneData?.shadows]
 		)
 
-		// The persisted bake from the scene's inlined asset data, so a scene renders
-		// its stored shadow alongside the model instead of re-baking on load.
-		const bakedShadow = useMemo(
-			() => resolveBakedShadowSource(shadowsOptions, sceneData?.assetData),
-			[shadowsOptions, sceneData?.assetData]
-		)
+		// The persisted bake, so a scene renders its stored shadow alongside the
+		// model instead of re-baking on load.
+		//
+		// Validated against the basis it was baked on rather than this model,
+		// which is the Draco-compressed GLB on a published scene and can never
+		// reproduce the editor model's vertex count. Settings changes still
+		// invalidate it.
+		const bakedShadow = useMemo(() => {
+			const source = resolveBakedShadowSource(shadowsOptions, {
+				assetData: sceneData?.assetData,
+				assetRefs: sceneData?.assetRefs
+			})
+			const basis = shadowsOptions.baked?.basis
+			return source && basis ? { ...source, basis } : source
+		}, [shadowsOptions, sceneData?.assetData, sceneData?.assetRefs])
 
 		return (
 			<div className={cn('relative h-full w-full', className)}>
@@ -99,7 +116,7 @@ const SceneEmbedViewer = memo(
 					boundsOptions={sceneData?.bounds}
 					cameraOptions={sceneData?.camera}
 					controlsOptions={sceneData?.controls}
-					envOptions={sceneData?.environment}
+					envOptions={sceneData ? sceneData.environment : environment}
 					normalizationOptions={sceneData?.normalization}
 					/*
 					  Straight from the scene's own settings, and never with
@@ -125,7 +142,6 @@ const SceneEmbedViewer = memo(
 					showHotspotMarkers={hotspotPresentation?.showMarkers}
 					revealHotspotContent={hotspotPresentation?.revealContent}
 					shadowsOptions={shadowsOptions}
-					staticShadowBake
 					bakedShadow={bakedShadow}
 					loadingThumbnail={loadingThumbnail}
 					popover={
@@ -139,7 +155,16 @@ const SceneEmbedViewer = memo(
 					theme={theme}
 					onCommandExecutorReady={onCommandExecutorReady}
 					onInteractionEvent={onInteractionEvent}
-					loader={<CenteredSpinner text="Preparing scene..." />}
+					/*
+					  Mounted while the model is still downloading, so the viewer's
+					  code, its WebGL context and the environment map load alongside
+					  it; the loader says which of the two waits it is.
+					*/
+					loader={
+						<CenteredSpinner
+							text={file?.model ? 'Preparing scene...' : 'Loading scene...'}
+						/>
+					}
 					fallback={<CenteredSpinner text="Loading scene..." />}
 				/>
 			</div>

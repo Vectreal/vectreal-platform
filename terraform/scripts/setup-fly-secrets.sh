@@ -213,6 +213,10 @@ FLY_SECRETS_OPTIONAL=(
   # Genuinely degrades: /api/billing/reconcile is fail-closed and 401s
   # everything, which leaves the drift detector off but breaks nothing.
   "BILLING_RECONCILE_SECRET"
+  # Genuinely degrades: embed manifests hand out key-authenticated asset URLs
+  # instead of signed ones (embed-asset-signature.server.ts), so embeds still
+  # load but no asset is cached at the edge.
+  "EMBED_ASSET_SIGNING_SECRET"
 )
 
 # Sent to Fly. One value covers both environments.
