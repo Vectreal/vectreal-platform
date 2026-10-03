@@ -25,7 +25,10 @@ import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extensi
 import { modelFormatForFileName, type ModelFormat } from '../model-formats'
 import { missingAssetsError } from './missing-assets'
 import { OperationProgress } from '../types'
-import { getThreeDracoLoader } from './draco-three-loader'
+import {
+	getThreeDracoLoader,
+	prepareThreeDracoDecoder
+} from './draco-three-loader'
 import { referenceIn, selectionKey } from './dropped-selection'
 import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
@@ -772,10 +775,10 @@ export class ModelLoader {
 	/**
 	 * Fetches and compiles the Draco decoder ahead of the first model that
 	 * needs it, so a caller can overlap that with the model's download.
+	 * Rejects when the decoder cannot be downloaded.
 	 */
 	public async prepareDracoDecoder(): Promise<void> {
-		const dracoLoader = await getThreeDracoLoader(this.dracoDecoderPath)
-		dracoLoader.preload()
+		await prepareThreeDracoDecoder(this.dracoDecoderPath)
 	}
 
 	/**
