@@ -12,6 +12,7 @@ import type { SceneEmbedManifestResponse } from '../app/types/api'
 import type { ModelSource } from '@vctrl/hooks/use-load-model'
 
 const sources: Array<ModelSource | null> = []
+const load = vi.fn()
 
 vi.mock('../app/lib/domain/scene/client/use-scene-model', () => ({
 	useSceneModel: (_model: unknown, source: ModelSource | null) => {
@@ -24,7 +25,7 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 		file: null,
 		sceneData: null,
 		error: null,
-		load: vi.fn()
+		load
 	})
 }))
 
@@ -82,5 +83,21 @@ describe('useSceneEmbedScene', () => {
 		)
 
 		expect(sources.at(-1)).toMatchObject({ kind: 'server', sceneId: 's1' })
+	})
+
+	it('retries from the server, never from URLs the document may have outlived', () => {
+		load.mockClear()
+		const { result } = renderHook(() =>
+			useSceneEmbedScene({
+				sceneId: 's1',
+				projectId: 'p1',
+				initialManifest: manifest
+			})
+		)
+
+		result.current.retrySceneLoad()
+		expect(load).toHaveBeenCalledWith(
+			expect.objectContaining({ kind: 'server', sceneId: 's1' })
+		)
 	})
 })

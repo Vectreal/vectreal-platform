@@ -30,23 +30,9 @@ export function useSceneEmbedScene({
 	const trackedPreviewKeysRef = useRef(new Set<string>())
 
 	const token = searchParams.get('token')?.trim() || undefined
-	const sceneSource = useMemo<ModelSource | null>(() => {
+	const serverSource = useMemo<ModelSource | null>(() => {
 		if (!sceneId || !projectId) {
 			return null
-		}
-
-		/*
-		  The manifest the document carried, loaded as it stands: no manifest
-		  request, and no key sent as a header with the asset requests, which is
-		  what lets them reuse the document's preloads.
-		*/
-		if (initialManifest) {
-			return {
-				kind: 'scene-data',
-				sceneId,
-				sceneData: embedManifestToScenePayload(initialManifest),
-				parseMode: 'direct'
-			}
 		}
 
 		return {
@@ -58,13 +44,31 @@ export function useSceneEmbedScene({
 			},
 			parseMode: 'direct'
 		}
-	}, [initialManifest, projectId, sceneId, token])
+	}, [projectId, sceneId, token])
+
+	/*
+	  The manifest the document carried, loaded as it stands: no manifest
+	  request, and no key sent as a header with the asset requests, which is
+	  what lets them reuse the document's preloads.
+	*/
+	const sceneSource = useMemo<ModelSource | null>(() => {
+		if (!sceneId || !initialManifest) return serverSource
+
+		return {
+			kind: 'scene-data',
+			sceneId,
+			sceneData: embedManifestToScenePayload(initialManifest),
+			parseMode: 'direct'
+		}
+	}, [initialManifest, sceneId, serverSource])
 
 	useSceneModel(model, sceneSource)
 
+	// Always from the server: the document's manifest signs its asset URLs for
+	// an hour or two, and a retry in a tab left open longer would replay them.
 	const retrySceneLoad = useCallback(() => {
-		if (sceneSource) void load(sceneSource)
-	}, [load, sceneSource])
+		if (serverSource) void load(serverSource)
+	}, [load, serverSource])
 
 	useEffect(() => {
 		if (!consent?.analytics || !sceneData || !sceneId || !projectId) {
