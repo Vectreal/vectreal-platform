@@ -22,7 +22,7 @@
  * Class strings are literal so Tailwind's scanner still finds them.
  */
 export const PUBLISHER_LAYER = {
-	/** Publish card, bottom-right of the canvas stage. */
+	/** The bottom-right column of the stage: save progress over the publish card. */
 	card: 'z-10',
 	/** Preview-mode camera controls, bottom-center of the stage. */
 	previewControls: 'z-20',

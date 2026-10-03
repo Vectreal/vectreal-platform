@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import { ArrowUpRight, Image as ImageIcon } from 'lucide-react'
 
-import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell-layout'
 import {
 	DELIVERY_REFERENCE_LABEL,
 	estimateDeliveryTime
@@ -69,8 +68,8 @@ interface PublishCardProps {
 }
 
 /**
- * The publisher's outbound affordance, floating at the bottom-right of the
- * canvas stage with the same inset as the tool bar.
+ * The publisher's outbound affordance, at the foot of the canvas stage's
+ * bottom-right column, under the save progress.
  *
  * Two triggers on one card, grouped because they are two halves of shipping:
  * **Publish** opens the publish panel and says what state the scene is in,
@@ -110,9 +109,7 @@ export const PublishCard: FC<PublishCardProps> = ({
 			transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
 			aria-hidden={isPreviewMode}
 			className={cn(
-				'publisher-shell-panel absolute right-0 bottom-0 flex w-60 flex-col gap-2 overflow-hidden p-2',
-				PUBLISHER_EDGE_INSET,
-				PUBLISHER_LAYER.card,
+				'publisher-shell-panel pointer-events-auto flex w-full shrink-0 flex-col gap-2 overflow-hidden p-2',
 				isPreviewMode && 'pointer-events-none',
 				disabled && 'pointer-events-none opacity-45 saturate-50'
 			)}

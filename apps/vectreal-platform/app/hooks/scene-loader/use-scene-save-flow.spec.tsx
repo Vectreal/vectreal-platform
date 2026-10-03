@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { act, render, waitFor } from '@testing-library/react'
 import { useEffect, useState } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSceneSaveFlow } from './use-scene-save-flow'
 import { defaultBoundsOptions } from '../../constants/viewer-defaults'
+import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
 
 import type { ScenePersistenceState } from './contracts'
 import type { SceneMetaState } from '../../types/publisher-config'
@@ -12,10 +13,12 @@ import type { SaveSceneResult } from '../../types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
 import type { SceneSettings } from '@vctrl/core'
 
-const { mockSetAtom, mockExecuteSceneSaveOrchestrator } = vi.hoisted(() => ({
-	mockSetAtom: vi.fn(() => vi.fn()),
-	mockExecuteSceneSaveOrchestrator: vi.fn()
-}))
+const { mockSetAtom, mockExecuteSceneSaveOrchestrator, dispatchSaveProgress } =
+	vi.hoisted(() => ({
+		mockSetAtom: vi.fn(),
+		mockExecuteSceneSaveOrchestrator: vi.fn(),
+		dispatchSaveProgress: vi.fn()
+	}))
 
 vi.mock('jotai/react', async () => {
 	const actual =
@@ -159,9 +162,54 @@ function SceneSaveFlowHarness({
 	return null
 }
 
+const renderHarness = () => {
+	const apiRef: { current: HarnessApi | null } = { current: null }
+	render(
+		<SceneSaveFlowHarness
+			apiRef={apiRef}
+			initialCurrentSettings={createSettings(2)}
+			initialLastSavedSettings={createSettings(1)}
+		/>
+	)
+	return apiRef
+}
+
 describe('useSceneSaveFlow', () => {
+	beforeEach(() => {
+		mockSetAtom.mockImplementation((atom: unknown) =>
+			atom === dispatchSaveProgressAtom ? dispatchSaveProgress : vi.fn()
+		)
+	})
+
 	afterEach(() => {
 		vi.clearAllMocks()
+	})
+
+	it('hands the save panel every event the save reports', async () => {
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
+		const apiRef = renderHarness()
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
+			expect.objectContaining({ onProgress: dispatchSaveProgress })
+		)
+	})
+
+	it('tells the save panel when a save fails', async () => {
+		mockExecuteSceneSaveOrchestrator.mockRejectedValue(new Error('disk full'))
+		const apiRef = renderHarness()
+
+		await act(async () => {
+			await expect(apiRef.current?.saveSceneSettings()).rejects.toThrow()
+		})
+
+		expect(dispatchSaveProgress).toHaveBeenCalledWith({
+			type: 'failed',
+			message: 'disk full'
+		})
 	})
 
 	it('keeps dirty state when settings change during an in-flight save', async () => {

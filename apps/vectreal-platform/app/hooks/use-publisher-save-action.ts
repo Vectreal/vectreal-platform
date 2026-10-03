@@ -1,4 +1,4 @@
-import { useAtom, useSetAtom } from 'jotai/react'
+import { useAtom, useSetAtom, useStore } from 'jotai/react'
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -7,7 +7,11 @@ import {
 	isBillingLimitError,
 	toUpgradeModalPayload
 } from '../lib/domain/billing/client/billing-limit-error'
-import { processAtom } from '../lib/stores/publisher-config-store'
+import {
+	isPreviewModeAtom,
+	processAtom,
+	showPublishPanelAtom
+} from '../lib/stores/publisher-config-store'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -38,6 +42,7 @@ export const usePublisherSaveAction = ({
 	const navigate = useNavigate()
 	const [, setProcessState] = useAtom(processAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
+	const store = useStore()
 
 	const handleSaveScene = useCallback(async () => {
 		if (!userId) {
@@ -51,14 +56,10 @@ export const usePublisherSaveAction = ({
 			const result = (await saveSceneSettings(saveLocationTarget)) as
 				SaveSceneResult | { unchanged: true } | undefined
 
+			// The save panel reports how the save went, so success is not toasted.
 			if (result) {
-				if (result.unchanged) {
-					toast.info('No changes were detected - scene is already up to date')
-				} else {
-					toast.success('Scene settings saved successfully!')
-					if (!sceneId && result.sceneId) {
-						navigate(`/publisher/${result.sceneId}`, { replace: true })
-					}
+				if (!result.unchanged && !sceneId && result.sceneId) {
+					navigate(`/publisher/${result.sceneId}`, { replace: true })
 				}
 			} else {
 				toast.error('Failed to save scene settings')
@@ -74,7 +75,6 @@ export const usePublisherSaveAction = ({
 						actionAttempted: 'scene_save'
 					})
 				)
-				toast.error(error.message)
 				return
 			}
 
@@ -104,13 +104,21 @@ export const usePublisherSaveAction = ({
 				toast.error(
 					'Missing required information. Please try refreshing the page.'
 				)
-			} else {
-				toast.error(`Failed to save: ${errorMessage}`)
+			} else if (
+				store.get(showPublishPanelAtom) ||
+				store.get(isPreviewModeAtom)
+			) {
+				// The save panel cannot be seen: the publish panel slides over its
+				// corner, and preview mode hides it. A failure it would hide must
+				// not go unreported. Read when the save fails, since either can
+				// change while the save runs.
+				toast.error(`Save didn't complete: ${errorMessage}`)
 			}
 		} finally {
 			setProcessState((prev) => ({ ...prev, isSaving: false }))
 		}
 	}, [
+		store,
 		navigate,
 		onRequireAuth,
 		saveLocationTarget,
