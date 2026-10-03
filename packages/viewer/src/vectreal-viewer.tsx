@@ -446,6 +446,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			: !cameraOptions?.cameras?.some((c) => c.position != null)
 	const [isInitialFramingComplete, setIsInitialFramingComplete] =
 		useState(false)
+	// Latched on the first compile: a later model swap keeps the previous frame
+	// up while it compiles, and must not bring the loader back.
+	const [areShadersReady, setAreShadersReady] = useState(false)
 	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
 		null | boolean
 	>(null)
@@ -471,6 +474,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	useEffect(() => {
 		if (!hasContent) {
 			setIsInitialFramingComplete(false)
+			setAreShadersReady(false)
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
@@ -480,6 +484,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const handleInitialFramingComplete = useCallback(() => {
 		setIsInitialFramingComplete(true)
+	}, [])
+
+	const handleShadersReady = useCallback(() => {
+		setAreShadersReady(true)
 	}, [])
 
 	const { forwardCommand: forwardAnimationCommand } = animation
@@ -630,9 +638,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		}
 	}, [executeViewerCommand, onCommandExecutorReady])
 
+	// Without the composer nothing compiles ahead of the first frame, so there
+	// is nothing to wait for.
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
-		isInitialFramingComplete,
+		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
 		Boolean(loader)
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
@@ -695,6 +705,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								aoAtRest={shadowsOptions?.aoAtRest}
 								model={model}
 								active={animation.status.active}
+								onShadersReady={handleShadersReady}
 							/>
 							<SceneControls
 								{...controlsOptions}
