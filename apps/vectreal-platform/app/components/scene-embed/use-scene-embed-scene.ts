@@ -3,20 +3,24 @@ import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 
+import { embedManifestToScenePayload } from '../../lib/domain/scene/client/embed-manifest-payload'
 import { buildPreviewSceneEndpoint } from '../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../lib/domain/scene/client/use-scene-model'
 import { useConsent } from '../consent/consent-context'
 
+import type { SceneEmbedManifestResponse } from '../../types/api'
 import type { ModelSource } from '@vctrl/hooks/use-load-model'
 
 interface UseSceneEmbedSceneParams {
 	sceneId?: string
 	projectId?: string
+	initialManifest?: SceneEmbedManifestResponse | null
 }
 
 export function useSceneEmbedScene({
 	sceneId,
-	projectId
+	projectId,
+	initialManifest
 }: UseSceneEmbedSceneParams) {
 	const [searchParams] = useSearchParams()
 	const model = useLoadModel()
@@ -31,6 +35,20 @@ export function useSceneEmbedScene({
 			return null
 		}
 
+		/*
+		  The manifest the document carried, loaded as it stands: no manifest
+		  request, and no key sent as a header with the asset requests, which is
+		  what lets them reuse the document's preloads.
+		*/
+		if (initialManifest) {
+			return {
+				kind: 'scene-data',
+				sceneId,
+				sceneData: embedManifestToScenePayload(initialManifest),
+				parseMode: 'direct'
+			}
+		}
+
 		return {
 			kind: 'server',
 			sceneId,
@@ -40,7 +58,7 @@ export function useSceneEmbedScene({
 			},
 			parseMode: 'direct'
 		}
-	}, [projectId, sceneId, token])
+	}, [initialManifest, projectId, sceneId, token])
 
 	useSceneModel(model, sceneSource)
 

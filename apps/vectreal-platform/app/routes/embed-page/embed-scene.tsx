@@ -10,13 +10,15 @@ import type { EmbedLayoutContext } from '../layouts/embed-layout'
  * `embed-layout.tsx`, so this route structurally cannot render internal chrome.
  */
 const EmbedScenePage = ({ params }: Route.ComponentProps) => {
-	const { showsVectrealBranding } = useOutletContext<EmbedLayoutContext>()
+	const { showsVectrealBranding, manifest } =
+		useOutletContext<EmbedLayoutContext>()
 
 	return (
 		<SceneEmbedPage
 			projectId={params.projectId}
 			sceneId={params.sceneId}
 			showsVectrealBranding={showsVectrealBranding}
+			initialManifest={manifest}
 		/>
 	)
 }

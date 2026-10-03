@@ -12,6 +12,7 @@ import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-br
 import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
 
+import type { SceneEmbedManifestResponse } from '../../types/api'
 import type {
 	VectrealViewerProps,
 	ViewerCommand,
@@ -54,6 +55,11 @@ export interface SceneEmbedPageProps {
 	 * internal and carries no mark.
 	 */
 	showsVectrealBranding?: boolean
+	/**
+	 * The scene manifest, when the document carried it. Loading from it skips
+	 * the manifest request; without it the page fetches one.
+	 */
+	initialManifest?: SceneEmbedManifestResponse | null
 }
 
 /** Opening viewer state driven by the embed URL's query parameters. */
@@ -120,11 +126,13 @@ const SceneEmbedPage = ({
 	sceneId,
 	chrome,
 	theme,
-	showsVectrealBranding = false
+	showsVectrealBranding = false,
+	initialManifest
 }: SceneEmbedPageProps) => {
 	const { file, sceneData, loadError, retrySceneLoad } = useSceneEmbedScene({
 		sceneId,
-		projectId
+		projectId,
+		initialManifest
 	})
 	const initialCommands = useInitialCommands()
 	const hotspotPresentation = useHotspotPresentation()

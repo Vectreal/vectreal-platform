@@ -1,4 +1,9 @@
-import { loadModelFromServer } from '@vctrl/hooks/use-load-model/scene-loaders'
+import {
+	loadModelFromSceneData,
+	loadModelFromServer
+} from '@vctrl/hooks/use-load-model/scene-loaders'
+
+import { embedManifestToScenePayload } from '../app/lib/domain/scene/client/embed-manifest-payload'
 
 import type { LoadedModel, ModelSource } from '@vctrl/hooks/use-load-model'
 import type { LoadContext } from '@vctrl/hooks/use-load-model/load-context'
@@ -44,10 +49,14 @@ function embedManifest(overrides: Record<string, unknown> = {}) {
 
 /** Records every request so a stray POST to the legacy endpoint is visible. */
 function stubFetch(manifestBody: unknown, manifestStatus = 200) {
-	const calls: { url: string; method: string }[] = []
+	const calls: { url: string; method: string; headers: Headers }[] = []
 
 	const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-		calls.push({ url, method: init?.method ?? 'GET' })
+		calls.push({
+			url,
+			method: init?.method ?? 'GET',
+			headers: new Headers(init?.headers)
+		})
 
 		if (url === MODEL_URL) {
 			return {
@@ -247,5 +256,30 @@ describe('published-GLB embed load', () => {
 		})
 
 		expect(calls.some((call) => call.method === 'POST')).toBe(false)
+	})
+
+	/*
+	  The document's preload of the GLB is reused only by a request that adds
+	  no header of its own; one carrying the key as `Authorization` downloads
+	  the model a second time.
+	*/
+	it('loads an inline manifest with no request beyond the model, and no key header', async () => {
+		const calls = stubFetch(null)
+		const { ctx, published } = buildContext()
+		const manifest = embedManifest().data
+
+		await loadModelFromSceneData(
+			{
+				kind: 'scene-data',
+				sceneId: SCENE_ID,
+				sceneData: embedManifestToScenePayload(manifest as never),
+				parseMode: 'direct'
+			},
+			ctx
+		)
+
+		expect(calls.map((call) => call.url)).toEqual([MODEL_URL])
+		expect(calls[0].headers.has('authorization')).toBe(false)
+		expect(published[0].sceneData?.meta?.name).toBe('Blue Vans Shoe')
 	})
 })

@@ -136,11 +136,39 @@ export async function buildEmbedSceneManifest(
 	published: PublishedModelRow,
 	buildAssetUrl: (assetId: string) => string
 ): Promise<SceneEmbedManifestResponse> {
-	const settingsData = await sceneSettingsService.getSceneSettingsWithAssetRefs(
+	return composeEmbedSceneManifest(
 		sceneId,
-		{ includeGltfJson: false }
+		published,
+		await readEmbedSceneSettings(sceneId),
+		buildAssetUrl
 	)
+}
 
+/**
+ * The settings half of an embed manifest, which depends on nothing but the
+ * scene id. Split out so the `/embed` document can read it alongside the
+ * publication instead of after it.
+ */
+export function readEmbedSceneSettings(sceneId: string) {
+	return sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
+		includeGltfJson: false
+	})
+}
+
+export type EmbedSceneSettings = Awaited<
+	ReturnType<typeof readEmbedSceneSettings>
+>
+
+/**
+ * Assembles an embed manifest from settings already read. Whatever the caller
+ * read them for, only the published scene's own are ever passed here.
+ */
+export async function composeEmbedSceneManifest(
+	sceneId: string,
+	published: PublishedModelRow,
+	settingsData: EmbedSceneSettings,
+	buildAssetUrl: (assetId: string) => string
+): Promise<SceneEmbedManifestResponse> {
 	const publishedModel = buildPublishedModelRef(published, buildAssetUrl)
 
 	if (!settingsData) {

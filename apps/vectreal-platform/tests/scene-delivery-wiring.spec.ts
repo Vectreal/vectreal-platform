@@ -133,3 +133,31 @@ describe('the published GLB upload', () => {
 		)
 	})
 })
+
+describe('the /embed document', () => {
+	const layout = read('routes/layouts/embed-layout.tsx')
+	const route = read('routes/embed-page/embed-scene.tsx')
+
+	it('reads the publication, settings and branding together', () => {
+		expect(layout).toMatch(
+			/await Promise\.all\(\[\s*getPublishedScenePreview\(projectId, sceneId\),\s*readEmbedSceneSettings\(sceneId\)/
+		)
+	})
+
+	it('builds the inline manifest with the same asset URLs the API hands out', () => {
+		const builder = layout.slice(
+			layout.indexOf('async function buildInlineEmbedManifest(')
+		)
+		expect(builder).toMatch(
+			/^[\s\S]{0,1200}?createEmbedAssetUrls\(\{ sceneId, projectId, token \}\)/
+		)
+		expect(builder).toMatch(
+			/^[\s\S]{0,2000}?composeEmbedSceneManifest\(\s*sceneId,\s*toPublishedModelRow\(previewScene\),\s*settingsData,\s*assetUrls\.buildAssetUrl\s*\)/
+		)
+	})
+
+	it('hands the manifest to the page', () => {
+		expect(layout).toContain('manifest: loaderData.manifest as')
+		expect(route).toContain('initialManifest={manifest}')
+	})
+})
