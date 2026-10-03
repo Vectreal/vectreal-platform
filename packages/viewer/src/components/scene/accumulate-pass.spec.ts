@@ -39,13 +39,25 @@ const sourceOf = (draws: Draw[], texture: Texture | null): Texture | null => {
 const frame = () => new WebGLRenderTarget(1, 1)
 
 describe('AccumulatePass history', () => {
+	it('draws a moving frame once when nothing redraws it', () => {
+		const pass = new AccumulatePass()
+		pass.renderToScreen = true
+		const { renderer, draws } = recordingRenderer(pass)
+		const moving = frame()
+
+		pass.present(false)
+		pass.render(renderer, moving)
+
+		expect(draws).toEqual([{ input: moving.texture, target: null }])
+	})
+
 	it('redraws the last frame presented while moving', () => {
 		const pass = new AccumulatePass()
 		pass.renderToScreen = true
 		const { renderer, draws } = recordingRenderer(pass)
 		const moving = frame()
 
-		pass.present()
+		pass.present(true)
 		pass.render(renderer, moving)
 		pass.presentHistory(renderer)
 
@@ -63,7 +75,7 @@ describe('AccumulatePass history', () => {
 
 		pass.accumulate(0)
 		pass.render(renderer, still)
-		pass.present()
+		pass.present(true)
 		pass.render(renderer, moving)
 		pass.presentHistory(renderer)
 

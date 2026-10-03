@@ -37,8 +37,10 @@ void main() {
 /**
  * The final pass of the viewer's composer. Owns the presented image:
  *
- * - `present()`: draw this frame's input to the canvas (motion), keeping it
- *   as the history so a redraw shows the last frame presented.
+ * - `present(keepHistory)`: draw this frame's input to the canvas (motion).
+ *   With `keepHistory` it is kept as the history too, so a redraw shows the
+ *   last frame presented; that costs a full-size copy, so only a canvas
+ *   something else draws over asks for it.
  * - `accumulate(sample)`: fold this frame's input into the running average,
  *   then draw the average to the canvas (at rest, jittered).
  * - `presentHistory()`: redraw the last presented frame without rendering
@@ -54,6 +56,7 @@ export class AccumulatePass extends Pass {
 	private write: WebGLRenderTarget
 	private mode: 'present' | 'accumulate' = 'present'
 	private sample = 0
+	private keepHistory = false
 
 	constructor() {
 		super('AccumulatePass')
@@ -77,8 +80,9 @@ export class AccumulatePass extends Pass {
 		this.needsSwap = false
 	}
 
-	present() {
+	present(keepHistory: boolean) {
 		this.mode = 'present'
+		this.keepHistory = keepHistory
 	}
 
 	accumulate(sample: number) {
@@ -97,6 +101,11 @@ export class AccumulatePass extends Pass {
 	) {
 		const input = inputBuffer?.texture ?? null
 		const output = this.renderToScreen ? null : inputBuffer
+
+		if (this.mode === 'present' && !this.keepHistory) {
+			this.draw(renderer, input, input, 1, output)
+			return
+		}
 
 		if (this.mode === 'present') {
 			this.draw(renderer, input, input, 1, this.read)

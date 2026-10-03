@@ -42,8 +42,15 @@ describe('shader warm-up', () => {
 		)
 		expect(gate?.index).toBeGreaterThan(-1)
 		expect(gate!.index!).toBeLessThan(
-			frame.indexOf('pipeline.render(delta, plan)')
+			frame.indexOf('pipeline.render(delta, plan,')
 		)
+	})
+
+	it('keeps the history wherever it is redrawn under another renderer', () => {
+		expect(composer).toContain(
+			'pipeline.render(delta, plan, state.internal.priority > 1)'
+		)
+		expect(composer).toContain('accumulatePass.present(keepHistory)')
 	})
 
 	it('holds the loader until the first warm-up finishes', () => {

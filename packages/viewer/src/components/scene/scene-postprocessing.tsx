@@ -254,7 +254,7 @@ const createPipeline = (
 		composer,
 		aoPass,
 		accumulatePass,
-		render(delta: number, plan: FramePlan) {
+		render(delta: number, plan: FramePlan, keepHistory: boolean) {
 			jittering = plan.kind === 'accumulate'
 			if (plan.kind === 'accumulate') {
 				jitter[0] = plan.offset[0]
@@ -264,7 +264,7 @@ const createPipeline = (
 				// A change the camera did not cause leaves N8AO's camera check
 				// satisfied; tell it its accumulated AO is stale.
 				if (aoPass) aoPass.needsFrame = true
-				accumulatePass.present()
+				accumulatePass.present(keepHistory)
 			}
 			if (aoPass) aoPass.enabled = !aoAtRest || jittering
 			if (smaaPass) {
@@ -436,7 +436,8 @@ const ViewerComposer = ({
 		})
 
 		if (plan.kind !== 'converged') {
-			pipeline.render(delta, plan)
+			// The history is redrawn only under another renderer's frame.
+			pipeline.render(delta, plan, state.internal.priority > 1)
 			return
 		}
 
