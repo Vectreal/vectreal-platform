@@ -47,6 +47,7 @@ import {
 	Overlay,
 	SceneViewReturn
 } from './components'
+import LoadFailureBoundary from './components/load-failure-boundary'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -60,6 +61,7 @@ import {
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import EnvironmentPrewarm from './components/scene/environment-prewarm'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
@@ -803,6 +805,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					powerPreference: 'low-power'
 				}}
 			>
+				{environmentFiles && (
+					// A failed prewarm only costs the head start: the scene's own
+					// environment loads the same file and reports the failure.
+					<LoadFailureBoundary onError={() => undefined}>
+						<Suspense fallback={null}>
+							<EnvironmentPrewarm files={environmentFiles} />
+						</Suspense>
+					</LoadFailureBoundary>
+				)}
 				<Suspense fallback={null}>
 					{hasContent && (
 						<>
