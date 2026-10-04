@@ -26,7 +26,10 @@ import {
 	resolveDerivedSettings
 } from '../../../lib/domain/scene'
 import { savePanelAtom } from '../../../lib/stores/save-progress-store'
-import { keptOriginalAtom } from '../../../lib/stores/scene-optimization-store'
+import {
+	comparedModelAtom,
+	keptOriginalAtom
+} from '../../../lib/stores/scene-optimization-store'
 import { PUBLISHER_LAYER } from '../shell/shell-layout'
 import {
 	DrillDown,
@@ -104,6 +107,8 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		derivedFrom
 	})
 	const sourceIsOriginal = optimizationsMatch(sourceSettings, originalPreset)
+	const isComparing = useAtomValue(comparedModelAtom) !== null
+	const sourceName = sourceIsOriginal ? 'the original' : 'the saved version'
 	const { isPreparing: isPreparingCompare, holdProps } = useHoldToCompare({
 		isOpen: open,
 		isAvailable: isComparable,
@@ -275,9 +280,13 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 												{...holdProps}
 											>
 												<Eye />
-												{isPreparingCompare
-													? 'Preparing…'
-													: `Hold to see ${sourceIsOriginal ? 'the original' : 'the saved version'}`}
+												{/* The canvas label sits behind the mobile sheet, so the
+												    button says what is showing too. */}
+												{isComparing
+													? `Showing ${sourceName}`
+													: isPreparingCompare
+														? 'Preparing…'
+														: `Hold to see ${sourceName}`}
 												<kbd className="text-muted-foreground ml-auto font-mono text-[11px]">
 													{COMPARE_HOLD_KEY}
 												</kbd>

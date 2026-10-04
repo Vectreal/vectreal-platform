@@ -1,3 +1,4 @@
+import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -5,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
+import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
@@ -244,14 +246,21 @@ const PublisherPage = () => {
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
 				{comparedModel && (
-					<p
-						role="status"
-						className="ds-overlay pointer-events-none absolute top-16 left-1/2 z-10 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-medium"
+					<div
+						className={cn(
+							'pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3',
+							PUBLISHER_LAYER.compareLabel
+						)}
 					>
-						{comparedModel.isOriginal
-							? 'Showing the original'
-							: 'Showing the saved version'}
-					</p>
+						<p
+							role="status"
+							className="ds-overlay rounded-full px-3 py-1 text-xs font-medium"
+						>
+							{comparedModel.isOriginal
+								? 'Showing the original'
+								: 'Showing the saved version'}
+						</p>
+					</div>
 				)}
 			</div>
 		</div>
