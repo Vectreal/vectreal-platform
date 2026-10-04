@@ -2,8 +2,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { act, render } from '@testing-library/react'
-import { Component, type ReactNode } from 'react'
+import { act, render, screen } from '@testing-library/react'
+import { Component, type ReactNode, Suspense } from 'react'
 import {
 	Mesh,
 	MeshStandardMaterial,
@@ -149,6 +149,43 @@ describe('EnvironmentPrewarm', () => {
 
 		rerender(page('studio.hdr'))
 		expect(compile).toHaveBeenCalledOnce()
+		unmount()
+	})
+})
+
+describe('EnvironmentPrewarm, while its environment downloads', () => {
+	it('keeps the viewer showing, and a download that then fails off the page', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const pageCaught = vi.fn()
+		let failDownload = (_error: Error) => undefined as void
+		let failed: Error | null = null
+		const download = new Promise<never>((_resolve, reject) => {
+			failDownload = (error) => {
+				failed = error
+				reject(error)
+			}
+		}).catch(() => undefined)
+		useEnvironment.mockImplementation(() => {
+			throw failed ?? download
+		})
+
+		const { unmount } = render(
+			<PageBoundary onCatch={pageCaught}>
+				<Suspense fallback={<span data-testid="viewer-loader" />}>
+					<EnvironmentPrewarm files="slow.hdr" />
+				</Suspense>
+			</PageBoundary>
+		)
+		expect(screen.queryByTestId('viewer-loader')).toBeNull()
+
+		await act(async () => {
+			failDownload(new Error('404'))
+			await download
+		})
+
+		expect(screen.queryByTestId('viewer-loader')).toBeNull()
+		expect(pageCaught).not.toHaveBeenCalled()
+		expect(compile).not.toHaveBeenCalled()
 		unmount()
 	})
 })
