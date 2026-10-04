@@ -1,5 +1,5 @@
 import { deriveUniqueSlug } from '@shared/utils'
-import { useAtom } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo } from 'react'
 
 import {
@@ -20,7 +20,10 @@ import {
 } from '../../../../../lib/domain/scene/scene-hotspot-camera-links'
 import {
 	cameraAtom,
+	exitHotspotCameraAtom,
+	hotspotCameraModeAtom,
 	hotspotsAtom,
+	selectCameraAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
@@ -35,6 +38,9 @@ import { useOpeningViewCapture } from '../../../shell/use-opening-view'
 export function useSceneCameras() {
 	const [camera, setCamera] = useAtom(cameraAtom)
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
+	const selectCamera = useSetAtom(selectCameraAtom)
+	const exitHotspotCamera = useSetAtom(exitHotspotCameraAtom)
+	const hotspotCameraMode = useAtomValue(hotspotCameraModeAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
 	const { setOpeningView } = useOpeningViewCapture()
@@ -114,8 +120,11 @@ export function useSceneCameras() {
 	 * Selecting only changes the selection and moves the viewport. Writing the
 	 * live viewport into a saved camera is reserved for "Set camera to current
 	 * view", so reviewing cameras never overwrites one.
+	 *
+	 * A hotspot's camera is picked into the hotspot camera mode, so closing the
+	 * tool puts the author back where they were; a scene camera stays picked.
 	 */
-	const select = setSelectedCameraId
+	const select = selectCamera
 
 	const add = useCallback(async () => {
 		const snapshot = await requestSceneCameraSnapshot()
@@ -163,13 +172,8 @@ export function useSceneCameras() {
 				cameras: [...(normalized.cameras ?? []), newCamera]
 			})
 		})
-		if (newCameraId) setSelectedCameraId(newCameraId)
-	}, [
-		requestSceneCameraSnapshot,
-		selectedCameraId,
-		setCamera,
-		setSelectedCameraId
-	])
+		if (newCameraId) selectCamera(newCameraId)
+	}, [requestSceneCameraSnapshot, selectCamera, selectedCameraId, setCamera])
 
 	const removeSelected = useCallback(() => {
 		const next = removeCamera(
@@ -188,14 +192,19 @@ export function useSceneCameras() {
 
 		setCamera(nextCamera)
 		setHotspots(next.hotspots)
-		setSelectedCameraId(nextCamera.activeCameraId ?? '')
+		// Deleting the hotspot camera the mode stands on ends the mode the way
+		// closing the tool would, back where the author started.
+		if (hotspotCameraMode) exitHotspotCamera()
+		else selectCamera(nextCamera.activeCameraId ?? '')
 	}, [
 		editorTargetCameraId,
+		exitHotspotCamera,
+		hotspotCameraMode,
 		hotspots,
 		normalizedCamera,
+		selectCamera,
 		setCamera,
-		setHotspots,
-		setSelectedCameraId
+		setHotspots
 	])
 
 	/** Renaming re-derives the id from the name, so hotspot links follow it. */

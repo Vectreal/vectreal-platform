@@ -24,6 +24,7 @@ describe('isViewerCommand', () => {
 		{ type: 'set_animation_playing', playing: true },
 		{ type: 'set_animation_playing', playing: false },
 		{ type: 'restart_animation' },
+		{ type: 'return_to_scene_view' },
 		{ type: 'seek_animation_clip', clipId: 'spin', time: 0 },
 		{ type: 'seek_animation_clip', clipId: 'spin', time: 1.25 }
 	])('accepts %j', (command) => {

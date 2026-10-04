@@ -299,6 +299,27 @@
 }
 
 /*
+  The way back from a hotspot's camera arrives with the view it belongs to.
+  Opacity only: the root is centred with a transform, and moving it would fight
+  that.
+*/
+@keyframes vctrl-scene-view-return-in {
+	from {
+		opacity: 0;
+	}
+}
+
+.vctrl-viewer-scene-view-return {
+	animation: vctrl-scene-view-return-in 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vctrl-viewer-scene-view-return {
+		animation: none;
+	}
+}
+
+/*
   A hotspot the author is keeping backstage.
 
   A dashed ring outside the marker rather than a colour change, for the same

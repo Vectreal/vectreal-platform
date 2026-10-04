@@ -12,7 +12,7 @@
 
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { getDefaultStore } from 'jotai'
-import { afterEach, describe, expect, it, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 
 import HotspotsSettingsPanel from './hotspots-settings-panel'
 import { MAX_HOTSPOT_BODY_LENGTH } from '../../../../../lib/domain/scene/hotspot-urls'
@@ -33,6 +33,22 @@ import { DynamicSidebar } from '../../dynamic-sidebar'
 import type { HotspotDefinition } from '@vctrl/core'
 
 const store = getDefaultStore()
+
+/** The editor's view, as the viewer would report it. Null when not mounted. */
+const snapshot = vi.hoisted(() => ({
+	current: null as null | {
+		position: [number, number, number]
+		rotation: [number, number, number]
+		target: [number, number, number]
+		fov: number
+	}
+}))
+
+vi.mock('../../../publisher-viewer-capture-context', () => ({
+	usePublisherViewerCapture: () => ({
+		requestSceneCameraSnapshot: () => Promise.resolve(snapshot.current)
+	})
+}))
 
 const hotspot: HotspotDefinition = {
 	id: '00000000-0000-4000-8000-000000000001',
@@ -111,10 +127,45 @@ const openView = async (name: string) => {
 }
 
 beforeEach(() => {
+	snapshot.current = null
 	store.set(hotspotsAtom, [])
 	store.set(activeHotspotIdAtom, null)
 	store.set(isClickToPlaceActiveAtom, false)
 	store.set(cameraAtom, { cameras: [] })
+})
+
+describe('HotspotsSettingsPanel adding', () => {
+	it('starts the new marker’s camera at the editor’s view', async () => {
+		snapshot.current = {
+			position: [4, 2, 6],
+			rotation: [0.1, 0.2, 0],
+			target: [0, 0.5, 0],
+			fov: 42
+		}
+		render(<HotspotsSettingsPanel />)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Add marker' }))
+		await vi.waitFor(() => expect(store.get(hotspotsAtom)).toHaveLength(1))
+
+		const [added] = store.get(hotspotsAtom)
+		const camera = store
+			.get(cameraAtom)
+			.cameras?.find((entry) => entry.cameraId === added.linkedCameraId)
+		expect(camera).toMatchObject({ position: [4, 2, 6], fov: 42 })
+		// Aimed at the marker wherever it is placed, so no target is captured.
+		expect(camera).not.toHaveProperty('target')
+		expect(camera).not.toHaveProperty('rotation')
+	})
+
+	it('still adds the marker when the viewer cannot report a view', async () => {
+		render(<HotspotsSettingsPanel />)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Add marker' }))
+		await vi.waitFor(() => expect(store.get(hotspotsAtom)).toHaveLength(1))
+
+		const camera = store.get(cameraAtom).cameras?.[0]
+		expect(camera).not.toHaveProperty('position')
+	})
 })
 
 describe('HotspotsSettingsPanel arming', () => {

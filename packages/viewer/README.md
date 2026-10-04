@@ -56,6 +56,7 @@ function App() {
 | `hotspotColor`                 | `string`                                                | No       | Overrides the marker fill. The default is neutral so it does not compete with the product. The step numeral stays dark ink, so a dark or saturated fill needs `--vctrl-hotspot-ink` overridden on the container |
 | `showHotspotMarkers`           | `boolean`                                               | No       | Draws the markers, default `true`. `false` leaves them resolved but undrawn, so a host can still reach them by id |
 | `revealHotspotContent`         | `boolean`                                               | No       | Opens a card on click, default `true`. `false` still flies the camera and still reports the activation |
+| `showSceneViewReturn` | `boolean` | No | Draws a "Back to scene view" control while the view stands at a camera a hotspot flew it to, and lets Escape inside the viewer do the same. Default `true`. Both return to the scene camera the visitor was on before, or the scene's default |
 | `selectedHotspotId`            | `string \| null`                                        | No       | Draws one marker as the current one. Editing surfaces only                       |
 | `showInternalHotspots`         | `boolean`                                               | No       | Draws hotspots the author kept backstage. Editing surfaces only                  |
 | `showHiddenHotspots`           | `boolean`                                               | No       | Draws hotspots the author hid. Editing surfaces only                             |
@@ -184,6 +185,7 @@ Current commands:
 | Command                | Payload                                                                                            | Effect                                              |
 | ---------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `activate_camera`      | `{ cameraId: string }`                                                                             | Transitions to one of the configured scene cameras  |
+| `return_to_scene_view` | `{}` | Leaves a hotspot's camera for the scene camera the visitor was on before, or the default. Does nothing away from a hotspot |
 | `set_controls_enabled` | `{ enabled: boolean }`                                                                             | Temporarily enables or disables orbit interaction   |
 | `set_transition`       | `{ transitionType: 'none' \| 'linear' \| 'object_avoidance'; duration?: number; easing?: string }` | Overrides the active camera transition              |
 | `set_auto_rotate`      | `{ enabled: boolean; speed?: number }`                                                             | Toggles and configures auto-rotation                |

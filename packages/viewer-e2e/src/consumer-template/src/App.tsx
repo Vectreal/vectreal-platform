@@ -36,8 +36,40 @@ const E2E_HOTSPOTS = [
 		internalOnly: false,
 		stylePreset: 'dot' as const,
 		occlusionEnabled: false
+	},
+	{
+		id: 'camera-hotspot',
+		name: 'Camera marker',
+		body: 'A marker that flies its own camera.',
+		worldPosition: [0, -1.5, 0] as [number, number, number],
+		linkedCameraId: 'camera-hotspot-view',
+		visible: true,
+		internalOnly: false,
+		stylePreset: 'dot' as const,
+		occlusionEnabled: false
 	}
 ]
+
+/*
+  A scene camera to stand on and the camera the last marker flies to, so the
+  way back out of a hotspot view is exercised from the published package.
+*/
+const E2E_CAMERAS = {
+	cameras: [
+		{
+			cameraId: 'front',
+			name: 'Front',
+			initial: true,
+			position: [0, 0.5, 6] as [number, number, number]
+		},
+		{
+			cameraId: 'camera-hotspot-view',
+			name: 'Camera marker view',
+			kind: 'hotspot' as const,
+			position: [1, -2, 3] as [number, number, number]
+		}
+	]
+}
 
 // Reusable error boundary: a render-time crash would otherwise be swallowed by
 // React. We mirror it onto a window flag the e2e polls, and swap in a marker node.
@@ -97,6 +129,7 @@ export default function App() {
 					theme="dark"
 					controlsOptions={{ autoRotate: false }}
 					hotspots={E2E_HOTSPOTS}
+					cameraOptions={E2E_CAMERAS}
 					onCommandExecutorReady={() => {
 						// Viewer scene graph is live and the imperative API is wired up.
 						window.__VIEWER_E2E__ = { status: 'mounted' }

@@ -7,8 +7,8 @@
  * it defaults to a real tool before the author has opened anything, and closing
  * a drawer flips `showSidebar` while leaving it untouched. Read on its own it
  * says a tool is active when its panel is shut - which is how the hotspot gizmo
- * came to outlive its drawer, letting a click select a marker for editing where
- * it should have flown the marker's linked camera.
+ * came to outlive its drawer, keeping its handles live on a canvas whose tool
+ * had been shut.
  *
  * So this is a ratchet rather than a convention: `openComposeToolAtom` is the
  * single answer, and the raw field is readable only where the question is

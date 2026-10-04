@@ -9,6 +9,7 @@ import {
 } from './hotspot-occlusion'
 import { resolveHotspotMarkers } from './resolve-hotspot-markers'
 import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
+import { leftOpenHotspotView } from './scene-view-return'
 
 import type { ViewerCommandExecutor } from '../../types/viewer-interactions'
 import type { HotspotDefinition } from '@vctrl/core'
@@ -222,6 +223,20 @@ const SceneHotspots = ({
 			setOpenId(null)
 		}
 	}, [markers, occludedIds, openId])
+
+	/**
+	 * An open card closes when the view leaves the camera its marker flew to,
+	 * by whatever route: the way back, Escape, a camera switcher or a host.
+	 */
+	const previousCameraId = useRef(activeCameraId ?? null)
+	useEffect(() => {
+		const previous = previousCameraId.current
+		previousCameraId.current = activeCameraId ?? null
+		const openMarker = markers.find((marker) => marker.id === openId)
+		if (leftOpenHotspotView(openMarker, previous, activeCameraId ?? null)) {
+			setOpenId(null)
+		}
+	}, [activeCameraId, markers, openId])
 
 	/**
 	 * A host focusing a hotspot does what clicking the marker does.

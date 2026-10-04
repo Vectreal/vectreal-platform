@@ -58,6 +58,7 @@ other origin are dropped.
 | `ready()` | `Promise<EmbedReadyInfo>` | Resolves with `{ sceneId, cameras, hotspots }` when the viewer is ready. |
 | `activateCamera(cameraId)` | `void` | Switch to a named camera. |
 | `focusHotspot(hotspotId)` | `void` | Reveal a hotspot's content and fly its camera. |
+| `returnToSceneView()` | `void` | Leave a hotspot's camera for the scene camera the visitor was on before. |
 | `setTransition(options)` | `void` | Override transition for subsequent camera switches. |
 | `setControlsEnabled(enabled)` | `void` | Enable or disable orbit controls. |
 | `setAutoRotate(enabled, speed?)` | `void` | Toggle auto-rotate. |

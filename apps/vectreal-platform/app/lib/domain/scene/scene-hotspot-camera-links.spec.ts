@@ -73,6 +73,20 @@ describe('addHotspot', () => {
 		})
 	})
 
+	it('stands the paired camera at a captured pose, aimed by its hotspot', () => {
+		const result = addHotspot({ camera: { cameras }, hotspots: [] }, ids, {
+			position: [3, 1, 5],
+			fov: 45
+		})
+		expect(result.camera.cameras?.[1]).toEqual({
+			cameraId: 'new-camera',
+			kind: 'hotspot',
+			name: 'New Hotspot Camera',
+			fov: 45,
+			position: [3, 1, 5]
+		})
+	})
+
 	it('leaves the hotspots and cameras already in the scene alone', () => {
 		const result = addHotspot(
 			{ camera: { cameras }, hotspots: [hotspot('a')] },
@@ -247,8 +261,15 @@ describe('relinkHotspot', () => {
 	const cameras = [
 		sceneCamera,
 		emptyCamera,
-		camera('framed', { kind: 'hotspot', position: [1, 2, 3] }),
-		camera('aimed', { kind: 'hotspot', target: [0, 0, 0] })
+		// What "Set camera to current view" writes.
+		camera('framed', {
+			kind: 'hotspot',
+			position: [1, 2, 3],
+			rotation: [0, 0.5, 0]
+		}),
+		camera('aimed', { kind: 'hotspot', target: [0, 0, 0] }),
+		// What a hotspot is minted with: a pose nobody chose.
+		camera('minted', { kind: 'hotspot', position: [4, 2, 6], fov: 45 })
 	]
 
 	it('points the hotspot at the camera it was given', () => {
@@ -272,7 +293,7 @@ describe('relinkHotspot', () => {
 			'a',
 			'default'
 		)
-		expect(cameraIds(result)).toEqual(['default', 'framed', 'aimed'])
+		expect(cameraIds(result)).toEqual(['default', 'framed', 'aimed', 'minted'])
 	})
 
 	// It holds a frame someone composed, and a hotspot can be pointed back at
@@ -285,6 +306,18 @@ describe('relinkHotspot', () => {
 		const result = relinkHotspot(state, 'a', undefined)
 		expect(result.hotspots[0].linkedCameraId).toBeUndefined()
 		expect(result.camera).toBe(state.camera)
+	})
+
+	it('drops a camera that only has the pose it was minted with', () => {
+		const result = relinkHotspot(
+			{
+				camera: { cameras },
+				hotspots: [hotspot('a', { linkedCameraId: 'minted' })]
+			},
+			'a',
+			'default'
+		)
+		expect(cameraIds(result)).not.toContain('minted')
 	})
 
 	it('keeps a camera that has been aimed', () => {
@@ -339,7 +372,13 @@ describe('relinkHotspot', () => {
 			hotspots: [hotspot('a', { linkedCameraId: 'empty' })]
 		}
 		relinkHotspot(state, 'a', 'default')
-		expect(cameraIds(state)).toEqual(['default', 'empty', 'framed', 'aimed'])
+		expect(cameraIds(state)).toEqual([
+			'default',
+			'empty',
+			'framed',
+			'aimed',
+			'minted'
+		])
 		expect(state.hotspots[0].linkedCameraId).toBe('empty')
 	})
 })

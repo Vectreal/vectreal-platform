@@ -1,5 +1,5 @@
-import { useAtom } from 'jotai/react'
-import { memo, useEffect, useState } from 'react'
+import { useAtom, useSetAtom } from 'jotai/react'
+import { memo, useCallback, useEffect, useState } from 'react'
 
 import {
 	CameraDetail,
@@ -9,6 +9,7 @@ import {
 } from './camera-views'
 import { useSceneCameras } from './use-scene-cameras'
 import { cameraToolOpenRequestAtom } from '../../../../../lib/stores/publisher-config-store'
+import { exitHotspotCameraAtom } from '../../../../../lib/stores/scene-settings-store'
 import {
 	DrillDown,
 	DrillDownView,
@@ -33,12 +34,32 @@ function OpenRequestedCamera() {
 	return null
 }
 
-const CameraControlsSettingsPanel = memo(() => {
+/**
+ * Stepping back out of a hotspot camera's view puts back the camera the
+ * author had before. Closing the tool does too, and `ToolSidebar` owns that,
+ * because the mode can be entered before this panel ever mounts.
+ */
+function useCameraToolPath() {
 	const [path, setPath] = useState<string[]>([])
+	const exitHotspotCamera = useSetAtom(exitHotspotCameraAtom)
+
+	const onPathChange = useCallback(
+		(next: string[]) => {
+			if (!next.includes('camera')) exitHotspotCamera()
+			setPath(next)
+		},
+		[exitHotspotCamera]
+	)
+
+	return { path, onPathChange }
+}
+
+const CameraControlsSettingsPanel = memo(() => {
+	const { path, onPathChange } = useCameraToolPath()
 	const cameras = useSceneCameras()
 
 	return (
-		<DrillDown path={path} onPathChange={setPath} rootTitle="Camera">
+		<DrillDown path={path} onPathChange={onPathChange} rootTitle="Camera">
 			<DrillDownView id="root">
 				<OpenRequestedCamera />
 				<CameraList cameras={cameras} />
@@ -49,7 +70,7 @@ const CameraControlsSettingsPanel = memo(() => {
 				title={cameras.selectedCamera?.name || 'Unnamed camera'}
 			>
 				{/* The camera it showed is gone, so the view goes with it. */}
-				<CameraDetail cameras={cameras} onDeleted={() => setPath([])} />
+				<CameraDetail cameras={cameras} onDeleted={() => onPathChange([])} />
 			</DrillDownView>
 
 			<DrillDownView

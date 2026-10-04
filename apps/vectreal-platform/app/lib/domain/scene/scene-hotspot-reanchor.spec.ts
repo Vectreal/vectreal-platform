@@ -86,6 +86,51 @@ describe('reanchorHotspotsForScale', () => {
 		])
 	})
 
+	it('moves a hotspot camera’s position with the model', () => {
+		// `addHotspot` stands the camera where the editor's view was; left behind,
+		// a shrink would leave it looking at the model from ten times too far.
+		const state = paired()
+		state.camera.cameras = [
+			camera('cam-a', {
+				kind: 'hotspot',
+				position: [0, 2, 10],
+				target: [2, 4, 6]
+			})
+		]
+
+		const next = reanchorHotspotsForScale(state, 1, 0.5)
+
+		expect(
+			next.camera.cameras?.find((entry) => entry.cameraId === 'cam-a')?.position
+		).toEqual([0, 1, 5])
+	})
+
+	it('keeps a camera two hotspots share looking at the model', () => {
+		// Shared, it has no owner for `placeHotspot` to re-aim, so the target has
+		// to travel with the position or the view turns away.
+		const state: CameraHotspotState = {
+			camera: {
+				cameras: [
+					camera('cam-a', {
+						kind: 'hotspot',
+						position: [0, 2, 10],
+						target: [2, 4, 6]
+					})
+				]
+			},
+			hotspots: [
+				hotspot('h1', [2, 4, 6], { linkedCameraId: 'cam-a' }),
+				hotspot('h2', [0, 0, 0], { linkedCameraId: 'cam-a' })
+			]
+		}
+
+		const next = reanchorHotspotsForScale(state, 1, 0.5)
+		const cam = next.camera.cameras?.find((entry) => entry.cameraId === 'cam-a')
+
+		expect(cam?.position).toEqual([0, 1, 5])
+		expect(cam?.target).toEqual([1, 2, 3])
+	})
+
 	it('leaves a camera the author framed by hand alone', () => {
 		const next = reanchorHotspotsForScale(paired(), 1, 2)
 
