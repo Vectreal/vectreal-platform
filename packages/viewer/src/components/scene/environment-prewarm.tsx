@@ -1,6 +1,6 @@
 import { useEnvironment } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import {
 	type Camera,
 	type Texture,
@@ -10,6 +10,8 @@ import {
 	Scene,
 	type WebGLRenderer
 } from 'three'
+
+import LoadFailureBoundary from '../load-failure-boundary'
 
 /**
  * Builds the PMREM three needs to light a scene with `texture`, by compiling a
@@ -39,14 +41,11 @@ export const prewarmEnvironment = (
 }
 
 /**
- * Prewarms the environment as soon as the viewer knows which one it will use,
- * before there is a model to light.
- *
  * drei's `<Environment>` disposes this same cached texture when it unmounts,
  * which drops the PMREM with it, so the prewarm runs again whenever that
  * happens and the next model finds it ready too.
  */
-const EnvironmentPrewarm = ({ files }: { files: string | string[] }) => {
+const PrewarmEnvironmentTexture = ({ files }: { files: string | string[] }) => {
 	const texture = useEnvironment({ files })
 	const gl = useThree((state) => state.gl)
 	const camera = useThree((state) => state.camera)
@@ -61,5 +60,23 @@ const EnvironmentPrewarm = ({ files }: { files: string | string[] }) => {
 
 	return null
 }
+
+/**
+ * Prewarms the environment as soon as the viewer knows which one it will use,
+ * before there is a model to light. With no files chosen yet it prewarms
+ * nothing rather than a default.
+ *
+ * A failed prewarm only costs the head start: the scene's own environment
+ * loads the same file and reports the failure. The boundary is keyed on the
+ * files so that a later environment is prewarmed after an earlier one failed.
+ */
+const EnvironmentPrewarm = ({ files }: { files: string | string[] | null }) =>
+	files ? (
+		<LoadFailureBoundary key={String(files)} onError={() => undefined}>
+			<Suspense fallback={null}>
+				<PrewarmEnvironmentTexture files={files} />
+			</Suspense>
+		</LoadFailureBoundary>
+	) : null
 
 export default EnvironmentPrewarm
