@@ -5,8 +5,12 @@ import { isBillingStateReadOnly } from '../../constants/plan-config'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { EntitlementRequiredError } from '../../lib/domain/billing/entitlement-required-error'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
+import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
+import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
 import { createEmbedAssetUrls } from '../../lib/domain/embed/embed-asset-signature.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
+import { buildPreviewAssetUrl } from '../../lib/domain/scene/client/preview-scene-endpoint'
+import { normalizePresentationSettings } from '../../lib/domain/scene/scene-presentation'
 import { parseSceneBytes } from '../../lib/domain/scene/scene-size-limit'
 import {
 	acquireHeavySceneActionToken,
@@ -26,15 +30,16 @@ import {
 	buildSceneManifestEtag,
 	type ManifestPublication
 } from '../../lib/domain/scene/server/scene-manifest-etag'
+import { chooseSceneManifestKind } from '../../lib/domain/scene/server/scene-manifest-kind'
 import {
 	buildEmbedSceneManifest,
 	buildSceneManifest
 } from '../../lib/domain/scene/server/scene-manifest.server'
 import {
 	getPublishedScenePreview,
-	toPublishedModelRow,
-	type PublishedScenePreview
+	toPublishedModelRow
 } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { updateScenePresentation } from '../../lib/domain/scene/server/scene-settings-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
 import { getAuthUser } from '../../lib/http/auth.server'
@@ -304,47 +309,58 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			return authContext
 		}
 
-		let previewScene: PublishedScenePreview | null = null
-
-		if (authContext.mode === 'apiKey') {
-			previewScene = await getPublishedScenePreview(previewProjectId, sceneId)
-			if (!previewScene) {
-				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-			}
-		} else {
-			const scene = await getScene(sceneId, authContext.userId)
-			if (!scene || scene.projectId !== previewProjectId) {
+		if (authContext.mode === 'session') {
+			const membership = await resolveSceneMembership(
+				sceneId,
+				authContext.userId
+			)
+			if (!membership || membership.projectId !== previewProjectId) {
 				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 			}
 		}
 
-		const publishedModelRow = previewScene
-			? toPublishedModelRow(previewScene)
-			: null
-		// Signed only for an embed: the session manifest describes the working
-		// scene, whose assets must not become publicly cacheable URLs.
-		const embedAssetUrls = previewScene
+		const previewScene = await getPublishedScenePreview(
+			previewProjectId,
+			sceneId
+		)
+		const manifestKind = chooseSceneManifestKind({
+			hasPublication: previewScene !== null,
+			caller: authContext.mode
+		})
+		if (manifestKind === 'not-found') {
+			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+		}
+
+		const publishedModelRow =
+			manifestKind === 'embed' && previewScene
+				? toPublishedModelRow(previewScene)
+				: null
+		/*
+		  Signed only for the published set: the working manifest describes the
+		  draft, whose assets must not become publicly cacheable URLs. A member
+		  gets no token in theirs - unsigned, they authenticate by cookie.
+		*/
+		const embedAssetUrls = publishedModelRow
 			? createEmbedAssetUrls({
 					sceneId,
 					projectId: previewProjectId,
-					token: url.searchParams.get('token')?.trim() || null
+					token:
+						authContext.mode === 'apiKey'
+							? url.searchParams.get('token')?.trim() || null
+							: null
 				})
 			: null
-		const buildPreviewAssetUrl =
+		const buildAssetUrl =
 			embedAssetUrls?.buildAssetUrl ??
-			((assetId: string) => {
-				const query = new URLSearchParams({
-					preview: '1',
-					projectId: previewProjectId
-				})
-				return `/api/scenes/${sceneId}/assets/${assetId}?${query}`
-			})
+			((assetId: string) =>
+				buildPreviewAssetUrl({ sceneId, projectId: previewProjectId, assetId }))
 		const publication: ManifestPublication | null =
 			previewScene && embedAssetUrls
 				? {
 						assetId: previewScene.publishedAssetId,
 						publishedAt: previewScene.publishedAt,
-						assetUrlsVersion: embedAssetUrls.version
+						assetUrlsVersion: embedAssetUrls.version,
+						caller: authContext.mode
 					}
 				: null
 
@@ -353,9 +369,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				? await buildEmbedSceneManifest(
 						sceneId,
 						publishedModelRow,
-						buildPreviewAssetUrl
+						buildAssetUrl
 					)
-				: await buildSceneManifest(sceneId, buildPreviewAssetUrl)
+				: await buildSceneManifest(sceneId, buildAssetUrl)
 			const etag = buildSceneManifestEtag(
 				sceneId,
 				manifest.settingsUpdatedAt,
@@ -620,6 +636,84 @@ export async function action({ request, params }: ActionFunctionArgs) {
 						? error.message
 						: 'Failed to update scene metadata'
 				),
+				authHeaders
+			)
+		}
+	}
+
+	if (action === 'update-scene-presentation') {
+		/*
+		  A single field written in place, so the dashboard can change how a
+		  published scene presents itself without a full publisher save. Not a
+		  `/api/dashboard/mutations` verb: that contract owns the scene's place
+		  in the tree - create, rename, move, delete - and this is a scene
+		  setting, which lives here beside the save that writes the rest.
+
+		  Last write wins against a publisher tab holding older settings: its
+		  next full save writes the whole presentation back.
+		*/
+		const tokenCheck = await ensureValidCsrfToken(request, actionRequest.csrf)
+		if (tokenCheck) {
+			return withAdditionalHeaders(tokenCheck, authHeaders)
+		}
+
+		if (!routeSceneId) {
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Scene ID is required'),
+				authHeaders
+			)
+		}
+
+		// One 404 for "no such scene" and "not yours to change", so the
+		// endpoint confirms nothing about an id the caller cannot edit.
+		const membership = await resolveSceneMembership(
+			routeSceneId,
+			authResult.user.id
+		)
+		if (
+			!membership ||
+			!canPerformDashboardOperation('scene:update', membership)
+		) {
+			return withAdditionalHeaders(
+				ApiResponse.notFound('Scene not found'),
+				authHeaders
+			)
+		}
+
+		const presentation = normalizePresentationSettings(
+			actionRequest.presentation
+		)
+		if (!presentation) {
+			return withAdditionalHeaders(
+				ApiResponse.badRequest('Presentation settings are required'),
+				authHeaders
+			)
+		}
+
+		try {
+			return withAdditionalHeaders(
+				await runWithSceneWriteLock(
+					routeSceneId,
+					`${authResult.user.id}:update-scene-presentation`,
+					async () => {
+						const updated = await updateScenePresentation(
+							routeSceneId,
+							presentation
+						)
+						return updated
+							? ApiResponse.success({ presentation: updated })
+							: ApiResponse.notFound('Scene not found')
+					}
+				),
+				authHeaders
+			)
+		} catch (error) {
+			reportServerError(error, {
+				request,
+				properties: { action, sceneId: routeSceneId }
+			})
+			return withAdditionalHeaders(
+				ApiResponse.serverError('Failed to update presentation'),
 				authHeaders
 			)
 		}

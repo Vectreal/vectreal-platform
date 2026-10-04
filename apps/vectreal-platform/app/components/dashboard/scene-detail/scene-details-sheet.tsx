@@ -4,7 +4,7 @@ import { SceneAssetsSection } from './scene-assets-section'
 import { SceneMetricsSection } from './scene-metrics-section'
 import { SceneSurfaceDrawer } from './scene-surface-drawer'
 
-import type { TextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
+import type { TextureThumbnailUrls } from '../../../lib/domain/dashboard/scene-texture-thumbnails'
 import type { SceneDetailsSummary } from '../../../types/dashboard'
 
 interface SceneDetailsSheetProps {

@@ -28,9 +28,9 @@ describe('embed key use', () => {
 describe('the embed manifest ETag', () => {
 	const route = read('routes/api/scenes.$sceneId.ts')
 
-	it("is keyed on the publication and its URLs' expiry", () => {
+	it("is keyed on the publication, its URLs' expiry and the caller", () => {
 		expect(route).toMatch(
-			/\{\s*assetId: previewScene\.publishedAssetId,\s*publishedAt: previewScene\.publishedAt,\s*assetUrlsVersion: embedAssetUrls\.version\s*\}/
+			/\{\s*assetId: previewScene\.publishedAssetId,\s*publishedAt: previewScene\.publishedAt,\s*assetUrlsVersion: embedAssetUrls\.version,\s*caller: authContext\.mode\s*\}/
 		)
 		expect(route).toMatch(
 			/buildSceneManifestEtag\(\s*sceneId,\s*manifest\.settingsUpdatedAt,\s*publication\s*\)/
@@ -39,7 +39,13 @@ describe('the embed manifest ETag', () => {
 
 	it('signs asset URLs for an embed manifest only', () => {
 		expect(route).toMatch(
-			/const embedAssetUrls = previewScene\s*\?\s*createEmbedAssetUrls\(/
+			/const embedAssetUrls = publishedModelRow\s*\?\s*createEmbedAssetUrls\(/
+		)
+	})
+
+	it('hands a member no token, only a key holder their own', () => {
+		expect(route).toMatch(
+			/token:\s*authContext\.mode === 'apiKey'\s*\?\s*url\.searchParams\.get\('token'\)\?\.trim\(\) \|\| null\s*:\s*null/
 		)
 	})
 })
@@ -49,7 +55,7 @@ describe('the embed asset route', () => {
 
 	it('serves the published GLB before reading any settings', () => {
 		const fastPath = route.indexOf(
-			'if (assetId === previewScene.publishedAssetId && filePath && name) {'
+			'const publishedModel = serveFromPublishedRow('
 		)
 		expect(fastPath).toBeGreaterThan(
 			route.indexOf('await getPublishedScenePreview(projectId, sceneId)')
@@ -58,7 +64,131 @@ describe('the embed asset route', () => {
 			route.indexOf('sceneSettingsService.getSceneSettingsWithAssetRefs')
 		)
 		expect(route.slice(fastPath)).toMatch(
-			/^[\s\S]{0,300}?downloadAssetFromRow\(\{ id: assetId, filePath, mimeType, name \}\)/
+			/^[^;]*previewScene\s*\)\s*if \(publishedModel\) return publishedModel/
+		)
+	})
+
+	it('downloads the published GLB from the row the query joined', () => {
+		const helper = route.slice(route.indexOf('function serveFromPublishedRow('))
+		expect(helper).toMatch(
+			/^[\s\S]{0,400}?if \(!previewScene \|\| ids\.assetId !== previewScene\.publishedAssetId\) \{\s*return null/
+		)
+		expect(helper).toMatch(
+			/^[\s\S]{0,900}?downloadAssetFromRow\(\{ id: ids\.assetId, filePath, mimeType, name \}\)/
+		)
+	})
+})
+
+describe('the session asset branch', () => {
+	const route = read('routes/api/scenes.$sceneId.assets.$assetId.ts')
+	const session = route.slice(route.indexOf('// Session branch:'))
+
+	it('gates on membership before it looks anything up', () => {
+		const gate = session.indexOf(
+			'await resolveSceneMembership(sceneId, auth.user.id)'
+		)
+		expect(gate).toBeGreaterThan(-1)
+		expect(session.slice(gate)).toMatch(
+			/^[^}]*if \(!membership\) \{\s*return new Response\('Asset not found', \{\s*status: 404/
+		)
+		expect(gate).toBeLessThan(session.indexOf('getPublishedScenePreview('))
+		expect(gate).toBeLessThan(session.indexOf('assetBelongsToScene('))
+		expect(session).not.toContain('getScene(')
+	})
+
+	it("serves the scene's linked assets or its published GLB, nothing else", () => {
+		expect(session).toContain(
+			'getPublishedScenePreview(membership.projectId, sceneId)'
+		)
+		const published = session.indexOf('serveFromPublishedRow(')
+		const linked = session.indexOf('if (!isLinked) {')
+		expect(published).toBeGreaterThan(-1)
+		expect(linked).toBeGreaterThan(published)
+		expect(linked).toBeLessThan(session.indexOf('await downloadAsset(assetId)'))
+		expect(session).not.toContain('isEmbedServableAssetId')
+	})
+})
+
+describe('the session manifest branch', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+	const preview = route.slice(
+		route.indexOf('if (isPreviewRequest) {'),
+		route.indexOf('const authResult = await getAuthUser(request)')
+	)
+
+	it('gates a member on membership of this scene, in this project', () => {
+		const gate = preview.indexOf('await resolveSceneMembership(')
+		expect(gate).toBeGreaterThan(-1)
+		expect(preview.slice(gate)).toMatch(
+			/^[^}]*if \(!membership \|\| membership\.projectId !== previewProjectId\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound/
+		)
+		expect(gate).toBeLessThan(preview.indexOf('getPublishedScenePreview('))
+		expect(preview).not.toContain('getScene(')
+	})
+
+	it('looks up the publication for every caller and lets one rule choose', () => {
+		expect(preview).toMatch(
+			/const previewScene = await getPublishedScenePreview\(\s*previewProjectId,\s*sceneId\s*\)\s*const manifestKind = chooseSceneManifestKind\(\{\s*hasPublication: previewScene !== null,\s*caller: authContext\.mode\s*\}\)/
+		)
+		expect(preview).toMatch(
+			/const publishedModelRow =\s*manifestKind === 'embed' && previewScene/
+		)
+	})
+})
+
+describe('the presentation action', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+	const block = route.slice(
+		route.indexOf("if (action === 'update-scene-presentation') {"),
+		route.indexOf('const uploadOrPrepareAction =')
+	)
+
+	it('checks CSRF, then membership, then permission, then parses, then writes', () => {
+		const order = [
+			'await ensureValidCsrfToken(request, actionRequest.csrf)',
+			'await resolveSceneMembership(',
+			"canPerformDashboardOperation('scene:update', membership)",
+			'normalizePresentationSettings(',
+			'await updateScenePresentation('
+		].map((step) => block.indexOf(step))
+
+		expect(order.every((index) => index > -1)).toBe(true)
+		expect([...order].sort((a, b) => a - b)).toEqual(order)
+	})
+
+	it('answers a non-member and a non-editor with the same 404', () => {
+		expect(block).toMatch(
+			/!membership \|\|\s*!canPerformDashboardOperation\('scene:update', membership\)\s*\) \{\s*return withAdditionalHeaders\(\s*ApiResponse\.notFound/
+		)
+		expect(block).not.toContain('assertDashboardPermission')
+	})
+
+	it('runs before the save parser, which would drop the field', () => {
+		expect(
+			route.indexOf("if (action === 'update-scene-presentation') {")
+		).toBeLessThan(
+			route.indexOf(
+				': SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)'
+			)
+		)
+	})
+})
+
+describe('the presentation write', () => {
+	const repository = read(
+		'lib/domain/scene/server/scene-settings-repository.server.ts'
+	)
+	const write = repository.slice(
+		repository.indexOf('export async function updateScenePresentation(')
+	)
+
+	it('merges into the stored JSON in one statement and moves the ETag', () => {
+		expect(write).toMatch(
+			/^[\s\S]{0,700}?\(coalesce\(\$\{sceneSettings\.presentation\}::jsonb, '\{\}'::jsonb\) \|\| \$\{JSON\.stringify\(patch\)\}::jsonb\)::json/
+		)
+		expect(write).toMatch(/^[\s\S]{0,800}?updatedAt: sql`now\(\)`/)
+		expect(write).toMatch(
+			/^[\s\S]{0,900}?\.where\(eq\(sceneSettings\.sceneId, sceneId\)\)/
 		)
 	})
 })
@@ -167,14 +297,21 @@ describe('the /embed document', () => {
 	})
 
 	it('builds the inline manifest with the same asset URLs the API hands out', () => {
-		const builder = layout.slice(
-			layout.indexOf('async function buildInlineEmbedManifest(')
+		const builder = read('lib/domain/embed/inline-embed-manifest.server.ts')
+		expect(builder).toContain(
+			'createEmbedAssetUrls({ sceneId, projectId, token })'
 		)
 		expect(builder).toMatch(
-			/^[\s\S]{0,1200}?createEmbedAssetUrls\(\{ sceneId, projectId, token \}\)/
+			/if \(assetUrls\.version === null && !token && !allowUnsignedWithoutToken\) \{\s*return null/
 		)
 		expect(builder).toMatch(
-			/^[\s\S]{0,2000}?composeEmbedSceneManifest\(\s*sceneId,\s*toPublishedModelRow\(previewScene\),\s*settingsData,\s*assetUrls\.buildAssetUrl\s*\)/
+			/composeEmbedSceneManifest\(\s*sceneId,\s*toPublishedModelRow\(previewScene\),\s*settingsData,\s*assetUrls\.buildAssetUrl\s*\)/
+		)
+	})
+
+	it('refuses unsigned, tokenless URLs, which a third-party page cannot use', () => {
+		expect(layout).toMatch(
+			/token: tokenFromQuery,\s*allowUnsignedWithoutToken: false/
 		)
 	})
 
@@ -200,5 +337,60 @@ describe('the loading thumbnail', () => {
 		expect(read('routes/api/scenes.$sceneId.assets.$assetId.ts')).toMatch(
 			/showsLoadingThumbnail: shouldShowLoadingThumbnail\(\s*settingsData\?\.settings\?\.presentation\s*\)/
 		)
+	})
+})
+
+describe('the /preview document', () => {
+	const layout = read('routes/layouts/preview-layout.tsx')
+	const route = read('routes/preview-page/preview-scene.tsx')
+
+	it('gates on membership of this scene, in this project', () => {
+		expect(layout).toMatch(
+			/if \(!membership \|\| membership\.projectId !== projectId\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound/
+		)
+		expect(layout).not.toContain('getScene(')
+	})
+
+	it('inlines the published manifest, whose URLs authenticate by cookie', () => {
+		expect(layout).toMatch(
+			/const manifest = previewScene\s*\?\s*await buildInlineEmbedManifest\(request, \{[^}]*token: null,\s*allowUnsignedWithoutToken: true\s*\}\)/
+		)
+		expect(layout).toContain('{ projectId, sceneId, manifest }')
+	})
+
+	it('hands the manifest and its preloads to the page', () => {
+		expect(route).toContain('initialManifest={manifest}')
+		expect(route).toContain(
+			'{manifest && <EmbedResourceHints manifest={manifest} />}'
+		)
+	})
+})
+
+describe('the dashboard scene page', () => {
+	const route = read('routes/dashboard-page/projects/scene.tsx')
+
+	it('inlines the published manifest, whose URLs authenticate by cookie', () => {
+		expect(route).toMatch(
+			/const manifest = publishedMeta\s*\?\s*await buildInlineEmbedManifest\(request, \{[^}]*token: null,\s*allowUnsignedWithoutToken: true\s*\}\)/
+		)
+	})
+
+	it('loads a published scene from it and a draft from the server', () => {
+		expect(route).toContain(
+			'sceneSourceFromManifest(sceneId, manifest, serverSource)'
+		)
+		expect(route).toMatch(
+			/endpoint: buildPreviewSceneEndpoint\(\{ sceneId, projectId: project\.id \}\)/
+		)
+	})
+
+	it('retries from the server, never the signed URLs the document carried', () => {
+		expect(route).toMatch(
+			/const retrySceneLoad = useCallback\(\(\) => \{\s*void load\(serverSource\)/
+		)
+	})
+
+	it('gates the thumbnail toggle on scene:update', () => {
+		expect(route).toContain('canUpdateScene: canUpdateScene(membership)')
 	})
 })

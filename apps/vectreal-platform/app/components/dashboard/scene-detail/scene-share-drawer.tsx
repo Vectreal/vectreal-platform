@@ -1,14 +1,18 @@
+import { SceneLoadingThumbnailSetting } from './scene-loading-thumbnail-setting'
 import { SceneSurfaceDrawer } from './scene-surface-drawer'
 import { EmbedOptionsPanel } from '../../embed/embed-options-panel'
 import { DetailPanelSection } from '../../layout-components'
 import { ScenePublishStateControl } from '../../publishing/scene-publish-state-control'
 
 import type { ScenePublishStateResponse } from '../../../types/api'
+import type { ScenePresentationSettings } from '@vctrl/core'
 
 interface SceneShareDrawerProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	presentation: ScenePresentationSettings | null
+	canUpdateScene: boolean
 	/** Publishing happens in the publisher; this navigates there. */
 	onPublish: () => void
 	className?: string
@@ -33,6 +37,8 @@ export function SceneShareDrawer({
 	sceneId,
 	projectId,
 	publishState,
+	presentation,
+	canUpdateScene,
 	onPublish,
 	className
 }: SceneShareDrawerProps) {
@@ -70,9 +76,18 @@ export function SceneShareDrawer({
 			  that explains itself.
 			*/}
 			{isPublished && (
-				<DetailPanelSection className="pt-1">
-					<EmbedOptionsPanel sceneId={sceneId} projectId={projectId} />
-				</DetailPanelSection>
+				<>
+					<DetailPanelSection title="Viewer">
+						<SceneLoadingThumbnailSetting
+							sceneId={sceneId}
+							presentation={presentation}
+							canUpdate={canUpdateScene}
+						/>
+					</DetailPanelSection>
+					<DetailPanelSection className="pt-1">
+						<EmbedOptionsPanel sceneId={sceneId} projectId={projectId} />
+					</DetailPanelSection>
+				</>
 			)}
 		</SceneSurfaceDrawer>
 	)

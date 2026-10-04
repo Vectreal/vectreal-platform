@@ -31,7 +31,12 @@ vi.mock('react-router', () => ({
 
 describe('the preview overlay', () => {
 	it('points at the internal preview for this scene', () => {
-		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'draft' }}
+			/>
+		)
 
 		/*
 		  The preview route, not the embed one. They are deliberately distinct -
@@ -48,7 +53,12 @@ describe('the preview overlay', () => {
 		  A button with an onClick would swallow middle-click and cmd-click, which
 		  is exactly how someone compares the preview against the scene beside it.
 		*/
-		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'draft' }}
+			/>
+		)
 
 		expect(screen.getByRole('link', { name: /preview/i }).tagName).toBe('A')
 	})
@@ -59,12 +69,41 @@ describe('the preview overlay', () => {
 		  in a model whose colour belongs to the user, and anything but a corner is
 		  where a thumb wants to rotate the scene.
 		*/
-		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'draft' }}
+			/>
+		)
 
 		const overlay = screen.getByRole('link', { name: /preview/i })
 		expect(overlay.className).toContain('absolute')
 		expect(overlay.className).toContain('top-3')
 		expect(overlay.className).toContain('right-3')
 		expect(overlay.className).toContain('backdrop-blur')
+	})
+
+	it('says a published scene shows what visitors see', () => {
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'published' }}
+			/>
+		)
+
+		expect(screen.getByText('What visitors see')).not.toBeNull()
+		expect(screen.queryByText('Draft')).toBeNull()
+	})
+
+	it('says a draft is the draft', () => {
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'draft' }}
+			/>
+		)
+
+		expect(screen.getByText('Draft')).not.toBeNull()
+		expect(screen.queryByText('What visitors see')).toBeNull()
 	})
 })
