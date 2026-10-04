@@ -25,7 +25,10 @@ import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extensi
 import { modelFormatForFileName, type ModelFormat } from '../model-formats'
 import { missingAssetsError } from './missing-assets'
 import { OperationProgress } from '../types'
-import { getThreeDracoLoader } from './draco-three-loader'
+import {
+	getThreeDracoLoader,
+	prepareThreeDracoDecoder
+} from './draco-three-loader'
 import { referenceIn, selectionKey } from './dropped-selection'
 import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
@@ -35,7 +38,8 @@ import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
 import type { ModelSiblings } from './three-source-bridges'
 import type { AnimationClip, Object3D } from 'three'
 
-const DEFAULT_DRACO_DECODER_PATH = '/draco/'
+/** Where the Draco decoder is served from unless a caller says otherwise. */
+export const DRACO_DECODER_PATH = '/draco/'
 
 const EMPTY_SIBLINGS: ModelSiblings = new Map()
 
@@ -82,8 +86,7 @@ export class ModelLoader {
 
 	constructor(options?: { dracoDecoderPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
-		this.dracoDecoderPath =
-			options?.dracoDecoderPath ?? DEFAULT_DRACO_DECODER_PATH
+		this.dracoDecoderPath = options?.dracoDecoderPath ?? DRACO_DECODER_PATH
 	}
 
 	/**
@@ -708,6 +711,74 @@ export class ModelLoader {
 				URL.revokeObjectURL(objectUrl)
 			}
 		}
+	}
+
+	/**
+	 * Parse GLB bytes straight to a Three.js scene, for a viewer that will never
+	 * edit or optimize the model.
+	 *
+	 * `loadToThreeJS` reads a GLB into a glTF-Transform document first, because
+	 * the optimizer needs one. That read decodes Draco on the main thread with
+	 * the pure-JavaScript decoder, and the document is then written back out as
+	 * an uncompressed GLB for three.js to parse a second time. A published
+	 * scene has no use for the document, so it skips both: one parse, with
+	 * Draco decoded by three's worker-based WebAssembly decoder.
+	 */
+	public async parseGLBToThreeJS(bytes: Uint8Array): Promise<{
+		scene: Object3D
+		animations: AnimationClip[]
+		size: number
+		loadTime: number
+	}> {
+		const startTime = Date.now()
+		this.emitProgress('Parsing model data', 25)
+
+		const [{ GLTFLoader }, dracoLoader] = await Promise.all([
+			import('three/examples/jsm/loaders/GLTFLoader.js'),
+			getThreeDracoLoader(this.dracoDecoderPath)
+		])
+
+		const loader = new GLTFLoader()
+		loader.setDRACOLoader(dracoLoader)
+
+		// GLTFLoader reads the buffer from offset zero, so a view into a larger
+		// buffer is copied out to exactly its own bytes.
+		const buffer =
+			bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+				? (bytes.buffer as ArrayBuffer)
+				: (bytes.slice().buffer as ArrayBuffer)
+
+		const gltf = await new Promise<{
+			scene: Object3D
+			animations: AnimationClip[]
+		}>((resolve, reject) => {
+			loader.parse(buffer, '', resolve, (error) =>
+				reject(
+					error instanceof Error
+						? error
+						: new Error(`Failed to parse GLB: ${error}`)
+				)
+			)
+		})
+
+		this.emitProgress('Model loaded successfully', 100)
+		gltf.scene.animations = gltf.animations ?? []
+
+		return {
+			scene: gltf.scene,
+			animations: gltf.animations ?? [],
+			size: bytes.byteLength,
+			loadTime: Date.now() - startTime
+		}
+	}
+
+	/**
+	 * Fetches and compiles the Draco decoder ahead of the first model that
+	 * needs it, so a caller can overlap that with the model's download.
+	 * Rejects when the decoder cannot be downloaded.
+	 */
+	public async prepareDracoDecoder(): Promise<void> {
+		await prepareThreeDracoDecoder(this.dracoDecoderPath)
 	}
 
 	/**

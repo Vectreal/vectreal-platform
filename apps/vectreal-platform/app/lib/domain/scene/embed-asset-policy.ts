@@ -1,6 +1,8 @@
-import { PERSISTED_BAKE_FILENAME } from '@vctrl/core'
+import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 
-import type { SceneAssetRef, SceneAssetRefMap } from '@vctrl/core'
+import { DRACO_EXTENSION } from './glb-header'
+
+import type { PublishedModelRef, SceneAssetRefMap } from '@vctrl/core'
 
 /**
  * The single owner of "what may an external embed fetch?".
@@ -32,16 +34,20 @@ export interface PublishedModelRow {
 	fileName: string | null
 	mimeType: string | null
 	byteSize: number | null
+	/** The extensions the GLB declares, recorded on upload; null if unknown. */
+	extensionsUsed?: readonly string[] | null
 }
 
 /**
  * Every asset id an embed is allowed to fetch, and therefore every asset id the
- * embed manifest is allowed to reference. Deliberately a closed set of two:
- * the optimized GLB, and the persisted shadow bake that lives outside it.
+ * embed manifest is allowed to reference. Deliberately a closed set: the
+ * optimized GLB, the persisted shadow bake that lives outside it, and the
+ * scene's saved thumbnail when its author chose to show it while loading.
  */
 export interface EmbedServableAssets {
 	publishedAssetId: string
 	bakeAssetId: string | null
+	thumbnailAssetId: string | null
 }
 
 const GLB_MIME_TYPE = 'model/gltf-binary'
@@ -60,11 +66,14 @@ const FALLBACK_GLB_FILENAME = 'scene.glb'
 export function selectEmbedServableAssets({
 	publishedAssetId,
 	sceneAssets,
-	bakedShadowAssetId
+	bakedShadowAssetId,
+	showsLoadingThumbnail = false
 }: {
 	publishedAssetId: string
 	sceneAssets: readonly EmbedAssetRow[]
 	bakedShadowAssetId?: string | null
+	/** The author's `presentation.showLoadingThumbnail`. */
+	showsLoadingThumbnail?: boolean
 }): EmbedServableAssets {
 	const declaredBakeId = bakedShadowAssetId?.trim() || null
 
@@ -77,7 +86,14 @@ export function selectEmbedServableAssets({
 			? declaredBakeId
 			: null
 
-	return { publishedAssetId, bakeAssetId }
+	// Opted into per scene, and found by the link and its stable name: the
+	// thumbnail's id is not recorded anywhere a save could forge.
+	const thumbnailAssetId = showsLoadingThumbnail
+		? (sceneAssets.find((asset) => asset.name === SCENE_THUMBNAIL_FILENAME)
+				?.id ?? null)
+		: null
+
+	return { publishedAssetId, bakeAssetId, thumbnailAssetId }
 }
 
 export function isEmbedServableAssetId(
@@ -86,39 +102,53 @@ export function isEmbedServableAssetId(
 ): boolean {
 	return (
 		assetId === servable.publishedAssetId ||
-		(servable.bakeAssetId !== null && assetId === servable.bakeAssetId)
+		(servable.bakeAssetId !== null && assetId === servable.bakeAssetId) ||
+		(servable.thumbnailAssetId !== null &&
+			assetId === servable.thumbnailAssetId)
 	)
 }
 
 /**
- * The manifest's `assetRefs` for an embed: the bake and nothing else. The
- * published GLB is referenced separately as `publishedModel`, because the
- * loader treats it as the model rather than as a side asset.
+ * The manifest's `assetRefs` for an embed: the bake and the loading thumbnail,
+ * when servable, and nothing else. The published GLB is referenced separately
+ * as `publishedModel`, because the loader treats it as the model rather than
+ * as a side asset.
  */
 export function buildEmbedAssetRefs(
 	servable: EmbedServableAssets,
 	sceneAssets: readonly EmbedAssetRow[],
 	buildAssetUrl: (assetId: string) => string
 ): SceneAssetRefMap {
-	if (servable.bakeAssetId === null) {
-		return {}
-	}
+	const refs: SceneAssetRefMap = {}
 
-	const bakeAsset = sceneAssets.find(
-		(asset) => asset.id === servable.bakeAssetId
-	)
-	if (!bakeAsset) {
-		return {}
-	}
-
-	return {
-		[bakeAsset.id]: {
-			url: buildAssetUrl(bakeAsset.id),
-			fileName: bakeAsset.name,
-			mimeType: bakeAsset.mimeType ?? 'application/octet-stream',
-			byteSize: bakeAsset.fileSize ?? null
+	for (const assetId of [servable.bakeAssetId, servable.thumbnailAssetId]) {
+		const asset = assetId
+			? sceneAssets.find((candidate) => candidate.id === assetId)
+			: undefined
+		if (!asset) continue
+		refs[asset.id] = {
+			url: buildAssetUrl(asset.id),
+			fileName: asset.name,
+			mimeType: asset.mimeType ?? 'application/octet-stream',
+			byteSize: asset.fileSize ?? null
 		}
 	}
+
+	return refs
+}
+
+/**
+ * The extensions a published GLB declared, as `uploadPublishedGlb` recorded
+ * them in the asset row's metadata. Null for a GLB uploaded before that, or
+ * metadata in any other shape: an unknown answer, never a guessed one.
+ */
+export function extensionsUsedFromMetadata(metadata: unknown): string[] | null {
+	const recorded = (metadata as { gltfExtensionsUsed?: unknown } | null)
+		?.gltfExtensionsUsed
+	return Array.isArray(recorded) &&
+		recorded.every((name) => typeof name === 'string')
+		? recorded
+		: null
 }
 
 /**
@@ -130,7 +160,7 @@ export function buildEmbedAssetRefs(
 export function buildPublishedModelRef(
 	published: PublishedModelRow,
 	buildAssetUrl: (assetId: string) => string
-): SceneAssetRef {
+): PublishedModelRef {
 	const storedName = published.fileName?.trim()
 	const fileName =
 		storedName && storedName.toLowerCase().endsWith('.glb')
@@ -141,6 +171,9 @@ export function buildPublishedModelRef(
 		url: buildAssetUrl(published.assetId),
 		fileName,
 		mimeType: published.mimeType ?? GLB_MIME_TYPE,
-		byteSize: published.byteSize ?? null
+		byteSize: published.byteSize ?? null,
+		...(published.extensionsUsed
+			? { usesDraco: published.extensionsUsed.includes(DRACO_EXTENSION) }
+			: {})
 	}
 }

@@ -41,7 +41,6 @@ const sceneDataRef: { current: Partial<ServerSceneData> | undefined } = {
 vi.mock('../app/components/scene-embed/use-scene-embed-scene', () => ({
 	useSceneEmbedScene: () => ({
 		file: { model: {} },
-		isLoadingScene: false,
 		sceneData: sceneDataRef.current,
 		loadError: null,
 		retrySceneLoad: () => Promise.resolve()

@@ -25,12 +25,16 @@ export const CDN_PUBLIC_EXACT_PATHS = [
  * when their content changes (see `server.mjs`). It is here so Cloudflare
  * respects the five minutes the origin gives them, rather than bypassing the
  * cache or, as under `/assets/`, holding them for a year.
+ *
+ * `/draco/` is the same kind of file: three.js's Draco decoder, which every
+ * Draco-published embed fetches, served for a day (see `server.mjs`).
  */
 export const CDN_PUBLIC_PREFIXES = [
 	'/convert',
 	'/docs',
 	'/news-room',
-	'/media/'
+	'/media/',
+	'/draco/'
 ] as const
 
 /**

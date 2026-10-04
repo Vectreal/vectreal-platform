@@ -375,12 +375,15 @@ class SceneSettingsService {
 	 * `includeGltfJson` is opt-out because the embed manifest never sends the
 	 * editor glTF document, and downloading plus parsing it would be a storage
 	 * round-trip per embed load for bytes that are then discarded.
+	 *
+	 * `readErrors: 'throw'` lets a caller tell a failed read from a scene that
+	 * has no settings; by default a failure is reported and reads as null.
 	 */
 	async getSceneSettingsWithAssetRefs(
 		sceneId: string,
-		options: { includeGltfJson?: boolean } = {}
+		options: { includeGltfJson?: boolean; readErrors?: 'report' | 'throw' } = {}
 	) {
-		const { includeGltfJson = true } = options
+		const { includeGltfJson = true, readErrors = 'report' } = options
 		let result: Awaited<ReturnType<typeof getSceneSettingsWithAssetsRow>>
 		let hotspots: import('@vctrl/core').HotspotDefinition[] = []
 
@@ -393,6 +396,7 @@ class SceneSettingsService {
 				return row
 			})
 		} catch (error) {
+			if (readErrors === 'throw') throw error
 			reportServerError(error, { properties: { sceneId } })
 			return null
 		}

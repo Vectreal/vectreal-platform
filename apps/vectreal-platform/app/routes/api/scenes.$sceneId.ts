@@ -5,6 +5,7 @@ import { isBillingStateReadOnly } from '../../constants/plan-config'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { EntitlementRequiredError } from '../../lib/domain/billing/entitlement-required-error'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
+import { createEmbedAssetUrls } from '../../lib/domain/embed/embed-asset-signature.server'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import { parseSceneBytes } from '../../lib/domain/scene/scene-size-limit'
 import {
@@ -22,13 +23,17 @@ import {
 	updateSceneMetadata
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import {
+	buildSceneManifestEtag,
+	type ManifestPublication
+} from '../../lib/domain/scene/server/scene-manifest-etag'
+import {
 	buildEmbedSceneManifest,
-	buildSceneManifest,
-	buildSceneManifestEtag
+	buildSceneManifest
 } from '../../lib/domain/scene/server/scene-manifest.server'
 import {
 	getPublishedScenePreview,
-	toPublishedModelRow
+	toPublishedModelRow,
+	type PublishedScenePreview
 } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
@@ -40,7 +45,6 @@ import {
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 
-import type { PublishedModelRow } from '../../lib/domain/scene/embed-asset-policy'
 import type { SceneSettingsAction } from '../../types/api'
 
 function withNoStoreHeaders(response: Response): Response {
@@ -300,17 +304,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			return authContext
 		}
 
-		let publishedModelRow: PublishedModelRow | null = null
+		let previewScene: PublishedScenePreview | null = null
 
 		if (authContext.mode === 'apiKey') {
-			const previewScene = await getPublishedScenePreview(
-				previewProjectId,
-				sceneId
-			)
+			previewScene = await getPublishedScenePreview(previewProjectId, sceneId)
 			if (!previewScene) {
 				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 			}
-			publishedModelRow = toPublishedModelRow(previewScene)
 		} else {
 			const scene = await getScene(sceneId, authContext.userId)
 			if (!scene || scene.projectId !== previewProjectId) {
@@ -318,15 +318,35 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			}
 		}
 
-		const token = url.searchParams.get('token')?.trim() || null
-		const buildPreviewAssetUrl = (assetId: string) => {
-			const assetParams = new URLSearchParams({
-				preview: '1',
-				projectId: previewProjectId
+		const publishedModelRow = previewScene
+			? toPublishedModelRow(previewScene)
+			: null
+		// Signed only for an embed: the session manifest describes the working
+		// scene, whose assets must not become publicly cacheable URLs.
+		const embedAssetUrls = previewScene
+			? createEmbedAssetUrls({
+					sceneId,
+					projectId: previewProjectId,
+					token: url.searchParams.get('token')?.trim() || null
+				})
+			: null
+		const buildPreviewAssetUrl =
+			embedAssetUrls?.buildAssetUrl ??
+			((assetId: string) => {
+				const query = new URLSearchParams({
+					preview: '1',
+					projectId: previewProjectId
+				})
+				return `/api/scenes/${sceneId}/assets/${assetId}?${query}`
 			})
-			if (token) assetParams.set('token', token)
-			return `/api/scenes/${sceneId}/assets/${assetId}?${assetParams.toString()}`
-		}
+		const publication: ManifestPublication | null =
+			previewScene && embedAssetUrls
+				? {
+						assetId: previewScene.publishedAssetId,
+						publishedAt: previewScene.publishedAt,
+						assetUrlsVersion: embedAssetUrls.version
+					}
+				: null
 
 		try {
 			const manifest = publishedModelRow
@@ -339,7 +359,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			const etag = buildSceneManifestEtag(
 				sceneId,
 				manifest.settingsUpdatedAt,
-				publishedModelRow ? 'embed' : 'session'
+				publication
 			)
 
 			if (etag && request.headers.get('If-None-Match') === etag) {

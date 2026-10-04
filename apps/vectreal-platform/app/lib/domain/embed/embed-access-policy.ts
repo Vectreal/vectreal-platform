@@ -35,6 +35,25 @@ export type EmbedKeyMatch = {
 	apiKeyOrganizationId: string
 	projectOrganizationId: string
 	allowedEmbedDomains: string | null
+	lastUsedAt: Date | null
+}
+
+/**
+ * How stale `lastUsedAt` may get before a request writes it again.
+ *
+ * The column answers "has this key been picked up", which a minute of
+ * imprecision does not change. Writing it on every request did: an embed view
+ * makes several authenticated requests, each paying a round trip and a row
+ * lock on the same key, and a busy storefront serialized on that row.
+ */
+export const KEY_USE_RECORD_INTERVAL_MS = 60_000
+
+export function shouldRecordKeyUse(
+	lastUsedAt: Date | null,
+	now: Date
+): boolean {
+	if (!lastUsedAt) return true
+	return now.getTime() - lastUsedAt.getTime() >= KEY_USE_RECORD_INTERVAL_MS
 }
 
 export type EmbedAccessDecision =

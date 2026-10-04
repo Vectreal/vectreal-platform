@@ -13,7 +13,10 @@ import {
 	toUpgradeModalPayload
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
-import { shouldShowInfoPopover } from '../../../../../lib/domain/scene/scene-presentation'
+import {
+	shouldShowInfoPopover,
+	shouldShowLoadingThumbnail
+} from '../../../../../lib/domain/scene/scene-presentation'
 import { hasUnsavedChangesAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	documentOptimizationsAtom,
@@ -206,6 +209,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation]
 	)
 
+	const handleToggleLoadingThumbnail = useCallback(
+		(showLoadingThumbnail: boolean) => {
+			setPresentation((previous) => ({ ...previous, showLoadingThumbnail }))
+		},
+		[setPresentation]
+	)
+
 	const statusText =
 		publishStatus === 'saving'
 			? 'Saving latest scene changes before publishing...'
@@ -242,6 +252,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						onCheckedChange={handleToggleInfoPopover}
 						label="Show scene info"
 						description="Adds an info button to the viewer, opening this scene's name and description. Applies to embeds and preview links as soon as you save."
+					/>
+					<Toggle
+						checked={shouldShowLoadingThumbnail(presentation)}
+						onCheckedChange={handleToggleLoadingThumbnail}
+						label="Show thumbnail while loading"
+						description="Embeds show this scene's saved thumbnail behind the loader until the 3D scene is ready. Applies as soon as you save."
 					/>
 				</SidebarSectionContent>
 			</SidebarSection>
