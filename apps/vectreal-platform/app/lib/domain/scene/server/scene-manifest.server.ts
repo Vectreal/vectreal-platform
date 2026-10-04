@@ -1,5 +1,6 @@
 import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 
+import { shouldShowLoadingThumbnail } from '../scene-presentation'
 import { sceneSettingsService } from './scene-settings-service.server'
 import { reportServerError } from '../../../observability/report-server-error.server'
 import {
@@ -136,11 +137,44 @@ export async function buildEmbedSceneManifest(
 	published: PublishedModelRow,
 	buildAssetUrl: (assetId: string) => string
 ): Promise<SceneEmbedManifestResponse> {
-	const settingsData = await sceneSettingsService.getSceneSettingsWithAssetRefs(
+	return composeEmbedSceneManifest(
 		sceneId,
-		{ includeGltfJson: false }
+		published,
+		await readEmbedSceneSettings(sceneId),
+		buildAssetUrl
 	)
+}
 
+/**
+ * The settings half of an embed manifest, which depends on nothing but the
+ * scene id. Split out so the `/embed` document can read it alongside the
+ * publication instead of after it.
+ *
+ * A failed read throws rather than reading as "no settings": a manifest built
+ * from that would render the published model with default lighting and no
+ * shadow, where a failure lets the caller fall back or report it.
+ */
+export function readEmbedSceneSettings(sceneId: string) {
+	return sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
+		includeGltfJson: false,
+		readErrors: 'throw'
+	})
+}
+
+export type EmbedSceneSettings = Awaited<
+	ReturnType<typeof readEmbedSceneSettings>
+>
+
+/**
+ * Assembles an embed manifest from settings already read. Whatever the caller
+ * read them for, only the published scene's own are ever passed here.
+ */
+export async function composeEmbedSceneManifest(
+	sceneId: string,
+	published: PublishedModelRow,
+	settingsData: EmbedSceneSettings,
+	buildAssetUrl: (assetId: string) => string
+): Promise<SceneEmbedManifestResponse> {
 	const publishedModel = buildPublishedModelRef(published, buildAssetUrl)
 
 	if (!settingsData) {
@@ -158,7 +192,8 @@ export async function buildEmbedSceneManifest(
 	const servable = selectEmbedServableAssets({
 		publishedAssetId: published.assetId,
 		sceneAssets: settingsData.assets ?? [],
-		bakedShadowAssetId: settings?.shadows?.baked?.assetId
+		bakedShadowAssetId: settings?.shadows?.baked?.assetId,
+		showsLoadingThumbnail: shouldShowLoadingThumbnail(settings?.presentation)
 	})
 
 	return {
@@ -177,23 +212,4 @@ export async function buildEmbedSceneManifest(
 			? settingsData.settingsUpdatedAt.toISOString()
 			: null
 	}
-}
-
-/**
- * Returns a weak ETag for the scene manifest based on the scene ID and the
- * timestamp of the last settings save. Returns null when no timestamp is
- * available so callers can skip caching headers entirely.
- *
- * `shape` keeps the embed and session manifests for one scene in separate
- * cache entries. They carry different fields from the same `settingsUpdatedAt`,
- * so a shared tag would let one be served in place of the other.
- */
-export function buildSceneManifestEtag(
-	sceneId: string,
-	settingsUpdatedAt: string | null,
-	shape: 'session' | 'embed' = 'session'
-): string | null {
-	if (!settingsUpdatedAt) return null
-	const prefix = shape === 'embed' ? 'scene-embed' : 'scene'
-	return `W/"${prefix}-${sceneId}-${settingsUpdatedAt}"`
 }

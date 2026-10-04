@@ -1,4 +1,9 @@
-import { loadModelFromServer } from '@vctrl/hooks/use-load-model/scene-loaders'
+import {
+	loadModelFromSceneData,
+	loadModelFromServer
+} from '@vctrl/hooks/use-load-model/scene-loaders'
+
+import { embedManifestToScenePayload } from '../app/lib/domain/scene/client/embed-manifest-payload'
 
 import type { LoadedModel, ModelSource } from '@vctrl/hooks/use-load-model'
 import type { LoadContext } from '@vctrl/hooks/use-load-model/load-context'
@@ -44,10 +49,14 @@ function embedManifest(overrides: Record<string, unknown> = {}) {
 
 /** Records every request so a stray POST to the legacy endpoint is visible. */
 function stubFetch(manifestBody: unknown, manifestStatus = 200) {
-	const calls: { url: string; method: string }[] = []
+	const calls: { url: string; method: string; headers: Headers }[] = []
 
 	const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-		calls.push({ url, method: init?.method ?? 'GET' })
+		calls.push({
+			url,
+			method: init?.method ?? 'GET',
+			headers: new Headers(init?.headers)
+		})
 
 		if (url === MODEL_URL) {
 			return {
@@ -78,21 +87,28 @@ function stubFetch(manifestBody: unknown, manifestStatus = 200) {
 
 function buildContext() {
 	const published: LoadedModel[] = []
-	// Typed on the parameter so the File assertion below has something to read.
-	const loadToThreeJS = vi.fn(async (_file: File) => ({
+	const parseGLBToThreeJS = vi.fn(async (_bytes: Uint8Array) => ({
 		scene: { name: 'three-scene' },
 		animations: []
 	}))
+	const loadToThreeJS = vi.fn()
+	const prepareDracoDecoder = vi.fn(async () => {})
 
 	const ctx = {
-		modelLoader: { loadToThreeJS },
+		modelLoader: { parseGLBToThreeJS, loadToThreeJS, prepareDracoDecoder },
 		optimizer: undefined,
 		publish: (loaded: LoadedModel) => published.push(loaded),
 		mayIngest: () => true,
 		onProgress: () => {}
 	} as unknown as LoadContext
 
-	return { ctx, loadToThreeJS, published }
+	return {
+		ctx,
+		parseGLBToThreeJS,
+		loadToThreeJS,
+		prepareDracoDecoder,
+		published
+	}
 }
 
 const source: Extract<ModelSource, { kind: 'server' }> = {
@@ -121,7 +137,7 @@ describe('published-GLB embed load', () => {
 		expect(calls.some((call) => call.method === 'POST')).toBe(false)
 	})
 
-	it('requests exactly the published GLB and the bake', async () => {
+	it('requests the published GLB alone, leaving the bake to the viewer', async () => {
 		const calls = stubFetch(embedManifest())
 		const { ctx } = buildContext()
 
@@ -130,25 +146,60 @@ describe('published-GLB embed load', () => {
 		const assetCalls = calls
 			.filter((call) => call.url !== MANIFEST_URL)
 			.map((call) => call.url)
-			.sort()
 
-		expect(assetCalls).toEqual([BAKE_URL, MODEL_URL].sort())
+		expect(assetCalls).toEqual([MODEL_URL])
 	})
 
-	it('hands the loader a File carrying the GLB bytes, name and mime type', async () => {
+	it('parses the GLB bytes once, without the editor document round trip', async () => {
 		stubFetch(embedManifest())
-		const { ctx, loadToThreeJS } = buildContext()
+		const { ctx, parseGLBToThreeJS, loadToThreeJS } = buildContext()
 
 		await loadModelFromServer(source, ctx)
 
-		expect(loadToThreeJS).toHaveBeenCalledTimes(1)
-		const [file] = loadToThreeJS.mock.calls[0]
-
-		expect(file.name).toBe('blue-vans-shoe.glb')
-		expect(file.type).toBe('model/gltf-binary')
-		expect(Array.from(new Uint8Array(await file.arrayBuffer()))).toEqual(
+		expect(parseGLBToThreeJS).toHaveBeenCalledTimes(1)
+		expect(Array.from(parseGLBToThreeJS.mock.calls[0][0])).toEqual(
 			Array.from(GLB_BYTES)
 		)
+		expect(loadToThreeJS).not.toHaveBeenCalled()
+	})
+
+	it('leaves the Draco decoder alone for a GLB recorded as not needing it', async () => {
+		stubFetch(
+			embedManifest({
+				publishedModel: {
+					url: MODEL_URL,
+					fileName: 'blue-vans-shoe.glb',
+					mimeType: 'model/gltf-binary',
+					byteSize: GLB_BYTES.byteLength,
+					usesDraco: false
+				}
+			})
+		)
+		const { ctx, prepareDracoDecoder } = buildContext()
+
+		await loadModelFromServer(source, ctx)
+
+		expect(prepareDracoDecoder).not.toHaveBeenCalled()
+	})
+
+	it('warms the Draco decoder before the model has downloaded', async () => {
+		const order: string[] = []
+		stubFetch(embedManifest())
+		const { ctx, prepareDracoDecoder } = buildContext()
+		prepareDracoDecoder.mockImplementation(async () => {
+			order.push('decoder')
+		})
+		const fetchMock = vi.mocked(fetch)
+		const originalFetch = fetchMock.getMockImplementation()!
+		fetchMock.mockImplementation(async (url, init) => {
+			if (url === MODEL_URL) order.push('model')
+			return originalFetch(url, init)
+		})
+
+		await loadModelFromServer(source, ctx)
+
+		expect(order.indexOf('decoder')).toBeGreaterThan(-1)
+		expect(order.indexOf('decoder')).toBeLessThan(order.indexOf('model'))
 	})
 
 	it('keeps settings and meta while reporting no glTF document', async () => {
@@ -164,17 +215,18 @@ describe('published-GLB embed load', () => {
 		expect(published).toHaveLength(1)
 	})
 
-	it('makes the bake bytes available as scene asset data', async () => {
+	it('hands the viewer the bake by reference, and no model bytes', async () => {
 		stubFetch(embedManifest())
 		const { ctx } = buildContext()
 
 		const loaded = await loadModelFromServer(source, ctx)
-		const entries = Object.values(loaded.sceneData?.assetData ?? {})
 
-		expect(entries.map((entry) => entry.fileName)).toEqual(['shadow-bake.png'])
+		expect(
+			Object.values(loaded.sceneData?.assetRefs ?? {}).map((ref) => ref.url)
+		).toEqual([BAKE_URL])
 		// The GLB rides in the asset map only while it is fetched; it must not
 		// leak into the data the viewer sees.
-		expect(entries).toHaveLength(1)
+		expect(loaded.sceneData?.assetData).toEqual({})
 	})
 
 	it('loads a scene that has no shadow bake', async () => {
@@ -204,5 +256,30 @@ describe('published-GLB embed load', () => {
 		})
 
 		expect(calls.some((call) => call.method === 'POST')).toBe(false)
+	})
+
+	/*
+	  The document's preload of the GLB is reused only by a request that adds
+	  no header of its own; one carrying the key as `Authorization` downloads
+	  the model a second time.
+	*/
+	it('loads an inline manifest with no request beyond the model, and no key header', async () => {
+		const calls = stubFetch(null)
+		const { ctx, published } = buildContext()
+		const manifest = embedManifest().data
+
+		await loadModelFromSceneData(
+			{
+				kind: 'scene-data',
+				sceneId: SCENE_ID,
+				sceneData: embedManifestToScenePayload(manifest as never),
+				parseMode: 'direct'
+			},
+			ctx
+		)
+
+		expect(calls.map((call) => call.url)).toEqual([MODEL_URL])
+		expect(calls[0].headers.has('authorization')).toBe(false)
+		expect(published[0].sceneData?.meta?.name).toBe('Blue Vans Shoe')
 	})
 })

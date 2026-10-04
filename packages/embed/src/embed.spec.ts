@@ -9,7 +9,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { VectrealEmbed } from './embed'
-import { HOSTED_PREVIEW_VIEWER_SOURCE } from './protocol'
+import { HOSTED_PREVIEW_VIEWER_SOURCE, isViewerCommand } from './protocol'
 
 const ORIGIN = 'https://vectreal.com'
 
@@ -92,6 +92,25 @@ describe('VectrealEmbed readiness', () => {
 		viewerReady(own)
 
 		expect(onReady).toHaveBeenCalledTimes(1)
+		embed.destroy()
+	})
+})
+
+describe('VectrealEmbed.returnToSceneView', () => {
+	// The command has to survive the frame's own guard, or it is dropped there
+	// without a word on either side.
+	it('sends a command the frame accepts', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		pong(own, 'scene-a')
+		viewerReady(own)
+
+		const post = vi.spyOn(own.contentWindow as Window, 'postMessage')
+		embed.returnToSceneView()
+
+		const message = post.mock.calls.at(-1)?.[0] as { command: unknown }
+		expect(message.command).toEqual({ type: 'return_to_scene_view' })
+		expect(isViewerCommand(message.command)).toBe(true)
 		embed.destroy()
 	})
 })

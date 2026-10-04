@@ -123,6 +123,7 @@ other origin are dropped.
 | `ready` | `() => Promise<EmbedReadyInfo>` | Resolves once the scene has loaded and the viewer accepts commands, wherever the frame sits on the page. Returns `{ sceneId, cameras, hotspots }` for that scene. |
 | `activateCamera` | `(cameraId: string) => void` | Switch to a named camera. |
 | `focusHotspot` | `(hotspotId: string) => void` | Reveal a hotspot's content and fly its camera. Sets rather than toggles, so calling it twice does not close the card; there is no close command. |
+| `returnToSceneView` | `() => void` | Leave a hotspot's camera for the scene camera the visitor was on before, or the scene's default. Does nothing while the view is not at a hotspot. Visitors get the same from the viewer's own "Back to scene view" control and from Escape. |
 | `setTransition` | `(options: SetTransitionOptions) => void` | Override transition type for subsequent camera switches. |
 | `setControlsEnabled` | `(enabled: boolean) => void` | Enable or disable orbit controls. |
 | `setAutoRotate` | `(enabled: boolean, speed?: number) => void` | Toggle auto-rotate. |
@@ -318,6 +319,8 @@ present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts reque
 present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mode === 'apiKey'
 present packages/embed/src/embed.ts focusHotspot(hotspotId: string)
 present packages/embed/src/protocol.ts case 'focus_hotspot':
+present packages/embed/src/embed.ts returnToSceneView(): void
+present packages/embed/src/protocol.ts case 'return_to_scene_view':
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspots')
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspotContent')
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts const HEX_COLOR

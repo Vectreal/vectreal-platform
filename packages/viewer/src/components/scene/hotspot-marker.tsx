@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { FOCUS_RING } from '../focus-ring'
 import { resolveHotspotInteraction } from './hotspot-interaction'
 import HotspotPopover from './hotspot-popover'
 import {
@@ -104,13 +105,6 @@ const HTML_WRAPPER_STYLE = { pointerEvents: 'none' } as const
  */
 const RING_SHADOW =
 	'shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_1px_3px_rgba(0,0,0,0.3)]'
-
-/**
- * A white ring inside a dark halo, and independent of the fill so a focused
- * marker is distinguishable from the marker itself whatever colour it is.
- */
-const FOCUS_RING =
-	'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:shadow-[0_0_0_4px_rgba(0,0,0,0.5)]'
 
 const markerClasses = {
 	root: 'vctrl-viewer-hotspot pointer-events-none relative flex items-center justify-center opacity-100 transition-opacity duration-300 ease-out',

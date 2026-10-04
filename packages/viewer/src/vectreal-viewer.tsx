@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
-import { resolveNormalizedScale } from '@vctrl/core'
+import { resolveEnvironmentFiles, resolveNormalizedScale } from '@vctrl/core'
 import {
 	AnimationSettings,
 	BoundsProps,
@@ -36,11 +36,17 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
+	useRef,
 	useState
 } from 'react'
 import { AnimationClip, Object3D } from 'three'
 
-import { AnimationControls, Canvas, Overlay } from './components'
+import {
+	AnimationControls,
+	Canvas,
+	Overlay,
+	SceneViewReturn
+} from './components'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -48,14 +54,17 @@ import {
 	SceneControls,
 	SceneEnvironment,
 	resolveHotspotCameraTargets,
+	resolveHotspotMarkers,
 	SceneHotspots,
 	SceneModel,
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
+import { preloadEnvironmentFiles } from './components/scene/scene-environment'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useHeldExecutor } from './hooks/use-held-executor'
+import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
@@ -238,6 +247,17 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * drawing a second copy of the same text over the model.
 	 */
 	revealHotspotContent?: boolean
+	/**
+	 * Whether the viewer draws its way back from a hotspot's camera. Default true.
+	 *
+	 * While the view stands at a camera a hotspot flew it to, a "Back to scene
+	 * view" control is drawn, and Escape inside the viewer does the same: both
+	 * return to the scene camera the visitor was on before, or the scene's
+	 * default when there was none. Turn it off only where something else
+	 * offers the way back - a host's own control can send
+	 * `return_to_scene_view`, which works either way.
+	 */
+	showSceneViewReturn?: boolean
 
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
@@ -424,6 +444,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		hotspotColor,
 		showHotspotMarkers,
 		revealHotspotContent,
+		showSceneViewReturn = true,
 		// Editor affordances
 		shadowLightEditable,
 		showInternalHotspots = false,
@@ -450,6 +471,18 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const hasContent = !!(model || children)
 
+	// Prefetched as soon as a surface says which environment it wants, which
+	// can be long before there is content to light: the map is otherwise only
+	// requested once the model has loaded and the scene mounts. A surface that
+	// has not decided yet prefetches nothing rather than the default.
+	const environmentFiles = envOptions
+		? resolveEnvironmentFiles(envOptions)
+		: null
+	const environmentFilesKey = environmentFiles && String(environmentFiles)
+	useEffect(() => {
+		if (environmentFiles) preloadEnvironmentFiles(environmentFiles)
+	}, [environmentFilesKey])
+
 	// Bounds-based camera framing is the fallback for scenes without saved camera positions.
 	// Explicit boundsOptions.enable overrides this inference.
 	const boundsEnabled =
@@ -458,6 +491,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			: !cameraOptions?.cameras?.some((c) => c.position != null)
 	const [isInitialFramingComplete, setIsInitialFramingComplete] =
 		useState(false)
+	// Latched on the first compile: a later model swap keeps the previous frame
+	// up while it compiles, and must not bring the loader back.
+	const [areShadersReady, setAreShadersReady] = useState(false)
 	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
 		null | boolean
 	>(null)
@@ -483,6 +519,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	useEffect(() => {
 		if (!hasContent) {
 			setIsInitialFramingComplete(false)
+			setAreShadersReady(false)
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
@@ -494,7 +531,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		setIsInitialFramingComplete(true)
 	}, [])
 
+	const handleShadersReady = useCallback(() => {
+		setAreShadersReady(true)
+	}, [])
+
 	const { forwardCommand: forwardAnimationCommand } = animation
+
+	// Filled in below, once the camera state it reads exists. A ref keeps the
+	// command executor's identity independent of every camera change.
+	const returnToSceneViewRef = useRef<() => boolean>(() => false)
 
 	const executeViewerCommand = useCallback(
 		(command: ViewerCommand) => {
@@ -504,6 +549,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					break
 				case 'focus_hotspot':
 					hotspotLayer.execute(command)
+					break
+				case 'return_to_scene_view':
+					returnToSceneViewRef.current()
 					break
 				case 'set_controls_enabled':
 					setControlsEnabledOverride(command.enabled)
@@ -598,17 +646,77 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	 */
 	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
 
+	// The markers this surface draws, by the same rule `SceneHotspots` draws
+	// them, so a hidden or internal hotspot's camera is never a hotspot view.
+	const hotspotMarkers = useMemo(
+		() =>
+			resolveHotspotMarkers(hotspots, {
+				includeInternal: showInternalHotspots,
+				includeHidden: showHiddenHotspots
+			}),
+		[hotspots, showInternalHotspots, showHiddenHotspots]
+	)
+
+	const activateCamera = useCallback(
+		(cameraId: string) =>
+			cameraLayer.execute({ type: 'activate_camera', cameraId }),
+		[cameraLayer]
+	)
+
+	const sceneViewReturn = useSceneViewReturn({
+		cameras: cameraOptions?.cameras,
+		hotspots,
+		markers: hotspotMarkers,
+		activeCameraId,
+		activateCamera
+	})
+	const { noteCamera, returnToSceneView } = sceneViewReturn
+	returnToSceneViewRef.current = returnToSceneView
+
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
 			if (event.type === 'camera_changed') {
 				setActiveCameraId(event.cameraId)
+				noteCamera(event.cameraId)
 			} else if (event.type === 'initial_framing_completed') {
 				setActiveCameraId(event.cameraId)
+				noteCamera(event.cameraId)
 			}
 			onInteractionEvent?.(event)
 		},
-		[onInteractionEvent]
+		[noteCamera, onInteractionEvent]
 	)
+
+	/**
+	 * Escape inside the viewer leaves a hotspot's camera, like the control.
+	 *
+	 * A native listener on the container, so it hears only keys pressed while
+	 * focus is inside this viewer and a host page keeps its own Escape. An open
+	 * hotspot card claims the key first: its handler stops propagation inside
+	 * drei's own React root, below this container, so the first Escape closes
+	 * the card and the second leaves the view.
+	 */
+	const [container, setContainer] = useState<HTMLDivElement | null>(null)
+
+	useEffect(() => {
+		if (!container || !showSceneViewReturn) return
+
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape' || event.defaultPrevented) return
+			// An open dialog inside the viewer (the info popover) owns Escape;
+			// its listener sits on the document, after this one.
+			if (
+				event.target instanceof Element &&
+				event.target.closest('[role="dialog"]')
+			) {
+				return
+			}
+			if (returnToSceneViewRef.current()) event.preventDefault()
+		}
+
+		container.addEventListener('keydown', handleKeyDown)
+		return () => container.removeEventListener('keydown', handleKeyDown)
+	}, [container, showSceneViewReturn])
 
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
@@ -642,9 +750,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		}
 	}, [executeViewerCommand, onCommandExecutorReady])
 
+	// Without the composer nothing compiles ahead of the first frame, so there
+	// is nothing to wait for.
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
-		isInitialFramingComplete,
+		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
 		Boolean(loader)
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
@@ -661,6 +771,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 				)}
 				theme={theme}
 				loadingState={loadingState}
+				onContainerChange={setContainer}
 				overlay={
 					<Overlay
 						loadingState={loadingState}
@@ -673,6 +784,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									complete={animation.status.complete}
 									onToggle={animation.toggle}
 									onRestart={animation.restart}
+								/>
+							) : null
+						}
+						sceneViewReturn={
+							showSceneViewReturn ? (
+								<SceneViewReturn
+									hotspotName={sceneViewReturn.hotspot?.name ?? null}
+									onReturn={returnToSceneView}
+									focusOnLeave={container}
 								/>
 							) : null
 						}
@@ -707,6 +827,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								aoAtRest={shadowsOptions?.aoAtRest}
 								model={model}
 								active={animation.status.active}
+								onShadersReady={handleShadersReady}
 							/>
 							<SceneControls
 								{...controlsOptions}

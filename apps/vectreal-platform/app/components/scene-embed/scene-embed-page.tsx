@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 
 import { EmbedErrorState } from './embed-error-state'
@@ -9,10 +10,14 @@ import VectrealEmbedBadge from './vectreal-embed-badge'
 import { resolveEmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
 import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
-import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
+import {
+	isSceneCamera,
+	resolveHotspotViewName
+} from '../../lib/domain/scene/scene-camera'
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
-import CenteredSpinner from '../centered-spinner'
+import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
+import type { SceneEmbedManifestResponse } from '../../types/api'
 import type {
 	VectrealViewerProps,
 	ViewerCommand,
@@ -30,6 +35,12 @@ export interface SceneEmbedViewerControl {
 	 */
 	cameras: { cameraId: string; name?: null | string }[]
 	activeCameraId: null | string
+	/**
+	 * The hotspot whose camera the view stands on, so a switcher that lists
+	 * scene cameras only can say where the view is instead of claiming one of
+	 * them. Null on a scene camera.
+	 */
+	activeHotspotName: null | string
 	activateCamera: (cameraId: string) => void
 }
 
@@ -55,6 +66,11 @@ export interface SceneEmbedPageProps {
 	 * internal and carries no mark.
 	 */
 	showsVectrealBranding?: boolean
+	/**
+	 * The scene manifest, when the document carried it. Loading from it skips
+	 * the manifest request; without it the page fetches one.
+	 */
+	initialManifest?: SceneEmbedManifestResponse | null
 }
 
 /** Opening viewer state driven by the embed URL's query parameters. */
@@ -121,13 +137,14 @@ const SceneEmbedPage = ({
 	sceneId,
 	chrome,
 	theme,
-	showsVectrealBranding = false
+	showsVectrealBranding = false,
+	initialManifest
 }: SceneEmbedPageProps) => {
-	const { file, isLoadingScene, sceneData, loadError, retrySceneLoad } =
-		useSceneEmbedScene({
-			sceneId,
-			projectId
-		})
+	const { file, sceneData, loadError, retrySceneLoad } = useSceneEmbedScene({
+		sceneId,
+		projectId,
+		initialManifest
+	})
 	const initialCommands = useInitialCommands()
 	const hotspotPresentation = useHotspotPresentation()
 	const embedTheme = useEmbedViewerTheme()
@@ -152,13 +169,30 @@ const SceneEmbedPage = ({
 
 	// The embed SDK bridge and the chrome both need these, so they chain rather
 	// than compete for the viewer's single callback slot.
+	const [viewerExecutor, setViewerExecutor] =
+		useState<null | ViewerCommandExecutor>(null)
 	const onCommandExecutorReady = useCallback(
 		(executor: null | ViewerCommandExecutor) => {
 			executorRef.current = executor
-			bridgeRef.current.onCommandExecutorReady?.(executor)
+			setViewerExecutor(executor)
 		},
 		[]
 	)
+
+	/*
+	  The bridge reads a registered executor as "the scene is ready": it answers
+	  the host page's ping with the scene's cameras and hotspots, and runs the
+	  author's `viewer_ready` interactions. The viewer now mounts while the
+	  scene is still loading, and registers before any of those exist, so the
+	  bridge is told only once the scene data has arrived. Keyed on whether it
+	  has, not on its identity, so the bridge hears of each executor once.
+	*/
+	const hasSceneData = Boolean(sceneData)
+	useEffect(() => {
+		if (!hasSceneData || !viewerExecutor) return
+		bridgeRef.current.onCommandExecutorReady?.(viewerExecutor)
+		return () => bridgeRef.current.onCommandExecutorReady?.(null)
+	}, [hasSceneData, viewerExecutor])
 
 	const onInteractionEvent = useCallback((event: ViewerInteractionEvent) => {
 		if (event.type === 'camera_changed') {
@@ -174,14 +208,20 @@ const SceneEmbedPage = ({
 		executorRef.current?.execute({ type: 'activate_camera', cameraId })
 	}, [])
 
+	// From the manifest the document carried until the scene data exists, so
+	// the thumbnail is up from the first paint rather than after the model.
+	const loadingThumbnail = useMemo(() => {
+		const refs = sceneData?.assetRefs ?? initialManifest?.assetRefs ?? {}
+		const thumbnail = Object.values(refs).find(
+			(ref) => ref.fileName === SCENE_THUMBNAIL_FILENAME
+		)
+		return toViewerLoadingThumbnail(thumbnail?.url)
+	}, [sceneData?.assetRefs, initialManifest?.assetRefs])
+
 	const sceneCameras = useMemo(
 		() => (sceneData?.camera?.cameras ?? []).filter(isSceneCamera),
 		[sceneData?.camera?.cameras]
 	)
-
-	if (isLoadingScene && !file?.model) {
-		return <CenteredSpinner className="h-dvh" text="Loading scene..." />
-	}
 
 	if (loadError && !file?.model) {
 		return (
@@ -213,6 +253,14 @@ const SceneEmbedPage = ({
 			<SceneEmbedViewer
 				file={file}
 				sceneData={sceneData}
+				loadingThumbnail={loadingThumbnail}
+				// A scene that names no environment is lit by the default, which
+				// `{}` asks for; an absent manifest says nothing yet.
+				environment={
+					initialManifest
+						? (initialManifest.settings?.environment ?? {})
+						: undefined
+				}
 				onCommandExecutorReady={onCommandExecutorReady}
 				onInteractionEvent={onInteractionEvent}
 				hotspotPresentation={hotspotPresentation}
@@ -236,6 +284,10 @@ const SceneEmbedPage = ({
 			{chrome?.({
 				cameras: sceneCameras,
 				activeCameraId,
+				activeHotspotName: resolveHotspotViewName(
+					sceneData?.hotspots,
+					activeCameraId
+				),
 				activateCamera
 			})}
 		</div>

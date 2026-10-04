@@ -193,10 +193,9 @@ export function useSceneSource({
 			// The persisted shadow bake is inlined in the scene's own assets, so it
 			// only becomes available once the loader has resolved them.
 			setBakedShadowSource(
-				resolveBakedShadowSource(
-					state.sceneData?.shadows,
-					state.sceneData?.assetData
-				) ?? null
+				resolveBakedShadowSource(state.sceneData?.shadows, {
+					assetData: state.sceneData?.assetData
+				}) ?? null
 			)
 
 			toast.success(

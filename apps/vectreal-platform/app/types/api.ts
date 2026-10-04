@@ -11,6 +11,7 @@ import type {
 	ExtendedGLTFDocument,
 	Optimizations,
 	OptimizationReport,
+	PublishedModelRef,
 	SceneAssetRef,
 	SceneAssetRefMap,
 	SceneSettings,
@@ -188,7 +189,7 @@ export interface SceneEmbedManifestResponse {
 	readonly sceneId: string
 	readonly meta: SceneMetaState | null
 	/** The optimized, published GLB. The only model an embed ever loads. */
-	readonly publishedModel: SceneAssetRef
+	readonly publishedModel: PublishedModelRef
 	/** The persisted shadow bake, which lives outside the GLB. Often empty. */
 	readonly assetRefs: SceneAssetRefMap
 	readonly settings: SceneSettings | null

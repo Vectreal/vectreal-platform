@@ -4,10 +4,14 @@ import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useMemo } from 'react'
 
 import { PUBLISHER_LAYER } from './shell/shell-layout'
-import { isSceneCamera } from '../../lib/domain/scene/scene-camera'
+import {
+	isSceneCamera,
+	resolveHotspotViewName
+} from '../../lib/domain/scene/scene-camera'
 import { isPreviewModeAtom } from '../../lib/stores/publisher-config-store'
 import {
 	cameraAtom,
+	hotspotsAtom,
 	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
 import CameraSwitcherPill from '../scene-embed/preview-chrome/camera-switcher-pill'
@@ -16,6 +20,7 @@ const PreviewCameraControls: React.FC = () => {
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const { cameras } = useAtomValue(cameraAtom)
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
+	const hotspots = useAtomValue(hotspotsAtom)
 
 	const sceneCameras = useMemo(
 		() => (cameras ?? []).filter(isSceneCamera),
@@ -51,6 +56,7 @@ const PreviewCameraControls: React.FC = () => {
 						className="pointer-events-auto"
 						cameras={sceneCameras}
 						activeCameraId={selectedCameraId ?? null}
+						offListLabel={resolveHotspotViewName(hotspots, selectedCameraId)}
 						onSelect={handleSelectPreviewCamera}
 					/>
 				</motion.div>

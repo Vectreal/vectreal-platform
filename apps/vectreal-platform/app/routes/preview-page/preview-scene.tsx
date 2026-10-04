@@ -21,11 +21,17 @@ const PreviewScenePage = ({ params }: Route.ComponentProps) => {
 			projectId={params.projectId}
 			sceneId={params.sceneId}
 			theme={theme}
-			chrome={({ cameras, activeCameraId, activateCamera }) => (
+			chrome={({
+				cameras,
+				activeCameraId,
+				activeHotspotName,
+				activateCamera
+			}) => (
 				<PreviewChrome
 					backTo={`/dashboard/projects/${params.projectId}/${params.sceneId}`}
 					cameras={cameras}
 					activeCameraId={activeCameraId}
+					activeHotspotName={activeHotspotName}
 					onSelectCamera={activateCamera}
 				/>
 			)}

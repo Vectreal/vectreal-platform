@@ -113,7 +113,7 @@ describe('a displayed model only changes what is drawn', () => {
 			'<Fragment key={shadowGeneration}>',
 			'</Fragment>'
 		)
-		expect(live).toContain('{contactShadow}')
+		expect(live).toContain('{sized && contactShadow}')
 		expect(live).toContain('{bake}')
 		expect(live).toContain('<ShadowAutoCutoff')
 	})

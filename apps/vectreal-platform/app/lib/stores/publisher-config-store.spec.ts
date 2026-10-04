@@ -18,10 +18,18 @@ import {
 	isPreviewModeAtom,
 	openCameraInCameraToolAtom,
 	openComposeToolAtom,
+	openHotspotInHotspotToolAtom,
 	processAtom,
 	processInitialState
 } from './publisher-config-store'
-import { cameraAtom, selectedCameraIdAtom } from './scene-settings-store'
+import {
+	activeHotspotIdAtom,
+	cameraAtom,
+	exitHotspotCameraAtom,
+	hotspotCameraModeAtom,
+	hotspotsAtom,
+	selectedCameraIdAtom
+} from './scene-settings-store'
 
 import type { ProcessState } from '../../types/publisher-config'
 
@@ -216,5 +224,81 @@ describe('openCameraInCameraToolAtom', () => {
 		expect(store.get(processAtom).showPublishPanel).toBe(false)
 		expect(store.get(selectedCameraIdAtom)).toBe('hotspot-camera-1')
 		expect(store.get(cameraToolOpenRequestAtom)).toBe('hotspot-camera-1')
+	})
+})
+
+/**
+ * The hotspot camera mode across the publisher's tools: entered by opening a
+ * hotspot's camera in the Camera tool, never by editing the hotspot, and
+ * ended by preview so preview never hands back a hotspot's close-up.
+ */
+describe('the hotspot camera mode across tools', () => {
+	const arrangeScene = (overrides: Partial<ProcessState> = {}) => {
+		const store = storeWith(overrides)
+		store.set(cameraAtom, {
+			cameras: [
+				{ cameraId: 'front', name: 'Front', kind: 'scene', initial: true },
+				{ cameraId: 'side', name: 'Side', kind: 'scene' },
+				{ cameraId: 'handle-cam', name: 'Handle camera', kind: 'hotspot' }
+			]
+		})
+		store.set(hotspotsAtom, [
+			{
+				id: 'handle',
+				name: 'Handle',
+				worldPosition: [0, 0, 0],
+				visible: true,
+				internalOnly: false,
+				stylePreset: 'dot',
+				linkedCameraId: 'handle-cam'
+			}
+		])
+		store.set(selectedCameraIdAtom, 'side')
+		return store
+	}
+
+	it('opens the Hotspot tool on a marker clicked on the canvas, view unmoved', () => {
+		const store = arrangeScene({ mode: 'compose', showSidebar: false })
+
+		store.set(openHotspotInHotspotToolAtom, 'handle')
+
+		expect(store.get(openComposeToolAtom)).toBe('hotspots')
+		expect(store.get(activeHotspotIdAtom)).toBe('handle')
+		// Placing writes the hotspot's camera; standing on it would move the view.
+		expect(store.get(selectedCameraIdAtom)).toBe('side')
+		expect(store.get(hotspotCameraModeAtom)).toBeNull()
+	})
+
+	it('opens a hotspot’s camera in the Camera tool, and closing it returns', () => {
+		const store = arrangeScene({
+			mode: 'compose',
+			activeComposeTool: 'hotspots',
+			showSidebar: true
+		})
+		store.set(activeHotspotIdAtom, 'handle')
+
+		store.set(openCameraInCameraToolAtom, 'handle-cam')
+		// The Hotspot tool's panel unmounts and drops its selection.
+		store.set(activeHotspotIdAtom, null)
+		expect(store.get(selectedCameraIdAtom)).toBe('handle-cam')
+
+		// Closing the Camera tool.
+		store.set(exitHotspotCameraAtom)
+		expect(store.get(selectedCameraIdAtom)).toBe('side')
+	})
+
+	it('hands preview the scene camera, not the hotspot’s close-up', () => {
+		const store = arrangeScene({
+			mode: 'compose',
+			activeComposeTool: 'camera-controls',
+			showSidebar: true
+		})
+		store.set(openCameraInCameraToolAtom, 'handle-cam')
+
+		store.set(enterPreviewModeAtom)
+		expect(store.get(hotspotCameraModeAtom)).toBeNull()
+
+		store.set(exitPreviewModeAtom)
+		expect(store.get(selectedCameraIdAtom)).toBe('side')
 	})
 })

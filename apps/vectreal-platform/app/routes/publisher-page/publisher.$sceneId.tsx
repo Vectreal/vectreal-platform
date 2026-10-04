@@ -10,6 +10,8 @@ import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
+	isPreviewModeAtom,
+	openHotspotInHotspotToolAtom,
 	sceneMetaAtom,
 	openComposeToolAtom
 } from '../../lib/stores/publisher-config-store'
@@ -119,6 +121,8 @@ const PublisherPage = () => {
 	// The tool whose panel is open, not the one merely selected. Every in-scene
 	// affordance below scopes to it, so no tool's handles outlive its drawer.
 	const openComposeTool = useAtomValue(openComposeToolAtom)
+	const isPreviewMode = useAtomValue(isPreviewModeAtom)
+	const openHotspotInHotspotTool = useSetAtom(openHotspotInHotspotToolAtom)
 	// The in-scene light handle only belongs to the shadow tool, so show it only
 	// while that tool's panel is open (and shadows are on).
 	const isShadowToolActive =
@@ -168,19 +172,29 @@ const PublisherPage = () => {
 	)
 
 	/**
-	 * Selection is offered only while the hotspot tool's panel is open, and
-	 * passing it is exactly what makes a marker select rather than fly its camera.
-	 * Outside the tool the publisher wants the visitor's behaviour - a click
-	 * activates the linked camera - so it passes nothing at all.
+	 * In the editor a marker is always picked up for editing, never flown to as
+	 * a visitor would: inside the Hotspot tool a click toggles the selection,
+	 * and outside it a click opens the tool on that hotspot. Neither moves the
+	 * view: placing a marker writes its camera, and standing on that camera
+	 * would jerk the view with every placement.
+	 *
+	 * Preview passes nothing, which is exactly what gives a marker the
+	 * visitor's behavior there - a click flies its camera, and the viewer's own
+	 * way back leads out.
 	 */
-	const handleHotspotSelect = useMemo(
-		() =>
-			openComposeTool === 'hotspots'
-				? (id: string) =>
-						setActiveHotspotId((previous) => (previous === id ? null : id))
-				: undefined,
-		[openComposeTool, setActiveHotspotId]
-	)
+	const handleHotspotSelect = useMemo(() => {
+		if (isPreviewMode) return undefined
+		if (openComposeTool === 'hotspots') {
+			return (id: string) =>
+				setActiveHotspotId((previous) => (previous === id ? null : id))
+		}
+		return openHotspotInHotspotTool
+	}, [
+		isPreviewMode,
+		openComposeTool,
+		openHotspotInHotspotTool,
+		setActiveHotspotId
+	])
 
 	// Memoized: a fresh object here re-creates the viewer's screenshot capture on
 	// every render, which would de-register it for the frame a save runs in.
@@ -230,6 +244,12 @@ const PublisherPage = () => {
 						openComposeTool === 'hotspots' ? activeHotspotId : null
 					}
 					onHotspotSelect={handleHotspotSelect}
+					/*
+					  A visitor's way back from a hotspot's camera, so only where the
+					  author is looking as a visitor. In the editor the way back is
+					  leaving a hotspot camera's view in the Camera tool.
+					*/
+					showSceneViewReturn={isPreviewMode}
 					onHotspotPositionSetterReady={registerHotspotPositionSetter}
 					onShadowLightChange={handleShadowLightChange}
 					normalizationOptions={normalization}

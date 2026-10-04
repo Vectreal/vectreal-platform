@@ -28,7 +28,6 @@ import {
 	optimizationRuntimeInitialState
 } from '../../lib/stores/scene-optimization-store'
 import {
-	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
@@ -39,6 +38,7 @@ import {
 	normalizationAtom,
 	presentationAtom,
 	rawModelDiagonalAtom,
+	resetHotspotEditingAtom,
 	selectedCameraIdAtom,
 	shadowsAtom
 } from '../../lib/stores/scene-settings-store'
@@ -64,7 +64,9 @@ export function useApplySceneSettings() {
 	const setPresentation = useSetAtom(presentationAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
-	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
+	// Clears the hotspot camera mode with the selection, without restoring:
+	// its return camera belongs to the scene that came before.
+	const resetHotspotEditing = useSetAtom(resetHotspotEditingAtom)
 	const setLastSavedSettings = useSetAtom(lastSavedSettingsAtom)
 
 	/**
@@ -106,7 +108,7 @@ export function useApplySceneSettings() {
 					defaultCameraOptions.activeCameraId ??
 					'default'
 			)
-			setActiveHotspotId(null)
+			resetHotspotEditing()
 			setLastSavedSettings(
 				isSavedBaseline
 					? {
@@ -124,7 +126,7 @@ export function useApplySceneSettings() {
 			)
 		},
 		[
-			setActiveHotspotId,
+			resetHotspotEditing,
 			setBounds,
 			setCamera,
 			setControls,
@@ -160,7 +162,9 @@ export function useResetSceneState() {
 	const setPresentation = useSetAtom(presentationAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
-	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
+	// Clears the hotspot camera mode with the selection, without restoring:
+	// its return camera belongs to the scene that came before.
+	const resetHotspotEditing = useSetAtom(resetHotspotEditingAtom)
 	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
@@ -186,7 +190,7 @@ export function useResetSceneState() {
 				defaultCameraOptions.cameras?.[0]?.cameraId ??
 				'default'
 		)
-		setActiveHotspotId(null)
+		resetHotspotEditing()
 		setBakedShadowSource(null)
 		setRawModelDiagonal(0)
 		setOptimizationState(optimizationInitialState)
@@ -197,7 +201,7 @@ export function useResetSceneState() {
 		setLastSavedSceneMeta(null)
 		setLastSavedSceneId(null)
 	}, [
-		setActiveHotspotId,
+		resetHotspotEditing,
 		setBakedShadowSource,
 		setBounds,
 		setCamera,

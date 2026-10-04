@@ -46,6 +46,18 @@ export interface FocusHotspotViewerCommand {
 	hotspotId: string
 }
 
+/**
+ * Command that leaves a hotspot's camera for the scene camera the visitor was
+ * on before it, or the scene's default when there was none - what the viewer's
+ * own "Back to scene view" control does.
+ *
+ * Does nothing while the view is not at a hotspot, so a host can send it
+ * without tracking where the camera is.
+ */
+export interface ReturnToSceneViewViewerCommand {
+	type: 'return_to_scene_view'
+}
+
 /** Command that plays the animation program from the beginning. */
 export interface RestartAnimationViewerCommand {
 	type: 'restart_animation'
@@ -75,6 +87,7 @@ export type ViewerCommand =
 	| ActivateCameraViewerCommand
 	| FocusHotspotViewerCommand
 	| RestartAnimationViewerCommand
+	| ReturnToSceneViewViewerCommand
 	| SeekAnimationClipViewerCommand
 	| SetAnimationPlayingViewerCommand
 	| SetAutoRotateViewerCommand

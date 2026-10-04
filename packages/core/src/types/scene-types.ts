@@ -224,6 +224,25 @@ export interface BakedShadowRef {
 	assetId: string
 	/** Bake signature the texture was captured with. */
 	signature: string
+	/**
+	 * The model measurements the signature was computed from. Absent on bakes
+	 * saved before it was recorded.
+	 */
+	basis?: BakeBasis
+}
+
+/**
+ * The model measurements a shadow bake was computed against.
+ *
+ * Stored because the model an embed loads cannot reproduce them: publishing
+ * Draco-compresses the GLB, and Draco's weld changes the vertex count, so a
+ * signature recomputed from the published model never matched the one the
+ * publisher saved, and every embed of a Draco-published scene re-baked.
+ */
+export interface BakeBasis {
+	footprint: number
+	radius: number
+	vertexCount: number
 }
 
 /**
@@ -414,6 +433,15 @@ export interface ScenePresentationSettings {
 	 * be the one that changes nothing for them.
 	 */
 	showInfoPopover?: boolean
+	/**
+	 * Whether an embed shows the scene's saved thumbnail behind its loader
+	 * until the 3D scene is ready.
+	 *
+	 * Absent means not shown: it is the last-saved thumbnail, which an author
+	 * opts into showing on a public page, and scenes saved before this field
+	 * existed showed none.
+	 */
+	showLoadingThumbnail?: boolean
 }
 
 /**
@@ -485,6 +513,15 @@ export interface SceneAssetRef {
 /** Asset reference map keyed by asset identifier. */
 export type SceneAssetRefMap = Record<string, SceneAssetRef>
 
+/** The published GLB an embed loads, with what is known about it up front. */
+export interface PublishedModelRef extends SceneAssetRef {
+	/**
+	 * Whether the GLB needs the Draco decoder. Read from the GLB when it is
+	 * uploaded; absent for one published before that was recorded.
+	 */
+	usesDraco?: boolean
+}
+
 /** Optional scene metadata payload persisted with scene settings. */
 export interface SceneMetaData {
 	name?: string
@@ -517,7 +554,7 @@ export interface ServerScenePayload {
 	 * null and {@link assetRefs} carries only assets that live outside the GLB
 	 * (today: the persisted shadow bake).
 	 */
-	publishedModel?: SceneAssetRef | null
+	publishedModel?: PublishedModelRef | null
 }
 
 /** Resolved scene data contract consumed by loaders and viewer clients. */
@@ -535,6 +572,12 @@ export interface ServerSceneData extends SceneSettings {
 	gltfJson: ExtendedGLTFDocument | null
 	/** Binary asset data keyed by asset identifier. */
 	assetData: SerializedSceneAssetDataMap
+	/**
+	 * Assets the scene references by URL instead of carrying as bytes. On a
+	 * published scene that is the persisted shadow bake, which the viewer loads
+	 * itself, so it neither delays the model nor round-trips through base64.
+	 */
+	assetRefs?: SceneAssetRefMap
 }
 
 export interface TextureOptimization

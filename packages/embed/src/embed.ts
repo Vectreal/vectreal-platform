@@ -187,6 +187,16 @@ export class VectrealEmbed {
 		this.sendCommand({ type: 'focus_hotspot', hotspotId })
 	}
 
+	/**
+	 * Leave a hotspot's camera for the scene camera the visitor was on before
+	 * it, or the scene's default - what the viewer's own "Back to scene view"
+	 * control does. Does nothing while the view is not at a hotspot, so it can
+	 * be sent without tracking where the camera is.
+	 */
+	returnToSceneView(): void {
+		this.sendCommand({ type: 'return_to_scene_view' })
+	}
+
 	/** Override the transition behaviour for subsequent camera switches. */
 	setTransition(options: SetTransitionOptions): void {
 		this.sendCommand({

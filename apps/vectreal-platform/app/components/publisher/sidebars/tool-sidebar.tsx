@@ -11,6 +11,7 @@ import {
 	processAtom,
 	toolSidebarStateAtom
 } from '../../../lib/stores/publisher-config-store'
+import { exitHotspotCameraAtom } from '../../../lib/stores/scene-settings-store'
 import {
 	PUBLISHER_BELOW_TOOL_BAR,
 	PUBLISHER_LAYER
@@ -34,14 +35,19 @@ export const ToolSidebar = memo(({ isMobile = false }: ToolSidebarProps) => {
 	const activeToolDefinition = getComposeToolDefinition(activeComposeTool)
 
 	// A request to open the Camera tool on one camera belongs to the opening
-	// that made it. Dropped once the Camera tool is not the open tool, so a
-	// switch away before its panel mounts cannot leave it for a later visit.
+	// that made it, and so does looking through a hotspot's camera there. Both
+	// end once the Camera tool is not the open tool, so a switch away before
+	// its panel mounts cannot leave them for later: a hotspot camera left
+	// active would move the view with every marker placed in the Hotspot tool.
 	const setCameraToolOpenRequest = useSetAtom(cameraToolOpenRequestAtom)
+	const exitHotspotCamera = useSetAtom(exitHotspotCameraAtom)
 	const isCameraToolOpen =
 		useAtomValue(openComposeToolAtom) === 'camera-controls'
 	useEffect(() => {
-		if (!isCameraToolOpen) setCameraToolOpenRequest(null)
-	}, [isCameraToolOpen, setCameraToolOpenRequest])
+		if (isCameraToolOpen) return
+		setCameraToolOpenRequest(null)
+		exitHotspotCamera()
+	}, [exitHotspotCamera, isCameraToolOpen, setCameraToolOpenRequest])
 
 	const handleOpenChange = useCallback(
 		(open: boolean) => {

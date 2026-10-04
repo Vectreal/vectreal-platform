@@ -8,7 +8,10 @@ import {
 
 function key(
 	overrides: Partial<
-		Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'metaKey'>
+		Pick<
+			KeyboardEvent,
+			'key' | 'altKey' | 'ctrlKey' | 'metaKey' | 'defaultPrevented'
+		>
 	>
 ) {
 	return {
@@ -16,6 +19,7 @@ function key(
 		altKey: false,
 		ctrlKey: false,
 		metaKey: false,
+		defaultPrevented: false,
 		...overrides
 	}
 }
@@ -41,6 +45,13 @@ describe('resolveChromeKeyAction', () => {
 		['alt', { key: 'h', altKey: true }]
 	])('ignores %s-modified h', (_label, overrides) => {
 		expect(resolveChromeKeyAction(key(overrides))).toBeNull()
+	})
+
+	it('leaves Escape to whatever inside the page already claimed it', () => {
+		// The viewer takes Escape to leave a hotspot's camera first.
+		expect(
+			resolveChromeKeyAction(key({ key: 'Escape', defaultPrevented: true }))
+		).toBeNull()
 	})
 
 	it('ignores modified Escape', () => {
