@@ -1,4 +1,5 @@
 import { Button } from '@shared/components/ui/button'
+import { Kbd } from '@shared/components/ui/kbd'
 import { formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
@@ -287,9 +288,9 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 													: isPreparingCompare
 														? 'Preparing…'
 														: `Hold to see ${sourceName}`}
-												<kbd className="text-muted-foreground ml-auto font-mono text-[11px]">
-													{COMPARE_HOLD_KEY}
-												</kbd>
+												{!isMobile && (
+													<Kbd className="ml-auto">{COMPARE_HOLD_KEY}</Kbd>
+												)}
 											</Button>
 										)}
 
