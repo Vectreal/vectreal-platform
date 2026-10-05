@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	normalizePresentationSettings,
+	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail
 } from './scene-presentation'
@@ -91,5 +92,45 @@ describe('the loading thumbnail setting', () => {
 		)
 		expect(shouldShowLoadingThumbnail({})).toBe(false)
 		expect(shouldShowLoadingThumbnail(undefined)).toBe(false)
+	})
+})
+
+describe('the GPU-compressed textures setting', () => {
+	it('is kept as a boolean and dropped as anything else', () => {
+		expect(
+			normalizePresentationSettings({ compressTexturesForGpu: false })
+		).toEqual({ compressTexturesForGpu: false })
+		expect(
+			normalizePresentationSettings({
+				showInfoPopover: true,
+				compressTexturesForGpu: 'no'
+			})
+		).toEqual({ showInfoPopover: true })
+	})
+
+	it('is on by default, except for a scene on the original preset', () => {
+		expect(
+			shouldCompressTexturesForGpu(undefined, { isOriginalPreset: false })
+		).toBe(true)
+		expect(shouldCompressTexturesForGpu({}, { isOriginalPreset: true })).toBe(
+			false
+		)
+	})
+
+	it('follows the author’s explicit choice on any preset', () => {
+		for (const isOriginalPreset of [true, false]) {
+			expect(
+				shouldCompressTexturesForGpu(
+					{ compressTexturesForGpu: true },
+					{ isOriginalPreset }
+				)
+			).toBe(true)
+			expect(
+				shouldCompressTexturesForGpu(
+					{ compressTexturesForGpu: false },
+					{ isOriginalPreset }
+				)
+			).toBe(false)
+		}
 	})
 })

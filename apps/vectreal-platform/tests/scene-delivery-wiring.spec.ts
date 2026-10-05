@@ -63,17 +63,23 @@ describe('the embed asset route', () => {
 	})
 })
 
-describe('the Draco decoder', () => {
+describe('the codec files: Draco decoder, KTX2 transcoder and encoder', () => {
 	const server = readFileSync(
 		join(import.meta.dirname, '..', 'server.mjs'),
 		'utf8'
 	)
 
-	it('is cached for a day, ahead of the uncached static fallback', () => {
-		const draco = server.indexOf("app.use(\n\t'/draco',")
-		expect(draco).toBeGreaterThan(-1)
-		expect(server.slice(draco)).toMatch(/^[\s\S]{0,200}?maxAge: '1d'/)
-		expect(draco).toBeLessThan(
+	it('are cached for a day, ahead of the uncached static fallback', () => {
+		const mount = server.match(
+			/for \(const codecDir of (\[[^\]]*\])\) \{\n\tapp\.use\(\n\t\t`\/\$\{codecDir\}`,\n\t\texpress\.static\(path\.join\(CLIENT_DIR, codecDir\), \{\n\t\t\tmaxAge: '1d',/
+		)
+		expect(mount).not.toBeNull()
+		expect(JSON.parse(mount![1].replaceAll("'", '"'))).toEqual([
+			'draco',
+			'basis',
+			'basis-encoder'
+		])
+		expect(mount!.index).toBeLessThan(
 			server.indexOf('app.use(express.static(CLIENT_DIR, { redirect: false }))')
 		)
 	})

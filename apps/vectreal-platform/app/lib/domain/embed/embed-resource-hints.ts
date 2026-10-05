@@ -1,5 +1,6 @@
 import {
 	DRACO_DECODER_PATH,
+	KTX2_TRANSCODER_PATH,
 	resolveEnvironmentFiles,
 	SCENE_THUMBNAIL_FILENAME
 } from '@vctrl/core'
@@ -28,7 +29,7 @@ export interface EmbedResourceHints {
  *
  * Without these the browser learns of the model only once the page has
  * hydrated and the loader asks for it, and of the environment map and the
- * Draco decoder only after that. Each href is exactly what the client will
+ * Draco decoder or KTX2 transcoder only after that. Each href is exactly what the client will
  * request, built by the same function, because a preload is reused only by a
  * request for the same URL and is otherwise a second download.
  */
@@ -59,18 +60,28 @@ export function resolveEmbedResourceHints(
 		})
 	}
 
-	// Only for a model known to need it. A preload nothing uses costs the
+	// Only for a model known to need them. A preload nothing uses costs the
 	// download and a console warning, and an older GLB that says nothing
 	// either way has its decoder warmed by the loader instead.
-	if (manifest.publishedModel.usesDraco === true) {
-		for (const file of ['draco_wasm_wrapper.js', 'draco_decoder.wasm']) {
-			preload.push({
-				href: `${DRACO_DECODER_PATH}${file}`,
-				as: 'fetch',
-				fetchPriority: 'auto',
-				crossOrigin: 'anonymous'
-			})
-		}
+	const decoderFiles = [
+		...(manifest.publishedModel.usesDraco === true
+			? ['draco_wasm_wrapper.js', 'draco_decoder.wasm'].map(
+					(file) => `${DRACO_DECODER_PATH}${file}`
+				)
+			: []),
+		...(manifest.publishedModel.usesKtx2 === true
+			? ['basis_transcoder.js', 'basis_transcoder.wasm'].map(
+					(file) => `${KTX2_TRANSCODER_PATH}${file}`
+				)
+			: [])
+	]
+	for (const href of decoderFiles) {
+		preload.push({
+			href,
+			as: 'fetch',
+			fetchPriority: 'auto',
+			crossOrigin: 'anonymous'
+		})
 	}
 
 	for (const ref of Object.values(manifest.assetRefs)) {

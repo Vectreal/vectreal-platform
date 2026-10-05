@@ -84,6 +84,13 @@ const sceneResult = await loader.loadToThreeJS('model.glb')
 | `parseGLTFJsonToThreeJS(json, assets)` | Parse glTF JSON straight to Three.js, for a saved scene |
 | `loadToThreeJS(input, assetFiles?)` | Load and convert to Three.js scene |
 | `loadGLTFWithAssetsToThreeJS(...)` | GLTF + assets directly to Three.js |
+| `parseGLBToThreeJS(bytes)` | Parse a GLB straight to Three.js, for a model that will never be edited |
+| `prepareDracoDecoder()` / `prepareKtx2Transcoder()` | Download a decoder ahead of the first model that needs it |
+
+Every path decodes Draco, meshopt and KTX2 (`KHR_texture_basisu`). The Draco
+decoder and the KTX2 transcoder are fetched from `/draco/` and `/basis/` unless
+the constructor's `dracoDecoderPath` or `ktx2TranscoderPath` says otherwise; the
+meshopt decoder ships inside the package.
 
 Asking which formats are accepted is `@vctrl/core/model-formats`, not the loader.
 `isSupportedFormat` and `getSupportedExtensions` were removed for that reason:
@@ -303,6 +310,7 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 |---|---|
 | `exportDocumentGLB(document)` | Export glTF-Transform `Document` to GLB |
 | `exportDocumentGLBDraco(document, options?)` | Export `Document` to GLB with Draco geometry compression |
+| `exportDocumentGLBForPublish(document, options?)` | Export the GLB a scene is published as: `options.textures` rewrites the textures of a clone once (the Publisher passes `compressTexturesToKtx2` from `@vctrl/core/model-optimizer`), then `options.draco` encodes the geometry in Draco or meshopt, whichever `pickGeometryCodec` chooses by gzipped size |
 | `exportDocumentGLTF(document, options?)` | Export `Document` to GLTF JSON + assets. `options.draco` runs the same compression as `exportDocumentGLBDraco`, but note the nesting differs: there, the whole `options` argument is the Draco options |
 | `exportThreeJSGLB(object)` | Export Three.js object to GLB |
 | `exportThreeJSUSDZ(object)` | Export Three.js object to USDZ |

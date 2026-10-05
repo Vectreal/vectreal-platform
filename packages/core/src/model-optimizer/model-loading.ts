@@ -27,6 +27,7 @@ import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
+import { stripDecodedMeshoptExtension } from '../meshopt/meshopt-codec'
 
 export type LoadResult = {
 	document: Document
@@ -106,6 +107,7 @@ export async function loadFromBuffer(
 
 		const document = await io.readBinary(buffer)
 		stripDecodedDracoExtension(document)
+		stripDecodedMeshoptExtension(document)
 		const originalSize = buffer.byteLength
 		const originalReport = inspect(document)
 		normalizeURIs(document)
@@ -168,6 +170,7 @@ export async function loadFromJSON(
 	try {
 		const document = await io.readJSON(json)
 		stripDecodedDracoExtension(document)
+		stripDecodedMeshoptExtension(document)
 		const originalReport = inspect(document)
 		normalizeURIs(document)
 		const binary = await exportFn(document)

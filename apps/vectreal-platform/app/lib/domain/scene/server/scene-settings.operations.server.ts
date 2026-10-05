@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { ApiResponse } from '@shared/utils'
 import { SerializedSceneAssetDataMap, SceneSettings } from '@vctrl/core'
+import { readGlbExtensionsUsed } from '@vctrl/core/model-loader'
 import { count, eq } from 'drizzle-orm'
 
 import { getScene, getSceneFolder } from './scene-folder-repository.server'
@@ -35,7 +36,6 @@ import {
 	getOrCreateDefaultProject,
 	userExists
 } from '../../user/user-repository.server'
-import { readGlbExtensionsUsed } from '../glb-header'
 import { isSceneOverSizeLimit } from '../scene-size-limit'
 
 import type { EntitlementKey } from '../../../../constants/plan-config'

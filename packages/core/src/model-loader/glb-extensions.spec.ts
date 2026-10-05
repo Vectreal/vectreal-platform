@@ -1,7 +1,7 @@
 import { Document, WebIO } from '@gltf-transform/core'
 import { describe, expect, it } from 'vitest'
 
-import { DRACO_EXTENSION, readGlbExtensionsUsed } from './glb-header'
+import { DRACO_EXTENSION, readGlbExtensionsUsed } from './glb-extensions'
 
 /** A GLB holding only a JSON chunk, laid out as the spec requires. */
 function glbFromJson(json: object): Uint8Array {

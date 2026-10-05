@@ -8,12 +8,16 @@ import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import { originalPreset } from '../../../../../constants/optimizations'
 import {
 	isBillingLimitError,
 	toUpgradeModalPayload
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
+import { optimizationsMatch } from '../../../../../lib/domain/scene/client/optimization-inference'
+import { runPublishExportInWorker } from '../../../../../lib/domain/scene/client/publish-export'
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
 import {
+	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
@@ -37,6 +41,7 @@ import type {
 	ScenePublishStateResponse
 } from '../../../../../types/api'
 import type { SaveSceneFn } from '../../../../../types/publisher-scene'
+import type { PublishExportProgress } from '../../../../../workers/publish-export.worker.types'
 
 type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 
@@ -53,6 +58,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 }) => {
 	const [publishStatus, setPublishStatus] = useState<PublishStatus>('idle')
 	const [publishError, setPublishError] = useState<string | null>(null)
+	const [exportProgress, setExportProgress] =
+		useState<PublishExportProgress | null>(null)
 	const { optimizer, file } = useModelContext(true)
 	const navigate = useNavigate()
 	const revalidator = useRevalidator()
@@ -65,6 +72,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
+	const compressTextures = shouldCompressTexturesForGpu(presentation, {
+		isOriginalPreset: optimizationsMatch(optimizations, originalPreset)
+	})
 	const canPublish = Boolean(optimizer?.isReady)
 	const isWorking = publishStatus === 'saving' || publishStatus === 'publishing'
 
@@ -111,43 +121,45 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 			setPublishStatus('publishing')
 
-			// Draco is applied here rather than during optimization: the working
-			// document stays uncompressed so editing and re-optimizing never
-			// re-encode (and degrade) the geometry. `isWorthApplying` is false when
-			// the measured compression came out larger than the plain GLB.
-			const draco = optimizations.draco
-			const shouldCompressGeometry = Boolean(
-				draco?.enabled && dracoReport?.isWorthApplying !== false
+			// Geometry and texture codecs are applied here rather than during
+			// optimization: the working document stays uncompressed WebP, so
+			// editing and re-optimizing never re-encode (and degrade) it. Draco is
+			// the switch for geometry compression as a whole; `isWorthApplying` is
+			// false when the measured compression came out larger than the plain
+			// GLB, which leaves meshopt to compete with plain geometry alone.
+			const { enabled: dracoEnabled, ...dracoOptions } = optimizations.draco
+			const { data: workingGlb } =
+				await exporterRef.current.exportDocumentGLB(document)
+			const result = await runPublishExportInWorker(
+				{
+					buffer: workingGlb.slice().buffer as ArrayBuffer,
+					draco: dracoEnabled ? dracoOptions : undefined,
+					dracoWorthApplying: dracoReport?.isWorthApplying !== false,
+					ktx2: compressTextures
+				},
+				setExportProgress
 			)
+			const glbData = new Uint8Array(result.buffer)
 
-			const result = shouldCompressGeometry
-				? await exporterRef.current.exportDocumentGLBDraco(document, {
-						method: draco.method,
-						encodeSpeed: draco.encodeSpeed,
-						decodeSpeed: draco.decodeSpeed,
-						quantizePosition: draco.quantizePosition,
-						quantizeNormal: draco.quantizeNormal,
-						quantizeColor: draco.quantizeColor,
-						quantizeTexcoord: draco.quantizeTexcoord,
-						quantizeGeneric: draco.quantizeGeneric
-					})
-				: await exporterRef.current.exportDocumentGLB(document)
+			const keptTextures = result.textures?.kept ?? []
+			if (keptTextures.length > 0) {
+				toast.warning(
+					`${keptTextures.length} texture${keptTextures.length === 1 ? '' : 's'} could not be GPU-compressed and shipped as before.`,
+					{ description: keptTextures[0].reason }
+				)
+			}
+
 			setOptimizationRuntime((prev) => ({
 				...prev,
-				optimizedSceneBytes: result.size,
-				clientSceneBytes: prev.clientSceneBytes ?? result.size
+				optimizedSceneBytes: glbData.byteLength,
+				clientSceneBytes: prev.clientSceneBytes ?? glbData.byteLength
 			}))
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
 			const publishResult = await publishSceneFromGlb({
 				sceneId: targetSceneId,
 				baseFileName: baseName,
-				glbData:
-					result.data instanceof Uint8Array
-						? result.data
-						: new Uint8Array(result.data),
-				currentSceneBytes: Number.isFinite(result.size)
-					? result.size
-					: undefined
+				glbData,
+				currentSceneBytes: glbData.byteLength
 			})
 
 			const data = publishResult.response as PublishSceneResponse
@@ -186,6 +198,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				error instanceof Error ? error.message : 'Failed to publish scene'
 			)
 			return
+		} finally {
+			setExportProgress(null)
 		}
 	}, [
 		canPublish,
@@ -199,12 +213,20 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		setUpgradeModal,
 		file,
 		optimizations.draco,
-		dracoReport
+		dracoReport,
+		compressTextures
 	])
 
 	const handleToggleInfoPopover = useCallback(
 		(showInfoPopover: boolean) => {
 			setPresentation((previous) => ({ ...previous, showInfoPopover }))
+		},
+		[setPresentation]
+	)
+
+	const handleToggleTextureCompression = useCallback(
+		(compressTexturesForGpu: boolean) => {
+			setPresentation((previous) => ({ ...previous, compressTexturesForGpu }))
 		},
 		[setPresentation]
 	)
@@ -220,7 +242,10 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		publishStatus === 'saving'
 			? 'Saving latest scene changes before publishing...'
 			: publishStatus === 'publishing'
-				? 'Publishing optimized scene...'
+				? exportProgress &&
+					exportProgress.texturesDone < exportProgress.texturesTotal
+					? `Compressing textures for the GPU (${exportProgress.texturesDone + 1} of ${exportProgress.texturesTotal})...`
+					: 'Publishing optimized scene...'
 				: publishStatus === 'error'
 					? publishError || 'Publishing failed. Retry to continue.'
 					: hasUnsavedChanges
@@ -258,6 +283,17 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						onCheckedChange={handleToggleLoadingThumbnail}
 						label="Show thumbnail while loading"
 						description="Embeds show this scene's saved thumbnail behind the loader until the 3D scene is ready. Applies as soon as you save."
+					/>
+				</SidebarSectionContent>
+			</SidebarSection>
+
+			<SidebarSection title="Published file">
+				<SidebarSectionContent>
+					<Toggle
+						checked={compressTextures}
+						onCheckedChange={handleToggleTextureCompression}
+						label="GPU-compressed textures"
+						description="Publishes textures as KTX2, which stays compressed in GPU memory, so the scene appears sooner and uses less memory, most of all on phones. Publishing takes longer. Applies the next time you publish."
 					/>
 				</SidebarSectionContent>
 			</SidebarSection>

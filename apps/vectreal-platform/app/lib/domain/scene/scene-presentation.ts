@@ -40,12 +40,15 @@ export function normalizePresentationSettings(
 		return undefined
 	}
 
-	const { showInfoPopover, showLoadingThumbnail } =
+	const { showInfoPopover, showLoadingThumbnail, compressTexturesForGpu } =
 		presentation as ScenePresentationSettings
 	const normalized: ScenePresentationSettings = {
 		...(typeof showInfoPopover === 'boolean' ? { showInfoPopover } : {}),
 		...(typeof showLoadingThumbnail === 'boolean'
 			? { showLoadingThumbnail }
+			: {}),
+		...(typeof compressTexturesForGpu === 'boolean'
+			? { compressTexturesForGpu }
 			: {})
 	}
 
@@ -74,4 +77,16 @@ export function shouldShowLoadingThumbnail(
 	presentation: ScenePresentationSettings | undefined | null
 ): boolean {
 	return presentation?.showLoadingThumbnail === true
+}
+
+/**
+ * Whether publishing encodes textures as KTX2. Absent means on, except for a
+ * scene on the `original` preset; see
+ * `ScenePresentationSettings.compressTexturesForGpu`.
+ */
+export function shouldCompressTexturesForGpu(
+	presentation: ScenePresentationSettings | undefined | null,
+	{ isOriginalPreset }: { isOriginalPreset: boolean }
+): boolean {
+	return presentation?.compressTexturesForGpu ?? !isOriginalPreset
 }

@@ -93,9 +93,15 @@ function buildContext() {
 	}))
 	const loadToThreeJS = vi.fn()
 	const prepareDracoDecoder = vi.fn(async () => {})
+	const prepareKtx2Transcoder = vi.fn(async () => {})
 
 	const ctx = {
-		modelLoader: { parseGLBToThreeJS, loadToThreeJS, prepareDracoDecoder },
+		modelLoader: {
+			parseGLBToThreeJS,
+			loadToThreeJS,
+			prepareDracoDecoder,
+			prepareKtx2Transcoder
+		},
 		optimizer: undefined,
 		publish: (loaded: LoadedModel) => published.push(loaded),
 		mayIngest: () => true,
@@ -107,6 +113,7 @@ function buildContext() {
 		parseGLBToThreeJS,
 		loadToThreeJS,
 		prepareDracoDecoder,
+		prepareKtx2Transcoder,
 		published
 	}
 }
@@ -180,6 +187,37 @@ describe('published-GLB embed load', () => {
 		await loadModelFromServer(source, ctx)
 
 		expect(prepareDracoDecoder).not.toHaveBeenCalled()
+	})
+
+	it('warms only the decoders the GLB was recorded as needing', async () => {
+		const publishedModel = (flags: object) => ({
+			url: MODEL_URL,
+			fileName: 'blue-vans-shoe.glb',
+			mimeType: 'model/gltf-binary',
+			byteSize: GLB_BYTES.byteLength,
+			...flags
+		})
+
+		stubFetch(
+			embedManifest({
+				publishedModel: publishedModel({
+					usesDraco: false,
+					usesMeshopt: true,
+					usesKtx2: true
+				})
+			})
+		)
+		const ktx2 = buildContext()
+		await loadModelFromServer(source, ktx2.ctx)
+		expect(ktx2.prepareKtx2Transcoder).toHaveBeenCalledOnce()
+		expect(ktx2.prepareDracoDecoder).not.toHaveBeenCalled()
+
+		for (const flags of [{}, { usesKtx2: false }]) {
+			stubFetch(embedManifest({ publishedModel: publishedModel(flags) }))
+			const plain = buildContext()
+			await loadModelFromServer(source, plain.ctx)
+			expect(plain.prepareKtx2Transcoder).not.toHaveBeenCalled()
+		}
 	})
 
 	it('warms the Draco decoder before the model has downloaded', async () => {

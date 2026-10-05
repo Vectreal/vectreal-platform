@@ -7,9 +7,10 @@ const CHUNK_HEADER_BYTES = 8
  * The extensions a GLB declares in `extensionsUsed`, read from its JSON chunk
  * without parsing anything else. Null when the bytes are not a GLB.
  *
- * Read on upload so a published model can say whether it needs the Draco
- * decoder before anyone downloads it: an embed then fetches the decoder in
- * parallel with the model, or not at all.
+ * Read on upload so a published model can say which decoders it needs before
+ * anyone downloads it: an embed then fetches them in parallel with the model,
+ * or not at all. Read again before parsing, so the KTX2 transcoder is set up
+ * only for a model with KTX2 textures.
  */
 export function readGlbExtensionsUsed(bytes: Uint8Array): string[] | null {
 	if (bytes.byteLength < HEADER_BYTES + CHUNK_HEADER_BYTES) return null
@@ -44,3 +45,5 @@ export function readGlbExtensionsUsed(bytes: Uint8Array): string[] | null {
 }
 
 export const DRACO_EXTENSION = 'KHR_draco_mesh_compression'
+export const MESHOPT_EXTENSION = 'EXT_meshopt_compression'
+export const KTX2_EXTENSION = 'KHR_texture_basisu'

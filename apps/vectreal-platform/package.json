@@ -6,6 +6,7 @@
 	"dependencies": {
 		"@marsidev/react-turnstile": "^1.5.5",
 		"@gltf-transform/core": "catalog:",
+		"@gltf-transform/extensions": "catalog:",
 		"@react-router/dev": "8.3.0",
 		"@react-router/node": "8.3.0",
 		"@react-three/drei": "catalog:",
@@ -23,6 +24,7 @@
 		"framer-motion": "^13.0.0",
 		"isbot": "^5.1.39",
 		"jotai": "^2.20.2",
+		"ktx2-encoder": "0.6.0",
 		"lucide-react": "^1.30.0",
 		"postgres": "^3.4.9",
 		"react": "catalog:",

@@ -20,6 +20,12 @@ export {
 */
 export { referencedUris } from './referenced-assets'
 export { isMissingAssetsError, missingAssetsError } from './missing-assets'
+export {
+	DRACO_EXTENSION,
+	KTX2_EXTENSION,
+	MESHOPT_EXTENSION,
+	readGlbExtensionsUsed
+} from './glb-extensions'
 /*
   Named rather than `export *`: the dispatch in `@vctrl/hooks` needs to ask
   which formats take the three.js route, and nothing outside this package should

@@ -442,6 +442,14 @@ export interface ScenePresentationSettings {
 	 * existed showed none.
 	 */
 	showLoadingThumbnail?: boolean
+	/**
+	 * Whether publishing encodes the scene's textures as KTX2, which the GPU
+	 * samples compressed instead of decoding to full-size RGBA first.
+	 *
+	 * Absent means on, unless the scene is on the `original` optimization
+	 * preset, whose promise is that the published file is the upload.
+	 */
+	compressTexturesForGpu?: boolean
 }
 
 /**
@@ -520,6 +528,13 @@ export interface PublishedModelRef extends SceneAssetRef {
 	 * uploaded; absent for one published before that was recorded.
 	 */
 	usesDraco?: boolean
+	/**
+	 * Whether the GLB needs the meshopt decoder, or the KTX2 transcoder. Absent
+	 * means not needed: neither format was published before these were
+	 * recorded, so an older GLB that says nothing uses neither.
+	 */
+	usesMeshopt?: boolean
+	usesKtx2?: boolean
 }
 
 /** Optional scene metadata payload persisted with scene settings. */
