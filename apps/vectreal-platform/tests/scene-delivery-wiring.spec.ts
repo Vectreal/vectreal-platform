@@ -64,7 +64,7 @@ describe('the embed asset route', () => {
 			route.indexOf('sceneSettingsService.getSceneSettingsWithAssetRefs')
 		)
 		expect(route.slice(fastPath)).toMatch(
-			/^[^;]*previewScene\s*\)\s*if \(publishedModel\) return publishedModel/
+			/^[^)]*previewScene\s*\)\s*if \(publishedModel\) return publishedModel/
 		)
 	})
 
@@ -173,9 +173,9 @@ describe('the presentation action', () => {
 	})
 
 	it('writes under the scene write lock, and a scene with no settings row is a 404', () => {
-		const lock = block.indexOf('await runWithSceneWriteLock(')
-		expect(lock).toBeGreaterThan(-1)
-		expect(lock).toBeLessThan(block.indexOf('await updateScenePresentation('))
+		expect(block).toMatch(
+			/await runWithSceneWriteLock\(\s*routeSceneId,\s*`[^`]*`,\s*async \(\) => \{\s*const updated = await updateScenePresentation\(/
+		)
 		expect(block).toMatch(
 			/return updated\s*\?\s*ApiResponse\.success\(\{ presentation: updated \}\)\s*:\s*ApiResponse\.notFound\('Scene not found'\)/
 		)
@@ -420,12 +420,9 @@ describe('the dashboard scene page', () => {
 	})
 
 	it('reads the publication and settings alongside its other queries', () => {
-		const reads = route.slice(
-			route.indexOf('] = await Promise.all(['),
-			route.indexOf('const manifest = publishedMeta')
+		expect(route).toMatch(
+			/settingsData\s*\] = await Promise\.all\(\[[\s\S]*?getPublishedScenePreview\(projectId, sceneId\),\s*readEmbedSceneSettings\(sceneId\)\.catch\(\s*\(error: unknown\) => new EmbedSettingsReadFailure\(error\)\s*\)\s*\]\)/
 		)
-		expect(reads).toContain('getPublishedScenePreview(projectId, sceneId)')
-		expect(reads).toContain('readEmbedSceneSettings(sceneId)')
 	})
 
 	it('hands the drawer the stored presentation, null only when unread', () => {

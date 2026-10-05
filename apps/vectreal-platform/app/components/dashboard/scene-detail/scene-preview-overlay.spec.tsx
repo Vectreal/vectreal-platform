@@ -119,5 +119,7 @@ describe('the preview overlay', () => {
 		expect(label.textContent).toBe('Viewer showing: What visitors see')
 		expect(label.className).toContain('bottom-3')
 		expect(label.className).toContain('left-3')
+		expect(label.className).toContain('text-foreground')
+		expect(label.className).not.toContain('text-muted-foreground')
 	})
 })

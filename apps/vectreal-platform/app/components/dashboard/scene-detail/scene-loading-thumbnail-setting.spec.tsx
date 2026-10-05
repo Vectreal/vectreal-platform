@@ -91,22 +91,62 @@ describe('the dashboard loading thumbnail setting', () => {
 		expect(revalidate).toHaveBeenCalledOnce()
 	})
 
-	it('shows the new choice until the revalidation after the write settles', async () => {
+	it('never flashes the old value between the write and the new loader value', async () => {
 		const revalidation = deferred<void>()
 		fetchMock.mockResolvedValue(answer(200, { success: true, data: {} }))
 		revalidate.mockReturnValue(revalidation.promise)
-		renderSetting()
+		const view = renderSetting()
 
 		await act(async () => {
 			fireEvent.click(toggle())
 		})
 		expect(toggle().getAttribute('aria-checked')).toBe('true')
 
+		// The router can settle before it commits the revalidated data.
 		await act(async () => {
 			revalidation.resolve()
 		})
-		// The loader in this test never changes, so settled means stored again.
+		expect(toggle().getAttribute('aria-checked')).toBe('true')
+
+		view.rerender(
+			<SceneLoadingThumbnailSetting
+				sceneId="scene-1"
+				presentation={{ showLoadingThumbnail: true }}
+				canUpdate
+			/>
+		)
+		expect(toggle().getAttribute('aria-checked')).toBe('true')
+	})
+
+	it('lets a newer loader value win over a choice made against an older one', async () => {
+		fetchMock.mockResolvedValue(answer(200, { success: true, data: {} }))
+		const view = renderSetting()
+
+		await act(async () => {
+			fireEvent.click(toggle())
+		})
+		view.rerender(
+			<SceneLoadingThumbnailSetting
+				sceneId="scene-1"
+				presentation={{ showLoadingThumbnail: false }}
+				canUpdate
+			/>
+		)
+
 		expect(toggle().getAttribute('aria-checked')).toBe('false')
+	})
+
+	it('does not report a saved change as failed when the revalidation fails', async () => {
+		fetchMock.mockResolvedValue(answer(200, { success: true, data: {} }))
+		revalidate.mockRejectedValue(new Error('aborted'))
+		renderSetting()
+
+		await act(async () => {
+			fireEvent.click(toggle())
+		})
+
+		expect(toastError).not.toHaveBeenCalled()
+		expect(toggle().getAttribute('aria-checked')).toBe('true')
 	})
 
 	it('falls back to the stored choice, and says so, when the write is refused', async () => {
@@ -136,19 +176,26 @@ describe('the dashboard loading thumbnail setting', () => {
 		expect(toastError).toHaveBeenCalledWith('Failed to fetch')
 	})
 
-	it('cannot be changed without scene:update', () => {
+	it('cannot be changed without scene:update, and says so', () => {
 		renderSetting({ canUpdate: false })
 
 		fireEvent.click(toggle())
 
 		expect(fetchMock).not.toHaveBeenCalled()
+		expect(document.body.textContent).toContain(
+			"You can't change this setting for this scene."
+		)
 	})
 
-	it('cannot be changed when the stored choice could not be read', () => {
+	it('cannot be changed when the stored choice could not be read, and says so', () => {
 		renderSetting({ presentation: null })
 
 		fireEvent.click(toggle())
 
 		expect(fetchMock).not.toHaveBeenCalled()
+		expect(document.body.textContent).toContain(
+			"This setting couldn't be loaded. Reload the page to try again."
+		)
+		expect(document.body.textContent).not.toContain("You can't change")
 	})
 })

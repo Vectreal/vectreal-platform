@@ -15,21 +15,26 @@ interface SceneLoadingThumbnailSettingProps {
 	canUpdate: boolean
 }
 
+/** A choice made against one loader value, and void once the loader moves on. */
+interface OptimisticChoice {
+	value: boolean
+	madeAgainst: ScenePresentationSettings | null
+}
+
 /**
  * The loading-thumbnail toggle, written straight to the scene rather than
  * through a publisher save.
  *
- * Optimistic until the write and the revalidation after it settle, then the
- * loader's value again: a successful write shows what the server stored, a
- * failed one falls back to it.
+ * The optimistic value holds until the loader hands back a new presentation,
+ * not until the request settles: the router applies revalidated data in a
+ * transition, which commits after an urgent state update, so clearing on
+ * settle would flash the old value for a frame. A failed write clears it at
+ * once, falling back to what is stored.
  *
  * A plain `fetch`, like the metadata editor on this page, rather than a
  * fetcher: a fetcher's network failure is thrown to an error boundary, which
  * would replace the page for one dropped request instead of rolling the
  * switch back.
- *
- * Unavailable when the stored value could not be read, because the switch
- * would otherwise show "off" for a scene stored "on".
  */
 export function SceneLoadingThumbnailSetting({
 	sceneId,
@@ -38,13 +43,18 @@ export function SceneLoadingThumbnailSetting({
 }: SceneLoadingThumbnailSettingProps) {
 	const csrf = useAuthenticityToken()
 	const revalidator = useRevalidator()
-	const [pending, setPending] = useState<boolean | null>(null)
+	const [optimistic, setOptimistic] = useState<OptimisticChoice | null>(null)
+	const [isWriting, setIsWriting] = useState(false)
 
-	const checked = pending ?? shouldShowLoadingThumbnail(presentation)
+	const checked =
+		optimistic && optimistic.madeAgainst === presentation
+			? optimistic.value
+			: shouldShowLoadingThumbnail(presentation)
 
 	const handleCheckedChange = async (showLoadingThumbnail: boolean) => {
-		if (pending !== null) return
-		setPending(showLoadingThumbnail)
+		if (isWriting) return
+		setIsWriting(true)
+		setOptimistic({ value: showLoadingThumbnail, madeAgainst: presentation })
 
 		try {
 			const response = await fetch(`/api/scenes/${sceneId}`, {
@@ -60,14 +70,19 @@ export function SceneLoadingThumbnailSetting({
 			if (!response.ok || !payload?.success) {
 				throw new Error(payload?.error || 'Could not update the scene.')
 			}
-			await revalidator.revalidate()
 		} catch (error) {
+			setOptimistic(null)
 			toast.error(
 				error instanceof Error ? error.message : 'Could not update the scene.'
 			)
+			return
 		} finally {
-			setPending(null)
+			setIsWriting(false)
 		}
+
+		// Saved either way; a revalidation that fails only leaves the stored
+		// value to arrive with the next navigation.
+		await revalidator.revalidate().catch(() => undefined)
 	}
 
 	return (
@@ -75,7 +90,13 @@ export function SceneLoadingThumbnailSetting({
 			checked={checked}
 			onCheckedChange={handleCheckedChange}
 			appliesOn="change"
-			disabled={!canUpdate || presentation === null}
+			unavailableReason={
+				presentation === null
+					? "This setting couldn't be loaded. Reload the page to try again."
+					: !canUpdate
+						? "You can't change this setting for this scene."
+						: undefined
+			}
 		/>
 	)
 }

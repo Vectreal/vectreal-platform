@@ -5,15 +5,18 @@ interface LoadingThumbnailToggleProps {
 	onCheckedChange: (checked: boolean) => void
 	/** When the change reaches visitors: with the next save, or at once. */
 	appliesOn: 'save' | 'change'
-	disabled?: boolean
+	/**
+	 * Why the switch cannot be changed here, shown in place of when it applies.
+	 * Present means disabled: a disabled switch with no reason tells nobody
+	 * anything.
+	 */
+	unavailableReason?: string
 }
 
 const APPLIES = {
 	save: 'Applies as soon as you save.',
 	change: 'Applies right away.'
 } as const
-
-const UNAVAILABLE = "You can't change this setting for this scene."
 
 /**
  * The author's choice of `presentation.showLoadingThumbnail`, the same control
@@ -23,15 +26,15 @@ export function LoadingThumbnailToggle({
 	checked,
 	onCheckedChange,
 	appliesOn,
-	disabled
+	unavailableReason
 }: LoadingThumbnailToggleProps) {
 	return (
 		<Toggle
 			checked={checked}
 			onCheckedChange={onCheckedChange}
-			disabled={disabled}
+			disabled={Boolean(unavailableReason)}
 			label="Show thumbnail while loading"
-			description={`Embeds show this scene's saved thumbnail behind the loader until the 3D scene is ready. ${disabled ? UNAVAILABLE : APPLIES[appliesOn]}`}
+			description={`Embeds show this scene's saved thumbnail behind the loader until the 3D scene is ready. ${unavailableReason ?? APPLIES[appliesOn]}`}
 		/>
 	)
 }

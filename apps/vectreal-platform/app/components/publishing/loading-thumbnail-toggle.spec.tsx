@@ -35,14 +35,14 @@ describe('the loading thumbnail toggle', () => {
 		expect(onCheckedChange).toHaveBeenCalledWith(true)
 	})
 
-	it('cannot be changed when disabled', () => {
+	it('cannot be changed, and says why, when unavailable', () => {
 		const onCheckedChange = vi.fn()
 		render(
 			<LoadingThumbnailToggle
 				checked={false}
 				onCheckedChange={onCheckedChange}
 				appliesOn="change"
-				disabled
+				unavailableReason="Not yours to change."
 			/>
 		)
 
@@ -50,9 +50,7 @@ describe('the loading thumbnail toggle', () => {
 
 		expect(toggle()).toHaveProperty('disabled', true)
 		expect(onCheckedChange).not.toHaveBeenCalled()
-		expect(document.body.textContent).toContain(
-			"You can't change this setting for this scene."
-		)
+		expect(document.body.textContent).toContain('Not yours to change.')
 		expect(document.body.textContent).not.toContain('Applies right away.')
 	})
 

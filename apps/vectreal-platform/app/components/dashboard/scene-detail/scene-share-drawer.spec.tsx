@@ -216,6 +216,20 @@ describe('the loading thumbnail setting', () => {
 		expect(screen.queryByTestId('thumbnail-setting')).toBeNull()
 	})
 
+	it('comes after the embed block, which belongs under Publishing', () => {
+		open(PUBLISHED)
+
+		const embed = screen.getByTestId('embed-panel')
+		const viewer = screen.getByRole('heading', { name: 'Viewer' })
+		expect(
+			embed.compareDocumentPosition(viewer) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy()
+		expect(
+			embed.compareDocumentPosition(screen.getByTestId('thumbnail-setting')) &
+				Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy()
+	})
+
 	it('is handed this scene, its stored choice and the permission', () => {
 		open(PUBLISHED, { canUpdateScene: false })
 
