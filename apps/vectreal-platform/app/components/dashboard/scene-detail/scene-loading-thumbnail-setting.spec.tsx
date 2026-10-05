@@ -138,6 +138,15 @@ describe('the dashboard loading thumbnail setting', () => {
 		expect(toastError).toHaveBeenCalledWith('Scene not found')
 	})
 
+	it('does not repeat an old refusal while a retry is being written', () => {
+		writingOn('submitting')
+		fetcher.data = { success: false, error: 'Scene not found' }
+
+		renderSetting()
+
+		expect(toastError).not.toHaveBeenCalled()
+	})
+
 	it('cannot be changed without scene:update, and says so', () => {
 		renderSetting(OFF, false)
 
