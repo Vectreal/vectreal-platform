@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 /**
  * The dashboard's loading-thumbnail toggle: what it posts, what it shows while
- * a write is in flight and after it lands, and how it fails.
+ * a write and the revalidation after it are in flight, and how it fails.
  *
- * The scene route does not re-run its loader for a plain revalidation, so the
- * `presentation` prop stays the pre-write value after a write. The cases below
- * keep it there unless a test is about a newer loader value arriving.
+ * A revalidation is modelled the way the router delivers one: the route
+ * re-renders with a new `presentation` object, which may commit after the
+ * revalidation promise has already settled.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -14,8 +14,12 @@ import { SceneLoadingThumbnailSetting } from './scene-loading-thumbnail-setting'
 
 import type { ScenePresentationSettings } from '@vctrl/core'
 
-const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
+const { revalidate, toastError } = vi.hoisted(() => ({
+	revalidate: vi.fn(),
+	toastError: vi.fn()
+}))
 
+vi.mock('react-router', () => ({ useRevalidator: () => ({ revalidate }) }))
 vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
 }))
@@ -27,6 +31,7 @@ const OFF: ScenePresentationSettings = {
 	showLoadingThumbnail: false,
 	showInfoPopover: false
 }
+const ON: ScenePresentationSettings = { ...OFF, showLoadingThumbnail: true }
 
 const toggle = () =>
 	screen.getByRole('switch', { name: /show thumbnail while loading/i })
@@ -34,17 +39,17 @@ const isOn = () => toggle().getAttribute('aria-checked') === 'true'
 
 const setting = (
 	presentation: ScenePresentationSettings | null = OFF,
-	canUpdate = true
+	{ canUpdate = true, sceneId = 'scene-1' } = {}
 ) => (
 	<SceneLoadingThumbnailSetting
-		sceneId="scene-1"
+		sceneId={sceneId}
 		presentation={presentation}
 		canUpdate={canUpdate}
 	/>
 )
 
-const stored = (presentation: ScenePresentationSettings) =>
-	new Response(JSON.stringify({ success: true, data: { presentation } }), {
+const saved = () =>
+	new Response(JSON.stringify({ success: true, data: { presentation: ON } }), {
 		status: 200
 	})
 
@@ -65,23 +70,25 @@ const click = () =>
 
 beforeEach(() => {
 	vi.stubGlobal('fetch', fetchMock)
+	revalidate.mockResolvedValue(undefined)
 })
 
 afterEach(() => {
 	vi.unstubAllGlobals()
 	fetchMock.mockReset()
+	revalidate.mockReset()
 	toastError.mockClear()
 })
 
 describe('the dashboard loading thumbnail setting', () => {
 	it('shows the stored choice', () => {
-		render(setting({ showLoadingThumbnail: true }))
+		render(setting(ON))
 
 		expect(isOn()).toBe(true)
 	})
 
-	it('posts only the field it changes, as JSON, with the CSRF token', async () => {
-		fetchMock.mockResolvedValue(stored({ ...OFF, showLoadingThumbnail: true }))
+	it('posts only the field it changes, as JSON, with the CSRF token, then reads it back', async () => {
+		fetchMock.mockResolvedValue(saved())
 		render(setting())
 
 		await click()
@@ -96,16 +103,27 @@ describe('the dashboard loading thumbnail setting', () => {
 			presentation: { showLoadingThumbnail: true },
 			csrf: 'csrf-token'
 		})
+		expect(revalidate).toHaveBeenCalledOnce()
 	})
 
-	it('shows the value being written while the write is in flight', async () => {
-		const answer = deferred<Response>()
-		fetchMock.mockReturnValue(answer.promise)
-		render(setting())
+	it('never flashes the old value between the write and the new loader value', async () => {
+		const revalidation = deferred<void>()
+		fetchMock.mockResolvedValue(saved())
+		revalidate.mockReturnValue(revalidation.promise)
+		const view = render(setting())
 
 		await click()
-
 		expect(isOn()).toBe(true)
+
+		// The router can settle before it commits the revalidated data.
+		await act(async () => {
+			revalidation.resolve()
+		})
+		expect(isOn()).toBe(true)
+
+		// And the revalidated data is the truth once it lands, whatever it says.
+		view.rerender(setting({ ...OFF }))
+		expect(isOn()).toBe(false)
 	})
 
 	it('ignores a second change while the first is still being written', async () => {
@@ -120,62 +138,6 @@ describe('the dashboard loading thumbnail setting', () => {
 		expect(isOn()).toBe(true)
 	})
 
-	it('shows what the server stored once the write lands', async () => {
-		// The answer, not the click, is the truth: here the server kept it off.
-		fetchMock.mockResolvedValue(stored(OFF))
-		render(setting())
-
-		await click()
-
-		expect(isOn()).toBe(false)
-	})
-
-	it('keeps the stored value although the loader still holds the old one', async () => {
-		fetchMock.mockResolvedValue(stored({ ...OFF, showLoadingThumbnail: true }))
-		render(setting())
-
-		await click()
-
-		expect(isOn()).toBe(true)
-	})
-
-	it('falls back to the last stored value, not the stale loader, when a later write fails', async () => {
-		fetchMock
-			.mockResolvedValueOnce(stored({ ...OFF, showLoadingThumbnail: true }))
-			.mockResolvedValueOnce(refused(500, 'Failed to update presentation'))
-		render(setting())
-
-		await click()
-		await click()
-
-		expect(isOn()).toBe(true)
-		expect(toastError).toHaveBeenCalledWith('Failed to update presentation')
-	})
-
-	it('lets a write that lands supersede a loader value that arrived mid-write', async () => {
-		const answer = deferred<Response>()
-		fetchMock.mockReturnValue(answer.promise)
-		const view = render(setting())
-
-		await click()
-		view.rerender(setting({ ...OFF }))
-		await act(async () => {
-			answer.resolve(stored({ ...OFF, showLoadingThumbnail: true }))
-		})
-
-		expect(isOn()).toBe(true)
-	})
-
-	it('gives way to a loader value that arrives after the write', async () => {
-		fetchMock.mockResolvedValue(stored({ ...OFF, showLoadingThumbnail: true }))
-		const view = render(setting())
-
-		await click()
-		view.rerender(setting({ ...OFF }))
-
-		expect(isOn()).toBe(false)
-	})
-
 	it('falls back to the stored choice, and says so, when the write is refused', async () => {
 		fetchMock.mockResolvedValue(refused(404, 'Scene not found'))
 		render(setting())
@@ -184,6 +146,7 @@ describe('the dashboard loading thumbnail setting', () => {
 
 		expect(isOn()).toBe(false)
 		expect(toastError).toHaveBeenCalledWith('Scene not found')
+		expect(revalidate).not.toHaveBeenCalled()
 	})
 
 	it('rolls back rather than throwing when the request never answers', async () => {
@@ -196,8 +159,30 @@ describe('the dashboard loading thumbnail setting', () => {
 		expect(toastError).toHaveBeenCalledWith('Failed to fetch')
 	})
 
+	it('does not report a saved change as failed when the revalidation fails', async () => {
+		fetchMock.mockResolvedValue(saved())
+		revalidate.mockRejectedValue(new Error('aborted'))
+		render(setting())
+
+		await click()
+
+		expect(toastError).not.toHaveBeenCalled()
+		expect(isOn()).toBe(true)
+	})
+
+	it("does not carry one scene's choice onto the next", async () => {
+		const answer = deferred<Response>()
+		fetchMock.mockReturnValue(answer.promise)
+		const view = render(setting())
+
+		await click()
+		view.rerender(setting({ ...OFF }, { sceneId: 'scene-2' }))
+
+		expect(isOn()).toBe(false)
+	})
+
 	it('cannot be changed without scene:update, and says so', () => {
-		render(setting(OFF, false))
+		render(setting(OFF, { canUpdate: false }))
 
 		fireEvent.click(toggle())
 

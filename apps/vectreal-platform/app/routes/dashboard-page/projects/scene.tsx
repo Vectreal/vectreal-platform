@@ -41,7 +41,10 @@ import {
 import { readEmbedSceneSettings } from '../../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../../lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-settings-service.server'
-import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
+import {
+	isSameUrlRevalidation,
+	shouldRevalidateForRouteParams
+} from '../../../lib/navigation/dashboard-route-behavior'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
 import type {
@@ -175,12 +178,20 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
+	currentUrl,
+	nextUrl,
 	currentParams,
 	nextParams,
 	formMethod,
 	actionResult,
 	defaultShouldRevalidate
 }) => {
+	// The thumbnail toggle writes with a plain `fetch` and revalidates to read
+	// back what it stored.
+	if (isSameUrlRevalidation({ currentUrl, nextUrl, defaultShouldRevalidate })) {
+		return true
+	}
+
 	return shouldRevalidateForRouteParams({
 		currentParams,
 		nextParams,

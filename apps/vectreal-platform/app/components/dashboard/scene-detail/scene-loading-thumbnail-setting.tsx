@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { useRevalidator } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
@@ -14,23 +15,23 @@ interface SceneLoadingThumbnailSettingProps {
 	canUpdate: boolean
 }
 
-/** What the server stored, and the loader value it supersedes. */
-interface ConfirmedPresentation {
-	value: ScenePresentationSettings
-	supersedes: ScenePresentationSettings | null
+/** A choice made against one loader value, and void once the loader moves on. */
+interface OptimisticChoice {
+	value: boolean
+	madeAgainst: ScenePresentationSettings | null
 }
 
 /**
  * The loading-thumbnail toggle, written straight to the scene rather than
  * through a publisher save.
  *
- * The action answers with the presentation it stored, and that answer is
- * what the switch shows afterwards: this route does not re-run its loader for
- * a plain revalidation (`shouldRevalidateForRouteParams`), so the loader's
- * value would otherwise stay the one from before the write. A loader value
- * that arrives later, from a navigation or another mutation, is newer and
- * wins. While a write is in flight the switch shows the value being written;
- * a failed write falls back to the last stored value.
+ * The loader is the only truth. A write revalidates the route (which the scene
+ * route allows for its own URL, see `isSameUrlRevalidation`), and the choice is
+ * shown until the loader hands back a new presentation rather than until the
+ * request settles: the router commits revalidated data in a transition, after
+ * an urgent state update, so clearing on settle would flash the old value. A
+ * choice made against one loader value never outlives it, so it cannot follow
+ * the page to another scene. A failed write drops it at once.
  *
  * A plain `fetch`, like the metadata editor on this page, rather than a
  * fetcher: a fetcher's network failure is thrown to an error boundary, which
@@ -43,25 +44,19 @@ export function SceneLoadingThumbnailSetting({
 	canUpdate
 }: SceneLoadingThumbnailSettingProps) {
 	const csrf = useAuthenticityToken()
-	const [writing, setWriting] = useState<boolean | null>(null)
-	const [confirmed, setConfirmed] = useState<ConfirmedPresentation | null>(null)
+	const revalidator = useRevalidator()
+	const [optimistic, setOptimistic] = useState<OptimisticChoice | null>(null)
+	const [isWriting, setIsWriting] = useState(false)
 
-	// Read when a write lands, so the answer supersedes whichever loader value
-	// is on screen by then, including one that arrived mid-write.
-	const latestPresentation = useRef(presentation)
-	useEffect(() => {
-		latestPresentation.current = presentation
-	}, [presentation])
-
-	const stored =
-		confirmed && confirmed.supersedes === presentation
-			? confirmed.value
-			: presentation
-	const checked = writing ?? shouldShowLoadingThumbnail(stored)
+	const checked =
+		optimistic && optimistic.madeAgainst === presentation
+			? optimistic.value
+			: shouldShowLoadingThumbnail(presentation)
 
 	const handleCheckedChange = async (showLoadingThumbnail: boolean) => {
-		if (writing !== null) return
-		setWriting(showLoadingThumbnail)
+		if (isWriting) return
+		setIsWriting(true)
+		setOptimistic({ value: showLoadingThumbnail, madeAgainst: presentation })
 
 		try {
 			const response = await fetch(`/api/scenes/${sceneId}`, {
@@ -77,17 +72,19 @@ export function SceneLoadingThumbnailSetting({
 			if (!response.ok || !payload?.success) {
 				throw new Error(payload?.error || 'Could not update the scene.')
 			}
-			setConfirmed({
-				value: payload.data.presentation,
-				supersedes: latestPresentation.current
-			})
 		} catch (error) {
+			setOptimistic(null)
+			setIsWriting(false)
 			toast.error(
 				error instanceof Error ? error.message : 'Could not update the scene.'
 			)
-		} finally {
-			setWriting(null)
+			return
 		}
+
+		// Saved either way; a revalidation that fails leaves the choice showing,
+		// which is what was stored, until the next navigation reads it back.
+		await revalidator.revalidate().catch(() => undefined)
+		setIsWriting(false)
 	}
 
 	return (

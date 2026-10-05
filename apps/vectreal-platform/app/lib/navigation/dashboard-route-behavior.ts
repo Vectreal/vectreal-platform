@@ -88,3 +88,25 @@ export function shouldRevalidateForRouteParams({
 
 	return defaultShouldRevalidate
 }
+
+interface SameUrlRevalidationArgs {
+	currentUrl: URL
+	nextUrl: URL
+	defaultShouldRevalidate: boolean
+}
+
+/**
+ * Whether React Router is re-running the page already on screen, as
+ * `useRevalidator().revalidate()` does: the same URL, and the router asking.
+ *
+ * `shouldRevalidateForRouteParams` answers no to that, since nothing about the
+ * params changed, which leaves a page that wrote through a plain `fetch` no
+ * way to read back what it wrote.
+ */
+export function isSameUrlRevalidation({
+	currentUrl,
+	nextUrl,
+	defaultShouldRevalidate
+}: SameUrlRevalidationArgs): boolean {
+	return defaultShouldRevalidate && currentUrl.href === nextUrl.href
+}
