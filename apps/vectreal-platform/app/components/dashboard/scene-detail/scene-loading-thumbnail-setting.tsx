@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useRevalidator } from 'react-router'
+import { useEffect } from 'react'
+import { useFetcher } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
@@ -15,76 +15,68 @@ interface SceneLoadingThumbnailSettingProps {
 	canUpdate: boolean
 }
 
-/** A choice made against one loader value, and void once the loader moves on. */
-interface OptimisticChoice {
-	value: boolean
-	madeAgainst: ScenePresentationSettings | null
+interface PresentationUpdateResult {
+	success?: boolean
+	error?: string
+}
+
+interface PresentationUpdateRequest {
+	presentation: { showLoadingThumbnail: boolean }
 }
 
 /**
  * The loading-thumbnail toggle, written straight to the scene rather than
  * through a publisher save.
  *
- * The loader is the only truth. A write revalidates the route (which the scene
- * route allows for its own URL, see `isSameUrlRevalidation`), and the choice is
- * shown until the loader hands back a new presentation rather than until the
- * request settles: the router commits revalidated data in a transition, after
- * an urgent state update, so clearing on settle would flash the old value. A
- * choice made against one loader value never outlives it, so it cannot follow
- * the page to another scene. A failed write drops it at once.
+ * A fetcher, because its POST is what makes the scene route re-run its loader
+ * (`shouldRevalidateForRouteParams` answers yes to a non-GET form method and
+ * no to a plain revalidation), and the router hands the fetcher back idle in
+ * the same update that commits the revalidated loader data. So the switch
+ * shows the value being written through the request and the revalidation,
+ * then reads the loader again with no frame of the old value in between; a
+ * refused write falls back to what is stored.
  *
- * A plain `fetch`, like the metadata editor on this page, rather than a
- * fetcher: a fetcher's network failure is thrown to an error boundary, which
- * would replace the page for one dropped request instead of rolling the
- * switch back.
+ * Keyed by scene, so a write still in flight on one scene is never shown on
+ * the next one the page navigates to.
  */
 export function SceneLoadingThumbnailSetting({
 	sceneId,
 	presentation,
 	canUpdate
 }: SceneLoadingThumbnailSettingProps) {
+	const fetcher = useFetcher<PresentationUpdateResult>({
+		key: `scene-presentation:${sceneId}`
+	})
 	const csrf = useAuthenticityToken()
-	const revalidator = useRevalidator()
-	const [optimistic, setOptimistic] = useState<OptimisticChoice | null>(null)
-	const [isWriting, setIsWriting] = useState(false)
 
+	const writing =
+		fetcher.state === 'idle'
+			? undefined
+			: (fetcher.json as PresentationUpdateRequest | undefined)
 	const checked =
-		optimistic && optimistic.madeAgainst === presentation
-			? optimistic.value
-			: shouldShowLoadingThumbnail(presentation)
+		writing?.presentation.showLoadingThumbnail ??
+		shouldShowLoadingThumbnail(presentation)
 
-	const handleCheckedChange = async (showLoadingThumbnail: boolean) => {
-		if (isWriting) return
-		setIsWriting(true)
-		setOptimistic({ value: showLoadingThumbnail, madeAgainst: presentation })
-
-		try {
-			const response = await fetch(`/api/scenes/${sceneId}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					action: 'update-scene-presentation',
-					presentation: { showLoadingThumbnail },
-					csrf
-				})
-			})
-			const payload = await response.json().catch(() => null)
-			if (!response.ok || !payload?.success) {
-				throw new Error(payload?.error || 'Could not update the scene.')
-			}
-		} catch (error) {
-			setOptimistic(null)
-			setIsWriting(false)
-			toast.error(
-				error instanceof Error ? error.message : 'Could not update the scene.'
-			)
-			return
+	useEffect(() => {
+		if (fetcher.state === 'idle' && fetcher.data?.success === false) {
+			toast.error(fetcher.data.error ?? 'Could not update the scene.')
 		}
+	}, [fetcher.state, fetcher.data])
 
-		// Saved either way; a revalidation that fails leaves the choice showing,
-		// which is what was stored, until the next navigation reads it back.
-		await revalidator.revalidate().catch(() => undefined)
-		setIsWriting(false)
+	const handleCheckedChange = (showLoadingThumbnail: boolean) => {
+		if (writing) return
+		fetcher.submit(
+			{
+				action: 'update-scene-presentation',
+				presentation: { showLoadingThumbnail },
+				csrf
+			},
+			{
+				method: 'POST',
+				encType: 'application/json',
+				action: `/api/scenes/${sceneId}`
+			}
+		)
 	}
 
 	return (

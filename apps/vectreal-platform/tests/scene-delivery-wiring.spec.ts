@@ -415,15 +415,6 @@ describe('the dashboard scene page', () => {
 		)
 	})
 
-	it('re-runs its loader when the page revalidates itself', () => {
-		const rule = route.slice(
-			route.indexOf('export const shouldRevalidate: ShouldRevalidateFunction')
-		)
-		expect(rule).toMatch(
-			/^[\s\S]{0,500}?if \(\s*isSameUrlRevalidation\(\{ currentUrl, nextUrl, defaultShouldRevalidate \}\)\s*\) \{\s*return true\s*\}\s*return shouldRevalidateForRouteParams\(/
-		)
-	})
-
 	it('gates the thumbnail toggle on scene:update', () => {
 		expect(route).toContain('canUpdateScene: canUpdateScene(membership)')
 	})
