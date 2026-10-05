@@ -106,6 +106,7 @@ describe('the session asset branch', () => {
 		expect(linked).toBeGreaterThan(published)
 		expect(linked).toBeLessThan(session.indexOf('await downloadAsset(assetId)'))
 		expect(session).not.toContain('isEmbedServableAssetId')
+		expect(session).not.toContain('selectEmbedServableAssets')
 	})
 })
 
@@ -134,6 +135,15 @@ describe('the session manifest branch', () => {
 			/const publishedModelRow =\s*manifestKind === 'embed' && previewScene/
 		)
 	})
+
+	it('refuses a key holder a draft before any manifest is built', () => {
+		const refusal = preview.indexOf("if (manifestKind === 'not-found') {")
+		expect(refusal).toBeGreaterThan(-1)
+		expect(preview.slice(refusal)).toMatch(
+			/^if \(manifestKind === 'not-found'\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound\('Scene not found'\)\)/
+		)
+		expect(refusal).toBeLessThan(preview.indexOf('await buildSceneManifest('))
+	})
 })
 
 describe('the presentation action', () => {
@@ -154,6 +164,21 @@ describe('the presentation action', () => {
 
 		expect(order.every((index) => index > -1)).toBe(true)
 		expect([...order].sort((a, b) => a - b)).toEqual(order)
+	})
+
+	it('refuses a body with nothing it understands as a 400', () => {
+		expect(block).toMatch(
+			/if \(!presentation\) \{\s*return withAdditionalHeaders\(\s*ApiResponse\.badRequest\('Presentation settings are required'\)/
+		)
+	})
+
+	it('writes under the scene write lock, and a scene with no settings row is a 404', () => {
+		const lock = block.indexOf('await runWithSceneWriteLock(')
+		expect(lock).toBeGreaterThan(-1)
+		expect(lock).toBeLessThan(block.indexOf('await updateScenePresentation('))
+		expect(block).toMatch(
+			/return updated\s*\?\s*ApiResponse\.success\(\{ presentation: updated \}\)\s*:\s*ApiResponse\.notFound\('Scene not found'\)/
+		)
 	})
 
 	it('answers a non-member and a non-editor with the same 404', () => {
@@ -392,5 +417,26 @@ describe('the dashboard scene page', () => {
 
 	it('gates the thumbnail toggle on scene:update', () => {
 		expect(route).toContain('canUpdateScene: canUpdateScene(membership)')
+	})
+
+	it('reads the publication and settings alongside its other queries', () => {
+		const reads = route.slice(
+			route.indexOf('] = await Promise.all(['),
+			route.indexOf('const manifest = publishedMeta')
+		)
+		expect(reads).toContain('getPublishedScenePreview(projectId, sceneId)')
+		expect(reads).toContain('readEmbedSceneSettings(sceneId)')
+	})
+
+	it('hands the drawer the stored presentation, null only when unread', () => {
+		expect(route).toMatch(
+			/settingsData instanceof EmbedSettingsReadFailure\s*\?\s*null\s*:\s*\(settingsData\?\.settings\?\.presentation \?\? \{\}\)/
+		)
+	})
+
+	it('builds thumbnails from the asset rows, as session asset URLs', () => {
+		expect(route).toMatch(
+			/textureUrls: buildTextureThumbnailUrls\(sceneAssets, \(assetId\) =>\s*buildPreviewAssetUrl\(\{ sceneId, projectId, assetId \}\)/
+		)
 	})
 })

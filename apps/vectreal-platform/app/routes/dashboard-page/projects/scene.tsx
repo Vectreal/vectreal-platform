@@ -117,10 +117,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 				allowUnsignedWithoutToken: true
 			})
 		: null
+	// Null only when the read failed, so the toggle can tell "unknown" apart
+	// from "nothing stored".
 	const presentation =
 		settingsData instanceof EmbedSettingsReadFailure
 			? null
-			: (settingsData?.settings?.presentation ?? null)
+			: (settingsData?.settings?.presentation ?? {})
 
 	const additionalMetrics = stats?.additionalMetrics as
 		SceneAdditionalMetrics | null | undefined
@@ -220,9 +222,9 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		}),
 		[project.id, sceneId]
 	)
-	// Memoized on the manifest, so a revalidation that hands back the same
-	// publication does not rebuild the source; `useSceneModel` keys reloads on
-	// the source's kind and id, not its object.
+	// A revalidation hands back a new manifest object, so this rebuilds; it is
+	// `useSceneModel`'s key, not this memo, that keeps the scene from reloading
+	// unless the source names a different scene or a different published GLB.
 	const sceneSource = useMemo(
 		() => sceneSourceFromManifest(sceneId, manifest, serverSource),
 		[manifest, sceneId, serverSource]

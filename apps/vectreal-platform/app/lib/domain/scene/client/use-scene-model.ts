@@ -14,13 +14,18 @@ type SceneModelLoader = Pick<UseLoadModelReturn<boolean>, 'load'>
  * Source objects are rebuilt on every render, so the effect below keys off this
  * string instead. Change the id, the endpoint or the parse mode and the scene
  * reloads; re-render with the same scene and nothing happens.
+ *
+ * Inline scene data also keys on the published model's path: a revalidation
+ * after a republish hands back the same scene with a different GLB, and the
+ * one on screen may already be deleted. The path, not the URL, because a
+ * signed URL's query moves with its signing window.
  */
-const sceneSourceKey = (source: ModelSource): string => {
+export const sceneSourceKey = (source: ModelSource): string => {
 	switch (source.kind) {
 		case 'files':
 			return 'files'
 		case 'scene-data':
-			return `scene-data:${source.sceneId ?? 'inline'}:${source.parseMode ?? 'document'}`
+			return `scene-data:${source.sceneId ?? 'inline'}:${source.parseMode ?? 'document'}:${source.sceneData.publishedModel?.url.split('?')[0] ?? ''}`
 		case 'server':
 			return `server:${source.sceneId}:${source.serverOptions?.endpoint ?? ''}:${source.parseMode ?? 'document'}`
 	}

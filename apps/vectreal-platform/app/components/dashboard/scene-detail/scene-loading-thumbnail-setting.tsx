@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { useFetcher } from 'react-router'
+import { useState } from 'react'
+import { useRevalidator } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
@@ -10,63 +10,64 @@ import type { ScenePresentationSettings } from '@vctrl/core'
 
 interface SceneLoadingThumbnailSettingProps {
 	sceneId: string
-	/** The stored presentation, from the loader. */
+	/** The stored presentation, from the loader; null when it could not be read. */
 	presentation: ScenePresentationSettings | null
 	canUpdate: boolean
-}
-
-interface PresentationUpdateResult {
-	success?: boolean
-	error?: string
-}
-
-interface PresentationUpdateRequest {
-	presentation: { showLoadingThumbnail: boolean }
 }
 
 /**
  * The loading-thumbnail toggle, written straight to the scene rather than
  * through a publisher save.
  *
- * Optimistic while the request and the revalidation after it are in flight;
- * once the fetcher settles it reads the loader again, so a failed write falls
- * back to what is stored, and a successful one shows what the server stored.
+ * Optimistic until the write and the revalidation after it settle, then the
+ * loader's value again: a successful write shows what the server stored, a
+ * failed one falls back to it.
+ *
+ * A plain `fetch`, like the metadata editor on this page, rather than a
+ * fetcher: a fetcher's network failure is thrown to an error boundary, which
+ * would replace the page for one dropped request instead of rolling the
+ * switch back.
+ *
+ * Unavailable when the stored value could not be read, because the switch
+ * would otherwise show "off" for a scene stored "on".
  */
 export function SceneLoadingThumbnailSetting({
 	sceneId,
 	presentation,
 	canUpdate
 }: SceneLoadingThumbnailSettingProps) {
-	const fetcher = useFetcher<PresentationUpdateResult>()
 	const csrf = useAuthenticityToken()
+	const revalidator = useRevalidator()
+	const [pending, setPending] = useState<boolean | null>(null)
 
-	const pending =
-		fetcher.state === 'idle'
-			? undefined
-			: (fetcher.json as PresentationUpdateRequest | undefined)
-	const checked =
-		pending?.presentation.showLoadingThumbnail ??
-		shouldShowLoadingThumbnail(presentation)
+	const checked = pending ?? shouldShowLoadingThumbnail(presentation)
 
-	useEffect(() => {
-		if (fetcher.state === 'idle' && fetcher.data?.success === false) {
-			toast.error(fetcher.data.error ?? 'Could not update the scene.')
-		}
-	}, [fetcher.state, fetcher.data])
+	const handleCheckedChange = async (showLoadingThumbnail: boolean) => {
+		if (pending !== null) return
+		setPending(showLoadingThumbnail)
 
-	const handleCheckedChange = (showLoadingThumbnail: boolean) => {
-		fetcher.submit(
-			{
-				action: 'update-scene-presentation',
-				presentation: { showLoadingThumbnail },
-				csrf
-			},
-			{
+		try {
+			const response = await fetch(`/api/scenes/${sceneId}`, {
 				method: 'POST',
-				encType: 'application/json',
-				action: `/api/scenes/${sceneId}`
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					action: 'update-scene-presentation',
+					presentation: { showLoadingThumbnail },
+					csrf
+				})
+			})
+			const payload = await response.json().catch(() => null)
+			if (!response.ok || !payload?.success) {
+				throw new Error(payload?.error || 'Could not update the scene.')
 			}
-		)
+			await revalidator.revalidate()
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : 'Could not update the scene.'
+			)
+		} finally {
+			setPending(null)
+		}
 	}
 
 	return (
@@ -74,7 +75,7 @@ export function SceneLoadingThumbnailSetting({
 			checked={checked}
 			onCheckedChange={handleCheckedChange}
 			appliesOn="change"
-			disabled={!canUpdate}
+			disabled={!canUpdate || presentation === null}
 		/>
 	)
 }

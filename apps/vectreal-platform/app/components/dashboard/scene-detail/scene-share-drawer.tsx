@@ -77,15 +77,20 @@ export function SceneShareDrawer({
 			*/}
 			{isPublished && (
 				<>
+					<DetailPanelSection className="pt-1">
+						<EmbedOptionsPanel sceneId={sceneId} projectId={projectId} />
+					</DetailPanelSection>
+					{/*
+					  After the embed block, not before it: that block's `h4`s belong
+					  under `h3 Publishing`, and a titled section ahead of them would
+					  adopt them in the outline.
+					*/}
 					<DetailPanelSection title="Viewer">
 						<SceneLoadingThumbnailSetting
 							sceneId={sceneId}
 							presentation={presentation}
 							canUpdate={canUpdateScene}
 						/>
-					</DetailPanelSection>
-					<DetailPanelSection className="pt-1">
-						<EmbedOptionsPanel sceneId={sceneId} projectId={projectId} />
 					</DetailPanelSection>
 				</>
 			)}

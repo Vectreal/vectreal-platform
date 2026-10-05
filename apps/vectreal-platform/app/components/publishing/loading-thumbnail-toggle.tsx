@@ -13,6 +13,8 @@ const APPLIES = {
 	change: 'Applies right away.'
 } as const
 
+const UNAVAILABLE = "You can't change this setting for this scene."
+
 /**
  * The author's choice of `presentation.showLoadingThumbnail`, the same control
  * in the publisher and on the dashboard.
@@ -29,7 +31,7 @@ export function LoadingThumbnailToggle({
 			onCheckedChange={onCheckedChange}
 			disabled={disabled}
 			label="Show thumbnail while loading"
-			description={`Embeds show this scene's saved thumbnail behind the loader until the 3D scene is ready. ${APPLIES[appliesOn]}`}
+			description={`Embeds show this scene's saved thumbnail behind the loader until the 3D scene is ready. ${disabled ? UNAVAILABLE : APPLIES[appliesOn]}`}
 		/>
 	)
 }

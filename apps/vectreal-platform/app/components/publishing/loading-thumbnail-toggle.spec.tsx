@@ -50,6 +50,10 @@ describe('the loading thumbnail toggle', () => {
 
 		expect(toggle()).toHaveProperty('disabled', true)
 		expect(onCheckedChange).not.toHaveBeenCalled()
+		expect(document.body.textContent).toContain(
+			"You can't change this setting for this scene."
+		)
+		expect(document.body.textContent).not.toContain('Applies right away.')
 	})
 
 	it('says when the change reaches visitors', () => {

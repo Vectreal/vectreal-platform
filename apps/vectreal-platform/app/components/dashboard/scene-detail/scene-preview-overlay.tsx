@@ -43,13 +43,18 @@ export function ScenePreviewOverlay({
 			  working scene. Not "Published version": the presentation settings are
 			  read live, not snapshotted at publish, so what this shows is what a
 			  visitor would see right now.
+
+			  Bottom-left, which the dashboard's viewer leaves empty: it draws no
+			  info popover there, while top-centre is where it puts its own
+			  "back to scene view" control after a hotspot is opened.
 			*/}
 			<p
 				className={cn(
 					OVERLAY_SURFACE,
-					'text-muted-foreground pointer-events-none absolute top-3 left-3 z-10 rounded-md px-2 py-1 text-xs'
+					'text-foreground pointer-events-none absolute bottom-3 left-3 z-10 rounded-md px-2 py-1 text-xs'
 				)}
 			>
+				<span className="sr-only">Viewer showing: </span>
 				{publishState.status === 'published' ? 'What visitors see' : 'Draft'}
 			</p>
 			<Button

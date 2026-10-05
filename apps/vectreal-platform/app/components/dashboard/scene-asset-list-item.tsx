@@ -54,7 +54,8 @@ export function SceneAssetListItem({
 			{textureUrl && (
 				<img
 					src={textureUrl}
-					alt={asset.name}
+					// Decorative: the name is the text beside it.
+					alt=""
 					loading="lazy"
 					decoding="async"
 					className="h-10 w-10 shrink-0 rounded-lg object-cover"

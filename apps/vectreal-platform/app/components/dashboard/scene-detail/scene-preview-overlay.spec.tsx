@@ -106,4 +106,18 @@ describe('the preview overlay', () => {
 		expect(screen.getByText('Draft')).not.toBeNull()
 		expect(screen.queryByText('What visitors see')).toBeNull()
 	})
+
+	it('names what it labels for a screen reader, away from the top edge', () => {
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'published' }}
+			/>
+		)
+
+		const label = screen.getByText('What visitors see')
+		expect(label.textContent).toBe('Viewer showing: What visitors see')
+		expect(label.className).toContain('bottom-3')
+		expect(label.className).toContain('left-3')
+	})
 })
