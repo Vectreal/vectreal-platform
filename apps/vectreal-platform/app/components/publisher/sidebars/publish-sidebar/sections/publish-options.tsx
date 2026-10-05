@@ -19,6 +19,7 @@ import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scen
 import {
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
+	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
 import { hasUnsavedChangesAtom } from '../../../../../lib/stores/publisher-config-store'
@@ -72,8 +73,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
+	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
 	const compressTextures = shouldCompressTexturesForGpu(presentation, {
-		isOriginalPreset: optimizationsMatch(optimizations, originalPreset)
+		isOriginalPreset
 	})
 	const canPublish = Boolean(optimizer?.isReady)
 	const isWorking = publishStatus === 'saving' || publishStatus === 'publishing'
@@ -127,7 +129,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			// the switch for geometry compression as a whole; `isWorthApplying` is
 			// false when the measured compression came out larger than the plain
 			// GLB, which leaves meshopt to compete with plain geometry alone.
-			const { enabled: dracoEnabled, ...dracoOptions } = optimizations.draco
+			// Settings saved before a step existed lack it, so Draco may be absent.
+			const { enabled: dracoEnabled = false, ...dracoOptions } =
+				optimizations.draco ?? {}
 			const { data: workingGlb } =
 				await exporterRef.current.exportDocumentGLB(document)
 			const result = await runPublishExportInWorker(
@@ -226,9 +230,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 	const handleToggleTextureCompression = useCallback(
 		(compressTexturesForGpu: boolean) => {
-			setPresentation((previous) => ({ ...previous, compressTexturesForGpu }))
+			setPresentation((previous) =>
+				withCompressTexturesForGpu(previous, compressTexturesForGpu, {
+					isOriginalPreset
+				})
+			)
 		},
-		[setPresentation]
+		[setPresentation, isOriginalPreset]
 	)
 
 	const handleToggleLoadingThumbnail = useCallback(
@@ -293,7 +301,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						checked={compressTextures}
 						onCheckedChange={handleToggleTextureCompression}
 						label="GPU-compressed textures"
-						description="Publishes textures as KTX2, which stays compressed in GPU memory, so the scene appears sooner and uses less memory, most of all on phones. Publishing takes longer. Applies the next time you publish."
+						description="Keeps textures compressed on the GPU, so the scene appears sooner and uses less memory, most of all on phones. Publishing takes longer. Off by default on the Original preset."
 					/>
 				</SidebarSectionContent>
 			</SidebarSection>

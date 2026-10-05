@@ -79,9 +79,18 @@ async function decodeRgba(bytes: Uint8Array, width: number, height: number) {
 			0
 		)
 		const data = new Uint8Array(width * height * 4)
-		gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data)
+		const readable =
+			gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE
+		if (readable) {
+			gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data)
+		}
+		const error = gl.getError()
 		gl.deleteFramebuffer(framebuffer)
 		gl.deleteTexture(texture)
+		// Unchecked, a failed upload reads back as zeros and ships black.
+		if (!readable || error !== gl.NO_ERROR) {
+			throw new Error(`WebGL could not read the texture back (${error})`)
+		}
 
 		return { data, width, height }
 	} finally {

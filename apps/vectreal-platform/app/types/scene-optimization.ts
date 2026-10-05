@@ -63,9 +63,10 @@ export interface SceneOptimizationRuntimeState {
 	isPending: boolean
 	isSceneSizeLoading: boolean
 	/**
-	 * Size of the scene as it will be published. With Draco enabled this is the
-	 * projected compressed GLB, which is what the plan size gate and the server
-	 * both end up measuring.
+	 * Size of the scene as it will be published. Before a publish this is the
+	 * projected Draco GLB; after one it is the GLB that was published, in
+	 * whichever geometry codec won and with KTX2 textures where they were kept,
+	 * which is what the plan size gate and the server both end up measuring.
 	 */
 	optimizedSceneBytes: null | number
 	clientSceneBytes: null | number

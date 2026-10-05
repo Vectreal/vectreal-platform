@@ -90,3 +90,20 @@ export function shouldCompressTexturesForGpu(
 ): boolean {
 	return presentation?.compressTexturesForGpu ?? !isOriginalPreset
 }
+
+/**
+ * Records an author's texture compression choice, as a deviation from the
+ * default only. Choosing what the default already says removes the field, so
+ * switching it off and on again leaves the scene as it was saved rather than
+ * dirty, and the default keeps following the preset.
+ */
+export function withCompressTexturesForGpu(
+	presentation: ScenePresentationSettings,
+	compressTexturesForGpu: boolean,
+	{ isOriginalPreset }: { isOriginalPreset: boolean }
+): ScenePresentationSettings {
+	const { compressTexturesForGpu: _previous, ...rest } = presentation
+	return compressTexturesForGpu === !isOriginalPreset
+		? rest
+		: { ...rest, compressTexturesForGpu }
+}

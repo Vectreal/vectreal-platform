@@ -4,7 +4,8 @@ import {
 	normalizePresentationSettings,
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
-	shouldShowLoadingThumbnail
+	shouldShowLoadingThumbnail,
+	withCompressTexturesForGpu
 } from './scene-presentation'
 
 describe('normalizePresentationSettings', () => {
@@ -132,5 +133,22 @@ describe('the GPU-compressed textures setting', () => {
 				)
 			).toBe(false)
 		}
+	})
+
+	it('records a choice only where it differs from the default', () => {
+		const original = { isOriginalPreset: true }
+		const optimizing = { isOriginalPreset: false }
+
+		expect(
+			withCompressTexturesForGpu({ showInfoPopover: false }, true, original)
+		).toEqual({ showInfoPopover: false, compressTexturesForGpu: true })
+		expect(
+			withCompressTexturesForGpu(
+				{ showInfoPopover: false, compressTexturesForGpu: false },
+				true,
+				optimizing
+			)
+		).toEqual({ showInfoPopover: false })
+		expect(withCompressTexturesForGpu({}, false, original)).toEqual({})
 	})
 })

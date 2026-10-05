@@ -205,7 +205,9 @@ export class ModelOptimizer {
 				: Promise.resolve()
 			this.decoderRegistration = Promise.all([
 				draco,
-				registerMeshoptDecoder(this.io)
+				// Tolerated for the reason ModelLoader tolerates it: only meshopt
+				// content needs it, and that content then fails with its own error.
+				registerMeshoptDecoder(this.io).catch(() => {})
 			]).then(() => undefined)
 		}
 		return this.decoderRegistration

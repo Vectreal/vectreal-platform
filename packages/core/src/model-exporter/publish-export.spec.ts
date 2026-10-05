@@ -1,7 +1,10 @@
 import { Document, WebIO } from '@gltf-transform/core'
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
+import {
+	ALL_EXTENSIONS,
+	KHRMeshPrimitiveRestart
+} from '@gltf-transform/extensions'
 import { Vector3 } from 'three'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ModelExporter } from './model-exporter'
 import { readGlbExtensionsUsed } from '../model-loader/glb-extensions'
@@ -67,7 +70,13 @@ const meshesOf = (scene: { traverse: (fn: (o: unknown) => void) => void }) => {
 	return meshes
 }
 
+type CodecSpy = { applyGeometryCodec: (...args: unknown[]) => unknown }
+
 describe('ModelExporter.exportDocumentGLBForPublish', () => {
+	afterEach(() => {
+		vi.restoreAllMocks()
+	})
+
 	it('ships meshopt geometry that parses back within quantization tolerance', async () => {
 		const source = gridDocument()
 		const sourcePositions = source
@@ -157,5 +166,97 @@ describe('ModelExporter.exportDocumentGLBForPublish', () => {
 		expect(textures).toHaveBeenCalledOnce()
 		expect(source.getRoot().listNodes()[0].getName()).toBe('grid')
 		expect(new TextDecoder().decode(result.data)).toContain('rewritten')
+	})
+
+	it('ships plain geometry when meshopt refuses it, rather than failing', async () => {
+		const source = gridDocument()
+		source.createExtension(KHRMeshPrimitiveRestart)
+
+		const result = await new ModelExporter().exportDocumentGLBForPublish(
+			source,
+			{ draco: {} }
+		)
+
+		expect(result.geometryCodec).toBe('none')
+		expect(result.geometrySizes?.meshopt).toBeUndefined()
+	})
+
+	it('measures geometry without the textures every codec would share', async () => {
+		const source = gridDocument()
+		const texture = source
+			.createTexture('color')
+			.setImage(new Uint8Array(4096).map((_, i) => (i * 7919) % 251))
+			.setMimeType('image/png')
+		source.createMaterial().setBaseColorTexture(texture)
+		source
+			.getRoot()
+			.listMeshes()[0]
+			.listPrimitives()[0]
+			.setMaterial(source.getRoot().listMaterials()[0])
+		const written: number[] = []
+		const writeBinary = WebIO.prototype.writeBinary
+		vi.spyOn(WebIO.prototype, 'writeBinary').mockImplementation(function (
+			this: WebIO,
+			document: Document
+		) {
+			written.push(document.getRoot().listTextures().length)
+			return writeBinary.call(this, document)
+		})
+
+		await new ModelExporter().exportDocumentGLBForPublish(source, {
+			draco: {}
+		})
+
+		expect(written.at(-1)).toBe(1)
+		expect(written.slice(0, -1)).toEqual([0, 0])
+	})
+
+	it('measures Draco only when the optimizer found it worth applying', async () => {
+		const tried = async (dracoWorthApplying: boolean) => {
+			const spy = vi.spyOn(
+				ModelExporter.prototype as unknown as CodecSpy,
+				'applyGeometryCodec'
+			)
+			await new ModelExporter().exportDocumentGLBForPublish(gridDocument(), {
+				draco: {},
+				dracoWorthApplying
+			})
+			const codecs = spy.mock.calls.map(([, codec]) => codec)
+			spy.mockRestore()
+			return codecs
+		}
+
+		expect(await tried(true)).toContain('draco')
+		expect(await tried(false)).not.toContain('draco')
+	})
+
+	it('reads back from glTF JSON through the loader and the optimizer', async () => {
+		const { data } = await new ModelExporter().exportDocumentGLBForPublish(
+			gridDocument(),
+			{ draco: {} }
+		)
+		const { MeshoptDecoder, MeshoptEncoder } = await import('meshoptimizer')
+		await Promise.all([MeshoptDecoder.ready, MeshoptEncoder.ready])
+		const io = new WebIO()
+			.registerExtensions(ALL_EXTENSIONS)
+			.registerDependencies({
+				'meshopt.decoder': MeshoptDecoder,
+				'meshopt.encoder': MeshoptEncoder
+			})
+		const gltf = await io.writeJSON(await io.readBinary(data))
+		expect(gltf.json.extensionsUsed).toContain('EXT_meshopt_compression')
+
+		const loaded = await new ModelLoader().loadGLTFWithAssets(
+			new TextEncoder().encode(JSON.stringify(gltf.json)),
+			new Map(Object.entries(gltf.resources)),
+			'scene.gltf'
+		)
+		await expect(
+			new WebIO().registerExtensions(ALL_EXTENSIONS).writeBinary(loaded.data)
+		).resolves.toBeInstanceOf(Uint8Array)
+
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromJSON(gltf)
+		await expect(optimizer.export()).resolves.toBeInstanceOf(Uint8Array)
 	})
 })

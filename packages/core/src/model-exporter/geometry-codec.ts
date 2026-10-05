@@ -24,7 +24,7 @@ export type GeometryCodec = 'none' | 'meshopt' | 'draco'
 /**
  * Transfer size of the geometry under each codec, in gzipped bytes because the
  * origin gzips `model/gltf-binary`. A codec that was not measured, because it
- * is off or its encoder could not run, is absent.
+ * is off or its encoder could not run on this geometry, is absent.
  */
 export interface GeometryCodecSizes {
 	none: number

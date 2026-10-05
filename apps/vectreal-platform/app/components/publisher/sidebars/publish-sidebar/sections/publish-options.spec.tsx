@@ -14,7 +14,10 @@ import {
 	balancedPreset,
 	originalPreset
 } from '../../../../../constants/optimizations'
-import { optimizationAtom } from '../../../../../lib/stores/scene-optimization-store'
+import {
+	optimizationAtom,
+	optimizationRuntimeAtom
+} from '../../../../../lib/stores/scene-optimization-store'
 import { presentationAtom } from '../../../../../lib/stores/scene-settings-store'
 
 import type { Optimizations } from '@vctrl/core'
@@ -54,16 +57,11 @@ const PUBLISHED = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0])
 
 function renderPanel(
 	derivedFrom: Optimizations,
-	compressTexturesForGpu?: boolean
+	prepare?: (store: ReturnType<typeof createStore>) => void
 ) {
 	const store = createStore()
 	store.set(optimizationAtom, (state) => ({ ...state, derivedFrom }))
-	if (compressTexturesForGpu !== undefined) {
-		store.set(presentationAtom, (state) => ({
-			...state,
-			compressTexturesForGpu
-		}))
-	}
+	prepare?.(store)
 	render(
 		<Provider store={store}>
 			<PublishOptions
@@ -108,6 +106,72 @@ describe('the publish panel', () => {
 		fireEvent.click(textureSwitch())
 		expect(store.get(presentationAtom).compressTexturesForGpu).toBe(true)
 		expect(textureSwitch()).toBeChecked()
+	})
+
+	it('forgets the choice once it is switched back to the default', () => {
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(textureSwitch())
+		fireEvent.click(textureSwitch())
+		expect(store.get(presentationAtom)).not.toHaveProperty(
+			'compressTexturesForGpu'
+		)
+	})
+
+	it('leaves Draco unmeasured when the optimizer found it not worth applying', async () => {
+		renderPanel(balancedPreset, (store) =>
+			store.set(optimizationRuntimeAtom, (state) => ({
+				...state,
+				dracoReport: { isWorthApplying: false } as never
+			}))
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
+			dracoWorthApplying: false
+		})
+	})
+
+	it('publishes settings saved before Draco existed without geometry compression', async () => {
+		const { draco: _draco, ...withoutDraco } = balancedPreset
+		renderPanel(withoutDraco as Optimizations)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
+			draco: undefined
+		})
+	})
+
+	it('counts textures while they encode, and stops once publishing ends', async () => {
+		let finish: (value: unknown) => void = () => {}
+		mocks.runPublishExportInWorker.mockImplementation(
+			(_request, onProgress: (p: object) => void) => {
+				onProgress({ texturesDone: 0, texturesTotal: 2 })
+				return new Promise((resolve) => {
+					finish = resolve
+				})
+			}
+		)
+		renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		expect(
+			await screen.findByText(/Compressing textures for the GPU \(1 of 2\)/)
+		).toBeInTheDocument()
+
+		finish({ buffer: PUBLISHED.slice().buffer, geometryCodec: 'none' })
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+
+		// A second publish that has not reported yet shows no stale count.
+		mocks.runPublishExportInWorker.mockImplementation(
+			() => new Promise(() => {})
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		expect(
+			await screen.findByText('Publishing optimized scene...')
+		).toBeInTheDocument()
+		expect(screen.queryByText(/Compressing textures/)).toBeNull()
 	})
 
 	it('publishes what the worker encoded, with geometry and texture codecs on', async () => {

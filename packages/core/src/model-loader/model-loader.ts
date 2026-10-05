@@ -35,7 +35,11 @@ import {
 	getThreeDracoLoader,
 	prepareThreeDracoDecoder
 } from './draco-three-loader'
-import { KTX2_EXTENSION, readGlbExtensionsUsed } from './glb-extensions'
+import {
+	KTX2_EXTENSION,
+	MESHOPT_EXTENSION,
+	readGlbExtensionsUsed
+} from './glb-extensions'
 import {
 	getThreeKtx2Loader,
 	prepareThreeKtx2Transcoder
@@ -111,9 +115,10 @@ export class ModelLoader {
 
 	/**
 	 * A three.js `GLTFLoader` that decodes every codec a published model can
-	 * carry. The KTX2 loader is attached only for a model that declares
-	 * `KHR_texture_basisu`: creating it probes the GPU through a throwaway
-	 * WebGL context, which no other model should pay for.
+	 * carry. The meshopt and KTX2 decoders are attached only for a model that
+	 * declares them: each compiles WebAssembly, which a page whose CSP forbids
+	 * it cannot do, and the KTX2 loader also probes the GPU through a throwaway
+	 * WebGL context. No other model should pay for either.
 	 */
 	private async createThreeLoader(
 		extensionsUsed: readonly string[],
@@ -123,7 +128,9 @@ export class ModelLoader {
 			await Promise.all([
 				import('three/examples/jsm/loaders/GLTFLoader.js'),
 				getThreeDracoLoader(this.dracoDecoderPath),
-				loadMeshoptDecoder(),
+				extensionsUsed.includes(MESHOPT_EXTENSION)
+					? loadMeshoptDecoder()
+					: null,
 				extensionsUsed.includes(KTX2_EXTENSION)
 					? getThreeKtx2Loader(this.ktx2TranscoderPath)
 					: null
@@ -131,7 +138,7 @@ export class ModelLoader {
 
 		const loader = new GLTFLoader(manager)
 		loader.setDRACOLoader(dracoLoader)
-		loader.setMeshoptDecoder(meshoptDecoder)
+		if (meshoptDecoder) loader.setMeshoptDecoder(meshoptDecoder)
 		if (ktx2Loader) loader.setKTX2Loader(ktx2Loader)
 		return loader
 	}
@@ -145,8 +152,10 @@ export class ModelLoader {
 	private ensureDecodersRegistered(): Promise<void> {
 		if (!this.decoderRegistration) {
 			// Outside a browser/worker environment there is no Draco decoder to
-			// load. Non-Draco content is unaffected; Draco content will still throw
-			// glTF-Transform's own clear "install extension dependency" error.
+			// load, and meshopt's can fail to compile where WebAssembly is blocked.
+			// Either way other content is unaffected, and content needing the
+			// missing decoder throws glTF-Transform's own "install extension
+			// dependency" error.
 			const draco = canLoadDracoInBrowser()
 				? loadDracoModule('decoder', this.dracoDecoderPath).then(
 						(decoderModule) => {
@@ -158,7 +167,7 @@ export class ModelLoader {
 				: Promise.resolve()
 			this.decoderRegistration = Promise.all([
 				draco,
-				registerMeshoptDecoder(this.io)
+				registerMeshoptDecoder(this.io).catch(() => {})
 			]).then(() => undefined)
 		}
 		return this.decoderRegistration

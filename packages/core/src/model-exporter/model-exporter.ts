@@ -256,11 +256,12 @@ export class ModelExporter {
 			return gzipSize(await this.io.writeBinary(encoded))
 		}
 
+		// A codec left unmeasured is no candidate: Draco when the optimizer found
+		// it larger than the plain GLB, either one when its encoder cannot load or
+		// refuses the geometry (meshopt on KHR_mesh_primitive_restart).
 		return {
 			none: await sizeAs('none'),
-			meshopt: await sizeAs('meshopt'),
-			// Unmeasured when the optimizer found Draco larger than the plain
-			// GLB, or when its encoder cannot load: either way it is no candidate.
+			meshopt: await sizeAs('meshopt').catch(() => undefined),
 			draco: dracoWorthApplying
 				? await sizeAs('draco').catch(() => undefined)
 				: undefined

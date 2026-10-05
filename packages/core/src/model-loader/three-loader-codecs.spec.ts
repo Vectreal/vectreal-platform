@@ -62,6 +62,20 @@ describe('the KTX2 loader attached to three.js parses', () => {
 		)
 	})
 
+	it('leaves the meshopt decoder off a model that does not declare it', async () => {
+		const setMeshoptDecoder = vi.spyOn(
+			GLTFLoader.prototype,
+			'setMeshoptDecoder'
+		)
+		const io = new WebIO().registerExtensions([KHRTextureBasisu])
+
+		await new ModelLoader().parseGLBToThreeJS(
+			await io.writeBinary(triangleDocument(true))
+		)
+
+		expect(setMeshoptDecoder).not.toHaveBeenCalled()
+	})
+
 	it('is created for a document that declares it', async () => {
 		const loader = new ModelLoader()
 

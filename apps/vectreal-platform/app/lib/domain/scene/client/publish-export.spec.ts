@@ -84,4 +84,29 @@ describe('runPublishExportInWorker', () => {
 		await expect(pending).rejects.toThrow(/timed out after 1s/)
 		expect(lastWorker().terminate).toHaveBeenCalled()
 	})
+
+	it('rejects and terminates when the worker crashes', async () => {
+		const pending = run()
+		lastWorker().onerror?.({ message: 'out of memory' })
+
+		await expect(pending).rejects.toThrow('out of memory')
+		expect(lastWorker().terminate).toHaveBeenCalled()
+	})
+
+	it('rejects and terminates on a message that fails structured clone', async () => {
+		const pending = run()
+		lastWorker().onmessageerror?.()
+
+		await expect(pending).rejects.toThrow(/undeserializable/)
+		expect(lastWorker().terminate).toHaveBeenCalled()
+	})
+
+	it('cancels its timeout once the worker has answered', async () => {
+		const pending = run(vi.fn(), 1_000)
+		lastWorker().reply({ type: 'error', message: 'no' })
+		await expect(pending).rejects.toThrow('no')
+
+		vi.advanceTimersByTime(1_000)
+		expect(lastWorker().terminate).toHaveBeenCalledOnce()
+	})
 })
