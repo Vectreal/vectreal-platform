@@ -80,15 +80,6 @@ function rendererReporting({
 	} as unknown as WebGLRenderer
 }
 
-const released = new WeakSet<KTX2Loader>()
-
-/** Disposes a loader once: three counts active loaders, and twice miscounts. */
-function releaseLoader(loader: KTX2Loader) {
-	if (released.has(loader)) return
-	released.add(loader)
-	loader.dispose()
-}
-
 /**
  * Returns a memoized `THREE.KTX2Loader` for `GLTFLoader.setKTX2Loader()`,
  * shared so the transcoder and its workers are only spun up once.
@@ -103,10 +94,10 @@ function releaseLoader(loader: KTX2Loader) {
 export async function getThreeKtx2Loader(
 	transcoderPath: string
 ): Promise<KTX2Loader> {
+	// One transcoder path per page, as with Draco: a loader for a path given
+	// up on is left alive, because a parse may still be transcoding with it and
+	// disposing it would leave that parse waiting forever.
 	if (memoized?.transcoderPath === transcoderPath) return memoized.loader
-
-	// A loader for another path would keep its workers for the page's life.
-	memoized?.loader.then(releaseLoader, () => {})
 
 	const entry: MemoizedLoader = {
 		transcoderPath,
@@ -116,11 +107,16 @@ export async function getThreeKtx2Loader(
 					.setTranscoderPath(transcoderPath)
 					.detectSupport(rendererReporting(detectCompressedTextureSupport()))
 
+				// Disposed once: three counts active loaders, and twice miscounts.
 				const init = loader.init.bind(loader)
+				let disposed = false
 				loader.init = () =>
 					init().catch((error: unknown) => {
 						if (memoized === entry) memoized = null
-						releaseLoader(loader)
+						if (!disposed) {
+							disposed = true
+							loader.dispose()
+						}
 						throw error
 					})
 

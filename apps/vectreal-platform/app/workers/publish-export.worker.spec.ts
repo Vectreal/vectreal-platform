@@ -159,4 +159,93 @@ describe('the publish export worker', () => {
 			{ type: 'error', message: 'Draco encoder failed' }
 		])
 	})
+
+	describe('reading a texture back for the encoder', () => {
+		const FRAMEBUFFER_COMPLETE = 0x8cd5
+		const NO_ERROR = 0
+
+		/** A WebGL2 context whose read-back outcome the case decides. */
+		function stubWebGl(status: number, error: number) {
+			const gl = {
+				FRAMEBUFFER_COMPLETE,
+				NO_ERROR,
+				createTexture: vi.fn(() => ({})),
+				createFramebuffer: vi.fn(() => ({})),
+				bindTexture: vi.fn(),
+				texImage2D: vi.fn(),
+				bindFramebuffer: vi.fn(),
+				framebufferTexture2D: vi.fn(),
+				checkFramebufferStatus: vi.fn(() => status),
+				readPixels: vi.fn((...args: unknown[]) => {
+					;(args[6] as Uint8Array).fill(200)
+				}),
+				getError: vi.fn(() => error),
+				deleteFramebuffer: vi.fn(),
+				deleteTexture: vi.fn()
+			}
+			vi.stubGlobal(
+				'OffscreenCanvas',
+				class {
+					getContext = () => gl
+				}
+			)
+			vi.stubGlobal(
+				'createImageBitmap',
+				vi.fn(async () => ({ close: vi.fn() }))
+			)
+			return gl
+		}
+
+		async function decoderFor() {
+			let decode:
+				((bytes: Uint8Array) => Promise<{ data: Uint8Array }>) | undefined
+			mocks.encode.mockImplementation(async (_image, options) => {
+				decode = options.imageDecoder
+				return new Uint8Array(1)
+			})
+			mocks.compressTexturesToKtx2.mockImplementation(
+				async (_document, { encode }) => {
+					await encode(
+						{
+							image: new Uint8Array(4),
+							mimeType: 'image/webp',
+							width: 2,
+							height: 2
+						},
+						{}
+					)
+					return report
+				}
+			)
+			await send({ dracoWorthApplying: true, ktx2: true })
+			return decode as (bytes: Uint8Array) => Promise<{ data: Uint8Array }>
+		}
+
+		it('hands the encoder the pixels it read', async () => {
+			stubWebGl(FRAMEBUFFER_COMPLETE, NO_ERROR)
+			const decode = await decoderFor()
+
+			const { data } = await decode(new Uint8Array(4))
+			expect(data).toHaveLength(2 * 2 * 4)
+			expect(data.every((value) => value === 200)).toBe(true)
+		})
+
+		it('refuses a texture the framebuffer cannot read, rather than ship it black', async () => {
+			const gl = stubWebGl(0, NO_ERROR)
+			const decode = await decoderFor()
+
+			await expect(decode(new Uint8Array(4))).rejects.toThrow(
+				/read the texture/
+			)
+			expect(gl.readPixels).not.toHaveBeenCalled()
+			expect(gl.deleteTexture).toHaveBeenCalled()
+		})
+
+		it('refuses a texture WebGL reported an error for', async () => {
+			stubWebGl(FRAMEBUFFER_COMPLETE, 0x0505)
+			const decode = await decoderFor()
+
+			await expect(decode(new Uint8Array(4))).rejects.toThrow(/1285/)
+		})
+	})
 })

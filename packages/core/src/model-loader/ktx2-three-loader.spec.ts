@@ -65,14 +65,4 @@ describe('the shared KTX2 loader', () => {
 		const loader = await getThreeKtx2Loader(`${transcoderPath}detect/`)
 		expect(Object.values(loader.workerConfig).some(Boolean)).toBe(false)
 	})
-
-	it('disposes the loader for a path it moves away from', async () => {
-		serveTranscoder([])
-		const previous = await getThreeKtx2Loader(`${transcoderPath}first/`)
-		const dispose = vi.spyOn(previous, 'dispose')
-
-		await getThreeKtx2Loader(`${transcoderPath}second/`)
-
-		expect(dispose).toHaveBeenCalledOnce()
-	})
 })
