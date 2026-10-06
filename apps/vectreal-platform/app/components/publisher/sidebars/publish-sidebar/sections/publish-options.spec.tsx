@@ -215,6 +215,39 @@ describe('the publish panel', () => {
 		})
 	})
 
+	it('records nothing as shipped when the upload fails', async () => {
+		mocks.publishSceneFromGlb.mockRejectedValue(new Error('network down'))
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		await screen.findByText('network down')
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedTextureBytes: null,
+			publishedEncoding: null
+		})
+	})
+
+	it('counts no KTX2 textures for a model that has none', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'draco',
+			textureBytes: 0,
+			textures: { encoded: [], kept: [] }
+		})
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(
+				store.get(optimizationRuntimeAtom).publishedEncoding
+			).not.toBeNull()
+		)
+		expect(
+			store.get(optimizationRuntimeAtom).publishedEncoding
+		).not.toHaveProperty('ktx2Textures')
+	})
+
 	it('publishes plain geometry and textures for the original preset', async () => {
 		renderPanel(originalPreset)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))

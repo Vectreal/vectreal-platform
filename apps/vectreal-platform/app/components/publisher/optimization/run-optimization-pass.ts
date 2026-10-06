@@ -275,8 +275,14 @@ export async function runOptimizationPass(
 
 	// Clear the previous pass's Draco measurement up front — this run may not
 	// include Draco at all, and a stale report would keep advertising a saving
-	// that no longer applies.
-	setRuntime((prev) => ({ ...prev, isPending: true, dracoReport: null }))
+	// that no longer applies. The last publish goes too: it described the
+	// document this pass is replacing.
+	setRuntime((prev) => ({
+		...prev,
+		isPending: true,
+		dracoReport: null,
+		publishedEncoding: null
+	}))
 
 	const { geometryKeys, hasTextureStep, allSteps } =
 		planOptimizationSteps(optimizations)

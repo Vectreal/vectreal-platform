@@ -153,22 +153,6 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				)
 			}
 
-			// The figures now describe the file that shipped, in the codecs the
-			// export chose, rather than the Draco and WebP projection.
-			setOptimizationRuntime((prev) => ({
-				...prev,
-				optimizedSceneBytes: glbData.byteLength,
-				optimizedTextureBytes: result.textureBytes,
-				clientSceneBytes: prev.clientSceneBytes ?? glbData.byteLength,
-				publishedEncoding: {
-					geometryCodec: result.geometryCodec,
-					geometrySizes: result.geometrySizes,
-					ktx2Textures: result.textures && {
-						encoded: result.textures.encoded.length,
-						total: result.textures.encoded.length + result.textures.kept.length
-					}
-				}
-			}))
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
 			const publishResult = await publishSceneFromGlb({
 				sceneId: targetSceneId,
@@ -177,13 +161,32 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				currentSceneBytes: glbData.byteLength
 			})
 
+			// Only once it has shipped: the figures then describe that file, in
+			// the codecs the export chose, rather than the Draco and WebP
+			// projection.
 			const data = publishResult.response as PublishSceneResponse
-			if (data.stats) {
-				setOptimizationRuntime((prev) => ({
-					...prev,
-					latestSceneStats: data.stats
-				}))
-			}
+			const ktx2Total =
+				(result.textures?.encoded.length ?? 0) +
+				(result.textures?.kept.length ?? 0)
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				optimizedSceneBytes: glbData.byteLength,
+				optimizedTextureBytes: result.textureBytes,
+				clientSceneBytes: prev.clientSceneBytes ?? glbData.byteLength,
+				publishedEncoding: {
+					geometryCodec: result.geometryCodec,
+					geometrySizes: result.geometrySizes,
+					...(result.textures && ktx2Total > 0
+						? {
+								ktx2Textures: {
+									encoded: result.textures.encoded.length,
+									total: ktx2Total
+								}
+							}
+						: {})
+				},
+				...(data.stats ? { latestSceneStats: data.stats } : {})
+			}))
 
 			const publishStateUpdate: ScenePublishStateResponse =
 				publishResult.publishState

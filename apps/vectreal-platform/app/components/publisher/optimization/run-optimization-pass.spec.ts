@@ -257,13 +257,18 @@ describe('runOptimizationPass', () => {
 		expect(result.dracoReport).toEqual(dracoReport)
 	})
 
-	// A stale report would keep advertising a saving that this pass never made.
-	it('clears the previous Draco report before running', async () => {
+	// A stale report would keep advertising a saving that this pass never
+	// made, and the last publish describes the document this pass replaces.
+	it('clears the previous Draco report and publish record before running', async () => {
 		const { deps, runtime } = createDeps(onlyEnable(['dedup']))
 
 		await runOptimizationPass(deps)
 
-		expect(runtime[0]).toMatchObject({ isPending: true, dracoReport: null })
+		expect(runtime[0]).toMatchObject({
+			isPending: true,
+			dracoReport: null,
+			publishedEncoding: null
+		})
 	})
 
 	it('reports failure and clears the checklist when a step throws', async () => {
