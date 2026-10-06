@@ -229,6 +229,10 @@ export class ModelExporter {
 
 		await this.applyGeometryCodec(workingDoc, geometryCodec, draco)
 		const data = await this.io.writeBinary(workingDoc)
+		const textureBytes = workingDoc
+			.getRoot()
+			.listTextures()
+			.reduce((sum, texture) => sum + (texture.getImage()?.byteLength ?? 0), 0)
 
 		return {
 			data,
@@ -236,7 +240,8 @@ export class ModelExporter {
 			size: data.byteLength,
 			exportTime: Date.now() - startTime,
 			geometryCodec,
-			geometrySizes
+			geometrySizes,
+			textureBytes
 		}
 	}
 

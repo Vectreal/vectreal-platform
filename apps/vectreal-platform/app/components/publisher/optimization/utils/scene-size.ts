@@ -135,6 +135,8 @@ export function useSceneSizeCalculator(
 				...prev,
 				optimizedSceneBytes: publishedSceneBytes,
 				workingSceneBytes,
+				// A new document: the last publish no longer describes it.
+				publishedEncoding: null,
 				optimizedTextureBytes:
 					typeof updatedTextureBytes === 'number'
 						? updatedTextureBytes

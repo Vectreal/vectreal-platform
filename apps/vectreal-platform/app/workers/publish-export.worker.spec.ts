@@ -67,7 +67,8 @@ beforeEach(async () => {
 			return {
 				data: new Uint8Array([1, 2, 3]),
 				geometryCodec: 'meshopt',
-				geometrySizes: { none: 3, meshopt: 2 }
+				geometrySizes: { none: 3, meshopt: 2 },
+				textureBytes: 7
 			}
 		}
 	)
@@ -106,6 +107,7 @@ describe('the publish export worker', () => {
 			type: 'done',
 			geometryCodec: 'meshopt',
 			geometrySizes: { none: 3, meshopt: 2 },
+			textureBytes: 7,
 			textures: report
 		})
 		const { buffer } = done as { buffer: ArrayBuffer }

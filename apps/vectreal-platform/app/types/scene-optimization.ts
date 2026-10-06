@@ -1,5 +1,10 @@
 import type { SceneSourceRef, SceneStatsData } from './api'
-import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
+import type {
+	DracoCompressionReport,
+	GeometryCodec,
+	GeometryCodecSizes,
+	Optimizations
+} from '@vctrl/core'
 
 /**
  * Presets the user can pick. Every one of these has an entry in
@@ -82,6 +87,20 @@ export interface SceneOptimizationRuntimeState {
 	latestSceneStats: null | SceneStatsData
 	/** Draco measurement from the most recent optimization pass. */
 	dracoReport: null | DracoCompressionReport
+	/**
+	 * How the last publish encoded this document, which the size figures above
+	 * then describe. Cleared when the document changes, since the published
+	 * file no longer describes it.
+	 */
+	publishedEncoding: null | PublishedEncoding
+}
+
+export interface PublishedEncoding {
+	geometryCodec: GeometryCodec
+	/** Gzipped geometry per codec; absent when geometry compression is off. */
+	geometrySizes?: GeometryCodecSizes
+	/** Textures shipped as KTX2, out of all textures; absent when KTX2 was off. */
+	ktx2Textures?: { encoded: number; total: number }
 }
 
 export type OptimizationModalSource = 'initial' | 'reoptimize' | null

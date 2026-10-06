@@ -146,6 +146,7 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 				buffer: output,
 				geometryCodec: result.geometryCodec,
 				geometrySizes: result.geometrySizes,
+				textureBytes: result.textureBytes,
 				textures
 			},
 			[output]

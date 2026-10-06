@@ -43,6 +43,8 @@ export interface PublishExportResult extends GLBExportResult {
 	geometryCodec: GeometryCodec
 	/** What each codec measured; absent when geometry compression is off. */
 	geometrySizes?: GeometryCodecSizes
+	/** Image bytes the GLB carries, after `textures` rewrote them. */
+	textureBytes: number
 }
 
 export interface GLTFExportResult {

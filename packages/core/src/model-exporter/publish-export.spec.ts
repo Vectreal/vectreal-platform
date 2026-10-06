@@ -164,6 +164,7 @@ describe('ModelExporter.exportDocumentGLBForPublish', () => {
 		)
 
 		expect(textures).toHaveBeenCalledOnce()
+		expect(result.textureBytes).toBe(0)
 		expect(source.getRoot().listNodes()[0].getName()).toBe('grid')
 		expect(new TextDecoder().decode(result.data)).toContain('rewritten')
 	})
@@ -203,11 +204,13 @@ describe('ModelExporter.exportDocumentGLBForPublish', () => {
 			return writeBinary.call(this, document)
 		})
 
-		await new ModelExporter().exportDocumentGLBForPublish(source, {
-			draco: {}
-		})
+		const result = await new ModelExporter().exportDocumentGLBForPublish(
+			source,
+			{ draco: {} }
+		)
 
 		expect(written.at(-1)).toBe(1)
+		expect(result.textureBytes).toBe(4096)
 		expect(written.slice(0, -1)).toEqual([0, 0])
 	})
 

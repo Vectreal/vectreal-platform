@@ -83,7 +83,12 @@ describe('the publish panel', () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: PUBLISHED.slice().buffer,
 			geometryCodec: 'meshopt',
-			textures: { encoded: ['color'], kept: [] }
+			geometrySizes: { none: 300, meshopt: 120, draco: 110 },
+			textureBytes: 4321,
+			textures: {
+				encoded: ['color', 'emissive'],
+				kept: []
+			}
 		})
 		mocks.publishSceneFromGlb.mockResolvedValue({
 			response: {},
@@ -194,6 +199,22 @@ describe('the publish panel', () => {
 		expect(mocks.toastWarning).not.toHaveBeenCalled()
 	})
 
+	it('makes the size figures describe the file that shipped', async () => {
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedSceneBytes: PUBLISHED.byteLength,
+			optimizedTextureBytes: 4321,
+			publishedEncoding: {
+				geometryCodec: 'meshopt',
+				geometrySizes: { none: 300, meshopt: 120, draco: 110 },
+				ktx2Textures: { encoded: 2, total: 2 }
+			}
+		})
+	})
+
 	it('publishes plain geometry and textures for the original preset', async () => {
 		renderPanel(originalPreset)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
@@ -214,10 +235,13 @@ describe('the publish panel', () => {
 				kept: [{ texture: 'normal', reason: 'KTX2 was more than 3× its size' }]
 			}
 		})
-		renderPanel(balancedPreset)
+		const store = renderPanel(balancedPreset)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
 
 		await waitFor(() => expect(mocks.toastWarning).toHaveBeenCalled())
+		expect(store.get(optimizationRuntimeAtom).publishedEncoding).toMatchObject({
+			ktx2Textures: { encoded: 0, total: 1 }
+		})
 		expect(mocks.toastWarning).toHaveBeenCalledWith(
 			expect.stringContaining('1 texture could not be GPU-compressed'),
 			{ description: 'KTX2 was more than 3× its size' }

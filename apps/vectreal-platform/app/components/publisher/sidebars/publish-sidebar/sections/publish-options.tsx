@@ -153,10 +153,21 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				)
 			}
 
+			// The figures now describe the file that shipped, in the codecs the
+			// export chose, rather than the Draco and WebP projection.
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				optimizedSceneBytes: glbData.byteLength,
-				clientSceneBytes: prev.clientSceneBytes ?? glbData.byteLength
+				optimizedTextureBytes: result.textureBytes,
+				clientSceneBytes: prev.clientSceneBytes ?? glbData.byteLength,
+				publishedEncoding: {
+					geometryCodec: result.geometryCodec,
+					geometrySizes: result.geometrySizes,
+					ktx2Textures: result.textures && {
+						encoded: result.textures.encoded.length,
+						total: result.textures.encoded.length + result.textures.kept.length
+					}
+				}
 			}))
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
 			const publishResult = await publishSceneFromGlb({

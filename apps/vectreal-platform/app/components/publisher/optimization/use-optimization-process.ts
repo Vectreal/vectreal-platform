@@ -352,6 +352,7 @@ export const useOptimizationProcess = ({
 		// resurrected the previous measurement after a texture-only pass, which
 		// also invalidates any projected size it was quoting.
 		dracoReport: runtimeDracoReport ?? null,
+		publishedEncoding: optimizationRuntime.publishedEncoding,
 		simplificationOutcome,
 		resolvedMetrics,
 		isPending,

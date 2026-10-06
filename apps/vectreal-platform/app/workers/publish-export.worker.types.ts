@@ -41,6 +41,8 @@ export interface PublishExportOutcome {
 	buffer: ArrayBuffer
 	geometryCodec: GeometryCodec
 	geometrySizes?: GeometryCodecSizes
+	/** Image bytes the published GLB carries. */
+	textureBytes: number
 	/** Present when KTX2 encoding ran. */
 	textures?: Ktx2CompressionReport
 }
