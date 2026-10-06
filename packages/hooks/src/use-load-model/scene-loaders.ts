@@ -77,14 +77,18 @@ const loadPublishedSceneModel = async (
 	{ modelLoader, publish, onProgress }: LoadContext,
 	assetHeaders?: HeadersInit
 ): Promise<LoadedModel> => {
-	// Started before the download rather than after it: the decoder's script,
+	// Started before the download rather than after it: a decoder's script,
 	// its wasm and the worker it compiles in are all independent of the model's
 	// bytes, and fetching them after the GLB arrived put them in series. A
 	// failure here resurfaces, with its context, in the parse that needs it.
-	// Unknown counts as needed: GLBs published before the flag was recorded
-	// say nothing either way.
+	// Unknown counts as needing Draco, since GLBs published before the flag was
+	// recorded may use it, and as not needing KTX2, which none of them could.
+	// Meshopt has nothing to warm: its decoder ships inside the bundle.
 	if (publishedModel.usesDraco !== false) {
 		modelLoader.prepareDracoDecoder().catch(() => {})
+	}
+	if (publishedModel.usesKtx2 === true) {
+		modelLoader.prepareKtx2Transcoder().catch(() => {})
 	}
 
 	// The model alone. The bake is left in `assetRefs` for the viewer to load by

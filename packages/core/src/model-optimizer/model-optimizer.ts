@@ -45,6 +45,7 @@ import {
 	canLoadDracoInBrowser,
 	loadDracoModule
 } from '../draco/load-draco-module'
+import { registerMeshoptDecoder } from '../meshopt/meshopt-codec'
 import { OperationProgress } from '../types'
 import {
 	loadFromThreeJS as _loadFromThreeJS,
@@ -154,7 +155,7 @@ export class ModelOptimizer {
 	private progressCallback?: (progress: OperationProgress) => void
 	private dracoPath: string
 	private dracoEncoderRegistration: Promise<void> | null = null
-	private dracoDecoderRegistration: Promise<void> | null = null
+	private decoderRegistration: Promise<void> | null = null
 	private dracoReport: DracoCompressionReport | null = null
 
 	constructor(options?: { dracoPath?: string }) {
@@ -186,24 +187,30 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Lazily loads and registers the Draco decoder module on this instance's
-	 * WebIO, so `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression`
-	 * primitives — needed both for loading pre-compressed input and for
+	 * Lazily registers the geometry decoders on this instance's WebIO, so
+	 * `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression` and
+	 * `EXT_meshopt_compression` primitives — needed both for loading pre-compressed input and for
 	 * reloading this optimizer's own Draco-compressed output (e.g. syncing
 	 * the worker's compressed buffer back to the main-thread optimizer via
-	 * `loadFromBuffer`). Memoized per instance; no-ops outside a browser.
+	 * `loadFromBuffer`). Memoized per instance; Draco no-ops outside a browser.
 	 */
-	private ensureDracoDecoderRegistered(): Promise<void> {
-		if (!this.dracoDecoderRegistration) {
-			this.dracoDecoderRegistration = canLoadDracoInBrowser()
+	private ensureDecodersRegistered(): Promise<void> {
+		if (!this.decoderRegistration) {
+			const draco = canLoadDracoInBrowser()
 				? loadDracoModule('decoder', this.dracoPath).then((decoderModule) => {
 						this.io.registerDependencies({
 							'draco3d.decoder': decoderModule
 						})
 					})
 				: Promise.resolve()
+			this.decoderRegistration = Promise.all([
+				draco,
+				// Tolerated for the reason ModelLoader tolerates it: only meshopt
+				// content needs it, and that content then fails with its own error.
+				registerMeshoptDecoder(this.io).catch(() => {})
+			]).then(() => undefined)
 		}
-		return this.dracoDecoderRegistration
+		return this.decoderRegistration
 	}
 
 	/**
@@ -576,7 +583,7 @@ export class ModelOptimizer {
 		return this.unlessSuperseded(
 			() => !this.isCurrent(ticket) || this.sourceBytes !== source,
 			async () => {
-				await this.ensureDracoDecoderRegistered()
+				await this.ensureDecodersRegistered()
 				const { document } = await _loadFromBuffer(
 					bytes,
 					this.io,
@@ -627,7 +634,7 @@ export class ModelOptimizer {
 		await this.unlessSuperseded(
 			() => ticket.generation !== this.generation,
 			async () => {
-				await this.ensureDracoDecoderRegistered()
+				await this.ensureDecodersRegistered()
 				return _loadFromBuffer(
 					bytes,
 					this.io,
@@ -894,7 +901,7 @@ export class ModelOptimizer {
 	private async load(read: () => Promise<LoadResult>): Promise<void> {
 		const ticket = this.claimModel()
 		try {
-			await this.ensureDracoDecoderRegistered()
+			await this.ensureDecodersRegistered()
 			this.adoptLoad(await read(), ticket)
 		} catch (error) {
 			// A newer model owns the optimizer; this failure is not about it.

@@ -114,3 +114,28 @@ export const recordSavedOriginal = (
 			? { ...prev.stored, assetId: kept.assetId, url: kept.url }
 			: null
 })
+
+/**
+ * Whether the drawer can hold the source up against the document: only while
+ * it is open and settled, and only when the document differs from its source.
+ * Never during a save, whose thumbnail and shadow bake capture whatever model
+ * is mounted.
+ */
+export const canCompareWithSource = ({
+	isOpen,
+	isPending,
+	isLoadingOriginal,
+	isSaving,
+	sourceSettings,
+	derivedFrom
+}: Pick<SourceState, 'sourceSettings' | 'derivedFrom'> & {
+	isOpen: boolean
+	isPending: boolean
+	isLoadingOriginal: boolean
+	isSaving: boolean
+}): boolean =>
+	isOpen &&
+	!isPending &&
+	!isLoadingOriginal &&
+	!isSaving &&
+	!optimizationsMatch(derivedFrom, sourceSettings)

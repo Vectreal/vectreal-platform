@@ -52,6 +52,12 @@ describe('presentation settings on the save path', () => {
 		).toBeUndefined()
 	})
 
+	it('carries the GPU-compressed textures choice through', () => {
+		expect(
+			parsed(parse({ presentation: { compressTexturesForGpu: false } }))
+		).toMatchObject({ presentation: { compressTexturesForGpu: false } })
+	})
+
 	it('leaves a scene that says nothing about presentation alone', () => {
 		expect(parsed(parse({})).presentation).toBeUndefined()
 	})

@@ -1,21 +1,9 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
 // These assertions run against a throwaway Vite app that installed
 // @vctrl/viewer from the local Verdaccio registry (i.e. the real published
 // tarball, not the workspace source). A green run proves the package can be
 // installed, bundled, and rendered on a clean integration site.
-
-/*
-  `mounted` arrives as the viewer mounts, before its scene is on screen: the
-  environment map downloads and the shaders compile behind the loader, and the
-  viewer's chrome (the way back from a hotspot's camera) appears only once the
-  loader has faded. A visitor meets the scene when it is ready, and so does
-  this, rather than racing the load against each assertion's 5s.
-*/
-const waitForScene = (page: Page) =>
-	expect(page.locator('[data-loading-state="ready"]')).toBeAttached({
-		timeout: 30000
-	})
 
 test('viewer mounts without a runtime crash', async ({ page }) => {
 	const consoleErrors: string[] = []
@@ -56,7 +44,15 @@ test('viewer mounts without a runtime crash', async ({ page }) => {
 	const hooksFlag = await page.evaluate(() => window.__HOOKS_E2E__)
 	expect(hooksFlag?.status, hooksFlag?.error).toBe('ok')
 
-	await waitForScene(page)
+	// `mounted` fires before the scene has framed; markers draw once it has,
+	// which on a cold dev load can take longer than an assertion's timeout.
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
 
 	// Hotspots, in a real browser, from the published tarball. The seam test in
 	// the platform app asserts which props are handed over; this asserts what the
@@ -74,6 +70,10 @@ test('viewer mounts without a runtime crash', async ({ page }) => {
 test('a visitor can leave the camera a hotspot flew them to', async ({
 	page
 }) => {
+	// Framing, then three flights, each a few seconds under software GL. It
+	// took 21s of the default 30s on a built consumer in CI.
+	test.setTimeout(60000)
+
 	await page.goto('/')
 	await page.waitForFunction(
 		() => window.__VIEWER_E2E__?.status === 'mounted',
@@ -81,16 +81,18 @@ test('a visitor can leave the camera a hotspot flew them to', async ({
 		{ timeout: 15000 }
 	)
 
-	await waitForScene(page)
-
 	const marker = page.getByRole('button', { name: 'Camera marker' })
 	const back = page.getByRole('button', { name: 'Back to scene view' })
 
 	// No way back is offered where there is nothing to come back from.
 	await expect(back).toHaveCount(0)
 
+	// `mounted` fires before the scene has framed, so this click usually lands
+	// early, as a visitor's can: the viewer holds it and flies once framing is
+	// done. The first wait therefore spans framing, which in a dev build under
+	// software GL can outlast the default five seconds.
 	await marker.click()
-	await expect(back).toBeVisible()
+	await expect(back).toBeVisible({ timeout: 20000 })
 	await expect(page.getByRole('status')).toHaveText('Viewing Camera marker')
 
 	// An open card claims the first Escape; the view stays where it is.
@@ -117,5 +119,6 @@ declare global {
 	interface Window {
 		__VIEWER_E2E__?: { status: 'mounted' | 'crashed'; error?: string }
 		__HOOKS_E2E__?: { status: 'ok' | 'crashed'; error?: string }
+		__VIEWER_READY__?: boolean
 	}
 }

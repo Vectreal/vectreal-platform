@@ -72,6 +72,9 @@ function createDeps(
 ) {
 	const steps = createStepsSpy()
 	const runtime: SceneOptimizationRuntimeState[] = []
+	let state = {} as SceneOptimizationRuntimeState
+	// Stands in for derivePass dropping a superseded pass's writes.
+	const filtered = { dropWrites: false }
 
 	const model = {
 		restoreSource: vi.fn(recorded('restoreSource', undefined)),
@@ -99,12 +102,17 @@ function createDeps(
 			...baselineOverrides
 		},
 		setRuntime: (updater) => {
-			const next = updater({} as SceneOptimizationRuntimeState)
-			runtime.push(next)
+			if (filtered.dropWrites) return
+			state = updater(state)
+			runtime.push(state)
+		},
+		setRuntimeUnfiltered: (updater) => {
+			state = updater(state)
+			runtime.push(state)
 		}
 	}
 
-	return { deps, steps, model, runtime }
+	return { deps, steps, model, runtime, filtered }
 }
 
 beforeEach(() => {
@@ -257,13 +265,32 @@ describe('runOptimizationPass', () => {
 		expect(result.dracoReport).toEqual(dracoReport)
 	})
 
-	// A stale report would keep advertising a saving that this pass never made.
-	it('clears the previous Draco report before running', async () => {
+	// A stale report would keep advertising a saving that this pass never
+	// made, and the last publish describes the document this pass replaces.
+	it('clears the previous Draco report and publish record before running', async () => {
 		const { deps, runtime } = createDeps(onlyEnable(['dedup']))
 
 		await runOptimizationPass(deps)
 
-		expect(runtime[0]).toMatchObject({ isPending: true, dracoReport: null })
+		expect(runtime[0]).toMatchObject({
+			isPending: true,
+			dracoReport: null,
+			publishedEncoding: null,
+			passRevision: expect.any(Number)
+		})
+	})
+
+	// A revision after a runtime reset must never equal one handed out before.
+	it('gives every pass a revision no other pass has had', async () => {
+		const first = createDeps(onlyEnable(['dedup']))
+		const second = createDeps(onlyEnable(['dedup']))
+
+		await runOptimizationPass(first.deps)
+		await runOptimizationPass(second.deps)
+
+		expect(second.runtime[0].passRevision).toBeGreaterThan(
+			first.runtime[0].passRevision
+		)
 	})
 
 	it('reports failure and clears the checklist when a step throws', async () => {
@@ -295,6 +322,36 @@ describe('runOptimizationPass', () => {
 		await runOptimizationPass(deps)
 
 		expect(runtime.at(-1)).toMatchObject({ isPending: false })
+	})
+
+	// A superseded pass's writes are dropped, and when no hydration follows,
+	// as after setSource, nothing else would lower the flag it raised.
+	it('clears its pending flag even once its other writes are dropped', async () => {
+		const { deps, runtime, filtered } = createDeps(onlyEnable(['dedup']))
+		runGeometryOptimizationsInWorker.mockImplementation(async () => {
+			filtered.dropWrites = true
+			throw new Error('superseded')
+		})
+
+		await runOptimizationPass(deps)
+
+		expect(runtime.at(-1)).toMatchObject({ isPending: false })
+	})
+
+	it('leaves the flag of a newer pass alone', async () => {
+		const { deps, runtime } = createDeps(onlyEnable(['dedup']))
+		runGeometryOptimizationsInWorker.mockImplementation(async () => {
+			deps.setRuntimeUnfiltered((prev) => ({
+				...prev,
+				isPending: true,
+				passRevision: prev.passRevision + 1000
+			}))
+			throw new Error('superseded')
+		})
+
+		await runOptimizationPass(deps)
+
+		expect(runtime.at(-1)).toMatchObject({ isPending: true })
 	})
 
 	// Skipping the phase would leave a result these settings do not produce.

@@ -1,11 +1,24 @@
 import type { SceneSourceRef, SceneStatsData } from './api'
-import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
+import type {
+	DracoCompressionReport,
+	GeometryCodec,
+	GeometryCodecSizes,
+	Optimizations
+} from '@vctrl/core'
+import type { Object3D } from 'three'
 
 /**
  * Presets the user can pick. Every one of these has an entry in
  * `optimizationPresets`. `original` runs nothing: the scene as uploaded.
  */
 export type PresetId = 'original' | 'quality' | 'balanced' | 'smallest'
+
+/** The source shown in place of the optimized model while it is held. */
+export interface ComparedModel {
+	model: Object3D
+	/** The untouched upload, rather than a saved, optimized version. */
+	isOriginal: boolean
+}
 
 /** The scene's original, kept beside its optimized model. */
 export interface KeptOriginalState {
@@ -63,9 +76,10 @@ export interface SceneOptimizationRuntimeState {
 	isPending: boolean
 	isSceneSizeLoading: boolean
 	/**
-	 * Size of the scene as it will be published. With Draco enabled this is the
-	 * projected compressed GLB, which is what the plan size gate and the server
-	 * both end up measuring.
+	 * Size of the scene as it will be published. Before a publish this is the
+	 * projected Draco GLB; after one it is the GLB that was published, in
+	 * whichever geometry codec won and with KTX2 textures where they were kept,
+	 * which is what the plan size gate and the server both end up measuring.
 	 */
 	optimizedSceneBytes: null | number
 	clientSceneBytes: null | number
@@ -81,6 +95,27 @@ export interface SceneOptimizationRuntimeState {
 	latestSceneStats: null | SceneStatsData
 	/** Draco measurement from the most recent optimization pass. */
 	dracoReport: null | DracoCompressionReport
+	/**
+	 * How the last publish encoded this document, which the size figures above
+	 * then describe. Cleared when the document changes, since the published
+	 * file no longer describes it.
+	 */
+	publishedEncoding: null | PublishedEncoding
+	/**
+	 * The latest optimization pass to start, unique for the page's life, so
+	 * work that outlives a pass can tell whether the document it read has been
+	 * replaced since. A pass can rewrite the document in place, so the
+	 * document's identity cannot answer that. 0 until the first pass.
+	 */
+	passRevision: number
+}
+
+export interface PublishedEncoding {
+	geometryCodec: GeometryCodec
+	/** Gzipped geometry per codec; absent when geometry compression is off. */
+	geometrySizes?: GeometryCodecSizes
+	/** Textures shipped as KTX2, out of all textures; absent when KTX2 was off. */
+	ktx2Textures?: { encoded: number; total: number }
 }
 
 export type OptimizationModalSource = 'initial' | 'reoptimize' | null

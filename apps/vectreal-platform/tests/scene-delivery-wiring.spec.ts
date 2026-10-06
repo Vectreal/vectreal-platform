@@ -218,17 +218,23 @@ describe('the presentation write', () => {
 	})
 })
 
-describe('the Draco decoder', () => {
+describe('the codec files: Draco decoder, KTX2 transcoder and encoder', () => {
 	const server = readFileSync(
 		join(import.meta.dirname, '..', 'server.mjs'),
 		'utf8'
 	)
 
-	it('is cached for a day, ahead of the uncached static fallback', () => {
-		const draco = server.indexOf("app.use(\n\t'/draco',")
-		expect(draco).toBeGreaterThan(-1)
-		expect(server.slice(draco)).toMatch(/^[\s\S]{0,200}?maxAge: '1d'/)
-		expect(draco).toBeLessThan(
+	it('are cached for a day, ahead of the uncached static fallback', () => {
+		const mount = server.match(
+			/for \(const codecDir of (\[[^\]]*\])\) \{\n\tapp\.use\(\n\t\t`\/\$\{codecDir\}`,\n\t\texpress\.static\(path\.join\(CLIENT_DIR, codecDir\), \{\n\t\t\tmaxAge: '1d',/
+		)
+		expect(mount).not.toBeNull()
+		expect(JSON.parse(mount![1].replaceAll("'", '"'))).toEqual([
+			'draco',
+			'basis',
+			'basis-encoder'
+		])
+		expect(mount!.index).toBeLessThan(
 			server.indexOf('app.use(express.static(CLIENT_DIR, { redirect: false }))')
 		)
 	})
@@ -412,6 +418,24 @@ describe('the dashboard scene page', () => {
 	it('retries from the server, never the signed URLs the document carried', () => {
 		expect(route).toMatch(
 			/const retrySceneLoad = useCallback\(\(\) => \{\s*void load\(serverSource\)/
+		)
+	})
+
+	it('forwards fetcher mutations to the scene API through a clientAction that always resolves', () => {
+		expect(route).toMatch(
+			/export async function clientAction\(\{\s*request,\s*params\s*\}: Route\.ClientActionArgs\) \{\s*return forwardSceneAction\(params\.sceneId, await request\.json\(\)\)/
+		)
+		expect(route).not.toMatch(/export async function action\(/)
+	})
+
+	it('skips the root reload after an action that never reached the server', () => {
+		const rule = read('root.tsx').slice(
+			read('root.tsx').indexOf(
+				'export const shouldRevalidate: ShouldRevalidateFunction'
+			)
+		)
+		expect(rule).toMatch(
+			/^[^}]*\}\) => \{\s*if \(isUnreachableAction\(actionResult\)\) \{\s*return false/
 		)
 	})
 

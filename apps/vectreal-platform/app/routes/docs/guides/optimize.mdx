@@ -15,11 +15,29 @@ Quality presets apply a combination of Draco geometry compression, duplicate rem
 | **Balanced** | 1K WebP | 80% | Recommended for most web experiences |
 | **Smallest** | 512px WebP | 70% | Smallest file size, mobile and low-end hardware |
 
-The three optimizing presets share the same geometry pipeline: duplicate removal and Draco compression, both on. They differ only in texture resolution and quality. **Original** runs nothing, Draco included, so the published file is your upload as it is. Mesh simplification and vertex quantization are off in every preset - simplification is destructive and opt-in from the advanced panel, and quantization is redundant because Draco quantizes vertex attributes itself.
+The three optimizing presets share the same geometry pipeline: duplicate removal and geometry compression, both on. They differ only in texture resolution and quality. **Original** runs nothing, geometry compression included, so the published file is your upload as it is. Mesh simplification and vertex quantization are off in every preset - simplification is destructive and opt-in from the advanced panel, and quantization is redundant because geometry compression quantizes vertex attributes itself.
+
+Geometry compression happens when you publish. The Publisher encodes the geometry with both Draco and meshopt and keeps meshopt, which decodes almost for free, unless it comes out more than 15% larger than Draco after the gzip compression it travels with. The **Draco** switch in the advanced panel turns geometry compression on or off as a whole. Until you publish, the optimization result shows the Draco projection; after a publish it shows what shipped: the geometry codec the Publisher chose with its gzipped size, how many textures went out as KTX2, and the published file's size. A new optimization pass returns it to the projection, since the published file no longer describes the scene.
+
+## GPU-compressed textures
+
+When you publish, textures are also encoded as KTX2, which the GPU keeps compressed: the scene appears sooner and uses less memory, most of all on phones. Colour and emissive maps use the compact ETC1S mode; normal, roughness and other data maps use UASTC, which keeps their values precise. A texture whose KTX2 version would be more than three times the size of its WebP stays WebP, so the setting never balloons the published file. Encoding takes a few seconds per texture.
+
+It is on by default for every preset except **Original**, and the **GPU-compressed textures** switch under **Published file** in the publish panel overrides it for the scene.
+
+{/* claims
+present packages/core/src/model-exporter/geometry-codec.ts export const DRACO_SIZE_MARGIN = 0.15
+present packages/core/src/model-optimizer/ktx2-compression.ts export const KTX2_MAX_GROWTH = 3
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="GPU-compressed textures"
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx <SidebarSection title="Published file">
+present apps/vectreal-platform/app/lib/domain/scene/scene-presentation.ts return presentation?.compressTexturesForGpu ?? !isOriginalPreset
+*/}
 
 Every preset is made from your original upload, never from the result of the previous one, so you can switch between them freely and pick **Original** to get the upload back. Choosing a preset applies it straight away; edits in the advanced panel apply when you press **Apply changes**. Saving stores the result of the preset in effect.
 
 When you save an optimized scene, it keeps your original upload alongside the optimized model, so after you reopen it every preset still starts from the original. The **Keep the original** switch in the **Scene Info & Publish** panel controls this. The original counts toward your storage, and the switch shows how much it adds. Turn it off and save to remove the original. From then on, presets start from the saved version and the first choice reads **Saved version**, as they do for scenes saved before the original was kept.
+
+To compare a preset with what it was made from, press and hold **Hold to see the original** in the optimization panel, or hold the `\` key. The canvas shows the original for as long as you hold, with the camera exactly where you left it, and switches back when you let go. For a scene that keeps no original, the button shows the saved version instead.
 
 ---
 

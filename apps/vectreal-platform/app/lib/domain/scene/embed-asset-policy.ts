@@ -1,6 +1,9 @@
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
-
-import { DRACO_EXTENSION } from './glb-header'
+import {
+	DRACO_EXTENSION,
+	KTX2_EXTENSION,
+	MESHOPT_EXTENSION
+} from '@vctrl/core/model-loader'
 
 import type { PublishedModelRef, SceneAssetRefMap } from '@vctrl/core'
 
@@ -173,7 +176,11 @@ export function buildPublishedModelRef(
 		mimeType: published.mimeType ?? GLB_MIME_TYPE,
 		byteSize: published.byteSize ?? null,
 		...(published.extensionsUsed
-			? { usesDraco: published.extensionsUsed.includes(DRACO_EXTENSION) }
+			? {
+					usesDraco: published.extensionsUsed.includes(DRACO_EXTENSION),
+					usesMeshopt: published.extensionsUsed.includes(MESHOPT_EXTENSION),
+					usesKtx2: published.extensionsUsed.includes(KTX2_EXTENSION)
+				}
 			: {})
 	}
 }

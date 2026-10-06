@@ -12,6 +12,7 @@ import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 import { BillingLimitError } from '../app/lib/domain/billing/client/billing-limit-error'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
 import {
+	isSaveInFlight,
 	reduceSaveProgress,
 	summarizeSaveProgress
 } from '../app/lib/domain/scene/client/scene-save-progress'
@@ -468,5 +469,26 @@ describe('what a save reports', () => {
 			expect(commitForm()?.has('sourceAssetId')).toBe(false)
 			expect(added(events).map((file) => file.group)).not.toContain('original')
 		})
+	})
+})
+
+describe('isSaveInFlight', () => {
+	const at = (status: SavePanelState['status']): SavePanelState => ({
+		status,
+		files: [],
+		message: null
+	})
+
+	it('is true from the first event until the save settles', () => {
+		for (const status of ['preparing', 'uploading', 'committing'] as const) {
+			expect(isSaveInFlight(at(status)), status).toBe(true)
+		}
+	})
+
+	it('is false once a save has settled, or before any', () => {
+		for (const status of ['saved', 'unchanged', 'failed'] as const) {
+			expect(isSaveInFlight(at(status)), status).toBe(false)
+		}
+		expect(isSaveInFlight(null)).toBe(false)
 	})
 })

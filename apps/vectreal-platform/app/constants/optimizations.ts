@@ -6,13 +6,15 @@ import type { Optimizations } from '@vctrl/core'
  *
  * Two rules hold across every preset that optimizes (all but `original`):
  *
- * - **Draco is always on.** It is the largest geometry saving available and,
- *   unlike simplification, it does not change topology. It is applied at
- *   publish time, so the document being edited stays at full precision.
- * - **Quantize is always off.** Draco quantizes vertex attributes itself;
- *   stacking the standalone pass on top costs an extra pass and compounds
- *   precision loss. It stays available in the advanced panel as the fallback
- *   for anyone who turns Draco off.
+ * - **Draco is always on.** It is the switch for geometry compression, the
+ *   largest geometry saving available and, unlike simplification, one that
+ *   does not change topology. It is applied at publish time, where the
+ *   exporter weighs Draco against meshopt, so the document being edited stays
+ *   at full precision.
+ * - **Quantize is always off.** Both codecs quantize vertex attributes
+ *   themselves; stacking the standalone pass on top costs an extra pass and
+ *   compounds precision loss. It stays available in the advanced panel as the
+ *   fallback for anyone who turns Draco off.
  *
  * Mesh simplification is off everywhere. It is genuinely destructive (it can
  * leave holes and shading seams) and is opt-in from the advanced panel only.
