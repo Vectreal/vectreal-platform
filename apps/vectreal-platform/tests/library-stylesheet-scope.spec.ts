@@ -21,23 +21,37 @@ const scope = (css: string) => scopeStylesheetRules(css, '.v')
 describe('scopeStylesheetRules', () => {
 	it('confines a utility without adding specificity', () => {
 		expect(scope('.border{border-width:1px}')).toBe(
-			`${WHERE}.border{border-width:1px}`
+			`.border${WHERE}{border-width:1px}`
 		)
 	})
 
 	it('scopes every selector in a list, and rules inside at-rules', () => {
 		expect(scope('@media (hover:hover){.a:hover,.b{color:red}}')).toBe(
-			`@media (hover:hover){${WHERE}.a:hover,${WHERE}.b{color:red}}`
+			`@media (hover:hover){.a:hover${WHERE},.b${WHERE}{color:red}}`
 		)
 	})
 
-	it('scopes the first compound of a descendant selector', () => {
-		expect(scope('.x a{color:inherit}')).toBe(`${WHERE}.x a{color:inherit}`)
+	it('scopes the subject of a descendant selector', () => {
+		expect(scope('.x a{color:inherit}')).toBe(`.x a${WHERE}{color:inherit}`)
 	})
 
-	it('keeps a type or universal selector first in its compound', () => {
-		expect(scope('*,::backdrop,a{--x:0}')).toBe(
-			`*${WHERE},${WHERE}::backdrop,a${WHERE}{--x:0}`
+	it('still matches a selector that starts at the document', () => {
+		expect(scope(':root.dark .x{color:red}')).toBe(
+			`:root.dark .x${WHERE}{color:red}`
+		)
+	})
+
+	it('keeps a pseudo-element last', () => {
+		expect(
+			scope('*,:before,::backdrop,.a::-webkit-scrollbar,.b:hover{--x:0}')
+		).toBe(
+			`*${WHERE},${WHERE}:before,${WHERE}::backdrop,.a${WHERE}::-webkit-scrollbar,.b:hover${WHERE}{--x:0}`
+		)
+	})
+
+	it('leaves an escaped colon in a class name alone', () => {
+		expect(scope('.group\\:after{color:red}')).toBe(
+			`.group\\:after${WHERE}{color:red}`
 		)
 	})
 

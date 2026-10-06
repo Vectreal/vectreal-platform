@@ -110,8 +110,10 @@ export function manifestExternals(projectRoot: string): Plugin {
  * viewer's `.hidden` kept the app's `hidden md:flex` hidden, its `.border`
  * beat `border-b-2`, and its theme's `:root` block rewrote the app's tokens.
  *
- * Every rule gains `:where(scope, scope *)` on its first compound, which adds
- * no specificity and stops it matching anything the scope does not contain.
+ * Every rule gains `:where(scope, scope *)` on its subject, the compound the
+ * rule styles, which adds no specificity and stops it matching anything the
+ * scope does not contain. The subject rather than the first compound, so a
+ * selector that starts at the document (`:root.dark .x`) still matches.
  * The theme's `:root, :host` variables move onto the scope, where they still
  * inherit to everything that reads them. Keyframe selectors are left alone.
  */
@@ -133,9 +135,13 @@ export function scopeStylesheetRules(css: string, scope: string): string {
 			return
 		}
 
-		// A type or universal selector has to open its compound.
+		// Appended, so it lands on the subject; a pseudo-element has to stay
+		// last, so it goes in front of one.
 		rule.selectors = rule.selectors.map((selector) =>
-			selector.replace(/^([a-zA-Z][\w-]*|\*)?/, (type) => `${type}${where}`)
+			selector.replace(
+				/((?<!\\):(?:before|after|first-line|first-letter)|::[\w-]+(?:\([^)]*\))?)?$/,
+				(pseudoElement) => `${where}${pseudoElement}`
+			)
 		)
 	})
 
