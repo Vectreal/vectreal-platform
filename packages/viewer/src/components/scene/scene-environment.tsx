@@ -4,10 +4,10 @@ import {
 	EnvironmentProps,
 	resolveEnvironmentFiles
 } from '@vctrl/core'
-import { memo, useState } from 'react'
+import { memo } from 'react'
 
 import LoadFailureBoundary from '../load-failure-boundary'
-import { useRoomEnvironmentMap } from './room-environment-map'
+import { useRoomEnvironment } from './room-environment'
 
 export const defaultEnvOptions = {
 	preset: DEFAULT_ENVIRONMENT_PRESET,
@@ -37,29 +37,38 @@ export const preloadEnvironmentFiles = (files: string | string[]) => {
 	}
 }
 
+/**
+ * Drops a failed map from the loader cache, which otherwise keeps the failure
+ * and throws it for that file for the rest of the page's life.
+ */
+const forgetEnvironmentFiles = (files: string | string[]) => {
+	try {
+		useEnvironment.clear({ files })
+	} catch {
+		return
+	}
+}
+
 /** Lights the scene, without a backdrop, while its own map is unavailable. */
 const FallbackEnvironment = ({
 	environmentIntensity,
 	scene
-}: Pick<EnvironmentProps, 'environmentIntensity' | 'scene'>) => {
-	const map = useRoomEnvironmentMap()
-
-	return map ? (
-		<Environment
-			map={map}
-			environmentIntensity={environmentIntensity}
-			scene={scene}
-		/>
-	) : null
+}: {
+	environmentIntensity: number
+	scene: EnvironmentProps['scene']
+}) => {
+	useRoomEnvironment(environmentIntensity, scene)
+	return null
 }
 
 /**
  * Sets up the environment for a scene.
  *
  * A map that fails to download is an extra gone missing, not a broken scene:
- * the scene is lit by a local room instead, and a different map is tried
- * afresh. The load still suspends the viewer's content, so the shader warm-up
- * compiles against the environment the scene is shown with.
+ * the scene is lit by a local room instead, from the same render that caught
+ * the failure, so the shader warm-up compiles against the environment the
+ * scene is shown with either way. The failure is forgotten, so the map is
+ * downloaded again the next time it is shown, but not while it is on screen.
  */
 const SceneEnvironment = memo((props: EnvironmentProps) => {
 	const environment = { ...defaultEnvOptions, ...props }
@@ -71,20 +80,18 @@ const SceneEnvironment = memo((props: EnvironmentProps) => {
 		scene
 	} = environment
 	const files = resolveEnvironmentFiles(environment)
-	const filesKey = String(files)
-	const [failedFilesKey, setFailedFilesKey] = useState<null | string>(null)
-
-	if (failedFilesKey === filesKey) {
-		return (
-			<FallbackEnvironment
-				environmentIntensity={environmentIntensity}
-				scene={scene}
-			/>
-		)
-	}
 
 	return (
-		<LoadFailureBoundary onError={() => setFailedFilesKey(filesKey)}>
+		<LoadFailureBoundary
+			key={String(files)}
+			onError={() => forgetEnvironmentFiles(files)}
+			fallback={
+				<FallbackEnvironment
+					environmentIntensity={environmentIntensity}
+					scene={scene}
+				/>
+			}
+		>
 			<Environment
 				files={files}
 				background={background}

@@ -2,8 +2,13 @@ import { Component, type ReactNode } from 'react'
 
 interface LoadFailureBoundaryProps {
 	children: ReactNode
-	/** Called once when a child fails to load; the boundary then renders nothing. */
+	/** Called once when a child fails to load. */
 	onError: (error: unknown) => void
+	/**
+	 * Drawn in place of the children from the render that caught the failure,
+	 * not a commit later. Nothing by default.
+	 */
+	fallback?: ReactNode
 }
 
 /**
@@ -28,7 +33,9 @@ class LoadFailureBoundary extends Component<
 	}
 
 	render() {
-		return this.state.failed ? null : this.props.children
+		return this.state.failed
+			? (this.props.fallback ?? null)
+			: this.props.children
 	}
 }
 
