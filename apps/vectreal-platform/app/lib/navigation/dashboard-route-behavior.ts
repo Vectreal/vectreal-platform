@@ -3,7 +3,6 @@ interface ScopedRevalidationArgs {
 	nextPathname: string
 	formMethod?: string | null
 	actionResult?: unknown
-	actionStatus?: number
 	defaultShouldRevalidate: boolean
 	scopePrefix: string
 }
@@ -14,23 +13,31 @@ interface ParamRevalidationArgs {
 	paramKeys: string[]
 	formMethod?: string | null
 	actionResult?: unknown
-	actionStatus?: number
 	defaultShouldRevalidate: boolean
 }
 
+/** What an action answers when its request never reached the server. */
+export interface UnreachableActionResult {
+	unreachable: true
+}
+
 /**
- * Whether the action behind this revalidation was refused, and so changed
- * nothing worth reloading.
+ * Whether the action behind this revalidation never reached the server.
  *
- * React Router's own default already skips revalidation for an action status
- * of 400 or more; the routes here answer yes to any POST before consulting it,
- * so they have to ask this first. It matters most when the refusal is the
- * network itself: a page that reloads its data after an offline write fails
- * that reload too, and the failed loaders replace the page with its error
- * boundary.
+ * The routes here reload their data after any POST, and that is load-bearing
+ * for a refusal: a 401 reloads the layout into its sign-in redirect, a 403
+ * reloads root into a fresh CSRF token, a confirmation refusal reloads the
+ * plan the dialog reads. An unreachable action is the one case where the
+ * reload cannot help and does harm: offline it fails too, and the failed
+ * loaders replace the page with its error boundary. So only an action that
+ * says so outright (`postSceneAction`) skips it.
  */
-export function isRefusedAction(actionStatus: number | undefined): boolean {
-	return actionStatus !== undefined && actionStatus >= 400
+export function isUnreachableAction(actionResult: unknown): boolean {
+	return (
+		typeof actionResult === 'object' &&
+		actionResult !== null &&
+		(actionResult as Partial<UnreachableActionResult>).unreachable === true
+	)
 }
 
 const DASHBOARD_OVERLAY_ROUTE_PATTERNS = [
@@ -54,11 +61,10 @@ export function shouldRevalidateWithinScope({
 	nextPathname,
 	formMethod,
 	actionResult,
-	actionStatus,
 	defaultShouldRevalidate,
 	scopePrefix
 }: ScopedRevalidationArgs): boolean {
-	if (isRefusedAction(actionStatus)) {
+	if (isUnreachableAction(actionResult)) {
 		return false
 	}
 
@@ -90,10 +96,9 @@ export function shouldRevalidateForRouteParams({
 	paramKeys,
 	formMethod,
 	actionResult,
-	actionStatus,
 	defaultShouldRevalidate
 }: ParamRevalidationArgs): boolean {
-	if (isRefusedAction(actionStatus)) {
+	if (isUnreachableAction(actionResult)) {
 		return false
 	}
 

@@ -11,7 +11,7 @@
  * that really fetches, so both failures are live.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { createRoutesStub } from 'react-router'
+import { createRoutesStub, Outlet } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SceneLoadingThumbnailSetting } from '../app/components/dashboard/scene-detail/scene-loading-thumbnail-setting'
@@ -30,36 +30,50 @@ const fetchMock = vi.fn()
 function renderScenePage() {
 	const Stub = createRoutesStub([
 		{
-			path: '/scene',
+			/*
+			  A parent with no reload rule of its own, on React Router's default:
+			  only the refusal's failing status keeps it from reloading.
+			*/
+			id: 'parent',
+			path: '/',
 			loader: async () => {
-				await fetch('/scene.data')
-				return { presentation: { showLoadingThumbnail: false } }
+				await fetch('/parent.data')
+				return null
 			},
-			action: async ({ request }) =>
-				forwardSceneAction('scene-1', await request.json()),
-			shouldRevalidate: ({
-				formMethod,
-				actionResult,
-				actionStatus,
-				defaultShouldRevalidate
-			}) =>
-				shouldRevalidateForRouteParams({
-					currentParams: {},
-					nextParams: {},
-					paramKeys: [],
-					formMethod,
-					actionResult,
-					actionStatus,
-					defaultShouldRevalidate
-				}),
-			Component: () => (
-				<SceneLoadingThumbnailSetting
-					sceneId="scene-1"
-					presentation={{ showLoadingThumbnail: false }}
-					canUpdate
-				/>
-			),
-			ErrorBoundary: () => <p>The page error screen</p>
+			Component: Outlet,
+			ErrorBoundary: () => <p>The page error screen</p>,
+			children: [
+				{
+					path: 'scene',
+					loader: async () => {
+						await fetch('/scene.data')
+						return { presentation: { showLoadingThumbnail: false } }
+					},
+					action: async ({ request }) =>
+						forwardSceneAction('scene-1', await request.json()),
+					shouldRevalidate: ({
+						formMethod,
+						actionResult,
+						defaultShouldRevalidate
+					}) =>
+						shouldRevalidateForRouteParams({
+							currentParams: {},
+							nextParams: {},
+							paramKeys: [],
+							formMethod,
+							actionResult,
+							defaultShouldRevalidate
+						}),
+					Component: () => (
+						<SceneLoadingThumbnailSetting
+							sceneId="scene-1"
+							presentation={{ showLoadingThumbnail: false }}
+							canUpdate
+						/>
+					),
+					ErrorBoundary: () => <p>The page error screen</p>
+				}
+			]
 		}
 	])
 
@@ -103,13 +117,38 @@ describe('the loading thumbnail toggle, when the request is dropped', () => {
 			'/api/scenes/scene-1',
 			expect.objectContaining({ method: 'POST' })
 		)
-		// Nothing tried to reload after the refused write.
+		// Nothing tried to reload after the unreachable write.
 		expect(fetchMock).not.toHaveBeenCalledWith('/scene.data')
+		expect(fetchMock).not.toHaveBeenCalledWith('/parent.data')
+	})
+
+	it('still reloads after a refusal the server gave, which can carry a sign-in redirect', async () => {
+		fetchMock.mockImplementation(async (url: string) =>
+			url.endsWith('.data')
+				? new Response('{}')
+				: new Response(
+						JSON.stringify({ success: false, error: 'Unauthorized' }),
+						{ status: 401 }
+					)
+		)
+		renderScenePage()
+		const control = await toggle()
+		fetchMock.mockClear()
+
+		await act(async () => {
+			fireEvent.click(control)
+		})
+
+		await vi.waitFor(() =>
+			expect(fetchMock).toHaveBeenCalledWith('/scene.data')
+		)
+		expect(toastError).toHaveBeenCalledWith('Unauthorized')
+		expect((await toggle()).getAttribute('aria-checked')).toBe('false')
 	})
 
 	it('still reloads the page data after a write that succeeds', async () => {
 		fetchMock.mockImplementation(async (url: string) =>
-			url === '/scene.data'
+			url.endsWith('.data')
 				? new Response('{}')
 				: new Response(
 						JSON.stringify({ success: true, data: { presentation: {} } })

@@ -55,7 +55,8 @@ describe('postSceneAction', () => {
 		expect(await postSceneAction('scene-1', {}, fetchImpl)).toEqual({
 			success: false,
 			error: 'Could not reach the server. Try again.',
-			status: 503
+			status: 503,
+			unreachable: true
 		})
 	})
 
@@ -67,7 +68,8 @@ describe('postSceneAction', () => {
 		expect(await postSceneAction('scene-1', {}, fetchImpl)).toEqual({
 			success: false,
 			error: 'Could not reach the server. Try again.',
-			status: 503
+			status: 503,
+			unreachable: true
 		})
 	})
 })

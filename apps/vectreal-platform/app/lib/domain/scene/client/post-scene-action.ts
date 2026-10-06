@@ -7,6 +7,8 @@ export interface SceneActionResult {
 	data?: unknown
 	/** The HTTP status, or 503 when no answer arrived at all. */
 	status: number
+	/** Set when no answer arrived; see `isUnreachableAction`. */
+	unreachable?: true
 }
 
 const UNREACHABLE = 'Could not reach the server. Try again.'
@@ -36,14 +38,20 @@ export async function postSceneAction(
 			? { ...payload, status: response.status }
 			: { ...payload, success: false, status: response.status }
 	} catch {
-		return { success: false, error: UNREACHABLE, status: 503 }
+		return {
+			success: false,
+			error: UNREACHABLE,
+			status: 503,
+			unreachable: true
+		}
 	}
 }
 
 /**
- * A route `clientAction`'s answer for a scene mutation: the API's result, with
- * a refusal carrying its failing status so the routes in the chain skip their
- * reload (`isRefusedAction`). Offline, that reload would fail as well and
+ * A route `clientAction`'s answer for a scene mutation: the API's result, a
+ * refusal carrying the API's own status as the resource route would have, and
+ * an unreachable request marked so no route reloads after it
+ * (`isUnreachableAction`). Offline, that reload would fail as well and
  * replace the page with its error boundary.
  */
 export async function forwardSceneAction(sceneId: string, body: unknown) {

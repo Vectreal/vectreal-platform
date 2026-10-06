@@ -422,23 +422,15 @@ describe('the dashboard scene page', () => {
 		expect(route).not.toMatch(/export async function action\(/)
 	})
 
-	it('skips every reload in its chain after a refused action', () => {
-		const rule = (path: string) =>
-			read(path).slice(
-				read(path).indexOf(
-					'export const shouldRevalidate: ShouldRevalidateFunction'
-				)
+	it('skips the root reload after an action that never reached the server', () => {
+		const rule = read('root.tsx').slice(
+			read('root.tsx').indexOf(
+				'export const shouldRevalidate: ShouldRevalidateFunction'
 			)
-		expect(rule('root.tsx')).toMatch(
-			/^[^}]*actionStatus,[^}]*\}\) => \{\s*if \(isRefusedAction\(actionStatus\)\) \{\s*return false/
 		)
-		for (const path of [
-			'routes/layouts/dashboard-layout.tsx',
-			'routes/dashboard-page/projects/project.tsx',
-			'routes/dashboard-page/projects/scene.tsx'
-		]) {
-			expect(rule(path), path).toMatch(/^[\s\S]{0,600}?\t\tactionStatus,\n/)
-		}
+		expect(rule).toMatch(
+			/^[^}]*\}\) => \{\s*if \(isUnreachableAction\(actionResult\)\) \{\s*return false/
+		)
 	})
 
 	it('gates the thumbnail toggle on scene:update', () => {

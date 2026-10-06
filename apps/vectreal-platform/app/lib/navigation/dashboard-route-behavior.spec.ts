@@ -1,61 +1,70 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-	isRefusedAction,
+	isUnreachableAction,
 	shouldRevalidateForRouteParams,
 	shouldRevalidateWithinScope
 } from './dashboard-route-behavior'
 
 const params = { projectId: 'p', sceneId: 's' }
 
-const afterPost = (actionStatus?: number) =>
+const afterPost = (actionResult: unknown) =>
 	shouldRevalidateForRouteParams({
 		currentParams: params,
 		nextParams: params,
 		paramKeys: ['projectId', 'sceneId'],
 		formMethod: 'POST',
-		actionResult: {},
-		actionStatus,
+		actionResult,
 		defaultShouldRevalidate: true
 	})
 
-const afterScopedPost = (actionStatus?: number) =>
+const afterScopedPost = (actionResult: unknown) =>
 	shouldRevalidateWithinScope({
 		currentPathname: '/dashboard/projects',
 		nextPathname: '/dashboard/projects',
 		formMethod: 'POST',
-		actionResult: {},
-		actionStatus,
+		actionResult,
 		defaultShouldRevalidate: true,
 		scopePrefix: '/dashboard'
 	})
 
-describe('isRefusedAction', () => {
-	it('is a refusal from 400 up', () => {
-		expect(isRefusedAction(400)).toBe(true)
-		expect(isRefusedAction(503)).toBe(true)
+describe('isUnreachableAction', () => {
+	it('is an action that says it never reached the server', () => {
+		expect(isUnreachableAction({ success: false, unreachable: true })).toBe(
+			true
+		)
 	})
 
-	it('is not a refusal below 400, or with no status at all', () => {
-		expect(isRefusedAction(200)).toBe(false)
-		expect(isRefusedAction(399)).toBe(false)
-		expect(isRefusedAction(undefined)).toBe(false)
+	it('is not a refusal the server gave, or anything else', () => {
+		expect(isUnreachableAction({ success: false, error: 'Unauthorized' })).toBe(
+			false
+		)
+		expect(isUnreachableAction({ unreachable: 'yes' })).toBe(false)
+		expect(isUnreachableAction(null)).toBe(false)
+		expect(isUnreachableAction(undefined)).toBe(false)
 	})
 })
 
 describe('revalidating after a POST', () => {
 	it('reloads after an action that succeeded', () => {
-		expect(afterPost(200)).toBe(true)
-		expect(afterScopedPost(200)).toBe(true)
+		expect(afterPost({ success: true })).toBe(true)
+		expect(afterScopedPost({ success: true })).toBe(true)
 	})
 
-	it('reloads after an action that reported no status', () => {
-		expect(afterPost(undefined)).toBe(true)
-		expect(afterScopedPost(undefined)).toBe(true)
+	/*
+	  Load-bearing: a 401 reloads the layout into its sign-in redirect, a 403
+	  reloads root into a fresh CSRF token, and a confirmation refusal reloads
+	  the plan the delete dialog reads.
+	*/
+	it('still reloads after a refusal the server gave', () => {
+		expect(afterPost({ success: false, error: 'Unauthorized' })).toBe(true)
+		expect(
+			afterScopedPost({ success: false, error: 'Invalid CSRF token' })
+		).toBe(true)
 	})
 
-	it('reloads nothing after an action that was refused', () => {
-		expect(afterPost(503)).toBe(false)
-		expect(afterScopedPost(404)).toBe(false)
+	it('reloads nothing after an action that never reached the server', () => {
+		expect(afterPost({ success: false, unreachable: true })).toBe(false)
+		expect(afterScopedPost({ success: false, unreachable: true })).toBe(false)
 	})
 })
