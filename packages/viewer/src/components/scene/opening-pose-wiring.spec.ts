@@ -35,7 +35,9 @@ describe('the opening pose is wired into SceneCamera', () => {
 		// The camera command and the selection effect; initialization runs before
 		// any framing, so it has none to pass.
 		expect(
-			source.match(/sceneTransition,\s*openingPose\.current\s*\)/g)
+			source.match(
+				/sceneTransition(?:Ref\.current)?,\s*openingPose\.current\s*\)/g
+			)
 		).toHaveLength(2)
 	})
 

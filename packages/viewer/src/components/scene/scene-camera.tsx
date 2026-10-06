@@ -6,7 +6,7 @@ import {
 	CameraTransitionEasing,
 	CameraTransitionType
 } from '@vctrl/core'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
 	CatmullRomCurve3,
 	Euler,
@@ -62,6 +62,8 @@ interface SceneCameraProps extends CameraProps {
 	) => void
 	onInteractionEvent?: (event: ViewerInteractionEvent) => void
 	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
+	/** A host's `set_transition`, which wins over `sceneTransition` while set. */
+	transitionOverride?: RefObject<CameraTransitionConfig | null | undefined>
 }
 
 type CameraTransitionRuntime = {
@@ -323,7 +325,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		onInitialFramingComplete,
 		onCameraSnapshotCaptureReady,
 		onCommandExecutorReady,
-		onInteractionEvent
+		onInteractionEvent,
+		transitionOverride
 	} = props
 	const { cameras, activeCameraId, sceneTransition } = {
 		...defaultCameraOptions,
@@ -372,6 +375,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		cameraId: string
 		signature: CameraSelectionSignature
 	} | null>(null)
+
+	/*
+	  Read by the command executor when a command runs, not when it was created.
+	  A ref keeps the executor's identity independent of the transition: a host
+	  passing an inline `sceneTransition` would otherwise re-register it, and
+	  re-emit `viewer_ready`, on every render.
+	*/
+	const sceneTransitionRef = useRef(sceneTransition)
+	sceneTransitionRef.current = sceneTransition
 
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
@@ -485,7 +497,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				command.cameraId,
 				controls?.target ?? new Vector3(0, 0, 0),
 				sceneCamera as PerspectiveCamera,
-				sceneTransition,
+				transitionOverride?.current ?? sceneTransitionRef.current,
 				openingPose.current
 			)
 
@@ -600,7 +612,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCameraId,
 			controls?.target ?? new Vector3(0, 0, 0),
 			sceneCamera as PerspectiveCamera,
-			sceneTransition,
+			transitionOverride?.current ?? sceneTransition,
 			openingPose.current
 		)
 		const selectionKey = selection.cameraId
