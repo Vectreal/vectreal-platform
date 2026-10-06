@@ -505,9 +505,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		zoom?: boolean
 		pan?: boolean
 	} | null>(null)
-	const [transitionOverride, setTransitionOverride] = useState<
-		CameraProps['sceneTransition'] | null
-	>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	const animation = useAnimationRuntime({
@@ -523,7 +520,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
-			setTransitionOverride(null)
 		}
 	}, [hasContent])
 
@@ -544,7 +540,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const executeViewerCommand = useCallback(
 		(command: ViewerCommand) => {
 			switch (command.type) {
+				// The camera layer owns the transition, so a `set_transition` sent
+				// straight before an `activate_camera` reaches it first, in order,
+				// rather than waiting on a render the flight would not wait for.
 				case 'activate_camera':
+				case 'set_transition':
 					cameraLayer.execute(command)
 					break
 				case 'focus_hotspot':
@@ -564,13 +564,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					break
 				case 'set_controls_options':
 					setControlsOptionsOverride((prev) => ({ ...prev, ...command }))
-					break
-				case 'set_transition':
-					setTransitionOverride({
-						type: command.transitionType,
-						duration: command.duration,
-						easing: command.easing
-					})
 					break
 				case 'restart_animation':
 				case 'seek_animation_clip':
@@ -849,9 +842,6 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<SceneCamera
 									{...cameraOptions}
 									cameras={aimedCameras}
-									sceneTransition={
-										transitionOverride ?? cameraOptions?.sceneTransition
-									}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}

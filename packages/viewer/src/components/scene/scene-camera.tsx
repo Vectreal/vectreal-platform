@@ -374,6 +374,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	} | null>(null)
 
 	/*
+	  A host's `set_transition`, written the moment the command lands. Not
+	  state: an `activate_camera` sent straight after it runs before any render
+	  would, and must already fly with it.
+	*/
+	const transitionOverride = useRef<CameraTransitionConfig | null>(null)
+	/*
 	  Read by the command executor when a command runs, not when it was created.
 	  A ref keeps the executor's identity independent of the transition: a host
 	  passing an inline `sceneTransition` would otherwise re-register it, and
@@ -485,6 +491,14 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 	const executeViewerCommand = useCallback(
 		(command: ViewerCommand) => {
+			if (command.type === 'set_transition') {
+				transitionOverride.current = {
+					type: command.transitionType,
+					duration: command.duration,
+					easing: command.easing
+				}
+				return
+			}
 			if (command.type !== 'activate_camera') {
 				return
 			}
@@ -494,7 +508,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				command.cameraId,
 				controls?.target ?? new Vector3(0, 0, 0),
 				sceneCamera as PerspectiveCamera,
-				sceneTransitionRef.current,
+				transitionOverride.current ?? sceneTransitionRef.current,
 				openingPose.current
 			)
 
@@ -544,7 +558,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				activeCameraId,
 				initialControlsTarget,
 				sceneCamera,
-				sceneTransition
+				transitionOverride.current ?? sceneTransition
 			)
 			applyCameraInstantly(selection)
 			// Read from the store rather than this render's `controls`: this runs
@@ -592,6 +606,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			initializedCameraPosition.current = false
 			hasInitialFramingCompleted.current = false
 			openingPose.current = null
+			transitionOverride.current = null
 			isWaitingForStableFrame.current = false
 			setIsFramed(false)
 			return
@@ -609,7 +624,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCameraId,
 			controls?.target ?? new Vector3(0, 0, 0),
 			sceneCamera as PerspectiveCamera,
-			sceneTransition,
+			transitionOverride.current ?? sceneTransition,
 			openingPose.current
 		)
 		const selectionKey = selection.cameraId
@@ -635,7 +650,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 					activeCameraId,
 					controls?.target ?? new Vector3(0, 0, 0),
 					sceneCamera as PerspectiveCamera,
-					sceneTransition
+					transitionOverride.current ?? sceneTransition
 				)
 			)
 		} else {
