@@ -161,20 +161,21 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				currentSceneBytes: glbData.byteLength
 			})
 
-			// Only once it has shipped, and only while the document on screen is
-			// the one exported: the figures then describe that file, in the codecs
-			// the export chose, rather than the Draco and WebP projection. A pass
-			// started during the upload has replaced the document, and its own
+			// Only once it has shipped, and only if no optimization pass has
+			// started since the export: the figures then describe that file, in
+			// the codecs the export chose, rather than the Draco and WebP
+			// projection. A pass that finished has swapped the document; one
+			// still running is pending and has yet to swap it. Either way its own
 			// figures win.
 			const data = publishResult.response as PublishSceneResponse
-			const describesDocument = optimizer?._getDocument?.() === document
+			const documentUnchanged = optimizer?._getDocument?.() === document
 			const ktx2Total =
 				(result.textures?.encoded.length ?? 0) +
 				(result.textures?.kept.length ?? 0)
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				...(data.stats ? { latestSceneStats: data.stats } : {}),
-				...(describesDocument
+				...(documentUnchanged && !prev.isPending
 					? {
 							optimizedSceneBytes: glbData.byteLength,
 							optimizedTextureBytes: result.textureBytes,

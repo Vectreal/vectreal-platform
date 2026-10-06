@@ -241,6 +241,28 @@ describe('the publish panel', () => {
 		})
 	})
 
+	it('leaves the figures to a pass still running when the upload lands', async () => {
+		const store = renderPanel(balancedPreset)
+		mocks.publishSceneFromGlb.mockImplementation(async () => {
+			store.set(optimizationRuntimeAtom, (state) => ({
+				...state,
+				isPending: true
+			}))
+			return {
+				response: { stats: { currentSceneBytes: 8 } },
+				publishState: { sceneId: 'scene-1', status: 'published' }
+			}
+		})
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalled())
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedTextureBytes: null,
+			publishedEncoding: null,
+			latestSceneStats: { currentSceneBytes: 8 }
+		})
+	})
+
 	it('records nothing as shipped when the upload fails', async () => {
 		mocks.publishSceneFromGlb.mockRejectedValue(new Error('network down'))
 		const store = renderPanel(balancedPreset)
