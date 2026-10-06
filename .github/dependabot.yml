@@ -15,6 +15,12 @@ updates:
       npm-dependencies:
         patterns:
           - '@nx' # groups nx npm dependencies
+    ignore:
+      # Each stripe major types `apiVersion` to the one API version it ships
+      # with, so a bump that leaves the pin in app/lib/stripe.server.ts behind
+      # cannot typecheck. Majors are upgraded by hand together with the pin.
+      - dependency-name: 'stripe'
+        update-types: ['version-update:semver-major']
 
   # GitHub Actions dependencies
   - package-ecosystem: 'github-actions'
