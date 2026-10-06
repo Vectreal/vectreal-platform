@@ -117,6 +117,24 @@ describe('useRoomEnvironment', () => {
 		expect(scene.current.environment).toBe('previous map')
 	})
 
+	it('moves to a new target scene, putting the old one back', () => {
+		const first = { environment: 'first map', environmentIntensity: 1 }
+		const second = { environment: null, environmentIntensity: 1 }
+		const { rerender } = renderHook(
+			({ target }) => useRoomEnvironment(0.7, target as never),
+			{ initialProps: { target: first as object } }
+		)
+
+		rerender({ target: { current: second } })
+
+		expect(first).toEqual({ environment: 'first map', environmentIntensity: 1 })
+		expect(targets[0].dispose).toHaveBeenCalledOnce()
+		expect(second).toEqual({
+			environment: targets[1].texture,
+			environmentIntensity: 0.7
+		})
+	})
+
 	it('puts the scene back and releases the room when it is no longer needed', () => {
 		scene.current.environmentIntensity = 0.4
 		const { unmount } = renderHook(() => useRoomEnvironment(0.7, undefined))

@@ -71,7 +71,11 @@ const WarmUp = () => {
 	return null
 }
 
+/** Files the network cannot serve, by the loader's own key shape. */
 const failing = new Set<string>()
+/** Failures drei's loader cache holds on to, until they are cleared. */
+const cachedFailures = new Set<string>()
+const cacheKey = (files: unknown) => JSON.stringify(files)
 
 const renderEnvironment = (props: EnvironmentProps) => {
 	const hostError = vi.fn()
@@ -97,12 +101,18 @@ const requestedFiles = () =>
 beforeEach(() => {
 	vi.spyOn(console, 'error').mockImplementation(() => undefined)
 	failing.clear()
+	cachedFailures.clear()
 	litAtWarmUp.length = 0
 	loadFiles = (files) => {
-		if (failing.has(String(files))) {
+		const key = cacheKey(files)
+		if (failing.has(key)) cachedFailures.add(key)
+		if (cachedFailures.has(key)) {
 			throw new Error(`Could not load ${String(files)}: Failed to fetch`)
 		}
 	}
+	clearEnvironment.mockImplementation(({ files }: { files: unknown }) =>
+		cachedFailures.delete(cacheKey(files))
+	)
 })
 
 afterEach(() => {
@@ -124,7 +134,7 @@ describe('SceneEnvironment', () => {
 	})
 
 	it('lights the scene from a local room when its map fails, without reaching the host', () => {
-		failing.add('/env/studio.hdr')
+		failing.add(cacheKey('/env/studio.hdr'))
 		const target = { isScene: true }
 
 		const { hostError, queryByText } = renderEnvironment({
@@ -140,7 +150,7 @@ describe('SceneEnvironment', () => {
 	})
 
 	it('has the room in place before the shader warm-up compiles', () => {
-		failing.add('/env/studio.hdr')
+		failing.add(cacheKey('/env/studio.hdr'))
 
 		renderEnvironment({ files: '/env/studio.hdr' })
 
@@ -148,7 +158,7 @@ describe('SceneEnvironment', () => {
 	})
 
 	it('forgets the failed download, so the map is fetched again next time', () => {
-		failing.add('/env/studio.hdr')
+		failing.add(cacheKey('/env/studio.hdr'))
 
 		renderEnvironment({ files: '/env/studio.hdr' })
 
@@ -156,18 +166,49 @@ describe('SceneEnvironment', () => {
 	})
 
 	it('keeps the room while the failed map is on screen rather than asking again', () => {
-		failing.add('/env/studio.hdr')
+		failing.add(cacheKey('/env/studio.hdr'))
 		const { rerenderWith } = renderEnvironment({ files: '/env/studio.hdr' })
 		Environment.mockClear()
 
-		rerenderWith({ files: '/env/studio.hdr', environmentIntensity: 2 })
+		rerenderWith({
+			files: '/env/studio.hdr',
+			background: true,
+			backgroundBlurriness: 0.1,
+			backgroundIntensity: 3,
+			environmentIntensity: 2
+		})
 
 		expect(Environment).not.toHaveBeenCalled()
 		expect(useRoomEnvironment).toHaveBeenLastCalledWith(2, undefined)
 	})
 
+	it('stays on the room even when the failure cannot be forgotten', () => {
+		failing.add(cacheKey('/env/studio.hdr'))
+		clearEnvironment.mockImplementation(() => {
+			throw new Error('useEnvironment: Unrecognized file extension')
+		})
+
+		const { hostError } = renderEnvironment({ files: '/env/studio.hdr' })
+
+		expect(hostError).not.toHaveBeenCalled()
+		expect(room.lit).toBe(true)
+	})
+
+	it('downloads a failed list of files again when it is shown again', () => {
+		const cube = ['/env/px.hdr', '/env/nx.hdr']
+		failing.add(cacheKey(cube))
+		const { rerenderWith } = renderEnvironment({ files: cube })
+		rerenderWith({ files: '/env/sunset.hdr' })
+		failing.delete(cacheKey(cube))
+
+		rerenderWith({ files: [...cube] })
+
+		expect(Environment.mock.calls.at(-1)?.[0].files).toEqual(cube)
+		expect(room.lit).toBe(false)
+	})
+
 	it('treats an equal list of files as the same map', () => {
-		failing.add(String(['/env/px.hdr', '/env/nx.hdr']))
+		failing.add(cacheKey(['/env/px.hdr', '/env/nx.hdr']))
 		const { rerenderWith } = renderEnvironment({
 			files: ['/env/px.hdr', '/env/nx.hdr']
 		})
@@ -179,7 +220,7 @@ describe('SceneEnvironment', () => {
 	})
 
 	it('tries a different map, and lights from the room again if that fails too', () => {
-		failing.add('/env/studio.hdr')
+		failing.add(cacheKey('/env/studio.hdr'))
 		const { rerenderWith, hostError } = renderEnvironment({
 			files: '/env/studio.hdr'
 		})
@@ -188,17 +229,17 @@ describe('SceneEnvironment', () => {
 		expect(requestedFiles().at(-1)).toBe('/env/sunset.hdr')
 		expect(room.lit).toBe(false)
 
-		failing.add('/env/dusk.hdr')
+		failing.add(cacheKey('/env/dusk.hdr'))
 		rerenderWith({ files: '/env/dusk.hdr' })
 		expect(room.lit).toBe(true)
 		expect(hostError).not.toHaveBeenCalled()
 	})
 
 	it('downloads a failed map again when it is shown again', () => {
-		failing.add('/env/studio.hdr')
+		failing.add(cacheKey('/env/studio.hdr'))
 		const { rerenderWith } = renderEnvironment({ files: '/env/studio.hdr' })
 		rerenderWith({ files: '/env/sunset.hdr' })
-		failing.delete('/env/studio.hdr')
+		failing.delete(cacheKey('/env/studio.hdr'))
 
 		rerenderWith({ files: '/env/studio.hdr' })
 

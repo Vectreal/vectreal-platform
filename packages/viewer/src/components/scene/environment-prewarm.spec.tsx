@@ -22,7 +22,9 @@ const compile = vi.fn()
 /** One renderer for every render, as R3F's store gives. */
 const gl = { compile }
 
-const useEnvironment = vi.hoisted(() => vi.fn())
+const useEnvironment = vi.hoisted(() =>
+	Object.assign(vi.fn(), { clear: vi.fn() })
+)
 
 vi.mock('@react-three/drei', () => ({ useEnvironment }))
 
@@ -34,6 +36,7 @@ afterEach(() => {
 	vi.restoreAllMocks()
 	compile.mockReset()
 	useEnvironment.mockReset()
+	useEnvironment.clear.mockReset()
 })
 
 describe('prewarmEnvironment', () => {
@@ -146,6 +149,7 @@ describe('EnvironmentPrewarm', () => {
 		const { rerender, unmount } = render(page('missing.hdr'))
 		expect(pageCaught).not.toHaveBeenCalled()
 		expect(compile).not.toHaveBeenCalled()
+		expect(useEnvironment.clear).toHaveBeenCalledWith({ files: 'missing.hdr' })
 
 		rerender(page('studio.hdr'))
 		expect(compile).toHaveBeenCalledOnce()

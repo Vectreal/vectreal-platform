@@ -137,9 +137,12 @@ test('a scene whose environment map cannot be downloaded still renders', async (
 		{ timeout: 30000 }
 	)
 
-	expect(blockedMaps).toBeGreaterThan(0)
 	await expect(page.getByTestId('viewer-crashed')).toHaveCount(0)
 	await expect(page.locator('.vctrl-viewer-hotspot')).toHaveCount(2)
+
+	// Asked for once: the failure is not retried while the room is on screen.
+	await page.waitForTimeout(1000)
+	expect(blockedMaps).toBe(1)
 
 	// Contained, not hidden: R3F reports what a boundary in its tree catches
 	// through `reportError`, so the host's error monitoring still hears of the

@@ -41,7 +41,7 @@ export const preloadEnvironmentFiles = (files: string | string[]) => {
  * Drops a failed map from the loader cache, which otherwise keeps the failure
  * and throws it for that file for the rest of the page's life.
  */
-const forgetEnvironmentFiles = (files: string | string[]) => {
+export const forgetEnvironmentFiles = (files: string | string[]) => {
 	try {
 		useEnvironment.clear({ files })
 	} catch {
