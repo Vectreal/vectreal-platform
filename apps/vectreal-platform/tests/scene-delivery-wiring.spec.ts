@@ -415,6 +415,13 @@ describe('the dashboard scene page', () => {
 		)
 	})
 
+	it('forwards fetcher mutations to the scene API through a clientAction that always resolves', () => {
+		expect(route).toMatch(
+			/export async function clientAction\(\{\s*request,\s*params\s*\}: Route\.ClientActionArgs\) \{\s*return postSceneAction\(params\.sceneId, await request\.json\(\)\)/
+		)
+		expect(route).not.toMatch(/export async function action\(/)
+	})
+
 	it('gates the thumbnail toggle on scene:update', () => {
 		expect(route).toContain('canUpdateScene: canUpdateScene(membership)')
 	})
