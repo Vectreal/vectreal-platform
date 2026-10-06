@@ -179,9 +179,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
  * Mutations this page makes through a fetcher, forwarded to the scene API.
  *
  * Client-side so a request that never gets an answer resolves as a refusal
- * instead of throwing to the error boundary, and on this route so a
- * successful POST still makes the loader re-run and hand back what was
- * stored; a refusal carries its failing status so nothing reloads
+ * instead of throwing to the error boundary, and on this route so a POST
+ * still makes the loader re-run. A refusal the server gives keeps its status
+ * and reloads as it always has; only an unreachable request skips the reload
  * (`forwardSceneAction`).
  */
 export async function clientAction({

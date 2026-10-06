@@ -17,7 +17,7 @@ interface ParamRevalidationArgs {
 }
 
 /** What an action answers when its request never reached the server. */
-export interface UnreachableActionResult {
+interface UnreachableActionResult {
 	unreachable: true
 }
 

@@ -143,6 +143,9 @@ describe('the loading thumbnail toggle, when the request is dropped', () => {
 			expect(fetchMock).toHaveBeenCalledWith('/scene.data')
 		)
 		expect(toastError).toHaveBeenCalledWith('Unauthorized')
+		// The refusal kept its 401, so a route on React Router's default skips
+		// its reload, exactly as when the fetcher posted to the API directly.
+		expect(fetchMock).not.toHaveBeenCalledWith('/parent.data')
 		expect((await toggle()).getAttribute('aria-checked')).toBe('false')
 	})
 

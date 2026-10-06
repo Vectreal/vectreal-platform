@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { postSceneAction } from './post-scene-action'
+import { forwardSceneAction, postSceneAction } from './post-scene-action'
 
 const respond = (status: number, body: unknown) =>
 	vi.fn(async () => new Response(JSON.stringify(body), { status }))
@@ -71,5 +71,46 @@ describe('postSceneAction', () => {
 			status: 503,
 			unreachable: true
 		})
+	})
+})
+
+describe('forwardSceneAction', () => {
+	it('answers a success as plain data, so every route reloads', async () => {
+		vi.stubGlobal('fetch', respond(200, { success: true, data: {} }))
+
+		expect(await forwardSceneAction('scene-1', {})).toEqual({
+			success: true,
+			data: {},
+			status: 200
+		})
+		vi.unstubAllGlobals()
+	})
+
+	it("keeps a server refusal's own status, as the resource route did", async () => {
+		vi.stubGlobal(
+			'fetch',
+			respond(401, { success: false, error: 'Unauthorized' })
+		)
+
+		expect(await forwardSceneAction('scene-1', {})).toMatchObject({
+			data: { success: false, error: 'Unauthorized', status: 401 },
+			init: { status: 401 }
+		})
+		vi.unstubAllGlobals()
+	})
+
+	it('answers an unreachable request with 503 and the marker', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => {
+				throw new TypeError('Failed to fetch')
+			})
+		)
+
+		expect(await forwardSceneAction('scene-1', {})).toMatchObject({
+			data: { unreachable: true, status: 503 },
+			init: { status: 503 }
+		})
+		vi.unstubAllGlobals()
 	})
 })
