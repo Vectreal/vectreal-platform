@@ -16,15 +16,15 @@ import {
 	useRef,
 	useState
 } from 'react'
-import { Box3, Mesh, Object3D, type Texture, Vector3 } from 'three'
+import { Mesh, Object3D, type Texture, Vector3 } from 'three'
 
 import LoadFailureBoundary from '../load-failure-boundary'
+import { measureModel, worldBounds } from './model-measurement'
 import SceneBakedShadow from './scene-baked-shadow'
 import ShadowAutoCutoff from './shadow-auto-cutoff'
 import {
 	captureShadowDensity,
 	computeBakeSignature,
-	computeModelFingerprint,
 	isPersistedBakeValid,
 	PERSISTED_BAKE_RESOLUTION
 } from './shadow-bake'
@@ -245,10 +245,8 @@ export const useModelMetrics = (
 
 	useEffect(() => {
 		if (!model) return
-		// Bake ancestor transforms (model normalization scale, Center offset) into
-		// the world matrices before measuring.
-		model.updateWorldMatrix(true, true)
-		const size = new Box3().setFromObject(model).getSize(new Vector3())
+		// World size, so after the normalization scale applied above the model.
+		const size = worldBounds(model).getSize(new Vector3())
 		const footprint = Math.max(size.x, size.z)
 		const radius = 0.5 * Math.hypot(size.x, size.y, size.z)
 		const measurable = footprint > 0 && radius > 0 && Number.isFinite(radius)
@@ -259,7 +257,7 @@ export const useModelMetrics = (
 						footprint,
 						radius,
 						height: size.y,
-						vertexCount: computeModelFingerprint(model),
+						vertexCount: measureModel(model).vertexCount,
 						measured: true,
 						sized: true
 					}

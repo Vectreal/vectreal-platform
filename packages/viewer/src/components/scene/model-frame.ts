@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Box3, Vector3 } from 'three'
+import { Vector3 } from 'three'
+
+import { measureModel } from './model-measurement'
 
 import type { Object3D } from 'three'
 
@@ -23,7 +25,7 @@ export interface ModelFrame {
 }
 
 const measureRawDiagonal = (model: Object3D) =>
-	new Box3().setFromObject(model).getSize(new Vector3()).length()
+	measureModel(model).bounds.getSize(new Vector3()).length()
 
 /**
  * The frame for `model`: the previous one while the key is unchanged, a fresh

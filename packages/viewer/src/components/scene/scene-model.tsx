@@ -21,6 +21,7 @@ import {
 } from 'three'
 
 import { useModelFrame, type ModelKey } from './model-frame'
+import { worldBounds } from './model-measurement'
 
 import type {
 	SceneScreenshotCapture,
@@ -252,10 +253,7 @@ const SceneModel = memo((props: ModelProps) => {
 		}
 
 		if (clipSphereDirtyRef.current && focusGroupRef.current) {
-			focusGroupRef.current.updateWorldMatrix(true, true)
-			new Box3()
-				.setFromObject(focusGroupRef.current)
-				.getBoundingSphere(clipSphereRef.current)
+			worldBounds(object).getBoundingSphere(clipSphereRef.current)
 			if (clipSphereRef.current.radius > 0) {
 				clipSphereDirtyRef.current = false
 			}
