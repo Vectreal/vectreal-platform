@@ -505,6 +505,14 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		zoom?: boolean
 		pan?: boolean
 	} | null>(null)
+	/*
+	  A host's `set_transition`. A ref, written the moment the command lands:
+	  state reaches the camera only on the next render, and an `activate_camera`
+	  sent straight after it runs before that render would. Held here rather
+	  than in the camera layer because the canvas unmounts while the viewer is
+	  out of view, and the override has to outlive it.
+	*/
+	const transitionOverride = useRef<CameraProps['sceneTransition'] | null>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	const animation = useAnimationRuntime({
@@ -520,6 +528,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
+			transitionOverride.current = null
 		}
 	}, [hasContent])
 
@@ -540,11 +549,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const executeViewerCommand = useCallback(
 		(command: ViewerCommand) => {
 			switch (command.type) {
-				// The camera layer owns the transition, so a `set_transition` sent
-				// straight before an `activate_camera` reaches it first, in order,
-				// rather than waiting on a render the flight would not wait for.
 				case 'activate_camera':
-				case 'set_transition':
 					cameraLayer.execute(command)
 					break
 				case 'focus_hotspot':
@@ -564,6 +569,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					break
 				case 'set_controls_options':
 					setControlsOptionsOverride((prev) => ({ ...prev, ...command }))
+					break
+				case 'set_transition':
+					transitionOverride.current = {
+						type: command.transitionType,
+						duration: command.duration,
+						easing: command.easing
+					}
 					break
 				case 'restart_animation':
 				case 'seek_animation_clip':
@@ -842,6 +854,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<SceneCamera
 									{...cameraOptions}
 									cameras={aimedCameras}
+									transitionOverride={transitionOverride}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}

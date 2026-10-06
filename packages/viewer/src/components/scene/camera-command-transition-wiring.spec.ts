@@ -10,6 +10,10 @@
  * the camera on the next render: an embed host calling `setTransition` and
  * then `activateCamera` back to back sends two messages that both run before
  * that render, so the flight still used the old transition.
+ *
+ * The override stays with the viewer, not the camera layer: the canvas
+ * unmounts while the viewer is out of view, and a held `set_transition` would
+ * replay after a camera command sent before it.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -37,31 +41,35 @@ const executor = slice(
 	'useEffect('
 )
 
-describe('set_transition reaches the camera before the next command', () => {
-	it('is routed to the camera layer, in order with activate_camera', () => {
-		const routing = slice(viewer, "case 'activate_camera':", 'break')
-		expect(routing).toContain("case 'set_transition':")
-		expect(routing).toContain('cameraLayer.execute(command)')
+describe('set_transition is in effect before the next command', () => {
+	it('is written to a viewer-owned ref the moment it runs', () => {
+		const handler = slice(viewer, "case 'set_transition':", 'break')
+		expect(handler).toContain('transitionOverride.current = {')
+		expect(viewer).toContain('const transitionOverride = useRef<')
 		expect(viewer).not.toContain('setTransitionOverride')
 	})
 
-	it('is recorded the moment the command runs', () => {
-		const recorded = slice(
-			executor,
-			"if (command.type === 'set_transition') {",
-			"if (command.type !== 'activate_camera')"
-		)
-		expect(recorded).toContain('transitionOverride.current = {')
-		expect(recorded).toContain('return')
+	it('is handed to the camera as the ref, not a value', () => {
+		expect(viewer).toContain('transitionOverride={transitionOverride}')
+		expect(viewer).not.toMatch(/sceneTransition=\{/)
 	})
 })
 
-describe('camera commands read the current transition', () => {
-	it('resolves the selection from the override, then the latest prop', () => {
+describe('camera flights read the current transition', () => {
+	it('resolves a command from the override, then the latest prop', () => {
 		expect(executor).toContain(
-			'transitionOverride.current ?? sceneTransitionRef.current,'
+			'transitionOverride?.current ?? sceneTransitionRef.current,'
 		)
 		expect(executor).not.toMatch(/\bsceneTransition,/)
+	})
+
+	it('resolves a prop-driven flight from the override too', () => {
+		const effect = slice(
+			camera,
+			'// update camera properties if props change after initialization',
+			'const selectionKey'
+		)
+		expect(effect).toContain('transitionOverride?.current ?? sceneTransition,')
 	})
 
 	it('keeps the ref on the transition of every render', () => {
@@ -69,11 +77,5 @@ describe('camera commands read the current transition', () => {
 		expect(camera).toContain(
 			'\tconst sceneTransitionRef = useRef(sceneTransition)\n\tsceneTransitionRef.current = sceneTransition\n'
 		)
-	})
-
-	it('applies the override to a selection the props make too', () => {
-		expect(
-			camera.match(/transitionOverride\.current \?\? sceneTransition\b/g)
-		).toHaveLength(3)
 	})
 })

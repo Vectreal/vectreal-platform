@@ -23,9 +23,7 @@ describe('viewer commands are held for the layer that runs them', () => {
 	it('routes camera and hotspot commands through held slots', () => {
 		expect(viewer).toContain('const cameraLayer = useHeldExecutor()')
 		expect(viewer).toContain('const hotspotLayer = useHeldExecutor()')
-		expect(viewer).toMatch(
-			/case 'activate_camera':\s*case 'set_transition':\s*cameraLayer\.execute/
-		)
+		expect(viewer).toMatch(/case 'activate_camera':\s*cameraLayer\.execute/)
 		expect(viewer).toMatch(/case 'focus_hotspot':\s*hotspotLayer\.execute/)
 		expect(viewer).toContain('onCommandExecutorReady={cameraLayer.register}')
 		expect(viewer).toContain('onCommandExecutorReady={hotspotLayer.register}')
