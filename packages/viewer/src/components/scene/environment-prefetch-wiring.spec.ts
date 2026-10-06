@@ -24,8 +24,9 @@ const viewer = readFileSync(
 describe('environment prefetch', () => {
 	it('loads the scene environment from the shared URL rule', () => {
 		expect(environment).toContain(
-			'files={resolveEnvironmentFiles(environment)}'
+			'const files = resolveEnvironmentFiles(environment)'
 		)
+		expect(environment).toContain('files={files}')
 	})
 
 	it('prefetches the same file, and only once a surface names one', () => {

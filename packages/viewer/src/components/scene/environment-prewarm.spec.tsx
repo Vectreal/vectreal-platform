@@ -22,7 +22,9 @@ const compile = vi.fn()
 /** One renderer for every render, as R3F's store gives. */
 const gl = { compile }
 
-const useEnvironment = vi.hoisted(() => vi.fn())
+const useEnvironment = vi.hoisted(() =>
+	Object.assign(vi.fn(), { clear: vi.fn() })
+)
 
 vi.mock('@react-three/drei', () => ({ useEnvironment }))
 
@@ -34,6 +36,7 @@ afterEach(() => {
 	vi.restoreAllMocks()
 	compile.mockReset()
 	useEnvironment.mockReset()
+	useEnvironment.clear.mockReset()
 })
 
 describe('prewarmEnvironment', () => {
@@ -146,10 +149,45 @@ describe('EnvironmentPrewarm', () => {
 		const { rerender, unmount } = render(page('missing.hdr'))
 		expect(pageCaught).not.toHaveBeenCalled()
 		expect(compile).not.toHaveBeenCalled()
+		expect(useEnvironment.clear).toHaveBeenCalledWith({ files: 'missing.hdr' })
 
 		rerender(page('studio.hdr'))
 		expect(compile).toHaveBeenCalledOnce()
 		unmount()
+	})
+})
+
+describe('EnvironmentPrewarm, after a failed load', () => {
+	const renderFailing = (files: string | string[]) => {
+		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const pageCaught = vi.fn()
+		useEnvironment.mockImplementation(() => {
+			throw new Error('404')
+		})
+		render(
+			<PageBoundary onCatch={pageCaught}>
+				<EnvironmentPrewarm files={files} />
+			</PageBoundary>
+		)
+		return pageCaught
+	}
+
+	it('forgets a failed cube map by its own list of files', () => {
+		const cube = ['px.hdr', 'nx.hdr', 'py.hdr', 'ny.hdr', 'pz.hdr', 'nz.hdr']
+
+		renderFailing(cube)
+
+		expect(useEnvironment.clear).toHaveBeenCalledWith({ files: cube })
+	})
+
+	it('keeps the page up when the failure cannot be forgotten', () => {
+		useEnvironment.clear.mockImplementation(() => {
+			throw new Error('useEnvironment: Unrecognized file extension')
+		})
+
+		const pageCaught = renderFailing('/api/assets/123')
+
+		expect(pageCaught).not.toHaveBeenCalled()
 	})
 })
 

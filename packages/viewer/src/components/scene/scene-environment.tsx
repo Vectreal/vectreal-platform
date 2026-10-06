@@ -6,6 +6,9 @@ import {
 } from '@vctrl/core'
 import { memo } from 'react'
 
+import LoadFailureBoundary from '../load-failure-boundary'
+import { useRoomEnvironment } from './room-environment'
+
 export const defaultEnvOptions = {
 	preset: DEFAULT_ENVIRONMENT_PRESET,
 	background: false,
@@ -35,7 +38,37 @@ export const preloadEnvironmentFiles = (files: string | string[]) => {
 }
 
 /**
- * SceneEnvironment component that sets up the environment for a scene.
+ * Drops a failed map from the loader cache, which otherwise keeps the failure
+ * and throws it for that file for the rest of the page's life.
+ */
+export const forgetEnvironmentFiles = (files: string | string[]) => {
+	try {
+		useEnvironment.clear({ files })
+	} catch {
+		return
+	}
+}
+
+/** Lights the scene, without a backdrop, while its own map is unavailable. */
+const FallbackEnvironment = ({
+	environmentIntensity,
+	scene
+}: {
+	environmentIntensity: number
+	scene: EnvironmentProps['scene']
+}) => {
+	useRoomEnvironment(environmentIntensity, scene)
+	return null
+}
+
+/**
+ * Sets up the environment for a scene.
+ *
+ * A map that fails to download is an extra gone missing, not a broken scene:
+ * the scene is lit by a local room instead, from the same render that caught
+ * the failure, so the shader warm-up compiles against the environment the
+ * scene is shown with either way. The failure is forgotten, so the map is
+ * downloaded again the next time it is shown, but not while it is on screen.
  */
 const SceneEnvironment = memo((props: EnvironmentProps) => {
 	const environment = { ...defaultEnvOptions, ...props }
@@ -46,16 +79,28 @@ const SceneEnvironment = memo((props: EnvironmentProps) => {
 		environmentIntensity,
 		scene
 	} = environment
+	const files = resolveEnvironmentFiles(environment)
 
 	return (
-		<Environment
-			files={resolveEnvironmentFiles(environment)}
-			background={background}
-			backgroundBlurriness={backgroundBlurriness}
-			backgroundIntensity={backgroundIntensity}
-			environmentIntensity={environmentIntensity}
-			scene={scene}
-		/>
+		<LoadFailureBoundary
+			key={String(files)}
+			onError={() => forgetEnvironmentFiles(files)}
+			fallback={
+				<FallbackEnvironment
+					environmentIntensity={environmentIntensity}
+					scene={scene}
+				/>
+			}
+		>
+			<Environment
+				files={files}
+				background={background}
+				backgroundBlurriness={backgroundBlurriness}
+				backgroundIntensity={backgroundIntensity}
+				environmentIntensity={environmentIntensity}
+				scene={scene}
+			/>
+		</LoadFailureBoundary>
 	)
 })
 
