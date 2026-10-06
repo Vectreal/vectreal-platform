@@ -1,3 +1,4 @@
+import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -5,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
+import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
@@ -13,6 +15,7 @@ import {
 	sceneMetaAtom,
 	openComposeToolAtom
 } from '../../lib/stores/publisher-config-store'
+import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
 import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
@@ -67,6 +70,9 @@ const PublisherPage = () => {
 	// viewer keeps the camera and framing where the user left them.
 	const modelKey =
 		loadedModel.status === 'ready' ? loadedModel.loadId : undefined
+	// A held comparison only changes what is drawn: the camera, framing,
+	// shadows, animation and hotspots keep following the loaded model.
+	const comparedModel = useAtomValue(comparedModelAtom)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const {
@@ -211,6 +217,7 @@ const PublisherPage = () => {
 				<ClientVectrealViewer
 					model={file?.model}
 					modelKey={modelKey}
+					displayedModel={comparedModel?.model}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
 					envOptions={environment}
@@ -258,6 +265,23 @@ const PublisherPage = () => {
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
+				{comparedModel && (
+					<div
+						className={cn(
+							'pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3',
+							PUBLISHER_LAYER.compareLabel
+						)}
+					>
+						<p
+							role="status"
+							className="ds-overlay rounded-full px-3 py-1 text-xs font-medium"
+						>
+							{comparedModel.isOriginal
+								? 'Showing the original'
+								: 'Showing the saved version'}
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	)

@@ -360,10 +360,18 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const stabilizationStartedAt = useRef<number | null>(null)
 	const transitionRuntime = useRef<CameraTransitionRuntime | null>(null)
 	const openingPose = useRef<OpeningPose | null>(null)
+	/** The camera in view, by whichever route it got there. */
 	const previousSelectionKey = useRef<string | null>(null)
-	const previousSelectionSignature = useRef<CameraSelectionSignature | null>(
-		null
-	)
+	/**
+	 * The selection the props last asked for. Kept apart from the camera in
+	 * view because a command (a marker click, a host call) moves the view
+	 * without touching the props: compared against the view, any unrelated
+	 * re-render after a command read as "the props changed" and flew back.
+	 */
+	const requestedSelection = useRef<{
+		cameraId: string
+		signature: CameraSelectionSignature
+	} | null>(null)
 
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
@@ -487,11 +495,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 			startTransition(nextSelection)
 			previousSelectionKey.current = nextSelection.cameraId
-			previousSelectionSignature.current = cameraSelectionSignature(
-				cameras,
-				nextSelection.cameraId,
-				nextSelection.transition
-			)
 			onInteractionEvent?.({
 				type: 'camera_changed',
 				cameraId: nextSelection.cameraId
@@ -558,11 +561,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 			initializedCameraPosition.current = true
 			previousSelectionKey.current = selection.cameraId
-			previousSelectionSignature.current = cameraSelectionSignature(
-				cameras,
-				selection.cameraId,
-				selection.transition
-			)
+			requestedSelection.current = {
+				cameraId: selection.cameraId,
+				signature: cameraSelectionSignature(cameras, selection.cameraId)
+			}
 		},
 		[
 			activeCameraId,
@@ -602,18 +604,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			openingPose.current
 		)
 		const selectionKey = selection.cameraId
-		const signature = cameraSelectionSignature(
-			cameras,
-			selection.cameraId,
-			selection.transition
-		)
+		const signature = cameraSelectionSignature(cameras, selection.cameraId)
 
 		if (
-			previousSelectionKey.current === selectionKey &&
-			previousSelectionSignature.current === signature
+			requestedSelection.current?.cameraId === selectionKey &&
+			requestedSelection.current.signature === signature
 		) {
 			return
 		}
+		requestedSelection.current = { cameraId: selectionKey, signature }
 
 		// Only animate when switching between cameras; apply property edits instantly
 		// so sidebar changes don't re-trigger the transition for the active camera.
@@ -634,7 +633,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			startTransition(selection)
 		}
 		previousSelectionKey.current = selectionKey
-		previousSelectionSignature.current = signature
 		onInteractionEvent?.({
 			type: 'camera_changed',
 			cameraId: selection.cameraId

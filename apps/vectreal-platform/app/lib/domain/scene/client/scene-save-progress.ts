@@ -55,6 +55,12 @@ export interface SavePanelState {
 	message: string | null
 }
 
+/** Whether a save has started and not yet finished, either way. */
+export const isSaveInFlight = (state: SavePanelState | null): boolean =>
+	state?.status === 'preparing' ||
+	state?.status === 'uploading' ||
+	state?.status === 'committing'
+
 /** The panel's input: a file arrives with its preview already turned into a URL. */
 export type SavePanelEvent =
 	| Exclude<SaveProgressEvent, { type: 'file-added' }>

@@ -8,7 +8,7 @@ const camera = (overrides: Partial<CameraConfig> = {}): CameraConfig =>
 	({ cameraId: 'cam-a', name: 'A', ...overrides }) as CameraConfig
 
 const sign = (cameras: CameraConfig[], id = 'cam-a') =>
-	cameraSelectionSignature(cameras, id, undefined)
+	cameraSelectionSignature(cameras, id)
 
 describe('cameraSelectionSignature', () => {
 	it('is the same for a camera nobody edited', () => {
@@ -55,14 +55,6 @@ describe('cameraSelectionSignature', () => {
 
 	it('changes when the field of view changes', () => {
 		expect(sign([camera({ fov: 50 })])).not.toBe(sign([camera({ fov: 60 })]))
-	})
-
-	it('follows the transition it was given', () => {
-		const cameras = [camera()]
-
-		expect(
-			cameraSelectionSignature(cameras, 'cam-a', { type: 'linear' })
-		).not.toBe(cameraSelectionSignature(cameras, 'cam-a', { type: 'none' }))
 	})
 
 	it('reads a legacy lookAt as the target', () => {

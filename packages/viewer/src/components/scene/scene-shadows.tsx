@@ -6,10 +6,12 @@ import {
 import { useThree } from '@react-three/fiber'
 import {
 	type ComponentRef,
+	Fragment,
 	memo,
 	type RefObject,
 	Suspense,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState
@@ -138,6 +140,11 @@ type SceneShadowsProps = Partial<ShadowsProps> & {
 	 * bake can be proportioned to it.
 	 */
 	model?: Object3D
+	/**
+	 * The viewer's `displayedModel`: drawn in place of `model`, so a live bake
+	 * still accumulating meanwhile takes its frames from that object.
+	 */
+	displayedModel?: Object3D
 	/**
 	 * Model normalization, which rescales the model via an ancestor group.
 	 *
@@ -271,6 +278,11 @@ export const useModelMetrics = (
 		: { ...measurement.metrics, measured: false, sized: false }
 }
 
+type BakeApi = ComponentRef<typeof AccumulativeShadows>
+
+/** A non-temporal bake is complete on mount, so its `count` stays 0. */
+const isBakeSettled = (api: BakeApi) => !api.temporal || api.count >= api.frames
+
 interface ShadowBakeCaptureProps {
 	apiRef: RefObject<ComponentRef<typeof AccumulativeShadows> | null>
 	/** Signature of the live bake inputs, measured on the loaded model. */
@@ -363,6 +375,7 @@ const ShadowBakeCapture = ({
 const SceneShadows = memo(
 	({
 		model,
+		displayedModel,
 		normalizationOptions,
 		isModelAnimating = false,
 		lightEditable = false,
@@ -589,6 +602,52 @@ const SceneShadows = memo(
 		const showsPersistedBake =
 			usePersistedBake && bakedShadow?.url !== failedBakeUrl
 
+		// Every live shadow pass captures the meshes drawn when it starts: drei's
+		// bake snapshots them on reset, the contact pool renders once, the cutoff
+		// calibrates once. So while the viewer draws another object, a bake that
+		// has not settled starts over on it, and once the model is drawn again
+		// the passes start over on the model unless they had settled before the
+		// hold. Resetting reuses the bake's render targets; a remount would leak
+		// them (drei never disposes them), so the passes remount only when they
+		// changed during the hold. A layout effect, so no frame renders between
+		// the swap and the restart.
+		const [shadowGeneration, setShadowGeneration] = useState(0)
+		const holdRef = useRef<{
+			settledBake: BakeApi | null
+			passesChanged: boolean
+		} | null>(null)
+		useLayoutEffect(() => {
+			const api = apiRef.current
+			if (displayedModel) {
+				const settled = api === null || isBakeSettled(api)
+				// Drawing one object after another keeps the first one's record.
+				holdRef.current ??= {
+					settledBake: settled ? api : null,
+					passesChanged: false
+				}
+				if (api && !settled) api.reset()
+				return
+			}
+			const hold = holdRef.current
+			holdRef.current = null
+			if (!hold) return
+			if (hold.passesChanged)
+				setShadowGeneration((generation) => generation + 1)
+			else if (api && api !== hold.settledBake) api.reset()
+		}, [displayedModel])
+		// Declared after the hold effect, so a pass that changes in the commit a
+		// hold starts in is still recorded.
+		useLayoutEffect(() => {
+			if (holdRef.current) holdRef.current.passesChanged = true
+		}, [
+			options.enabled,
+			isModelAnimating,
+			showsPersistedBake,
+			sized,
+			bake,
+			contactShadow
+		])
+
 		if (!options.enabled) return null
 
 		if (isModelAnimating) {
@@ -605,37 +664,39 @@ const SceneShadows = memo(
 
 		return (
 			<>
-				{sized && contactShadow}
+				<Fragment key={shadowGeneration}>
+					{sized && contactShadow}
 
-				{showsPersistedBake && bakedShadow ? (
-					// Load-time fast path: render the stored bake, no recomputation.
-					<LoadFailureBoundary
-						key={bakedShadow.url}
-						onError={() => setFailedBakeUrl(bakedShadow.url)}
-					>
-						<Suspense fallback={null}>
-							<SceneBakedShadow
-								url={bakedShadow.url}
-								planeScale={planeScale}
-								opacity={options.opacity ?? defaultShadowsOptions.opacity!}
-								color={options.color ?? '#000000'}
+					{showsPersistedBake && bakedShadow ? (
+						// Load-time fast path: render the stored bake, no recomputation.
+						<LoadFailureBoundary
+							key={bakedShadow.url}
+							onError={() => setFailedBakeUrl(bakedShadow.url)}
+						>
+							<Suspense fallback={null}>
+								<SceneBakedShadow
+									url={bakedShadow.url}
+									planeScale={planeScale}
+									opacity={options.opacity ?? defaultShadowsOptions.opacity!}
+									color={options.color ?? '#000000'}
+								/>
+							</Suspense>
+						</LoadFailureBoundary>
+					) : sized ? (
+						// Not before: drei bakes on mount, so a bake sized from the
+						// placeholder metrics is thrown away when the real ones land.
+						// A static bake blocks the main thread for its whole length.
+						<>
+							{bake}
+
+							<ShadowAutoCutoff
+								apiRef={apiRef}
+								cutoffScale={options.cutoffScale ?? 1}
+								temporal={temporal ?? true}
 							/>
-						</Suspense>
-					</LoadFailureBoundary>
-				) : sized ? (
-					// Not before: drei bakes on mount, so a bake sized from the
-					// placeholder metrics is thrown away when the real ones land.
-					// A static bake blocks the main thread for its whole length.
-					<>
-						{bake}
-
-						<ShadowAutoCutoff
-							apiRef={apiRef}
-							cutoffScale={options.cutoffScale ?? 1}
-							temporal={temporal ?? true}
-						/>
-					</>
-				) : null}
+						</>
+					) : null}
+				</Fragment>
 
 				{/* Mounted in both branches so a save can either persist a fresh live
 				    bake or confirm the stored one is still valid (avoiding re-upload). */}
