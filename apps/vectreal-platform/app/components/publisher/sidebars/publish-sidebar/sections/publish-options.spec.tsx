@@ -245,6 +245,24 @@ describe('the publish panel', () => {
 		})
 	})
 
+	it('leaves the figures to a scene or upload that replaced the document during the upload', async () => {
+		const store = renderPanel(balancedPreset)
+		mocks.publishSceneFromGlb.mockImplementation(async () => {
+			mocks.getDocument.mockImplementation(() => new Document())
+			return {
+				response: {},
+				publishState: { sceneId: 'scene-1', status: 'published' }
+			}
+		})
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalled())
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedTextureBytes: null,
+			publishedEncoding: null
+		})
+	})
+
 	it('leaves the figures to a pass that was running when Publish was pressed', async () => {
 		const store = renderPanel(balancedPreset, (store) =>
 			store.set(optimizationRuntimeAtom, (state) => ({

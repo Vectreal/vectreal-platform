@@ -166,18 +166,20 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			})
 
 			// Only once it has shipped, and only if the document exported is the
-			// one on screen: no pass was running when Publish was pressed, and
-			// none has started since. The figures then describe that file, in the
-			// codecs the export chose, rather than the Draco and WebP projection;
-			// otherwise the pass's own figures win.
+			// one on screen: the same document object, so no other scene or upload
+			// replaced it; no pass running when Publish was pressed; and no pass
+			// started since, which can rewrite the document in place. The figures
+			// then describe that file, in the codecs the export chose, rather than
+			// the Draco and WebP projection; otherwise the newer figures win.
 			const data = publishResult.response as PublishSceneResponse
+			const sameDocument = optimizer?._getDocument?.() === document
 			const ktx2Total =
 				(result.textures?.encoded.length ?? 0) +
 				(result.textures?.kept.length ?? 0)
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				...(data.stats ? { latestSceneStats: data.stats } : {}),
-				...(!isOptimizing && prev.passRevision === passRevision
+				...(sameDocument && !isOptimizing && prev.passRevision === passRevision
 					? {
 							optimizedSceneBytes: glbData.byteLength,
 							optimizedTextureBytes: result.textureBytes,
