@@ -60,6 +60,7 @@ import {
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import EnvironmentPrewarm from './components/scene/environment-prewarm'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
@@ -815,6 +816,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					powerPreference: 'low-power'
 				}}
 			>
+				<EnvironmentPrewarm files={environmentFiles} />
 				<Suspense fallback={null}>
 					{hasContent && (
 						<>
