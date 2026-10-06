@@ -42,7 +42,10 @@ import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ConverterSurface } from '../app/components/convert/converter-surface'
-import { convertPairBySlug } from '../app/lib/convert/convert-pairs'
+import {
+	convertPairBySlug,
+	USDZ_GLASS_NOTE
+} from '../app/lib/convert/convert-pairs'
 
 /* ------------------------------------------------------------------ *
  * A model context the test drives, rather than a value it fixes.
@@ -121,7 +124,10 @@ const reachStage = (index: number, file: LoaderFile) =>
 const refuse = (index: number, code = 'unsupported_format') =>
 	pending[index]?.reject({ code, message: 'nope' })
 
-const exported = { data: new Uint8Array(0) }
+const exported = {
+	data: new Uint8Array(0),
+	transmissiveMaterials: [] as string[]
+}
 
 /** Blocks the WebP pass, the slowest thing a conversion does. */
 let passBlock: Promise<void> | null = null
@@ -370,6 +376,7 @@ beforeEach(() => {
 		}
 	)
 	exported.data = new Uint8Array(0)
+	exported.transmissiveMaterials = []
 	exportBlock = null
 	passBlock = null
 	latestToken = 0
@@ -497,6 +504,34 @@ describe('a document that was just read is not read again', () => {
 		expect(loadCalls).toHaveLength(1)
 		expect(screen.getByTestId('stage').dataset.model).toBe('chair')
 	})
+})
+
+describe('a USDZ result says when its glass was flattened', () => {
+	/*
+	  The stage keeps drawing the glass clear, so this line is the only place the
+	  reader hears about it before Quick Look shows them.
+	*/
+	it.each([
+		[['lens'], true],
+		[[], false]
+	])(
+		'with transmissive materials %j, says so: %s',
+		async (transmissiveMaterials, expected) => {
+			render(<ConverterSurface pair={convertPairBySlug('gltf-to-usdz')!} />)
+
+			drop([gltfFile()])
+			await waitFor(() => expect(loadCalls).toHaveLength(1))
+			settle(0, loadedFile({ sourcePackageBytes: 1_000 }))
+			await screen.findByTestId('stage')
+
+			exported.data = new Uint8Array(900)
+			exported.transmissiveMaterials = transmissiveMaterials
+			fireEvent.click(convertButton())
+			await screen.findByText(formatFileSize(900))
+
+			expect(screen.queryByText(USDZ_GLASS_NOTE) !== null).toBe(expected)
+		}
+	)
 })
 
 describe('a load that lost does not describe the page', () => {
