@@ -7,7 +7,6 @@ import {
 	OCCLUSION_INTERVAL_SECONDS,
 	occlusionRayFar
 } from './hotspot-occlusion'
-import { worldBounds } from './model-measurement'
 import { resolveHotspotMarkers } from './resolve-hotspot-markers'
 import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
 import { leftOpenHotspotView } from './scene-view-return'
@@ -431,15 +430,18 @@ const SceneHotspots = ({
 
 			/*
 			  The occlusion tolerance is a fraction of the model's own size, so the
-			  diagonal is read here, once per pass, from the current world bounds.
-			  Normalization rescales the model through an ancestor group without
-			  replacing the object, so a diagonal cached against the model's identity
-			  would go stale for exactly the edit this tolerance has to survive;
-			  `worldBounds` applies the ancestors on every read without walking the
-			  geometry again.
+			  diagonal is measured here, once per pass, rather than cached against the
+			  model's identity. Normalization rescales the model through an ancestor
+			  group without replacing the object, so an effect keyed on `model` would
+			  hold a stale diagonal for exactly the edit this tolerance has to survive.
+			  One `Box3` walk at 15Hz is the same order as one of the raycasts below,
+			  and there are as many of those as there are markers - but skipped
+			  entirely when every marker has occlusion off, which is a scene that
+			  casts no rays at all.
 			*/
 			const diagonal = markers.some((marker) => marker.occlusionEnabled)
-				? worldBounds(model, measureBox.current)
+				? measureBox.current
+						.setFromObject(model)
 						.getSize(measureSize.current)
 						.length()
 				: 0

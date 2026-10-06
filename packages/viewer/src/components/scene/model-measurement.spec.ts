@@ -61,6 +61,18 @@ describe('measureModel', () => {
 		expect(loose.bounds.min.x).toBeCloseTo(0)
 	})
 
+	it('keeps each model to its own measurement', () => {
+		const walk = vi.spyOn(Box3.prototype, 'setFromObject')
+		const large = model()
+		const small = new Group().add(
+			new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial())
+		)
+
+		expect(size(measureModel(large).bounds)).toEqual(new Vector3(2, 4, 6))
+		expect(size(measureModel(small).bounds)).toEqual(new Vector3(1, 1, 1))
+		expect(walk).toHaveBeenCalledTimes(2)
+	})
+
 	it('counts the vertices the bake signature fingerprints', () => {
 		expect(measureModel(model()).vertexCount).toBe(
 			new BoxGeometry(2, 4, 6).attributes.position.count
@@ -96,6 +108,21 @@ describe('worldBounds', () => {
 		expect(walk).not.toHaveBeenCalled()
 	})
 
+	it('ignores a rotated parent the model was first measured under', () => {
+		const subject = model()
+		const host = new Group()
+		host.rotation.set(0.7, 0.4, 1.1)
+		host.scale.setScalar(5)
+		host.add(subject)
+
+		const { bounds } = measureModel(subject)
+
+		expect(size(bounds).x).toBeCloseTo(2, 9)
+		expect(size(bounds).y).toBeCloseTo(4, 9)
+		expect(size(bounds).z).toBeCloseTo(6, 9)
+		expect(subject.parent).toBe(host)
+	})
+
 	it('stays empty for a model with nothing to measure', () => {
 		const empty = new Group()
 		mountUnder(empty, 3)
@@ -115,15 +142,57 @@ describe('the viewer', () => {
 		})
 	const viewerSrc = join(import.meta.dirname, '..', '..')
 
-	it('walks a model only in the shared measurement and the screenshot fit', () => {
-		const walkers = sources(viewerSrc)
-			.filter((path) => readFileSync(path, 'utf8').includes('.setFromObject('))
-			.map((path) => path.slice(viewerSrc.length + 1))
-			.sort()
+	const read = (path: string) => readFileSync(join(viewerSrc, path), 'utf8')
+	const occurrences = (source: string, needle: string) =>
+		source.split(needle).length - 1
 
-		expect(walkers).toEqual([
-			'components/scene/model-measurement.ts',
-			'components/scene/scene-model.tsx'
+	it('walks a model only in the shared measurement, the screenshot fit and the live hotspot pose', () => {
+		const walks = Object.fromEntries(
+			sources(viewerSrc)
+				.map((path) => [
+					path.slice(viewerSrc.length + 1),
+					occurrences(readFileSync(path, 'utf8'), '.setFromObject(')
+				])
+				.filter(([, count]) => count)
+		)
+
+		expect(walks).toEqual({
+			'components/scene/model-measurement.ts': 1,
+			'components/scene/scene-hotspots.tsx': 1,
+			'components/scene/scene-model.tsx': 1
+		})
+
+		const sceneModel = read('components/scene/scene-model.tsx')
+		const screenshotFit = sceneModel.slice(
+			sceneModel.indexOf('function solveAutoFitFraming('),
+			sceneModel.indexOf(
+				'\n}\n',
+				sceneModel.indexOf('function solveAutoFitFraming(')
+			)
+		)
+		expect(screenshotFit).toContain('.setFromObject(')
+	})
+
+	it('reads world bounds wherever the normalization scale matters', () => {
+		for (const [path, call] of [
+			['components/scene/scene-shadows.tsx', 'worldBounds(model)'],
+			['components/scene/scene-postprocessing.tsx', 'worldBounds(model)'],
+			[
+				'components/scene/scene-model.tsx',
+				'worldBounds(object).getBoundingSphere'
+			]
+		]) {
+			expect(read(path), path).toContain(call)
+		}
+
+		const rawReaders = sources(viewerSrc)
+			.filter((path) =>
+				/measureModel\([^)]*\)\.bounds/.test(readFileSync(path, 'utf8'))
+			)
+			.map((path) => path.slice(viewerSrc.length + 1))
+		expect(rawReaders).toEqual([
+			'components/scene/model-frame.ts',
+			'components/scene/model-measurement.ts'
 		])
 	})
 })

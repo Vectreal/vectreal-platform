@@ -36,6 +36,21 @@ describe('useModelMetrics', () => {
 		})
 	})
 
+	it('measures in world space, after the normalization scale', () => {
+		const model = box(4, 2, 3)
+		const center = new Group()
+		center.position.set(5, -2, 3)
+		const normalization = new Group()
+		normalization.scale.setScalar(2)
+		center.add(normalization)
+		normalization.add(model)
+
+		const { result } = renderMetrics(model)
+
+		expect(result.current).toMatchObject({ footprint: 8, height: 4 })
+		expect(result.current.radius).toBeCloseTo(Math.hypot(8, 4, 6) / 2)
+	})
+
 	it('keeps the previous figures, unmeasured and unsized, until a swapped model is measured', () => {
 		const { result, rerender, renders } = renderMetrics(box(4, 2, 3))
 		renders.length = 0
