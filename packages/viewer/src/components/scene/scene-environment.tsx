@@ -4,7 +4,10 @@ import {
 	EnvironmentProps,
 	resolveEnvironmentFiles
 } from '@vctrl/core'
-import { memo } from 'react'
+import { memo, useState } from 'react'
+
+import LoadFailureBoundary from '../load-failure-boundary'
+import { useRoomEnvironmentMap } from './room-environment-map'
 
 export const defaultEnvOptions = {
 	preset: DEFAULT_ENVIRONMENT_PRESET,
@@ -34,8 +37,29 @@ export const preloadEnvironmentFiles = (files: string | string[]) => {
 	}
 }
 
+/** Lights the scene, without a backdrop, while its own map is unavailable. */
+const FallbackEnvironment = ({
+	environmentIntensity,
+	scene
+}: Pick<EnvironmentProps, 'environmentIntensity' | 'scene'>) => {
+	const map = useRoomEnvironmentMap()
+
+	return map ? (
+		<Environment
+			map={map}
+			environmentIntensity={environmentIntensity}
+			scene={scene}
+		/>
+	) : null
+}
+
 /**
- * SceneEnvironment component that sets up the environment for a scene.
+ * Sets up the environment for a scene.
+ *
+ * A map that fails to download is an extra gone missing, not a broken scene:
+ * the scene is lit by a local room instead, and a different map is tried
+ * afresh. The load still suspends the viewer's content, so the shader warm-up
+ * compiles against the environment the scene is shown with.
  */
 const SceneEnvironment = memo((props: EnvironmentProps) => {
 	const environment = { ...defaultEnvOptions, ...props }
@@ -46,16 +70,30 @@ const SceneEnvironment = memo((props: EnvironmentProps) => {
 		environmentIntensity,
 		scene
 	} = environment
+	const files = resolveEnvironmentFiles(environment)
+	const filesKey = String(files)
+	const [failedFilesKey, setFailedFilesKey] = useState<null | string>(null)
+
+	if (failedFilesKey === filesKey) {
+		return (
+			<FallbackEnvironment
+				environmentIntensity={environmentIntensity}
+				scene={scene}
+			/>
+		)
+	}
 
 	return (
-		<Environment
-			files={resolveEnvironmentFiles(environment)}
-			background={background}
-			backgroundBlurriness={backgroundBlurriness}
-			backgroundIntensity={backgroundIntensity}
-			environmentIntensity={environmentIntensity}
-			scene={scene}
-		/>
+		<LoadFailureBoundary onError={() => setFailedFilesKey(filesKey)}>
+			<Environment
+				files={files}
+				background={background}
+				backgroundBlurriness={backgroundBlurriness}
+				backgroundIntensity={backgroundIntensity}
+				environmentIntensity={environmentIntensity}
+				scene={scene}
+			/>
+		</LoadFailureBoundary>
 	)
 })
 

@@ -115,6 +115,41 @@ test('a visitor can leave the camera a hotspot flew them to', async ({
 	await expect(marker).toHaveAttribute('aria-expanded', 'false')
 })
 
+test('a scene whose environment map cannot be downloaded still renders', async ({
+	page
+}) => {
+	// The default map lives on a third-party bucket that a visitor's network, an
+	// ad blocker or an outage can take away. The scene is lit from a local room
+	// instead of falling to the host page's error boundary.
+	test.setTimeout(60000)
+	const pageErrors: string[] = []
+	page.on('pageerror', (err) => pageErrors.push(err.message))
+	let blockedMaps = 0
+	await page.route('**/*.hdr', (route) => {
+		blockedMaps += 1
+		return route.abort()
+	})
+
+	await page.goto('/')
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{ timeout: 30000 }
+	)
+
+	expect(blockedMaps).toBeGreaterThan(0)
+	await expect(page.getByTestId('viewer-crashed')).toHaveCount(0)
+	await expect(page.locator('.vctrl-viewer-hotspot')).toHaveCount(2)
+
+	// Contained, not hidden: R3F reports what a boundary in its tree catches
+	// through `reportError`, so the host's error monitoring still hears of the
+	// missing map, and of nothing else.
+	expect(pageErrors.length).toBeGreaterThan(0)
+	for (const message of pageErrors) {
+		expect(message).toMatch(/^Could not load \S+\.hdr/)
+	}
+})
+
 declare global {
 	interface Window {
 		__VIEWER_E2E__?: { status: 'mounted' | 'crashed'; error?: string }
