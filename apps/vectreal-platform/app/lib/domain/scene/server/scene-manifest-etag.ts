@@ -1,9 +1,13 @@
+import type { SceneManifestCaller } from './scene-manifest-kind'
+
 /** The publication an embed manifest describes: which GLB, published when. */
 export interface ManifestPublication {
 	assetId: string
 	publishedAt: Date
 	/** The version of the manifest's signed asset URLs, if they are signed. */
 	assetUrlsVersion: string | null
+	/** Who the manifest was built for; their asset URLs differ when unsigned. */
+	caller: SceneManifestCaller
 }
 
 /**
@@ -21,10 +25,11 @@ export interface ManifestPublication {
  * rotated, so their version is in the tag as well: otherwise a 304 would keep
  * a manifest in the browser after its URLs stopped working.
  *
- * The publication also keeps the embed and session manifests for one scene in
+ * The publication also keeps the embed and working manifests for one scene in
  * separate cache entries. They carry different fields from the same
  * `settingsUpdatedAt`, so a shared tag would let one be served in place of the
- * other.
+ * other. The caller does the same for the two embed manifests: a key holder's
+ * unsigned URLs carry the key, a member's authenticate by cookie.
  */
 export function buildSceneManifestEtag(
 	sceneId: string,
@@ -33,6 +38,7 @@ export function buildSceneManifestEtag(
 ): string | null {
 	if (!settingsUpdatedAt) return null
 	if (!publication) return `W/"scene-${sceneId}-${settingsUpdatedAt}"`
-	const { assetId, publishedAt, assetUrlsVersion } = publication
-	return `W/"scene-embed-${sceneId}-${settingsUpdatedAt}-${assetId}-${publishedAt.toISOString()}-${assetUrlsVersion ?? 'unsigned'}"`
+	const { assetId, publishedAt, assetUrlsVersion, caller } = publication
+	const callerSuffix = caller === 'session' ? '-session' : ''
+	return `W/"scene-embed-${sceneId}-${settingsUpdatedAt}-${assetId}-${publishedAt.toISOString()}-${assetUrlsVersion ?? 'unsigned'}${callerSuffix}"`
 }

@@ -2,11 +2,12 @@
  * What the handshake is allowed to tell a host page about a scene's hotspots.
  *
  * The filter is the load-bearing part. `redactSettingsForEmbed`, which strips
- * `internalOnly` hotspots, runs in exactly one place - `buildEmbedSceneManifest`
- * - and `/preview` never reaches it, because it always takes the session
- * branch. So on that route the settings this hook is handed are unredacted, and
- * `resolveHotspotMarkers`' default options are the only thing standing between
- * an internal marker's name and whichever origin pinged the frame.
+ * `internalOnly` hotspots, runs only on a published scene's manifest
+ * (`composeEmbedSceneManifest`), and `/preview` of a draft is served the
+ * working scene. So on that route the settings this hook is handed can be
+ * unredacted, and `resolveHotspotMarkers`' default options are the only thing
+ * standing between an internal marker's name and whichever origin pinged the
+ * frame.
  */
 import { describe, expect, it } from 'vitest'
 
