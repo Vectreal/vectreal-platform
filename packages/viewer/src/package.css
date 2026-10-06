@@ -1,0 +1,26 @@
+/*
+  Tailwind for the published bundle only, whose consumers have no build that
+  scans the viewer's source. `index.package.ts` imports it ahead of
+  `styles.css`; a host compiling the viewer from source generates these
+  utilities itself (see `styles.css`).
+*/
+@import 'tailwindcss/theme';
+@import 'tailwindcss/utilities';
+
+/*
+  The corner-radius scale belongs to whoever is embedding the viewer.
+
+  `tailwindcss/theme` emits the full default theme into `:root, :host`, which
+  includes Tailwind's own `--radius-sm` … `--radius-2xl`. This stylesheet is
+  loaded by a dynamic `import('@vctrl/viewer')`, so in a host app it arrives
+  *after* hydration and its `:root` block then overwrote that app's radius
+  tokens — corners visibly sharpened mid-session once the viewer mounted.
+
+  Clearing the namespace keeps every other default (colours, spacing, type
+  scale) intact for standalone consumers while leaving the host's radii alone.
+  Nothing here needs the scale: the viewer uses `rounded-full`, which takes no
+  token, and one explicit radius in `info-popover.tsx`.
+*/
+@theme {
+	--radius-*: initial;
+}

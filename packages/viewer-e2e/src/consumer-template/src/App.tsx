@@ -120,6 +120,14 @@ export default function App() {
 			data-last-viewer-event={lastEvent}
 			style={{ height: '100vh', width: '100vw' }}
 		>
+			{/*
+			  A host element sharing a class name with a utility the viewer ships.
+			  The viewer's stylesheet must not reach it: an app using Tailwind
+			  would see its own `hidden md:flex` stuck hidden.
+			*/}
+			<div data-testid="host-utility" className="hidden">
+				host
+			</div>
 			<CrashBoundary
 				testid="hooks-crashed"
 				onCrash={(message) => {

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import postcss, { type AtRule } from 'postcss'
 import type { Plugin } from 'vite'
 
 /**
@@ -95,6 +96,113 @@ export function manifestExternals(projectRoot: string): Plugin {
 					)
 				}
 			}
+		}
+	}
+}
+
+/**
+ * A published stylesheet's rules, confined to the element that owns them.
+ *
+ * `@vctrl/viewer` ships Tailwind's utilities for consumers with no build that
+ * scans its source. Outside any `@layer`, so a plain stylesheet's resets cannot
+ * undo them. But an app that uses Tailwind itself emits the same class names in
+ * its own `utilities` layer, and an unlayered rule beats every layered one: the
+ * viewer's `.hidden` kept the app's `hidden md:flex` hidden, its `.border`
+ * beat `border-b-2`, and its theme's `:root` block rewrote the app's tokens.
+ *
+ * Every rule gains `:where(scope, scope *)` on its subject, the compound the
+ * rule styles, which adds no specificity and stops it matching anything the
+ * scope does not contain. The subject rather than the first compound, so a
+ * selector that starts at the document (`:root.dark .x`) still matches.
+ * The theme's `:root, :host` variables move onto the scope, where they still
+ * inherit to everything that reads them. Keyframe selectors are left alone.
+ */
+export function scopeStylesheetRules(css: string, scope: string): string {
+	const where = `:where(${scope}, ${scope} *)`
+	const root = postcss.parse(css)
+
+	root.walkRules((rule) => {
+		const parent = rule.parent
+		if (
+			parent?.type === 'atrule' &&
+			/keyframes$/.test((parent as AtRule).name)
+		) {
+			return
+		}
+
+		if (rule.selectors.every((selector) => /^:(root|host)$/.test(selector))) {
+			rule.selector = scope
+			return
+		}
+
+		// On the subject, ahead of its pseudo-element: one has to stay last.
+		rule.selectors = rule.selectors.map((selector) => {
+			const at = pseudoElementStart(selector)
+			return `${selector.slice(0, at)}${where}${selector.slice(at)}`
+		})
+	})
+
+	return root.toString()
+}
+
+const LEGACY_PSEUDO_ELEMENT =
+	/^:(before|after|first-line|first-letter)(?![\w-])/
+
+/**
+ * Where the subject's pseudo-element starts, or the selector's length when it
+ * has none. A scan rather than a pattern, because arguments nest
+ * (`::slotted(:is(.a))`) and escaped or quoted text (`.after\:x`,
+ * `[title=":after"]`) only looks like a pseudo-element.
+ */
+function pseudoElementStart(selector: string): number {
+	let depth = 0
+	let start = -1
+
+	for (let index = 0; index < selector.length; index++) {
+		const char = selector[index]
+
+		if (char === '\\') {
+			index++
+		} else if (char === '"' || char === "'") {
+			// To the closing quote, stepping over escapes as the outer scan does.
+			for (
+				index++;
+				index < selector.length && selector[index] !== char;
+				index++
+			) {
+				if (selector[index] === '\\') index++
+			}
+		} else if (char === '(' || char === '[') {
+			depth++
+		} else if (char === ')' || char === ']') {
+			depth--
+		} else if (
+			depth === 0 &&
+			start === -1 &&
+			char === ':' &&
+			(selector[index + 1] === ':' ||
+				LEGACY_PSEUDO_ELEMENT.test(selector.slice(index)))
+		) {
+			start = index
+		}
+	}
+
+	return start === -1 ? selector.length : start
+}
+
+/** Applies `scopeStylesheetRules` to the named stylesheet a build emits. */
+export function scopedStylesheet(fileName: string, scope: string): Plugin {
+	return {
+		name: 'vctrl-scoped-stylesheet',
+		// After Vite has emitted the stylesheet asset.
+		enforce: 'post',
+		generateBundle(_options, bundle) {
+			const asset = bundle[fileName]
+			if (asset?.type !== 'asset') {
+				this.error(`${fileName} was not emitted, so it could not be scoped.`)
+			}
+
+			asset.source = scopeStylesheetRules(String(asset.source), scope)
 		}
 	}
 }
