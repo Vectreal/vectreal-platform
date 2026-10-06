@@ -223,30 +223,12 @@ describe('the publish panel', () => {
 		})
 	})
 
-	it('leaves the figures to a pass that replaced the document during the upload', async () => {
-		mocks.publishSceneFromGlb.mockImplementation(async () => {
-			mocks.getDocument.mockImplementation(() => new Document())
-			return {
-				response: {},
-				publishState: { sceneId: 'scene-1', status: 'published' }
-			}
-		})
-		const store = renderPanel(balancedPreset)
-		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
-
-		await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalled())
-		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
-			optimizedTextureBytes: null,
-			publishedEncoding: null
-		})
-	})
-
-	it('leaves the figures to a pass still running when the upload lands', async () => {
+	it('leaves the figures to a pass started during the upload', async () => {
 		const store = renderPanel(balancedPreset)
 		mocks.publishSceneFromGlb.mockImplementation(async () => {
 			store.set(optimizationRuntimeAtom, (state) => ({
 				...state,
-				isPending: true
+				passRevision: state.passRevision + 1
 			}))
 			return {
 				response: { stats: { currentSceneBytes: 8 } },
@@ -261,6 +243,19 @@ describe('the publish panel', () => {
 			publishedEncoding: null,
 			latestSceneStats: { currentSceneBytes: 8 }
 		})
+	})
+
+	it('leaves the figures to a pass that was running when Publish was pressed', async () => {
+		const store = renderPanel(balancedPreset, (store) =>
+			store.set(optimizationRuntimeAtom, (state) => ({
+				...state,
+				isPending: true
+			}))
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalled())
+		expect(store.get(optimizationRuntimeAtom).publishedEncoding).toBeNull()
 	})
 
 	it('records nothing as shipped when the upload fails', async () => {

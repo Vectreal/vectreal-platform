@@ -68,7 +68,11 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	// The settings the document was derived from decide the publish-time
 	// Draco repack, not edits in the panel that were never applied.
 	const optimizations = useAtomValue(documentOptimizationsAtom)
-	const { dracoReport } = useAtomValue(optimizationRuntimeAtom)
+	const {
+		dracoReport,
+		isPending: isOptimizing,
+		passRevision
+	} = useAtomValue(optimizationRuntimeAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
@@ -161,21 +165,19 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				currentSceneBytes: glbData.byteLength
 			})
 
-			// Only once it has shipped, and only if no optimization pass has
-			// started since the export: the figures then describe that file, in
-			// the codecs the export chose, rather than the Draco and WebP
-			// projection. A pass that finished has swapped the document; one
-			// still running is pending and has yet to swap it. Either way its own
-			// figures win.
+			// Only once it has shipped, and only if the document exported is the
+			// one on screen: no pass was running when Publish was pressed, and
+			// none has started since. The figures then describe that file, in the
+			// codecs the export chose, rather than the Draco and WebP projection;
+			// otherwise the pass's own figures win.
 			const data = publishResult.response as PublishSceneResponse
-			const documentUnchanged = optimizer?._getDocument?.() === document
 			const ktx2Total =
 				(result.textures?.encoded.length ?? 0) +
 				(result.textures?.kept.length ?? 0)
 			setOptimizationRuntime((prev) => ({
 				...prev,
 				...(data.stats ? { latestSceneStats: data.stats } : {}),
-				...(documentUnchanged && !prev.isPending
+				...(!isOptimizing && prev.passRevision === passRevision
 					? {
 							optimizedSceneBytes: glbData.byteLength,
 							optimizedTextureBytes: result.textureBytes,
@@ -240,7 +242,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		file,
 		optimizations.draco,
 		dracoReport,
-		compressTextures
+		compressTextures,
+		isOptimizing,
+		passRevision
 	])
 
 	const handleToggleInfoPopover = useCallback(

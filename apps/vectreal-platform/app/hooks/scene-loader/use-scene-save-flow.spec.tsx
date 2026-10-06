@@ -121,7 +121,8 @@ function SceneSaveFlowHarness({
 			lastSavedReportSignature: null,
 			latestSceneStats: null,
 			dracoReport: null,
-			publishedEncoding: null
+			publishedEncoding: null,
+			passRevision: 0
 		})
 
 	const scenePersistence: ScenePersistenceState = {

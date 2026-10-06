@@ -32,7 +32,8 @@ const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
 	lastSavedReportSignature: null,
 	latestSceneStats: null,
 	dracoReport: null,
-	publishedEncoding: null
+	publishedEncoding: null,
+	passRevision: 0
 }
 
 const optimizationModalInitialState: SceneOptimizationModalState = {

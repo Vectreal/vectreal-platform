@@ -281,7 +281,8 @@ export async function runOptimizationPass(
 		...prev,
 		isPending: true,
 		dracoReport: null,
-		publishedEncoding: null
+		publishedEncoding: null,
+		passRevision: (prev.passRevision ?? 0) + 1
 	}))
 
 	const { geometryKeys, hasTextureStep, allSteps } =

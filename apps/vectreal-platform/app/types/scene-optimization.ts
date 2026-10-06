@@ -93,6 +93,12 @@ export interface SceneOptimizationRuntimeState {
 	 * file no longer describes it.
 	 */
 	publishedEncoding: null | PublishedEncoding
+	/**
+	 * Counts optimization passes started, so work that outlives one can tell
+	 * whether the document it read has been replaced since. A pass can rewrite
+	 * the document in place, so the document's identity cannot answer that.
+	 */
+	passRevision: number
 }
 
 export interface PublishedEncoding {

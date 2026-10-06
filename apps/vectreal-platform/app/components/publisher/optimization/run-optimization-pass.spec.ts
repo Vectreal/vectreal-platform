@@ -267,7 +267,8 @@ describe('runOptimizationPass', () => {
 		expect(runtime[0]).toMatchObject({
 			isPending: true,
 			dracoReport: null,
-			publishedEncoding: null
+			publishedEncoding: null,
+			passRevision: 1
 		})
 	})
 
