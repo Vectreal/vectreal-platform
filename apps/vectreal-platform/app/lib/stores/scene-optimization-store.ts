@@ -8,6 +8,7 @@ import {
 } from '../../constants/optimizations'
 
 import type {
+	ComparedModel,
 	KeptOriginalState,
 	SceneOptimizationModalState,
 	OptimizationState,
@@ -66,11 +67,18 @@ const keptOriginalInitialState: KeptOriginalState = {
 
 const keptOriginalAtom = atom<KeptOriginalState>(keptOriginalInitialState)
 
+/**
+ * The source the author is holding to compare against, once it is built.
+ * View state only: save, export and measuring keep reading the loaded model.
+ */
+const comparedModelAtom = atom<ComparedModel | null>(null)
+
 const optimizationModalAtom = atomWithReset<SceneOptimizationModalState>(
 	optimizationModalInitialState
 )
 
 export {
+	comparedModelAtom,
 	documentOptimizationsAtom,
 	keptOriginalAtom,
 	keptOriginalInitialState,

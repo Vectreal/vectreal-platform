@@ -13,26 +13,44 @@ import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
 import { useAppColorScheme } from '../../../hooks/use-app-color-scheme'
 import { useSceneMetadata } from '../../../hooks/use-scene-metadata'
-import { useTextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
 import { loadAuthenticatedSession } from '../../../lib/domain/auth/auth-loader.server'
 import { toSceneRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
 import { resolveSceneMembership } from '../../../lib/domain/dashboard/dashboard-permissions.server'
-import { canDeleteScene } from '../../../lib/domain/dashboard/scene-detail-capabilities'
+import {
+	canDeleteScene,
+	canUpdateScene
+} from '../../../lib/domain/dashboard/scene-detail-capabilities'
+import { buildTextureThumbnailUrls } from '../../../lib/domain/dashboard/scene-texture-thumbnails'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
+import {
+	buildInlineEmbedManifest,
+	EmbedSettingsReadFailure
+} from '../../../lib/domain/embed/inline-embed-manifest.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
+import { sceneSourceFromManifest } from '../../../lib/domain/scene/client/embed-manifest-payload'
+import { forwardSceneAction } from '../../../lib/domain/scene/client/post-scene-action'
+import {
+	buildPreviewAssetUrl,
+	buildPreviewSceneEndpoint
+} from '../../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import {
 	getScene,
 	getSceneFolderAncestry
 } from '../../../lib/domain/scene/server/scene-folder-repository.server'
+import { readEmbedSceneSettings } from '../../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../../lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-settings-service.server'
 import { shouldRevalidateForRouteParams } from '../../../lib/navigation/dashboard-route-behavior'
 import { toViewerLoadingThumbnail } from '../../../lib/viewer/viewer-loading-thumbnail'
 
-import type { SceneAdditionalMetrics } from '../../../types/api'
+import type {
+	SceneAdditionalMetrics,
+	SceneEmbedManifestResponse
+} from '../../../types/api'
 import type { SceneDetailsSummary } from '../../../types/dashboard'
+import type { ModelSource } from '@vctrl/hooks/use-load-model'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request, params }: Route.LoaderArgs) {
@@ -59,7 +77,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Scene not found', { status: 404 })
 	}
 
-	const [folderPath, stats, sceneAssets, membership] = await Promise.all([
+	const [
+		folderPath,
+		stats,
+		sceneAssets,
+		membership,
+		publishedMeta,
+		settingsData
+	] = await Promise.all([
 		scene.folderId
 			? getSceneFolderAncestry(scene.folderId, user.id)
 			: Promise.resolve([]),
@@ -67,14 +92,38 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		sceneSettingsService.getSceneAssetRecords(sceneId),
 		/*
 		  Scene-scoped rather than `buildDashboardCapabilities` over every
-		  organization the user belongs to: this page gates exactly one affordance,
-		  and this is the resolver `CLAUDE.md` names for a scene actor. The table it
-		  feeds is the same one the mutation endpoint enforces with.
+		  organization the user belongs to: this page gates two affordances, and
+		  this is the resolver `CLAUDE.md` names for a scene actor. The table it
+		  feeds is the same one the endpoints enforce with.
 		*/
-		resolveSceneMembership(sceneId, user.id)
+		resolveSceneMembership(sceneId, user.id),
+		getPublishedScenePreview(projectId, sceneId),
+		readEmbedSceneSettings(sceneId).catch(
+			(error: unknown) => new EmbedSettingsReadFailure(error)
+		)
 	])
 
-	const publishedMeta = await getPublishedScenePreview(projectId, sceneId)
+	/*
+	  A published scene shows what a visitor gets, from the manifest an embed
+	  receives, inline so the viewer starts on hydration. A draft keeps loading
+	  the working scene from the server.
+	*/
+	const manifest = publishedMeta
+		? await buildInlineEmbedManifest(request, {
+				projectId,
+				sceneId,
+				previewScene: publishedMeta,
+				settingsData,
+				token: null,
+				allowUnsignedWithoutToken: true
+			})
+		: null
+	// Null only when the read failed, so the toggle can tell "unknown" apart
+	// from "nothing stored".
+	const presentation =
+		settingsData instanceof EmbedSettingsReadFailure
+			? null
+			: (settingsData?.settings?.presentation ?? {})
 
 	const additionalMetrics = stats?.additionalMetrics as
 		SceneAdditionalMetrics | null | undefined
@@ -114,10 +163,32 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			},
 			folderPath,
 			sceneDetails,
-			canDeleteScene: canDeleteScene(membership)
+			textureUrls: buildTextureThumbnailUrls(sceneAssets, (assetId) =>
+				buildPreviewAssetUrl({ sceneId, projectId, assetId })
+			),
+			manifest,
+			presentation,
+			canDeleteScene: canDeleteScene(membership),
+			canUpdateScene: canUpdateScene(membership)
 		},
 		{ headers }
 	)
+}
+
+/**
+ * Mutations this page makes through a fetcher, forwarded to the scene API.
+ *
+ * Client-side so a request that never gets an answer resolves as a refusal
+ * instead of throwing to the error boundary, and on this route so a POST
+ * still makes the loader re-run. A refusal the server gives keeps its status
+ * and reloads as it always has; only an unreachable request skips the reload
+ * (`forwardSceneAction`).
+ */
+export async function clientAction({
+	request,
+	params
+}: Route.ClientActionArgs) {
+	return forwardSceneAction(params.sceneId, await request.json())
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -140,31 +211,40 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
 const ScenePage = ({ loaderData }: Route.ComponentProps) => {
-	const { scene, project, sceneDetails, publishState, canDeleteScene } =
-		loaderData
+	const {
+		scene,
+		project,
+		sceneDetails,
+		textureUrls,
+		publishState,
+		presentation,
+		canDeleteScene,
+		canUpdateScene
+	} = loaderData
+	// Cast back from the serialized type; see `EmbedLayout`.
+	const manifest = loaderData.manifest as SceneEmbedManifestResponse | null
 	const sceneId = scene.id
 	const navigate = useNavigate()
 
 	const model = useLoadModel()
 	const { file, sceneData, load } = model
-	/*
-	  Thumbnails are resolved here, where the bytes already live in hook state, and
-	  only the URLs go down. Passing `assetData` itself through props froze the
-	  tab for 40 seconds in development: React's render logging walks changed
-	  props, and it reached every byte. See `useTextureThumbnailUrls`.
-	*/
-	const textureUrls = useTextureThumbnailUrls(sceneData?.assetData)
+	const serverSource = useMemo<ModelSource>(
+		() => ({
+			kind: 'server',
+			sceneId,
+			serverOptions: {
+				endpoint: buildPreviewSceneEndpoint({ sceneId, projectId: project.id })
+			},
+			parseMode: 'direct'
+		}),
+		[project.id, sceneId]
+	)
+	// A revalidation hands back a new manifest object, so this rebuilds; it is
+	// `useSceneModel`'s key, not this memo, that keeps the scene from reloading
+	// unless the source names a different scene or a different published GLB.
 	const sceneSource = useMemo(
-		() =>
-			sceneId
-				? ({
-						kind: 'server',
-						sceneId,
-						serverOptions: { endpoint: `/api/scenes/${sceneId}` },
-						parseMode: 'direct'
-					} as const)
-				: null,
-		[sceneId]
+		() => sceneSourceFromManifest(sceneId, manifest, serverSource),
+		[manifest, sceneId, serverSource]
 	)
 	useSceneModel(model, sceneSource)
 
@@ -214,9 +294,11 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		navigate(publisherPath, { viewTransition: true })
 	}, [navigate, publisherPath])
 
+	// Always from the server: the document's manifest signs its asset URLs for
+	// an hour or two, and a retry in a tab left open longer would replay them.
 	const retrySceneLoad = useCallback(() => {
-		if (sceneSource) void load(sceneSource)
-	}, [load, sceneSource])
+		void load(serverSource)
+	}, [load, serverSource])
 
 	return (
 		/*
@@ -292,7 +374,10 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							*/
 							theme={colorScheme}
 						/>
-						<ScenePreviewOverlay previewPath={previewPath} />
+						<ScenePreviewOverlay
+							previewPath={previewPath}
+							publishState={publishState}
+						/>
 					</section>
 					<DetailPanelSection surface="raised" contentClassName="space-y-6">
 						<header className="space-y-4">
@@ -372,6 +457,8 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					sceneId={sceneState.id}
 					projectId={project.id}
 					publishState={publishState}
+					presentation={presentation}
+					canUpdateScene={canUpdateScene}
 					publisherPath={publisherPath}
 					onPublish={openPublisherForPublishing}
 					deleteRef={deleteRef}

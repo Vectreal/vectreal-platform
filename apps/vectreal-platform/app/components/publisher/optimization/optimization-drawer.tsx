@@ -1,8 +1,9 @@
 import { Button } from '@shared/components/ui/button'
+import { Kbd } from '@shared/components/ui/kbd'
 import { formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import { LoaderCircle, SlidersHorizontal } from 'lucide-react'
+import { Eye, LoaderCircle, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useState, type FC } from 'react'
 import { Link } from 'react-router'
 
@@ -13,16 +14,23 @@ import { OptimizationProgress } from './progress/optimization-progress'
 import { OptimizationResults } from './results/optimization-results'
 import { PreOptimizationSummary } from './results/pre-optimization-summary'
 import { SceneNormalizationNotice } from './scene-normalization-notice'
+import { COMPARE_HOLD_KEY, useHoldToCompare } from './use-hold-to-compare'
 import { useOptimizationProcess } from './use-optimization-process'
 import { useOptimizationSettings } from './use-optimization-settings'
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import { originalPreset } from '../../../constants/optimizations'
 import {
+	canCompareWithSource,
 	derivesFromSavedVersion,
+	isSaveInFlight,
 	optimizationsMatch,
 	resolveDerivedSettings
 } from '../../../lib/domain/scene'
-import { keptOriginalAtom } from '../../../lib/stores/scene-optimization-store'
+import { savePanelAtom } from '../../../lib/stores/save-progress-store'
+import {
+	comparedModelAtom,
+	keptOriginalAtom
+} from '../../../lib/stores/scene-optimization-store'
 import { PUBLISHER_LAYER } from '../shell/shell-layout'
 import {
 	DrillDown,
@@ -90,6 +98,24 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		sourceSettings
 	})
 	const isUnoptimized = optimizationsMatch(derivedFrom, originalPreset)
+
+	const isSaving = isSaveInFlight(useAtomValue(savePanelAtom))
+	const isComparable = canCompareWithSource({
+		isOpen: open,
+		isPending,
+		isLoadingOriginal,
+		isSaving,
+		sourceSettings,
+		derivedFrom
+	})
+	const sourceIsOriginal = optimizationsMatch(sourceSettings, originalPreset)
+	const isComparing = useAtomValue(comparedModelAtom) !== null
+	const sourceName = sourceIsOriginal ? 'the original' : 'the saved version'
+	const { isPreparing: isPreparingCompare, holdProps } = useHoldToCompare({
+		isOpen: open,
+		isAvailable: isComparable,
+		isOriginal: sourceIsOriginal
+	})
 
 	// Soft-gate: only an in-progress optimization blocks closing. Being over the
 	// size limit keeps save disabled (server 402 is the hard backstop) but never
@@ -246,6 +272,29 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 												/>
 											)}
 										</AnimatePresence>
+
+										{isComparable && (
+											<Button
+												type="button"
+												variant="secondary"
+												size="sm"
+												className="w-full touch-none select-none"
+												onContextMenu={(event) => event.preventDefault()}
+												{...holdProps}
+											>
+												<Eye />
+												{/* The canvas label sits behind the mobile sheet, so the
+												    button says what is showing too. */}
+												{isComparing
+													? `Showing ${sourceName}`
+													: isPreparingCompare
+														? 'Preparing…'
+														: `Hold to see ${sourceName}`}
+												{!isMobile && (
+													<Kbd className="ml-auto">{COMPARE_HOLD_KEY}</Kbd>
+												)}
+											</Button>
+										)}
 
 										<SceneNormalizationNotice />
 

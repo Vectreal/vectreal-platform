@@ -1,4 +1,4 @@
-import type { CameraProps, CameraTransitionConfig } from '@vctrl/core'
+import type { CameraProps } from '@vctrl/core'
 
 /**
  * A signature only this module can mint.
@@ -37,11 +37,15 @@ export type CameraSelectionSignature = string & {
  *
  * Absent fields are signed as null rather than skipped, so adding a position to
  * a camera that had none still reads as an edit.
+ *
+ * The transition is not signed. It decides how the next flight moves, never
+ * where the camera is, and a host's `set_transition` command changes it without
+ * the props asking for anything: signed, that read as a new request and flew a
+ * visitor off the camera a marker had just taken them to.
  */
 export function cameraSelectionSignature(
 	cameras: CameraProps['cameras'],
-	cameraId: string,
-	transition: CameraTransitionConfig | undefined
+	cameraId: string
 ): CameraSelectionSignature {
 	const camera = cameras?.find((entry) => entry.cameraId === cameraId)
 
@@ -49,8 +53,7 @@ export function cameraSelectionSignature(
 		position: triple(camera?.position),
 		target: triple(camera?.target ?? camera?.lookAt),
 		rotation: triple(camera?.rotation),
-		fov: typeof camera?.fov === 'number' ? camera.fov : null,
-		transition: transition ?? null
+		fov: typeof camera?.fov === 'number' ? camera.fov : null
 	}) as CameraSelectionSignature
 }
 

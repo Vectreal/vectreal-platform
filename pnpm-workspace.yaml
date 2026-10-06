@@ -17,7 +17,7 @@ catalog:
   '@gltf-transform/core': ^4.4.2
   '@gltf-transform/extensions': ^4.4.2
   '@gltf-transform/functions': ^4.4.2
-  '@nx/vite': 23.1.1
+  '@nx/vite': 23.2.1
   '@react-three/drei': ^10.7.8
   '@react-three/fiber': ^9.7.0
   '@vitejs/plugin-react': ^6.0.5

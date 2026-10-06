@@ -3,7 +3,7 @@ import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 
-import { embedManifestToScenePayload } from '../../lib/domain/scene/client/embed-manifest-payload'
+import { sceneSourceFromManifest } from '../../lib/domain/scene/client/embed-manifest-payload'
 import { buildPreviewSceneEndpoint } from '../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../lib/domain/scene/client/use-scene-model'
 import { useConsent } from '../consent/consent-context'
@@ -46,21 +46,13 @@ export function useSceneEmbedScene({
 		}
 	}, [projectId, sceneId, token])
 
-	/*
-	  The manifest the document carried, loaded as it stands: no manifest
-	  request, and no key sent as a header with the asset requests, which is
-	  what lets them reuse the document's preloads.
-	*/
-	const sceneSource = useMemo<ModelSource | null>(() => {
-		if (!sceneId || !initialManifest) return serverSource
-
-		return {
-			kind: 'scene-data',
-			sceneId,
-			sceneData: embedManifestToScenePayload(initialManifest),
-			parseMode: 'direct'
-		}
-	}, [initialManifest, sceneId, serverSource])
+	const sceneSource = useMemo(
+		() =>
+			sceneId
+				? sceneSourceFromManifest(sceneId, initialManifest, serverSource)
+				: serverSource,
+		[initialManifest, sceneId, serverSource]
+	)
 
 	useSceneModel(model, sceneSource)
 

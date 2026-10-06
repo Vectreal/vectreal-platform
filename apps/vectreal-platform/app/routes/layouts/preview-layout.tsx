@@ -2,15 +2,22 @@ import { ApiResponse } from '@shared/utils'
 import { data, Outlet, redirect, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/preview-layout'
+import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
 import { buildEmbedPath } from '../../lib/domain/embed/embed-snippet'
-import { getProject } from '../../lib/domain/project/project-repository.server'
+import {
+	buildInlineEmbedManifest,
+	EmbedSettingsReadFailure
+} from '../../lib/domain/embed/inline-embed-manifest.server'
 import {
 	parseSceneRouteParams,
 	SCENE_ROUTE_PARAM_ERRORS
 } from '../../lib/domain/scene/scene-route-params'
-import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { readEmbedSceneSettings } from '../../lib/domain/scene/server/scene-manifest.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { buildMeta } from '../../lib/seo'
+
+import type { SceneEmbedManifestResponse } from '../../types/api'
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -62,21 +69,57 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 	}
 
-	const project = await getProject(projectId, sessionAuth.user.id)
-	if (!project) {
+	const membership = await resolveSceneMembership(sceneId, sessionAuth.user.id)
+	if (!membership || membership.projectId !== projectId) {
 		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
 	}
 
-	const scene = await getScene(sceneId, sessionAuth.user.id)
-	if (!scene || scene.projectId !== projectId) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-	}
+	/*
+	  A published scene previews as what a visitor gets: the published GLB and
+	  the embed's settings, inline so the model starts loading on hydration.
+	  A draft has no such artefact and loads the working scene, as it always
+	  has. The settings are read alongside the publication and dropped unread
+	  for a draft, the way `/embed` reads them.
+	*/
+	const [previewScene, settingsData] = await Promise.all([
+		getPublishedScenePreview(projectId, sceneId),
+		readEmbedSceneSettings(sceneId).catch(
+			(error: unknown) => new EmbedSettingsReadFailure(error)
+		)
+	])
+	const manifest = previewScene
+		? await buildInlineEmbedManifest(request, {
+				projectId,
+				sceneId,
+				previewScene,
+				settingsData,
+				token: null,
+				allowUnsignedWithoutToken: true
+			})
+		: null
 
-	return data({ projectId, sceneId }, { headers: sessionAuth.headers ?? {} })
+	return data(
+		{ projectId, sceneId, manifest },
+		{ headers: sessionAuth.headers ?? {} }
+	)
 }
 
-const PreviewLayout = () => {
-	return <Outlet />
+/** What the preview route needs from this layout. */
+export interface PreviewLayoutContext {
+	/** The published scene's manifest; null for a draft, or when not inlined. */
+	manifest: SceneEmbedManifestResponse | null
+}
+
+const PreviewLayout = ({ loaderData }: Route.ComponentProps) => {
+	const context: PreviewLayoutContext = {
+		// Cast back from the serialized type; see `EmbedLayout`.
+		manifest:
+			'manifest' in loaderData
+				? (loaderData.manifest as SceneEmbedManifestResponse | null)
+				: null
+	}
+
+	return <Outlet context={context} />
 }
 
 export default PreviewLayout

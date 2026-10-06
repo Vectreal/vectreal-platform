@@ -33,6 +33,7 @@ import {
 	upgradeModalAtom
 } from '../../../../../lib/stores/upgrade-modal-store'
 import { InlineNotice } from '../../../../layout-components'
+import { LoadingThumbnailToggle } from '../../../../publishing/loading-thumbnail-toggle'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
 import { itemVariants } from '../../animation'
 import { SidebarSection, SidebarSectionContent } from '../../sidebar-section'
@@ -314,11 +315,10 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						label="Show scene info"
 						description="Adds an info button to the viewer, opening this scene's name and description. Applies to embeds and preview links as soon as you save."
 					/>
-					<Toggle
+					<LoadingThumbnailToggle
 						checked={shouldShowLoadingThumbnail(presentation)}
 						onCheckedChange={handleToggleLoadingThumbnail}
-						label="Show thumbnail while loading"
-						description="Embeds show this scene's saved thumbnail behind the loader until the 3D scene is ready. Applies as soon as you save."
+						appliesOn="save"
 					/>
 				</SidebarSectionContent>
 			</SidebarSection>

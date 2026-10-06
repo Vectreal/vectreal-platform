@@ -141,6 +141,8 @@ function renderAside(sceneDetails: SceneDetailsSummary = details()) {
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={PUBLISH_STATE}
+			presentation={null}
+			canUpdateScene
 			publisherPath="/publisher/scene-1"
 			onPublish={vi.fn()}
 			deleteRef={DELETE_REF}

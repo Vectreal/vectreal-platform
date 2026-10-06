@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	canCompareWithSource,
 	derivesFromSavedVersion,
 	recordSavedOriginal,
 	resolveSourceToSave
@@ -158,5 +159,39 @@ describe('recordSavedOriginal', () => {
 			saved: true,
 			stored: null
 		})
+	})
+})
+
+describe('canCompareWithSource', () => {
+	const settled = {
+		isOpen: true,
+		isPending: false,
+		isLoadingOriginal: false,
+		isSaving: false,
+		sourceSettings: originalPreset,
+		derivedFrom: smallestPreset
+	}
+
+	it('compares a document derived from its source while the drawer is settled', () => {
+		expect(canCompareWithSource(settled)).toBe(true)
+	})
+
+	it('has nothing to compare while the document is its source', () => {
+		expect(
+			canCompareWithSource({ ...settled, derivedFrom: originalPreset })
+		).toBe(false)
+	})
+
+	it('waits out a pass, the original loading, and a closed drawer', () => {
+		expect(canCompareWithSource({ ...settled, isPending: true })).toBe(false)
+		expect(canCompareWithSource({ ...settled, isLoadingOriginal: true })).toBe(
+			false
+		)
+		expect(canCompareWithSource({ ...settled, isOpen: false })).toBe(false)
+	})
+
+	// A save captures whatever model is mounted for its thumbnail and bake.
+	it('never compares while a save is in flight', () => {
+		expect(canCompareWithSource({ ...settled, isSaving: true })).toBe(false)
 	})
 })

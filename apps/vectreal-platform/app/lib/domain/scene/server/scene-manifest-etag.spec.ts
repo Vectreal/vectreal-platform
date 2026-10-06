@@ -31,10 +31,11 @@ describe('buildSceneManifestEtag', () => {
 		const publication = {
 			assetId: 'glb-1',
 			publishedAt: new Date('2026-07-03T09:00:00.000Z'),
-			assetUrlsVersion: null
+			assetUrlsVersion: null,
+			caller: 'apiKey' as const
 		}
 
-		it('never shares a tag with the session manifest', () => {
+		it('never shares a tag with the working manifest', () => {
 			expect(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, publication)
 			).not.toBe(buildSceneManifestEtag('s1', settingsUpdatedAt))
@@ -44,7 +45,8 @@ describe('buildSceneManifestEtag', () => {
 			const republished = {
 				assetId: 'glb-2',
 				publishedAt: new Date('2026-07-03T11:00:00.000Z'),
-				assetUrlsVersion: null
+				assetUrlsVersion: null,
+				caller: 'apiKey' as const
 			}
 			expect(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, republished)
@@ -67,6 +69,24 @@ describe('buildSceneManifestEtag', () => {
 			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, next)).not.toBe(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, signed)
 			)
+		})
+
+		it('never shares a tag between a key holder and a member', () => {
+			const member = { ...publication, caller: 'session' as const }
+			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, member)).toBe(
+				'W/"scene-embed-s1-2026-07-03T10:00:00.000Z-glb-1-2026-07-03T09:00:00.000Z-unsigned-session"'
+			)
+			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, member)).not.toBe(
+				buildSceneManifestEtag('s1', settingsUpdatedAt, publication)
+			)
+
+			const signed = { ...publication, assetUrlsVersion: '1800000000.aaaa' }
+			expect(
+				buildSceneManifestEtag('s1', settingsUpdatedAt, {
+					...signed,
+					caller: 'session'
+				})
+			).not.toBe(buildSceneManifestEtag('s1', settingsUpdatedAt, signed))
 		})
 	})
 })

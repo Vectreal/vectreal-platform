@@ -26,6 +26,11 @@ export const PUBLISHER_LAYER = {
 	card: 'z-10',
 	/** Preview-mode camera controls, bottom-center of the stage. */
 	previewControls: 'z-20',
+	/**
+	 * The hold-to-compare label, in the same bottom-center slot: it only shows
+	 * with the optimization drawer open, which preview mode never is.
+	 */
+	compareLabel: 'z-20',
 	/** Tool bar, top-left of the stage. */
 	toolBar: 'z-30',
 	/** Sliding panels: publish sidebar, compose sidebar, optimization drawer. */
