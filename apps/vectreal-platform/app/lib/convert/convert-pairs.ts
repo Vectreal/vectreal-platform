@@ -70,6 +70,18 @@ export const USDZ_RESULT_NOTE =
 	'USDZ carries each texture as a PNG or JPEG at most 1024 pixels across, and its geometry uncompressed, so the result can be much smaller or much larger than what you dropped in.'
 
 /**
+ * What a USDZ result says when the model had see-through glass.
+ *
+ * Per result, not per pair: only a model with transmissive materials loses
+ * anything, and the converter's own viewer still draws that glass clear, so
+ * without this line the change first shows up in Quick Look.
+ * `exportThreeJSUSDZ` owns the approximation and reports which materials it
+ * touched.
+ */
+export const USDZ_GLASS_NOTE =
+	'This model has see-through glass. USDZ cannot describe glass that bends light, so in AR Quick Look it shows as plain transparency rather than the glass in this preview.'
+
+/**
  * A format id, as it appears in a URL slug.
  *
  * The owner's union, not a wider one of our own. It used to list `obj`, `stl`

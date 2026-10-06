@@ -18,7 +18,7 @@ import { Document, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import { cloneDocument, draco, DracoOptions } from '@gltf-transform/functions'
 import JSZip from 'jszip'
-import { Object3D } from 'three'
+import { Material, Mesh, MeshPhysicalMaterial, Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import {
@@ -56,6 +56,72 @@ const DEFAULT_DRACO_PATH = '/draco/'
  * most this size, and a change of three.js default must not make that untrue.
  */
 export const USDZ_MAX_TEXTURE_SIZE = 1024
+
+/**
+ * A copy of `object` whose transmissive materials are written as opacity.
+ *
+ * USDZ's material model, `UsdPreviewSurface`, has no transmission, and
+ * three.js's `USDZExporter` writes `inputs:opacity` from `material.opacity`
+ * alone. glTF glass is usually opaque with `KHR_materials_transmission` on top,
+ * so it arrived in Quick Look as a solid surface. Opacity is the nearest thing
+ * the format has: under the spec's default `opacityMode` of `transparent` it
+ * fades only the diffuse response and keeps the reflections, which is how the
+ * spec itself describes glass. Refraction, thickness and tint are still lost.
+ *
+ * Only where the exporter writes `material.opacity` at all. An `alphaMap`
+ * replaces it, and a `map` with `alphaTest` turns it into a scale on a cutout
+ * threshold, where lowering it would discard the whole surface. Such a material
+ * keeps exporting as before and is not reported. `transparent` is left alone:
+ * setting it would reroute opacity through the base color texture's alpha,
+ * which an opaque texture holds at 1.
+ *
+ * The copy shares geometry and every other material with `object`, and the
+ * scene on screen is never touched. Replacements are cached per material so two
+ * meshes sharing one still share it in the file.
+ */
+function withTransmissionAsOpacity(object: Object3D): {
+	object: Object3D
+	transmissiveMaterials: string[]
+} {
+	const replacements = new Map<Material, Material>()
+
+	const replace = (material: Material): Material => {
+		const physical = material as MeshPhysicalMaterial
+		const writesOpacity =
+			!physical.alphaMap && !(physical.map && physical.alphaTest > 0)
+		if (
+			!physical.isMeshPhysicalMaterial ||
+			physical.transmission <= 0 ||
+			!writesOpacity
+		) {
+			return material
+		}
+
+		let replacement = replacements.get(material)
+		if (!replacement) {
+			const glass = physical.clone()
+			glass.opacity = physical.opacity * (1 - physical.transmission)
+			glass.transmission = 0
+			replacement = glass
+			replacements.set(material, replacement)
+		}
+		return replacement
+	}
+
+	const copy = object.clone()
+	copy.traverse((child) => {
+		const mesh = child as Mesh
+		if (!mesh.isMesh) return
+		mesh.material = Array.isArray(mesh.material)
+			? mesh.material.map(replace)
+			: replace(mesh.material)
+	})
+
+	return {
+		object: copy,
+		transmissiveMaterials: [...replacements.keys()].map(({ name }) => name)
+	}
+}
 
 export class ModelExporter {
 	private io: WebIO
@@ -310,9 +376,11 @@ export class ModelExporter {
 			const { USDZExporter } =
 				await import('three/examples/jsm/exporters/USDZExporter.js')
 			const exporter = new USDZExporter()
+			const { object: exportable, transmissiveMaterials } =
+				withTransmissionAsOpacity(object)
 
 			this.emitProgress('Serializing Three.js scene', 40)
-			const result = await exporter.parseAsync(object, {
+			const result = await exporter.parseAsync(exportable, {
 				maxTextureSize: USDZ_MAX_TEXTURE_SIZE
 			})
 
@@ -326,7 +394,8 @@ export class ModelExporter {
 				data: binary,
 				format: 'usdz',
 				size: binary.byteLength,
-				exportTime
+				exportTime,
+				transmissiveMaterials
 			}
 		} catch (error) {
 			throw new Error(`Failed to export Three.js object to USDZ: ${error}`, {

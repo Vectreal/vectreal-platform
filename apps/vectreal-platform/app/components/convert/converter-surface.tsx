@@ -39,7 +39,8 @@ import {
 	CONVERT_OPTIONS,
 	convertOptionsFor,
 	type ConvertOption,
-	type ConvertPair
+	type ConvertPair,
+	USDZ_GLASS_NOTE
 } from '../../lib/convert/convert-pairs'
 import {
 	activeConvertOptions,
@@ -73,6 +74,8 @@ interface Props {
 interface Conversion {
 	bytes: Uint8Array
 	fileName: string
+	/** Said beside this result only, because only this model lost it. */
+	note?: string
 }
 
 /**
@@ -888,7 +891,12 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			*/
 			if (pair.to === 'usdz') {
 				const usdz = await exporter.exportThreeJSUSDZ(model.model)
-				store({ bytes: usdz.data, fileName: `${baseFileName}.usdz` })
+				store({
+					bytes: usdz.data,
+					fileName: `${baseFileName}.usdz`,
+					note:
+						usdz.transmissiveMaterials.length > 0 ? USDZ_GLASS_NOTE : undefined
+				})
 				return
 			}
 
@@ -1292,6 +1300,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 									result.bytes.byteLength
 								)}
 							/>
+							{result.note && (
+								<p className="text-foreground pb-2 text-sm">{result.note}</p>
+							)}
 							{pair.note && (
 								<p className="text-muted-foreground pb-2 text-sm">
 									{pair.note}
