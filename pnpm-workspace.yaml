@@ -30,7 +30,7 @@ catalog:
   react: 19.2.8
   react-dom: 19.2.8
   three: ^0.185.1
-  vite: ^8.2.1
+  vite: ^8.3.2
   vite-plugin-dts: 5.0.3
 
 # One React for the whole graph, not only for the manifests that name it.
