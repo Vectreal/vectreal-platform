@@ -1,9 +1,21 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 
 // These assertions run against a throwaway Vite app that installed
 // @vctrl/viewer from the local Verdaccio registry (i.e. the real published
 // tarball, not the workspace source). A green run proves the package can be
 // installed, bundled, and rendered on a clean integration site.
+
+/*
+  `mounted` arrives as the viewer mounts, before its scene is on screen: the
+  environment map downloads and the shaders compile behind the loader, and the
+  viewer's chrome (the way back from a hotspot's camera) appears only once the
+  loader has faded. A visitor meets the scene when it is ready, and so does
+  this, rather than racing the load against each assertion's 5s.
+*/
+const waitForScene = (page: Page) =>
+	expect(page.locator('[data-loading-state="ready"]')).toBeAttached({
+		timeout: 30000
+	})
 
 test('viewer mounts without a runtime crash', async ({ page }) => {
 	const consoleErrors: string[] = []
@@ -44,6 +56,8 @@ test('viewer mounts without a runtime crash', async ({ page }) => {
 	const hooksFlag = await page.evaluate(() => window.__HOOKS_E2E__)
 	expect(hooksFlag?.status, hooksFlag?.error).toBe('ok')
 
+	await waitForScene(page)
+
 	// Hotspots, in a real browser, from the published tarball. The seam test in
 	// the platform app asserts which props are handed over; this asserts what the
 	// package actually draws when it gets them - and that the two markers a
@@ -66,6 +80,8 @@ test('a visitor can leave the camera a hotspot flew them to', async ({
 		undefined,
 		{ timeout: 15000 }
 	)
+
+	await waitForScene(page)
 
 	const marker = page.getByRole('button', { name: 'Camera marker' })
 	const back = page.getByRole('button', { name: 'Back to scene view' })
