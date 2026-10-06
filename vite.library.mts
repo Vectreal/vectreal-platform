@@ -164,9 +164,14 @@ function pseudoElementStart(selector: string): number {
 		if (char === '\\') {
 			index++
 		} else if (char === '"' || char === "'") {
-			do index = selector.indexOf(char, index + 1)
-			while (index > 0 && selector[index - 1] === '\\')
-			if (index === -1) break
+			// To the closing quote, stepping over escapes as the outer scan does.
+			for (
+				index++;
+				index < selector.length && selector[index] !== char;
+				index++
+			) {
+				if (selector[index] === '\\') index++
+			}
 		} else if (char === '(' || char === '[') {
 			depth++
 		} else if (char === ')' || char === ']') {

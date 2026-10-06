@@ -67,6 +67,12 @@ describe('scopeStylesheetRules', () => {
 		)
 	})
 
+	it('ends a quoted value at a quote after an escaped backslash', () => {
+		expect(scope('[title="a\\\\"]::before{--x:0}')).toBe(
+			`[title="a\\\\"]${WHERE}::before{--x:0}`
+		)
+	})
+
 	it('leaves an escaped colon in a class name alone', () => {
 		expect(scope('.group\\:after{color:red}')).toBe(
 			`.group\\:after${WHERE}{color:red}`
