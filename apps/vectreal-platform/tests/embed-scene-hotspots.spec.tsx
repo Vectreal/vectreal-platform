@@ -80,11 +80,10 @@ describe('the published scene draws its hotspots', () => {
 
 	it('never asks the viewer for internal or hidden hotspots', () => {
 		/*
-		  Two of the three surfaces rendering this component are served the
-		  unredacted manifest - the dashboard's scene detail panel, and `/preview`
-		  of a scene with no published model row - so `internalOnly` hotspots
-		  really do arrive here, and this omission is the only thing stopping them
-		  being drawn on those two.
+		  A draft is served the unredacted working manifest on both surfaces that
+		  show one - the dashboard's scene detail panel and `/preview` - so
+		  `internalOnly` hotspots really do arrive here, and this omission is the
+		  only thing stopping them being drawn there.
 		*/
 		const props = renderEmbed({ hotspots: HOTSPOTS })
 
