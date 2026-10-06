@@ -170,16 +170,19 @@ describe('SceneEnvironment', () => {
 		const { rerenderWith } = renderEnvironment({ files: '/env/studio.hdr' })
 		Environment.mockClear()
 
+		const target = { isScene: true } as unknown as EnvironmentProps['scene']
+
 		rerenderWith({
 			files: '/env/studio.hdr',
 			background: true,
 			backgroundBlurriness: 0.1,
 			backgroundIntensity: 3,
-			environmentIntensity: 2
+			environmentIntensity: 2,
+			scene: target
 		})
 
 		expect(Environment).not.toHaveBeenCalled()
-		expect(useRoomEnvironment).toHaveBeenLastCalledWith(2, undefined)
+		expect(useRoomEnvironment).toHaveBeenLastCalledWith(2, target)
 	})
 
 	it('stays on the room even when the failure cannot be forgotten', () => {
