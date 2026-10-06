@@ -135,18 +135,54 @@ export function scopeStylesheetRules(css: string, scope: string): string {
 			return
 		}
 
-		// Appended, so it lands on the subject; a pseudo-element, and any
-		// pseudo-class after it such as `::-webkit-scrollbar-thumb:hover`, has to
-		// stay last, so it goes in front of them.
-		rule.selectors = rule.selectors.map((selector) =>
-			selector.replace(
-				/(?:((?<!\\):(?:before|after|first-line|first-letter)|::[\w-]+(?:\([^)]*\))?)(?::[\w-]+(?:\([^)]*\))?)*)?$/,
-				(pseudoElement) => `${where}${pseudoElement}`
-			)
-		)
+		// On the subject, ahead of its pseudo-element: one has to stay last.
+		rule.selectors = rule.selectors.map((selector) => {
+			const at = pseudoElementStart(selector)
+			return `${selector.slice(0, at)}${where}${selector.slice(at)}`
+		})
 	})
 
 	return root.toString()
+}
+
+const LEGACY_PSEUDO_ELEMENT =
+	/^:(before|after|first-line|first-letter)(?![\w-])/
+
+/**
+ * Where the subject's pseudo-element starts, or the selector's length when it
+ * has none. A scan rather than a pattern, because arguments nest
+ * (`::slotted(:is(.a))`) and escaped or quoted text (`.after\:x`,
+ * `[title=":after"]`) only looks like a pseudo-element.
+ */
+function pseudoElementStart(selector: string): number {
+	let depth = 0
+	let start = -1
+
+	for (let index = 0; index < selector.length; index++) {
+		const char = selector[index]
+
+		if (char === '\\') {
+			index++
+		} else if (char === '"' || char === "'") {
+			do index = selector.indexOf(char, index + 1)
+			while (index > 0 && selector[index - 1] === '\\')
+			if (index === -1) break
+		} else if (char === '(' || char === '[') {
+			depth++
+		} else if (char === ')' || char === ']') {
+			depth--
+		} else if (
+			depth === 0 &&
+			start === -1 &&
+			char === ':' &&
+			(selector[index + 1] === ':' ||
+				LEGACY_PSEUDO_ELEMENT.test(selector.slice(index)))
+		) {
+			start = index
+		}
+	}
+
+	return start === -1 ? selector.length : start
 }
 
 /** Applies `scopeStylesheetRules` to the named stylesheet a build emits. */

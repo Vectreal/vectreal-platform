@@ -57,6 +57,16 @@ describe('scopeStylesheetRules', () => {
 		)
 	})
 
+	it('places the scope correctly around nested arguments and quoted text', () => {
+		expect(
+			scope(
+				'.a::slotted(:is(.b)),.c::part(x):not(:is(:hover,:focus)),[title=":after\\"]::x"],.d:not(:is(.e))::before{--x:0}'
+			)
+		).toBe(
+			`.a${WHERE}::slotted(:is(.b)),.c${WHERE}::part(x):not(:is(:hover,:focus)),[title=":after\\"]::x"]${WHERE},.d:not(:is(.e))${WHERE}::before{--x:0}`
+		)
+	})
+
 	it('leaves an escaped colon in a class name alone', () => {
 		expect(scope('.group\\:after{color:red}')).toBe(
 			`.group\\:after${WHERE}{color:red}`
