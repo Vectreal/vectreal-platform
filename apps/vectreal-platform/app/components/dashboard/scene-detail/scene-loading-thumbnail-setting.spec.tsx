@@ -89,11 +89,10 @@ describe('the dashboard loading thumbnail setting', () => {
 				presentation: { showLoadingThumbnail: true },
 				csrf: 'csrf-token'
 			},
-			{
-				method: 'POST',
-				encType: 'application/json',
-				action: '/api/scenes/scene-1'
-			}
+			// The scene route's clientAction, which turns a dropped request into
+			// a refusal; posting straight to the API would throw it to the
+			// error boundary.
+			{ method: 'POST', encType: 'application/json' }
 		)
 	})
 

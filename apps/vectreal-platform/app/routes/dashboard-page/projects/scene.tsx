@@ -28,6 +28,7 @@ import {
 } from '../../../lib/domain/embed/inline-embed-manifest.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { sceneSourceFromManifest } from '../../../lib/domain/scene/client/embed-manifest-payload'
+import { forwardSceneAction } from '../../../lib/domain/scene/client/post-scene-action'
 import {
 	buildPreviewAssetUrl,
 	buildPreviewSceneEndpoint
@@ -172,6 +173,22 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		},
 		{ headers }
 	)
+}
+
+/**
+ * Mutations this page makes through a fetcher, forwarded to the scene API.
+ *
+ * Client-side so a request that never gets an answer resolves as a refusal
+ * instead of throwing to the error boundary, and on this route so a POST
+ * still makes the loader re-run. A refusal the server gives keeps its status
+ * and reloads as it always has; only an unreachable request skips the reload
+ * (`forwardSceneAction`).
+ */
+export async function clientAction({
+	request,
+	params
+}: Route.ClientActionArgs) {
+	return forwardSceneAction(params.sceneId, await request.json())
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

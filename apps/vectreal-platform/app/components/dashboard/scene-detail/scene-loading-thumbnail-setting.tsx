@@ -36,6 +36,11 @@ interface PresentationUpdateRequest {
  * then reads the loader again with no frame of the old value in between; a
  * refused write falls back to what is stored.
  *
+ * It posts to the scene route's `clientAction` rather than the API directly.
+ * A fetcher whose request never gets an answer is thrown to the error
+ * boundary, replacing the page; the action catches that and answers with a
+ * refusal, so a dropped connection rolls the switch back like any other.
+ *
  * Keyed by scene, so a write still in flight on one scene is never shown on
  * the next one the page navigates to.
  */
@@ -71,11 +76,9 @@ export function SceneLoadingThumbnailSetting({
 				presentation: { showLoadingThumbnail },
 				csrf
 			},
-			{
-				method: 'POST',
-				encType: 'application/json',
-				action: `/api/scenes/${sceneId}`
-			}
+			// No `action`: it posts to the scene route's `clientAction`, the
+			// closest route to this fetcher.
+			{ method: 'POST', encType: 'application/json' }
 		)
 	}
 
