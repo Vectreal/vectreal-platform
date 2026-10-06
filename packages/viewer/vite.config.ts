@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
-import { manifestExternals } from '../../vite.library.mts'
+import { manifestExternals, scopedStylesheet } from '../../vite.library.mts'
 
 export default defineConfig({
 	root: import.meta.dirname,
@@ -18,7 +18,10 @@ export default defineConfig({
 			entryRoot: 'src',
 			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
 		}),
-		manifestExternals(import.meta.dirname)
+		manifestExternals(import.meta.dirname),
+		// The published stylesheet matches only inside a viewer, so an app's own
+		// Tailwind classes keep winning everywhere else on its page.
+		scopedStylesheet('style.css', '.vctrl-viewer')
 	],
 
 	build: {
@@ -27,7 +30,9 @@ export default defineConfig({
 		cssCodeSplit: false,
 		lib: {
 			entry: {
-				index: path.resolve(import.meta.dirname, 'src/index.ts'),
+				// The source entry plus the Tailwind utilities a consumer of the
+				// bundle cannot generate; see `src/package.css`.
+				index: path.resolve(import.meta.dirname, 'src/index.package.ts'),
 				// Dependency-free, so a consumer that only needs the hotspot list
 				// rules does not pull React, three and drei in behind them.
 				hotspots: path.resolve(import.meta.dirname, 'src/hotspots.ts')

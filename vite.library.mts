@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import postcss, { type AtRule } from 'postcss'
 import type { Plugin } from 'vite'
 
 /**
@@ -95,6 +96,65 @@ export function manifestExternals(projectRoot: string): Plugin {
 					)
 				}
 			}
+		}
+	}
+}
+
+/**
+ * A published stylesheet's rules, confined to the element that owns them.
+ *
+ * `@vctrl/viewer` ships Tailwind's utilities for consumers with no build that
+ * scans its source. Outside any `@layer`, so a plain stylesheet's resets cannot
+ * undo them. But an app that uses Tailwind itself emits the same class names in
+ * its own `utilities` layer, and an unlayered rule beats every layered one: the
+ * viewer's `.hidden` kept the app's `hidden md:flex` hidden, its `.border`
+ * beat `border-b-2`, and its theme's `:root` block rewrote the app's tokens.
+ *
+ * Every rule gains `:where(scope, scope *)` on its first compound, which adds
+ * no specificity and stops it matching anything the scope does not contain.
+ * The theme's `:root, :host` variables move onto the scope, where they still
+ * inherit to everything that reads them. Keyframe selectors are left alone.
+ */
+export function scopeStylesheetRules(css: string, scope: string): string {
+	const where = `:where(${scope}, ${scope} *)`
+	const root = postcss.parse(css)
+
+	root.walkRules((rule) => {
+		const parent = rule.parent
+		if (
+			parent?.type === 'atrule' &&
+			/keyframes$/.test((parent as AtRule).name)
+		) {
+			return
+		}
+
+		if (rule.selectors.every((selector) => /^:(root|host)$/.test(selector))) {
+			rule.selector = scope
+			return
+		}
+
+		// A type or universal selector has to open its compound.
+		rule.selectors = rule.selectors.map((selector) =>
+			selector.replace(/^([a-zA-Z][\w-]*|\*)?/, (type) => `${type}${where}`)
+		)
+	})
+
+	return root.toString()
+}
+
+/** Applies `scopeStylesheetRules` to the named stylesheet a build emits. */
+export function scopedStylesheet(fileName: string, scope: string): Plugin {
+	return {
+		name: 'vctrl-scoped-stylesheet',
+		// After Vite has emitted the stylesheet asset.
+		enforce: 'post',
+		generateBundle(_options, bundle) {
+			const asset = bundle[fileName]
+			if (asset?.type !== 'asset') {
+				this.error(`${fileName} was not emitted, so it could not be scoped.`)
+			}
+
+			asset.source = scopeStylesheetRules(String(asset.source), scope)
 		}
 	}
 }

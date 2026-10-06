@@ -64,6 +64,10 @@ test('viewer mounts without a runtime crash', async ({ page }) => {
 	await expect(page.getByLabel('Internal marker')).toHaveCount(0)
 	await expect(page.getByLabel('Hidden marker')).toHaveCount(0)
 
+	// The published stylesheet is scoped to the viewer, so a page element
+	// outside it keeps its own meaning for a class the viewer also uses.
+	await expect(page.getByTestId('host-utility')).toBeVisible()
+
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 

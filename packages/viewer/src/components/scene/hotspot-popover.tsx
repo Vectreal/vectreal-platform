@@ -13,7 +13,7 @@ const popoverClasses = {
 	below: 'top-[var(--vctrl-hotspot-popover-gap)]',
 	// `font-[600]` rather than the named scale: a named weight registers its
 	// theme variable in the published stylesheet's `:root, :host` block, which
-	// lands in a host application after hydration. See styles.css.
+	// lands in a host application after hydration. See package.css.
 	title: 'text-[12px] leading-[1.35] font-[600]',
 	// `whitespace-pre-wrap` so the line breaks an author typed survive. The body
 	// is plain text, never markup, so this is the only formatting it carries.
