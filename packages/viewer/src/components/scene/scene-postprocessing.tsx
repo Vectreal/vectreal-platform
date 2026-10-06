@@ -10,7 +10,6 @@ import {
 } from 'postprocessing'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
-	Box3,
 	type Camera,
 	HalfFloatType,
 	NeutralToneMapping,
@@ -24,6 +23,7 @@ import {
 } from 'three'
 
 import { AccumulatePass } from './accumulate-pass'
+import { worldBounds } from './model-measurement'
 import { N8AOPostPass } from './n8ao'
 import {
 	computeSceneSignature,
@@ -121,8 +121,7 @@ const useModelRadius = (model?: Object3D): number => {
 
 	useEffect(() => {
 		if (!model) return
-		model.updateWorldMatrix(true, true)
-		const size = new Box3().setFromObject(model).getSize(new Vector3())
+		const size = worldBounds(model).getSize(new Vector3())
 		const next = 0.5 * Math.hypot(size.x, size.y, size.z)
 		if (next > 0 && Number.isFinite(next)) setRadius(next)
 	}, [model])
