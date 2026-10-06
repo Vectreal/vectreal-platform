@@ -23,6 +23,8 @@ import { presentationAtom } from '../../../../../lib/stores/scene-settings-store
 import type { Optimizations } from '@vctrl/core'
 
 const mocks = vi.hoisted(() => ({
+	getDocument: vi.fn(),
+	toastSuccess: vi.fn(),
 	runPublishExportInWorker: vi.fn(),
 	publishSceneFromGlb: vi.fn(),
 	toastWarning: vi.fn()
@@ -30,7 +32,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
 	useModelContext: () => ({
-		optimizer: { isReady: true, _getDocument: () => new Document() },
+		optimizer: { isReady: true, _getDocument: mocks.getDocument },
 		file: { name: 'shoe.glb' }
 	})
 }))
@@ -39,7 +41,11 @@ vi.mock('react-router', () => ({
 	useRevalidator: () => ({ revalidate: vi.fn() })
 }))
 vi.mock('sonner', () => ({
-	toast: { success: vi.fn(), error: vi.fn(), warning: mocks.toastWarning }
+	toast: {
+		success: mocks.toastSuccess,
+		error: vi.fn(),
+		warning: mocks.toastWarning
+	}
 }))
 vi.mock('../../../../../lib/domain/scene/client/publish-export', () => ({
 	runPublishExportInWorker: mocks.runPublishExportInWorker
@@ -80,6 +86,8 @@ const textureSwitch = () =>
 describe('the publish panel', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		const document = new Document()
+		mocks.getDocument.mockImplementation(() => document)
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: PUBLISHED.slice().buffer,
 			geometryCodec: 'meshopt',
@@ -212,6 +220,24 @@ describe('the publish panel', () => {
 				geometrySizes: { none: 300, meshopt: 120, draco: 110 },
 				ktx2Textures: { encoded: 2, total: 2 }
 			}
+		})
+	})
+
+	it('leaves the figures to a pass that replaced the document during the upload', async () => {
+		mocks.publishSceneFromGlb.mockImplementation(async () => {
+			mocks.getDocument.mockImplementation(() => new Document())
+			return {
+				response: {},
+				publishState: { sceneId: 'scene-1', status: 'published' }
+			}
+		})
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalled())
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedTextureBytes: null,
+			publishedEncoding: null
 		})
 	})
 

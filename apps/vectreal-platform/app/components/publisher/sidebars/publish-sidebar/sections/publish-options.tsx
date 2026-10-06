@@ -161,31 +161,38 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				currentSceneBytes: glbData.byteLength
 			})
 
-			// Only once it has shipped: the figures then describe that file, in
-			// the codecs the export chose, rather than the Draco and WebP
-			// projection.
+			// Only once it has shipped, and only while the document on screen is
+			// the one exported: the figures then describe that file, in the codecs
+			// the export chose, rather than the Draco and WebP projection. A pass
+			// started during the upload has replaced the document, and its own
+			// figures win.
 			const data = publishResult.response as PublishSceneResponse
+			const describesDocument = optimizer?._getDocument?.() === document
 			const ktx2Total =
 				(result.textures?.encoded.length ?? 0) +
 				(result.textures?.kept.length ?? 0)
 			setOptimizationRuntime((prev) => ({
 				...prev,
-				optimizedSceneBytes: glbData.byteLength,
-				optimizedTextureBytes: result.textureBytes,
-				clientSceneBytes: prev.clientSceneBytes ?? glbData.byteLength,
-				publishedEncoding: {
-					geometryCodec: result.geometryCodec,
-					geometrySizes: result.geometrySizes,
-					...(result.textures && ktx2Total > 0
-						? {
-								ktx2Textures: {
-									encoded: result.textures.encoded.length,
-									total: ktx2Total
-								}
+				...(data.stats ? { latestSceneStats: data.stats } : {}),
+				...(describesDocument
+					? {
+							optimizedSceneBytes: glbData.byteLength,
+							optimizedTextureBytes: result.textureBytes,
+							clientSceneBytes: prev.clientSceneBytes ?? glbData.byteLength,
+							publishedEncoding: {
+								geometryCodec: result.geometryCodec,
+								geometrySizes: result.geometrySizes,
+								...(result.textures && ktx2Total > 0
+									? {
+											ktx2Textures: {
+												encoded: result.textures.encoded.length,
+												total: ktx2Total
+											}
+										}
+									: {})
 							}
-						: {})
-				},
-				...(data.stats ? { latestSceneStats: data.stats } : {})
+						}
+					: {})
 			}))
 
 			const publishStateUpdate: ScenePublishStateResponse =
