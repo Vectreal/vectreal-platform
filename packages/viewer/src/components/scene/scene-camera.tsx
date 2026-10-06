@@ -373,6 +373,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		signature: CameraSelectionSignature
 	} | null>(null)
 
+	/*
+	  Read by the command executor when a command runs, not when it was created.
+	  A ref keeps the executor's identity independent of the transition: a host
+	  passing an inline `sceneTransition` would otherwise re-register it, and
+	  re-emit `viewer_ready`, on every render.
+	*/
+	const sceneTransitionRef = useRef(sceneTransition)
+	sceneTransitionRef.current = sceneTransition
+
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
 			const activeCamera = sceneCamera as PerspectiveCamera
@@ -485,7 +494,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				command.cameraId,
 				controls?.target ?? new Vector3(0, 0, 0),
 				sceneCamera as PerspectiveCamera,
-				sceneTransition,
+				sceneTransitionRef.current,
 				openingPose.current
 			)
 
