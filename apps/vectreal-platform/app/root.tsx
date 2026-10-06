@@ -23,6 +23,7 @@ import { RouteErrorState, routeErrorMeta } from './components/not-found'
 import { ThemeController, ThemeScript } from './components/theme'
 import { shouldRenderConsentUi } from './lib/consent/consent-surfaces'
 import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
+import { isRefusedAction } from './lib/navigation/dashboard-route-behavior'
 import { useErrorReport } from './lib/observability/use-error-report'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
@@ -83,8 +84,13 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	nextUrl,
 	formMethod,
 	actionResult,
+	actionStatus,
 	defaultShouldRevalidate
 }) => {
+	if (isRefusedAction(actionStatus)) {
+		return false
+	}
+
 	if (formMethod && formMethod !== 'GET') {
 		return true
 	}

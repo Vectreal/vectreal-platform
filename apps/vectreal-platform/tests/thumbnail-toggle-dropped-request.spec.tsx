@@ -3,17 +3,20 @@
  * The loading-thumbnail toggle under a real router, with the network gone.
  *
  * The component spec mocks the fetcher, so it cannot show the thing this
- * guards: React Router throws a fetcher request that never got an answer to
- * the route's error boundary, replacing the whole scene page. Routed through a
- * `clientAction` built on `postSceneAction`, as the scene route does, the same
- * failure has to come back as data the switch rolls back from.
+ * guards. Offline, two requests fail, and either one replaces the whole scene
+ * page with its error boundary: the write, which React Router throws when it
+ * never gets an answer, and the loader reload that follows any POST. The
+ * route here is built from the real pieces (`forwardSceneAction` as its
+ * action, `shouldRevalidateForRouteParams` as its reload rule) and a loader
+ * that really fetches, so both failures are live.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createRoutesStub } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { SceneLoadingThumbnailSetting } from '../app/components/dashboard/scene-detail/scene-loading-thumbnail-setting'
-import { postSceneAction } from '../app/lib/domain/scene/client/post-scene-action'
+import { forwardSceneAction } from '../app/lib/domain/scene/client/post-scene-action'
+import { shouldRevalidateForRouteParams } from '../app/lib/navigation/dashboard-route-behavior'
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
 
@@ -28,10 +31,27 @@ function renderScenePage() {
 	const Stub = createRoutesStub([
 		{
 			path: '/scene',
-			loader: () => ({ presentation: { showLoadingThumbnail: false } }),
-			// What the scene route's clientAction does.
+			loader: async () => {
+				await fetch('/scene.data')
+				return { presentation: { showLoadingThumbnail: false } }
+			},
 			action: async ({ request }) =>
-				postSceneAction('scene-1', await request.json()),
+				forwardSceneAction('scene-1', await request.json()),
+			shouldRevalidate: ({
+				formMethod,
+				actionResult,
+				actionStatus,
+				defaultShouldRevalidate
+			}) =>
+				shouldRevalidateForRouteParams({
+					currentParams: {},
+					nextParams: {},
+					paramKeys: [],
+					formMethod,
+					actionResult,
+					actionStatus,
+					defaultShouldRevalidate
+				}),
 			Component: () => (
 				<SceneLoadingThumbnailSetting
 					sceneId="scene-1"
@@ -61,10 +81,13 @@ afterEach(() => {
 
 describe('the loading thumbnail toggle, when the request is dropped', () => {
 	it('rolls back with a toast and keeps the page', async () => {
-		fetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
+		fetchMock.mockResolvedValue(new Response('{}'))
 		renderScenePage()
-
 		const control = await toggle()
+		// The network goes away after the page has loaded.
+		fetchMock.mockReset()
+		fetchMock.mockRejectedValue(new TypeError('Failed to fetch'))
+
 		await act(async () => {
 			fireEvent.click(control)
 		})
@@ -80,5 +103,29 @@ describe('the loading thumbnail toggle, when the request is dropped', () => {
 			'/api/scenes/scene-1',
 			expect.objectContaining({ method: 'POST' })
 		)
+		// Nothing tried to reload after the refused write.
+		expect(fetchMock).not.toHaveBeenCalledWith('/scene.data')
+	})
+
+	it('still reloads the page data after a write that succeeds', async () => {
+		fetchMock.mockImplementation(async (url: string) =>
+			url === '/scene.data'
+				? new Response('{}')
+				: new Response(
+						JSON.stringify({ success: true, data: { presentation: {} } })
+					)
+		)
+		renderScenePage()
+		const control = await toggle()
+		fetchMock.mockClear()
+
+		await act(async () => {
+			fireEvent.click(control)
+		})
+
+		await vi.waitFor(() =>
+			expect(fetchMock).toHaveBeenCalledWith('/scene.data')
+		)
+		expect(toastError).not.toHaveBeenCalled()
 	})
 })

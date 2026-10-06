@@ -21,9 +21,10 @@ describe('postSceneAction', () => {
 	it("hands back the API's answer", async () => {
 		const answer = { success: true, data: { presentation: {} } }
 
-		expect(await postSceneAction('scene-1', {}, respond(200, answer))).toEqual(
-			answer
-		)
+		expect(await postSceneAction('scene-1', {}, respond(200, answer))).toEqual({
+			...answer,
+			status: 200
+		})
 	})
 
 	it("hands back the API's refusal with its message", async () => {
@@ -33,7 +34,7 @@ describe('postSceneAction', () => {
 				{},
 				respond(404, { success: false, error: 'Scene not found' })
 			)
-		).toEqual({ success: false, error: 'Scene not found' })
+		).toEqual({ success: false, error: 'Scene not found', status: 404 })
 	})
 
 	it('treats a failing status as a refusal even if the body claims success', async () => {
@@ -53,7 +54,8 @@ describe('postSceneAction', () => {
 
 		expect(await postSceneAction('scene-1', {}, fetchImpl)).toEqual({
 			success: false,
-			error: 'Could not reach the server. Try again.'
+			error: 'Could not reach the server. Try again.',
+			status: 503
 		})
 	})
 
@@ -64,7 +66,8 @@ describe('postSceneAction', () => {
 
 		expect(await postSceneAction('scene-1', {}, fetchImpl)).toEqual({
 			success: false,
-			error: 'Could not reach the server. Try again.'
+			error: 'Could not reach the server. Try again.',
+			status: 503
 		})
 	})
 })

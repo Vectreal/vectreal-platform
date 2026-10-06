@@ -117,6 +117,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	nextUrl,
 	formMethod,
 	actionResult,
+	actionStatus,
 	defaultShouldRevalidate
 }) => {
 	return shouldRevalidateWithinScope({
@@ -124,6 +125,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		nextPathname: nextUrl.pathname,
 		formMethod,
 		actionResult,
+		actionStatus,
 		defaultShouldRevalidate,
 		scopePrefix: '/dashboard/projects'
 	})

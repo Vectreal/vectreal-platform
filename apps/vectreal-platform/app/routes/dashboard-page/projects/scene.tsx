@@ -28,7 +28,7 @@ import {
 } from '../../../lib/domain/embed/inline-embed-manifest.server'
 import { getProject } from '../../../lib/domain/project/project-repository.server'
 import { sceneSourceFromManifest } from '../../../lib/domain/scene/client/embed-manifest-payload'
-import { postSceneAction } from '../../../lib/domain/scene/client/post-scene-action'
+import { forwardSceneAction } from '../../../lib/domain/scene/client/post-scene-action'
 import {
 	buildPreviewAssetUrl,
 	buildPreviewSceneEndpoint
@@ -179,14 +179,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
  * Mutations this page makes through a fetcher, forwarded to the scene API.
  *
  * Client-side so a request that never gets an answer resolves as a refusal
- * instead of throwing to the error boundary, and on this route so the POST
- * still makes the loader re-run and hand back what was stored.
+ * instead of throwing to the error boundary, and on this route so a
+ * successful POST still makes the loader re-run and hand back what was
+ * stored; a refusal carries its failing status so nothing reloads
+ * (`forwardSceneAction`).
  */
 export async function clientAction({
 	request,
 	params
 }: Route.ClientActionArgs) {
-	return postSceneAction(params.sceneId, await request.json())
+	return forwardSceneAction(params.sceneId, await request.json())
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
@@ -194,6 +196,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	nextParams,
 	formMethod,
 	actionResult,
+	actionStatus,
 	defaultShouldRevalidate
 }) => {
 	return shouldRevalidateForRouteParams({
@@ -202,6 +205,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		paramKeys: ['projectId', 'sceneId'],
 		formMethod,
 		actionResult,
+		actionStatus,
 		defaultShouldRevalidate
 	})
 }

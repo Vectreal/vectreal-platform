@@ -70,6 +70,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	nextParams,
 	formMethod,
 	actionResult,
+	actionStatus,
 	defaultShouldRevalidate
 }) => {
 	return shouldRevalidateForRouteParams({
@@ -78,6 +79,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 		paramKeys: ['projectId', 'folderId'],
 		formMethod,
 		actionResult,
+		actionStatus,
 		defaultShouldRevalidate
 	})
 }

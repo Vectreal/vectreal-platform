@@ -417,9 +417,28 @@ describe('the dashboard scene page', () => {
 
 	it('forwards fetcher mutations to the scene API through a clientAction that always resolves', () => {
 		expect(route).toMatch(
-			/export async function clientAction\(\{\s*request,\s*params\s*\}: Route\.ClientActionArgs\) \{\s*return postSceneAction\(params\.sceneId, await request\.json\(\)\)/
+			/export async function clientAction\(\{\s*request,\s*params\s*\}: Route\.ClientActionArgs\) \{\s*return forwardSceneAction\(params\.sceneId, await request\.json\(\)\)/
 		)
 		expect(route).not.toMatch(/export async function action\(/)
+	})
+
+	it('skips every reload in its chain after a refused action', () => {
+		const rule = (path: string) =>
+			read(path).slice(
+				read(path).indexOf(
+					'export const shouldRevalidate: ShouldRevalidateFunction'
+				)
+			)
+		expect(rule('root.tsx')).toMatch(
+			/^[^}]*actionStatus,[^}]*\}\) => \{\s*if \(isRefusedAction\(actionStatus\)\) \{\s*return false/
+		)
+		for (const path of [
+			'routes/layouts/dashboard-layout.tsx',
+			'routes/dashboard-page/projects/project.tsx',
+			'routes/dashboard-page/projects/scene.tsx'
+		]) {
+			expect(rule(path), path).toMatch(/^[\s\S]{0,600}?\t\tactionStatus,\n/)
+		}
 	})
 
 	it('gates the thumbnail toggle on scene:update', () => {
