@@ -155,7 +155,8 @@ export const useOptimizationProcess = ({
 					reportTextureBytesBefore: report?.stats.textureBytes.before,
 					calculateSceneBytes
 				},
-				setRuntime: writeRuntime
+				setRuntime: writeRuntime,
+				setRuntimeUnfiltered: setOptimizationRuntime
 			})
 
 			if (!isCurrent()) return
@@ -352,6 +353,7 @@ export const useOptimizationProcess = ({
 		// resurrected the previous measurement after a texture-only pass, which
 		// also invalidates any projected size it was quoting.
 		dracoReport: runtimeDracoReport ?? null,
+		publishedEncoding: optimizationRuntime.publishedEncoding,
 		simplificationOutcome,
 		resolvedMetrics,
 		isPending,

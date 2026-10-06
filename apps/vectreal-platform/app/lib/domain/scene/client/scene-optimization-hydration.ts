@@ -106,6 +106,7 @@ export const executeOptimizationStateHydration = ({
 		isSceneSizeLoading: false,
 		optimizedSceneBytes: null,
 		optimizedTextureBytes: null,
+		publishedEncoding: null,
 		clientSceneBytes: sourcePackageBytes,
 		clientTextureBytes: textureBytes,
 		latestSceneStats

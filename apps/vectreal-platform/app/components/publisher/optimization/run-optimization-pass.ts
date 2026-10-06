@@ -75,7 +75,19 @@ export interface OptimizationPassDeps {
 			prev: SceneOptimizationRuntimeState
 		) => SceneOptimizationRuntimeState
 	) => void
+	/**
+	 * Writes past whatever `setRuntime` filters out for a superseded pass. Only
+	 * for lowering `isPending`: the pass that raised it must lower it, or
+	 * nothing does when no hydration follows, as after `setSource`.
+	 */
+	setRuntimeUnfiltered: OptimizationPassDeps['setRuntime']
 }
+
+/**
+ * Never reset, unlike the runtime: a revision handed out before a scene
+ * switch must not equal one handed out after it.
+ */
+let lastPassRevision = 0
 
 export interface OptimizationPassResult {
 	/**
@@ -272,11 +284,19 @@ export async function runOptimizationPass(
 	deps: OptimizationPassDeps
 ): Promise<OptimizationPassResult> {
 	const { optimizations, steps, model, setRuntime } = deps
+	const revision = ++lastPassRevision
 
 	// Clear the previous pass's Draco measurement up front — this run may not
 	// include Draco at all, and a stale report would keep advertising a saving
-	// that no longer applies.
-	setRuntime((prev) => ({ ...prev, isPending: true, dracoReport: null }))
+	// that no longer applies. The last publish goes too: it described the
+	// document this pass is replacing.
+	setRuntime((prev) => ({
+		...prev,
+		isPending: true,
+		dracoReport: null,
+		publishedEncoding: null,
+		passRevision: revision
+	}))
 
 	const { geometryKeys, hasTextureStep, allSteps } =
 		planOptimizationSteps(optimizations)
@@ -336,7 +356,11 @@ export async function runOptimizationPass(
 		await showOriginal(model)
 		return FAILED
 	} finally {
-		setRuntime((prev) => ({ ...prev, isPending: false }))
+		// Only while no newer pass has started: lowering its flag would read
+		// as idle in the middle of its work.
+		deps.setRuntimeUnfiltered((prev) =>
+			prev.passRevision === revision ? { ...prev, isPending: false } : prev
+		)
 		steps.reset()
 	}
 

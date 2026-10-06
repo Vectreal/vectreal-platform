@@ -8,6 +8,7 @@ import {
 } from '../../../layout-components/file-size-comparison'
 
 import type { resolveSceneMetrics } from '../../../../lib/domain/scene'
+import type { PublishedEncoding } from '../../../../types/scene-optimization'
 import type { SimplificationOutcome } from '../model'
 import type { SizeInfo } from '../use-optimization-process'
 import type { DracoCompressionReport } from '@vctrl/core'
@@ -17,15 +18,42 @@ interface OptimizationResultsProps {
 	sizeInfo: SizeInfo
 	resolvedMetrics: ReturnType<typeof resolveSceneMetrics>
 	dracoReport: DracoCompressionReport | null
+	/** Present once this document has been published; then it leads. */
+	publishedEncoding?: PublishedEncoding | null
 	simplificationOutcome: SimplificationOutcome | null
+}
+
+const CODEC_LABELS = {
+	draco: 'Draco',
+	meshopt: 'meshopt',
+	none: 'uncompressed'
+} as const
+
+/** The geometry row for a published file: what shipped, against plain. */
+const PublishedGeometry: FC<{ encoding: PublishedEncoding }> = ({
+	encoding: { geometryCodec, geometrySizes }
+}) => {
+	const shipped = geometrySizes?.[geometryCodec]
+	if (geometryCodec === 'none' || !geometrySizes || shipped == null) {
+		return <span className="text-muted-foreground">Not compressed</span>
+	}
+	return (
+		<BeforeAfter
+			before={formatFileSize(geometrySizes.none)}
+			after={formatFileSize(shipped)}
+			suffix={`(-${Math.round((1 - shipped / geometrySizes.none) * 100)}%, gzipped)`}
+		/>
+	)
 }
 
 export const OptimizationResults: FC<OptimizationResultsProps> = ({
 	sizeInfo,
 	resolvedMetrics,
 	dracoReport,
+	publishedEncoding,
 	simplificationOutcome
 }) => {
+	const ktx2 = publishedEncoding?.ktx2Textures
 	const { reductionPercent, deltaLabel } = describeSizeChange(
 		resolvedMetrics.sceneBytes.initial,
 		resolvedMetrics.sceneBytes.current
@@ -58,8 +86,18 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 			  ordinary padding still look crammed.
 			*/}
 			<div className="border-border/60 mt-4 space-y-2 border-t pt-4 text-xs">
-				{/* Draco leads: it is usually the largest single saving. */}
-				{dracoReport ? (
+				{/*
+				  Geometry leads: it is usually the largest single saving. Once
+				  published, the row describes the codec the export chose, measured
+				  as it travels; before that, the Draco projection.
+				*/}
+				{publishedEncoding ? (
+					<MetricRow
+						label={`Geometry (${CODEC_LABELS[publishedEncoding.geometryCodec]})`}
+					>
+						<PublishedGeometry encoding={publishedEncoding} />
+					</MetricRow>
+				) : dracoReport ? (
 					<MetricRow label="Geometry (Draco)">
 						{dracoReport.isWorthApplying ? (
 							<BeforeAfter
@@ -77,7 +115,7 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 					</MetricRow>
 				) : null}
 
-				{sizeInfo.workingSceneBytes != null ? (
+				{sizeInfo.workingSceneBytes != null && !publishedEncoding ? (
 					<MetricRow label="Before Draco">
 						<span className="text-muted-foreground">
 							{formatFileSize(sizeInfo.workingSceneBytes)}
@@ -124,6 +162,11 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 					<BeforeAfter
 						before={formatFileSize(resolvedMetrics.textureBytes.initial)}
 						after={formatFileSize(resolvedMetrics.textureBytes.current)}
+						suffix={
+							ktx2
+								? `(${ktx2.encoded} of ${ktx2.total} GPU-compressed)`
+								: undefined
+						}
 					/>
 				</MetricRow>
 			</div>

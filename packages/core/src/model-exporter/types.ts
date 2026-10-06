@@ -15,6 +15,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import type { SerializedAsset } from '../types'
+import type { GeometryCodec, GeometryCodecSizes } from './geometry-codec'
+import type { Document } from '@gltf-transform/core'
+import type { DracoOptions } from '@gltf-transform/functions'
 
 export interface GLBExportResult {
 	/** Exported binary data for GLB */
@@ -25,6 +28,23 @@ export interface GLBExportResult {
 	size: number
 	/** Export duration in milliseconds */
 	exportTime: number
+}
+
+export interface PublishExportOptions {
+	/** Draco settings; absent when geometry compression is off. */
+	draco?: DracoOptions
+	/** False when the optimizer measured Draco larger than the plain GLB. */
+	dracoWorthApplying?: boolean
+	/** Rewrites the export clone's textures, before geometry is encoded. */
+	textures?: (document: Document) => Promise<void>
+}
+
+export interface PublishExportResult extends GLBExportResult {
+	geometryCodec: GeometryCodec
+	/** What each codec measured; absent when geometry compression is off. */
+	geometrySizes?: GeometryCodecSizes
+	/** Image bytes the GLB carries, after `textures` rewrote them. */
+	textureBytes: number
 }
 
 export interface GLTFExportResult {

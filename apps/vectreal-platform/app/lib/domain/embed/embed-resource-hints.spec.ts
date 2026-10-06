@@ -1,4 +1,8 @@
-import { DRACO_DECODER_PATH, resolveEnvironmentFiles } from '@vctrl/core'
+import {
+	DRACO_DECODER_PATH,
+	KTX2_TRANSCODER_PATH,
+	resolveEnvironmentFiles
+} from '@vctrl/core'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { describe, expect, it } from 'vitest'
 
@@ -73,6 +77,32 @@ describe('resolveEmbedResourceHints', () => {
 				})
 			)
 		).not.toContain(decoder.wasm)
+	})
+
+	it('preloads both KTX2 transcoder files only for a model known to need them', () => {
+		// The names three's KTX2Loader requests under its transcoder path.
+		const transcoder = [
+			`${KTX2_TRANSCODER_PATH}basis_transcoder.js`,
+			`${KTX2_TRANSCODER_PATH}basis_transcoder.wasm`
+		]
+		const withFlags = (flags: object) =>
+			hrefs(
+				manifest({
+					publishedModel: { ...manifest().publishedModel, ...flags }
+				})
+			)
+
+		expect(withFlags({ usesKtx2: true })).toEqual(
+			expect.arrayContaining(transcoder)
+		)
+		for (const flags of [{}, { usesKtx2: false }, { usesMeshopt: true }]) {
+			expect(
+				withFlags(flags).filter((href) => transcoder.includes(href))
+			).toEqual([])
+		}
+		expect(withFlags({ usesKtx2: true })).not.toContain(
+			`${DRACO_DECODER_PATH}draco_decoder.wasm`
+		)
 	})
 
 	it('preloads the shadow bake as the image the viewer will load', () => {

@@ -27,14 +27,18 @@ export const CDN_PUBLIC_EXACT_PATHS = [
  * cache or, as under `/assets/`, holding them for a year.
  *
  * `/draco/` is the same kind of file: three.js's Draco decoder, which every
- * Draco-published embed fetches, served for a day (see `server.mjs`).
+ * Draco-published embed fetches, served for a day (see `server.mjs`). So are
+ * `/basis/`, the KTX2 transcoder a KTX2-published embed fetches, and
+ * `/basis-encoder/`, the KTX2 encoder the publisher fetches.
  */
 export const CDN_PUBLIC_PREFIXES = [
 	'/convert',
 	'/docs',
 	'/news-room',
 	'/media/',
-	'/draco/'
+	'/draco/',
+	'/basis/',
+	'/basis-encoder/'
 ] as const
 
 /**

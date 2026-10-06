@@ -120,7 +120,9 @@ function SceneSaveFlowHarness({
 			clientTextureBytes: null,
 			lastSavedReportSignature: null,
 			latestSceneStats: null,
-			dracoReport: null
+			dracoReport: null,
+			publishedEncoding: null,
+			passRevision: 0
 		})
 
 	const scenePersistence: ScenePersistenceState = {

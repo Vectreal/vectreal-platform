@@ -16,7 +16,12 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-import { cloneDocument, draco, DracoOptions } from '@gltf-transform/functions'
+import {
+	cloneDocument,
+	draco,
+	DracoOptions,
+	meshopt
+} from '@gltf-transform/functions'
 import JSZip from 'jszip'
 import { Material, Mesh, MeshPhysicalMaterial, Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
@@ -25,11 +30,20 @@ import {
 	canLoadDracoInBrowser,
 	loadDracoModule
 } from '../draco/load-draco-module'
+import { loadMeshoptEncoder } from '../meshopt/meshopt-codec'
 import { OperationProgress } from '../types'
+import {
+	GeometryCodec,
+	GeometryCodecSizes,
+	gzipSize,
+	pickGeometryCodec
+} from './geometry-codec'
 import {
 	ExportResult,
 	GLBExportResult,
 	GLTFExportResult,
+	PublishExportOptions,
+	PublishExportResult,
 	USDZExportResult
 } from './types'
 
@@ -250,6 +264,99 @@ export class ModelExporter {
 			throw new Error(`Failed to export Draco-compressed GLB: ${error}`, {
 				cause: error
 			})
+		}
+	}
+
+	/**
+	 * Export a document as the GLB a scene is published as.
+	 *
+	 * Works on a clone, so the caller's document stays as it was. `textures`
+	 * rewrites that clone's textures once, KTX2 encoding being far too slow to
+	 * repeat. Geometry is then encoded in whichever codec `pickGeometryCodec`
+	 * chooses, measured on texture-free copies so the comparison is between
+	 * geometry bytes rather than diluted by textures every codec shares.
+	 *
+	 * Without `draco` geometry compression is off and no codec is applied.
+	 */
+	public async exportDocumentGLBForPublish(
+		document: Document,
+		{ draco, dracoWorthApplying = true, textures }: PublishExportOptions = {}
+	): Promise<PublishExportResult> {
+		const startTime = Date.now()
+		const workingDoc = cloneDocument(document)
+		if (textures) await textures(workingDoc)
+
+		const geometrySizes = draco
+			? await this.measureGeometryCodecs(document, draco, dracoWorthApplying)
+			: undefined
+		const geometryCodec = geometrySizes
+			? pickGeometryCodec(geometrySizes)
+			: 'none'
+
+		await this.applyGeometryCodec(workingDoc, geometryCodec, draco)
+		const data = await this.io.writeBinary(workingDoc)
+		const textureBytes = workingDoc
+			.getRoot()
+			.listTextures()
+			.reduce((sum, texture) => sum + (texture.getImage()?.byteLength ?? 0), 0)
+
+		return {
+			data,
+			format: 'glb',
+			size: data.byteLength,
+			exportTime: Date.now() - startTime,
+			geometryCodec,
+			geometrySizes,
+			textureBytes
+		}
+	}
+
+	private async measureGeometryCodecs(
+		document: Document,
+		dracoOptions: DracoOptions,
+		dracoWorthApplying: boolean
+	): Promise<GeometryCodecSizes> {
+		const geometryOnly = cloneDocument(document)
+		for (const texture of geometryOnly.getRoot().listTextures()) {
+			texture.dispose()
+		}
+
+		const sizeAs = async (codec: GeometryCodec) => {
+			const encoded = cloneDocument(geometryOnly)
+			await this.applyGeometryCodec(encoded, codec, dracoOptions)
+			return gzipSize(await this.io.writeBinary(encoded))
+		}
+
+		// A codec left unmeasured is no candidate: Draco when the optimizer found
+		// it larger than the plain GLB, either one when its encoder cannot load or
+		// refuses the geometry (meshopt on KHR_mesh_primitive_restart).
+		return {
+			none: await sizeAs('none'),
+			meshopt: await sizeAs('meshopt').catch(() => undefined),
+			draco: dracoWorthApplying
+				? await sizeAs('draco').catch(() => undefined)
+				: undefined
+		}
+	}
+
+	/**
+	 * `meshopt()` reorders and quantizes before compressing. Quantizing moves a
+	 * mesh's offset and scale onto its node, inserting a child node to hold the
+	 * mesh where the original also has children or animation. Nothing in a
+	 * published scene addresses nodes by identity, so that rewrite is safe.
+	 */
+	private async applyGeometryCodec(
+		document: Document,
+		codec: GeometryCodec,
+		dracoOptions: DracoOptions = {}
+	): Promise<void> {
+		if (codec === 'draco') {
+			await this.ensureDracoEncoderRegistered()
+			await document.transform(draco(dracoOptions))
+		} else if (codec === 'meshopt') {
+			const encoder = await loadMeshoptEncoder()
+			this.io.registerDependencies({ 'meshopt.encoder': encoder })
+			await document.transform(meshopt({ encoder, level: 'medium' }))
 		}
 	}
 

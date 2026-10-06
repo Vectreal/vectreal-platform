@@ -282,6 +282,25 @@ describe('whether the published GLB needs the Draco decoder', () => {
 		expect(ref.usesDraco).toBe(false)
 	})
 
+	it('says which of meshopt and KTX2 the upload recorded', () => {
+		const refFor = (gltfExtensionsUsed: string[]) =>
+			buildPublishedModelRef(
+				{
+					...row,
+					extensionsUsed: extensionsUsedFromMetadata({ gltfExtensionsUsed })
+				},
+				url
+			)
+
+		expect(
+			refFor(['EXT_meshopt_compression', 'KHR_mesh_quantization'])
+		).toMatchObject({ usesDraco: false, usesMeshopt: true, usesKtx2: false })
+		expect(refFor(['KHR_texture_basisu'])).toMatchObject({
+			usesMeshopt: false,
+			usesKtx2: true
+		})
+	})
+
 	it('says nothing for a GLB uploaded before it was recorded', () => {
 		for (const metadata of [null, {}, { gltfExtensionsUsed: null }]) {
 			const ref = buildPublishedModelRef(
@@ -289,6 +308,8 @@ describe('whether the published GLB needs the Draco decoder', () => {
 				url
 			)
 			expect(ref).not.toHaveProperty('usesDraco')
+			expect(ref).not.toHaveProperty('usesMeshopt')
+			expect(ref).not.toHaveProperty('usesKtx2')
 		}
 	})
 

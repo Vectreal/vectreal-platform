@@ -151,15 +151,18 @@ app.use(
 	})
 )
 app.use('/media', express.static(MEDIA_DIR, { maxAge: '5m', redirect: false }))
-// The Draco decoder keeps its file names across three.js upgrades, so it gets a
-// day rather than a year; purge /draco/* at the edge after replacing it.
-app.use(
-	'/draco',
-	express.static(path.join(CLIENT_DIR, 'draco'), {
-		maxAge: '1d',
-		redirect: false
-	})
-)
+// The Draco decoder, the KTX2 transcoder and the KTX2 encoder keep their file
+// names across upgrades, so they get a day rather than a year; purge
+// /draco/*, /basis/* or /basis-encoder/* at the edge after replacing one.
+for (const codecDir of ['draco', 'basis', 'basis-encoder']) {
+	app.use(
+		`/${codecDir}`,
+		express.static(path.join(CLIENT_DIR, codecDir), {
+			maxAge: '1d',
+			redirect: false
+		})
+	)
+}
 app.use(express.static(CLIENT_DIR, { redirect: false }))
 app.use(morgan('tiny'))
 

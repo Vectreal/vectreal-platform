@@ -260,6 +260,24 @@ describe('useOptimizationProcess', () => {
 		expect(runtime().clientSceneBytes).not.toBe(999)
 	})
 
+	// The flag a pass raised has to come down even after its scene moved on,
+	// or the drawer reads as busy for the rest of the session.
+	it('gives a pass a writer its scene moving on does not filter', async () => {
+		const { result, openAnotherScene, runtime } = renderProcess()
+		runOptimizationPass.mockImplementation(async (deps) => {
+			openAnotherScene()
+			deps.setRuntimeUnfiltered((prev: SceneOptimizationRuntimeState) => ({
+				...prev,
+				clientSceneBytes: 999
+			}))
+			return { succeeded: false, dracoReport: null }
+		})
+
+		await act(() => result.current.derive(smallestPreset))
+
+		expect(runtime().clientSceneBytes).toBe(999)
+	})
+
 	// The size refresh exports the whole document after the pass, which is
 	// slow enough for the next scene to open in the meantime.
 	it('drops the size measured after a pass once another scene has opened', async () => {

@@ -67,6 +67,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	const {
 		info,
 		dracoReport,
+		publishedEncoding,
 		simplificationOutcome,
 		resolvedMetrics,
 		sizeInfo,
@@ -259,6 +260,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 													sizeInfo={sizeInfo}
 													resolvedMetrics={resolvedMetrics}
 													dracoReport={dracoReport}
+													publishedEncoding={publishedEncoding}
 													simplificationOutcome={simplificationOutcome}
 												/>
 											) : (
