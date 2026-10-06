@@ -2,11 +2,16 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
+	Bone,
 	Box3,
 	BoxGeometry,
+	Float32BufferAttribute,
 	Group,
 	Mesh,
 	MeshBasicMaterial,
+	Skeleton,
+	SkinnedMesh,
+	Uint16BufferAttribute,
 	Vector3
 } from 'three'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -31,6 +36,28 @@ const mountUnder = (object: Group, scale: number) => {
 	center.add(normalization)
 	normalization.add(object)
 	return { center, normalization }
+}
+
+/** A 2 × 2 × 2 box skinned to one bone at its root, as an animated glTF is. */
+const skinnedModel = () => {
+	const geometry = new BoxGeometry(2, 2, 2)
+	const vertices = geometry.attributes.position.count
+	geometry.setAttribute(
+		'skinIndex',
+		new Uint16BufferAttribute(new Array(vertices * 4).fill(0), 4)
+	)
+	geometry.setAttribute(
+		'skinWeight',
+		new Float32BufferAttribute(
+			Array.from({ length: vertices }, () => [1, 0, 0, 0]).flat(),
+			4
+		)
+	)
+	const bone = new Bone()
+	const mesh = new SkinnedMesh(geometry, new MeshBasicMaterial())
+	mesh.add(bone)
+	mesh.bind(new Skeleton([bone]))
+	return new Group().add(mesh)
 }
 
 const size = (box: Box3) => box.getSize(new Vector3())
@@ -59,6 +86,32 @@ describe('measureModel', () => {
 		expect(size(measureModel(mounted).bounds)).toEqual(size(loose.bounds))
 		expect(size(loose.bounds)).toEqual(new Vector3(2, 4, 6))
 		expect(loose.bounds.min.x).toBeCloseTo(0)
+	})
+
+	it("includes the model root's own transform", () => {
+		const subject = model()
+		subject.position.set(0, 3, 0)
+		subject.scale.setScalar(2)
+		const { center } = mountUnder(subject, 3)
+		center.updateMatrixWorld(true)
+
+		const { bounds } = measureModel(subject)
+
+		expect(size(bounds)).toEqual(new Vector3(4, 8, 12))
+		expect(bounds.min.y).toBeCloseTo(-1)
+		expect(size(worldBounds(subject))).toEqual(new Vector3(12, 24, 36))
+	})
+
+	it("leaves a mounted model's world transforms as it found them", () => {
+		const subject = skinnedModel()
+		const { center } = mountUnder(subject, 4)
+		center.updateMatrixWorld(true)
+		const mesh = subject.children[0] as SkinnedMesh
+		const before = [mesh.matrixWorld.clone(), mesh.bindMatrixInverse.clone()]
+
+		measureModel(subject)
+
+		expect([mesh.matrixWorld, mesh.bindMatrixInverse]).toEqual(before)
 	})
 
 	it('keeps each model to its own measurement', () => {
@@ -121,6 +174,15 @@ describe('worldBounds', () => {
 		expect(size(bounds).y).toBeCloseTo(4, 9)
 		expect(size(bounds).z).toBeCloseTo(6, 9)
 		expect(subject.parent).toBe(host)
+	})
+
+	it('measures a skinned model the viewer has already drawn', () => {
+		const subject = skinnedModel()
+		const { center } = mountUnder(subject, 4)
+		center.updateMatrixWorld(true)
+
+		expect(size(measureModel(subject).bounds)).toEqual(new Vector3(2, 2, 2))
+		expect(size(worldBounds(subject))).toEqual(new Vector3(8, 8, 8))
 	})
 
 	it('stays empty for a model with nothing to measure', () => {

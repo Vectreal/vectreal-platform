@@ -37,16 +37,19 @@ export const measureModel = (model: Object3D): ModelMeasurement => {
 /**
  * Detached for the walk, so whatever holds the model at first measure, a host
  * scene's rotated group included, contributes nothing to the cached box.
+ * `updateMatrixWorld`, not `updateWorldMatrix`: only the former refreshes a
+ * skinned mesh's bind inverse, which its bounds are computed against.
  */
 const measureInParentSpace = (model: Object3D): Box3 => {
 	const parent = model.parent
 	model.parent = null
 	try {
-		model.updateWorldMatrix(false, true)
+		model.updateMatrixWorld(true)
 		return new Box3().setFromObject(model)
 	} finally {
 		model.parent = parent
-		model.updateWorldMatrix(true, true)
+		parent?.updateWorldMatrix(true, false)
+		model.updateMatrixWorld(true)
 	}
 }
 
