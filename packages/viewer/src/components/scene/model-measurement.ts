@@ -18,9 +18,10 @@ const measurements = new WeakMap<Object3D, ModelMeasurement>()
  * Every consumer used to walk it again: the scale, the centering key, the
  * shadows, the AO radius and the clipping planes each ran their own
  * `Box3.setFromObject`. The box is the rest pose; hotspot occlusion walks the
- * live pose itself, because an animation moves it. The bounds are taken without the ancestors,
- * so the normalization scale applied above the model, which changes without
- * replacing it, never goes stale here; `worldBounds` applies it on each read.
+ * live pose itself, because an animation moves it. The bounds are taken without
+ * the ancestors, so the normalization scale applied above the model, which
+ * changes without replacing it, never goes stale here; `worldBounds` applies it
+ * on each read. An empty model is not remembered: it may be filled later.
  */
 export const measureModel = (model: Object3D): ModelMeasurement => {
 	const known = measurements.get(model)
@@ -30,7 +31,7 @@ export const measureModel = (model: Object3D): ModelMeasurement => {
 		bounds: measureInParentSpace(model),
 		vertexCount: computeModelFingerprint(model)
 	}
-	measurements.set(model, measurement)
+	if (!measurement.bounds.isEmpty()) measurements.set(model, measurement)
 	return measurement
 }
 
@@ -59,7 +60,9 @@ const measureInParentSpace = (model: Object3D): Box3 => {
  *
  * Exact for the viewer's tree, where every ancestor of a model only translates
  * it or scales it uniformly (`Center`, then the normalization group): the
- * transformed box is the box `setFromObject` would have measured.
+ * transformed box is the box `setFromObject` would have measured. A descendant
+ * with `matrixWorldAutoUpdate` off keeps the world matrix it was given, so it is
+ * measured where that matrix puts it.
  */
 export const worldBounds = (model: Object3D, target = new Box3()): Box3 => {
 	target.copy(measureModel(model).bounds)

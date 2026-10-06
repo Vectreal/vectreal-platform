@@ -104,14 +104,16 @@ describe('measureModel', () => {
 
 	it("leaves a mounted model's world transforms as it found them", () => {
 		const subject = skinnedModel()
-		const { center } = mountUnder(subject, 4)
+		const { center, normalization } = mountUnder(subject, 4)
 		center.updateMatrixWorld(true)
+		normalization.scale.setScalar(2)
 		const mesh = subject.children[0] as SkinnedMesh
-		const before = [mesh.matrixWorld.clone(), mesh.bindMatrixInverse.clone()]
 
 		measureModel(subject)
+		const after = [mesh.matrixWorld.clone(), mesh.bindMatrixInverse.clone()]
+		center.updateMatrixWorld(true)
 
-		expect([mesh.matrixWorld, mesh.bindMatrixInverse]).toEqual(before)
+		expect(after).toEqual([mesh.matrixWorld, mesh.bindMatrixInverse])
 	})
 
 	it('keeps each model to its own measurement', () => {
@@ -190,6 +192,16 @@ describe('worldBounds', () => {
 		mountUnder(empty, 3)
 
 		expect(worldBounds(empty).isEmpty()).toBe(true)
+	})
+
+	it('measures a model that was empty once it has something to measure', () => {
+		const late = new Group()
+		mountUnder(late, 3)
+		worldBounds(late)
+
+		late.add(new Mesh(new BoxGeometry(1, 2, 3), new MeshBasicMaterial()))
+
+		expect(size(worldBounds(late))).toEqual(new Vector3(3, 6, 9))
 	})
 })
 
