@@ -68,6 +68,11 @@ export interface USDZExportResult {
 	size: number
 	/** Export duration in milliseconds */
 	exportTime: number
+	/**
+	 * Names of the materials whose transmission was written as plain opacity,
+	 * because USDZ cannot describe glass that refracts. Empty when none was.
+	 */
+	transmissiveMaterials: string[]
 }
 
 /** Any result `ModelExporter#saveToFile` can persist. */
