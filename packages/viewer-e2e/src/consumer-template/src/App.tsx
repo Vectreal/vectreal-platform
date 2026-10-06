@@ -1,6 +1,6 @@
 import { useLoadModel } from '@vctrl/hooks'
 import { VectrealViewer } from '@vctrl/viewer'
-import { Component, useEffect, type ReactNode } from 'react'
+import { Component, useEffect, useState, type ReactNode } from 'react'
 
 /*
   Three hotspots covering the visibility contract, so a real browser proves what
@@ -109,8 +109,17 @@ function HooksProbe() {
 }
 
 export default function App() {
+	// Like a real host: an inline callback that re-renders the page on every
+	// viewer event, so each render hands the viewer a new function. A camera a
+	// marker flew to must survive that.
+	const [lastEvent, setLastEvent] = useState('none')
+
 	return (
-		<div data-testid="viewer-host" style={{ height: '100vh', width: '100vw' }}>
+		<div
+			data-testid="viewer-host"
+			data-last-viewer-event={lastEvent}
+			style={{ height: '100vh', width: '100vw' }}
+		>
 			<CrashBoundary
 				testid="hooks-crashed"
 				onCrash={(message) => {
@@ -130,6 +139,11 @@ export default function App() {
 					controlsOptions={{ autoRotate: false }}
 					hotspots={E2E_HOTSPOTS}
 					cameraOptions={E2E_CAMERAS}
+					onInteractionEvent={(event) => {
+						// The scene has framed and drawn: what the markers wait for.
+						if (event.type === 'viewer_ready') window.__VIEWER_READY__ = true
+						setLastEvent(event.type)
+					}}
 					onCommandExecutorReady={() => {
 						// Viewer scene graph is live and the imperative API is wired up.
 						window.__VIEWER_E2E__ = { status: 'mounted' }

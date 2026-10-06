@@ -11,6 +11,7 @@ declare global {
 			status: 'mounted' | 'crashed'
 			error?: string
 		}
+		__VIEWER_READY__?: boolean
 	}
 }
 
