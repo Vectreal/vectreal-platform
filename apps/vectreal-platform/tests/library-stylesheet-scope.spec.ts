@@ -49,6 +49,14 @@ describe('scopeStylesheetRules', () => {
 		)
 	})
 
+	it('keeps a pseudo-class that follows a pseudo-element after it too', () => {
+		expect(
+			scope('.a::-webkit-scrollbar-thumb:hover,.b::part(x):focus{--x:0}')
+		).toBe(
+			`.a${WHERE}::-webkit-scrollbar-thumb:hover,.b${WHERE}::part(x):focus{--x:0}`
+		)
+	})
+
 	it('leaves an escaped colon in a class name alone', () => {
 		expect(scope('.group\\:after{color:red}')).toBe(
 			`.group\\:after${WHERE}{color:red}`

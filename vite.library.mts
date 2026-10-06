@@ -135,11 +135,12 @@ export function scopeStylesheetRules(css: string, scope: string): string {
 			return
 		}
 
-		// Appended, so it lands on the subject; a pseudo-element has to stay
-		// last, so it goes in front of one.
+		// Appended, so it lands on the subject; a pseudo-element, and any
+		// pseudo-class after it such as `::-webkit-scrollbar-thumb:hover`, has to
+		// stay last, so it goes in front of them.
 		rule.selectors = rule.selectors.map((selector) =>
 			selector.replace(
-				/((?<!\\):(?:before|after|first-line|first-letter)|::[\w-]+(?:\([^)]*\))?)?$/,
+				/(?:((?<!\\):(?:before|after|first-line|first-letter)|::[\w-]+(?:\([^)]*\))?)(?::[\w-]+(?:\([^)]*\))?)*)?$/,
 				(pseudoElement) => `${where}${pseudoElement}`
 			)
 		)
