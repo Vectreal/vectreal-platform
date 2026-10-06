@@ -155,7 +155,8 @@ export const useOptimizationProcess = ({
 					reportTextureBytesBefore: report?.stats.textureBytes.before,
 					calculateSceneBytes
 				},
-				setRuntime: writeRuntime
+				setRuntime: writeRuntime,
+				setRuntimeUnfiltered: setOptimizationRuntime
 			})
 
 			if (!isCurrent()) return

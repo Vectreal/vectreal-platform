@@ -131,7 +131,8 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 						reportTextureBytesBefore: null,
 						calculateSceneBytes: async () => null
 					},
-					setRuntime: () => {}
+					setRuntime: () => {},
+					setRuntimeUnfiltered: () => {}
 				})
 
 				// The working document: every pass applied, Draco left for publish time, as in the publisher.
