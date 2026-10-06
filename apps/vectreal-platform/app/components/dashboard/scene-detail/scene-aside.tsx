@@ -7,10 +7,11 @@ import { SceneMetricsSection } from './scene-metrics-section'
 import { ScenePublishPanel } from './scene-publish-panel'
 import { StatGrid, StatTile } from '../../layout-components'
 
-import type { TextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
 import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard-confirmation'
+import type { TextureThumbnailUrls } from '../../../lib/domain/dashboard/scene-texture-thumbnails'
 import type { ScenePublishStateResponse } from '../../../types/api'
 import type { SceneDetailsSummary } from '../../../types/dashboard'
+import type { ScenePresentationSettings } from '@vctrl/core'
 
 interface SceneAsideProps {
 	details: SceneDetailsSummary
@@ -18,6 +19,8 @@ interface SceneAsideProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	presentation: ScenePresentationSettings | null
+	canUpdateScene: boolean
 	publisherPath: string
 	onPublish: () => void
 	deleteRef: DashboardEntityRef
@@ -51,9 +54,9 @@ interface SceneAsideProps {
  * `scene-summary-bar.spec.tsx` pinned that the bar did not render it - but the
  * page mounted `SceneFactsPanel` beside it regardless, `hidden` rather than
  * unmounted, so the list was in the document at every width already. The
- * thumbnails are object URLs over asset bytes the page has loaded anyway, so
- * this is DOM and decode, never a request. What the split did cost was real:
- * two publish panels and two delete buttons per page.
+ * thumbnails load lazily, so a list hidden at this width fetches nothing.
+ * What the split did cost was real: two publish panels and two delete buttons
+ * per page.
  *
  * The breakpoint stays in CSS deliberately. Choosing a host in JavaScript would
  * need the viewport at render time, which is the hydration flip `mobile-nav.tsx`
@@ -65,6 +68,8 @@ export function SceneAside({
 	sceneId,
 	projectId,
 	publishState,
+	presentation,
+	canUpdateScene,
 	publisherPath,
 	onPublish,
 	deleteRef,
@@ -105,6 +110,8 @@ export function SceneAside({
 				sceneId={sceneId}
 				projectId={projectId}
 				publishState={publishState}
+				presentation={presentation}
+				canUpdateScene={canUpdateScene}
 				publisherPath={publisherPath}
 				onPublish={onPublish}
 			/>

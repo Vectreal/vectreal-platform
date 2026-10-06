@@ -8,11 +8,14 @@ import { DetailPanelSection } from '../../layout-components'
 import { SCENE_STATUS_DOT } from '../scene-status'
 
 import type { ScenePublishStateResponse } from '../../../types/api'
+import type { ScenePresentationSettings } from '@vctrl/core'
 
 interface ScenePublishPanelProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	presentation: ScenePresentationSettings | null
+	canUpdateScene: boolean
 	publisherPath: string
 	/**
 	 * Forwarded to the drawer's publish control, which takes a callback.
@@ -48,6 +51,8 @@ export function ScenePublishPanel({
 	sceneId,
 	projectId,
 	publishState,
+	presentation,
+	canUpdateScene,
 	publisherPath,
 	onPublish,
 	className
@@ -145,6 +150,8 @@ export function ScenePublishPanel({
 						sceneId={sceneId}
 						projectId={projectId}
 						publishState={publishState}
+						presentation={presentation}
+						canUpdateScene={canUpdateScene}
 						onPublish={onPublish}
 					/>
 				</>

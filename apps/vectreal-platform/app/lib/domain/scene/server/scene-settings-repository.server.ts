@@ -1,5 +1,6 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm'
 
+import { getDbClient } from '../../../../db/client'
 import * as dbSchema from '../../../../db/schema'
 import {
 	assets,
@@ -14,7 +15,11 @@ import {
 import { SCENE_ASSET_ROLE } from '../scene-asset-roles'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
 
-import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
+import type {
+	HotspotDefinition,
+	ScenePresentationSettings,
+	SceneSettings
+} from '@vctrl/core'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
@@ -65,6 +70,30 @@ export async function getSceneSettingsBySceneId(
 		.limit(1)
 
 	return settings[0] || null
+}
+
+/**
+ * Merges `patch` into a scene's stored presentation, leaving every field it
+ * does not name as it was. Null when the scene has no settings row.
+ *
+ * One statement, so a concurrent writer cannot interleave between a read and
+ * a write here. `updated_at` moves with it, because the manifest's ETag is
+ * keyed on it: a toggle that left it alone would be revalidated away as a 304.
+ */
+export async function updateScenePresentation(
+	sceneId: string,
+	patch: ScenePresentationSettings
+): Promise<ScenePresentationSettings | null> {
+	const [row] = await getDbClient()
+		.update(sceneSettings)
+		.set({
+			presentation: sql`(coalesce(${sceneSettings.presentation}::jsonb, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb)::json`,
+			updatedAt: sql`now()`
+		})
+		.where(eq(sceneSettings.sceneId, sceneId))
+		.returning({ presentation: sceneSettings.presentation })
+
+	return row ? (row.presentation ?? {}) : null
 }
 
 export async function getSceneSettingsWithAssetsRow(

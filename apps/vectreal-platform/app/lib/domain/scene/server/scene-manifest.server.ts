@@ -111,12 +111,13 @@ export async function buildSceneManifest(
 }
 
 /**
- * The manifest an external, token-authenticated embed receives.
+ * The manifest of a published scene: what an embed receives, and what
+ * `/preview` and the dashboard show of it.
  *
  * Deliberately a different function rather than a flag on
- * {@link buildSceneManifest}: `/preview` and the publisher keep the editor
- * manifest untouched by construction, and the two shapes cannot drift into
- * each other by someone reading the flag the wrong way round.
+ * {@link buildSceneManifest}: a draft's preview and the publisher keep the
+ * editor manifest untouched by construction, and the two shapes cannot drift
+ * into each other by someone reading the flag the wrong way round.
  *
  * What an embed does NOT get, and why:
  * - `gltfJson` - the editor scene graph: node hierarchy, material graph, every

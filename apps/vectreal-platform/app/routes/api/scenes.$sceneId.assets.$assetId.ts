@@ -9,6 +9,7 @@ import {
 	downloadAssetFromRow
 } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
+import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
 import {
 	getAssetSigningSecret,
 	verifySignedAsset
@@ -18,8 +19,10 @@ import {
 	selectEmbedServableAssets
 } from '../../lib/domain/scene/embed-asset-policy'
 import { shouldShowLoadingThumbnail } from '../../lib/domain/scene/scene-presentation'
-import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
-import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import {
+	getPublishedScenePreview,
+	type PublishedScenePreview
+} from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
@@ -99,18 +102,52 @@ function assetResponse(
 async function serveEmbedAsset(
 	request: Request,
 	ids: { sceneId: string; assetId: string },
-	download: () => Promise<{ data: Uint8Array; mimeType: string }>
+	download: () => Promise<{ data: Uint8Array; mimeType: string }>,
+	extraHeaders?: HeadersInit
 ): Promise<Response> {
 	try {
 		const assetData = await download()
-		return assetResponse(assetData.data, assetData.mimeType)
+		return assetResponse(assetData.data, assetData.mimeType, extraHeaders)
 	} catch (error) {
 		reportServerError(error, { request, properties: ids })
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: withNoStoreHeaders()
+			headers: withNoStoreHeaders(extraHeaders)
 		})
 	}
+}
+
+/**
+ * The published GLB, downloaded from the asset row the publication query
+ * already joined. Null when `assetId` is not that GLB.
+ *
+ * It is the request every published load makes, so it skips the settings
+ * transaction the rest of the published set needs. And it is the one asset no
+ * `scene_assets` row names: `uploadPublishedGlb` never links it.
+ */
+function serveFromPublishedRow(
+	request: Request,
+	ids: { sceneId: string; assetId: string },
+	previewScene: PublishedScenePreview | null,
+	extraHeaders?: HeadersInit
+): Promise<Response> | null {
+	if (!previewScene || ids.assetId !== previewScene.publishedAssetId) {
+		return null
+	}
+
+	const {
+		publishedAssetFilePath: filePath,
+		publishedAssetName: name,
+		publishedAssetMimeType: mimeType
+	} = previewScene
+	if (!filePath || !name) return null
+
+	return serveEmbedAsset(
+		request,
+		ids,
+		() => downloadAssetFromRow({ id: ids.assetId, filePath, mimeType, name }),
+		extraHeaders
+	)
 }
 
 /**
@@ -234,20 +271,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			})
 		}
 
-		/*
-		  The published GLB is servable by definition, and it is the request
-		  every embed makes, so it skips the settings transaction below - which
-		  exists only to learn the bake's id - and is downloaded from the asset
-		  row the preview query already joined.
-		*/
-		const { publishedAssetFilePath: filePath, publishedAssetName: name } =
+		const publishedModel = serveFromPublishedRow(
+			request,
+			{ sceneId, assetId },
 			previewScene
-		if (assetId === previewScene.publishedAssetId && filePath && name) {
-			const mimeType = previewScene.publishedAssetMimeType
-			return serveEmbedAsset(request, { sceneId, assetId }, () =>
-				downloadAssetFromRow({ id: assetId, filePath, mimeType, name })
-			)
-		}
+		)
+		if (publishedModel) return publishedModel
 
 		/*
 		  The servable set is computed by the same module the embed manifest
@@ -290,20 +319,44 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	const authHeaders = auth.headers ?? {}
 
-	// Authorization gate first: ensures unauthorized users get the same 404
-	// regardless of whether the asset exists, preventing existence oracle leaks.
-	const scene = await getScene(sceneId, auth.user.id)
-	if (!scene) {
+	/*
+	  Authorization gate first: a non-member gets the same 404 whether or not
+	  the asset exists, so the route is no existence oracle. A membership
+	  lookup rather than `getScene`, which throws for a non-member and turned
+	  that 404 into a 500.
+	*/
+	const membership = await resolveSceneMembership(sceneId, auth.user.id)
+	if (!membership) {
 		return new Response('Asset not found', {
 			status: 404,
 			headers: withNoStoreHeaders(authHeaders)
 		})
 	}
 
-	// Asset-to-scene link check: assets are de-duplicated per project by content
-	// hash, so the same asset row can be shared by multiple scenes — this must
-	// check the scene_assets join table, not a single-owner field on the asset.
-	if (!(await assetBelongsToScene(assetId, sceneId))) {
+	/*
+	  A member may fetch every asset the scene links, plus the published GLB:
+	  `/preview` and the dashboard load a published scene from the same
+	  manifest an embed gets. Never narrowed to the embed's servable set, which
+	  would refuse the draft's buffers to the editor.
+
+	  Linked is checked through `scene_assets`, not a single-owner field on the
+	  asset: assets are de-duplicated per project by content hash, so one row
+	  can belong to several scenes.
+	*/
+	const [previewScene, isLinked] = await Promise.all([
+		getPublishedScenePreview(membership.projectId, sceneId),
+		assetBelongsToScene(assetId, sceneId)
+	])
+
+	const publishedModel = serveFromPublishedRow(
+		request,
+		{ sceneId, assetId },
+		previewScene,
+		authHeaders
+	)
+	if (publishedModel) return publishedModel
+
+	if (!isLinked) {
 		return new Response('Asset not found', {
 			status: 404,
 			headers: withNoStoreHeaders(authHeaders)

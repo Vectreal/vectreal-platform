@@ -64,6 +64,8 @@ function renderPanel(publishState: ScenePublishStateResponse) {
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={publishState}
+			presentation={null}
+			canUpdateScene
 			publisherPath="/publisher/scene-1"
 			onPublish={vi.fn()}
 		/>
