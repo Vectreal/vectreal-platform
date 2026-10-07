@@ -135,6 +135,12 @@
 		opacity: 1;
 	}
 
+	img,
+	video,
+	picture {
+		max-height: 60vh;
+	}
+
 	a {
 		color: var(--color-orange);
 		text-underline-offset: 4px;
