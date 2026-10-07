@@ -134,8 +134,12 @@
 	p:has(> picture) {
 		opacity: 1;
 	}
-	
-	img, video, picture{max-height: 60vh;}
+
+	img,
+	video,
+	picture {
+		max-height: 60vh;
+	}
 
 	a {
 		color: var(--color-orange);
