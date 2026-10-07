@@ -1,7 +1,7 @@
 ---
 title: "How to open a GLB file"
 slug: "how-to-open-a-glb-file"
-excerpt: "To open a GLB file, drag it into a free browser viewer such as Babylon.js Sandbox or the Khronos glTF Sample Viewer. Nothing to install. On a current Mac, Preview opens it too. On Windows, Microsoft's 3D Viewer has left the Store, so use a browser viewer or Blender. On an iPhone, convert it to USDZ first."
+excerpt: "To open a GLB file, drag it into a free browser viewer such as the Vectreal converter, Babylon.js Sandbox or the Khronos glTF Sample Viewer. Nothing to install. On a current Mac, Preview opens it too. On Windows, Microsoft's 3D Viewer has left the Store, so use a browser viewer or Blender. On an iPhone, convert it to USDZ first."
 publishedAt: "2026-10-07"
 updatedAt: "2026-10-07"
 category: "guides"
@@ -29,7 +29,7 @@ cta: https://vectreal.com/convert
 
 The quickest way to open a GLB file is to drag it into a free browser viewer, such as the [Vectreal converter](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file), [Babylon.js Sandbox](https://sandbox.babylonjs.com/) or the [Khronos glTF Sample Viewer](https://github.khronos.org/glTF-Sample-Viewer-Release/). The model appears in the page, and you install nothing. What else works depends on your device, and on one detail of how the file was made.
 
-<video src="/media/images/newsroom/13/converter-folder-to-glb.mp4" autoPlay muted loop playsInline aria-label="A converter page with an empty drop area for a glTF folder. The page reads the folder, then a fabric armchair appears in it, with the options for the download beside it."></video>
+<video src="/media/images/newsroom/13/glb-to-usdz-camera.mp4" autoPlay muted loop playsInline aria-label="The GLB to USDZ converter with an empty drop area and two sample models. The camera sample downloads and appears in the page, then the page converts it and reports the USDZ at 4.4 MB against the 18 MB GLB while the camera turns."></video>
 
 ## What is a GLB file?
 
@@ -70,7 +70,11 @@ On macOS 26 Tahoe and earlier, Preview doesn't list 3D formats, so use a browser
 
 Not directly. The 3D and AR view built into iOS and iPadOS, AR Quick Look, takes USDZ and Reality files. It does not take glTF or GLB ([Apple, Previewing a model with AR Quick Look](https://developer.apple.com/documentation/arkit/previewing-a-model-with-ar-quick-look)).
 
-So convert it first. The [GLB to USDZ converter](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file) shows the model on the page while it converts, then hands you a `.usdz`. Sent to yourself in Messages or Mail, it opens in 3D, and in AR on the table in front of you.
+So convert it first. The [GLB to USDZ converter](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file) shows the model on the page while it converts, then hands you a `.usdz`. Saved to Files or sent to yourself in Messages or Mail, it opens in AR on the table in front of you, and in an Object view that shows the model on its own.
+
+<video src="/media/images/newsroom/13/iphone-ar-quick-look.mp4" autoPlay muted loop playsInline aria-label="An iPhone opens the converted USDZ in AR Quick Look. The camera model appears on a desk, the phone moves around it and enlarges it, then switches to Object view, where the camera turns on a grey background."></video>
+
+The camera in the clips went from an 18 MB GLB to a 4.4 MB USDZ. The converter writes each texture at most 1024 pixels across, and this model has nine 4K ones.
 
 ## Can I open a GLB file on Android?
 
@@ -84,11 +88,11 @@ Three causes cover most of it.
 
 **It is compressed, and the viewer can't unpack it.** Files prepared for the web are often shrunk with Draco or meshopt for the geometry, or KTX2 for the textures. A viewer that can't unpack them refuses the file ([Khronos glTF extensions](https://github.com/KhronosGroup/glTF/blob/main/extensions/README.md)). The Khronos Sample Viewer, the glTF Viewer and the three.js editor all read those. Google's Scene Viewer lists neither Draco nor KTX2 among what it supports. [Draco in the Publisher](https://vectreal.com/news-room/draco-geometry-compression-in-the-publisher) explains what the compression buys, if you're the one preparing the file.
 
-**It uses something newer than the viewer.** The Sheen Chair in the clip above comes in two upholsteries, Mango Velvet and Peacock Velvet, stored with a glTF extension called `KHR_materials_variants`, and its fabric uses another, `KHR_materials_sheen`, for the soft shine velvet has. A viewer that doesn't know extensions like these still opens the model, but shows one version of it, with a plainer material. If a model looks flatter than the person who sent it says it should, try the Khronos Sample Viewer, which follows the format's own reference.
+**It uses something newer than the viewer.** Khronos's [Sheen Chair](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SheenChair) sample comes in two upholsteries, Mango Velvet and Peacock Velvet, stored with a glTF extension called `KHR_materials_variants`, and its fabric uses another, `KHR_materials_sheen`, for the soft shine velvet has. A viewer that doesn't know extensions like these still opens the model, but shows one version of it, with a plainer material. If a model looks flatter than the person who sent it says it should, try the Khronos Sample Viewer, which follows the format's own reference.
 
 ## From a folder of loose files to one GLB
 
-The clip at the top is the fix for the first problem. On the [glTF to GLB converter](https://vectreal.com/convert/gltf-to-glb?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file) you drop the whole folder, see the model, and download one GLB that opens everywhere a GLB does. It runs in your browser, so the file stays on your computer, and it needs no account.
+For the first problem, the [glTF to GLB converter](https://vectreal.com/convert/gltf-to-glb?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file) takes the whole folder: drop it in, see the model, and download one GLB that opens everywhere a GLB does. It runs in your browser, so the file stays on your computer, and it needs no account.
 
 The same converters read STL, FBX and OBJ, and write GLB, glTF or USDZ:
 
