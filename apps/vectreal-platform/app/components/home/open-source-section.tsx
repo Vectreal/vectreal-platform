@@ -5,7 +5,7 @@ import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router'
 
 import { CameraDrawing } from './camera-drawing'
-import { StageBoundary } from './hero/stage-boundary'
+import { StageBoundary } from './stage/stage-boundary'
 import {
 	HOME_PAGE_COPY,
 	OPEN_SOURCE_PACKAGES

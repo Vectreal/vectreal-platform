@@ -57,3 +57,12 @@ onlyBuiltDependencies:
   - supabase
   - unrs-resolver
   - workerd
+
+# jsdom's optional peer, which nothing here imports. Its native binary is never
+# built, so jsdom has no 2D context and every spec takes the same path in CI and
+# locally. A machine that built it before this list existed got a real context,
+# DitherGrain's effect reached `new ResizeObserver`, which jsdom does not
+# provide, and 66 specs failed there that passed in CI. Delete
+# node_modules/.pnpm/canvas@*/node_modules/canvas/build if yours has one.
+ignoredBuiltDependencies:
+  - canvas

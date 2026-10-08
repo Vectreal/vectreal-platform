@@ -2,7 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 import { TextureLoader } from 'three'
 
 import { HERO_SHADOW_URL } from './hero/hero-assets'
-import { createStageEngine, type StageEngine } from './hero/stage-engine'
+import { createStageEngine, type StageEngine } from './stage/stage-engine'
 import { HERO_MODEL } from '../../lib/samples/sample-models'
 
 import type { FrameRect } from './product-stage'
