@@ -25,7 +25,8 @@ import {
 	type NormalsOptions,
 	type QuantizeOptions,
 	type SimplifyOptions,
-	type TextureCompressOptions
+	type TextureCompressOptions,
+	TextureCompressionError
 } from '@vctrl/core/model-optimizer'
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
@@ -487,6 +488,17 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Texture optimization failed:', err)
+				// A partial failure committed the textures that compressed, so the
+				// report has to describe them. Its own failure must not replace
+				// the error the caller is owed.
+				if (err instanceof TextureCompressionError && err.isPartial) {
+					try {
+						const report = await optimizerRef.current.getReport()
+						dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+					} catch {
+						// The pass's own error, rethrown below, is the one to report.
+					}
+				}
 				// Re-throw to allow caller to handle compression failures
 				throw err
 			}
