@@ -9,7 +9,7 @@ import {
 } from 'react'
 
 import { CameraDrawing } from './camera-drawing'
-import { StageBoundary } from './hero/stage-boundary'
+import { StageBoundary } from './stage/stage-boundary'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 
 const LIVE_HINT = HOME_PAGE_COPY.stage.status.live

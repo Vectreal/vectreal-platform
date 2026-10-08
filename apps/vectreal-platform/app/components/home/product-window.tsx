@@ -46,8 +46,8 @@ const VIEW_ORDER: ProductView[] = ['prepare', 'manage', 'embed']
 const isProductView = (value: string): value is ProductView =>
 	value in COPY.views
 
-/* Where the live camera stands in each screenshot, as the capture recorded it. A view not yet captured borrows Prepare's box. */
-const SHOTS: { prepare: FrameRect; manage?: FrameRect } = PRODUCT_SHOTS
+/* Where the live camera stands in each screenshot, as the capture recorded it. */
+const SHOTS: Record<'prepare' | 'manage', FrameRect> = PRODUCT_SHOTS
 
 /*
   Prepare and Manage are screenshots, captured from the running app by
@@ -64,8 +64,6 @@ const SHOT_URLS = {
 	prepare: { light: prepareLightUrl, dark: prepareDarkUrl },
 	manage: { light: manageLightUrl, dark: manageDarkUrl }
 } as const
-const shotPath = (view: 'prepare' | 'manage', theme: 'light' | 'dark') =>
-	SHOT_URLS[view][theme]
 
 /** How long the dissolve between two screenshots takes, one mask frame per step. */
 const DISSOLVE_MS = 400
@@ -129,11 +127,7 @@ export const ProductWindow = () => {
 	}, [])
 
 	const stagePlace: FrameRect =
-		view === 'embed'
-			? (embedSlot ?? SHOTS.prepare)
-			: view === 'manage'
-				? (SHOTS.manage ?? SHOTS.prepare)
-				: SHOTS.prepare
+		view === 'embed' ? (embedSlot ?? SHOTS.prepare) : SHOTS[view]
 
 	const switchTo = (next: string) => {
 		if (!isProductView(next) || next === view) return
@@ -237,7 +231,7 @@ export const ProductWindow = () => {
 								) : (
 									<>
 										<img
-											src={shotPath(one, 'light')}
+											src={SHOT_URLS[one].light}
 											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
 											width={1200}
 											height={750}
@@ -245,7 +239,7 @@ export const ProductWindow = () => {
 											className="block h-auto w-full dark:hidden"
 										/>
 										<img
-											src={shotPath(one, 'dark')}
+											src={SHOT_URLS[one].dark}
 											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
 											width={1200}
 											height={750}

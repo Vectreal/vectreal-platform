@@ -11,10 +11,10 @@ import { TextureLoader, type Texture } from 'three'
 
 import { createBackdropEngine } from './backdrop-engine'
 import { HERO_SHADOW_URL } from './hero-assets'
-import { StageBoundary } from './stage-boundary'
-import { createStageEngine } from './stage-engine'
 import { readGlbContents } from '../../../lib/samples/glb-contents'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
+import { StageBoundary } from '../stage/stage-boundary'
+import { createStageEngine } from '../stage/stage-engine'
 
 import type { OwnFileApi } from './hero-own-file'
 import type { HeroState, HeroStore } from './hero-store'

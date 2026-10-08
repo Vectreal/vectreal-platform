@@ -19,7 +19,6 @@ import { Link } from 'react-router'
 import { HERO_POSTERS } from './hero-assets'
 import styles from './hero-sheet.module.css'
 import { createHeroStore, useHeroState, type HeroStore } from './hero-store'
-import { StageBoundary } from './stage-boundary'
 import {
 	HOME_PAGE_COPY,
 	PILOT_CONTACT_HREF
@@ -31,6 +30,7 @@ import {
 	publisherSampleHref
 } from '../../../lib/samples/sample-models'
 import { inUnitOf } from '../format-bytes'
+import { StageBoundary } from '../stage/stage-boundary'
 
 import type { HeroStageElements } from './hero-stage-client'
 
