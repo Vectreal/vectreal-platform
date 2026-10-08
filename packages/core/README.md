@@ -14,7 +14,7 @@ pnpm add @vctrl/core
 
 **Module format:** ES modules only. Import it from any bundler, browser or Node.js. `require()` also loads it on Node.js 20.19, 22.12 and later, but three.js and glTF-Transform then load as ES modules too, separately from a `require('three')` of your own, so their objects fail each other's `instanceof` checks. Use `import` when you pass those objects in.
 
-> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the sharp constructor API: `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.
+> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the part of the sharp constructor API glTF-Transform calls: `(buffer) => { toFormat, resize, toBuffer }`) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.
 
 ---
 
@@ -203,10 +203,20 @@ Worker environment.
 
 `encoder` is typed `unknown` so the package does not force a Sharp type dependency on
 browser and edge callers. It must match the part of the Sharp constructor API that
-glTF-Transform uses: `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`.
-`createBrowserTextureEncoder()` from `@vctrl/hooks` returns exactly that.
+glTF-Transform calls: `(buffer) => { toFormat, resize, toBuffer }`.
+`createBrowserTextureEncoder()` from `@vctrl/hooks` returns that and more.
 
-When no encoder is available, `compressTextures` falls back to basic texture optimization using `dedup` and `prune` instead of throwing.
+The pass compresses a copy of the document and commits it in one step, so the document
+only ever holds a finished result:
+
+| Outcome | Document | Recorded as `texture compression` | Throws |
+| --- | --- | --- | --- |
+| Every texture compressed | The compressed copy | Yes | No |
+| Some failed | The copy: compressed textures replaced, failed ones as they were | Yes | `TextureCompressionError`, `isPartial === true` |
+| None compressed | Unchanged | No | `TextureCompressionError`, `isPartial === false` |
+| Another model or document taken while it ran | Unchanged | No | `SupersededError` |
+
+When no encoder is available, `compressTextures` falls back to basic texture optimization using `dedup` and `prune` instead of throwing, and records only that.
 
 #### `optimizeAll(options?)`
 

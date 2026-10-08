@@ -73,8 +73,8 @@ export interface TextureCompressOptions {
 	/**
 	 * Custom image encoder compatible with the sharp constructor API.
 	 * When provided, sharp is not imported, enabling use in browser and edge
-	 * environments. Must implement:
-	 * `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`.
+	 * environments. Must implement the part glTF-Transform calls:
+	 * `(buffer) => { toFormat, resize, toBuffer }`.
 	 *
 	 * In browser contexts, pass `createBrowserTextureEncoder()` from `@vctrl/hooks`.
 	 */

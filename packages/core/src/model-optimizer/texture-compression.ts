@@ -17,14 +17,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 /**
  * Texture compression helpers for ModelOptimizer.
  *
- * `runTextureCompression` and `runBasicTextureOptimization` are extracted from
- * the class body so that `model-optimizer.ts` stays below 500 lines.
+ * The per-texture work, kept out of the class body. When a result is
+ * committed is `ModelOptimizer.compressTextures`'s decision.
  */
 
 import { Document, Transform } from '@gltf-transform/core'
 import { compressTexture, dedup, prune } from '@gltf-transform/functions'
 
-import { targetFormatToMimeType } from './texture-naming'
 import { TextureCompressOptions } from './types'
 
 type TextureCompressionEncoder = NonNullable<
@@ -52,11 +51,6 @@ type TransformRunner = (transforms: Transform[], name: string) => Promise<void>
 const SHARP_SPECIFIER = 'sharp'
 
 /**
- * Run texture compression on a loaded document.
- * Returns the list of applied optimization labels to append.
- */
-
-/**
  * Some or all textures could not be compressed. The ones that could were
  * replaced; the rest are left as they were. The counts are what a caller needs
  * to tell a partial result, which still stands, from one where nothing changed.
@@ -78,61 +72,60 @@ export class TextureCompressionError extends Error {
 	}
 }
 
-export async function runTextureCompression(
+/**
+ * The encoder a texture pass runs with: the caller's, or sharp where it can be
+ * imported. Null when there is neither, and the pass falls back to
+ * `runBasicTextureOptimization`.
+ */
+export async function resolveTextureEncoder(
+	options: TextureCompressOptions
+): Promise<TextureCompressionEncoder | null> {
+	// Caller-provided, e.g. the OffscreenCanvas encoder in a browser.
+	if (options.encoder) return options.encoder as TextureCompressionEncoder
+
+	try {
+		const sharpModule = await import(/* @vite-ignore */ SHARP_SPECIFIER)
+		const encoder = sharpModule.default || sharpModule
+
+		if (typeof encoder !== 'function') {
+			throw new Error('Sharp is not available or not properly installed')
+		}
+		return encoder
+	} catch (error) {
+		console.warn(
+			'Sharp-based compression failed, applying basic optimization:',
+			error
+		)
+		return null
+	}
+}
+
+/**
+ * Compresses every texture of `document` in place, and returns what failed.
+ *
+ * Each texture is replaced only once its encode succeeded, so a failure leaves
+ * that texture as it was. Whether a partial result stands is the caller's
+ * decision, which is why it comes back as a value rather than a throw.
+ */
+export async function compressDocumentTextures(
 	document: Document,
 	options: TextureCompressOptions,
-	emitProgress: ProgressEmitter,
-	applyTransforms: TransformRunner
-): Promise<void> {
+	encoder: TextureCompressionEncoder,
+	emitProgress: ProgressEmitter
+): Promise<TextureCompressionError | null> {
 	emitProgress('Compressing textures', 0)
-
-	let encoder: TextureCompressionEncoder
-
-	if (options.encoder) {
-		// Use caller-provided encoder (e.g. OffscreenCanvas encoder in browser, imagescript in Deno)
-		encoder = options.encoder as TextureCompressionEncoder
-	} else {
-		try {
-			const sharpModule = await import(/* @vite-ignore */ SHARP_SPECIFIER)
-			encoder = sharpModule.default || sharpModule
-
-			if (typeof encoder !== 'function') {
-				throw new Error('Sharp is not available or not properly installed')
-			}
-		} catch (error) {
-			console.warn(
-				'Sharp-based compression failed, applying basic optimization:',
-				error
-			)
-			await runBasicTextureOptimization(emitProgress, applyTransforms)
-			return
-		}
-	}
-
-	const { encoder: _encoder, ...textureCompressOptions } = options
-	const expectedMimeType = targetFormatToMimeType(
-		textureCompressOptions.targetFormat
-	)
 
 	const textures = document.getRoot().listTextures()
 	const failures: Array<{ index: number; reason: string }> = []
 
 	for (let i = 0; i < textures.length; i++) {
-		const texture = textures[i]
-
 		try {
-			await compressTexture(texture, {
+			await compressTexture(textures[i], {
 				encoder,
-				targetFormat: textureCompressOptions.targetFormat,
-				quality: textureCompressOptions.quality,
-				resize: textureCompressOptions.resize
+				targetFormat: options.targetFormat,
+				quality: options.quality,
+				resize: options.resize
 			})
-
-			if (expectedMimeType && texture.getMimeType() !== expectedMimeType) {
-				throw new Error(
-					`expected ${expectedMimeType}, received ${texture.getMimeType() || 'unknown mime type'}`
-				)
-			}
 		} catch (error) {
 			failures.push({
 				index: i,
@@ -151,7 +144,7 @@ export async function runTextureCompression(
 		const failureSummary = failures
 			.map((failure) => `#${failure.index}: ${failure.reason}`)
 			.join('; ')
-		throw new TextureCompressionError(
+		return new TextureCompressionError(
 			failures.length,
 			textures.length,
 			`Texture compression failed for ${failures.length} of ${textures.length} textures. ${failureSummary}`
@@ -159,6 +152,7 @@ export async function runTextureCompression(
 	}
 
 	emitProgress('Texture compression complete', 100)
+	return null
 }
 
 /**
