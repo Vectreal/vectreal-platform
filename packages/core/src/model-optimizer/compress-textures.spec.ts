@@ -257,6 +257,7 @@ describe('ModelOptimizer.compressTextures', () => {
 	// Claimed but not yet committed: only the revision says the pass is stale.
 	it('commits nothing while a restore it was overtaken by is still parsing', async () => {
 		const optimizer = await loaded()
+		const before = optimizer.document
 		const held = fakeEncoder({ holdAt: 0 })
 		const parse = holdParse(optimizer, optimizer.getBaseline().source!)
 
@@ -269,9 +270,11 @@ describe('ModelOptimizer.compressTextures', () => {
 		held.release()
 
 		await expect(pass).rejects.toBeInstanceOf(SupersededError)
+		// Asked before the restore commits, which would reset both anyway.
+		expect(optimizer.document).toBe(before)
+		expect(recorded(optimizer)).toEqual([])
 		parse.release()
 		await restoring
-		expect(recorded(optimizer)).toEqual([])
 	})
 
 	// Another step can commit a new document without claiming a revision, and
@@ -316,11 +319,16 @@ describe('ModelOptimizer.compressTextures', () => {
 			throw new Error('sharp is not installed here')
 		})
 		const optimizer = await loaded()
-		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
 		const pass = optimizer.compressTextures({ targetFormat: 'webp' })
 		optimizer.reset()
 
 		await expect(pass).rejects.toBeInstanceOf(SupersededError)
+		// The fallback path, not the encoder's: the reset had no encoder to race.
+		expect(warn).toHaveBeenCalledWith(
+			'Sharp-based compression failed, applying basic optimization:',
+			expect.anything()
+		)
 	})
 })
