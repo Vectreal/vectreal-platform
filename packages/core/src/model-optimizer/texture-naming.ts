@@ -16,8 +16,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 /**
  * Resolving canonical texture filenames. No I/O, so everything here is safe to
- * call in any environment; only the `sync*` functions write, and only the
- * names they resolve onto the textures they are given.
+ * call in any environment; only the `sync*` functions write, and only to the
+ * textures they are given.
  */
 
 import { Document, Material, Texture } from '@gltf-transform/core'
@@ -136,6 +136,9 @@ export const resolveTextureByMaterialSlot = (
 // Canonical names
 // ---------------------------------------------------------------------------
 
+// Typed as a string, but a glTF image's `"name": null` reads back as null.
+const storedName = (texture: Texture): string => texture.getName()?.trim() ?? ''
+
 /**
  * The file name a texture is known by: its own stable URI or name, else its
  * material slot (`Wood_Planks_baseColor.png`), else its position
@@ -147,7 +150,7 @@ export const resolveTextureCanonicalFileName = (
 	index: number
 ): string => {
 	const currentUri = texture.getURI().trim()
-	const currentName = texture.getName().trim()
+	const currentName = storedName(texture)
 	const stableUri =
 		currentUri &&
 		!currentUri.startsWith('data:') &&
@@ -175,8 +178,8 @@ export const resolveTextureCanonicalFileName = (
 }
 
 /**
- * Writes the canonical file name onto a texture's URI and name. A stable
- * `fileName` is adopted first, so it becomes the name the texture keeps.
+ * Writes a texture's canonical file name to its URI and name. A stable
+ * `fileName` is written first, so the canonical name is resolved from it.
  */
 export const syncTextureIdentity = (
 	document: Document,
@@ -184,7 +187,7 @@ export const syncTextureIdentity = (
 	index: number,
 	fileName?: string
 ): void => {
-	const currentName = texture.getName().trim()
+	const currentName = storedName(texture)
 	const currentUri = texture.getURI().trim()
 	const preferredFileName = fileName?.trim()
 

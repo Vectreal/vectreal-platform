@@ -23,8 +23,8 @@ import {
 import { registerMeshoptDecoder } from '../meshopt/meshopt-codec'
 
 /**
- * Registers the geometry codecs on one WebIO the first time each is needed,
- * so a model that uses neither never loads them.
+ * Registers the geometry codecs on one WebIO, each once: the decoders before
+ * the first read, the Draco encoder only when a Draco step first needs it.
  */
 export class GeometryCodecs {
 	private io: WebIO

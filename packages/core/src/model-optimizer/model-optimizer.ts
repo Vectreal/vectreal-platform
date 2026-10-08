@@ -100,10 +100,10 @@ export interface ModelBaseline {
  * environments (custom encoder injection).
  *
  * The class holds the model and decides when a result replaces its document.
- * The work it commits lives in sibling modules that take what they need as
- * arguments and never see the class: loading, the transform passes, Draco,
- * texture compression, naming and payloads, and the currency check every
- * commit passes.
+ * The work lives in sibling modules that take what they need as arguments and
+ * never see the class: loading, the transform passes, Draco, texture
+ * compression, naming and payloads, and the ticket bookkeeping that refuses a
+ * result whose model or document was replaced while it ran.
  */
 export class ModelOptimizer {
 	private _document: Document | null = null
@@ -752,9 +752,12 @@ export class ModelOptimizer {
 	}
 
 	/**
-	 * Normalize all texture URIs and names to canonical form.
-	 * Called eagerly after every load path to ensure consistent naming
-	 * regardless of how the model was loaded (Three.js, GLB, GLTF JSON).
+	 * Normalize all texture URIs and names to canonical form. Passing `doc`
+	 * also adopts it as the loaded document.
+	 *
+	 * Loads do not call this: they name a document's textures before the load
+	 * may commit, and adopting the document here would make it the held one
+	 * before that check.
 	 */
 	public normalizeAllTextureURIs(doc?: Document): void {
 		const target = doc ?? this._document
