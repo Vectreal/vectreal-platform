@@ -8,6 +8,7 @@ import {
 	useModelContext,
 	type StructuredLoadError
 } from '@vctrl/hooks/use-load-model'
+import { canEncodeImage } from '@vctrl/hooks/use-optimize-model'
 import fileSaver from 'file-saver'
 import { useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
@@ -400,7 +401,28 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		openDirectoryPicker
 	} = useModelFileInputs((files) => void ingest(files))
 
-	const options = convertOptionsFor(pair)
+	/*
+	  WebP only where this browser can write it. Safari cannot, and its canvas
+	  answers a request for WebP with a PNG rather than an error - so the box
+	  turned the camera sample's 18 MB of JPEG textures into 190 MB of PNG and
+	  took the tab down. The encoder refuses now; offering the box anyway would
+	  promise a pass that can only fail.
+
+	  Asked after mount because the answer lives in the browser. The options
+	  render only once a model is on the stage, long after it has arrived.
+	*/
+	const [canWriteWebp, setCanWriteWebp] = useState(false)
+	useEffect(() => {
+		void canEncodeImage('webp').then(setCanWriteWebp)
+	}, [])
+
+	const options = useMemo(
+		() =>
+			convertOptionsFor(pair).filter(
+				(option) => option !== 'webp' || canWriteWebp
+			),
+		[pair, canWriteWebp]
+	)
 	const bundleCopy = bundleSourceCopy(pair.from)
 	const isBundle = (SOURCES_THAT_ARE_BUNDLES as readonly string[]).includes(
 		pair.from
