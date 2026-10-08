@@ -469,7 +469,9 @@ const useOptimizeModel = () => {
 	 * @param options.targetFormat - Target compression format ('webp' | 'jpeg' | 'png')
 	 * @param options.quality - Compression quality (0-100)
 	 * @returns Promise that resolves when texture compression is complete
-	 * @throws Error if OffscreenCanvas is unavailable or encoding fails
+	 * @throws Error if OffscreenCanvas is unavailable, the browser cannot write
+	 * `targetFormat` (Safari cannot write WebP; ask `canEncodeImage` first), or
+	 * encoding fails
 	 */
 	const texturesOptimization = useCallback(
 		async (options?: TextureCompressOptions): Promise<void> => {
@@ -638,11 +640,13 @@ const useOptimizeModel = () => {
 
 		/**
 		 * Compresses textures using browser-native OffscreenCanvas encoding.
-		 * No server call is made. Works in any modern browser context.
+		 * No server call is made. Writes only formats the browser's canvas can:
+		 * Safari cannot write WebP, which `canEncodeImage` reports.
 		 *
 		 * @param options - Texture compression options (targetFormat, quality, resize)
 		 * @returns Promise that resolves when compression is complete
-		 * @throws Error if OffscreenCanvas is unavailable or encoding fails
+		 * @throws Error if OffscreenCanvas is unavailable, the browser cannot write
+		 * `targetFormat`, or encoding fails
 		 */
 		texturesOptimization
 	}

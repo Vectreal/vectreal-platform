@@ -33,7 +33,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  */
 
 interface EncodeOptions {
-	format: 'webp' | 'jpeg' | 'png'
+	/** The image subtype: `webp` encodes `image/webp`. */
+	format: string
 	/** Quality 0–100 (mapped to 0.0–1.0 for convertToBlob) */
 	quality: number
 	/** Scale down to fit within this width (never enlarges) */
@@ -42,10 +43,36 @@ interface EncodeOptions {
 	maxHeight?: number
 }
 
+/**
+ * Whether this browser's canvas can write `image/<format>`.
+ *
+ * Asked of a one-pixel canvas because a canvas that cannot write a type does
+ * not fail: it hands back a PNG. WebKit cannot write WebP, so on Safari every
+ * texture "compressed" to WebP came back as a PNG under a WebP label, and the
+ * camera sample's 18 MB of JPEGs became 190 MB, which took the tab down.
+ */
+export async function canEncodeImage(format: string): Promise<boolean> {
+	const mimeType = `image/${format}`
+
+	try {
+		const canvas = new OffscreenCanvas(1, 1)
+		// Chromium refuses to encode a canvas that has no rendering context.
+		canvas.getContext('2d')
+		const blob = await canvas.convertToBlob({ type: mimeType })
+		return blob.type === mimeType
+	} catch {
+		return false
+	}
+}
+
 async function encodeWithOffscreenCanvas(
 	input: Uint8Array,
 	opts: EncodeOptions
 ): Promise<Uint8Array> {
+	if (!(await canEncodeImage(opts.format))) {
+		throw new Error(`This browser cannot write image/${opts.format}.`)
+	}
+
 	const blob = new Blob([input as Uint8Array<ArrayBuffer>])
 	const bitmap = await createImageBitmap(blob)
 
@@ -71,15 +98,8 @@ async function encodeWithOffscreenCanvas(
 	ctx.drawImage(bitmap, 0, 0, width, height)
 	bitmap.close()
 
-	const mimeType =
-		opts.format === 'webp'
-			? 'image/webp'
-			: opts.format === 'jpeg'
-				? 'image/jpeg'
-				: 'image/png'
-
 	const resultBlob = await canvas.convertToBlob({
-		type: mimeType,
+		type: `image/${opts.format}`,
 		quality: opts.quality / 100
 	})
 
@@ -109,7 +129,7 @@ export function createBrowserTextureEncoder() {
 				? inputBuffer
 				: new Uint8Array(inputBuffer)
 
-		let targetFormat: 'webp' | 'jpeg' | 'png' = 'webp'
+		let targetFormat = 'webp'
 		let quality = 80
 		let maxWidth: number | undefined
 		let maxHeight: number | undefined
@@ -137,14 +157,15 @@ export function createBrowserTextureEncoder() {
 			/**
 			 * sharp-compatible `.toFormat(format, opts)` — gltf-transform calls this
 			 * instead of `.webp()` / `.jpeg()` / `.png()` directly.
+			 *
+			 * Any format is taken as asked: one the canvas cannot write is refused
+			 * by `toBuffer`, where an AVIF request used to come back as WebP.
 			 */
 			toFormat(
 				format: string,
 				opts?: { quality?: number; lossless?: boolean; nearLossless?: boolean }
 			) {
-				if (format === 'webp' || format === 'jpeg' || format === 'png') {
-					targetFormat = format
-				}
+				targetFormat = format
 				if (typeof opts?.quality === 'number') quality = opts.quality
 				return instance
 			},
