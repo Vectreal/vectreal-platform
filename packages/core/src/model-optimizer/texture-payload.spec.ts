@@ -5,7 +5,7 @@
  * material slot, and failing that after its position. Whichever wins carries
  * the extension of the texture's current MIME type.
  */
-import { Document, WebIO } from '@gltf-transform/core'
+import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { describe, expect, it } from 'vitest'
 
 import { ModelOptimizer } from './model-optimizer'
@@ -85,6 +85,39 @@ describe('ModelOptimizer texture payloads', () => {
 				byteLength: ONE_PIXEL_PNG.byteLength
 			}
 		])
+	})
+
+	// Payloads resolve the name, so they stay right after an edit that bypassed
+	// naming, such as a MIME type changed on the document directly.
+	it('reports the canonical name rather than the one a texture stores', async () => {
+		const optimizer = await loaded()
+		const [wood, metal] = optimizer.document.getRoot().listTextures()
+		wood.setURI('').setName('image_3.png')
+		metal.setMimeType('image/jpeg')
+
+		expect(
+			optimizer.listTextureDescriptors().map(({ fileName }) => fileName)
+		).toEqual(['Wood_baseColor.png', 'Metal_baseColor.jpg', 'texture-2.png'])
+		expect(optimizer.getTexturePayload(1)).toMatchObject({
+			fileName: 'Metal_baseColor.jpg',
+			mimeType: 'image/jpeg'
+		})
+	})
+
+	// Against the glTF schema, but files carry it, and a load used to accept it.
+	it('names a texture whose file gave its image a null name', async () => {
+		const optimizer = new ModelOptimizer()
+
+		await optimizer.loadFromJSON({
+			json: {
+				asset: { version: '2.0' },
+				buffers: [{ uri: 'model.bin', byteLength: 0 }],
+				images: [{ name: null, uri: 'wood.png' }]
+			} as unknown as GLTF.IGLTF,
+			resources: { 'model.bin': new Uint8Array(), 'wood.png': ONE_PIXEL_PNG }
+		})
+
+		expect(names(optimizer)).toEqual([['wood.png', 'wood.png']])
 	})
 
 	it('returns a texture with its bytes', async () => {
