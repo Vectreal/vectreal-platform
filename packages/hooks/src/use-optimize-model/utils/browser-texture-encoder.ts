@@ -89,9 +89,10 @@ async function encodeWithOffscreenCanvas(
 /**
  * Creates a sharp-constructor-compatible browser encoder.
  *
- * The returned function matches the sharp API surface that gltf-transform uses:
- * `encoder(buffer)` → instance with `.resize()`, `.webp/jpeg/png()`,
- * `.toBuffer()`, and `.metadata()`.
+ * The returned function matches the part of the sharp API gltf-transform calls:
+ * `encoder(buffer).toFormat(...)`, then `.resize(...)` on what that returns
+ * when resizing, then `.toBuffer()`. Like sharp, the instance also offers
+ * `.webp/jpeg/png()` and `.metadata()`.
  *
  * Pass the result directly to `TextureCompressOptions.encoder`:
  * ```ts

@@ -169,7 +169,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			// Only once it has shipped, and only if the document exported is the
 			// one on screen: the same document object, so no other scene or upload
 			// replaced it; no pass running when Publish was pressed; and no pass
-			// started since, which can rewrite the document in place. The figures
+			// started since. A pass clears these figures the moment it starts,
+			// before its restore replaces the document, so in between the document
+			// check alone would write them back for the document on its way out. The figures
 			// then describe that file, in the codecs the export chose, rather than
 			// the Draco and WebP projection; otherwise the newer figures win.
 			const data = publishResult.response as PublishSceneResponse

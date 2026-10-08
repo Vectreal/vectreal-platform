@@ -699,6 +699,8 @@ export class ModelOptimizer {
 		// The revision catches a restore or a new model. The document check
 		// catches a step that replaced it without claiming one, as
 		// `applyTransforms` does, which a commit here would silently undo.
+		// Edits made to the document in place while this runs are neither: they
+		// are not merged into the copy, and nothing in this repo makes one.
 		const isStale = () => !this.isCurrent(ticket) || this._document !== document
 		if (isStale()) throw new SupersededError()
 
@@ -1176,6 +1178,10 @@ export class ModelOptimizer {
 		operationName: string,
 		ticket = this.currentTicket()
 	): Promise<void> {
+		// Asked before the document is: a reset or a failed load that retired
+		// the ticket also cleared the document, and returning quietly then
+		// would report a step that never ran as done.
+		this.ensureCurrent(ticket)
 		// Read once: the document can be replaced while this awaits.
 		const document = this._document
 		if (!document) return

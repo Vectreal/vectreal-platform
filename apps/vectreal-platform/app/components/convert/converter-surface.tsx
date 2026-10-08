@@ -79,7 +79,8 @@ interface Conversion {
 }
 
 /**
- * Passes that rewrite the document in place, with no undo.
+ * Passes that replace the optimizer's document with a changed one, with no
+ * undo.
  *
  * The distinction matters because it decides whether changing an option can be
  * answered from the model already in memory or needs the source read again.
@@ -301,8 +302,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	/*
 	  The source files are kept, not just their size.
 
-	  `texturesOptimization` rewrites the optimizer's document in place and there
-	  is no undo, so a checkbox that could be ticked but not untick-able would
+	  `texturesOptimization` replaces the optimizer's document and there is no
+	  undo, so a checkbox that could be ticked but not untick-able would
 	  lie the second time somebody downloaded. Keeping the originals means an
 	  option change can start again from them, which is the only version of this
 	  control that tells the truth.

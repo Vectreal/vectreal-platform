@@ -14,7 +14,7 @@ pnpm add @vctrl/core
 
 **Module format:** ES modules only. Import it from any bundler, browser or Node.js. `require()` also loads it on Node.js 20.19, 22.12 and later, but three.js and glTF-Transform then load as ES modules too, separately from a `require('three')` of your own, so their objects fail each other's `instanceof` checks. Use `import` when you pass those objects in.
 
-> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the part of the sharp constructor API glTF-Transform calls: `(buffer) => { toFormat, resize, toBuffer }`) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.
+> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the part of the sharp constructor API glTF-Transform calls: `(buffer) => instance`, whose `toFormat` and `resize` return the instance and whose `toBuffer` resolves to the encoded bytes) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.
 
 ---
 
@@ -203,7 +203,9 @@ Worker environment.
 
 `encoder` is typed `unknown` so the package does not force a Sharp type dependency on
 browser and edge callers. It must match the part of the Sharp constructor API that
-glTF-Transform calls: `(buffer) => { toFormat, resize, toBuffer }`.
+glTF-Transform calls: `(buffer) => instance`, where `instance.toFormat(format, options)` and
+`instance.resize(width, height, options)` return the instance and `instance.toBuffer()`
+resolves to the encoded bytes.
 `createBrowserTextureEncoder()` from `@vctrl/hooks` returns that and more.
 
 The pass compresses a copy of the document and commits it in one step, so the document

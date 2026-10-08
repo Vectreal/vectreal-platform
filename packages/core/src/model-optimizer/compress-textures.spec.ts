@@ -92,6 +92,24 @@ function fakeEncoder({
 	return { encoder, release: () => release(), reached: gate }
 }
 
+/**
+ * Holds the optimizer's parse of `held` until `release`, so a restore can be
+ * left claimed but not committed while the pass finishes.
+ */
+function holdParse(optimizer: ModelOptimizer, held: Uint8Array) {
+	const io = (optimizer as unknown as { io: WebIO }).io
+	const readBinary = io.readBinary.bind(io)
+	let release: () => void = () => {}
+	vi.spyOn(io, 'readBinary').mockImplementation((bytes) =>
+		bytes === held
+			? new Promise((resolve) => {
+					release = () => resolve(readBinary(bytes))
+				})
+			: readBinary(bytes)
+	)
+	return { release: () => release() }
+}
+
 async function loaded() {
 	const optimizer = new ModelOptimizer()
 	await optimizer.loadFromBuffer(await texturedGlb())
@@ -236,6 +254,26 @@ describe('ModelOptimizer.compressTextures', () => {
 		expect(recorded(optimizer)).toEqual([])
 	})
 
+	// Claimed but not yet committed: only the revision says the pass is stale.
+	it('commits nothing while a restore it was overtaken by is still parsing', async () => {
+		const optimizer = await loaded()
+		const held = fakeEncoder({ holdAt: 0 })
+		const parse = holdParse(optimizer, optimizer.getBaseline().source!)
+
+		const pass = optimizer.compressTextures({
+			encoder: held.encoder,
+			targetFormat: 'webp'
+		})
+		await held.reached
+		const restoring = optimizer.restoreSource()
+		held.release()
+
+		await expect(pass).rejects.toBeInstanceOf(SupersededError)
+		parse.release()
+		await restoring
+		expect(recorded(optimizer)).toEqual([])
+	})
+
 	// Another step can commit a new document without claiming a revision, and
 	// committing over it would silently undo that step.
 	it('commits nothing over a document another step replaced while it ran', async () => {
@@ -266,9 +304,23 @@ describe('ModelOptimizer.compressTextures', () => {
 
 		await optimizer.compressTextures({ targetFormat: 'webp' })
 
-		expect(recorded(optimizer)).toEqual([])
-		expect(textures(optimizer).map(({ mimeType }) => mimeType)).not.toContain(
-			'image/webp'
-		)
+		expect(optimizer.getAppliedOptimizations()).toEqual([
+			'basic texture optimization'
+		])
+	})
+
+	// A reset clears the document, so the fallback found nothing to read and
+	// used to report that as done.
+	it('refuses the fallback when the model is reset while the encoder is sought', async () => {
+		vi.doMock('sharp', () => {
+			throw new Error('sharp is not installed here')
+		})
+		const optimizer = await loaded()
+		vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+		const pass = optimizer.compressTextures({ targetFormat: 'webp' })
+		optimizer.reset()
+
+		await expect(pass).rejects.toBeInstanceOf(SupersededError)
 	})
 })
