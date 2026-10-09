@@ -103,7 +103,7 @@ function App() {
 
 A still viewer stops drawing. Once the camera stops it renders a few dozen extra frames to smooth edges and settle ambient occlusion, then draws nothing until something changes. Moving objects are detected on their own, so `children` that animate in `useFrame` keep rendering. A child that changes only a material, a uniform or a texture must call `invalidate()` from `useThree`, the same contract React Three Fiber sets for on-demand rendering.
 
-The editor affordances exist for editing surfaces such as the Publisher: `shadowLightEditable`, `staticShadowBake`, `bakedShadow`, `onShadowBakeReady`, `onShadowLightChange`, and the hotspot four above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them.
+The editor affordances exist for editing surfaces such as the Publisher: `shadowLightEditable`, `staticShadowBake`, `onShadowBakeReady`, `onShadowLightChange`, and the hotspot four above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them. Embedded viewers do pass the scene's saved bake as `bakedShadow`, so the shadow renders on load without re-baking.
 
 ---
 
