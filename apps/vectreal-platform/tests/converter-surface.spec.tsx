@@ -57,6 +57,9 @@
  *    the cases that read after one;
  *  - sending USDZ through `prepare` again reddens both USDZ cases, and
  *    exporting anything but the stage's model reddens the left-alone case;
+ *  - handing over with the ticked options, or without preparing the
+ *    document, reddens the as-loaded handoff cases; going on to serialize a
+ *    model replaced while the handoff waited reddens that case;
  *  - letting the publisher button run during a conversion, or Convert during
  *    a handoff, reddens the case for each.
  */
@@ -1661,6 +1664,57 @@ describe('the handoff to the publisher', () => {
 			)
 		)
 		expect(navigated).toEqual([])
+		expect(documentsRead).toEqual([])
+	})
+
+	/*
+	  THE DEFECT: the handoff serialized the document as the last Convert left
+	  it and told the publisher it was the original, so after a WebP download
+	  every preset started from recompressed textures. The stage shows the model
+	  as loaded, and that is what the button names.
+	*/
+	it('hands over the model as loaded, not a WebP pass made for a download', async () => {
+		await modelOnStage()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		fireEvent.click(openButton())
+
+		await waitFor(() => expect(navigated).toHaveLength(1))
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(1)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf' })
+	})
+
+	it('runs no pass that is ticked but was never converted', async () => {
+		await modelOnStage()
+		toggleWebp()
+
+		fireEvent.click(openButton())
+
+		await waitFor(() => expect(navigated).toHaveLength(1))
+		expect(optimizer.texturesOptimization).not.toHaveBeenCalled()
+		expect(documentsRead).toEqual([{ name: 'chair.gltf' }])
+	})
+
+	it('does not hand over a pass it could not undo', async () => {
+		await modelOnStage()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+		optimizer.restoreSource.mockRejectedValueOnce(
+			new Error('The source could not be parsed.')
+		)
+
+		fireEvent.click(openButton())
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'That model could not be handed over. Try the publisher.'
+			)
+		)
+		expect(navigated).toEqual([])
+		expect(documentsRead).toEqual([{ name: 'chair.gltf', webp: true }])
 	})
 
 	// A conversion would restore or rewrite the document it is serializing.
