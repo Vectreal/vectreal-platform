@@ -826,8 +826,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		  The handoff asks the same question every other await on this page asks,
 		  and used to be the one place that did not. Both values it writes with -
 		  `file` and `baseFileName` - are render-closure captures, and it awaits
-		  twice: once to serialize the document, once to navigate. A drop landing
-		  in either gap wrote whatever `prepareGltfDocument` found at that moment
+		  to prepare the document, to serialize it and to navigate. A drop landing
+		  in one of those gaps wrote whatever `prepareGltfDocument` found then
 		  into a draft named after the model the visitor had pressed the button
 		  for, and the publisher opened on the mixture.
 		*/

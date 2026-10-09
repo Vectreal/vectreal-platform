@@ -27,12 +27,10 @@
  *  - offering WebP without asking `canEncodeImage` reddens the Safari case
  *    alone;
  *  - not waiting for `stageIngest` in `prepare`, or not handing it over in
- *    `adoptSource`, reddens the first-model and previous-model cases; not
- *    waiting in the handoff reddens both handoff waiting cases;
+ *    `adoptSource`, reddens the first-model and previous-model cases;
  *  - dropping `prepare`'s on-screen check after that wait, or capturing its
  *    predicate after the wait instead of before, reddens the
- *    replaced-while-waiting case; capturing the handoff's after it reddens
- *    the handoff's;
+ *    replaced-while-waiting case;
  *  - adopting by `stillCurrent` rather than `stillOnScreen` reddens both
  *    refusal cases on the adopted model;
  *  - in the restore-based undo: never restoring, or always restoring,
@@ -57,9 +55,10 @@
  *    the cases that read after one;
  *  - sending USDZ through `prepare` again reddens both USDZ cases, and
  *    exporting anything but the stage's model reddens the left-alone case;
- *  - handing over with the ticked options, or without preparing the
- *    document, reddens the as-loaded handoff cases; going on to serialize a
- *    model replaced while the handoff waited reddens that case;
+ *  - handing over with the ticked options reddens the three new
+ *    handoff cases; handing over without `prepare` reddens the as-loaded,
+ *    could-not-undo and replaced-while-waiting cases; going on to serialize a
+ *    model `prepare` found replaced reddens the replaced-while-waiting case;
  *  - letting the publisher button run during a conversion, or Convert during
  *    a handoff, reddens the case for each.
  */
