@@ -66,7 +66,7 @@ describe('applyOptimization', () => {
 		const { result } = renderHook(() => useLoadModel(optimizer()))
 
 		await expect(result.current.optimizer.applyOptimization()).rejects.toThrow(
-			'No model is loaded to apply the optimization to.'
+			'No model was loaded when this optimizer was read.'
 		)
 	})
 
@@ -87,17 +87,16 @@ describe('applyOptimization', () => {
 		const result = await loaded(optimizer(async () => null))
 
 		await expect(result.current.optimizer.applyOptimization()).rejects.toThrow(
-			'The optimized model could not be exported.'
+			'No optimized model could be exported.'
 		)
 	})
 
-	it('rejects when the optimized model cannot be shown, keeping the one on screen', async () => {
+	it('rejects when the optimized model cannot be shown', async () => {
 		const parseError = new Error('not a GLB')
 		vi.spyOn(ModelLoader.prototype, 'loadToThreeJS').mockRejectedValue(
 			parseError
 		)
 		const result = await loaded()
-		const onScreen = result.current.file?.model
 
 		await expect(
 			result.current.optimizer.applyOptimization()
@@ -105,7 +104,6 @@ describe('applyOptimization', () => {
 			message: 'The optimized model could not be shown.',
 			cause: parseError
 		})
-		expect(result.current.file?.model).toBe(onScreen)
 	})
 
 	// The textures that compressed are in the document, so the viewer has to

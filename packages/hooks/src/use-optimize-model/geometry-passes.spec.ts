@@ -34,7 +34,7 @@ describe('useOptimizeModel geometry passes', () => {
 	})
 
 	it.each(PASSES)(
-		'%s does nothing, and says nothing, before a model is loaded',
+		'%s does nothing before a model is loaded',
 		async (pass, method) => {
 			const run = vi.spyOn(ModelOptimizer.prototype, method)
 			const { result } = renderHook(() => useOptimizeModel())

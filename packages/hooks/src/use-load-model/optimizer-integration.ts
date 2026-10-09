@@ -37,7 +37,7 @@ export function useOptimizerIntegration(
 			// Captured with this callback, so a load that starts while the pass
 			// runs cannot receive its result.
 			if (loadId === null) {
-				throw new Error('No model is loaded to apply the optimization to.')
+				throw new Error('No model was loaded when this optimizer was read.')
 			}
 
 			// A partial texture pass committed what it compressed, so the viewer
@@ -54,7 +54,7 @@ export function useOptimizerIntegration(
 
 			const optimizedModel = await instance.getModel()
 			if (!optimizedModel) {
-				throw new Error('The optimized model could not be exported.')
+				throw new Error('No optimized model could be exported.')
 			}
 
 			const optimizedBlobPart =

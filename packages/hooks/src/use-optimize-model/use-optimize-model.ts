@@ -606,7 +606,8 @@ const useOptimizeModel = () => {
 		reset,
 
 		/**
-		 * Error object if any optimization operation failed, otherwise null.
+		 * The error from the last load into the optimizer that failed, otherwise
+		 * null. Optimization steps report a failure by rejecting, not here.
 		 */
 		error,
 
