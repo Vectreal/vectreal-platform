@@ -36,14 +36,18 @@
  *    be the only unmeasured line in the file;
  *  - offering WebP without asking `canEncodeImage` reddens the Safari case
  *    alone;
- *  - not waiting for `stageIngest` in `prepare` reddens the first-model,
- *    previous-model and replaced-while-waiting cases, and not waiting in the
- *    handoff reddens its own case;
- *  - dropping `prepare`'s on-screen check after that wait reddens the
- *    replaced-while-waiting case alone;
+ *  - not waiting for `stageIngest` in `prepare`, or not handing it over in
+ *    `adoptSource`, reddens the first-model and previous-model cases; not
+ *    waiting in the handoff reddens both handoff waiting cases;
+ *  - dropping `prepare`'s on-screen check after that wait, or capturing its
+ *    predicate after the wait instead of before, reddens the
+ *    replaced-while-waiting case; capturing the handoff's after it reddens
+ *    the handoff's;
  *  - adopting by `stillCurrent` rather than `stillOnScreen` reddens both
- *    refusal cases on the adopted model, and recording the WebP re-read by it
- *    reddens the two on the re-read one.
+ *    refusal cases on the adopted model, and asking it of the WebP re-read
+ *    reddens the refusal cases on the re-read one;
+ *  - a failed re-read that skips asking whether a newer file replaced it
+ *    reddens the case naming the newer file.
  */
 import { formatFileSize } from '@shared/utils'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -103,6 +107,9 @@ let heldDocument: { name: string } | null = null
 
 /** Every document an export or a handoff read, in order. */
 let documentsRead: unknown[] = []
+
+/* The last model on the stage, which a refused load puts back. */
+let lastReady: LoaderFile | null = null
 
 /** Blocks every export until the test lets go, so a drop can land mid-encode. */
 let exportBlock: Promise<void> | null = null
@@ -193,6 +200,7 @@ function resetContext() {
 		reset: () => {
 			latestToken += 1
 			onScreen = 0
+			lastReady = null
 			publish({ status: 'empty', file: null })
 		},
 		load: (
@@ -205,6 +213,9 @@ function resetContext() {
 			const stillCurrent = () => latestToken === token
 			const stillOnScreen = () => onScreen === token
 
+			/* Every load blanks the stage on the way in, as the hook's does. */
+			publish({ status: 'loading', file: null })
+
 			return new Promise((resolve) => {
 				const reachStage = (file: LoaderFile) => {
 					/*
@@ -214,6 +225,7 @@ function resetContext() {
 					*/
 					if (!stillCurrent()) return
 					onScreen = token
+					lastReady = file
 					publish({ status: 'ready', file })
 					options?.onPublish?.({
 						status: 'ready',
@@ -242,7 +254,15 @@ function resetContext() {
 							stillOnScreen
 						})
 					},
-					reject: (error) =>
+					reject: (error) => {
+						/* A refused upload puts back whatever was on the stage. */
+						if (stillCurrent()) {
+							publish(
+								lastReady
+									? { status: 'ready', file: lastReady }
+									: { status: 'error', file: null }
+							)
+						}
 						resolve({
 							status: 'error',
 							file: null,
@@ -250,6 +270,7 @@ function resetContext() {
 							stillCurrent,
 							stillOnScreen
 						})
+					}
 				})
 			})
 		}
@@ -448,6 +469,7 @@ beforeEach(() => {
 	onScreen = 0
 	heldDocument = null
 	documentsRead = []
+	lastReady = null
 	draftBlock = null
 	sampleBlock = null
 	navigated.length = 0
@@ -999,7 +1021,7 @@ describe('the optimizer is read only for the model it holds', () => {
 		exported.data = new Uint8Array(1_000)
 		fireEvent.click(convertButton())
 		await yieldToPage()
-		expect(documentsRead).toEqual([])
+		expect(toast.error).not.toHaveBeenCalled()
 
 		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 
@@ -1039,11 +1061,41 @@ describe('the optimizer is read only for the model it holds', () => {
 	})
 
 	/*
-	  The wait can end on a different model: one dropped while it waited. The
-	  conversion was for the model the button was pressed under, so it stops
-	  rather than export the newer one under the older one's name.
+	  The wait can end on a different model: one dropped and shown while it
+	  waited. The conversion was for the model the button was pressed under,
+	  so it stops rather than export the newer one under the older one's name.
 	*/
 	it('abandons a Convert whose model was replaced while it waited', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		reachStage(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await screen.findByTestId('stage')
+
+		fireEvent.click(convertButton())
+		await yieldToPage()
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(documentsRead).toEqual([])
+	})
+
+	/*
+	  A refused drop never reaches the stage, so it cannot stand in for the
+	  ingest of the model that is there. Waiting on the newest load instead
+	  waited on a refusal that had already settled.
+	*/
+	it('still waits for the model on the stage after a refused drop', async () => {
 		render(<ConverterSurface pair={gltfToGlb} />)
 
 		drop([gltfFile('first.gltf')])
@@ -1053,16 +1105,24 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		reachStage(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
+		drop([new File(['x'], 'notes.txt')])
+		await waitFor(() => expect(loadCalls).toHaveLength(3))
+		refuse(2)
+		await screen.findByRole('alert')
+
 		fireEvent.click(convertButton())
 		await yieldToPage()
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
-
-		await waitFor(() =>
-			expect(toast.error).toHaveBeenCalledWith(
-				'A newer file replaced that one. Press Convert again.'
-			)
-		)
 		expect(documentsRead).toEqual([])
+
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(documentsRead).toEqual([{ name: 'second.gltf' }])
 	})
 
 	/*
@@ -1133,6 +1193,71 @@ describe('a refused drop does not retire a model a WebP pass re-read', () => {
 		)
 		await refuseANote(3)
 		releasePass()
+
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(toast.error).not.toHaveBeenCalled()
+	})
+
+	it('says when the re-read itself failed', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		refuse(1)
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'That file could not be read again to apply those options. Untick them to download it as it is.'
+			)
+		)
+	})
+
+	it('names the newer file, not the re-read, when a newer file replaced it', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(3))
+		settle(2, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		refuse(1)
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(toast.error).toHaveBeenCalledTimes(1)
+	})
+
+	it('keeps a re-read a refused drop landed in while it was being read', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		reachStage(1, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await refuseANote(3)
+		settle(1, loadedFile({ sourcePackageBytes: 2_000_000 }))
 
 		expect(
 			await screen.findByRole('button', { name: /^Download/ })
@@ -1218,10 +1343,38 @@ describe('the handoff to the publisher', () => {
 		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
 
 		fireEvent.click(openButton())
+		await yieldToPage()
+		expect(documentsRead).toEqual([])
+
 		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
 
 		await waitFor(() => expect(navigated).toHaveLength(1))
 		expect(documentsRead).toEqual([{ name: 'second.gltf' }])
+	})
+
+	it('does not hand over a model replaced while it waited', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		reachStage(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await screen.findByTestId('stage')
+
+		fireEvent.click(openButton())
+		await yieldToPage()
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press the button again.'
+			)
+		)
+		expect(navigated).toEqual([])
 	})
 
 	it('cannot be cleared out from under itself', async () => {

@@ -376,14 +376,17 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	const stageLoad = useRef<(() => boolean) | null>(null)
 
 	/*
-	  The newest load, which settles once the optimizer has ingested its model.
+	  Settles once the optimizer has ingested the model the page adopted.
 
 	  The loader shows a model before the optimizer holds it, so until this
 	  settles the optimizer's document is still the previous model's. Convert
 	  pressed in that window exported the previous model under the new file's
 	  name, so everything that reads the document waits for this first.
+
+	  Handed over on adoption, not when a load starts: a drop that is refused
+	  never reaches the stage, and waiting on its load waited on nothing.
 	*/
-	const stageIngest = useRef<Promise<unknown> | null>(null)
+	const stageIngest = useRef<Promise<void> | null>(null)
 
 	/*
 	  The page being looked at right now, for the benefit of a load that started
@@ -484,12 +487,18 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  document that never had one. One writer means they cannot drift apart.
 	*/
 	const adoptSource = useCallback(
-		(files: File[], bytes: number, stillOnScreen: () => boolean) => {
+		(
+			files: File[],
+			bytes: number,
+			stillOnScreen: () => boolean,
+			ingested: Promise<void>
+		) => {
 			setSource({ files, bytes })
 			// Every stored result describes bytes that came from the file replaced.
 			setConversions({})
 			appliedKey.current = INGESTED_RECIPE
 			stageLoad.current = stillOnScreen
+			stageIngest.current = ingested
 		},
 		[]
 	)
@@ -499,6 +508,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setConversions({})
 		appliedKey.current = null
 		stageLoad.current = null
+		stageIngest.current = null
 	}, [])
 
 	const ingest = useCallback(
@@ -539,6 +549,12 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  is handed to `adoptSource` to be recorded as `stageLoad` rather than
 			  read as a boolean here.
 			*/
+			/* Settles with this load, which is once its model is ingested. */
+			let markIngested: () => void = () => undefined
+			const ingested = new Promise<void>((resolve) => {
+				markIngested = resolve
+			})
+
 			let adopted = false
 			const adopt = (state: LoadOutcome) => {
 				adopted = true
@@ -546,13 +562,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				adoptSource(
 					files,
 					referenced || measuredBytes(files),
-					state.stillOnScreen
+					state.stillOnScreen,
+					ingested
 				)
 			}
 
-			const loading = load({ kind: 'files', files }, { onPublish: adopt })
-			stageIngest.current = loading
-			const loaded = await loading
+			const loaded = await load({ kind: 'files', files }, { onPublish: adopt })
+			markIngested()
 			const refused = loaded.status === 'error'
 
 			/*
@@ -703,21 +719,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		const state = await load({ kind: 'files', files: source.files })
 
 		/*
-		  A file dropped while this was running replaced the source, so what
-		  came back describes the model that is on its way out. Writing
-		  `appliedKey` for it would tell the page a destructive pass had been
-		  applied to a document that never saw one, and the next Convert would
-		  skip the pass and export untouched textures under a ticked box.
-
-		  The newest load, not the model on screen: a re-read that failed is not
-		  on screen either, and it is reported below rather than as a newer file.
-		*/
-		if (!state.stillCurrent()) return null
-
-		/*
 		  A reload that fails is not a replaced file, and saying so sent the
 		  reader to press Convert again forever. The loader keeps the model on
-		  screen, so this is written for someone looking at it.
+		  screen, so this is written for someone looking at it - unless a newer
+		  file has replaced that model meanwhile.
 
 		  A LITERAL SENTENCE, NOT `refusalMessage`. Every sentence that function
 		  returns addresses someone who has just brought a file - "Check it is a
@@ -728,10 +733,20 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		  questions, which is the defect rather than the fix.
 		*/
 		if (!state.file) {
+			if (!state.stillCurrent()) return null
 			throw new Error(
 				'That file could not be read again to apply those options. Untick them to download it as it is.'
 			)
 		}
+
+		/*
+		  A file dropped while this was running replaced the source, so what
+		  came back describes the model that is on its way out. Writing
+		  `appliedKey` for it would tell the page a destructive pass had been
+		  applied to a document that never saw one, and the next Convert would
+		  skip the pass and export untouched textures under a ticked box.
+		*/
+		if (!state.stillOnScreen()) return null
 
 		if (wanted.includes('webp')) {
 			await optimizer?.texturesOptimization({
