@@ -982,7 +982,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		fireEvent.click(convertButton())
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
-				'That file could not be read again to change those options. Drop it again to start over.'
+				'Those options could not be changed. Press Convert to try again, or drop the file again to start over.'
 			)
 		)
 		fireEvent.click(convertButton())
@@ -1008,7 +1008,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		fireEvent.click(convertButton())
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
-				'That file could not be read again to change those options. Drop it again to start over.'
+				'Those options could not be changed. Press Convert to try again, or drop the file again to start over.'
 			)
 		)
 		toggleWebp()

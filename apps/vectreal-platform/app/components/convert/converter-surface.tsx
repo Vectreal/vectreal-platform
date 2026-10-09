@@ -684,7 +684,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	/*
 	  Makes the optimizer's document match the ticked options, then returns the
 	  model on the stage and what a partial pass left out, for the result to say.
-	  Null means a newer file replaced that model.
+	  Null means the model it started on is no longer on the stage.
 
 	  A destructive pass is undone by restoring the optimizer's source, the model
 	  as it was loaded, not by reading the file again. The re-read went through
@@ -724,7 +724,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			} catch (error) {
 				if (!stillOurs()) return null
 				throw new Error(
-					'That file could not be read again to change those options. Drop it again to start over.',
+					'Those options could not be changed. Press Convert to try again, or drop the file again to start over.',
 					{ cause: error }
 				)
 			}
@@ -925,9 +925,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 			if (!prepared) {
 				/*
-				  `prepare` returns null only when a newer drop replaced the
-				  model mid-run; a failure to restore or recompress throws
-				  instead, and the catch below reports it.
+				  `prepare` returns null only when the model it started on is
+				  no longer on the stage; a failure to restore or recompress
+				  throws instead, and the catch below reports it.
 				*/
 				toast.error(
 					file
