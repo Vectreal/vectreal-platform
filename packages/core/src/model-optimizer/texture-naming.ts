@@ -38,21 +38,6 @@ export const mimeTypeToExtension = (mimeType: string): string | null => {
 	}
 }
 
-export const targetFormatToMimeType = (
-	targetFormat?: 'webp' | 'jpeg' | 'png'
-): string | null => {
-	switch (targetFormat) {
-		case 'webp':
-			return 'image/webp'
-		case 'jpeg':
-			return 'image/jpeg'
-		case 'png':
-			return 'image/png'
-		default:
-			return null
-	}
-}
-
 // ---------------------------------------------------------------------------
 // URI / filename helpers
 // ---------------------------------------------------------------------------

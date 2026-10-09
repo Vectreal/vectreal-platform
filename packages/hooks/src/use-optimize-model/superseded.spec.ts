@@ -15,6 +15,7 @@ const calls = vi.hoisted(() => ({ load: vi.fn(), replace: vi.fn() }))
 
 vi.mock('@vctrl/core/model-optimizer', () => ({
 	SupersededError: class extends Error {},
+	TextureCompressionError: class extends Error {},
 	ModelOptimizer: class {
 		hasModel = () => true
 		reset = () => {}

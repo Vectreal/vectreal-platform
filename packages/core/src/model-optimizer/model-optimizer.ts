@@ -61,7 +61,11 @@ import {
 	calculateMeshSize,
 	readGlbJsonChunk
 } from './report-helpers'
-import { runTextureCompression } from './texture-compression'
+import {
+	compressDocumentTextures,
+	resolveTextureEncoder,
+	runBasicTextureOptimization
+} from './texture-compression'
 import {
 	mimeTypeToExtension,
 	replaceUriExtension,
@@ -659,35 +663,76 @@ export class ModelOptimizer {
 	 * `createBrowserTextureEncoder()` from `@vctrl/hooks` which uses
 	 * OffscreenCanvas and requires no network call.
 	 *
+	 * The pass compresses a copy and commits it in one step, as
+	 * `applyTransforms` does, so the document only ever holds a finished
+	 * result:
+	 * - every texture compressed: committed and recorded;
+	 * - some failed: the ones that compressed are committed and recorded, and a
+	 *   partial `TextureCompressionError` is thrown so the caller can say so;
+	 * - none compressed: nothing changes, and the error is thrown;
+	 * - another model or document taken meanwhile: nothing changes, and
+	 *   `SupersededError` is thrown.
+	 *
+	 * With no encoder and no Sharp, only the dedup and prune fallback runs, and
+	 * only it is recorded.
+	 *
 	 * @param options - Texture compression options
 	 */
 	public async compressTextures(
 		options: TextureCompressOptions = {}
 	): Promise<void> {
+		// Both read before the encoder import awaits: a model loaded meanwhile
+		// is not the one this pass was asked to compress.
 		const document = this.ensureModelLoaded()
 		const ticket = this.currentTicket()
 
-		try {
-			await runTextureCompression(
-				document,
-				options,
+		const encoder = await resolveTextureEncoder(options)
+		if (!encoder) {
+			await runBasicTextureOptimization(
 				this.emitProgress.bind(this),
 				(transforms, operationName) =>
 					this.applyTransforms(transforms, operationName, ticket)
 			)
-		} finally {
-			// A newer model makes this result moot, partial failure or not.
-			this.ensureCurrent(ticket)
+			return
 		}
 
-		// Sync URI and name to reflect the new MIME type after compression
-		// (e.g. .png → .webp), matching what the texture-naming helpers expect.
-		document
-			.getRoot()
-			.listTextures()
-			.forEach((texture, i) => this.syncTextureIdentity(document, texture, i))
+		// The revision catches a restore or a new model. The document check
+		// catches a step that replaced it without claiming one, as
+		// `applyTransforms` does, which a commit here would silently undo.
+		// Edits made to the document in place while this runs are neither: they
+		// are not merged into the copy, and nothing in this repo makes one.
+		const isStale = () => !this.isCurrent(ticket) || this._document !== document
+		if (isStale()) throw new SupersededError()
 
-		this.appliedOptimizations.push('texture compression')
+		const working = cloneDocument(document)
+		const partialFailure = await this.unlessSuperseded(
+			isStale,
+			async () => {
+				const failure = await compressDocumentTextures(
+					working,
+					options,
+					encoder,
+					this.emitProgress.bind(this)
+				)
+				// Nothing compressed, so there is nothing to commit.
+				if (failure && !failure.isPartial) throw failure
+				return failure
+			},
+			(failure) => {
+				// On the copy: naming finds a texture's material slot by identity.
+				working
+					.getRoot()
+					.listTextures()
+					.forEach((texture, i) =>
+						this.syncTextureIdentity(working, texture, i)
+					)
+				this._document = working
+				this.addAppliedOptimization('texture compression')
+				return failure
+			}
+		)
+
+		if (partialFailure) throw partialFailure
 	}
 
 	/**
@@ -1133,6 +1178,10 @@ export class ModelOptimizer {
 		operationName: string,
 		ticket = this.currentTicket()
 	): Promise<void> {
+		// Asked before the document is: a reset or a failed load that retired
+		// the ticket also cleared the document, and returning quietly then
+		// would report a step that never ran as done.
+		this.ensureCurrent(ticket)
 		// Read once: the document can be replaced while this awaits.
 		const document = this._document
 		if (!document) return

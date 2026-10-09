@@ -173,7 +173,7 @@ function Optimizer() {
 | `dedupOptimization(options?)` | `Promise<void>` | Deduplicate model data |
 | `quantizeOptimization(options?)` | `Promise<void>` | Quantize vertex attributes |
 | `normalsOptimization(options?)` | `Promise<void>` | Recompute/normalize normals |
-| `texturesOptimization(options?)` | `Promise<void>` | Run texture compression flow |
+| `texturesOptimization(options?)` | `Promise<void>` | Compress textures; rejects on failure, and a partial `TextureCompressionError` has already committed the textures that compressed |
 | `getModel()` | `Promise<Uint8Array \| null>` | Export current optimized model as GLB binary |
 | `report` / `info` | Objects | Optimization metrics and derived stats |
 | `loading` / `error` | State | Optimization status |

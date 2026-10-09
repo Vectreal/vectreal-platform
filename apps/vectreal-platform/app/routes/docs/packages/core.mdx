@@ -239,7 +239,16 @@ Worker environment.
 
 There is no server round-trip in this path and no `serverOptions`: compression happens in-process using whichever encoder is in play.
 
-When Sharp is unavailable, `compressTextures` falls back to basic texture optimization (`dedup` + `prune`) instead of throwing.
+The pass compresses a copy of the document and commits it in one step, so the document only ever holds a finished result:
+
+| Outcome | Document | Recorded as `texture compression` | Throws |
+|---|---|---|---|
+| Every texture compressed | The compressed copy | Yes | No |
+| Some failed | The copy: compressed textures replaced, failed ones as they were | Yes | `TextureCompressionError`, `isPartial === true` |
+| None compressed | Unchanged | No | `TextureCompressionError`, `isPartial === false` |
+| Another model or document taken while it ran | Unchanged | No | `SupersededError` |
+
+When Sharp is unavailable, `compressTextures` falls back to basic texture optimization (`dedup` + `prune`) instead of throwing, and records only that.
 
 #### `optimizeAll(options?)`
 

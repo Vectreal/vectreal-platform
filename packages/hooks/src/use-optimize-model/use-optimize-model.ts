@@ -25,7 +25,8 @@ import {
 	type NormalsOptions,
 	type QuantizeOptions,
 	type SimplifyOptions,
-	type TextureCompressOptions
+	type TextureCompressOptions,
+	TextureCompressionError
 } from '@vctrl/core/model-optimizer'
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
@@ -465,6 +466,10 @@ const useOptimizeModel = () => {
 	 * Compresses textures in the model using browser-native OffscreenCanvas encoding.
 	 * Significantly reduces file size while maintaining visual quality. No server call is made.
 	 *
+	 * Rejects when compression fails. A partial `TextureCompressionError`
+	 * (`isPartial`) means the textures that did compress were committed, and
+	 * `report` already describes them; the rest are as they were.
+	 *
 	 * @param options - Configuration options for texture compression
 	 * @param options.targetFormat - Target compression format ('webp' | 'jpeg' | 'png')
 	 * @param options.quality - Compression quality (0-100)
@@ -489,6 +494,17 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Texture optimization failed:', err)
+				// A partial failure committed the textures that compressed, so the
+				// report has to describe them. Its own failure must not replace
+				// the error the caller is owed.
+				if (err instanceof TextureCompressionError && err.isPartial) {
+					try {
+						const report = await optimizerRef.current.getReport()
+						dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+					} catch {
+						// The pass's own error, rethrown below, is the one to report.
+					}
+				}
 				// Re-throw to allow caller to handle compression failures
 				throw err
 			}

@@ -13,6 +13,7 @@ const pending = vi.hoisted(() => ({ finish: () => {}, reportFails: false }))
 
 vi.mock('@vctrl/core/model-optimizer', () => ({
 	SupersededError: class extends Error {},
+	TextureCompressionError: class extends Error {},
 	ModelOptimizer: class {
 		hasModel = () => true
 		document = {}
