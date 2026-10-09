@@ -16,7 +16,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 /**
  * Which model ModelOptimizer holds and which document of it, and the check
- * that refuses a result whose model or document was replaced while it ran.
+ * that refuses a result once a newer model or document has been claimed. A
+ * step that replaces the document without claiming one is not caught by it.
  */
 
 /**

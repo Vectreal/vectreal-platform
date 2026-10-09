@@ -103,7 +103,7 @@ export interface ModelBaseline {
  * The work lives in sibling modules that take what they need as arguments and
  * never see the class: loading, the transform passes, Draco, texture
  * compression, naming and payloads, and the ticket bookkeeping that refuses a
- * result whose model or document was replaced while it ran.
+ * result once a newer model or document has been claimed.
  */
 export class ModelOptimizer {
 	private _document: Document | null = null
