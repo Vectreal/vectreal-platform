@@ -121,7 +121,9 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 					optimizations: balancedPreset,
 					isCurrent: loaded.stillCurrent,
 					steps: NO_CHECKLIST,
-					model: optimizer,
+					// The stage draws getModel()'s buffer itself, so there is no
+					// loader viewer to sync the result into.
+					model: { ...optimizer, applyOptimization: async () => {} },
 					baseline: {
 						clientSceneBytes: originalBytes,
 						clientTextureBytes: loaded.file.sourceTextureBytes ?? null,
