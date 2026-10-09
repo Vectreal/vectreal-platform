@@ -232,13 +232,18 @@ file: a `GLBExportResult` when `binary` is true, a `GLTFExportResult` otherwise.
 
 ## Additional exports
 
-- `reconstructGltfFiles` and `createBrowserTextureEncoder` from `@vctrl/hooks`
+- `reconstructGltfFiles`, `createBrowserTextureEncoder` and `canEncodeImage` from `@vctrl/hooks`
 - `ModelProvider` and `useModelContext` from `@vctrl/hooks/use-load-model`
 - Shared types such as `ModelFile`, `SceneLoadResult`, `ServerSceneData`, and `OptimizerIntegrationReturn`
 
 `createBrowserTextureEncoder()` returns the `OffscreenCanvas` encoder the hook injects
 into `texturesOptimization`. Pass it as `ModelOptimizer#compressTextures`'s
 `encoder` option when driving the optimizer directly.
+
+The encoder writes the format it is asked for or rejects, and with no `targetFormat`
+that is each texture's own format. Safari cannot write WebP, so there a texture
+cannot be compressed to WebP or re-encoded as WebP; `await canEncodeImage('webp')`
+tells you before you ask.
 
 ---
 

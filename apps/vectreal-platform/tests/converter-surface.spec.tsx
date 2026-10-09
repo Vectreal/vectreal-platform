@@ -33,7 +33,9 @@
  *    superseded-re-read case. The header claimed that check was covered by the
  *    cases above it and it was covered by none of them: `if (false) return null`
  *    left all six green, which is how a guard written in this changeset came to
- *    be the only unmeasured line in the file.
+ *    be the only unmeasured line in the file;
+ *  - offering WebP without asking `canEncodeImage` reddens the Safari case
+ *    alone.
  */
 import { formatFileSize } from '@shared/utils'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -325,6 +327,15 @@ vi.mock('../app/components/layout-components/sample-tiles', () => ({
 	)
 }))
 
+/*
+  The image formats this browser's canvas can write. Every browser the other
+  cases describe writes WebP; the Safari case takes it away.
+*/
+const writableFormats = vi.hoisted(() => new Set(['webp', 'jpeg', 'png']))
+vi.mock('@vctrl/hooks/use-optimize-model', () => ({
+	canEncodeImage: async (format: string) => writableFormats.has(format)
+}))
+
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
 vi.mock('file-saver', () => ({ default: { saveAs: vi.fn() } }))
@@ -395,7 +406,30 @@ beforeEach(() => {
 	vi.mocked(toast.success).mockClear()
 	capture.mockClear()
 	consentState.analytics = false
+	writableFormats.add('webp')
 	resetContext()
+})
+
+describe('an option the browser cannot carry out is not offered', () => {
+	it('leaves WebP out where the canvas cannot write it', async () => {
+		/*
+		  THE DEFECT: WebKit cannot encode WebP and hands back a PNG instead of
+		  failing. Ticking this box on Safari turned the camera sample's 18 MB of
+		  JPEG textures into 190 MB of PNG filed as WebP, and the tab crashed.
+		  The encoder refuses now, so offering the box would promise a pass that
+		  can only fail.
+		*/
+		writableFormats.delete('webp')
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile())
+		await screen.findByTestId('stage')
+
+		expect(screen.getByRole('checkbox', { name: /Draco/i })).toBeTruthy()
+		expect(screen.queryByRole('checkbox', { name: /WebP/i })).toBeNull()
+	})
 })
 
 describe('a sample on its way down', () => {

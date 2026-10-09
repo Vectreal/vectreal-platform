@@ -23,6 +23,13 @@ vi.mock('./utils/geometry-worker', () => ({
 	runGeometryOptimizationsInWorker
 }))
 
+/* Whether this browser can write a format. Every case but Safari's says yes. */
+const { canEncodeImage } = vi.hoisted(() => ({
+	canEncodeImage: vi.fn(async (_format: string) => true)
+}))
+
+vi.mock('@vctrl/hooks/use-optimize-model', () => ({ canEncodeImage }))
+
 vi.mock('sonner', () => ({
 	toast: {
 		info: vi.fn(),
@@ -117,6 +124,7 @@ function createDeps(
 
 beforeEach(() => {
 	vi.clearAllMocks()
+	canEncodeImage.mockImplementation(async () => true)
 	callOrder.length = 0
 	runGeometryOptimizationsInWorker.mockResolvedValue({
 		buffer: new Uint8Array([9]),
@@ -374,6 +382,105 @@ describe('runOptimizationPass', () => {
 		})
 
 		expect((await runOptimizationPass(deps)).succeeded).toBe(false)
+	})
+
+	it('compresses textures to the format the settings name', async () => {
+		const { deps, model } = createDeps(onlyEnable(['texture']))
+
+		await runOptimizationPass(deps)
+
+		expect(model.texturesOptimization).toHaveBeenCalledWith(
+			expect.objectContaining({ targetFormat: 'webp' })
+		)
+		expect(toast.info).not.toHaveBeenCalled()
+	})
+
+	// Safari, and every browser on iOS, cannot write WebP, which every preset
+	// asks for. Its canvas used to hand back PNG under a WebP label, which
+	// turned the camera sample's 18 MB of JPEG into 190 MB and crashed the tab.
+	describe('in a browser that cannot write WebP', () => {
+		beforeEach(() => {
+			canEncodeImage.mockImplementation(async (format) => format !== 'webp')
+		})
+
+		const withFormat = (
+			targetFormat: 'webp' | 'jpeg',
+			keys: Array<keyof Optimizations> = ['texture']
+		) => {
+			const optimizations = onlyEnable(keys)
+			optimizations.texture = { ...optimizations.texture, targetFormat }
+			return optimizations
+		}
+
+		it('keeps each texture in its own format, and says so', async () => {
+			const { deps, model } = createDeps(withFormat('webp'))
+
+			const result = await runOptimizationPass(deps)
+
+			expect(model.texturesOptimization).toHaveBeenCalledWith({
+				...balancedPreset.texture,
+				enabled: true,
+				targetFormat: undefined
+			})
+			expect(toast.info).toHaveBeenCalledWith(
+				'This browser cannot write WEBP, so textures keep their own format.',
+				{ id: 'texture-format-kept' }
+			)
+			expect(result.succeeded).toBe(true)
+		})
+
+		it('still writes a format it can', async () => {
+			const { deps, model } = createDeps(withFormat('jpeg'))
+
+			await runOptimizationPass(deps)
+
+			expect(model.texturesOptimization).toHaveBeenCalledWith(
+				expect.objectContaining({ targetFormat: 'jpeg' })
+			)
+			expect(toast.info).not.toHaveBeenCalled()
+		})
+
+		// A model whose textures are all WebP already: none can be rewritten in
+		// its own format there, so all are left as uploaded and the geometry
+		// stands. Failing it took the Draco and dedup work down with it.
+		it('leaves textures it cannot rewrite as uploaded rather than failing', async () => {
+			const { deps } = createDeps(withFormat('webp'), {
+				texturesOptimization: vi
+					.fn()
+					.mockRejectedValue(new TextureCompressionError(3, 3, 'all webp'))
+			})
+
+			expect((await runOptimizationPass(deps)).succeeded).toBe(true)
+		})
+
+		// Only a texture failing is tolerated. A timeout does not cancel the
+		// encode, so succeeding here would sync the viewer while the abandoned
+		// pass kept rewriting the document behind it.
+		it('still fails on anything else, a timeout included', async () => {
+			const { deps } = createDeps(withFormat('webp'), {
+				texturesOptimization: vi
+					.fn()
+					.mockRejectedValue(new Error('Texture optimization timed out'))
+			})
+
+			expect((await runOptimizationPass(deps)).succeeded).toBe(false)
+		})
+
+		it('says nothing for a scene that replaced its own', async () => {
+			const { deps, model } = createDeps(
+				withFormat('webp', ['dedup', 'texture']),
+				{
+					loadFromGlbBuffer: vi.fn(async () => {
+						deps.isCurrent = () => false
+					})
+				}
+			)
+
+			await runOptimizationPass(deps)
+
+			expect(model.texturesOptimization).not.toHaveBeenCalled()
+			expect(toast.info).not.toHaveBeenCalled()
+		})
 	})
 
 	// Some textures replaced and the rest left as uploaded is still a result

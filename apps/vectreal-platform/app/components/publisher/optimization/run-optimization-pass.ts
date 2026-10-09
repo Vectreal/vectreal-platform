@@ -2,6 +2,7 @@ import {
 	SupersededError,
 	TextureCompressionError
 } from '@vctrl/core/model-optimizer'
+import { canEncodeImage } from '@vctrl/hooks/use-optimize-model'
 import { toast } from 'sonner'
 
 import {
@@ -250,10 +251,21 @@ async function runGeometryPhase(
  * lives. A partial failure still counts: some textures were replaced, and the
  * rest are the originals. A total failure throws, so the pass fails instead of
  * claiming texture settings that were never applied.
+ *
+ * Every preset asks for WebP, and Safari - with every browser on iOS - cannot
+ * write it. There each texture keeps the format it arrived in instead: written
+ * again at the preset's size and quality where the browser can write that
+ * format, which is not always smaller for a texture already within the size,
+ * and left as uploaded where it cannot, as a WebP texture is on Safari. A
+ * texture failing is that outcome, so it does not fail the pass; anything else
+ * thrown, a timeout included, still does. The notice says what happened.
  */
 async function runTexturePhase(deps: OptimizationPassDeps): Promise<void> {
 	const { steps, model, optimizations } = deps
 	const label = getOptimizationDefinition('texture').stepLabel
+	const { targetFormat } = optimizations.texture
+	const keepsOwnFormat =
+		targetFormat !== undefined && !(await canEncodeImage(targetFormat))
 
 	// Only reached without the geometry phase when no geometry step is enabled,
 	// in which case preparation ends here instead.
@@ -261,14 +273,28 @@ async function runTexturePhase(deps: OptimizationPassDeps): Promise<void> {
 	ensureCurrent(deps)
 	steps.begin(label)
 
+	if (keepsOwnFormat) {
+		toast.info(
+			`This browser cannot write ${targetFormat.toUpperCase()}, so textures keep their own format.`,
+			{ id: 'texture-format-kept' }
+		)
+	}
+
 	try {
 		await withTimeout(
-			model.texturesOptimization(optimizations.texture),
+			model.texturesOptimization(
+				keepsOwnFormat
+					? { ...optimizations.texture, targetFormat: undefined }
+					: optimizations.texture
+			),
 			OPTIMIZATION_STEP_TIMEOUT_MS,
 			'Texture optimization'
 		)
 	} catch (error) {
-		if (!(error instanceof TextureCompressionError && error.isPartial)) {
+		if (!(
+			error instanceof TextureCompressionError &&
+			(error.isPartial || keepsOwnFormat)
+		)) {
 			throw error
 		}
 		console.warn('Some textures could not be compressed:', error)
