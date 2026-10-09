@@ -51,9 +51,10 @@
  *    that writer; not keeping it with the recipe, or not returning it when
  *    the pass is skipped, reddens the later-result case; keeping it across a
  *    restore or into the next model reddens the case for each;
- *  - not asking for the document once the ingest settled, or never refusing
- *    an empty one, reddens both not-ingested cases; exporting the document
- *    read before a restore or a pass reddens the cases that read after one;
+ *  - reading the document before any restore or pass without refusing an
+ *    empty one, or never refusing one at all, reddens both not-ingested
+ *    cases; exporting the document read before a restore or a pass reddens
+ *    the cases that read after one;
  *  - sending USDZ through `prepare` again reddens both USDZ cases, and
  *    exporting anything but the stage's model reddens the left-alone case;
  *  - letting the publisher button run during a conversion, or Convert during

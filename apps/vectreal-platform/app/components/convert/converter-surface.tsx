@@ -699,10 +699,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		if (!stillOurs()) return null
 
 		/*
-		  Read again after each restore or pass, because each replaces it. Asked
-		  once the ingest has settled, which is when an empty optimizer stops
-		  meaning "not yet" and starts meaning "never": the loader keeps a model
-		  on the stage whose ingest failed, so the page has to ask.
+		  Read again after a restore or a pass, because either may replace it.
+		  Asked once the ingest has settled, which is when an empty optimizer
+		  stops meaning "not yet" and starts meaning "never": the loader keeps a
+		  model on the stage whose ingest failed, so the page has to ask.
 		*/
 		const heldDocument = () => {
 			const document = optimizer?._getDocument()
@@ -788,9 +788,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		*/
 		if (!stillOurs()) return null
 
+		const passed = heldDocument()
 		appliedKey.current = wantedKey
 		appliedNote.current = note
-		return { document: heldDocument(), note }
+		return { document: passed, note }
 	}
 
 	const baseFileName = (file?.name ?? 'model').replace(/\.[^/.]+$/, '')
