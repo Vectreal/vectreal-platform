@@ -39,17 +39,46 @@ export const defaultCameraOptions: CameraProps = {
 		easing: 'ease_in_out'
 	}
 }
+/*
+  How dragging the scene feels, as one choice. OrbitControls applies
+  `dampingFactor` of the remaining drag each frame and has no inertia of its
+  own, so a low factor is pure lag behind the pointer rather than glide: 0.25
+  delivers 90% of a drag in about 8 frames, 0.06 takes about 37.
+*/
+export const INTERACTION_FEELS = {
+	floaty: {
+		dampingFactor: 0.06,
+		rotateSpeed: 0.5,
+		panSpeed: 0.5,
+		zoomSpeed: 0.4
+	},
+	balanced: {
+		dampingFactor: 0.25,
+		rotateSpeed: 0.75,
+		panSpeed: 0.75,
+		zoomSpeed: 0.6
+	},
+	snappy: { dampingFactor: 0.5, rotateSpeed: 1, panSpeed: 1, zoomSpeed: 0.8 }
+} satisfies Record<
+	string,
+	Required<
+		Pick<
+			ControlsProps,
+			'dampingFactor' | 'rotateSpeed' | 'panSpeed' | 'zoomSpeed'
+		>
+	>
+>
+
+export type InteractionFeel = keyof typeof INTERACTION_FEELS
+
 export const defaultControlsOptions: ControlsProps = {
 	controlsTimeout: 0,
 	maxPolarAngle: Math.PI / 2,
 	autoRotate: false,
 	autoRotateSpeed: 0.25,
 	enableZoom: true,
-	zoomSpeed: 0.4,
-	panSpeed: 0.5,
-	rotateSpeed: 0.5,
 	enableDamping: true,
-	dampingFactor: 0.2,
+	...INTERACTION_FEELS.balanced,
 	makeDefault: true
 }
 

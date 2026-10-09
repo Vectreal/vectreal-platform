@@ -23,8 +23,8 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 	},
 	{
 		key: 'dampingFactor',
-		label: 'Movement Smoothness',
-		min: 0.01,
+		label: 'Responsiveness',
+		min: 0.02,
 		max: 1,
 		step: 0.01,
 		formatValue: (value) => value.toFixed(2)
@@ -43,16 +43,16 @@ export const CAMERA_CONTROLS_FIELDS: FieldConfig[] = [
 		label: 'Orbit Speed',
 		min: 0.1,
 		max: 3,
-		step: 0.1,
-		formatValue: (value) => value.toFixed(1)
+		step: 0.05,
+		formatValue: (value) => value.toFixed(2)
 	},
 	{
 		key: 'panSpeed',
 		label: 'Pan Speed',
 		min: 0.1,
 		max: 3,
-		step: 0.1,
-		formatValue: (value) => value.toFixed(1)
+		step: 0.05,
+		formatValue: (value) => value.toFixed(2)
 	},
 	{
 		key: 'maxPolarAngle',
