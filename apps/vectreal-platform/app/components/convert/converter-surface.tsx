@@ -684,7 +684,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	/*
 	  Makes the optimizer's document match the ticked options, then returns the
 	  model on the stage and what a partial pass left out, for the result to say.
-	  Null means the model it started on is no longer on the stage.
+	  Null means no model is on the stage, or not the one it started on.
 
 	  A destructive pass is undone by restoring the optimizer's source, the model
 	  as it was loaded, not by reading the file again. The re-read went through
@@ -925,8 +925,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 			if (!prepared) {
 				/*
-				  `prepare` returns null only when the model it started on is
-				  no longer on the stage; a failure to restore or recompress
+				  `prepare` returns null only when no model is on the stage, or
+				  not the one it started on; a failure to restore or recompress
 				  throws instead, and the catch below reports it.
 				*/
 				toast.error(
