@@ -40,11 +40,13 @@
  *    after a restore, after a failed restore, after a failed pass, or after
  *    the pass reddens the case for that window; keeping the recipe during the
  *    pass reddens the failed-pass cases; treating every pass failure as fatal,
- *    or a total one as partial, reddens the partial and the total case;
- *  - of the restore's record: recording it before it runs reddens the
- *    failed-restore case, keeping the old recipe while it runs reddens the
- *    case where it failed after putting the document back, and not recording
- *    it at all reddens the undo-then-redo case;
+ *    a total one as partial, or any other failure as a total one reddens the
+ *    partial, the total and the failed-pass case; throwing the partial result
+ *    away reddens the partial case;
+ *  - of the restore's record: recording it before it runs, or as done when it
+ *    failed, reddens both failed-restore cases; keeping the old recipe while
+ *    it runs reddens the case where it failed after putting the document
+ *    back; not recording it at all reddens the undo-then-redo case;
  *  - of the partial pass's note: not filing it reddens the partial case for
  *    that writer; not keeping it with the recipe, or not returning it when
  *    the pass is skipped, reddens the later-result case; keeping it across a
@@ -817,11 +819,11 @@ describe('a refused drop does not retire the model it left on screen', () => {
 describe('a destructive pass is undone from the optimizer, not the file', () => {
 	/*
 	  THE DEFECT. Undoing a WebP pass used to read the file again through
-	  \`load\`: a second full parse of the model, the stage unmounted while it
-	  ran, and a load of its own that a pass which threw left the page asking
-	  about, so every later Convert was told a newer file had replaced it. The
-	  optimizer keeps the model as it was loaded for exactly this, and the
-	  publisher already restores from it.
+	  `load`: three.js decoded every texture again with the stage unmounted,
+	  and the read claimed a load of its own that a pass which threw left the
+	  page asking about, so every later Convert was told a newer file had
+	  replaced it. The optimizer keeps the model as it was loaded for exactly
+	  this, and the publisher already restores from it.
 	*/
 	const refuseANote = async (loads: number) => {
 		drop([new File(['x'], 'notes.txt')])
@@ -880,6 +882,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 			await convertOnceWithWebp()
 
 			expect(await screen.findByText(PARTIAL_NOTE)).toBeTruthy()
+			expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf', webp: true })
 		}
 	)
 
@@ -947,14 +950,18 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		expect(toast.error).toHaveBeenCalledTimes(1)
 	})
 
-	it('restores the document after a pass that failed, even unticked', async () => {
+	it('says the pass failed, then restores the document even unticked', async () => {
 		optimizer.texturesOptimization.mockRejectedValueOnce(
 			new Error('The encoder went away.')
 		)
 		await modelOnStage()
 		toggleWebp()
 		fireEvent.click(convertButton())
-		await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1))
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'The WebP pass failed. Untick it to download the file as it is.'
+			)
+		)
 
 		toggleWebp()
 		fireEvent.click(convertButton())
@@ -1009,6 +1016,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		fireEvent.click(convertButton())
 
 		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(2)
 		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
 		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf', webp: true })
 	})

@@ -302,7 +302,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	const exporterRef = useRef(new ModelExporter())
 
 	/* The size of what is on the stage, which every reduction is measured against. */
-	const [source, setSource] = useState<{ bytes: number } | null>(null)
+	const [sourceBytes, setSourceBytes] = useState<number | null>(null)
 	const [selected, setSelected] = useState<ConvertOption[]>([])
 	const [isConverting, setIsConverting] = useState(false)
 	const [conversions, setConversions] = useState<Record<string, Conversion>>({})
@@ -472,20 +472,15 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	/*
 	  Everything that describes the model on the stage, moved in one step.
 	
-	  These four were written and cleared separately in two places each, and the
+	  These were once written and cleared separately in two places each, and the
 	  cost was not tidiness: any path that changed the model without visiting
 	  every clear site left them disagreeing - the stored result of one file
 	  offered as another's, an `appliedKey` claiming a destructive pass on a
 	  document that never had one. One writer means they cannot drift apart.
 	*/
 	const adoptSource = useCallback(
-		(
-			files: File[],
-			bytes: number,
-			stillOnScreen: () => boolean,
-			ingested: Promise<void>
-		) => {
-			setSource({ bytes })
+		(bytes: number, stillOnScreen: () => boolean, ingested: Promise<void>) => {
+			setSourceBytes(bytes)
 			// Every stored result describes bytes that came from the file replaced.
 			setConversions({})
 			appliedKey.current = INGESTED_RECIPE
@@ -497,7 +492,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	)
 
 	const dropSource = useCallback(() => {
-		setSource(null)
+		setSourceBytes(null)
 		setConversions({})
 		appliedKey.current = null
 		appliedNote.current = undefined
@@ -530,7 +525,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  The loader publishes as soon as it has parsed, then awaits the
 			  optimizer ingest, so resolving happens one ingest later. Adopting on
 			  the resolved value left a window - seconds, on a large model - where
-			  the viewer and `{file.name}` showed the new model while `source.bytes`,
+			  the viewer and `{file.name}` showed the new model while `sourceBytes`,
 			  the size comparison and a live Download button all still described the
 			  old one. `stillCurrent()` cannot help: inside that window the new load
 			  genuinely is the current one. The two moments had to become one.
@@ -554,7 +549,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				adopted = true
 				const referenced = state.file?.sourcePackageBytes ?? 0
 				adoptSource(
-					files,
 					referenced || measuredBytes(files),
 					state.stillOnScreen,
 					ingested
@@ -688,13 +682,15 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	/*
-	  Returns the model to export, having made the optimizer's document match the
-	  ticked options, and what a partial pass left out, for the result to say.
+	  Makes the optimizer's document match the ticked options, then returns the
+	  model on the stage and what a partial pass left out, for the result to say.
+	  Null means a newer file replaced that model.
 
 	  A destructive pass is undone by restoring the optimizer's source, the model
-	  as it was loaded, not by reading the file again. The re-read parsed the
-	  whole model a second time, unmounted the stage while it did, and claimed a
-	  load of its own, which a pass that threw left the page asking about.
+	  as it was loaded, not by reading the file again. The re-read went through
+	  the loader: it unmounted the stage while three.js decoded every texture
+	  again, and claimed a load of its own, which a pass that threw left the page
+	  asking about.
 	*/
 	const prepare = async (): Promise<{
 		model: ModelFile
@@ -720,12 +716,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  and then reads a report, which can fail after the document is
 			  already the original - so a failed restore is not a document that
 			  still has its pass.
-
-			  A LITERAL SENTENCE, NOT `refusalMessage`. Every sentence that
-			  function returns addresses someone who has just brought a file -
-			  "Check it is a valid GLB." arriving alone, unprefixed, about a GLB
-			  visibly rendering on the stage was the result. Dropping it again is
-			  what starts from the original once restoring it has failed.
 			*/
 			appliedKey.current = null
 			appliedNote.current = undefined
@@ -761,7 +751,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  A texture the browser cannot re-encode, such as a KTX2 one, would
 			  otherwise keep a model with one of them from converting at all.
 			*/
-			if (!(error instanceof TextureCompressionError && error.isPartial)) {
+			if (!(error instanceof TextureCompressionError)) {
+				throw new Error(
+					'The WebP pass failed. Untick it to download the file as it is.',
+					{ cause: error }
+				)
+			}
+			if (!error.isPartial) {
 				throw new Error(
 					'None of the textures could be recompressed as WebP. Untick it to download the file as it is.',
 					{ cause: error }
@@ -785,7 +781,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 	const baseFileName = (file?.name ?? 'model').replace(/\.[^/.]+$/, '')
 
-	/** Runs the ticked passes and encodes the target format, without saving. */
 	const startOver = () => {
 		dropSource()
 		setRefusal(null)
@@ -869,6 +864,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		}
 	}
 
+	/** Runs the ticked passes and encodes the target format, without saving. */
 	const runConversion = async () => {
 		setIsConverting(true)
 
@@ -920,7 +916,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						buildConvertModelResultProps(
 							pair,
 							activeOptions,
-							source?.bytes ?? null,
+							sourceBytes,
 							conversion.bytes.byteLength
 						)
 					)
@@ -1035,7 +1031,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				buildConvertModelResultProps(
 					pair,
 					activeOptions,
-					source?.bytes ?? null,
+					sourceBytes,
 					result.bytes.byteLength
 				)
 			)
@@ -1280,7 +1276,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 							<span className="text-foreground truncate font-medium">
 								{file.name}
 							</span>
-							{source && <> · {formatFileSize(source.bytes)}</>}
+							{sourceBytes !== null && <> · {formatFileSize(sourceBytes)}</>}
 						</p>
 						<button
 							type="button"
@@ -1359,13 +1355,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 							</p>
 							<FileSizeComparison
 								sizeInfo={{
-									initialSceneBytes: source?.bytes ?? null,
+									initialSceneBytes: sourceBytes,
 									currentSceneBytes: result.bytes.byteLength
 								}}
-								{...describeSizeChange(
-									source?.bytes ?? null,
-									result.bytes.byteLength
-								)}
+								{...describeSizeChange(sourceBytes, result.bytes.byteLength)}
 							/>
 							{result.note && (
 								<p className="text-foreground pb-2 text-sm">{result.note}</p>
