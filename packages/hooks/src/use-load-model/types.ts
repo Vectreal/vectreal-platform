@@ -339,13 +339,14 @@ export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
 				 * @param options - Configuration options for the optimization
 				 * @returns Promise that resolves when optimization is complete and model is updated.
 				 * It also resolves, changing nothing, when a newer load holds the state by then.
-				 * @throws When this object was read before any model loaded, when the
+				 * @throws When no model was ready in the render this object comes from
+				 * (before a load, during one, after a reset or a failed load), when the
 				 * optimization fails (its own error, so a `SupersededError` stays
 				 * recognisable), or when the result cannot be exported or shown. The viewer
 				 * then keeps its model, but the optimizer may already hold the step's
-				 * result: `restoreSource()` puts the two back in step. A partial
-				 * `TextureCompressionError` is thrown after the textures that did compress
-				 * are shown.
+				 * result: `restoreSource()` and then `applyOptimization()` with no step put
+				 * the two back in step. A partial `TextureCompressionError` is thrown after
+				 * the textures that did compress are shown.
 				 *
 				 * @example
 				 * // Apply simplification optimization

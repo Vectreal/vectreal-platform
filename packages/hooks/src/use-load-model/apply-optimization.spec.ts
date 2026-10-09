@@ -66,7 +66,7 @@ describe('applyOptimization', () => {
 		const { result } = renderHook(() => useLoadModel(optimizer()))
 
 		await expect(result.current.optimizer.applyOptimization()).rejects.toThrow(
-			'No model was loaded when this optimizer was read.'
+			'No model was ready when this optimizer was read.'
 		)
 	})
 

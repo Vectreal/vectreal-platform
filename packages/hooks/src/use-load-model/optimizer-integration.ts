@@ -37,7 +37,7 @@ export function useOptimizerIntegration(
 			// Captured with this callback, so a load that starts while the pass
 			// runs cannot receive its result.
 			if (loadId === null) {
-				throw new Error('No model was loaded when this optimizer was read.')
+				throw new Error('No model was ready when this optimizer was read.')
 			}
 
 			// A partial texture pass committed what it compressed, so the viewer

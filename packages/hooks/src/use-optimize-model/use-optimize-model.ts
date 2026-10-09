@@ -606,8 +606,9 @@ const useOptimizeModel = () => {
 		reset,
 
 		/**
-		 * The error from the last load into the optimizer that failed, otherwise
-		 * null. Optimization steps report a failure by rejecting, not here.
+		 * The error from the last load, restore or source change that failed,
+		 * otherwise null. Optimization steps report a failure by rejecting, not
+		 * here.
 		 */
 		error,
 

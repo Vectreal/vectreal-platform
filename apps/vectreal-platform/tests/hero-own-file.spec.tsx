@@ -24,7 +24,7 @@ const { context, runOptimizationPass } = vi.hoisted(() => ({
 		optimizer: {
 			getModel: vi.fn(async () => new Uint8Array([1, 2, 3])),
 			applyOptimization: vi.fn(async () => {
-				throw new Error('No model was loaded when this optimizer was read.')
+				throw new Error('No model was ready when this optimizer was read.')
 			})
 		}
 	},
