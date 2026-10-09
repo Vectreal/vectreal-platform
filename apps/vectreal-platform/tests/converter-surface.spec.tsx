@@ -51,6 +51,8 @@
  *    that writer; not keeping it with the recipe, or not returning it when
  *    the pass is skipped, reddens the later-result case; keeping it across a
  *    restore or into the next model reddens the case for each;
+ *  - sending USDZ through `prepare` again reddens both USDZ cases, and
+ *    exporting anything but the stage's model reddens the left-alone case;
  *  - letting the publisher button run during a conversion, or Convert during
  *    a handoff, reddens the case for each.
  */
@@ -116,6 +118,9 @@ let heldDocument: { name: string; webp?: boolean } | null = null
 
 /** Every document an export or a handoff read, in order. */
 let documentsRead: unknown[] = []
+
+/** Every three.js model the USDZ exporter was handed, in order. */
+let modelsExported: unknown[] = []
 
 /* The last model on the stage, which a refused load puts back. */
 let lastReady: LoaderFile | null = null
@@ -341,7 +346,8 @@ vi.mock('@vctrl/core/model-exporter', () => ({
 			documentsRead.push(document)
 			return exported
 		}
-		async exportThreeJSUSDZ() {
+		async exportThreeJSUSDZ(model: unknown) {
+			modelsExported.push(model)
 			return exported
 		}
 		async createZIPArchive() {
@@ -479,11 +485,12 @@ async function modelOnStage(
 	bytes = 2_000_000,
 	pair = gltfToGlb
 ) {
-	render(<ConverterSurface pair={pair} />)
+	const view = render(<ConverterSurface pair={pair} />)
 	drop([gltfFile(name)])
 	await waitFor(() => expect(loadCalls).toHaveLength(1))
 	settle(0, loadedFile({ name, sourcePackageBytes: bytes }))
 	await screen.findByTestId('stage')
+	return view
 }
 
 const toggleWebp = () =>
@@ -520,6 +527,7 @@ beforeEach(() => {
 	onScreen = 0
 	heldDocument = null
 	documentsRead = []
+	modelsExported = []
 	lastReady = null
 	draftBlock = null
 	sampleBlock = null
@@ -703,6 +711,42 @@ describe('a USDZ result says when its glass was flattened', () => {
 			expect(screen.queryByText(USDZ_GLASS_NOTE) !== null).toBe(expected)
 		}
 	)
+})
+
+describe('a USDZ conversion reads the model on the stage, not the document', () => {
+	/*
+	  THE DEFECT: every target went through `prepare`, which brings the
+	  optimizer's document to the ticked recipe. USDZ never reads that document,
+	  yet a model kept across a pair switch had its WebP pass undone first - a
+	  re-parse of the whole source for nothing - and a USDZ Convert waited for
+	  an ingest it does not use.
+	*/
+	it('leaves a pass made for another format where it is', async () => {
+		const { rerender } = await modelOnStage()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		rerender(<ConverterSurface pair={convertPairBySlug('gltf-to-usdz')!} />)
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).not.toHaveBeenCalled()
+		expect(modelsExported).toEqual([{ name: 'chair' }])
+	})
+
+	it('converts before the optimizer has taken the model in', async () => {
+		render(<ConverterSurface pair={convertPairBySlug('gltf-to-usdz')!} />)
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		reachStage(0, loadedFile())
+		await screen.findByTestId('stage')
+
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer._getDocument).not.toHaveBeenCalled()
+	})
 })
 
 describe('a load that lost does not describe the page', () => {
