@@ -1,0 +1,85 @@
+---
+title: "How to make a 3D model look like it's standing somewhere"
+slug: "3d-model-shadows-and-lighting"
+excerpt: "A 3D model without a shadow looks like it's floating. In the Vectreal Publisher you ground it with two switches, a shadow cast by a light and a darker one where it touches the floor, then pick one of 15 lighting presets and blur it into a soft background if you like. No 3D background needed."
+publishedAt: "2026-10-09"
+updatedAt: "2026-10-09"
+category: "guides"
+tags:
+  - "shadows"
+  - "publisher"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/media/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+
+voice: A
+author_persona: moritz
+type: "Practical Guide"
+premise: capability
+pillar: Quality
+seo_cluster: "3D on the web / 3d model shadows and lighting"
+cta: https://vectreal.com/publisher
+sceneImage: "/media/images/newsroom/scene-3d-model-shadows-and-lighting.webp"
+coverImage: "/media/images/newsroom/og-3d-model-shadows-and-lighting.webp"
+---
+
+A 3D model looks like it's standing somewhere once it has a shadow. In the [Vectreal Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=3d-model-shadows-and-lighting) that takes two switches, one for a shadow cast by a light and one for a darker shadow where the model meets the floor, and then a lighting preset that suits the product.
+
+<video src="/media/images/newsroom/14/shadows-and-light.mp4" autoPlay muted loop playsInline aria-label="A vintage camera floats flat against a plain background. A soft shadow appears under it and shifts as the light is moved, then a darker one forms where it touches the ground. The light warms until the lens and chrome catch it, and the view turns round the camera."></video>
+
+## Why does my 3D model look like it's floating?
+
+Because nothing tells your eye where the ground is. Anything you'd put somewhere in real life, a car, a bike, a cup, a chair, needs a ground under it, and on a web page, unless the model brings its own floor, that ground is its shadow. Without one it hangs in front of the page like a sticker.
+
+Not every model needs to sit on something, so shadows start switched off in the Publisher. When yours does, grounding it should be as easy as clicking a toggle, so each shadow in the Publisher is one switch.
+
+## The cast shadow and the ground shadow
+
+![A light above and to the left of a grey cube throws its shadow across the floor to the right, in the cube's own shape.](/media/images/newsroom/14/cast-shadow.webp)
+
+**The cast shadow.** Switch on **Cast shadows** and the Publisher computes a shadow from a light above the model. It has the model's real shape and falls the way a shadow does, instead of being an outline of the model feathered onto the floor. Three presets, Soft, Studio and Dramatic, set its darkness, softness and angle together, and you can drag the light in the scene to change where it falls.
+
+![The same grey cube with a small, dark shadow pressed tight around its base, where it touches the floor.](/media/images/newsroom/14/ground-shadow.webp)
+
+**The ground shadow.** With Cast shadows on, switch on **Ground shadow** for a smaller, darker shadow right where the model touches the floor. It's what makes the contact convincing: the wheels of a car or the base of a cup look pressed against the ground rather than hovering just above it. It starts at values that work, and you can soften or spread it if you want.
+
+With both on, the model looks like it's standing on the floor.
+
+## Which lighting preset should I pick?
+
+![The same cube in front of a warm sunset horizon. Its top face picks up the orange of the sky.](/media/images/newsroom/14/environment-light.webp)
+
+The light on the model comes from an environment map, a panoramic image of a scene that lights the model and shows up in its reflections. I went through a lot of them and picked a few per category, so you can match the light to the mood of the product. They're under **Environment**, in the **HDR preset** menu:
+
+- **Studio:** soft, natural, key
+- **Outdoor:** golden hour, noon, overcast, sky
+- **Nature:** park, park overcast, snow, moonlit
+- **Night:** city, building, stars, pure sky
+
+![The same camera under five lighting presets with the background shown: Studio soft, Outdoor golden hour, Nature park overcast, Nature snow and Night city. Each lens reflects a different scene.](/media/images/newsroom/14/lighting-presets.webp)
+
+*Top: Studio soft, Outdoor golden hour. Bottom: Nature park overcast, Nature snow, Night city.*
+
+A new scene starts on Studio natural, and the **Lighting** slider makes any preset dimmer or brighter. On anything glossy, paint, chrome or glass, the preset changes the reflections as much as the light, so click through a few on your own model before you settle.
+
+## A background instead of a void
+
+Show the environment behind it. Under **Background** in the Environment section, switch on **Show** and turn **Blur** up to Soft or Blurred, and the model gets a soft backdrop. With the shadows on as well, the model reads as standing on a surface with a space around it, not floating in a void. It helps the shadows too: on a dark stage there's little for them to show against.
+
+## Visitors see the shadow straight away
+
+When you save, the Publisher stores the finished shadow with the scene, so whoever opens it sees the shadow from the first frame instead of watching it fade in.
+
+## Do I need to know 3D to set this up?
+
+No. I spent a lot of time regrouping the Publisher's controls so they aren't one long wall of sliders: shadows have their own section, and lighting and background sit together under Environment. I want anyone and everyone to be able to play around with it and get nice results, whether they know 3D or not.
+
+Before you publish, check the result the way a visitor will see it in [preview mode](https://vectreal.com/news-room/preview-a-scene-the-way-it-will-be-embedded?utm_source=newsroom&utm_medium=article&utm_campaign=3d-model-shadows-and-lighting).
+
+## Try it
+
+Drop a GLB, FBX or STL file into the [Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=3d-model-shadows-and-lighting), or the folder that holds a glTF or OBJ. Switch on Cast shadows and Ground shadow, and click through the lighting presets. You can try all of it without an account; you sign in when you want to save. If the model is headed for a product page next, [how to add a 3D model to a website](https://vectreal.com/news-room/how-to-add-3d-model-to-website?utm_source=newsroom&utm_medium=article&utm_campaign=3d-model-shadows-and-lighting) covers the rest.
