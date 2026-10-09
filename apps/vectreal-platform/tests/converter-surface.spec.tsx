@@ -40,11 +40,15 @@
  *    after a restore, after a failed restore, after a failed pass, or after
  *    the pass reddens the case for that window; keeping the recipe during the
  *    pass reddens the failed-pass cases; treating every pass failure as fatal,
- *    or a total one as partial, reddens the partial and the total case; not
- *    filing the note reddens the partial case for that writer, and not keeping
- *    it with the recipe reddens the later-result case; recording the restore
- *    before it runs reddens the failed-restore case, and not recording it at
- *    all reddens the undo-then-redo case;
+ *    or a total one as partial, reddens the partial and the total case;
+ *  - of the restore's record: recording it before it runs reddens the
+ *    failed-restore case, keeping the old recipe while it runs reddens the
+ *    case where it failed after putting the document back, and not recording
+ *    it at all reddens the undo-then-redo case;
+ *  - of the partial pass's note: not filing it reddens the partial case for
+ *    that writer; not keeping it with the recipe, or not returning it when
+ *    the pass is skipped, reddens the later-result case; keeping it across a
+ *    restore or into the next model reddens the case for each;
  *  - letting the publisher button run during a conversion, or Convert during
  *    a handoff, reddens the case for each.
  */
@@ -857,6 +861,12 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 	const PARTIAL_NOTE =
 		'1 of 3 textures could not be recompressed and kept their own format.'
 
+	/* Keeps the textures it did compress, as the core does, then says so. */
+	const partialPass = async () => {
+		await runPass()
+		throw new TextureCompressionError(1, 3, '1 of 3 failed')
+	}
+
 	// A KTX2 texture, say, would otherwise keep the whole model from converting.
 	it.each([
 		['GLB', gltfToGlb],
@@ -864,9 +874,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 	])(
 		'keeps what a partial pass compressed into a %s, and says what it left',
 		async (_, pair) => {
-			optimizer.texturesOptimization.mockRejectedValueOnce(
-				new TextureCompressionError(1, 3, '1 of 3 failed')
-			)
+			optimizer.texturesOptimization.mockImplementationOnce(partialPass)
 			await modelOnStage('chair.gltf', 2_000_000, pair)
 
 			await convertOnceWithWebp()
@@ -876,9 +884,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 	)
 
 	it('says what a partial pass left beside every later result from it', async () => {
-		optimizer.texturesOptimization.mockRejectedValueOnce(
-			new TextureCompressionError(1, 3, '1 of 3 failed')
-		)
+		optimizer.texturesOptimization.mockImplementationOnce(partialPass)
 		await modelOnStage()
 		await convertOnceWithWebp()
 
@@ -888,6 +894,37 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 
 		expect(await screen.findByText(PARTIAL_NOTE)).toBeTruthy()
 		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
+	})
+
+	it('says nothing of a partial pass beside a result it was undone for', async () => {
+		optimizer.texturesOptimization.mockImplementationOnce(partialPass)
+		await modelOnStage()
+		await convertOnceWithWebp()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(screen.queryByText(PARTIAL_NOTE)).toBeNull()
+	})
+
+	it('says nothing of a partial pass beside the next model', async () => {
+		optimizer.texturesOptimization.mockImplementationOnce(partialPass)
+		await modelOnStage()
+		await convertOnceWithWebp()
+		toggleWebp()
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(screen.queryByText(PARTIAL_NOTE)).toBeNull()
 	})
 
 	it('says plainly when no texture could be recompressed, then converts again', async () => {
@@ -927,14 +964,12 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		expect(loadCalls).toHaveLength(1)
 	})
 
-	/*
-	  The hook can fail after the document was already put back, so a failed
-	  restore leaves the recipe unknown and the next Convert restores again.
-	*/
-	it('says when the restore failed, and restores again next time', async () => {
+	it('says when the restore failed, and restores before the next export', async () => {
 		await modelOnStage()
 		await convertOnceWithWebp()
-		optimizer.restoreSource.mockRejectedValueOnce(new Error('bad source'))
+		optimizer.restoreSource.mockRejectedValueOnce(
+			new Error('The source could not be parsed.')
+		)
 
 		toggleWebp()
 		fireEvent.click(convertButton())
@@ -947,6 +982,35 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 
 		expect(await downloadButton()).toBeTruthy()
 		expect(optimizer.restoreSource).toHaveBeenCalledTimes(2)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf' })
+	})
+
+	/*
+	  The hook can fail after the document was already put back, so a failed
+	  restore leaves the recipe unknown and the next Convert restores again.
+	*/
+	it('says when the restore failed, and knows the pass may be gone', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		optimizer.restoreSource.mockImplementationOnce(async () => {
+			await restore()
+			throw new Error('The report could not be read.')
+		})
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'That file could not be read again to change those options. Drop it again to start over.'
+			)
+		)
+		toggleWebp()
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf', webp: true })
 	})
 
 	it('runs the pass again after it was undone', async () => {
