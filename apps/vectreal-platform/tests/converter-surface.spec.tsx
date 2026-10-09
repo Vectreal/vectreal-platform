@@ -51,6 +51,9 @@
  *    that writer; not keeping it with the recipe, or not returning it when
  *    the pass is skipped, reddens the later-result case; keeping it across a
  *    restore or into the next model reddens the case for each;
+ *  - not asking for the document once the ingest settled, or never refusing
+ *    an empty one, reddens both not-ingested cases; exporting the document
+ *    read before a restore or a pass reddens the cases that read after one;
  *  - sending USDZ through `prepare` again reddens both USDZ cases, and
  *    exporting anything but the stage's model reddens the left-alone case;
  *  - letting the publisher button run during a conversion, or Convert during
@@ -87,7 +90,8 @@ interface LoaderFile {
 interface Pending {
 	/** Puts the model on the stage, leaving `load` unresolved. */
 	publish: (file: LoaderFile) => void
-	resolve: (file: LoaderFile) => void
+	/** Settles the load; `ingested: false` is an ingest that failed, as the loader allows. */
+	resolve: (file: LoaderFile, ingested?: boolean) => void
 	reject: (error: { code: string; message: string }) => void
 }
 
@@ -149,8 +153,8 @@ const publish = (next: Record<string, unknown>) => {
  * Out of order on purpose in the supersession cases: that is the whole
  * scenario, and it cannot be produced by awaiting them as they were made.
  */
-const settle = (index: number, file: LoaderFile) =>
-	pending[index]?.resolve(file)
+const settle = (index: number, file: LoaderFile, ingested = true) =>
+	pending[index]?.resolve(file, ingested)
 
 /**
  * Puts a load's model on the stage without letting `load` resolve.
@@ -202,14 +206,19 @@ function blockRestores() {
 	})
 }
 
-/* A pass marks the document it rewrote; a restore swaps in the source as read. */
+/*
+  A pass marks the document it rewrote; a restore swaps in the source as read.
+  With nothing held, both throw, as the hook's do.
+*/
 const runPass = async () => {
 	if (passBlock) await passBlock
-	if (heldDocument) heldDocument = { ...heldDocument, webp: true }
+	if (!heldDocument) throw new Error('No model loaded')
+	heldDocument = { ...heldDocument, webp: true }
 }
 const restore = async () => {
 	if (restoreBlock) await restoreBlock
-	if (heldDocument) heldDocument = { name: heldDocument.name }
+	if (!heldDocument) throw new Error('No source to restore')
+	heldDocument = { name: heldDocument.name }
 }
 
 const optimizer = {
@@ -274,14 +283,18 @@ function resetContext() {
 
 				pending.push({
 					publish: reachStage,
-					resolve: (file) => {
+					resolve: (file, ingested = true) => {
 						/*
 						  Publishing happens before the promise settles, the way the
 						  real hook does, which is why the Convert button can render
 						  before the drop that produced it has finished adopting.
+						  A failed ingest still settles, and the core clears what it
+						  held.
 						*/
 						reachStage(file)
-						if (stillOnScreen()) heldDocument = { name: file.name }
+						if (stillOnScreen()) {
+							heldDocument = ingested ? { name: file.name } : null
+						}
 						resolve({
 							status: 'ready',
 							file,
@@ -746,6 +759,44 @@ describe('a USDZ conversion reads the model on the stage, not the document', () 
 
 		expect(await downloadButton()).toBeTruthy()
 		expect(modelsExported).toEqual([{ name: 'chair' }])
+	})
+})
+
+describe('a model the optimizer could not take in', () => {
+	/*
+	  THE DEFECT: the loader keeps a model on the stage whose ingest failed, and
+	  the page read the empty optimizer as one still working. Convert said "The
+	  model is still preparing. Try again in a moment." for a model that never
+	  would be, and with WebP ticked the pass failed first and said that instead.
+	*/
+	const NOT_PREPARED = 'This model could not be prepared for conversion to GLB.'
+
+	async function modelNotIngested() {
+		render(<ConverterSurface pair={gltfToGlb} />)
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile(), false)
+		await screen.findByTestId('stage')
+	}
+
+	it('says it could not be prepared, not that it is still preparing', async () => {
+		await modelNotIngested()
+
+		fireEvent.click(convertButton())
+
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(NOT_PREPARED))
+		expect(documentsRead).toEqual([])
+	})
+
+	it('says so before a WebP pass can fail on it', async () => {
+		await modelNotIngested()
+		toggleWebp()
+
+		fireEvent.click(convertButton())
+
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(NOT_PREPARED))
+		expect(optimizer.texturesOptimization).not.toHaveBeenCalled()
+		expect(toast.error).toHaveBeenCalledTimes(1)
 	})
 })
 

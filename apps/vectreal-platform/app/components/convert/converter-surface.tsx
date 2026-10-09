@@ -682,9 +682,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	/*
-	  Makes the optimizer's document match the ticked options, then returns what
-	  a partial pass left out, for the result to say. Null means the model it
-	  started on is no longer on the stage.
+	  Makes the optimizer's document match the ticked options, then returns it
+	  with what a partial pass left out, for the result to say. Null means the
+	  model it started on is no longer on the stage.
 
 	  A destructive pass is undone by restoring the optimizer's source, the model
 	  as it was loaded, not by reading the file again. The re-read went through
@@ -692,11 +692,28 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  again, and claimed a load of its own, which a pass that threw left the page
 	  asking about.
 	*/
-	const prepare = async (): Promise<{ note?: string } | null> => {
+	const prepare = async () => {
 		const startedFrom = stageLoad.current
 		await stageIngest.current
 		const stillOurs = () => startedFrom?.() ?? false
 		if (!stillOurs()) return null
+
+		/*
+		  Read again after each restore or pass, because each replaces it. Asked
+		  once the ingest has settled, which is when an empty optimizer stops
+		  meaning "not yet" and starts meaning "never": the loader keeps a model
+		  on the stage whose ingest failed, so the page has to ask.
+		*/
+		const heldDocument = () => {
+			const document = optimizer?._getDocument()
+			if (!document) {
+				throw new Error(
+					`This model could not be prepared for conversion to ${pair.toLabel}.`
+				)
+			}
+			return document
+		}
+		const document = heldDocument()
 
 		const wanted = activeOptions.filter((one) =>
 			DESTRUCTIVE_OPTIONS.includes(one)
@@ -704,7 +721,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		const wantedKey = convertRecipeKey('doc', wanted)
 
 		if (appliedKey.current === wantedKey) {
-			return { note: appliedNote.current }
+			return { document, note: appliedNote.current }
 		}
 
 		if (appliedKey.current !== INGESTED_RECIPE) {
@@ -729,7 +746,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			appliedKey.current = INGESTED_RECIPE
 		}
 
-		if (!wanted.includes('webp')) return {}
+		if (!wanted.includes('webp')) return { document: heldDocument() }
 
 		/*
 		  Unknown until the pass finishes, so a pass that throws leaves the next
@@ -773,7 +790,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 		appliedKey.current = wantedKey
 		appliedNote.current = note
-		return { note }
+		return { document: heldDocument(), note }
 	}
 
 	const baseFileName = (file?.name ?? 'model').replace(/\.[^/.]+$/, '')
@@ -953,21 +970,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				return
 			}
 
-			/*
-			  Read without a currency check of its own, deliberately. `prepare`
-			  answers that question on both of its slow paths - after the restore
-			  and again after the texture pass - and returns null, which the
-			  `!prepared` branch above has already turned into a message and a return.
-			  A guard here was written and then removed: no mutation could redden a
-			  test for it, because the only window it covers is the microtask
-			  between `await prepare()` resolving and this line.
-			*/
-			const document = optimizer?._getDocument()
-
-			if (!document) {
-				toast.error('The model is still preparing. Try again in a moment.')
-				return
-			}
+			const { document, note } = prepared
 
 			if (pair.to === 'glb') {
 				const glb = activeOptions.includes('draco')
@@ -977,7 +980,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				store({
 					bytes: glb.data,
 					fileName: `${baseFileName}.glb`,
-					note: prepared.note
+					note
 				})
 				return
 			}
@@ -993,7 +996,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				store({
 					bytes: zip,
 					fileName: `${baseFileName}.zip`,
-					note: prepared.note
+					note
 				})
 				return
 			}
