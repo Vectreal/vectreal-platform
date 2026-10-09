@@ -682,9 +682,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	/*
-	  Makes the optimizer's document match the ticked options, then returns it
-	  with what a partial pass left out, for the result to say. Null means the
-	  model it started on is no longer on the stage.
+	  Makes the optimizer's document match `options`, then returns it with what
+	  a partial pass left out, for the result to say. Null means the model it
+	  started on is no longer on the stage.
 
 	  A destructive pass is undone by restoring the optimizer's source, the model
 	  as it was loaded, not by reading the file again. The re-read went through
@@ -692,7 +692,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  again, and claimed a load of its own, which a pass that threw left the page
 	  asking about.
 	*/
-	const prepare = async () => {
+	const prepare = async (options: readonly ConvertOption[]) => {
 		const startedFrom = stageLoad.current
 		await stageIngest.current
 		const stillOurs = () => startedFrom?.() ?? false
@@ -715,9 +715,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		}
 		const document = heldDocument()
 
-		const wanted = activeOptions.filter((one) =>
-			DESTRUCTIVE_OPTIONS.includes(one)
-		)
+		const wanted = options.filter((one) => DESTRUCTIVE_OPTIONS.includes(one))
 		const wantedKey = convertRecipeKey('doc', wanted)
 
 		if (appliedKey.current === wantedKey) {
@@ -817,8 +815,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  copy of the serialization - `usePrepareGltfDocument` is the same payload the
 	  publisher's own save flow uploads.
 
-	  It hands over the document as it stands, passes included: "it" is what is on
-	  the stage, and the stage shows the passes that have been applied.
+	  It hands over the model as it was loaded, which is what the stage shows: a
+	  WebP pass made for a download is undone first. Handed over with it, the
+	  publisher took recompressed textures for the original, and every preset
+	  started from them.
 	*/
 	const openInPublisher = async () => {
 		if (!file) return
@@ -826,8 +826,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		  The handoff asks the same question every other await on this page asks,
 		  and used to be the one place that did not. Both values it writes with -
 		  `file` and `baseFileName` - are render-closure captures, and it awaits
-		  twice: once to serialize the document, once to navigate. A drop landing
-		  in either gap wrote whatever `prepareGltfDocument` found at that moment
+		  to prepare the document, to serialize it and to navigate. A drop landing
+		  in one of those gaps wrote whatever `prepareGltfDocument` found then
 		  into a draft named after the model the visitor had pressed the button
 		  for, and the publisher opened on the mixture.
 		*/
@@ -837,7 +837,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setIsHandingOff(true)
 
 		try {
-			await stageIngest.current
+			if (!(await prepare([]))) {
+				toast.error('A newer file replaced that one. Press the button again.')
+				return
+			}
 			const draftId = await persistPendingSceneDraftOrchestrator({
 				modelAvailable: true,
 				prepareGltfDocumentForUpload: prepareGltfDocument,
@@ -848,7 +851,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				},
 				currentSettings,
 				optimizationSettings: null,
-				// Converted, never optimized: the document is its own original.
+				// As loaded, so the document is its own original.
 				sourceGlb: null
 			})
 
@@ -959,7 +962,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				return
 			}
 
-			const prepared = await prepare()
+			const prepared = await prepare(activeOptions)
 
 			/*
 			  `prepare` returns null only when the model it started on is no
