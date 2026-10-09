@@ -66,7 +66,7 @@ import {
 import { SampleTiles } from '../layout-components/sample-tiles'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
-import type { LoadOutcome, ModelFile } from '@vctrl/hooks/use-load-model'
+import type { LoadOutcome } from '@vctrl/hooks/use-load-model'
 
 interface Props {
 	pair: ConvertPair
@@ -682,9 +682,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	/*
-	  Makes the optimizer's document match the ticked options, then returns the
-	  model on the stage and what a partial pass left out, for the result to say.
-	  Null means no model is on the stage, or not the one it started on.
+	  Makes the optimizer's document match the ticked options, then returns what
+	  a partial pass left out, for the result to say. Null means the model it
+	  started on is no longer on the stage.
 
 	  A destructive pass is undone by restoring the optimizer's source, the model
 	  as it was loaded, not by reading the file again. The re-read went through
@@ -692,14 +692,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  again, and claimed a load of its own, which a pass that threw left the page
 	  asking about.
 	*/
-	const prepare = async (): Promise<{
-		model: ModelFile
-		note?: string
-	} | null> => {
+	const prepare = async (): Promise<{ note?: string } | null> => {
 		const startedFrom = stageLoad.current
 		await stageIngest.current
 		const stillOurs = () => startedFrom?.() ?? false
-		if (!stillOurs() || !file) return null
+		if (!stillOurs()) return null
 
 		const wanted = activeOptions.filter((one) =>
 			DESTRUCTIVE_OPTIONS.includes(one)
@@ -707,7 +704,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		const wantedKey = convertRecipeKey('doc', wanted)
 
 		if (appliedKey.current === wantedKey) {
-			return { model: file, note: appliedNote.current }
+			return { note: appliedNote.current }
 		}
 
 		if (appliedKey.current !== INGESTED_RECIPE) {
@@ -732,7 +729,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			appliedKey.current = INGESTED_RECIPE
 		}
 
-		if (!wanted.includes('webp')) return { model: file }
+		if (!wanted.includes('webp')) return {}
 
 		/*
 		  Unknown until the pass finishes, so a pass that throws leaves the next
@@ -776,7 +773,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 		appliedKey.current = wantedKey
 		appliedNote.current = note
-		return { model: file, note }
+		return { note }
 	}
 
 	const baseFileName = (file?.name ?? 'model').replace(/\.[^/.]+$/, '')
@@ -866,11 +863,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 	/** Runs the ticked passes and encodes the target format, without saving. */
 	const runConversion = async () => {
+		if (!file) {
+			toast.error('No model loaded yet.')
+			return
+		}
 		setIsConverting(true)
 
 		try {
-			const prepared = await prepare()
-
 			/*
 			  Files a conversion, if it is still about the model it was started
 			  for.
@@ -923,35 +922,34 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				}
 			}
 
-			if (!prepared) {
-				/*
-				  `prepare` returns null only when no model is on the stage, or
-				  not the one it started on; a failure to restore or recompress
-				  throws instead, and the catch below reports it.
-				*/
-				toast.error(
-					file
-						? 'A newer file replaced that one. Press Convert again.'
-						: 'No model loaded yet.'
-				)
-				return
-			}
-
 			const exporter = exporterRef.current
 
 			/*
 			  USDZ leaves through three.js rather than the document, which is why
 			  `OPTIONS_BY_TARGET` gives it no options: a pass applied here would not
-			  reach the bytes below.
+			  reach the bytes below. So it never waits for the optimizer, and never
+			  undoes a pass the document carries from another format's page.
 			*/
 			if (pair.to === 'usdz') {
-				const usdz = await exporter.exportThreeJSUSDZ(prepared.model.model)
+				const usdz = await exporter.exportThreeJSUSDZ(file.model)
 				store({
 					bytes: usdz.data,
 					fileName: `${baseFileName}.usdz`,
 					note:
 						usdz.transmissiveMaterials.length > 0 ? USDZ_GLASS_NOTE : undefined
 				})
+				return
+			}
+
+			const prepared = await prepare()
+
+			/*
+			  `prepare` returns null only when the model it started on is no
+			  longer on the stage; a failure to restore or recompress throws
+			  instead, and the catch below reports it.
+			*/
+			if (!prepared) {
+				toast.error('A newer file replaced that one. Press Convert again.')
 				return
 			}
 
