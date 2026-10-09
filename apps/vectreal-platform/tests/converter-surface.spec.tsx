@@ -745,7 +745,7 @@ describe('a USDZ conversion reads the model on the stage, not the document', () 
 		fireEvent.click(convertButton())
 
 		expect(await downloadButton()).toBeTruthy()
-		expect(optimizer._getDocument).not.toHaveBeenCalled()
+		expect(modelsExported).toEqual([{ name: 'chair' }])
 	})
 })
 
