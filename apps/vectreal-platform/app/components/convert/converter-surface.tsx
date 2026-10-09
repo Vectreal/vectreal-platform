@@ -748,6 +748,14 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		*/
 		if (!state.stillOnScreen()) return null
 
+		/*
+		  The re-read is the model on the stage now, whatever the pass below
+		  does. Recorded before it, because a pass that throws would otherwise
+		  leave the page asking about the model the re-read replaced, and every
+		  later Convert would be told a newer file had replaced it.
+		*/
+		stageLoad.current = state.stillOnScreen
+
 		if (wanted.includes('webp')) {
 			await optimizer?.texturesOptimization({
 				targetFormat: 'webp',
@@ -765,7 +773,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		*/
 		if (!state.stillOnScreen()) return null
 
-		stageLoad.current = state.stillOnScreen
 		appliedKey.current = wantedKey
 		return state.file
 	}

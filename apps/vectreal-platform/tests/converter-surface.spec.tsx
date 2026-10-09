@@ -47,7 +47,8 @@
  *    refusal cases on the adopted model, and asking it of the WebP re-read
  *    reddens the refusal cases on the re-read one;
  *  - a failed re-read that skips asking whether a newer file replaced it
- *    reddens the case naming the newer file.
+ *    reddens the case naming the newer file;
+ *  - recording the re-read only after its pass reddens the failed-pass case.
  */
 import { formatFileSize } from '@shared/utils'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -1263,6 +1264,31 @@ describe('a refused drop does not retire a model a WebP pass re-read', () => {
 			await screen.findByRole('button', { name: /^Download/ })
 		).toBeTruthy()
 		expect(toast.error).not.toHaveBeenCalled()
+	})
+
+	it('converts again after a pass that failed', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+
+		optimizer.texturesOptimization.mockRejectedValueOnce(
+			new Error('No texture could be written.')
+		)
+		await convertWithWebp(1)
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('No texture could be written.')
+		)
+
+		await convertWithWebp(2)
+
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(toast.error).toHaveBeenCalledTimes(1)
 	})
 
 	it('converts the re-read model again after a refusal', async () => {
