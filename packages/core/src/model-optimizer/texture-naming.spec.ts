@@ -99,6 +99,7 @@ const ENTRIES: Array<
 		'restoreSource',
 		async (optimizer, glb) => {
 			await optimizer.loadFromBuffer(glb)
+			unname(optimizer.document)
 			await optimizer.restoreSource()
 		}
 	],
@@ -106,6 +107,7 @@ const ENTRIES: Array<
 		'replaceDocument',
 		async (optimizer, glb) => {
 			await optimizer.loadFromBuffer(glb)
+			unname(optimizer.document)
 			await optimizer.replaceDocument(glb)
 		}
 	],

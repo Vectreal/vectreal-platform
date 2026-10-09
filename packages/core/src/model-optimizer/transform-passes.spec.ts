@@ -88,9 +88,11 @@ const PASSES = [
 		name: 'deduplication',
 		progress: ['Applying deduplication', 'Deduplication complete'],
 		fixture: {},
+		// Quantizing also merges the copies, but leaves no float positions.
 		effect: (document: Document) => {
 			const [first, second] = primitives(document)
 			expect(first.getIndices()).toBe(second.getIndices())
+			expect(first.getAttribute('POSITION')?.getComponentSize()).toBe(4)
 		}
 	},
 	{
