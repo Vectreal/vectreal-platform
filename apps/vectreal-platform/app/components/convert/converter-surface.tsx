@@ -4,6 +4,7 @@ import { Checkbox } from '@shared/components/ui/checkbox'
 import { cn, formatFileSize } from '@shared/utils'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { modelFormatForFileName } from '@vctrl/core/model-formats'
+import { TextureCompressionError } from '@vctrl/core/model-optimizer'
 import {
 	useModelContext,
 	type StructuredLoadError
@@ -80,12 +81,11 @@ interface Conversion {
 }
 
 /**
- * Passes that replace the optimizer's document with a changed one, with no
- * undo.
+ * Passes that replace the optimizer's document with a changed one.
  *
  * The distinction matters because it decides whether changing an option can be
- * answered from the model already in memory or needs the source read again.
- * `texturesOptimization` is destructive; Draco is not, because
+ * answered from the document as it stands or needs the optimizer's source put
+ * back first. `texturesOptimization` is destructive; Draco is not, because
  * `exportDocumentGLBDraco` clones the document and writes the copy.
  */
 const DESTRUCTIVE_OPTIONS: readonly ConvertOption[] = ['webp']
@@ -97,9 +97,9 @@ const DESTRUCTIVE_OPTIONS: readonly ConvertOption[] = ['webp']
  * destructive pass applied, and everything that reads the document waits for
  * that ingest first (`stageIngest`). That is a known state, and saying `null`
  * for it said "unknown" - which `prepare` can never match, so the very first
- * Convert re-read the source, unmounted the viewer and spun for seconds on
- * work already done, on every page including the ones offering no options at
- * all.
+ * Convert undid a pass that was never applied, on every page including the
+ * ones offering no options at all. When undoing meant reading the file again,
+ * that unmounted the viewer and spun for seconds on work already done.
  *
  * `dropSource` keeps `null`, because there the document is genuinely gone.
  */
@@ -301,22 +301,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	*/
 	const exporterRef = useRef(new ModelExporter())
 
-	/*
-	  The source files are kept, not just their size.
-
-	  `texturesOptimization` replaces the optimizer's document and there is no
-	  undo, so a checkbox that could be ticked but not untick-able would
-	  lie the second time somebody downloaded. Keeping the originals means an
-	  option change can start again from them, which is the only version of this
-	  control that tells the truth.
-	*/
-	/*
-	  What is on the stage, as one value.
-	*/
-	const [source, setSource] = useState<{
-		files: File[]
-		bytes: number
-	} | null>(null)
+	/* The size of what is on the stage, which every reduction is measured against. */
+	const [source, setSource] = useState<{ bytes: number } | null>(null)
 	const [selected, setSelected] = useState<ConvertOption[]>([])
 	const [isConverting, setIsConverting] = useState(false)
 	const [conversions, setConversions] = useState<Record<string, Conversion>>({})
@@ -493,7 +479,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			stillOnScreen: () => boolean,
 			ingested: Promise<void>
 		) => {
-			setSource({ files, bytes })
+			setSource({ bytes })
 			// Every stored result describes bytes that came from the file replaced.
 			setConversions({})
 			appliedKey.current = INGESTED_RECIPE
@@ -694,92 +680,92 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	/*
-	  Returns the model to export, having made the document match the ticked
-	  options - reloading from the kept originals when a destructive pass has to
-	  be added or undone. `load` resolves to the terminal state, so the fresh
-	  `file` comes back from there rather than from a closure that is now stale.
+	  Returns the model to export, having made the optimizer's document match the
+	  ticked options, and what a partial pass left out, for the result to say.
 
-	  The source files are kept for exactly this: `texturesOptimization` rewrites
-	  the document with no undo, so a box that could be ticked but not unticked
-	  would lie the second time somebody downloaded.
+	  A destructive pass is undone by restoring the optimizer's source, the model
+	  as it was loaded, not by reading the file again. The re-read parsed the
+	  whole model a second time, unmounted the stage while it did, and claimed a
+	  load of its own, which a pass that threw left the page asking about.
 	*/
-	const prepare = async (): Promise<ModelFile | null> => {
+	const prepare = async (): Promise<{
+		model: ModelFile
+		note?: string
+	} | null> => {
 		const startedFrom = stageLoad.current
 		await stageIngest.current
-		if (!startedFrom?.()) return null
+		const stillOurs = () => startedFrom?.() ?? false
+		if (!stillOurs() || !file) return null
 
 		const wanted = activeOptions.filter((one) =>
 			DESTRUCTIVE_OPTIONS.includes(one)
 		)
 		const wantedKey = convertRecipeKey('doc', wanted)
 
-		if (appliedKey.current === wantedKey) return file ?? null
-		if (!source) return file ?? null
+		if (appliedKey.current === wantedKey) return { model: file }
 
-		const state = await load({ kind: 'files', files: source.files })
+		if (appliedKey.current !== INGESTED_RECIPE) {
+			/*
+			  A LITERAL SENTENCE, NOT `refusalMessage`. Every sentence that
+			  function returns addresses someone who has just brought a file -
+			  "Check it is a valid GLB." arriving alone, unprefixed, about a GLB
+			  visibly rendering on the stage was the result. The restore happens
+			  only to apply or undo a destructive pass, so that is what this can
+			  offer to take back.
 
-		/*
-		  A reload that fails is not a replaced file, and saying so sent the
-		  reader to press Convert again forever. The loader keeps the model on
-		  screen, so this is written for someone looking at it - unless a newer
-		  file has replaced that model meanwhile.
-
-		  A LITERAL SENTENCE, NOT `refusalMessage`. Every sentence that function
-		  returns addresses someone who has just brought a file - "Check it is a
-		  valid GLB." arriving alone, unprefixed, about a GLB visibly rendering
-		  on the stage was the result. The re-read happens only to apply or undo
-		  a destructive pass, so that is what this can offer to take back. Adding
-		  a case to `refusalMessage` would make one function answer two
-		  questions, which is the defect rather than the fix.
-		*/
-		if (!state.file) {
-			if (!state.stillCurrent()) return null
-			throw new Error(
-				'That file could not be read again to apply those options. Untick them to download it as it is.'
-			)
+			  A failed restore commits nothing, so the recipe stays as it was.
+			*/
+			try {
+				await optimizer?.restoreSource()
+			} catch (error) {
+				if (!stillOurs()) return null
+				throw new Error(
+					'That file could not be read again to apply those options. Untick them to download it as it is.',
+					{ cause: error }
+				)
+			}
+			if (!stillOurs()) return null
+			appliedKey.current = INGESTED_RECIPE
 		}
 
-		/*
-		  A file dropped while this was running replaced the source, so what
-		  came back describes the model that is on its way out. Writing
-		  `appliedKey` for it would tell the page a destructive pass had been
-		  applied to a document that never saw one, and the next Convert would
-		  skip the pass and export untouched textures under a ticked box.
-		*/
-		if (!state.stillOnScreen()) return null
+		if (!wanted.includes('webp')) return { model: file }
 
 		/*
-		  The re-read is the model on the stage now, whatever the pass below
-		  does. Recorded before it, because a pass that throws would otherwise
-		  leave the page asking about the model the re-read replaced, and every
-		  later Convert would be told a newer file had replaced it.
-
-		  Which passes its document has is unknown until the pass finishes, so
-		  a pass that throws leaves the next Convert to read it again rather
-		  than export whatever the pass left behind.
+		  Unknown until the pass finishes, so a pass that throws leaves the next
+		  Convert to restore the document rather than export what it left.
 		*/
-		stageLoad.current = state.stillOnScreen
 		appliedKey.current = null
-
-		if (wanted.includes('webp')) {
+		let note: string | undefined
+		try {
 			await optimizer?.texturesOptimization({
 				targetFormat: 'webp',
 				quality: 82
 			})
+		} catch (error) {
+			if (!stillOurs()) return null
+			/*
+			  A texture the browser cannot re-encode, such as a KTX2 one, would
+			  otherwise keep a model with one of them from converting at all.
+			*/
+			if (!(error instanceof TextureCompressionError && error.isPartial)) {
+				throw new Error(
+					'None of the textures could be recompressed as WebP. Untick it to download the file as it is.',
+					{ cause: error }
+				)
+			}
+			note = `${error.failed} of ${error.total} textures could not be recompressed and kept their own format.`
 		}
 
 		/*
-		  Asked again, because the check above only covers the read. Re-encoding
-		  every texture is the slowest thing this page does and the easiest
-		  window for a second file to land in, and the write below is the one
-		  that tells the next Convert it may skip the pass - so a drop landing
-		  here used to hand the new model's untouched textures out under a ticked
-		  box.
+		  Asked again, because re-encoding every texture is the slowest thing
+		  this page does and the easiest window for a second file to land in, and
+		  the write below is the one that tells the next Convert it may skip the
+		  pass.
 		*/
-		if (!state.stillOnScreen()) return null
+		if (!stillOurs()) return null
 
 		appliedKey.current = wantedKey
-		return state.file
+		return { model: file, note }
 	}
 
 	const baseFileName = (file?.name ?? 'model').replace(/\.[^/.]+$/, '')
@@ -872,7 +858,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setIsConverting(true)
 
 		try {
-			const model = await prepare()
+			const prepared = await prepare()
 
 			/*
 			  Files a conversion, if it is still about the model it was started
@@ -926,11 +912,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				}
 			}
 
-			if (!model) {
+			if (!prepared) {
 				/*
 				  `prepare` returns null only when a newer drop replaced the
-				  source mid-run; a failure to re-read throws instead, and the
-				  catch below reports what the loader said.
+				  model mid-run; a failure to restore or recompress throws
+				  instead, and the catch below reports it.
 				*/
 				toast.error(
 					file
@@ -948,7 +934,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  reach the bytes below.
 			*/
 			if (pair.to === 'usdz') {
-				const usdz = await exporter.exportThreeJSUSDZ(model.model)
+				const usdz = await exporter.exportThreeJSUSDZ(prepared.model.model)
 				store({
 					bytes: usdz.data,
 					fileName: `${baseFileName}.usdz`,
@@ -960,9 +946,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 
 			/*
 			  Read without a currency check of its own, deliberately. `prepare`
-			  answers that question on both of its slow paths - after the re-read
+			  answers that question on both of its slow paths - after the restore
 			  and again after the texture pass - and returns null, which the
-			  `!model` branch above has already turned into a message and a return.
+			  `!prepared` branch above has already turned into a message and a return.
 			  A guard here was written and then removed: no mutation could redden a
 			  test for it, because the only window it covers is the microtask
 			  between `await prepare()` resolving and this line.
@@ -979,7 +965,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					? await exporter.exportDocumentGLBDraco(document)
 					: await exporter.exportDocumentGLB(document)
 
-				store({ bytes: glb.data, fileName: `${baseFileName}.glb` })
+				store({
+					bytes: glb.data,
+					fileName: `${baseFileName}.glb`,
+					note: prepared.note
+				})
 				return
 			}
 
@@ -991,7 +981,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					activeOptions.includes('draco') ? { draco: {} } : {}
 				)
 				const zip = await exporter.createZIPArchive(gltf, baseFileName)
-				store({ bytes: zip, fileName: `${baseFileName}.zip` })
+				store({
+					bytes: zip,
+					fileName: `${baseFileName}.zip`,
+					note: prepared.note
+				})
 				return
 			}
 
@@ -1328,7 +1322,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					) : (
 						<Button
 							onClick={runConversion}
-							disabled={isConverting}
+							disabled={isConverting || isHandingOff}
 							className="self-start"
 						>
 							{isConverting && (
