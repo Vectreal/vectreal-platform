@@ -399,6 +399,12 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	*/
 	const appliedKey = useRef<string | null>(null)
 
+	/*
+	  What the pass behind `appliedKey` could not do, said beside every result
+	  exported from that document, not only the one that ran it.
+	*/
+	const appliedNote = useRef<string | undefined>(undefined)
+
 	const {
 		fileInputRef,
 		directoryInputRef,
@@ -483,6 +489,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			// Every stored result describes bytes that came from the file replaced.
 			setConversions({})
 			appliedKey.current = INGESTED_RECIPE
+			appliedNote.current = undefined
 			stageLoad.current = stillOnScreen
 			stageIngest.current = ingested
 		},
@@ -493,6 +500,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setSource(null)
 		setConversions({})
 		appliedKey.current = null
+		appliedNote.current = undefined
 		stageLoad.current = null
 		stageIngest.current = null
 	}, [])
@@ -702,25 +710,31 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		)
 		const wantedKey = convertRecipeKey('doc', wanted)
 
-		if (appliedKey.current === wantedKey) return { model: file }
+		if (appliedKey.current === wantedKey) {
+			return { model: file, note: appliedNote.current }
+		}
 
 		if (appliedKey.current !== INGESTED_RECIPE) {
 			/*
+			  Unknown until the restore is done. The hook puts the document back
+			  and then reads a report, which can fail after the document is
+			  already the original - so a failed restore is not a document that
+			  still has its pass.
+
 			  A LITERAL SENTENCE, NOT `refusalMessage`. Every sentence that
 			  function returns addresses someone who has just brought a file -
 			  "Check it is a valid GLB." arriving alone, unprefixed, about a GLB
-			  visibly rendering on the stage was the result. The restore happens
-			  only to apply or undo a destructive pass, so that is what this can
-			  offer to take back.
-
-			  A failed restore commits nothing, so the recipe stays as it was.
+			  visibly rendering on the stage was the result. Dropping it again is
+			  what starts from the original once restoring it has failed.
 			*/
+			appliedKey.current = null
+			appliedNote.current = undefined
 			try {
 				await optimizer?.restoreSource()
 			} catch (error) {
 				if (!stillOurs()) return null
 				throw new Error(
-					'That file could not be read again to apply those options. Untick them to download it as it is.',
+					'That file could not be read again to change those options. Drop it again to start over.',
 					{ cause: error }
 				)
 			}
@@ -765,6 +779,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		if (!stillOurs()) return null
 
 		appliedKey.current = wantedKey
+		appliedNote.current = note
 		return { model: file, note }
 	}
 

@@ -41,7 +41,10 @@
  *    the pass reddens the case for that window; keeping the recipe during the
  *    pass reddens the failed-pass cases; treating every pass failure as fatal,
  *    or a total one as partial, reddens the partial and the total case; not
- *    filing the note reddens the partial case;
+ *    filing the note reddens the partial case for that writer, and not keeping
+ *    it with the recipe reddens the later-result case; recording the restore
+ *    before it runs reddens the failed-restore case, and not recording it at
+ *    all reddens the undo-then-redo case;
  *  - letting the publisher button run during a conversion, or Convert during
  *    a handoff, reddens the case for each.
  */
@@ -103,7 +106,7 @@ let onScreen = 0
   the real loaders publish first and ingest after. Distinct per load, so a test
   can tell which model's document was read.
 */
-let heldDocument: { name: string } | null = null
+let heldDocument: { name: string; webp?: boolean } | null = null
 
 /** Every document an export or a handoff read, in order. */
 let documentsRead: unknown[] = []
@@ -188,11 +191,14 @@ function blockRestores() {
 	})
 }
 
+/* A pass marks the document it rewrote; a restore swaps in the source as read. */
 const runPass = async () => {
 	if (passBlock) await passBlock
+	if (heldDocument) heldDocument = { ...heldDocument, webp: true }
 }
 const restore = async () => {
 	if (restoreBlock) await restoreBlock
+	if (heldDocument) heldDocument = { name: heldDocument.name }
 }
 
 const optimizer = {
@@ -321,10 +327,12 @@ vi.mock('@vctrl/core/model-exporter', () => ({
 			if (exportBlock) await exportBlock
 			return exported
 		}
-		async exportDocumentGLBDraco() {
+		async exportDocumentGLBDraco(document: unknown) {
+			documentsRead.push(document)
 			return exported
 		}
-		async exportDocumentGLTF() {
+		async exportDocumentGLTF(document: unknown) {
+			documentsRead.push(document)
 			return exported
 		}
 		async exportThreeJSUSDZ() {
@@ -460,8 +468,12 @@ function drop(files: File[]) {
 const convertButton = () => screen.getByRole('button', { name: /^Convert to/ })
 
 /** A model on the stage, read and ingested, as most cases start. */
-async function modelOnStage(name = 'chair.gltf', bytes = 2_000_000) {
-	render(<ConverterSurface pair={gltfToGlb} />)
+async function modelOnStage(
+	name = 'chair.gltf',
+	bytes = 2_000_000,
+	pair = gltfToGlb
+) {
+	render(<ConverterSurface pair={pair} />)
 	drop([gltfFile(name)])
 	await waitFor(() => expect(loadCalls).toHaveLength(1))
 	settle(0, loadedFile({ name, sourcePackageBytes: bytes }))
@@ -774,8 +786,8 @@ describe('a refused drop does not retire the model it left on screen', () => {
 
 		  Deterministic, not a race: no overlap, no timing. Drop a file that is
 		  not a model onto an open one, press Convert, and the spinner finishes
-		  onto an empty panel. With no option ticked `prepare` returns early and
-		  never rewrites the predicate, so it never repairs itself either.
+		  onto an empty panel. Nothing in `prepare` rewrites the predicate, so it
+		  never repaired itself either.
 		*/
 		render(<ConverterSurface pair={gltfToGlb} />)
 
@@ -842,20 +854,40 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		expect(loadCalls).toHaveLength(1)
 	})
 
+	const PARTIAL_NOTE =
+		'1 of 3 textures could not be recompressed and kept their own format.'
+
 	// A KTX2 texture, say, would otherwise keep the whole model from converting.
-	it('keeps what a partial pass compressed, and says what it left', async () => {
+	it.each([
+		['GLB', gltfToGlb],
+		['glTF', convertPairBySlug('glb-to-gltf')!]
+	])(
+		'keeps what a partial pass compressed into a %s, and says what it left',
+		async (_, pair) => {
+			optimizer.texturesOptimization.mockRejectedValueOnce(
+				new TextureCompressionError(1, 3, '1 of 3 failed')
+			)
+			await modelOnStage('chair.gltf', 2_000_000, pair)
+
+			await convertOnceWithWebp()
+
+			expect(await screen.findByText(PARTIAL_NOTE)).toBeTruthy()
+		}
+	)
+
+	it('says what a partial pass left beside every later result from it', async () => {
 		optimizer.texturesOptimization.mockRejectedValueOnce(
 			new TextureCompressionError(1, 3, '1 of 3 failed')
 		)
 		await modelOnStage()
-
 		await convertOnceWithWebp()
 
-		expect(
-			await screen.findByText(
-				'1 of 3 textures could not be recompressed and kept their own format.'
-			)
-		).toBeTruthy()
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		expect(await screen.findByText(PARTIAL_NOTE)).toBeTruthy()
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
 	})
 
 	it('says plainly when no texture could be recompressed, then converts again', async () => {
@@ -895,19 +927,43 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		expect(loadCalls).toHaveLength(1)
 	})
 
-	it('says when the restore failed', async () => {
+	/*
+	  The hook can fail after the document was already put back, so a failed
+	  restore leaves the recipe unknown and the next Convert restores again.
+	*/
+	it('says when the restore failed, and restores again next time', async () => {
 		await modelOnStage()
 		await convertOnceWithWebp()
 		optimizer.restoreSource.mockRejectedValueOnce(new Error('bad source'))
 
 		toggleWebp()
 		fireEvent.click(convertButton())
-
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
-				'That file could not be read again to apply those options. Untick them to download it as it is.'
+				'That file could not be read again to change those options. Drop it again to start over.'
 			)
 		)
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(2)
+	})
+
+	it('runs the pass again after it was undone', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		toggleWebp()
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(1)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf', webp: true })
 	})
 
 	it('names the newer file when one replaced the model during a restore', async () => {
@@ -933,13 +989,13 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 			)
 		)
 		expect(toast.error).toHaveBeenCalledTimes(1)
-		expect(documentsRead).toEqual([{ name: 'chair.gltf' }])
+		expect(documentsRead).toEqual([{ name: 'chair.gltf', webp: true }])
 	})
 
 	/*
-	  The core refuses a restore only once the newer model is ingested. One
-	  that is on the stage but still being read leaves the restore standing,
-	  and the restored document is the older model's.
+	  The core refuses a restore once the newer model's ingest has begun. In
+	  the gap between the stage changing and that ingest starting the restore
+	  still stands, and the restored document is the older model's.
 	*/
 	it('does not export a restored document for a model a newer one replaced', async () => {
 		await modelOnStage()
@@ -962,7 +1018,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 				'A newer file replaced that one. Press Convert again.'
 			)
 		)
-		expect(documentsRead).toEqual([{ name: 'chair.gltf' }])
+		expect(documentsRead).toEqual([{ name: 'chair.gltf', webp: true }])
 	})
 
 	it('names the newer file, not the raw error, when one replaced the model during the pass', async () => {
