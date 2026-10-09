@@ -1,7 +1,8 @@
-# syntax=docker/dockerfile:1
-
-# Base image with Node.js
-FROM node:22-alpine AS base
+# Base image with Node.js, the official image from AWS's public mirror rather
+# than Docker Hub: Hub's anonymous pull limit, shared by every GitHub runner,
+# failed staging deploys with a 429. No `# syntax=` line for the same reason:
+# BuildKit's built-in frontend covers everything this file uses.
+FROM public.ecr.aws/docker/library/node:22-alpine AS base
 ARG PNPM_VERSION=10.28.0
 WORKDIR /app
 ENV PNPM_HOME=/usr/local/bin

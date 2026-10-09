@@ -171,8 +171,10 @@ jobs:
       # roles and an auth schema - a second description of the database that can
       # drift from the one `supabase start` gives developers. This image already
       # carries them. The tag tracks `[db] major_version` in supabase/config.toml.
+      # Pulled from Supabase's own ECR Public repository, the same digest as
+      # Docker Hub's, whose anonymous limit failed this job with a 429.
       postgres:
-        image: supabase/postgres:17.4.1.075
+        image: public.ecr.aws/supabase/postgres:17.4.1.075
         env:
           POSTGRES_PASSWORD: postgres
         # 54322 is the port `supabase start` publishes and the port the
