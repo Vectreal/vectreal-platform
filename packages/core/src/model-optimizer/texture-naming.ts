@@ -15,8 +15,9 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 /**
- * Pure helper functions for resolving canonical texture filenames.
- * No I/O, no side-effects — all functions are safe to call in any environment.
+ * Resolving canonical texture filenames. No I/O, so everything here is safe to
+ * call in any environment; only the `sync*` functions write, and only to the
+ * textures they are given.
  */
 
 import { Document, Material, Texture } from '@gltf-transform/core'
@@ -129,4 +130,86 @@ export const resolveTextureByMaterialSlot = (
 		}
 	}
 	return null
+}
+
+// ---------------------------------------------------------------------------
+// Canonical names
+// ---------------------------------------------------------------------------
+
+// Typed as a string, but a glTF image's `"name": null` reads back as null.
+const storedName = (texture: Texture): string => texture.getName()?.trim() ?? ''
+
+/**
+ * The file name a texture is known by: its own stable URI or name, else its
+ * material slot (`Wood_Planks_baseColor.png`), else its position
+ * (`texture-2.png`), with the extension its MIME type calls for.
+ */
+export const resolveTextureCanonicalFileName = (
+	document: Document,
+	texture: Texture,
+	index: number
+): string => {
+	const currentUri = texture.getURI().trim()
+	const currentName = storedName(texture)
+	const stableUri =
+		currentUri &&
+		!currentUri.startsWith('data:') &&
+		!isGenericTextureFileName(currentUri)
+			? currentUri
+			: ''
+	const stableName =
+		currentName && !isGenericTextureFileName(currentName) ? currentName : ''
+	const extension = mimeTypeToExtension(texture.getMimeType())
+
+	if (stableUri || stableName) {
+		const baseFileName = extractFileNameSegment(stableUri || stableName)
+		return extension
+			? replaceUriExtension(baseFileName, extension)
+			: baseFileName
+	}
+
+	const slot = resolveTextureByMaterialSlot(document, texture)
+	if (slot) {
+		const slotFileName = `${slot.materialName}_${slot.slotName}`
+		return extension ? `${slotFileName}.${extension}` : slotFileName
+	}
+
+	return buildTextureFallbackFileName(index, texture.getMimeType())
+}
+
+/**
+ * Writes a texture's canonical file name to its URI and name. A stable
+ * `fileName` is written first, so the canonical name is resolved from it.
+ */
+export const syncTextureIdentity = (
+	document: Document,
+	texture: Texture,
+	index: number,
+	fileName?: string
+): void => {
+	const currentName = storedName(texture)
+	const currentUri = texture.getURI().trim()
+	const preferredFileName = fileName?.trim()
+
+	if (preferredFileName && !isGenericTextureFileName(preferredFileName)) {
+		const preferredBaseName = extractFileNameSegment(preferredFileName)
+		if (currentUri !== preferredBaseName) texture.setURI(preferredBaseName)
+		if (currentName !== preferredBaseName) texture.setName(preferredBaseName)
+	}
+
+	const canonicalFileName = resolveTextureCanonicalFileName(
+		document,
+		texture,
+		index
+	)
+	if (currentUri !== canonicalFileName) texture.setURI(canonicalFileName)
+	if (currentName !== canonicalFileName) texture.setName(canonicalFileName)
+}
+
+/** Gives every texture of `document` its canonical file name. */
+export const syncTextureIdentities = (document: Document): void => {
+	document
+		.getRoot()
+		.listTextures()
+		.forEach((texture, index) => syncTextureIdentity(document, texture, index))
 }
