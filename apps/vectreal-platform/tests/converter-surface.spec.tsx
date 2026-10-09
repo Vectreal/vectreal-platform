@@ -48,7 +48,11 @@
  *    reddens the refusal cases on the re-read one;
  *  - a failed re-read that skips asking whether a newer file replaced it
  *    reddens the case naming the newer file;
- *  - recording the re-read only after its pass reddens the failed-pass case.
+ *  - recording the re-read only after its pass reddens the failed-pass case,
+ *    and leaving `appliedKey` as it was during the pass reddens the unticked
+ *    one after it;
+ *  - letting the publisher button run during a conversion reddens the case
+ *    that holds a pass open.
  */
 import { formatFileSize } from '@shared/utils'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -1289,6 +1293,54 @@ describe('a refused drop does not retire a model a WebP pass re-read', () => {
 			await screen.findByRole('button', { name: /^Download/ })
 		).toBeTruthy()
 		expect(toast.error).toHaveBeenCalledTimes(1)
+	})
+
+	it('reads the file again after a pass that failed, even unticked', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+		const webp = screen.getByRole('checkbox', { name: /WebP/i })
+		fireEvent.click(webp)
+
+		optimizer.texturesOptimization.mockRejectedValueOnce(
+			new Error('No texture could be written.')
+		)
+		await convertWithWebp(1)
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith('No texture could be written.')
+		)
+
+		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+		await convertWithWebp(2)
+
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(loadCalls).toHaveLength(3)
+	})
+
+	// It serializes the document, which the pass is rewriting.
+	it('cannot be handed to the publisher while a pass runs', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+
+		blockPasses()
+		await convertWithWebp(1)
+		await waitFor(() =>
+			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
+		)
+
+		expect(screen.getByRole('button', { name: /publisher/i })).toBeDisabled()
+		releasePass()
+		await screen.findByRole('button', { name: /^Download/ })
 	})
 
 	it('converts the re-read model again after a refusal', async () => {

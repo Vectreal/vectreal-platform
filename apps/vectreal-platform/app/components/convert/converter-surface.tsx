@@ -753,8 +753,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		  does. Recorded before it, because a pass that throws would otherwise
 		  leave the page asking about the model the re-read replaced, and every
 		  later Convert would be told a newer file had replaced it.
+
+		  Which passes its document has is unknown until the pass finishes, so
+		  a pass that throws leaves the next Convert to read it again rather
+		  than export whatever the pass left behind.
 		*/
 		stageLoad.current = state.stillOnScreen
+		appliedKey.current = null
 
 		if (wanted.includes('webp')) {
 			await optimizer?.texturesOptimization({
@@ -1368,7 +1373,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						<button
 							type="button"
 							onClick={openInPublisher}
-							disabled={isHandingOff}
+							disabled={isHandingOff || isConverting}
 							className="hover:text-foreground underline underline-offset-4 transition-colors disabled:opacity-50"
 						>
 							{isHandingOff
