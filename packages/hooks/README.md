@@ -170,10 +170,14 @@ function Optimizer() {
 
 	const handleOptimize = async () => {
 		if (!file?.model || !integrated) return
-		await integrated.applyOptimization(integrated.simplifyOptimization, {
-			ratio: 0.6,
-			error: 0.001
-		})
+		try {
+			await integrated.applyOptimization(integrated.simplifyOptimization, {
+				ratio: 0.6,
+				error: 0.001
+			})
+		} catch (error) {
+			console.error('Optimization failed', error)
+		}
 	}
 
 	return (
@@ -199,7 +203,7 @@ function Optimizer() {
 | `report` / `info`                    | Objects                                                            | Optimization metrics and derived stats                                 |
 | `loading` / `error`                  | State                                                              | Optimization status                                                    |
 
-> `applyOptimization(fn, opts?)` is **not** returned by `useOptimizeModel` directly. It becomes available on the `optimizer` object returned by `useLoadModel(optimizer)` when you pass an optimizer instance in; it runs an optimization step and syncs the result back into loader state (see the example above).
+> `applyOptimization(fn, opts?)` is **not** returned by `useOptimizeModel` directly. It becomes available on the `optimizer` object returned by `useLoadModel(optimizer)` when you pass an optimizer instance in; it runs an optimization step and syncs the result back into loader state (see the example above). It rejects when no model is loaded, when the step fails, or when the result cannot be exported or shown, and the viewer then keeps the model it had. A partial `TextureCompressionError` is the exception: the textures that did compress are shown first. The step methods themselves reject when they fail, and resolve without doing anything when no model is loaded.
 
 ### Optimization option types
 

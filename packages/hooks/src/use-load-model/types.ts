@@ -337,14 +337,23 @@ export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
 				 * @template TOptions - Type of options for the optimization function
 				 * @param optimizationFunction - The optimization to apply (e.g., simplifyOptimization)
 				 * @param options - Configuration options for the optimization
-				 * @returns Promise that resolves when optimization is complete and model is updated
+				 * @returns Promise that resolves when optimization is complete and model is updated.
+				 * It also resolves, changing nothing, when a newer load holds the state by then.
+				 * @throws When no model is loaded, when the optimization fails (its own error,
+				 * so a `SupersededError` stays recognisable), or when the result cannot be
+				 * exported or shown. A partial `TextureCompressionError` is thrown after the
+				 * textures that did compress are shown.
 				 *
 				 * @example
 				 * // Apply simplification optimization
-				 * await optimizer.applyOptimization(
-				 *   optimizer.simplifyOptimization,
-				 *   { ratio: 0.5 }
-				 * )
+				 * try {
+				 *   await optimizer.applyOptimization(
+				 *     optimizer.simplifyOptimization,
+				 *     { ratio: 0.5 }
+				 *   )
+				 * } catch (error) {
+				 *   // The viewer still shows the model as it was before this call
+				 * }
 				 */
 				applyOptimization: <TOptions>(
 					optimizationFunction?:
