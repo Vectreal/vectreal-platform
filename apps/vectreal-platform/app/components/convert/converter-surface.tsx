@@ -93,12 +93,13 @@ const DESTRUCTIVE_OPTIONS: readonly ConvertOption[] = ['webp']
 /**
  * The recipe a document satisfies the moment it has been read.
  *
- * `adoptSource` runs only after `load` resolved, so the optimizer holds a
- * document read straight from the source with no destructive pass applied.
- * That is a known state, and saying `null` for it said "unknown" - which
- * `prepare` can never match, so the very first Convert re-read the source,
- * unmounted the viewer and spun for seconds on work already done, on every
- * page including the ones offering no options at all.
+ * The optimizer ingests the adopted model straight from its source, with no
+ * destructive pass applied, and everything that reads the document waits for
+ * that ingest first (`stageIngest`). That is a known state, and saying `null`
+ * for it said "unknown" - which `prepare` can never match, so the very first
+ * Convert re-read the source, unmounted the viewer and spun for seconds on
+ * work already done, on every page including the ones offering no options at
+ * all.
  *
  * `dropSource` keeps `null`, because there the document is genuinely gone.
  */
@@ -354,20 +355,35 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	/*
 	  Whether the model on the stage is still the one this page is about.
 
-	  THIS IS THE LOADER'S CLOCK, NOT A SECOND ONE. `load` resolves with the
-	  `stillCurrent` predicate it already gates its own state writes on, and this
-	  ref just holds the one belonging to whichever load the page adopted. It was
-	  a monotonic counter of our own until the hook could answer the question,
-	  and a counter is what has to be remembered at every site that retires a
-	  load - which is how "Convert another" came to empty the stage while a drop
-	  still in flight put the source back: `reset()` retired the load and nothing
-	  moved the counter.
+	  THIS IS THE LOADER'S CLOCK, NOT A SECOND ONE. `load` hands back a
+	  `stillOnScreen` predicate, and this ref holds the one belonging to
+	  whichever load the page adopted. It was a monotonic counter of our own
+	  until the hook could answer the question, and a counter is what has to be
+	  remembered at every site that retires a load - which is how "Convert
+	  another" came to empty the stage while a drop still in flight put the
+	  source back: `reset()` retired the load and nothing moved the counter.
+
+	  ON SCREEN, NOT NEWEST. A refused drop is the newest load, but it leaves
+	  this model on the stage and in the optimizer. Asking whether the adopted
+	  load was still the newest made every refusal retire a model that was still
+	  there, so a conversion running through one was thrown away with a message
+	  about a newer file that did not exist.
 
 	  Asked, never cached. A drop can land during a texture re-encode or a GLB
 	  write as easily as during a parse, so the answer is only good at the
 	  instant it is read.
 	*/
 	const stageLoad = useRef<(() => boolean) | null>(null)
+
+	/*
+	  The newest load, which settles once the optimizer has ingested its model.
+
+	  The loader shows a model before the optimizer holds it, so until this
+	  settles the optimizer's document is still the previous model's. Convert
+	  pressed in that window exported the previous model under the new file's
+	  name, so everything that reads the document waits for this first.
+	*/
+	const stageIngest = useRef<Promise<unknown> | null>(null)
 
 	/*
 	  The page being looked at right now, for the benefit of a load that started
@@ -468,12 +484,12 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  document that never had one. One writer means they cannot drift apart.
 	*/
 	const adoptSource = useCallback(
-		(files: File[], bytes: number, stillCurrent: () => boolean) => {
+		(files: File[], bytes: number, stillOnScreen: () => boolean) => {
 			setSource({ files, bytes })
 			// Every stored result describes bytes that came from the file replaced.
 			setConversions({})
 			appliedKey.current = INGESTED_RECIPE
-			stageLoad.current = stillCurrent
+			stageLoad.current = stillOnScreen
 		},
 		[]
 	)
@@ -519,7 +535,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  `adoptSource`: the loader calls `onPublish` only for a load that is
 			  still the current one, so a check here could never be false, and the
 			  outer `loaded.stillCurrent()` below already covers the resolved path.
-			  What goes stale is everything after, which is why `state.stillCurrent`
+			  What goes stale is everything after, which is why `state.stillOnScreen`
 			  is handed to `adoptSource` to be recorded as `stageLoad` rather than
 			  read as a boolean here.
 			*/
@@ -530,11 +546,13 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				adoptSource(
 					files,
 					referenced || measuredBytes(files),
-					state.stillCurrent
+					state.stillOnScreen
 				)
 			}
 
-			const loaded = await load({ kind: 'files', files }, { onPublish: adopt })
+			const loading = load({ kind: 'files', files }, { onPublish: adopt })
+			stageIngest.current = loading
+			const loaded = await loading
 			const refused = loaded.status === 'error'
 
 			/*
@@ -545,24 +563,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			*/
 			if (loaded.stillCurrent()) {
 				if (refused) {
-					/*
-					  THE MODEL ON THE STAGE SURVIVED THIS, SO ITS CURRENCY HAS TO.
-					  The loader claims a fresh token for every attempt, including
-					  one that fails and deliberately leaves the previous model
-					  rendered - so a refused drop retired the predicate
-					  `adoptSource` recorded for a model that is still on screen.
-					  Every write guarded by it was then dropped in silence: on a
-					  page offering no options `prepare` returns early and never
-					  rewrites it, so Convert spun, finished, filed nothing and
-					  said nothing, for good.
-
-					  Re-arming here rather than teaching `load` to roll its token
-					  back: the failed load *is* the latest event, and its own
-					  `stillCurrent` is what tells the next drop that this one is
-					  stale. Rolling back would take the refusal above with it.
-					*/
-					stageLoad.current = loaded.stillCurrent
-
 					/*
 					  Only where the reader can still see it. A load that outlives
 					  the page it started on has nothing to say to the page they
@@ -688,6 +688,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  would lie the second time somebody downloaded.
 	*/
 	const prepare = async (): Promise<ModelFile | null> => {
+		const startedFrom = stageLoad.current
+		await stageIngest.current
+		if (!startedFrom?.()) return null
+
 		const wanted = activeOptions.filter((one) =>
 			DESTRUCTIVE_OPTIONS.includes(one)
 		)
@@ -704,6 +708,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		  `appliedKey` for it would tell the page a destructive pass had been
 		  applied to a document that never saw one, and the next Convert would
 		  skip the pass and export untouched textures under a ticked box.
+
+		  The newest load, not the model on screen: a re-read that failed is not
+		  on screen either, and it is reported below rather than as a newer file.
 		*/
 		if (!state.stillCurrent()) return null
 
@@ -741,9 +748,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		  here used to hand the new model's untouched textures out under a ticked
 		  box.
 		*/
-		if (!state.stillCurrent()) return null
+		if (!state.stillOnScreen()) return null
 
-		stageLoad.current = state.stillCurrent
+		stageLoad.current = state.stillOnScreen
 		appliedKey.current = wantedKey
 		return state.file
 	}
@@ -792,6 +799,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setIsHandingOff(true)
 
 		try {
+			await stageIngest.current
 			const draftId = await persistPendingSceneDraftOrchestrator({
 				modelAvailable: true,
 				prepareGltfDocumentForUpload: prepareGltfDocument,
