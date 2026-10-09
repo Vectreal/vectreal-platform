@@ -88,8 +88,8 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 	}
 
 	/*
-	  What was prepared, as the hand-off must describe it. Not read back from the
-	  context: the optimizer renames the file once its pass has run.
+	  What was prepared, as the hand-off must describe it: the sizes and the
+	  settings it was derived from, which the load context does not hold.
 	*/
 	const prepared = useRef<{
 		name: string
@@ -121,7 +121,10 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 					optimizations: balancedPreset,
 					isCurrent: loaded.stillCurrent,
 					steps: NO_CHECKLIST,
-					model: optimizer,
+					// The stage draws getModel()'s buffer itself, so there is no
+					// loader viewer to sync. The context's sync was read before the
+					// load above, so it belongs to the previous load, or to none.
+					model: { ...optimizer, applyOptimization: async () => {} },
 					baseline: {
 						clientSceneBytes: originalBytes,
 						clientTextureBytes: loaded.file.sourceTextureBytes ?? null,

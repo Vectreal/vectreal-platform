@@ -339,7 +339,8 @@ const useOptimizeModel = () => {
 	 * @param options - Configuration options for simplification
 	 * @param options.ratio - Target ratio of triangles to keep (0.0-1.0). Default: 0.5
 	 * @param options.error - Maximum allowed error threshold. Default: 0.001
-	 * @returns Promise that resolves when simplification is complete
+	 * @returns Promise that resolves when simplification is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const simplifyOptimization = useCallback(
 		async (options?: SimplifyOptions): Promise<void> => {
@@ -362,6 +363,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Simplification failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -372,7 +374,8 @@ const useOptimizeModel = () => {
 	 * Removes redundant vertices, primitives, and other duplicate data to reduce file size.
 	 *
 	 * @param options - Configuration options for deduplication
-	 * @returns Promise that resolves when deduplication is complete
+	 * @returns Promise that resolves when deduplication is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const dedupOptimization = useCallback(
 		async (options?: DedupOptions): Promise<void> => {
@@ -393,6 +396,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Deduplication failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -405,7 +409,8 @@ const useOptimizeModel = () => {
 	 * @param options - Per-attribute bit depths: `quantizePosition`, `quantizeNormal`,
 	 * `quantizeColor`, `quantizeTexcoord`. Defaults come from glTF-Transform `quantize()`
 	 * (position 14, normal 10, color 8, texcoord 12).
-	 * @returns Promise that resolves when quantization is complete
+	 * @returns Promise that resolves when quantization is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const quantizeOptimization = useCallback(
 		async (options?: QuantizeOptions): Promise<void> => {
@@ -426,6 +431,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Quantization failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -436,7 +442,8 @@ const useOptimizeModel = () => {
 	 * Can remove, generate, or clean up normal data to improve rendering quality or reduce file size.
 	 *
 	 * @param options - Configuration options for normal optimization
-	 * @returns Promise that resolves when normal optimization is complete
+	 * @returns Promise that resolves when normal optimization is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const normalsOptimization = useCallback(
 		async (options?: NormalsOptions): Promise<void> => {
@@ -457,6 +464,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Normals optimization failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -598,7 +606,9 @@ const useOptimizeModel = () => {
 		reset,
 
 		/**
-		 * Error object if any optimization operation failed, otherwise null.
+		 * The error from the last load, restore or source change that failed, or
+		 * whose report could not be read afterwards; otherwise null. Optimization
+		 * steps report a failure by rejecting, not here.
 		 */
 		error,
 
@@ -624,7 +634,8 @@ const useOptimizeModel = () => {
 		 * Maintains visual quality while improving performance.
 		 *
 		 * @param options - Simplification options (ratio, error threshold)
-		 * @returns Promise that resolves when simplification is complete
+		 * @returns Promise that resolves when simplification is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		simplifyOptimization,
 
@@ -633,7 +644,8 @@ const useOptimizeModel = () => {
 		 * Reduces file size without affecting visual appearance.
 		 *
 		 * @param options - Deduplication options
-		 * @returns Promise that resolves when deduplication is complete
+		 * @returns Promise that resolves when deduplication is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		dedupOptimization,
 
@@ -642,7 +654,8 @@ const useOptimizeModel = () => {
 		 * Reduces file size with minimal visual quality loss.
 		 *
 		 * @param options - Quantization options (bit depth)
-		 * @returns Promise that resolves when quantization is complete
+		 * @returns Promise that resolves when quantization is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		quantizeOptimization,
 
@@ -650,7 +663,8 @@ const useOptimizeModel = () => {
 		 * Optimizes normal vectors by removing, generating, or cleaning up normal data.
 		 *
 		 * @param options - Normal optimization options
-		 * @returns Promise that resolves when optimization is complete
+		 * @returns Promise that resolves when optimization is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		normalsOptimization,
 

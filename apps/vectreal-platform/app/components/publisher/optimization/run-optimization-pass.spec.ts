@@ -323,6 +323,27 @@ describe('runOptimizationPass', () => {
 		expect(callOrder.slice(-2)).toEqual(['restoreSource', 'applyOptimization'])
 	})
 
+	// The sync resolved whatever happened until it learned to reject, so a pass
+	// whose result never reached the viewer was reported as a success.
+	it('reports failure when the viewer cannot show the result', async () => {
+		const { deps } = createDeps(onlyEnable(['dedup']), {
+			applyOptimization: vi
+				.fn(recorded('applyOptimization', undefined))
+				.mockImplementationOnce(async () => {
+					callOrder.push('applyOptimization')
+					throw new Error('The optimized model could not be shown.')
+				})
+		})
+
+		const result = await runOptimizationPass(deps)
+
+		expect(result).toEqual({ succeeded: false, dracoReport: null })
+		expect(toast.error).toHaveBeenCalledWith(
+			'The optimized model could not be shown.'
+		)
+		expect(callOrder.slice(-2)).toEqual(['restoreSource', 'applyOptimization'])
+	})
+
 	it('always clears the pending flag, including on failure', async () => {
 		runGeometryOptimizationsInWorker.mockRejectedValue(new Error('boom'))
 		const { deps, runtime } = createDeps(onlyEnable(['dedup']))
