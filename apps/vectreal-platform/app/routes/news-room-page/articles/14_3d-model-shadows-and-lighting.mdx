@@ -29,7 +29,7 @@ coverImage: "/media/images/newsroom/og-3d-model-shadows-and-lighting.webp"
 
 A 3D model looks like it's standing somewhere once it has a shadow. In the [Vectreal Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=3d-model-shadows-and-lighting) that takes two switches, one for a shadow cast by a light and one for a darker shadow where the model meets the floor, and then a lighting preset that suits the product.
 
-<video src="/media/images/newsroom/14/shadows-and-light.mp4" poster="/media/images/newsroom/14/shadows-and-light-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera floats over a dark floor with nothing under it. A light comes on and its shadow lands beneath the camera, then swings around as the light is dragged. Closer to the floor, a darker shadow forms where the camera touches it. The light warms to golden hour, a blurred outdoor scene fades in behind, and the view turns around the camera."></video>
+<video src="/media/images/newsroom/14/shadows-and-light.mp4" poster="/media/images/newsroom/14/shadows-and-light-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera floats in the dark with nothing under it. A light comes on and its shadow lands beneath the camera, then swings around as the light is dragged. Closer to the floor, a darker shadow forms where the camera touches it. The light warms to golden hour, a blurred outdoor scene fades in behind, and the view turns around the camera."></video>
 
 ## Why does my 3D model look like it's floating?
 
@@ -39,11 +39,15 @@ Not every model needs to sit on something, so shadows start switched off in the 
 
 ## The cast shadow and the ground shadow
 
-![A plain grey stool, split down the middle. On the left, with no shadow light, it stands on a dark floor. On the right, a light low on the left lights the floor and throws the stool's shadow across it.](/media/images/newsroom/14/cast-shadow.webp)
+![Two views of the same plain grey stool. On the left, with Cast shadows off, it stands on an unlit floor. On the right, with it on, a light low on the left lights the floor and throws the stool's shadow across it.](/media/images/newsroom/14/cast-shadow.webp)
+
+*Left: Cast shadows off. Right: on.*
 
 **The cast shadow.** Switch on **Cast shadows** and the Publisher computes a shadow from a light above the model. It has the model's real shape and falls the way a shadow does, instead of being an outline of the model feathered onto the floor. Three presets, Soft, Studio and Dramatic, set its darkness, softness and angle together, and you can drag the light in the scene to change where it falls.
 
-![A close view of the stool's feet, split down the middle. On the right, where the ground shadow is on, the floor under and around the feet is darker than on the left.](/media/images/newsroom/14/ground-shadow.webp)
+![Two views of the same stool with its cast shadow. On the right, with Ground shadow on, the floor is darker right around its feet, where they touch it.](/media/images/newsroom/14/ground-shadow.webp)
+
+*Left: Ground shadow off. Right: on.*
 
 **The ground shadow.** With Cast shadows on, switch on **Ground shadow** for a smaller, darker shadow right where the model touches the floor. It's what makes the contact convincing: the wheels of a car or the base of a cup look pressed against the ground rather than hovering just above it. It starts at values that work, and you can soften or spread it if you want.
 
@@ -51,7 +55,9 @@ With both on, the model looks like it's standing on the floor.
 
 ## Which lighting preset should I pick?
 
-![The stool split down the middle: on the left under neutral studio light, on the right under golden-hour light, where its seat and legs turn warm.](/media/images/newsroom/14/environment-light.webp)
+![Two views of the same stool. On the left it is lit by the Studio soft preset; on the right by Outdoor golden hour, and its seat and legs turn warm.](/media/images/newsroom/14/environment-light.webp)
+
+*Left: Studio soft. Right: Outdoor golden hour.*
 
 The light on the model comes from an environment map, a panoramic image of a scene that lights the model and shows up in its reflections. I went through a lot of them and picked a few per category, so you can match the light to the mood of the product. They're under **Environment**, in the **HDR preset** menu:
 
@@ -68,7 +74,9 @@ A new scene starts on Studio natural, and the **Lighting** slider makes any pres
 
 ## A background instead of a void
 
-![The stool split down the middle: on the left on a dark stage, on the right in front of a blurred golden-hour scene, with its shadow falling across a warm floor.](/media/images/newsroom/14/background.webp)
+![Two views of the same stool under golden-hour light. On the left the background is hidden and it stands on a dark stage; on the right the blurred golden-hour scene is shown behind it.](/media/images/newsroom/14/background.webp)
+
+*Left: Background hidden. Right: shown and blurred.*
 
 Show the environment behind it. Under **Background** in the Environment section, switch on **Show** and turn **Blur** up to Soft or Blurred, and the model gets a soft backdrop. With the shadows on as well, the model reads as standing on a surface with a space around it, not floating in a void. It helps the shadows too: on a dark stage there's little for them to show against.
 
