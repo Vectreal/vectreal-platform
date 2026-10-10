@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.0.0...viewer-v2.1.0) (2026-10-10)
+
+
+### Features
+
+* **publisher:** hold to compare an optimization with its source ([#940](https://github.com/Vectreal/vectreal-platform/issues/940)) ([b7a4ab8](https://github.com/Vectreal/vectreal-platform/commit/b7a4ab86ec85ac56a0e93b18dfcc0595dd569478))
+* **viewer:** a way out of a hotspot's camera for visitors and authors ([#942](https://github.com/Vectreal/vectreal-platform/issues/942)) ([a0119d2](https://github.com/Vectreal/vectreal-platform/commit/a0119d2bc641919475687bed48baf908719ff8da))
+
+
+### Bug Fixes
+
+* **embed:** no command is lost before the viewer can run it ([#924](https://github.com/Vectreal/vectreal-platform/issues/924)) ([c69a3b1](https://github.com/Vectreal/vectreal-platform/commit/c69a3b1b6a727387f62f9450dd14e5701d51189e))
+* **viewer:** fly camera commands with the transition a host set ([#951](https://github.com/Vectreal/vectreal-platform/issues/951)) ([5199951](https://github.com/Vectreal/vectreal-platform/commit/51999515162b67592388b3bb3fe6712293f06f09))
+* **viewer:** keep the camera still when an optimization swaps the model ([#928](https://github.com/Vectreal/vectreal-platform/issues/928)) ([3185d1d](https://github.com/Vectreal/vectreal-platform/commit/3185d1df46b1d9c6372cacb6d2f8bf43847b6b68))
+* **viewer:** keep the viewer's stylesheet from overriding the host page ([#953](https://github.com/Vectreal/vectreal-platform/issues/953)) ([0c6d910](https://github.com/Vectreal/vectreal-platform/commit/0c6d910b343a1a55f9d741f73d8629b47f37f789))
+* **viewer:** light the scene from a local room when its environment map fails to load ([#956](https://github.com/Vectreal/vectreal-platform/issues/956)) ([c1d60a5](https://github.com/Vectreal/vectreal-platform/commit/c1d60a5ae195c5f856b9aaf9d74922f2e6cf62b1))
+
+
+### Performance Improvements
+
+* **embed:** remove the load freeze and move scene delivery work to publish time and the edge ([#941](https://github.com/Vectreal/vectreal-platform/issues/941)) ([46a9f1a](https://github.com/Vectreal/vectreal-platform/commit/46a9f1a5c026367139ab286fdccdf2ff9b3b4905))
+* **viewer:** build the environment's PMREM while the model downloads ([#943](https://github.com/Vectreal/vectreal-platform/issues/943)) ([af7863a](https://github.com/Vectreal/vectreal-platform/commit/af7863a23342da12d0bf33cf25357dae1abc9c3c))
+* **viewer:** measure a model once and derive every figure from it ([#948](https://github.com/Vectreal/vectreal-platform/issues/948)) ([8b5b9ab](https://github.com/Vectreal/vectreal-platform/commit/8b5b9abdf37021703437c71a596cef0c4a9425ab))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/core bumped to 2.1.0
+
 ## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v1.0.0...viewer-v2.0.0) (2026-10-02)
 
 

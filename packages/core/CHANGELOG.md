@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/core-v2.0.0...core-v2.1.0) (2026-10-10)
+
+
+### Bug Fixes
+
+* **core:** commit a texture pass atomically ([#960](https://github.com/Vectreal/vectreal-platform/issues/960)) ([006ab46](https://github.com/Vectreal/vectreal-platform/commit/006ab466d2a536e2b7731977722191c35be49bdd))
+* **core:** write glass as transparency in USDZ exports and say so on the converter ([#950](https://github.com/Vectreal/vectreal-platform/issues/950)) ([d9ebdbc](https://github.com/Vectreal/vectreal-platform/commit/d9ebdbc5135ed5ec4540f14d7beddd30b9f1f883))
+* **optimization:** derive every result from the original ([#929](https://github.com/Vectreal/vectreal-platform/issues/929)) ([dd0d291](https://github.com/Vectreal/vectreal-platform/commit/dd0d2916cc402893234c7e7aafe2e0536311d859))
+
+
+### Performance Improvements
+
+* **embed:** remove the load freeze and move scene delivery work to publish time and the edge ([#941](https://github.com/Vectreal/vectreal-platform/issues/941)) ([46a9f1a](https://github.com/Vectreal/vectreal-platform/commit/46a9f1a5c026367139ab286fdccdf2ff9b3b4905))
+* **publish:** ship meshopt geometry and KTX2 textures, decoded by every loader ([#944](https://github.com/Vectreal/vectreal-platform/issues/944)) ([004207f](https://github.com/Vectreal/vectreal-platform/commit/004207f67a2677d2764990d7e11cb2bec24e7b60))
+
 ## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/core-v1.0.0...core-v2.0.0) (2026-10-02)
 
 
