@@ -3,7 +3,7 @@ title: "From Upload to Embed - The Vectreal Publisher Walkthrough"
 slug: "the-vectreal-publisher-walkthrough"
 excerpt: "A practical step-by-step guide to the Vectreal Publisher workflow, from first upload to production embed."
 publishedAt: "2026-04-07"
-updatedAt: "2026-09-18"
+updatedAt: "2026-10-11"
 category: "guides"
 tags:
 - "publisher"
@@ -68,19 +68,20 @@ There are no hard file size limits enforced in the Publisher UI, though very lar
 
 ### Step 2 - Optimize
 
-![Optimizing a model](/media/images/newsroom/02/02-publisher-optimize.jpeg)
+<video src="/media/images/newsroom/02/optimize.mp4" poster="/media/images/newsroom/02/optimize-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera in the Publisher. The Optimize Scene panel opens beside it with the presets Original, Maximum quality, Balanced and Smallest. Balanced is chosen, the panel works through its steps, and the result shows the scene 95% smaller."></video>
 
-Once your model is in the viewport, the right sidebar shows the quality presets. These are the fastest way to reduce file size for web delivery.
+Once your model is in the viewport, open the **Optimize** card at the bottom right. The **Optimize Scene** panel lists the quality presets, the fastest way to reduce file size for web delivery.
 
 **Quality presets:**
 
 | Preset | Texture resolution | Texture quality | Use when |
 |---|---|---|---|
+| Original | Unchanged | Unchanged | Publishing the file exactly as uploaded |
 | Maximum quality | 2048 px | 90 | High-fidelity product display |
 | Balanced | 1024 px | 80 | Recommended for most web experiences |
 | Smallest | 512 px | 70 | Maximum performance, lightweight pages |
 
-All three share the same geometry pipeline: duplicate removal plus Draco compression, both always on. The only thing a preset changes is texture resolution and quality.
+Original runs nothing, so the scene stays exactly as uploaded; a new scene starts on it. The other three share the same geometry pipeline: duplicate removal plus Draco compression, both always on. The only thing they change between them is texture resolution and quality.
 
 Presets are **non-destructive**: switching between them re-processes from the original uploaded file. Nothing is lost. Advanced users can override texture values, and opt into mesh simplification, in the settings panel.
 
@@ -96,11 +97,11 @@ For server-side optimization (via `@vctrl/core`), Sharp is used for texture comp
 
 ### Step 3 - Configure
 
-![Composing the scene](/media/images/newsroom/02/03-publisher-compose.jpeg)
-
 Beyond file size, the Publisher gives you full control over how the scene looks and behaves.
 
 #### Lighting and Environment
+
+<video src="/media/images/newsroom/02/environment.mp4" poster="/media/images/newsroom/02/environment-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera on a dark, empty stage in the Publisher. The Environment panel opens and the background switches to a soft light studio behind the camera, lighting it from all sides."></video>
 
 Choose from a set of HDR environment presets - including studio, golden hour, and overcast options - that determine ambient lighting, reflections, and image-based lighting (IBL). You can adjust lighting strength, toggle **Show as background**, and tune **Background Blur** and **Background Brightness**. With the background toggle off, the background stays transparent; there is no solid background color setting.
 
@@ -108,13 +109,17 @@ The viewer fits the camera to the loaded model automatically via its bounds logi
 
 #### Camera
 
+<video src="/media/images/newsroom/02/camera-preview.mp4" poster="/media/images/newsroom/02/camera-preview-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera with a hotspot on its lens. The Camera panel opens and the view moves in close on the lens for that camera, then preview mode clears the tool rails and panels away and leaves the camera alone on the page."></video>
+
 There are no x/y/z position inputs. Frame the shot in the viewport, then click **Set camera to current view** to capture the position, rotation, target, and field of view onto the selected camera. Field of view is a three-way preset: Wide (90°), Standard (60°), Telephoto (35°).
 
 **Auto Rotate:** in the **Interaction** tool, enable continuous orbit around the model and set the rotation speed. There is no pause-on-interaction delay.
 
 #### Shadows
 
-Shadows are off by default. The **Shadows** tool has a single **Enabled** switch, then three presets (Soft, Studio, Dramatic) that each set a complete look, plus **Opacity**, **Darkness** and **Softness** sliders to adjust one. A separate **Ground shadow** section adds a soft pool under the model, and **Ambient occlusion** sits behind **Advanced**.
+<video src="/media/images/newsroom/02/shadows.mp4" poster="/media/images/newsroom/02/shadows-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera in the Publisher. The Shadows panel opens, Cast shadows is switched on and the Studio preset chosen, then the Ground shadow sliders are adjusted while a shadow settles under the camera."></video>
+
+Shadows are off by default. The **Shadows** tool has a single **Cast shadows** toggle, then three presets (Soft, Studio, Dramatic) that each set a complete look, plus **Opacity**, **Darkness** and **Softness** sliders to adjust one. A separate **Ground shadow** section adds a soft pool under the model, and **Ambient occlusion** sits behind **Advanced**.
 
 #### Grid
 
@@ -124,7 +129,7 @@ Grid controls are currently not active in the viewer render flow. This section w
 
 ### Step 4 - Save the Scene
 
-![Dashboard view](/media/images/newsroom/02/04-dashboard-recent.jpeg)
+<video src="/media/images/newsroom/02/save-to-dashboard.mp4" poster="/media/images/newsroom/02/save-to-dashboard-poster.webp" autoPlay muted loop playsInline aria-label="From the Publisher, the account menu leads to the saved camera scene's details page, with its preview, publishing state and assets, and then to the Dashboard overview, where the camera scene sits at the top as the most recent work."></video>
 
 Click **Save** in the Publisher header.
 
@@ -139,15 +144,15 @@ To load a different model, start from [vectreal.com/publisher](https://vectreal.
 
 ### Step 5 - Publish
 
-![Publishing a scene](/media/images/newsroom/02/05-publisher-publish.jpeg)
+<video src="/media/images/newsroom/02/publish.mp4" poster="/media/images/newsroom/02/publish-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera in the Publisher with the Scene Info & Publish panel open. Publish Scene is clicked and confirmed, and a toast reports that the scene was published."></video>
 
-From the Dashboard, open the scene. In the **Publish** sidebar section, click **Publish**.
+In the Publisher, open the **Publish** card at the bottom right. In the **Scene Info & Publish** panel, click **Publish Scene** and confirm.
 
 Publishing transitions the scene from **draft** to **published** status and generates a stable embed URL.
 
 > **Draft scenes are never accessible to external iframe embeds.** They remain viewable only by authenticated collaborators with project access.
 
-To revert, click **Unpublish**. The embed URL becomes inaccessible to external principals immediately.
+To revert, revoke the publication. That removes the published asset and sets the scene back to draft, so the embed URL becomes inaccessible to external principals immediately.
 
 ---
 
@@ -245,7 +250,7 @@ Worth bookmarking for debugging:
 | Optimize | Select quality preset | No |
 | Configure | Adjust lighting, camera, shadows | No |
 | Save | Click Save | Yes (free) |
-| Publish | Click Publish in sidebar | Yes |
+| Publish | Click Publish Scene in Scene Info & Publish | Yes |
 | API Key | Create in Dashboard → API Keys | Yes |
 | Embed | Paste iframe snippet | - |
 
