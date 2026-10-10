@@ -3,7 +3,7 @@ title: "What the three optimization presets actually do"
 slug: "optimization-presets-and-texture-compression"
 excerpt: "The Publisher has three optimization presets: Maximum quality, Balanced and Smallest. They differ only in how they treat textures; the geometry work is identical in all three, with Draco compression applied when you publish. This walks through what each preset decides, what every preset does the same, and when to open the advanced panel instead."
 publishedAt: "2026-05-17"
-updatedAt: "2026-08-01"
+updatedAt: "2026-10-11"
 category: "guides"
 tags:
 - "optimization"
@@ -28,7 +28,7 @@ cta: https://vectreal.com/publisher
 sceneImage: "/media/images/newsroom/scene-optimization-presets-and-texture-compression.webp"
 ---
 
-The Publisher has three optimization presets: **Maximum quality**, **Balanced** and **Smallest**. Balanced is the default. The only thing that changes between them is how textures are treated. Everything they do to geometry is identical, and the biggest geometry saving, Draco compression, is applied when you publish rather than while you edit.
+The Publisher has three optimization presets: **Maximum quality**, **Balanced** and **Smallest**. The only thing that changes between them is how textures are treated. Everything they do to geometry is identical, and the biggest geometry saving, Draco compression, is applied when you publish rather than while you edit. A new scene starts on a fourth choice, **Original**, which runs nothing at all, so the model stays exactly as you uploaded it until you pick one of the three.
 
 A note before the detail: I rewrote this article on 1 August 2026. The version that used to live at this URL described an earlier pipeline with four presets and a different texture stack, and the rework that shipped on 31 July made most of it wrong. What follows matches the Publisher as it is now.
 
@@ -78,7 +78,7 @@ A Draco-compressed file needs a Draco-capable loader to open, and decoding costs
 
 ## Picking a preset in practice
 
-Start on Balanced, which is where the Publisher starts you. Look at the scene at normal viewing distance. If textures visibly softened, step up to Maximum quality. If the scene is bound for mobile or sits in a grid of embeds, try Smallest and see whether you can tell. The pass never damages the document, so trying all three costs you nothing but the wait.
+The Publisher opens on Original, so nothing has been optimized yet. Pick Balanced first and look at the scene at normal viewing distance. If textures visibly softened, step up to Maximum quality. If the scene is bound for mobile or sits in a grid of embeds, try Smallest and see whether you can tell. The pass never damages the document, so trying all three costs you nothing but the wait, and choosing Original takes you back to the model as uploaded.
 
 This is a pre-1.0 project. If a preset produces something that looks wrong rather than just smaller, that is a bug, and reporting it helps.
 
