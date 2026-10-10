@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v2.0.0...hooks-v2.1.0) (2026-10-10)
+
+
+### Bug Fixes
+
+* **core:** commit a texture pass atomically ([#960](https://github.com/Vectreal/vectreal-platform/issues/960)) ([006ab46](https://github.com/Vectreal/vectreal-platform/commit/006ab466d2a536e2b7731977722191c35be49bdd))
+* **hooks:** reject when applyOptimization or a geometry pass fails ([#962](https://github.com/Vectreal/vectreal-platform/issues/962)) ([55dd7bf](https://github.com/Vectreal/vectreal-platform/commit/55dd7bf9782ea7acbc006fb0c5d23e99c10bf36c))
+* **hooks:** return the GLB result when download is false ([#925](https://github.com/Vectreal/vectreal-platform/issues/925)) ([daed31e](https://github.com/Vectreal/vectreal-platform/commit/daed31ee804868b6ceda7d1e81b42bcb2d20e2ae))
+* **optimization:** derive every result from the original ([#929](https://github.com/Vectreal/vectreal-platform/issues/929)) ([dd0d291](https://github.com/Vectreal/vectreal-platform/commit/dd0d2916cc402893234c7e7aafe2e0536311d859))
+* **optimization:** never record a pass into a scene opened while it ran ([#931](https://github.com/Vectreal/vectreal-platform/issues/931)) ([7d67240](https://github.com/Vectreal/vectreal-platform/commit/7d672408f88cd7e34cf187658cd6eac700380de7))
+* stop Safari writing PNG textures under a WebP label ([#958](https://github.com/Vectreal/vectreal-platform/issues/958)) ([a162633](https://github.com/Vectreal/vectreal-platform/commit/a16263303f8f78363b4e3708076f94beacfb5e41))
+* **viewer:** keep the camera still when an optimization swaps the model ([#928](https://github.com/Vectreal/vectreal-platform/issues/928)) ([3185d1d](https://github.com/Vectreal/vectreal-platform/commit/3185d1df46b1d9c6372cacb6d2f8bf43847b6b68))
+
+
+### Performance Improvements
+
+* **embed:** remove the load freeze and move scene delivery work to publish time and the edge ([#941](https://github.com/Vectreal/vectreal-platform/issues/941)) ([46a9f1a](https://github.com/Vectreal/vectreal-platform/commit/46a9f1a5c026367139ab286fdccdf2ff9b3b4905))
+* **publish:** ship meshopt geometry and KTX2 textures, decoded by every loader ([#944](https://github.com/Vectreal/vectreal-platform/issues/944)) ([004207f](https://github.com/Vectreal/vectreal-platform/commit/004207f67a2677d2764990d7e11cb2bec24e7b60))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 2.1.0
+
 ## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v1.0.0...hooks-v2.0.0) (2026-10-02)
 
 

@@ -1,5 +1,52 @@
 # Changelog
 
+## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v2.0.0...workspace-v2.1.0) (2026-10-10)
+
+
+### Features
+
+* **dashboard:** redesign the landing page around a dithered opening band ([#935](https://github.com/Vectreal/vectreal-platform/issues/935)) ([9f809c1](https://github.com/Vectreal/vectreal-platform/commit/9f809c1a7aeaedf80a432982e2a1f564ad4c1fa8))
+* **publisher:** hold to compare an optimization with its source ([#940](https://github.com/Vectreal/vectreal-platform/issues/940)) ([b7a4ab8](https://github.com/Vectreal/vectreal-platform/commit/b7a4ab86ec85ac56a0e93b18dfcc0595dd569478))
+* **publisher:** keep a scene's original on save ([#939](https://github.com/Vectreal/vectreal-platform/issues/939)) ([17a702a](https://github.com/Vectreal/vectreal-platform/commit/17a702a4b5e277f7e0177fa94e526d8c214cf8b3))
+* **publisher:** make interaction feel presets set damping and speeds together ([#964](https://github.com/Vectreal/vectreal-platform/issues/964)) ([843efb3](https://github.com/Vectreal/vectreal-platform/commit/843efb33502b1b5632fc127da91cbda4cb7a91fc))
+* **publisher:** open a hotspot's linked camera in the Camera tool ([#937](https://github.com/Vectreal/vectreal-platform/issues/937)) ([d007fe8](https://github.com/Vectreal/vectreal-platform/commit/d007fe8e296f74b778ebf79f6e8c815949a5e4b9))
+* **publisher:** redesign controls, tool bar and drill-down panels ([#926](https://github.com/Vectreal/vectreal-platform/issues/926)) ([65cb34a](https://github.com/Vectreal/vectreal-platform/commit/65cb34a07d0da5a2e6fb3d16d528ffcc32adcd48))
+* **publisher:** show what a save is doing in an upload panel ([#934](https://github.com/Vectreal/vectreal-platform/issues/934)) ([8c75b92](https://github.com/Vectreal/vectreal-platform/commit/8c75b92f0353b45b8379b9c5c11501d227991b33))
+* **viewer:** a way out of a hotspot's camera for visitors and authors ([#942](https://github.com/Vectreal/vectreal-platform/issues/942)) ([a0119d2](https://github.com/Vectreal/vectreal-platform/commit/a0119d2bc641919475687bed48baf908719ff8da))
+
+
+### Bug Fixes
+
+* **convert:** act on the optimizer only for the model it holds ([#963](https://github.com/Vectreal/vectreal-platform/issues/963)) ([3478626](https://github.com/Vectreal/vectreal-platform/commit/3478626f716cca4e69169fc0a72ac7b00311efeb))
+* **convert:** export USDZ from the stage without preparing the document ([#966](https://github.com/Vectreal/vectreal-platform/issues/966)) ([2949133](https://github.com/Vectreal/vectreal-platform/commit/2949133b463c80951ad26dfb7258c3ac0fe4ca44))
+* **convert:** hand the publisher the model as it was loaded ([#968](https://github.com/Vectreal/vectreal-platform/issues/968)) ([b969eb6](https://github.com/Vectreal/vectreal-platform/commit/b969eb67382483288c6dcdf58c1fe25790ad146a))
+* **convert:** say a model could not be prepared instead of "still preparing" ([#967](https://github.com/Vectreal/vectreal-platform/issues/967)) ([838a197](https://github.com/Vectreal/vectreal-platform/commit/838a19734023830c5ace90d514a19f80e3e53ec3))
+* **convert:** undo a WebP pass by restoring the optimizer's source ([#965](https://github.com/Vectreal/vectreal-platform/issues/965)) ([b578329](https://github.com/Vectreal/vectreal-platform/commit/b57832933039b186409f23dca9a01f191e665272))
+* **core:** commit a texture pass atomically ([#960](https://github.com/Vectreal/vectreal-platform/issues/960)) ([006ab46](https://github.com/Vectreal/vectreal-platform/commit/006ab466d2a536e2b7731977722191c35be49bdd))
+* **core:** write glass as transparency in USDZ exports and say so on the converter ([#950](https://github.com/Vectreal/vectreal-platform/issues/950)) ([d9ebdbc](https://github.com/Vectreal/vectreal-platform/commit/d9ebdbc5135ed5ec4540f14d7beddd30b9f1f883))
+* **dashboard:** roll the thumbnail toggle back when its request is dropped ([#949](https://github.com/Vectreal/vectreal-platform/issues/949)) ([461b260](https://github.com/Vectreal/vectreal-platform/commit/461b26025692381708a38b639a30282ac6d6e211))
+* **embed:** no command is lost before the viewer can run it ([#924](https://github.com/Vectreal/vectreal-platform/issues/924)) ([c69a3b1](https://github.com/Vectreal/vectreal-platform/commit/c69a3b1b6a727387f62f9450dd14e5701d51189e))
+* **hooks:** reject when applyOptimization or a geometry pass fails ([#962](https://github.com/Vectreal/vectreal-platform/issues/962)) ([55dd7bf](https://github.com/Vectreal/vectreal-platform/commit/55dd7bf9782ea7acbc006fb0c5d23e99c10bf36c))
+* **hooks:** return the GLB result when download is false ([#925](https://github.com/Vectreal/vectreal-platform/issues/925)) ([daed31e](https://github.com/Vectreal/vectreal-platform/commit/daed31ee804868b6ceda7d1e81b42bcb2d20e2ae))
+* **optimization:** derive every result from the original ([#929](https://github.com/Vectreal/vectreal-platform/issues/929)) ([dd0d291](https://github.com/Vectreal/vectreal-platform/commit/dd0d2916cc402893234c7e7aafe2e0536311d859))
+* **optimization:** never record a pass into a scene opened while it ran ([#931](https://github.com/Vectreal/vectreal-platform/issues/931)) ([7d67240](https://github.com/Vectreal/vectreal-platform/commit/7d672408f88cd7e34cf187658cd6eac700380de7))
+* **publisher:** open preview on the default camera and restore the editor's on exit ([#936](https://github.com/Vectreal/vectreal-platform/issues/936)) ([d0dcd3f](https://github.com/Vectreal/vectreal-platform/commit/d0dcd3f62e71b214fe647768b02258679c2f5930))
+* **publisher:** say that picking a preset applies it and Save keeps it ([#932](https://github.com/Vectreal/vectreal-platform/issues/932)) ([18abce1](https://github.com/Vectreal/vectreal-platform/commit/18abce1f1909564cb054b74be2f9d50f423d91ae))
+* stop Safari writing PNG textures under a WebP label ([#958](https://github.com/Vectreal/vectreal-platform/issues/958)) ([a162633](https://github.com/Vectreal/vectreal-platform/commit/a16263303f8f78363b4e3708076f94beacfb5e41))
+* **viewer:** fly camera commands with the transition a host set ([#951](https://github.com/Vectreal/vectreal-platform/issues/951)) ([5199951](https://github.com/Vectreal/vectreal-platform/commit/51999515162b67592388b3bb3fe6712293f06f09))
+* **viewer:** keep the camera still when an optimization swaps the model ([#928](https://github.com/Vectreal/vectreal-platform/issues/928)) ([3185d1d](https://github.com/Vectreal/vectreal-platform/commit/3185d1df46b1d9c6372cacb6d2f8bf43847b6b68))
+* **viewer:** keep the viewer's stylesheet from overriding the host page ([#953](https://github.com/Vectreal/vectreal-platform/issues/953)) ([0c6d910](https://github.com/Vectreal/vectreal-platform/commit/0c6d910b343a1a55f9d741f73d8629b47f37f789))
+* **viewer:** light the scene from a local room when its environment map fails to load ([#956](https://github.com/Vectreal/vectreal-platform/issues/956)) ([c1d60a5](https://github.com/Vectreal/vectreal-platform/commit/c1d60a5ae195c5f856b9aaf9d74922f2e6cf62b1))
+
+
+### Performance Improvements
+
+* **embed:** remove the load freeze and move scene delivery work to publish time and the edge ([#941](https://github.com/Vectreal/vectreal-platform/issues/941)) ([46a9f1a](https://github.com/Vectreal/vectreal-platform/commit/46a9f1a5c026367139ab286fdccdf2ff9b3b4905))
+* **preview:** show the published artefact in /preview and the dashboard ([#945](https://github.com/Vectreal/vectreal-platform/issues/945)) ([52fced2](https://github.com/Vectreal/vectreal-platform/commit/52fced23d47c75684a116e8c6b741bc9e5e98f59))
+* **publish:** ship meshopt geometry and KTX2 textures, decoded by every loader ([#944](https://github.com/Vectreal/vectreal-platform/issues/944)) ([004207f](https://github.com/Vectreal/vectreal-platform/commit/004207f67a2677d2764990d7e11cb2bec24e7b60))
+* **viewer:** build the environment's PMREM while the model downloads ([#943](https://github.com/Vectreal/vectreal-platform/issues/943)) ([af7863a](https://github.com/Vectreal/vectreal-platform/commit/af7863a23342da12d0bf33cf25357dae1abc9c3c))
+* **viewer:** measure a model once and derive every figure from it ([#948](https://github.com/Vectreal/vectreal-platform/issues/948)) ([8b5b9ab](https://github.com/Vectreal/vectreal-platform/commit/8b5b9abdf37021703437c71a596cef0c4a9425ab))
+
 ## [2.0.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v1.0.0...workspace-v2.0.0) (2026-10-02)
 
 
