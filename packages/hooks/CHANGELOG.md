@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v2.1.0...hooks-v2.2.0) (2026-10-11)
+
+
+### Miscellaneous Chores
+
+* **hooks:** Synchronize vectreal-monorepo versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 2.2.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v2.0.0...hooks-v2.1.0) (2026-10-10)
 
 

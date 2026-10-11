@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.1.0...viewer-v2.2.0) (2026-10-11)
+
+
+### Features
+
+* **publisher:** animation tool for the clips a model carries ([#987](https://github.com/Vectreal/vectreal-platform/issues/987)) ([4b7425d](https://github.com/Vectreal/vectreal-platform/commit/4b7425de0ef97b61729c301f1c80e7813987e190))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/core bumped to 2.2.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.0.0...viewer-v2.1.0) (2026-10-10)
 
 
