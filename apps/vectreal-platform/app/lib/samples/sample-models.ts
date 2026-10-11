@@ -87,6 +87,13 @@ export function sampleModelById(id: string): SampleModel | null {
 	return SAMPLE_MODELS.find((sample) => sample.id === id) ?? null
 }
 
+/** For an id the code itself names, where a missing sample is a bug rather than a bad link. */
+export function requireSampleModel(id: string): SampleModel {
+	const sample = sampleModelById(id)
+	if (!sample) throw new Error(`Unknown sample "${id}"`)
+	return sample
+}
+
 /**
  * Fetches a sample as a `File`, ready for the same load path a dropped file
  * takes. Nothing about it is special-cased downstream: it is a real GLB going
@@ -99,7 +106,7 @@ export function sampleModelById(id: string): SampleModel | null {
  * compressed response's header counts what crossed the wire.
  */
 export async function fetchSampleModel(
-	sample: SampleModel,
+	sample: Pick<SampleModel, 'url' | 'fileName' | 'bytes'>,
 	onProgress?: (fraction: number) => void
 ): Promise<File> {
 	const response = await fetch(sample.url)

@@ -18,7 +18,16 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { Box3, Matrix4, PerspectiveCamera, Vector3 } from 'three'
+import {
+	Box3,
+	BoxGeometry,
+	Group,
+	Matrix4,
+	Mesh,
+	PerspectiveCamera,
+	PlaneGeometry,
+	Vector3
+} from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -124,7 +133,13 @@ describe('applyInitialFraming', () => {
 			const controls = viewerControls(camera)
 			const approach = camera.position.clone().sub(center).setY(0).normalize()
 
-			applyInitialFraming(fakeBounds(box, distance), camera, controls, true)
+			applyInitialFraming(
+				fakeBounds(box, distance),
+				null,
+				camera,
+				controls,
+				true
+			)
 
 			expectMatrixWorldCurrent(camera)
 
@@ -153,7 +168,7 @@ describe('applyInitialFraming', () => {
 		const controls = viewerControls(camera)
 		controls.maxDistance = 3
 
-		applyInitialFraming(fakeBounds(box, 8), camera, controls, true)
+		applyInitialFraming(fakeBounds(box, 8), null, camera, controls, true)
 
 		expect(camera.position.distanceTo(center)).toBeCloseTo(3, 6)
 	})
@@ -164,7 +179,7 @@ describe('applyInitialFraming', () => {
 		const camera = new PerspectiveCamera(60, 16 / 9)
 		camera.position.set(0, 0, 5)
 
-		applyInitialFraming(fakeBounds(box, 4), camera, null, true)
+		applyInitialFraming(fakeBounds(box, 4), null, camera, null, true)
 
 		expectMatrixWorldCurrent(camera)
 		const facing = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
@@ -180,7 +195,7 @@ describe('applyInitialFraming', () => {
 			4
 		)
 
-		applyInitialFraming(bounds, new PerspectiveCamera(), null, true)
+		applyInitialFraming(bounds, null, new PerspectiveCamera(), null, true)
 
 		expect(bounds.calls).toEqual(['refresh', 'getSize'])
 		expect(bounds.reset).not.toHaveBeenCalled()
@@ -199,7 +214,7 @@ describe('applyInitialFraming', () => {
 		const storedQuaternion = camera.quaternion.clone()
 		const controls = { target: new Vector3(0.5, 0.5, 0.5), update: vi.fn() }
 
-		applyInitialFraming(bounds, camera, controls, false)
+		applyInitialFraming(bounds, null, camera, controls, false)
 
 		expect(camera.position.toArray()).toEqual(storedPosition.toArray())
 		expect(camera.quaternion.toArray()).toEqual(storedQuaternion.toArray())
@@ -209,6 +224,104 @@ describe('applyInitialFraming', () => {
 		// what `clip()` measures.
 		expect(bounds.calls).toEqual(['refresh', 'clip'])
 		expect(bounds.reset).not.toHaveBeenCalled()
+	})
+})
+
+/**
+ * drei's own `refresh()` and `getSize()`, over a real group: `refresh(object)`
+ * measures that object, `refresh()` the whole `<Bounds>` group, and the
+ * distance is drei's fit formula at the viewer's 1.5 margin.
+ */
+function dreiBounds(group: Group, camera: PerspectiveCamera) {
+	const box = new Box3()
+	const api = {
+		refresh(object?: Group | Mesh) {
+			const target = object ?? group
+			target.updateWorldMatrix(true, true)
+			box.setFromObject(target)
+			return api
+		},
+		getSize() {
+			const size = box.getSize(new Vector3())
+			const maxSize = Math.max(size.x, size.y, size.z)
+			const fitHeight = maxSize / (2 * Math.atan((Math.PI * camera.fov) / 360))
+			const fitWidth = fitHeight / camera.aspect
+			return {
+				box,
+				size,
+				center: box.getCenter(new Vector3()),
+				distance: 1.5 * Math.max(fitHeight, fitWidth)
+			}
+		},
+		reset: () => api,
+		fit: () => api,
+		clip: () => api
+	}
+	return api as unknown as BoundsApi
+}
+
+/**
+ * What `<SceneBounds>` holds with shadows on at load: the model, and beside it
+ * the shadow plane SceneShadows lays at 2.5 times the model's footprint.
+ */
+function boundsGroupWithShadows() {
+	const group = new Group()
+	const model = new Mesh(new BoxGeometry(1, 1, 1))
+	model.position.y = 0.5
+	const shadowPlane = new Mesh(new PlaneGeometry(1, 1))
+	shadowPlane.rotation.x = -Math.PI / 2
+	shadowPlane.scale.setScalar(2.5)
+	group.add(model, shadowPlane)
+	return { group, model }
+}
+
+describe('applyInitialFraming frames the model, not the whole bounds group', () => {
+	const camera = () => {
+		const camera = new PerspectiveCamera(60, 16 / 9)
+		camera.position.set(0, 2, 5)
+		return camera
+	}
+
+	it('opens at the same distance with shadows on at load as without them', () => {
+		const { group, model } = boundsGroupWithShadows()
+		const withShadows = camera()
+		applyInitialFraming(
+			dreiBounds(group, withShadows),
+			model,
+			withShadows,
+			null,
+			true
+		)
+
+		const modelOnly = new Group()
+		const alone = model.clone()
+		modelOnly.add(alone)
+		const withoutShadows = camera()
+		applyInitialFraming(
+			dreiBounds(modelOnly, withoutShadows),
+			alone,
+			withoutShadows,
+			null,
+			true
+		)
+
+		const center = new Vector3(0, 0.5, 0)
+		expect(withShadows.position.distanceTo(center)).toBeCloseTo(
+			withoutShadows.position.distanceTo(center),
+			6
+		)
+	})
+
+	it('frames the whole group when there is no model, only children', () => {
+		const { group } = boundsGroupWithShadows()
+		const viewer = camera()
+		const bounds = dreiBounds(group, viewer)
+
+		applyInitialFraming(bounds, null, viewer, null, true)
+
+		// The plane is the widest thing in the group, so it sets the distance.
+		const { distance, center } = bounds.refresh().getSize()
+		expect(viewer.position.distanceTo(center)).toBeCloseTo(distance, 6)
 	})
 })
 
@@ -230,12 +343,24 @@ describe('SceneCamera frames the first view through applyInitialFraming', () => 
 		// Comment lines between the two calls are skipped only whole, so a
 		// commented-out call cannot satisfy the match.
 		expect(source).toMatch(
-			/applyCameraInstantly\(selection\)\s*(?:\/\/[^\n]*\n\s*)*applyInitialFraming\(\s*bounds,\s*sceneCamera,\s*getThreeState\(\)\.controls as InitialFramingControls \| null,\s*boundsEnabled\s*\)/
+			/applyCameraInstantly\(selection\)\s*(?:\/\/[^\n]*\n\s*)*applyInitialFraming\(\s*bounds,\s*model,\s*sceneCamera,\s*getThreeState\(\)\.controls as InitialFramingControls \| null,\s*boundsEnabled\s*\)/
 		)
 		// `get` reads the store when called; a selector returning the state
 		// would hand back this render's snapshot instead.
 		expect(source).toMatch(
 			/const getThreeState = useThree\(\(state\) => state\.get\)/
+		)
+	})
+
+	it('is handed the model the viewer draws', () => {
+		const viewer = readFileSync(
+			join(import.meta.dirname, '..', '..', 'vectreal-viewer.tsx'),
+			'utf8'
+		)
+		const start = viewer.indexOf('<SceneCamera')
+		expect(start).toBeGreaterThan(-1)
+		expect(viewer.slice(start, viewer.indexOf('/>', start))).toMatch(
+			/\bmodel=\{model\}/
 		)
 	})
 

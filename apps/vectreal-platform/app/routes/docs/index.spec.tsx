@@ -34,7 +34,8 @@ describe('the docs index', () => {
 		renderPage()
 
 		const link = door('In the browser').getByRole('link', {
-			name: 'Open the publisher with the rocket sample'
+			// The row's size line is part of the name: what opening it costs.
+			name: /^Open the rocket sample/
 		})
 		expect(link.getAttribute('href')).toBe('/publisher?sample=rocket')
 		expect(

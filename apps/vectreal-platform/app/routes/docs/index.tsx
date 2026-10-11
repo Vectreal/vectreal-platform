@@ -1,9 +1,11 @@
 import { Button } from '@shared/components/ui/button'
+import { formatFileSize } from '@shared/utils'
 import { ArrowRight } from 'lucide-react'
 import { Link, type MetaArgs } from 'react-router'
 
 import { PublicErrorBoundary } from '../../components/errors'
 import { PageHero } from '../../components/layout-components'
+import { ModelLinkRow } from '../../components/layout-components/model-link-row'
 import { routeErrorMeta } from '../../components/not-found'
 import { DOCS_PAGE_COPY } from '../../constants/product-copy'
 import {
@@ -12,7 +14,10 @@ import {
 	docsPages,
 	type DocCategory
 } from '../../lib/docs/docs-manifest'
-import { publisherSampleHref } from '../../lib/samples/sample-models'
+import {
+	publisherSampleHref,
+	requireSampleModel
+} from '../../lib/samples/sample-models'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
@@ -30,6 +35,9 @@ export function meta({ error }: MetaArgs) {
   day it is added to the manifest, which is the only place a contributor is
   told to register one.
 */
+// The sample offered from the browser door: the one under a megabyte.
+const rocket = requireSampleModel('rocket')
+
 const pagesIn = (category: DocCategory) =>
 	docsPages
 		.filter((page) => page.category === category)
@@ -141,14 +149,14 @@ export default function DocsIndexPage() {
 							start={
 								audience.id === 'browser' && (
 									/* The publisher with a model already on its way, so there is nothing to hand over first. */
-									<Link
+									<ModelLinkRow
 										to={publisherSampleHref('rocket')}
+										previewUrl={rocket.previewUrl}
+										title={DOCS_PAGE_COPY.rocketSampleCta}
+										meta={`${formatFileSize(rocket.bytes)} · ${rocket.hint}`}
+										className="mt-4"
 										viewTransition
-										className="text-body-sm text-foreground decoration-orange mt-4 inline-flex items-center gap-1.5 underline-offset-4 hover:underline"
-									>
-										{DOCS_PAGE_COPY.rocketSampleCta}
-										<ArrowRight className="h-3.5 w-3.5" />
-									</Link>
+									/>
 								)
 							}
 						/>

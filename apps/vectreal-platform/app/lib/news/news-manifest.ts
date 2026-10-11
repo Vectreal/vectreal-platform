@@ -1,8 +1,10 @@
 import { isValidElement } from 'react'
 
+import { resolveArticleCta } from './article-cta'
 import { formatShortDate } from '../../constants/limit-format'
 import { normalizeSlug } from '../utils/slug'
 
+import type { ArticleCta } from './article-cta'
 import type { ComponentType, ReactNode } from 'react'
 
 export interface NewsAuthor {
@@ -34,6 +36,8 @@ export interface NewsArticleFrontmatter {
 	heroSeed?: number
 	/** Replaces the generated hero with a real image. Use sparingly - see the spec. */
 	heroImage?: string
+	/** Where the closing panel sends the reader: a vectreal.com /publisher or /convert URL. See `resolveArticleCta`. */
+	cta?: string
 	draft?: boolean
 }
 
@@ -63,6 +67,7 @@ export interface NewsArticle {
 	heroSeed?: number
 	/** Replaces the generated hero with a real image. Use sparingly - see the spec. */
 	heroImage?: string
+	cta: ArticleCta
 	draft: boolean
 	readingTimeMinutes: number
 	sourcePath: string
@@ -98,11 +103,11 @@ const rawArticleModules = import.meta.glob<unknown>(
 
 const DEV = import.meta.env.DEV
 
-function isDraftArticle(frontmatter: Partial<NewsArticleFrontmatter>): boolean {
+function isDraftArticle(frontmatter: { draft?: boolean }): boolean {
 	return Boolean(frontmatter.draft)
 }
 
-function canShowArticle(frontmatter: Partial<NewsArticleFrontmatter>): boolean {
+function canShowArticle(frontmatter: { draft?: boolean }): boolean {
 	return DEV || !isDraftArticle(frontmatter)
 }
 
@@ -289,6 +294,16 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			return null
 		}
 
+		const cta = resolveArticleCta(module.frontmatter?.cta)
+		if (!cta) {
+			if (DEV) {
+				console.warn(
+					`Newsroom article skipped (${moduleKey}): cta must be a vectreal.com /publisher or /convert URL.`
+				)
+			}
+			return null
+		}
+
 		const fileName = getFileName(moduleKey)
 		const rawModuleEntry =
 			rawArticleModules[moduleKey] ??
@@ -339,6 +354,7 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			...(module.frontmatter?.heroImage
 				? { heroImage: module.frontmatter.heroImage }
 				: {}),
+			cta,
 			draft: Boolean(module.frontmatter?.draft),
 			readingTimeMinutes: calculateReadingTimeMinutes(readingTimeSource),
 			sourcePath,

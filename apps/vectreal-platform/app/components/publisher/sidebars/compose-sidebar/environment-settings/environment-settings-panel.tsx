@@ -9,7 +9,6 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { Slider, type SliderPreset } from '@shared/components/ui/slider'
-import { Toggle } from '@shared/components/ui/toggle'
 import {
 	ToggleGroup,
 	ToggleGroupItem
@@ -24,6 +23,12 @@ import { useAtom } from 'jotai/react'
 import { Image as ImageIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
+import {
+	type BackgroundMode,
+	backgroundModeOf,
+	withBackgroundMode
+} from './background-mode'
+import StageColorField from './stage-color-field'
 import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { SettingGroup } from '../../sidebar-section'
@@ -79,9 +84,45 @@ const BG_BRIGHTNESS_PRESETS: SliderPreset[] = [
 	{ value: 2, label: 'Bright' }
 ]
 
+const BACKGROUND_MODES: {
+	value: BackgroundMode
+	label: string
+	summary: string
+}[] = [
+	{ value: 'environment', label: 'HDRI', summary: 'Environment' },
+	{ value: 'color', label: 'Color', summary: 'Color' },
+	{ value: 'gradient', label: 'Gradient', summary: 'Gradient' },
+	{ value: 'none', label: 'None', summary: 'Transparent' }
+]
+
+const BACKGROUND_CAPTIONS: Record<BackgroundMode, string> = {
+	environment:
+		'The environment map fills the view behind the model. It has no floor, so a shadow has nothing to land on.',
+	color:
+		'A flat stage behind the model, for its shadow to land on. The environment map still lights it.',
+	gradient:
+		'A stage that shades from top to bottom, for the shadow to land on. The environment map still lights it.',
+	none: 'Nothing behind the model: an embed shows the page it sits on.'
+}
+
 const EnvironmentSettings = () => {
 	const [environment, setEnvironment] = useAtom(environmentAtom)
 	const [path, setPath] = useState<string[]>([])
+	const backgroundMode = backgroundModeOf(environment)
+	const backdrop = environment.backdrop
+
+	// From the latest state, not this render's: the system color picker sends
+	// a change per frame while it is dragged, and the two gradient stops are
+	// one value.
+	const setGradientStop = useCallback(
+		(stop: 'top' | 'bottom', color: string) =>
+			setEnvironment((prev) =>
+				prev.backdrop?.type === 'gradient'
+					? { ...prev, backdrop: { ...prev.backdrop, [stop]: color } }
+					: prev
+			),
+		[setEnvironment]
+	)
 
 	const handleEnvironmentChange = useCallback(
 		(
@@ -171,53 +212,89 @@ const EnvironmentSettings = () => {
 					to="background"
 					icon={<ImageIcon />}
 					label="Background"
-					summary={environment.background ? 'Shown' : 'Hidden'}
+					summary={
+						BACKGROUND_MODES.find((mode) => mode.value === backgroundMode)
+							?.summary
+					}
 				/>
 			</DrillDownView>
 
 			<DrillDownView
 				id="background"
 				title="Background"
-				caption="Show the environment map behind the model, and how it looks there."
+				caption={BACKGROUND_CAPTIONS[backgroundMode]}
 			>
-				<div className="grid grid-cols-3 gap-2">
-					<Toggle
-						layout="tile"
-						label="Show"
-						icon={<ImageIcon />}
-						checked={!!environment.background}
-						onCheckedChange={(enabled) =>
-							handleEnvironmentChange('background', enabled)
+				<ToggleGroup
+					type="single"
+					aria-label="Background"
+					value={backgroundMode}
+					onValueChange={(value) => {
+						if (value)
+							setEnvironment((prev) =>
+								withBackgroundMode(prev, value as BackgroundMode)
+							)
+					}}
+				>
+					{BACKGROUND_MODES.map((mode) => (
+						<ToggleGroupItem key={mode.value} value={mode.value}>
+							{mode.label}
+						</ToggleGroupItem>
+					))}
+				</ToggleGroup>
+
+				{backgroundMode === 'environment' && (
+					<>
+						<Slider
+							label="Blur"
+							min={0}
+							max={1}
+							step={0.01}
+							presets={BG_BLUR_PRESETS}
+							value={environment.backgroundBlurriness || 0}
+							onValueChange={(value) =>
+								handleEnvironmentChange('backgroundBlurriness', value)
+							}
+						/>
+
+						<Slider
+							label="Brightness"
+							min={0}
+							max={3}
+							step={0.01}
+							mapping={valueMappings.quadratic}
+							presets={BG_BRIGHTNESS_PRESETS}
+							value={environment.backgroundIntensity || 1}
+							onValueChange={(value) =>
+								handleEnvironmentChange('backgroundIntensity', value)
+							}
+						/>
+					</>
+				)}
+
+				{backgroundMode === 'color' && backdrop?.type === 'color' && (
+					<StageColorField
+						label="Color"
+						value={backdrop.color}
+						onChange={(color) =>
+							handleEnvironmentChange('backdrop', { type: 'color', color })
 						}
 					/>
-				</div>
+				)}
 
-				<Slider
-					label="Blur"
-					min={0}
-					max={1}
-					step={0.01}
-					presets={BG_BLUR_PRESETS}
-					disabled={!environment.background}
-					value={environment.backgroundBlurriness || 0}
-					onValueChange={(value) =>
-						handleEnvironmentChange('backgroundBlurriness', value)
-					}
-				/>
-
-				<Slider
-					label="Brightness"
-					min={0}
-					max={3}
-					step={0.01}
-					mapping={valueMappings.quadratic}
-					presets={BG_BRIGHTNESS_PRESETS}
-					disabled={!environment.background}
-					value={environment.backgroundIntensity || 1}
-					onValueChange={(value) =>
-						handleEnvironmentChange('backgroundIntensity', value)
-					}
-				/>
+				{backgroundMode === 'gradient' && backdrop?.type === 'gradient' && (
+					<>
+						<StageColorField
+							label="Top"
+							value={backdrop.top}
+							onChange={(top) => setGradientStop('top', top)}
+						/>
+						<StageColorField
+							label="Bottom"
+							value={backdrop.bottom}
+							onChange={(bottom) => setGradientStop('bottom', bottom)}
+						/>
+					</>
+				)}
 			</DrillDownView>
 		</DrillDown>
 	)
