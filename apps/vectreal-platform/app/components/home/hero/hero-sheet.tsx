@@ -164,7 +164,7 @@ export function HeroSheet() {
 						{HERO.lead}
 					</p>
 					<div className="mt-8 flex flex-col gap-4 sm:flex-row">
-						<Button asChild size="lg">
+						<Button asChild size="lg" variant="brand">
 							<Link to={PILOT_CONTACT_HREF}>
 								{HERO.primaryCta}
 								<ArrowRight aria-hidden="true" />

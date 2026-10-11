@@ -255,7 +255,7 @@ export const PilotOffer = () => {
 				data-reveal
 			>
 				<p className="text-foreground text-body max-w-md">{COPY.team}</p>
-				<Button asChild size="lg" className="w-full sm:w-fit">
+				<Button asChild size="lg" variant="brand" className="w-full sm:w-fit">
 					<Link to={PILOT_CONTACT_HREF}>
 						{COPY.cta}
 						<ArrowRight aria-hidden="true" />

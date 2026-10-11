@@ -138,6 +138,7 @@ const Result = () => {
 					<Button
 						type="button"
 						size="sm"
+						variant="brand"
 						onClick={run}
 						className="absolute right-4 bottom-4 rounded-full"
 					>
