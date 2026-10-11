@@ -1,8 +1,9 @@
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import AnimationPlaybackBar from '../../components/publisher/animation-playback-bar'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
@@ -137,6 +138,7 @@ const PublisherPage = () => {
 		'Scene thumbnail preview'
 	)
 	const {
+		commandExecutor,
 		registerSceneScreenshotCapture,
 		registerSceneCameraSnapshotCapture,
 		registerShadowBakeCapture,
@@ -166,10 +168,18 @@ const PublisherPage = () => {
 	 * and returns before animating or re-emitting. `selectedCameraIdAtom` is not
 	 * part of `sceneViewerSettingsAtom`, so it also cannot mark the scene dirty.
 	 */
+	// Whether the viewer is playing, as it reports it. Drives the stage's own
+	// playback bar, which sends commands but cannot know the outcome itself:
+	// a sequence can run out, and the runtime resets when animation is off.
+	const [isAnimationPlaying, setIsAnimationPlaying] = useState(false)
+
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
 			if (event.type === 'camera_changed' && event.cameraId) {
 				setSelectedCameraId(event.cameraId)
+			}
+			if (event.type === 'animation_state_changed') {
+				setIsAnimationPlaying(event.playing)
 			}
 			captureOpeningView(event)
 		},
@@ -225,6 +235,12 @@ const PublisherPage = () => {
 					displayedModel={comparedModel?.model}
 					animations={file?.animations}
 					animationOptions={animation}
+					/*
+					  The built-in controls are the published scene's, set by the
+					  author's "Visitor controls" choice, so they show in preview. The
+					  editor draws its own bar below, clear of the publish card.
+					*/
+					showAnimationControls={isPreviewMode}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
 					envOptions={environment}
@@ -272,6 +288,24 @@ const PublisherPage = () => {
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
+				<AnimationPlaybackBar
+					visible={
+						!isPreviewMode &&
+						!comparedModel &&
+						Boolean(animation?.enabled) &&
+						(file?.animations?.length ?? 0) > 0
+					}
+					playing={isAnimationPlaying}
+					onToggle={() =>
+						commandExecutor.current?.execute({
+							type: 'set_animation_playing',
+							playing: !isAnimationPlaying
+						})
+					}
+					onRestart={() =>
+						commandExecutor.current?.execute({ type: 'restart_animation' })
+					}
+				/>
 				{comparedModel && (
 					<div
 						className={cn(

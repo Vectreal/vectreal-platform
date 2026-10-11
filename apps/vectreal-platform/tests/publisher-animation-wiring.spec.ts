@@ -36,4 +36,20 @@ describe('the publisher canvas', () => {
 	it('reconciles a saved config with the loaded clips', () => {
 		expect(page).toMatch(/^\tuseAnimationReconciliation\(\)$/m)
 	})
+
+	it("keeps the viewer's own controls for preview, where visitors would see them", () => {
+		expect(page).toContain('showAnimationControls={isPreviewMode}')
+	})
+
+	it('drives its own playback bar from what the viewer reports', () => {
+		expect(page).toMatch(
+			/event\.type === 'animation_state_changed'\) \{\s*setIsAnimationPlaying\(event\.playing\)/
+		)
+		expect(page).toMatch(
+			/<AnimationPlaybackBar[\s\S]*?playing=\{isAnimationPlaying\}/
+		)
+		expect(page).toMatch(
+			/type: 'set_animation_playing',\s*playing: !isAnimationPlaying/
+		)
+	})
 })

@@ -15,8 +15,7 @@ import {
 	Infinity as InfinityIcon,
 	MonitorPlay,
 	Play,
-	Repeat,
-	RotateCcw
+	Repeat
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -239,7 +238,7 @@ const AnimationSettingsPanel = () => {
 							/>
 							<Toggle
 								layout="tile"
-								label="Playback controls"
+								label="Visitor controls"
 								icon={<MonitorPlay />}
 								checked={draft.showControls}
 								onCheckedChange={(showControls) =>
@@ -483,9 +482,8 @@ interface ClipScrubberProps {
  *
  * Write-only: the viewer reports no clip time, and across several clips of
  * different lengths and speeds there is no single position to show. Scrubbing
- * pauses playback, so the pose stays where it was dragged; Play and Restart
- * give it back, since the scene's own controls may be switched off.
- * Never saved.
+ * pauses playback, so the pose stays where it was dragged; the stage's
+ * playback bar resumes it. Never saved.
  */
 function ClipScrubber({
 	clipId,
@@ -501,7 +499,7 @@ function ClipScrubber({
 			description={
 				disabled
 					? 'Turn on animation and include this clip to preview it.'
-					: 'Drag to hold the model at any moment of this clip. Not saved.'
+					: 'Drag to hold the model at any moment of this clip, then play from there with the bar on the stage. Not saved.'
 			}
 		>
 			<Slider
@@ -518,28 +516,6 @@ function ClipScrubber({
 					execute({ type: 'seek_animation_clip', clipId, time })
 				}}
 			/>
-			<div className="flex gap-2">
-				<Button
-					variant="secondary"
-					size="sm"
-					disabled={disabled}
-					onClick={() =>
-						execute({ type: 'set_animation_playing', playing: true })
-					}
-				>
-					<Play />
-					Play
-				</Button>
-				<Button
-					variant="secondary"
-					size="sm"
-					disabled={disabled}
-					onClick={() => execute({ type: 'restart_animation' })}
-				>
-					<RotateCcw />
-					Restart
-				</Button>
-			</div>
 		</SettingGroup>
 	)
 }
