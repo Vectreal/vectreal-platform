@@ -475,6 +475,30 @@ describe('embed asset authorization', () => {
 
 			expect(response.status).toBe(404)
 		})
+
+		/*
+		  A member of the project is still refused an asset that this scene does
+		  not link: membership opens the scene, and only `scene_assets` says which
+		  rows belong to it. The asset sits in the same project and folder, so
+		  nothing but the link tells the two apart.
+		*/
+		it('answers a member 404 for an asset the scene does not link', async () => {
+			const unlinkedAssetId = randomUUID()
+			await db.insert(schema.assets).values({
+				id: unlinkedAssetId,
+				folderId: assetFolderId,
+				name: 'other-scene.bin',
+				type: 'model',
+				filePath: `smoke/${unlinkedAssetId}.bin`,
+				mimeType: 'application/octet-stream',
+				fileSize: 1024,
+				ownerId
+			})
+
+			const response = await fetchAsset(ownerId, unlinkedAssetId)
+
+			expect(response.status).toBe(404)
+		})
 	})
 
 	describe('the thumbnail route', () => {

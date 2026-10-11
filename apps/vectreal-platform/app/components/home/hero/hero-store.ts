@@ -30,7 +30,7 @@ export interface HeroState {
 	canHandOff: boolean
 }
 
-export const HERO_INITIAL_STATE: HeroState = {
+const HERO_INITIAL_STATE: HeroState = {
 	status: 'loading',
 	busy: true,
 	readout: {
@@ -84,4 +84,14 @@ export function useHeroState<T>(
 		() => select(store.get()),
 		() => select(HERO_INITIAL_STATE)
 	)
+}
+
+/**
+ * The stage could not run, or stopped partway, so the poster stands and the
+ * readout stops waiting: the poster inked whole, not wherever the download
+ * stopped, because it is drawn from the file the readout names.
+ */
+export function fallBackToPoster(store: HeroStore, frame: HTMLElement | null) {
+	frame?.style.setProperty('--plot', '1')
+	store.set({ status: 'drawn', busy: false, shownBytes: HERO_MODEL.bytes })
 }

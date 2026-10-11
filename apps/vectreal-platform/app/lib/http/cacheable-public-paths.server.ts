@@ -10,17 +10,6 @@ export const CACHEABLE_PUBLIC_PATH_LIST = CDN_PUBLIC_EXACT_PATHS
 /** Prefix rules: any path under these is a cacheable public path. */
 export const CACHEABLE_PUBLIC_PATH_PREFIXES = CDN_PUBLIC_PREFIXES
 
-export const CACHEABLE_PUBLIC_PATHS = new Set(CACHEABLE_PUBLIC_PATH_LIST)
-const CACHEABLE_PUBLIC_PATHS_SET: ReadonlySet<string> = CACHEABLE_PUBLIC_PATHS
-
-export function isCacheablePublicPath(pathname: string): boolean {
-	if (CACHEABLE_PUBLIC_PATHS_SET.has(pathname)) {
-		return true
-	}
-
-	return isPublicCacheablePath(pathname)
-}
-
 /**
  * Single cache directive for anonymous public pages. `max-age=0` makes browsers
  * revalidate against the edge (near-fresh for users); `s-maxage=300` protects
@@ -36,7 +25,7 @@ export const PUBLIC_CACHE_CONTROL =
  * Exposed so both the request predicate and the Terraform parity test share one
  * implementation.
  */
-export function isAnonymousCacheablePath(pathname: string): boolean {
+function isAnonymousCacheablePath(pathname: string): boolean {
 	return isPublicCacheablePath(pathname)
 }
 
@@ -55,12 +44,4 @@ export function isAnonymousCacheableRequest(request: Request): boolean {
 	if (url.search.length > 0) return false
 
 	return isAnonymousCacheablePath(url.pathname)
-}
-
-/** Headers applied to an anonymous, publicly cacheable response. */
-export function publicCacheHeaders(): Headers {
-	const headers = new Headers()
-	headers.set('Cache-Control', PUBLIC_CACHE_CONTROL)
-	headers.set('Vary', 'Accept-Encoding')
-	return headers
 }

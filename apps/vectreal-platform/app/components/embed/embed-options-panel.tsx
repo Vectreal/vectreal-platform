@@ -15,6 +15,7 @@ import {
 	EMBED_COPY,
 	EMBED_DOCS_PATH
 } from '../../lib/domain/embed/embed-snippet'
+import { duration } from '../../lib/motion/motion-tokens'
 import { DetailPanelSection, InlineNotice } from '../layout-components'
 
 /**
@@ -124,7 +125,7 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 		: {
 				initial: { opacity: 0, y: -4 },
 				animate: { opacity: 1, y: 0 },
-				transition: { duration: 0.15, ease: 'easeOut' as const }
+				transition: { duration: duration.fast, ease: 'easeOut' as const }
 			}
 
 	if (!canEmbed) {

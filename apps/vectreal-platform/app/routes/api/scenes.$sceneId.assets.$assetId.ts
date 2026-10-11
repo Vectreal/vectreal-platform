@@ -1,214 +1,20 @@
-import { and, eq } from 'drizzle-orm'
 import { LoaderFunctionArgs } from 'react-router'
 
-import { getDbClient } from '../../db/client'
-import { sceneAssets, sceneSettings } from '../../db/schema'
-import {
-	AssetNotFoundError,
-	downloadAsset,
-	downloadAssetFromRow
-} from '../../lib/domain/asset/asset-storage.server'
+import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
+import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import {
-	getAssetSigningSecret,
-	verifySignedAsset
-} from '../../lib/domain/embed/embed-asset-signature.server'
-import {
-	isEmbedServableAssetId,
-	selectEmbedServableAssets
-} from '../../lib/domain/scene/embed-asset-policy'
-import { shouldShowLoadingThumbnail } from '../../lib/domain/scene/scene-presentation'
-import {
-	getPublishedScenePreview,
-	type PublishedScenePreview
-} from '../../lib/domain/scene/server/scene-preview-repository.server'
-import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
+	serveFromPublishedRow,
+	servePublishedEmbedAsset,
+	serveSignedAsset
+} from '../../lib/domain/embed/embed-asset-serving.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { isAssetLinkedToScene } from '../../lib/domain/scene/server/scene-settings-repository.server'
+import { assetResponse } from '../../lib/http/asset-response.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { noStoreHeaders } from '../../lib/http/response-headers.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
-
-const db = getDbClient()
-
-/**
- * Whether `assetId` is linked to `sceneId` via the `scene_assets` join table.
- *
- * Assets are de-duplicated per project by content hash (see
- * `uploadSceneAssets`), so the same asset row can legitimately be shared by
- * multiple scenes — the asset's `metadata.sceneId` only records the scene
- * that happened to create the row first and must not be used for
- * authorization.
- */
-async function assetBelongsToScene(
-	assetId: string,
-	sceneId: string
-): Promise<boolean> {
-	const [row] = await db
-		.select({ assetId: sceneAssets.assetId })
-		.from(sceneAssets)
-		.innerJoin(sceneSettings, eq(sceneAssets.sceneSettingsId, sceneSettings.id))
-		.where(
-			and(eq(sceneAssets.assetId, assetId), eq(sceneSettings.sceneId, sceneId))
-		)
-		.limit(1)
-
-	return Boolean(row)
-}
-
-// Asset rows are content-addressed per save: new bytes always get a new UUID
-// (upsert: false, path embeds assetId), so immutable caching is safe here.
-const ASSET_CACHE_CONTROL = 'private, max-age=31536000, immutable'
-
-// Only these MIME types are served verbatim. Anything else (including
-// text/html, image/svg+xml, application/xml, and unknown types) is downgraded
-// to application/octet-stream to prevent stored-XSS via client-supplied types.
-const PASSIVE_MIME_TYPES = new Set([
-	'image/png',
-	'image/jpeg',
-	'image/webp',
-	'image/ktx2',
-	'image/avif',
-	'model/gltf-binary',
-	'model/gltf+json',
-	'application/octet-stream'
-])
-
-function sanitizeMimeType(mimeType: string | undefined | null): string {
-	if (!mimeType || !PASSIVE_MIME_TYPES.has(mimeType)) {
-		return 'application/octet-stream'
-	}
-	return mimeType
-}
-
-function withNoStoreHeaders(init?: HeadersInit): Headers {
-	const headers = new Headers(init)
-	headers.set('Cache-Control', 'no-store')
-	return headers
-}
-
-function assetResponse(
-	data: Uint8Array,
-	mimeType: string,
-	extraHeaders?: HeadersInit,
-	cacheControl = ASSET_CACHE_CONTROL
-): Response {
-	const headers = new Headers(extraHeaders)
-	headers.set('Content-Type', sanitizeMimeType(mimeType))
-	headers.set('Cache-Control', cacheControl)
-	headers.set('X-Content-Type-Options', 'nosniff')
-	headers.set('Content-Security-Policy', 'sandbox')
-	return new Response(new Blob([Buffer.from(data)]), { status: 200, headers })
-}
-
-async function serveEmbedAsset(
-	request: Request,
-	ids: { sceneId: string; assetId: string },
-	download: () => Promise<{ data: Uint8Array; mimeType: string }>,
-	extraHeaders?: HeadersInit
-): Promise<Response> {
-	try {
-		const assetData = await download()
-		return assetResponse(assetData.data, assetData.mimeType, extraHeaders)
-	} catch (error) {
-		reportServerError(error, { request, properties: ids })
-		return new Response('Failed to load asset', {
-			status: 500,
-			headers: withNoStoreHeaders(extraHeaders)
-		})
-	}
-}
-
-/**
- * The published GLB, downloaded from the asset row the publication query
- * already joined. Null when `assetId` is not that GLB.
- *
- * It is the request every published load makes, so it skips the settings
- * transaction the rest of the published set needs. And it is the one asset no
- * `scene_assets` row names: `uploadPublishedGlb` never links it.
- */
-function serveFromPublishedRow(
-	request: Request,
-	ids: { sceneId: string; assetId: string },
-	previewScene: PublishedScenePreview | null,
-	extraHeaders?: HeadersInit
-): Promise<Response> | null {
-	if (!previewScene || ids.assetId !== previewScene.publishedAssetId) {
-		return null
-	}
-
-	const {
-		publishedAssetFilePath: filePath,
-		publishedAssetName: name,
-		publishedAssetMimeType: mimeType
-	} = previewScene
-	if (!filePath || !name) return null
-
-	return serveEmbedAsset(
-		request,
-		ids,
-		() => downloadAssetFromRow({ id: ids.assetId, filePath, mimeType, name }),
-		extraHeaders
-	)
-}
-
-/**
- * An asset addressed by a signed URL from an embed manifest.
- *
- * The signature is the authorization: the manifest that handed it out already
- * checked the key, the domain and the publication. So this reads no key and no
- * scene, which is what lets the response be public and cached at the edge for
- * as long as the URL stays valid.
- *
- * GET only: the edge caches GETs, and any other method would download the
- * whole asset at the origin on every request.
- */
-async function serveSignedAsset(
-	request: Request,
-	target: { sceneId: string; assetId: string },
-	url: URL
-): Promise<Response> {
-	if (request.method !== 'GET') {
-		return new Response(null, {
-			status: 405,
-			headers: withNoStoreHeaders({ Allow: 'GET' })
-		})
-	}
-
-	const secret = getAssetSigningSecret()
-	const check = secret
-		? verifySignedAsset(target, url, secret, Date.now())
-		: null
-
-	if (!check?.ok) {
-		return new Response('Asset not found', {
-			status: 404,
-			headers: withNoStoreHeaders()
-		})
-	}
-
-	try {
-		const assetData = await downloadAsset(target.assetId)
-		return assetResponse(
-			assetData.data,
-			assetData.mimeType,
-			undefined,
-			`public, max-age=${check.secondsLeft}, s-maxage=${check.secondsLeft}`
-		)
-	} catch (error) {
-		// A republish deletes the previous GLB while URLs naming it are still
-		// valid. That is expected, not a fault.
-		if (error instanceof AssetNotFoundError) {
-			return new Response('Asset not found', {
-				status: 404,
-				headers: withNoStoreHeaders()
-			})
-		}
-		reportServerError(error, { request, properties: target })
-		return new Response('Failed to load asset', {
-			status: 500,
-			headers: withNoStoreHeaders()
-		})
-	}
-}
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const sceneId = params.sceneId?.trim()
@@ -217,7 +23,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!sceneId || !assetId) {
 		return new Response('Missing scene or asset ID', {
 			status: 400,
-			headers: withNoStoreHeaders()
+			headers: noStoreHeaders()
 		})
 	}
 
@@ -232,16 +38,14 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// Token credential present means the caller is using an API key (embedded
 	// player, public preview). No token means the caller is a cookie-authenticated
 	// session - fall through to the session branch in both preview and non-preview.
-	const hasTokenCredential =
-		Boolean(url.searchParams.get('token')?.trim()) ||
-		Boolean(request.headers.get('authorization')?.trim())
+	const hasTokenCredential = hasPreviewTokenCredential(request)
 
 	if (isPreviewRequest && hasTokenCredential) {
 		const projectId = url.searchParams.get('projectId')?.trim()
 		if (!projectId) {
 			return new Response('Project ID is required', {
 				status: 400,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 
@@ -259,7 +63,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 						: 404
 			return new Response('Asset not found', {
 				status,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 
@@ -267,47 +71,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		if (!previewScene) {
 			return new Response('Asset not found', {
 				status: 404,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 
-		const publishedModel = serveFromPublishedRow(
-			request,
-			{ sceneId, assetId },
-			previewScene
-		)
-		if (publishedModel) return publishedModel
-
-		/*
-		  The servable set is computed by the same module the embed manifest
-		  builds its refs from. This gate used to be an equality against
-		  `publishedAssetId` alone - an id `uploadPublishedGlb` never links into
-		  `scene_assets`, and therefore an id the manifest never referenced. The
-		  two sets were disjoint, so every asset an embed asked for 404'd.
-		*/
-		const settingsData =
-			await sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
-				includeGltfJson: false
-			})
-		const servable = selectEmbedServableAssets({
-			publishedAssetId: previewScene.publishedAssetId,
-			sceneAssets: settingsData?.assets ?? [],
-			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId,
-			showsLoadingThumbnail: shouldShowLoadingThumbnail(
-				settingsData?.settings?.presentation
-			)
-		})
-
-		if (!isEmbedServableAssetId(assetId, servable)) {
-			return new Response('Asset not found', {
-				status: 404,
-				headers: withNoStoreHeaders()
-			})
-		}
-
-		return serveEmbedAsset(request, { sceneId, assetId }, () =>
-			downloadAsset(assetId)
-		)
+		return servePublishedEmbedAsset(request, { sceneId, assetId }, previewScene)
 	}
 
 	// Session branch: handles both plain authenticated requests and cookie-
@@ -329,7 +97,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!membership) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: withNoStoreHeaders(authHeaders)
+			headers: noStoreHeaders(authHeaders)
 		})
 	}
 
@@ -345,7 +113,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	*/
 	const [previewScene, isLinked] = await Promise.all([
 		getPublishedScenePreview(membership.projectId, sceneId),
-		assetBelongsToScene(assetId, sceneId)
+		isAssetLinkedToScene(assetId, sceneId)
 	])
 
 	const publishedModel = serveFromPublishedRow(
@@ -359,7 +127,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!isLinked) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: withNoStoreHeaders(authHeaders)
+			headers: noStoreHeaders(authHeaders)
 		})
 	}
 
@@ -373,7 +141,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: withNoStoreHeaders(authHeaders)
+			headers: noStoreHeaders(authHeaders)
 		})
 	}
 }

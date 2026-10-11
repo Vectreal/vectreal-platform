@@ -27,13 +27,7 @@ export { RelativeTime, formatRelativeTime } from './relative-time'
 export { SceneStatusTag, SCENE_STATUS_DOT } from './scene-status'
 export { SceneThumbnail } from './scene-thumbnail'
 export { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
-export {
-	UsageMeter,
-	UsageMeterList,
-	UsageMeterRowSkeleton,
-	readUsage,
-	hasUsagePressure
-} from './usage-meter'
+export { UsageMeter, UsageMeterList, readUsage } from './usage-meter'
 export {
 	SceneAssetListItem,
 	buildAssetListItemProps

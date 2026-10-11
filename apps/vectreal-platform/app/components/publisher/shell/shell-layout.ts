@@ -48,13 +48,6 @@ export const PUBLISHER_LAYER = {
 export const PUBLISHER_EDGE_INSET = 'm-3'
 
 /**
- * The same inset expressed for consumers that take a length rather than a
- * class, so toasts line up with the surfaces they appear beside. Matches
- * Tailwind's spacing-3.
- */
-export const PUBLISHER_EDGE_INSET_PX = 12
-
-/**
  * Insets for a panel that opens on the left of the stage, under the tool bar,
  * so it keeps the same 12px (`PUBLISHER_EDGE_INSET`) from every neighbor:
  * the bar above, the stage's left and bottom edges. The top is the bar's own

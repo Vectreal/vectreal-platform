@@ -33,8 +33,10 @@ vi.mock('@shared/components/hooks/use-mobile', () => ({
 }))
 vi.mock('posthog-js', () => ({ default: { reset: vi.fn() } }))
 
-vi.mock('./index', () => ({
-	ToolSidebar: probe('tool-sidebar'),
+vi.mock('./sidebars/tool-sidebar', () => ({
+	ToolSidebar: probe('tool-sidebar')
+}))
+vi.mock('./sidebars/dynamic-sidebar', () => ({
 	DynamicSidebar: probe('publish-sidebar')
 }))
 vi.mock('./optimization/optimization-drawer', () => ({
@@ -66,7 +68,7 @@ vi.mock('./shell/publisher-surface-fallback', () => ({
 vi.mock('./sidebars/use-scene-size-initializer', () => ({
 	useSceneSizeInitializer: () => undefined
 }))
-vi.mock('../../hooks', () => ({
+vi.mock('../../hooks/use-publisher-scene', () => ({
 	usePublisherScene: () => ({
 		openSceneId: null,
 		isRestoringDraft: false,
@@ -75,7 +77,9 @@ vi.mock('../../hooks', () => ({
 		saveSceneSettings: vi.fn(),
 		saveAvailability: { canSave: false, reason: 'no-model' },
 		persistPendingSceneDraft: vi.fn()
-	}),
+	})
+}))
+vi.mock('../../hooks/use-optimization-drawer-flow', () => ({
 	useOptimizationDrawerFlow: () => ({
 		effectiveSaveAvailability: { canSave: false, reason: 'no-model' },
 		requiresSizeReduction: false,
