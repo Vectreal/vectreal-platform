@@ -49,6 +49,10 @@ import {
 } from '../../lib/domain/auth/api-key-lifecycle'
 import { describeDashboardOperationRequirement } from '../../lib/domain/dashboard/dashboard-operations'
 
+import type {
+	ApiKeyRowValue,
+	ApiKeyValueUnavailableReason
+} from '../../lib/domain/auth/api-key-disclosure'
 import type { SceneStatus } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { LegacyColumnDef as ColumnDef } from '@tanstack/react-table/legacy'
 
@@ -515,30 +519,11 @@ export function createContentColumns(
 	]
 }
 
-/**
- * Why a key's value cannot be put in front of its owner.
- *
- * Four reasons, and the loader is the only place three of them are
- * distinguishable at all: `decryptEmbedToken` returns null both for a row that
- * never stored a value and for one whose ciphertext no longer authenticates,
- * and only the server holds the row that separates them. Resolving this in the
- * cell would collapse two different instructions - "rotate to get one" and
- * "the encryption key changed" - into one shrug.
- */
-export type ApiKeyValueUnavailableReason =
-	'revoked' | 'never-stored' | 'undecryptable' | 'withheld'
-
-/**
- * The key itself, or the reason it is missing.
- *
- * A union rather than `string | null` so the reason survives the trip to the
- * browser. The value is public by construction - it ships in an `iframe src` on
- * the customer's own page - so showing it to the owner who minted it is the
- * point; see `api-keys.tsx`, which resolves this field.
- */
-export type ApiKeyRowValue =
-	| { readable: true; value: string }
-	| { readable: false; reason: ApiKeyValueUnavailableReason }
+/*
+  Owned by the disclosure module, which the server resolves them with; this
+  file is where the table, and every import of it, has always read them from.
+*/
+export type { ApiKeyRowValue, ApiKeyValueUnavailableReason }
 
 export interface ApiKeyRow {
 	id: string

@@ -19,6 +19,7 @@ import {
 	createApiKey,
 	getAllUserApiKeys
 } from '../../lib/domain/auth/api-key-repository.server'
+import { resolveApiKeyValue } from '../../lib/domain/auth/api-key-value.server'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { resolveProjectMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
@@ -28,7 +29,6 @@ import { getProject } from '../../lib/domain/project/project-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { ensurePost } from '../../lib/http/requests.server'
-import { decryptEmbedToken } from '../../lib/security/embed-token-cipher.server'
 
 import type { EmbedApiKeyOption } from '../../lib/domain/embed/embed-key-options'
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
@@ -129,14 +129,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return ApiResponse.notFound('Project not found', { headers })
 	}
 
+	const now = new Date()
 	const payload: EmbedApiKeysPayload = {
 		projectId: project.id,
 		projectName: project.name,
 		allowedDomains: parseAllowedDomainPatterns(project.allowedEmbedDomains),
 		/*
 		  Decryption happens here, on the server, behind the `api-key:read` check
-		  above. `toEmbedApiKeyOptions` is pure and client-safe, so it takes the
-		  value already resolved rather than importing the cipher.
+		  above, and through `resolveApiKeyValue` so a kind that must not be
+		  disclosed is never decrypted. `toEmbedApiKeyOptions` is pure and
+		  client-safe, so it takes the value already resolved rather than
+		  importing the cipher.
 		*/
 		keys: toEmbedApiKeyOptions(
 			/*
@@ -150,12 +153,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				.filter((key) =>
 					key.projects.some((scoped) => scoped.id === project.id)
 				)
-				.map((key) => ({
-					...key,
-					value: decryptEmbedToken(key.apiKey.encryptedKey)
-				})),
+				.map((key) => {
+					const resolved = resolveApiKeyValue(key.apiKey, now)
+
+					return { ...key, value: resolved.readable ? resolved.value : null }
+				}),
 			project.id,
-			new Date()
+			now
 		),
 		canCreateKey: canPerformDashboardOperation('api-key:create', membership)
 	}
