@@ -8,7 +8,7 @@ import {
 } from 'react'
 
 import { CameraDrawing, CameraObject } from './camera-drawing'
-import { inUnitOf } from './format-bytes'
+import { inUnitOf } from './in-unit-of'
 import styles from './mission-statement.module.css'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'

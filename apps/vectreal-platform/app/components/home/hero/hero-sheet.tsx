@@ -16,6 +16,7 @@ import {
 import { Link } from 'react-router'
 
 import { HERO_POSTERS } from './hero-assets'
+import { ArrowLink } from '../arrow-link'
 import { FigureLabel, Readout } from './hero-readout'
 import styles from './hero-sheet.module.css'
 import {
@@ -175,14 +176,13 @@ export function HeroSheet() {
 							handOffRef={handOffRef}
 						/>
 					</div>
-					<Link
+					<ArrowLink
 						to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
 						viewTransition
-						className="text-muted-foreground hover:text-foreground text-body-sm mt-5 inline-flex w-fit items-center gap-1 underline-offset-4 transition-colors hover:underline"
+						className="text-muted-foreground hover:text-foreground mt-5 transition-colors"
 					>
 						{HERO.sampleCta}
-						<ArrowRight className="size-3.5" aria-hidden="true" />
-					</Link>
+					</ArrowLink>
 				</div>
 
 				<figure className={cn('ds-sunken', styles.figure)}>

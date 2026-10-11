@@ -4,7 +4,7 @@ import styles from './hero-sheet.module.css'
 import { useHeroState, type HeroStore } from './hero-store'
 import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
-import { inUnitOf } from '../format-bytes'
+import { inUnitOf } from '../in-unit-of'
 
 import type { ReactNode } from 'react'
 

@@ -5,20 +5,14 @@ import {
 	TabsTrigger
 } from '@shared/components/ui/tabs'
 import { cn } from '@shared/utils'
-import { ArrowRight } from 'lucide-react'
-import {
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
-	type CSSProperties
-} from 'react'
-import { Link } from 'react-router'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
+import { ArrowLink } from './arrow-link'
 import { ProductPageSketch } from './product-page-sketch'
 import PRODUCT_SHOTS from './product-shots.json'
 import { ProductStage, type FrameRect } from './product-stage'
 import styles from './product-window.module.css'
+import { useRelativeRect } from './use-relative-rect'
 import manageDarkUrl from '../../assets/home/product/manage-dark.webp?url'
 import manageLightUrl from '../../assets/home/product/manage-light.webp?url'
 import prepareDarkUrl from '../../assets/home/product/prepare-dark.webp?url'
@@ -66,6 +60,31 @@ const SHOT_URLS = {
 	manage: { light: manageLightUrl, dark: manageDarkUrl }
 } as const
 
+/** One capture per theme; the page shows the one that matches the theme it is in. */
+function ThemedShot({ view }: { view: keyof typeof SHOT_URLS }) {
+	const alt = `The ${COPY.views[view].label} view in the Vectreal app`
+	return (
+		<>
+			<img
+				src={SHOT_URLS[view].light}
+				alt={alt}
+				width={1200}
+				height={750}
+				loading="lazy"
+				className="block h-auto w-full dark:hidden"
+			/>
+			<img
+				src={SHOT_URLS[view].dark}
+				alt={alt}
+				width={1200}
+				height={750}
+				loading="lazy"
+				className="hidden h-auto w-full dark:block"
+			/>
+		</>
+	)
+}
+
 /** How long the dissolve between two screenshots takes, one mask frame per step. */
 const DISSOLVE_MS = 400
 
@@ -103,29 +122,9 @@ export const ProductWindow = () => {
 	const cancelDissolve = useRef(() => {})
 	const sceneRef = useRef<HTMLDivElement>(null)
 	const embedSlotRef = useRef<HTMLDivElement>(null)
-	const [embedSlot, setEmbedSlot] = useState<FrameRect | null>(null)
 
 	// The product page is laid out by CSS, so its gallery is measured, as a share of the frame.
-	useLayoutEffect(() => {
-		const scene = sceneRef.current
-		const slot = embedSlotRef.current
-		if (!scene || !slot) return
-		const measure = () => {
-			const frame = scene.getBoundingClientRect()
-			const box = slot.getBoundingClientRect()
-			if (!frame.width || !frame.height) return
-			setEmbedSlot({
-				x: (box.left - frame.left) / frame.width,
-				y: (box.top - frame.top) / frame.height,
-				w: box.width / frame.width,
-				h: box.height / frame.height
-			})
-		}
-		measure()
-		const observer = new ResizeObserver(measure)
-		observer.observe(scene)
-		return () => observer.disconnect()
-	}, [])
+	const embedSlot = useRelativeRect(sceneRef, embedSlotRef)
 
 	const stagePlace: FrameRect =
 		view === 'embed' ? (embedSlot ?? SHOTS.prepare) : SHOTS[view]
@@ -226,24 +225,7 @@ export const ProductWindow = () => {
 										}
 									/>
 								) : (
-									<>
-										<img
-											src={SHOT_URLS[one].light}
-											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
-											width={1200}
-											height={750}
-											loading="lazy"
-											className="block h-auto w-full dark:hidden"
-										/>
-										<img
-											src={SHOT_URLS[one].dark}
-											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
-											width={1200}
-											height={750}
-											loading="lazy"
-											className="hidden h-auto w-full dark:block"
-										/>
-									</>
+									<ThemedShot view={one} />
 								)}
 							</div>
 						))}
@@ -297,14 +279,13 @@ export const ProductWindow = () => {
 								<p className="text-muted-foreground text-body">
 									{COPY.views[one].body}
 								</p>
-								<Link
+								<ArrowLink
 									to={VIEW_LINKS[one]}
 									viewTransition={entersFunnel(VIEW_LINKS[one])}
-									className="text-foreground text-body-sm inline-flex w-fit items-center gap-1 underline-offset-4 hover:underline"
+									className="text-foreground"
 								>
 									{COPY.views[one].link}
-									<ArrowRight className="size-3.5" aria-hidden="true" />
-								</Link>
+								</ArrowLink>
 							</TabsContent>
 						))}
 					</div>
