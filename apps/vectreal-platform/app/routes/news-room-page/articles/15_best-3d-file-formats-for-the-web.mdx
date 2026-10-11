@@ -1,0 +1,122 @@
+---
+title: "The best 3D file formats for the web in 2026"
+slug: "best-3d-file-formats-for-the-web"
+excerpt: "For a 3D model on a web page, use glTF 2.0 packed as a single GLB file, and compress its textures and geometry before it ships. Add a USDZ copy only if people on iPhone and iPad should be able to place the model in their room. OBJ, STL and FBX are formats to convert from, not to publish."
+publishedAt: "2026-10-14"
+updatedAt: "2026-10-14"
+category: "concepts"
+tags:
+  - "formats"
+  - "gltf"
+  - "glb"
+  - "usdz"
+  - "compression"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/media/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+
+voice: A
+author_persona: moritz
+type: "Comparison / Positioning"
+premise: capability
+pillar: Quality
+seo_cluster: "3D formats / best 3d format for web"
+cta: https://vectreal.com/convert
+sceneImage: "/media/images/newsroom/scene-best-3d-file-formats-for-the-web.webp"
+coverImage: "/media/images/newsroom/og-best-3d-file-formats-for-the-web.webp"
+---
+
+For a 3D model on a web page, use glTF 2.0, packed as a single GLB file, and compress its textures and geometry before it ships. Add a USDZ copy only if people on iPhone and iPad should be able to place the model in their room.
+
+<video src="/media/images/newsroom/15/same-chair-smaller-file.mp4" poster="/media/images/newsroom/15/same-chair-smaller-file-poster.webp" autoPlay muted loop playsInline aria-label="A fabric armchair stands on a tall stack of nine loose grey slabs, one for each file of its glTF folder. The slabs close into one block. Its seven texture layers turn orange and shrink, then its geometry layer does, and the chair sinks onto a thin slab a seventh of the starting height, looking as it did. The view turns round the chair and it starts again."></video>
+
+## Which 3D format should I use on my website?
+
+| | Format | Use it for | On a web page |
+| --- | --- | --- | --- |
+| 1 | GLB (glTF 2.0, one file) | Any model on any page | Yes. The default |
+| 2 | glTF (a `.gltf` with its files) | The same model, when you edit it by hand or share textures between models | Yes |
+| 3 | USDZ | AR on iPhone, iPad and Apple Vision Pro | Next to a GLB, not instead of it |
+| 4 | OBJ | Static shapes from older tools | Convert it first |
+| 5 | STL | 3D printing | Convert it first, and expect no colour |
+| 6 | FBX | Moving models between 3D apps | Convert it first |
+
+## Why is GLB the default?
+
+Because the web's 3D libraries are built around it. glTF was designed for delivery rather than editing: Khronos, who maintain it, call it "the JPEG of 3D" ([Khronos, glTF](https://www.khronos.org/gltf/)), and it is an ISO standard, [ISO/IEC 12113:2022](https://www.iso.org/standard/83990.html).
+
+The libraries say the same. three.js: "Where possible, we recommend using glTF" ([three.js manual, Loading 3D models](https://threejs.org/manual/#en/loading-3d-models)). Google's `<model-viewer>` takes nothing else as its main model: "Only glTF/GLB models are supported" ([model-viewer documentation](https://modelviewer.dev/docs/)). Babylon.js loads it with its standard loaders package ([Babylon.js, glTF loader](https://doc.babylonjs.com/features/featuresDeepDive/importers/glTF)).
+
+GLB is glTF in one file: the description, the geometry and the images packed together, under the media type `model/gltf-binary` ([glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)). One file is one upload and one request, with no texture path to break.
+
+## When is a .gltf folder the better choice?
+
+When people work on the file rather than ship it. A `.gltf` is a readable text file next to a `.bin` and its images, so a material name or a texture can be changed by hand, and two models that share a texture can share the image. [glTF vs GLB](https://vectreal.com/news-room/gltf-vs-glb-what-actually-matters?utm_source=newsroom&utm_medium=article&utm_campaign=best-3d-file-formats-for-the-web) covers that trade in detail. For the page itself, pack it as a GLB.
+
+## Do I need a USDZ file as well?
+
+Only for Apple's AR. AR Quick Look on iPhone, iPad and Vision Pro opens `.usdz` and `.reality` files, and not glTF ([Apple, AR Quick Look](https://developer.apple.com/augmented-reality/quick-look/)). If a shopper should be able to put your chair in their living room from Safari, the page needs a USDZ beside the GLB.
+
+`<model-viewer>` handles that with a second attribute, `ios-src`, pointing at the USDZ. Without one it can generate a USDZ on the fly, though its own documentation says animations are not supported that way yet ([model-viewer documentation](https://modelviewer.dev/docs/)).
+
+USD itself is becoming an open standard too. The Alliance for OpenUSD ratified its Core Specification 1.0 in December 2025, covering the USDA, USDC and USDZ file formats, and calls it the first step toward ISO standardization ([AOUSD](https://aousd.org/uncategorized/foundations-of-open-3d-development-introducing-aousd-core-specification-1-0/)). For a web page in 2026 it is still the companion file, not the main one.
+
+## What about OBJ, STL and FBX?
+
+All three load into three.js ([OBJLoader](https://threejs.org/docs/pages/OBJLoader.html), [STLLoader](https://threejs.org/docs/pages/STLLoader.html), [FBXLoader](https://threejs.org/docs/pages/FBXLoader.html)) and most 3D apps. None of them is what you want on a page.
+
+![The same armchair three times. On the left, from the GLB, its orange velvet has a soft sheen and the wood shows its grain. In the middle, from an OBJ export, the velvet is a little redder and flat, with no sheen. On the right, from an STL, the chair has no colour at all.](/media/images/newsroom/15/what-each-format-keeps.webp)
+
+*The Sheen Chair from three files. Left: the GLB. Middle: an OBJ export, which kept the colour textures for one upholstery. Right: an STL export, which kept the shape.*
+
+**OBJ** stores the shape and its texture coordinates, with colours and textures in a separate MTL file. It has no animation and no skeleton, and its material model predates the physically based materials glTF uses ([Library of Congress, OBJ](https://www.loc.gov/preservation/digital/formats/fdd/fdd000507.shtml)).
+
+**STL** is a triangle mesh and nothing else. There is no standard support for colours or textures, which is fine for its job: 3D scanning and printing ([Library of Congress, STL](https://www.loc.gov/preservation/digital/formats/fdd/fdd000504.shtml)).
+
+**FBX** belongs to Autodesk. In Autodesk's own words, "The FBX file format is not documented", and applications are meant to read it through Autodesk's SDK ([Autodesk FBX SDK help](https://help.autodesk.com/cloudhelp/2020/ENU/FBX-Developer-Help/files/welcome_to_the_fbx_sdk/FBX_Developer_Help_welcome_to_the_fbx_sdk_what_is_autodesk_fbx_technology_html.html)). It is built for moving models between 3D apps, not for a browser to download.
+
+So if a file arrives in one of these, convert it to GLB once and publish that.
+
+## How much does compression save?
+
+More than the choice of format. Here is one model, the [Sheen Chair](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SheenChair) from the Khronos sample assets: 39,936 triangles, seven textures, two upholsteries.
+
+| Version | Files | Size | What survives |
+| --- | --- | --- | --- |
+| glTF folder | 9 | 4.14 MB | Everything |
+| GLB | 1 | 4.13 MB | Everything |
+| GLB, Draco geometry | 1 | 3.13 MB | Everything, compressed |
+| GLB, meshopt geometry | 1 | 3.34 MB | Everything, compressed |
+| GLB, WebP textures | 1 | 1.57 MB | Everything, compressed |
+| GLB, WebP textures and Draco geometry | 1 | 0.58 MB | Everything, compressed |
+| GLB, WebP textures and meshopt geometry | 1 | 0.78 MB | Everything, compressed |
+| OBJ with MTL and textures | 5 | 3.80 MB | Colour textures for one upholstery |
+| STL | 1 | 2.00 MB | The shape |
+
+Measured on 5 October 2026: the GLB variants with glTF Transform 4.5.1 at its default settings, the OBJ and STL exports with trimesh 5.1.1. Draco, meshopt and WebP are lossy: the details survive at slightly lower precision. In the OBJ the sheen, the second velvet and the normal, roughness and occlusion maps were dropped.
+
+![The same armchair twice, side by side: on the left from the GLB as exported, on the right from the version with WebP textures and Draco geometry. The two look the same.](/media/images/newsroom/15/compressed-side-by-side.webp)
+
+*Left: the GLB as exported, 4.13 MB. Right: with WebP textures and Draco geometry, 0.58 MB.*
+
+**Textures are usually the bigger half.** Here WebP took 2.56 MB off and Draco took 0.99 MB. WebP is safe to use on the web now: caniuse puts support at about 97% of users, with every current major browser in it ([caniuse, WebP](https://caniuse.com/webp)). KTX2 is the other option, and the one that matters on pages with many or large textures: KTX2 textures stay compressed on the graphics card as well as in the download, so a phone has less to hold in memory ([KHR_texture_basisu](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_basisu/README.md)). It needs a decoder, like Draco. WebP is the simpler first step.
+
+**Draco and meshopt solve the same problem differently.** On this chair Draco came out smaller: 3.13 MB against meshopt's 3.34 MB, both with PNG textures. meshopt is meant to be served gzipped, and gzipped the gap narrows to 3.24 MB against 3.12 MB. The glTF Transform documentation weighs the two further, on its [meshopt](https://gltf-transform.dev/modules/extensions/classes/EXTMeshoptCompression) and [Draco](https://gltf-transform.dev/modules/extensions/classes/KHRDracoMeshCompression) pages. Both are lossy, so keep the uncompressed original.
+
+**A compressed file needs a viewer that can unpack it.** three.js and Babylon.js both read Draco, meshopt and KTX2, three.js once its decoders are set up ([three.js, GLTFLoader](https://threejs.org/docs/pages/GLTFLoader.html); [Babylon.js, glTF loader](https://doc.babylonjs.com/features/featuresDeepDive/importers/glTF)), and a viewer without them refuses the file. [What the optimization presets do](https://vectreal.com/news-room/optimization-presets-and-texture-compression?utm_source=newsroom&utm_medium=article&utm_campaign=best-3d-file-formats-for-the-web) shows the same trade from inside a publishing tool.
+
+## What changed for glTF in 2026?
+
+glTF keeps gaining extensions. Khronos took a Gaussian splatting extension, `KHR_gaussian_splatting`, to release candidate in February ([Khronos](https://www.khronos.org/news/press/gltf-gaussian-splatting-press-release)), submitted `KHR_interactivity` for behaviour stored inside the file in July ([Khronos](https://www.khronos.org/news/press/gltf-interactivity-extension-submitted-for-ratification)), and announced glTF 2.1 in June, a backward-compatible revision for large scenes built from many assets ([Khronos blog](https://www.khronos.org/blog/introducing-gltf-2.1-with-complex-scenes)). So a GLB you publish today keeps working.
+
+## Next step
+
+If what you have is an FBX, an OBJ, an STL or a loose glTF folder, turn it into a GLB before it goes anywhere near a page. The [Vectreal converters](https://vectreal.com/convert?utm_source=newsroom&utm_medium=article&utm_campaign=best-3d-file-formats-for-the-web) show the model while they work, can compress the geometry with Draco and the textures with WebP on the way, and write USDZ for the iPhone copy. They run in your browser, so the file stays on your computer, and they need no account.
+
+[Convert a file](https://vectreal.com/convert?utm_source=newsroom&utm_medium=article&utm_campaign=best-3d-file-formats-for-the-web)
+
+All sources were checked on 5 October 2026, the three.js and Babylon.js loader pages on 11 October.
