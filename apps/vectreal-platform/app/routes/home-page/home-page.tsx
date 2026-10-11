@@ -67,11 +67,12 @@ const HomePage = () => (
 			</DitherReveal>
 		</section>
 
+		{/* The one grain on the page in the brand, rising behind the closing figure and clear of the buttons. */}
 		<section
 			aria-label="Where to go next"
-			className="container-page relative isolate mt-32 pb-32 lg:mt-48 lg:pb-48"
+			className="container-page relative isolate mt-32 pb-32 [--grain:rgb(var(--orange-rgb)/0.18)] lg:mt-48 lg:pb-48"
 		>
-			<DitherGrain origin="bottom" className={cn(BLEED, '-top-32')} />
+			<DitherGrain origin="right" className={cn(BLEED, '-top-32')} />
 			<DitherReveal>
 				<ClosingDoors />
 			</DitherReveal>

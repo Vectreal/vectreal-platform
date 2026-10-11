@@ -500,15 +500,19 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	closing: {
-		companies: {
-			title: 'For companies',
-			body: 'Tell us about your products and we will tell you honestly whether a pilot makes sense.',
-			cta: 'Start a pilot project'
-		},
+		heading: ['Bring one product.', 'See it on your own site.'],
+		body: 'Tell us what you sell and which files you have. We will tell you honestly whether a pilot makes sense, and if it does, show you your own product in 3D.',
+		primaryCta: 'Start a pilot project',
+		secondaryCta: 'Try it on your own file',
+		/** The second reader's door, kept to one line under the first. */
 		developers: {
-			title: 'For developers and 3D artists',
-			body: 'Try the publisher in your browser with a sample model, no account needed. The packages behind it are on npm.',
+			lead: 'Developer or 3D artist? The packages behind the publisher are on npm.',
 			cta: 'Read the docs'
+		},
+		/** Over the two halves of the camera: the file you bring, and what it becomes. */
+		figure: {
+			file: 'Your file',
+			page: 'Your product page'
 		}
 	}
 } as const
