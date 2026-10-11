@@ -3,9 +3,7 @@ import { Link } from 'react-router'
 
 import { formatNewsDate } from '../../lib/news/news-manifest'
 
-import type { NewsArticle } from '../../lib/news/news-manifest'
-
-type ArticleSummary = Omit<NewsArticle, 'Component'>
+import type { ArticleSummary } from '../../lib/news/news-manifest'
 
 interface ArticleRowProps {
 	article: ArticleSummary

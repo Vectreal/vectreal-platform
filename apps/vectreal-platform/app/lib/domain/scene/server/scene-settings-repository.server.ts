@@ -148,6 +148,31 @@ export async function getSceneAssetLinks(
 	}
 }
 
+/**
+ * Whether `assetId` is linked to `sceneId` via the `scene_assets` join table.
+ *
+ * Assets are de-duplicated per project by content hash (see
+ * `uploadSceneAssets`), so the same asset row can legitimately be shared by
+ * multiple scenes - the asset's `metadata.sceneId` only records the scene
+ * that happened to create the row first and must not be used for
+ * authorization.
+ */
+export async function isAssetLinkedToScene(
+	assetId: string,
+	sceneId: string
+): Promise<boolean> {
+	const [row] = await getDbClient()
+		.select({ assetId: sceneAssets.assetId })
+		.from(sceneAssets)
+		.innerJoin(sceneSettings, eq(sceneAssets.sceneSettingsId, sceneSettings.id))
+		.where(
+			and(eq(sceneAssets.assetId, assetId), eq(sceneSettings.sceneId, sceneId))
+		)
+		.limit(1)
+
+	return Boolean(row)
+}
+
 export async function upsertSceneSettings(
 	tx: SceneSettingsTransaction,
 	params: SceneSettingsUpsertInput

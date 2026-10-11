@@ -1,5 +1,6 @@
 import { isValidElement } from 'react'
 
+import { formatShortDate } from '../../constants/limit-format'
 import { normalizeSlug } from '../utils/slug'
 
 import type { ComponentType, ReactNode } from 'react'
@@ -68,6 +69,13 @@ export interface NewsArticle {
 	editUrl: string
 	Component: ComponentType<Record<string, unknown>>
 }
+
+/**
+ * What a listing renders. `NewsArticle` carries the MDX `Component`, which the
+ * loaders strip on the way to the client, so requiring the whole type would
+ * demand a field the route can never hand over.
+ */
+export type ArticleSummary = Omit<NewsArticle, 'Component'>
 
 const GITHUB_REPO = 'https://github.com/Vectreal/vectreal-platform'
 const GITHUB_DEFAULT_BRANCH = 'main'
@@ -423,9 +431,5 @@ export function formatNewsDate(dateValue: string): string {
 		return dateValue
 	}
 
-	return new Intl.DateTimeFormat('en-US', {
-		day: 'numeric',
-		month: 'short',
-		year: 'numeric'
-	}).format(new Date(parsed))
+	return formatShortDate(parsed)
 }

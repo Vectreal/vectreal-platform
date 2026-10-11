@@ -52,24 +52,40 @@ describe('the embed manifest ETag', () => {
 
 describe('the embed asset route', () => {
 	const route = read('routes/api/scenes.$sceneId.assets.$assetId.ts')
+	const serving = read('lib/domain/embed/embed-asset-serving.server.ts')
+
+	it('hands a key holder only a published scene to the serving rules', () => {
+		const lookup = route.indexOf(
+			'await getPublishedScenePreview(projectId, sceneId)'
+		)
+		expect(lookup).toBeGreaterThan(
+			route.indexOf('await validatePreviewApiKeyForProject(')
+		)
+		expect(route.slice(lookup)).toMatch(
+			/^[^}]*if \(!previewScene\) \{\s*return new Response\('Asset not found', \{\s*status: 404[\s\S]*?\}\s*return servePublishedEmbedAsset\(\s*request,\s*\{ sceneId, assetId \},\s*previewScene\s*\)/
+		)
+	})
 
 	it('serves the published GLB before reading any settings', () => {
-		const fastPath = route.indexOf(
+		const handler = serving.slice(
+			serving.indexOf('export async function servePublishedEmbedAsset(')
+		)
+		const fastPath = handler.indexOf(
 			'const publishedModel = serveFromPublishedRow('
 		)
-		expect(fastPath).toBeGreaterThan(
-			route.indexOf('await getPublishedScenePreview(projectId, sceneId)')
-		)
+		expect(fastPath).toBeGreaterThan(-1)
 		expect(fastPath).toBeLessThan(
-			route.indexOf('sceneSettingsService.getSceneSettingsWithAssetRefs')
+			handler.indexOf('sceneSettingsService.getSceneSettingsWithAssetRefs')
 		)
-		expect(route.slice(fastPath)).toMatch(
+		expect(handler.slice(fastPath)).toMatch(
 			/^[^)]*previewScene\s*\)\s*if \(publishedModel\) return publishedModel/
 		)
 	})
 
 	it('downloads the published GLB from the row the query joined', () => {
-		const helper = route.slice(route.indexOf('function serveFromPublishedRow('))
+		const helper = serving.slice(
+			serving.indexOf('function serveFromPublishedRow(')
+		)
 		expect(helper).toMatch(
 			/^[\s\S]{0,400}?if \(!previewScene \|\| ids\.assetId !== previewScene\.publishedAssetId\) \{\s*return null/
 		)
@@ -92,7 +108,7 @@ describe('the session asset branch', () => {
 			/^[^}]*if \(!membership\) \{\s*return new Response\('Asset not found', \{\s*status: 404/
 		)
 		expect(gate).toBeLessThan(session.indexOf('getPublishedScenePreview('))
-		expect(gate).toBeLessThan(session.indexOf('assetBelongsToScene('))
+		expect(gate).toBeLessThan(session.indexOf('isAssetLinkedToScene('))
 		expect(session).not.toContain('getScene(')
 	})
 
@@ -121,7 +137,7 @@ describe('the session manifest branch', () => {
 		const gate = preview.indexOf('await resolveSceneMembership(')
 		expect(gate).toBeGreaterThan(-1)
 		expect(preview.slice(gate)).toMatch(
-			/^[^}]*if \(!membership \|\| membership\.projectId !== previewProjectId\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound/
+			/^[^}]*if \(!membership \|\| membership\.projectId !== previewProjectId\) \{\s*return withNoStore\(ApiResponse\.notFound/
 		)
 		expect(gate).toBeLessThan(preview.indexOf('getPublishedScenePreview('))
 		expect(preview).not.toContain('getScene(')
@@ -140,7 +156,7 @@ describe('the session manifest branch', () => {
 		const refusal = preview.indexOf("if (manifestKind === 'not-found') {")
 		expect(refusal).toBeGreaterThan(-1)
 		expect(preview.slice(refusal)).toMatch(
-			/^if \(manifestKind === 'not-found'\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound\('Scene not found'\)\)/
+			/^if \(manifestKind === 'not-found'\) \{\s*return withNoStore\(ApiResponse\.notFound\('Scene not found'\)\)/
 		)
 		expect(refusal).toBeLessThan(preview.indexOf('await buildSceneManifest('))
 	})
@@ -242,6 +258,7 @@ describe('the codec files: Draco decoder, KTX2 transcoder and encoder', () => {
 
 describe('signed embed assets', () => {
 	const route = read('routes/api/scenes.$sceneId.assets.$assetId.ts')
+	const serving = read('lib/domain/embed/embed-asset-serving.server.ts')
 
 	it('are answered before any key or session lookup', () => {
 		const signed = route.indexOf("if (url.searchParams.has('sig')) {")
@@ -253,8 +270,8 @@ describe('signed embed assets', () => {
 	})
 
 	it('are verified before anything is downloaded', () => {
-		const handler = route.slice(
-			route.indexOf('async function serveSignedAsset(')
+		const handler = serving.slice(
+			serving.indexOf('async function serveSignedAsset(')
 		)
 		expect(handler.indexOf('verifySignedAsset(')).toBeGreaterThan(-1)
 		expect(handler.indexOf('if (!check?.ok) {')).toBeGreaterThan(-1)
@@ -270,10 +287,9 @@ describe('signed embed assets', () => {
 	})
 
 	it('answer an asset deleted by a republish with a quiet 404', () => {
-		const handler = route.slice(
-			route.indexOf('async function serveSignedAsset('),
-			route.indexOf('export async function loader(')
-		)
+		const start = serving.indexOf('async function serveSignedAsset(')
+		expect(start).toBeGreaterThan(-1)
+		const handler = serving.slice(start, serving.indexOf('\n}\n', start))
 		const notFound = handler.indexOf(
 			'if (error instanceof AssetNotFoundError) {'
 		)
@@ -286,7 +302,7 @@ describe('signed embed assets', () => {
 	})
 
 	it('are publicly cacheable for exactly as long as they stay valid', () => {
-		expect(route).toContain(
+		expect(serving).toContain(
 			'`public, max-age=${check.secondsLeft}, s-maxage=${check.secondsLeft}`'
 		)
 	})
@@ -365,7 +381,7 @@ describe('the loading thumbnail', () => {
 		expect(read('lib/domain/scene/server/scene-manifest.server.ts')).toContain(
 			'showsLoadingThumbnail: shouldShowLoadingThumbnail(settings?.presentation)'
 		)
-		expect(read('routes/api/scenes.$sceneId.assets.$assetId.ts')).toMatch(
+		expect(read('lib/domain/embed/embed-asset-serving.server.ts')).toMatch(
 			/showsLoadingThumbnail: shouldShowLoadingThumbnail\(\s*settingsData\?\.settings\?\.presentation\s*\)/
 		)
 	})
@@ -377,7 +393,7 @@ describe('the /preview document', () => {
 
 	it('gates on membership of this scene, in this project', () => {
 		expect(layout).toMatch(
-			/if \(!membership \|\| membership\.projectId !== projectId\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound/
+			/if \(!membership \|\| membership\.projectId !== projectId\) \{\s*return withNoStore\(ApiResponse\.notFound/
 		)
 		expect(layout).not.toContain('getScene(')
 	})
@@ -459,5 +475,44 @@ describe('the dashboard scene page', () => {
 		expect(route).toMatch(
 			/textureUrls: buildTextureThumbnailUrls\(sceneAssets, \(assetId\) =>\s*buildPreviewAssetUrl\(\{ sceneId, projectId, assetId \}\)/
 		)
+	})
+})
+
+describe('the scene mutations', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+	const caseBody = (action: string) => {
+		const start = route.indexOf(`case '${action}':`)
+		expect(start).toBeGreaterThan(-1)
+		return route.slice(start, route.indexOf('case ', start + 1))
+	}
+
+	it.each([
+		['commit-scene-save', 'saveSceneSettings'],
+		['commit-scene-publish', 'publishScene'],
+		['revoke-scene-publish', 'revokeScenePublish']
+	])(
+		'%s runs inside the idempotency, load and write-lock chain',
+		(action, operation) => {
+			expect(caseBody(action)).toMatch(
+				new RegExp(
+					`await runGuardedSceneMutation\\(\\{[^}]*operation: \\(\\) =>\\s*sceneSettingsOps\\.${operation}\\(`
+				)
+			)
+		}
+	)
+
+	it('coalesces a burst of settings reads for one user and scene', () => {
+		expect(caseBody('get-scene-settings')).toMatch(
+			/await runWithSceneSettingsCoalescing\(\s*getSceneSettingsRequestKey\(authResult\.user\.id, requestData\.sceneId\),\s*\(\) =>\s*sceneSettingsOps\.getSceneSettings\(/
+		)
+	})
+
+	it('maps a billing refusal before reporting an error', () => {
+		const outerCatch = route.slice(route.lastIndexOf('} catch (error) {'))
+		const mapped = outerCatch.search(
+			/const refusal = billingRefusalResponse\(error\)\s*if \(refusal\) return withAdditionalHeaders\(refusal, authHeaders\)/
+		)
+		expect(mapped).toBeGreaterThan(-1)
+		expect(mapped).toBeLessThan(outerCatch.indexOf('reportServerError('))
 	})
 })

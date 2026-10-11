@@ -9,7 +9,6 @@ import {
 	CardTitle
 } from '@shared/components/ui/card'
 import { Separator } from '@shared/components/ui/separator'
-import { eq } from 'drizzle-orm'
 import {
 	ArrowRight,
 	Check,
@@ -20,130 +19,19 @@ import {
 import { useEffect } from 'react'
 import { data, Link, redirect, useLoaderData } from 'react-router'
 
-import { getDbClient } from '../../db/client'
-import { orgSubscriptions } from '../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { describePlanChange } from '../../lib/domain/billing/plan-change-outcome'
-import { syncSubscriptionFromStripe } from '../../lib/domain/billing/stripe-subscription-sync.server'
+import {
+	syncCompletedCheckout,
+	type CheckoutData
+} from '../../lib/domain/billing/stripe-subscription-sync.server'
+import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
-import { getStripeClient } from '../../lib/stripe.server'
 
 import type { Route } from './+types/billing-upgrade-success'
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'
-
-// ---------------------------------------------------------------------------
-// Server: checkout session sync
-// ---------------------------------------------------------------------------
-
-interface CheckoutData {
-	planId: string | null
-	billingPeriod: string | null
-	fromPlan: string | null
-	/** True when the subscription was updated in-place (no Stripe Checkout
-	 *  redirect) - the DB is already synced before the user lands here. */
-	isDirectUpdate: boolean
-}
-
-/**
- * Retrieves the Stripe checkout session, verifies it belongs to the given org,
- * syncs the new subscription to the DB, and cancels any prior subscription that
- * was replaced - preventing double-billing on plan/price switches.
- */
-async function syncCompletedCheckout(
-	sessionId: string,
-	organizationId: string
-): Promise<CheckoutData> {
-	const stripe = getStripeClient()
-	const session = await stripe.checkout.sessions.retrieve(sessionId, {
-		expand: ['subscription']
-	})
-
-	const base: CheckoutData = {
-		planId: session.metadata?.plan_id ?? null,
-		billingPeriod: session.metadata?.billing_period ?? null,
-		fromPlan: session.metadata?.from_plan ?? null,
-		isDirectUpdate: false
-	}
-
-	// Security: reject sessions not issued for this org
-	if (session.metadata?.organization_id !== organizationId) {
-		return base
-	}
-
-	const isPaymentSettled =
-		session.payment_status === 'paid' ||
-		session.payment_status === 'no_payment_required'
-
-	const subscription = session.subscription
-	const isEligibleForSync =
-		session.status === 'complete' &&
-		isPaymentSettled &&
-		session.mode === 'subscription' &&
-		subscription != null &&
-		typeof subscription !== 'string'
-
-	if (!isEligibleForSync || typeof subscription === 'string') return base
-
-	const customerId =
-		typeof session.customer === 'string'
-			? session.customer
-			: (session.customer?.id ?? null)
-
-	if (!customerId) return base
-
-	const db = getDbClient()
-
-	// Capture the existing subscription ID before syncing overwrites it.
-	// This is necessary to cancel the old subscription when the user switched
-	// plans or billing period - Stripe creates a new subscription rather than
-	// updating the existing one, so we must cancel the old one explicitly to
-	// avoid double-billing.
-	const [existing] = await db
-		.select({ stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId })
-		.from(orgSubscriptions)
-		.where(eq(orgSubscriptions.organizationId, organizationId))
-		.limit(1)
-
-	const oldSubscriptionId = existing?.stripeSubscriptionId ?? null
-
-	// Retrieve the full subscription with price+product expanded so that
-	// resolvePlanFromSubscription can read metadata (Stripe caps expansion at 4 levels).
-	const expandedSubscription = await stripe.subscriptions.retrieve(
-		subscription.id,
-		{ expand: ['items.data.price.product'] }
-	)
-
-	await syncSubscriptionFromStripe({
-		organizationId,
-		stripeCustomerId: customerId,
-		subscription: expandedSubscription
-	})
-
-	// Cancel the replaced subscription so the customer is not charged twice.
-	// This safety net applies to edge cases where a second subscription was
-	// created despite the direct-update path (e.g. stale DB state).
-	if (oldSubscriptionId && oldSubscriptionId !== subscription.id) {
-		try {
-			await stripe.subscriptions.cancel(oldSubscriptionId)
-		} catch (err) {
-			/*
-			  The customer now holds two live Stripe subscriptions and is billed
-			  for both. No request in scope here - this runs from a helper - so
-			  the report carries the ids instead.
-			*/
-			reportServerError(err, {
-				properties: {
-					oldSubscriptionId,
-					newSubscriptionId: subscription.id
-				}
-			})
-		}
-	}
-
-	return base
-}
 
 // ---------------------------------------------------------------------------
 // Loader
@@ -162,7 +50,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const membership = memberships.find(
 		(m) => m.organization.id === organizationId
 	)
-	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
+	if (
+		!membership ||
+		!canPerformDashboardOperation('billing:manage', {
+			role: membership.membership.role
+		})
+	) {
 		throw redirect('/dashboard/billing', { headers })
 	}
 

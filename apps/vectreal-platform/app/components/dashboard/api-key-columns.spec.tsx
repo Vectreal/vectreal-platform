@@ -8,7 +8,7 @@
  * rendered `keyPreview` and ignored `value` entirely would satisfy every
  * assertion in the loader spec.
  *
- * `table-columns.tsx` had no test of any kind before this file, which is also
+ * `table-columns/api-key-columns.tsx` had no test of any kind before this file, which is also
  * why the cell was extracted into a component: `createApiKeyColumns` is a plain
  * function, so its inline `cell` render could not call a hook and could not be
  * mounted without a table around it.

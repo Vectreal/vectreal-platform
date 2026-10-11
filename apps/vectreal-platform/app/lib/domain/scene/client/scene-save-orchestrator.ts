@@ -28,7 +28,7 @@ import type { ShadowBakeResult } from '@vctrl/viewer'
  * save pipeline's concurrency; a per-call `options.maxConcurrentAssetUploads`
  * may override it. Kept here because the orchestrator is the only consumer.
  */
-export const MAX_CONCURRENT_ASSET_UPLOADS = 4
+const MAX_CONCURRENT_ASSET_UPLOADS = 4
 
 export interface SaveSceneOrchestratorOptions {
 	includeOptimizationReport?: boolean

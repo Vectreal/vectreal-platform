@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 
 import { DITHER_CELL_PX, DITHER_DISSOLVE_FRAMES } from '../../lib/dither/dither'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 
 /** How far a block travels to its seat. */
 const TRAVEL_PX = 20
@@ -56,7 +57,7 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		const root = ref.current
 		if (!root) return
-		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+		if (prefersReducedMotion()) return
 		if (root.getBoundingClientRect().top < window.innerHeight) return
 
 		const blocks = [...root.querySelectorAll<HTMLElement>('[data-reveal]')]
@@ -74,10 +75,7 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 
 				// Jumped past, by an anchor or a fling, or motion was turned off
 				// since the page loaded: seat it at once.
-				if (
-					entry.boundingClientRect.bottom < 0 ||
-					window.matchMedia('(prefers-reduced-motion: reduce)').matches
-				) {
+				if (entry.boundingClientRect.bottom < 0 || prefersReducedMotion()) {
 					for (const el of blocks) {
 						clearFrame(el)
 						el.style.transform = ''

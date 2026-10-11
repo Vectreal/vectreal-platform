@@ -55,6 +55,23 @@ export const PUBLISHED_COPY_LOCALE = 'en-US'
  */
 export const DASHBOARD_LOCALE = 'en-US'
 
+/**
+ * The one spelling for an absolute date, such as "Oct 2, 2026".
+ *
+ * Pinned to `DASHBOARD_LOCALE` for the reason above: these pages are
+ * server-rendered, so an unpinned locale is formatted once by the container and
+ * again by the browser, and the two disagree for any reader who is not
+ * American, a hydration mismatch that swaps the date under them on load. Five
+ * call sites spelled these three fields out by hand before this.
+ */
+export function formatShortDate(value: Date | string | number): string {
+	return new Date(value).toLocaleDateString(DASHBOARD_LOCALE, {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric'
+	})
+}
+
 export function formatLimitValue(
 	key: string,
 	v: number | null,

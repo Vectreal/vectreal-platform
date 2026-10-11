@@ -44,7 +44,7 @@ export function toAssetRefs(
 }
 
 /** The kept original as a fetchable ref, kept out of the model's refs. */
-export function toSourceRef(
+function toSourceRef(
 	asset: SceneAssetRecord | null,
 	buildAssetUrl: (assetId: string) => string
 ): SceneSourceRef | null {

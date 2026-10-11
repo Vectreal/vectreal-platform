@@ -1,6 +1,4 @@
-import { ArrowRight } from 'lucide-react'
-import { Link } from 'react-router'
-
+import { ArrowLink } from './arrow-link'
 import {
 	HOME_PAGE_COPY,
 	PILOT_CONTACT_HREF
@@ -28,14 +26,9 @@ export const ClosingDoors = () => (
 				<p className="text-muted-foreground text-body max-w-md" data-reveal>
 					{door.body}
 				</p>
-				<Link
-					to={door.to}
-					data-reveal
-					className="text-foreground text-body-sm inline-flex w-fit items-center gap-1 underline-offset-4 hover:underline"
-				>
+				<ArrowLink to={door.to} data-reveal className="text-foreground">
 					{door.cta}
-					<ArrowRight className="size-3.5" aria-hidden="true" />
-				</Link>
+				</ArrowLink>
 			</div>
 		))}
 	</div>

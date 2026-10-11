@@ -418,14 +418,6 @@ export const BLOCKING_BILLING_STATES: ReadonlySet<BillingState> = new Set([
 	...READ_ONLY_BILLING_STATES
 ])
 
-/**
- * Returns true if the billing state allows full plan access.
- * States not in the blocking set grant full entitlements for the subscribed plan.
- */
-export function isBillingStateActive(state: BillingState): boolean {
-	return !BLOCKING_BILLING_STATES.has(state)
-}
-
 /** Returns true when the billing state should be treated as free-tier. */
 export function isBillingStateDowngradedToFree(state: BillingState): boolean {
 	return BILLING_STATES_DOWNGRADED_TO_FREE.has(state)

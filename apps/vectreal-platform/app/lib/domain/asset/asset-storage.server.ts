@@ -181,7 +181,7 @@ const REUSE_CANDIDATE_LIMIT = 25
 /**
  * Computes a deterministic content hash used for de-duplication.
  */
-export function computeAssetHash(data: Uint8Array): string {
+function computeAssetHash(data: Uint8Array): string {
 	return createHash('sha256').update(data).digest('hex')
 }
 
@@ -455,6 +455,21 @@ export class AssetNotFoundError extends Error {
 		super(`Asset not found: ${assetId}`)
 		this.name = 'AssetNotFoundError'
 	}
+}
+
+/** The fields that place an asset and date it, without its bytes. */
+export async function findAssetMetadata(assetId: string) {
+	const [asset] = await db
+		.select({
+			id: assets.id,
+			metadata: assets.metadata,
+			updatedAt: assets.updatedAt
+		})
+		.from(assets)
+		.where(eq(assets.id, assetId))
+		.limit(1)
+
+	return asset
 }
 
 export async function downloadAsset(assetId: string): Promise<{

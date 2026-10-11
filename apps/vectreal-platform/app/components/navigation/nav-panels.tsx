@@ -13,6 +13,7 @@ import { Link, useLocation } from 'react-router'
 
 import { isNavItemActive } from './nav-items'
 import { dissolveIn } from '../../lib/dither/dither'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel } from '../../lib/navigation/site-map'
 
 import type { SiteLink, SiteSection } from '../../lib/navigation/site-map'
@@ -206,8 +207,7 @@ function NavPanel({
 	// It arrives through the page's own dither, the way the product window changes views: the dissolve reports that something opened.
 	useLayoutEffect(() => {
 		const el = ref.current
-		if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-			return
+		if (!el || prefersReducedMotion()) return
 		return dissolveIn(el, DISSOLVE_MS)
 	}, [])
 

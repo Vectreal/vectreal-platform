@@ -2,6 +2,7 @@ import { cn } from '@shared/utils'
 import { useEffect, useRef } from 'react'
 
 import { BAYER_4, DITHER_CELL_PX } from '../../lib/dither/dither'
+import { observeTheme } from '../../lib/theme/theme-probe'
 
 // The home hero backdrop's value noise, so every grain on the site is one material.
 const hash = (x: number, y: number) => {
@@ -122,14 +123,10 @@ export function DitherGrain({ origin, className }: DitherGrainProps) {
 
 		const resize = new ResizeObserver(paint)
 		resize.observe(canvas)
-		const theme = new MutationObserver(paint)
-		theme.observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ['class']
-		})
+		const stopObservingTheme = observeTheme(paint)
 		return () => {
 			resize.disconnect()
-			theme.disconnect()
+			stopObservingTheme()
 		}
 	}, [origin])
 
