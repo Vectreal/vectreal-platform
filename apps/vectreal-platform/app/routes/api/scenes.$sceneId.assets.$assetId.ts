@@ -1,143 +1,20 @@
 import { LoaderFunctionArgs } from 'react-router'
 
-import {
-	AssetNotFoundError,
-	downloadAsset,
-	downloadAssetFromRow
-} from '../../lib/domain/asset/asset-storage.server'
+import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
 import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import {
-	getAssetSigningSecret,
-	verifySignedAsset
-} from '../../lib/domain/embed/embed-asset-signature.server'
-import {
-	isEmbedServableAssetId,
-	selectEmbedServableAssets
-} from '../../lib/domain/scene/embed-asset-policy'
-import { shouldShowLoadingThumbnail } from '../../lib/domain/scene/scene-presentation'
-import {
-	getPublishedScenePreview,
-	type PublishedScenePreview
-} from '../../lib/domain/scene/server/scene-preview-repository.server'
+	serveFromPublishedRow,
+	servePublishedEmbedAsset,
+	serveSignedAsset
+} from '../../lib/domain/embed/embed-asset-serving.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { isAssetLinkedToScene } from '../../lib/domain/scene/server/scene-settings-repository.server'
-import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
 import { assetResponse } from '../../lib/http/asset-response.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { noStoreHeaders } from '../../lib/http/response-headers.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
-
-async function serveEmbedAsset(
-	request: Request,
-	ids: { sceneId: string; assetId: string },
-	download: () => Promise<{ data: Uint8Array; mimeType: string }>,
-	extraHeaders?: HeadersInit
-): Promise<Response> {
-	try {
-		const assetData = await download()
-		return assetResponse(assetData.data, assetData.mimeType, extraHeaders)
-	} catch (error) {
-		reportServerError(error, { request, properties: ids })
-		return new Response('Failed to load asset', {
-			status: 500,
-			headers: noStoreHeaders(extraHeaders)
-		})
-	}
-}
-
-/**
- * The published GLB, downloaded from the asset row the publication query
- * already joined. Null when `assetId` is not that GLB.
- *
- * It is the request every published load makes, so it skips the settings
- * transaction the rest of the published set needs. And it is the one asset no
- * `scene_assets` row names: `uploadPublishedGlb` never links it.
- */
-function serveFromPublishedRow(
-	request: Request,
-	ids: { sceneId: string; assetId: string },
-	previewScene: PublishedScenePreview | null,
-	extraHeaders?: HeadersInit
-): Promise<Response> | null {
-	if (!previewScene || ids.assetId !== previewScene.publishedAssetId) {
-		return null
-	}
-
-	const {
-		publishedAssetFilePath: filePath,
-		publishedAssetName: name,
-		publishedAssetMimeType: mimeType
-	} = previewScene
-	if (!filePath || !name) return null
-
-	return serveEmbedAsset(
-		request,
-		ids,
-		() => downloadAssetFromRow({ id: ids.assetId, filePath, mimeType, name }),
-		extraHeaders
-	)
-}
-
-/**
- * An asset addressed by a signed URL from an embed manifest.
- *
- * The signature is the authorization: the manifest that handed it out already
- * checked the key, the domain and the publication. So this reads no key and no
- * scene, which is what lets the response be public and cached at the edge for
- * as long as the URL stays valid.
- *
- * GET only: the edge caches GETs, and any other method would download the
- * whole asset at the origin on every request.
- */
-async function serveSignedAsset(
-	request: Request,
-	target: { sceneId: string; assetId: string },
-	url: URL
-): Promise<Response> {
-	if (request.method !== 'GET') {
-		return new Response(null, {
-			status: 405,
-			headers: noStoreHeaders({ Allow: 'GET' })
-		})
-	}
-
-	const secret = getAssetSigningSecret()
-	const check = secret
-		? verifySignedAsset(target, url, secret, Date.now())
-		: null
-
-	if (!check?.ok) {
-		return new Response('Asset not found', {
-			status: 404,
-			headers: noStoreHeaders()
-		})
-	}
-
-	try {
-		const assetData = await downloadAsset(target.assetId)
-		return assetResponse(
-			assetData.data,
-			assetData.mimeType,
-			undefined,
-			`public, max-age=${check.secondsLeft}, s-maxage=${check.secondsLeft}`
-		)
-	} catch (error) {
-		// A republish deletes the previous GLB while URLs naming it are still
-		// valid. That is expected, not a fault.
-		if (error instanceof AssetNotFoundError) {
-			return new Response('Asset not found', {
-				status: 404,
-				headers: noStoreHeaders()
-			})
-		}
-		reportServerError(error, { request, properties: target })
-		return new Response('Failed to load asset', {
-			status: 500,
-			headers: noStoreHeaders()
-		})
-	}
-}
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const sceneId = params.sceneId?.trim()
@@ -198,43 +75,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			})
 		}
 
-		const publishedModel = serveFromPublishedRow(
-			request,
-			{ sceneId, assetId },
-			previewScene
-		)
-		if (publishedModel) return publishedModel
-
-		/*
-		  The servable set is computed by the same module the embed manifest
-		  builds its refs from. This gate used to be an equality against
-		  `publishedAssetId` alone - an id `uploadPublishedGlb` never links into
-		  `scene_assets`, and therefore an id the manifest never referenced. The
-		  two sets were disjoint, so every asset an embed asked for 404'd.
-		*/
-		const settingsData =
-			await sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
-				includeGltfJson: false
-			})
-		const servable = selectEmbedServableAssets({
-			publishedAssetId: previewScene.publishedAssetId,
-			sceneAssets: settingsData?.assets ?? [],
-			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId,
-			showsLoadingThumbnail: shouldShowLoadingThumbnail(
-				settingsData?.settings?.presentation
-			)
-		})
-
-		if (!isEmbedServableAssetId(assetId, servable)) {
-			return new Response('Asset not found', {
-				status: 404,
-				headers: noStoreHeaders()
-			})
-		}
-
-		return serveEmbedAsset(request, { sceneId, assetId }, () =>
-			downloadAsset(assetId)
-		)
+		return servePublishedEmbedAsset(request, { sceneId, assetId }, previewScene)
 	}
 
 	// Session branch: handles both plain authenticated requests and cookie-
