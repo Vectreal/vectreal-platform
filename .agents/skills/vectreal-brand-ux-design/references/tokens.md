@@ -11,6 +11,7 @@ Source of truth: `shared/components/src/styles/globals.css`.
 | --------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
 | The brand color                                           | `--orange` (`#fc6c18`), or `bg-orange` / `text-orange` | `--accent`, `--primary`                             |
 | Brand at partial alpha                                    | `rgb(var(--orange-rgb) / <alpha>)`                     | `hsl(var(--orange)/…)`, `color-mix` with `--orange` |
+| Brand as text or a small mark                             | `--orange-ink`, or `text-orange-ink`                   | `text-orange` (2.9:1 on white, fails AA)            |
 | Hover/focus background for menus, options, ghost controls | `--accent`                                             | a hand-picked gray                                  |
 
 `--accent` is **not** the brand. It is the hover/focus background, near-white in
