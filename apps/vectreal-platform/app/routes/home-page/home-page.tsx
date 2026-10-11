@@ -2,6 +2,7 @@ import { cn } from '@shared/utils'
 
 import { Route } from './+types/home-page'
 import { ClosingDoors } from '../../components/home/closing-doors'
+import { FormatStrip } from '../../components/home/format-strip'
 import { HeroSheet } from '../../components/home/hero/hero-sheet'
 import { MissionStatement } from '../../components/home/mission-statement'
 import { OpenSourceSection } from '../../components/home/open-source-section'
@@ -18,8 +19,8 @@ export function meta(_: Route.MetaArgs) {
 }
 
 /*
-  Five sections, each a different shape: a figure, a product window, a signed
-  statement, an offer, and a code panel. The rhythm is the spacing reference's
+  Each section a different shape: a figure, a product window, a signed
+  statement, an offer, a row of type, a code panel, and the closing invitation. The rhythm is the spacing reference's
   steps. The hero and the product window are one argument, so they sit 128
   apart; everything after starts a new one at 128, and at 192 on a wide screen,
   where 128 read as cramped between sections this size.
@@ -54,6 +55,12 @@ const HomePage = () => (
 			<DitherGrain origin="right" className={cn(BLEED, '-inset-y-16')} />
 			<DitherReveal>
 				<PilotOffer />
+			</DitherReveal>
+		</section>
+
+		<section aria-label="Formats" className="container-page mt-32 lg:mt-48">
+			<DitherReveal>
+				<FormatStrip />
 			</DitherReveal>
 		</section>
 
