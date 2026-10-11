@@ -16,6 +16,7 @@ import { fallBackToPoster } from './hero-store'
 import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
 import { readGlbContents } from '../../../lib/samples/glb-contents'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
+import { markHeroSettled } from '../stage/hero-settled'
 import { StageBoundary } from '../stage/stage-boundary'
 import { createStageEngine } from '../stage/stage-engine'
 
@@ -215,6 +216,7 @@ export default function HeroStageClient({
 			setPhase('live')
 			stage.setAttribute('data-turnable', '')
 			store.set({ status: 'live', busy: false, view: 'live', ...live })
+			markHeroSettled()
 			return true
 		}
 
