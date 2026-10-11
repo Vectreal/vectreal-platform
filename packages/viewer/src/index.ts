@@ -15,5 +15,9 @@ export {
 	type ViewerLoadingThumbnail,
 	type VectrealViewerProps
 } from './vectreal-viewer'
+export {
+	default as AnimationControls,
+	type AnimationControlsProps
+} from './components/animation-controls'
 export * from './components/scene'
 export * from './components/info-popover'

@@ -259,6 +259,17 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * `return_to_scene_view`, which works either way.
 	 */
 	showSceneViewReturn?: boolean
+	/**
+	 * Whether the viewer draws its own animation playback controls. Default true.
+	 *
+	 * They appear only when the scene's `animationOptions.showControls` asks for
+	 * them; this lets a host that draws its own controls keep them off anyway.
+	 * Such a host drives playback with the `set_animation_playing` and
+	 * `restart_animation` commands and follows `animation_state_changed`.
+	 * The built-in controls are exported as `AnimationControls` for a host that
+	 * wants the same look in its own layout.
+	 */
+	showAnimationControls?: boolean
 
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
@@ -446,6 +457,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		showHotspotMarkers,
 		revealHotspotContent,
 		showSceneViewReturn = true,
+		showAnimationControls = true,
 		// Editor affordances
 		shadowLightEditable,
 		showInternalHotspots = false,
@@ -519,7 +531,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const animation = useAnimationRuntime({
 		animations,
 		options: animationOptions,
-		hasContent
+		hasContent,
+		allowControls: showAnimationControls,
+		onInteractionEvent
 	})
 
 	useEffect(() => {

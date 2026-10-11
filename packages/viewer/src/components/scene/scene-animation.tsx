@@ -260,13 +260,9 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 			if (isSameStatus(status, statusRef.current)) return
 
 			statusRef.current = status
+			// Reported to the viewer root, which owns `animation_state_changed`:
+			// it also has to announce the reset when this runtime goes away.
 			onPlaybackStatusChangeRef.current?.(status)
-			onInteractionEventRef.current?.({
-				type: 'animation_state_changed',
-				playing: status.playing,
-				activeClipId: status.activeClipId,
-				complete: status.complete
-			})
 		},
 		[applyEffect]
 	)
@@ -353,6 +349,10 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 			// so a retune against a matching key would silently play nothing.
 			configureKeyRef.current = null
 			stateRef.current = initialPlaybackState()
+			// The reported status goes with the state: kept, it would make the
+			// next configure's identical status read as no change, and never be
+			// reported to a runtime that has just reset to idle.
+			statusRef.current = readStatus(stateRef.current)
 		}
 	}, [mixer, model])
 
@@ -381,6 +381,9 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 
 	useEffect(() => {
 		onCommandExecutorReady?.({ execute: executeViewerCommand })
+		// Registering again, as a model swap does, follows an unregister that
+		// reset the runtime's status to idle. Say where playback actually is.
+		onPlaybackStatusChangeRef.current?.(statusRef.current)
 
 		return () => {
 			onCommandExecutorReady?.(null)
