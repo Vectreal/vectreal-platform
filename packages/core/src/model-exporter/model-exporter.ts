@@ -431,7 +431,15 @@ export class ModelExporter {
 	}
 
 	/**
-	 * Export a Three.js Object3D as GLB binary.
+	 * Export a Three.js Object3D as GLB binary, with the animation clips it
+	 * carries on `object.animations`.
+	 *
+	 * `GLTFExporter` writes only the clips handed to it as `options.animations`
+	 * and defaults that to none, while `FBXLoader` leaves a file's clips on the
+	 * object it returns. Reading them here is what keeps an animated FBX
+	 * animated on the way to GLB. `GLTFLoader` is the exception: it returns its
+	 * clips beside the scene rather than on it, which is why `model-loader.ts`
+	 * copies `gltf.animations` onto `gltf.scene` before anything exports it.
 	 *
 	 * @param object - The Three.js Object3D
 	 * @returns Promise resolving to the export result
@@ -442,7 +450,8 @@ export class ModelExporter {
 		try {
 			this.emitProgress('Serializing Three.js scene', 40)
 			const result = await this.threeExporter.parseAsync(object, {
-				binary: true
+				binary: true,
+				animations: object.animations
 			})
 
 			if (!(result instanceof ArrayBuffer)) {

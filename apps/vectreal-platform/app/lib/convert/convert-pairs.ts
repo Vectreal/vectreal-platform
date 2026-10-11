@@ -336,19 +336,19 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		description:
 			'Convert an FBX file to GLB in your browser. No account, no upload, no watermark.',
 		/*
-		  What an FBX arrives with that the conversion does not keep, said before
-		  the download rather than discovered after it. Cameras and lights have no
-		  glTF equivalent beyond what a material carries, and three.js re-encodes
-		  every embedded texture on the way out, so a JPEG-heavy file can come
-		  back larger.
+		  What an FBX arrives with, and the one part of it that does not arrive
+		  quite as it left. Clips come across because `exportThreeJSGLB` writes
+		  the clips its object carries (`three-source-bridges.spec.ts` round-trips
+		  an animated FBX). Cameras and lights were never lost: `GLTFExporter`
+		  writes camera nodes and `KHR_lights_punctual`, and the same spec counts
+		  both. What is not exact is a light's aim and strength, since
+		  `FBXLoader` aims a light at a target where glTF aims it down the node's
+		  -Z, and rescales its intensity on the way in.
 
-		  Animation is on that list too, and this note claimed the opposite on
-		  both FBX pages. `FBXLoader` leaves its clips on `object.animations` and
-		  `GLTFExporter` writes only the clips passed as `options.animations`,
-		  which nothing passes - so the clips are dropped, silently, on a page
-		  that promised they would come across.
+		  Not said in the note but true: three.js re-encodes every embedded
+		  texture on the way out, so a JPEG-heavy file can come back larger.
 		*/
-		note: 'Meshes, materials, textures and skinning all come across. Animation, cameras and lights do not.'
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can arrive aimed or lit differently, because FBX and glTF describe lights differently.'
 	},
 	{
 		slug: 'fbx-to-gltf',
@@ -359,8 +359,8 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		title: 'FBX to glTF converter',
 		description:
 			'Convert an FBX file to glTF in your browser. No account, no upload, no watermark.',
-		/* The same note, and the same caveat about animation, as `fbx-to-glb`. */
-		note: 'Meshes, materials, textures and skinning all come across. Animation, cameras and lights do not.'
+		/* The same note, and the same caveat about lights, as `fbx-to-glb`. */
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can arrive aimed or lit differently, because FBX and glTF describe lights differently.'
 	},
 	{
 		slug: 'fbx-to-usdz',
