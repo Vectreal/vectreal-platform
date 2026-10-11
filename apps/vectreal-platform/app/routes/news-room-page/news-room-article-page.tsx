@@ -4,7 +4,7 @@ import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
 import { ChevronLeft, Copy } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
@@ -17,11 +17,12 @@ import { ArticleHero } from '../../components/layout-components/article-hero'
 import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
 import { useConsentedCapture } from '../../hooks/use-consented-capture'
 import { useDocToc } from '../../hooks/use-doc-toc'
+import { getArticleBody } from '../../lib/news/news-article-body'
 import {
 	getAdjacentNewsArticles,
 	getNewsArticle,
 	getRelatedNewsArticles
-} from '../../lib/news/news-manifest'
+} from '../../lib/news/news-manifest.server'
 import { buildPageMeta, SITE_URL } from '../../lib/seo'
 import {
 	buildAuthorPersonJsonLd,
@@ -40,23 +41,10 @@ export async function loader({ params }: Route.LoaderArgs) {
 		throw new Response('Article not found', { status: 404 })
 	}
 
-	const { Component: _, ...serializableArticle } = article
-	const adjacent = getAdjacentNewsArticles(slug)
-	const related = getRelatedNewsArticles(slug, 3).map(
-		({ Component, ...entry }) => entry
-	)
-
 	return data({
-		article: serializableArticle,
-		adjacent: {
-			previous: adjacent.previous
-				? (({ Component, ...entry }) => entry)(adjacent.previous)
-				: undefined,
-			next: adjacent.next
-				? (({ Component, ...entry }) => entry)(adjacent.next)
-				: undefined
-		},
-		related
+		article,
+		adjacent: getAdjacentNewsArticles(slug),
+		related: getRelatedNewsArticles(slug, 3)
 	})
 }
 
@@ -125,11 +113,7 @@ export default function NewsRoomArticlePage({
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const captureConsented = useConsentedCapture()
-	const fullArticle = useMemo(
-		() => getNewsArticle(article.slug),
-		[article.slug]
-	)
-	const ArticleComponent = fullArticle?.Component
+	const ArticleComponent = getArticleBody(article.sourcePath)
 	const contentRef = useRef<HTMLDivElement | null>(null)
 	const viewTrackedRef = useRef(false)
 	const scrollTrackedMilestones = useRef(new Set<number>())

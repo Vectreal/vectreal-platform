@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { getNewsArticles } from './news-manifest'
+import { getNewsArticles } from './news-manifest.server'
 
-import type { NewsArticle } from './news-manifest'
+import type { NewsArticle } from './news-article'
 
 describe('news manifest hero fields', () => {
 	it('exposes optional heroSeed and heroImage on every article', () => {
@@ -23,9 +23,9 @@ describe('news manifest hero fields', () => {
 	})
 
 	it('omits the keys entirely rather than setting them undefined', () => {
-		// The loader strips the MDX Component and serializes the rest, so an
-		// explicit `undefined` would survive into the payload as a null. The
-		// conditional spread in the mapping keeps absent fields absent.
+		// Loaders serialize the article, so an explicit `undefined` would
+		// survive into the payload as a null. The conditional spread in the
+		// mapping keeps absent fields absent.
 		const withoutOverrides = getNewsArticles().filter(
 			(article) => article.heroSeed === undefined
 		)

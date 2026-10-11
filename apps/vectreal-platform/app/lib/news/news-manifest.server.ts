@@ -1,104 +1,30 @@
 import { isValidElement } from 'react'
 
 import { resolveArticleCta } from './article-cta'
-import { formatShortDate } from '../../constants/limit-format'
 import { normalizeSlug } from '../utils/slug'
 
-import type { ArticleCta } from './article-cta'
+import type { NewsArticle, NewsArticleFrontmatter } from './news-article'
 import type { ComponentType, ReactNode } from 'react'
 
-export interface NewsAuthor {
-	name: string
-	role: string
-	bio?: string
-	avatar?: string
-	linkedinUrl?: string
-}
-
-export interface NewsArticleFrontmatter {
-	title: string
-	slug?: string
-	excerpt: string
-	publishedAt: string
-	updatedAt?: string
-	category: string
-	tags: string[]
-	author: NewsAuthor
-	/** WebP used as the og:image / SEO social card (mosaic + text panel). */
-	coverImage?: string
-	/**
-	 * The generated scene as a 1200x630 WebP, with no text baked in. One file
-	 * serves both the article hero and the listing's featured block; `coverImage`
-	 * is the same scene with the og text composited on top.
-	 */
-	sceneImage?: string
-	/** Overrides the slug-derived scene seed. Set by hand from /__scenes. */
-	heroSeed?: number
-	/** Replaces the generated hero with a real image. Use sparingly - see the spec. */
-	heroImage?: string
-	/** Where the closing panel sends the reader: a vectreal.com /publisher or /convert URL. See `resolveArticleCta`. */
-	cta?: string
-	draft?: boolean
-}
+const GITHUB_REPO = 'https://github.com/Vectreal/vectreal-platform'
+const GITHUB_DEFAULT_BRANCH = 'main'
 
 interface MdxNewsModule {
 	default: ComponentType<Record<string, unknown>>
 	frontmatter?: Partial<NewsArticleFrontmatter>
 }
 
-export interface NewsArticle {
-	slug: string
-	title: string
-	excerpt: string
-	publishedAt: string
-	updatedAt?: string
-	category: string
-	tags: string[]
-	author: NewsAuthor
-	/** WebP used as the og:image / SEO social card (mosaic + text panel). */
-	coverImage?: string
-	/**
-	 * The generated scene as a 1200x630 WebP, with no text baked in. One file
-	 * serves both the article hero and the listing's featured block; `coverImage`
-	 * is the same scene with the og text composited on top.
-	 */
-	sceneImage?: string
-	/** Overrides the slug-derived scene seed. Set by hand from /__scenes. */
-	heroSeed?: number
-	/** Replaces the generated hero with a real image. Use sparingly - see the spec. */
-	heroImage?: string
-	cta: ArticleCta
-	draft: boolean
-	readingTimeMinutes: number
-	sourcePath: string
-	editUrl: string
-	Component: ComponentType<Record<string, unknown>>
-}
+/*
+  Every article, compiled. This module is `.server` so that only loaders reach
+  it: the browser loads one body at a time through `news-article-body.ts`.
 
-/**
- * What a listing renders. `NewsArticle` carries the MDX `Component`, which the
- * loaders strip on the way to the client, so requiring the whole type would
- * demand a field the route can never hand over.
- */
-export type ArticleSummary = Omit<NewsArticle, 'Component'>
-
-const GITHUB_REPO = 'https://github.com/Vectreal/vectreal-platform'
-const GITHUB_DEFAULT_BRANCH = 'main'
-
+  Reading time is counted from the rendered text. A `?raw` glob looks like the
+  obvious source, but the MDX plugin compiles `*.mdx?raw` as well, so it hands
+  back the same component and never the text.
+*/
 const articleModules = import.meta.glob<MdxNewsModule>(
 	'../../routes/news-room-page/articles/*.mdx',
-	{
-		eager: true
-	}
-)
-
-const rawArticleModules = import.meta.glob<unknown>(
-	'../../routes/news-room-page/articles/*.mdx',
-	{
-		eager: true,
-		query: '?raw',
-		import: 'default'
-	}
+	{ eager: true }
 )
 
 const DEV = import.meta.env.DEV
@@ -133,25 +59,6 @@ function calculateReadingTimeMinutes(content: string): number {
 
 	const words = stripped.split(/\s+/).filter(Boolean).length
 	return Math.max(1, Math.ceil(words / 100))
-}
-
-function getRawArticleSource(moduleEntry: unknown): string {
-	if (typeof moduleEntry === 'string') {
-		return moduleEntry
-	}
-
-	if (
-		typeof moduleEntry === 'object' &&
-		moduleEntry !== null &&
-		'default' in moduleEntry
-	) {
-		const defaultExport = (moduleEntry as { default?: unknown }).default
-		if (typeof defaultExport === 'string') {
-			return defaultExport
-		}
-	}
-
-	return ''
 }
 
 function getComponentTextSource(
@@ -206,20 +113,6 @@ function toSourcePath(moduleKey: string): string {
 function toEditUrl(sourcePath: string): string {
 	return `${GITHUB_REPO}/blob/${GITHUB_DEFAULT_BRANCH}/${sourcePath}`
 }
-
-const rawArticleModulesByNormalizedKey = new Map<string, unknown>(
-	Object.entries(rawArticleModules).map(([moduleKey, moduleEntry]) => [
-		moduleKey.split('?')[0],
-		moduleEntry
-	])
-)
-
-const rawArticleModulesByFileName = new Map<string, unknown>(
-	Object.entries(rawArticleModules).map(([moduleKey, moduleEntry]) => [
-		getFileName(moduleKey),
-		moduleEntry
-	])
-)
 
 function validateFrontmatter(
 	moduleKey: string,
@@ -279,8 +172,8 @@ function validateFrontmatter(
 }
 
 const allArticles: NewsArticle[] = Object.entries(articleModules)
-	.map<NewsArticle | null>(([moduleKey, module]) => {
-		const validation = validateFrontmatter(moduleKey, module.frontmatter)
+	.map<NewsArticle | null>(([moduleKey, { default: Body, frontmatter }]) => {
+		const validation = validateFrontmatter(moduleKey, frontmatter)
 		if (!validation.isValid) {
 			if (DEV && validation.reason) {
 				console.warn(
@@ -290,11 +183,11 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			return null
 		}
 
-		if (!canShowArticle(module.frontmatter ?? {})) {
+		if (!canShowArticle(frontmatter ?? {})) {
 			return null
 		}
 
-		const cta = resolveArticleCta(module.frontmatter?.cta)
+		const cta = resolveArticleCta(frontmatter?.cta)
 		if (!cta) {
 			if (DEV) {
 				console.warn(
@@ -305,61 +198,42 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 		}
 
 		const fileName = getFileName(moduleKey)
-		const rawModuleEntry =
-			rawArticleModules[moduleKey] ??
-			rawArticleModules[`${moduleKey}?raw`] ??
-			rawArticleModulesByNormalizedKey.get(moduleKey) ??
-			rawArticleModulesByFileName.get(fileName)
 		const slug =
-			normalizeSlug(module.frontmatter?.slug ?? '') ||
+			normalizeSlug(frontmatter?.slug ?? '') ||
 			normalizeSlug(fileName.replace(/\.mdx$/i, ''))
 
 		const sourcePath = toSourcePath(moduleKey)
-		const rawContent = getRawArticleSource(rawModuleEntry)
-		const componentTextSource = getComponentTextSource(module.default)
-		if (DEV && !rawContent && !componentTextSource) {
-			console.warn(
-				`Newsroom reading time fallback used (${moduleKey}): raw and component sources unavailable, using title+excerpt.`
-			)
-		}
-		const readingTimeSource =
-			rawContent ||
-			componentTextSource ||
-			`${module.frontmatter?.title ?? ''}\n${module.frontmatter?.excerpt ?? ''}`
 
 		const article: NewsArticle = {
 			slug,
-			title: module.frontmatter?.title?.trim() ?? '',
-			excerpt: module.frontmatter?.excerpt?.trim() ?? '',
-			publishedAt: module.frontmatter?.publishedAt ?? '',
-			...(module.frontmatter?.updatedAt
-				? { updatedAt: module.frontmatter.updatedAt }
-				: {}),
-			category: module.frontmatter?.category?.trim() ?? 'general',
-			tags: Array.isArray(module.frontmatter?.tags)
-				? module.frontmatter.tags.filter(Boolean)
+			title: frontmatter?.title?.trim() ?? '',
+			excerpt: frontmatter?.excerpt?.trim() ?? '',
+			publishedAt: frontmatter?.publishedAt ?? '',
+			...(frontmatter?.updatedAt ? { updatedAt: frontmatter.updatedAt } : {}),
+			category: frontmatter?.category?.trim() ?? 'general',
+			tags: Array.isArray(frontmatter?.tags)
+				? frontmatter.tags.filter(Boolean)
 				: [],
 			author: {
-				name: module.frontmatter?.author?.name?.trim() ?? '',
-				role: module.frontmatter?.author?.role?.trim() ?? '',
-				bio: module.frontmatter?.author?.bio,
-				avatar: module.frontmatter?.author?.avatar,
-				linkedinUrl: module.frontmatter?.author?.linkedinUrl
+				name: frontmatter?.author?.name?.trim() ?? '',
+				role: frontmatter?.author?.role?.trim() ?? '',
+				bio: frontmatter?.author?.bio,
+				avatar: frontmatter?.author?.avatar,
+				linkedinUrl: frontmatter?.author?.linkedinUrl
 			},
-			coverImage: module.frontmatter?.coverImage,
-			sceneImage: module.frontmatter?.sceneImage,
-			...(typeof module.frontmatter?.heroSeed === 'number'
-				? { heroSeed: module.frontmatter.heroSeed }
+			coverImage: frontmatter?.coverImage,
+			sceneImage: frontmatter?.sceneImage,
+			...(typeof frontmatter?.heroSeed === 'number'
+				? { heroSeed: frontmatter.heroSeed }
 				: {}),
-			...(module.frontmatter?.heroImage
-				? { heroImage: module.frontmatter.heroImage }
-				: {}),
+			...(frontmatter?.heroImage ? { heroImage: frontmatter.heroImage } : {}),
 			cta,
-			draft: Boolean(module.frontmatter?.draft),
-			readingTimeMinutes: calculateReadingTimeMinutes(readingTimeSource),
+			draft: Boolean(frontmatter?.draft),
+			readingTimeMinutes: calculateReadingTimeMinutes(
+				getComponentTextSource(Body)
+			),
 			sourcePath,
-			editUrl: toEditUrl(sourcePath),
-			Component: module.default
+			editUrl: toEditUrl(sourcePath)
 		}
 
 		return article
@@ -439,13 +313,4 @@ export function getRelatedNewsArticles(slug: string, limit = 3): NewsArticle[] {
 		})
 		.slice(0, limit)
 		.map((entry) => entry.article)
-}
-
-export function formatNewsDate(dateValue: string): string {
-	const parsed = Date.parse(dateValue)
-	if (Number.isNaN(parsed)) {
-		return dateValue
-	}
-
-	return formatShortDate(parsed)
 }
