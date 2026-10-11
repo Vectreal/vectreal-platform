@@ -17,7 +17,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { referenceIn } from './dropped-selection'
 
 import type { ModelFormatId } from '../model-formats'
-import type { LoadingManager, Mesh, Object3D, Texture } from 'three'
+import type { Group, LoadingManager, Mesh, Object3D, Texture } from 'three'
 
 /**
  * Formats that reach this pipeline through a three.js loader rather than
@@ -120,14 +120,14 @@ const parseSTL: ThreeSourceBridge = async (bytes) => {
  * Unlike STL this is a whole scene: a graph, materials, textures the file
  * usually carries inside itself, and often skinning and animation.
  *
- * ANIMATION DOES NOT SURVIVE THE ROUND TRIP, and it is not glTF's fault.
- * `FBXLoader` leaves its clips on `object.animations`, while three's
- * `GLTFExporter` writes only the clips handed to it as `options.animations` and
- * defaults that to none - so `exportThreeJSGLB` drops every clip. Skinning does
- * survive, which is what made this easy to state the other way round.
+ * Animation comes across because the clips stay on the object this returns:
+ * `FBXLoader` leaves them on `object.animations`, and `exportThreeJSGLB` writes
+ * whatever clips the object it is handed carries. Anything this bridge puts in
+ * place of the loader's object therefore has to carry them too, which is the
+ * one constraint the unit scale below works under.
  */
 const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
-	const [{ FBXLoader }, { LoadingManager }] = await Promise.all([
+	const [{ FBXLoader }, { Group, LoadingManager }] = await Promise.all([
 		import('three/examples/jsm/loaders/FBXLoader.js'),
 		import('three')
 	])
@@ -175,7 +175,7 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		  rotation would lay every Z-up FBX on its side - the exact defect we
 		  fixed for STL, reintroduced by copying its fix.
 		*/
-		applyUnitScale(object)
+		const scaled = applyUnitScale(object, Group)
 
 		/*
 		  `TextureLoader` fills a texture in asynchronously, so `parse` returns
@@ -186,9 +186,9 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		  hanging.
 		*/
 		await texturesSettled()
-		dropFailedTextures(object)
+		dropFailedTextures(scaled)
 
-		return object
+		return scaled
 	} finally {
 		/*
 		  Safe here, and only here: an image that has finished loading keeps its
@@ -256,19 +256,36 @@ export function watchTextureLoads(
  * format exists to state. An absent factor is left alone rather than assumed:
  * nothing is known about that file's unit, and guessing centimetres there would
  * shrink a correct model by 100.
+ *
+ * THE SCALE GOES ON A NEW PARENT, never on the loader's object, because that
+ * object can be animated. When a file has a single top-level group `FBXLoader`
+ * returns that group, and a clip that moves it writes positions in the file's
+ * own unit: scaling the group itself would leave every such move a hundred
+ * times too long, and a clip that scales it would overwrite the unit outright.
+ * A node this bridge made is one no clip in the file names. The exception is a
+ * track for an FBX model with no name at all, which three binds to whatever
+ * root it is exported from; that was the loader's object before and is this
+ * wrapper now, so such a file was wrong either way. The wrapper carries the
+ * clips as well, since it is now the object `exportThreeJSGLB` reads them from.
+ *
+ * Returns the object to export: the wrapper when a unit applied, and the
+ * loader's object untouched otherwise. `GroupClass` is passed in because three
+ * is imported dynamically here, for the reason the module header gives.
  */
-function applyUnitScale(object: Object3D): void {
+function applyUnitScale(
+	object: Object3D,
+	GroupClass: new () => Group
+): Object3D {
 	const carrier = unitScaleCarrier(object)
-	if (!carrier) return
+	if (!carrier) return object
 
 	/* Bracketed because `userData` is an index signature, not a shape. */
 	const centimetresPerUnit = carrier.userData['unitScaleFactor']
 
-	if (typeof centimetresPerUnit !== 'number') return
-	if (!Number.isFinite(centimetresPerUnit) || centimetresPerUnit <= 0) return
-
-	const metresPerUnit = centimetresPerUnit / 100
-	object.scale.multiplyScalar(metresPerUnit)
+	if (typeof centimetresPerUnit !== 'number') return object
+	if (!Number.isFinite(centimetresPerUnit) || centimetresPerUnit <= 0) {
+		return object
+	}
 
 	/*
 	  And then stop saying it. `userData` is written straight into the exported
@@ -277,6 +294,13 @@ function applyUnitScale(object: Object3D): void {
 	  the next reader to apply it a second time.
 	*/
 	delete carrier.userData['unitScaleFactor']
+
+	const scaled = new GroupClass()
+	scaled.scale.setScalar(centimetresPerUnit / 100)
+	scaled.animations = object.animations
+	scaled.add(object)
+
+	return scaled
 }
 
 /**

@@ -322,6 +322,14 @@ interface FbxScene {
 	 * back.
 	 */
 	rootNull?: boolean
+	/**
+	 * One take, `Take 001`, that slides this model 100 units along X over one
+	 * second. `root` needs `rootNull`, and is the case that matters: the node
+	 * `FBXLoader` hands back is then the node the clip moves.
+	 */
+	animate?: 'part' | 'root'
+	/** A camera and a directional light beside the part, at the top level. */
+	cameraAndLight?: boolean
 	vertices: readonly number[]
 	/** FBX polygon indices: the last vertex of a face is written ~i. */
 	polygons: readonly number[]
@@ -378,6 +386,8 @@ ${
 	}`
 		: ''
 }
+${scene.cameraAndLight ? CAMERA_AND_LIGHT_OBJECTS : ''}
+${scene.animate ? ANIMATION_OBJECTS : ''}
 }
 Connections:  {
 ${
@@ -387,9 +397,64 @@ ${
 		: `	C: "OO",2001,0`
 }
 	C: "OO",1001,2001
+${scene.cameraAndLight ? CAMERA_AND_LIGHT_CONNECTIONS : ''}
+${
+	scene.animate
+		? `${ANIMATION_CONNECTIONS}
+	C: "OP",4003,${scene.animate === 'root' ? 3001 : 2001}, "Lcl Translation"`
+		: ''
+}
 }
 `)
 }
+
+/** One second, in the 1/46186158000 s ticks FBX counts time in. */
+const FBX_SECOND = 46186158000
+
+const ANIMATION_OBJECTS = `	AnimationStack: 4001, "AnimStack::Take 001", "" {
+	}
+	AnimationLayer: 4002, "AnimLayer::BaseLayer", "" {
+	}
+	AnimationCurveNode: 4003, "AnimCurveNode::T", "" {
+		Properties70:  {
+			P: "d|X", "Number", "", "A",0
+		}
+	}
+	AnimationCurve: 4004, "AnimCurve::", "" {
+		Default: 0
+		KeyVer: 4009
+		KeyTime: *2 {
+			a: 0,${FBX_SECOND}
+		}
+		KeyValueFloat: *2 {
+			a: 0,100
+		}
+	}`
+
+const ANIMATION_CONNECTIONS = `	C: "OO",4002,4001
+	C: "OO",4003,4002
+	C: "OP",4004,4003, "d|X"`
+
+const CAMERA_AND_LIGHT_OBJECTS = `	Model: 5001, "Model::cam", "Camera" {
+		Version: 232
+	}
+	NodeAttribute: 5002, "NodeAttribute::cam", "Camera" {
+		TypeFlags: "Camera"
+	}
+	Model: 6001, "Model::lamp", "Light" {
+		Version: 232
+	}
+	NodeAttribute: 6002, "NodeAttribute::lamp", "Light" {
+		Properties70:  {
+			P: "LightType", "enum", "", "",1
+		}
+		TypeFlags: "Light"
+	}`
+
+const CAMERA_AND_LIGHT_CONNECTIONS = `	C: "OO",5001,0
+	C: "OO",5002,5001
+	C: "OO",6001,0
+	C: "OO",6002,6001`
 
 /*
   A binary FBX 7400, in the node-record shape `BinaryParser` reads: a 27-byte
@@ -737,6 +802,76 @@ describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
 		)
 
 		expect(worldBounds(result).max[1]).toBeCloseTo(4, 6)
+	})
+
+	it('keeps the animation clip the file carries', async () => {
+		const result = await new ModelLoader().loadFromBuffer(
+			asciiFBX({ ...WEDGE, animate: 'part' }),
+			'part.fbx'
+		)
+
+		const animations = result.data.getRoot().listAnimations()
+		expect(animations.map((animation) => animation.getName())).toEqual([
+			'Take 001'
+		])
+
+		const [channel] = animations[0].listChannels()
+		expect(channel.getTargetPath()).toBe('translation')
+		expect(channel.getTargetNode()?.getName()).toBe('part')
+		/* Keyed at 0 s and 1 s, so the clip lasts one second. */
+		expect(channel.getSampler()?.getInput()?.getMax([])[0]).toBeCloseTo(1, 5)
+	})
+
+	it('moves an animated root in metres, not in the file unit', async () => {
+		/*
+		  The shape that made the scale move off the loader's object. With one
+		  top-level group, the node `FBXLoader` returns is the node the clip
+		  moves, and the clip writes centimetres. Scaled in place, the root would
+		  rest at the right size and then slide a hundred times too far.
+		*/
+		const result = await new ModelLoader().loadFromBuffer(
+			asciiFBX({ ...WEDGE, rootNull: true, animate: 'root' }),
+			'part.fbx'
+		)
+
+		const [channel] = result.data.getRoot().listAnimations()[0].listChannels()
+		const moved = channel.getTargetNode()
+
+		expect(moved?.getName()).toBe('root')
+		expect(moved?.getScale()).toEqual([1, 1, 1])
+		/* 100 cm of travel only reads as 1 m under a 0.01 parent. */
+		expect(moved?.getParentNode()?.getScale()[0]).toBeCloseTo(0.01, 6)
+		expect(worldBounds(result).max[1]).toBeCloseTo(0.04, 6)
+	})
+
+	it('keeps the cameras and lights the file carries', async () => {
+		/*
+		  `FBXLoader.createCamera` reads `window.innerWidth` before it looks at
+		  the camera's own aspect, so a camera cannot be parsed without one. Only
+		  `window`, never `document`: the header says why a DOM is kept out.
+		*/
+		const previous = globalThis.window
+		globalThis.window = {
+			innerWidth: 1,
+			innerHeight: 1
+		} as unknown as typeof globalThis.window
+
+		try {
+			const result = await new ModelLoader().loadFromBuffer(
+				asciiFBX({ ...WEDGE, cameraAndLight: true }),
+				'part.fbx'
+			)
+			const root = result.data.getRoot()
+
+			expect(root.listCameras()).toHaveLength(1)
+			expect(
+				root
+					.listNodes()
+					.filter((node) => node.getExtension('KHR_lights_punctual'))
+			).toHaveLength(1)
+		} finally {
+			globalThis.window = previous
+		}
 	})
 })
 
