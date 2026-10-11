@@ -27,7 +27,11 @@ import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
 } from '../../types/viewer-types'
-import type { CameraProps, NormalizationOptions } from '@vctrl/core'
+import type {
+	CameraProps,
+	NormalizationOptions,
+	SceneBackdrop
+} from '@vctrl/core'
 
 /**
  * Anisotropic filtering keeps textures sharp on surfaces seen at a glancing
@@ -70,6 +74,11 @@ interface ModelProps {
 	 * Used to resolve target camera positions when capturing with targetCameraId.
 	 */
 	cameraOptions?: CameraProps
+	/**
+	 * The backdrop the viewer paints behind its transparent canvas. Painted
+	 * under the screenshot too, so a thumbnail shows the scene as it is seen.
+	 */
+	backdrop?: SceneBackdrop | null
 }
 
 type OrbitControlsLike = {
@@ -145,7 +154,8 @@ function solveAutoFitFraming(
 
 const buildScreenshotDataUrl = async (
 	sourceCanvas: HTMLCanvasElement,
-	options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>>
+	options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>>,
+	backdrop?: SceneBackdrop | null
 ): Promise<string> => {
 	const outputCanvas = document.createElement('canvas')
 	outputCanvas.width = options.width
@@ -172,6 +182,27 @@ const buildScreenshotDataUrl = async (
 	} else {
 		cropHeight = sourceWidth / outputAspect
 		cropY = (sourceHeight - cropHeight) / 2
+	}
+
+	if (backdrop) {
+		if (backdrop.type === 'color') {
+			context.fillStyle = backdrop.color
+		} else {
+			// The CSS gradient spans the whole viewer, and the capture is a crop
+			// of it, so the gradient runs between where the viewer's top and
+			// bottom edges land in the output rather than the output's own.
+			const scale = options.height / cropHeight
+			const gradient = context.createLinearGradient(
+				0,
+				-cropY * scale,
+				0,
+				(sourceHeight - cropY) * scale
+			)
+			gradient.addColorStop(0, backdrop.top)
+			gradient.addColorStop(1, backdrop.bottom)
+			context.fillStyle = gradient
+		}
+		context.fillRect(0, 0, options.width, options.height)
 	}
 
 	context.drawImage(
@@ -202,6 +233,7 @@ const SceneModel = memo((props: ModelProps) => {
 		cameraOptions,
 		onScreenshot,
 		onScreenshotCaptureReady,
+		backdrop,
 		enableShadows = false,
 		normalizationOptions,
 		onRawDiagonalComputed
@@ -377,7 +409,11 @@ const SceneModel = memo((props: ModelProps) => {
 				await waitForNextFrame()
 				gl.render(scene, activeCamera)
 
-				const dataUrl = await buildScreenshotDataUrl(gl.domElement, options)
+				const dataUrl = await buildScreenshotDataUrl(
+					gl.domElement,
+					options,
+					backdrop
+				)
 				onScreenshot?.(dataUrl)
 				return dataUrl
 			} finally {
@@ -400,6 +436,7 @@ const SceneModel = memo((props: ModelProps) => {
 			}
 		},
 		[
+			backdrop,
 			camera,
 			cameraOptions,
 			controls,

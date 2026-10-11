@@ -119,6 +119,43 @@ export const AmbientOcclusion: Story = {
 }
 
 /**
+ * A stage behind the model: the environment still lights it, and the baked
+ * shadow lands on a flat color the viewer paints behind its canvas, rather
+ * than on whatever page the viewer sits on.
+ */
+export const StageBackdrop: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createOcclusionModel(),
+		envOptions: {
+			...defaultEnvOptions,
+			background: false,
+			backdrop: { type: 'color', color: '#f4f4f5' }
+		},
+		shadowsOptions: { ...defaultShadowsOptions, enabled: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * A stage that shades from top to bottom, the gradient form of the same
+ * backdrop.
+ */
+export const StageGradient: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createOcclusionModel(),
+		envOptions: {
+			...defaultEnvOptions,
+			background: false,
+			backdrop: { type: 'gradient', top: '#fafafa', bottom: '#d4d4d8' }
+		},
+		shadowsOptions: { ...defaultShadowsOptions, enabled: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
  * The same scene with AO held for rest: orbiting costs nothing extra, and the
  * occlusion drops out while moving and settles back in once the view stops.
  */

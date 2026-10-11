@@ -202,7 +202,29 @@ type InheritedEnvProps = Pick<
 export interface EnvironmentProps extends InheritedEnvProps {
 	preset?: EnvironmentKey
 	environmentResolution?: EnvironmentResolution
+	/**
+	 * What the viewer paints behind the model while the environment map is not
+	 * shown as the {@link background}. The map still lights the model.
+	 *
+	 * Absent means nothing: the viewer stays transparent and the page it sits
+	 * on shows through, which is how every scene saved before this field
+	 * existed renders.
+	 */
+	backdrop?: SceneBackdrop
 }
+
+/**
+ * A flat stage behind the model, so its shadow lands on something.
+ *
+ * Colors are `#rrggbb` hex. The viewer paints it behind its transparent canvas
+ * rather than into the 3D scene, so the color on screen is exactly the one
+ * picked: the scene itself is tone mapped, and a clear color drawn there would
+ * be shifted by it.
+ */
+export type SceneBackdrop =
+	| { type: 'color'; color: string }
+	/** A vertical gradient from the top of the viewer to the bottom. */
+	| { type: 'gradient'; top: string; bottom: string }
 
 /**
  * Light configuration for accumulative shadows (a drei `RandomizedLight`).

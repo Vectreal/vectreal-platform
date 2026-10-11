@@ -15,6 +15,11 @@ interface CanvasComponentProps extends CanvasProps {
 	 */
 	containerClassName?: string
 	/**
+	 * CSS background for the container, painted behind the transparent canvas
+	 * and visible while the scene is still loading.
+	 */
+	containerBackground?: string
+	/**
 	 * Theme to apply to the viewer
 	 */
 	theme?: 'light' | 'dark' | 'system'
@@ -64,6 +69,7 @@ const DPR_STEP = 0.25
 const Canvas = ({
 	children,
 	containerClassName,
+	containerBackground,
 	theme = 'system',
 	overlay,
 	enableViewportRendering = true,
@@ -170,6 +176,9 @@ const Canvas = ({
 		<div
 			ref={setContainer}
 			className={cn('outline-none', containerClassName)}
+			style={
+				containerBackground ? { background: containerBackground } : undefined
+			}
 			data-theme={theme}
 			/*
 			  Focusable, never tabbable. A click on the canvas focuses the viewer

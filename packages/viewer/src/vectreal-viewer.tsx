@@ -17,7 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
-import { resolveEnvironmentFiles, resolveNormalizedScale } from '@vctrl/core'
+import {
+	resolveEnvironmentFiles,
+	resolveNormalizedScale,
+	resolveSceneBackdrop,
+	sceneBackdropCss
+} from '@vctrl/core'
 import {
 	AnimationSettings,
 	BoundsProps,
@@ -492,6 +497,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		? resolveEnvironmentFiles(envOptions)
 		: null
 	const environmentFilesKey = environmentFiles && String(environmentFiles)
+	// Painted by the viewer itself, so every surface shows the same stage
+	// rather than whatever its own page happens to be behind the canvas.
+	const backdrop = resolveSceneBackdrop(envOptions)
 	useEffect(() => {
 		if (environmentFiles) preloadEnvironmentFiles(environmentFiles)
 	}, [environmentFilesKey])
@@ -789,6 +797,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					'viewer vctrl-viewer h-full w-full overflow-clip font-[DM_Sans_Variable,sans-serif] text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
 					className
 				)}
+				containerBackground={backdrop ? sceneBackdropCss(backdrop) : undefined}
 				theme={theme}
 				loadingState={loadingState}
 				onContainerChange={setContainer}
@@ -895,6 +904,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											cameraOptions={cameraOptions}
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
+											backdrop={backdrop}
 											object={model}
 											displayedObject={displayedModel}
 											modelKey={modelKey}
