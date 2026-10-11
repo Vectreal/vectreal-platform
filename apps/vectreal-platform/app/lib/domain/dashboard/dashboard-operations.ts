@@ -180,7 +180,7 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
  * deleted, not what role the viewer holds.
  *
  * It exists because three components were writing this sentence out by hand -
- * `project-card.tsx`, `table-columns.tsx` and `projects-edit.tsx` all carried
+ * `project-card.tsx`, `table-columns/project-columns.tsx` and `projects-edit.tsx` all carried
  * "Only organization owners can delete a project." - while the table that
  * decides the answer sat one import away. Three copies of a rule is one rule
  * and two chances to disagree with it, and the day `project:delete` admits

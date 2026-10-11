@@ -14,7 +14,7 @@
  * its own first letter to be usable mid-sentence. A formatter that has to undo
  * its own prefix is a formatter that should not have one.
  *
- * `formatRelativeDeadline` in `table-columns.tsx` deliberately stays separate:
+ * `formatRelativeDeadline` in `table-columns/api-key-status.ts` deliberately stays separate:
  * it reads forward (`in 3 days`, `tomorrow`) and feeding a future date to this
  * one produces a negative that formats as `0 min ago`. Its own comment already
  * made that argument; this file is the past tense.
