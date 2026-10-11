@@ -181,7 +181,7 @@ const REUSE_CANDIDATE_LIMIT = 25
 /**
  * Computes a deterministic content hash used for de-duplication.
  */
-export function computeAssetHash(data: Uint8Array): string {
+function computeAssetHash(data: Uint8Array): string {
 	return createHash('sha256').update(data).digest('hex')
 }
 

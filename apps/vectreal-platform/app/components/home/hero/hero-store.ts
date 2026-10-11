@@ -30,7 +30,7 @@ export interface HeroState {
 	canHandOff: boolean
 }
 
-export const HERO_INITIAL_STATE: HeroState = {
+const HERO_INITIAL_STATE: HeroState = {
 	status: 'loading',
 	busy: true,
 	readout: {

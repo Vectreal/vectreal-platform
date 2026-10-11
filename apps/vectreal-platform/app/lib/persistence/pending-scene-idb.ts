@@ -46,7 +46,7 @@ const createId = () => {
  * newly opened tab (after OAuth) to locate the correct draft in IDB even
  * though its own sessionStorage is fresh.
  */
-export const getTabDraftId = () => {
+const getTabDraftId = () => {
 	if (!isClient()) {
 		return 'pending-scene-default'
 	}

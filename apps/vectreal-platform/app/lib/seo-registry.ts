@@ -121,7 +121,7 @@ export function buildDocsPageSeo(args: {
 	}
 }
 
-export function buildOrganizationJsonLd() {
+function buildOrganizationJsonLd() {
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'Organization',
@@ -157,7 +157,7 @@ export function buildWebSiteJsonLd() {
 	}
 }
 
-export function buildWebApplicationJsonLd() {
+function buildWebApplicationJsonLd() {
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'WebApplication',

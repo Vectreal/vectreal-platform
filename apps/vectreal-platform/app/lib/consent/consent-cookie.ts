@@ -8,7 +8,7 @@ import {
 export { CONSENT_POLICY_VERSION }
 
 export const CONSENT_COOKIE_NAME = 'consent_prefs'
-export const CONSENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
+const CONSENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
 
 export interface ConsentChoices {
 	necessary: true
@@ -87,9 +87,7 @@ export function readConsentCookie(): ConsentCookieData | null {
  * Server side: read consent from an incoming request's Cookie header.
  * Returns null when the visitor has not answered the banner yet.
  */
-export function readConsentFromRequest(
-	request: Request
-): ConsentCookieData | null {
+function readConsentFromRequest(request: Request): ConsentCookieData | null {
 	return decodeConsentCookieValue(
 		readRawCookie(request.headers.get('cookie'), CONSENT_COOKIE_NAME)
 	)

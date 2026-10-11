@@ -103,7 +103,7 @@ export const DOC_AUDIENCES: readonly {
 ]
 
 /** Ordered list of categories as they appear in the sidebar: the browser's first, then the code's. */
-export const DOC_CATEGORY_ORDER: DocCategory[] = DOC_AUDIENCES.flatMap(
+const DOC_CATEGORY_ORDER: DocCategory[] = DOC_AUDIENCES.flatMap(
 	(audience) => audience.categories
 )
 
@@ -323,7 +323,7 @@ export function getDocsByCategory(): Map<DocCategory, DocPage[]> {
 }
 
 /** Flat, ordered docs list based on category order and per-category page order. */
-export function getOrderedDocsPages(): DocPage[] {
+function getOrderedDocsPages(): DocPage[] {
 	const ordered: DocPage[] = []
 
 	for (const category of DOC_CATEGORY_ORDER) {
