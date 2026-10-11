@@ -330,7 +330,7 @@ export const DOCS_PAGE_COPY = {
 	description:
 		'Try the publisher with a sample model, with nothing to install and no account. Or build on the open-source packages underneath.',
 	publisherCta: 'Open the publisher',
-	rocketSampleCta: 'Open the publisher with the rocket sample',
+	rocketSampleCta: 'Open the rocket sample',
 	quickLinksLabel: 'Elsewhere'
 } as const
 

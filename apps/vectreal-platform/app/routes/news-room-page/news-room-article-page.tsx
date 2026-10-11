@@ -15,6 +15,7 @@ import { ArticleCard } from '../../components/layout-components/article-card'
 import { ArticleCtaPanel } from '../../components/layout-components/article-cta-panel'
 import { ArticleHero } from '../../components/layout-components/article-hero'
 import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
+import { useConsentedCapture } from '../../hooks/use-consented-capture'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	getAdjacentNewsArticles,
@@ -123,6 +124,7 @@ export default function NewsRoomArticlePage({
 	const { article, adjacent, related } = loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
+	const captureConsented = useConsentedCapture()
 	const fullArticle = useMemo(
 		() => getNewsArticle(article.slug),
 		[article.slug]
@@ -330,14 +332,13 @@ export default function NewsRoomArticlePage({
 
 				<ArticleCtaPanel
 					cta={article.cta}
-					onAction={(action) => {
-						if (!consent?.analytics) return
-						posthog?.capture('newsroom_cta_clicked', {
+					onAction={(action) =>
+						captureConsented('newsroom_cta_clicked', {
 							slug: article.slug,
 							destination: article.cta.kind,
 							action
 						})
-					}}
+					}
 				/>
 
 				<AdjacentPager

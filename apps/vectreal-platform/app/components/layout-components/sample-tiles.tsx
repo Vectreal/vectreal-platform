@@ -1,5 +1,4 @@
 import { cn, formatFileSize } from '@shared/utils'
-import { Link } from 'react-router'
 
 import { SAMPLE_MODELS, sampleModelById } from '../../lib/samples/sample-models'
 
@@ -7,17 +6,8 @@ import type { SampleDownload } from '../../hooks/use-sample-download'
 import type { FC } from 'react'
 
 interface Props {
-	/**
-	 * Called with the sample's id. Both surfaces load it the same way. With
-	 * `hrefFor`, the link navigates and this only reports which tile was taken.
-	 */
+	/** Called with the sample's id. Both surfaces load it the same way. */
 	onOpen: (id: string) => void
-	/**
-	 * Makes each tile a link to this href instead of a button, for a page that
-	 * sends the reader elsewhere to open the sample: a link can be opened in a
-	 * new tab, is announced as one, and is in the prerendered HTML.
-	 */
-	hrefFor?: (id: string) => string
 	/** What the row of tiles is for, said once above them. */
 	label: string
 	className?: string
@@ -40,7 +30,6 @@ interface Props {
  */
 export const SampleTiles: FC<Props> = ({
 	onOpen,
-	hrefFor,
 	label,
 	className,
 	download = null
@@ -51,90 +40,74 @@ export const SampleTiles: FC<Props> = ({
 		<ul className="grid grid-cols-2 gap-4 sm:max-w-md">
 			{SAMPLE_MODELS.map((sample) => {
 				const isDownloading = download?.id === sample.id
-				const tileClassName = cn(
-					// `h-full`: the captions are different lengths and one wraps to a
-					// second line at 375px, which left the two tiles different
-					// heights in a two-column grid.
-					'group relative block h-full w-full rounded-xl p-3 text-left transition-[background-color,opacity]',
-					// The ladder's own hover step, as the publisher's scene tiles beside
-					// these use; flat while a download holds them.
-					download ? 'ds-raised cursor-default' : 'ds-raised-interactive',
-					download && !isDownloading && 'opacity-50'
-				)
-				const content = (
-					<>
-						{/*
-						  `alt=""`: the tile is already named by the text below, and a
-						  screen reader gains nothing from "Rocket" twice. Lazy, because
-						  on the converter these sit below the fold on a phone.
-						*/}
-						<img
-							src={sample.previewUrl}
-							alt=""
-							loading="lazy"
-							className={cn(
-								'mb-3 aspect-[4/3] w-full object-contain transition-[transform,opacity] duration-200',
-								isDownloading ? 'opacity-60' : 'group-hover:scale-[1.03]'
-							)}
-						/>
-						<span className="text-foreground block text-sm font-medium">
-							{sample.label}
-						</span>
-						{/*
-						  Two lines rather than one joined by a separator: at 375px the
-						  joined version wrapped mid-phrase, and where it broke depended on
-						  which model it was.
-
-						  While it downloads, the size line says how far: it is the line
-						  that was already about the download.
-						*/}
-						<span className="text-muted-foreground block text-xs tabular-nums">
-							{isDownloading
-								? `Downloading, ${download.percent}%`
-								: formatFileSize(sample.bytes)}
-						</span>
-						<span className="text-muted-foreground/70 block text-xs">
-							{sample.hint}
-						</span>
-						{/* In the tile's padding, so it reports progress without moving anything. */}
-						{isDownloading && (
-							<span
-								aria-hidden="true"
-								className="ds-sunken absolute inset-x-3 bottom-1.5 h-0.5 overflow-hidden rounded-full"
-							>
-								<span
-									className="bg-orange block h-full rounded-full transition-[width] duration-(--duration-fast) motion-reduce:transition-none"
-									style={{ width: `${download.percent}%` }}
-								/>
-							</span>
-						)}
-					</>
-				)
 				return (
 					<li key={sample.id}>
-						{hrefFor ? (
-							<Link
-								to={hrefFor(sample.id)}
-								onClick={() => onOpen(sample.id)}
-								className={tileClassName}
-							>
-								{content}
-							</Link>
-						) : (
-							<button
-								type="button"
-								// Not `disabled`: that would drop keyboard focus off the tile that was just pressed.
-								aria-disabled={download ? true : undefined}
-								aria-busy={isDownloading || undefined}
-								onClick={() => {
-									if (download) return
-									onOpen(sample.id)
-								}}
-								className={tileClassName}
-							>
-								{content}
-							</button>
-						)}
+						<button
+							type="button"
+							// Not `disabled`: that would drop keyboard focus off the tile that was just pressed.
+							aria-disabled={download ? true : undefined}
+							aria-busy={isDownloading || undefined}
+							onClick={() => {
+								if (download) return
+								onOpen(sample.id)
+							}}
+							className={cn(
+								// `h-full`: the captions are different lengths and one wraps to a
+								// second line at 375px, which left the two tiles different
+								// heights in a two-column grid.
+								'group relative block h-full w-full rounded-xl p-3 text-left transition-[background-color,opacity]',
+								// The ladder's own hover step, as the publisher's scene tiles beside
+								// these use; flat while a download holds them.
+								download ? 'ds-raised cursor-default' : 'ds-raised-interactive',
+								download && !isDownloading && 'opacity-50'
+							)}
+						>
+							{/*
+							  `alt=""`: the button is already named by the text below, and a
+							  screen reader gains nothing from "Rocket" twice. Lazy, because
+							  on the converter these sit below the fold on a phone.
+							*/}
+							<img
+								src={sample.previewUrl}
+								alt=""
+								loading="lazy"
+								className={cn(
+									'mb-3 aspect-[4/3] w-full object-contain transition-[transform,opacity] duration-200',
+									isDownloading ? 'opacity-60' : 'group-hover:scale-[1.03]'
+								)}
+							/>
+							<span className="text-foreground block text-sm font-medium">
+								{sample.label}
+							</span>
+							{/*
+							  Two lines rather than one joined by a separator: at 375px the
+							  joined version wrapped mid-phrase, and where it broke depended on
+							  which model it was.
+
+							  While it downloads, the size line says how far: it is the line
+							  that was already about the download.
+							*/}
+							<span className="text-muted-foreground block text-xs tabular-nums">
+								{isDownloading
+									? `Downloading, ${download.percent}%`
+									: formatFileSize(sample.bytes)}
+							</span>
+							<span className="text-muted-foreground/70 block text-xs">
+								{sample.hint}
+							</span>
+							{/* In the tile's padding, so it reports progress without moving anything. */}
+							{isDownloading && (
+								<span
+									aria-hidden="true"
+									className="ds-sunken absolute inset-x-3 bottom-1.5 h-0.5 overflow-hidden rounded-full"
+								>
+									<span
+										className="bg-orange block h-full rounded-full transition-[width] duration-(--duration-fast) motion-reduce:transition-none"
+										style={{ width: `${download.percent}%` }}
+									/>
+								</span>
+							)}
+						</button>
 					</li>
 				)
 			})}
