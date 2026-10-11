@@ -3,6 +3,12 @@ import { ThreeEvent, useThree } from '@react-three/fiber'
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Group, Matrix4, Object3D, Vector3 } from 'three'
 
+import {
+	type ClipExtent,
+	type ClipExtentRegistry,
+	useClipExtents
+} from './clip-planes'
+
 interface ShadowLightGizmoProps {
 	/** World-space position of the light handle. */
 	position: [number, number, number]
@@ -13,11 +19,16 @@ interface ShadowLightGizmoProps {
 	/** Fired when a drag begins / ends (used to drop to a fast preview bake). */
 	onDragStart?: () => void
 	onDragEnd?: () => void
+	/** Where the handle registers its extent, so the clip planes contain it. */
+	clipExtents?: ClipExtentRegistry
 }
 
 // Keep the light at least this far above the horizon (as a fraction of its
 // distance from the target) so it can't be dragged below the ground plane.
 const MIN_ELEVATION_SIN = Math.sin((6 * Math.PI) / 180)
+
+// The move arrows' length in CSS pixels (PivotControls `fixed` scale).
+const ARROW_PIXELS = 95
 
 const scratch = new Vector3()
 const ORIGIN: [number, number, number] = [0, 0, 0]
@@ -40,7 +51,8 @@ const ShadowLightGizmo = ({
 	minDistance = 0,
 	onChange,
 	onDragStart,
-	onDragEnd
+	onDragEnd,
+	clipExtents
 }: ShadowLightGizmoProps) => {
 	const controls = useThree(
 		(state) => state.controls as { enabled?: boolean } | null
@@ -112,8 +124,24 @@ const ShadowLightGizmo = ({
 		setActive((value) => !value)
 	}, [])
 
+	// Registered at the live position, so a drag toward the camera is never
+	// clipped while the store commit catches up. The direction line runs from
+	// the origin, which the shadow ground already covers.
+	const handlePosition = livePosition ?? position
+	const handleExtent = useMemo<ClipExtent[]>(
+		() => [
+			{
+				kind: 'sphere',
+				center: new Vector3(...handlePosition),
+				radius: markerRadius,
+				screenRadius: active ? ARROW_PIXELS : 0
+			}
+		],
+		[handlePosition, markerRadius, active]
+	)
+	useClipExtents(clipExtents, handleExtent)
+
 	const markerColor = active ? '#ffcf6b' : hovered ? '#ffd98a' : '#f4f4f5'
-	const lineEnd = livePosition ?? position
 
 	const marker = (
 		<mesh
@@ -136,7 +164,7 @@ const ShadowLightGizmo = ({
 	return (
 		<group ref={groupRef}>
 			<Line
-				points={[ORIGIN, lineEnd]}
+				points={[ORIGIN, handlePosition]}
 				color="#ffcf6b"
 				lineWidth={1}
 				transparent
@@ -148,7 +176,7 @@ const ShadowLightGizmo = ({
 					matrix={matrix}
 					autoTransform
 					fixed
-					scale={95}
+					scale={ARROW_PIXELS}
 					disableRotations
 					disableScaling
 					disableSliders

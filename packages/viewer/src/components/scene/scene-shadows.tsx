@@ -17,6 +17,11 @@ import LoadFailureBoundary from '../load-failure-boundary'
 import AccumulativeShadowBake, {
 	type ShadowBakeApi
 } from './accumulative-shadow-bake'
+import {
+	type ClipExtent,
+	type ClipExtentRegistry,
+	useClipExtents
+} from './clip-planes'
 import { measureModel, worldBounds } from './model-measurement'
 import SceneBakedShadow from './scene-baked-shadow'
 import {
@@ -173,6 +178,11 @@ type SceneShadowsProps = Partial<ShadowsProps> & {
 	 * dragged (i.e. ready to store back into `light.position`).
 	 */
 	onLightChange?: (position: [number, number, number]) => void
+	/**
+	 * Where the shadow ground and the light handle register their extents, so
+	 * the camera's clip planes contain them.
+	 */
+	clipExtents?: ClipExtentRegistry
 	/**
 	 * A persisted shadow bake. When present and its signature still matches the
 	 * current bake inputs, the viewer renders the stored texture and skips the
@@ -368,6 +378,7 @@ const SceneShadows = memo(
 		staticBake = false,
 		bakedShadow,
 		onShadowBakeReady,
+		clipExtents,
 		...props
 	}: SceneShadowsProps) => {
 		const { footprint, radius, height, vertexCount, measured, sized } =
@@ -494,6 +505,9 @@ const SceneShadows = memo(
 		// falloff between touching and slightly-raised geometry is steep — true
 		// contact AO (only wheels/underbelly), not a uniform silhouette pool. A small
 		// floor keeps the camera from degenerating on near-flat models.
+		const contactScale =
+			(options.contact.scale ?? defaultShadowsOptions.contact!.scale!) *
+			footprint
 		const contactShadow = useMemo(() => {
 			if (!options.contact.enabled) return null
 			const reach =
@@ -501,10 +515,7 @@ const SceneShadows = memo(
 			return (
 				<ContactShadows
 					frames={1}
-					scale={
-						(options.contact.scale ?? defaultShadowsOptions.contact!.scale!) *
-						footprint
-					}
+					scale={contactScale}
 					far={Math.max(reach * height, radius * 0.03)}
 					blur={options.contact.blur ?? defaultShadowsOptions.contact!.blur!}
 					opacity={
@@ -519,15 +530,39 @@ const SceneShadows = memo(
 			)
 		}, [
 			options.contact.enabled,
-			options.contact.scale,
+			contactScale,
 			options.contact.blur,
 			options.contact.opacity,
 			options.contact.reach,
 			options.color,
-			footprint,
 			height,
 			radius
 		])
+
+		// The ground the shadows are drawn on: a square centered under the model,
+		// as wide as the widest shadow plane drawn. It reaches well past the
+		// model, so the clip planes have to know about it.
+		const animatingScale =
+			(options.scale ?? defaultContactFallback.scale) * footprint
+		const groundScale = isModelAnimating
+			? animatingScale
+			: Math.max(planeScale, options.contact.enabled ? contactScale : 0)
+		const groundExtent = useMemo<ClipExtent[] | null>(() => {
+			if (!options.enabled) return null
+			const half = groundScale / 2
+			return [
+				{
+					kind: 'polygon',
+					corners: [
+						new Vector3(-half, 0, -half),
+						new Vector3(half, 0, -half),
+						new Vector3(half, 0, half),
+						new Vector3(-half, 0, half)
+					]
+				}
+			]
+		}, [options.enabled, groundScale])
+		useClipExtents(clipExtents, groundExtent)
 
 		// The bake inputs a signature covers. A persisted bake is reused only while
 		// it still matches; any change to the light/frames/scale/alphaTest/colorBlend/
@@ -635,7 +670,7 @@ const SceneShadows = memo(
 			return (
 				<ContactShadows
 					opacity={options.opacity ?? defaultContactFallback.opacity}
-					scale={(options.scale ?? defaultContactFallback.scale) * footprint}
+					scale={animatingScale}
 					color={options.color ?? defaultContactFallback.color}
 					blur={defaultContactFallback.blur}
 					far={defaultContactFallback.far * radius}
@@ -687,6 +722,7 @@ const SceneShadows = memo(
 					<ShadowLightGizmo
 						position={lightPosition}
 						minDistance={radius * 1.3}
+						clipExtents={clipExtents}
 						onDragStart={() => setPreviewing(true)}
 						onDragEnd={() => setPreviewing(false)}
 						onChange={(worldPosition) =>
