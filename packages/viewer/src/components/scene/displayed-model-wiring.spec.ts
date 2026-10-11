@@ -87,10 +87,10 @@ describe('a displayed model only changes what is drawn', () => {
 			'}, [displayedModel])'
 		)
 		expect(hold).toContain('useLayoutEffect(() => {')
-		expect(hold).toContain('const settled = api === null || isBakeSettled(api)')
+		expect(hold).toContain('const settled = api === null || api.settled')
 		expect(hold).toContain('holdRef.current ??= {')
 		expect(hold).toContain('settledBake: settled ? api : null')
-		expect(hold).toContain('if (api && !settled) api.reset()')
+		expect(hold).toContain('if (api && !settled) api.restart()')
 		const passes = between(
 			sceneShadows,
 			'}, [displayedModel])',
@@ -105,16 +105,14 @@ describe('a displayed model only changes what is drawn', () => {
 			/if \(hold\.passesChanged\)\s+setShadowGeneration\(\(generation\) => generation \+ 1\)/
 		)
 		expect(hold).toContain(
-			'else if (api && api !== hold.settledBake) api.reset()'
+			'else if (api && api !== hold.settledBake) api.restart()'
 		)
-		expect(sceneShadows).toContain('!api.temporal || api.count >= api.frames')
 		const live = between(
 			sceneShadows,
 			'<Fragment key={shadowGeneration}>',
 			'</Fragment>'
 		)
 		expect(live).toContain('{sized && contactShadow}')
-		expect(live).toContain('{bake}')
-		expect(live).toContain('<ShadowAutoCutoff')
+		expect(live).toMatch(/\bbake\s*\) : null\}/)
 	})
 })
