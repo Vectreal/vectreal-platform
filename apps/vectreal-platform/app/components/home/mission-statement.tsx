@@ -40,6 +40,10 @@ const LAYERS: { label: string; value?: string; art: ReactNode }[] = [
 	{ label: COPY.layers.page, art: <CameraObject /> }
 ]
 
+/* Each key phrase's place among the key phrases, which staggers when it lights. */
+const keyIndex = (part: number) =>
+	COPY.statement.slice(0, part).filter((one) => typeof one !== 'string').length
+
 /**
  * Why the company exists: one paragraph, and beside it the path it names.
  *
@@ -48,6 +52,12 @@ const LAYERS: { label: string; value?: string; art: ReactNode }[] = [
  * your page. The statement says what the company is for; the figure says the
  * same thing to someone who reads pictures first, so the words can be set as a
  * caption instead of carrying the section alone.
+ *
+ * The statement is set large and muted, and its key phrases light up one after
+ * another as it scrolls through the middle of the screen, so a reader skimming
+ * past still takes away the four things it says. That is the browser's own
+ * scroll timeline, with no script: where it has none, or motion is reduced, the
+ * phrases are simply lit.
  *
  * The layers arrive stacked and separate as the section comes into view. The
  * page is complete without that: rendered apart, it is only closed while it
@@ -77,12 +87,12 @@ export const MissionStatement = () => {
 	}, [])
 
 	return (
-		<figure className="grid items-center gap-16 lg:grid-cols-[1.2fr_1fr] lg:gap-24">
+		<figure className="grid items-center gap-16 lg:grid-cols-[1.4fr_1fr] lg:gap-24">
 			<div
 				ref={ref}
 				data-reveal
 				data-apart={apart ? '' : undefined}
-				className={styles.stack}
+				className={cn(styles.stack, 'lg:order-2')}
 			>
 				<div className={styles.scene}>
 					{LAYERS.map((layer, i) => (
@@ -109,8 +119,23 @@ export const MissionStatement = () => {
 				<p className="text-eyebrow text-muted-foreground" data-reveal>
 					{COPY.label}
 				</p>
-				<blockquote className="text-h4 mt-6" data-reveal>
-					{COPY.statement}
+				<blockquote
+					className={cn('text-h2 text-muted-foreground mt-6', styles.statement)}
+					data-reveal
+				>
+					{COPY.statement.map((part, i) =>
+						typeof part === 'string' ? (
+							part
+						) : (
+							<span
+								key={part.key}
+								className={styles.key}
+								style={{ '--k': keyIndex(i) } as CSSProperties}
+							>
+								{part.key}
+							</span>
+						)
+					)}
 				</blockquote>
 				<figcaption
 					data-reveal

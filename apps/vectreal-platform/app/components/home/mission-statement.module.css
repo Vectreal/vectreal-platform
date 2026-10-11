@@ -58,3 +58,48 @@
 		transition: none;
 	}
 }
+
+/*
+  The statement's key phrases, lit by default. Where the browser can tie an
+  animation to the paragraph's place on screen, they start muted with the rest
+  and light one after another as it crosses the middle of the viewport; the
+  last one, the promise the paragraph ends on, lights in the brand.
+*/
+.key {
+	color: var(--foreground);
+}
+.key:last-of-type {
+	color: var(--orange-ink);
+}
+@supports (animation-timeline: view()) {
+	@media (prefers-reduced-motion: no-preference) {
+		.statement {
+			view-timeline: --statement block;
+		}
+		.key {
+			animation: key-lit linear both;
+			animation-timeline: --statement;
+			animation-range: cover calc(30% + var(--k) * 8%) cover
+				calc(36% + var(--k) * 8%);
+		}
+		.key:last-of-type {
+			animation-name: key-lit-brand;
+		}
+	}
+}
+@keyframes key-lit {
+	from {
+		color: var(--muted-foreground);
+	}
+	to {
+		color: var(--foreground);
+	}
+}
+@keyframes key-lit-brand {
+	from {
+		color: var(--muted-foreground);
+	}
+	to {
+		color: var(--orange-ink);
+	}
+}
