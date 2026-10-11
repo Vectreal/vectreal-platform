@@ -121,7 +121,7 @@ describe('the session manifest branch', () => {
 		const gate = preview.indexOf('await resolveSceneMembership(')
 		expect(gate).toBeGreaterThan(-1)
 		expect(preview.slice(gate)).toMatch(
-			/^[^}]*if \(!membership \|\| membership\.projectId !== previewProjectId\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound/
+			/^[^}]*if \(!membership \|\| membership\.projectId !== previewProjectId\) \{\s*return withNoStore\(ApiResponse\.notFound/
 		)
 		expect(gate).toBeLessThan(preview.indexOf('getPublishedScenePreview('))
 		expect(preview).not.toContain('getScene(')
@@ -140,7 +140,7 @@ describe('the session manifest branch', () => {
 		const refusal = preview.indexOf("if (manifestKind === 'not-found') {")
 		expect(refusal).toBeGreaterThan(-1)
 		expect(preview.slice(refusal)).toMatch(
-			/^if \(manifestKind === 'not-found'\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound\('Scene not found'\)\)/
+			/^if \(manifestKind === 'not-found'\) \{\s*return withNoStore\(ApiResponse\.notFound\('Scene not found'\)\)/
 		)
 		expect(refusal).toBeLessThan(preview.indexOf('await buildSceneManifest('))
 	})
@@ -377,7 +377,7 @@ describe('the /preview document', () => {
 
 	it('gates on membership of this scene, in this project', () => {
 		expect(layout).toMatch(
-			/if \(!membership \|\| membership\.projectId !== projectId\) \{\s*return withNoStoreHeaders\(ApiResponse\.notFound/
+			/if \(!membership \|\| membership\.projectId !== projectId\) \{\s*return withNoStore\(ApiResponse\.notFound/
 		)
 		expect(layout).not.toContain('getScene(')
 	})

@@ -15,6 +15,7 @@ import {
 import { readEmbedSceneSettings } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { withNoStore } from '../../lib/http/response-headers.server'
 import { buildMeta } from '../../lib/seo'
 
 import type { SceneEmbedManifestResponse } from '../../types/api'
@@ -29,15 +30,6 @@ export const meta: MetaFunction = () =>
 		{ private: true }
 	)
 
-function withNoStoreHeaders(response: Response): Response {
-	const headers = new Headers(response.headers)
-	headers.set('Cache-Control', 'no-store')
-	return new Response(response.body, {
-		status: response.status,
-		headers
-	})
-}
-
 /**
  * The internal preview authenticates by session and nothing else.
  *
@@ -49,7 +41,7 @@ function withNoStoreHeaders(response: Response): Response {
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const parsedParams = parseSceneRouteParams(params)
 	if (!parsedParams.ok) {
-		return withNoStoreHeaders(
+		return withNoStore(
 			ApiResponse.badRequest(SCENE_ROUTE_PARAM_ERRORS[parsedParams.reason])
 		)
 	}
@@ -66,12 +58,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	const sessionAuth = await getAuthUser(request)
 	if (sessionAuth instanceof Response) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+		return withNoStore(ApiResponse.notFound('Scene not found'))
 	}
 
 	const membership = await resolveSceneMembership(sceneId, sessionAuth.user.id)
 	if (!membership || membership.projectId !== projectId) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+		return withNoStore(ApiResponse.notFound('Scene not found'))
 	}
 
 	/*

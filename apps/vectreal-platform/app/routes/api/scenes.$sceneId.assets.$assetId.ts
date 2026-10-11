@@ -24,7 +24,9 @@ import {
 	type PublishedScenePreview
 } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
+import { assetResponse } from '../../lib/http/asset-response.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import { noStoreHeaders } from '../../lib/http/response-headers.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 
 const db = getDbClient()
@@ -54,51 +56,6 @@ async function assetBelongsToScene(
 	return Boolean(row)
 }
 
-// Asset rows are content-addressed per save: new bytes always get a new UUID
-// (upsert: false, path embeds assetId), so immutable caching is safe here.
-const ASSET_CACHE_CONTROL = 'private, max-age=31536000, immutable'
-
-// Only these MIME types are served verbatim. Anything else (including
-// text/html, image/svg+xml, application/xml, and unknown types) is downgraded
-// to application/octet-stream to prevent stored-XSS via client-supplied types.
-const PASSIVE_MIME_TYPES = new Set([
-	'image/png',
-	'image/jpeg',
-	'image/webp',
-	'image/ktx2',
-	'image/avif',
-	'model/gltf-binary',
-	'model/gltf+json',
-	'application/octet-stream'
-])
-
-function sanitizeMimeType(mimeType: string | undefined | null): string {
-	if (!mimeType || !PASSIVE_MIME_TYPES.has(mimeType)) {
-		return 'application/octet-stream'
-	}
-	return mimeType
-}
-
-function withNoStoreHeaders(init?: HeadersInit): Headers {
-	const headers = new Headers(init)
-	headers.set('Cache-Control', 'no-store')
-	return headers
-}
-
-function assetResponse(
-	data: Uint8Array,
-	mimeType: string,
-	extraHeaders?: HeadersInit,
-	cacheControl = ASSET_CACHE_CONTROL
-): Response {
-	const headers = new Headers(extraHeaders)
-	headers.set('Content-Type', sanitizeMimeType(mimeType))
-	headers.set('Cache-Control', cacheControl)
-	headers.set('X-Content-Type-Options', 'nosniff')
-	headers.set('Content-Security-Policy', 'sandbox')
-	return new Response(new Blob([Buffer.from(data)]), { status: 200, headers })
-}
-
 async function serveEmbedAsset(
 	request: Request,
 	ids: { sceneId: string; assetId: string },
@@ -112,7 +69,7 @@ async function serveEmbedAsset(
 		reportServerError(error, { request, properties: ids })
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: withNoStoreHeaders(extraHeaders)
+			headers: noStoreHeaders(extraHeaders)
 		})
 	}
 }
@@ -169,7 +126,7 @@ async function serveSignedAsset(
 	if (request.method !== 'GET') {
 		return new Response(null, {
 			status: 405,
-			headers: withNoStoreHeaders({ Allow: 'GET' })
+			headers: noStoreHeaders({ Allow: 'GET' })
 		})
 	}
 
@@ -181,7 +138,7 @@ async function serveSignedAsset(
 	if (!check?.ok) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: withNoStoreHeaders()
+			headers: noStoreHeaders()
 		})
 	}
 
@@ -199,13 +156,13 @@ async function serveSignedAsset(
 		if (error instanceof AssetNotFoundError) {
 			return new Response('Asset not found', {
 				status: 404,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 		reportServerError(error, { request, properties: target })
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: withNoStoreHeaders()
+			headers: noStoreHeaders()
 		})
 	}
 }
@@ -217,7 +174,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!sceneId || !assetId) {
 		return new Response('Missing scene or asset ID', {
 			status: 400,
-			headers: withNoStoreHeaders()
+			headers: noStoreHeaders()
 		})
 	}
 
@@ -241,7 +198,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		if (!projectId) {
 			return new Response('Project ID is required', {
 				status: 400,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 
@@ -259,7 +216,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 						: 404
 			return new Response('Asset not found', {
 				status,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 
@@ -267,7 +224,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		if (!previewScene) {
 			return new Response('Asset not found', {
 				status: 404,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 
@@ -301,7 +258,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		if (!isEmbedServableAssetId(assetId, servable)) {
 			return new Response('Asset not found', {
 				status: 404,
-				headers: withNoStoreHeaders()
+				headers: noStoreHeaders()
 			})
 		}
 
@@ -329,7 +286,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!membership) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: withNoStoreHeaders(authHeaders)
+			headers: noStoreHeaders(authHeaders)
 		})
 	}
 
@@ -359,7 +316,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!isLinked) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: withNoStoreHeaders(authHeaders)
+			headers: noStoreHeaders(authHeaders)
 		})
 	}
 
@@ -373,7 +330,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: withNoStoreHeaders(authHeaders)
+			headers: noStoreHeaders(authHeaders)
 		})
 	}
 }

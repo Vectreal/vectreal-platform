@@ -48,28 +48,13 @@ import {
 	ensureValidCsrfToken
 } from '../../lib/http/csrf.server'
 import { ensurePost, parseActionRequest } from '../../lib/http/requests.server'
+import {
+	manifestResponse,
+	withNoStore
+} from '../../lib/http/response-headers.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 
 import type { SceneSettingsAction } from '../../types/api'
-
-function withNoStoreHeaders(response: Response): Response {
-	const headers = new Headers(response.headers)
-	headers.set('Cache-Control', 'no-store')
-	return new Response(response.body, {
-		status: response.status,
-		headers
-	})
-}
-
-function withManifestCacheHeaders(
-	response: Response,
-	etag: string | null
-): Response {
-	const headers = new Headers(response.headers)
-	headers.set('Cache-Control', 'private, no-cache')
-	if (etag) headers.set('ETag', etag)
-	return new Response(response.body, { status: response.status, headers })
-}
 
 function withAdditionalHeaders(
 	response: Response,
@@ -258,13 +243,13 @@ async function authorizePreviewRequest(request: Request, projectId: string) {
 
 		if (!validation.ok) {
 			if (validation.error === 'rate_limited') {
-				return withNoStoreHeaders(ApiResponse.error('Too many requests', 429))
+				return withNoStore(ApiResponse.error('Too many requests', 429))
 			}
 			if (validation.error === 'domain_not_allowed') {
-				return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+				return withNoStore(ApiResponse.forbidden('Forbidden'))
 			}
 
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+			return withNoStore(ApiResponse.notFound('Scene not found'))
 		}
 
 		return { mode: 'apiKey' as const, userId: null }
@@ -272,12 +257,12 @@ async function authorizePreviewRequest(request: Request, projectId: string) {
 
 	const sessionAuth = await getAuthUser(request)
 	if (sessionAuth instanceof Response) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+		return withNoStore(ApiResponse.notFound('Scene not found'))
 	}
 
 	const project = await getProject(projectId, sessionAuth.user.id)
 	if (!project) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+		return withNoStore(ApiResponse.notFound('Scene not found'))
 	}
 
 	return {
@@ -295,13 +280,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (isPreviewRequest) {
 		const sceneId = params.sceneId?.trim()
 		if (!sceneId) {
-			return withNoStoreHeaders(ApiResponse.badRequest('Scene ID is required'))
+			return withNoStore(ApiResponse.badRequest('Scene ID is required'))
 		}
 
 		if (!previewProjectId) {
-			return withNoStoreHeaders(
-				ApiResponse.badRequest('Project ID is required')
-			)
+			return withNoStore(ApiResponse.badRequest('Project ID is required'))
 		}
 
 		const authContext = await authorizePreviewRequest(request, previewProjectId)
@@ -315,7 +298,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				authContext.userId
 			)
 			if (!membership || membership.projectId !== previewProjectId) {
-				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+				return withNoStore(ApiResponse.notFound('Scene not found'))
 			}
 		}
 
@@ -328,7 +311,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			caller: authContext.mode
 		})
 		if (manifestKind === 'not-found') {
-			return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+			return withNoStore(ApiResponse.notFound('Scene not found'))
 		}
 
 		const publishedModelRow =
@@ -378,38 +361,18 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				publication
 			)
 
-			if (etag && request.headers.get('If-None-Match') === etag) {
-				if (authContext.mode === 'session') {
-					return withManifestCacheHeaders(
-						new Response(null, {
-							status: 304,
-							headers: new Headers(authContext.headers)
-						}),
-						etag
-					)
-				}
-				return withManifestCacheHeaders(
-					new Response(null, { status: 304 }),
-					etag
-				)
-			}
-
-			if (authContext.mode === 'session') {
-				return withManifestCacheHeaders(
-					ApiResponse.success(manifest, 200, {
-						headers: new Headers(authContext.headers)
-					}),
-					etag
-				)
-			}
-
-			return withManifestCacheHeaders(ApiResponse.success(manifest), etag)
+			return manifestResponse(
+				request,
+				manifest,
+				etag,
+				authContext.mode === 'session' ? authContext.headers : undefined
+			)
 		} catch (error) {
 			reportServerError(error, {
 				request,
 				properties: { sceneId, projectId: previewProjectId }
 			})
-			return withNoStoreHeaders(ApiResponse.serverError('Failed to load scene'))
+			return withNoStore(ApiResponse.serverError('Failed to load scene'))
 		}
 	}
 
@@ -439,22 +402,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		)
 		const etag = buildSceneManifestEtag(sceneId, manifest.settingsUpdatedAt)
 
-		if (etag && request.headers.get('If-None-Match') === etag) {
-			return withManifestCacheHeaders(
-				new Response(null, {
-					status: 304,
-					headers: new Headers(authResult.headers)
-				}),
-				etag
-			)
-		}
-
-		return withManifestCacheHeaders(
-			ApiResponse.success(manifest, 200, {
-				headers: new Headers(authResult.headers)
-			}),
-			etag
-		)
+		return manifestResponse(request, manifest, etag, authResult.headers)
 	} catch (error) {
 		reportServerError(error, {
 			request,
@@ -492,17 +440,15 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	if (isPreviewRequest) {
 		if (action !== 'get-scene-settings') {
-			return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+			return withNoStore(ApiResponse.forbidden('Forbidden'))
 		}
 
 		if (!routeSceneId) {
-			return withNoStoreHeaders(ApiResponse.badRequest('Scene ID is required'))
+			return withNoStore(ApiResponse.badRequest('Scene ID is required'))
 		}
 
 		if (!previewProjectId) {
-			return withNoStoreHeaders(
-				ApiResponse.badRequest('Project ID is required')
-			)
+			return withNoStore(ApiResponse.badRequest('Project ID is required'))
 		}
 
 		const authContext = await authorizePreviewRequest(request, previewProjectId)
@@ -524,20 +470,20 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		  the moment the manifest stopped carrying it.
 		*/
 		if (authContext.mode === 'apiKey') {
-			return withNoStoreHeaders(ApiResponse.forbidden('Forbidden'))
+			return withNoStore(ApiResponse.forbidden('Forbidden'))
 		}
 
 		{
 			const scene = await getScene(routeSceneId, authContext.userId)
 			if (!scene || scene.projectId !== previewProjectId) {
-				return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+				return withNoStore(ApiResponse.notFound('Scene not found'))
 			}
 		}
 
 		const parsedRequest =
 			SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 		if (parsedRequest instanceof Response) {
-			return withNoStoreHeaders(
+			return withNoStore(
 				withAdditionalHeaders(parsedRequest, previewSessionHeaders)
 			)
 		}
@@ -556,9 +502,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			})
 		)
 
-		return withNoStoreHeaders(
-			withAdditionalHeaders(response, previewSessionHeaders)
-		)
+		return withNoStore(withAdditionalHeaders(response, previewSessionHeaders))
 	}
 
 	const authResult = await getAuthUser(request)
