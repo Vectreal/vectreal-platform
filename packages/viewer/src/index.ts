@@ -19,5 +19,10 @@ export {
 	default as AnimationControls,
 	type AnimationControlsProps
 } from './components/animation-controls'
+export {
+	default as CameraControls,
+	type CameraControlsOption,
+	type CameraControlsProps
+} from './components/camera-controls'
 export * from './components/scene'
 export * from './components/info-popover'

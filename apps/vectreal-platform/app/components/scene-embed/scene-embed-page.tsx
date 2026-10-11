@@ -7,13 +7,12 @@ import SceneEmbedInfoPopover from './scene-embed-info-popover'
 import SceneEmbedViewer from './scene-embed-viewer'
 import { useSceneEmbedScene } from './use-scene-embed-scene'
 import VectrealEmbedBadge from './vectreal-embed-badge'
-import { resolveEmbedHotspotPresentation } from '../../lib/domain/embed/embed-presentation'
+import {
+	resolveEmbedCameraControls,
+	resolveEmbedHotspotPresentation
+} from '../../lib/domain/embed/embed-presentation'
 import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
-import {
-	isSceneCamera,
-	resolveHotspotViewName
-} from '../../lib/domain/scene/scene-camera'
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
@@ -26,32 +25,15 @@ import type {
 } from '@vctrl/viewer'
 import type { ReactNode } from 'react'
 
-/** What an overlay needs from the running viewer. */
-export interface SceneEmbedViewerControl {
-	/**
-	 * Scene cameras only. A hotspot's own camera is reachable by clicking its
-	 * marker, which the viewer draws, so listing it here as well would put the
-	 * same viewpoint in the chrome's switcher twice.
-	 */
-	cameras: { cameraId: string; name?: null | string }[]
-	activeCameraId: null | string
-	/**
-	 * The hotspot whose camera the view stands on, so a switcher that lists
-	 * scene cameras only can say where the view is instead of claiming one of
-	 * them. Null on a scene camera.
-	 */
-	activeHotspotName: null | string
-	activateCamera: (cameraId: string) => void
-}
-
 export interface SceneEmbedPageProps {
 	projectId?: string
 	sceneId?: string
 	/**
-	 * Rendered over the viewer. A function because chrome needs the live control
-	 * surface, which only exists once the viewer has registered its executor.
+	 * Rendered over the viewer. What belongs to the scene - its camera
+	 * switcher, playback, the way back from a hotspot - the viewer draws
+	 * itself, so both routes show it; this is for what only one surface adds.
 	 */
-	chrome?: (control: SceneEmbedViewerControl) => ReactNode
+	chrome?: ReactNode
 	/**
 	 * Color scheme, for a surface that knows its own background.
 	 *
@@ -125,6 +107,12 @@ function useHotspotPresentation() {
 	)
 }
 
+/** Whether the embedding page left the camera switcher to the viewer. */
+function useEmbedCameraControls() {
+	const [searchParams] = useSearchParams()
+	return resolveEmbedCameraControls(searchParams)
+}
+
 /**
  * The full-viewport scene page shared by `/embed` and `/preview`.
  *
@@ -147,6 +135,7 @@ const SceneEmbedPage = ({
 	})
 	const initialCommands = useInitialCommands()
 	const hotspotPresentation = useHotspotPresentation()
+	const showCameraControls = useEmbedCameraControls()
 	const embedTheme = useEmbedViewerTheme()
 	const bridge = useHostedPreviewBridge({
 		sceneId,
@@ -156,28 +145,15 @@ const SceneEmbedPage = ({
 		initialCommands
 	})
 
-	const executorRef = useRef<null | ViewerCommandExecutor>(null)
-	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
-
 	// `useHostedPreviewBridge` returns a fresh object each render, and the viewer
 	// re-runs its executor-registration effect whenever these props change
 	// identity — unregistering with `null` on the way through. Reading the bridge
-	// from a ref keeps the callbacks below referentially stable, so tracking the
-	// active camera in state cannot tear down the executor that switching needs.
+	// from a ref keeps the callbacks below referentially stable.
 	const bridgeRef = useRef(bridge)
 	bridgeRef.current = bridge
 
-	// The embed SDK bridge and the chrome both need these, so they chain rather
-	// than compete for the viewer's single callback slot.
 	const [viewerExecutor, setViewerExecutor] =
 		useState<null | ViewerCommandExecutor>(null)
-	const onCommandExecutorReady = useCallback(
-		(executor: null | ViewerCommandExecutor) => {
-			executorRef.current = executor
-			setViewerExecutor(executor)
-		},
-		[]
-	)
 
 	/*
 	  The bridge reads a registered executor as "the scene is ready": it answers
@@ -195,17 +171,7 @@ const SceneEmbedPage = ({
 	}, [hasSceneData, viewerExecutor])
 
 	const onInteractionEvent = useCallback((event: ViewerInteractionEvent) => {
-		if (event.type === 'camera_changed') {
-			setActiveCameraId(event.cameraId)
-		} else if (event.type === 'initial_framing_completed' && event.cameraId) {
-			setActiveCameraId(event.cameraId)
-		}
-
 		bridgeRef.current.onInteractionEvent?.(event)
-	}, [])
-
-	const activateCamera = useCallback((cameraId: string) => {
-		executorRef.current?.execute({ type: 'activate_camera', cameraId })
 	}, [])
 
 	// From the manifest the document carried until the scene data exists, so
@@ -217,11 +183,6 @@ const SceneEmbedPage = ({
 		)
 		return toViewerLoadingThumbnail(thumbnail?.url)
 	}, [sceneData?.assetRefs, initialManifest?.assetRefs])
-
-	const sceneCameras = useMemo(
-		() => (sceneData?.camera?.cameras ?? []).filter(isSceneCamera),
-		[sceneData?.camera?.cameras]
-	)
 
 	if (loadError && !file?.model) {
 		return (
@@ -261,9 +222,10 @@ const SceneEmbedPage = ({
 						? (initialManifest.settings?.environment ?? {})
 						: undefined
 				}
-				onCommandExecutorReady={onCommandExecutorReady}
+				onCommandExecutorReady={setViewerExecutor}
 				onInteractionEvent={onInteractionEvent}
 				hotspotPresentation={hotspotPresentation}
+				showCameraControls={showCameraControls}
 				theme={theme ?? embedTheme}
 				branding={showsVectrealBranding ? <VectrealEmbedBadge /> : undefined}
 				/*
@@ -281,15 +243,7 @@ const SceneEmbedPage = ({
 					) : undefined
 				}
 			/>
-			{chrome?.({
-				cameras: sceneCameras,
-				activeCameraId,
-				activeHotspotName: resolveHotspotViewName(
-					sceneData?.hotspots,
-					activeCameraId
-				),
-				activateCamera
-			})}
+			{chrome}
 		</div>
 	)
 }

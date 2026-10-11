@@ -42,7 +42,6 @@ vi.mock('./sidebars/dynamic-sidebar', () => ({
 vi.mock('./optimization/optimization-drawer', () => ({
 	default: probe('optimization-drawer')
 }))
-vi.mock('./preview-camera-controls', () => ({ default: probe('camera') }))
 vi.mock('./shell/empty-stage', () => ({
 	EmptyStage: ({
 		recentScenes

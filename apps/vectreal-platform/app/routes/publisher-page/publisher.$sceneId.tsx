@@ -273,6 +273,12 @@ const PublisherPage = () => {
 					  leaving a hotspot camera's view in the Camera tool.
 					*/
 					showSceneViewReturn={isPreviewMode}
+					/*
+					  The visitor's camera switcher, so preview shows what ships. The
+					  editor switches cameras in the Camera tool, and the selection
+					  follows the viewer either way through `camera_changed` above.
+					*/
+					showCameraControls={isPreviewMode}
 					onHotspotPositionSetterReady={registerHotspotPositionSetter}
 					onShadowLightChange={handleShadowLightChange}
 					normalizationOptions={normalization}

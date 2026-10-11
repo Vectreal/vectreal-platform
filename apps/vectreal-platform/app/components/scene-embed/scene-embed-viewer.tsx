@@ -27,6 +27,11 @@ export interface SceneEmbedViewerProps {
 	 */
 	hotspotPresentation?: EmbedHotspotPresentation
 	/**
+	 * False where the embedding page switches cameras itself
+	 * (`?cameraControls=0`). Omitted, the viewer's default applies.
+	 */
+	showCameraControls?: boolean
+	/**
 	 * The Vectreal mark, when the owning plan has not bought its removal.
 	 *
 	 * Separate from `popover` because the author controls one and the plan
@@ -79,6 +84,7 @@ const SceneEmbedViewer = memo(
 		loadingThumbnail,
 		popover,
 		hotspotPresentation,
+		showCameraControls,
 		branding,
 		theme,
 		environment,
@@ -142,6 +148,7 @@ const SceneEmbedViewer = memo(
 					hotspotColor={hotspotPresentation?.color}
 					showHotspotMarkers={hotspotPresentation?.showMarkers}
 					revealHotspotContent={hotspotPresentation?.revealContent}
+					showCameraControls={showCameraControls}
 					shadowsOptions={shadowsOptions}
 					bakedShadow={bakedShadow}
 					loadingThumbnail={loadingThumbnail}

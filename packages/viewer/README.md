@@ -60,6 +60,7 @@ function App() {
 | `animations` | `AnimationClip[]` | No | The model's animation clips, as parsed from the same glTF. Without them no animation runtime is mounted |
 | `animationOptions` | `AnimationSettings` | No | How those clips play: on or off, together or in sequence, autoplay, per-clip loop, speed and offset, and whether the viewer shows its playback controls |
 | `showAnimationControls` | `boolean` | No | Lets the viewer draw its playback controls when `animationOptions.showControls` asks for them. Default `true`. Set `false` to draw your own with the exported `AnimationControls` or any UI, driven by `set_animation_playing` and `restart_animation` and following `animation_state_changed` |
+| `showCameraControls` | `boolean` | No | Lets the viewer draw its switcher between scene cameras when the scene has two or more and `cameraOptions.showControls` is not `false`; hotspot cameras never count. Default `true`. Set `false` to draw your own with the exported `CameraControls` or any UI, driven by `activate_camera` and following `camera_changed` |
 | `selectedHotspotId`            | `string \| null`                                        | No       | Draws one marker as the current one. Editing surfaces only                       |
 | `showInternalHotspots`         | `boolean`                                               | No       | Draws hotspots the author kept backstage. Editing surfaces only                  |
 | `showHiddenHotspots`           | `boolean`                                               | No       | Draws hotspots the author hid. Editing surfaces only                             |
@@ -111,10 +112,11 @@ type CameraProps = {
 		duration?: number
 		easing?: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
 	}
+	showControls?: boolean
 }
 ```
 
-Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera.
+Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera. `showControls: false` keeps the viewer's camera switcher off for this scene; absent, it shows whenever there are two or more scene cameras.
 
 ```tsx
 <VectrealViewer

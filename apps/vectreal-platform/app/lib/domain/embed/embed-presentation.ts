@@ -66,3 +66,16 @@ export function resolveEmbedHotspotPresentation(
 		color: color && HEX_COLOR.test(color) ? color : undefined
 	}
 }
+
+/**
+ * Whether the viewer draws its camera switcher, from `?cameraControls`.
+ *
+ * For a host that moves between cameras itself, with its own buttons or a
+ * scroll, through `activate_camera`: two controls for one camera would
+ * compete. On by default, like the hotspot options; the scene's own
+ * `camera.showControls` and its camera count still decide whether there is a
+ * switcher to show at all.
+ */
+export function resolveEmbedCameraControls(params: URLSearchParams): boolean {
+	return isOn(params.get('cameraControls'))
+}

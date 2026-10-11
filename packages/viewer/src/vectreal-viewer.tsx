@@ -48,6 +48,7 @@ import { AnimationClip, Object3D } from 'three'
 
 import {
 	AnimationControls,
+	CameraControls,
 	Canvas,
 	Overlay,
 	SceneViewReturn
@@ -65,10 +66,15 @@ import {
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import { shouldShowCameraControls } from './components/scene/camera-controls-rule'
 import { type ClipExtentRegistry } from './components/scene/clip-planes'
 import EnvironmentPrewarm from './components/scene/environment-prewarm'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
+import {
+	resolveHotspotViewName,
+	resolveSceneViewCameras
+} from './components/scene/scene-view-return'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useHeldExecutor } from './hooks/use-held-executor'
 import { useSceneViewReturn } from './hooks/use-scene-view-return'
@@ -276,6 +282,18 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * wants the same look in its own layout.
 	 */
 	showAnimationControls?: boolean
+	/**
+	 * Whether the viewer draws its own switcher between the scene cameras.
+	 * Default true.
+	 *
+	 * It appears only when the scene has two or more scene cameras and its
+	 * `cameraOptions.showControls` is not false; hotspot cameras never count.
+	 * Turn it off where the host offers its own way between cameras, driven by
+	 * `activate_camera` and following `camera_changed`. The built-in control is
+	 * exported as `CameraControls` for a host that wants the same look in its
+	 * own layout.
+	 */
+	showCameraControls?: boolean
 
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
@@ -464,6 +482,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		revealHotspotContent,
 		showSceneViewReturn = true,
 		showAnimationControls = true,
+		showCameraControls = true,
 		// Editor affordances
 		shadowLightEditable,
 		showInternalHotspots = false,
@@ -702,6 +721,18 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const { noteCamera, returnToSceneView } = sceneViewReturn
 	returnToSceneViewRef.current = returnToSceneView
 
+	// The views the switcher steps through: scene cameras, never a hotspot's
+	// close-up, read by the same rule the way back uses.
+	const sceneViewCameras = useMemo(
+		() => resolveSceneViewCameras(cameraOptions?.cameras, hotspots ?? []),
+		[cameraOptions?.cameras, hotspots]
+	)
+	const showCameraSwitcher = shouldShowCameraControls({
+		sceneViewCount: sceneViewCameras.length,
+		authorAllows: cameraOptions?.showControls,
+		hostAllows: showCameraControls
+	})
+
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
 			if (event.type === 'camera_changed') {
@@ -736,11 +767,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key !== 'Escape' || event.defaultPrevented) return
-			// An open dialog inside the viewer (the info popover) owns Escape;
-			// its listener sits on the document, after this one.
+			// An open dialog inside the viewer (the info popover) or the open
+			// camera list, from its options or its expanded trigger, owns Escape.
+			// Their handlers run after this native listener, so they cannot claim
+			// the key first.
 			if (
 				event.target instanceof Element &&
-				event.target.closest('[role="dialog"]')
+				event.target.closest(
+					'[role="dialog"], [role="listbox"], [aria-expanded="true"]'
+				)
 			) {
 				return
 			}
@@ -818,6 +853,19 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									complete={animation.status.complete}
 									onToggle={animation.toggle}
 									onRestart={animation.restart}
+								/>
+							) : null
+						}
+						cameraControls={
+							showCameraSwitcher ? (
+								<CameraControls
+									cameras={sceneViewCameras}
+									activeCameraId={activeCameraId}
+									offListLabel={resolveHotspotViewName(
+										activeCameraId,
+										hotspots ?? []
+									)}
+									onSelect={activateCamera}
 								/>
 							) : null
 						}
