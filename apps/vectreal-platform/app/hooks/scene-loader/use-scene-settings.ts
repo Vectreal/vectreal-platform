@@ -9,7 +9,7 @@ import {
 	defaultNormalizationOptions,
 	defaultPresentationOptions,
 	defaultShadowsOptions,
-	normalizeShadowOptions
+	withSceneSettingsDefaults
 } from '../../constants/viewer-defaults'
 import { resolveDefaultSceneCameraId } from '../../lib/domain/scene/scene-camera'
 import {
@@ -89,14 +89,15 @@ export function useApplySceneSettings() {
 			settings: SceneSettings,
 			{ isSavedBaseline }: { isSavedBaseline: boolean }
 		) => {
-			const bounds = settings.bounds ?? defaultBoundsOptions
-			const environment = settings.environment ?? defaultEnvOptions
-			const camera = settings.camera ?? defaultCameraOptions
-			const controls = settings.controls ?? defaultControlsOptions
-			const shadows = normalizeShadowOptions(settings.shadows)
-			const normalization =
-				settings.normalization ?? defaultNormalizationOptions
-			const presentation = settings.presentation ?? defaultPresentationOptions
+			const {
+				bounds,
+				environment,
+				camera,
+				controls,
+				shadows,
+				normalization,
+				presentation
+			} = withSceneSettingsDefaults(settings)
 
 			setAnimation(settings.animation)
 			setAnimationDrift(null)

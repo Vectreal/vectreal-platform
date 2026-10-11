@@ -35,6 +35,14 @@ describe('ArticleCtaPanel', () => {
 		expect(hrefs()).toEqual(['/publisher', '/publisher?sample=rocket'])
 	})
 
+	it("offers the article's example scene when its cta names one", () => {
+		renderPanel({
+			kind: 'publisher',
+			shortcut: { type: 'example', id: 'camera-shadows' }
+		})
+		expect(hrefs()).toEqual(['/publisher', '/publisher?example=camera-shadows'])
+	})
+
 	it('reports the primary action and follows the article cta', () => {
 		const onAction = renderPanel({ kind: 'convert', to: '/convert' })
 		fireEvent.click(screen.getByRole('link', { name: /open the converters/i }))

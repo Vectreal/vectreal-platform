@@ -1,6 +1,9 @@
 import { useCallback, useState } from 'react'
 
+import { exampleSceneById } from '../lib/samples/example-scenes'
 import { fetchSampleModel, sampleModelById } from '../lib/samples/sample-models'
+
+import type { ExampleScene } from '../lib/samples/example-scenes'
 
 /** The sample on its way down, and how much of it has arrived, in whole percent. */
 export type SampleDownload = { id: string; percent: number } | null
@@ -21,14 +24,15 @@ export type SampleDownload = { id: string; percent: number } | null
 export function useSampleDownload() {
 	const [download, setDownload] = useState<SampleDownload>(null)
 
-	const openSample = useCallback(
-		async (id: string, use: (file: File) => unknown) => {
-			const sample = sampleModelById(id)
-			if (!sample) return
-
+	const openModel = useCallback(
+		async (
+			id: string,
+			model: Parameters<typeof fetchSampleModel>[0],
+			use: (file: File) => unknown
+		) => {
 			setDownload({ id, percent: 0 })
 			try {
-				const file = await fetchSampleModel(sample, (fraction) => {
+				const file = await fetchSampleModel(model, (fraction) => {
 					const percent = Math.floor(fraction * 100)
 					// One render per percent, not per chunk: the 18 MB camera arrives in hundreds.
 					setDownload((current) =>
@@ -43,7 +47,26 @@ export function useSampleDownload() {
 		[]
 	)
 
-	return { download, openSample }
+	const openSample = useCallback(
+		async (id: string, use: (file: File) => unknown) => {
+			const sample = sampleModelById(id)
+			if (!sample) return
+			await openModel(id, sample, use)
+		},
+		[openModel]
+	)
+
+	/** The same download for an example scene's model; `use` applies its settings. */
+	const openExample = useCallback(
+		async (id: string, use: (example: ExampleScene, file: File) => unknown) => {
+			const example = exampleSceneById(id)
+			if (!example) return
+			await openModel(id, example.model, (file) => use(example, file))
+		},
+		[openModel]
+	)
+
+	return { download, openSample, openExample }
 }
 
 export type SampleDownloader = ReturnType<typeof useSampleDownload>

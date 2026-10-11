@@ -22,10 +22,12 @@ type: "Practical Guide"
 premise: capability
 pillar: Quality
 seo_cluster: "3D on the web / 3d model shadows and lighting"
-cta: https://vectreal.com/publisher
+cta: https://vectreal.com/publisher?example=camera-shadows
 sceneImage: "/media/images/newsroom/scene-3d-model-shadows-and-lighting.webp"
 coverImage: "/media/images/newsroom/og-3d-model-shadows-and-lighting.webp"
 ---
+
+import { ExampleScene } from '../../../components/examples/example-scene'
 
 A 3D model looks like it's standing somewhere once it has a shadow. In the [Vectreal Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=3d-model-shadows-and-lighting) that takes two switches, one for a shadow cast by a light and one for a darker shadow where the model meets the floor, and then a lighting preset that suits the product.
 
@@ -52,6 +54,8 @@ Not every model needs to sit on something, so shadows start switched off in the 
 **The ground shadow.** With Cast shadows on, switch on **Ground shadow** for a smaller, darker shadow right where the model touches the floor. It's what makes the contact convincing: the wheels of a car or the base of a cup look pressed against the ground rather than hovering just above it. It starts at values that work, and you can soften or spread it if you want.
 
 With both on, the model looks like it's standing on the floor.
+
+<ExampleScene id="camera-shadows" caption="Load it to see Cast shadows on the Studio preset with Ground shadow on, then drag to look at it from any side." />
 
 ## Which lighting preset should I pick?
 

@@ -9,6 +9,7 @@ import type {
 	ControlsProps,
 	EnvironmentProps,
 	NormalizationOptions,
+	SceneSettings,
 	ScenePresentationSettings,
 	ShadowsProps
 } from '@vctrl/core'
@@ -193,4 +194,25 @@ export const defaultNormalizationOptions: Required<NormalizationOptions> = {
 	enabled: false,
 	minSize: NORMALIZATION_DEFAULT_MIN_SIZE,
 	maxSize: NORMALIZATION_DEFAULT_MAX_SIZE
+}
+
+/**
+ * A scene's settings with every absent group filled from the defaults above.
+ *
+ * The one answer to "what does this scene look like": the publisher writes it
+ * into its atoms, and an example scene in an article renders it, so the scene a
+ * reader drags and the one that opens in the publisher cannot disagree.
+ */
+export function withSceneSettingsDefaults(settings: SceneSettings) {
+	return {
+		animation: settings.animation,
+		bounds: settings.bounds ?? defaultBoundsOptions,
+		environment: settings.environment ?? defaultEnvOptions,
+		interactions: settings.interactions,
+		camera: settings.camera ?? defaultCameraOptions,
+		controls: settings.controls ?? defaultControlsOptions,
+		shadows: normalizeShadowOptions(settings.shadows),
+		normalization: settings.normalization ?? defaultNormalizationOptions,
+		presentation: settings.presentation ?? defaultPresentationOptions
+	}
 }

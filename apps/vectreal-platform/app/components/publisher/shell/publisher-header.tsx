@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router'
 
 import { PUBLISHER_LAYER } from './shell-layout'
 import { UserMenu } from '../../user-menu'
+import { CopyExampleSettingsButton } from '../copy-example-settings-button'
 import SaveButton from '../save-button'
 import { SceneNameAndLocation } from '../scene-name-and-location'
 
@@ -117,6 +118,10 @@ export const PublisherHeader: FC<PublisherHeaderProps> = ({
 							className="bg-shell-border-strong hidden h-4 sm:block"
 						/>
 					</>
+				)}
+
+				{import.meta.env.DEV && showSceneControls && (
+					<CopyExampleSettingsButton />
 				)}
 
 				{showSceneControls && (

@@ -106,7 +106,7 @@ export function requireSampleModel(id: string): SampleModel {
  * compressed response's header counts what crossed the wire.
  */
 export async function fetchSampleModel(
-	sample: SampleModel,
+	sample: Pick<SampleModel, 'url' | 'fileName' | 'bytes'>,
 	onProgress?: (fraction: number) => void
 ): Promise<File> {
 	const response = await fetch(sample.url)

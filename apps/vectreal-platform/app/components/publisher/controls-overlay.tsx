@@ -23,6 +23,7 @@ import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish
 import { ToolSidebar } from './sidebars/tool-sidebar'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
+import { useOpenExampleScene } from '../../hooks/scene-loader/use-open-example-scene'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { useOptimizationDrawerFlow } from '../../hooks/use-optimization-drawer-flow'
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
@@ -144,6 +145,7 @@ const OverlayControls = ({
 	})
 	// Here rather than in the empty stage, which a revalidation unmounts mid-download: see its `sampleDownload`.
 	const sampleDownload = useSampleDownload()
+	const openExampleScene = useOpenExampleScene(uploadFiles)
 	/*
 	  The rail, the publish card, the sidebars and the header's scene controls
 	  act on a scene, so an empty stage has none of them: nothing on screen is a
@@ -339,6 +341,7 @@ const OverlayControls = ({
 						isMobile={isMobile}
 						onUpload={uploadFiles}
 						sampleDownload={sampleDownload}
+						onOpenExample={openExampleScene}
 						recentScenes={recentScenes}
 					/>
 				) : (
