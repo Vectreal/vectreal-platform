@@ -8,7 +8,8 @@ const meta = (thumbnailUrl: string) => ({
 	thumbnailUrl
 })
 
-const stored = '/api/scenes/s1/thumbnail/a1'
+const storedId = 'a1'
+const stored = `/api/scenes/s1/thumbnail/${storedId}`
 const captured = 'data:image/webp;base64,AAAA'
 
 describe('planThumbnailForSave', () => {
@@ -16,7 +17,8 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(captured),
 			lastSavedSceneMeta: meta(''),
-			defaultCameraChanged: false
+			defaultCameraChanged: false,
+			reusableThumbnailAssetId: storedId
 		})
 
 		expect(plan.capturedThumbnail).toBe(captured)
@@ -27,7 +29,8 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(captured),
 			lastSavedSceneMeta: meta(captured),
-			defaultCameraChanged: false
+			defaultCameraChanged: false,
+			reusableThumbnailAssetId: storedId
 		})
 
 		expect(plan.fallbackThumbnailUrl).toBe('')
@@ -37,7 +40,8 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(captured),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: false
+			defaultCameraChanged: false,
+			reusableThumbnailAssetId: storedId
 		})
 
 		expect(plan.fallbackThumbnailUrl).toBe(stored)
@@ -47,7 +51,8 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(''),
 			lastSavedSceneMeta: null,
-			defaultCameraChanged: false
+			defaultCameraChanged: false,
+			reusableThumbnailAssetId: storedId
 		})
 
 		expect(plan.needsCapture).toBe(true)
@@ -57,7 +62,8 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(stored),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: true
+			defaultCameraChanged: true,
+			reusableThumbnailAssetId: storedId
 		})
 
 		expect(plan.needsCapture).toBe(true)
@@ -67,11 +73,39 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(stored),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: false
+			defaultCameraChanged: false,
+			reusableThumbnailAssetId: storedId
 		})
 
 		expect(plan.needsCapture).toBe(false)
 		expect(plan.capturedThumbnail).toBeNull()
 		expect(plan.fallbackThumbnailUrl).toBe(stored)
+	})
+	/*
+	  A save into another project gets nothing back as reusable, and a stored
+	  thumbnail lives in the old project. Relinked, it names an asset the new
+	  project does not own, and the save refuses the whole commit.
+	*/
+	it('recaptures rather than relink a thumbnail the server does not list', () => {
+		const plan = planThumbnailForSave({
+			sceneMetaState: meta(stored),
+			lastSavedSceneMeta: meta(stored),
+			defaultCameraChanged: false,
+			reusableThumbnailAssetId: undefined
+		})
+
+		expect(plan.needsCapture).toBe(true)
+		expect(plan.fallbackThumbnailUrl).toBe('')
+	})
+
+	it('commits none, not the old URL, when that recapture fails to upload', () => {
+		const plan = planThumbnailForSave({
+			sceneMetaState: meta(captured),
+			lastSavedSceneMeta: meta(stored),
+			defaultCameraChanged: false,
+			reusableThumbnailAssetId: 'some-other-thumbnail'
+		})
+
+		expect(plan.fallbackThumbnailUrl).toBe('')
 	})
 })

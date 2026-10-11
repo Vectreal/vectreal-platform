@@ -1,4 +1,5 @@
 import { isLocallyCapturedThumbnail } from './scene-change-detection'
+import { thumbnailAssetIdFromUrl } from '../scene-thumbnail-url'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
 
@@ -7,6 +8,12 @@ interface ThumbnailSavePlanInput {
 	lastSavedSceneMeta: SceneMetaState | null
 	/** True when the frame the scene opens on has moved since the last save. */
 	defaultCameraChanged: boolean
+	/**
+	 * The thumbnail asset the server says this save may relink, from
+	 * `existingAssets`. Undefined on a save into another project, where every
+	 * asset has to be uploaded into the new project's storage.
+	 */
+	reusableThumbnailAssetId: string | undefined
 }
 
 export interface ThumbnailSavePlan {
@@ -33,7 +40,8 @@ export interface ThumbnailSavePlan {
 export const planThumbnailForSave = ({
 	sceneMetaState,
 	lastSavedSceneMeta,
-	defaultCameraChanged
+	defaultCameraChanged,
+	reusableThumbnailAssetId
 }: ThumbnailSavePlanInput): ThumbnailSavePlan => {
 	const capturedThumbnail = isLocallyCapturedThumbnail(
 		sceneMetaState.thumbnailUrl
@@ -41,17 +49,25 @@ export const planThumbnailForSave = ({
 		? sceneMetaState.thumbnailUrl
 		: null
 
-	const storedThumbnailUrl = capturedThumbnail
+	const candidateUrl = capturedThumbnail
 		? (lastSavedSceneMeta?.thumbnailUrl ?? '')
 		: sceneMetaState.thumbnailUrl
+
+	// A stored thumbnail is kept only while the server lists it as reusable for
+	// this save, the same rule the model files follow. Relinked after a move to
+	// another project, it would name an asset in the old project, and the save
+	// refuses that.
+	const candidateAssetId = thumbnailAssetIdFromUrl(candidateUrl)
+	const storedThumbnailUrl =
+		candidateAssetId !== null && candidateAssetId === reusableThumbnailAssetId
+			? candidateUrl
+			: ''
 
 	return {
 		capturedThumbnail,
 		needsCapture:
 			capturedThumbnail === null &&
 			(!storedThumbnailUrl || defaultCameraChanged),
-		fallbackThumbnailUrl: isLocallyCapturedThumbnail(storedThumbnailUrl)
-			? ''
-			: storedThumbnailUrl
+		fallbackThumbnailUrl: storedThumbnailUrl
 	}
 }
