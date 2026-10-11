@@ -46,8 +46,8 @@ interface Props {
 	handOffRef: RefObject<(() => Promise<void>) | null>
 }
 
-/** How long the drawing stands as a drawing before the sweep, so it reads as one. */
-const DRAWN_HOLD_MS = 1800
+/** How long the drawing stands as a drawing before the sweep: long enough to read as one, short enough not to read as a wait. */
+const DRAWN_HOLD_MS = 600
 
 /*
   Bake mode, for `scripts/bake-home-hero.ts` against the dev server only: the

@@ -21,7 +21,7 @@ export function useMountWhenVisibleAndIdle(
 			observer.disconnect()
 			const mount = () => setWanted(true)
 			idle = hasIdle
-				? window.requestIdleCallback(mount, { timeout: 1500 })
+				? window.requestIdleCallback(mount, { timeout: 500 })
 				: window.setTimeout(mount, 200)
 		})
 		observer.observe(element)
