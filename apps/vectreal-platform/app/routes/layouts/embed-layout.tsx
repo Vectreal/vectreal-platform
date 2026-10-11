@@ -4,6 +4,7 @@ import { Route } from './+types/embed-layout'
 import { EmbedErrorState } from '../../components/scene-embed/embed-error-state'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { hasEntitlement } from '../../lib/domain/billing/entitlement-service.server'
+import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import {
 	resolveEmbedBranding,
 	shouldShowVectrealBranding
@@ -52,9 +53,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	const { projectId, sceneId } = parsedParams.value
 	const url = new URL(request.url)
 	const tokenFromQuery = url.searchParams.get('token')?.trim() || null
-	const hasTokenCredential =
-		Boolean(tokenFromQuery) ||
-		Boolean(request.headers.get('authorization')?.trim())
+	const hasTokenCredential = hasPreviewTokenCredential(request)
 
 	if (!hasTokenCredential) {
 		throw embedRefusal('not_available')

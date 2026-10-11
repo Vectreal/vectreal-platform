@@ -422,6 +422,22 @@ describe('embed asset authorization', () => {
 			.where(eq(schema.sceneHotspots.sceneSettingsId, settingsId))
 	})
 
+	it("reads an asset's metadata and date without touching its bytes", async () => {
+		const { findAssetMetadata } =
+			await import('../../app/lib/domain/asset/asset-storage.server')
+
+		const asset = await findAssetMetadata(thumbnailAssetId)
+		expect(asset?.id).toBe(thumbnailAssetId)
+		expect(asset?.updatedAt).toBeInstanceOf(Date)
+		expect(Object.keys(asset ?? {}).sort()).toEqual([
+			'id',
+			'metadata',
+			'updatedAt'
+		])
+
+		expect(await findAssetMetadata(randomUUID())).toBeUndefined()
+	})
+
 	describe('a signed-in session', () => {
 		const outsiderId = randomUUID()
 
@@ -470,6 +486,30 @@ describe('embed asset authorization', () => {
 
 		it('answers a non-member 404 for a linked asset too', async () => {
 			const response = await fetchAsset(outsiderId, bufferAssetId)
+
+			expect(response.status).toBe(404)
+		})
+
+		/*
+		  A member of the project is still refused an asset that this scene does
+		  not link: membership opens the scene, and only `scene_assets` says which
+		  rows belong to it. The asset sits in the same project and folder, so
+		  nothing but the link tells the two apart.
+		*/
+		it('answers a member 404 for an asset the scene does not link', async () => {
+			const unlinkedAssetId = randomUUID()
+			await db.insert(schema.assets).values({
+				id: unlinkedAssetId,
+				folderId: assetFolderId,
+				name: 'other-scene.bin',
+				type: 'model',
+				filePath: `smoke/${unlinkedAssetId}.bin`,
+				mimeType: 'application/octet-stream',
+				fileSize: 1024,
+				ownerId
+			})
+
+			const response = await fetchAsset(ownerId, unlinkedAssetId)
 
 			expect(response.status).toBe(404)
 		})

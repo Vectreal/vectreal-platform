@@ -19,6 +19,7 @@ import {
 	createApiKey,
 	getAllUserApiKeys
 } from '../../lib/domain/auth/api-key-repository.server'
+import { quotaExceededResponse } from '../../lib/domain/billing/billing-refusal-response'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { resolveProjectMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
@@ -251,16 +252,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return ApiResponse.created(payload, { headers })
 	} catch (error) {
 		if (error instanceof QuotaExceededError) {
-			return withHeaders(
-				ApiResponse.quotaExceeded(error.message, {
-					limitKey: error.limitKey,
-					currentValue: error.currentValue,
-					limit: error.limit,
-					plan: error.plan,
-					upgradeTo: error.upgradeTo
-				}),
-				headers
-			)
+			return withHeaders(quotaExceededResponse(error), headers)
 		}
 
 		return withHeaders(

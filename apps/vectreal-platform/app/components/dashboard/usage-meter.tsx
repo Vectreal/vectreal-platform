@@ -1,5 +1,4 @@
 import { Progress } from '@shared/components/ui/progress'
-import { Skeleton } from '@shared/components/ui/skeleton'
 import { cn } from '@shared/utils'
 
 import { InfoTooltip } from '../info-tooltip'
@@ -57,11 +56,6 @@ export function readUsage(current: number, limit: null | number): UsageReading {
 					? 'warning'
 					: 'ok'
 	}
-}
-
-/** True when any reading deserves the user's attention. */
-export function hasUsagePressure(readings: UsageReading[]) {
-	return readings.some((reading) => reading.level !== 'ok')
 }
 
 /*
@@ -133,28 +127,6 @@ export function UsageMeterList({ children }: { children: ReactNode }) {
 	return (
 		<div className="grid gap-x-8 gap-y-3 sm:grid-cols-2 xl:grid-cols-3">
 			{children}
-		</div>
-	)
-}
-
-/** The row, with nothing in it yet. Same DOM, so the page cannot shift on load. */
-export function UsageMeterRowSkeleton({ delayMs = 0 }: { delayMs?: number }) {
-	return (
-		<div className="space-y-1.5">
-			<div className="flex items-baseline justify-between gap-3">
-				<Skeleton
-					className="h-4 w-24"
-					style={{ animationDelay: `${delayMs}ms` }}
-				/>
-				<Skeleton
-					className="h-4 w-28"
-					style={{ animationDelay: `${delayMs + 30}ms` }}
-				/>
-			</div>
-			<Skeleton
-				className="h-1 w-full"
-				style={{ animationDelay: `${delayMs + 60}ms` }}
-			/>
 		</div>
 	)
 }

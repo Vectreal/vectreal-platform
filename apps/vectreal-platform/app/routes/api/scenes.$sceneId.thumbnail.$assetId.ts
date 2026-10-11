@@ -1,35 +1,13 @@
-import { eq } from 'drizzle-orm'
 import { LoaderFunctionArgs } from 'react-router'
 
-import { getDbClient } from '../../db/client'
-import { assets } from '../../db/schema'
-import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
+import {
+	downloadAsset,
+	findAssetMetadata
+} from '../../lib/domain/asset/asset-storage.server'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { assetResponse } from '../../lib/http/asset-response.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
-
-const db = getDbClient()
-
-// Only these MIME types are served verbatim. Anything else (including
-// text/html, image/svg+xml, application/xml, and unknown types) is downgraded
-// to application/octet-stream to prevent stored-XSS via client-supplied types.
-const PASSIVE_MIME_TYPES = new Set([
-	'image/png',
-	'image/jpeg',
-	'image/webp',
-	'image/ktx2',
-	'image/avif',
-	'model/gltf-binary',
-	'model/gltf+json',
-	'application/octet-stream'
-])
-
-function sanitizeMimeType(mimeType: string | undefined | null): string {
-	if (!mimeType || !PASSIVE_MIME_TYPES.has(mimeType)) {
-		return 'application/octet-stream'
-	}
-	return mimeType
-}
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const auth = await getAuthUser(request)
@@ -54,16 +32,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// `verifyProjectAccess` for the requesting user. Requiring ownership on top
 	// of that was strictly narrower and broke teams - a scene you are entitled to
 	// open returned 404 for its thumbnail whenever a colleague had uploaded it.
-	const [asset] = await db
-		.select({
-			id: assets.id,
-			ownerId: assets.ownerId,
-			metadata: assets.metadata,
-			updatedAt: assets.updatedAt
-		})
-		.from(assets)
-		.where(eq(assets.id, assetId))
-		.limit(1)
+	const asset = await findAssetMetadata(assetId)
 
 	if (!asset) {
 		return new Response('Thumbnail not found', { status: 404, headers })
@@ -93,28 +62,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	try {
 		const assetData = await downloadAsset(assetId)
-		const body = new Blob([Buffer.from(assetData.data)], {
-			type: sanitizeMimeType(assetData.mimeType)
-		})
+		const responseHeaders = new Headers(headers)
+		responseHeaders.set('Last-Modified', asset.updatedAt.toUTCString())
 
-		return new Response(body, {
-			status: 200,
-			headers: (() => {
-				const responseHeaders = new Headers(headers)
-				responseHeaders.set(
-					'Content-Type',
-					sanitizeMimeType(assetData.mimeType)
-				)
-				responseHeaders.set(
-					'Cache-Control',
-					'private, max-age=31536000, immutable'
-				)
-				responseHeaders.set('Last-Modified', asset.updatedAt.toUTCString())
-				responseHeaders.set('X-Content-Type-Options', 'nosniff')
-				responseHeaders.set('Content-Security-Policy', 'sandbox')
-				return responseHeaders
-			})()
-		})
+		return assetResponse(assetData.data, assetData.mimeType, responseHeaders)
 	} catch (error) {
 		reportServerError(error, {
 			request,

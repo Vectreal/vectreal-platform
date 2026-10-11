@@ -10,7 +10,7 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { inUnitOf } from './format-bytes'
+import { inUnitOf } from './in-unit-of'
 import { MissionStatement } from './mission-statement'
 import { HERO_MODEL } from '../../lib/samples/sample-models'
 

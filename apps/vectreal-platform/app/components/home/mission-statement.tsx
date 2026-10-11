@@ -8,9 +8,10 @@ import {
 } from 'react'
 
 import { CameraDrawing, CameraObject } from './camera-drawing'
-import { inUnitOf } from './format-bytes'
+import { inUnitOf } from './in-unit-of'
 import styles from './mission-statement.module.css'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { HERO_MODEL } from '../../lib/samples/sample-models'
 
 const COPY = HOME_PAGE_COPY.mission
@@ -59,7 +60,7 @@ export const MissionStatement = () => {
 	useEffect(() => {
 		const node = ref.current
 		if (!node) return
-		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+		if (prefersReducedMotion()) return
 		if (node.getBoundingClientRect().top < window.innerHeight) return
 		setApart(false)
 		const observer = new IntersectionObserver(

@@ -7,6 +7,7 @@
  * cover and keep every other response private: a public response on the key
  * or session path would let the edge serve one caller's asset to another.
  */
+import { PERSISTED_BAKE_FILENAME } from '@vctrl/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /** The `scene_assets` rows the link check reads; empty means unlinked. */
@@ -66,6 +67,7 @@ import { validatePreviewApiKeyForProject } from '../app/lib/domain/auth/preview-
 import { resolveSceneMembership } from '../app/lib/domain/dashboard/dashboard-permissions.server'
 import { buildSignedAssetUrl } from '../app/lib/domain/embed/embed-asset-signature.server'
 import { getPublishedScenePreview } from '../app/lib/domain/scene/server/scene-preview-repository.server'
+import { sceneSettingsService } from '../app/lib/domain/scene/server/scene-settings-service.server'
 import { getAuthUser } from '../app/lib/http/auth.server'
 import { reportServerError } from '../app/lib/observability/report-server-error.server'
 import { loader } from '../app/routes/api/scenes.$sceneId.assets.$assetId'
@@ -209,6 +211,77 @@ describe('a key-authenticated asset request', () => {
 			expect(response.status).toBe(200)
 			expect(response.headers.get('Cache-Control')).toMatch(/^private,/)
 		}
+	})
+	describe('for an asset other than the published GLB', () => {
+		const BAKE_ID = 'bake-1'
+		const DRAFT_ID = 'draft-1'
+		const keyedGet = (assetId: string) =>
+			loader({
+				request: new Request(
+					`${ORIGIN}/api/scenes/${SCENE_ID}/assets/${assetId}?preview=1&projectId=p&token=vctrl_key`
+				),
+				params: { sceneId: SCENE_ID, assetId }
+			} as unknown as LoaderFunctionArgs)
+
+		beforeEach(() => {
+			vi.mocked(
+				sceneSettingsService.getSceneSettingsWithAssetRefs
+			).mockResolvedValue({
+				assets: [
+					{
+						id: BAKE_ID,
+						name: PERSISTED_BAKE_FILENAME,
+						mimeType: 'image/png',
+						fileSize: 1
+					},
+					{
+						id: DRAFT_ID,
+						name: 'draft.png',
+						mimeType: 'image/png',
+						fileSize: 1
+					}
+				],
+				settings: { shadows: { baked: { assetId: BAKE_ID } } }
+			} as never)
+		})
+
+		it('serves the bake the published settings declare', async () => {
+			const response = await keyedGet(BAKE_ID)
+
+			expect(response.status).toBe(200)
+			expect(
+				sceneSettingsService.getSceneSettingsWithAssetRefs
+			).toHaveBeenCalledWith(SCENE_ID, { includeGltfJson: false })
+			expect(downloadAsset).toHaveBeenCalledWith(BAKE_ID)
+		})
+
+		it('refuses a bake-named asset the published settings do not declare', async () => {
+			vi.mocked(
+				sceneSettingsService.getSceneSettingsWithAssetRefs
+			).mockResolvedValue({
+				assets: [
+					{
+						id: BAKE_ID,
+						name: PERSISTED_BAKE_FILENAME,
+						mimeType: 'image/png',
+						fileSize: 1
+					}
+				],
+				settings: {}
+			} as never)
+
+			const response = await keyedGet(BAKE_ID)
+
+			expect(response.status).toBe(404)
+			expect(downloadAsset).not.toHaveBeenCalled()
+		})
+
+		it('refuses a linked asset the embed manifest never references', async () => {
+			const response = await keyedGet(DRAFT_ID)
+
+			expect(response.status).toBe(404)
+			expect(downloadAsset).not.toHaveBeenCalled()
+		})
 	})
 })
 

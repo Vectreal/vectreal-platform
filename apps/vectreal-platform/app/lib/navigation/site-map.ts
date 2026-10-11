@@ -77,7 +77,7 @@ const PACKAGES: SiteLink[] = OPEN_SOURCE_PACKAGES.map((pkg) => ({
 	description: pkg.description
 }))
 
-export const SITE_SECTIONS = {
+const SITE_SECTIONS = {
 	product: {
 		label: 'Product',
 		links: [PUBLISHER, CONVERTERS, PILOT]

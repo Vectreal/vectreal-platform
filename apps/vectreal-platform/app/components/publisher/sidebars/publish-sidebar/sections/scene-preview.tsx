@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import { Camera, Image as ImageIcon, Loader2 } from 'lucide-react'
 
+import { duration } from '../../../../../lib/motion/motion-tokens'
 import { sceneMetaAtom } from '../../../../../lib/stores/publisher-config-store'
 import { useOpeningViewCapture } from '../../../shell/use-opening-view'
 
@@ -26,7 +27,7 @@ export const ScenePreview: FC = () => {
 		<motion.div
 			initial={{ opacity: 0, y: 10 }}
 			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.4 }}
+			transition={{ duration: duration.slow }}
 			className="space-y-3"
 		>
 			<div className="publisher-shell-nested relative aspect-video w-full overflow-hidden rounded-xl">

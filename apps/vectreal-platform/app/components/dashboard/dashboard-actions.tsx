@@ -19,11 +19,12 @@ import {
 	MoreVertical,
 	Plus
 } from 'lucide-react'
-import { memo, useEffect, useState } from 'react'
+import { memo } from 'react'
 import { Link, useParams } from 'react-router'
 
 import { identifyDrawerRoute } from './utils'
 import { PUBLISHER_ROUTES } from '../../constants/dashboard'
+import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 import { createFolderDialogAtom } from '../../lib/stores/dashboard-management-store'
 import { ACTION_VARIANT } from '../../types/dashboard'
 
@@ -190,8 +191,7 @@ const ActionButton = memo<ActionButtonProps>(({ action, routeContext }) => {
 ActionButton.displayName = 'ActionButton'
 
 const ActionsMenu = memo<ActionsMenuProps>(({ actions, routeContext }) => {
-	const [isClientMounted, setIsClientMounted] = useState(false)
-	useEffect(() => setIsClientMounted(true), [])
+	const isClientMounted = useIsClientMounted()
 
 	const trigger = (
 		<Button

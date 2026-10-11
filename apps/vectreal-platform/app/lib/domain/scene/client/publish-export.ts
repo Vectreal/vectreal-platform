@@ -10,7 +10,7 @@ import type {
  * this is generous; it exists so a stuck encoder cannot hold the publish
  * button forever.
  */
-export const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
+const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
 
 /**
  * Runs the publish export in its worker. As in `runGeometryOptimizationsInWorker`,

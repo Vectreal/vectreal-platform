@@ -6,9 +6,7 @@ import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
 
-import type { NewsArticle } from '../../lib/news/news-manifest'
-
-type ArticleSummary = Omit<NewsArticle, 'Component'>
+import type { ArticleSummary } from '../../lib/news/news-manifest'
 
 interface FeaturedArticleProps {
 	article: ArticleSummary

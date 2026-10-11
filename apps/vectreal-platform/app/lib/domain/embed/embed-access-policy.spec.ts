@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	decideEmbedAccess,
 	getPreviewTokenFromRequest,
+	hasPreviewTokenCredential,
 	isEmbedRequestHostAllowed,
 	KEY_USE_RECORD_INTERVAL_MS,
 	resolveRequestHostContext,
@@ -320,5 +321,26 @@ describe('recording that a key was used', () => {
 
 	it('skips a write dated in the future, as from another clock', () => {
 		expect(shouldRecordKeyUse(ago(-5_000), now)).toBe(false)
+	})
+})
+
+describe('hasPreviewTokenCredential', () => {
+	const request = (query = '', headers: Record<string, string> = {}) =>
+		new Request(`https://vectreal.test/embed/p/s${query}`, { headers })
+
+	it('sees a token in the query string', () => {
+		expect(hasPreviewTokenCredential(request('?token=abc'))).toBe(true)
+	})
+
+	it('sees any Authorization header, Bearer or not', () => {
+		expect(
+			hasPreviewTokenCredential(request('', { Authorization: 'Basic x' }))
+		).toBe(true)
+	})
+
+	it('ignores a blank token and a blank header', () => {
+		expect(
+			hasPreviewTokenCredential(request('?token=%20', { Authorization: ' ' }))
+		).toBe(false)
 	})
 })

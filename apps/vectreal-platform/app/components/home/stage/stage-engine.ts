@@ -4,7 +4,18 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-import { BAYER4_GLSL, DITHER_CELL_PX } from '../../../lib/dither/dither'
+import {
+	groundFragment,
+	overlayFragment,
+	overlayUniforms,
+	quadVert
+} from './stage-shaders'
+import { SHADOW, createShadowBaker } from './stage-shadow'
+import { DITHER_CELL_PX } from '../../../lib/dither/dither'
+import {
+	createCssColorProbe,
+	observeTheme
+} from '../../../lib/theme/theme-probe'
 
 /**
  * The hero's stage: a model drawn as a technical drawing, swept into its
@@ -40,135 +51,12 @@ export interface StageOptions {
 	edgeFade?: boolean
 }
 
-/*
-  The ground shadow is two layers, both stored as density (alpha) so strength is
-  applied live and tuning never needs a re-bake:
-  1. A soft directional shadow accumulated from jittered lights. The hero model's
-     ships as a baked image; any other file bakes it once on arrival.
-  2. A contact layer rendered from under the ground and blurred, standing in for
-     ground occlusion.
-  The key is the light the model is shaded by, so the cast shadow falls away from
-  the viewer, as in a front-lit product shot. What grounds the object is the
-  contact layer: a short reach (only what really touches, not a lens hovering a
-  few millimetres up), blurred wide enough to show past the base. A wide blur is
-  built from many narrow passes: few wide ones leave visible steps.
-*/
-const SHADOW = {
-	samples: 96,
-	ambient: 0.3,
-	skyLow: 0.5,
-	key: new THREE.Vector3(3, 5, 4),
-	jitter: 2.2,
-	planeScale: 2.5,
-	opacity: 0.4,
-	contactScale: 1.3,
-	contactReach: 0.06,
-	contactOpacity: 1,
-	contactBlur: 4,
-	contactPasses: 10
-}
-
 /** The sequence's timings, in milliseconds. */
 const TIMING = { sweep: 2600, turn: 1500 }
 
 /** Drawn square to the sheet, then turned high enough to see the ground its shadow lies on. */
 const ELEVATION = { az: 0.03, el: 0.05 }
 const OBJECT = { az: 0.5, el: 0.3 }
-
-const quadVert = /* glsl */ `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`
-
-/** Pass 1 renders normals and depth; the overlay finds the drawing in them, then composites. */
-const overlayUniforms = () => ({
-	uPass: { value: 1 },
-	tN: { value: null as THREE.Texture | null },
-	tD: { value: null as THREE.Texture | null },
-	uRes: { value: new THREE.Vector2() },
-	uTexel: { value: new THREE.Vector2() },
-	uNear: { value: 0.01 },
-	uFar: { value: 100 },
-	uInk: { value: new THREE.Vector3() },
-	uAccent: { value: new THREE.Vector3() },
-	uFade: { value: new THREE.Vector2(-1, -1) },
-	uCell: { value: DITHER_CELL_PX },
-	uVFade: { value: 0 },
-	uSpan: { value: new THREE.Vector2(0, 1e5) },
-	uReveal: { value: 0 },
-	uLine: { value: 1.5 }
-})
-
-const overlayFragment = /* glsl */ `
-#include <packing>
-uniform sampler2D tN; uniform sampler2D tD;
-uniform vec2 uRes, uTexel; uniform float uNear, uFar;
-uniform vec3 uInk, uAccent; uniform int uPass;
-uniform vec2 uFade, uSpan; uniform float uCell, uVFade;
-uniform float uReveal, uLine;
-varying vec2 vUv;
-${BAYER4_GLSL}
-/*
-  One dissolve for every edge the object can meet: toward the copy (uFade) and at
-  the stage's top and bottom (uVFade), so where the canvas ends reads as a frame
-  the drawing was set in rather than a crop.
-*/
-float kept(){
-  float f = 1.0;
-  if (uFade.y > uFade.x) { float a = clamp((gl_FragCoord.x - uFade.x) / (uFade.y - uFade.x), 0.0, 1.0); f = a * a * (3.0 - 2.0 * a); }
-  if (uVFade > 0.0) { float e = clamp(min(gl_FragCoord.y, uRes.y - gl_FragCoord.y) / uVFade, 0.0, 1.0); f *= e * e * (3.0 - 2.0 * e); }
-  return step(bayer4(floor(gl_FragCoord.xy / uCell)), f);
-}
-float z(vec2 uv){ float d = texture2D(tD, uv).x; return -perspectiveDepthToViewZ(d, uNear, uFar); }
-vec3 n(vec2 uv){ return texture2D(tN, uv).xyz * 2.0 - 1.0; }
-/* Two weights, as a draughtsman would: outlines in full ink, creases lighter. */
-float edgeAt(vec2 uv){
-  vec2 px = uLine * uTexel;
-  vec2 a = uv + vec2(-px.x, -px.y), b = uv + vec2(px.x, px.y), c = uv + vec2(px.x, -px.y), d = uv + vec2(-px.x, px.y);
-  if (texture2D(tD, a).x >= 1.0 && texture2D(tD, b).x >= 1.0 && texture2D(tD, c).x >= 1.0 && texture2D(tD, d).x >= 1.0) return 0.0;
-  float gz = (abs(z(a) - z(b)) + abs(z(c) - z(d))) / max(z(uv), 1e-3);
-  float gn = length(n(a) - n(b)) + length(n(c) - n(d));
-  return max(smoothstep(0.03, 0.08, gz), smoothstep(0.9, 1.4, gn) * 0.45);
-}
-void main(){
-  /* Below the front the object shows through. The soft edge sits wholly below the front, so at uReveal = 0 not one row is revealed. */
-  float revealed = 1.0 - smoothstep(uReveal - 0.008, uReveal, vUv.y);
-  float keep = kept();
-  /* Pass 0 erases the rendered object wherever it is not yet revealed, leaving the page to show through. */
-  if (uPass == 0) { gl_FragColor = vec4(0.0, 0.0, 0.0, max(1.0 - revealed, 1.0 - keep)); return; }
-  /* Pass 1 inks the drawing. The edge buffer is twice the canvas resolution; four taps per pixel keep thin parts continuous. */
-  vec2 h = 0.5 * uTexel;
-  float edge = 0.25 * (edgeAt(vUv + vec2(-h.x, -h.y)) + edgeAt(vUv + vec2(h.x, -h.y)) + edgeAt(vUv + vec2(-h.x, h.y)) + edgeAt(vUv + vec2(h.x, h.y)));
-  float ink = edge * (1.0 - revealed) * keep;
-  /* The sweep front: the one accent, fading in and out, and only as wide as the object. */
-  float front = (1.0 - smoothstep(0.0, 1.5, abs(vUv.y * uRes.y - uReveal * uRes.y))) * smoothstep(0.0, 0.08, uReveal) * (1.0 - smoothstep(0.92, 1.02, uReveal));
-  front *= step(uSpan.x, gl_FragCoord.x) * step(gl_FragCoord.x, uSpan.y);
-  gl_FragColor = vec4(mix(uInk * ink, uAccent, front), max(ink, front));   // premultiplied
-}`
-
-const groundFragment = /* glsl */ `
-varying vec2 vUv; uniform sampler2D uBake, uContact; uniform float uContactScale, uOpacity, uContactOpacity, uHasBake;
-void main(){
-  vec2 below = vec2(1.0 - vUv.x, vUv.y);   // both bakes look up from under the ground, so they see it mirrored
-  float a = uHasBake > 0.5 ? texture2D(uBake, below).a * uOpacity : 0.0;
-  vec2 cuv = (below - 0.5) * uContactScale + 0.5;   // the contact layer covers a tighter square, at finer texels
-  float c = all(greaterThanEqual(cuv, vec2(0.0))) && all(lessThanEqual(cuv, vec2(1.0))) ? texture2D(uContact, cuv).a * uContactOpacity : 0.0;
-  float fade = smoothstep(0.5, 0.3, length(vUv - 0.5));   // no square edge: the ground dissolves before the plane ends
-  gl_FragColor = vec4(0.0, 0.0, 0.0, (1.0 - (1.0 - a) * (1.0 - c)) * fade);
-}`
-
-const blurFragment = /* glsl */ `
-varying vec2 vUv; uniform sampler2D t; uniform vec2 d;
-void main(){ float s = 0.0; float w[5] = float[](0.227, 0.195, 0.122, 0.054, 0.016);
-  s += texture2D(t, vUv).a * w[0];
-  for (int i = 1; i < 5; i++) { s += (texture2D(t, vUv + d * float(i)).a + texture2D(t, vUv - d * float(i)).a) * w[i]; }
-  gl_FragColor = vec4(0.0, 0.0, 0.0, s); }`
-
-/** Resolves a CSS color (tokens are oklch and color-mix) through a 2D canvas, to sRGB 0..1. */
-function cssColor(probe: CanvasRenderingContext2D, css: string): THREE.Vector3 {
-	probe.clearRect(0, 0, 1, 1)
-	probe.fillStyle = css
-	probe.fillRect(0, 0, 1, 1)
-	const [r, g, b] = probe.getImageData(0, 0, 1, 1).data
-	return new THREE.Vector3(r / 255, g / 255, b / 255)
-}
 
 export function createStageEngine(el: StageElements, options: StageOptions) {
 	const { reducedMotion, posterMode = false, edgeFade = true } = options
@@ -231,211 +119,11 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	scene.add(ground)
 
 	const passCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
-	const fsQuad = (material: THREE.Material) => {
-		const quad = new THREE.Scene()
-		quad.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material))
-		return quad
-	}
-
-	const blurPass = new THREE.ShaderMaterial({
-		uniforms: {
-			t: { value: null as THREE.Texture | null },
-			d: { value: new THREE.Vector2() }
-		},
-		vertexShader: quadVert,
-		depthTest: false,
-		fragmentShader: blurFragment
-	})
-	const blurScene = fsQuad(blurPass)
-	function blurDensity(
-		rt: THREE.WebGLRenderTarget,
-		texels: number,
-		passes = 2
-	) {
-		const tmp = rt.clone()
-		for (let i = 0; i < passes; i++) {
-			blurPass.uniforms.t.value = rt.texture
-			blurPass.uniforms.d.value.set(texels / rt.width, 0)
-			renderer.setRenderTarget(tmp)
-			renderer.render(blurScene, passCam)
-			blurPass.uniforms.t.value = tmp.texture
-			blurPass.uniforms.d.value.set(0, texels / rt.height)
-			renderer.setRenderTarget(rt)
-			renderer.render(blurScene, passCam)
-		}
-		renderer.setRenderTarget(null)
-		tmp.dispose()
-	}
-
-	/*
-	  The bake looks up from under the ground, as the contact pass does. The
-	  receiver is opaque and fills the view, and it is always nearer than the
-	  model, so only the shadow is written. (Hiding the model by layers does not
-	  work: three draws only casters visible to the rendering camera into the
-	  shadow map.) The samples are spread evenly, a spiral over the key's disc and
-	  the high sky, so the same model always bakes the same image.
-	*/
-	function bakeDirectional(
-		center: THREE.Vector3,
-		extent: number,
-		radius: number
-	) {
-		const res = 1024
-		const tmp = new THREE.WebGLRenderTarget(res, res)
-		const acc = new THREE.WebGLRenderTarget(res, res, {
-			type: THREE.HalfFloatType
-		})
-		const receiver = new THREE.Mesh(
-			new THREE.PlaneGeometry(extent, extent),
-			new THREE.ShadowMaterial({
-				opacity: 1,
-				transparent: false,
-				side: THREE.DoubleSide
-			})
-		)
-		receiver.rotation.x = -Math.PI / 2
-		receiver.position.set(center.x, 0, center.z)
-		receiver.receiveShadow = true
-		scene.add(receiver)
-		const under = new THREE.OrthographicCamera(
-			-extent / 2,
-			extent / 2,
-			extent / 2,
-			-extent / 2,
-			0,
-			1
-		)
-		under.up.set(0, 0, -1)
-		under.position.set(center.x, -0.5, center.z)
-		under.lookAt(center.x, 1, center.z)
-		const light = new THREE.DirectionalLight(0xffffff, 1)
-		light.castShadow = true
-		light.shadow.mapSize.set(2048, 2048)
-		light.shadow.bias = -0.001
-		light.shadow.normalBias = 0.02
-		const sc = light.shadow.camera
-		sc.left = sc.bottom = -radius * 1.3
-		sc.right = sc.top = radius * 1.3
-		sc.near = 0.01
-		sc.far = radius * 8
-		sc.updateProjectionMatrix()
-		light.target.position.set(center.x, 0, center.z)
-		scene.add(light, light.target)
-		const add = new THREE.ShaderMaterial({
-			uniforms: { t: { value: tmp.texture }, w: { value: 1 / SHADOW.samples } },
-			vertexShader: quadVert,
-			fragmentShader: `varying vec2 vUv; uniform sampler2D t; uniform float w; void main(){ gl_FragColor = vec4(0.0, 0.0, 0.0, texture2D(t, vUv).a * w); }`,
-			blending: THREE.CustomBlending,
-			blendSrc: THREE.OneFactor,
-			blendDst: THREE.OneFactor,
-			blendSrcAlpha: THREE.OneFactor,
-			blendDstAlpha: THREE.OneFactor,
-			depthTest: false
-		})
-		const addScene = fsQuad(add)
-		const golden = Math.PI * (3 - Math.sqrt(5))
-		const nSky = Math.round(SHADOW.samples * SHADOW.ambient)
-		const nKey = SHADOW.samples - nSky
-		renderer.setRenderTarget(acc)
-		renderer.setClearColor(0, 0)
-		renderer.clear()
-		for (let i = 0; i < SHADOW.samples; i++) {
-			let dir: THREE.Vector3
-			if (i < nKey) {
-				const r = Math.sqrt((i + 0.5) / nKey) * SHADOW.jitter
-				const a = i * golden
-				dir = SHADOW.key
-					.clone()
-					.add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))
-					.normalize()
-			} else {
-				const k = i - nKey
-				const y = 1 - ((1 - SHADOW.skyLow) * (k + 0.5)) / nSky
-				const a = k * golden
-				const h = Math.sqrt(1 - y * y)
-				dir = new THREE.Vector3(Math.cos(a) * h, y, Math.sin(a) * h)
-			}
-			light.position.set(center.x, 0, center.z).addScaledVector(dir, radius * 4)
-			renderer.setRenderTarget(tmp)
-			renderer.clear()
-			renderer.render(scene, under)
-			renderer.setRenderTarget(acc)
-			renderer.autoClear = false
-			renderer.render(addScene, passCam)
-			renderer.autoClear = true
-		}
-		renderer.setRenderTarget(null)
-		scene.remove(receiver, light, light.target)
-		tmp.dispose()
-		receiver.geometry.dispose()
-		add.dispose()
-		blurDensity(acc, 3) // the sky samples are few; unblurred, each one leaves a ghost copy of the shadow
-		return acc
-	}
-
-	/* Contact: look up from the ground; anything within reach darkens with nearness, then blur. */
-	function bakeContact(center: THREE.Vector3, extent: number, reach: number) {
-		const rt = new THREE.WebGLRenderTarget(1024, 1024, {
-			type: THREE.HalfFloatType
-		})
-		const cam = new THREE.OrthographicCamera(
-			-extent / 2,
-			extent / 2,
-			extent / 2,
-			-extent / 2,
-			0,
-			reach
-		)
-		cam.up.set(0, 0, -1)
-		cam.position.set(center.x, -reach * 0.001, center.z)
-		cam.lookAt(center.x, 1, center.z)
-		const near = new THREE.ShaderMaterial({
-			side: THREE.DoubleSide,
-			uniforms: { uReach: { value: reach } },
-			vertexShader: `varying float vH; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vH = w.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
-			fragmentShader: `varying float vH; uniform float uReach; void main(){ float d = clamp(1.0 - vH / uReach, 0.0, 1.0); gl_FragColor = vec4(0.0, 0.0, 0.0, d * d); }`
-		})
-		renderer.setRenderTarget(rt)
-		renderer.setClearColor(0, 0)
-		renderer.clear()
-		scene.overrideMaterial = near
-		renderer.render(scene, cam)
-		scene.overrideMaterial = null
-		renderer.setRenderTarget(null)
-		near.dispose()
-		blurDensity(rt, SHADOW.contactBlur, SHADOW.contactPasses)
-		return rt
-	}
-
-	/** Density out to a PNG data URL, for the bake script: 512px, the size a soft density loses nothing at. */
-	function densityPng(rt: THREE.WebGLRenderTarget) {
-		const size = 512
-		const out = new THREE.WebGLRenderTarget(size, size)
-		const copy = new THREE.ShaderMaterial({
-			uniforms: { t: { value: rt.texture } },
-			vertexShader: quadVert,
-			depthTest: false,
-			fragmentShader: `varying vec2 vUv; uniform sampler2D t; void main(){ gl_FragColor = vec4(0.0, 0.0, 0.0, texture2D(t, vUv).a); }`
-		})
-		renderer.setRenderTarget(out)
-		renderer.render(fsQuad(copy), passCam)
-		renderer.setRenderTarget(null)
-		const px = new Uint8Array(size * size * 4)
-		renderer.readRenderTargetPixels(out, 0, 0, size, size, px)
-		out.dispose()
-		copy.dispose()
-		const c = document.createElement('canvas')
-		c.width = c.height = size
-		const ctx = c.getContext('2d')!
-		const img = ctx.createImageData(size, size)
-		for (let y = 0; y < size; y++)
-			img.data.set(
-				px.subarray((size - 1 - y) * size * 4, (size - y) * size * 4),
-				y * size * 4
-			) // GL rows run bottom-up
-		ctx.putImageData(img, 0, 0)
-		return c.toDataURL('image/png')
-	}
+	const { bakeDirectional, bakeContact, densityPng } = createShadowBaker(
+		renderer,
+		scene,
+		passCam
+	)
 
 	const normalMat = new THREE.MeshNormalMaterial()
 	let rtN: THREE.WebGLRenderTarget | null = null
@@ -476,18 +164,13 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	inkQuad.renderOrder = 1
 	quadScene.add(eraseQuad, inkQuad)
 
-	const probe = document
-		.createElement('canvas')
-		.getContext('2d', { willReadFrequently: true })!
-	probe.canvas.width = probe.canvas.height = 1
+	const resolveColor = createCssColorProbe()
+	const color = (css: string) => new THREE.Vector3(...resolveColor(css))
 	/* The overlay writes straight to the canvas, so it takes the tokens' sRGB values as they render. */
 	function readTheme() {
 		const style = getComputedStyle(el.stage)
-		uniforms.uInk.value = cssColor(
-			probe,
-			style.getPropertyValue('--foreground')
-		)
-		uniforms.uAccent.value = cssColor(probe, style.getPropertyValue('--orange'))
+		uniforms.uInk.value = color(style.getPropertyValue('--foreground'))
+		uniforms.uAccent.value = color(style.getPropertyValue('--orange'))
 		request()
 	}
 
@@ -847,11 +530,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	draco.setDecoderPath('/draco/')
 	loader.setDRACOLoader(draco)
 
-	const themeObserver = new MutationObserver(readTheme)
-	themeObserver.observe(document.documentElement, {
-		attributes: true,
-		attributeFilter: ['class']
-	})
+	const stopObservingTheme = observeTheme(readTheme)
 	readTheme()
 	const resizeObserver = new ResizeObserver(resize)
 	resizeObserver.observe(el.stage)
@@ -964,7 +643,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			disposed = true
 			running?.cancel()
 			cancelAnimationFrame(raf)
-			themeObserver.disconnect()
+			stopObservingTheme()
 			resizeObserver.disconnect()
 			controls.dispose()
 			draco.dispose()

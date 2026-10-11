@@ -1,4 +1,8 @@
 import { BAYER4_GLSL, DITHER_CELL_PX } from '../../../lib/dither/dither'
+import {
+	createCssColorProbe,
+	observeTheme
+} from '../../../lib/theme/theme-probe'
 
 /**
  * The sheet's backdrop: two blobs in one dithered field, behind the whole fold.
@@ -108,18 +112,9 @@ export function createBackdropEngine(
 		].map((n) => [n, gl.getUniformLocation(program, n)])
 	)
 
-	// Token colors resolved through a 2D canvas, which understands oklch and color-mix, into premultiplied RGBA.
-	const probe = document
-		.createElement('canvas')
-		.getContext('2d', { willReadFrequently: true })!
-	probe.canvas.width = probe.canvas.height = 1
-	const rgba = (css: string) => {
-		probe.clearRect(0, 0, 1, 1)
-		probe.fillStyle = css
-		probe.fillRect(0, 0, 1, 1)
-		const [r, g, b] = probe.getImageData(0, 0, 1, 1).data
-		return [r / 255, g / 255, b / 255, 1]
-	}
+	// Token colors resolved to sRGB, as opaque RGBA.
+	const resolveColor = createCssColorProbe()
+	const rgba = (css: string) => [...resolveColor(css), 1]
 	function readTheme() {
 		const style = getComputedStyle(el.sheet)
 		gl!.uniform4fv(u.uLight, rgba(style.getPropertyValue('--hero-pool')))
@@ -199,11 +194,7 @@ export function createBackdropEngine(
 	intersection.observe(el.canvas)
 	const resize = new ResizeObserver(() => draw())
 	resize.observe(el.sheet)
-	const theme = new MutationObserver(readTheme)
-	theme.observe(document.documentElement, {
-		attributes: true,
-		attributeFilter: ['class']
-	})
+	const stopObservingTheme = observeTheme(readTheme)
 	readTheme()
 
 	return {
@@ -212,7 +203,7 @@ export function createBackdropEngine(
 			cancelAnimationFrame(raf)
 			intersection.disconnect()
 			resize.disconnect()
-			theme.disconnect()
+			stopObservingTheme()
 			// The context is left alive: a remount (StrictMode mounts twice) draws on the same canvas.
 		}
 	}

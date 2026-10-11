@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import {
 	canPerformDashboardOperation,
 	DASHBOARD_OPERATION_ROLES,
@@ -36,7 +38,8 @@ const EXPECTED: Record<DashboardOperation, MembershipRole[]> = {
 	'api-key:read': ['owner', 'admin'],
 	'api-key:update': ['owner', 'admin'],
 	'api-key:revoke': ['owner', 'admin'],
-	'api-key:rotate': ['owner', 'admin']
+	'api-key:rotate': ['owner', 'admin'],
+	'billing:manage': ['owner', 'admin']
 }
 
 describe('dashboard operation permissions', () => {
@@ -149,5 +152,34 @@ describe('dashboard operation permissions', () => {
 				'Only organization owners and admins can delete this scene. Your role is member.'
 			)
 		})
+	})
+})
+
+/*
+  The billing routes cannot be imported here: each reaches a module that calls
+  `getDbClient()` at module scope. So the binding to the table is asserted
+  against source, the way the checkout gate's is. Each of the three used to
+  carry its own `['owner', 'admin']` list, which is the copy this replaces.
+*/
+describe('the billing routes', () => {
+	const source = (relativePath: string) =>
+		readFileSync(new URL(relativePath, import.meta.url), 'utf8')
+
+	it.each([
+		'../../../routes/api/billing/checkout.ts',
+		'../../../routes/api/billing/portal.ts',
+		'../../../routes/dashboard-page/billing-upgrade-success.tsx'
+	])('%s asks the table rather than listing roles', (path) => {
+		const route = source(path)
+
+		/*
+		  The whole gate, from the condition to the refusal: a bare `toContain`
+		  on the call also passed with the `!` dropped, which admits members and
+		  turns owners away.
+		*/
+		expect(route).toMatch(
+			/if \(\s*!membership \|\|\s*!canPerformDashboardOperation\('billing:manage', \{\s*role: membership\.membership\.role\s*\}\)\s*\) \{\s*(return ApiResponse\.forbidden\(|throw redirect\('\/dashboard\/billing')/
+		)
+		expect(route).not.toContain("['owner', 'admin']")
 	})
 })
