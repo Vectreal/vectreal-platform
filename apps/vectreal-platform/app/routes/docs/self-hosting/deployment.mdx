@@ -84,8 +84,6 @@ Both deploy workflows call the shared `shared-fly-deploy.yaml` workflow. The bui
 | `FLY_API_TOKEN` | Fly.io deploy token |
 | `VITE_PUBLIC_POSTHOG_TOKEN` / `VITE_PUBLIC_POSTHOG_HOST` | PostHog analytics config. Needed in two places, not one: see below |
 | `VITE_PUBLIC_POSTHOG_UI_HOST` | Optional PostHog UI host |
-| `VITE_PUBLIC_VECTREAL_API_KEY_PROD` | Optional public API key for demo scenes |
-| `VITE_PUBLIC_DEMO_SCENE_URL` | Optional demo scene URL |
 
 Application runtime secrets (Supabase URLs/keys, `DATABASE_URL`, `CSRF_SECRET`, Stripe keys, Cloudflare Turnstile keys) are managed on Fly.io via the `setup-fly-secrets` scripts rather than as GitHub secrets.
 
