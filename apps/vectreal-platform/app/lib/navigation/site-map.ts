@@ -68,6 +68,7 @@ const CONTRIBUTING: SiteLink = {
 }
 const PRICING: SiteLink = { label: 'Pricing', to: '/pricing' }
 const DOCS: SiteLink = { label: 'Docs', to: '/docs' }
+const NEWSROOM: SiteLink = { label: 'Newsroom', to: '/news-room' }
 const CONTACT: SiteLink = { label: 'Contact', to: '/contact' }
 
 /** A package's docs, as a path on this site: the constant holds the public URL. */
@@ -101,7 +102,7 @@ const SITE_SECTIONS = {
 		links: [
 			PRICING,
 			{ label: 'About', to: '/about' },
-			{ label: 'Newsroom', to: '/news-room' },
+			NEWSROOM,
 			{ label: 'Changelog', to: '/changelog' },
 			CONTACT
 		]
@@ -130,10 +131,10 @@ export function entersFunnel(to: string): boolean {
 	)
 }
 
-/** The marketing nav: two panels, two plain links, and the two ways in. */
+/** The marketing nav: two panels, three plain links, and the two ways in. */
 export const NAV = {
 	panels: [SITE_SECTIONS.product, SITE_SECTIONS.openSource],
-	links: [PRICING, DOCS],
+	links: [PRICING, DOCS, NEWSROOM],
 	signIn: { label: 'Sign in', to: '/sign-in' },
 	getStarted: { label: 'Get started', to: PUBLISHER.to }
 } as const

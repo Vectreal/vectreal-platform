@@ -332,6 +332,14 @@ describe('the site nav', () => {
 		).toBe('page')
 	})
 
+	it('marks the newsroom current on an article', () => {
+		renderAt('/news-room/3d-model-shadows-and-lighting')
+		const bar = within(desktopBar())
+		expect(
+			bar.getByRole('link', { name: 'Newsroom' }).getAttribute('aria-current')
+		).toBe('page')
+	})
+
 	it('shows the docs trail in place of the marketing links on a docs page', () => {
 		renderAt('/docs/guides/upload')
 		const bar = within(desktopBar())
