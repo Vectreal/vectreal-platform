@@ -61,6 +61,8 @@ vi.mock('../../app/lib/http/auth.server', () => ({
 type Schema = typeof import('../../app/db/schema')
 type AssetRoute =
 	typeof import('../../app/routes/api/scenes.$sceneId.assets.$assetId')
+type ThumbnailRoute =
+	typeof import('../../app/routes/api/scenes.$sceneId.thumbnail.$assetId')
 type SettingsRepository =
 	typeof import('../../app/lib/domain/scene/server/scene-settings-repository.server')
 type Manifest =
@@ -470,6 +472,155 @@ describe('embed asset authorization', () => {
 
 		it('answers a non-member 404 for a linked asset too', async () => {
 			const response = await fetchAsset(outsiderId, bufferAssetId)
+
+			expect(response.status).toBe(404)
+		})
+	})
+
+	describe('the thumbnail route', () => {
+		const outsiderId = randomUUID()
+		const otherSceneId = randomUUID()
+		const foreignOrganizationId = randomUUID()
+		const foreignProjectId = randomUUID()
+		const foreignFolderId = randomUUID()
+		const foreignAssetId = randomUUID()
+		let thumbnailLoader: ThumbnailRoute['loader']
+
+		beforeAll(async () => {
+			vi.stubEnv('SUPABASE_URL', process.env.SUPABASE_URL || 'http://127.0.0.1')
+			vi.stubEnv(
+				'SUPABASE_SECRET_KEY',
+				process.env.SUPABASE_SECRET_KEY || 'integration-secret'
+			)
+			;({ loader: thumbnailLoader } =
+				await import('../../app/routes/api/scenes.$sceneId.thumbnail.$assetId'))
+
+			// A second scene in the same project, which a member can open but
+			// whose thumbnail is not this asset.
+			await db.insert(schema.scenes).values({
+				id: otherSceneId,
+				projectId,
+				folderId: null,
+				name: 'Other scene'
+			})
+			await db
+				.update(schema.scenes)
+				.set({
+					thumbnailUrl: `/api/scenes/${sceneId}/thumbnail/${thumbnailAssetId}`
+				})
+				.where(eq(schema.scenes.id, sceneId))
+			// The de-duplicated shape: the row was created by another scene, so
+			// its metadata names that one. The old rule refused this thumbnail.
+			await db
+				.update(schema.assets)
+				.set({ metadata: { sceneId: otherSceneId } })
+				.where(eq(schema.assets.id, thumbnailAssetId))
+
+			// An asset in another organization's project, which this scene's
+			// members have no claim on.
+			await db.insert(schema.organizations).values({
+				id: foreignOrganizationId,
+				name: `smoke-${foreignOrganizationId}`,
+				ownerId
+			})
+			await db.insert(schema.projects).values({
+				id: foreignProjectId,
+				organizationId: foreignOrganizationId,
+				name: 'Foreign project',
+				slug: `smoke-${foreignProjectId}`
+			})
+			await db.insert(schema.folders).values({
+				id: foreignFolderId,
+				projectId: foreignProjectId,
+				name: 'Scene Assets'
+			})
+			await db.insert(schema.assets).values({
+				id: foreignAssetId,
+				folderId: foreignFolderId,
+				name: 'secret.glb',
+				type: 'model',
+				filePath: `smoke/${foreignAssetId}.glb`,
+				mimeType: 'model/gltf-binary',
+				ownerId
+			})
+		})
+
+		afterAll(async () => {
+			vi.unstubAllEnvs()
+			await db
+				.delete(schema.organizations)
+				.where(eq(schema.organizations.id, foreignOrganizationId))
+			await db
+				.update(schema.scenes)
+				.set({ thumbnailUrl: null })
+				.where(eq(schema.scenes.id, sceneId))
+			await db.delete(schema.scenes).where(eq(schema.scenes.id, otherSceneId))
+		})
+
+		const fetchThumbnail = async (
+			userId: string,
+			assetId: string,
+			forSceneId = sceneId
+		) => {
+			sessionUser.id = userId
+			const response = await thumbnailLoader({
+				request: new Request(
+					`https://vectreal.test/api/scenes/${forSceneId}/thumbnail/${assetId}`
+				),
+				params: { sceneId: forSceneId, assetId }
+			} as never)
+			return response as Response
+		}
+
+		it("serves a member the scene's thumbnail whatever its metadata names", async () => {
+			const response = await fetchThumbnail(ownerId, thumbnailAssetId)
+
+			expect(response.status).toBe(200)
+			expect(await response.text()).toBe(`smoke/${thumbnailAssetId}.webp`)
+			expect(response.headers.get('Last-Modified')).toMatch(/GMT$/)
+		})
+
+		it('answers a member 404 for a linked asset that is not the thumbnail', async () => {
+			const response = await fetchThumbnail(ownerId, bufferAssetId)
+
+			expect(response.status).toBe(404)
+		})
+
+		it('answers a member 404 for a thumbnail under a scene that does not show it', async () => {
+			const response = await fetchThumbnail(
+				ownerId,
+				thumbnailAssetId,
+				otherSceneId
+			)
+
+			expect(response.status).toBe(404)
+		})
+
+		it('answers a member 404, not 500, for an asset id that is not a uuid', async () => {
+			const response = await fetchThumbnail(ownerId, 'not-a-uuid')
+
+			expect(response.status).toBe(404)
+		})
+
+		it("answers 404 when a member points thumbnail_url at another project's asset", async () => {
+			const setThumbnail = (assetId: string) =>
+				db
+					.update(schema.scenes)
+					.set({ thumbnailUrl: `/api/scenes/${sceneId}/thumbnail/${assetId}` })
+					.where(eq(schema.scenes.id, sceneId))
+
+			await setThumbnail(foreignAssetId)
+			try {
+				const response = await fetchThumbnail(ownerId, foreignAssetId)
+
+				expect(response.status).toBe(404)
+			} finally {
+				await setThumbnail(thumbnailAssetId)
+			}
+		})
+
+		it('answers a non-member 404 for the real thumbnail', async () => {
+			const response = await fetchThumbnail(outsiderId, thumbnailAssetId)
 
 			expect(response.status).toBe(404)
 		})

@@ -543,6 +543,50 @@ export async function downloadAssets(
 }
 
 /**
+ * The asset id a scene's `thumbnail_url` names: the last path segment of
+ * `/api/scenes/:sceneId/thumbnail/:assetId`. The URL is the only link a
+ * thumbnail is guaranteed to have, so the collectors and the thumbnail route
+ * all read it through this one expression.
+ */
+const thumbnailAssetIdSql = sql<string>`regexp_replace(${scenes.thumbnailUrl}, '^.*/', '')`
+
+/**
+ * The asset row for `assetId` when it is the thumbnail `sceneId` currently
+ * shows, otherwise undefined.
+ *
+ * Read from `scenes.thumbnail_url`, not from the asset row. Assets are
+ * de-duplicated per project by content hash, so a row's `metadata.sceneId`
+ * names only the scene that created it first, and `scene_assets` does not
+ * link every thumbnail (see `selectUnreferencedAssetIds`).
+ *
+ * The URL is client-written and nothing validates it on save, so it alone
+ * binds nothing: a member could point their own scene's `thumbnail_url` at any
+ * asset id. The folder join below is the guard that the asset sits in the
+ * scene's project. A thumbnail the publisher uploads always does: it is linked
+ * with the save's other assets, which must all belong to that project.
+ */
+export async function findSceneThumbnailAsset(
+	sceneId: string,
+	assetId: string
+): Promise<{ updatedAt: Date } | undefined> {
+	const [row] = await db
+		.select({ updatedAt: assets.updatedAt })
+		.from(scenes)
+		.innerJoin(assets, eq(sql`${assets.id}::text`, thumbnailAssetIdSql))
+		.innerJoin(
+			folders,
+			and(
+				eq(folders.id, assets.folderId),
+				eq(folders.projectId, scenes.projectId)
+			)
+		)
+		.where(and(eq(scenes.id, sceneId), eq(thumbnailAssetIdSql, assetId)))
+		.limit(1)
+
+	return row
+}
+
+/**
  * Narrows a set of asset ids to the ones nothing points at any more.
  *
  * There are three ways an asset is still in use, and every caller that deletes
@@ -571,9 +615,6 @@ export async function selectUnreferencedAssetIds(
 		return []
 	}
 
-	// The id is the last path segment of `/api/scenes/:sceneId/thumbnail/:assetId`.
-	const thumbnailAssetId = sql<string>`regexp_replace(${scenes.thumbnailUrl}, '^.*/', '')`
-
 	const [attached, published, thumbnails] = await Promise.all([
 		db
 			.selectDistinct({ assetId: sceneAssets.assetId })
@@ -584,10 +625,13 @@ export async function selectUnreferencedAssetIds(
 			.from(scenePublished)
 			.where(inArray(scenePublished.assetId, assetIds)),
 		db
-			.select({ assetId: thumbnailAssetId })
+			.select({ assetId: thumbnailAssetIdSql })
 			.from(scenes)
 			.where(
-				and(isNotNull(scenes.thumbnailUrl), inArray(thumbnailAssetId, assetIds))
+				and(
+					isNotNull(scenes.thumbnailUrl),
+					inArray(thumbnailAssetIdSql, assetIds)
+				)
 			)
 	])
 
@@ -654,7 +698,7 @@ function isReferencedSql() {
 		or exists (
 			select 1 from ${scenes}
 			where ${scenes.thumbnailUrl} is not null
-				and regexp_replace(${scenes.thumbnailUrl}, '^.*/', '') = ${assets.id}::text
+				and ${thumbnailAssetIdSql} = ${assets.id}::text
 		)
 	)`
 }
