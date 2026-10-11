@@ -1,5 +1,7 @@
 import { useGLTF } from '@react-three/drei'
 import { VectrealViewer } from '@vctrl/viewer'
+import { useMemo } from 'react'
+import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import { withSceneSettingsDefaults } from '../../constants/viewer-defaults'
 
@@ -19,12 +21,20 @@ export default function ExampleSceneClient({
 }) {
 	// Draco-compressed, decoded by the copy the app serves rather than a CDN's.
 	const { scene } = useGLTF(example.model.url, '/draco/')
+	/*
+	  A copy per viewer. `useGLTF` caches by URL, so every example of one model
+	  receives the same scene, and an object can only have one parent: the
+	  second viewer on a page took the model out of the first, which went blank.
+	  `SkeletonUtils.clone` rather than `Object3D.clone`, which leaves a skinned
+	  mesh bound to the original's bones.
+	*/
+	const model = useMemo(() => clone(scene), [scene])
 	const settings = withSceneSettingsDefaults(example.settings)
 
 	return (
 		<VectrealViewer
 			className="h-full w-full"
-			model={scene}
+			model={model}
 			animationOptions={settings.animation}
 			boundsOptions={settings.bounds}
 			cameraOptions={settings.camera}

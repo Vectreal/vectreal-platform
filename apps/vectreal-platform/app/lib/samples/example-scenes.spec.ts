@@ -5,6 +5,10 @@ import {
 	publisherExampleHref
 } from './example-scenes'
 import { HERO_MODEL } from './sample-models'
+import {
+	defaultControlsOptions,
+	INTERACTION_FEELS
+} from '../../constants/viewer-defaults'
 
 describe('example scenes', () => {
 	it('gives every example a unique id a link can name', () => {
@@ -22,6 +26,36 @@ describe('example scenes', () => {
 			url: HERO_MODEL.url,
 			fileName: HERO_MODEL.fileName,
 			bytes: HERO_MODEL.bytes
+		})
+	})
+})
+
+describe('example cameras', () => {
+	it('opens every example on exactly one camera it has', () => {
+		for (const example of EXAMPLE_SCENES) {
+			const { activeCameraId, cameras = [] } = example.settings.camera ?? {}
+			const ids = cameras.map((camera) => camera.cameraId)
+			expect(new Set(ids).size, example.id).toBe(ids.length)
+			// The page viewer opens on the initial camera, the Publisher on the
+			// active one, so they must be the same camera.
+			expect(
+				cameras.filter((camera) => camera.initial).map((c) => c.cameraId),
+				example.id
+			).toEqual([activeCameraId])
+		}
+	})
+
+	it('gives the showroom the Publisher’s Floaty feel, with nothing else left out', () => {
+		// The viewer takes `controls` whole, so a missing key is a default lost,
+		// and the Interaction tool only reads Floaty off these exact numbers.
+		expect(
+			exampleSceneById('camera-floaty-showroom')?.settings.controls
+		).toEqual({
+			...defaultControlsOptions,
+			...INTERACTION_FEELS.floaty,
+			autoRotate: true,
+			autoRotateSpeed: 1,
+			enableZoom: false
 		})
 	})
 })
