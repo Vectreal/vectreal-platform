@@ -223,6 +223,11 @@ export function HeroSheet() {
 					</figcaption>
 				</figure>
 
+				<a href="#product-heading" className={cn('text-eyebrow', styles.cue)}>
+					{HERO.foldCue}
+					<span className={styles.cueLine} aria-hidden="true" />
+				</a>
+
 				{elements && (
 					<StageBoundary onError={stageFailed}>
 						<Suspense fallback={null}>

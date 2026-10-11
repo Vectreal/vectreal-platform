@@ -370,11 +370,14 @@ export const HOME_PAGE_COPY = {
 	hero: {
 		/** One sentence per line, set as written: the breaks are part of the headline. */
 		heading: ['Your product.', 'Every angle.', 'On your own site.'],
-		lead: 'Drop in the 3D file you already have. Vectreal makes it fast enough for any product page.',
+		/** The problem and what Vectreal does about it, in that order: the headline implies it, this says it. */
+		lead: 'The 3D files you already have are built for engineering, far too heavy for a web page. Vectreal makes them light enough to load with any product page, on your own site.',
 		primaryCta: 'Start a pilot project',
 		secondaryCta: 'Try it on your own file',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
-		sampleCta: 'No file at hand? Open this camera in the publisher'
+		sampleCta: 'No file at hand? Open this camera in the publisher',
+		/** The fold's cue, a link to the first section below. */
+		foldCue: 'Scroll'
 	},
 	stage: {
 		figure: 'Fig 01',
