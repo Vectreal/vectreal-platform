@@ -156,31 +156,6 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 	const onPlaybackStatusChangeRef = useRef(onPlaybackStatusChange)
 	onPlaybackStatusChangeRef.current = onPlaybackStatusChange
 
-	/**
-	 * Resolves a clip id to a mixer action, creating and registering it if needed.
-	 *
-	 * Returns null when the id does not correspond to a currently-configured
-	 * clip, which happens whenever settings drift from the loaded model.
-	 */
-	const bindClip = useCallback(
-		(clipId: string): AnimationAction | null => {
-			const configured = stateRef.current.clips.find(
-				(entry) => entry.clipId === clipId
-			)
-			if (!configured) return null
-
-			const clip = animationsRef.current[configured.clipIndex]
-			if (!clip) return null
-
-			const action = mixer.clipAction(clip)
-			actionsRef.current.set(clipId, action)
-			clipIdByActionRef.current.set(action, clipId)
-
-			return action
-		},
-		[mixer]
-	)
-
 	const applyEffect = useCallback(
 		(effect: PlaybackEffect) => {
 			const actions = actionsRef.current
@@ -252,10 +227,10 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 				}
 
 				case 'seek': {
-					// Bind lazily. Seeking is an authoring affordance and the common
-					// case is a scene with autoplay off, where no action exists yet;
-					// requiring one would have made every scrub a silent no-op.
-					const action = actions.get(effect.clipId) ?? bindClip(effect.clipId)
+					// The reducer starts the clip before seeking it: the mixer poses
+					// the model only from running actions, so time set on a bare
+					// binding would show nothing.
+					const action = actions.get(effect.clipId)
 					if (!action) return
 
 					action.time = Math.min(
@@ -269,7 +244,7 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 				}
 			}
 		},
-		[bindClip, mixer]
+		[mixer]
 	)
 
 	const dispatch = useCallback(
