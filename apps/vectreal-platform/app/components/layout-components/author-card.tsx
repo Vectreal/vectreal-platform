@@ -77,9 +77,14 @@ export function AuthorCard({ author }: AuthorCardProps) {
 	return (
 		<Popover open={open} onOpenChange={handleOpenChange}>
 			<PopoverTrigger asChild>
+				{/*
+				  `-ml-4` cancels the ghost button's own `px-4`, so the avatar sits on
+				  the column edge the text beside and below it starts from. The
+				  padding stays as hit area and hover background, outside the column.
+				*/}
 				<Button
 					variant="ghost"
-					className="h-[unset] gap-2 text-left"
+					className="-ml-4 h-[unset] gap-2 text-left"
 					onPointerEnter={(event) => scheduleHover(true, event.pointerType)}
 					onPointerLeave={(event) => scheduleHover(false, event.pointerType)}
 				>
