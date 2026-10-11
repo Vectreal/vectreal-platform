@@ -272,6 +272,7 @@ Configures the [@react-three/drei `Environment`](https://github.com/pmndrs/drei#
 | `backgroundIntensity`   | `number`             | Background intensity multiplier                               |
 | `environmentIntensity`  | `number`             | Lighting intensity multiplier                                 |
 | `files`                 | `string \| string[]` | Custom environment files                                      |
+| `backdrop` | `SceneBackdrop` | A stage painted behind the model while `background` is off: `{ type: 'color', color }` or `{ type: 'gradient', top, bottom }`, `#rrggbb` hex. The environment still lights the model. Absent leaves the viewer transparent |
 
 ```tsx
 <VectrealViewer
