@@ -60,6 +60,7 @@ import {
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import { type ClipExtentRegistry } from './components/scene/clip-planes'
 import EnvironmentPrewarm from './components/scene/environment-prewarm'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
@@ -718,6 +719,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	 */
 	const [container, setContainer] = useState<HTMLDivElement | null>(null)
 
+	// What the viewer draws besides the model registers here, and the model's
+	// clip planes are fitted to it as well.
+	const [clipExtents] = useState<ClipExtentRegistry>(() => new Set())
+
 	useEffect(() => {
 		if (!container || !showSceneViewReturn) return
 
@@ -900,6 +905,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											enableShadows={shadowsEnabled}
 											normalizationOptions={normalizationOptions}
 											onRawDiagonalComputed={onRawDiagonalComputed}
+											clipExtents={clipExtents}
 										/>
 									)}
 								</Center>
@@ -914,6 +920,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									staticBake={staticShadowBake}
 									bakedShadow={bakedShadow}
 									onShadowBakeReady={onShadowBakeReady}
+									clipExtents={clipExtents}
 								/>
 								<SceneHotspots
 									hotspots={hotspots}

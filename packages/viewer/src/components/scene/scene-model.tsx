@@ -20,6 +20,7 @@ import {
 	Vector3
 } from 'three'
 
+import { resolveClipPlanes, type ClipExtentRegistry } from './clip-planes'
 import { useModelFrame, type ModelKey } from './model-frame'
 import { worldBounds } from './model-measurement'
 
@@ -70,6 +71,11 @@ interface ModelProps {
 	 * Used to resolve target camera positions when capturing with targetCameraId.
 	 */
 	cameraOptions?: CameraProps
+	/**
+	 * Everything else the viewer draws (the shadow ground, the light handle),
+	 * which the clip planes have to contain along with the model.
+	 */
+	clipExtents?: ClipExtentRegistry
 }
 
 type OrbitControlsLike = {
@@ -204,16 +210,20 @@ const SceneModel = memo((props: ModelProps) => {
 		onScreenshotCaptureReady,
 		enableShadows = false,
 		normalizationOptions,
-		onRawDiagonalComputed
+		onRawDiagonalComputed,
+		clipExtents
 	} = props
 	const bounds = useBounds()
-	const { camera, controls, gl, invalidate, scene } = useThree((state) => ({
-		camera: state.camera,
-		controls: state.controls as unknown as OrbitControlsLike | undefined,
-		gl: state.gl,
-		invalidate: state.invalidate,
-		scene: state.scene
-	}))
+	const { camera, controls, gl, invalidate, scene, size } = useThree(
+		(state) => ({
+			camera: state.camera,
+			controls: state.controls as unknown as OrbitControlsLike | undefined,
+			gl: state.gl,
+			invalidate: state.invalidate,
+			scene: state.scene,
+			size: state.size
+		})
+	)
 
 	const frame = useModelFrame(object, modelKey)
 	const drawnObjects = useMemo(
@@ -230,9 +240,11 @@ const SceneModel = memo((props: ModelProps) => {
 	// Dynamic camera clipping planes. drei's one-shot `.clip()` sets near/far tight
 	// to the bounding box at the fit distance, then clips the model the moment the
 	// camera zooms closer (and normalization, which rescales the model, left stale
-	// planes behind). Instead, recompute near/far every frame from the model's
-	// bounding sphere and the live camera distance: the planes stay tight enough for
-	// good depth precision yet always contain the model. Never persisted.
+	// planes behind). Instead, recompute near/far every frame from the live camera
+	// and the bounds of everything drawn: the model's bounding sphere plus the
+	// registered `clipExtents`, since the shadow ground reaches well past the model
+	// and the light handle sits outside it. The planes stay tight enough for good
+	// depth precision yet always contain what is drawn. Never persisted.
 	//
 	// The sphere is read from the rendered group's WORLD bounds (the model sits
 	// inside a <Center> wrapper that offsets it, so a local-bounds approximation
@@ -264,13 +276,20 @@ const SceneModel = memo((props: ModelProps) => {
 			return
 		}
 
-		const distance = perspectiveCamera.position.distanceTo(sphere.center)
-		const radius = sphere.radius
-		// Margins keep the model's front/back just inside the planes.
-		const near = Math.max(distance - radius * 1.1, radius * 0.001, 1e-4)
-		const far = distance + radius * 1.1
+		const { near, far } = resolveClipPlanes(
+			perspectiveCamera,
+			sphere,
+			clipExtents ?? [],
+			size.height
+		)
 
-		if (perspectiveCamera.near !== near || perspectiveCamera.far !== far) {
+		// The resolver reads the frustum's sides from a projection built with the
+		// previous planes, so its result drifts in the last bits from frame to
+		// frame. Ignoring that keeps a still view still, so it can converge.
+		if (
+			Math.abs(perspectiveCamera.near - near) > near * 1e-6 ||
+			Math.abs(perspectiveCamera.far - far) > far * 1e-6
+		) {
 			perspectiveCamera.near = near
 			perspectiveCamera.far = far
 			perspectiveCamera.updateProjectionMatrix()
