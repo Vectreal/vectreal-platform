@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { observeTheme } from '../lib/theme/theme-probe'
+
 /**
  * The color scheme the app is actually painting in, for surfaces that embed
  * the viewer inside our own chrome.
@@ -29,10 +31,7 @@ export function useAppColorScheme(): 'light' | 'dark' {
 
 		read()
 
-		const observer = new MutationObserver(read)
-		observer.observe(root, { attributeFilter: ['class'] })
-
-		return () => observer.disconnect()
+		return observeTheme(read)
 	}, [])
 
 	return scheme
