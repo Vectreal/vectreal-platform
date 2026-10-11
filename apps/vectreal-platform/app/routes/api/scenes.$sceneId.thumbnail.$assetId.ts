@@ -1,15 +1,13 @@
-import { eq } from 'drizzle-orm'
 import { LoaderFunctionArgs } from 'react-router'
 
-import { getDbClient } from '../../db/client'
-import { assets } from '../../db/schema'
-import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
+import {
+	downloadAsset,
+	findAssetMetadata
+} from '../../lib/domain/asset/asset-storage.server'
 import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { assetResponse } from '../../lib/http/asset-response.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
-
-const db = getDbClient()
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const auth = await getAuthUser(request)
@@ -34,16 +32,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// `verifyProjectAccess` for the requesting user. Requiring ownership on top
 	// of that was strictly narrower and broke teams - a scene you are entitled to
 	// open returned 404 for its thumbnail whenever a colleague had uploaded it.
-	const [asset] = await db
-		.select({
-			id: assets.id,
-			ownerId: assets.ownerId,
-			metadata: assets.metadata,
-			updatedAt: assets.updatedAt
-		})
-		.from(assets)
-		.where(eq(assets.id, assetId))
-		.limit(1)
+	const asset = await findAssetMetadata(assetId)
 
 	if (!asset) {
 		return new Response('Thumbnail not found', { status: 404, headers })

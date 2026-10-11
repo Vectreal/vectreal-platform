@@ -1,8 +1,5 @@
-import { and, eq } from 'drizzle-orm'
 import { LoaderFunctionArgs } from 'react-router'
 
-import { getDbClient } from '../../db/client'
-import { sceneAssets, sceneSettings } from '../../db/schema'
 import {
 	AssetNotFoundError,
 	downloadAsset,
@@ -23,38 +20,12 @@ import {
 	getPublishedScenePreview,
 	type PublishedScenePreview
 } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { isAssetLinkedToScene } from '../../lib/domain/scene/server/scene-settings-repository.server'
 import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
 import { assetResponse } from '../../lib/http/asset-response.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { noStoreHeaders } from '../../lib/http/response-headers.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
-
-const db = getDbClient()
-
-/**
- * Whether `assetId` is linked to `sceneId` via the `scene_assets` join table.
- *
- * Assets are de-duplicated per project by content hash (see
- * `uploadSceneAssets`), so the same asset row can legitimately be shared by
- * multiple scenes — the asset's `metadata.sceneId` only records the scene
- * that happened to create the row first and must not be used for
- * authorization.
- */
-async function assetBelongsToScene(
-	assetId: string,
-	sceneId: string
-): Promise<boolean> {
-	const [row] = await db
-		.select({ assetId: sceneAssets.assetId })
-		.from(sceneAssets)
-		.innerJoin(sceneSettings, eq(sceneAssets.sceneSettingsId, sceneSettings.id))
-		.where(
-			and(eq(sceneAssets.assetId, assetId), eq(sceneSettings.sceneId, sceneId))
-		)
-		.limit(1)
-
-	return Boolean(row)
-}
 
 async function serveEmbedAsset(
 	request: Request,
@@ -302,7 +273,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	*/
 	const [previewScene, isLinked] = await Promise.all([
 		getPublishedScenePreview(membership.projectId, sceneId),
-		assetBelongsToScene(assetId, sceneId)
+		isAssetLinkedToScene(assetId, sceneId)
 	])
 
 	const publishedModel = serveFromPublishedRow(

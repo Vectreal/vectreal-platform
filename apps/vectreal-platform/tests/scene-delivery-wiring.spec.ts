@@ -92,7 +92,7 @@ describe('the session asset branch', () => {
 			/^[^}]*if \(!membership\) \{\s*return new Response\('Asset not found', \{\s*status: 404/
 		)
 		expect(gate).toBeLessThan(session.indexOf('getPublishedScenePreview('))
-		expect(gate).toBeLessThan(session.indexOf('assetBelongsToScene('))
+		expect(gate).toBeLessThan(session.indexOf('isAssetLinkedToScene('))
 		expect(session).not.toContain('getScene(')
 	})
 

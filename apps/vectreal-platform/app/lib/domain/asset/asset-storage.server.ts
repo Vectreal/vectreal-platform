@@ -457,6 +457,21 @@ export class AssetNotFoundError extends Error {
 	}
 }
 
+/** The fields that place an asset and date it, without its bytes. */
+export async function findAssetMetadata(assetId: string) {
+	const [asset] = await db
+		.select({
+			id: assets.id,
+			metadata: assets.metadata,
+			updatedAt: assets.updatedAt
+		})
+		.from(assets)
+		.where(eq(assets.id, assetId))
+		.limit(1)
+
+	return asset
+}
+
 export async function downloadAsset(assetId: string): Promise<{
 	data: Uint8Array
 	mimeType: string

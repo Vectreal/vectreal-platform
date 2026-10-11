@@ -12,12 +12,10 @@
  */
 
 import { ApiResponse } from '@shared/utils'
-import { eq } from 'drizzle-orm'
 
 import { Route } from './+types/portal'
-import { getDbClient } from '../../../db/client'
-import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
+import { getOrgStripeIds } from '../../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { getStripeClient } from '../../../lib/stripe.server'
@@ -56,12 +54,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	}
 
 	// Fetch the Stripe customer ID - required for portal access
-	const db = getDbClient()
-	const [sub] = await db
-		.select({ stripeCustomerId: orgSubscriptions.stripeCustomerId })
-		.from(orgSubscriptions)
-		.where(eq(orgSubscriptions.organizationId, organizationId))
-		.limit(1)
+	const sub = await getOrgStripeIds(organizationId)
 
 	if (!sub?.stripeCustomerId) {
 		return ApiResponse.error(

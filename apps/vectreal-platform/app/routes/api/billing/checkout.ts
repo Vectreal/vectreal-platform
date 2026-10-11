@@ -27,12 +27,9 @@
  */
 
 import { ApiResponse } from '@shared/utils'
-import { eq } from 'drizzle-orm'
 
 import { Route } from './+types/checkout'
 import { isPaidPlan, PURCHASABLE_PLANS } from '../../../constants/plan-config'
-import { getDbClient } from '../../../db/client'
-import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { planChangeAppliesImmediately } from '../../../lib/domain/billing/billing-situation'
 import {
@@ -44,7 +41,10 @@ import {
 	getBillingPeriod,
 	resolvePlanFromPrice
 } from '../../../lib/domain/billing/stripe-price-plan'
-import { syncSubscriptionFromStripe } from '../../../lib/domain/billing/stripe-subscription-sync.server'
+import {
+	getOrgStripeIds,
+	syncSubscriptionFromStripe
+} from '../../../lib/domain/billing/stripe-subscription-sync.server'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { reportServerError } from '../../../lib/observability/report-server-error.server'
@@ -164,15 +164,7 @@ export async function action({
 	}
 
 	// Fetch existing subscription to determine the current Stripe customer ID and current plan
-	const db = getDbClient()
-	const [existingSub] = await db
-		.select({
-			stripeCustomerId: orgSubscriptions.stripeCustomerId,
-			stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId
-		})
-		.from(orgSubscriptions)
-		.where(eq(orgSubscriptions.organizationId, organizationId))
-		.limit(1)
+	const existingSub = await getOrgStripeIds(organizationId)
 
 	const { plan: currentPlan, billingState } =
 		await getOrgSubscription(organizationId)
@@ -234,7 +226,7 @@ export async function action({
 	if (isActiveSub) {
 		// Retrieve the existing subscription - needed only for the item ID.
 		const existingSubscription = await stripe.subscriptions.retrieve(
-			existingSub.stripeSubscriptionId!
+			existingSub!.stripeSubscriptionId!
 		)
 		const itemId = existingSubscription.items.data[0]?.id
 		if (!itemId) {
@@ -244,7 +236,7 @@ export async function action({
 		// Swap price in-place. Expand price+product so syncSubscriptionFromStripe
 		// can resolve the plan via metadata without a second round-trip.
 		const updatedSubscription = await stripe.subscriptions.update(
-			existingSub.stripeSubscriptionId!,
+			existingSub!.stripeSubscriptionId!,
 			{
 				items: [{ id: itemId, price: priceId }],
 				proration_behavior: 'create_prorations',
@@ -255,7 +247,7 @@ export async function action({
 		// Sync DB immediately - the success page needs no further Stripe call.
 		await syncSubscriptionFromStripe({
 			organizationId,
-			stripeCustomerId: existingSub.stripeCustomerId!,
+			stripeCustomerId: existingSub!.stripeCustomerId!,
 			subscription: updatedSubscription
 		})
 
@@ -264,7 +256,7 @@ export async function action({
 			`?plan_id=${planId}&billing_period=${billingPeriod}&from_plan=${currentPlan}`
 
 		console.info('[billing/checkout] updated existing subscription', {
-			subscriptionId: existingSub.stripeSubscriptionId,
+			subscriptionId: existingSub!.stripeSubscriptionId,
 			organizationId,
 			planId,
 			billingPeriod
