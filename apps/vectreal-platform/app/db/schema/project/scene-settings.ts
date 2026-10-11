@@ -1,4 +1,5 @@
 import {
+	AnimationSettings,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -41,6 +42,7 @@ export const sceneSettings = pgTable(
 		shadows: json('shadows').$type<ShadowsProps>(), // shadowsAtom data
 		normalization: json('normalization').$type<NormalizationOptions>(), // normalizationAtom data
 		presentation: json('presentation').$type<ScenePresentationSettings>(), // presentationAtom data
+		animation: json('animation').$type<AnimationSettings>(), // animationAtom data
 
 		// Audit fields
 		createdAt: timestamp('created_at').defaultNow().notNull(),

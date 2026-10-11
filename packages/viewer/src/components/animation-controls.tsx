@@ -4,7 +4,7 @@ import PauseIcon from './assets/pause-icon'
 import PlayIcon from './assets/play-icon'
 import RestartIcon from './assets/restart-icon'
 
-interface AnimationControlsProps {
+export interface AnimationControlsProps {
 	playing: boolean
 	/** True once the program has run to its end without looping. */
 	complete: boolean

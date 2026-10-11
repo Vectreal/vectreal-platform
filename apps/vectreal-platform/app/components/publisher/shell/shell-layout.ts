@@ -31,6 +31,12 @@ export const PUBLISHER_LAYER = {
 	 * with the optimization drawer open, which preview mode never is.
 	 */
 	compareLabel: 'z-20',
+	/**
+	 * The author's animation playback bar, in the same bottom-center slot. It
+	 * belongs to the editor, so it never meets the preview controls, and it
+	 * steps aside while the compare label is up.
+	 */
+	animationControls: 'z-20',
 	/** Tool bar, top-left of the stage. */
 	toolBar: 'z-30',
 	/** Sliding panels: publish sidebar, compose sidebar, optimization drawer. */

@@ -113,6 +113,8 @@ const SceneEmbedViewer = memo(
 			<div className={cn('relative h-full w-full', className)}>
 				<ClientVectrealViewer
 					model={file?.model}
+					animations={file?.animations}
+					animationOptions={sceneData?.animation}
 					boundsOptions={sceneData?.bounds}
 					cameraOptions={sceneData?.camera}
 					controlsOptions={sceneData?.controls}

@@ -2,6 +2,7 @@ import { JSONDocument } from '@gltf-transform/core'
 import { ApiResponse } from '@shared/utils'
 import {
 	normalizeCameraSettings,
+	normalizeSceneAnimation,
 	normalizeSceneInteractions,
 	OptimizationReport,
 	Optimizations
@@ -347,6 +348,17 @@ export class SceneSettingsParser {
 			)
 		}
 
+		let normalizedAnimation: SceneSettings['animation']
+		try {
+			normalizedAnimation = normalizeSceneAnimation(sceneSettings.animation)
+		} catch (error) {
+			return ApiResponse.badRequest(
+				error instanceof Error
+					? error.message
+					: 'Invalid scene animation configuration'
+			)
+		}
+
 		const normalizedHotspots = this.normalizeHotspots(
 			sceneSettings.hotspots,
 			normalizedCamera?.cameras ?? []
@@ -357,6 +369,7 @@ export class SceneSettingsParser {
 
 		return {
 			...sceneSettings,
+			animation: normalizedAnimation,
 			camera: normalizedCamera,
 			interactions: normalizedInteractions,
 			hotspots: normalizedHotspots,
