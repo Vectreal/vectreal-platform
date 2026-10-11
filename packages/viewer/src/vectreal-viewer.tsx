@@ -873,6 +873,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									transitionOverride={transitionOverride}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
+									model={model}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
 									onCommandExecutorReady={cameraLayer.register}
 									onInitialFramingComplete={handleInitialFramingComplete}

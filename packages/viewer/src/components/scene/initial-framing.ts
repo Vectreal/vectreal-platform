@@ -1,5 +1,5 @@
 import type { BoundsApi } from '@react-three/drei'
-import type { PerspectiveCamera, Vector3 } from 'three'
+import type { Object3D, PerspectiveCamera, Vector3 } from 'three'
 
 export type InitialFramingControls = {
 	target: Vector3
@@ -17,16 +17,23 @@ export type InitialFramingControls = {
  * that reports `initial_framing_completed`, and the publisher's automatic
  * opening view, which writes the pose it reads into the default camera where
  * SceneCamera re-applies it over the fit.
+ *
+ * The fit measures `model`, not the whole `<Bounds>` group. Everything else
+ * mounted there would count too: with shadows on at load, the shadow plane is
+ * 2.5 times the model's footprint and the model opened at about a quarter of
+ * the frame. Without a model (a viewer showing only `children`) the group is
+ * all there is to frame.
  */
 export function applyInitialFraming(
 	bounds: BoundsApi,
+	model: Object3D | null | undefined,
 	camera: PerspectiveCamera,
 	controls: InitialFramingControls | null | undefined,
 	fitToBounds: boolean
 ) {
 	// Also clears any goal drei is still animating toward, such as SceneModel's
 	// normalization refit, so nothing moves the camera after this returns.
-	bounds.refresh()
+	bounds.refresh(model ?? undefined)
 
 	if (!fitToBounds) {
 		bounds.clip()

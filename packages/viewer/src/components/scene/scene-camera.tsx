@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
 	CatmullRomCurve3,
 	Euler,
+	type Object3D,
 	PerspectiveCamera,
 	Quaternion,
 	Vector3,
@@ -56,6 +57,8 @@ export const defaultCameraOptions: CameraProps = {
 interface SceneCameraProps extends CameraProps {
 	boundsEnabled?: boolean
 	hasContent?: boolean
+	/** What the first view frames; see `applyInitialFraming`. */
+	model?: Object3D | null
 	onInitialFramingComplete?: () => void
 	onCameraSnapshotCaptureReady?: (
 		capture: null | SceneCameraSnapshotCapture
@@ -322,6 +325,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
 		hasContent: hasModel = false,
+		model,
 		onInitialFramingComplete,
 		onCameraSnapshotCaptureReady,
 		onCommandExecutorReady,
@@ -555,6 +559,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			// captured before OrbitControls registered.
 			applyInitialFraming(
 				bounds,
+				model,
 				sceneCamera,
 				getThreeState().controls as InitialFramingControls | null,
 				boundsEnabled
@@ -586,6 +591,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			cameras,
 			controls?.target,
 			getThreeState,
+			model,
 			sceneTransition
 		]
 	)
