@@ -1,5 +1,7 @@
 import { HERO_MODEL } from './sample-models'
-import cameraPreviewUrl from '../../assets/models/camera-preview.webp?url'
+import cameraHeroPreviewUrl from '../../assets/models/camera-hero-preview.webp?url'
+import cameraTelephotoPreviewUrl from '../../assets/models/camera-telephoto-preview.webp?url'
+import cameraWidePreviewUrl from '../../assets/models/camera-wide-preview.webp?url'
 
 import type { SampleModel } from './sample-models'
 import type {
@@ -28,7 +30,10 @@ export interface ExampleScene {
 	/** Names the scene for a screen reader and in the publisher's toasts. */
 	label: string
 	model: Pick<SampleModel, 'url' | 'fileName' | 'bytes'>
-	/** A capture of the model, shown until the reader asks for the 3D scene. */
+	/**
+	 * A cutout of the scene from its own opening camera, shown until the reader
+	 * asks for the 3D scene, so the poster is the view the scene opens on.
+	 */
 	previewUrl: string
 	settings: SceneSettings
 }
@@ -92,8 +97,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 		id: 'camera-shadows',
 		label: 'Camera with a cast shadow and a ground shadow',
 		model: CAMERA_MODEL,
-		// The camera sample's capture: the same model, before the Balanced preset.
-		previewUrl: cameraPreviewUrl,
+		previewUrl: cameraHeroPreviewUrl,
 		settings: {
 			camera: {
 				activeCameraId: 'default',
@@ -116,7 +120,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 		id: 'camera-three-views',
 		label: 'Camera with three saved cameras: Hero, Detail and Context',
 		model: CAMERA_MODEL,
-		previewUrl: cameraPreviewUrl,
+		previewUrl: cameraHeroPreviewUrl,
 		settings: {
 			camera: {
 				activeCameraId: 'default',
@@ -150,7 +154,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 		id: 'camera-fov-telephoto',
 		label: 'Camera seen through a 35° telephoto field of view',
 		model: CAMERA_MODEL,
-		previewUrl: cameraPreviewUrl,
+		previewUrl: cameraTelephotoPreviewUrl,
 		settings: {
 			camera: {
 				activeCameraId: 'default',
@@ -171,7 +175,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 		id: 'camera-fov-wide',
 		label: 'Camera seen through a 90° wide field of view',
 		model: CAMERA_MODEL,
-		previewUrl: cameraPreviewUrl,
+		previewUrl: cameraWidePreviewUrl,
 		settings: {
 			camera: {
 				activeCameraId: 'default',
@@ -198,7 +202,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 		id: 'camera-slow-tour',
 		label: 'Camera with three cameras on a slow, smooth transition',
 		model: CAMERA_MODEL,
-		previewUrl: cameraPreviewUrl,
+		previewUrl: cameraHeroPreviewUrl,
 		settings: {
 			camera: {
 				activeCameraId: 'default',
@@ -237,7 +241,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 		id: 'camera-floaty-showroom',
 		label: 'Camera turning on its own, with a floaty drag and zoom off',
 		model: CAMERA_MODEL,
-		previewUrl: cameraPreviewUrl,
+		previewUrl: cameraHeroPreviewUrl,
 		settings: {
 			camera: {
 				activeCameraId: 'default',
