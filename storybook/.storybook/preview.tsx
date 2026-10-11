@@ -22,10 +22,16 @@ import type { Preview } from '@storybook/react-vite'
  * Stories that manage their own theming or are expensive to mount twice - the
  * viewer's, which each spin up a WebGL canvas - opt out with
  * `parameters: { dualTheme: false }`.
+ *
+ * No `actions.argTypesRegex`. It gave every `on*` prop an implicit action, and
+ * an implicit action does two kinds of harm: it throws when a component calls
+ * it while a story renders (a ready callback fired from an effect is enough),
+ * and a passed callback changes behavior, so a viewer marker selected instead
+ * of opening its card. A story that wants a callback logged passes `fn()` from
+ * `storybook/test` in its args.
  */
 const preview: Preview = {
 	parameters: {
-		actions: { argTypesRegex: '^on[A-Z].*' },
 		controls: { expanded: true, sort: 'requiredFirst' },
 		layout: 'fullscreen',
 		options: {
