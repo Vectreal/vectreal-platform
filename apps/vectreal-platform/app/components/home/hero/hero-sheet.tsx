@@ -11,25 +11,29 @@ import {
 	useState,
 	type CSSProperties,
 	type MouseEvent,
-	type ReactNode,
 	type RefObject
 } from 'react'
 import { Link } from 'react-router'
 
 import { HERO_POSTERS } from './hero-assets'
+import { FigureLabel, Readout } from './hero-readout'
 import styles from './hero-sheet.module.css'
-import { createHeroStore, useHeroState, type HeroStore } from './hero-store'
+import {
+	createHeroStore,
+	fallBackToPoster,
+	useHeroState,
+	type HeroStore
+} from './hero-store'
+import { useMountWhenVisibleAndIdle } from './use-mount-when-visible-and-idle'
 import {
 	HOME_PAGE_COPY,
 	PILOT_CONTACT_HREF
 } from '../../../constants/product-copy'
 import { ditherFadeDownMask } from '../../../lib/dither/dither'
 import {
-	HERO_MODEL,
 	HERO_SOURCE_SAMPLE_ID,
 	publisherSampleHref
 } from '../../../lib/samples/sample-models'
-import { inUnitOf } from '../format-bytes'
 import { StageBoundary } from '../stage/stage-boundary'
 
 import type { HeroStageElements } from './hero-stage-client'
@@ -38,8 +42,6 @@ const HeroStageClient = lazy(() => import('./hero-stage-client'))
 
 const HERO = HOME_PAGE_COPY.hero
 const COPY = HOME_PAGE_COPY.stage
-
-const count = new Intl.NumberFormat('en-US')
 
 /*
   Set on the section by the server, so the first paint already has the poster in
@@ -73,7 +75,6 @@ const CORNERS = [styles.tl, styles.tr, styles.bl, styles.br] as const
  */
 export function HeroSheet() {
 	const [store] = useState(createHeroStore)
-	const [stageWanted, setStageWanted] = useState(false)
 	const [elements, setElements] = useState<HeroStageElements | null>(null)
 	const openFileRef = useRef<(() => void) | null>(null)
 	const handOffRef = useRef<(() => Promise<void>) | null>(null)
@@ -87,28 +88,7 @@ export function HeroSheet() {
 	const scaleRef = useRef<HTMLSpanElement>(null)
 	const readoutRef = useRef<HTMLElement>(null)
 	const backdropRef = useRef<HTMLCanvasElement>(null)
-
-	useEffect(() => {
-		const stage = stageRef.current
-		if (!stage) return
-		// Safari has no idle callback; a short timeout stands in for it.
-		const hasIdle = typeof window.requestIdleCallback === 'function'
-		let idle = 0
-		const observer = new IntersectionObserver(([entry]) => {
-			if (!entry.isIntersecting) return
-			observer.disconnect()
-			const mount = () => setStageWanted(true)
-			idle = hasIdle
-				? window.requestIdleCallback(mount, { timeout: 1500 })
-				: window.setTimeout(mount, 200)
-		})
-		observer.observe(stage)
-		return () => {
-			observer.disconnect()
-			if (hasIdle) window.cancelIdleCallback(idle)
-			else window.clearTimeout(idle)
-		}
-	}, [])
+	const stageWanted = useMountWhenVisibleAndIdle(stageRef)
 
 	useEffect(() => {
 		if (!stageWanted) return
@@ -146,15 +126,8 @@ export function HeroSheet() {
 		})
 	}, [stageWanted])
 
-	/*
-	  The stage could not run at all (no WebGL, the chunk would not load), so the
-	  readout stops waiting for it and describes the poster, inked whole, which is
-	  drawn from the file it names.
-	*/
-	const stageFailed = () => {
-		frameRef.current?.style.setProperty('--plot', '1')
-		store.set({ status: 'drawn', busy: false, shownBytes: HERO_MODEL.bytes })
-	}
+	// The stage could not run at all: no WebGL, or the chunk would not load.
+	const stageFailed = () => fallBackToPoster(store, frameRef.current)
 
 	// Before the stage can take a file, the door stays a plain link to the publisher.
 	const tryOwnFile = (event: MouseEvent) => {
@@ -311,118 +284,5 @@ function OwnFileCta({
 			{COPY.openInPublisher}
 			<ArrowRight aria-hidden="true" />
 		</Button>
-	)
-}
-
-function FigureLabel({ store }: { store: HeroStore }) {
-	const view = useHeroState(store, (s) => s.view)
-	const face =
-		view === 'live'
-			? COPY.liveView
-			: view === 'dropped'
-				? COPY.droppedView
-				: HERO_MODEL.view
-	return (
-		<span className="text-eyebrow">
-			{COPY.figure} · {face}
-		</span>
-	)
-}
-
-function Cell({
-	label,
-	className,
-	children
-}: {
-	label: string
-	className?: string
-	children: ReactNode
-}) {
-	return (
-		<div className={className}>
-			<span className={cn('text-eyebrow', styles.label)}>{label}</span>
-			{children}
-		</div>
-	)
-}
-
-/*
-  The readout is a polite live region, so what the stage finds in a dropped file
-  is announced. The download counter is not: it lives in its own cell, outside
-  the announced text, or a screen reader would read every frame of it.
-*/
-function Readout({ store }: { store: HeroStore }) {
-	const readout = useHeroState(store, (s) => s.readout)
-	const original =
-		readout.originalBytes === null
-			? null
-			: inUnitOf(readout.originalBytes, readout.originalBytes)
-	return (
-		<>
-			<div className="contents" aria-live="polite">
-				<Cell label={COPY.readouts.file} className={styles.file}>
-					<span className={styles.value}>{readout.fileName}</span>
-				</Cell>
-				<Cell label={COPY.readouts.materials} className={styles.count}>
-					<span className={styles.value}>
-						{count.format(readout.materials)}
-					</span>
-				</Cell>
-				<Cell label={COPY.readouts.vertices} className={styles.count}>
-					<span className={styles.value}>{count.format(readout.vertices)}</span>
-				</Cell>
-				<Cell label={COPY.readouts.textures} className={styles.count}>
-					<span className={styles.value}>{count.format(readout.textures)}</span>
-				</Cell>
-				{original && (
-					<Cell label={COPY.readouts.original} className={styles.original}>
-						<span className={styles.value}>
-							{original.value}
-							<small>{original.unit}</small>
-						</span>
-					</Cell>
-				)}
-			</div>
-			<SizeCell store={store} />
-			<StatusCell store={store} />
-		</>
-	)
-}
-
-function SizeCell({ store }: { store: HeroStore }) {
-	const total = useHeroState(store, (s) => s.readout.bytes)
-	const shown = useHeroState(store, (s) => s.shownBytes)
-	const got = inUnitOf(shown, total)
-	const of = inUnitOf(total, total)
-	return (
-		<Cell label={COPY.readouts.size} className={styles.size}>
-			<span
-				className={styles.value}
-				data-done={shown >= total ? '' : undefined}
-			>
-				{got.value}
-				<small>
-					<span className={styles.of}>/&nbsp;{of.value}&nbsp;</span>
-					{of.unit}
-				</small>
-			</span>
-		</Cell>
-	)
-}
-
-function StatusCell({ store }: { store: HeroStore }) {
-	const status = useHeroState(store, (s) => s.status)
-	const busy = useHeroState(store, (s) => s.busy)
-	return (
-		<Cell label={COPY.readouts.status} className={styles.status}>
-			<span
-				className={styles.value}
-				data-live={busy ? '' : undefined}
-				role="status"
-			>
-				<i className={styles.dot} aria-hidden="true" />
-				{COPY.status[status]}
-			</span>
-		</Cell>
 	)
 }
