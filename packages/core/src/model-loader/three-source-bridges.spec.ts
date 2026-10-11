@@ -28,6 +28,7 @@ import { BufferGeometry, Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { IMPORTABLE_FORMAT_IDS, MODEL_FORMATS } from '../model-formats'
+import { readFbxFacts } from './fbx-file-facts'
 import { ModelLoader } from './model-loader'
 import {
 	BLOCKED_TEXTURE_URL,
@@ -38,7 +39,6 @@ import {
 	siblingFor,
 	textureSourceFor,
 	THREE_SOURCE_FORMAT_IDS,
-	upAxisOf,
 	watchTextureLoads,
 	withoutMissingMaps
 } from './three-source-bridges'
@@ -340,6 +340,23 @@ interface FbxScene {
 	rootRotation?: readonly [number, number, number]
 	/** A directional light 5 units up, aimed at a target 3 units along X of it. */
 	aimedLight?: boolean
+	/**
+	 * With `aimedLight`: the target hangs under the light in the file rather
+	 * than at the top level, so its position is relative to the light.
+	 */
+	lightTargetUnderLight?: boolean
+	/** A camera 5 units up, aimed at a target 4 units along Z of it. */
+	aimedCamera?: boolean
+	/**
+	 * The binary file version. From 7500 a record's three leading counts are
+	 * 64-bit, which is what Maya and 3ds Max write; Blender writes 7400.
+	 */
+	version?: 7400 | 7500
+	/**
+	 * More `C` records, binary only: child, parent, and the property an `OP`
+	 * connection targets. The ASCII builder spells its connections out.
+	 */
+	extraConnections?: ReadonlyArray<readonly [number, number, string?]>
 	vertices: readonly number[]
 	/** FBX polygon indices: the last vertex of a face is written ~i. */
 	polygons: readonly number[]
@@ -404,6 +421,7 @@ ${
 		: ''
 }
 ${scene.aimedLight ? AIMED_LIGHT_OBJECTS : ''}
+${scene.aimedCamera ? AIMED_CAMERA_OBJECTS : ''}
 ${scene.cameraAndLight ? CAMERA_AND_LIGHT_OBJECTS : ''}
 ${scene.animate ? ANIMATION_OBJECTS : ''}
 }
@@ -416,7 +434,15 @@ ${
 }
 	C: "OO",1001,2001
 ${scene.cameraAndLight ? CAMERA_AND_LIGHT_CONNECTIONS : ''}
-${scene.aimedLight ? AIMED_LIGHT_CONNECTIONS : ''}
+${
+	scene.aimedLight
+		? AIMED_LIGHT_CONNECTIONS.replace(
+				'C: "OO",7003,0',
+				`C: "OO",7003,${scene.lightTargetUnderLight ? 7001 : 0}`
+			)
+		: ''
+}
+${scene.aimedCamera ? AIMED_CAMERA_CONNECTIONS : ''}
 ${
 	scene.animate
 		? `${ANIMATION_CONNECTIONS}
@@ -500,6 +526,28 @@ const AIMED_LIGHT_CONNECTIONS = `	C: "OO",7001,0
 	C: "OO",7003,0
 	C: "OP",7003,7001, "LookAtProperty"`
 
+const AIMED_CAMERA_OBJECTS = `	Model: 8001, "Model::eye", "Camera" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",0,5,0
+			P: "LookAtProperty", "object", "", ""
+		}
+	}
+	NodeAttribute: 8002, "NodeAttribute::eye", "Camera" {
+		TypeFlags: "Camera"
+	}
+	Model: 8003, "Model::eye.Target", "Null" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",0,5,4
+		}
+	}`
+
+const AIMED_CAMERA_CONNECTIONS = `	C: "OO",8001,0
+	C: "OO",8002,8001
+	C: "OO",8003,0
+	C: "OP",8003,8001, "LookAtProperty"`
+
 const CAMERA_AND_LIGHT_CONNECTIONS = `	C: "OO",5001,0
 	C: "OO",5002,5001
 	C: "OO",6001,0
@@ -539,11 +587,19 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 	}
 	const u8 = (n: number) => scalar((v) => v.setUint8(0, n), 1)
 	const u32 = (n: number) => scalar((v) => v.setUint32(0, n, true), 4)
+	const version = scene.version ?? 7400
+	const wide = version >= 7500
+	/* A record's three leading counts, 64-bit from 7500. */
+	const count = (n: number) =>
+		wide ? scalar((v) => v.setBigUint64(0, BigInt(n), true), 8) : u32(n)
 	const i32 = (n: number) => scalar((v) => v.setInt32(0, n, true), 4)
+	const i64 = (n: number) => scalar((v) => v.setBigInt64(0, BigInt(n), true), 8)
 	const f64 = (n: number) => scalar((v) => v.setFloat64(0, n, true), 8)
 
 	const prop = {
 		int: (v: number) => bytes(text.encode('I'), i32(v)),
+		/* What real files write every object and connection ID as. */
+		id: (v: number) => bytes(text.encode('L'), i64(v)),
 		double: (v: number) => bytes(text.encode('D'), f64(v)),
 		string: (v: number | string) => {
 			const encoded = text.encode(String(v))
@@ -568,7 +624,7 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 			)
 	}
 
-	const NULL_RECORD = new Uint8Array(13)
+	const NULL_RECORD = new Uint8Array(wide ? 25 : 13)
 
 	type Record_ = (start: number) => Uint8Array
 	const record =
@@ -580,7 +636,7 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 		(start) => {
 			const label = text.encode(name)
 			const propList = bytes(...props)
-			let end = start + 13 + label.length + propList.length
+			let end = start + NULL_RECORD.length + label.length + propList.length
 			const nested: Uint8Array[] = []
 			for (const child of children) {
 				const built = child(end)
@@ -589,9 +645,9 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 			}
 			if (children.length > 0) end += NULL_RECORD.length
 			return bytes(
-				u32(end),
-				u32(props.length),
-				u32(propList.length),
+				count(end),
+				count(props.length),
+				count(propList.length),
 				u8(label.length),
 				label,
 				propList,
@@ -628,7 +684,11 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 		settings.push(record('Properties70', [], properties))
 
 	const top: Record_[] = [
-		record('FBXHeaderExtension', [], [record('FBXVersion', [prop.int(7400)])]),
+		record(
+			'FBXHeaderExtension',
+			[],
+			[record('FBXVersion', [prop.int(version)])]
+		),
 		record('GlobalSettings', [], settings),
 		record(
 			'Objects',
@@ -636,7 +696,7 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 			[
 				record(
 					'Geometry',
-					[prop.int(1001), prop.string('Geometry::part'), prop.string('Mesh')],
+					[prop.id(1001), prop.string('Geometry::part'), prop.string('Mesh')],
 					[
 						record('Vertices', [prop.doubles(scene.vertices)]),
 						record('PolygonVertexIndex', [prop.ints(scene.polygons)]),
@@ -645,7 +705,7 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 				),
 				record(
 					'Model',
-					[prop.int(2001), prop.string('Model::part'), prop.string('Mesh')],
+					[prop.id(2001), prop.string('Model::part'), prop.string('Mesh')],
 					[record('Version', [prop.int(232)])]
 				)
 			]
@@ -654,8 +714,16 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 			'Connections',
 			[],
 			[
-				record('C', [prop.string('OO'), prop.int(2001), prop.int(0)]),
-				record('C', [prop.string('OO'), prop.int(1001), prop.int(2001)])
+				record('C', [prop.string('OO'), prop.id(2001), prop.id(0)]),
+				record('C', [prop.string('OO'), prop.id(1001), prop.id(2001)]),
+				...(scene.extraConnections ?? []).map(([child, parent, property]) =>
+					record('C', [
+						prop.string(property ? 'OP' : 'OO'),
+						prop.id(child),
+						prop.id(parent),
+						...(property ? [prop.string(property)] : [])
+					])
+				)
 			]
 		)
 	]
@@ -663,7 +731,7 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 	const header = bytes(
 		text.encode('Kaydara FBX Binary  '),
 		new Uint8Array([0x00, 0x1a, 0x00]),
-		u32(7400)
+		u32(version)
 	)
 
 	let offset = header.length
@@ -767,6 +835,22 @@ function lightDirection(
 	expect(lights).toHaveLength(1)
 
 	const matrix = lights[0].getWorldMatrix()
+	const direction = [-matrix[8], -matrix[9], -matrix[10]]
+	const length = Math.hypot(...direction)
+	return direction.map((value) => value / length)
+}
+
+/** The world direction the one camera in a document looks: its -Z. */
+function cameraDirection(
+	loaded: Awaited<ReturnType<ModelLoader['loadFromBuffer']>>
+): number[] {
+	const cameras = loaded.data
+		.getRoot()
+		.listNodes()
+		.filter((node) => node.getCamera())
+	expect(cameras).toHaveLength(1)
+
+	const matrix = cameras[0].getWorldMatrix()
 	const direction = [-matrix[8], -matrix[9], -matrix[10]]
 	const length = Math.hypot(...direction)
 	return direction.map((value) => value / length)
@@ -1083,6 +1167,79 @@ describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
 		const at = light.getWorldMatrix().slice(12, 15)
 		expectVector(at, [0, 0.05, 0])
 	})
+
+	it('aims a light at a target the file hangs under it', async () => {
+		/*
+		  The target sits at (3, 5, 0) relative to a light at (0, 5, 0), so at
+		  (3, 10, 0). `FBXLoader` lifts the light, and the target with it, one
+		  unit; read before that comes off, the aim tilts towards (3, 6, 0).
+		*/
+		const result = await new ModelLoader().loadFromBuffer(
+			asciiFBX({
+				...WEDGE,
+				upAxis: 1,
+				aimedLight: true,
+				lightTargetUnderLight: true
+			}),
+			'part.fbx'
+		)
+
+		const towards = [3, 5, 0].map((value) => value / Math.hypot(3, 5))
+		expectVector(lightDirection(result), towards)
+	})
+
+	it('looks a camera down its +X, as FBX cameras look', async () => {
+		/*
+		  glTF cameras look down -Z and FBX cameras down +X. This one sits
+		  unrotated in a Y-up file, so it has to look along +X.
+		*/
+		const result = await withViewport(() =>
+			new ModelLoader().loadFromBuffer(
+				asciiFBX({ ...WEDGE, upAxis: 1, cameraAndLight: true }),
+				'part.fbx'
+			)
+		)
+
+		expectVector(cameraDirection(result), [1, 0, 0])
+	})
+
+	it('looks a camera at its target where the file names one', async () => {
+		const result = await withViewport(() =>
+			new ModelLoader().loadFromBuffer(
+				asciiFBX({ ...WEDGE, upAxis: 1, aimedCamera: true }),
+				'part.fbx'
+			)
+		)
+
+		/* From (0, 5, 0) at (0, 5, 4): along +Z. */
+		expectVector(cameraDirection(result), [0, 0, 1])
+	})
+
+	it.each([
+		['light', 'sunTarget', { aimedLight: true }, [0.03, 0.05, 0]],
+		['camera', 'eyeTarget', { aimedCamera: true }, [0, 0.05, 0.04]]
+	])(
+		"keeps a %s's target, %s, where the file puts it",
+		async (_kind, name, fixture, expected) => {
+			/*
+			  `FBXLoader` parents a model by every connection it has, and a
+			  target's `LookAtProperty` connection is one of them.
+			*/
+			const result = await withViewport(() =>
+				new ModelLoader().loadFromBuffer(
+					asciiFBX({ ...WEDGE, upAxis: 1, ...fixture }),
+					'part.fbx'
+				)
+			)
+			const target = result.data
+				.getRoot()
+				.listNodes()
+				.find((node) => node.getName() === name)
+
+			expect(target?.getParentNode()?.getName()).toBe('')
+			expectVector(target!.getWorldMatrix().slice(12, 15), expected)
+		}
+	)
 })
 
 /*
@@ -1092,23 +1249,70 @@ describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
   texture path in three needs a DOM to make an `img` with, and these specs
   deliberately run without one.
 */
-describe('the up axis is read from the file', () => {
+describe('what the FBX states is read from the file', () => {
 	it.each([
-		['binary', binaryFBX],
+		['binary 7400', (scene: FbxScene) => binaryFBX(scene)],
+		[
+			'binary 7500',
+			(scene: FbxScene) => binaryFBX({ ...scene, version: 7500 })
+		],
 		['ASCII', asciiFBX]
-	])('reads a %s file that declares Z-up', (_spelling, build) => {
-		expect(upAxisOf(build(WEDGE))).toBe(2)
+	])('reads the up axis of a %s file', (_spelling, build) => {
+		expect(readFbxFacts(build(WEDGE)).upAxis).toBe(2)
+		expect(readFbxFacts(build({ ...WEDGE, upAxis: 1 })).upAxis).toBe(1)
+		expect(readFbxFacts(build({ ...WEDGE, upAxis: undefined })).upAxis).toBe(
+			undefined
+		)
 	})
 
 	it.each([
-		['binary', binaryFBX],
-		['ASCII', asciiFBX]
-	])('reads a %s file that declares Y-up', (_spelling, build) => {
-		expect(upAxisOf(build({ ...WEDGE, upAxis: 1 }))).toBe(1)
+		['binary 7400', (scene: FbxScene) => binaryFBX(scene)],
+		['binary 7500', (scene: FbxScene) => binaryFBX({ ...scene, version: 7500 })]
+	])('reads the connections of a %s file', (_spelling, build) => {
+		expect(readFbxFacts(build(WEDGE)).connections).toEqual([
+			{ child: 2001, parent: 0 },
+			{ child: 1001, parent: 2001 }
+		])
 	})
 
-	it('reads nothing from a file that does not say', () => {
-		expect(upAxisOf(binaryFBX({ ...WEDGE, upAxis: undefined }))).toBe(undefined)
+	it.each([
+		['binary 7400', 7400],
+		['binary 7500', 7500]
+	] as const)(
+		'reads a %s property connection after its 64-bit IDs',
+		(_spelling, version) => {
+			/*
+			  Above 2^32, so the high word matters, and the property field only
+			  lines up if both IDs were read as eight bytes.
+			*/
+			const target = 2 ** 40 + 7
+			const { connections } = readFbxFacts(
+				binaryFBX({
+					...WEDGE,
+					version,
+					extraConnections: [[target, 2001, 'LookAtProperty']]
+				})
+			)
+
+			expect(connections).toContainEqual({
+				child: target,
+				parent: 2001,
+				property: 'LookAtProperty'
+			})
+		}
+	)
+
+	it('reads a constraint target as a property connection', () => {
+		const { connections } = readFbxFacts(
+			asciiFBX({ ...WEDGE, upAxis: 1, aimedLight: true })
+		)
+
+		expect(connections).toContainEqual({
+			child: 7003,
+			parent: 7001,
+			property: 'LookAtProperty'
+		})
+		expect(connections).toContainEqual({ child: 7003, parent: 0 })
 	})
 
 	it('does not take OriginalUpAxis for the axis', () => {
@@ -1120,7 +1324,17 @@ describe('the up axis is read from the file', () => {
 				'Properties70:  {\n\t\tP: "OriginalUpAxis", "int", "Integer", "",2'
 			)
 
-		expect(upAxisOf(new TextEncoder().encode(text))).toBe(undefined)
+		expect(readFbxFacts(new TextEncoder().encode(text)).upAxis).toBe(undefined)
+	})
+
+	it('loads a 7500 file, whose records are 64-bit', async () => {
+		/* The reader and the loader agree on the layout, or this parse fails. */
+		const result = await new ModelLoader().loadFromBuffer(
+			binaryFBX({ ...WEDGE, version: 7500 }),
+			'part.fbx'
+		)
+
+		expect(worldBounds(result).max[1]).toBeCloseTo(0.04, 6)
 	})
 })
 

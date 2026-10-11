@@ -15,16 +15,20 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { referenceIn } from './dropped-selection'
+import { readFbxFacts } from './fbx-file-facts'
 
 import type { ModelFormatId } from '../model-formats'
+import type { FbxFacts } from './fbx-file-facts'
 import type {
 	DirectionalLight,
 	Group,
 	LoadingManager,
 	Mesh,
 	Object3D,
+	PerspectiveCamera,
 	SpotLight,
-	Texture
+	Texture,
+	Vector3
 } from 'three'
 import type * as Three from 'three'
 
@@ -177,7 +181,7 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 	try {
 		const root = rootFor(
 			new FBXLoader(manager).parse(toArrayBuffer(bytes), ''),
-			upAxisOf(bytes) === 2,
+			readFbxFacts(bytes),
 			three
 		)
 
@@ -244,7 +248,8 @@ export function watchTextureLoads(
 /**
  * The node this bridge puts above the loader's object, carrying every
  * correction the bridge makes to the file as a whole: its unit, its up axis,
- * and the direction its lights face.
+ * where its constraint targets sit, and which way its lights and cameras
+ * face.
  *
  * WHY A NEW NODE AND NOT THE LOADER'S OBJECT. When a file has a single
  * top-level group `FBXLoader` returns that group, and that group can be
@@ -260,16 +265,24 @@ export function watchTextureLoads(
  * The root carries the clips as well, since it is the object
  * `exportThreeJSGLB` reads them from.
  */
-function rootFor(object: Object3D, zUp: boolean, three: typeof Three): Group {
+function rootFor(
+	object: Object3D,
+	facts: FbxFacts,
+	three: typeof Three
+): Group {
 	const root = new three.Group()
 	root.animations = object.animations
 
 	/* Read before `add`, which reparents the node the factor may sit on. */
 	root.scale.setScalar(takeUnitScale(object))
-	if (zUp) liftUpAxisCorrection(object, root, three)
+	if (facts.upAxis === 2) liftUpAxisCorrection(object, root, three)
 	root.add(object)
 
-	aimLights(root, three)
+	const byId = modelsById(root)
+	releaseLookAtTargets(root, facts, byId)
+	root.updateMatrixWorld(true)
+	aimLights(root, facts, byId, three)
+	aimCameras(root, facts, byId, three)
 
 	return root
 }
@@ -351,72 +364,98 @@ function liftUpAxisCorrection(
 }
 
 /**
- * `GlobalSettings.UpAxis` as the file states it, read from the bytes because
- * `FBXLoader` acts on it and keeps no record: 1 is Y-up, 2 is Z-up.
- *
- * Read rather than inferred from the object. The loader's turn is -90 degrees
- * about X, so a root that already carries exactly that rotation ends with the
- * same rotation and the same matrix whether the file is Z-up or Y-up, and only
- * the Z-up one has a turn to move.
- *
- * Both spellings, located the way the loader's own parsers read the property:
- * a `P` record whose five fields are the name, two type names, a flags string
- * and the value. In binary each string field is `S` plus a 32-bit length, and
- * the value is `I` plus a 32-bit integer. `OriginalUpAxis` is a different
- * property; the quote, or the length prefix, keeps it from matching.
- *
- * Exported for its own test, so both spellings are checked directly rather
- * than only through whichever one a parse case happens to build.
- * Package-internal; the barrel does not re-export it.
+ * Every object `FBXLoader` made from a file model, by that model's ID. The
+ * loader writes the ID onto each one, which is what lets a connection read from
+ * the file name the object it is about.
  */
-export function upAxisOf(bytes: Uint8Array): number | undefined {
-	if (!startsWith(bytes, FBX_BINARY_MAGIC)) {
-		const match = /"UpAxis",\s*"int",\s*"Integer",\s*"[^"]*",\s*(-?\d+)/.exec(
-			decodeText(bytes)
+function modelsById(root: Object3D): Map<number, Object3D> {
+	const byId = new Map<number, Object3D>()
+	root.traverse((node) => {
+		const id = (node as Object3D & { ID?: unknown }).ID
+		if (typeof id === 'number') byId.set(id, node)
+	})
+	return byId
+}
+
+/**
+ * Puts every constraint target back under the parent the file gives it.
+ *
+ * `FBXLoader` parents a model by each of its connections, and a target's
+ * `LookAtProperty` connection is one of them, so a light's or camera's target
+ * ends up as that light's or camera's child - placed by its own transform
+ * relative to the wrong node, and written to the file there. Its real parent is
+ * its plain `OO` connection. A target at the top level of the file goes on
+ * `root`, whose space is the file's top level once the unit and up axis sit on
+ * it.
+ */
+function releaseLookAtTargets(
+	root: Object3D,
+	facts: FbxFacts,
+	byId: ReadonlyMap<number, Object3D>
+): void {
+	for (const lookAt of facts.connections) {
+		if (lookAt.property !== LOOK_AT) continue
+
+		const target = byId.get(lookAt.child)
+		if (!target || target.parent !== byId.get(lookAt.parent)) continue
+
+		const home = facts.connections.find(
+			(connection) =>
+				connection.child === lookAt.child && connection.property === undefined
 		)
-		return match ? Number(match[1]) : undefined
+		const parent = !home || home.parent === 0 ? root : byId.get(home.parent)
+		parent?.add(target)
 	}
-
-	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-	const name = indexOf(bytes, UP_AXIS_FIELD)
-	if (name < 0) return undefined
-
-	/* Past the name, then the type, the subtype and the flags. */
-	let at = name + UP_AXIS_FIELD.length
-	for (let field = 0; field < 3; field += 1) {
-		if (bytes[at] !== STRING_FIELD || at + 5 > bytes.length) return undefined
-		at += 5 + view.getUint32(at + 1, true)
-	}
-
-	if (bytes[at] !== INT_FIELD || at + 5 > bytes.length) return undefined
-	return view.getInt32(at + 1, true)
 }
 
-const FBX_BINARY_MAGIC = new TextEncoder().encode('Kaydara FBX Binary  \0')
-const STRING_FIELD = 0x53 /* 'S' */
-const INT_FIELD = 0x49 /* 'I' */
-/* The name field itself: `S`, a length of 6, then the name. */
-const UP_AXIS_FIELD = new Uint8Array([
-	STRING_FIELD,
-	6,
-	0,
-	0,
-	0,
-	...new TextEncoder().encode('UpAxis')
-])
-
-function startsWith(bytes: Uint8Array, prefix: Uint8Array): boolean {
-	return prefix.every((byte, i) => bytes[i] === byte)
+/**
+ * Where the file aims a model, when it gives that model a target: the target's
+ * position in the world, or null for a model that faces along its own axes.
+ */
+function aimOf(
+	model: Object3D,
+	facts: FbxFacts,
+	byId: ReadonlyMap<number, Object3D>,
+	three: typeof Three
+): Vector3 | null {
+	const id = (model as Object3D & { ID?: unknown }).ID
+	const lookAt = facts.connections.find(
+		(connection) => connection.property === LOOK_AT && connection.parent === id
+	)
+	const target = lookAt ? byId.get(lookAt.child) : undefined
+	return target ? target.getWorldPosition(new three.Vector3()) : null
 }
 
-function indexOf(bytes: Uint8Array, needle: Uint8Array): number {
-	outer: for (let i = 0; i <= bytes.length - needle.length; i += 1) {
-		for (let j = 0; j < needle.length; j += 1) {
-			if (bytes[i + j] !== needle[j]) continue outer
-		}
-		return i
-	}
-	return -1
+const LOOK_AT = 'LookAtProperty'
+
+/**
+ * Puts a group in `held`'s place and `held` inside it, at the group's origin,
+ * ready to be turned on its own.
+ *
+ * Why the group: a clip that moves a light or camera names it, and turning that
+ * same node to face the glTF way would fight the clip on every frame. The
+ * group takes the name, transform, user data and children, so the clip still
+ * finds what it moved; `held` keeps its name too, since `GLTFExporter` names a
+ * light or camera definition after the object that carries it.
+ */
+function standIn(held: Object3D, three: typeof Three): Group {
+	const node = new three.Group()
+	node.name = held.name
+	node.position.copy(held.position)
+	node.quaternion.copy(held.quaternion)
+	node.scale.copy(held.scale)
+	node.userData = held.userData
+	for (const child of [...held.children]) node.add(child)
+	held.parent?.add(node)
+	held.removeFromParent()
+
+	held.userData = {}
+	held.position.set(0, 0, 0)
+	held.quaternion.identity()
+	held.scale.set(1, 1, 1)
+	node.add(held)
+
+	return node
 }
 
 /**
@@ -429,11 +468,7 @@ function indexOf(bytes: Uint8Array, needle: Uint8Array): number {
  * `GLTFExporter` then writes the node's -Z regardless. A converted sun came out
  * facing sideways.
  *
- * Each light becomes a group in its place, keeping the name, transform and
- * children, so a clip that moves the light still finds it; the light itself
- * sits inside, turned so its -Z is the FBX direction, and keeps the name too,
- * since `GLTFExporter` names the light definition after it. Turning the light's
- * own node instead would fight the same clip. Its target is then a hidden child
+ * Each light is turned inside a `standIn`. Its target is then a hidden child
  * one unit down -Z: where three aims it, where `GLTFExporter` expects it, and,
  * hidden, not a node of its own in the file.
  *
@@ -441,7 +476,12 @@ function indexOf(bytes: Uint8Array, needle: Uint8Array): number {
  * converted: FBX states intensity as a bare percentage and glTF requires
  * candela or lux, and nothing in the file relates the two.
  */
-function aimLights(root: Object3D, three: typeof Three): void {
+function aimLights(
+	root: Object3D,
+	facts: FbxFacts,
+	byId: ReadonlyMap<number, Object3D>,
+	three: typeof Three
+): void {
 	const lights: Array<DirectionalLight | SpotLight> = []
 	root.traverse((node) => {
 		if ((node as DirectionalLight).isDirectionalLight) {
@@ -451,20 +491,10 @@ function aimLights(root: Object3D, three: typeof Three): void {
 		}
 	})
 
-	root.updateMatrixWorld(true)
-
 	for (const light of lights) {
-		/*
-		  `FBXLoader` adds a light's target to the scene only when the file gives
-		  it one, so a target with a parent is the file's own.
-		*/
-		const aimAt = light.target.parent
-			? light.target.getWorldPosition(new three.Vector3())
-			: null
+		/* The loader's own target object: replaced below, never written. */
 		light.target.removeFromParent()
 
-		const node = new three.Group()
-		node.name = light.name
 		/*
 		  Less the unit `FBXLoader` adds. Both light classes start at (0, 1, 0)
 		  in three, and the loader premultiplies the file's transform onto that
@@ -472,28 +502,20 @@ function aimLights(root: Object3D, three: typeof Three): void {
 		  file unit along its own up. A spot light then lights from the wrong
 		  place, and a targeted one aims from it.
 		*/
-		node.position
-			.copy(light.position)
-			.sub(
-				new three.Vector3(0, 1, 0)
-					.multiply(light.scale)
-					.applyQuaternion(light.quaternion)
-			)
-		node.quaternion.copy(light.quaternion)
-		node.scale.copy(light.scale)
-		node.userData = light.userData
-		for (const child of [...light.children]) node.add(child)
-		light.parent?.add(node)
-		light.removeFromParent()
+		const loaderOffset = new three.Vector3(0, 1, 0)
+			.multiply(light.scale)
+			.applyQuaternion(light.quaternion)
+		const node = standIn(light, three)
+		node.position.sub(loaderOffset)
 
-		light.userData = {}
-		light.position.set(0, 0, 0)
-		light.quaternion.identity()
-		light.scale.set(1, 1, 1)
-		node.add(light)
+		/*
+		  Read after the offset comes off: a target the file hangs under the
+		  light itself moves with it.
+		*/
+		node.updateMatrixWorld(true)
+		const aimAt = aimOf(light, facts, byId, three)
 
 		if (aimAt) {
-			node.updateMatrixWorld(true)
 			light.lookAt(aimAt)
 		} else {
 			/* Turns -Z onto the node's -Y, where an FBX light shines. */
@@ -504,6 +526,51 @@ function aimLights(root: Object3D, three: typeof Three): void {
 		light.target.position.set(0, 0, -1)
 		light.target.visible = false
 		light.add(light.target)
+	}
+}
+
+/**
+ * Points every perspective camera the way the FBX meant it.
+ *
+ * An FBX camera looks down its node's +X axis, or at its target; a glTF camera
+ * looks down -Z. `FBXLoader` turns neither kind, so a free camera came out
+ * looking 90 degrees to the side. A targeted one it does turn, but before it
+ * applies the file's own transform, so that transform then turns it again.
+ * Each camera is turned inside a `standIn`, aimed at its target from the
+ * file where it has one.
+ *
+ * The aim is the one at rest, baked as a fixed turn inside the stand-in. glTF
+ * has no constraint, so when a clip moves the camera, the light or the target,
+ * the turn stays the rest one and stops following the target; the converter
+ * note says so.
+ *
+ * Orthographic cameras are not here because `FBXLoader` makes none: it warns
+ * and returns an empty object, which the exporter writes as a plain node.
+ */
+function aimCameras(
+	root: Object3D,
+	facts: FbxFacts,
+	byId: ReadonlyMap<number, Object3D>,
+	three: typeof Three
+): void {
+	const cameras: PerspectiveCamera[] = []
+	root.traverse((node) => {
+		if ((node as PerspectiveCamera).isPerspectiveCamera) {
+			cameras.push(node as PerspectiveCamera)
+		}
+	})
+
+	for (const camera of cameras) {
+		const node = standIn(camera, three)
+		node.updateMatrixWorld(true)
+		const aimAt = aimOf(camera, facts, byId, three)
+
+		if (aimAt) {
+			camera.lookAt(aimAt)
+		} else {
+			/* Turns -Z onto the node's +X, where an FBX camera looks. */
+			camera.rotation.y = -Math.PI / 2
+		}
 	}
 }
 
