@@ -43,9 +43,8 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 		previewUrl: cameraPreviewUrl,
 		settings: {
 			/*
-			  Posed rather than auto-fit: with shadows on from the first frame,
-			  the viewer's fit takes in the shadow plane, 2.5 times the model's
-			  footprint, and the camera opens as a speck.
+			  A three-quarter view from above, so the shadow falling away from the
+			  lens is in frame. Auto-fit would open straight on from the front.
 			*/
 			camera: {
 				activeCameraId: 'default',
