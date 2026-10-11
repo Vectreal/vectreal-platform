@@ -1,14 +1,5 @@
-import { formatNewsDate, getNewsArticles } from './news-manifest'
-
-describe('formatNewsDate', () => {
-	it('spells a frontmatter date the way the rest of the site does', () => {
-		expect(formatNewsDate('2026-10-02T12:00:00Z')).toBe('Oct 2, 2026')
-	})
-
-	it('passes an unparseable date through untouched', () => {
-		expect(formatNewsDate('soon')).toBe('soon')
-	})
-})
+import { getArticleBody } from './news-article-body'
+import { getNewsArticles } from './news-manifest.server'
 
 describe('news manifest', () => {
 	it('keeps every article file, so invalid frontmatter cannot drop one silently', () => {
@@ -20,5 +11,12 @@ describe('news manifest', () => {
 
 		expect(files.length).toBeGreaterThan(0)
 		expect(getNewsArticles()).toHaveLength(files.length)
+	})
+
+	it('finds a body for every article it lists', () => {
+		// The page renders whatever `getArticleBody` returns for the path the
+		// manifest hands it, so a path the two disagree on is an empty article.
+		for (const article of getNewsArticles())
+			expect(getArticleBody(article.sourcePath), article.slug).toBeDefined()
 	})
 })

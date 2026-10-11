@@ -13,7 +13,7 @@ import { routeErrorMeta } from '../../components/not-found'
 import {
 	getNewsArticles,
 	getNewsCategories
-} from '../../lib/news/news-manifest'
+} from '../../lib/news/news-manifest.server'
 import { buildPageMeta, SITE_URL } from '../../lib/seo'
 import {
 	buildCollectionPageJsonLd,
@@ -55,9 +55,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const query = url.searchParams.get('q')?.trim() ?? ''
 	const category = url.searchParams.get('category')?.trim() ?? ''
 
-	let articles = getNewsArticles().map(
-		({ Component: _, ...article }) => article
-	)
+	let articles = [...getNewsArticles()]
 
 	if (query) {
 		articles = articles.filter((article) => {

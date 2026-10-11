@@ -12,7 +12,7 @@ import {
 	convertPairPath
 } from '../lib/convert/convert-pairs'
 import { docsPages } from '../lib/docs/docs-manifest'
-import { getNewsArticles } from '../lib/news/news-manifest'
+import { getNewsArticles } from '../lib/news/news-manifest.server'
 
 import type { LoaderFunctionArgs } from 'react-router'
 

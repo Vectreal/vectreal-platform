@@ -3,7 +3,7 @@ import { cn } from '@shared/utils'
 
 import { ArticleMeta } from './article-meta'
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
-import { formatNewsDate } from '../../lib/news/news-manifest'
+import { formatNewsDate } from '../../lib/news/news-article'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
 
 interface ArticleHeroProps {

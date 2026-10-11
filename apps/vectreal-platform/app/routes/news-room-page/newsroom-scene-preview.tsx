@@ -1,7 +1,7 @@
 import { Button } from '@shared/components/ui/button'
 import { useMemo, useState } from 'react'
 
-import { getNewsArticles } from '../../lib/news/news-manifest'
+import { getNewsArticles } from '../../lib/news/news-manifest.server'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
 import { seedFromSlug } from '../../lib/newsroom-thumbnail/prng'
 import { renderSvg } from '../../lib/newsroom-thumbnail/render-svg'
