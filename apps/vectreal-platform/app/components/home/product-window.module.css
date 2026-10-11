@@ -1,39 +1,44 @@
 @reference '../../../../../shared/components/src/styles/globals.css';
 
 /*
-  A view in the list is a rounded row. The active one sits a step up the
-  elevation ladder, and while the window cycles, its surface fills a second
-  step from left to right over the dwell: the fill is the clock, drawn in
-  elevation rather than a line. Once the reader has taken over, it stands full.
+  A step in the chain stands on a rule, and the rules end to end are the chain.
+  The rule reports where the reader is: the active step's is drawn in the
+  brand, the others stay faint. While the window cycles, the active step's
+  rule fills from left to right over the dwell: the fill is the clock, its
+  moving end sharp and the way it has come fading out behind it. Once the
+  reader has taken over, the step they chose draws full and solid, quickly.
 */
-.view {
+.step {
 	position: relative;
-	isolation: isolate;
-	overflow: hidden;
-	/* Concentric with the window, like the screenshot: 28px less the 12px padding. */
-	border-radius: var(--radius-lg);
 }
-.view[data-state='active'] {
-	background: color-mix(in oklch, var(--foreground) 4%, transparent);
+.step::before,
+.fill {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 2px;
 }
-.view:not([data-state='active']):hover {
-	background: color-mix(in oklch, var(--foreground) 3%, transparent);
+.step::before {
+	background: color-mix(in oklch, var(--foreground) 12%, transparent);
 }
 .fill {
-	position: absolute;
-	inset: 0;
-	z-index: -1;
-	background: color-mix(in oklch, var(--foreground) 4%, transparent);
+	background: var(--orange);
 	transform-origin: left;
 	transform: scaleX(0);
 }
-.view[data-state='active'] .fill {
+.step[data-state='active'] .fill {
 	transform: scaleX(1);
 }
-.window[data-cycling] .view[data-state='active'] .fill {
+.window[data-cycling] .step[data-state='active'] .fill {
+	mask-image: linear-gradient(to right, transparent, black 60%);
 	animation: dwell var(--dwell) linear forwards;
 }
-.window[data-paused] .view[data-state='active'] .fill {
+.window:not([data-cycling]) .step[data-state='active'] .fill {
+	animation: chosen var(--duration-slow) var(--ease-out) both;
+}
+.window[data-cycling][data-paused] .step[data-state='active'] .fill {
 	animation-play-state: paused;
 }
 @keyframes dwell {
@@ -42,5 +47,15 @@
 	}
 	to {
 		transform: scaleX(1);
+	}
+}
+@keyframes chosen {
+	from {
+		transform: scaleX(0);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.fill {
+		animation: none !important;
 	}
 }

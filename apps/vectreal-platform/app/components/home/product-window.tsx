@@ -92,16 +92,17 @@ const DISSOLVE_MS = 400
 const DWELL_MS = 7000
 
 /**
- * The product as it is today, one view at a time.
+ * The product as three steps, one view at a time.
  *
  * Tabs rather than a grid of feature cards: the three views are one workflow,
  * and showing one screen large says more than three small ones side by side.
  * Every screenshot and caption is server-rendered, and switching only changes
  * which one is shown.
  *
- * The views are listed inside the window, beside the screenshot, numbered in
- * workflow order, and the window walks through them on its own: a line under
- * the active view fills over its dwell and hands on to the next. Hovering or
+ * The views are the workflow's three steps, set above the window as a chain
+ * numbered in workflow order, so the page says how short the path is before it
+ * shows any of it. The window walks through them on its own: the active step's
+ * rule fills over its dwell and hands on to the next. Hovering or
  * focusing the window pauses it, so nobody loses a caption mid-read; so does
  * the window being off screen. A click hands it over to the reader for good,
  * and reduced motion never starts it.
@@ -152,8 +153,11 @@ export const ProductWindow = () => {
 	}
 
 	// The dwell line's animation ending is the clock: one timer, and it pauses with the line.
-	const advance = () =>
+	// The fill also animates once when the reader chooses a step; only the dwell, which runs while cycling, is the clock.
+	const advance = () => {
+		if (!cycling) return
 		switchTo(VIEW_ORDER[(VIEW_ORDER.indexOf(view) + 1) % VIEW_ORDER.length])
+	}
 
 	useEffect(() => {
 		if (!prefersReducedMotion()) setCycling(true)
@@ -170,25 +174,19 @@ export const ProductWindow = () => {
 	}, [])
 
 	return (
-		<Tabs
-			value={view}
-			onValueChange={choose}
-			orientation="vertical"
-			className="gap-8"
-		>
-			<div className="max-w-xl">
-				<h2 id="product-heading" className="text-h2" data-reveal>
+		<Tabs value={view} onValueChange={choose} className="gap-12">
+			<div className="max-w-3xl">
+				<h2 id="product-heading" className="text-headline" data-reveal>
 					{COPY.heading}
 				</h2>
-				<p className="text-muted-foreground text-body-lg mt-4" data-reveal>
+				<p className="text-muted-foreground text-body-lg mt-6" data-reveal>
 					{COPY.lead}
 				</p>
 			</div>
 
 			<div
 				ref={windowRef}
-				data-reveal
-				className={cn('ds-raised rounded-2xl p-2 md:p-3', styles.window)}
+				className={cn('flex flex-col gap-8', styles.window)}
 				style={{ '--dwell': `${DWELL_MS}ms` } as CSSProperties}
 				data-cycling={cycling ? '' : undefined}
 				data-paused={held || offscreen ? '' : undefined}
@@ -199,7 +197,43 @@ export const ProductWindow = () => {
 					if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false)
 				}}
 			>
-				<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:gap-3">
+				<TabsList
+					aria-label={COPY.stepsLabel}
+					data-reveal
+					className="grid h-auto w-full grid-cols-3 items-start gap-4 bg-transparent p-0 md:gap-8"
+				>
+					{VIEW_ORDER.map((one, index) => (
+						<TabsTrigger
+							key={one}
+							value={one}
+							className={cn(
+								// The shared trigger's pill states are forced (`!`), so they are cleared the same way; the step's own styles live in the module.
+								'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 rounded-none border-0 px-0 pt-5 pb-0 text-left whitespace-normal shadow-none data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent',
+								styles.step
+							)}
+						>
+							<span className="flex items-baseline gap-3">
+								<span className="text-eyebrow text-orange-ink tabular-nums">
+									{String(index + 1).padStart(2, '0')}
+								</span>
+								<span className="text-h3">{COPY.views[one].label}</span>
+							</span>
+							<span className="text-body-sm text-muted-foreground hidden md:block">
+								{COPY.views[one].summary}
+							</span>
+							<span
+								className={styles.fill}
+								aria-hidden="true"
+								onAnimationEnd={advance}
+							/>
+						</TabsTrigger>
+					))}
+				</TabsList>
+
+				<div
+					data-reveal
+					className="ds-raised grid gap-4 rounded-2xl p-2 md:p-3 lg:grid-cols-[1fr_18rem] lg:gap-3"
+				>
 					{/* Concentric with the window: its 28px corner less the padding between them. */}
 					<div
 						ref={sceneRef}
@@ -238,57 +272,28 @@ export const ProductWindow = () => {
 						</div>
 					</div>
 
-					<div className="flex flex-col gap-6 pb-2">
-						<TabsList
-							aria-label={COPY.heading}
-							className="grid h-auto w-full grid-cols-3 gap-1 bg-transparent p-0 lg:grid-cols-1"
+					{VIEW_ORDER.map((one) => (
+						<TabsContent
+							key={one}
+							value={one}
+							forceMount
+							className="flex flex-col gap-4 px-4 pt-2 pb-4 data-[state=inactive]:hidden lg:pt-4"
 						>
-							{VIEW_ORDER.map((one, index) => (
-								<TabsTrigger
-									key={one}
-									value={one}
-									className={cn(
-										// The shared trigger's pill states are forced (`!`), so they are cleared the same way; the row styles live in the module.
-										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-1 border-0 px-3 py-3 text-left shadow-none data-[state=active]:bg-transparent! data-[state=active]:shadow-none lg:flex-row lg:items-center lg:gap-0 lg:px-4 dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent',
-										styles.view
-									)}
-								>
-									<span className="text-eyebrow tabular-nums">
-										{String(index + 1).padStart(2, '0')}
-									</span>
-									{/* Three to a row on a phone: the number sits over the label there, since side by side they do not fit. */}
-									<span className="text-h4 lg:ml-3">
-										{COPY.views[one].label}
-									</span>
-									<span
-										className={styles.fill}
-										aria-hidden="true"
-										onAnimationEnd={advance}
-									/>
-								</TabsTrigger>
-							))}
-						</TabsList>
-
-						{VIEW_ORDER.map((one) => (
-							<TabsContent
-								key={one}
-								value={one}
-								forceMount
-								className="flex flex-col gap-4 px-4 data-[state=inactive]:hidden"
+							<p className="text-eyebrow text-muted-foreground">
+								{COPY.views[one].label}
+							</p>
+							<p className="text-muted-foreground text-body">
+								{COPY.views[one].body}
+							</p>
+							<ArrowLink
+								to={VIEW_LINKS[one]}
+								viewTransition={entersFunnel(VIEW_LINKS[one])}
+								className="text-foreground"
 							>
-								<p className="text-muted-foreground text-body">
-									{COPY.views[one].body}
-								</p>
-								<ArrowLink
-									to={VIEW_LINKS[one]}
-									viewTransition={entersFunnel(VIEW_LINKS[one])}
-									className="text-foreground"
-								>
-									{COPY.views[one].link}
-								</ArrowLink>
-							</TabsContent>
-						))}
-					</div>
+								{COPY.views[one].link}
+							</ArrowLink>
+						</TabsContent>
+					))}
 				</div>
 			</div>
 		</Tabs>

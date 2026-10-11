@@ -404,21 +404,27 @@ export const HOME_PAGE_COPY = {
 		openInPublisher: 'Open in the publisher'
 	},
 	product: {
-		heading: 'The product, as it is today',
-		lead: 'Three parts of one workflow, each one live today.',
+		heading: 'From the file you have to your product page, in three steps',
+		lead: 'Each step is live in the product today.',
+		/** The chain's accessible name: the heading is a sentence, this names the control. */
+		stepsLabel: 'The three steps',
 		views: {
 			prepare: {
 				label: 'Prepare',
+				summary:
+					'Drop in your file and keep the lightest version that still looks right.',
 				body: `Upload ${SUPPORTED_FORMAT_NAMES.join(', ')}. Pick a preset, compare before and after, and download the result without an account.`,
 				link: 'Open the optimizer'
 			},
 			manage: {
 				label: 'Manage',
+				summary: 'Every scene, project and API key in one place.',
 				body: `Projects, folders and scenes in one place, with API keys and allowed domains for every embed. From the ${PLAN_DISPLAY_NAMES[TEAM_PLAN]} plan up, your whole team works in it, and owners, admins and members each get the actions their role allows.`,
 				link: 'Compare plans'
 			},
 			embed: {
 				label: 'Embed',
+				summary: 'One snippet puts it on your page.',
 				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
 				link: 'See the embed guide',
 				/** The address bar of the product page the view shows the camera on: anyone's shop, not one we name. */
@@ -428,8 +434,22 @@ export const HOME_PAGE_COPY = {
 	},
 	mission: {
 		label: 'Why we build this',
-		statement:
-			'Most companies that make physical products already have 3D files. Very few can put them on their own website without an agency, an enterprise platform or a plugin that keeps their data. Vectreal is the open path from the file you have to a product page that loads fast, and we build it in public.',
+		/** One paragraph, in parts: the `key` ones light up in turn as it scrolls through the screen. */
+		statement: [
+			'Most companies that make physical products ',
+			{ key: 'already have 3D files' },
+			'. Very few can put them on their own website ',
+			{
+				key: 'without an agency, an enterprise platform or a plugin that keeps their data'
+			},
+			'. Vectreal is ',
+			{
+				key: 'the open path from the file you have to a product page that loads fast'
+			},
+			', and ',
+			{ key: 'we build it in public' },
+			'.'
+		],
 		signature: 'Moritz Becker, founder',
 		/** The figure beside the statement: one file, pulled apart into the path it takes. Back to front. */
 		layers: {
