@@ -125,6 +125,7 @@ export interface UpdateSceneSettingsParams {
 	readonly gltfJson?: JSONDocument
 }
 
+/** Omitted optional fields are left unchanged; null or '' clears them. */
 export interface SceneMetadataUpdateInput {
 	readonly name: string
 	readonly description?: string | null
