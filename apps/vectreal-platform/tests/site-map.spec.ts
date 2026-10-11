@@ -55,7 +55,7 @@ describe('the site map', () => {
 		for (const [to, labels] of names) expect([...labels], to).toHaveLength(1)
 	})
 
-	it('offers the founding-client pilot from the nav', () => {
+	it('offers the pilot from the nav', () => {
 		expect(navLinks.map((link) => link.to)).toContain('/contact?topic=pilot')
 	})
 

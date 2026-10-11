@@ -151,7 +151,7 @@ function usePinnedStage(count: number) {
 }
 
 /**
- * The founding-client offer, written as terms rather than as features.
+ * The pilot offer, written as terms rather than as features.
  *
  * Each term has a small drawing of the stage of the project it belongs to, so
  * the offer can be read at a glance before it is read in full.

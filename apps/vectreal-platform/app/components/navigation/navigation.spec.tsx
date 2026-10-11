@@ -137,7 +137,7 @@ describe('the site nav', () => {
 		) as HTMLElement
 		expect(
 			within(panel)
-				.getByRole('link', { name: /Founding-client pilot/ })
+				.getByRole('link', { name: /Pilot projects/ })
 				.getAttribute('href')
 		).toBe('/contact?topic=pilot')
 

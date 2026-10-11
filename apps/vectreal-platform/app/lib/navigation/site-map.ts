@@ -11,7 +11,7 @@ import { CONVERT_INDEX_PATH } from '../convert/convert-pairs'
   The desktop nav, the phone drawer and the footer each used to write their own
   list of the site, and they drifted apart the way copies do: five links against
   five different columns, "Docs" in one and "Docs Home" in another, and the
-  founding-client pilot, the home page's main action, in none of them. They all
+  pilot project, the home page's main action, in none of them. They all
   read this now, so a page is added, renamed or moved here and nowhere else.
 
   Pure data, with no React, so the specs that hold the three surfaces to it can
@@ -45,9 +45,9 @@ const CONVERTERS: SiteLink = {
 	description: 'Convert between 3D formats in your browser. No account.'
 }
 const PILOT: SiteLink = {
-	label: 'Founding-client pilot',
+	label: 'Pilot projects',
 	to: '/contact?topic=pilot',
-	description: 'We build your product viewer with you, on founding terms.'
+	description: 'We build your product viewer with you, from the files you have.'
 }
 const GITHUB: SiteLink = {
 	label: 'GitHub',
