@@ -38,11 +38,13 @@ import {
 	siblingFor,
 	textureSourceFor,
 	THREE_SOURCE_FORMAT_IDS,
+	upAxisOf,
 	watchTextureLoads,
 	withoutMissingMaps
 } from './three-source-bridges'
 
 import type { ModelFormatId } from '../model-formats'
+import type { Light } from '@gltf-transform/extensions'
 import type { LoadingManager } from 'three'
 
 /**
@@ -330,6 +332,14 @@ interface FbxScene {
 	animate?: 'part' | 'root'
 	/** A camera and a directional light beside the part, at the top level. */
 	cameraAndLight?: boolean
+	/**
+	 * The root `Null`'s own `Lcl Rotation`, in degrees. Needs `rootNull`. A
+	 * Z-up file is where it matters: `FBXLoader` replaces this rotation with
+	 * its up-axis turn rather than composing the two.
+	 */
+	rootRotation?: readonly [number, number, number]
+	/** A directional light 5 units up, aimed at a target 3 units along X of it. */
+	aimedLight?: boolean
 	vertices: readonly number[]
 	/** FBX polygon indices: the last vertex of a face is written ~i. */
 	polygons: readonly number[]
@@ -382,10 +392,18 @@ Objects:  {
 ${
 	scene.rootNull
 		? `	Model: 3001, "Model::root", "Null" {
-		Version: 232
+		Version: 232${
+			scene.rootRotation
+				? `
+		Properties70:  {
+			P: "Lcl Rotation", "Lcl Rotation", "", "A",${scene.rootRotation.join(',')}
+		}`
+				: ''
+		}
 	}`
 		: ''
 }
+${scene.aimedLight ? AIMED_LIGHT_OBJECTS : ''}
 ${scene.cameraAndLight ? CAMERA_AND_LIGHT_OBJECTS : ''}
 ${scene.animate ? ANIMATION_OBJECTS : ''}
 }
@@ -398,6 +416,7 @@ ${
 }
 	C: "OO",1001,2001
 ${scene.cameraAndLight ? CAMERA_AND_LIGHT_CONNECTIONS : ''}
+${scene.aimedLight ? AIMED_LIGHT_CONNECTIONS : ''}
 ${
 	scene.animate
 		? `${ANIMATION_CONNECTIONS}
@@ -450,6 +469,36 @@ const CAMERA_AND_LIGHT_OBJECTS = `	Model: 5001, "Model::cam", "Camera" {
 		}
 		TypeFlags: "Light"
 	}`
+
+/*
+  A light whose node names a target, the way 3ds Max writes a target light:
+  `LookAtProperty` in the node's properties and an `OP` connection to the
+  target model. An FBX light with a target faces the target, not its -Y.
+*/
+const AIMED_LIGHT_OBJECTS = `	Model: 7001, "Model::sun", "Light" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",0,5,0
+			P: "LookAtProperty", "object", "", ""
+		}
+	}
+	NodeAttribute: 7002, "NodeAttribute::sun", "Light" {
+		Properties70:  {
+			P: "LightType", "enum", "", "",1
+		}
+		TypeFlags: "Light"
+	}
+	Model: 7003, "Model::sun.Target", "Null" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",3,5,0
+		}
+	}`
+
+const AIMED_LIGHT_CONNECTIONS = `	C: "OO",7001,0
+	C: "OO",7002,7001
+	C: "OO",7003,0
+	C: "OP",7003,7001, "LookAtProperty"`
 
 const CAMERA_AND_LIGHT_CONNECTIONS = `	C: "OO",5001,0
 	C: "OO",5002,5001
@@ -687,6 +736,62 @@ function worldBounds(
 	return { min, max }
 }
 
+/**
+ * Runs a parse with the two `window` numbers `FBXLoader.createCamera` reads
+ * before it looks at the camera's own aspect, so a camera cannot be parsed
+ * without them. Only `window`, never `document`: the header says why a DOM is
+ * kept out.
+ */
+async function withViewport<T>(run: () => Promise<T>): Promise<T> {
+	const previous = globalThis.window
+	globalThis.window = {
+		innerWidth: 1,
+		innerHeight: 1
+	} as unknown as typeof globalThis.window
+
+	try {
+		return await run()
+	} finally {
+		globalThis.window = previous
+	}
+}
+
+/** The world direction the one punctual light in a document shines: its -Z. */
+function lightDirection(
+	loaded: Awaited<ReturnType<ModelLoader['loadFromBuffer']>>
+): number[] {
+	const lights = loaded.data
+		.getRoot()
+		.listNodes()
+		.filter((node) => node.getExtension('KHR_lights_punctual'))
+	expect(lights).toHaveLength(1)
+
+	const matrix = lights[0].getWorldMatrix()
+	const direction = [-matrix[8], -matrix[9], -matrix[10]]
+	const length = Math.hypot(...direction)
+	return direction.map((value) => value / length)
+}
+
+function expectVector(actual: number[], expected: number[]): void {
+	actual.forEach((value, axis) =>
+		expect(value, `got ${actual}`).toBeCloseTo(expected[axis], 5)
+	)
+}
+
+/** Quaternions, compared up to sign: q and -q are the same rotation. */
+function expectRotation(
+	actual: readonly number[] | undefined,
+	expected: readonly number[]
+): void {
+	expect(actual).toBeDefined()
+	const sign = Math.sign(
+		actual!.reduce((sum, value, i) => sum + value * expected[i], 0)
+	)
+	actual!.forEach((value, i) =>
+		expect(value * sign, `rotation ${actual}`).toBeCloseTo(expected[i], 5)
+	)
+}
+
 describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
 	it.each([
 		['binary', binaryFBX],
@@ -845,33 +950,138 @@ describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
 	})
 
 	it('keeps the cameras and lights the file carries', async () => {
-		/*
-		  `FBXLoader.createCamera` reads `window.innerWidth` before it looks at
-		  the camera's own aspect, so a camera cannot be parsed without one. Only
-		  `window`, never `document`: the header says why a DOM is kept out.
-		*/
-		const previous = globalThis.window
-		globalThis.window = {
-			innerWidth: 1,
-			innerHeight: 1
-		} as unknown as typeof globalThis.window
-
-		try {
-			const result = await new ModelLoader().loadFromBuffer(
+		const result = await withViewport(() =>
+			new ModelLoader().loadFromBuffer(
 				asciiFBX({ ...WEDGE, cameraAndLight: true }),
 				'part.fbx'
 			)
-			const root = result.data.getRoot()
+		)
+		const root = result.data.getRoot()
 
-			expect(root.listCameras()).toHaveLength(1)
-			expect(
-				root
-					.listNodes()
-					.filter((node) => node.getExtension('KHR_lights_punctual'))
-			).toHaveLength(1)
-		} finally {
-			globalThis.window = previous
+		expect(root.listCameras()).toHaveLength(1)
+		expect(
+			root
+				.listNodes()
+				.filter((node) => node.getExtension('KHR_lights_punctual'))
+		).toHaveLength(1)
+	})
+
+	it('turns a Z-up file upright whatever its root is already turned by', async () => {
+		/*
+		  The case that cannot be told from the object afterwards: a root already
+		  at the loader's -90 degrees about X looks exactly like a Y-up root the
+		  loader left alone, so the turn has to come from the file's own UpAxis.
+		*/
+		const result = await new ModelLoader().loadFromBuffer(
+			asciiFBX({ ...WEDGE, rootNull: true, rootRotation: [-90, 0, 0] }),
+			'part.fbx'
+		)
+		const rootNode = result.data
+			.getRoot()
+			.listNodes()
+			.find((node) => node.getName() === 'root')
+
+		const quarterTurn = [-Math.SQRT1_2, 0, 0, Math.SQRT1_2]
+		expectRotation(rootNode?.getRotation(), quarterTurn)
+		expectRotation(rootNode?.getParentNode()?.getRotation(), quarterTurn)
+	})
+
+	it('keeps the rotation a Z-up file gives its root', async () => {
+		/*
+		  `FBXLoader` turns a Z-up file upright by *setting* the root's rotation,
+		  so the root's own 30 degrees about the file's up axis were simply gone - and a clip rotating
+		  that root would undo the turn instead. The turn belongs on the node
+		  above it.
+		*/
+		const result = await new ModelLoader().loadFromBuffer(
+			asciiFBX({ ...WEDGE, rootNull: true, rootRotation: [0, 0, 30] }),
+			'part.fbx'
+		)
+		const rootNode = result.data
+			.getRoot()
+			.listNodes()
+			.find((node) => node.getName() === 'root')
+
+		const half = (degrees: number) => (degrees * Math.PI) / 360
+		expectRotation(rootNode?.getRotation(), [
+			0,
+			0,
+			Math.sin(half(30)),
+			Math.cos(half(30))
+		])
+		expectRotation(rootNode?.getParentNode()?.getRotation(), [
+			-Math.sin(half(90)),
+			0,
+			0,
+			Math.cos(half(90))
+		])
+		/* Still standing: the turn moved, it did not vanish. */
+		expect(worldBounds(result).max[1]).toBeCloseTo(0.04, 6)
+	})
+
+	/*
+	  glTF lights shine down -Z and FBX lights down -Y, so a light written
+	  without a turn faces sideways. Each light here sits unrotated, so it shines
+	  down the file's -Y: straight down in a Y-up file, and, once a Z-up file is
+	  stood upright, towards the viewer.
+	*/
+	it.each([
+		['Y-up', 1, [0, -1, 0]],
+		['Z-up', 2, [0, 0, 1]]
+	])(
+		'shines a light down its -Y in a %s file, as FBX lights shine',
+		async (_axis, upAxis, expected) => {
+			const result = await withViewport(() =>
+				new ModelLoader().loadFromBuffer(
+					asciiFBX({ ...WEDGE, upAxis, cameraAndLight: true }),
+					'part.fbx'
+				)
+			)
+
+			expectVector(lightDirection(result), expected)
 		}
+	)
+
+	it('names the light and writes no node for its target', async () => {
+		const result = await withViewport(() =>
+			new ModelLoader().loadFromBuffer(
+				asciiFBX({ ...WEDGE, upAxis: 1, cameraAndLight: true }),
+				'part.fbx'
+			)
+		)
+		const [light] = result.data
+			.getRoot()
+			.listNodes()
+			.filter((node) => node.getExtension('KHR_lights_punctual'))
+
+		/* `GLTFLoader` names an unnamed light `light_0`. */
+		expect(light.getExtension<Light>('KHR_lights_punctual')?.getName()).toBe(
+			'lamp'
+		)
+		/* Its target is how three aims it, not something the file needs. */
+		expect(light.listChildren()).toHaveLength(0)
+	})
+
+	it('shines a light at its target where the file names one', async () => {
+		const result = await new ModelLoader().loadFromBuffer(
+			asciiFBX({ ...WEDGE, upAxis: 1, aimedLight: true }),
+			'part.fbx'
+		)
+
+		/* From (0, 5, 0) at (3, 5, 0): along +X. */
+		expectVector(lightDirection(result), [1, 0, 0])
+
+		/*
+		  And from where the file put it. `FBXLoader` lands it one unit higher,
+		  which is also what tilted the aim before the bridge took that back.
+		  5 centimetres, at this file's unit.
+		*/
+		const [light] = result.data
+			.getRoot()
+			.listNodes()
+			.filter((node) => node.getExtension('KHR_lights_punctual'))
+		const at = light.getWorldMatrix().slice(12, 15)
+		expectVector(at, [0, 0.05, 0])
 	})
 })
 
@@ -882,6 +1092,38 @@ describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
   texture path in three needs a DOM to make an `img` with, and these specs
   deliberately run without one.
 */
+describe('the up axis is read from the file', () => {
+	it.each([
+		['binary', binaryFBX],
+		['ASCII', asciiFBX]
+	])('reads a %s file that declares Z-up', (_spelling, build) => {
+		expect(upAxisOf(build(WEDGE))).toBe(2)
+	})
+
+	it.each([
+		['binary', binaryFBX],
+		['ASCII', asciiFBX]
+	])('reads a %s file that declares Y-up', (_spelling, build) => {
+		expect(upAxisOf(build({ ...WEDGE, upAxis: 1 }))).toBe(1)
+	})
+
+	it('reads nothing from a file that does not say', () => {
+		expect(upAxisOf(binaryFBX({ ...WEDGE, upAxis: undefined }))).toBe(undefined)
+	})
+
+	it('does not take OriginalUpAxis for the axis', () => {
+		/* What the authoring tool used, which the loader ignores, and so do we. */
+		const text = new TextDecoder()
+			.decode(asciiFBX({ ...WEDGE, upAxis: undefined }))
+			.replace(
+				'Properties70:  {',
+				'Properties70:  {\n\t\tP: "OriginalUpAxis", "int", "Integer", "",2'
+			)
+
+		expect(upAxisOf(new TextEncoder().encode(text))).toBe(undefined)
+	})
+})
+
 describe('waiting for textures settles in both directions', () => {
 	it('resolves immediately when the parse loaded nothing', async () => {
 		const { LoadingManager } = await import('three')

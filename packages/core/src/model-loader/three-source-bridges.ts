@@ -17,7 +17,16 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { referenceIn } from './dropped-selection'
 
 import type { ModelFormatId } from '../model-formats'
-import type { Group, LoadingManager, Mesh, Object3D, Texture } from 'three'
+import type {
+	DirectionalLight,
+	Group,
+	LoadingManager,
+	Mesh,
+	Object3D,
+	SpotLight,
+	Texture
+} from 'three'
+import type * as Three from 'three'
 
 /**
  * Formats that reach this pipeline through a three.js loader rather than
@@ -122,12 +131,12 @@ const parseSTL: ThreeSourceBridge = async (bytes) => {
  *
  * Animation comes across because the clips stay on the object this returns:
  * `FBXLoader` leaves them on `object.animations`, and `exportThreeJSGLB` writes
- * whatever clips the object it is handed carries. Anything this bridge puts in
- * place of the loader's object therefore has to carry them too, which is the
- * one constraint the unit scale below works under.
+ * whatever clips the object it is handed carries. The root this bridge puts
+ * above the loader's object therefore carries them too; `rootFor` says why
+ * that root exists at all.
  */
 const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
-	const [{ FBXLoader }, { Group, LoadingManager }] = await Promise.all([
+	const [{ FBXLoader }, three] = await Promise.all([
 		import('three/examples/jsm/loaders/FBXLoader.js'),
 		import('three')
 	])
@@ -137,7 +146,7 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 	  manager, and `DefaultLoadingManager` is global: two conversions in one tab
 	  would settle against each other's counts.
 	*/
-	const manager = new LoadingManager()
+	const manager = new three.LoadingManager()
 	/*
 	  An FBX almost always carries its images inside itself, and those arrive as
 	  blob URLs the loader made - passed through untouched.
@@ -166,16 +175,11 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 	  whose whole purpose is that you try another file.
 	*/
 	try {
-		const object = new FBXLoader(manager).parse(toArrayBuffer(bytes), '')
-
-		/*
-		  The up axis needs nothing here, and that asymmetry with STL is the
-		  point: an FBX *states* its axis in `GlobalSettings.UpAxis`, and
-		  `FBXLoader` already rotates the root when it reads Z-up. Adding our own
-		  rotation would lay every Z-up FBX on its side - the exact defect we
-		  fixed for STL, reintroduced by copying its fix.
-		*/
-		const scaled = applyUnitScale(object, Group)
+		const root = rootFor(
+			new FBXLoader(manager).parse(toArrayBuffer(bytes), ''),
+			upAxisOf(bytes) === 2,
+			three
+		)
 
 		/*
 		  `TextureLoader` fills a texture in asynchronously, so `parse` returns
@@ -186,9 +190,9 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		  hanging.
 		*/
 		await texturesSettled()
-		dropFailedTextures(scaled)
+		dropFailedTextures(root)
 
-		return scaled
+		return root
 	} finally {
 		/*
 		  Safe here, and only here: an image that has finished loading keeps its
@@ -238,7 +242,41 @@ export function watchTextureLoads(
 }
 
 /**
- * The scale that turns the file's own unit into the metre glTF specifies.
+ * The node this bridge puts above the loader's object, carrying every
+ * correction the bridge makes to the file as a whole: its unit, its up axis,
+ * and the direction its lights face.
+ *
+ * WHY A NEW NODE AND NOT THE LOADER'S OBJECT. When a file has a single
+ * top-level group `FBXLoader` returns that group, and that group can be
+ * animated. A clip writes its values in the file's own space, so a correction
+ * made on the group itself is undone by playback: a scale is overwritten
+ * outright, a move travels in centimetres under a metre scale, and a rotation
+ * replaces the up-axis turn and lays a Z-up model on its back. A node this
+ * bridge made is one no clip in the file names. The exception is a track for an
+ * FBX model with no name at all, which three binds to whatever root it is
+ * exported from, so such a file is wrong whichever node carries the
+ * correction.
+ *
+ * The root carries the clips as well, since it is the object
+ * `exportThreeJSGLB` reads them from.
+ */
+function rootFor(object: Object3D, zUp: boolean, three: typeof Three): Group {
+	const root = new three.Group()
+	root.animations = object.animations
+
+	/* Read before `add`, which reparents the node the factor may sit on. */
+	root.scale.setScalar(takeUnitScale(object))
+	if (zUp) liftUpAxisCorrection(object, root, three)
+	root.add(object)
+
+	aimLights(root, three)
+
+	return root
+}
+
+/**
+ * The scale that turns the file's own unit into the metre glTF specifies, and
+ * 1 when the file states none.
  *
  * glTF 2.0 states its linear unit is the metre. FBX does not have one: it
  * records `UnitScaleFactor`, the number of centimetres one unit represents, and
@@ -256,36 +294,16 @@ export function watchTextureLoads(
  * format exists to state. An absent factor is left alone rather than assumed:
  * nothing is known about that file's unit, and guessing centimetres there would
  * shrink a correct model by 100.
- *
- * THE SCALE GOES ON A NEW PARENT, never on the loader's object, because that
- * object can be animated. When a file has a single top-level group `FBXLoader`
- * returns that group, and a clip that moves it writes positions in the file's
- * own unit: scaling the group itself would leave every such move a hundred
- * times too long, and a clip that scales it would overwrite the unit outright.
- * A node this bridge made is one no clip in the file names. The exception is a
- * track for an FBX model with no name at all, which three binds to whatever
- * root it is exported from; that was the loader's object before and is this
- * wrapper now, so such a file was wrong either way. The wrapper carries the
- * clips as well, since it is now the object `exportThreeJSGLB` reads them from.
- *
- * Returns the object to export: the wrapper when a unit applied, and the
- * loader's object untouched otherwise. `GroupClass` is passed in because three
- * is imported dynamically here, for the reason the module header gives.
  */
-function applyUnitScale(
-	object: Object3D,
-	GroupClass: new () => Group
-): Object3D {
+function takeUnitScale(object: Object3D): number {
 	const carrier = unitScaleCarrier(object)
-	if (!carrier) return object
+	if (!carrier) return 1
 
 	/* Bracketed because `userData` is an index signature, not a shape. */
 	const centimetresPerUnit = carrier.userData['unitScaleFactor']
 
-	if (typeof centimetresPerUnit !== 'number') return object
-	if (!Number.isFinite(centimetresPerUnit) || centimetresPerUnit <= 0) {
-		return object
-	}
+	if (typeof centimetresPerUnit !== 'number') return 1
+	if (!Number.isFinite(centimetresPerUnit) || centimetresPerUnit <= 0) return 1
 
 	/*
 	  And then stop saying it. `userData` is written straight into the exported
@@ -295,12 +313,198 @@ function applyUnitScale(
 	*/
 	delete carrier.userData['unitScaleFactor']
 
-	const scaled = new GroupClass()
-	scaled.scale.setScalar(centimetresPerUnit / 100)
-	scaled.animations = object.animations
-	scaled.add(object)
+	return centimetresPerUnit / 100
+}
 
-	return scaled
+/**
+ * Moves `FBXLoader`'s Z-up turn off the object it returned and onto `root`,
+ * and gives that object back the rotation the turn replaced. Called only for a
+ * file that declares Z-up.
+ *
+ * `FBXLoader` acts on Z-up by *setting* the returned object's rotation to -90
+ * degrees about X - not composing with it. Two things follow when that object
+ * is the file's own top-level group: its own rotation is lost even at rest, and
+ * a clip that rotates it overwrites the turn on playback. Both are fixed by the
+ * same move.
+ *
+ * The rotation that was replaced is still on the object, in its `matrix`:
+ * `FBXLoader` composes that matrix from the file's transform and then sets the
+ * rotation without recomposing it. That is an ordering inside the loader
+ * rather than a promise. Were a later three to recompose first, the matrix
+ * would hold the turn, the object would be turned twice, and the Z-up specs
+ * would go red rather than this going wrong quietly.
+ *
+ * Never a rotation of our own on top, and that asymmetry with STL is the point:
+ * STL states no axis, so its bridge has to choose one, while an FBX states it
+ * and the loader has already turned it once.
+ */
+function liftUpAxisCorrection(
+	object: Object3D,
+	root: Object3D,
+	three: typeof Three
+): void {
+	const ownRotation = new three.Quaternion()
+	object.matrix.decompose(new three.Vector3(), ownRotation, new three.Vector3())
+
+	root.quaternion.copy(object.quaternion)
+	object.quaternion.copy(ownRotation)
+}
+
+/**
+ * `GlobalSettings.UpAxis` as the file states it, read from the bytes because
+ * `FBXLoader` acts on it and keeps no record: 1 is Y-up, 2 is Z-up.
+ *
+ * Read rather than inferred from the object. The loader's turn is -90 degrees
+ * about X, so a root that already carries exactly that rotation ends with the
+ * same rotation and the same matrix whether the file is Z-up or Y-up, and only
+ * the Z-up one has a turn to move.
+ *
+ * Both spellings, located the way the loader's own parsers read the property:
+ * a `P` record whose five fields are the name, two type names, a flags string
+ * and the value. In binary each string field is `S` plus a 32-bit length, and
+ * the value is `I` plus a 32-bit integer. `OriginalUpAxis` is a different
+ * property; the quote, or the length prefix, keeps it from matching.
+ *
+ * Exported for its own test, so both spellings are checked directly rather
+ * than only through whichever one a parse case happens to build.
+ * Package-internal; the barrel does not re-export it.
+ */
+export function upAxisOf(bytes: Uint8Array): number | undefined {
+	if (!startsWith(bytes, FBX_BINARY_MAGIC)) {
+		const match = /"UpAxis",\s*"int",\s*"Integer",\s*"[^"]*",\s*(-?\d+)/.exec(
+			decodeText(bytes)
+		)
+		return match ? Number(match[1]) : undefined
+	}
+
+	const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+	const name = indexOf(bytes, UP_AXIS_FIELD)
+	if (name < 0) return undefined
+
+	/* Past the name, then the type, the subtype and the flags. */
+	let at = name + UP_AXIS_FIELD.length
+	for (let field = 0; field < 3; field += 1) {
+		if (bytes[at] !== STRING_FIELD || at + 5 > bytes.length) return undefined
+		at += 5 + view.getUint32(at + 1, true)
+	}
+
+	if (bytes[at] !== INT_FIELD || at + 5 > bytes.length) return undefined
+	return view.getInt32(at + 1, true)
+}
+
+const FBX_BINARY_MAGIC = new TextEncoder().encode('Kaydara FBX Binary  \0')
+const STRING_FIELD = 0x53 /* 'S' */
+const INT_FIELD = 0x49 /* 'I' */
+/* The name field itself: `S`, a length of 6, then the name. */
+const UP_AXIS_FIELD = new Uint8Array([
+	STRING_FIELD,
+	6,
+	0,
+	0,
+	0,
+	...new TextEncoder().encode('UpAxis')
+])
+
+function startsWith(bytes: Uint8Array, prefix: Uint8Array): boolean {
+	return prefix.every((byte, i) => bytes[i] === byte)
+}
+
+function indexOf(bytes: Uint8Array, needle: Uint8Array): number {
+	outer: for (let i = 0; i <= bytes.length - needle.length; i += 1) {
+		for (let j = 0; j < needle.length; j += 1) {
+			if (bytes[i + j] !== needle[j]) continue outer
+		}
+		return i
+	}
+	return -1
+}
+
+/**
+ * Points every directional and spot light the way the FBX meant it.
+ *
+ * The two formats disagree about which way a light faces. An FBX light shines
+ * down its node's -Y axis, or at the node's target where it has one. glTF's
+ * `KHR_lights_punctual` shines down -Z, with no target. `FBXLoader` follows
+ * neither: it aims a light at the origin unless the file gives it a target, and
+ * `GLTFExporter` then writes the node's -Z regardless. A converted sun came out
+ * facing sideways.
+ *
+ * Each light becomes a group in its place, keeping the name, transform and
+ * children, so a clip that moves the light still finds it; the light itself
+ * sits inside, turned so its -Z is the FBX direction, and keeps the name too,
+ * since `GLTFExporter` names the light definition after it. Turning the light's
+ * own node instead would fight the same clip. Its target is then a hidden child
+ * one unit down -Z: where three aims it, where `GLTFExporter` expects it, and,
+ * hidden, not a node of its own in the file.
+ *
+ * A point light has no direction and is left alone. Brightness is not
+ * converted: FBX states intensity as a bare percentage and glTF requires
+ * candela or lux, and nothing in the file relates the two.
+ */
+function aimLights(root: Object3D, three: typeof Three): void {
+	const lights: Array<DirectionalLight | SpotLight> = []
+	root.traverse((node) => {
+		if ((node as DirectionalLight).isDirectionalLight) {
+			lights.push(node as DirectionalLight)
+		} else if ((node as SpotLight).isSpotLight) {
+			lights.push(node as SpotLight)
+		}
+	})
+
+	root.updateMatrixWorld(true)
+
+	for (const light of lights) {
+		/*
+		  `FBXLoader` adds a light's target to the scene only when the file gives
+		  it one, so a target with a parent is the file's own.
+		*/
+		const aimAt = light.target.parent
+			? light.target.getWorldPosition(new three.Vector3())
+			: null
+		light.target.removeFromParent()
+
+		const node = new three.Group()
+		node.name = light.name
+		/*
+		  Less the unit `FBXLoader` adds. Both light classes start at (0, 1, 0)
+		  in three, and the loader premultiplies the file's transform onto that
+		  instead of replacing it, so every directional and spot light lands one
+		  file unit along its own up. A spot light then lights from the wrong
+		  place, and a targeted one aims from it.
+		*/
+		node.position
+			.copy(light.position)
+			.sub(
+				new three.Vector3(0, 1, 0)
+					.multiply(light.scale)
+					.applyQuaternion(light.quaternion)
+			)
+		node.quaternion.copy(light.quaternion)
+		node.scale.copy(light.scale)
+		node.userData = light.userData
+		for (const child of [...light.children]) node.add(child)
+		light.parent?.add(node)
+		light.removeFromParent()
+
+		light.userData = {}
+		light.position.set(0, 0, 0)
+		light.quaternion.identity()
+		light.scale.set(1, 1, 1)
+		node.add(light)
+
+		if (aimAt) {
+			node.updateMatrixWorld(true)
+			light.lookAt(aimAt)
+		} else {
+			/* Turns -Z onto the node's -Y, where an FBX light shines. */
+			light.rotation.x = -Math.PI / 2
+		}
+
+		light.target = new three.Object3D()
+		light.target.position.set(0, 0, -1)
+		light.target.visible = false
+		light.add(light.target)
+	}
 }
 
 /**

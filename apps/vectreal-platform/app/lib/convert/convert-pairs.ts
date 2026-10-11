@@ -336,19 +336,24 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		description:
 			'Convert an FBX file to GLB in your browser. No account, no upload, no watermark.',
 		/*
-		  What an FBX arrives with, and the one part of it that does not arrive
-		  quite as it left. Clips come across because `exportThreeJSGLB` writes
-		  the clips its object carries (`three-source-bridges.spec.ts` round-trips
-		  an animated FBX). Cameras and lights were never lost: `GLTFExporter`
-		  writes camera nodes and `KHR_lights_punctual`, and the same spec counts
-		  both. What is not exact is a light's aim and strength, since
-		  `FBXLoader` aims a light at a target where glTF aims it down the node's
-		  -Z, and rescales its intensity on the way in.
+		  What an FBX arrives with, and what does not arrive quite as it left.
+		  Clips come across because `threeObjectToGLB` writes the clips its
+		  object carries, and cameras and lights because `GLTFExporter` writes
+		  camera nodes and `KHR_lights_punctual`; the FBX bridge turns each light
+		  to face the way FBX means it. `three-source-bridges.spec.ts` checks
+		  all of that.
+
+		  Two things it cannot carry exactly. FBX states a light's intensity as a
+		  bare percentage and glTF requires candela or lux, with nothing in the
+		  file relating them. And an FBX camera looks down +X where glTF looks
+		  down -Z, but a camera's FBX target leaves no trace once `FBXLoader` has
+		  parsed it, so the bridge cannot tell an aimed camera from a free one
+		  and turns neither.
 
 		  Not said in the note but true: three.js re-encodes every embedded
 		  texture on the way out, so a JPEG-heavy file can come back larger.
 		*/
-		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can arrive aimed or lit differently, because FBX and glTF describe lights differently.'
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can come out brighter or dimmer and a camera can face another way, because FBX and glTF describe them differently.'
 	},
 	{
 		slug: 'fbx-to-gltf',
@@ -359,8 +364,8 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		title: 'FBX to glTF converter',
 		description:
 			'Convert an FBX file to glTF in your browser. No account, no upload, no watermark.',
-		/* The same note, and the same caveat about lights, as `fbx-to-glb`. */
-		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can arrive aimed or lit differently, because FBX and glTF describe lights differently.'
+		/* The same note, and the same caveats, as `fbx-to-glb`. */
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can come out brighter or dimmer and a camera can face another way, because FBX and glTF describe them differently.'
 	},
 	{
 		slug: 'fbx-to-usdz',
