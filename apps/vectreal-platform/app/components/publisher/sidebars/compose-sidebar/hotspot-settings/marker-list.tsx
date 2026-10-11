@@ -230,7 +230,7 @@ export function MarkerList({
 
 	if (hotspots.length === 0) {
 		return (
-			<Empty className="publisher-shell-nested gap-4 rounded-xl px-4 py-8">
+			<Empty className="shell-nested gap-4 rounded-xl px-4 py-8">
 				<EmptyHeader>
 					<EmptyMedia variant="icon">
 						<Locate aria-hidden />
@@ -266,7 +266,7 @@ export function MarkerList({
 					variant="ghost"
 					size="sm"
 					onClick={edits.add}
-					className="publisher-shell-focus -my-1 h-7 gap-1.5 px-2"
+					className="shell-focus -my-1 h-7 gap-1.5 px-2"
 				>
 					<Plus aria-hidden className="size-3.5" />
 					Add

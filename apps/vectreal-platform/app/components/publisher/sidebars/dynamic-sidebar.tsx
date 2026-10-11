@@ -182,7 +182,7 @@ export const DynamicSidebar = ({
 			aria-label="Close"
 			className={cn(
 				OVERLAY_CLOSE_APPEARANCE,
-				'publisher-shell-focus',
+				'shell-focus',
 				!showDesktopHeader && 'absolute top-4 right-4'
 			)}
 			onClick={handleClose}
@@ -216,7 +216,7 @@ export const DynamicSidebar = ({
 						variants={variants}
 						transition={{ type: 'tween', ease: 'easeInOut', duration: 0.3 }}
 						className={cn(
-							'publisher-shell-panel w-detail-panel pointer-events-auto relative z-20 flex h-full flex-col overflow-hidden',
+							'shell-panel w-detail-panel pointer-events-auto relative z-20 flex h-full flex-col overflow-hidden',
 							className
 						)}
 					>

@@ -3,7 +3,9 @@
 Owner of: brand color, radius, spacing rhythm, stacking tiers, viewport height,
 page measure. Surfaces belong to [elevation.md](elevation.md).
 
-Source of truth: `shared/components/src/styles/globals.css`.
+Source of truth: `shared/components/src/styles/globals.css`, and for colour
+`shared/components/src/styles/theme.css`, which holds the palette and the shell
+recipe on their own so the published viewer can import them.
 
 ## The three that are most often confused
 

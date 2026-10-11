@@ -47,7 +47,7 @@ const AnimationPlaybackBar = ({
 				<div
 					role="group"
 					aria-label="Animation playback"
-					className="publisher-shell-panel pointer-events-auto flex items-center gap-0.5 p-1"
+					className="shell-panel pointer-events-auto flex items-center gap-0.5 p-1"
 				>
 					<Button
 						variant="ghost"

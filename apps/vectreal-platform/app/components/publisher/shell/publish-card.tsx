@@ -18,7 +18,7 @@ import type { FC, ReactNode } from 'react'
 
 /*
   One 8px step for the card's padding and every gap inside it, and inner
-  corners at the card's radius (`rounded-xl`, which `publisher-shell-panel`
+  corners at the card's radius (`rounded-xl`, which `shell-panel`
   sets) less that padding, so the thumbnail and both triggers sit concentric
   with the card.
 */
@@ -41,7 +41,7 @@ const CardTrigger = ({
 		onClick={onClick}
 		disabled={disabled}
 		className={cn(
-			'publisher-shell-focus ds-field-interactive flex w-full items-center gap-2 px-3 py-2 text-left',
+			'shell-focus ds-field-interactive flex w-full items-center gap-2 px-3 py-2 text-left',
 			INNER_RADIUS
 		)}
 	>
@@ -109,7 +109,7 @@ export const PublishCard: FC<PublishCardProps> = ({
 			transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
 			aria-hidden={isPreviewMode}
 			className={cn(
-				'publisher-shell-panel pointer-events-auto flex w-full shrink-0 flex-col gap-2 overflow-hidden p-2',
+				'shell-panel pointer-events-auto flex w-full shrink-0 flex-col gap-2 overflow-hidden p-2',
 				isPreviewMode && 'pointer-events-none',
 				disabled && 'pointer-events-none opacity-45 saturate-50'
 			)}

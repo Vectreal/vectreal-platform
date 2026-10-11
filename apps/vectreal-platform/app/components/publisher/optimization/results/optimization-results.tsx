@@ -66,7 +66,7 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -8 }}
 			transition={{ duration: 0.3 }}
-			className="publisher-shell-nested rounded-xl p-4"
+			className="shell-nested rounded-xl p-4"
 		>
 			<p className="text-muted-foreground text-eyebrow mb-1">
 				Optimization result

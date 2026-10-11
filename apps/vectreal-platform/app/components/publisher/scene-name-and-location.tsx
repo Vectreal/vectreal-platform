@@ -417,7 +417,7 @@ export function SceneNameAndLocation({
 				<div
 					className={cn(
 						'overflow-hidden rounded-xl',
-						locationOpen && 'publisher-shell-panel'
+						locationOpen && 'shell-panel'
 					)}
 				>
 					<LocationPicker open={locationOpen} />

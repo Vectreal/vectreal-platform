@@ -153,7 +153,7 @@ export const EmbedSnippetCard: FC<EmbedSnippetCardProps> = ({
 				  alone it separates the controls from the code and leaves both
 				  borders drawing against the host.
 				*/}
-				<div className="publisher-shell-nested flex flex-wrap items-center justify-end gap-1 border-b px-2 py-1.5">
+				<div className="shell-nested flex flex-wrap items-center justify-end gap-1 border-b px-2 py-1.5">
 					<Button
 						variant="ghost"
 						size="sm"
