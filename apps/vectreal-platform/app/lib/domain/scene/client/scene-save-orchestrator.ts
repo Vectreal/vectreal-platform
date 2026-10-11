@@ -6,6 +6,10 @@ import { postFormWithProgress } from './post-form-with-progress'
 import { createFileFromDataUrl } from './scene-draft-serialization'
 import { planThumbnailForSave } from './scene-thumbnail-save'
 import {
+	buildSceneThumbnailUrl,
+	thumbnailAssetIdFromUrl
+} from '../scene-thumbnail-url'
+import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
 } from './scene-upload-manifest'
@@ -67,19 +71,6 @@ interface ExecuteSceneSaveOrchestratorParams {
 
 /** The scene document's key, the same name `existingAssets` lists it under. */
 const SCENE_DOCUMENT_KEY = 'scene.gltf'
-
-// Pulls the asset id out of an internal thumbnail URL
-// (`/api/scenes/:sceneId/thumbnail/:assetId`). Used to re-link the current
-// thumbnail on every save so it isn't garbage-collected, and so a superseded one
-// becomes an unlinked GC candidate.
-const extractThumbnailAssetId = (
-	thumbnailUrl?: string | null
-): string | null => {
-	if (!thumbnailUrl) return null
-	// Anchor to the end so only the final `/thumbnail/<id>` segment is taken.
-	const match = thumbnailUrl.match(/\/thumbnail\/([^/?#]+)$/)
-	return match ? match[1] : null
-}
 
 /** The original a save left the scene keeping, and where it is read back. */
 export interface KeptOriginalRef {
@@ -353,7 +344,10 @@ export const executeSceneSaveOrchestrator = async ({
 
 				sceneMetaForSave = {
 					...sceneMetaForSave,
-					thumbnailUrl: `/api/scenes/${preparedSceneId}/thumbnail/${uploadedThumbnail.assetId}`
+					thumbnailUrl: buildSceneThumbnailUrl(
+						preparedSceneId,
+						uploadedThumbnail.assetId
+					)
 				}
 			} catch (error) {
 				console.warn('[scene-settings] thumbnail upload failed', {
@@ -663,8 +657,9 @@ export const executeSceneSaveOrchestrator = async ({
 	// Link the current thumbnail (newly uploaded or the existing one) so it is
 	// tracked as a scene asset: this keeps it from being GC'd and lets a superseded
 	// thumbnail become an unlinked GC candidate. It is excluded from the manifest's
-	// inlined render data server-side (served by URL, not rendered).
-	const thumbnailAssetId = extractThumbnailAssetId(
+	// inlined render data server-side (served by URL, not rendered). The save
+	// parser also refuses a thumbnail URL whose asset the save does not link.
+	const thumbnailAssetId = thumbnailAssetIdFromUrl(
 		sceneMetaForSave.thumbnailUrl
 	)
 	if (thumbnailAssetId) {
