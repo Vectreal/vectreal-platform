@@ -64,10 +64,16 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 					easing: 'ease_in_out'
 				}
 			},
-			// The background shown: a shadow darkens what is behind it, and the default void is already dark.
+			/*
+			  The studio map lights the model but is not shown: the shadow lands on
+			  a stage instead, the Publisher's default gradient, rather than on a
+			  photo with no floor in it.
+			*/
 			environment: {
 				preset: 'studio-natural',
-				background: true,
+				background: false,
+				backdrop: { type: 'gradient', top: '#fafafa', bottom: '#d4d4d8' },
+				// Kept for anyone who switches the map back on in the Publisher.
 				backgroundBlurriness: 0.5,
 				backgroundIntensity: 1,
 				environmentIntensity: 1,
