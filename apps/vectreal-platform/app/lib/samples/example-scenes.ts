@@ -2,6 +2,8 @@ import { HERO_MODEL } from './sample-models'
 import cameraHeroPreviewUrl from '../../assets/models/camera-hero-preview.webp?url'
 import cameraTelephotoPreviewUrl from '../../assets/models/camera-telephoto-preview.webp?url'
 import cameraWidePreviewUrl from '../../assets/models/camera-wide-preview.webp?url'
+import sheenChairPreviewUrl from '../../assets/models/sheen-chair-preview.webp?url'
+import sheenChairUrl from '../../assets/models/sheen-chair.glb?url'
 
 import type { SampleModel } from './sample-models'
 import type {
@@ -46,11 +48,11 @@ const CAMERA_MODEL: ExampleScene['model'] = {
 }
 
 /*
-  The stage every camera example stands on. The studio map lights the model
+  The stage every example stands on. The studio map lights the model
   but is not shown: the shadow lands on the Publisher's default gradient
   instead, rather than on a photo with no floor in it.
 */
-const CAMERA_STAGE = {
+const STUDIO_STAGE = {
 	environment: {
 		preset: 'studio-natural',
 		background: false,
@@ -108,7 +110,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 					easing: 'ease_in_out'
 				}
 			},
-			...CAMERA_STAGE
+			...STUDIO_STAGE
 		}
 	},
 	/*
@@ -143,7 +145,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 				],
 				sceneTransition: LINEAR_QUICK
 			},
-			...CAMERA_STAGE
+			...STUDIO_STAGE
 		}
 	},
 	/*
@@ -168,7 +170,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 				],
 				sceneTransition: LINEAR_QUICK
 			},
-			...CAMERA_STAGE
+			...STUDIO_STAGE
 		}
 	},
 	{
@@ -189,7 +191,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 				],
 				sceneTransition: LINEAR_QUICK
 			},
-			...CAMERA_STAGE
+			...STUDIO_STAGE
 		}
 	},
 	/*
@@ -229,7 +231,7 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 					easing: 'ease_in_out'
 				}
 			},
-			...CAMERA_STAGE
+			...STUDIO_STAGE
 		}
 	},
 	/*
@@ -262,7 +264,40 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 				zoomSpeed: 0.4,
 				makeDefault: true
 			},
-			...CAMERA_STAGE
+			...STUDIO_STAGE
+		}
+	},
+	/*
+	  Article 15's compressed chair: Khronos's Sheen Chair (© 2020 Wayfair LLC,
+	  CC BY 4.0, by Eric Chadwick) with WebP textures and Draco geometry, the
+	  exact 0.58 MB file the article measured, so the reader can turn the claim
+	  that it looks the same.
+	*/
+	{
+		id: 'sheen-chair-compressed',
+		label: 'Sheen Chair at 0.58 MB, with WebP textures and Draco geometry',
+		model: {
+			url: sheenChairUrl,
+			fileName: 'sheen-chair.glb',
+			bytes: 576_016
+		},
+		previewUrl: sheenChairPreviewUrl,
+		settings: {
+			camera: {
+				activeCameraId: 'default',
+				cameras: [
+					{
+						cameraId: 'default',
+						name: 'Default Camera',
+						fov: 60,
+						initial: true,
+						position: [0.55, 0.6, 0.95],
+						target: [0, 0.32, 0]
+					}
+				],
+				sceneTransition: LINEAR_QUICK
+			},
+			...STUDIO_STAGE
 		}
 	}
 ]

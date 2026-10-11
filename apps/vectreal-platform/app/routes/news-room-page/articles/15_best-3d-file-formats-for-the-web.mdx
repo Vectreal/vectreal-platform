@@ -30,6 +30,8 @@ sceneImage: "/media/images/newsroom/scene-best-3d-file-formats-for-the-web.webp"
 coverImage: "/media/images/newsroom/og-best-3d-file-formats-for-the-web.webp"
 ---
 
+import { ExampleScene } from '../../../components/examples/example-scene'
+
 <video src="/media/images/newsroom/15/same-chair-smaller-file.mp4" poster="/media/images/newsroom/15/same-chair-smaller-file-poster.webp" autoPlay muted loop playsInline aria-label="A fabric armchair stands on a tall stack of nine loose grey slabs, one for each file of its glTF folder. The slabs close into one block. Its seven texture layers turn orange and shrink, then its geometry layer does, and the chair sinks onto a thin slab a seventh of the starting height, looking as it did. The view turns round the chair and it starts again."></video>
 
 ## Which 3D format should I use on my website?
@@ -100,6 +102,8 @@ Measured on 5 October 2026: the GLB variants with glTF Transform 4.5.1 at its de
 ![The same armchair twice, side by side: on the left from the GLB as exported, on the right from the version with WebP textures and Draco geometry. The two look the same.](/media/images/newsroom/15/compressed-side-by-side.webp)
 
 *Left: the GLB as exported, 4.13 MB. Right: with WebP textures and Draco geometry, 0.58 MB.*
+
+<ExampleScene id="sheen-chair-compressed" caption="The compressed file itself. Load it and turn it to look for what compression changed. Sheen Chair © 2020 Wayfair LLC, CC BY 4.0, model and textures by Eric Chadwick." />
 
 **Textures are usually the bigger half.** Here WebP took 2.56 MB off and Draco took 0.99 MB. WebP is safe to use on the web now: caniuse puts support at about 97% of users, with every current major browser in it ([caniuse, WebP](https://caniuse.com/webp)). KTX2 is the other option, and the one that matters on pages with many or large textures: KTX2 textures stay compressed on the graphics card as well as in the download, so a phone has less to hold in memory ([KHR_texture_basisu](https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_texture_basisu/README.md)). It needs a decoder, like Draco. WebP is the simpler first step.
 
