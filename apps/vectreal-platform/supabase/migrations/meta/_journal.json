@@ -176,6 +176,13 @@
       "when": 1788769791815,
       "tag": "0024_natural_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791684028602,
+      "tag": "0025_spotty_black_crow",
+      "breakpoints": true
     }
   ]
 }

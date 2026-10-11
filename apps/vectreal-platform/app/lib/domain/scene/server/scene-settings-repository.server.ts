@@ -47,6 +47,7 @@ export function rowToSceneSettings(
 	hotspots: HotspotDefinition[] = []
 ): SceneSettings {
 	return {
+		animation: row.animation ?? undefined,
 		bounds: row.bounds ?? undefined,
 		camera: row.camera ?? undefined,
 		controls: row.controls ?? undefined,

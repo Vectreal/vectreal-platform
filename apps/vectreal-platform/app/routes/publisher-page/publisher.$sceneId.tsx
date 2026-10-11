@@ -8,6 +8,7 @@ import { usePublisherViewerCapture } from '../../components/publisher/publisher-
 import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
 import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
+import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
 	isPreviewModeAtom,
@@ -66,6 +67,9 @@ const SHADOW_LIGHT_COMMIT_DEBOUNCE_MS = 80
 const PublisherPage = () => {
 	const loadedModel = useModelContext()
 	const { file } = loadedModel
+	// Here rather than in the Animation tool, so a saved config is matched to
+	// the model's clips whether or not that tool is ever opened.
+	useAnimationReconciliation()
 	// An optimization pass swaps the rendered object but keeps the load, so the
 	// viewer keeps the camera and framing where the user left them.
 	const modelKey =
@@ -76,6 +80,7 @@ const PublisherPage = () => {
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const {
+		animation,
 		bounds,
 		camera,
 		controls,
@@ -218,6 +223,8 @@ const PublisherPage = () => {
 					model={file?.model}
 					modelKey={modelKey}
 					displayedModel={comparedModel?.model}
+					animations={file?.animations}
+					animationOptions={animation}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
 					envOptions={environment}

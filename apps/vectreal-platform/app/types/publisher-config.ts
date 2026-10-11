@@ -6,6 +6,7 @@ export type ComposeTool =
 	| 'camera-controls'
 	| 'interaction-controls'
 	| 'hotspots'
+	| 'animation'
 export interface SceneMetaState {
 	name: string
 	description: string

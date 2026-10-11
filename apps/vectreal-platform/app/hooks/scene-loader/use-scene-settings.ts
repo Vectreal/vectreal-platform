@@ -28,6 +28,8 @@ import {
 	optimizationRuntimeInitialState
 } from '../../lib/stores/scene-optimization-store'
 import {
+	animationAtom,
+	animationDriftAtom,
 	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
@@ -54,6 +56,8 @@ import type { SceneSettings } from '@vctrl/core'
  * otherwise keep the previous scene's selected camera and open hotspot.
  */
 export function useApplySceneSettings() {
+	const setAnimation = useSetAtom(animationAtom)
+	const setAnimationDrift = useSetAtom(animationDriftAtom)
 	const setBounds = useSetAtom(boundsAtom)
 	const setEnv = useSetAtom(environmentAtom)
 	const setInteractions = useSetAtom(interactionsAtom)
@@ -94,6 +98,8 @@ export function useApplySceneSettings() {
 				settings.normalization ?? defaultNormalizationOptions
 			const presentation = settings.presentation ?? defaultPresentationOptions
 
+			setAnimation(settings.animation)
+			setAnimationDrift(null)
 			setBounds(bounds)
 			setEnv(environment)
 			setInteractions(settings.interactions)
@@ -112,6 +118,7 @@ export function useApplySceneSettings() {
 			setLastSavedSettings(
 				isSavedBaseline
 					? {
+							animation: settings.animation,
 							bounds,
 							environment,
 							interactions: settings.interactions,
@@ -127,6 +134,8 @@ export function useApplySceneSettings() {
 		},
 		[
 			resetHotspotEditing,
+			setAnimation,
+			setAnimationDrift,
 			setBounds,
 			setCamera,
 			setControls,
@@ -152,6 +161,8 @@ export function useApplySceneSettings() {
  * to /publisher, which is the same route.
  */
 export function useResetSceneState() {
+	const setAnimation = useSetAtom(animationAtom)
+	const setAnimationDrift = useSetAtom(animationDriftAtom)
 	const setBounds = useSetAtom(boundsAtom)
 	const setEnv = useSetAtom(environmentAtom)
 	const setInteractions = useSetAtom(interactionsAtom)
@@ -176,6 +187,8 @@ export function useResetSceneState() {
 	const setLastSavedSceneId = useSetAtom(lastSavedSceneIdAtom)
 
 	return useCallback(() => {
+		setAnimation(undefined)
+		setAnimationDrift(null)
 		setBounds(defaultBoundsOptions)
 		setEnv(defaultEnvOptions)
 		setInteractions(undefined)
@@ -202,6 +215,8 @@ export function useResetSceneState() {
 		setLastSavedSceneId(null)
 	}, [
 		resetHotspotEditing,
+		setAnimation,
+		setAnimationDrift,
 		setBakedShadowSource,
 		setBounds,
 		setCamera,

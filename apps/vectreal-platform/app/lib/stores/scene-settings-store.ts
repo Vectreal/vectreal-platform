@@ -15,6 +15,8 @@ import {
 } from '../domain/scene/scene-camera'
 
 import type {
+	AnimationReconciliation,
+	AnimationSettings,
 	BoundsProps,
 	CameraProps,
 	ControlsProps,
@@ -27,6 +29,22 @@ import type {
 } from '@vctrl/core'
 import type { BakedShadow } from '@vctrl/viewer'
 
+/**
+ * Absent until the author turns animation on, and absent means off: a model
+ * that carries clips stays still until then. The Animation tool resolves this
+ * against the loaded model's clips (`resolveAnimationDraft`) rather than
+ * seeding it, so a scene nobody animated never reports itself as edited.
+ */
+const animationAtom = atom<AnimationSettings | undefined>(undefined)
+/**
+ * What reconciling a saved animation config against the loaded model changed,
+ * so the Animation tool can say so rather than quietly re-pointing the
+ * author's tuning. Cleared whenever a scene is opened or reset.
+ */
+const animationDriftAtom = atom<Pick<
+	AnimationReconciliation,
+	'added' | 'dropped' | 'remapped'
+> | null>(null)
 const boundsAtom = atom<BoundsProps>(defaultBoundsOptions)
 const cameraAtom = atom<CameraProps>(defaultCameraOptions)
 const selectedCameraIdAtom = atom<string>(
@@ -138,6 +156,7 @@ const bakedShadowSourceAtom = atom<BakedShadow | null>(null)
 const sceneViewerSettingsAtom = atom(
 	(get) =>
 		({
+			animation: get(animationAtom),
 			bounds: get(boundsAtom),
 			camera: get(cameraAtom),
 			controls: get(controlsAtom),
@@ -157,6 +176,8 @@ export {
 	hotspotCameraModeAtom,
 	resetHotspotEditingAtom,
 	selectCameraAtom,
+	animationAtom,
+	animationDriftAtom,
 	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
