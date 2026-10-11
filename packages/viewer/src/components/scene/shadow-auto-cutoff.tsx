@@ -13,12 +13,12 @@ import {
 	type WebGLRenderer
 } from 'three'
 
-type AccumulativeApi = ComponentRef<typeof AccumulativeShadows>
+import {
+	calibratedAlphaTest,
+	cutoffCalibrationStep
+} from './shadow-cutoff-calibration'
 
-// alphaTest is clamped to this safe band so a degenerate measurement can never
-// blow out the plane or erase the shadow entirely.
-const ALPHA_TEST_MIN = 1.0
-const ALPHA_TEST_MAX = 6.0
+type AccumulativeApi = ComponentRef<typeof AccumulativeShadows>
 
 // Lightmap UVs sampled for the LIT brightness. The model's shadow sits at the
 // center, so these edge/corner points read the fully-lit plane; the max across
@@ -94,8 +94,9 @@ interface ShadowAutoCutoffProps {
  * shadow reads consistently on any environment with no manual tuning.
  *
  * alphaTest only maps the already-baked lightmap to alpha, so we set the material
- * directly once the bake settles — no re-bake. It re-runs when the bake restarts
- * (new model / settings) or when the manual trim changes.
+ * directly once the bake settles — no re-bake. It re-runs whenever drei has
+ * written over the calibrated value, which every reset and re-bake does (new
+ * model, moved light, changed settings), and when the manual trim changes.
  */
 const ShadowAutoCutoff = ({
 	apiRef,
@@ -104,26 +105,16 @@ const ShadowAutoCutoff = ({
 }: ShadowAutoCutoffProps) => {
 	const gl = useThree((state) => state.gl)
 	const invalidate = useThree((state) => state.invalidate)
-	const calibratedRef = useRef(false)
+	// The alphaTest last written to the material; null forces a recalibration.
+	const lastWrittenRef = useRef<number | null>(null)
 
 	useEffect(() => {
-		calibratedRef.current = false
+		lastWrittenRef.current = null
 	}, [cutoffScale, temporal])
 
 	useFrame(() => {
 		const api = apiRef.current
 		if (!api) return
-
-		// In temporal mode, re-arm while the bake ramps and calibrate once it has
-		// settled. In non-temporal mode drei bakes synchronously in a layout effect
-		// and leaves `api.count` at 0, so there is no counter to wait on — the bake
-		// is already complete by the first frame; calibrate once (the calibrated
-		// flag prevents re-measuring every frame).
-		if (temporal && api.count < api.frames) {
-			calibratedRef.current = false
-			return
-		}
-		if (calibratedRef.current) return
 
 		const mesh = api.getMesh() as Mesh & {
 			material: { map?: Texture | null; alphaTest: number }
@@ -131,14 +122,29 @@ const ShadowAutoCutoff = ({
 		const map = mesh?.material?.map
 		if (!map) return
 
-		calibratedRef.current = true
-		const litBrightness = measureLitBrightness(gl, map)
-		if (litBrightness <= 0) return
+		const step = cutoffCalibrationStep({
+			temporal,
+			count: api.count,
+			frames: api.frames,
+			alphaTest: mesh.material.alphaTest,
+			lastWritten: lastWrittenRef.current
+		})
+		if (step === 'baking') lastWrittenRef.current = null
+		if (step !== 'calibrate') return
 
-		mesh.material.alphaTest = Math.min(
-			ALPHA_TEST_MAX,
-			Math.max(ALPHA_TEST_MIN, litBrightness * cutoffScale)
+		const alphaTest = calibratedAlphaTest(
+			measureLitBrightness(gl, map),
+			cutoffScale
 		)
+		if (alphaTest === null) {
+			// Nothing to calibrate against: adopt drei's value rather than
+			// measuring again on every frame.
+			lastWrittenRef.current = mesh.material.alphaTest
+			return
+		}
+
+		mesh.material.alphaTest = alphaTest
+		lastWrittenRef.current = alphaTest
 		// A material edit moves nothing in the scene graph, so without this a
 		// viewer already converging at rest would keep the uncalibrated shadow.
 		invalidate()
