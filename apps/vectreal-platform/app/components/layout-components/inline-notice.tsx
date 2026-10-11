@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 const TONE_CLASSES = {
 	warning: 'bg-warning-bg text-warning-foreground',
 	error: 'bg-error-bg text-error-foreground',
-	neutral: 'publisher-shell-nested text-muted-foreground'
+	neutral: 'shell-nested text-muted-foreground'
 } as const
 
 interface InlineNoticeProps {

@@ -81,7 +81,7 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 				<button
 					type="button"
 					onClick={onOpenOptimization}
-					className="publisher-shell-focus publisher-shell-nested-interactive w-full rounded-xl p-3 text-left"
+					className="shell-focus shell-nested-interactive w-full rounded-xl p-3 text-left"
 				>
 					{/*
 					  A slow scene changes the urgency of this control, not its identity.

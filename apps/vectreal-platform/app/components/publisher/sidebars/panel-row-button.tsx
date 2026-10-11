@@ -28,7 +28,7 @@ export function PanelRowButton({
 		<button
 			type="button"
 			className={cn(
-				'publisher-shell-focus ds-field-interactive flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium',
+				'shell-focus ds-field-interactive flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium',
 				'disabled:pointer-events-none disabled:opacity-50',
 				'[&>svg:last-child]:text-muted-foreground [&_svg]:size-4 [&_svg]:shrink-0',
 				className

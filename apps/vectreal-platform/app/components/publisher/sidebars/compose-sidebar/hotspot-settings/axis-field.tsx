@@ -36,7 +36,7 @@ export const AxisField = memo(
 		const shown = draft ?? String(value)
 
 		return (
-			<div className="publisher-shell-nested focus-within:ring-ring flex items-center rounded-lg pl-2 focus-within:ring-2">
+			<div className="shell-nested focus-within:ring-ring flex items-center rounded-lg pl-2 focus-within:ring-2">
 				<span
 					aria-hidden
 					className="text-muted-foreground w-3 shrink-0 text-xs font-medium"

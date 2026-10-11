@@ -210,7 +210,7 @@ const GroupRow: FC<{
 				onClick={onToggle}
 				aria-expanded={isOpen}
 				aria-controls={filesId}
-				className="publisher-shell-focus ds-field-interactive flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left"
+				className="shell-focus ds-field-interactive flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left"
 			>
 				<span className="text-muted-foreground [&_svg]:size-4">{icon}</span>
 				<span className="min-w-0 flex-1">
@@ -385,7 +385,7 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 						onBlur={handleBlur}
 						onPointerEnter={() => setIsHovered(true)}
 						onPointerLeave={() => setIsHovered(false)}
-						className="publisher-shell-panel pointer-events-auto flex min-h-0 w-full flex-col overflow-hidden p-2"
+						className="shell-panel pointer-events-auto flex min-h-0 w-full flex-col overflow-hidden p-2"
 					>
 						<div className="flex items-center gap-2 px-1">
 							<MarkSwap
@@ -456,7 +456,7 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 								aria-label={
 									isExpanded ? 'Hide save details' : 'Show save details'
 								}
-								className="publisher-shell-focus ds-field-interactive text-muted-foreground flex size-7 items-center justify-center rounded-md"
+								className="shell-focus ds-field-interactive text-muted-foreground flex size-7 items-center justify-center rounded-md"
 							>
 								<motion.span
 									animate={{ rotate: isExpanded ? 0 : 180 }}
@@ -477,7 +477,7 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 										animate={{ opacity: 1, width: 28 }}
 										exit={{ opacity: 0, width: 0 }}
 										transition={transition}
-										className="publisher-shell-focus ds-field-interactive text-muted-foreground flex h-7 items-center justify-center overflow-hidden rounded-md"
+										className="shell-focus ds-field-interactive text-muted-foreground flex h-7 items-center justify-center overflow-hidden rounded-md"
 									>
 										<X aria-hidden className="size-4 shrink-0" />
 									</motion.button>

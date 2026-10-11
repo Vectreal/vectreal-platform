@@ -57,9 +57,5 @@ export function StepToggle({
  * every nested block in the publisher, so no step sits on a card inside a card.
  */
 export function StepBlock({ children }: { children: ReactNode }) {
-	return (
-		<div className="publisher-shell-nested space-y-4 rounded-xl p-4">
-			{children}
-		</div>
-	)
+	return <div className="shell-nested space-y-4 rounded-xl p-4">{children}</div>
 }

@@ -350,7 +350,7 @@ function DrillDownView({
 						type="button"
 						onClick={pop}
 						aria-label={`Back to ${parentTitle}`}
-						className="publisher-shell-focus text-muted-foreground hover:text-foreground -ml-1 flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium transition-colors"
+						className="shell-focus text-muted-foreground hover:text-foreground -ml-1 flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium transition-colors"
 					>
 						<ChevronLeft className="size-3.5 shrink-0" />
 						<span className="truncate">{parentTitle}</span>

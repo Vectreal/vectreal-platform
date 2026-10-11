@@ -200,13 +200,13 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 								  which computes `overflow-x` to `auto` and gave the whole
 								  drawer a horizontal scrollbar.
 
-								  `publisher-shell-nested` rather than `ds-sunken`, for the
+								  `shell-nested` rather than `ds-sunken`, for the
 								  reason `EmbedSnippetCard` records: the `ds-*` ladder mixes
 								  against `--background`, which is not what either host is.
 								*/
 								<li
 									key={domain}
-									className="publisher-shell-nested min-w-0 rounded-full px-2 py-0.5"
+									className="shell-nested min-w-0 rounded-full px-2 py-0.5"
 								>
 									<code className="font-mono text-xs break-all">{domain}</code>
 								</li>

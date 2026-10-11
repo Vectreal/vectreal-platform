@@ -30,7 +30,7 @@ export const ScenePreview: FC = () => {
 			transition={{ duration: duration.slow }}
 			className="space-y-3"
 		>
-			<div className="publisher-shell-nested relative aspect-video w-full overflow-hidden rounded-xl">
+			<div className="shell-nested relative aspect-video w-full overflow-hidden rounded-xl">
 				{thumbnailUrl ? (
 					<img
 						src={thumbnailUrl}

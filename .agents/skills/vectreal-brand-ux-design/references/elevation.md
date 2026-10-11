@@ -17,7 +17,7 @@ the whole ladder tracks the theme from one pair of tokens.
   `aria-invalid` colours: a field is identified by its surface, not a drawn
   box, so a call site adds neither. The exception is a field inside a block
   that is already its surface, such as the hotspot position input in a
-  `publisher-shell-nested` block, which passes `bg-transparent` so the tint
+  `shell-nested` block, which passes `bg-transparent` so the tint
   does not stack.
 - `ds-divider` — only where a divider carries meaning, never to draw a box.
   Note it sets a **background-color**, not a border colour: it is the fill of a

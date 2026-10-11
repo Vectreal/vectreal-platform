@@ -146,7 +146,7 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 							variant="ghost"
 							size="sm"
 							onClick={() => openCameraInCameraTool(linkedCamera.cameraId)}
-							className="publisher-shell-focus -my-1 h-7 gap-1.5 px-2"
+							className="shell-focus -my-1 h-7 gap-1.5 px-2"
 						>
 							Open in Camera tool
 							<ArrowUpRight aria-hidden className="size-3.5" />

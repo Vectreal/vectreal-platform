@@ -68,7 +68,7 @@ export const HotspotRow = memo(
 		const viewId = hotspotViewId(hotspot.id)
 
 		return (
-			<div className="publisher-shell-nested-interactive flex items-center gap-1 rounded-xl pr-1">
+			<div className="shell-nested-interactive flex items-center gap-1 rounded-xl pr-1">
 				{dragControls && onMove ? (
 					<button
 						type="button"
@@ -82,7 +82,7 @@ export const HotspotRow = memo(
 							event.preventDefault()
 							onMove(move)
 						}}
-						className="publisher-shell-focus text-muted-foreground hover:text-foreground ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md active:cursor-grabbing"
+						className="shell-focus text-muted-foreground hover:text-foreground ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md active:cursor-grabbing"
 					>
 						<GripVertical aria-hidden className="size-3.5" />
 					</button>
@@ -114,7 +114,7 @@ export const HotspotRow = memo(
 						onOpen()
 						push(viewId)
 					}}
-					className="publisher-shell-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pr-1 pl-1 text-left"
+					className="shell-focus flex min-w-0 flex-1 items-center gap-2 rounded-lg py-2 pr-1 pl-1 text-left"
 				>
 					<span className="min-w-0 flex-1">
 						<span
@@ -179,7 +179,7 @@ export const HotspotRow = memo(
 					size="icon"
 					aria-label={`Delete ${name}`}
 					onClick={onDelete}
-					className="publisher-shell-focus text-muted-foreground hover:text-destructive size-7 shrink-0"
+					className="shell-focus text-muted-foreground hover:text-destructive size-7 shrink-0"
 				>
 					<Trash2 aria-hidden className="size-3.5" />
 				</Button>

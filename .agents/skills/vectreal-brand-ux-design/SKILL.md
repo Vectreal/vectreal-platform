@@ -51,6 +51,8 @@ wrong form is wrong.
 
 - `shared/components/src/styles/globals.css` — read the comments; several record
   an afternoon someone already lost
+- `shared/components/src/styles/theme.css` — the colour palette and the shell
+  surface recipe, apart so the published viewer can import them too
 - `shared/components/src/ui/`
 - `eslint.config.mts`, the `no-restricted-syntax` block
 - `apps/vectreal-platform/app/components/`
@@ -59,9 +61,9 @@ The `absent` line below is the load-bearing one: it fails the build the day
 someone points `--accent` back at the brand.
 
 ```claims
-present  shared/components/src/styles/globals.css                              --orange: #fc6c18
-present  shared/components/src/styles/globals.css                              --orange-rgb: 252 108 24
-absent   shared/components/src/styles/globals.css                              --accent: var(--orange)
+present  shared/components/src/styles/theme.css                                --orange: #fc6c18
+present  shared/components/src/styles/theme.css                                --orange-rgb: 252 108 24
+absent   shared/components/src/styles/theme.css                                --accent: var(--orange)
 exists   .agents/skills/vectreal-brand-ux-design/references/tokens.md
 exists   .agents/skills/vectreal-brand-ux-design/references/elevation.md
 exists   .agents/skills/vectreal-brand-ux-design/references/typography.md
