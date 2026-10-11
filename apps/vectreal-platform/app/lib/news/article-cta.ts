@@ -1,5 +1,9 @@
 import { CONVERT_INDEX_PATH, convertPairBySlug } from '../convert/convert-pairs'
 import {
+	exampleSceneById,
+	PUBLISHER_EXAMPLE_PARAM
+} from '../samples/example-scenes'
+import {
 	PUBLISHER_SAMPLE_PARAM,
 	sampleModelById
 } from '../samples/sample-models'
@@ -12,7 +16,8 @@ import { SITE_URL } from '../seo'
  * under a body that had just said "Try it, no account needed". Each article now
  * names its own next step in `cta:`, and the panel asks for that one thing.
  *
- * A publisher ask also carries one model to open straight away, a sample. The panel offers it as a shortcut beside the
+ * A publisher ask also carries one model to open straight away: the example
+ * the article showed, or a sample. The panel offers it as a shortcut beside the
  * main button, so a reader with nothing to hand still has a first step.
  */
 export type ArticleCta =
@@ -21,7 +26,7 @@ export type ArticleCta =
 	| { kind: 'convert'; to: string }
 
 export interface ArticleCtaShortcut {
-	type: 'sample'
+	type: 'sample' | 'example'
 	id: string
 }
 
@@ -40,10 +45,11 @@ export const DEFAULT_ARTICLE_CTA: ArticleCta = {
 /**
  * Reads the `cta:` URL an author wrote, absolute on vectreal.com or a path,
  * as one of the destinations the panel knows how to present: the publisher,
- * optionally naming a sample, or the converters, optionally naming a pair.
+ * optionally naming a sample or an example scene, or the converters,
+ * optionally naming a pair.
  *
- * Returns null for anything else, including a sample or pair that does not
- * exist, which the manifest treats as invalid frontmatter: a typo'd
+ * Returns null for anything else, including a sample, example or pair that
+ * does not exist, which the manifest treats as invalid frontmatter: a typo'd
  * URL must not ship as the article's only call to action.
  */
 export function resolveArticleCta(
@@ -69,6 +75,9 @@ export function resolveArticleCta(
 		const [[name, id]] = params
 		if (name === PUBLISHER_SAMPLE_PARAM && sampleModelById(id)) {
 			return { kind: 'publisher', shortcut: { type: 'sample', id } }
+		}
+		if (name === PUBLISHER_EXAMPLE_PARAM && exampleSceneById(id)) {
+			return { kind: 'publisher', shortcut: { type: 'example', id } }
 		}
 		return null
 	}

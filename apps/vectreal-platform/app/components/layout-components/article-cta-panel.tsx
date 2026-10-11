@@ -7,6 +7,10 @@ import { CtaPanel } from './cta-panel'
 import { ModelLinkRow } from './model-link-row'
 import { CONVERT_INDEX_COPY } from '../../lib/convert/convert-pairs'
 import {
+	exampleSceneById,
+	publisherExampleHref
+} from '../../lib/samples/example-scenes'
+import {
 	publisherSampleHref,
 	requireSampleModel
 } from '../../lib/samples/sample-models'
@@ -22,7 +26,18 @@ interface Props {
 }
 
 /** The shortcut's link. The manifest has already rejected an unknown id. */
-function shortcutLink({ id }: ArticleCtaShortcut) {
+function shortcutLink({ type, id }: ArticleCtaShortcut) {
+	if (type === 'example') {
+		const example = exampleSceneById(id)
+		if (!example) throw new Error(`Unknown example scene "${id}"`)
+		return {
+			to: publisherExampleHref(id),
+			previewUrl: example.previewUrl,
+			title: 'Or open this scene',
+			meta: `${formatFileSize(example.model.bytes)} · as the article set it up`
+		}
+	}
+
 	const sample = requireSampleModel(id)
 	return {
 		to: publisherSampleHref(id),
