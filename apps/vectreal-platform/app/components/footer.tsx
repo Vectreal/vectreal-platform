@@ -23,8 +23,9 @@ const SOCIAL = [
 	{ label: 'X', href: COMMUNITY.x, Icon: XLogo }
 ] as const
 
+/* Orange is the site's interactive state, so a link the pointer is on lights in it. */
 const LINK_CLASS =
-	'text-muted-foreground hover:text-foreground text-body-sm transition-colors'
+	'text-muted-foreground hover:text-orange-ink focus-visible:text-orange-ink text-body-sm transition-colors'
 
 const FooterLink = ({ link }: { link: SiteLink }) =>
 	link.external ? (
@@ -48,7 +49,8 @@ const FooterLink = ({ link }: { link: SiteLink }) =>
  * Every column comes from the site map, so the footer and the nav cannot name
  * a page two ways or forget one. It is grouped by type and space alone: the
  * lines it used to draw between rows separated nothing that alignment did not
- * already separate.
+ * already separate. Each column's label carries one cell of the page's dither
+ * in the brand, so the footer is recognizably the same site as the page above.
  */
 export const Footer = () => {
 	const { setPreferencesOpen } = useConsent()
@@ -69,7 +71,8 @@ export const Footer = () => {
 				>
 					{FOOTER.sections.map((section) => (
 						<div key={section.label}>
-							<h2 className="text-eyebrow text-muted-foreground">
+							<h2 className="text-eyebrow text-muted-foreground flex items-center gap-2">
+								<span className="bg-orange size-1" aria-hidden="true" />
 								{section.label}
 							</h2>
 							<ul className="mt-4 flex flex-col gap-3">
@@ -96,7 +99,7 @@ export const Footer = () => {
 										target="_blank"
 										rel="noreferrer"
 										aria-label={label}
-										className="hover:text-foreground block transition-colors"
+										className="hover:text-orange-ink focus-visible:text-orange-ink block transition-colors"
 									>
 										<Icon className="size-4" />
 									</a>
