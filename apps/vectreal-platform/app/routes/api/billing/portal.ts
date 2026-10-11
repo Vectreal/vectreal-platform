@@ -16,6 +16,7 @@ import { ApiResponse } from '@shared/utils'
 import { Route } from './+types/portal'
 import { loadAuthenticatedUser } from '../../../lib/domain/auth/auth-loader.server'
 import { getOrgStripeIds } from '../../../lib/domain/billing/stripe-subscription-sync.server'
+import { canPerformDashboardOperation } from '../../../lib/domain/dashboard/dashboard-operations'
 import { getUserOrganizations } from '../../../lib/domain/user/user-repository.server'
 import { ensureSameOriginMutation } from '../../../lib/http/csrf.server'
 import { getStripeClient } from '../../../lib/stripe.server'
@@ -46,7 +47,12 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		(m) => m.organization.id === organizationId
 	)
 
-	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
+	if (
+		!membership ||
+		!canPerformDashboardOperation('billing:manage', {
+			role: membership.membership.role
+		})
+	) {
 		return ApiResponse.forbidden(
 			'Only organization owners and admins can access the billing portal',
 			{ headers: responseHeaders }

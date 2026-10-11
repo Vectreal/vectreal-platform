@@ -25,6 +25,7 @@ import {
 	syncCompletedCheckout,
 	type CheckoutData
 } from '../../lib/domain/billing/stripe-subscription-sync.server'
+import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 
@@ -49,7 +50,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const membership = memberships.find(
 		(m) => m.organization.id === organizationId
 	)
-	if (!membership || !['owner', 'admin'].includes(membership.membership.role)) {
+	if (
+		!membership ||
+		!canPerformDashboardOperation('billing:manage', {
+			role: membership.membership.role
+		})
+	) {
 		throw redirect('/dashboard/billing', { headers })
 	}
 
