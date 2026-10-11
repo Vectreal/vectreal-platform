@@ -304,7 +304,7 @@ export default function NewsRoomArticlePage({
 				  there is no rail, so they appear here instead - the same
 				  components, rendered once, in whichever place exists.
 				*/}
-				<div className="mt-16 mb-16 flex flex-wrap items-center gap-3 lg:hidden">
+				<div className="mt-16 flex flex-wrap items-center gap-3 lg:hidden">
 					<AuthorCard author={article.author} />
 					<span className="text-muted-foreground text-body-sm">
 						{article.readingTimeMinutes} min read
@@ -320,13 +320,14 @@ export default function NewsRoomArticlePage({
 					</Button>
 				</div>
 
+				{/*
+				  The article owns the gap above it. It used to borrow it from the
+				  metadata row's bottom margin, so on `lg`, where that row is hidden,
+				  the body ran straight on from the standfirst.
+				*/}
 				<article
 					ref={contentRef}
-					className={cn(
-						styles.docsContent,
-						styles.newsroomContent,
-						'mb-16 px-2'
-					)}
+					className={cn(styles.docsContent, styles.newsroomContent, 'my-16')}
 				>
 					<ArticleComponent />
 				</article>
