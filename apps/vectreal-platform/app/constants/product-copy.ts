@@ -439,8 +439,8 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	pilot: {
-		heading: 'Founding clients',
-		lead: 'We are looking for the first companies to build with, and we will put in the work to make it count for both sides.',
+		heading: 'Start with a pilot project',
+		lead: 'We take your products from the files you already have to a working 3D view on your own site, and we do the setup work with you.',
 		blocks: [
 			{
 				title: 'Who it is for',
@@ -448,11 +448,11 @@ export const HOME_PAGE_COPY = {
 			},
 			{
 				title: 'What we do',
-				body: 'We prepare your files, build the product viewer or configurator into your site, and host and manage it in Vectreal. Configurators are built per project today. What we learn from the first ones becomes part of the product.'
+				body: 'We prepare your files, build the product viewer or configurator into your site, and host and manage it in Vectreal. Configurators are built per project.'
 			},
 			{
-				title: 'What we ask',
-				body: 'Permission to publish the project as a case study, and your honest feedback. In return you get founding-client terms.'
+				title: 'What we ask in return',
+				body: 'Permission to publish the project as a case study, and your honest feedback on what worked and what did not.'
 			}
 		],
 		team: 'A small team in Germany. You work directly with the people who build the product.',
