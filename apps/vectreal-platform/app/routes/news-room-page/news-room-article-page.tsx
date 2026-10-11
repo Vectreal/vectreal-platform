@@ -3,21 +3,19 @@ import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
-import { ArrowRight, ChevronLeft, Copy } from 'lucide-react'
+import { ChevronLeft, Copy } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { PublicErrorBoundary } from '../../components/errors'
-import {
-	AdjacentPager,
-	AuthorCard,
-	CtaPanel
-} from '../../components/layout-components'
+import { AdjacentPager, AuthorCard } from '../../components/layout-components'
 import { ArticleCard } from '../../components/layout-components/article-card'
+import { ArticleCtaPanel } from '../../components/layout-components/article-cta-panel'
 import { ArticleHero } from '../../components/layout-components/article-hero'
 import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
+import { useConsentedCapture } from '../../hooks/use-consented-capture'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
 	getAdjacentNewsArticles,
@@ -126,6 +124,7 @@ export default function NewsRoomArticlePage({
 	const { article, adjacent, related } = loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
+	const captureConsented = useConsentedCapture()
 	const fullArticle = useMemo(
 		() => getNewsArticle(article.slug),
 		[article.slug]
@@ -331,20 +330,14 @@ export default function NewsRoomArticlePage({
 					<ArticleComponent />
 				</article>
 
-				<CtaPanel
-					heading="Ready to publish your first interactive scene?"
-					actions={
-						<>
-							<Button asChild>
-								<Link to="/sign-up">
-									Create free account
-									<ArrowRight className="h-4 w-4" />
-								</Link>
-							</Button>
-							<Button variant="ghost" asChild>
-								<Link to="/pricing">See plans</Link>
-							</Button>
-						</>
+				<ArticleCtaPanel
+					cta={article.cta}
+					onAction={(action) =>
+						captureConsented('newsroom_cta_clicked', {
+							slug: article.slug,
+							destination: article.cta.kind,
+							action
+						})
 					}
 				/>
 

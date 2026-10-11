@@ -1,0 +1,56 @@
+import { DEFAULT_ARTICLE_CTA, resolveArticleCta } from './article-cta'
+
+describe('resolveArticleCta', () => {
+	it('ends an article without cta on the publisher, with the rocket beside it', () => {
+		expect(resolveArticleCta(undefined)).toEqual(DEFAULT_ARTICLE_CTA)
+		expect(DEFAULT_ARTICLE_CTA).toEqual({
+			kind: 'publisher',
+			shortcut: { type: 'sample', id: 'rocket' }
+		})
+	})
+
+	it('reads the absolute vectreal.com URLs authors write', () => {
+		expect(resolveArticleCta('https://vectreal.com/publisher')).toEqual(
+			DEFAULT_ARTICLE_CTA
+		)
+		expect(resolveArticleCta('https://vectreal.com/convert')).toEqual({
+			kind: 'convert',
+			to: '/convert'
+		})
+	})
+
+	it('reads a named sample or converter pair', () => {
+		expect(resolveArticleCta('/publisher?sample=camera')).toEqual({
+			kind: 'publisher',
+			shortcut: { type: 'sample', id: 'camera' }
+		})
+		expect(resolveArticleCta('/convert/glb-to-gltf')).toEqual({
+			kind: 'convert',
+			to: '/convert/glb-to-gltf'
+		})
+	})
+
+	it('rejects destinations the panel cannot present', () => {
+		expect(resolveArticleCta('https://example.com/publisher')).toBeNull()
+		expect(resolveArticleCta('https://vectreal.com/pricing')).toBeNull()
+		expect(resolveArticleCta('https://vectreal.com/publisher/abc')).toBeNull()
+		expect(resolveArticleCta('https://vectreal.com/converter')).toBeNull()
+		expect(resolveArticleCta('http://[')).toBeNull()
+	})
+
+	it('rejects a sample or converter pair that does not exist', () => {
+		expect(resolveArticleCta('/convert/glb-to-gltff')).toBeNull()
+		expect(resolveArticleCta('/convert/glb-to-gltf/extra')).toBeNull()
+		expect(resolveArticleCta('/publisher?sample=bike')).toBeNull()
+		expect(resolveArticleCta('/publisher?sample=')).toBeNull()
+	})
+
+	it('rejects query parameters it cannot vouch for', () => {
+		expect(resolveArticleCta('/publisher?sample=rocket&x=1')).toBeNull()
+		expect(
+			resolveArticleCta('/publisher?sample=rocket&example=camera-shadows')
+		).toBeNull()
+		expect(resolveArticleCta('/publisher?utm_source=newsroom')).toBeNull()
+		expect(resolveArticleCta('/convert?utm_source=newsroom')).toBeNull()
+	})
+})
