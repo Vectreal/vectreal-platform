@@ -36,11 +36,12 @@ describe('example cameras', () => {
 			const { activeCameraId, cameras = [] } = example.settings.camera ?? {}
 			const ids = cameras.map((camera) => camera.cameraId)
 			expect(new Set(ids).size, example.id).toBe(ids.length)
-			expect(ids, example.id).toContain(activeCameraId)
+			// The page viewer opens on the initial camera, the Publisher on the
+			// active one, so they must be the same camera.
 			expect(
-				cameras.filter((camera) => camera.initial),
+				cameras.filter((camera) => camera.initial).map((c) => c.cameraId),
 				example.id
-			).toHaveLength(1)
+			).toEqual([activeCameraId])
 		}
 	})
 
