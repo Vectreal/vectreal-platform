@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { StepRow } from './step-row'
+import { duration } from '../../../../lib/motion/motion-tokens'
 import { getOptimizationDefinition } from '../model'
 
 import type { OptimizationStepsState } from '../use-optimization-steps'
@@ -60,7 +61,7 @@ export const OptimizationProgress: FC<OptimizationProgressProps> = ({
 			initial={{ opacity: 0, y: 8 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -8 }}
-			transition={{ duration: 0.25 }}
+			transition={{ duration: duration.base }}
 			className="flex flex-col items-center px-6 py-10"
 		>
 			<div className="mb-6 flex flex-col items-center gap-3 text-center">

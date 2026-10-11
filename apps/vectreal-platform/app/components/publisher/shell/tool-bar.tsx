@@ -13,6 +13,7 @@ import { useParams } from 'react-router'
 
 import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell-layout'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
+import { duration, ease } from '../../../lib/motion/motion-tokens'
 import {
 	currentLocationAtom,
 	enterPreviewModeAtom,
@@ -26,8 +27,7 @@ import { COMPOSE_TOOL_DEFINITIONS } from '../sidebars/compose-sidebar/compose-to
 
 import type { ComposeTool } from '../../../types/publisher-config'
 
-/** `--ease-out` and `--duration-base`, which Framer cannot read as tokens. */
-const TOOLS_TRANSITION = { duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }
+const TOOLS_TRANSITION = { duration: duration.base, ease: ease.out }
 
 const triggerClassName =
 	'publisher-shell-focus inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors duration-150 motion-reduce:transition-none [&_svg]:size-4 [&_svg]:shrink-0'

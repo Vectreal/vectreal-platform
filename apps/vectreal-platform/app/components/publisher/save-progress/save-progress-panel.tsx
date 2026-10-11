@@ -19,6 +19,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 
 import { ProgressRing } from './progress-ring'
 import { summarizeSaveProgress } from '../../../lib/domain/scene/client/scene-save-progress'
+import { duration, ease } from '../../../lib/motion/motion-tokens'
 import {
 	isPreviewModeAtom,
 	sceneMetaAtom
@@ -39,8 +40,7 @@ import type { FC, FocusEvent, ReactNode } from 'react'
 /** How long a finished save stays on screen while the panel is collapsed. */
 const HIDE_AFTER_SAVED_MS = 4000
 
-/** `--ease-out` over `--duration-base`, which Framer cannot read as tokens. */
-const STATE_CHANGE = { duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }
+const STATE_CHANGE = { duration: duration.base, ease: ease.out }
 
 /**
  * Every change in the panel is a change of state, so every one moves, and

@@ -4,14 +4,7 @@ import { Link } from 'react-router'
 import { ArticleMeta } from './article-meta'
 import { formatNewsDate } from '../../lib/news/news-manifest'
 
-import type { NewsArticle } from '../../lib/news/news-manifest'
-
-/**
- * Only what the card renders. `NewsArticle` carries the MDX `Component`, which
- * the loaders strip on the way to the client, so requiring the whole type here
- * would demand a field the route can never hand over.
- */
-type ArticleSummary = Omit<NewsArticle, 'Component'>
+import type { ArticleSummary } from '../../lib/news/news-manifest'
 
 interface ArticleCardProps {
 	article: ArticleSummary

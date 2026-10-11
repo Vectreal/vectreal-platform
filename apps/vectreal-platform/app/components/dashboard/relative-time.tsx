@@ -29,6 +29,8 @@
  * now use this component gain that guard rather than losing anything.
  */
 
+import { formatShortDate } from '../../constants/limit-format'
+
 /** Minutes, hours, days, then a date. The absolute form takes over at 30 days. */
 export function formatRelativeTime(at: Date | string): string {
 	const date = at instanceof Date ? at : new Date(at)
@@ -39,11 +41,7 @@ export function formatRelativeTime(at: Date | string): string {
 	if (minutes < 1440) return `${Math.floor(minutes / 60)}h ago`
 	if (minutes < 43_200) return `${Math.floor(minutes / 1440)}d ago`
 
-	return date.toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric'
-	})
+	return formatShortDate(date)
 }
 
 interface RelativeTimeProps {

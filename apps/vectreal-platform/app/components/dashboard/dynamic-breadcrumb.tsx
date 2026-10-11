@@ -20,6 +20,7 @@ import { Link } from 'react-router'
 
 import { getRouteContext, parseRouteParams } from './utils'
 import { useDashboardHeaderData } from '../../hooks/use-dashboard-content'
+import { duration } from '../../lib/motion/motion-tokens'
 
 import type {
 	BreadcrumbItem as DashboardBreadcrumbItem,
@@ -117,7 +118,7 @@ export const DynamicBreadcrumb = memo(() => {
 				animate={{ opacity: 1, x: 0 }}
 				exit={{ opacity: 0, x: 8 }}
 				transition={{
-					duration: 0.4,
+					duration: duration.slow,
 					ease: 'easeOut'
 				}}
 			>

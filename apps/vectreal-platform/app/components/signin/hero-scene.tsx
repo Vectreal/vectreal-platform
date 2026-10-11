@@ -1,5 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense } from 'react'
 
+import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 import CenteredSpinner from '../centered-spinner'
 
 const HeroSceneClient = lazy(() => import('./hero-scene-client'))
@@ -9,11 +10,7 @@ interface HeroSceneProps {
 }
 
 const HeroScene = ({ vertical }: HeroSceneProps) => {
-	const [isMounted, setIsMounted] = useState(false)
-
-	useEffect(() => {
-		setIsMounted(true)
-	}, [])
+	const isMounted = useIsClientMounted()
 
 	if (!isMounted) {
 		return (

@@ -1,4 +1,4 @@
-import { DASHBOARD_LOCALE } from '../../../constants/limit-format'
+import { formatShortDate } from '../../../constants/limit-format'
 import {
 	BILLING_STATES_DOWNGRADED_TO_FREE,
 	type BillingState,
@@ -96,30 +96,6 @@ export interface BillingSituationInput {
 	trialEnd: string | null
 }
 
-/**
- * The dashboard's one spelling for an absolute date.
- *
- * `DASHBOARD_LOCALE` and not the machine default, which is what this line used
- * to pass. It was a fourth inline `'en-US'` until the constant got an owner.
- * Every dashboard page is server-rendered, so an unpinned locale is formatted
- * once by the container and again by the browser, and the two disagree wherever
- * the reader is not American - a hydration mismatch that swaps the date under
- * them on load. `relative-time.tsx` pins the same three fields for the same
- * reason and this deliberately matches its spelling; a third caller should
- * extract them both rather than add a third.
- *
- * Not `PUBLISHED_COPY_LOCALE`, whose own docstring scopes it to prose rendered
- * by a machine rather than for a reader. This is the opposite case and only
- * happens to agree on the value.
- */
-function formatDate(value: string): string {
-	return new Date(value).toLocaleDateString(DASHBOARD_LOCALE, {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric'
-	})
-}
-
 export function describeBillingSituation(
 	input: BillingSituationInput
 ): BillingSituation {
@@ -163,7 +139,7 @@ function describeState({
 		case 'trialing':
 			return {
 				headline: trialEnd
-					? `Your trial ends ${formatDate(trialEnd)}.`
+					? `Your trial ends ${formatShortDate(trialEnd)}.`
 					: 'Your trial is running.',
 				remedy: null,
 				isProblem: false
@@ -181,7 +157,7 @@ function describeState({
 			return {
 				headline:
 					currentPeriodEnd && new Date(currentPeriodEnd).getTime() > Date.now()
-						? `Renews ${formatDate(currentPeriodEnd)}.`
+						? `Renews ${formatShortDate(currentPeriodEnd)}.`
 						: 'Your subscription is active.',
 				remedy: null,
 				isProblem: false

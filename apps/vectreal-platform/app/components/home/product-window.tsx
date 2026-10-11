@@ -25,6 +25,7 @@ import prepareDarkUrl from '../../assets/home/product/prepare-dark.webp?url'
 import prepareLightUrl from '../../assets/home/product/prepare-light.webp?url'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import { dissolveIn } from '../../lib/dither/dither'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel } from '../../lib/navigation/site-map'
 
 const COPY = HOME_PAGE_COPY.product
@@ -135,10 +136,7 @@ export const ProductWindow = () => {
 		cancelDissolve.current()
 		setView(next)
 		const shot = shots.current[next]
-		if (
-			!shot ||
-			window.matchMedia('(prefers-reduced-motion: reduce)').matches
-		) {
+		if (!shot || prefersReducedMotion()) {
 			setPrevious(null)
 			return
 		}
@@ -159,8 +157,7 @@ export const ProductWindow = () => {
 		switchTo(VIEW_ORDER[(VIEW_ORDER.indexOf(view) + 1) % VIEW_ORDER.length])
 
 	useEffect(() => {
-		if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-			setCycling(true)
+		if (!prefersReducedMotion()) setCycling(true)
 		const node = windowRef.current
 		if (!node) return
 		const observer = new IntersectionObserver(([entry]) =>

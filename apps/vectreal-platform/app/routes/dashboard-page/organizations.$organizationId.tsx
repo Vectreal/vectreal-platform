@@ -33,7 +33,10 @@ import {
 } from '../../lib/domain/billing/entitlement-service.server'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { DASHBOARD_CONFIRMATION_TOKEN } from '../../lib/domain/dashboard/dashboard-confirmation'
-import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
+import {
+	canPerformDashboardOperation,
+	type MembershipRole
+} from '../../lib/domain/dashboard/dashboard-operations'
 import {
 	deleteOrganization,
 	getOrganizationDetailForUser,
@@ -136,7 +139,7 @@ function deleteOrganizationAction(
 }
 
 function membershipVariant(
-	role: 'owner' | 'admin' | 'member'
+	role: MembershipRole
 ): 'default' | 'secondary' | 'outline' {
 	if (role === 'owner') {
 		return 'default'

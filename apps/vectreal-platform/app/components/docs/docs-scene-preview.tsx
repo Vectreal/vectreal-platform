@@ -1,4 +1,6 @@
-import { Component, lazy, Suspense, useEffect, useState } from 'react'
+import { Component, lazy, Suspense } from 'react'
+
+import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
 import type { ReactNode } from 'react'
 
@@ -17,11 +19,7 @@ const DocsScenePreviewClient = lazy(() => import('./docs-scene-preview-client'))
  * does not shift when the viewer arrives.
  */
 export function DocsScenePreview() {
-	const [isMounted, setIsMounted] = useState(false)
-
-	useEffect(() => {
-		setIsMounted(true)
-	}, [])
+	const isMounted = useIsClientMounted()
 
 	// min-w-0 because the canvas has an intrinsic width and a grid or flex item
 	// defaults to min-width: auto, so without it the track sizes to the canvas

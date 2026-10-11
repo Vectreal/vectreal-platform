@@ -4,6 +4,7 @@ import { VectrealViewer } from '@vctrl/viewer'
 import { useEffect, useRef } from 'react'
 
 import rocket from '../../assets/models/rocket-v3.glb?url'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import CenteredSpinner from '../centered-spinner'
 
 import type { Group } from 'three'
@@ -65,7 +66,7 @@ const HeroSceneClient = ({ vertical }: HeroSceneClientProps) => {
 	const pointer = useRef({ x: 0, y: 0 })
 
 	useEffect(() => {
-		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+		if (prefersReducedMotion()) return
 		const onMove = (e: PointerEvent) => {
 			// Normalize to viewport, -1..1. Independent of scroll position.
 			pointer.current.x = (e.clientX / window.innerWidth) * 2 - 1

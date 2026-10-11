@@ -39,6 +39,7 @@ import { createCheckboxColumn, SortableHeader } from './data-table'
 import { RelativeTime } from './relative-time'
 import { SceneStatusTag } from './scene-status'
 import { StatusBreakdown, type SceneStatusCounts } from './status-breakdown'
+import { formatShortDate } from '../../constants/limit-format'
 import { useClipboardCopy } from '../../hooks/use-clipboard-copy'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 import {
@@ -142,13 +143,7 @@ export function createProjectColumns({
 
 				return (
 					<span className="text-muted-foreground text-sm">
-						{date
-							? new Date(date).toLocaleDateString('en-US', {
-									month: 'short',
-									day: 'numeric',
-									year: 'numeric'
-								})
-							: 'Never'}
+						{date ? formatShortDate(date) : 'Never'}
 					</span>
 				)
 			}
@@ -491,11 +486,7 @@ export function createContentColumns(
 				const date = row.getValue('updatedAt') as Date
 				return (
 					<span className="text-muted-foreground text-sm">
-						{new Date(date).toLocaleDateString('en-US', {
-							month: 'short',
-							day: 'numeric',
-							year: 'numeric'
-						})}
+						{formatShortDate(date)}
 					</span>
 				)
 			}

@@ -11,6 +11,7 @@ import { TextureLoader, type Texture } from 'three'
 
 import { createBackdropEngine } from './backdrop-engine'
 import { HERO_SHADOW_URL } from './hero-assets'
+import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
 import { readGlbContents } from '../../../lib/samples/glb-contents'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
 import { StageBoundary } from '../stage/stage-boundary'
@@ -146,9 +147,7 @@ export default function HeroStageClient({
 	}, [])
 
 	useEffect(() => {
-		const reducedMotion = window.matchMedia(
-			'(prefers-reduced-motion: reduce)'
-		).matches
+		const reducedMotion = prefersReducedMotion()
 		const baking = bakeMode()
 		const abort = new AbortController()
 		const timers: number[] = []
