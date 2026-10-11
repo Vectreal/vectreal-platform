@@ -51,8 +51,8 @@ export interface StageOptions {
 	edgeFade?: boolean
 }
 
-/** The sequence's timings, in milliseconds. */
-const TIMING = { sweep: 2600, turn: 1500 }
+/** The sequence's timings, in milliseconds: from poster to a camera in the reader's hands in about three seconds, not six. */
+const TIMING = { sweep: 1400, turn: 1000 }
 
 /** Drawn square to the sheet, then turned high enough to see the ground its shadow lies on. */
 const ELEVATION = { az: 0.03, el: 0.05 }
