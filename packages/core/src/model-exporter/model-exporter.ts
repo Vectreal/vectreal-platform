@@ -38,6 +38,7 @@ import {
 	gzipSize,
 	pickGeometryCodec
 } from './geometry-codec'
+import { threeObjectToGLB } from './three-object-glb'
 import {
 	ExportResult,
 	GLBExportResult,
@@ -431,7 +432,8 @@ export class ModelExporter {
 	}
 
 	/**
-	 * Export a Three.js Object3D as GLB binary.
+	 * Export a Three.js Object3D as GLB binary, with the animation clips it
+	 * carries on `object.animations` (see `threeObjectToGLB`).
 	 *
 	 * @param object - The Three.js Object3D
 	 * @returns Promise resolving to the export result
@@ -441,16 +443,9 @@ export class ModelExporter {
 		this.emitProgress('Exporting Three.js object to GLB', 0)
 		try {
 			this.emitProgress('Serializing Three.js scene', 40)
-			const result = await this.threeExporter.parseAsync(object, {
-				binary: true
-			})
-
-			if (!(result instanceof ArrayBuffer)) {
-				throw new Error('Expected binary GLB output from GLTFExporter')
-			}
+			const binary = await threeObjectToGLB(this.threeExporter, object)
 
 			this.emitProgress('Finalizing GLB binary', 90)
-			const binary = new Uint8Array(result)
 			const exportTime = Date.now() - startTime
 
 			this.emitProgress('Export completed', 100)
@@ -512,7 +507,8 @@ export class ModelExporter {
 	}
 
 	/**
-	 * Export a Three.js Object3D as GLTF JSON with separate assets.
+	 * Export a Three.js Object3D as GLTF JSON with separate assets, with the
+	 * animation clips it carries on `object.animations`.
 	 *
 	 * @note The way Three.js exports GLTF resources is limited to png image textures
 	 *
@@ -522,12 +518,10 @@ export class ModelExporter {
 	public async exportThreeJSGLTF(object: Object3D): Promise<GLTFExportResult> {
 		this.emitProgress('Exporting Three.js object to GLTF', 0)
 		try {
-			const result = await this.threeExporter.parseAsync(object, {
-				binary: true
-			})
-
 			return await this.exportDocumentGLTF(
-				await this.io.readBinary(new Uint8Array(result as ArrayBuffer))
+				await this.io.readBinary(
+					await threeObjectToGLB(this.threeExporter, object)
+				)
 			)
 		} catch (error) {
 			throw new Error(`Failed to export Three.js object: ${error}`, {

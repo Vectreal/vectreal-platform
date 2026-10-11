@@ -821,9 +821,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					/>
 				}
 				enableViewportRendering={enableViewportRendering}
-				// 'percentage' = PCFShadowMap. AccumulativeShadows bakes its own soft
-				// shadow from its RandomizedLight, so the realtime filter just needs to
-				// be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
+				// 'percentage' = PCFShadowMap. The accumulative shadow bake softens its
+				// own shadow by jittering its lights, so the realtime filter just needs
+				// to be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
 				shadows={shadowsEnabled ? 'percentage' : false}
 				// The composer antialiases inside its own buffers and presents a
 				// full-screen quad, so a multisampled canvas would only cost memory

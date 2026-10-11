@@ -28,6 +28,7 @@ import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
 import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
 import { stripDecodedMeshoptExtension } from '../meshopt/meshopt-codec'
+import { threeObjectToGLB } from '../model-exporter/three-object-glb'
 
 export type LoadResult = {
 	document: Document
@@ -58,11 +59,8 @@ export async function loadFromThreeJS(
 	emitProgress('Loading model from Three.js object', 0)
 
 	try {
-		const parseOptions = { binary: true }
-		const binary = await exporter.parseAsync(model, parseOptions)
-		const modelBuffer = new Uint8Array(binary as ArrayBuffer)
 		const result = await loadFromBuffer(
-			modelBuffer,
+			await threeObjectToGLB(exporter, model),
 			io,
 			emitProgress,
 			normalizeURIs

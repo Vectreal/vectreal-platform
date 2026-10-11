@@ -336,19 +336,24 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		description:
 			'Convert an FBX file to GLB in your browser. No account, no upload, no watermark.',
 		/*
-		  What an FBX arrives with that the conversion does not keep, said before
-		  the download rather than discovered after it. Cameras and lights have no
-		  glTF equivalent beyond what a material carries, and three.js re-encodes
-		  every embedded texture on the way out, so a JPEG-heavy file can come
-		  back larger.
+		  What an FBX arrives with, and the two things that do not arrive
+		  quite as they left. Clips come across because `threeObjectToGLB` writes the
+		  clips its object carries, and cameras and lights because `GLTFExporter`
+		  writes camera nodes and `KHR_lights_punctual`; the FBX bridge turns each
+		  light and camera to face the way FBX means it, at its target where it
+		  has one. `three-source-bridges.spec.ts` checks all of that.
 
-		  Animation is on that list too, and this note claimed the opposite on
-		  both FBX pages. `FBXLoader` leaves its clips on `object.animations` and
-		  `GLTFExporter` writes only the clips passed as `options.animations`,
-		  which nothing passes - so the clips are dropped, silently, on a page
-		  that promised they would come across.
+		  What it cannot carry exactly: brightness, since FBX states a light's
+		  intensity as a bare percentage and glTF requires candela or lux with
+		  nothing in the file relating them; and a moving target, since glTF has
+		  no constraints, so the aim is baked at rest as a fixed turn, and a clip
+		  that moves the camera, the light or its target no longer keeps them
+		  facing each other.
+
+		  Not said in the note but true: three.js re-encodes every embedded
+		  texture on the way out, so a JPEG-heavy file can come back larger.
 		*/
-		note: 'Meshes, materials, textures and skinning all come across. Animation, cameras and lights do not.'
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can come out brighter or dimmer, and anything aimed at a moving target keeps the aim it starts with, because glTF has neither FBX light units nor its targets.'
 	},
 	{
 		slug: 'fbx-to-gltf',
@@ -359,8 +364,8 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		title: 'FBX to glTF converter',
 		description:
 			'Convert an FBX file to glTF in your browser. No account, no upload, no watermark.',
-		/* The same note, and the same caveat about animation, as `fbx-to-glb`. */
-		note: 'Meshes, materials, textures and skinning all come across. Animation, cameras and lights do not.'
+		/* The same note, and the same caveats, as `fbx-to-glb`. */
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can come out brighter or dimmer, and anything aimed at a moving target keeps the aim it starts with, because glTF has neither FBX light units nor its targets.'
 	},
 	{
 		slug: 'fbx-to-usdz',

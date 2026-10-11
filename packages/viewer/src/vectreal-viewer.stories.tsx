@@ -534,13 +534,7 @@ export const HotspotCameraReturn: Story = {
 			]
 		}
 	},
-	/*
-	  Storybook's global `argTypesRegex` hands every `on*` prop an action, and
-	  a passed `onHotspotSelect` makes a marker select instead of fly its
-	  camera. Dropped here so the markers behave as they do for a visitor.
-	*/
-	render: ({ onHotspotSelect: _select, ...args }, context) =>
-		hotspotRender?.(args, context)
+	render: hotspotRender
 }
 
 export const WithPopover: Story = {

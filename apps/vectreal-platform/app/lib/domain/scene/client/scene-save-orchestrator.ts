@@ -292,7 +292,9 @@ export const executeSceneSaveOrchestrator = async ({
 		planThumbnailForSave({
 			sceneMetaState,
 			lastSavedSceneMeta,
-			defaultCameraChanged
+			defaultCameraChanged,
+			reusableThumbnailAssetId:
+				existingAssets?.[SCENE_THUMBNAIL_FILENAME]?.assetId
 		})
 
 	const thumbnailDataUrl =
@@ -429,10 +431,15 @@ export const executeSceneSaveOrchestrator = async ({
 			} else if (
 				bake &&
 				currentShadows.baked &&
-				currentShadows.baked.signature === bake.signature
+				currentShadows.baked.signature === bake.signature &&
+				existingAssets?.[PERSISTED_BAKE_FILENAME]?.assetId ===
+					currentShadows.baked.assetId
 			) {
 				// Stored bake is still valid for the current inputs: keep and relink it,
-				// recording the basis it was validated against if it had none.
+				// recording the basis it was validated against if it had none. Only
+				// while the server lists it as reusable for this save: after a move to
+				// another project it lives in the old project, so the ref is dropped
+				// and the scene re-bakes on its next load.
 				bakedRef = { ...currentShadows.baked, basis: bake.basis }
 				bakedShadowAssetId = currentShadows.baked.assetId
 			}
