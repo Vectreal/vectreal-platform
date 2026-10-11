@@ -21,6 +21,10 @@ import {
 	resolveDefaultSceneCameraId
 } from '../scene-camera'
 import { normalizePresentationSettings } from '../scene-presentation'
+import {
+	buildSceneThumbnailUrl,
+	thumbnailAssetIdFromUrl
+} from '../scene-thumbnail-url'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -215,6 +219,15 @@ export class SceneSettingsParser {
 					return sourceAssetId
 				}
 
+				const thumbnailUrl = this.parseThumbnailUrl(
+					meta.thumbnailUrl,
+					sceneId,
+					sceneAssetIds
+				)
+				if (thumbnailUrl instanceof Response) {
+					return thumbnailUrl
+				}
+
 				return {
 					action,
 					requestId,
@@ -222,7 +235,7 @@ export class SceneSettingsParser {
 					sceneId,
 					targetProjectId,
 					targetFolderId,
-					meta,
+					meta: { ...meta, thumbnailUrl },
 					settings,
 					sceneAssetIds,
 					sourceAssetId,
@@ -969,6 +982,38 @@ export class SceneSettingsParser {
 		}
 
 		return sourceAssetId
+	}
+
+	/**
+	 * The thumbnail a commit stores in `scenes.thumbnail_url`.
+	 *
+	 * Empty means none. Anything else must be this scene's thumbnail route for
+	 * an asset the same commit links, which the save then checks belongs to the
+	 * scene's project. Stored unexamined, the column could name any asset id,
+	 * and the GC counts every asset it names as in use.
+	 */
+	private static parseThumbnailUrl(
+		raw: string,
+		sceneId: string | undefined,
+		sceneAssetIds: string[]
+	): string | Response {
+		const thumbnailUrl = raw.trim()
+		if (!thumbnailUrl) return ''
+
+		const assetId = thumbnailAssetIdFromUrl(thumbnailUrl)
+		const isLinkedThumbnail =
+			sceneId !== undefined &&
+			assetId !== null &&
+			sceneAssetIds.includes(assetId) &&
+			thumbnailUrl === buildSceneThumbnailUrl(sceneId, assetId)
+
+		if (!isLinkedThumbnail) {
+			return ApiResponse.badRequest(
+				"meta.thumbnailUrl must be this scene's thumbnail for an asset the save links"
+			)
+		}
+
+		return thumbnailUrl
 	}
 
 	private static parsePublishedAssetId(
