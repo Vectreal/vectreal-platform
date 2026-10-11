@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v2.1.0...embed-v2.2.0) (2026-10-11)
+
+
+### Miscellaneous Chores
+
+* **embed:** Synchronize vectreal-monorepo versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/viewer bumped to 2.2.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v2.0.0...embed-v2.1.0) (2026-10-10)
 
 

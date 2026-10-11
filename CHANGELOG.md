@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v2.1.0...workspace-v2.2.0) (2026-10-11)
+
+
+### Features
+
+* **publisher:** animation tool for the clips a model carries ([#987](https://github.com/Vectreal/vectreal-platform/issues/987)) ([4b7425d](https://github.com/Vectreal/vectreal-platform/commit/4b7425de0ef97b61729c301f1c80e7813987e190))
+
+
+### Bug Fixes
+
+* **api-keys:** resolve key values through one disclosure-aware function ([#985](https://github.com/Vectreal/vectreal-platform/issues/985)) ([b34c206](https://github.com/Vectreal/vectreal-platform/commit/b34c206f377831cd4474ca1919a34e3bbb165448))
+* **platform:** accept only a linked thumbnail URL on scene save ([#990](https://github.com/Vectreal/vectreal-platform/issues/990)) ([b44695e](https://github.com/Vectreal/vectreal-platform/commit/b44695ea2737df550f4728e297a97160c8878a3c))
+* **platform:** authorize thumbnails by scene membership and thumbnail_url ([#986](https://github.com/Vectreal/vectreal-platform/issues/986)) ([3878434](https://github.com/Vectreal/vectreal-platform/commit/38784347789dea71946eaa6ce68bc45e8adb4daf))
+* **platform:** keep the scene thumbnail when renaming a scene ([#989](https://github.com/Vectreal/vectreal-platform/issues/989)) ([5d36b67](https://github.com/Vectreal/vectreal-platform/commit/5d36b677f6afb47ba8b1241ec8c8daa222f26b07))
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v2.0.0...workspace-v2.1.0) (2026-10-10)
 
 
