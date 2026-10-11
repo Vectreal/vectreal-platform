@@ -82,9 +82,7 @@ export function DitherGrain({ origin, className }: DitherGrainProps) {
 			if (!width || !height) return
 			canvas.width = Math.round(width * dpr)
 			canvas.height = Math.round(height * dpr)
-			const style = getComputedStyle(canvas)
-			const dark = document.documentElement.classList.contains('dark')
-			context.fillStyle = `color-mix(in oklch, ${style.getPropertyValue('--foreground')} ${dark ? 9 : 7}%, ${style.getPropertyValue('--background')})`
+			context.fillStyle = getComputedStyle(canvas).getPropertyValue('--grain')
 
 			const columns = Math.ceil(width / DITHER_CELL_PX)
 			const rows = Math.ceil(height / DITHER_CELL_PX)

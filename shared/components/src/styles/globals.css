@@ -64,10 +64,25 @@
 	  orange. This spelling needs no fallback. Keep the two in sync.
 	*/
 	--orange-rgb: 252 108 24;
+	/*
+	  The brand as text and as a small mark. --orange on white is about 2.9:1,
+	  under AA for any text, so the light theme writes it a step deeper
+	  (about 5.2:1); on the dark background --orange itself passes, so the dark
+	  theme points back at it. Fills and lines keep --orange.
+	*/
+	--orange-ink: #c2410c;
 
 	/* Semantic tokens - light theme */
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0 0);
+	/*
+	  The ink of the site's ordered dither: the hero's backdrop and every
+	  section grain (`DitherGrain`) paint their cells in it, so the material is
+	  one strength everywhere. It has to read as a texture on its own, not as a
+	  smudge on the background: at 7% it disappeared on most screens, and at
+	  14% it competed with the content set on it.
+	*/
+	--grain: color-mix(in oklch, var(--foreground) 11%, var(--background));
 	--card: oklch(1 0 0);
 	--card-foreground: oklch(0.145 0 0);
 	--popover: oklch(1 0 0);
@@ -281,10 +296,12 @@
 
 .dark {
 	color-scheme: dark;
+	--orange-ink: var(--orange);
 
 	/* Semantic tokens - dark theme */
 	--background: oklch(0.145 0 0);
 	--foreground: oklch(0.985 0 0);
+	--grain: color-mix(in oklch, var(--foreground) 13%, var(--background));
 	--card: oklch(0.145 0 0);
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.145 0 0);
@@ -370,6 +387,7 @@
 	--color-chart-4: var(--chart-4);
 	--color-chart-5: var(--chart-5);
 	--color-orange: var(--orange);
+	--color-orange-ink: var(--orange-ink);
 	--color-dark-orange: var(--dark-orange);
 
 	/* Surface tokens */

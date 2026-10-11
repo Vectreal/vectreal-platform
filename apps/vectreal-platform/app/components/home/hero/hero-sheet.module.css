@@ -36,7 +36,7 @@
 	--frame-bottom: 32px;
 	/* The backdrop's two inks. The engine reads them as tokens, so the fold (which drops the sheet's surface) keeps them. */
 	--hero-pool: var(--background);
-	--hero-grain: color-mix(in oklch, var(--foreground) 7%, var(--background));
+	--hero-grain: var(--grain);
 
 	position: relative;
 	/* Its own stacking context, so the backdrop at z-index -1 paints over the sheet's surface rather than under it. */
@@ -53,7 +53,6 @@
 }
 :global(.dark) .sheet {
 	--hero-pool: color-mix(in oklch, var(--foreground) 7%, var(--background));
-	--hero-grain: color-mix(in oklch, var(--foreground) 9%, var(--background));
 }
 
 /*

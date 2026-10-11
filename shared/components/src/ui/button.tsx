@@ -10,6 +10,13 @@ const buttonVariants = cva(
 			variant: {
 				default:
 					'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+				/*
+				  The page's one next step, in the brand. Dark ink in both themes:
+				  white on the orange is under 3:1, black is over 7:1. The hover is
+				  the darker brand rather than an alpha, which `--orange` (a hex)
+				  cannot take inline.
+				*/
+				brand: 'bg-orange text-black shadow hover:bg-dark-orange',
 				destructive:
 					'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
 				outline:
