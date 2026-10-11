@@ -892,7 +892,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					{isReady && file ? (
 						<ClientVectrealViewer
 							model={file.model}
-							theme="system"
 							className="h-full w-full"
 							boundsOptions={STAGE_BOUNDS}
 							controlsOptions={stageControls}

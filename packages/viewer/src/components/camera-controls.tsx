@@ -12,7 +12,7 @@ import {
 import CheckIcon from './assets/check-icon'
 import ChevronLeftIcon from './assets/chevron-left-icon'
 import ChevronRightIcon from './assets/chevron-right-icon'
-import { FOCUS_RING } from './focus-ring'
+import { CHROME_BUTTON } from './chrome-classes'
 
 export interface CameraControlsOption {
 	cameraId: string
@@ -41,17 +41,19 @@ export interface CameraControlsProps {
 const LIST_THRESHOLD = 3
 
 const classes = {
-	root: 'vctrl-viewer-camera-controls absolute bottom-0 left-1/2 z-[100] mb-2 flex max-w-[calc(100%-10rem)] -translate-x-1/2 items-center gap-0.5 rounded-full bg-[var(--vctrl-bg)] p-1 text-[var(--vctrl-text)]',
-	arrow:
-		'flex h-7 w-7 shrink-0 cursor-pointer appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 leading-none text-[var(--vctrl-text)] transition-colors duration-200 hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent',
+	root: 'vctrl-viewer-camera-controls shell-panel text-foreground flex items-center gap-0.5 p-1',
+	arrow: cn(
+		CHROME_BUTTON,
+		'flex h-7 w-7 shrink-0 items-center justify-center rounded-full p-0 leading-none disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent'
+	),
 	label:
 		'flex h-7 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-xs leading-none font-medium sm:min-w-32',
-	trigger:
-		'cursor-pointer appearance-none border-0 bg-transparent text-[var(--vctrl-text)] transition-colors duration-200 hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]',
-	counter: 'text-[11px] tabular-nums opacity-60',
-	list: 'absolute bottom-full left-1/2 mb-2 flex max-h-64 w-56 -translate-x-1/2 flex-col overflow-y-auto rounded-2xl bg-[var(--vctrl-bg)] p-1',
+	counter: 'text-muted-foreground text-[11px] tabular-nums',
+	list: 'shell-panel absolute bottom-full left-1/2 mb-2 flex max-h-64 w-56 -translate-x-1/2 flex-col overflow-y-auto p-1',
+	// Marked the way the shared menus mark an item, by tint rather than a ring:
+	// a ring is clipped by the scrolling list and outweighs the rows around it.
 	option:
-		'flex w-full cursor-pointer appearance-none items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-left text-xs text-[var(--vctrl-text)] transition-colors duration-200 hover:bg-[var(--vctrl-hover-bg)] focus-visible:bg-[var(--vctrl-hover-bg)]',
+		'text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:bg-foreground/10 focus-visible:text-foreground flex w-full cursor-pointer appearance-none items-center gap-2 rounded-[var(--radius,1rem)] border-0 bg-transparent px-3 py-2 text-left text-xs outline-hidden transition-colors duration-150 motion-reduce:transition-none',
 	icon: 'h-3.5 w-3.5 shrink-0'
 } as const
 
@@ -140,7 +142,7 @@ const CameraControls = ({
 		>
 			<button
 				type="button"
-				className={cn(classes.arrow, FOCUS_RING)}
+				className={classes.arrow}
 				onClick={() => cycle(-1)}
 				disabled={!isCyclable}
 				aria-label="Previous camera"
@@ -163,7 +165,7 @@ const CameraControls = ({
 
 			<button
 				type="button"
-				className={cn(classes.arrow, FOCUS_RING)}
+				className={classes.arrow}
 				onClick={() => cycle(1)}
 				disabled={!isCyclable}
 				aria-label="Next camera"
@@ -291,7 +293,7 @@ const CameraList = ({
 			<button
 				ref={triggerRef}
 				type="button"
-				className={cn(classes.label, classes.trigger, 'w-full', FOCUS_RING)}
+				className={cn(CHROME_BUTTON, classes.label, 'text-foreground w-full')}
 				onMouseDown={keepFocus}
 				onClick={() => (isOpen ? close(true) : setIsOpen(true))}
 				aria-haspopup="listbox"
@@ -323,8 +325,8 @@ const CameraList = ({
 								aria-selected={isActive}
 								className={cn(
 									classes.option,
-									// Marked, not filled: a solid block fights the surface.
-									isActive && 'font-medium'
+									// Marked by its check, not filled: a solid row fights the surface.
+									isActive && 'text-foreground'
 								)}
 								onClick={() => {
 									onSelect(camera.cameraId)

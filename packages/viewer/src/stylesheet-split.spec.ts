@@ -51,10 +51,13 @@ describe('the viewer stylesheet split', () => {
 		expect(importers).toEqual([])
 	})
 
-	it('gives the published bundle the theme and utilities', () => {
+	it('gives the published bundle the theme, utilities and the app palette', () => {
 		expect(importsOf(read('package.css'))).toEqual([
 			'tailwindcss/theme',
-			'tailwindcss/utilities'
+			'tailwindcss/utilities',
+			// The shared palette and shell recipe, so the controls the viewer
+			// draws can look like the Publisher's on a page we do not own.
+			'../../../shared/components/src/styles/theme.css'
 		])
 		expect(read('package.css')).toContain('--radius-*: initial;')
 	})

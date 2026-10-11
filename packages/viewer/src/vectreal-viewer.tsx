@@ -53,6 +53,7 @@ import {
 	Overlay,
 	SceneViewReturn
 } from './components'
+import { CHROME_PLACEMENT } from './components/chrome-classes'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -81,6 +82,7 @@ import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
+import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type {
 	BakedShadow,
 	SceneCameraSnapshotCapture,
@@ -159,7 +161,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * - 'dark': Force dark theme
 	 * - 'system': Use system preference (default)
 	 */
-	theme?: 'light' | 'dark' | 'system'
+	theme?: ViewerTheme
 
 	// --- Performance ---
 
@@ -849,6 +851,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 						animationControls={
 							animation.showControls ? (
 								<AnimationControls
+									className={CHROME_PLACEMENT.animationControls}
 									playing={animation.status.playing}
 									complete={animation.status.complete}
 									onToggle={animation.toggle}
@@ -859,6 +862,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 						cameraControls={
 							showCameraSwitcher ? (
 								<CameraControls
+									className={CHROME_PLACEMENT.cameraControls}
 									cameras={sceneViewCameras}
 									activeCameraId={activeCameraId}
 									offListLabel={resolveHotspotViewName(

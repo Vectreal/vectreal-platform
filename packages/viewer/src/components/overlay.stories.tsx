@@ -37,10 +37,7 @@ const meta = {
 		)
 	},
 	render: (args: OverlayProps) => (
-		<div
-			className="viewer relative h-[320px] w-[480px] border border-zinc-300 bg-zinc-100 p-3"
-			data-theme="light"
-		>
+		<div className="viewer light relative h-[320px] w-[480px] border border-zinc-300 bg-zinc-100 p-3">
 			<div className="absolute inset-0 bg-gradient-to-br from-zinc-50 to-zinc-200" />
 			<Overlay {...args} />
 		</div>

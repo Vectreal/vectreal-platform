@@ -1,5 +1,7 @@
 import { type ComponentType, useEffect, useState } from 'react'
 
+import { useAppColorScheme } from '../../hooks/use-app-color-scheme'
+
 import type { VectrealViewerProps } from '@vctrl/viewer'
 
 interface ClientVectrealViewerProps extends VectrealViewerProps {
@@ -8,9 +10,12 @@ interface ClientVectrealViewerProps extends VectrealViewerProps {
 
 export const ClientVectrealViewer = ({
 	fallback = null,
-	theme = 'dark',
+	theme,
 	...props
 }: ClientVectrealViewerProps) => {
+	// Inside our own chrome the viewer wears the page's scheme, so its controls
+	// match the Publisher's around it. A caller that means otherwise says so.
+	const appColorScheme = useAppColorScheme()
 	const [ViewerComponent, setViewerComponent] =
 		useState<ComponentType<VectrealViewerProps> | null>(null)
 
@@ -32,5 +37,5 @@ export const ClientVectrealViewer = ({
 		return <>{fallback}</>
 	}
 
-	return <ViewerComponent {...props} theme={theme} />
+	return <ViewerComponent {...props} theme={theme ?? appColorScheme} />
 }

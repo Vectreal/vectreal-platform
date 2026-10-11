@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import CameraControls from './camera-controls'
+import { CHROME_PLACEMENT } from './chrome-classes'
 
 import type { CameraControlsOption } from './camera-controls'
 import type { Meta, StoryObj } from '@storybook/react-vite'
@@ -34,12 +35,12 @@ const Stage = ({
 		<div
 			className={
 				theme === 'dark'
-					? 'viewer relative h-[360px] w-[480px] bg-zinc-900'
-					: 'viewer relative h-[360px] w-[480px] bg-zinc-100'
+					? 'viewer dark relative h-[360px] w-[480px] bg-zinc-900'
+					: 'viewer light relative h-[360px] w-[480px] bg-zinc-100'
 			}
-			data-theme={theme}
 		>
 			<CameraControls
+				className={CHROME_PLACEMENT.cameraControls}
 				cameras={cameras}
 				activeCameraId={activeCameraId}
 				offListLabel={offListLabel}

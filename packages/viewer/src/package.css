@@ -6,6 +6,14 @@
 */
 @import 'tailwindcss/theme';
 @import 'tailwindcss/utilities';
+/*
+  The app's palette and shell recipe, so the viewer's controls can be drawn as
+  the Publisher's are. The scoping step confines it to the viewer like every
+  other rule here: its light values sit on `.vctrl-viewer` by default, `.dark`
+  matches only a viewer that carries the class, and its `@layer utilities`
+  joins the bundle's unlayered utilities.
+*/
+@import '../../../shared/components/src/styles/theme.css';
 
 /*
   The corner-radius scale belongs to whoever is embedding the viewer.

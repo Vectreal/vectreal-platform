@@ -1,13 +1,13 @@
-import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
+import { AnimationControls } from '@vctrl/viewer'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Pause, Play, RotateCcw } from 'lucide-react'
 
 import { PUBLISHER_LAYER } from './shell/shell-layout'
 
 interface AnimationPlaybackBarProps {
 	visible: boolean
 	playing: boolean
+	complete: boolean
 	onToggle: () => void
 	onRestart: () => void
 }
@@ -15,15 +15,17 @@ interface AnimationPlaybackBarProps {
 /**
  * The author's playback controls, on the stage.
  *
- * The publisher's own rather than the viewer's built-in ones: those belong to
- * the published scene, follow the author's "Visitor controls" setting, and sit
- * in the corner the publish card covers. These drive the same viewer commands
- * from the bottom-center slot the stage keeps for its controls, and show
- * whenever animation is on, whichever tool is open.
+ * The viewer's own `AnimationControls`, so the editor and preview draw one
+ * bar. Placed by the stage rather than the viewer: the viewer's built-in copy
+ * belongs to the published scene, follows the author's "Visitor controls"
+ * setting, and sits in the corner the publish card covers. This one drives the
+ * same commands from the bottom-center slot the stage keeps for its controls,
+ * and shows whenever animation is on, whichever tool is open.
  */
 const AnimationPlaybackBar = ({
 	visible,
 	playing,
+	complete,
 	onToggle,
 	onRestart
 }: AnimationPlaybackBarProps) => (
@@ -44,30 +46,13 @@ const AnimationPlaybackBar = ({
 					PUBLISHER_LAYER.animationControls
 				)}
 			>
-				<div
-					role="group"
-					aria-label="Animation playback"
-					className="shell-panel pointer-events-auto flex items-center gap-0.5 p-1"
-				>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="h-8 w-8 rounded-lg"
-						onClick={onToggle}
-						aria-label={playing ? 'Pause animation' : 'Play animation'}
-					>
-						{playing ? <Pause /> : <Play />}
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="h-8 w-8 rounded-lg"
-						onClick={onRestart}
-						aria-label="Restart animation"
-					>
-						<RotateCcw />
-					</Button>
-				</div>
+				<AnimationControls
+					className="pointer-events-auto"
+					playing={playing}
+					complete={complete}
+					onToggle={onToggle}
+					onRestart={onRestart}
+				/>
 			</motion.div>
 		) : null}
 	</AnimatePresence>

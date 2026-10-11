@@ -43,13 +43,13 @@ describe('the publisher canvas', () => {
 
 	it('drives its own playback bar from what the viewer reports', () => {
 		expect(page).toMatch(
-			/event\.type === 'animation_state_changed'\) \{\s*setIsAnimationPlaying\(event\.playing\)/
+			/event\.type === 'animation_state_changed'\) \{\s*setAnimationStatus\(\{\s*playing: event\.playing,\s*complete: event\.complete/
 		)
 		expect(page).toMatch(
-			/<AnimationPlaybackBar[\s\S]*?playing=\{isAnimationPlaying\}/
+			/<AnimationPlaybackBar[\s\S]*?playing=\{animationStatus\.playing\}\s*complete=\{animationStatus\.complete\}/
 		)
 		expect(page).toMatch(
-			/type: 'set_animation_playing',\s*playing: !isAnimationPlaying/
+			/type: 'set_animation_playing',\s*playing: !animationStatus\.playing/
 		)
 	})
 })

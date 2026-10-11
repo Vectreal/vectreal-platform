@@ -3,6 +3,10 @@ import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
 import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import {
+	type ViewerTheme,
+	useViewerColorScheme
+} from '../hooks/use-viewer-color-scheme'
 import { useViewportDetection } from '../hooks/use-viewport-detection'
 import { VIEWER_MODEL_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
 
@@ -22,7 +26,7 @@ interface CanvasComponentProps extends CanvasProps {
 	/**
 	 * Theme to apply to the viewer
 	 */
-	theme?: 'light' | 'dark' | 'system'
+	theme?: ViewerTheme
 
 	/**
 	 * JSX element to render while loading
@@ -81,6 +85,7 @@ const Canvas = ({
 		typeof document === 'undefined' ? true : !document.hidden
 
 	const [isReady, setIsReady] = useState(false)
+	const colorScheme = useViewerColorScheme(theme)
 	// Starts sharp and steps down when the device cannot hold its refresh rate.
 	// A caller that sets `dpr` takes the decision over entirely.
 	const [dprCap, setDprCap] = useState(MAX_DPR)
@@ -175,7 +180,7 @@ const Canvas = ({
 	return (
 		<div
 			ref={setContainer}
-			className={cn('outline-none', containerClassName)}
+			className={cn('outline-none', colorScheme, containerClassName)}
 			style={
 				containerBackground ? { background: containerBackground } : undefined
 			}

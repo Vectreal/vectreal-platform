@@ -2,7 +2,7 @@ import { cn } from '@shared/utils'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import ChevronLeftIcon from './assets/chevron-left-icon'
-import { FOCUS_RING } from './focus-ring'
+import { CHROME_BUTTON } from './chrome-classes'
 
 interface SceneViewReturnProps {
 	/** The hotspot the view is standing at, or null when it is not at one. */
@@ -17,9 +17,11 @@ interface SceneViewReturnProps {
 }
 
 const classes = {
-	root: 'vctrl-viewer-scene-view-return absolute top-0 left-1/2 z-[100] m-2 -translate-x-1/2',
-	button:
-		'flex h-8 cursor-pointer appearance-none items-center gap-1 rounded-full border-0 bg-[var(--vctrl-bg)] py-0 pr-3.5 pl-2.5 text-xs leading-none font-medium whitespace-nowrap text-[var(--vctrl-text)] transition-colors duration-200 hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]',
+	root: 'vctrl-viewer-scene-view-return shell-panel absolute top-0 left-1/2 z-[100] m-2 -translate-x-1/2 p-1',
+	button: cn(
+		CHROME_BUTTON,
+		'flex h-7 items-center gap-1 rounded-full py-0 pr-3 pl-2 text-xs leading-none font-medium whitespace-nowrap'
+	),
 	icon: 'h-3.5 w-3.5'
 } as const
 
@@ -47,7 +49,7 @@ const ReturnButton = ({
 			<button
 				ref={buttonRef}
 				type="button"
-				className={cn(classes.button, FOCUS_RING)}
+				className={classes.button}
 				onClick={onReturn}
 			>
 				<ChevronLeftIcon className={classes.icon} />

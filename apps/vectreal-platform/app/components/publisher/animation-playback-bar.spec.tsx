@@ -13,6 +13,7 @@ const renderBar = (
 		<AnimationPlaybackBar
 			visible={overrides.visible ?? true}
 			playing={overrides.playing ?? false}
+			complete={false}
 			onToggle={onToggle}
 			onRestart={onRestart}
 		/>
@@ -39,6 +40,15 @@ describe('AnimationPlaybackBar', () => {
 
 		expect(onToggle).toHaveBeenCalledOnce()
 		expect(onRestart).toHaveBeenCalledOnce()
+	})
+
+	it("draws the viewer's own controls, so editor and preview match", () => {
+		renderBar()
+		expect(
+			screen
+				.getByRole('group', { name: 'Animation playback' })
+				.classList.contains('vctrl-viewer-animation-controls')
+		).toBe(true)
 	})
 
 	it('renders nothing while hidden', () => {
