@@ -1,10 +1,11 @@
 import { LoaderFunctionArgs } from 'react-router'
 
+import { UUID_REGEX } from '../../constants/utility-constants'
 import {
 	downloadAsset,
-	findAssetMetadata
+	findSceneThumbnailAsset
 } from '../../lib/domain/asset/asset-storage.server'
-import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
 import { assetResponse } from '../../lib/http/asset-response.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
@@ -26,44 +27,34 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 	}
 
-	// Deliberately not filtered by `assets.ownerId`. Access to a thumbnail is
-	// decided by access to the scene it belongs to, which the two checks below
-	// establish: the metadata binds the asset to this scene, and `getScene` runs
-	// `verifyProjectAccess` for the requesting user. Requiring ownership on top
-	// of that was strictly narrower and broke teams - a scene you are entitled to
-	// open returned 404 for its thumbnail whenever a colleague had uploaded it.
-	const asset = await findAssetMetadata(assetId)
+	/*
+	  Authorization gate first, as on the assets route: a non-member gets the
+	  same 404 whether or not the thumbnail exists, so the route is no
+	  existence oracle. A malformed id names no scene and would fail the uuid
+	  cast in Postgres, so it gets that 404 too rather than a 500.
 
-	if (!asset) {
+	  Not filtered by `assets.ownerId`: a scene you are entitled to open must
+	  show its thumbnail whichever colleague uploaded it.
+	*/
+	const membership =
+		UUID_REGEX.test(sceneId) &&
+		(await resolveSceneMembership(sceneId, auth.user.id))
+	if (!membership) {
 		return new Response('Thumbnail not found', { status: 404, headers })
 	}
 
-	const metadata = asset.metadata as { sceneId?: unknown } | null
-	if (metadata?.sceneId !== sceneId) {
-		return new Response('Thumbnail not found', { status: 404, headers })
-	}
-
-	// `getScene` returns null for a missing scene but *throws* from
-	// `verifyProjectAccess` when the user is not a member of the owning org.
-	// Both mean the same thing to a caller who should not see this image, and
-	// both must answer 404 rather than leaking the distinction - or, worse,
-	// surfacing an unhandled error. While the query above still filtered on
-	// `ownerId`, a non-member never reached this line.
-	let scene: Awaited<ReturnType<typeof getScene>> = null
-	try {
-		scene = await getScene(sceneId, auth.user.id)
-	} catch {
-		scene = null
-	}
-
-	if (!scene) {
+	// The thumbnail is whatever `scenes.thumbnail_url` names, never the asset
+	// row's `metadata.sceneId`: content-hash de-duplication shares one row
+	// between scenes, and that field names only the first.
+	const thumbnail = await findSceneThumbnailAsset(sceneId, assetId)
+	if (!thumbnail) {
 		return new Response('Thumbnail not found', { status: 404, headers })
 	}
 
 	try {
 		const assetData = await downloadAsset(assetId)
 		const responseHeaders = new Headers(headers)
-		responseHeaders.set('Last-Modified', asset.updatedAt.toUTCString())
+		responseHeaders.set('Last-Modified', thumbnail.updatedAt.toUTCString())
 
 		return assetResponse(assetData.data, assetData.mimeType, responseHeaders)
 	} catch (error) {
