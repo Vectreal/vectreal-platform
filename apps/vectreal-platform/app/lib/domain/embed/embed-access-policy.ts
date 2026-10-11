@@ -96,6 +96,21 @@ export function getPreviewTokenFromRequest(request: Request): string | null {
 }
 
 /**
+ * Whether the request presents a token at all, which decides whether it is
+ * judged as an API key holder or by session.
+ *
+ * Looser than `getPreviewTokenFromRequest` on purpose: any non-empty
+ * `Authorization` header counts, Bearer or not, so a malformed one is refused
+ * as a bad key rather than silently falling through to the session.
+ */
+export function hasPreviewTokenCredential(request: Request): boolean {
+	return (
+		Boolean(new URL(request.url).searchParams.get('token')?.trim()) ||
+		Boolean(request.headers.get('authorization')?.trim())
+	)
+}
+
+/**
  * Which host the request claims to come from.
  *
  * `Referer` first, `Origin` second, and `missing` when neither survives. Missing

@@ -3,6 +3,7 @@ import { data, Outlet, redirect, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/preview-layout'
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
+import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import { buildEmbedPath } from '../../lib/domain/embed/embed-snippet'
 import {
 	buildInlineEmbedManifest,
@@ -48,9 +49,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	const { projectId, sceneId } = parsedParams.value
 	const url = new URL(request.url)
-	const hasTokenCredential =
-		Boolean(url.searchParams.get('token')?.trim()) ||
-		Boolean(request.headers.get('authorization')?.trim())
+	const hasTokenCredential = hasPreviewTokenCredential(request)
 
 	if (hasTokenCredential) {
 		return redirect(`${buildEmbedPath({ projectId, sceneId })}${url.search}`)

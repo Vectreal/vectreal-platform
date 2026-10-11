@@ -7,6 +7,7 @@ import {
 } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
+import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import {
 	getAssetSigningSecret,
 	verifySignedAsset
@@ -160,9 +161,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// Token credential present means the caller is using an API key (embedded
 	// player, public preview). No token means the caller is a cookie-authenticated
 	// session - fall through to the session branch in both preview and non-preview.
-	const hasTokenCredential =
-		Boolean(url.searchParams.get('token')?.trim()) ||
-		Boolean(request.headers.get('authorization')?.trim())
+	const hasTokenCredential = hasPreviewTokenCredential(request)
 
 	if (isPreviewRequest && hasTokenCredential) {
 		const projectId = url.searchParams.get('projectId')?.trim()

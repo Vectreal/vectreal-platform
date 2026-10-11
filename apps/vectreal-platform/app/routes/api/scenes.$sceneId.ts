@@ -1,27 +1,14 @@
 import { ApiResponse } from '@shared/utils'
 import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
-import { isBillingStateReadOnly } from '../../constants/plan-config'
-import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
-import { EntitlementRequiredError } from '../../lib/domain/billing/entitlement-required-error'
-import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
+import { authorizePreviewRequest } from '../../lib/domain/auth/preview-request-auth.server'
+import { billingRefusalResponse } from '../../lib/domain/billing/billing-refusal-response'
 import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
 import { createEmbedAssetUrls } from '../../lib/domain/embed/embed-asset-signature.server'
-import { getProject } from '../../lib/domain/project/project-repository.server'
 import { buildPreviewAssetUrl } from '../../lib/domain/scene/client/preview-scene-endpoint'
 import { normalizePresentationSettings } from '../../lib/domain/scene/scene-presentation'
 import { parseSceneBytes } from '../../lib/domain/scene/scene-size-limit'
-import {
-	acquireHeavySceneActionToken,
-	acquireSceneWriteLock,
-	buildSceneRequestKey,
-	completeIdempotentSceneRequest,
-	failIdempotentSceneRequest,
-	releaseHeavySceneActionToken,
-	releaseSceneWriteLock,
-	reserveIdempotentSceneRequest
-} from '../../lib/domain/scene/server/scene-action-guard.server'
 import {
 	getScene,
 	updateSceneMetadata
@@ -39,6 +26,12 @@ import {
 	getPublishedScenePreview,
 	toPublishedModelRow
 } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import {
+	getSceneSettingsRequestKey,
+	runGuardedSceneMutation,
+	runWithSceneSettingsCoalescing,
+	runWithSceneWriteLock
+} from '../../lib/domain/scene/server/scene-request-guards.server'
 import { updateScenePresentation } from '../../lib/domain/scene/server/scene-settings-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
@@ -78,198 +71,6 @@ function withAdditionalHeaders(
 		status: response.status,
 		headers
 	})
-}
-
-const MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS = 2
-const inFlightGetSceneSettingsRequests = new Map<string, Promise<Response>>()
-
-function getSceneSettingsRequestKey(scope: string, sceneId: string): string {
-	return `${scope}:${sceneId}`
-}
-
-async function runWithSceneSettingsCoalescing(
-	key: string,
-	operation: () => Promise<Response>
-): Promise<Response> {
-	const existingRequest = inFlightGetSceneSettingsRequests.get(key)
-	if (existingRequest) {
-		return existingRequest
-	}
-
-	const request = operation().finally(() => {
-		inFlightGetSceneSettingsRequests.delete(key)
-	})
-
-	inFlightGetSceneSettingsRequests.set(key, request)
-
-	return request
-}
-
-async function runWithHeavySceneActionLimit(
-	operation: () => Promise<Response>
-): Promise<Response> {
-	const acquiredToken = await acquireHeavySceneActionToken(
-		MAX_IN_FLIGHT_HEAVY_SCENE_ACTIONS
-	)
-
-	if (!acquiredToken) {
-		return ApiResponse.error('Server is busy, please retry in a moment', 503)
-	}
-
-	try {
-		return await operation()
-	} finally {
-		await releaseHeavySceneActionToken()
-	}
-}
-
-async function runWithSceneWriteLock(
-	sceneId: string,
-	holderKey: string,
-	operation: () => Promise<Response>
-): Promise<Response> {
-	const acquiredLock = await acquireSceneWriteLock({ sceneId, holderKey })
-	if (!acquiredLock) {
-		return ApiResponse.error(
-			'Scene is currently being processed. Retry shortly.',
-			409
-		)
-	}
-
-	try {
-		return await operation()
-	} finally {
-		await releaseSceneWriteLock({ sceneId, holderKey })
-	}
-}
-
-async function runWithIdempotentSceneRequest(params: {
-	requestId?: string
-	userId: string
-	action: string
-	sceneId?: string
-	operation: () => Promise<Response>
-}): Promise<Response> {
-	if (!params.requestId) {
-		return params.operation()
-	}
-
-	const requestKey = buildSceneRequestKey({
-		requestId: params.requestId,
-		userId: params.userId,
-		action: params.action,
-		sceneId: params.sceneId
-	})
-
-	const reservation = await reserveIdempotentSceneRequest({
-		requestKey,
-		requestId: params.requestId,
-		userId: params.userId,
-		action: params.action,
-		sceneId: params.sceneId
-	})
-
-	if (!reservation) {
-		return ApiResponse.serverError('Failed to reserve request state')
-	}
-
-	const existing = reservation.record
-
-	if (existing.status === 'completed') {
-		const body = existing.responseBody
-		const status = existing.responseStatus ?? 200
-		if (body && typeof body === 'object') {
-			return new Response(JSON.stringify(body), {
-				status,
-				headers: { 'Content-Type': 'application/json' }
-			})
-		}
-	}
-
-	if (existing.status === 'pending' && reservation.created) {
-		const response = await params.operation()
-
-		try {
-			const body = await response.clone().json()
-			if (response.ok) {
-				await completeIdempotentSceneRequest({
-					requestKey,
-					responseStatus: response.status,
-					responseBody: body
-				})
-			} else {
-				await failIdempotentSceneRequest({
-					requestKey,
-					errorMessage:
-						typeof body?.error === 'string'
-							? body.error
-							: `Request failed with status ${response.status}`
-				})
-			}
-		} catch {
-			if (response.ok) {
-				await completeIdempotentSceneRequest({
-					requestKey,
-					responseStatus: response.status,
-					responseBody: {}
-				})
-			} else {
-				await failIdempotentSceneRequest({
-					requestKey,
-					errorMessage: `Request failed with status ${response.status}`
-				})
-			}
-		}
-
-		return response
-	}
-
-	return ApiResponse.error(
-		'A request with the same idempotency key is in progress',
-		409
-	)
-}
-
-async function authorizePreviewRequest(request: Request, projectId: string) {
-	const hasTokenCredential =
-		Boolean(new URL(request.url).searchParams.get('token')?.trim()) ||
-		Boolean(request.headers.get('authorization')?.trim())
-
-	if (hasTokenCredential) {
-		const validation = await validatePreviewApiKeyForProject({
-			request,
-			projectId
-		})
-
-		if (!validation.ok) {
-			if (validation.error === 'rate_limited') {
-				return withNoStore(ApiResponse.error('Too many requests', 429))
-			}
-			if (validation.error === 'domain_not_allowed') {
-				return withNoStore(ApiResponse.forbidden('Forbidden'))
-			}
-
-			return withNoStore(ApiResponse.notFound('Scene not found'))
-		}
-
-		return { mode: 'apiKey' as const, userId: null }
-	}
-
-	const sessionAuth = await getAuthUser(request)
-	if (sessionAuth instanceof Response) {
-		return withNoStore(ApiResponse.notFound('Scene not found'))
-	}
-
-	const project = await getProject(projectId, sessionAuth.user.id)
-	if (!project) {
-		return withNoStore(ApiResponse.notFound('Scene not found'))
-	}
-
-	return {
-		mode: 'session' as const,
-		userId: sessionAuth.user.id,
-		headers: sessionAuth.headers
-	}
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -746,32 +547,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 						authHeaders
 					)
 				} catch (err) {
-					if (err instanceof EntitlementRequiredError) {
-						/*
-						  Read-only billing is a payment, not an upgrade: the plan still
-						  grants the entitlement and the account has simply stopped paying
-						  for it. Sending 403 there tells the owner to buy something they
-						  already own.
-						*/
-						return withAdditionalHeaders(
-							isBillingStateReadOnly(err.billingState)
-								? ApiResponse.paymentRequired(err.message)
-								: ApiResponse.forbidden(err.message),
-							authHeaders
-						)
-					}
-					if (err instanceof QuotaExceededError) {
-						return withAdditionalHeaders(
-							ApiResponse.quotaExceeded(err.message, {
-								limitKey: err.limitKey,
-								currentValue: err.currentValue,
-								limit: err.limit,
-								plan: err.plan,
-								upgradeTo: err.upgradeTo
-							}),
-							authHeaders
-						)
-					}
+					const refusal = billingRefusalResponse(err)
+					if (refusal) return withAdditionalHeaders(refusal, authHeaders)
 					throw err
 				}
 			}
@@ -839,25 +616,15 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 			case 'commit-scene-save':
 				return withAdditionalHeaders(
-					await runWithIdempotentSceneRequest({
+					await runGuardedSceneMutation({
 						requestId: requestData.requestId,
 						userId: authResult.user.id,
 						action,
 						sceneId: requestData.sceneId,
 						operation: () =>
-							runWithHeavySceneActionLimit(() =>
-								runWithSceneWriteLock(
-									requestData.sceneId as string,
-									`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
-									() =>
-										sceneSettingsOps.saveSceneSettings(
-											{
-												...requestData,
-												action
-											},
-											authResult.user.id
-										)
-								)
+							sceneSettingsOps.saveSceneSettings(
+								{ ...requestData, action },
+								authResult.user.id
 							)
 					}),
 					authHeaders
@@ -885,25 +652,15 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 			case 'commit-scene-publish':
 				return withAdditionalHeaders(
-					await runWithIdempotentSceneRequest({
+					await runGuardedSceneMutation({
 						requestId: requestData.requestId,
 						userId: authResult.user.id,
 						action,
 						sceneId: requestData.sceneId,
 						operation: () =>
-							runWithHeavySceneActionLimit(() =>
-								runWithSceneWriteLock(
-									requestData.sceneId as string,
-									`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
-									() =>
-										sceneSettingsOps.publishScene(
-											{
-												...requestData,
-												action
-											},
-											authResult.user.id
-										)
-								)
+							sceneSettingsOps.publishScene(
+								{ ...requestData, action },
+								authResult.user.id
 							)
 					}),
 					authHeaders
@@ -911,25 +668,15 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 			case 'revoke-scene-publish':
 				return withAdditionalHeaders(
-					await runWithIdempotentSceneRequest({
+					await runGuardedSceneMutation({
 						requestId: requestData.requestId,
 						userId: authResult.user.id,
 						action,
 						sceneId: requestData.sceneId,
 						operation: () =>
-							runWithHeavySceneActionLimit(() =>
-								runWithSceneWriteLock(
-									requestData.sceneId as string,
-									`${authResult.user.id}:${requestData.requestId ?? 'no-request-id'}`,
-									() =>
-										sceneSettingsOps.revokeScenePublish(
-											{
-												...requestData,
-												action
-											},
-											authResult.user.id
-										)
-								)
+							sceneSettingsOps.revokeScenePublish(
+								{ ...requestData, action },
+								authResult.user.id
 							)
 					}),
 					authHeaders
@@ -942,32 +689,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				)
 		}
 	} catch (error) {
-		if (error instanceof EntitlementRequiredError) {
-			/*
-			  Read-only billing is a payment, not an upgrade: the plan still
-			  grants the entitlement and the account has simply stopped paying
-			  for it. Sending 403 there tells the owner to buy something they
-			  already own.
-			*/
-			return withAdditionalHeaders(
-				isBillingStateReadOnly(error.billingState)
-					? ApiResponse.paymentRequired(error.message)
-					: ApiResponse.forbidden(error.message),
-				authHeaders
-			)
-		}
-		if (error instanceof QuotaExceededError) {
-			return withAdditionalHeaders(
-				ApiResponse.quotaExceeded(error.message, {
-					limitKey: error.limitKey,
-					currentValue: error.currentValue,
-					limit: error.limit,
-					plan: error.plan,
-					upgradeTo: error.upgradeTo
-				}),
-				authHeaders
-			)
-		}
+		const refusal = billingRefusalResponse(error)
+		if (refusal) return withAdditionalHeaders(refusal, authHeaders)
 
 		reportServerError(error, {
 			request,

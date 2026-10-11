@@ -461,3 +461,42 @@ describe('the dashboard scene page', () => {
 		)
 	})
 })
+
+describe('the scene mutations', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+	const caseBody = (action: string) => {
+		const start = route.indexOf(`case '${action}':`)
+		expect(start).toBeGreaterThan(-1)
+		return route.slice(start, route.indexOf('case ', start + 1))
+	}
+
+	it.each([
+		['commit-scene-save', 'saveSceneSettings'],
+		['commit-scene-publish', 'publishScene'],
+		['revoke-scene-publish', 'revokeScenePublish']
+	])(
+		'%s runs inside the idempotency, load and write-lock chain',
+		(action, operation) => {
+			expect(caseBody(action)).toMatch(
+				new RegExp(
+					`await runGuardedSceneMutation\\(\\{[^}]*operation: \\(\\) =>\\s*sceneSettingsOps\\.${operation}\\(`
+				)
+			)
+		}
+	)
+
+	it('coalesces a burst of settings reads for one user and scene', () => {
+		expect(caseBody('get-scene-settings')).toMatch(
+			/await runWithSceneSettingsCoalescing\(\s*getSceneSettingsRequestKey\(authResult\.user\.id, requestData\.sceneId\),\s*\(\) =>\s*sceneSettingsOps\.getSceneSettings\(/
+		)
+	})
+
+	it('maps a billing refusal before reporting an error', () => {
+		const outerCatch = route.slice(route.lastIndexOf('} catch (error) {'))
+		const mapped = outerCatch.search(
+			/const refusal = billingRefusalResponse\(error\)\s*if \(refusal\) return withAdditionalHeaders\(refusal, authHeaders\)/
+		)
+		expect(mapped).toBeGreaterThan(-1)
+		expect(mapped).toBeLessThan(outerCatch.indexOf('reportServerError('))
+	})
+})
