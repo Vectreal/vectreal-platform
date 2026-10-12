@@ -20,20 +20,35 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * textures they are given.
  */
 
-import { Document, Material, Texture } from '@gltf-transform/core'
+import { Document, ImageUtils, Material, Texture } from '@gltf-transform/core'
 
 // ---------------------------------------------------------------------------
 // MIME / format converters
 // ---------------------------------------------------------------------------
 
+/**
+ * A MIME type as glTF expects it. One taken from a URI can arrive as
+ * `image/PNG`, `image/JPG` or `image/png?v=2`: types are case-insensitive,
+ * nothing after a `?`, `#` or `;` names a format, and `jpg` is spelled
+ * `jpeg` in a type.
+ */
+export const normalizeMimeType = (mimeType: string): string => {
+	const normalized = mimeType.toLowerCase().split(/[?#;]/)[0].trim()
+	return normalized === 'image/jpg' ? 'image/jpeg' : normalized
+}
+
 export const mimeTypeToExtension = (mimeType: string): string | null => {
-	switch (mimeType.toLowerCase()) {
+	switch (normalizeMimeType(mimeType)) {
 		case 'image/webp':
 			return 'webp'
 		case 'image/jpeg':
 			return 'jpg'
 		case 'image/png':
 			return 'png'
+		case 'image/ktx2':
+			return 'ktx2'
+		case 'image/avif':
+			return 'avif'
 		default:
 			return null
 	}
@@ -178,8 +193,38 @@ export const resolveTextureCanonicalFileName = (
 }
 
 /**
- * Writes a texture's canonical file name to its URI and name. A stable
+ * The type a texture's bytes are: what the bytes say when gltf-transform
+ * recognizes them, else the image type the texture has stored, else none.
+ * PNG and JPEG are always recognized; WebP, AVIF and KTX2 once an I/O has
+ * registered their extensions, as every document the optimizer holds has.
+ * Neither a file name nor a stored `application/octet-stream` says what the
+ * bytes are. The URI is cleared to read what is stored, because
+ * `getMimeType` falls back to the URI's extension. Putting the URI back
+ * overwrites the stored type, so the caller must store the type returned.
+ */
+const resolveImageMimeType = (texture: Texture): string => {
+	const image = texture.getImage()
+	const detected = image ? ImageUtils.getMimeType(image) : null
+	if (detected) return detected
+
+	const uri = texture.getURI()
+	const stored = normalizeMimeType(texture.setURI('').getMimeType())
+	texture.setURI(uri)
+	return stored.startsWith('image/') ? stored : ''
+}
+
+/**
+ * Writes a texture's canonical file name to its URI and name, and settles its
+ * MIME type first, so the name's extension follows that type. A stable
  * `fileName` is written first, so the canonical name is resolved from it.
+ *
+ * gltf-transform's `setURI` also sets the MIME type from whatever follows the
+ * last dot, the whole name when there is none, so every write puts the
+ * settled type back. With none known, none is stored and the getter reads the
+ * type off the new name. That is right for a name with an extension; one
+ * without reads as a made-up `image/<name>`, which is left as it is because
+ * nothing says what such bytes are. Written unconditionally, so what is
+ * stored is always exactly what `resolveTextureCanonicalFileName` reports.
  */
 export const syncTextureIdentity = (
 	document: Document,
@@ -187,23 +232,18 @@ export const syncTextureIdentity = (
 	index: number,
 	fileName?: string
 ): void => {
-	const currentName = storedName(texture)
-	const currentUri = texture.getURI().trim()
-	const preferredFileName = fileName?.trim()
+	const mimeType = resolveImageMimeType(texture)
+	const writeFileName = (name: string) =>
+		texture.setURI(name).setMimeType(mimeType).setName(name)
 
+	// Before anything reads it: resolving overwrote the stored type.
+	texture.setMimeType(mimeType)
+	const preferredFileName = fileName?.trim()
 	if (preferredFileName && !isGenericTextureFileName(preferredFileName)) {
-		const preferredBaseName = extractFileNameSegment(preferredFileName)
-		if (currentUri !== preferredBaseName) texture.setURI(preferredBaseName)
-		if (currentName !== preferredBaseName) texture.setName(preferredBaseName)
+		writeFileName(extractFileNameSegment(preferredFileName))
 	}
 
-	const canonicalFileName = resolveTextureCanonicalFileName(
-		document,
-		texture,
-		index
-	)
-	if (currentUri !== canonicalFileName) texture.setURI(canonicalFileName)
-	if (currentName !== canonicalFileName) texture.setName(canonicalFileName)
+	writeFileName(resolveTextureCanonicalFileName(document, texture, index))
 }
 
 /** Gives every texture of `document` its canonical file name. */
