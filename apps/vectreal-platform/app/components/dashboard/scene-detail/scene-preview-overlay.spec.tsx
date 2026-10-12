@@ -31,12 +31,7 @@ vi.mock('react-router', () => ({
 
 describe('the preview overlay', () => {
 	it('points at the internal preview for this scene', () => {
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'draft' }}
-			/>
-		)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
 
 		/*
 		  The preview route, not the embed one. They are deliberately distinct -
@@ -53,62 +48,25 @@ describe('the preview overlay', () => {
 		  A button with an onClick would swallow middle-click and cmd-click, which
 		  is exactly how someone compares the preview against the scene beside it.
 		*/
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'draft' }}
-			/>
-		)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
 
 		expect(screen.getByRole('link', { name: /preview/i }).tagName).toBe('A')
 	})
 
-	it('floats over the viewer without covering it', () => {
+	it("floats in the corner the viewer's own controls leave free", () => {
 		/*
-		  Pinned to a corner and translucent. A solid chip would be a hole punched
-		  in a model whose colour belongs to the user, and anything but a corner is
-		  where a thumb wants to rotate the scene.
+		  Top-right and translucent. The viewer draws its camera switcher bottom
+		  centre, playback bottom right and "Back to scene view" top centre, and a
+		  solid chip would be a hole punched in a model whose colour belongs to
+		  the user.
 		*/
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'draft' }}
-			/>
-		)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
 
 		const link = screen.getByRole('link', { name: /preview/i })
+		expect(link.className).toContain('absolute')
+		expect(link.className).toContain('top-3')
+		expect(link.className).toContain('right-3')
 		expect(link.className).toContain('backdrop-blur')
-		expect(link.className).toContain('pointer-events-auto')
-		expect(link.parentElement?.className).toContain('pointer-events-none')
-	})
-
-	it("keeps both overlays in the top-right, out of the viewer's own controls", () => {
-		/*
-		  The viewer's camera switcher sits bottom centre and reserves 5rem per
-		  side, narrower than "What visitors see", so on a phone it covered the
-		  label in the bottom-left. "Back to scene view" takes the top centre.
-		  One column in the corner the viewer never draws in, Preview first and
-		  the label beneath it.
-		*/
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'published' }}
-			/>
-		)
-
-		const link = screen.getByRole('link', { name: /preview/i })
-		const label = screen.getByText('What visitors see')
-		const column = link.parentElement
-
-		expect(label.parentElement).toBe(column)
-		expect(column?.className).toContain('absolute')
-		expect(column?.className).toContain('top-3')
-		expect(column?.className).toContain('right-3')
-		expect(label.className).not.toContain('bottom-3')
-		expect(
-			link.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING
-		).toBeTruthy()
 	})
 
 	it('is still named Preview where only its icon shows', () => {
@@ -117,54 +75,11 @@ describe('the preview overlay', () => {
 		  viewer's top-centre "Back to scene view". Hidden, not removed: it is the
 		  link's accessible name.
 		*/
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'draft' }}
-			/>
-		)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
 
 		const word = screen.getByText('Preview')
 		expect(word.className).toContain('sr-only')
 		expect(word.className).toContain('sm:not-sr-only')
 		expect(screen.getByRole('link').textContent).toBe('Preview')
-	})
-
-	it('says a published scene shows what visitors see', () => {
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'published' }}
-			/>
-		)
-
-		expect(screen.getByText('What visitors see')).not.toBeNull()
-		expect(screen.queryByText('Draft')).toBeNull()
-	})
-
-	it('says a draft is the draft', () => {
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'draft' }}
-			/>
-		)
-
-		expect(screen.getByText('Draft')).not.toBeNull()
-		expect(screen.queryByText('What visitors see')).toBeNull()
-	})
-
-	it('names what it labels for a screen reader', () => {
-		render(
-			<ScenePreviewOverlay
-				previewPath="/preview/project-1/scene-1"
-				publishState={{ status: 'published' }}
-			/>
-		)
-
-		const label = screen.getByText('What visitors see')
-		expect(label.textContent).toBe('Viewer showing: What visitors see')
-		expect(label.className).toContain('text-foreground')
-		expect(label.className).not.toContain('text-muted-foreground')
 	})
 })

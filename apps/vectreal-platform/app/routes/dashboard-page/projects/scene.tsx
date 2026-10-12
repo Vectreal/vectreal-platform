@@ -374,10 +374,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							*/
 							theme={colorScheme}
 						/>
-						<ScenePreviewOverlay
-							previewPath={previewPath}
-							publishState={publishState}
-						/>
+						<ScenePreviewOverlay previewPath={previewPath} />
 					</section>
 					<DetailPanelSection surface="raised" contentClassName="space-y-6">
 						<header className="space-y-4">
