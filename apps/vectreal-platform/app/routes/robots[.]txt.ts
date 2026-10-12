@@ -53,6 +53,7 @@ export async function loader() {
 		'User-agent: *',
 		'Allow: /',
 		'Allow: /llms.txt',
+		'Allow: /llms-full.txt',
 		'',
 		'# Authenticated / private pages',
 		'Disallow: /dashboard',
@@ -85,6 +86,7 @@ export async function loader() {
 		'',
 		'# LLM-readable index',
 		`# ${origin}/llms.txt`,
+		`# ${origin}/llms-full.txt`,
 		`Sitemap: ${origin}/sitemap.xml`
 	].join('\n')
 

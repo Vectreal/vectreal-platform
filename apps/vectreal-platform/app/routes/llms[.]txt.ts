@@ -12,9 +12,9 @@ import {
 	convertPairPath
 } from '../lib/convert/convert-pairs'
 import { docsPages } from '../lib/docs/docs-manifest'
+import { markdownTwinPath } from '../lib/markdown/markdown-twin'
 import { getNewsArticles } from '../lib/news/news-manifest.server'
-
-import type { LoaderFunctionArgs } from 'react-router'
+import { SITE_URL } from '../lib/seo'
 
 /**
  * llms.txt endpoint.
@@ -22,16 +22,22 @@ import type { LoaderFunctionArgs } from 'react-router'
  * GEO support for LLM-powered retrieval systems. All product claims here are
  * derived from app/constants/product-copy.ts, which is the single source of
  * truth for user-facing claims. Do not add inline claims.
+ *
+ * Links are on `SITE_URL`, never the request origin: Express runs without
+ * `trust proxy`, so behind Fly and Cloudflare it sees `http://`, and staging
+ * would hand models a host that is not the product.
  */
-export async function loader({ request }: LoaderFunctionArgs) {
-	const origin = new URL(request.url).origin
+export function loader() {
+	const origin = SITE_URL
 
 	// The landing page is not a manifest entry (it has no MDX source and no place
 	// in the sidebar), but it is where a reader should start.
 	const docsLinks = [
 		`- [Documentation](${origin}/docs): Guides, package references and operations docs for the Vectreal platform.`,
+		// The markdown twin, as the llms.txt convention asks: the HTML page is the
+		// same path without `.md`.
 		...docsPages.map((page) => {
-			const url = `${origin}/docs/${page.slug}`
+			const url = `${origin}${markdownTwinPath(`/docs/${page.slug}`)}`
 			return `- [${page.title}](${url})${page.description ? ': ' + page.description : ''}`
 		})
 	]
@@ -40,7 +46,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		.filter((article) => !article.draft)
 		.map(
 			(article) =>
-				`- [${article.title}](${origin}/news-room/${article.slug}): ${article.excerpt}`
+				`- [${article.title}](${origin}${markdownTwinPath(`/news-room/${article.slug}`)}): ${article.excerpt}`
 		)
 
 	// Derived from the pair manifest, so a converter that exists is listed and
@@ -97,6 +103,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
 		...convertLines,
 		'',
 		'## Documentation',
+		`Every docs page below links its markdown version. All of them in one file: ${origin}/llms-full.txt`,
+		'',
 		...docsLinks,
 		'',
 		'## News',
