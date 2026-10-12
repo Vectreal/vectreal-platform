@@ -11,7 +11,11 @@ import {
 import { resolveDefaultSceneCameraId } from '../domain/scene/scene-camera'
 
 import type { SceneCurrentLocation } from '../../types/api'
-import type { ProcessState, SceneMetaState } from '../../types/publisher-config'
+import type {
+	CapturedThumbnailFrame,
+	ProcessState,
+	SceneMetaState
+} from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type { SceneSettings } from '@vctrl/core'
 
@@ -37,6 +41,9 @@ const processAtom = atom<ProcessState>(processInitialState)
 // Deliberately not persisted. A second publisher tab writing the same storage
 // key would blank this tab's name and thumbnail mid-edit.
 const sceneMetaAtom = atom<SceneMetaState>(sceneMetaInitialState)
+// Which frame the capture in `sceneMetaAtom` painted. Kept beside the meta
+// rather than in it, because the meta is what a save sends to the server.
+const capturedThumbnailFrameAtom = atom<CapturedThumbnailFrame | null>(null)
 
 // Last-saved baselines. Atoms rather than component state so they survive a
 // route transition between /publisher and /publisher/:sceneId, which does not
@@ -238,6 +245,7 @@ export {
 	processAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
+	capturedThumbnailFrameAtom,
 	saveLocationAtom,
 	currentLocationAtom,
 	maxSceneBytesAtom,

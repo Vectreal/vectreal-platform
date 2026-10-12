@@ -133,18 +133,25 @@ export function usePublisherScene({
 	)
 
 	/**
-	 * The fallback for a scene that reaches save without a thumbnail: the same
-	 * live frame the opening-view capture takes, so both produce the same image
-	 * and the placeholder always matches the view the scene resolves into.
+	 * The capture a save takes itself: from the opening camera when the save
+	 * names it, so the image is the frame the scene resolves into whatever the
+	 * author's live view is, and with the same options as the opening-view
+	 * capture, so both produce the same image.
 	 */
-	const captureSceneThumbnail = useCallback(async () => {
-		try {
-			return await requestSceneScreenshot(OPENING_VIEW_CAPTURE_OPTIONS)
-		} catch (error) {
-			console.warn('[scene-settings] thumbnail capture failed', error)
-			return null
-		}
-	}, [requestSceneScreenshot])
+	const captureSceneThumbnail = useCallback(
+		async (targetCameraId?: string) => {
+			try {
+				return await requestSceneScreenshot({
+					...OPENING_VIEW_CAPTURE_OPTIONS,
+					targetCameraId
+				})
+			} catch (error) {
+				console.warn('[scene-settings] thumbnail capture failed', error)
+				return null
+			}
+		},
+		[requestSceneScreenshot]
+	)
 
 	const captureShadowBake = useCallback(async () => {
 		try {
