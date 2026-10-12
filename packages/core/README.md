@@ -27,6 +27,7 @@ pnpm add @vctrl/core
 | `ModelExporter`     | `@vctrl/core/model-exporter`  | Export `Document` or Three.js objects to GLB or GLTF                                              |
 | Model formats       | `@vctrl/core/model-formats`   | The accepted format set, and every question about it: `MODEL_FORMATS`, `modelFormatForFileName`, `isImportableFileName`, `modelAcceptPattern` |
 | Dropped selections  | `@vctrl/core/model-loader`    | What a reference inside a model means: `selectionKey`, `referenceIn`, `referenceKeyIn`            |
+| Remote models       | `@vctrl/core/model-loader`    | A model at a URL, as the files a drop would give: `fetchModelFiles`, `ModelFetchError`            |
 | Scene asset helpers | `@vctrl/core`                 | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
 
 ---
@@ -68,6 +69,27 @@ reason: they were a second statement of the set, and they disagreed with the
 first one on casing, so `MODEL.GLB` was rejected by the guard in front of a
 loader that would have read it. Use `isImportableFileName(fileName)` or
 `modelFormatForFileName(fileName)`.
+
+### Fetching a model from a URL
+
+```typescript
+import { fetchModelFiles, ModelLoader } from '@vctrl/core/model-loader'
+
+const [model, ...siblings] = await fetchModelFiles('https://cdn.example.com/chair.gltf')
+const loader = new ModelLoader()
+const result = model.name.toLowerCase().endsWith('.gltf')
+  ? await loader.loadGLTFWithAssetsToThreeJS(model, siblings)
+  : await loader.loadToThreeJS(model, siblings)
+```
+
+`fetchModelFiles(url, { init?, onProgress? })` returns the files a drop of the
+same model would give, model first, so they load through the path a dropped
+file takes. A `.gltf` brings the buffers and images it references on its own
+origin; a reference on another host is skipped and the loader reports it
+missing. A URL with no file extension is read as a GLB when its bytes are one.
+`init` goes with every request, and an abort through its `signal` rejects with the signal's reason. `onProgress` reports the model file's download from 0 to 1 when the host sends a `Content-Length`; a `.gltf`'s other files download after it without reporting. A failure is a
+`ModelFetchError` with `kind` `unreachable`, `http` (and `status`), `unrecognized` or `invalid` (not a URL, or relative with no page to resolve it against); its message names the host only, and `url` carries the full
+address. The host has to allow cross-origin reads.
 
 `documentToThreeJS` requires both the `Document` and the original `ModelLoadResult` metadata object:
 

@@ -26,12 +26,13 @@
  *  - `current = current.cause` to `current = undefined` and the wrapped case
  *    goes red, which is the whole reason the marker is not just a message.
  */
-import { missingAssetsError } from '@vctrl/core/model-loader'
+import { missingAssetsError, ModelFetchError } from '@vctrl/core/model-loader'
 import { describe, expect, it } from 'vitest'
 
 import {
 	normalizeLocalLoadError,
-	normalizeServerLoadError
+	normalizeServerLoadError,
+	normalizeUrlLoadError
 } from './error-helpers'
 
 describe('a load that failed because files were missing says so', () => {
@@ -81,5 +82,48 @@ describe('an ordinary failure keeps its own code', () => {
 		const missing = new Error('Server responded with 404')
 
 		expect(normalizeServerLoadError(missing, 'scene-1').code).toBe('not_found')
+	})
+})
+
+describe('a URL load says what went wrong at the host', () => {
+	const URL_ = 'https://cdn.example.com/m.glb?sig=abc'
+
+	it.each([
+		['unreachable', undefined, 'url_unreachable', true],
+		['unrecognized', undefined, 'url_unrecognized', true],
+		['invalid', undefined, 'url_invalid', true],
+		['http', 503, 'url_http', true],
+		['http', 404, 'url_http', false],
+		['http', 410, 'url_http', false]
+	] as const)(
+		'reports a %s fetch (%s) as %s',
+		(kind, status, code, recoverable) => {
+			const error = normalizeUrlLoadError(
+				new ModelFetchError(kind, URL_, status),
+				URL_
+			)
+
+			expect(error).toMatchObject({
+				code,
+				recoverable,
+				source: 'remote-url',
+				context: { url: URL_, status }
+			})
+		}
+	)
+
+	it('keeps the code of a file that arrived and failed, as a remote failure', () => {
+		const error = normalizeUrlLoadError(
+			new Error('could not load', {
+				cause: missingAssetsError('Missing required image files:\na.png')
+			}),
+			URL_
+		)
+
+		expect(error).toMatchObject({
+			code: 'missing_assets',
+			source: 'remote-url',
+			context: { url: URL_ }
+		})
 	})
 })
