@@ -99,10 +99,9 @@ try {
 				  Session replay is excluded, and not because it is safe. A `$snapshot`
 				  carries a whole rrweb payload, and walking one on every snapshot
 				  would cost far more than the rest of this does on a normal event.
-				  So `disable_session_recording` above refuses replay on `/embed`,
-				  whose URL holds a key from the first load. Everywhere else replay
-				  follows the project's remote config, including `/view`, whose
-				  `src` arrives by client-side navigation after init.
+				  So the one page whose URL holds a key is never recorded at all:
+				  `disable_session_recording` above refuses replay on `/embed`.
+				  Everywhere else replay follows the project's remote config.
 				*/
 				if (event.event === '$snapshot') return event
 
