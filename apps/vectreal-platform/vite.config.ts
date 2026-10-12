@@ -13,6 +13,7 @@ import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
 import { mdxMarkdownPlugin } from './app/lib/markdown/mdx-to-markdown.ts'
+import { remarkDocPageActions } from './app/lib/markdown/remark-doc-page-actions.ts'
 
 /**
  * Wraps every MDX `<table>` in a focusable horizontal scroll container.
@@ -195,7 +196,12 @@ export default defineConfig(({ command }) => {
 			mdxMarkdownPlugin(),
 			mdx({
 				format: 'mdx',
-				remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter],
+				remarkPlugins: [
+					remarkGfm,
+					remarkFrontmatter,
+					remarkMdxFrontmatter,
+					remarkDocPageActions
+				],
 				rehypePlugins: [
 					[rehypePrettyCode, prettyCodeOptions],
 					rehypeSlug,
