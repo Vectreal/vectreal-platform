@@ -140,7 +140,7 @@ const DashboardLayout = () => {
 	useEffect(() => {
 		if (!orgId) return
 		posthog?.group('organization', orgId, { plan })
-	}, [orgId, plan])
+	}, [orgId, plan, posthog])
 
 	const handleSidebarOpenChange = (open: boolean) => {
 		setSidebarOpen(open)

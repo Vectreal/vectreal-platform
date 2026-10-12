@@ -443,6 +443,7 @@ export const useSceneSaveFlow = ({
 			optimizedSceneBytes,
 			clientSceneBytes,
 			latestSceneStats,
+			sceneCurrentBytes,
 			setOptimizationRuntime,
 			setCurrentLocation,
 			setSaveLocation,

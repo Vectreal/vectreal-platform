@@ -191,12 +191,14 @@ export default function NewsRoomArticlePage({
 	}, [article.slug, consent?.analytics, posthog])
 
 	useEffect(() => {
+		const startedAt = startedAtRef.current
+
 		return () => {
 			if (!consent?.analytics) {
 				return
 			}
 
-			const durationMs = Date.now() - startedAtRef.current
+			const durationMs = Date.now() - startedAt
 			posthog?.capture('newsroom_article_read_completed', {
 				slug: article.slug,
 				duration_ms: durationMs,

@@ -527,7 +527,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			controls?.target,
 			onInteractionEvent,
 			sceneCamera,
-			startTransition
+			startTransition,
+			transitionOverride
 		]
 	)
 
@@ -613,7 +614,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		}
 		if (initializedCameraPosition.current) return
 		setTimeout(() => initializeCamera(sceneCamera as PerspectiveCamera), 0)
-	}, [hasModel, initializeCamera])
+	}, [hasModel, initializeCamera, sceneCamera])
 
 	useEffect(() => {
 		// update camera properties if props change after initialization
@@ -624,7 +625,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCameraId,
 			controls?.target ?? new Vector3(0, 0, 0),
 			sceneCamera as PerspectiveCamera,
-			transitionOverride?.current ?? sceneTransition,
+			transitionOverride?.current ?? sceneTransitionRef.current,
 			openingPose.current
 		)
 		const selectionKey = selection.cameraId
@@ -650,7 +651,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 					activeCameraId,
 					controls?.target ?? new Vector3(0, 0, 0),
 					sceneCamera as PerspectiveCamera,
-					sceneTransition
+					sceneTransitionRef.current
 				)
 			)
 		} else {
@@ -668,7 +669,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		controls?.target,
 		onInteractionEvent,
 		sceneCamera,
-		startTransition
+		startTransition,
+		transitionOverride
 	])
 
 	useFrame(() => {
