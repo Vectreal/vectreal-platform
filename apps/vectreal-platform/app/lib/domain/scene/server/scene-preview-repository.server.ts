@@ -11,10 +11,12 @@ import {
 
 const db = getDbClient()
 
-export async function getPublishedScenePreview(
-	projectId: string,
-	sceneId: string
-) {
+/**
+ * The publication of a scene, joined to its GLB's asset row. Null unless the
+ * scene is published. `projectId`, when given, must match: a caller holding a
+ * key for one project gets nothing from another.
+ */
+async function selectPublishedScene(sceneId: string, projectId?: string) {
 	const rows = await db
 		.select({
 			sceneId: scenes.id,
@@ -31,7 +33,11 @@ export async function getPublishedScenePreview(
 		.from(scenes)
 		.innerJoin(scenePublished, eq(scenePublished.sceneId, scenes.id))
 		.leftJoin(assets, eq(assets.id, scenePublished.assetId))
-		.where(and(eq(scenes.id, sceneId), eq(scenes.projectId, projectId)))
+		.where(
+			projectId === undefined
+				? eq(scenes.id, sceneId)
+				: and(eq(scenes.id, sceneId), eq(scenes.projectId, projectId))
+		)
 		.limit(1)
 
 	if (rows.length === 0) {
@@ -43,6 +49,18 @@ export async function getPublishedScenePreview(
 	}
 
 	return rows[0]
+}
+
+export function getPublishedScenePreview(projectId: string, sceneId: string) {
+	return selectPublishedScene(sceneId, projectId)
+}
+
+/**
+ * The same publication, for a caller that proved the scene by other means: a
+ * signed asset URL names the scene but carries no project.
+ */
+export function getPublishedSceneById(sceneId: string) {
+	return selectPublishedScene(sceneId)
 }
 
 export type PublishedScenePreview = NonNullable<
