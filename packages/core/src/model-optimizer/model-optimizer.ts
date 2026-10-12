@@ -330,7 +330,7 @@ export class ModelOptimizer {
 
 				// The already-encoded clone, rather than a second encode of the
 				// same document.
-				this._document = workingDoc
+				this.adoptDocument(workingDoc, ticket)
 			}
 		)
 	}
@@ -396,7 +396,7 @@ export class ModelOptimizer {
 		}
 		const ticket = this.currency.claimDocument()
 		await this.parseDocument(source, ticket, source, (document) => {
-			this._document = document
+			this.adoptDocument(document, ticket)
 			this.appliedOptimizations = []
 			this.dracoReport = null
 		})
@@ -404,15 +404,16 @@ export class ModelOptimizer {
 
 	/**
 	 * Replace the document with a derivation of the same source, such as the
-	 * geometry worker's output, keeping the baseline. Unlike a load this claims
-	 * nothing: the result belongs to the model held when it was asked for, and
-	 * is dropped if another model was loaded meanwhile.
+	 * geometry worker's output, keeping the baseline. Unlike a load it keeps
+	 * the model: it claims a new document of it, which retires any step still
+	 * running on the old one, and is dropped if another model or document was
+	 * taken while it parsed.
 	 */
 	public async replaceDocument(buffer: Uint8Array): Promise<void> {
 		const source = this.sourceBytes
 		const ticket = this.currency.claimDocument()
 		await this.parseDocument(buffer, ticket, source, (document) => {
-			this._document = document
+			this.adoptDocument(document, ticket)
 		})
 	}
 
@@ -420,28 +421,41 @@ export class ModelOptimizer {
 	 * Parses a document of the current model for `restoreSource` or
 	 * `replaceDocument`. It is refused if another document or model was
 	 * claimed meanwhile, or if a source stated meanwhile retired `source`, the
-	 * one it belongs to.
+	 * one it belongs to. One that does not commit releases its claim, so the
+	 * document still held can be worked on again.
+	 *
+	 * Claimed by the caller before the first await, so whoever asks last owns
+	 * the document. With a model held, the claim cannot be held open
+	 * indefinitely: every held document descends from a load, which commits
+	 * only after registering the decoders (memoized), so the one await that
+	 * could reach the network has already settled and what remains is the
+	 * parse. Without one there is no document for the claim to hold off.
 	 */
-	private parseDocument(
+	private async parseDocument(
 		bytes: Uint8Array,
 		ticket: Ticket,
 		source: Uint8Array | null,
 		commit: (document: Document) => void
 	): Promise<void> {
-		return unlessSuperseded(
-			() => !this.currency.isCurrent(ticket) || this.sourceBytes !== source,
-			async () => {
-				await this.codecs.registerDecoders()
-				const { document } = await _loadFromBuffer(
-					bytes,
-					this.io,
-					this.emitProgress,
-					syncTextureIdentities
-				)
-				return document
-			},
-			commit
-		)
+		try {
+			await unlessSuperseded(
+				() => !this.currency.isCurrent(ticket) || this.sourceBytes !== source,
+				async () => {
+					await this.codecs.registerDecoders()
+					const { document } = await _loadFromBuffer(
+						bytes,
+						this.io,
+						this.emitProgress,
+						syncTextureIdentities
+					)
+					return document
+				},
+				commit
+			)
+		} catch (error) {
+			this.currency.release(ticket)
+			throw error
+		}
 	}
 
 	/**
@@ -455,7 +469,7 @@ export class ModelOptimizer {
 		this.ensureModelLoaded()
 		// Not a new model: the document stays, and work on it stays valid, so
 		// only a newer model refuses this.
-		const ticket = this.currency.currentTicket()
+		const ticket = this.currency.currentModelTicket()
 		await unlessSuperseded(
 			() => !this.currency.isCurrentModel(ticket),
 			async () => {
@@ -472,6 +486,9 @@ export class ModelOptimizer {
 				this.originalSize = originalSize
 				this.originalReport = originalReport
 				this.sourceBytes = sourceBytes
+				// A restore or derivation still parsing belongs to the source
+				// this retires, so it will not commit; work need not wait for it.
+				this.currency.releasePending()
 			}
 		)
 	}
@@ -517,13 +534,11 @@ export class ModelOptimizer {
 			return
 		}
 
-		// The revision catches a restore or a new model. The document check
-		// catches a step that replaced it without claiming one, as
-		// `applyTransforms` does, which a commit here would silently undo.
-		// Edits made to the document in place while this runs are neither: they
+		// Every replacement of the document advances the revision, so this
+		// catches a restore, a new model and another step's commit alike.
+		// Edits made to the document in place while this runs do not: they
 		// are not merged into the copy, and nothing in this repo makes one.
-		const isStale = () =>
-			!this.currency.isCurrent(ticket) || this._document !== document
+		const isStale = () => !this.currency.isCurrent(ticket)
 		if (isStale()) throw new SupersededError()
 
 		const working = cloneDocument(document)
@@ -546,7 +561,7 @@ export class ModelOptimizer {
 					.getRoot()
 					.listTextures()
 					.forEach((texture, i) => syncTextureIdentity(working, texture, i))
-				this._document = working
+				this.adoptDocument(working, ticket)
 				this.addAppliedOptimization('texture compression')
 				return failure
 			}
@@ -576,8 +591,9 @@ export class ModelOptimizer {
 		} = {}
 	): Promise<void> {
 		this.ensureModelLoaded()
-		// Each step checks only its own run; this keeps the rest of the
-		// sequence off a model loaded between two steps.
+		// Each step checks only its own run, and each commit advances the
+		// revision, so this asks only about the model: it keeps the rest of
+		// the sequence off a model loaded between two steps.
 		const ticket = this.currency.currentTicket()
 
 		const operations = []
@@ -602,7 +618,7 @@ export class ModelOptimizer {
 				`Running optimization ${i + 1}/${operations.length}`,
 				progress
 			)
-			this.currency.ensureCurrent(ticket)
+			if (!this.currency.isCurrentModel(ticket)) throw new SupersededError()
 			await operations[i]()
 		}
 
@@ -752,17 +768,36 @@ export class ModelOptimizer {
 	}
 
 	/**
+	 * Every replacement of the document of the current model goes through
+	 * here, so committing it also retires every other operation that started
+	 * on the document it replaces. Called in the same synchronous step as the
+	 * operation's last staleness check.
+	 */
+	private adoptDocument(document: Document, ticket: Ticket): void {
+		this.currency.commit(ticket)
+		this._document = document
+	}
+
+	/**
 	 * Normalize all texture URIs and names to canonical form. Passing `doc`
-	 * also adopts it as the loaded document.
+	 * also adopts it as a new document of the loaded model, at once: it
+	 * retires any step running on the old document and any restore or
+	 * derivation still parsing. It throws with no model loaded to adopt it
+	 * into, as every step does, and `SupersededError` while a load is pending.
+	 * So every document held descends from a load, which is what lets
+	 * `parseDocument` rely on the decoders being registered already.
 	 *
 	 * Loads do not call this: they name a document's textures before the load
 	 * may commit, and adopting the document here would make it the held one
 	 * before that check.
 	 */
 	public normalizeAllTextureURIs(doc?: Document): void {
+		if (doc) {
+			this.ensureModelLoaded()
+			this.adoptDocument(doc, this.currency.claimDocument())
+		}
 		const target = doc ?? this._document
 		if (!target) return
-		if (doc) this._document = doc
 		syncTextureIdentities(target)
 	}
 
@@ -848,7 +883,7 @@ export class ModelOptimizer {
 			}
 
 			// If optimization was beneficial, update the model and track the optimization
-			this._document = workingDoc
+			this.adoptDocument(workingDoc, ticket)
 			this.appliedOptimizations.push(operationName)
 		} catch (error) {
 			// Its own commit check, or a failure while stale: either way not

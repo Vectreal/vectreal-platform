@@ -277,7 +277,7 @@ describe('ModelOptimizer.compressTextures', () => {
 		await restoring
 	})
 
-	// Another step can commit a new document without claiming a revision, and
+	// Another step's commit retires the document this pass started on, and
 	// committing over it would silently undo that step.
 	it('commits nothing over a document another step replaced while it ran', async () => {
 		const optimizer = await loaded()
@@ -296,6 +296,35 @@ describe('ModelOptimizer.compressTextures', () => {
 		await expect(pass).rejects.toBeInstanceOf(SupersededError)
 		expect(optimizer.document).toBe(quantized)
 		expect(recorded(optimizer)).toEqual([])
+	})
+
+	// The other direction: a step that started on the document this pass
+	// replaced must not commit its result over the compressed textures.
+	it('retires a step started on the document it replaced', async () => {
+		const optimizer = await loaded()
+		const held = fakeEncoder({ holdAt: 0 })
+		const io = (optimizer as unknown as { io: WebIO }).io
+		const writeBinary = io.writeBinary.bind(io)
+		let releaseWrite: () => void = () => {}
+		const writeHeld = new Promise<void>((resolve) => (releaseWrite = resolve))
+
+		const pass = optimizer.compressTextures({
+			encoder: held.encoder,
+			targetFormat: 'webp'
+		})
+		await held.reached
+		vi.spyOn(io, 'writeBinary').mockImplementation(async (document) => {
+			await writeHeld
+			return writeBinary(document)
+		})
+		const step = optimizer.quantize()
+		held.release()
+		await pass
+		releaseWrite()
+
+		await expect(step).rejects.toBeInstanceOf(SupersededError)
+		expect(recorded(optimizer)).toEqual(['texture compression'])
+		expect(optimizer.getAppliedOptimizations()).not.toContain('quantization')
 	})
 
 	it('records only the fallback it ran when there is no encoder at all', async () => {

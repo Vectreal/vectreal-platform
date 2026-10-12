@@ -542,6 +542,279 @@ describe('ModelOptimizer with the document replaced mid-operation', () => {
 
 	// A stale pass can sync its result after a new load started but before
 	// it committed; the new model must still win.
+
+	// Both read one document; the first commit replaces it, so the second
+	// would otherwise overwrite that result with one made from what it replaced.
+	it('commits only the first of two steps started on one document', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+
+		const results = await Promise.allSettled([
+			optimizer.quantize(),
+			optimizer.quantize()
+		])
+
+		expect(results.map(({ status }) => status).sort()).toEqual([
+			'fulfilled',
+			'rejected'
+		])
+		expect(results.find(({ status }) => status === 'rejected')).toMatchObject({
+			reason: expect.any(SupersededError)
+		})
+		expect(optimizer.getAppliedOptimizations()).toEqual(['quantization'])
+	})
+
+	// The document still held while a derivation parses is the one it retires.
+	it('refuses a step started while a derivation is still parsing', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const derived = await optimizer.export()
+		const parse = holdParse(optimizer, derived)
+
+		const replacing = optimizer.replaceDocument(derived)
+		await parse.reached
+		await expect(optimizer.quantize()).rejects.toBeInstanceOf(SupersededError)
+		parse.release()
+		await replacing
+
+		expect(positionComponentType(optimizer)).toBe(FLOAT)
+		expect(optimizer.getAppliedOptimizations()).not.toContain('quantization')
+	})
+
+	// Adopting a document through the naming helper is a replacement too.
+	it('retires a step when a document is adopted while it ran', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const adopted = await io.readBinary(await glb(600))
+
+		const step = optimizer.quantize()
+		optimizer.normalizeAllTextureURIs(adopted)
+
+		await expect(step).rejects.toBeInstanceOf(SupersededError)
+		expect(optimizer.document).toBe(adopted)
+	})
+
+	// A source stated meanwhile dooms the pending parse, so nothing waits on it.
+	it('reports at once when a stated source retired a pending derivation', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const derived = await optimizer.export()
+		const parse = holdParse(optimizer, derived)
+
+		const replacing = optimizer.replaceDocument(derived)
+		await parse.reached
+		await optimizer.setSource(await glb(600))
+
+		await expect(optimizer.getReport()).resolves.toBeDefined()
+		parse.release()
+		await expect(replacing).rejects.toBeInstanceOf(SupersededError)
+	})
+
+	// A claim a newer one retired has nothing to release: the newer one is
+	// still parsing, and the document held is the one it retires.
+	it('keeps work waiting on a newer claim when an older one is dropped', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const derived = await optimizer.export()
+		const source = optimizer.getBaseline().source as Uint8Array
+		const io = (optimizer as unknown as { io: WebIO }).io
+		const readBinary = io.readBinary.bind(io)
+		const gates = new Map<Uint8Array, (fail: boolean) => void>()
+		vi.spyOn(io, 'readBinary').mockImplementation((bytes) =>
+			bytes === derived || bytes === source
+				? new Promise((resolve, reject) =>
+						gates.set(bytes, (fail) =>
+							fail ? reject(new Error('corrupt')) : resolve(readBinary(bytes))
+						)
+					)
+				: readBinary(bytes)
+		)
+
+		const replacing = optimizer.replaceDocument(derived)
+		await vi.waitFor(() => expect(gates.has(derived)).toBe(true))
+		const restoring = optimizer.restoreSource()
+		await vi.waitFor(() => expect(gates.has(source)).toBe(true))
+		gates.get(derived)?.(true)
+		await expect(replacing).rejects.toBeInstanceOf(SupersededError)
+
+		await expect(optimizer.quantize()).rejects.toBeInstanceOf(SupersededError)
+		gates.get(source)?.(false)
+		await restoring
+		await optimizer.quantize()
+	})
+
+	it('takes work again once the original failed to parse', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const parse = holdParse(
+			optimizer,
+			optimizer.getBaseline().source as Uint8Array
+		)
+
+		const restoring = optimizer.restoreSource()
+		await parse.reached
+		parse.fail()
+		await expect(restoring).rejects.not.toBeInstanceOf(SupersededError)
+		await optimizer.quantize()
+
+		expect(positionComponentType(optimizer)).not.toBe(FLOAT)
+	})
+
+	// Adopting is a claim that commits at once, so it wins over a parse still
+	// running rather than waiting on it.
+	it('adopts a document over a derivation still parsing', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const derived = await optimizer.export()
+		const parse = holdParse(optimizer, derived)
+		const adopted = await io.readBinary(await glb(600))
+
+		const replacing = optimizer.replaceDocument(derived)
+		await parse.reached
+		optimizer.normalizeAllTextureURIs(adopted)
+		parse.release()
+
+		await expect(replacing).rejects.toBeInstanceOf(SupersededError)
+		expect(optimizer.document).toBe(adopted)
+		await optimizer.quantize()
+	})
+
+	// A restore claims when it is asked for, so the later request wins.
+	it('keeps a document adopted after a restore was asked for', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const adopted = await io.readBinary(await glb(600))
+
+		const restoring = optimizer.restoreSource()
+		optimizer.normalizeAllTextureURIs(adopted)
+
+		await expect(restoring).rejects.toBeInstanceOf(SupersededError)
+		expect(optimizer.document).toBe(adopted)
+	})
+
+	// Every held document descends from a load: that is what keeps a claim
+	// from ever waiting on a decoder fetch.
+	it('adopts no document before a load', () => {
+		const optimizer = new ModelOptimizer()
+
+		expect(() => optimizer.normalizeAllTextureURIs(new Document())).toThrow(
+			'No model loaded'
+		)
+		expect(optimizer.hasModel()).toBe(false)
+	})
+
+	it('adopts no document after a reset', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		optimizer.reset()
+
+		expect(() => optimizer.normalizeAllTextureURIs(new Document())).toThrow(
+			'No model loaded'
+		)
+		expect(optimizer.hasModel()).toBe(false)
+	})
+
+	// A claim taken while a source is being stated belongs to the source
+	// that statement retires, so it releases that claim too.
+	it('reports at once when a stated source retired a later derivation', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const derived = await optimizer.export()
+		const stated = await glb(600)
+		const io = (optimizer as unknown as { io: WebIO }).io
+		const readBinary = io.readBinary.bind(io)
+		const gates = new Map<Uint8Array, () => void>()
+		vi.spyOn(io, 'readBinary').mockImplementation((bytes) =>
+			bytes === derived || bytes === stated
+				? new Promise((resolve) =>
+						gates.set(bytes, () => resolve(readBinary(bytes)))
+					)
+				: readBinary(bytes)
+		)
+
+		const stating = optimizer.setSource(stated)
+		await vi.waitFor(() => expect(gates.has(stated)).toBe(true))
+		const replacing = optimizer.replaceDocument(derived)
+		await vi.waitFor(() => expect(gates.has(derived)).toBe(true))
+		gates.get(stated)?.()
+		await stating
+
+		await expect(optimizer.getReport()).resolves.toBeDefined()
+		gates.get(derived)?.()
+		await expect(replacing).rejects.toBeInstanceOf(SupersededError)
+	})
+
+	// The sequence starts nothing, not even its first step's progress.
+	it('starts no sequence while a derivation is still parsing', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const derived = await optimizer.export()
+		const parse = holdParse(optimizer, derived)
+		const progress: string[] = []
+		optimizer.onProgress(({ operation }) => progress.push(operation))
+
+		const replacing = optimizer.replaceDocument(derived)
+		await parse.reached
+		await expect(
+			optimizer.optimizeAll({ simplify: false, textures: false })
+		).rejects.toBeInstanceOf(SupersededError)
+		parse.release()
+		await replacing
+
+		expect(progress.filter((step) => step.startsWith('Running'))).toEqual([])
+	})
+
+	it('takes work again once a derivation committed', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+
+		await optimizer.replaceDocument(await optimizer.export())
+		await optimizer.quantize()
+
+		expect(positionComponentType(optimizer)).not.toBe(FLOAT)
+	})
+
+	it('takes work again once a derivation failed to parse', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+
+		await expect(
+			optimizer.replaceDocument(corrupt())
+		).rejects.not.toBeInstanceOf(SupersededError)
+		await optimizer.quantize()
+
+		expect(positionComponentType(optimizer)).not.toBe(FLOAT)
+	})
+
+	it('takes work again once a stated source dropped a derivation', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+		const derived = await optimizer.export()
+		const parse = holdParse(optimizer, derived)
+
+		const replacing = optimizer.replaceDocument(derived)
+		await parse.reached
+		await optimizer.setSource(await glb(600))
+		parse.release()
+		await expect(replacing).rejects.toBeInstanceOf(SupersededError)
+		await optimizer.quantize()
+
+		expect(positionComponentType(optimizer)).not.toBe(FLOAT)
+	})
+
+	// Each step commits, so the sequence asks only whether its model is held.
+	it('runs every step of a sequence on the document the last one left', async () => {
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await glb())
+
+		await optimizer.optimizeAll({
+			simplify: false,
+			dedup: false,
+			textures: false
+		})
+
+		expect(optimizer.getAppliedOptimizations()).toContain('quantization')
+	})
 })
 
 describe('ModelOptimizer texture names at load', () => {
