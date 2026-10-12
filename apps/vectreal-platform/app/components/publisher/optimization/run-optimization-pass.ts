@@ -172,6 +172,9 @@ async function establishBaselines({
 	}
 }
 
+const GEOMETRY_EXPORT_FAILED =
+	'Could not export the model for geometry optimization. Try reloading the scene.'
+
 /** Runs the geometry steps in the worker and syncs the result back. */
 async function runGeometryPhase(
 	deps: OptimizationPassDeps,
@@ -180,7 +183,9 @@ async function runGeometryPhase(
 	const { steps, model, optimizations } = deps
 
 	const currentBuffer = await withTimeout(
-		model.getModel(),
+		model.getModel().catch((error: unknown) => {
+			throw new Error(GEOMETRY_EXPORT_FAILED, { cause: error })
+		}),
 		MODEL_SYNC_TIMEOUT_MS,
 		'Model export for worker'
 	)
@@ -188,11 +193,7 @@ async function runGeometryPhase(
 
 	// Fails the pass rather than skipping the phase: a result without its
 	// geometry steps would not be what these settings produce.
-	if (!currentBuffer) {
-		throw new Error(
-			'Could not export the model for geometry optimization. Try reloading the scene.'
-		)
-	}
+	if (!currentBuffer) throw new Error(GEOMETRY_EXPORT_FAILED)
 
 	let runningStep: string | null = null
 
@@ -398,12 +399,28 @@ export async function runOptimizationPass(
  * showing, and a save exports the document. Putting the original back and
  * showing it keeps the two the same, and the original is a state the user can
  * always start from again.
+ *
+ * Once the original is back, the viewer shows a model the document no longer
+ * holds until this sync lands, and a save writes the document. A sync that
+ * timed out still lands later, being the newest; one that failed never does.
+ * Either way the user is told, since the two cannot be told apart here. A
+ * restore that fails changes nothing the user has not already been told.
  */
 async function showOriginal(model: OptimizationPassDeps['model']) {
 	try {
 		await model.restoreSource()
-		await syncViewer(model)
 	} catch (error) {
 		console.error('Could not restore the original after a failure:', error)
+		return
+	}
+	try {
+		await syncViewer(model)
+	} catch (error) {
+		// A newer sync or model owns the viewer now.
+		if (error instanceof SupersededError) return
+		console.error('Could not show the original after a failure:', error)
+		toast.error(
+			'The viewer may not be showing the original model. Reload the scene before saving.'
+		)
 	}
 }

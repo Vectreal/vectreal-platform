@@ -344,6 +344,81 @@ describe('runOptimizationPass', () => {
 		expect(callOrder.slice(-2)).toEqual(['restoreSource', 'applyOptimization'])
 	})
 
+	// The document is the original from here, and a save writes it, so a
+	// viewer still showing the failed result is something the user must hear.
+	it('says so when the viewer cannot show the original either', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+		runGeometryOptimizationsInWorker.mockRejectedValue(new Error('boom'))
+		const { deps } = createDeps(onlyEnable(['dedup']), {
+			applyOptimization: vi.fn(async () => {
+				throw new Error('The optimized model could not be shown.')
+			})
+		})
+
+		await runOptimizationPass(deps)
+
+		expect(toast.error).toHaveBeenLastCalledWith(
+			'The viewer may not be showing the original model. Reload the scene before saving.'
+		)
+		expect(logged).toHaveBeenCalledWith(
+			'Could not show the original after a failure:',
+			expect.any(Error)
+		)
+	})
+
+	// A timed-out sync still lands later, but until then the two disagree.
+	it('says so when showing the original times out', async () => {
+		vi.useFakeTimers()
+		try {
+			vi.spyOn(console, 'error').mockImplementation(() => {})
+			runGeometryOptimizationsInWorker.mockRejectedValue(new Error('boom'))
+			const { deps } = createDeps(onlyEnable(['dedup']), {
+				applyOptimization: vi.fn(() => new Promise(() => {}))
+			})
+
+			const pass = runOptimizationPass(deps)
+			await vi.advanceTimersByTimeAsync(60_000)
+			await pass
+
+			expect(toast.error).toHaveBeenLastCalledWith(
+				'The viewer may not be showing the original model. Reload the scene before saving.'
+			)
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	// The pass already said it failed, and a document that could not be put
+	// back is still the one the viewer was showing before the restore.
+	it('adds nothing when the original cannot be put back', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		const { deps, model } = createDeps(onlyEnable(['dedup']), {
+			restoreSource: vi.fn(async () => {
+				throw new Error('No source to restore. Load a model first.')
+			})
+		})
+
+		await runOptimizationPass(deps)
+
+		expect(toast.error).toHaveBeenCalledTimes(1)
+		expect(model.applyOptimization).not.toHaveBeenCalled()
+	})
+
+	// A newer sync or model owns the viewer then, and the original is not owed.
+	it('stays silent when showing the original was superseded', async () => {
+		runGeometryOptimizationsInWorker.mockRejectedValue(new Error('boom'))
+		const { deps } = createDeps(onlyEnable(['dedup']), {
+			applyOptimization: vi.fn(async () => {
+				throw new SupersededError()
+			})
+		})
+
+		await runOptimizationPass(deps)
+
+		expect(toast.error).toHaveBeenCalledTimes(1)
+		expect(toast.error).toHaveBeenCalledWith('boom')
+	})
+
 	it('always clears the pending flag, including on failure', async () => {
 		runGeometryOptimizationsInWorker.mockRejectedValue(new Error('boom'))
 		const { deps, runtime } = createDeps(onlyEnable(['dedup']))
@@ -393,6 +468,47 @@ describe('runOptimizationPass', () => {
 
 		expect(result.succeeded).toBe(false)
 		expect(callOrder).not.toContain('texturesOptimization')
+	})
+
+	// The export's own error is internal; the user is told what to do.
+	it('says what to do when exporting for the geometry steps fails', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+		const writeError = new Error('writeBinary: invalid accessor')
+		const { deps } = createDeps(onlyEnable(['dedup']), {
+			getModel: vi.fn().mockRejectedValue(writeError)
+		})
+
+		const result = await runOptimizationPass(deps)
+
+		expect(result.succeeded).toBe(false)
+		expect(toast.error).toHaveBeenCalledWith(
+			'Could not export the model for geometry optimization. Try reloading the scene.'
+		)
+		// The export's own error stays with it for whoever reads the log.
+		expect(logged).toHaveBeenCalledWith(
+			'Error during optimization:',
+			expect.objectContaining({ cause: writeError })
+		)
+	})
+
+	it('still reports an export that ran out of time as a timeout', async () => {
+		vi.useFakeTimers()
+		try {
+			vi.spyOn(console, 'error').mockImplementation(() => {})
+			const { deps } = createDeps(onlyEnable(['dedup']), {
+				getModel: vi.fn(() => new Promise<Uint8Array>(() => {}))
+			})
+
+			const pass = runOptimizationPass(deps)
+			await vi.advanceTimersByTimeAsync(60_000)
+			await pass
+
+			expect(toast.error).toHaveBeenCalledWith(
+				expect.stringContaining('timed out')
+			)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	it('fails when no texture could be compressed', async () => {

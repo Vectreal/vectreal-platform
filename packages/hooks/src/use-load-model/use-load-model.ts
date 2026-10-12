@@ -81,6 +81,19 @@ function useLoadModel<
 	// The load whose model is on screen, or 0; see `LoadContext.mayIngest`.
 	const onScreenRef = useRef(0)
 
+	/*
+	  The only writer of `onScreenRef`. The optimizer may hold the on-screen
+	  model or none, so another model reaching the screen releases it here,
+	  rather than when an ingest gets as far as claiming it: a read that fails
+	  first, or a source that never ingests, would otherwise leave the previous
+	  model's document to be optimized and saved under the new model's name.
+	*/
+	const putOnScreen = useCallback((owner: number) => {
+		if (onScreenRef.current === owner) return
+		onScreenRef.current = owner
+		optimizerRef.current?.reset()
+	}, [])
+
 	const modelLoader = useMemo(() => {
 		const loader = new ModelLoader()
 		// Parser progress only means anything while a load is in flight.
@@ -156,9 +169,9 @@ function useLoadModel<
 				if (isCurrent()) {
 					if (next.status === 'ready') {
 						lastReadyRef.current = next
-						onScreenRef.current = owner
+						putOnScreen(owner)
 					}
-					if (next.status === 'error') onScreenRef.current = 0
+					if (next.status === 'error') putOnScreen(0)
 					setState(next)
 				}
 				return next
@@ -219,20 +232,20 @@ function useLoadModel<
 				return outcome(errorModelState(source.kind, structured))
 			}
 		},
-		[modelLoader]
+		[modelLoader, putOnScreen]
 	)
 
 	const reset = useCallback(() => {
 		// Claiming a token retires any in-flight load along with the state.
 		loadTokenRef.current += 1
 		// No load may ingest a model that is no longer on screen.
-		onScreenRef.current = 0
+		putOnScreen(0)
 		// Nothing is on screen after this, so a later failure has nothing to
 		// restore - without it, clearing the model and then failing a drop would
 		// bring the cleared model back.
 		lastReadyRef.current = null
 		setState(emptyModelState)
-	}, [])
+	}, [putOnScreen])
 
 	/*
 	  Swaps in a new rendition of the model one load put on screen, and only that

@@ -139,17 +139,17 @@ const useOptimizeModel = () => {
 		async (sceneData: ServerSceneData): Promise<void> => {
 			dispatch({ type: 'LOAD_START' })
 
-			// A scene loaded from a published GLB carries no editor glTF document.
-			// The optimizer works on that document, so there is nothing to ingest -
-			// and the casts below would otherwise turn null into an opaque failure
-			// deep inside glTF-Transform.
-			if (!sceneData.gltfJson) {
-				throw new Error(
-					'Cannot optimize a scene loaded from a published GLB: it has no glTF document.'
-				)
-			}
-
 			try {
+				// A scene loaded from a published GLB carries no editor glTF
+				// document. The optimizer works on that document, so there is
+				// nothing to ingest - and the casts below would otherwise turn null
+				// into an opaque failure deep inside glTF-Transform.
+				if (!sceneData.gltfJson) {
+					throw new Error(
+						'Cannot optimize a scene loaded from a published GLB: it has no glTF document.'
+					)
+				}
+
 				const optimizer = optimizerRef.current
 
 				// Build a lookup from asset fileName (and its variants) → asset entry,
@@ -525,18 +525,11 @@ const useOptimizeModel = () => {
 	 * The model is exported in glTF binary (.glb) format.
 	 *
 	 * @returns Promise that resolves with the model binary, or null if no model is loaded
+	 * @throws The export's own error when a loaded model cannot be written
 	 */
 	const getModel = useCallback(async (): Promise<Uint8Array | null> => {
-		// Guard: return null if no model is currently loaded
 		if (!optimizerRef.current.hasModel()) return null
-
-		try {
-			// Export model as Uint8Array binary data
-			return await optimizerRef.current.export()
-		} catch (err) {
-			console.error('Error getting model binary:', err)
-			return null
-		}
+		return optimizerRef.current.export()
 	}, [])
 
 	const getDocument = useCallback(() => {
@@ -590,6 +583,7 @@ const useOptimizeModel = () => {
 		 * Retrieves the current model as a binary Uint8Array in glTF (.glb) format.
 		 *
 		 * @returns Promise that resolves with the model binary or null if no model is loaded
+		 * @throws The export's own error when a loaded model cannot be written
 		 */
 		getModel,
 
