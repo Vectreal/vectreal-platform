@@ -88,8 +88,7 @@ file takes. A `.gltf` brings the buffers and images it references on its own
 origin; a reference on another host is skipped and the loader reports it
 missing. A URL with no file extension is read as a GLB when its bytes are one.
 `init` goes with every request, and an abort through its `signal` rejects with the signal's reason. `onProgress` reports the model file's download from 0 to 1 when the host sends a `Content-Length`; a `.gltf`'s other files download after it without reporting. A failure is a
-`ModelFetchError` with `kind` `unreachable`, `http` (and `status`), `unrecognized` or `invalid` (not a URL, or relative with no page to resolve it against); its message names the host only, and `url` carries the full
-address. The host has to allow cross-origin reads.
+`ModelFetchError` with `kind` `unreachable`, `http` (and `status`), `unrecognized` or `invalid` (not a URL, or relative with no page to resolve it against); its message and `host` name the host only, never the address, which can be a signed link. The host has to allow cross-origin reads.
 
 `documentToThreeJS` requires both the `Document` and the original `ModelLoadResult` metadata object:
 

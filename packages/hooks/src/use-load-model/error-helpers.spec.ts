@@ -103,11 +103,12 @@ describe('a URL load says what went wrong at the host', () => {
 				URL_
 			)
 
+			expect(JSON.stringify(error.context)).not.toContain('sig=')
 			expect(error).toMatchObject({
 				code,
 				recoverable,
 				source: 'remote-url',
-				context: { url: URL_, status }
+				context: { host: 'cdn.example.com', status }
 			})
 		}
 	)
@@ -123,7 +124,7 @@ describe('a URL load says what went wrong at the host', () => {
 		expect(error).toMatchObject({
 			code: 'missing_assets',
 			source: 'remote-url',
-			context: { url: URL_ }
+			context: { host: 'cdn.example.com' }
 		})
 	})
 })

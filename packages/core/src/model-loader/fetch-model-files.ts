@@ -19,17 +19,20 @@ export type ModelFetchErrorKind =
 	'unreachable' | 'http' | 'unrecognized' | 'invalid'
 
 export class ModelFetchError extends Error {
+	/**
+	 * The host the model was asked from, or `null` for an address that is not a
+	 * URL. The host and never the address: errors get logged and reported, and
+	 * a presigned link is a credential until it expires. The caller already has
+	 * the address it passed.
+	 */
+	readonly host: string | null
+
 	constructor(
 		readonly kind: ModelFetchErrorKind,
-		readonly url: string,
+		url: string,
 		readonly status?: number,
 		options?: ErrorOptions
 	) {
-		/*
-		  The host alone in the message. Messages get logged and shown, and a
-		  presigned link is a credential until it expires; `url` carries the
-		  whole address for a caller that wants it.
-		*/
 		const host = hostOf(url)
 		super(
 			!host || kind === 'invalid'
@@ -42,6 +45,7 @@ export class ModelFetchError extends Error {
 			options
 		)
 		this.name = 'ModelFetchError'
+		this.host = host
 	}
 }
 
@@ -92,8 +96,9 @@ export async function fetchModelFiles(
 	let modelUrl: URL
 	try {
 		modelUrl = new URL(url, globalThis.location?.href)
-	} catch (cause) {
-		throw new ModelFetchError('invalid', String(url), undefined, { cause })
+	} catch {
+		// No `cause`: Node's URL error carries the address it refused.
+		throw new ModelFetchError('invalid', String(url))
 	}
 
 	let files: File[]

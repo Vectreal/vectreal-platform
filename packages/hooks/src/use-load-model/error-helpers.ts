@@ -142,10 +142,23 @@ export const normalizeUrlLoadError = (
 			),
 			source: 'remote-url',
 			cause: error,
-			context: { url, status: error.status }
+			context: { host: error.host, status: error.status }
 		})
 	}
 
 	const local = normalizeLocalLoadError(error, 'unknown')
-	return { ...local, source: 'remote-url', context: { ...local.context, url } }
+	return {
+		...local,
+		source: 'remote-url',
+		context: { ...local.context, host: hostOf(url) }
+	}
+}
+
+// The host alone, for the reason `ModelFetchError.host` gives.
+function hostOf(url: string): string | null {
+	try {
+		return new URL(url, globalThis.location?.href).host
+	} catch {
+		return null
+	}
 }

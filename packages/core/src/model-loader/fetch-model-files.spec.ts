@@ -102,6 +102,11 @@ describe('fetchModelFiles', () => {
 			fetchModelFiles(new URL('https://a.com/gone.glb'))
 		)
 		expect(error).toMatchObject({ kind: 'http', status: 404 })
+		// The host, never the address: a signed link is a credential.
+		expect(error.host).toBe('a.com')
+		expect(JSON.stringify({ ...error, message: error.message })).not.toContain(
+			'gone.glb'
+		)
 	})
 
 	it('brings a glTF its same-origin files, placed as a dropped folder', async () => {

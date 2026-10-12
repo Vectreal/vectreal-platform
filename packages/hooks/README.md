@@ -145,7 +145,7 @@ does.
   fetched, so an OBJ opens without materials.
 - **A URL with no file extension** (a presigned or download link) opens when its
   bytes are a GLB.
-- **`init`** goes with every request: headers, `credentials`, `referrerPolicy`.
+- **`init`** goes with every request: headers, `credentials`, `referrerPolicy`. Credentials follow the browser's default, so cookies go only to your own origin; for a URL someone else supplied, pass `credentials: 'omit'`.
   Its `signal` aborts the download (the model file, and for a `.gltf` the files it references): what was on screen stays, and `load` resolves `empty` rather than reporting an error. A newer `load` or `reset` aborts the download too, and the load resolves `empty`; what is on screen is then theirs to decide. Once the files have all arrived, the parse runs to the end.
 - **Progress** runs to 90 while the model file downloads, when the host sends a
   `Content-Length`, and the parse fills the rest. A `.gltf`'s buffers and
@@ -182,7 +182,7 @@ To fetch the files without loading them, `fetchModelFiles` from
 `error.code` is one of `unsupported_format`, `multiple_models`,
 `binary_load_failed`, `gltf_load_failed`, `missing_assets`,
 `server_load_failed`, `not_found`, `quota_exceeded`, `url_unreachable`, `url_http`, `url_unrecognized`, `url_invalid`, `unknown`. Every failure of a `url` load has
-`error.source === 'remote-url'` and the address in `error.context.url`;
+`error.source === 'remote-url'` and the host in `error.context.host` (never the address, which can be a signed link);
 `url_http` carries the status in `error.context.status` and is not recoverable
 for 404 or 410. Optimizer
 ingest is deliberately not among them: the model is already on screen by then,
