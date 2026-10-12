@@ -20,7 +20,8 @@ function renderPanel(cta: ArticleCta, onAction = vi.fn()) {
 			Component: () => <ArticleCtaPanel cta={cta} onAction={onAction} />
 		},
 		{ path: '/publisher', Component: Destination },
-		{ path: '/convert', Component: Destination }
+		{ path: '/convert', Component: Destination },
+		{ path: '/view', Component: Destination }
 	])
 	render(<Stub />)
 	return onAction
@@ -48,6 +49,14 @@ describe('ArticleCtaPanel', () => {
 		fireEvent.click(screen.getByRole('link', { name: /open the converters/i }))
 		expect(onAction).toHaveBeenCalledWith('primary')
 		expect(screen.getByText('at /convert')).toBeTruthy()
+	})
+
+	it('sends a reader with a file to look at to the viewer', () => {
+		const onAction = renderPanel({ kind: 'view' })
+		expect(hrefs()).toEqual(['/view'])
+		fireEvent.click(screen.getByRole('link', { name: /open the viewer/i }))
+		expect(onAction).toHaveBeenCalledWith('primary')
+		expect(screen.getByText('at /view')).toBeTruthy()
 	})
 
 	it('opens the shortcut model in the publisher and reports which', () => {

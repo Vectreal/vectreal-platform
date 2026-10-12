@@ -36,6 +36,14 @@ describe('resolveArticleCta', () => {
 		})
 	})
 
+	it('reads the viewer, with no parameters to vouch for', () => {
+		expect(resolveArticleCta('https://vectreal.com/view')).toEqual({
+			kind: 'view'
+		})
+		expect(resolveArticleCta('/view?src=https://a.com/m.glb')).toBeNull()
+		expect(resolveArticleCta('/view/glb')).toBeNull()
+	})
+
 	it('rejects destinations the panel cannot present', () => {
 		expect(resolveArticleCta('https://example.com/publisher')).toBeNull()
 		expect(resolveArticleCta('https://vectreal.com/pricing')).toBeNull()

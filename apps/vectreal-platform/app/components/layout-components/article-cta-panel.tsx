@@ -14,6 +14,10 @@ import {
 	publisherSampleHref,
 	requireSampleModel
 } from '../../lib/samples/sample-models'
+import {
+	VIEW_PAGE_DESCRIPTION,
+	VIEW_PAGE_PATH
+} from '../../lib/view/view-page-copy'
 
 import type { ArticleCta, ArticleCtaShortcut } from '../../lib/news/article-cta'
 import type { FC } from 'react'
@@ -68,6 +72,24 @@ export const ArticleCtaPanel: FC<Props> = ({ cta, onAction, className }) => {
 					<Button asChild>
 						<Link to={cta.to} onClick={() => onAction('primary')}>
 							Open the converters
+							<ArrowRight className="h-4 w-4" />
+						</Link>
+					</Button>
+				}
+			/>
+		)
+	}
+
+	if (cta.kind === 'view') {
+		return (
+			<CtaPanel
+				className={className}
+				heading="Look at your own file"
+				description={VIEW_PAGE_DESCRIPTION}
+				actions={
+					<Button asChild>
+						<Link to={VIEW_PAGE_PATH} onClick={() => onAction('primary')}>
+							Open the viewer
 							<ArrowRight className="h-4 w-4" />
 						</Link>
 					</Button>

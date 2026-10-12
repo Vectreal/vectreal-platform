@@ -8,6 +8,7 @@ import {
 	sampleModelById
 } from '../samples/sample-models'
 import { SITE_URL } from '../seo'
+import { VIEW_PAGE_PATH } from '../view/view-page-copy'
 
 /**
  * Where an article's closing panel sends the reader.
@@ -24,6 +25,7 @@ export type ArticleCta =
 	| { kind: 'publisher'; shortcut: ArticleCtaShortcut }
 	/** `to` is a same-origin path, ready for `<Link to>`. */
 	| { kind: 'convert'; to: string }
+	| { kind: 'view' }
 
 export interface ArticleCtaShortcut {
 	type: 'sample' | 'example'
@@ -45,8 +47,8 @@ export const DEFAULT_ARTICLE_CTA: ArticleCta = {
 /**
  * Reads the `cta:` URL an author wrote, absolute on vectreal.com or a path,
  * as one of the destinations the panel knows how to present: the publisher,
- * optionally naming a sample or an example scene, or the converters,
- * optionally naming a pair.
+ * optionally naming a sample or an example scene, the converters,
+ * optionally naming a pair, or the viewer.
  *
  * Returns null for anything else, including a sample, example or pair that
  * does not exist, which the manifest treats as invalid frontmatter: a typo'd
@@ -85,6 +87,7 @@ export function resolveArticleCta(
 	if (params.length > 0) return null
 
 	const to = url.pathname
+	if (to === VIEW_PAGE_PATH) return { kind: 'view' }
 	if (to === CONVERT_INDEX_PATH) return { kind: 'convert', to }
 
 	const [, section, slug, ...rest] = to.split('/')

@@ -191,7 +191,7 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 		if (!cta) {
 			if (DEV) {
 				console.warn(
-					`Newsroom article skipped (${moduleKey}): cta must be a vectreal.com /publisher or /convert URL.`
+					`Newsroom article skipped (${moduleKey}): cta must be a vectreal.com /publisher, /convert or /view URL.`
 				)
 			}
 			return null

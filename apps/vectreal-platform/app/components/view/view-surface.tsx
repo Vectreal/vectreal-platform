@@ -1,9 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
-import {
-	IMPORTABLE_FORMAT_LABELS,
-	modelAcceptPattern
-} from '@vctrl/core/model-formats'
+import { modelAcceptPattern } from '@vctrl/core/model-formats'
 import { useModelContext, type LoadOutcome } from '@vctrl/hooks/use-load-model'
 import { useAtomValue } from 'jotai'
 import { usePostHog } from 'posthog-js/react'
@@ -21,18 +18,14 @@ import {
 	fetchRemoteModel,
 	RemoteModelError
 } from '../../lib/view/fetch-remote-model'
+import {
+	FORMAT_LIST,
+	VIEW_PAGE_DESCRIPTION
+} from '../../lib/view/view-page-copy'
 import { parseViewSource } from '../../lib/view/view-source'
 import { useConsent } from '../consent/consent-context'
 import { PageHero } from '../layout-components'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
-
-/** "GLB, glTF, STL, FBX or OBJ", from the format owner. */
-export const FORMAT_LIST = new Intl.ListFormat('en', {
-	type: 'disjunction'
-}).format(IMPORTABLE_FORMAT_LABELS)
-
-/** The page's promise in one line, shared by the hero and the meta tags. */
-export const VIEW_PAGE_DESCRIPTION = `Drop a ${FORMAT_LIST} file, or paste a link to one. It opens in your browser, with no upload and no account.`
 
 /** What became of a link, as the page reports it. */
 type ViewOutcome =

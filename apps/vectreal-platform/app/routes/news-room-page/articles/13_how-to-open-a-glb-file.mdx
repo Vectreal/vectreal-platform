@@ -1,9 +1,9 @@
 ---
 title: "How to open a GLB file"
 slug: "how-to-open-a-glb-file"
-excerpt: "To open a GLB file, drag it into a free browser viewer such as the Vectreal converter, Babylon.js Sandbox or the Khronos glTF Sample Viewer. Nothing to install. On a current Mac, Preview opens it too. On Windows, Microsoft's 3D Viewer has left the Store, so use a browser viewer or Blender. On an iPhone, convert it to USDZ first."
+excerpt: "To open a GLB file, drag it into a free browser viewer such as the Vectreal viewer, Babylon.js Sandbox or the Khronos glTF Sample Viewer. Nothing to install. On a current Mac, Preview opens it too. On Windows, Microsoft's 3D Viewer has left the Store, so use a browser viewer or Blender. On an iPhone, convert it to USDZ first."
 publishedAt: "2026-10-07"
-updatedAt: "2026-10-07"
+updatedAt: "2026-10-12"
 category: "guides"
 tags:
   - "glb"
@@ -24,14 +24,12 @@ type: "Practical Guide"
 premise: capability
 pillar: Quality
 seo_cluster: "3D formats / open a glb file"
-cta: https://vectreal.com/convert
+cta: https://vectreal.com/view
 sceneImage: "/media/images/newsroom/scene-how-to-open-a-glb-file.webp"
 coverImage: "/media/images/newsroom/og-how-to-open-a-glb-file.webp"
 ---
 
-The quickest way to open a GLB file is to drag it into a free browser viewer, such as the [Vectreal converter](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file), [Babylon.js Sandbox](https://sandbox.babylonjs.com/) or the [Khronos glTF Sample Viewer](https://github.khronos.org/glTF-Sample-Viewer-Release/). The model appears in the page, and you install nothing. What else works depends on your device, and on one detail of how the file was made.
-
-<video src="/media/images/newsroom/13/glb-to-usdz-camera.mp4" autoPlay muted loop playsInline aria-label="The GLB to USDZ converter with an empty drop area and two sample models. The camera sample downloads and appears in the page, then the page converts it and reports the USDZ at 4.4 MB against the 18 MB GLB while the camera turns."></video>
+The quickest way to open a GLB file is to drag it into a free browser viewer, such as the [Vectreal viewer](https://vectreal.com/view?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file), [Babylon.js Sandbox](https://sandbox.babylonjs.com/) or the [Khronos glTF Sample Viewer](https://github.khronos.org/glTF-Sample-Viewer-Release/). The model appears in the page, and you install nothing. What else works depends on your device, and on one detail of how the file was made.
 
 ## What is a GLB file?
 
@@ -45,14 +43,14 @@ Drop it on one of these pages. All six are free and need no account:
 
 | Viewer | Address | Good for |
 | --- | --- | --- |
-| Vectreal converter (I work on it) | [vectreal.com/convert](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file) | Looking at it with the file staying on your computer, then turning it into USDZ for an iPhone or into a smaller GLB |
+| Vectreal viewer (I work on it) | [vectreal.com/view](https://vectreal.com/view?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file) | Looking at it with the file staying on your computer, or from a link when you were sent one instead of the file |
 | Babylon.js Sandbox | [sandbox.babylonjs.com](https://sandbox.babylonjs.com/) | A quick look. Also opens `.gltf`, `.obj` and `.babylon` |
 | Khronos glTF Sample Viewer | [github.khronos.org/glTF-Sample-Viewer-Release](https://github.khronos.org/glTF-Sample-Viewer-Release/) | Seeing the model the way Khronos, who maintain the format, draw it |
 | glTF Viewer by Don McCurdy | [gltf-viewer.donmccurdy.com](https://gltf-viewer.donmccurdy.com/) | Dropping a whole `.gltf` folder at once |
 | three.js editor | [threejs.org/editor](https://threejs.org/editor/) | Moving things around, changing a material, exporting again |
 | `<model-viewer>` editor | [modelviewer.dev/editor](https://modelviewer.dev/editor/) | Getting the code to put the model on your own page |
 
-If the model is confidential, read the page before you drop it. Two of these say outright that the file stays with you: the Vectreal converter reads it in your browser and never uploads it, and the `<model-viewer>` editor sends nothing you import to a server unless you ask it to deploy to your phone.
+If the model is confidential, read the page before you drop it. Two of these say outright that the file stays with you: the Vectreal viewer reads it in your browser and never uploads it, and the `<model-viewer>` editor sends nothing you import to a server unless you ask it to deploy to your phone.
 
 ## How do I open a GLB file on Windows?
 
@@ -73,6 +71,8 @@ On macOS 26 Tahoe and earlier, Preview doesn't list 3D formats, so use a browser
 Not directly. The 3D and AR view built into iOS and iPadOS, AR Quick Look, takes USDZ and Reality files. It does not take glTF or GLB ([Apple, Previewing a model with AR Quick Look](https://developer.apple.com/documentation/arkit/previewing-a-model-with-ar-quick-look)).
 
 So convert it first. The [GLB to USDZ converter](https://vectreal.com/convert/glb-to-usdz?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-open-a-glb-file) shows the model on the page while it converts, then hands you a `.usdz`. Saved to Files or sent to yourself in Messages or Mail, it opens in AR on the table in front of you, and in an Object view that shows the model on its own ([Apple, AR Quick Look](https://developer.apple.com/augmented-reality/quick-look/)).
+
+<video src="/media/images/newsroom/13/glb-to-usdz-camera.mp4" autoPlay muted loop playsInline aria-label="The GLB to USDZ converter with an empty drop area and two sample models. The camera sample downloads and appears in the page, then the page converts it and reports the USDZ at 4.4 MB against the 18 MB GLB while the camera turns."></video>
 
 <video src="/media/images/newsroom/13/iphone-ar-quick-look.mp4" autoPlay muted loop playsInline aria-label="An iPhone opens the converted USDZ in AR Quick Look. The camera model appears on a desk, the phone moves around it and enlarges it, then switches to Object view, where the camera turns on a grey background."></video>
 

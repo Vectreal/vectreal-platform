@@ -8,11 +8,9 @@
 import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 
-import {
-	VIEW_PAGE_DESCRIPTION,
-	ViewSurface
-} from '../../components/view/view-surface'
+import { ViewSurface } from '../../components/view/view-surface'
 import { buildPageMeta } from '../../lib/seo'
+import { VIEW_PAGE_DESCRIPTION } from '../../lib/view/view-page-copy'
 
 import type { Route } from './+types/view-page'
 
