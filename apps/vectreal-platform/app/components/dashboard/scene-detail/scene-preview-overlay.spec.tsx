@@ -76,11 +76,58 @@ describe('the preview overlay', () => {
 			/>
 		)
 
-		const overlay = screen.getByRole('link', { name: /preview/i })
-		expect(overlay.className).toContain('absolute')
-		expect(overlay.className).toContain('top-3')
-		expect(overlay.className).toContain('right-3')
-		expect(overlay.className).toContain('backdrop-blur')
+		const link = screen.getByRole('link', { name: /preview/i })
+		expect(link.className).toContain('backdrop-blur')
+		expect(link.className).toContain('pointer-events-auto')
+		expect(link.parentElement?.className).toContain('pointer-events-none')
+	})
+
+	it("keeps both overlays in the top-right, out of the viewer's own controls", () => {
+		/*
+		  The viewer's camera switcher sits bottom centre and reserves 5rem per
+		  side, narrower than "What visitors see", so on a phone it covered the
+		  label in the bottom-left. "Back to scene view" takes the top centre.
+		  One column in the corner the viewer never draws in, Preview first and
+		  the label beneath it.
+		*/
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'published' }}
+			/>
+		)
+
+		const link = screen.getByRole('link', { name: /preview/i })
+		const label = screen.getByText('What visitors see')
+		const column = link.parentElement
+
+		expect(label.parentElement).toBe(column)
+		expect(column?.className).toContain('absolute')
+		expect(column?.className).toContain('top-3')
+		expect(column?.className).toContain('right-3')
+		expect(label.className).not.toContain('bottom-3')
+		expect(
+			link.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy()
+	})
+
+	it('is still named Preview where only its icon shows', () => {
+		/*
+		  Below `sm` the word is visually hidden so the button stays clear of the
+		  viewer's top-centre "Back to scene view". Hidden, not removed: it is the
+		  link's accessible name.
+		*/
+		render(
+			<ScenePreviewOverlay
+				previewPath="/preview/project-1/scene-1"
+				publishState={{ status: 'draft' }}
+			/>
+		)
+
+		const word = screen.getByText('Preview')
+		expect(word.className).toContain('sr-only')
+		expect(word.className).toContain('sm:not-sr-only')
+		expect(screen.getByRole('link').textContent).toBe('Preview')
 	})
 
 	it('says a published scene shows what visitors see', () => {
@@ -107,7 +154,7 @@ describe('the preview overlay', () => {
 		expect(screen.queryByText('What visitors see')).toBeNull()
 	})
 
-	it('names what it labels for a screen reader, away from the top edge', () => {
+	it('names what it labels for a screen reader', () => {
 		render(
 			<ScenePreviewOverlay
 				previewPath="/preview/project-1/scene-1"
@@ -117,8 +164,6 @@ describe('the preview overlay', () => {
 
 		const label = screen.getByText('What visitors see')
 		expect(label.textContent).toBe('Viewer showing: What visitors see')
-		expect(label.className).toContain('bottom-3')
-		expect(label.className).toContain('left-3')
 		expect(label.className).toContain('text-foreground')
 		expect(label.className).not.toContain('text-muted-foreground')
 	})

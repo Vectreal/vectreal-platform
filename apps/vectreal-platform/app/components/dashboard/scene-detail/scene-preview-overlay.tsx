@@ -23,8 +23,18 @@ const OVERLAY_SURFACE = 'bg-background/80 backdrop-blur-sm'
  *
  * So it sits on the viewer, which is the thing it is a different view of.
  *
- * `z-10`, a plain number: this orders two siblings inside one component's own
- * stacking context and claims no relationship with the site chrome, which is
+ * Top-right, and the label beneath it, because that corner is the one the
+ * viewer never draws in. Its camera switcher sits bottom centre, playback
+ * bottom right, and "Back to scene view" top centre after a hotspot is opened.
+ * Bottom-left is free here, since this page passes the viewer no info
+ * popover, but not wide enough: the label sat there until the camera switcher
+ * moved into the viewer, and on a phone the switcher ran straight over it. It
+ * reserves 5rem per side for the viewer's own icon-sized controls, and "What
+ * visitors see" is wider than that. Below `sm` Preview also drops to its icon,
+ * which keeps it clear of the way back from a hotspot.
+ *
+ * `z-10`, a plain number: it only lifts this column over the viewer it shares
+ * a section with, and claims no relationship with the site chrome, which is
  * what the named tiers are for.
  *
  * Translucent with a blur rather than solid, because it floats over a model
@@ -36,41 +46,43 @@ export function ScenePreviewOverlay({
 	publishState
 }: ScenePreviewOverlayProps) {
 	return (
-		<>
-			{/*
-			  Which scene the viewer is showing, because the two now differ: a
-			  published scene renders the artefact that ships, a draft renders the
-			  working scene. Not "Published version": the presentation settings are
-			  read live, not snapshotted at publish, so what this shows is what a
-			  visitor would see right now.
-
-			  Bottom-left, which the dashboard's viewer leaves empty: it draws no
-			  info popover there, while top-centre is where it puts its own
-			  "back to scene view" control after a hotspot is opened.
-			*/}
-			<p
-				className={cn(
-					OVERLAY_SURFACE,
-					'text-foreground pointer-events-none absolute bottom-3 left-3 z-10 rounded-md px-2 py-1 text-xs'
-				)}
-			>
-				<span className="sr-only">Viewer showing: </span>
-				{publishState.status === 'published' ? 'What visitors see' : 'Draft'}
-			</p>
+		/*
+		  Click-through except for the link: the column is as wide as the label,
+		  so below `sm` it spans empty space beside the icon where a drag should
+		  still reach the model.
+		*/
+		<div className="pointer-events-none absolute top-3 right-3 z-10 flex flex-col items-end gap-2">
 			<Button
 				variant="secondary"
 				size="sm"
 				asChild
 				className={cn(
 					OVERLAY_SURFACE,
-					'hover:bg-background/90 absolute top-3 right-3 z-10'
+					'hover:bg-background/90 pointer-events-auto'
 				)}
 			>
 				<Link viewTransition to={previewPath}>
-					<Eye className="mr-2 h-4 w-4 shrink-0" />
-					Preview
+					<Eye className="h-4 w-4 shrink-0 sm:mr-2" />
+					{/* Still the link's name below `sm`, where only the icon shows. */}
+					<span className="sr-only sm:not-sr-only">Preview</span>
 				</Link>
 			</Button>
-		</>
+			{/*
+			  Which scene the viewer is showing, because the two now differ: a
+			  published scene renders the artefact that ships, a draft renders the
+			  working scene. Not "Published version": the presentation settings are
+			  read live, not snapshotted at publish, so what this shows is what a
+			  visitor would see right now.
+			*/}
+			<p
+				className={cn(
+					OVERLAY_SURFACE,
+					'text-foreground rounded-md px-2 py-1 text-xs'
+				)}
+			>
+				<span className="sr-only">Viewer showing: </span>
+				{publishState.status === 'published' ? 'What visitors see' : 'Draft'}
+			</p>
+		</div>
 	)
 }
