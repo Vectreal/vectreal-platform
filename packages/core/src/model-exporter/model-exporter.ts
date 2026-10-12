@@ -26,10 +26,7 @@ import JSZip from 'jszip'
 import { Material, Mesh, MeshPhysicalMaterial, Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import {
-	canLoadDracoInBrowser,
-	loadDracoModule
-} from '../draco/load-draco-module'
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 import { loadMeshoptEncoder } from '../meshopt/meshopt-codec'
 import { OperationProgress } from '../types'
 import {
@@ -142,35 +139,15 @@ export class ModelExporter {
 	private io: WebIO
 	private threeExporter: GLTFExporter
 	private progressCallback?: (progress: OperationProgress) => void
-	private dracoPath: string
-	private dracoEncoderRegistration: Promise<void> | null = null
+	private codecs: GeometryCodecs
 
 	constructor(options?: { dracoPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 		this.threeExporter = new GLTFExporter()
-		this.dracoPath = options?.dracoPath ?? DEFAULT_DRACO_PATH
-	}
-
-	/**
-	 * Lazily loads and registers the Draco encoder module on this instance's
-	 * WebIO, so `writeBinary` can encode `KHR_draco_mesh_compression`
-	 * primitives after `document.transform(draco(...))`. Memoized per instance.
-	 */
-	private ensureDracoEncoderRegistered(): Promise<void> {
-		if (!this.dracoEncoderRegistration) {
-			this.dracoEncoderRegistration = canLoadDracoInBrowser()
-				? loadDracoModule('encoder', this.dracoPath).then((encoderModule) => {
-						this.io.registerDependencies({
-							'draco3d.encoder': encoderModule
-						})
-					})
-				: Promise.reject(
-						new Error(
-							'Draco encoding requires a browser (window or worker) environment'
-						)
-					)
-		}
-		return this.dracoEncoderRegistration
+		this.codecs = new GeometryCodecs(
+			this.io,
+			options?.dracoPath ?? DEFAULT_DRACO_PATH
+		)
 	}
 
 	/**
@@ -227,7 +204,7 @@ export class ModelExporter {
 		document: Document,
 		options: DracoOptions
 	): Promise<Document> {
-		await this.ensureDracoEncoderRegistered()
+		await this.codecs.registerDracoEncoder()
 
 		const workingDoc = cloneDocument(document)
 		await workingDoc.transform(draco(options))
@@ -352,7 +329,7 @@ export class ModelExporter {
 		dracoOptions: DracoOptions = {}
 	): Promise<void> {
 		if (codec === 'draco') {
-			await this.ensureDracoEncoderRegistered()
+			await this.codecs.registerDracoEncoder()
 			await document.transform(draco(dracoOptions))
 		} else if (codec === 'meshopt') {
 			const encoder = await loadMeshoptEncoder()

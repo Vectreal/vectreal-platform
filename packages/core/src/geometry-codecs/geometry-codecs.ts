@@ -25,6 +25,8 @@ import { registerMeshoptDecoder } from '../meshopt/meshopt-codec'
 /**
  * Registers the geometry codecs on one WebIO, each once: the decoders before
  * the first read, the Draco encoder only when a Draco step first needs it.
+ * `ModelLoader`, `ModelExporter` and `ModelOptimizer` each hold one for their
+ * own WebIO.
  */
 export class GeometryCodecs {
 	private io: WebIO
@@ -60,11 +62,12 @@ export class GeometryCodecs {
 
 	/**
 	 * So `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression` and
-	 * `EXT_meshopt_compression` primitives — needed both for loading
-	 * pre-compressed input and for reloading the optimizer's own
-	 * Draco-compressed output (e.g. syncing the worker's compressed buffer back
-	 * to the main-thread optimizer via `loadFromBuffer`). Draco no-ops outside a
-	 * browser.
+	 * `EXT_meshopt_compression` primitives in pre-compressed input.
+	 *
+	 * Outside a browser or worker there is no Draco decoder to load, and
+	 * meshopt's can fail to compile where WebAssembly is blocked. Either way
+	 * other content is unaffected, and content needing the missing decoder
+	 * throws glTF-Transform's own "install extension dependency" error.
 	 */
 	registerDecoders(): Promise<void> {
 		if (!this.decoderRegistration) {
@@ -77,8 +80,6 @@ export class GeometryCodecs {
 				: Promise.resolve()
 			this.decoderRegistration = Promise.all([
 				draco,
-				// Tolerated for the reason ModelLoader tolerates it: only meshopt
-				// content needs it, and that content then fails with its own error.
 				registerMeshoptDecoder(this.io).catch(() => {})
 			]).then(() => undefined)
 		}

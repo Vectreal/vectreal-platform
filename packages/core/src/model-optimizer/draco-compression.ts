@@ -22,13 +22,13 @@ import {
 	inspect
 } from '@gltf-transform/functions'
 
-import { GeometryCodecs } from './geometry-codecs'
 import {
 	calculateDracoCompressedGeometrySize,
 	calculateMeshSize,
 	readGlbJsonChunk
 } from './report-helpers'
 import { DracoCompressionReport, DracoOptions } from './types'
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 
 type ProgressEmitter = (operation: string, progress: number) => void
 
