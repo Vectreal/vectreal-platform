@@ -468,7 +468,12 @@ export default defineConfig(tseslint.configs.recommended, [
 					ignoredFiles: [
 						...dependencyCheckOptions.ignoredFiles,
 						'{projectRoot}/scripts/capture-home-product-shots.ts',
-						'{projectRoot}/scripts/bake-home-hero.ts'
+						'{projectRoot}/scripts/bake-home-hero.ts',
+						// The markdown-twin transform runs in the Vite config graph,
+						// imported by vite.config.ts and vitest.config.ts, so its remark
+						// packages are build tooling beside @mdx-js/rollup in the root
+						// manifest. Only the twins' strings reach the server bundle.
+						'{projectRoot}/app/lib/markdown/mdx-to-markdown.ts'
 					]
 				}
 			]

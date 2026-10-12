@@ -19,6 +19,7 @@ import {
 	getDocPage,
 	getDocTrail
 } from '../../lib/docs/docs-manifest'
+import { markdownTwinLink } from '../../lib/markdown/markdown-twin'
 import { buildPageMeta, getRootMeta, SITE_URL } from '../../lib/seo'
 import {
 	buildBreadcrumbListJsonLd,
@@ -63,17 +64,20 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 			)
 		}
 
-		return buildPageMeta(
-			{
-				...buildDocsPageSeo({
-					pathname: args.location.pathname,
-					title: page.title,
-					description: page.description
-				}),
-				structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
-			},
-			getRootMeta(args)
-		)
+		return [
+			...buildPageMeta(
+				{
+					...buildDocsPageSeo({
+						pathname: args.location.pathname,
+						title: page.title,
+						description: page.description
+					}),
+					structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
+				},
+				getRootMeta(args)
+			),
+			markdownTwinLink(`/docs/${page.slug}`)
+		]
 	})()
 
 /**

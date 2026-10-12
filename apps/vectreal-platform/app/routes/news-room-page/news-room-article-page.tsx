@@ -17,6 +17,7 @@ import { ArticleHero } from '../../components/layout-components/article-hero'
 import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
 import { useConsentedCapture } from '../../hooks/use-consented-capture'
 import { useDocToc } from '../../hooks/use-doc-toc'
+import { markdownTwinLink } from '../../lib/markdown/markdown-twin'
 import { getArticleBody } from '../../lib/news/news-article-body'
 import {
 	getAdjacentNewsArticles,
@@ -61,49 +62,54 @@ export function meta({ error, loaderData }: Route.MetaArgs) {
 	const description = loaderData.article.excerpt
 	const canonical = `/news-room/${loaderData.article.slug}`
 
-	return buildPageMeta(
-		{
-			title,
-			description,
-			canonical,
-			type: 'article',
-			image: loaderData.article.coverImage,
-			imageAlt: loaderData.article.title,
-			publishedTime: loaderData.article.publishedAt,
-			modifiedTime:
-				loaderData.article.updatedAt ?? loaderData.article.publishedAt,
-			articleAuthor: loaderData.article.author.name,
-			articleSection: loaderData.article.category,
-			structuredData: [
-				buildNewsArticleJsonLd({
-					title: loaderData.article.title,
-					description,
-					canonicalPath: canonical,
-					publishedAt: loaderData.article.publishedAt,
-					updatedAt: loaderData.article.updatedAt,
-					image: loaderData.article.coverImage,
-					authorName: loaderData.article.author.name
-				}),
-				buildAuthorPersonJsonLd({
-					name: loaderData.article.author.name,
-					role: loaderData.article.author.role,
-					linkedinUrl: loaderData.article.author.linkedinUrl
-				}),
-				buildBreadcrumbListJsonLd([
-					{ name: 'Home', item: SITE_URL },
-					{ name: 'Newsroom', item: `${SITE_URL}/news-room` },
-					{ name: loaderData.article.title }
-				])
-			]
-		},
-		undefined,
-		// Article cover images are 1200x630, so use the large card format.
-		{
-			twitterCard: loaderData.article.coverImage
-				? 'summary_large_image'
-				: undefined
-		}
-	)
+	const twin = loaderData.article.draft ? [] : [markdownTwinLink(canonical)]
+
+	return [
+		...buildPageMeta(
+			{
+				title,
+				description,
+				canonical,
+				type: 'article',
+				image: loaderData.article.coverImage,
+				imageAlt: loaderData.article.title,
+				publishedTime: loaderData.article.publishedAt,
+				modifiedTime:
+					loaderData.article.updatedAt ?? loaderData.article.publishedAt,
+				articleAuthor: loaderData.article.author.name,
+				articleSection: loaderData.article.category,
+				structuredData: [
+					buildNewsArticleJsonLd({
+						title: loaderData.article.title,
+						description,
+						canonicalPath: canonical,
+						publishedAt: loaderData.article.publishedAt,
+						updatedAt: loaderData.article.updatedAt,
+						image: loaderData.article.coverImage,
+						authorName: loaderData.article.author.name
+					}),
+					buildAuthorPersonJsonLd({
+						name: loaderData.article.author.name,
+						role: loaderData.article.author.role,
+						linkedinUrl: loaderData.article.author.linkedinUrl
+					}),
+					buildBreadcrumbListJsonLd([
+						{ name: 'Home', item: SITE_URL },
+						{ name: 'Newsroom', item: `${SITE_URL}/news-room` },
+						{ name: loaderData.article.title }
+					])
+				]
+			},
+			undefined,
+			// Article cover images are 1200x630, so use the large card format.
+			{
+				twitterCard: loaderData.article.coverImage
+					? 'summary_large_image'
+					: undefined
+			}
+		),
+		...twin
+	]
 }
 
 export default function NewsRoomArticlePage({

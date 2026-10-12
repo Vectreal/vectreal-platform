@@ -12,6 +12,8 @@ import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
+import { mdxMarkdownPlugin } from './app/lib/markdown/mdx-to-markdown.ts'
+
 /**
  * Wraps every MDX `<table>` in a focusable horizontal scroll container.
  *
@@ -189,6 +191,8 @@ export default defineConfig(({ command }) => {
 		resolve: { tsconfigPaths: true },
 		plugins: [
 			tailwindcss(),
+			// Before `mdx()`: it serves `*.mdx?markdown` the MDX plugin would claim.
+			mdxMarkdownPlugin(),
 			mdx({
 				format: 'mdx',
 				remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter],
