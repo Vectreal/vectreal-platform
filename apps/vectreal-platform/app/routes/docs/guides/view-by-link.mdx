@@ -1,0 +1,107 @@
+# Viewing a Model by Link
+
+[/view](/view) shows a 3D model in the browser. Drop a file on it, or give it a
+link to one: `https://vectreal.com/view?src=<link>`. No account, and nothing is
+uploaded. The visitor's browser fetches the file from wherever it is hosted and
+draws it on the page.
+
+It is the shortest way to show someone a model. A file attached to a chat
+message has to be downloaded and opened in something; a `/view` link opens in
+the browser they already have.
+
+---
+
+## Making a link
+
+Encode the file's address and put it after `src=`:
+
+```js
+const link = `https://vectreal.com/view?src=${encodeURIComponent(fileUrl)}`
+```
+
+Encoding matters when the file's address has a query of its own, as a signed
+storage link does. Without it, everything after the file address's first `&`
+is read as part of the page's address instead. The field on [/view](/view)
+encodes whatever is pasted into it.
+
+The page reads GLB, glTF, STL, FBX and OBJ. A link whose address names none of
+them, such as a download endpoint, still opens when the file is a GLB: the page
+recognizes one by its first bytes.
+
+A glTF arrives with the files it references (its `.bin` and textures), fetched
+from the same host as the `.gltf`. A reference to any other host is not
+followed. An OBJ arrives without its material library, so it opens grey.
+
+---
+
+## Hosts that work
+
+The file's host has to let other sites read it. Browsers enforce this with
+[cross-origin resource sharing](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS):
+the response needs an `Access-Control-Allow-Origin` header that allows the
+page.
+
+- **GitHub:** the raw file address (`raw.githubusercontent.com/...`) sends it.
+  The address of the page that shows the file on github.com does not serve the
+  file and will not open.
+- **S3, R2, Google Cloud Storage and similar:** they send it once the bucket has
+  a CORS rule allowing `GET` from any origin, or from `https://vectreal.com`.
+- **Your own server:** add the header to the file's response.
+
+When a host does not send it, the browser refuses to let the page read the file,
+and the page says so: it offers a link to download the file, and a place to
+drop it. The model then opens the same way, still without being uploaded. The
+browser reports a host that refuses and a host that is down as the same error,
+so the page cannot tell which one it met.
+
+A link opens only for as long as its host serves the file. When the file moves
+or expires, the page shows the status the host answered with.
+
+---
+
+## Opening it in the Publisher
+
+**Open in Publisher** under the model hands it to the
+[Publisher](/publisher), where it can be optimized, given a camera and lighting,
+and downloaded. Like the viewer, the Publisher needs no account for that. It
+keeps the model in the browser until you sign in and save it; publishing it as
+an embed needs an account. See [Optimizing & Configuring](/docs/guides/optimize)
+and [Publishing & Embedding](/docs/guides/publish-embed).
+
+---
+
+## Privacy
+
+- The file goes from its host to the visitor's browser. It does not pass through
+  Vectreal's servers.
+- The page's requests for the file carry no cookies and no referrer, so the
+  host does not learn which page asked.
+- A link can be a credential: a signed storage link lets whoever holds it fetch
+  the file until it expires. Analytics, when a visitor has consented to them,
+  record the host's name and never the link.
+- A page opened with a link is never indexed by search engines.
+
+---
+
+## See also
+
+- [Uploading Models](/docs/guides/upload) - what each format carries
+- [Converting Between Formats](/docs/guides/convert) - when you need a different
+  file, not a look at this one
+
+{/*
+```claims
+  # The fetch sends no cookies and no referrer.
+  present  apps/vectreal-platform/app/lib/view/fetch-remote-model.ts   credentials: 'omit',
+  present  apps/vectreal-platform/app/lib/view/fetch-remote-model.ts   referrerPolicy: 'no-referrer'
+  # A glTF's references are followed on the model's own host only.
+  present  apps/vectreal-platform/app/lib/view/view-source.ts   if (url.origin !== modelUrl.origin) continue
+  # A GLB is recognized by its first bytes when the link names no format.
+  present  apps/vectreal-platform/app/lib/view/view-source.ts   const GLB_MAGIC
+  # Analytics record the host, and the link is redacted from every event.
+  present  apps/vectreal-platform/app/components/view/view-surface.tsx   source_host: from.hostname
+  present  apps/vectreal-platform/app/lib/posthog/redact-url-secrets.ts   const SRC_PARAM
+  # A page opened with a link is not indexed.
+  present  apps/vectreal-platform/app/routes/view-page/view-page.tsx   { private: opensLink }
+```
+*/}

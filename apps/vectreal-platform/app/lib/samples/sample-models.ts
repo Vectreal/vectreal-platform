@@ -3,6 +3,7 @@ import cameraSourceUrl from '../../assets/models/camera-source.glb?url'
 import cameraUrl from '../../assets/models/camera.glb?url'
 import rocketPreviewUrl from '../../assets/models/rocket-preview.webp?url'
 import rocketUrl from '../../assets/models/rocket-v3.glb?url'
+import { readWithProgress } from '../http/read-with-progress'
 
 /**
  * Models anyone can try without handing over their own work.
@@ -115,16 +116,7 @@ export async function fetchSampleModel(
 		throw new Error(`Sample fetch failed: ${response.status}`)
 	}
 
-	const reader = response.body.getReader()
-	const chunks: Uint8Array<ArrayBuffer>[] = []
-	let received = 0
-	for (;;) {
-		const { done, value } = await reader.read()
-		if (done) break
-		chunks.push(value)
-		received += value.byteLength
-		onProgress?.(Math.min(received / sample.bytes, 1))
-	}
+	const chunks = await readWithProgress(response.body, sample.bytes, onProgress)
 
 	return new File(chunks, sample.fileName, { type: 'model/gltf-binary' })
 }

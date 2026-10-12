@@ -2,6 +2,7 @@ import { RegistrationMark } from '@shared/components/assets/icons/registration-m
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { ArrowRight, FolderUp, Loader2 } from 'lucide-react'
+import { Link } from 'react-router'
 
 import { articleFor, type ConvertPair } from '../../lib/convert/convert-pairs'
 import { DitherGrain } from '../layout-components/dither-grain'
@@ -131,6 +132,21 @@ export function ConverterEmptyStage({
 									</Button>
 								)}
 							</div>
+
+							{/*
+							  For a visitor holding a link rather than a file, who is on
+							  the wrong page here: the viewer fetches it in the browser.
+							*/}
+							<p className="text-muted-foreground text-body-sm mt-4">
+								Have a link instead?{' '}
+								<Link
+									to="/view"
+									viewTransition
+									className="hover:text-foreground underline underline-offset-4 transition-colors"
+								>
+									Open it in the viewer
+								</Link>
+							</p>
 						</div>
 
 						{/*

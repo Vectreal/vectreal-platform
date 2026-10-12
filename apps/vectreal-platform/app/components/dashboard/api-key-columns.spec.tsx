@@ -131,7 +131,7 @@ describe('ApiKeyNameCell', () => {
 		/*
 		  The guard, not an incidental. Matching the value would make pasting a
 		  live key into the search box the obvious move, and that box is URL-backed:
-		  `redact-embed-token.ts` rewrites `token=` parameters and would not touch
+		  `redact-url-secrets.ts` rewrites `token=` parameters and would not touch
 		  this one.
 		*/
 		const columns = createApiKeyColumns({

@@ -390,7 +390,21 @@ const navigated: string[] = []
 vi.mock('react-router', () => ({
 	useNavigate: () => async (to: string) => {
 		navigated.push(to)
-	}
+	},
+	// The empty stage's link to the viewer; navigating it is not under test here.
+	Link: ({
+		to,
+		children,
+		className
+	}: {
+		to: string
+		children: React.ReactNode
+		className?: string
+	}) => (
+		<a href={to} className={className}>
+			{children}
+		</a>
+	)
 }))
 
 /** Holds the publisher handoff open, the way a large document would. */

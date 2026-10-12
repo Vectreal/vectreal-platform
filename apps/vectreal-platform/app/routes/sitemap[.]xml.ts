@@ -95,6 +95,12 @@ export async function loader() {
 			priority: '0.8'
 		},
 		{
+			path: '/view',
+			lastmod: '2026-10-12',
+			changefreq: 'monthly',
+			priority: '0.7'
+		},
+		{
 			path: '/news-room',
 			lastmod: '2026-06-29',
 			changefreq: 'daily',
