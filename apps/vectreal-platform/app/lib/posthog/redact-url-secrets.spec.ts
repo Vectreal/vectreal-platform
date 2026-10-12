@@ -123,41 +123,6 @@ describe('redactUrlSecrets', () => {
 	})
 })
 
-/*
-  `/view?src=<url>` puts the visitor's model link in the page URL, and a
-  presigned storage link is a bearer credential until it expires.
-*/
-describe('redactUrlSecrets on a /view link', () => {
-	const SIGNATURE = 'X-Amz-Signature=5f3a9c'
-
-	it('replaces an encoded src', () => {
-		const url = `https://vectreal.com/view?src=${encodeURIComponent(
-			`https://bucket.s3.amazonaws.com/m.glb?${SIGNATURE}`
-		)}`
-
-		expect(redactUrlSecrets(url)).toBe('https://vectreal.com/view?src=redacted')
-	})
-
-	it('takes the rest of the query with it when the link was not encoded', () => {
-		// The credential is a parameter *after* `src` here, not part of its value.
-		const url = `https://vectreal.com/view?src=https://bucket/m.glb?${SIGNATURE}&X-Amz-Credential=AKIA`
-
-		expect(redactUrlSecrets(url)).toBe('https://vectreal.com/view?src=redacted')
-	})
-
-	it('keeps the fragment and a token rule still applies', () => {
-		expect(redactUrlSecrets('/view?token=t&src=https://a/b.glb#x')).toBe(
-			'/view?token=redacted&src=redacted#x'
-		)
-	})
-
-	it('leaves a page without src alone', () => {
-		const url = 'https://vectreal.com/view'
-
-		expect(redactUrlSecrets(url)).toBe(url)
-	})
-})
-
 describe('redactUrlSecretsFromProperties', () => {
 	it('redacts the property PostHog adds to every event', () => {
 		const event = redactUrlSecretsFromProperties({

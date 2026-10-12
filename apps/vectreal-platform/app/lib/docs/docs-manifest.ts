@@ -147,24 +147,13 @@ export const docsPages: DocPage[] = [
 		version: 'latest'
 	},
 	{
-		slug: 'guides/view-by-link',
-		title: 'Viewing a Model by Link',
-		description:
-			'Show any GLB, glTF, STL, FBX or OBJ in the browser from a link, which hosts allow it, and how it reaches the Publisher.',
-		sourcePath:
-			'apps/vectreal-platform/app/routes/docs/guides/view-by-link.mdx',
-		category: 'guides',
-		order: 2,
-		version: 'latest'
-	},
-	{
 		slug: 'guides/optimize',
 		title: 'Optimizing & Configuring',
 		description:
 			'Quality presets, texture compression, mesh simplification, lighting, and camera settings.',
 		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/optimize.mdx',
 		category: 'guides',
-		order: 3,
+		order: 2,
 		version: 'latest'
 	},
 	{
@@ -175,7 +164,7 @@ export const docsPages: DocPage[] = [
 		sourcePath:
 			'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx',
 		category: 'guides',
-		order: 4,
+		order: 3,
 		version: 'latest'
 	},
 	{
