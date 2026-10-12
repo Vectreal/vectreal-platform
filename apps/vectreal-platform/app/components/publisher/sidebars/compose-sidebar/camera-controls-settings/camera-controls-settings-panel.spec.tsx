@@ -4,7 +4,7 @@
  * "Open in Camera tool"). The panel opens on that camera as if its row had
  * been clicked, and takes the request only once.
  */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
@@ -110,6 +110,34 @@ describe('CameraControlsSettingsPanel and hotspot cameras', () => {
 
 		// Not the default camera: the one the author was on.
 		expect(store.get(selectedCameraIdAtom)).toBe('side')
+	})
+})
+
+/**
+ * Capturing the default camera writes the opening view, which can fail: the
+ * viewer may not have registered its capture yet. The button only says the view
+ * was captured when it was.
+ */
+describe('CameraControlsSettingsPanel capturing the current view', () => {
+	it('does not report a capture that failed', async () => {
+		const store = sceneWithTwoCameras()
+		renderPanel(store)
+
+		fireEvent.click(await screen.findByRole('button', { name: /Front/ }))
+		await screen.findByRole('heading', { name: 'Front' })
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Set camera to current view' })
+		)
+
+		// The capture settles over a few microtasks; give it every chance to
+		// report success before asserting it did not.
+		await waitFor(() =>
+			expect(
+				screen.getByRole('button', { name: 'Set camera to current view' })
+			).toBeTruthy()
+		)
+		await new Promise((resolve) => setTimeout(resolve, 0))
+		expect(screen.queryByText('View captured')).toBeNull()
 	})
 })
 

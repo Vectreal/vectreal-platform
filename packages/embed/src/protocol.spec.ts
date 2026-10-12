@@ -65,6 +65,14 @@ describe('focus_hotspot', () => {
 	})
 })
 
+/** The viewer's command union, read from source so it covers the next one added. */
+const commandTypes = [
+	...readFileSync(
+		join(import.meta.dirname, '../../viewer/src/types/viewer-interactions.ts'),
+		'utf8'
+	).matchAll(/export interface \w+ViewerCommand \{\n\ttype: '(\w+)'/g)
+].map((match) => match[1])
+
 /**
  * Every command in the union has a case in the guard.
  *
@@ -75,20 +83,10 @@ describe('focus_hotspot', () => {
  * so it covers the next command added, not just this one.
  */
 describe('the guard covers the command union', () => {
-	const viewerTypes = readFileSync(
-		join(import.meta.dirname, '../../viewer/src/types/viewer-interactions.ts'),
-		'utf8'
-	)
 	const protocol = readFileSync(
 		join(import.meta.dirname, 'protocol.ts'),
 		'utf8'
 	)
-
-	const commandTypes = [
-		...viewerTypes.matchAll(
-			/export interface \w+ViewerCommand \{\n\ttype: '(\w+)'/g
-		)
-	].map((match) => match[1])
 
 	const guard = protocol
 		.split('export function isViewerCommand')[1]
@@ -101,5 +99,21 @@ describe('the guard covers the command union', () => {
 
 	it.each(commandTypes)('registers %s', (type) => {
 		expect(guard).toContain(`case '${type}':`)
+	})
+})
+
+/**
+ * Every command in the union has a `VectrealEmbed` method.
+ *
+ * A command the guard accepts and the viewer runs is still unusable from a host
+ * page until the SDK sends it: `seek_animation_clip` sat in that state, and the
+ * guard above could not see it because it compares the union with the guard,
+ * not with the SDK.
+ */
+describe('the SDK covers the command union', () => {
+	const sdk = readFileSync(join(import.meta.dirname, 'embed.ts'), 'utf8')
+
+	it.each(commandTypes)('sends %s', (type) => {
+		expect(sdk).toContain(`type: '${type}'`)
 	})
 })

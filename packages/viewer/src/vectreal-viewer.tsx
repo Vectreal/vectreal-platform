@@ -955,8 +955,13 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										onPlaybackStatusChange={animation.setStatus}
 									/>
 								)}
-								<Center top cacheKey={centerCacheKey}>
-									{model && (
+								{/*
+								  Only around a model: content passed as children is not
+								  centered, and an empty Center measures an empty box and
+								  writes a NaN offset into the scene graph.
+								*/}
+								{model && (
+									<Center top cacheKey={centerCacheKey}>
 										<SceneModel
 											cameraOptions={cameraOptions}
 											onScreenshot={onScreenshot}
@@ -970,8 +975,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											onRawDiagonalComputed={onRawDiagonalComputed}
 											clipExtents={clipExtents}
 										/>
-									)}
-								</Center>
+									</Center>
+								)}
 								<SceneShadows
 									model={model}
 									displayedModel={displayedModel}

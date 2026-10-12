@@ -279,10 +279,7 @@ export function useSceneCameras() {
 	 * Resolves to whether a view was captured.
 	 */
 	const captureCurrentView = useCallback(async (): Promise<boolean> => {
-		if (isEditingDefaultCamera) {
-			await setOpeningView()
-			return true
-		}
+		if (isEditingDefaultCamera) return setOpeningView()
 		const snapshot = await requestSceneCameraSnapshot()
 		if (!snapshot) return false
 		updateSelected((entry) => applySnapshotToCamera(entry, snapshot))

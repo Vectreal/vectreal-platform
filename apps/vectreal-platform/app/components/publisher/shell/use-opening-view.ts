@@ -29,7 +29,8 @@ export const OPENING_VIEW_CAPTURE_OPTIONS = {
 }
 
 /**
- * Sets the current viewport as the scene's opening view.
+ * Sets the current viewport as the scene's opening view, resolving to whether
+ * it did.
  *
  * Thumbnail and default camera are one concept, not two. The thumbnail is the
  * placeholder rendered while a scene loads, and the default camera is the frame
@@ -45,8 +46,10 @@ export function useOpeningViewCapture() {
 	const [isCapturing, setIsCapturing] = useState(false)
 
 	const setOpeningView = useCallback(
-		async ({ announce = true }: { announce?: boolean } = {}) => {
-			if (isCapturing) return
+		async ({
+			announce = true
+		}: { announce?: boolean } = {}): Promise<boolean> => {
+			if (isCapturing) return false
 			setIsCapturing(true)
 
 			try {
@@ -57,38 +60,36 @@ export function useOpeningViewCapture() {
 					requestSceneScreenshot(OPENING_VIEW_CAPTURE_OPTIONS)
 				])
 
-				if (!dataUrl) {
+				// Writing one without the other would leave the thumbnail and the
+				// default camera describing different views.
+				if (!dataUrl || !snapshot) {
 					if (announce) {
 						toast.error(
 							'Could not capture the viewport. Try again once the scene has finished loading.'
 						)
 					}
-					return
+					return false
 				}
 
-				if (snapshot) {
-					setCamera((previous) => {
-						const defaultCameraId = resolveDefaultSceneCameraId(
-							previous.cameras
+				setCamera((previous) => {
+					const defaultCameraId = resolveDefaultSceneCameraId(previous.cameras)
+					if (!defaultCameraId) return previous
+
+					return {
+						...previous,
+						cameras: previous.cameras?.map((entry) =>
+							entry.cameraId === defaultCameraId
+								? {
+										...entry,
+										position: snapshot.position,
+										rotation: snapshot.rotation,
+										target: snapshot.target,
+										fov: snapshot.fov
+									}
+								: entry
 						)
-						if (!defaultCameraId) return previous
-
-						return {
-							...previous,
-							cameras: previous.cameras?.map((entry) =>
-								entry.cameraId === defaultCameraId
-									? {
-											...entry,
-											position: snapshot.position,
-											rotation: snapshot.rotation,
-											target: snapshot.target,
-											fov: snapshot.fov
-										}
-									: entry
-							)
-						}
-					})
-				}
+					}
+				})
 
 				// Writing the meta is enough to mark the scene dirty: a `data:` URL only
 				// ever comes from a capture in this session, which the change detection
@@ -97,11 +98,13 @@ export function useOpeningViewCapture() {
 				if (announce) {
 					toast.success('Opening view updated. Save to keep it.')
 				}
+				return true
 			} catch (error) {
 				console.error('Opening view capture failed:', error)
 				if (announce) {
 					toast.error('Could not capture the viewport.')
 				}
+				return false
 			} finally {
 				setIsCapturing(false)
 			}
