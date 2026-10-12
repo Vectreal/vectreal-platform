@@ -12,12 +12,7 @@ async function load(route: 'llms' | 'llms-full') {
 		route === 'llms'
 			? await import('../app/routes/llms[.]txt')
 			: await import('../app/routes/llms-full[.]txt')
-	const response = (await loader({
-		request: new Request(`${ORIGIN}/${route}.txt`),
-		params: {},
-		context: {} as never
-	} as never)) as Response
-	return response.text()
+	return loader().text()
 }
 
 describe('/llms.txt links the markdown twins', () => {
@@ -50,12 +45,27 @@ describe('/llms.txt links the markdown twins', () => {
 	it('names the one-file version', async () => {
 		expect(await load('llms')).toContain(`${ORIGIN}/llms-full.txt`)
 	})
+
+	it('links the canonical site, whoever asks', async () => {
+		const { loader } = await import('../app/routes/llms[.]txt')
+		// The request Express sees on staging: proxy-stripped scheme, staging host.
+		const body = await (loader as (args: unknown) => Response)({
+			request: new Request('http://staging.vectreal.com/llms.txt')
+		}).text()
+		const origins = new Set(
+			[...body.matchAll(/https?:\/\/(?:[\w-]+\.)*vectreal\.com\b/g)].map(
+				(match) => match[0]
+			)
+		)
+
+		expect([...origins]).toEqual([ORIGIN])
+	})
 })
 
 describe('/llms-full.txt', () => {
 	it('says where each page came from on the canonical site, whoever asks', async () => {
 		const { loader } = await import('../app/routes/llms-full[.]txt')
-		const body = await (loader as () => Response)().text()
+		const body = await loader().text()
 		expect(body).not.toMatch(/Source: (?!https:\/\/vectreal\.com\/)/)
 	})
 

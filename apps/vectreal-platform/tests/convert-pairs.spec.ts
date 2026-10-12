@@ -590,12 +590,7 @@ describe('every crawl surface derives its pairs from the manifest', () => {
 
 	it('puts every pair in llms.txt', async () => {
 		const { loader } = await import('../app/routes/llms[.]txt')
-		const response = (await loader({
-			request: new Request('https://vectreal.com/llms.txt'),
-			params: {},
-			context: {} as never
-		} as never)) as Response
-		const body = await response.text()
+		const body = await loader().text()
 
 		expect(body).toContain('## Converters')
 		expect(body).toContain(`[${CONVERT_INDEX_COPY.title}]`)
