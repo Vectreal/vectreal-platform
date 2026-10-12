@@ -11,7 +11,6 @@ import {
 } from 'react'
 import {
 	Box3,
-	Euler,
 	Mesh,
 	Object3D,
 	PerspectiveCamera,
@@ -23,6 +22,8 @@ import {
 import { resolveClipPlanes, type ClipExtentRegistry } from './clip-planes'
 import { useModelFrame, type ModelKey } from './model-frame'
 import { worldBounds } from './model-measurement'
+import { resolveCameraSelection } from './scene-camera'
+import { renderAtPose } from './screenshot-pose'
 
 import type {
 	SceneScreenshotCapture,
@@ -290,7 +291,7 @@ const SceneModel = memo((props: ModelProps) => {
 		clipSphereDirtyRef.current = true
 	}, [drawnObjects, normalizedScale])
 
-	useFrame(() => {
+	const fitClipPlanes = useCallback(() => {
 		const perspectiveCamera = camera as PerspectiveCamera
 		if (!perspectiveCamera.isPerspectiveCamera) {
 			return
@@ -326,7 +327,9 @@ const SceneModel = memo((props: ModelProps) => {
 			perspectiveCamera.far = far
 			perspectiveCamera.updateProjectionMatrix()
 		}
-	})
+	}, [camera, clipExtents, object, size.height])
+
+	useFrame(fitClipPlanes)
 
 	useEffect(() => {
 		if (rawDiagonal > 0) onRawDiagonalComputed?.(rawDiagonal)
@@ -349,51 +352,35 @@ const SceneModel = memo((props: ModelProps) => {
 			const initialControlsEnabled = controls?.enabled
 
 			try {
-				// If a target camera ID is specified, resolve and apply that camera's settings first
+				// The pose the capture renders at, set before the frames it waits and
+				// again right before the render: see `renderAtPose`. Viewport mode
+				// sets none and renders the live frame.
+				let setCapturePose = () => {}
+
 				if (options.targetCameraId && cameraOptions?.cameras) {
 					const targetCameraConfig = cameraOptions.cameras.find(
 						(c) => c.cameraId === options.targetCameraId
 					)
 
 					if (targetCameraConfig) {
-						// Apply target camera's position if available
-						if (
-							Array.isArray(targetCameraConfig.position) &&
-							targetCameraConfig.position.length >= 3
-						) {
-							activeCamera.position.fromArray(
-								targetCameraConfig.position as [number, number, number]
-							)
-						}
+						// Resolved by the viewer's camera rule, from the values at capture
+						// start, so fallbacks (a missing target, fov or position) do not
+						// follow a transition that is still running. One case differs from
+						// what the viewer shows: a camera with no pose at all, which the
+						// viewer sends to the opening view SceneCamera keeps and this
+						// component cannot see. It keeps the pose at capture start.
+						const selection = resolveCameraSelection(
+							cameraOptions.cameras,
+							targetCameraConfig.cameraId,
+							initialControlsTarget ?? new Vector3(),
+							activeCamera
+						)
 
-						// Apply target camera's rotation if available
-						if (
-							Array.isArray(targetCameraConfig.rotation) &&
-							targetCameraConfig.rotation.length >= 3
-						) {
-							const euler = new Euler(
-								...(targetCameraConfig.rotation as [number, number, number])
-							)
-							activeCamera.quaternion.setFromEuler(euler)
-						}
-
-						// Apply target camera's field of view if available
-						if (typeof targetCameraConfig.fov === 'number') {
-							activeCamera.fov = targetCameraConfig.fov
-						}
-
-						// Apply target camera's target/lookAt if controls exist
-						if (
-							controls?.target &&
-							(Array.isArray(targetCameraConfig.target) ||
-								Array.isArray(targetCameraConfig.lookAt))
-						) {
-							const targetPosition = (targetCameraConfig.target ??
-								targetCameraConfig.lookAt) as
-								[number, number, number] | undefined
-							if (targetPosition) {
-								controls.target.fromArray(targetPosition)
-							}
+						setCapturePose = () => {
+							activeCamera.position.copy(selection.targetPosition)
+							activeCamera.rotation.copy(selection.targetRotation)
+							activeCamera.fov = selection.targetFov
+							controls?.target?.copy(selection.targetLookAt)
 						}
 					}
 				} else if (options.mode === 'auto-fit') {
@@ -414,19 +401,33 @@ const SceneModel = memo((props: ModelProps) => {
 					const framing = solveAutoFitFraming(object, activeCamera)
 
 					if (framing) {
-						activeCamera.position.copy(framing.position)
-						activeCamera.lookAt(framing.target)
-						controls?.target?.copy(framing.target)
+						// The distance was solved for this fov; hold it.
+						const framedFov = activeCamera.fov
+						setCapturePose = () => {
+							activeCamera.fov = framedFov
+							activeCamera.position.copy(framing.position)
+							activeCamera.lookAt(framing.target)
+							controls?.target?.copy(framing.target)
+						}
 					}
 				}
 
-				activeCamera.updateProjectionMatrix()
-				controls?.update()
-				invalidate()
-				await waitForNextFrame()
-				invalidate()
-				await waitForNextFrame()
-				gl.render(scene, activeCamera)
+				const applyPose = () => {
+					setCapturePose()
+					activeCamera.updateProjectionMatrix()
+					controls?.update()
+					// The planes the last frame solved were for wherever the camera
+					// was then; a pose set after it needs its own, or a model nearer
+					// or farther than that pose is clipped away.
+					fitClipPlanes()
+				}
+
+				await renderAtPose({
+					applyPose,
+					invalidate,
+					waitForNextFrame,
+					render: () => gl.render(scene, activeCamera)
+				})
 
 				const dataUrl = await buildScreenshotDataUrl(
 					gl.domElement,
@@ -459,6 +460,7 @@ const SceneModel = memo((props: ModelProps) => {
 			camera,
 			cameraOptions,
 			controls,
+			fitClipPlanes,
 			gl,
 			invalidate,
 			object,

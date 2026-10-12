@@ -87,7 +87,7 @@ type CameraTransitionRuntime = {
 	curve?: CatmullRomCurve3
 }
 
-type ResolvedCameraSelection = {
+export type ResolvedCameraSelection = {
 	cameraId: string
 	targetPosition: Vector3
 	targetRotation: Euler
@@ -202,7 +202,7 @@ function applyEasing(t: number, easing?: CameraTransitionEasing): number {
 	}
 }
 
-function resolveCameraSelection(
+export function resolveCameraSelection(
 	cameras: CameraProps['cameras'],
 	activeCameraId: CameraProps['activeCameraId'],
 	currentControlsTarget: Vector3,
