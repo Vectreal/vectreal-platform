@@ -17,6 +17,7 @@ import type { LoadingState } from '../hooks/use-viewer-loading'
 
 const POPOVER = <div>info popover</div>
 const CONTROLS = <div>playback controls</div>
+const CAMERAS = <div>camera switcher</div>
 
 function renderOverlay(loadingState: LoadingState) {
 	render(
@@ -25,40 +26,45 @@ function renderOverlay(loadingState: LoadingState) {
 			loader={<div>loading spinner</div>}
 			popover={POPOVER}
 			animationControls={CONTROLS}
+			cameraControls={CAMERAS}
 		/>
 	)
 
 	return {
 		popover: screen.queryByText('info popover'),
 		controls: screen.queryByText('playback controls'),
+		cameras: screen.queryByText('camera switcher'),
 		loader: screen.queryByText('loading spinner')
 	}
 }
 
 describe('Overlay', () => {
 	it('shows the loader alone while the scene is loading', () => {
-		const { popover, controls, loader } = renderOverlay('loading')
+		const { popover, controls, cameras, loader } = renderOverlay('loading')
 
 		expect(loader).not.toBeNull()
 		// The defect: this popover used to be rendered outside the loader gate,
 		// and its `z-[100]` root painted over the spinner for the whole load.
 		expect(popover).toBeNull()
 		expect(controls).toBeNull()
+		expect(cameras).toBeNull()
 	})
 
 	it('still shows no chrome during the loader cross-fade', () => {
-		const { popover, controls, loader } = renderOverlay('loaded')
+		const { popover, controls, cameras, loader } = renderOverlay('loaded')
 
 		expect(loader).not.toBeNull()
 		expect(popover).toBeNull()
 		expect(controls).toBeNull()
+		expect(cameras).toBeNull()
 	})
 
 	it('shows chrome and no loader once the scene is ready', () => {
-		const { popover, controls, loader } = renderOverlay('ready')
+		const { popover, controls, cameras, loader } = renderOverlay('ready')
 
 		expect(loader).toBeNull()
 		expect(popover).not.toBeNull()
 		expect(controls).not.toBeNull()
+		expect(cameras).not.toBeNull()
 	})
 })

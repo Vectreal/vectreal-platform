@@ -117,6 +117,12 @@ export interface CameraProps {
 	 * Replaces per-camera CameraConfig.transition in new saves.
 	 */
 	sceneTransition?: CameraTransitionConfig
+	/**
+	 * Whether visitors get a switcher between the scene cameras. Absent means
+	 * yes. It is drawn only when there are two or more scene cameras to switch
+	 * between; hotspot cameras are reached through their markers and never count.
+	 */
+	showControls?: boolean
 }
 
 /**

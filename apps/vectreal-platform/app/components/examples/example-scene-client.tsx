@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 import { withSceneSettingsDefaults } from '../../constants/viewer-defaults'
+import { useAppColorScheme } from '../../hooks/use-app-color-scheme'
 
 import type { ExampleScene } from '../../lib/samples/example-scenes'
 
@@ -30,10 +31,14 @@ export default function ExampleSceneClient({
 	*/
 	const model = useMemo(() => clone(scene), [scene])
 	const settings = withSceneSettingsDefaults(example.settings)
+	// The article's scheme, not the visitor's system one, so the camera
+	// switcher matches the page it sits in.
+	const theme = useAppColorScheme()
 
 	return (
 		<VectrealViewer
 			className="h-full w-full"
+			theme={theme}
 			model={model}
 			animationOptions={settings.animation}
 			boundsOptions={settings.bounds}

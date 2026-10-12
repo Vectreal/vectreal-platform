@@ -41,9 +41,13 @@ collapsed every corner in the app to square.
 The rule is one place per name, not "never `@theme`". A name that belongs in
 `@theme`, because a utility should generate from it, goes there and only there.
 
-The viewer package must not emit global theme tokens. `packages/viewer` owns a
-separate `--vctrl-*` namespace scoped to `.viewer`, deliberately outside the app
-theme, and resets `--radius-*` to `initial` so it cannot clobber a host app.
+The viewer package must not emit global theme tokens. Its built-in controls
+wear the app's palette and shell recipe from `theme.css`, which the published
+bundle compiles in and its build confines to `.vctrl-viewer`; the scheme is the
+`light` or `dark` class the viewer puts on its own root, not the page's. Only
+the hotspot marker keeps viewer-owned `--vctrl-hotspot-*` tokens on `.viewer`,
+and `package.css` resets `--radius-*` to `initial` so it cannot clobber a host
+app.
 
 ## Spacing rhythm
 

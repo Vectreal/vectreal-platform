@@ -1,3 +1,4 @@
+import { cn } from '@shared/utils'
 import { createRef } from 'react'
 
 import HotspotPopover from './hotspot-popover'
@@ -40,11 +41,9 @@ const meta = {
 		layout: 'centered',
 		/*
 		  The workspace decorator renders every story twice and switches themes
-		  with the app's `.dark` class. That is the wrong mechanism here: this
-		  package's tokens hang off `.viewer` and are switched by `data-theme` on
-		  that same element, so `.dark` moves nothing and both panes came out
-		  identical - a card with no resolved background at all, showing the
-		  backdrop straight through itself.
+		  with the app's `.dark` class. Each pane here also needs its own
+		  backdrop, which stands in for the model, so the story names its scheme
+		  and sets the class itself, as the viewer does on its root.
 		*/
 		dualTheme: false,
 		viewerTheme: 'light'
@@ -65,10 +64,9 @@ const meta = {
 		 * A marker to hang off, a surface to sit on, and the token scope both
 		 * need.
 		 *
-		 * `.viewer` is not decoration: every colour this card uses is declared
-		 * there, so without it `--vctrl-bg` and `--vctrl-text` do not resolve and
-		 * the card renders transparent with inherited text - which is how this
-		 * story first shipped, looking plausible because the shadow still drew.
+		 * The scheme class is not decoration: the card's palette is switched by
+		 * `light` or `dark` on the viewer's root, so the story sets it there the
+		 * way `useViewerColorScheme` does.
 		 *
 		 * The card is absolutely positioned against the nearest positioned
 		 * ancestor and offset by the gap, so it also needs a point to hang off
@@ -82,8 +80,10 @@ const meta = {
 		 */
 		(Story, context) => (
 			<div
-				className="viewer"
-				data-theme={context.parameters.viewerTheme as 'light' | 'dark'}
+				className={cn(
+					'viewer',
+					context.parameters.viewerTheme as 'light' | 'dark'
+				)}
 			>
 				<div className="flex h-[240px] w-[340px] items-center justify-center rounded-[0.75rem] bg-neutral-500">
 					<div className="relative">

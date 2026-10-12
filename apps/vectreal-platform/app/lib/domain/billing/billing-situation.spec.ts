@@ -11,7 +11,7 @@
  * that is how #846's cap test came to hold for an empty list.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
 	describeBillingSituation,
@@ -19,6 +19,20 @@ import {
 } from './billing-situation'
 
 import type { BillingSituationInput } from './billing-situation'
+
+/*
+  "Renews" is only said of a date still ahead, so the clock is pinned before the
+  fixtures' dates. Read live, every one of them falls into the past on its own
+  day and the suite starts failing with no change to the code.
+*/
+beforeAll(() => {
+	vi.useFakeTimers({ toFake: ['Date'] })
+	vi.setSystemTime(new Date('2026-09-01T00:00:00.000Z'))
+})
+
+afterAll(() => {
+	vi.useRealTimers()
+})
 
 const FREE: BillingSituationInput = {
 	plan: 'free',

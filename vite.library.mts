@@ -114,12 +114,24 @@ export function manifestExternals(projectRoot: string): Plugin {
  * rule styles, which adds no specificity and stops it matching anything the
  * scope does not contain. The subject rather than the first compound, so a
  * selector that starts at the document (`:root.dark .x`) still matches.
- * The theme's `:root, :host` variables move onto the scope, where they still
- * inherit to everything that reads them. Keyframe selectors are left alone.
+ * A `:root` or `:host` selector moves onto the scope, where its variables still
+ * inherit to everything that reads them, including one listed beside another
+ * selector (`:root, .light`), which would otherwise never match.
+ * Keyframe selectors are left alone.
+ *
+ * A source's own `@layer utilities` is unwrapped into the unlayered bundle, or
+ * its rules would lose to the viewer's other utilities and to any unlayered
+ * host stylesheet.
  */
 export function scopeStylesheetRules(css: string, scope: string): string {
 	const where = `:where(${scope}, ${scope} *)`
 	const root = postcss.parse(css)
+
+	root.walkAtRules('layer', (layer) => {
+		if (layer.params === 'utilities' && layer.nodes) {
+			layer.replaceWith(layer.nodes)
+		}
+	})
 
 	root.walkRules((rule) => {
 		const parent = rule.parent
@@ -130,16 +142,14 @@ export function scopeStylesheetRules(css: string, scope: string): string {
 			return
 		}
 
-		if (rule.selectors.every((selector) => /^:(root|host)$/.test(selector))) {
-			rule.selector = scope
-			return
-		}
-
 		// On the subject, ahead of its pseudo-element: one has to stay last.
-		rule.selectors = rule.selectors.map((selector) => {
+		const selectors = rule.selectors.map((selector) => {
+			if (/^:(root|host)$/.test(selector)) return scope
 			const at = pseudoElementStart(selector)
 			return `${selector.slice(0, at)}${where}${selector.slice(at)}`
 		})
+		// `:root, :host` would otherwise name the scope twice.
+		rule.selectors = [...new Set(selectors)]
 	})
 
 	return root.toString()

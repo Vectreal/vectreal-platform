@@ -24,17 +24,17 @@
 export const PUBLISHER_LAYER = {
 	/** The bottom-right column of the stage: save progress over the publish card. */
 	card: 'z-10',
-	/** Preview-mode camera controls, bottom-center of the stage. */
-	previewControls: 'z-20',
 	/**
-	 * The hold-to-compare label, in the same bottom-center slot: it only shows
-	 * with the optimization drawer open, which preview mode never is.
+	 * The hold-to-compare label, bottom-center of the stage: it only shows with
+	 * the optimization drawer open, which preview mode never is, so it never
+	 * meets the viewer's camera switcher there.
 	 */
 	compareLabel: 'z-20',
 	/**
 	 * The author's animation playback bar, in the same bottom-center slot. It
-	 * belongs to the editor, so it never meets the preview controls, and it
-	 * steps aside while the compare label is up.
+	 * belongs to the editor, so it never meets the viewer's camera switcher,
+	 * which shows only in preview, and it steps aside while the compare label
+	 * is up.
 	 */
 	animationControls: 'z-20',
 	/** Tool bar, top-left of the stage. */

@@ -83,6 +83,16 @@ describe('scopeStylesheetRules', () => {
 		expect(scope(':root,:host{--spacing:.25rem}')).toBe('.v{--spacing:.25rem}')
 	})
 
+	it('moves a root selector onto the scope beside another selector', () => {
+		expect(scope(':root,.light{--x:0}')).toBe(`.v,.light${WHERE}{--x:0}`)
+	})
+
+	it('unwraps a utilities layer into the unlayered bundle, and only that one', () => {
+		expect(
+			scope('@layer utilities{.a{color:red}}@layer properties{.b{--x:0}}')
+		).toBe(`.a${WHERE}{color:red}@layer properties{.b${WHERE}{--x:0}}`)
+	})
+
 	it('leaves keyframe selectors alone', () => {
 		const keyframes = '@keyframes pulse{0%{opacity:0}to{opacity:1}}'
 		expect(scope(keyframes)).toBe(keyframes)

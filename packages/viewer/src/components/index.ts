@@ -1,4 +1,5 @@
 export { default as AnimationControls } from './animation-controls'
+export { default as CameraControls } from './camera-controls'
 export { default as Canvas } from './canvas-wrapper'
 export * from './info-popover'
 export { default as Overlay } from './overlay'

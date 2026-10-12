@@ -14,32 +14,32 @@ import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo
  * whose plan this scene is published under - and folding the mark into the
  * popover made switching the popover off a free way to remove the branding.
  *
- * Styled from the viewer's own `--vctrl-*` tokens rather than the app's,
- * because it renders inside the `.viewer` container and has to resolve to the
- * scheme the viewer resolved. App tokens follow the `dark` class on `<html>`,
- * which an embedded viewer following `prefers-color-scheme` need not agree
- * with.
+ * Drawn like the viewer's own controls: a `shell-panel` from the shared theme
+ * stylesheet, with muted text that brightens on hover. It renders inside the
+ * viewer, so the palette is the scheme the viewer carries, not the `dark` class
+ * on `<html>`, which an embed following `prefers-color-scheme` need not match.
  *
  * Top-right: the info popover holds the bottom-left of the same container and
  * the playback controls hold the bottom-right.
  *
- * Full opacity, like that chrome, rather than the faded mark this started as.
- * A partial opacity composites the whole element toward the scene behind it,
- * and at 70% the label measured 3.7:1 - under AA for 11px text, on the one
- * element in the viewer a reader is least able to enlarge. At full strength
- * `--vctrl-text` on `--vctrl-bg` is 14.9:1 dark and 13.3:1 light. Hover moves
- * the background, the way the other chrome does.
+ * The color sits on the panel and the link inherits it: the viewer container's
+ * `[&_a]:text-inherit` outranks a color class on the anchor itself. Full
+ * opacity, never the faded mark this started as: at 70% the 11px label
+ * measured 3.7:1, under AA on the one element a reader cannot enlarge.
+ * `contrast-tokens.spec.ts` holds muted text on the panel to AA.
  */
 export const VectrealEmbedBadge = () => (
-	<a
-		className="vctrl-embed-badge absolute top-0 right-0 m-2 flex items-center gap-1.5 rounded-full bg-[var(--vctrl-bg)] px-2.5 py-1 text-[0.6875rem] leading-none text-[var(--vctrl-text)] no-underline transition-[background-color] duration-300 visited:text-[var(--vctrl-text)] hover:bg-[var(--vctrl-hover-bg)] hover:text-[var(--vctrl-text)] active:bg-[var(--vctrl-active-bg)] [&_svg]:h-3 [&_svg]:w-3 [&_svg]:text-current"
-		href="https://vectreal.com"
-		target="_blank"
-		rel="noopener noreferrer"
-	>
-		<VectrealLogoSmall className="text-current" />
-		Vectreal
-	</a>
+	<div className="vctrl-embed-badge shell-panel text-muted-foreground absolute top-0 right-0 m-2">
+		<a
+			className="shell-focus hover:text-foreground hover:bg-foreground/5 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] leading-none no-underline transition-colors duration-150 motion-reduce:transition-none [&_svg]:h-3 [&_svg]:w-3"
+			href="https://vectreal.com"
+			target="_blank"
+			rel="noopener noreferrer"
+		>
+			<VectrealLogoSmall className="text-current" />
+			Vectreal
+		</a>
+	</div>
 )
 
 export default VectrealEmbedBadge

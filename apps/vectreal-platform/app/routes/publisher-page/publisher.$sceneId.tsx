@@ -171,7 +171,10 @@ const PublisherPage = () => {
 	// Whether the viewer is playing, as it reports it. Drives the stage's own
 	// playback bar, which sends commands but cannot know the outcome itself:
 	// a sequence can run out, and the runtime resets when animation is off.
-	const [isAnimationPlaying, setIsAnimationPlaying] = useState(false)
+	const [animationStatus, setAnimationStatus] = useState({
+		playing: false,
+		complete: false
+	})
 
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
@@ -179,7 +182,10 @@ const PublisherPage = () => {
 				setSelectedCameraId(event.cameraId)
 			}
 			if (event.type === 'animation_state_changed') {
-				setIsAnimationPlaying(event.playing)
+				setAnimationStatus({
+					playing: event.playing,
+					complete: event.complete
+				})
 			}
 			captureOpeningView(event)
 		},
@@ -273,6 +279,12 @@ const PublisherPage = () => {
 					  leaving a hotspot camera's view in the Camera tool.
 					*/
 					showSceneViewReturn={isPreviewMode}
+					/*
+					  The visitor's camera switcher, so preview shows what ships. The
+					  editor switches cameras in the Camera tool, and the selection
+					  follows the viewer either way through `camera_changed` above.
+					*/
+					showCameraControls={isPreviewMode}
 					onHotspotPositionSetterReady={registerHotspotPositionSetter}
 					onShadowLightChange={handleShadowLightChange}
 					normalizationOptions={normalization}
@@ -295,11 +307,12 @@ const PublisherPage = () => {
 						Boolean(animation?.enabled) &&
 						(file?.animations?.length ?? 0) > 0
 					}
-					playing={isAnimationPlaying}
+					playing={animationStatus.playing}
+					complete={animationStatus.complete}
 					onToggle={() =>
 						commandExecutor.current?.execute({
 							type: 'set_animation_playing',
-							playing: !isAnimationPlaying
+							playing: !animationStatus.playing
 						})
 					}
 					onRestart={() =>

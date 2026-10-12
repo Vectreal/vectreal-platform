@@ -1,6 +1,7 @@
 /*
-  The viewer's own rules: its tokens, the hotspot marker and popover, the
-  scene-view return. No Tailwind here.
+  The viewer's own rules: the hotspot marker's tokens, the marker and popover,
+  the controls' entrances. No Tailwind here, and no palette: the controls take
+  the shared one from `theme.css` through the scheme class on the viewer root.
 
   The utilities the components use come from whoever compiles them. A host
   that builds the viewer from source, as the platform and Storybook do, scans
@@ -12,11 +13,6 @@
 */
 
 .viewer {
-	--vctrl-bg: #f3f4f6;
-	--vctrl-hover-bg: #e5e7eb;
-	--vctrl-active-bg: #d1d5db;
-	--vctrl-text: #1f2937;
-
 	/*
 	  The hotspot marker's own colours, and deliberately not the brand accent.
 
@@ -61,39 +57,6 @@
 	--vctrl-hotspot-internal-ring: #6366f1;
 
 	font-family: 'DM Sans Variable', sans-serif;
-}
-
-.viewer[data-theme='dark'] {
-	--vctrl-bg: #141414;
-	--vctrl-hover-bg: #363636;
-	--vctrl-active-bg: #585858;
-	/*
-	  It was #959595, which is dimmer than the host design system's *muted*
-	  foreground and was carrying primary text: 6.2:1 for a title and 5.2:1 for
-	  body at the 90% opacity the surfaces use. Both clear AA, but that floor
-	  assumes ordinary body copy and the smallest of these is 11px. Light mode
-	  ran at 13.3:1 and 10.0:1 for the same roles, so dark was at roughly half
-	  the contrast of its own counterpart - which is the part that reads as
-	  wrong rather than the absolute number.
-
-	  This lands at 14.9:1 and 12.2:1. The value is not new to the palette,
-	  which is why it was picked over a shade tuned to mirror light exactly.
-	*/
-	--vctrl-text: #e5e7eb;
-}
-
-.viewer[data-theme='light'] {
-	--vctrl-bg: #f3f4f6;
-	--vctrl-hover-bg: #e5e7eb;
-	--vctrl-active-bg: #d1d5db;
-	--vctrl-text: #1f2937;
-}
-
-.viewer[data-theme='system'] {
-	--vctrl-bg: #f3f4f6;
-	--vctrl-hover-bg: #e5e7eb;
-	--vctrl-active-bg: #d1d5db;
-	--vctrl-text: #1f2937;
 }
 
 /*
@@ -312,6 +275,87 @@
 }
 
 /*
+  The camera switcher arrives the way a phone's status island grows: a dot at
+  the bottom centre, which then opens sideways into the full control, with its
+  contents following from the middle out - the name first, then each arrow
+  from the side it sits on. It says where the control came from and that it
+  is one thing, not three buttons appearing at once.
+
+  The width is opened with `clip-path`, not animated: the control is as wide
+  as its camera's name, and `width: auto` does not interpolate. The dot is the
+  control's own height (h-7, p-1 and the panel's hairline each side, 38px), so
+  it is a circle. The panel's shadow waits for the clip to come off, which
+  would otherwise cut it away and then drop it in whole.
+  `scale` rather than `transform`, which the centring `translate` would fight.
+  Durations and easing follow the app's motion tokens: the pop is
+  `--duration-fast` and the opening `--ease-out`.
+*/
+@keyframes vctrl-camera-controls-in {
+	0% {
+		opacity: 0;
+		scale: 0.5;
+		clip-path: inset(0 calc(50% - 19px) round 19px);
+		animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	30% {
+		opacity: 1;
+		scale: 1;
+		clip-path: inset(0 calc(50% - 19px) round 19px);
+		animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+	}
+	100% {
+		clip-path: inset(0 0 round 19px);
+	}
+}
+
+/* No `to`: it ends on the panel's own shadow, whatever the theme makes it. */
+@keyframes vctrl-camera-controls-shadow-in {
+	from {
+		box-shadow: none;
+	}
+}
+
+@keyframes vctrl-camera-controls-content-in {
+	from {
+		opacity: 0;
+		translate: var(--vctrl-camera-controls-from, 0) 0;
+	}
+}
+
+.vctrl-viewer-camera-controls {
+	/*
+	  No fill: the clip must come off when the entrance ends, or it would cut
+	  away the camera list, which opens above the control.
+	*/
+	animation:
+		vctrl-camera-controls-in 500ms,
+		vctrl-camera-controls-shadow-in 200ms ease-out 500ms backwards;
+}
+
+.vctrl-viewer-camera-controls > * {
+	animation: vctrl-camera-controls-content-in 250ms
+		cubic-bezier(0.16, 1, 0.3, 1) 260ms backwards;
+}
+
+/* The arrows come out of the middle towards the side each one sits on. */
+.vctrl-viewer-camera-controls > :first-child {
+	--vctrl-camera-controls-from: 10px;
+	animation-delay: 340ms;
+}
+
+.vctrl-viewer-camera-controls > :last-child {
+	--vctrl-camera-controls-from: -10px;
+	animation-delay: 340ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vctrl-viewer-camera-controls,
+	.vctrl-viewer-camera-controls > * {
+		animation: none;
+	}
+}
+
+/*
   A hotspot the author is keeping backstage.
 
   A dashed ring outside the marker rather than a colour change, for the same
@@ -350,14 +394,4 @@
 	transform: scale(1.5);
 	opacity: 0.9;
 	border-width: 2px;
-}
-
-@media (prefers-color-scheme: dark) {
-	.viewer[data-theme='system'] {
-		--vctrl-bg: #141414;
-		--vctrl-hover-bg: #363636;
-		--vctrl-active-bg: #585858;
-		/* Kept in step with the explicit dark block above, deliberately. */
-		--vctrl-text: #e5e7eb;
-	}
 }

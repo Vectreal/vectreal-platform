@@ -25,10 +25,7 @@ const meta = {
 		}
 	},
 	render: () => (
-		<div
-			className="viewer relative h-[360px] w-[360px] bg-zinc-100"
-			data-theme="light"
-		>
+		<div className="viewer light relative h-[360px] w-[360px] bg-zinc-100">
 			<InfoPopover>
 				<InfoPopoverTrigger />
 				<InfoPopoverContent>
@@ -53,10 +50,7 @@ export const Default: Story = {}
 
 export const DarkMode: Story = {
 	render: () => (
-		<div
-			className="viewer relative h-[360px] w-[360px] bg-zinc-900"
-			data-theme="dark"
-		>
+		<div className="viewer dark relative h-[360px] w-[360px] bg-zinc-900">
 			<InfoPopover>
 				<InfoPopoverTrigger />
 				<InfoPopoverContent>

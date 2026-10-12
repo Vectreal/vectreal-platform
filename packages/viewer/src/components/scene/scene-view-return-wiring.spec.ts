@@ -50,9 +50,11 @@ describe('the way back from a hotspot view is wired into the viewer', () => {
 		expect(source).toContain('onContainerChange={setContainer}')
 	})
 
-	it('leaves Escape to an open dialog inside the viewer', () => {
+	it('leaves Escape to an open dialog or the camera list inside the viewer', () => {
 		const handler = between('const handleKeyDown', 'container.addEventListener')
-		expect(handler).toContain(`closest('[role="dialog"]')`)
+		expect(handler).toMatch(
+			/closest\(\s*'\[role="dialog"\], \[role="listbox"\], \[aria-expanded="true"\]'/
+		)
 	})
 
 	it('is on unless a surface turns it off', () => {

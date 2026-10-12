@@ -151,7 +151,7 @@ const markerClasses = {
 	// namespace (see package.css), so every named radius but `full` compiles to
 	// nothing once the package is consumed from npm.
 	label:
-		'pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 max-w-[180px] -translate-x-1/2 truncate rounded-full bg-[var(--vctrl-bg)] px-2 py-0.5 text-[11px] leading-[1.4] text-[var(--vctrl-text)] shadow-[0_1px_6px_rgba(0,0,0,0.3)] select-none'
+		'shell-panel text-foreground pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 max-w-[180px] -translate-x-1/2 truncate px-2 py-0.5 text-[11px] leading-[1.4] select-none'
 } as const
 
 export interface HotspotMarkerProps {

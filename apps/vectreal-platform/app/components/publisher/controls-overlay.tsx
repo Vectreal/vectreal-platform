@@ -8,7 +8,6 @@ import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
 import OptimizationDrawer from './optimization/optimization-drawer'
-import PreviewCameraControls from './preview-camera-controls'
 import { SaveProgressPanel } from './save-progress/save-progress-panel'
 import { EmptyStage } from './shell/empty-stage'
 import { PublishCard } from './shell/publish-card'
@@ -414,8 +413,6 @@ const OverlayControls = ({
 							dashboardHref={sceneDetailsHref ?? '/dashboard'}
 							isMobile={isMobile}
 						/>
-
-						<PreviewCameraControls />
 					</>
 				)}
 			</div>

@@ -40,6 +40,37 @@ const findCamera = (
 	cameraId ? cameras?.find((camera) => camera.cameraId === cameraId) : undefined
 
 /**
+ * The cameras that are views of the scene, in saved order: every camera that
+ * is not a hotspot's close-up. The way back leads to one of them, and the
+ * camera switcher steps through them.
+ */
+export function resolveSceneViewCameras<Camera extends ReturnCamera>(
+	cameras: readonly Camera[] | undefined,
+	links: readonly Linked[]
+): Camera[] {
+	return (cameras ?? []).filter((camera) => !isHotspotCamera(camera, links))
+}
+
+/**
+ * What to call the view while a hotspot's camera holds it: that hotspot's
+ * name, or null on a camera no hotspot links.
+ *
+ * Read against every stored hotspot, not the drawn markers, so the close-up
+ * of a hidden hotspot - or any hotspot on an embed that draws no markers,
+ * reached by `?camera=` or a host's command - is still named.
+ */
+export function resolveHotspotViewName(
+	activeCameraId: null | string,
+	hotspots: readonly (Linked & { name?: string })[]
+): null | string {
+	if (!activeCameraId) return null
+	const hotspot = hotspots.find(
+		(entry) => entry.linkedCameraId === activeCameraId
+	)
+	return hotspot ? hotspot.name?.trim() || null : null
+}
+
+/**
  * The drawn marker whose close-up the view is on, or null.
  *
  * Null on a scene camera a marker happens to link: the visitor is standing in
@@ -90,9 +121,7 @@ export function resolveReturnCameraId(
 	cameras: readonly ReturnCamera[] | undefined,
 	links: readonly Linked[]
 ): null | string {
-	const candidates = (cameras ?? []).filter(
-		(camera) => !isHotspotCamera(camera, links)
-	)
+	const candidates = resolveSceneViewCameras(cameras, links)
 	if (recorded && candidates.some((camera) => camera.cameraId === recorded)) {
 		return recorded
 	}
