@@ -113,9 +113,25 @@ export function meta({ error, loaderData }: Route.MetaArgs) {
 	]
 }
 
+/*
+  One article, one instance. Following a related-article card navigates between
+  two URLs of this route, so React Router keeps the page mounted and passes new
+  loader data. Everything the page holds per article - the view sent once, the
+  read clock, the furthest scroll, the milestones reached, the copied state -
+  then carried over: the second article reported no view, a read measured from
+  the first one's load, and none of its scroll milestones.
+*/
 export default function NewsRoomArticlePage({
 	loaderData
 }: Route.ComponentProps) {
+	return (
+		<NewsRoomArticle key={loaderData.article.slug} loaderData={loaderData} />
+	)
+}
+
+function NewsRoomArticle({
+	loaderData
+}: Pick<Route.ComponentProps, 'loaderData'>) {
 	const { article, adjacent, related } = loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
