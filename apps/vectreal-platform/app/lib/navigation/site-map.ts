@@ -44,6 +44,12 @@ const CONVERTERS: SiteLink = {
 	to: CONVERT_INDEX_PATH,
 	description: 'Convert between 3D formats in your browser. No account.'
 }
+const VIEWER: SiteLink = {
+	label: 'Viewer',
+	to: '/view',
+	description:
+		'Look at a 3D file, or a link to one, in your browser. No account.'
+}
 const PILOT: SiteLink = {
 	label: 'Pilot projects',
 	to: '/contact?topic=pilot',
@@ -125,7 +131,7 @@ const SITE_SECTIONS = {
   links asks this rather than each deciding for itself.
 */
 export function entersFunnel(to: string): boolean {
-	return [PUBLISHER.to, CONVERTERS.to].some(
+	return [PUBLISHER.to, CONVERTERS.to, VIEWER.to].some(
 		(path) =>
 			to === path || to.startsWith(`${path}/`) || to.startsWith(`${path}?`)
 	)
@@ -147,10 +153,20 @@ export const ACCOUNT: readonly SiteLink[] = [
 	{ label: 'Settings', to: '/dashboard/settings' }
 ]
 
+/*
+  The viewer is in the footer's product column and not in the nav's product
+  panel, which reads the same section. The nav's two ways in are the Publisher
+  and the converters; the viewer is a third tool that a link usually opens
+  before the visitor has seen the site, so it is listed where the whole site is
+  and kept out of the place that asks a visitor to choose.
+*/
 export const FOOTER = {
 	tagline: PLATFORM_TAGLINE,
 	sections: [
-		SITE_SECTIONS.product,
+		{
+			...SITE_SECTIONS.product,
+			links: [...SITE_SECTIONS.product.links, VIEWER]
+		},
 		SITE_SECTIONS.openSource,
 		SITE_SECTIONS.docs,
 		SITE_SECTIONS.company,

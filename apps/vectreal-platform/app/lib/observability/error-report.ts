@@ -2,9 +2,9 @@ import { isRouteErrorResponse } from 'react-router'
 
 import { criticalFlowsForPathname } from './critical-flows'
 import {
-	redactEmbedToken,
-	redactEmbedTokenFromProperties
-} from '../posthog/redact-embed-token'
+	redactUrlSecrets,
+	redactUrlSecretsFromProperties
+} from '../posthog/redact-url-secrets'
 
 /**
  * Everything both reporting sinks agree on, with no PostHog import on either
@@ -36,7 +36,7 @@ export type ErrorReport = {
  * What a call site may attach, beyond what the error and request already say.
  *
  * Scalars only, and that is a guarantee rather than a style preference.
- * `redactEmbedTokenFromProperties` walks strings, arrays and plain objects; a
+ * `redactUrlSecretsFromProperties` walks strings, arrays and plain objects; a
  * class instance is returned untouched, by design, so that redacting cannot
  * silently rebuild somebody's `Date` as a bare object. An `Error` passed as a
  * property would therefore travel to PostHog with its message and stack
@@ -86,9 +86,9 @@ export type ErrorReportContext = {
  * rather than "everything, hopefully".
  */
 function redactError(error: Error): Error {
-	const redacted = new Error(redactEmbedToken(error.message))
+	const redacted = new Error(redactUrlSecrets(error.message))
 	redacted.name = error.name
-	redacted.stack = error.stack ? redactEmbedToken(error.stack) : undefined
+	redacted.stack = error.stack ? redactUrlSecrets(error.stack) : undefined
 	return redacted
 }
 
@@ -106,7 +106,7 @@ function redactError(error: Error): Error {
  */
 function toError(value: unknown): Error {
 	if (value instanceof Error) return redactError(value)
-	if (typeof value === 'string') return new Error(redactEmbedToken(value))
+	if (typeof value === 'string') return new Error(redactUrlSecrets(value))
 
 	let described: string
 	try {
@@ -115,7 +115,7 @@ function toError(value: unknown): Error {
 		described = String(value)
 	}
 
-	return new Error(redactEmbedToken(described))
+	return new Error(redactUrlSecrets(described))
 }
 
 /**
@@ -175,7 +175,7 @@ export function buildErrorReport(
 		  covers everything else rather than by whatever each call site
 		  remembered.
 		*/
-		properties: redactEmbedTokenFromProperties({
+		properties: redactUrlSecretsFromProperties({
 			/*
 			  Caller properties first. The computed keys below are the contract
 			  alerts filter on, so a call site must not be able to shadow one by

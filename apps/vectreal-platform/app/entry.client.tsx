@@ -12,7 +12,7 @@ import { HydratedRouter } from 'react-router/dom'
 
 import { readConsentCookie } from './lib/consent/consent-cookie'
 import { isPosthogEnabled } from './lib/posthog/posthog-enabled'
-import { redactEmbedTokenFromProperties } from './lib/posthog/redact-embed-token'
+import { redactUrlSecretsFromProperties } from './lib/posthog/redact-url-secrets'
 
 /*
   Analytics may fail. The app may not.
@@ -93,7 +93,7 @@ try {
 				*/
 				if (event.event === '$snapshot') return event
 
-				return redactEmbedTokenFromProperties(event)
+				return redactUrlSecretsFromProperties(event)
 			}
 		})
 		posthog.register({ client_type: 'web' })

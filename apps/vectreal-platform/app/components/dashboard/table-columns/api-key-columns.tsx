@@ -293,7 +293,7 @@ export function createApiKeyColumns(
 			  The search box writes through to the URL: `use-dashboard-table-state`
 			  puts the raw typed string in a `?<namespace>-q=` param before any
 			  filter runs, so a pasted key reaches `$current_url`, history and the
-			  access logs whatever this function matches on. `redact-embed-token.ts`
+			  access logs whatever this function matches on. `redact-url-secrets.ts`
 			  rewrites `token=` parameters and would not touch that one. Matching
 			  here cannot prevent it, and the leak has to be fixed where the value
 			  reaches the URL.

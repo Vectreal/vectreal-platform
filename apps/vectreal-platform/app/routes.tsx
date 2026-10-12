@@ -147,6 +147,11 @@ export default [
 			])
 		]),
 
+		// A model opened from a link, in the visitor's browser. Beside the
+		// converters because it is the same instrument: a file read client-side,
+		// with no account and nothing uploaded.
+		route('view', './routes/view-page/view-page.tsx'),
+
 		// News room page
 		layout('./routes/layouts/news-room-layout.tsx', [
 			route('news-room', './routes/news-room-page/news-room-page.tsx'),
@@ -179,6 +184,7 @@ export default [
 				...prefix('guides', [
 					route('upload', './routes/docs/guides/upload.mdx'),
 					route('convert', './routes/docs/guides/convert.mdx'),
+					route('view-by-link', './routes/docs/guides/view-by-link.mdx'),
 					route('optimize', './routes/docs/guides/optimize.mdx'),
 					route('publish-embed', './routes/docs/guides/publish-embed.mdx'),
 					route('embed-sdk', './routes/docs/guides/embed-sdk.mdx')
