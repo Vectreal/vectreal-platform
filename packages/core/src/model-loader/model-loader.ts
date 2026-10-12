@@ -17,17 +17,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
-import { referenceIn, selectionKey } from './dropped-selection'
-import {
-	canLoadDracoInBrowser,
-	loadDracoModule
-} from '../draco/load-draco-module'
-import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
-import {
-	loadMeshoptDecoder,
-	registerMeshoptDecoder,
-	stripDecodedMeshoptExtension
-} from '../meshopt/meshopt-codec'
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 import { modelFormatForFileName, type ModelFormat } from '../model-formats'
 import { missingAssetsError } from './missing-assets'
 import { OperationProgress } from '../types'
@@ -35,6 +25,7 @@ import {
 	getThreeDracoLoader,
 	prepareThreeDracoDecoder
 } from './draco-three-loader'
+import { referenceIn, selectionKey } from './dropped-selection'
 import {
 	KTX2_EXTENSION,
 	MESHOPT_EXTENSION,
@@ -48,6 +39,11 @@ import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
 import { threeSourceBridge } from './three-source-bridges'
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
+import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
+import {
+	loadMeshoptDecoder,
+	stripDecodedMeshoptExtension
+} from '../meshopt/meshopt-codec'
 
 import type { ModelSiblings } from './three-source-bridges'
 import type { AnimationClip, LoadingManager, Object3D } from 'three'
@@ -101,7 +97,7 @@ export class ModelLoader {
 	private progressCallback?: (progress: OperationProgress) => void
 	private dracoDecoderPath: string
 	private ktx2TranscoderPath: string
-	private decoderRegistration: Promise<void> | null = null
+	private codecs: GeometryCodecs
 
 	constructor(options?: {
 		dracoDecoderPath?: string
@@ -109,6 +105,7 @@ export class ModelLoader {
 	}) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 		this.dracoDecoderPath = options?.dracoDecoderPath ?? DRACO_DECODER_PATH
+		this.codecs = new GeometryCodecs(this.io, this.dracoDecoderPath)
 		this.ktx2TranscoderPath =
 			options?.ktx2TranscoderPath ?? KTX2_TRANSCODER_PATH
 	}
@@ -141,36 +138,6 @@ export class ModelLoader {
 		if (meshoptDecoder) loader.setMeshoptDecoder(meshoptDecoder)
 		if (ktx2Loader) loader.setKTX2Loader(ktx2Loader)
 		return loader
-	}
-
-	/**
-	 * Lazily registers the geometry decoders on this instance's WebIO, so
-	 * `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression` and
-	 * `EXT_meshopt_compression` primitives. Memoized so each decoder is only
-	 * loaded once per instance.
-	 */
-	private ensureDecodersRegistered(): Promise<void> {
-		if (!this.decoderRegistration) {
-			// Outside a browser/worker environment there is no Draco decoder to
-			// load, and meshopt's can fail to compile where WebAssembly is blocked.
-			// Either way other content is unaffected, and content needing the
-			// missing decoder throws glTF-Transform's own "install extension
-			// dependency" error.
-			const draco = canLoadDracoInBrowser()
-				? loadDracoModule('decoder', this.dracoDecoderPath).then(
-						(decoderModule) => {
-							this.io.registerDependencies({
-								'draco3d.decoder': decoderModule
-							})
-						}
-					)
-				: Promise.resolve()
-			this.decoderRegistration = Promise.all([
-				draco,
-				registerMeshoptDecoder(this.io).catch(() => {})
-			]).then(() => undefined)
-		}
-		return this.decoderRegistration
 	}
 
 	/**
@@ -518,7 +485,7 @@ export class ModelLoader {
 				progressOffset + 75 * progressScale
 			)
 
-			await this.ensureDecodersRegistered()
+			await this.codecs.registerDecoders()
 			const document = await this.io.readJSON({
 				json: gltfJson,
 				resources: resources.entries().reduce(
@@ -933,7 +900,7 @@ export class ModelLoader {
 			glbBytes = exported.data
 		}
 
-		await this.ensureDecodersRegistered()
+		await this.codecs.registerDecoders()
 		const document = await this.io.readBinary(glbBytes ?? bytes)
 		stripDecodedDracoExtension(document)
 		stripDecodedMeshoptExtension(document)

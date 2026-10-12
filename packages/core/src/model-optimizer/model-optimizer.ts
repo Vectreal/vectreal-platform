@@ -32,7 +32,6 @@ import {
 	unlessSuperseded
 } from './document-currency'
 import { encodeDracoCopy } from './draco-compression'
-import { GeometryCodecs } from './geometry-codecs'
 import {
 	loadFromThreeJS as _loadFromThreeJS,
 	loadFromBuffer as _loadFromBuffer,
@@ -72,6 +71,7 @@ import {
 	TextureDescriptor,
 	TextureCompressOptions
 } from './types'
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 
 export { SupersededError } from './document-currency'
 
@@ -310,8 +310,9 @@ export class ModelOptimizer {
 	 *
 	 * The platform app does not use this: it measures with
 	 * `measureDracoCompression` and compresses at export time instead, so the
-	 * working document is never lossily re-encoded. Kept for Node/CLI callers
-	 * that want a compressed document directly.
+	 * working document is never lossily re-encoded. Kept for callers that want
+	 * a compressed document directly; it runs only in a browser or worker, since
+	 * the Draco encoder cannot be loaded anywhere else.
 	 */
 	public async compressGeometry(options: DracoOptions = {}): Promise<void> {
 		const ticket = this.currency.currentTicket()
