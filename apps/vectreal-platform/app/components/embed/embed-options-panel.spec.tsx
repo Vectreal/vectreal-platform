@@ -49,6 +49,11 @@ Object.defineProperty(navigator, 'clipboard', {
 	configurable: true
 })
 
+// The provider wraps every route at `root.tsx`; this suite renders the panel alone.
+vi.mock('../../hooks/use-consented-capture', () => ({
+	useConsentedCapture: () => vi.fn()
+}))
+
 vi.mock('sonner', () => ({
 	toast: { success: vi.fn(), error: vi.fn() }
 }))
@@ -599,5 +604,91 @@ describe('the allowed-domains readout', () => {
 				.getAllByRole('listitem')
 				.map((item) => item.textContent)
 		).toEqual(['shop.example.com', '*.myshop.com'])
+	})
+})
+
+describe('the coding agent prompt', () => {
+	const agentPromptButton = () => button(EMBED_COPY.copyAgentPrompt)
+
+	it('copies a prompt carrying the snippet the card copies, key and all', async () => {
+		withLiveKey()
+		renderPanel()
+
+		fireEvent.click(button(EMBED_COPY.copyHtml))
+		const snippet = writeText.mock.calls.at(-1)?.[0] ?? ''
+
+		await act(async () => {
+			fireEvent.click(agentPromptButton())
+		})
+		const prompt = writeText.mock.calls.at(-1)?.[0] ?? ''
+
+		expect(snippet).toContain(`token=${LIVE_KEY.value}`)
+		expect(prompt).toContain(snippet)
+		expect(prompt).toContain('shop.example.com')
+	})
+
+	it('opens each agent with that same prompt', async () => {
+		withLiveKey()
+		renderPanel()
+
+		await act(async () => {
+			fireEvent.click(agentPromptButton())
+		})
+		const prompt = writeText.mock.calls.at(-1)?.[0] ?? ''
+		const cursor = screen.getByRole('link', { name: 'Open in Cursor' })
+
+		expect(
+			new URL(cursor.getAttribute('href') ?? '').searchParams.get('text')
+		).toBe(prompt)
+	})
+
+	it('opens a chat with a walk-through instead of edit instructions', () => {
+		withLiveKey()
+		renderPanel()
+
+		const chatgpt = screen.getByRole('link', { name: 'Open in ChatGPT' })
+		const prompt =
+			new URL(chatgpt.getAttribute('href') ?? '').searchParams.get('q') ?? ''
+
+		expect(prompt).toMatch(/^Help me add this Vectreal 3D scene/)
+		expect(prompt).toContain(`token=${LIVE_KEY.value}`)
+	})
+
+	it('follows a change of key, so the prompt never carries the old token', async () => {
+		const otherKey = { ...LIVE_KEY, id: 'key-other', value: 'vctrl_otherkey9z' }
+		keys = [LIVE_KEY, otherKey]
+		selectedKeyId = LIVE_KEY.id
+		const { rerender } = renderPanel()
+
+		selectedKeyId = otherKey.id
+		rerender(<EmbedOptionsPanel projectId={PROJECT_ID} sceneId={SCENE_ID} />)
+		await act(async () => {
+			fireEvent.click(agentPromptButton())
+		})
+		const prompt = writeText.mock.calls.at(-1)?.[0] ?? ''
+
+		expect(prompt).toContain(`token=${otherKey.value}`)
+		expect(prompt).not.toContain(`token=${LIVE_KEY.value}`)
+	})
+
+	it('warns the agent when the project allows no domains', async () => {
+		withLiveKey()
+		allowedDomains = []
+		renderPanel()
+
+		await act(async () => {
+			fireEvent.click(agentPromptButton())
+		})
+
+		expect(writeText.mock.calls.at(-1)?.[0]).toMatch(/allows no domains yet/)
+	})
+
+	it('is not offered while there is no key to put in it', () => {
+		renderPanel()
+
+		expect(
+			screen.queryByRole('button', { name: EMBED_COPY.copyAgentPrompt })
+		).toBeNull()
+		expect(screen.queryByRole('link', { name: 'Open in Cursor' })).toBeNull()
 	})
 })

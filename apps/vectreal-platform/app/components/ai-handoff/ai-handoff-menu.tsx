@@ -60,6 +60,8 @@ export interface AiHandoffMenuProps {
 	surface: string
 	/** The copy action's name, shown as its tooltip and accessible name. */
 	copyLabel: string
+	/** What the copy action looks like: a page by default, a prompt otherwise. */
+	copyIcon?: FC<{ className?: string }>
 	/** What it copies. Called only once the clipboard is known to exist. */
 	copyValue: () => string | Promise<string>
 	copyMessages: { success: string; failure: string; unavailable: string }
@@ -76,6 +78,7 @@ export interface AiHandoffMenuProps {
 export const AiHandoffMenu: FC<AiHandoffMenuProps> = ({
 	surface,
 	copyLabel,
+	copyIcon: CopyIcon = FileText,
 	copyValue,
 	copyMessages,
 	prompt,
@@ -98,7 +101,7 @@ export const AiHandoffMenu: FC<AiHandoffMenuProps> = ({
 						void clipboard.copy('copy', copyValue, copyMessages)
 					}}
 				>
-					{clipboard.copiedId === 'copy' ? <Check /> : <FileText />}
+					{clipboard.copiedId === 'copy' ? <Check /> : <CopyIcon />}
 				</Button>
 			</IconAction>
 			{AI_HANDOFF_TARGETS.map((target) => {

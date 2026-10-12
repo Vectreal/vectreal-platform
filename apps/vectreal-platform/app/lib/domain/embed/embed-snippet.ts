@@ -1,3 +1,8 @@
+import { markdownTwinPath } from '../../markdown/markdown-twin'
+import { SITE_URL } from '../../seo'
+
+import type { AiHandoffKind } from '../../ai-handoff/ai-handoff-targets'
+
 /**
  * CDN URL for the `@vctrl/embed` script-tag build used by the generated SDK
  * snippet.
@@ -94,7 +99,10 @@ export const EMBED_COPY = {
 	testEmbedUrl: 'Test embed URL',
 	tabHtml: 'HTML',
 	tabSdk: 'SDK',
-	tabUrl: 'URL'
+	tabUrl: 'URL',
+	copyAgentPrompt: 'Copy a prompt for your coding agent',
+	copyAgentPromptSuccess: 'Prompt copied. Paste it into your coding agent.',
+	copyAgentPromptFailure: 'Failed to copy the prompt.'
 } as const
 
 type EmbedSnippetOptions = {
@@ -315,4 +323,83 @@ ${EMBED_PARENT_FIX}
     console.log('Active camera:', cameraId)
   })
 </script>`
+}
+
+const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/)/
+
+/** The SDK guide, which the agent prompt points at beside the embedding guide. */
+export const EMBED_SDK_DOCS_PATH = '/docs/guides/embed-sdk'
+
+/**
+ * A prompt that has a coding agent put this scene on the user's site.
+ *
+ * It carries the snippets the card copies rather than building its own, so the
+ * agent pastes exactly what the user would have. The token stays in: it is
+ * already in the markup the user publishes, and the key only works on the
+ * project's allowed domains, which the prompt states (or warns there are none,
+ * which is the embed failing on every site).
+ *
+ * Docs go by URL, as markdown twins on vectreal.com, so the prompt stays a few
+ * thousand characters and fits every target's link.
+ */
+export function buildEmbedAgentPrompt(params: {
+	/** A coding agent edits the project; a chat walks the user through it. */
+	kind: AiHandoffKind
+	code: { html: string; url: string }
+	projectId: string
+	sceneId: string
+	allowedDomains: readonly string[]
+}): string {
+	const { kind, code, projectId, sceneId, allowedDomains } = params
+	const docs = (path: string) => `${SITE_URL}${markdownTwinPath(path)}`
+
+	/*
+	  `*.shop.com` is matched as a strict suffix (`isAllowedEmbedHost`), so it
+	  never covers `shop.com` itself, and an agent reading the bare pattern would
+	  reasonably assume it does.
+	*/
+	const wildcardNote = allowedDomains.some((domain) => domain.startsWith('*.'))
+		? ' A *. pattern covers subdomains only, never the bare domain.'
+		: ''
+	const domains =
+		allowedDomains.length > 0
+			? `It loads only on these domains: ${allowedDomains.join(', ')}.${wildcardNote} If the site runs anywhere else, tell me which domain to allow before anything else.`
+			: "The project allows no domains yet, so the embed will be refused on every site. Tell me to add the site's domain in the project settings on Vectreal before you finish."
+
+	/*
+	  The snippet is built on the origin the panel was opened from, which on
+	  staging or a local instance is not the vectreal.com the guides show. Said
+	  out loud, or an agent comparing the two "fixes" the host and the key, which
+	  only that instance knows, stops working. A local one is worse: no visitor
+	  can reach it, so the embed is for trying out and never for shipping.
+	  Compared as strings rather than parsed, so no URL shape can throw here.
+	*/
+	const originNote = code.url.startsWith(`${SITE_URL}/`)
+		? ''
+		: LOCAL_ORIGIN.test(code.url)
+			? ' This embed URL is on a local development instance that visitors cannot reach: use it to try the integration, and tell me to swap in a production embed before it ships.'
+			: ' It is not on vectreal.com: keep its host, the key only works there.'
+
+	const task =
+		kind === 'agent'
+			? 'Add this Vectreal 3D scene to the site in this project. Find the page where it belongs, or ask me.'
+			: 'Help me add this Vectreal 3D scene to my website. Ask what the site is built with, then walk me through it.'
+
+	return `${task}
+
+Project id: ${projectId}
+Scene id: ${sceneId}
+Embed URL: ${code.url}
+
+${domains}
+
+Use the iframe snippet below as it is for plain HTML or a template. If the page needs to switch cameras or react to viewer events, keep the same iframe and control it with @vctrl/embed (npm install @vctrl/embed), following ${docs(EMBED_SDK_DOCS_PATH)}. Keep the embed URL exactly as given, token included.${originNote}
+
+Iframe snippet:
+
+\`\`\`html
+${code.html}
+\`\`\`
+
+Embedding guide: ${docs(EMBED_DOCS_PATH)}`
 }

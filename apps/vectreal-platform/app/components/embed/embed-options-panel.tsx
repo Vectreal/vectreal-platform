@@ -1,14 +1,15 @@
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ExternalLink } from 'lucide-react'
-import { useEffect, useMemo, useState, type FC } from 'react'
+import { ExternalLink, MessageSquareCode } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type FC } from 'react'
 import { Link } from 'react-router'
 
 import { EmbedKeySelect } from './embed-key-select'
 import { EmbedSnippetCard } from './embed-snippet-card'
 import { useEmbedApiKeys } from './use-embed-api-keys'
 import {
+	buildEmbedAgentPrompt,
 	buildEmbedUrl,
 	buildResponsiveEmbedSnippet,
 	buildSdkEmbedSnippet,
@@ -16,7 +17,10 @@ import {
 	EMBED_DOCS_PATH
 } from '../../lib/domain/embed/embed-snippet'
 import { duration } from '../../lib/motion/motion-tokens'
+import { AiHandoffMenu } from '../ai-handoff/ai-handoff-menu'
 import { DetailPanelSection, InlineNotice } from '../layout-components'
+
+import type { AiHandoffKind } from '../../lib/ai-handoff/ai-handoff-targets'
 
 /**
  * The house idiom for a link sitting on a section's heading row.
@@ -101,6 +105,18 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 			url: embedUrl
 		}),
 		[embedUrl]
+	)
+
+	const agentPrompt = useCallback(
+		(kind: AiHandoffKind) =>
+			buildEmbedAgentPrompt({
+				kind,
+				code,
+				projectId: projectId as string,
+				sceneId: sceneId as string,
+				allowedDomains: keysApi.allowedDomains
+			}),
+		[code, projectId, sceneId, keysApi.allowedDomains]
 	)
 
 	/*
@@ -262,6 +278,23 @@ export const EmbedOptionsPanel: FC<EmbedOptionsPanelProps> = ({
 						  from here they can no longer be reached.
 						*/}
 						<EmbedSnippetCard code={code} ready={ready} onTest={openEmbedUrl} />
+						{/*
+						  The same snippet, handed to an agent that wires it into the
+						  user's codebase. Inside the `ready` gate, so it never carries a
+						  snippet without a key behind it.
+						*/}
+						<AiHandoffMenu
+							surface="embed-panel"
+							copyLabel={EMBED_COPY.copyAgentPrompt}
+							copyIcon={MessageSquareCode}
+							copyValue={() => agentPrompt('agent')}
+							copyMessages={{
+								success: EMBED_COPY.copyAgentPromptSuccess,
+								failure: EMBED_COPY.copyAgentPromptFailure,
+								unavailable: EMBED_COPY.clipboardUnavailable
+							}}
+							prompt={agentPrompt}
+						/>
 					</DetailPanelSection>
 				</motion.div>
 			)}
