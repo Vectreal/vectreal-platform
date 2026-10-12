@@ -67,6 +67,8 @@ const createSettings = (margin: number): SceneSettings => ({
 	}
 })
 
+const OPTIMIZATION_SETTINGS = {} as never
+
 const sceneMeta: SceneMetaState = {
 	name: 'Scene',
 	description: 'Test scene',
@@ -78,6 +80,7 @@ interface HarnessApi {
 		SaveSceneResult | { unchanged: true } | undefined
 	>
 	setCurrentSettings: (settings: SceneSettings) => void
+	setLastSavedSettings: (settings: SceneSettings | null) => void
 	getLastSavedSettings: () => SceneSettings | null
 	getHasUnsavedChanges: () => boolean
 	openScene: (sceneId: string) => void
@@ -125,6 +128,20 @@ function SceneSaveFlowHarness({
 			passRevision: 0
 		})
 
+	// Stable across renders, as the publisher's are: callbacks rebuilt every
+	// render would recreate the hook's own callbacks on every render too, and
+	// hide any dependency they leave out.
+	const [stableActions] = useState(() => ({
+		revalidate: vi.fn(),
+		clearPendingDraft: vi.fn().mockResolvedValue(undefined),
+		createRequestId: () => 'request-1',
+		prepareGltfDocumentForUpload: vi.fn().mockResolvedValue(null),
+		captureSceneThumbnail: vi.fn().mockResolvedValue(null),
+		captureShadowBake: vi.fn().mockResolvedValue(null),
+		resolveSource,
+		recordSavedSource
+	}))
+
 	const scenePersistence: ScenePersistenceState = {
 		hasModel: true,
 		userId: 'user-1',
@@ -146,7 +163,7 @@ function SceneSaveFlowHarness({
 	const { saveSceneSettings } = useSceneSaveFlow({
 		scenePersistence,
 		optimizationState: {
-			optimizationSettings: {} as never,
+			optimizationSettings: OPTIMIZATION_SETTINGS,
 			optimizationReport: null,
 			latestSceneStats: optimizationRuntime.latestSceneStats,
 			optimizedSceneBytes: optimizationRuntime.optimizedSceneBytes,
@@ -154,23 +171,14 @@ function SceneSaveFlowHarness({
 			lastSavedReportSignature: optimizationRuntime.lastSavedReportSignature,
 			setOptimizationRuntime
 		},
-		actions: {
-			setHasUnsavedChanges,
-			revalidate: vi.fn(),
-			clearPendingDraft: vi.fn().mockResolvedValue(undefined),
-			createRequestId: () => 'request-1',
-			prepareGltfDocumentForUpload: vi.fn().mockResolvedValue(null),
-			captureSceneThumbnail: vi.fn().mockResolvedValue(null),
-			captureShadowBake: vi.fn().mockResolvedValue(null),
-			resolveSource,
-			recordSavedSource
-		}
+		actions: { setHasUnsavedChanges, ...stableActions }
 	})
 
 	useEffect(() => {
 		apiRef.current = {
 			saveSceneSettings: () => saveSceneSettings(),
 			setCurrentSettings,
+			setLastSavedSettings,
 			getLastSavedSettings: () => lastSavedSettings,
 			getHasUnsavedChanges: () => hasUnsavedChanges,
 			openScene: setCurrentSceneIdState
@@ -232,6 +240,29 @@ describe('useSceneSaveFlow', () => {
 			type: 'failed',
 			message: 'disk full'
 		})
+	})
+
+	/*
+	  The orchestrator compares the scene against this baseline to decide
+	  whether the thumbnail still shows the opening frame. Every writer today
+	  happens to change another input in the same render, so a stale closure
+	  would only show up once one did not.
+	*/
+	it('hands the next save a baseline that changed on its own', async () => {
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
+		const apiRef = renderHarness()
+		const rebased = createSettings(3)
+
+		act(() => {
+			apiRef.current?.setLastSavedSettings(rebased)
+		})
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
+			expect.objectContaining({ lastSavedSettings: rebased })
+		)
 	})
 
 	it('keeps dirty state when settings change during an in-flight save', async () => {
