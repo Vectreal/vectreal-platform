@@ -39,3 +39,13 @@ export {
 	type HotspotLink,
 	type HotspotPopoverContent
 } from './components/scene/resolve-hotspot-popover'
+
+/*
+  Which cameras are views of the scene, and whether that is enough for a camera
+  switcher. A hotspot's linked camera is its close-up, not a view, so the count
+  depends on the hotspot links; an authoring surface that offers the switcher
+  setting has to count the way the viewer does, or it offers a switch that does
+  nothing.
+*/
+export { resolveSceneViewCameras } from './components/scene/scene-view-return'
+export { shouldShowCameraControls } from './components/scene/camera-controls-rule'

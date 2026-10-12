@@ -1,6 +1,7 @@
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
 import { Slider, type SliderPreset } from '@shared/components/ui/slider'
+import { Toggle } from '@shared/components/ui/toggle'
 import {
 	ToggleGroup,
 	ToggleGroupItem
@@ -27,6 +28,7 @@ import {
 	withAvoidanceDefaults,
 	type ObjectAvoidanceKey
 } from './camera-state'
+import { useCameraSwitcherSetting } from './use-camera-switcher-setting'
 import { useSceneTransition } from './use-scene-transition'
 import { canEditCameraSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
 import { InlineNotice } from '../../../../layout-components'
@@ -95,10 +97,11 @@ interface CamerasProps {
 	cameras: SceneCameras
 }
 
-/** The drill-down's root: every camera, and the way into transitions. */
+/** The drill-down's root: every camera, the switcher, and the way into transitions. */
 export function CameraList({ cameras }: CamerasProps) {
 	const isLocked = useIsCameraEditingLocked()
 	const { transition } = useSceneTransition()
+	const switcher = useCameraSwitcherSetting()
 	const transitionLabel = TRANSITION_TYPE_OPTIONS.find(
 		(option) => option.value === transition.type
 	)?.label
@@ -144,6 +147,18 @@ export function CameraList({ cameras }: CamerasProps) {
 					})}
 				</div>
 			</SettingGroup>
+
+			<Toggle
+				label="Camera switcher"
+				description={
+					switcher.available
+						? 'Lets visitors step between these cameras in the published scene.'
+						: 'Shown once the scene has two cameras to switch between.'
+				}
+				checked={switcher.shown}
+				disabled={isLocked || !switcher.available}
+				onCheckedChange={switcher.setShown}
+			/>
 
 			<DrillDownTrigger
 				to="transitions"

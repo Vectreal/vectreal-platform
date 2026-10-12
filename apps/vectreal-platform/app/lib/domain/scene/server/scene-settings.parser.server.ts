@@ -412,6 +412,15 @@ export class SceneSettingsParser {
 			}
 		}
 
+		// The viewer hides its switcher only for a literal `false`, so anything
+		// else that is not a boolean would read as "shown" and drop the setting.
+		if (
+			camera.showControls !== undefined &&
+			typeof camera.showControls !== 'boolean'
+		) {
+			return ApiResponse.badRequest('camera.showControls must be a boolean')
+		}
+
 		const normalizedCameras: CameraEntry[] = []
 		const seenCameraIds = new Set<string>()
 
