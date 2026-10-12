@@ -48,8 +48,8 @@ vi.mock('./scene-loaders', () => ({
 	loadModelFromServer: () => Promise.reject(new Error('missing scene'))
 }))
 
-function setup() {
-	const { result } = renderHook(() => useLoadModel())
+function setup(optimizer?: Parameters<typeof useLoadModel>[0]) {
+	const { result } = renderHook(() => useLoadModel(optimizer))
 	const start = async (name: string) => {
 		await act(async () => {
 			void result.current
@@ -148,5 +148,70 @@ describe('LoadContext.mayIngest', () => {
 
 		await start('b.ready')
 		expect(outcome?.stillOnScreen()).toBe(false)
+	})
+})
+
+/*
+  The optimizer may hold the on-screen model or none, so it is released when
+  another model reaches the screen, not when an ingest gets as far as claiming
+  it: a read that fails first would otherwise leave the previous document.
+*/
+describe('the optimizer while the screen changes', () => {
+	const setupWithOptimizer = () => {
+		const reset = vi.fn()
+		const optimizer = { reset, isReady: false } as unknown as Parameters<
+			typeof useLoadModel
+		>[0]
+		return { reset, ...setup(optimizer) }
+	}
+
+	it('is released when a newer model reaches the screen, before any ingest', async () => {
+		const { reset, start, publish } = setupWithOptimizer()
+		const a = await start('a.glb')
+		publish(a, 'a.glb')
+		reset.mockClear()
+		const b = await start('b.glb')
+		expect(reset).not.toHaveBeenCalled()
+
+		publish(b, 'b.glb')
+		expect(reset).toHaveBeenCalledTimes(1)
+	})
+
+	it('keeps the model a failed newer drop left on screen', async () => {
+		const { reset, start, publish } = setupWithOptimizer()
+		const a = await start('a.glb')
+		publish(a, 'a.glb')
+		reset.mockClear()
+		await start('bad')
+
+		expect(reset).not.toHaveBeenCalled()
+	})
+
+	it('is released once a failed scene left nothing on screen', async () => {
+		const { result, reset, start, publish } = setupWithOptimizer()
+		const a = await start('a.glb')
+		publish(a, 'a.glb')
+		reset.mockClear()
+		let failed: Awaited<ReturnType<typeof result.current.load>> | undefined
+		await act(async () => {
+			failed = await result.current.load({
+				kind: 'scene-data',
+				sceneData: {} as never
+			})
+		})
+
+		expect(reset).toHaveBeenCalledTimes(1)
+		// Nothing, not the failed scene, is what the optimizer may now hold.
+		expect(failed?.stillOnScreen()).toBe(false)
+	})
+
+	it('is released when the model is cleared', async () => {
+		const { result, reset, start, publish } = setupWithOptimizer()
+		const a = await start('a.glb')
+		publish(a, 'a.glb')
+		reset.mockClear()
+		act(() => result.current.reset())
+
+		expect(reset).toHaveBeenCalledTimes(1)
 	})
 })

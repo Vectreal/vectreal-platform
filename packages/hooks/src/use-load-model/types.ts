@@ -346,7 +346,9 @@ export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
 				 * then keeps its model, but the optimizer may already hold the step's
 				 * result: `restoreSource()` and then `applyOptimization()` with no step put
 				 * the two back in step. A partial `TextureCompressionError` is thrown after
-				 * the textures that did compress are shown.
+				 * the textures that did compress are shown. A `SupersededError` means a
+				 * later call read the optimizer after this one did, and the viewer shows
+				 * that call's result instead.
 				 *
 				 * @example
 				 * // Apply simplification optimization

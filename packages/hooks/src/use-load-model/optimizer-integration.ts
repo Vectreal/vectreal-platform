@@ -1,6 +1,9 @@
 import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
-import { TextureCompressionError } from '@vctrl/core/model-optimizer'
-import { useCallback } from 'react'
+import {
+	SupersededError,
+	TextureCompressionError
+} from '@vctrl/core/model-optimizer'
+import { useCallback, useRef } from 'react'
 
 import { ModelFile, OptimizerIntegrationReturn } from './types'
 
@@ -25,6 +28,14 @@ export function useOptimizerIntegration(
 	loadId: number | null,
 	modelLoader: ModelLoader
 ): OptimizerIntegrationReturn<boolean> {
+	/*
+	  Each call shows the optimizer's document as it was when the call read it,
+	  so only the call that read last may reach the viewer. A caller that gave
+	  up on a slow sync and asked for another, as a failed pass does to show the
+	  original, would otherwise have the abandoned one land last and stay.
+	*/
+	const syncRef = useRef(0)
+
 	const applyOptimization = useCallback(
 		async <TOptions>(
 			optimizationFunction?:
@@ -52,7 +63,14 @@ export function useOptimizerIntegration(
 				partialFailure = error
 			}
 
-			const optimizedModel = await instance.getModel()
+			const sync = ++syncRef.current
+			const optimizedModel = await instance
+				.getModel()
+				.catch((error: unknown) => {
+					throw new Error('No optimized model could be exported.', {
+						cause: error
+					})
+				})
 			if (!optimizedModel) {
 				throw new Error('No optimized model could be exported.')
 			}
@@ -75,6 +93,8 @@ export function useOptimizerIntegration(
 						cause: error
 					})
 				})
+
+			if (sync !== syncRef.current) throw new SupersededError()
 
 			// Dropped, not refused, when a newer load holds the state: the pass
 			// did its work, and that load's model is the one to show.
