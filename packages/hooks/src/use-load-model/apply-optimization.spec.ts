@@ -39,7 +39,7 @@ const optimizer = (
 	getModel: () => Promise<Uint8Array | null> = async () =>
 		new Uint8Array([1, 2, 3])
 ) =>
-	({ isReady: true, getModel }) as unknown as ReturnType<
+	({ isReady: true, reset: () => {}, getModel }) as unknown as ReturnType<
 		typeof useOptimizeModel
 	>
 
@@ -91,6 +91,22 @@ describe('applyOptimization', () => {
 		)
 	})
 
+	it('rejects with the export error as the cause when the export fails', async () => {
+		const writeError = new Error('writeBinary: invalid accessor')
+		const result = await loaded(
+			optimizer(async () => {
+				throw writeError
+			})
+		)
+
+		await expect(
+			result.current.optimizer.applyOptimization()
+		).rejects.toMatchObject({
+			message: 'No optimized model could be exported.',
+			cause: writeError
+		})
+	})
+
 	it('rejects when the optimized model cannot be shown', async () => {
 		const parseError = new Error('not a GLB')
 		vi.spyOn(ModelLoader.prototype, 'loadToThreeJS').mockRejectedValue(
@@ -131,5 +147,81 @@ describe('applyOptimization', () => {
 			result.current.optimizer.applyOptimization(failingWith(total))
 		).rejects.toBe(total)
 		expect(shown).not.toHaveBeenCalled()
+	})
+
+	// A failed pass gives up on a slow sync and asks for the original; the
+	// abandoned sync landing afterwards would put the failed result back.
+	it('lets only the sync that read last reach the viewer', async () => {
+		const abandoned = new Object3D()
+		const original = new Object3D()
+		let finishAbandoned: (scene: Object3D) => void = () => {}
+		vi.spyOn(ModelLoader.prototype, 'loadToThreeJS')
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						finishAbandoned = (scene) =>
+							resolve({ scene, animations: [] } as never)
+					})
+			)
+			.mockResolvedValueOnce({ scene: original, animations: [] } as never)
+		const result = await loaded()
+
+		const first = result.current.optimizer.applyOptimization()
+		await act(() => result.current.optimizer.applyOptimization())
+		expect(result.current.file?.model).toBe(original)
+
+		finishAbandoned(abandoned)
+		await act(() => expect(first).rejects.toBeInstanceOf(SupersededError))
+		expect(result.current.file?.model).toBe(original)
+	})
+
+	// A call that runs a step reads the document after the step, so it shows
+	// a newer document than a call that read while the step ran.
+	it('lets a call that read after its step outrank one made during it', async () => {
+		const shown = parse()
+		const result = await loaded()
+		let finishStep: () => void = () => {}
+		const step = () =>
+			new Promise<void>((resolve) => {
+				finishStep = resolve
+			})
+
+		const withStep = result.current.optimizer.applyOptimization(step)
+		await act(() => result.current.optimizer.applyOptimization())
+		finishStep()
+
+		await act(() => withStep)
+		expect(shown).toHaveBeenCalledTimes(2)
+	})
+
+	// The read is the claim: an export that finishes late still describes the
+	// document as it was when the call asked for it.
+	it('refuses a call whose read finished after a later call read', async () => {
+		const scenes = new Map([
+			[1, new Object3D()],
+			[2, new Object3D()]
+		])
+		vi.spyOn(ModelLoader.prototype, 'loadToThreeJS').mockImplementation(
+			async (file) =>
+				({ scene: scenes.get((file as File).size), animations: [] }) as never
+		)
+		let finishFirstRead: () => void = () => {}
+		const getModel = vi
+			.fn<() => Promise<Uint8Array | null>>()
+			.mockImplementationOnce(
+				() =>
+					new Promise((resolve) => {
+						finishFirstRead = () => resolve(new Uint8Array([1]))
+					})
+			)
+			.mockResolvedValueOnce(new Uint8Array([1, 2]))
+		const result = await loaded(optimizer(getModel))
+
+		const first = result.current.optimizer.applyOptimization()
+		await act(() => result.current.optimizer.applyOptimization())
+		finishFirstRead()
+
+		await act(() => expect(first).rejects.toBeInstanceOf(SupersededError))
+		expect(result.current.file?.model).toBe(scenes.get(2))
 	})
 })

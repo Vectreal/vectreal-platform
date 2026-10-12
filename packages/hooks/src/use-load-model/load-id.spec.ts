@@ -38,6 +38,7 @@ afterEach(() => {
 
 const fakeOptimizer = {
 	isReady: true,
+	reset: () => {},
 	getModel: async () => new Uint8Array([1, 2, 3])
 } as unknown as ReturnType<typeof useOptimizeModel>
 

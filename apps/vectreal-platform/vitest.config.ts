@@ -6,6 +6,7 @@ import { configDefaults, defineConfig, mergeConfig } from 'vitest/config'
 
 import sharedConfig, { vctrlSourcePlugin } from '../../vitest.shared.mts'
 import { mdxMarkdownPlugin } from './app/lib/markdown/mdx-to-markdown.ts'
+import { remarkDocPageActions } from './app/lib/markdown/remark-doc-page-actions.ts'
 
 export default mergeConfig(
 	sharedConfig,
@@ -28,7 +29,12 @@ export default mergeConfig(
 			// vacuously.
 			mdx({
 				format: 'mdx',
-				remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter]
+				remarkPlugins: [
+					remarkGfm,
+					remarkFrontmatter,
+					remarkMdxFrontmatter,
+					remarkDocPageActions
+				]
 			})
 		],
 		test: {

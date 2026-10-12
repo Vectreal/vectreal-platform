@@ -7,6 +7,7 @@ import { ChevronLeft, Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
+import { PageHandoffMenu } from '../../components/ai-handoff/ai-handoff-menu'
 import { useConsent } from '../../components/consent/consent-context'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { PublicErrorBoundary } from '../../components/errors'
@@ -204,6 +205,15 @@ export default function NewsRoomArticlePage({
 		}
 	}, [article.slug, consent?.analytics, posthog])
 
+	// A draft has no markdown twin: the route list leaves drafts out.
+	const handoff = article.draft
+		? null
+		: {
+				surface: 'newsroom' as const,
+				htmlPath: `/news-room/${article.slug}`,
+				title: article.title
+			}
+
 	function copyArticleLink() {
 		if (typeof navigator === 'undefined') {
 			return
@@ -307,6 +317,9 @@ export default function NewsRoomArticlePage({
 						<Copy className="mr-2 h-3.5 w-3.5" />
 						{copied ? 'Copied' : 'Copy link'}
 					</Button>
+					{handoff ? (
+						<PageHandoffMenu {...handoff} className="basis-full justify-end" />
+					) : null}
 				</div>
 
 				{/*
@@ -394,6 +407,7 @@ export default function NewsRoomArticlePage({
 							<Copy className="mr-2 h-3.5 w-3.5" />
 							{copied ? 'Copied' : 'Copy link'}
 						</Button>
+						{handoff ? <PageHandoffMenu {...handoff} /> : null}
 					</div>
 
 					{headings.length > 0 && (

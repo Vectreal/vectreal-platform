@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import { useRef } from 'react'
 import { type MetaFunction, Link, Outlet, useLocation } from 'react-router'
 
+import { PageHandoffMenu } from '../../components/ai-handoff/ai-handoff-menu'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { usePublishDocsToc } from '../../components/docs/docs-toc-context'
 import { DocsTreeNav } from '../../components/docs/docs-tree-nav'
@@ -223,11 +224,20 @@ export default function DocsLayout() {
 				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 xl:block"
 				aria-label="On this page"
 			>
-				<div className="h-full pl-4">
+				<div className="flex h-full flex-col pl-4">
+					{page ? (
+						<PageHandoffMenu
+							surface="docs"
+							htmlPath={`/docs/${page.slug}`}
+							title={page.title}
+							className="mb-6"
+						/>
+					) : null}
 					<p className="text-muted-foreground text-eyebrow mb-3 px-1">
 						On this page
 					</p>
-					<ScrollArea className="h-[calc(100dvh-8rem)] pr-2 pb-8">
+					{/* Fills what the rows above leave, rather than a height measured for them. */}
+					<ScrollArea className="min-h-0 flex-1 pr-2 pb-8">
 						<DocsPageToc headings={headings} activeId={activeId} />
 					</ScrollArea>
 				</div>

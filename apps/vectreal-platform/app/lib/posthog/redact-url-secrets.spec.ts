@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import {
-	redactEmbedTokenFromProperties,
-	redactEmbedToken
-} from './redact-embed-token'
+	redactUrlSecretsFromProperties,
+	redactUrlSecrets
+} from './redact-url-secrets'
 
 /**
  * A live API key must not leave the browser inside an analytics event.
@@ -23,9 +23,9 @@ const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const EMBED_URL =
 	'https://vectreal.com/embed/395a09f0-9340/488bd4a1-46d3?token=vctrl_liveSecretab3x'
 
-describe('redactEmbedToken', () => {
+describe('redactUrlSecrets', () => {
 	it('replaces the token in an embed URL', () => {
-		const redacted = redactEmbedToken(EMBED_URL)
+		const redacted = redactUrlSecrets(EMBED_URL)
 
 		expect(redacted).not.toContain('vctrl_liveSecretab3x')
 		expect(new URL(redacted).searchParams.get('token')).toBe('redacted')
@@ -33,7 +33,7 @@ describe('redactEmbedToken', () => {
 
 	it('keeps every other part of the URL intact', () => {
 		const redacted = new URL(
-			redactEmbedToken(`${EMBED_URL}&transition=linear&autoRotate=0`)
+			redactUrlSecrets(`${EMBED_URL}&transition=linear&autoRotate=0`)
 		)
 
 		expect(redacted.origin).toBe('https://vectreal.com')
@@ -48,16 +48,16 @@ describe('redactEmbedToken', () => {
 	  A parse-based redaction skipped those entirely.
 	*/
 	it('redacts a relative URL, which autocapture can produce', () => {
-		expect(redactEmbedToken('/embed/a/b?token=vctrl_liveSecretab3x')).toBe(
+		expect(redactUrlSecrets('/embed/a/b?token=vctrl_liveSecretab3x')).toBe(
 			'/embed/a/b?token=redacted'
 		)
-		expect(redactEmbedToken('?token=vctrl_liveSecretab3x')).toBe(
+		expect(redactUrlSecrets('?token=vctrl_liveSecretab3x')).toBe(
 			'?token=redacted'
 		)
 	})
 
 	it('stops at a fragment rather than eating it', () => {
-		expect(redactEmbedToken('/e?token=vctrl_secret#camera-2')).toBe(
+		expect(redactUrlSecrets('/e?token=vctrl_secret#camera-2')).toBe(
 			'/e?token=redacted#camera-2'
 		)
 	})
@@ -68,7 +68,7 @@ describe('redactEmbedToken', () => {
 		// never had.
 		const url = `${EMBED_URL}&label=a%20b&note=it's~(fine)`
 
-		expect(redactEmbedToken(url)).toBe(
+		expect(redactUrlSecrets(url)).toBe(
 			url.replace('vctrl_liveSecretab3x', 'redacted')
 		)
 	})
@@ -76,10 +76,10 @@ describe('redactEmbedToken', () => {
 	it('redacts a capitalised parameter name', () => {
 		// The regex was case-insensitive while the cheap-reject guard in front of
 		// it was not, so this returned unredacted before reaching the rewrite.
-		expect(redactEmbedToken('https://vectreal.com/e?Token=vctrl_secret')).toBe(
+		expect(redactUrlSecrets('https://vectreal.com/e?Token=vctrl_secret')).toBe(
 			'https://vectreal.com/e?Token=redacted'
 		)
-		expect(redactEmbedToken('https://vectreal.com/e?TOKEN=vctrl_secret')).toBe(
+		expect(redactUrlSecrets('https://vectreal.com/e?TOKEN=vctrl_secret')).toBe(
 			'https://vectreal.com/e?TOKEN=redacted'
 		)
 	})
@@ -92,7 +92,7 @@ describe('redactEmbedToken', () => {
 		const url = 'https://vectreal.com/e?token=vctrl_secret'
 
 		for (let attempt = 0; attempt < 5; attempt += 1) {
-			expect(redactEmbedToken(url), `call ${attempt}`).toBe(
+			expect(redactUrlSecrets(url), `call ${attempt}`).toBe(
 				'https://vectreal.com/e?token=redacted'
 			)
 		}
@@ -101,13 +101,13 @@ describe('redactEmbedToken', () => {
 	it('does not match a parameter that merely ends in token', () => {
 		const url = 'https://vectreal.com/x?mytoken=vctrl_liveSecretab3x'
 
-		expect(redactEmbedToken(url)).toBe(url)
+		expect(redactUrlSecrets(url)).toBe(url)
 	})
 
 	it('leaves a URL without a token alone', () => {
 		const url = 'https://vectreal.com/pricing?utm_source=x'
 
-		expect(redactEmbedToken(url)).toBe(url)
+		expect(redactUrlSecrets(url)).toBe(url)
 	})
 
 	it('leaves prose that merely mentions a token alone', () => {
@@ -115,17 +115,52 @@ describe('redactEmbedToken', () => {
 		// stops it being rewritten: there is no parameter position here.
 		const message = 'Request failed: token=missing'
 
-		expect(redactEmbedToken(message)).toBe(message)
+		expect(redactUrlSecrets(message)).toBe(message)
 	})
 
 	it('does not throw on a value that is not a URL', () => {
-		expect(() => redactEmbedToken('token=')).not.toThrow()
+		expect(() => redactUrlSecrets('token=')).not.toThrow()
 	})
 })
 
-describe('redactEmbedTokenFromProperties', () => {
+/*
+  `/view?src=<url>` puts the visitor's model link in the page URL, and a
+  presigned storage link is a bearer credential until it expires.
+*/
+describe('redactUrlSecrets on a /view link', () => {
+	const SIGNATURE = 'X-Amz-Signature=5f3a9c'
+
+	it('replaces an encoded src', () => {
+		const url = `https://vectreal.com/view?src=${encodeURIComponent(
+			`https://bucket.s3.amazonaws.com/m.glb?${SIGNATURE}`
+		)}`
+
+		expect(redactUrlSecrets(url)).toBe('https://vectreal.com/view?src=redacted')
+	})
+
+	it('takes the rest of the query with it when the link was not encoded', () => {
+		// The credential is a parameter *after* `src` here, not part of its value.
+		const url = `https://vectreal.com/view?src=https://bucket/m.glb?${SIGNATURE}&X-Amz-Credential=AKIA`
+
+		expect(redactUrlSecrets(url)).toBe('https://vectreal.com/view?src=redacted')
+	})
+
+	it('keeps the fragment and a token rule still applies', () => {
+		expect(redactUrlSecrets('/view?token=t&src=https://a/b.glb#x')).toBe(
+			'/view?token=redacted&src=redacted#x'
+		)
+	})
+
+	it('leaves a page without src alone', () => {
+		const url = 'https://vectreal.com/view'
+
+		expect(redactUrlSecrets(url)).toBe(url)
+	})
+})
+
+describe('redactUrlSecretsFromProperties', () => {
 	it('redacts the property PostHog adds to every event', () => {
-		const event = redactEmbedTokenFromProperties({
+		const event = redactUrlSecretsFromProperties({
 			event: 'preview_viewed',
 			properties: { $current_url: EMBED_URL, scene_id: 'abc' }
 		})
@@ -135,7 +170,7 @@ describe('redactEmbedTokenFromProperties', () => {
 	})
 
 	it('redacts a token nested below the top level', () => {
-		const event = redactEmbedTokenFromProperties({
+		const event = redactUrlSecretsFromProperties({
 			properties: {
 				$set: { last_seen_on: EMBED_URL },
 				breadcrumbs: [{ url: EMBED_URL }]
@@ -151,7 +186,7 @@ describe('redactEmbedTokenFromProperties', () => {
 		  adds `$initial_current_url`, `$referrer` and others without this code
 		  knowing their names, and invents more between versions.
 		*/
-		const event = redactEmbedTokenFromProperties({
+		const event = redactUrlSecretsFromProperties({
 			properties: {
 				$current_url: EMBED_URL,
 				$initial_current_url: EMBED_URL,
@@ -165,9 +200,19 @@ describe('redactEmbedTokenFromProperties', () => {
 		}
 	})
 
+	it('redacts a URL used as a key, as heatmaps send them', () => {
+		const event = redactUrlSecretsFromProperties({
+			event: '$$heatmap',
+			properties: { $heatmap_data: { [EMBED_URL]: [{ x: 1 }] } }
+		})
+
+		expect(JSON.stringify(event)).not.toContain('vctrl_liveSecretab3x')
+		expect(Object.values(event.properties.$heatmap_data)).toEqual([[{ x: 1 }]])
+	})
+
 	it('leaves values it does not understand as they are', () => {
 		const date = new Date('2026-08-22T12:00:00.000Z')
-		const event = redactEmbedTokenFromProperties({
+		const event = redactUrlSecretsFromProperties({
 			properties: { when: date, count: 3, ok: true, missing: null }
 		})
 
@@ -198,7 +243,7 @@ describe('posthog is wired to use it', () => {
 	*/
 	it('registers the redaction with before_send', () => {
 		const hook = entryClient.indexOf('before_send')
-		const call = entryClient.indexOf('redactEmbedTokenFromProperties(')
+		const call = entryClient.indexOf('redactUrlSecretsFromProperties(')
 
 		expect(
 			hook,
@@ -207,12 +252,12 @@ describe('posthog is wired to use it', () => {
 
 		expect(
 			call,
-			'redactEmbedTokenFromProperties is never called, so the embed token is captured verbatim.'
+			'redactUrlSecretsFromProperties is never called, so the embed token is captured verbatim.'
 		).toBeGreaterThan(-1)
 
 		expect(
 			call,
-			'redactEmbedTokenFromProperties is called outside before_send, so it does not run for every event.'
+			'redactUrlSecretsFromProperties is called outside before_send, so it does not run for every event.'
 		).toBeGreaterThan(hook)
 	})
 })

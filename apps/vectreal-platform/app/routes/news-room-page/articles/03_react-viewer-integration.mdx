@@ -3,7 +3,7 @@ title: "React Viewer Integration - Minimal Setup to Production"
 slug: "react-viewer-integration"
 excerpt: "Drop a Vectreal scene into a real React app in under thirty minutes - SSR-safe, lazy-loaded, and ready for production."
 publishedAt: "2026-04-20"
-updatedAt: "2026-05-02"
+updatedAt: "2026-10-12"
 category: "guides"
 tags:
 - "react"
@@ -279,7 +279,7 @@ Define one or more named cameras. The viewer animates between them when you swit
 />
 ```
 
-This is the same surface a future post in this series will expand on - a dedicated camera-presets guide is on the way.
+With two or more cameras in `cameras`, the viewer also draws a switcher along the bottom of the canvas. Set `showControls: false` in `cameraOptions` to leave it out for that scene, or pass `showCameraControls={false}` when your app brings its own buttons and switches cameras through the viewer's commands. Choosing the cameras themselves is covered in [Camera Presets, Transitions, and the Single Biggest Quality Lever in 3D Web Publishing](https://vectreal.com/news-room/camera-presets-and-transitions).
 
 #### `controlsOptions`
 

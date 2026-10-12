@@ -22,6 +22,20 @@ The **Publish** sidebar's **Viewer** section carries one toggle, **Show scene in
 
 A scene with nothing stored for it shows the button, so every scene published before the toggle existed renders exactly as it did. The setting belongs to the scene rather than to one embed: it applies to embeds and to preview links as soon as you save, with nothing to republish.
 
+### Camera switcher
+
+A scene with two or more saved cameras gets a switcher along the bottom of the viewer: arrows either side of the current camera's name and a count such as `2/3`. Past three cameras the name also opens a list of all of them. A hotspot's own camera never counts toward the two and is not one of the cameras the arrows step through; while a visitor stands at one, the switcher shows the hotspot's name, and either arrow leads back to the saved cameras.
+
+To leave it out, open the **Camera** tool and switch off **Camera switcher**. The toggle is offered once the scene has two cameras to switch between. Like **Show scene info**, it belongs to the scene and applies to embeds and preview links as soon as you save.
+
+One embed can drop it without changing the scene: add `cameraControls=0` to the iframe `src`, as described under [URL parameters](/docs/guides/embed-sdk#url-parameters). Do that when your page switches cameras itself, so the visitor is not offered two controls for the same thing.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/camera-controls-settings/camera-views.tsx label="Camera switcher"
+present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('cameraControls')
+present packages/viewer/src/components/camera-controls.tsx const LIST_THRESHOLD = 3
+*/}
+
 ### The Vectreal badge
 
 Embeds carry a small **Vectreal** badge in the top right corner of the viewer on the free plan, linking back to vectreal.com. Paid plans do not.
@@ -356,6 +370,7 @@ each carrying only its own field (`zoom` or `pan`), so a partial payload is norm
 
 - This protocol is only available on hosted embed routes such as `/embed/:projectId/:sceneId`.
 - Preview API keys and allowed embed domains still gate access before the iframe loads.
+- A page that switches cameras with `activate_camera` should usually add `cameraControls=0` to the iframe `src`, so the viewer's own [camera switcher](#camera-switcher) does not compete with it.
 - `set_controls_enabled` only affects runtime interactivity in the current viewer session. It does not rewrite persisted `controlsOptions` defaults.
 - `host_scroll_progress` should be normalized to the `[0, 1]` range. The hosted preview bridge only re-fires range-based interactions when progress re-enters a configured range.
 - `host_message` is intended for named host-driven triggers such as `next-step`, `open-details`, or `focus-product`.
