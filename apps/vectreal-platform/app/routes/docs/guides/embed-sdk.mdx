@@ -83,7 +83,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 | `?transition=<type>` | `none`, `linear`, `object_avoidance` | Overrides the stored transition type |
 | `?hotspots=0` | `0` to hide | Draws no markers. The hotspots stay reachable through `focusHotspot` and still appear in `ready()` |
 | `?hotspotContent=0` | `0` to suppress | Keeps the markers, and the clicks, but draws no card. A click still flies the camera and still emits `hotspot_activated`, which is how your own panel knows to open. `focusHotspot` draws no card in this mode either |
-| `?cameraControls=0` | `0` to hide | Draws no camera switcher. The viewer shows one when the scene has two or more scene cameras (a hotspot's own camera does not count) and the author has not turned it off; turn it off when your page switches cameras itself with `activateCamera`, so two controls do not compete |
+| `?cameraControls=0` | `0` to hide | Draws no camera switcher. The viewer shows one when the scene has two or more scene cameras (a hotspot's own camera does not count) and the author has not turned it off (the Camera tool's **Camera switcher** setting); turn it off when your page switches cameras itself with `activateCamera`, so two controls do not compete |
 | `?hotspotColor=<hex>` | A URL-encoded hex colour, e.g. `%23fc6c18` | Sets the marker fill. Hex only; any other CSS value is ignored. The step numeral stays dark ink, so a dark or saturated fill makes it unreadable and an iframe cannot override the ink token - keep the fill light |
 | `?theme=<mode>` | `light`, `dark`, `system` | Color scheme for the viewer's chrome. Defaults to `system`, which follows the visitor's browser setting - set it explicitly when your page forces a scheme of its own |
 
