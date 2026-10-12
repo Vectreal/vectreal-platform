@@ -2,12 +2,13 @@
  * The asset route's caching and authorization, with storage and the database
  * mocked out.
  *
- * A signed request is answered with no key or scene lookup and is cached at
- * the edge, so the route must refuse every request the signature does not
- * cover and keep every other response private: a public response on the key
- * or session path would let the edge serve one caller's asset to another.
+ * A signed request is answered with no key lookup and is cached at the edge,
+ * so the route must refuse every request the signature does not cover, re-check
+ * that the asset is still one an embed gets, and keep every other response
+ * private: a public response on the key or session path would let the edge
+ * serve one caller's asset to another.
  */
-import { PERSISTED_BAKE_FILENAME } from '@vctrl/core'
+import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /** The `scene_assets` rows the link check reads; empty means unlinked. */
@@ -40,7 +41,8 @@ vi.mock('../app/lib/domain/auth/preview-api-key-auth.server', () => ({
 vi.mock(
 	'../app/lib/domain/scene/server/scene-preview-repository.server',
 	() => ({
-		getPublishedScenePreview: vi.fn()
+		getPublishedScenePreview: vi.fn(),
+		getPublishedSceneById: vi.fn()
 	})
 )
 
@@ -65,8 +67,15 @@ import {
 } from '../app/lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../app/lib/domain/auth/preview-api-key-auth.server'
 import { resolveSceneMembership } from '../app/lib/domain/dashboard/dashboard-permissions.server'
-import { buildSignedAssetUrl } from '../app/lib/domain/embed/embed-asset-signature.server'
-import { getPublishedScenePreview } from '../app/lib/domain/scene/server/scene-preview-repository.server'
+import { SIDE_ASSET_MAX_AGE_SECONDS } from '../app/lib/domain/embed/embed-asset-serving.server'
+import {
+	buildSignedAssetUrl,
+	signedAssetExpiry
+} from '../app/lib/domain/embed/embed-asset-signature.server'
+import {
+	getPublishedSceneById,
+	getPublishedScenePreview
+} from '../app/lib/domain/scene/server/scene-preview-repository.server'
 import { sceneSettingsService } from '../app/lib/domain/scene/server/scene-settings-service.server'
 import { getAuthUser } from '../app/lib/http/auth.server'
 import { reportServerError } from '../app/lib/observability/report-server-error.server'
@@ -91,12 +100,23 @@ const get = (path: string, method = 'GET') =>
 		params: { sceneId: SCENE_ID, assetId: GLB_ID }
 	} as unknown as LoaderFunctionArgs)
 
-const signedPath = () =>
-	buildSignedAssetUrl(
-		{ sceneId: SCENE_ID, assetId: GLB_ID },
-		SECRET,
-		Date.now()
-	)
+const signedPath = (assetId = GLB_ID) =>
+	buildSignedAssetUrl({ sceneId: SCENE_ID, assetId }, SECRET, Date.now())
+
+const signedGet = (assetId: string) =>
+	loader({
+		request: new Request(`${ORIGIN}${signedPath(assetId)}`),
+		params: { sceneId: SCENE_ID, assetId }
+	} as unknown as LoaderFunctionArgs)
+
+const maxAgeOf = (response: Response) => {
+	const match = response.headers
+		.get('Cache-Control')
+		?.match(/^public, max-age=(\d+), s-maxage=(\d+)$/)
+	expect(match, 'a signed response is public and sets both ages').toBeTruthy()
+	expect(match![1]).toBe(match![2])
+	return Number(match![1])
+}
 
 const glbBytes = {
 	data: new Uint8Array([1, 2, 3]),
@@ -116,31 +136,127 @@ afterEach(() => {
 })
 
 describe('a signed asset request', () => {
+	const THUMBNAIL_ID = 'thumb-1'
+
+	/** The scene's live settings, as the servable check reads them. */
+	const liveSettings = (showLoadingThumbnail: boolean) =>
+		vi
+			.mocked(sceneSettingsService.getSceneSettingsWithAssetRefs)
+			.mockResolvedValue({
+				assets: [
+					{
+						id: THUMBNAIL_ID,
+						name: SCENE_THUMBNAIL_FILENAME,
+						mimeType: 'image/webp',
+						fileSize: 1
+					}
+				],
+				settings: { presentation: { showLoadingThumbnail } }
+			} as never)
+
+	const downloadedNothing = () => {
+		expect(downloadAsset).not.toHaveBeenCalled()
+		expect(downloadAssetFromRow).not.toHaveBeenCalled()
+	}
+
 	beforeEach(() => {
 		vi.stubEnv('EMBED_ASSET_SIGNING_SECRET', SECRET)
+		vi.mocked(getPublishedSceneById).mockResolvedValue(PUBLISHED_ROW as never)
+		liveSettings(true)
 	})
 
-	it('is served publicly for as long as its URL stays valid', async () => {
-		const response = await get(signedPath())
+	it("serves the published GLB, public for exactly the URL's remaining life", async () => {
+		const now = Date.UTC(2026, 9, 12, 10, 17, 30)
+		vi.useFakeTimers({ now, toFake: ['Date'] })
+		try {
+			const response = await get(signedPath())
+
+			expect(response.status).toBe(200)
+			expect(maxAgeOf(response)).toBe(
+				signedAssetExpiry(now) - Math.floor(now / 1000)
+			)
+		} finally {
+			vi.useRealTimers()
+		}
+		expect(getPublishedSceneById).toHaveBeenCalledWith(SCENE_ID)
+		expect(downloadAsset).toHaveBeenCalledWith(GLB_ID)
+		expect(
+			sceneSettingsService.getSceneSettingsWithAssetRefs
+		).not.toHaveBeenCalled()
+	})
+
+	it('serves a shown loading thumbnail, held at the edge for minutes only', async () => {
+		const response = await signedGet(THUMBNAIL_ID)
 
 		expect(response.status).toBe(200)
-		expect(response.headers.get('Cache-Control')).toMatch(
-			/^public, max-age=(\d+), s-maxage=\1$/
-		)
-		expect(downloadAsset).toHaveBeenCalledWith(GLB_ID)
+		expect(maxAgeOf(response)).toBe(SIDE_ASSET_MAX_AGE_SECONDS)
+		expect(downloadAsset).toHaveBeenCalledWith(THUMBNAIL_ID)
 	})
 
-	it('is refused, downloading nothing, without a signing secret', async () => {
+	it('never holds a side asset at the edge past its URL', async () => {
+		const issuedAt = Date.UTC(2026, 9, 12, 10, 0, 0)
+		vi.useFakeTimers({ now: issuedAt, toFake: ['Date'] })
+		try {
+			const path = signedPath(THUMBNAIL_ID)
+			const expiry = signedAssetExpiry(issuedAt)
+			vi.setSystemTime((expiry - 100) * 1000)
+
+			const response = await loader({
+				request: new Request(`${ORIGIN}${path}`),
+				params: { sceneId: SCENE_ID, assetId: THUMBNAIL_ID }
+			} as unknown as LoaderFunctionArgs)
+
+			expect(response.status).toBe(200)
+			expect(maxAgeOf(response)).toBe(100)
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	it('refuses the thumbnail once its author switches it off', async () => {
+		liveSettings(false)
+
+		const response = await signedGet(THUMBNAIL_ID)
+
+		expect(response.status).toBe(404)
+		downloadedNothing()
+	})
+
+	it('refuses every asset of a scene that is no longer published', async () => {
+		vi.mocked(getPublishedSceneById).mockResolvedValue(null)
+
+		for (const assetId of [GLB_ID, THUMBNAIL_ID]) {
+			const response = await signedGet(assetId)
+			expect(response.status).toBe(404)
+		}
+		downloadedNothing()
+	})
+
+	it('refuses the GLB a republish replaced, quietly and without a download', async () => {
+		vi.mocked(getPublishedSceneById).mockResolvedValue({
+			...PUBLISHED_ROW,
+			publishedAssetId: 'glb-2'
+		} as never)
+
+		const response = await get(signedPath())
+
+		expect(response.status).toBe(404)
+		downloadedNothing()
+		expect(reportServerError).not.toHaveBeenCalled()
+	})
+
+	it('is refused, looking nothing up, without a signing secret', async () => {
 		const path = signedPath()
 		vi.stubEnv('EMBED_ASSET_SIGNING_SECRET', '')
 
 		const response = await get(path)
 
 		expect(response.status).toBe(404)
-		expect(downloadAsset).not.toHaveBeenCalled()
+		expect(getPublishedSceneById).not.toHaveBeenCalled()
+		downloadedNothing()
 	})
 
-	it('is refused, downloading nothing, with a tampered signature', async () => {
+	it('is refused, looking nothing up, with a tampered signature', async () => {
 		const signed = signedPath()
 		const tampered = signed.replace(
 			/sig=(.)/,
@@ -151,7 +267,8 @@ describe('a signed asset request', () => {
 		const response = await get(tampered)
 
 		expect(response.status).toBe(404)
-		expect(downloadAsset).not.toHaveBeenCalled()
+		expect(getPublishedSceneById).not.toHaveBeenCalled()
+		downloadedNothing()
 	})
 
 	it('is refused at any other spelling of its path', async () => {
@@ -160,22 +277,26 @@ describe('a signed asset request', () => {
 		const response = await get(`${path}/?${query}`)
 
 		expect(response.status).toBe(404)
-		expect(downloadAsset).not.toHaveBeenCalled()
+		downloadedNothing()
 	})
 
 	it('is refused for any method but GET, downloading nothing', async () => {
 		const response = await get(signedPath(), 'HEAD')
 
 		expect(response.status).toBe(405)
-		expect(downloadAsset).not.toHaveBeenCalled()
+		downloadedNothing()
 	})
 
-	it('answers an asset a republish deleted with a quiet 404', async () => {
-		vi.mocked(downloadAsset).mockRejectedValue(new AssetNotFoundError(GLB_ID))
+	it('answers a row deleted between lookup and download with a quiet 404', async () => {
+		for (const assetId of [GLB_ID, THUMBNAIL_ID]) {
+			vi.mocked(downloadAsset).mockRejectedValueOnce(
+				new AssetNotFoundError(assetId)
+			)
 
-		const response = await get(signedPath())
+			const response = await signedGet(assetId)
 
-		expect(response.status).toBe(404)
+			expect(response.status, assetId).toBe(404)
+		}
 		expect(reportServerError).not.toHaveBeenCalled()
 	})
 
@@ -212,6 +333,21 @@ describe('a key-authenticated asset request', () => {
 			expect(response.headers.get('Cache-Control')).toMatch(/^private,/)
 		}
 	})
+	it("serves the published GLB from the publication's row, reading no settings", async () => {
+		const response = await get(
+			`/api/scenes/${SCENE_ID}/assets/${GLB_ID}?preview=1&projectId=p&token=vctrl_key`
+		)
+
+		expect(response.status).toBe(200)
+		expect(downloadAssetFromRow).toHaveBeenCalledWith(
+			expect.objectContaining({ id: GLB_ID, filePath: 'project/scene.glb' })
+		)
+		expect(downloadAsset).not.toHaveBeenCalled()
+		expect(
+			sceneSettingsService.getSceneSettingsWithAssetRefs
+		).not.toHaveBeenCalled()
+	})
+
 	describe('for an asset other than the published GLB', () => {
 		const BAKE_ID = 'bake-1'
 		const DRAFT_ID = 'draft-1'
