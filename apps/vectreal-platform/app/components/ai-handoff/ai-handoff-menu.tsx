@@ -164,7 +164,9 @@ export const DocPageActions: FC = () => {
 			surface="docs"
 			htmlPath={`/docs/${page.slug}`}
 			title={page.title}
-			className="my-8 xl:hidden"
+			// The prose column is a flex column with a 32px gap; pulled up by half
+			// of it so the row reads as part of the introduction it closes.
+			className="-mt-4 xl:hidden"
 		/>
 	)
 }
