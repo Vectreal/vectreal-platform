@@ -164,21 +164,7 @@ for (const codecDir of ['draco', 'basis', 'basis-encoder']) {
 	)
 }
 app.use(express.static(CLIENT_DIR, { redirect: false }))
-/*
-  morgan's 'tiny' format, with the model link `/view?src=` opens taken out of
-  the logged address. The link is the visitor's, and a signed storage link is
-  a credential until it expires. Everything from `src=` to the end of the query
-  goes, for the reason `redact-url-secrets.ts` gives for doing the same to
-  analytics: an unencoded signed link's own parameters follow it.
-*/
-morgan.token('url-without-link', (req) =>
-	(req.originalUrl || req.url).replace(/([?&]src=)[^#\s]*/gi, '$1redacted')
-)
-app.use(
-	morgan(
-		':method :url-without-link :status :res[content-length] - :response-time ms'
-	)
-)
+app.use(morgan('tiny'))
 
 app.all(
 	'/{*splat}',

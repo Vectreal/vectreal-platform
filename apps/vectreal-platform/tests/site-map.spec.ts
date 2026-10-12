@@ -59,11 +59,6 @@ describe('the site map', () => {
 		expect(navLinks.map((link) => link.to)).toContain('/contact?topic=pilot')
 	})
 
-	it('lists the viewer in the footer, not in the nav', () => {
-		expect(footerLinks.map((link) => link.to)).toContain('/view')
-		expect(navLinks.map((link) => link.to)).not.toContain('/view')
-	})
-
 	it('signs in at sign-in, and starts at the publisher', () => {
 		expect(NAV.signIn.to).toBe('/sign-in')
 		expect(NAV.getStarted.to).toBe('/publisher')
@@ -77,23 +72,14 @@ describe('which links crossfade into a tool', () => {
 			'/publisher/3c101785',
 			'/publisher?sample=rocket',
 			'/convert',
-			'/convert/obj-to-glb',
-			'/view',
-			'/view?src=https%3A%2F%2Fa.example%2Fm.glb'
+			'/convert/obj-to-glb'
 		]) {
 			expect(entersFunnel(to), to).toBe(true)
 		}
 	})
 
 	it('leaves every other page, and a path that only starts the same, as a cut', () => {
-		for (const to of [
-			'/pricing',
-			'/docs',
-			'/publishers',
-			'/converter',
-			'/viewer',
-			'/'
-		]) {
+		for (const to of ['/pricing', '/docs', '/publishers', '/converter', '/']) {
 			expect(entersFunnel(to), to).toBe(false)
 		}
 	})

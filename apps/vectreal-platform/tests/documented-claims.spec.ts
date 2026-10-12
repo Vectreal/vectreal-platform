@@ -139,13 +139,6 @@ const CLAIM_CARRYING_DOCS = [
 	*/
 	'apps/vectreal-platform/app/routes/docs/guides/convert.mdx',
 	/*
-	  The viewer guide promises a visitor what the link page does with their
-	  file and their link: no cookies or referrer on the fetch, no host but the
-	  model's own, the link kept out of analytics, and no indexing. Each is a
-	  sentence someone decides to share a signed link on.
-	*/
-	'apps/vectreal-platform/app/routes/docs/guides/view-by-link.mdx',
-	/*
 	  Each package page tells an installer what module format they get. The
 	  manifest decides that, so the page names the two fields that would change
 	  first if a CommonJS build came back.
