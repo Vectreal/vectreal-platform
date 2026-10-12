@@ -238,6 +238,16 @@ export class VectrealEmbed {
 	}
 
 	/**
+	 * Move one clip to a time offset, in seconds.
+	 *
+	 * Clip ids arrive with `animation_state_changed` and
+	 * `animation_clip_finished`. The frame drops a negative or non-finite time.
+	 */
+	seekAnimationClip(clipId: string, time: number): void {
+		this.sendCommand({ type: 'seek_animation_clip', clipId, time })
+	}
+
+	/**
 	 * Drive scroll-triggered interactions defined in the Publisher.
 	 * @param progress 0 (page top) – 1 (page bottom)
 	 */

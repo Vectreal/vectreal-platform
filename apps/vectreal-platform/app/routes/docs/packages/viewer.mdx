@@ -140,7 +140,7 @@ type CameraProps = {
 }
 ```
 
-Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera. `showControls: false` keeps the viewer's camera switcher off for this scene; absent, it shows whenever there are two or more scene cameras.
+Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera. A visitor whose system asks for reduced motion (`prefers-reduced-motion: reduce`) gets every camera switch instantly, whatever the transition. `showControls: false` keeps the viewer's camera switcher off for this scene; absent, it shows whenever there are two or more scene cameras.
 
 ```jsx
 <VectrealViewer

@@ -114,3 +114,24 @@ describe('VectrealEmbed.returnToSceneView', () => {
 		embed.destroy()
 	})
 })
+
+describe('VectrealEmbed.seekAnimationClip', () => {
+	it('sends a command the frame accepts', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		pong(own, 'scene-a')
+		viewerReady(own)
+
+		const post = vi.spyOn(own.contentWindow as Window, 'postMessage')
+		embed.seekAnimationClip('spin', 1.25)
+
+		const message = post.mock.calls.at(-1)?.[0] as { command: unknown }
+		expect(message.command).toEqual({
+			type: 'seek_animation_clip',
+			clipId: 'spin',
+			time: 1.25
+		})
+		expect(isViewerCommand(message.command)).toBe(true)
+		embed.destroy()
+	})
+})

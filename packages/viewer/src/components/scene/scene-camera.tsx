@@ -20,6 +20,7 @@ import {
 import { cameraSelectionSignature } from './camera-selection-signature'
 import { applyInitialFraming } from './initial-framing'
 import { withOpeningPose } from './opening-pose'
+import { prefersReducedMotion } from './reduced-motion'
 
 import type { CameraSelectionSignature } from './camera-selection-signature'
 import type { InitialFramingControls } from './initial-framing'
@@ -444,7 +445,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				selection.transition.duration ?? DEFAULT_TRANSITION_DURATION_MS
 			)
 
-			if (normalizedType === 'none' || durationMs === 0) {
+			// A visitor who asked for less motion arrives without the flight.
+			if (
+				normalizedType === 'none' ||
+				durationMs === 0 ||
+				prefersReducedMotion()
+			) {
 				transitionRuntime.current = null
 				applyCameraInstantly(selection)
 				return

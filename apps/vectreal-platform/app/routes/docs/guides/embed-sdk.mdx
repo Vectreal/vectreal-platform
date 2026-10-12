@@ -132,6 +132,7 @@ other origin are dropped.
 | `setPanEnabled` | `(enabled: boolean) => void` | Toggle right-click pan. |
 | `setAnimationPlaying` | `(playing: boolean) => void` | Start or suspend animation playback. |
 | `restartAnimation` | `() => void` | Play the animation program from the beginning. |
+| `seekAnimationClip` | `(clipId: string, time: number) => void` | Move one clip to a time offset in seconds. Clip ids arrive with the `animation_state_changed` and `animation_clip_finished` events. A negative or non-finite time is dropped. |
 | `sendScrollProgress` | `(progress: number) => void` | Drive scroll-triggered interactions (0–1). |
 | `sendMessage` | `(message: string, payload?) => void` | Trigger a named `host_message` interaction. |
 | `on` | `(type, handler) => () => void` | Subscribe to an event. Returns an unsubscribe function. |

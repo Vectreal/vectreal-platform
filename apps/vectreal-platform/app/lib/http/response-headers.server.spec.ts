@@ -1,6 +1,10 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import {
 	manifestResponse,
 	noStoreHeaders,
+	previewDocumentHeaders,
 	withNoStore
 } from './response-headers.server'
 
@@ -69,5 +73,36 @@ describe('manifestResponse', () => {
 
 		expect(response.status).toBe(200)
 		expect(response.headers.has('ETag')).toBe(false)
+	})
+})
+
+describe('previewDocumentHeaders', () => {
+	it('lets only this origin frame the preview', () => {
+		const headers = previewDocumentHeaders(new Headers())
+
+		expect(headers.get('Content-Security-Policy')).toBe(
+			"frame-ancestors 'self'"
+		)
+	})
+
+	it('keeps what the loader set', () => {
+		const headers = previewDocumentHeaders(
+			new Headers({ 'Cache-Control': 'no-store' })
+		)
+
+		expect(headers.get('Cache-Control')).toBe('no-store')
+	})
+
+	it('is what the preview route sends', () => {
+		// A document route drops every loader header but Set-Cookie unless it
+		// exports `headers`, so the helper alone sends nothing.
+		const route = readFileSync(
+			join(import.meta.dirname, '../../routes/layouts/preview-layout.tsx'),
+			'utf8'
+		)
+
+		expect(route).toMatch(
+			/export function headers\(\{ loaderHeaders \}[^)]*\) \{\s*return previewDocumentHeaders\(loaderHeaders\)/
+		)
 	})
 })

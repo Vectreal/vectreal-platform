@@ -16,7 +16,10 @@ import {
 import { readEmbedSceneSettings } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
-import { withNoStore } from '../../lib/http/response-headers.server'
+import {
+	previewDocumentHeaders,
+	withNoStore
+} from '../../lib/http/response-headers.server'
 import { buildMeta } from '../../lib/seo'
 
 import type { SceneEmbedManifestResponse } from '../../types/api'
@@ -93,6 +96,15 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		{ projectId, sceneId, manifest },
 		{ headers: sessionAuth.headers ?? {} }
 	)
+}
+
+/**
+ * A document route keeps only `Set-Cookie` from its loader unless it exports
+ * `headers`, so the framing policy is set here; the preview page has no loader
+ * and inherits these.
+ */
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+	return previewDocumentHeaders(loaderHeaders)
 }
 
 /** What the preview route needs from this layout. */

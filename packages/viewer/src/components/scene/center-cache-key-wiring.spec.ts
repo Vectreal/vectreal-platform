@@ -67,3 +67,18 @@ describe('the centering offset is re-measured when the model rescales', () => {
 		expect(measurement).not.toContain('normalizationOptions')
 	})
 })
+
+/**
+ * `Center` is mounted only around a model.
+ *
+ * With content passed as `children` and no model, `Center` measured an empty
+ * box and wrote a NaN offset onto its group, poisoning any world matrix read
+ * through it.
+ */
+describe('Center needs a model to center', () => {
+	it('is not mounted without one', () => {
+		expect(source).toMatch(
+			/\{model && \(\s*<Center top cacheKey=\{centerCacheKey\}>/
+		)
+	})
+})

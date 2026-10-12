@@ -55,3 +55,17 @@ export function manifestResponse(
 		headers: cached
 	})
 }
+
+/**
+ * Document headers for the internal preview: the loader's own, plus a refusal
+ * to be framed by any other origin.
+ *
+ * The preview's bridge answers whichever window frames it, and for a member it
+ * renders the working draft. Only the dashboard and the publisher frame it, and
+ * both are this origin.
+ */
+export function previewDocumentHeaders(loaderHeaders: Headers): Headers {
+	const headers = new Headers(loaderHeaders)
+	headers.set('Content-Security-Policy', "frame-ancestors 'self'")
+	return headers
+}
