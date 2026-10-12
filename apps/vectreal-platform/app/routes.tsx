@@ -29,6 +29,7 @@ export default [
 	route('robots.txt', './routes/robots[.]txt.ts'),
 	route('sitemap.xml', './routes/sitemap[.]xml.ts'),
 	route('llms.txt', './routes/llms[.]txt.ts'),
+	route('llms-full.txt', './routes/llms-full[.]txt.ts'),
 	...MARKDOWN_TWIN_PATHS.map((path) =>
 		route(path, './routes/page-markdown[.]md.ts', {
 			id: `markdown-twin:${path}`
