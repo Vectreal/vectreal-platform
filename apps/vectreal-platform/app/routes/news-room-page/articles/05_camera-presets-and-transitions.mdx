@@ -3,7 +3,7 @@ title: "Camera Presets, Transitions, and the Single Biggest Quality Lever in 3D 
 slug: "camera-presets-and-transitions"
 excerpt: "Multi-camera scenes, smart transitions, and the small set of decisions that turn a flat embed into a presentation people actually finish watching."
 publishedAt: "2026-05-06"
-updatedAt: "2026-10-11"
+updatedAt: "2026-10-12"
 category: "guides"
 tags:
 - "camera"
@@ -80,6 +80,8 @@ To re-aim a camera you already have, open it, frame the view, and click **Set ca
 
 Each saved camera stores its position, target, and field of view. Switching between cameras at runtime cuts (or transitions, depending on settings - more below) to the saved view.
 
+Visitors switch with a control the viewer draws along the bottom of the scene once it has two saved cameras: arrows either side of the camera's name and a count such as `2/3`. Past three cameras the name also opens a list. Hotspot cameras are not part of it. To keep a scene on the angle you chose, switch off **Camera switcher** in the Camera tool.
+
 **A useful default starting set is three cameras:**
 
 - **Hero** - the angle the visitor lands on. Three-quarter front, slightly above the model's center of mass, framed so the silhouette reads cleanly against the background.
@@ -88,7 +90,7 @@ Each saved camera stores its position, target, and field of view. Switching betw
 
 <ExampleScene id="camera-three-views" caption="This scene opens on Hero. Load it and use the arrows along the bottom to move to Detail and Context." />
 
-If you only had time to set up one extra camera, **set up Hero** and make it the default. The first frame is the entire experience for half your visitors.
+If you only had time to set up one extra camera, **set up Hero** and make it the default.
 
 ---
 
@@ -207,7 +209,7 @@ Smart transitions are doing real work here - without them, switching between cam
 **Transitions:** Linear or Smart depending on geometry. Smooth easing. **Duration Slow (2000 ms)** to give each step room to breathe.
 **Interaction:** Zoom off. Auto-rotate off. The visitor's job is to **press Next**, not to free-fly.
 
-This is the layout that turns a 3D embed into a slide deck. Combined with a few buttons in your surrounding UI that switch cameras through the [embed SDK](/docs/guides/embed-sdk), it becomes a presentation people watch start to finish.
+This is the layout that turns a 3D embed into a slide deck. Combined with a few buttons in your surrounding UI that switch cameras through the [embed SDK](/docs/guides/embed-sdk), it becomes a presentation people watch start to finish. Add `cameraControls=0` to that embed's URL so your buttons are the only way between steps.
 
 ---
 
