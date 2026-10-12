@@ -13,3 +13,12 @@ export const markdownTwinLink = (htmlPath: string): MetaDescriptor => ({
 	type: 'text/markdown',
 	href: markdownTwinPath(htmlPath)
 })
+
+/** The twin's text, from the same origin the page was served from. */
+export async function fetchMarkdownTwin(htmlPath: string): Promise<string> {
+	const response = await fetch(markdownTwinPath(htmlPath))
+	if (!response.ok) {
+		throw new Error(`${markdownTwinPath(htmlPath)} answered ${response.status}`)
+	}
+	return response.text()
+}

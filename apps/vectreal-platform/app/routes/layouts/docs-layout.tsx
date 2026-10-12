@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import { useRef } from 'react'
 import { type MetaFunction, Link, Outlet, useLocation } from 'react-router'
 
+import { PageHandoffMenu } from '../../components/ai-handoff/ai-handoff-menu'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { usePublishDocsToc } from '../../components/docs/docs-toc-context'
 import { DocsTreeNav } from '../../components/docs/docs-tree-nav'
@@ -124,9 +125,17 @@ export default function DocsLayout() {
 				  elements, so anything else here, such as the not-found state, had
 				  its buttons turned into orange prose links.
 				*/}
+				{page ? (
+					<PageHandoffMenu
+						surface="docs"
+						htmlPath={`/docs/${page.slug}`}
+						title={page.title}
+						className="mt-24 justify-end"
+					/>
+				) : null}
 				<article
 					ref={contentRef}
-					className={cn('mt-24', page && styles.docsContent)}
+					className={cn(page ? 'mt-6' : 'mt-24', page && styles.docsContent)}
 				>
 					<Outlet />
 				</article>
