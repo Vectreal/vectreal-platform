@@ -40,7 +40,7 @@ describe('PLAN_OFFER_DESCRIPTIONS', () => {
 			PLAN_OFFER_DESCRIPTIONS,
 			'A plan number moved. The sentence below already carries the new number, because it reads PLAN_LIMITS - so read the whole sentence before updating this string. The claim wrapped around the number may no longer be true.'
 		).toEqual({
-			free: '10 scenes, 500 MB storage, 3 concurrent published scenes. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.',
+			free: '10 scenes, 500 MB storage, 3 concurrent published scenes. Embed API keys and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.',
 			pro: '200 scenes, 10 GB storage, 50 concurrent published scenes, 20 projects. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.',
 			business:
 				'2,000 scenes, 100 GB storage, 500 concurrent published scenes. Adds team collaboration with role-based access (up to 10 seats) and priority support.',

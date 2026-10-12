@@ -294,7 +294,7 @@ const count = (plan: Plan, key: LimitKey, noun: string) =>
   which is why that entry was already written differently by hand.
 */
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
-	free: `${count('free', 'scenes_total', 'scene')}, ${publishedLimit('free', 'storage_bytes_total')} storage, ${count('free', 'scenes_published_concurrent', 'concurrent published scene')}. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.`,
+	free: `${count('free', 'scenes_total', 'scene')}, ${publishedLimit('free', 'storage_bytes_total')} storage, ${count('free', 'scenes_published_concurrent', 'concurrent published scene')}. Embed API keys and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.`,
 	pro: `${count('pro', 'scenes_total', 'scene')}, ${publishedLimit('pro', 'storage_bytes_total')} storage, ${count('pro', 'scenes_published_concurrent', 'concurrent published scene')}, ${count('pro', 'projects_total', 'project')}. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.`,
 	business: `${count('business', 'scenes_total', 'scene')}, ${publishedLimit('business', 'storage_bytes_total')} storage, ${count('business', 'scenes_published_concurrent', 'concurrent published scene')}. Adds team collaboration with role-based access (up to ${count('business', 'org_seats', 'seat')}) and priority support.`,
 	enterprise:
