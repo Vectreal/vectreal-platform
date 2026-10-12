@@ -473,7 +473,8 @@ export default defineConfig(tseslint.configs.recommended, [
 						// imported by vite.config.ts and vitest.config.ts, so its remark
 						// packages are build tooling beside @mdx-js/rollup in the root
 						// manifest. Only the twins' strings reach the server bundle.
-						'{projectRoot}/app/lib/markdown/mdx-to-markdown.ts'
+						'{projectRoot}/app/lib/markdown/mdx-to-markdown.ts',
+						'{projectRoot}/app/lib/markdown/remark-doc-page-actions.ts'
 					]
 				}
 			]

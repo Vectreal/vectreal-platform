@@ -9,6 +9,7 @@ import {
 } from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
 import { Check, FileText, SquareTerminal } from 'lucide-react'
+import { useLocation } from 'react-router'
 
 import { useClipboardCopy } from '../../hooks/use-clipboard-copy'
 import { useConsentedCapture } from '../../hooks/use-consented-capture'
@@ -18,6 +19,7 @@ import {
 	type AiHandoffKind,
 	type AiHandoffTarget
 } from '../../lib/ai-handoff/ai-handoff-targets'
+import { getDocPage } from '../../lib/docs/docs-manifest'
 import { fetchMarkdownTwin } from '../../lib/markdown/markdown-twin'
 
 import type { FC, ReactNode } from 'react'
@@ -36,7 +38,12 @@ const TARGET_ICONS: Record<
 	'claude-code': SquareTerminal
 }
 
-const ICON_BUTTON = 'text-muted-foreground hover:text-foreground size-8'
+/*
+  Important, because docs prose colours every bare `a` orange from a CSS module
+  selector that outranks a utility, and the row also renders inside the prose.
+*/
+const ICON_BUTTON =
+	'text-muted-foreground! hover:text-foreground! size-8 opacity-100! no-underline!'
 
 const IconAction: FC<{ label: string; children: ReactNode }> = ({
 	label,
@@ -139,3 +146,25 @@ export const PageHandoffMenu: FC<{
 		className={className}
 	/>
 )
+
+/**
+ * The docs page's row inside its content, at the end of the introduction
+ * (`remark-doc-page-actions.ts` puts it there). Below `xl` only: from `xl` the
+ * contents rail carries it beside the title instead.
+ */
+export const DocPageActions: FC = () => {
+	const slug = useLocation()
+		.pathname.replace(/^\/docs\/?/, '')
+		.replace(/\/$/, '')
+	const page = getDocPage(slug)
+	if (!page) return null
+
+	return (
+		<PageHandoffMenu
+			surface="docs"
+			htmlPath={`/docs/${page.slug}`}
+			title={page.title}
+			className="my-8 xl:hidden"
+		/>
+	)
+}
