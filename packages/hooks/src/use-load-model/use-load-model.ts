@@ -14,12 +14,13 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-import { ModelLoader } from '@vctrl/core/model-loader'
+import { fetchModelFiles, ModelLoader } from '@vctrl/core/model-loader'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 import {
 	normalizeLocalLoadError,
-	normalizeServerLoadError
+	normalizeServerLoadError,
+	normalizeUrlLoadError
 } from './error-helpers'
 import { loadModelFromFiles } from './file-loaders'
 import { useOptimizerIntegration } from './optimizer-integration'
@@ -94,18 +95,14 @@ function useLoadModel<
 		optimizerRef.current?.reset()
 	}, [])
 
-	const modelLoader = useMemo(() => {
-		const loader = new ModelLoader()
-		// Parser progress only means anything while a load is in flight.
-		loader.onProgress((progress: OperationProgress) => {
-			setState((prev) =>
-				prev.status === 'loading'
-					? { ...prev, progress: progress.progress }
-					: prev
-			)
-		})
-		return loader
-	}, [])
+	/*
+	  For the optimizer's conversions, which report no progress. Each load
+	  parses with a loader of its own (see `load`).
+	*/
+	const modelLoader = useMemo(() => new ModelLoader(), [])
+
+	// The in-flight URL fetch, aborted by any newer load or a reset.
+	const fetchAbortRef = useRef<AbortController | null>(null)
 
 	// Read inside `load` so a failure can put back what was on screen.
 	const stateRef = useRef(state)
@@ -138,6 +135,8 @@ function useLoadModel<
 		): Promise<LoadOutcome> => {
 			const token = ++loadTokenRef.current
 			const isCurrent = () => loadTokenRef.current === token
+			fetchAbortRef.current?.abort()
+			fetchAbortRef.current = null
 
 			/*
 			  The same token the state writes are gated on, handed to the caller.
@@ -156,11 +155,14 @@ function useLoadModel<
 				stillCurrent: isCurrent,
 				stillOnScreen: isOnScreen
 			})
-			// Only an upload is an attempt to *add* a model; a scene source replaces
-			// the one on screen, so its failure has to be visible as one rather than
-			// leaving the previous scene's geometry under the new scene's name.
+			// Only an upload or a URL is an attempt to *add* a model; a scene source
+			// replaces the one on screen, so its failure has to be visible as one
+			// rather than leaving the previous scene's geometry under the new
+			// scene's name.
 			const modelOnScreen =
-				source.kind === 'files' ? lastReadyRef.current : null
+				source.kind === 'files' || source.kind === 'url'
+					? lastReadyRef.current
+					: null
 			const modelOnScreenLoad = onScreenRef.current
 
 			// `owner` is the load whose model `next` shows: this one, except when
@@ -181,8 +183,32 @@ function useLoadModel<
 			// optimizer has ingested it, so the viewer never waits on that.
 			let published: ModelState | null = null
 
+			/*
+			  A loader of this load's own, so the progress it reports is this
+			  load's. A loader has one progress listener and no idea which call
+			  emitted, so on a shared one a superseded load still parsing drew
+			  its percentage into the newer load's bar. Its decoders are cached
+			  per module, not per instance, so a loader costs a `WebIO`.
+
+			  `parseRange` is the span of the bar the parser fills, as [start,
+			  width]: all of it, except after a URL's download has filled the
+			  first 90, where drawing the parser's own 0 to 100 would run the
+			  bar back to the start.
+			*/
+			let parseRange: [number, number] = [0, 100]
+			const loadLoader = new ModelLoader()
+			loadLoader.onProgress((progress: OperationProgress) => {
+				if (!isCurrent()) return
+				const [start, width] = parseRange
+				setState((prev) =>
+					prev.status === 'loading'
+						? { ...prev, progress: start + (progress.progress * width) / 100 }
+						: prev
+				)
+			})
+
 			const context: LoadContext = {
-				modelLoader,
+				modelLoader: loadLoader,
 				optimizer: optimizerRef.current,
 				mayIngest: isOnScreen,
 				publish: (loaded: LoadedModel) => {
@@ -203,24 +229,83 @@ function useLoadModel<
 				}
 			}
 
+			/*
+			  A URL becomes the files a drop would give, and from there it is a
+			  drop. The download fills the first 90 of the bar and parsing the
+			  rest. Aborted by the next load or a reset, and by the caller's own
+			  signal; listened to rather than combined, because
+			  `AbortSignal.any` is newer than some browsers this package runs in.
+			*/
+			/*
+			  Set when the download itself rejected after an abort. Which phase
+			  threw decides it, not when the abort landed, so a parse failure
+			  after a late abort still reports itself.
+			*/
+			let downloadAborted = false
+			const fetchFiles = (
+				{ url, init }: Extract<ModelSource, { kind: 'url' }>,
+				{ onProgress }: LoadContext
+			) => {
+				const controller = new AbortController()
+				fetchAbortRef.current = controller
+				const callerSignal = init?.signal
+				const abort = () => controller.abort(callerSignal?.reason)
+				if (callerSignal?.aborted) abort()
+				callerSignal?.addEventListener('abort', abort, { once: true })
+				return fetchModelFiles(url, {
+					init: { ...init, signal: controller.signal },
+					onProgress: (fraction) => onProgress(fraction * 90)
+				})
+					.catch((error: unknown) => {
+						downloadAborted = controller.signal.aborted
+						throw error
+					})
+					.finally(() => {
+						// A long-lived caller signal must not collect one per load.
+						callerSignal?.removeEventListener('abort', abort)
+						if (fetchAbortRef.current === controller) {
+							fetchAbortRef.current = null
+						}
+						parseRange = [90, 10]
+					})
+			}
+
 			commit(loadingModelState(source.kind))
 
 			try {
 				const loaded =
 					source.kind === 'files'
 						? await loadModelFromFiles(source.files, context)
-						: source.kind === 'scene-data'
-							? await loadModelFromSceneData(source, context)
-							: await loadModelFromServer(source, context)
+						: source.kind === 'url'
+							? await loadModelFromFiles(
+									await fetchFiles(source, context),
+									context
+								)
+							: source.kind === 'scene-data'
+								? await loadModelFromSceneData(source, context)
+								: await loadModelFromServer(source, context)
 
 				return outcome(
 					published ?? commit(readyModelState(source.kind, loaded, token))
 				)
 			} catch (error) {
+				/*
+				  The download was aborted: by the caller's signal, a newer load or
+				  a reset. Not a failure to report. What was on screen stays, and
+				  the load resolves empty, as one that never started would have
+				  left the page.
+				*/
+				if (downloadAborted) {
+					commit(modelOnScreen ?? emptyModelState, modelOnScreenLoad)
+					return outcome(emptyModelState)
+				}
+
 				const structured =
 					source.kind === 'files'
 						? normalizeLocalLoadError(error, 'unknown')
-						: normalizeServerLoadError(error, source.sceneId ?? '')
+						: source.kind === 'url'
+							? normalizeUrlLoadError(error, String(source.url))
+							: normalizeServerLoadError(error, source.sceneId ?? '')
 
 				console.error(`Model load failed (${source.kind}):`, structured)
 
@@ -238,6 +323,8 @@ function useLoadModel<
 	const reset = useCallback(() => {
 		// Claiming a token retires any in-flight load along with the state.
 		loadTokenRef.current += 1
+		fetchAbortRef.current?.abort()
+		fetchAbortRef.current = null
 		// No load may ingest a model that is no longer on screen.
 		putOnScreen(0)
 		// Nothing is on screen after this, so a later failure has nothing to

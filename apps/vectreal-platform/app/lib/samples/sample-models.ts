@@ -1,9 +1,10 @@
+import { readWithProgress } from '@vctrl/core/model-loader'
+
 import cameraPreviewUrl from '../../assets/models/camera-preview.webp?url'
 import cameraSourceUrl from '../../assets/models/camera-source.glb?url'
 import cameraUrl from '../../assets/models/camera.glb?url'
 import rocketPreviewUrl from '../../assets/models/rocket-preview.webp?url'
 import rocketUrl from '../../assets/models/rocket-v3.glb?url'
-import { readWithProgress } from '../http/read-with-progress'
 
 /**
  * Models anyone can try without handing over their own work.
