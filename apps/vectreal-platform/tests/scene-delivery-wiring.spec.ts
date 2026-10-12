@@ -162,6 +162,38 @@ describe('the session manifest branch', () => {
 	})
 })
 
+describe('the preview POST', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+	const action = route.slice(route.indexOf('export async function action('))
+	const preview = action.slice(
+		action.indexOf('if (isPreviewRequest) {'),
+		action.indexOf('const authResult = await getAuthUser(request)')
+	)
+
+	/*
+	  The client falls back to this POST when a manifest fails its shape check,
+	  and it returns the working scene, so it has to ask the same rule as the
+	  GET or a published scene's draft leaks onto /preview on that path.
+	*/
+	it('lets the manifest rule refuse a published scene before reading the draft', () => {
+		expect(preview).toMatch(
+			/const previewScene = await getPublishedScenePreview\(\s*previewProjectId,\s*routeSceneId\s*\)\s*const manifestKind = chooseSceneManifestKind\(\{\s*hasPublication: previewScene !== null,\s*caller: authContext\.mode\s*\}\)\s*if \(manifestKind !== 'working'\) \{\s*return withNoStore\(/
+		)
+
+		const refusal = preview.indexOf("if (manifestKind !== 'working') {")
+		expect(refusal).toBeGreaterThan(-1)
+		expect(refusal).toBeLessThan(
+			preview.indexOf('sceneSettingsOps.getSceneSettings(')
+		)
+	})
+
+	it('reads the scene every check was keyed on, never one the body names', () => {
+		expect(preview).toMatch(
+			/sceneSettingsOps\.getSceneSettings\(\{\s*\.\.\.parsedRequest,\s*action,\s*sceneId: routeSceneId\s*\}\)/
+		)
+	})
+})
+
 describe('the presentation action', () => {
 	const route = read('routes/api/scenes.$sceneId.ts')
 	const block = route.slice(
