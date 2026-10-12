@@ -37,6 +37,10 @@ present packages/viewer/src/index.ts default as AnimationControls,
 exists packages/viewer/vitest.config.ts
 present packages/viewer/src/hooks/use-held-executor.ts heldRef.current.set(command.type, command)
 present packages/viewer/src/components/scene/scene-camera.tsx if (!isFramed) return
+present packages/viewer/src/components/canvas-wrapper.tsx className={cn('outline-none', colorScheme, containerClassName)}
+present packages/viewer/src/package.css @import '../../../shared/components/src/styles/theme.css'
+absent packages/viewer/src/components/animation-controls.tsx absolute
+absent packages/viewer/src/components/camera-controls.tsx bottom-0
 */}
 
 ---
@@ -65,7 +69,7 @@ function App() {
 | `model` | `Object3D` | No* | The Three.js scene to display. *Optional when rendering via `children` instead. |
 | `children` | `React.ReactNode` | No | Scene content rendered inside the canvas, alongside or instead of `model` |
 | `className` | `string` | No | Additional CSS classes for the viewer container |
-| `theme` | `'light' \| 'dark' \| 'system'` | No | Viewer theme, default is `system` |
+| `theme` | `'light' \| 'dark' \| 'system'` | No | Color scheme of the built-in controls. Default `system`, which follows the visitor's browser setting as it changes. The viewer root carries the matching `light` or `dark` class |
 | `enableViewportRendering` | `boolean` | No | Render only while in viewport (default `true`) |
 | `enablePostProcessing` | `boolean` | No | Render through the viewer's composer: ambient occlusion, and edge smoothing that converges once the camera stops. Set `false` when `children` bring their own `EffectComposer`. Whether the canvas is multisampled follows this value when the canvas is created. Default `true` |
 | `boundsOptions` | `BoundsProps` | No | Scene bounds/framing behavior |
@@ -81,8 +85,8 @@ function App() {
 | `showSceneViewReturn` | `boolean` | No | Draws a "Back to scene view" control while the view stands at a camera a hotspot flew it to, and lets Escape inside the viewer do the same. Default `true`. Both return to the scene camera the visitor was on before, or the scene's default |
 | `animations` | `AnimationClip[]` | No | The model's animation clips, as parsed from the same glTF. Without them no animation runtime is mounted |
 | `animationOptions` | `AnimationSettings` | No | How those clips play: on or off, together or in sequence, autoplay, per-clip loop, speed and offset, and whether the viewer shows its playback controls |
-| `showAnimationControls` | `boolean` | No | Lets the viewer draw its playback controls when `animationOptions.showControls` asks for them. Default `true`. Set `false` to draw your own with the exported `AnimationControls` or any UI, driven by `set_animation_playing` and `restart_animation` and following `animation_state_changed` |
-| `showCameraControls` | `boolean` | No | Lets the viewer draw its switcher between scene cameras when the scene has two or more and `cameraOptions.showControls` is not `false`; hotspot cameras never count. Default `true`. Set `false` to draw your own with the exported `CameraControls` or any UI, driven by `activate_camera` and following `camera_changed` |
+| `showAnimationControls` | `boolean` | No | Lets the viewer draw its playback controls when `animationOptions.showControls` asks for them. Default `true`. Set `false` to draw your own with the exported `AnimationControls` (it carries no placement: position it with `className`) or any UI, driven by `set_animation_playing` and `restart_animation` and following `animation_state_changed` |
+| `showCameraControls` | `boolean` | No | Lets the viewer draw its switcher between scene cameras when the scene has two or more and `cameraOptions.showControls` is not `false`; hotspot cameras never count. Default `true`. Set `false` to draw your own with the exported `CameraControls` (it carries no placement: position it with `className`) or any UI, driven by `activate_camera` and following `camera_changed` |
 | `selectedHotspotId` | `string \| null` | No | Draws one marker as the current one. Editing surfaces only |
 | `showInternalHotspots` | `boolean` | No | Draws hotspots the author kept backstage. Editing surfaces only |
 | `showHiddenHotspots` | `boolean` | No | Draws hotspots the author hid. Editing surfaces only |
@@ -483,6 +487,17 @@ its own. Note that the viewer's own container is not positioned either, so
 `InfoPopover`'s `absolute bottom-0` resolves against whatever positioned
 ancestor you give it: put the viewer in a `relative` wrapper if you use the
 slot, or position your own content some other way.
+
+The built-in controls (camera switcher, playback, the way back from a hotspot's
+camera, the info button and card, hotspot cards and labels) are drawn in
+Vectreal's own panel style, and their palette is declared on the viewer's root
+under its `light` or `dark` class. Content you render inside the viewer, such as
+a custom `loader` or your popover content, inherits that palette, so tokens it
+shares a name with (`--background`, `--foreground`, `--muted-foreground`,
+`--border` and the rest of a shadcn-style set) resolve to the viewer's values
+there rather than your page's. Style that content with your own names, or set
+`theme` to match your page. The hotspot marker keeps its own
+`--vctrl-hotspot-*` tokens, which you can override on the container.
 
 ---
 
