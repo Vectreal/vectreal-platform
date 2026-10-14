@@ -8,7 +8,6 @@ import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-per
 import { createEmbedAssetUrls } from '../../lib/domain/embed/embed-asset-signature.server'
 import { buildPreviewAssetUrl } from '../../lib/domain/scene/client/preview-scene-endpoint'
 import { normalizePresentationSettings } from '../../lib/domain/scene/scene-presentation'
-import { parseSceneBytes } from '../../lib/domain/scene/scene-size-limit'
 import {
 	getScene,
 	updateSceneMetadata
@@ -492,8 +491,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				targetFolderId:
 					typeof actionRequest.targetFolderId === 'string'
 						? actionRequest.targetFolderId.trim() || null
-						: undefined,
-				currentSceneBytes: parseSceneBytes(actionRequest.currentSceneBytes)
+						: undefined
 			}
 		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 

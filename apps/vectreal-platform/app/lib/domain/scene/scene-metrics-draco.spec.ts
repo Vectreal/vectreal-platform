@@ -55,4 +55,37 @@ describe('resolveSceneMetrics with worker-sourced optimizations', () => {
 		expect(metrics.sceneBytes.current).toBe(1_800_000)
 		expect(metrics.hasImproved).toBe(true)
 	})
+
+	/*
+	  Only a publish records the current size, so a scene saved but never
+	  published has none, and reopening it hydrates no runtime result either.
+	  It is then what it stores, which the runtime measured from its manifest,
+	  not the original it was uploaded as.
+	*/
+	it('takes what a reopened, unpublished scene stores as its current size', () => {
+		const metrics = resolveSceneMetrics({
+			stats: {
+				initialSceneBytes: 200_000_000,
+				currentSceneBytes: null
+			} as never,
+			runtime: { initialSceneBytes: 20_000_000, currentSceneBytes: null }
+		})
+
+		expect(metrics.sceneBytes).toEqual({
+			initial: 200_000_000,
+			current: 20_000_000
+		})
+	})
+
+	it('takes the published size over what a published scene stores', () => {
+		const metrics = resolveSceneMetrics({
+			stats: {
+				initialSceneBytes: 200_000_000,
+				currentSceneBytes: 3_000_000
+			} as never,
+			runtime: { initialSceneBytes: 12_000_000, currentSceneBytes: null }
+		})
+
+		expect(metrics.sceneBytes.current).toBe(3_000_000)
+	})
 })

@@ -53,7 +53,7 @@ The parser identifies the `.gltf` root and resolves all referenced `.bin` and te
 
 ## File size and limits
 
-The Publisher enforces your plan's maximum scene size: {publishedLimit('free', 'storage_bytes_per_scene')} on Free, {publishedLimit('pro', 'storage_bytes_per_scene')} on Pro, {publishedLimit('business', 'storage_bytes_per_scene')} on Business, and a custom limit on Enterprise. While a scene is over the limit the Save button becomes **Optimize to Save**, the optimizer opens automatically, and the server rejects the save until the scene fits. Run optimization first for production-grade assets (see [Optimizing & Configuring](/docs/guides/optimize)).
+The Publisher enforces your plan's maximum scene size: {publishedLimit('free', 'storage_bytes_per_scene')} on Free, {publishedLimit('pro', 'storage_bytes_per_scene')} on Pro, {publishedLimit('business', 'storage_bytes_per_scene')} on Business, and a custom limit on Enterprise. The limit applies to the published file, the one visitors download. Saving is never refused for size. While the scene shown is over the limit the optimizer opens to say so, and the server refuses to publish a file over it, measuring the file it stored. Run optimization first for production-grade assets (see [Optimizing & Configuring](/docs/guides/optimize)).
 
 {/* claims
   # The three sizes above are read from PLAN_LIMITS now, so the claims that
@@ -66,10 +66,11 @@ The Publisher enforces your plan's maximum scene size: {publishedLimit('free', '
   # holds it, because enterprise is the only plan holding null for this key.
   present  apps/vectreal-platform/app/constants/plan-config.ts   storage_bytes_per_scene: null
 
-  # What rendering cannot replace is the other half of the sentence: that a
-  # server actually refuses the save. These two stay for that.
+  # What rendering cannot replace is the other half of the sentence: that the
+  # server refuses the publish, against the size it stored. These stay for that.
   present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts   limitKey: 'storage_bytes_per_scene'
-  present  apps/vectreal-platform/app/lib/domain/scene/scene-size-limit.ts   isSceneOverSizeLimit
+  present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts   sceneSettingsService.getPublishedAssetBytes(
+  present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings-service.server.ts   const currentSceneBytes = assetRecord?.fileSize ?? null
 
   # THE FORMAT LIST, PINNED. Every accepted-format claim on this page was stale
   # for as long as the page existed, and no claim block anywhere in the repo

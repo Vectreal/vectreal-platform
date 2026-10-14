@@ -2,13 +2,7 @@ import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
 import { useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
-import {
-	Check,
-	CircleFadingArrowUp,
-	Cloud,
-	LoaderCircle,
-	Sparkles
-} from 'lucide-react'
+import { Check, CircleFadingArrowUp, Cloud, LoaderCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
@@ -91,23 +85,17 @@ const SaveButton = ({
 							label: 'Sign In to Save',
 							icon: <CircleFadingArrowUp size={16} className="inline" />
 						}
-					: saveAvailability.reason === 'requires-size-reduction'
+					: saveAvailability.reason === 'no-unsaved-changes'
 						? {
-								key: 'reduce-size',
-								label: 'Optimize to Save',
-								icon: <Sparkles size={16} className="inline animate-pulse" />
+								key: 'saved',
+								label: 'Saved',
+								icon: <Cloud size={16} className="inline" />
 							}
-						: saveAvailability.reason === 'no-unsaved-changes'
-							? {
-									key: 'saved',
-									label: 'Saved',
-									icon: <Cloud size={16} className="inline" />
-								}
-							: {
-									key: 'ready',
-									label: 'Save',
-									icon: <CircleFadingArrowUp size={16} className="inline" />
-								}
+						: {
+								key: 'ready',
+								label: 'Save',
+								icon: <CircleFadingArrowUp size={16} className="inline" />
+							}
 
 	/**
 	 * The swap is a keyed remount with a CSS enter animation rather than an

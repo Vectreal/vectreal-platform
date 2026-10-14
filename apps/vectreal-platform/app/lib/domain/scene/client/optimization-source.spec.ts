@@ -18,7 +18,10 @@ import {
 } from '../../../stores/scene-optimization-store'
 
 import type { SceneManifestResponse } from '../../../../types/api'
-import type { OptimizationState } from '../../../../types/scene-optimization'
+import type {
+	OptimizationState,
+	SceneOptimizationRuntimeState
+} from '../../../../types/scene-optimization'
 import type { Optimizations } from '@vctrl/core'
 
 describe('resolveDerivedSettings', () => {
@@ -130,5 +133,139 @@ describe('resolveRestoredDraftOptimization', () => {
 				sourceSettings: smallestPreset
 			})
 		).toEqual({ sourceSettings: smallestPreset, derivedFrom: balancedPreset })
+	})
+
+	// Opening a scene makes its document the saved one, whatever passes the
+	// previous scene ran, so nothing reads as unsaved until a pass runs on it.
+	it('counts a scene it opens as saved as of the latest pass', () => {
+		let runtime: SceneOptimizationRuntimeState = {
+			...optimizationRuntimeInitialState,
+			passRevision: 5
+		}
+		executeOptimizationStateHydration({
+			manifest: {
+				stats: {
+					optimizationSettings: balancedPreset,
+					appliedOptimizations: []
+				}
+			} as unknown as SceneManifestResponse,
+			calculateManifestReferencedBytes: () => ({
+				sourcePackageBytes: null,
+				textureBytes: null
+			}),
+			inferOptimizationPreset,
+			setOptimizationState: () => {},
+			setOptimizationRuntime: (update) => {
+				runtime = typeof update === 'function' ? update(runtime) : update
+			},
+			optimizationRuntimeInitialState,
+			defaultOptimizations: balancedPreset
+		})
+
+		expect(runtime.savedPassRevision).toBe(5)
+	})
+})
+
+it('counts a scene it opens without saved stats as saved too', () => {
+	let runtime: SceneOptimizationRuntimeState = {
+		...optimizationRuntimeInitialState,
+		passRevision: 5
+	}
+	executeOptimizationStateHydration({
+		manifest: { stats: null } as unknown as SceneManifestResponse,
+		calculateManifestReferencedBytes: () => ({
+			sourcePackageBytes: null,
+			textureBytes: null
+		}),
+		inferOptimizationPreset,
+		setOptimizationState: () => {},
+		setOptimizationRuntime: (update) => {
+			runtime = typeof update === 'function' ? update(runtime) : update
+		},
+		optimizationRuntimeInitialState,
+		defaultOptimizations: balancedPreset
+	})
+
+	expect(runtime.savedPassRevision).toBe(runtime.passRevision)
+})
+
+// A scene this tab just saved: its save recorded the pass it stored, and a
+// pass that finished during the save must not be counted as stored too.
+it('keeps what the save recorded when it hydrates a scene this tab saved', () => {
+	let runtime: SceneOptimizationRuntimeState = {
+		...optimizationRuntimeInitialState,
+		passRevision: 5,
+		savedPassRevision: 3
+	}
+	executeOptimizationStateHydration({
+		manifest: {
+			stats: { optimizationSettings: balancedPreset, appliedOptimizations: [] }
+		} as unknown as SceneManifestResponse,
+		calculateManifestReferencedBytes: () => ({
+			sourcePackageBytes: null,
+			textureBytes: null
+		}),
+		inferOptimizationPreset,
+		setOptimizationState: () => {},
+		setOptimizationRuntime: (update) => {
+			runtime = typeof update === 'function' ? update(runtime) : update
+		},
+		optimizationRuntimeInitialState,
+		defaultOptimizations: balancedPreset,
+		isSourceLoaded: true
+	})
+
+	expect(runtime.savedPassRevision).toBe(3)
+})
+
+// What a pass measured describes the document it ran on, which only a scene
+// this tab just saved still has loaded.
+describe('measured sizes on hydration', () => {
+	const measured: SceneOptimizationRuntimeState = {
+		...optimizationRuntimeInitialState,
+		optimizedSceneBytes: 861,
+		optimizedTextureBytes: 772,
+		workingSceneBytes: 1400
+	}
+
+	const hydrate = (isSourceLoaded: boolean) => {
+		let runtime = measured
+		executeOptimizationStateHydration({
+			manifest: {
+				stats: {
+					optimizationSettings: balancedPreset,
+					appliedOptimizations: []
+				}
+			} as unknown as SceneManifestResponse,
+			calculateManifestReferencedBytes: () => ({
+				sourcePackageBytes: 1400,
+				textureBytes: null
+			}),
+			inferOptimizationPreset,
+			setOptimizationState: () => {},
+			setOptimizationRuntime: (update) => {
+				runtime = typeof update === 'function' ? update(runtime) : update
+			},
+			optimizationRuntimeInitialState,
+			defaultOptimizations: balancedPreset,
+			isSourceLoaded
+		})
+		return runtime
+	}
+
+	it('keeps them for a scene this tab just saved', () => {
+		expect(hydrate(true)).toMatchObject({
+			optimizedSceneBytes: 861,
+			optimizedTextureBytes: 772,
+			workingSceneBytes: 1400
+		})
+	})
+
+	it('drops them for a scene it opens', () => {
+		expect(hydrate(false)).toMatchObject({
+			optimizedSceneBytes: null,
+			optimizedTextureBytes: null,
+			workingSceneBytes: null
+		})
 	})
 })

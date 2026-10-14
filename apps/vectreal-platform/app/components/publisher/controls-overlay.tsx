@@ -8,6 +8,10 @@ import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
 import OptimizationDrawer from './optimization/optimization-drawer'
+import {
+	usePublishSizeProjection,
+	useSizeExcludesTextureEncoding
+} from './optimization/use-publish-size-projection'
 import { SaveProgressPanel } from './save-progress/save-progress-panel'
 import { EmptyStage } from './shell/empty-stage'
 import { PublishCard } from './shell/publish-card'
@@ -29,6 +33,7 @@ import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { usePublisherScene } from '../../hooks/use-publisher-scene'
 import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
+import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
 import {
 	arePublisherActionsDisabledAtom,
@@ -78,6 +83,7 @@ const OverlayControls = ({
 	const {
 		latestSceneStats,
 		isSceneSizeLoading,
+		isProjectingSceneBytes,
 		optimizedSceneBytes,
 		clientSceneBytes,
 		optimizedTextureBytes,
@@ -87,6 +93,8 @@ const OverlayControls = ({
 	// Ensure scene size is calculated and bottom bar is populated before the tool
 	// sidebar is opened for the first time.
 	useSceneSizeInitializer()
+	usePublishSizeProjection()
+	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
 
 	// Save location comes from the Jotai atom - initialized in publisher-layout
 	// and updated by the shell-level SceneNameAndLocation picker.
@@ -109,21 +117,6 @@ const OverlayControls = ({
 		sceneId,
 		userId: user?.id,
 		sceneManifest
-	})
-
-	const {
-		effectiveSaveAvailability,
-		requiresSizeReduction,
-		isOptimizationDrawerOpen,
-		handleOptimizationDrawerChange,
-		// Two ways in, by design. The card's size line is the direct route from
-		// the signal itself; the sidebar's Delivery section is the one you meet
-		// on the way to publishing.
-		handleOpenOptimizationDrawer,
-		openReoptimizeDrawer
-	} = useOptimizationDrawerFlow({
-		saveAvailability,
-		hasUnsavedLocationChange
 	})
 
 	/*
@@ -175,7 +168,7 @@ const OverlayControls = ({
 					currentSceneBytes: optimizedSceneBytes,
 					initialTextureBytes: clientTextureBytes,
 					currentTextureBytes: optimizedTextureBytes,
-					isSceneSizeComputing: isSceneSizeLoading
+					isSceneSizeComputing: isSceneSizeLoading || isProjectingSceneBytes
 				}
 			}),
 		[
@@ -186,10 +179,37 @@ const OverlayControls = ({
 			optimizedSceneBytes,
 			clientTextureBytes,
 			optimizedTextureBytes,
-			isSceneSizeLoading
+			isSceneSizeLoading,
+			isProjectingSceneBytes
 		]
 	)
 	const currentSceneBytes = resolvedSceneMetrics.sceneBytes.current
+	const isSceneSizeComputing = resolvedSceneMetrics.isSceneSizeComputing
+	// Checked against a size publish would ship: the projection, or the file a
+	// publish stored. The server checks the stored file when publishing. Never
+	// the stored package the card falls back to before either is known, which
+	// is uncompressed and would nudge scenes that publish well within it.
+	const publishSizeBytes =
+		optimizedSceneBytes ?? latestSceneStats?.currentSceneBytes ?? null
+	const isOverSizeLimit =
+		!isSceneSizeComputing &&
+		isSceneOverSizeLimit(publishSizeBytes ?? undefined, maxSceneBytes)
+
+	const {
+		effectiveSaveAvailability,
+		isOptimizationDrawerOpen,
+		handleOptimizationDrawerChange,
+		// Two ways in, by design. The card's size line is the direct route from
+		// the signal itself; the sidebar's Delivery section is the one you meet
+		// on the way to publishing.
+		handleOpenOptimizationDrawer,
+		openReoptimizeDrawer
+	} = useOptimizationDrawerFlow({
+		saveAvailability,
+		hasUnsavedLocationChange,
+		isOverSizeLimit
+	})
+
 	const publishedAt =
 		typeof publishedMeta?.publishedAt === 'string'
 			? publishedMeta.publishedAt
@@ -381,7 +401,8 @@ const OverlayControls = ({
 							<SaveProgressPanel onRetry={() => void handleSaveScene()} />
 							<PublishCard
 								sceneBytes={currentSceneBytes}
-								isSceneSizeLoading={isSceneSizeLoading}
+								isSceneSizeLoading={isSceneSizeComputing}
+								sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}
 								statusText={optimizerStatusText}
 								isPublished={Boolean(publishedAt)}
 								onOpenPublishPanel={handleOpenPublishPanel}
@@ -408,9 +429,8 @@ const OverlayControls = ({
 						<OptimizationDrawer
 							open={isOptimizationDrawerOpen}
 							onOpenChange={handleOptimizationDrawerChange}
-							isOverSizeLimit={requiresSizeReduction}
+							isOverSizeLimit={isOverSizeLimit}
 							maxSceneBytes={maxSceneBytes}
-							dashboardHref={sceneDetailsHref ?? '/dashboard'}
 							isMobile={isMobile}
 						/>
 					</>

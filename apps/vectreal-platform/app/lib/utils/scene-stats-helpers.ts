@@ -6,11 +6,9 @@ type TextureByteMetrics = {
 	currentTextureBytes?: number | null
 }
 
-type ResolveSceneByteMetricsScopeInput = {
+type ResolveInitialSceneBytesInput = {
 	existingInitialSceneBytes?: number | null
-	existingCurrentSceneBytes?: number | null
 	requestInitialSceneBytes?: number | null
-	requestCurrentSceneBytes?: number | null
 	report?: OptimizationReport
 }
 
@@ -19,32 +17,23 @@ const asNonNegativeNumber = (value: unknown): number | null =>
 		? value
 		: null
 
-export function resolveSceneByteMetricsScope({
+/**
+ * The scene's size before optimization, kept from the first save that knew it.
+ *
+ * The current size has no counterpart here: it is the published GLB's size,
+ * which only a publish writes, from the file the server stored.
+ */
+export function resolveInitialSceneBytes({
 	existingInitialSceneBytes,
-	existingCurrentSceneBytes,
 	requestInitialSceneBytes,
-	requestCurrentSceneBytes,
 	report
-}: ResolveSceneByteMetricsScopeInput): {
-	initialSceneBytes: number | null
-	currentSceneBytes: number | null
-} {
-	const initialSceneBytes =
+}: ResolveInitialSceneBytesInput): number | null {
+	return (
 		asNonNegativeNumber(existingInitialSceneBytes) ??
 		asNonNegativeNumber(requestInitialSceneBytes) ??
 		asNonNegativeNumber(report?.originalSize) ??
 		null
-
-	const currentSceneBytes =
-		asNonNegativeNumber(requestCurrentSceneBytes) ??
-		asNonNegativeNumber(report?.optimizedSize) ??
-		asNonNegativeNumber(existingCurrentSceneBytes) ??
-		null
-
-	return {
-		initialSceneBytes,
-		currentSceneBytes
-	}
+	)
 }
 
 export function resolveTextureByteMetricsScope(
@@ -144,7 +133,6 @@ export function createSceneStatsFromReport(
 		label?: string
 		description?: string
 		initialSceneBytes?: number | null
-		currentSceneBytes?: number | null
 		optimizationSettings?: Optimizations
 		existingAdditionalMetrics?: TextureByteMetrics | null
 	}
@@ -162,7 +150,6 @@ export function createSceneStatsFromReport(
 		baseline: buildSceneStatsSnapshot(report, 'baseline'),
 		optimized: buildSceneStatsSnapshot(report, 'optimized'),
 		initialSceneBytes: asNonNegativeNumber(options?.initialSceneBytes) ?? null,
-		currentSceneBytes: asNonNegativeNumber(options?.currentSceneBytes) ?? null,
 		appliedOptimizations: report.appliedOptimizations,
 		optimizationSettings: options?.optimizationSettings ?? null,
 		// Persist texture byte metrics separately from texture counts.

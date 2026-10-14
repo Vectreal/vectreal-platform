@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import { Eye, LoaderCircle, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useState, type FC } from 'react'
-import { Link } from 'react-router'
 
 import { OptimizeButton } from './optimize-button'
 import { AdvancedPanel } from './panels/advanced-panel'
@@ -17,7 +16,6 @@ import { SceneNormalizationNotice } from './scene-normalization-notice'
 import { COMPARE_HOLD_KEY, useHoldToCompare } from './use-hold-to-compare'
 import { useOptimizationProcess } from './use-optimization-process'
 import { useOptimizationSettings } from './use-optimization-settings'
-import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import { originalPreset } from '../../../constants/optimizations'
 import {
 	canCompareWithSource,
@@ -44,7 +42,6 @@ interface OptimizationDrawerProps {
 	onOpenChange: (open: boolean) => void
 	isOverSizeLimit: boolean
 	maxSceneBytes: number | null
-	dashboardHref?: string
 	isMobile: boolean
 }
 
@@ -53,7 +50,6 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	onOpenChange,
 	isOverSizeLimit,
 	maxSceneBytes,
-	dashboardHref,
 	isMobile
 }) => {
 	// Starts at the root each time the drawer opens.
@@ -145,7 +141,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 				typeof sizeInfo.currentSceneBytes === 'number'
 					? formatFileSize(sizeInfo.currentSceneBytes)
 					: 'This scene'
-			return `${current} exceeds your plan's ${formatFileSize(maxSceneBytes)} max scene size. Optimize to get under ${formatFileSize(maxSceneBytes)} to save.`
+			return `${current} exceeds your plan's ${formatFileSize(maxSceneBytes)} max scene size. Optimize to get under ${formatFileSize(maxSceneBytes)} to publish.`
 		}
 
 		if (startsFromSavedVersion) {
@@ -162,8 +158,6 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		isPending,
 		sizeInfo.currentSceneBytes
 	])
-
-	const resolvedDashboardHref = dashboardHref ?? DASHBOARD_ROUTES.DASHBOARD
 
 	return (
 		<DynamicSidebar
@@ -325,11 +319,6 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 
 				<div className="border-shell-border-soft shrink-0 border-t px-5 py-4">
 					<div className="flex flex-row justify-between gap-3">
-						{isOverSizeLimit && !isPending ? (
-							<Button type="button" variant="ghost" asChild>
-								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
-							</Button>
-						) : null}
 						{hasUnappliedSettings || isPending ? (
 							<OptimizeButton
 								onOptimize={applyPlanned}
@@ -339,17 +328,13 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 								disabled={isLoadingOriginal}
 							/>
 						) : (
-							// Over the limit, leaving points away from the only action that
-							// unblocks saving, so it is not offered.
-							!isOverSizeLimit && (
-								<Button
-									type="button"
-									className="grow"
-									onClick={() => onOpenChange(false)}
-								>
-									Continue to Composition
-								</Button>
-							)
+							<Button
+								type="button"
+								className="grow"
+								onClick={() => onOpenChange(false)}
+							>
+								Continue to Composition
+							</Button>
 						)}
 					</div>
 				</div>

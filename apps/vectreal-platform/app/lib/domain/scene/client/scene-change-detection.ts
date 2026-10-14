@@ -1,4 +1,3 @@
-import type { SceneStatsData } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { OptimizationReport, SceneSettings } from '@vctrl/core'
 
@@ -90,33 +89,27 @@ export const hasSceneMetaChanged = (
 interface OptimizationChangeArgs {
 	reportSignature: null | string
 	lastSavedReportSignature: null | string
-	lastSavedSceneBytes?: null | number
-	optimizedSceneBytes: null | number
-	latestSceneStats: SceneStatsData | null
+	passRevision: number
+	savedPassRevision: null | number
 }
 
+/**
+ * Whether optimization changed the document since it was saved: a pass ran
+ * since, or the report differs from the one last saved. Asked of the pass, not
+ * of a size: no size the client knows is one the server stores.
+ */
 export const hasOptimizationChanges = ({
 	reportSignature,
 	lastSavedReportSignature,
-	lastSavedSceneBytes,
-	optimizedSceneBytes,
-	latestSceneStats
+	passRevision,
+	savedPassRevision
 }: OptimizationChangeArgs): boolean => {
 	const hasReportChanges =
 		reportSignature !== null &&
 		lastSavedReportSignature !== null &&
 		reportSignature !== lastSavedReportSignature
 
-	const savedSceneBytes =
-		typeof lastSavedSceneBytes === 'number'
-			? lastSavedSceneBytes
-			: (latestSceneStats?.currentSceneBytes ?? null)
-
-	const hasSceneSizeChanges =
-		typeof optimizedSceneBytes === 'number' &&
-		optimizedSceneBytes !== savedSceneBytes
-
-	return hasReportChanges || hasSceneSizeChanges
+	return hasReportChanges || passRevision !== savedPassRevision
 }
 
 interface UnsavedChangesArgs {
@@ -127,9 +120,8 @@ interface UnsavedChangesArgs {
 	lastSavedSceneMeta: SceneMetaState | null
 	reportSignature: null | string
 	lastSavedReportSignature: null | string
-	lastSavedSceneBytes?: null | number
-	optimizedSceneBytes: null | number
-	latestSceneStats: SceneStatsData | null
+	passRevision: number
+	savedPassRevision: null | number
 }
 
 export const hasUnsavedSceneChanges = ({
@@ -140,9 +132,8 @@ export const hasUnsavedSceneChanges = ({
 	lastSavedSceneMeta,
 	reportSignature,
 	lastSavedReportSignature,
-	lastSavedSceneBytes,
-	optimizedSceneBytes,
-	latestSceneStats
+	passRevision,
+	savedPassRevision
 }: UnsavedChangesArgs): boolean => {
 	if (suppressDirtyDetection) {
 		return false
@@ -165,9 +156,8 @@ export const hasUnsavedSceneChanges = ({
 	const optimizationChanged = hasOptimizationChanges({
 		reportSignature,
 		lastSavedReportSignature,
-		lastSavedSceneBytes,
-		optimizedSceneBytes,
-		latestSceneStats
+		passRevision,
+		savedPassRevision
 	})
 
 	return settingsChanged || sceneMetaChanged || optimizationChanged

@@ -14,10 +14,12 @@ import {
 	toUpgradeModalPayload
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { optimizationsMatch } from '../../../../../lib/domain/scene/client/optimization-inference'
-import { runPublishExportInWorker } from '../../../../../lib/domain/scene/client/publish-export'
+import {
+	resolvePublishGeometryOptions,
+	runPublishExportInWorker
+} from '../../../../../lib/domain/scene/client/publish-export'
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
 import {
-	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
@@ -35,6 +37,7 @@ import {
 import { InlineNotice } from '../../../../layout-components'
 import { LoadingThumbnailToggle } from '../../../../publishing/loading-thumbnail-toggle'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
+import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
 import { itemVariants } from '../../animation'
 import { SidebarSection, SidebarSectionContent } from '../../sidebar-section'
 
@@ -79,9 +82,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const [presentation, setPresentation] = useAtom(presentationAtom)
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
-	const compressTextures = shouldCompressTexturesForGpu(presentation, {
-		isOriginalPreset
-	})
+	const compressTextures = useCompressesTexturesForGpu()
 	const canPublish = Boolean(optimizer?.isReady)
 	const isWorking = publishStatus === 'saving' || publishStatus === 'publishing'
 
@@ -128,22 +129,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 			setPublishStatus('publishing')
 
-			// Geometry and texture codecs are applied here rather than during
-			// optimization: the working document stays uncompressed WebP, so
-			// editing and re-optimizing never re-encode (and degrade) it. Draco is
-			// the switch for geometry compression as a whole; `isWorthApplying` is
-			// false when the measured compression came out larger than the plain
-			// GLB, which leaves meshopt to compete with plain geometry alone.
-			// Settings saved before a step existed lack it, so Draco may be absent.
-			const { enabled: dracoEnabled = false, ...dracoOptions } =
-				optimizations.draco ?? {}
 			const { data: workingGlb } =
 				await exporterRef.current.exportDocumentGLB(document)
 			const result = await runPublishExportInWorker(
 				{
 					buffer: workingGlb.slice().buffer as ArrayBuffer,
-					draco: dracoEnabled ? dracoOptions : undefined,
-					dracoWorthApplying: dracoReport?.isWorthApplying !== false,
+					...resolvePublishGeometryOptions(optimizations, dracoReport),
 					ktx2: compressTextures
 				},
 				setExportProgress
@@ -162,8 +153,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			const publishResult = await publishSceneFromGlb({
 				sceneId: targetSceneId,
 				baseFileName: baseName,
-				glbData,
-				currentSceneBytes: glbData.byteLength
+				glbData
 			})
 
 			// Only once it has shipped, and only if the document exported is the
@@ -291,6 +281,24 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						? 'Publish will save your latest changes first.'
 						: 'Scene is ready to publish.'
 
+	// Revoking deletes the published GLB, so the size it gave the scene goes
+	// with it, here as on the server; what the scene stores describes it again.
+	const handlePublishStateChange = useCallback(
+		(next: ScenePublishStateResponse) => {
+			if (next.status !== 'draft') return
+			setOptimizationRuntime((prev) => ({
+				...prev,
+				latestSceneStats: prev.latestSceneStats
+					? { ...prev.latestSceneStats, currentSceneBytes: null }
+					: null,
+				...(prev.publishedEncoding
+					? { optimizedSceneBytes: null, publishedEncoding: null }
+					: {})
+			}))
+		},
+		[setOptimizationRuntime]
+	)
+
 	return (
 		<motion.div variants={itemVariants} className="space-y-3 pb-4">
 			<div className="text-muted-foreground text-sm">
@@ -352,6 +360,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				publishDialogDescription="This creates or updates the published GLB for this scene and makes it available as your current published version."
 				revokeDialogTitle="Revoke publication?"
 				revokeDialogDescription="This removes the published GLB asset and sets this scene back to draft."
+				onStateChange={handlePublishStateChange}
 			/>
 
 			{isWorking && (

@@ -1,4 +1,5 @@
 import {
+	hasOptimizationChanges,
 	hasSceneMetaChanged,
 	hasUnsavedSceneChanges,
 	isSaveActionBlocked,
@@ -10,17 +11,14 @@ import type { SceneSettings } from '@vctrl/core'
 describe('scene save state', () => {
 	it('blocks save with nothing on the stage, ahead of every other reason', () => {
 		for (const userId of [undefined, 'user-1']) {
-			for (const isSceneOverSizeLimit of [false, true]) {
-				for (const hasChanges of [false, true]) {
-					expect(
-						resolveSaveAvailability({
-							hasModel: false,
-							userId,
-							isSceneOverSizeLimit,
-							hasChanges
-						})
-					).toEqual({ canSave: false, reason: 'no-model' })
-				}
+			for (const hasChanges of [false, true]) {
+				expect(
+					resolveSaveAvailability({
+						hasModel: false,
+						userId,
+						hasChanges
+					})
+				).toEqual({ canSave: false, reason: 'no-model' })
 			}
 		}
 	})
@@ -30,11 +28,7 @@ describe('scene save state', () => {
 		expect(isSaveActionBlocked({ canSave: false, reason: 'no-user' })).toBe(
 			false
 		)
-		for (const reason of [
-			'no-model',
-			'no-unsaved-changes',
-			'requires-size-reduction'
-		] as const) {
+		for (const reason of ['no-model', 'no-unsaved-changes'] as const) {
 			expect(isSaveActionBlocked({ canSave: false, reason }), reason).toBe(true)
 		}
 	})
@@ -44,21 +38,9 @@ describe('scene save state', () => {
 			resolveSaveAvailability({
 				hasModel: true,
 				userId: undefined,
-				isSceneOverSizeLimit: false,
 				hasChanges: true
 			})
 		).toEqual({ canSave: false, reason: 'no-user' })
-	})
-
-	it('requires size reduction when over the limit', () => {
-		expect(
-			resolveSaveAvailability({
-				hasModel: true,
-				userId: 'user-1',
-				isSceneOverSizeLimit: true,
-				hasChanges: true
-			})
-		).toEqual({ canSave: false, reason: 'requires-size-reduction' })
 	})
 
 	it('returns ready when live dirty state is true', () => {
@@ -66,18 +48,16 @@ describe('scene save state', () => {
 			resolveSaveAvailability({
 				hasModel: true,
 				userId: 'user-1',
-				isSceneOverSizeLimit: false,
 				hasChanges: true
 			})
 		).toEqual({ canSave: true, reason: 'ready' })
 	})
 
-	it('reports no-unsaved-changes when under limit with no changes', () => {
+	it('reports no-unsaved-changes with no changes', () => {
 		expect(
 			resolveSaveAvailability({
 				hasModel: true,
 				userId: 'user-1',
-				isSceneOverSizeLimit: false,
 				hasChanges: false
 			})
 		).toEqual({ canSave: false, reason: 'no-unsaved-changes' })
@@ -152,8 +132,8 @@ describe('scene save state', () => {
 				lastSavedSceneMeta: null,
 				reportSignature: null,
 				lastSavedReportSignature: null,
-				optimizedSceneBytes: null,
-				latestSceneStats: null
+				passRevision: 0,
+				savedPassRevision: 0
 			})
 		).toBe(true)
 	})
@@ -171,9 +151,59 @@ describe('scene save state', () => {
 				lastSavedSceneMeta: sceneMeta,
 				reportSignature: null,
 				lastSavedReportSignature: null,
-				optimizedSceneBytes: null,
-				latestSceneStats: null
+				passRevision: 0,
+				savedPassRevision: 0
 			})
 		).toBe(false)
+	})
+
+	/*
+	  Optimization changes the document, so a pass run since the last save is
+	  unsaved. This used to be read off the scene size against the stored one,
+	  which made the size the client reported part of the save.
+	*/
+	describe('optimization changes', () => {
+		const unchanged = { reportSignature: null, lastSavedReportSignature: null }
+
+		it('counts a pass run since the last save', () => {
+			expect(
+				hasOptimizationChanges({
+					...unchanged,
+					passRevision: 3,
+					savedPassRevision: 2
+				})
+			).toBe(true)
+		})
+
+		it('counts nothing when no pass ran since', () => {
+			expect(
+				hasOptimizationChanges({
+					...unchanged,
+					passRevision: 3,
+					savedPassRevision: 3
+				})
+			).toBe(false)
+		})
+
+		it('counts a document nothing saved describes', () => {
+			expect(
+				hasOptimizationChanges({
+					...unchanged,
+					passRevision: 0,
+					savedPassRevision: null
+				})
+			).toBe(true)
+		})
+
+		it('counts a report that differs from the one last saved', () => {
+			expect(
+				hasOptimizationChanges({
+					reportSignature: 'b',
+					lastSavedReportSignature: 'a',
+					passRevision: 3,
+					savedPassRevision: 3
+				})
+			).toBe(true)
+		})
 	})
 })

@@ -214,10 +214,10 @@ export function usePublisherScene({
 		optimizationState: {
 			optimizationSettings,
 			optimizationReport: optimizer?.report,
-			latestSceneStats: optimizationRuntime.latestSceneStats,
-			optimizedSceneBytes: optimizationRuntime.optimizedSceneBytes,
 			clientSceneBytes: optimizationRuntime.clientSceneBytes,
 			lastSavedReportSignature: optimizationRuntime.lastSavedReportSignature,
+			passRevision: optimizationRuntime.passRevision,
+			savedPassRevision: optimizationRuntime.savedPassRevision,
 			setOptimizationRuntime
 		},
 		actions: {
