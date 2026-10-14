@@ -21,6 +21,7 @@ import {
 	loadDracoModule
 } from '../draco/load-draco-module'
 import { registerMeshoptDecoder } from '../meshopt/meshopt-codec'
+import { DRACO_EXTENSION } from '../model-loader/glb-extensions'
 
 /**
  * Registers the geometry codecs on one WebIO, each once: the decoders before
@@ -32,7 +33,8 @@ export class GeometryCodecs {
 	private io: WebIO
 	private dracoPath: string
 	private dracoEncoderRegistration: Promise<void> | null = null
-	private decoderRegistration: Promise<void> | null = null
+	private dracoDecoderRegistration: Promise<void> | null = null
+	private meshoptRegistration: Promise<void> | null = null
 
 	constructor(io: WebIO, dracoPath: string) {
 		this.io = io
@@ -64,25 +66,32 @@ export class GeometryCodecs {
 	 * So `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression` and
 	 * `EXT_meshopt_compression` primitives in pre-compressed input.
 	 *
+	 * The Draco decoder is fetched only for a model that declares it, or one
+	 * whose extensions the caller could not read: it is a separate download from
+	 * `dracoPath`, which a page that never serves Draco content has no reason to
+	 * host. Its failure is the model's failure, and names the path it tried.
+	 *
 	 * Outside a browser or worker there is no Draco decoder to load, and
 	 * meshopt's can fail to compile where WebAssembly is blocked. Either way
 	 * other content is unaffected, and content needing the missing decoder
 	 * throws glTF-Transform's own "install extension dependency" error.
 	 */
-	registerDecoders(): Promise<void> {
-		if (!this.decoderRegistration) {
-			const draco = canLoadDracoInBrowser()
-				? loadDracoModule('decoder', this.dracoPath).then((decoderModule) => {
-						this.io.registerDependencies({
-							'draco3d.decoder': decoderModule
-						})
-					})
-				: Promise.resolve()
-			this.decoderRegistration = Promise.all([
-				draco,
-				registerMeshoptDecoder(this.io).catch(() => {})
+	registerDecoders(extensionsUsed: readonly string[] | null): Promise<void> {
+		this.meshoptRegistration ??= registerMeshoptDecoder(this.io).catch(() => {})
+		const needsDraco =
+			extensionsUsed === null || extensionsUsed.includes(DRACO_EXTENSION)
+		if (needsDraco && canLoadDracoInBrowser()) {
+			this.dracoDecoderRegistration ??= loadDracoModule(
+				'decoder',
+				this.dracoPath
+			).then((decoderModule) => {
+				this.io.registerDependencies({ 'draco3d.decoder': decoderModule })
+			})
+			return Promise.all([
+				this.meshoptRegistration,
+				this.dracoDecoderRegistration
 			]).then(() => undefined)
 		}
-		return this.decoderRegistration
+		return this.meshoptRegistration
 	}
 }

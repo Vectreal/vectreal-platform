@@ -442,7 +442,7 @@ export class ModelOptimizer {
 			await unlessSuperseded(
 				() => !this.currency.isCurrent(ticket) || this.sourceBytes !== source,
 				async () => {
-					await this.codecs.registerDecoders()
+					await this.codecs.registerDecoders(null)
 					const { document } = await _loadFromBuffer(
 						bytes,
 						this.io,
@@ -474,7 +474,7 @@ export class ModelOptimizer {
 		await unlessSuperseded(
 			() => !this.currency.isCurrentModel(ticket),
 			async () => {
-				await this.codecs.registerDecoders()
+				await this.codecs.registerDecoders(null)
 				return _loadFromBuffer(
 					bytes,
 					this.io,
@@ -742,7 +742,7 @@ export class ModelOptimizer {
 	private async load(read: () => Promise<LoadResult>): Promise<void> {
 		const ticket = this.currency.claimModel()
 		try {
-			await this.codecs.registerDecoders()
+			await this.codecs.registerDecoders(null)
 			this.adoptLoad(await read(), ticket)
 		} catch (error) {
 			// A newer model owns the optimizer; this failure is not about it.

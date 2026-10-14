@@ -79,10 +79,12 @@ import {
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useHeldExecutor } from './hooks/use-held-executor'
 import { useSceneViewReturn } from './hooks/use-scene-view-return'
+import { useSrcModel } from './hooks/use-src-model'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
 import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
+import type { SrcLoadOptions, SrcModel } from './load-src'
 import type {
 	BakedShadow,
 	SceneCameraSnapshotCapture,
@@ -115,6 +117,31 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * The 3D model to render in the viewer. (three.js `Object3D`)
 	 */
 	model?: Object3D
+
+	/**
+	 * A model file to load from a URL, for a host that has an address rather
+	 * than a loaded model: GLB, glTF, STL, FBX or OBJ, fetched and parsed in the
+	 * browser. The host has to allow cross-origin reads, and a `.gltf` brings
+	 * the files it references on its own origin. Ignored while `model` is set.
+	 *
+	 * The parsers load on first use, so a page that only passes `model` never
+	 * downloads them. A new address loads afresh; new `srcOptions` alone do not.
+	 */
+	src?: string | URL
+
+	/**
+	 * How `src` is fetched and decoded: `init` goes with every request (headers,
+	 * `credentials`, a `signal`), and `dracoDecoderPath` / `ktx2TranscoderPath`
+	 * say where the decoders for a compressed model are served, `/draco/` and
+	 * `/basis/` on the page's origin unless set.
+	 */
+	srcOptions?: SrcLoadOptions
+
+	/** Called with the model and its animation clips once `src` has loaded. */
+	onLoad?: (result: SrcModel) => void
+
+	/** Called when `src` could not be fetched or parsed. */
+	onLoadError?: (error: unknown) => void
 
 	/**
 	 * Which model `model` renders, when the caller can say so. A new `model`
@@ -396,6 +423,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	loader?: React.ReactNode
 
 	/**
+	 * Shown in place of `loader` when `src` could not be loaded. Defaults to a
+	 * one-line message; `null` shows nothing, for a host reporting the failure
+	 * itself through `onLoadError`.
+	 */
+	errorFallback?: React.ReactNode
+
+	/**
 	 * Optional thumbnail rendered as a blurred backdrop under the loader.
 	 */
 	loadingThumbnail?: ViewerLoadingThumbnail
@@ -457,7 +491,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
  *   );
  * };
  */
-const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
+const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const {
 		// Content
 		children,
@@ -1015,6 +1049,63 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		</Suspense>
 	)
 })
+
+ViewerScene.displayName = 'ViewerScene'
+
+type SceneProps = Omit<
+	VectrealViewerProps,
+	'src' | 'srcOptions' | 'onLoad' | 'onLoadError' | 'errorFallback'
+>
+
+/**
+ * Resolves `src` into the model the scene draws, and draws it.
+ *
+ * Apart from the scene so the scene never knows where its model came from:
+ * while `src` loads it simply has no content and shows `loader`, and when it
+ * fails it shows `errorFallback` there instead.
+ */
+const VectrealViewer = memo(
+	({
+		src,
+		srcOptions,
+		onLoad,
+		onLoadError,
+		errorFallback,
+		...props
+	}: VectrealViewerProps) => {
+		const loaded = useSrcModel(props.model ? null : src, srcOptions, {
+			onLoad,
+			onLoadError
+		})
+
+		if (props.model || !src) return <ViewerScene {...props} />
+
+		return (
+			<ViewerScene
+				{...props}
+				model={loaded.model ?? undefined}
+				// Withheld until the model is there: children alone count as
+				// content, and would end the loader before `src` had loaded.
+				children={loaded.status === 'ready' ? props.children : undefined}
+				animations={
+					props.animations ??
+					(loaded.status === 'ready' ? loaded.animations : undefined)
+				}
+				loader={
+					loaded.status !== 'error' ? (
+						props.loader
+					) : errorFallback !== undefined ? (
+						errorFallback
+					) : (
+						<p role="alert" className="text-sm opacity-70">
+							This model could not be loaded.
+						</p>
+					)
+				}
+			/>
+		)
+	}
+)
 
 VectrealViewer.displayName = 'VectrealViewer'
 

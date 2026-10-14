@@ -157,10 +157,61 @@ test('a scene whose environment map cannot be downloaded still renders', async (
 	}
 })
 
+test('a model loads from a URL through src, and a bad one shows the fallback', async ({
+	page
+}) => {
+	const pageErrors: string[] = []
+	page.on('pageerror', (err) => pageErrors.push(err.message))
+
+	await page.goto('/?src-case')
+
+	// The lazy parser chunk resolved from the installed @vctrl/core, fetched the
+	// file and parsed it: the published package's whole src path.
+	await page.waitForFunction(
+		() => window.__SRC_E2E__ !== undefined,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+	const loaded = await page.evaluate(() => window.__SRC_E2E__)
+	expect(loaded?.status, loaded?.error).toBe('loaded')
+	expect(loaded?.meshes).toBe(1)
+
+	// And the viewer framed and drew it.
+	await page.waitForFunction(() => window.__SRC_READY__ === true, undefined, {
+		timeout: 30000
+	})
+
+	// An address that is not a model ends in the fallback, not a crash, and
+	// children of its own do not end the loader early.
+	await page.waitForFunction(
+		() => window.__SRC_MISSING__?.length === 2,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+	await expect(page.getByTestId('src-missing').getByRole('alert')).toHaveText(
+		'This model could not be loaded.'
+	)
+	// `errorFallback={null}` shows nothing.
+	await expect(page.getByTestId('src-silent').getByRole('alert')).toHaveCount(0)
+
+	expect(pageErrors, pageErrors.join('\n')).toEqual([])
+})
+
 declare global {
 	interface Window {
 		__VIEWER_E2E__?: { status: 'mounted' | 'crashed'; error?: string }
 		__HOOKS_E2E__?: { status: 'ok' | 'crashed'; error?: string }
 		__VIEWER_READY__?: boolean
+		__SRC_E2E__?: {
+			status: 'loaded' | 'error'
+			meshes?: number
+			error?: string
+		}
+		__SRC_READY__?: boolean
+		__SRC_MISSING__?: string[]
 	}
 }

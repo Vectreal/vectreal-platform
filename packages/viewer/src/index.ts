@@ -15,6 +15,7 @@ export {
 	type ViewerLoadingThumbnail,
 	type VectrealViewerProps
 } from './vectreal-viewer'
+export type { SrcLoadOptions, SrcModel } from './load-src'
 export {
 	default as AnimationControls,
 	type AnimationControlsProps

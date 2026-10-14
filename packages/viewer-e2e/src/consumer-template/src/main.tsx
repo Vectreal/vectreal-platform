@@ -12,6 +12,13 @@ declare global {
 			error?: string
 		}
 		__VIEWER_READY__?: boolean
+		__SRC_E2E__?: {
+			status: 'loaded' | 'error'
+			meshes?: number
+			error?: string
+		}
+		__SRC_READY__?: boolean
+		__SRC_MISSING__?: string[]
 	}
 }
 

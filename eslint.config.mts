@@ -434,20 +434,16 @@ export default defineConfig(tseslint.configs.recommended, [
 		}
 	},
 	{
-		// The viewer bundles these instead of externalizing them, so a consumer
-		// installs nothing for them. @shared/* are private workspace libraries
-		// that could not be installed even if they were declared.
+		// The viewer bundles these instead of externalizing them: they are
+		// private workspace libraries that could not be installed even if they
+		// were declared. @vctrl/core is published, so it is a real dependency.
 		files: ['packages/viewer/package.json'],
 		rules: {
 			'@nx/dependency-checks': [
 				'error',
 				{
 					...dependencyCheckOptions,
-					ignoredDependencies: [
-						'@vctrl/core',
-						'@shared/components',
-						'@shared/utils'
-					]
+					ignoredDependencies: ['@shared/components', '@shared/utils']
 				}
 			]
 		}

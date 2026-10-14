@@ -57,7 +57,7 @@ export function installedPackageName(moduleId: string): string | undefined {
  *
  * `dependencies` and `peerDependencies` are what a consumer installs, so they
  * are what a build must import rather than inline. `devDependencies` stay
- * bundled, which is how the viewer carries `@vctrl/core` and `@shared/*`.
+ * bundled, which is how the viewer carries `@shared/*`.
  *
  * The same plugin fails the build when its own rule did not hold: a module
  * installed as a declared package inside a chunk, or rolldown's `require`

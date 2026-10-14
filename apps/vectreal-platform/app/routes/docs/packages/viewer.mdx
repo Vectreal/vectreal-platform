@@ -41,6 +41,8 @@ present packages/viewer/src/components/canvas-wrapper.tsx className={cn('outline
 present packages/viewer/src/package.css @import '../../../shared/components/src/styles/theme.css'
 absent packages/viewer/src/components/animation-controls.tsx absolute
 absent packages/viewer/src/components/camera-controls.tsx bottom-0
+present packages/viewer/src/hooks/use-src-model.ts import('../load-src')
+present packages/viewer/package.json "@vctrl/core": "workspace:^"
 */}
 
 ---
@@ -58,6 +60,12 @@ function App() {
 }
 ```
 
+Or, with a model already hosted somewhere, give it the address:
+
+```tsx
+<VectrealViewer src="https://cdn.example.com/models/chair.glb" />
+```
+
 > You **must** import the CSS bundle (`@vctrl/viewer/css`) for the viewer to render correctly.
 
 ---
@@ -67,6 +75,10 @@ function App() {
 | Prop | Type | Required | Description |
 |---|---|---|---|
 | `model` | `Object3D` | No* | The Three.js scene to display. *Optional when rendering via `children` instead. |
+| `src` | `string \| URL` | No | A model file to load from a URL (GLB, glTF, STL, FBX, OBJ), fetched and parsed in the browser. Ignored while `model` is set. See below |
+| `srcOptions` | `SrcLoadOptions` | No | `init` for every request (headers, `credentials`, a `signal`), and `dracoDecoderPath` / `ktx2TranscoderPath` for a compressed model (`/draco/` and `/basis/` on your origin by default) |
+| `onLoad` | `({ model, animations }) => void` | No | Called once `src` has loaded |
+| `onLoadError` | `(error: unknown) => void` | No | Called when `src` could not be fetched or parsed. The error is a `ModelFetchError` from `@vctrl/core/model-loader` when the fetch failed |
 | `children` | `React.ReactNode` | No | Scene content rendered inside the canvas, alongside or instead of `model` |
 | `className` | `string` | No | Additional CSS classes for the viewer container |
 | `theme` | `'light' \| 'dark' \| 'system'` | No | Color scheme of the built-in controls. Default `system`, which follows the visitor's browser setting as it changes. The viewer root carries the matching `light` or `dark` class |
@@ -97,6 +109,7 @@ function App() {
 | `bakedShadow` | `BakedShadow` | No | A persisted shadow bake to render instead of recomputing one |
 | `popover` | `React.ReactNode` | No | Optional info popover slot. Its content is unmounted until the viewer reaches `ready`, after the loader's cross-fade |
 | `loader` | `React.ReactNode` | No | Custom loading UI, default is a built-in spinner. `loader={null}` renders no loader and skips the `loaded` cross-fade, taking the viewer from `loading` straight to `ready` |
+| `errorFallback` | `React.ReactNode` | No | Shown in place of `loader` when `src` could not be loaded. Default is a one-line message; `null` shows nothing |
 | `loadingThumbnail` | `ViewerLoadingThumbnail` | No | Optional blurred loading thumbnail |
 | `onScreenshot` | `(dataUrl: string) => void` | No | Called when a screenshot is captured |
 | `onScreenshotCaptureReady` | `(capture: SceneScreenshotCapture \| null) => void` | No | Receives capture function for on-demand screenshots |
@@ -109,7 +122,20 @@ function App() {
 
 ### Notes on content source
 
-`model` is optional because you can also render scene content via `children`. With neither, nothing renders.
+`model` is optional because you can also pass `src`, or render scene content via `children`. With none of them, nothing renders.
+
+**Loading from a URL.** `src` covers the case where you have an address rather
+than a loaded model. The viewer fetches the file, parses it and draws it, showing
+`loader` meanwhile and `errorFallback` if it fails, and `children` render once
+the model has. The parsers come from
+`@vctrl/core` and load the first time `src` is used, so a page that only passes
+`model` never downloads them. The host has to allow cross-origin reads. A `.gltf`
+brings the buffers and images it references on its own origin. A URL with no
+extension opens when its bytes are a GLB. A new address loads afresh, and a new
+`srcOptions` object at the same address does not. For a URL someone else
+supplied, pass `srcOptions={{ init: { credentials: 'omit' } }}`. To load through
+your own state, with progress and errors in one place, use `useLoadModel`'s
+`{ kind: 'url' }` source from `@vctrl/hooks` and pass `model` instead.
 
 A still viewer stops drawing. Once the camera stops it renders a few dozen extra frames to smooth edges and settle ambient occlusion, then draws nothing until something changes. Moving objects are detected on their own, so `children` that animate in `useFrame` keep rendering. A child that changes only a material, a uniform or a texture must call `invalidate()` from `useThree`, the same contract React Three Fiber sets for on-demand rendering.
 
