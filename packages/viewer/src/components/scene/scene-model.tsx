@@ -7,7 +7,8 @@ import {
 	useEffect,
 	useLayoutEffect,
 	useMemo,
-	useRef
+	useRef,
+	type RefObject
 } from 'react'
 import {
 	Box3,
@@ -29,6 +30,7 @@ import {
 	type OrbitLimits
 } from './screenshot-pose'
 
+import type { OpeningPose } from './opening-pose'
 import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
@@ -85,6 +87,12 @@ interface ModelProps {
 	 * which the clip planes have to contain along with the model.
 	 */
 	clipExtents?: ClipExtentRegistry
+	/**
+	 * Where the scene opened, which `SceneCamera` records once framing
+	 * completes. A capture from a camera with no pose of its own renders from
+	 * there, as the viewer shows it.
+	 */
+	openingPose: RefObject<OpeningPose | null>
 	/**
 	 * The backdrop the viewer paints behind its transparent canvas. Painted
 	 * under the screenshot too, so a thumbnail shows the scene as it is seen.
@@ -248,7 +256,8 @@ const SceneModel = memo((props: ModelProps) => {
 		enableShadows = false,
 		normalizationOptions,
 		onRawDiagonalComputed,
-		clipExtents
+		clipExtents,
+		openingPose
 	} = props
 	const bounds = useBounds()
 	const { camera, controls, gl, invalidate, scene, size } = useThree(
@@ -363,16 +372,15 @@ const SceneModel = memo((props: ModelProps) => {
 
 				if (targetCameraConfig) {
 					// Resolved by the viewer's camera rule, so fallbacks (a missing
-					// target, fov or position) read the live values at capture start.
-					// One case differs from what the viewer shows: a camera with no pose
-					// at all, which the viewer sends to the opening view SceneCamera
-					// keeps and this component cannot see. It keeps the pose at capture
-					// start.
+					// target, fov or position) read the live values at capture start,
+					// and a camera with no pose at all stands where the scene opened.
 					const selection = resolveCameraSelection(
 						cameraOptions.cameras,
 						targetCameraConfig.cameraId,
 						controls?.target?.clone() ?? new Vector3(),
-						activeCamera
+						activeCamera,
+						undefined,
+						openingPose.current
 					)
 
 					pose = controls?.target
@@ -451,6 +459,7 @@ const SceneModel = memo((props: ModelProps) => {
 			invalidate,
 			object,
 			onScreenshot,
+			openingPose,
 			scene
 		]
 	)

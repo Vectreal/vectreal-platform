@@ -82,6 +82,7 @@ import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
+import type { OpeningPose } from './components/scene/opening-pose'
 import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type {
 	BakedShadow,
@@ -558,6 +559,12 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	  out of view, and the override has to outlive it.
 	*/
 	const transitionOverride = useRef<CameraProps['sceneTransition'] | null>(null)
+	/*
+	  Where the scene opened. SceneCamera records it once framing completes and
+	  stands a camera with no pose of its own there; the capture reads the same
+	  ref, so a screenshot from that camera shows what the viewer shows.
+	*/
+	const openingPose = useRef<OpeningPose | null>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	const animation = useAnimationRuntime({
@@ -939,6 +946,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									{...cameraOptions}
 									cameras={aimedCameras}
 									transitionOverride={transitionOverride}
+									openingPose={openingPose}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									model={model}
@@ -976,6 +984,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 											normalizationOptions={normalizationOptions}
 											onRawDiagonalComputed={onRawDiagonalComputed}
 											clipExtents={clipExtents}
+											openingPose={openingPose}
 										/>
 									</Center>
 								)}
