@@ -71,6 +71,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # `supabase/config.toml` describes the local stack, and the CLI validates
+      # all of it before `db push`, which fails on an unset send-email hook
+      # secret. Migrations never read it (the hosted projects configure their
+      # hooks in the dashboard), so any well-formed value lets the file parse.
+      - name: Placeholder for local-only config
+        run: echo "SEND_EMAIL_HOOK_SECRET=v1,whsec_$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
       - name: Link project
         working-directory: apps/vectreal-platform
         env:
