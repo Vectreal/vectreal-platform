@@ -28,6 +28,12 @@ jobs:
     name: Publish Storybook to Chromatic
     runs-on: ubuntu-22.04
     environment: chromatic-publishing
+    # Release Please rebases its PR onto main after every merge and bumps
+    # packages/viewer/package.json, so it matched the path filter each time and
+    # re-snapshotted exactly what the main build had just accepted. It was 119 of
+    # 248 runs and about half the billed snapshots between 2026-09-08 and
+    # 2026-10-14, while changing nothing that renders.
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
 
     # One Chromatic project for the whole workspace. The upload is skipped when
     # no token is configured, so the build and typecheck still run either way.
