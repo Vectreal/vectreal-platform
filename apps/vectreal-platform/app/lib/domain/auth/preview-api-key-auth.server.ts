@@ -13,6 +13,7 @@ import {
 import {
 	decideEmbedAccess,
 	getPreviewTokenFromRequest,
+	shouldRecordKeyUse,
 	type EmbedAccessDecision,
 	type EmbedKeyMatch
 } from '../embed/embed-access-policy'
@@ -64,7 +65,8 @@ async function findLiveKeyForProject(
 			userId: apiKeys.userId,
 			apiKeyOrganizationId: apiKeys.organizationId,
 			projectOrganizationId: projects.organizationId,
-			allowedEmbedDomains: projects.allowedEmbedDomains
+			allowedEmbedDomains: projects.allowedEmbedDomains,
+			lastUsedAt: apiKeys.lastUsedAt
 		})
 		.from(apiKeys)
 		.innerJoin(apiKeyProjects, eq(apiKeyProjects.apiKeyId, apiKeys.id))
@@ -125,7 +127,7 @@ export async function validatePreviewApiKeyForProject(params: {
 	// A decision can only be `ok` when a row matched, which can only happen when
 	// a token was present and hashed. The guard is here to say that in types
 	// rather than to handle a reachable case.
-	if (hashedToken) {
+	if (hashedToken && shouldRecordKeyUse(match?.lastUsedAt ?? null, now)) {
 		await db
 			.update(apiKeys)
 			.set({ lastUsedAt: now })

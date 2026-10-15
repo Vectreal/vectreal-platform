@@ -5,38 +5,30 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 
-import CameraSwitcherPill, {
-	type CameraSwitcherOption
-} from './camera-switcher-pill'
 import PreviewExitBadge from './preview-exit-badge'
 import { useChromeVisibility } from './use-chrome-visibility'
 
 export interface PreviewChromeProps {
 	/** Where Back and Escape land. Always the scene's dashboard page. */
 	backTo: string
-	cameras: CameraSwitcherOption[]
-	activeCameraId: null | string
-	onSelectCamera: (cameraId: string) => void
 }
 
 const PILL_SURFACE =
 	'bg-muted/92 border-border/70 rounded-2xl border shadow-2xl backdrop-blur-2xl'
 
 /**
- * The internal preview's overlay: leave, switch camera, get out of the way.
+ * The internal preview's overlay: leave, and get out of the way.
  *
  * Only `/preview` renders this. `/embed` cannot, because it is a different
- * route with a different layout, which is the point of the split.
+ * route with a different layout, which is the point of the split. Anything a
+ * visitor would also get - the camera switcher included - the viewer draws,
+ * so the preview shows exactly what the embed does and this adds only the way
+ * out.
  *
- * Placement keeps the viewer's own info popover (bottom-right) clear: leaving
- * and hiding sit on the top edge, cameras along the bottom-center.
+ * Both controls sit on the top edge, clear of the viewer's own along the
+ * bottom.
  */
-const PreviewChrome = ({
-	backTo,
-	cameras,
-	activeCameraId,
-	onSelectCamera
-}: PreviewChromeProps) => {
+const PreviewChrome = ({ backTo }: PreviewChromeProps) => {
 	const navigate = useNavigate()
 	const prefersReducedMotion = useReducedMotion()
 
@@ -97,22 +89,6 @@ const PreviewChrome = ({
 								<EyeOff className="h-4 w-4" />
 							</Button>
 						</motion.div>
-
-						{cameras.length > 0 ? (
-							<motion.div
-								className="pointer-events-auto absolute inset-x-0 bottom-3 flex justify-center px-3"
-								initial={{ y: offset }}
-								animate={{ y: 0 }}
-								exit={{ y: offset }}
-								transition={fade}
-							>
-								<CameraSwitcherPill
-									cameras={cameras}
-									activeCameraId={activeCameraId}
-									onSelect={onSelectCamera}
-								/>
-							</motion.div>
-						) : null}
 					</motion.div>
 				) : (
 					// Hiding the chrome must not strand anyone. This stays on screen at

@@ -22,14 +22,49 @@ import { randomUUID } from 'node:crypto'
 
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { eq } from 'drizzle-orm'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
 	isEmbedServableAssetId,
 	selectEmbedServableAssets
 } from '../../app/lib/domain/scene/embed-asset-policy'
 
+/*
+  Storage and the session are faked at their boundaries: the session asset
+  route's authorization is the subject, and it reads only Postgres. Every
+  download answers with the object path, so a test can tell which row served.
+*/
+vi.mock('@supabase/supabase-js', () => ({
+	createClient: () => ({
+		storage: {
+			getBucket: async () => ({ data: { name: 'assets' }, error: null }),
+			createBucket: async () => ({ data: null, error: null }),
+			from: () => ({
+				download: async (path: string) => ({
+					data: new Blob([path]),
+					error: null
+				})
+			})
+		}
+	})
+}))
+
+const sessionUser = vi.hoisted(() => ({ id: '' }))
+
+vi.mock('../../app/lib/http/auth.server', () => ({
+	getAuthUser: async () => ({
+		user: { id: sessionUser.id },
+		headers: new Headers()
+	})
+}))
+
 type Schema = typeof import('../../app/db/schema')
+type AssetRoute =
+	typeof import('../../app/routes/api/scenes.$sceneId.assets.$assetId')
+type ThumbnailRoute =
+	typeof import('../../app/routes/api/scenes.$sceneId.thumbnail.$assetId')
+type SettingsRepository =
+	typeof import('../../app/lib/domain/scene/server/scene-settings-repository.server')
 type Manifest =
 	typeof import('../../app/lib/domain/scene/server/scene-manifest.server')
 type PreviewRepo =
@@ -48,6 +83,8 @@ describe('embed asset authorization', () => {
 	let getPublishedScenePreview: PreviewRepo['getPublishedScenePreview']
 	let toPublishedModelRow: PreviewRepo['toPublishedModelRow']
 	let sceneSettingsService: SettingsService['sceneSettingsService']
+	let assetLoader: AssetRoute['loader']
+	let updateScenePresentation: SettingsRepository['updateScenePresentation']
 	let db: Db
 
 	const ownerId = randomUUID()
@@ -71,6 +108,10 @@ describe('embed asset authorization', () => {
 			await import('../../app/lib/domain/scene/server/scene-preview-repository.server'))
 		;({ sceneSettingsService } =
 			await import('../../app/lib/domain/scene/server/scene-settings-service.server'))
+		;({ loader: assetLoader } =
+			await import('../../app/routes/api/scenes.$sceneId.assets.$assetId'))
+		;({ updateScenePresentation } =
+			await import('../../app/lib/domain/scene/server/scene-settings-repository.server'))
 		db = (await import('../../app/db/client')).getDbClient()
 
 		await db.insert(schema.users).values({
@@ -203,6 +244,13 @@ describe('embed asset authorization', () => {
 			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId
 		})
 	}
+
+	it('finds no publication for a key holder of another project', async () => {
+		// The asset route's key branch, the embed layout and the GET manifest
+		// all scope the publication to the key's project through this filter.
+		expect(await getPublishedScenePreview(randomUUID(), sceneId)).toBeNull()
+		expect(await getPublishedScenePreview(projectId, sceneId)).not.toBeNull()
+	})
 
 	it('reproduces the production shape: the published GLB is not a scene asset', async () => {
 		const settingsData =
@@ -381,5 +429,411 @@ describe('embed asset authorization', () => {
 		await db
 			.delete(schema.sceneHotspots)
 			.where(eq(schema.sceneHotspots.sceneSettingsId, settingsId))
+	})
+
+	describe('a signed-in session', () => {
+		const outsiderId = randomUUID()
+
+		beforeAll(() => {
+			vi.stubEnv('SUPABASE_URL', process.env.SUPABASE_URL || 'http://127.0.0.1')
+			vi.stubEnv(
+				'SUPABASE_SECRET_KEY',
+				process.env.SUPABASE_SECRET_KEY || 'integration-secret'
+			)
+		})
+
+		afterAll(() => {
+			vi.unstubAllEnvs()
+		})
+
+		const fetchAsset = async (userId: string, assetId: string) => {
+			sessionUser.id = userId
+			const response = await assetLoader({
+				request: new Request(
+					`https://vectreal.test/api/scenes/${sceneId}/assets/${assetId}?preview=1&projectId=${projectId}`
+				),
+				params: { sceneId, assetId }
+			} as never)
+			return response as Response
+		}
+
+		it('serves a member the published GLB, which no scene_assets row names', async () => {
+			const response = await fetchAsset(ownerId, publishedAssetId)
+
+			expect(response.status).toBe(200)
+			expect(await response.text()).toBe(`smoke/${publishedAssetId}.glb`)
+		})
+
+		it("still serves a member the draft's linked buffer", async () => {
+			const response = await fetchAsset(ownerId, bufferAssetId)
+
+			expect(response.status).toBe(200)
+			expect(await response.text()).toBe(`smoke/${bufferAssetId}.bin`)
+		})
+
+		it('answers a non-member 404 for the published GLB', async () => {
+			const response = await fetchAsset(outsiderId, publishedAssetId)
+
+			expect(response.status).toBe(404)
+		})
+
+		it('answers a non-member 404 for a linked asset too', async () => {
+			const response = await fetchAsset(outsiderId, bufferAssetId)
+
+			expect(response.status).toBe(404)
+		})
+
+		/*
+		  A member of the project is still refused an asset that this scene does
+		  not link: membership opens the scene, and only `scene_assets` says which
+		  rows belong to it. The asset sits in the same project and folder, so
+		  nothing but the link tells the two apart.
+		*/
+		it('answers a member 404 for an asset the scene does not link', async () => {
+			const unlinkedAssetId = randomUUID()
+			await db.insert(schema.assets).values({
+				id: unlinkedAssetId,
+				folderId: assetFolderId,
+				name: 'other-scene.bin',
+				type: 'model',
+				filePath: `smoke/${unlinkedAssetId}.bin`,
+				mimeType: 'application/octet-stream',
+				fileSize: 1024,
+				ownerId
+			})
+
+			const response = await fetchAsset(ownerId, unlinkedAssetId)
+
+			expect(response.status).toBe(404)
+		})
+	})
+
+	describe('the thumbnail route', () => {
+		const outsiderId = randomUUID()
+		const otherSceneId = randomUUID()
+		const foreignOrganizationId = randomUUID()
+		const foreignProjectId = randomUUID()
+		const foreignFolderId = randomUUID()
+		const foreignAssetId = randomUUID()
+		let thumbnailLoader: ThumbnailRoute['loader']
+
+		beforeAll(async () => {
+			vi.stubEnv('SUPABASE_URL', process.env.SUPABASE_URL || 'http://127.0.0.1')
+			vi.stubEnv(
+				'SUPABASE_SECRET_KEY',
+				process.env.SUPABASE_SECRET_KEY || 'integration-secret'
+			)
+			;({ loader: thumbnailLoader } =
+				await import('../../app/routes/api/scenes.$sceneId.thumbnail.$assetId'))
+
+			// A second scene in the same project, which a member can open but
+			// whose thumbnail is not this asset.
+			await db.insert(schema.scenes).values({
+				id: otherSceneId,
+				projectId,
+				folderId: null,
+				name: 'Other scene'
+			})
+			await db
+				.update(schema.scenes)
+				.set({
+					thumbnailUrl: `/api/scenes/${sceneId}/thumbnail/${thumbnailAssetId}`
+				})
+				.where(eq(schema.scenes.id, sceneId))
+			// The de-duplicated shape: the row was created by another scene, so
+			// its metadata names that one. The old rule refused this thumbnail.
+			await db
+				.update(schema.assets)
+				.set({ metadata: { sceneId: otherSceneId } })
+				.where(eq(schema.assets.id, thumbnailAssetId))
+
+			// An asset in another organization's project, which this scene's
+			// members have no claim on.
+			await db.insert(schema.organizations).values({
+				id: foreignOrganizationId,
+				name: `smoke-${foreignOrganizationId}`,
+				ownerId
+			})
+			await db.insert(schema.projects).values({
+				id: foreignProjectId,
+				organizationId: foreignOrganizationId,
+				name: 'Foreign project',
+				slug: `smoke-${foreignProjectId}`
+			})
+			await db.insert(schema.folders).values({
+				id: foreignFolderId,
+				projectId: foreignProjectId,
+				name: 'Scene Assets'
+			})
+			await db.insert(schema.assets).values({
+				id: foreignAssetId,
+				folderId: foreignFolderId,
+				name: 'secret.glb',
+				type: 'model',
+				filePath: `smoke/${foreignAssetId}.glb`,
+				mimeType: 'model/gltf-binary',
+				ownerId
+			})
+		})
+
+		afterAll(async () => {
+			vi.unstubAllEnvs()
+			await db
+				.delete(schema.organizations)
+				.where(eq(schema.organizations.id, foreignOrganizationId))
+			await db
+				.update(schema.scenes)
+				.set({ thumbnailUrl: null })
+				.where(eq(schema.scenes.id, sceneId))
+			await db.delete(schema.scenes).where(eq(schema.scenes.id, otherSceneId))
+		})
+
+		const fetchThumbnail = async (
+			userId: string,
+			assetId: string,
+			forSceneId = sceneId
+		) => {
+			sessionUser.id = userId
+			const response = await thumbnailLoader({
+				request: new Request(
+					`https://vectreal.test/api/scenes/${forSceneId}/thumbnail/${assetId}`
+				),
+				params: { sceneId: forSceneId, assetId }
+			} as never)
+			return response as Response
+		}
+
+		it("serves a member the scene's thumbnail whatever its metadata names", async () => {
+			const response = await fetchThumbnail(ownerId, thumbnailAssetId)
+
+			expect(response.status).toBe(200)
+			expect(await response.text()).toBe(`smoke/${thumbnailAssetId}.webp`)
+			expect(response.headers.get('Last-Modified')).toMatch(/GMT$/)
+		})
+
+		it('answers a member 404 for a linked asset that is not the thumbnail', async () => {
+			const response = await fetchThumbnail(ownerId, bufferAssetId)
+
+			expect(response.status).toBe(404)
+		})
+
+		it('answers a member 404 for a thumbnail under a scene that does not show it', async () => {
+			const response = await fetchThumbnail(
+				ownerId,
+				thumbnailAssetId,
+				otherSceneId
+			)
+
+			expect(response.status).toBe(404)
+		})
+
+		it('answers a member 404, not 500, for an asset id that is not a uuid', async () => {
+			const response = await fetchThumbnail(ownerId, 'not-a-uuid')
+
+			expect(response.status).toBe(404)
+		})
+
+		it("answers 404 when a member points thumbnail_url at another project's asset", async () => {
+			const setThumbnail = (assetId: string) =>
+				db
+					.update(schema.scenes)
+					.set({ thumbnailUrl: `/api/scenes/${sceneId}/thumbnail/${assetId}` })
+					.where(eq(schema.scenes.id, sceneId))
+
+			await setThumbnail(foreignAssetId)
+			try {
+				const response = await fetchThumbnail(ownerId, foreignAssetId)
+
+				expect(response.status).toBe(404)
+			} finally {
+				await setThumbnail(thumbnailAssetId)
+			}
+		})
+
+		it('answers a non-member 404 for the real thumbnail', async () => {
+			const response = await fetchThumbnail(outsiderId, thumbnailAssetId)
+
+			expect(response.status).toBe(404)
+		})
+	})
+
+	/*
+	  The two halves of a signed embed: the manifest hands out signed URLs, and
+	  the asset route answers them without a key. Both must agree on the set,
+	  and must keep agreeing after the author changes a setting without
+	  publishing, which is what a signature alone could not see.
+	*/
+	describe('a signed URL', () => {
+		type Signature =
+			typeof import('../../app/lib/domain/embed/embed-asset-signature.server')
+		type Serving =
+			typeof import('../../app/lib/domain/embed/embed-asset-serving.server')
+		let createEmbedAssetUrls: Signature['createEmbedAssetUrls']
+		let servePublishedEmbedAsset: Serving['servePublishedEmbedAsset']
+
+		const ORIGIN = 'https://vectreal.test'
+
+		beforeAll(async () => {
+			vi.stubEnv('EMBED_ASSET_SIGNING_SECRET', 'integration-signing-secret')
+			vi.stubEnv('SUPABASE_URL', process.env.SUPABASE_URL || 'http://127.0.0.1')
+			vi.stubEnv(
+				'SUPABASE_SECRET_KEY',
+				process.env.SUPABASE_SECRET_KEY || 'integration-secret'
+			)
+			;({ createEmbedAssetUrls } =
+				await import('../../app/lib/domain/embed/embed-asset-signature.server'))
+			;({ servePublishedEmbedAsset } =
+				await import('../../app/lib/domain/embed/embed-asset-serving.server'))
+		})
+
+		afterAll(async () => {
+			vi.unstubAllEnvs()
+			await db
+				.update(schema.sceneSettings)
+				.set({ presentation: null })
+				.where(eq(schema.sceneSettings.id, settingsId))
+		})
+
+		/** The embed manifest as `/embed` would build it now, with signed URLs. */
+		async function signedManifest() {
+			const preview = await getPublishedScenePreview(projectId, sceneId)
+			const { buildAssetUrl: buildSignedUrl } = createEmbedAssetUrls({
+				sceneId,
+				projectId,
+				token: null
+			})
+			return buildEmbedSceneManifest(
+				sceneId,
+				toPublishedModelRow(preview!),
+				buildSignedUrl
+			)
+		}
+
+		const fetchSigned = async (path: string) => {
+			const assetId = new URL(path, ORIGIN).pathname.split('/').pop()!
+			return (await assetLoader({
+				request: new Request(`${ORIGIN}${path}`),
+				params: { sceneId, assetId }
+			} as never)) as Response
+		}
+
+		/** The key branch, past the key check, for the same asset. */
+		const fetchKeyed = async (assetId: string) => {
+			const preview = await getPublishedScenePreview(projectId, sceneId)
+			return servePublishedEmbedAsset(
+				new Request(`${ORIGIN}/api/scenes/${sceneId}/assets/${assetId}`),
+				{ sceneId, assetId },
+				preview!
+			)
+		}
+
+		it('serves every URL the manifest signs, and the key branch agrees', async () => {
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: true })
+			const manifest = await signedManifest()
+
+			const urls = [
+				manifest.publishedModel.url,
+				...Object.values(manifest.assetRefs).map((ref) => ref.url)
+			]
+			expect(Object.keys(manifest.assetRefs)).toContain(thumbnailAssetId)
+
+			for (const url of urls) {
+				expect(url).toContain('sig=')
+				const response = await fetchSigned(url)
+				expect(response.status, `signed ${url} refused`).toBe(200)
+			}
+			for (const assetId of Object.keys(manifest.assetRefs)) {
+				expect((await fetchKeyed(assetId)).status).toBe(200)
+			}
+		})
+
+		it('stops serving the thumbnail once its author switches it off', async () => {
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: true })
+			const issued = (await signedManifest()).assetRefs[thumbnailAssetId]
+			expect(issued).toBeDefined()
+
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: false })
+
+			expect((await fetchSigned(issued.url)).status).toBe(404)
+			expect((await fetchKeyed(thumbnailAssetId)).status).toBe(404)
+			expect((await signedManifest()).assetRefs).not.toHaveProperty(
+				thumbnailAssetId
+			)
+		})
+
+		it('keeps serving the published GLB the same URL named', async () => {
+			const manifest = await signedManifest()
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: false })
+
+			const response = await fetchSigned(manifest.publishedModel.url)
+
+			expect(response.status).toBe(200)
+			expect(await response.text()).toBe(`smoke/${publishedAssetId}.glb`)
+		})
+	})
+
+	describe('the presentation write', () => {
+		afterAll(async () => {
+			await db
+				.update(schema.sceneSettings)
+				.set({ presentation: null })
+				.where(eq(schema.sceneSettings.id, settingsId))
+		})
+
+		it('merges one field and keeps the others', async () => {
+			await db
+				.update(schema.sceneSettings)
+				.set({ presentation: { showInfoPopover: false } })
+				.where(eq(schema.sceneSettings.id, settingsId))
+
+			const updated = await updateScenePresentation(sceneId, {
+				showLoadingThumbnail: true
+			})
+
+			expect(updated).toEqual({
+				showInfoPopover: false,
+				showLoadingThumbnail: true
+			})
+			const [row] = await db
+				.select({ presentation: schema.sceneSettings.presentation })
+				.from(schema.sceneSettings)
+				.where(eq(schema.sceneSettings.id, settingsId))
+			expect(row.presentation).toEqual(updated)
+		})
+
+		it('writes into a scene that stored no presentation at all', async () => {
+			await db
+				.update(schema.sceneSettings)
+				.set({ presentation: null })
+				.where(eq(schema.sceneSettings.id, settingsId))
+
+			expect(
+				await updateScenePresentation(sceneId, { showLoadingThumbnail: false })
+			).toEqual({ showLoadingThumbnail: false })
+		})
+
+		it("moves the settings timestamp the manifest's ETag is keyed on", async () => {
+			const stale = new Date('2026-01-01T00:00:00.000Z')
+			await db
+				.update(schema.sceneSettings)
+				.set({ updatedAt: stale })
+				.where(eq(schema.sceneSettings.id, settingsId))
+
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: true })
+
+			const [row] = await db
+				.select({ updatedAt: schema.sceneSettings.updatedAt })
+				.from(schema.sceneSettings)
+				.where(eq(schema.sceneSettings.id, settingsId))
+			expect(row.updatedAt.getTime()).toBeGreaterThan(stale.getTime())
+		})
+
+		it('answers null for a scene with no settings row', async () => {
+			expect(
+				await updateScenePresentation(randomUUID(), {
+					showLoadingThumbnail: true
+				})
+			).toBeNull()
+		})
 	})
 })

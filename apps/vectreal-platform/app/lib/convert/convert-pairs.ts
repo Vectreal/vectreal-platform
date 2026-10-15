@@ -70,6 +70,18 @@ export const USDZ_RESULT_NOTE =
 	'USDZ carries each texture as a PNG or JPEG at most 1024 pixels across, and its geometry uncompressed, so the result can be much smaller or much larger than what you dropped in.'
 
 /**
+ * What a USDZ result says when the model had see-through glass.
+ *
+ * Per result, not per pair: only a model with transmissive materials loses
+ * anything, and the converter's own viewer still draws that glass clear, so
+ * without this line the change first shows up in Quick Look.
+ * `exportThreeJSUSDZ` owns the approximation and reports which materials it
+ * touched.
+ */
+export const USDZ_GLASS_NOTE =
+	'This model has see-through glass. USDZ cannot describe glass that bends light, so in AR Quick Look it shows as plain transparency rather than the glass in this preview.'
+
+/**
  * A format id, as it appears in a URL slug.
  *
  * The owner's union, not a wider one of our own. It used to list `obj`, `stl`
@@ -324,19 +336,24 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		description:
 			'Convert an FBX file to GLB in your browser. No account, no upload, no watermark.',
 		/*
-		  What an FBX arrives with that the conversion does not keep, said before
-		  the download rather than discovered after it. Cameras and lights have no
-		  glTF equivalent beyond what a material carries, and three.js re-encodes
-		  every embedded texture on the way out, so a JPEG-heavy file can come
-		  back larger.
+		  What an FBX arrives with, and the two things that do not arrive
+		  quite as they left. Clips come across because `threeObjectToGLB` writes the
+		  clips its object carries, and cameras and lights because `GLTFExporter`
+		  writes camera nodes and `KHR_lights_punctual`; the FBX bridge turns each
+		  light and camera to face the way FBX means it, at its target where it
+		  has one. `three-source-bridges.spec.ts` checks all of that.
 
-		  Animation is on that list too, and this note claimed the opposite on
-		  both FBX pages. `FBXLoader` leaves its clips on `object.animations` and
-		  `GLTFExporter` writes only the clips passed as `options.animations`,
-		  which nothing passes - so the clips are dropped, silently, on a page
-		  that promised they would come across.
+		  What it cannot carry exactly: brightness, since FBX states a light's
+		  intensity as a bare percentage and glTF requires candela or lux with
+		  nothing in the file relating them; and a moving target, since glTF has
+		  no constraints, so the aim is baked at rest as a fixed turn, and a clip
+		  that moves the camera, the light or its target no longer keeps them
+		  facing each other.
+
+		  Not said in the note but true: three.js re-encodes every embedded
+		  texture on the way out, so a JPEG-heavy file can come back larger.
 		*/
-		note: 'Meshes, materials, textures and skinning all come across. Animation, cameras and lights do not.'
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can come out brighter or dimmer, and anything aimed at a moving target keeps the aim it starts with, because glTF has neither FBX light units nor its targets.'
 	},
 	{
 		slug: 'fbx-to-gltf',
@@ -347,8 +364,8 @@ export const CONVERT_PAIRS: ConvertPair[] = [
 		title: 'FBX to glTF converter',
 		description:
 			'Convert an FBX file to glTF in your browser. No account, no upload, no watermark.',
-		/* The same note, and the same caveat about animation, as `fbx-to-glb`. */
-		note: 'Meshes, materials, textures and skinning all come across. Animation, cameras and lights do not.'
+		/* The same note, and the same caveats, as `fbx-to-glb`. */
+		note: 'Meshes, materials, textures, skinning and animation all come across, and so do cameras and lights. A light can come out brighter or dimmer, and anything aimed at a moving target keeps the aim it starts with, because glTF has neither FBX light units nor its targets.'
 	},
 	{
 		slug: 'fbx-to-usdz',

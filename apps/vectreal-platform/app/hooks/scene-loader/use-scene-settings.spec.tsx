@@ -14,11 +14,19 @@ import { renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import { useApplySceneSettings } from './use-scene-settings'
+import { useApplySceneSettings, useResetSceneState } from './use-scene-settings'
 import { lastSavedSettingsAtom } from '../../lib/stores/publisher-config-store'
-import { hotspotsAtom } from '../../lib/stores/scene-settings-store'
+import {
+	animationAtom,
+	animationDriftAtom,
+	hotspotsAtom
+} from '../../lib/stores/scene-settings-store'
 
-import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
+import type {
+	AnimationSettings,
+	HotspotDefinition,
+	SceneSettings
+} from '@vctrl/core'
 import type { ReactNode } from 'react'
 
 const hotspot: HotspotDefinition = {
@@ -64,5 +72,43 @@ describe('useApplySceneSettings', () => {
 		apply(settings, { isSavedBaseline: false })
 
 		expect(store.get(lastSavedSettingsAtom)).toBeNull()
+	})
+})
+
+describe('a scene\u2019s animation settings', () => {
+	const animation: AnimationSettings = {
+		enabled: true,
+		mode: 'sequence',
+		autoplay: false,
+		loopSequence: true,
+		showControls: true,
+		clips: []
+	}
+
+	it('are applied, adopted as the baseline, and clear a previous scene\u2019s report', () => {
+		const { store, apply } = arrange()
+		store.set(animationDriftAtom, { added: ['x'], dropped: [], remapped: [] })
+
+		apply({ animation }, { isSavedBaseline: true })
+
+		expect(store.get(animationAtom)).toBe(animation)
+		expect(store.get(lastSavedSettingsAtom)?.animation).toBe(animation)
+		expect(store.get(animationDriftAtom)).toBeNull()
+	})
+
+	it('are cleared with the scene', () => {
+		const store = createStore()
+		store.set(animationAtom, animation)
+		store.set(animationDriftAtom, { added: ['x'], dropped: [], remapped: [] })
+		const { result } = renderHook(() => useResetSceneState(), {
+			wrapper: ({ children }: { children: ReactNode }) => (
+				<Provider store={store}>{children}</Provider>
+			)
+		})
+
+		result.current()
+
+		expect(store.get(animationAtom)).toBeUndefined()
+		expect(store.get(animationDriftAtom)).toBeNull()
 	})
 })

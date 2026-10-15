@@ -414,7 +414,7 @@ describe('the page says a or an the way the label is read', () => {
 		*/
 		/*
 		  Source labels only, because `articleFor` is only ever called on
-		  `pair.fromLabel` - three times in `converter-surface.tsx`. USDZ is the
+		  `pair.fromLabel` - twice, in `converter-empty-stage.tsx`. USDZ is the
 		  trap the rule exists for and is absent here for a reason that is not an
 		  oversight: it is barred as a source, so no sentence on the site takes
 		  an article before it. The pure-function table above is where it is
@@ -590,12 +590,7 @@ describe('every crawl surface derives its pairs from the manifest', () => {
 
 	it('puts every pair in llms.txt', async () => {
 		const { loader } = await import('../app/routes/llms[.]txt')
-		const response = (await loader({
-			request: new Request('https://vectreal.com/llms.txt'),
-			params: {},
-			context: {} as never
-		} as never)) as Response
-		const body = await response.text()
+		const body = await loader().text()
 
 		expect(body).toContain('## Converters')
 		expect(body).toContain(`[${CONVERT_INDEX_COPY.title}]`)

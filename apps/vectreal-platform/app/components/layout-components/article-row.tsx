@@ -1,14 +1,12 @@
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
-import { formatNewsDate } from '../../lib/news/news-manifest'
+import { formatNewsDate } from '../../lib/news/news-article'
 
-import type { NewsArticle } from '../../lib/news/news-manifest'
-
-type ArticleSummary = Omit<NewsArticle, 'Component'>
+import type { NewsArticle } from '../../lib/news/news-article'
 
 interface ArticleRowProps {
-	article: ArticleSummary
+	article: NewsArticle
 	className?: string
 }
 

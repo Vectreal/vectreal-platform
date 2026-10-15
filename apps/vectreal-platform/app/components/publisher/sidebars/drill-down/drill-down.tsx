@@ -16,6 +16,7 @@ import {
 	type ReactNode
 } from 'react'
 
+import { duration, ease } from '../../../../lib/motion/motion-tokens'
 import { PanelRowButton } from '../panel-row-button'
 import { PanelCaption } from '../sidebar-section'
 
@@ -35,11 +36,7 @@ import { PanelCaption } from '../sidebar-section'
 
 const ROOT_VIEW_ID = 'root'
 
-/** `--ease-out` and `--duration-base`, which Framer cannot read as tokens. */
-const SLIDE_TRANSITION = {
-	duration: 0.25,
-	ease: [0.16, 1, 0.3, 1] as const
-}
+const SLIDE_TRANSITION = { duration: duration.base, ease: ease.out }
 
 type FocusIntent =
 	| null
@@ -317,7 +314,9 @@ function DrillDownView({
 	const { depth, parentTitle } = useContext(DrillDownPositionContext)
 	const sectionRef = useRef<HTMLElement>(null)
 
-	useEffect(() => {
+	// A layout effect, so focus arrives in the commit that shows the view. A
+	// passive one left a frame where the view was on screen and focus on the page.
+	useLayoutEffect(() => {
 		const intent = takeFocusIntent()
 		const section = sectionRef.current
 		if (!intent || !section) return
@@ -351,7 +350,7 @@ function DrillDownView({
 						type="button"
 						onClick={pop}
 						aria-label={`Back to ${parentTitle}`}
-						className="publisher-shell-focus text-muted-foreground hover:text-foreground -ml-1 flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium transition-colors"
+						className="shell-focus text-muted-foreground hover:text-foreground -ml-1 flex max-w-full min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-xs font-medium transition-colors"
 					>
 						<ChevronLeft className="size-3.5 shrink-0" />
 						<span className="truncate">{parentTitle}</span>

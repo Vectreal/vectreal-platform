@@ -16,20 +16,32 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-import { cloneDocument, draco, DracoOptions } from '@gltf-transform/functions'
+import {
+	cloneDocument,
+	draco,
+	DracoOptions,
+	meshopt
+} from '@gltf-transform/functions'
 import JSZip from 'jszip'
-import { Object3D } from 'three'
+import { Material, Mesh, MeshPhysicalMaterial, Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import {
-	canLoadDracoInBrowser,
-	loadDracoModule
-} from '../draco/load-draco-module'
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
+import { loadMeshoptEncoder } from '../meshopt/meshopt-codec'
 import { OperationProgress } from '../types'
+import {
+	GeometryCodec,
+	GeometryCodecSizes,
+	gzipSize,
+	pickGeometryCodec
+} from './geometry-codec'
+import { threeObjectToGLB } from './three-object-glb'
 import {
 	ExportResult,
 	GLBExportResult,
 	GLTFExportResult,
+	PublishExportOptions,
+	PublishExportResult,
 	USDZExportResult
 } from './types'
 
@@ -57,39 +69,85 @@ const DEFAULT_DRACO_PATH = '/draco/'
  */
 export const USDZ_MAX_TEXTURE_SIZE = 1024
 
+/**
+ * A copy of `object` whose transmissive materials are written as opacity.
+ *
+ * USDZ's material model, `UsdPreviewSurface`, has no transmission, and
+ * three.js's `USDZExporter` writes `inputs:opacity` from `material.opacity`
+ * alone. glTF glass is usually opaque with `KHR_materials_transmission` on top,
+ * so it arrived in Quick Look as a solid surface. Opacity is the nearest thing
+ * the format has: under the spec's default `opacityMode` of `transparent` it
+ * fades only the diffuse response and keeps the reflections, which is how the
+ * spec itself describes glass. Refraction, thickness and tint are still lost.
+ *
+ * Only where the exporter writes `material.opacity` at all. An `alphaMap`
+ * replaces it, and a `map` with `alphaTest` turns it into a scale on a cutout
+ * threshold, where lowering it would discard the whole surface. Such a material
+ * keeps exporting as before and is not reported. `transparent` is left alone:
+ * setting it would reroute opacity through the base color texture's alpha,
+ * which an opaque texture holds at 1.
+ *
+ * The copy shares geometry and every other material with `object`, and the
+ * scene on screen is never touched. Replacements are cached per material so two
+ * meshes sharing one still share it in the file.
+ */
+function withTransmissionAsOpacity(object: Object3D): {
+	object: Object3D
+	transmissiveMaterials: string[]
+} {
+	const replacements = new Map<Material, Material>()
+
+	const replace = (material: Material): Material => {
+		const physical = material as MeshPhysicalMaterial
+		const writesOpacity =
+			!physical.alphaMap && !(physical.map && physical.alphaTest > 0)
+		if (
+			!physical.isMeshPhysicalMaterial ||
+			physical.transmission <= 0 ||
+			!writesOpacity
+		) {
+			return material
+		}
+
+		let replacement = replacements.get(material)
+		if (!replacement) {
+			const glass = physical.clone()
+			glass.opacity = physical.opacity * (1 - physical.transmission)
+			glass.transmission = 0
+			replacement = glass
+			replacements.set(material, replacement)
+		}
+		return replacement
+	}
+
+	const copy = object.clone()
+	copy.traverse((child) => {
+		const mesh = child as Mesh
+		if (!mesh.isMesh) return
+		mesh.material = Array.isArray(mesh.material)
+			? mesh.material.map(replace)
+			: replace(mesh.material)
+	})
+
+	return {
+		object: copy,
+		transmissiveMaterials: [...replacements.keys()].map(({ name }) => name)
+	}
+}
+
 export class ModelExporter {
 	private io: WebIO
 	private threeExporter: GLTFExporter
 	private progressCallback?: (progress: OperationProgress) => void
-	private dracoPath: string
-	private dracoEncoderRegistration: Promise<void> | null = null
+	private codecs: GeometryCodecs
 
 	constructor(options?: { dracoPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 		this.threeExporter = new GLTFExporter()
-		this.dracoPath = options?.dracoPath ?? DEFAULT_DRACO_PATH
-	}
-
-	/**
-	 * Lazily loads and registers the Draco encoder module on this instance's
-	 * WebIO, so `writeBinary` can encode `KHR_draco_mesh_compression`
-	 * primitives after `document.transform(draco(...))`. Memoized per instance.
-	 */
-	private ensureDracoEncoderRegistered(): Promise<void> {
-		if (!this.dracoEncoderRegistration) {
-			this.dracoEncoderRegistration = canLoadDracoInBrowser()
-				? loadDracoModule('encoder', this.dracoPath).then((encoderModule) => {
-						this.io.registerDependencies({
-							'draco3d.encoder': encoderModule
-						})
-					})
-				: Promise.reject(
-						new Error(
-							'Draco encoding requires a browser (window or worker) environment'
-						)
-					)
-		}
-		return this.dracoEncoderRegistration
+		this.codecs = new GeometryCodecs(
+			this.io,
+			options?.dracoPath ?? DEFAULT_DRACO_PATH
+		)
 	}
 
 	/**
@@ -146,7 +204,7 @@ export class ModelExporter {
 		document: Document,
 		options: DracoOptions
 	): Promise<Document> {
-		await this.ensureDracoEncoderRegistered()
+		await this.codecs.registerDracoEncoder()
 
 		const workingDoc = cloneDocument(document)
 		await workingDoc.transform(draco(options))
@@ -184,6 +242,99 @@ export class ModelExporter {
 			throw new Error(`Failed to export Draco-compressed GLB: ${error}`, {
 				cause: error
 			})
+		}
+	}
+
+	/**
+	 * Export a document as the GLB a scene is published as.
+	 *
+	 * Works on a clone, so the caller's document stays as it was. `textures`
+	 * rewrites that clone's textures once, KTX2 encoding being far too slow to
+	 * repeat. Geometry is then encoded in whichever codec `pickGeometryCodec`
+	 * chooses, measured on texture-free copies so the comparison is between
+	 * geometry bytes rather than diluted by textures every codec shares.
+	 *
+	 * Without `draco` geometry compression is off and no codec is applied.
+	 */
+	public async exportDocumentGLBForPublish(
+		document: Document,
+		{ draco, dracoWorthApplying = true, textures }: PublishExportOptions = {}
+	): Promise<PublishExportResult> {
+		const startTime = Date.now()
+		const workingDoc = cloneDocument(document)
+		if (textures) await textures(workingDoc)
+
+		const geometrySizes = draco
+			? await this.measureGeometryCodecs(document, draco, dracoWorthApplying)
+			: undefined
+		const geometryCodec = geometrySizes
+			? pickGeometryCodec(geometrySizes)
+			: 'none'
+
+		await this.applyGeometryCodec(workingDoc, geometryCodec, draco)
+		const data = await this.io.writeBinary(workingDoc)
+		const textureBytes = workingDoc
+			.getRoot()
+			.listTextures()
+			.reduce((sum, texture) => sum + (texture.getImage()?.byteLength ?? 0), 0)
+
+		return {
+			data,
+			format: 'glb',
+			size: data.byteLength,
+			exportTime: Date.now() - startTime,
+			geometryCodec,
+			geometrySizes,
+			textureBytes
+		}
+	}
+
+	private async measureGeometryCodecs(
+		document: Document,
+		dracoOptions: DracoOptions,
+		dracoWorthApplying: boolean
+	): Promise<GeometryCodecSizes> {
+		const geometryOnly = cloneDocument(document)
+		for (const texture of geometryOnly.getRoot().listTextures()) {
+			texture.dispose()
+		}
+
+		const sizeAs = async (codec: GeometryCodec) => {
+			const encoded = cloneDocument(geometryOnly)
+			await this.applyGeometryCodec(encoded, codec, dracoOptions)
+			return gzipSize(await this.io.writeBinary(encoded))
+		}
+
+		// A codec left unmeasured is no candidate: Draco when the optimizer found
+		// it larger than the plain GLB, either one when its encoder cannot load or
+		// refuses the geometry (meshopt on KHR_mesh_primitive_restart).
+		return {
+			none: await sizeAs('none'),
+			meshopt: await sizeAs('meshopt').catch(() => undefined),
+			draco: dracoWorthApplying
+				? await sizeAs('draco').catch(() => undefined)
+				: undefined
+		}
+	}
+
+	/**
+	 * `meshopt()` reorders and quantizes before compressing. Quantizing moves a
+	 * mesh's offset and scale onto its node, inserting a child node to hold the
+	 * mesh where the original also has children or animation. Nothing in a
+	 * published scene addresses nodes by identity, so that rewrite is safe.
+	 */
+	private async applyGeometryCodec(
+		document: Document,
+		codec: GeometryCodec,
+		dracoOptions: DracoOptions = {}
+	): Promise<void> {
+		if (codec === 'draco') {
+			await this.codecs.registerDracoEncoder()
+			await document.transform(draco(dracoOptions))
+		} else if (codec === 'meshopt') {
+			const encoder = await loadMeshoptEncoder()
+			this.io.registerDependencies({ 'meshopt.encoder': encoder })
+			await document.transform(meshopt({ encoder, level: 'medium' }))
 		}
 	}
 
@@ -258,7 +409,8 @@ export class ModelExporter {
 	}
 
 	/**
-	 * Export a Three.js Object3D as GLB binary.
+	 * Export a Three.js Object3D as GLB binary, with the animation clips it
+	 * carries on `object.animations` (see `threeObjectToGLB`).
 	 *
 	 * @param object - The Three.js Object3D
 	 * @returns Promise resolving to the export result
@@ -268,16 +420,9 @@ export class ModelExporter {
 		this.emitProgress('Exporting Three.js object to GLB', 0)
 		try {
 			this.emitProgress('Serializing Three.js scene', 40)
-			const result = await this.threeExporter.parseAsync(object, {
-				binary: true
-			})
-
-			if (!(result instanceof ArrayBuffer)) {
-				throw new Error('Expected binary GLB output from GLTFExporter')
-			}
+			const binary = await threeObjectToGLB(this.threeExporter, object)
 
 			this.emitProgress('Finalizing GLB binary', 90)
-			const binary = new Uint8Array(result)
 			const exportTime = Date.now() - startTime
 
 			this.emitProgress('Export completed', 100)
@@ -310,9 +455,11 @@ export class ModelExporter {
 			const { USDZExporter } =
 				await import('three/examples/jsm/exporters/USDZExporter.js')
 			const exporter = new USDZExporter()
+			const { object: exportable, transmissiveMaterials } =
+				withTransmissionAsOpacity(object)
 
 			this.emitProgress('Serializing Three.js scene', 40)
-			const result = await exporter.parseAsync(object, {
+			const result = await exporter.parseAsync(exportable, {
 				maxTextureSize: USDZ_MAX_TEXTURE_SIZE
 			})
 
@@ -326,7 +473,8 @@ export class ModelExporter {
 				data: binary,
 				format: 'usdz',
 				size: binary.byteLength,
-				exportTime
+				exportTime,
+				transmissiveMaterials
 			}
 		} catch (error) {
 			throw new Error(`Failed to export Three.js object to USDZ: ${error}`, {
@@ -336,7 +484,8 @@ export class ModelExporter {
 	}
 
 	/**
-	 * Export a Three.js Object3D as GLTF JSON with separate assets.
+	 * Export a Three.js Object3D as GLTF JSON with separate assets, with the
+	 * animation clips it carries on `object.animations`.
 	 *
 	 * @note The way Three.js exports GLTF resources is limited to png image textures
 	 *
@@ -346,12 +495,10 @@ export class ModelExporter {
 	public async exportThreeJSGLTF(object: Object3D): Promise<GLTFExportResult> {
 		this.emitProgress('Exporting Three.js object to GLTF', 0)
 		try {
-			const result = await this.threeExporter.parseAsync(object, {
-				binary: true
-			})
-
 			return await this.exportDocumentGLTF(
-				await this.io.readBinary(new Uint8Array(result as ArrayBuffer))
+				await this.io.readBinary(
+					await threeObjectToGLB(this.threeExporter, object)
+				)
 			)
 		} catch (error) {
 			throw new Error(`Failed to export Three.js object: ${error}`, {

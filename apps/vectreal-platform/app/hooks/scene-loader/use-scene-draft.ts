@@ -9,11 +9,11 @@ import { useApplySceneSettings } from './use-scene-settings'
 import {
 	inferOptimizationPreset,
 	persistPendingSceneDraftOrchestrator,
-	serializeSceneAssetData
+	resolveRestoredDraftOptimization,
+	restoreDraftSource
 } from '../../lib/domain/scene'
 import {
 	loadPendingSceneDraft,
-	saveOriginalSceneModel,
 	setTabDraftId
 } from '../../lib/persistence/pending-scene-idb'
 import {
@@ -21,29 +21,28 @@ import {
 	sceneMetaAtom
 } from '../../lib/stores/publisher-config-store'
 import {
+	documentOptimizationsAtom,
+	keptOriginalAtom,
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../lib/stores/scene-optimization-store'
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 
-import type { ServerSceneData } from '@vctrl/core'
-import type { ModelFile } from '@vctrl/hooks/use-load-model'
-
 /**
- * The publisher's IndexedDB side: the draft that survives an auth redirect, and
- * the pre-optimization snapshot every re-optimization starts from.
+ * The publisher's IndexedDB side: the draft that survives an auth redirect.
  *
- * All three operations are plain functions called from the moment they belong
- * to - a save button, a finished upload - except the restore, which is a route
- * state (`?restore_draft=1`) and so runs once when that route is entered.
+ * Persisting is a plain function called from the save button; the restore is a
+ * route state (`?restore_draft=1`) and so runs once when that route is entered.
  */
 export function useSceneDraft() {
-	const { file } = useModelContext()
+	const { file, optimizer } = useModelContext()
 	const prepareGltfDocument = usePrepareGltfDocument()
 
 	const sceneMetaState = useAtomValue(sceneMetaAtom)
 	const currentSettings = useAtomValue(sceneViewerSettingsAtom)
-	const optimization = useAtomValue(optimizationAtom)
+	const documentOptimizations = useAtomValue(documentOptimizationsAtom)
+	const { sourceSettings } = useAtomValue(optimizationAtom)
+	const { keep: keepOriginal } = useAtomValue(keptOriginalAtom)
 	const optimizationRuntime = useAtomValue(optimizationRuntimeAtom)
 
 	/**
@@ -57,14 +56,20 @@ export function useSceneDraft() {
 				prepareGltfDocumentForUpload: prepareGltfDocument,
 				sceneMetaState,
 				currentSettings,
-				optimizationSettings: optimization.optimizations ?? null,
+				optimizationSettings: documentOptimizations,
+				sourceGlb: optimizer.getSource(),
+				sourceSettings,
+				keepOriginal,
 				optimizedSceneBytes: optimizationRuntime.optimizedSceneBytes,
 				clientSceneBytes: optimizationRuntime.clientSceneBytes
 			}),
 		[
 			currentSettings,
+			documentOptimizations,
+			sourceSettings,
+			keepOriginal,
 			file,
-			optimization.optimizations,
+			optimizer,
 			optimizationRuntime.clientSceneBytes,
 			optimizationRuntime.optimizedSceneBytes,
 			prepareGltfDocument,
@@ -72,36 +77,9 @@ export function useSceneDraft() {
 		]
 	)
 
-	/**
-	 * Stores the model as uploaded, before any optimization pass touches it.
-	 * "Re-apply preset" restores this, so without it every later pass would stack
-	 * on the previous result instead of starting over.
-	 */
-	const snapshotOriginalModel = useCallback(
-		async (uploadedFile: ModelFile) => {
-			try {
-				const gltfJson = await prepareGltfDocument(uploadedFile)
-				if (!gltfJson || typeof gltfJson !== 'object') return
-
-				const gltfData = (gltfJson as { data?: unknown }).data ?? gltfJson
-				const gltfAssets = (gltfJson as { assets?: unknown }).assets
-
-				await saveOriginalSceneModel({
-					sceneData: {
-						gltfJson: gltfData as ServerSceneData['gltfJson'],
-						assetData: await serializeSceneAssetData(gltfData, gltfAssets)
-					} as ServerSceneData
-				})
-			} catch (error) {
-				console.warn('Failed to persist the original scene to IDB:', error)
-			}
-		},
-		[prepareGltfDocument]
-	)
-
 	const isRestoringDraft = useRestorePendingDraft()
 
-	return { isRestoringDraft, persistPendingSceneDraft, snapshotOriginalModel }
+	return { isRestoringDraft, persistPendingSceneDraft }
 }
 
 /**
@@ -117,13 +95,15 @@ export function useSceneDraft() {
  * over the draft, and the shell does not show an upload prompt during it.
  */
 function useRestorePendingDraft(): boolean {
-	const { load } = useModelContext()
+	const { load, optimizer } = useModelContext()
+	const { setSource } = optimizer
 	const location = useLocation()
 	const navigate = useNavigate()
 	const setSceneMetaState = useSetAtom(sceneMetaAtom)
 	const setLastSavedSceneMeta = useSetAtom(lastSavedSceneMetaAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const setKeptOriginal = useSetAtom(keptOriginalAtom)
 
 	// Captured once: the effect below clears these parameters when it is done.
 	const [draftId] = useState(() => {
@@ -158,19 +138,22 @@ function useRestorePendingDraft(): boolean {
 				const draft = await loadPendingSceneDraft(draftId)
 				if (!draft) return
 
-				const { optimizationSettings } = draft
-				if (optimizationSettings) {
-					setOptimizationState((previous) => ({
-						...previous,
-						optimizationPreset: inferOptimizationPreset(optimizationSettings),
-						optimizations: optimizationSettings
-					}))
-				}
+				const { sourceGlb } = draft
+				const { sourceSettings, derivedFrom } =
+					resolveRestoredDraftOptimization(draft)
+				setOptimizationState((previous) => ({
+					...previous,
+					optimizationPreset: inferOptimizationPreset(derivedFrom),
+					optimizations: derivedFrom,
+					sourceSettings,
+					derivedFrom
+				}))
 
-				// The byte snapshot is what tells the save flow that optimization
-				// already ran before the redirect, so saving stays available.
+				// Nothing saved describes a draft's document, so the save flow treats
+				// any optimization in it as unsaved.
 				setOptimizationRuntime((previous) => ({
 					...previous,
+					savedPassRevision: null,
 					isSceneSizeLoading: false,
 					optimizedSceneBytes:
 						draft.optimizedSceneBytes ?? previous.optimizedSceneBytes,
@@ -187,6 +170,30 @@ function useRestorePendingDraft(): boolean {
 					return
 				}
 
+				// The load made the draft's already-optimized document the original.
+				// Its real original came with the draft; without this, the next pass
+				// would start from the optimized version and quality lost to the
+				// previous preset could never come back.
+				const missedOriginal = await restoreDraftSource({
+					sourceGlb,
+					isCurrent: result.stillOnScreen,
+					setSource
+				})
+				// The source is then the restored version, which embodies the
+				// settings it was derived from.
+				if (missedOriginal) {
+					const restored = resolveRestoredDraftOptimization({
+						...draft,
+						sourceGlb: null,
+						sourceSettings: null
+					})
+					setOptimizationState((previous) => ({
+						...previous,
+						sourceSettings: restored.sourceSettings,
+						derivedFrom: restored.derivedFrom
+					}))
+				}
+
 				// The draft carries the composed settings, and `ServerSceneData`
 				// extends `SceneSettings`, so this is the settings object. Applying
 				// it is what puts hotspots, interactions and normalization back into
@@ -199,12 +206,17 @@ function useRestorePendingDraft(): boolean {
 				// what was just restored as the last-saved state would make the
 				// unsaved-changes check report nothing to save.
 				applySceneSettings(draft.sceneData, { isSavedBaseline: false })
+				// The author's choice about the original survives the sign-in too.
+				setKeptOriginal((previous) => ({
+					...previous,
+					keep: draft.keepOriginal ?? true
+				}))
 
 				setSceneMetaState(draft.sceneMeta)
 				setLastSavedSceneMeta(draft.sceneMeta)
 
 				// Re-anchor the tab's draft id: a new OAuth tab starts with empty
-				// sessionStorage, and the original-model lookup is keyed by it.
+				// sessionStorage, and clearing the draft after a save is keyed by it.
 				setTabDraftId(draftId)
 				toast.success('Restored your unsaved scene from this browser')
 			} catch (error) {
@@ -225,7 +237,9 @@ function useRestorePendingDraft(): boolean {
 		setLastSavedSceneMeta,
 		setOptimizationRuntime,
 		setOptimizationState,
-		setSceneMetaState
+		setKeptOriginal,
+		setSceneMetaState,
+		setSource
 	])
 
 	return Boolean(draftId) && !hasSettled

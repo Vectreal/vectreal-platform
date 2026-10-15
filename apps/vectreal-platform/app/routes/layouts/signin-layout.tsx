@@ -19,7 +19,7 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { Route } from './+types/signin-layout'
 import { useConsent } from '../../components/consent/consent-context'
 import { AuthErrorBoundary } from '../../components/errors'
-import HeroScene from '../../components/home/hero-scene'
+import HeroScene from '../../components/signin/hero-scene'
 import { TurnstileWidget } from '../../components/turnstile-widget'
 import { useSpendTurnstileToken } from '../../hooks/use-spend-turnstile-token'
 import {

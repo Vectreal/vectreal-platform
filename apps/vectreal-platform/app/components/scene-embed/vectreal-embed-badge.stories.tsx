@@ -1,11 +1,13 @@
+import { cn } from '@shared/utils'
+
 import { VectrealEmbedBadge } from './vectreal-embed-badge'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 /**
- * The mark sits inside the viewer's container and takes the viewer's tokens,
- * not the app's, so both stories scope their own `.viewer[data-theme]` exactly
- * as the viewer's own chrome stories do.
+ * The mark sits inside the viewer's container and takes the viewer's scheme,
+ * not the page's, so both stories put the `light` or `dark` class on their own
+ * `.viewer` exactly as the viewer does.
  */
 const meta = {
 	title: 'Embed/Vectreal Badge',
@@ -28,8 +30,7 @@ type Story = StoryObj<typeof meta>
 
 const surface = (theme: 'light' | 'dark') => () => (
 	<div
-		className="viewer relative h-[240px] w-[420px] overflow-hidden"
-		data-theme={theme}
+		className={cn('viewer relative h-[240px] w-[420px] overflow-hidden', theme)}
 		style={{ background: theme === 'dark' ? '#1c1c1c' : '#e9e9ec' }}
 	>
 		<VectrealEmbedBadge />

@@ -14,12 +14,14 @@ import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
 import { type ImgTo3dGeneration } from '../../../hooks/use-img-to-3d-generation'
 import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
 import { type SampleDownloader } from '../../../hooks/use-sample-download'
+import { PUBLISHER_EXAMPLE_PARAM } from '../../../lib/samples/example-scenes'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
 import { RelativeTime } from '../../dashboard/relative-time'
 import { SceneThumbnail } from '../../dashboard/scene-thumbnail'
 import { DitherGrain } from '../../layout-components/dither-grain'
 import { SampleTiles } from '../../layout-components/sample-tiles'
 
+import type { ExampleScene } from '../../../lib/samples/example-scenes'
 import type { SceneSummary } from '../../dashboard/scene-card'
 
 interface Props {
@@ -34,6 +36,8 @@ interface Props {
 	 * and the tiles came back idle and clickable halfway through 18 MB.
 	 */
 	sampleDownload: SampleDownloader
+	/** Loads an example scene's model and applies its settings, from `useOpenExampleScene`. */
+	onOpenExample: (example: ExampleScene, file: File) => Promise<void>
 	/** The signed-in user's latest scenes, from the loader; none signed out. */
 	recentScenes?: readonly SceneSummary[]
 	/**
@@ -97,6 +101,7 @@ export const EmptyStage = ({
 	isMobile,
 	onUpload,
 	sampleDownload,
+	onOpenExample,
 	recentScenes = [],
 	imgTo3d
 }: Props) => {
@@ -150,7 +155,11 @@ export const EmptyStage = ({
 		[onUpload]
 	)
 
-	const { download, openSample: downloadSample } = sampleDownload
+	const {
+		download,
+		openSample: downloadSample,
+		openExample: downloadExample
+	} = sampleDownload
 	const openSample = useCallback(
 		async (id: string) => {
 			try {
@@ -166,27 +175,45 @@ export const EmptyStage = ({
 		[downloadSample, onUpload]
 	)
 
+	const openExample = useCallback(
+		async (id: string) => {
+			try {
+				await downloadExample(id, onOpenExample)
+			} catch {
+				toast.error(
+					'The example could not be opened. Try your own file instead.'
+				)
+			}
+		},
+		[downloadExample, onOpenExample]
+	)
+
 	/*
-	  A link can name a sample (`publisherSampleHref`), for someone arriving from
-	  a page that showed them one. The param is taken off the URL as the sample
-	  opens, so a reload lands here empty rather than downloading it again. The
-	  ref is for StrictMode, which mounts this twice and would open it twice.
+	  A link can name a sample (`publisherSampleHref`) or an example scene
+	  (`publisherExampleHref`), for someone arriving from a page that showed them
+	  one. The param is taken off the URL as it opens, so a reload lands here
+	  empty rather than downloading it again. The ref is for StrictMode, which
+	  mounts this twice and would open it twice.
 	*/
 	const [searchParams, setSearchParams] = useSearchParams()
 	const linkedSample = searchParams.get(PUBLISHER_SAMPLE_PARAM)
-	const openedLinkedSample = useRef(false)
+	const linkedExample = searchParams.get(PUBLISHER_EXAMPLE_PARAM)
+	const openedLinkedModel = useRef(false)
 	useEffect(() => {
-		if (!linkedSample || openedLinkedSample.current) return
-		openedLinkedSample.current = true
+		if ((!linkedSample && !linkedExample) || openedLinkedModel.current) return
+		openedLinkedModel.current = true
 		setSearchParams(
 			(params) => {
 				params.delete(PUBLISHER_SAMPLE_PARAM)
+				params.delete(PUBLISHER_EXAMPLE_PARAM)
 				return params
 			},
 			{ replace: true, preventScrollReset: true }
 		)
-		void openSample(linkedSample)
-	}, [linkedSample, openSample, setSearchParams])
+		// An example is a model with settings on top, so it wins when both are named.
+		if (linkedExample) void openExample(linkedExample)
+		else if (linkedSample) void openSample(linkedSample)
+	}, [linkedExample, linkedSample, openExample, openSample, setSearchParams])
 
 	/*
 	  No click and no keyboard: the buttons below open the picker by name, so a

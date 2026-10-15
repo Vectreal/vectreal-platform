@@ -13,7 +13,24 @@ export interface PendingSceneDraft {
 	sceneMeta: SceneMetaState
 	sceneData: ServerSceneData
 	optimizationSettings: Optimizations | null
-	/** Byte size of the optimized scene at the time of persisting. Restored on draft hydration to re-enable saving without re-optimizing. */
+	/**
+	 * The original the draft's document was derived from, as GLB bytes, so a
+	 * restored draft can still be re-optimized from it rather than from its
+	 * already-optimized self. Null for drafts written before it existed.
+	 */
+	sourceGlb: Uint8Array | null
+	/**
+	 * What `sourceGlb` already embodies: the original preset for an upload, the
+	 * saved settings when the source was a saved, optimized scene. Absent on
+	 * drafts written before it existed.
+	 */
+	sourceSettings?: Optimizations | null
+	/**
+	 * Whether the author chose to keep the original on save. Absent on drafts
+	 * written before the choice existed, which read as the default, kept.
+	 */
+	keepOriginal?: boolean
+	/** Byte size of the optimized scene at the time of persisting. Restored on draft hydration, so the size shown survives the sign-in. */
 	optimizedSceneBytes?: number | null
 	/** Byte size of the raw client scene at the time of persisting. */
 	clientSceneBytes?: number | null
@@ -26,26 +43,25 @@ export interface SavePendingSceneDraftInput {
 	sceneMeta: SceneMetaState
 	sceneData: ServerSceneData
 	optimizationSettings: Optimizations | null
+	/**
+	 * The original the draft's document was derived from, as GLB bytes, so a
+	 * restored draft can still be re-optimized from it rather than from its
+	 * already-optimized self. Null for drafts written before it existed.
+	 */
+	sourceGlb: Uint8Array | null
+	/**
+	 * What `sourceGlb` already embodies: the original preset for an upload, the
+	 * saved settings when the source was a saved, optimized scene. Absent on
+	 * drafts written before it existed.
+	 */
+	sourceSettings?: Optimizations | null
+	/**
+	 * Whether the author chose to keep the original on save. Absent on drafts
+	 * written before the choice existed, which read as the default, kept.
+	 */
+	keepOriginal?: boolean
 	/** Byte size of the optimized scene at the time of persisting. */
 	optimizedSceneBytes?: number | null
 	/** Byte size of the raw client scene at the time of persisting. */
 	clientSceneBytes?: number | null
-}
-
-/**
- * Original un-optimized scene snapshot stored in IndexedDB on first upload.
- *
- * Keyed by the same tab-scoped draft ID as PendingSceneDraft so both entries
- * share a lookup key and survive auth redirects.
- */
-export interface OriginalSceneModel {
-	id: string
-	createdAt: number
-	expiresAt: number
-	sceneData: ServerSceneData
-}
-
-/** Input used when writing the original scene snapshot to IDB. */
-export interface SaveOriginalSceneModelInput {
-	sceneData: ServerSceneData
 }

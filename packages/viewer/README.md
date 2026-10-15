@@ -43,7 +43,7 @@ function App() {
 | `model`                        | `Object3D`                                              | No\*     | The Three.js scene to display. Optional only if you supply scene content via `children`; with neither, nothing renders. |
 | `children`                     | `React.ReactNode`                                       | No       | Scene content rendered inside the canvas, alongside or instead of `model`        |
 | `className`                    | `string`                                                | No       | Additional CSS classes for the viewer container                                  |
-| `theme`                        | `'light' \| 'dark' \| 'system'`                         | No       | Viewer theme, default is `system`                                                |
+| `theme`                        | `'light' \| 'dark' \| 'system'`                         | No       | Color scheme of the built-in controls. Default `system`, which follows the visitor's browser setting as it changes. The viewer root carries the matching `light` or `dark` class                                                |
 | `enableViewportRendering`      | `boolean`                                               | No       | Render only while in viewport, default `true`                                    |
 | `enablePostProcessing`         | `boolean`                                               | No       | Render through the viewer's composer: ambient occlusion, and edge smoothing that converges once the camera stops. Set `false` when `children` bring their own `EffectComposer`. Whether the canvas is multisampled follows this value when the canvas is created. Default `true`                                    |
 | `boundsOptions`                | `BoundsProps`                                           | No       | Scene bounds and framing behavior                                                |
@@ -56,6 +56,11 @@ function App() {
 | `hotspotColor`                 | `string`                                                | No       | Overrides the marker fill. The default is neutral so it does not compete with the product. The step numeral stays dark ink, so a dark or saturated fill needs `--vctrl-hotspot-ink` overridden on the container |
 | `showHotspotMarkers`           | `boolean`                                               | No       | Draws the markers, default `true`. `false` leaves them resolved but undrawn, so a host can still reach them by id |
 | `revealHotspotContent`         | `boolean`                                               | No       | Opens a card on click, default `true`. `false` still flies the camera and still reports the activation |
+| `showSceneViewReturn` | `boolean` | No | Draws a "Back to scene view" control while the view stands at a camera a hotspot flew it to, and lets Escape inside the viewer do the same. Default `true`. Both return to the scene camera the visitor was on before, or the scene's default |
+| `animations` | `AnimationClip[]` | No | The model's animation clips, as parsed from the same glTF. Without them no animation runtime is mounted |
+| `animationOptions` | `AnimationSettings` | No | How those clips play: on or off, together or in sequence, autoplay, per-clip loop, speed and offset, and whether the viewer shows its playback controls |
+| `showAnimationControls` | `boolean` | No | Lets the viewer draw its playback controls when `animationOptions.showControls` asks for them. Default `true`. Set `false` to draw your own with the exported `AnimationControls` (it carries no placement: position it with `className`) or any UI, driven by `set_animation_playing` and `restart_animation` and following `animation_state_changed` |
+| `showCameraControls` | `boolean` | No | Lets the viewer draw its switcher between scene cameras when the scene has two or more and `cameraOptions.showControls` is not `false`; hotspot cameras never count. Default `true`. Set `false` to draw your own with the exported `CameraControls` (it carries no placement: position it with `className`) or any UI, driven by `activate_camera` and following `camera_changed` |
 | `selectedHotspotId`            | `string \| null`                                        | No       | Draws one marker as the current one. Editing surfaces only                       |
 | `showInternalHotspots`         | `boolean`                                               | No       | Draws hotspots the author kept backstage. Editing surfaces only                  |
 | `showHiddenHotspots`           | `boolean`                                               | No       | Draws hotspots the author hid. Editing surfaces only                             |
@@ -107,10 +112,11 @@ type CameraProps = {
 		duration?: number
 		easing?: 'linear' | 'ease_in' | 'ease_out' | 'ease_in_out'
 	}
+	showControls?: boolean
 }
 ```
 
-Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera.
+Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera. `showControls: false` keeps the viewer's camera switcher off for this scene; absent, it shows whenever there are two or more scene cameras.
 
 ```tsx
 <VectrealViewer
@@ -184,6 +190,7 @@ Current commands:
 | Command                | Payload                                                                                            | Effect                                              |
 | ---------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `activate_camera`      | `{ cameraId: string }`                                                                             | Transitions to one of the configured scene cameras  |
+| `return_to_scene_view` | `{}` | Leaves a hotspot's camera for the scene camera the visitor was on before, or the default. Does nothing away from a hotspot |
 | `set_controls_enabled` | `{ enabled: boolean }`                                                                             | Temporarily enables or disables orbit interaction   |
 | `set_transition`       | `{ transitionType: 'none' \| 'linear' \| 'object_avoidance'; duration?: number; easing?: string }` | Overrides the active camera transition              |
 | `set_auto_rotate`      | `{ enabled: boolean; speed?: number }`                                                             | Toggles and configures auto-rotation                |
@@ -267,6 +274,7 @@ Configures the [@react-three/drei `Environment`](https://github.com/pmndrs/drei#
 | `backgroundIntensity`   | `number`             | Background intensity multiplier                               |
 | `environmentIntensity`  | `number`             | Lighting intensity multiplier                                 |
 | `files`                 | `string \| string[]` | Custom environment files                                      |
+| `backdrop` | `SceneBackdrop` | A stage painted behind the model while `background` is off: `{ type: 'color', color }` or `{ type: 'gradient', top, bottom }`, `#rrggbb` hex. The environment still lights the model. Absent leaves the viewer transparent |
 
 ```tsx
 <VectrealViewer
@@ -465,6 +473,17 @@ its own. Note that the viewer's own container is not positioned either, so
 `InfoPopover`'s `absolute bottom-0` resolves against whatever positioned
 ancestor you give it: put the viewer in a `relative` wrapper if you use the
 slot, or position your own content some other way.
+
+The built-in controls (camera switcher, playback, the way back from a hotspot's
+camera, the info button and card, hotspot cards and labels) are drawn in
+Vectreal's own panel style, and their palette is declared on the viewer's root
+under its `light` or `dark` class. Content you render inside the viewer, such as
+a custom `loader` or your popover content, inherits that palette, so tokens it
+shares a name with (`--background`, `--foreground`, `--muted-foreground`,
+`--border` and the rest of a shadcn-style set) resolve to the viewer's values
+there rather than your page's. Style that content with your own names, or set
+`theme` to match your page. The hotspot marker keeps its own
+`--vctrl-hotspot-*` tokens, which you can override on the container.
 
 ---
 

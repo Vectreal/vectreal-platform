@@ -9,16 +9,20 @@
  * Every child is a probe, so this reads the shell's own decisions and nothing
  * the children decide for themselves.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { getDefaultStore } from 'jotai'
 import { createRoutesStub } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import OverlayControls from './controls-overlay'
+import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
 
 import type { PublisherLoaderData } from '../../types/api'
 
-const { model, probe } = vi.hoisted(() => ({
+const { model, probe, drawerFlow, sizeLabel } = vi.hoisted(() => ({
 	model: { status: 'empty' },
+	sizeLabel: { excludesTextureEncoding: false },
+	drawerFlow: { args: [] as { isOverSizeLimit: boolean }[] },
 	probe: (name: string) => () => <div data-testid={name} />
 }))
 
@@ -36,14 +40,15 @@ vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
 }))
 
-vi.mock('./index', () => ({
-	ToolSidebar: probe('tool-sidebar'),
+vi.mock('./sidebars/tool-sidebar', () => ({
+	ToolSidebar: probe('tool-sidebar')
+}))
+vi.mock('./sidebars/dynamic-sidebar', () => ({
 	DynamicSidebar: probe('publish-sidebar')
 }))
 vi.mock('./optimization/optimization-drawer', () => ({
 	default: probe('optimization-drawer')
 }))
-vi.mock('./preview-camera-controls', () => ({ default: probe('camera') }))
 vi.mock('./shell/empty-stage', () => ({
 	EmptyStage: ({
 		recentScenes,
@@ -60,7 +65,21 @@ vi.mock('./shell/empty-stage', () => ({
 	)
 }))
 vi.mock('./shell/tool-bar', () => ({ ToolBar: probe('tool-bar') }))
-vi.mock('./shell/publish-card', () => ({ PublishCard: probe('publish-card') }))
+vi.mock('./shell/publish-card', () => ({
+	PublishCard: ({
+		isSceneSizeLoading,
+		sizeExcludesTextureEncoding
+	}: {
+		isSceneSizeLoading: boolean
+		sizeExcludesTextureEncoding: boolean
+	}) => (
+		<div
+			data-testid="publish-card"
+			data-loading={String(isSceneSizeLoading)}
+			data-excludes-textures={String(sizeExcludesTextureEncoding)}
+		/>
+	)
+}))
 vi.mock('./shell/publisher-header', () => ({
 	PublisherHeader: ({ showSceneControls }: { showSceneControls: boolean }) => (
 		<div data-testid="header" data-scene-controls={String(showSceneControls)} />
@@ -72,7 +91,11 @@ vi.mock('./shell/publisher-surface-fallback', () => ({
 vi.mock('./sidebars/use-scene-size-initializer', () => ({
 	useSceneSizeInitializer: () => undefined
 }))
-vi.mock('../../hooks', () => ({
+vi.mock('./optimization/use-publish-size-projection', () => ({
+	usePublishSizeProjection: () => undefined,
+	useSizeExcludesTextureEncoding: () => sizeLabel.excludesTextureEncoding
+}))
+vi.mock('../../hooks/use-publisher-scene', () => ({
 	usePublisherScene: () => ({
 		openSceneId: null,
 		isRestoringDraft: false,
@@ -81,15 +104,19 @@ vi.mock('../../hooks', () => ({
 		saveSceneSettings: vi.fn(),
 		saveAvailability: { canSave: false, reason: 'no-model' },
 		persistPendingSceneDraft: vi.fn()
-	}),
-	useOptimizationDrawerFlow: () => ({
-		effectiveSaveAvailability: { canSave: false, reason: 'no-model' },
-		requiresSizeReduction: false,
-		isOptimizationDrawerOpen: false,
-		handleOptimizationDrawerChange: vi.fn(),
-		handleOpenOptimizationDrawer: vi.fn(),
-		openReoptimizeDrawer: vi.fn()
 	})
+}))
+vi.mock('../../hooks/use-optimization-drawer-flow', () => ({
+	useOptimizationDrawerFlow: (args: { isOverSizeLimit: boolean }) => {
+		drawerFlow.args.push(args)
+		return {
+			effectiveSaveAvailability: { canSave: false, reason: 'no-model' },
+			isOptimizationDrawerOpen: false,
+			handleOptimizationDrawerChange: vi.fn(),
+			handleOpenOptimizationDrawer: vi.fn(),
+			openReoptimizeDrawer: vi.fn()
+		}
+	}
 }))
 vi.mock('../../hooks/use-location-change-state', () => ({
 	useLocationChangeState: () => ({ hasUnsavedLocationChange: false })
@@ -117,12 +144,12 @@ const loaderData: PublisherLoaderData = {
 	]
 }
 
-function renderShell(overrides: Partial<PublisherLoaderData> = {}) {
+function renderShell(data: PublisherLoaderData = loaderData) {
 	const Stub = createRoutesStub([
 		{
 			path: '/publisher',
 			Component: () => (
-				<OverlayControls {...loaderData} {...overrides}>
+				<OverlayControls {...data}>
 					<div data-testid="viewer" />
 				</OverlayControls>
 			)
@@ -164,7 +191,7 @@ describe('the publisher shell', () => {
 	})
 
 	it('hands the stage the generation panel when the loader allows it', async () => {
-		renderShell({ imgTo3dEnabled: true })
+		renderShell({ ...loaderData, imgTo3dEnabled: true })
 		expect((await screen.findByTestId('empty-stage')).dataset.generate).toBe(
 			'true'
 		)
@@ -181,5 +208,89 @@ describe('the publisher shell', () => {
 		for (const id of SCENE_CHROME) {
 			expect(screen.getByTestId(id), id).toBeTruthy()
 		}
+	})
+
+	// Checked against the size the card shows; publishing checks the stored file.
+	it('tells the optimizer flow when the scene shown is over the max scene size', async () => {
+		model.status = 'ready'
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			optimizedSceneBytes: 2000
+		}))
+
+		renderShell({ ...loaderData, maxSceneBytes: 1000 })
+		await screen.findByTestId('header')
+		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(true)
+
+		renderShell({ ...loaderData, maxSceneBytes: 2000 })
+		await waitFor(() =>
+			expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(false)
+		)
+	})
+
+	// Meanwhile the figure is the stored package, larger than what publishes.
+	it('holds the over-limit nudge while the size is being measured', async () => {
+		model.status = 'ready'
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			optimizedSceneBytes: 2000,
+			isProjectingSceneBytes: true
+		}))
+
+		renderShell({ ...loaderData, maxSceneBytes: 1000 })
+
+		const card = await screen.findByTestId('publish-card')
+		expect(card.dataset.loading).toBe('true')
+		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(false)
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			isProjectingSceneBytes: false
+		}))
+	})
+
+	it('tells the card when its size leaves out GPU textures', async () => {
+		model.status = 'ready'
+		sizeLabel.excludesTextureEncoding = true
+
+		renderShell()
+
+		const card = await screen.findByTestId('publish-card')
+		expect(card.dataset.excludesTextures).toBe('true')
+		sizeLabel.excludesTextureEncoding = false
+	})
+
+	// Before the projection lands the card shows the stored package, which is
+	// uncompressed: no publish size is known yet to judge.
+	it('judges no stored package against the max scene size', async () => {
+		model.status = 'ready'
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			optimizedSceneBytes: null,
+			clientSceneBytes: 5000,
+			latestSceneStats: null
+		}))
+
+		renderShell({ ...loaderData, maxSceneBytes: 1000 })
+
+		await screen.findByTestId('publish-card')
+		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(false)
+	})
+
+	it('judges the size a publish stored', async () => {
+		model.status = 'ready'
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			optimizedSceneBytes: null,
+			latestSceneStats: { currentSceneBytes: 2000 } as never
+		}))
+
+		renderShell({ ...loaderData, maxSceneBytes: 1000 })
+
+		await screen.findByTestId('publish-card')
+		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(true)
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			latestSceneStats: null
+		}))
 	})
 })

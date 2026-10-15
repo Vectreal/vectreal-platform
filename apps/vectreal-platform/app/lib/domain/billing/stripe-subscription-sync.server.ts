@@ -284,3 +284,130 @@ export async function cancelStripeSubscriptionsForOrganization(
 		})
 	}
 }
+
+/**
+ * The Stripe ids recorded for an organization, or `undefined` when it has no
+ * subscription row yet. Checkout needs both, the billing portal the customer,
+ * and a completed checkout the subscription it is about to replace.
+ */
+export async function getOrgStripeIds(organizationId: string): Promise<
+	| {
+			stripeCustomerId: string | null
+			stripeSubscriptionId: string | null
+	  }
+	| undefined
+> {
+	const db = getDbClient()
+
+	const [row] = await db
+		.select({
+			stripeCustomerId: orgSubscriptions.stripeCustomerId,
+			stripeSubscriptionId: orgSubscriptions.stripeSubscriptionId
+		})
+		.from(orgSubscriptions)
+		.where(eq(orgSubscriptions.organizationId, organizationId))
+		.limit(1)
+
+	return row
+}
+
+export interface CheckoutData {
+	planId: string | null
+	billingPeriod: string | null
+	fromPlan: string | null
+	/** True when the subscription was updated in-place (no Stripe Checkout
+	 *  redirect) - the DB is already synced before the user lands here. */
+	isDirectUpdate: boolean
+}
+
+/**
+ * Retrieves the Stripe checkout session, verifies it belongs to the given org,
+ * syncs the new subscription to the DB, and cancels any prior subscription that
+ * was replaced - preventing double-billing on plan/price switches.
+ */
+export async function syncCompletedCheckout(
+	sessionId: string,
+	organizationId: string
+): Promise<CheckoutData> {
+	const stripe = getStripeClient()
+	const session = await stripe.checkout.sessions.retrieve(sessionId, {
+		expand: ['subscription']
+	})
+
+	const base: CheckoutData = {
+		planId: session.metadata?.plan_id ?? null,
+		billingPeriod: session.metadata?.billing_period ?? null,
+		fromPlan: session.metadata?.from_plan ?? null,
+		isDirectUpdate: false
+	}
+
+	// Security: reject sessions not issued for this org
+	if (session.metadata?.organization_id !== organizationId) {
+		return base
+	}
+
+	const isPaymentSettled =
+		session.payment_status === 'paid' ||
+		session.payment_status === 'no_payment_required'
+
+	const subscription = session.subscription
+	const isEligibleForSync =
+		session.status === 'complete' &&
+		isPaymentSettled &&
+		session.mode === 'subscription' &&
+		subscription != null &&
+		typeof subscription !== 'string'
+
+	if (!isEligibleForSync || typeof subscription === 'string') return base
+
+	const customerId =
+		typeof session.customer === 'string'
+			? session.customer
+			: (session.customer?.id ?? null)
+
+	if (!customerId) return base
+
+	// Capture the existing subscription ID before syncing overwrites it.
+	// This is necessary to cancel the old subscription when the user switched
+	// plans or billing period - Stripe creates a new subscription rather than
+	// updating the existing one, so we must cancel the old one explicitly to
+	// avoid double-billing.
+	const existing = await getOrgStripeIds(organizationId)
+	const oldSubscriptionId = existing?.stripeSubscriptionId ?? null
+
+	// Retrieve the full subscription with price+product expanded so that
+	// resolvePlanFromSubscription can read metadata (Stripe caps expansion at 4 levels).
+	const expandedSubscription = await stripe.subscriptions.retrieve(
+		subscription.id,
+		{ expand: ['items.data.price.product'] }
+	)
+
+	await syncSubscriptionFromStripe({
+		organizationId,
+		stripeCustomerId: customerId,
+		subscription: expandedSubscription
+	})
+
+	// Cancel the replaced subscription so the customer is not charged twice.
+	// This safety net applies to edge cases where a second subscription was
+	// created despite the direct-update path (e.g. stale DB state).
+	if (oldSubscriptionId && oldSubscriptionId !== subscription.id) {
+		try {
+			await stripe.subscriptions.cancel(oldSubscriptionId)
+		} catch (err) {
+			/*
+			  The customer now holds two live Stripe subscriptions and is billed
+			  for both. No request in scope here - this runs from a helper - so
+			  the report carries the ids instead.
+			*/
+			reportServerError(err, {
+				properties: {
+					oldSubscriptionId,
+					newSubscriptionId: subscription.id
+				}
+			})
+		}
+	}
+
+	return base
+}

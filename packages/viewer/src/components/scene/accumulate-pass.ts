@@ -37,11 +37,15 @@ void main() {
 /**
  * The final pass of the viewer's composer. Owns the presented image:
  *
- * - `present()`: draw this frame's input straight to the canvas (motion).
+ * - `present(keepHistory)`: draw this frame's input to the canvas (motion).
+ *   With `keepHistory` it is kept as the history too, so a redraw shows the
+ *   last frame presented; that costs a full-size copy, so only a canvas
+ *   something else draws over asks for it.
  * - `accumulate(sample)`: fold this frame's input into the running average,
  *   then draw the average to the canvas (at rest, jittered).
- * - `presentHistory()`: redraw the converged average without rendering the
- *   scene, for when something else draws onto the same canvas each frame.
+ * - `presentHistory()`: redraw the last presented frame without rendering
+ *   the scene, for when something else draws onto the same canvas each frame:
+ *   at rest, or while a new model's shaders compile.
  *
  * Averaging happens after tone mapping, in linear half-float: resolving
  * display-referred values is what keeps bright edges from aliasing.
@@ -52,6 +56,7 @@ export class AccumulatePass extends Pass {
 	private write: WebGLRenderTarget
 	private mode: 'present' | 'accumulate' = 'present'
 	private sample = 0
+	private keepHistory = false
 
 	constructor() {
 		super('AccumulatePass')
@@ -75,8 +80,9 @@ export class AccumulatePass extends Pass {
 		this.needsSwap = false
 	}
 
-	present() {
+	present(keepHistory: boolean) {
 		this.mode = 'present'
+		this.keepHistory = keepHistory
 	}
 
 	accumulate(sample: number) {
@@ -84,7 +90,7 @@ export class AccumulatePass extends Pass {
 		this.sample = sample
 	}
 
-	/** Redraws the last converged average onto the canvas. */
+	/** Redraws the last presented frame onto the canvas. */
 	presentHistory(renderer: WebGLRenderer) {
 		this.draw(renderer, this.read.texture, this.read.texture, 1, null)
 	}
@@ -96,8 +102,14 @@ export class AccumulatePass extends Pass {
 		const input = inputBuffer?.texture ?? null
 		const output = this.renderToScreen ? null : inputBuffer
 
-		if (this.mode === 'present') {
+		if (this.mode === 'present' && !this.keepHistory) {
 			this.draw(renderer, input, input, 1, output)
+			return
+		}
+
+		if (this.mode === 'present') {
+			this.draw(renderer, input, input, 1, this.read)
+			this.draw(renderer, this.read.texture, this.read.texture, 1, output)
 			return
 		}
 

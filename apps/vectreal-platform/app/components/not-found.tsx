@@ -19,7 +19,7 @@ import { buildMeta } from '../lib/seo'
  * response body a loader wrote on purpose replaces the generic description;
  * an exception's message never does.
  */
-export function PublicErrorState({
+function PublicErrorState({
 	kind,
 	detail
 }: {
@@ -104,7 +104,7 @@ const ERROR_PAGE_TITLE: Record<PublicErrorKind, string> = {
 }
 
 /** Kept out of search results, and with no canonical pointing anywhere. */
-export function errorPageMeta(kind: PublicErrorKind) {
+function errorPageMeta(kind: PublicErrorKind) {
 	return buildMeta(
 		[{ title: `${ERROR_PAGE_TITLE[kind]} - Vectreal` }],
 		undefined,

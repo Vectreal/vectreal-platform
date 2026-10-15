@@ -1,4 +1,5 @@
 import { useIsMobile } from '@shared/components/hooks/use-mobile'
+import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
 import posthog from 'posthog-js'
@@ -6,25 +7,34 @@ import { useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
-import { DynamicSidebar, ToolSidebar } from '.'
 import OptimizationDrawer from './optimization/optimization-drawer'
-import PreviewCameraControls from './preview-camera-controls'
+import {
+	usePublishSizeProjection,
+	useSizeExcludesTextureEncoding
+} from './optimization/use-publish-size-projection'
+import { SaveProgressPanel } from './save-progress/save-progress-panel'
 import { EmptyStage } from './shell/empty-stage'
 import { PublishCard } from './shell/publish-card'
 import { PublisherHeader } from './shell/publisher-header'
 import { PublisherSurfaceFallback } from './shell/publisher-surface-fallback'
-import { PUBLISHER_LAYER } from './shell/shell-layout'
+import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell/shell-layout'
 import { ToolBar } from './shell/tool-bar'
+import { DynamicSidebar } from './sidebars/dynamic-sidebar'
 import PublishSidebarContent from './sidebars/publish-sidebar/publish-sidebar-content'
 import { PublishSidebarProvider } from './sidebars/publish-sidebar/publish-sidebar-context'
 import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish-sidebar-view-model'
+import { ToolSidebar } from './sidebars/tool-sidebar'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
-import { useOptimizationDrawerFlow, usePublisherScene } from '../../hooks'
+import { useOpenExampleScene } from '../../hooks/scene-loader/use-open-example-scene'
 import { useImgTo3dGeneration } from '../../hooks/use-img-to-3d-generation'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
+import { useOptimizationDrawerFlow } from '../../hooks/use-optimization-drawer-flow'
+import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
+import { usePublisherScene } from '../../hooks/use-publisher-scene'
 import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
+import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
 import {
 	arePublisherActionsDisabledAtom,
@@ -75,6 +85,7 @@ const OverlayControls = ({
 	const {
 		latestSceneStats,
 		isSceneSizeLoading,
+		isProjectingSceneBytes,
 		optimizedSceneBytes,
 		clientSceneBytes,
 		optimizedTextureBytes,
@@ -84,6 +95,8 @@ const OverlayControls = ({
 	// Ensure scene size is calculated and bottom bar is populated before the tool
 	// sidebar is opened for the first time.
 	useSceneSizeInitializer()
+	usePublishSizeProjection()
+	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
 
 	// Save location comes from the Jotai atom - initialized in publisher-layout
 	// and updated by the shell-level SceneNameAndLocation picker.
@@ -108,21 +121,6 @@ const OverlayControls = ({
 		sceneManifest
 	})
 
-	const {
-		effectiveSaveAvailability,
-		requiresSizeReduction,
-		isOptimizationDrawerOpen,
-		handleOptimizationDrawerChange,
-		// Two ways in, by design. The card's size line is the direct route from
-		// the signal itself; the sidebar's Delivery section is the one you meet
-		// on the way to publishing.
-		handleOpenOptimizationDrawer,
-		openReoptimizeDrawer
-	} = useOptimizationDrawerFlow({
-		saveAvailability,
-		hasUnsavedLocationChange
-	})
-
 	/*
 	  The one place that decides what the publisher is showing. The canvas stage
 	  below and the chrome around it both read it, so they cannot disagree.
@@ -141,6 +139,7 @@ const OverlayControls = ({
 	})
 	// Here rather than in the empty stage, which a revalidation unmounts mid-download: see its `sampleDownload`.
 	const sampleDownload = useSampleDownload()
+	const openExampleScene = useOpenExampleScene(uploadFiles)
 	// Here for the same reason: opening a variant unmounts the empty stage.
 	const imgTo3d = useImgTo3dGeneration(uploadFiles)
 	/*
@@ -173,7 +172,7 @@ const OverlayControls = ({
 					currentSceneBytes: optimizedSceneBytes,
 					initialTextureBytes: clientTextureBytes,
 					currentTextureBytes: optimizedTextureBytes,
-					isSceneSizeComputing: isSceneSizeLoading
+					isSceneSizeComputing: isSceneSizeLoading || isProjectingSceneBytes
 				}
 			}),
 		[
@@ -184,10 +183,37 @@ const OverlayControls = ({
 			optimizedSceneBytes,
 			clientTextureBytes,
 			optimizedTextureBytes,
-			isSceneSizeLoading
+			isSceneSizeLoading,
+			isProjectingSceneBytes
 		]
 	)
 	const currentSceneBytes = resolvedSceneMetrics.sceneBytes.current
+	const isSceneSizeComputing = resolvedSceneMetrics.isSceneSizeComputing
+	// Checked against a size publish would ship: the projection, or the file a
+	// publish stored. The server checks the stored file when publishing. Never
+	// the stored package the card falls back to before either is known, which
+	// is uncompressed and would nudge scenes that publish well within it.
+	const publishSizeBytes =
+		optimizedSceneBytes ?? latestSceneStats?.currentSceneBytes ?? null
+	const isOverSizeLimit =
+		!isSceneSizeComputing &&
+		isSceneOverSizeLimit(publishSizeBytes ?? undefined, maxSceneBytes)
+
+	const {
+		effectiveSaveAvailability,
+		isOptimizationDrawerOpen,
+		handleOptimizationDrawerChange,
+		// Two ways in, by design. The card's size line is the direct route from
+		// the signal itself; the sidebar's Delivery section is the one you meet
+		// on the way to publishing.
+		handleOpenOptimizationDrawer,
+		openReoptimizeDrawer
+	} = useOptimizationDrawerFlow({
+		saveAvailability,
+		hasUnsavedLocationChange,
+		isOverSizeLimit
+	})
+
 	const publishedAt =
 		typeof publishedMeta?.publishedAt === 'string'
 			? publishedMeta.publishedAt
@@ -209,6 +235,15 @@ const OverlayControls = ({
 		const authPath = `/sign-in?next=${encodeURIComponent(nextPath)}&scene_saved=true`
 		navigate(authPath)
 	}, [persistPendingSceneDraft, openSceneId, navigate])
+
+	// The save panel's Retry runs the same save the header's Save button does.
+	const { handleSaveScene } = usePublisherSaveAction({
+		sceneId,
+		userId: user?.id,
+		saveLocationTarget,
+		onRequireAuth: handleRequireAuthForSave,
+		saveSceneSettings
+	})
 
 	const publishSidebarViewModel = useMemo(
 		() =>
@@ -249,7 +284,6 @@ const OverlayControls = ({
 			onOpenOptimizationDrawer: openReoptimizeDrawer
 		}),
 		[
-			sceneId,
 			projectId,
 			user?.id,
 			handleRequireAuthForSave,
@@ -277,7 +311,7 @@ const OverlayControls = ({
 	const handleLogout = useCallback(async () => {
 		posthog?.reset()
 		await submit(null, { method: 'post', action: '/auth/logout' })
-	}, [posthog, submit])
+	}, [submit])
 
 	const handlePublishPanelChange = useCallback(
 		(isOpen: boolean) => {
@@ -329,6 +363,7 @@ const OverlayControls = ({
 						isMobile={isMobile}
 						onUpload={uploadFiles}
 						sampleDownload={sampleDownload}
+						onOpenExample={openExampleScene}
 						recentScenes={recentScenes}
 						imgTo3d={imgTo3dEnabled ? imgTo3d : undefined}
 					/>
@@ -357,15 +392,28 @@ const OverlayControls = ({
 
 						<ToolSidebar isMobile={isMobile} />
 
-						<PublishCard
-							sceneBytes={currentSceneBytes}
-							isSceneSizeLoading={isSceneSizeLoading}
-							statusText={optimizerStatusText}
-							isPublished={Boolean(publishedAt)}
-							onOpenPublishPanel={handleOpenPublishPanel}
-							onOpenOptimization={handleOpenOptimizationDrawer}
-							disabled={arePublisherActionsDisabled}
-						/>
+						<div
+							className={cn(
+								// Only the surfaces in the column take the pointer: the card
+								// keeps its space while preview hides it, and the canvas
+								// under that space must stay draggable.
+								'pointer-events-none absolute top-0 right-0 bottom-0 flex w-60 flex-col justify-end gap-2',
+								PUBLISHER_EDGE_INSET,
+								PUBLISHER_LAYER.card
+							)}
+						>
+							<SaveProgressPanel onRetry={() => void handleSaveScene()} />
+							<PublishCard
+								sceneBytes={currentSceneBytes}
+								isSceneSizeLoading={isSceneSizeComputing}
+								sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}
+								statusText={optimizerStatusText}
+								isPublished={Boolean(publishedAt)}
+								onOpenPublishPanel={handleOpenPublishPanel}
+								onOpenOptimization={handleOpenOptimizationDrawer}
+								disabled={arePublisherActionsDisabled}
+							/>
+						</div>
 
 						<DynamicSidebar
 							open={showPublishPanel}
@@ -385,13 +433,10 @@ const OverlayControls = ({
 						<OptimizationDrawer
 							open={isOptimizationDrawerOpen}
 							onOpenChange={handleOptimizationDrawerChange}
-							isOverSizeLimit={requiresSizeReduction}
+							isOverSizeLimit={isOverSizeLimit}
 							maxSceneBytes={maxSceneBytes}
-							dashboardHref={sceneDetailsHref ?? '/dashboard'}
 							isMobile={isMobile}
 						/>
-
-						<PreviewCameraControls />
 					</>
 				)}
 			</div>

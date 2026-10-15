@@ -39,8 +39,9 @@ import {
 	LayoutDashboard,
 	ArrowUpCircleIcon
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { Link, useFetcher } from 'react-router'
+
+import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
 import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
 
@@ -103,8 +104,7 @@ const DashboardSidebarContent = ({
 }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
 	const { toggleSidebar, openMobile } = useSidebar()
-	const [isClientMounted, setIsClientMounted] = useState(false)
-	useEffect(() => setIsClientMounted(true), [])
+	const isClientMounted = useIsClientMounted()
 
 	const handleSidebarClose = () => {
 		if (openMobile) {

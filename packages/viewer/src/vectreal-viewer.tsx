@@ -17,7 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import { cn } from '@shared/utils'
-import { resolveNormalizedScale } from '@vctrl/core'
+import {
+	resolveEnvironmentFiles,
+	resolveNormalizedScale,
+	resolveSceneBackdrop,
+	sceneBackdropCss
+} from '@vctrl/core'
 import {
 	AnimationSettings,
 	BoundsProps,
@@ -36,11 +41,19 @@ import {
 	useCallback,
 	useEffect,
 	useMemo,
+	useRef,
 	useState
 } from 'react'
 import { AnimationClip, Object3D } from 'three'
 
-import { AnimationControls, Canvas, Overlay } from './components'
+import {
+	AnimationControls,
+	CameraControls,
+	Canvas,
+	Overlay,
+	SceneViewReturn
+} from './components'
+import { CHROME_PLACEMENT } from './components/chrome-classes'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -48,17 +61,28 @@ import {
 	SceneControls,
 	SceneEnvironment,
 	resolveHotspotCameraTargets,
+	resolveHotspotMarkers,
 	SceneHotspots,
 	SceneModel,
 	ScenePostProcessing,
 	SceneShadows
 } from './components/scene'
+import { shouldShowCameraControls } from './components/scene/camera-controls-rule'
+import { type ClipExtentRegistry } from './components/scene/clip-planes'
+import EnvironmentPrewarm from './components/scene/environment-prewarm'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
+import { preloadEnvironmentFiles } from './components/scene/scene-environment'
+import {
+	resolveHotspotViewName,
+	resolveSceneViewCameras
+} from './components/scene/scene-view-return'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { useHeldExecutor } from './hooks/use-held-executor'
+import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
+import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type {
 	BakedShadow,
 	SceneCameraSnapshotCapture,
@@ -102,6 +126,17 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	modelKey?: ModelKey
 
 	/**
+	 * Draws this object in place of `model` without changing what the scene is
+	 * about: `model` stays mounted, hidden, and framing, normalization, shadow
+	 * sizing, animation and hotspots keep reading it, so swapping this in and out
+	 * leaves all of them as they were. Shadows are cast by what is drawn. Used to
+	 * show another rendition of the same model for a moment, such as the
+	 * original beside an optimized result. The displayed object is not animated:
+	 * playback stays bound to `model`.
+	 */
+	displayedModel?: Object3D
+
+	/**
 	 * Animation clips belonging to `model`, as parsed from the same glTF.
 	 * Without these no animation runtime is mounted.
 	 */
@@ -126,7 +161,7 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * - 'dark': Force dark theme
 	 * - 'system': Use system preference (default)
 	 */
-	theme?: 'light' | 'dark' | 'system'
+	theme?: ViewerTheme
 
 	// --- Performance ---
 
@@ -227,6 +262,40 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * drawing a second copy of the same text over the model.
 	 */
 	revealHotspotContent?: boolean
+	/**
+	 * Whether the viewer draws its way back from a hotspot's camera. Default true.
+	 *
+	 * While the view stands at a camera a hotspot flew it to, a "Back to scene
+	 * view" control is drawn, and Escape inside the viewer does the same: both
+	 * return to the scene camera the visitor was on before, or the scene's
+	 * default when there was none. Turn it off only where something else
+	 * offers the way back - a host's own control can send
+	 * `return_to_scene_view`, which works either way.
+	 */
+	showSceneViewReturn?: boolean
+	/**
+	 * Whether the viewer draws its own animation playback controls. Default true.
+	 *
+	 * They appear only when the scene's `animationOptions.showControls` asks for
+	 * them; this lets a host that draws its own controls keep them off anyway.
+	 * Such a host drives playback with the `set_animation_playing` and
+	 * `restart_animation` commands and follows `animation_state_changed`.
+	 * The built-in controls are exported as `AnimationControls` for a host that
+	 * wants the same look in its own layout.
+	 */
+	showAnimationControls?: boolean
+	/**
+	 * Whether the viewer draws its own switcher between the scene cameras.
+	 * Default true.
+	 *
+	 * It appears only when the scene has two or more scene cameras and its
+	 * `cameraOptions.showControls` is not false; hotspot cameras never count.
+	 * Turn it off where the host offers its own way between cameras, driven by
+	 * `activate_camera` and following `camera_changed`. The built-in control is
+	 * exported as `CameraControls` for a host that wants the same look in its
+	 * own layout.
+	 */
+	showCameraControls?: boolean
 
 	// --- Editor affordances ---
 	// Editing-surface features (e.g. the publisher). Public/embedded viewers omit
@@ -393,6 +462,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		// Content
 		children,
 		modelKey,
+		displayedModel,
 		animations,
 		animationOptions,
 		// Container & appearance
@@ -412,6 +482,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		hotspotColor,
 		showHotspotMarkers,
 		revealHotspotContent,
+		showSceneViewReturn = true,
+		showAnimationControls = true,
+		showCameraControls = true,
 		// Editor affordances
 		shadowLightEditable,
 		showInternalHotspots = false,
@@ -438,6 +511,23 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 
 	const hasContent = !!(model || children)
 
+	// Prefetched as soon as a surface says which environment it wants, which
+	// can be long before there is content to light: the map is otherwise only
+	// requested once the model has loaded and the scene mounts. A surface that
+	// has not decided yet prefetches nothing rather than the default.
+	const environmentFiles = envOptions
+		? resolveEnvironmentFiles(envOptions)
+		: null
+	const environmentFilesKey = environmentFiles && String(environmentFiles)
+	// Painted by the viewer itself, so every surface shows the same stage
+	// rather than whatever its own page happens to be behind the canvas.
+	const backdrop = resolveSceneBackdrop(envOptions)
+	useEffect(() => {
+		if (environmentFiles) preloadEnvironmentFiles(environmentFiles)
+		// Keyed on the file list's value: the array is rebuilt on every render.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [environmentFilesKey])
+
 	// Bounds-based camera framing is the fallback for scenes without saved camera positions.
 	// Explicit boundsOptions.enable overrides this inference.
 	const boundsEnabled =
@@ -446,6 +536,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 			: !cameraOptions?.cameras?.some((c) => c.position != null)
 	const [isInitialFramingComplete, setIsInitialFramingComplete] =
 		useState(false)
+	// Latched on the first compile: a later model swap keeps the previous frame
+	// up while it compiles, and must not bring the loader back.
+	const [areShadersReady, setAreShadersReady] = useState(false)
 	const [controlsEnabledOverride, setControlsEnabledOverride] = useState<
 		null | boolean
 	>(null)
@@ -457,24 +550,32 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		zoom?: boolean
 		pan?: boolean
 	} | null>(null)
-	const [transitionOverride, setTransitionOverride] = useState<
-		CameraProps['sceneTransition'] | null
-	>(null)
+	/*
+	  A host's `set_transition`. A ref, written the moment the command lands:
+	  state reaches the camera only on the next render, and an `activate_camera`
+	  sent straight after it runs before that render would. Held here rather
+	  than in the camera layer because the canvas unmounts while the viewer is
+	  out of view, and the override has to outlive it.
+	*/
+	const transitionOverride = useRef<CameraProps['sceneTransition'] | null>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	const animation = useAnimationRuntime({
 		animations,
 		options: animationOptions,
-		hasContent
+		hasContent,
+		allowControls: showAnimationControls,
+		onInteractionEvent
 	})
 
 	useEffect(() => {
 		if (!hasContent) {
 			setIsInitialFramingComplete(false)
+			setAreShadersReady(false)
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
-			setTransitionOverride(null)
+			transitionOverride.current = null
 		}
 	}, [hasContent])
 
@@ -482,7 +583,15 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		setIsInitialFramingComplete(true)
 	}, [])
 
+	const handleShadersReady = useCallback(() => {
+		setAreShadersReady(true)
+	}, [])
+
 	const { forwardCommand: forwardAnimationCommand } = animation
+
+	// Filled in below, once the camera state it reads exists. A ref keeps the
+	// command executor's identity independent of every camera change.
+	const returnToSceneViewRef = useRef<() => boolean>(() => false)
 
 	const executeViewerCommand = useCallback(
 		(command: ViewerCommand) => {
@@ -492,6 +601,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					break
 				case 'focus_hotspot':
 					hotspotLayer.execute(command)
+					break
+				case 'return_to_scene_view':
+					returnToSceneViewRef.current()
 					break
 				case 'set_controls_enabled':
 					setControlsEnabledOverride(command.enabled)
@@ -506,11 +618,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					setControlsOptionsOverride((prev) => ({ ...prev, ...command }))
 					break
 				case 'set_transition':
-					setTransitionOverride({
+					transitionOverride.current = {
 						type: command.transitionType,
 						duration: command.duration,
 						easing: command.easing
-					})
+					}
 					break
 				case 'restart_animation':
 				case 'seek_animation_clip':
@@ -586,17 +698,97 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	 */
 	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
 
+	// The markers this surface draws, by the same rule `SceneHotspots` draws
+	// them, so a hidden or internal hotspot's camera is never a hotspot view.
+	const hotspotMarkers = useMemo(
+		() =>
+			resolveHotspotMarkers(hotspots, {
+				includeInternal: showInternalHotspots,
+				includeHidden: showHiddenHotspots
+			}),
+		[hotspots, showInternalHotspots, showHiddenHotspots]
+	)
+
+	const activateCamera = useCallback(
+		(cameraId: string) =>
+			cameraLayer.execute({ type: 'activate_camera', cameraId }),
+		[cameraLayer]
+	)
+
+	const sceneViewReturn = useSceneViewReturn({
+		cameras: cameraOptions?.cameras,
+		hotspots,
+		markers: hotspotMarkers,
+		activeCameraId,
+		activateCamera
+	})
+	const { noteCamera, returnToSceneView } = sceneViewReturn
+	returnToSceneViewRef.current = returnToSceneView
+
+	// The views the switcher steps through: scene cameras, never a hotspot's
+	// close-up, read by the same rule the way back uses.
+	const sceneViewCameras = useMemo(
+		() => resolveSceneViewCameras(cameraOptions?.cameras, hotspots ?? []),
+		[cameraOptions?.cameras, hotspots]
+	)
+	const showCameraSwitcher = shouldShowCameraControls({
+		sceneViewCount: sceneViewCameras.length,
+		authorAllows: cameraOptions?.showControls,
+		hostAllows: showCameraControls
+	})
+
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
 			if (event.type === 'camera_changed') {
 				setActiveCameraId(event.cameraId)
+				noteCamera(event.cameraId)
 			} else if (event.type === 'initial_framing_completed') {
 				setActiveCameraId(event.cameraId)
+				noteCamera(event.cameraId)
 			}
 			onInteractionEvent?.(event)
 		},
-		[onInteractionEvent]
+		[noteCamera, onInteractionEvent]
 	)
+
+	/**
+	 * Escape inside the viewer leaves a hotspot's camera, like the control.
+	 *
+	 * A native listener on the container, so it hears only keys pressed while
+	 * focus is inside this viewer and a host page keeps its own Escape. An open
+	 * hotspot card claims the key first: its handler stops propagation inside
+	 * drei's own React root, below this container, so the first Escape closes
+	 * the card and the second leaves the view.
+	 */
+	const [container, setContainer] = useState<HTMLDivElement | null>(null)
+
+	// What the viewer draws besides the model registers here, and the model's
+	// clip planes are fitted to it as well.
+	const [clipExtents] = useState<ClipExtentRegistry>(() => new Set())
+
+	useEffect(() => {
+		if (!container || !showSceneViewReturn) return
+
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape' || event.defaultPrevented) return
+			// An open dialog inside the viewer (the info popover) or the open
+			// camera list, from its options or its expanded trigger, owns Escape.
+			// Their handlers run after this native listener, so they cannot claim
+			// the key first.
+			if (
+				event.target instanceof Element &&
+				event.target.closest(
+					'[role="dialog"], [role="listbox"], [aria-expanded="true"]'
+				)
+			) {
+				return
+			}
+			if (returnToSceneViewRef.current()) event.preventDefault()
+		}
+
+		container.addEventListener('keydown', handleKeyDown)
+		return () => container.removeEventListener('keydown', handleKeyDown)
+	}, [container, showSceneViewReturn])
 
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
@@ -630,9 +822,11 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 		}
 	}, [executeViewerCommand, onCommandExecutorReady])
 
+	// Without the composer nothing compiles ahead of the first frame, so there
+	// is nothing to wait for.
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
-		isInitialFramingComplete,
+		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
 		Boolean(loader)
 	)
 	const shadowsEnabled = shadowsOptions?.enabled ?? false
@@ -647,8 +841,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					'viewer vctrl-viewer h-full w-full overflow-clip font-[DM_Sans_Variable,sans-serif] text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
 					className
 				)}
+				containerBackground={backdrop ? sceneBackdropCss(backdrop) : undefined}
 				theme={theme}
 				loadingState={loadingState}
+				onContainerChange={setContainer}
 				overlay={
 					<Overlay
 						loadingState={loadingState}
@@ -657,10 +853,34 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 						animationControls={
 							animation.showControls ? (
 								<AnimationControls
+									className={CHROME_PLACEMENT.animationControls}
 									playing={animation.status.playing}
 									complete={animation.status.complete}
 									onToggle={animation.toggle}
 									onRestart={animation.restart}
+								/>
+							) : null
+						}
+						cameraControls={
+							showCameraSwitcher ? (
+								<CameraControls
+									className={CHROME_PLACEMENT.cameraControls}
+									cameras={sceneViewCameras}
+									activeCameraId={activeCameraId}
+									offListLabel={resolveHotspotViewName(
+										activeCameraId,
+										hotspots ?? []
+									)}
+									onSelect={activateCamera}
+								/>
+							) : null
+						}
+						sceneViewReturn={
+							showSceneViewReturn ? (
+								<SceneViewReturn
+									hotspotName={sceneViewReturn.hotspot?.name ?? null}
+									onReturn={returnToSceneView}
+									focusOnLeave={container}
 								/>
 							) : null
 						}
@@ -669,9 +889,9 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					/>
 				}
 				enableViewportRendering={enableViewportRendering}
-				// 'percentage' = PCFShadowMap. AccumulativeShadows bakes its own soft
-				// shadow from its RandomizedLight, so the realtime filter just needs to
-				// be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
+				// 'percentage' = PCFShadowMap. The accumulative shadow bake softens its
+				// own shadow by jittering its lights, so the realtime filter just needs
+				// to be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
 				shadows={shadowsEnabled ? 'percentage' : false}
 				// The composer antialiases inside its own buffers and presents a
 				// full-screen quad, so a multisampled canvas would only cost memory
@@ -683,6 +903,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 					powerPreference: 'low-power'
 				}}
 			>
+				<EnvironmentPrewarm files={environmentFiles} />
 				<Suspense fallback={null}>
 					{hasContent && (
 						<>
@@ -695,6 +916,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								aoAtRest={shadowsOptions?.aoAtRest}
 								model={model}
 								active={animation.status.active}
+								onShadersReady={handleShadersReady}
 							/>
 							<SceneControls
 								{...controlsOptions}
@@ -716,11 +938,10 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 								<SceneCamera
 									{...cameraOptions}
 									cameras={aimedCameras}
-									sceneTransition={
-										transitionOverride ?? cameraOptions?.sceneTransition
-									}
+									transitionOverride={transitionOverride}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
+									model={model}
 									onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
 									onCommandExecutorReady={cameraLayer.register}
 									onInitialFramingComplete={handleInitialFramingComplete}
@@ -736,22 +957,31 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 										onPlaybackStatusChange={animation.setStatus}
 									/>
 								)}
-								<Center top cacheKey={centerCacheKey}>
-									{model && (
+								{/*
+								  Only around a model: content passed as children is not
+								  centered, and an empty Center measures an empty box and
+								  writes a NaN offset into the scene graph.
+								*/}
+								{model && (
+									<Center top cacheKey={centerCacheKey}>
 										<SceneModel
 											cameraOptions={cameraOptions}
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
+											backdrop={backdrop}
 											object={model}
+											displayedObject={displayedModel}
 											modelKey={modelKey}
 											enableShadows={shadowsEnabled}
 											normalizationOptions={normalizationOptions}
 											onRawDiagonalComputed={onRawDiagonalComputed}
+											clipExtents={clipExtents}
 										/>
-									)}
-								</Center>
+									</Center>
+								)}
 								<SceneShadows
 									model={model}
+									displayedModel={displayedModel}
 									normalizationOptions={normalizationOptions}
 									{...shadowsOptions}
 									isModelAnimating={animation.status.active}
@@ -760,6 +990,7 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 									staticBake={staticShadowBake}
 									bakedShadow={bakedShadow}
 									onShadowBakeReady={onShadowBakeReady}
+									clipExtents={clipExtents}
 								/>
 								<SceneHotspots
 									hotspots={hotspots}

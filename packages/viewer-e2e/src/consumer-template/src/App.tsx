@@ -1,6 +1,6 @@
 import { useLoadModel } from '@vctrl/hooks'
 import { VectrealViewer } from '@vctrl/viewer'
-import { Component, useEffect, type ReactNode } from 'react'
+import { Component, useEffect, useState, type ReactNode } from 'react'
 
 /*
   Three hotspots covering the visibility contract, so a real browser proves what
@@ -36,8 +36,40 @@ const E2E_HOTSPOTS = [
 		internalOnly: false,
 		stylePreset: 'dot' as const,
 		occlusionEnabled: false
+	},
+	{
+		id: 'camera-hotspot',
+		name: 'Camera marker',
+		body: 'A marker that flies its own camera.',
+		worldPosition: [0, -1.5, 0] as [number, number, number],
+		linkedCameraId: 'camera-hotspot-view',
+		visible: true,
+		internalOnly: false,
+		stylePreset: 'dot' as const,
+		occlusionEnabled: false
 	}
 ]
+
+/*
+  A scene camera to stand on and the camera the last marker flies to, so the
+  way back out of a hotspot view is exercised from the published package.
+*/
+const E2E_CAMERAS = {
+	cameras: [
+		{
+			cameraId: 'front',
+			name: 'Front',
+			initial: true,
+			position: [0, 0.5, 6] as [number, number, number]
+		},
+		{
+			cameraId: 'camera-hotspot-view',
+			name: 'Camera marker view',
+			kind: 'hotspot' as const,
+			position: [1, -2, 3] as [number, number, number]
+		}
+	]
+}
 
 // Reusable error boundary: a render-time crash would otherwise be swallowed by
 // React. We mirror it onto a window flag the e2e polls, and swap in a marker node.
@@ -77,8 +109,25 @@ function HooksProbe() {
 }
 
 export default function App() {
+	// Like a real host: an inline callback that re-renders the page on every
+	// viewer event, so each render hands the viewer a new function. A camera a
+	// marker flew to must survive that.
+	const [lastEvent, setLastEvent] = useState('none')
+
 	return (
-		<div data-testid="viewer-host" style={{ height: '100vh', width: '100vw' }}>
+		<div
+			data-testid="viewer-host"
+			data-last-viewer-event={lastEvent}
+			style={{ height: '100vh', width: '100vw' }}
+		>
+			{/*
+			  A host element sharing a class name with a utility the viewer ships.
+			  The viewer's stylesheet must not reach it: an app using Tailwind
+			  would see its own `hidden md:flex` stuck hidden.
+			*/}
+			<div data-testid="host-utility" className="hidden">
+				host
+			</div>
 			<CrashBoundary
 				testid="hooks-crashed"
 				onCrash={(message) => {
@@ -97,6 +146,12 @@ export default function App() {
 					theme="dark"
 					controlsOptions={{ autoRotate: false }}
 					hotspots={E2E_HOTSPOTS}
+					cameraOptions={E2E_CAMERAS}
+					onInteractionEvent={(event) => {
+						// The scene has framed and drawn: what the markers wait for.
+						if (event.type === 'viewer_ready') window.__VIEWER_READY__ = true
+						setLastEvent(event.type)
+					}}
 					onCommandExecutorReady={() => {
 						// Viewer scene graph is live and the imperative API is wired up.
 						window.__VIEWER_E2E__ = { status: 'mounted' }

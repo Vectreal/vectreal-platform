@@ -4,6 +4,7 @@ import { VectrealViewer } from '@vctrl/viewer'
 import { useRef } from 'react'
 
 import rocketUrl from '../../assets/models/rocket-balanced.glb?url'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 
 import type { Group } from 'three'
 
@@ -33,12 +34,10 @@ function Rocket() {
 	  slowed. The CSS block in `globals.css` cannot reach a render loop, so the
 	  guard has to live here.
 	*/
-	const prefersReducedMotion =
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches
+	const reducedMotion = prefersReducedMotion()
 
 	useFrame((_, delta) => {
-		if (prefersReducedMotion || !ref.current) return
+		if (reducedMotion || !ref.current) return
 		ref.current.rotation.z += delta * 0.4
 	})
 
@@ -67,7 +66,7 @@ export default function DocsScenePreviewClient() {
 		<VectrealViewer
 			className="h-full w-full"
 			// A chrome model shows its environment, not a color of its own: the key preset left it a black silhouette.
-			envOptions={{ preset: 'studio-natural' }}
+			envOptions={{ preset: 'studio-soft' }}
 			shadowsOptions={{ enabled: false }}
 			boundsOptions={{ margin: 1.05 }}
 		>

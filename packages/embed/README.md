@@ -95,10 +95,10 @@ SDK after the `src` is set, or pass `iframeOrigin` explicitly.
 
 ## URL parameter shorthand
 
-Opening state, color scheme and hotspot presentation can be set with query parameters on the iframe
-`src`, no JavaScript required — `?camera`, `?autoRotate`, `?transition`, `?theme`,
-`?hotspots`, `?hotspotContent` and `?hotspotColor`. Values and behaviour are tabled once, in the
-[Embed SDK guide](https://vectreal.com/docs/guides/embed-sdk#url-parameters).
+Opening state, color scheme, the camera switcher and hotspot presentation can be set with query
+parameters on the iframe `src`, no JavaScript required: `?camera`, `?autoRotate`, `?transition`,
+`?theme`, `?cameraControls`, `?hotspots`, `?hotspotContent` and `?hotspotColor`. Values and
+behavior are tabled once, in the [Embed SDK guide](https://vectreal.com/docs/guides/embed-sdk#url-parameters).
 
 ## Documentation
 

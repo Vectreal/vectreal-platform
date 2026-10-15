@@ -117,6 +117,12 @@ export interface CameraProps {
 	 * Replaces per-camera CameraConfig.transition in new saves.
 	 */
 	sceneTransition?: CameraTransitionConfig
+	/**
+	 * Whether visitors get a switcher between the scene cameras. Absent means
+	 * yes. It is drawn only when there are two or more scene cameras to switch
+	 * between; hotspot cameras are reached through their markers and never count.
+	 */
+	showControls?: boolean
 }
 
 /**
@@ -202,7 +208,29 @@ type InheritedEnvProps = Pick<
 export interface EnvironmentProps extends InheritedEnvProps {
 	preset?: EnvironmentKey
 	environmentResolution?: EnvironmentResolution
+	/**
+	 * What the viewer paints behind the model while the environment map is not
+	 * shown as the {@link background}. The map still lights the model.
+	 *
+	 * Absent means nothing: the viewer stays transparent and the page it sits
+	 * on shows through, which is how every scene saved before this field
+	 * existed renders.
+	 */
+	backdrop?: SceneBackdrop
 }
+
+/**
+ * A flat stage behind the model, so its shadow lands on something.
+ *
+ * Colors are `#rrggbb` hex. The viewer paints it behind its transparent canvas
+ * rather than into the 3D scene, so the color on screen is exactly the one
+ * picked: the scene itself is tone mapped, and a clear color drawn there would
+ * be shifted by it.
+ */
+export type SceneBackdrop =
+	| { type: 'color'; color: string }
+	/** A vertical gradient from the top of the viewer to the bottom. */
+	| { type: 'gradient'; top: string; bottom: string }
 
 /**
  * Light configuration for accumulative shadows (a drei `RandomizedLight`).
@@ -224,6 +252,25 @@ export interface BakedShadowRef {
 	assetId: string
 	/** Bake signature the texture was captured with. */
 	signature: string
+	/**
+	 * The model measurements the signature was computed from. Absent on bakes
+	 * saved before it was recorded.
+	 */
+	basis?: BakeBasis
+}
+
+/**
+ * The model measurements a shadow bake was computed against.
+ *
+ * Stored because the model an embed loads cannot reproduce them: publishing
+ * Draco-compresses the GLB, and Draco's weld changes the vertex count, so a
+ * signature recomputed from the published model never matched the one the
+ * publisher saved, and every embed of a Draco-published scene re-baked.
+ */
+export interface BakeBasis {
+	footprint: number
+	radius: number
+	vertexCount: number
 }
 
 /**
@@ -414,6 +461,23 @@ export interface ScenePresentationSettings {
 	 * be the one that changes nothing for them.
 	 */
 	showInfoPopover?: boolean
+	/**
+	 * Whether an embed shows the scene's saved thumbnail behind its loader
+	 * until the 3D scene is ready.
+	 *
+	 * Absent means not shown: it is the last-saved thumbnail, which an author
+	 * opts into showing on a public page, and scenes saved before this field
+	 * existed showed none.
+	 */
+	showLoadingThumbnail?: boolean
+	/**
+	 * Whether publishing encodes the scene's textures as KTX2, which the GPU
+	 * samples compressed instead of decoding to full-size RGBA first.
+	 *
+	 * Absent means on, unless the scene is on the `original` optimization
+	 * preset, whose promise is that the published file is the upload.
+	 */
+	compressTexturesForGpu?: boolean
 }
 
 /**
@@ -485,6 +549,22 @@ export interface SceneAssetRef {
 /** Asset reference map keyed by asset identifier. */
 export type SceneAssetRefMap = Record<string, SceneAssetRef>
 
+/** The published GLB an embed loads, with what is known about it up front. */
+export interface PublishedModelRef extends SceneAssetRef {
+	/**
+	 * Whether the GLB needs the Draco decoder. Read from the GLB when it is
+	 * uploaded; absent for one published before that was recorded.
+	 */
+	usesDraco?: boolean
+	/**
+	 * Whether the GLB needs the meshopt decoder, or the KTX2 transcoder. Absent
+	 * means not needed: neither format was published before these were
+	 * recorded, so an older GLB that says nothing uses neither.
+	 */
+	usesMeshopt?: boolean
+	usesKtx2?: boolean
+}
+
 /** Optional scene metadata payload persisted with scene settings. */
 export interface SceneMetaData {
 	name?: string
@@ -517,7 +597,7 @@ export interface ServerScenePayload {
 	 * null and {@link assetRefs} carries only assets that live outside the GLB
 	 * (today: the persisted shadow bake).
 	 */
-	publishedModel?: SceneAssetRef | null
+	publishedModel?: PublishedModelRef | null
 }
 
 /** Resolved scene data contract consumed by loaders and viewer clients. */
@@ -535,6 +615,12 @@ export interface ServerSceneData extends SceneSettings {
 	gltfJson: ExtendedGLTFDocument | null
 	/** Binary asset data keyed by asset identifier. */
 	assetData: SerializedSceneAssetDataMap
+	/**
+	 * Assets the scene references by URL instead of carrying as bytes. On a
+	 * published scene that is the persisted shadow bake, which the viewer loads
+	 * itself, so it neither delays the model nor round-trips through base64.
+	 */
+	assetRefs?: SceneAssetRefMap
 }
 
 export interface TextureOptimization

@@ -2,6 +2,7 @@ import { cn } from '@shared/utils'
 
 import { Route } from './+types/home-page'
 import { ClosingDoors } from '../../components/home/closing-doors'
+import { FormatStrip } from '../../components/home/format-strip'
 import { HeroSheet } from '../../components/home/hero/hero-sheet'
 import { MissionStatement } from '../../components/home/mission-statement'
 import { OpenSourceSection } from '../../components/home/open-source-section'
@@ -18,8 +19,8 @@ export function meta(_: Route.MetaArgs) {
 }
 
 /*
-  Five sections, each a different shape: a figure, a product window, a signed
-  statement, an offer, and a code panel. The rhythm is the spacing reference's
+  Each section a different shape: a figure, a product window, a signed
+  statement, an offer, a row of type, a code panel, and the closing invitation. The rhythm is the spacing reference's
   steps. The hero and the product window are one argument, so they sit 128
   apart; everything after starts a new one at 128, and at 192 on a wide screen,
   where 128 read as cramped between sections this size.
@@ -57,6 +58,12 @@ const HomePage = () => (
 			</DitherReveal>
 		</section>
 
+		<section aria-label="Formats" className="container-page mt-32 lg:mt-48">
+			<DitherReveal>
+				<FormatStrip />
+			</DitherReveal>
+		</section>
+
 		<section
 			aria-labelledby="open-source-heading"
 			className="container-page relative isolate mt-32 lg:mt-48"
@@ -67,11 +74,12 @@ const HomePage = () => (
 			</DitherReveal>
 		</section>
 
+		{/* The one grain on the page in the brand, rising behind the closing figure and clear of the buttons. */}
 		<section
 			aria-label="Where to go next"
-			className="container-page relative isolate mt-32 pb-32 lg:mt-48 lg:pb-48"
+			className="container-page relative isolate mt-32 pb-32 [--grain:rgb(var(--orange-rgb)/0.18)] lg:mt-48 lg:pb-48"
 		>
-			<DitherGrain origin="bottom" className={cn(BLEED, '-top-32')} />
+			<DitherGrain origin="right" className={cn(BLEED, '-top-32')} />
 			<DitherReveal>
 				<ClosingDoors />
 			</DitherReveal>

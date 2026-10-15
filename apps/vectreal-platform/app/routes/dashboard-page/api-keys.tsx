@@ -45,7 +45,6 @@ import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destru
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
 import { useOncePerFetcherResponse } from '../../hooks/use-once-per-fetcher-response'
-import { isApiKeyKindDisclosable } from '../../lib/domain/auth/api-key-disclosure'
 import { resolveApiKeyState } from '../../lib/domain/auth/api-key-lifecycle'
 import {
 	getAllUserApiKeys,
@@ -53,6 +52,7 @@ import {
 	rotateApiKey,
 	type ApiKeyWithDetails
 } from '../../lib/domain/auth/api-key-repository.server'
+import { resolveApiKeyValue } from '../../lib/domain/auth/api-key-value.server'
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import {
 	getOrgSubscription,
@@ -63,30 +63,14 @@ import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboa
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
 import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
-import { decryptEmbedToken } from '../../lib/security/embed-token-cipher.server'
 
 import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 /**
- * Whether this key's value can be put in front of its owner, and if not, why.
- *
- * The embed token is public by construction - `buildEmbedUrl` puts it in an
- * `iframe src` on the customer's own page - so the question this answers is
- * "can it be read back", not "may it be seen". `encrypted_key` exists for
- * exactly this, and `/api/projects/:projectId/api-keys` has been answering the
- * same question for the embed panel since #760.
- *
- * `revoked` is read first, and not as a synonym for a null ciphertext.
- * `revokeApiKey` clears the ciphertext on purpose, so both branches would fire
- * for a revoked row - and `never-stored` tells its owner to rotate, which
- * `rotateApiKey` refuses for anything that is not active. Wrong order is a
- * wrong instruction, not a cosmetic slip.
- *
- * Expired and inactive keys still return their value. This field is not asking
- * whether the key works; the Status column already does that, from the same
- * `resolveApiKeyState`. An expired key's value is still what identifies it in a
- * page that has started 404ing.
+ * This page's answer for one key's value: withheld from an actor who may not
+ * read keys, otherwise whatever `resolveApiKeyValue` says, which is also what
+ * the embed panel's route reads.
  */
 function resolveRowValue(
 	key: ApiKeyWithDetails,
@@ -97,36 +81,7 @@ function resolveRowValue(
 		return { readable: false, reason: 'withheld' }
 	}
 
-	/*
-	  Asked before anything is decrypted, because it is a different question from
-	  the three below it: those are reasons a value cannot be produced, this is a
-	  reason it must not be. Today it never fires - every row is an `embed` key -
-	  and it exists so that the day a write-scoped kind is added, showing it is a
-	  decision someone has to make rather than the default.
-	*/
-	if (!isApiKeyKindDisclosable(key.apiKey.kind)) {
-		return { readable: false, reason: 'withheld' }
-	}
-
-	if (resolveApiKeyState(key.apiKey, now) === 'revoked') {
-		return { readable: false, reason: 'revoked' }
-	}
-
-	if (key.apiKey.encryptedKey === null) {
-		return { readable: false, reason: 'never-stored' }
-	}
-
-	/*
-	  `decryptEmbedToken` returns null for a ciphertext that no longer
-	  authenticates as well as for one that was never there, and this is the only
-	  place the two are still separable - the branch above has already taken the
-	  second case. Past this point they would be one indistinguishable null.
-	*/
-	const value = decryptEmbedToken(key.apiKey.encryptedKey)
-
-	return value === null
-		? { readable: false, reason: 'undecryptable' }
-		: { readable: true, value }
+	return resolveApiKeyValue(key.apiKey, now)
 }
 
 /**

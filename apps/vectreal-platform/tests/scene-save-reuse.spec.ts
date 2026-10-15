@@ -28,6 +28,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ok, stubSceneApi } from './fixtures/scene-api-stub'
 import { planSceneAssetNameBackfill } from '../app/lib/domain/asset/asset-name-backfill'
 import { executeSceneSaveOrchestrator } from '../app/lib/domain/scene/client/scene-save-orchestrator'
 
@@ -53,9 +54,6 @@ interface Saved {
 	sceneAssetIds: string[]
 }
 
-/** The envelope every real endpoint answers in. */
-const ok = (data: unknown) => Response.json({ success: true, data })
-
 const runSave = async (
 	existingAssets: Record<string, { assetId: string; contentHash: string }>,
 	assets: Map<string, Uint8Array>
@@ -65,33 +63,29 @@ const runSave = async (
 	let sceneAssetIds: string[] = []
 	let nextId = 0
 
-	vi.stubGlobal(
-		'fetch',
-		vi.fn(async (_url: string, init: { body: FormData }) => {
-			const form = init.body
-			const action = form.get('action')
+	stubSceneApi(async (form) => {
+		const action = form.get('action')
 
-			if (action === 'prepare-scene-upload') {
-				return ok({ sceneId: 's1', projectId: 'p1', existingAssets })
-			}
+		if (action === 'prepare-scene-upload') {
+			return ok({ sceneId: 's1', projectId: 'p1', existingAssets })
+		}
 
-			if (action === 'upload-scene-asset') {
-				const file = form.get('file') as File
-				uploaded.push(file.name)
-				uploadedBytes.push([...new Uint8Array(await file.arrayBuffer())])
-				nextId += 1
-				return ok({ assetId: `new-${nextId}` })
-			}
+		if (action === 'upload-scene-asset') {
+			const file = form.get('file') as File
+			uploaded.push(file.name)
+			uploadedBytes.push([...new Uint8Array(await file.arrayBuffer())])
+			nextId += 1
+			return ok({ assetId: `new-${nextId}` })
+		}
 
-			if (action === 'upload-scene-gltf') {
-				nextId += 1
-				return ok({ assetId: `gltf-${nextId}` })
-			}
+		if (action === 'upload-scene-gltf') {
+			nextId += 1
+			return ok({ assetId: `gltf-${nextId}` })
+		}
 
-			sceneAssetIds = JSON.parse(String(form.get('sceneAssetIds') ?? '[]'))
-			return ok({ sceneId: 's1' })
-		})
-	)
+		sceneAssetIds = JSON.parse(String(form.get('sceneAssetIds') ?? '[]'))
+		return ok({ sceneId: 's1' })
+	})
 
 	await executeSceneSaveOrchestrator({
 		userId: 'u1',

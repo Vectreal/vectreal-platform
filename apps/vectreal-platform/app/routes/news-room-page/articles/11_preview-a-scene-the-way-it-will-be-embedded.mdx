@@ -3,7 +3,7 @@ title: "Preview a scene the way it will be embedded"
 slug: "preview-a-scene-the-way-it-will-be-embedded"
 excerpt: "Once you have set your cameras, shadows and interactions, preview mode shows you that configuration with the editor gone, on the same page an embed renders. So you can check the work before the scene is published anywhere."
 publishedAt: "2026-08-12"
-updatedAt: "2026-09-04"
+updatedAt: "2026-10-12"
 category: "releases"
 tags:
   - "publisher"
@@ -30,7 +30,7 @@ sceneImage: "/media/images/newsroom/scene-preview-a-scene-the-way-it-will-be-emb
 
 You set up a scene across several tools. Cameras, shadows, the environment, hotspots, how the model responds to a drag. Preview mode takes the editor off the canvas and shows you what all of that adds up to, before the scene is published anywhere.
 
-<video src="/media/images/newsroom/11/preview-mode-enter.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 in the Vectreal Publisher, surrounded by tool rails, panels and a publish card. Preview mode switches on and the editing surface clears away, leaving the car alone on the page, dark here because the app is in dark mode, with a small Preview badge and a camera switcher along the bottom."></video>
+<video src="/media/images/newsroom/11/preview-mode-enter.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 in the Vectreal Publisher, with the tool bar along the top, a panel open and a publish card. Preview in the tool bar switches preview mode on and the editing surface clears away, leaving the car alone on the page, dark here because the app is in dark mode, with an Exit preview button where Preview was and a camera switcher along the bottom."></video>
 
 ## Why it is worth a second look
 
@@ -42,7 +42,7 @@ That is the pass preview mode is for. Not a first look at something you just upl
 
 ## What you are looking at is the embed
 
-The page a preview opens is the page an embed renders. One component behind two routes, differing in how the request is authenticated and running the same saved scene either way. Cameras frame the same way, shadows fall the same way, a drag behaves the same way. Press `H` and the preview badge and camera switcher go too, leaving one faint restore button in the corner and, apart from it, near enough what a visitor gets.
+The page a preview opens is the page an embed renders. One component behind two routes, differing in how the request is authenticated and running the same saved scene either way. Cameras frame the same way, shadows fall the same way, a drag behaves the same way. Press `H` and the preview badge goes too, leaving one faint restore button in the corner and, apart from it, what a visitor gets: the scene with its own controls, the camera switcher among them when the scene has more than one camera.
 
 So the check you do here is the check. If a camera clips into the model in preview, it clips on someone's product page, and there is nothing to confirm again after publishing.
 
@@ -50,15 +50,15 @@ Near enough, because two things are not identical, and both are worth knowing be
 
 An embed carries a small Vectreal mark in the corner on the free plan and loses it on the paid ones. Preview never carries it, on any plan, because it is our own page rather than a placement somebody bought. So a free-plan author is looking at slightly less than their visitor will be.
 
-The color scheme is settled at each end by whoever sits closest to the page. Preview follows the app, because it is inside the app: the preview badge and the camera switcher are drawn in app tokens, and light chrome over a dark scene is its own kind of wrong. An embed sits on a page we cannot see, so it follows the visitor's own browser setting unless the host states one with `?theme=light` or `?theme=dark`. Worth looking at the scene both ways, or pinning the scheme in the URL and looking at the one you pinned.
+The color scheme is settled at each end by whoever sits closest to the page. Preview follows the app, because it is inside the app: the preview badge is drawn in app tokens, and light chrome over a dark scene is its own kind of wrong. An embed sits on a page we cannot see, so it follows the visitor's own browser setting unless the host states one with `?theme=light` or `?theme=dark`. Worth looking at the scene both ways, or pinning the scheme in the URL and looking at the one you pinned.
 
 ## Two ways in
 
-**From the canvas.** The **Preview Mode** block in **Camera Controls** clears the editing surface and leaves the scene in front of you, unsaved changes included. Save stays disabled until you leave. This is the one to reach for mid-adjustment, because it runs on the configuration you are still working on rather than the one on disk.
+**From the canvas.** **Preview**, in the Publisher's tool bar, clears the editing surface and leaves the scene in front of you, unsaved changes included. Save stays disabled until you leave, with **Exit preview** in the button's place. This is the one to reach for mid-adjustment, because it runs on the configuration you are still working on rather than the one on disk.
 
-**On its own page.** **Open full preview**, in the same block, opens in a new tab and leaves the Publisher untouched behind it. The **Preview** button on the scene's page in the dashboard goes to the same place. Either way you are looking at the saved scene, so this is the one that answers whether what you committed is what you meant to commit.
+**On its own page.** **Open full preview**, the icon beside **Preview**, opens in a new tab and leaves the Publisher untouched behind it. It needs the scene saved once, since there is nothing on disk to show before that. The **Preview** button on the scene's page in the dashboard goes to the same place. Either way you are looking at the saved scene, so this is the one that answers whether what you committed is what you meant to commit.
 
-<video src="/media/images/newsroom/11/full-preview-chrome.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 on the full preview page, with a Preview badge at the top left, a hide control at the top right and the camera switcher along the bottom. Pressing H hides all three, leaving one faint restore button at the top right that brightens under the pointer, and pressing H again brings them back."></video>
+<video src="/media/images/newsroom/11/full-preview-chrome.mp4" autoPlay muted loop playsInline aria-label="A black Porsche GT3 on the full preview page, with a Preview badge at the top left, a hide control at the top right and the camera switcher along the bottom. Pressing H hides the badge and the hide control, leaving one faint restore button at the top right that brightens under the pointer, while the camera switcher stays because a visitor would have it too. Pressing H again brings them back."></video>
 
 Leaving always lands on the scene's page in the dashboard rather than wherever you came from. We would rather put you next to the thing you were just looking at than behind it.
 

@@ -12,6 +12,7 @@
 
 import { ApiResponse } from '@shared/utils'
 
+import { quotaExceededResponse } from '../../lib/domain/billing/billing-refusal-response'
 import { QuotaExceededError } from '../../lib/domain/billing/quota-exceeded-error'
 import { parseDashboardMutationRequest } from '../../lib/domain/dashboard/dashboard-mutations'
 import {
@@ -91,16 +92,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		}
 
 		if (error instanceof QuotaExceededError) {
-			return withHeaders(
-				ApiResponse.quotaExceeded(error.message, {
-					limitKey: error.limitKey,
-					currentValue: error.currentValue,
-					limit: error.limit,
-					plan: error.plan,
-					upgradeTo: error.upgradeTo
-				}),
-				authHeaders
-			)
+			return withHeaders(quotaExceededResponse(error), authHeaders)
 		}
 
 		return withHeaders(

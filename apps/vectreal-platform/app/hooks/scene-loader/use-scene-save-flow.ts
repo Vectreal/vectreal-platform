@@ -1,4 +1,4 @@
-import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -13,14 +13,10 @@ import {
 	type SaveAvailabilityState
 } from '../../lib/domain/scene'
 import {
-	isSceneOverSizeLimit,
-	resolveSceneCurrentBytes
-} from '../../lib/domain/scene/scene-size-limit'
-import {
 	currentLocationAtom,
-	maxSceneBytesAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
+import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
 import { isSceneCurrentLocation } from '../../types/api'
 
 import type { UseSceneSaveFlowArgs } from './contracts'
@@ -48,15 +44,16 @@ export const useSceneSaveFlow = ({
 		setLastSavedSceneMeta,
 		lastSavedSceneId,
 		setLastSavedSceneId,
-		suppressDirtyDetection
+		suppressDirtyDetection,
+		hasUnsavedOriginalChoice
 	} = scenePersistence
 	const {
 		optimizationSettings,
 		optimizationReport,
-		latestSceneStats,
-		optimizedSceneBytes,
 		clientSceneBytes,
 		lastSavedReportSignature,
+		passRevision,
+		savedPassRevision,
 		setOptimizationRuntime
 	} = optimizationState
 	const {
@@ -66,12 +63,19 @@ export const useSceneSaveFlow = ({
 		createRequestId,
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
-		captureShadowBake
+		captureShadowBake,
+		resolveSource,
+		recordSavedSource
 	} = actions
 
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
-	const maxSceneBytes = useAtomValue(maxSceneBytesAtom)
+	const dispatchSaveProgress = useSetAtom(dispatchSaveProgressAtom)
+	// What the dirty check last said, for a failed save to put back.
+	const hasChangesRef = useRef(false)
+	// The open scene when a save settles, which may not be the one it saved.
+	const currentSceneIdRef = useRef(currentSceneId)
+	currentSceneIdRef.current = currentSceneId
 	const inFlightSaveRef = useRef<Promise<
 		SaveSceneResult | { unchanged: true } | undefined
 	> | null>(null)
@@ -81,27 +85,11 @@ export const useSceneSaveFlow = ({
 		settings: typeof currentSettings
 		sceneMeta: typeof sceneMetaState
 		reportSignature: null | string
-		sceneBytes: null | number
 	}>(null)
 
 	const reportSignature = useMemo(
 		() => buildOptimizationReportSignature(optimizationReport),
 		[optimizationReport]
-	)
-
-	const sceneCurrentBytes = useMemo(
-		() =>
-			resolveSceneCurrentBytes({
-				optimizedSceneBytes,
-				persistedCurrentSceneBytes: latestSceneStats?.currentSceneBytes,
-				clientSceneBytes
-			}),
-		[optimizedSceneBytes, latestSceneStats?.currentSceneBytes, clientSceneBytes]
-	)
-
-	const sceneOverSizeLimit = useMemo(
-		() => isSceneOverSizeLimit(sceneCurrentBytes, maxSceneBytes),
-		[sceneCurrentBytes, maxSceneBytes]
 	)
 
 	useEffect(() => {
@@ -133,17 +121,8 @@ export const useSceneSaveFlow = ({
 			!hasSceneMetaChanged(lastSavedSceneMeta, optimisticSaveBaseline.sceneMeta)
 		const reportSettled =
 			lastSavedReportSignature === optimisticSaveBaseline.reportSignature
-		const sceneBytesSettled =
-			optimisticSaveBaseline.sceneBytes === null ||
-			(latestSceneStats?.currentSceneBytes ?? null) ===
-				optimisticSaveBaseline.sceneBytes
-
-		if (
-			settingsSettled &&
-			sceneMetaSettled &&
-			reportSettled &&
-			sceneBytesSettled
-		) {
+		// A pass needs no baseline: the save records it when it lands.
+		if (settingsSettled && sceneMetaSettled && reportSettled) {
 			setOptimisticSaveBaseline(null)
 		}
 	}, [
@@ -152,50 +131,7 @@ export const useSceneSaveFlow = ({
 		lastSavedReportSignature,
 		lastSavedSceneMeta,
 		lastSavedSettings,
-		latestSceneStats,
 		optimisticSaveBaseline
-	])
-
-	useEffect(() => {
-		if (!reportSignature || lastSavedReportSignature || !latestSceneStats) {
-			return
-		}
-
-		const persistedInitialSceneBytes = latestSceneStats.initialSceneBytes
-		const persistedCurrentSceneBytes = latestSceneStats.currentSceneBytes
-
-		if (
-			typeof persistedInitialSceneBytes !== 'number' ||
-			typeof persistedCurrentSceneBytes !== 'number' ||
-			!optimizationReport ||
-			typeof optimizationReport !== 'object'
-		) {
-			return
-		}
-
-		const reportCandidate = optimizationReport as {
-			originalSize?: unknown
-			optimizedSize?: unknown
-		}
-
-		const isPersistedReportSignature =
-			reportCandidate.originalSize === persistedInitialSceneBytes &&
-			reportCandidate.optimizedSize === persistedCurrentSceneBytes
-
-		if (!isPersistedReportSignature) {
-			return
-		}
-
-		setOptimizationRuntime((prev) => ({
-			...prev,
-			lastSavedReportSignature: reportSignature
-		}))
-	}, [
-		reportSignature,
-		lastSavedReportSignature,
-		latestSceneStats,
-		optimizationReport,
-		setOptimizationRuntime
 	])
 
 	const saveToDB = useCallback(
@@ -208,8 +144,10 @@ export const useSceneSaveFlow = ({
 
 			const saveToken = Symbol('scene-save')
 			const savePromise = (async () => {
+				const source = resolveSource()
+				const savedSceneId = currentSceneId
 				try {
-					return await executeSceneSaveOrchestrator({
+					const result = await executeSceneSaveOrchestrator({
 						userId,
 						currentSceneId,
 						currentSettings,
@@ -222,12 +160,27 @@ export const useSceneSaveFlow = ({
 						createRequestId,
 						prepareGltfDocumentForUpload,
 						captureSceneThumbnail,
-						captureShadowBake
+						captureShadowBake,
+						onProgress: dispatchSaveProgress,
+						source
 					})
+					// What it kept describes the scene it saved. Another scene opened
+					// meanwhile has its own original, which this must not overwrite.
+					if (currentSceneIdRef.current === savedSceneId) {
+						recordSavedSource(result.keptOriginal)
+					}
+					return result
 				} catch (error) {
 					console.error('Failed to save scene settings:', {
 						sceneId: currentSceneId || null,
 						error
+					})
+					dispatchSaveProgress({
+						type: 'failed',
+						message:
+							error instanceof Error
+								? error.message
+								: 'The save did not complete.'
 					})
 					throw error
 				}
@@ -251,11 +204,15 @@ export const useSceneSaveFlow = ({
 			createRequestId,
 			currentSceneId,
 			currentSettings,
+			dispatchSaveProgress,
 			lastSavedSceneMeta,
+			lastSavedSettings,
 			sceneMetaState,
 			optimizationSettings,
 			optimizationReport,
 			prepareGltfDocumentForUpload,
+			recordSavedSource,
+			resolveSource,
 			userId
 		]
 	)
@@ -270,6 +227,7 @@ export const useSceneSaveFlow = ({
 			const settingsSnapshot = currentSettings
 			const sceneMetaSnapshot = sceneMetaState
 			const reportSignatureSnapshot = reportSignature
+			const passRevisionSnapshot = passRevision
 			const requestedSaveLocation = {
 				targetProjectId: target?.targetProjectId,
 				targetFolderId: target?.targetFolderId ?? null
@@ -278,8 +236,8 @@ export const useSceneSaveFlow = ({
 			const hasOptimizationReportChanges = hasOptimizationChanges({
 				reportSignature: reportSignatureSnapshot,
 				lastSavedReportSignature,
-				optimizedSceneBytes,
-				latestSceneStats
+				passRevision: passRevisionSnapshot,
+				savedPassRevision
 			})
 			const sceneInitialBytes =
 				typeof clientSceneBytes === 'number' ? clientSceneBytes : undefined
@@ -288,8 +246,7 @@ export const useSceneSaveFlow = ({
 				sceneId: currentSceneId,
 				settings: settingsSnapshot,
 				sceneMeta: sceneMetaSnapshot,
-				reportSignature: reportSignatureSnapshot,
-				sceneBytes: sceneCurrentBytes ?? null
+				reportSignature: reportSignatureSnapshot
 			})
 			setHasUnsavedChanges(false)
 
@@ -299,12 +256,16 @@ export const useSceneSaveFlow = ({
 				result = await saveToDB({
 					includeOptimizationReport: hasOptimizationReportChanges,
 					initialSceneBytes: sceneInitialBytes,
-					currentSceneBytes: sceneCurrentBytes,
 					targetProjectId: target?.targetProjectId,
 					targetFolderId: target?.targetFolderId
 				})
 			} catch (error) {
 				setOptimisticSaveBaseline(null)
+				// The flag was cleared up front. Dropping the baseline brings back
+				// edits it covered, but the sync only runs when the dirty check
+				// changes, and a pending choice about the original kept it from
+				// changing at all, so the check's own answer is written back.
+				setHasUnsavedChanges(hasChangesRef.current)
 				throw error
 			}
 
@@ -360,9 +321,7 @@ export const useSceneSaveFlow = ({
 					sceneId: persistedSceneId ?? null,
 					settings: settingsSnapshot,
 					sceneMeta: savedSceneMeta,
-					reportSignature: reportSignatureSnapshot,
-					sceneBytes:
-						result.stats?.currentSceneBytes ?? sceneCurrentBytes ?? null
+					reportSignature: reportSignatureSnapshot
 				})
 
 				const latestStats = result.stats
@@ -387,6 +346,21 @@ export const useSceneSaveFlow = ({
 			}
 
 			if (result) {
+				// Stored either way, an unchanged answer included: a pass that
+				// rebuilt the document the scene already stores changed nothing.
+				// The snapshot, not the live revision, so a pass that finished
+				// mid-save stays unsaved. Only while the saved scene is still the
+				// one open: another scene's runtime has its own saved revision.
+				const openSceneId = currentSceneIdRef.current
+				if (
+					openSceneId === currentSceneId ||
+					('sceneId' in result && openSceneId === result.sceneId)
+				) {
+					setOptimizationRuntime((prev) => ({
+						...prev,
+						savedPassRevision: passRevisionSnapshot
+					}))
+				}
 				void clearPendingDraft()
 			}
 
@@ -404,9 +378,9 @@ export const useSceneSaveFlow = ({
 			setLastSavedSceneId,
 			reportSignature,
 			lastSavedReportSignature,
-			optimizedSceneBytes,
+			passRevision,
+			savedPassRevision,
 			clientSceneBytes,
-			latestSceneStats,
 			setOptimizationRuntime,
 			setCurrentLocation,
 			setSaveLocation,
@@ -422,11 +396,10 @@ export const useSceneSaveFlow = ({
 		optimisticSaveBaseline?.sceneMeta ?? lastSavedSceneMeta
 	const effectiveLastSavedReportSignature =
 		optimisticSaveBaseline?.reportSignature ?? lastSavedReportSignature
-	const effectiveLastSavedSceneBytes =
-		optimisticSaveBaseline?.sceneBytes ?? null
 
 	const hasChanges = useMemo(
 		() =>
+			(!suppressDirtyDetection && hasUnsavedOriginalChoice) ||
 			hasUnsavedSceneChanges({
 				suppressDirtyDetection,
 				currentSettings,
@@ -435,23 +408,24 @@ export const useSceneSaveFlow = ({
 				lastSavedSceneMeta: effectiveLastSavedSceneMeta,
 				reportSignature,
 				lastSavedReportSignature: effectiveLastSavedReportSignature,
-				lastSavedSceneBytes: effectiveLastSavedSceneBytes,
-				optimizedSceneBytes,
-				latestSceneStats
+				passRevision,
+				savedPassRevision
 			}),
 		[
 			suppressDirtyDetection,
+			hasUnsavedOriginalChoice,
 			currentSettings,
 			effectiveLastSavedSettings,
 			sceneMetaState,
 			effectiveLastSavedSceneMeta,
 			reportSignature,
 			effectiveLastSavedReportSignature,
-			effectiveLastSavedSceneBytes,
-			optimizedSceneBytes,
-			latestSceneStats
+			passRevision,
+			savedPassRevision
 		]
 	)
+
+	hasChangesRef.current = hasChanges
 
 	useEffect(() => {
 		if (suppressDirtyDetection) {
@@ -466,10 +440,9 @@ export const useSceneSaveFlow = ({
 			resolveSaveAvailability({
 				hasModel,
 				userId,
-				isSceneOverSizeLimit: sceneOverSizeLimit,
 				hasChanges
 			}),
-		[hasModel, userId, sceneOverSizeLimit, hasChanges]
+		[hasModel, userId, hasChanges]
 	)
 
 	return {

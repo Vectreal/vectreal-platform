@@ -30,13 +30,19 @@ const ASSETS = path.resolve(
 	'../../../build/apps/vectreal-platform/client/assets'
 )
 
-/** Route id, as `app/routes.tsx` gives it, and its budget in KB gzipped. Measured: 289, 354, 363, 366, 362. */
+/**
+ * Route id, as `app/routes.tsx` gives it, and its budget in KB gzipped.
+ * Measured: 289, 354, 363, 366, 362; the two newsroom routes 367 and 374 on
+ * 11 Oct 2026, down from 500 and 504 when each carried every article.
+ */
 const BUDGETS_KB: Record<string, number> = {
 	'home-index': 300,
 	'routes/layouts/convert-layout': 370,
 	'routes/pricing-page/pricing-page': 380,
 	'routes/contact-page': 385,
-	'routes/docs/index': 380
+	'routes/docs/index': 380,
+	'routes/news-room-page/news-room-page': 380,
+	'routes/news-room-page/news-room-article-page': 385
 }
 
 /*
@@ -58,11 +64,15 @@ function routeModules() {
 	return routes
 }
 
-/** What must never be on these first loads, each by a string only it emits. */
-const FORBIDDEN: Record<string, string> = {
-	'three.js': 'WebGLRenderer',
-	// The newsroom manifest's eager glob keeps each article's path as a key, so this means every article body came along.
-	'the newsroom articles': 'news-room-page/articles/'
+/** What must never be on these first loads, each by a pattern only it emits. */
+const FORBIDDEN: Record<string, RegExp> = {
+	'three.js': /WebGLRenderer/,
+	/*
+	  A glob over the articles keys each one by its path. The article page's own
+	  lazy glob maps a path to a loader, `"…/x.mdx":()=>…`, and loads one body;
+	  any other value under that key is a body already in the chunk.
+	*/
+	'the newsroom articles': /news-room-page\/articles\/[^"]+\.mdx":(?!\(\)=>)/
 }
 
 const STATIC_IMPORT = /(?:from|import)\s*"\.\/([^"]+\.js)"/g
@@ -97,8 +107,9 @@ function main() {
 		for (const file of closure) {
 			const source = readFileSync(path.join(ASSETS, file))
 			bytes += gzipSync(source).length
+			const text = source.toString('utf8')
 			for (const [what, marker] of Object.entries(FORBIDDEN))
-				if (!found.has(what) && source.includes(marker)) found.set(what, file)
+				if (!found.has(what) && marker.test(text)) found.set(what, file)
 		}
 		const kb = Math.round(bytes / 1024)
 		console.log(

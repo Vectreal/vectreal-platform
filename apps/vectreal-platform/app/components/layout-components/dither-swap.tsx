@@ -2,6 +2,7 @@ import { cn } from '@shared/utils'
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 
 import { dissolveIn } from '../../lib/dither/dither'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 
 const SWAP_MS = 360
 
@@ -36,7 +37,7 @@ export function DitherSwap({
 		const el = ref.current
 		if (!el || shown.current === value) return
 		shown.current = value
-		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+		if (prefersReducedMotion()) return
 		return dissolveIn(el, SWAP_MS)
 	}, [value])
 

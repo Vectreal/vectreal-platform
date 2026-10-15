@@ -1,7 +1,7 @@
 import { Badge } from '@shared/components/ui/badge'
 import { cn, formatFileSize } from '@shared/utils'
 
-import type { TextureThumbnailUrls } from '../../hooks/use-texture-thumbnail-urls'
+import type { TextureThumbnailUrls } from '../../lib/domain/dashboard/scene-texture-thumbnails'
 import type { SceneAssetSummary } from '../../types/dashboard'
 
 type TextureAssetProps = {
@@ -24,8 +24,8 @@ export type SceneAssetListItemProps = TextureAssetProps | OtherAssetProps
  *
  * Takes a URL per asset rather than the asset's bytes. The bytes used to be
  * passed down to here and base64-encoded one character at a time on every
- * recomputation; the page now makes one object URL per image and this only
- * looks it up. See `useTextureThumbnailUrls` for why bytes must not travel
+ * recomputation; the page now hands down one URL per image and this only
+ * looks it up. See `buildTextureThumbnailUrls` for why bytes must not travel
  * through props at all.
  */
 export function buildAssetListItemProps(
@@ -54,7 +54,10 @@ export function SceneAssetListItem({
 			{textureUrl && (
 				<img
 					src={textureUrl}
-					alt={asset.name}
+					// Decorative: the name is the text beside it.
+					alt=""
+					loading="lazy"
+					decoding="async"
 					className="h-10 w-10 shrink-0 rounded-lg object-cover"
 				/>
 			)}

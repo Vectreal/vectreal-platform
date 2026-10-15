@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import {
+	buildEmbedAgentPrompt,
 	buildEmbedPath,
 	buildEmbedUrl,
 	buildInternalPreviewPath,
@@ -13,8 +14,10 @@ import {
 	buildSdkEmbedSnippet,
 	EMBED_COPY,
 	EMBED_DOCS_PATH,
+	EMBED_SDK_DOCS_PATH,
 	escapeHtmlAttributeValue
 } from './embed-snippet'
+import { AI_HANDOFF_TARGETS } from '../../ai-handoff/ai-handoff-targets'
 import { docsPages } from '../../docs/docs-manifest'
 
 const ORIGIN = 'https://vectreal.com'
@@ -570,5 +573,118 @@ describe('the two link targets stay distinct', () => {
 		expect(preview).not.toBe(
 			buildEmbedPath({ projectId: PROJECT_ID, sceneId: SCENE_ID })
 		)
+	})
+})
+
+describe('buildEmbedAgentPrompt', () => {
+	const url = buildEmbedUrl({
+		origin: ORIGIN,
+		projectId: PROJECT_ID,
+		sceneId: SCENE_ID,
+		token: `vctrl_${'k'.repeat(48)}`
+	})
+	const html = buildResponsiveEmbedSnippet({ src: url })
+	const prompt = (
+		allowedDomains: string[],
+		code = { html, url },
+		kind: 'agent' | 'chat' = 'agent'
+	) =>
+		buildEmbedAgentPrompt({
+			kind,
+			code,
+			projectId: PROJECT_ID,
+			sceneId: SCENE_ID,
+			allowedDomains
+		})
+
+	it('hands over the snippet it is given, not one of its own', () => {
+		// A sentinel no builder would produce: rebuilding from the URL fails here.
+		const text = prompt(['shop.example.com'], {
+			html: '<!-- exactly what the card copied -->',
+			url
+		})
+		expect(text).toContain('<!-- exactly what the card copied -->')
+		expect(text).toContain(`Embed URL: ${url}`)
+		expect(text).toContain(`Project id: ${PROJECT_ID}`)
+		expect(text).toContain(`Scene id: ${SCENE_ID}`)
+	})
+
+	it('names the allowed domains, or warns that there are none', () => {
+		expect(prompt(['a.example.com', 'b.example.com'])).toContain(
+			'only on these domains: a.example.com, b.example.com.'
+		)
+		expect(prompt(['a.example.com'])).not.toMatch(/allows no domains/)
+		expect(prompt([])).toMatch(/allows no domains yet/)
+	})
+
+	it('says a wildcard never covers the bare domain, only when there is one', () => {
+		expect(prompt(['*.example.com'])).toContain(
+			'A *. pattern covers subdomains only, never the bare domain.'
+		)
+		expect(prompt(['shop.example.com'])).not.toContain('*. pattern')
+	})
+
+	it('tells the agent to keep a host that is not vectreal.com', () => {
+		const stagingUrl = buildEmbedUrl({
+			origin: 'https://staging.vectreal.com',
+			projectId: PROJECT_ID,
+			sceneId: SCENE_ID,
+			token: 'vctrl_staging'
+		})
+		expect(prompt(['a.example.com'], { html, url: stagingUrl })).toContain(
+			'It is not on vectreal.com: keep its host'
+		)
+		expect(prompt(['a.example.com'])).not.toContain('not on vectreal.com')
+	})
+
+	it('says a local embed is for trying out, never for shipping', () => {
+		const localUrl = buildEmbedUrl({
+			origin: 'http://localhost:4200',
+			projectId: PROJECT_ID,
+			sceneId: SCENE_ID,
+			token: 'vctrl_local'
+		})
+		const text = prompt(['a.example.com'], { html, url: localUrl })
+		expect(text).toContain(
+			'local development instance that visitors cannot reach'
+		)
+		expect(text).not.toContain('keep its host')
+	})
+
+	it('builds a prompt from an empty URL without throwing', () => {
+		expect(() => prompt([], { html: '', url: '' })).not.toThrow()
+	})
+
+	it('asks a chat to walk the user through it, and an agent to do it', () => {
+		expect(prompt(['a.example.com'], { html, url }, 'agent')).toMatch(
+			/^Add this Vectreal 3D scene to the site in this project\./
+		)
+		expect(prompt(['a.example.com'], { html, url }, 'chat')).toMatch(
+			/^Help me add this Vectreal 3D scene to my website\./
+		)
+	})
+
+	it('keeps the iframe when the SDK is needed, rather than replacing it', () => {
+		expect(prompt(['a.example.com'])).toContain(
+			'keep the same iframe and control it with @vctrl/embed'
+		)
+	})
+
+	it('points at both guides as markdown twins on the canonical site', () => {
+		const text = prompt(['shop.example.com'])
+		for (const path of [EMBED_DOCS_PATH, EMBED_SDK_DOCS_PATH]) {
+			expect(text).toContain(`https://vectreal.com${path}.md`)
+			expect(docsPages.map((page) => `/docs/${page.slug}`)).toContain(path)
+		}
+	})
+
+	it("fits inside Cursor's documented link length with ten domains", () => {
+		// cursor.com/docs/integrations/deeplinks: 10,000 characters after encoding.
+		const text = prompt(
+			Array.from({ length: 10 }, (_, i) => `shop-${i}.example-store.co.uk`)
+		)
+		for (const target of AI_HANDOFF_TARGETS) {
+			expect(target.buildUrl(text).length).toBeLessThan(10_000)
+		}
 	})
 })

@@ -14,7 +14,7 @@ pnpm add @vctrl/core
 
 **Module format:** ES modules only. Import it from any bundler, browser or Node.js. `require()` also loads it on Node.js 20.19, 22.12 and later, but three.js and glTF-Transform then load as ES modules too, separately from a `require('three')` of your own, so their objects fail each other's `instanceof` checks. Use `import` when you pass those objects in.
 
-> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the sharp constructor API: `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.
+> **Texture compression is encoder-injectable.** In Node.js, [Sharp](https://sharp.pixelplumbing.com) is used by default. In browser environments, pass your own `TextureCompressOptions.encoder` (anything matching the part of the sharp constructor API glTF-Transform calls: `(buffer) => instance`, whose `toFormat` and `resize` return the instance and whose `toBuffer` resolves to the encoded bytes) so sharp is never imported. `@vctrl/hooks` ships an `OffscreenCanvas`-based encoder as `createBrowserTextureEncoder()`, injects it for you inside `useOptimizeModel`, and exports it for direct use.
 
 ---
 
@@ -27,6 +27,7 @@ pnpm add @vctrl/core
 | `ModelExporter`     | `@vctrl/core/model-exporter`  | Export `Document` or Three.js objects to GLB or GLTF                                              |
 | Model formats       | `@vctrl/core/model-formats`   | The accepted format set, and every question about it: `MODEL_FORMATS`, `modelFormatForFileName`, `isImportableFileName`, `modelAcceptPattern` |
 | Dropped selections  | `@vctrl/core/model-loader`    | What a reference inside a model means: `selectionKey`, `referenceIn`, `referenceKeyIn`            |
+| Remote models       | `@vctrl/core/model-loader`    | A model at a URL, as the files a drop would give: `fetchModelFiles`, `ModelFetchError`            |
 | Scene asset helpers | `@vctrl/core`                 | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
 
 ---
@@ -68,6 +69,26 @@ reason: they were a second statement of the set, and they disagreed with the
 first one on casing, so `MODEL.GLB` was rejected by the guard in front of a
 loader that would have read it. Use `isImportableFileName(fileName)` or
 `modelFormatForFileName(fileName)`.
+
+### Fetching a model from a URL
+
+```typescript
+import { fetchModelFiles, ModelLoader } from '@vctrl/core/model-loader'
+
+const [model, ...siblings] = await fetchModelFiles('https://cdn.example.com/chair.gltf')
+const loader = new ModelLoader()
+const result = model.name.toLowerCase().endsWith('.gltf')
+  ? await loader.loadGLTFWithAssetsToThreeJS(model, siblings)
+  : await loader.loadToThreeJS(model, siblings)
+```
+
+`fetchModelFiles(url, { init?, onProgress? })` returns the files a drop of the
+same model would give, model first, so they load through the path a dropped
+file takes. A `.gltf` brings the buffers and images it references on its own
+origin; a reference on another host is skipped and the loader reports it
+missing. A URL with no file extension is read as a GLB when its bytes are one.
+`init` goes with every request, and an abort through its `signal` rejects with the signal's reason. `onProgress` reports the model file's download from 0 to 1 when the host sends a `Content-Length`; a `.gltf`'s other files download after it without reporting. A failure is a
+`ModelFetchError` with `kind` `unreachable`, `http` (and `status`), `unrecognized` or `invalid` (not a URL, or relative with no page to resolve it against); its message and `host` name the host only, never the address, which can be a signed link. The host has to allow cross-origin reads.
 
 `documentToThreeJS` requires both the `Document` and the original `ModelLoadResult` metadata object:
 
@@ -203,10 +224,22 @@ Worker environment.
 
 `encoder` is typed `unknown` so the package does not force a Sharp type dependency on
 browser and edge callers. It must match the part of the Sharp constructor API that
-glTF-Transform uses: `(buffer) => { resize, webp, jpeg, png, toBuffer, metadata }`.
-`createBrowserTextureEncoder()` from `@vctrl/hooks` returns exactly that.
+glTF-Transform calls: `(buffer) => instance`, where `instance.toFormat(format, options)` and
+`instance.resize(width, height, options)` return the instance and `instance.toBuffer()`
+resolves to the encoded bytes.
+`createBrowserTextureEncoder()` from `@vctrl/hooks` returns that and more.
 
-When no encoder is available, `compressTextures` falls back to basic texture optimization using `dedup` and `prune` instead of throwing.
+The pass compresses a copy of the document and commits it in one step, so the document
+only ever holds a finished result:
+
+| Outcome | Document | Recorded as `texture compression` | Throws |
+| --- | --- | --- | --- |
+| Every texture compressed | The compressed copy | Yes | No |
+| Some failed | The copy: compressed textures replaced, failed ones as they were | Yes | `TextureCompressionError`, `isPartial === true` |
+| None compressed | Unchanged | No | `TextureCompressionError`, `isPartial === false` |
+| Another model or document taken while it ran | Unchanged | No | `SupersededError` |
+
+When no encoder is available, `compressTextures` falls back to basic texture optimization using `dedup` and `prune` instead of throwing, and records only that.
 
 #### `optimizeAll(options?)`
 

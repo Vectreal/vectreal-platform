@@ -1,5 +1,7 @@
 import {
+	FloatType,
 	Mesh,
+	MeshBasicMaterial,
 	type Object3D,
 	OrthographicCamera,
 	PlaneGeometry,
@@ -12,7 +14,7 @@ import {
 	type WebGLRenderer
 } from 'three'
 
-import type { ShadowsProps } from '@vctrl/core'
+import type { BakeBasis, ShadowsProps } from '@vctrl/core'
 
 /**
  * Resolution (px, square) of the persisted shadow-density PNG. Independent of the
@@ -102,6 +104,41 @@ export const computeBakeSignature = (
 	return `v2:${fnv1aHex(canonical)}`
 }
 
+/** The settings a bake signature covers. */
+export type BakeSignatureOptions = Parameters<typeof computeBakeSignature>[0]
+
+/**
+ * Whether a persisted bake still shows what a live bake would.
+ *
+ * With a stored basis, the bake is checked against the measurements it was
+ * baked on, so only a change to the shadow settings invalidates it. Without
+ * one, it is checked against the loaded model - and trusted until that model
+ * is measured, rather than spawning the very live bake the stored one exists
+ * to avoid.
+ */
+export const isPersistedBakeValid = (
+	baked: { signature: string; basis?: BakeBasis },
+	options: BakeSignatureOptions,
+	model: BakeBasis & { measured: boolean }
+): boolean => {
+	if (baked.basis) {
+		const { footprint, radius, vertexCount } = baked.basis
+		return (
+			computeBakeSignature(options, footprint, radius, vertexCount) ===
+			baked.signature
+		)
+	}
+	if (!model.measured) return true
+	return (
+		computeBakeSignature(
+			options,
+			model.footprint,
+			model.radius,
+			model.vertexCount
+		) === baked.signature
+	)
+}
+
 const DENSITY_VERTEX = /* glsl */ `
 	varying vec2 vUv;
 	void main() {
@@ -130,7 +167,7 @@ const DENSITY_FRAGMENT = /* glsl */ `
  * persisted artifact — re-applied to a plane at load time so the bake never has
  * to run again.
  *
- * Uses the same float-readback idea as the auto-cutoff, but at full resolution
+ * Uses the same float-readback idea as measureLitBrightness, but at full resolution
  * and through the density formula, then copies the pixels into a 2D canvas (row
  * order flipped — WebGL reads bottom-up) and exports a PNG.
  */
@@ -180,4 +217,59 @@ export const captureShadowDensity = (
 	}
 	ctx.putImageData(image, 0, 0)
 	return canvas.toDataURL('image/png')
+}
+
+// Lightmap UVs sampled for the LIT brightness. The model's shadow sits at the
+// center, so these edge/corner points read the fully-lit plane; the max across
+// them is taken so a sample that happens to land in penumbra can't drag the
+// estimate down.
+const LIT_SAMPLES: ReadonlyArray<readonly [number, number]> = [
+	[0.04, 0.04],
+	[0.96, 0.96],
+	[0.96, 0.04],
+	[0.04, 0.96],
+	[0.5, 0.04],
+	[0.04, 0.5]
+]
+
+const READBACK_RES = 32
+
+/**
+ * Measures the maximum (lit) brightness of the baked lightmap by drawing it to a
+ * small float target and reading back a few edge samples. Values are linear: the
+ * basic material is untonemapped and the target is float, so the readback is the
+ * raw accumulated irradiance.
+ */
+export const measureLitBrightness = (
+	gl: WebGLRenderer,
+	map: Texture
+): number => {
+	const target = new WebGLRenderTarget(READBACK_RES, READBACK_RES, {
+		type: FloatType
+	})
+	const scene = new Scene()
+	const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1)
+	const material = new MeshBasicMaterial({ map, toneMapped: false })
+	const quad = new Mesh(new PlaneGeometry(2, 2), material)
+	scene.add(quad)
+
+	const previous = gl.getRenderTarget()
+	gl.setRenderTarget(target)
+	gl.render(scene, camera)
+	const pixels = new Float32Array(READBACK_RES * READBACK_RES * 4)
+	gl.readRenderTargetPixels(target, 0, 0, READBACK_RES, READBACK_RES, pixels)
+	gl.setRenderTarget(previous)
+
+	let maxSum = 0
+	for (const [u, v] of LIT_SAMPLES) {
+		const x = Math.floor(u * (READBACK_RES - 1))
+		const y = Math.floor(v * (READBACK_RES - 1))
+		const i = (y * READBACK_RES + x) * 4
+		maxSum = Math.max(maxSum, pixels[i] + pixels[i + 1] + pixels[i + 2])
+	}
+
+	target.dispose()
+	material.dispose()
+	quad.geometry.dispose()
+	return maxSum
 }

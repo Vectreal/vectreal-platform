@@ -3,7 +3,6 @@
  * @description Utility functions for parsing and validating dashboard routes
  */
 
-import { DASHBOARD_CONTENT } from '../../constants/dashboard'
 import { UUID_REGEX } from '../../constants/utility-constants'
 
 import type { OrganizationDetailLoaderData } from '../../lib/domain/dashboard/dashboard-types'
@@ -11,8 +10,7 @@ import type {
 	DashboardView,
 	RouteContext,
 	RouteDataResult,
-	RouteParams,
-	TitleContent
+	RouteParams
 } from '../../types/dashboard'
 import type { UIMatch } from 'react-router'
 
@@ -33,85 +31,6 @@ export const parseRouteParams = (pathname: string): RouteParams => {
 		projectId: projectId || undefined,
 		routeType: routeType || undefined,
 		routeId: routeId || undefined
-	}
-}
-
-/**
- * Validates if a view is a valid dashboard view
- * @param view - The view to validate
- * @returns True if the view is valid
- */
-export const isValidDashboardView = (view: string): view is DashboardView => {
-	const validViews: DashboardView[] = [
-		'dashboard',
-		'projects',
-		'api-keys',
-		'organizations',
-		'usage',
-		'billing',
-		'settings'
-	]
-	return validViews.includes(view as DashboardView)
-}
-
-/**
- * Checks if the current route is a folder route
- * @param params - Route parameters
- * @returns True if it's a folder route
- */
-export const isFolderRoute = (params: RouteParams): boolean => {
-	const { view, routeType, routeId } = params
-	return view === 'projects' && routeType === 'folder' && Boolean(routeId)
-}
-
-/**
- * Checks if the current route is a scene route
- * @param params - Route parameters
- * @returns True if it's a scene route
- */
-export const isSceneRoute = (params: RouteParams): boolean => {
-	const { view, projectId, routeType, routeId } = params
-	return (
-		view === 'projects' &&
-		Boolean(projectId) &&
-		Boolean(routeType) &&
-		UUID_REGEX.test(routeType || '') &&
-		!routeId
-	)
-}
-
-/**
- * Gets the title content for a specific view
- * Maps DashboardView to RouteContext and retrieves from DASHBOARD_CONTENT
- * @param view - Dashboard view
- * @returns Title content or default values
- */
-export const getTitleContent = (view: DashboardView): TitleContent | null => {
-	const routeContextMap: Record<
-		DashboardView,
-		Exclude<RouteContext, 'scene-detail' | 'organization-detail'>
-	> = {
-		dashboard: 'dashboard',
-		projects: 'project-list',
-		'api-keys': 'api-keys',
-		organizations: 'organizations',
-		usage: 'usage',
-		billing: 'billing',
-		settings: 'settings'
-	}
-
-	const routeContext = routeContextMap[view]
-	const config = DASHBOARD_CONTENT[routeContext]
-
-	/*
-		`description` passes through absent rather than becoming `''`. The empty
-		string rendered the same - both are falsy - but it turned "this page needs
-		no gloss" into "this page has a blank one", which is a different claim to
-		the next reader.
-	*/
-	return {
-		title: config?.title || '',
-		description: config?.description
 	}
 }
 

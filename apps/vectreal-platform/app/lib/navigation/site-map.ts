@@ -11,7 +11,7 @@ import { CONVERT_INDEX_PATH } from '../convert/convert-pairs'
   The desktop nav, the phone drawer and the footer each used to write their own
   list of the site, and they drifted apart the way copies do: five links against
   five different columns, "Docs" in one and "Docs Home" in another, and the
-  founding-client pilot, the home page's main action, in none of them. They all
+  pilot project, the home page's main action, in none of them. They all
   read this now, so a page is added, renamed or moved here and nowhere else.
 
   Pure data, with no React, so the specs that hold the three surfaces to it can
@@ -45,9 +45,9 @@ const CONVERTERS: SiteLink = {
 	description: 'Convert between 3D formats in your browser. No account.'
 }
 const PILOT: SiteLink = {
-	label: 'Founding-client pilot',
+	label: 'Pilot projects',
 	to: '/contact?topic=pilot',
-	description: 'We build your product viewer with you, on founding terms.'
+	description: 'We build your product viewer with you, from the files you have.'
 }
 const GITHUB: SiteLink = {
 	label: 'GitHub',
@@ -68,6 +68,7 @@ const CONTRIBUTING: SiteLink = {
 }
 const PRICING: SiteLink = { label: 'Pricing', to: '/pricing' }
 const DOCS: SiteLink = { label: 'Docs', to: '/docs' }
+const NEWSROOM: SiteLink = { label: 'Newsroom', to: '/news-room' }
 const CONTACT: SiteLink = { label: 'Contact', to: '/contact' }
 
 /** A package's docs, as a path on this site: the constant holds the public URL. */
@@ -77,7 +78,7 @@ const PACKAGES: SiteLink[] = OPEN_SOURCE_PACKAGES.map((pkg) => ({
 	description: pkg.description
 }))
 
-export const SITE_SECTIONS = {
+const SITE_SECTIONS = {
 	product: {
 		label: 'Product',
 		links: [PUBLISHER, CONVERTERS, PILOT]
@@ -101,7 +102,7 @@ export const SITE_SECTIONS = {
 		links: [
 			PRICING,
 			{ label: 'About', to: '/about' },
-			{ label: 'Newsroom', to: '/news-room' },
+			NEWSROOM,
 			{ label: 'Changelog', to: '/changelog' },
 			CONTACT
 		]
@@ -130,10 +131,10 @@ export function entersFunnel(to: string): boolean {
 	)
 }
 
-/** The marketing nav: two panels, two plain links, and the two ways in. */
+/** The marketing nav: two panels, three plain links, and the two ways in. */
 export const NAV = {
 	panels: [SITE_SECTIONS.product, SITE_SECTIONS.openSource],
-	links: [PRICING, DOCS],
+	links: [PRICING, DOCS, NEWSROOM],
 	signIn: { label: 'Sign in', to: '/sign-in' },
 	getStarted: { label: 'Get started', to: PUBLISHER.to }
 } as const

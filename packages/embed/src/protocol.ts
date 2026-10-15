@@ -145,6 +145,7 @@ export function isViewerCommand(value: unknown): value is ViewerCommand {
 		case 'set_animation_playing':
 			return typeof value.playing === 'boolean'
 		case 'restart_animation':
+		case 'return_to_scene_view':
 			return true
 		case 'seek_animation_clip':
 			return (

@@ -14,60 +14,51 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
-import {
-	Document,
-	JSONDocument,
-	Texture,
-	Transform,
-	WebIO
-} from '@gltf-transform/core'
+import { Document, JSONDocument, Transform, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
 	cloneDocument,
-	DedupOptions as GltfDedupOptions,
-	draco,
-	DracoOptions as GltfDracoOptions,
-	NormalsOptions as GltfNormalsOptions,
-	QuantizeOptions as GltfQuantizeOptions,
 	inspect,
-	InspectReport,
-	normals,
-	quantize,
-	simplify,
-	weld,
-	dedup
+	InspectReport
 } from '@gltf-transform/functions'
-import { MeshoptSimplifier } from 'meshoptimizer'
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import {
-	canLoadDracoInBrowser,
-	loadDracoModule
-} from '../draco/load-draco-module'
 import { OperationProgress } from '../types'
+import {
+	DocumentCurrency,
+	SupersededError,
+	Ticket,
+	unlessSuperseded
+} from './document-currency'
+import { encodeDracoCopy } from './draco-compression'
 import {
 	loadFromThreeJS as _loadFromThreeJS,
 	loadFromBuffer as _loadFromBuffer,
 	loadFromFile as _loadFromFile,
 	loadFromJSON as _loadFromJSON,
-	loadFromGLTFWithAssets as _loadFromGLTFWithAssets
+	loadFromGLTFWithAssets as _loadFromGLTFWithAssets,
+	type LoadResult
 } from './model-loading'
+import { buildOptimizationReport } from './report-helpers'
 import {
-	buildOptimizationReport,
-	calculateDracoCompressedGeometrySize,
-	calculateMeshSize,
-	readGlbJsonChunk
-} from './report-helpers'
-import { runTextureCompression } from './texture-compression'
+	compressDocumentTextures,
+	resolveTextureEncoder,
+	runBasicTextureOptimization
+} from './texture-compression'
+import { syncTextureIdentities, syncTextureIdentity } from './texture-naming'
 import {
-	mimeTypeToExtension,
-	replaceUriExtension,
-	buildTextureFallbackFileName,
-	extractFileNameSegment,
-	isGenericTextureFileName,
-	resolveTextureByMaterialSlot
-} from './texture-naming'
+	getTexturePayload,
+	listTextureDescriptors,
+	replaceTexturePayload
+} from './texture-payload'
+import {
+	dedupPass,
+	normalsPass,
+	quantizePass,
+	simplifyPass,
+	TransformPass
+} from './transform-passes'
 import {
 	DedupOptions,
 	DracoCompressionReport,
@@ -80,8 +71,19 @@ import {
 	TextureDescriptor,
 	TextureCompressOptions
 } from './types'
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
+
+export { SupersededError } from './document-currency'
 
 const DEFAULT_DRACO_PATH = '/draco/'
+
+/** What a load establishes and every later optimization is measured against. */
+export interface ModelBaseline {
+	size: number
+	report: InspectReport | null
+	/** The model as loaded; null only before a load. */
+	source: Uint8Array | null
+}
 
 /**
  * Isomorphic 3D model optimization service using glTF-Transform.
@@ -96,6 +98,12 @@ const DEFAULT_DRACO_PATH = '/draco/'
  * Works in Node.js (Sharp default), browser (OffscreenCanvas via
  * `createBrowserTextureEncoder` from `@vctrl/hooks`), and edge/Deno
  * environments (custom encoder injection).
+ *
+ * The class holds the model and decides when a result replaces its document.
+ * The work lives in sibling modules that take what they need as arguments and
+ * never see the class: loading, the transform passes, Draco, texture
+ * compression, naming and payloads, and the ticket bookkeeping that refuses a
+ * result once a newer model or document has been claimed.
  */
 export class ModelOptimizer {
 	private _document: Document | null = null
@@ -103,60 +111,26 @@ export class ModelOptimizer {
 	private exporter: GLTFExporter
 	private originalSize = 0
 	private originalReport: InspectReport | null = null
+	/**
+	 * The model as it was loaded. Part of the baseline with the size and report
+	 * measured from it, and like them it survives every optimization, so any
+	 * result can be re-derived from the original rather than from the previous
+	 * result.
+	 */
+	private sourceBytes: Uint8Array | null = null
+	private currency = new DocumentCurrency()
 	private appliedOptimizations: string[] = []
 	private progressCallback?: (progress: OperationProgress) => void
-	private dracoPath: string
-	private dracoEncoderRegistration: Promise<void> | null = null
-	private dracoDecoderRegistration: Promise<void> | null = null
+	private codecs: GeometryCodecs
 	private dracoReport: DracoCompressionReport | null = null
 
 	constructor(options?: { dracoPath?: string }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 		this.exporter = new GLTFExporter()
-		this.dracoPath = options?.dracoPath ?? DEFAULT_DRACO_PATH
-	}
-
-	/**
-	 * Lazily loads and registers the Draco encoder module on this instance's
-	 * WebIO, so `writeBinary`/`writeJSON` can encode `KHR_draco_mesh_compression`
-	 * primitives after `document.transform(draco(...))`. Memoized per instance.
-	 */
-	private ensureDracoEncoderRegistered(): Promise<void> {
-		if (!this.dracoEncoderRegistration) {
-			this.dracoEncoderRegistration = canLoadDracoInBrowser()
-				? loadDracoModule('encoder', this.dracoPath).then((encoderModule) => {
-						this.io.registerDependencies({
-							'draco3d.encoder': encoderModule
-						})
-					})
-				: Promise.reject(
-						new Error(
-							'Draco encoding requires a browser (window or worker) environment'
-						)
-					)
-		}
-		return this.dracoEncoderRegistration
-	}
-
-	/**
-	 * Lazily loads and registers the Draco decoder module on this instance's
-	 * WebIO, so `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression`
-	 * primitives — needed both for loading pre-compressed input and for
-	 * reloading this optimizer's own Draco-compressed output (e.g. syncing
-	 * the worker's compressed buffer back to the main-thread optimizer via
-	 * `loadFromBuffer`). Memoized per instance; no-ops outside a browser.
-	 */
-	private ensureDracoDecoderRegistered(): Promise<void> {
-		if (!this.dracoDecoderRegistration) {
-			this.dracoDecoderRegistration = canLoadDracoInBrowser()
-				? loadDracoModule('decoder', this.dracoPath).then((decoderModule) => {
-						this.io.registerDependencies({
-							'draco3d.decoder': decoderModule
-						})
-					})
-				: Promise.resolve()
-		}
-		return this.dracoDecoderRegistration
+		this.codecs = new GeometryCodecs(
+			this.io,
+			options?.dracoPath ?? DEFAULT_DRACO_PATH
+		)
 	}
 
 	/**
@@ -172,17 +146,15 @@ export class ModelOptimizer {
 	 * @param model - The Three.js Object3D model to optimize
 	 */
 	public async loadFromThreeJS(model: Object3D): Promise<void> {
-		await this.ensureDracoDecoderRegistered()
-		const result = await _loadFromThreeJS(
-			model,
-			this.io,
-			this.exporter,
-			this.emitProgress.bind(this),
-			(doc) => this.normalizeAllTextureURIs(doc)
+		await this.load(() =>
+			_loadFromThreeJS(
+				model,
+				this.io,
+				this.exporter,
+				this.emitProgress,
+				syncTextureIdentities
+			)
 		)
-		this._document = result.document
-		this.originalSize = result.originalSize
-		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -191,16 +163,9 @@ export class ModelOptimizer {
 	 * @param buffer - The binary model data (GLB format)
 	 */
 	public async loadFromBuffer(buffer: Uint8Array): Promise<void> {
-		await this.ensureDracoDecoderRegistered()
-		const result = await _loadFromBuffer(
-			buffer,
-			this.io,
-			this.emitProgress.bind(this),
-			(doc) => this.normalizeAllTextureURIs(doc)
+		await this.load(() =>
+			_loadFromBuffer(buffer, this.io, this.emitProgress, syncTextureIdentities)
 		)
-		this._document = result.document
-		this.originalSize = result.originalSize
-		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -209,16 +174,9 @@ export class ModelOptimizer {
 	 * @param filePath - Path to the model file
 	 */
 	public async loadFromFile(filePath: string): Promise<void> {
-		await this.ensureDracoDecoderRegistered()
-		const result = await _loadFromFile(
-			filePath,
-			this.io,
-			this.emitProgress.bind(this),
-			(doc) => this.normalizeAllTextureURIs(doc)
+		await this.load(() =>
+			_loadFromFile(filePath, this.io, this.emitProgress, syncTextureIdentities)
 		)
-		this._document = result.document
-		this.originalSize = result.originalSize
-		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -227,17 +185,15 @@ export class ModelOptimizer {
 	 * @param json - The JSON glTF document
 	 */
 	public async loadFromJSON(json: JSONDocument): Promise<void> {
-		await this.ensureDracoDecoderRegistered()
-		const result = await _loadFromJSON(
-			json,
-			this.io,
-			this.emitProgress.bind(this),
-			(doc) => this.normalizeAllTextureURIs(doc),
-			() => this.export()
+		await this.load(() =>
+			_loadFromJSON(
+				json,
+				this.io,
+				this.emitProgress,
+				syncTextureIdentities,
+				(doc) => this.io.writeBinary(doc)
+			)
 		)
-		this._document = result.document
-		this.originalSize = result.originalSize
-		this.originalReport = result.originalReport
 	}
 
 	/**
@@ -246,23 +202,7 @@ export class ModelOptimizer {
 	 * @param options - Simplification options
 	 */
 	public async simplify(options: SimplifyOptions = {}): Promise<void> {
-		this.ensureModelLoaded()
-
-		const { ratio = 0.5, error = 0.001 } = options
-
-		this.emitProgress('Applying mesh simplification', 0)
-
-		const transforms: Transform[] = [
-			weld(),
-			simplify({
-				ratio,
-				simplifier: MeshoptSimplifier,
-				error
-			})
-		]
-
-		await this.applyTransforms(transforms, 'simplification')
-		this.emitProgress('Mesh simplification complete', 100)
+		await this.runPass(simplifyPass, options)
 	}
 
 	/**
@@ -271,14 +211,7 @@ export class ModelOptimizer {
 	 * @param options - Deduplication options
 	 */
 	public async deduplicate(options: DedupOptions = {}): Promise<void> {
-		this.ensureModelLoaded()
-
-		this.emitProgress('Applying deduplication', 0)
-		await this.applyTransforms(
-			[dedup(options as GltfDedupOptions)],
-			'deduplication'
-		)
-		this.emitProgress('Deduplication complete', 100)
+		await this.runPass(dedupPass, options)
 	}
 
 	/**
@@ -287,14 +220,7 @@ export class ModelOptimizer {
 	 * @param options - Quantization options
 	 */
 	public async quantize(options: QuantizeOptions = {}): Promise<void> {
-		this.ensureModelLoaded()
-
-		this.emitProgress('Applying quantization', 0)
-		await this.applyTransforms(
-			[quantize(options as GltfQuantizeOptions)],
-			'quantization'
-		)
-		this.emitProgress('Quantization complete', 100)
+		await this.runPass(quantizePass, options)
 	}
 
 	/**
@@ -303,66 +229,28 @@ export class ModelOptimizer {
 	 * @param options - Normals options
 	 */
 	public async optimizeNormals(options: NormalsOptions = {}): Promise<void> {
-		this.ensureModelLoaded()
-
-		this.emitProgress('Optimizing normals', 0)
-		await this.applyTransforms(
-			[normals(options as GltfNormalsOptions)],
-			'normals optimization'
-		)
-		this.emitProgress('Normals optimization complete', 100)
+		await this.runPass(normalsPass, options)
 	}
 
-	/**
-	 * Draco-encodes a clone of the loaded document and measures the result.
-	 *
-	 * The encode is the expensive half of every Draco path, so it happens here
-	 * exactly once and both callers take what they need: `measureDracoCompression`
-	 * keeps only the numbers, `compressGeometry` also adopts the document.
-	 */
-	private async encodeDracoCopy(options: DracoOptions): Promise<{
-		report: DracoCompressionReport
-		workingDoc: Document
-	}> {
-		const document = this.ensureModelLoaded()
+	private async runPass<Options>(
+		pass: TransformPass<Options>,
+		options: Options
+	): Promise<void> {
+		this.ensureModelLoaded()
 
-		this.emitProgress('Compressing geometry with Draco', 0)
+		this.emitProgress(pass.started, 0)
+		await this.applyTransforms(pass.transforms(options), pass.name)
+		this.emitProgress(pass.finished, 100)
+	}
 
-		await this.ensureDracoEncoderRegistered()
-
-		const geometryBytesBefore = calculateMeshSize(inspect(document))
-		const uncompressedGlbBytes = (await this.io.writeBinary(document))
-			.byteLength
-
-		this.emitProgress('Compressing geometry with Draco', 40)
-
-		const workingDoc = cloneDocument(document)
-		await workingDoc.transform(draco(options as GltfDracoOptions))
-		const compressedGlb = await this.io.writeBinary(workingDoc)
-
-		this.emitProgress('Compressing geometry with Draco', 90)
-
-		const geometryBytesAfterCompression = calculateDracoCompressedGeometrySize(
-			readGlbJsonChunk(compressedGlb)
+	private encodeDracoCopy(options: DracoOptions) {
+		return encodeDracoCopy(
+			this.ensureModelLoaded(),
+			options,
+			this.io,
+			this.codecs,
+			this.emitProgress
 		)
-		const reductionPercent =
-			geometryBytesBefore > 0
-				? ((geometryBytesBefore - geometryBytesAfterCompression) /
-						geometryBytesBefore) *
-					100
-				: 0
-
-		return {
-			workingDoc,
-			report: {
-				geometryBytesBefore,
-				geometryBytesAfterCompression,
-				reductionPercent,
-				projectedGlbBytes: compressedGlb.byteLength,
-				uncompressedGlbBytes,
-				isWorthApplying: compressedGlb.byteLength < uncompressedGlbBytes
-			}
-		}
 	}
 
 	/**
@@ -402,9 +290,15 @@ export class ModelOptimizer {
 	public async measureDracoCompression(
 		options: DracoOptions = {}
 	): Promise<DracoCompressionReport> {
-		const { report } = await this.encodeDracoCopy(options)
-		this.adoptDracoReport(report)
-		return report
+		const ticket = this.currency.currentTicket()
+		return unlessSuperseded(
+			() => !this.currency.isCurrent(ticket),
+			() => this.encodeDracoCopy(options),
+			({ report }) => {
+				this.adoptDracoReport(report)
+				return report
+			}
+		)
 	}
 
 	/**
@@ -416,23 +310,30 @@ export class ModelOptimizer {
 	 *
 	 * The platform app does not use this: it measures with
 	 * `measureDracoCompression` and compresses at export time instead, so the
-	 * working document is never lossily re-encoded. Kept for Node/CLI callers
-	 * that want a compressed document directly.
+	 * working document is never lossily re-encoded. Kept for callers that want
+	 * a compressed document directly; it runs only in a browser or worker, since
+	 * the Draco encoder cannot be loaded anywhere else.
 	 */
 	public async compressGeometry(options: DracoOptions = {}): Promise<void> {
-		const { report, workingDoc } = await this.encodeDracoCopy(options)
-		this.adoptDracoReport(report)
+		const ticket = this.currency.currentTicket()
+		await unlessSuperseded(
+			() => !this.currency.isCurrent(ticket),
+			() => this.encodeDracoCopy(options),
+			({ report, workingDoc }) => {
+				this.adoptDracoReport(report)
 
-		if (!report.isWorthApplying) {
-			console.warn(
-				`draco compression increased model size (${report.uncompressedGlbBytes} → ${report.projectedGlbBytes} bytes), skipping.`
-			)
-			return
-		}
+				if (!report.isWorthApplying) {
+					console.warn(
+						`draco compression increased model size (${report.uncompressedGlbBytes} → ${report.projectedGlbBytes} bytes), skipping.`
+					)
+					return
+				}
 
-		// The already-encoded clone, rather than a second encode of the same
-		// document.
-		this._document = workingDoc
+				// The already-encoded clone, rather than a second encode of the
+				// same document.
+				this.adoptDocument(workingDoc, ticket)
+			}
+		)
 	}
 
 	/**
@@ -449,8 +350,12 @@ export class ModelOptimizer {
 	 * to replace this document with an already-optimized version of itself can
 	 * put it back afterwards. Pairs with `setBaseline`.
 	 */
-	public getBaseline(): { size: number; report: InspectReport | null } {
-		return { size: this.originalSize, report: this.originalReport }
+	public getBaseline(): ModelBaseline {
+		return {
+			size: this.originalSize,
+			report: this.originalReport,
+			source: this.sourceBytes
+		}
 	}
 
 	/**
@@ -462,12 +367,131 @@ export class ModelOptimizer {
 	 * on the already-optimized document, making every `before` in the report equal
 	 * its `after`.
 	 */
-	public setBaseline(baseline: {
-		size: number
-		report: InspectReport | null
-	}): void {
+	public setBaseline(baseline: ModelBaseline): void {
 		this.originalSize = baseline.size
 		this.originalReport = baseline.report
+		this.sourceBytes = baseline.source
+	}
+
+	/**
+	 * Whether there is an original to re-derive from. False only before the
+	 * first load and after `reset`.
+	 */
+	public hasSource(): boolean {
+		return this.sourceBytes !== null
+	}
+
+	/**
+	 * Put the original back as the working document, discarding every
+	 * optimization applied since. The baseline is kept, so a report taken after
+	 * the next pass measures it against the original.
+	 *
+	 * Every optimization pass that is meant to be reproducible from the original
+	 * plus its settings starts here.
+	 */
+	public async restoreSource(): Promise<void> {
+		// Read before the first await: a load meanwhile replaces the source.
+		const source = this.sourceBytes
+		if (!source) {
+			throw new Error('No source to restore. Load a model first.')
+		}
+		const ticket = this.currency.claimDocument()
+		await this.parseDocument(source, ticket, source, (document) => {
+			this.adoptDocument(document, ticket)
+			this.appliedOptimizations = []
+			this.dracoReport = null
+		})
+	}
+
+	/**
+	 * Replace the document with a derivation of the same source, such as the
+	 * geometry worker's output, keeping the baseline. Unlike a load it keeps
+	 * the model: it claims a new document of it, which retires any step still
+	 * running on the old one, and is dropped if another model or document was
+	 * taken while it parsed.
+	 */
+	public async replaceDocument(buffer: Uint8Array): Promise<void> {
+		const source = this.sourceBytes
+		const ticket = this.currency.claimDocument()
+		await this.parseDocument(buffer, ticket, source, (document) => {
+			this.adoptDocument(document, ticket)
+		})
+	}
+
+	/**
+	 * Parses a document of the current model for `restoreSource` or
+	 * `replaceDocument`. It is refused if another document or model was
+	 * claimed meanwhile, or if a source stated meanwhile retired `source`, the
+	 * one it belongs to. One that does not commit releases its claim, so the
+	 * document still held can be worked on again.
+	 *
+	 * Claimed by the caller before the first await, so whoever asks last owns
+	 * the document. With a model held, the claim cannot be held open
+	 * indefinitely: every held document descends from a load, which commits
+	 * only after registering the decoders (memoized), so the one await that
+	 * could reach the network has already settled and what remains is the
+	 * parse. Without one there is no document for the claim to hold off.
+	 */
+	private async parseDocument(
+		bytes: Uint8Array,
+		ticket: Ticket,
+		source: Uint8Array | null,
+		commit: (document: Document) => void
+	): Promise<void> {
+		try {
+			await unlessSuperseded(
+				() => !this.currency.isCurrent(ticket) || this.sourceBytes !== source,
+				async () => {
+					await this.codecs.registerDecoders()
+					const { document } = await _loadFromBuffer(
+						bytes,
+						this.io,
+						this.emitProgress,
+						syncTextureIdentities
+					)
+					return document
+				},
+				commit
+			)
+		} catch (error) {
+			this.currency.release(ticket)
+			throw error
+		}
+	}
+
+	/**
+	 * State what the original of the current document is, without changing the
+	 * document. For a document loaded in an already-optimized form, such as a
+	 * saved scene, whose original is held elsewhere: the baseline and every
+	 * later re-derivation then start from `bytes`.
+	 */
+	public async setSource(bytes: Uint8Array): Promise<void> {
+		// A source belongs to a document; there is none to state it for.
+		this.ensureModelLoaded()
+		// Not a new model: the document stays, and work on it stays valid, so
+		// only a newer model refuses this.
+		const ticket = this.currency.currentModelTicket()
+		await unlessSuperseded(
+			() => !this.currency.isCurrentModel(ticket),
+			async () => {
+				await this.codecs.registerDecoders()
+				return _loadFromBuffer(
+					bytes,
+					this.io,
+					this.emitProgress,
+					// Measured, not adopted: the parsed document is thrown away.
+					() => {}
+				)
+			},
+			({ originalSize, originalReport, sourceBytes }) => {
+				this.originalSize = originalSize
+				this.originalReport = originalReport
+				this.sourceBytes = sourceBytes
+				// A restore or derivation still parsing belongs to the source
+				// this retires, so it will not commit; work need not wait for it.
+				this.currency.releasePending()
+			}
+		)
 	}
 
 	/**
@@ -478,28 +502,73 @@ export class ModelOptimizer {
 	 * `createBrowserTextureEncoder()` from `@vctrl/hooks` which uses
 	 * OffscreenCanvas and requires no network call.
 	 *
+	 * The pass compresses a copy and commits it in one step, as
+	 * `applyTransforms` does, so the document only ever holds a finished
+	 * result:
+	 * - every texture compressed: committed and recorded;
+	 * - some failed: the ones that compressed are committed and recorded, and a
+	 *   partial `TextureCompressionError` is thrown so the caller can say so;
+	 * - none compressed: nothing changes, and the error is thrown;
+	 * - another model or document taken meanwhile: nothing changes, and
+	 *   `SupersededError` is thrown.
+	 *
+	 * With no encoder and no Sharp, only the dedup and prune fallback runs, and
+	 * only it is recorded.
+	 *
 	 * @param options - Texture compression options
 	 */
 	public async compressTextures(
 		options: TextureCompressOptions = {}
 	): Promise<void> {
+		// Both read before the encoder import awaits: a model loaded meanwhile
+		// is not the one this pass was asked to compress.
 		const document = this.ensureModelLoaded()
+		const ticket = this.currency.currentTicket()
 
-		await runTextureCompression(
-			document,
-			options,
-			this.emitProgress.bind(this),
-			this.applyTransforms.bind(this)
+		const encoder = await resolveTextureEncoder(options)
+		if (!encoder) {
+			await runBasicTextureOptimization(
+				this.emitProgress,
+				(transforms, operationName) =>
+					this.applyTransforms(transforms, operationName, ticket)
+			)
+			return
+		}
+
+		// Every replacement of the document advances the revision, so this
+		// catches a restore, a new model and another step's commit alike.
+		// Edits made to the document in place while this runs do not: they
+		// are not merged into the copy, and nothing in this repo makes one.
+		const isStale = () => !this.currency.isCurrent(ticket)
+		if (isStale()) throw new SupersededError()
+
+		const working = cloneDocument(document)
+		const partialFailure = await unlessSuperseded(
+			isStale,
+			async () => {
+				const failure = await compressDocumentTextures(
+					working,
+					options,
+					encoder,
+					this.emitProgress
+				)
+				// Nothing compressed, so there is nothing to commit.
+				if (failure && !failure.isPartial) throw failure
+				return failure
+			},
+			(failure) => {
+				// On the copy: naming finds a texture's material slot by identity.
+				working
+					.getRoot()
+					.listTextures()
+					.forEach((texture, i) => syncTextureIdentity(working, texture, i))
+				this.adoptDocument(working, ticket)
+				this.addAppliedOptimization('texture compression')
+				return failure
+			}
 		)
 
-		// Sync URI and name to reflect the new MIME type after compression
-		// (e.g. .png → .webp), matching what the texture-naming helpers expect.
-		document
-			.getRoot()
-			.listTextures()
-			.forEach((texture, i) => this.syncTextureIdentity(texture, i))
-
-		this.appliedOptimizations.push('texture compression')
+		if (partialFailure) throw partialFailure
 	}
 
 	/**
@@ -523,6 +592,10 @@ export class ModelOptimizer {
 		} = {}
 	): Promise<void> {
 		this.ensureModelLoaded()
+		// Each step checks only its own run, and each commit advances the
+		// revision, so this asks only about the model: it keeps the rest of
+		// the sequence off a model loaded between two steps.
+		const ticket = this.currency.currentTicket()
 
 		const operations = []
 		if (options.simplify !== false)
@@ -546,6 +619,7 @@ export class ModelOptimizer {
 				`Running optimization ${i + 1}/${operations.length}`,
 				progress
 			)
+			if (!this.currency.isCurrentModel(ticket)) throw new SupersededError()
 			await operations[i]()
 		}
 
@@ -557,8 +631,11 @@ export class ModelOptimizer {
 	 */
 	public async getReport(): Promise<OptimizationReport> {
 		const document = this.ensureModelLoaded()
+		const ticket = this.currency.currentTicket()
 		const currentInspectReport = inspect(document)
 		const currentSize = (await this.export()).byteLength
+		// Otherwise a newer model's baseline would describe this document.
+		this.currency.ensureCurrent(ticket)
 
 		return buildOptimizationReport(
 			this.originalSize,
@@ -590,9 +667,15 @@ export class ModelOptimizer {
 	 * Reset the optimizer state.
 	 */
 	public reset(): void {
+		this.currency.claimModel()
+		this.clear()
+	}
+
+	private clear(): void {
 		this._document = null
 		this.originalSize = 0
 		this.originalReport = null
+		this.sourceBytes = null
 		this.appliedOptimizations = []
 		this.dracoReport = null
 	}
@@ -605,44 +688,11 @@ export class ModelOptimizer {
 	}
 
 	public listTextureDescriptors(): TextureDescriptor[] {
-		const document = this.ensureModelLoaded()
-		return document
-			.getRoot()
-			.listTextures()
-			.map((texture, index) => {
-				const fileName = this.resolveTextureCanonicalFileName(texture, index)
-
-				return {
-					index,
-					fileName,
-					name: fileName,
-					mimeType: texture.getMimeType() || 'application/octet-stream',
-					byteLength: texture.getImage()?.byteLength ?? 0
-				}
-			})
+		return listTextureDescriptors(this.ensureModelLoaded())
 	}
 
 	public getTexturePayload(index: number): TextureBinaryPayload {
-		const document = this.ensureModelLoaded()
-		const textures = document.getRoot().listTextures()
-		const texture = textures[index]
-
-		if (!texture) {
-			throw new Error(`Texture not found for index ${index}`)
-		}
-
-		const image = texture.getImage()
-		if (!image || image.byteLength === 0) {
-			throw new Error(`Texture at index ${index} has no image payload`)
-		}
-
-		return {
-			index,
-			fileName: this.resolveTextureCanonicalFileName(texture, index),
-			name: this.resolveTextureCanonicalFileName(texture, index),
-			mimeType: texture.getMimeType() || 'application/octet-stream',
-			image
-		}
+		return getTexturePayload(this.ensureModelLoaded(), index)
 	}
 
 	public replaceTexturePayload(
@@ -651,17 +701,13 @@ export class ModelOptimizer {
 		mimeType: string,
 		fileName?: string
 	): void {
-		const document = this.ensureModelLoaded()
-		const textures = document.getRoot().listTextures()
-		const texture = textures[index]
-
-		if (!texture) {
-			throw new Error(`Texture not found for index ${index}`)
-		}
-
-		texture.setImage(image)
-		texture.setMimeType(mimeType)
-		this.syncTextureIdentity(texture, index, fileName)
+		replaceTexturePayload(
+			this.ensureModelLoaded(),
+			index,
+			image,
+			mimeType,
+			fileName
+		)
 	}
 
 	/**
@@ -675,124 +721,85 @@ export class ModelOptimizer {
 		gltfBytes: Uint8Array,
 		assets: Map<string, Uint8Array>
 	): Promise<void> {
-		await this.ensureDracoDecoderRegistered()
-		const result = await _loadFromGLTFWithAssets(
-			gltfBytes,
-			assets,
-			this.io,
-			this.emitProgress.bind(this),
-			(doc) => this.normalizeAllTextureURIs(doc),
-			() => this.export()
+		await this.load(() =>
+			_loadFromGLTFWithAssets(
+				gltfBytes,
+				assets,
+				this.io,
+				this.emitProgress,
+				syncTextureIdentities,
+				(doc) => this.io.writeBinary(doc)
+			)
 		)
-		this._document = result.document
-		this.originalSize = result.originalSize
-		this.originalReport = result.originalReport
 	}
 
 	/**
-	 * Normalize all texture URIs and names to canonical form.
-	 * Called eagerly after every load path to ensure consistent naming
-	 * regardless of how the model was loaded (Three.js, GLB, GLTF JSON).
+	 * Every load claims a new model, which retires the previous one whether or
+	 * not this load succeeds. A failed load therefore leaves no model rather
+	 * than the previous one, which would otherwise read as loaded and be
+	 * optimized, saved and shown under the failed model's name.
+	 */
+	private async load(read: () => Promise<LoadResult>): Promise<void> {
+		const ticket = this.currency.claimModel()
+		try {
+			await this.codecs.registerDecoders()
+			this.adoptLoad(await read(), ticket)
+		} catch (error) {
+			// A newer model owns the optimizer; this failure is not about it.
+			if (!this.currency.isCurrentModel(ticket)) {
+				throw error instanceof SupersededError
+					? error
+					: new SupersededError({ cause: error })
+			}
+			this.clear()
+			throw error
+		}
+	}
+
+	/**
+	 * Every genuine load replaces the document and the whole baseline with it,
+	 * unless a newer load claimed the optimizer while this one was parsing.
+	 */
+	private adoptLoad(result: LoadResult, ticket: Ticket): void {
+		this.currency.settle(ticket)
+		this._document = result.document
+		this.originalSize = result.originalSize
+		this.originalReport = result.originalReport
+		this.sourceBytes = result.sourceBytes
+	}
+
+	/**
+	 * Every replacement of the document of the current model goes through
+	 * here, so committing it also retires every other operation that started
+	 * on the document it replaces. Called in the same synchronous step as the
+	 * operation's last staleness check.
+	 */
+	private adoptDocument(document: Document, ticket: Ticket): void {
+		this.currency.commit(ticket)
+		this._document = document
+	}
+
+	/**
+	 * Normalize all texture URIs and names to canonical form. Passing `doc`
+	 * also adopts it as a new document of the loaded model, at once: it
+	 * retires any step running on the old document and any restore or
+	 * derivation still parsing. It throws with no model loaded to adopt it
+	 * into, as every step does, and `SupersededError` while a load is pending.
+	 * So every document held descends from a load, which is what lets
+	 * `parseDocument` rely on the decoders being registered already.
+	 *
+	 * Loads do not call this: they name a document's textures before the load
+	 * may commit, and adopting the document here would make it the held one
+	 * before that check.
 	 */
 	public normalizeAllTextureURIs(doc?: Document): void {
+		if (doc) {
+			this.ensureModelLoaded()
+			this.adoptDocument(doc, this.currency.claimDocument())
+		}
 		const target = doc ?? this._document
 		if (!target) return
-		if (doc) this._document = doc
-		const textures = target.getRoot().listTextures()
-		textures.forEach((texture, index) => {
-			this.syncTextureIdentity(texture, index)
-		})
-	}
-
-	private resolveTextureCanonicalFileName(
-		texture: {
-			getMimeType: () => string | null
-		},
-		index: number
-	): string {
-		const textureWithUri = texture as unknown as {
-			getURI?: () => string | null
-			getName?: () => string | null
-		}
-		const currentUri = textureWithUri.getURI?.()?.trim() ?? ''
-		const currentName = textureWithUri.getName?.()?.trim() ?? ''
-		const stableUri =
-			currentUri &&
-			!currentUri.startsWith('data:') &&
-			!isGenericTextureFileName(currentUri)
-				? currentUri
-				: ''
-		const stableName =
-			currentName && !isGenericTextureFileName(currentName) ? currentName : ''
-		const extension = mimeTypeToExtension(texture.getMimeType() || '')
-
-		// Priority 1: existing stable URI or name
-		if (stableUri || stableName) {
-			const baseFileName = extractFileNameSegment(stableUri || stableName)
-			return extension
-				? replaceUriExtension(baseFileName, extension)
-				: baseFileName
-		}
-
-		// Priority 2: material-slot name (e.g. "Wood_Planks_baseColor.png")
-		if (this._document) {
-			const slot = resolveTextureByMaterialSlot(
-				this._document,
-				texture as unknown as Texture
-			)
-			if (slot) {
-				const slotFileName = `${slot.materialName}_${slot.slotName}`
-				return extension ? `${slotFileName}.${extension}` : slotFileName
-			}
-		}
-
-		// Priority 3: positional fallback
-		return buildTextureFallbackFileName(index, texture.getMimeType())
-	}
-
-	private syncTextureIdentity(
-		texture: {
-			getMimeType: () => string | null
-		},
-		index: number,
-		fileName?: string
-	): void {
-		const textureWithUri = texture as unknown as {
-			getURI?: () => string | null
-			setURI?: (value: string) => void
-			getName?: () => string | null
-			setName?: (value: string) => void
-		}
-		const currentName = textureWithUri.getName?.()?.trim() ?? ''
-		const currentUri = textureWithUri.getURI?.()?.trim() ?? ''
-		const preferredFileName = fileName?.trim()
-		const preferredIsStable =
-			typeof preferredFileName === 'string' &&
-			preferredFileName.length > 0 &&
-			!isGenericTextureFileName(preferredFileName)
-
-		if (preferredIsStable) {
-			const preferredBaseName = extractFileNameSegment(preferredFileName)
-			if (textureWithUri.setURI && currentUri !== preferredBaseName) {
-				textureWithUri.setURI(preferredBaseName)
-			}
-			if (textureWithUri.setName && currentName !== preferredBaseName) {
-				textureWithUri.setName(preferredBaseName)
-			}
-		}
-
-		const canonicalFileName = this.resolveTextureCanonicalFileName(
-			texture,
-			index
-		)
-
-		if (textureWithUri.setURI && currentUri !== canonicalFileName) {
-			textureWithUri.setURI(canonicalFileName)
-		}
-
-		if (textureWithUri.setName && currentName !== canonicalFileName) {
-			textureWithUri.setName(canonicalFileName)
-		}
+		syncTextureIdentities(target)
 	}
 
 	/**
@@ -838,23 +845,36 @@ export class ModelOptimizer {
 		return this.ensureModelLoaded()
 	}
 
+	/**
+	 * `ticket` is the document the calling operation started on; it defaults
+	 * to the current one for callers that reach this without awaiting first.
+	 */
 	private async applyTransforms(
 		transforms: Transform[],
-		operationName: string
+		operationName: string,
+		ticket = this.currency.currentTicket()
 	): Promise<void> {
-		if (!this._document) return
+		// Asked before the document is: a reset or a failed load that retired
+		// the ticket also cleared the document, and returning quietly then
+		// would report a step that never ran as done.
+		this.currency.ensureCurrent(ticket)
+		// Read once: the document can be replaced while this awaits.
+		const document = this._document
+		if (!document) return
 
 		try {
 			// Create a safe copy and get original size before any mutations
-			const safeCopyDoc = cloneDocument(this._document)
+			const safeCopyDoc = cloneDocument(document)
 			const originalSize = (await this.io.writeBinary(safeCopyDoc)).byteLength
 
 			// Create a working copy to apply transforms to
-			const workingDoc = cloneDocument(this._document)
+			const workingDoc = cloneDocument(document)
 			await workingDoc.transform(...transforms)
 
 			// Check if transformation resulted in a model with increased size
 			const newSize = (await this.io.writeBinary(workingDoc)).byteLength
+			// Before either outcome: a retired step neither commits nor reverts.
+			this.currency.ensureCurrent(ticket)
 
 			if (newSize > originalSize) {
 				console.warn(
@@ -864,20 +884,24 @@ export class ModelOptimizer {
 			}
 
 			// If optimization was beneficial, update the model and track the optimization
-			this._document = workingDoc
+			this.adoptDocument(workingDoc, ticket)
 			this.appliedOptimizations.push(operationName)
 		} catch (error) {
+			// Its own commit check, or a failure while stale: either way not
+			// about the document that retired it.
+			if (!this.currency.isCurrent(ticket))
+				throw new SupersededError({ cause: error })
 			throw new Error(`Failed to apply ${operationName}: ${error}`, {
 				cause: error
 			})
 		}
 	}
 
-	private emitProgress(
+	private emitProgress = (
 		operation: string,
 		progress: number,
 		details?: string
-	): void {
+	): void => {
 		if (this.progressCallback) {
 			this.progressCallback({ operation, progress, details })
 		}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
 import {
@@ -99,17 +99,19 @@ export function useImgTo3dGeneration(
 	// Bumped after each round, so the effect below schedules the next one.
 	const [pollRound, setPollRound] = useState(0)
 
-	const pendingIds = useMemo(
-		() =>
-			candidates
-				.filter((candidate) => !isTerminalImgTo3dStatus(candidate.status))
-				.map((candidate) => candidate.jobId),
-		[candidates]
-	)
-	const pendingKey = pendingIds.join(',')
+	/*
+	  A string, so the effect below restarts when the set of pending jobs
+	  changes rather than whenever `candidates` is a new array, which every
+	  progress update makes it.
+	*/
+	const pendingKey = candidates
+		.filter((candidate) => !isTerminalImgTo3dStatus(candidate.status))
+		.map((candidate) => candidate.jobId)
+		.join(',')
 
 	useEffect(() => {
-		if (pendingIds.length === 0) return
+		if (!pendingKey) return
+		const pendingIds = pendingKey.split(',')
 		const controller = new AbortController()
 
 		const timer = setTimeout(async () => {
@@ -155,8 +157,7 @@ export function useImgTo3dGeneration(
 			controller.abort()
 			clearTimeout(timer)
 		}
-		// pendingKey stands in for pendingIds, which is a new array every render.
-	}, [pendingKey, pollRound])
+	}, [pendingKey, pollRound, pollAfterMs])
 
 	const generate = useCallback(
 		async (

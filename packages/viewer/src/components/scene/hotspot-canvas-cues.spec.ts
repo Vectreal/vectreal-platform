@@ -106,7 +106,7 @@ describe('the marker you are standing at says so', () => {
 		// a host command and an interaction all move the camera without it.
 		const handler = viewer
 			.split('const handleInteractionEvent = useCallback')[1]
-			?.split('\t\t[onInteractionEvent]')[0]
+			?.split('\t\t[noteCamera, onInteractionEvent]')[0]
 
 		// A real anchor check, not just truthiness: if the closing split stops
 		// matching, `handler` becomes the rest of the file and every assertion

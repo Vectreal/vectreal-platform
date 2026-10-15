@@ -41,6 +41,7 @@ export type DashboardOperation =
 	| 'api-key:update'
 	| 'api-key:revoke'
 	| 'api-key:rotate'
+	| 'billing:manage'
 
 /**
  * Operations a folder's creator may perform on it regardless of their role.
@@ -106,7 +107,10 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	 * secret, so every embed still carrying the old one stops working. It is
 	 * revoke plus a replacement, not a lesser action.
 	 */
-	'api-key:rotate': ['owner', 'admin']
+	'api-key:rotate': ['owner', 'admin'],
+
+	/** Checkout, the billing portal, and confirming a completed checkout. */
+	'billing:manage': ['owner', 'admin']
 }
 
 export interface DashboardActorContext {
@@ -164,7 +168,8 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 	'api-key:read': 'view API keys',
 	'api-key:update': 'edit API keys',
 	'api-key:revoke': 'revoke API keys',
-	'api-key:rotate': 'rotate API keys'
+	'api-key:rotate': 'rotate API keys',
+	'billing:manage': 'manage billing'
 }
 
 /**
@@ -175,7 +180,7 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
  * deleted, not what role the viewer holds.
  *
  * It exists because three components were writing this sentence out by hand -
- * `project-card.tsx`, `table-columns.tsx` and `projects-edit.tsx` all carried
+ * `project-card.tsx`, `table-columns/project-columns.tsx` and `projects-edit.tsx` all carried
  * "Only organization owners can delete a project." - while the table that
  * decides the answer sat one import away. Three copies of a rule is one rule
  * and two chances to disagree with it, and the day `project:delete` admits

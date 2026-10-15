@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { useAtomValue } from 'jotai/react'
 import { ArrowUpRight, Image as ImageIcon } from 'lucide-react'
 
-import { PUBLISHER_EDGE_INSET, PUBLISHER_LAYER } from './shell-layout'
 import {
 	DELIVERY_REFERENCE_LABEL,
 	estimateDeliveryTime
@@ -19,7 +18,7 @@ import type { FC, ReactNode } from 'react'
 
 /*
   One 8px step for the card's padding and every gap inside it, and inner
-  corners at the card's radius (`rounded-xl`, which `publisher-shell-panel`
+  corners at the card's radius (`rounded-xl`, which `shell-panel`
   sets) less that padding, so the thumbnail and both triggers sit concentric
   with the card.
 */
@@ -42,7 +41,7 @@ const CardTrigger = ({
 		onClick={onClick}
 		disabled={disabled}
 		className={cn(
-			'publisher-shell-focus ds-field-interactive flex w-full items-center gap-2 px-3 py-2 text-left',
+			'shell-focus ds-field-interactive flex w-full items-center gap-2 px-3 py-2 text-left',
 			INNER_RADIUS
 		)}
 	>
@@ -60,6 +59,11 @@ const CardTrigger = ({
 interface PublishCardProps {
 	sceneBytes?: null | number
 	isSceneSizeLoading?: boolean
+	/**
+	 * The size leaves out GPU texture encoding, which only publishing measures,
+	 * so no honest load time can be read from it.
+	 */
+	sizeExcludesTextureEncoding?: boolean
 	/** Transient loader/optimizer status; replaces the metric line while set. */
 	statusText?: null | string
 	isPublished: boolean
@@ -69,8 +73,8 @@ interface PublishCardProps {
 }
 
 /**
- * The publisher's outbound affordance, floating at the bottom-right of the
- * canvas stage with the same inset as the tool bar.
+ * The publisher's outbound affordance, at the foot of the canvas stage's
+ * bottom-right column, under the save progress.
  *
  * Two triggers on one card, grouped because they are two halves of shipping:
  * **Publish** opens the publish panel and says what state the scene is in,
@@ -83,6 +87,7 @@ interface PublishCardProps {
 export const PublishCard: FC<PublishCardProps> = ({
 	sceneBytes,
 	isSceneSizeLoading = false,
+	sizeExcludesTextureEncoding = false,
 	statusText = null,
 	isPublished,
 	onOpenPublishPanel,
@@ -110,9 +115,7 @@ export const PublishCard: FC<PublishCardProps> = ({
 			transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
 			aria-hidden={isPreviewMode}
 			className={cn(
-				'publisher-shell-panel absolute right-0 bottom-0 flex w-60 flex-col gap-2 overflow-hidden p-2',
-				PUBLISHER_EDGE_INSET,
-				PUBLISHER_LAYER.card,
+				'shell-panel pointer-events-auto flex w-full shrink-0 flex-col gap-2 overflow-hidden p-2',
 				isPreviewMode && 'pointer-events-none',
 				disabled && 'pointer-events-none opacity-45 saturate-50'
 			)}
@@ -174,8 +177,14 @@ export const PublishCard: FC<PublishCardProps> = ({
 								/>
 							)}
 							<span className="truncate">
-								{formatFileSize(sceneBytes)} · {estimate.label} on{' '}
-								{DELIVERY_REFERENCE_LABEL}
+								{sizeExcludesTextureEncoding ? (
+									<>{formatFileSize(sceneBytes)} + GPU textures</>
+								) : (
+									<>
+										{formatFileSize(sceneBytes)} · {estimate.label} on{' '}
+										{DELIVERY_REFERENCE_LABEL}
+									</>
+								)}
 							</span>
 							{estimate.isSlow && (
 								<span className="sr-only">, slow to load</span>

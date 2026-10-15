@@ -297,6 +297,40 @@ describe('asset reclaim', () => {
 		expect(await exists(stranded)).toBe(false)
 	})
 
+	it('keeps the original a save uploaded in its own batch', async () => {
+		// The batch reclaim deletes whatever this request uploaded and the commit
+		// did not keep. The original is committed apart from the model's assets,
+		// so unless it is kept too it is deleted the moment it is saved.
+		const { saveSceneSettings } =
+			await import('../../app/lib/domain/scene/server/scene-settings.operations.server')
+
+		const requestId = randomUUID()
+		const sceneId = randomUUID()
+		await db
+			.insert(schema.scenes)
+			.values({ id: sceneId, projectId, folderId: null, name: 'kept original' })
+		const buffer = await seedAsset({ requestId })
+		const original = await seedAsset({ requestId, name: 'source.glb' })
+
+		const response = await saveSceneSettings(
+			{
+				action: 'commit-scene-save',
+				requestId,
+				sceneId,
+				projectId,
+				meta: { name: 'kept original' },
+				settings: {},
+				sceneAssetIds: [buffer],
+				sourceAssetId: original
+			} as never,
+			ownerId
+		)
+
+		expect(response.ok).toBe(true)
+		expect(await exists(buffer)).toBe(true)
+		expect(await exists(original)).toBe(true)
+	})
+
 	it('reaches an orphan sitting behind a page of referenced rows', async () => {
 		// The bound has to be applied to rows already known unreferenced. A
 		// healthy project's oldest assets belong to its longest-lived scene and

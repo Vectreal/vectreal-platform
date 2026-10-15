@@ -3,7 +3,10 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { resolveEmbedHotspotPresentation } from './embed-presentation'
+import {
+	resolveEmbedCameraControls,
+	resolveEmbedHotspotPresentation
+} from './embed-presentation'
 
 const resolve = (query: string) =>
 	resolveEmbedHotspotPresentation(new URLSearchParams(query))
@@ -118,5 +121,17 @@ describe('the presentation reaches the viewer', () => {
 		// is not an embed gets the viewer's own defaults without restating them.
 		expect(viewer).toContain('hotspotPresentation?.')
 		expect(viewer).not.toContain('hotspotPresentation.showMarkers')
+	})
+})
+
+describe('resolveEmbedCameraControls', () => {
+	const resolveControls = (query: string) =>
+		resolveEmbedCameraControls(new URLSearchParams(query))
+
+	it('leaves the switcher to the scene unless the host says 0', () => {
+		expect(resolveControls('')).toBe(true)
+		expect(resolveControls('cameraControls=')).toBe(true)
+		expect(resolveControls('cameraControls=1')).toBe(true)
+		expect(resolveControls('cameraControls=0')).toBe(false)
 	})
 })

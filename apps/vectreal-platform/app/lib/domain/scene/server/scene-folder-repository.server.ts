@@ -610,8 +610,15 @@ export async function updateSceneMetadata(
 		.update(scenes)
 		.set({
 			name: trimmedName,
-			description: params.description?.trim() || null,
-			thumbnailUrl: params.thumbnailUrl?.trim() || null,
+			// An omitted field is left as it is; only an explicit empty value
+			// clears it. The scene page's title editor sends no thumbnail, and
+			// folding that into null wiped the thumbnail on every rename.
+			...(params.description !== undefined && {
+				description: params.description?.trim() || null
+			}),
+			...(params.thumbnailUrl !== undefined && {
+				thumbnailUrl: params.thumbnailUrl?.trim() || null
+			}),
 			updatedAt: new Date()
 		})
 		.where(eq(scenes.id, sceneId))

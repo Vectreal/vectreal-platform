@@ -11,7 +11,6 @@ import {
 } from 'react'
 import {
 	Box3,
-	Euler,
 	Mesh,
 	Object3D,
 	PerspectiveCamera,
@@ -20,13 +19,25 @@ import {
 	Vector3
 } from 'three'
 
+import { resolveClipPlanes, type ClipExtentRegistry } from './clip-planes'
 import { useModelFrame, type ModelKey } from './model-frame'
+import { worldBounds } from './model-measurement'
+import { resolveCameraSelection } from './scene-camera'
+import {
+	buildCaptureCamera,
+	type CapturePose,
+	type OrbitLimits
+} from './screenshot-pose'
 
 import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
 } from '../../types/viewer-types'
-import type { CameraProps, NormalizationOptions } from '@vctrl/core'
+import type {
+	CameraProps,
+	NormalizationOptions,
+	SceneBackdrop
+} from '@vctrl/core'
 
 /**
  * Anisotropic filtering keeps textures sharp on surfaces seen at a glancing
@@ -49,6 +60,11 @@ interface ModelProps {
 	 */
 	modelKey?: ModelKey
 	/**
+	 * Drawn in place of `object`. `object` stays mounted, hidden, so everything
+	 * that measures or raycasts it in world space still finds it in place.
+	 */
+	displayedObject?: Object3D
+	/**
 	 * The callback function to execute when creating a screenshot of the model after loading.
 	 */
 	onScreenshot?: (dataUrl: string) => void
@@ -64,9 +80,19 @@ interface ModelProps {
 	 * Used to resolve target camera positions when capturing with targetCameraId.
 	 */
 	cameraOptions?: CameraProps
+	/**
+	 * Everything else the viewer draws (the shadow ground, the light handle),
+	 * which the clip planes have to contain along with the model.
+	 */
+	clipExtents?: ClipExtentRegistry
+	/**
+	 * The backdrop the viewer paints behind its transparent canvas. Painted
+	 * under the screenshot too, so a thumbnail shows the scene as it is seen.
+	 */
+	backdrop?: SceneBackdrop | null
 }
 
-type OrbitControlsLike = {
+type OrbitControlsLike = OrbitLimits & {
 	enabled?: boolean
 	target: Vector3
 	update: () => void
@@ -139,7 +165,8 @@ function solveAutoFitFraming(
 
 const buildScreenshotDataUrl = async (
 	sourceCanvas: HTMLCanvasElement,
-	options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>>
+	options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>>,
+	backdrop?: SceneBackdrop | null
 ): Promise<string> => {
 	const outputCanvas = document.createElement('canvas')
 	outputCanvas.width = options.width
@@ -168,6 +195,27 @@ const buildScreenshotDataUrl = async (
 		cropY = (sourceHeight - cropHeight) / 2
 	}
 
+	if (backdrop) {
+		if (backdrop.type === 'color') {
+			context.fillStyle = backdrop.color
+		} else {
+			// The CSS gradient spans the whole viewer, and the capture is a crop
+			// of it, so the gradient runs between where the viewer's top and
+			// bottom edges land in the output rather than the output's own.
+			const scale = options.height / cropHeight
+			const gradient = context.createLinearGradient(
+				0,
+				-cropY * scale,
+				0,
+				(sourceHeight - cropY) * scale
+			)
+			gradient.addColorStop(0, backdrop.top)
+			gradient.addColorStop(1, backdrop.bottom)
+			context.fillStyle = gradient
+		}
+		context.fillRect(0, 0, options.width, options.height)
+	}
+
 	context.drawImage(
 		sourceCanvas,
 		cropX,
@@ -191,24 +239,34 @@ const buildScreenshotDataUrl = async (
 const SceneModel = memo((props: ModelProps) => {
 	const {
 		object,
+		displayedObject,
 		modelKey,
 		cameraOptions,
 		onScreenshot,
 		onScreenshotCaptureReady,
+		backdrop,
 		enableShadows = false,
 		normalizationOptions,
-		onRawDiagonalComputed
+		onRawDiagonalComputed,
+		clipExtents
 	} = props
 	const bounds = useBounds()
-	const { camera, controls, gl, invalidate, scene } = useThree((state) => ({
-		camera: state.camera,
-		controls: state.controls as unknown as OrbitControlsLike | undefined,
-		gl: state.gl,
-		invalidate: state.invalidate,
-		scene: state.scene
-	}))
+	const { camera, controls, gl, invalidate, scene, size } = useThree(
+		(state) => ({
+			camera: state.camera,
+			controls: state.controls as unknown as OrbitControlsLike | undefined,
+			gl: state.gl,
+			invalidate: state.invalidate,
+			scene: state.scene,
+			size: state.size
+		})
+	)
 
 	const frame = useModelFrame(object, modelKey)
+	const drawnObjects = useMemo(
+		() => (displayedObject ? [object, displayedObject] : [object]),
+		[object, displayedObject]
+	)
 	const rawDiagonal = frame?.rawDiagonal ?? 0
 
 	const normalizedScale = useMemo(
@@ -219,9 +277,11 @@ const SceneModel = memo((props: ModelProps) => {
 	// Dynamic camera clipping planes. drei's one-shot `.clip()` sets near/far tight
 	// to the bounding box at the fit distance, then clips the model the moment the
 	// camera zooms closer (and normalization, which rescales the model, left stale
-	// planes behind). Instead, recompute near/far every frame from the model's
-	// bounding sphere and the live camera distance: the planes stay tight enough for
-	// good depth precision yet always contain the model. Never persisted.
+	// planes behind). Instead, recompute near/far every frame from the live camera
+	// and the bounds of everything drawn: the model's bounding sphere plus the
+	// registered `clipExtents`, since the shadow ground reaches well past the model
+	// and the light handle sits outside it. The planes stay tight enough for good
+	// depth precision yet always contain what is drawn. Never persisted.
 	//
 	// The sphere is read from the rendered group's WORLD bounds (the model sits
 	// inside a <Center> wrapper that offsets it, so a local-bounds approximation
@@ -233,41 +293,49 @@ const SceneModel = memo((props: ModelProps) => {
 
 	useEffect(() => {
 		clipSphereDirtyRef.current = true
-	}, [object, normalizedScale])
+	}, [drawnObjects, normalizedScale])
 
-	useFrame(() => {
-		const perspectiveCamera = camera as PerspectiveCamera
-		if (!perspectiveCamera.isPerspectiveCamera) {
-			return
-		}
-
-		if (clipSphereDirtyRef.current && focusGroupRef.current) {
-			focusGroupRef.current.updateWorldMatrix(true, true)
-			new Box3()
-				.setFromObject(focusGroupRef.current)
-				.getBoundingSphere(clipSphereRef.current)
-			if (clipSphereRef.current.radius > 0) {
-				clipSphereDirtyRef.current = false
+	const fitClipPlanes = useCallback(
+		(perspectiveCamera: PerspectiveCamera) => {
+			if (!perspectiveCamera.isPerspectiveCamera) {
+				return
 			}
-		}
 
-		const sphere = clipSphereRef.current
-		if (sphere.radius <= 0) {
-			return
-		}
+			if (clipSphereDirtyRef.current && focusGroupRef.current) {
+				worldBounds(object).getBoundingSphere(clipSphereRef.current)
+				if (clipSphereRef.current.radius > 0) {
+					clipSphereDirtyRef.current = false
+				}
+			}
 
-		const distance = perspectiveCamera.position.distanceTo(sphere.center)
-		const radius = sphere.radius
-		// Margins keep the model's front/back just inside the planes.
-		const near = Math.max(distance - radius * 1.1, radius * 0.001, 1e-4)
-		const far = distance + radius * 1.1
+			const sphere = clipSphereRef.current
+			if (sphere.radius <= 0) {
+				return
+			}
 
-		if (perspectiveCamera.near !== near || perspectiveCamera.far !== far) {
-			perspectiveCamera.near = near
-			perspectiveCamera.far = far
-			perspectiveCamera.updateProjectionMatrix()
-		}
-	})
+			const { near, far } = resolveClipPlanes(
+				perspectiveCamera,
+				sphere,
+				clipExtents ?? [],
+				size.height
+			)
+
+			// The resolver reads the frustum's sides from a projection built with the
+			// previous planes, so its result drifts in the last bits from frame to
+			// frame. Ignoring that keeps a still view still, so it can converge.
+			if (
+				Math.abs(perspectiveCamera.near - near) > near * 1e-6 ||
+				Math.abs(perspectiveCamera.far - far) > far * 1e-6
+			) {
+				perspectiveCamera.near = near
+				perspectiveCamera.far = far
+				perspectiveCamera.updateProjectionMatrix()
+			}
+		},
+		[clipExtents, object, size.height]
+	)
+
+	useFrame(() => fitClipPlanes(camera as PerspectiveCamera))
 
 	useEffect(() => {
 		if (rawDiagonal > 0) onRawDiagonalComputed?.(rawDiagonal)
@@ -282,119 +350,103 @@ const SceneModel = memo((props: ModelProps) => {
 			}
 
 			const activeCamera = camera as PerspectiveCamera
-			const initialCameraPosition = activeCamera.position.clone()
-			const initialCameraQuaternion = activeCamera.quaternion.clone()
-			const initialFov = activeCamera.fov
-			const initialZoom = activeCamera.zoom
-			const initialControlsTarget = controls?.target?.clone()
-			const initialControlsEnabled = controls?.enabled
 
-			try {
-				// If a target camera ID is specified, resolve and apply that camera's settings first
-				if (options.targetCameraId && cameraOptions?.cameras) {
-					const targetCameraConfig = cameraOptions.cameras.find(
-						(c) => c.cameraId === options.targetCameraId
+			// The pose the capture renders at. A posed capture renders through a
+			// camera of its own: see `buildCaptureCamera`. Viewport mode sets none
+			// and renders the live frame.
+			let pose: CapturePose | null = null
+
+			if (options.targetCameraId && cameraOptions?.cameras) {
+				const targetCameraConfig = cameraOptions.cameras.find(
+					(c) => c.cameraId === options.targetCameraId
+				)
+
+				if (targetCameraConfig) {
+					// Resolved by the viewer's camera rule, so fallbacks (a missing
+					// target, fov or position) read the live values at capture start.
+					// One case differs from what the viewer shows: a camera with no pose
+					// at all, which the viewer sends to the opening view SceneCamera
+					// keeps and this component cannot see. It keeps the pose at capture
+					// start.
+					const selection = resolveCameraSelection(
+						cameraOptions.cameras,
+						targetCameraConfig.cameraId,
+						controls?.target?.clone() ?? new Vector3(),
+						activeCamera
 					)
 
-					if (targetCameraConfig) {
-						// Apply target camera's position if available
-						if (
-							Array.isArray(targetCameraConfig.position) &&
-							targetCameraConfig.position.length >= 3
-						) {
-							activeCamera.position.fromArray(
-								targetCameraConfig.position as [number, number, number]
-							)
-						}
-
-						// Apply target camera's rotation if available
-						if (
-							Array.isArray(targetCameraConfig.rotation) &&
-							targetCameraConfig.rotation.length >= 3
-						) {
-							const euler = new Euler(
-								...(targetCameraConfig.rotation as [number, number, number])
-							)
-							activeCamera.quaternion.setFromEuler(euler)
-						}
-
-						// Apply target camera's field of view if available
-						if (typeof targetCameraConfig.fov === 'number') {
-							activeCamera.fov = targetCameraConfig.fov
-						}
-
-						// Apply target camera's target/lookAt if controls exist
-						if (
-							controls?.target &&
-							(Array.isArray(targetCameraConfig.target) ||
-								Array.isArray(targetCameraConfig.lookAt))
-						) {
-							const targetPosition = (targetCameraConfig.target ??
-								targetCameraConfig.lookAt) as
-								[number, number, number] | undefined
-							if (targetPosition) {
-								controls.target.fromArray(targetPosition)
+					pose = controls?.target
+						? {
+								position: selection.targetPosition,
+								fov: selection.targetFov,
+								lookAt: selection.targetLookAt,
+								limits: controls
 							}
-						}
-					}
-				} else if (options.mode === 'auto-fit') {
-					// Framed here rather than via drei's `bounds.fit()`, which animates
-					// the camera with damping over several frames. The old code called
-					// it and then immediately read `controls.target` and the camera
-					// position to derive a framing, so it computed from pre-fit values
-					// while the animation was still running, and rendered two frames
-					// later with the camera somewhere in between. On most models that
-					// left it far enough out to capture the environment and no model.
-					//
-					// Solving for the distance directly is deterministic, which also
-					// makes a thumbnail reproducible instead of timing-dependent.
-					if (typeof controls?.enabled === 'boolean') {
-						controls.enabled = false
-					}
+						: {
+								position: selection.targetPosition,
+								fov: selection.targetFov,
+								rotation: selection.targetRotation
+							}
+				}
+			} else if (options.mode === 'auto-fit') {
+				// Framed here rather than via drei's `bounds.fit()`, which animates
+				// the camera with damping over several frames. The old code called
+				// it and then immediately read `controls.target` and the camera
+				// position to derive a framing, so it computed from pre-fit values
+				// while the animation was still running, and rendered two frames
+				// later with the camera somewhere in between. On most models that
+				// left it far enough out to capture the environment and no model.
+				//
+				// Solving for the distance directly is deterministic, which also
+				// makes a thumbnail reproducible instead of timing-dependent.
+				const framing = solveAutoFitFraming(object, activeCamera)
 
-					const framing = solveAutoFitFraming(object, activeCamera)
-
-					if (framing) {
-						activeCamera.position.copy(framing.position)
-						activeCamera.lookAt(framing.target)
-						controls?.target?.copy(framing.target)
+				if (framing) {
+					// The distance was solved for this fov; hold it.
+					pose = {
+						position: framing.position,
+						fov: activeCamera.fov,
+						lookAt: framing.target,
+						limits: controls
 					}
 				}
+			}
 
-				activeCamera.updateProjectionMatrix()
-				controls?.update()
-				invalidate()
-				await waitForNextFrame()
-				invalidate()
-				await waitForNextFrame()
-				gl.render(scene, activeCamera)
+			// Two frames let the scene settle before the render.
+			invalidate()
+			await waitForNextFrame()
+			invalidate()
+			await waitForNextFrame()
 
-				const dataUrl = await buildScreenshotDataUrl(gl.domElement, options)
+			try {
+				if (pose) {
+					const captureCamera = buildCaptureCamera(activeCamera, pose)
+					// The live camera's planes were solved for where it is; the pose
+					// needs its own, or a model nearer or farther is clipped away.
+					fitClipPlanes(captureCamera)
+					gl.render(scene, captureCamera)
+				} else {
+					gl.render(scene, activeCamera)
+				}
+
+				const dataUrl = await buildScreenshotDataUrl(
+					gl.domElement,
+					options,
+					backdrop
+				)
 				onScreenshot?.(dataUrl)
 				return dataUrl
 			} finally {
-				activeCamera.position.copy(initialCameraPosition)
-				activeCamera.quaternion.copy(initialCameraQuaternion)
-				activeCamera.fov = initialFov
-				activeCamera.zoom = initialZoom
-				activeCamera.updateProjectionMatrix()
-
-				if (controls?.target && initialControlsTarget) {
-					controls.target.copy(initialControlsTarget)
-				}
-
-				if (typeof controls?.enabled === 'boolean') {
-					controls.enabled = initialControlsEnabled
-				}
-
-				controls?.update()
+				// The render replaced the live frame with the capture's.
 				invalidate()
 			}
 		},
 		[
+			backdrop,
 			camera,
 			cameraOptions,
 			controls,
+			fitClipPlanes,
 			gl,
 			invalidate,
 			object,
@@ -404,46 +456,40 @@ const SceneModel = memo((props: ModelProps) => {
 	)
 
 	useLayoutEffect(() => {
-		if (!enableShadows) {
-			object.traverse((child) => {
+		for (const drawn of drawnObjects) {
+			drawn.traverse((child) => {
 				if (child instanceof Mesh) {
-					child.castShadow = false
-					child.receiveShadow = false
+					child.castShadow = enableShadows
+					child.receiveShadow = enableShadows
 				}
 			})
-			return
 		}
-
-		object.traverse((child) => {
-			if (child instanceof Mesh) {
-				child.castShadow = true
-				child.receiveShadow = true
-			}
-		})
-	}, [enableShadows, object])
+	}, [enableShadows, drawnObjects])
 
 	useLayoutEffect(() => {
 		const anisotropy = Math.min(
 			TEXTURE_ANISOTROPY,
 			gl.capabilities.getMaxAnisotropy()
 		)
-		object.traverse((child) => {
-			if (!(child instanceof Mesh)) return
-			const materials = Array.isArray(child.material)
-				? child.material
-				: [child.material]
-			for (const material of materials) {
-				for (const value of Object.values(material)) {
-					if (!(value instanceof Texture) || value.anisotropy >= anisotropy)
-						continue
-					value.anisotropy = anisotropy
-					// Sampler state is set on upload; a texture already on the GPU
-					// (the same model shown again) has to be re-uploaded to take it.
-					value.needsUpdate = true
+		for (const drawn of drawnObjects) {
+			drawn.traverse((child) => {
+				if (!(child instanceof Mesh)) return
+				const materials = Array.isArray(child.material)
+					? child.material
+					: [child.material]
+				for (const material of materials) {
+					for (const value of Object.values(material)) {
+						if (!(value instanceof Texture) || value.anisotropy >= anisotropy)
+							continue
+						value.anisotropy = anisotropy
+						// Sampler state is set on upload; a texture already on the GPU
+						// (the same model shown again) has to be re-uploaded to take it.
+						value.needsUpdate = true
+					}
 				}
-			}
-		})
-	}, [gl, object])
+			})
+		}
+	}, [gl, drawnObjects])
 
 	// Refit when normalization toggles, or a new model loads while normalization
 	// is already on. Keyed on the frame rather than the object: a rendition of the
@@ -477,7 +523,10 @@ const SceneModel = memo((props: ModelProps) => {
 			scale={normalizedScale}
 			dispose={null}
 		>
-			<primitive object={object} />
+			<group visible={!displayedObject}>
+				<primitive object={object} />
+			</group>
+			{displayedObject && <primitive object={displayedObject} />}
 		</group>
 	)
 })

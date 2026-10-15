@@ -9,7 +9,8 @@ import {
 } from 'react'
 
 import { CameraDrawing } from './camera-drawing'
-import { StageBoundary } from './hero/stage-boundary'
+import { whenHeroSettled } from './stage/hero-settled'
+import { StageBoundary } from './stage/stage-boundary'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 
 const LIVE_HINT = HOME_PAGE_COPY.stage.status.live
@@ -62,8 +63,9 @@ export function placeClip({ x, y, w, h }: FrameRect) {
  * canvas cut to one shape would crop the shadow, or leave it ending short of
  * the place's edge, in the others.
  *
- * The camera's line drawing holds the place until the window is first on
- * screen; then the live stage mounts over it and stays. It is the hero's own
+ * The camera's line drawing holds the place until the hero's stage has
+ * settled or the window is first on screen, whichever comes first; then the
+ * live stage mounts over it and stays. It is the hero's own
  * engine and file, so it costs almost nothing the page has not already loaded,
  * and it draws only when something changes.
  */
@@ -83,6 +85,8 @@ export const ProductStage = ({
 	const [live, setLive] = useState(false)
 	const frameRef = useRef<HTMLDivElement>(null)
 
+	// Started once the hero has settled, so its one-time GPU stall lands while the reader is still on the hero; on screen first, it starts then.
+	useEffect(() => whenHeroSettled(() => setWanted(true)), [])
 	useEffect(() => {
 		if (visible) setWanted(true)
 	}, [visible])

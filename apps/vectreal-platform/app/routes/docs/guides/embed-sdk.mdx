@@ -83,6 +83,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 | `?transition=<type>` | `none`, `linear`, `object_avoidance` | Overrides the stored transition type |
 | `?hotspots=0` | `0` to hide | Draws no markers. The hotspots stay reachable through `focusHotspot` and still appear in `ready()` |
 | `?hotspotContent=0` | `0` to suppress | Keeps the markers, and the clicks, but draws no card. A click still flies the camera and still emits `hotspot_activated`, which is how your own panel knows to open. `focusHotspot` draws no card in this mode either |
+| `?cameraControls=0` | `0` to hide | Draws no camera switcher. The viewer shows one when the scene has two or more scene cameras (a hotspot's own camera does not count) and the author has not turned it off (the Camera tool's **Camera switcher** setting); turn it off when your page switches cameras itself with `activateCamera`, so two controls do not compete |
 | `?hotspotColor=<hex>` | A URL-encoded hex colour, e.g. `%23fc6c18` | Sets the marker fill. Hex only; any other CSS value is ignored. The step numeral stays dark ink, so a dark or saturated fill makes it unreadable and an iframe cannot override the ink token - keep the fill light |
 | `?theme=<mode>` | `light`, `dark`, `system` | Color scheme for the viewer's chrome. Defaults to `system`, which follows the visitor's browser setting - set it explicitly when your page forces a scheme of its own |
 
@@ -94,7 +95,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 ></iframe>
 ```
 
-`?camera`, `?autoRotate` and `?transition` apply once, when the viewer loads and before `ready()` resolves, so a camera your page asks for afterwards replaces the one in the URL. `?theme` and the three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
+`?camera`, `?autoRotate` and `?transition` apply once, when the viewer loads and before `ready()` resolves, so a camera your page asks for afterwards replaces the one in the URL. `?theme`, `?cameraControls` and the three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
 
 None of them persists to the stored scene configuration.
 
@@ -123,6 +124,7 @@ other origin are dropped.
 | `ready` | `() => Promise<EmbedReadyInfo>` | Resolves once the scene has loaded and the viewer accepts commands, wherever the frame sits on the page. Returns `{ sceneId, cameras, hotspots }` for that scene. |
 | `activateCamera` | `(cameraId: string) => void` | Switch to a named camera. |
 | `focusHotspot` | `(hotspotId: string) => void` | Reveal a hotspot's content and fly its camera. Sets rather than toggles, so calling it twice does not close the card; there is no close command. |
+| `returnToSceneView` | `() => void` | Leave a hotspot's camera for the scene camera the visitor was on before, or the scene's default. Does nothing while the view is not at a hotspot. Visitors get the same from the viewer's own "Back to scene view" control and from Escape. |
 | `setTransition` | `(options: SetTransitionOptions) => void` | Override transition type for subsequent camera switches. |
 | `setControlsEnabled` | `(enabled: boolean) => void` | Enable or disable orbit controls. |
 | `setAutoRotate` | `(enabled: boolean, speed?: number) => void` | Toggle auto-rotate. |
@@ -130,6 +132,7 @@ other origin are dropped.
 | `setPanEnabled` | `(enabled: boolean) => void` | Toggle right-click pan. |
 | `setAnimationPlaying` | `(playing: boolean) => void` | Start or suspend animation playback. |
 | `restartAnimation` | `() => void` | Play the animation program from the beginning. |
+| `seekAnimationClip` | `(clipId: string, time: number) => void` | Move one clip to a time offset in seconds. Clip ids arrive with the `animation_state_changed` and `animation_clip_finished` events. A negative or non-finite time is dropped. |
 | `sendScrollProgress` | `(progress: number) => void` | Drive scroll-triggered interactions (0–1). |
 | `sendMessage` | `(message: string, payload?) => void` | Trigger a named `host_message` interaction. |
 | `on` | `(type, handler) => () => void` | Subscribe to an event. Returns an unsubscribe function. |
@@ -318,6 +321,8 @@ present apps/vectreal-platform/app/lib/domain/embed/embed-access-policy.ts reque
 present apps/vectreal-platform/app/routes/api/scenes.$sceneId.ts authContext.mode === 'apiKey'
 present packages/embed/src/embed.ts focusHotspot(hotspotId: string)
 present packages/embed/src/protocol.ts case 'focus_hotspot':
+present packages/embed/src/embed.ts returnToSceneView(): void
+present packages/embed/src/protocol.ts case 'return_to_scene_view':
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspots')
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hotspotContent')
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts const HEX_COLOR

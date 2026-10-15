@@ -1,6 +1,15 @@
 import { atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 
+import {
+	activeHotspotIdAtom,
+	cameraAtom,
+	exitHotspotCameraAtom,
+	selectCameraAtom,
+	selectedCameraIdAtom
+} from './scene-settings-store'
+import { resolveDefaultSceneCameraId } from '../domain/scene/scene-camera'
+
 import type { SceneCurrentLocation } from '../../types/api'
 import type { ProcessState, SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
@@ -122,6 +131,10 @@ const hasUnsavedChangesAtom = selectAtom(
  * Entering closes every panel and remembers what was open; exiting puts it
  * back. Both halves live here, beside the state they change, which is what
  * lets the tool bar enter preview from any tool.
+ *
+ * The camera is part of that. Preview shows the scene as a visitor first sees
+ * it, so it starts on the default camera, and the editor's camera (often a
+ * hotspot's, which the preview picker does not list) comes back on exit.
  */
 const previewModeStateAtom = atom<{
 	active: boolean
@@ -129,33 +142,90 @@ const previewModeStateAtom = atom<{
 		ProcessState,
 		'mode' | 'activeComposeTool' | 'showSidebar' | 'showPublishPanel'
 	>
-}>({ active: false, returnTo: null })
+	returnToCameraId: null | string
+}>({ active: false, returnTo: null, returnToCameraId: null })
 
 const isPreviewModeAtom = atom((get) => get(previewModeStateAtom).active)
 
 const enterPreviewModeAtom = atom(null, (get, set) => {
 	if (get(previewModeStateAtom).active) return
+	// Out of the hotspot camera mode first, so what preview hands back on exit
+	// is the scene camera the author left for it, not a hotspot's close-up.
+	set(exitHotspotCameraAtom)
 	const { mode, activeComposeTool, showSidebar, showPublishPanel } =
 		get(processAtom)
 	set(previewModeStateAtom, {
 		active: true,
-		returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel }
+		returnTo: { mode, activeComposeTool, showSidebar, showPublishPanel },
+		returnToCameraId: get(selectedCameraIdAtom)
 	})
 	set(processAtom, (prev) => ({
 		...prev,
 		showSidebar: false,
 		showPublishPanel: false
 	}))
+	const defaultCameraId = resolveDefaultSceneCameraId(get(cameraAtom).cameras)
+	if (defaultCameraId) set(selectedCameraIdAtom, defaultCameraId)
 })
 
 const exitPreviewModeAtom = atom(null, (get, set) => {
-	const { active, returnTo } = get(previewModeStateAtom)
+	const { active, returnTo, returnToCameraId } = get(previewModeStateAtom)
 	if (!active) return
-	set(previewModeStateAtom, { active: false, returnTo: null })
+	set(previewModeStateAtom, {
+		active: false,
+		returnTo: null,
+		returnToCameraId: null
+	})
 	if (returnTo) {
 		set(processAtom, (prev) => ({ ...prev, ...returnTo }))
 	}
+	if (returnToCameraId) set(selectedCameraIdAtom, returnToCameraId)
 })
+
+/**
+ * A camera the Camera tool should open on, left by a link from another tool
+ * and taken by the Camera tool's panel as it mounts.
+ */
+const cameraToolOpenRequestAtom = atom<null | string>(null)
+
+/**
+ * Switches to the Camera tool drilled into one camera, with the view moved to
+ * it, so a camera another tool points at is edited where cameras are edited.
+ *
+ * Selected the way the Camera tool selects, so a hotspot's camera enters the
+ * hotspot camera mode and closing the Camera tool puts back the camera the
+ * author was on.
+ */
+const openCameraInCameraToolAtom = atom(null, (_get, set, cameraId: string) => {
+	set(selectCameraAtom, cameraId)
+	set(cameraToolOpenRequestAtom, cameraId)
+	set(processAtom, (prev) => ({
+		...prev,
+		mode: 'compose',
+		activeComposeTool: 'camera-controls',
+		showSidebar: true,
+		showPublishPanel: false
+	}))
+})
+
+/**
+ * A marker clicked in the editor opens the Hotspot tool on that hotspot. The
+ * view stays where it is: the editor never gives a marker the visitor's
+ * behavior; preview does.
+ */
+const openHotspotInHotspotToolAtom = atom(
+	null,
+	(_get, set, hotspotId: string) => {
+		set(processAtom, (prev) => ({
+			...prev,
+			mode: 'compose',
+			activeComposeTool: 'hotspots',
+			showSidebar: true,
+			showPublishPanel: false
+		}))
+		set(activeHotspotIdAtom, hotspotId)
+	}
+)
 
 const isClickToPlaceActiveAtom = atom(false)
 const arePublisherActionsDisabledAtom = atom((get) => get(isPreviewModeAtom))
@@ -180,6 +250,9 @@ export {
 	isPreviewModeAtom,
 	enterPreviewModeAtom,
 	exitPreviewModeAtom,
+	cameraToolOpenRequestAtom,
+	openCameraInCameraToolAtom,
+	openHotspotInHotspotToolAtom,
 	isClickToPlaceActiveAtom,
 	arePublisherActionsDisabledAtom,
 	canEditCameraSettingsAtom,

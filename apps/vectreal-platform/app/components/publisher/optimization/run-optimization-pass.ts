@@ -1,3 +1,8 @@
+import {
+	SupersededError,
+	TextureCompressionError
+} from '@vctrl/core/model-optimizer'
+import { canEncodeImage } from '@vctrl/hooks/use-optimize-model'
 import { toast } from 'sonner'
 
 import {
@@ -14,13 +19,11 @@ import {
 	OPTIMIZATION_STEP_TIMEOUT_MS,
 	MODEL_SYNC_TIMEOUT_MS
 } from './utils'
-import { loadOriginalSceneModel } from '../../../lib/persistence/pending-scene-idb'
 
 import type { OptimizationStepsController } from './use-optimization-steps'
 import type { GeometryOptimizationResult } from './utils'
 import type { SceneOptimizationRuntimeState } from '../../../types/scene-optimization'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
-import type { ServerSceneData } from '@vctrl/core'
 
 /**
  * Everything the pass touches, passed in rather than closed over.
@@ -30,24 +33,20 @@ import type { ServerSceneData } from '@vctrl/core'
  * exercise without mounting React. As a plain function it is neither.
  */
 export interface OptimizationPassDeps {
-	/**
-	 * Reload the pristine scene from IndexedDB before optimizing. True when
-	 * switching presets (so passes never silently chain), false when stacking
-	 * another pass on the current state.
-	 */
-	fromOriginal: boolean
-	/**
-	 * Whether the current document may already carry optimizations, so falling
-	 * back to it is a meaningful difference worth telling the user about. False
-	 * for a first pass on a fresh upload, where the current document *is* the
-	 * pristine original and the IDB snapshot is merely still being written.
-	 */
-	documentMayBeOptimized?: boolean
 	optimizations: Optimizations
+	/**
+	 * Whether the scene this pass started on is still loaded. The optimizer is
+	 * shared and long-lived, so a pass that outlives its scene stops before its
+	 * next change to it rather than writing its result into the next scene.
+	 */
+	isCurrent: () => boolean
 	steps: OptimizationStepsController
 	model: {
-		reset: () => void
-		loadFromServerSceneData: (sceneData: ServerSceneData) => Promise<unknown>
+		/**
+		 * Puts the original back as the working document. Every pass starts here,
+		 * so its result is the original plus `optimizations` and nothing else.
+		 */
+		restoreSource: () => Promise<unknown>
 		loadFromGlbBuffer: (
 			buffer: Uint8Array,
 			meta: {
@@ -77,25 +76,41 @@ export interface OptimizationPassDeps {
 			prev: SceneOptimizationRuntimeState
 		) => SceneOptimizationRuntimeState
 	) => void
+	/**
+	 * Writes past whatever `setRuntime` filters out for a superseded pass. Only
+	 * for lowering `isPending`: the pass that raised it must lower it, or
+	 * nothing does when no hydration follows, as after `setSource`.
+	 */
+	setRuntimeUnfiltered: OptimizationPassDeps['setRuntime']
 }
 
+/**
+ * Never reset, unlike the runtime: a revision handed out before a scene
+ * switch must not equal one handed out after it.
+ */
+let lastPassRevision = 0
+
 export interface OptimizationPassResult {
-	/** False when nothing ran, or the pass failed. */
 	/**
-	 * The loaded document was replaced, so the viewer and the size display have
-	 * to catch up. Deliberately not "a step reduced something": the geometry
-	 * phase reloads the worker's bytes into the optimizer before this is set, so
-	 * even a run where every step reverted has left the optimizer holding a
-	 * different document than the viewer. Gating the sync on applied steps would
-	 * leave the two divergent.
+	 * Whether the document now is the original plus this pass's settings. False
+	 * means the pass failed and the document is the original itself: a failed
+	 * pass never leaves a partial result behind for the viewer or a save.
 	 */
-	documentChanged: boolean
+	succeeded: boolean
 	/** Null unless Draco ran in this pass. Never carried over from a previous one. */
 	dracoReport: DracoCompressionReport | null
 }
 
+/** Thrown at a checkpoint once the pass's scene has been replaced. */
+class SupersededPass extends Error {}
+
+/** Stops the pass before its next change to the optimizer if it is stale. */
+const ensureCurrent = (deps: Pick<OptimizationPassDeps, 'isCurrent'>) => {
+	if (!deps.isCurrent()) throw new SupersededPass()
+}
+
 const FAILED: OptimizationPassResult = {
-	documentChanged: false,
+	succeeded: false,
 	dracoReport: null
 }
 
@@ -157,31 +172,28 @@ async function establishBaselines({
 	}
 }
 
-/**
- * Runs the geometry steps in the worker and syncs the result back.
- *
- * Returns null when the model could not be exported for the worker, which is
- * recoverable — the texture phase can still run.
- */
+const GEOMETRY_EXPORT_FAILED =
+	'Could not export the model for geometry optimization. Try reloading the scene.'
+
+/** Runs the geometry steps in the worker and syncs the result back. */
 async function runGeometryPhase(
 	deps: OptimizationPassDeps,
 	stepCount: number
-): Promise<GeometryOptimizationResult | null> {
+): Promise<GeometryOptimizationResult> {
 	const { steps, model, optimizations } = deps
 
 	const currentBuffer = await withTimeout(
-		model.getModel(),
+		model.getModel().catch((error: unknown) => {
+			throw new Error(GEOMETRY_EXPORT_FAILED, { cause: error })
+		}),
 		MODEL_SYNC_TIMEOUT_MS,
 		'Model export for worker'
 	)
 	steps.complete(PREPARE_STEP)
 
-	if (!currentBuffer) {
-		toast.warning(
-			'Could not export the model for geometry optimization. Try reloading the scene.'
-		)
-		return null
-	}
+	// Fails the pass rather than skipping the phase: a result without its
+	// geometry steps would not be what these settings produce.
+	if (!currentBuffer) throw new Error(GEOMETRY_EXPORT_FAILED)
 
 	let runningStep: string | null = null
 
@@ -212,6 +224,7 @@ async function runGeometryPhase(
 	// Its own row rather than borrowing SYNC_STEP, which is planned last: with
 	// textures enabled that would jump the checklist to the end and then back
 	// when the texture phase starts.
+	ensureCurrent(deps)
 	steps.begin(LOAD_GEOMETRY_STEP)
 	await withTimeout(
 		model.loadFromGlbBuffer(
@@ -236,145 +249,179 @@ async function runGeometryPhase(
 
 /**
  * Compresses textures on the main thread, where the OffscreenCanvas encoder
- * lives. A partial failure still counts as a pass: some textures were replaced.
+ * lives. A partial failure still counts: some textures were replaced, and the
+ * rest are the originals. A total failure throws, so the pass fails instead of
+ * claiming texture settings that were never applied.
+ *
+ * Every preset asks for WebP, and Safari - with every browser on iOS - cannot
+ * write it. There each texture keeps the format it arrived in instead: written
+ * again at the preset's size and quality where the browser can write that
+ * format, which is not always smaller for a texture already within the size,
+ * and left as uploaded where it cannot, as a WebP texture is on Safari. A
+ * texture failing is that outcome, so it does not fail the pass; anything else
+ * thrown, a timeout included, still does. The notice says what happened.
  */
-async function runTexturePhase(deps: OptimizationPassDeps): Promise<boolean> {
+async function runTexturePhase(deps: OptimizationPassDeps): Promise<void> {
 	const { steps, model, optimizations } = deps
 	const label = getOptimizationDefinition('texture').stepLabel
+	const { targetFormat } = optimizations.texture
+	const keepsOwnFormat =
+		targetFormat !== undefined && !(await canEncodeImage(targetFormat))
 
 	// Only reached without the geometry phase when no geometry step is enabled,
 	// in which case preparation ends here instead.
 	steps.complete(PREPARE_STEP)
+	ensureCurrent(deps)
 	steps.begin(label)
+
+	if (keepsOwnFormat) {
+		toast.info(
+			`This browser cannot write ${targetFormat.toUpperCase()}, so textures keep their own format.`,
+			{ id: 'texture-format-kept' }
+		)
+	}
 
 	try {
 		await withTimeout(
-			model.texturesOptimization(optimizations.texture),
+			model.texturesOptimization(
+				keepsOwnFormat
+					? { ...optimizations.texture, targetFormat: undefined }
+					: optimizations.texture
+			),
 			OPTIMIZATION_STEP_TIMEOUT_MS,
 			'Texture optimization'
 		)
-		steps.complete(label)
-		return true
 	} catch (error) {
-		console.error('Error processing texture:', error)
-		const isPartialFailure =
-			error instanceof Error &&
-			error.message.includes('failed for ') &&
-			!error.message.includes('failed for all textures')
-
-		if (isPartialFailure) {
-			steps.complete(label)
-			return true
+		if (!(
+			error instanceof TextureCompressionError &&
+			(error.isPartial || keepsOwnFormat)
+		)) {
+			throw error
 		}
-		return false
+		console.warn('Some textures could not be compressed:', error)
 	}
+	steps.complete(label)
 }
+
+/** Shows the optimizer's document in the viewer, within the sync budget. */
+const syncViewer = (model: OptimizationPassDeps['model']) =>
+	withTimeout(model.applyOptimization(), MODEL_SYNC_TIMEOUT_MS, 'Model sync')
 
 export async function runOptimizationPass(
 	deps: OptimizationPassDeps
 ): Promise<OptimizationPassResult> {
-	const {
-		fromOriginal,
-		documentMayBeOptimized,
-		optimizations,
-		steps,
-		model,
-		setRuntime
-	} = deps
+	const { optimizations, steps, model, setRuntime } = deps
+	const revision = ++lastPassRevision
 
 	// Clear the previous pass's Draco measurement up front — this run may not
 	// include Draco at all, and a stale report would keep advertising a saving
-	// that no longer applies.
-	setRuntime((prev) => ({ ...prev, isPending: true, dracoReport: null }))
+	// that no longer applies. The last publish goes too, with the size it
+	// measured: both described the document this pass is replacing.
+	setRuntime((prev) => ({
+		...prev,
+		isPending: true,
+		dracoReport: null,
+		publishedEncoding: null,
+		...(prev.publishedEncoding ? { optimizedSceneBytes: null } : {}),
+		passRevision: revision
+	}))
 
 	const { geometryKeys, hasTextureStep, allSteps } =
 		planOptimizationSteps(optimizations)
 
-	// Set before the scene reload below, which is slow on large models and would
+	// Set before the restore below, which is slow on large models and would
 	// otherwise leave the panel spinning with no checklist at all.
 	steps.plan(allSteps, PREPARE_STEP)
 
-	let documentChanged = false
 	let dracoReport: DracoCompressionReport | null = null
 
 	try {
-		if (fromOriginal) {
-			const original = await loadOriginalSceneModel()
-			if (original) {
-				model.reset()
-				await model.loadFromServerSceneData(original.sceneData)
-			} else {
-				// The pristine original is only written to IDB for freshly uploaded
-				// scenes, so a scene reopened from the server has none. Re-applying
-				// would silently stack a second pass on the already-optimized
-				// document instead of starting over, and the numbers it reported
-				// would be measured against the wrong baseline. Say so rather than
-				// letting the result quietly mean something else.
-				console.warn(
-					'[optimization] No original scene in IDB; optimizing from current document state.'
-				)
-				// Only when falling back actually changes the meaning of the result.
-				// On a first pass the snapshot write races the optimizer becoming
-				// ready, so a missing record there means the document is still the
-				// pristine upload and this pass is starting over after all.
-				if (documentMayBeOptimized) {
-					toast.info(
-						'The original upload is not available in this session, so this pass builds on the current model instead of starting over.'
-					)
-				}
-			}
-		}
-
+		await model.restoreSource()
 		await establishBaselines(deps)
 
 		if (geometryKeys.length > 0) {
 			const result = await runGeometryPhase(deps, geometryKeys.length)
+			dracoReport = result.dracoReport ?? null
+			setRuntime((prev) => ({ ...prev, dracoReport }))
 
-			if (result) {
-				dracoReport = result.dracoReport ?? null
-				setRuntime((prev) => ({ ...prev, dracoReport }))
-
-				if (dracoReport && !dracoReport.isWorthApplying) {
-					toast.info(
-						'Draco compression would not shrink this model, so it was skipped.'
-					)
-				}
-
-				// See the field's doc: the worker's bytes are already loaded by here.
-				documentChanged = true
+			if (dracoReport && !dracoReport.isWorthApplying) {
+				toast.info(
+					'Draco compression would not shrink this model, so it was skipped.'
+				)
 			}
 		}
 
 		if (hasTextureStep) {
-			documentChanged = (await runTexturePhase(deps)) || documentChanged
+			await runTexturePhase(deps)
 		}
 
-		if (documentChanged) {
-			steps.begin(SYNC_STEP)
-			try {
-				await withTimeout(
-					model.applyOptimization(),
-					MODEL_SYNC_TIMEOUT_MS,
-					'Model sync'
-				)
-			} catch (syncError) {
-				console.warn('Model sync after optimization failed:', syncError)
-			}
-		}
+		// Always, even when every step was off or reverted: the restore above
+		// replaced the document, so the viewer is showing a different one.
+		ensureCurrent(deps)
+		steps.begin(SYNC_STEP)
+		await syncViewer(model)
 
 		steps.settleAll()
 	} catch (error) {
+		// The scene it ran for is gone; the optimizer belongs to the next one.
+		// A new load fails `isCurrent` at once. The core also refuses a stale
+		// commit when another caller claims the optimizer without a load: a
+		// reset, or a restore or replacement of its document.
+		if (
+			error instanceof SupersededError ||
+			error instanceof SupersededPass ||
+			!deps.isCurrent()
+		) {
+			return FAILED
+		}
+
 		console.error('Error during optimization:', error)
 		toast.error(
 			error instanceof Error
 				? error.message
 				: 'Optimization failed. Please retry.'
 		)
+		await showOriginal(model)
 		return FAILED
 	} finally {
-		setRuntime((prev) => ({ ...prev, isPending: false }))
+		// Only while no newer pass has started: lowering its flag would read
+		// as idle in the middle of its work.
+		deps.setRuntimeUnfiltered((prev) =>
+			prev.passRevision === revision ? { ...prev, isPending: false } : prev
+		)
 		steps.reset()
 	}
 
-	return { documentChanged, dracoReport }
+	return { succeeded: true, dracoReport }
+}
+
+/**
+ * After a failure the document holds a partial result the viewer is not
+ * showing, and a save exports the document. Putting the original back and
+ * showing it keeps the two the same, and the original is a state the user can
+ * always start from again.
+ *
+ * Once the original is back, the viewer shows a model the document no longer
+ * holds until this sync lands, and a save writes the document. A sync that
+ * timed out still lands later, being the newest; one that failed never does.
+ * Either way the user is told, since the two cannot be told apart here. A
+ * restore that fails changes nothing the user has not already been told.
+ */
+async function showOriginal(model: OptimizationPassDeps['model']) {
+	try {
+		await model.restoreSource()
+	} catch (error) {
+		console.error('Could not restore the original after a failure:', error)
+		return
+	}
+	try {
+		await syncViewer(model)
+	} catch (error) {
+		// A newer sync or model owns the viewer now.
+		if (error instanceof SupersededError) return
+		console.error('Could not show the original after a failure:', error)
+		toast.error(
+			'The viewer may not be showing the original model. Reload the scene before saving.'
+		)
+	}
 }

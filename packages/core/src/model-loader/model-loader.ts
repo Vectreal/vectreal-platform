@@ -17,25 +17,43 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
-import {
-	canLoadDracoInBrowser,
-	loadDracoModule
-} from '../draco/load-draco-module'
-import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
+import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
 import { modelFormatForFileName, type ModelFormat } from '../model-formats'
 import { missingAssetsError } from './missing-assets'
 import { OperationProgress } from '../types'
-import { getThreeDracoLoader } from './draco-three-loader'
+import {
+	getThreeDracoLoader,
+	prepareThreeDracoDecoder
+} from './draco-three-loader'
 import { referenceIn, selectionKey } from './dropped-selection'
+import {
+	KTX2_EXTENSION,
+	MESHOPT_EXTENSION,
+	readGlbExtensionsUsed
+} from './glb-extensions'
+import {
+	getThreeKtx2Loader,
+	prepareThreeKtx2Transcoder
+} from './ktx2-three-loader'
 import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
 import { threeSourceBridge } from './three-source-bridges'
 import { ModelFileTypes, ModelLoadResult, ThreeJSModelResult } from './types'
+import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
+import {
+	loadMeshoptDecoder,
+	stripDecodedMeshoptExtension
+} from '../meshopt/meshopt-codec'
 
 import type { ModelSiblings } from './three-source-bridges'
-import type { AnimationClip, Object3D } from 'three'
+import type { AnimationClip, LoadingManager, Object3D } from 'three'
+import type { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
-const DEFAULT_DRACO_DECODER_PATH = '/draco/'
+/** Where the Draco decoder is served from unless a caller says otherwise. */
+export const DRACO_DECODER_PATH = '/draco/'
+
+/** Where the KTX2 (Basis Universal) transcoder is served from by default. */
+export const KTX2_TRANSCODER_PATH = '/basis/'
 
 const EMPTY_SIBLINGS: ModelSiblings = new Map()
 
@@ -78,35 +96,48 @@ export class ModelLoader {
 	private io: WebIO
 	private progressCallback?: (progress: OperationProgress) => void
 	private dracoDecoderPath: string
-	private dracoDecoderRegistration: Promise<void> | null = null
+	private ktx2TranscoderPath: string
+	private codecs: GeometryCodecs
 
-	constructor(options?: { dracoDecoderPath?: string }) {
+	constructor(options?: {
+		dracoDecoderPath?: string
+		ktx2TranscoderPath?: string
+	}) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
-		this.dracoDecoderPath =
-			options?.dracoDecoderPath ?? DEFAULT_DRACO_DECODER_PATH
+		this.dracoDecoderPath = options?.dracoDecoderPath ?? DRACO_DECODER_PATH
+		this.codecs = new GeometryCodecs(this.io, this.dracoDecoderPath)
+		this.ktx2TranscoderPath =
+			options?.ktx2TranscoderPath ?? KTX2_TRANSCODER_PATH
 	}
 
 	/**
-	 * Lazily loads and registers the Draco decoder module on this instance's
-	 * WebIO, so `readBinary`/`readJSON` can decode `KHR_draco_mesh_compression`
-	 * primitives. Memoized so the decoder is only fetched once per instance.
+	 * A three.js `GLTFLoader` that decodes every codec a published model can
+	 * carry. The meshopt and KTX2 decoders are attached only for a model that
+	 * declares them: each compiles WebAssembly, which a page whose CSP forbids
+	 * it cannot do, and the KTX2 loader also probes the GPU through a throwaway
+	 * WebGL context. No other model should pay for either.
 	 */
-	private ensureDracoDecoderRegistered(): Promise<void> {
-		if (!this.dracoDecoderRegistration) {
-			// Outside a browser/worker environment there is no decoder to load.
-			// Non-Draco content is unaffected; Draco content will still throw
-			// glTF-Transform's own clear "install extension dependency" error.
-			this.dracoDecoderRegistration = canLoadDracoInBrowser()
-				? loadDracoModule('decoder', this.dracoDecoderPath).then(
-						(decoderModule) => {
-							this.io.registerDependencies({
-								'draco3d.decoder': decoderModule
-							})
-						}
-					)
-				: Promise.resolve()
-		}
-		return this.dracoDecoderRegistration
+	private async createThreeLoader(
+		extensionsUsed: readonly string[],
+		manager?: LoadingManager
+	): Promise<GLTFLoader> {
+		const [{ GLTFLoader }, dracoLoader, meshoptDecoder, ktx2Loader] =
+			await Promise.all([
+				import('three/examples/jsm/loaders/GLTFLoader.js'),
+				getThreeDracoLoader(this.dracoDecoderPath),
+				extensionsUsed.includes(MESHOPT_EXTENSION)
+					? loadMeshoptDecoder()
+					: null,
+				extensionsUsed.includes(KTX2_EXTENSION)
+					? getThreeKtx2Loader(this.ktx2TranscoderPath)
+					: null
+			])
+
+		const loader = new GLTFLoader(manager)
+		loader.setDRACOLoader(dracoLoader)
+		if (meshoptDecoder) loader.setMeshoptDecoder(meshoptDecoder)
+		if (ktx2Loader) loader.setKTX2Loader(ktx2Loader)
+		return loader
 	}
 
 	/**
@@ -454,7 +485,7 @@ export class ModelLoader {
 				progressOffset + 75 * progressScale
 			)
 
-			await this.ensureDracoDecoderRegistered()
+			await this.codecs.registerDecoders()
 			const document = await this.io.readJSON({
 				json: gltfJson,
 				resources: resources.entries().reduce(
@@ -466,6 +497,7 @@ export class ModelLoader {
 				)
 			})
 			stripDecodedDracoExtension(document)
+			stripDecodedMeshoptExtension(document)
 
 			const totalSize =
 				gltfBuffer.byteLength +
@@ -560,16 +592,14 @@ export class ModelLoader {
 			// Export document as GLB buffer
 			const glbBuffer = await this.io.writeBinary(document)
 
-			// Dynamic import to avoid server-side issues
-			const [{ GLTFLoader }, dracoLoader] = await Promise.all([
-				import('three/examples/jsm/loaders/GLTFLoader.js'),
-				getThreeDracoLoader(this.dracoDecoderPath)
-			])
+			const loader = await this.createThreeLoader(
+				document
+					.getRoot()
+					.listExtensionsUsed()
+					.map((extension) => extension.extensionName)
+			)
 
 			return new Promise((resolve, reject) => {
-				const loader = new GLTFLoader()
-				loader.setDRACOLoader(dracoLoader)
-
 				loader.parse(
 					glbBuffer.buffer as ArrayBuffer,
 					'',
@@ -629,13 +659,7 @@ export class ModelLoader {
 		const startTime = Date.now()
 		this.emitProgress('Parsing model data', 25)
 
-		const [{ GLTFLoader }, { LoadingManager }, dracoLoader] = await Promise.all(
-			[
-				import('three/examples/jsm/loaders/GLTFLoader.js'),
-				import('three'),
-				getThreeDracoLoader(this.dracoDecoderPath)
-			]
-		)
+		const { LoadingManager } = await import('three')
 
 		let totalSize = 0
 		for (const bytes of assets.values()) totalSize += bytes.byteLength
@@ -671,8 +695,12 @@ export class ModelLoader {
 
 		const manager = new LoadingManager()
 		manager.setURLModifier((url) => resolveModifiedUrl(urlMap, url))
-		const loader = new GLTFLoader(manager)
-		loader.setDRACOLoader(dracoLoader)
+		const extensionsUsed = (gltfJson as { extensionsUsed?: unknown })
+			.extensionsUsed
+		const loader = await this.createThreeLoader(
+			Array.isArray(extensionsUsed) ? extensionsUsed : [],
+			manager
+		)
 		const gltfText = JSON.stringify(gltfJson)
 		totalSize += gltfText.length
 
@@ -708,6 +736,78 @@ export class ModelLoader {
 				URL.revokeObjectURL(objectUrl)
 			}
 		}
+	}
+
+	/**
+	 * Parse GLB bytes straight to a Three.js scene, for a viewer that will never
+	 * edit or optimize the model.
+	 *
+	 * `loadToThreeJS` reads a GLB into a glTF-Transform document first, because
+	 * the optimizer needs one. That read decodes Draco on the main thread with
+	 * the pure-JavaScript decoder, and the document is then written back out as
+	 * an uncompressed GLB for three.js to parse a second time. A published
+	 * scene has no use for the document, so it skips both: one parse, with
+	 * Draco decoded by three's worker-based WebAssembly decoder.
+	 */
+	public async parseGLBToThreeJS(bytes: Uint8Array): Promise<{
+		scene: Object3D
+		animations: AnimationClip[]
+		size: number
+		loadTime: number
+	}> {
+		const startTime = Date.now()
+		this.emitProgress('Parsing model data', 25)
+
+		const loader = await this.createThreeLoader(
+			readGlbExtensionsUsed(bytes) ?? []
+		)
+
+		// GLTFLoader reads the buffer from offset zero, so a view into a larger
+		// buffer is copied out to exactly its own bytes.
+		const buffer =
+			bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+				? (bytes.buffer as ArrayBuffer)
+				: (bytes.slice().buffer as ArrayBuffer)
+
+		const gltf = await new Promise<{
+			scene: Object3D
+			animations: AnimationClip[]
+		}>((resolve, reject) => {
+			loader.parse(buffer, '', resolve, (error) =>
+				reject(
+					error instanceof Error
+						? error
+						: new Error(`Failed to parse GLB: ${error}`)
+				)
+			)
+		})
+
+		this.emitProgress('Model loaded successfully', 100)
+		gltf.scene.animations = gltf.animations ?? []
+
+		return {
+			scene: gltf.scene,
+			animations: gltf.animations ?? [],
+			size: bytes.byteLength,
+			loadTime: Date.now() - startTime
+		}
+	}
+
+	/**
+	 * Fetches and compiles the Draco decoder ahead of the first model that
+	 * needs it, so a caller can overlap that with the model's download.
+	 * Rejects when the decoder cannot be downloaded.
+	 */
+	public async prepareDracoDecoder(): Promise<void> {
+		await prepareThreeDracoDecoder(this.dracoDecoderPath)
+	}
+
+	/**
+	 * Fetches the KTX2 transcoder ahead of the first model that needs it, as
+	 * `prepareDracoDecoder` does for Draco.
+	 */
+	public async prepareKtx2Transcoder(): Promise<void> {
+		await prepareThreeKtx2Transcoder(this.ktx2TranscoderPath)
 	}
 
 	/**
@@ -800,9 +900,10 @@ export class ModelLoader {
 			glbBytes = exported.data
 		}
 
-		await this.ensureDracoDecoderRegistered()
+		await this.codecs.registerDecoders()
 		const document = await this.io.readBinary(glbBytes ?? bytes)
 		stripDecodedDracoExtension(document)
+		stripDecodedMeshoptExtension(document)
 
 		return { document, glbBytes }
 	}

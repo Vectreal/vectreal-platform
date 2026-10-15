@@ -11,6 +11,7 @@ import type {
 	ExtendedGLTFDocument,
 	Optimizations,
 	OptimizationReport,
+	PublishedModelRef,
 	SceneAssetRef,
 	SceneAssetRefMap,
 	SceneSettings,
@@ -56,7 +57,10 @@ export type SceneSettingsRecord = typeof sceneSettings.$inferSelect
 
 export type SceneSettingsWithAssets = {
 	settings: SceneSettingsRecord
+	/** The model on screen: every link but the kept original. */
 	assets: SceneAssetRecord[]
+	/** The original the model was optimized from, when the scene keeps one. */
+	sourceAsset: SceneAssetRecord | null
 }
 
 export type SceneSettingsUpsertInput = {
@@ -86,11 +90,12 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly settings?: SceneSettings
 	readonly gltfJson?: JSONDocument
 	readonly sceneAssetIds?: string[]
+	/** The kept original, linked apart from the model's assets. */
+	readonly sourceAssetId?: string
 	readonly publishedAssetId?: string
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
 	readonly initialSceneBytes?: number
-	readonly currentSceneBytes?: number
 }
 
 /** Parameters for retrieving scene settings. */
@@ -107,7 +112,6 @@ export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
 	readonly initialSceneBytes?: number
-	readonly currentSceneBytes?: number
 }
 
 /** Parameters for updating existing scene settings. */
@@ -119,6 +123,7 @@ export interface UpdateSceneSettingsParams {
 	readonly gltfJson?: JSONDocument
 }
 
+/** Omitted optional fields are left unchanged; null or '' clears them. */
 export interface SceneMetadataUpdateInput {
 	readonly name: string
 	readonly description?: string | null
@@ -162,6 +167,15 @@ export interface SceneManifestResponse {
 	readonly assets: SceneAssetRecord[] | null
 	readonly settings?: SceneSettings | null
 	readonly settingsUpdatedAt: string | null
+	/**
+	 * The original the model was optimized from, when the scene keeps one.
+	 * Fetched only when the publisher re-derives, never as part of the model.
+	 */
+	readonly source: SceneSourceRef | null
+}
+
+export interface SceneSourceRef extends SceneAssetRef {
+	readonly assetId: string
 }
 
 /**
@@ -174,7 +188,7 @@ export interface SceneEmbedManifestResponse {
 	readonly sceneId: string
 	readonly meta: SceneMetaState | null
 	/** The optimized, published GLB. The only model an embed ever loads. */
-	readonly publishedModel: SceneAssetRef
+	readonly publishedModel: PublishedModelRef
 	/** The persisted shadow bake, which lives outside the GLB. Often empty. */
 	readonly assetRefs: SceneAssetRefMap
 	readonly settings: SceneSettings | null

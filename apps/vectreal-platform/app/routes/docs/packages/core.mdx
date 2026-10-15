@@ -47,6 +47,7 @@ to match:
 | `ModelExporter` | `@vctrl/core/model-exporter` | Export `Document` or Three.js objects to GLB/GLTF |
 | Model formats | `@vctrl/core/model-formats` | The accepted format set, and every question about it: `MODEL_FORMATS`, `modelFormatForFileName`, `isImportableFileName`, `modelAcceptPattern` |
 | Dropped selections | `@vctrl/core/model-loader` | What a reference inside a model means: `selectionKey`, `referenceIn`, `referenceKeyIn` |
+| Remote models | `@vctrl/core/model-loader` | A model at a URL, as the files a drop would give: `fetchModelFiles`, `ModelFetchError` |
 | Scene asset helpers | `@vctrl/core` | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
 
 ---
@@ -84,6 +85,13 @@ const sceneResult = await loader.loadToThreeJS('model.glb')
 | `parseGLTFJsonToThreeJS(json, assets)` | Parse glTF JSON straight to Three.js, for a saved scene |
 | `loadToThreeJS(input, assetFiles?)` | Load and convert to Three.js scene |
 | `loadGLTFWithAssetsToThreeJS(...)` | GLTF + assets directly to Three.js |
+| `parseGLBToThreeJS(bytes)` | Parse a GLB straight to Three.js, for a model that will never be edited |
+| `prepareDracoDecoder()` / `prepareKtx2Transcoder()` | Download a decoder ahead of the first model that needs it |
+
+Every path decodes Draco, meshopt and KTX2 (`KHR_texture_basisu`). The Draco
+decoder and the KTX2 transcoder are fetched from `/draco/` and `/basis/` unless
+the constructor's `dracoDecoderPath` or `ktx2TranscoderPath` says otherwise; the
+meshopt decoder ships inside the package.
 
 Asking which formats are accepted is `@vctrl/core/model-formats`, not the loader.
 `isSupportedFormat` and `getSupportedExtensions` were removed for that reason:
@@ -91,6 +99,26 @@ they were a second statement of the set, and they disagreed with the first one o
 casing, so `MODEL.GLB` was rejected by the guard standing in front of a loader
 that would have read it. Use `isImportableFileName(fileName)` or
 `modelFormatForFileName(fileName)`.
+
+### Fetching a model from a URL
+
+```typescript
+import { fetchModelFiles, ModelLoader } from '@vctrl/core/model-loader'
+
+const [model, ...siblings] = await fetchModelFiles('https://cdn.example.com/chair.gltf')
+const loader = new ModelLoader()
+const result = model.name.toLowerCase().endsWith('.gltf')
+  ? await loader.loadGLTFWithAssetsToThreeJS(model, siblings)
+  : await loader.loadToThreeJS(model, siblings)
+```
+
+`fetchModelFiles(url, { init?, onProgress? })` returns the files a drop of the
+same model would give, model first, so they load through the path a dropped
+file takes. A `.gltf` brings the buffers and images it references on its own
+origin; a reference on another host is skipped and the loader reports it
+missing. A URL with no file extension is read as a GLB when its bytes are one.
+`init` goes with every request, and an abort through its `signal` rejects with the signal's reason. `onProgress` reports the model file's download from 0 to 1 when the host sends a `Content-Length`; a `.gltf`'s other files download after it without reporting. A failure is a
+`ModelFetchError` with `kind` `unreachable`, `http` (and `status`), `unrecognized` or `invalid` (not a URL, or relative with no page to resolve it against); its message and `host` name the host only, never the address, which can be a signed link. The host has to allow cross-origin reads.
 
 `documentToThreeJS` requires both the `Document` and the original `ModelLoadResult` metadata object:
 
@@ -232,7 +260,16 @@ Worker environment.
 
 There is no server round-trip in this path and no `serverOptions`: compression happens in-process using whichever encoder is in play.
 
-When Sharp is unavailable, `compressTextures` falls back to basic texture optimization (`dedup` + `prune`) instead of throwing.
+The pass compresses a copy of the document and commits it in one step, so the document only ever holds a finished result:
+
+| Outcome | Document | Recorded as `texture compression` | Throws |
+|---|---|---|---|
+| Every texture compressed | The compressed copy | Yes | No |
+| Some failed | The copy: compressed textures replaced, failed ones as they were | Yes | `TextureCompressionError`, `isPartial === true` |
+| None compressed | Unchanged | No | `TextureCompressionError`, `isPartial === false` |
+| Another model or document taken while it ran | Unchanged | No | `SupersededError` |
+
+When Sharp is unavailable, `compressTextures` falls back to basic texture optimization (`dedup` + `prune`) instead of throwing, and records only that.
 
 #### `optimizeAll(options?)`
 
@@ -303,6 +340,7 @@ const zip = await exporter.createZIPArchive(gltf, 'model')
 |---|---|
 | `exportDocumentGLB(document)` | Export glTF-Transform `Document` to GLB |
 | `exportDocumentGLBDraco(document, options?)` | Export `Document` to GLB with Draco geometry compression |
+| `exportDocumentGLBForPublish(document, options?)` | Export the GLB a scene is published as: `options.textures` rewrites the textures of a clone once (the Publisher passes `compressTexturesToKtx2` from `@vctrl/core/model-optimizer`), then `options.draco` encodes the geometry in Draco or meshopt, whichever `pickGeometryCodec` chooses by gzipped size |
 | `exportDocumentGLTF(document, options?)` | Export `Document` to GLTF JSON + assets. `options.draco` runs the same compression as `exportDocumentGLBDraco`, but note the nesting differs: there, the whole `options` argument is the Draco options |
 | `exportThreeJSGLB(object)` | Export Three.js object to GLB |
 | `exportThreeJSUSDZ(object)` | Export Three.js object to USDZ |

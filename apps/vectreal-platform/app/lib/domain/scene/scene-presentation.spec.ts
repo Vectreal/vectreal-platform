@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	normalizePresentationSettings,
-	shouldShowInfoPopover
+	shouldCompressTexturesForGpu,
+	shouldShowInfoPopover,
+	shouldShowLoadingThumbnail,
+	withCompressTexturesForGpu
 } from './scene-presentation'
 
 describe('normalizePresentationSettings', () => {
@@ -56,5 +59,96 @@ describe('shouldShowInfoPopover', () => {
 	it('hides it only when the author said so', () => {
 		expect(shouldShowInfoPopover({ showInfoPopover: false })).toBe(false)
 		expect(shouldShowInfoPopover({ showInfoPopover: true })).toBe(true)
+	})
+})
+
+describe('the loading thumbnail setting', () => {
+	it('is kept beside the info popover, each field on its own', () => {
+		expect(
+			normalizePresentationSettings({
+				showInfoPopover: false,
+				showLoadingThumbnail: true
+			})
+		).toEqual({ showInfoPopover: false, showLoadingThumbnail: true })
+		expect(
+			normalizePresentationSettings({ showLoadingThumbnail: true })
+		).toEqual({ showLoadingThumbnail: true })
+	})
+
+	it('drops a non-boolean without losing the other field', () => {
+		expect(
+			normalizePresentationSettings({
+				showInfoPopover: true,
+				showLoadingThumbnail: 'yes'
+			})
+		).toEqual({ showInfoPopover: true })
+	})
+
+	it('shows the thumbnail only for an author who switched it on', () => {
+		expect(shouldShowLoadingThumbnail({ showLoadingThumbnail: true })).toBe(
+			true
+		)
+		expect(shouldShowLoadingThumbnail({ showLoadingThumbnail: false })).toBe(
+			false
+		)
+		expect(shouldShowLoadingThumbnail({})).toBe(false)
+		expect(shouldShowLoadingThumbnail(undefined)).toBe(false)
+	})
+})
+
+describe('the GPU-compressed textures setting', () => {
+	it('is kept as a boolean and dropped as anything else', () => {
+		expect(
+			normalizePresentationSettings({ compressTexturesForGpu: false })
+		).toEqual({ compressTexturesForGpu: false })
+		expect(
+			normalizePresentationSettings({
+				showInfoPopover: true,
+				compressTexturesForGpu: 'no'
+			})
+		).toEqual({ showInfoPopover: true })
+	})
+
+	it('is on by default, except for a scene on the original preset', () => {
+		expect(
+			shouldCompressTexturesForGpu(undefined, { isOriginalPreset: false })
+		).toBe(true)
+		expect(shouldCompressTexturesForGpu({}, { isOriginalPreset: true })).toBe(
+			false
+		)
+	})
+
+	it('follows the author’s explicit choice on any preset', () => {
+		for (const isOriginalPreset of [true, false]) {
+			expect(
+				shouldCompressTexturesForGpu(
+					{ compressTexturesForGpu: true },
+					{ isOriginalPreset }
+				)
+			).toBe(true)
+			expect(
+				shouldCompressTexturesForGpu(
+					{ compressTexturesForGpu: false },
+					{ isOriginalPreset }
+				)
+			).toBe(false)
+		}
+	})
+
+	it('records a choice only where it differs from the default', () => {
+		const original = { isOriginalPreset: true }
+		const optimizing = { isOriginalPreset: false }
+
+		expect(
+			withCompressTexturesForGpu({ showInfoPopover: false }, true, original)
+		).toEqual({ showInfoPopover: false, compressTexturesForGpu: true })
+		expect(
+			withCompressTexturesForGpu(
+				{ showInfoPopover: false, compressTexturesForGpu: false },
+				true,
+				optimizing
+			)
+		).toEqual({ showInfoPopover: false })
+		expect(withCompressTexturesForGpu({}, false, original)).toEqual({})
 	})
 })

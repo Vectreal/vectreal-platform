@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { FOCUS_RING } from '../focus-ring'
 import { resolveHotspotInteraction } from './hotspot-interaction'
 import HotspotPopover from './hotspot-popover'
 import {
@@ -105,13 +106,6 @@ const HTML_WRAPPER_STYLE = { pointerEvents: 'none' } as const
 const RING_SHADOW =
 	'shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_1px_3px_rgba(0,0,0,0.3)]'
 
-/**
- * A white ring inside a dark halo, and independent of the fill so a focused
- * marker is distinguishable from the marker itself whatever colour it is.
- */
-const FOCUS_RING =
-	'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:shadow-[0_0_0_4px_rgba(0,0,0,0.5)]'
-
 const markerClasses = {
 	root: 'vctrl-viewer-hotspot pointer-events-none relative flex items-center justify-center opacity-100 transition-opacity duration-300 ease-out',
 	// Focus overrides the fade: a keyboard user who reaches an occluded marker
@@ -135,7 +129,7 @@ const markerClasses = {
 	interactive: 'cursor-pointer',
 	// `font-[600]` and `leading-[1.4]` rather than the named scale: a named value
 	// registers its theme variable in the published stylesheet's `:root, :host`
-	// block, which lands in a host application after hydration. See styles.css.
+	// block, which lands in a host application after hydration. See package.css.
 	dot: `flex shrink-0 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-fill)] font-[600] text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
 	dotPlain: 'h-3 w-3',
 	dotStep: 'h-5 w-5 text-[10px]',
@@ -154,10 +148,10 @@ const markerClasses = {
 	// Offset clear of the artwork rather than overlapping its corner.
 	badge: `absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-fill)] text-[10px] font-[600] text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
 	// `rounded-full`, never `rounded`: this package clears Tailwind's radius
-	// namespace (see styles.css), so every named radius but `full` compiles to
+	// namespace (see package.css), so every named radius but `full` compiles to
 	// nothing once the package is consumed from npm.
 	label:
-		'pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 max-w-[180px] -translate-x-1/2 truncate rounded-full bg-[var(--vctrl-bg)] px-2 py-0.5 text-[11px] leading-[1.4] text-[var(--vctrl-text)] shadow-[0_1px_6px_rgba(0,0,0,0.3)] select-none'
+		'shell-panel text-foreground pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 max-w-[180px] -translate-x-1/2 truncate px-2 py-0.5 text-[11px] leading-[1.4] select-none'
 } as const
 
 export interface HotspotMarkerProps {

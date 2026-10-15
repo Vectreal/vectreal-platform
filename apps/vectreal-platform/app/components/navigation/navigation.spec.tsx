@@ -137,7 +137,7 @@ describe('the site nav', () => {
 		) as HTMLElement
 		expect(
 			within(panel)
-				.getByRole('link', { name: /Founding-client pilot/ })
+				.getByRole('link', { name: /Pilot projects/ })
 				.getAttribute('href')
 		).toBe('/contact?topic=pilot')
 
@@ -329,6 +329,14 @@ describe('the site nav', () => {
 		).toBeNull()
 		expect(
 			bar.getByRole('link', { name: 'Docs' }).getAttribute('aria-current')
+		).toBe('page')
+	})
+
+	it('marks the newsroom current on an article', () => {
+		renderAt('/news-room/3d-model-shadows-and-lighting')
+		const bar = within(desktopBar())
+		expect(
+			bar.getByRole('link', { name: 'Newsroom' }).getAttribute('aria-current')
 		).toBe('page')
 	})
 

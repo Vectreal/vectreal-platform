@@ -378,17 +378,92 @@ describe('reducePlayback', () => {
 				expect(reducePlayback(empty, action).effects).toEqual([])
 			}
 		})
+	})
 
-		it('emits a seek without changing state', () => {
+	describe('seek_clip', () => {
+		const seek = (clipId: string): PlaybackAction => ({
+			type: 'seek_clip',
+			clipId,
+			time: 1.5
+		})
+
+		it('only seeks a clip that is already running', () => {
 			const playing = run([configure([clip('a')], { autoplay: true })])
-			const seeked = reducePlayback(playing.state, {
-				type: 'seek_clip',
-				clipId: 'a',
-				time: 1.5
-			})
+			const seeked = reducePlayback(playing.state, seek('a'))
 
 			expect(seeked.effects).toEqual([{ type: 'seek', clipId: 'a', time: 1.5 }])
 			expect(seeked.state).toBe(playing.state)
+		})
+
+		it('starts a program that never started, held paused, then seeks', () => {
+			const idle = run([configure([clip('a'), clip('b')])])
+			const seeked = reducePlayback(idle.state, seek('b'))
+
+			expect(seeked.effects).toEqual([
+				{ type: 'stop_all' },
+				{ type: 'start', clip: clip('a') },
+				{ type: 'start', clip: clip('b') },
+				{ type: 'pause_all' },
+				{ type: 'seek', clipId: 'b', time: 1.5 }
+			])
+			expect(seeked.state).toMatchObject({
+				hasStarted: true,
+				isPlaying: false
+			})
+		})
+
+		it('moves a sequence onto the clip being seeked', () => {
+			const parked = run([
+				configure([clip('a'), clip('b')], { mode: 'sequence' }),
+				{ type: 'play' },
+				{ type: 'pause' }
+			])
+			const seeked = reducePlayback(parked.state, seek('b'))
+
+			expect(seeked.effects).toEqual([
+				{ type: 'stop_all' },
+				{ type: 'start', clip: clip('b') },
+				{ type: 'pause_all' },
+				{ type: 'seek', clipId: 'b', time: 1.5 }
+			])
+			expect(seeked.state.activeIndex).toBe(1)
+
+			// Play carries on from there: b finishing hands off to nothing.
+			const resumed = reducePlayback(seeked.state, { type: 'play' })
+			expect(resumed.effects).toEqual([{ type: 'resume', clipId: 'b' }])
+		})
+
+		it('keeps a playing sequence playing on the clip it moved to', () => {
+			const playing = run([
+				configure([clip('a'), clip('b')], { mode: 'sequence', autoplay: true })
+			])
+			const seeked = reducePlayback(playing.state, seek('b'))
+
+			expect(seeked.effects).not.toContainEqual({ type: 'pause_all' })
+			expect(seeked.state).toMatchObject({ activeIndex: 1, isPlaying: true })
+		})
+
+		it('lets play carry on from a scrub of a finished program', () => {
+			const finished = run([
+				configure([clip('a'), clip('b')], { mode: 'sequence', autoplay: true }),
+				{ type: 'clip_finished', clipId: 'a' },
+				{ type: 'clip_finished', clipId: 'b' }
+			])
+			expect(finished.state.isComplete).toBe(true)
+
+			const scrubbed = reducePlayback(finished.state, seek('b'))
+			const played = reducePlayback(scrubbed.state, { type: 'play' })
+
+			expect(played.effects).toEqual([{ type: 'resume', clipId: 'b' }])
+		})
+
+		it('ignores a clip the program does not have', () => {
+			const playing = run([configure([clip('a')], { autoplay: true })])
+
+			expect(reducePlayback(playing.state, seek('gone'))).toEqual({
+				state: playing.state,
+				effects: []
+			})
 		})
 	})
 })

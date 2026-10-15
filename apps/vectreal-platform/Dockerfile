@@ -1,7 +1,8 @@
-# syntax=docker/dockerfile:1
-
-# Base image with Node.js
-FROM node:22-alpine AS base
+# Base image with Node.js, the official image from AWS's public mirror rather
+# than Docker Hub: Hub's anonymous pull limit, shared by every GitHub runner,
+# failed staging deploys with a 429. No `# syntax=` line for the same reason:
+# BuildKit's built-in frontend covers everything this file uses.
+FROM public.ecr.aws/docker/library/node:22-alpine AS base
 ARG PNPM_VERSION=10.28.0
 WORKDIR /app
 ENV PNPM_HOME=/usr/local/bin
@@ -44,8 +45,6 @@ ARG BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=https://eu.posthog.com
 # Unset in CI, so deployed images report. Pass false to build one locally that
 # does not: the browser bundle bakes this in, see posthog-enabled.ts.
 ARG BUILD_VITE_PUBLIC_POSTHOG_ENABLED=
-ARG BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=
-ARG BUILD_VITE_PUBLIC_DEMO_SCENE_URL=
 
 ENV CSRF_SECRET=${BUILD_CSRF_SECRET}
 ENV DATABASE_URL=${BUILD_DATABASE_URL}
@@ -56,8 +55,6 @@ ENV VITE_PUBLIC_POSTHOG_TOKEN=${BUILD_VITE_PUBLIC_POSTHOG_TOKEN}
 ENV VITE_PUBLIC_POSTHOG_HOST=${BUILD_VITE_PUBLIC_POSTHOG_HOST}
 ENV VITE_PUBLIC_POSTHOG_UI_HOST=${BUILD_VITE_PUBLIC_POSTHOG_UI_HOST}
 ENV VITE_PUBLIC_POSTHOG_ENABLED=${BUILD_VITE_PUBLIC_POSTHOG_ENABLED}
-ENV VITE_PUBLIC_VECTREAL_API_KEY_PROD=${BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD}
-ENV VITE_PUBLIC_DEMO_SCENE_URL=${BUILD_VITE_PUBLIC_DEMO_SCENE_URL}
 
 # Copy source and build application artifacts inside Docker
 COPY . .

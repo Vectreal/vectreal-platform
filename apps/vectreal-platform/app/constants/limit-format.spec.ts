@@ -1,4 +1,8 @@
-import { formatLimitCount, formatLimitValue } from './limit-format'
+import {
+	formatLimitCount,
+	formatLimitValue,
+	formatShortDate
+} from './limit-format'
 
 describe('formatLimitValue', () => {
 	it('formats storage_bytes_per_scene as MB', () => {
@@ -72,5 +76,19 @@ describe('formatLimitCount', () => {
 		expect(
 			formatLimitValue('storage_bytes_total', 1000 * 1024 * 1024, 'de-DE')
 		).toBe('1.000 MB')
+	})
+})
+
+describe('formatShortDate', () => {
+	// Noon UTC, so the calendar day is the same in every timezone a runner uses.
+	const at = '2026-10-02T12:00:00Z'
+
+	it('spells the date with a short month, the day and the year', () => {
+		expect(formatShortDate(at)).toBe('Oct 2, 2026')
+	})
+
+	it('reads a Date and a timestamp the same as the string', () => {
+		expect(formatShortDate(new Date(at))).toBe('Oct 2, 2026')
+		expect(formatShortDate(Date.parse(at))).toBe('Oct 2, 2026')
 	})
 })

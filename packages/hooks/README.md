@@ -83,6 +83,11 @@ again after any further await, because a drop can land during an encode as
 easily as during a parse. `reset()` claims a token too, so a load in flight when
 the user clears the model also reports `false`.
 
+Newest is not always what is on screen. A dropped file that fails to load puts
+the previous model back, so the previous load is no longer the newest but its
+model is the one shown, and the one the optimizer holds. Before acting on the
+optimizer for a load, ask `stillOnScreen()` instead.
+
 Resolving is not the same moment as reaching the screen. With an optimizer
 attached, the loaders publish the parsed model first and then await its ingest,
 so `load` resolves one ingest after the viewer changed. A caller that adopts on
@@ -112,10 +117,42 @@ same moment and `onPublish` gains nothing.
 | `files`      | `files: (File \| FileSystemDirectoryHandle)[]`                 | A user upload: a single model, or a bundle with the siblings it refers to. A dropped folder arrives here as plain `File`s; the handle branch is for a caller that opened `showDirectoryPicker()` itself |
 | `scene-data` | `sceneData: ServerScenePayload`, `sceneId?`, `parseMode?`      | A payload you already hold. Binary assets may be referenced rather than inlined; the loader fetches them |
 | `server`     | `sceneId: string`, `serverOptions?`, `parseMode?`              | Fetch a scene from an API endpoint by id                                                         |
+| `url`        | `url: string \| URL`, `init?: RequestInit`                    | A model file hosted anywhere that allows cross-origin reads. Loaded as the same file dropped would be |
 
 `parseMode: 'direct'` parses the glTF JSON with its assets in memory and skips
 the optimizer: the read-only fast path for viewers. The default reconstructs
 files so the optimizer can ingest exactly what the viewer renders.
+
+#### Loading from a URL
+
+```tsx
+const outcome = await load({ kind: 'url', url: 'https://cdn.example.com/models/chair.glb' })
+if (outcome.status === 'error') console.warn(outcome.error.code, outcome.error.message)
+```
+
+The file is fetched in the browser and then loaded exactly as the same file
+dropped would be: every format, the same validation, the same optimizer ingest.
+A failed link leaves a model already on screen where it was, as a failed drop
+does.
+
+- **The host has to allow cross-origin reads** (an `Access-Control-Allow-Origin`
+  header that admits your page). A browser reports a refusal, an unreachable
+  host and being offline as the same error, so all three arrive as
+  `url_unreachable`.
+- **A `.gltf` brings its buffers and images from its own origin.** References
+  are resolved relative to the `.gltf`; one on another host is not fetched, and
+  the load reports it as `missing_assets`. An OBJ's material library is not
+  fetched, so an OBJ opens without materials.
+- **A URL with no file extension** (a presigned or download link) opens when its
+  bytes are a GLB.
+- **`init`** goes with every request: headers, `credentials`, `referrerPolicy`. Credentials follow the browser's default, so cookies go only to your own origin; for a URL someone else supplied, pass `credentials: 'omit'`.
+  Its `signal` aborts the download (the model file, and for a `.gltf` the files it references): what was on screen stays, and `load` resolves `empty` rather than reporting an error. A newer `load` or `reset` aborts the download too, and the load resolves `empty`; what is on screen is then theirs to decide. Once the files have all arrived, the parse runs to the end.
+- **Progress** runs to 90 while the model file downloads, when the host sends a
+  `Content-Length`, and the parse fills the rest. A `.gltf`'s buffers and
+  images download after it without moving the bar.
+
+To fetch the files without loading them, `fetchModelFiles` from
+`@vctrl/core/model-loader` does the same fetch and returns the `File`s.
 
 ### Context and direct usage
 
@@ -133,17 +170,21 @@ files so the optimizer can ingest exactly what the viewer renders.
 | `error`        | `StructuredLoadError \| null`                     | Non-null exactly when `status` is `'error'`                       |
 | `sceneData`    | `ServerSceneData \| undefined`                    | The resolved payload, for scene sources                           |
 | `progress`     | `number`                                          | Progress value from 0 to 100                                      |
-| `source`       | `'files' \| 'scene-data' \| 'server' \| null`     | What the current state came from                                  |
-| `load(source, options?)` | `Promise<LoadOutcome>`                  | Load a model; resolves to the terminal state plus `stillCurrent()`. `options.onPublish` fires earlier, when the model reaches the screen |
+| `source`       | `'files' \| 'url' \| 'scene-data' \| 'server' \| null` | What the current state came from                             |
+| `load(source, options?)` | `Promise<LoadOutcome>`                  | Load a model; resolves to the terminal state plus `stillCurrent()` and `stillOnScreen()`. `options.onPublish` fires earlier, when the model reaches the screen |
 | `supportedFileTypes` | `ModelFileTypes[]`                          | Every format the loader accepts, from `@vctrl/core/model-formats` |
 | `reset`        | `() => void`                                      | Clear the current model and retire any load in flight             |
+| `isLatestLoad(loadId)` | `boolean`                                 | Whether no load or reset has started since the one that minted `loadId` (the ready state carries it). Changes the moment `load` is called, before anything renders. Newest, not on screen: a failed `files` load that puts the previous model back still counts |
 | `optimizer`    | `OptimizerIntegrationReturn<true> \| null`        | Populated when the hook is called with `useOptimizeModel()`       |
 
 ### Error codes
 
 `error.code` is one of `unsupported_format`, `multiple_models`,
 `binary_load_failed`, `gltf_load_failed`, `missing_assets`,
-`server_load_failed`, `not_found`, `quota_exceeded`, `unknown`. Optimizer
+`server_load_failed`, `not_found`, `quota_exceeded`, `url_unreachable`, `url_http`, `url_unrecognized`, `url_invalid`, `unknown`. Every failure of a `url` load has
+`error.source === 'remote-url'` and the host in `error.context.host` (never the address, which can be a signed link);
+`url_http` carries the status in `error.context.status` and is not recoverable
+for 404 or 410. Optimizer
 ingest is deliberately not among them: the model is already on screen by then,
 so a failure there costs the optimize step and is reported on
 `optimizer.error`.
@@ -164,10 +205,14 @@ function Optimizer() {
 
 	const handleOptimize = async () => {
 		if (!file?.model || !integrated) return
-		await integrated.applyOptimization(integrated.simplifyOptimization, {
-			ratio: 0.6,
-			error: 0.001
-		})
+		try {
+			await integrated.applyOptimization(integrated.simplifyOptimization, {
+				ratio: 0.6,
+				error: 0.001
+			})
+		} catch (error) {
+			console.error('Optimization failed', error)
+		}
 	}
 
 	return (
@@ -188,12 +233,12 @@ function Optimizer() {
 | `dedupOptimization(options?)`        | `Promise<void>`                                                    | Deduplicate model data                                                 |
 | `quantizeOptimization(options?)`     | `Promise<void>`                                                    | Quantize vertex attributes                                             |
 | `normalsOptimization(options?)`      | `Promise<void>`                                                    | Recompute or normalize normals                                         |
-| `texturesOptimization(options?)`     | `Promise<void>`                                                    | Run texture compression flow                                           |
+| `texturesOptimization(options?)`     | `Promise<void>`                                                    | Compress textures; rejects on failure, and a partial `TextureCompressionError` has already committed the textures that compressed |
 | `getModel()`                         | `Promise<Uint8Array \| null>`                                      | Export the current optimized model as GLB binary                       |
 | `report` / `info`                    | Objects                                                            | Optimization metrics and derived stats                                 |
 | `loading` / `error`                  | State                                                              | Optimization status                                                    |
 
-> `applyOptimization(fn, opts?)` is **not** returned by `useOptimizeModel` directly. It becomes available on the `optimizer` object returned by `useLoadModel(optimizer)` when you pass an optimizer instance in; it runs an optimization step and syncs the result back into loader state (see the example above).
+> `applyOptimization(fn, opts?)` is **not** returned by `useOptimizeModel` directly. It becomes available on the `optimizer` object returned by `useLoadModel(optimizer)` when you pass an optimizer instance in; it runs an optimization step and syncs the result back into loader state (see the example above). It rejects when no model was ready in the render the `optimizer` comes from, when the step fails, or when the result cannot be exported or shown. The viewer then keeps the model it had, but the optimizer may already hold the step's result: call `restoreSource()` and then `applyOptimization()` with no step to show the original again before exporting, as the publisher does. A partial `TextureCompressionError` is the exception: the textures that did compress are shown first. The step methods themselves reject when they fail; with no model loaded, the four geometry steps resolve without doing anything and `texturesOptimization` rejects.
 
 ### Optimization option types
 
@@ -247,13 +292,18 @@ file: a `GLBExportResult` when `binary` is true, a `GLTFExportResult` otherwise.
 
 ## Additional exports
 
-- `reconstructGltfFiles` and `createBrowserTextureEncoder` from `@vctrl/hooks`
+- `reconstructGltfFiles`, `createBrowserTextureEncoder` and `canEncodeImage` from `@vctrl/hooks`
 - `ModelProvider` and `useModelContext` from `@vctrl/hooks/use-load-model`
 - Shared types such as `ModelFile`, `SceneLoadResult`, `ServerSceneData`, and `OptimizerIntegrationReturn`
 
 `createBrowserTextureEncoder()` returns the `OffscreenCanvas` encoder the hook injects
 into `texturesOptimization`. Pass it as `ModelOptimizer#compressTextures`'s
 `encoder` option when driving the optimizer directly.
+
+The encoder writes the format it is asked for or rejects, and with no `targetFormat`
+that is each texture's own format. Safari cannot write WebP, so there a texture
+cannot be compressed to WebP or re-encoded as WebP; `await canEncodeImage('webp')`
+tells you before you ask.
 
 ---
 

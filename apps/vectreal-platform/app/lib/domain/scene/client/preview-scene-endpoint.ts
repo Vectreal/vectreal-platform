@@ -26,3 +26,20 @@ export function buildPreviewSceneEndpoint({
 
 	return `/api/scenes/${sceneId}?${endpointParams.toString()}`
 }
+
+/**
+ * A scene asset as a signed-in preview surface fetches it: scoped by project
+ * like the manifest, and authenticated by the session cookie.
+ */
+export function buildPreviewAssetUrl({
+	sceneId,
+	projectId,
+	assetId
+}: {
+	sceneId: string
+	projectId: string
+	assetId: string
+}): string {
+	const query = new URLSearchParams({ preview: '1', projectId })
+	return `/api/scenes/${sceneId}/assets/${assetId}?${query}`
+}

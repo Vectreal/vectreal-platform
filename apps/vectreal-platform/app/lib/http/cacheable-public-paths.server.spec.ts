@@ -38,7 +38,10 @@ describe('exported allowlist sources', () => {
 			'/convert',
 			'/docs',
 			'/news-room',
-			'/media/'
+			'/media/',
+			'/draco/',
+			'/basis/',
+			'/basis-encoder/'
 		])
 	})
 })

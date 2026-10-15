@@ -1,5 +1,6 @@
 import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 
+import { shouldShowLoadingThumbnail } from '../scene-presentation'
 import { sceneSettingsService } from './scene-settings-service.server'
 import { reportServerError } from '../../../observability/report-server-error.server'
 import {
@@ -14,7 +15,8 @@ import type {
 	SceneAssetRecord,
 	SceneAssetRefMap,
 	SceneEmbedManifestResponse,
-	SceneManifestResponse
+	SceneManifestResponse,
+	SceneSourceRef
 } from '../../../../types/api'
 
 const GLTF_JSON_MIME_TYPE = 'model/gltf+json'
@@ -39,6 +41,21 @@ export function toAssetRefs(
 	}
 
 	return refs
+}
+
+/** The kept original as a fetchable ref, kept out of the model's refs. */
+function toSourceRef(
+	asset: SceneAssetRecord | null,
+	buildAssetUrl: (assetId: string) => string
+): SceneSourceRef | null {
+	if (!asset) return null
+	return {
+		assetId: asset.id,
+		url: buildAssetUrl(asset.id),
+		fileName: asset.name,
+		mimeType: asset.mimeType ?? 'application/octet-stream',
+		byteSize: asset.fileSize ?? null
+	}
 }
 
 export async function buildSceneManifest(
@@ -73,7 +90,8 @@ export async function buildSceneManifest(
 			gltfJson: null,
 			assetRefs: null,
 			assets: null,
-			settingsUpdatedAt: null
+			settingsUpdatedAt: null,
+			source: null
 		}
 	}
 
@@ -87,17 +105,19 @@ export async function buildSceneManifest(
 		assets: settingsData.assets ?? null,
 		settingsUpdatedAt: settingsData.settingsUpdatedAt
 			? settingsData.settingsUpdatedAt.toISOString()
-			: null
+			: null,
+		source: toSourceRef(settingsData.sourceAsset, buildAssetUrl)
 	}
 }
 
 /**
- * The manifest an external, token-authenticated embed receives.
+ * The manifest of a published scene: what an embed receives, and what
+ * `/preview` and the dashboard show of it.
  *
  * Deliberately a different function rather than a flag on
- * {@link buildSceneManifest}: `/preview` and the publisher keep the editor
- * manifest untouched by construction, and the two shapes cannot drift into
- * each other by someone reading the flag the wrong way round.
+ * {@link buildSceneManifest}: a draft's preview and the publisher keep the
+ * editor manifest untouched by construction, and the two shapes cannot drift
+ * into each other by someone reading the flag the wrong way round.
  *
  * What an embed does NOT get, and why:
  * - `gltfJson` - the editor scene graph: node hierarchy, material graph, every
@@ -118,11 +138,44 @@ export async function buildEmbedSceneManifest(
 	published: PublishedModelRow,
 	buildAssetUrl: (assetId: string) => string
 ): Promise<SceneEmbedManifestResponse> {
-	const settingsData = await sceneSettingsService.getSceneSettingsWithAssetRefs(
+	return composeEmbedSceneManifest(
 		sceneId,
-		{ includeGltfJson: false }
+		published,
+		await readEmbedSceneSettings(sceneId),
+		buildAssetUrl
 	)
+}
 
+/**
+ * The settings half of an embed manifest, which depends on nothing but the
+ * scene id. Split out so the `/embed` document can read it alongside the
+ * publication instead of after it.
+ *
+ * A failed read throws rather than reading as "no settings": a manifest built
+ * from that would render the published model with default lighting and no
+ * shadow, where a failure lets the caller fall back or report it.
+ */
+export function readEmbedSceneSettings(sceneId: string) {
+	return sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
+		includeGltfJson: false,
+		readErrors: 'throw'
+	})
+}
+
+export type EmbedSceneSettings = Awaited<
+	ReturnType<typeof readEmbedSceneSettings>
+>
+
+/**
+ * Assembles an embed manifest from settings already read. Whatever the caller
+ * read them for, only the published scene's own are ever passed here.
+ */
+export async function composeEmbedSceneManifest(
+	sceneId: string,
+	published: PublishedModelRow,
+	settingsData: EmbedSceneSettings,
+	buildAssetUrl: (assetId: string) => string
+): Promise<SceneEmbedManifestResponse> {
 	const publishedModel = buildPublishedModelRef(published, buildAssetUrl)
 
 	if (!settingsData) {
@@ -140,7 +193,8 @@ export async function buildEmbedSceneManifest(
 	const servable = selectEmbedServableAssets({
 		publishedAssetId: published.assetId,
 		sceneAssets: settingsData.assets ?? [],
-		bakedShadowAssetId: settings?.shadows?.baked?.assetId
+		bakedShadowAssetId: settings?.shadows?.baked?.assetId,
+		showsLoadingThumbnail: shouldShowLoadingThumbnail(settings?.presentation)
 	})
 
 	return {
@@ -159,23 +213,4 @@ export async function buildEmbedSceneManifest(
 			? settingsData.settingsUpdatedAt.toISOString()
 			: null
 	}
-}
-
-/**
- * Returns a weak ETag for the scene manifest based on the scene ID and the
- * timestamp of the last settings save. Returns null when no timestamp is
- * available so callers can skip caching headers entirely.
- *
- * `shape` keeps the embed and session manifests for one scene in separate
- * cache entries. They carry different fields from the same `settingsUpdatedAt`,
- * so a shared tag would let one be served in place of the other.
- */
-export function buildSceneManifestEtag(
-	sceneId: string,
-	settingsUpdatedAt: string | null,
-	shape: 'session' | 'embed' = 'session'
-): string | null {
-	if (!settingsUpdatedAt) return null
-	const prefix = shape === 'embed' ? 'scene-embed' : 'scene'
-	return `W/"${prefix}-${sceneId}-${settingsUpdatedAt}"`
 }

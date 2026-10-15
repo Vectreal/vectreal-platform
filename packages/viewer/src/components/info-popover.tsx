@@ -11,6 +11,7 @@ import {
 
 import CrossIcon from './assets/cross-icon'
 import InfoIcon from './assets/info-icon'
+import { CHROME_BUTTON } from './chrome-classes'
 
 interface IPopoverContext {
 	isOpen: boolean
@@ -21,16 +22,20 @@ const PopoverContext = createContext<IPopoverContext>({} as IPopoverContext)
 
 const popoverClasses = {
 	root: 'vctrl-viewer-info-popover absolute bottom-0 z-[100] m-2',
-	triggerRoot: 'vctrl-viewer-info-popover-trigger relative h-6 w-6',
-	triggerButton:
-		'z-10 flex h-full w-full cursor-pointer items-center justify-center rounded-full border-0 bg-[var(--vctrl-bg)] p-1 leading-none appearance-none hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]',
+	triggerRoot: 'vctrl-viewer-info-popover-trigger shell-panel relative p-1',
+	triggerButton: cn(
+		CHROME_BUTTON,
+		'flex h-7 w-7 items-center justify-center rounded-full p-0 leading-none'
+	),
 	modalBase:
-		'vctrl-viewer-info-popover-modal absolute bottom-0 left-0 flex w-64 flex-col overflow-hidden rounded-[0.5rem] bg-[var(--vctrl-bg)] text-[var(--vctrl-text)] transition-all duration-300 ease-out',
+		'vctrl-viewer-info-popover-modal shell-panel text-foreground absolute bottom-0 left-0 flex w-64 flex-col overflow-hidden transition-all duration-300 ease-out',
 	modalOpen: 'visible translate-x-0 translate-y-0 opacity-100',
 	modalClosed: 'invisible -translate-x-2 translate-y-2 opacity-0',
-	textContainer: 'grow p-4 mr-4 [&_p]:text-sm [&_p]:text-[var(--vctrl-text)]',
-	closeButton:
-		'absolute right-0 top-0 m-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded border-0 bg-[var(--vctrl-bg)] p-2 text-[var(--vctrl-text)] leading-none appearance-none transition-all duration-300 ease-in-out hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]'
+	textContainer: 'grow p-4 mr-4 [&_p]:text-sm',
+	closeButton: cn(
+		CHROME_BUTTON,
+		'absolute top-0 right-0 m-2 flex h-8 w-8 items-center justify-center rounded-[var(--radius,1rem)] p-2 leading-none'
+	)
 } as const
 
 interface PropsWithChildrenAndClass extends PropsWithChildren {
@@ -59,14 +64,14 @@ export const InfoPopoverTrigger = ({
 	return (
 		<div className={cn(popoverClasses.triggerRoot, className)}>
 			<button
-				className={cn(popoverClasses.triggerButton)}
+				className={popoverClasses.triggerButton}
 				onClick={() => setIsOpen(true)}
 				aria-haspopup="dialog"
 				aria-expanded={isOpen}
 				aria-controls="info-popover"
 				aria-label="Open information popover"
 			>
-				<InfoIcon className="h-4 w-4 text-[var(--vctrl-text)]" />
+				<InfoIcon className="h-4 w-4" />
 			</button>
 		</div>
 	)

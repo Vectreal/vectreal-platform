@@ -1,5 +1,6 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm'
 
+import { getDbClient } from '../../../../db/client'
 import * as dbSchema from '../../../../db/schema'
 import {
 	assets,
@@ -11,9 +12,14 @@ import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
 } from '../../../../types/api'
+import { SCENE_ASSET_ROLE } from '../scene-asset-roles'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
 
-import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
+import type {
+	HotspotDefinition,
+	ScenePresentationSettings,
+	SceneSettings
+} from '@vctrl/core'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import type { PgTransaction } from 'drizzle-orm/pg-core'
 import type { PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js'
@@ -41,6 +47,7 @@ export function rowToSceneSettings(
 	hotspots: HotspotDefinition[] = []
 ): SceneSettings {
 	return {
+		animation: row.animation ?? undefined,
 		bounds: row.bounds ?? undefined,
 		camera: row.camera ?? undefined,
 		controls: row.controls ?? undefined,
@@ -66,6 +73,30 @@ export async function getSceneSettingsBySceneId(
 	return settings[0] || null
 }
 
+/**
+ * Merges `patch` into a scene's stored presentation, leaving every field it
+ * does not name as it was. Null when the scene has no settings row.
+ *
+ * One statement, so a concurrent writer cannot interleave between a read and
+ * a write here. `updated_at` moves with it, because the manifest's ETag is
+ * keyed on it: a toggle that left it alone would be revalidated away as a 304.
+ */
+export async function updateScenePresentation(
+	sceneId: string,
+	patch: ScenePresentationSettings
+): Promise<ScenePresentationSettings | null> {
+	const [row] = await getDbClient()
+		.update(sceneSettings)
+		.set({
+			presentation: sql`(coalesce(${sceneSettings.presentation}::jsonb, '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb)::json`,
+			updatedAt: sql`now()`
+		})
+		.where(eq(sceneSettings.sceneId, sceneId))
+		.returning({ presentation: sceneSettings.presentation })
+
+	return row ? (row.presentation ?? {}) : null
+}
+
 export async function getSceneSettingsWithAssetsRow(
 	tx: SceneSettingsTransaction,
 	sceneId: string
@@ -74,14 +105,21 @@ export async function getSceneSettingsWithAssetsRow(
 	if (!settings) return null
 
 	const sceneAssetsData = await tx
-		.select({ asset: assets })
+		.select({ asset: assets, usageType: sceneAssets.usageType })
 		.from(sceneAssets)
 		.innerJoin(assets, eq(sceneAssets.assetId, assets.id))
 		.where(eq(sceneAssets.sceneSettingsId, settings.id))
 
+	// The one place links are read, so the kept original is told apart here
+	// and no reader downstream can take it for part of the model.
 	return {
 		settings,
-		assets: sceneAssetsData.map((sa) => sa.asset)
+		assets: sceneAssetsData
+			.filter((sa) => sa.usageType !== SCENE_ASSET_ROLE.source)
+			.map((sa) => sa.asset),
+		sourceAsset:
+			sceneAssetsData.find((sa) => sa.usageType === SCENE_ASSET_ROLE.source)
+				?.asset ?? null
 	}
 }
 
@@ -93,16 +131,47 @@ function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
 	}
 }
 
-export async function getSceneAssetIds(
+/** What a scene links: every asset, and which of them is its kept original. */
+export async function getSceneAssetLinks(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string
-): Promise<string[]> {
-	const assets = await tx
-		.select({ assetId: sceneAssets.assetId })
+): Promise<{ assetIds: string[]; sourceAssetId: string | null }> {
+	const links = await tx
+		.select({ assetId: sceneAssets.assetId, usageType: sceneAssets.usageType })
 		.from(sceneAssets)
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 
-	return assets.map((asset) => asset.assetId)
+	return {
+		assetIds: links.map((link) => link.assetId),
+		sourceAssetId:
+			links.find((link) => link.usageType === SCENE_ASSET_ROLE.source)
+				?.assetId ?? null
+	}
+}
+
+/**
+ * Whether `assetId` is linked to `sceneId` via the `scene_assets` join table.
+ *
+ * Assets are de-duplicated per project by content hash (see
+ * `uploadSceneAssets`), so the same asset row can legitimately be shared by
+ * multiple scenes - the asset's `metadata.sceneId` only records the scene
+ * that happened to create the row first and must not be used for
+ * authorization.
+ */
+export async function isAssetLinkedToScene(
+	assetId: string,
+	sceneId: string
+): Promise<boolean> {
+	const [row] = await getDbClient()
+		.select({ assetId: sceneAssets.assetId })
+		.from(sceneAssets)
+		.innerJoin(sceneSettings, eq(sceneAssets.sceneSettingsId, sceneSettings.id))
+		.where(
+			and(eq(sceneAssets.assetId, assetId), eq(sceneSettings.sceneId, sceneId))
+		)
+		.limit(1)
+
+	return Boolean(row)
 }
 
 export async function upsertSceneSettings(
@@ -127,29 +196,41 @@ export async function upsertSceneSettings(
 export async function linkSceneAssets(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string,
-	assetIds: string[]
+	assetIds: string[],
+	sourceAssetId: string | null = null
 ) {
-	if (assetIds.length === 0) return
-
-	await tx.insert(sceneAssets).values(
-		assetIds.map((assetId) => ({
+	const links = [
+		...assetIds.map((assetId) => ({
 			sceneSettingsId,
 			assetId,
-			usageType: 'gltf-asset'
-		}))
-	)
+			usageType: SCENE_ASSET_ROLE.model
+		})),
+		...(sourceAssetId
+			? [
+					{
+						sceneSettingsId,
+						assetId: sourceAssetId,
+						usageType: SCENE_ASSET_ROLE.source
+					}
+				]
+			: [])
+	]
+	if (links.length === 0) return
+
+	await tx.insert(sceneAssets).values(links)
 }
 
 export async function replaceSceneAssets(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string,
-	assetIds: string[]
+	assetIds: string[],
+	sourceAssetId: string | null = null
 ) {
 	await tx
 		.delete(sceneAssets)
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 
-	await linkSceneAssets(tx, sceneSettingsId, assetIds)
+	await linkSceneAssets(tx, sceneSettingsId, assetIds, sourceAssetId)
 }
 
 // ---------------------------------------------------------------------------

@@ -62,3 +62,16 @@ export function authFieldEntrance(index: number) {
 		}
 	}
 }
+
+/**
+ * Whether the visitor has asked for reduced motion, read once at the moment of
+ * the call. For effects and handlers that decide whether to start an animation
+ * at all. A component that has to re-render when the setting changes wants
+ * Framer's reactive `useReducedMotion` instead.
+ */
+export function prefersReducedMotion(): boolean {
+	return (
+		typeof window !== 'undefined' &&
+		window.matchMedia('(prefers-reduced-motion: reduce)').matches
+	)
+}

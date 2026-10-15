@@ -1,5 +1,9 @@
 import { ModelFileTypes, ModelLoader } from '@vctrl/core/model-loader'
-import { useCallback } from 'react'
+import {
+	SupersededError,
+	TextureCompressionError
+} from '@vctrl/core/model-optimizer'
+import { useCallback, useRef } from 'react'
 
 import { ModelFile, OptimizerIntegrationReturn } from './types'
 
@@ -24,6 +28,14 @@ export function useOptimizerIntegration(
 	loadId: number | null,
 	modelLoader: ModelLoader
 ): OptimizerIntegrationReturn<boolean> {
+	/*
+	  Each call shows the optimizer's document as it was when the call read it,
+	  so only the call that read last may reach the viewer. A caller that gave
+	  up on a slow sync and asked for another, as a failed pass does to show the
+	  original, would otherwise have the abandoned one land last and stay.
+	*/
+	const syncRef = useRef(0)
+
 	const applyOptimization = useCallback(
 		async <TOptions>(
 			optimizationFunction?:
@@ -31,54 +43,76 @@ export function useOptimizerIntegration(
 			options?: TOptions
 		) => {
 			if (!instance) {
-				console.warn('Optimizer is not available')
-				return
+				throw new Error('No optimizer to apply the optimization with.')
 			}
 			// Captured with this callback, so a load that starts while the pass
 			// runs cannot receive its result.
 			if (loadId === null) {
-				console.warn('No loaded model to apply the optimization to')
-				return
+				throw new Error('No model was ready when this optimizer was read.')
 			}
 
+			// A partial texture pass committed what it compressed, so the viewer
+			// shows that before the caller hears what did not compress.
+			let partialFailure: TextureCompressionError | null = null
 			try {
 				if (optimizationFunction) await optimizationFunction(options)
-
-				const optimizedModel = await instance.getModel()
-				if (!optimizedModel) {
-					console.warn('No optimized model available after optimization')
-					return
-				}
-
-				const optimizedBlobPart =
-					optimizedModel instanceof Uint8Array
-						? optimizedModel.slice()
-						: new Uint8Array(optimizedModel as ArrayBufferLike).slice()
-
-				const optimizedFile = new File(
-					[optimizedBlobPart],
-					file?.name || 'optimized_model.glb',
-					{ type: 'model/gltf-binary' }
-				)
-
-				const result = await modelLoader.loadToThreeJS(optimizedFile)
-
-				replaceModel(
-					{
-						model: result.scene,
-						// Re-read from the optimized model rather than carrying the
-						// previous clips over: optimization can legitimately change
-						// what survives, and a stale clip would be bound against a
-						// scene graph that no longer matches it.
-						animations: result.animations,
-						type: ModelFileTypes.glb,
-						name: optimizedFile.name
-					},
-					loadId
-				)
 			} catch (error) {
-				console.error('Optimization failed:', error)
+				if (!(error instanceof TextureCompressionError && error.isPartial)) {
+					throw error
+				}
+				partialFailure = error
 			}
+
+			const sync = ++syncRef.current
+			const optimizedModel = await instance
+				.getModel()
+				.catch((error: unknown) => {
+					throw new Error('No optimized model could be exported.', {
+						cause: error
+					})
+				})
+			if (!optimizedModel) {
+				throw new Error('No optimized model could be exported.')
+			}
+
+			const optimizedBlobPart =
+				optimizedModel instanceof Uint8Array
+					? optimizedModel.slice()
+					: new Uint8Array(optimizedModel as ArrayBufferLike).slice()
+
+			const optimizedFile = new File(
+				[optimizedBlobPart],
+				file?.name || 'optimized_model.glb',
+				{ type: 'model/gltf-binary' }
+			)
+
+			const result = await modelLoader
+				.loadToThreeJS(optimizedFile)
+				.catch((error: unknown) => {
+					throw new Error('The optimized model could not be shown.', {
+						cause: error
+					})
+				})
+
+			if (sync !== syncRef.current) throw new SupersededError()
+
+			// Dropped, not refused, when a newer load holds the state: the pass
+			// did its work, and that load's model is the one to show.
+			replaceModel(
+				{
+					model: result.scene,
+					// Re-read from the optimized model rather than carrying the
+					// previous clips over: optimization can legitimately change
+					// what survives, and a stale clip would be bound against a
+					// scene graph that no longer matches it.
+					animations: result.animations,
+					type: ModelFileTypes.glb,
+					name: optimizedFile.name
+				},
+				loadId
+			)
+
+			if (partialFailure) throw partialFailure
 		},
 		[instance, modelLoader, file, loadId, replaceModel]
 	)

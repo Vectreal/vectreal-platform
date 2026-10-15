@@ -4,6 +4,7 @@ import { Route } from './+types/embed-layout'
 import { EmbedErrorState } from '../../components/scene-embed/embed-error-state'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { hasEntitlement } from '../../lib/domain/billing/entitlement-service.server'
+import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import {
 	resolveEmbedBranding,
 	shouldShowVectrealBranding
@@ -13,11 +14,18 @@ import {
 	EMBED_RESPONSE_HEADERS,
 	mergeEmbedResponseHeaders
 } from '../../lib/domain/embed/embed-response-headers'
+import {
+	buildInlineEmbedManifest,
+	EmbedSettingsReadFailure
+} from '../../lib/domain/embed/inline-embed-manifest.server'
 import { parseSceneRouteParams } from '../../lib/domain/scene/scene-route-params'
+import { readEmbedSceneSettings } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { embedErrorKind } from '../../lib/errors/error-state-copy'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 import { buildMeta } from '../../lib/seo'
+
+import type { SceneEmbedManifestResponse } from '../../types/api'
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -45,9 +53,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	const { projectId, sceneId } = parsedParams.value
 	const url = new URL(request.url)
 	const tokenFromQuery = url.searchParams.get('token')?.trim() || null
-	const hasTokenCredential =
-		Boolean(tokenFromQuery) ||
-		Boolean(request.headers.get('authorization')?.trim())
+	const hasTokenCredential = hasPreviewTokenCredential(request)
 
 	if (!hasTokenCredential) {
 		throw embedRefusal('not_available')
@@ -76,10 +82,39 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw embedRefusal('not_available')
 	}
 
-	const previewScene = await getPublishedScenePreview(projectId, sceneId)
+	/*
+	  Read together rather than in turn: each depends only on what the key
+	  check already established. The settings are read before the scene is
+	  known to be published and dropped unread if it is not, so a refusal
+	  costs one query and discloses nothing.
+
+	  The branding answer stays here rather than in the manifest, because this
+	  is the only response on the embed path that already knows the owning
+	  organization - the key lookup selects it and `decideEmbedAccess` compares
+	  it - and because these headers are `no-store`, while the manifest is
+	  cached against an ETag keyed on the scene; putting a plan answer behind
+	  that tag would leave an org that upgrades serving the old one until it
+	  next edited the scene.
+	*/
+	const [previewScene, settingsData, brandingRemoval] = await Promise.all([
+		getPublishedScenePreview(projectId, sceneId),
+		readEmbedSceneSettings(sceneId).catch(
+			(error: unknown) => new EmbedSettingsReadFailure(error)
+		),
+		hasEntitlement(authResult.organizationId, 'embed_branding_removal')
+	])
 	if (!previewScene) {
 		throw embedRefusal('not_available')
 	}
+
+	const manifest = await buildInlineEmbedManifest(request, {
+		projectId,
+		sceneId,
+		previewScene,
+		settingsData,
+		token: tokenFromQuery,
+		allowUnsignedWithoutToken: false
+	})
 
 	/*
 	  The success path carried no headers at all until now, so it was the one
@@ -87,27 +122,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	  marked `no-store` - while being the only one whose body embeds the token
 	  and the id of the key that authorized it.
 	*/
-	/*
-	  Resolved here rather than in the scene manifest, for two reasons. This is
-	  the only response on the embed path that already knows the owning
-	  organization - the key lookup selects it and `decideEmbedAccess` compares
-	  it - so nothing extra is queried. And these headers are `no-store`, while
-	  the manifest is cached against an ETag keyed on the scene and its last
-	  save; putting a plan answer behind that tag would leave an org that
-	  upgrades serving the old one until it next edited the scene.
-	*/
-	const brandingRemoval = await hasEntitlement(
-		authResult.organizationId,
-		'embed_branding_removal'
-	)
-
 	return data(
 		{
 			projectId,
 			sceneId,
 			tokenFromQuery,
 			authenticatedByApiKeyId: authResult.apiKeyId,
-			showsVectrealBranding: shouldShowVectrealBranding(brandingRemoval)
+			showsVectrealBranding: shouldShowVectrealBranding(brandingRemoval),
+			manifest
 		},
 		{ headers: EMBED_RESPONSE_HEADERS }
 	)
@@ -169,11 +191,20 @@ export interface EmbedLayoutContext {
 	 * internal `/preview` renders no mark at all.
 	 */
 	showsVectrealBranding: boolean
+	/** The scene manifest, when the document could carry it. */
+	manifest: SceneEmbedManifestResponse | null
 }
 
 const EmbedLayout = ({ loaderData }: Route.ComponentProps) => {
 	const context: EmbedLayoutContext = {
-		showsVectrealBranding: resolveEmbedBranding(loaderData)
+		showsVectrealBranding: resolveEmbedBranding(loaderData),
+		/*
+		  Cast back from the serialized type, which strips the methods off the
+		  three.js types `SceneSettings` names (a `Vector3` position, say). The
+		  value never had any: settings are stored as JSON and were plain data
+		  before they were ever serialized.
+		*/
+		manifest: loaderData.manifest as SceneEmbedManifestResponse | null
 	}
 
 	return <Outlet context={context} />

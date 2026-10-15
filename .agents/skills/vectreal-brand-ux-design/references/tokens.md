@@ -3,7 +3,9 @@
 Owner of: brand color, radius, spacing rhythm, stacking tiers, viewport height,
 page measure. Surfaces belong to [elevation.md](elevation.md).
 
-Source of truth: `shared/components/src/styles/globals.css`.
+Source of truth: `shared/components/src/styles/globals.css`, and for colour
+`shared/components/src/styles/theme.css`, which holds the palette and the shell
+recipe on their own so the published viewer can import them.
 
 ## The three that are most often confused
 
@@ -11,6 +13,7 @@ Source of truth: `shared/components/src/styles/globals.css`.
 | --------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
 | The brand color                                           | `--orange` (`#fc6c18`), or `bg-orange` / `text-orange` | `--accent`, `--primary`                             |
 | Brand at partial alpha                                    | `rgb(var(--orange-rgb) / <alpha>)`                     | `hsl(var(--orange)/…)`, `color-mix` with `--orange` |
+| Brand as text or a small mark                             | `--orange-ink`, or `text-orange-ink`                   | `text-orange` (2.9:1 on white, fails AA)            |
 | Hover/focus background for menus, options, ghost controls | `--accent`                                             | a hand-picked gray                                  |
 
 `--accent` is **not** the brand. It is the hover/focus background, near-white in
@@ -38,9 +41,13 @@ collapsed every corner in the app to square.
 The rule is one place per name, not "never `@theme`". A name that belongs in
 `@theme`, because a utility should generate from it, goes there and only there.
 
-The viewer package must not emit global theme tokens. `packages/viewer` owns a
-separate `--vctrl-*` namespace scoped to `.viewer`, deliberately outside the app
-theme, and resets `--radius-*` to `initial` so it cannot clobber a host app.
+The viewer package must not emit global theme tokens. Its built-in controls
+wear the app's palette and shell recipe from `theme.css`, which the published
+bundle compiles in and its build confines to `.vctrl-viewer`; the scheme is the
+`light` or `dark` class the viewer puts on its own root, not the page's. Only
+the hotspot marker keeps viewer-owned `--vctrl-hotspot-*` tokens on `.viewer`,
+and `package.css` resets `--radius-*` to `initial` so it cannot clobber a host
+app.
 
 ## Spacing rhythm
 

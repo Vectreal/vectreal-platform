@@ -294,7 +294,7 @@ const count = (plan: Plan, key: LimitKey, noun: string) =>
   which is why that entry was already written differently by hand.
 */
 export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
-	free: `${count('free', 'scenes_total', 'scene')}, ${publishedLimit('free', 'storage_bytes_total')} storage, ${count('free', 'scenes_published_concurrent', 'concurrent published scene')}. API access and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.`,
+	free: `${count('free', 'scenes_total', 'scene')}, ${publishedLimit('free', 'storage_bytes_total')} storage, ${count('free', 'scenes_published_concurrent', 'concurrent published scene')}. Embed API keys and community support included. Embedded scenes carry a small Vectreal badge. No credit card required.`,
 	pro: `${count('pro', 'scenes_total', 'scene')}, ${publishedLimit('pro', 'storage_bytes_total')} storage, ${count('pro', 'scenes_published_concurrent', 'concurrent published scene')}, ${count('pro', 'projects_total', 'project')}. Removes the Vectreal badge from embedded scenes; otherwise the feature set matches Free.`,
 	business: `${count('business', 'scenes_total', 'scene')}, ${publishedLimit('business', 'storage_bytes_total')} storage, ${count('business', 'scenes_published_concurrent', 'concurrent published scene')}. Adds team collaboration with role-based access (up to ${count('business', 'org_seats', 'seat')}) and priority support.`,
 	enterprise:
@@ -330,7 +330,7 @@ export const DOCS_PAGE_COPY = {
 	description:
 		'Try the publisher with a sample model, with nothing to install and no account. Or build on the open-source packages underneath.',
 	publisherCta: 'Open the publisher',
-	rocketSampleCta: 'Open the publisher with the rocket sample',
+	rocketSampleCta: 'Open the rocket sample',
 	quickLinksLabel: 'Elsewhere'
 } as const
 
@@ -370,11 +370,14 @@ export const HOME_PAGE_COPY = {
 	hero: {
 		/** One sentence per line, set as written: the breaks are part of the headline. */
 		heading: ['Your product.', 'Every angle.', 'On your own site.'],
-		lead: 'Drop in the 3D file you already have. Vectreal makes it fast enough for any product page.',
+		/** The problem and what Vectreal does about it, in that order: the headline implies it, this says it. */
+		lead: 'The 3D files you already have are built for engineering, far too heavy for a web page. Vectreal makes them light enough to load with any product page, on your own site.',
 		primaryCta: 'Start a pilot project',
 		secondaryCta: 'Try it on your own file',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
-		sampleCta: 'No file at hand? Open this camera in the publisher'
+		sampleCta: 'No file at hand? Open this camera in the publisher',
+		/** The fold's cue, a link to the first section below. */
+		foldCue: 'Scroll'
 	},
 	stage: {
 		figure: 'Fig 01',
@@ -404,21 +407,27 @@ export const HOME_PAGE_COPY = {
 		openInPublisher: 'Open in the publisher'
 	},
 	product: {
-		heading: 'The product, as it is today',
-		lead: 'Three parts of one workflow, each one live today.',
+		heading: 'From the file you have to your product page, in three steps',
+		lead: 'Each step is live in the product today.',
+		/** The chain's accessible name: the heading is a sentence, this names the control. */
+		stepsLabel: 'The three steps',
 		views: {
 			prepare: {
 				label: 'Prepare',
+				summary:
+					'Drop in your file and keep the lightest version that still looks right.',
 				body: `Upload ${SUPPORTED_FORMAT_NAMES.join(', ')}. Pick a preset, compare before and after, and download the result without an account.`,
 				link: 'Open the optimizer'
 			},
 			manage: {
 				label: 'Manage',
+				summary: 'Every scene, project and API key in one place.',
 				body: `Projects, folders and scenes in one place, with API keys and allowed domains for every embed. From the ${PLAN_DISPLAY_NAMES[TEAM_PLAN]} plan up, your whole team works in it, and owners, admins and members each get the actions their role allows.`,
 				link: 'Compare plans'
 			},
 			embed: {
 				label: 'Embed',
+				summary: 'One snippet puts it on your page.',
 				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
 				link: 'See the embed guide',
 				/** The address bar of the product page the view shows the camera on: anyone's shop, not one we name. */
@@ -428,8 +437,22 @@ export const HOME_PAGE_COPY = {
 	},
 	mission: {
 		label: 'Why we build this',
-		statement:
-			'Most companies that make physical products already have 3D files. Very few can put them on their own website without an agency, an enterprise platform or a plugin that keeps their data. Vectreal is the open path from the file you have to a product page that loads fast, and we build it in public.',
+		/** One paragraph, in parts: the `key` ones light up in turn as it scrolls through the screen. */
+		statement: [
+			'Most companies that make physical products ',
+			{ key: 'already have 3D files' },
+			'. Very few can put them on their own website ',
+			{
+				key: 'without an agency, an enterprise platform or a plugin that keeps their data'
+			},
+			'. Vectreal is ',
+			{
+				key: 'the open path from the file you have to a product page that loads fast'
+			},
+			', and ',
+			{ key: 'we build it in public' },
+			'.'
+		],
 		signature: 'Moritz Becker, founder',
 		/** The figure beside the statement: one file, pulled apart into the path it takes. Back to front. */
 		layers: {
@@ -439,8 +462,8 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	pilot: {
-		heading: 'Founding clients',
-		lead: 'We are looking for the first companies to build with, and we will put in the work to make it count for both sides.',
+		heading: 'Start with a pilot project',
+		lead: 'We take your products from the files you already have to a working 3D view on your own site, and we do the setup work with you.',
 		blocks: [
 			{
 				title: 'Who it is for',
@@ -448,11 +471,11 @@ export const HOME_PAGE_COPY = {
 			},
 			{
 				title: 'What we do',
-				body: 'We prepare your files, build the product viewer or configurator into your site, and host and manage it in Vectreal. Configurators are built per project today. What we learn from the first ones becomes part of the product.'
+				body: 'We prepare your files, build the product viewer or configurator into your site, and host and manage it in Vectreal. Configurators are built per project.'
 			},
 			{
-				title: 'What we ask',
-				body: 'Permission to publish the project as a case study, and your honest feedback. In return you get founding-client terms.'
+				title: 'What we ask in return',
+				body: 'Permission to publish the project as a case study, and your honest feedback on what worked and what did not.'
 			}
 		],
 		team: 'A small team in Germany. You work directly with the people who build the product.',
@@ -477,15 +500,19 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	closing: {
-		companies: {
-			title: 'For companies',
-			body: 'Tell us about your products and we will tell you honestly whether a pilot makes sense.',
-			cta: 'Start a pilot project'
-		},
+		heading: ['Bring one product.', 'See it on your own site.'],
+		body: 'Tell us what you sell and which files you have. We will tell you honestly whether a pilot makes sense, and if it does, show you your own product in 3D.',
+		primaryCta: 'Start a pilot project',
+		secondaryCta: 'Try it on your own file',
+		/** The second reader's door, kept to one line under the first. */
 		developers: {
-			title: 'For developers and 3D artists',
-			body: 'Try the publisher in your browser with a sample model, no account needed. The packages behind it are on npm.',
+			lead: 'Developer or 3D artist? The packages behind the publisher are on npm.',
 			cta: 'Read the docs'
+		},
+		/** Over the two halves of the camera: the file you bring, and what it becomes. */
+		figure: {
+			file: 'Your file',
+			page: 'Your product page'
 		}
 	}
 } as const

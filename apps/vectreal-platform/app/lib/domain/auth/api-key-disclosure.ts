@@ -36,3 +36,28 @@ export const KIND_IS_DISCLOSABLE: Record<ApiKeyKind, boolean> = {
 export function isApiKeyKindDisclosable(kind: ApiKeyKind): boolean {
 	return KIND_IS_DISCLOSABLE[kind]
 }
+
+/**
+ * Why a key's value cannot be put in front of its owner.
+ *
+ * Four reasons, and the server is the only place three of them are
+ * distinguishable at all: `decryptEmbedToken` returns null both for a row that
+ * never stored a value and for one whose ciphertext no longer authenticates,
+ * and only the server holds the row that separates them. Resolving this in the
+ * cell would collapse two different instructions - "rotate to get one" and
+ * "the encryption key changed" - into one shrug.
+ */
+export type ApiKeyValueUnavailableReason =
+	'revoked' | 'never-stored' | 'undecryptable' | 'withheld'
+
+/**
+ * The key itself, or the reason it is missing.
+ *
+ * A union rather than `string | null` so the reason survives the trip to the
+ * browser. The value is public by construction - it ships in an `iframe src` on
+ * the customer's own page - so showing it to the owner who minted it is the
+ * point; see `resolveApiKeyValue`, which resolves this field.
+ */
+export type ApiKeyRowValue =
+	| { readable: true; value: string }
+	| { readable: false; reason: ApiKeyValueUnavailableReason }

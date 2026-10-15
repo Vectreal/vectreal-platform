@@ -1,39 +1,45 @@
-import {
-	AccumulativeShadows,
-	ContactShadows,
-	RandomizedLight
-} from '@react-three/drei'
+import { ContactShadows } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import {
-	type ComponentRef,
+	Fragment,
 	memo,
 	type RefObject,
 	Suspense,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState
 } from 'react'
-import { Box3, Mesh, Object3D, type Texture, Vector3 } from 'three'
+import { Object3D, Vector3 } from 'three'
 
+import LoadFailureBoundary from '../load-failure-boundary'
+import AccumulativeShadowBake, {
+	type ShadowBakeApi
+} from './accumulative-shadow-bake'
+import {
+	type ClipExtent,
+	type ClipExtentRegistry,
+	useClipExtents
+} from './clip-planes'
+import { measureModel, worldBounds } from './model-measurement'
 import SceneBakedShadow from './scene-baked-shadow'
-import ShadowAutoCutoff from './shadow-auto-cutoff'
 import {
 	captureShadowDensity,
 	computeBakeSignature,
-	computeModelFingerprint,
+	isPersistedBakeValid,
 	PERSISTED_BAKE_RESOLUTION
 } from './shadow-bake'
 import ShadowLightGizmo from './shadow-light-gizmo'
 
 import type { BakedShadow, ShadowBakeCapture } from '../../types/viewer-types'
-import type { NormalizationOptions, ShadowsProps } from '@vctrl/core'
+import type { BakeBasis, NormalizationOptions, ShadowsProps } from '@vctrl/core'
 
 // Accumulative shadows: high-quality baked soft shadows for a static subject.
-// The shadow is baked into the receiving plane's UV space from the
-// RandomizedLight, independent of the camera, so camera auto-rotate (which
-// orbits the camera, not the model) keeps the bake valid while rotating. The
-// RandomizedLight only feeds the bake and does not light the rest of the scene.
+// The shadow is baked into the receiving plane's UV space from jittered bake
+// lights, independent of the camera, so camera auto-rotate (which orbits the
+// camera, not the model) keeps the bake valid while rotating. The bake lights
+// only feed the bake and do not light the rest of the scene.
 //
 // The numeric controls below are expressed RELATIVE to the model's measured
 // size (see `contentScale`): the plane scale and light radius are multiples of
@@ -58,7 +64,7 @@ export const defaultShadowsOptions: ShadowsProps = {
 	// the shadow core gets real alpha. Fixed just below the lit brightness; shadow
 	// depth is driven by light.ambient ("Darkness") rather than alphaTest.
 	alphaTest: 3.0,
-	// Manual trim on the auto-calibrated cutoff (see ShadowAutoCutoff). 1 = auto.
+	// Manual trim on the auto-calibrated cutoff (see AccumulativeShadowBake). 1 = auto.
 	cutoffScale: 1,
 	opacity: 0.9,
 	// Ground plane side length, in multiples of the model's footprint. Kept tight
@@ -137,6 +143,11 @@ type SceneShadowsProps = Partial<ShadowsProps> & {
 	 */
 	model?: Object3D
 	/**
+	 * The viewer's `displayedModel`: drawn in place of `model`, so a live bake
+	 * still accumulating meanwhile takes its frames from that object.
+	 */
+	displayedModel?: Object3D
+	/**
 	 * Model normalization, which rescales the model via an ancestor group.
 	 *
 	 * Read only to know when to re-measure: the scale lives on a group above the
@@ -168,6 +179,11 @@ type SceneShadowsProps = Partial<ShadowsProps> & {
 	 */
 	onLightChange?: (position: [number, number, number]) => void
 	/**
+	 * Where the shadow ground and the light handle register their extents, so
+	 * the camera's clip planes contain them.
+	 */
+	clipExtents?: ClipExtentRegistry
+	/**
 	 * A persisted shadow bake. When present and its signature still matches the
 	 * current bake inputs, the viewer renders the stored texture and skips the
 	 * accumulative bake entirely (no recomputation on load).
@@ -191,6 +207,12 @@ interface ModelMetrics {
 	vertexCount: number
 	/** False until the model has actually been measured (values are real, not defaults). */
 	measured: boolean
+	/**
+	 * True once these figures are final: the model was measured, could not be
+	 * (no geometry), or there is no model and the subject is the viewer's
+	 * children. A live bake waits for this rather than `measured`.
+	 */
+	sized: boolean
 }
 
 const DEFAULT_METRICS: ModelMetrics = {
@@ -198,7 +220,8 @@ const DEFAULT_METRICS: ModelMetrics = {
 	radius: 1,
 	height: 1,
 	vertexCount: 0,
-	measured: false
+	measured: false,
+	sized: false
 }
 
 /**
@@ -209,13 +232,19 @@ const DEFAULT_METRICS: ModelMetrics = {
  * box: the plane follows the horizontal footprint, while the light distance and
  * shadow camera follow the overall size. Using one shared max-dimension instead
  * makes the shadow read too small under tall models and too large under flat
- * ones. Returns unit metrics until measured.
+ * ones. Returns unit metrics until the first model is measured. Right after a
+ * swap it keeps the previous model's figures, so a stored bake's plane holds
+ * its size, but marks them unmeasured and unsized, so nothing reads them as
+ * this model's.
  */
-const useModelMetrics = (
+export const useModelMetrics = (
 	model?: Object3D,
 	normalizationOptions?: NormalizationOptions
 ): ModelMetrics => {
-	const [metrics, setMetrics] = useState<ModelMetrics>(DEFAULT_METRICS)
+	const [measurement, setMeasurement] = useState<{
+		model: Object3D
+		metrics: ModelMetrics
+	} | null>(null)
 
 	const normalizationEnabled = normalizationOptions?.enabled ?? false
 	const normalizationMinSize = normalizationOptions?.minSize
@@ -223,35 +252,45 @@ const useModelMetrics = (
 
 	useEffect(() => {
 		if (!model) return
-		// Bake ancestor transforms (model normalization scale, Center offset) into
-		// the world matrices before measuring.
-		model.updateWorldMatrix(true, true)
-		const size = new Box3().setFromObject(model).getSize(new Vector3())
+		// World size, so after the normalization scale applied above the model.
+		const size = worldBounds(model).getSize(new Vector3())
 		const footprint = Math.max(size.x, size.z)
 		const radius = 0.5 * Math.hypot(size.x, size.y, size.z)
-		if (footprint > 0 && radius > 0 && Number.isFinite(radius)) {
-			setMetrics({
-				footprint,
-				radius,
-				height: size.y,
-				vertexCount: computeModelFingerprint(model),
-				measured: true
-			})
-		}
+		const measurable = footprint > 0 && radius > 0 && Number.isFinite(radius)
+		setMeasurement({
+			model,
+			metrics: measurable
+				? {
+						footprint,
+						radius,
+						height: size.y,
+						vertexCount: measureModel(model).vertexCount,
+						measured: true,
+						sized: true
+					}
+				: { ...DEFAULT_METRICS, sized: true }
+		})
 		// Normalization is a dependency because it rescales the model from an
 		// ancestor group: the object identity is unchanged, but every figure
 		// derived here (plane size, light distance, shadow-camera extent, and the
 		// bake signature built from them) is in model-size units and goes stale.
 	}, [model, normalizationEnabled, normalizationMinSize, normalizationMaxSize])
 
-	return metrics
+	if (!model) return { ...DEFAULT_METRICS, sized: true }
+	if (!measurement) return DEFAULT_METRICS
+	return measurement.model === model
+		? measurement.metrics
+		: { ...measurement.metrics, measured: false, sized: false }
 }
 
 interface ShadowBakeCaptureProps {
-	apiRef: RefObject<ComponentRef<typeof AccumulativeShadows> | null>
+	apiRef: RefObject<ShadowBakeApi | null>
+	/** Signature of the live bake inputs, measured on the loaded model. */
 	signature: string
-	/** True when the persisted bake is being rendered (no live bake to capture). */
-	usingPersistedBake: boolean
+	/** The loaded model's measurements, which {@link signature} is computed from. */
+	basis: BakeBasis
+	/** The persisted bake being rendered instead of a live one, if any. */
+	persistedBake?: BakedShadow
 	onReady?: (capture: ShadowBakeCapture | null) => void
 }
 
@@ -266,46 +305,50 @@ interface ShadowBakeCaptureProps {
  *
  * Mounted unconditionally (in both the persisted and live branches) so a save can
  * confirm the persisted bake is current; registered/cleared like the screenshot
- * capture. The bake is non-deterministic (RandomizedLight jitter), so reusing the
- * stored asset when inputs are unchanged is what avoids a new upload every save.
+ * capture. Reusing the stored asset when inputs are unchanged is what avoids a
+ * new upload every save.
  */
 const ShadowBakeCapture = ({
 	apiRef,
 	signature,
-	usingPersistedBake,
+	basis,
+	persistedBake,
 	onReady
 }: ShadowBakeCaptureProps) => {
 	const gl = useThree((state) => state.gl)
 	// Keep the latest values without re-registering the capture each render.
-	const signatureRef = useRef(signature)
-	signatureRef.current = signature
-	const usingPersistedBakeRef = useRef(usingPersistedBake)
-	usingPersistedBakeRef.current = usingPersistedBake
+	const liveRef = useRef({ signature, basis })
+	liveRef.current = { signature, basis }
+	const persistedBakeRef = useRef(persistedBake)
+	persistedBakeRef.current = persistedBake
 
 	useEffect(() => {
 		if (!onReady) return
 		const capture: ShadowBakeCapture = async () => {
-			// Persisted bake is already valid for the current inputs: keep it.
-			if (usingPersistedBakeRef.current) {
-				return { dataUrl: null, signature: signatureRef.current }
+			// Persisted bake is already valid for the current inputs: keep it, with
+			// the basis it was validated against.
+			const persisted = persistedBakeRef.current
+			if (persisted) {
+				return persisted.basis
+					? {
+							dataUrl: null,
+							signature: persisted.signature,
+							basis: persisted.basis
+						}
+					: { dataUrl: null, ...liveRef.current }
 			}
 			const api = apiRef.current
-			// Only a fully accumulated live bake is worth persisting.
-			if (!api || api.count < api.frames) return null
-			const mesh = api.getMesh() as Mesh & {
-				material: { map?: Texture | null; alphaTest: number }
-			}
-			const map = mesh?.material?.map
-			const alphaTest = mesh?.material?.alphaTest
-			if (!map || alphaTest == null) return null
+			// Only a settled live bake, calibrated cutoff included, is worth
+			// persisting.
+			if (!api?.settled) return null
 			const dataUrl = captureShadowDensity(
 				gl,
-				map,
-				alphaTest,
+				api.texture,
+				api.cutoff,
 				PERSISTED_BAKE_RESOLUTION
 			)
 			if (!dataUrl) return null
-			return { dataUrl, signature: signatureRef.current }
+			return { dataUrl, ...liveRef.current }
 		}
 		onReady(capture)
 		return () => onReady(null)
@@ -327,6 +370,7 @@ const ShadowBakeCapture = ({
 const SceneShadows = memo(
 	({
 		model,
+		displayedModel,
 		normalizationOptions,
 		isModelAnimating = false,
 		lightEditable = false,
@@ -334,13 +378,12 @@ const SceneShadows = memo(
 		staticBake = false,
 		bakedShadow,
 		onShadowBakeReady,
+		clipExtents,
 		...props
 	}: SceneShadowsProps) => {
-		const { footprint, radius, height, vertexCount, measured } =
+		const { footprint, radius, height, vertexCount, measured, sized } =
 			useModelMetrics(model, normalizationOptions)
-		const apiRef = useRef<React.ComponentRef<
-			typeof AccumulativeShadows
-		> | null>(null)
+		const apiRef = useRef<ShadowBakeApi | null>(null)
 		// While the light handle is dragged, bake a coarse, fast preview so the
 		// shadow tracks the light, then settle to full quality on release.
 		const [previewing, setPreviewing] = useState(false)
@@ -391,53 +434,52 @@ const SceneShadows = memo(
 
 		// In a read-only/preview context, bake in one synchronous pass on mount so
 		// the shadow is present immediately instead of building up over many frames
-		// (drei bakes all frames in a layout effect when temporal is off). The editor
+		// (the bake runs every frame in a layout effect when temporal is off). The editor
 		// keeps the temporal fade-in so live tweaks don't hard-hitch.
 		const temporal = staticBake ? false : options.temporal
 
-		// Memoize the bake subtree. drei's AccumulativeShadows resets and re-bakes in
-		// a layout effect that has NO dependency array, so it re-bakes on every one
-		// of its renders. Re-rendering SceneShadows for an unrelated reason — chiefly
-		// toggling `lightEditable` when the shadow tool opens, which mounts the light
-		// gizmo — would therefore wipe and rebuild the bake. Keeping the element
-		// referentially stable (it only changes when a real bake input changes) makes
-		// React skip re-rendering AccumulativeShadows, so the bake survives.
+		// Memoized so its identity changes only with a bake input: the hold effect
+		// below watches it to learn that the bake changed during a hold.
 		const bake = useMemo(
 			() => (
-				<AccumulativeShadows
+				<AccumulativeShadowBake
 					ref={apiRef}
-					temporal={temporal}
-					frames={frames}
-					alphaTest={options.alphaTest}
-					opacity={options.opacity}
+					temporal={temporal ?? true}
+					frames={frames ?? defaultShadowsOptions.frames!}
+					alphaTest={options.alphaTest ?? defaultShadowsOptions.alphaTest!}
+					cutoffScale={options.cutoffScale ?? 1}
+					opacity={options.opacity ?? defaultShadowsOptions.opacity!}
 					scale={planeScale}
-					resolution={options.resolution}
-					colorBlend={options.colorBlend}
-					color={options.color}
-				>
-					<RandomizedLight
-						castShadow
-						amount={options.light.amount}
-						radius={lightRadius}
-						ambient={options.light.ambient}
-						intensity={options.light.intensity}
-						position={lightPosition}
-						bias={options.light.bias}
-						size={SHADOW_CAMERA_SIZE_FACTOR * radius}
-						mapSize={1024}
-						// Scale the shadow camera depth range to the model. drei's fixed
-						// near=0.5 clips the model out of the shadow map when the light is
-						// dragged close; a small relative near (with a generous far) keeps
-						// the model inside the frustum at any light distance.
-						near={radius * 0.02}
-						far={radius * 25}
-					/>
-				</AccumulativeShadows>
+					resolution={options.resolution ?? defaultShadowsOptions.resolution!}
+					colorBlend={options.colorBlend ?? defaultShadowsOptions.colorBlend!}
+					color={options.color ?? '#000000'}
+					light={{
+						amount:
+							options.light.amount ?? defaultShadowsOptions.light!.amount!,
+						radius: lightRadius,
+						ambient:
+							options.light.ambient ?? defaultShadowsOptions.light!.ambient!,
+						intensity:
+							options.light.intensity ??
+							defaultShadowsOptions.light!.intensity!,
+						position: lightPosition,
+						bias: options.light.bias ?? defaultShadowsOptions.light!.bias!,
+						size: SHADOW_CAMERA_SIZE_FACTOR * radius,
+						mapSize: 1024,
+						// Scale the shadow camera depth range to the model. A fixed near
+						// clips the model out of the shadow map when the light is dragged
+						// close; a small relative near (with a generous far) keeps the
+						// model inside the frustum at any light distance.
+						near: radius * 0.02,
+						far: radius * 25
+					}}
+				/>
 			),
 			[
 				temporal,
 				frames,
 				options.alphaTest,
+				options.cutoffScale,
 				options.opacity,
 				planeScale,
 				options.resolution,
@@ -463,6 +505,9 @@ const SceneShadows = memo(
 		// falloff between touching and slightly-raised geometry is steep — true
 		// contact AO (only wheels/underbelly), not a uniform silhouette pool. A small
 		// floor keeps the camera from degenerating on near-flat models.
+		const contactScale =
+			(options.contact.scale ?? defaultShadowsOptions.contact!.scale!) *
+			footprint
 		const contactShadow = useMemo(() => {
 			if (!options.contact.enabled) return null
 			const reach =
@@ -470,10 +515,7 @@ const SceneShadows = memo(
 			return (
 				<ContactShadows
 					frames={1}
-					scale={
-						(options.contact.scale ?? defaultShadowsOptions.contact!.scale!) *
-						footprint
-					}
+					scale={contactScale}
 					far={Math.max(reach * height, radius * 0.03)}
 					blur={options.contact.blur ?? defaultShadowsOptions.contact!.blur!}
 					opacity={
@@ -488,39 +530,59 @@ const SceneShadows = memo(
 			)
 		}, [
 			options.contact.enabled,
-			options.contact.scale,
+			contactScale,
 			options.contact.blur,
 			options.contact.opacity,
 			options.contact.reach,
 			options.color,
-			footprint,
 			height,
 			radius
 		])
 
-		// Signature of the current bake inputs. A persisted bake is reused only while
+		// The ground the shadows are drawn on: a square centered under the model,
+		// as wide as the widest shadow plane drawn. It reaches well past the
+		// model, so the clip planes have to know about it.
+		const animatingScale =
+			(options.scale ?? defaultContactFallback.scale) * footprint
+		const groundScale = isModelAnimating
+			? animatingScale
+			: Math.max(planeScale, options.contact.enabled ? contactScale : 0)
+		const groundExtent = useMemo<ClipExtent[] | null>(() => {
+			if (!options.enabled) return null
+			const half = groundScale / 2
+			return [
+				{
+					kind: 'polygon',
+					corners: [
+						new Vector3(-half, 0, -half),
+						new Vector3(half, 0, -half),
+						new Vector3(half, 0, half),
+						new Vector3(-half, 0, half)
+					]
+				}
+			]
+		}, [options.enabled, groundScale])
+		useClipExtents(clipExtents, groundExtent)
+
+		// The bake inputs a signature covers. A persisted bake is reused only while
 		// it still matches; any change to the light/frames/scale/alphaTest/colorBlend/
 		// model re-bakes live (and the next save re-persists). Uses `options.frames`
-		// (the full count, not the drag-preview reduction). Memoized so it isn't
-		// re-serialized + re-hashed on every render.
-		const bakeSignature = useMemo(
-			() =>
-				computeBakeSignature(
-					{
-						light: options.light,
-						frames: options.frames,
-						scale: options.scale,
-						resolution: options.resolution,
-						alphaTest: options.alphaTest,
-						colorBlend: options.colorBlend,
-						cutoffScale: options.cutoffScale
-					},
-					footprint,
-					radius,
-					vertexCount
-				),
-			// Depend on primitive inputs, not the freshly-spread `options`/`options.light`
-			// objects, so the memo actually holds across unrelated re-renders.
+		// (the full count, not the drag-preview reduction). Memoized on primitive
+		// inputs, not the freshly-spread `options`/`options.light` objects, so the
+		// signatures below are not re-serialized and re-hashed on every render.
+		const bakeOptions = useMemo(
+			() => ({
+				light: options.light,
+				frames: options.frames,
+				scale: options.scale,
+				resolution: options.resolution,
+				alphaTest: options.alphaTest,
+				colorBlend: options.colorBlend,
+				cutoffScale: options.cutoffScale
+			}),
+			// Keyed on the light's fields, not its object, which is spread fresh on
+			// every render; see above.
+			// eslint-disable-next-line react-hooks/exhaustive-deps
 			[
 				options.frames,
 				options.scale,
@@ -533,18 +595,77 @@ const SceneShadows = memo(
 				options.light.ambient,
 				options.light.amount,
 				options.light.intensity,
-				options.light.bias,
-				footprint,
-				radius,
-				vertexCount
+				options.light.bias
 			]
 		)
-		// Use the persisted bake when one exists and either the model isn't measured
-		// yet (render it optimistically rather than spawn the expensive live bake we
-		// are trying to avoid) or its signature still matches the measured inputs.
-		const usePersistedBake = Boolean(
-			bakedShadow && (!measured || bakedShadow.signature === bakeSignature)
+		const bakeBasis = useMemo(
+			() => ({ footprint, radius, vertexCount }),
+			[footprint, radius, vertexCount]
 		)
+		const bakeSignature = useMemo(
+			() => computeBakeSignature(bakeOptions, footprint, radius, vertexCount),
+			[bakeOptions, footprint, radius, vertexCount]
+		)
+		const usePersistedBake = useMemo(
+			() =>
+				Boolean(
+					bakedShadow &&
+					isPersistedBakeValid(bakedShadow, bakeOptions, {
+						...bakeBasis,
+						measured
+					})
+				),
+			[bakedShadow, bakeOptions, bakeBasis, measured]
+		)
+		// A stored bake whose image failed to load gives way to a live bake.
+		const [failedBakeUrl, setFailedBakeUrl] = useState<string | null>(null)
+		const showsPersistedBake =
+			usePersistedBake && bakedShadow?.url !== failedBakeUrl
+
+		// Every live shadow pass captures the meshes drawn when it starts: the
+		// bake snapshots them on restart, the contact pool renders once. So while
+		// the viewer draws another object, a bake that has not settled starts
+		// over on it, and once the model is drawn again the passes start over on
+		// the model unless they had settled before the hold. Restarting reuses
+		// the bake's render targets, so the passes remount only when they changed
+		// during the hold. A layout effect, so no frame renders between the swap
+		// and the restart.
+		const [shadowGeneration, setShadowGeneration] = useState(0)
+		const holdRef = useRef<{
+			settledBake: ShadowBakeApi | null
+			passesChanged: boolean
+		} | null>(null)
+		useLayoutEffect(() => {
+			const api = apiRef.current
+			if (displayedModel) {
+				const settled = api === null || api.settled
+				// Drawing one object after another keeps the first one's record.
+				holdRef.current ??= {
+					settledBake: settled ? api : null,
+					passesChanged: false
+				}
+				if (api && !settled) api.restart()
+				return
+			}
+			const hold = holdRef.current
+			holdRef.current = null
+			if (!hold) return
+			if (hold.passesChanged)
+				setShadowGeneration((generation) => generation + 1)
+			else if (api && api !== hold.settledBake) api.restart()
+		}, [displayedModel])
+		// Declared after the hold effect, so a pass that changes in the commit a
+		// hold starts in is still recorded.
+		useLayoutEffect(() => {
+			if (holdRef.current) holdRef.current.passesChanged = true
+		}, [
+			options.enabled,
+			isModelAnimating,
+			showsPersistedBake,
+			sized,
+			bake,
+			contactShadow
+		])
 
 		if (!options.enabled) return null
 
@@ -552,7 +673,7 @@ const SceneShadows = memo(
 			return (
 				<ContactShadows
 					opacity={options.opacity ?? defaultContactFallback.opacity}
-					scale={(options.scale ?? defaultContactFallback.scale) * footprint}
+					scale={animatingScale}
 					color={options.color ?? defaultContactFallback.color}
 					blur={defaultContactFallback.blur}
 					far={defaultContactFallback.far * radius}
@@ -562,29 +683,31 @@ const SceneShadows = memo(
 
 		return (
 			<>
-				{contactShadow}
+				<Fragment key={shadowGeneration}>
+					{sized && contactShadow}
 
-				{usePersistedBake && bakedShadow ? (
-					// Load-time fast path: render the stored bake, no recomputation.
-					<Suspense fallback={null}>
-						<SceneBakedShadow
-							url={bakedShadow.url}
-							planeScale={planeScale}
-							opacity={options.opacity ?? defaultShadowsOptions.opacity!}
-							color={options.color ?? '#000000'}
-						/>
-					</Suspense>
-				) : (
-					<>
-						{bake}
-
-						<ShadowAutoCutoff
-							apiRef={apiRef}
-							cutoffScale={options.cutoffScale ?? 1}
-							temporal={temporal ?? true}
-						/>
-					</>
-				)}
+					{showsPersistedBake && bakedShadow ? (
+						// Load-time fast path: render the stored bake, no recomputation.
+						<LoadFailureBoundary
+							key={bakedShadow.url}
+							onError={() => setFailedBakeUrl(bakedShadow.url)}
+						>
+							<Suspense fallback={null}>
+								<SceneBakedShadow
+									url={bakedShadow.url}
+									planeScale={planeScale}
+									opacity={options.opacity ?? defaultShadowsOptions.opacity!}
+									color={options.color ?? '#000000'}
+								/>
+							</Suspense>
+						</LoadFailureBoundary>
+					) : sized ? (
+						// Not before: the bake runs on mount, so a bake sized from the
+						// placeholder metrics is thrown away when the real ones land.
+						// A static bake blocks the main thread for its whole length.
+						bake
+					) : null}
+				</Fragment>
 
 				{/* Mounted in both branches so a save can either persist a fresh live
 				    bake or confirm the stored one is still valid (avoiding re-upload). */}
@@ -592,7 +715,8 @@ const SceneShadows = memo(
 					<ShadowBakeCapture
 						apiRef={apiRef}
 						signature={bakeSignature}
-						usingPersistedBake={usePersistedBake}
+						basis={bakeBasis}
+						persistedBake={showsPersistedBake ? bakedShadow : undefined}
 						onReady={onShadowBakeReady}
 					/>
 				)}
@@ -601,6 +725,7 @@ const SceneShadows = memo(
 					<ShadowLightGizmo
 						position={lightPosition}
 						minDistance={radius * 1.3}
+						clipExtents={clipExtents}
 						onDragStart={() => setPreviewing(true)}
 						onDragEnd={() => setPreviewing(false)}
 						onChange={(worldPosition) =>

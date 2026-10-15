@@ -127,10 +127,11 @@ beforeEach(() => {
  * with, not a stand-in: a fake string would make the route's decrypt call
  * indistinguishable from no decrypt call at all.
  */
-function storedKey(encryptedKey: string | null) {
+function storedKey(encryptedKey: string | null, kind = 'embed') {
 	return {
 		apiKey: {
 			id: 'key-1',
+			kind,
 			name: 'Embed key for Storefront',
 			keyPreview: 'ab3x',
 			encryptedKey,
@@ -200,6 +201,29 @@ describe('the key value the picker needs', () => {
 		await loadKeys()
 
 		expect(decryptSpy).toHaveBeenCalledTimes(1)
+	})
+
+	it('never decrypts or sends a kind that must not be disclosed', async () => {
+		/*
+		  Every key is an `embed` key today, so this drives a kind that does not
+		  exist yet through the cast `api-key-disclosure.spec.ts` uses. The day a
+		  write-scoped kind is added, the panel must not be the surface that hands
+		  its plaintext out. Watching the cipher, not only the body, pins that the
+		  refusal comes before the decrypt rather than after it.
+		*/
+		authenticateAs('admin')
+		vi.mocked(getAllUserApiKeys).mockResolvedValue([
+			storedKey(encryptEmbedToken('vctrl_writescopeab3x'), 'server-write')
+		] as unknown as Awaited<ReturnType<typeof getAllUserApiKeys>>)
+
+		const response = (await loadKeys()) as Response
+		const body = await response.clone().text()
+		const keys = await keysFrom(response)
+
+		expect(keys).toHaveLength(1)
+		expect(keys[0].value).toBeNull()
+		expect(body).not.toContain('vctrl_writescopeab3x')
+		expect(decryptSpy).not.toHaveBeenCalled()
 	})
 
 	it('reports null for a row written before the value was stored', async () => {
@@ -278,6 +302,7 @@ describe('loader', () => {
 			{
 				apiKey: {
 					id: 'mine',
+					kind: 'embed',
 					name: 'mine',
 					keyPreview: 'ab3x',
 					active: true,
@@ -291,6 +316,7 @@ describe('loader', () => {
 			{
 				apiKey: {
 					id: 'theirs',
+					kind: 'embed',
 					name: 'theirs',
 					keyPreview: '9zQ1',
 					active: true,

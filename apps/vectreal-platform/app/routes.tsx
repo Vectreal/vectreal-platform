@@ -6,6 +6,21 @@ import {
 	type RouteConfig
 } from '@react-router/dev/routes'
 
+import { docsPages } from './lib/docs/docs-manifest'
+import { getNewsPrerenderPaths } from './lib/news/news-prerender-paths'
+
+/*
+  Every docs page and published article, as markdown (see
+  `page-markdown[.]md.ts`). Listed from the manifests the prerender list reads,
+  so a page that exists has a twin and one that does not cannot.
+*/
+const MARKDOWN_TWIN_PATHS = [
+	...docsPages.map((page) => `docs/${page.slug}.md`),
+	...getNewsPrerenderPaths()
+		.filter((path) => path.startsWith('/news-room/'))
+		.map((path) => `${path.slice(1)}.md`)
+]
+
 export default [
 	// Health check endpoint for Docker and monitoring
 	route('health', './routes/health.tsx'),
@@ -14,6 +29,12 @@ export default [
 	route('robots.txt', './routes/robots[.]txt.ts'),
 	route('sitemap.xml', './routes/sitemap[.]xml.ts'),
 	route('llms.txt', './routes/llms[.]txt.ts'),
+	route('llms-full.txt', './routes/llms-full[.]txt.ts'),
+	...MARKDOWN_TWIN_PATHS.map((path) =>
+		route(path, './routes/page-markdown[.]md.ts', {
+			id: `markdown-twin:${path}`
+		})
+	),
 
 	/// API
 	route(

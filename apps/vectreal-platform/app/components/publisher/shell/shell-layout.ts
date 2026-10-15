@@ -22,10 +22,21 @@
  * Class strings are literal so Tailwind's scanner still finds them.
  */
 export const PUBLISHER_LAYER = {
-	/** Publish card, bottom-right of the canvas stage. */
+	/** The bottom-right column of the stage: save progress over the publish card. */
 	card: 'z-10',
-	/** Preview-mode camera controls, bottom-center of the stage. */
-	previewControls: 'z-20',
+	/**
+	 * The hold-to-compare label, bottom-center of the stage: it only shows with
+	 * the optimization drawer open, which preview mode never is, so it never
+	 * meets the viewer's camera switcher there.
+	 */
+	compareLabel: 'z-20',
+	/**
+	 * The author's animation playback bar, in the same bottom-center slot. It
+	 * belongs to the editor, so it never meets the viewer's camera switcher,
+	 * which shows only in preview, and it steps aside while the compare label
+	 * is up.
+	 */
+	animationControls: 'z-20',
 	/** Tool bar, top-left of the stage. */
 	toolBar: 'z-30',
 	/** Sliding panels: publish sidebar, compose sidebar, optimization drawer. */
@@ -41,13 +52,6 @@ export const PUBLISHER_LAYER = {
  * share a margin, and nothing sits a few pixels off from its neighbours.
  */
 export const PUBLISHER_EDGE_INSET = 'm-3'
-
-/**
- * The same inset expressed for consumers that take a length rather than a
- * class, so toasts line up with the surfaces they appear beside. Matches
- * Tailwind's spacing-3.
- */
-export const PUBLISHER_EDGE_INSET_PX = 12
 
 /**
  * Insets for a panel that opens on the left of the stage, under the tool bar,

@@ -1,11 +1,15 @@
+import { atom } from 'jotai'
 import { atomWithReset } from 'jotai/utils'
 
 import {
 	DEFAULT_PRESET_ID,
-	optimizationPresets
+	optimizationPresets,
+	originalPreset
 } from '../../constants/optimizations'
 
 import type {
+	ComparedModel,
+	KeptOriginalState,
 	SceneOptimizationModalState,
 	OptimizationState,
 	SceneOptimizationRuntimeState
@@ -13,20 +17,26 @@ import type {
 
 const optimizationInitialState: OptimizationState = {
 	optimizations: optimizationPresets[DEFAULT_PRESET_ID],
-	optimizationPreset: DEFAULT_PRESET_ID
+	optimizationPreset: DEFAULT_PRESET_ID,
+	sourceSettings: originalPreset,
+	derivedFrom: originalPreset
 }
 
 const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
 	isPending: false,
 	isSceneSizeLoading: false,
 	optimizedSceneBytes: null,
+	isProjectingSceneBytes: false,
 	clientSceneBytes: null,
 	workingSceneBytes: null,
 	optimizedTextureBytes: null,
 	clientTextureBytes: null,
 	lastSavedReportSignature: null,
 	latestSceneStats: null,
-	dracoReport: null
+	dracoReport: null,
+	publishedEncoding: null,
+	passRevision: 0,
+	savedPassRevision: 0
 }
 
 const optimizationModalInitialState: SceneOptimizationModalState = {
@@ -38,15 +48,42 @@ const optimizationAtom = atomWithReset<OptimizationState>(
 	optimizationInitialState
 )
 
+/**
+ * The settings that describe the document on screen, which is what a save, a
+ * draft and the publish-time Draco repack must act on.
+ */
+const documentOptimizationsAtom = atom(
+	(get) => get(optimizationAtom).derivedFrom
+)
+
 const optimizationRuntimeAtom = atomWithReset<SceneOptimizationRuntimeState>(
 	optimizationRuntimeInitialState
 )
+
+const keptOriginalInitialState: KeptOriginalState = {
+	keep: true,
+	stored: null,
+	saved: false,
+	unreadable: false
+}
+
+const keptOriginalAtom = atom<KeptOriginalState>(keptOriginalInitialState)
+
+/**
+ * The source the author is holding to compare against, once it is built.
+ * View state only: save, export and measuring keep reading the loaded model.
+ */
+const comparedModelAtom = atom<ComparedModel | null>(null)
 
 const optimizationModalAtom = atomWithReset<SceneOptimizationModalState>(
 	optimizationModalInitialState
 )
 
 export {
+	comparedModelAtom,
+	documentOptimizationsAtom,
+	keptOriginalAtom,
+	keptOriginalInitialState,
 	optimizationModalAtom,
 	optimizationModalInitialState,
 	optimizationAtom,

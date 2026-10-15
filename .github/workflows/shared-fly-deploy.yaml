@@ -34,10 +34,6 @@ on:
         required: true
       VITE_PUBLIC_POSTHOG_UI_HOST:
         required: false
-      VITE_PUBLIC_VECTREAL_API_KEY_PROD:
-        required: false
-      VITE_PUBLIC_DEMO_SCENE_URL:
-        required: false
 
 jobs:
   deploy:
@@ -48,8 +44,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # The builder runs in a BuildKit container, which this action otherwise
+      # pulls from Docker Hub. Google's mirror serves the same image, so a Hub
+      # outage or its anonymous rate limit no longer fails the deploy.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -79,8 +80,6 @@ jobs:
             BUILD_VITE_PUBLIC_POSTHOG_TOKEN=${{ secrets.VITE_PUBLIC_POSTHOG_TOKEN }}
             BUILD_VITE_PUBLIC_POSTHOG_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
             BUILD_VITE_PUBLIC_POSTHOG_UI_HOST=${{ secrets.VITE_PUBLIC_POSTHOG_UI_HOST || 'https://eu.posthog.com' }}
-            BUILD_VITE_PUBLIC_VECTREAL_API_KEY_PROD=${{ secrets.VITE_PUBLIC_VECTREAL_API_KEY_PROD }}
-            BUILD_VITE_PUBLIC_DEMO_SCENE_URL=${{ secrets.VITE_PUBLIC_DEMO_SCENE_URL }}
 
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master

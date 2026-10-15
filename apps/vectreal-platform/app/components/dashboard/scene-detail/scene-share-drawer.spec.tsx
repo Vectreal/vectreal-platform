@@ -62,6 +62,26 @@ vi.mock('../../embed/embed-options-panel', () => ({
 }))
 
 /*
+  Shaped like the real setting: the scene it writes to, what is stored, and
+  whether this actor may change it. Its fetcher is its own spec's subject.
+*/
+vi.mock('./scene-loading-thumbnail-setting', () => ({
+	SceneLoadingThumbnailSetting: ({
+		sceneId,
+		presentation,
+		canUpdate
+	}: {
+		sceneId: string
+		presentation: { showLoadingThumbnail?: boolean } | null
+		canUpdate: boolean
+	}) => (
+		<div data-testid="thumbnail-setting">
+			{`${sceneId}:${String(presentation?.showLoadingThumbnail)}:${canUpdate}`}
+		</div>
+	)
+}))
+
+/*
   Shaped like the real control, not a bare marker. As a propless stub both
   `publishState` and `onPublish` could be deleted from the call site with every
   test still green - and `onPublish` is the whole "publishing happens in the
@@ -102,12 +122,17 @@ const PUBLISHED: ScenePublishStateResponse = {
 
 const onPublish = vi.fn()
 
-function open(publishState: ScenePublishStateResponse) {
+function open(
+	publishState: ScenePublishStateResponse,
+	{ canUpdateScene = true } = {}
+) {
 	render(
 		<SceneShareDrawer
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={publishState}
+			presentation={{ showLoadingThumbnail: true }}
+			canUpdateScene={canUpdateScene}
 			onPublish={onPublish}
 		/>
 	)
@@ -181,5 +206,35 @@ describe('the trigger', () => {
 		const dialog = screen.getByRole('dialog')
 		expect(dialog.textContent).toContain('Publishing')
 		expect(dialog.textContent).toContain('Publish & Embed')
+	})
+})
+
+describe('the loading thumbnail setting', () => {
+	it('is absent while the scene is a draft, which no embed shows', () => {
+		open(DRAFT)
+
+		expect(screen.queryByTestId('thumbnail-setting')).toBeNull()
+	})
+
+	it('comes after the embed block, which belongs under Publishing', () => {
+		open(PUBLISHED)
+
+		const embed = screen.getByTestId('embed-panel')
+		const viewer = screen.getByRole('heading', { name: 'Viewer' })
+		expect(
+			embed.compareDocumentPosition(viewer) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy()
+		expect(
+			embed.compareDocumentPosition(screen.getByTestId('thumbnail-setting')) &
+				Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy()
+	})
+
+	it('is handed this scene, its stored choice and the permission', () => {
+		open(PUBLISHED, { canUpdateScene: false })
+
+		expect(screen.getByTestId('thumbnail-setting').textContent).toBe(
+			'scene-1:true:false'
+		)
 	})
 })

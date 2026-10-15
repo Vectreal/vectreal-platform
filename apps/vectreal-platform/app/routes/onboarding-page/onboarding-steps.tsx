@@ -69,23 +69,6 @@ export const CONTENT_VARIANTS: Variants = {
 	})
 } as const
 
-export const VISUAL_VARIANTS = {
-	enter: { scale: 1.02, opacity: 0 },
-	center: {
-		scale: 1,
-		opacity: 1,
-		transition: {
-			duration: 0.35,
-			ease: [0.16, 1, 0.3, 1] as [number, number, number, number]
-		}
-	},
-	exit: {
-		scale: 0.97,
-		opacity: 0,
-		transition: { duration: 0.25 }
-	}
-} as const
-
 // ─── Steps data ───────────────────────────────────────────────────────────────
 
 export const STEPS: OnboardingStep[] = [

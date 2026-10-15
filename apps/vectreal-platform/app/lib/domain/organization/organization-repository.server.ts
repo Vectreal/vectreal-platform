@@ -8,9 +8,9 @@ import { projects } from '../../../db/schema/project/projects'
 import { assertWithinQuota } from '../billing/quota-enforcement.server'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
-const db = getDbClient()
+import type { MembershipRole } from '../dashboard/dashboard-operations'
 
-type MembershipRole = (typeof organizationMemberships.$inferSelect)['role']
+const db = getDbClient()
 
 export interface OrganizationMember {
 	membership: typeof organizationMemberships.$inferSelect

@@ -3,7 +3,7 @@
  * What the converter page does with what the loader hands it.
  *
  * WHY THIS FILE EXISTS. `converter-surface.tsx` is where the two numbers a
- * visitor actually reads are computed, where the decision to re-read a file is
+ * visitor actually reads are computed, where the decision to undo a pass is
  * taken, and where a superseded load is told apart from a winning one - and it
  * had no test at all. Every defect below shipped green, and two of them reached
  * every visitor on every conversion.
@@ -20,29 +20,63 @@
  *  - adding `sourceTextureBytes` back onto `sourcePackageBytes` reddens the
  *    figures case alone;
  *  - putting `adoptSource` back to `appliedKey.current = null` reddens the
- *    whole first half, because the second read it causes never resolves here
- *    and no result reaches the screen. Blunt, and correct: the second read is
- *    the defect and the spinner was only its symptom;
+ *    not-read-again case: the first Convert then restores a document that
+ *    was already as loaded;
  *  - making `ingest` adopt unconditionally reddens the superseded-drop case;
  *  - dropping `store`'s guard reddens the conversion-filed-late case;
- *  - dropping the currency check that follows `texturesOptimization` reddens
- *    the WebP case and nothing else, which is the point of that case: the two
- *    checks bracket the pass and each needs a window of its own to be caught
- *    in;
- *  - dropping the currency check that precedes the pass reddens the
- *    superseded-re-read case. The header claimed that check was covered by the
- *    cases above it and it was covered by none of them: `if (false) return null`
- *    left all six green, which is how a guard written in this changeset came to
- *    be the only unmeasured line in the file.
+ *  - offering WebP without asking `canEncodeImage` reddens the Safari case
+ *    alone;
+ *  - not waiting for `stageIngest` in `prepare`, or not handing it over in
+ *    `adoptSource`, reddens the first-model and previous-model cases;
+ *  - dropping `prepare`'s on-screen check after that wait, or capturing its
+ *    predicate after the wait instead of before, reddens the
+ *    replaced-while-waiting case;
+ *  - adopting by `stillCurrent` rather than `stillOnScreen` reddens both
+ *    refusal cases on the adopted model;
+ *  - in the restore-based undo: never restoring, or always restoring,
+ *    reddens the restore-once and as-read cases; skipping the currency check
+ *    after a restore, after a failed restore, after a failed pass, or after
+ *    the pass reddens the case for that window; keeping the recipe during the
+ *    pass reddens the failed-pass cases; treating every pass failure as fatal,
+ *    a total one as partial, or any other failure as a total one reddens the
+ *    partial, the total and the failed-pass case; throwing the partial result
+ *    away reddens the partial case;
+ *  - of the restore's record: recording it before it runs, or as done when it
+ *    failed, reddens both failed-restore cases; keeping the old recipe while
+ *    it runs reddens the case where it failed after putting the document
+ *    back; not recording it at all reddens the undo-then-redo case;
+ *  - of the partial pass's note: not filing it reddens the partial case for
+ *    that writer; not keeping it with the recipe, or not returning it when
+ *    the pass is skipped, reddens the later-result case; keeping it across a
+ *    restore or into the next model reddens the case for each;
+ *  - reading the document before any restore or pass without refusing an
+ *    empty one, or never refusing one at all, reddens both not-ingested
+ *    cases; exporting the document read before a restore or a pass reddens
+ *    the cases that read after one;
+ *  - sending USDZ through `prepare` again reddens both USDZ cases, and
+ *    exporting anything but the stage's model reddens the left-alone case;
+ *  - handing over with the ticked options reddens the three new
+ *    handoff cases; handing over without `prepare` reddens the as-loaded,
+ *    could-not-undo and replaced-while-waiting cases; going on to serialize a
+ *    model `prepare` found replaced reddens the replaced-while-waiting case;
+ *  - letting the publisher button run during a conversion, or Convert during
+ *    a handoff, reddens the case for each.
  */
 import { formatFileSize } from '@shared/utils'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+	SupersededError,
+	TextureCompressionError
+} from '@vctrl/core/model-optimizer'
 import { useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ConverterSurface } from '../app/components/convert/converter-surface'
-import { convertPairBySlug } from '../app/lib/convert/convert-pairs'
+import {
+	convertPairBySlug,
+	USDZ_GLASS_NOTE
+} from '../app/lib/convert/convert-pairs'
 
 /* ------------------------------------------------------------------ *
  * A model context the test drives, rather than a value it fixes.
@@ -59,7 +93,8 @@ interface LoaderFile {
 interface Pending {
 	/** Puts the model on the stage, leaving `load` unresolved. */
 	publish: (file: LoaderFile) => void
-	resolve: (file: LoaderFile) => void
+	/** Settles the load; `ingested: false` is an ingest that failed, as the loader allows. */
+	resolve: (file: LoaderFile, ingested?: boolean) => void
 	reject: (error: { code: string; message: string }) => void
 }
 
@@ -74,6 +109,28 @@ let pending: Pending[] = []
   model" and "a newer file replaced it" the same answer to a caller.
 */
 let latestToken = 0
+
+/*
+  Which load's model is on the stage. Publishing moves it to that load; a
+  refusal leaves it where it was and `reset` clears it, as in the real hook.
+*/
+let onScreen = 0
+
+/*
+  The document the optimizer holds: a load's, once that load settles, because
+  the real loaders publish first and ingest after. Distinct per load, so a test
+  can tell which model's document was read.
+*/
+let heldDocument: { name: string; webp?: boolean } | null = null
+
+/** Every document an export or a handoff read, in order. */
+let documentsRead: unknown[] = []
+
+/** Every three.js model the USDZ exporter was handed, in order. */
+let modelsExported: unknown[] = []
+
+/* The last model on the stage, which a refused load puts back. */
+let lastReady: LoaderFile | null = null
 
 /** Blocks every export until the test lets go, so a drop can land mid-encode. */
 let exportBlock: Promise<void> | null = null
@@ -99,8 +156,8 @@ const publish = (next: Record<string, unknown>) => {
  * Out of order on purpose in the supersession cases: that is the whole
  * scenario, and it cannot be produced by awaiting them as they were made.
  */
-const settle = (index: number, file: LoaderFile) =>
-	pending[index]?.resolve(file)
+const settle = (index: number, file: LoaderFile, ingested = true) =>
+	pending[index]?.resolve(file, ingested)
 
 /**
  * Puts a load's model on the stage without letting `load` resolve.
@@ -121,7 +178,10 @@ const reachStage = (index: number, file: LoaderFile) =>
 const refuse = (index: number, code = 'unsupported_format') =>
 	pending[index]?.reject({ code, message: 'nope' })
 
-const exported = { data: new Uint8Array(0) }
+const exported = {
+	data: new Uint8Array(0),
+	transmissiveMaterials: [] as string[]
+}
 
 /** Blocks the WebP pass, the slowest thing a conversion does. */
 let passBlock: Promise<void> | null = null
@@ -136,6 +196,34 @@ function blockPasses() {
 	})
 }
 
+/** Holds the optimizer's restore open, the way re-parsing a large source does. */
+let restoreBlock: Promise<void> | null = null
+let releaseRestore: () => void = () => undefined
+
+function blockRestores() {
+	restoreBlock = new Promise<void>((resolve) => {
+		releaseRestore = () => {
+			restoreBlock = null
+			resolve()
+		}
+	})
+}
+
+/*
+  A pass marks the document it rewrote; a restore swaps in the source as read.
+  With nothing held, both throw, as the hook's do.
+*/
+const runPass = async () => {
+	if (passBlock) await passBlock
+	if (!heldDocument) throw new Error('No model loaded')
+	heldDocument = { ...heldDocument, webp: true }
+}
+const restore = async () => {
+	if (restoreBlock) await restoreBlock
+	if (!heldDocument) throw new Error('No source to restore')
+	heldDocument = { name: heldDocument.name }
+}
+
 const optimizer = {
 	/*
 	  A spy, not a plain arrow. Whether the optimizer is read *at all* after a
@@ -143,10 +231,9 @@ const optimizer = {
 	  guard keeps the wrong bytes off the page but cannot say the encode was
 	  skipped.
 	*/
-	_getDocument: vi.fn(() => ({})),
-	texturesOptimization: vi.fn(async () => {
-		if (passBlock) await passBlock
-	})
+	_getDocument: vi.fn(() => heldDocument),
+	texturesOptimization: vi.fn(runPass),
+	restoreSource: vi.fn(restore)
 }
 
 function resetContext() {
@@ -160,6 +247,8 @@ function resetContext() {
 		optimizer,
 		reset: () => {
 			latestToken += 1
+			onScreen = 0
+			lastReady = null
 			publish({ status: 'empty', file: null })
 		},
 		load: (
@@ -170,6 +259,10 @@ function resetContext() {
 
 			const token = ++latestToken
 			const stillCurrent = () => latestToken === token
+			const stillOnScreen = () => onScreen === token
+
+			/* Every load blanks the stage on the way in, as the hook's does. */
+			publish({ status: 'loading', file: null })
 
 			return new Promise((resolve) => {
 				const reachStage = (file: LoaderFile) => {
@@ -179,28 +272,57 @@ function resetContext() {
 					  rather than reading `status`.
 					*/
 					if (!stillCurrent()) return
+					onScreen = token
+					lastReady = file
 					publish({ status: 'ready', file })
 					options?.onPublish?.({
 						status: 'ready',
 						file,
 						error: null,
-						stillCurrent
+						stillCurrent,
+						stillOnScreen
 					})
 				}
 
 				pending.push({
 					publish: reachStage,
-					resolve: (file) => {
+					resolve: (file, ingested = true) => {
 						/*
 						  Publishing happens before the promise settles, the way the
 						  real hook does, which is why the Convert button can render
 						  before the drop that produced it has finished adopting.
+						  A failed ingest still settles, and the core clears what it
+						  held.
 						*/
 						reachStage(file)
-						resolve({ status: 'ready', file, error: null, stillCurrent })
+						if (stillOnScreen()) {
+							heldDocument = ingested ? { name: file.name } : null
+						}
+						resolve({
+							status: 'ready',
+							file,
+							error: null,
+							stillCurrent,
+							stillOnScreen
+						})
 					},
-					reject: (error) =>
-						resolve({ status: 'error', file: null, error, stillCurrent })
+					reject: (error) => {
+						/* A refused upload puts back whatever was on the stage. */
+						if (stillCurrent()) {
+							publish(
+								lastReady
+									? { status: 'ready', file: lastReady }
+									: { status: 'error', file: null }
+							)
+						}
+						resolve({
+							status: 'error',
+							file: null,
+							error,
+							stillCurrent,
+							stillOnScreen
+						})
+					}
 				})
 			})
 		}
@@ -227,17 +349,21 @@ vi.mock('../app/components/viewer/client-vectreal-viewer', () => ({
 
 vi.mock('@vctrl/core/model-exporter', () => ({
 	ModelExporter: class {
-		async exportDocumentGLB() {
+		async exportDocumentGLB(document: unknown) {
+			documentsRead.push(document)
 			if (exportBlock) await exportBlock
 			return exported
 		}
-		async exportDocumentGLBDraco() {
+		async exportDocumentGLBDraco(document: unknown) {
+			documentsRead.push(document)
 			return exported
 		}
-		async exportDocumentGLTF() {
+		async exportDocumentGLTF(document: unknown) {
+			documentsRead.push(document)
 			return exported
 		}
-		async exportThreeJSUSDZ() {
+		async exportThreeJSUSDZ(model: unknown) {
+			modelsExported.push(model)
 			return exported
 		}
 		async createZIPArchive() {
@@ -281,20 +407,31 @@ function blockDraft() {
 }
 
 vi.mock('../app/lib/domain/scene/client/scene-draft-persistence', () => ({
-	persistPendingSceneDraftOrchestrator: async () => {
+	persistPendingSceneDraftOrchestrator: async ({
+		prepareGltfDocumentForUpload
+	}: {
+		prepareGltfDocumentForUpload: () => Promise<unknown>
+	}) => {
+		await prepareGltfDocumentForUpload()
 		if (draftBlock) await draftBlock
 		return 'draft-1'
 	}
 }))
 
+/* Serializes whatever the optimizer holds, as the real one does. */
 vi.mock('../app/hooks/scene-loader/use-scene-document-export', () => ({
-	usePrepareGltfDocument: () => async () => ({ data: {}, assets: new Map() })
+	usePrepareGltfDocument: () => async () => {
+		documentsRead.push(heldDocument)
+		return { data: {}, assets: new Map() }
+	}
 }))
 
 /** Holds a sample's download open until a test lets it finish. */
 let sampleBlock: Promise<void> | null = null
 
 vi.mock('../app/lib/samples/sample-models', () => ({
+	// Read by the example scenes `useSampleDownload` also opens.
+	HERO_MODEL: { url: '', fileName: 'camera.glb', bytes: 1 },
 	sampleModelById: (id: string) =>
 		id === 'rocket' ? { id: 'rocket', label: 'Rocket', bytes: 1 } : null,
 	fetchSampleModel: async () => {
@@ -317,6 +454,15 @@ vi.mock('../app/components/layout-components/sample-tiles', () => ({
 			sample
 		</button>
 	)
+}))
+
+/*
+  The image formats this browser's canvas can write. Every browser the other
+  cases describe writes WebP; the Safari case takes it away.
+*/
+const writableFormats = vi.hoisted(() => new Set(['webp', 'jpeg', 'png']))
+vi.mock('@vctrl/hooks/use-optimize-model', () => ({
+	canEncodeImage: async (format: string) => writableFormats.has(format)
 }))
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
@@ -351,6 +497,28 @@ function drop(files: File[]) {
 
 const convertButton = () => screen.getByRole('button', { name: /^Convert to/ })
 
+/** A model on the stage, read and ingested, as most cases start. */
+async function modelOnStage(
+	name = 'chair.gltf',
+	bytes = 2_000_000,
+	pair = gltfToGlb
+) {
+	const view = render(<ConverterSurface pair={pair} />)
+	drop([gltfFile(name)])
+	await waitFor(() => expect(loadCalls).toHaveLength(1))
+	settle(0, loadedFile({ name, sourcePackageBytes: bytes }))
+	await screen.findByTestId('stage')
+	return view
+}
+
+const toggleWebp = () =>
+	fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+
+const downloadButton = () => screen.findByRole('button', { name: /^Download/ })
+
+/** One turn of the event loop: long enough for every microtask a click starts. */
+const yieldToPage = () => new Promise((resolve) => setTimeout(resolve, 0))
+
 function loadedFile(over: Partial<LoaderFile> = {}): LoaderFile {
 	return {
 		model: { name: 'chair' },
@@ -370,13 +538,25 @@ beforeEach(() => {
 		}
 	)
 	exported.data = new Uint8Array(0)
+	exported.transmissiveMaterials = []
 	exportBlock = null
 	passBlock = null
 	latestToken = 0
+	onScreen = 0
+	heldDocument = null
+	documentsRead = []
+	modelsExported = []
+	lastReady = null
 	draftBlock = null
 	sampleBlock = null
 	navigated.length = 0
-	optimizer.texturesOptimization.mockClear()
+	/*
+	  Reset rather than cleared: a case that queues a rejection it never
+	  reaches would otherwise hand it to the next case.
+	*/
+	optimizer.texturesOptimization.mockReset().mockImplementation(runPass)
+	optimizer.restoreSource.mockReset().mockImplementation(restore)
+	restoreBlock = null
 	optimizer._getDocument.mockClear()
 	/*
 	  The toast spies are module-level and were never cleared, so a message
@@ -388,7 +568,30 @@ beforeEach(() => {
 	vi.mocked(toast.success).mockClear()
 	capture.mockClear()
 	consentState.analytics = false
+	writableFormats.add('webp')
 	resetContext()
+})
+
+describe('an option the browser cannot carry out is not offered', () => {
+	it('leaves WebP out where the canvas cannot write it', async () => {
+		/*
+		  THE DEFECT: WebKit cannot encode WebP and hands back a PNG instead of
+		  failing. Ticking this box on Safari turned the camera sample's 18 MB of
+		  JPEG textures into 190 MB of PNG filed as WebP, and the tab crashed.
+		  The encoder refuses now, so offering the box would promise a pass that
+		  can only fail.
+		*/
+		writableFormats.delete('webp')
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile())
+		await screen.findByTestId('stage')
+
+		expect(screen.getByRole('checkbox', { name: /Draco/i })).toBeTruthy()
+		expect(screen.queryByRole('checkbox', { name: /WebP/i })).toBeNull()
+	})
 })
 
 describe('a sample on its way down', () => {
@@ -495,7 +698,110 @@ describe('a document that was just read is not read again', () => {
 
 		await screen.findByText(formatFileSize(900))
 		expect(loadCalls).toHaveLength(1)
+		expect(optimizer.restoreSource).not.toHaveBeenCalled()
 		expect(screen.getByTestId('stage').dataset.model).toBe('chair')
+	})
+})
+
+describe('a USDZ result says when its glass was flattened', () => {
+	/*
+	  The stage keeps drawing the glass clear, so this line is the only place the
+	  reader hears about it before Quick Look shows them.
+	*/
+	it.each([
+		[['lens'], true],
+		[[], false]
+	])(
+		'with transmissive materials %j, says so: %s',
+		async (transmissiveMaterials, expected) => {
+			render(<ConverterSurface pair={convertPairBySlug('gltf-to-usdz')!} />)
+
+			drop([gltfFile()])
+			await waitFor(() => expect(loadCalls).toHaveLength(1))
+			settle(0, loadedFile({ sourcePackageBytes: 1_000 }))
+			await screen.findByTestId('stage')
+
+			exported.data = new Uint8Array(900)
+			exported.transmissiveMaterials = transmissiveMaterials
+			fireEvent.click(convertButton())
+			await screen.findByText(formatFileSize(900))
+
+			expect(screen.queryByText(USDZ_GLASS_NOTE) !== null).toBe(expected)
+		}
+	)
+})
+
+describe('a USDZ conversion reads the model on the stage, not the document', () => {
+	/*
+	  THE DEFECT: every target went through `prepare`, which brings the
+	  optimizer's document to the ticked recipe. USDZ never reads that document,
+	  yet a model kept across a pair switch had its WebP pass undone first - a
+	  re-parse of the whole source for nothing - and a USDZ Convert waited for
+	  an ingest it does not use.
+	*/
+	it('leaves a pass made for another format where it is', async () => {
+		const { rerender } = await modelOnStage()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		rerender(<ConverterSurface pair={convertPairBySlug('gltf-to-usdz')!} />)
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).not.toHaveBeenCalled()
+		expect(modelsExported).toEqual([{ name: 'chair' }])
+	})
+
+	it('converts before the optimizer has taken the model in', async () => {
+		render(<ConverterSurface pair={convertPairBySlug('gltf-to-usdz')!} />)
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		reachStage(0, loadedFile())
+		await screen.findByTestId('stage')
+
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(modelsExported).toEqual([{ name: 'chair' }])
+	})
+})
+
+describe('a model the optimizer could not take in', () => {
+	/*
+	  THE DEFECT: the loader keeps a model on the stage whose ingest failed, and
+	  the page read the empty optimizer as one still working. Convert said "The
+	  model is still preparing. Try again in a moment." for a model that never
+	  would be, and with WebP ticked the pass failed first and said that instead.
+	*/
+	const NOT_PREPARED = 'This model could not be prepared for conversion to GLB.'
+
+	async function modelNotIngested() {
+		render(<ConverterSurface pair={gltfToGlb} />)
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile(), false)
+		await screen.findByTestId('stage')
+	}
+
+	it('says it could not be prepared, not that it is still preparing', async () => {
+		await modelNotIngested()
+
+		fireEvent.click(convertButton())
+
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(NOT_PREPARED))
+		expect(documentsRead).toEqual([])
+	})
+
+	it('says so before a WebP pass can fail on it', async () => {
+		await modelNotIngested()
+		toggleWebp()
+
+		fireEvent.click(convertButton())
+
+		await waitFor(() => expect(toast.error).toHaveBeenCalledWith(NOT_PREPARED))
+		expect(optimizer.texturesOptimization).not.toHaveBeenCalled()
+		expect(toast.error).toHaveBeenCalledTimes(1)
 	})
 })
 
@@ -586,8 +892,8 @@ describe('a refused drop does not retire the model it left on screen', () => {
 
 		  Deterministic, not a race: no overlap, no timing. Drop a file that is
 		  not a model onto an open one, press Convert, and the spinner finishes
-		  onto an empty panel. With no option ticked `prepare` returns early and
-		  never rewrites the predicate, so it never repairs itself either.
+		  onto an empty panel. Nothing in `prepare` rewrites the predicate, so it
+		  never repaired itself either.
 		*/
 		render(<ConverterSurface pair={gltfToGlb} />)
 
@@ -610,117 +916,388 @@ describe('a refused drop does not retire the model it left on screen', () => {
 	})
 })
 
-describe('a destructive pass is not credited to a document that never had it', () => {
-	it('abandons a re-read that a newer file replaced before the pass began', async () => {
-		/*
-		  The other half of the bracket. `prepare` re-reads the source and only
-		  then decides whether to apply a destructive pass, so a file landing
-		  inside the re-read leaves that resolution describing the model on its
-		  way out. Running the pass for it re-encodes the wrong document and
-		  writes the recipe down against the new one.
+describe('a destructive pass is undone from the optimizer, not the file', () => {
+	/*
+	  THE DEFECT. Undoing a WebP pass used to read the file again through
+	  `load`: three.js decoded every texture again with the stage unmounted,
+	  and the read claimed a load of its own that a pass which threw left the
+	  page asking about, so every later Convert was told a newer file had
+	  replaced it. The optimizer keeps the model as it was loaded for exactly
+	  this, and the publisher already restores from it.
+	*/
+	const refuseANote = async (loads: number) => {
+		drop([new File(['x'], 'notes.txt')])
+		await waitFor(() => expect(loadCalls).toHaveLength(loads))
+		refuse(loads - 1)
+		await screen.findByRole('alert')
+	}
 
-		  The re-read is settled *after* the drop that replaces it, which is the
-		  whole scenario and cannot be produced by settling in order.
-		*/
-		render(<ConverterSurface pair={gltfToGlb} />)
-
-		drop([gltfFile('first.gltf')])
-		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 }))
-		await screen.findByTestId('stage')
-
-		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
+	const convertOnceWithWebp = async () => {
+		toggleWebp()
 		fireEvent.click(convertButton())
-		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		await downloadButton()
+	}
 
-		/* A second file lands while the re-read is still outstanding. */
-		drop([gltfFile('second.gltf')])
-		await waitFor(() => expect(loadCalls).toHaveLength(3))
-		settle(
-			2,
-			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000_000 })
-		)
-		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+	it('runs WebP on the document as read, without reading the file or restoring it', async () => {
+		await modelOnStage()
 
-		/* Only now does the re-read of the replaced file come back. */
-		settle(1, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 }))
-		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+		await convertOnceWithWebp()
 
-		expect(optimizer.texturesOptimization).not.toHaveBeenCalled()
+		expect(loadCalls).toHaveLength(1)
+		expect(optimizer.restoreSource).not.toHaveBeenCalled()
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
 	})
 
-	it('re-runs the WebP pass when a newer file landed during the last one', async () => {
-		/*
-		  THE DEFECT: the currency check sat immediately after the re-read and was
-		  not repeated after `texturesOptimization` - which re-encodes every
-		  texture and is the slowest thing this page does, so it is the easiest
-		  window for a second file to land in. The write below it tells the next
-		  Convert that the document already has the pass, so the new model's
-		  untouched textures went out under a ticked box.
+	it('restores the document once to take a pass back', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
 
-		  Asserted through the pass count rather than through the ref: what the
-		  reader would see is a second conversion that quietly skips the work,
-		  and that is exactly what the count measures.
-		*/
-		render(<ConverterSurface pair={gltfToGlb} />)
-
-		drop([gltfFile('first.gltf')])
-		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 }))
-		await screen.findByTestId('stage')
-
-		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
-
-		blockPasses()
+		toggleWebp()
 		fireEvent.click(convertButton())
 
-		/* `prepare` re-reads the source before it may apply a destructive pass. */
-		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 }))
-		await waitFor(() =>
-			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
-		)
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(1)
+		expect(loadCalls).toHaveLength(1)
+	})
 
-		/* A second file arrives while those textures are still being encoded. */
+	const PARTIAL_NOTE =
+		'1 of 3 textures could not be recompressed and kept their own format.'
+
+	/* Keeps the textures it did compress, as the core does, then says so. */
+	const partialPass = async () => {
+		await runPass()
+		throw new TextureCompressionError(1, 3, '1 of 3 failed')
+	}
+
+	// A KTX2 texture, say, would otherwise keep the whole model from converting.
+	it.each([
+		['GLB', gltfToGlb],
+		['glTF', convertPairBySlug('glb-to-gltf')!]
+	])(
+		'keeps what a partial pass compressed into a %s, and says what it left',
+		async (_, pair) => {
+			optimizer.texturesOptimization.mockImplementationOnce(partialPass)
+			await modelOnStage('chair.gltf', 2_000_000, pair)
+
+			await convertOnceWithWebp()
+
+			expect(await screen.findByText(PARTIAL_NOTE)).toBeTruthy()
+			expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf', webp: true })
+		}
+	)
+
+	it('says what a partial pass left beside every later result from it', async () => {
+		optimizer.texturesOptimization.mockImplementationOnce(partialPass)
+		await modelOnStage()
+		await convertOnceWithWebp()
+
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		expect(await screen.findByText(PARTIAL_NOTE)).toBeTruthy()
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
+	})
+
+	it('says nothing of a partial pass beside a result it was undone for', async () => {
+		optimizer.texturesOptimization.mockImplementationOnce(partialPass)
+		await modelOnStage()
+		await convertOnceWithWebp()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(screen.queryByText(PARTIAL_NOTE)).toBeNull()
+	})
+
+	it('says nothing of a partial pass beside the next model', async () => {
+		optimizer.texturesOptimization.mockImplementationOnce(partialPass)
+		await modelOnStage()
+		await convertOnceWithWebp()
+		toggleWebp()
+
 		drop([gltfFile('second.gltf')])
-		await waitFor(() => expect(loadCalls).toHaveLength(3))
-		settle(
-			2,
-			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000_000 })
-		)
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
 		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+		fireEvent.click(convertButton())
 
-		/*
-		  Let the interrupted run finish and try to file its result.
+		expect(await downloadButton()).toBeTruthy()
+		expect(screen.queryByText(PARTIAL_NOTE)).toBeNull()
+	})
 
-		  This waited on the Download button being absent, which passed on entry
-		  - `adoptSource` had already cleared the conversions - so it asserted
-		  nothing. It was still load-bearing, because `waitFor` yields to the
-		  event loop and the interrupted run needs that to unwind before the
-		  click below. Keeping the yield and giving it something true to check:
-		  releasing a superseded pass must not start another one.
-		*/
+	it('says plainly when no texture could be recompressed, then converts again', async () => {
+		optimizer.texturesOptimization.mockRejectedValueOnce(
+			new TextureCompressionError(3, 3, '3 of 3 failed')
+		)
+		await modelOnStage()
+		toggleWebp()
+
+		fireEvent.click(convertButton())
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'None of the textures could be recompressed as WebP. Untick it to download the file as it is.'
+			)
+		)
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(1)
+		expect(toast.error).toHaveBeenCalledTimes(1)
+	})
+
+	it('says the pass failed, then restores the document even unticked', async () => {
+		optimizer.texturesOptimization.mockRejectedValueOnce(
+			new Error('The encoder went away.')
+		)
+		await modelOnStage()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'The WebP pass failed. Untick it to download the file as it is.'
+			)
+		)
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(1)
+		expect(loadCalls).toHaveLength(1)
+	})
+
+	it('says when the restore failed, and restores before the next export', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		optimizer.restoreSource.mockRejectedValueOnce(
+			new Error('The source could not be parsed.')
+		)
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'Those options could not be changed. Press Convert to try again, or drop the file again to start over.'
+			)
+		)
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(2)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf' })
+	})
+
+	/*
+	  The hook can fail after the document was already put back, so a failed
+	  restore leaves the recipe unknown and the next Convert restores again.
+	*/
+	it('says when the restore failed, and knows the pass may be gone', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		optimizer.restoreSource.mockImplementationOnce(async () => {
+			await restore()
+			throw new Error('The report could not be read.')
+		})
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'Those options could not be changed. Press Convert to try again, or drop the file again to start over.'
+			)
+		)
+		toggleWebp()
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(2)
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf', webp: true })
+	})
+
+	it('runs the pass again after it was undone', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		toggleWebp()
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(1)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf', webp: true })
+	})
+
+	it('names the newer file when one replaced the model during a restore', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		blockRestores()
+		optimizer.restoreSource.mockImplementationOnce(async () => {
+			await restore()
+			throw new SupersededError()
+		})
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(optimizer.restoreSource).toHaveBeenCalled())
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		releaseRestore()
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(toast.error).toHaveBeenCalledTimes(1)
+		expect(documentsRead).toEqual([{ name: 'chair.gltf', webp: true }])
+	})
+
+	/*
+	  The core refuses a restore once the newer model's ingest has begun. In
+	  the gap between the stage changing and that ingest starting the restore
+	  still stands, and the restored document is the older model's.
+	*/
+	it('does not export a restored document for a model a newer one replaced', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		blockRestores()
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(optimizer.restoreSource).toHaveBeenCalled())
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		reachStage(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
+		releaseRestore()
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(documentsRead).toEqual([{ name: 'chair.gltf', webp: true }])
+	})
+
+	it('names the newer file, not the raw error, when one replaced the model during the pass', async () => {
+		await modelOnStage()
+		blockPasses()
+		optimizer.texturesOptimization.mockImplementationOnce(async () => {
+			await runPass()
+			throw new SupersededError()
+		})
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() =>
+			expect(optimizer.texturesOptimization).toHaveBeenCalled()
+		)
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
 		releasePass()
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(toast.error).toHaveBeenCalledTimes(1)
+	})
+
+	it('runs the pass again for a newer file that landed during the last one', async () => {
+		await modelOnStage('first.gltf')
+		blockPasses()
+		toggleWebp()
+		fireEvent.click(convertButton())
 		await waitFor(() =>
 			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
 		)
 
-		/*
-		  Converting the new model must do the work again. If the interrupted run
-		  had been allowed to write its recipe down, this takes the early return
-		  and the count stays at one.
-		*/
-		exported.data = new Uint8Array(1_000_000)
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		releasePass()
+		await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1))
+
 		fireEvent.click(convertButton())
-		await waitFor(() => expect(loadCalls).toHaveLength(4))
-		settle(
-			3,
-			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000_000 })
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
+		expect(optimizer.restoreSource).not.toHaveBeenCalled()
+	})
+
+	it('keeps a pass a refused drop landed in', async () => {
+		await modelOnStage()
+		blockPasses()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() =>
+			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
 		)
 
+		await refuseANote(2)
+		releasePass()
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(toast.error).not.toHaveBeenCalled()
+	})
+
+	it('keeps a restore a refused drop landed in', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+		blockRestores()
+
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(optimizer.restoreSource).toHaveBeenCalled())
+		await refuseANote(2)
+		releaseRestore()
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(toast.error).not.toHaveBeenCalled()
+	})
+
+	it('converts again after a refusal that followed a pass', async () => {
+		await modelOnStage()
+		await convertOnceWithWebp()
+
+		await refuseANote(2)
+		fireEvent.click(screen.getByRole('checkbox', { name: /Draco/i }))
+		fireEvent.click(convertButton())
+
+		expect(await downloadButton()).toBeTruthy()
+		expect(toast.error).not.toHaveBeenCalled()
+		expect(optimizer.restoreSource).not.toHaveBeenCalled()
+	})
+
+	// It serializes the document, which the pass is rewriting.
+	it('cannot be handed to the publisher while a pass runs', async () => {
+		await modelOnStage()
+		blockPasses()
+		toggleWebp()
+		fireEvent.click(convertButton())
 		await waitFor(() =>
-			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(2)
+			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
 		)
+
+		expect(screen.getByRole('button', { name: /publisher/i })).toBeDisabled()
+		releasePass()
+		await downloadButton()
 	})
 })
 
@@ -822,24 +1399,18 @@ describe('the page describes the model that is on the stage', () => {
 		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
-		/*
-		  A pass has to be ticked for there to be a slow await to land inside, and
-		  ticking one makes Convert re-read the document first - so the pass only
-		  starts once that re-read settles.
-		*/
+		/* A pass has to be ticked for there to be a slow await to land inside. */
 		fireEvent.click(screen.getByRole('checkbox', { name: /WebP/i }))
 
 		blockPasses()
 		fireEvent.click(convertButton())
-		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await waitFor(() =>
 			expect(optimizer.texturesOptimization).toHaveBeenCalledTimes(1)
 		)
 
 		drop([gltfFile('second.gltf')])
-		await waitFor(() => expect(loadCalls).toHaveLength(3))
-		settle(2, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
 
 		optimizer._getDocument.mockClear()
 		releasePass()
@@ -850,6 +1421,163 @@ describe('the page describes the model that is on the stage', () => {
 			)
 		)
 		expect(optimizer._getDocument).not.toHaveBeenCalled()
+	})
+})
+
+describe('the optimizer is read only for the model it holds', () => {
+	/*
+	  THE DEFECT. The page adopts a model the moment it reaches the stage, but
+	  the optimizer ingests it only after that, so for as long as the ingest takes
+	  the optimizer still holds the previous model's document. A Convert pressed
+	  in that window exported it under the new file's name, with no box ticked.
+
+	  `reachStage` is that window: published, not settled.
+	*/
+	it('waits for the first model to be read before converting it', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		reachStage(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		exported.data = new Uint8Array(1_000)
+		fireEvent.click(convertButton())
+		await yieldToPage()
+		expect(toast.error).not.toHaveBeenCalled()
+
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(documentsRead).toEqual([{ name: 'chair.gltf' }])
+		expect(toast.error).not.toHaveBeenCalled()
+	})
+
+	it('never exports the previous model for a file still being read', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await screen.findByTestId('stage')
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		reachStage(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
+		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+
+		fireEvent.click(convertButton())
+		await yieldToPage()
+		expect(documentsRead).toEqual([])
+
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(documentsRead).toEqual([{ name: 'second.gltf' }])
+	})
+
+	/*
+	  The wait can end on a different model: one dropped and shown while it
+	  waited. The conversion was for the model the button was pressed under,
+	  so it stops rather than export the newer one under the older one's name.
+	*/
+	it('abandons a Convert whose model was replaced while it waited', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		reachStage(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await screen.findByTestId('stage')
+
+		fireEvent.click(convertButton())
+		await yieldToPage()
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press Convert again.'
+			)
+		)
+		expect(documentsRead).toEqual([])
+	})
+
+	/*
+	  A refused drop never reaches the stage, so it cannot stand in for the
+	  ingest of the model that is there. Waiting on the newest load instead
+	  waited on a refusal that had already settled.
+	*/
+	it('still waits for the model on the stage after a refused drop', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await screen.findByTestId('stage')
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		reachStage(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
+		drop([new File(['x'], 'notes.txt')])
+		await waitFor(() => expect(loadCalls).toHaveLength(3))
+		refuse(2)
+		await screen.findByRole('alert')
+
+		fireEvent.click(convertButton())
+		await yieldToPage()
+		expect(documentsRead).toEqual([])
+
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(documentsRead).toEqual([{ name: 'second.gltf' }])
+	})
+
+	/*
+	  A refused drop is the newest load but leaves the model on the stage, so a
+	  conversion running through one is still about the model on screen. Asked
+	  as "is it the newest load", it was thrown away with a message about a
+	  newer file that did not exist.
+	*/
+	it('still files a conversion a refused drop ran through', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile()])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await screen.findByTestId('stage')
+
+		blockExports()
+		exported.data = new Uint8Array(1_000)
+		fireEvent.click(convertButton())
+		await waitFor(() => expect(documentsRead).toHaveLength(1))
+
+		drop([new File(['x'], 'notes.txt')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		refuse(1)
+		await screen.findByRole('alert')
+
+		releaseExport()
+
+		expect(
+			await screen.findByRole('button', { name: /^Download/ })
+		).toBeTruthy()
+		expect(toast.error).not.toHaveBeenCalled()
 	})
 })
 
@@ -886,6 +1614,119 @@ describe('the handoff to the publisher', () => {
 			)
 		)
 		expect(navigated).toEqual([])
+	})
+
+	it('hands over the model on the stage once the optimizer holds it', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await screen.findByTestId('stage')
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		reachStage(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
+		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+
+		fireEvent.click(openButton())
+		await yieldToPage()
+		expect(documentsRead).toEqual([])
+
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+
+		await waitFor(() => expect(navigated).toHaveLength(1))
+		expect(documentsRead).toEqual([{ name: 'second.gltf' }])
+	})
+
+	it('does not hand over a model replaced while it waited', async () => {
+		render(<ConverterSurface pair={gltfToGlb} />)
+
+		drop([gltfFile('first.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(1))
+		reachStage(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await screen.findByTestId('stage')
+
+		fireEvent.click(openButton())
+		await yieldToPage()
+
+		drop([gltfFile('second.gltf')])
+		await waitFor(() => expect(loadCalls).toHaveLength(2))
+		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
+		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'A newer file replaced that one. Press the button again.'
+			)
+		)
+		expect(navigated).toEqual([])
+		expect(documentsRead).toEqual([])
+	})
+
+	/*
+	  THE DEFECT: the handoff serialized the document as the last Convert left
+	  it and told the publisher it was the original, so after a WebP download
+	  every preset started from recompressed textures. The stage shows the model
+	  as loaded, and that is what the button names.
+	*/
+	it('hands over the model as loaded, not a WebP pass made for a download', async () => {
+		await modelOnStage()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+
+		fireEvent.click(openButton())
+
+		await waitFor(() => expect(navigated).toHaveLength(1))
+		expect(optimizer.restoreSource).toHaveBeenCalledTimes(1)
+		expect(documentsRead.at(-1)).toEqual({ name: 'chair.gltf' })
+	})
+
+	it('runs no pass that is ticked but was never converted', async () => {
+		await modelOnStage()
+		toggleWebp()
+
+		fireEvent.click(openButton())
+
+		await waitFor(() => expect(navigated).toHaveLength(1))
+		expect(optimizer.texturesOptimization).not.toHaveBeenCalled()
+		expect(documentsRead).toEqual([{ name: 'chair.gltf' }])
+	})
+
+	it('does not hand over a pass it could not undo', async () => {
+		await modelOnStage()
+		toggleWebp()
+		fireEvent.click(convertButton())
+		await downloadButton()
+		optimizer.restoreSource.mockRejectedValueOnce(
+			new Error('The source could not be parsed.')
+		)
+
+		fireEvent.click(openButton())
+
+		await waitFor(() =>
+			expect(toast.error).toHaveBeenCalledWith(
+				'That model could not be handed over. Try the publisher.'
+			)
+		)
+		expect(navigated).toEqual([])
+		expect(documentsRead).toEqual([{ name: 'chair.gltf', webp: true }])
+	})
+
+	// A conversion would restore or rewrite the document it is serializing.
+	it('cannot be converted while it is handed over', async () => {
+		await modelOnStage()
+
+		blockDraft()
+		fireEvent.click(openButton())
+
+		await waitFor(() => expect(convertButton()).toBeDisabled())
+		releaseDraft()
 	})
 
 	it('cannot be cleared out from under itself', async () => {

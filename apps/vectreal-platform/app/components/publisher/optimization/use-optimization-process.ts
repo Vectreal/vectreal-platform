@@ -1,16 +1,27 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai/react'
-import { useCallback, useMemo } from 'react'
+import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { resolveSimplificationOutcome } from './model/simplification-outcome'
 import { runOptimizationPass } from './run-optimization-pass'
+import { useLatestWins } from './use-latest-wins'
 import { useOptimizationSteps } from './use-optimization-steps'
 import { useSceneSizeCalculator } from './utils'
-import { resolveSceneMetrics } from '../../../lib/domain/scene'
+import { originalPreset } from '../../../constants/optimizations'
 import {
+	resolveDerivedSettings,
+	resolveSceneMetrics
+} from '../../../lib/domain/scene'
+import { optimizationsMatch } from '../../../lib/domain/scene/client/optimization-inference'
+import {
+	documentOptimizationsAtom,
+	keptOriginalAtom,
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
+
+import type { SceneSourceRef } from '../../../types/api'
+import type { Optimizations } from '@vctrl/core'
 
 export type SizeInfo = {
 	initialSceneBytes?: number | null
@@ -30,15 +41,38 @@ export type SizeInfo = {
  * hook only assembles its dependencies and exposes the results the drawer
  * renders.
  */
-export const useOptimizationProcess = () => {
-	const { optimizer, file } = useModelContext(true)
+/** A choice of settings, bound to the scene it was made for. */
+interface DeriveRequest {
+	settings: Optimizations
+	/**
+	 * The load that put the scene on screen. Opening another scene starts a new
+	 * load at once, while its source only replaces this one once it is ingested,
+	 * and the new scene's state is hydrated in between.
+	 */
+	loadId: number | null
+	/** Changes without a new load when a restored draft states its original. */
+	source: Uint8Array | null
+}
+
+interface OptimizationProcessOptions {
+	/** Whether the drawer is open, which is when a kept original loads. */
+	isOpen: boolean
+}
+
+export const useOptimizationProcess = ({
+	isOpen
+}: OptimizationProcessOptions) => {
+	const model = useModelContext(true)
+	const { optimizer, file, isLatestLoad } = model
+	const loadId = model.status === 'ready' ? model.loadId : null
 	const {
 		isReady,
 		isPreparing,
 		texturesOptimization,
 		applyOptimization,
-		reset,
-		loadFromServerSceneData,
+		restoreSource,
+		getSource,
+		setSource,
 		loadFromGlbBuffer,
 		getModel,
 		info,
@@ -46,6 +80,9 @@ export const useOptimizationProcess = () => {
 	} = optimizer
 
 	const { optimizations: plannedOptimizations } = useAtomValue(optimizationAtom)
+	const documentOptimizations = useAtomValue(documentOptimizationsAtom)
+	const setOptimizationState = useSetAtom(optimizationAtom)
+	const store = useStore()
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
 		optimizationRuntimeAtom
 	)
@@ -68,33 +105,43 @@ export const useOptimizationProcess = () => {
 			optimizer,
 			file ?? null,
 			isReady,
-			report?.stats.textureBytes.after,
-			setOptimizationRuntime
+			report?.stats.textureBytes.after
 		)
 
-	// `optimizedSceneBytes` only ever describes a pass run in this browser
-	// session, and reopening a saved scene explicitly nulls it during hydration -
-	// so on its own it answered "did you optimize in this tab" rather than "is
-	// this scene optimized". `appliedOptimizations` is the persisted signal, and
-	// it accrues only from real optimization operations (a publish-time Draco
-	// repack never touches it), so a scene that was uploaded and published but
-	// never optimized still reads as false.
+	// What the document on screen was derived from answers whether it is
+	// optimized, including for a restored draft, which carries no measurement
+	// of its own. `appliedOptimizations` covers scenes saved before
+	// `derivedFrom` was recorded. Not a size: every scene's publish size is
+	// projected as it opens.
 	const hasCompletedOptimizationPass =
-		typeof optimizationRuntime.optimizedSceneBytes === 'number' ||
+		!optimizationsMatch(documentOptimizations, originalPreset) ||
 		(latestSceneStats?.appliedOptimizations?.length ?? 0) > 0
 
-	const runPass = useCallback(
-		async (fromOriginal: boolean): Promise<boolean> => {
-			if (isPending || isPreparing || !isReady) return false
+	/**
+	 * Makes the document `source` plus `settings`, in one pass, as long as the
+	 * scene it was asked for is still open. A choice made for the previous scene,
+	 * or a pass that settles after the scene changed, never describes the scene
+	 * that replaced it.
+	 */
+	const derivePass = useCallback(
+		async ({ settings, loadId, source }: DeriveRequest): Promise<void> => {
+			const isCurrent = () =>
+				loadId !== null && isLatestLoad(loadId) && getSource() === source
+			if (isPreparing || !isReady || !isCurrent()) return
 
-			const { documentChanged, dracoReport } = await runOptimizationPass({
-				fromOriginal,
-				documentMayBeOptimized: hasCompletedOptimizationPass,
-				optimizations: plannedOptimizations,
+			// Every figure the pass records lands after an await, and the scene
+			// it describes may have closed by then. The next scene's hydration
+			// resets the runtime, so nothing is lost by dropping these.
+			const writeRuntime: typeof setOptimizationRuntime = (update) => {
+				if (isCurrent()) setOptimizationRuntime(update)
+			}
+
+			const result = await runOptimizationPass({
+				optimizations: settings,
+				isCurrent,
 				steps: stepsController,
 				model: {
-					reset,
-					loadFromServerSceneData,
+					restoreSource,
 					loadFromGlbBuffer,
 					getModel,
 					texturesOptimization,
@@ -105,28 +152,33 @@ export const useOptimizationProcess = () => {
 					clientTextureBytes,
 					sourcePackageBytes: file?.sourcePackageBytes,
 					sourceTextureBytes: file?.sourceTextureBytes,
-					statsSceneBytes: latestSceneStats?.currentSceneBytes,
+					statsSceneBytes: latestSceneStats?.initialSceneBytes,
 					reportTextureBytesBefore: report?.stats.textureBytes.before,
 					calculateSceneBytes
 				},
-				setRuntime: setOptimizationRuntime
+				setRuntime: writeRuntime,
+				setRuntimeUnfiltered: setOptimizationRuntime
 			})
 
-			if (documentChanged) {
-				void refreshOptimizedSizeInfo(dracoReport)
-			}
+			if (!isCurrent()) return
 
-			return documentChanged
+			// A failed pass puts the source back on screen, so the source is what
+			// describes the document then.
+			setOptimizationState((prev) => ({
+				...prev,
+				derivedFrom: result.succeeded
+					? resolveDerivedSettings(settings, prev.sourceSettings)
+					: prev.sourceSettings
+			}))
+			void refreshOptimizedSizeInfo(writeRuntime)
 		},
 		[
-			isPending,
 			isPreparing,
 			isReady,
-			hasCompletedOptimizationPass,
-			plannedOptimizations,
+			isLatestLoad,
+			getSource,
 			stepsController,
-			reset,
-			loadFromServerSceneData,
+			restoreSource,
 			loadFromGlbBuffer,
 			getModel,
 			texturesOptimization,
@@ -135,18 +187,97 @@ export const useOptimizationProcess = () => {
 			clientTextureBytes,
 			file?.sourcePackageBytes,
 			file?.sourceTextureBytes,
-			latestSceneStats?.currentSceneBytes,
+			latestSceneStats?.initialSceneBytes,
 			report?.stats.textureBytes.before,
 			calculateSceneBytes,
 			setOptimizationRuntime,
+			setOptimizationState,
 			refreshOptimizedSizeInfo
 		]
 	)
 
-	// Re-running a preset reloads the pristine scene first, so passes never
-	// silently chain. "Optimize further" deliberately stacks on current state.
-	const handleOptimizeClick = useCallback(() => runPass(true), [runPass])
-	const handleStackOptimizeClick = useCallback(() => runPass(false), [runPass])
+	// Choosing presets faster than a pass runs derives the last one once more,
+	// never each one in between.
+	const deriveLatest = useLatestWins(derivePass)
+
+	/**
+	 * A reopened scene's kept original becomes the source while the drawer is
+	 * open, before any choice can be made: the drawer shows it loading in place
+	 * of the presets until it has loaded or failed. It waits for the optimizer
+	 * to be ready, since `setSource` cannot replace a document still being
+	 * taken in. A failed download leaves passes on the saved version and is
+	 * tried again the next time the drawer opens.
+	 */
+	const { stored, unreadable } = useAtomValue(keptOriginalAtom)
+	const loadingOriginalRef = useRef<SceneSourceRef | null>(null)
+	useEffect(() => {
+		if (!isOpen) {
+			if (unreadable) {
+				store.set(keptOriginalAtom, (prev) => ({ ...prev, unreadable: false }))
+			}
+			return
+		}
+		if (!stored || unreadable || loadId === null) return
+		if (isPreparing || !isReady) return
+		// `setSource` itself re-renders the optimizer not ready, then ready.
+		if (loadingOriginalRef.current === stored) return
+		loadingOriginalRef.current = stored
+		// Another scene, or the same one stated anew, may be loading by now;
+		// only the load still in flight may state the source.
+		const isOwner = () =>
+			isLatestLoad(loadId) && loadingOriginalRef.current === stored
+
+		void (async () => {
+			try {
+				const response = await fetch(stored.url)
+				if (!response.ok) throw new Error(`HTTP ${response.status}`)
+				const bytes = new Uint8Array(await response.arrayBuffer())
+				if (!isOwner()) return
+				await setSource(bytes)
+				if (!isOwner()) return
+				setOptimizationState((prev) => ({
+					...prev,
+					sourceSettings: originalPreset
+				}))
+				store.set(keptOriginalAtom, (prev) => ({ ...prev, stored: null }))
+			} catch (error) {
+				// The original stays stored, so a save keeps linking it.
+				console.warn('[optimization] the kept original did not load', error)
+				if (isOwner()) {
+					store.set(keptOriginalAtom, (prev) => ({ ...prev, unreadable: true }))
+				}
+			} finally {
+				if (loadingOriginalRef.current === stored) {
+					loadingOriginalRef.current = null
+				}
+			}
+		})()
+	}, [
+		isOpen,
+		stored,
+		unreadable,
+		loadId,
+		isPreparing,
+		isReady,
+		isLatestLoad,
+		setSource,
+		setOptimizationState,
+		store
+	])
+	const isLoadingOriginal = isOpen && stored !== null && !unreadable
+
+	/** Makes the document the current source plus `settings`. */
+	const derive = useCallback(
+		(settings: Optimizations) =>
+			deriveLatest({ settings, loadId, source: getSource() }),
+		[deriveLatest, loadId, getSource]
+	)
+
+	/** Applies what the panel shows, for edits made in the advanced controls. */
+	const applyPlanned = useCallback(
+		() => derive(plannedOptimizations),
+		[derive, plannedOptimizations]
+	)
 
 	const resolvedMetrics = useMemo(
 		() =>
@@ -159,7 +290,9 @@ export const useOptimizationProcess = () => {
 					currentSceneBytes: optimizedSceneBytes,
 					initialTextureBytes: clientTextureBytes,
 					currentTextureBytes: optimizedTextureBytes,
-					isSceneSizeComputing: optimizationRuntime.isSceneSizeLoading
+					isSceneSizeComputing:
+						optimizationRuntime.isSceneSizeLoading ||
+						optimizationRuntime.isProjectingSceneBytes
 				}
 			}),
 		[
@@ -170,7 +303,8 @@ export const useOptimizationProcess = () => {
 			optimizedSceneBytes,
 			clientTextureBytes,
 			optimizedTextureBytes,
-			optimizationRuntime.isSceneSizeLoading
+			optimizationRuntime.isSceneSizeLoading,
+			optimizationRuntime.isProjectingSceneBytes
 		]
 	)
 
@@ -223,16 +357,18 @@ export const useOptimizationProcess = () => {
 		// resurrected the previous measurement after a texture-only pass, which
 		// also invalidates any projected size it was quoting.
 		dracoReport: runtimeDracoReport ?? null,
+		publishedEncoding: optimizationRuntime.publishedEncoding,
 		simplificationOutcome,
 		resolvedMetrics,
 		isPending,
+		isLoadingOriginal,
 		isOptimizerPreparing: isPreparing,
 		isOptimizerReady: isReady,
 		hasImproved: resolvedMetrics.hasImproved,
 		hasCompletedOptimizationPass,
 		sizeInfo,
 		optimizingStep,
-		handleOptimizeClick,
-		handleStackOptimizeClick
+		derive,
+		applyPlanned
 	}
 }

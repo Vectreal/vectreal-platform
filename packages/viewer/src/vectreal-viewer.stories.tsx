@@ -119,6 +119,43 @@ export const AmbientOcclusion: Story = {
 }
 
 /**
+ * A stage behind the model: the environment still lights it, and the baked
+ * shadow lands on a flat color the viewer paints behind its canvas, rather
+ * than on whatever page the viewer sits on.
+ */
+export const StageBackdrop: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createOcclusionModel(),
+		envOptions: {
+			...defaultEnvOptions,
+			background: false,
+			backdrop: { type: 'color', color: '#f4f4f5' }
+		},
+		shadowsOptions: { ...defaultShadowsOptions, enabled: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * A stage that shades from top to bottom, the gradient form of the same
+ * backdrop.
+ */
+export const StageGradient: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createOcclusionModel(),
+		envOptions: {
+			...defaultEnvOptions,
+			background: false,
+			backdrop: { type: 'gradient', top: '#fafafa', bottom: '#d4d4d8' }
+		},
+		shadowsOptions: { ...defaultShadowsOptions, enabled: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
  * The same scene with AO held for rest: orbiting costs nothing extra, and the
  * occlusion drops out while moving and settles back in once the view stops.
  */
@@ -489,6 +526,52 @@ export const HotspotOcclusion: Story = {
 			<directionalLight position={[3, 4, 2]} intensity={1.4} />
 		</VectrealViewer>
 	)
+}
+
+/**
+ * Click either marker: the view flies to that hotspot's camera, and "Back to
+ * scene view" appears at the top. It returns to the scene camera you clicked
+ * from, however many markers you hopped through, and Escape inside the viewer
+ * does the same once any open card is closed.
+ */
+export const HotspotCameraReturn: Story = {
+	args: {
+		hotspots: [
+			{
+				...base('front-face', 'Front face', [0, 0.15, 0.7]),
+				body: 'The camera moves in close; the way back is at the top.',
+				linkedCameraId: 'front-face-camera'
+			},
+			{
+				...base('top-face', 'Top face', [0, 0.7, 0]),
+				linkedCameraId: 'top-face-camera'
+			}
+		],
+		cameraOptions: {
+			cameras: [
+				{
+					cameraId: 'scene',
+					name: 'Scene',
+					initial: true,
+					position: [2.4, 1.6, 3.6],
+					target: [0, 0, 0]
+				},
+				{
+					cameraId: 'front-face-camera',
+					name: 'Front face',
+					kind: 'hotspot',
+					position: [0, 0.2, 2.2]
+				},
+				{
+					cameraId: 'top-face-camera',
+					name: 'Top face',
+					kind: 'hotspot',
+					position: [0.1, 2.4, 0.4]
+				}
+			]
+		}
+	},
+	render: hotspotRender
 }
 
 export const WithPopover: Story = {

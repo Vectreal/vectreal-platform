@@ -8,17 +8,21 @@ import type { SaveAvailabilityState } from '../lib/domain/scene'
 interface UseOptimizationDrawerFlowArgs {
 	saveAvailability: SaveAvailabilityState
 	hasUnsavedLocationChange: boolean
+	/** Whether the scene shown is over the plan's max scene size. */
+	isOverSizeLimit: boolean
 }
 
 /**
- * Centralizes optimization-modal behavior and first-save optimization gating.
+ * Centralizes optimization-modal behavior, and opens the optimizer once when
+ * the scene is over the plan's max scene size, which publishing enforces.
  *
  * This keeps controls/publisher UI components focused on rendering while the
  * hook owns modal orchestration side effects.
  */
 export function useOptimizationDrawerFlow({
 	saveAvailability,
-	hasUnsavedLocationChange
+	hasUnsavedLocationChange,
+	isOverSizeLimit
 }: UseOptimizationDrawerFlowArgs) {
 	const [optimizationDrawer, setOptimizationDrawer] = useAtom(
 		optimizationModalAtom
@@ -37,16 +41,13 @@ export function useOptimizationDrawerFlow({
 		[saveAvailability, hasUnsavedLocationChange]
 	)
 
-	const requiresSizeReduction =
-		effectiveSaveAvailability.reason === 'requires-size-reduction'
-
 	// Pre-open the optimizer once per over-limit episode. Soft-gate: if the user
 	// closes it while still over the limit, we do not force it back open; the ref
 	// resets only when the scene drops back under the limit.
 	const hasAutoOpenedForSizeRef = useRef(false)
 
 	useEffect(() => {
-		if (!requiresSizeReduction) {
+		if (!isOverSizeLimit) {
 			hasAutoOpenedForSizeRef.current = false
 			return
 		}
@@ -60,7 +61,7 @@ export function useOptimizationDrawerFlow({
 			isOpen: true,
 			source: 'initial'
 		})
-	}, [requiresSizeReduction, optimizationDrawer.isOpen, setOptimizationDrawer])
+	}, [isOverSizeLimit, optimizationDrawer.isOpen, setOptimizationDrawer])
 
 	const handleOptimizationDrawerChange = useCallback(
 		(open: boolean) => {
@@ -86,7 +87,6 @@ export function useOptimizationDrawerFlow({
 
 	return {
 		effectiveSaveAvailability,
-		requiresSizeReduction,
 		isOptimizationDrawerOpen: optimizationDrawer.isOpen,
 		handleOptimizationDrawerChange,
 		handleOpenOptimizationDrawer,

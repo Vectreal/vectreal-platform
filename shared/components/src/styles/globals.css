@@ -45,98 +45,12 @@
   is 17.7 KB for latin.
 */
 @import '@fontsource-variable/funnel-display/wght.css';
+/* The palette and the shell recipe; see the file for why they live apart. */
+@import './theme.css';
 
 @custom-variant dark (&:is(.dark, .dark *));
 
 :root {
-	color-scheme: light;
-
-	/* Brand palette */
-	--orange: #fc6c18;
-	--dark-orange: #f54703;
-	/*
-	  Channel form of --orange, for `rgb(var(--orange-rgb) / <alpha>)`.
-
-	  --orange is a hex, so there is no valid way to apply an alpha to it inline;
-	  `hsl(var(--orange)/0.14)` was tried once and silently killed a gradient for
-	  months. color-mix works but degrades badly: lightningcss emits a no-alpha
-	  fallback for browsers that lack it, turning a 14% wash into solid brand
-	  orange. This spelling needs no fallback. Keep the two in sync.
-	*/
-	--orange-rgb: 252 108 24;
-
-	/* Semantic tokens - light theme */
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	/*
-	  Contrast-solved values, not eyeballed ones.
-
-	  Each of the four below was failing WCAG AA on a surface it is actually used
-	  on, and each was solved against `.ds-overlay` (an 8% foreground mix) rather
-	  than against `--background`, because the failures were all on cards: muted
-	  text reads 4.73:1 on a plain page and 3.49:1 inside a nested panel, which
-	  is why this looked fine in a hero and failed in every card in the product.
-
-	  Measured after: muted-foreground 4.55:1 on overlay and 5.57:1 on the page;
-	  destructive 4.50:1 and 5.52:1; ring 3.01:1 on an overlay and 3.69:1 on the
-	  page.
-
-	  `--input` is deliberately NOT raised to the 3:1 that 1.4.11 asks of a
-	  control boundary. Doing that turns every field edge into a heavy grey rule,
-	  and this system separates surfaces by value rather than by outlines - the
-	  whole reason the `ds-*` ladder exists. A field should be identified by its
-	  surface, not by a drawn box. The gap is real and recorded; the answer is a
-	  sunken fill, not a darker border.
-
-	  `contrast-tokens.spec.ts` pins these. Change one and it fails with the
-	  measured ratio, so the next person does not have to rediscover the method.
-	*/
-	--muted-foreground: oklch(0.519 0 0);
-	/*
-	  The hover/focus background for menus, options, and ghost controls, not a
-	  brand colour. It used to point at --orange, which made every dropdown item
-	  and ghost hover a solid brand block. Reach for --orange (or bg-orange /
-	  text-orange) when you want the brand.
-	*/
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.534 0.237 25.331);
-	--destructive-foreground: oklch(0.985 0 0);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: oklch(0.618 0 0);
-
-	/* Success (green) - light theme */
-	--success: oklch(0.627 0.17 145);
-	--success-foreground: oklch(0.215 0.06 145);
-
-	/* Warning (amber) - light theme */
-	--warning: oklch(0.769 0.185 75);
-	--warning-foreground: oklch(0.277 0.065 70);
-	--warning-muted-foreground: oklch(0.445 0.14 75);
-	--warning-bg: oklch(0.986 0.012 82);
-	--warning-border: oklch(0.88 0.065 80);
-
-	/* Error banner (red) - light theme */
-	--error-bg: oklch(0.97 0.018 25);
-	--error-border: oklch(0.86 0.08 25);
-	--error-foreground: oklch(0.42 0.18 25);
-
-	--chart-1: var(--orange);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-
 	/*
 	  Corner radii - confidently rounded, never tight.
 
@@ -260,118 +174,9 @@
 	  page, so it widens everywhere rather than in one section.
 	*/
 	--container-max: 90rem;
-
-	/* Sidebar tokens */
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.145 0 0);
-	--sidebar-primary: oklch(0.205 0 0);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.97 0 0);
-	--sidebar-accent-foreground: oklch(0.205 0 0);
-	--sidebar-border: oklch(0.922 0 0);
-	--sidebar-ring: oklch(0.708 0 0);
-
-	/* Publisher shell tokens */
-	--shell-surface: oklch(0.985 0 0 / 0.94);
-	--shell-surface-soft: oklch(0.97 0 0 / 0.9);
-	--shell-overlay: oklch(0.985 0 0 / 0.88);
-	--shell-border-strong: oklch(0.86 0 0 / 0.75);
-	--shell-border-soft: oklch(0.82 0 0 / 0.35);
-}
-
-.dark {
-	color-scheme: dark;
-
-	/* Semantic tokens - dark theme */
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.145 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.145 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.985 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	/* Neutral hover/focus surface, matching --muted. See the light block above. */
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.643 0.237 25.331);
-	--destructive-foreground: oklch(0.985 0 0);
-	--border: oklch(0.269 0 0);
-	--input: oklch(0.269 0 0);
-	--ring: oklch(0.53 0 0);
-
-	/* Success (green) - dark theme */
-	--success: oklch(0.871 0.15 145);
-	--success-foreground: oklch(0.94 0.04 145);
-
-	/* Warning (amber) - dark theme */
-	--warning: oklch(0.769 0.185 75);
-	--warning-foreground: oklch(0.978 0.026 80);
-	--warning-muted-foreground: oklch(0.88 0.12 80);
-	--warning-bg: oklch(0.175 0.018 82);
-	--warning-border: oklch(0.295 0.04 80);
-
-	/* Error banner (red) - dark theme */
-	--error-bg: oklch(0.19 0.03 25);
-	--error-border: oklch(0.38 0.1 25);
-	--error-foreground: oklch(0.88 0.06 25);
-
-	--chart-1: var(--orange);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-
-	/* Sidebar tokens */
-	--sidebar: oklch(0.205 0 0);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.985 0 0);
-	--sidebar-primary-foreground: oklch(0.205 0 0);
-	--sidebar-accent: oklch(0.269 0 0);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(0.269 0 0);
-	--sidebar-ring: oklch(0.439 0 0);
-
-	/* Publisher shell tokens */
-	--shell-surface: oklch(0.22 0 0 / 0.95);
-	--shell-surface-soft: oklch(0.26 0 0 / 0.9);
-	--shell-overlay: oklch(0.19 0 0 / 0.88);
-	--shell-border-strong: oklch(0.47 0 0 / 0.8);
-	--shell-border-soft: oklch(0.38 0 0 / 0.35);
 }
 
 @theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
-	--color-card: var(--card);
-	--color-card-foreground: var(--card-foreground);
-	--color-popover: var(--popover);
-	--color-popover-foreground: var(--popover-foreground);
-	--color-primary: var(--primary);
-	--color-primary-foreground: var(--primary-foreground);
-	--color-secondary: var(--secondary);
-	--color-secondary-foreground: var(--secondary-foreground);
-	--color-muted: var(--muted);
-	--color-muted-foreground: var(--muted-foreground);
-	--color-accent: var(--accent);
-	--color-accent-foreground: var(--accent-foreground);
-	--color-destructive: var(--destructive);
-	--color-destructive-foreground: var(--destructive-foreground);
-	--color-border: var(--border);
-	--color-input: var(--input);
-	--color-ring: var(--ring);
-	--color-chart-1: var(--chart-1);
-	--color-chart-2: var(--chart-2);
-	--color-chart-3: var(--chart-3);
-	--color-chart-4: var(--chart-4);
-	--color-chart-5: var(--chart-5);
-	--color-orange: var(--orange);
-	--color-dark-orange: var(--dark-orange);
-
 	/* Surface tokens */
 	--color-surface-0: var(--surface-0);
 	--color-surface-1: var(--surface-1);
@@ -446,30 +251,6 @@
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
 	--radius-2xl: calc(var(--radius) + 12px);
-	--color-sidebar: var(--sidebar);
-	--color-sidebar-foreground: var(--sidebar-foreground);
-	--color-sidebar-primary: var(--sidebar-primary);
-	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-	--color-sidebar-accent: var(--sidebar-accent);
-	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-	--color-sidebar-border: var(--sidebar-border);
-	--color-sidebar-ring: var(--sidebar-ring);
-	--color-shell-surface: var(--shell-surface);
-	--color-shell-surface-soft: var(--shell-surface-soft);
-	--color-shell-overlay: var(--shell-overlay);
-	--color-shell-border-strong: var(--shell-border-strong);
-	--color-shell-border-soft: var(--shell-border-soft);
-
-	--color-success: var(--success);
-	--color-success-foreground: var(--success-foreground);
-	--color-warning: var(--warning);
-	--color-warning-foreground: var(--warning-foreground);
-	--color-warning-muted-foreground: var(--warning-muted-foreground);
-	--color-warning-bg: var(--warning-bg);
-	--color-warning-border: var(--warning-border);
-	--color-error-bg: var(--error-bg);
-	--color-error-border: var(--error-border);
-	--color-error-foreground: var(--error-foreground);
 }
 
 /*
@@ -778,7 +559,7 @@
 	  the page's own colour) and on publisher shell panels, and `ds-sunken`
 	  cannot go below the page it mixes against: on a dialog it was 2.5% from
 	  its surface, 1.5% inside a card, and less than that on a shell panel. The
-	  same mechanism as `.publisher-shell-nested`, for the same reason.
+	  same mechanism as `.shell-nested`, for the same reason.
 	*/
 	.ds-field {
 		background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
@@ -962,45 +743,6 @@
 }
 
 @layer utilities {
-	.publisher-shell-panel {
-		@apply bg-shell-surface border-shell-border-soft rounded-xl border shadow-xl backdrop-blur-xl;
-	}
-
-	/*
-	  A block nested inside a publisher shell panel.
-
-	  Deliberately not `ds-raised`. The `ds-*` ladder mixes against `--background`
-	  because it describes surfaces sitting on the page; a shell panel does not —
-	  it floats over the 3D canvas at its own opacity, and in dark mode it is
-	  lighter than the page background. Mixing against `--background` there put a
-	  nested block *below* the panel it sits on.
-
-	  So it uses the ladder's mechanism (a value tint, never a border) against a
-	  transparent base, which separates from whatever the panel resolves to in
-	  either theme. It also stacks: a block nested inside a nested block reaches
-	  the next step up on its own, the same way the `ds-*` ladder self-corrects.
-
-	  Radius is left to the caller. Panels take `rounded-2xl` and inner blocks
-	  `rounded-xl`, and baking one in meant call sites had to override it with
-	  another utility from the same layer — a precedence coin-flip.
-	*/
-	.publisher-shell-nested {
-		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
-	}
-
-	/* Same surface, for blocks that are themselves the control. */
-	.publisher-shell-nested-interactive {
-		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
-		transition: background-color var(--duration-fast) var(--ease-out);
-	}
-	.publisher-shell-nested-interactive:hover {
-		background-color: color-mix(in oklch, var(--foreground) 9%, transparent);
-	}
-
-	.publisher-shell-focus {
-		@apply focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none;
-	}
-
 	.no-scrollbar::-webkit-scrollbar {
 		display: none;
 	}

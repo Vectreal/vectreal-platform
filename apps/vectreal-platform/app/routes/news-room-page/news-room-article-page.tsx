@@ -3,27 +3,28 @@ import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
 import { cn } from '@shared/utils'
-import { ArrowRight, ChevronLeft, Copy } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, Copy } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { data, Link } from 'react-router'
 
+import { PageHandoffMenu } from '../../components/ai-handoff/ai-handoff-menu'
 import { useConsent } from '../../components/consent/consent-context'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { PublicErrorBoundary } from '../../components/errors'
-import {
-	AdjacentPager,
-	AuthorCard,
-	CtaPanel
-} from '../../components/layout-components'
+import { AdjacentPager, AuthorCard } from '../../components/layout-components'
 import { ArticleCard } from '../../components/layout-components/article-card'
+import { ArticleCtaPanel } from '../../components/layout-components/article-cta-panel'
 import { ArticleHero } from '../../components/layout-components/article-hero'
 import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
+import { useConsentedCapture } from '../../hooks/use-consented-capture'
 import { useDocToc } from '../../hooks/use-doc-toc'
+import { markdownTwinLink } from '../../lib/markdown/markdown-twin'
+import { getArticleBody } from '../../lib/news/news-article-body'
 import {
 	getAdjacentNewsArticles,
 	getNewsArticle,
 	getRelatedNewsArticles
-} from '../../lib/news/news-manifest'
+} from '../../lib/news/news-manifest.server'
 import { buildPageMeta, SITE_URL } from '../../lib/seo'
 import {
 	buildAuthorPersonJsonLd,
@@ -42,23 +43,10 @@ export async function loader({ params }: Route.LoaderArgs) {
 		throw new Response('Article not found', { status: 404 })
 	}
 
-	const { Component: _, ...serializableArticle } = article
-	const adjacent = getAdjacentNewsArticles(slug)
-	const related = getRelatedNewsArticles(slug, 3).map(
-		({ Component, ...entry }) => entry
-	)
-
 	return data({
-		article: serializableArticle,
-		adjacent: {
-			previous: adjacent.previous
-				? (({ Component, ...entry }) => entry)(adjacent.previous)
-				: undefined,
-			next: adjacent.next
-				? (({ Component, ...entry }) => entry)(adjacent.next)
-				: undefined
-		},
-		related
+		article,
+		adjacent: getAdjacentNewsArticles(slug),
+		related: getRelatedNewsArticles(slug, 3)
 	})
 }
 
@@ -75,62 +63,80 @@ export function meta({ error, loaderData }: Route.MetaArgs) {
 	const description = loaderData.article.excerpt
 	const canonical = `/news-room/${loaderData.article.slug}`
 
-	return buildPageMeta(
-		{
-			title,
-			description,
-			canonical,
-			type: 'article',
-			image: loaderData.article.coverImage,
-			imageAlt: loaderData.article.title,
-			publishedTime: loaderData.article.publishedAt,
-			modifiedTime:
-				loaderData.article.updatedAt ?? loaderData.article.publishedAt,
-			articleAuthor: loaderData.article.author.name,
-			articleSection: loaderData.article.category,
-			structuredData: [
-				buildNewsArticleJsonLd({
-					title: loaderData.article.title,
-					description,
-					canonicalPath: canonical,
-					publishedAt: loaderData.article.publishedAt,
-					updatedAt: loaderData.article.updatedAt,
-					image: loaderData.article.coverImage,
-					authorName: loaderData.article.author.name
-				}),
-				buildAuthorPersonJsonLd({
-					name: loaderData.article.author.name,
-					role: loaderData.article.author.role,
-					linkedinUrl: loaderData.article.author.linkedinUrl
-				}),
-				buildBreadcrumbListJsonLd([
-					{ name: 'Home', item: SITE_URL },
-					{ name: 'Newsroom', item: `${SITE_URL}/news-room` },
-					{ name: loaderData.article.title }
-				])
-			]
-		},
-		undefined,
-		// Article cover images are 1200x630, so use the large card format.
-		{
-			twitterCard: loaderData.article.coverImage
-				? 'summary_large_image'
-				: undefined
-		}
-	)
+	const twin = loaderData.article.draft ? [] : [markdownTwinLink(canonical)]
+
+	return [
+		...buildPageMeta(
+			{
+				title,
+				description,
+				canonical,
+				type: 'article',
+				image: loaderData.article.coverImage,
+				imageAlt: loaderData.article.title,
+				publishedTime: loaderData.article.publishedAt,
+				modifiedTime:
+					loaderData.article.updatedAt ?? loaderData.article.publishedAt,
+				articleAuthor: loaderData.article.author.name,
+				articleSection: loaderData.article.category,
+				structuredData: [
+					buildNewsArticleJsonLd({
+						title: loaderData.article.title,
+						description,
+						canonicalPath: canonical,
+						publishedAt: loaderData.article.publishedAt,
+						updatedAt: loaderData.article.updatedAt,
+						image: loaderData.article.coverImage,
+						authorName: loaderData.article.author.name
+					}),
+					buildAuthorPersonJsonLd({
+						name: loaderData.article.author.name,
+						role: loaderData.article.author.role,
+						linkedinUrl: loaderData.article.author.linkedinUrl
+					}),
+					buildBreadcrumbListJsonLd([
+						{ name: 'Home', item: SITE_URL },
+						{ name: 'Newsroom', item: `${SITE_URL}/news-room` },
+						{ name: loaderData.article.title }
+					])
+				]
+			},
+			undefined,
+			// Article cover images are 1200x630, so use the large card format.
+			{
+				twitterCard: loaderData.article.coverImage
+					? 'summary_large_image'
+					: undefined
+			}
+		),
+		...twin
+	]
 }
 
+/*
+  One article, one instance. Following a related-article card navigates between
+  two URLs of this route, so React Router keeps the page mounted and passes new
+  loader data. Everything the page holds per article - the view sent once, the
+  read clock, the furthest scroll, the milestones reached, the copied state -
+  then carried over: the second article reported no view, a read measured from
+  the first one's load, and none of its scroll milestones.
+*/
 export default function NewsRoomArticlePage({
 	loaderData
 }: Route.ComponentProps) {
+	return (
+		<NewsRoomArticle key={loaderData.article.slug} loaderData={loaderData} />
+	)
+}
+
+function NewsRoomArticle({
+	loaderData
+}: Pick<Route.ComponentProps, 'loaderData'>) {
 	const { article, adjacent, related } = loaderData
 	const posthog = usePostHog()
 	const { consent } = useConsent()
-	const fullArticle = useMemo(
-		() => getNewsArticle(article.slug),
-		[article.slug]
-	)
-	const ArticleComponent = fullArticle?.Component
+	const captureConsented = useConsentedCapture()
+	const ArticleComponent = getArticleBody(article.sourcePath)
 	const contentRef = useRef<HTMLDivElement | null>(null)
 	const viewTrackedRef = useRef(false)
 	const scrollTrackedMilestones = useRef(new Set<number>())
@@ -201,12 +207,14 @@ export default function NewsRoomArticlePage({
 	}, [article.slug, consent?.analytics, posthog])
 
 	useEffect(() => {
+		const startedAt = startedAtRef.current
+
 		return () => {
 			if (!consent?.analytics) {
 				return
 			}
 
-			const durationMs = Date.now() - startedAtRef.current
+			const durationMs = Date.now() - startedAt
 			posthog?.capture('newsroom_article_read_completed', {
 				slug: article.slug,
 				duration_ms: durationMs,
@@ -214,6 +222,15 @@ export default function NewsRoomArticlePage({
 			})
 		}
 	}, [article.slug, consent?.analytics, posthog])
+
+	// A draft has no markdown twin: the route list leaves drafts out.
+	const handoff = article.draft
+		? null
+		: {
+				surface: 'newsroom' as const,
+				htmlPath: `/news-room/${article.slug}`,
+				title: article.title
+			}
 
 	function copyArticleLink() {
 		if (typeof navigator === 'undefined') {
@@ -304,7 +321,7 @@ export default function NewsRoomArticlePage({
 				  there is no rail, so they appear here instead - the same
 				  components, rendered once, in whichever place exists.
 				*/}
-				<div className="mt-16 mb-16 flex flex-wrap items-center gap-3 lg:hidden">
+				<div className="mt-16 flex flex-wrap items-center gap-3 lg:hidden">
 					<AuthorCard author={article.author} />
 					<span className="text-muted-foreground text-body-sm">
 						{article.readingTimeMinutes} min read
@@ -318,33 +335,31 @@ export default function NewsRoomArticlePage({
 						<Copy className="mr-2 h-3.5 w-3.5" />
 						{copied ? 'Copied' : 'Copy link'}
 					</Button>
+					{handoff ? (
+						<PageHandoffMenu {...handoff} className="basis-full justify-end" />
+					) : null}
 				</div>
 
+				{/*
+				  The article owns the gap above it. It used to borrow it from the
+				  metadata row's bottom margin, so on `lg`, where that row is hidden,
+				  the body ran straight on from the standfirst.
+				*/}
 				<article
 					ref={contentRef}
-					className={cn(
-						styles.docsContent,
-						styles.newsroomContent,
-						'mb-16 px-2'
-					)}
+					className={cn(styles.docsContent, styles.newsroomContent, 'my-16')}
 				>
 					<ArticleComponent />
 				</article>
 
-				<CtaPanel
-					heading="Ready to publish your first interactive scene?"
-					actions={
-						<>
-							<Button asChild>
-								<Link to="/sign-up">
-									Create free account
-									<ArrowRight className="h-4 w-4" />
-								</Link>
-							</Button>
-							<Button variant="ghost" asChild>
-								<Link to="/pricing">See plans</Link>
-							</Button>
-						</>
+				<ArticleCtaPanel
+					cta={article.cta}
+					onAction={(action) =>
+						captureConsented('newsroom_cta_clicked', {
+							slug: article.slug,
+							destination: article.cta.kind,
+							action
+						})
 					}
 				/>
 
@@ -410,6 +425,7 @@ export default function NewsRoomArticlePage({
 							<Copy className="mr-2 h-3.5 w-3.5" />
 							{copied ? 'Copied' : 'Copy link'}
 						</Button>
+						{handoff ? <PageHandoffMenu {...handoff} /> : null}
 					</div>
 
 					{headings.length > 0 && (

@@ -5,7 +5,7 @@ import { updateSceneMetadata } from './scene-folder-repository.server'
 import { compareAssetIds } from './scene-settings-assets.server'
 import {
 	getHotspotsBySceneSettingsId,
-	getSceneAssetIds,
+	getSceneAssetLinks,
 	getSceneSettingsBySceneId,
 	getSceneSettingsWithAssetsRow,
 	replaceHotspots,
@@ -33,7 +33,7 @@ import {
 import { reportServerError } from '../../../observability/report-server-error.server'
 import {
 	createSceneStatsFromReport,
-	resolveSceneByteMetricsScope,
+	resolveInitialSceneBytes,
 	resolveTextureByteMetricsScope
 } from '../../../utils/scene-stats-helpers'
 import {
@@ -79,6 +79,25 @@ class SceneSettingsService {
 		if (records.some((record) => record.projectId !== projectId)) {
 			throw new Error('Uploaded assets do not belong to the target project')
 		}
+	}
+
+	/**
+	 * The stored size of an asset the project owns. Refuses an asset from any
+	 * other project, as `assertAssetsBelongToProject` does, so its size is never
+	 * reported to a caller who could not publish it. A row from before sizes
+	 * were recorded reads as 0.
+	 */
+	async getPublishedAssetBytes(
+		assetId: string,
+		projectId: string
+	): Promise<number> {
+		await this.assertAssetsBelongToProject([assetId], projectId)
+		const [record] = await this.db
+			.select({ fileSize: assets.fileSize })
+			.from(assets)
+			.where(eq(assets.id, assetId))
+			.limit(1)
+		return record?.fileSize ?? 0
 	}
 
 	/**
@@ -144,6 +163,8 @@ class SceneSettingsService {
 	async saveSceneSettingsFromAssetIds(
 		params: Omit<SaveSceneSettingsParams, 'gltfJson'> & {
 			sceneAssetIds: string[]
+			/** The kept original. Left out, any original the scene had is unlinked. */
+			sourceAssetId?: string | null
 		}
 	) {
 		const {
@@ -155,13 +176,18 @@ class SceneSettingsService {
 			meta,
 			settings,
 			sceneAssetIds,
+			sourceAssetId = null,
 			optimizationReport,
 			optimizationSettings,
-			initialSceneBytes,
-			currentSceneBytes
+			initialSceneBytes
 		} = params
+		// Every id the scene will link, the original included, so dropping the
+		// original reads as a change and leaves it to the GC below.
+		const linkedAssetIds = sourceAssetId
+			? [...sceneAssetIds, sourceAssetId]
+			: sceneAssetIds
 
-		await this.assertAssetsBelongToProject(sceneAssetIds, projectId)
+		await this.assertAssetsBelongToProject(linkedAssetIds, projectId)
 
 		const saveResult = await this.db.transaction(async (tx) => {
 			const scene = await this.ensureSceneExists(tx, {
@@ -181,9 +207,10 @@ class SceneSettingsService {
 				)
 
 			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
-			const existingAssetIds = existingSettings
-				? await getSceneAssetIds(tx, existingSettings.id)
-				: []
+			const existingLinks = existingSettings
+				? await getSceneAssetLinks(tx, existingSettings.id)
+				: { assetIds: [], sourceAssetId: null }
+			const existingAssetIds = existingLinks.assetIds
 			const existingHotspots = existingSettings
 				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
 				: []
@@ -191,7 +218,11 @@ class SceneSettingsService {
 			const settingsChanged = existingSettings
 				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
 				: true
-			const assetsChanged = compareAssetIds(sceneAssetIds, existingAssetIds)
+			// The same ids can still change roles: a model asset kept as the
+			// original, or the reverse, has to be relinked.
+			const assetsChanged =
+				compareAssetIds(linkedAssetIds, existingAssetIds) ||
+				existingLinks.sourceAssetId !== sourceAssetId
 
 			if (
 				existingSettings &&
@@ -204,7 +235,7 @@ class SceneSettingsService {
 
 			// Assets this scene no longer links (superseded bake/thumbnail, textures
 			// dropped by a model change). Candidates for GC once the new links commit.
-			const newAssetIdSet = new Set(sceneAssetIds)
+			const newAssetIdSet = new Set(linkedAssetIds)
 			const removedAssetIds = existingAssetIds.filter(
 				(id) => !newAssetIdSet.has(id)
 			)
@@ -216,7 +247,12 @@ class SceneSettingsService {
 			})
 
 			if (!existingSettings || assetsChanged) {
-				await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds)
+				await replaceSceneAssets(
+					tx,
+					savedSettings.id,
+					sceneAssetIds,
+					sourceAssetId
+				)
 			}
 
 			// Always sync hotspots - the client is authoritative on the full list.
@@ -229,7 +265,6 @@ class SceneSettingsService {
 					sceneId: updatedScene.id,
 					userId,
 					initialSceneBytes,
-					currentSceneBytes,
 					label: 'latest',
 					description: 'Latest scene statistics'
 				})
@@ -357,12 +392,15 @@ class SceneSettingsService {
 	 * `includeGltfJson` is opt-out because the embed manifest never sends the
 	 * editor glTF document, and downloading plus parsing it would be a storage
 	 * round-trip per embed load for bytes that are then discarded.
+	 *
+	 * `readErrors: 'throw'` lets a caller tell a failed read from a scene that
+	 * has no settings; by default a failure is reported and reads as null.
 	 */
 	async getSceneSettingsWithAssetRefs(
 		sceneId: string,
-		options: { includeGltfJson?: boolean } = {}
+		options: { includeGltfJson?: boolean; readErrors?: 'report' | 'throw' } = {}
 	) {
-		const { includeGltfJson = true } = options
+		const { includeGltfJson = true, readErrors = 'report' } = options
 		let result: Awaited<ReturnType<typeof getSceneSettingsWithAssetsRow>>
 		let hotspots: import('@vctrl/core').HotspotDefinition[] = []
 
@@ -375,6 +413,7 @@ class SceneSettingsService {
 				return row
 			})
 		} catch (error) {
+			if (readErrors === 'throw') throw error
 			reportServerError(error, { properties: { sceneId } })
 			return null
 		}
@@ -406,6 +445,7 @@ class SceneSettingsService {
 			settings: rowToSceneSettings(settings, hotspots),
 			settingsUpdatedAt: settings.updatedAt ?? null,
 			assets: sceneAssetsData,
+			sourceAsset: result.sourceAsset,
 			gltfJson
 		}
 	}
@@ -450,10 +490,8 @@ class SceneSettingsService {
 		projectId: string
 		userId: string
 		publishedAssetId: string
-		currentSceneBytes?: number
 	}) {
-		const { sceneId, projectId, userId, publishedAssetId, currentSceneBytes } =
-			params
+		const { sceneId, projectId, userId, publishedAssetId } = params
 
 		await this.assertAssetsBelongToProject([publishedAssetId], projectId)
 
@@ -488,17 +526,25 @@ class SceneSettingsService {
 				})
 				.where(eq(scenes.id, sceneId))
 
-			await this.upsertSceneStats(tx, {
-				sceneId,
-				userId,
-				currentSceneBytes
-			})
-
 			const [assetRecord] = await tx
 				.select()
 				.from(assets)
 				.where(eq(assets.id, publishedAssetId))
 				.limit(1)
+
+			/*
+			  The scene's size is the GLB it now publishes, as stored. Written on
+			  its own: the save-time upsert would also overwrite what the last
+			  save recorded, the optimization settings among it, with nothing.
+			*/
+			const currentSceneBytes = assetRecord?.fileSize ?? null
+			await tx
+				.insert(sceneStats)
+				.values({ sceneId, createdBy: userId, currentSceneBytes })
+				.onConflictDoUpdate({
+					target: sceneStats.sceneId,
+					set: { currentSceneBytes, updatedAt: new Date() }
+				})
 
 			return {
 				record: { ...publishedRecord, asset: assetRecord ?? null },
@@ -537,6 +583,12 @@ class SceneSettingsService {
 					updatedAt: new Date()
 				})
 				.where(eq(scenes.id, sceneId))
+
+			// The size was the published GLB's, and there is none now.
+			await tx
+				.update(sceneStats)
+				.set({ currentSceneBytes: null, updatedAt: new Date() })
+				.where(eq(sceneStats.sceneId, sceneId))
 
 			return publishedRecord?.assetId ?? null
 		})
@@ -707,7 +759,6 @@ class SceneSettingsService {
 			sceneId: string
 			userId: string
 			initialSceneBytes?: number | null
-			currentSceneBytes?: number | null
 			label?: string
 			description?: string
 		}
@@ -716,7 +767,6 @@ class SceneSettingsService {
 			.select({
 				baseline: sceneStats.baseline,
 				initialSceneBytes: sceneStats.initialSceneBytes,
-				currentSceneBytes: sceneStats.currentSceneBytes,
 				additionalMetrics: sceneStats.additionalMetrics
 			})
 			.from(sceneStats)
@@ -733,14 +783,11 @@ class SceneSettingsService {
 				| null
 				| undefined) ?? null
 
-		const { initialSceneBytes, currentSceneBytes } =
-			resolveSceneByteMetricsScope({
-				existingInitialSceneBytes: existingStats[0]?.initialSceneBytes,
-				existingCurrentSceneBytes: existingStats[0]?.currentSceneBytes,
-				requestInitialSceneBytes: params.initialSceneBytes,
-				requestCurrentSceneBytes: params.currentSceneBytes,
-				report: params.report
-			})
+		const initialSceneBytes = resolveInitialSceneBytes({
+			existingInitialSceneBytes: existingStats[0]?.initialSceneBytes,
+			requestInitialSceneBytes: params.initialSceneBytes,
+			report: params.report
+		})
 
 		const textureByteMetrics = resolveTextureByteMetricsScope(
 			params.report,
@@ -756,7 +803,6 @@ class SceneSettingsService {
 					label: params.label,
 					description: params.description,
 					initialSceneBytes,
-					currentSceneBytes,
 					optimizationSettings: params.optimizationSettings,
 					existingAdditionalMetrics
 				}
@@ -773,7 +819,6 @@ class SceneSettingsService {
 						baseline: existingBaseline ?? statsData.baseline,
 						optimized: statsData.optimized,
 						initialSceneBytes,
-						currentSceneBytes,
 						appliedOptimizations: statsData.appliedOptimizations,
 						optimizationSettings: statsData.optimizationSettings,
 						additionalMetrics: textureByteMetrics,
@@ -793,7 +838,6 @@ class SceneSettingsService {
 				label: params.label,
 				description: params.description,
 				initialSceneBytes,
-				currentSceneBytes,
 				additionalMetrics: textureByteMetrics,
 				optimizationSettings: params.optimizationSettings ?? null
 			})
@@ -803,7 +847,6 @@ class SceneSettingsService {
 					label: params.label,
 					description: params.description,
 					initialSceneBytes,
-					currentSceneBytes,
 					additionalMetrics: textureByteMetrics,
 					optimizationSettings: params.optimizationSettings ?? null,
 					updatedAt: new Date()

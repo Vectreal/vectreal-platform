@@ -10,6 +10,8 @@
  * cannot disagree about field names or encodings.
  */
 
+import { UUID_REGEX } from '../../../constants/utility-constants'
+
 import type { DashboardEntityType } from './dashboard-operations'
 
 export type DashboardMutationVerb =
@@ -79,9 +81,6 @@ export interface DashboardMutationResponse {
 	createdFolder?: { id: string; name: string }
 }
 
-const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
 const ENTITY_TYPES: readonly DashboardEntityType[] = [
 	'project',
 	'folder',
@@ -134,7 +133,7 @@ function parseTargets(raw: unknown): ParseResult<DashboardMutationTarget[]> {
 		) {
 			return { ok: false, error: `unknown target type: ${String(type)}` }
 		}
-		if (typeof id !== 'string' || !UUID_PATTERN.test(id)) {
+		if (typeof id !== 'string' || !UUID_REGEX.test(id)) {
 			return { ok: false, error: 'each target id must be a UUID' }
 		}
 
@@ -167,7 +166,7 @@ function parseMoveTarget(raw: unknown): ParseResult<MoveTarget> {
 	}
 
 	if (kind === 'folder') {
-		if (typeof folderId !== 'string' || !UUID_PATTERN.test(folderId)) {
+		if (typeof folderId !== 'string' || !UUID_REGEX.test(folderId)) {
 			return { ok: false, error: 'moveTarget.folderId must be a UUID' }
 		}
 		return { ok: true, value: { kind: 'folder', folderId } }
@@ -183,7 +182,7 @@ export function parseDashboardMutationRequest(
 
 	if (verb === 'create-folder') {
 		const projectId = readString(source, 'projectId')
-		if (!UUID_PATTERN.test(projectId)) {
+		if (!UUID_REGEX.test(projectId)) {
 			return { ok: false, error: 'projectId must be a UUID' }
 		}
 
@@ -193,7 +192,7 @@ export function parseDashboardMutationRequest(
 		}
 
 		const parentFolderIdRaw = readString(source, 'parentFolderId')
-		if (parentFolderIdRaw && !UUID_PATTERN.test(parentFolderIdRaw)) {
+		if (parentFolderIdRaw && !UUID_REGEX.test(parentFolderIdRaw)) {
 			return { ok: false, error: 'parentFolderId must be a UUID' }
 		}
 

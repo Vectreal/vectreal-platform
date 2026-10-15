@@ -6,7 +6,7 @@
  * that object again would change the normalization scale and the centering
  * under the user's camera, which is exactly the jump a key exists to prevent.
  */
-import { BoxGeometry, Mesh } from 'three'
+import { BoxGeometry, Group, Mesh } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import { nextModelFrame } from './model-frame'
@@ -35,6 +35,18 @@ describe('nextModelFrame', () => {
 
 		expect(nextModelFrame(first, model, undefined)).toBe(first)
 		expect(nextModelFrame(first, boxModel(1), undefined)).not.toBe(first)
+	})
+
+	it('measures the model as loaded, before the normalization scale above it', () => {
+		const model = boxModel(3)
+		const normalization = new Group()
+		normalization.position.set(5, -2, 3)
+		normalization.scale.setScalar(4)
+		normalization.add(model)
+
+		expect(nextModelFrame(null, model, 1)?.rawDiagonal).toBeCloseTo(
+			Math.sqrt(27)
+		)
 	})
 
 	it('has no frame without a model', () => {

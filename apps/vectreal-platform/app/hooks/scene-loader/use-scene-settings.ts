@@ -9,7 +9,7 @@ import {
 	defaultNormalizationOptions,
 	defaultPresentationOptions,
 	defaultShadowsOptions,
-	normalizeShadowOptions
+	withSceneSettingsDefaults
 } from '../../constants/viewer-defaults'
 import { resolveDefaultSceneCameraId } from '../../lib/domain/scene/scene-camera'
 import {
@@ -20,13 +20,16 @@ import {
 	sceneMetaInitialState
 } from '../../lib/stores/publisher-config-store'
 import {
+	keptOriginalAtom,
+	keptOriginalInitialState,
 	optimizationAtom,
 	optimizationInitialState,
 	optimizationRuntimeAtom,
 	optimizationRuntimeInitialState
 } from '../../lib/stores/scene-optimization-store'
 import {
-	activeHotspotIdAtom,
+	animationAtom,
+	animationDriftAtom,
 	bakedShadowSourceAtom,
 	boundsAtom,
 	cameraAtom,
@@ -37,6 +40,7 @@ import {
 	normalizationAtom,
 	presentationAtom,
 	rawModelDiagonalAtom,
+	resetHotspotEditingAtom,
 	selectedCameraIdAtom,
 	shadowsAtom
 } from '../../lib/stores/scene-settings-store'
@@ -52,6 +56,8 @@ import type { SceneSettings } from '@vctrl/core'
  * otherwise keep the previous scene's selected camera and open hotspot.
  */
 export function useApplySceneSettings() {
+	const setAnimation = useSetAtom(animationAtom)
+	const setAnimationDrift = useSetAtom(animationDriftAtom)
 	const setBounds = useSetAtom(boundsAtom)
 	const setEnv = useSetAtom(environmentAtom)
 	const setInteractions = useSetAtom(interactionsAtom)
@@ -62,7 +68,9 @@ export function useApplySceneSettings() {
 	const setPresentation = useSetAtom(presentationAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
-	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
+	// Clears the hotspot camera mode with the selection, without restoring:
+	// its return camera belongs to the scene that came before.
+	const resetHotspotEditing = useSetAtom(resetHotspotEditingAtom)
 	const setLastSavedSettings = useSetAtom(lastSavedSettingsAtom)
 
 	/**
@@ -81,15 +89,18 @@ export function useApplySceneSettings() {
 			settings: SceneSettings,
 			{ isSavedBaseline }: { isSavedBaseline: boolean }
 		) => {
-			const bounds = settings.bounds ?? defaultBoundsOptions
-			const environment = settings.environment ?? defaultEnvOptions
-			const camera = settings.camera ?? defaultCameraOptions
-			const controls = settings.controls ?? defaultControlsOptions
-			const shadows = normalizeShadowOptions(settings.shadows)
-			const normalization =
-				settings.normalization ?? defaultNormalizationOptions
-			const presentation = settings.presentation ?? defaultPresentationOptions
+			const {
+				bounds,
+				environment,
+				camera,
+				controls,
+				shadows,
+				normalization,
+				presentation
+			} = withSceneSettingsDefaults(settings)
 
+			setAnimation(settings.animation)
+			setAnimationDrift(null)
 			setBounds(bounds)
 			setEnv(environment)
 			setInteractions(settings.interactions)
@@ -104,10 +115,11 @@ export function useApplySceneSettings() {
 					defaultCameraOptions.activeCameraId ??
 					'default'
 			)
-			setActiveHotspotId(null)
+			resetHotspotEditing()
 			setLastSavedSettings(
 				isSavedBaseline
 					? {
+							animation: settings.animation,
 							bounds,
 							environment,
 							interactions: settings.interactions,
@@ -122,7 +134,9 @@ export function useApplySceneSettings() {
 			)
 		},
 		[
-			setActiveHotspotId,
+			resetHotspotEditing,
+			setAnimation,
+			setAnimationDrift,
 			setBounds,
 			setCamera,
 			setControls,
@@ -148,6 +162,8 @@ export function useApplySceneSettings() {
  * to /publisher, which is the same route.
  */
 export function useResetSceneState() {
+	const setAnimation = useSetAtom(animationAtom)
+	const setAnimationDrift = useSetAtom(animationDriftAtom)
 	const setBounds = useSetAtom(boundsAtom)
 	const setEnv = useSetAtom(environmentAtom)
 	const setInteractions = useSetAtom(interactionsAtom)
@@ -158,17 +174,22 @@ export function useResetSceneState() {
 	const setPresentation = useSetAtom(presentationAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
-	const setActiveHotspotId = useSetAtom(activeHotspotIdAtom)
+	// Clears the hotspot camera mode with the selection, without restoring:
+	// its return camera belongs to the scene that came before.
+	const resetHotspotEditing = useSetAtom(resetHotspotEditingAtom)
 	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setRawModelDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const setKeptOriginal = useSetAtom(keptOriginalAtom)
 	const setSceneMetaState = useSetAtom(sceneMetaAtom)
 	const setLastSavedSettings = useSetAtom(lastSavedSettingsAtom)
 	const setLastSavedSceneMeta = useSetAtom(lastSavedSceneMetaAtom)
 	const setLastSavedSceneId = useSetAtom(lastSavedSceneIdAtom)
 
 	return useCallback(() => {
+		setAnimation(undefined)
+		setAnimationDrift(null)
 		setBounds(defaultBoundsOptions)
 		setEnv(defaultEnvOptions)
 		setInteractions(undefined)
@@ -183,17 +204,20 @@ export function useResetSceneState() {
 				defaultCameraOptions.cameras?.[0]?.cameraId ??
 				'default'
 		)
-		setActiveHotspotId(null)
+		resetHotspotEditing()
 		setBakedShadowSource(null)
 		setRawModelDiagonal(0)
 		setOptimizationState(optimizationInitialState)
 		setOptimizationRuntime(optimizationRuntimeInitialState)
+		setKeptOriginal(keptOriginalInitialState)
 		setSceneMetaState(sceneMetaInitialState)
 		setLastSavedSettings(null)
 		setLastSavedSceneMeta(null)
 		setLastSavedSceneId(null)
 	}, [
-		setActiveHotspotId,
+		resetHotspotEditing,
+		setAnimation,
+		setAnimationDrift,
 		setBakedShadowSource,
 		setBounds,
 		setCamera,
@@ -201,6 +225,7 @@ export function useResetSceneState() {
 		setEnv,
 		setHotspots,
 		setInteractions,
+		setKeptOriginal,
 		setLastSavedSceneId,
 		setLastSavedSceneMeta,
 		setLastSavedSettings,

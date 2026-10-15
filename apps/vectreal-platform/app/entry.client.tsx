@@ -11,8 +11,13 @@ import { hydrateRoot } from 'react-dom/client'
 import { HydratedRouter } from 'react-router/dom'
 
 import { readConsentCookie } from './lib/consent/consent-cookie'
+import {
+	DEAD_CLICKS_CONFIG,
+	RAGECLICK_CONFIG
+} from './lib/posthog/frustration-signals'
 import { isPosthogEnabled } from './lib/posthog/posthog-enabled'
-import { redactEmbedTokenFromProperties } from './lib/posthog/redact-embed-token'
+import { redactUrlSecretsFromProperties } from './lib/posthog/redact-url-secrets'
+import { isSessionReplayExcludedPath } from './lib/posthog/session-replay'
 
 /*
   Analytics may fail. The app may not.
@@ -69,6 +74,14 @@ try {
 			// opt_in_capturing() once the user accepts analytics.
 			persistence: 'memory',
 			capture_pageview: false,
+			// Never record an embed: its URL carries the API key, and a replay
+			// stores that URL where `before_send` cannot reach it (see below).
+			disable_session_recording: isSessionReplayExcludedPath(
+				window.location.pathname
+			),
+			// A drag on a 3D viewer is not a frustrated click: see the module.
+			rageclick: RAGECLICK_CONFIG,
+			capture_dead_clicks: DEAD_CLICKS_CONFIG,
 			/*
 			  An embed authenticates by a `token` query parameter, so on `/embed` the
 			  page URL contains a live API key - and PostHog attaches `$current_url`
@@ -86,14 +99,13 @@ try {
 				  Session replay is excluded, and not because it is safe. A `$snapshot`
 				  carries a whole rrweb payload, and walking one on every snapshot
 				  would cost far more than the rest of this does on a normal event.
-				  Redacting inside a replay is a different problem with a different
-				  tool - PostHog's own masking - so it is filed rather than half-done
-				  here. Replay is remote-config controlled and not enabled in this
-				  file, so whether it is on at all has to be checked in the project.
+				  So the one page whose URL holds a key is never recorded at all:
+				  `disable_session_recording` above refuses replay on `/embed`.
+				  Everywhere else replay follows the project's remote config.
 				*/
 				if (event.event === '$snapshot') return event
 
-				return redactEmbedTokenFromProperties(event)
+				return redactUrlSecretsFromProperties(event)
 			}
 		})
 		posthog.register({ client_type: 'web' })

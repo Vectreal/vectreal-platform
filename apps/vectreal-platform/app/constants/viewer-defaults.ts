@@ -9,6 +9,7 @@ import type {
 	ControlsProps,
 	EnvironmentProps,
 	NormalizationOptions,
+	SceneSettings,
 	ScenePresentationSettings,
 	ShadowsProps
 } from '@vctrl/core'
@@ -39,17 +40,46 @@ export const defaultCameraOptions: CameraProps = {
 		easing: 'ease_in_out'
 	}
 }
+/*
+  How dragging the scene feels, as one choice. OrbitControls applies
+  `dampingFactor` of the remaining drag each frame and has no inertia of its
+  own, so a low factor is pure lag behind the pointer rather than glide: 0.25
+  delivers 90% of a drag in about 8 frames, 0.06 takes about 37.
+*/
+export const INTERACTION_FEELS = {
+	floaty: {
+		dampingFactor: 0.06,
+		rotateSpeed: 0.5,
+		panSpeed: 0.5,
+		zoomSpeed: 0.4
+	},
+	balanced: {
+		dampingFactor: 0.25,
+		rotateSpeed: 0.75,
+		panSpeed: 0.75,
+		zoomSpeed: 0.6
+	},
+	snappy: { dampingFactor: 0.5, rotateSpeed: 1, panSpeed: 1, zoomSpeed: 0.8 }
+} satisfies Record<
+	string,
+	Required<
+		Pick<
+			ControlsProps,
+			'dampingFactor' | 'rotateSpeed' | 'panSpeed' | 'zoomSpeed'
+		>
+	>
+>
+
+export type InteractionFeel = keyof typeof INTERACTION_FEELS
+
 export const defaultControlsOptions: ControlsProps = {
 	controlsTimeout: 0,
 	maxPolarAngle: Math.PI / 2,
 	autoRotate: false,
 	autoRotateSpeed: 0.25,
 	enableZoom: true,
-	zoomSpeed: 0.4,
-	panSpeed: 0.5,
-	rotateSpeed: 0.5,
 	enableDamping: true,
-	dampingFactor: 0.2,
+	...INTERACTION_FEELS.balanced,
 	makeDefault: true
 }
 
@@ -60,7 +90,8 @@ export const defaultControlsOptions: ControlsProps = {
   publisher toggle is an opt-out.
 */
 export const defaultPresentationOptions: ScenePresentationSettings = {
-	showInfoPopover: true
+	showInfoPopover: true,
+	showLoadingThumbnail: false
 }
 
 export const defaultEnvOptions: EnvironmentProps = {
@@ -163,4 +194,25 @@ export const defaultNormalizationOptions: Required<NormalizationOptions> = {
 	enabled: false,
 	minSize: NORMALIZATION_DEFAULT_MIN_SIZE,
 	maxSize: NORMALIZATION_DEFAULT_MAX_SIZE
+}
+
+/**
+ * A scene's settings with every absent group filled from the defaults above.
+ *
+ * The one answer to "what does this scene look like": the publisher writes it
+ * into its atoms, and an example scene in an article renders it, so the scene a
+ * reader drags and the one that opens in the publisher cannot disagree.
+ */
+export function withSceneSettingsDefaults(settings: SceneSettings) {
+	return {
+		animation: settings.animation,
+		bounds: settings.bounds ?? defaultBoundsOptions,
+		environment: settings.environment ?? defaultEnvOptions,
+		interactions: settings.interactions,
+		camera: settings.camera ?? defaultCameraOptions,
+		controls: settings.controls ?? defaultControlsOptions,
+		shadows: normalizeShadowOptions(settings.shadows),
+		normalization: settings.normalization ?? defaultNormalizationOptions,
+		presentation: settings.presentation ?? defaultPresentationOptions
+	}
 }

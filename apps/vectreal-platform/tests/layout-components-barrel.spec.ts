@@ -21,7 +21,7 @@ const BARREL = resolve(
 )
 const MANIFEST = resolve(
 	import.meta.dirname,
-	'../app/lib/news/news-manifest.ts'
+	'../app/lib/news/news-manifest.server.ts'
 )
 
 function resolveModule(from: string, specifier: string): string | null {

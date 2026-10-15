@@ -37,6 +37,12 @@ describe('restoring a draft applies its settings', () => {
 		expect(source).toContain('applySceneSettings(draft.sceneData,')
 	})
 
+	it('counts what the draft was optimized to as unsaved', () => {
+		// Nothing saved describes a draft's document, so the first save sends
+		// its optimization along rather than treating it as already stored.
+		expect(source).toContain('savedPassRevision: null,')
+	})
+
 	it('does not adopt the restored draft as the saved baseline', () => {
 		// A restored draft has no server row. Adopting it as the last-saved state
 		// makes the unsaved-changes check report nothing to save, and the Save
@@ -44,11 +50,40 @@ describe('restoring a draft applies its settings', () => {
 		expect(source).toContain('{ isSavedBaseline: false }')
 	})
 
+	it("gives back the author's choice about the original", () => {
+		// Without it a restored draft keeps the original the author turned off,
+		// and the save stores it against their storage.
+		expect(source).toContain('keep: draft.keepOriginal ?? true')
+		expect(source.indexOf("result.status !== 'ready'")).toBeLessThan(
+			source.indexOf('keep: draft.keepOriginal ?? true')
+		)
+	})
+
 	it('applies them only once the model actually loaded', () => {
 		// Applying before the `status !== 'ready'` bail would leave the atoms
 		// describing a scene the viewer never got.
 		expect(source.indexOf("result.status !== 'ready'")).toBeLessThan(
 			source.indexOf('applySceneSettings(draft.sceneData,')
+		)
+	})
+})
+
+describe('restoring a draft states its original', () => {
+	// Its behavior is `restoreDraftSource`'s own spec; this pins that the
+	// restore asks about its own load, and only once the load is ready.
+	it('for the load it made', () => {
+		// On screen, not newest: a failed newer drop leaves the draft there.
+		expect(source).toContain('isCurrent: result.stillOnScreen')
+		expect(source.indexOf("result.status !== 'ready'")).toBeLessThan(
+			source.indexOf('await restoreDraftSource(')
+		)
+	})
+
+	// Its labels would otherwise claim an original the optimizer never got.
+	it('describes the source as the restored version when that failed', () => {
+		expect(source).toContain('if (missedOriginal) {')
+		expect(source).toMatch(
+			/resolveRestoredDraftOptimization\(\{\s*\.\.\.draft,\s*sourceGlb: null,\s*sourceSettings: null/
 		)
 	})
 })

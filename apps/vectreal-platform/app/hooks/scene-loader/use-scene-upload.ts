@@ -9,25 +9,14 @@ import { useConsent } from '../../components/consent/consent-context'
 import { buildSceneUploadFailedAnalyticsProps } from '../../lib/domain/analytics/scene-events'
 import { getSceneNameFromFileName } from '../../lib/domain/scene'
 import { getUploadLoadErrorMessage } from '../../lib/domain/scene/scene-load-error-messages'
-import {
-	clearOriginalSceneModel,
-	clearPendingSceneDraft
-} from '../../lib/persistence/pending-scene-idb'
+import { clearPendingSceneDraft } from '../../lib/persistence/pending-scene-idb'
 import {
 	currentSceneIdAtom,
 	sceneMetaAtom,
 	sceneMetaInitialState
 } from '../../lib/stores/publisher-config-store'
 
-import type {
-	InputFileOrDirectory,
-	ModelFile
-} from '@vctrl/hooks/use-load-model'
-
-interface UseSceneUploadArgs {
-	/** Snapshots the freshly loaded model to IndexedDB for re-optimization. */
-	snapshotOriginalModel: (uploadedFile: ModelFile) => Promise<void>
-}
+import type { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
 
 /**
  * Everything that happens when a user drops a model in.
@@ -37,7 +26,7 @@ interface UseSceneUploadArgs {
  * supported file, two models in one folder) simply skipped the ones that would
  * have cleared the loading flag. Here the order is the order you read.
  */
-export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
+export function useSceneUpload() {
 	const { load } = useModelContext()
 	const posthog = usePostHog()
 	const { consent } = useConsent()
@@ -70,10 +59,6 @@ export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 			//
 			// A drop always starts a new unsaved scene: the stage only takes a drop
 			// while it is empty, so there is nothing to merge with.
-			// Both IndexedDB snapshots are keyed per tab rather than per model, and
-			// the clear is awaited so it cannot land after the snapshot below and
-			// leave re-optimization without its pristine baseline.
-			await clearOriginalSceneModel()
 			await clearPendingSceneDraft()
 			resetSceneState()
 			setCurrentSceneId(null)
@@ -96,10 +81,6 @@ export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 				})
 			}
 
-			// The optimizer has the model by now (the load awaits its ingest), so the
-			// pre-optimization snapshot can be taken without waiting on a render.
-			await snapshotOriginalModel(result.file)
-
 			return result
 		},
 		[
@@ -108,8 +89,7 @@ export function useSceneUpload({ snapshotOriginalModel }: UseSceneUploadArgs) {
 			posthog,
 			resetSceneState,
 			setCurrentSceneId,
-			setSceneMeta,
-			snapshotOriginalModel
+			setSceneMeta
 		]
 	)
 

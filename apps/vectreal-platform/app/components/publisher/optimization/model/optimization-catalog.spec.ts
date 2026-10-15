@@ -88,10 +88,13 @@ describe('listEnabledKeys', () => {
 describe('presets', () => {
 	// Draco is the largest saving available and does not change topology, so
 	// there is no tier where leaving it off is the right default.
-	it('enables Draco everywhere', () => {
-		for (const preset of Object.values(optimizationPresets)) {
+	it('enables Draco in every preset that optimizes', () => {
+		const { original, ...optimizing } = optimizationPresets
+		for (const preset of Object.values(optimizing)) {
 			expect(preset.draco.enabled).toBe(true)
 		}
+		// The way back to the scene as uploaded runs nothing at all.
+		expect(listEnabledKeys(original)).toEqual([])
 	})
 
 	// Draco quantizes attributes itself; stacking the standalone pass on top

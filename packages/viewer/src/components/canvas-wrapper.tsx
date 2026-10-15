@@ -1,8 +1,12 @@
 import { PerformanceMonitor } from '@react-three/drei'
 import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
 import { cn } from '@shared/utils'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
+import {
+	type ViewerTheme,
+	useViewerColorScheme
+} from '../hooks/use-viewer-color-scheme'
 import { useViewportDetection } from '../hooks/use-viewport-detection'
 import { VIEWER_MODEL_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
 
@@ -15,9 +19,14 @@ interface CanvasComponentProps extends CanvasProps {
 	 */
 	containerClassName?: string
 	/**
+	 * CSS background for the container, painted behind the transparent canvas
+	 * and visible while the scene is still loading.
+	 */
+	containerBackground?: string
+	/**
 	 * Theme to apply to the viewer
 	 */
-	theme?: 'light' | 'dark' | 'system'
+	theme?: ViewerTheme
 
 	/**
 	 * JSX element to render while loading
@@ -36,6 +45,11 @@ interface CanvasComponentProps extends CanvasProps {
 	 * Viewer loading lifecycle state used to synchronize loader/model cross-fade.
 	 */
 	loadingState?: LoadingState
+	/**
+	 * Receives the outermost container, for the viewer's own key handling and
+	 * focus management. Must be referentially stable.
+	 */
+	onContainerChange?: (node: HTMLDivElement | null) => void
 }
 
 /**
@@ -59,16 +73,19 @@ const DPR_STEP = 0.25
 const Canvas = ({
 	children,
 	containerClassName,
+	containerBackground,
 	theme = 'system',
 	overlay,
 	enableViewportRendering = true,
 	loadingState = 'loading',
+	onContainerChange,
 	...props
 }: CanvasComponentProps) => {
 	const getInitialPageVisibility = () =>
 		typeof document === 'undefined' ? true : !document.hidden
 
 	const [isReady, setIsReady] = useState(false)
+	const colorScheme = useViewerColorScheme(theme)
 	// Starts sharp and steps down when the device cannot hold its refresh rate.
 	// A caller that sets `dpr` takes the decision over entirely.
 	const [dprCap, setDprCap] = useState(MAX_DPR)
@@ -81,6 +98,14 @@ const Canvas = ({
 	const [containerRef, isInViewport] = useViewportDetection(
 		enableViewportRendering,
 		{ rootMargin: '100% 0px' }
+	)
+
+	const setContainer = useCallback(
+		(node: HTMLDivElement | null) => {
+			containerRef.current = node
+			onContainerChange?.(node)
+		},
+		[containerRef, onContainerChange]
 	)
 
 	// Handle StrictMode double-mounting
@@ -153,7 +178,21 @@ const Canvas = ({
 	}, [shouldRenderCanvas])
 
 	return (
-		<div ref={containerRef} className={containerClassName} data-theme={theme}>
+		<div
+			ref={setContainer}
+			className={cn('outline-none', colorScheme, containerClassName)}
+			style={
+				containerBackground ? { background: containerBackground } : undefined
+			}
+			data-theme={theme}
+			/*
+			  Focusable, never tabbable. A click on the canvas focuses the viewer
+			  rather than dropping focus to the page, so its keys (Escape out of a
+			  hotspot's camera) keep working after an orbit; and a control that
+			  removes itself has somewhere inside the viewer to hand focus to.
+			*/
+			tabIndex={-1}
+		>
 			{shouldRenderCanvas && (
 				<ThreeCanvas
 					{...props}

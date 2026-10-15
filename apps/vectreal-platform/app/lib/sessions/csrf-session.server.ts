@@ -24,7 +24,7 @@ export const cookie = createCookie('csrf', {
  * building a carrier `FormData` for `CSRF#validate` has to use the same key, or
  * validation fails with `missing_token_in_body` and reads like a client bug.
  */
-export const CSRF_FORM_DATA_KEY = 'csrf'
+const CSRF_FORM_DATA_KEY = 'csrf'
 
 export const csrfSession = new CSRF({
 	cookie,

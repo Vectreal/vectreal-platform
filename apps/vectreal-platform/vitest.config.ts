@@ -5,6 +5,8 @@ import remarkMdxFrontmatter from 'remark-mdx-frontmatter'
 import { configDefaults, defineConfig, mergeConfig } from 'vitest/config'
 
 import sharedConfig, { vctrlSourcePlugin } from '../../vitest.shared.mts'
+import { mdxMarkdownPlugin } from './app/lib/markdown/mdx-to-markdown.ts'
+import { remarkDocPageActions } from './app/lib/markdown/remark-doc-page-actions.ts'
 
 export default mergeConfig(
 	sharedConfig,
@@ -20,13 +22,19 @@ export default mergeConfig(
 			  winning. Viewer and embed are left alone deliberately.
 			*/
 			vctrlSourcePlugin(['core', 'hooks']),
+			mdxMarkdownPlugin(),
 			// Must mirror vite.config.ts. Without the frontmatter plugins the MDX
 			// modules compile but export no `frontmatter`, so the news and docs
 			// manifests resolve to zero entries and any test over them passes
 			// vacuously.
 			mdx({
 				format: 'mdx',
-				remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter]
+				remarkPlugins: [
+					remarkGfm,
+					remarkFrontmatter,
+					remarkMdxFrontmatter,
+					remarkDocPageActions
+				]
 			})
 		],
 		test: {

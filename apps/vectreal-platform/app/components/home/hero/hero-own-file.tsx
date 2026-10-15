@@ -5,14 +5,21 @@ import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
-import { balancedPreset } from '../../../constants/optimizations'
+import {
+	balancedPreset,
+	originalPreset
+} from '../../../constants/optimizations'
 import { usePrepareGltfDocument } from '../../../hooks/scene-loader/use-scene-document-export'
+import {
+	projectPublishedGlbBytes,
+	resolvePublishGeometryOptions
+} from '../../../lib/domain/scene/client/publish-export'
 import { persistPendingSceneDraftOrchestrator } from '../../../lib/domain/scene/client/scene-draft-persistence'
 import { sceneViewerSettingsAtom } from '../../../lib/stores/scene-settings-store'
 import { runOptimizationPass } from '../../publisher/optimization/run-optimization-pass'
-import { resolvePublishedSceneBytes } from '../../publisher/optimization/utils'
 
 import type { OptimizationStepsController } from '../../publisher/optimization/use-optimization-steps'
+import type { Optimizations } from '@vctrl/core'
 
 export type OwnFileOutcome =
 	| {
@@ -84,13 +91,14 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 	}
 
 	/*
-	  What was prepared, as the hand-off must describe it. Not read back from the
-	  context: the optimizer renames the file once its pass has run.
+	  What was prepared, as the hand-off must describe it: the sizes and the
+	  settings it was derived from, which the load context does not hold.
 	*/
 	const prepared = useRef<{
 		name: string
 		originalBytes: number
 		bytes: number
+		derivedFrom: Optimizations
 	} | null>(null)
 
 	useEffect(() => {
@@ -112,11 +120,14 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 				const originalBytes =
 					loaded.file.sourcePackageBytes ??
 					files.reduce((sum, one) => sum + one.size, 0)
-				const { dracoReport } = await runOptimizationPass({
-					fromOriginal: false,
+				const { succeeded, dracoReport } = await runOptimizationPass({
 					optimizations: balancedPreset,
+					isCurrent: loaded.stillCurrent,
 					steps: NO_CHECKLIST,
-					model: optimizer,
+					// The stage draws getModel()'s buffer itself, so there is no
+					// loader viewer to sync. The context's sync was read before the
+					// load above, so it belongs to the previous load, or to none.
+					model: { ...optimizer, applyOptimization: async () => {} },
 					baseline: {
 						clientSceneBytes: originalBytes,
 						clientTextureBytes: loaded.file.sourceTextureBytes ?? null,
@@ -126,16 +137,29 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 						reportTextureBytesBefore: null,
 						calculateSceneBytes: async () => null
 					},
-					setRuntime: () => {}
+					setRuntime: () => {},
+					setRuntimeUnfiltered: () => {}
 				})
 
 				// The working document: every pass applied, Draco left for publish time, as in the publisher.
 				const working = await optimizer.getModel()
 				if (!working) return { ok: false, reason: 'failed' }
-				const bytes =
-					resolvePublishedSceneBytes(working.byteLength, dracoReport) ??
-					working.byteLength
-				prepared.current = { name: loaded.file.name, originalBytes, bytes }
+				// A failed pass leaves the original on screen, and the hand-off
+				// has to say which one the publisher is getting.
+				const derivedFrom = succeeded ? balancedPreset : originalPreset
+				// The size it publishes at, as the publisher's card measures it. A
+				// measurement that fails costs the figure, not the visitor's file:
+				// the publisher measures again once it is handed on.
+				const bytes = await projectPublishedGlbBytes(
+					working,
+					resolvePublishGeometryOptions(derivedFrom, dracoReport)
+				).catch(() => working.byteLength)
+				prepared.current = {
+					name: loaded.file.name,
+					originalBytes,
+					bytes,
+					derivedFrom
+				}
 				const buffer = working.buffer.slice(
 					working.byteOffset,
 					working.byteOffset + working.byteLength
@@ -165,8 +189,10 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 							thumbnailUrl: ''
 						},
 						currentSettings,
-						// So the publisher opens on Balanced, already applied, at the size the sheet showed.
-						optimizationSettings: balancedPreset,
+						// So the publisher opens on what was applied, at the size the sheet showed.
+						optimizationSettings: done.derivedFrom,
+						// And can still make any other preset from the visitor's original.
+						sourceGlb: latest.current.optimizer.getSource(),
 						optimizedSceneBytes: done.bytes,
 						clientSceneBytes: done.originalBytes
 					})

@@ -4,10 +4,12 @@ import { describe, expect, it } from 'vitest'
 import {
 	buildEmbedAssetRefs,
 	buildPublishedModelRef,
+	extensionsUsedFromMetadata,
 	isEmbedServableAssetId,
 	selectEmbedServableAssets,
 	type EmbedAssetRow
 } from './embed-asset-policy'
+import { SOURCE_MODEL_FILENAME } from './scene-asset-roles'
 
 /**
  * The production shape that broke embeds: `scene_published.asset_id` is written
@@ -110,6 +112,25 @@ describe('embed asset policy', () => {
 				`${assetId} is an editor asset and must not be servable`
 			).toBe(false)
 		}
+	})
+
+	// A scene can keep the original its model was optimized from. It is the
+	// author's full-quality source and never part of what an embed shows, so it
+	// must stay unservable even when a crafted save names it as the bake.
+	it('never serves a kept original, even one declared as the bake', () => {
+		const original: EmbedAssetRow = {
+			id: 'original-id',
+			name: SOURCE_MODEL_FILENAME,
+			mimeType: 'model/gltf-binary',
+			fileSize: 38_000_000
+		}
+		const servable = selectEmbedServableAssets({
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: [...SCENE_ASSETS, original],
+			bakedShadowAssetId: original.id
+		})
+
+		expect(isEmbedServableAssetId(original.id, servable)).toBe(false)
 	})
 
 	it('references only the bake, never the source buffers or textures', () => {
@@ -227,5 +248,122 @@ describe('embed asset policy', () => {
 				).mimeType
 			).toBe('model/gltf-binary')
 		})
+	})
+})
+
+describe('whether the published GLB needs the Draco decoder', () => {
+	const row = {
+		assetId: PUBLISHED_ASSET_ID,
+		fileName: 'shoe.glb',
+		mimeType: 'model/gltf-binary',
+		byteSize: 812345
+	}
+	const url = (assetId: string) => `/assets/${assetId}`
+
+	it('says so when the upload recorded the Draco extension', () => {
+		const metadata = {
+			gltfExtensionsUsed: ['KHR_draco_mesh_compression', 'KHR_materials_ior']
+		}
+		const ref = buildPublishedModelRef(
+			{ ...row, extensionsUsed: extensionsUsedFromMetadata(metadata) },
+			url
+		)
+		expect(ref.usesDraco).toBe(true)
+	})
+
+	it('says not when the upload recorded no Draco', () => {
+		const ref = buildPublishedModelRef(
+			{
+				...row,
+				extensionsUsed: extensionsUsedFromMetadata({ gltfExtensionsUsed: [] })
+			},
+			url
+		)
+		expect(ref.usesDraco).toBe(false)
+	})
+
+	it('says which of meshopt and KTX2 the upload recorded', () => {
+		const refFor = (gltfExtensionsUsed: string[]) =>
+			buildPublishedModelRef(
+				{
+					...row,
+					extensionsUsed: extensionsUsedFromMetadata({ gltfExtensionsUsed })
+				},
+				url
+			)
+
+		expect(
+			refFor(['EXT_meshopt_compression', 'KHR_mesh_quantization'])
+		).toMatchObject({ usesDraco: false, usesMeshopt: true, usesKtx2: false })
+		expect(refFor(['KHR_texture_basisu'])).toMatchObject({
+			usesMeshopt: false,
+			usesKtx2: true
+		})
+	})
+
+	it('says nothing for a GLB uploaded before it was recorded', () => {
+		for (const metadata of [null, {}, { gltfExtensionsUsed: null }]) {
+			const ref = buildPublishedModelRef(
+				{ ...row, extensionsUsed: extensionsUsedFromMetadata(metadata) },
+				url
+			)
+			expect(ref).not.toHaveProperty('usesDraco')
+			expect(ref).not.toHaveProperty('usesMeshopt')
+			expect(ref).not.toHaveProperty('usesKtx2')
+		}
+	})
+
+	it('reads only a list of names as recorded', () => {
+		expect(
+			extensionsUsedFromMetadata({ gltfExtensionsUsed: [1, 'KHR_x'] })
+		).toBeNull()
+		expect(
+			extensionsUsedFromMetadata({ gltfExtensionsUsed: 'KHR_draco' })
+		).toBeNull()
+	})
+})
+
+describe('the loading thumbnail', () => {
+	const thumbnail = SCENE_ASSETS.find(
+		(asset) => asset.name === 'scene-thumbnail.webp'
+	)!
+	const url = (assetId: string) => `/assets/${assetId}`
+
+	it('is servable and referenced once the author shows it', () => {
+		const servable = selectEmbedServableAssets({
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: SCENE_ASSETS,
+			showsLoadingThumbnail: true
+		})
+		expect(isEmbedServableAssetId(thumbnail.id, servable)).toBe(true)
+		expect(
+			buildEmbedAssetRefs(servable, SCENE_ASSETS, url)[thumbnail.id]
+		).toEqual({
+			url: `/assets/${thumbnail.id}`,
+			fileName: 'scene-thumbnail.webp',
+			mimeType: thumbnail.mimeType,
+			byteSize: thumbnail.fileSize
+		})
+	})
+
+	it('stays private while the author has not', () => {
+		const servable = selectEmbedServableAssets({
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets: SCENE_ASSETS
+		})
+		expect(isEmbedServableAssetId(thumbnail.id, servable)).toBe(false)
+		expect(buildEmbedAssetRefs(servable, SCENE_ASSETS, url)).not.toHaveProperty(
+			thumbnail.id
+		)
+	})
+
+	it('is nothing for a scene that has no thumbnail linked', () => {
+		expect(
+			selectEmbedServableAssets({
+				publishedAssetId: PUBLISHED_ASSET_ID,
+				sceneAssets: SCENE_ASSETS.filter((asset) => asset !== thumbnail),
+				showsLoadingThumbnail: true
+			}).thumbnailAssetId
+		).toBeNull()
 	})
 })

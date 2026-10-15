@@ -1,3 +1,5 @@
+import { ExampleScene } from '../../../components/examples/example-scene'
+
 # Your First Model
 
 Open a model in the Publisher, optimize it, and publish it to a page. It runs in your browser: there is nothing to install, and you need an account only when you save.
@@ -45,7 +47,7 @@ STL, FBX and OBJ are converted to glTF on the way in, so what you optimize and p
 
 ## Step 3 - Optimize
 
-The card at the bottom right of the stage shows the scene's size and how long it takes to load on 4G. Click that line to open **Optimize Scene** on the left.
+The card at the bottom right of the stage shows the size the scene publishes at and how long it takes to load on 4G. With GPU-compressed textures on, it says **+ GPU textures** instead of a load time, because those are only encoded when you publish. Click that line to open **Optimize Scene** on the left.
 
 - Pick **Maximum quality**, **Balanced** or **Smallest**, then **Apply Optimizations**.
 - Mesh simplification stays off unless you turn it on under **Advanced controls**.
@@ -57,6 +59,10 @@ The size on the card updates when the pass finishes. Close the panel with the **
 ## Step 4 - Set up the scene
 
 The toolbar on the left opens one panel each for **Environment**, **Shadows**, **Camera**, **Interaction** and **Hotspots**. Changes apply to the viewport as you make them.
+
+The scene below is the camera sample after the Balanced preset, with **Cast shadows** on the Studio preset and **Ground shadow** on. Open it in the Publisher to see those settings in the Shadows panel, and change them.
+
+<ExampleScene id="camera-shadows" />
 
 Want the file rather than a published scene? Open the publish panel (Step 6) and use **Download** to export GLB, glTF, Draco-compressed GLB or USDZ. No account needed.
 

@@ -15,6 +15,10 @@ the installed three.js version. `THREE.DRACOLoader` picks between them.
 * `draco_decoder.wasm` — WebAssembly decoder, compatible with newer browsers and devices.
 * `draco_wasm_wrapper.js` — JavaScript wrapper for the WASM decoder.
 
+These are served with a one-day cache, at the origin and at Cloudflare, under
+names that do not change between versions. After replacing them, purge
+`/draco/*` at the edge so a browser never pairs a new wrapper with an old wasm.
+
 ### Encoder — Draco 1.5.7
 
 Sourced from

@@ -178,6 +178,7 @@ export function resolvePublishedSceneDataContract(
 		meta: payload.meta,
 		gltfJson: null,
 		assetData,
+		assetRefs: payload.assetRefs ?? {},
 		...toSceneSettings(payload)
 	}
 }

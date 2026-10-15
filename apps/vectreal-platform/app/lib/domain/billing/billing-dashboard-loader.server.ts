@@ -1,4 +1,15 @@
-import { count, desc, eq, max, sql, sum } from 'drizzle-orm'
+import {
+	and,
+	count,
+	desc,
+	eq,
+	isNull,
+	max,
+	ne,
+	or,
+	sql,
+	sum
+} from 'drizzle-orm'
 
 import { planChangeAppliesImmediately } from './billing-situation'
 import { getOrgSubscription, getQuotaLimit } from './entitlement-service.server'
@@ -21,6 +32,7 @@ import {
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
+import { SCENE_ASSET_ROLE } from '../scene/scene-asset-roles'
 
 import type {
 	BillingCheckoutOption,
@@ -375,6 +387,9 @@ export async function loadLargestAssets(
  * it free". The org total walks `assets -> folders -> projects` instead and
  * counts each asset exactly once, which is the right answer to the quota
  * question and the wrong one to this.
+ *
+ * A kept original is never loaded, and optimizing cannot shrink it, so it is
+ * left out here and counted only in the org total.
  */
 export async function loadHeaviestScenes(
 	organizationId: string,
@@ -397,7 +412,16 @@ export async function loadHeaviestScenes(
 		.innerJoin(scenes, eq(scenes.id, sceneSettings.sceneId))
 		.innerJoin(assets, eq(assets.id, sceneAssets.assetId))
 		.innerJoin(projects, eq(projects.id, scenes.projectId))
-		.where(eq(projects.organizationId, organizationId))
+		.where(
+			and(
+				eq(projects.organizationId, organizationId),
+				// A link without a role is part of the model, as every reader takes it.
+				or(
+					isNull(sceneAssets.usageType),
+					ne(sceneAssets.usageType, SCENE_ASSET_ROLE.source)
+				)
+			)
+		)
 		.groupBy(
 			scenes.id,
 			scenes.name,

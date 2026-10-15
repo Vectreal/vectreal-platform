@@ -49,11 +49,13 @@ const SceneBakedShadow = ({
 }: SceneBakedShadowProps) => {
 	const map = useTexture(url)
 
+	// Color and opacity are written below on every render, so the material
+	// keeps its uniforms object and only the texture rebuilds it.
 	const uniforms = useMemo(
 		() => ({
 			uMap: { value: map },
-			uColor: { value: new Color(color) },
-			uOpacity: { value: opacity }
+			uColor: { value: new Color() },
+			uOpacity: { value: 1 }
 		}),
 		[map]
 	)

@@ -3,8 +3,9 @@ import { cn } from '@shared/utils'
 import PauseIcon from './assets/pause-icon'
 import PlayIcon from './assets/play-icon'
 import RestartIcon from './assets/restart-icon'
+import { CHROME_BUTTON } from './chrome-classes'
 
-interface AnimationControlsProps {
+export interface AnimationControlsProps {
 	playing: boolean
 	/** True once the program has run to its end without looping. */
 	complete: boolean
@@ -14,9 +15,11 @@ interface AnimationControlsProps {
 }
 
 const controlClasses = {
-	root: 'vctrl-viewer-animation-controls absolute right-0 bottom-0 z-[100] m-2 flex items-center gap-0.5 rounded-full bg-[var(--vctrl-bg)] p-1',
-	button:
-		'flex h-7 w-7 cursor-pointer appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 leading-none text-[var(--vctrl-text)] transition-colors duration-200 hover:bg-[var(--vctrl-hover-bg)] active:bg-[var(--vctrl-active-bg)]',
+	root: 'vctrl-viewer-animation-controls shell-panel flex items-center gap-0.5 p-1',
+	button: cn(
+		CHROME_BUTTON,
+		'flex h-7 w-7 items-center justify-center rounded-full p-0 leading-none'
+	),
 	icon: 'h-3.5 w-3.5'
 } as const
 
@@ -32,8 +35,8 @@ const controlClasses = {
  * Restart is always present because in simultaneous mode there is no other way
  * back to the beginning once a program has run out.
  *
- * Anchored bottom-right: the viewer's own info popover already occupies the
- * bottom-left of the same container.
+ * The bar alone, placed by whoever draws it: the viewer puts it bottom-right,
+ * clear of its info popover, and the Publisher at the foot of its stage.
  */
 const AnimationControls = ({
 	playing,
@@ -49,7 +52,7 @@ const AnimationControls = ({
 	>
 		<button
 			type="button"
-			className={cn(controlClasses.button)}
+			className={controlClasses.button}
 			onClick={onToggle}
 			aria-label={playing ? 'Pause animation' : 'Play animation'}
 		>
@@ -61,7 +64,7 @@ const AnimationControls = ({
 		</button>
 		<button
 			type="button"
-			className={cn(controlClasses.button)}
+			className={controlClasses.button}
 			onClick={onRestart}
 			aria-label="Restart animation"
 			data-complete={complete || undefined}

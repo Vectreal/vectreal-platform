@@ -6,15 +6,15 @@
  * grain is the page hero's, not a blurred glow, so onboarding is made of the
  * same material as the pages that led to it.
  */
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense } from 'react'
 
 import { DitherGrain } from '../../components/layout-components/dither-grain'
+import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
 const OnboardingWelcomeScene = lazy(() => import('./onboarding-welcome-client'))
 
 export function WelcomeVisual() {
-	const [mounted, setMounted] = useState(false)
-	useEffect(() => setMounted(true), [])
+	const mounted = useIsClientMounted()
 
 	return (
 		<div className="relative isolate h-full w-full overflow-hidden">

@@ -2,6 +2,7 @@ import { JSONDocument } from '@gltf-transform/core'
 import { ApiResponse } from '@shared/utils'
 import {
 	normalizeCameraSettings,
+	normalizeSceneAnimation,
 	normalizeSceneInteractions,
 	OptimizationReport,
 	Optimizations
@@ -21,6 +22,10 @@ import {
 	resolveDefaultSceneCameraId
 } from '../scene-camera'
 import { normalizePresentationSettings } from '../scene-presentation'
+import {
+	buildSceneThumbnailUrl,
+	thumbnailAssetIdFromUrl
+} from '../scene-thumbnail-url'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -140,11 +145,6 @@ export class SceneSettingsParser {
 				if (publishedAssetId instanceof Response) {
 					return publishedAssetId
 				}
-				const currentSceneBytes = this.parseCurrentSceneBytes(requestData)
-				if (currentSceneBytes instanceof Response) {
-					return currentSceneBytes
-				}
-
 				return {
 					action,
 					requestId,
@@ -154,8 +154,7 @@ export class SceneSettingsParser {
 					targetFolderId: undefined,
 					settings: undefined,
 					gltfJson: undefined,
-					publishedAssetId,
-					currentSceneBytes
+					publishedAssetId
 				}
 			}
 
@@ -191,11 +190,6 @@ export class SceneSettingsParser {
 				return initialSceneBytes
 			}
 
-			const currentSceneBytes = this.parseCurrentSceneBytes(requestData)
-			if (currentSceneBytes instanceof Response) {
-				return currentSceneBytes
-			}
-
 			const meta = this.parseSceneMeta(requestData)
 			if (meta instanceof Response) {
 				return meta
@@ -207,6 +201,23 @@ export class SceneSettingsParser {
 					return sceneAssetIds
 				}
 
+				const sourceAssetId = this.parseSourceAssetId(
+					requestData,
+					sceneAssetIds
+				)
+				if (sourceAssetId instanceof Response) {
+					return sourceAssetId
+				}
+
+				const thumbnailUrl = this.parseThumbnailUrl(
+					meta.thumbnailUrl,
+					sceneId,
+					sceneAssetIds
+				)
+				if (thumbnailUrl instanceof Response) {
+					return thumbnailUrl
+				}
+
 				return {
 					action,
 					requestId,
@@ -214,14 +225,14 @@ export class SceneSettingsParser {
 					sceneId,
 					targetProjectId,
 					targetFolderId,
-					meta,
+					meta: { ...meta, thumbnailUrl },
 					settings,
 					sceneAssetIds,
+					sourceAssetId,
 					gltfJson: undefined,
 					optimizationReport: optimizationReport || undefined,
 					optimizationSettings: optimizationSettings || undefined,
-					initialSceneBytes,
-					currentSceneBytes
+					initialSceneBytes
 				}
 			}
 
@@ -241,8 +252,7 @@ export class SceneSettingsParser {
 				gltfJson: gltfJsonData || undefined,
 				optimizationReport: optimizationReport || undefined,
 				optimizationSettings: optimizationSettings || undefined,
-				initialSceneBytes,
-				currentSceneBytes
+				initialSceneBytes
 			}
 		} catch (error) {
 			console.warn('Failed to parse scene settings request:', error)
@@ -338,6 +348,17 @@ export class SceneSettingsParser {
 			)
 		}
 
+		let normalizedAnimation: SceneSettings['animation']
+		try {
+			normalizedAnimation = normalizeSceneAnimation(sceneSettings.animation)
+		} catch (error) {
+			return ApiResponse.badRequest(
+				error instanceof Error
+					? error.message
+					: 'Invalid scene animation configuration'
+			)
+		}
+
 		const normalizedHotspots = this.normalizeHotspots(
 			sceneSettings.hotspots,
 			normalizedCamera?.cameras ?? []
@@ -348,6 +369,7 @@ export class SceneSettingsParser {
 
 		return {
 			...sceneSettings,
+			animation: normalizedAnimation,
 			camera: normalizedCamera,
 			interactions: normalizedInteractions,
 			hotspots: normalizedHotspots,
@@ -375,6 +397,15 @@ export class SceneSettingsParser {
 			if (normalizedTransition instanceof Response) {
 				return normalizedTransition
 			}
+		}
+
+		// The viewer hides its switcher only for a literal `false`, so anything
+		// else that is not a boolean would read as "shown" and drop the setting.
+		if (
+			camera.showControls !== undefined &&
+			typeof camera.showControls !== 'boolean'
+		) {
+			return ApiResponse.badRequest('camera.showControls must be a boolean')
 		}
 
 		const normalizedCameras: CameraEntry[] = []
@@ -936,6 +967,64 @@ export class SceneSettingsParser {
 		return normalizedIds
 	}
 
+	/**
+	 * The kept original, optional. It is linked under its own role, so it must
+	 * not also arrive as one of the model's assets: one asset cannot be linked
+	 * twice to one scene, and it would be served as part of the model.
+	 */
+	private static parseSourceAssetId(
+		requestData: Record<string, unknown>,
+		sceneAssetIds: string[]
+	): string | undefined | Response {
+		const raw = requestData.sourceAssetId
+		if (raw === undefined || raw === null || raw === '') return undefined
+
+		if (typeof raw !== 'string' || !UUID_REGEX.test(raw.trim())) {
+			return ApiResponse.badRequest('sourceAssetId must be a valid UUID')
+		}
+
+		const sourceAssetId = raw.trim()
+		if (sceneAssetIds.includes(sourceAssetId)) {
+			return ApiResponse.badRequest(
+				'sourceAssetId must not also be one of sceneAssetIds'
+			)
+		}
+
+		return sourceAssetId
+	}
+
+	/**
+	 * The thumbnail a commit stores in `scenes.thumbnail_url`.
+	 *
+	 * Empty means none. Anything else must be this scene's thumbnail route for
+	 * an asset the same commit links, which the save then checks belongs to the
+	 * scene's project. Stored unexamined, the column could name any asset id,
+	 * and the GC counts every asset it names as in use.
+	 */
+	private static parseThumbnailUrl(
+		raw: string,
+		sceneId: string | undefined,
+		sceneAssetIds: string[]
+	): string | Response {
+		const thumbnailUrl = raw.trim()
+		if (!thumbnailUrl) return ''
+
+		const assetId = thumbnailAssetIdFromUrl(thumbnailUrl)
+		const isLinkedThumbnail =
+			sceneId !== undefined &&
+			assetId !== null &&
+			sceneAssetIds.includes(assetId) &&
+			thumbnailUrl === buildSceneThumbnailUrl(sceneId, assetId)
+
+		if (!isLinkedThumbnail) {
+			return ApiResponse.badRequest(
+				"meta.thumbnailUrl must be this scene's thumbnail for an asset the save links"
+			)
+		}
+
+		return thumbnailUrl
+	}
+
 	private static parsePublishedAssetId(
 		requestData: Record<string, unknown>
 	): string | Response {
@@ -954,32 +1043,6 @@ export class SceneSettingsParser {
 		}
 
 		return publishedAssetId
-	}
-
-	private static parseCurrentSceneBytes(
-		requestData: Record<string, unknown>
-	): number | undefined | Response {
-		const rawCurrentSceneBytes =
-			requestData.currentSceneBytes ?? requestData.publishedBytes
-
-		if (rawCurrentSceneBytes == null) {
-			return undefined
-		}
-
-		const parsedValue =
-			typeof rawCurrentSceneBytes === 'number'
-				? rawCurrentSceneBytes
-				: typeof rawCurrentSceneBytes === 'string'
-					? Number(rawCurrentSceneBytes)
-					: NaN
-
-		if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-			return ApiResponse.badRequest(
-				'currentSceneBytes must be a non-negative number'
-			)
-		}
-
-		return Math.round(parsedValue)
 	}
 
 	private static parseInitialSceneBytes(

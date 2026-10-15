@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
+import { markHeroSettled } from '../stage/hero-settled'
 
 import type { HOME_PAGE_COPY } from '../../../constants/product-copy'
 
@@ -30,7 +31,7 @@ export interface HeroState {
 	canHandOff: boolean
 }
 
-export const HERO_INITIAL_STATE: HeroState = {
+const HERO_INITIAL_STATE: HeroState = {
 	status: 'loading',
 	busy: true,
 	readout: {
@@ -84,4 +85,16 @@ export function useHeroState<T>(
 		() => select(store.get()),
 		() => select(HERO_INITIAL_STATE)
 	)
+}
+
+/**
+ * The stage could not run, or stopped partway, so the poster stands and the
+ * readout stops waiting: the poster inked whole, not wherever the download
+ * stopped, because it is drawn from the file the readout names. The hero is
+ * done with the GPU either way, so the page's other stages stop waiting too.
+ */
+export function fallBackToPoster(store: HeroStore, frame: HTMLElement | null) {
+	frame?.style.setProperty('--plot', '1')
+	store.set({ status: 'drawn', busy: false, shownBytes: HERO_MODEL.bytes })
+	markHeroSettled()
 }

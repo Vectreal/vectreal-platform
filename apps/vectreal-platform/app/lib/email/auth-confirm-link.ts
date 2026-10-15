@@ -18,7 +18,7 @@
 
 const AUTH_CONFIRM_PATH = '/auth/confirm'
 
-export function resolveNextPath(redirectTo: string | undefined): string | null {
+function resolveNextPath(redirectTo: string | undefined): string | null {
 	if (!redirectTo) return null
 	try {
 		const parsed = new URL(redirectTo)

@@ -25,7 +25,7 @@ export interface UpgradeModalState {
 	actionAttempted?: string
 }
 
-export const DEFAULT_UPGRADE_MODAL_STATE: UpgradeModalState = {
+const DEFAULT_UPGRADE_MODAL_STATE: UpgradeModalState = {
 	open: false,
 	reason: 'quota_exceeded',
 	message: 'You have reached your plan limit.'
@@ -39,10 +39,4 @@ export function buildUpgradeModalState(
 	overrides: Partial<Omit<UpgradeModalState, 'open'>>
 ): UpgradeModalState {
 	return { ...DEFAULT_UPGRADE_MODAL_STATE, open: true, ...overrides }
-}
-
-export function closeUpgradeModalState(
-	state: UpgradeModalState
-): UpgradeModalState {
-	return { ...state, open: false }
 }

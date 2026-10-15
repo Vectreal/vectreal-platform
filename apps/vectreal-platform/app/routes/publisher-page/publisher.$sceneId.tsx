@@ -1,16 +1,23 @@
+import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import AnimationPlaybackBar from '../../components/publisher/animation-playback-bar'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
 import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
+import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
+import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import {
+	isPreviewModeAtom,
+	openHotspotInHotspotToolAtom,
 	sceneMetaAtom,
 	openComposeToolAtom
 } from '../../lib/stores/publisher-config-store'
+import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
 import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
@@ -61,13 +68,20 @@ const SHADOW_LIGHT_COMMIT_DEBOUNCE_MS = 80
 const PublisherPage = () => {
 	const loadedModel = useModelContext()
 	const { file } = loadedModel
+	// Here rather than in the Animation tool, so a saved config is matched to
+	// the model's clips whether or not that tool is ever opened.
+	useAnimationReconciliation()
 	// An optimization pass swaps the rendered object but keeps the load, so the
 	// viewer keeps the camera and framing where the user left them.
 	const modelKey =
 		loadedModel.status === 'ready' ? loadedModel.loadId : undefined
+	// A held comparison only changes what is drawn: the camera, framing,
+	// shadows, animation and hotspots keep following the loaded model.
+	const comparedModel = useAtomValue(comparedModelAtom)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const setShadows = useSetAtom(shadowsAtom)
 	const {
+		animation,
 		bounds,
 		camera,
 		controls,
@@ -113,6 +127,8 @@ const PublisherPage = () => {
 	// The tool whose panel is open, not the one merely selected. Every in-scene
 	// affordance below scopes to it, so no tool's handles outlive its drawer.
 	const openComposeTool = useAtomValue(openComposeToolAtom)
+	const isPreviewMode = useAtomValue(isPreviewModeAtom)
+	const openHotspotInHotspotTool = useSetAtom(openHotspotInHotspotToolAtom)
 	// The in-scene light handle only belongs to the shadow tool, so show it only
 	// while that tool's panel is open (and shadows are on).
 	const isShadowToolActive =
@@ -122,6 +138,7 @@ const PublisherPage = () => {
 		'Scene thumbnail preview'
 	)
 	const {
+		commandExecutor,
 		registerSceneScreenshotCapture,
 		registerSceneCameraSnapshotCapture,
 		registerShadowBakeCapture,
@@ -151,10 +168,24 @@ const PublisherPage = () => {
 	 * and returns before animating or re-emitting. `selectedCameraIdAtom` is not
 	 * part of `sceneViewerSettingsAtom`, so it also cannot mark the scene dirty.
 	 */
+	// Whether the viewer is playing, as it reports it. Drives the stage's own
+	// playback bar, which sends commands but cannot know the outcome itself:
+	// a sequence can run out, and the runtime resets when animation is off.
+	const [animationStatus, setAnimationStatus] = useState({
+		playing: false,
+		complete: false
+	})
+
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
 			if (event.type === 'camera_changed' && event.cameraId) {
 				setSelectedCameraId(event.cameraId)
+			}
+			if (event.type === 'animation_state_changed') {
+				setAnimationStatus({
+					playing: event.playing,
+					complete: event.complete
+				})
 			}
 			captureOpeningView(event)
 		},
@@ -162,19 +193,29 @@ const PublisherPage = () => {
 	)
 
 	/**
-	 * Selection is offered only while the hotspot tool's panel is open, and
-	 * passing it is exactly what makes a marker select rather than fly its camera.
-	 * Outside the tool the publisher wants the visitor's behaviour - a click
-	 * activates the linked camera - so it passes nothing at all.
+	 * In the editor a marker is always picked up for editing, never flown to as
+	 * a visitor would: inside the Hotspot tool a click toggles the selection,
+	 * and outside it a click opens the tool on that hotspot. Neither moves the
+	 * view: placing a marker writes its camera, and standing on that camera
+	 * would jerk the view with every placement.
+	 *
+	 * Preview passes nothing, which is exactly what gives a marker the
+	 * visitor's behavior there - a click flies its camera, and the viewer's own
+	 * way back leads out.
 	 */
-	const handleHotspotSelect = useMemo(
-		() =>
-			openComposeTool === 'hotspots'
-				? (id: string) =>
-						setActiveHotspotId((previous) => (previous === id ? null : id))
-				: undefined,
-		[openComposeTool, setActiveHotspotId]
-	)
+	const handleHotspotSelect = useMemo(() => {
+		if (isPreviewMode) return undefined
+		if (openComposeTool === 'hotspots') {
+			return (id: string) =>
+				setActiveHotspotId((previous) => (previous === id ? null : id))
+		}
+		return openHotspotInHotspotTool
+	}, [
+		isPreviewMode,
+		openComposeTool,
+		openHotspotInHotspotTool,
+		setActiveHotspotId
+	])
 
 	// Memoized: a fresh object here re-creates the viewer's screenshot capture on
 	// every render, which would de-register it for the frame a save runs in.
@@ -197,6 +238,15 @@ const PublisherPage = () => {
 				<ClientVectrealViewer
 					model={file?.model}
 					modelKey={modelKey}
+					displayedModel={comparedModel?.model}
+					animations={file?.animations}
+					animationOptions={animation}
+					/*
+					  The built-in controls are the published scene's, set by the
+					  author's "Visitor controls" choice, so they show in preview. The
+					  editor draws its own bar below, clear of the publish card.
+					*/
+					showAnimationControls={isPreviewMode}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
 					envOptions={environment}
@@ -223,6 +273,18 @@ const PublisherPage = () => {
 						openComposeTool === 'hotspots' ? activeHotspotId : null
 					}
 					onHotspotSelect={handleHotspotSelect}
+					/*
+					  A visitor's way back from a hotspot's camera, so only where the
+					  author is looking as a visitor. In the editor the way back is
+					  leaving a hotspot camera's view in the Camera tool.
+					*/
+					showSceneViewReturn={isPreviewMode}
+					/*
+					  The visitor's camera switcher, so preview shows what ships. The
+					  editor switches cameras in the Camera tool, and the selection
+					  follows the viewer either way through `camera_changed` above.
+					*/
+					showCameraControls={isPreviewMode}
 					onHotspotPositionSetterReady={registerHotspotPositionSetter}
 					onShadowLightChange={handleShadowLightChange}
 					normalizationOptions={normalization}
@@ -238,6 +300,42 @@ const PublisherPage = () => {
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
+				<AnimationPlaybackBar
+					visible={
+						!isPreviewMode &&
+						!comparedModel &&
+						Boolean(animation?.enabled) &&
+						(file?.animations?.length ?? 0) > 0
+					}
+					playing={animationStatus.playing}
+					complete={animationStatus.complete}
+					onToggle={() =>
+						commandExecutor.current?.execute({
+							type: 'set_animation_playing',
+							playing: !animationStatus.playing
+						})
+					}
+					onRestart={() =>
+						commandExecutor.current?.execute({ type: 'restart_animation' })
+					}
+				/>
+				{comparedModel && (
+					<div
+						className={cn(
+							'pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3',
+							PUBLISHER_LAYER.compareLabel
+						)}
+					>
+						<p
+							role="status"
+							className="ds-overlay rounded-full px-3 py-1 text-xs font-medium"
+						>
+							{comparedModel.isOriginal
+								? 'Showing the original'
+								: 'Showing the saved version'}
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	)

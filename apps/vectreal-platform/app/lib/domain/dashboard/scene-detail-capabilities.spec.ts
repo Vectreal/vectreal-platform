@@ -1,5 +1,5 @@
 import { DASHBOARD_OPERATION_ROLES } from './dashboard-operations'
-import { canDeleteScene } from './scene-detail-capabilities'
+import { canDeleteScene, canUpdateScene } from './scene-detail-capabilities'
 
 import type { MembershipRole } from './dashboard-operations'
 
@@ -37,5 +37,24 @@ describe('canDeleteScene', () => {
 		  on every surface an owner ever sees.
 		*/
 		expect(canDeleteScene(null)).toBe(false)
+	})
+})
+
+describe('canUpdateScene', () => {
+	it('answers with the permission table rather than a rule of its own', () => {
+		for (const role of ROLES) {
+			expect(canUpdateScene({ role })).toBe(
+				DASHBOARD_OPERATION_ROLES['scene:update'].includes(role)
+			)
+		}
+	})
+
+	it('names scene:update, which a member holds and scene:delete does not', () => {
+		expect(canUpdateScene({ role: 'member' })).toBe(true)
+		expect(DASHBOARD_OPERATION_ROLES['scene:delete']).not.toContain('member')
+	})
+
+	it('refuses an actor with no membership at all', () => {
+		expect(canUpdateScene(null)).toBe(false)
 	})
 })

@@ -180,6 +180,63 @@ function completeSimultaneous(
 }
 
 /**
+ * Moves one clip to `time`, first making it a running action.
+ *
+ * The mixer only poses the model from actions that are playing, so setting the
+ * time of one that is not changes nothing on screen. Two programs leave the
+ * target in that state: one never started (autoplay off), and a sequence parked
+ * on a different clip. A sequence therefore jumps to the target, as a scrub on
+ * it means "show me this clip"; a program that never started starts. Either
+ * way it keeps playing only if it already was, and play afterwards continues
+ * from the scrubbed pose.
+ */
+function seekClip(
+	state: PlaybackState,
+	clipId: string,
+	time: number
+): PlaybackTransition {
+	const index = state.clips.findIndex((clip) => clip.clipId === clipId)
+	if (index < 0) return { state, effects: [] }
+
+	const seek: PlaybackEffect = { type: 'seek', clipId, time }
+	const isRunning =
+		state.hasStarted &&
+		(state.mode === 'simultaneous' || state.activeIndex === index)
+	if (isRunning) {
+		// A finished program holds its closing pose, and play on a finished one
+		// starts over. After a scrub it is no longer at its end, so play has to
+		// carry on from the pose the author picked.
+		return {
+			state: state.isComplete
+				? { ...state, isComplete: false, completed: [] }
+				: state,
+			effects: [seek]
+		}
+	}
+
+	const started =
+		state.mode === 'sequence'
+			? [state.clips[index] as PlaybackClip]
+			: state.clips
+
+	return {
+		state: {
+			...state,
+			activeIndex: state.mode === 'sequence' ? index : -1,
+			completed: [],
+			isComplete: false,
+			hasStarted: true
+		},
+		effects: [
+			{ type: 'stop_all' },
+			...started.map((clip) => ({ type: 'start' as const, clip })),
+			...(state.isPlaying ? [] : [{ type: 'pause_all' as const }]),
+			seek
+		]
+	}
+}
+
+/**
  * The whole playback program, as a pure reducer.
  *
  * Kept free of three so the sequencing rules can be tested without a WebGL
@@ -294,10 +351,7 @@ export function reducePlayback(
 		}
 
 		case 'seek_clip':
-			return {
-				state,
-				effects: [{ type: 'seek', clipId: action.clipId, time: action.time }]
-			}
+			return seekClip(state, action.clipId, action.time)
 
 		default:
 			return { state, effects: [] }

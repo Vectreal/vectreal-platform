@@ -25,6 +25,7 @@ import {
 	sceneMetaInitialState
 } from '../../lib/stores/publisher-config-store'
 import {
+	keptOriginalAtom,
 	optimizationAtom,
 	optimizationRuntimeAtom,
 	optimizationRuntimeInitialState
@@ -77,6 +78,7 @@ export function useSceneSource({
 	const setBakedShadowSource = useSetAtom(bakedShadowSourceAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
+	const setKeptOriginal = useSetAtom(keptOriginalAtom)
 	const { reset: resetModel } = model
 	// Keyed on the URL, not on the manifest. Leaving a scene is something the
 	// user did; a manifest that stops arriving is a session going stale, and
@@ -118,6 +120,14 @@ export function useSceneSource({
 	const manifestRef = useRef(sceneManifest)
 	manifestRef.current = sceneManifest
 
+	// The first save navigates /publisher -> /publisher/<newId> while the model
+	// that produced the scene is already on screen. Fetching and parsing it back
+	// would tear down the viewer to rebuild what it is showing.
+	const isJustSavedScene =
+		Boolean(openSceneId) && openSceneId === lastSavedSceneId
+	const isJustSavedSceneRef = useRef(isJustSavedScene)
+	isJustSavedSceneRef.current = isJustSavedScene
+
 	// Saved state, applied from the manifest the route already fetched.
 	useEffect(() => {
 		const manifest = manifestRef.current
@@ -141,22 +151,28 @@ export function useSceneSource({
 			setOptimizationState,
 			setOptimizationRuntime,
 			optimizationRuntimeInitialState,
-			defaultOptimizations: optimizationPresets[DEFAULT_PRESET_ID]
+			defaultOptimizations: optimizationPresets[DEFAULT_PRESET_ID],
+			isSourceLoaded: isJustSavedSceneRef.current
+		})
+		// The save that just made this scene recorded what it kept, and the
+		// optimizer already holds that original: nothing to fetch back.
+		if (isJustSavedSceneRef.current) return
+		// Kept by default; fetched when the optimization drawer opens.
+		setKeptOriginal({
+			keep: true,
+			stored: manifest.source ?? null,
+			saved: Boolean(manifest.source),
+			unreadable: false
 		})
 	}, [
 		applySceneSettings,
 		savedSceneKey,
 		setLastSavedSceneMeta,
 		setOptimizationRuntime,
+		setKeptOriginal,
 		setOptimizationState,
 		setSceneMeta
 	])
-
-	// The first save navigates /publisher -> /publisher/<newId> while the model
-	// that produced the scene is already on screen. Fetching and parsing it back
-	// would tear down the viewer to rebuild what it is showing.
-	const isJustSavedScene =
-		Boolean(openSceneId) && openSceneId === lastSavedSceneId
 
 	const source = useMemo<ModelSource | null>(() => {
 		if (!openSceneId || !sceneManifest) return null
@@ -177,10 +193,9 @@ export function useSceneSource({
 			// The persisted shadow bake is inlined in the scene's own assets, so it
 			// only becomes available once the loader has resolved them.
 			setBakedShadowSource(
-				resolveBakedShadowSource(
-					state.sceneData?.shadows,
-					state.sceneData?.assetData
-				) ?? null
+				resolveBakedShadowSource(state.sceneData?.shadows, {
+					assetData: state.sceneData?.assetData
+				}) ?? null
 			)
 
 			toast.success(

@@ -25,7 +25,8 @@ import {
 	type NormalsOptions,
 	type QuantizeOptions,
 	type SimplifyOptions,
-	type TextureCompressOptions
+	type TextureCompressOptions,
+	TextureCompressionError
 } from '@vctrl/core/model-optimizer'
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { Object3D } from 'three'
@@ -138,17 +139,17 @@ const useOptimizeModel = () => {
 		async (sceneData: ServerSceneData): Promise<void> => {
 			dispatch({ type: 'LOAD_START' })
 
-			// A scene loaded from a published GLB carries no editor glTF document.
-			// The optimizer works on that document, so there is nothing to ingest -
-			// and the casts below would otherwise turn null into an opaque failure
-			// deep inside glTF-Transform.
-			if (!sceneData.gltfJson) {
-				throw new Error(
-					'Cannot optimize a scene loaded from a published GLB: it has no glTF document.'
-				)
-			}
-
 			try {
+				// A scene loaded from a published GLB carries no editor glTF
+				// document. The optimizer works on that document, so there is
+				// nothing to ingest - and the casts below would otherwise turn null
+				// into an opaque failure deep inside glTF-Transform.
+				if (!sceneData.gltfJson) {
+					throw new Error(
+						'Cannot optimize a scene loaded from a published GLB: it has no glTF document.'
+					)
+				}
+
 				const optimizer = optimizerRef.current
 
 				// Build a lookup from asset fileName (and its variants) → asset entry,
@@ -234,14 +235,12 @@ const useOptimizeModel = () => {
 			try {
 				// Explicit rather than inferred from `meta`: this is also the
 				// fresh-model load path, where re-deriving the baseline is correct.
-				const baseline = options?.preserveBaseline
-					? optimizerRef.current.getBaseline()
-					: null
-
-				await optimizerRef.current.loadFromBuffer(buffer)
-
-				if (baseline) {
-					optimizerRef.current.setBaseline(baseline)
+				// A derivation keeps the baseline and is dropped by the core if
+				// another model was loaded while it was parsed.
+				if (options?.preserveBaseline) {
+					await optimizerRef.current.replaceDocument(buffer)
+				} else {
+					await optimizerRef.current.loadFromBuffer(buffer)
 				}
 
 				// Always written, never conditionally: this optimizer instance is
@@ -261,6 +260,55 @@ const useOptimizeModel = () => {
 				throw err
 			}
 		},
+		[]
+	)
+
+	/**
+	 * Puts the model back exactly as it was loaded, dropping every optimization
+	 * since. Start each pass here and its result depends only on the original
+	 * and that pass's settings, never on what ran before it.
+	 */
+	const restoreSource = useCallback(async (): Promise<void> => {
+		dispatch({ type: 'LOAD_START' })
+		try {
+			await optimizerRef.current.restoreSource()
+			const report = await optimizerRef.current.getReport()
+			dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+		} catch (err) {
+			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+			throw err
+		}
+	}, [])
+
+	/**
+	 * States the original of a model that was loaded already optimized, such as
+	 * a restored draft, so later passes start from it. The document on screen
+	 * is unchanged; the report's baseline moves to the original.
+	 */
+	const setSource = useCallback(async (bytes: Uint8Array): Promise<void> => {
+		// Not ready while the source is replaced, like every other operation
+		// here, so no pass can start from the source being retired.
+		dispatch({ type: 'LOAD_START' })
+		try {
+			await optimizerRef.current.setSource(bytes)
+		} catch (err) {
+			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+			throw err
+		}
+		// Rejects only if the source was not stated: once it was, a report
+		// that fails says nothing about the source, and a caller relabeling
+		// it as not stated would describe a source the optimizer does not hold.
+		try {
+			const report = await optimizerRef.current.getReport()
+			dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+		} catch (err) {
+			dispatch({ type: 'LOAD_ERROR', payload: err as Error })
+		}
+	}, [])
+
+	/** The model as it was loaded, as GLB bytes, or null before a load. */
+	const getSource = useCallback(
+		(): Uint8Array | null => optimizerRef.current.getBaseline().source,
 		[]
 	)
 
@@ -291,7 +339,8 @@ const useOptimizeModel = () => {
 	 * @param options - Configuration options for simplification
 	 * @param options.ratio - Target ratio of triangles to keep (0.0-1.0). Default: 0.5
 	 * @param options.error - Maximum allowed error threshold. Default: 0.001
-	 * @returns Promise that resolves when simplification is complete
+	 * @returns Promise that resolves when simplification is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const simplifyOptimization = useCallback(
 		async (options?: SimplifyOptions): Promise<void> => {
@@ -314,6 +363,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Simplification failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -324,7 +374,8 @@ const useOptimizeModel = () => {
 	 * Removes redundant vertices, primitives, and other duplicate data to reduce file size.
 	 *
 	 * @param options - Configuration options for deduplication
-	 * @returns Promise that resolves when deduplication is complete
+	 * @returns Promise that resolves when deduplication is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const dedupOptimization = useCallback(
 		async (options?: DedupOptions): Promise<void> => {
@@ -345,6 +396,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Deduplication failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -357,7 +409,8 @@ const useOptimizeModel = () => {
 	 * @param options - Per-attribute bit depths: `quantizePosition`, `quantizeNormal`,
 	 * `quantizeColor`, `quantizeTexcoord`. Defaults come from glTF-Transform `quantize()`
 	 * (position 14, normal 10, color 8, texcoord 12).
-	 * @returns Promise that resolves when quantization is complete
+	 * @returns Promise that resolves when quantization is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const quantizeOptimization = useCallback(
 		async (options?: QuantizeOptions): Promise<void> => {
@@ -378,6 +431,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Quantization failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -388,7 +442,8 @@ const useOptimizeModel = () => {
 	 * Can remove, generate, or clean up normal data to improve rendering quality or reduce file size.
 	 *
 	 * @param options - Configuration options for normal optimization
-	 * @returns Promise that resolves when normal optimization is complete
+	 * @returns Promise that resolves when normal optimization is complete, or at once when no model is loaded
+	 * @throws The pass's own error when it fails
 	 */
 	const normalsOptimization = useCallback(
 		async (options?: NormalsOptions): Promise<void> => {
@@ -409,6 +464,7 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Normals optimization failed:', err)
+				throw err
 			}
 		},
 		[]
@@ -418,11 +474,17 @@ const useOptimizeModel = () => {
 	 * Compresses textures in the model using browser-native OffscreenCanvas encoding.
 	 * Significantly reduces file size while maintaining visual quality. No server call is made.
 	 *
+	 * Rejects when compression fails. A partial `TextureCompressionError`
+	 * (`isPartial`) means the textures that did compress were committed, and
+	 * `report` already describes them; the rest are as they were.
+	 *
 	 * @param options - Configuration options for texture compression
 	 * @param options.targetFormat - Target compression format ('webp' | 'jpeg' | 'png')
 	 * @param options.quality - Compression quality (0-100)
 	 * @returns Promise that resolves when texture compression is complete
-	 * @throws Error if OffscreenCanvas is unavailable or encoding fails
+	 * @throws Error if OffscreenCanvas is unavailable, the browser cannot write
+	 * `targetFormat` (Safari cannot write WebP; ask `canEncodeImage` first), or
+	 * encoding fails
 	 */
 	const texturesOptimization = useCallback(
 		async (options?: TextureCompressOptions): Promise<void> => {
@@ -440,6 +502,17 @@ const useOptimizeModel = () => {
 				})
 			} catch (err) {
 				console.error('Texture optimization failed:', err)
+				// A partial failure committed the textures that compressed, so the
+				// report has to describe them. Its own failure must not replace
+				// the error the caller is owed.
+				if (err instanceof TextureCompressionError && err.isPartial) {
+					try {
+						const report = await optimizerRef.current.getReport()
+						dispatch({ type: 'LOAD_SUCCESS', payload: { report } })
+					} catch {
+						// The pass's own error, rethrown below, is the one to report.
+					}
+				}
 				// Re-throw to allow caller to handle compression failures
 				throw err
 			}
@@ -452,18 +525,11 @@ const useOptimizeModel = () => {
 	 * The model is exported in glTF binary (.glb) format.
 	 *
 	 * @returns Promise that resolves with the model binary, or null if no model is loaded
+	 * @throws The export's own error when a loaded model cannot be written
 	 */
 	const getModel = useCallback(async (): Promise<Uint8Array | null> => {
-		// Guard: return null if no model is currently loaded
 		if (!optimizerRef.current.hasModel()) return null
-
-		try {
-			// Export model as Uint8Array binary data
-			return await optimizerRef.current.export()
-		} catch (err) {
-			console.error('Error getting model binary:', err)
-			return null
-		}
+		return optimizerRef.current.export()
 	}, [])
 
 	const getDocument = useCallback(() => {
@@ -507,10 +573,17 @@ const useOptimizeModel = () => {
 
 		loadFromGLTFWithAssets,
 
+		restoreSource,
+
+		setSource,
+
+		getSource,
+
 		/**
 		 * Retrieves the current model as a binary Uint8Array in glTF (.glb) format.
 		 *
 		 * @returns Promise that resolves with the model binary or null if no model is loaded
+		 * @throws The export's own error when a loaded model cannot be written
 		 */
 		getModel,
 
@@ -527,7 +600,9 @@ const useOptimizeModel = () => {
 		reset,
 
 		/**
-		 * Error object if any optimization operation failed, otherwise null.
+		 * The error from the last load, restore or source change that failed, or
+		 * whose report could not be read afterwards; otherwise null. Optimization
+		 * steps report a failure by rejecting, not here.
 		 */
 		error,
 
@@ -553,7 +628,8 @@ const useOptimizeModel = () => {
 		 * Maintains visual quality while improving performance.
 		 *
 		 * @param options - Simplification options (ratio, error threshold)
-		 * @returns Promise that resolves when simplification is complete
+		 * @returns Promise that resolves when simplification is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		simplifyOptimization,
 
@@ -562,7 +638,8 @@ const useOptimizeModel = () => {
 		 * Reduces file size without affecting visual appearance.
 		 *
 		 * @param options - Deduplication options
-		 * @returns Promise that resolves when deduplication is complete
+		 * @returns Promise that resolves when deduplication is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		dedupOptimization,
 
@@ -571,7 +648,8 @@ const useOptimizeModel = () => {
 		 * Reduces file size with minimal visual quality loss.
 		 *
 		 * @param options - Quantization options (bit depth)
-		 * @returns Promise that resolves when quantization is complete
+		 * @returns Promise that resolves when quantization is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		quantizeOptimization,
 
@@ -579,17 +657,20 @@ const useOptimizeModel = () => {
 		 * Optimizes normal vectors by removing, generating, or cleaning up normal data.
 		 *
 		 * @param options - Normal optimization options
-		 * @returns Promise that resolves when optimization is complete
+		 * @returns Promise that resolves when optimization is complete, or at once when no model is loaded
+		 * @throws The pass's own error when it fails
 		 */
 		normalsOptimization,
 
 		/**
 		 * Compresses textures using browser-native OffscreenCanvas encoding.
-		 * No server call is made. Works in any modern browser context.
+		 * No server call is made. Writes only formats the browser's canvas can:
+		 * Safari cannot write WebP, which `canEncodeImage` reports.
 		 *
 		 * @param options - Texture compression options (targetFormat, quality, resize)
 		 * @returns Promise that resolves when compression is complete
-		 * @throws Error if OffscreenCanvas is unavailable or encoding fails
+		 * @throws Error if OffscreenCanvas is unavailable, the browser cannot write
+		 * `targetFormat`, or encoding fails
 		 */
 		texturesOptimization
 	}

@@ -39,9 +39,19 @@ export function isEditableEventTarget(target: EventTarget | null): boolean {
  * decision can be tested without a DOM.
  */
 export function resolveChromeKeyAction(
-	event: Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'metaKey'>
+	event: Pick<
+		KeyboardEvent,
+		'key' | 'altKey' | 'ctrlKey' | 'metaKey' | 'defaultPrevented'
+	>
 ): 'exit' | 'toggle' | null {
 	if (event.altKey || event.ctrlKey || event.metaKey) {
+		return null
+	}
+
+	// Something inside the page already answered the key. The viewer claims
+	// Escape to leave a hotspot's camera, and the same press must not also
+	// leave the preview.
+	if (event.defaultPrevented) {
 		return null
 	}
 

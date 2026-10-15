@@ -5,11 +5,12 @@ import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router'
 
 import { CameraDrawing } from './camera-drawing'
-import { StageBoundary } from './hero/stage-boundary'
+import { StageBoundary } from './stage/stage-boundary'
 import {
 	HOME_PAGE_COPY,
 	OPEN_SOURCE_PACKAGES
 } from '../../constants/product-copy'
+import { DitherGrain } from '../layout-components'
 
 const COPY = HOME_PAGE_COPY.openSource
 
@@ -45,7 +46,7 @@ const Name = ({ children }: { children: string }) => (
 	<span className="text-foreground font-medium">{children}</span>
 )
 const Str = ({ children }: { children: string }) => (
-	<span className="text-orange">{children}</span>
+	<span className="text-orange-ink">{children}</span>
 )
 
 /*
@@ -107,9 +108,10 @@ const Result = () => {
 		setState('running')
 	}
 
+	// In full ink on the page's grain, the way the hero draws it: at 40% it read as an empty well rather than a result waiting to run.
 	const drawing = (
-		<div className="text-muted-foreground absolute inset-0 flex items-center justify-center p-10">
-			<CameraDrawing className="w-full max-w-sm opacity-40" />
+		<div className="text-foreground absolute inset-0 flex items-center justify-center p-10">
+			<CameraDrawing className="w-full max-w-sm" />
 		</div>
 	)
 
@@ -118,8 +120,9 @@ const Result = () => {
 			role="region"
 			aria-label={COPY.result.label}
 			// Edge to edge in its half: the window's own corners round it, so it needs no margin or radius of its own.
-			className="ds-sunken relative aspect-16/10 lg:aspect-auto"
+			className="ds-sunken relative isolate aspect-16/10 lg:aspect-auto"
 		>
+			<DitherGrain origin="bottom" />
 			<span className="text-label-xs text-muted-foreground absolute top-4 left-5">
 				{COPY.result.label}
 			</span>
@@ -138,6 +141,7 @@ const Result = () => {
 					<Button
 						type="button"
 						size="sm"
+						variant="brand"
 						onClick={run}
 						className="absolute right-4 bottom-4 rounded-full"
 					>

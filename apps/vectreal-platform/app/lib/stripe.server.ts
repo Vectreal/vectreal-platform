@@ -80,7 +80,7 @@ export function getStripeClient(): Stripe {
 	cachedStripe = new Stripe(secretKey, {
 		// Pin to the API version tested in CI to prevent unexpected surface changes.
 		// Upgrade intentionally and update types when a new API version is adopted.
-		apiVersion: '2026-02-25.clover',
+		apiVersion: '2026-09-30.endive',
 		typescript: true
 	})
 
@@ -90,13 +90,3 @@ export function getStripeClient(): Stripe {
 // ---------------------------------------------------------------------------
 // Mode helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Returns `true` when the Stripe client is operating in test mode
- * (i.e., the secret key starts with `sk_test_`).
- * Useful for conditional logging or test-only guardrails.
- */
-export function isStripeTestMode(): boolean {
-	const key = process.env.STRIPE_SECRET_KEY ?? ''
-	return key.startsWith('sk_test_')
-}

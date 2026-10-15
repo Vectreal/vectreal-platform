@@ -8,7 +8,7 @@ import {
 	SceneAssetListItem
 } from '../scene-asset-list-item'
 
-import type { TextureThumbnailUrls } from '../../../hooks/use-texture-thumbnail-urls'
+import type { TextureThumbnailUrls } from '../../../lib/domain/dashboard/scene-texture-thumbnails'
 import type { SceneAssetSummary } from '../../../types/dashboard'
 
 /** Rows shown before the list asks to be expanded. */
@@ -16,7 +16,7 @@ const COLLAPSED_LIMIT = 6
 
 interface SceneAssetsSectionProps {
 	assets: SceneAssetSummary[]
-	/** A thumbnail URL per image asset. Never the bytes - see `useTextureThumbnailUrls`. */
+	/** A thumbnail URL per image asset. Never the bytes - see `buildTextureThumbnailUrls`. */
 	textureUrls?: TextureThumbnailUrls
 	/** `h2` in the aside, `h3` under the details sheet's own title. */
 	headingLevel?: 'h2' | 'h3'

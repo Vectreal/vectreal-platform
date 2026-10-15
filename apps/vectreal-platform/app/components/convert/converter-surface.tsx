@@ -1,17 +1,14 @@
 import { useModelFileInputs } from '@shared/components/hooks/use-model-file-inputs'
 import { Button } from '@shared/components/ui/button'
-import { Checkbox } from '@shared/components/ui/checkbox'
 import { cn, formatFileSize } from '@shared/utils'
 import { ModelExporter } from '@vctrl/core/model-exporter'
-import { modelFormatForFileName } from '@vctrl/core/model-formats'
-import {
-	useModelContext,
-	type StructuredLoadError
-} from '@vctrl/hooks/use-load-model'
+import { TextureCompressionError } from '@vctrl/core/model-optimizer'
+import { useModelContext } from '@vctrl/hooks/use-load-model'
+import { canEncodeImage } from '@vctrl/hooks/use-optimize-model'
 import fileSaver from 'file-saver'
 import { useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
-import { Download, FolderUp, Loader2 } from 'lucide-react'
+import { Download, Loader2 } from 'lucide-react'
 import { usePostHog } from 'posthog-js/react'
 import {
 	useCallback,
@@ -25,21 +22,31 @@ import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
+import { ConversionOptions } from './conversion-options'
+import { ConversionResult } from './conversion-result'
+import { ConverterEmptyStage } from './converter-empty-stage'
+import {
+	downloadContainer,
+	KEPT_CONVERSIONS,
+	DESTRUCTIVE_OPTIONS,
+	measuredBytes,
+	refusalMessage,
+	type Conversion
+} from './converter-surface.utils'
+import { INGESTED_RECIPE, useStageSource } from './use-stage-source'
 import { usePrepareGltfDocument } from '../../hooks/scene-loader/use-scene-document-export'
 import { useSampleDownload } from '../../hooks/use-sample-download'
 import { useTrackedHeight } from '../../hooks/use-tracked-height'
 import {
 	SOURCES_THAT_ARE_BUNDLES,
 	bundleSourceCopy,
-	sourceAcceptAttribute,
-	type BundleSourceCopy
+	sourceAcceptAttribute
 } from '../../lib/convert/convert-capabilities'
 import {
-	articleFor,
-	CONVERT_OPTIONS,
 	convertOptionsFor,
 	type ConvertOption,
-	type ConvertPair
+	type ConvertPair,
+	USDZ_GLASS_NOTE
 } from '../../lib/convert/convert-pairs'
 import {
 	activeConvertOptions,
@@ -54,162 +61,13 @@ import {
 import { persistPendingSceneDraftOrchestrator } from '../../lib/domain/scene/client/scene-draft-persistence'
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 import { useConsent } from '../consent/consent-context'
-import { DitherGrain } from '../layout-components/dither-grain'
-import { DitherSwap } from '../layout-components/dither-swap'
-import {
-	describeSizeChange,
-	FileSizeComparison
-} from '../layout-components/file-size-comparison'
-import { SampleTiles } from '../layout-components/sample-tiles'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
-import type { LoadOutcome, ModelFile } from '@vctrl/hooks/use-load-model'
+import type { LoadOutcome } from '@vctrl/hooks/use-load-model'
 
 interface Props {
 	pair: ConvertPair
 }
-
-/** What one conversion produced, stamped with the recipe that produced it. */
-interface Conversion {
-	bytes: Uint8Array
-	fileName: string
-}
-
-/**
- * Passes that rewrite the document in place, with no undo.
- *
- * The distinction matters because it decides whether changing an option can be
- * answered from the model already in memory or needs the source read again.
- * `texturesOptimization` is destructive; Draco is not, because
- * `exportDocumentGLBDraco` clones the document and writes the copy.
- */
-const DESTRUCTIVE_OPTIONS: readonly ConvertOption[] = ['webp']
-
-/**
- * The recipe a document satisfies the moment it has been read.
- *
- * `adoptSource` runs only after `load` resolved, so the optimizer holds a
- * document read straight from the source with no destructive pass applied.
- * That is a known state, and saying `null` for it said "unknown" - which
- * `prepare` can never match, so the very first Convert re-read the source,
- * unmounted the viewer and spun for seconds on work already done, on every
- * page including the ones offering no options at all.
- *
- * `dropSource` keeps `null`, because there the document is genuinely gone.
- */
-const INGESTED_RECIPE = convertRecipeKey('doc', [])
-
-/**
- * The container a result arrives in, when that is not the format itself.
- *
- * The button used to name the extension alone, which is the one thing on the
- * page that is not the format the visitor asked for: every glTF page said
- * "Download ZIP" under a "glTF converter" heading, beside "Convert to glTF".
- * Naming the format and, where they differ, the container, is both true at
- * once - and it stays true for a format that is written into an archive later.
- */
-function downloadContainer(fileName: string, target: string): string {
-	const extension = fileName.split('.').pop()?.toLowerCase()
-
-	return extension && extension !== target ? ` (.${extension})` : ''
-}
-
-/**
- * The bytes the conversion actually started from.
- *
- * A bundle is its whole selection - a folder is what the visitor had. A
- * single-file source is not: the drop zone takes every file now, because
- * refusing them silently was worse, so a GLB dropped next to the `.blend` it
- * came from would otherwise be measured against both and report a reduction
- * that never happened.
- */
-function measuredBytes(files: readonly File[]): number {
-	const model = files.find(
-		(file) => modelFormatForFileName(file.name)?.canImport
-	)
-
-	/*
-	  Asked of the model that loaded, not of the page. The drop zone filters
-	  nothing, so an OBJ and its textures load perfectly well on a GLB page - and
-	  keying this on the page's own source excluded the siblings from the
-	  baseline while the conversion very much contained them, reporting a large
-	  increase that never happened.
-	*/
-	const isBundle = model ? modelFormatForFileName(model.name)?.isBundle : false
-	const counted = isBundle || !model ? files : [model]
-
-	return counted.reduce((total, one) => total + one.size, 0)
-}
-
-/**
- * What to tell someone whose file was refused.
- *
- * The loader already names what was wrong and the surface was throwing that
- * away for one sentence about the page's own source format - so dropping two
- * models at once, which the loader reports precisely, read as "Check it is a
- * valid GLB" about a GLB that was perfectly valid. Only the codes that are
- * written for a reader are passed through; the rest keep the sentence, because
- * a parser's own message is not copy.
- */
-function refusalMessage(
-	error: StructuredLoadError | null,
-	pair: ConvertPair,
-	bundleCopy: BundleSourceCopy | null
-): string {
-	switch (error?.code) {
-		case 'unsupported_format':
-			/*
-			  The likeliest refusal here by far, now that the drop zone filters
-			  nothing on purpose. The generic sentence sent someone who dropped a
-			  perfectly good `.3ds` off to check their STL - a file they never
-			  brought - which is the same defect the `multiple_models` case below
-			  was written for.
-			*/
-			return `Nothing in that selection is a format we can read. This page converts ${pair.fromLabel}.`
-
-		case 'multiple_models':
-			/*
-			  "One at a time" is impossible advice on a bundle page, which asks
-			  for a whole folder one line above the stage. There the fix is to
-			  take the extra model out, not to drop fewer files.
-			*/
-			return bundleCopy
-				? 'That folder has more than one model in it. Leave just the one you want converted, with its own files.'
-				: 'That selection has more than one model in it. Drop one at a time.'
-
-		case 'missing_assets':
-			return (
-				bundleCopy?.refusal ??
-				'That model refers to files that did not come with it. Drop the folder it lives in.'
-			)
-
-		case 'gltf_load_failed':
-		case 'binary_load_failed':
-			/*
-			  The file arrived complete and would not parse, which is the one
-			  thing the bundle copy must not be used for: it asks for the sibling
-			  files, and on a glTF page that sentence is handed to someone who
-			  brought the whole folder. Whether a bundle's parts are missing is
-			  `missing_assets`, above.
-			*/
-			return `Check it is a valid ${pair.fromLabel}.`
-
-		default:
-			if (bundleCopy) return bundleCopy.refusal
-
-			/*
-			  "a", not `articleFor`, and this is the rule rather than an exception
-			  to it: an article agrees with the word that follows it, and here
-			  that word is always "valid". Reading the format label instead
-			  produced "an valid FBX" - the same defect as "Drop a STL file here",
-			  reintroduced by its own fix one line along.
-			*/
-			return `Check it is a valid ${pair.fromLabel}.`
-	}
-}
-
-/** How many conversions to keep; `storeConversion` says why it is bounded. */
-const KEPT_CONVERSIONS = 3
 
 /*
   Frames the model the way a product shot would, rather than the way a default
@@ -295,25 +153,20 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	*/
 	const exporterRef = useRef(new ModelExporter())
 
-	/*
-	  The source files are kept, not just their size.
+	const {
+		sourceBytes,
+		conversions,
+		setConversions,
+		stageLoad,
+		stageIngest,
+		appliedKey,
+		appliedNote,
+		adoptSource,
+		dropSource
+	} = useStageSource()
 
-	  `texturesOptimization` rewrites the optimizer's document in place and there
-	  is no undo, so a checkbox that could be ticked but not untick-able would
-	  lie the second time somebody downloaded. Keeping the originals means an
-	  option change can start again from them, which is the only version of this
-	  control that tells the truth.
-	*/
-	/*
-	  What is on the stage, as one value.
-	*/
-	const [source, setSource] = useState<{
-		files: File[]
-		bytes: number
-	} | null>(null)
 	const [selected, setSelected] = useState<ConvertOption[]>([])
 	const [isConverting, setIsConverting] = useState(false)
-	const [conversions, setConversions] = useState<Record<string, Conversion>>({})
 	const [isHandingOff, setIsHandingOff] = useState(false)
 
 	/*
@@ -347,24 +200,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	const refusalCount = useRef(0)
 
 	/*
-	  Whether the model on the stage is still the one this page is about.
-
-	  THIS IS THE LOADER'S CLOCK, NOT A SECOND ONE. `load` resolves with the
-	  `stillCurrent` predicate it already gates its own state writes on, and this
-	  ref just holds the one belonging to whichever load the page adopted. It was
-	  a monotonic counter of our own until the hook could answer the question,
-	  and a counter is what has to be remembered at every site that retires a
-	  load - which is how "Convert another" came to empty the stage while a drop
-	  still in flight put the source back: `reset()` retired the load and nothing
-	  moved the counter.
-
-	  Asked, never cached. A drop can land during a texture re-encode or a GLB
-	  write as easily as during a parse, so the answer is only good at the
-	  instant it is read.
-	*/
-	const stageLoad = useRef<(() => boolean) | null>(null)
-
-	/*
 	  The page being looked at right now, for the benefit of a load that started
 	  on a different one. A refusal earned by a drop the reader has already
 	  navigated away from is not news when they come back.
@@ -381,14 +216,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	const consentRef = useRef(consent)
 	consentRef.current = consent
 
-	/*
-	  Which destructive passes the document in memory has been given. Not state,
-	  because nothing renders from it: it describes the optimizer's document, and
-	  the only question asked of it is whether that document already matches what
-	  is about to be exported.
-	*/
-	const appliedKey = useRef<string | null>(null)
-
 	const {
 		fileInputRef,
 		directoryInputRef,
@@ -397,7 +224,28 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		openDirectoryPicker
 	} = useModelFileInputs((files) => void ingest(files))
 
-	const options = convertOptionsFor(pair)
+	/*
+	  WebP only where this browser can write it. Safari cannot, and its canvas
+	  answers a request for WebP with a PNG rather than an error - so the box
+	  turned the camera sample's 18 MB of JPEG textures into 190 MB of PNG and
+	  took the tab down. The encoder refuses now; offering the box anyway would
+	  promise a pass that can only fail.
+
+	  Asked after mount because the answer lives in the browser. The options
+	  render only once a model is on the stage, long after it has arrived.
+	*/
+	const [canWriteWebp, setCanWriteWebp] = useState(false)
+	useEffect(() => {
+		void canEncodeImage('webp').then(setCanWriteWebp)
+	}, [])
+
+	const options = useMemo(
+		() =>
+			convertOptionsFor(pair).filter(
+				(option) => option !== 'webp' || canWriteWebp
+			),
+		[pair, canWriteWebp]
+	)
 	const bundleCopy = bundleSourceCopy(pair.from)
 	const isBundle = (SOURCES_THAT_ARE_BUNDLES as readonly string[]).includes(
 		pair.from
@@ -432,33 +280,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setRefusal(null)
 	}, [pair.slug])
 
-	/*
-	  Everything that describes the model on the stage, moved in one step.
-	
-	  These four were written and cleared separately in two places each, and the
-	  cost was not tidiness: any path that changed the model without visiting
-	  every clear site left them disagreeing - the stored result of one file
-	  offered as another's, an `appliedKey` claiming a destructive pass on a
-	  document that never had one. One writer means they cannot drift apart.
-	*/
-	const adoptSource = useCallback(
-		(files: File[], bytes: number, stillCurrent: () => boolean) => {
-			setSource({ files, bytes })
-			// Every stored result describes bytes that came from the file replaced.
-			setConversions({})
-			appliedKey.current = INGESTED_RECIPE
-			stageLoad.current = stillCurrent
-		},
-		[]
-	)
-
-	const dropSource = useCallback(() => {
-		setSource(null)
-		setConversions({})
-		appliedKey.current = null
-		stageLoad.current = null
-	}, [])
-
 	const ingest = useCallback(
 		async (files: File[]) => {
 			/*
@@ -484,7 +305,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  The loader publishes as soon as it has parsed, then awaits the
 			  optimizer ingest, so resolving happens one ingest later. Adopting on
 			  the resolved value left a window - seconds, on a large model - where
-			  the viewer and `{file.name}` showed the new model while `source.bytes`,
+			  the viewer and `{file.name}` showed the new model while `sourceBytes`,
 			  the size comparison and a live Download button all still described the
 			  old one. `stillCurrent()` cannot help: inside that window the new load
 			  genuinely is the current one. The two moments had to become one.
@@ -493,22 +314,29 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			  `adoptSource`: the loader calls `onPublish` only for a load that is
 			  still the current one, so a check here could never be false, and the
 			  outer `loaded.stillCurrent()` below already covers the resolved path.
-			  What goes stale is everything after, which is why `state.stillCurrent`
+			  What goes stale is everything after, which is why `state.stillOnScreen`
 			  is handed to `adoptSource` to be recorded as `stageLoad` rather than
 			  read as a boolean here.
 			*/
+			/* Settles with this load, which is once its model is ingested. */
+			let markIngested: () => void = () => undefined
+			const ingested = new Promise<void>((resolve) => {
+				markIngested = resolve
+			})
+
 			let adopted = false
 			const adopt = (state: LoadOutcome) => {
 				adopted = true
 				const referenced = state.file?.sourcePackageBytes ?? 0
 				adoptSource(
-					files,
 					referenced || measuredBytes(files),
-					state.stillCurrent
+					state.stillOnScreen,
+					ingested
 				)
 			}
 
 			const loaded = await load({ kind: 'files', files }, { onPublish: adopt })
+			markIngested()
 			const refused = loaded.status === 'error'
 
 			/*
@@ -519,24 +347,6 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			*/
 			if (loaded.stillCurrent()) {
 				if (refused) {
-					/*
-					  THE MODEL ON THE STAGE SURVIVED THIS, SO ITS CURRENCY HAS TO.
-					  The loader claims a fresh token for every attempt, including
-					  one that fails and deliberately leaves the previous model
-					  rendered - so a refused drop retired the predicate
-					  `adoptSource` recorded for a model that is still on screen.
-					  Every write guarded by it was then dropped in silence: on a
-					  page offering no options `prepare` returns early and never
-					  rewrites it, so Convert spun, finished, filed nothing and
-					  said nothing, for good.
-
-					  Re-arming here rather than teaching `load` to roll its token
-					  back: the failed load *is* the latest event, and its own
-					  `stillCurrent` is what tells the next drop that this one is
-					  stale. Rolling back would take the refusal above with it.
-					*/
-					stageLoad.current = loaded.stillCurrent
-
 					/*
 					  Only where the reader can still see it. A load that outlives
 					  the page it started on has nothing to say to the page they
@@ -596,7 +406,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				)
 			}
 		},
-		[load, pair, bundleCopy, posthog]
+		[load, pair, bundleCopy, posthog, adoptSource]
 	)
 
 	const { getRootProps, getInputProps, isDragActive, rootRef } = useDropzone({
@@ -652,79 +462,118 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	}
 
 	/*
-	  Returns the model to export, having made the document match the ticked
-	  options - reloading from the kept originals when a destructive pass has to
-	  be added or undone. `load` resolves to the terminal state, so the fresh
-	  `file` comes back from there rather than from a closure that is now stale.
+	  Makes the optimizer's document match `options`, then returns it with what
+	  a partial pass left out, for the result to say. Null means the model it
+	  started on is no longer on the stage.
 
-	  The source files are kept for exactly this: `texturesOptimization` rewrites
-	  the document with no undo, so a box that could be ticked but not unticked
-	  would lie the second time somebody downloaded.
+	  A destructive pass is undone by restoring the optimizer's source, the model
+	  as it was loaded, not by reading the file again. The re-read went through
+	  the loader: it unmounted the stage while three.js decoded every texture
+	  again, and claimed a load of its own, which a pass that threw left the page
+	  asking about.
 	*/
-	const prepare = async (): Promise<ModelFile | null> => {
-		const wanted = activeOptions.filter((one) =>
-			DESTRUCTIVE_OPTIONS.includes(one)
-		)
+	const prepare = async (options: readonly ConvertOption[]) => {
+		const startedFrom = stageLoad.current
+		await stageIngest.current
+		const stillOurs = () => startedFrom?.() ?? false
+		if (!stillOurs()) return null
+
+		/*
+		  Read again after a restore or a pass, because either may replace it.
+		  Asked once the ingest has settled, which is when an empty optimizer
+		  stops meaning "not yet" and starts meaning "never": the loader keeps a
+		  model on the stage whose ingest failed, so the page has to ask.
+		*/
+		const heldDocument = () => {
+			const document = optimizer?._getDocument()
+			if (!document) {
+				throw new Error(
+					`This model could not be prepared for conversion to ${pair.toLabel}.`
+				)
+			}
+			return document
+		}
+		const document = heldDocument()
+
+		const wanted = options.filter((one) => DESTRUCTIVE_OPTIONS.includes(one))
 		const wantedKey = convertRecipeKey('doc', wanted)
 
-		if (appliedKey.current === wantedKey) return file ?? null
-		if (!source) return file ?? null
-
-		const state = await load({ kind: 'files', files: source.files })
-
-		/*
-		  A file dropped while this was running replaced the source, so what
-		  came back describes the model that is on its way out. Writing
-		  `appliedKey` for it would tell the page a destructive pass had been
-		  applied to a document that never saw one, and the next Convert would
-		  skip the pass and export untouched textures under a ticked box.
-		*/
-		if (!state.stillCurrent()) return null
-
-		/*
-		  A reload that fails is not a replaced file, and saying so sent the
-		  reader to press Convert again forever. The loader keeps the model on
-		  screen, so this is written for someone looking at it.
-
-		  A LITERAL SENTENCE, NOT `refusalMessage`. Every sentence that function
-		  returns addresses someone who has just brought a file - "Check it is a
-		  valid GLB." arriving alone, unprefixed, about a GLB visibly rendering
-		  on the stage was the result. The re-read happens only to apply or undo
-		  a destructive pass, so that is what this can offer to take back. Adding
-		  a case to `refusalMessage` would make one function answer two
-		  questions, which is the defect rather than the fix.
-		*/
-		if (!state.file) {
-			throw new Error(
-				'That file could not be read again to apply those options. Untick them to download it as it is.'
-			)
+		if (appliedKey.current === wantedKey) {
+			return { document, note: appliedNote.current }
 		}
 
-		if (wanted.includes('webp')) {
+		if (appliedKey.current !== INGESTED_RECIPE) {
+			/*
+			  Unknown until the restore is done. The hook puts the document back
+			  and then reads a report, which can fail after the document is
+			  already the original - so a failed restore is not a document that
+			  still has its pass.
+			*/
+			appliedKey.current = null
+			appliedNote.current = undefined
+			try {
+				await optimizer?.restoreSource()
+			} catch (error) {
+				if (!stillOurs()) return null
+				throw new Error(
+					'Those options could not be changed. Press Convert to try again, or drop the file again to start over.',
+					{ cause: error }
+				)
+			}
+			if (!stillOurs()) return null
+			appliedKey.current = INGESTED_RECIPE
+		}
+
+		if (!wanted.includes('webp')) return { document: heldDocument() }
+
+		/*
+		  Unknown until the pass finishes, so a pass that throws leaves the next
+		  Convert to restore the document rather than export what it left.
+		*/
+		appliedKey.current = null
+		let note: string | undefined
+		try {
 			await optimizer?.texturesOptimization({
 				targetFormat: 'webp',
 				quality: 82
 			})
+		} catch (error) {
+			if (!stillOurs()) return null
+			/*
+			  A texture the browser cannot re-encode, such as a KTX2 one, would
+			  otherwise keep a model with one of them from converting at all.
+			*/
+			if (!(error instanceof TextureCompressionError)) {
+				throw new Error(
+					'The WebP pass failed. Untick it to download the file as it is.',
+					{ cause: error }
+				)
+			}
+			if (!error.isPartial) {
+				throw new Error(
+					'None of the textures could be recompressed as WebP. Untick it to download the file as it is.',
+					{ cause: error }
+				)
+			}
+			note = `${error.failed} of ${error.total} textures could not be recompressed and kept their own format.`
 		}
 
 		/*
-		  Asked again, because the check above only covers the read. Re-encoding
-		  every texture is the slowest thing this page does and the easiest
-		  window for a second file to land in, and the write below is the one
-		  that tells the next Convert it may skip the pass - so a drop landing
-		  here used to hand the new model's untouched textures out under a ticked
-		  box.
+		  Asked again, because re-encoding every texture is the slowest thing
+		  this page does and the easiest window for a second file to land in, and
+		  the write below is the one that tells the next Convert it may skip the
+		  pass.
 		*/
-		if (!state.stillCurrent()) return null
+		if (!stillOurs()) return null
 
-		stageLoad.current = state.stillCurrent
+		const passed = heldDocument()
 		appliedKey.current = wantedKey
-		return state.file
+		appliedNote.current = note
+		return { document: passed, note }
 	}
 
 	const baseFileName = (file?.name ?? 'model').replace(/\.[^/.]+$/, '')
 
-	/** Runs the ticked passes and encodes the target format, without saving. */
 	const startOver = () => {
 		dropSource()
 		setRefusal(null)
@@ -746,8 +595,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 	  copy of the serialization - `usePrepareGltfDocument` is the same payload the
 	  publisher's own save flow uploads.
 
-	  It hands over the document as it stands, passes included: "it" is what is on
-	  the stage, and the stage shows the passes that have been applied.
+	  It hands over the model as it was loaded, which is what the stage shows: a
+	  WebP pass made for a download is undone first. Handed over with it, the
+	  publisher took recompressed textures for the original, and every preset
+	  started from them.
 	*/
 	const openInPublisher = async () => {
 		if (!file) return
@@ -755,8 +606,8 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		  The handoff asks the same question every other await on this page asks,
 		  and used to be the one place that did not. Both values it writes with -
 		  `file` and `baseFileName` - are render-closure captures, and it awaits
-		  twice: once to serialize the document, once to navigate. A drop landing
-		  in either gap wrote whatever `prepareGltfDocument` found at that moment
+		  to prepare the document, to serialize it and to navigate. A drop landing
+		  in one of those gaps wrote whatever `prepareGltfDocument` found then
 		  into a draft named after the model the visitor had pressed the button
 		  for, and the publisher opened on the mixture.
 		*/
@@ -766,6 +617,10 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		setIsHandingOff(true)
 
 		try {
+			if (!(await prepare([]))) {
+				toast.error('A newer file replaced that one. Press the button again.')
+				return
+			}
 			const draftId = await persistPendingSceneDraftOrchestrator({
 				modelAvailable: true,
 				prepareGltfDocumentForUpload: prepareGltfDocument,
@@ -775,7 +630,9 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					thumbnailUrl: ''
 				},
 				currentSettings,
-				optimizationSettings: null
+				optimizationSettings: null,
+				// As loaded, so the document is its own original.
+				sourceGlb: null
 			})
 
 			if (!draftId) {
@@ -805,12 +662,15 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 		}
 	}
 
+	/** Runs the ticked passes and encodes the target format, without saving. */
 	const runConversion = async () => {
+		if (!file) {
+			toast.error('No model loaded yet.')
+			return
+		}
 		setIsConverting(true)
 
 		try {
-			const model = await prepare()
-
 			/*
 			  Files a conversion, if it is still about the model it was started
 			  for.
@@ -856,25 +716,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 						buildConvertModelResultProps(
 							pair,
 							activeOptions,
-							source?.bytes ?? null,
+							sourceBytes,
 							conversion.bytes.byteLength
 						)
 					)
 				}
-			}
-
-			if (!model) {
-				/*
-				  `prepare` returns null only when a newer drop replaced the
-				  source mid-run; a failure to re-read throws instead, and the
-				  catch below reports what the loader said.
-				*/
-				toast.error(
-					file
-						? 'A newer file replaced that one. Press Convert again.'
-						: 'No model loaded yet.'
-				)
-				return
 			}
 
 			const exporter = exporterRef.current
@@ -882,36 +728,44 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 			/*
 			  USDZ leaves through three.js rather than the document, which is why
 			  `OPTIONS_BY_TARGET` gives it no options: a pass applied here would not
-			  reach the bytes below.
+			  reach the bytes below. So it never waits for the optimizer, and never
+			  undoes a pass the document carries from another format's page.
 			*/
 			if (pair.to === 'usdz') {
-				const usdz = await exporter.exportThreeJSUSDZ(model.model)
-				store({ bytes: usdz.data, fileName: `${baseFileName}.usdz` })
+				const usdz = await exporter.exportThreeJSUSDZ(file.model)
+				store({
+					bytes: usdz.data,
+					fileName: `${baseFileName}.usdz`,
+					note:
+						usdz.transmissiveMaterials.length > 0 ? USDZ_GLASS_NOTE : undefined
+				})
 				return
 			}
+
+			const prepared = await prepare(activeOptions)
 
 			/*
-			  Read without a currency check of its own, deliberately. `prepare`
-			  answers that question on both of its slow paths - after the re-read
-			  and again after the texture pass - and returns null, which the
-			  `!model` branch above has already turned into a message and a return.
-			  A guard here was written and then removed: no mutation could redden a
-			  test for it, because the only window it covers is the microtask
-			  between `await prepare()` resolving and this line.
+			  `prepare` returns null only when the model it started on is no
+			  longer on the stage; a failure to restore or recompress throws
+			  instead, and the catch below reports it.
 			*/
-			const document = optimizer?._getDocument()
-
-			if (!document) {
-				toast.error('The model is still preparing. Try again in a moment.')
+			if (!prepared) {
+				toast.error('A newer file replaced that one. Press Convert again.')
 				return
 			}
+
+			const { document, note } = prepared
 
 			if (pair.to === 'glb') {
 				const glb = activeOptions.includes('draco')
 					? await exporter.exportDocumentGLBDraco(document)
 					: await exporter.exportDocumentGLB(document)
 
-				store({ bytes: glb.data, fileName: `${baseFileName}.glb` })
+				store({
+					bytes: glb.data,
+					fileName: `${baseFileName}.glb`,
+					note
+				})
 				return
 			}
 
@@ -923,7 +777,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					activeOptions.includes('draco') ? { draco: {} } : {}
 				)
 				const zip = await exporter.createZIPArchive(gltf, baseFileName)
-				store({ bytes: zip, fileName: `${baseFileName}.zip` })
+				store({
+					bytes: zip,
+					fileName: `${baseFileName}.zip`,
+					note
+				})
 				return
 			}
 
@@ -958,7 +816,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				buildConvertModelResultProps(
 					pair,
 					activeOptions,
-					source?.bytes ?? null,
+					sourceBytes,
 					result.bytes.byteLength
 				)
 			)
@@ -1034,104 +892,22 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					{isReady && file ? (
 						<ClientVectrealViewer
 							model={file.model}
-							theme="system"
 							className="h-full w-full"
 							boundsOptions={STAGE_BOUNDS}
 							controlsOptions={stageControls}
 						/>
 					) : (
-						/*
-					  Anchored bottom-left rather than centred. A centred glyph over
-					  centred copy over a centred outline button is the stock empty
-					  state; putting the invitation where a caption would sit leaves
-					  the stage reading as a stage, which is what it becomes one
-					  second later.
-					*/
-						/*
-					  On a wide screen the invitation keeps the bottom-left and the
-					  samples take the bottom-right, so the stage's full width is a
-					  composition rather than a caption with empty space beside it.
-					  The grain is the page's own, rising from the right; it belongs
-					  to the empty stage and goes when a model arrives.
-
-					  What it offers depends on the source, samples for GLB and a
-					  folder for a glTF bundle, so switching source dissolves the new
-					  offer in rather than cutting to it. The grain stays put: it is
-					  the stage, not the offer.
-					*/
-						<>
-							<DitherGrain origin="right" />
-							<DitherSwap
-								as="div"
-								value={pair.from}
-								className="grid min-h-[17rem] content-end gap-8 p-6 sm:min-h-[20rem] sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
-							>
-								{status === 'loading' ? (
-									<p
-										aria-live="polite"
-										className="text-muted-foreground flex items-center gap-2 text-sm"
-									>
-										<Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-										Reading your {pair.fromLabel}, {Math.round(progress)}%
-									</p>
-								) : (
-									<>
-										<div>
-											<p className="text-h3 text-foreground max-w-sm">
-												Drop{' '}
-												{bundleCopy
-													? bundleCopy.dropTarget
-													: `${articleFor(pair.fromLabel)} ${pair.fromLabel} file`}{' '}
-												here
-											</p>
-											{/*
-								  The only line here, and only for a bundle source: the one
-								  thing someone needs to know before they drop. Everything else
-								  the old empty state said - read in your browser, no upload, no
-								  account - the page heading two inches away says already.
-								*/}
-											{bundleCopy && (
-												<p className="text-muted-foreground text-body-sm mt-4 max-w-md">
-													{bundleCopy.instruction}
-												</p>
-											)}
-
-											<div className="mt-8 flex flex-wrap items-center gap-2">
-												<Button onClick={openFilePicker}>
-													{bundleCopy
-														? bundleCopy.chooseLabel
-														: `Choose ${articleFor(pair.fromLabel)} ${pair.fromLabel} file`}
-												</Button>
-												{isBundle && (
-													<Button
-														variant="outline"
-														onClick={openDirectoryPicker}
-													>
-														<FolderUp className="h-4 w-4" aria-hidden />
-														Choose a folder
-													</Button>
-												)}
-											</div>
-										</div>
-
-										{/*
-								  Samples are GLB, so they are offered where GLB is what the
-								  page reads. Building a glTF bundle at runtime to sample the
-								  glTF pages would be a fixture pretending to be a file
-								  somebody exported.
-								*/}
-										{pair.from === 'glb' && (
-											<SampleTiles
-												className="lg:w-md"
-												label="Or open one of these"
-												onOpen={loadSample}
-												download={sampleDownload}
-											/>
-										)}
-									</>
-								)}
-							</DitherSwap>
-						</>
+						<ConverterEmptyStage
+							pair={pair}
+							status={status}
+							progress={progress}
+							bundleCopy={bundleCopy}
+							isBundle={isBundle}
+							onChooseFile={openFilePicker}
+							onChooseFolder={openDirectoryPicker}
+							onOpenSample={loadSample}
+							sampleDownload={sampleDownload}
+						/>
 					)}
 				</section>
 			</div>
@@ -1203,7 +979,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 							<span className="text-foreground truncate font-medium">
 								{file.name}
 							</span>
-							{source && <> · {formatFileSize(source.bytes)}</>}
+							{sourceBytes !== null && <> · {formatFileSize(sourceBytes)}</>}
 						</p>
 						<button
 							type="button"
@@ -1222,33 +998,11 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					</div>
 
 					{options.length > 0 && (
-						<fieldset>
-							<legend className="text-muted-foreground text-eyebrow mb-3">
-								Before you download
-							</legend>
-							<div className="flex flex-col gap-3">
-								{options.map((option) => (
-									<label
-										key={option}
-										className="flex cursor-pointer items-start gap-3"
-									>
-										<Checkbox
-											checked={activeOptions.includes(option)}
-											onCheckedChange={() => toggleOption(option)}
-											className="mt-0.5"
-										/>
-										<span className="min-w-0">
-											<span className="text-foreground block text-sm font-medium">
-												{CONVERT_OPTIONS[option].label}
-											</span>
-											<span className="text-muted-foreground block text-sm">
-												{CONVERT_OPTIONS[option].description}
-											</span>
-										</span>
-									</label>
-								))}
-							</div>
-						</fieldset>
+						<ConversionOptions
+							options={options}
+							active={activeOptions}
+							onToggle={toggleOption}
+						/>
 					)}
 
 					{result ? (
@@ -1260,7 +1014,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					) : (
 						<Button
 							onClick={runConversion}
-							disabled={isConverting}
+							disabled={isConverting || isHandingOff}
 							className="self-start"
 						>
 							{isConverting && (
@@ -1271,38 +1025,18 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 					)}
 
 					{result && (
-						/*
-						  `ds-raised`, matching the index: a container sitting on the page
-						  rather than a well you put something into. The stage above is the
-						  well.
-						*/
-						<div className="ds-raised rounded-2xl p-6">
-							<p className="text-muted-foreground text-eyebrow mb-1">
-								{pair.fromLabel} to {pair.toLabel}
-							</p>
-							<FileSizeComparison
-								sizeInfo={{
-									initialSceneBytes: source?.bytes ?? null,
-									currentSceneBytes: result.bytes.byteLength
-								}}
-								{...describeSizeChange(
-									source?.bytes ?? null,
-									result.bytes.byteLength
-								)}
-							/>
-							{pair.note && (
-								<p className="text-muted-foreground pb-2 text-sm">
-									{pair.note}
-								</p>
-							)}
-						</div>
+						<ConversionResult
+							pair={pair}
+							sourceBytes={sourceBytes}
+							result={result}
+						/>
 					)}
 
 					<p className="text-muted-foreground text-body-sm">
 						<button
 							type="button"
 							onClick={openInPublisher}
-							disabled={isHandingOff}
+							disabled={isHandingOff || isConverting}
 							className="hover:text-foreground underline underline-offset-4 transition-colors disabled:opacity-50"
 						>
 							{isHandingOff

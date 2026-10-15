@@ -15,39 +15,40 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 /**
- * Pure helper functions for resolving canonical texture filenames.
- * No I/O, no side-effects — all functions are safe to call in any environment.
+ * Resolving canonical texture filenames. No I/O, so everything here is safe to
+ * call in any environment; only the `sync*` functions write, and only to the
+ * textures they are given.
  */
 
-import { Document, Material, Texture } from '@gltf-transform/core'
+import { Document, ImageUtils, Material, Texture } from '@gltf-transform/core'
 
 // ---------------------------------------------------------------------------
 // MIME / format converters
 // ---------------------------------------------------------------------------
 
+/**
+ * A MIME type as glTF expects it. One taken from a URI can arrive as
+ * `image/PNG`, `image/JPG` or `image/png?v=2`: types are case-insensitive,
+ * nothing after a `?`, `#` or `;` names a format, and `jpg` is spelled
+ * `jpeg` in a type.
+ */
+export const normalizeMimeType = (mimeType: string): string => {
+	const normalized = mimeType.toLowerCase().split(/[?#;]/)[0].trim()
+	return normalized === 'image/jpg' ? 'image/jpeg' : normalized
+}
+
 export const mimeTypeToExtension = (mimeType: string): string | null => {
-	switch (mimeType.toLowerCase()) {
+	switch (normalizeMimeType(mimeType)) {
 		case 'image/webp':
 			return 'webp'
 		case 'image/jpeg':
 			return 'jpg'
 		case 'image/png':
 			return 'png'
-		default:
-			return null
-	}
-}
-
-export const targetFormatToMimeType = (
-	targetFormat?: 'webp' | 'jpeg' | 'png'
-): string | null => {
-	switch (targetFormat) {
-		case 'webp':
-			return 'image/webp'
-		case 'jpeg':
-			return 'image/jpeg'
-		case 'png':
-			return 'image/png'
+		case 'image/ktx2':
+			return 'ktx2'
+		case 'image/avif':
+			return 'avif'
 		default:
 			return null
 	}
@@ -144,4 +145,111 @@ export const resolveTextureByMaterialSlot = (
 		}
 	}
 	return null
+}
+
+// ---------------------------------------------------------------------------
+// Canonical names
+// ---------------------------------------------------------------------------
+
+// Typed as a string, but a glTF image's `"name": null` reads back as null.
+const storedName = (texture: Texture): string => texture.getName()?.trim() ?? ''
+
+/**
+ * The file name a texture is known by: its own stable URI or name, else its
+ * material slot (`Wood_Planks_baseColor.png`), else its position
+ * (`texture-2.png`), with the extension its MIME type calls for.
+ */
+export const resolveTextureCanonicalFileName = (
+	document: Document,
+	texture: Texture,
+	index: number
+): string => {
+	const currentUri = texture.getURI().trim()
+	const currentName = storedName(texture)
+	const stableUri =
+		currentUri &&
+		!currentUri.startsWith('data:') &&
+		!isGenericTextureFileName(currentUri)
+			? currentUri
+			: ''
+	const stableName =
+		currentName && !isGenericTextureFileName(currentName) ? currentName : ''
+	const extension = mimeTypeToExtension(texture.getMimeType())
+
+	if (stableUri || stableName) {
+		const baseFileName = extractFileNameSegment(stableUri || stableName)
+		return extension
+			? replaceUriExtension(baseFileName, extension)
+			: baseFileName
+	}
+
+	const slot = resolveTextureByMaterialSlot(document, texture)
+	if (slot) {
+		const slotFileName = `${slot.materialName}_${slot.slotName}`
+		return extension ? `${slotFileName}.${extension}` : slotFileName
+	}
+
+	return buildTextureFallbackFileName(index, texture.getMimeType())
+}
+
+/**
+ * The type a texture's bytes are: what the bytes say when gltf-transform
+ * recognizes them, else the image type the texture has stored, else none.
+ * PNG and JPEG are always recognized; WebP, AVIF and KTX2 once an I/O has
+ * registered their extensions, as every document the optimizer holds has.
+ * Neither a file name nor a stored `application/octet-stream` says what the
+ * bytes are. The URI is cleared to read what is stored, because
+ * `getMimeType` falls back to the URI's extension. Putting the URI back
+ * overwrites the stored type, so the caller must store the type returned.
+ */
+const resolveImageMimeType = (texture: Texture): string => {
+	const image = texture.getImage()
+	const detected = image ? ImageUtils.getMimeType(image) : null
+	if (detected) return detected
+
+	const uri = texture.getURI()
+	const stored = normalizeMimeType(texture.setURI('').getMimeType())
+	texture.setURI(uri)
+	return stored.startsWith('image/') ? stored : ''
+}
+
+/**
+ * Writes a texture's canonical file name to its URI and name, and settles its
+ * MIME type first, so the name's extension follows that type. A stable
+ * `fileName` is written first, so the canonical name is resolved from it.
+ *
+ * gltf-transform's `setURI` also sets the MIME type from whatever follows the
+ * last dot, the whole name when there is none, so every write puts the
+ * settled type back. With none known, none is stored and the getter reads the
+ * type off the new name. That is right for a name with an extension; one
+ * without reads as a made-up `image/<name>`, which is left as it is because
+ * nothing says what such bytes are. Written unconditionally, so what is
+ * stored is always exactly what `resolveTextureCanonicalFileName` reports.
+ */
+export const syncTextureIdentity = (
+	document: Document,
+	texture: Texture,
+	index: number,
+	fileName?: string
+): void => {
+	const mimeType = resolveImageMimeType(texture)
+	const writeFileName = (name: string) =>
+		texture.setURI(name).setMimeType(mimeType).setName(name)
+
+	// Before anything reads it: resolving overwrote the stored type.
+	texture.setMimeType(mimeType)
+	const preferredFileName = fileName?.trim()
+	if (preferredFileName && !isGenericTextureFileName(preferredFileName)) {
+		writeFileName(extractFileNameSegment(preferredFileName))
+	}
+
+	writeFileName(resolveTextureCanonicalFileName(document, texture, index))
+}
+
+/** Gives every texture of `document` its canonical file name. */
+export const syncTextureIdentities = (document: Document): void => {
+	document
+		.getRoot()
+		.listTextures()
+		.forEach((texture, index) => syncTextureIdentity(document, texture, index))
 }

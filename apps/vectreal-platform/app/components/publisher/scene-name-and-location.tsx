@@ -167,7 +167,7 @@ const LocationPicker = ({ open }: LocationPickerProps) => {
 	const selectedFolderId = saveLocation.targetFolderId ?? ROOT_FOLDER_VALUE
 
 	const projects = options?.projects ?? []
-	const folders = options?.folders ?? []
+	const folders = useMemo(() => options?.folders ?? [], [options])
 	const hasLoadedOptions = Boolean(options)
 	const isInitialLoading = fetcher.state !== 'idle' && !hasLoadedOptions
 	const isRefreshingFolders = fetcher.state !== 'idle' && hasLoadedOptions
@@ -417,7 +417,7 @@ export function SceneNameAndLocation({
 				<div
 					className={cn(
 						'overflow-hidden rounded-xl',
-						locationOpen && 'publisher-shell-panel'
+						locationOpen && 'shell-panel'
 					)}
 				>
 					<LocationPicker open={locationOpen} />

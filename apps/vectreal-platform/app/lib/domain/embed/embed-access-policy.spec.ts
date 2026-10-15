@@ -3,8 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
 	decideEmbedAccess,
 	getPreviewTokenFromRequest,
+	hasPreviewTokenCredential,
 	isEmbedRequestHostAllowed,
+	KEY_USE_RECORD_INTERVAL_MS,
 	resolveRequestHostContext,
+	shouldRecordKeyUse,
 	type EmbedKeyMatch
 } from './embed-access-policy'
 
@@ -34,6 +37,7 @@ function keyMatch(overrides: Partial<EmbedKeyMatch> = {}): EmbedKeyMatch {
 		apiKeyOrganizationId: ORG,
 		projectOrganizationId: ORG,
 		allowedEmbedDomains: 'store.example.com',
+		lastUsedAt: null,
 		...overrides
 	}
 }
@@ -294,5 +298,49 @@ describe('decideEmbedAccess', () => {
 			userId: 'user-1',
 			organizationId: ORG
 		})
+	})
+})
+
+describe('recording that a key was used', () => {
+	const now = new Date('2026-10-03T12:00:00Z')
+	const ago = (ms: number) => new Date(now.getTime() - ms)
+
+	it('records the first use, including the first after a rotation', () => {
+		expect(shouldRecordKeyUse(null, now)).toBe(true)
+	})
+
+	it('skips the write while the last one is fresh', () => {
+		expect(shouldRecordKeyUse(ago(KEY_USE_RECORD_INTERVAL_MS - 1), now)).toBe(
+			false
+		)
+	})
+
+	it('writes again once the last one is a full interval old', () => {
+		expect(shouldRecordKeyUse(ago(KEY_USE_RECORD_INTERVAL_MS), now)).toBe(true)
+	})
+
+	it('skips a write dated in the future, as from another clock', () => {
+		expect(shouldRecordKeyUse(ago(-5_000), now)).toBe(false)
+	})
+})
+
+describe('hasPreviewTokenCredential', () => {
+	const request = (query = '', headers: Record<string, string> = {}) =>
+		new Request(`https://vectreal.test/embed/p/s${query}`, { headers })
+
+	it('sees a token in the query string', () => {
+		expect(hasPreviewTokenCredential(request('?token=abc'))).toBe(true)
+	})
+
+	it('sees any Authorization header, Bearer or not', () => {
+		expect(
+			hasPreviewTokenCredential(request('', { Authorization: 'Basic x' }))
+		).toBe(true)
+	})
+
+	it('ignores a blank token and a blank header', () => {
+		expect(
+			hasPreviewTokenCredential(request('?token=%20', { Authorization: ' ' }))
+		).toBe(false)
 	})
 })

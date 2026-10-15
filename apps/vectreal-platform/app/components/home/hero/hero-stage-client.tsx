@@ -5,16 +5,20 @@ import {
 	useEffect,
 	useRef,
 	useState,
-	type MutableRefObject
+	type RefObject
 } from 'react'
 import { TextureLoader, type Texture } from 'three'
 
 import { createBackdropEngine } from './backdrop-engine'
+import { attachFileDrop } from './file-drop'
 import { HERO_SHADOW_URL } from './hero-assets'
-import { StageBoundary } from './stage-boundary'
-import { createStageEngine } from './stage-engine'
+import { fallBackToPoster } from './hero-store'
+import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
 import { readGlbContents } from '../../../lib/samples/glb-contents'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
+import { markHeroSettled } from '../stage/hero-settled'
+import { StageBoundary } from '../stage/stage-boundary'
+import { createStageEngine } from '../stage/stage-engine'
 
 import type { OwnFileApi } from './hero-own-file'
 import type { HeroState, HeroStore } from './hero-store'
@@ -38,12 +42,12 @@ export interface HeroStageElements {
 interface Props {
 	store: HeroStore
 	elements: HeroStageElements
-	openFileRef: MutableRefObject<(() => void) | null>
-	handOffRef: MutableRefObject<(() => Promise<void>) | null>
+	openFileRef: RefObject<(() => void) | null>
+	handOffRef: RefObject<(() => Promise<void>) | null>
 }
 
-/** How long the drawing stands as a drawing before the sweep, so it reads as one. */
-const DRAWN_HOLD_MS = 1800
+/** How long the drawing stands as a drawing before the sweep: long enough to read as one, short enough not to read as a wait. */
+const DRAWN_HOLD_MS = 600
 
 /*
   Bake mode, for `scripts/bake-home-hero.ts` against the dev server only: the
@@ -146,9 +150,7 @@ export default function HeroStageClient({
 	}, [])
 
 	useEffect(() => {
-		const reducedMotion = window.matchMedia(
-			'(prefers-reduced-motion: reduce)'
-		).matches
+		const reducedMotion = prefersReducedMotion()
 		const baking = bakeMode()
 		const abort = new AbortController()
 		const timers: number[] = []
@@ -214,6 +216,7 @@ export default function HeroStageClient({
 			setPhase('live')
 			stage.setAttribute('data-turnable', '')
 			store.set({ status: 'live', busy: false, view: 'live', ...live })
+			markHeroSettled()
 			return true
 		}
 
@@ -257,52 +260,11 @@ export default function HeroStageClient({
 			picker.value = ''
 			if (files.length) void take(files)
 		})
-		let depth = 0
-		let before: HeroState['status'] | null = null
-		const endDrag = () => {
-			depth = 0
-			sheet.removeAttribute('data-dragging')
-			if (before) store.set({ status: before })
-			before = null
-		}
-		/*
-		  Files dragged over the sheet are always claimed, so a drop can never fall
-		  through to the browser and navigate away from the page; while the stage
-		  is busy they are claimed and ignored.
-		*/
-		const carriesFiles = (event: DragEvent) =>
-			event.dataTransfer?.types.includes('Files') ?? false
-		const onDragEnter = (event: DragEvent) => {
-			if (!carriesFiles(event)) return
-			event.preventDefault()
-			if (store.get().busy) return
-			if (depth++ === 0) {
-				before = store.get().status
-				sheet.setAttribute('data-dragging', '')
-				store.set({ status: 'dragging' })
-			}
-		}
-		const onDragOver = (event: DragEvent) => {
-			if (carriesFiles(event)) event.preventDefault()
-		}
-		const onDragLeave = () => {
-			if (depth && --depth === 0) endDrag()
-		}
-		const onDrop = (event: DragEvent) => {
-			if (!carriesFiles(event)) return
-			event.preventDefault()
-			if (!depth) return
-			endDrag()
-			const files = [...(event.dataTransfer?.files ?? [])]
-			if (files.length) void take(files)
-		}
+		let detachFileDrop: (() => void) | null = null
 		function acceptFiles() {
 			openFileRef.current = () => picker.click()
 			handOffRef.current = async () => (await ownFileApi()).handOff()
-			sheet.addEventListener('dragenter', onDragEnter)
-			sheet.addEventListener('dragover', onDragOver)
-			sheet.addEventListener('dragleave', onDragLeave)
-			sheet.addEventListener('drop', onDrop)
+			detachFileDrop = attachFileDrop(sheet, store, (files) => void take(files))
 		}
 
 		async function run() {
@@ -351,9 +313,7 @@ export default function HeroStageClient({
 			console.error('Hero stage failed', error)
 			stage.removeAttribute('data-receiving')
 			setPhase('poster')
-			// The poster whole, not wherever the download stopped: it is the drawing the readout now describes.
-			frame.style.setProperty('--plot', '1')
-			store.set({ status: 'drawn', busy: false, shownBytes: HERO_MODEL.bytes })
+			fallBackToPoster(store, frame)
 		})
 
 		return () => {
@@ -361,11 +321,7 @@ export default function HeroStageClient({
 			for (const timer of timers) window.clearTimeout(timer)
 			openFileRef.current = null
 			handOffRef.current = null
-			sheet.removeEventListener('dragenter', onDragEnter)
-			sheet.removeEventListener('dragover', onDragOver)
-			sheet.removeEventListener('dragleave', onDragLeave)
-			sheet.removeEventListener('drop', onDrop)
-			endDrag()
+			detachFileDrop?.()
 			backdrop?.dispose()
 			engine.dispose()
 			elements.backdrop.removeAttribute('data-ready')

@@ -36,3 +36,16 @@ export function canDeleteScene(membership: SceneActorLike | null): boolean {
 
 	return canPerformDashboardOperation('scene:delete', membership)
 }
+
+/**
+ * Whether this actor may change the scene's settings from the dashboard, such
+ * as whether its embed shows the thumbnail while loading. Absent membership is
+ * no, for the reason `canDeleteScene` gives.
+ */
+export function canUpdateScene(membership: SceneActorLike | null): boolean {
+	if (!membership) {
+		return false
+	}
+
+	return canPerformDashboardOperation('scene:update', membership)
+}

@@ -18,4 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 export { optimizeTextures } from './texture-optimization'
 
 // Browser-native texture encoder
-export { createBrowserTextureEncoder } from './browser-texture-encoder'
+export {
+	canEncodeImage,
+	createBrowserTextureEncoder
+} from './browser-texture-encoder'

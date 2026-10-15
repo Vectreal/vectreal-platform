@@ -6,11 +6,34 @@ const CONFIRMATION_MS = 1500
 export interface ClipboardCopyApi {
 	copy: (
 		id: string,
-		value: string,
+		value: string | (() => string | Promise<string>),
 		messages: { success: string; failure: string; unavailable: string }
 	) => Promise<void>
 	/** Id of the button that most recently copied, for its "Copied" label. */
 	copiedId: string | null
+}
+
+/*
+  A value still being fetched goes through `ClipboardItem`, which accepts a
+  promise. Safari forgets the click once an `await` has passed, so fetching first
+  and calling `writeText` afterwards is refused there as a write nobody asked
+  for. Where `ClipboardItem` is missing, the fetch is awaited and `writeText`
+  tried anyway: the browsers lacking it do not hold that rule.
+*/
+async function writeToClipboard(value: string | Promise<string>) {
+	if (typeof value === 'string') {
+		await navigator.clipboard.writeText(value)
+	} else if (typeof ClipboardItem !== 'undefined') {
+		await navigator.clipboard.write([
+			new ClipboardItem({
+				'text/plain': value.then(
+					(text) => new Blob([text], { type: 'text/plain' })
+				)
+			})
+		])
+	} else {
+		await navigator.clipboard.writeText(await value)
+	}
 }
 
 /**
@@ -35,7 +58,7 @@ export function useClipboardCopy(): ClipboardCopyApi {
 	const copy = useCallback(
 		async (
 			id: string,
-			value: string,
+			value: string | (() => string | Promise<string>),
 			messages: { success: string; failure: string; unavailable: string }
 		) => {
 			if (!navigator?.clipboard) {
@@ -44,7 +67,8 @@ export function useClipboardCopy(): ClipboardCopyApi {
 			}
 
 			try {
-				await navigator.clipboard.writeText(value)
+				// Resolved only now, so nothing is fetched for a clipboard that is not there.
+				await writeToClipboard(typeof value === 'function' ? value() : value)
 				setCopiedId(id)
 				if (timeoutRef.current) clearTimeout(timeoutRef.current)
 				timeoutRef.current = setTimeout(

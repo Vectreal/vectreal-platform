@@ -15,9 +15,9 @@ export interface PreviewExitBadgeProps {
  * "You are previewing, and here is the way out."
  *
  * Shared by the publisher's in-canvas preview mode and the standalone `/preview`
- * route so leaving a preview looks and reads the same in both, the way
- * `CameraSwitcherPill` already does for switching cameras. Two very different
- * exits — one clears a jotai flag, the other navigates — behind one affordance.
+ * route so leaving a preview looks and reads the same in both, as the viewer's
+ * own camera switcher does for switching cameras. Two very different exits —
+ * one clears a jotai flag, the other navigates — behind one affordance.
  */
 const PreviewExitBadge = ({
 	label = 'Preview',

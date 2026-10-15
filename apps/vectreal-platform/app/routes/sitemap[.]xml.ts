@@ -8,7 +8,7 @@ import {
 	resolveDeploymentOrigin
 } from '../lib/deployment-origin'
 import { docsPages } from '../lib/docs/docs-manifest'
-import { getNewsArticles } from '../lib/news/news-manifest'
+import { getNewsArticles } from '../lib/news/news-manifest.server'
 
 interface SitemapEntry {
 	path: string

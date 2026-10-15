@@ -21,13 +21,14 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-const CSS = readFileSync(
-	join(
-		dirname(fileURLToPath(import.meta.url)),
-		'../../../shared/components/src/styles/globals.css'
-	),
-	'utf8'
+const STYLES = join(
+	dirname(fileURLToPath(import.meta.url)),
+	'../../../shared/components/src/styles'
 )
+/** The palette, which lives in its own file so the published viewer can import it. */
+const CSS = readFileSync(join(STYLES, 'theme.css'), 'utf8')
+/** Everything else, including the global focus indicator. */
+const GLOBALS = readFileSync(join(STYLES, 'globals.css'), 'utf8')
 
 type Rgb = [number, number, number]
 
@@ -66,7 +67,8 @@ function contrast(a: Rgb, b: Rgb): number {
 }
 
 /**
- * Reads a token out of `:root` or `.dark`.
+ * Reads a token out of the light block (`:root, .light`) or `.dark`, both in
+ * `theme.css`, where the palette lives apart from the rest of `globals.css`.
  *
  * `.dark` is matched by slicing the file at its opening brace: the two blocks
  * declare the same names, so a whole-file regex silently returns the light
@@ -90,9 +92,43 @@ function surface(theme: 'light' | 'dark', percent: number): Rgb {
 	) as Rgb
 }
 
+/**
+ * `--shell-surface` as drawn: translucent over the 3D canvas, so composited
+ * on the backdrop that costs it most contrast, black under the light panel and
+ * white under the dark one. The Publisher's panels and the viewer's built-in
+ * controls both sit on it, over a scene nobody here controls.
+ */
+function shellSurface(theme: 'light' | 'dark'): Rgb {
+	const scope = theme === 'dark' ? CSS.slice(CSS.indexOf('.dark {')) : CSS
+	const alpha = scope.match(
+		/--shell-surface:\s*oklch\([\d.]+\s+[\d.]+\s+[\d.]+\s*\/\s*([\d.]+)\)/
+	)
+	if (!alpha) throw new Error(`--shell-surface alpha not found for ${theme}`)
+	const a = Number(alpha[1])
+	const backdrop = theme === 'dark' ? 255 : 0
+	return token('shell-surface', theme).map((c) =>
+		Math.round(c * a + backdrop * (1 - a))
+	) as Rgb
+}
+
 const AA_TEXT = 4.5
 /** WCAG 1.4.11, for a focus indicator and other non-text affordances. */
 const AA_NON_TEXT = 3
+
+describe('the shell panel carries its text over any canvas', () => {
+	describe.each(['light', 'dark'] as const)('%s', (theme) => {
+		const panel = shellSurface(theme)
+
+		it.each(['foreground', 'muted-foreground'])(
+			`%s reaches ${AA_TEXT}:1`,
+			(name) => {
+				expect(contrast(token(name, theme), panel)).toBeGreaterThanOrEqual(
+					AA_TEXT
+				)
+			}
+		)
+	})
+})
 
 describe('semantic tokens clear WCAG AA on the surfaces they are used on', () => {
 	describe.each(['light', 'dark'] as const)('%s', (theme) => {
@@ -146,14 +182,14 @@ describe('semantic tokens clear WCAG AA on the surfaces they are used on', () =>
 		  outline to a half-alpha ring, and each control then suppressed it and
 		  drew its own. Both were under 3:1, and links got neither.
 		*/
-		expect(CSS).toContain('outline: 2px solid var(--ring)')
+		expect(GLOBALS).toContain('outline: 2px solid var(--ring)')
 
 		/*
 		  Match the declaration, not the word. The comment above that rule
 		  explains what it replaced and names `outline-ring/50`, so a bare
 		  substring check fails on the explanation of its own fix.
 		*/
-		const declarations = CSS.replace(/\/\*[\s\S]*?\*\//g, '')
+		const declarations = GLOBALS.replace(/\/\*[\s\S]*?\*\//g, '')
 		expect(declarations).not.toMatch(/@apply[^;]*outline-ring\/50/)
 	})
 })

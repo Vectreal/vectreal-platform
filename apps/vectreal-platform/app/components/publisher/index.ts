@@ -1,6 +1,0 @@
-export { default as ControlsOverlay } from './controls-overlay'
-export { default as SaveButton } from './save-button'
-export * from './sidebars'
-export * from './scene-name-and-location'
-export { PublisherHeader } from './shell/publisher-header'
-export { PublishCard } from './shell/publish-card'

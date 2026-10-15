@@ -1,4 +1,8 @@
-import { DEFAULT_PRESET_ID } from '../../../../constants/optimizations'
+import { optimizationsMatch } from './optimization-inference'
+import {
+	DEFAULT_PRESET_ID,
+	originalPreset
+} from '../../../../constants/optimizations'
 
 import type { SceneManifestResponse } from '../../../../types/api'
 import type {
@@ -29,6 +33,12 @@ interface ExecuteOptimizationStateHydrationParams {
 	) => void
 	optimizationRuntimeInitialState: SceneOptimizationRuntimeState
 	defaultOptimizations: Optimizations
+	/**
+	 * The optimizer already holds this scene's source: a scene this tab just
+	 * saved, whose upload is still loaded. What the source and the document
+	 * embody is then known here, not inferred from the saved settings.
+	 */
+	isSourceLoaded?: boolean
 }
 
 export const executeOptimizationStateHydration = ({
@@ -38,7 +48,8 @@ export const executeOptimizationStateHydration = ({
 	setOptimizationState,
 	setOptimizationRuntime,
 	optimizationRuntimeInitialState,
-	defaultOptimizations
+	defaultOptimizations,
+	isSourceLoaded = false
 }: ExecuteOptimizationStateHydrationParams) => {
 	const persistedOptimizationSettings = manifest?.stats?.optimizationSettings
 	const latestSceneStats = manifest?.stats ?? null
@@ -49,7 +60,10 @@ export const executeOptimizationStateHydration = ({
 		setOptimizationState((prev) => ({
 			...prev,
 			optimizationPreset: DEFAULT_PRESET_ID,
-			optimizations: defaultOptimizations
+			optimizations: defaultOptimizations,
+			...(isSourceLoaded
+				? {}
+				: { sourceSettings: originalPreset, derivedFrom: originalPreset })
 		}))
 
 		setOptimizationRuntime({
@@ -64,20 +78,50 @@ export const executeOptimizationStateHydration = ({
 
 	const inferredPreset = inferOptimizationPreset(persistedOptimizationSettings)
 
+	// The saved document is the only source a reopened scene has, and it
+	// already embodies the settings it was saved with: a save stores the
+	// settings that produced its document. Only a scene saved as the original
+	// is the untouched upload.
+	//
+	// Scenes saved before that rule may carry settings no pass applied. They
+	// read as a saved version, which costs nothing: their document is lossless,
+	// and they keep the publish-time Draco they had.
+	const sourceSettings = optimizationsMatch(
+		persistedOptimizationSettings,
+		originalPreset
+	)
+		? originalPreset
+		: persistedOptimizationSettings
+
 	setOptimizationState((prev) => ({
 		...prev,
 		optimizationPreset: inferredPreset,
-		optimizations: persistedOptimizationSettings
+		optimizations: persistedOptimizationSettings,
+		...(isSourceLoaded ? {} : { sourceSettings, derivedFrom: sourceSettings })
 	}))
 
 	setOptimizationRuntime((prev) => ({
 		...prev,
 		isPending: false,
 		isSceneSizeLoading: false,
-		optimizedSceneBytes: null,
-		optimizedTextureBytes: null,
+		// The document a scene this tab just saved is still loaded, so what was
+		// measured from it still describes it. Only publishing records a size
+		// on the server, so nothing else would.
+		...(isSourceLoaded
+			? {}
+			: {
+					optimizedSceneBytes: null,
+					optimizedTextureBytes: null,
+					workingSceneBytes: null,
+					publishedEncoding: null
+				}),
 		clientSceneBytes: sourcePackageBytes,
 		clientTextureBytes: textureBytes,
-		latestSceneStats
+		latestSceneStats,
+		// A scene this tab just saved keeps what its save recorded, so a pass
+		// that finished during that save stays unsaved; any other opens as saved.
+		savedPassRevision: isSourceLoaded
+			? prev.savedPassRevision
+			: prev.passRevision
 	}))
 }

@@ -1,4 +1,4 @@
-import { isMissingAssetsError } from '@vctrl/core/model-loader'
+import { isMissingAssetsError, ModelFetchError } from '@vctrl/core/model-loader'
 
 import { StructuredLoadError } from './types'
 
@@ -108,4 +108,57 @@ export const normalizeServerLoadError = (
 			sceneId
 		}
 	})
+}
+
+const URL_FETCH_CODES = {
+	unreachable: 'url_unreachable',
+	http: 'url_http',
+	unrecognized: 'url_unrecognized',
+	invalid: 'url_invalid'
+} as const satisfies Record<
+	ModelFetchError['kind'],
+	StructuredLoadError['code']
+>
+
+/**
+ * A failed `url` load, whether the fetch failed or the fetched file did.
+ *
+ * Every failure of a URL load reports `remote-url`, including a parse failure
+ * or a missing asset, because what the caller can do about it differs from a
+ * dropped file: the remedy is on the host. A link that answers 404 or 410 is
+ * not recoverable by retrying, as a missing scene is not.
+ */
+export const normalizeUrlLoadError = (
+	error: unknown,
+	url: string
+): StructuredLoadError => {
+	if (error instanceof ModelFetchError) {
+		return createStructuredLoadError({
+			code: URL_FETCH_CODES[error.kind],
+			message: error.message,
+			recoverable: !(
+				error.kind === 'http' &&
+				(error.status === 404 || error.status === 410)
+			),
+			source: 'remote-url',
+			cause: error,
+			context: { host: error.host, status: error.status }
+		})
+	}
+
+	const local = normalizeLocalLoadError(error, 'unknown')
+	return {
+		...local,
+		source: 'remote-url',
+		context: { ...local.context, host: hostOf(url) }
+	}
+}
+
+// The host alone, for the reason `ModelFetchError.host` gives.
+function hostOf(url: string): string | null {
+	try {
+		return new URL(url, globalThis.location?.href).host
+	} catch {
+		return null
+	}
 }

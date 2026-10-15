@@ -6,10 +6,11 @@ import {
 	CameraTransitionEasing,
 	CameraTransitionType
 } from '@vctrl/core'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
 	CatmullRomCurve3,
 	Euler,
+	type Object3D,
 	PerspectiveCamera,
 	Quaternion,
 	Vector3,
@@ -18,9 +19,12 @@ import {
 
 import { cameraSelectionSignature } from './camera-selection-signature'
 import { applyInitialFraming } from './initial-framing'
+import { withOpeningPose } from './opening-pose'
+import { prefersReducedMotion } from './reduced-motion'
 
 import type { CameraSelectionSignature } from './camera-selection-signature'
 import type { InitialFramingControls } from './initial-framing'
+import type { OpeningPose } from './opening-pose'
 import type {
 	ViewerCommand,
 	ViewerCommandExecutor,
@@ -54,12 +58,16 @@ export const defaultCameraOptions: CameraProps = {
 interface SceneCameraProps extends CameraProps {
 	boundsEnabled?: boolean
 	hasContent?: boolean
+	/** What the first view frames; see `applyInitialFraming`. */
+	model?: Object3D | null
 	onInitialFramingComplete?: () => void
 	onCameraSnapshotCaptureReady?: (
 		capture: null | SceneCameraSnapshotCapture
 	) => void
 	onInteractionEvent?: (event: ViewerInteractionEvent) => void
 	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
+	/** A host's `set_transition`, which wins over `sceneTransition` while set. */
+	transitionOverride?: RefObject<CameraTransitionConfig | null | undefined>
 }
 
 type CameraTransitionRuntime = {
@@ -79,7 +87,7 @@ type CameraTransitionRuntime = {
 	curve?: CatmullRomCurve3
 }
 
-type ResolvedCameraSelection = {
+export type ResolvedCameraSelection = {
 	cameraId: string
 	targetPosition: Vector3
 	targetRotation: Euler
@@ -194,23 +202,26 @@ function applyEasing(t: number, easing?: CameraTransitionEasing): number {
 	}
 }
 
-function resolveCameraSelection(
+export function resolveCameraSelection(
 	cameras: CameraProps['cameras'],
 	activeCameraId: CameraProps['activeCameraId'],
 	currentControlsTarget: Vector3,
 	sceneCamera: PerspectiveCamera,
-	sceneTransition?: CameraTransitionConfig
+	sceneTransition?: CameraTransitionConfig,
+	openingPose: OpeningPose | null = null
 ): ResolvedCameraSelection {
 	const sceneCameras = cameras?.filter((c) => !c.kind || c.kind === 'scene')
 	const defaultCamera =
 		sceneCameras && sceneCameras.length > 0 ? sceneCameras[0] : cameras?.[0]
 
-	const selectedCamera =
+	const foundCamera =
 		cameras?.find((camera) => camera.cameraId === activeCameraId) ??
 		cameras?.find((camera) => camera.initial) ??
 		defaultCamera ??
 		cameras?.[0] ??
 		defaultCameraOptions.cameras?.[0]
+	const selectedCamera =
+		foundCamera && withOpeningPose(foundCamera, openingPose)
 
 	const transition = selectedCamera
 		? resolveTransition(sceneTransition)
@@ -315,10 +326,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
 		hasContent: hasModel = false,
+		model,
 		onInitialFramingComplete,
 		onCameraSnapshotCaptureReady,
 		onCommandExecutorReady,
-		onInteractionEvent
+		onInteractionEvent,
+		transitionOverride
 	} = props
 	const { cameras, activeCameraId, sceneTransition } = {
 		...defaultCameraOptions,
@@ -354,10 +367,28 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const stabilizationFrameCount = useRef(0)
 	const stabilizationStartedAt = useRef<number | null>(null)
 	const transitionRuntime = useRef<CameraTransitionRuntime | null>(null)
+	const openingPose = useRef<OpeningPose | null>(null)
+	/** The camera in view, by whichever route it got there. */
 	const previousSelectionKey = useRef<string | null>(null)
-	const previousSelectionSignature = useRef<CameraSelectionSignature | null>(
-		null
-	)
+	/**
+	 * The selection the props last asked for. Kept apart from the camera in
+	 * view because a command (a marker click, a host call) moves the view
+	 * without touching the props: compared against the view, any unrelated
+	 * re-render after a command read as "the props changed" and flew back.
+	 */
+	const requestedSelection = useRef<{
+		cameraId: string
+		signature: CameraSelectionSignature
+	} | null>(null)
+
+	/*
+	  Read by the command executor when a command runs, not when it was created.
+	  A ref keeps the executor's identity independent of the transition: a host
+	  passing an inline `sceneTransition` would otherwise re-register it, and
+	  re-emit `viewer_ready`, on every render.
+	*/
+	const sceneTransitionRef = useRef(sceneTransition)
+	sceneTransitionRef.current = sceneTransition
 
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
@@ -414,7 +445,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				selection.transition.duration ?? DEFAULT_TRANSITION_DURATION_MS
 			)
 
-			if (normalizedType === 'none' || durationMs === 0) {
+			// A visitor who asked for less motion arrives without the flight.
+			if (
+				normalizedType === 'none' ||
+				durationMs === 0 ||
+				prefersReducedMotion()
+			) {
 				transitionRuntime.current = null
 				applyCameraInstantly(selection)
 				return
@@ -471,7 +507,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				command.cameraId,
 				controls?.target ?? new Vector3(0, 0, 0),
 				sceneCamera as PerspectiveCamera,
-				sceneTransition
+				transitionOverride?.current ?? sceneTransitionRef.current,
+				openingPose.current
 			)
 
 			if (nextSelection.cameraId !== command.cameraId) {
@@ -480,11 +517,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 			startTransition(nextSelection)
 			previousSelectionKey.current = nextSelection.cameraId
-			previousSelectionSignature.current = cameraSelectionSignature(
-				cameras,
-				nextSelection.cameraId,
-				nextSelection.transition
-			)
 			onInteractionEvent?.({
 				type: 'camera_changed',
 				cameraId: nextSelection.cameraId
@@ -495,7 +527,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			controls?.target,
 			onInteractionEvent,
 			sceneCamera,
-			startTransition
+			startTransition,
+			transitionOverride
 		]
 	)
 
@@ -533,6 +566,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			// captured before OrbitControls registered.
 			applyInitialFraming(
 				bounds,
+				model,
 				sceneCamera,
 				getThreeState().controls as InitialFramingControls | null,
 				boundsEnabled
@@ -551,11 +585,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 			initializedCameraPosition.current = true
 			previousSelectionKey.current = selection.cameraId
-			previousSelectionSignature.current = cameraSelectionSignature(
-				cameras,
-				selection.cameraId,
-				selection.transition
-			)
+			requestedSelection.current = {
+				cameraId: selection.cameraId,
+				signature: cameraSelectionSignature(cameras, selection.cameraId)
+			}
 		},
 		[
 			activeCameraId,
@@ -565,6 +598,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			cameras,
 			controls?.target,
 			getThreeState,
+			model,
 			sceneTransition
 		]
 	)
@@ -573,13 +607,14 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		if (!hasModel) {
 			initializedCameraPosition.current = false
 			hasInitialFramingCompleted.current = false
+			openingPose.current = null
 			isWaitingForStableFrame.current = false
 			setIsFramed(false)
 			return
 		}
 		if (initializedCameraPosition.current) return
 		setTimeout(() => initializeCamera(sceneCamera as PerspectiveCamera), 0)
-	}, [hasModel, initializeCamera])
+	}, [hasModel, initializeCamera, sceneCamera])
 
 	useEffect(() => {
 		// update camera properties if props change after initialization
@@ -590,31 +625,39 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCameraId,
 			controls?.target ?? new Vector3(0, 0, 0),
 			sceneCamera as PerspectiveCamera,
-			sceneTransition
+			transitionOverride?.current ?? sceneTransitionRef.current,
+			openingPose.current
 		)
 		const selectionKey = selection.cameraId
-		const signature = cameraSelectionSignature(
-			cameras,
-			selection.cameraId,
-			selection.transition
-		)
+		const signature = cameraSelectionSignature(cameras, selection.cameraId)
 
 		if (
-			previousSelectionKey.current === selectionKey &&
-			previousSelectionSignature.current === signature
+			requestedSelection.current?.cameraId === selectionKey &&
+			requestedSelection.current.signature === signature
 		) {
 			return
 		}
+		requestedSelection.current = { cameraId: selectionKey, signature }
 
 		// Only animate when switching between cameras; apply property edits instantly
 		// so sidebar changes don't re-trigger the transition for the active camera.
 		if (previousSelectionKey.current === selectionKey) {
-			applyCameraInstantly(selection)
+			// Without the opening pose: an edit to the camera in view, such as its
+			// field of view, must not pull a camera with no pose of its own back to
+			// where the scene opened.
+			applyCameraInstantly(
+				resolveCameraSelection(
+					cameras,
+					activeCameraId,
+					controls?.target ?? new Vector3(0, 0, 0),
+					sceneCamera as PerspectiveCamera,
+					sceneTransitionRef.current
+				)
+			)
 		} else {
 			startTransition(selection)
 		}
 		previousSelectionKey.current = selectionKey
-		previousSelectionSignature.current = signature
 		onInteractionEvent?.({
 			type: 'camera_changed',
 			cameraId: selection.cameraId
@@ -626,7 +669,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		controls?.target,
 		onInteractionEvent,
 		sceneCamera,
-		startTransition
+		startTransition,
+		transitionOverride
 	])
 
 	useFrame(() => {
@@ -699,6 +743,25 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		const controlsTarget = controls?.target
 		stabilizationFrameCount.current += 1
 
+		const completeInitialFraming = () => {
+			hasInitialFramingCompleted.current = true
+			isWaitingForStableFrame.current = false
+			// The view a camera with no pose of its own comes back to.
+			if (previousSelectionKey.current) {
+				openingPose.current = {
+					cameraId: previousSelectionKey.current,
+					position: cameraPosition.toArray(),
+					target: (controlsTarget ?? new Vector3(0, 0, 0)).toArray()
+				}
+			}
+			setIsFramed(true)
+			onInteractionEvent?.({
+				type: 'initial_framing_completed',
+				cameraId: previousSelectionKey.current
+			})
+			onInitialFramingComplete?.()
+		}
+
 		const now =
 			typeof performance !== 'undefined' ? performance.now() : Date.now()
 		const startedAt = stabilizationStartedAt.current ?? now
@@ -708,14 +771,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			stabilizationFrameCount.current >= MAX_STABILIZATION_FRAMES
 
 		if (stabilizationTimedOut || stabilizationFrameLimitReached) {
-			hasInitialFramingCompleted.current = true
-			isWaitingForStableFrame.current = false
-			setIsFramed(true)
-			onInteractionEvent?.({
-				type: 'initial_framing_completed',
-				cameraId: previousSelectionKey.current
-			})
-			onInitialFramingComplete?.()
+			completeInitialFraming()
 			return
 		}
 
@@ -764,14 +820,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		}
 
 		if (stableFrameCount.current >= 2) {
-			hasInitialFramingCompleted.current = true
-			isWaitingForStableFrame.current = false
-			setIsFramed(true)
-			onInteractionEvent?.({
-				type: 'initial_framing_completed',
-				cameraId: previousSelectionKey.current
-			})
-			onInitialFramingComplete?.()
+			completeInitialFraming()
 			return
 		}
 

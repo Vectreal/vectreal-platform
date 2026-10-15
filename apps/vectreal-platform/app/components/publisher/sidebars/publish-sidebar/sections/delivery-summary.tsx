@@ -10,10 +10,15 @@ import { InfoTooltip } from '../../../../info-tooltip'
 
 import type { FC } from 'react'
 
+const TEXTURE_ENCODING_EXPLANATION =
+	'GPU-compressed textures are encoded when you publish, so their size is only known then. The rest of this figure is exact.'
+
 interface DeliverySummaryProps {
 	sceneBytes?: null | number
 	sizeReductionPercent: null | number
 	sizeDeltaLabel: null | string
+	/** The size leaves out GPU texture encoding, which only publishing measures. */
+	sizeExcludesTextureEncoding?: boolean
 	onOpenOptimization?: () => void
 }
 
@@ -31,13 +36,14 @@ interface DeliverySummaryProps {
  * Deliberately not gated on the scene being saved or the user being signed in.
  * Optimization is a local pass over the loaded model that needs neither, and
  * gating it made it unreachable exactly when it matters most: on a fresh upload
- * that is over the plan's size limit and therefore cannot be saved until it
- * shrinks.
+ * that is over the plan's size limit and therefore cannot be published until
+ * it shrinks.
  */
 export const DeliverySummary: FC<DeliverySummaryProps> = ({
 	sceneBytes,
 	sizeReductionPercent,
 	sizeDeltaLabel,
+	sizeExcludesTextureEncoding = false,
 	onOpenOptimization
 }) => {
 	const estimate = estimateDeliveryTime(sceneBytes)
@@ -47,7 +53,12 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 		<div className="space-y-3">
 			<div className="flex items-center justify-between gap-2">
 				<p className="text-muted-foreground text-eyebrow">Delivery</p>
-				{estimate ? (
+				{sizeExcludesTextureEncoding ? (
+					<span className="text-muted-foreground text-label-xs flex items-center gap-1">
+						+ GPU textures
+						<InfoTooltip content={TEXTURE_ENCODING_EXPLANATION} />
+					</span>
+				) : estimate ? (
 					<span className="text-muted-foreground text-label-xs flex items-center gap-1">
 						{estimate.label} on {DELIVERY_REFERENCE_LABEL}
 						<InfoTooltip content={DELIVERY_ESTIMATE_EXPLANATION} />
@@ -81,7 +92,7 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 				<button
 					type="button"
 					onClick={onOpenOptimization}
-					className="publisher-shell-focus publisher-shell-nested-interactive w-full rounded-xl p-3 text-left"
+					className="shell-focus shell-nested-interactive w-full rounded-xl p-3 text-left"
 				>
 					{/*
 					  A slow scene changes the urgency of this control, not its identity.

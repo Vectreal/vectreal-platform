@@ -22,15 +22,23 @@ import {
 import { modelAcceptPattern } from '@vctrl/core/model-formats'
 import { BUNDLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { MemoryRouter, useLocation } from 'react-router'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EmptyStage } from './empty-stage'
 import { useSampleDownload } from '../../../hooks/use-sample-download'
+import { exampleSceneById } from '../../../lib/samples/example-scenes'
 import { sampleModelById } from '../../../lib/samples/sample-models'
 
+import type { ExampleScene } from '../../../lib/samples/example-scenes'
 import type { ComponentProps } from 'react'
 
+vi.mock('sonner', () => ({
+	toast: { error: vi.fn(), success: vi.fn() }
+}))
+
 beforeEach(() => {
+	vi.mocked(toast.error).mockClear()
 	/* jsdom has no matchMedia; `useAcceptPattern` reads it through `useIsMobile`. */
 	window.matchMedia = vi.fn().mockImplementation((query: string) => ({
 		matches: false,
@@ -43,9 +51,11 @@ beforeEach(() => {
 /** The empty stage as the shell renders it, holding the sample download above it. */
 function ShellStage({
 	onUpload,
+	onOpenExample = vi.fn().mockResolvedValue(undefined),
 	isMobile
 }: {
 	onUpload: (files: unknown) => Promise<unknown>
+	onOpenExample?: ComponentProps<typeof EmptyStage>['onOpenExample']
 	isMobile?: boolean
 }) {
 	return (
@@ -53,6 +63,7 @@ function ShellStage({
 			isMobile={isMobile}
 			onUpload={onUpload}
 			sampleDownload={useSampleDownload()}
+			onOpenExample={onOpenExample}
 		/>
 	)
 }
@@ -309,7 +320,11 @@ describe('a sample on its way down', () => {
 		function Shell({ shown }: { shown: boolean }) {
 			const sampleDownload = useSampleDownload()
 			return shown ? (
-				<EmptyStage onUpload={onUpload} sampleDownload={sampleDownload} />
+				<EmptyStage
+					onUpload={onUpload}
+					sampleDownload={sampleDownload}
+					onOpenExample={vi.fn()}
+				/>
 			) : null
 		}
 		const view = render(
@@ -358,6 +373,7 @@ describe('recent scenes', () => {
 				<EmptyStage
 					onUpload={vi.fn()}
 					sampleDownload={useSampleDownload()}
+					onOpenExample={vi.fn()}
 					recentScenes={recentScenes}
 				/>
 			)
@@ -415,8 +431,10 @@ describe('recent scenes', () => {
 					onUpload={vi.fn()}
 					sampleDownload={{
 						download: { id: 'rocket', percent: 50 },
-						openSample: vi.fn()
+						openSample: vi.fn(),
+						openExample: vi.fn()
 					}}
+					onOpenExample={vi.fn()}
 					recentScenes={[
 						{
 							id: 'scene-1',
@@ -452,13 +470,14 @@ describe('a sample named by the link', () => {
 
 	function renderAt(search: string) {
 		const onUpload = vi.fn().mockResolvedValue(undefined)
+		const onOpenExample = vi.fn().mockResolvedValue(undefined)
 		render(
 			<MemoryRouter initialEntries={[`/publisher${search}`]}>
-				<ShellStage onUpload={onUpload} />
+				<ShellStage onUpload={onUpload} onOpenExample={onOpenExample} />
 				<LocationProbe />
 			</MemoryRouter>
 		)
-		return onUpload
+		return Object.assign(onUpload, { onOpenExample })
 	}
 
 	beforeEach(() => {
@@ -475,6 +494,38 @@ describe('a sample named by the link', () => {
 		const [files] = onUpload.mock.calls[0] as [File[]]
 		expect(files[0].name).toBe('rocket.glb')
 		expect(screen.getByTestId('search').textContent).toBe('')
+	})
+
+	it('opens an example scene with its settings, and takes the param off the URL', async () => {
+		const { onOpenExample } = renderAt('?example=camera-shadows')
+
+		await waitFor(() => expect(onOpenExample).toHaveBeenCalledTimes(1))
+		const [example, file] = onOpenExample.mock.calls[0] as [ExampleScene, File]
+		expect(example).toBe(exampleSceneById('camera-shadows'))
+		expect(file.name).toBe('camera.glb')
+		expect(screen.getByTestId('search').textContent).toBe('')
+	})
+
+	it('opens the example when a link names both, and only that', async () => {
+		const onUpload = renderAt('?sample=rocket&example=camera-shadows')
+
+		await waitFor(() => expect(onUpload.onOpenExample).toHaveBeenCalledTimes(1))
+		expect(onUpload).not.toHaveBeenCalled()
+		expect(screen.getByTestId('search').textContent).toBe('')
+	})
+
+	it('opens nothing for an example it does not know, and says nothing either', async () => {
+		const onUpload = renderAt('?example=not-an-example')
+
+		await waitFor(() =>
+			expect(screen.getByTestId('search').textContent).toBe('')
+		)
+		// Past the param's removal, so the open itself has run: a stale link is
+		// an empty stage, not an error about an example that never existed.
+		await new Promise((resolve) => setTimeout(resolve, 20))
+		expect(toast.error).not.toHaveBeenCalled()
+		expect(onUpload.onOpenExample).not.toHaveBeenCalled()
+		expect(onUpload).not.toHaveBeenCalled()
 	})
 
 	it('opens nothing for a sample it does not know', async () => {
@@ -501,7 +552,12 @@ describe('before the page is running', () => {
 			<MemoryRouter>
 				<Stage
 					onUpload={vi.fn()}
-					sampleDownload={{ download: null, openSample: vi.fn() }}
+					sampleDownload={{
+						download: null,
+						openSample: vi.fn(),
+						openExample: vi.fn()
+					}}
+					onOpenExample={vi.fn()}
 				/>
 			</MemoryRouter>
 		)

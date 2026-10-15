@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
 import { CameraDrawing, CameraObject } from './camera-drawing'
-import styles from './pilot-offer.module.css'
 import { ProductPageSketch, SketchLine } from './product-page-sketch'
 import {
 	HOME_PAGE_COPY,
@@ -53,8 +52,12 @@ const DRAWINGS: ReactNode[] = [
 
 /*
   How far below the pinned frame a term has to be to count as the one being
-  read. Snap rests a term's top 48px below the frame (`pilot-offer.module.css`),
-  so the line sits inside a resting term.
+  read: the 48px gap between terms plus a little, so the line falls inside a
+  term as soon as it clears the frame.
+
+  The terms do not snap to this line. Snap has to be declared on the root to
+  reach the page's own scroll, which made every scroll on a phone a snap
+  scroll, and iOS Safari pulled at the whole page to rest on these terms.
 */
 const READING_LINE_BELOW_FRAME_PX = 64
 
@@ -148,7 +151,7 @@ function usePinnedStage(count: number) {
 }
 
 /**
- * The founding-client offer, written as terms rather than as features.
+ * The pilot offer, written as terms rather than as features.
  *
  * Each term has a small drawing of the stage of the project it belongs to, so
  * the offer can be read at a glance before it is read in full.
@@ -176,7 +179,7 @@ export const PilotOffer = () => {
 			ref={(node) => {
 				terms.current[i] = node
 			}}
-			className={cn(styles.term, 'flex flex-col gap-4')}
+			className="flex flex-col gap-4"
 		>
 			<div
 				aria-hidden="true"
@@ -252,7 +255,7 @@ export const PilotOffer = () => {
 				data-reveal
 			>
 				<p className="text-foreground text-body max-w-md">{COPY.team}</p>
-				<Button asChild size="lg" className="w-full sm:w-fit">
+				<Button asChild size="lg" variant="brand" className="w-full sm:w-fit">
 					<Link to={PILOT_CONTACT_HREF}>
 						{COPY.cta}
 						<ArrowRight aria-hidden="true" />

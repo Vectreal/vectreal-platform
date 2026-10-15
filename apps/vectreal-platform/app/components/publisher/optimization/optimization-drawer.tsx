@@ -1,20 +1,34 @@
 import { Button } from '@shared/components/ui/button'
+import { Kbd } from '@shared/components/ui/kbd'
 import { formatFileSize } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
-import { SlidersHorizontal } from 'lucide-react'
+import { useAtomValue } from 'jotai/react'
+import { Eye, LoaderCircle, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useMemo, useState, type FC } from 'react'
-import { Link } from 'react-router'
 
 import { OptimizeButton } from './optimize-button'
 import { AdvancedPanel } from './panels/advanced-panel'
-import { PresetPanel } from './panels/preset-panel'
+import { PRESET_META, PresetPanel } from './panels/preset-panel'
 import { OptimizationProgress } from './progress/optimization-progress'
 import { OptimizationResults } from './results/optimization-results'
 import { PreOptimizationSummary } from './results/pre-optimization-summary'
 import { SceneNormalizationNotice } from './scene-normalization-notice'
+import { COMPARE_HOLD_KEY, useHoldToCompare } from './use-hold-to-compare'
 import { useOptimizationProcess } from './use-optimization-process'
 import { useOptimizationSettings } from './use-optimization-settings'
-import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
+import { originalPreset } from '../../../constants/optimizations'
+import {
+	canCompareWithSource,
+	derivesFromSavedVersion,
+	isSaveInFlight,
+	optimizationsMatch,
+	resolveDerivedSettings
+} from '../../../lib/domain/scene'
+import { savePanelAtom } from '../../../lib/stores/save-progress-store'
+import {
+	comparedModelAtom,
+	keptOriginalAtom
+} from '../../../lib/stores/scene-optimization-store'
 import { PUBLISHER_LAYER } from '../shell/shell-layout'
 import {
 	DrillDown,
@@ -28,7 +42,6 @@ interface OptimizationDrawerProps {
 	onOpenChange: (open: boolean) => void
 	isOverSizeLimit: boolean
 	maxSceneBytes: number | null
-	dashboardHref?: string
 	isMobile: boolean
 }
 
@@ -37,7 +50,6 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 	onOpenChange,
 	isOverSizeLimit,
 	maxSceneBytes,
-	dashboardHref,
 	isMobile
 }) => {
 	// Starts at the root each time the drawer opens.
@@ -46,20 +58,60 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		if (!open) setAdvancedPath([])
 	}, [open])
 
-	const { optimizationPreset } = useOptimizationSettings()
+	const { optimizations, optimizationPreset, sourceSettings, derivedFrom } =
+		useOptimizationSettings()
 	const {
 		info,
 		dracoReport,
+		publishedEncoding,
 		simplificationOutcome,
 		resolvedMetrics,
 		sizeInfo,
 		isPending,
+		isLoadingOriginal,
 		hasCompletedOptimizationPass,
-		handleOptimizeClick,
-		handleStackOptimizeClick,
+		derive,
+		applyPlanned,
 		isOptimizerPreparing,
 		optimizingStep
-	} = useOptimizationProcess()
+	} = useOptimizationProcess({ isOpen: open })
+
+	// The document on screen is not what the panel shows: nothing has been
+	// derived yet, or the advanced controls were edited since.
+	const hasUnappliedSettings = !optimizationsMatch(
+		resolveDerivedSettings(optimizations, sourceSettings),
+		derivedFrom
+	)
+	const applyLabel =
+		optimizationPreset === 'custom'
+			? 'Apply changes'
+			: `Apply ${PRESET_META[optimizationPreset].label}`
+
+	const { stored, unreadable } = useAtomValue(keptOriginalAtom)
+	const startsFromSavedVersion = derivesFromSavedVersion({
+		stored,
+		unreadable,
+		sourceSettings
+	})
+	const isUnoptimized = optimizationsMatch(derivedFrom, originalPreset)
+
+	const isSaving = isSaveInFlight(useAtomValue(savePanelAtom))
+	const isComparable = canCompareWithSource({
+		isOpen: open,
+		isPending,
+		isLoadingOriginal,
+		isSaving,
+		sourceSettings,
+		derivedFrom
+	})
+	const sourceIsOriginal = optimizationsMatch(sourceSettings, originalPreset)
+	const isComparing = useAtomValue(comparedModelAtom) !== null
+	const sourceName = sourceIsOriginal ? 'the original' : 'the saved version'
+	const { isPreparing: isPreparingCompare, holdProps } = useHoldToCompare({
+		isOpen: open,
+		isAvailable: isComparable,
+		isOriginal: sourceIsOriginal
+	})
 
 	// Soft-gate: only an in-progress optimization blocks closing. Being over the
 	// size limit keeps save disabled (server 402 is the hard backstop) but never
@@ -89,18 +141,23 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 				typeof sizeInfo.currentSceneBytes === 'number'
 					? formatFileSize(sizeInfo.currentSceneBytes)
 					: 'This scene'
-			return `${current} exceeds your plan's ${formatFileSize(maxSceneBytes)} max scene size. Optimize to get under ${formatFileSize(maxSceneBytes)} to save.`
+			return `${current} exceeds your plan's ${formatFileSize(maxSceneBytes)} max scene size. Optimize to get under ${formatFileSize(maxSceneBytes)} to publish.`
 		}
 
-		return 'Adjust options and run another optimization pass.'
-	}, [isOverSizeLimit, maxSceneBytes, isPending, sizeInfo.currentSceneBytes])
-
-	const resolvedDashboardHref = dashboardHref ?? DASHBOARD_ROUTES.DASHBOARD
-	// Over the limit, "Continue to Composition" points away from the only action
-	// that unblocks saving, so an already-optimized scene that is still too large
-	// keeps the single-action layout and re-optimizing stays the primary CTA.
-	const shouldShowCompletionActions =
-		!isPending && hasCompletedOptimizationPass && !isOverSizeLimit
+		if (startsFromSavedVersion) {
+			return 'Each preset is made from the saved version of this scene and applies as soon as you pick it. Save keeps the one you chose.'
+		}
+		return isUnoptimized
+			? 'Not optimized yet. Picking a preset applies it from your original right away. Save keeps it.'
+			: 'Each preset is made from your original and applies as soon as you pick it, so you can switch freely. Save keeps the one you chose.'
+	}, [
+		isUnoptimized,
+		startsFromSavedVersion,
+		isOverSizeLimit,
+		maxSceneBytes,
+		isPending,
+		sizeInfo.currentSceneBytes
+	])
 
 	return (
 		<DynamicSidebar
@@ -157,6 +214,24 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 					<AnimatePresence mode="wait">
 						{isPending ? (
 							<OptimizationProgress key="processing" steps={optimizingStep} />
+						) : isLoadingOriginal ? (
+							<motion.div
+								key="loading-original"
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								exit={{ opacity: 0 }}
+								transition={{ duration: 0.2 }}
+								role="status"
+								className="flex items-center gap-3 px-5 py-6"
+							>
+								<LoaderCircle className="text-muted-foreground size-4 shrink-0 motion-safe:animate-spin" />
+								<div className="space-y-0.5">
+									<p className="text-sm font-medium">Loading your original</p>
+									<p className="text-muted-foreground text-xs">
+										Every preset is made from it, at full quality.
+									</p>
+								</div>
+							</motion.div>
 						) : (
 							<motion.div
 								key="config"
@@ -179,6 +254,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 													sizeInfo={sizeInfo}
 													resolvedMetrics={resolvedMetrics}
 													dracoReport={dracoReport}
+													publishedEncoding={publishedEncoding}
 													simplificationOutcome={simplificationOutcome}
 												/>
 											) : (
@@ -191,9 +267,35 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 											)}
 										</AnimatePresence>
 
+										{isComparable && (
+											<Button
+												type="button"
+												variant="secondary"
+												size="sm"
+												className="w-full touch-none select-none"
+												onContextMenu={(event) => event.preventDefault()}
+												{...holdProps}
+											>
+												<Eye />
+												{/* The canvas label sits behind the mobile sheet, so the
+												    button says what is showing too. */}
+												{isComparing
+													? `Showing ${sourceName}`
+													: isPreparingCompare
+														? 'Preparing…'
+														: `Hold to see ${sourceName}`}
+												{!isMobile && (
+													<Kbd className="ml-auto">{COMPARE_HOLD_KEY}</Kbd>
+												)}
+											</Button>
+										)}
+
 										<SceneNormalizationNotice />
 
-										<PresetPanel />
+										<PresetPanel
+											onChoose={derive}
+											sourceIsSaved={startsFromSavedVersion}
+										/>
 
 										<DrillDownTrigger
 											to="advanced"
@@ -217,40 +319,22 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 
 				<div className="border-shell-border-soft shrink-0 border-t px-5 py-4">
 					<div className="flex flex-row justify-between gap-3">
-						{isOverSizeLimit && !isPending ? (
-							<Button type="button" variant="ghost" asChild>
-								<Link to={resolvedDashboardHref}>Back to Dashboard</Link>
-							</Button>
-						) : null}
-						{shouldShowCompletionActions ? (
-							<>
-								<OptimizeButton
-									onOptimize={handleOptimizeClick}
-									onStackOptimize={handleStackOptimizeClick}
-									isPending={isPending}
-									mode="optimize-more"
-									isPreparing={isOptimizerPreparing}
-								/>
-								<Button
-									type="button"
-									className="grow"
-									onClick={() => onOpenChange(false)}
-								>
-									Continue to Composition
-								</Button>
-							</>
+						{hasUnappliedSettings || isPending ? (
+							<OptimizeButton
+								onOptimize={applyPlanned}
+								isPending={isPending}
+								label={applyLabel}
+								isPreparing={isOptimizerPreparing}
+								disabled={isLoadingOriginal}
+							/>
 						) : (
-							<div className="w-full sm:w-[18rem]">
-								<OptimizeButton
-									onOptimize={handleOptimizeClick}
-									onStackOptimize={handleStackOptimizeClick}
-									isPending={isPending}
-									mode={
-										hasCompletedOptimizationPass ? 'optimize-more' : 'apply'
-									}
-									isPreparing={isOptimizerPreparing}
-								/>
-							</div>
+							<Button
+								type="button"
+								className="grow"
+								onClick={() => onOpenChange(false)}
+							>
+								Continue to Composition
+							</Button>
 						)}
 					</div>
 				</div>

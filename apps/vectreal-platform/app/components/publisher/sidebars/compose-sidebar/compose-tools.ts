@@ -1,11 +1,13 @@
 import {
 	Camera,
+	Clapperboard,
 	Locate,
 	MountainSnow,
 	MousePointer2,
 	Tornado
 } from 'lucide-react'
 
+import { AnimationToolSettings } from './animation-settings'
 import { CameraControlsSettings } from './camera-controls-settings'
 import { EnvironmentSettings } from './environment-settings'
 import { HotspotsSettings } from './hotspot-settings'
@@ -70,6 +72,15 @@ const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 			'Add point-of-interest markers linked to saved camera positions.',
 		icon: Locate,
 		component: HotspotsSettings
+	},
+	{
+		value: 'animation',
+		label: 'Animation',
+		shortLabel: 'Animation',
+		description:
+			'Play the animation clips that come with the model, together or one after another.',
+		icon: Clapperboard,
+		component: AnimationToolSettings
 	}
 ]
 

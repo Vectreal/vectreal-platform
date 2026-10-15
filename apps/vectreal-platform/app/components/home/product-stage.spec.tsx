@@ -6,12 +6,12 @@
  * boxes that must agree: the clip, which is the place itself, so the shadow
  * reaches its edges and stops there, and the frame the camera is fitted into,
  * the place less its margin, centered in it. It is a second WebGL renderer and
- * a parse of the hero's file, so it must not start before the window is on
- * screen, and once started it stays: the window cycles every few seconds, and
+ * a parse of the hero's file, so it waits for the hero's stage to settle or
+ * the window to come on screen, whichever is first, and once started it stays: the window cycles every few seconds, and
  * tearing it down each time round would parse the file again on every pass.
  */
 import { act, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	frameBox,
@@ -19,6 +19,7 @@ import {
 	ProductStage,
 	type FrameRect
 } from './product-stage'
+import { markHeroSettled, resetHeroSettled } from './stage/hero-settled'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 
 vi.mock('./embed-stage-client', () => ({
@@ -58,13 +59,24 @@ describe('placing the stage', () => {
 })
 
 describe('the live stage', () => {
+	beforeEach(resetHeroSettled)
+
 	it('stays out of the accessibility tree, hint included', () => {
 		render(<ProductStage visible={false} place={PLACE} hint />)
 		const hint = screen.getByText(HOME_PAGE_COPY.stage.status.live)
 		expect(hint.closest('[aria-hidden="true"]')).not.toBeNull()
 	})
 
-	it('starts only once the window is on screen, then keeps running', async () => {
+	it('starts once the hero has settled, before the window is reached', async () => {
+		render(<ProductStage visible={false} place={PLACE} hint />)
+		await act(async () => {})
+		expect(screen.queryByText('live stage')).toBeNull()
+
+		act(() => markHeroSettled())
+		expect(await screen.findByText('live stage')).toBeTruthy()
+	})
+
+	it('starts when the window is on screen first, then keeps running', async () => {
 		const props = { place: PLACE, hint: true }
 		const { rerender } = render(<ProductStage visible={false} {...props} />)
 		await act(async () => {})

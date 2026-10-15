@@ -3,15 +3,13 @@ import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
-import { formatNewsDate } from '../../lib/news/news-manifest'
+import { formatNewsDate } from '../../lib/news/news-article'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
 
-import type { NewsArticle } from '../../lib/news/news-manifest'
-
-type ArticleSummary = Omit<NewsArticle, 'Component'>
+import type { NewsArticle } from '../../lib/news/news-article'
 
 interface FeaturedArticleProps {
-	article: ArticleSummary
+	article: NewsArticle
 	className?: string
 }
 

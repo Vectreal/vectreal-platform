@@ -12,7 +12,8 @@ interface UseViewerLoadingResult {
  * Handles transitions between loading, loaded, and ready states.
  *
  * @param hasContent - Whether the viewer has content to display (model or children)
- * @param isInitialFramingComplete - Whether initial camera framing via bounds has stabilized
+ * @param isSceneReady - Whether the first view is framed and can be drawn without
+ *   stalling on shader compilation
  * @param hasLoader - Whether a loader element will render, and therefore whether
  *   there is a fade-out to wait for. `loaded` exists only to cover that fade,
  *   and it is left by the loader's own `transitionend`; a consumer passing
@@ -22,11 +23,11 @@ interface UseViewerLoadingResult {
  */
 export function useViewerLoading(
 	hasContent: boolean,
-	isInitialFramingComplete: boolean,
+	isSceneReady: boolean,
 	hasLoader: boolean
 ): UseViewerLoadingResult {
 	const [loadingState, setLoadingState] = useState<LoadingState>('loading')
-	const canTransitionToLoaded = hasContent && isInitialFramingComplete
+	const canTransitionToLoaded = hasContent && isSceneReady
 	const completeLoadingTransition = useCallback(() => {
 		setLoadingState((currentState) =>
 			currentState === 'loaded' ? 'ready' : currentState

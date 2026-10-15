@@ -14,9 +14,9 @@ import {
 } from '@shared/components/ui/dropdown-menu'
 import { cn } from '@shared/utils'
 import { User } from '@supabase/supabase-js'
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
 
+import { useIsClientMounted } from '../hooks/use-is-client-mounted'
 import { CONVERT_INDEX_PATH } from '../lib/convert/convert-pairs'
 import { ACCOUNT } from '../lib/navigation/site-map'
 
@@ -74,11 +74,7 @@ export function UserMenu({
 	sceneDetailsHref
 }: UserMenuProps) {
 	const navigate = useNavigate()
-	const [isClientMounted, setIsClientMounted] = useState(false)
-
-	useEffect(() => {
-		setIsClientMounted(true)
-	}, [])
+	const isClientMounted = useIsClientMounted()
 
 	async function handleMenuItemClick(to = '/dashboard') {
 		await navigate(to, { viewTransition: true })

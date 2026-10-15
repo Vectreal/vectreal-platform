@@ -70,10 +70,10 @@ function buildCameraDescriptors(
  * Built through `resolveHotspotMarkers` with its default options, which is the
  * same filter the renderer uses, so `internalOnly` and hidden markers cannot
  * reach a parent page. That is not belt and braces here. `redactSettingsForEmbed`
- * runs in exactly one place, `buildEmbedSceneManifest`, and `/preview` never
- * reaches it - it always takes the session branch - so the settings this hook
- * is handed there are unredacted, and this filter is the only thing standing
- * between an internal marker's name and whichever origin pinged the frame.
+ * runs only on the published manifest, and `/preview` of a draft is served the
+ * working scene - so the settings this hook is handed there are unredacted, and
+ * this filter is the only thing standing between an internal marker's name and
+ * whichever origin pinged the frame.
  *
  * Names and camera ids only. A host builds navigation from these; the body and
  * the link are what the viewer draws, and a second copy on the page would have

@@ -15,6 +15,7 @@ import {
 } from 'drizzle-orm'
 
 import { assetObjectPath } from './asset-object-path'
+import { MAX_STORED_FILE_BYTES } from '../../../constants/utility-constants'
 import { getDbClient } from '../../../db/client'
 import {
 	assets,
@@ -42,6 +43,8 @@ export interface GLTFAssetData {
 	data: Uint8Array
 	mimeType: string
 	type: 'buffer' | 'image'
+	/** Facts about the bytes, recorded on the row a new upload creates. */
+	metadata?: Record<string, unknown>
 }
 
 const db = getDbClient()
@@ -90,7 +93,7 @@ async function ensureStorageBucket() {
 			STORAGE_BUCKET,
 			{
 				public: false,
-				fileSizeLimit: 104857600
+				fileSizeLimit: MAX_STORED_FILE_BYTES
 			}
 		)
 
@@ -178,7 +181,7 @@ const REUSE_CANDIDATE_LIMIT = 25
 /**
  * Computes a deterministic content hash used for de-duplication.
  */
-export function computeAssetHash(data: Uint8Array): string {
+function computeAssetHash(data: Uint8Array): string {
 	return createHash('sha256').update(data).digest('hex')
 }
 
@@ -408,6 +411,7 @@ export async function uploadSceneAssets(
 				fileSize: asset.data.byteLength,
 				mimeType: asset.mimeType,
 				metadata: {
+					...asset.metadata,
 					sceneId,
 					originalFileName: fileName,
 					assetType: asset.type,
@@ -435,16 +439,29 @@ export async function uploadSceneAssets(
 	return results
 }
 
+/** The columns a download needs, for a caller that already selected them. */
+export interface DownloadableAssetRow {
+	id: string
+	filePath: string
+	mimeType: string | null
+	name: string
+}
+
 /**
  * Downloads a single asset payload and returns bytes + metadata for response use.
  */
+export class AssetNotFoundError extends Error {
+	constructor(assetId: string) {
+		super(`Asset not found: ${assetId}`)
+		this.name = 'AssetNotFoundError'
+	}
+}
+
 export async function downloadAsset(assetId: string): Promise<{
 	data: Uint8Array
 	mimeType: string
 	fileName: string
 }> {
-	await ensureStorageBucketOnce()
-
 	const [asset] = await db
 		.select()
 		.from(assets)
@@ -452,8 +469,21 @@ export async function downloadAsset(assetId: string): Promise<{
 		.limit(1)
 
 	if (!asset) {
-		throw new Error(`Asset not found: ${assetId}`)
+		throw new AssetNotFoundError(assetId)
 	}
+
+	return downloadAssetFromRow(asset)
+}
+
+/** `downloadAsset` without the row lookup. */
+export async function downloadAssetFromRow(
+	asset: DownloadableAssetRow
+): Promise<{
+	data: Uint8Array
+	mimeType: string
+	fileName: string
+}> {
+	await ensureStorageBucketOnce()
 
 	const storage = getStorageClient()
 
@@ -473,7 +503,7 @@ export async function downloadAsset(assetId: string): Promise<{
 		}
 	} catch (error) {
 		throw new Error(
-			`Failed to download asset ${assetId}: ${getErrorMessage(error)}`,
+			`Failed to download asset ${asset.id}: ${getErrorMessage(error)}`,
 			error instanceof Error ? { cause: error } : undefined
 		)
 	}
@@ -513,6 +543,50 @@ export async function downloadAssets(
 }
 
 /**
+ * The asset id a scene's `thumbnail_url` names: the last path segment of
+ * `/api/scenes/:sceneId/thumbnail/:assetId`. The URL is the only link a
+ * thumbnail is guaranteed to have, so the collectors and the thumbnail route
+ * all read it through this one expression.
+ */
+const thumbnailAssetIdSql = sql<string>`regexp_replace(${scenes.thumbnailUrl}, '^.*/', '')`
+
+/**
+ * The asset row for `assetId` when it is the thumbnail `sceneId` currently
+ * shows, otherwise undefined.
+ *
+ * Read from `scenes.thumbnail_url`, not from the asset row. Assets are
+ * de-duplicated per project by content hash, so a row's `metadata.sceneId`
+ * names only the scene that created it first, and `scene_assets` does not
+ * link every thumbnail (see `selectUnreferencedAssetIds`).
+ *
+ * The URL is client-written and nothing validates it on save, so it alone
+ * binds nothing: a member could point their own scene's `thumbnail_url` at any
+ * asset id. The folder join below is the guard that the asset sits in the
+ * scene's project. A thumbnail the publisher uploads always does: it is linked
+ * with the save's other assets, which must all belong to that project.
+ */
+export async function findSceneThumbnailAsset(
+	sceneId: string,
+	assetId: string
+): Promise<{ updatedAt: Date } | undefined> {
+	const [row] = await db
+		.select({ updatedAt: assets.updatedAt })
+		.from(scenes)
+		.innerJoin(assets, eq(sql`${assets.id}::text`, thumbnailAssetIdSql))
+		.innerJoin(
+			folders,
+			and(
+				eq(folders.id, assets.folderId),
+				eq(folders.projectId, scenes.projectId)
+			)
+		)
+		.where(and(eq(scenes.id, sceneId), eq(thumbnailAssetIdSql, assetId)))
+		.limit(1)
+
+	return row
+}
+
+/**
  * Narrows a set of asset ids to the ones nothing points at any more.
  *
  * There are three ways an asset is still in use, and every caller that deletes
@@ -541,9 +615,6 @@ export async function selectUnreferencedAssetIds(
 		return []
 	}
 
-	// The id is the last path segment of `/api/scenes/:sceneId/thumbnail/:assetId`.
-	const thumbnailAssetId = sql<string>`regexp_replace(${scenes.thumbnailUrl}, '^.*/', '')`
-
 	const [attached, published, thumbnails] = await Promise.all([
 		db
 			.selectDistinct({ assetId: sceneAssets.assetId })
@@ -554,10 +625,13 @@ export async function selectUnreferencedAssetIds(
 			.from(scenePublished)
 			.where(inArray(scenePublished.assetId, assetIds)),
 		db
-			.select({ assetId: thumbnailAssetId })
+			.select({ assetId: thumbnailAssetIdSql })
 			.from(scenes)
 			.where(
-				and(isNotNull(scenes.thumbnailUrl), inArray(thumbnailAssetId, assetIds))
+				and(
+					isNotNull(scenes.thumbnailUrl),
+					inArray(thumbnailAssetIdSql, assetIds)
+				)
 			)
 	])
 
@@ -624,7 +698,7 @@ function isReferencedSql() {
 		or exists (
 			select 1 from ${scenes}
 			where ${scenes.thumbnailUrl} is not null
-				and regexp_replace(${scenes.thumbnailUrl}, '^.*/', '') = ${assets.id}::text
+				and ${thumbnailAssetIdSql} = ${assets.id}::text
 		)
 	)`
 }

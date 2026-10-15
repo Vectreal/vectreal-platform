@@ -1,16 +1,19 @@
+import { useAtomValue } from 'jotai/react'
 import { ArrowUpRight, Sparkles } from 'lucide-react'
 
+import { inferOptimizationPreset } from '../../../../../lib/domain/scene'
+import { documentOptimizationsAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { listEnabledKeys } from '../../../optimization/model'
 import { PRESET_META } from '../../../optimization/panels/preset-panel'
-import { useOptimizationSettings } from '../../../optimization/use-optimization-settings'
 import { PanelRowButton } from '../../panel-row-button'
 import { usePublishSidebarContext } from '../publish-sidebar-context'
 
 import type { FC } from 'react'
 
 /**
- * What the optimization pass is configured to do, in one line that opens the
- * optimization drawer.
+ * What the published scene was optimized with, in one line that opens the
+ * optimization drawer. Read from the document, not the drawer's settings,
+ * which can hold edits that were never applied.
  *
  * Complementary to the Delivery summary above it, which reports the outcome
  * (size and load time); this reports the inputs. It used to be a full section
@@ -20,7 +23,8 @@ import type { FC } from 'react'
  */
 export const OptimizationOptions: FC = () => {
 	const { onOpenOptimizationDrawer } = usePublishSidebarContext()
-	const { optimizations, optimizationPreset } = useOptimizationSettings()
+	const optimizations = useAtomValue(documentOptimizationsAtom)
+	const optimizationPreset = inferOptimizationPreset(optimizations)
 	const stepCount = listEnabledKeys(optimizations).length
 	const summary =
 		stepCount === 0

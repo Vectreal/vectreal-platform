@@ -7,8 +7,8 @@ import type { FieldConfig } from '../../../../../types/settings-field'
 // shadow core. Ambient is clamped to this range — never 0 (keeps a little softness)
 // and never so high the shadow washes out. The virtual "darkness" slider value
 // (0..1) is mapped to/from ambient in the panel.
-export const SHADOW_AMBIENT_DARKEST = 0.05
-export const SHADOW_AMBIENT_LIGHTEST = 0.6
+const SHADOW_AMBIENT_DARKEST = 0.05
+const SHADOW_AMBIENT_LIGHTEST = 0.6
 
 /** Convert the 0..1 Darkness slider value to a RandomizedLight ambient value. */
 export const darknessToAmbient = (darkness: number) =>

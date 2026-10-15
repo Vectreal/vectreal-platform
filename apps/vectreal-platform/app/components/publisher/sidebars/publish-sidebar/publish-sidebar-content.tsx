@@ -9,8 +9,10 @@ import { useState } from 'react'
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
 import { isSaveActionBlocked } from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
+import { useSizeExcludesTextureEncoding } from '../../optimization/use-publish-size-projection'
 import { sidebarContentVariants } from '../animation'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
+import { KeepOriginalToggle } from './keep-original-toggle'
 import { usePublishSidebarContext } from './publish-sidebar-context'
 import { DeliverySummary } from './sections/delivery-summary'
 import { EmbedOptions } from './sections/embed-options'
@@ -64,6 +66,7 @@ const PublishSidebarContent: FC = () => {
 	const isSaveDisabled = isSaving || isSaveActionBlocked(saveAvailability)
 
 	const sizeDeltaLabel = getSizeDeltaLabel(viewModel.sizeDeltaBytes)
+	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
 	const currentSceneBytes = viewModel.publishMetricSizeInfo.currentSceneBytes
 	const isAuthenticated = viewModel.isAuthenticated
 	const hasSavedScene = viewModel.hasSavedScene
@@ -92,6 +95,7 @@ const PublishSidebarContent: FC = () => {
 							sceneBytes={currentSceneBytes}
 							sizeReductionPercent={viewModel.sizeReductionPercent}
 							sizeDeltaLabel={sizeDeltaLabel}
+							sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}
 							onOpenOptimization={onOpenOptimizationDrawer}
 						/>
 
@@ -102,6 +106,9 @@ const PublishSidebarContent: FC = () => {
 						  ships is decided there, before anything below it matters.
 						*/}
 						<OptimizationOptions />
+
+						{/* Beside the optimization, which is what makes an original worth keeping. */}
+						{isAuthenticated && <KeepOriginalToggle />}
 
 						<DrillDownTrigger to="download" icon={<Save />} label="Download" />
 
@@ -145,14 +152,6 @@ const PublishSidebarContent: FC = () => {
 								</Button>
 							</div>
 						)}
-
-						{isSaveDisabled &&
-							saveAvailability?.reason === 'requires-size-reduction' && (
-								<p className="text-muted-foreground text-xs">
-									This scene is over your plan's max scene size. Optimize to
-									reduce it below the limit to enable saving and publishing.
-								</p>
-							)}
 
 						{canAccessPublishFeatures && (
 							<>

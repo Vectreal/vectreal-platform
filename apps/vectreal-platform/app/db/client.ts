@@ -35,20 +35,3 @@ export function getDbClient() {
 	cachedClient = drizzle({ client, schema })
 	return cachedClient
 }
-
-/**
- * Cleanup database connections on application shutdown.
- * Call this during graceful shutdown to prevent connection leaks.
- */
-export async function closeDbConnection() {
-	if (cachedClient) {
-		// Access the underlying postgres client for cleanup
-		const client = (
-			cachedClient as unknown as { $client: { end(): Promise<void> } }
-		).$client
-		if (client && typeof client.end === 'function') {
-			await client.end()
-		}
-		cachedClient = null
-	}
-}

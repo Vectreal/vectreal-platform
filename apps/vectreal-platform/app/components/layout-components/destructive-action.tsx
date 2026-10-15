@@ -25,7 +25,7 @@ import type { ReactNode } from 'react'
  *
  * `note` is for a reason the reader cannot act on the control, and it is the
  * only thing that makes a disabled destructive action legitimate:
- * `table-columns.tsx` puts it as "a disabled item explains itself". Where there
+ * `table-columns/api-key-columns.tsx` puts it as "a disabled item explains itself". Where there
  * is no explanation to give, render nothing at all instead - that is the other
  * half of the same rule, and it belongs to the caller, because only the caller
  * knows whether the reader has a move.

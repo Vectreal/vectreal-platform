@@ -2,15 +2,27 @@ import { ApiResponse } from '@shared/utils'
 import { data, Outlet, redirect, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/preview-layout'
+import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
+import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import { buildEmbedPath } from '../../lib/domain/embed/embed-snippet'
-import { getProject } from '../../lib/domain/project/project-repository.server'
+import {
+	buildInlineEmbedManifest,
+	EmbedSettingsReadFailure
+} from '../../lib/domain/embed/inline-embed-manifest.server'
 import {
 	parseSceneRouteParams,
 	SCENE_ROUTE_PARAM_ERRORS
 } from '../../lib/domain/scene/scene-route-params'
-import { getScene } from '../../lib/domain/scene/server/scene-folder-repository.server'
+import { readEmbedSceneSettings } from '../../lib/domain/scene/server/scene-manifest.server'
+import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
 import { getAuthUser } from '../../lib/http/auth.server'
+import {
+	previewDocumentHeaders,
+	withNoStore
+} from '../../lib/http/response-headers.server'
 import { buildMeta } from '../../lib/seo'
+
+import type { SceneEmbedManifestResponse } from '../../types/api'
 
 export const meta: MetaFunction = () =>
 	buildMeta(
@@ -21,15 +33,6 @@ export const meta: MetaFunction = () =>
 		undefined,
 		{ private: true }
 	)
-
-function withNoStoreHeaders(response: Response): Response {
-	const headers = new Headers(response.headers)
-	headers.set('Cache-Control', 'no-store')
-	return new Response(response.body, {
-		status: response.status,
-		headers
-	})
-}
 
 /**
  * The internal preview authenticates by session and nothing else.
@@ -42,16 +45,14 @@ function withNoStoreHeaders(response: Response): Response {
 export async function loader({ request, params }: Route.LoaderArgs) {
 	const parsedParams = parseSceneRouteParams(params)
 	if (!parsedParams.ok) {
-		return withNoStoreHeaders(
+		return withNoStore(
 			ApiResponse.badRequest(SCENE_ROUTE_PARAM_ERRORS[parsedParams.reason])
 		)
 	}
 
 	const { projectId, sceneId } = parsedParams.value
 	const url = new URL(request.url)
-	const hasTokenCredential =
-		Boolean(url.searchParams.get('token')?.trim()) ||
-		Boolean(request.headers.get('authorization')?.trim())
+	const hasTokenCredential = hasPreviewTokenCredential(request)
 
 	if (hasTokenCredential) {
 		return redirect(`${buildEmbedPath({ projectId, sceneId })}${url.search}`)
@@ -59,24 +60,69 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	const sessionAuth = await getAuthUser(request)
 	if (sessionAuth instanceof Response) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+		return withNoStore(ApiResponse.notFound('Scene not found'))
 	}
 
-	const project = await getProject(projectId, sessionAuth.user.id)
-	if (!project) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
+	const membership = await resolveSceneMembership(sceneId, sessionAuth.user.id)
+	if (!membership || membership.projectId !== projectId) {
+		return withNoStore(ApiResponse.notFound('Scene not found'))
 	}
 
-	const scene = await getScene(sceneId, sessionAuth.user.id)
-	if (!scene || scene.projectId !== projectId) {
-		return withNoStoreHeaders(ApiResponse.notFound('Scene not found'))
-	}
+	/*
+	  A published scene previews as what a visitor gets: the published GLB and
+	  the embed's settings, inline so the model starts loading on hydration.
+	  A draft has no such artefact and loads the working scene, as it always
+	  has. The settings are read alongside the publication and dropped unread
+	  for a draft, the way `/embed` reads them.
+	*/
+	const [previewScene, settingsData] = await Promise.all([
+		getPublishedScenePreview(projectId, sceneId),
+		readEmbedSceneSettings(sceneId).catch(
+			(error: unknown) => new EmbedSettingsReadFailure(error)
+		)
+	])
+	const manifest = previewScene
+		? await buildInlineEmbedManifest(request, {
+				projectId,
+				sceneId,
+				previewScene,
+				settingsData,
+				token: null,
+				allowUnsignedWithoutToken: true
+			})
+		: null
 
-	return data({ projectId, sceneId }, { headers: sessionAuth.headers ?? {} })
+	return data(
+		{ projectId, sceneId, manifest },
+		{ headers: sessionAuth.headers ?? {} }
+	)
 }
 
-const PreviewLayout = () => {
-	return <Outlet />
+/**
+ * A document route keeps only `Set-Cookie` from its loader unless it exports
+ * `headers`, so the framing policy is set here; the preview page has no loader
+ * and inherits these.
+ */
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+	return previewDocumentHeaders(loaderHeaders)
+}
+
+/** What the preview route needs from this layout. */
+export interface PreviewLayoutContext {
+	/** The published scene's manifest; null for a draft, or when not inlined. */
+	manifest: SceneEmbedManifestResponse | null
+}
+
+const PreviewLayout = ({ loaderData }: Route.ComponentProps) => {
+	const context: PreviewLayoutContext = {
+		// Cast back from the serialized type; see `EmbedLayout`.
+		manifest:
+			'manifest' in loaderData
+				? (loaderData.manifest as SceneEmbedManifestResponse | null)
+				: null
+	}
+
+	return <Outlet context={context} />
 }
 
 export default PreviewLayout

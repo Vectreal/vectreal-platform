@@ -53,18 +53,33 @@ describe('the preview overlay', () => {
 		expect(screen.getByRole('link', { name: /preview/i }).tagName).toBe('A')
 	})
 
-	it('floats over the viewer without covering it', () => {
+	it("floats in the corner the viewer's own controls leave free", () => {
 		/*
-		  Pinned to a corner and translucent. A solid chip would be a hole punched
-		  in a model whose colour belongs to the user, and anything but a corner is
-		  where a thumb wants to rotate the scene.
+		  Top-right and translucent. The viewer draws its camera switcher bottom
+		  centre, playback bottom right and "Back to scene view" top centre, and a
+		  solid chip would be a hole punched in a model whose colour belongs to
+		  the user.
 		*/
 		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
 
-		const overlay = screen.getByRole('link', { name: /preview/i })
-		expect(overlay.className).toContain('absolute')
-		expect(overlay.className).toContain('top-3')
-		expect(overlay.className).toContain('right-3')
-		expect(overlay.className).toContain('backdrop-blur')
+		const link = screen.getByRole('link', { name: /preview/i })
+		expect(link.className).toContain('absolute')
+		expect(link.className).toContain('top-3')
+		expect(link.className).toContain('right-3')
+		expect(link.className).toContain('backdrop-blur')
+	})
+
+	it('is still named Preview where only its icon shows', () => {
+		/*
+		  Below `sm` the word is visually hidden so the button stays clear of the
+		  viewer's top-centre "Back to scene view". Hidden, not removed: it is the
+		  link's accessible name.
+		*/
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+
+		const word = screen.getByText('Preview')
+		expect(word.className).toContain('sr-only')
+		expect(word.className).toContain('sm:not-sr-only')
+		expect(screen.getByRole('link').textContent).toBe('Preview')
 	})
 })

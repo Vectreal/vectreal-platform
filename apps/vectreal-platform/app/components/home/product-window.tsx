@@ -5,26 +5,21 @@ import {
 	TabsTrigger
 } from '@shared/components/ui/tabs'
 import { cn } from '@shared/utils'
-import { ArrowRight } from 'lucide-react'
-import {
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
-	type CSSProperties
-} from 'react'
-import { Link } from 'react-router'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
+import { ArrowLink } from './arrow-link'
 import { ProductPageSketch } from './product-page-sketch'
 import PRODUCT_SHOTS from './product-shots.json'
 import { ProductStage, type FrameRect } from './product-stage'
 import styles from './product-window.module.css'
+import { useRelativeRect } from './use-relative-rect'
 import manageDarkUrl from '../../assets/home/product/manage-dark.webp?url'
 import manageLightUrl from '../../assets/home/product/manage-light.webp?url'
 import prepareDarkUrl from '../../assets/home/product/prepare-dark.webp?url'
 import prepareLightUrl from '../../assets/home/product/prepare-light.webp?url'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
 import { dissolveIn } from '../../lib/dither/dither'
+import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel } from '../../lib/navigation/site-map'
 
 const COPY = HOME_PAGE_COPY.product
@@ -46,8 +41,8 @@ const VIEW_ORDER: ProductView[] = ['prepare', 'manage', 'embed']
 const isProductView = (value: string): value is ProductView =>
 	value in COPY.views
 
-/* Where the live camera stands in each screenshot, as the capture recorded it. A view not yet captured borrows Prepare's box. */
-const SHOTS: { prepare: FrameRect; manage?: FrameRect } = PRODUCT_SHOTS
+/* Where the live camera stands in each screenshot, as the capture recorded it. */
+const SHOTS: Record<'prepare' | 'manage', FrameRect> = PRODUCT_SHOTS
 
 /*
   Prepare and Manage are screenshots, captured from the running app by
@@ -64,8 +59,31 @@ const SHOT_URLS = {
 	prepare: { light: prepareLightUrl, dark: prepareDarkUrl },
 	manage: { light: manageLightUrl, dark: manageDarkUrl }
 } as const
-const shotPath = (view: 'prepare' | 'manage', theme: 'light' | 'dark') =>
-	SHOT_URLS[view][theme]
+
+/** One capture per theme; the page shows the one that matches the theme it is in. */
+function ThemedShot({ view }: { view: keyof typeof SHOT_URLS }) {
+	const alt = `The ${COPY.views[view].label} view in the Vectreal app`
+	return (
+		<>
+			<img
+				src={SHOT_URLS[view].light}
+				alt={alt}
+				width={1200}
+				height={750}
+				loading="lazy"
+				className="block h-auto w-full dark:hidden"
+			/>
+			<img
+				src={SHOT_URLS[view].dark}
+				alt={alt}
+				width={1200}
+				height={750}
+				loading="lazy"
+				className="hidden h-auto w-full dark:block"
+			/>
+		</>
+	)
+}
 
 /** How long the dissolve between two screenshots takes, one mask frame per step. */
 const DISSOLVE_MS = 400
@@ -74,16 +92,17 @@ const DISSOLVE_MS = 400
 const DWELL_MS = 7000
 
 /**
- * The product as it is today, one view at a time.
+ * The product as three steps, one view at a time.
  *
  * Tabs rather than a grid of feature cards: the three views are one workflow,
  * and showing one screen large says more than three small ones side by side.
  * Every screenshot and caption is server-rendered, and switching only changes
  * which one is shown.
  *
- * The views are listed inside the window, beside the screenshot, numbered in
- * workflow order, and the window walks through them on its own: a line under
- * the active view fills over its dwell and hands on to the next. Hovering or
+ * The views are the workflow's three steps, set above the window as a chain
+ * numbered in workflow order, so the page says how short the path is before it
+ * shows any of it. The window walks through them on its own: the active step's
+ * rule fills over its dwell and hands on to the next. Hovering or
  * focusing the window pauses it, so nobody loses a caption mid-read; so does
  * the window being off screen. A click hands it over to the reader for good,
  * and reduced motion never starts it.
@@ -104,36 +123,12 @@ export const ProductWindow = () => {
 	const cancelDissolve = useRef(() => {})
 	const sceneRef = useRef<HTMLDivElement>(null)
 	const embedSlotRef = useRef<HTMLDivElement>(null)
-	const [embedSlot, setEmbedSlot] = useState<FrameRect | null>(null)
 
 	// The product page is laid out by CSS, so its gallery is measured, as a share of the frame.
-	useLayoutEffect(() => {
-		const scene = sceneRef.current
-		const slot = embedSlotRef.current
-		if (!scene || !slot) return
-		const measure = () => {
-			const frame = scene.getBoundingClientRect()
-			const box = slot.getBoundingClientRect()
-			if (!frame.width || !frame.height) return
-			setEmbedSlot({
-				x: (box.left - frame.left) / frame.width,
-				y: (box.top - frame.top) / frame.height,
-				w: box.width / frame.width,
-				h: box.height / frame.height
-			})
-		}
-		measure()
-		const observer = new ResizeObserver(measure)
-		observer.observe(scene)
-		return () => observer.disconnect()
-	}, [])
+	const embedSlot = useRelativeRect(sceneRef, embedSlotRef)
 
 	const stagePlace: FrameRect =
-		view === 'embed'
-			? (embedSlot ?? SHOTS.prepare)
-			: view === 'manage'
-				? (SHOTS.manage ?? SHOTS.prepare)
-				: SHOTS.prepare
+		view === 'embed' ? (embedSlot ?? SHOTS.prepare) : SHOTS[view]
 
 	const switchTo = (next: string) => {
 		if (!isProductView(next) || next === view) return
@@ -141,10 +136,7 @@ export const ProductWindow = () => {
 		cancelDissolve.current()
 		setView(next)
 		const shot = shots.current[next]
-		if (
-			!shot ||
-			window.matchMedia('(prefers-reduced-motion: reduce)').matches
-		) {
+		if (!shot || prefersReducedMotion()) {
 			setPrevious(null)
 			return
 		}
@@ -161,12 +153,14 @@ export const ProductWindow = () => {
 	}
 
 	// The dwell line's animation ending is the clock: one timer, and it pauses with the line.
-	const advance = () =>
+	// The fill also animates once when the reader chooses a step; only the dwell, which runs while cycling, is the clock.
+	const advance = () => {
+		if (!cycling) return
 		switchTo(VIEW_ORDER[(VIEW_ORDER.indexOf(view) + 1) % VIEW_ORDER.length])
+	}
 
 	useEffect(() => {
-		if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-			setCycling(true)
+		if (!prefersReducedMotion()) setCycling(true)
 		const node = windowRef.current
 		if (!node) return
 		const observer = new IntersectionObserver(([entry]) =>
@@ -180,25 +174,19 @@ export const ProductWindow = () => {
 	}, [])
 
 	return (
-		<Tabs
-			value={view}
-			onValueChange={choose}
-			orientation="vertical"
-			className="gap-8"
-		>
-			<div className="max-w-xl">
-				<h2 id="product-heading" className="text-h2" data-reveal>
+		<Tabs value={view} onValueChange={choose} className="gap-12">
+			<div className="max-w-3xl">
+				<h2 id="product-heading" className="text-headline" data-reveal>
 					{COPY.heading}
 				</h2>
-				<p className="text-muted-foreground text-body-lg mt-4" data-reveal>
+				<p className="text-muted-foreground text-body-lg mt-6" data-reveal>
 					{COPY.lead}
 				</p>
 			</div>
 
 			<div
 				ref={windowRef}
-				data-reveal
-				className={cn('ds-raised rounded-2xl p-2 md:p-3', styles.window)}
+				className={cn('flex flex-col gap-8', styles.window)}
 				style={{ '--dwell': `${DWELL_MS}ms` } as CSSProperties}
 				data-cycling={cycling ? '' : undefined}
 				data-paused={held || offscreen ? '' : undefined}
@@ -209,7 +197,43 @@ export const ProductWindow = () => {
 					if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false)
 				}}
 			>
-				<div className="grid gap-4 lg:grid-cols-[1fr_18rem] lg:gap-3">
+				<TabsList
+					aria-label={COPY.stepsLabel}
+					data-reveal
+					className="grid h-auto w-full grid-cols-3 items-start gap-4 bg-transparent p-0 md:gap-8"
+				>
+					{VIEW_ORDER.map((one, index) => (
+						<TabsTrigger
+							key={one}
+							value={one}
+							className={cn(
+								// The shared trigger's pill states are forced (`!`), so they are cleared the same way; the step's own styles live in the module.
+								'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 rounded-none border-0 px-0 pt-5 pb-0 text-left whitespace-normal shadow-none data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent',
+								styles.step
+							)}
+						>
+							<span className="flex items-baseline gap-3">
+								<span className="text-eyebrow text-orange-ink tabular-nums">
+									{String(index + 1).padStart(2, '0')}
+								</span>
+								<span className="text-h3">{COPY.views[one].label}</span>
+							</span>
+							<span className="text-body-sm text-muted-foreground hidden md:block">
+								{COPY.views[one].summary}
+							</span>
+							<span
+								className={styles.fill}
+								aria-hidden="true"
+								onAnimationEnd={advance}
+							/>
+						</TabsTrigger>
+					))}
+				</TabsList>
+
+				<div
+					data-reveal
+					className="ds-raised grid gap-4 rounded-2xl p-2 md:p-3 lg:grid-cols-[1fr_18rem] lg:gap-3"
+				>
 					{/* Concentric with the window: its 28px corner less the padding between them. */}
 					<div
 						ref={sceneRef}
@@ -235,24 +259,7 @@ export const ProductWindow = () => {
 										}
 									/>
 								) : (
-									<>
-										<img
-											src={shotPath(one, 'light')}
-											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
-											width={1200}
-											height={750}
-											loading="lazy"
-											className="block h-auto w-full dark:hidden"
-										/>
-										<img
-											src={shotPath(one, 'dark')}
-											alt={`The ${COPY.views[one].label} view in the Vectreal app`}
-											width={1200}
-											height={750}
-											loading="lazy"
-											className="hidden h-auto w-full dark:block"
-										/>
-									</>
+									<ThemedShot view={one} />
 								)}
 							</div>
 						))}
@@ -265,58 +272,28 @@ export const ProductWindow = () => {
 						</div>
 					</div>
 
-					<div className="flex flex-col gap-6 pb-2">
-						<TabsList
-							aria-label={COPY.heading}
-							className="grid h-auto w-full grid-cols-3 gap-1 bg-transparent p-0 lg:grid-cols-1"
+					{VIEW_ORDER.map((one) => (
+						<TabsContent
+							key={one}
+							value={one}
+							forceMount
+							className="flex flex-col gap-4 px-4 pt-2 pb-4 data-[state=inactive]:hidden lg:pt-4"
 						>
-							{VIEW_ORDER.map((one, index) => (
-								<TabsTrigger
-									key={one}
-									value={one}
-									className={cn(
-										// The shared trigger's pill states are forced (`!`), so they are cleared the same way; the row styles live in the module.
-										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-1 border-0 px-3 py-3 text-left shadow-none data-[state=active]:bg-transparent! data-[state=active]:shadow-none lg:flex-row lg:items-center lg:gap-0 lg:px-4 dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent',
-										styles.view
-									)}
-								>
-									<span className="text-eyebrow tabular-nums">
-										{String(index + 1).padStart(2, '0')}
-									</span>
-									{/* Three to a row on a phone: the number sits over the label there, since side by side they do not fit. */}
-									<span className="text-h4 lg:ml-3">
-										{COPY.views[one].label}
-									</span>
-									<span
-										className={styles.fill}
-										aria-hidden="true"
-										onAnimationEnd={advance}
-									/>
-								</TabsTrigger>
-							))}
-						</TabsList>
-
-						{VIEW_ORDER.map((one) => (
-							<TabsContent
-								key={one}
-								value={one}
-								forceMount
-								className="flex flex-col gap-4 px-4 data-[state=inactive]:hidden"
+							<p className="text-eyebrow text-muted-foreground">
+								{COPY.views[one].label}
+							</p>
+							<p className="text-muted-foreground text-body">
+								{COPY.views[one].body}
+							</p>
+							<ArrowLink
+								to={VIEW_LINKS[one]}
+								viewTransition={entersFunnel(VIEW_LINKS[one])}
+								className="text-foreground"
 							>
-								<p className="text-muted-foreground text-body">
-									{COPY.views[one].body}
-								</p>
-								<Link
-									to={VIEW_LINKS[one]}
-									viewTransition={entersFunnel(VIEW_LINKS[one])}
-									className="text-foreground text-body-sm inline-flex w-fit items-center gap-1 underline-offset-4 hover:underline"
-								>
-									{COPY.views[one].link}
-									<ArrowRight className="size-3.5" aria-hidden="true" />
-								</Link>
-							</TabsContent>
-						))}
-					</div>
+								{COPY.views[one].link}
+							</ArrowLink>
+						</TabsContent>
+					))}
 				</div>
 			</div>
 		</Tabs>

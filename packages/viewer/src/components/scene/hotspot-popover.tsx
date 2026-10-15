@@ -5,15 +5,12 @@ import type { HotspotPopoverPlacement } from './resolve-hotspot-popover'
 import type { CSSProperties, KeyboardEvent, RefObject } from 'react'
 
 const popoverClasses = {
-	// `rounded-[0.5rem]`, never a named radius: this package clears Tailwind's
-	// radius namespace, so every named token but `full` compiles to nothing once
-	// the package is consumed from npm.
-	root: 'vctrl-hotspot-popover pointer-events-auto absolute left-1/2 w-max max-w-[240px] rounded-[0.5rem] bg-[var(--vctrl-bg)] px-3 py-2 text-left text-[var(--vctrl-text)] shadow-[0_2px_12px_rgba(0,0,0,0.35)]',
+	root: 'vctrl-hotspot-popover shell-panel text-foreground pointer-events-auto absolute left-1/2 w-max max-w-[240px] px-3 py-2 text-left',
 	above: 'bottom-[var(--vctrl-hotspot-popover-gap)]',
 	below: 'top-[var(--vctrl-hotspot-popover-gap)]',
 	// `font-[600]` rather than the named scale: a named weight registers its
 	// theme variable in the published stylesheet's `:root, :host` block, which
-	// lands in a host application after hydration. See styles.css.
+	// lands in a host application after hydration. See package.css.
 	title: 'text-[12px] leading-[1.35] font-[600]',
 	// `whitespace-pre-wrap` so the line breaks an author typed survive. The body
 	// is plain text, never markup, so this is the only formatting it carries.

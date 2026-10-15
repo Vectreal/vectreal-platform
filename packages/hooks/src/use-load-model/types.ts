@@ -64,12 +64,26 @@ export interface ModelFile {
 }
 
 /**
- * Where a model comes from. Every load in the platform is one of these three,
- * and they all go through the single `load(source)` entry point.
+ * Where a model comes from. Every load is one of these, and they all go
+ * through the single `load(source)` entry point.
  */
 export type ModelSource =
 	/** Files or folders picked by the user (glTF + assets, GLB, STL, FBX, OBJ). */
 	| { kind: 'files'; files: InputFileOrDirectory }
+	/**
+	 * A model file at a URL, fetched in the browser and then loaded exactly as
+	 * the same file dropped would be. A `.gltf` brings the buffers and images it
+	 * references on its own origin (`fetchModelFiles` in
+	 * `@vctrl/core/model-loader`). The host has to allow cross-origin reads.
+	 *
+	 * `init` goes with every request, for headers or `credentials`. Its
+	 * `signal` aborts the download (the model file, and for a `.gltf` the files
+	 * it references): what was on screen stays, and the load resolves `empty`
+	 * rather than reporting an error. A newer `load` or `reset` aborts it too,
+	 * and the load resolves `empty`; what is on screen is then theirs to decide.
+	 * Once the files have all arrived the parse runs to the end.
+	 */
+	| { kind: 'url'; url: string | URL; init?: RequestInit }
 	/**
 	 * A scene payload the caller already has in memory (route aggregate, IDB
 	 * draft). Binary assets may be referenced rather than inlined; the loader
@@ -164,6 +178,13 @@ export type ModelState =
 export type LoadOutcome = ModelState & {
 	/** Whether this load is still the newest one, asked now. */
 	stillCurrent: () => boolean
+	/**
+	 * Whether this load's model is the one on screen, asked now. Differs from
+	 * `stillCurrent` after a newer drop fails: that drop is the newest load,
+	 * but it puts this load's model back. It is the model the optimizer holds,
+	 * so ask this before acting on the optimizer for this load.
+	 */
+	stillOnScreen: () => boolean
 }
 
 /** Optional hooks into a load, for callers that need more than its result. */
@@ -226,13 +247,21 @@ export type ViewerLoadErrorCode =
 	| 'server_load_failed'
 	| 'not_found'
 	| 'quota_exceeded'
+	/** The request threw: the host refused cross-origin reads, or is unreachable. A browser does not say which. */
+	| 'url_unreachable'
+	/** The host answered with a status that is not a file, in `context.status`. */
+	| 'url_http'
+	/** The URL names no format the loader reads, and its bytes are not a GLB. */
+	| 'url_unrecognized'
+	/** The address is not a URL, or is relative with no page to resolve it against. */
+	| 'url_invalid'
 	| 'unknown'
 
 export interface StructuredLoadError {
 	code: ViewerLoadErrorCode
 	message: string
 	recoverable: boolean
-	source: 'local-upload' | 'server-load'
+	source: 'local-upload' | 'server-load' | 'remote-url'
 	cause?: unknown
 	context?: Record<string, unknown>
 }
@@ -279,6 +308,18 @@ export type UseLoadModelReturn<HasOptimizer extends boolean> = ModelState & {
 	 */
 	reset: () => void
 	/**
+	 * Whether no load has started, and no `reset()` has run, since the load
+	 * that minted `loadId`. Unlike the rendered state, it changes the moment
+	 * `load` is called, so work started for one model can stop before anything
+	 * the caller hydrates for the next one is overwritten.
+	 *
+	 * It answers which load is newest, not which model is on screen: a `files`
+	 * load that fails and puts the previous model back still counts as newer,
+	 * so the restored model's `loadId` answers false from then on. Ask
+	 * `stillOnScreen()` on a load's outcome for the model shown.
+	 */
+	isLatestLoad: (loadId: number) => boolean
+	/**
 	 * Optimizer integration object.
 	 * - When optimizer is provided: Contains full optimization methods and state
 	 * - When no optimizer: null
@@ -318,14 +359,29 @@ export type OptimizerIntegrationReturn<HasOptimizer extends boolean = false> =
 				 * @template TOptions - Type of options for the optimization function
 				 * @param optimizationFunction - The optimization to apply (e.g., simplifyOptimization)
 				 * @param options - Configuration options for the optimization
-				 * @returns Promise that resolves when optimization is complete and model is updated
+				 * @returns Promise that resolves when optimization is complete and model is updated.
+				 * It also resolves, changing nothing, when a newer load holds the state by then.
+				 * @throws When no model was ready in the render this object comes from
+				 * (before a load, during one, after a reset or a failed load), when the
+				 * optimization fails (its own error, so a `SupersededError` stays
+				 * recognisable), or when the result cannot be exported or shown. The viewer
+				 * then keeps its model, but the optimizer may already hold the step's
+				 * result: `restoreSource()` and then `applyOptimization()` with no step put
+				 * the two back in step. A partial `TextureCompressionError` is thrown after
+				 * the textures that did compress are shown. A `SupersededError` means a
+				 * later call read the optimizer after this one did, and the viewer shows
+				 * that call's result instead.
 				 *
 				 * @example
 				 * // Apply simplification optimization
-				 * await optimizer.applyOptimization(
-				 *   optimizer.simplifyOptimization,
-				 *   { ratio: 0.5 }
-				 * )
+				 * try {
+				 *   await optimizer.applyOptimization(
+				 *     optimizer.simplifyOptimization,
+				 *     { ratio: 0.5 }
+				 *   )
+				 * } catch (error) {
+				 *   // The viewer still shows the model as it was before this call
+				 * }
 				 */
 				applyOptimization: <TOptions>(
 					optimizationFunction?:
