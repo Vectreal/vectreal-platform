@@ -18,11 +18,15 @@ import {
 	originalPreset
 } from '../../../constants/optimizations'
 import { resolvePublishGeometryOptions } from '../../../lib/domain/scene/client/publish-export'
-import { processAtom } from '../../../lib/stores/publisher-config-store'
+import {
+	lastSavedSettingsAtom,
+	processAtom
+} from '../../../lib/stores/publisher-config-store'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
+import { presentationAtom } from '../../../lib/stores/scene-settings-store'
 
 import type {
 	PublishedEncoding,
@@ -137,12 +141,15 @@ describe('usePublishSizeProjection', () => {
 		expect(runtime().optimizedSceneBytes).toBeNull()
 	})
 
-	// The GPU texture switch, or any other unsaved change, is what the next
-	// publish ships, so the published file stops being the figure to show.
-	it('replaces a published size once anything is unsaved', async () => {
+	// The server's answer for the saved scene: a save that changed the model
+	// leaves the published file behind, and a reload reads the same answer.
+	it('replaces a published size once the saved scene no longer matches it', async () => {
 		store.set(optimizationRuntimeAtom, (prev) => ({
 			...prev,
-			latestSceneStats: { currentSceneBytes: 995 } as never,
+			latestSceneStats: {
+				currentSceneBytes: 995,
+				publishedIsCurrent: true
+			} as never,
 			optimizedSceneBytes: 995,
 			publishedEncoding: { geometryCodec: 'draco' } as PublishedEncoding
 		}))
@@ -150,31 +157,12 @@ describe('usePublishSizeProjection', () => {
 		await act(async () => {})
 		expect(projectPublishedGlbBytes).not.toHaveBeenCalled()
 
-		act(() =>
-			store.set(processAtom, (prev) => ({ ...prev, hasUnsavedChanges: true }))
-		)
-
-		await waitFor(() =>
-			expect(runtime()).toMatchObject({
-				optimizedSceneBytes: 861,
-				publishedEncoding: null
-			})
-		)
-	})
-
-	it('measures again after publishing in this tab, once anything is unsaved', async () => {
-		renderProjection()
-		await waitFor(() => expect(runtime().optimizedSceneBytes).toBe(861))
-
 		setRuntime({
-			latestSceneStats: { currentSceneBytes: 995 } as never,
-			optimizedSceneBytes: 995,
-			publishedEncoding: { geometryCodec: 'draco' } as PublishedEncoding
+			latestSceneStats: {
+				currentSceneBytes: 995,
+				publishedIsCurrent: false
+			} as never
 		})
-		await act(async () => {})
-		act(() =>
-			store.set(processAtom, (prev) => ({ ...prev, hasUnsavedChanges: true }))
-		)
 
 		await waitFor(() =>
 			expect(runtime()).toMatchObject({
@@ -184,21 +172,67 @@ describe('usePublishSizeProjection', () => {
 		)
 	})
 
-	it('shows the published size again once nothing is unsaved', async () => {
+	it('opens a scene saved since its publish on the projection', async () => {
 		store.set(optimizationRuntimeAtom, (prev) => ({
 			...prev,
-			latestSceneStats: { currentSceneBytes: 995 } as never
+			latestSceneStats: {
+				currentSceneBytes: 995,
+				publishedIsCurrent: false
+			} as never
+		}))
+		renderProjection()
+
+		await waitFor(() => expect(runtime().optimizedSceneBytes).toBe(861))
+	})
+
+	// Settings reach an embed live once saved, so an unsaved one leaves the
+	// published file what visitors get.
+	it('keeps a published size through an unsaved settings edit', async () => {
+		store.set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			latestSceneStats: {
+				currentSceneBytes: 995,
+				publishedIsCurrent: true
+			} as never
 		}))
 		renderProjection()
 		act(() =>
 			store.set(processAtom, (prev) => ({ ...prev, hasUnsavedChanges: true }))
 		)
+		await act(async () => {})
+
+		expect(projectPublishedGlbBytes).not.toHaveBeenCalled()
+		expect(runtime().optimizedSceneBytes).toBeNull()
+	})
+
+	// The GPU texture switch is a setting, but it changes the published file.
+	it('measures again once the GPU texture switch is changed, and not once it is set back', async () => {
+		store.set(lastSavedSettingsAtom, { presentation: {} } as never)
+		store.set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			latestSceneStats: {
+				currentSceneBytes: 995,
+				publishedIsCurrent: true
+			} as never
+		}))
+		renderProjection()
+		await act(async () => {})
+		expect(projectPublishedGlbBytes).not.toHaveBeenCalled()
+
+		act(() =>
+			store.set(presentationAtom, (prev) => ({
+				...prev,
+				compressTexturesForGpu: false
+			}))
+		)
 		await waitFor(() => expect(runtime().optimizedSceneBytes).toBe(861))
 
 		act(() =>
-			store.set(processAtom, (prev) => ({ ...prev, hasUnsavedChanges: false }))
+			store.set(presentationAtom, (prev) => ({
+				...prev,
+				compressTexturesForGpu: undefined
+			}))
 		)
-
 		await waitFor(() => expect(runtime().optimizedSceneBytes).toBeNull())
 	})
 

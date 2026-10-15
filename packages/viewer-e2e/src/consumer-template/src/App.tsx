@@ -108,7 +108,79 @@ function HooksProbe() {
 	return null
 }
 
+/*
+  `src`, from the published package: one model this app serves itself, loaded
+  through the viewer's lazy parser chunk, and one address that is not a model,
+  which has to end in the error fallback rather than a crash. Separate from the
+  main page so its assertions do not count these viewers' markers or flags.
+*/
+function SrcCase() {
+	return (
+		<div
+			style={{
+				display: 'grid',
+				gridTemplateColumns: '1fr 1fr 1fr',
+				height: '100vh',
+				width: '100vw'
+			}}
+		>
+			<div data-testid="src-viewer">
+				<VectrealViewer
+					src="/box.glb"
+					onLoad={({ model }) => {
+						let meshes = 0
+						model.traverse((object) => {
+							if ((object as { isMesh?: boolean }).isMesh) meshes += 1
+						})
+						window.__SRC_E2E__ = { status: 'loaded', meshes }
+					}}
+					onLoadError={(error) => {
+						window.__SRC_E2E__ = { status: 'error', error: String(error) }
+					}}
+					onInteractionEvent={(event) => {
+						if (event.type === 'viewer_ready') window.__SRC_READY__ = true
+					}}
+				/>
+			</div>
+			{/*
+			  With children, which count as content of their own: the fallback
+			  must still show rather than the loader ending on the light alone.
+			*/}
+			<div data-testid="src-missing">
+				<VectrealViewer
+					src="/not-a-model.glb"
+					onLoadError={() => {
+						window.__SRC_MISSING__ = [
+							...(window.__SRC_MISSING__ ?? []),
+							'default'
+						]
+					}}
+				>
+					<ambientLight />
+				</VectrealViewer>
+			</div>
+			{/* A host that reports the failure itself. */}
+			<div data-testid="src-silent">
+				<VectrealViewer
+					src="/not-a-model.glb"
+					errorFallback={null}
+					onLoadError={() => {
+						window.__SRC_MISSING__ = [
+							...(window.__SRC_MISSING__ ?? []),
+							'silent'
+						]
+					}}
+				/>
+			</div>
+		</div>
+	)
+}
+
 export default function App() {
+	if (new URLSearchParams(window.location.search).has('src-case')) {
+		return <SrcCase />
+	}
+
 	// Like a real host: an inline callback that re-renders the page on every
 	// viewer event, so each render hands the viewer a new function. A camera a
 	// marker flew to must survive that.

@@ -1,5 +1,12 @@
 import { sql } from 'drizzle-orm'
-import { index, pgPolicy, pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+	index,
+	pgPolicy,
+	pgTable,
+	text,
+	timestamp,
+	uuid
+} from 'drizzle-orm/pg-core'
 import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
 
 import { assets } from './assets'
@@ -23,6 +30,13 @@ export const scenePublished = pgTable(
 				onDelete: 'set null'
 			}
 		),
+		/**
+		 * What the published GLB was made from, as `describePublishSource` writes
+		 * it. Compared with the saved scene's to tell whether publishing again
+		 * would ship something different. Null on rows published before it was
+		 * recorded, which therefore cannot say.
+		 */
+		sourceFingerprint: text('source_fingerprint'),
 		publishedAt: timestamp('published_at').defaultNow().notNull(),
 		publishedBy: uuid('published_by')
 			.references(() => users.id, { onDelete: 'cascade' })

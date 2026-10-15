@@ -118,7 +118,12 @@ describe("load({ kind: 'url' })", () => {
 		act(() => {
 			done = result.current.load({ kind: 'url', url: 'https://a.com/m.glb' })
 		})
-		await vi.waitFor(() => expect(loader.received).toHaveLength(1))
+		// Inside act, so the download's updates commit before the bar is read:
+		// outside it React renders them on its own schedule, which a loaded run
+		// can leave behind the wait returning.
+		await act(async () => {
+			await vi.waitFor(() => expect(loader.received).toHaveLength(1))
+		})
 
 		// The parser has just reported 0, and the bar does not run back.
 		expect(result.current.progress).toBe(90)
