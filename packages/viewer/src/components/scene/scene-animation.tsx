@@ -340,11 +340,12 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 
 	useEffect(() => {
 		const root = model
+		const actions = actionsRef.current
 
 		return () => {
 			mixer.stopAllAction()
 			mixer.uncacheRoot(root)
-			actionsRef.current.clear()
+			actions.clear()
 			// Force the next pass to configure: the incoming mixer has no actions,
 			// so a retune against a matching key would silently play nothing.
 			configureKeyRef.current = null

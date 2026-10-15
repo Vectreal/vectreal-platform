@@ -1,6 +1,5 @@
 import type { KeptOriginalRef } from '../../lib/domain/scene/client/scene-save-orchestrator'
 import type { SourceToSave } from '../../lib/domain/scene/client/scene-source-to-save'
-import type { SceneStatsData } from '../../types/api'
 import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
@@ -41,10 +40,10 @@ export interface ScenePersistenceState {
 export interface SceneOptimizationSaveState {
 	optimizationSettings: Optimizations
 	optimizationReport: OptimizationReport | null | undefined
-	latestSceneStats: SceneStatsData | null
-	optimizedSceneBytes: null | number
 	clientSceneBytes: null | number
 	lastSavedReportSignature: null | string
+	passRevision: number
+	savedPassRevision: null | number
 	setOptimizationRuntime: (
 		next:
 			| SceneOptimizationRuntimeState

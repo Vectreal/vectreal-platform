@@ -432,14 +432,18 @@ describe('plan limits refuse at the boundary', () => {
 	 * rather than in `beforeEach`, so the tests above keep the fixture they were
 	 * written against.
 	 */
-	const makePublishedAsset = async () => {
+	const makePublishedAsset = async (
+		fileSize?: number,
+		intoFolder = folderId
+	) => {
 		const assetId = randomUUID()
 		await db.insert(schema.assets).values({
 			id: assetId,
-			folderId,
+			folderId: intoFolder,
 			name: 'published.glb',
 			type: 'model',
 			filePath: `quota/${assetId}/published.glb`,
+			fileSize,
 			ownerId
 		})
 		return assetId
@@ -573,5 +577,71 @@ describe('plan limits refuse at the boundary', () => {
 		expect(response.status).toBe(200)
 		expect(await countPublishedInProject()).toBe(3)
 		expect(await countPublishedInProject(siblingProjectId)).toBe(2)
+	})
+	/*
+	  `storage_bytes_per_scene` limits the published GLB, which is what a
+	  visitor downloads, measured from the size the server stored rather than
+	  one the client reports. Each test publishes into a project of its own, so
+	  the published scenes above cannot trip the concurrent limit first.
+	*/
+	const freshProject = async () => {
+		const freshProjectId = randomUUID()
+		await db.insert(schema.projects).values({
+			id: freshProjectId,
+			organizationId,
+			name: 'Size project',
+			slug: `size-${freshProjectId}`
+		})
+		const freshFolderId = randomUUID()
+		await db
+			.insert(schema.folders)
+			.values({ id: freshFolderId, projectId: freshProjectId, name: 'Assets' })
+		return { sizeProjectId: freshProjectId, sizeFolderId: freshFolderId }
+	}
+
+	it('refuses a publish whose stored GLB is over storage_bytes_per_scene, and publishes nothing', async () => {
+		await setLimit('storage_bytes_per_scene', 1000)
+		const { sizeProjectId, sizeFolderId } = await freshProject()
+		const assetId = await makePublishedAsset(1001, sizeFolderId)
+		const sceneId = await sceneAwaitingPublish(sizeProjectId)
+
+		const attempt = attemptPublish(sceneId, assetId)
+		await expect(attempt).rejects.toBeInstanceOf(QuotaExceededError)
+		await expect(attempt).rejects.toMatchObject({
+			limitKey: 'storage_bytes_per_scene',
+			currentValue: 1001,
+			limit: 1000,
+			plan: 'free',
+			upgradeTo: 'pro'
+		})
+
+		expect(await countPublishedInProject(sizeProjectId)).toBe(0)
+	})
+
+	it('allows a publish whose stored GLB is exactly at storage_bytes_per_scene', async () => {
+		await setLimit('storage_bytes_per_scene', 1000)
+		const { sizeProjectId, sizeFolderId } = await freshProject()
+		const assetId = await makePublishedAsset(1000, sizeFolderId)
+		const sceneId = await sceneAwaitingPublish(sizeProjectId)
+
+		const response = await attemptPublish(sceneId, assetId)
+
+		expect(response.status).toBe(200)
+		expect(await countPublishedInProject(sizeProjectId)).toBe(1)
+	})
+
+	// Measured only once the asset is known to be the project's own, so a
+	// refusal never reports the size of a file the caller could not publish.
+	it('refuses a GLB from another project before measuring it', async () => {
+		await setLimit('storage_bytes_per_scene', 1000)
+		const { sizeProjectId } = await freshProject()
+		const { sizeFolderId: otherFolderId } = await freshProject()
+		const assetId = await makePublishedAsset(5000, otherFolderId)
+		const sceneId = await sceneAwaitingPublish(sizeProjectId)
+
+		const response = await attemptPublish(sceneId, assetId)
+
+		expect(response.status).toBe(500)
+		expect(await countPublishedInProject(sizeProjectId)).toBe(0)
 	})
 })

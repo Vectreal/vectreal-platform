@@ -83,6 +83,7 @@ const resolvePair = ({
 	reportCurrent,
 	infoInitial,
 	infoCurrent,
+	storedCurrent,
 	allowInfo
 }: {
 	persistedInitial?: null | number
@@ -93,10 +94,13 @@ const resolvePair = ({
 	reportCurrent?: null | number
 	infoInitial?: null | number
 	infoCurrent?: null | number
+	/** What the scene is now when nothing measured a result: what it stores. */
+	storedCurrent?: null | number
 	allowInfo: boolean
 }): SceneMetricPair => {
-	// Resolution precedence (highest -> lowest): persisted -> runtime -> report -> info.
-	// `info` is treated as least authoritative and can be disabled by caller.
+	// Initial: persisted -> runtime -> info -> report. Current: runtime ->
+	// persisted -> report -> info -> stored -> initial. `info` is least
+	// authoritative and can be disabled by the caller.
 	const initial = selectFirstNumber(
 		asNumber(persistedInitial),
 		asNumber(runtimeInitial),
@@ -112,6 +116,7 @@ const resolvePair = ({
 		asNumber(persistedCurrent),
 		asNumber(reportCurrent),
 		allowInfo ? asNumber(infoCurrent) : null,
+		asNumber(storedCurrent),
 		initial
 	)
 
@@ -233,6 +238,13 @@ export const resolveSceneMetrics = ({
 		runtimeCurrent: normalizedRuntime.currentSceneBytes,
 		reportInitial: allowReportBaseline ? report?.originalSize : null,
 		reportCurrent: allowReportCurrent ? report?.optimizedSize : null,
+		/*
+		  Only a publish records the current size, so a saved scene that was
+		  never published has none. What it stores, the package the runtime
+		  measured from its manifest, is then what it is; the original upload
+		  is not.
+		*/
+		storedCurrent: normalizedRuntime.initialSceneBytes,
 		allowInfo: false
 	})
 

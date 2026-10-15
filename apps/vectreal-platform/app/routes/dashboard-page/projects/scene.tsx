@@ -35,6 +35,7 @@ import {
 } from '../../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
+import { resolveSceneSizeBytes } from '../../../lib/domain/scene/scene-stored-size'
 import {
 	getScene,
 	getSceneFolderAncestry
@@ -129,7 +130,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		SceneAdditionalMetrics | null | undefined
 
 	const sceneDetails: SceneDetailsSummary = {
-		fileSizeBytes: stats?.currentSceneBytes ?? stats?.initialSceneBytes ?? null,
+		fileSizeBytes: resolveSceneSizeBytes(stats, sceneAssets),
 		assetCount: sceneAssets.length,
 		textureBytes:
 			additionalMetrics?.currentTextureBytes ??

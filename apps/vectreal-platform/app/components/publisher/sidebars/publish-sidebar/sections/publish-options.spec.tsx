@@ -47,15 +47,33 @@ vi.mock('sonner', () => ({
 		warning: mocks.toastWarning
 	}
 }))
-vi.mock('../../../../../lib/domain/scene/client/publish-export', () => ({
-	runPublishExportInWorker: mocks.runPublishExportInWorker
-}))
+vi.mock(
+	'../../../../../lib/domain/scene/client/publish-export',
+	async (importOriginal) => ({
+		...(await importOriginal<object>()),
+		runPublishExportInWorker: mocks.runPublishExportInWorker
+	})
+)
 vi.mock('../../../../../lib/domain/scene/client/scene-publish', () => ({
 	publishSceneFromGlb: mocks.publishSceneFromGlb
 }))
 vi.mock('../../../../publishing/scene-publish-state-control', () => ({
-	ScenePublishStateControl: ({ onPublish }: { onPublish: () => void }) => (
-		<button onClick={onPublish}>Publish Scene</button>
+	ScenePublishStateControl: ({
+		onPublish,
+		onStateChange
+	}: {
+		onPublish: () => void
+		onStateChange?: (state: { status: 'draft' | 'published' }) => void
+	}) => (
+		<>
+			<button onClick={onPublish}>Publish Scene</button>
+			<button onClick={() => onStateChange?.({ status: 'draft' })}>
+				Revoke
+			</button>
+			<button onClick={() => onStateChange?.({ status: 'published' })}>
+				Report published
+			</button>
+		</>
 	)
 }))
 
@@ -203,7 +221,8 @@ describe('the publish panel', () => {
 
 		const [published] = mocks.publishSceneFromGlb.mock.calls[0]
 		expect(Array.from(published.glbData)).toEqual(Array.from(PUBLISHED))
-		expect(published.currentSceneBytes).toBe(PUBLISHED.byteLength)
+		// The server measures the GLB it stores; the request carries no size.
+		expect(published).not.toHaveProperty('currentSceneBytes')
 		expect(mocks.toastWarning).not.toHaveBeenCalled()
 	})
 
@@ -340,5 +359,70 @@ describe('the publish panel', () => {
 			expect.stringContaining('1 texture could not be GPU-compressed'),
 			{ description: 'KTX2 was more than 3× its size' }
 		)
+	})
+
+	// Revoking deletes the published GLB, so its size stops describing the scene.
+	it('drops the published size when the publication is revoked', async () => {
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(
+				store.get(optimizationRuntimeAtom).publishedEncoding
+			).not.toBeNull()
+		)
+		store.set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			latestSceneStats: { currentSceneBytes: 8 } as never
+		}))
+
+		fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
+
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedSceneBytes: null,
+			publishedEncoding: null,
+			latestSceneStats: { currentSceneBytes: null }
+		})
+	})
+
+	// The control reports its new state after every publish too.
+	it('keeps the published size when the control reports a publish', async () => {
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(
+				store.get(optimizationRuntimeAtom).publishedEncoding
+			).not.toBeNull()
+		)
+		store.set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			latestSceneStats: { currentSceneBytes: 8 } as never
+		}))
+		const before = store.get(optimizationRuntimeAtom)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Report published' }))
+
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedSceneBytes: before.optimizedSceneBytes,
+			publishedEncoding: before.publishedEncoding,
+			latestSceneStats: { currentSceneBytes: 8 }
+		})
+	})
+
+	// Without a publish this session, the figure on screen is a pass's own.
+	it('keeps a pass’s size when a publication it never shipped is revoked', () => {
+		const store = renderPanel(balancedPreset)
+		store.set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			optimizedSceneBytes: 5,
+			publishedEncoding: null,
+			latestSceneStats: { currentSceneBytes: 8 } as never
+		}))
+
+		fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
+
+		expect(store.get(optimizationRuntimeAtom)).toMatchObject({
+			optimizedSceneBytes: 5,
+			latestSceneStats: { currentSceneBytes: null }
+		})
 	})
 })

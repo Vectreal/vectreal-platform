@@ -25,6 +25,11 @@ const db = getDbClient()
   A scene saved before stats were recorded, or never measured, would otherwise
   add its original and no result, and the "saved" figure would grow by its
   whole weight.
+
+  The current size is the published GLB, which only a publish records, so a
+  scene counts once it has been published: the saving is what visitors no
+  longer download. Rows written before that rule hold the size a save
+  reported, the same projection of the published file.
 */
 const hasBothSizes = sql`${sceneStats.initialSceneBytes} > 0 and ${sceneStats.currentSceneBytes} > 0`
 /*

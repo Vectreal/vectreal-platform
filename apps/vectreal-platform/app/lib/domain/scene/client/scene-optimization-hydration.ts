@@ -104,11 +104,24 @@ export const executeOptimizationStateHydration = ({
 		...prev,
 		isPending: false,
 		isSceneSizeLoading: false,
-		optimizedSceneBytes: null,
-		optimizedTextureBytes: null,
-		publishedEncoding: null,
+		// The document a scene this tab just saved is still loaded, so what was
+		// measured from it still describes it. Only publishing records a size
+		// on the server, so nothing else would.
+		...(isSourceLoaded
+			? {}
+			: {
+					optimizedSceneBytes: null,
+					optimizedTextureBytes: null,
+					workingSceneBytes: null,
+					publishedEncoding: null
+				}),
 		clientSceneBytes: sourcePackageBytes,
 		clientTextureBytes: textureBytes,
-		latestSceneStats
+		latestSceneStats,
+		// A scene this tab just saved keeps what its save recorded, so a pass
+		// that finished during that save stays unsaved; any other opens as saved.
+		savedPassRevision: isSourceLoaded
+			? prev.savedPassRevision
+			: prev.passRevision
 	}))
 }

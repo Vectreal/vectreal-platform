@@ -406,7 +406,7 @@ export const ConverterSurface: FC<Props> = ({ pair }) => {
 				)
 			}
 		},
-		[load, pair, bundleCopy, posthog]
+		[load, pair, bundleCopy, posthog, adoptSource]
 	)
 
 	const { getRootProps, getInputProps, isDragActive, rootRef } = useDropzone({

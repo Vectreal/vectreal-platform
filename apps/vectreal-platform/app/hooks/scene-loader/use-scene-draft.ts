@@ -149,10 +149,11 @@ function useRestorePendingDraft(): boolean {
 					derivedFrom
 				}))
 
-				// The byte snapshot is what tells the save flow that optimization
-				// already ran before the redirect, so saving stays available.
+				// Nothing saved describes a draft's document, so the save flow treats
+				// any optimization in it as unsaved.
 				setOptimizationRuntime((previous) => ({
 					...previous,
+					savedPassRevision: null,
 					isSceneSizeLoading: false,
 					optimizedSceneBytes:
 						draft.optimizedSceneBytes ?? previous.optimizedSceneBytes,
@@ -236,6 +237,7 @@ function useRestorePendingDraft(): boolean {
 		setLastSavedSceneMeta,
 		setOptimizationRuntime,
 		setOptimizationState,
+		setKeptOriginal,
 		setSceneMetaState,
 		setSource
 	])

@@ -317,7 +317,7 @@ function useLoadModel<
 				return outcome(errorModelState(source.kind, structured))
 			}
 		},
-		[modelLoader, putOnScreen]
+		[putOnScreen]
 	)
 
 	const reset = useCallback(() => {

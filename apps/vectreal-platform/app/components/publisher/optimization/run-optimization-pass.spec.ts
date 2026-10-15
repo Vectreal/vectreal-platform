@@ -288,6 +288,28 @@ describe('runOptimizationPass', () => {
 		})
 	})
 
+	// The size a publish measured describes the file it shipped, which this
+	// pass replaces; a projection describes the document and is measured again.
+	it('drops the size a publish measured, and only that', async () => {
+		const published = createDeps(onlyEnable(['dedup']))
+		published.deps.setRuntimeUnfiltered((prev) => ({
+			...prev,
+			optimizedSceneBytes: 995,
+			publishedEncoding: { geometryCodec: 'draco' } as never
+		}))
+		await runOptimizationPass(published.deps)
+		expect(published.runtime[1]).toMatchObject({ optimizedSceneBytes: null })
+
+		const projected = createDeps(onlyEnable(['dedup']))
+		projected.deps.setRuntimeUnfiltered((prev) => ({
+			...prev,
+			optimizedSceneBytes: 861,
+			publishedEncoding: null
+		}))
+		await runOptimizationPass(projected.deps)
+		expect(projected.runtime[1]).toMatchObject({ optimizedSceneBytes: 861 })
+	})
+
 	// A revision after a runtime reset must never equal one handed out before.
 	it('gives every pass a revision no other pass has had', async () => {
 		const first = createDeps(onlyEnable(['dedup']))

@@ -119,6 +119,68 @@ beforeEach(() => {
 })
 
 describe('useOptimizationProcess', () => {
+	// The "before" size is the upload; the current size is the published GLB.
+	it('measures a pass from the scene as uploaded', async () => {
+		runOptimizationPass.mockResolvedValue({
+			succeeded: true,
+			dracoReport: null
+		})
+		const { result, store } = renderProcess()
+		act(() =>
+			store.set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				latestSceneStats: {
+					initialSceneBytes: 900,
+					currentSceneBytes: 100
+				} as never
+			}))
+		)
+
+		await act(() => result.current.derive(smallestPreset))
+
+		expect(runOptimizationPass).toHaveBeenCalledWith(
+			expect.objectContaining({
+				baseline: expect.objectContaining({ statsSceneBytes: 900 })
+			})
+		)
+	})
+
+	// Every scene's publish size is projected as it opens, so that figure
+	// existing says nothing about whether the document is optimized. A restored
+	// draft carries no measurement at all, only what it was derived from.
+	it('shows results for an optimized document, not merely a projected size', () => {
+		const { result, store } = renderProcess()
+
+		act(() =>
+			store.set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				optimizedSceneBytes: 861
+			}))
+		)
+		expect(result.current.hasCompletedOptimizationPass).toBe(false)
+
+		act(() =>
+			store.set(optimizationAtom, (prev) => ({
+				...prev,
+				derivedFrom: balancedPreset
+			}))
+		)
+		expect(result.current.hasCompletedOptimizationPass).toBe(true)
+	})
+
+	it('reports the size as computing while it is projected', () => {
+		const { result, store } = renderProcess()
+
+		act(() =>
+			store.set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				isProjectingSceneBytes: true
+			}))
+		)
+
+		expect(result.current.sizeInfo.isSceneSizeComputing).toBe(true)
+	})
+
 	it('records the settings a successful pass derived the document from', async () => {
 		runOptimizationPass.mockResolvedValue({
 			succeeded: true,

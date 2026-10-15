@@ -68,18 +68,19 @@ export function MoveItemsDialog({
 	onConfirm
 }: MoveItemsDialogProps) {
 	const fetcher = useFetcher<LocationEnvelope>()
+	// Stable across renders, unlike `fetcher`, which changes with every state
+	// and response, so depending on it would re-request in a loop.
+	const loadFolders = fetcher.load
 	const [target, setTarget] = useState<string | null>(null)
 
 	useEffect(() => {
 		if (!open || !projectId) {
 			return
 		}
-		fetcher.load(
+		loadFolders(
 			`/api/scene-location-options?projectId=${encodeURIComponent(projectId)}`
 		)
-		// Deliberately not depending on `fetcher`: it is a new object each render,
-		// so including it would re-request in a loop.
-	}, [open, projectId])
+	}, [open, projectId, loadFolders])
 
 	useEffect(() => {
 		if (!open) {
@@ -87,7 +88,10 @@ export function MoveItemsDialog({
 		}
 	}, [open])
 
-	const folders = fetcher.data?.success ? fetcher.data.data.folders : []
+	const folders = useMemo(
+		() => (fetcher.data?.success ? fetcher.data.data.folders : []),
+		[fetcher.data]
+	)
 	const isLoadingFolders = fetcher.state !== 'idle' && folders.length === 0
 	const loadError =
 		fetcher.state === 'idle' && fetcher.data && !fetcher.data.success
