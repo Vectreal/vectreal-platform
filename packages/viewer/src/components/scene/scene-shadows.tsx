@@ -580,6 +580,9 @@ const SceneShadows = memo(
 				colorBlend: options.colorBlend,
 				cutoffScale: options.cutoffScale
 			}),
+			// Keyed on the light's fields, not its object, which is spread fresh on
+			// every render; see above.
+			// eslint-disable-next-line react-hooks/exhaustive-deps
 			[
 				options.frames,
 				options.scale,
