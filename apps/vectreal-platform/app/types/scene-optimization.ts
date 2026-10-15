@@ -76,17 +76,18 @@ export interface SceneOptimizationRuntimeState {
 	isPending: boolean
 	isSceneSizeLoading: boolean
 	/**
-	 * Size of the scene as it will be published. Before a publish this is the
-	 * projected Draco GLB; after one it is the GLB that was published, in
-	 * whichever geometry codec won and with KTX2 textures where they were kept,
-	 * which is what the plan size gate and the server both end up measuring.
+	 * Size of the scene as it will be published, for the document on screen.
+	 * Before a publish it is the publish export run without GPU texture
+	 * encoding (`usePublishSizeProjection`); after one it is the GLB that was
+	 * published, which is what the plan size gate and the server measure.
 	 */
 	optimizedSceneBytes: null | number
+	/** A projection of `optimizedSceneBytes` is under way. */
+	isProjectingSceneBytes: boolean
 	clientSceneBytes: null | number
 	/**
-	 * Size of the uncompressed working document. Equal to `optimizedSceneBytes`
-	 * unless Draco is enabled, in which case it is the larger "before Draco"
-	 * figure shown as secondary detail.
+	 * Size of the uncompressed working document, measured after a pass in this
+	 * tab and null until one runs. Shown as the "before Draco" detail.
 	 */
 	workingSceneBytes: null | number
 	optimizedTextureBytes: null | number
@@ -109,6 +110,13 @@ export interface SceneOptimizationRuntimeState {
 	 * that. 0 until the first pass.
 	 */
 	passRevision: number
+	/**
+	 * `passRevision` as of the last save or load, so a pass run since reads as
+	 * an unsaved change. Equal to it on a fresh upload, which is unsaved for
+	 * other reasons; null only after restoring a draft, whose optimization
+	 * nothing saved describes.
+	 */
+	savedPassRevision: null | number
 }
 
 export interface PublishedEncoding {

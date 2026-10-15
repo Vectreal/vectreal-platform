@@ -26,6 +26,7 @@ const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
 	isPending: false,
 	isSceneSizeLoading: false,
 	optimizedSceneBytes: null,
+	isProjectingSceneBytes: false,
 	clientSceneBytes: null,
 	workingSceneBytes: null,
 	optimizedTextureBytes: null,
@@ -34,7 +35,8 @@ const optimizationRuntimeInitialState: SceneOptimizationRuntimeState = {
 	latestSceneStats: null,
 	dracoReport: null,
 	publishedEncoding: null,
-	passRevision: 0
+	passRevision: 0,
+	savedPassRevision: 0
 }
 
 const optimizationModalInitialState: SceneOptimizationModalState = {

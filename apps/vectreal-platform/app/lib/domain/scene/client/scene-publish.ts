@@ -11,7 +11,6 @@ interface PublishSceneFromGlbInput {
 	sceneId: string
 	baseFileName: string
 	glbData: Uint8Array
-	currentSceneBytes?: number
 }
 
 interface PublishSceneFromGlbResult {
@@ -35,8 +34,7 @@ function normalizeError(payload: unknown, status: number, fallback: string) {
 export async function publishSceneFromGlb({
 	sceneId,
 	baseFileName,
-	glbData,
-	currentSceneBytes
+	glbData
 }: PublishSceneFromGlbInput): Promise<PublishSceneFromGlbResult> {
 	// One id for the upload and the commit. It gives the server a scope for
 	// reclaiming the GLB when the commit is refused on entitlement or quota, and
@@ -96,9 +94,6 @@ export async function publishSceneFromGlb({
 	publishFormData.append('sceneId', sceneId)
 	publishFormData.append('requestId', requestId)
 	publishFormData.append('publishedAssetId', uploadedAsset.assetId)
-	if (Number.isFinite(currentSceneBytes)) {
-		publishFormData.append('currentSceneBytes', String(currentSceneBytes))
-	}
 
 	const publishResponse = await fetch(`/api/scenes/${sceneId}`, {
 		method: 'POST',
@@ -147,8 +142,8 @@ export async function publishSceneFromGlb({
 			status: 'published',
 			publishedAt,
 			publishedAssetId: uploadedAsset.assetId,
-			publishedAssetSizeBytes:
-				typeof currentSceneBytes === 'number' ? currentSceneBytes : null
+			// The size the server stored, as the publish recorded it.
+			publishedAssetSizeBytes: publishData.stats?.currentSceneBytes ?? null
 		}
 	}
 }

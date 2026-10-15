@@ -25,7 +25,6 @@ import {
 import {
 	hasEntitlement,
 	getRecommendedUpgrade,
-	getOrgSubscription,
 	getQuotaLimit
 } from '../../billing/entitlement-service.server'
 import { assertWithinQuota } from '../../billing/quota-enforcement.server'
@@ -36,7 +35,6 @@ import {
 	getOrCreateDefaultProject,
 	userExists
 } from '../../user/user-repository.server'
-import { isSceneOverSizeLimit } from '../scene-size-limit'
 
 import type { EntitlementKey } from '../../../../constants/plan-config'
 import type { SceneSettingsRequest } from '../../../../types/api'
@@ -55,7 +53,6 @@ type GetSceneSettingsRequest = SceneSettingsRequest & {
 type PublishSceneRequest = SceneSettingsRequest & {
 	sceneId: string
 	publishedAssetId: string
-	currentSceneBytes?: number
 }
 
 type UploadPreparedScene = {
@@ -346,37 +343,6 @@ export async function prepareSceneUpload(
 		})
 	}
 
-	/*
-	  Enforced against the reported final (post-optimization) scene size.
-	  `currentSceneBytes` is client-reported - the same value that feeds scene
-	  stats - so this is a plan gate, not a security boundary. The storage
-	  bucket's own per-file limit is the boundary.
-
-	  This comment used to name `storage_bytes_total` as a second hard backstop.
-	  It was not one, and it still is not: nothing enforces it. Enforcing it here
-	  was tried and reverted, because the figure arrives from the same client
-	  value and is absent from every path that actually writes bytes.
-	*/
-	if (typeof request.currentSceneBytes === 'number') {
-		const organizationId = await resolveOwningOrganizationId(request, userId)
-		const { limit } = await getQuotaLimit(
-			organizationId,
-			'storage_bytes_per_scene'
-		)
-		if (isSceneOverSizeLimit(request.currentSceneBytes, limit)) {
-			const { plan } = await getOrgSubscription(organizationId)
-			throw new QuotaExceededError({
-				limitKey: 'storage_bytes_per_scene',
-				currentValue: request.currentSceneBytes,
-				limit,
-				plan,
-				upgradeTo: getRecommendedUpgrade(plan),
-				message:
-					'Scene exceeds the maximum size for your plan. Optimize further or upgrade.'
-			})
-		}
-	}
-
 	const resolved = await resolveSceneAndProject(
 		request.sceneId,
 		userId,
@@ -608,8 +574,7 @@ export async function saveSceneSettings(
 				sourceAssetId: request.sourceAssetId,
 				optimizationReport: request.optimizationReport,
 				optimizationSettings: request.optimizationSettings,
-				initialSceneBytes: request.initialSceneBytes,
-				currentSceneBytes: request.currentSceneBytes
+				initialSceneBytes: request.initialSceneBytes
 			}
 		)
 
@@ -756,8 +721,7 @@ export async function publishScene(
 	let keepAssetIds: string[] = []
 
 	try {
-		const { sceneId, publishedAssetId, currentSceneBytes } =
-			request as PublishSceneRequest
+		const { sceneId, publishedAssetId } = request as PublishSceneRequest
 		assertParsed(
 			sceneId,
 			'Scene settings request must be validated before calling operations'
@@ -850,12 +814,30 @@ export async function publishScene(
 			}
 		}
 
+		/*
+		  The plan's scene size limits the published GLB, which is what a visitor
+		  downloads, at the size the server stored it. The client used to report
+		  the figure, and it reported whichever size it had measured last.
+		*/
+		const publishedBytes = await sceneSettingsService.getPublishedAssetBytes(
+			publishedAssetId,
+			projectId
+		)
+		await assertWithinQuota({
+			organizationId: project.organizationId,
+			limitKey: 'storage_bytes_per_scene',
+			measure: async () => publishedBytes,
+			// The measurement is the file itself, not a count it would add to.
+			adds: 0,
+			message: () =>
+				'Scene exceeds the maximum size for your plan. Optimize further or upgrade.'
+		})
+
 		const result = await sceneSettingsService.publishSceneFromAssetId({
 			sceneId,
 			projectId,
 			userId,
-			publishedAssetId,
-			currentSceneBytes
+			publishedAssetId
 		})
 		// Only reached when the publish landed, so this is the one asset the
 		// reclaim must leave alone.

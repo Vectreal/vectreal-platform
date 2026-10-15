@@ -30,7 +30,7 @@ export interface PendingSceneDraft {
 	 * written before the choice existed, which read as the default, kept.
 	 */
 	keepOriginal?: boolean
-	/** Byte size of the optimized scene at the time of persisting. Restored on draft hydration to re-enable saving without re-optimizing. */
+	/** Byte size of the optimized scene at the time of persisting. Restored on draft hydration, so the size shown survives the sign-in. */
 	optimizedSceneBytes?: number | null
 	/** Byte size of the raw client scene at the time of persisting. */
 	clientSceneBytes?: number | null

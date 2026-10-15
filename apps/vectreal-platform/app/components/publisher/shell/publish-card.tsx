@@ -59,6 +59,11 @@ const CardTrigger = ({
 interface PublishCardProps {
 	sceneBytes?: null | number
 	isSceneSizeLoading?: boolean
+	/**
+	 * The size leaves out GPU texture encoding, which only publishing measures,
+	 * so no honest load time can be read from it.
+	 */
+	sizeExcludesTextureEncoding?: boolean
 	/** Transient loader/optimizer status; replaces the metric line while set. */
 	statusText?: null | string
 	isPublished: boolean
@@ -82,6 +87,7 @@ interface PublishCardProps {
 export const PublishCard: FC<PublishCardProps> = ({
 	sceneBytes,
 	isSceneSizeLoading = false,
+	sizeExcludesTextureEncoding = false,
 	statusText = null,
 	isPublished,
 	onOpenPublishPanel,
@@ -171,8 +177,14 @@ export const PublishCard: FC<PublishCardProps> = ({
 								/>
 							)}
 							<span className="truncate">
-								{formatFileSize(sceneBytes)} · {estimate.label} on{' '}
-								{DELIVERY_REFERENCE_LABEL}
+								{sizeExcludesTextureEncoding ? (
+									<>{formatFileSize(sceneBytes)} + GPU textures</>
+								) : (
+									<>
+										{formatFileSize(sceneBytes)} · {estimate.label} on{' '}
+										{DELIVERY_REFERENCE_LABEL}
+									</>
+								)}
 							</span>
 							{estimate.isSlow && (
 								<span className="sr-only">, slow to load</span>

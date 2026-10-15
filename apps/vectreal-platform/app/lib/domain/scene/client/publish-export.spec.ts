@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { runPublishExportInWorker } from './publish-export'
+import {
+	projectPublishedGlbBytes,
+	resolvePublishGeometryOptions,
+	runPublishExportInWorker
+} from './publish-export'
+
+import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
 
 class FakeWorker {
 	static instances: FakeWorker[] = []
@@ -108,5 +114,70 @@ describe('runPublishExportInWorker', () => {
 
 		vi.advanceTimersByTime(1_000)
 		expect(lastWorker().terminate).toHaveBeenCalledOnce()
+	})
+})
+
+describe('projectPublishedGlbBytes', () => {
+	// GPU texture encoding is seconds per texture, so the projection leaves it
+	// to publish and runs the rest of the export as publish does.
+	it('runs the publish export without GPU textures and measures its file', async () => {
+		const working = new Uint8Array([1, 2, 3, 4])
+		const pending = projectPublishedGlbBytes(working, {
+			draco: { quantizePosition: 14 },
+			dracoWorthApplying: false
+		})
+		const worker = lastWorker()
+		expect(worker.postMessage.mock.calls[0][0]).toMatchObject({
+			type: 'export',
+			draco: { quantizePosition: 14 },
+			dracoWorthApplying: false,
+			ktx2: false
+		})
+
+		worker.reply({
+			type: 'done',
+			buffer: new ArrayBuffer(3),
+			geometryCodec: 'none',
+			textureBytes: 0
+		})
+
+		await expect(pending).resolves.toBe(3)
+		// Sent a copy: the caller's GLB is still whole.
+		expect(working.byteLength).toBe(4)
+	})
+})
+
+describe('resolvePublishGeometryOptions', () => {
+	const withDraco = (draco: Optimizations['draco']) =>
+		({ draco }) as Optimizations
+	const report = (isWorthApplying: boolean) =>
+		({ isWorthApplying }) as DracoCompressionReport
+
+	it('passes Draco’s options on without its switch', () => {
+		expect(
+			resolvePublishGeometryOptions(
+				withDraco({ enabled: true, quantizePosition: 14 }),
+				null
+			)
+		).toEqual({ draco: { quantizePosition: 14 }, dracoWorthApplying: true })
+	})
+
+	it('turns geometry compression off when Draco is off or absent', () => {
+		expect(
+			resolvePublishGeometryOptions(withDraco({ enabled: false }), null).draco
+		).toBeUndefined()
+		expect(
+			resolvePublishGeometryOptions({} as Optimizations, null).draco
+		).toBeUndefined()
+	})
+
+	it('leaves Draco out of the contest only when it measured larger', () => {
+		const draco = withDraco({ enabled: true })
+		expect(
+			resolvePublishGeometryOptions(draco, report(false)).dracoWorthApplying
+		).toBe(false)
+		expect(
+			resolvePublishGeometryOptions(draco, report(true)).dracoWorthApplying
+		).toBe(true)
 	})
 })

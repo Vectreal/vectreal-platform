@@ -1,9 +1,5 @@
 export type SaveAvailabilityReason =
-	| 'ready'
-	| 'no-model'
-	| 'no-user'
-	| 'no-unsaved-changes'
-	| 'requires-size-reduction'
+	'ready' | 'no-model' | 'no-user' | 'no-unsaved-changes'
 
 export interface SaveAvailabilityState {
 	canSave: boolean
@@ -14,14 +10,12 @@ interface SaveAvailabilityArgs {
 	/** Whether a model is on the stage. */
 	hasModel: boolean
 	userId?: string
-	isSceneOverSizeLimit: boolean
 	hasChanges: boolean
 }
 
 export const resolveSaveAvailability = ({
 	hasModel,
 	userId,
-	isSceneOverSizeLimit,
 	hasChanges
 }: SaveAvailabilityArgs): SaveAvailabilityState => {
 	/*
@@ -35,10 +29,6 @@ export const resolveSaveAvailability = ({
 
 	if (!userId) {
 		return { canSave: false, reason: 'no-user' }
-	}
-
-	if (isSceneOverSizeLimit) {
-		return { canSave: false, reason: 'requires-size-reduction' }
 	}
 
 	if (!hasChanges) {
