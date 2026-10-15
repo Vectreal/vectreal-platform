@@ -72,8 +72,13 @@ describe('a newsroom article followed from another', () => {
 				loader: loader as never
 			}
 		])
-		render(<Stub initialEntries={[`/news-room/${first.slug}`]} />)
-		await screen.findByRole('heading', { level: 1, name: first.title })
+		// Awaited rather than polled: the loader runs on promises alone, so act
+		// settles the navigation however slow the machine is, where a find has
+		// a one-second deadline that a loaded parallel run overruns.
+		await act(async () => {
+			render(<Stub initialEntries={[`/news-room/${first.slug}`]} />)
+		})
+		screen.getByRole('heading', { level: 1, name: first.title })
 
 		// Read the first article to the end over a minute.
 		act(() => scrollTo(1000))
@@ -86,9 +91,11 @@ describe('a newsroom article followed from another', () => {
 				link.getAttribute('href')?.endsWith(`/news-room/${second.slug}`)
 			)
 		if (!card) throw new Error('no link to the related article')
-		fireEvent.click(card)
+		await act(async () => {
+			fireEvent.click(card)
+		})
 		// The card shows the title too; the page heading is what says it arrived.
-		await screen.findByRole('heading', { level: 1, name: second.title })
+		screen.getByRole('heading', { level: 1, name: second.title })
 
 		return { first, second }
 	}
