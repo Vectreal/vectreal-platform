@@ -13,6 +13,9 @@ on:
       - 'apps/vectreal-platform/app/components/**'
       - '.github/workflows/cd-chromatic.yaml'
   pull_request:
+    # `labeled` lets adding the `chromatic` label start a build on a PR whose
+    # last push did not upload.
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'storybook/**'
       - 'shared/components/**'
@@ -37,7 +40,11 @@ jobs:
     # re-snapshotted exactly what the main build had just accepted. It was 119 of
     # 248 runs and about half the billed snapshots between 2026-09-08 and
     # 2026-10-14, while changing nothing that renders.
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+    #
+    # Adding any other label is not a new commit, so it builds nothing.
+    if: >-
+      ${{ !startsWith(github.head_ref, 'release-please--') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'chromatic') }}
 
     # One Chromatic project for the whole workspace. The upload is skipped when
     # no token is configured, so the build and typecheck still run either way.
@@ -70,8 +77,20 @@ jobs:
         run: |
           echo "::notice::CHROMATIC_PROJECT_TOKEN_1 is not set. Storybook was built but not published."
 
+      # Every PR builds and type-checks Storybook above, but only a PR labeled
+      # `chromatic` uploads. Builds on every PR push were about 880 billed
+      # snapshots in five weeks against a 5,000 monthly allowance, and none of
+      # them could fail the PR (exitZeroOnChanges). Main always uploads, so the
+      # baselines a labeled PR compares against stay current.
+      - name: ⏭️ Chromatic upload not requested
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'chromatic')
+        run: |
+          echo "::notice::Storybook was built but not published. Add the chromatic label to this PR to publish it."
+
       - name: ⚡ Publish to Chromatic
-        if: env.CHROMATIC_TOKEN != ''
+        if: >-
+          env.CHROMATIC_TOKEN != '' &&
+          (github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'chromatic'))
         uses: chromaui/action@v18
         with:
           projectToken: ${{ env.CHROMATIC_TOKEN }}
@@ -85,11 +104,3 @@ jobs:
           exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
           exitOnceUploaded: true
           onlyChanged: true
-          # `chore/**` used to be skipped, from when this only covered the
-          # viewer. Now that it covers the design system, chore branches are
-          # exactly where refactors that move surfaces and tokens land - the
-          # branch that introduced this Storybook produced no snapshots because
-          # of that pattern. Bot branches stay skipped: they are high volume and
-          # a lockfile bump that does change rendering will be caught when it
-          # reaches main.
-          skip: '@(renovate/**|dependabot/**)'
