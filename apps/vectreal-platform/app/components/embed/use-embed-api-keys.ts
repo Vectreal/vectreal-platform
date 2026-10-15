@@ -126,6 +126,9 @@ export function useEmbedApiKeys(params: {
 	const listFetcher = useFetcher<Envelope<EmbedApiKeysPayload>>({
 		key: `embed-keys:${endpoint ?? 'none'}`
 	})
+	// Stable for an endpoint, unlike `listFetcher`, which changes with every
+	// state and response, so depending on it would re-fire the request.
+	const loadList = listFetcher.load
 	const createFetcher = useFetcher<Envelope<EmbedApiKeyCreatedPayload>>({
 		key: `embed-keys-create:${endpoint ?? 'none'}`
 	})
@@ -158,11 +161,9 @@ export function useEmbedApiKeys(params: {
 		if (requestedEndpointRef.current === endpoint) return
 
 		requestedEndpointRef.current = endpoint
-		listFetcher.load(endpoint)
-		// `listFetcher` is deliberately not a dependency: it is a new object every
-		// render, so depending on it re-fires the request on each one. The ref is
-		// what makes this run once per endpoint.
-	}, [enabled, endpoint])
+		loadList(endpoint)
+		// The ref is what makes this run once per endpoint.
+	}, [enabled, endpoint, loadList])
 
 	const retry = useCallback(() => {
 		if (!endpoint) return
@@ -174,8 +175,8 @@ export function useEmbedApiKeys(params: {
 		  fetcher key before starting the next, so repeat clicks are safe and the
 		  last one is the one that lands.
 		*/
-		listFetcher.load(endpoint)
-	}, [listFetcher, endpoint])
+		loadList(endpoint)
+	}, [loadList, endpoint])
 
 	/**
 	 * The answer, but only if it is an answer about this project.
@@ -239,7 +240,7 @@ export function useEmbedApiKeys(params: {
 		if (fetched.some((key) => key.id === createdKey.option.id)) return fetched
 
 		return [createdKey.option, ...fetched]
-	}, [payload?.keys, createdKey, listFetcher.data])
+	}, [payload, createdKey, listFetcher.data])
 
 	/*
 	  One rule covers first load, creating a key, and a key revoked in another
@@ -320,12 +321,13 @@ export function useEmbedApiKeys(params: {
 		  the new key anyway.
 		*/
 		setSelectedKeyId(key.id)
-		listFetcher.load(endpoint)
+		loadList(endpoint)
 	}, [
 		createFetcher.state,
 		createFetcher.data,
 		endpoint,
 		listFetcher.data,
+		loadList,
 		setUpgradeModal
 	])
 

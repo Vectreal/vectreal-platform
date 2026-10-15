@@ -52,7 +52,6 @@ describe('the embed manifest ETag', () => {
 
 describe('the embed asset route', () => {
 	const route = read('routes/api/scenes.$sceneId.assets.$assetId.ts')
-	const serving = read('lib/domain/embed/embed-asset-serving.server.ts')
 
 	it('hands a key holder only a published scene to the serving rules', () => {
 		const lookup = route.indexOf(
@@ -63,34 +62,6 @@ describe('the embed asset route', () => {
 		)
 		expect(route.slice(lookup)).toMatch(
 			/^[^}]*if \(!previewScene\) \{\s*return new Response\('Asset not found', \{\s*status: 404[\s\S]*?\}\s*return servePublishedEmbedAsset\(\s*request,\s*\{ sceneId, assetId \},\s*previewScene\s*\)/
-		)
-	})
-
-	it('serves the published GLB before reading any settings', () => {
-		const handler = serving.slice(
-			serving.indexOf('export async function servePublishedEmbedAsset(')
-		)
-		const fastPath = handler.indexOf(
-			'const publishedModel = serveFromPublishedRow('
-		)
-		expect(fastPath).toBeGreaterThan(-1)
-		expect(fastPath).toBeLessThan(
-			handler.indexOf('sceneSettingsService.getSceneSettingsWithAssetRefs')
-		)
-		expect(handler.slice(fastPath)).toMatch(
-			/^[^)]*previewScene\s*\)\s*if \(publishedModel\) return publishedModel/
-		)
-	})
-
-	it('downloads the published GLB from the row the query joined', () => {
-		const helper = serving.slice(
-			serving.indexOf('function serveFromPublishedRow(')
-		)
-		expect(helper).toMatch(
-			/^[\s\S]{0,400}?if \(!previewScene \|\| ids\.assetId !== previewScene\.publishedAssetId\) \{\s*return null/
-		)
-		expect(helper).toMatch(
-			/^[\s\S]{0,900}?downloadAssetFromRow\(\{ id: ids\.assetId, filePath, mimeType, name \}\)/
 		)
 	})
 })
@@ -159,6 +130,38 @@ describe('the session manifest branch', () => {
 			/^if \(manifestKind === 'not-found'\) \{\s*return withNoStore\(ApiResponse\.notFound\('Scene not found'\)\)/
 		)
 		expect(refusal).toBeLessThan(preview.indexOf('await buildSceneManifest('))
+	})
+})
+
+describe('the preview POST', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+	const action = route.slice(route.indexOf('export async function action('))
+	const preview = action.slice(
+		action.indexOf('if (isPreviewRequest) {'),
+		action.indexOf('const authResult = await getAuthUser(request)')
+	)
+
+	/*
+	  The client falls back to this POST when a manifest fails its shape check,
+	  and it returns the working scene, so it has to ask the same rule as the
+	  GET or a published scene's draft leaks onto /preview on that path.
+	*/
+	it('lets the manifest rule refuse a published scene before reading the draft', () => {
+		expect(preview).toMatch(
+			/const previewScene = await getPublishedScenePreview\(\s*previewProjectId,\s*routeSceneId\s*\)\s*const manifestKind = chooseSceneManifestKind\(\{\s*hasPublication: previewScene !== null,\s*caller: authContext\.mode\s*\}\)\s*if \(manifestKind !== 'working'\) \{\s*return withNoStore\(/
+		)
+
+		const refusal = preview.indexOf("if (manifestKind !== 'working') {")
+		expect(refusal).toBeGreaterThan(-1)
+		expect(refusal).toBeLessThan(
+			preview.indexOf('sceneSettingsOps.getSceneSettings(')
+		)
+	})
+
+	it('reads the scene every check was keyed on, never one the body names', () => {
+		expect(preview).toMatch(
+			/sceneSettingsOps\.getSceneSettings\(\{\s*\.\.\.parsedRequest,\s*action,\s*sceneId: routeSceneId\s*\}\)/
+		)
 	})
 })
 
@@ -258,7 +261,6 @@ describe('the codec files: Draco decoder, KTX2 transcoder and encoder', () => {
 
 describe('signed embed assets', () => {
 	const route = read('routes/api/scenes.$sceneId.assets.$assetId.ts')
-	const serving = read('lib/domain/embed/embed-asset-serving.server.ts')
 
 	it('are answered before any key or session lookup', () => {
 		const signed = route.indexOf("if (url.searchParams.has('sig')) {")
@@ -269,41 +271,17 @@ describe('signed embed assets', () => {
 		expect(signed).toBeLessThan(route.indexOf('await getAuthUser(request)'))
 	})
 
-	it('are verified before anything is downloaded', () => {
-		const handler = serving.slice(
-			serving.indexOf('async function serveSignedAsset(')
-		)
-		expect(handler.indexOf('verifySignedAsset(')).toBeGreaterThan(-1)
-		expect(handler.indexOf('if (!check?.ok) {')).toBeGreaterThan(-1)
-		expect(handler.indexOf('if (!check?.ok) {')).toBeLessThan(
-			handler.indexOf('await downloadAsset(')
-		)
-	})
-
 	it('verify the whole query the route received', () => {
 		expect(route).toContain(
 			'return serveSignedAsset(request, { sceneId, assetId }, url)'
 		)
 	})
 
-	it('answer an asset deleted by a republish with a quiet 404', () => {
-		const start = serving.indexOf('async function serveSignedAsset(')
-		expect(start).toBeGreaterThan(-1)
-		const handler = serving.slice(start, serving.indexOf('\n}\n', start))
-		const notFound = handler.indexOf(
-			'if (error instanceof AssetNotFoundError) {'
-		)
-		expect(notFound).toBeGreaterThan(-1)
-		expect(notFound).toBeLessThan(handler.indexOf('reportServerError('))
-		expect(handler.slice(notFound)).toMatch(/^[^}]*status: 404/)
+	// The route spec mocks storage, so it cannot see that a missing row really
+	// throws the error the signed path answers with a quiet 404.
+	it('rely on a missing row throwing AssetNotFoundError', () => {
 		expect(read('lib/domain/asset/asset-storage.server.ts')).toMatch(
 			/if \(!asset\) \{\s*throw new AssetNotFoundError\(assetId\)/
-		)
-	})
-
-	it('are publicly cacheable for exactly as long as they stay valid', () => {
-		expect(serving).toContain(
-			'`public, max-age=${check.secondsLeft}, s-maxage=${check.secondsLeft}`'
 		)
 	})
 })

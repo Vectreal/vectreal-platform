@@ -206,6 +206,7 @@ export const useSceneSaveFlow = ({
 			currentSettings,
 			dispatchSaveProgress,
 			lastSavedSceneMeta,
+			lastSavedSettings,
 			sceneMetaState,
 			optimizationSettings,
 			optimizationReport,

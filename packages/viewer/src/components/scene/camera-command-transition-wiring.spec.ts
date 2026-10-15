@@ -69,7 +69,9 @@ describe('camera flights read the current transition', () => {
 			'// update camera properties if props change after initialization',
 			'const selectionKey'
 		)
-		expect(effect).toContain('transitionOverride?.current ?? sceneTransition,')
+		expect(effect).toContain(
+			'transitionOverride?.current ?? sceneTransitionRef.current,'
+		)
 	})
 
 	it('keeps the ref on the transition of every render', () => {

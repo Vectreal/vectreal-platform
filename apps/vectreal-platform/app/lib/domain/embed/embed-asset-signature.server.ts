@@ -12,9 +12,15 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
  * The URL carries no key and expires on an hour boundary, so every visitor of a
  * scene in the same hour asks for the same URL, and Cloudflare can serve it.
  * The cost is revocation lag. A URL works for anyone holding it until it
- * expires, two hours at most, and nothing checked when it was issued is checked
- * again: a revoked key, a narrowed domain list, an unpublished or deleted
- * scene all stop new URLs at once and leave the issued ones working.
+ * expires, two hours at most, and the key checks are not repeated: a revoked
+ * key or a narrowed domain list stops new URLs at once and leaves the issued
+ * ones working.
+ *
+ * What the origin does re-check, on every edge miss, is that the asset is still
+ * one an embed of the scene gets (`serveSignedAsset`). An unpublished scene or
+ * a withdrawn side asset is refused there, but only once the edge asks again:
+ * a side asset is held at the edge for minutes, because its author can
+ * withdraw it without publishing, while the GLB is held for the URL's life.
  */
 
 const SIGNING_SECRET_ENV = 'EMBED_ASSET_SIGNING_SECRET'

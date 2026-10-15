@@ -237,6 +237,7 @@ function useRestorePendingDraft(): boolean {
 		setLastSavedSceneMeta,
 		setOptimizationRuntime,
 		setOptimizationState,
+		setKeptOriginal,
 		setSceneMetaState,
 		setSource
 	])

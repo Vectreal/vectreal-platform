@@ -188,11 +188,11 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 
 	// Fire onboarding_step_viewed whenever the current step changes (and on mount for the first step)
 	useEffect(() => {
-		track('onboarding_step_viewed', {
+		posthog?.capture('onboarding_step_viewed', {
 			step_index: currentStep,
 			step_id: step.fieldKey
 		})
-	}, [currentStep, posthog])
+	}, [currentStep, step.fieldKey, posthog])
 
 	const setField = (key: OnboardingProfileKey, value: string) => {
 		setProfile((prev) => ({ ...prev, [key]: value || null }))

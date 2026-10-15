@@ -64,6 +64,26 @@ interface BillingSettingsSectionProps {
 	planFit: PlanFit
 }
 
+type PortalFetcherResponse = {
+	data: {
+		portalUrl: string
+	}
+}
+
+function hasPortalUrl(value: unknown): value is PortalFetcherResponse {
+	if (!value || typeof value !== 'object' || !('data' in value)) {
+		return false
+	}
+
+	const { data } = value as { data: unknown }
+
+	if (!data || typeof data !== 'object' || !('portalUrl' in data)) {
+		return false
+	}
+
+	return typeof (data as { portalUrl: unknown }).portalUrl === 'string'
+}
+
 export function BillingSettingsSection({
 	billing,
 	planFit
@@ -105,26 +125,6 @@ export function BillingSettingsSection({
 
 	const handleOpenPortal = () => {
 		portalFetcher.submit({}, { method: 'POST', action: '/api/billing/portal' })
-	}
-
-	type PortalFetcherResponse = {
-		data: {
-			portalUrl: string
-		}
-	}
-
-	const hasPortalUrl = (value: unknown): value is PortalFetcherResponse => {
-		if (!value || typeof value !== 'object' || !('data' in value)) {
-			return false
-		}
-
-		const { data } = value as { data: unknown }
-
-		if (!data || typeof data !== 'object' || !('portalUrl' in data)) {
-			return false
-		}
-
-		return typeof (data as { portalUrl: unknown }).portalUrl === 'string'
 	}
 
 	useEffect(() => {

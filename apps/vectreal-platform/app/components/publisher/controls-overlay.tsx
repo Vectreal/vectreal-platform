@@ -280,7 +280,6 @@ const OverlayControls = ({
 			onOpenOptimizationDrawer: openReoptimizeDrawer
 		}),
 		[
-			sceneId,
 			projectId,
 			user?.id,
 			handleRequireAuthForSave,
@@ -308,7 +307,7 @@ const OverlayControls = ({
 	const handleLogout = useCallback(async () => {
 		posthog?.reset()
 		await submit(null, { method: 'post', action: '/auth/logout' })
-	}, [posthog, submit])
+	}, [submit])
 
 	const handlePublishPanelChange = useCallback(
 		(isOpen: boolean) => {

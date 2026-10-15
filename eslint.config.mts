@@ -6,6 +6,7 @@ import { defineConfig } from 'eslint/config'
 import * as jsoncParser from 'jsonc-eslint-parser'
 import pluginImport from 'eslint-plugin-import-x'
 import pluginReact from 'eslint-plugin-react'
+import pluginReactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
@@ -103,7 +104,8 @@ export default defineConfig(tseslint.configs.recommended, [
 		...pluginReact.configs.flat.recommended,
 		plugins: {
 			...pluginReact.configs.flat.recommended.plugins,
-			import: pluginImport
+			import: pluginImport,
+			'react-hooks': pluginReactHooks
 		},
 		settings: { react: { version: '19' }, runtime: 'automatic' },
 		rules: {
@@ -112,6 +114,8 @@ export default defineConfig(tseslint.configs.recommended, [
 			'react/react-in-jsx-scope': 'off', // Not needed with React 17+ and new JSX transform
 			'react/prop-types': 'off', // Using TypeScript for type checking, so prop-types are redundant
 			'react/jsx-uses-react': 'off', // Not needed with React 17+ and new JSX transform
+			'react-hooks/rules-of-hooks': 'error',
+			'react-hooks/exhaustive-deps': 'error',
 			'import/order': [
 				'error',
 				{
