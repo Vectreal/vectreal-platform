@@ -524,6 +524,8 @@ const VectrealViewer = memo(({ model, ...props }: VectrealViewerProps) => {
 	const backdrop = resolveSceneBackdrop(envOptions)
 	useEffect(() => {
 		if (environmentFiles) preloadEnvironmentFiles(environmentFiles)
+		// Keyed on the file list's value: the array is rebuilt on every render.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [environmentFilesKey])
 
 	// Bounds-based camera framing is the fallback for scenes without saved camera positions.

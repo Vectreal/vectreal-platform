@@ -34,7 +34,7 @@ describe('environment prefetch', () => {
 			/const environmentFiles = envOptions\s*\?\s*resolveEnvironmentFiles\(envOptions\)\s*:\s*null/
 		)
 		expect(viewer).toMatch(
-			/useEffect\(\(\) => \{\s*if \(environmentFiles\) preloadEnvironmentFiles\(environmentFiles\)\s*\}, \[environmentFilesKey\]\)/
+			/useEffect\(\(\) => \{\s*if \(environmentFiles\) preloadEnvironmentFiles\(environmentFiles\)\s*(\/\/.*\s*)*\}, \[environmentFilesKey\]\)/
 		)
 		expect(environment).toContain('useEnvironment.preload({ files })')
 	})

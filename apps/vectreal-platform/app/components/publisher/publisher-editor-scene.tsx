@@ -326,7 +326,8 @@ function ClickToPlace({
 		gizmoGrabbedRef,
 		gl,
 		modelRoot,
-		onPlace
+		onPlace,
+		placementRay
 	])
 
 	return null

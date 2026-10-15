@@ -431,16 +431,7 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 			description: config.description,
 			actionVariant: config.actionVariant
 		}
-	}, [
-		location.pathname,
-		routeContext,
-		project,
-		folder,
-		scene,
-		organizationDetail,
-		usage,
-		billing
-	])
+	}, [routeContext, project, folder, scene, organizationDetail, usage, billing])
 
 	return content
 }
