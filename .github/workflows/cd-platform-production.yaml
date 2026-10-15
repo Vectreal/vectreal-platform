@@ -17,10 +17,22 @@ jobs:
     name: CI Quality Gate
     uses: ./.github/workflows/ci-quality.yaml
 
-  deploy-production:
-    name: Deploy to Production Environment
+  migrate-production:
+    name: Migrate Production Database
     needs: quality-gate
     if: ${{ needs.quality-gate.result == 'success' }}
+    uses: ./.github/workflows/shared-supabase-migrate.yaml
+    with:
+      environment: production
+    secrets:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+  deploy-production:
+    name: Deploy to Production Environment
+    needs: migrate-production
+    if: ${{ needs.migrate-production.result == 'success' }}
     uses: ./.github/workflows/shared-fly-deploy.yaml
     with:
       app_name: vectreal-platform

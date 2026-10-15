@@ -71,11 +71,11 @@ Workflows live in `.github/workflows/`.
 
 | Workflow | Fly app | Trigger | What it does |
 |---|---|---|---|
-| **Staging deploy** (`cd-platform-staging.yaml`) | `vectreal-platform-staging` | Push to `main` (on app/package changes) | Builds the Docker image, pushes to GHCR and the Fly.io registry, runs `flyctl deploy` against `fly.staging.toml` |
-| **Production deploy** (`cd-platform-production.yaml`) | `vectreal-platform` | Manual `workflow_dispatch` | Runs the CI quality gate, then deploys the image against `fly.toml` |
+| **Staging deploy** (`cd-platform-staging.yaml`) | `vectreal-platform-staging` | Push to `main` (on app/package changes) | Applies pending database migrations, then builds the Docker image, pushes to GHCR and the Fly.io registry, and runs `flyctl deploy` against `fly.staging.toml` |
+| **Production deploy** (`cd-platform-production.yaml`) | `vectreal-platform` | Manual `workflow_dispatch` | Runs the CI quality gate, applies pending database migrations, then deploys the image against `fly.toml` |
 | **Package release** | n/a | Managed by Release Please | Publishes `@vctrl/*` packages to npmjs.com |
 
-Both deploy workflows call the shared `shared-fly-deploy.yaml` workflow. The build injects `VITE_PUBLIC_*` values as Docker build args; runtime secrets (Supabase, Stripe, Cloudflare Turnstile, email) are set as Fly.io app secrets.
+Both deploy workflows call `shared-supabase-migrate.yaml` and then `shared-fly-deploy.yaml`, and the deploy waits on the migration, so a release never starts ahead of the schema it reads. The build injects `VITE_PUBLIC_*` values as Docker build args; runtime secrets (Supabase, Stripe, Cloudflare Turnstile, email) are set as Fly.io app secrets.
 
 ### Required GitHub secrets
 
@@ -84,6 +84,18 @@ Both deploy workflows call the shared `shared-fly-deploy.yaml` workflow. The bui
 | `FLY_API_TOKEN` | Fly.io deploy token |
 | `VITE_PUBLIC_POSTHOG_TOKEN` / `VITE_PUBLIC_POSTHOG_HOST` | PostHog analytics config. Needed in two places, not one: see below |
 | `VITE_PUBLIC_POSTHOG_UI_HOST` | Optional PostHog UI host |
+
+### Required environment secrets
+
+Set in each of the `staging` and `production` GitHub environments, under the same names, for the migration job:
+
+| Secret | Description |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | Supabase personal access token the CLI links the project with |
+| `SUPABASE_PROJECT_REF` | That environment's Supabase project ref |
+| `SUPABASE_DB_PASSWORD` | That environment's database password |
+
+A missing one fails the migration job by name, and with it the deploy.
 
 Application runtime secrets (Supabase URLs/keys, `DATABASE_URL`, `CSRF_SECRET`, Stripe keys, Cloudflare Turnstile keys) are managed on Fly.io via the `setup-fly-secrets` scripts rather than as GitHub secrets.
 
@@ -99,16 +111,19 @@ So they are needed twice: as a GitHub secret, which `shared-fly-deploy.yaml` pas
 
 ## Database migrations
 
-Migrations follow a Supabase-first flow - Drizzle generates SQL from schema edits, the Supabase CLI applies it.
+Migrations follow a Supabase-first flow - Drizzle generates SQL from schema edits, the Supabase CLI applies it. The deploy workflows apply them, before the new release starts:
 
 ```bash
 # Generate SQL from schema changes
 pnpm nx run vectreal-platform:drizzle-generate
+```
 
-# Apply to staging
+The old release is still serving while a migration runs, so each one has to work with the code already deployed: add a column before code reads it, and drop one only once no deployed release reads it.
+
+To apply by hand, for example to repair a failed run:
+
+```bash
 pnpm nx run vectreal-platform:supabase-db-push-staging
-
-# Apply to production
 pnpm nx run vectreal-platform:supabase-db-push-prod
 ```
 

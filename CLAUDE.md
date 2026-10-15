@@ -86,7 +86,8 @@ pnpm nx run vectreal-platform:drizzle-generate
 pnpm nx run vectreal-platform:supabase-start
 pnpm nx run vectreal-platform:supabase-db-reset
 
-# Deploy DB schema
+# Deploy DB schema. The deploy workflows already run this before every Fly
+# deploy (shared-supabase-migrate.yaml); these targets are for break-glass only.
 pnpm nx run vectreal-platform:supabase-db-push-staging
 pnpm nx run vectreal-platform:supabase-db-push-prod
 ```
@@ -198,7 +199,7 @@ Create, rename, move and delete for projects, folders and scenes go through `POS
 
 ### Database
 
-Drizzle ORM over Supabase PostgreSQL. Schema modules under `app/db/schema/` (auth, billing, consent, core, project, shared). Generate a new migration with `pnpm nx run vectreal-platform:drizzle-generate`, then push to staging/prod with the supabase-db-push targets.
+Drizzle ORM over Supabase PostgreSQL. Schema modules under `app/db/schema/` (auth, billing, consent, core, project, shared). Generate a new migration with `pnpm nx run vectreal-platform:drizzle-generate`. The staging and production deploy workflows apply pending migrations before the new release starts, so a migration has to work with the release still running: add before you read, drop only once nothing deployed reads it.
 
 ### Shared UI
 
