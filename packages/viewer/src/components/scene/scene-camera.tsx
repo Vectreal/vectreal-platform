@@ -68,6 +68,12 @@ interface SceneCameraProps extends CameraProps {
 	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
 	/** A host's `set_transition`, which wins over `sceneTransition` while set. */
 	transitionOverride?: RefObject<CameraTransitionConfig | null | undefined>
+	/**
+	 * Where the scene opened. Recorded here once framing completes, and held by
+	 * the viewer so a capture can stand a camera with no pose of its own there
+	 * too.
+	 */
+	openingPose: RefObject<OpeningPose | null>
 }
 
 type CameraTransitionRuntime = {
@@ -331,6 +337,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		onCameraSnapshotCaptureReady,
 		onCommandExecutorReady,
 		onInteractionEvent,
+		openingPose,
 		transitionOverride
 	} = props
 	const { cameras, activeCameraId, sceneTransition } = {
@@ -367,7 +374,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const stabilizationFrameCount = useRef(0)
 	const stabilizationStartedAt = useRef<number | null>(null)
 	const transitionRuntime = useRef<CameraTransitionRuntime | null>(null)
-	const openingPose = useRef<OpeningPose | null>(null)
 	/** The camera in view, by whichever route it got there. */
 	const previousSelectionKey = useRef<string | null>(null)
 	/**
@@ -526,6 +532,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			cameras,
 			controls?.target,
 			onInteractionEvent,
+			openingPose,
 			sceneCamera,
 			startTransition,
 			transitionOverride
@@ -603,6 +610,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		]
 	)
 
+	// The pose belongs to the framing this instance did. The viewer keeps the
+	// ref, and this component unmounts with its content, before the reset below
+	// can run, so it forgets the pose itself: the next model frames afresh.
+	useEffect(() => {
+		return () => {
+			openingPose.current = null
+		}
+	}, [openingPose])
+
 	useEffect(() => {
 		if (!hasModel) {
 			initializedCameraPosition.current = false
@@ -614,7 +630,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		}
 		if (initializedCameraPosition.current) return
 		setTimeout(() => initializeCamera(sceneCamera as PerspectiveCamera), 0)
-	}, [hasModel, initializeCamera, sceneCamera])
+	}, [hasModel, initializeCamera, openingPose, sceneCamera])
 
 	useEffect(() => {
 		// update camera properties if props change after initialization
@@ -668,6 +684,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		cameras,
 		controls?.target,
 		onInteractionEvent,
+		openingPose,
 		sceneCamera,
 		startTransition,
 		transitionOverride

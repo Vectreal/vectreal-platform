@@ -52,10 +52,59 @@ describe('the opening pose is wired into SceneCamera', () => {
 		expect(edit).not.toContain('applyCameraInstantly(selection)')
 	})
 
+	it('forgets it when it unmounts with its content', () => {
+		// The viewer owns the ref and outlives SceneCamera, which unmounts with
+		// its content before the reset below sees the model go.
+		expect(source).toMatch(
+			/useEffect\(\(\) => \{\s*return \(\) => \{\s*openingPose\.current = null\s*\}\s*\}, \[openingPose\]\)/
+		)
+	})
+
 	it('forgets it with the model', () => {
 		const reset = source.slice(source.indexOf('if (!hasModel) {'))
 		expect(reset.slice(0, reset.indexOf('return'))).toContain(
 			'openingPose.current = null'
+		)
+	})
+})
+
+/*
+  The pose lives with the viewer, which hands the one ref to the camera that
+  records it and to the model that captures from it. A copy in either would
+  type-check and leave a screenshot of a pose-less camera rendering the live
+  view.
+*/
+describe('the opening pose is shared with the capture', () => {
+	const viewer = readFileSync(
+		join(import.meta.dirname, '../../vectreal-viewer.tsx'),
+		'utf8'
+	)
+	const model = readFileSync(
+		join(import.meta.dirname, 'scene-model.tsx'),
+		'utf8'
+	)
+	const element = (name: string) =>
+		viewer.slice(
+			viewer.indexOf(`<${name}`),
+			viewer.indexOf('/>', viewer.indexOf(`<${name}`))
+		)
+
+	it('is one ref the viewer owns and hands to both', () => {
+		expect(viewer).toContain(
+			'const openingPose = useRef<OpeningPose | null>(null)'
+		)
+		expect(element('SceneCamera')).toContain('openingPose={openingPose}')
+		expect(element('SceneModel')).toContain('openingPose={openingPose}')
+		expect(source).not.toMatch(/useRef<OpeningPose/)
+	})
+
+	it('is read by the capture when it resolves its camera', () => {
+		const capture = model.slice(
+			model.indexOf('const captureScreenshot'),
+			model.indexOf('onScreenshotCaptureReady?.(captureScreenshot)')
+		)
+		expect(capture).toMatch(
+			/resolveCameraSelection\(\s*cameraOptions\.cameras,\s*targetCameraConfig\.cameraId,[\s\S]*?openingPose\.current\s*\)/
 		)
 	})
 })

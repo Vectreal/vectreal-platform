@@ -1,6 +1,8 @@
+import { PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import { withOpeningPose } from './opening-pose'
+import { resolveCameraSelection } from './scene-camera'
 
 import type { OpeningPose } from './opening-pose'
 
@@ -50,5 +52,45 @@ describe('withOpeningPose', () => {
 		const camera = { cameraId: 'default', name: 'Default' }
 
 		expect(withOpeningPose(camera, null)).toBe(camera)
+	})
+})
+
+/*
+  The resolver the viewer flies with and a capture renders from. A screenshot
+  of the default camera has to land where the viewer stands it, or a scene with
+  a pose-less default camera saves a thumbnail of wherever the author last
+  orbited.
+*/
+describe('resolveCameraSelection with the opening pose', () => {
+	const live = () => {
+		const camera = new PerspectiveCamera(50, 1, 0.1, 100)
+		camera.position.set(9, 9, 9)
+		return camera
+	}
+	const cameras = [{ cameraId: 'default', name: 'Default', fov: 60 }]
+
+	it('stands a pose-less camera where the scene opened', () => {
+		const selection = resolveCameraSelection(
+			cameras,
+			'default',
+			new Vector3(),
+			live(),
+			undefined,
+			opening
+		)
+
+		expect(selection.targetPosition.toArray()).toEqual([0, 3.5, 23.6])
+		expect(selection.targetLookAt.toArray()).toEqual([0, 3.5, 0])
+	})
+
+	it('keeps the live position without one', () => {
+		const selection = resolveCameraSelection(
+			cameras,
+			'default',
+			new Vector3(),
+			live()
+		)
+
+		expect(selection.targetPosition.toArray()).toEqual([9, 9, 9])
 	})
 })

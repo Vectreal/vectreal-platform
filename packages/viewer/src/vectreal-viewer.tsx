@@ -83,6 +83,7 @@ import { useSrcModel } from './hooks/use-src-model'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
+import type { OpeningPose } from './components/scene/opening-pose'
 import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type { SrcLoadOptions, SrcModel } from './load-src'
 import type {
@@ -592,6 +593,12 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	  out of view, and the override has to outlive it.
 	*/
 	const transitionOverride = useRef<CameraProps['sceneTransition'] | null>(null)
+	/*
+	  Where the scene opened. SceneCamera records it once framing completes and
+	  stands a camera with no pose of its own there; the capture reads the same
+	  ref, so a screenshot from that camera shows what the viewer shows.
+	*/
+	const openingPose = useRef<OpeningPose | null>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	const animation = useAnimationRuntime({
@@ -973,6 +980,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									{...cameraOptions}
 									cameras={aimedCameras}
 									transitionOverride={transitionOverride}
+									openingPose={openingPose}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									model={model}
@@ -1010,6 +1018,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 											normalizationOptions={normalizationOptions}
 											onRawDiagonalComputed={onRawDiagonalComputed}
 											clipExtents={clipExtents}
+											openingPose={openingPose}
 										/>
 									</Center>
 								)}
