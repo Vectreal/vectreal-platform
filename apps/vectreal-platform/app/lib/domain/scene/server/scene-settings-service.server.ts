@@ -42,6 +42,8 @@ import {
 	downloadAssets,
 	selectUnreferencedAssetIds
 } from '../../asset/asset-storage.server'
+import { optimizationsMatch } from '../client/optimization-inference'
+import { describePublishSource } from '../publish-source'
 import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -50,6 +52,27 @@ import type {
 	OptimizationReport,
 	Optimizations
 } from '@vctrl/core'
+
+/** What publishing the saved scene would be made from; see `describePublishSource`. */
+async function readPublishSource(
+	tx: SceneSettingsTransaction,
+	sceneId: string
+): Promise<string | null> {
+	const saved = await getSceneSettingsWithAssetsRow(tx, sceneId)
+	if (!saved) return null
+
+	const [stats] = await tx
+		.select({ optimizationSettings: sceneStats.optimizationSettings })
+		.from(sceneStats)
+		.where(eq(sceneStats.sceneId, sceneId))
+		.limit(1)
+
+	return describePublishSource({
+		assets: saved.assets,
+		optimizationSettings: stats?.optimizationSettings,
+		presentation: saved.settings.presentation
+	})
+}
 
 /**
  * Data service for scene settings operations.
@@ -224,10 +247,35 @@ class SceneSettingsService {
 				compareAssetIds(linkedAssetIds, existingAssetIds) ||
 				existingLinks.sourceAssetId !== sourceAssetId
 
+			/*
+			  Draco and the GPU texture default are applied at publish, so a pass
+			  that changes only those rebuilds a byte-identical document: same
+			  assets, same settings. Its settings still change what publish ships,
+			  and `describePublishSource` reads them from the stats, so the save
+			  has to write them.
+			*/
+			const [existingStats] = optimizationSettings
+				? await tx
+						.select({ optimizationSettings: sceneStats.optimizationSettings })
+						.from(sceneStats)
+						.where(eq(sceneStats.sceneId, sceneId))
+						.limit(1)
+				: []
+			const optimizationSettingsChanged =
+				optimizationSettings !== undefined &&
+				!(
+					existingStats?.optimizationSettings &&
+					optimizationsMatch(
+						optimizationSettings,
+						existingStats.optimizationSettings
+					)
+				)
+
 			if (
 				existingSettings &&
 				!settingsChanged &&
 				!assetsChanged &&
+				!optimizationSettingsChanged &&
 				!hasLocationChange
 			) {
 				return { ...existingSettings, unchanged: true }
@@ -506,6 +554,10 @@ class SceneSettingsService {
 				.where(eq(scenePublished.sceneId, sceneId))
 				.limit(1)
 
+			// Publish saves first whenever anything is unsaved, so the saved scene is
+			// what this GLB was exported from.
+			const sourceFingerprint = await readPublishSource(tx, sceneId)
+
 			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
 
 			const [publishedRecord] = await tx
@@ -514,6 +566,7 @@ class SceneSettingsService {
 					sceneId,
 					assetId: publishedAssetId,
 					sceneSettingsId: latestSettings?.id,
+					sourceFingerprint,
 					publishedBy: userId
 				})
 				.returning()
@@ -614,13 +667,32 @@ class SceneSettingsService {
 	 * @returns Scene stats record
 	 */
 	async getSceneStats(sceneId: string) {
-		const stats = await this.db
-			.select()
-			.from(sceneStats)
-			.where(eq(sceneStats.sceneId, sceneId))
-			.limit(1)
+		return this.db.transaction(async (tx) => {
+			const [stats] = await tx
+				.select()
+				.from(sceneStats)
+				.where(eq(sceneStats.sceneId, sceneId))
+				.limit(1)
+			if (!stats) return null
 
-		return stats.length > 0 ? stats[0] : null
+			const [published] = await tx
+				.select({ sourceFingerprint: scenePublished.sourceFingerprint })
+				.from(scenePublished)
+				.where(eq(scenePublished.sceneId, sceneId))
+				.limit(1)
+
+			/*
+			  Read beside the published size, because both describe the published
+			  file: whether publishing again would ship something else. Null when
+			  nothing is published, or when the row predates the fingerprint and
+			  so cannot say.
+			*/
+			const publishedIsCurrent = published?.sourceFingerprint
+				? published.sourceFingerprint === (await readPublishSource(tx, sceneId))
+				: null
+
+			return { ...stats, publishedIsCurrent }
+		})
 	}
 
 	// Private helper methods

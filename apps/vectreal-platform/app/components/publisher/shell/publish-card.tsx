@@ -9,10 +9,10 @@ import {
 	estimateDeliveryTime
 } from '../../../lib/domain/scene/scene-delivery-estimate'
 import {
-	hasUnsavedChangesAtom,
 	isPreviewModeAtom,
 	sceneMetaAtom
 } from '../../../lib/stores/publisher-config-store'
+import { usePublishedFileIsCurrent } from '../optimization/use-publish-size-projection'
 
 import type { FC, ReactNode } from 'react'
 
@@ -95,14 +95,14 @@ export const PublishCard: FC<PublishCardProps> = ({
 	disabled
 }) => {
 	const { thumbnailUrl } = useAtomValue(sceneMetaAtom)
-	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
+	const publishedFileIsCurrent = usePublishedFileIsCurrent()
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 
 	const estimate = estimateDeliveryTime(sceneBytes)
 	const statusLabel = isPublished
-		? hasUnsavedChanges
-			? 'Unpublished changes'
-			: 'Published'
+		? publishedFileIsCurrent
+			? 'Published'
+			: 'Unpublished changes'
 		: 'Draft'
 
 	return (
@@ -146,7 +146,7 @@ export const PublishCard: FC<PublishCardProps> = ({
 				disabled={disabled}
 				status={
 					<span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-						{isPublished && !hasUnsavedChanges && (
+						{isPublished && publishedFileIsCurrent && (
 							<span
 								aria-hidden
 								className="bg-foreground size-1.5 shrink-0 rounded-full"
