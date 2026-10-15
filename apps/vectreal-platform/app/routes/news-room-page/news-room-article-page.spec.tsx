@@ -1,11 +1,5 @@
 // @vitest-environment jsdom
-import {
-	act,
-	cleanup,
-	fireEvent,
-	render,
-	waitFor
-} from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { createRoutesStub } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -35,8 +29,6 @@ vi.mock('../../lib/news/news-article-body', () => ({
   inside the default one-second wait on CI.
 */
 const pageHeading = () => document.querySelector('h1')?.textContent
-const showsArticle = (title: string) =>
-	waitFor(() => expect(pageHeading()).toBe(title))
 
 const eventsFor = (event: string, slug: string) =>
 	capture.mock.calls
@@ -89,8 +81,13 @@ describe('a newsroom article followed from another', () => {
 				loader: loader as never
 			}
 		])
-		render(<Stub initialEntries={[`/news-room/${first.slug}`]} />)
-		await showsArticle(first.title)
+		// Awaited rather than polled: the loader runs on promises alone, so act
+		// settles the navigation however slow the machine is, where a wait has
+		// a one-second deadline that a loaded parallel run can overrun.
+		await act(async () => {
+			render(<Stub initialEntries={[`/news-room/${first.slug}`]} />)
+		})
+		expect(pageHeading()).toBe(first.title)
 
 		// Read the first article to the end over a minute.
 		act(() => scrollTo(1000))
@@ -99,9 +96,11 @@ describe('a newsroom article followed from another', () => {
 
 		const card = document.querySelector(`a[href$="/news-room/${second.slug}"]`)
 		if (!card) throw new Error('no link to the related article')
-		fireEvent.click(card)
+		await act(async () => {
+			fireEvent.click(card)
+		})
 		// The card shows the title too; the page heading is what says it arrived.
-		await showsArticle(second.title)
+		expect(pageHeading()).toBe(second.title)
 
 		return { first, second }
 	}
