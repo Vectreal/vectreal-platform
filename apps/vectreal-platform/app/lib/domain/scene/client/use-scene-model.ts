@@ -24,6 +24,8 @@ export const sceneSourceKey = (source: ModelSource): string => {
 	switch (source.kind) {
 		case 'files':
 			return 'files'
+		case 'url':
+			return `url:${String(source.url)}`
 		case 'scene-data':
 			return `scene-data:${source.sceneId ?? 'inline'}:${source.parseMode ?? 'document'}:${source.sceneData.publishedModel?.url.split('?')[0] ?? ''}`
 		case 'server':

@@ -245,6 +245,13 @@ describe('embed asset authorization', () => {
 		})
 	}
 
+	it('finds no publication for a key holder of another project', async () => {
+		// The asset route's key branch, the embed layout and the GET manifest
+		// all scope the publication to the key's project through this filter.
+		expect(await getPublishedScenePreview(randomUUID(), sceneId)).toBeNull()
+		expect(await getPublishedScenePreview(projectId, sceneId)).not.toBeNull()
+	})
+
 	it('reproduces the production shape: the published GLB is not a scene asset', async () => {
 		const settingsData =
 			await sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
@@ -647,6 +654,121 @@ describe('embed asset authorization', () => {
 			const response = await fetchThumbnail(outsiderId, thumbnailAssetId)
 
 			expect(response.status).toBe(404)
+		})
+	})
+
+	/*
+	  The two halves of a signed embed: the manifest hands out signed URLs, and
+	  the asset route answers them without a key. Both must agree on the set,
+	  and must keep agreeing after the author changes a setting without
+	  publishing, which is what a signature alone could not see.
+	*/
+	describe('a signed URL', () => {
+		type Signature =
+			typeof import('../../app/lib/domain/embed/embed-asset-signature.server')
+		type Serving =
+			typeof import('../../app/lib/domain/embed/embed-asset-serving.server')
+		let createEmbedAssetUrls: Signature['createEmbedAssetUrls']
+		let servePublishedEmbedAsset: Serving['servePublishedEmbedAsset']
+
+		const ORIGIN = 'https://vectreal.test'
+
+		beforeAll(async () => {
+			vi.stubEnv('EMBED_ASSET_SIGNING_SECRET', 'integration-signing-secret')
+			vi.stubEnv('SUPABASE_URL', process.env.SUPABASE_URL || 'http://127.0.0.1')
+			vi.stubEnv(
+				'SUPABASE_SECRET_KEY',
+				process.env.SUPABASE_SECRET_KEY || 'integration-secret'
+			)
+			;({ createEmbedAssetUrls } =
+				await import('../../app/lib/domain/embed/embed-asset-signature.server'))
+			;({ servePublishedEmbedAsset } =
+				await import('../../app/lib/domain/embed/embed-asset-serving.server'))
+		})
+
+		afterAll(async () => {
+			vi.unstubAllEnvs()
+			await db
+				.update(schema.sceneSettings)
+				.set({ presentation: null })
+				.where(eq(schema.sceneSettings.id, settingsId))
+		})
+
+		/** The embed manifest as `/embed` would build it now, with signed URLs. */
+		async function signedManifest() {
+			const preview = await getPublishedScenePreview(projectId, sceneId)
+			const { buildAssetUrl: buildSignedUrl } = createEmbedAssetUrls({
+				sceneId,
+				projectId,
+				token: null
+			})
+			return buildEmbedSceneManifest(
+				sceneId,
+				toPublishedModelRow(preview!),
+				buildSignedUrl
+			)
+		}
+
+		const fetchSigned = async (path: string) => {
+			const assetId = new URL(path, ORIGIN).pathname.split('/').pop()!
+			return (await assetLoader({
+				request: new Request(`${ORIGIN}${path}`),
+				params: { sceneId, assetId }
+			} as never)) as Response
+		}
+
+		/** The key branch, past the key check, for the same asset. */
+		const fetchKeyed = async (assetId: string) => {
+			const preview = await getPublishedScenePreview(projectId, sceneId)
+			return servePublishedEmbedAsset(
+				new Request(`${ORIGIN}/api/scenes/${sceneId}/assets/${assetId}`),
+				{ sceneId, assetId },
+				preview!
+			)
+		}
+
+		it('serves every URL the manifest signs, and the key branch agrees', async () => {
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: true })
+			const manifest = await signedManifest()
+
+			const urls = [
+				manifest.publishedModel.url,
+				...Object.values(manifest.assetRefs).map((ref) => ref.url)
+			]
+			expect(Object.keys(manifest.assetRefs)).toContain(thumbnailAssetId)
+
+			for (const url of urls) {
+				expect(url).toContain('sig=')
+				const response = await fetchSigned(url)
+				expect(response.status, `signed ${url} refused`).toBe(200)
+			}
+			for (const assetId of Object.keys(manifest.assetRefs)) {
+				expect((await fetchKeyed(assetId)).status).toBe(200)
+			}
+		})
+
+		it('stops serving the thumbnail once its author switches it off', async () => {
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: true })
+			const issued = (await signedManifest()).assetRefs[thumbnailAssetId]
+			expect(issued).toBeDefined()
+
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: false })
+
+			expect((await fetchSigned(issued.url)).status).toBe(404)
+			expect((await fetchKeyed(thumbnailAssetId)).status).toBe(404)
+			expect((await signedManifest()).assetRefs).not.toHaveProperty(
+				thumbnailAssetId
+			)
+		})
+
+		it('keeps serving the published GLB the same URL named', async () => {
+			const manifest = await signedManifest()
+			await updateScenePresentation(sceneId, { showLoadingThumbnail: false })
+
+			const response = await fetchSigned(manifest.publishedModel.url)
+
+			expect(response.status).toBe(200)
+			expect(await response.text()).toBe(`smoke/${publishedAssetId}.glb`)
 		})
 	})
 

@@ -280,6 +280,30 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			}
 		}
 
+		/*
+		  The same rule as the GET: a published scene is shown as published, and
+		  this POST only ever returns the working scene. It is the client's
+		  fallback when a manifest fails its shape check, so answering it here
+		  would quietly put the draft of a published scene on /preview or the
+		  dashboard. The GET manifest is a published scene's only form.
+		*/
+		const previewScene = await getPublishedScenePreview(
+			previewProjectId,
+			routeSceneId
+		)
+		const manifestKind = chooseSceneManifestKind({
+			hasPublication: previewScene !== null,
+			caller: authContext.mode
+		})
+		if (manifestKind !== 'working') {
+			return withNoStore(
+				withAdditionalHeaders(
+					ApiResponse.notFound('Scene not found'),
+					previewSessionHeaders
+				)
+			)
+		}
+
 		const parsedRequest =
 			SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 		if (parsedRequest instanceof Response) {
@@ -288,17 +312,32 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			)
 		}
 
-		const effectiveSceneId = parsedRequest.sceneId?.trim() || routeSceneId
+		/*
+		  Every check above is keyed on the route's scene, so the read is too. A
+		  body naming another scene is refused rather than followed:
+		  `getSceneSettings` checks nothing itself, so following it would hand a
+		  member any scene's draft, in any project, through their own scene's URL.
+		*/
+		const bodySceneId = parsedRequest.sceneId?.trim()
+		if (bodySceneId && bodySceneId !== routeSceneId) {
+			return withNoStore(
+				withAdditionalHeaders(
+					ApiResponse.notFound('Scene not found'),
+					previewSessionHeaders
+				)
+			)
+		}
+
 		const requestKey = getSceneSettingsRequestKey(
 			`preview-session-${authContext.userId}`,
-			effectiveSceneId
+			routeSceneId
 		)
 
 		const response = await runWithSceneSettingsCoalescing(requestKey, () =>
 			sceneSettingsOps.getSceneSettings({
 				...parsedRequest,
 				action,
-				sceneId: effectiveSceneId
+				sceneId: routeSceneId
 			})
 		)
 

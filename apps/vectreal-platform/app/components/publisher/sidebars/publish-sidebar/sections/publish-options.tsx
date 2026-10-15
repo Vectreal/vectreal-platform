@@ -235,7 +235,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		setOptimizationRuntime,
 		setUpgradeModal,
 		file,
-		optimizations.draco,
+		optimizations,
 		dracoReport,
 		compressTextures,
 		isOptimizing,

@@ -117,10 +117,42 @@ same moment and `onPublish` gains nothing.
 | `files`      | `files: (File \| FileSystemDirectoryHandle)[]`                 | A user upload: a single model, or a bundle with the siblings it refers to. A dropped folder arrives here as plain `File`s; the handle branch is for a caller that opened `showDirectoryPicker()` itself |
 | `scene-data` | `sceneData: ServerScenePayload`, `sceneId?`, `parseMode?`      | A payload you already hold. Binary assets may be referenced rather than inlined; the loader fetches them |
 | `server`     | `sceneId: string`, `serverOptions?`, `parseMode?`              | Fetch a scene from an API endpoint by id                                                         |
+| `url`        | `url: string \| URL`, `init?: RequestInit`                    | A model file hosted anywhere that allows cross-origin reads. Loaded as the same file dropped would be |
 
 `parseMode: 'direct'` parses the glTF JSON with its assets in memory and skips
 the optimizer: the read-only fast path for viewers. The default reconstructs
 files so the optimizer can ingest exactly what the viewer renders.
+
+#### Loading from a URL
+
+```tsx
+const outcome = await load({ kind: 'url', url: 'https://cdn.example.com/models/chair.glb' })
+if (outcome.status === 'error') console.warn(outcome.error.code, outcome.error.message)
+```
+
+The file is fetched in the browser and then loaded exactly as the same file
+dropped would be: every format, the same validation, the same optimizer ingest.
+A failed link leaves a model already on screen where it was, as a failed drop
+does.
+
+- **The host has to allow cross-origin reads** (an `Access-Control-Allow-Origin`
+  header that admits your page). A browser reports a refusal, an unreachable
+  host and being offline as the same error, so all three arrive as
+  `url_unreachable`.
+- **A `.gltf` brings its buffers and images from its own origin.** References
+  are resolved relative to the `.gltf`; one on another host is not fetched, and
+  the load reports it as `missing_assets`. An OBJ's material library is not
+  fetched, so an OBJ opens without materials.
+- **A URL with no file extension** (a presigned or download link) opens when its
+  bytes are a GLB.
+- **`init`** goes with every request: headers, `credentials`, `referrerPolicy`. Credentials follow the browser's default, so cookies go only to your own origin; for a URL someone else supplied, pass `credentials: 'omit'`.
+  Its `signal` aborts the download (the model file, and for a `.gltf` the files it references): what was on screen stays, and `load` resolves `empty` rather than reporting an error. A newer `load` or `reset` aborts the download too, and the load resolves `empty`; what is on screen is then theirs to decide. Once the files have all arrived, the parse runs to the end.
+- **Progress** runs to 90 while the model file downloads, when the host sends a
+  `Content-Length`, and the parse fills the rest. A `.gltf`'s buffers and
+  images download after it without moving the bar.
+
+To fetch the files without loading them, `fetchModelFiles` from
+`@vctrl/core/model-loader` does the same fetch and returns the `File`s.
 
 ### Context and direct usage
 
@@ -138,7 +170,7 @@ files so the optimizer can ingest exactly what the viewer renders.
 | `error`        | `StructuredLoadError \| null`                     | Non-null exactly when `status` is `'error'`                       |
 | `sceneData`    | `ServerSceneData \| undefined`                    | The resolved payload, for scene sources                           |
 | `progress`     | `number`                                          | Progress value from 0 to 100                                      |
-| `source`       | `'files' \| 'scene-data' \| 'server' \| null`     | What the current state came from                                  |
+| `source`       | `'files' \| 'url' \| 'scene-data' \| 'server' \| null` | What the current state came from                             |
 | `load(source, options?)` | `Promise<LoadOutcome>`                  | Load a model; resolves to the terminal state plus `stillCurrent()` and `stillOnScreen()`. `options.onPublish` fires earlier, when the model reaches the screen |
 | `supportedFileTypes` | `ModelFileTypes[]`                          | Every format the loader accepts, from `@vctrl/core/model-formats` |
 | `reset`        | `() => void`                                      | Clear the current model and retire any load in flight             |
@@ -149,7 +181,10 @@ files so the optimizer can ingest exactly what the viewer renders.
 
 `error.code` is one of `unsupported_format`, `multiple_models`,
 `binary_load_failed`, `gltf_load_failed`, `missing_assets`,
-`server_load_failed`, `not_found`, `quota_exceeded`, `unknown`. Optimizer
+`server_load_failed`, `not_found`, `quota_exceeded`, `url_unreachable`, `url_http`, `url_unrecognized`, `url_invalid`, `unknown`. Every failure of a `url` load has
+`error.source === 'remote-url'` and the host in `error.context.host` (never the address, which can be a signed link);
+`url_http` carries the status in `error.context.status` and is not recoverable
+for 404 or 410. Optimizer
 ingest is deliberately not among them: the model is already on screen by then,
 so a failure there costs the optimize step and is reported on
 `optimizer.error`.

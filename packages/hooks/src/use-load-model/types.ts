@@ -64,12 +64,26 @@ export interface ModelFile {
 }
 
 /**
- * Where a model comes from. Every load in the platform is one of these three,
- * and they all go through the single `load(source)` entry point.
+ * Where a model comes from. Every load is one of these, and they all go
+ * through the single `load(source)` entry point.
  */
 export type ModelSource =
 	/** Files or folders picked by the user (glTF + assets, GLB, STL, FBX, OBJ). */
 	| { kind: 'files'; files: InputFileOrDirectory }
+	/**
+	 * A model file at a URL, fetched in the browser and then loaded exactly as
+	 * the same file dropped would be. A `.gltf` brings the buffers and images it
+	 * references on its own origin (`fetchModelFiles` in
+	 * `@vctrl/core/model-loader`). The host has to allow cross-origin reads.
+	 *
+	 * `init` goes with every request, for headers or `credentials`. Its
+	 * `signal` aborts the download (the model file, and for a `.gltf` the files
+	 * it references): what was on screen stays, and the load resolves `empty`
+	 * rather than reporting an error. A newer `load` or `reset` aborts it too,
+	 * and the load resolves `empty`; what is on screen is then theirs to decide.
+	 * Once the files have all arrived the parse runs to the end.
+	 */
+	| { kind: 'url'; url: string | URL; init?: RequestInit }
 	/**
 	 * A scene payload the caller already has in memory (route aggregate, IDB
 	 * draft). Binary assets may be referenced rather than inlined; the loader
@@ -233,13 +247,21 @@ export type ViewerLoadErrorCode =
 	| 'server_load_failed'
 	| 'not_found'
 	| 'quota_exceeded'
+	/** The request threw: the host refused cross-origin reads, or is unreachable. A browser does not say which. */
+	| 'url_unreachable'
+	/** The host answered with a status that is not a file, in `context.status`. */
+	| 'url_http'
+	/** The URL names no format the loader reads, and its bytes are not a GLB. */
+	| 'url_unrecognized'
+	/** The address is not a URL, or is relative with no page to resolve it against. */
+	| 'url_invalid'
 	| 'unknown'
 
 export interface StructuredLoadError {
 	code: ViewerLoadErrorCode
 	message: string
 	recoverable: boolean
-	source: 'local-upload' | 'server-load'
+	source: 'local-upload' | 'server-load' | 'remote-url'
 	cause?: unknown
 	context?: Record<string, unknown>
 }

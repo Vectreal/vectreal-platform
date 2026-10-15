@@ -20,6 +20,18 @@ export {
 */
 export { referencedUris } from './referenced-assets'
 export { isMissingAssetsError, missingAssetsError } from './missing-assets'
+/*
+  A model at a URL, as the files a drop would produce. Here, beside
+  `referencedUris`, because it follows a glTF's references by that rule, and
+  both the loading hook and the viewer's `src` read through it.
+*/
+export {
+	fetchModelFiles,
+	ModelFetchError,
+	type FetchModelFilesOptions,
+	type ModelFetchErrorKind
+} from './fetch-model-files'
+export { readWithProgress } from './read-with-progress'
 export {
 	DRACO_EXTENSION,
 	KTX2_EXTENSION,
