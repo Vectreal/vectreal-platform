@@ -1,11 +1,19 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { buildThumbnailFrameSignature } from '../../../lib/domain/scene/client/scene-change-detection'
 import { resolveDefaultSceneCameraId } from '../../../lib/domain/scene/scene-camera'
-import { sceneMetaAtom } from '../../../lib/stores/publisher-config-store'
-import { cameraAtom } from '../../../lib/stores/scene-settings-store'
+import {
+	capturedThumbnailFrameAtom,
+	sceneMetaAtom
+} from '../../../lib/stores/publisher-config-store'
+import {
+	cameraAtom,
+	environmentAtom,
+	normalizationAtom
+} from '../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../publisher-viewer-capture-context'
 
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
@@ -41,7 +49,9 @@ export const OPENING_VIEW_CAPTURE_OPTIONS = {
 export function useOpeningViewCapture() {
 	const { requestSceneScreenshot, requestSceneCameraSnapshot } =
 		usePublisherViewerCapture()
+	const store = useStore()
 	const setSceneMeta = useSetAtom(sceneMetaAtom)
+	const setCapturedFrame = useSetAtom(capturedThumbnailFrameAtom)
 	const setCamera = useSetAtom(cameraAtom)
 	const [isCapturing, setIsCapturing] = useState(false)
 
@@ -95,6 +105,16 @@ export function useOpeningViewCapture() {
 				// ever comes from a capture in this session, which the change detection
 				// treats as an unsaved edit.
 				setSceneMeta((previous) => ({ ...previous, thumbnailUrl: dataUrl }))
+				// The image is the frame the default camera now opens on, so a save
+				// can upload it as it is rather than render that frame again.
+				setCapturedFrame({
+					thumbnailUrl: dataUrl,
+					frame: buildThumbnailFrameSignature({
+						camera: store.get(cameraAtom),
+						environment: store.get(environmentAtom),
+						normalization: store.get(normalizationAtom)
+					})
+				})
 				if (announce) {
 					toast.success('Opening view updated. Save to keep it.')
 				}
@@ -114,7 +134,9 @@ export function useOpeningViewCapture() {
 			requestSceneCameraSnapshot,
 			requestSceneScreenshot,
 			setCamera,
-			setSceneMeta
+			setCapturedFrame,
+			setSceneMeta,
+			store
 		]
 	)
 

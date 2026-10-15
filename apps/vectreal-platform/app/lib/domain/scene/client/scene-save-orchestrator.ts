@@ -3,6 +3,7 @@ import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { toast } from 'sonner'
 
 import { postFormWithProgress } from './post-form-with-progress'
+import { buildThumbnailFrameSignature } from './scene-change-detection'
 import { createFileFromDataUrl } from './scene-draft-serialization'
 import { planThumbnailForSave } from './scene-thumbnail-save'
 import {
@@ -19,11 +20,14 @@ import {
 	isBillingLimitError
 } from '../../billing/client/billing-limit-error'
 import { SOURCE_MODEL_FILENAME } from '../scene-asset-roles'
-import { buildDefaultCameraSignature } from '../scene-camera'
+import { resolveDefaultSceneCameraId } from '../scene-camera'
 
 import type { SaveProgressEvent } from './scene-save-progress'
 import type { SourceToSave } from './scene-source-to-save'
-import type { SceneMetaState } from '../../../../types/publisher-config'
+import type {
+	CapturedThumbnailFrame,
+	SceneMetaState
+} from '../../../../types/publisher-config'
 import type { SceneSettings } from '@vctrl/core'
 import type { ShadowBakeResult } from '@vctrl/viewer'
 
@@ -54,6 +58,8 @@ interface ExecuteSceneSaveOrchestratorParams {
 	currentSceneId: null | string
 	currentSettings: SceneSettings
 	sceneMetaState: SceneMetaState
+	/** Which frame the capture in `sceneMetaState` painted, when recorded. */
+	capturedThumbnailFrame?: CapturedThumbnailFrame | null
 	lastSavedSceneMeta: SceneMetaState | null
 	lastSavedSettings: SceneSettings | null
 	optimizationSettings: unknown
@@ -61,7 +67,8 @@ interface ExecuteSceneSaveOrchestratorParams {
 	options?: SaveSceneOrchestratorOptions
 	createRequestId: () => string
 	prepareGltfDocumentForUpload: () => Promise<unknown>
-	captureSceneThumbnail: () => Promise<null | string>
+	/** Captures the scene from `targetCameraId`, or the live view without one. */
+	captureSceneThumbnail: (targetCameraId?: string) => Promise<null | string>
 	captureShadowBake?: () => Promise<ShadowBakeResult | null>
 	onProgress?: (event: SaveProgressEvent) => void
 	/** What the save does with the scene's original. Keeps none when left out. */
@@ -143,6 +150,7 @@ export const executeSceneSaveOrchestrator = async ({
 	currentSceneId,
 	currentSettings,
 	sceneMetaState,
+	capturedThumbnailFrame,
 	lastSavedSceneMeta,
 	lastSavedSettings,
 	optimizationSettings,
@@ -273,24 +281,37 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 
 	// The thumbnail is the placeholder shown while the scene loads, so it has to
-	// match the frame the default camera opens on. Comparing the signature rather
-	// than just the camera id means nudging the default camera's pose also
-	// triggers a recapture - otherwise the saved thumbnail keeps showing the old
-	// framing and the load transition visibly jumps.
-	const defaultCameraChanged =
-		buildDefaultCameraSignature(currentSettings.camera?.cameras) !==
-		buildDefaultCameraSignature(lastSavedSettings?.camera?.cameras)
-	const { capturedThumbnail, needsCapture, fallbackThumbnailUrl } =
-		planThumbnailForSave({
-			sceneMetaState,
-			lastSavedSceneMeta,
-			defaultCameraChanged,
-			reusableThumbnailAssetId:
-				existingAssets?.[SCENE_THUMBNAIL_FILENAME]?.assetId
-		})
+	// match the frame the scene opens into: the default camera's pose and the
+	// background or stage behind the model. Otherwise the saved thumbnail keeps
+	// showing the old frame and the load transition visibly jumps.
+	const currentFrame = buildThumbnailFrameSignature(currentSettings)
+	const frameChanged =
+		currentFrame !== buildThumbnailFrameSignature(lastSavedSettings)
+	const {
+		capturedThumbnail,
+		pendingCapture,
+		needsCapture,
+		fallbackThumbnailUrl
+	} = planThumbnailForSave({
+		sceneMetaState,
+		lastSavedSceneMeta,
+		frameChanged,
+		pendingCaptureIsCurrent:
+			capturedThumbnailFrame &&
+			capturedThumbnailFrame.thumbnailUrl === sceneMetaState.thumbnailUrl
+				? capturedThumbnailFrame.frame === currentFrame
+				: undefined,
+		reusableThumbnailAssetId:
+			existingAssets?.[SCENE_THUMBNAIL_FILENAME]?.assetId
+	})
 
 	const thumbnailDataUrl =
-		capturedThumbnail ?? (needsCapture ? await captureSceneThumbnail() : null)
+		capturedThumbnail ??
+		(needsCapture
+			? ((await captureSceneThumbnail(
+					resolveDefaultSceneCameraId(currentSettings.camera?.cameras)
+				)) ?? pendingCapture)
+			: null)
 
 	let sceneMetaForSave = {
 		...sceneMetaState,

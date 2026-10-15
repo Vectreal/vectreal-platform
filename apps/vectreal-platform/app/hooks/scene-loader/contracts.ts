@@ -57,7 +57,7 @@ export interface SceneSaveFlowActions {
 	clearPendingDraft: () => Promise<void>
 	createRequestId: () => string
 	prepareGltfDocumentForUpload: () => Promise<unknown>
-	captureSceneThumbnail: () => Promise<null | string>
+	captureSceneThumbnail: (targetCameraId?: string) => Promise<null | string>
 	captureShadowBake: () => Promise<ShadowBakeResult | null>
 	/** What this save does with the scene's original, read when it starts. */
 	resolveSource: () => SourceToSave

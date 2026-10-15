@@ -17,7 +17,7 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(captured),
 			lastSavedSceneMeta: meta(''),
-			defaultCameraChanged: false,
+			frameChanged: false,
 			reusableThumbnailAssetId: storedId
 		})
 
@@ -29,7 +29,7 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(captured),
 			lastSavedSceneMeta: meta(captured),
-			defaultCameraChanged: false,
+			frameChanged: false,
 			reusableThumbnailAssetId: storedId
 		})
 
@@ -40,7 +40,7 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(captured),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: false,
+			frameChanged: false,
 			reusableThumbnailAssetId: storedId
 		})
 
@@ -51,7 +51,7 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(''),
 			lastSavedSceneMeta: null,
-			defaultCameraChanged: false,
+			frameChanged: false,
 			reusableThumbnailAssetId: storedId
 		})
 
@@ -62,18 +62,31 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(stored),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: true,
+			frameChanged: true,
 			reusableThumbnailAssetId: storedId
 		})
 
 		expect(plan.needsCapture).toBe(true)
 	})
 
+	it('drops a pending capture for a fresh one when the frame changed', () => {
+		const plan = planThumbnailForSave({
+			sceneMetaState: meta(captured),
+			lastSavedSceneMeta: meta(stored),
+			frameChanged: true,
+			reusableThumbnailAssetId: storedId
+		})
+
+		expect(plan.capturedThumbnail).toBeNull()
+		expect(plan.needsCapture).toBe(true)
+		expect(plan.fallbackThumbnailUrl).toBe(stored)
+	})
+
 	it('leaves a stored thumbnail alone when nothing changed', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(stored),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: false,
+			frameChanged: false,
 			reusableThumbnailAssetId: storedId
 		})
 
@@ -90,7 +103,7 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(stored),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: false,
+			frameChanged: false,
 			reusableThumbnailAssetId: undefined
 		})
 
@@ -102,7 +115,7 @@ describe('planThumbnailForSave', () => {
 		const plan = planThumbnailForSave({
 			sceneMetaState: meta(captured),
 			lastSavedSceneMeta: meta(stored),
-			defaultCameraChanged: false,
+			frameChanged: false,
 			reusableThumbnailAssetId: 'some-other-thumbnail'
 		})
 
