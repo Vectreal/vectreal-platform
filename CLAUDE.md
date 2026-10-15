@@ -136,7 +136,7 @@ correction, including `catalog:` where the catalog owns that version. Trust it o
 hand-editing.
 
 It reads imports, not bundler config, so a package that deliberately bundles a dependency
-has to say so. `packages/viewer` bundles `@vctrl/core` and `@shared/*`, and
+has to say so. `packages/viewer` bundles `@shared/*` (private, so it cannot be installed), and
 `packages/embed` uses `@vctrl/viewer` only for types that `vite-plugin-dts` inlines; both
 are listed as `ignoredDependencies` in `eslint.config.mts` with the reason.
 

@@ -352,6 +352,17 @@ export default defineConfig(({ command }) => {
 								return 'vendor-vectreal-hotspots'
 							}
 
+							/*
+							  The viewer's `src` loader, reached only through `import()`.
+							  Bucketed with the viewer, it pulled in the `@vctrl/core`
+							  modules it shares with marketing pages (the format tables
+							  among them), so `/` imported the whole viewer chunk, and
+							  three, R3F and postprocessing behind it, statically: about
+							  600KB gz over every public route's budget. Unbucketed, it
+							  stays the lazy chunk it is meant to be.
+							*/
+							if (id.endsWith('/packages/viewer/src/load-src.ts')) return
+
 							return 'vendor-vectreal-viewer'
 						}
 					}
