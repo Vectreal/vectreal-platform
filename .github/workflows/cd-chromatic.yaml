@@ -1,5 +1,7 @@
 name: CD - Publish Storybook to Chromatic
 
+# Paths mirror the `stories` globs in storybook/.storybook/main.ts. A story
+# directory left out here never gets a PR build when only its own files change.
 on:
   push:
     branches:
@@ -8,12 +10,14 @@ on:
       - 'storybook/**'
       - 'shared/components/**'
       - 'packages/viewer/**'
+      - 'apps/vectreal-platform/app/components/**'
       - '.github/workflows/cd-chromatic.yaml'
   pull_request:
     paths:
       - 'storybook/**'
       - 'shared/components/**'
       - 'packages/viewer/**'
+      - 'apps/vectreal-platform/app/components/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-chromatic
