@@ -24,6 +24,7 @@ on:
       - '.github/workflows/cd-platform-staging.yaml'
       - '.github/workflows/cd-platform-production.yaml'
       - '.github/workflows/shared-fly-deploy.yaml'
+      - '.github/workflows/shared-supabase-migrate.yaml'
 
 permissions:
   contents: read
@@ -34,8 +35,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  migrate-staging:
+    name: Migrate Staging Database
+    uses: ./.github/workflows/shared-supabase-migrate.yaml
+    with:
+      environment: staging
+    secrets:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
   deploy-staging:
     name: Deploy to Staging Environment
+    needs: migrate-staging
     uses: ./.github/workflows/shared-fly-deploy.yaml
     with:
       app_name: vectreal-platform-staging
