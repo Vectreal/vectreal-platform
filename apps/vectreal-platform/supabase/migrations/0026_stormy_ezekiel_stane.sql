@@ -1,0 +1,1 @@
+ALTER TABLE "scene_published" ADD COLUMN "source_fingerprint" text;

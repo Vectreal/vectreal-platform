@@ -9,7 +9,7 @@ import {
 	resolvePublishGeometryOptions
 } from '../../../lib/domain/scene/client/publish-export'
 import { shouldCompressTexturesForGpu } from '../../../lib/domain/scene/scene-presentation'
-import { hasUnsavedChangesAtom } from '../../../lib/stores/publisher-config-store'
+import { lastSavedSettingsAtom } from '../../../lib/stores/publisher-config-store'
 import {
 	documentOptimizationsAtom,
 	optimizationRuntimeAtom
@@ -26,6 +26,43 @@ export function useCompressesTexturesForGpu(): boolean {
 	return shouldCompressTexturesForGpu(presentation, {
 		isOriginalPreset: optimizationsMatch(optimizations, originalPreset)
 	})
+}
+
+/**
+ * Whether the published file is what publishing now would ship. The server
+ * answers for the saved scene (`publishedIsCurrent`); what it cannot see is
+ * anything this tab has not saved yet that changes the file, which is a pass
+ * or the GPU texture switch. Every other unsaved edit is a setting, and an
+ * embed reads those live once saved, so it leaves the published file current.
+ *
+ * Read by both claims about the published file: the publish card's status and
+ * whether the size shown is the published one.
+ */
+export function usePublishedFileIsCurrent(): boolean {
+	const optimizations = useAtomValue(documentOptimizationsAtom)
+	const presentation = useAtomValue(presentationAtom)
+	const lastSavedSettings = useAtomValue(lastSavedSettingsAtom)
+	const { passRevision, savedPassRevision, latestSceneStats } = useAtomValue(
+		optimizationRuntimeAtom
+	)
+
+	// With no unsaved pass the saved settings are these optimizations, so the
+	// switch's default resolves the same on both sides.
+	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
+	const compressesTextures = shouldCompressTexturesForGpu(presentation, {
+		isOriginalPreset
+	})
+	const savedCompressesTextures = lastSavedSettings
+		? shouldCompressTexturesForGpu(lastSavedSettings.presentation, {
+				isOriginalPreset
+			})
+		: compressesTextures
+
+	return (
+		latestSceneStats?.publishedIsCurrent !== false &&
+		passRevision === savedPassRevision &&
+		compressesTextures === savedCompressesTextures
+	)
 }
 
 /**
@@ -51,10 +88,10 @@ export function useSizeExcludesTextureEncoding(): boolean {
  * codec publish will pick rather than a guess at one.
  *
  * Runs once the document settles: when a scene opens and after every pass,
- * and again whenever hydration clears the figure. A published scene with
- * nothing unsaved keeps the size its publish recorded, because that is the
- * file visitors get; any unsaved change, the GPU texture switch included,
- * makes the next publish the figure to show.
+ * and again whenever hydration clears the figure. A published scene whose
+ * published file is current keeps the size its publish recorded, because that
+ * is the file visitors get; once the model or its encoding changes, saved or
+ * not, the next publish is the figure to show.
  *
  * Publisher only. The embed and preview routes never mount it.
  */
@@ -63,12 +100,11 @@ export function usePublishSizeProjection() {
 	const { optimizer } = model
 	const loadId = model.status === 'ready' ? model.loadId : null
 	const optimizations = useAtomValue(documentOptimizationsAtom)
-	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
+	const publishedFileIsCurrent = usePublishedFileIsCurrent()
 	const [runtime, setRuntime] = useAtom(optimizationRuntimeAtom)
 	const {
 		isPending,
 		passRevision,
-		savedPassRevision,
 		dracoReport,
 		latestSceneStats,
 		optimizedSceneBytes,
@@ -77,8 +113,7 @@ export function usePublishSizeProjection() {
 
 	// Only a publish stores a current size, and a revoke clears it.
 	const isPublished = typeof latestSceneStats?.currentSceneBytes === 'number'
-	const keepsPublishedSize =
-		isPublished && passRevision === savedPassRevision && !hasUnsavedChanges
+	const keepsPublishedSize = isPublished && publishedFileIsCurrent
 	const canProject =
 		optimizer.isReady && !isPending && loadId !== null && !keepsPublishedSize
 
@@ -112,7 +147,7 @@ export function usePublishSizeProjection() {
 				if (prev.isProjectingSceneBytes) {
 					next = { ...next, isProjectingSceneBytes: false }
 				}
-				// Back to nothing unsaved, the published file is the figure again,
+				// Back to the published file being current, it is the figure again,
 				// read from the stored stats once the projection is out of the way.
 				if (
 					keepsPublishedSize &&

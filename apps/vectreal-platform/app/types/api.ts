@@ -352,6 +352,11 @@ export interface SceneStatsData {
 	readonly optimized?: SceneStatsSnapshot | null
 	readonly initialSceneBytes?: number | null
 	readonly currentSceneBytes?: number | null
+	/**
+	 * Whether the published file is what publishing the saved scene would ship.
+	 * Null when nothing is published, or published before this was recorded.
+	 */
+	readonly publishedIsCurrent?: boolean | null
 	readonly appliedOptimizations?: string[] | null
 	readonly optimizationSettings?: Optimizations | null
 	// Extended persisted metrics that do not fit the snapshot count schema.
