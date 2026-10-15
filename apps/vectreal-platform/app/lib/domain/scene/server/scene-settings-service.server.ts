@@ -33,7 +33,7 @@ import {
 import { reportServerError } from '../../../observability/report-server-error.server'
 import {
 	createSceneStatsFromReport,
-	resolveSceneByteMetricsScope,
+	resolveInitialSceneBytes,
 	resolveTextureByteMetricsScope
 } from '../../../utils/scene-stats-helpers'
 import {
@@ -79,6 +79,25 @@ class SceneSettingsService {
 		if (records.some((record) => record.projectId !== projectId)) {
 			throw new Error('Uploaded assets do not belong to the target project')
 		}
+	}
+
+	/**
+	 * The stored size of an asset the project owns. Refuses an asset from any
+	 * other project, as `assertAssetsBelongToProject` does, so its size is never
+	 * reported to a caller who could not publish it. A row from before sizes
+	 * were recorded reads as 0.
+	 */
+	async getPublishedAssetBytes(
+		assetId: string,
+		projectId: string
+	): Promise<number> {
+		await this.assertAssetsBelongToProject([assetId], projectId)
+		const [record] = await this.db
+			.select({ fileSize: assets.fileSize })
+			.from(assets)
+			.where(eq(assets.id, assetId))
+			.limit(1)
+		return record?.fileSize ?? 0
 	}
 
 	/**
@@ -160,8 +179,7 @@ class SceneSettingsService {
 			sourceAssetId = null,
 			optimizationReport,
 			optimizationSettings,
-			initialSceneBytes,
-			currentSceneBytes
+			initialSceneBytes
 		} = params
 		// Every id the scene will link, the original included, so dropping the
 		// original reads as a change and leaves it to the GC below.
@@ -247,7 +265,6 @@ class SceneSettingsService {
 					sceneId: updatedScene.id,
 					userId,
 					initialSceneBytes,
-					currentSceneBytes,
 					label: 'latest',
 					description: 'Latest scene statistics'
 				})
@@ -473,10 +490,8 @@ class SceneSettingsService {
 		projectId: string
 		userId: string
 		publishedAssetId: string
-		currentSceneBytes?: number
 	}) {
-		const { sceneId, projectId, userId, publishedAssetId, currentSceneBytes } =
-			params
+		const { sceneId, projectId, userId, publishedAssetId } = params
 
 		await this.assertAssetsBelongToProject([publishedAssetId], projectId)
 
@@ -511,17 +526,25 @@ class SceneSettingsService {
 				})
 				.where(eq(scenes.id, sceneId))
 
-			await this.upsertSceneStats(tx, {
-				sceneId,
-				userId,
-				currentSceneBytes
-			})
-
 			const [assetRecord] = await tx
 				.select()
 				.from(assets)
 				.where(eq(assets.id, publishedAssetId))
 				.limit(1)
+
+			/*
+			  The scene's size is the GLB it now publishes, as stored. Written on
+			  its own: the save-time upsert would also overwrite what the last
+			  save recorded, the optimization settings among it, with nothing.
+			*/
+			const currentSceneBytes = assetRecord?.fileSize ?? null
+			await tx
+				.insert(sceneStats)
+				.values({ sceneId, createdBy: userId, currentSceneBytes })
+				.onConflictDoUpdate({
+					target: sceneStats.sceneId,
+					set: { currentSceneBytes, updatedAt: new Date() }
+				})
 
 			return {
 				record: { ...publishedRecord, asset: assetRecord ?? null },
@@ -560,6 +583,12 @@ class SceneSettingsService {
 					updatedAt: new Date()
 				})
 				.where(eq(scenes.id, sceneId))
+
+			// The size was the published GLB's, and there is none now.
+			await tx
+				.update(sceneStats)
+				.set({ currentSceneBytes: null, updatedAt: new Date() })
+				.where(eq(sceneStats.sceneId, sceneId))
 
 			return publishedRecord?.assetId ?? null
 		})
@@ -730,7 +759,6 @@ class SceneSettingsService {
 			sceneId: string
 			userId: string
 			initialSceneBytes?: number | null
-			currentSceneBytes?: number | null
 			label?: string
 			description?: string
 		}
@@ -739,7 +767,6 @@ class SceneSettingsService {
 			.select({
 				baseline: sceneStats.baseline,
 				initialSceneBytes: sceneStats.initialSceneBytes,
-				currentSceneBytes: sceneStats.currentSceneBytes,
 				additionalMetrics: sceneStats.additionalMetrics
 			})
 			.from(sceneStats)
@@ -756,14 +783,11 @@ class SceneSettingsService {
 				| null
 				| undefined) ?? null
 
-		const { initialSceneBytes, currentSceneBytes } =
-			resolveSceneByteMetricsScope({
-				existingInitialSceneBytes: existingStats[0]?.initialSceneBytes,
-				existingCurrentSceneBytes: existingStats[0]?.currentSceneBytes,
-				requestInitialSceneBytes: params.initialSceneBytes,
-				requestCurrentSceneBytes: params.currentSceneBytes,
-				report: params.report
-			})
+		const initialSceneBytes = resolveInitialSceneBytes({
+			existingInitialSceneBytes: existingStats[0]?.initialSceneBytes,
+			requestInitialSceneBytes: params.initialSceneBytes,
+			report: params.report
+		})
 
 		const textureByteMetrics = resolveTextureByteMetricsScope(
 			params.report,
@@ -779,7 +803,6 @@ class SceneSettingsService {
 					label: params.label,
 					description: params.description,
 					initialSceneBytes,
-					currentSceneBytes,
 					optimizationSettings: params.optimizationSettings,
 					existingAdditionalMetrics
 				}
@@ -796,7 +819,6 @@ class SceneSettingsService {
 						baseline: existingBaseline ?? statsData.baseline,
 						optimized: statsData.optimized,
 						initialSceneBytes,
-						currentSceneBytes,
 						appliedOptimizations: statsData.appliedOptimizations,
 						optimizationSettings: statsData.optimizationSettings,
 						additionalMetrics: textureByteMetrics,
@@ -816,7 +838,6 @@ class SceneSettingsService {
 				label: params.label,
 				description: params.description,
 				initialSceneBytes,
-				currentSceneBytes,
 				additionalMetrics: textureByteMetrics,
 				optimizationSettings: params.optimizationSettings ?? null
 			})
@@ -826,7 +847,6 @@ class SceneSettingsService {
 					label: params.label,
 					description: params.description,
 					initialSceneBytes,
-					currentSceneBytes,
 					additionalMetrics: textureByteMetrics,
 					optimizationSettings: params.optimizationSettings ?? null,
 					updatedAt: new Date()

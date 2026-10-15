@@ -37,6 +37,12 @@ describe('restoring a draft applies its settings', () => {
 		expect(source).toContain('applySceneSettings(draft.sceneData,')
 	})
 
+	it('counts what the draft was optimized to as unsaved', () => {
+		// Nothing saved describes a draft's document, so the first save sends
+		// its optimization along rather than treating it as already stored.
+		expect(source).toContain('savedPassRevision: null,')
+	})
+
 	it('does not adopt the restored draft as the saved baseline', () => {
 		// A restored draft has no server row. Adopting it as the last-saved state
 		// makes the unsaved-changes check report nothing to save, and the Save

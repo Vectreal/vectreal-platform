@@ -13,26 +13,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import HeroOwnFile, {
 	type OwnFileApi
 } from '../app/components/home/hero/hero-own-file'
+import { balancedPreset } from '../app/constants/optimizations'
+import { resolvePublishGeometryOptions } from '../app/lib/domain/scene/client/publish-export'
 
-const { context, runOptimizationPass } = vi.hoisted(() => ({
-	context: {
-		load: vi.fn(async () => ({
-			status: 'ready',
-			file: { name: 'model.glb', sourcePackageBytes: 3 },
-			stillCurrent: () => true
-		})),
-		optimizer: {
-			getModel: vi.fn(async () => new Uint8Array([1, 2, 3])),
-			applyOptimization: vi.fn(async () => {
-				throw new Error('No model was ready when this optimizer was read.')
-			})
-		}
-	},
-	runOptimizationPass: vi.fn(async () => ({
-		succeeded: true,
-		dracoReport: null
-	}))
-}))
+const { context, runOptimizationPass, projectPublishedGlbBytes } = vi.hoisted(
+	() => ({
+		projectPublishedGlbBytes: vi.fn(async () => 2),
+		context: {
+			load: vi.fn(async () => ({
+				status: 'ready',
+				file: { name: 'model.glb', sourcePackageBytes: 3 },
+				stillCurrent: () => true
+			})),
+			optimizer: {
+				getModel: vi.fn(async () => new Uint8Array([1, 2, 3])),
+				applyOptimization: vi.fn(async () => {
+					throw new Error('No model was ready when this optimizer was read.')
+				})
+			}
+		},
+		runOptimizationPass: vi.fn(async () => ({
+			succeeded: true,
+			dracoReport: null
+		}))
+	})
+)
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
 	ModelProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -45,6 +50,13 @@ vi.mock(
 	'../app/components/publisher/optimization/run-optimization-pass',
 	() => ({
 		runOptimizationPass
+	})
+)
+vi.mock(
+	'../app/lib/domain/scene/client/publish-export',
+	async (importOriginal) => ({
+		...(await importOriginal<object>()),
+		projectPublishedGlbBytes
 	})
 )
 vi.mock('../app/hooks/scene-loader/use-scene-document-export', () => ({
@@ -77,5 +89,27 @@ describe('HeroOwnFile', () => {
 		]
 		await expect(model.applyOptimization()).resolves.toBeUndefined()
 		expect(context.optimizer.applyOptimization).not.toHaveBeenCalled()
+	})
+
+	// The sheet quotes what the file publishes at, measured as the publisher's card measures it.
+	it('reports the size the prepared document publishes at', async () => {
+		const api = await ready()
+
+		const outcome = await api.prepare([new File(['glb'], 'model.glb')])
+
+		expect(projectPublishedGlbBytes).toHaveBeenCalledWith(
+			new Uint8Array([1, 2, 3]),
+			resolvePublishGeometryOptions(balancedPreset, null)
+		)
+		expect(outcome).toMatchObject({ ok: true, bytes: 2, originalBytes: 3 })
+	})
+
+	it('keeps a prepared file whose size could not be projected', async () => {
+		projectPublishedGlbBytes.mockRejectedValueOnce(new Error('worker crashed'))
+		const api = await ready()
+
+		const outcome = await api.prepare([new File(['glb'], 'model.glb')])
+
+		expect(outcome).toMatchObject({ ok: true, bytes: 3 })
 	})
 })

@@ -37,7 +37,6 @@ const MAX_CONCURRENT_ASSET_UPLOADS = 4
 export interface SaveSceneOrchestratorOptions {
 	includeOptimizationReport?: boolean
 	initialSceneBytes?: number
-	currentSceneBytes?: number
 	targetProjectId?: string
 	targetFolderId?: string | null
 	maxConcurrentAssetUploads?: number
@@ -187,13 +186,6 @@ export const executeSceneSaveOrchestrator = async ({
 
 	if (typeof options?.targetFolderId !== 'undefined') {
 		prepareFormData.append('targetFolderId', options.targetFolderId ?? '')
-	}
-
-	if (typeof options?.currentSceneBytes === 'number') {
-		prepareFormData.append(
-			'currentSceneBytes',
-			String(options.currentSceneBytes)
-		)
 	}
 
 	const prepared = await toJsonOrThrow(
@@ -697,10 +689,6 @@ export const executeSceneSaveOrchestrator = async ({
 
 	if (typeof options?.initialSceneBytes === 'number') {
 		formData.append('initialSceneBytes', String(options.initialSceneBytes))
-	}
-
-	if (typeof options?.currentSceneBytes === 'number') {
-		formData.append('currentSceneBytes', String(options.currentSceneBytes))
 	}
 
 	if (optimizationReport && options?.includeOptimizationReport !== false) {

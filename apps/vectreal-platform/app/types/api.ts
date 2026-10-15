@@ -96,7 +96,6 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
 	readonly initialSceneBytes?: number
-	readonly currentSceneBytes?: number
 }
 
 /** Parameters for retrieving scene settings. */
@@ -113,7 +112,6 @@ export interface SaveSceneSettingsParams extends BaseSceneParams {
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
 	readonly initialSceneBytes?: number
-	readonly currentSceneBytes?: number
 }
 
 /** Parameters for updating existing scene settings. */

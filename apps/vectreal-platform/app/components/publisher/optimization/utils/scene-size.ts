@@ -2,7 +2,6 @@ import { useExportModel } from '@vctrl/hooks/use-export-model'
 import { useCallback } from 'react'
 
 import type { SceneOptimizationRuntimeState } from '../../../../types/scene-optimization'
-import type { DracoCompressionReport } from '@vctrl/core'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
 import type { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 
@@ -12,38 +11,6 @@ type UpdateRuntime = (
 		prev: SceneOptimizationRuntimeState
 	) => SceneOptimizationRuntimeState
 ) => void
-
-/**
- * The size the scene will actually be published at, given the post-pass export
- * and what Draco is projected to save.
- *
- * `projectedGlbBytes` cannot be used directly: it is measured inside the
- * geometry worker, before the texture phase runs, so its image payload is still
- * the original textures and taking it as the headline erases every byte of
- * texture saving. Only the whole-file Draco delta survives the texture phase,
- * because `uncompressedGlbBytes` and `projectedGlbBytes` are both a
- * `writeBinary` of the same document and their identical textures cancel out.
- *
- * Deliberately not `geometryBytesBefore - geometryBytesAfterCompression`: those
- * two count shared accessors differently (per-mesh versus once globally), and
- * `dedup` runs immediately before `draco` in every shipped preset, so the
- * difference would overstate the saving.
- */
-export const resolvePublishedSceneBytes = (
-	workingSceneBytes: number | null,
-	dracoReport?: DracoCompressionReport | null
-): number | null => {
-	if (!dracoReport?.isWorthApplying || workingSceneBytes == null) {
-		return workingSceneBytes
-	}
-
-	const dracoSaving =
-		dracoReport.uncompressedGlbBytes - dracoReport.projectedGlbBytes
-
-	// Guards against GLB padding noise only; a negative saving cannot reach here
-	// because `isWorthApplying` is `projected < uncompressed`.
-	return Math.max(0, workingSceneBytes - dracoSaving)
-}
 
 /**
  * Sub-hook that encapsulates the three scene/texture size calculation callbacks.
@@ -95,20 +62,15 @@ export function useSceneSizeCalculator(
 	}, [isReady, optimizer, handleDocumentGltfExport, file])
 
 	/**
-	 * @param dracoReport When Draco compression is in play, the working document
-	 * is deliberately left uncompressed, so exporting it understates what will
-	 * actually be published. The measured projection is the honest figure for
-	 * the headline size and the plan size gate; the uncompressed export is kept
-	 * alongside it as `workingSceneBytes`.
+	 * Measures the working document after a pass. What it publishes at is
+	 * `usePublishSizeProjection`'s to measure.
+	 *
 	 * @param writeRuntime Records the result. The caller's, because the
 	 * measurement is slow and only the caller knows whether its scene is still
 	 * open when it lands.
 	 */
 	const refreshOptimizedSizeInfo = useCallback(
-		async (
-			dracoReport: DracoCompressionReport | null,
-			writeRuntime: UpdateRuntime
-		) => {
+		async (writeRuntime: UpdateRuntime) => {
 			// Deliberately does not raise `isSceneSizeLoading` to cover this window.
 			// `useSceneSizeInitializer` force-clears that flag whenever
 			// `clientSceneBytes` is a number and keeps the flag in its own dep array,
@@ -124,17 +86,10 @@ export function useSceneSizeCalculator(
 			const updatedTextureBytes =
 				textureResult.status === 'fulfilled' ? textureResult.value : null
 
-			const workingSceneBytes =
-				typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null
-			const publishedSceneBytes = resolvePublishedSceneBytes(
-				workingSceneBytes,
-				dracoReport
-			)
-
 			writeRuntime((prev) => ({
 				...prev,
-				optimizedSceneBytes: publishedSceneBytes,
-				workingSceneBytes,
+				workingSceneBytes:
+					typeof updatedSceneBytes === 'number' ? updatedSceneBytes : null,
 				optimizedTextureBytes:
 					typeof updatedTextureBytes === 'number'
 						? updatedTextureBytes

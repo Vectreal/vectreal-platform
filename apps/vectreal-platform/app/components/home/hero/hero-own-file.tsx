@@ -10,10 +10,13 @@ import {
 	originalPreset
 } from '../../../constants/optimizations'
 import { usePrepareGltfDocument } from '../../../hooks/scene-loader/use-scene-document-export'
+import {
+	projectPublishedGlbBytes,
+	resolvePublishGeometryOptions
+} from '../../../lib/domain/scene/client/publish-export'
 import { persistPendingSceneDraftOrchestrator } from '../../../lib/domain/scene/client/scene-draft-persistence'
 import { sceneViewerSettingsAtom } from '../../../lib/stores/scene-settings-store'
 import { runOptimizationPass } from '../../publisher/optimization/run-optimization-pass'
-import { resolvePublishedSceneBytes } from '../../publisher/optimization/utils'
 
 import type { OptimizationStepsController } from '../../publisher/optimization/use-optimization-steps'
 import type { Optimizations } from '@vctrl/core'
@@ -141,16 +144,21 @@ function Runner({ onReady }: { onReady: (api: OwnFileApi) => void }) {
 				// The working document: every pass applied, Draco left for publish time, as in the publisher.
 				const working = await optimizer.getModel()
 				if (!working) return { ok: false, reason: 'failed' }
-				const bytes =
-					resolvePublishedSceneBytes(working.byteLength, dracoReport) ??
-					working.byteLength
+				// A failed pass leaves the original on screen, and the hand-off
+				// has to say which one the publisher is getting.
+				const derivedFrom = succeeded ? balancedPreset : originalPreset
+				// The size it publishes at, as the publisher's card measures it. A
+				// measurement that fails costs the figure, not the visitor's file:
+				// the publisher measures again once it is handed on.
+				const bytes = await projectPublishedGlbBytes(
+					working,
+					resolvePublishGeometryOptions(derivedFrom, dracoReport)
+				).catch(() => working.byteLength)
 				prepared.current = {
 					name: loaded.file.name,
 					originalBytes,
 					bytes,
-					// A failed pass leaves the original on screen, and the hand-off
-					// has to say which one the publisher is getting.
-					derivedFrom: succeeded ? balancedPreset : originalPreset
+					derivedFrom
 				}
 				const buffer = working.buffer.slice(
 					working.byteOffset,
