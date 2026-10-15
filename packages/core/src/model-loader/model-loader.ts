@@ -485,7 +485,7 @@ export class ModelLoader {
 				progressOffset + 75 * progressScale
 			)
 
-			await this.codecs.registerDecoders()
+			await this.codecs.registerDecoders(gltfJson.extensionsUsed ?? [])
 			const document = await this.io.readJSON({
 				json: gltfJson,
 				resources: resources.entries().reduce(
@@ -900,8 +900,9 @@ export class ModelLoader {
 			glbBytes = exported.data
 		}
 
-		await this.codecs.registerDecoders()
-		const document = await this.io.readBinary(glbBytes ?? bytes)
+		const glb = glbBytes ?? bytes
+		await this.codecs.registerDecoders(readGlbExtensionsUsed(glb))
+		const document = await this.io.readBinary(glb)
 		stripDecodedDracoExtension(document)
 		stripDecodedMeshoptExtension(document)
 

@@ -84,6 +84,8 @@ interface HarnessApi {
 	getLastSavedSettings: () => SceneSettings | null
 	getHasUnsavedChanges: () => boolean
 	openScene: (sceneId: string) => void
+	runPass: () => void
+	getSavedPassRevision: () => number | null
 }
 
 interface SceneSaveFlowHarnessProps {
@@ -117,6 +119,7 @@ function SceneSaveFlowHarness({
 			isPending: false,
 			isSceneSizeLoading: false,
 			optimizedSceneBytes: null,
+			isProjectingSceneBytes: false,
 			clientSceneBytes: null,
 			workingSceneBytes: null,
 			optimizedTextureBytes: null,
@@ -125,7 +128,8 @@ function SceneSaveFlowHarness({
 			latestSceneStats: null,
 			dracoReport: null,
 			publishedEncoding: null,
-			passRevision: 0
+			passRevision: 0,
+			savedPassRevision: 0
 		})
 
 	// Stable across renders, as the publisher's are: callbacks rebuilt every
@@ -165,10 +169,10 @@ function SceneSaveFlowHarness({
 		optimizationState: {
 			optimizationSettings: OPTIMIZATION_SETTINGS,
 			optimizationReport: null,
-			latestSceneStats: optimizationRuntime.latestSceneStats,
-			optimizedSceneBytes: optimizationRuntime.optimizedSceneBytes,
 			clientSceneBytes: optimizationRuntime.clientSceneBytes,
 			lastSavedReportSignature: optimizationRuntime.lastSavedReportSignature,
+			passRevision: optimizationRuntime.passRevision,
+			savedPassRevision: optimizationRuntime.savedPassRevision,
 			setOptimizationRuntime
 		},
 		actions: { setHasUnsavedChanges, ...stableActions }
@@ -181,9 +185,21 @@ function SceneSaveFlowHarness({
 			setLastSavedSettings,
 			getLastSavedSettings: () => lastSavedSettings,
 			getHasUnsavedChanges: () => hasUnsavedChanges,
-			openScene: setCurrentSceneIdState
+			openScene: setCurrentSceneIdState,
+			getSavedPassRevision: () => optimizationRuntime.savedPassRevision,
+			runPass: () =>
+				setOptimizationRuntime((prev) => ({
+					...prev,
+					passRevision: prev.passRevision + 1
+				}))
 		}
-	}, [apiRef, hasUnsavedChanges, lastSavedSettings, saveSceneSettings])
+	}, [
+		apiRef,
+		hasUnsavedChanges,
+		lastSavedSettings,
+		optimizationRuntime.savedPassRevision,
+		saveSceneSettings
+	])
 
 	return null
 }
@@ -434,5 +450,141 @@ describe('useSceneSaveFlow', () => {
 		await waitFor(() =>
 			expect(changed.apiRef.current?.getHasUnsavedChanges()).toBe(true)
 		)
+	})
+
+	it('counts a pass since the last save as unsaved until it is saved', async () => {
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({
+			sceneId: 'scene-1',
+			sceneMeta,
+			stats: null
+		})
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings
+		})
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(false)
+		)
+
+		act(() => apiRef.current?.runPass())
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(false)
+		)
+		// What opening the next scene compares against.
+		expect(apiRef.current?.getSavedPassRevision()).toBe(1)
+	})
+
+	// A pass can rebuild exactly the document the scene stores; the server then
+	// answers unchanged, and the scene has to read saved, not stay dirty.
+	it('counts a pass as saved when the server finds nothing changed', async () => {
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings
+		})
+		act(() => apiRef.current?.runPass())
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		expect(apiRef.current?.getSavedPassRevision()).toBe(1)
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(false)
+		)
+	})
+
+	// The save exported the document as it was when it started.
+	it('keeps a pass that finished during a save unsaved', async () => {
+		const deferred = createDeferred<SaveSceneResult>()
+		mockExecuteSceneSaveOrchestrator.mockReturnValue(deferred.promise)
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings
+		})
+
+		let saving: Promise<unknown> = Promise.resolve()
+		act(() => {
+			saving = apiRef.current?.saveSceneSettings() ?? saving
+		})
+		act(() => apiRef.current?.runPass())
+		await act(async () => {
+			deferred.resolve({ sceneId: 'scene-1', sceneMeta, stats: null })
+			await saving
+		})
+
+		expect(apiRef.current?.getSavedPassRevision()).toBe(0)
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
+	})
+
+	it('keeps a pass unsaved when the save fails', async () => {
+		mockExecuteSceneSaveOrchestrator.mockRejectedValue(new Error('offline'))
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings
+		})
+		act(() => apiRef.current?.runPass())
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings().catch(() => undefined)
+		})
+
+		expect(apiRef.current?.getSavedPassRevision()).toBe(0)
+		await waitFor(() =>
+			expect(apiRef.current?.getHasUnsavedChanges()).toBe(true)
+		)
+	})
+
+	// The next scene's runtime holds its own saved revision.
+	it('records no saved pass once another scene has opened', async () => {
+		const deferred = createDeferred<SaveSceneResult>()
+		mockExecuteSceneSaveOrchestrator.mockReturnValue(deferred.promise)
+		const settings = createSettings(1)
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: settings,
+			initialLastSavedSettings: settings
+		})
+		act(() => apiRef.current?.runPass())
+
+		let saving: Promise<unknown> = Promise.resolve()
+		act(() => {
+			saving = apiRef.current?.saveSceneSettings() ?? saving
+		})
+		act(() => apiRef.current?.openScene('scene-2'))
+		await act(async () => {
+			deferred.resolve({ sceneId: 'scene-1', sceneMeta, stats: null })
+			await saving
+		})
+
+		expect(apiRef.current?.getSavedPassRevision()).toBe(0)
 	})
 })

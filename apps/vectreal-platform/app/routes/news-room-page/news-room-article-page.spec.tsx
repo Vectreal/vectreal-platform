@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { createRoutesStub } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -20,6 +20,15 @@ vi.mock('../../components/consent/consent-context', () => ({
 vi.mock('../../lib/news/news-article-body', () => ({
 	getArticleBody: () => () => <p>body</p>
 }))
+
+/*
+  The page heading says which article is on screen. Read directly rather than
+  through a role query: those compute roles and accessible names across the
+  whole article on every attempt, about 100ms here and several times that in a
+  loaded worker pool, which left a full navigation too few polls to land
+  inside the default one-second wait on CI.
+*/
+const pageHeading = () => document.querySelector('h1')?.textContent
 
 const eventsFor = (event: string, slug: string) =>
 	capture.mock.calls
@@ -72,23 +81,26 @@ describe('a newsroom article followed from another', () => {
 				loader: loader as never
 			}
 		])
-		render(<Stub initialEntries={[`/news-room/${first.slug}`]} />)
-		await screen.findByRole('heading', { level: 1, name: first.title })
+		// Awaited rather than polled: the loader runs on promises alone, so act
+		// settles the navigation however slow the machine is, where a wait has
+		// a one-second deadline that a loaded parallel run can overrun.
+		await act(async () => {
+			render(<Stub initialEntries={[`/news-room/${first.slug}`]} />)
+		})
+		expect(pageHeading()).toBe(first.title)
 
 		// Read the first article to the end over a minute.
 		act(() => scrollTo(1000))
 		vi.setSystemTime(60_000)
 		act(() => scrollTo(0))
 
-		const card = screen
-			.getAllByRole('link')
-			.find((link) =>
-				link.getAttribute('href')?.endsWith(`/news-room/${second.slug}`)
-			)
+		const card = document.querySelector(`a[href$="/news-room/${second.slug}"]`)
 		if (!card) throw new Error('no link to the related article')
-		fireEvent.click(card)
+		await act(async () => {
+			fireEvent.click(card)
+		})
 		// The card shows the title too; the page heading is what says it arrived.
-		await screen.findByRole('heading', { level: 1, name: second.title })
+		expect(pageHeading()).toBe(second.title)
 
 		return { first, second }
 	}

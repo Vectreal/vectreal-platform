@@ -12,7 +12,9 @@ import {
 	resolveDerivedSettings,
 	resolveSceneMetrics
 } from '../../../lib/domain/scene'
+import { optimizationsMatch } from '../../../lib/domain/scene/client/optimization-inference'
 import {
+	documentOptimizationsAtom,
 	keptOriginalAtom,
 	optimizationAtom,
 	optimizationRuntimeAtom
@@ -78,6 +80,7 @@ export const useOptimizationProcess = ({
 	} = optimizer
 
 	const { optimizations: plannedOptimizations } = useAtomValue(optimizationAtom)
+	const documentOptimizations = useAtomValue(documentOptimizationsAtom)
 	const setOptimizationState = useSetAtom(optimizationAtom)
 	const store = useStore()
 	const [optimizationRuntime, setOptimizationRuntime] = useAtom(
@@ -105,15 +108,13 @@ export const useOptimizationProcess = ({
 			report?.stats.textureBytes.after
 		)
 
-	// `optimizedSceneBytes` only ever describes a pass run in this browser
-	// session, and reopening a saved scene explicitly nulls it during hydration -
-	// so on its own it answered "did you optimize in this tab" rather than "is
-	// this scene optimized". `appliedOptimizations` is the persisted signal, and
-	// it accrues only from real optimization operations (a publish-time Draco
-	// repack never touches it), so a scene that was uploaded and published but
-	// never optimized still reads as false.
+	// What the document on screen was derived from answers whether it is
+	// optimized, including for a restored draft, which carries no measurement
+	// of its own. `appliedOptimizations` covers scenes saved before
+	// `derivedFrom` was recorded. Not a size: every scene's publish size is
+	// projected as it opens.
 	const hasCompletedOptimizationPass =
-		typeof optimizationRuntime.optimizedSceneBytes === 'number' ||
+		!optimizationsMatch(documentOptimizations, originalPreset) ||
 		(latestSceneStats?.appliedOptimizations?.length ?? 0) > 0
 
 	/**
@@ -151,7 +152,7 @@ export const useOptimizationProcess = ({
 					clientTextureBytes,
 					sourcePackageBytes: file?.sourcePackageBytes,
 					sourceTextureBytes: file?.sourceTextureBytes,
-					statsSceneBytes: latestSceneStats?.currentSceneBytes,
+					statsSceneBytes: latestSceneStats?.initialSceneBytes,
 					reportTextureBytesBefore: report?.stats.textureBytes.before,
 					calculateSceneBytes
 				},
@@ -169,7 +170,7 @@ export const useOptimizationProcess = ({
 					? resolveDerivedSettings(settings, prev.sourceSettings)
 					: prev.sourceSettings
 			}))
-			void refreshOptimizedSizeInfo(result.dracoReport, writeRuntime)
+			void refreshOptimizedSizeInfo(writeRuntime)
 		},
 		[
 			isPreparing,
@@ -186,7 +187,7 @@ export const useOptimizationProcess = ({
 			clientTextureBytes,
 			file?.sourcePackageBytes,
 			file?.sourceTextureBytes,
-			latestSceneStats?.currentSceneBytes,
+			latestSceneStats?.initialSceneBytes,
 			report?.stats.textureBytes.before,
 			calculateSceneBytes,
 			setOptimizationRuntime,
@@ -289,7 +290,9 @@ export const useOptimizationProcess = ({
 					currentSceneBytes: optimizedSceneBytes,
 					initialTextureBytes: clientTextureBytes,
 					currentTextureBytes: optimizedTextureBytes,
-					isSceneSizeComputing: optimizationRuntime.isSceneSizeLoading
+					isSceneSizeComputing:
+						optimizationRuntime.isSceneSizeLoading ||
+						optimizationRuntime.isProjectingSceneBytes
 				}
 			}),
 		[
@@ -300,7 +303,8 @@ export const useOptimizationProcess = ({
 			optimizedSceneBytes,
 			clientTextureBytes,
 			optimizedTextureBytes,
-			optimizationRuntime.isSceneSizeLoading
+			optimizationRuntime.isSceneSizeLoading,
+			optimizationRuntime.isProjectingSceneBytes
 		]
 	)
 

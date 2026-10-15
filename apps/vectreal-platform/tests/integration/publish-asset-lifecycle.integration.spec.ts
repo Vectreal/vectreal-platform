@@ -61,7 +61,7 @@ describe('publish asset lifecycle', () => {
 	const projectId = randomUUID()
 	const assetFolderId = randomUUID()
 
-	const makeAsset = async (name: string) => {
+	const makeAsset = async (name: string, fileSize?: number) => {
 		const assetId = randomUUID()
 		await db.insert(schema.assets).values({
 			id: assetId,
@@ -69,6 +69,7 @@ describe('publish asset lifecycle', () => {
 			name,
 			type: 'model',
 			filePath: `smoke/${assetId}/${name}`,
+			fileSize,
 			ownerId
 		})
 		return assetId
@@ -208,5 +209,84 @@ describe('publish asset lifecycle', () => {
 			.from(schema.scenePublished)
 			.where(eq(schema.scenePublished.sceneId, sceneId))
 		expect(stillPublished).toEqual([{ assetId }])
+	})
+	/*
+	  The scene size is the published GLB's size, and the server measured that
+	  when it stored the file. The client used to report it, which let a save
+	  write any figure the browser had measured last.
+	*/
+	it('records the stored GLB size as the scene size', async () => {
+		const assetId = await makeAsset('sized.glb', 4321)
+		const sceneId = await makeScene('sized')
+
+		await sceneSettingsService.publishSceneFromAssetId({
+			sceneId,
+			projectId,
+			userId: ownerId,
+			publishedAssetId: assetId
+		})
+
+		const [stats] = await db
+			.select({ currentSceneBytes: schema.sceneStats.currentSceneBytes })
+			.from(schema.sceneStats)
+			.where(eq(schema.sceneStats.sceneId, sceneId))
+		expect(stats?.currentSceneBytes).toBe(4321)
+	})
+
+	it('keeps what the last save recorded when publishing', async () => {
+		const assetId = await makeAsset('kept.glb', 10)
+		const sceneId = await makeScene('kept')
+		const optimizationSettings = { simplification: { enabled: true } }
+		await db.insert(schema.sceneStats).values({
+			sceneId,
+			createdBy: ownerId,
+			label: 'Saved',
+			initialSceneBytes: 99,
+			optimizationSettings:
+				optimizationSettings as typeof schema.sceneStats.$inferInsert.optimizationSettings,
+			appliedOptimizations: ['simplification']
+		})
+
+		await sceneSettingsService.publishSceneFromAssetId({
+			sceneId,
+			projectId,
+			userId: ownerId,
+			publishedAssetId: assetId
+		})
+
+		const [stats] = await db
+			.select()
+			.from(schema.sceneStats)
+			.where(eq(schema.sceneStats.sceneId, sceneId))
+		expect(stats).toMatchObject({
+			label: 'Saved',
+			initialSceneBytes: 99,
+			currentSceneBytes: 10,
+			optimizationSettings,
+			appliedOptimizations: ['simplification']
+		})
+	})
+
+	// The size is the published GLB's, so unpublishing leaves none.
+	it('clears the scene size when a scene is unpublished', async () => {
+		const assetId = await makeAsset('revoked-size.glb', 777)
+		const sceneId = await makeScene('revoked-size')
+		await sceneSettingsService.publishSceneFromAssetId({
+			sceneId,
+			projectId,
+			userId: ownerId,
+			publishedAssetId: assetId
+		})
+
+		await sceneSettingsService.revokeScenePublication({
+			sceneId,
+			userId: ownerId
+		})
+
+		const [stats] = await db
+			.select({ currentSceneBytes: schema.sceneStats.currentSceneBytes })
+			.from(schema.sceneStats)
+			.where(eq(schema.sceneStats.sceneId, sceneId))
+		expect(stats?.currentSceneBytes).toBeNull()
 	})
 })

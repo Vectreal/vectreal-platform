@@ -145,11 +145,6 @@ export class SceneSettingsParser {
 				if (publishedAssetId instanceof Response) {
 					return publishedAssetId
 				}
-				const currentSceneBytes = this.parseCurrentSceneBytes(requestData)
-				if (currentSceneBytes instanceof Response) {
-					return currentSceneBytes
-				}
-
 				return {
 					action,
 					requestId,
@@ -159,8 +154,7 @@ export class SceneSettingsParser {
 					targetFolderId: undefined,
 					settings: undefined,
 					gltfJson: undefined,
-					publishedAssetId,
-					currentSceneBytes
+					publishedAssetId
 				}
 			}
 
@@ -194,11 +188,6 @@ export class SceneSettingsParser {
 			const initialSceneBytes = this.parseInitialSceneBytes(requestData)
 			if (initialSceneBytes instanceof Response) {
 				return initialSceneBytes
-			}
-
-			const currentSceneBytes = this.parseCurrentSceneBytes(requestData)
-			if (currentSceneBytes instanceof Response) {
-				return currentSceneBytes
 			}
 
 			const meta = this.parseSceneMeta(requestData)
@@ -243,8 +232,7 @@ export class SceneSettingsParser {
 					gltfJson: undefined,
 					optimizationReport: optimizationReport || undefined,
 					optimizationSettings: optimizationSettings || undefined,
-					initialSceneBytes,
-					currentSceneBytes
+					initialSceneBytes
 				}
 			}
 
@@ -264,8 +252,7 @@ export class SceneSettingsParser {
 				gltfJson: gltfJsonData || undefined,
 				optimizationReport: optimizationReport || undefined,
 				optimizationSettings: optimizationSettings || undefined,
-				initialSceneBytes,
-				currentSceneBytes
+				initialSceneBytes
 			}
 		} catch (error) {
 			console.warn('Failed to parse scene settings request:', error)
@@ -1056,32 +1043,6 @@ export class SceneSettingsParser {
 		}
 
 		return publishedAssetId
-	}
-
-	private static parseCurrentSceneBytes(
-		requestData: Record<string, unknown>
-	): number | undefined | Response {
-		const rawCurrentSceneBytes =
-			requestData.currentSceneBytes ?? requestData.publishedBytes
-
-		if (rawCurrentSceneBytes == null) {
-			return undefined
-		}
-
-		const parsedValue =
-			typeof rawCurrentSceneBytes === 'number'
-				? rawCurrentSceneBytes
-				: typeof rawCurrentSceneBytes === 'string'
-					? Number(rawCurrentSceneBytes)
-					: NaN
-
-		if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-			return ApiResponse.badRequest(
-				'currentSceneBytes must be a non-negative number'
-			)
-		}
-
-		return Math.round(parsedValue)
 	}
 
 	private static parseInitialSceneBytes(
