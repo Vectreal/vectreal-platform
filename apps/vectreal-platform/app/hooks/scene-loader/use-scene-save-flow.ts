@@ -1,4 +1,4 @@
-import { useSetAtom } from 'jotai/react'
+import { useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -13,6 +13,7 @@ import {
 	type SaveAvailabilityState
 } from '../../lib/domain/scene'
 import {
+	capturedThumbnailFrameAtom,
 	currentLocationAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
@@ -71,6 +72,7 @@ export const useSceneSaveFlow = ({
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
 	const dispatchSaveProgress = useSetAtom(dispatchSaveProgressAtom)
+	const capturedThumbnailFrame = useAtomValue(capturedThumbnailFrameAtom)
 	// What the dirty check last said, for a failed save to put back.
 	const hasChangesRef = useRef(false)
 	// The open scene when a save settles, which may not be the one it saved.
@@ -152,6 +154,7 @@ export const useSceneSaveFlow = ({
 						currentSceneId,
 						currentSettings,
 						sceneMetaState,
+						capturedThumbnailFrame,
 						lastSavedSceneMeta,
 						lastSavedSettings,
 						optimizationSettings,
@@ -200,6 +203,7 @@ export const useSceneSaveFlow = ({
 		},
 		[
 			captureSceneThumbnail,
+			capturedThumbnailFrame,
 			captureShadowBake,
 			createRequestId,
 			currentSceneId,

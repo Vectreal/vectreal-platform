@@ -1,0 +1,102 @@
+# .github/workflows/shared-supabase-migrate.yaml
+name: Shared - Supabase Migrations
+
+# Applies the pending migrations in apps/vectreal-platform/supabase/migrations
+# to one environment's database. The deploy workflows run it before the Fly
+# deploy and make the deploy wait on it, so code never ships ahead of the
+# schema it reads: #1054 reached staging with `scene_published.source_fingerprint`
+# missing because migrations were pushed by hand.
+#
+# Migrations run before the new release starts, while the old one is still
+# serving, so each must be safe for the code already running: add before you
+# read, and drop only after no deployed release reads it.
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'GitHub environment holding the target project secrets (staging | production)'
+        required: true
+        type: string
+    secrets:
+      SUPABASE_ACCESS_TOKEN:
+        required: true
+      SUPABASE_PROJECT_REF:
+        required: true
+      SUPABASE_DB_PASSWORD:
+        required: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      # A secret the environment does not hold reaches a reusable workflow as
+      # an empty string, not an error, and `required` above only checks that
+      # the caller named it.
+      - name: Check secrets
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_DB_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set in the '$ENVIRONMENT' environment."
+              exit 1
+            fi
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # The CLI is a root devDependency, so the lockfile owns its version and
+      # this runs the same binary as the supabase-db-push-* Nx targets. The
+      # credentials are set per step below, never for the job, so no
+      # dependency's install script runs with them in its environment.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `supabase/config.toml` describes the local stack, and the CLI validates
+      # all of it before `db push`, which fails on an unset send-email hook
+      # secret. Migrations never read it (the hosted projects configure their
+      # hooks in the dashboard), so any well-formed value lets the file parse.
+      - name: Placeholder for local-only config
+        run: echo "SEND_EMAIL_HOOK_SECRET=v1,whsec_$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+
+      - name: Link project
+        working-directory: apps/vectreal-platform
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: pnpm exec supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      # Lists what is about to run, so the log names each migration applied.
+      - name: Show pending migrations
+        working-directory: apps/vectreal-platform
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: pnpm exec supabase db push --linked --dry-run
+
+      - name: Apply migrations
+        working-directory: apps/vectreal-platform
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: pnpm exec supabase db push --linked

@@ -1,3 +1,5 @@
+import { buildDefaultCameraSignature } from '../scene-camera'
+
 import type { SceneMetaState } from '../../../../types/publisher-config'
 import type { OptimizationReport, SceneSettings } from '@vctrl/core'
 
@@ -54,6 +56,33 @@ export const buildOptimizationReportSignature = (
 		optimizedSize: report.optimizedSize,
 		stats: report.stats,
 		appliedOptimizations: report.appliedOptimizations
+	})
+}
+
+/**
+ * Everything a thumbnail capture paints besides the model's own geometry: the
+ * frame the default camera opens on, the normalization that sizes the model
+ * inside it, and the environment behind it - the HDRI shown as background, its
+ * blur and intensity, and the `backdrop` stage the screenshot composites in. A
+ * saved thumbnail is stale once any of these changes.
+ *
+ * Whether or not the default camera has a pose: without one the viewer stands
+ * it at the frame the scene opened on, and a capture from it renders there.
+ *
+ * Shadows are left out on purpose: `shadows.baked.assetId` moves whenever a
+ * bake is saved, and including it would recapture on every such save.
+ */
+export const buildThumbnailFrameSignature = (
+	settings:
+		| Pick<SceneSettings, 'camera' | 'environment' | 'normalization'>
+		| null
+		| undefined
+): string => {
+	const cameras = settings?.camera?.cameras
+	return canonicalize({
+		camera: buildDefaultCameraSignature(cameras),
+		environment: settings?.environment ?? null,
+		normalization: settings?.normalization ?? null
 	})
 }
 
