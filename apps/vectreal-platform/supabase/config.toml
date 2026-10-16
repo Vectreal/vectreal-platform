@@ -218,10 +218,14 @@ redirect_uri = "http://localhost:54321/auth/v1/callback"
 # Force log out if the user has been inactive longer than the specified duration.
 # inactivity_timeout = "8h"
 
-# This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
+# Sets the agent audience on OAuth-issued tokens and returns every other token
+# unchanged (migration 0028). It runs on every sign-in and refresh, and Auth
+# fails the token when the function is missing, so an existing local database
+# needs `supabase migration up` before restarting with this enabled.
+# The hosted projects enable the same hook in the dashboard.
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
