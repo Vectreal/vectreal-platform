@@ -48,11 +48,17 @@ pnpm nx run terraform:plan-infrastructure    # init + validate + plan
 pnpm nx run terraform:apply-infrastructure   # runs scripts/apply-infrastructure.sh
 ```
 
-### 3. Sync Fly.io app secrets and the Supabase hook
+### 3. Sync Fly.io app secrets and the Supabase auth hooks
 
 `scripts/setup-fly-secrets.sh` (a) sets Fly.io app secrets via `fly secrets set`
-and (b) syncs the Supabase `send_email` hook URI and signing secret through the
-Management API.
+and (b) syncs both Supabase auth hooks through the Management API: the
+`send_email` hook URI and signing secret, and the `custom_access_token` hook
+(the Postgres function from migration 0028). The token hook is switched on only
+where that function exists, because Auth fails every token while the hook names
+a missing function; elsewhere the run reports it as a failure.
+
+Nothing about the hosted hooks is set by hand in the dashboard. A value changed
+there is drift, and `verify` reports it.
 
 **Prefer the workflow.** `CD - Sync Platform Secrets`
 (`.github/workflows/cd-platform-secrets.yaml`) runs it against one environment
@@ -63,7 +69,7 @@ laptop, and inheriting whatever protection rules the Environment carries.
 | --- | --- |
 | `stage` | Writes the secrets with `--stage`. The app keeps running the old values until the next deploy applies them. The default, because a routine rotation should not bounce production. |
 | `immediate` | Writes and restarts now. For an urgent rotation, such as a leaked key. |
-| `verify` | Read-only, and a gate: exits non-zero when a *required* secret is missing, when the `send_email` hook is disabled, or when its live URI does not match `APPLICATION_URL`. An optional secret that is unset warns and passes, matching what the sync does with it. |
+| `verify` | Read-only, and a gate: exits non-zero when a *required* secret is missing, when either auth hook is disabled, when the `send_email` URI does not match `APPLICATION_URL` or the `custom_access_token` URI does not name its function, or when that function is missing. An optional secret that is unset warns and passes, matching what the sync does with it. |
 
 Rotating a value is: change it in the GitHub Environment, run the workflow.
 
@@ -98,10 +104,11 @@ callers read the same script.
 **What this is not.** The repo owns the mapping - which value reaches which app
 under which name - and GitHub Environments own the values. There is no state
 file and no plan, and `verify` can only prove a Fly secret *exists*: `fly
-secrets list` reports digests, never values. The hook URI is the one thing
-checked against its expected value, because it is editable in the Supabase
-dashboard, invisible to this repo, and decides whether any auth email is
-delivered at all.
+secrets list` reports digests, never values. The auth hooks are the one thing
+checked against their expected values, because they are editable in the
+Supabase dashboard, invisible to this repo, and each decides something for
+every user: whether any auth email is delivered, and whether agent tokens carry
+the audience the API checks.
 
 ## Variables
 
@@ -145,7 +152,7 @@ terraform/
 ├── project.json                # Nx targets
 └── scripts/
     ├── apply-infrastructure.sh # terraform init/validate/apply wrapper
-    └── setup-fly-secrets.sh    # Fly.io secrets + Supabase email hook sync
+    └── setup-fly-secrets.sh    # Fly.io secrets + Supabase auth hook sync
 ```
 
 ## Nx targets
