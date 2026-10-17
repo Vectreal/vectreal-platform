@@ -68,9 +68,11 @@ export interface ModelFormat {
 	 */
 	isBundle: boolean
 	/**
-	 * Extensions a bundle's siblings carry. Empty for a self-contained format.
-	 * These are not formats: nothing dispatches on them, and a picker offering
-	 * them is the only reason they are recorded.
+	 * Extensions of the files a model can use from beside it. A bundle needs
+	 * them; a format that is not one can still use them when they arrive, which
+	 * is FBX and an image it names rather than embeds. Empty for a format that
+	 * reads nothing beside it. These are not formats: nothing dispatches on
+	 * them. The picker offers them, and the load hands them to the model.
 	 */
 	siblingExtensions: readonly string[]
 }
@@ -166,10 +168,12 @@ export const MODEL_FORMATS: readonly ModelFormat[] = [
 		  until someone converts *to* it, which needs an engine we do not have.
 
 		  `isBundle: false` because an FBX carries its textures inside the file
-		  in the overwhelming majority of cases. One that references siblings
-		  instead resolves them against the page, finds nothing, and arrives
-		  untextured rather than failing - which is the honest outcome for a
-		  file that is genuinely incomplete on its own.
+		  in the overwhelming majority of cases, so it is complete on its own and
+		  nothing should tell a visitor to bring a folder. The sibling extensions
+		  are for the rest: an FBX that names its images rather than embedding
+		  them finds them when they are dropped with it, and arrives untextured
+		  rather than failing when they are not. TGA and TIFF are listed because
+		  the bridge decodes them itself; see the OBJ row.
 
 		  There is no registered media type for FBX. `model/fbx` is what the
 		  tools that name one use; the extension is what actually matches in a
@@ -182,7 +186,7 @@ export const MODEL_FORMATS: readonly ModelFormat[] = [
 		canImport: true,
 		canExport: false,
 		isBundle: false,
-		siblingExtensions: []
+		siblingExtensions: ['jpeg', 'jpg', 'png', 'webp', 'tga', 'tif', 'tiff']
 	},
 	{
 		/*
@@ -208,12 +212,22 @@ export const MODEL_FORMATS: readonly ModelFormat[] = [
 		canExport: false,
 		isBundle: true,
 		/*
-		  The material library, and the image formats a browser can actually
-		  decode. TGA and BMP appear in older OBJ sets and are deliberately
-		  absent: offering them in the picker would accept a file that reaches
-		  `ImageLoader` and silently fails to become a texture.
+		  The material library, and the image formats that become a texture.
+		  TGA and TIFF never reach an `img`: the bridge registers decoders for
+		  them, so they are as readable as a PNG. BMP is still absent, since
+		  nothing decodes it reliably, and offering it would accept a file that
+		  silently fails to become a texture.
 		*/
-		siblingExtensions: ['mtl', 'jpeg', 'jpg', 'png', 'webp']
+		siblingExtensions: [
+			'mtl',
+			'jpeg',
+			'jpg',
+			'png',
+			'webp',
+			'tga',
+			'tif',
+			'tiff'
+		]
 	}
 ]
 
@@ -325,6 +339,28 @@ export function modelFormatForFileName(fileName: string): ModelFormat | null {
 }
 
 /** Whether a file name names a format the loader can read. */
+/**
+ * Whether a model in `format` uses a file that arrived beside it.
+ *
+ * A bundle uses everything that came with it: the selection is a folder, and
+ * its manifest decides what it reads, which can be a name no list here
+ * predicts (a glTF's `.ktx2`). A format that only *may* use siblings, which
+ * is FBX and the images it names, uses the files whose extension it declares
+ * and nothing else, so a game-asset folder's `.psd` and `.exr` are neither
+ * read into memory nor counted as part of the model.
+ *
+ * The one statement of that rule: the load hands a model these files, and the
+ * converter measures the model by them, so the two cannot disagree about what
+ * the output contains.
+ */
+export function usesSibling(format: ModelFormat, fileName: string): boolean {
+	if (format.isBundle) return true
+
+	const lowered = fileName.toLowerCase()
+	const dot = lowered.lastIndexOf('.')
+	return dot >= 0 && format.siblingExtensions.includes(lowered.slice(dot + 1))
+}
+
 export function isImportableFileName(fileName: string): boolean {
 	return modelFormatForFileName(fileName)?.canImport === true
 }

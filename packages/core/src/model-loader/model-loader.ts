@@ -35,6 +35,7 @@ import {
 	getThreeKtx2Loader,
 	prepareThreeKtx2Transcoder
 } from './ktx2-three-loader'
+import { registerNonColorVertexColors } from './non-color-vertex-colors'
 import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
 import { threeSourceBridge } from './three-source-bridges'
@@ -134,6 +135,7 @@ export class ModelLoader {
 			])
 
 		const loader = new GLTFLoader(manager)
+		registerNonColorVertexColors(loader)
 		loader.setDRACOLoader(dracoLoader)
 		if (meshoptDecoder) loader.setMeshoptDecoder(meshoptDecoder)
 		if (ktx2Loader) loader.setKTX2Loader(ktx2Loader)
@@ -814,9 +816,9 @@ export class ModelLoader {
 	 * Load a model and convert to Three.js scene (browser environment).
 	 * This is a convenience method that combines loading and Three.js conversion.
 	 *
-	 * `assetFiles` are the files that arrived beside the model. Only a bundle
-	 * read through three.js uses them - an OBJ and its `.mtl` today - and the
-	 * glTF family takes its own path, `loadGLTFWithAssetsToThreeJS`, because
+	 * `assetFiles` are the files that arrived beside the model. Only a format
+	 * read through three.js uses them - an OBJ and its `.mtl`, an FBX and the
+	 * images it names - and the glTF family takes its own path, `loadGLTFWithAssetsToThreeJS`, because
 	 * glTF-Transform resolves those references itself.
 	 */
 	public async loadToThreeJS(

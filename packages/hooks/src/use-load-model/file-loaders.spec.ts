@@ -12,7 +12,8 @@
  *    with the accept-pattern and owner specs;
  *  - make `modelFormatForFileName` case-sensitive again and `MODEL.GLB` goes
  *    red here as well as in the owner's own spec;
- *  - delete the `format.isBundle` branch and the glTF sibling case goes red;
+ *  - hand siblings only to `format.isBundle` again and the FBX image case goes
+ *    red; send every bundle to the glTF loader and the OBJ case goes red;
  *  - drop the `withDroppedPath` call in `expandDirectories` and two of the four
  *    dropped-path cases go red, `adopts the path react-dropzone computed` and
  *    `keeps two same-named files in sibling folders apart`. The other two assert
@@ -194,6 +195,24 @@ describe('a bundle reaches the loader with its siblings', () => {
 
 		const [passedObj, passedSiblings] = loadToThreeJS.mock.calls[0]
 		expect(passedObj).toBe(obj)
+		expect(passedSiblings).toEqual(siblings)
+	})
+
+	/*
+	  Not a bundle, and still handed what came with it: an FBX that names its
+	  images rather than embedding them reads them from the dropped folder.
+	*/
+	it('passes the images beside an .fbx to the bridged loader', async () => {
+		const { ctx, loadToThreeJS, loadGLTFWithAssetsToThreeJS } = context()
+		const fbx = file('car.fbx')
+		const siblings = [file('paint.png'), file('trim.tga')]
+
+		/* A `.psd` it cannot read stays on disk rather than in memory. */
+		await loadModelFromFiles([fbx, ...siblings, file('paint.psd')], ctx)
+
+		expect(loadGLTFWithAssetsToThreeJS).not.toHaveBeenCalled()
+		const [passedFbx, passedSiblings] = loadToThreeJS.mock.calls[0]
+		expect(passedFbx).toBe(fbx)
 		expect(passedSiblings).toEqual(siblings)
 	})
 
