@@ -289,8 +289,16 @@ OAUTH_AUTHORIZATION_PATH="/oauth/consent"
 CLI_OAUTH_CLIENT_NAME="Vectreal CLI"
 CLI_REDIRECT_URIS='["http://127.0.0.1:51730/callback","http://127.0.0.1:51731/callback","http://127.0.0.1:51732/callback"]'
 
+# The PATCH that turns the OAuth server on returns before Auth serves it: for a
+# few seconds the clients endpoint still answers 404 feature_disabled, as it
+# does wherever the server is off. The sync waits that answer out, and only that
+# one, for up to this many tries this many seconds apart.
+CLI_CLIENT_LIST_ATTEMPTS=10
+CLI_CLIENT_LIST_DELAY=3
+
 # Prints the CLI client as JSON, or nothing when it is not registered.
-# Returns 0 when the lookup itself worked, 1 when it did not.
+# Returns 0 when the lookup itself worked, 2 when Auth reports the OAuth server
+# disabled, 1 when it failed any other way.
 find_cli_client() {
   local supabase_url="$1" secret_key="$2"
   local response http_code body
@@ -299,9 +307,12 @@ find_cli_client() {
     -H "apikey: $secret_key" -H "Authorization: Bearer $secret_key" 2>&1)
   http_code=$(printf '%s' "$response" | tail -n1)
   body=$(printf '%s' "$response" | sed '$d')
+  if [[ "$http_code" == 404 && "$(printf '%s' "$body" | jq -r '.error_code?' 2>/dev/null)" == feature_disabled ]]; then
+    return 2
+  fi
   [[ "$http_code" =~ ^2 ]] || return 1
   printf '%s' "$body" | jq -c --arg name "$CLI_OAUTH_CLIENT_NAME" \
-    'first(.clients[]? | select(.client_name == $name)) // empty'
+    'first(.clients[]? | select(.client_name == $name)) // empty' || return 1
 }
 
 # Whether a CLI client is public with no secret, as the CLI's PKCE exchange
@@ -316,8 +327,16 @@ cli_client_is_public() {
 # nothing. Returns 0 when the client is as it should be afterwards.
 ensure_cli_client() {
   local supabase_url="$1" secret_key="$2" label="$3"
-  local client
-  if ! client=$(find_cli_client "$supabase_url" "$secret_key"); then
+  local client status attempt
+  for (( attempt = 1; ; attempt++ )); do
+    client=$(find_cli_client "$supabase_url" "$secret_key") && status=0 || status=$?
+    (( status == 2 && attempt < CLI_CLIENT_LIST_ATTEMPTS )) || break
+    sleep "$CLI_CLIENT_LIST_DELAY"
+  done
+  if (( status == 2 )); then
+    err "$label - Auth still reports the OAuth server disabled after ${CLI_CLIENT_LIST_ATTEMPTS} tries"
+    return 1
+  elif (( status != 0 )); then
     err "$label - could not list OAuth clients"
     return 1
   fi
