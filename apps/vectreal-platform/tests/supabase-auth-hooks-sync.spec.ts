@@ -9,7 +9,8 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -168,6 +169,129 @@ describe('the hosted OAuth server and CLI client', () => {
 		expect(between(SCRIPT, 'find_cli_client() {', '\n}\n')).toContain(
 			'select(.client_name == $name)'
 		)
+	})
+})
+
+describe('the CLI client step after the PATCH', () => {
+	// Hosted Auth applies the PATCH a few seconds after it returns, and until
+	// then the clients endpoint answers as it does with the OAuth server off
+	// (reproduced on a local GoTrue v2.196.0). Run, not read: the stubs stand in
+	// for curl and sleep, each response consumed in order, the last one repeated.
+	const DISABLED = [
+		'{"code":404,"error_code":"feature_disabled","msg":"OAuth server is disabled"}',
+		404
+	] as const
+	const CLIENT = {
+		client_id: 'cli-id',
+		client_name: 'Vectreal CLI',
+		client_type: 'public',
+		token_endpoint_auth_method: 'none',
+		redirect_uris: JSON.parse(
+			SCRIPT.match(/^CLI_REDIRECT_URIS='([^'\n]+)'$/m)?.[1] ?? 'null'
+		)
+	}
+
+	function runEnsure(responses: ReadonlyArray<readonly [string, number]>) {
+		const dir = mkdtempSync(join(tmpdir(), 'cli-client-'))
+		try {
+			writeFileSync(
+				join(dir, 'responses'),
+				JSON.stringify(responses.map(([body, code]) => `${body}\n${code}`))
+			)
+			writeFileSync(join(dir, 'calls'), '0')
+			const constants = SCRIPT.match(
+				/^(CLI_OAUTH_CLIENT_NAME|CLI_REDIRECT_URIS|CLI_CLIENT_LIST_ATTEMPTS|CLI_CLIENT_LIST_DELAY)=.*$/gm
+			)
+			const stubs = `
+curl() {
+  local n; n=$(( $(cat "$DIR/calls") + 1 )); echo "$n" > "$DIR/calls"
+  jq -r --argjson i "$n" '.[([$i, length] | min) - 1]' "$DIR/responses"
+}
+sleep() { echo "$1" >> "$DIR/sleeps"; }
+# jq 1.6 exits 2 on a parse error, the status find_cli_client reserves for
+# feature_disabled; 1.7 exits 5. Answer as 1.6 does whatever is installed.
+jq() { command jq "$@"; local s=$?; (( s == 5 )) && return 2; return "$s"; }
+ok() { echo "ok: $*"; }
+err() { echo "err: $*"; }`
+			const result = spawnSync(
+				'bash',
+				[
+					'-c',
+					[
+						...(constants ?? []),
+						stubs,
+						between(SCRIPT, 'find_cli_client() {', '\n}\n') + '\n}',
+						between(SCRIPT, 'cli_client_is_public() {', '\n}\n') + '\n}',
+						between(SCRIPT, 'ensure_cli_client() {', '\n}\n') + '\n}',
+						'ensure_cli_client https://auth.test key staging'
+					].join('\n')
+				],
+				{ encoding: 'utf8', env: { ...process.env, DIR: dir } }
+			)
+			const sleeps = (() => {
+				try {
+					return readFileSync(join(dir, 'sleeps'), 'utf8').trim().split('\n')
+				} catch {
+					return []
+				}
+			})()
+			return {
+				status: result.status,
+				stdout: result.stdout,
+				calls: Number(readFileSync(join(dir, 'calls'), 'utf8')),
+				sleeps
+			}
+		} finally {
+			rmSync(dir, { recursive: true, force: true })
+		}
+	}
+
+	it('waits while Auth still reports the OAuth server disabled', () => {
+		const run = runEnsure([
+			DISABLED,
+			DISABLED,
+			[JSON.stringify({ clients: [CLIENT] }), 200]
+		])
+
+		expect(run.stdout).toContain('ok: staging - CLI client: cli-id')
+		expect(run.status).toBe(0)
+		expect(run.calls).toBe(3)
+		expect(run.sleeps).toEqual(['3', '3'])
+	})
+
+	it('gives up after a bounded wait', () => {
+		const run = runEnsure([DISABLED])
+
+		expect(run.status).toBe(1)
+		expect(run.stdout).toContain('OAuth server disabled after 10 tries')
+		expect(run.calls).toBe(10)
+		expect(run.sleeps).toHaveLength(9)
+	})
+
+	it.each([
+		['{"code":401,"error_code":"no_authorization"}', 401],
+		['{"code":404,"error_code":"not_found"}', 404],
+		['<html>Bad Gateway</html>', 502],
+		['<html>Proxy</html>', 200]
+	] as const)('fails at once on any other error: %s', (body, code) => {
+		const run = runEnsure([[body, code]])
+
+		expect(run.status).toBe(1)
+		expect(run.stdout).toContain('err: staging - could not list OAuth clients')
+		expect(run.calls).toBe(1)
+		expect(run.sleeps).toEqual([])
+	})
+
+	it('waits only in the sync, never in --verify', () => {
+		const ensure = between(SCRIPT, 'ensure_cli_client() {', '\n}\n')
+
+		// The wait lives in ensure_cli_client alone, and only the sync calls it.
+		expect(ensure).toContain('sleep "$CLI_CLIENT_LIST_DELAY"')
+		expect(
+			SCRIPT.replace(ensure, '').match(/CLI_CLIENT_LIST_(ATTEMPTS|DELAY)\b/g)
+		).toEqual(['CLI_CLIENT_LIST_ATTEMPTS', 'CLI_CLIENT_LIST_DELAY'])
+		expect(SCRIPT.match(/ensure_cli_client\b/g)).toHaveLength(2)
+		expect(verify).not.toContain('sleep')
 	})
 })
 
