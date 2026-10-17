@@ -1,8 +1,11 @@
-# Base image with Node.js, the official image from AWS's public mirror rather
-# than Docker Hub: Hub's anonymous pull limit, shared by every GitHub runner,
-# failed staging deploys with a 429. No `# syntax=` line for the same reason:
-# BuildKit's built-in frontend covers everything this file uses.
-FROM public.ecr.aws/docker/library/node:22-alpine AS base
+# Base image with Node.js: the official node:22-alpine, mirrored into this
+# organization's GHCR by .github/workflows/ci-mirror-node-image.yaml. The deploy
+# pulls it with GITHUB_TOKEN. Anonymous pulls are metered per IP, which every
+# GitHub runner shares, so other tenants used up the quota: Docker Hub and then
+# ECR Public both failed staging deploys with a 429. Building locally needs
+# `docker login ghcr.io` unless the package is public. No `# syntax=` line for
+# the same reason: BuildKit's built-in frontend covers everything this file uses.
+FROM ghcr.io/vectreal/node:22-alpine AS base
 ARG PNPM_VERSION=10.28.0
 WORKDIR /app
 ENV PNPM_HOME=/usr/local/bin
