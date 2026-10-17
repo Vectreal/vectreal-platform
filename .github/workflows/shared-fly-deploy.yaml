@@ -52,6 +52,8 @@ jobs:
         with:
           driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
+      # Also authenticates the Dockerfile's base image pull, which comes from
+      # the GHCR mirror kept by ci-mirror-node-image.yaml.
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
         with:
