@@ -11,11 +11,14 @@
  * were found by hand, by walking the static imports from a route's chunk in the
  * emitted build. This is that walk, kept.
  *
- * A route's first load is its chunk plus every chunk that chunk imports
- * statically, gzipped. Dynamic imports are not followed: they load later, on a
- * condition, which is how the 3D on these pages stays off the first load.
+ * A route's first load is the client entry, the route's chunk and the chunk of
+ * every layout above it up to root, plus every chunk those import statically,
+ * gzipped. Counting the route alone let the nav layout, which every marketing
+ * page loads, grow 4.7 KB with no budget moving. Dynamic imports are not
+ * followed: they load later, on a condition, which is how the 3D on these pages
+ * stays off the first load.
  *
- * The budgets sit a little above the sizes measured on 24 Sep 2026, so an
+ * The budgets sit a little above the sizes measured on 18 Oct 2026, so an
  * ordinary change passes and a new dependency or a leaked module does not.
  * Raising one is a decision: say why in the PR.
  */
@@ -32,17 +35,18 @@ const ASSETS = path.resolve(
 
 /**
  * Route id, as `app/routes.tsx` gives it, and its budget in KB gzipped.
- * Measured: 289, 354, 363, 366, 362; the two newsroom routes 367 and 374 on
- * 11 Oct 2026, down from 500 and 504 when each carried every article.
+ * Measured on 18 Oct 2026, once the entry and the layouts were counted: 399,
+ * 390, 392, 395, 389, and the two newsroom routes 392 and 400. Home had read
+ * 298, because its own chunk never imports the router runtime the entry loads.
  */
 const BUDGETS_KB: Record<string, number> = {
-	'home-index': 300,
-	'routes/layouts/convert-layout': 370,
-	'routes/pricing-page/pricing-page': 380,
-	'routes/contact-page': 385,
-	'routes/docs/index': 380,
-	'routes/news-room-page/news-room-page': 380,
-	'routes/news-room-page/news-room-article-page': 385
+	'home-index': 405,
+	'routes/layouts/convert-layout': 395,
+	'routes/pricing-page/pricing-page': 395,
+	'routes/contact-page': 400,
+	'routes/docs/index': 395,
+	'routes/news-room-page/news-room-page': 395,
+	'routes/news-room-page/news-room-article-page': 405
 }
 
 /*
@@ -50,7 +54,7 @@ const BUDGETS_KB: Record<string, number> = {
   from file names: a shared chunk can carry a route's name, as a component
   chunk called pricing sits beside the pricing page's module.
 */
-function routeModules() {
+function routeManifest() {
 	const [manifest, ...more] = readdirSync(ASSETS).filter((file) =>
 		/^manifest-[\w-]+\.js$/.test(file)
 	)
@@ -58,10 +62,10 @@ function routeModules() {
 		throw new Error(`Expected one route manifest in ${ASSETS}`)
 	const source = readFileSync(path.join(ASSETS, manifest), 'utf8')
 	const json = source.slice(source.indexOf('=') + 1).replace(/;\s*$/, '')
-	const { routes } = JSON.parse(json) as {
-		routes: Record<string, { module: string }>
+	return JSON.parse(json) as {
+		entry: { module: string }
+		routes: Record<string, { module: string; parentId?: string }>
 	}
-	return routes
 }
 
 /** What must never be on these first loads, each by a pattern only it emits. */
@@ -77,9 +81,9 @@ const FORBIDDEN: Record<string, RegExp> = {
 
 const STATIC_IMPORT = /(?:from|import)\s*"\.\/([^"]+\.js)"/g
 
-function staticClosure(files: string[], entry: string) {
+function staticClosure(files: string[], entries: string[]) {
 	const seen = new Set<string>()
-	const todo = [entry]
+	const todo = [...entries]
 	while (todo.length) {
 		const file = todo.pop() as string
 		if (seen.has(file) || !files.includes(file)) continue
@@ -92,16 +96,21 @@ function staticClosure(files: string[], entry: string) {
 
 function main() {
 	const files = readdirSync(ASSETS).filter((file) => file.endsWith('.js'))
-	const routes = routeModules()
+	const { entry, routes } = routeManifest()
 	const failures: string[] = []
 
 	for (const [route, budget] of Object.entries(BUDGETS_KB)) {
-		const module = routes[route]?.module
-		if (!module) {
+		if (!routes[route]) {
 			failures.push(`${route}: no such route; was it renamed?`)
 			continue
 		}
-		const closure = staticClosure(files, path.basename(module))
+		const modules = [entry.module]
+		for (let id: string | undefined = route; id; id = routes[id].parentId)
+			modules.push(routes[id].module)
+		const closure = staticClosure(
+			files,
+			modules.map((module) => path.basename(module))
+		)
 		let bytes = 0
 		const found = new Map<string, string>()
 		for (const file of closure) {
