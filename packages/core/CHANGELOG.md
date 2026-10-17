@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/core-v2.1.0...core-v2.2.0) (2026-10-17)
+
+
+### Features
+
+* **hooks:** load a model from a URL ([#1045](https://github.com/Vectreal/vectreal-platform/issues/1045)) ([645fa06](https://github.com/Vectreal/vectreal-platform/commit/645fa06eb76999505afcdc6d9fbaac2c3eb1f68c))
+* **viewer:** draw a camera switcher when a scene has more than one camera ([#1019](https://github.com/Vectreal/vectreal-platform/issues/1019)) ([64f7925](https://github.com/Vectreal/vectreal-platform/commit/64f792523dc6681de697e93a5577d4baa81c315d))
+* **viewer:** give scenes a stage for the shadow to land on ([#1000](https://github.com/Vectreal/vectreal-platform/issues/1000)) ([2a03d3b](https://github.com/Vectreal/vectreal-platform/commit/2a03d3b1098779676a70079809401145b2e83733))
+* **viewer:** load a model from a URL with the src prop ([#1046](https://github.com/Vectreal/vectreal-platform/issues/1046)) ([a34a96f](https://github.com/Vectreal/vectreal-platform/commit/a34a96ffd2a2adf250dd157eb9fb51b49ebb61c4))
+
+
+### Bug Fixes
+
+* **core:** advance the optimizer's revision on every document commit ([#1037](https://github.com/Vectreal/vectreal-platform/issues/1037)) ([d40bb3a](https://github.com/Vectreal/vectreal-platform/commit/d40bb3a8061d7500f1843473e06554966e1ab8b7))
+* **core:** keep a texture's MIME type when naming it ([#1041](https://github.com/Vectreal/vectreal-platform/issues/1041)) ([907b8aa](https://github.com/Vectreal/vectreal-platform/commit/907b8aa59253828b98caf714f73d8dfd285d9085))
+* **core:** keep FBX animation, lights, cameras and up axis through conversion ([#982](https://github.com/Vectreal/vectreal-platform/issues/982)) ([07fa6f1](https://github.com/Vectreal/vectreal-platform/commit/07fa6f1aa9824761f572f22deaf2de9191feceae))
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/core-v2.0.0...core-v2.1.0) (2026-10-10)
 
 

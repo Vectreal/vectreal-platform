@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v2.1.0...hooks-v2.2.0) (2026-10-17)
+
+
+### Features
+
+* **hooks:** load a model from a URL ([#1045](https://github.com/Vectreal/vectreal-platform/issues/1045)) ([645fa06](https://github.com/Vectreal/vectreal-platform/commit/645fa06eb76999505afcdc6d9fbaac2c3eb1f68c))
+
+
+### Bug Fixes
+
+* **hooks:** report optimizer failures instead of leaving state that contradicts them ([#1028](https://github.com/Vectreal/vectreal-platform/issues/1028)) ([0bf9d0a](https://github.com/Vectreal/vectreal-platform/commit/0bf9d0aa9e510dd9f46419e07dee0ea53f8dbf5f))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 2.2.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v2.0.0...hooks-v2.1.0) (2026-10-10)
 
 
