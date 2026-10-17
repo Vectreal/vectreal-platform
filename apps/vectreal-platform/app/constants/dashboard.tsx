@@ -35,6 +35,7 @@ export const DASHBOARD_ROUTES = {
 	BILLING_UPGRADE_SUCCESS: '/dashboard/billing/upgrade-success',
 	BILLING_UPGRADE_CANCELED: '/dashboard/billing/upgrade-canceled',
 	SETTINGS: '/dashboard/settings',
+	CONNECTED_AGENTS: '/dashboard/connected-agents',
 	PROJECT_DETAIL: (projectId: string) => `/dashboard/projects/${projectId}`,
 	FOLDER_DETAIL: (projectId: string, folderId: string) =>
 		`/dashboard/projects/${projectId}/folder/${folderId}`,
@@ -155,6 +156,11 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 		// Named, rather than "your account settings and preferences", which is the
 		// title again in more words. These are the three things the page holds.
 		description: 'Your display name, theme, and cookie choices',
+		actionVariant: undefined
+	},
+	'connected-agents': {
+		title: 'Connected agents',
+		description: 'Tools you signed in to Vectreal, and what each may do',
 		actionVariant: undefined
 	}
 } as const

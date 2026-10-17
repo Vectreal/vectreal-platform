@@ -30,6 +30,7 @@ export type DashboardView =
 	| 'usage'
 	| 'billing'
 	| 'settings'
+	| 'connected-agents'
 	| 'dashboard'
 
 /**
@@ -50,6 +51,7 @@ export type RouteContext =
 	| 'billing-checkout-success'
 	| 'billing-checkout-canceled'
 	| 'settings'
+	| 'connected-agents'
 
 /**
  * Navigation state passed through React Router

@@ -20,9 +20,42 @@ export class AgentGrantOrganizationError extends Error {
 	}
 }
 
-/** Every client the user has approved, one row each. */
-export async function listAgentGrants(userId: string): Promise<AgentGrant[]> {
-	return db.select().from(agentGrants).where(eq(agentGrants.userId, userId))
+/**
+ * Every client the user has approved, one row each, with the name of the
+ * organization it acts in. The name is read even when the user has since left
+ * that organization, so the dashboard can say which one a dead grant named.
+ */
+export async function listAgentGrants(
+	userId: string
+): Promise<Array<AgentGrant & { organizationName: string }>> {
+	const rows = await db
+		.select({ grant: agentGrants, organizationName: organizations.name })
+		.from(agentGrants)
+		.innerJoin(organizations, eq(organizations.id, agentGrants.organizationId))
+		.where(eq(agentGrants.userId, userId))
+
+	return rows.map(({ grant, organizationName }) => ({
+		...grant,
+		organizationName
+	}))
+}
+
+/**
+ * Remove what the user approved for one client. Keyed by the user as well as
+ * the client, so a caller can only ever delete its own row.
+ */
+export async function deleteAgentGrant(
+	userId: string,
+	oauthClientId: string
+): Promise<void> {
+	await db
+		.delete(agentGrants)
+		.where(
+			and(
+				eq(agentGrants.userId, userId),
+				eq(agentGrants.oauthClientId, oauthClientId)
+			)
+		)
 }
 
 /**

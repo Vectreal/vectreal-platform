@@ -4,6 +4,10 @@
  * must return nothing once the user has left that organization, even though
  * leaving deletes only the membership and not the grant.
  *
+ * Also the dashboard's half: listing a user's grants with their organization
+ * names, and deleting one, which must never reach another user's row for the
+ * same client.
+ *
  * Opt-in:
  *   pnpm nx run vectreal-platform:supabase-start
  *   pnpm nx run vectreal-platform:test-integration
@@ -150,5 +154,38 @@ describe('findAgentGrantForMember', () => {
 			organizationId: leftOrgId,
 			role: 'owner'
 		})
+	})
+
+	it("lists the user's grants with organization names, a left one included", async () => {
+		const grants = await repository.listAgentGrants(userId)
+
+		expect(
+			grants
+				.map(({ oauthClientId, organizationName }) => ({
+					oauthClientId,
+					organizationName
+				}))
+				.sort((a, b) => a.oauthClientId.localeCompare(b.oauthClientId))
+		).toEqual(
+			[
+				{ oauthClientId: clientId, organizationName: `actor-${orgId}` },
+				{ oauthClientId: leftClientId, organizationName: `actor-${leftOrgId}` }
+			].sort((a, b) => a.oauthClientId.localeCompare(b.oauthClientId))
+		)
+	})
+
+	it("deletes only the user's own grant for a client", async () => {
+		await repository.deleteAgentGrant(userId, clientId)
+
+		expect(
+			(await repository.listAgentGrants(userId)).map(
+				({ oauthClientId }) => oauthClientId
+			)
+		).toEqual([leftClientId])
+		expect(
+			(await repository.listAgentGrants(otherUserId)).map(
+				({ oauthClientId }) => oauthClientId
+			)
+		).toEqual([clientId])
 	})
 })
