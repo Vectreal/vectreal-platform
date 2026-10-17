@@ -71,6 +71,8 @@ export default [
 	route('api/theme', './routes/api/theme.ts'),
 	// Agent API: bearer tokens only, resolved by resolveAgentActor.
 	route('api/v1/me', './routes/api/v1/me.ts'),
+	// Public: tells the CLI which OAuth client and redirect ports to use.
+	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [
