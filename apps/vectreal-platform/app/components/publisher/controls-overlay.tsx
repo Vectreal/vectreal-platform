@@ -27,6 +27,7 @@ import { ToolSidebar } from './sidebars/tool-sidebar'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useOpenExampleScene } from '../../hooks/scene-loader/use-open-example-scene'
+import { useImgTo3dGeneration } from '../../hooks/use-img-to-3d-generation'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
 import { useOptimizationDrawerFlow } from '../../hooks/use-optimization-drawer-flow'
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
@@ -62,6 +63,7 @@ const OverlayControls = ({
 	publishedMeta,
 	maxSceneBytes,
 	recentScenes,
+	imgTo3dEnabled,
 	children
 }: PublisherLoaderData & { children: ReactNode }) => {
 	const navigate = useNavigate()
@@ -138,6 +140,8 @@ const OverlayControls = ({
 	// Here rather than in the empty stage, which a revalidation unmounts mid-download: see its `sampleDownload`.
 	const sampleDownload = useSampleDownload()
 	const openExampleScene = useOpenExampleScene(uploadFiles)
+	// Here for the same reason: opening a variant unmounts the empty stage.
+	const imgTo3d = useImgTo3dGeneration(uploadFiles)
 	/*
 	  The rail, the publish card, the sidebars and the header's scene controls
 	  act on a scene, so an empty stage has none of them: nothing on screen is a
@@ -361,6 +365,7 @@ const OverlayControls = ({
 						sampleDownload={sampleDownload}
 						onOpenExample={openExampleScene}
 						recentScenes={recentScenes}
+						imgTo3d={imgTo3dEnabled ? imgTo3d : undefined}
 					/>
 				) : (
 					/*

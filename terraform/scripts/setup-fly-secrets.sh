@@ -217,6 +217,11 @@ FLY_SECRETS_OPTIONAL=(
   # instead of signed ones (embed-asset-signature.server.ts), so embeds still
   # load but no asset is cached at the edge.
   "EMBED_ASSET_SIGNING_SECRET"
+  # Genuinely degrades: every image-to-3D route answers runtime_unavailable
+  # (503). Only accounts the PostHog flag lets in can reach them at all.
+  "IMG_TO_3D_RUNTIME_BASE_URL"
+  "IMG_TO_3D_RUNTIME_PROXY_KEY"
+  "IMG_TO_3D_RUNTIME_PROXY_SECRET"
 )
 
 # Sent to Fly. One value covers both environments.
