@@ -164,6 +164,7 @@ describe('runWithIdempotentSceneRequest', () => {
 
 		expect(operation).not.toHaveBeenCalled()
 		expect(response.status).toBe(201)
+		expect(response.headers.get('Content-Type')).toBe('application/json')
 		expect(await response.json()).toEqual({ success: true, data: 'saved' })
 	})
 
@@ -187,7 +188,7 @@ describe('runWithIdempotentSceneRequest', () => {
 		})
 	})
 
-	it('keys the request on its id, user, action and scene', async () => {
+	it('keys and reserves the request on its id, user, action and scene', async () => {
 		guard.reserveIdempotentSceneRequest.mockResolvedValue({
 			created: true,
 			record: { status: 'pending' }
@@ -200,6 +201,13 @@ describe('runWithIdempotentSceneRequest', () => {
 		})
 
 		expect(guard.buildSceneRequestKey).toHaveBeenCalledWith({
+			requestId: 'r1',
+			userId: 'u1',
+			action: 'commit-scene-save',
+			sceneId: 's1'
+		})
+		expect(guard.reserveIdempotentSceneRequest).toHaveBeenCalledWith({
+			requestKey: 'request-key',
 			requestId: 'r1',
 			userId: 'u1',
 			action: 'commit-scene-save',
