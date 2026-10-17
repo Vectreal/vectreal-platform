@@ -5,8 +5,9 @@ name: CI - Mirror Node Base Image
 # its base image from GHCR with GITHUB_TOKEN instead of anonymously. Anonymous
 # pulls from Docker Hub and ECR Public are metered per IP, which GitHub's
 # runners share: both failed staging deploys with a 429. This job is the only
-# anonymous pull left, and it runs once a day rather than on every deploy, so a
-# 429 here delays a security patch by a day instead of failing a release.
+# anonymous pull left. It runs once a day rather than on every deploy and tries
+# three registries serving the same digest, so a 429 here delays a security
+# patch by a day instead of failing a release.
 #
 # The pull_request trigger runs a change to this file before merge. It pushes
 # only when the mirror does not exist yet, which is how it is first created;
@@ -44,7 +45,12 @@ jobs:
       github.actor != 'dependabot[bot]')
     runs-on: ubuntu-latest
     env:
-      SOURCE: public.ecr.aws/docker/library/node:22-alpine
+      # The official image, one index digest at all three. Google's Docker Hub
+      # mirror first; ECR Public answered this job's first run with a 429.
+      SOURCES: >-
+        mirror.gcr.io/library/node:22-alpine
+        docker.io/library/node:22-alpine
+        public.ecr.aws/docker/library/node:22-alpine
       TARGET: ghcr.io/vectreal/node:22-alpine
     steps:
       - name: Log in to GitHub Container Registry
@@ -72,10 +78,22 @@ jobs:
               dry_run=""
             fi
           fi
-          docker buildx imagetools create $dry_run \
-            --annotation "index:org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
-            --tag "$TARGET" \
-            "$SOURCE"
+          copied=""
+          for source in $SOURCES; do
+            if docker buildx imagetools create $dry_run \
+              --annotation "index:org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+              --tag "$TARGET" \
+              "$source"; then
+              copied="$source"
+              break
+            fi
+            echo "::warning::Copy from $source failed; trying the next registry."
+          done
+          if [ -z "$copied" ]; then
+            echo "::error::No registry served node:22-alpine."
+            exit 1
+          fi
+          echo "Copied from $copied."
           if [ -z "$dry_run" ]; then
             docker buildx imagetools inspect "$TARGET"
           fi
