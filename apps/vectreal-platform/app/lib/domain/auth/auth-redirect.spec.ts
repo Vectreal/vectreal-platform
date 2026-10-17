@@ -41,6 +41,14 @@ describe('getSafeNextPath', () => {
 		)
 	})
 
+	// An agent's sign-in lands on consent with its authorization in the query;
+	// losing it to /dashboard would strand the CLI waiting on its callback.
+	it('keeps the OAuth consent page and its authorization id', () => {
+		expect(getSafeNextPath('/oauth/consent?authorization_id=abc123')).toBe(
+			'/oauth/consent?authorization_id=abc123'
+		)
+	})
+
 	it('rejects /dashboardevil (prefix but not slash-separated)', () => {
 		expect(getSafeNextPath('/dashboardevil')).toBe('/dashboard')
 	})
