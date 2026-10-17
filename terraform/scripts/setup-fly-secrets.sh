@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Vectreal Platform - Fly.io Secrets + Supabase Hook Sync
+# Vectreal Platform - Fly.io Secrets + Supabase Auth Hook Sync
 # =============================================================================
 # Usage:
 #   ./setup-fly-secrets.sh               # sync both envs
@@ -18,11 +18,13 @@
 #
 # Syncs:
 #   1. Fly.io app secrets (fly secrets set)
-#   2. Supabase send_email hook URI + secret (via Management API)
+#   2. Supabase auth hooks (via Management API): send_email URI + secret, and
+#      custom_access_token, enabled only once its function exists
 #
 # --verify is a gate, not a report: it exits non-zero when a *required* secret
-# is missing or the live hook URI does not match APPLICATION_URL. An optional
-# one that is unset warns and passes, which is what the sync does with it.
+# is missing, when either auth hook is disabled or its live URI drifted, or when
+# the token hook's function is missing. An optional secret that is unset warns
+# and passes, which is what the sync does with it.
 # =============================================================================
 
 RED='\033[0;31m'
@@ -263,6 +265,36 @@ strip_hook_prefix() {
   printf '%s' "$1" | tr -d '\r\n' | sed -e 's/^v1,whsec_//' -e 's/^whsec_//' | tr -d ' '
 }
 
+# The token hook is a Postgres function (migration 0028), the same one
+# `[auth.hook.custom_access_token]` in supabase/config.toml names for the local
+# stack. send_email stays an HTTP hook because it renders and sends mail from
+# the app; this one only edits claims, on every token Auth issues.
+CUSTOM_ACCESS_TOKEN_HOOK_URI="pg-functions://postgres/public/custom_access_token_hook"
+
+# Auth fails every token while the hook names a function that does not exist,
+# so nothing enables it, or calls it healthy, until the function is there.
+# Reads the catalogs, which the read-only role can see whatever 0027 revoked.
+# Returns 0 when present, 1 when absent, 2 when the check itself failed.
+custom_access_token_function_exists() {
+  local project_ref="$1"
+  local sql="select exists (select 1 from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'custom_access_token_hook') as present"
+  local response http_code body
+  response=$(curl -s -w "\n%{http_code}" -X POST \
+    "https://api.supabase.com/v1/projects/${project_ref}/database/query/read-only" \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg query "$sql" '{query: $query}')" 2>&1)
+  http_code=$(printf '%s' "$response" | tail -n1)
+  body=$(printf '%s' "$response" | sed '$d')
+
+  [[ "$http_code" =~ ^2 ]] || return 2
+  case "$(printf '%s' "$body" | jq -r '.[0].present' 2>/dev/null)" in
+    true) return 0 ;;
+    false) return 1 ;;
+    *) return 2 ;;
+  esac
+}
+
 # ===========================================================================
 # VERIFY MODE
 # ===========================================================================
@@ -328,14 +360,15 @@ if [[ "$MODE" == "verify" ]]; then
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
     check_env_secrets "vectreal-platform"
 
-  section "Supabase auth hook (live value)"
+  section "Supabase auth hooks (live values)"
 
   # The one thing here that is a real drift check rather than a presence check.
-  # The hook URI is what decides whether confirmation emails are delivered at
-  # all, and it lives in Supabase's project config - editable in a dashboard,
-  # invisible to this repo. Reading it back is the only way the repo learns that
-  # someone changed it.
-  check_hook_uri() {
+  # The hooks live in Supabase's project config - editable in a dashboard,
+  # invisible to this repo - and each one decides something for every user:
+  # send_email whether any auth email is delivered, custom_access_token whether
+  # agent tokens carry the audience the API checks. Reading them back is the
+  # only way the repo learns that someone changed one.
+  check_auth_hooks() {
     local project_ref="$1" expected_url="$2" label="$3"
     local expected="${expected_url}/auth/send-email"
 
@@ -366,19 +399,48 @@ if [[ "$MODE" == "verify" ]]; then
       err "$label - send_email hook is DISABLED; no auth email is delivered"
       VERIFY_FAILED+=("$label/hook-disabled")
     elif [[ "$actual" != "$expected" ]]; then
-      err "$label - hook URI drifted"
+      err "$label - send_email hook URI drifted"
       printf "      expected: %s\n      actual:   %s\n" "$expected" "$actual"
       VERIFY_FAILED+=("$label/hook-uri")
     else
-      ok "$label - $actual"
+      ok "$label - send_email: $actual"
     fi
+
+    enabled=$(printf '%s' "$body" | jq -r '.hook_custom_access_token_enabled // false')
+    actual=$(printf '%s' "$body" | jq -r '.hook_custom_access_token_uri // ""')
+
+    if [[ "$enabled" != "true" ]]; then
+      err "$label - custom_access_token hook is DISABLED; agent tokens lack their audience"
+      VERIFY_FAILED+=("$label/token-hook-disabled")
+    elif [[ "$actual" != "$CUSTOM_ACCESS_TOKEN_HOOK_URI" ]]; then
+      err "$label - custom_access_token hook URI drifted"
+      printf "      expected: %s\n      actual:   %s\n" "$CUSTOM_ACCESS_TOKEN_HOOK_URI" "$actual"
+      VERIFY_FAILED+=("$label/token-hook-uri")
+    else
+      ok "$label - custom_access_token: $actual"
+    fi
+
+    # Checked whether or not the hook is on: a missing function is what makes
+    # turning it on fail every sign-in, so it is worth knowing before that.
+    custom_access_token_function_exists "$project_ref"
+    case $? in
+      0) ok "$label - custom_access_token_hook function present" ;;
+      1)
+        err "$label - custom_access_token_hook function is MISSING; migration 0028 has not run"
+        VERIFY_FAILED+=("$label/token-hook-function")
+        ;;
+      *)
+        err "$label - could not check for the custom_access_token_hook function"
+        VERIFY_FAILED+=("$label/token-hook-function-read")
+        ;;
+    esac
   }
 
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
-    check_hook_uri "$(resolve SUPABASE_PROJECT_REF STAGING)" \
+    check_auth_hooks "$(resolve SUPABASE_PROJECT_REF STAGING)" \
       "$(resolve APPLICATION_URL STAGING)" "staging"
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
-    check_hook_uri "$(resolve SUPABASE_PROJECT_REF PROD)" \
+    check_auth_hooks "$(resolve SUPABASE_PROJECT_REF PROD)" \
       "$(resolve APPLICATION_URL PROD)" "prod"
 
   printf "\n"
@@ -452,23 +514,56 @@ sync_fly_secrets() {
   fi
 }
 
-sync_supabase_hook() {
+sync_supabase_auth_hooks() {
   local project_ref="$1" hook_secret_raw="$2" app_url="$3" label="$4"
   local hook_uri="${app_url}/auth/send-email"
+
+  # Built with jq rather than interpolated, so no secret or URL can break the
+  # JSON it is sent in.
+  local payload
+  payload=$(jq -n --arg uri "$hook_uri" --arg secrets "$hook_secret_raw" \
+    '{hook_send_email_enabled: true, hook_send_email_uri: $uri, hook_send_email_secrets: $secrets}')
+
+  # The token hook is on exactly where its function exists. On anywhere else it
+  # fails every sign-in, so it is switched off there - even if someone turned it
+  # on by hand - while that environment's send_email hook is still synced and
+  # the token hook is reported as a failure. When the check itself cannot be
+  # read, the live setting is left as it is, because nothing is known either way.
+  local token_hook_ready=false
+  custom_access_token_function_exists "$project_ref"
+  case $? in
+    0)
+      token_hook_ready=true
+      payload=$(printf '%s' "$payload" | jq --arg uri "$CUSTOM_ACCESS_TOKEN_HOOK_URI" \
+        '. + {hook_custom_access_token_enabled: true, hook_custom_access_token_uri: $uri}')
+      ;;
+    1)
+      err "$label - custom_access_token_hook function is MISSING; run migrations first. Switching the token hook off"
+      payload=$(printf '%s' "$payload" | jq '. + {hook_custom_access_token_enabled: false}')
+      ;;
+    *) err "$label - could not check for the custom_access_token_hook function; token hook left as it is" ;;
+  esac
+
   local response http_code body
   response=$(curl -s -w "\n%{http_code}" -X PATCH \
     "https://api.supabase.com/v1/projects/${project_ref}/config/auth" \
     -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"hook_send_email_enabled\":true,\"hook_send_email_uri\":\"${hook_uri}\",\"hook_send_email_secrets\":\"${hook_secret_raw}\"}" 2>&1)
+    -d "$payload" 2>&1)
   http_code=$(printf '%s' "$response" | tail -n1)
   body=$(printf '%s' "$response" | sed '$d')
-  if [[ "$http_code" =~ ^2 ]]; then
-    HOOKS_SYNCED+=("$label")
-    ok "$label - URI: $hook_uri"
-  else
+  if [[ ! "$http_code" =~ ^2 ]]; then
     HOOKS_FAILED+=("$label")
     err "$label - HTTP ${http_code}: $body"
+    return
+  fi
+
+  ok "$label - send_email: $hook_uri"
+  if [[ "$token_hook_ready" == "true" ]]; then
+    HOOKS_SYNCED+=("$label")
+    ok "$label - custom_access_token: $CUSTOM_ACCESS_TOKEN_HOOK_URI"
+  else
+    HOOKS_FAILED+=("$label/custom_access_token")
   fi
 }
 
@@ -477,13 +572,13 @@ sync_supabase_hook() {
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
   sync_fly_secrets prod "vectreal-platform"
 
-section "Supabase auth hook sync"
+section "Supabase auth hooks sync"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
-  sync_supabase_hook "$(resolve SUPABASE_PROJECT_REF STAGING)" \
+  sync_supabase_auth_hooks "$(resolve SUPABASE_PROJECT_REF STAGING)" \
     "$(resolve SEND_EMAIL_HOOK_SECRET STAGING)" \
     "$(resolve APPLICATION_URL STAGING)" "staging"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
-  sync_supabase_hook "$(resolve SUPABASE_PROJECT_REF PROD)" \
+  sync_supabase_auth_hooks "$(resolve SUPABASE_PROJECT_REF PROD)" \
     "$(resolve SEND_EMAIL_HOOK_SECRET PROD)" \
     "$(resolve APPLICATION_URL PROD)" "prod"
 

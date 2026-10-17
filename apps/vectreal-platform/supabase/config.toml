@@ -222,7 +222,8 @@ redirect_uri = "http://localhost:54321/auth/v1/callback"
 # unchanged (migration 0028). It runs on every sign-in and refresh, and Auth
 # fails the token when the function is missing, so an existing local database
 # needs `supabase migration up` before restarting with this enabled.
-# The hosted projects enable the same hook in the dashboard.
+# On the hosted projects `terraform/scripts/setup-fly-secrets.sh` enables the
+# same function, and only once it exists; its --verify fails on drift.
 [auth.hook.custom_access_token]
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
