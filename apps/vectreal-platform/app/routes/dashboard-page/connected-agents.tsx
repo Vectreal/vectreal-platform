@@ -1,11 +1,5 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia
-} from '@shared/components/ui/empty'
 import { Bot } from 'lucide-react'
 import { useState } from 'react'
 import { data, useFetcher, useRevalidator } from 'react-router'
@@ -13,7 +7,10 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
 import { Route } from './+types/connected-agents'
-import { DetailPanelSection } from '../../components/layout-components'
+import {
+	DetailPanelSection,
+	EmptyState
+} from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { useOncePerFetcherResponse } from '../../hooks/use-once-per-fetcher-response'
 import {
@@ -254,17 +251,12 @@ export default function ConnectedAgentsPage({
 
 	if (agents.length === 0) {
 		return (
-			<div className="space-y-8 py-6">
-				<Empty>
-					<EmptyMedia>
-						<Bot className="text-muted-foreground h-24 w-24" />
-					</EmptyMedia>
-					<EmptyHeader>No connected agents</EmptyHeader>
-					<EmptyDescription>
-						When you sign in to Vectreal from a CLI or an AI agent and approve
-						it, it shows up here, and you can revoke it at any time.
-					</EmptyDescription>
-				</Empty>
+			<div className="py-6">
+				<EmptyState
+					icon={Bot}
+					title="Connect your first agent"
+					description="Sign in to Vectreal from a CLI or an AI agent and approve it. It shows up here with what it may do, and you can revoke it at any time."
+				/>
 			</div>
 		)
 	}

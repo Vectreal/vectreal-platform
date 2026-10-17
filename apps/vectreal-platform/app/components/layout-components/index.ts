@@ -11,6 +11,7 @@ export { AuthorCard } from './author-card'
 export { AuthorChip } from './author-chip'
 export { CtaPanel } from './cta-panel'
 export { DetailPanelSection } from './detail-panel-section'
+export { EmptyState } from './empty-state'
 export {
 	describeSizeChange,
 	FileSizeComparison,

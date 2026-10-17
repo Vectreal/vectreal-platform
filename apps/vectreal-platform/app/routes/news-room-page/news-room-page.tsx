@@ -1,12 +1,16 @@
 import { usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
-import { ArrowRight, Search } from 'lucide-react'
+import { ArrowRight, Search, SearchX } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { data, Form, Link, useNavigation } from 'react-router'
 
 import { useConsent } from '../../components/consent/consent-context'
 import { PublicErrorBoundary } from '../../components/errors'
-import { CtaPanel, PageHero } from '../../components/layout-components'
+import {
+	CtaPanel,
+	EmptyState,
+	PageHero
+} from '../../components/layout-components'
 import { ArticleRow } from '../../components/layout-components/article-row'
 import { FeaturedArticle } from '../../components/layout-components/featured-article'
 import { routeErrorMeta } from '../../components/not-found'
@@ -258,20 +262,21 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 
 				<section id="news-feed" className="scroll-mt-24 space-y-4">
 					{articles.length === 0 ? (
-						<div className="ds-raised rounded-2xl p-8 text-center md:p-10">
-							<h2 className="text-h3 mb-1">No matching posts</h2>
-							{/*
+						<EmptyState
+							icon={SearchX}
+							title="No matching posts"
+							/*
 							  Echo the query back. "No matching posts" alone leaves the
 							  reader checking the field to see what was actually searched.
-							*/}
-							<p className="text-muted-foreground text-body-sm">
-								{filters.query
+							*/
+							description={`${
+								filters.query
 									? `Nothing matched "${filters.query}".`
-									: 'Nothing matched those filters.'}{' '}
-								Try another topic or clear your filters.
-							</p>
-							<div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-								{/*
+									: 'Nothing matched those filters.'
+							} Try another topic or clear your filters.`}
+							action={
+								<>
+									{/*
 								  Whichever filter is actually set is the one offered. With a
 								  query, clearing it keeps the topic - the old link went to a
 								  bare /news-room, so recovering from one typo threw away the
@@ -279,20 +284,21 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								  the same link would have pointed at the page the reader is
 								  already on: a primary action that goes nowhere.
 								*/}
-								<Button size="sm" asChild>
-									{filters.query ? (
-										<Link to={buildNewsRoomPath(filters, { query: '' })}>
-											Clear search
-										</Link>
-									) : (
-										<Link to="/news-room">Show all articles</Link>
-									)}
-								</Button>
-								<Button variant="ghost" size="sm" asChild>
-									<Link to="/sign-up">Create free account</Link>
-								</Button>
-							</div>
-						</div>
+									<Button size="sm" asChild>
+										{filters.query ? (
+											<Link to={buildNewsRoomPath(filters, { query: '' })}>
+												Clear search
+											</Link>
+										) : (
+											<Link to="/news-room">Show all articles</Link>
+										)}
+									</Button>
+									<Button variant="ghost" size="sm" asChild>
+										<Link to="/sign-up">Create free account</Link>
+									</Button>
+								</>
+							}
+						/>
 					) : (
 						<>
 							{featuredArticle ? (
