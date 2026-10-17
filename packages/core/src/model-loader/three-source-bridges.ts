@@ -23,7 +23,11 @@ import type {
 	DirectionalLight,
 	Group,
 	LoadingManager,
+	Material,
 	Mesh,
+	MeshLambertMaterial,
+	MeshPhongMaterial,
+	MeshStandardMaterial,
 	Object3D,
 	PerspectiveCamera,
 	SpotLight,
@@ -195,6 +199,7 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		*/
 		await texturesSettled()
 		dropFailedTextures(root)
+		standardMaterialsFor(root, three)
 
 		return root
 	} finally {
@@ -745,6 +750,123 @@ export function dropFailedTextures(object: Object3D): void {
 			}
 		}
 	})
+}
+
+/**
+ * Replaces every Phong and Lambert material with the `MeshStandardMaterial`
+ * glTF can describe.
+ *
+ * `FBXLoader` only makes those two, and `GLTFExporter` writes any material
+ * that is not Standard or Basic as metalness 0, roughness 1: its shininess is
+ * dropped, so every FBX converted as chalk. The exporter cannot know what an
+ * FBX meant by shininess, so the conversion is made here, where FBX becomes
+ * glTF.
+ *
+ * Roughness follows Blender's FBX importer, `1 - sqrt(Shininess) / 10` on
+ * FBX's 0-100 scale. Blender's exporter writes the inverse, so a Blender
+ * round trip lands where it started, and no other formula is used by a tool
+ * that writes FBX. A Lambert has no specular lobe, so it is fully rough.
+ *
+ * Metalness stays 0, although Blender reads `ReflectionFactor` as metallic.
+ * `FBXLoader` sets `reflectivity` only when the file carries that field, and a
+ * Phong material defaults it to 1, so a file without it is indistinguishable
+ * from a mirror and would convert as chrome. A missing `Shininess` reads as
+ * three's default 30 rather than Blender's 20 for the same reason.
+ *
+ * The bump map is left behind on purpose. `GLTFExporter` writes one only for a
+ * standard material, as `EXT_materials_bump`, which the document read does
+ * not register, so the extension is discarded with a warning and the bump
+ * never reaches the file anyway. A Phong bump was never exported before
+ * either, so nothing is lost that the conversion used to keep.
+ *
+ * One replacement per material, not per mesh: a material shared across
+ * a thousand wheel bolts stays one material in the exported file.
+ *
+ * Exported for its own test, like the texture rules above. Package-internal;
+ * the barrel does not re-export it.
+ */
+export function standardMaterialsFor(
+	object: Object3D,
+	three: typeof Three
+): void {
+	const replaced = new Map<Material, MeshStandardMaterial>()
+
+	const standardFor = (material: Material): Material => {
+		const legacy = material as MeshPhongMaterial | MeshLambertMaterial
+		if (
+			!(legacy as MeshPhongMaterial).isMeshPhongMaterial &&
+			!(legacy as MeshLambertMaterial).isMeshLambertMaterial
+		) {
+			return material
+		}
+
+		const known = replaced.get(material)
+		if (known) return known
+
+		/*
+		  The loader's placeholders state no shininess, only three's default,
+		  so they stay fully rough as they always exported. It makes two: one
+		  named `DEFAULT_MATERIAL_NAME` for a mesh with no material, and an
+		  unnamed one for a face group whose index has no material. Every
+		  material read from the file carries its own name, so the name is what
+		  tells them apart; a file material with an empty name keeps the old
+		  matte export rather than three's default 30.
+		*/
+		const statesShininess =
+			(legacy as MeshPhongMaterial).isMeshPhongMaterial &&
+			legacy.name !== '' &&
+			legacy.name !== three.Loader.DEFAULT_MATERIAL_NAME
+		const shininess = statesShininess
+			? (legacy as MeshPhongMaterial).shininess
+			: 0
+
+		const standard = new three.MeshStandardMaterial({
+			name: legacy.name,
+			color: legacy.color,
+			map: legacy.map,
+			normalMap: legacy.normalMap,
+			normalMapType: legacy.normalMapType,
+			normalScale: legacy.normalScale,
+			emissive: legacy.emissive,
+			emissiveMap: legacy.emissiveMap,
+			emissiveIntensity: legacy.emissiveIntensity,
+			aoMap: legacy.aoMap,
+			aoMapIntensity: legacy.aoMapIntensity,
+			alphaMap: legacy.alphaMap,
+			displacementMap: legacy.displacementMap,
+			displacementScale: legacy.displacementScale,
+			displacementBias: legacy.displacementBias,
+			lightMap: legacy.lightMap,
+			lightMapIntensity: legacy.lightMapIntensity,
+			opacity: legacy.opacity,
+			transparent: legacy.transparent,
+			alphaTest: legacy.alphaTest,
+			side: legacy.side,
+			vertexColors: legacy.vertexColors,
+			flatShading: legacy.flatShading,
+			metalness: 0,
+			roughness: roughnessFromShininess(shininess)
+		})
+		standard.userData = legacy.userData
+
+		legacy.dispose()
+		replaced.set(material, standard)
+		return standard
+	}
+
+	object.traverse((node) => {
+		const mesh = node as Mesh
+		if (!mesh.material) return
+
+		mesh.material = Array.isArray(mesh.material)
+			? mesh.material.map(standardFor)
+			: standardFor(mesh.material)
+	})
+}
+
+/** Blender's FBX importer's reading of a Phong exponent, on FBX's 0-100 scale. */
+function roughnessFromShininess(shininess: number): number {
+	return Math.min(1, Math.max(0, 1 - Math.sqrt(Math.max(shininess, 0)) / 10))
 }
 
 /** A texture whose image finished without becoming anything drawable. */

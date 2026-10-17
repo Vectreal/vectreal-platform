@@ -24,7 +24,16 @@
  *    past the STL-only header it used to carry;
  *  - returning `new Mesh(geometry)` with no vertices reddens the vertex counts.
  */
-import { BufferGeometry, Mesh, MeshStandardMaterial, Object3D } from 'three'
+import * as three from 'three'
+import {
+	BufferGeometry,
+	Mesh,
+	MeshLambertMaterial,
+	MeshPhongMaterial,
+	MeshStandardMaterial,
+	Object3D,
+	Texture
+} from 'three'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { IMPORTABLE_FORMAT_IDS, MODEL_FORMATS } from '../model-formats'
@@ -37,6 +46,7 @@ import {
 	imageTypeFor,
 	resolveTexturesFromSiblings,
 	siblingFor,
+	standardMaterialsFor,
 	textureSourceFor,
 	THREE_SOURCE_FORMAT_IDS,
 	watchTextureLoads,
@@ -357,9 +367,49 @@ interface FbxScene {
 	 * connection targets. The ASCII builder spells its connections out.
 	 */
 	extraConnections?: ReadonlyArray<readonly [number, number, string?]>
+	/** A material on the part, ASCII only: the shading model and its fields. */
+	material?: FbxMaterial
 	vertices: readonly number[]
 	/** FBX polygon indices: the last vertex of a face is written ~i. */
 	polygons: readonly number[]
+}
+
+interface FbxMaterial {
+	shadingModel: 'phong' | 'lambert'
+	diffuse: readonly [number, number, number]
+	/** The Phong exponent, on FBX's 0-100 scale. */
+	shininess?: number
+	opacity?: number
+}
+
+/** The `Material` record and its connection to the part, ASCII spelling. */
+function asciiMaterial(material: FbxMaterial): {
+	object: string
+	connection: string
+} {
+	const props = [
+		`P: "DiffuseColor", "Color", "", "A",${material.diffuse.join(',')}`,
+		material.shininess === undefined
+			? ''
+			: `P: "Shininess", "double", "Number", "",${material.shininess}`,
+		material.opacity === undefined
+			? ''
+			: `P: "Opacity", "double", "Number", "",${material.opacity}`
+	]
+		.filter(Boolean)
+		.map((line) => `\t\t\t${line}`)
+		.join('\n')
+
+	return {
+		object: `	Material: 9001, "Material::paint", "" {
+		Version: 102
+		ShadingModel: "${material.shadingModel}"
+		Properties70:  {
+${props}
+		}
+	}`,
+		connection: '	C: "OO",9001,2001'
+	}
 }
 
 /** A part four times as tall as it is wide, standing in Z the way CAD writes one. */
@@ -381,6 +431,7 @@ function asciiFBX(scene: FbxScene): Uint8Array {
 	]
 		.filter(Boolean)
 		.join('\n')
+	const material = scene.material ? asciiMaterial(scene.material) : null
 
 	return new TextEncoder().encode(`; FBX 7.4.0 project file
 FBXHeaderExtension:  {
@@ -424,6 +475,7 @@ ${scene.aimedLight ? AIMED_LIGHT_OBJECTS : ''}
 ${scene.aimedCamera ? AIMED_CAMERA_OBJECTS : ''}
 ${scene.cameraAndLight ? CAMERA_AND_LIGHT_OBJECTS : ''}
 ${scene.animate ? ANIMATION_OBJECTS : ''}
+${material?.object ?? ''}
 }
 Connections:  {
 ${
@@ -433,6 +485,7 @@ ${
 		: `	C: "OO",2001,0`
 }
 	C: "OO",1001,2001
+${material?.connection ?? ''}
 ${scene.cameraAndLight ? CAMERA_AND_LIGHT_CONNECTIONS : ''}
 ${
 	scene.aimedLight
@@ -567,6 +620,10 @@ function binaryFBX(scene: FbxScene): Uint8Array {
 	*/
 	if (scene.rootNull) {
 		throw new Error('binaryFBX does not build a root Null; use asciiFBX.')
+	}
+	/* Refused for the same reason: a material test must reach the material. */
+	if (scene.material) {
+		throw new Error('binaryFBX does not build a material; use asciiFBX.')
 	}
 
 	const text = new TextEncoder()
@@ -1963,6 +2020,161 @@ describe('a material does not keep a texture that failed to load', () => {
 		dropFailedTextures(root)
 
 		expect((mesh.material as MeshStandardMaterial).map).toBeNull()
+	})
+})
+
+/*
+  `FBXLoader` makes only Phong and Lambert materials, and `GLTFExporter`
+  writes either as roughness 1, so without the conversion every FBX exported
+  as chalk. Read off the converted document. Only the Phong case fails when the
+  bridge stops calling the conversion: the exporter already writes a Lambert as
+  fully rough and keeps opacity, so those two guard the conversion's own
+  branches.
+*/
+describe('an FBX material keeps its shininess through the conversion', () => {
+	function onlyMaterial(
+		loaded: Awaited<ReturnType<ModelLoader['loadFromBuffer']>>
+	) {
+		const materials = loaded.data.getRoot().listMaterials()
+		expect(materials, 'one material in, one material out').toHaveLength(1)
+		return materials[0]
+	}
+
+	it('reads a Phong exponent as roughness the way Blender does', async () => {
+		const material = onlyMaterial(
+			await new ModelLoader().loadFromBuffer(
+				asciiFBX({
+					...WEDGE,
+					material: {
+						shadingModel: 'phong',
+						diffuse: [0.8, 0.2, 0.1],
+						shininess: 20
+					}
+				}),
+				'part.fbx'
+			)
+		)
+
+		/* Blender's importer: 1 - sqrt(20) / 10. */
+		expect(material.getRoughnessFactor()).toBeCloseTo(1 - Math.sqrt(20) / 10)
+		expect(material.getMetallicFactor()).toBe(0)
+		expect(material.getBaseColorFactor()[0]).toBeGreaterThan(
+			material.getBaseColorFactor()[1]
+		)
+	})
+
+	it('exports a Lambert as fully rough', async () => {
+		const material = onlyMaterial(
+			await new ModelLoader().loadFromBuffer(
+				asciiFBX({
+					...WEDGE,
+					material: { shadingModel: 'lambert', diffuse: [0.5, 0.5, 0.5] }
+				}),
+				'part.fbx'
+			)
+		)
+
+		expect(material.getRoughnessFactor()).toBe(1)
+	})
+
+	it('keeps an opacity the file states', async () => {
+		const material = onlyMaterial(
+			await new ModelLoader().loadFromBuffer(
+				asciiFBX({
+					...WEDGE,
+					material: {
+						shadingModel: 'phong',
+						diffuse: [0.5, 0.5, 0.5],
+						shininess: 20,
+						opacity: 0.5
+					}
+				}),
+				'part.fbx'
+			)
+		)
+
+		expect(material.getAlphaMode()).toBe('BLEND')
+		expect(material.getAlpha()).toBeCloseTo(0.5)
+	})
+})
+
+describe('a Phong or Lambert material becomes a standard one', () => {
+	it('replaces a shared material once, so it stays shared', () => {
+		const shared = new MeshPhongMaterial({ shininess: 20 })
+		const root = new Object3D()
+		const first = new Mesh(new BufferGeometry(), shared)
+		const second = new Mesh(new BufferGeometry(), shared)
+		root.add(first, second)
+
+		standardMaterialsFor(root, three)
+
+		expect(first.material).toBeInstanceOf(MeshStandardMaterial)
+		expect(second.material).toBe(first.material)
+	})
+
+	it('carries the maps across rather than copies of them', () => {
+		const map = new Texture()
+		const mesh: Mesh = new Mesh(
+			new BufferGeometry(),
+			new MeshLambertMaterial({ map })
+		)
+
+		standardMaterialsFor(mesh, three)
+
+		expect((mesh.material as MeshStandardMaterial).map).toBe(map)
+	})
+
+	it('converts each entry of a multi-material mesh', () => {
+		const mesh: Mesh = new Mesh(new BufferGeometry(), [
+			new MeshPhongMaterial(),
+			new MeshLambertMaterial()
+		])
+
+		standardMaterialsFor(mesh, three)
+
+		for (const material of mesh.material as MeshStandardMaterial[]) {
+			expect(material).toBeInstanceOf(MeshStandardMaterial)
+		}
+	})
+
+	/*
+	  `FBXLoader`'s two placeholders: the named one for a mesh the file gives no
+	  material, the unnamed one for a face group whose index has none.
+	*/
+	it.each([
+		['named', three.Loader.DEFAULT_MATERIAL_NAME],
+		['unnamed', '']
+	])("keeps the loader's %s placeholder fully rough", (_kind, name) => {
+		const mesh: Mesh = new Mesh(
+			new BufferGeometry(),
+			new MeshPhongMaterial({ name })
+		)
+
+		standardMaterialsFor(mesh, three)
+
+		expect((mesh.material as MeshStandardMaterial).roughness).toBe(1)
+	})
+
+	it('reads shininess from a material the file named', () => {
+		const mesh: Mesh = new Mesh(
+			new BufferGeometry(),
+			new MeshPhongMaterial({ name: 'paint', shininess: 20 })
+		)
+
+		standardMaterialsFor(mesh, three)
+
+		expect((mesh.material as MeshStandardMaterial).roughness).toBeCloseTo(
+			1 - Math.sqrt(20) / 10
+		)
+	})
+
+	it('leaves a material that is already standard alone', () => {
+		const standard = new MeshStandardMaterial()
+		const mesh = new Mesh(new BufferGeometry(), standard)
+
+		standardMaterialsFor(mesh, three)
+
+		expect(mesh.material).toBe(standard)
 	})
 })
 
