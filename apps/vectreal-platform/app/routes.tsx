@@ -69,6 +69,8 @@ export default [
 	route('api/contact/webhook', './routes/api/contact/webhook.ts'),
 	route('api/consent', './routes/api/consent.ts'),
 	route('api/theme', './routes/api/theme.ts'),
+	// Agent API: bearer tokens only, resolved by resolveAgentActor.
+	route('api/v1/me', './routes/api/v1/me.ts'),
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [
