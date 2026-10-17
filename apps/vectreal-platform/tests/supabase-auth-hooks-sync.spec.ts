@@ -8,6 +8,7 @@
  * live projects, so this reads it, scoped to the function that does each job.
  */
 
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -36,7 +37,7 @@ describe('the hosted auth hook sync', () => {
 
 		expect(present).toContain('token_hook_ready=true')
 		expect(present).toContain('hook_custom_access_token_enabled: true')
-		expect(present).toContain('hook_custom_access_token_uri: $uri}')
+		expect(present).toContain('hook_custom_access_token_uri: $uri,')
 		expect(present).toContain('--arg uri "$CUSTOM_ACCESS_TOKEN_HOOK_URI"')
 
 		// Nowhere else in the sync may switch it on.
@@ -73,12 +74,116 @@ describe('the hosted auth hook sync', () => {
 	})
 })
 
+describe('the hosted OAuth server and CLI client', () => {
+	it('turns the OAuth server on only where the token hook goes on', () => {
+		const present = between(sync, '    0)', '    1)')
+		const absent = between(sync, '    1)', '    *)')
+
+		expect(present).toContain('oauth_server_enabled: true')
+		expect(present).toContain('oauth_server_authorization_path: $path')
+		expect(present).toContain('--arg path "$OAUTH_AUTHORIZATION_PATH"')
+		expect(present).toContain('oauth_server_allow_dynamic_registration: false')
+		expect(absent).toContain('oauth_server_enabled: false')
+		expect(sync.split('oauth_server_enabled: true').length - 1).toBe(1)
+	})
+
+	it('consents at the page the app serves', () => {
+		expect(SCRIPT).toMatch(/^OAUTH_AUTHORIZATION_PATH="\/oauth\/consent"$/m)
+		expect(read('apps/vectreal-platform/app/routes.tsx')).toContain(
+			"route('oauth/consent',"
+		)
+	})
+
+	it('ensures the CLI client only once the OAuth server is on', () => {
+		const ready = between(
+			sync,
+			'if [[ "$token_hook_ready" == "true" ]]; then',
+			'\n  else\n'
+		)
+
+		expect(ready).toContain(
+			'if ensure_cli_client "$supabase_url" "$secret_key" "$label"; then'
+		)
+		expect(ready).toContain('HOOKS_FAILED+=("$label/cli_client")')
+		expect(sync.split('ensure_cli_client').length - 1).toBe(1)
+	})
+
+	it('registers the CLI as a public client with no secret', () => {
+		const ensure = between(SCRIPT, 'ensure_cli_client() {', '\n}\n')
+
+		expect(ensure).toContain('client_type: "public"')
+		expect(ensure).toContain('token_endpoint_auth_method: "none"')
+		expect(ensure).toContain(
+			'grant_types: ["authorization_code", "refresh_token"]'
+		)
+		// A confidential client of the same name is refused, not trusted.
+		expect(ensure).toMatch(
+			/! cli_client_is_public "\$client"; then\n\s*err [^\n]*\n\s*return 1\n/
+		)
+		// Puts drifted redirect URIs back rather than leaving them.
+		expect(ensure).toMatch(/method=PUT[\s\S]*redirect_uris: \$uris/)
+	})
+
+	it.each([
+		[{ client_type: 'public', token_endpoint_auth_method: 'none' }, 0],
+		[
+			{
+				client_type: 'confidential',
+				token_endpoint_auth_method: 'client_secret_basic'
+			},
+			1
+		],
+		[
+			{
+				client_type: 'public',
+				token_endpoint_auth_method: 'client_secret_post'
+			},
+			1
+		]
+	])('judges %j public with no secret: exit %i', (client, status) => {
+		// Run, not read: the predicate decides whether sync trusts the client.
+		const predicate = between(SCRIPT, 'cli_client_is_public() {', '\n}\n')
+		const result = spawnSync(
+			'bash',
+			[
+				'-c',
+				`${predicate}\n}\ncli_client_is_public "$1"`,
+				'_',
+				JSON.stringify(client)
+			],
+			{ encoding: 'utf8' }
+		)
+
+		expect(result.status).toBe(status)
+	})
+
+	it('finds the client by the name the app looks it up by', () => {
+		const scriptName = SCRIPT.match(/^CLI_OAUTH_CLIENT_NAME="([^"\n]+)"$/m)?.[1]
+		const appName = read(
+			'apps/vectreal-platform/app/lib/domain/agent/agent-cli-client.server.ts'
+		).match(/export const CLI_OAUTH_CLIENT_NAME = '([^'\n]+)'/)?.[1]
+
+		expect(scriptName).toBe('Vectreal CLI')
+		expect(appName).toBe(scriptName)
+		expect(between(SCRIPT, 'find_cli_client() {', '\n}\n')).toContain(
+			'select(.client_name == $name)'
+		)
+	})
+})
+
 describe('verify mode for the auth hooks', () => {
 	it.each([
 		'token-hook-disabled',
 		'token-hook-uri',
 		'token-hook-function',
-		'token-hook-function-read'
+		'token-hook-function-read',
+		'oauth-disabled',
+		'oauth-path',
+		'oauth-dcr',
+		'cli-client-read',
+		'cli-client-missing',
+		'cli-client-shape',
+		'cli-client-uris'
 	])('fails the gate on %s', (key) => {
 		expect(verify).toContain(`VERIFY_FAILED+=("$label/${key}")`)
 	})

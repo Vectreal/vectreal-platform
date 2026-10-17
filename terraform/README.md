@@ -57,8 +57,16 @@ and (b) syncs both Supabase auth hooks through the Management API: the
 where that function exists, because Auth fails every token while the hook names
 a missing function; elsewhere the run reports it as a failure.
 
-Nothing about the hosted hooks is set by hand in the dashboard. A value changed
-there is drift, and `verify` reports it.
+The same run owns the OAuth 2.1 server the agent CLI signs in through. It is
+switched on exactly where the token hook is, with Auth sending the browser to
+`/oauth/consent` and dynamic client registration off, and the run ensures the
+CLI's public `Vectreal CLI` client exists with its three fixed loopback redirect
+URIs (through the project's Auth admin API, so it needs `SUPABASE_URL` and
+`SUPABASE_SECRET_KEY`). The app finds that client by name to serve
+`GET /api/v1/cli/client`, so its generated id is never copied anywhere.
+
+Nothing about the hosted hooks, the OAuth server or the CLI client is set by
+hand in the dashboard. A value changed there is drift, and `verify` reports it.
 
 **Prefer the workflow.** `CD - Sync Platform Secrets`
 (`.github/workflows/cd-platform-secrets.yaml`) runs it against one environment
@@ -69,7 +77,7 @@ laptop, and inheriting whatever protection rules the Environment carries.
 | --- | --- |
 | `stage` | Writes the secrets with `--stage`. The app keeps running the old values until the next deploy applies them. The default, because a routine rotation should not bounce production. |
 | `immediate` | Writes and restarts now. For an urgent rotation, such as a leaked key. |
-| `verify` | Read-only, and a gate: exits non-zero when a *required* secret is missing, when either auth hook is disabled, when the `send_email` URI does not match `APPLICATION_URL` or the `custom_access_token` URI does not name its function, or when that function is missing. An optional secret that is unset warns and passes, matching what the sync does with it. |
+| `verify` | Read-only, and a gate: exits non-zero when a *required* secret is missing, when either auth hook is disabled, when the `send_email` URI does not match `APPLICATION_URL` or the `custom_access_token` URI does not name its function, or when that function is missing, when the OAuth server is off, its consent path drifted or dynamic registration is on, or when the CLI client is missing or its redirect URIs drifted. An optional secret that is unset warns and passes, matching what the sync does with it. |
 
 Rotating a value is: change it in the GitHub Environment, run the workflow.
 
