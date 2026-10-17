@@ -1,6 +1,7 @@
 import {
 	IMPORTABLE_FORMAT_IDS,
 	modelFormatForFileName,
+	usesSibling,
 	type ModelFormatId
 } from '@vctrl/core/model-formats'
 import {
@@ -163,16 +164,17 @@ export const loadModelFromFiles = async (
 	>
 
 	/*
-	  A bundle is a manifest pointing at siblings, so it is loaded with the rest
-	  of the selection rather than on its own. There are two kinds, and the
+	  The files the model uses, as the owner's `usesSibling` decides: all of a
+	  bundle's selection, and only the declared images for an FBX, which may
+	  name images instead of embedding them. There are two routes, and the
 	  difference is who resolves the references: glTF-Transform reads a glTF's
-	  own, and a three.js loader reads an OBJ's material library. Asking which
-	  route the format takes rather than testing `format.id === 'gltf'` is what
+	  own, and a three.js loader reads an OBJ's material library or an FBX's
+	  images. Asking the owner rather than testing `format.id === 'gltf'` is what
 	  keeps this branch from becoming another statement of the format set.
 	*/
-	const siblings = format.isBundle
-		? files.filter((file) => file !== modelFile)
-		: []
+	const siblings = files.filter(
+		(file) => file !== modelFile && usesSibling(format, file.name)
+	)
 
 	if (format.isBundle && !isThreeSourceFormat(format.id)) {
 		return loadGltfModel(modelFile, siblings, ctx)
