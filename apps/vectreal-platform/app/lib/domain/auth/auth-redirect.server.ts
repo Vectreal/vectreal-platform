@@ -5,7 +5,8 @@ export const SAFE_NEXT_PATH_PREFIXES = [
 	'/publisher',
 	'/onboarding',
 	'/home',
-	'/reset-password'
+	'/reset-password',
+	'/oauth/consent'
 ] as const
 
 export function getSafeNextPath(next: string | null): string {
