@@ -1,5 +1,80 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v2.1.0...workspace-v2.2.0) (2026-10-17)
+
+
+### Features
+
+* **api:** resolve agent bearer tokens and add GET /api/v1/me ([#1068](https://github.com/Vectreal/vectreal-platform/issues/1068)) ([6f2cef1](https://github.com/Vectreal/vectreal-platform/commit/6f2cef1899461246d5249379e499812c09730996))
+* **auth:** add the OAuth consent page and agent grants ([#1066](https://github.com/Vectreal/vectreal-platform/issues/1066)) ([d34f6e4](https://github.com/Vectreal/vectreal-platform/commit/d34f6e4be175c0b4ecfebee9021e6fb53b09c180))
+* **auth:** set the agent audience on OAuth-issued access tokens ([#1065](https://github.com/Vectreal/vectreal-platform/issues/1065)) ([c8bfd1c](https://github.com/Vectreal/vectreal-platform/commit/c8bfd1ca96999822c66fd9b2d602497f3cd2ff05))
+* **convert:** draw the converter stage in the home page's sheet language ([#1013](https://github.com/Vectreal/vectreal-platform/issues/1013)) ([4114255](https://github.com/Vectreal/vectreal-platform/commit/4114255ba3f896255a53dc9cd7ece592dac73a54))
+* **design:** add a text-safe brand ink, a brand button and one grain token ([#1005](https://github.com/Vectreal/vectreal-platform/issues/1005)) ([2391a66](https://github.com/Vectreal/vectreal-platform/commit/2391a6649966481845d157974e9f5b8c299e7932))
+* **docs:** add an Ask AI row that hands a page to ChatGPT, Claude or a coding agent ([#1025](https://github.com/Vectreal/vectreal-platform/issues/1025)) ([e69de4b](https://github.com/Vectreal/vectreal-platform/commit/e69de4bbd81ae32b5e96efd550b23d966fd275f9))
+* **docs:** serve a markdown twin of every docs page and article ([#1023](https://github.com/Vectreal/vectreal-platform/issues/1023)) ([e260dab](https://github.com/Vectreal/vectreal-platform/commit/e260dabca84a9d2bbdbb863d2f80011d101ae9f9))
+* **embed:** give the embed panel a prompt that wires the scene in with a coding agent ([#1026](https://github.com/Vectreal/vectreal-platform/issues/1026)) ([9a01e12](https://github.com/Vectreal/vectreal-platform/commit/9a01e12932d2f0f9740bcf3eb0275658f56e3bcb))
+* **home:** bring the hero camera live in about three seconds ([#1017](https://github.com/Vectreal/vectreal-platform/issues/1017)) ([491b65e](https://github.com/Vectreal/vectreal-platform/commit/491b65ec47ce5ac8a874bd02cc09b512c28c79f8))
+* **home:** carry the brand into the footer and the open-source result ([#1011](https://github.com/Vectreal/vectreal-platform/issues/1011)) ([46e2e4e](https://github.com/Vectreal/vectreal-platform/commit/46e2e4e655a9152b08d225d01ad056bc4750e415))
+* **home:** draw the calls to action in the brand ([#1010](https://github.com/Vectreal/vectreal-platform/issues/1010)) ([7d20ef8](https://github.com/Vectreal/vectreal-platform/commit/7d20ef86eaba12612f15be1a1b610e89463ae5bd))
+* **home:** list the readable formats low on the page ([#1012](https://github.com/Vectreal/vectreal-platform/issues/1012)) ([c3111be](https://github.com/Vectreal/vectreal-platform/commit/c3111be66d06056b83835d1a10e6c8de3a6e79ab))
+* **home:** reframe founding clients as pilot projects ([#1009](https://github.com/Vectreal/vectreal-platform/issues/1009)) ([379840a](https://github.com/Vectreal/vectreal-platform/commit/379840a9cc6a0f98fd6ade719c39624c6fa6d017))
+* **home:** show the workflow as three steps and lift the mission statement ([#1008](https://github.com/Vectreal/vectreal-platform/issues/1008)) ([d6f9051](https://github.com/Vectreal/vectreal-platform/commit/d6f90518af3ba83ffa94029630a8d8b7a5e6ca3e))
+* **home:** state the problem in the hero lead and set the readout under the model ([#1007](https://github.com/Vectreal/vectreal-platform/issues/1007)) ([82cfb8e](https://github.com/Vectreal/vectreal-platform/commit/82cfb8e57b85cc2a99490a54b9222847d246a400))
+* **hooks:** load a model from a URL ([#1045](https://github.com/Vectreal/vectreal-platform/issues/1045)) ([645fa06](https://github.com/Vectreal/vectreal-platform/commit/645fa06eb76999505afcdc6d9fbaac2c3eb1f68c))
+* **newsroom:** end each article on the one ask its cta names ([#995](https://github.com/Vectreal/vectreal-platform/issues/995)) ([90b9ba6](https://github.com/Vectreal/vectreal-platform/commit/90b9ba685ea903734c9ed4b11d5c06f805f61c46))
+* **newsroom:** example scenes readers can turn and open in the Publisher ([#999](https://github.com/Vectreal/vectreal-platform/issues/999)) ([dd53ad6](https://github.com/Vectreal/vectreal-platform/commit/dd53ad6cf610436455dadb350f6f1e5fd054cf33))
+* **publisher:** animation tool for the clips a model carries ([#987](https://github.com/Vectreal/vectreal-platform/issues/987)) ([4b7425d](https://github.com/Vectreal/vectreal-platform/commit/4b7425de0ef97b61729c301f1c80e7813987e190))
+* **publisher:** let authors hide the camera switcher from the Camera tool ([#1021](https://github.com/Vectreal/vectreal-platform/issues/1021)) ([11ca4e3](https://github.com/Vectreal/vectreal-platform/commit/11ca4e3546ca2465ec6dae481ca1ada0c4fea32c))
+* **seo:** point llms.txt at markdown twins, add llms-full.txt, fix link origin ([#1027](https://github.com/Vectreal/vectreal-platform/issues/1027)) ([7a95850](https://github.com/Vectreal/vectreal-platform/commit/7a958509ca75660c80f310ae043793b1bd4c1bc0))
+* **viewer:** draw a camera switcher when a scene has more than one camera ([#1019](https://github.com/Vectreal/vectreal-platform/issues/1019)) ([64f7925](https://github.com/Vectreal/vectreal-platform/commit/64f792523dc6681de697e93a5577d4baa81c315d))
+* **viewer:** give scenes a stage for the shadow to land on ([#1000](https://github.com/Vectreal/vectreal-platform/issues/1000)) ([2a03d3b](https://github.com/Vectreal/vectreal-platform/commit/2a03d3b1098779676a70079809401145b2e83733))
+* **viewer:** load a model from a URL with the src prop ([#1046](https://github.com/Vectreal/vectreal-platform/issues/1046)) ([a34a96f](https://github.com/Vectreal/vectreal-platform/commit/a34a96ffd2a2adf250dd157eb9fb51b49ebb61c4))
+* **view:** open a 3D model from a link, with no account and no upload ([#1029](https://github.com/Vectreal/vectreal-platform/issues/1029)) ([792156f](https://github.com/Vectreal/vectreal-platform/commit/792156f489e4cda829683a21039f10afccf1beb7))
+
+
+### Bug Fixes
+
+* **analytics:** no replay on /embed, and no dead clicks from dragging a 3D viewer ([#1034](https://github.com/Vectreal/vectreal-platform/issues/1034)) ([4075b9e](https://github.com/Vectreal/vectreal-platform/commit/4075b9e45d5fd5fa7b70fd51005c5106260fd621))
+* **api-keys:** resolve key values through one disclosure-aware function ([#985](https://github.com/Vectreal/vectreal-platform/issues/985)) ([b34c206](https://github.com/Vectreal/vectreal-platform/commit/b34c206f377831cd4474ca1919a34e3bbb165448))
+* **ci:** let the migrate job parse the local-only Supabase config ([#1063](https://github.com/Vectreal/vectreal-platform/issues/1063)) ([ea147d3](https://github.com/Vectreal/vectreal-platform/commit/ea147d302b3a9ed5b161842f2a89dda60bd63104))
+* **copy:** say the free plan includes embed API keys, not API access ([#1040](https://github.com/Vectreal/vectreal-platform/issues/1040)) ([f219db6](https://github.com/Vectreal/vectreal-platform/commit/f219db6462bab38bf86ec476f4517206d0a9708b))
+* **core:** advance the optimizer's revision on every document commit ([#1037](https://github.com/Vectreal/vectreal-platform/issues/1037)) ([d40bb3a](https://github.com/Vectreal/vectreal-platform/commit/d40bb3a8061d7500f1843473e06554966e1ab8b7))
+* **core:** keep a texture's MIME type when naming it ([#1041](https://github.com/Vectreal/vectreal-platform/issues/1041)) ([907b8aa](https://github.com/Vectreal/vectreal-platform/commit/907b8aa59253828b98caf714f73d8dfd285d9085))
+* **core:** keep FBX animation, lights, cameras and up axis through conversion ([#982](https://github.com/Vectreal/vectreal-platform/issues/982)) ([07fa6f1](https://github.com/Vectreal/vectreal-platform/commit/07fa6f1aa9824761f572f22deaf2de9191feceae))
+* **dashboard:** keep the scene viewer's overlay clear of the viewer's own controls ([#1030](https://github.com/Vectreal/vectreal-platform/issues/1030)) ([7db26f7](https://github.com/Vectreal/vectreal-platform/commit/7db26f7e9f526f4ec6ecc2b8ee02dc5b48cab8c6))
+* **db:** close the public schema to the Data API roles ([#1064](https://github.com/Vectreal/vectreal-platform/issues/1064)) ([59e71e5](https://github.com/Vectreal/vectreal-platform/commit/59e71e5ee0011d318a25ad8362a90daafdb35de1))
+* **embed:** stop serving a signed side asset once it is withdrawn ([#1032](https://github.com/Vectreal/vectreal-platform/issues/1032)) ([1e73739](https://github.com/Vectreal/vectreal-platform/commit/1e73739f1a9b55663ae2091e585e09fc9d0b2ef7))
+* **examples:** give each example scene a poster from its own camera ([#1018](https://github.com/Vectreal/vectreal-platform/issues/1018)) ([a08bea5](https://github.com/Vectreal/vectreal-platform/commit/a08bea548f932bb764e82545d3ad670c5d067b95))
+* five small catalogue fixes across the embed SDK, viewer and publisher ([#1024](https://github.com/Vectreal/vectreal-platform/issues/1024)) ([2ec80e9](https://github.com/Vectreal/vectreal-platform/commit/2ec80e960a83a9dc4730b7b746014ff586bb39b6))
+* **home:** start the product window's stage once the hero has settled ([#1016](https://github.com/Vectreal/vectreal-platform/issues/1016)) ([ffde6ef](https://github.com/Vectreal/vectreal-platform/commit/ffde6efd2bf50438a1cbf7d3203a9aed927caeab))
+* **home:** stop snapping the whole page on phones ([#1006](https://github.com/Vectreal/vectreal-platform/issues/1006)) ([764479d](https://github.com/Vectreal/vectreal-platform/commit/764479de7dc5b498b3d8655f9814e79edd4f4bae))
+* **hooks:** report optimizer failures instead of leaving state that contradicts them ([#1028](https://github.com/Vectreal/vectreal-platform/issues/1028)) ([0bf9d0a](https://github.com/Vectreal/vectreal-platform/commit/0bf9d0aa9e510dd9f46419e07dee0ea53f8dbf5f))
+* **nav:** link the newsroom from the main nav ([#996](https://github.com/Vectreal/vectreal-platform/issues/996)) ([5a0c21c](https://github.com/Vectreal/vectreal-platform/commit/5a0c21c45ce8b9665b94ebf0cc63e3c791765db5))
+* **newsroom:** align the article byline with the column ([#1004](https://github.com/Vectreal/vectreal-platform/issues/1004)) ([91245ff](https://github.com/Vectreal/vectreal-platform/commit/91245ffc3cbb10cff9a402f7b4f72d611a903fdc))
+* **newsroom:** give each article its own view, read time and scroll milestones ([#1044](https://github.com/Vectreal/vectreal-platform/issues/1044)) ([98bd27d](https://github.com/Vectreal/vectreal-platform/commit/98bd27d9bad996eb6d0256a836258f1e4d797af3))
+* **newsroom:** land the shadows example on the Publisher's stage gradient ([#1002](https://github.com/Vectreal/vectreal-platform/issues/1002)) ([ad50e8f](https://github.com/Vectreal/vectreal-platform/commit/ad50e8f81aece52cf6da75eae9e4955960c2ed25))
+* **newsroom:** separate the article standfirst from the body ([#997](https://github.com/Vectreal/vectreal-platform/issues/997)) ([cb081b2](https://github.com/Vectreal/vectreal-platform/commit/cb081b2daab40e73b7187ecb6971ee22a1874505))
+* **platform:** accept only a linked thumbnail URL on scene save ([#990](https://github.com/Vectreal/vectreal-platform/issues/990)) ([b44695e](https://github.com/Vectreal/vectreal-platform/commit/b44695ea2737df550f4728e297a97160c8878a3c))
+* **platform:** authorize thumbnails by scene membership and thumbnail_url ([#986](https://github.com/Vectreal/vectreal-platform/issues/986)) ([3878434](https://github.com/Vectreal/vectreal-platform/commit/38784347789dea71946eaa6ce68bc45e8adb4daf))
+* **platform:** keep the scene thumbnail when renaming a scene ([#989](https://github.com/Vectreal/vectreal-platform/issues/989)) ([5d36b67](https://github.com/Vectreal/vectreal-platform/commit/5d36b677f6afb47ba8b1241ec8c8daa222f26b07))
+* **publisher:** hand saveToDB the current saved baseline ([#1035](https://github.com/Vectreal/vectreal-platform/issues/1035)) ([c88548d](https://github.com/Vectreal/vectreal-platform/commit/c88548d627b6403b40f78ad69babd292e05465b1))
+* **publisher:** know on the server whether the published file is current ([#1054](https://github.com/Vectreal/vectreal-platform/issues/1054)) ([ab2d9e6](https://github.com/Vectreal/vectreal-platform/commit/ab2d9e6fb3f0cc3edf2bdf9e48a50b0f7d814c9b))
+* **publisher:** reuse the thumbnail and bake only when the server lists them ([#992](https://github.com/Vectreal/vectreal-platform/issues/992)) ([7357360](https://github.com/Vectreal/vectreal-platform/commit/7357360ef688d5bdcafccfdf20b08ac9b1c904cc))
+* **scene:** let the server own the stored scene size ([#1047](https://github.com/Vectreal/vectreal-platform/issues/1047)) ([2062129](https://github.com/Vectreal/vectreal-platform/commit/2062129df8f02d877276ffdea923683b2d94bef0))
+* **scene:** recapture the thumbnail when the frame behind the model changes ([#1058](https://github.com/Vectreal/vectreal-platform/issues/1058)) ([08772f8](https://github.com/Vectreal/vectreal-platform/commit/08772f83fbed87987d74e8b0064eb4f95898a976))
+* **scenes:** refuse a published scene's draft on the preview POST ([#1033](https://github.com/Vectreal/vectreal-platform/issues/1033)) ([0a52c0e](https://github.com/Vectreal/vectreal-platform/commit/0a52c0ea02a500794bb474e777f6aca903a47eec))
+* **storybook:** stop injecting implicit actions into every on* prop ([#994](https://github.com/Vectreal/vectreal-platform/issues/994)) ([d83e393](https://github.com/Vectreal/vectreal-platform/commit/d83e393476a42aa7822d995acaa5b87533ddc6ea)), closes [#993](https://github.com/Vectreal/vectreal-platform/issues/993)
+* **viewer:** fit the clip planes to the shadow ground and light handle ([#1001](https://github.com/Vectreal/vectreal-platform/issues/1001)) ([713918b](https://github.com/Vectreal/vectreal-platform/commit/713918b79f77676fe30ed003d92e0f9d5a34c64f))
+* **viewer:** frame the model on first view, not the whole bounds group ([#998](https://github.com/Vectreal/vectreal-platform/issues/998)) ([cdd1620](https://github.com/Vectreal/vectreal-platform/commit/cdd1620850c8021d051a3cbea4590d510c88222c))
+* **viewer:** own the accumulative shadow bake ([#984](https://github.com/Vectreal/vectreal-platform/issues/984)) ([c6f83f7](https://github.com/Vectreal/vectreal-platform/commit/c6f83f7e5613ba2c0f5516d1d10b37d44162a342)), closes [#980](https://github.com/Vectreal/vectreal-platform/issues/980) [#983](https://github.com/Vectreal/vectreal-platform/issues/983)
+* **viewer:** render a capture of a pose-less camera from where the scene opened ([#1057](https://github.com/Vectreal/vectreal-platform/issues/1057)) ([b02664d](https://github.com/Vectreal/vectreal-platform/commit/b02664d80edeb79930a3fee448b22f5cdb0b6b08))
+* **viewer:** render a screenshot through its own camera, so a camera flight is never disturbed ([#1036](https://github.com/Vectreal/vectreal-platform/issues/1036)) ([c49a18c](https://github.com/Vectreal/vectreal-platform/commit/c49a18c0c7bc29870339aa35d4d3077ea2cde2ec))
+
+
+### Performance Improvements
+
+* **newsroom:** load one article body per page instead of all of them ([#1003](https://github.com/Vectreal/vectreal-platform/issues/1003)) ([86a3b87](https://github.com/Vectreal/vectreal-platform/commit/86a3b876d23b213ddc73de473fc058ddeca2a3bb))
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v2.0.0...workspace-v2.1.0) (2026-10-10)
 
 

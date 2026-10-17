@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.1.0...viewer-v2.2.0) (2026-10-17)
+
+
+### Features
+
+* **publisher:** animation tool for the clips a model carries ([#987](https://github.com/Vectreal/vectreal-platform/issues/987)) ([4b7425d](https://github.com/Vectreal/vectreal-platform/commit/4b7425de0ef97b61729c301f1c80e7813987e190))
+* **publisher:** let authors hide the camera switcher from the Camera tool ([#1021](https://github.com/Vectreal/vectreal-platform/issues/1021)) ([11ca4e3](https://github.com/Vectreal/vectreal-platform/commit/11ca4e3546ca2465ec6dae481ca1ada0c4fea32c))
+* **viewer:** draw a camera switcher when a scene has more than one camera ([#1019](https://github.com/Vectreal/vectreal-platform/issues/1019)) ([64f7925](https://github.com/Vectreal/vectreal-platform/commit/64f792523dc6681de697e93a5577d4baa81c315d))
+* **viewer:** give scenes a stage for the shadow to land on ([#1000](https://github.com/Vectreal/vectreal-platform/issues/1000)) ([2a03d3b](https://github.com/Vectreal/vectreal-platform/commit/2a03d3b1098779676a70079809401145b2e83733))
+* **viewer:** load a model from a URL with the src prop ([#1046](https://github.com/Vectreal/vectreal-platform/issues/1046)) ([a34a96f](https://github.com/Vectreal/vectreal-platform/commit/a34a96ffd2a2adf250dd157eb9fb51b49ebb61c4))
+
+
+### Bug Fixes
+
+* five small catalogue fixes across the embed SDK, viewer and publisher ([#1024](https://github.com/Vectreal/vectreal-platform/issues/1024)) ([2ec80e9](https://github.com/Vectreal/vectreal-platform/commit/2ec80e960a83a9dc4730b7b746014ff586bb39b6))
+* **storybook:** stop injecting implicit actions into every on* prop ([#994](https://github.com/Vectreal/vectreal-platform/issues/994)) ([d83e393](https://github.com/Vectreal/vectreal-platform/commit/d83e393476a42aa7822d995acaa5b87533ddc6ea)), closes [#993](https://github.com/Vectreal/vectreal-platform/issues/993)
+* **viewer:** fit the clip planes to the shadow ground and light handle ([#1001](https://github.com/Vectreal/vectreal-platform/issues/1001)) ([713918b](https://github.com/Vectreal/vectreal-platform/commit/713918b79f77676fe30ed003d92e0f9d5a34c64f))
+* **viewer:** frame the model on first view, not the whole bounds group ([#998](https://github.com/Vectreal/vectreal-platform/issues/998)) ([cdd1620](https://github.com/Vectreal/vectreal-platform/commit/cdd1620850c8021d051a3cbea4590d510c88222c))
+* **viewer:** own the accumulative shadow bake ([#984](https://github.com/Vectreal/vectreal-platform/issues/984)) ([c6f83f7](https://github.com/Vectreal/vectreal-platform/commit/c6f83f7e5613ba2c0f5516d1d10b37d44162a342)), closes [#980](https://github.com/Vectreal/vectreal-platform/issues/980) [#983](https://github.com/Vectreal/vectreal-platform/issues/983)
+* **viewer:** render a capture of a pose-less camera from where the scene opened ([#1057](https://github.com/Vectreal/vectreal-platform/issues/1057)) ([b02664d](https://github.com/Vectreal/vectreal-platform/commit/b02664d80edeb79930a3fee448b22f5cdb0b6b08))
+* **viewer:** render a screenshot through its own camera, so a camera flight is never disturbed ([#1036](https://github.com/Vectreal/vectreal-platform/issues/1036)) ([c49a18c](https://github.com/Vectreal/vectreal-platform/commit/c49a18c0c7bc29870339aa35d4d3077ea2cde2ec))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 2.2.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.0.0...viewer-v2.1.0) (2026-10-10)
 
 

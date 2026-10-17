@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.2.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v2.1.0...embed-v2.2.0) (2026-10-17)
+
+
+### Bug Fixes
+
+* five small catalogue fixes across the embed SDK, viewer and publisher ([#1024](https://github.com/Vectreal/vectreal-platform/issues/1024)) ([2ec80e9](https://github.com/Vectreal/vectreal-platform/commit/2ec80e960a83a9dc4730b7b746014ff586bb39b6))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/viewer bumped to 2.2.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v2.0.0...embed-v2.1.0) (2026-10-10)
 
 
