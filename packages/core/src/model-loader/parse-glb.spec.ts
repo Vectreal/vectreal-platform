@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { ModelLoader } from './model-loader'
 
-import type { Mesh } from 'three'
+import type { Material, Mesh } from 'three'
 
 /** Stands in for three's decoder, which needs a browser worker. */
 const dracoDecoder = vi.hoisted(() => ({
@@ -79,6 +79,46 @@ async function triangleGlb(): Promise<Uint8Array> {
 	return new WebIO().writeBinary(document)
 }
 
+/**
+ * A GLB of triangles that each carry a `COLOR_0` and share one glass material,
+ * alpha 0.25 and blended, the shape a Sketchfab export takes. Each entry is one
+ * primitive's vertex colors: three components, or four with alpha last.
+ */
+async function coloredGlassGlb(
+	primitives: ReadonlyArray<{ size: 3 | 4; color: readonly number[] }>
+): Promise<Uint8Array> {
+	const document = new Document()
+	const buffer = document.createBuffer()
+	const glass = document
+		.createMaterial('glass')
+		.setBaseColorFactor([0, 0, 0, 0.25])
+		.setAlphaMode('BLEND')
+	const mesh = document.createMesh('glass')
+
+	for (const { size, color } of primitives) {
+		const position = document
+			.createAccessor()
+			.setType('VEC3')
+			.setArray(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]))
+			.setBuffer(buffer)
+		const colors = document
+			.createAccessor()
+			.setType(size === 4 ? 'VEC4' : 'VEC3')
+			.setArray(new Float32Array([...color, ...color, ...color]))
+			.setBuffer(buffer)
+		mesh.addPrimitive(
+			document
+				.createPrimitive()
+				.setAttribute('POSITION', position)
+				.setAttribute('COLOR_0', colors)
+				.setMaterial(glass)
+		)
+	}
+
+	document.createScene().addChild(document.createNode('glass').setMesh(mesh))
+	return new WebIO().writeBinary(document)
+}
+
 const meshesOf = (scene: { traverse: (fn: (o: unknown) => void) => void }) => {
 	const meshes: Mesh[] = []
 	scene.traverse((object) => {
@@ -126,5 +166,59 @@ describe('ModelLoader.parseGLBToThreeJS', () => {
 		const meshes = meshesOf(result.scene)
 		expect(meshes).toHaveLength(1)
 		expect(meshes[0].geometry.getAttribute('position').count).toBe(3)
+	})
+})
+
+/*
+  Sketchfab's GLB export writes a `COLOR_0` whose alpha is near zero on every
+  vertex. glTF multiplies it in, so its glass vanished and textured trim went
+  dark. Driven through the parse a published scene takes, so these fail if the
+  loader stops registering the rule, not only if the rule is wrong.
+*/
+describe('a COLOR_0 that carries no color is not applied', () => {
+	const vertexColored = (mesh: Mesh) =>
+		(mesh.material as Material & { vertexColors: boolean }).vertexColors
+
+	it('turns vertex colors off where every vertex alpha is near zero', async () => {
+		const result = await new ModelLoader().parseGLBToThreeJS(
+			await coloredGlassGlb([{ size: 4, color: [0.3, 0.3, 0.3, 16 / 255] }])
+		)
+
+		const [mesh] = meshesOf(result.scene)
+		expect(vertexColored(mesh)).toBe(false)
+		expect((mesh.material as Material).opacity).toBeCloseTo(0.25)
+		expect(
+			mesh.geometry.getAttribute('color'),
+			'the attribute itself is left for an export to write back'
+		).toBeDefined()
+	})
+
+	it('keeps vertex colors whose alpha says something', async () => {
+		const result = await new ModelLoader().parseGLBToThreeJS(
+			await coloredGlassGlb([{ size: 4, color: [0.3, 0.3, 0.3, 1] }])
+		)
+
+		expect(vertexColored(meshesOf(result.scene)[0])).toBe(true)
+	})
+
+	it('keeps dark vertex colors that state no alpha at all', async () => {
+		const result = await new ModelLoader().parseGLBToThreeJS(
+			await coloredGlassGlb([{ size: 3, color: [0.05, 0.05, 0.05] }])
+		)
+
+		expect(vertexColored(meshesOf(result.scene)[0])).toBe(true)
+	})
+
+	it('leaves the shared material alone for a primitive whose colors are real', async () => {
+		const result = await new ModelLoader().parseGLBToThreeJS(
+			await coloredGlassGlb([
+				{ size: 4, color: [0.3, 0.3, 0.3, 0] },
+				{ size: 4, color: [0.3, 0.3, 0.3, 1] }
+			])
+		)
+
+		const [noColor, real] = meshesOf(result.scene)
+		expect(vertexColored(noColor)).toBe(false)
+		expect(vertexColored(real)).toBe(true)
 	})
 })

@@ -35,6 +35,7 @@ import {
 	getThreeKtx2Loader,
 	prepareThreeKtx2Transcoder
 } from './ktx2-three-loader'
+import { registerNonColorVertexColors } from './non-color-vertex-colors'
 import { referencedAssetNames, referencedUris } from './referenced-assets'
 import { resolveModifiedUrl } from './resolve-modified-url'
 import { threeSourceBridge } from './three-source-bridges'
@@ -134,6 +135,7 @@ export class ModelLoader {
 			])
 
 		const loader = new GLTFLoader(manager)
+		registerNonColorVertexColors(loader)
 		loader.setDRACOLoader(dracoLoader)
 		if (meshoptDecoder) loader.setMeshoptDecoder(meshoptDecoder)
 		if (ktx2Loader) loader.setKTX2Loader(ktx2Loader)
