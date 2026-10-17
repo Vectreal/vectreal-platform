@@ -28,6 +28,7 @@ import { useErrorReport } from './lib/observability/use-error-report'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
 import { commitValidCsrfToken } from './lib/sessions/csrf-session.server'
+import { sessionCookieMiddleware } from './lib/sessions/session-cookie-middleware'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
@@ -41,7 +42,12 @@ import './styles/view-transitions.css'
 export const meta: MetaFunction = ({ error }) =>
 	error ? routeErrorMeta(error) : buildMeta([], undefined, { canonical: '/' })
 
-export const middleware: Route.MiddlewareFunction[] = [posthogMiddleware]
+// The session cookie middleware runs outermost, so the response it finishes
+// with is the one that leaves the server.
+export const middleware: Route.MiddlewareFunction[] = [
+	sessionCookieMiddleware,
+	posthogMiddleware
+]
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const pathname = new URL(request.url).pathname

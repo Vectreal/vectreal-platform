@@ -300,7 +300,8 @@ export default [
 				'billing/upgrade-canceled',
 				'./routes/dashboard-page/billing-upgrade-canceled.tsx'
 			),
-			route('settings', './routes/dashboard-page/settings.tsx')
+			route('settings', './routes/dashboard-page/settings.tsx'),
+			route('connected-agents', './routes/dashboard-page/connected-agents.tsx')
 		])
 	])
 ] satisfies RouteConfig

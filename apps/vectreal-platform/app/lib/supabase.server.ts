@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
+
 import {
 	createServerClient,
 	parseCookieHeader,
@@ -24,8 +26,25 @@ interface SupabaseClientContext {
  */
 const clientCache = new WeakMap<Request, SupabaseClientContext>()
 
+/**
+ * One client per incoming HTTP request, not per Request object. React Router
+ * runs the loaders that revalidate after a document POST on a fresh Request,
+ * so the WeakMap alone gave the action and those loaders a client each: two
+ * refreshes of one token, and cookies the session cookie middleware could not
+ * find. `sessionCookieMiddleware` opens this scope around every request; the
+ * WeakMap still serves code that runs outside it, such as tests.
+ */
+const requestScope = new AsyncLocalStorage<{
+	context?: SupabaseClientContext
+}>()
+
+export function runInSupabaseScope<T>(fn: () => Promise<T>): Promise<T> {
+	return requestScope.run({}, fn)
+}
+
 export async function createSupabaseClient(request: Request) {
-	const cached = clientCache.get(request)
+	const scope = requestScope.getStore()
+	const cached = scope?.context ?? clientCache.get(request)
 	if (cached) return cached
 
 	// Validate required environment variables
@@ -74,7 +93,19 @@ export async function createSupabaseClient(request: Request) {
 
 	const context: SupabaseClientContext = { client, headers }
 	clientCache.set(request, context)
+	if (scope) scope.context = context
 	return context
+}
+
+/**
+ * The `Set-Cookie` values this request's Supabase client has written so far:
+ * a refreshed session, a sign-in, a sign-out. Empty when no client was made
+ * for the request. `sessionCookieMiddleware` reads it to put them on whatever
+ * response the request ends with.
+ */
+export function pendingSupabaseCookies(request: Request): string[] {
+	const context = requestScope.getStore()?.context ?? clientCache.get(request)
+	return context?.headers.getSetCookie() ?? []
 }
 
 export function createSupabaseAdminClient() {
