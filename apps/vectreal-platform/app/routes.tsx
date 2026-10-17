@@ -214,6 +214,10 @@ export default [
 	// First-run onboarding (standalone page, no nav layout)
 	route('onboarding', './routes/onboarding-page/onboarding-page.tsx'),
 
+	// OAuth consent for agents and the CLI (standalone page, no nav layout).
+	// Supabase Auth redirects here: `[auth.oauth_server] authorization_url_path`.
+	route('oauth/consent', './routes/oauth-consent-page/oauth-consent-page.tsx'),
+
 	// External embeds: preview API key only, never internal chrome
 	layout('./routes/layouts/embed-layout.tsx', [
 		route('embed/:projectId/:sceneId', './routes/embed-page/embed-scene.tsx')

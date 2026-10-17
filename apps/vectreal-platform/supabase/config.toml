@@ -227,6 +227,16 @@ redirect_uri = "http://localhost:54321/auth/v1/callback"
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
 
+# Lets the CLI and agents sign in through Vectreal (OAuth 2.1 with PKCE).
+# Auth sends the browser to `site_url` + this path to approve a client.
+# Clients are registered by us, never by themselves: dynamic registration is
+# off until remote MCP needs it. The hosted projects set the same in the
+# dashboard.
+[auth.oauth_server]
+enabled = true
+authorization_url_path = "/oauth/consent"
+allow_dynamic_registration = false
+
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
 enabled = false
