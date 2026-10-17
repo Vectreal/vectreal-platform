@@ -27,6 +27,9 @@
 import * as three from 'three'
 import {
 	BufferGeometry,
+	DataTexture,
+	LinearFilter,
+	LinearMipmapLinearFilter,
 	Mesh,
 	MeshLambertMaterial,
 	MeshPhongMaterial,
@@ -40,10 +43,16 @@ import { IMPORTABLE_FORMAT_IDS, MODEL_FORMATS } from '../model-formats'
 import { readFbxFacts } from './fbx-file-facts'
 import { ModelLoader } from './model-loader'
 import {
+	alphaUseOf,
 	BLOCKED_TEXTURE_URL,
+	bottomUpDataTextures,
+	bridgeLoadingManager,
+	fbxShininess,
+	prepareMaterialsForExport,
 	NON_IMAGE_SIBLING_EXTENSIONS,
 	dropFailedTextures,
 	imageTypeFor,
+	resolveAlphaMaps,
 	resolveTexturesFromSiblings,
 	siblingFor,
 	standardMaterialsFor,
@@ -1496,6 +1505,40 @@ describe('an OBJ loads with the material library beside it', () => {
 		}
 	})
 
+	it.each([
+		['a material with no Ns', 'newmtl painted\nKd 0.8 0.4 0.1\n'],
+		['a material the library does not define', 'newmtl other\nNs 900\n']
+	])('keeps %s fully rough, as Blender reads it', async (_case, mtl) => {
+		const result = await new ModelLoader().loadFromBuffer(
+			OBJ,
+			'part.obj',
+			new Map([['part.mtl', encode(mtl)]])
+		)
+
+		const painted = result.data
+			.getRoot()
+			.listMaterials()
+			.find((material) => material.getName() === 'painted')
+		expect(painted?.getRoughnessFactor()).toBe(1)
+	})
+
+	it('reads Ns as roughness the way Blender does, on its 0-1000 scale', async () => {
+		/*
+		  `MTLLoader` makes a Phong, which `GLTFExporter` writes fully rough; the
+		  bridge converts it, so this fails if the OBJ bridge stops calling it.
+		*/
+		const result = await new ModelLoader().loadFromBuffer(
+			OBJ,
+			'part.obj',
+			new Map([
+				['part.mtl', encode('newmtl painted\nKd 0.8 0.4 0.1\nNs 250\n')]
+			])
+		)
+
+		const [material] = result.data.getRoot().listMaterials()
+		expect(material.getRoughnessFactor()).toBeCloseTo(1 - Math.sqrt(0.25))
+	})
+
 	/*
 	  The assertion the whole bundle machinery exists for. `OBJLoader.parse` never
 	  reads the `.mtl` itself - it records the name and moves on - so without the
@@ -2021,6 +2064,350 @@ describe('a material does not keep a texture that failed to load', () => {
 
 		expect((mesh.material as MeshStandardMaterial).map).toBeNull()
 	})
+
+	it('makes a material opaque again when its alpha map never arrived', () => {
+		const material = new MeshPhongMaterial({ transparent: true })
+		;(material as unknown as Record<string, unknown>)['alphaMap'] = {
+			isTexture: true,
+			image: { width: 0 }
+		}
+
+		dropFailedTextures(new Mesh(new BufferGeometry(), material))
+
+		expect(material.alphaMap).toBeNull()
+		expect(material.transparent).toBe(false)
+	})
+
+	it('keeps a material transparent whose opacity asks for it', () => {
+		const material = new MeshPhongMaterial({ transparent: true, opacity: 0.5 })
+		;(material as unknown as Record<string, unknown>)['alphaMap'] = {
+			isTexture: true,
+			image: null
+		}
+
+		dropFailedTextures(new Mesh(new BufferGeometry(), material))
+
+		expect(material.transparent).toBe(true)
+	})
+
+	it('takes off a decoded texture whose file never decoded', () => {
+		/* Three's placeholder for a TGA or TIFF that failed: `{ data: null }`. */
+		const mesh = meshWith(new DataTexture())
+
+		dropFailedTextures(mesh)
+
+		expect((mesh.material as MeshStandardMaterial).map).toBeNull()
+	})
+})
+
+/** A data texture of `width` x `height` pixels, top row first, as a decoder writes one. */
+function pixels(
+	width: number,
+	height: number,
+	pixel: (x: number, y: number) => readonly [number, number, number, number]
+): DataTexture {
+	const data = new Uint8Array(width * height * 4)
+	for (let y = 0; y < height; y++) {
+		for (let x = 0; x < width; x++) {
+			data.set(pixel(x, y), (y * width + x) * 4)
+		}
+	}
+	const texture = new DataTexture(data, width, height)
+	texture.flipY = true
+	return texture
+}
+
+/*
+  An FBX alpha link, or an MTL `map_d`, as the loaders leave it: an alpha map on
+  a transparent material, which glTF cannot carry. Driven with data textures,
+  whose pixels can be read without a DOM.
+*/
+describe('an alpha map becomes the base color alpha it meant', () => {
+	function phongWith(map: DataTexture | null, alphaMap: DataTexture) {
+		const material = new MeshPhongMaterial({ map, alphaMap, transparent: true })
+		return { material, mesh: new Mesh(new BufferGeometry(), material) }
+	}
+
+	it('makes a material opaque when the alpha it links is opaque', () => {
+		/* Blender's link from an image whose alpha is all 255: the common case. */
+		const image = pixels(2, 2, () => [200, 0, 0, 255])
+		const { material, mesh } = phongWith(image, image)
+
+		resolveAlphaMaps(mesh, three)
+
+		expect(material.transparent).toBe(false)
+		expect(material.alphaMap).toBeNull()
+		expect(material.map).toBe(image)
+	})
+
+	it('cuts out a material whose alpha is only clear and opaque', () => {
+		const map = pixels(2, 1, () => [200, 0, 0, 255])
+		const alpha = pixels(2, 1, (x) => [0, 0, 0, x === 0 ? 0 : 255])
+		const { material, mesh } = phongWith(map, alpha)
+
+		resolveAlphaMaps(mesh, three)
+
+		expect(material.transparent).toBe(false)
+		expect(material.alphaTest).toBe(0.5)
+		expect(material.alphaMap).toBeNull()
+		expect(Array.from((material.map as DataTexture).image.data!)).toEqual([
+			200, 0, 0, 0, 200, 0, 0, 255
+		])
+	})
+
+	it('keeps a material blended when its alpha has values between', () => {
+		const map = pixels(1, 1, () => [10, 20, 30, 255])
+		const alpha = pixels(1, 1, () => [0, 0, 0, 128])
+		const { material, mesh } = phongWith(map, alpha)
+
+		resolveAlphaMaps(mesh, three)
+
+		expect(material.transparent).toBe(true)
+		expect(Array.from((material.map as DataTexture).image.data!)).toEqual([
+			10, 20, 30, 128
+		])
+	})
+
+	it('reads the alpha from the base color itself when they are one image', () => {
+		/*
+		  Two textures, one picture: `FBXLoader` makes a texture per link, and a
+		  decoder reads each into its own array.
+		*/
+		const shared = [200, 0, 0, 0, 200, 0, 0, 255]
+		const map = new DataTexture(new Uint8Array(shared), 2, 1)
+		const alpha = new DataTexture(new Uint8Array(shared), 2, 1)
+		map.flipY = alpha.flipY = true
+		const { material, mesh } = phongWith(map, alpha)
+
+		resolveAlphaMaps(mesh, three)
+
+		expect(material.map, 'nothing to combine').toBe(map)
+		expect(material.alphaTest).toBe(0.5)
+	})
+
+	it('keeps an opaque picture linked as its own alpha opaque', () => {
+		/*
+		  Blender links the alpha of every image it connects, alpha channel or
+		  not. Read as a grey mask, this red image's green channel is all clear.
+		*/
+		const red = [200, 0, 0, 255, 200, 0, 0, 255]
+		const map = new DataTexture(new Uint8Array(red), 2, 1)
+		const alpha = new DataTexture(new Uint8Array(red), 2, 1)
+		map.flipY = alpha.flipY = true
+		const { material, mesh } = phongWith(map, alpha)
+
+		resolveAlphaMaps(mesh, three)
+
+		expect(material.map).toBe(map)
+		expect(material.transparent).toBe(false)
+		expect(material.alphaTest).toBe(0)
+	})
+
+	it('samples an alpha map of another size to fit the base color', () => {
+		const map = pixels(2, 2, () => [200, 0, 0, 255])
+		const alpha = pixels(1, 1, () => [0, 0, 0, 64])
+		const { material, mesh } = phongWith(map, alpha)
+
+		resolveAlphaMaps(mesh, three)
+
+		const data = (material.map as DataTexture).image.data!
+		expect([data[3], data[7], data[11], data[15]]).toEqual([64, 64, 64, 64])
+	})
+
+	it('reads a grey mask with no alpha channel by its brightness', () => {
+		/* A 3ds Max opacity map or an MTL `map_d`: black is clear, white solid. */
+		const map = pixels(2, 1, () => [200, 0, 0, 255])
+		const mask = pixels(2, 1, (x) =>
+			x === 0 ? [0, 0, 0, 255] : [255, 255, 255, 255]
+		)
+		const { material, mesh } = phongWith(map, mask)
+
+		resolveAlphaMaps(mesh, three)
+
+		expect(material.alphaTest).toBe(0.5)
+		expect(Array.from((material.map as DataTexture).image.data!)).toEqual([
+			200, 0, 0, 0, 200, 0, 0, 255
+		])
+	})
+
+	it('samples the combined base color the way the picture it replaces was', () => {
+		const map = pixels(1, 1, () => [200, 0, 0, 255])
+		map.magFilter = LinearFilter
+		map.minFilter = LinearMipmapLinearFilter
+		map.generateMipmaps = true
+		const { material, mesh } = phongWith(
+			map,
+			pixels(1, 1, () => [0, 0, 0, 128])
+		)
+
+		resolveAlphaMaps(mesh, three)
+
+		const combined = material.map as DataTexture
+		expect(combined).not.toBe(map)
+		expect(combined.magFilter).toBe(LinearFilter)
+		expect(combined.minFilter).toBe(LinearMipmapLinearFilter)
+		expect(combined.generateMipmaps).toBe(true)
+	})
+
+	it('keeps a base color it cannot read rather than painting it white', () => {
+		const unreadable = new Texture({ width: 4, height: 4 })
+		const alpha = pixels(1, 1, () => [0, 0, 0, 0])
+		const material = new MeshPhongMaterial({
+			map: unreadable,
+			alphaMap: alpha,
+			transparent: true
+		})
+
+		resolveAlphaMaps(new Mesh(new BufferGeometry(), material), three)
+
+		expect(material.map).toBe(unreadable)
+		expect(material.alphaMap).toBe(alpha)
+	})
+
+	it('leaves an alpha map whose pixels cannot be read as it was', () => {
+		/* An `img` with no DOM to draw it on, which is what these specs have. */
+		const unreadable = new Texture({ width: 4, height: 4 })
+		const material = new MeshPhongMaterial({
+			alphaMap: unreadable,
+			transparent: true
+		})
+
+		resolveAlphaMaps(new Mesh(new BufferGeometry(), material), three)
+
+		expect(material.alphaMap).toBe(unreadable)
+		expect(material.transparent).toBe(true)
+	})
+})
+
+describe('a data texture faces the way the exporter writes it', () => {
+	it('stores a top-row-first texture bottom row first, without flipY', () => {
+		const texture = pixels(1, 2, (_x, y) => [y, 0, 0, 255])
+		const mesh = new Mesh(
+			new BufferGeometry(),
+			new MeshPhongMaterial({ map: texture })
+		)
+
+		bottomUpDataTextures(mesh)
+
+		expect(texture.flipY).toBe(false)
+		expect(Array.from(texture.image.data!)).toEqual([
+			1, 0, 0, 255, 0, 0, 0, 255
+		])
+	})
+
+	it('leaves a texture already stored bottom row first alone', () => {
+		const texture = pixels(1, 2, (_x, y) => [y, 0, 0, 255])
+		texture.flipY = false
+		const mesh = new Mesh(
+			new BufferGeometry(),
+			new MeshPhongMaterial({ map: texture })
+		)
+
+		bottomUpDataTextures(mesh)
+
+		expect(Array.from(texture.image.data!)).toEqual([
+			0, 0, 0, 255, 1, 0, 0, 255
+		])
+	})
+
+	it('turns a texture used in two slots once', () => {
+		const texture = pixels(1, 2, (_x, y) => [y, 0, 0, 255])
+		const mesh = new Mesh(
+			new BufferGeometry(),
+			new MeshPhongMaterial({ map: texture, emissiveMap: texture })
+		)
+
+		bottomUpDataTextures(mesh)
+
+		expect(Array.from(texture.image.data!)).toEqual([
+			1, 0, 0, 255, 0, 0, 0, 255
+		])
+	})
+})
+
+/*
+  The four steps in the order the bridges run them, on a cutout FBX material:
+  the alpha folded into the base color, that texture turned for the exporter,
+  and the result carried onto the standard material.
+*/
+describe('a material is ready for export in one pass', () => {
+	it('cuts out, faces the exporter and converts, in that order', () => {
+		const map = pixels(2, 1, () => [200, 0, 0, 255])
+		const alpha = pixels(2, 1, (x) => [0, 0, 0, x === 0 ? 0 : 255])
+		const mesh: Mesh = new Mesh(
+			new BufferGeometry(),
+			new MeshPhongMaterial({
+				name: 'paint',
+				map,
+				alphaMap: alpha,
+				transparent: true
+			})
+		)
+
+		prepareMaterialsForExport(mesh, three, fbxShininess(three))
+
+		const material = mesh.material as MeshStandardMaterial
+		expect(material).toBeInstanceOf(MeshStandardMaterial)
+		expect(material.alphaMap).toBeNull()
+		expect(material.alphaTest).toBe(0.5)
+		expect((material.map as DataTexture).flipY).toBe(false)
+	})
+})
+
+describe('TGA and TIFF textures reach a decoder', () => {
+	it.each([
+		['.tga', 'TGALoader'],
+		['wood.TGA', 'TGALoader'],
+		['.tif', 'TIFFLoader'],
+		['scan.tiff', 'TIFFLoader']
+	])('hands %s to %s', async (name, loader) => {
+		const { manager } = await bridgeLoadingManager(three, new Map(), '')
+
+		expect(manager.getHandler(name)?.constructor.name).toBe(loader)
+	})
+
+	it('keeps the wrap the model set while the image decoded', async () => {
+		/* A 1 x 1 uncompressed 32-bit TGA, stored top row first. */
+		const tga = new Uint8Array(18 + 4)
+		tga.set([0, 0, 2])
+		tga.set([1, 0, 1, 0, 32, 0x28], 12)
+		tga.set([0, 0, 255, 255], 18)
+		/* `FileLoader` reports progress with one, and Node has none. */
+		globalThis.ProgressEvent ??=
+			class extends Event {} as unknown as typeof ProgressEvent
+
+		const { manager, texturesSettled } = await bridgeLoadingManager(
+			three,
+			new Map([['wood.tga', tga]]),
+			''
+		)
+
+		const texture = (
+			manager.getHandler('wood.tga') as three.DataTextureLoader
+		).load('wood.tga')
+		/* As `FBXLoader` and `MTLLoader` do, once `load` returns. */
+		texture.wrapS = texture.wrapT = three.RepeatWrapping
+		await texturesSettled()
+
+		/* Stored blue, green, red, alpha: the red pixel only a decode can write. */
+		expect(Array.from(texture.image.data ?? []), 'decoded').toEqual([
+			255, 0, 0, 255
+		])
+		expect(texture.wrapS).toBe(three.RepeatWrapping)
+		expect(texture.wrapT).toBe(three.RepeatWrapping)
+	})
+})
+
+describe('what an alpha channel asks of the surface', () => {
+	it.each([
+		['opaque', [255, 252, 250]],
+		['mask', [0, 255, 3, 251]],
+		['blend', [0, 255, 128]]
+	] as const)('reads %s', (use, alphas) => {
+		const data = alphas.flatMap((alpha) => [0, 0, 0, alpha])
+
+		expect(alphaUseOf({ data, width: alphas.length, height: 1 }, 3)).toBe(use)
+	})
 })
 
 /*
@@ -2106,7 +2493,7 @@ describe('a Phong or Lambert material becomes a standard one', () => {
 		const second = new Mesh(new BufferGeometry(), shared)
 		root.add(first, second)
 
-		standardMaterialsFor(root, three)
+		standardMaterialsFor(root, three, fbxShininess(three))
 
 		expect(first.material).toBeInstanceOf(MeshStandardMaterial)
 		expect(second.material).toBe(first.material)
@@ -2119,7 +2506,7 @@ describe('a Phong or Lambert material becomes a standard one', () => {
 			new MeshLambertMaterial({ map })
 		)
 
-		standardMaterialsFor(mesh, three)
+		standardMaterialsFor(mesh, three, fbxShininess(three))
 
 		expect((mesh.material as MeshStandardMaterial).map).toBe(map)
 	})
@@ -2130,7 +2517,7 @@ describe('a Phong or Lambert material becomes a standard one', () => {
 			new MeshLambertMaterial()
 		])
 
-		standardMaterialsFor(mesh, three)
+		standardMaterialsFor(mesh, three, fbxShininess(three))
 
 		for (const material of mesh.material as MeshStandardMaterial[]) {
 			expect(material).toBeInstanceOf(MeshStandardMaterial)
@@ -2150,7 +2537,7 @@ describe('a Phong or Lambert material becomes a standard one', () => {
 			new MeshPhongMaterial({ name })
 		)
 
-		standardMaterialsFor(mesh, three)
+		standardMaterialsFor(mesh, three, fbxShininess(three))
 
 		expect((mesh.material as MeshStandardMaterial).roughness).toBe(1)
 	})
@@ -2161,7 +2548,7 @@ describe('a Phong or Lambert material becomes a standard one', () => {
 			new MeshPhongMaterial({ name: 'paint', shininess: 20 })
 		)
 
-		standardMaterialsFor(mesh, three)
+		standardMaterialsFor(mesh, three, fbxShininess(three))
 
 		expect((mesh.material as MeshStandardMaterial).roughness).toBeCloseTo(
 			1 - Math.sqrt(20) / 10
@@ -2172,7 +2559,7 @@ describe('a Phong or Lambert material becomes a standard one', () => {
 		const standard = new MeshStandardMaterial()
 		const mesh = new Mesh(new BufferGeometry(), standard)
 
-		standardMaterialsFor(mesh, three)
+		standardMaterialsFor(mesh, three, fbxShininess(three))
 
 		expect(mesh.material).toBe(standard)
 	})
@@ -2233,6 +2620,23 @@ describe('every texture URL a conversion uses is released with it', () => {
 		})
 	})
 
+	it('hands two requests for one sibling the same URL', () => {
+		/* How `resolveAlphaMaps` tells a diffuse and an alpha link apart. */
+		withStubbedObjectUrls((revoked) => {
+			const manager = fakeManager()
+			const release = resolveTexturesFromSiblings(
+				manager as unknown as LoadingManager,
+				new Map([['wood.png', new Uint8Array([1])]])
+			)
+
+			const first = manager.modify('wood.png')
+			expect(manager.modify('wood.png')).toBe(first)
+			release()
+
+			expect(revoked).toEqual([first])
+		})
+	})
+
 	it('releases a blob URL the loader made for an embedded image', () => {
 		/*
 		  `FBXLoader` creates one of these per embedded image and revokes none
@@ -2287,7 +2691,10 @@ describe('every image the picker offers can actually be decoded', () => {
 		png: 'image/png',
 		jpg: 'image/jpeg',
 		jpeg: 'image/jpeg',
-		webp: 'image/webp'
+		webp: 'image/webp',
+		tga: 'image/x-tga',
+		tif: 'image/tiff',
+		tiff: 'image/tiff'
 	}
 
 	const declared = new Set(
@@ -2327,7 +2734,15 @@ describe('every image the picker offers can actually be decoded', () => {
 			(extension) => !NON_IMAGE_SIBLING_EXTENSIONS.includes(extension)
 		)
 
-		expect(images.sort()).toEqual(['jpeg', 'jpg', 'png', 'webp'])
+		expect(images.sort()).toEqual([
+			'jpeg',
+			'jpg',
+			'png',
+			'tga',
+			'tif',
+			'tiff',
+			'webp'
+		])
 	})
 
 	it('names something other than an image as one it cannot decode', () => {

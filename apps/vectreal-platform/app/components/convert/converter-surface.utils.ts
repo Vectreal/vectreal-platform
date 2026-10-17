@@ -1,4 +1,4 @@
-import { modelFormatForFileName } from '@vctrl/core/model-formats'
+import { modelFormatForFileName, usesSibling } from '@vctrl/core/model-formats'
 
 import type { BundleSourceCopy } from '../../lib/convert/convert-capabilities'
 import type {
@@ -43,11 +43,13 @@ export function downloadContainer(fileName: string, target: string): string {
 /**
  * The bytes the conversion actually started from.
  *
- * A bundle is its whole selection - a folder is what the visitor had. A
- * single-file source is not: the drop zone takes every file now, because
- * refusing them silently was worse, so a GLB dropped next to the `.blend` it
- * came from would otherwise be measured against both and report a reduction
- * that never happened.
+ * The model and the files it uses, as the owner's `usesSibling` decides: a
+ * bundle is its whole selection - a folder is what the visitor had - and an
+ * FBX is itself plus the images it can read from beside it. Anything else is
+ * not counted: the drop zone takes every file now, because refusing them
+ * silently was worse, so a GLB dropped next to the `.blend` it came from would
+ * otherwise be measured against both and report a reduction that never
+ * happened.
  */
 export function measuredBytes(files: readonly File[]): number {
 	const model = files.find(
@@ -61,8 +63,11 @@ export function measuredBytes(files: readonly File[]): number {
 	  baseline while the conversion very much contained them, reporting a large
 	  increase that never happened.
 	*/
-	const isBundle = model ? modelFormatForFileName(model.name)?.isBundle : false
-	const counted = isBundle || !model ? files : [model]
+	const format = model ? modelFormatForFileName(model.name) : null
+	const counted =
+		!model || !format
+			? files
+			: files.filter((file) => file === model || usesSibling(format, file.name))
 
 	return counted.reduce((total, one) => total + one.size, 0)
 }

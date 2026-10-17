@@ -816,9 +816,9 @@ export class ModelLoader {
 	 * Load a model and convert to Three.js scene (browser environment).
 	 * This is a convenience method that combines loading and Three.js conversion.
 	 *
-	 * `assetFiles` are the files that arrived beside the model. Only a bundle
-	 * read through three.js uses them - an OBJ and its `.mtl` today - and the
-	 * glTF family takes its own path, `loadGLTFWithAssetsToThreeJS`, because
+	 * `assetFiles` are the files that arrived beside the model. Only a format
+	 * read through three.js uses them - an OBJ and its `.mtl`, an FBX and the
+	 * images it names - and the glTF family takes its own path, `loadGLTFWithAssetsToThreeJS`, because
 	 * glTF-Transform resolves those references itself.
 	 */
 	public async loadToThreeJS(

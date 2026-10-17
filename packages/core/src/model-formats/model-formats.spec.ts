@@ -183,11 +183,17 @@ describe('the derived sets agree with the declarations they come from', () => {
 	})
 
 	it('only marks a format a bundle if it names siblings', () => {
+		/*
+		  One direction only. A bundle needs its siblings, so one that names none
+		  can never be complete. The converse no longer holds: FBX uses images
+		  beside it without needing them.
+		*/
 		for (const format of MODEL_FORMATS) {
+			if (!format.isBundle) continue
 			expect(
-				format.siblingExtensions.length > 0,
-				`${format.id} is ${format.isBundle ? '' : 'not '}a bundle`
-			).toBe(format.isBundle)
+				format.siblingExtensions.length,
+				`${format.id} is a bundle`
+			).toBeGreaterThan(0)
 		}
 	})
 

@@ -20,6 +20,9 @@ import { readFbxFacts } from './fbx-file-facts'
 import type { ModelFormatId } from '../model-formats'
 import type { FbxFacts } from './fbx-file-facts'
 import type {
+	DataTexture,
+	DataTextureLoader,
+	DataTextureLoaderTexData,
 	DirectionalLight,
 	Group,
 	LoadingManager,
@@ -150,31 +153,17 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 	])
 
 	/*
-	  Its own manager, never the default one. Texture loads are tracked on the
-	  manager, and `DefaultLoadingManager` is global: two conversions in one tab
-	  would settle against each other's counts.
-	*/
-	const manager = new three.LoadingManager()
-	/*
 	  An FBX almost always carries its images inside itself, and those arrive as
 	  blob URLs the loader made - passed through untouched.
 
-	  One that names a sibling instead is *blocked*, not resolved, and that is
-	  worth stating plainly because the call below reads as though it could go
-	  either way: `fbx` is `isBundle: false` in the owner, and the dispatch only
-	  gathers siblings for a bundle, so this map is always empty here today. The
-	  half that runs is the half that matters - without it the page asks the site
-	  for the texture and then waits on an answer a dev server gives as the app
-	  shell, which never resolves and never errors. The resolving half is shared
-	  with OBJ, where the siblings do arrive, and starts working for FBX the day
-	  the owner's row says it is a bundle.
+	  One that names an image instead is resolved against the files that came
+	  with it: the owner gives `fbx` sibling extensions without making it a
+	  bundle, so a folder dropped with it arrives here and a lone file arrives
+	  with nothing. `FBXLoader` reduces a Windows path to its file name first,
+	  and the selection lookup matches that name.
 	*/
-	const releaseTextures = resolveTexturesFromSiblings(
-		manager,
-		siblings,
-		modelPath
-	)
-	const texturesSettled = watchTextureLoads(manager)
+	const { manager, releaseTextures, texturesSettled } =
+		await bridgeLoadingManager(three, siblings, modelPath)
 
 	/*
 	  `finally`, because a file that fails to parse is an ordinary outcome here -
@@ -198,8 +187,7 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		  hanging.
 		*/
 		await texturesSettled()
-		dropFailedTextures(root)
-		standardMaterialsFor(root, three)
+		prepareMaterialsForExport(root, three, fbxShininess(three))
 
 		return root
 	} finally {
@@ -209,6 +197,41 @@ const parseFBX: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		  wait would cancel a load that has not happened yet.
 		*/
 		releaseTextures()
+	}
+}
+
+/**
+ * The loading manager a bridge parses with, and the two things it must do
+ * with it afterwards: wait for its textures, and release what they held.
+ *
+ * Its own manager, never the default one. Texture loads are tracked on the
+ * manager, and `DefaultLoadingManager` is global: two conversions in one tab
+ * would settle against each other's counts. Every texture request is resolved
+ * against the files that came with the model and nothing else (see
+ * `resolveTexturesFromSiblings`), TGA and TIFF reach their decoders, and the
+ * wait is installed before the caller parses, which is the order
+ * `watchTextureLoads` needs.
+ *
+ * Exported for its own test, since a texture load needs a DOM and this is how
+ * the specs see what a bridge's loaders will be handed. Package-internal; the
+ * barrel does not re-export it.
+ */
+export async function bridgeLoadingManager(
+	three: typeof Three,
+	siblings: ModelSiblings,
+	modelPath: string
+): Promise<{
+	manager: LoadingManager
+	releaseTextures: () => void
+	texturesSettled: () => Promise<void>
+}> {
+	const manager = new three.LoadingManager()
+	await addImageDecoders(manager)
+
+	return {
+		manager,
+		releaseTextures: resolveTexturesFromSiblings(manager, siblings, modelPath),
+		texturesSettled: watchTextureLoads(manager)
 	}
 }
 
@@ -612,20 +635,14 @@ function unitScaleCarrier(object: Object3D): Object3D | null {
  * is untextured grey by construction, not by failure.
  */
 const parseOBJ: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
-	const [{ OBJLoader }, { MTLLoader }, { LoadingManager }] = await Promise.all([
+	const [{ OBJLoader }, { MTLLoader }, three] = await Promise.all([
 		import('three/examples/jsm/loaders/OBJLoader.js'),
 		import('three/examples/jsm/loaders/MTLLoader.js'),
 		import('three')
 	])
 
-	const manager = new LoadingManager()
-	const releaseTextures = resolveTexturesFromSiblings(
-		manager,
-		siblings,
-		modelPath
-	)
-
-	const texturesSettled = watchTextureLoads(manager)
+	const { manager, releaseTextures, texturesSettled } =
+		await bridgeLoadingManager(three, siblings, modelPath)
 	const loader = new OBJLoader(manager)
 
 	/*
@@ -646,12 +663,25 @@ const parseOBJ: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		modelPath
 	)
 
+	/*
+	  The materials whose `Ns` the library states. `MTLLoader` copies `Ns` to
+	  `shininess` only when it is there, so a material without one carries
+	  three's default, and Blender reads a missing `Ns` as fully rough. So does
+	  a material the OBJ names that no library defines, which `OBJLoader`
+	  makes as a bare Phong under that name.
+	*/
+	const statedNs = new Set<string>()
+
 	if (materialLibrary.trim()) {
 		/*
 		  An empty base path, so the URL modifier above is handed the filename
 		  exactly as the MTL writes it rather than something prefixed.
 		*/
-		loader.setMaterials(new MTLLoader(manager).parse(materialLibrary, ''))
+		const materials = new MTLLoader(manager).parse(materialLibrary, '')
+		for (const [name, info] of Object.entries(materials.materialsInfo)) {
+			if (info.ns !== undefined) statedNs.add(name)
+		}
+		loader.setMaterials(materials)
 	}
 
 	/* `finally` for the reason `parseFBX` gives: a refused file is ordinary. */
@@ -669,7 +699,10 @@ const parseOBJ: ThreeSourceBridge = async (bytes, siblings, modelPath) => {
 		*/
 
 		await texturesSettled()
-		dropFailedTextures(object)
+		prepareMaterialsForExport(object, three, {
+			scale: 1000,
+			states: (material) => statedNs.has(material.name)
+		})
 
 		return object
 	} finally {
@@ -746,6 +779,13 @@ export function dropFailedTextures(object: Object3D): void {
 				if (!isFailedTexture(value)) continue
 
 				;(material as unknown as Record<string, unknown>)[slot] = null
+				/*
+				  An alpha map is the only reason a loader marks an otherwise
+				  opaque material transparent, so the mark goes with the map.
+				  Left behind, it exports as BLEND with nothing to blend, and the
+				  reader turns depth writing off for a solid surface.
+				*/
+				if (slot === 'alphaMap') material.transparent = material.opacity < 1
 				material.needsUpdate = true
 			}
 		}
@@ -756,16 +796,18 @@ export function dropFailedTextures(object: Object3D): void {
  * Replaces every Phong and Lambert material with the `MeshStandardMaterial`
  * glTF can describe.
  *
- * `FBXLoader` only makes those two, and `GLTFExporter` writes any material
- * that is not Standard or Basic as metalness 0, roughness 1: its shininess is
- * dropped, so every FBX converted as chalk. The exporter cannot know what an
- * FBX meant by shininess, so the conversion is made here, where FBX becomes
- * glTF.
+ * `FBXLoader` only makes those two, `MTLLoader` makes Phong, and
+ * `GLTFExporter` writes any material that is not Standard or Basic as
+ * metalness 0, roughness 1: its shininess is dropped, so every FBX and OBJ
+ * converted as chalk. The exporter cannot know what a format meant by
+ * shininess, so the conversion is made here, where the format becomes glTF.
  *
- * Roughness follows Blender's FBX importer, `1 - sqrt(Shininess) / 10` on
- * FBX's 0-100 scale. Blender's exporter writes the inverse, so a Blender
- * round trip lands where it started, and no other formula is used by a tool
- * that writes FBX. A Lambert has no specular lobe, so it is fully rough.
+ * Roughness follows Blender's importers, `1 - sqrt(shininess / scale)`, where
+ * `scale` is the top of the format's exponent range: 100 for FBX (`Shininess`,
+ * `import_fbx.py`) and 1000 for MTL (`Ns`, `obj_import_mtl.cc`). Blender's
+ * exporters write the inverse, so a Blender round trip lands where it started,
+ * and no other formula is used by a tool that writes either format. A Lambert
+ * has no specular lobe, so it is fully rough.
  *
  * Metalness stays 0, although Blender reads `ReflectionFactor` as metallic.
  * `FBXLoader` sets `reflectivity` only when the file carries that field, and a
@@ -787,7 +829,8 @@ export function dropFailedTextures(object: Object3D): void {
  */
 export function standardMaterialsFor(
 	object: Object3D,
-	three: typeof Three
+	three: typeof Three,
+	shininess: ShininessReading
 ): void {
 	const replaced = new Map<Material, MeshStandardMaterial>()
 
@@ -804,21 +847,15 @@ export function standardMaterialsFor(
 		if (known) return known
 
 		/*
-		  The loader's placeholders state no shininess, only three's default,
-		  so they stay fully rough as they always exported. It makes two: one
-		  named `DEFAULT_MATERIAL_NAME` for a mesh with no material, and an
-		  unnamed one for a face group whose index has no material. Every
-		  material read from the file carries its own name, so the name is what
-		  tells them apart; a file material with an empty name keeps the old
-		  matte export rather than three's default 30.
+		  A material that states no shininess carries only three's default, so
+		  it stays fully rough, as it always exported. Which materials state one
+		  is the format's question; see `ShininessReading`.
 		*/
-		const statesShininess =
+		const exponent =
 			(legacy as MeshPhongMaterial).isMeshPhongMaterial &&
-			legacy.name !== '' &&
-			legacy.name !== three.Loader.DEFAULT_MATERIAL_NAME
-		const shininess = statesShininess
-			? (legacy as MeshPhongMaterial).shininess
-			: 0
+			shininess.states(legacy as MeshPhongMaterial)
+				? (legacy as MeshPhongMaterial).shininess
+				: 0
 
 		const standard = new three.MeshStandardMaterial({
 			name: legacy.name,
@@ -845,7 +882,7 @@ export function standardMaterialsFor(
 			vertexColors: legacy.vertexColors,
 			flatShading: legacy.flatShading,
 			metalness: 0,
-			roughness: roughnessFromShininess(shininess)
+			roughness: roughnessFromShininess(exponent, shininess.scale)
 		})
 		standard.userData = legacy.userData
 
@@ -864,9 +901,421 @@ export function standardMaterialsFor(
 	})
 }
 
-/** Blender's FBX importer's reading of a Phong exponent, on FBX's 0-100 scale. */
-function roughnessFromShininess(shininess: number): number {
-	return Math.min(1, Math.max(0, 1 - Math.sqrt(Math.max(shininess, 0)) / 10))
+/** Blender's importers' reading of a Phong exponent on a `0..scale` range. */
+function roughnessFromShininess(shininess: number, scale: number): number {
+	const clamped = Math.min(scale, Math.max(0, shininess))
+	return 1 - Math.sqrt(clamped / scale)
+}
+
+/**
+ * How a format states a Phong exponent: the top of its range, and whether a
+ * given material stated one at all rather than carrying three's default 30.
+ */
+export interface ShininessReading {
+	scale: number
+	states: (material: MeshPhongMaterial) => boolean
+}
+
+/**
+ * FBX's reading. `FBXLoader` makes two placeholders that state nothing: one
+ * named `DEFAULT_MATERIAL_NAME` for a mesh with no material, and an unnamed
+ * one for a face group whose index has no material. Every material read from
+ * the file carries its own name, so the name is what tells them apart; a file
+ * material with an empty name keeps the old matte export.
+ */
+export function fbxShininess(three: typeof Three): ShininessReading {
+	return {
+		scale: 100,
+		states: (material) =>
+			material.name !== '' &&
+			material.name !== three.Loader.DEFAULT_MATERIAL_NAME
+	}
+}
+
+/**
+ * What a bridge's materials need before `GLTFExporter` sees them, in the order
+ * each step depends on the one before: a failed texture must be gone before its
+ * pixels are read, an alpha map must be folded into the base color while both
+ * images still read top-down, every data texture must then face the way the
+ * exporter writes it, and only the finished maps are carried onto the standard
+ * material.
+ *
+ * Exported for its own test: each step has one, and this is where their order
+ * is checked. Package-internal; the barrel does not re-export it.
+ */
+export function prepareMaterialsForExport(
+	object: Object3D,
+	three: typeof Three,
+	shininess: ShininessReading
+): void {
+	dropFailedTextures(object)
+	resolveAlphaMaps(object, three)
+	bottomUpDataTextures(object)
+	standardMaterialsFor(object, three, shininess)
+}
+
+/**
+ * Lets a bridge's loaders decode TGA and TIFF, the two image formats FBX and
+ * OBJ sets carry most often that a browser's `img` cannot.
+ *
+ * `FBXLoader` and `MTLLoader` both ask the manager for a handler by extension
+ * before falling back to `TextureLoader`, so registering one is all either
+ * needs: an embedded TGA in an FBX, a `wood.tga` beside it, and an MTL naming
+ * one all reach the same decoder. Without it each became a texture whose image
+ * never decoded, which `dropFailedTextures` then took off.
+ *
+ * Dynamic for the reason the loaders themselves are.
+ */
+async function addImageDecoders(manager: LoadingManager): Promise<void> {
+	const [{ TGALoader }, { TIFFLoader }] = await Promise.all([
+		import('three/examples/jsm/loaders/TGALoader.js'),
+		import('three/examples/jsm/loaders/TIFFLoader.js')
+	])
+
+	manager.addHandler(/\.tga$/i, keepingWrap(new TGALoader(manager)))
+	manager.addHandler(/\.tiff?$/i, keepingWrap(new TIFFLoader(manager)))
+}
+
+/**
+ * A decoder that leaves a texture's wrap as its caller set it.
+ *
+ * `DataTextureLoader` writes clamp-to-edge over the wrap once the file
+ * decodes, unless the file names one, and neither TGA nor TIFF does. Both
+ * loaders set the wrap the model asks for as soon as `load` returns, before
+ * the image arrives, so every tiling TGA or TIFF lost its repeat. The decoded
+ * data therefore takes the texture's own wrap as its default.
+ *
+ * `_applyTexData` is the one step that writes it, and it is not in three's
+ * types, so it is named here; the spec loading a TGA is what notices a rename.
+ */
+function keepingWrap<T extends DataTextureLoader>(decoder: T): T {
+	const target = decoder as T & {
+		_applyTexData(texture: DataTexture, texData: DataTextureLoaderTexData): void
+	}
+	const apply = target._applyTexData.bind(target)
+
+	target._applyTexData = (texture, texData) =>
+		apply(texture, { wrapS: texture.wrapS, wrapT: texture.wrapT, ...texData })
+
+	return decoder
+}
+
+/** An image's pixels as RGBA bytes, top row first. */
+interface Rgba {
+	data: ArrayLike<number>
+	width: number
+	height: number
+}
+
+/**
+ * Folds every alpha map into the base color's alpha channel, and decides from
+ * the pixels whether the material is opaque, cut out or blended.
+ *
+ * An FBX links a texture to `TransparencyFactor` or `TransparentColor` to say
+ * "this image's alpha is the surface's alpha", and Blender's importer reads it
+ * exactly so. `FBXLoader` instead makes it an `alphaMap` and marks the
+ * material transparent, and an MTL's `map_d` does the same through
+ * `MTLLoader`. Neither survives: three samples an alpha map's green channel,
+ * glTF has no alpha map at all, and `GLTFExporter` drops it while still writing
+ * `BLEND`. The reader then turns depth writing off for that material, and a
+ * solid body sorts against itself and looks see-through. Blender writes the
+ * link for any Alpha socket connection, so a fully opaque image is the common
+ * case rather than an edge one.
+ *
+ * So the alpha the file meant is moved to where glTF reads it: the base color
+ * texture. When the alpha map is the base color's own image, which is how
+ * Blender writes it, that texture already carries it. Otherwise the two are
+ * combined into a new image at the base color's size. The pixels then decide
+ * the mode: all opaque becomes opaque, only clear and opaque becomes a cutout,
+ * anything between stays blended.
+ *
+ * Which channel is the alpha: the alpha channel, when the image has one that
+ * says anything or is the base color's own picture, as Blender reads a link.
+ * Otherwise the image is a grey mask, which is how a 3ds Max opacity map and
+ * most MTL `map_d` images are made, and its brightness is the alpha. That is
+ * the green channel three itself samples an alpha map by; an image with no
+ * alpha channel decodes with alpha 255 everywhere, so reading that channel
+ * would call every grey mask opaque and throw the cutout away.
+ *
+ * A texture whose pixels cannot be read is left as the loader left it, which
+ * is what every file got before.
+ *
+ * Exported for its own test, like the texture rules above. Package-internal;
+ * the barrel does not re-export it.
+ */
+export function resolveAlphaMaps(object: Object3D, three: typeof Three): void {
+	const resolved = new Set<Material>()
+
+	object.traverse((node) => {
+		const materials = (node as Mesh).material
+		if (!materials) return
+
+		for (const material of Array.isArray(materials) ? materials : [materials]) {
+			const target = material as MeshPhongMaterial
+			if (!target.alphaMap || resolved.has(material)) continue
+			resolved.add(material)
+
+			const alpha = rgbaOf(target.alphaMap)
+			if (!alpha) continue
+
+			let map = target.map
+			const ownImage = sameImage(map, target.alphaMap)
+			const channel = ownImage || carriesAlpha(alpha) ? ALPHA : GREEN
+			const use = alphaUseOf(alpha, channel)
+
+			if (use !== 'opaque' && !ownImage) {
+				const color = map ? rgbaOf(map) : null
+				if (map && !color) continue
+				map = withAlpha(color, alpha, channel, map, three)
+			}
+
+			target.map = map
+			target.alphaMap = null
+			if (use === 'opaque') {
+				target.transparent = target.opacity < 1
+			} else if (use === 'mask' && target.opacity >= 1) {
+				target.transparent = false
+				target.alphaTest = 0.5
+			} else {
+				target.transparent = true
+			}
+			target.needsUpdate = true
+		}
+	})
+}
+
+/*
+  How far from 0 and 255 a pixel may sit and still count as clear or opaque.
+  Images carry a little noise from compression and resampling, and a cutout
+  edge read as a blend is the depth-sorting fault this exists to remove.
+*/
+const CLEAR_ALPHA = 5
+const OPAQUE_ALPHA = 250
+
+/** Offsets into an RGBA pixel. */
+const GREEN = 1
+const ALPHA = 3
+
+/** Whether an image's alpha channel is anything but opaque somewhere. */
+function carriesAlpha(rgba: Rgba): boolean {
+	for (let index = ALPHA; index < rgba.data.length; index += 4) {
+		if (rgba.data[index] < OPAQUE_ALPHA) return true
+	}
+	return false
+}
+
+/** What one channel of an image, read as alpha, asks of the surface. */
+export function alphaUseOf(
+	rgba: Rgba,
+	channel: number
+): 'opaque' | 'mask' | 'blend' {
+	let anyClear = false
+
+	for (let index = channel; index < rgba.data.length; index += 4) {
+		const alpha = rgba.data[index]
+		if (alpha >= OPAQUE_ALPHA) continue
+		if (alpha > CLEAR_ALPHA) return 'blend'
+		anyClear = true
+	}
+
+	return anyClear ? 'mask' : 'opaque'
+}
+
+/** Whether two textures draw the same picture. */
+function sameImage(a: Texture | null, b: Texture): boolean {
+	if (!a) return false
+
+	const left = a.image as { src?: string; data?: unknown } | null
+	const right = b.image as { src?: string; data?: unknown } | null
+	if (!left || !right) return false
+
+	/*
+	  `FBXLoader` makes one texture per material link, so a diffuse and an alpha
+	  link to one image are two textures, each loading the same URL into its own
+	  `img`. A decoder reads that URL into its own array each time, so a decoded
+	  picture is compared by its pixels.
+	*/
+	if (left === right) return true
+	if (left.src) return left.src === right.src
+	return isTypedArray(left.data) && isTypedArray(right.data)
+		? samePixels(left.data, right.data)
+		: false
+}
+
+function isTypedArray(value: unknown): value is ArrayLike<number> {
+	return ArrayBuffer.isView(value)
+}
+
+function samePixels(a: ArrayLike<number>, b: ArrayLike<number>): boolean {
+	if (a.length !== b.length) return false
+	for (let index = 0; index < a.length; index++) {
+		if (a[index] !== b[index]) return false
+	}
+	return true
+}
+
+/**
+ * A texture's pixels, top row first, or null where they cannot be read.
+ *
+ * A data texture's bytes are read directly, turned over when they are stored
+ * bottom row first. Anything else is drawn onto a canvas, which needs a DOM or
+ * `OffscreenCanvas`; where neither exists there is nothing to read.
+ */
+export function rgbaOf(texture: Texture): Rgba | null {
+	const image = texture.image as {
+		data?: ArrayLike<number> | null
+		width?: number
+		height?: number
+	} | null
+	if (!image?.width || !image.height) return null
+
+	const { width, height } = image
+
+	if (image.data) {
+		if (image.data.length !== width * height * 4) return null
+		return texture.flipY
+			? { data: image.data, width, height }
+			: { data: flipRows(image.data, width, height), width, height }
+	}
+
+	const context = canvasContext(width, height)
+	if (!context) return null
+
+	context.drawImage(image as CanvasImageSource, 0, 0)
+	return { data: context.getImageData(0, 0, width, height).data, width, height }
+}
+
+function canvasContext(
+	width: number,
+	height: number
+): OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null {
+	if (typeof OffscreenCanvas !== 'undefined') {
+		return new OffscreenCanvas(width, height).getContext('2d')
+	}
+	if (typeof document === 'undefined') return null
+
+	const canvas = document.createElement('canvas')
+	canvas.width = width
+	canvas.height = height
+	return canvas.getContext('2d')
+}
+
+/**
+ * A new texture: `color`'s RGB, or white without one, under `alpha`'s alpha,
+ * at `color`'s size. The alpha is sampled to fit, since nothing requires the two
+ * images to match.
+ *
+ * Written top row first with `flipY`, like a decoded image, so it reads the
+ * same way as everything else until `bottomUpDataTextures` turns it for export.
+ */
+function withAlpha(
+	color: Rgba | null,
+	alpha: Rgba,
+	channel: number,
+	source: Texture | null,
+	three: typeof Three
+): Texture {
+	const width = color?.width ?? alpha.width
+	const height = color?.height ?? alpha.height
+	const data = new Uint8Array(width * height * 4)
+
+	for (let y = 0; y < height; y++) {
+		const alphaRow = Math.floor((y * alpha.height) / height) * alpha.width
+
+		for (let x = 0; x < width; x++) {
+			const at = (y * width + x) * 4
+			const alphaAt = (alphaRow + Math.floor((x * alpha.width) / width)) * 4
+
+			data[at] = color ? color.data[at] : 255
+			data[at + 1] = color ? color.data[at + 1] : 255
+			data[at + 2] = color ? color.data[at + 2] : 255
+			data[at + 3] = alpha.data[alphaAt + channel]
+		}
+	}
+
+	const texture = new three.DataTexture(data, width, height, three.RGBAFormat)
+	texture.flipY = true
+	texture.colorSpace = source?.colorSpace ?? three.SRGBColorSpace
+	/*
+	  Sampled like the picture it replaces. A data texture starts nearest and
+	  without mipmaps, and the exporter writes those filters into the file, so
+	  leaving them would pixelate every combined base color.
+	*/
+	texture.magFilter = source?.magFilter ?? three.LinearFilter
+	texture.minFilter = source?.minFilter ?? three.LinearMipmapLinearFilter
+	texture.generateMipmaps = source?.generateMipmaps ?? true
+	texture.anisotropy = source?.anisotropy ?? 1
+	if (source) {
+		texture.name = source.name
+		texture.wrapS = source.wrapS
+		texture.wrapT = source.wrapT
+		texture.repeat.copy(source.repeat)
+		texture.offset.copy(source.offset)
+		texture.center.copy(source.center)
+		texture.rotation = source.rotation
+		texture.channel = source.channel
+	}
+	texture.needsUpdate = true
+	return texture
+}
+
+/**
+ * Stores every data texture bottom row first, the way `GLTFExporter` needs it.
+ *
+ * The exporter turns an ordinary image over when its texture has `flipY`, by
+ * drawing it through a flipped canvas. A data texture it writes with
+ * `putImageData`, which the canvas transform does not touch, so one decoded top
+ * row first with `flipY` (a TGA, a TIFF, an alpha `withAlpha` combined)
+ * would land in the file upside down. Turning the bytes and clearing `flipY`
+ * draws the same picture in three and writes it the way the exporter writes
+ * every other image.
+ *
+ * Exported for its own test. Package-internal; the barrel does not re-export
+ * it.
+ */
+export function bottomUpDataTextures(object: Object3D): void {
+	const turned = new Set<Texture>()
+
+	object.traverse((node) => {
+		const materials = (node as Mesh).material
+		if (!materials) return
+
+		for (const material of Array.isArray(materials) ? materials : [materials]) {
+			for (const value of Object.values(material)) {
+				const texture = value as DataTexture
+				if (!texture?.isDataTexture || !texture.flipY || turned.has(texture)) {
+					continue
+				}
+				turned.add(texture)
+
+				const { data, width, height } = texture.image
+				if (!data) continue
+				texture.image.data = flipRows(data, width, height) as typeof data
+				texture.flipY = false
+				texture.needsUpdate = true
+			}
+		}
+	})
+}
+
+/** RGBA rows in the opposite order, as a new array of the same kind. */
+function flipRows<T extends ArrayLike<number>>(
+	data: T,
+	width: number,
+	height: number
+): T {
+	const rows = data as unknown as Uint8Array
+	const flipped = new (rows.constructor as Uint8ArrayConstructor)(rows.length)
+	const stride = width * 4
+
+	for (let y = 0; y < height; y++) {
+		flipped.set(
+			rows.subarray(y * stride, (y + 1) * stride),
+			(height - 1 - y) * stride
+		)
+	}
+
+	return flipped as unknown as T
 }
 
 /** A texture whose image finished without becoming anything drawable. */
@@ -874,8 +1323,18 @@ function isFailedTexture(value: unknown): value is Texture {
 	if (!value || typeof value !== 'object') return false
 	if (!(value as Texture).isTexture) return false
 
-	const image = (value as Texture).image as { width?: number } | null
+	const image = (value as Texture).image as {
+		width?: number
+		data?: unknown
+	} | null
 	if (!image) return true
+
+	/*
+	  A data texture whose file never decoded: `DataTextureLoader` hands back
+	  three's placeholder, whose image is `{ data: null }`, and the exporter
+	  reads that `data` as pixels.
+	*/
+	if (image.data === null) return true
 
 	/*
 	  `width` is absent on a source this cannot judge - a data texture, a
@@ -913,11 +1372,16 @@ export function resolveTexturesFromSiblings(
 	modelPath = ''
 ): () => void {
 	const objectUrls: string[] = []
+	const urlOf = new Map<Uint8Array, string>()
 
 	/*
-	  A blob per texture that is actually referenced, made inside the callback:
+	  A blob per file that is actually referenced, made inside the callback:
 	  a model with no textures starts no loads, so this never runs, which is what
 	  lets a format be read where there is no `URL.createObjectURL` to call.
+
+	  One per file, not per request. `FBXLoader` makes a texture per material
+	  link, so a diffuse and an alpha link to one sibling ask for it twice, and
+	  the URL is how `resolveAlphaMaps` tells they are the same picture.
 	*/
 	manager.setURLModifier((url) => {
 		const source = textureSourceFor(siblings, url, modelPath)
@@ -938,10 +1402,14 @@ export function resolveTexturesFromSiblings(
 
 		if (source.kind === 'blocked') return BLOCKED_TEXTURE_URL
 
+		const known = urlOf.get(source.bytes)
+		if (known) return known
+
 		const objectUrl = URL.createObjectURL(
 			new Blob([source.bytes as BlobPart], { type: source.type })
 		)
 		objectUrls.push(objectUrl)
+		urlOf.set(source.bytes, objectUrl)
 		return objectUrl
 	})
 
@@ -1052,8 +1520,9 @@ export function siblingFor(
  * sibling lookup read. The two agreeing is not automatic: an extension added
  * there and missing here is offered in the picker, found beside the model, and
  * handed to an `img` as `application/octet-stream`, which silently never
- * decodes. That is exactly the outcome the owner's own comment says it avoided
- * by leaving TGA out. `three-source-bridges.spec.ts` asserts the two sets
+ * decodes. TGA and TIFF are the exception that proves it: they are offered
+ * only because `addImageDecoders` decodes them without an `img` at all.
+ * `three-source-bridges.spec.ts` asserts the two sets
  * agree, so the gap is a red test rather than a grey model.
  */
 export function imageTypeFor(reference: string): string {
@@ -1064,7 +1533,14 @@ const IMAGE_TYPES: Readonly<Record<string, string>> = {
 	png: 'image/png',
 	jpg: 'image/jpeg',
 	jpeg: 'image/jpeg',
-	webp: 'image/webp'
+	webp: 'image/webp',
+	/*
+	  Never handed to an `img`: `addImageDecoders` routes both to their own
+	  decoders, which read the bytes. The type is only what the blob says it is.
+	*/
+	tga: 'image/x-tga',
+	tif: 'image/tiff',
+	tiff: 'image/tiff'
 }
 
 const FALLBACK = 'application/octet-stream'
