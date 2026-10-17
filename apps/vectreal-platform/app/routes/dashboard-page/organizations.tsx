@@ -1,17 +1,11 @@
 import { Badge } from '@shared/components/ui/badge'
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle
-} from '@shared/components/ui/empty'
 import { Building, Building2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { data, Outlet, useLoaderData, useLocation } from 'react-router'
 
 import { Route } from './+types/organizations'
 import { DashboardCard } from '../../components/dashboard'
+import { EmptyState } from '../../components/layout-components'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
@@ -86,17 +80,11 @@ const OrganizationsPage = () => {
 			*/}
 			<section>
 				{organizations.length === 0 ? (
-					<Empty>
-						<EmptyHeader>
-							<EmptyMedia variant="icon">
-								<Building />
-							</EmptyMedia>
-							<EmptyTitle>No organizations found</EmptyTitle>
-							<EmptyDescription>
-								You do not have access to any organizations yet.
-							</EmptyDescription>
-						</EmptyHeader>
-					</Empty>
+					<EmptyState
+						icon={Building}
+						title="Your organizations show up here"
+						description="You are not a member of any organization yet. An invitation from an owner or admin adds you to theirs."
+					/>
 				) : (
 					<div className="grid gap-4 lg:grid-cols-2">
 						{sortedOrganizations.byRole.map(({ organization, membership }) => (

@@ -310,7 +310,9 @@ describe('the asset list', () => {
 	it('says so when there are none', () => {
 		renderAside()
 
-		expect(screen.getByText('No linked assets.')).not.toBeNull()
+		expect(
+			screen.getByText('No linked assets', { selector: 'p' })
+		).not.toBeNull()
 		expect(screen.queryByRole('button', { name: /show/i })).toBeNull()
 	})
 

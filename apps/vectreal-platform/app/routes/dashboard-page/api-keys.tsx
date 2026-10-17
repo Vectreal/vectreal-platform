@@ -1,12 +1,5 @@
 import { Badge } from '@shared/components/ui/badge'
 import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle
-} from '@shared/components/ui/empty'
-import {
 	Tabs,
 	TabsContent,
 	TabsList,
@@ -41,6 +34,7 @@ import {
 	type ApiKeyRow,
 	type ApiKeyRowValue
 } from '../../components/dashboard'
+import { EmptyState } from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
@@ -391,10 +385,13 @@ function OrgApiKeysTable({
 	rows,
 	onEdit,
 	onRevoke,
-	onRotate
+	onRotate,
+	emptyHeadingLevel
 }: {
 	namespace: string
 	rows: ApiKeyRow[]
+	/** One level below whatever heads the table's organization, if anything does. */
+	emptyHeadingLevel: 'h2' | 'h3'
 	onEdit: (keyId: string) => void
 	onRevoke: (keyId: string) => void
 	onRotate: (keyId: string) => void
@@ -433,17 +430,12 @@ function OrgApiKeysTable({
 
 	if (rows.length === 0) {
 		return (
-			<Empty>
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<KeyRound />
-					</EmptyMedia>
-					<EmptyTitle>No API keys</EmptyTitle>
-					<EmptyDescription>
-						Create your first API key to get started
-					</EmptyDescription>
-				</EmptyHeader>
-			</Empty>
+			<EmptyState
+				icon={KeyRound}
+				title="Create your first API key"
+				description="A key lets embeds and previews load scenes from the projects you scope it to."
+				headingLevel={emptyHeadingLevel}
+			/>
 		)
 	}
 
@@ -596,17 +588,12 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 
 	if (organizations.length === 0) {
 		return (
-			<div className="space-y-8 py-6">
-				<Empty>
-					<EmptyMedia>
-						<KeyRound className="text-muted-foreground h-24 w-24" />
-					</EmptyMedia>
-					<EmptyHeader>No organizations</EmptyHeader>
-					<EmptyDescription>
-						You need to be an admin or owner of an organization to manage API
-						keys.
-					</EmptyDescription>
-				</Empty>
+			<div className="py-6">
+				<EmptyState
+					icon={KeyRound}
+					title="API keys belong to an organization you manage"
+					description="Admins and owners create and manage keys. Ask an owner or admin of your organization to change your role."
+				/>
 			</div>
 		)
 	}
@@ -679,6 +666,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 						</div>
 						{apiKeysAccessByOrg[organizations[0].organization.id]?.granted ? (
 							<OrgApiKeysTable
+								emptyHeadingLevel="h3"
 								namespace={`api-keys-${organizations[0].organization.id}`}
 								rows={keysByOrg[organizations[0].organization.id] || []}
 								onEdit={handleEdit}
@@ -727,6 +715,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 									</p>
 									{apiKeysAccessByOrg[org.organization.id]?.granted ? (
 										<OrgApiKeysTable
+											emptyHeadingLevel="h2"
 											namespace={`api-keys-${org.organization.id}`}
 											rows={keysByOrg[org.organization.id] || []}
 											onEdit={handleEdit}

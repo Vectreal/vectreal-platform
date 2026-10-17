@@ -40,10 +40,13 @@ import {
 	ChevronRight,
 	FolderInput,
 	Search,
+	SearchX,
 	TextCursor,
 	Trash2
 } from 'lucide-react'
 import { useEffect, useMemo, type ReactNode } from 'react'
+
+import { EmptyState } from '../layout-components'
 
 interface DataTableProps<TData extends RowData> {
 	columns: ColumnDef<TData>[]
@@ -281,12 +284,14 @@ export function DataTable<TData extends RowData>({
 								</TableRow>
 							))
 						) : (
-							<TableRow className="border-0">
-								<TableCell
-									colSpan={columns.length}
-									className="text-muted-foreground h-24 text-center"
-								>
-									No results found.
+							<TableRow className="border-0 hover:bg-transparent">
+								<TableCell colSpan={columns.length} className="p-3">
+									<EmptyState
+										size="inline"
+										icon={SearchX}
+										title="Nothing matches"
+										description="Try a different search term or filter."
+									/>
 								</TableCell>
 							</TableRow>
 						)}

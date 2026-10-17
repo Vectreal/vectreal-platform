@@ -1,8 +1,8 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Package } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-import { DetailPanelSection } from '../../layout-components'
+import { DetailPanelSection, EmptyState } from '../../layout-components'
 import {
 	buildAssetListItemProps,
 	SceneAssetListItem
@@ -62,9 +62,7 @@ export function SceneAssetsSection({
 			className={className}
 		>
 			{assets.length === 0 ? (
-				<p className="text-muted-foreground ds-sunken rounded-xl p-3 text-sm">
-					No linked assets.
-				</p>
+				<EmptyState size="inline" icon={Package} title="No linked assets" />
 			) : (
 				<div className="space-y-2">
 					{initial.map((asset) => (

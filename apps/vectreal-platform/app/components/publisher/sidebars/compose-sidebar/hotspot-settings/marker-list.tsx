@@ -1,12 +1,4 @@
 import { Button } from '@shared/components/ui/button'
-import {
-	Empty,
-	EmptyContent,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle
-} from '@shared/components/ui/empty'
 import { resolveHotspotMarkers } from '@vctrl/viewer/hotspots'
 import { Reorder, useReducedMotion } from 'framer-motion'
 import { useAtom, useSetAtom } from 'jotai/react'
@@ -24,6 +16,7 @@ import {
 	activeHotspotIdAtom,
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { EmptyState } from '../../../../layout-components'
 import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
 import { SidebarSection } from '../../sidebar-section'
 
@@ -230,19 +223,17 @@ export function MarkerList({
 
 	if (hotspots.length === 0) {
 		return (
-			<Empty className="shell-nested gap-4 rounded-xl px-4 py-8">
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<Locate aria-hidden />
-					</EmptyMedia>
-					<EmptyTitle className="text-h4">No markers yet</EmptyTitle>
-					<EmptyDescription>
-						{coversCanvas
-							? 'Add one, then set where it sits under Position.'
-							: 'Add one, then click the model to place it.'}
-					</EmptyDescription>
-				</EmptyHeader>
-				<EmptyContent>
+			<EmptyState
+				size="inline"
+				surface="shell"
+				icon={Locate}
+				title="Call out a point on the model"
+				description={
+					coversCanvas
+						? 'Add a marker, then set where it sits under Position.'
+						: 'Add a marker, then click the model to place it.'
+				}
+				action={
 					<Button
 						variant="outline"
 						size="sm"
@@ -252,8 +243,8 @@ export function MarkerList({
 						<Plus aria-hidden className="size-3.5" />
 						Add marker
 					</Button>
-				</EmptyContent>
-			</Empty>
+				}
+			/>
 		)
 	}
 

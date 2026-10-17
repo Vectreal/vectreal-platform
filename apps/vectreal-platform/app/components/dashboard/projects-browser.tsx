@@ -11,10 +11,11 @@ import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
-import { LayoutGrid, Rows3, Search } from 'lucide-react'
+import { LayoutGrid, Rows3, Search, SearchX } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { DataTable } from './data-table'
+import { EmptyState } from '../layout-components'
 import { ProjectCard } from './project-card'
 import { type SceneStatusCounts } from './status-breakdown'
 import { createProjectColumns, type ProjectRow } from './table-columns'
@@ -234,15 +235,16 @@ export function ProjectsBrowser({
 			  which is why clearing them is offered unconditionally.
 			*/}
 			{filtered.length === 0 ? (
-				<div className="ds-raised rounded-2xl p-12 text-center">
-					<p className="font-medium">No projects match these filters</p>
-					<p className="text-muted-foreground mt-1 text-sm">
-						Try a different search term, or clear the filters.
-					</p>
-					<Button variant="secondary" className="mt-4" onClick={clearFilters}>
-						Clear filters
-					</Button>
-				</div>
+				<EmptyState
+					icon={SearchX}
+					title="No projects match these filters"
+					description="Try a different search term, or clear the filters."
+					action={
+						<Button variant="secondary" onClick={clearFilters}>
+							Clear filters
+						</Button>
+					}
+				/>
 			) : tableState.view === 'grid' ? (
 				<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 					{filtered.map((item) => (
