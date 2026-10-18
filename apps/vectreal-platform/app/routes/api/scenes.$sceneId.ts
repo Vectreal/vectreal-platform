@@ -25,6 +25,7 @@ import {
 	getPublishedScenePreview,
 	toPublishedModelRow
 } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import * as scenePublishOps from '../../lib/domain/scene/server/scene-publish.operations.server'
 import {
 	getSceneSettingsRequestKey,
 	runGuardedSceneMutation,
@@ -34,6 +35,7 @@ import {
 import { updateScenePresentation } from '../../lib/domain/scene/server/scene-settings-repository.server'
 import * as sceneSettingsOps from '../../lib/domain/scene/server/scene-settings.operations.server'
 import { SceneSettingsParser } from '../../lib/domain/scene/server/scene-settings.parser.server'
+import * as sceneUploadOps from '../../lib/domain/scene/server/scene-upload.operations.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import {
 	ensureSameOriginMutation,
@@ -482,7 +484,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			case 'prepare-scene-upload': {
 				try {
 					return ApiResponse.success(
-						await sceneSettingsOps.prepareSceneUpload(
+						await sceneUploadOps.prepareSceneUpload(
 							{
 								...requestData,
 								action
@@ -508,7 +510,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 					)
 				}
 
-				return await sceneSettingsOps.uploadSceneAsset(
+				return await sceneUploadOps.uploadSceneAsset(
 					{ ...requestData, action },
 					authResult.user.id,
 					file,
@@ -524,7 +526,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 					)
 				}
 
-				return await sceneSettingsOps.uploadSceneGltf(
+				return await sceneUploadOps.uploadSceneGltf(
 					{ ...requestData, action },
 					authResult.user.id,
 					file
@@ -539,7 +541,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 					)
 				}
 
-				return await sceneSettingsOps.uploadPublishedGlb(
+				return await sceneUploadOps.uploadPublishedGlb(
 					{ ...requestData, action },
 					authResult.user.id,
 					file
@@ -580,7 +582,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 					action,
 					sceneId: requestData.sceneId,
 					operation: () =>
-						sceneSettingsOps.publishScene(
+						scenePublishOps.publishScene(
 							{ ...requestData, action },
 							authResult.user.id
 						)
@@ -593,7 +595,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 					action,
 					sceneId: requestData.sceneId,
 					operation: () =>
-						sceneSettingsOps.revokeScenePublish(
+						scenePublishOps.revokeScenePublish(
 							{ ...requestData, action },
 							authResult.user.id
 						)

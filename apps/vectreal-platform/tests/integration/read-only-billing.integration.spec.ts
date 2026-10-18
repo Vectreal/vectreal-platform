@@ -25,7 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 type Schema = typeof import('../../app/db/schema')
 type Db = ReturnType<typeof import('../../app/db/client').getDbClient>
 type SceneOps =
-	typeof import('../../app/lib/domain/scene/server/scene-settings.operations.server')
+	typeof import('../../app/lib/domain/scene/server/scene-upload.operations.server')
 
 describe('uploads while billing is read-only', () => {
 	let schema: Schema
@@ -89,7 +89,7 @@ describe('uploads while billing is read-only', () => {
 		schema = await import('../../app/db/schema')
 		db = (await import('../../app/db/client')).getDbClient()
 		sceneOps =
-			await import('../../app/lib/domain/scene/server/scene-settings.operations.server')
+			await import('../../app/lib/domain/scene/server/scene-upload.operations.server')
 
 		await db
 			.insert(schema.users)
