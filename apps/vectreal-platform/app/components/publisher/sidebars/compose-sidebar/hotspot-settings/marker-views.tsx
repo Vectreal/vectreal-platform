@@ -28,12 +28,11 @@ import {
 import { useEffect } from 'react'
 
 import { AXES, AxisField } from './axis-field'
+import { MarkerArtworkField } from './marker-artwork-field'
 import { useHotspotEdits } from './use-hotspot-edits'
-import { isHotspotPayloadUrlShape } from '../../../../../lib/domain/scene/hotspot-artwork'
 import {
 	isAllowedHotspotLinkUrl,
-	MAX_HOTSPOT_BODY_LENGTH,
-	MAX_HOTSPOT_URL_LENGTH
+	MAX_HOTSPOT_BODY_LENGTH
 } from '../../../../../lib/domain/scene/hotspot-urls'
 import {
 	isClickToPlaceActiveAtom,
@@ -293,19 +292,9 @@ export function MarkerContent({ hotspot }: MarkerViewProps) {
 	)
 }
 
-/** The marker's look: a dot, or an image or SVG from a URL. */
+/** The marker's look: a dot, or an uploaded image or SVG. */
 export function MarkerAppearance({ hotspot }: MarkerViewProps) {
 	const edits = useHotspotEdits()
-	const assetErrorId = `hotspot-asset-error-${hotspot.id}`
-	// The save parser's rule, so the field and the server cannot disagree. An
-	// empty field is not an invalid one: it saves, and draws no artwork.
-	const assetIsInvalid =
-		!!hotspot.payloadUrl && !isHotspotPayloadUrlShape(hotspot.payloadUrl)
-	// The rule refuses an over-long https address too, so the length gets its
-	// own reason rather than telling the author to use the https:// they have.
-	const assetIsTooLong =
-		(hotspot.payloadUrl?.length ?? 0) > MAX_HOTSPOT_URL_LENGTH
-	const assetLimitKb = Math.floor(MAX_HOTSPOT_URL_LENGTH / 1024)
 
 	return (
 		<>
@@ -329,28 +318,7 @@ export function MarkerAppearance({ hotspot }: MarkerViewProps) {
 			</ToggleGroup>
 
 			{hotspot.stylePreset !== 'dot' && (
-				<SettingGroup label="Asset URL">
-					<Input
-						aria-label="Asset URL"
-						value={hotspot.payloadUrl ?? ''}
-						onChange={(event) =>
-							edits.update(hotspot.id, {
-								payloadUrl: event.target.value || undefined
-							})
-						}
-						aria-invalid={assetIsInvalid || undefined}
-						aria-describedby={assetIsInvalid ? assetErrorId : undefined}
-						placeholder="https://…"
-						className="text-sm"
-					/>
-					{assetIsInvalid && (
-						<p id={assetErrorId} className="text-destructive text-xs">
-							{assetIsTooLong
-								? `Too long: keep it under ${assetLimitKb} KB, or host the image and use its https:// address.`
-								: `Use an https:// address, or an inline image under ${assetLimitKb} KB.`}
-						</p>
-					)}
-				</SettingGroup>
+				<MarkerArtworkField hotspot={hotspot} />
 			)}
 		</>
 	)

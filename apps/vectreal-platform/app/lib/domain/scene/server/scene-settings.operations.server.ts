@@ -6,7 +6,10 @@ import { readGlbExtensionsUsed } from '@vctrl/core/model-loader'
 import { count, eq } from 'drizzle-orm'
 
 import { getScene, getSceneFolder } from './scene-folder-repository.server'
-import { sceneSettingsService } from './scene-settings-service.server'
+import {
+	SceneSaveRefusedError,
+	sceneSettingsService
+} from './scene-settings-service.server'
 import { isBillingStateReadOnly } from '../../../../constants/plan-config'
 import { getDbClient } from '../../../../db/client'
 import { projects } from '../../../../db/schema/project/projects'
@@ -626,13 +629,16 @@ export async function saveSceneSettings(
 		}
 		return ApiResponse.success(result)
 	} catch (error) {
-		reportServerError(error, {
-			properties: {
-				requestId: request.requestId,
-				userId,
-				sceneId: request.sceneId || null
-			}
-		})
+		const refused = error instanceof SceneSaveRefusedError
+		if (!refused) {
+			reportServerError(error, {
+				properties: {
+					requestId: request.requestId,
+					userId,
+					sceneId: request.sceneId || null
+				}
+			})
+		}
 		// The uploads are already committed to storage by the time the save is
 		// rejected. Nothing linked them, so this is the last chance to find them.
 		if (reclaimProjectId) {
@@ -640,6 +646,9 @@ export async function saveSceneSettings(
 				requestId: request.requestId,
 				projectId: reclaimProjectId
 			})
+		}
+		if (refused) {
+			return ApiResponse.badRequest(error.message)
 		}
 		return ApiResponse.serverError(
 			error instanceof Error ? error.message : 'Failed to save scene settings'
