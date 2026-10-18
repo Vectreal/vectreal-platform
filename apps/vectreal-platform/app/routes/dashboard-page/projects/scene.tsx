@@ -67,7 +67,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	const { projectId, sceneId } = parsedParams.value
 
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch project and scene data
 	const [project, scene] = await Promise.all([
@@ -156,29 +156,26 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		}))
 	}
 
-	return data(
-		{
-			project,
-			scene,
-			publishState: {
-				sceneId: scene.id,
-				status: publishedMeta ? ('published' as const) : ('draft' as const),
-				publishedAt: publishedMeta?.publishedAt?.toISOString() ?? null,
-				publishedAssetId: publishedMeta?.publishedAssetId ?? null,
-				publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
-			},
-			folderPath,
-			sceneDetails,
-			textureUrls: buildTextureThumbnailUrls(sceneAssets, (assetId) =>
-				buildPreviewAssetUrl({ sceneId, projectId, assetId })
-			),
-			manifest,
-			presentation,
-			canDeleteScene: canDeleteScene(membership),
-			canUpdateScene: canUpdateScene(membership)
+	return data({
+		project,
+		scene,
+		publishState: {
+			sceneId: scene.id,
+			status: publishedMeta ? ('published' as const) : ('draft' as const),
+			publishedAt: publishedMeta?.publishedAt?.toISOString() ?? null,
+			publishedAssetId: publishedMeta?.publishedAssetId ?? null,
+			publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
 		},
-		{ headers }
-	)
+		folderPath,
+		sceneDetails,
+		textureUrls: buildTextureThumbnailUrls(sceneAssets, (assetId) =>
+			buildPreviewAssetUrl({ sceneId, projectId, assetId })
+		),
+		manifest,
+		presentation,
+		canDeleteScene: canDeleteScene(membership),
+		canUpdateScene: canUpdateScene(membership)
+	})
 }
 
 /**

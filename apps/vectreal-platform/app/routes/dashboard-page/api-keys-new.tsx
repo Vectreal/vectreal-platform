@@ -86,7 +86,7 @@ const apiKeyFormSchema = z.object({
 type ApiKeyFormValues = z.infer<typeof apiKeyFormSchema>
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 
 	const [organizations, userProjects] = await Promise.all([
 		getUserOrganizations(user.id),
@@ -124,18 +124,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	const apiKeysAccessByOrg = Object.fromEntries(apiKeyEntitlementEntries)
 
-	return data(
-		{
-			organizations: adminOrgs,
-			userProjects,
-			apiKeysAccessByOrg
-		},
-		{ headers }
-	)
+	return data({
+		organizations: adminOrgs,
+		userProjects,
+		apiKeysAccessByOrg
+	})
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -180,7 +177,7 @@ export async function action({ request }: Route.ActionArgs) {
 						actionAttempted: 'api_key_create'
 					}
 				},
-				{ status: 403, headers }
+				{ status: 403 }
 			)
 		}
 
@@ -204,19 +201,16 @@ export async function action({ request }: Route.ActionArgs) {
 
 		// The plaintext, for the dialog. The list shows it too, from
 		// `encrypted_key`, so this is a convenience rather than the only chance.
-		return data(
-			{
-				success: true,
-				apiKey: {
-					plaintext: result.plaintext,
-					name: result.apiKey.name,
-					// See the same field on the rotate path: an unset
-					// `EMBED_TOKEN_ENCRYPTION_KEY` mints a key with nothing to read back.
-					recoverable: result.apiKey.encryptedKey !== null
-				}
-			},
-			{ headers }
-		)
+		return data({
+			success: true,
+			apiKey: {
+				plaintext: result.plaintext,
+				name: result.apiKey.name,
+				// See the same field on the rotate path: an unset
+				// `EMBED_TOKEN_ENCRYPTION_KEY` mints a key with nothing to read back.
+				recoverable: result.apiKey.encryptedKey !== null
+			}
+		})
 	} catch (error) {
 		if (error instanceof QuotaExceededError) {
 			return data(
@@ -233,7 +227,7 @@ export async function action({ request }: Route.ActionArgs) {
 						actionAttempted: 'api_key_create'
 					}
 				},
-				{ status: 403, headers }
+				{ status: 403 }
 			)
 		}
 
@@ -247,23 +241,16 @@ export async function action({ request }: Route.ActionArgs) {
 				}
 			})
 
-			return data(
-				{
-					error: 'Validation failed',
-					fieldErrors
-				},
-				{ headers }
-			)
+			return data({
+				error: 'Validation failed',
+				fieldErrors
+			})
 		}
 
 		// Return general error for display
-		return data(
-			{
-				error:
-					error instanceof Error ? error.message : 'Failed to create API key'
-			},
-			{ headers }
-		)
+		return data({
+			error: error instanceof Error ? error.message : 'Failed to create API key'
+		})
 	}
 }
 

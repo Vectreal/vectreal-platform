@@ -68,7 +68,6 @@ async function resolveProjectAccess(request: Request, projectId?: string) {
 		return { error: authResult } as const
 	}
 
-	const headers = new Headers(authResult.headers)
 	const membership = await resolveProjectMembership(
 		projectId,
 		authResult.user.id
@@ -78,11 +77,11 @@ async function resolveProjectAccess(request: Request, projectId?: string) {
 	// forbidden, so this route cannot be used to probe which ids exist.
 	if (!membership) {
 		return {
-			error: ApiResponse.notFound('Project not found', { headers })
+			error: ApiResponse.notFound('Project not found')
 		} as const
 	}
 
-	return { userId: authResult.user.id, headers, membership } as const
+	return { userId: authResult.user.id, membership } as const
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -91,13 +90,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return access.error
 	}
 
-	const { userId, headers, membership } = access
+	const { userId, membership } = access
 
 	if (!canPerformDashboardOperation('api-key:read', membership)) {
-		return ApiResponse.forbidden(
-			'You do not have permission to view API keys',
-			{ headers }
-		)
+		return ApiResponse.forbidden('You do not have permission to view API keys')
 	}
 
 	const [project, allKeys] = await Promise.all([
@@ -106,7 +102,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	])
 
 	if (!project) {
-		return ApiResponse.notFound('Project not found', { headers })
+		return ApiResponse.notFound('Project not found')
 	}
 
 	const now = new Date()
@@ -154,9 +150,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	  protection living in a Terraform rule instead of the response, and does
 	  nothing about the browser's own disk cache.
 	*/
-	headers.set('Cache-Control', 'no-store')
-
-	return ApiResponse.success(payload, 200, { headers })
+	return ApiResponse.success(payload, 200, {
+		headers: { 'Cache-Control': 'no-store' }
+	})
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -177,7 +173,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return access.error
 	}
 
-	const { userId, headers, membership } = access
+	const { userId, membership } = access
 
 	if (formData.get('intent') !== 'create') {
 		return ApiResponse.badRequest('Unsupported intent')
@@ -185,14 +181,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	if (!canPerformDashboardOperation('api-key:create', membership)) {
 		return ApiResponse.forbidden(
-			'You do not have permission to create API keys',
-			{ headers }
+			'You do not have permission to create API keys'
 		)
 	}
 
 	const project = await getProject(membership.projectId, userId)
 	if (!project) {
-		return ApiResponse.notFound('Project not found', { headers })
+		return ApiResponse.notFound('Project not found')
 	}
 
 	const expiresAt = new Date()
@@ -232,7 +227,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			plaintext: created.plaintext
 		}
 
-		return ApiResponse.created(payload, { headers })
+		return ApiResponse.created(payload)
 	} catch (error) {
 		if (error instanceof QuotaExceededError) {
 			return quotaExceededResponse(error)

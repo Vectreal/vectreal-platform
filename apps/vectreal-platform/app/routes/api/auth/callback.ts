@@ -22,26 +22,21 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		return redirect(buildSigninErrorRedirect('missing_code', next))
 	}
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const { error } = await client.auth.exchangeCodeForSession(code)
 
 	if (error) {
 		console.warn('[auth/callback] code exchange failed', {
 			message: error.message
 		})
-		return redirect(
-			buildSigninErrorRedirect('provider_exchange_failed', next),
-			{ headers }
-		)
+		return redirect(buildSigninErrorRedirect('provider_exchange_failed', next))
 	}
 
 	const { data: userData } = await client.auth.getUser()
 
 	if (!userData.user) {
 		console.warn('[auth/callback] missing user after successful code exchange')
-		return redirect(buildSigninErrorRedirect('session_missing', next), {
-			headers
-		})
+		return redirect(buildSigninErrorRedirect('session_missing', next))
 	}
 
 	let userWithDefaults: Awaited<ReturnType<typeof initializeUserDefaults>>
@@ -62,9 +57,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 			})
 		}
 
-		return redirect(buildSigninErrorRedirect('user_init_failed', next), {
-			headers: new Headers(headers)
-		})
+		return redirect(buildSigninErrorRedirect('user_init_failed', next))
 	}
 
 	const posthog = (context as PostHogContext).posthog
@@ -87,10 +80,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	}
 
 	if (userWithDefaults.isNewUser) {
-		return redirect(newAccountDestination(next), {
-			headers: new Headers(headers)
-		})
+		return redirect(newAccountDestination(next))
 	}
 
-	return redirect(next, { headers: new Headers(headers) })
+	return redirect(next)
 }

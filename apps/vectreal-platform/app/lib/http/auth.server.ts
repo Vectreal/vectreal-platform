@@ -7,7 +7,7 @@ import type { ApiUserContext } from '../../types/api'
 export async function getAuthUser(
 	request: Request
 ): Promise<ApiUserContext | Response> {
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user },
 		error
@@ -22,8 +22,8 @@ export async function getAuthUser(
 	}
 
 	if (!user) {
-		return ApiResponse.unauthorized('Unauthorized', { headers })
+		return ApiResponse.unauthorized('Unauthorized')
 	}
 
-	return { user, headers }
+	return { user }
 }

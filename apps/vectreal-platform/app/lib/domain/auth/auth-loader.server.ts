@@ -13,7 +13,6 @@ import type { User } from '@supabase/supabase-js'
 
 export interface OptionalUserResult {
 	user: User | null
-	headers: Headers
 }
 
 /**
@@ -28,10 +27,10 @@ export async function resolveOptionalUser(
 ): Promise<OptionalUserResult> {
 	const cookieHeader = request.headers.get('Cookie')
 	if (!hasSupabaseAuthCookie(cookieHeader)) {
-		return { user: null, headers: new Headers() }
+		return { user: null }
 	}
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user },
 		error
@@ -43,21 +42,19 @@ export async function resolveOptionalUser(
 		} catch {
 			// Ignore cleanup errors and continue as unauthenticated.
 		}
-		return { user: null, headers }
+		return { user: null }
 	}
 
-	return { user: user ?? null, headers }
+	return { user: user ?? null }
 }
 
 export interface AuthLoaderResult {
 	user: User
 	userWithDefaults: UserWithDefaults
-	headers: HeadersInit
 }
 
 export interface AuthSessionResult {
 	user: User
-	headers: HeadersInit
 }
 
 function getSignUpRedirectPath(request: Request): string {
@@ -72,15 +69,10 @@ export async function loadAuthenticatedSession(
 	const authResponse = await getAuthUser(request)
 
 	if (authResponse instanceof Response) {
-		throw redirect(getSignUpRedirectPath(request), {
-			headers: authResponse.headers
-		})
+		throw redirect(getSignUpRedirectPath(request))
 	}
 
-	return {
-		user: authResponse.user,
-		headers: authResponse.headers ?? {}
-	}
+	return { user: authResponse.user }
 }
 
 /**
@@ -94,24 +86,19 @@ export async function loadAuthenticatedSession(
 export async function loadAuthenticatedUser(
 	request: Request
 ): Promise<AuthLoaderResult> {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	try {
 		// Initialize user defaults (creates user in local DB, default org, and project)
 		const userWithDefaults = await initializeUserDefaults(user)
 
-		return {
-			user,
-			userWithDefaults,
-			headers
-		}
+		return { user, userWithDefaults }
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error)
 		reportServerError(error, { request })
 
 		if (message.startsWith('email_conflict:')) {
-			const { client, headers: signOutHeaders } =
-				await createSupabaseClient(request)
+			const { client } = await createSupabaseClient(request)
 			try {
 				await client.auth.signOut({ scope: 'local' })
 			} catch (signOutError) {
@@ -121,19 +108,9 @@ export async function loadAuthenticatedUser(
 				)
 			}
 
-			const redirectHeaders = new Headers(headers as HeadersInit)
-			signOutHeaders.forEach((value, key) => {
-				if (key.toLowerCase() === 'set-cookie') {
-					redirectHeaders.append(key, value)
-					return
-				}
-
-				redirectHeaders.set(key, value)
-			})
-
-			throw redirect('/sign-in?error=email_conflict', {
-				headers: redirectHeaders
-			})
+			// The sign-out's cookie deletions reach the browser through
+			// `sessionCookieMiddleware`, which carries them on this redirect too.
+			throw redirect('/sign-in?error=email_conflict')
 		}
 
 		throw new Response(`Failed to initialize user data: ${message}`, {

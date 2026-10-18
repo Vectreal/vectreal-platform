@@ -58,21 +58,19 @@ describe('authorizePreviewRequest', () => {
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
 	})
 
-	it('admits a signed-in user who can open the project, with their headers', async () => {
-		const headers = new Headers({ 'Set-Cookie': 'session=1' })
-		deps.getAuthUser.mockResolvedValue({ user: { id: 'u1' }, headers })
+	it('admits a signed-in user who can open the project', async () => {
+		deps.getAuthUser.mockResolvedValue({ user: { id: 'u1' } })
 		deps.getProject.mockResolvedValue({ id: PROJECT_ID })
 
 		expect(await authorizePreviewRequest(withSession(), PROJECT_ID)).toEqual({
 			mode: 'session',
-			userId: 'u1',
-			headers
+			userId: 'u1'
 		})
 		expect(deps.getProject).toHaveBeenCalledWith(PROJECT_ID, 'u1')
 	})
 
 	it('tells a user outside the project the scene does not exist', async () => {
-		deps.getAuthUser.mockResolvedValue({ user: { id: 'u1' }, headers: {} })
+		deps.getAuthUser.mockResolvedValue({ user: { id: 'u1' } })
 		deps.getProject.mockResolvedValue(null)
 
 		const response = (await authorizePreviewRequest(

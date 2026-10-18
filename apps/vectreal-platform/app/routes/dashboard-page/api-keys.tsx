@@ -113,7 +113,7 @@ function toApiKeyRow(key: ApiKeyWithDetails, value: ApiKeyRowValue): ApiKeyRow {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 
 	const [apiKeys, organizations] = await Promise.all([
 		getAllUserApiKeys(user.id),
@@ -217,14 +217,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 	  response - React Router does not propagate a loader's `headers` onto one,
 	  which is the whole reason that hook exists.
 	*/
-	return data(
-		{
-			keysByOrg: Object.fromEntries(keysByOrg),
-			organizations: adminOrgs,
-			apiKeysAccessByOrg
-		},
-		{ headers }
-	)
+	return data({
+		keysByOrg: Object.fromEntries(keysByOrg),
+		organizations: adminOrgs,
+		apiKeysAccessByOrg
+	})
 }
 
 /**
@@ -244,7 +241,7 @@ interface ApiKeysActionResult {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -258,25 +255,19 @@ export async function action({ request }: Route.ActionArgs) {
 
 		if (intent === 'revoke') {
 			if (!apiKeyId) {
-				return data<ApiKeysActionResult>(
-					{ error: 'API key ID is required' },
-					{ headers }
-				)
+				return data<ApiKeysActionResult>({ error: 'API key ID is required' })
 			}
 
 			await revokeApiKey(apiKeyId, user.id)
-			return data<ApiKeysActionResult>(
-				{ success: true, message: 'API key revoked successfully' },
-				{ headers }
-			)
+			return data<ApiKeysActionResult>({
+				success: true,
+				message: 'API key revoked successfully'
+			})
 		}
 
 		if (intent === 'rotate') {
 			if (!apiKeyId) {
-				return data<ApiKeysActionResult>(
-					{ error: 'API key ID is required' },
-					{ headers }
-				)
+				return data<ApiKeysActionResult>({ error: 'API key ID is required' })
 			}
 
 			const rotated = await rotateApiKey({ apiKeyId, userId: user.id })
@@ -288,33 +279,29 @@ export async function action({ request }: Route.ActionArgs) {
 			  it back - that would be a round trip to re-fetch what this response
 			  already holds.
 			*/
-			return data<ApiKeysActionResult>(
-				{
-					success: true,
-					message: 'API key rotated.',
-					rotatedKey: {
-						plaintext: rotated.plaintext,
-						name: rotated.apiKey.name,
-						/*
+			return data<ApiKeysActionResult>({
+				success: true,
+				message: 'API key rotated.',
+				rotatedKey: {
+					plaintext: rotated.plaintext,
+					name: rotated.apiKey.name,
+					/*
 						  Read off what was actually written, not assumed. The cipher
 						  returns null rather than throwing when
 						  `EMBED_TOKEN_ENCRYPTION_KEY` is unset, so a rotation can
 						  succeed and still leave nothing to read back - and the dialog
 						  has to say so instead of promising this list will show it.
 						*/
-						recoverable: rotated.apiKey.encryptedKey !== null
-					}
-				},
-				{ headers }
-			)
+					recoverable: rotated.apiKey.encryptedKey !== null
+				}
+			})
 		}
 
-		return data<ApiKeysActionResult>({ error: 'Invalid intent' }, { headers })
+		return data<ApiKeysActionResult>({ error: 'Invalid intent' })
 	} catch (error) {
-		return data<ApiKeysActionResult>(
-			{ error: error instanceof Error ? error.message : 'An error occurred' },
-			{ headers }
-		)
+		return data<ApiKeysActionResult>({
+			error: error instanceof Error ? error.message : 'An error occurred'
+		})
 	}
 }
 

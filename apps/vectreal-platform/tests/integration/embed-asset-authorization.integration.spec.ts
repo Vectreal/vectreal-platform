@@ -57,8 +57,7 @@ const sessionUser = vi.hoisted(() => ({ id: '' }))
 
 vi.mock('../../app/lib/http/auth.server', () => ({
 	getAuthUser: async () => ({
-		user: { id: sessionUser.id },
-		headers: new Headers()
+		user: { id: sessionUser.id }
 	})
 }))
 

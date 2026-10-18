@@ -37,7 +37,7 @@ import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch data needed for this specific route
 	const [organizations, userProjects] = await Promise.all([
@@ -93,15 +93,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 		organizations,
 		projectQuotaByOrganization
 	)
-	return data(
-		{
-			organizations,
-			projects: userProjects,
-			scenes,
-			projectCreationCapabilities
-		},
-		{ headers }
-	)
+	return data({
+		organizations,
+		projects: userProjects,
+		scenes,
+		projectCreationCapabilities
+	})
 }
 
 /**

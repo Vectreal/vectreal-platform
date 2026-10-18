@@ -58,7 +58,6 @@ export async function authorizePreviewRequest(
 
 	return {
 		mode: 'session' as const,
-		userId: sessionAuth.user.id,
-		headers: sessionAuth.headers
+		userId: sessionAuth.user.id
 	}
 }

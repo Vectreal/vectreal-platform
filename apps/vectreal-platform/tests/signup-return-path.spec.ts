@@ -40,8 +40,7 @@ const { signUp, resend, verifyOtp, getUser, captureServerEvent } = vi.hoisted(
 
 vi.mock('../app/lib/supabase.server', () => ({
 	createSupabaseClient: async () => ({
-		client: { auth: { signUp, resend, verifyOtp, getUser } },
-		headers: new Headers()
+		client: { auth: { signUp, resend, verifyOtp, getUser } }
 	})
 }))
 vi.mock('../app/lib/http/csrf.server', () => ({

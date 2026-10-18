@@ -428,8 +428,7 @@ describe('a session asset request', () => {
 
 	beforeEach(() => {
 		vi.mocked(getAuthUser).mockResolvedValue({
-			user: { id: 'user-1' },
-			headers: new Headers()
+			user: { id: 'user-1' }
 		} as never)
 		vi.mocked(getPublishedScenePreview).mockResolvedValue(
 			PUBLISHED_ROW as never

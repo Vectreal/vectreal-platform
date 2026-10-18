@@ -18,13 +18,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	const sceneId = params.sceneId?.trim()
 	const assetId = params.assetId?.trim()
-	const headers = auth.headers ?? {}
 
 	if (!sceneId || !assetId) {
-		return new Response('Missing scene or asset ID', {
-			status: 400,
-			headers
-		})
+		return new Response('Missing scene or asset ID', { status: 400 })
 	}
 
 	/*
@@ -40,7 +36,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		UUID_REGEX.test(sceneId) &&
 		(await resolveSceneMembership(sceneId, auth.user.id))
 	if (!membership) {
-		return new Response('Thumbnail not found', { status: 404, headers })
+		return new Response('Thumbnail not found', { status: 404 })
 	}
 
 	// The thumbnail is whatever `scenes.thumbnail_url` names, never the asset
@@ -48,20 +44,19 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	// between scenes, and that field names only the first.
 	const thumbnail = await findSceneThumbnailAsset(sceneId, assetId)
 	if (!thumbnail) {
-		return new Response('Thumbnail not found', { status: 404, headers })
+		return new Response('Thumbnail not found', { status: 404 })
 	}
 
 	try {
 		const assetData = await downloadAsset(assetId)
-		const responseHeaders = new Headers(headers)
-		responseHeaders.set('Last-Modified', thumbnail.updatedAt.toUTCString())
-
-		return assetResponse(assetData.data, assetData.mimeType, responseHeaders)
+		return assetResponse(assetData.data, assetData.mimeType, {
+			'Last-Modified': thumbnail.updatedAt.toUTCString()
+		})
 	} catch (error) {
 		reportServerError(error, {
 			request,
 			properties: { sceneId, assetId, userId: auth.user.id }
 		})
-		return new Response('Failed to load thumbnail', { status: 500, headers })
+		return new Response('Failed to load thumbnail', { status: 500 })
 	}
 }

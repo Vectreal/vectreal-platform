@@ -451,11 +451,9 @@ export async function loadBillingDashboardData(
 	actorId: string
 	/** So a caller can load more for this organization without re-resolving it. */
 	organizationId: string
-	headers: HeadersInit
 }> {
 	const { includeCheckoutOptions = true } = options
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
 
 	const organizationId = userWithDefaults.organization.id
 	const db = getDbClient()
@@ -514,7 +512,6 @@ export async function loadBillingDashboardData(
 	return {
 		loaderData,
 		actorId: user.id,
-		organizationId,
-		headers
+		organizationId
 	}
 }

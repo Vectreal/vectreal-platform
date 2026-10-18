@@ -101,13 +101,11 @@ function isStaleAuthorization(error: { status?: number } | null): boolean {
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	const authorizationId = authorizationIdFrom(request)
 	if (!authorizationId) {
-		return Response.json({ kind: 'invalid' } satisfies ConsentView, {
-			headers
-		})
+		return Response.json({ kind: 'invalid' } satisfies ConsentView)
 	}
 
 	const [memberships, grants, consents] = await Promise.all([
@@ -139,9 +137,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 	if (error || !data) {
 		if (isStaleAuthorization(error)) {
-			return Response.json({ kind: 'invalid' } satisfies ConsentView, {
-				headers
-			})
+			return Response.json({ kind: 'invalid' } satisfies ConsentView)
 		}
 		throw error ?? new Error('Authorization details missing')
 	}
@@ -149,7 +145,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Consent Supabase still holds is backed by a valid grant (see above), so
 	// following its auto-approval is safe.
 	if ('redirect_url' in data) {
-		throw redirect(data.redirect_url, { headers })
+		throw redirect(data.redirect_url)
 	}
 
 	const existingGrant =
@@ -173,7 +169,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		isRenewal: existingGrant !== null
 	}
 
-	return Response.json(view, { headers })
+	return Response.json(view)
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -184,7 +180,7 @@ export async function action({ request }: Route.ActionArgs) {
 	if (csrfCheck) return csrfCheck
 
 	const { user } = await loadAuthenticatedUser(request)
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	const authorizationId = authorizationIdFrom(request)
 	const parsed = parseConsentForm(formData)
@@ -195,7 +191,7 @@ export async function action({ request }: Route.ActionArgs) {
 					? 'This authorization link is incomplete.'
 					: parsed.error
 			},
-			{ status: 400, headers }
+			{ status: 400 }
 		)
 	}
 
@@ -208,11 +204,11 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 		if (error || !data) {
 			if (isStaleAuthorization(error)) {
-				throw redirect(request.url, { headers })
+				throw redirect(request.url)
 			}
 			throw error ?? new Error('Denial returned no redirect')
 		}
-		throw redirect(data.redirect_url, { headers })
+		throw redirect(data.redirect_url)
 	}
 
 	const memberships = await getUserOrganizations(user.id)
@@ -223,7 +219,7 @@ export async function action({ request }: Route.ActionArgs) {
 	) {
 		return Response.json(
 			{ error: 'Choose one of your organizations.' },
-			{ status: 400, headers }
+			{ status: 400 }
 		)
 	}
 
@@ -233,12 +229,12 @@ export async function action({ request }: Route.ActionArgs) {
 		await client.auth.oauth.getAuthorizationDetails(authorizationId)
 	if (details.error || !details.data) {
 		if (isStaleAuthorization(details.error)) {
-			throw redirect(request.url, { headers })
+			throw redirect(request.url)
 		}
 		throw details.error ?? new Error('Authorization details missing')
 	}
 	if ('redirect_url' in details.data) {
-		throw redirect(details.data.redirect_url, { headers })
+		throw redirect(details.data.redirect_url)
 	}
 	const oauthClientId = details.data.client.id
 
@@ -255,7 +251,7 @@ export async function action({ request }: Route.ActionArgs) {
 	)
 	if (error || !data) {
 		if (isStaleAuthorization(error)) {
-			throw redirect(request.url, { headers })
+			throw redirect(request.url)
 		}
 		throw error ?? new Error('Approval returned no redirect')
 	}
@@ -267,7 +263,7 @@ export async function action({ request }: Route.ActionArgs) {
 		scopes: decision.scopes
 	})
 
-	throw redirect(data.redirect_url, { headers })
+	throw redirect(data.redirect_url)
 }
 
 const ConsentShell = ({ children }: { children: ReactNode }) => (

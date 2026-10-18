@@ -58,16 +58,9 @@ const routeArgs = (request: Request) =>
 		params: { projectId: PROJECT_ID }
 	}) as unknown as LoaderFunctionArgs & ActionFunctionArgs
 
-/**
- * What a refreshed session looks like from `getAuthUser`. Whether it reaches
- * the browser is `sessionCookieMiddleware`'s to prove, not this route's.
- */
-const SESSION_COOKIE = 'sb-access-token=rotated; Path=/'
-
 function authenticateAs(role: 'owner' | 'admin' | 'member' | null) {
 	vi.mocked(getAuthUser).mockResolvedValue({
-		user: { id: 'user-1' },
-		headers: new Headers({ 'Set-Cookie': SESSION_COOKIE })
+		user: { id: 'user-1' }
 	} as unknown as Awaited<ReturnType<typeof getAuthUser>>)
 
 	vi.mocked(resolveProjectMembership).mockResolvedValue(

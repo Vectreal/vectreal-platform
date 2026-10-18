@@ -96,8 +96,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return auth
 	}
 
-	const authHeaders = auth.headers ?? {}
-
 	/*
 	  Authorization gate first: a non-member gets the same 404 whether or not
 	  the asset exists, so the route is no existence oracle.
@@ -106,7 +104,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!membership) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: noStoreHeaders(authHeaders)
+			headers: noStoreHeaders()
 		})
 	}
 
@@ -128,21 +126,20 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const publishedModel = serveFromPublishedRow(
 		request,
 		{ sceneId, assetId },
-		previewScene,
-		authHeaders
+		previewScene
 	)
 	if (publishedModel) return publishedModel
 
 	if (!isLinked) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: noStoreHeaders(authHeaders)
+			headers: noStoreHeaders()
 		})
 	}
 
 	try {
 		const assetData = await downloadAsset(assetId)
-		return assetResponse(assetData.data, assetData.mimeType, authHeaders)
+		return assetResponse(assetData.data, assetData.mimeType)
 	} catch (error) {
 		reportServerError(error, {
 			request,
@@ -150,7 +147,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: noStoreHeaders(authHeaders)
+			headers: noStoreHeaders()
 		})
 	}
 }
