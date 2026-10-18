@@ -61,30 +61,6 @@ function isMalformedSceneId(sceneId: string | undefined): boolean {
 	return Boolean(sceneId) && !UUID_REGEX.test(sceneId as string)
 }
 
-function withAdditionalHeaders(
-	response: Response,
-	additionalHeaders?: HeadersInit
-): Response {
-	if (!additionalHeaders) {
-		return response
-	}
-
-	const headers = new Headers(response.headers)
-	new Headers(additionalHeaders).forEach((value, key) => {
-		if (key.toLowerCase() === 'set-cookie') {
-			headers.append(key, value)
-			return
-		}
-
-		headers.set(key, value)
-	})
-
-	return new Response(response.body, {
-		status: response.status,
-		headers
-	})
-}
-
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const url = new URL(request.url)
 	const isPreviewRequest = url.searchParams.get('preview') === '1'
@@ -277,9 +253,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			return authContext
 		}
 
-		const previewSessionHeaders =
-			authContext.mode === 'session' ? authContext.headers : undefined
-
 		/*
 		  Token callers get the GET manifest and nothing else.
 
@@ -317,20 +290,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			caller: authContext.mode
 		})
 		if (manifestKind !== 'working') {
-			return withNoStore(
-				withAdditionalHeaders(
-					ApiResponse.notFound('Scene not found'),
-					previewSessionHeaders
-				)
-			)
+			return withNoStore(ApiResponse.notFound('Scene not found'))
 		}
 
 		const parsedRequest =
 			SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 		if (parsedRequest instanceof Response) {
-			return withNoStore(
-				withAdditionalHeaders(parsedRequest, previewSessionHeaders)
-			)
+			return withNoStore(parsedRequest)
 		}
 
 		/*
@@ -341,12 +307,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		*/
 		const bodySceneId = parsedRequest.sceneId?.trim()
 		if (bodySceneId && bodySceneId !== routeSceneId) {
-			return withNoStore(
-				withAdditionalHeaders(
-					ApiResponse.notFound('Scene not found'),
-					previewSessionHeaders
-				)
-			)
+			return withNoStore(ApiResponse.notFound('Scene not found'))
 		}
 
 		const requestKey = getSceneSettingsRequestKey(
@@ -362,15 +323,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			})
 		)
 
-		return withNoStore(withAdditionalHeaders(response, previewSessionHeaders))
+		return withNoStore(response)
 	}
 
 	const authResult = await getAuthUser(request)
 	if (authResult instanceof Response) {
 		return authResult
 	}
-
-	const authHeaders = authResult.headers
 
 	if (action === 'update-scene-metadata') {
 		/*
@@ -383,22 +342,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		*/
 		const tokenCheck = await ensureValidCsrfToken(request, actionRequest.csrf)
 		if (tokenCheck) {
-			return withAdditionalHeaders(tokenCheck, authHeaders)
+			return tokenCheck
 		}
 
 		if (!routeSceneId) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Scene ID is required'),
-				authHeaders
-			)
+			return ApiResponse.badRequest('Scene ID is required')
 		}
 
 		const scene = await getScene(routeSceneId, authResult.user.id)
 		if (!scene) {
-			return withAdditionalHeaders(
-				ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`),
-				authHeaders
-			)
+			return ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`)
 		}
 
 		const nameRaw = actionRequest.name
@@ -409,10 +362,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			typeof descriptionRaw === 'string' ? descriptionRaw : null
 
 		if (!name) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Scene name is required'),
-				authHeaders
-			)
+			return ApiResponse.badRequest('Scene name is required')
 		}
 
 		try {
@@ -425,22 +375,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				}
 			)
 
-			return withAdditionalHeaders(
-				ApiResponse.success({
-					success: true,
-					action,
-					scene: updatedScene
-				}),
-				authHeaders
-			)
+			return ApiResponse.success({
+				success: true,
+				action,
+				scene: updatedScene
+			})
 		} catch (error) {
-			return withAdditionalHeaders(
-				ApiResponse.serverError(
-					error instanceof Error
-						? error.message
-						: 'Failed to update scene metadata'
-				),
-				authHeaders
+			return ApiResponse.serverError(
+				error instanceof Error
+					? error.message
+					: 'Failed to update scene metadata'
 			)
 		}
 	}
@@ -458,14 +402,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		*/
 		const tokenCheck = await ensureValidCsrfToken(request, actionRequest.csrf)
 		if (tokenCheck) {
-			return withAdditionalHeaders(tokenCheck, authHeaders)
+			return tokenCheck
 		}
 
 		if (!routeSceneId) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Scene ID is required'),
-				authHeaders
-			)
+			return ApiResponse.badRequest('Scene ID is required')
 		}
 
 		// One 404 for "no such scene" and "not yours to change", so the
@@ -478,48 +419,36 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			!membership ||
 			!canPerformDashboardOperation('scene:update', membership)
 		) {
-			return withAdditionalHeaders(
-				ApiResponse.notFound('Scene not found'),
-				authHeaders
-			)
+			return ApiResponse.notFound('Scene not found')
 		}
 
 		const presentation = normalizePresentationSettings(
 			actionRequest.presentation
 		)
 		if (!presentation) {
-			return withAdditionalHeaders(
-				ApiResponse.badRequest('Presentation settings are required'),
-				authHeaders
-			)
+			return ApiResponse.badRequest('Presentation settings are required')
 		}
 
 		try {
-			return withAdditionalHeaders(
-				await runWithSceneWriteLock(
-					routeSceneId,
-					`${authResult.user.id}:update-scene-presentation`,
-					async () => {
-						const updated = await updateScenePresentation(
-							routeSceneId,
-							presentation
-						)
-						return updated
-							? ApiResponse.success({ presentation: updated })
-							: ApiResponse.notFound('Scene not found')
-					}
-				),
-				authHeaders
+			return await runWithSceneWriteLock(
+				routeSceneId,
+				`${authResult.user.id}:update-scene-presentation`,
+				async () => {
+					const updated = await updateScenePresentation(
+						routeSceneId,
+						presentation
+					)
+					return updated
+						? ApiResponse.success({ presentation: updated })
+						: ApiResponse.notFound('Scene not found')
+				}
 			)
 		} catch (error) {
 			reportServerError(error, {
 				request,
 				properties: { action, sceneId: routeSceneId }
 			})
-			return withAdditionalHeaders(
-				ApiResponse.serverError('Failed to update presentation'),
-				authHeaders
-			)
+			return ApiResponse.serverError('Failed to update presentation')
 		}
 	}
 
@@ -556,7 +485,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 
 	if (parsedRequest instanceof Response) {
-		return withAdditionalHeaders(parsedRequest, authHeaders)
+		return parsedRequest
 	}
 
 	const effectiveSceneId = parsedRequest.sceneId?.trim() || routeSceneId
@@ -573,9 +502,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	) {
 		const scene = await getScene(effectiveSceneId, authResult.user.id)
 		if (!scene) {
-			return withAdditionalHeaders(
-				ApiResponse.notFound(`Scene not found with ID: ${effectiveSceneId}`),
-				authHeaders
+			return ApiResponse.notFound(
+				`Scene not found with ID: ${effectiveSceneId}`
 			)
 		}
 	}
@@ -592,21 +520,18 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		switch (action as SceneSettingsAction) {
 			case 'prepare-scene-upload': {
 				try {
-					return withAdditionalHeaders(
-						ApiResponse.success(
-							await sceneSettingsOps.prepareSceneUpload(
-								{
-									...requestData,
-									action
-								},
-								authResult.user.id
-							)
-						),
-						authHeaders
+					return ApiResponse.success(
+						await sceneSettingsOps.prepareSceneUpload(
+							{
+								...requestData,
+								action
+							},
+							authResult.user.id
+						)
 					)
 				} catch (err) {
 					const refusal = billingRefusalResponse(err)
-					if (refusal) return withAdditionalHeaders(refusal, authHeaders)
+					if (refusal) return refusal
 					throw err
 				}
 			}
@@ -617,138 +542,108 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				const kind = kindRaw === 'image' ? 'image' : 'buffer'
 
 				if (!(file instanceof File)) {
-					return withAdditionalHeaders(
-						ApiResponse.badRequest('file is required for upload-scene-asset'),
-						authHeaders
+					return ApiResponse.badRequest(
+						'file is required for upload-scene-asset'
 					)
 				}
 
-				return withAdditionalHeaders(
-					await sceneSettingsOps.uploadSceneAsset(
-						{ ...requestData, action },
-						authResult.user.id,
-						file,
-						kind
-					),
-					authHeaders
+				return await sceneSettingsOps.uploadSceneAsset(
+					{ ...requestData, action },
+					authResult.user.id,
+					file,
+					kind
 				)
 			}
 
 			case 'upload-scene-gltf': {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
-					return withAdditionalHeaders(
-						ApiResponse.badRequest('file is required for upload-scene-gltf'),
-						authHeaders
+					return ApiResponse.badRequest(
+						'file is required for upload-scene-gltf'
 					)
 				}
 
-				return withAdditionalHeaders(
-					await sceneSettingsOps.uploadSceneGltf(
-						{ ...requestData, action },
-						authResult.user.id,
-						file
-					),
-					authHeaders
+				return await sceneSettingsOps.uploadSceneGltf(
+					{ ...requestData, action },
+					authResult.user.id,
+					file
 				)
 			}
 
 			case 'upload-published-glb': {
 				const file = actionRequest.file
 				if (!(file instanceof File)) {
-					return withAdditionalHeaders(
-						ApiResponse.badRequest('file is required for upload-published-glb'),
-						authHeaders
+					return ApiResponse.badRequest(
+						'file is required for upload-published-glb'
 					)
 				}
 
-				return withAdditionalHeaders(
-					await sceneSettingsOps.uploadPublishedGlb(
-						{ ...requestData, action },
-						authResult.user.id,
-						file
-					),
-					authHeaders
+				return await sceneSettingsOps.uploadPublishedGlb(
+					{ ...requestData, action },
+					authResult.user.id,
+					file
 				)
 			}
 
 			case 'commit-scene-save':
-				return withAdditionalHeaders(
-					await runGuardedSceneMutation({
-						requestId: requestData.requestId,
-						userId: authResult.user.id,
-						action,
-						sceneId: requestData.sceneId,
-						operation: () =>
-							sceneSettingsOps.saveSceneSettings(
-								{ ...requestData, action },
-								authResult.user.id
-							)
-					}),
-					authHeaders
-				)
+				return await runGuardedSceneMutation({
+					requestId: requestData.requestId,
+					userId: authResult.user.id,
+					action,
+					sceneId: requestData.sceneId,
+					operation: () =>
+						sceneSettingsOps.saveSceneSettings(
+							{ ...requestData, action },
+							authResult.user.id
+						)
+				})
 
 			case 'get-scene-settings':
 				if (!requestData.sceneId) {
-					return withAdditionalHeaders(
-						ApiResponse.badRequest('Scene ID is required'),
-						authHeaders
-					)
+					return ApiResponse.badRequest('Scene ID is required')
 				}
 
-				return withAdditionalHeaders(
-					await runWithSceneSettingsCoalescing(
-						getSceneSettingsRequestKey(authResult.user.id, requestData.sceneId),
-						() =>
-							sceneSettingsOps.getSceneSettings({
-								...requestData,
-								action
-							})
-					),
-					authHeaders
+				return await runWithSceneSettingsCoalescing(
+					getSceneSettingsRequestKey(authResult.user.id, requestData.sceneId),
+					() =>
+						sceneSettingsOps.getSceneSettings({
+							...requestData,
+							action
+						})
 				)
 
 			case 'commit-scene-publish':
-				return withAdditionalHeaders(
-					await runGuardedSceneMutation({
-						requestId: requestData.requestId,
-						userId: authResult.user.id,
-						action,
-						sceneId: requestData.sceneId,
-						operation: () =>
-							sceneSettingsOps.publishScene(
-								{ ...requestData, action },
-								authResult.user.id
-							)
-					}),
-					authHeaders
-				)
+				return await runGuardedSceneMutation({
+					requestId: requestData.requestId,
+					userId: authResult.user.id,
+					action,
+					sceneId: requestData.sceneId,
+					operation: () =>
+						sceneSettingsOps.publishScene(
+							{ ...requestData, action },
+							authResult.user.id
+						)
+				})
 
 			case 'revoke-scene-publish':
-				return withAdditionalHeaders(
-					await runGuardedSceneMutation({
-						requestId: requestData.requestId,
-						userId: authResult.user.id,
-						action,
-						sceneId: requestData.sceneId,
-						operation: () =>
-							sceneSettingsOps.revokeScenePublish(
-								{ ...requestData, action },
-								authResult.user.id
-							)
-					}),
-					authHeaders
-				)
+				return await runGuardedSceneMutation({
+					requestId: requestData.requestId,
+					userId: authResult.user.id,
+					action,
+					sceneId: requestData.sceneId,
+					operation: () =>
+						sceneSettingsOps.revokeScenePublish(
+							{ ...requestData, action },
+							authResult.user.id
+						)
+				})
 
 			default:
-				return withAdditionalHeaders(
-					ApiResponse.badRequest(`Unknown action: ${action}`),
-					authHeaders
-				)
+				return ApiResponse.badRequest(`Unknown action: ${action}`)
 		}
 	} catch (error) {
 		const refusal = billingRefusalResponse(error)
-		if (refusal) return withAdditionalHeaders(refusal, authHeaders)
+		if (refusal) return refusal
 
 		reportServerError(error, {
 			request,
@@ -759,11 +654,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				sceneId: requestData.sceneId || null
 			}
 		})
-		return withAdditionalHeaders(
-			ApiResponse.serverError(
-				error instanceof Error ? error.message : 'Operation failed'
-			),
-			authHeaders
+		return ApiResponse.serverError(
+			error instanceof Error ? error.message : 'Operation failed'
 		)
 	}
 }

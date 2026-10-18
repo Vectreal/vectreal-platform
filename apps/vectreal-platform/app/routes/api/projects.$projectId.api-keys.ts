@@ -37,27 +37,6 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 /** Matches the 90-day default the full API key form offers. */
 const DEFAULT_EXPIRY_DAYS = 90
 
-/**
- * Re-attaches the auth headers to a response that could not carry them.
- *
- * `getAuthUser` returns a `Set-Cookie` whenever Supabase rotates the session,
- * and dropping it leaves the browser holding a token the server has already
- * replaced. Most `ApiResponse` statics take `options.headers`, but
- * `badRequest` and `quotaExceeded` do not, so the error paths need this.
- * `dashboard.mutations.ts` carries the same helper for the same reason.
- */
-function withHeaders(response: Response, headers: Headers): Response {
-	const merged = new Headers(response.headers)
-	headers.forEach((value, key) => {
-		merged.append(key, value)
-	})
-
-	return new Response(response.body, {
-		status: response.status,
-		headers: merged
-	})
-}
-
 export interface EmbedApiKeysPayload {
 	projectId: string
 	projectName: string
@@ -201,7 +180,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	const { userId, headers, membership } = access
 
 	if (formData.get('intent') !== 'create') {
-		return withHeaders(ApiResponse.badRequest('Unsupported intent'), headers)
+		return ApiResponse.badRequest('Unsupported intent')
 	}
 
 	if (!canPerformDashboardOperation('api-key:create', membership)) {
@@ -256,14 +235,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return ApiResponse.created(payload, { headers })
 	} catch (error) {
 		if (error instanceof QuotaExceededError) {
-			return withHeaders(quotaExceededResponse(error), headers)
+			return quotaExceededResponse(error)
 		}
 
-		return withHeaders(
-			ApiResponse.badRequest(
-				error instanceof Error ? error.message : 'Could not create an API key'
-			),
-			headers
+		return ApiResponse.badRequest(
+			error instanceof Error ? error.message : 'Could not create an API key'
 		)
 	}
 }
