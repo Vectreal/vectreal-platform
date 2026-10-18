@@ -11,8 +11,12 @@ import {
 import { UUID_REGEX } from '../../../../constants/utility-constants'
 import { parseActionRequest } from '../../../http/requests.server'
 import {
+	hotspotArtworkAssetIdFromUrl,
+	isHotspotArtworkPath,
+	isHotspotPayloadUrlShape
+} from '../hotspot-artwork'
+import {
 	isAllowedHotspotLinkUrl,
-	isAllowedHotspotPayloadUrl,
 	MAX_HOTSPOT_BODY_LENGTH,
 	MAX_HOTSPOT_URL_LENGTH
 } from '../hotspot-urls'
@@ -216,6 +220,15 @@ export class SceneSettingsParser {
 				)
 				if (thumbnailUrl instanceof Response) {
 					return thumbnailUrl
+				}
+
+				const artworkRefusal = this.checkHotspotArtwork(
+					settings.hotspots,
+					sceneId,
+					sceneAssetIds
+				)
+				if (artworkRefusal) {
+					return artworkRefusal
 				}
 
 				return {
@@ -608,9 +621,12 @@ export class SceneSettingsParser {
 				// marker never reaches an `<img src>`, so rejecting a legacy value
 				// there would make an existing scene unsaveable with no field on
 				// screen to correct.
+				// An uploaded artwork path passes on its shape here; which scene it
+				// names and whether the save links its asset are checked with the
+				// commit's asset ids, in `checkHotspotArtwork`.
 				if (
 					hotspot.stylePreset !== 'dot' &&
-					!isAllowedHotspotPayloadUrl(hotspot.payloadUrl)
+					!isHotspotPayloadUrlShape(hotspot.payloadUrl)
 				) {
 					return ApiResponse.badRequest(
 						`${marker} has an asset URL that is neither https nor an inline image (payloadUrl)`
@@ -1013,6 +1029,35 @@ export class SceneSettingsParser {
 	 * scene's project. Stored unexamined, the column could name any asset id,
 	 * and the GC counts every asset it names as in use.
 	 */
+	private static checkHotspotArtwork(
+		hotspots: SceneSettings['hotspots'],
+		sceneId: string | undefined,
+		sceneAssetIds: string[]
+	): Response | null {
+		/*
+		  The thumbnail's rule, for the same reason: an artwork path is a
+		  reference to an asset, and stored unexamined it could name any asset id
+		  at all - another scene's, or one this scene never linked. Checked for
+		  every preset, since a stored path outlives a switch back to a dot.
+		*/
+		for (const hotspot of hotspots ?? []) {
+			const payloadUrl = hotspot.payloadUrl
+			if (!payloadUrl || !isHotspotArtworkPath(payloadUrl)) continue
+
+			const assetId =
+				sceneId !== undefined
+					? hotspotArtworkAssetIdFromUrl(sceneId, payloadUrl)
+					: null
+			if (assetId === null || !sceneAssetIds.includes(assetId)) {
+				return ApiResponse.badRequest(
+					`Marker "${hotspot.name.trim()}" has artwork this save does not include. Upload it again (payloadUrl)`
+				)
+			}
+		}
+
+		return null
+	}
+
 	private static parseThumbnailUrl(
 		raw: string,
 		sceneId: string | undefined,

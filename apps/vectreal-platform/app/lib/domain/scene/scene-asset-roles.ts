@@ -1,3 +1,7 @@
+import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
+
+import { isHotspotArtworkAsset } from './hotspot-artwork'
+
 /**
  * What a `scene_assets` link is for.
  *
@@ -24,3 +28,18 @@ export type SceneAssetRole =
  * the stored original by name and reuses it when its hash matches.
  */
 export const SOURCE_MODEL_FILENAME = 'source.glb'
+
+/**
+ * A linked asset that is drawn from its own URL and is never part of the
+ * model: the scene thumbnail, and a marker's uploaded artwork.
+ *
+ * Linked so the GC keeps it, but every reader that turns linked assets into
+ * the model, its texture list or its publish signature has to leave these out,
+ * and they used to decide that one by one, each naming only the thumbnail.
+ */
+export function isUrlServedSceneAsset(asset: {
+	name: string
+	mimeType: string | null
+}): boolean {
+	return asset.name === SCENE_THUMBNAIL_FILENAME || isHotspotArtworkAsset(asset)
+}

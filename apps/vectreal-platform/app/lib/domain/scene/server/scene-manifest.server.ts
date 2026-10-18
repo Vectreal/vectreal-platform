@@ -1,5 +1,3 @@
-import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
-
 import { shouldShowLoadingThumbnail } from '../scene-presentation'
 import { sceneSettingsService } from './scene-settings-service.server'
 import { reportServerError } from '../../../observability/report-server-error.server'
@@ -10,6 +8,7 @@ import {
 	type PublishedModelRow
 } from '../embed-asset-policy'
 import { redactSettingsForEmbed } from '../embed-settings-policy'
+import { isUrlServedSceneAsset } from '../scene-asset-roles'
 
 import type {
 	SceneAssetRecord,
@@ -21,7 +20,10 @@ import type {
 
 const GLTF_JSON_MIME_TYPE = 'model/gltf+json'
 
-/** Maps asset rows to fetchable refs; thumbnail and glTF JSON are excluded. */
+/**
+ * Maps asset rows to fetchable refs. The thumbnail, marker artwork and glTF
+ * JSON are excluded: the loader treats every ref as part of the model.
+ */
 export function toAssetRefs(
 	assets: SceneAssetRecord[],
 	buildAssetUrl: (assetId: string) => string
@@ -29,7 +31,7 @@ export function toAssetRefs(
 	const refs: SceneAssetRefMap = {}
 
 	for (const asset of assets) {
-		if (asset.name === SCENE_THUMBNAIL_FILENAME) continue
+		if (isUrlServedSceneAsset(asset)) continue
 		if (asset.mimeType === GLTF_JSON_MIME_TYPE) continue
 
 		refs[asset.id] = {
@@ -191,10 +193,12 @@ export async function composeEmbedSceneManifest(
 
 	const settings = settingsData.settings
 	const servable = selectEmbedServableAssets({
+		sceneId,
 		publishedAssetId: published.assetId,
 		sceneAssets: settingsData.assets ?? [],
 		bakedShadowAssetId: settings?.shadows?.baked?.assetId,
-		showsLoadingThumbnail: shouldShowLoadingThumbnail(settings?.presentation)
+		showsLoadingThumbnail: shouldShowLoadingThumbnail(settings?.presentation),
+		hotspots: settings?.hotspots
 	})
 
 	return {
@@ -202,7 +206,13 @@ export async function composeEmbedSceneManifest(
 		meta: settingsData.meta,
 		publishedModel,
 		settings: settings
-			? redactSettingsForEmbed(settings, { bakeAssetId: servable.bakeAssetId })
+			? redactSettingsForEmbed(settings, {
+					bakeAssetId: servable.bakeAssetId,
+					hotspotArtwork: {
+						servableAssetIds: servable.hotspotArtworkAssetIds,
+						buildAssetUrl
+					}
+				})
 			: null,
 		assetRefs: buildEmbedAssetRefs(
 			servable,

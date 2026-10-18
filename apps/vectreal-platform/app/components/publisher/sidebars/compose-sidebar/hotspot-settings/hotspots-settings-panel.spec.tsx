@@ -573,6 +573,10 @@ describe('HotspotsSettingsPanel selection', () => {
 		it.each([
 			['an https address', 'https://cdn.test/pin.png'],
 			['an inline image', 'data:image/svg+xml,%3Csvg%3E%3C/svg%3E'],
+			[
+				'an uploaded artwork path',
+				'/api/scenes/33333333-3333-4333-8333-333333333333/assets/55555555-5555-4555-8555-555555555555'
+			],
 			['an empty field', '']
 		])('says nothing about %s', async (_label, value) => {
 			const field = await openAppearance()

@@ -29,9 +29,9 @@ import { useEffect } from 'react'
 
 import { AXES, AxisField } from './axis-field'
 import { useHotspotEdits } from './use-hotspot-edits'
+import { isHotspotPayloadUrlShape } from '../../../../../lib/domain/scene/hotspot-artwork'
 import {
 	isAllowedHotspotLinkUrl,
-	isAllowedHotspotPayloadUrl,
 	MAX_HOTSPOT_BODY_LENGTH,
 	MAX_HOTSPOT_URL_LENGTH
 } from '../../../../../lib/domain/scene/hotspot-urls'
@@ -300,7 +300,7 @@ export function MarkerAppearance({ hotspot }: MarkerViewProps) {
 	// The save parser's rule, so the field and the server cannot disagree. An
 	// empty field is not an invalid one: it saves, and draws no artwork.
 	const assetIsInvalid =
-		!!hotspot.payloadUrl && !isAllowedHotspotPayloadUrl(hotspot.payloadUrl)
+		!!hotspot.payloadUrl && !isHotspotPayloadUrlShape(hotspot.payloadUrl)
 	// The rule refuses an over-long https address too, so the length gets its
 	// own reason rather than telling the author to use the https:// they have.
 	const assetIsTooLong =

@@ -1,8 +1,8 @@
-import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { updateSceneMetadata } from './scene-folder-repository.server'
 import { compareAssetIds } from './scene-settings-assets.server'
+import { isUrlServedSceneAsset } from '../scene-asset-roles'
 import {
 	getHotspotsBySceneSettingsId,
 	getSceneAssetLinks,
@@ -388,11 +388,11 @@ class SceneSettingsService {
 
 		const { settings, assets: sceneAssetsData } = result
 
-		// Extract asset IDs to download into the manifest. The thumbnail is tracked
-		// as a scene asset (for GC) but served by URL, not rendered, so it is excluded
-		// from the inlined render data to keep the manifest lean.
+		// Extract asset IDs to download into the manifest. The thumbnail and marker
+		// artwork are tracked as scene assets (for GC) but served by URL, not
+		// rendered, so they are excluded from the inlined render data.
 		const assetIds = sceneAssetsData
-			.filter((asset) => asset.name !== SCENE_THUMBNAIL_FILENAME)
+			.filter((asset) => !isUrlServedSceneAsset(asset))
 			.map((asset) => asset.id)
 
 		// Download asset data from cloud storage

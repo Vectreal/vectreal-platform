@@ -1,3 +1,4 @@
+import { isHotspotArtworkPath } from './hotspot-artwork'
 import { isPairedHotspotCamera, isSceneCamera } from './scene-camera'
 
 import type { SceneSettings } from '@vctrl/core'
@@ -33,11 +34,41 @@ import type { SceneSettings } from '@vctrl/core'
  *   id `selectEmbedServableAssets` authorized; anything else is a stale or
  *   tampered reference whose bytes the embed cannot fetch anyway, so shipping
  *   the id would leak an internal identifier for nothing.
+ * - A marker's uploaded artwork path, which only a session can load. It
+ *   becomes the embed's own URL for that asset when `hotspotArtwork` says the
+ *   asset is servable, and is dropped otherwise, for the bake's reason. Without
+ *   `hotspotArtwork` every artwork path is dropped: the safe default for a
+ *   caller that only wants the redacted shape.
  */
 export function redactSettingsForEmbed(
 	settings: SceneSettings,
-	{ bakeAssetId }: { bakeAssetId: string | null }
+	{
+		bakeAssetId,
+		hotspotArtwork
+	}: {
+		bakeAssetId: string | null
+		hotspotArtwork?: {
+			/** The ids `selectEmbedServableAssets` authorized as artwork. */
+			servableAssetIds: readonly string[]
+			/** How this manifest addresses an asset. */
+			buildAssetUrl: (assetId: string) => string
+		}
+	}
 ): SceneSettings {
+	/*
+	  Keyed by the path's asset id alone, not re-checked against the scene: the
+	  servable ids were only ever taken from this scene's own paths, and the URL
+	  written out is built here for this manifest, so a path naming another
+	  scene with a servable id still resolves to this scene's copy.
+	*/
+	const embedArtworkUrl = (payloadUrl: string | undefined) => {
+		if (!payloadUrl || !isHotspotArtworkPath(payloadUrl)) return payloadUrl
+		const assetId = payloadUrl.slice(payloadUrl.lastIndexOf('/') + 1)
+		return hotspotArtwork?.servableAssetIds.includes(assetId)
+			? hotspotArtwork.buildAssetUrl(assetId)
+			: undefined
+	}
+
 	/*
 	  `internalOnly` drops the hotspot. `visible: false` keeps it, minus anything
 	  it has to say.
@@ -65,7 +96,7 @@ export function redactSettingsForEmbed(
 						linkUrl: undefined,
 						payloadUrl: undefined
 					}
-				: hotspot
+				: { ...hotspot, payloadUrl: embedArtworkUrl(hotspot.payloadUrl) }
 		)
 
 	const linkedCameraIds = (hotspots: typeof settings.hotspots) =>

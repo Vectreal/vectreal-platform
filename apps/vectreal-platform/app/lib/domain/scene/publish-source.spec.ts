@@ -6,6 +6,7 @@
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
+import { hotspotArtworkFileName } from './hotspot-artwork'
 import { describePublishSource } from './publish-source'
 import {
 	balancedPreset,
@@ -13,10 +14,11 @@ import {
 } from '../../../constants/optimizations'
 
 const model = [
-	{ id: 'gltf', name: 'scene.gltf' },
-	{ id: 'bin', name: 'scene.bin' },
-	{ id: 'tex', name: 'textures/diffuse.png' }
+	{ id: 'gltf', name: 'scene.gltf', mimeType: 'model/gltf+json' },
+	{ id: 'bin', name: 'scene.bin', mimeType: 'application/octet-stream' },
+	{ id: 'tex', name: 'textures/diffuse.png', mimeType: 'image/png' }
 ]
+const HOTSPOT_ID = '11111111-1111-4111-8111-111111111111'
 const base = {
 	assets: model,
 	optimizationSettings: balancedPreset,
@@ -36,20 +38,31 @@ describe('describePublishSource', () => {
 				...base,
 				assets: [
 					...model.slice(0, 2),
-					{ id: 'tex-2', name: 'textures/diffuse.png' }
+					{ id: 'tex-2', name: 'textures/diffuse.png', mimeType: 'image/png' }
 				]
 			})
 		).not.toBe(describePublishSource(base))
 	})
 
-	it('ignores the thumbnail and shadow bake, which live outside the GLB', () => {
+	it('ignores the thumbnail, marker artwork and shadow bake, which live outside the GLB', () => {
+		// Swapping a marker's image must not read as a scene that needs
+		// republishing: the GLB is byte-identical.
 		expect(
 			describePublishSource({
 				...base,
 				assets: [
 					...model,
-					{ id: 'thumb', name: SCENE_THUMBNAIL_FILENAME },
-					{ id: 'bake', name: PERSISTED_BAKE_FILENAME }
+					{
+						id: 'thumb',
+						name: SCENE_THUMBNAIL_FILENAME,
+						mimeType: 'image/webp'
+					},
+					{ id: 'bake', name: PERSISTED_BAKE_FILENAME, mimeType: 'image/png' },
+					{
+						id: 'art',
+						name: hotspotArtworkFileName(HOTSPOT_ID, 'image/png'),
+						mimeType: 'image/png'
+					}
 				]
 			})
 		).toBe(describePublishSource(base))
