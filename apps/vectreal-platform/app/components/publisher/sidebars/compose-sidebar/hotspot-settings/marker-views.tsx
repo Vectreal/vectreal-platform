@@ -25,6 +25,7 @@ import {
 	SquarePen,
 	Type
 } from 'lucide-react'
+import { useEffect } from 'react'
 
 import { AXES, AxisField } from './axis-field'
 import { useHotspotEdits } from './use-hotspot-edits'
@@ -38,7 +39,10 @@ import {
 	isClickToPlaceActiveAtom,
 	openCameraInCameraToolAtom
 } from '../../../../../lib/stores/publisher-config-store'
-import { cameraAtom } from '../../../../../lib/stores/scene-settings-store'
+import {
+	cameraAtom,
+	heldHotspotCardIdAtom
+} from '../../../../../lib/stores/scene-settings-store'
 import { InlineNotice } from '../../../../layout-components'
 import { DrillDownTrigger } from '../../drill-down'
 import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
@@ -202,8 +206,26 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 	)
 }
 
+/**
+ * Holds this hotspot's card open on the canvas while its Content view is on
+ * screen, so the author sees the card they are writing.
+ *
+ * The drill-down mounts only its active view, so mounted is exactly "open":
+ * going back, switching tools and entering preview all unmount it, and the
+ * card closes once the view has slid out.
+ */
+function useHoldHotspotCard(hotspotId: string) {
+	const setHeld = useSetAtom(heldHotspotCardIdAtom)
+
+	useEffect(() => {
+		setHeld(hotspotId)
+		return () => setHeld(null)
+	}, [hotspotId, setHeld])
+}
+
 /** What a visitor reads when they open the marker. */
 export function MarkerContent({ hotspot }: MarkerViewProps) {
+	useHoldHotspotCard(hotspot.id)
 	const edits = useHotspotEdits()
 	const linkErrorId = `hotspot-link-error-${hotspot.id}`
 	// An empty field is not an invalid one: clearing the link is how an author

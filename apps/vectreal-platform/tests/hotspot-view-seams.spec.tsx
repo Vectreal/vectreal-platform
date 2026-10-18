@@ -28,6 +28,19 @@ describe('the publisher preview', () => {
 		expect(route()).toContain('showCameraControls={isPreviewMode}')
 	})
 
+	it('leaves cards to clicks in preview, and holds the content card in the editor', () => {
+		const source = route()
+		const held = source.slice(
+			source.indexOf('revealedHotspotId={'),
+			source.indexOf('showSceneViewReturn=')
+		)
+		expect(held).toContain('isPreviewMode')
+		expect(held).toContain('? undefined')
+		expect(held).toContain("openComposeTool === 'hotspots'")
+		expect(held).toContain('? heldHotspotCardId')
+		expect(held).toContain(': null')
+	})
+
 	it('picks markers up for editing outside preview, never flies them', () => {
 		const source = route()
 		const handler = source.slice(

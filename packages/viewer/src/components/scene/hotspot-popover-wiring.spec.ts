@@ -220,7 +220,7 @@ describe('the hotspot layer owns which card is open', () => {
 	})
 
 	it('hands each marker its own open state and the toggle', () => {
-		expect(layer).toContain('open={marker.id === openId}')
+		expect(layer).toContain('open={marker.id === shownId}')
 		expect(layer).toContain('handleReveal')
 	})
 
@@ -400,5 +400,36 @@ describe('the card is safe to put inside a third-party page', () => {
 		// The marker's `Html` wrapper is `pointerEvents: 'none'`, so anything
 		// inside it that has to be clickable says so itself.
 		expect(popover).toContain('pointer-events-auto')
+	})
+})
+
+describe('an editing surface can hold the card', () => {
+	it('opens whatever the open-card rule decides, not the click state alone', () => {
+		expect(layer).toContain(
+			'resolveOpenHotspotId(revealedId, openId, occludedIds)'
+		)
+		expect(layer).toContain('open={marker.id === shownId}')
+	})
+
+	it('draws no held card where the host turned cards off', () => {
+		expect(layer).toMatch(
+			/const shownId = revealContent\s*\?\s*resolveOpenHotspotId\(/
+		)
+	})
+
+	it("drops the visitor's last card when a surface takes over or hands back", () => {
+		const reset = layer.split('if (wasHeld !== isHeld) {')[1]?.split('}')[0]
+		expect(reset).toContain('setOpenId(null)')
+	})
+
+	it('leaves a held card to the surface: the toggle does nothing while held', () => {
+		const reveal = layer
+			.split('const handleReveal = useCallback(')[1]
+			?.split('setOpenId(')[0]
+		expect(reveal).toContain('if (isHeld) return')
+	})
+
+	it('reaches the viewer prop the surface sets', () => {
+		expect(viewer).toContain('revealedId={revealedHotspotId}')
 	})
 })
