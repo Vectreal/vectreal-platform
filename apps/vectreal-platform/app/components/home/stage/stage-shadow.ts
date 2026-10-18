@@ -40,9 +40,11 @@ export function createShadowBaker(
 	scene: THREE.Scene,
 	passCam: THREE.OrthographicCamera
 ) {
+	// Every full-screen pass draws the same quad, so it is built once and owned here.
+	const quadGeometry = new THREE.PlaneGeometry(2, 2)
 	const fsQuad = (material: THREE.Material) => {
 		const quad = new THREE.Scene()
-		quad.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material))
+		quad.add(new THREE.Mesh(quadGeometry, material))
 		return quad
 	}
 
@@ -246,5 +248,11 @@ export function createShadowBaker(
 		return c.toDataURL('image/png')
 	}
 
-	return { bakeDirectional, bakeContact, densityPng }
+	/** Releases what outlives a bake: the shared quad and the blur pass. */
+	function dispose() {
+		quadGeometry.dispose()
+		blurPass.dispose()
+	}
+
+	return { bakeDirectional, bakeContact, densityPng, dispose }
 }
