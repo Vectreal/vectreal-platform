@@ -300,7 +300,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 			onAnimationEnd={drawer.onAnimationEnd}
 			direction="right"
 		>
-			<DrawerContent className="max-w-lg!">
+			<DrawerContent className="max-w-form-drawer!">
 				<DrawerHeader className="border-b">
 					<DrawerTitle>Create New Project</DrawerTitle>
 					<DrawerDescription>
