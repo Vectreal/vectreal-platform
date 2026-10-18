@@ -581,18 +581,18 @@ export interface SceneMetaData {
 	thumbnailUrl?: string
 }
 
-/** Raw API payload contract for scene loading. */
-export interface ServerScenePayload {
+/**
+ * Raw API payload contract for scene loading.
+ *
+ * Settings arrive nested under {@link settings}, flat at the top level (a
+ * {@link ServerSceneData} handed back in, as a local draft is), or both. A flat
+ * field wins over its nested twin.
+ */
+export interface ServerScenePayload extends SceneSettings {
 	/** Optional scene metadata payload. */
 	meta?: SceneMetaData
 	/** Optional nested scene settings payload. */
 	settings?: SceneSettings | null
-	/** Legacy flattened settings fields. */
-	bounds?: SceneSettings['bounds']
-	camera?: SceneSettings['camera']
-	controls?: SceneSettings['controls']
-	environment?: SceneSettings['environment']
-	shadows?: SceneSettings['shadows']
 	/** The GLTF JSON structure. */
 	gltfJson: ExtendedGLTFDocument | null
 	/** Binary asset data keyed by asset identifier. */

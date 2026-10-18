@@ -18,6 +18,7 @@ import {
 } from '../../../constants/plan-config'
 import { PLAN_DISPLAY_NAMES } from '../../../constants/product-copy'
 import { describeBillingSituation } from '../../../lib/domain/billing/billing-situation'
+import { COMMUNITY } from '../../../lib/navigation/site-map'
 import { InlineNotice } from '../../layout-components/inline-notice'
 
 import type { PlanFit } from '../../../lib/domain/billing/plan-fit'
@@ -326,15 +327,8 @@ export function BillingSettingsSection({
 				</Link>
 
 				<nav className="flex items-center gap-1.5">
-					{/*
-					  The canonical invite. This was the one place in the repo reaching
-					  `discord.gg/vectreal` against eleven uses of the real code, and a
-					  vanity invite needs a boosted server to resolve at all - so the
-					  support link on the billing page was the one most likely to be
-					  dead.
-					*/}
 					<a
-						href="https://discord.gg/A9a3nPkZw7"
+						href={COMMUNITY.discord}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="hover:text-foreground transition-colors"

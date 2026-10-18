@@ -14,6 +14,7 @@ import {
 	docsPages,
 	type DocCategory
 } from '../../lib/docs/docs-manifest'
+import { COMMUNITY } from '../../lib/navigation/site-map'
 import {
 	publisherSampleHref,
 	requireSampleModel
@@ -124,7 +125,7 @@ export default function DocsIndexPage() {
 						</Button>
 						<Button asChild variant="ghost" size="sm">
 							<a
-								href="https://github.com/Vectreal/vectreal-platform"
+								href={COMMUNITY.github}
 								target="_blank"
 								rel="noopener noreferrer"
 							>
@@ -169,7 +170,7 @@ export default function DocsIndexPage() {
 					</span>
 					<a
 						className={quickLinkClass}
-						href="https://github.com/Vectreal/vectreal-platform"
+						href={COMMUNITY.github}
 						target="_blank"
 						rel="noopener noreferrer"
 					>
@@ -177,7 +178,7 @@ export default function DocsIndexPage() {
 					</a>
 					<a
 						className={quickLinkClass}
-						href="https://discord.gg/A9a3nPkZw7"
+						href={COMMUNITY.discord}
 						target="_blank"
 						rel="noopener noreferrer"
 					>

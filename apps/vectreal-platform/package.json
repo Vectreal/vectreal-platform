@@ -49,7 +49,7 @@
 		"sharp": "^0.35.5",
 		"@react-router/express": "8.3.0",
 		"compression": "^1.8.2",
-		"express": "^5.2.1",
+		"express": "^5.3.0",
 		"file-saver": "catalog:",
 		"morgan": "^1.12.0"
 	}

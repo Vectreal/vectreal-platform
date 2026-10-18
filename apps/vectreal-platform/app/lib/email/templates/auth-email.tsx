@@ -15,6 +15,8 @@ import {
 } from '@react-email/components'
 import * as React from 'react'
 
+import { COMMUNITY } from '../../navigation/site-map'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -254,15 +256,15 @@ export function AuthEmail({
 							</Link>
 						</Text>
 						<Text style={s.footerNav}>
-							<Link href="https://github.com/vectreal/" style={s.footerLink}>
+							<Link href={COMMUNITY.github} style={s.footerLink}>
 								GitHub
 							</Link>
 							<span style={s.dot}> · </span>
-							<Link href="https://discord.gg/A9a3nPkZw7" style={s.footerLink}>
+							<Link href={COMMUNITY.discord} style={s.footerLink}>
 								Discord
 							</Link>
 							<span style={s.dot}> · </span>
-							<Link href="https://x.com/vectreal" style={s.footerLink}>
+							<Link href={COMMUNITY.x} style={s.footerLink}>
 								X
 							</Link>
 							<span style={s.dot}> · </span>

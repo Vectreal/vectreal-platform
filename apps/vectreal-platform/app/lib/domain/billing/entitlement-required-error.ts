@@ -46,9 +46,10 @@ export class EntitlementRequiredError extends Error {
 /**
  * The domain errors the scene route knows how to turn into a response.
  *
- * Seven operations in `scene-settings.operations.server.ts` wrap their body in
- * a catch that flattens everything to `ApiResponse.serverError`; the four that
- * can refuse ask this first. Adding a second `instanceof` to each of them for
+ * Seven scene operations (`scene-upload`, `scene-publish` and
+ * `scene-settings.operations.server.ts`) wrap their body in a catch that
+ * flattens everything to `ApiResponse.serverError`; the four that can refuse
+ * ask this first. Adding a second `instanceof` to each of them for
  * every new error type is how that catch quietly starts swallowing the next
  * one, so the question is asked once, here.
  */

@@ -267,8 +267,7 @@ export default function ApiKeysEditPage({
 		.filter((p) => p.organizationId === apiKeyData.organization.id)
 		.map((p) => ({
 			id: p.project.id,
-			name: p.project.name,
-			slug: p.project.slug
+			name: p.project.name
 		}))
 
 	// Show error toast
@@ -302,7 +301,7 @@ export default function ApiKeysEditPage({
 			onAnimationEnd={drawer.onAnimationEnd}
 			direction="right"
 		>
-			<DrawerContent className="max-w-lg!">
+			<DrawerContent className="max-w-form-drawer!">
 				<DrawerHeader className="border-b">
 					<DrawerTitle>Edit API Key</DrawerTitle>
 					<DrawerDescription>

@@ -32,7 +32,6 @@ export interface ApiKeyRow {
 	projects: Array<{
 		id: string
 		name: string
-		slug: string
 	}>
 	lastUsedAt: Date | null
 	active: boolean | null
