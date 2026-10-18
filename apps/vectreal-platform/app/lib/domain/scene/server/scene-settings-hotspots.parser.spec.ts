@@ -120,6 +120,49 @@ describe('hotspot validation', () => {
 	it('rejects a missing name', () => {
 		expect(rejected(parse([hotspot({ name: '  ' })]))).toBe(true)
 	})
+
+	it('points an unnamed marker at how the panel lists it', async () => {
+		// There is no name to name it by, and an index points at nothing the
+		// author can see, so the message uses the panel's own label.
+		const { error } = await bodyOf(
+			parse([hotspot(), hotspot({ id: OTHER_ID, name: '  ' })])
+		)
+
+		expect(error).toContain('"Unnamed hotspot"')
+		expect(error).not.toMatch(/hotspots\[\d\]/)
+	})
+})
+
+describe('rejections an author reaches from the editor', () => {
+	// Each lands in the save panel, where an index points at nothing the author
+	// can see. The second marker is the one at fault, so a message built from
+	// the wrong entry, or from the index, cannot pass.
+	it.each([
+		[
+			'body text over the cap',
+			{ body: 'a'.repeat(MAX_HOTSPOT_BODY_LENGTH + 1) },
+			/body text longer than/
+		],
+		[
+			'a link that is not https',
+			{ linkUrl: 'http://shop.test/item' },
+			/link that is not an https URL/
+		]
+	])(
+		'names the marker with %s, not its index',
+		async (_label, overrides, reason) => {
+			const { error } = await bodyOf(
+				parse([
+					hotspot(),
+					hotspot({ id: OTHER_ID, name: '  Rear badge ', ...overrides })
+				])
+			)
+
+			expect(error).toContain('Marker "Rear badge"')
+			expect(error).toMatch(reason)
+			expect(error).not.toMatch(/hotspots\[\d\]/)
+		}
+	)
 })
 
 describe('hotspot ceilings and payload URLs', () => {

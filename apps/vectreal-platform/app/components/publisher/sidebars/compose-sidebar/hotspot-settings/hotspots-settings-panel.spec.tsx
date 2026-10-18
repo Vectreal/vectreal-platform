@@ -489,6 +489,15 @@ describe('HotspotsSettingsPanel selection', () => {
 		expect(screen.getByRole('heading', { name: 'Markers' })).toBeTruthy()
 	})
 
+	it('lists a marker whose name is only spaces as unnamed', () => {
+		// The save refuses that name as no name and sends the author looking
+		// for this label, so a blank row would be one they could not find.
+		store.set(hotspotsAtom, [{ ...hotspot, name: '   ', sequenceIndex: 0 }])
+		render(<HotspotsSettingsPanel />)
+
+		expect(screen.getByText('Unnamed hotspot')).toBeTruthy()
+	})
+
 	it('offers the asset field only for a preset that needs one', async () => {
 		store.set(hotspotsAtom, [{ ...hotspot, sequenceIndex: 0 }])
 		store.set(activeHotspotIdAtom, hotspot.id)
