@@ -20,6 +20,7 @@ import {
 	activeHotspotIdAtom,
 	cameraAtom,
 	hotspotsAtom,
+	interactionsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
@@ -85,6 +86,7 @@ export function useHotspotEdits() {
 	const store = useStore()
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
+	const [interactions, setInteractions] = useAtom(interactionsAtom)
 	const setSelectedId = useSetAtom(activeHotspotIdAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
@@ -134,13 +136,14 @@ export function useHotspotEdits() {
 	 */
 	const remove = useCallback(
 		(id: string): { remainingInSequence: number } | null => {
-			const next = removeHotspot({ camera, hotspots }, id)
+			const next = removeHotspot({ camera, hotspots, interactions }, id)
 			const survivingOrder = sequencedFirst(next.hotspots).inSequence.map(
 				(hotspot) => hotspot.id
 			)
 
 			setHotspots(reorderSequence(next.hotspots, survivingOrder))
 			setCamera(next.camera)
+			setInteractions(next.interactions)
 			setSelectedCameraId((prev) =>
 				survivingSelectedCameraId(next.camera.cameras, prev)
 			)
@@ -156,8 +159,10 @@ export function useHotspotEdits() {
 		[
 			camera,
 			hotspots,
+			interactions,
 			setCamera,
 			setHotspots,
+			setInteractions,
 			setSelectedCameraId,
 			setSelectedId
 		]
@@ -175,15 +180,28 @@ export function useHotspotEdits() {
 
 	const relink = useCallback(
 		(id: string, linkedCameraId: string | undefined) => {
-			const next = relinkHotspot({ camera, hotspots }, id, linkedCameraId)
+			const next = relinkHotspot(
+				{ camera, hotspots, interactions },
+				id,
+				linkedCameraId
+			)
 
 			setHotspots(next.hotspots)
 			setCamera(next.camera)
+			setInteractions(next.interactions)
 			setSelectedCameraId((prev) =>
 				survivingSelectedCameraId(next.camera.cameras, prev)
 			)
 		},
-		[camera, hotspots, setCamera, setHotspots, setSelectedCameraId]
+		[
+			camera,
+			hotspots,
+			interactions,
+			setCamera,
+			setHotspots,
+			setInteractions,
+			setSelectedCameraId
+		]
 	)
 
 	const setMembership = useCallback(
