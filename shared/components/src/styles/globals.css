@@ -350,6 +350,17 @@
 	--container-detail-panel: 26rem;
 
 	/*
+	  The width for a dashboard form drawer: the right-edge sheets that create and
+	  edit API keys and projects. Deliberately wider than the detail panel. A
+	  form holds labelled inputs, scope checkboxes and domain lists, and the
+	  sheet covers a page nobody is working in, so it can take the measure a form
+	  wants. The detail panel's 26rem is set by the publish sidebar, which has to
+	  leave the canvas visible, a constraint a form drawer does not share. Read
+	  it as `max-w-form-drawer`.
+	*/
+	--container-form-drawer: 32rem;
+
+	/*
 	  The reading measure for long-form prose.
 
 	  40rem is roughly 72-78 characters of DM Sans at the body rung, inside the

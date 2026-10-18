@@ -301,7 +301,7 @@ export default function ApiKeysEditPage({
 			onAnimationEnd={drawer.onAnimationEnd}
 			direction="right"
 		>
-			<DrawerContent className="max-w-lg!">
+			<DrawerContent className="max-w-form-drawer!">
 				<DrawerHeader className="border-b">
 					<DrawerTitle>Edit API Key</DrawerTitle>
 					<DrawerDescription>
