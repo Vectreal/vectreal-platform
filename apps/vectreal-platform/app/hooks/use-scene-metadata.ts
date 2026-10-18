@@ -20,9 +20,12 @@ interface SceneLike {
  * are one concern - an optimistic inline editor over
  * `POST /api/scenes/:id` - and nothing else on the page reads them.
  *
- * `scene` is the loader's copy and is authoritative: a revalidation resets both
- * drafts, which is what makes a rename in another tab win over an untouched
- * field here.
+ * `scene` is the loader's copy and is authoritative for what is stored. A
+ * draft is reset only when the stored value it edits changes (or the page
+ * moves to another scene), which is what makes a rename in another tab win
+ * over this field. Every revalidation hands back a new `scene` object - a
+ * publish toggle or any dashboard mutation elsewhere on the page triggers one
+ * - so resetting on identity discarded whatever was being typed.
  */
 export function useSceneMetadata<TScene extends SceneLike>(scene: TScene) {
 	const csrfToken = useAuthenticityToken()
@@ -36,6 +39,9 @@ export function useSceneMetadata<TScene extends SceneLike>(scene: TScene) {
 	const [status, setStatus] = useState<SceneMetadataStatus>('idle')
 
 	const resetTimerRef = useRef<number | null>(null)
+	// The stored values the drafts were last reset to: the loader's, or the
+	// save response's, whichever arrived last.
+	const storedSceneRef = useRef(scene)
 
 	useEffect(() => {
 		return () => {
@@ -46,10 +52,24 @@ export function useSceneMetadata<TScene extends SceneLike>(scene: TScene) {
 	}, [])
 
 	useEffect(() => {
+		const previous = storedSceneRef.current
+		storedSceneRef.current = scene
 		setSceneState(scene)
-		setNameDraft(scene.name)
-		setDescriptionDraft(scene.description || '')
-		setStatus('idle')
+
+		const isOtherScene = scene.id !== previous.id
+		const nameChanged = isOtherScene || scene.name !== previous.name
+		const descriptionChanged =
+			isOtherScene || scene.description !== previous.description
+
+		if (nameChanged) {
+			setNameDraft(scene.name)
+		}
+		if (descriptionChanged) {
+			setDescriptionDraft(scene.description || '')
+		}
+		if (nameChanged || descriptionChanged) {
+			setStatus('idle')
+		}
 	}, [scene])
 
 	const nameTrimmed = nameDraft.trim()
@@ -95,6 +115,7 @@ export function useSceneMetadata<TScene extends SceneLike>(scene: TScene) {
 			}
 
 			const updatedScene = payload.data.scene as TScene
+			storedSceneRef.current = updatedScene
 			setSceneState(updatedScene)
 			setNameDraft(updatedScene.name)
 			setDescriptionDraft(updatedScene.description || '')
