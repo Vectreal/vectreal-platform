@@ -11,6 +11,7 @@ import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
+import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
 	isPreviewModeAtom,
 	openHotspotInHotspotToolAtom,
@@ -21,6 +22,8 @@ import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
 import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
+	heldHotspotCardIdAtom,
+	presentationAtom,
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
 	selectedCameraIdAtom,
@@ -123,7 +126,9 @@ const PublisherPage = () => {
 
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
 	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
+	const heldHotspotCardId = useAtomValue(heldHotspotCardIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
+	const presentation = useAtomValue(presentationAtom)
 	// The tool whose panel is open, not the one merely selected. Every in-scene
 	// affordance below scopes to it, so no tool's handles outlive its drawer.
 	const openComposeTool = useAtomValue(openComposeToolAtom)
@@ -274,11 +279,29 @@ const PublisherPage = () => {
 					}
 					onHotspotSelect={handleHotspotSelect}
 					/*
+					  Preview leaves the cards to clicks, as a visitor gets them. The
+					  editor holds the card of the hotspot whose content is being
+					  written, and every other card closed, so a card opened in
+					  preview does not outlive it and none stays up under another
+					  tool. Gated on the tool like the selection above, for the
+					  frame the panel's unmount has not yet cleared the atom.
+					*/
+					revealedHotspotId={
+						isPreviewMode
+							? undefined
+							: openComposeTool === 'hotspots'
+								? heldHotspotCardId
+								: null
+					}
+					/*
 					  A visitor's way back from a hotspot's camera, so only where the
-					  author is looking as a visitor. In the editor the way back is
+					  author is looking as a visitor, and only if the author left it
+					  on, so preview shows what ships. In the editor the way back is
 					  leaving a hotspot camera's view in the Camera tool.
 					*/
-					showSceneViewReturn={isPreviewMode}
+					showSceneViewReturn={
+						isPreviewMode && shouldShowSceneViewReturn(presentation)
+					}
 					/*
 					  The visitor's camera switcher, so preview shows what ships. The
 					  editor switches cameras in the Camera tool, and the selection

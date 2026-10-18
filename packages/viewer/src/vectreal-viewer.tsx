@@ -373,6 +373,19 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	onHotspotSelect?: (id: string) => void
 
 	/**
+	 * The hotspot whose card the surface holds open, or `null` to hold every
+	 * card closed. Undefined (the default) leaves the cards to visitors, who
+	 * open one by clicking its marker.
+	 *
+	 * For an editing surface that shows the card while its content is being
+	 * written, and closes it when the author moves on, rather than leaving it to
+	 * whichever card was last clicked. Switching between held and undefined
+	 * forgets the visitor's last card. While held, a click or Escape does not
+	 * open or close a card, and `revealHotspotContent={false}` still draws none.
+	 */
+	revealedHotspotId?: string | null
+
+	/**
 	 * Hands back a setter that moves a marker without moving the hotspot, or
 	 * `null` on teardown - the same shape as `onCommandExecutorReady` and the
 	 * capture callbacks beside it.
@@ -526,6 +539,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		showHiddenHotspots = false,
 		selectedHotspotId = null,
 		onHotspotSelect,
+		revealedHotspotId,
 		onHotspotPositionSetterReady,
 		staticShadowBake = false,
 		bakedShadow,
@@ -1044,6 +1058,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									showMarkers={showHotspotMarkers}
 									revealContent={revealHotspotContent}
 									selectedId={selectedHotspotId}
+									revealedId={revealedHotspotId}
 									activeCameraId={activeCameraId}
 									onActivateCamera={handleActivateHotspotCamera}
 									onSelect={onHotspotSelect}

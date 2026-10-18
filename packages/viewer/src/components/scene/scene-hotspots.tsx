@@ -7,6 +7,7 @@ import {
 	OCCLUSION_INTERVAL_SECONDS,
 	occlusionRayFar
 } from './hotspot-occlusion'
+import { resolveOpenHotspotId } from './open-hotspot'
 import { resolveHotspotMarkers } from './resolve-hotspot-markers'
 import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
 import { leftOpenHotspotView } from './scene-view-return'
@@ -68,6 +69,12 @@ export interface SceneHotspotsProps {
 	/** The marker drawn as the current one. */
 	selectedId?: string | null
 	/**
+	 * The marker whose card an editing surface holds open; `null` holds every
+	 * card closed. Undefined leaves the cards to the visitor's clicks. See
+	 * `resolveOpenHotspotId`.
+	 */
+	revealedId?: string | null
+	/**
 	 * The camera the viewer is looking through, so the hotspot that owns it can
 	 * say so. Null while the scene camera is active, which is every marker's
 	 * "not here".
@@ -114,6 +121,7 @@ const SceneHotspots = ({
 	showMarkers = true,
 	revealContent = true,
 	selectedId,
+	revealedId,
 	activeCameraId,
 	onActivateCamera,
 	onSelect,
@@ -134,6 +142,19 @@ const SceneHotspots = ({
 	 * of the occlusion pass below.
 	 */
 	const [openId, setOpenId] = useState<string | null>(null)
+
+	/*
+	  A visitor's choice belongs to the stretch it was made in. When a surface
+	  takes the cards over or hands them back - the publisher entering or leaving
+	  preview - the last choice is dropped, or a card opened in one preview
+	  would reappear at the start of the next.
+	*/
+	const isHeld = revealedId !== undefined
+	const [wasHeld, setWasHeld] = useState(isHeld)
+	if (wasHeld !== isHeld) {
+		setWasHeld(isHeld)
+		setOpenId(null)
+	}
 
 	const markers = useMemo(
 		() => resolveHotspotMarkers(hotspots, { includeInternal, includeHidden }),
@@ -198,12 +219,17 @@ const SceneHotspots = ({
 
 	const handleReveal = useCallback(
 		(id: string) => {
+			// A held card is the surface's to open and close. Still passed to the
+			// markers, so a marker keeps announcing the card it controls; a click
+			// or Escape toggling the visitor's choice underneath would only show
+			// once the hold ends.
+			if (isHeld) return
 			setOpenId((previous) => (previous === id ? null : id))
 			// Under `frameloop="demand"` nothing else asks for a frame here, and
 			// the card measures its own placement from one.
 			invalidate()
 		},
-		[invalidate]
+		[invalidate, isHeld]
 	)
 
 	/**
@@ -490,6 +516,18 @@ const SceneHotspots = ({
 		)
 	})
 
+	// `revealContent` off draws no card from any source, held ones included,
+	// for the reason `focusHotspot` gives above.
+	const shownId = revealContent
+		? resolveOpenHotspotId(revealedId, openId, occludedIds)
+		: null
+
+	// Under `frameloop="demand"` a held card would otherwise wait for an
+	// unrelated frame, and the card measures its own placement from one.
+	useEffect(() => {
+		invalidate()
+	}, [shownId, invalidate])
+
 	if (markers.length === 0 || !showMarkers) return null
 
 	return (
@@ -511,7 +549,7 @@ const SceneHotspots = ({
 					onActivate={onActivateCamera}
 					onSelect={onSelect}
 					onActivated={onHotspotActivated}
-					open={marker.id === openId}
+					open={marker.id === shownId}
 					onReveal={revealContent ? handleReveal : undefined}
 					onAnchorRef={registerAnchor}
 				/>

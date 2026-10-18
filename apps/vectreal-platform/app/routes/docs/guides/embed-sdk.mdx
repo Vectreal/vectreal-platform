@@ -124,7 +124,7 @@ other origin are dropped.
 | `ready` | `() => Promise<EmbedReadyInfo>` | Resolves once the scene has loaded and the viewer accepts commands, wherever the frame sits on the page. Returns `{ sceneId, cameras, hotspots }` for that scene. |
 | `activateCamera` | `(cameraId: string) => void` | Switch to a named camera. |
 | `focusHotspot` | `(hotspotId: string) => void` | Reveal a hotspot's content and fly its camera. Sets rather than toggles, so calling it twice does not close the card; there is no close command. |
-| `returnToSceneView` | `() => void` | Leave a hotspot's camera for the scene camera the visitor was on before, or the scene's default. Does nothing while the view is not at a hotspot. Visitors get the same from the viewer's own "Back to scene view" control and from Escape. |
+| `returnToSceneView` | `() => void` | Leave a hotspot's camera for the scene camera the visitor was on before, or the scene's default. Does nothing while the view is not at a hotspot. Visitors get the same from the viewer's own "Back to scene view" control and from Escape, unless the author switched that off in the publisher; this method works either way. |
 | `setTransition` | `(options: SetTransitionOptions) => void` | Override transition type for subsequent camera switches. |
 | `setControlsEnabled` | `(enabled: boolean) => void` | Enable or disable orbit controls. |
 | `setAutoRotate` | `(enabled: boolean, speed?: number) => void` | Toggle auto-rotate. |

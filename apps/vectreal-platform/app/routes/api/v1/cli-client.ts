@@ -14,6 +14,8 @@ import { ApiResponse } from '@shared/utils'
 
 import { findCliClient } from '../../../lib/domain/agent/agent-cli-client.server'
 
+import type { CliClient } from '@vctrl/sdk'
+
 export async function loader() {
 	const client = await findCliClient()
 	if (!client) {
@@ -25,7 +27,7 @@ export async function loader() {
 			client_id: client.clientId,
 			redirect_uris: client.redirectUris,
 			authorization_server: `${process.env.SUPABASE_URL}/auth/v1`
-		},
+		} satisfies CliClient,
 		200,
 		{ headers: { 'Cache-Control': 'public, max-age=300' } }
 	)

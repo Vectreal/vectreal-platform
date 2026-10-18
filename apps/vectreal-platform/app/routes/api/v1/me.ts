@@ -15,6 +15,7 @@ import { resolveAgentActor } from '../../../lib/domain/agent/agent-actor.server'
 import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
 
 import type { Route } from './+types/me'
+import type { Me } from '@vctrl/sdk'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const actor = await resolveAgentActor(request)
@@ -35,7 +36,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 				plan: subscription.plan,
 				billingState: subscription.billingState
 			}
-		},
+		} satisfies Me,
 		200,
 		{ headers: { 'Cache-Control': 'no-store' } }
 	)

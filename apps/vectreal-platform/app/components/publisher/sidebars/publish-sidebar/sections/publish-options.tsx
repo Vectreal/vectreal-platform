@@ -8,6 +8,7 @@ import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 import { originalPreset } from '../../../../../constants/optimizations'
 import {
 	isBillingLimitError,
@@ -80,6 +81,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
+	const sceneViewReturn = useSceneViewReturnSetting()
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
 	const compressTextures = useCompressesTexturesForGpu()
@@ -324,6 +326,17 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						onCheckedChange={handleToggleInfoPopover}
 						label="Show scene info"
 						description="Adds an info button to the viewer, opening this scene's name and description. Applies to embeds and preview links as soon as you save."
+					/>
+					<Toggle
+						checked={sceneViewReturn.shown}
+						onCheckedChange={sceneViewReturn.setShown}
+						disabled={!sceneViewReturn.available}
+						label="Back to scene view"
+						description={
+							sceneViewReturn.available
+								? 'Offers visitors a way back, by button or Escape, after a hotspot flies the camera to its own view. Applies to embeds and preview links as soon as you save.'
+								: 'Shown once a hotspot has its own camera.'
+						}
 					/>
 					<LoadingThumbnailToggle
 						checked={shouldShowLoadingThumbnail(presentation)}

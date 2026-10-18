@@ -3,6 +3,7 @@ import { memo, useMemo } from 'react'
 
 import { normalizeShadowOptions } from '../../constants/viewer-defaults'
 import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
+import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
@@ -149,6 +150,14 @@ const SceneEmbedViewer = memo(
 					showHotspotMarkers={hotspotPresentation?.showMarkers}
 					revealHotspotContent={hotspotPresentation?.revealContent}
 					showCameraControls={showCameraControls}
+					/*
+					  The author's, so read here like every other scene setting
+					  rather than handed in by each surface: one that forgot would
+					  draw a control the author switched off.
+					*/
+					showSceneViewReturn={shouldShowSceneViewReturn(
+						sceneData?.presentation
+					)}
 					shadowsOptions={shadowsOptions}
 					bakedShadow={bakedShadow}
 					loadingThumbnail={loadingThumbnail}
