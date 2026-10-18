@@ -13,6 +13,7 @@ import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
+import { describeAnimationClips } from '@vctrl/core'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import {
 	ArrowUpRight,
@@ -25,7 +26,7 @@ import {
 	SquarePen,
 	Type
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { AXES, AxisField } from './axis-field'
 import { MarkerArtworkField } from './marker-artwork-field'
@@ -34,6 +35,7 @@ import {
 	isAllowedHotspotLinkUrl,
 	MAX_HOTSPOT_BODY_LENGTH
 } from '../../../../../lib/domain/scene/hotspot-urls'
+import { clipLabel } from '../../../../../lib/domain/scene/scene-animation-draft'
 import {
 	isClickToPlaceActiveAtom,
 	openCameraInCameraToolAtom
@@ -46,6 +48,7 @@ import { InlineNotice } from '../../../../layout-components'
 import { DrillDownTrigger } from '../../drill-down'
 import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
 import { SettingGroup } from '../../sidebar-section'
+import { useModelClips } from '../animation-settings/use-animation-reconciliation'
 
 import type { HotspotDefinition, HotspotStylePreset } from '@vctrl/core'
 
@@ -179,6 +182,8 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 				</Select>
 			</SettingGroup>
 
+			<LinkedAnimationField hotspot={hotspot} />
+
 			<div className="space-y-2">
 				<DrillDownTrigger
 					to="content"
@@ -202,6 +207,62 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 				/>
 			</div>
 		</>
+	)
+}
+
+/** Value of the "no clip" option; never a clip id, which is never empty. */
+const NO_CLIP = 'none'
+
+/**
+ * The clip that plays once, holding its last frame, when a visitor clicks the
+ * marker. Not offered on a model with no clips.
+ *
+ * A saved link naming a clip the model no longer has stays selected under a
+ * label that says so, rather than reading as "None": the link is still saved,
+ * and the author should see why the marker plays nothing.
+ */
+function LinkedAnimationField({ hotspot }: MarkerViewProps) {
+	const edits = useHotspotEdits()
+	const clips = useModelClips()
+	const descriptors = useMemo(() => describeAnimationClips(clips), [clips])
+	if (descriptors.length === 0) return null
+
+	const linkedClipId = hotspot.linkedAnimationClipId
+	const isMissing =
+		!!linkedClipId &&
+		!descriptors.some((descriptor) => descriptor.clipId === linkedClipId)
+
+	return (
+		<SettingGroup
+			label="Linked animation"
+			description="Plays once when viewers click the marker, and holds its last frame."
+		>
+			<Select
+				value={linkedClipId ?? NO_CLIP}
+				onValueChange={(value) =>
+					edits.update(hotspot.id, {
+						linkedAnimationClipId: value === NO_CLIP ? undefined : value
+					})
+				}
+			>
+				<SelectTrigger aria-label="Linked animation" className="w-full min-w-0">
+					<SelectValue placeholder="None" />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value={NO_CLIP}>None</SelectItem>
+					{isMissing && (
+						<SelectItem value={linkedClipId} disabled>
+							Clip no longer in model
+						</SelectItem>
+					)}
+					{descriptors.map((descriptor) => (
+						<SelectItem key={descriptor.clipId} value={descriptor.clipId}>
+							<span className="truncate">{clipLabel(descriptor)}</span>
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+		</SettingGroup>
 	)
 }
 
