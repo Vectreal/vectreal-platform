@@ -122,12 +122,14 @@ async function isServableSideAsset(
 		}
 	)
 	const servable = selectEmbedServableAssets({
+		sceneId: ids.sceneId,
 		publishedAssetId: previewScene.publishedAssetId,
 		sceneAssets: settingsData?.assets ?? [],
 		bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId,
 		showsLoadingThumbnail: shouldShowLoadingThumbnail(
 			settingsData?.settings?.presentation
-		)
+		),
+		hotspots: settingsData?.settings?.hotspots
 	})
 
 	return isEmbedServableAssetId(ids.assetId, servable)

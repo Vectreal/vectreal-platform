@@ -1,6 +1,7 @@
-import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
+import { PERSISTED_BAKE_FILENAME } from '@vctrl/core'
 
 import { optimizationsMatch } from './client/optimization-inference'
+import { isUrlServedSceneAsset } from './scene-asset-roles'
 import { shouldCompressTexturesForGpu } from './scene-presentation'
 import { originalPreset } from '../../../constants/optimizations'
 
@@ -22,9 +23,9 @@ import type { Optimizations, ScenePresentationSettings } from '@vctrl/core'
  * ids mean the same bytes. The glTF JSON's id alone would not do: a texture
  * edited under its old name leaves the JSON byte-identical.
  *
- * The thumbnail and shadow bake are linked with the model but live outside the
- * GLB, and the kept original is never part of it; `getSceneSettingsWithAssetsRow`
- * already reads that one apart.
+ * The thumbnail, marker artwork and shadow bake are linked with the model but
+ * live outside the GLB, and the kept original is never part of it;
+ * `getSceneSettingsWithAssetsRow` already reads that one apart.
  */
 export function describePublishSource({
 	assets,
@@ -32,7 +33,7 @@ export function describePublishSource({
 	presentation
 }: {
 	/** The scene's linked assets, without its kept original. */
-	assets: readonly { id: string; name: string }[]
+	assets: readonly { id: string; name: string; mimeType: string | null }[]
 	/** As saved; a scene saved as the original upload stores none. */
 	optimizationSettings: Optimizations | null | undefined
 	presentation: ScenePresentationSettings | null | undefined
@@ -40,8 +41,7 @@ export function describePublishSource({
 	const modelAssetIds = assets
 		.filter(
 			(asset) =>
-				asset.name !== SCENE_THUMBNAIL_FILENAME &&
-				asset.name !== PERSISTED_BAKE_FILENAME
+				!isUrlServedSceneAsset(asset) && asset.name !== PERSISTED_BAKE_FILENAME
 		)
 		.map((asset) => asset.id)
 		.sort()

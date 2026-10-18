@@ -1,4 +1,4 @@
-import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
+import { isUrlServedSceneAsset } from '../scene/scene-asset-roles'
 
 /** A thumbnail URL for each image asset, by asset id. */
 export type TextureThumbnailUrls = Readonly<Record<string, string>>
@@ -20,7 +20,8 @@ interface ThumbnailAssetRow {
  * props once froze the tab, because React's development render logging walks
  * changed props down to the byte.
  *
- * The saved scene thumbnail is not a texture of the model and is left out.
+ * The saved scene thumbnail and marker artwork are not textures of the model
+ * and are left out.
  */
 export function buildTextureThumbnailUrls(
 	assets: readonly ThumbnailAssetRow[],
@@ -29,7 +30,7 @@ export function buildTextureThumbnailUrls(
 	const urls: Record<string, string> = {}
 	for (const asset of assets) {
 		if (!asset.mimeType?.startsWith('image/')) continue
-		if (asset.name === SCENE_THUMBNAIL_FILENAME) continue
+		if (isUrlServedSceneAsset(asset)) continue
 		urls[asset.id] = buildAssetUrl(asset.id)
 	}
 	return urls

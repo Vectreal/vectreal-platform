@@ -9,13 +9,21 @@ import {
 	selectEmbedServableAssets,
 	type EmbedAssetRow
 } from './embed-asset-policy'
+import { redactSettingsForEmbed } from './embed-settings-policy'
+import {
+	buildHotspotArtworkUrl,
+	hotspotArtworkFileName
+} from './hotspot-artwork'
 import { SOURCE_MODEL_FILENAME } from './scene-asset-roles'
+
+import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
 
 /**
  * The production shape that broke embeds: `scene_published.asset_id` is written
  * by `uploadPublishedGlb`, which never links into `scene_assets`, so the
  * published GLB is deliberately absent from the rows below.
  */
+const SCENE_ID = '33333333-3333-4333-8333-333333333333'
 const PUBLISHED_ASSET_ID = 'published-glb-id'
 const BAKE_ASSET_ID = 'bake-id'
 
@@ -62,6 +70,7 @@ const buildAssetUrl = (assetId: string) => `/api/assets/${assetId}`
 
 function servableWithBake() {
 	return selectEmbedServableAssets({
+		sceneId: SCENE_ID,
 		publishedAssetId: PUBLISHED_ASSET_ID,
 		sceneAssets: SCENE_ASSETS,
 		bakedShadowAssetId: BAKE_ASSET_ID
@@ -125,6 +134,7 @@ describe('embed asset policy', () => {
 			fileSize: 38_000_000
 		}
 		const servable = selectEmbedServableAssets({
+			sceneId: SCENE_ID,
 			publishedAssetId: PUBLISHED_ASSET_ID,
 			sceneAssets: [...SCENE_ASSETS, original],
 			bakedShadowAssetId: original.id
@@ -156,6 +166,7 @@ describe('embed asset policy', () => {
 
 		it('refuses a declared id that is not linked to the scene', () => {
 			const servable = selectEmbedServableAssets({
+				sceneId: SCENE_ID,
 				publishedAssetId: PUBLISHED_ASSET_ID,
 				sceneAssets: SCENE_ASSETS,
 				bakedShadowAssetId: 'some-other-scenes-bake'
@@ -174,6 +185,7 @@ describe('embed asset policy', () => {
 		 */
 		it('refuses a declared id that is linked but is not the bake', () => {
 			const servable = selectEmbedServableAssets({
+				sceneId: SCENE_ID,
 				publishedAssetId: PUBLISHED_ASSET_ID,
 				sceneAssets: SCENE_ASSETS,
 				bakedShadowAssetId: 'basecolor-id'
@@ -185,6 +197,7 @@ describe('embed asset policy', () => {
 
 		it('yields no refs when the scene has no bake', () => {
 			const servable = selectEmbedServableAssets({
+				sceneId: SCENE_ID,
 				publishedAssetId: PUBLISHED_ASSET_ID,
 				sceneAssets: SCENE_ASSETS,
 				bakedShadowAssetId: null
@@ -331,6 +344,7 @@ describe('the loading thumbnail', () => {
 
 	it('is servable and referenced once the author shows it', () => {
 		const servable = selectEmbedServableAssets({
+			sceneId: SCENE_ID,
 			publishedAssetId: PUBLISHED_ASSET_ID,
 			sceneAssets: SCENE_ASSETS,
 			showsLoadingThumbnail: true
@@ -348,6 +362,7 @@ describe('the loading thumbnail', () => {
 
 	it('stays private while the author has not', () => {
 		const servable = selectEmbedServableAssets({
+			sceneId: SCENE_ID,
 			publishedAssetId: PUBLISHED_ASSET_ID,
 			sceneAssets: SCENE_ASSETS
 		})
@@ -360,10 +375,166 @@ describe('the loading thumbnail', () => {
 	it('is nothing for a scene that has no thumbnail linked', () => {
 		expect(
 			selectEmbedServableAssets({
+				sceneId: SCENE_ID,
 				publishedAssetId: PUBLISHED_ASSET_ID,
 				sceneAssets: SCENE_ASSETS.filter((asset) => asset !== thumbnail),
 				showsLoadingThumbnail: true
 			}).thumbnailAssetId
 		).toBeNull()
+	})
+})
+
+/**
+ * Uploaded marker artwork. A marker's `payloadUrl` is user-writable through
+ * the save path, so it declares; the scene link and the reserved artwork name
+ * authorize. The manifest half is `redactSettingsForEmbed`, so the invariant
+ * below runs both, the way the first test in this file runs both for the bake.
+ */
+describe('marker artwork', () => {
+	const ARTWORK_ID = '66666666-6666-4666-8666-666666666666'
+	const TEXTURE_ID = '77777777-7777-4777-8777-777777777777'
+	const HOTSPOT_ID = '11111111-1111-4111-8111-111111111111'
+
+	const artworkRow: EmbedAssetRow = {
+		id: ARTWORK_ID,
+		name: hotspotArtworkFileName(HOTSPOT_ID, 'image/png'),
+		mimeType: 'image/png',
+		fileSize: 2048
+	}
+	// A model texture: linked, an image, and not artwork.
+	const textureRow: EmbedAssetRow = {
+		id: TEXTURE_ID,
+		name: 'Shoe_baseColor.png',
+		mimeType: 'image/png',
+		fileSize: 84996
+	}
+	const rows = [...SCENE_ASSETS, artworkRow, textureRow]
+
+	const marker = (
+		payloadUrl: string,
+		overrides: Partial<HotspotDefinition> = {}
+	): HotspotDefinition => ({
+		id: HOTSPOT_ID,
+		name: 'Badge',
+		worldPosition: [0, 0, 0],
+		visible: true,
+		internalOnly: false,
+		stylePreset: 'image',
+		payloadUrl,
+		...overrides
+	})
+
+	const servableFor = (hotspots: HotspotDefinition[], sceneAssets = rows) =>
+		selectEmbedServableAssets({
+			sceneId: SCENE_ID,
+			publishedAssetId: PUBLISHED_ASSET_ID,
+			sceneAssets,
+			hotspots
+		})
+
+	it('serves the artwork a drawn marker declares, linked and named as artwork', () => {
+		const servable = servableFor([
+			marker(buildHotspotArtworkUrl(SCENE_ID, ARTWORK_ID))
+		])
+
+		expect(servable.hotspotArtworkAssetIds).toEqual([ARTWORK_ID])
+		expect(isEmbedServableAssetId(ARTWORK_ID, servable)).toBe(true)
+	})
+
+	it('never serves a linked texture a crafted marker names as its artwork', () => {
+		const servable = servableFor([
+			marker(buildHotspotArtworkUrl(SCENE_ID, TEXTURE_ID))
+		])
+
+		expect(isEmbedServableAssetId(TEXTURE_ID, servable)).toBe(false)
+	})
+
+	it('never serves artwork the scene does not link', () => {
+		const servable = servableFor(
+			[marker(buildHotspotArtworkUrl(SCENE_ID, ARTWORK_ID))],
+			SCENE_ASSETS
+		)
+
+		expect(isEmbedServableAssetId(ARTWORK_ID, servable)).toBe(false)
+	})
+
+	it('never serves artwork through a path into another scene', () => {
+		const servable = servableFor([
+			marker(
+				buildHotspotArtworkUrl(
+					'44444444-4444-4444-8444-444444444444',
+					ARTWORK_ID
+				)
+			)
+		])
+
+		expect(isEmbedServableAssetId(ARTWORK_ID, servable)).toBe(false)
+	})
+
+	it.each([
+		['an internal marker', { internalOnly: true }],
+		['a hidden marker', { visible: false }],
+		['a dot', { stylePreset: 'dot' as const }]
+	])(
+		'serves nothing for %s, which the embed never draws as an image',
+		(_label, overrides) => {
+			const servable = servableFor([
+				marker(buildHotspotArtworkUrl(SCENE_ID, ARTWORK_ID), overrides)
+			])
+
+			expect(isEmbedServableAssetId(ARTWORK_ID, servable)).toBe(false)
+		}
+	)
+
+	it('serves every artwork URL the manifest writes, and writes no other', () => {
+		const hotspots = [
+			marker(buildHotspotArtworkUrl(SCENE_ID, ARTWORK_ID)),
+			marker(buildHotspotArtworkUrl(SCENE_ID, TEXTURE_ID), {
+				id: '22222222-2222-4222-8222-222222222222'
+			}),
+			marker('https://cdn.test/legacy.png', {
+				id: '33333333-1111-4111-8111-111111111111'
+			})
+		]
+		const servable = servableFor(hotspots)
+		const embedUrl = (assetId: string) => `/signed/${assetId}`
+
+		const redacted = redactSettingsForEmbed({ hotspots } as SceneSettings, {
+			bakeAssetId: null,
+			hotspotArtwork: {
+				servableAssetIds: servable.hotspotArtworkAssetIds,
+				buildAssetUrl: embedUrl
+			}
+		})
+		const written = (redacted.hotspots ?? []).map((h) => h.payloadUrl)
+
+		expect(written).toEqual([
+			embedUrl(ARTWORK_ID),
+			// The crafted path is dropped rather than shipped: neither the
+			// session path nor a signed URL for the texture reaches the embed.
+			undefined,
+			// A stored remote URL is grandfathered and passes through untouched.
+			'https://cdn.test/legacy.png'
+		])
+		for (const url of written) {
+			if (!url?.startsWith('/signed/')) continue
+			const assetId = url.slice('/signed/'.length)
+			expect(
+				isEmbedServableAssetId(assetId, servable),
+				`manifest writes ${assetId} but the gate would refuse it`
+			).toBe(true)
+		}
+	})
+
+	it('drops every artwork path when the caller gives no artwork', () => {
+		// The publisher's camera switcher redacts only for camera visibility.
+		const redacted = redactSettingsForEmbed(
+			{
+				hotspots: [marker(buildHotspotArtworkUrl(SCENE_ID, ARTWORK_ID))]
+			} as SceneSettings,
+			{ bakeAssetId: null }
+		)
+
+		expect(redacted.hotspots?.[0].payloadUrl).toBeUndefined()
 	})
 })
