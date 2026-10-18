@@ -39,14 +39,14 @@ export const meta: MetaFunction = () =>
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
-	return Response.json({ user }, { headers: new Headers(headers) })
+	const { user } = await loadAuthenticatedUser(request)
+	return Response.json({ user })
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
 
 export async function action({ request }: Route.ActionArgs) {
-	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { userWithDefaults } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 
 	const toNullable = (v: FormDataEntryValue | null): string | null => {
@@ -63,7 +63,7 @@ export async function action({ request }: Route.ActionArgs) {
 
 	// Respect a deep-link destination threaded through from the OAuth callback.
 	const next = getSafeNextPath(new URL(request.url).searchParams.get('next'))
-	return redirect(next, { headers: new Headers(headers) })
+	return redirect(next)
 }
 
 // ─── PillGroup ────────────────────────────────────────────────────────────────

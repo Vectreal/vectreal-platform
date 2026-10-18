@@ -84,8 +84,10 @@ import { loader } from '../app/routes/api/scenes.$sceneId.assets.$assetId'
 import type { LoaderFunctionArgs } from 'react-router'
 
 const SECRET = 'route-test-secret'
-const SCENE_ID = 'scene-1'
-const GLB_ID = 'glb-1'
+// Real uuids: the route answers 404 to a malformed scene or asset id before
+// any branch.
+const SCENE_ID = '0b9c2a64-6d5f-4c1e-9a7b-3f2e1d0c9b8a'
+const GLB_ID = '1a2b3c4d-0000-4000-8000-000000000001'
 const PUBLISHED_ROW = {
 	publishedAssetId: GLB_ID,
 	publishedAssetFilePath: 'project/scene.glb',
@@ -136,7 +138,7 @@ afterEach(() => {
 })
 
 describe('a signed asset request', () => {
-	const THUMBNAIL_ID = 'thumb-1'
+	const THUMBNAIL_ID = '1a2b3c4d-0000-4000-8000-000000000002'
 
 	/** The scene's live settings, as the servable check reads them. */
 	const liveSettings = (showLoadingThumbnail: boolean) =>
@@ -235,7 +237,7 @@ describe('a signed asset request', () => {
 	it('refuses the GLB a republish replaced, quietly and without a download', async () => {
 		vi.mocked(getPublishedSceneById).mockResolvedValue({
 			...PUBLISHED_ROW,
-			publishedAssetId: 'glb-2'
+			publishedAssetId: '1a2b3c4d-0000-4000-8000-000000000003'
 		} as never)
 
 		const response = await get(signedPath())
@@ -349,8 +351,8 @@ describe('a key-authenticated asset request', () => {
 	})
 
 	describe('for an asset other than the published GLB', () => {
-		const BAKE_ID = 'bake-1'
-		const DRAFT_ID = 'draft-1'
+		const BAKE_ID = '1a2b3c4d-0000-4000-8000-000000000004'
+		const DRAFT_ID = '1a2b3c4d-0000-4000-8000-000000000005'
 		const keyedGet = (assetId: string) =>
 			loader({
 				request: new Request(
@@ -426,8 +428,7 @@ describe('a session asset request', () => {
 
 	beforeEach(() => {
 		vi.mocked(getAuthUser).mockResolvedValue({
-			user: { id: 'user-1' },
-			headers: new Headers()
+			user: { id: 'user-1' }
 		} as never)
 		vi.mocked(getPublishedScenePreview).mockResolvedValue(
 			PUBLISHED_ROW as never

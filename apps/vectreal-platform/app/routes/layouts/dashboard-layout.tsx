@@ -54,7 +54,7 @@ export const meta: MetaFunction = () =>
 	)
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 	const [sidebarProjects, orgs] = await Promise.all([
 		getSidebarProjects(user.id, 3),
 		getUserOrganizations(user.id)
@@ -63,7 +63,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Safety net: if the user has no org yet (e.g. bypassed onboarding), send them
 	// through onboarding which calls initializeUserDefaults and creates the org.
 	if (orgs.length === 0) {
-		return redirect('/onboarding', { headers })
+		return redirect('/onboarding')
 	}
 
 	const primaryOrgId = orgs[0]?.organization.id ?? null
@@ -95,7 +95,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		avatarUrl: (user.user_metadata?.avatar_url as string | undefined) ?? null
 	}
 
-	return data({ actor, sidebarProjects, plan }, { headers })
+	return data({ actor, sidebarProjects, plan })
 }
 
 /**

@@ -93,7 +93,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID is required', { status: 400 })
 	}
 
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 
 	const [project, organizations] = await Promise.all([
 		getProject(projectId, user.id),
@@ -106,14 +106,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	const capabilities = buildDashboardCapabilities(organizations)
 
-	return data(
-		{
-			project,
-			organizations,
-			canDelete: capabilities[project.organizationId]?.canDeleteProject ?? false
-		},
-		{ headers }
-	)
+	return data({
+		project,
+		organizations,
+		canDelete: capabilities[project.organizationId]?.canDeleteProject ?? false
+	})
 }
 
 /**
@@ -158,7 +155,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		throw new Response('Project ID is required', { status: 400 })
 	}
 
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -174,15 +171,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 		const validatedData = projectEditSchema.parse({ name, slug })
 		const domainValidation = validateAllowedDomainInput(allowedEmbedDomainsRaw)
 		if (!domainValidation.ok) {
-			return data(
-				{
-					error: 'Validation failed',
-					fieldErrors: {
-						allowedEmbedDomains: domainValidation.message
-					}
-				},
-				{ headers }
-			)
+			return data({
+				error: 'Validation failed',
+				fieldErrors: {
+					allowedEmbedDomains: domainValidation.message
+				}
+			})
 		}
 
 		await updateProject(
@@ -198,9 +192,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			user.id
 		)
 
-		return redirect(resolveReturnTo(formData.get('returnTo'), projectId), {
-			headers
-		})
+		return redirect(resolveReturnTo(formData.get('returnTo'), projectId))
 	} catch (error) {
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
@@ -211,22 +203,15 @@ export async function action({ request, params }: Route.ActionArgs) {
 				}
 			})
 
-			return data(
-				{
-					error: 'Validation failed',
-					fieldErrors
-				},
-				{ headers }
-			)
+			return data({
+				error: 'Validation failed',
+				fieldErrors
+			})
 		}
 
-		return data(
-			{
-				error:
-					error instanceof Error ? error.message : 'Failed to update project'
-			},
-			{ headers }
-		)
+		return data({
+			error: error instanceof Error ? error.message : 'Failed to update project'
+		})
 	}
 }
 

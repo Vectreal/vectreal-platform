@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 import { and, eq, gt, isNull, or } from 'drizzle-orm'
 
+import { UUID_REGEX } from '../../../constants/utility-constants'
 import { getDbClient } from '../../../db/client'
 import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
@@ -100,10 +101,13 @@ export async function validatePreviewApiKeyForProject(params: {
 	const hashedToken = token ? hashApiToken(token) : null
 
 	// No token means no lookup: an absent token can match no key, and querying
-	// for one would let an unauthenticated caller drive database load.
-	const match = hashedToken
-		? await findLiveKeyForProject(hashedToken, projectId, now)
-		: null
+	// for one would let an unauthenticated caller drive database load. A
+	// malformed project id can match no key either, and Postgres rejects it
+	// outright rather than returning no rows, which surfaced as a 500.
+	const match =
+		hashedToken && UUID_REGEX.test(projectId)
+			? await findLiveKeyForProject(hashedToken, projectId, now)
+			: null
 
 	const decision = decideEmbedAccess({ request, token, match })
 

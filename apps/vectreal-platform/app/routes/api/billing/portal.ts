@@ -35,9 +35,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		return csrfCheck
 	}
 
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
-	const responseHeaders = new Headers(headers)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
 
 	const organizationId = userWithDefaults.organization.id
 
@@ -54,8 +52,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		})
 	) {
 		return ApiResponse.forbidden(
-			'Only organization owners and admins can access the billing portal',
-			{ headers: responseHeaders }
+			'Only organization owners and admins can access the billing portal'
 		)
 	}
 
@@ -65,8 +62,7 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 	if (!sub?.stripeCustomerId) {
 		return ApiResponse.error(
 			'No billing account found for this organization. Please complete a checkout first.',
-			400,
-			{ headers: responseHeaders }
+			400
 		)
 	}
 
@@ -85,8 +81,5 @@ export async function action({ request }: Route.ActionArgs): Promise<Response> {
 		userId: user.id
 	})
 
-	return ApiResponse.created(
-		{ portalUrl: portalSession.url },
-		{ headers: responseHeaders }
-	)
+	return ApiResponse.created({ portalUrl: portalSession.url })
 }

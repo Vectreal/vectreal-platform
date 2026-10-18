@@ -50,17 +50,16 @@ export const SIDE_ASSET_MAX_AGE_SECONDS = 300
 async function serveEmbedAsset(
 	request: Request,
 	ids: AssetIds,
-	download: () => Promise<{ data: Uint8Array; mimeType: string }>,
-	extraHeaders?: HeadersInit
+	download: () => Promise<{ data: Uint8Array; mimeType: string }>
 ): Promise<Response> {
 	try {
 		const assetData = await download()
-		return assetResponse(assetData.data, assetData.mimeType, extraHeaders)
+		return assetResponse(assetData.data, assetData.mimeType)
 	} catch (error) {
 		reportServerError(error, { request, properties: ids })
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: noStoreHeaders(extraHeaders)
+			headers: noStoreHeaders()
 		})
 	}
 }
@@ -76,8 +75,7 @@ async function serveEmbedAsset(
 export function serveFromPublishedRow(
 	request: Request,
 	ids: AssetIds,
-	previewScene: PublishedScenePreview | null,
-	extraHeaders?: HeadersInit
+	previewScene: PublishedScenePreview | null
 ): Promise<Response> | null {
 	if (!previewScene || ids.assetId !== previewScene.publishedAssetId) {
 		return null
@@ -90,11 +88,8 @@ export function serveFromPublishedRow(
 	} = previewScene
 	if (!filePath || !name) return null
 
-	return serveEmbedAsset(
-		request,
-		ids,
-		() => downloadAssetFromRow({ id: ids.assetId, filePath, mimeType, name }),
-		extraHeaders
+	return serveEmbedAsset(request, ids, () =>
+		downloadAssetFromRow({ id: ids.assetId, filePath, mimeType, name })
 	)
 }
 

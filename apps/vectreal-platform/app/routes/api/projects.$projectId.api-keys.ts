@@ -37,27 +37,6 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 /** Matches the 90-day default the full API key form offers. */
 const DEFAULT_EXPIRY_DAYS = 90
 
-/**
- * Re-attaches the auth headers to a response that could not carry them.
- *
- * `getAuthUser` returns a `Set-Cookie` whenever Supabase rotates the session,
- * and dropping it leaves the browser holding a token the server has already
- * replaced. Most `ApiResponse` statics take `options.headers`, but
- * `badRequest` and `quotaExceeded` do not, so the error paths need this.
- * `dashboard.mutations.ts` carries the same helper for the same reason.
- */
-function withHeaders(response: Response, headers: Headers): Response {
-	const merged = new Headers(response.headers)
-	headers.forEach((value, key) => {
-		merged.append(key, value)
-	})
-
-	return new Response(response.body, {
-		status: response.status,
-		headers: merged
-	})
-}
-
 export interface EmbedApiKeysPayload {
 	projectId: string
 	projectName: string
@@ -89,7 +68,6 @@ async function resolveProjectAccess(request: Request, projectId?: string) {
 		return { error: authResult } as const
 	}
 
-	const headers = new Headers(authResult.headers)
 	const membership = await resolveProjectMembership(
 		projectId,
 		authResult.user.id
@@ -99,11 +77,11 @@ async function resolveProjectAccess(request: Request, projectId?: string) {
 	// forbidden, so this route cannot be used to probe which ids exist.
 	if (!membership) {
 		return {
-			error: ApiResponse.notFound('Project not found', { headers })
+			error: ApiResponse.notFound('Project not found')
 		} as const
 	}
 
-	return { userId: authResult.user.id, headers, membership } as const
+	return { userId: authResult.user.id, membership } as const
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -112,13 +90,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return access.error
 	}
 
-	const { userId, headers, membership } = access
+	const { userId, membership } = access
 
 	if (!canPerformDashboardOperation('api-key:read', membership)) {
-		return ApiResponse.forbidden(
-			'You do not have permission to view API keys',
-			{ headers }
-		)
+		return ApiResponse.forbidden('You do not have permission to view API keys')
 	}
 
 	const [project, allKeys] = await Promise.all([
@@ -127,7 +102,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	])
 
 	if (!project) {
-		return ApiResponse.notFound('Project not found', { headers })
+		return ApiResponse.notFound('Project not found')
 	}
 
 	const now = new Date()
@@ -175,9 +150,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	  protection living in a Terraform rule instead of the response, and does
 	  nothing about the browser's own disk cache.
 	*/
-	headers.set('Cache-Control', 'no-store')
-
-	return ApiResponse.success(payload, 200, { headers })
+	return ApiResponse.success(payload, 200, {
+		headers: { 'Cache-Control': 'no-store' }
+	})
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -198,22 +173,21 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		return access.error
 	}
 
-	const { userId, headers, membership } = access
+	const { userId, membership } = access
 
 	if (formData.get('intent') !== 'create') {
-		return withHeaders(ApiResponse.badRequest('Unsupported intent'), headers)
+		return ApiResponse.badRequest('Unsupported intent')
 	}
 
 	if (!canPerformDashboardOperation('api-key:create', membership)) {
 		return ApiResponse.forbidden(
-			'You do not have permission to create API keys',
-			{ headers }
+			'You do not have permission to create API keys'
 		)
 	}
 
 	const project = await getProject(membership.projectId, userId)
 	if (!project) {
-		return ApiResponse.notFound('Project not found', { headers })
+		return ApiResponse.notFound('Project not found')
 	}
 
 	const expiresAt = new Date()
@@ -253,17 +227,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			plaintext: created.plaintext
 		}
 
-		return ApiResponse.created(payload, { headers })
+		return ApiResponse.created(payload)
 	} catch (error) {
 		if (error instanceof QuotaExceededError) {
-			return withHeaders(quotaExceededResponse(error), headers)
+			return quotaExceededResponse(error)
 		}
 
-		return withHeaders(
-			ApiResponse.badRequest(
-				error instanceof Error ? error.message : 'Could not create an API key'
-			),
-			headers
+		return ApiResponse.badRequest(
+			error instanceof Error ? error.message : 'Could not create an API key'
 		)
 	}
 }

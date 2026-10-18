@@ -33,16 +33,16 @@ export const meta: MetaFunction = () =>
 	)
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
 
 	if (!user) {
-		return redirect('/sign-in?error=session_missing', { headers })
+		return redirect('/sign-in?error=session_missing')
 	}
 
-	return data({}, { headers })
+	return data({})
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -71,17 +71,17 @@ export async function action({ request }: Route.ActionArgs) {
 		return data<ResetPasswordActionData>({ errors }, { status: 400 })
 	}
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const { error } = await client.auth.updateUser({ password })
 
 	if (error) {
 		return data<ResetPasswordActionData>(
 			{ formError: 'Unable to reset password right now. Please try again.' },
-			{ status: 500, headers }
+			{ status: 500 }
 		)
 	}
 
-	return redirect('/sign-in', { headers })
+	return redirect('/sign-in')
 }
 
 export default function ResetPasswordPage({

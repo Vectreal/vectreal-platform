@@ -101,7 +101,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-signup',
 		maxRequests: 5,
-		keyParts: [normalizedEmail]
+		keyParts: [normalizedEmail],
+		// Each attempt can send a confirmation email to an address the caller
+		// names, so one address may not reach more than a few inboxes.
+		addressCeiling: 10
 	})
 
 	if (rateLimitResult.limited) {
@@ -127,7 +130,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 			? (formData.get('utm_source') as string)
 			: ''
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	/*
 	  Where the visitor was headed when they chose to sign up: the publisher's
@@ -182,7 +185,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		})
 		return data<SignupActionData>(
 			{ formError: failure.message },
-			{ status: failure.status, headers }
+			{ status: failure.status }
 		)
 	}
 
@@ -199,9 +202,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 					utm_source: utmSource || undefined
 				}
 			})
-			return redirect(newAccountDestination(next), {
-				headers: new Headers(headers)
-			})
+			return redirect(newAccountDestination(next))
 		}
 
 		const confirmPendingUrl = new URL(
@@ -210,9 +211,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		)
 		confirmPendingUrl.searchParams.set('email', normalizedEmail)
 		confirmPendingUrl.searchParams.set('next', next)
-		return redirect(confirmPendingUrl.toString(), {
-			headers: new Headers(headers)
-		})
+		return redirect(confirmPendingUrl.toString())
 	}
 
 	if (signupError) {
@@ -235,7 +234,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 		return data<SignupActionData>(
 			{ formError: failure.message },
-			{ status: failure.status, headers }
+			{ status: failure.status }
 		)
 	}
 
@@ -250,22 +249,21 @@ export async function action({ request, context }: Route.ActionArgs) {
 	)
 	return data<SignupActionData>(
 		{ formError: unexpected.message },
-		{ status: unexpected.status, headers }
+		{ status: unexpected.status }
 	)
 }
 
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
 
 	if (user)
 		return redirect(
-			getSafeNextPath(new URL(request.url).searchParams.get('next')),
-			{ headers }
+			getSafeNextPath(new URL(request.url).searchParams.get('next'))
 		)
 
 	const url = new URL(request.url)
@@ -285,7 +283,7 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	const nextPath =
 		rawNext && getSafeNextPath(rawNext) === rawNext ? rawNext : null
 
-	return data({ accountDeleted, sceneSaved, nextPath }, { headers })
+	return data({ accountDeleted, sceneSaved, nextPath })
 }
 
 // ─── Password strength helper ─────────────────────────────────────────────────

@@ -1,13 +1,27 @@
 /**
  * The session cookie middleware against the real per-request Supabase client
- * cache. Supabase's own cookie write is stood in for by appending to the
- * client's Headers, which is exactly what its `setAll` does on a refresh.
+ * cache. Supabase's client is stood in for by one that keeps the cookie
+ * writer it was given, so a spec can call it as a token refresh would.
  */
 
+import { createRequestHandler, type ServerBuild } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sessionCookieMiddleware } from './session-cookie-middleware'
 import { createSupabaseClient } from '../supabase.server'
+
+type SetAll = (
+	cookies: { name: string; value: string; options: object }[]
+) => Promise<void>
+
+vi.mock('@supabase/ssr', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@supabase/ssr')>()),
+	createServerClient: (
+		_url: string,
+		_key: string,
+		options: { cookies: { setAll: SetAll } }
+	) => ({ setAll: options.cookies.setAll })
+}))
 
 const ROTATED = 'sb-127-auth-token=rotated; Path=/; HttpOnly; SameSite=Lax'
 const URL_ = 'https://vectreal.com/dashboard'
@@ -30,8 +44,14 @@ function run(
 }
 
 async function refresh(routeRequest: Request) {
-	const { headers } = await createSupabaseClient(routeRequest)
-	headers.append('Set-Cookie', ROTATED)
+	const { client } = await createSupabaseClient(routeRequest)
+	await (client as unknown as { setAll: SetAll }).setAll([
+		{
+			name: 'sb-127-auth-token',
+			value: 'rotated',
+			options: { path: '/', httpOnly: true, sameSite: 'lax' }
+		}
+	])
 }
 
 beforeEach(() => {
@@ -69,15 +89,6 @@ describe('sessionCookieMiddleware', () => {
 		expect(loaderClient).toBe(actionClient)
 	})
 
-	it('does not add a cookie the route already forwarded', async () => {
-		const response = await run(async (routeRequest) => {
-			await refresh(routeRequest)
-			return new Response(null, { headers: [['Set-Cookie', ROTATED]] })
-		})
-
-		expect(response.headers.getSetCookie()).toEqual([ROTATED])
-	})
-
 	it('keeps the route’s own cookies beside the session one', async () => {
 		const own = 'csrf=abc; Path=/'
 		const response = await run(async (routeRequest) => {
@@ -105,6 +116,62 @@ describe('sessionCookieMiddleware', () => {
 		const original = new Response('ok')
 
 		await expect(run(async () => original)).resolves.toBe(original)
+	})
+
+	/*
+	  The scene, dashboard-mutation and API-key routes no longer forward the
+	  cookie on their error paths; they rely on this. So it is checked through
+	  React Router's own request
+	  handler rather than by calling the middleware: a root middleware has to
+	  wrap a resource route's response too, not only a document's.
+	*/
+	it("reaches a resource route's response through React Router's handler", async () => {
+		const build = {
+			entry: {
+				module: {
+					default: () => new Response('no documents here', { status: 500 })
+				}
+			},
+			routes: {
+				root: {
+					id: 'root',
+					path: '',
+					module: { middleware: [sessionCookieMiddleware] }
+				},
+				'api-route': {
+					id: 'api-route',
+					parentId: 'root',
+					path: 'api/thing',
+					module: {
+						loader: async ({ request }: { request: Request }) => {
+							await refresh(request)
+							return Response.json({ ok: true })
+						}
+					}
+				}
+			},
+			assets: {
+				entry: { module: '', imports: [] },
+				routes: {},
+				url: '',
+				version: 'test'
+			},
+			publicPath: '/',
+			assetsBuildDirectory: '',
+			future: {},
+			ssr: true,
+			isSpaMode: false,
+			prerender: [],
+			routeDiscovery: { mode: 'lazy', manifestPath: '/__manifest' }
+		} as unknown as ServerBuild
+
+		const response = await createRequestHandler(
+			build,
+			'production'
+		)(new Request('https://vectreal.com/api/thing'))
+
+		expect(response.status).toBe(200)
+		expect(response.headers.getSetCookie()).toEqual([ROTATED])
 	})
 
 	it('runs outermost on every route, from root', async () => {

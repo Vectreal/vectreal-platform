@@ -13,12 +13,12 @@ import { getUserOrganizations } from '../../lib/domain/user/user-repository.serv
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch organizations
 	const organizations = await getUserOrganizations(user.id)
 
-	return data({ organizations }, { headers })
+	return data({ organizations })
 }
 
 /**

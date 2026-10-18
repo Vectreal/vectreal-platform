@@ -42,25 +42,19 @@ describe('manifestResponse', () => {
 	const manifest = { sceneId: 's1' }
 
 	it('sends the manifest with its ETag and a revalidate-first cache policy', async () => {
-		const response = manifestResponse(request(), manifest, '"v1"', {
-			'Set-Cookie': 'session=1'
-		})
+		const response = manifestResponse(request(), manifest, '"v1"')
 
 		expect(response.status).toBe(200)
 		expect(response.headers.get('ETag')).toBe('"v1"')
 		expect(response.headers.get('Cache-Control')).toBe('private, no-cache')
-		expect(response.headers.get('Set-Cookie')).toBe('session=1')
 		expect(await response.json()).toEqual({ success: true, data: manifest })
 	})
 
-	it('answers a matching If-None-Match with an empty 304 that keeps the auth headers', async () => {
-		const response = manifestResponse(request('"v1"'), manifest, '"v1"', {
-			'Set-Cookie': 'session=1'
-		})
+	it('answers a matching If-None-Match with an empty 304', async () => {
+		const response = manifestResponse(request('"v1"'), manifest, '"v1"')
 
 		expect(response.status).toBe(304)
 		expect(response.headers.get('ETag')).toBe('"v1"')
-		expect(response.headers.get('Set-Cookie')).toBe('session=1')
 		expect(await response.text()).toBe('')
 	})
 
@@ -102,7 +96,7 @@ describe('previewDocumentHeaders', () => {
 		)
 
 		expect(route).toMatch(
-			/export function headers\(\{ loaderHeaders \}[^)]*\) \{\s*return previewDocumentHeaders\(loaderHeaders\)/
+			/export function headers\(\{ loaderHeaders, errorHeaders \}[^)]*\) \{\s*return previewDocumentHeaders\(errorHeaders \?\? loaderHeaders\)/
 		)
 	})
 })

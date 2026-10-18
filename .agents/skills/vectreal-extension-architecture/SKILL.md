@@ -105,8 +105,12 @@ it. `app/lib/domain/scene/scene-route-params.ts` is the pattern.
    mutation.
 4. Respond through `ApiResponse.*` from `@shared/utils`. The envelope is
    `{ success: true, data }` or `{ success: false, error, quota? }`.
-5. Merge auth headers with `append`, not `set`. Supabase can rotate more than one
-   cookie in a single response and `set` drops all but the last.
+5. Do not write code to forward the session cookie. `sessionCookieMiddleware`
+   (`app/lib/sessions/session-cookie-middleware.ts`) runs on root and puts every
+   cookie Supabase wrote during the request on whatever response it ends with,
+   resource routes and thrown errors included. Older routes still pass
+   `getAuthUser`'s headers into a response; the middleware skips a cookie that
+   is already present, so that is redundant, not a pattern to copy.
 
 ## Recipe: a dashboard mutation
 
@@ -227,6 +231,7 @@ present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts
 present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-capabilities.ts          buildDashboardCapabilities
 present  apps/vectreal-platform/app/lib/domain/dashboard/dashboard-capabilities.ts          DashboardCapabilityMap
 present  apps/vectreal-platform/app/lib/http/csrf.server.ts                                 ensureValidCsrfFormData
+present  apps/vectreal-platform/app/root.tsx                                                 sessionCookieMiddleware,
 present  shared/utils/src/lib/api.utils.ts                                                  success: true, data
 exists   apps/vectreal-platform/app/lib/domain/scene/scene-route-params.ts
 present  apps/vectreal-platform/app/routes.tsx                                              api/dashboard/mutations

@@ -26,8 +26,7 @@ vi.mock('../../lib/domain/auth/auth-loader.server', () => ({
 }))
 vi.mock('../../lib/supabase.server', () => ({
 	createSupabaseClient: vi.fn(async () => ({
-		client: { auth: { oauth } },
-		headers: new Headers()
+		client: { auth: { oauth } }
 	}))
 }))
 vi.mock('../../lib/domain/agent/agent-grant-repository.server', () => ({
@@ -183,9 +182,6 @@ describe('listing connected agents', () => {
 			data: 'Could not load connected agents.',
 			init: { status: 502 }
 		})
-		expect(
-			(thrown as { init: { headers: unknown } }).init.headers
-		).toBeInstanceOf(Headers)
 		expect(reportServerError).toHaveBeenCalledWith(error, expect.anything())
 	})
 })

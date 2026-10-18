@@ -62,7 +62,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 		})
 	)
 
-	const { loaderData, actorId, organizationId, headers } =
+	const { loaderData, actorId, organizationId } =
 		await loadBillingDashboardData(request, {
 			includeCheckoutOptions: false
 		})
@@ -99,20 +99,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 	*/
 	const { effectivePlan } = describeBillingSituation(loaderData.billing)
 
-	return data(
-		{
-			...loaderData,
-			effectivePlan,
-			used: {
-				...usageByLimit(usage),
-				api_keys_per_org: apiKeys,
-				org_seats: seats
-			},
-			checkoutOptions,
-			checkoutEnabled: checkoutGate.allowed
+	return data({
+		...loaderData,
+		effectivePlan,
+		used: {
+			...usageByLimit(usage),
+			api_keys_per_org: apiKeys,
+			org_seats: seats
 		},
-		{ headers }
-	)
+		checkoutOptions,
+		checkoutEnabled: checkoutGate.allowed
+	})
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'

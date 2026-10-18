@@ -160,23 +160,32 @@ export async function getProjectsScenes(
 	return scenesByProject
 }
 
+/**
+ * The scene, or null when it does not exist or the user is not a member of
+ * the organization that owns it.
+ *
+ * One answer for both, so a caller's `if (!scene) 404` covers the non-member
+ * too and the route is no id oracle. The membership join is the whole
+ * authorization: RLS is inert for app traffic.
+ */
 export async function getScene(
 	sceneId: string,
 	userId: string
 ): Promise<typeof scenes.$inferSelect | null> {
-	const [scene] = await db
-		.select()
+	const [row] = await db
+		.select({ scene: scenes })
 		.from(scenes)
-		.where(eq(scenes.id, sceneId))
+		.innerJoin(projects, eq(projects.id, scenes.projectId))
+		.innerJoin(
+			organizationMemberships,
+			eq(organizationMemberships.organizationId, projects.organizationId)
+		)
+		.where(
+			and(eq(scenes.id, sceneId), eq(organizationMemberships.userId, userId))
+		)
 		.limit(1)
 
-	if (!scene) {
-		return null
-	}
-
-	await verifyProjectAccess(db, scene.projectId, userId)
-
-	return scene
+	return row?.scene ?? null
 }
 
 export async function getFolderScenes(

@@ -54,12 +54,12 @@ interface ActionData {
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
-	if (user) return redirect('/dashboard', { headers })
-	return data({}, { headers })
+	if (user) return redirect('/dashboard')
+	return data({})
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -81,7 +81,9 @@ export async function action({ request }: Route.ActionArgs) {
 	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-password-reset',
 		maxRequests: 3,
-		keyParts: [normalizedEmail]
+		keyParts: [normalizedEmail],
+		// Each attempt mails the named address; see `auth-signup`.
+		addressCeiling: 10
 	})
 
 	if (rateLimitResult.limited) {
@@ -94,14 +96,14 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 	}
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const url = new URL(request.url)
 	const redirectTo = `${url.origin}/reset-password`
 
 	// Fire-and-forget style - never reveal whether the email exists (OWASP A7)
 	await client.auth.resetPasswordForEmail(normalizedEmail, { redirectTo })
 
-	return data<ActionData>({ ok: true }, { headers })
+	return data<ActionData>({ ok: true })
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

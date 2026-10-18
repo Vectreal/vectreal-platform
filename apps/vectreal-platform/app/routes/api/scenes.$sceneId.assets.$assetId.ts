@@ -1,5 +1,6 @@
 import { LoaderFunctionArgs } from 'react-router'
 
+import { UUID_REGEX } from '../../constants/utility-constants'
 import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
@@ -23,6 +24,16 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!sceneId || !assetId) {
 		return new Response('Missing scene or asset ID', {
 			status: 400,
+			headers: noStoreHeaders()
+		})
+	}
+
+	// Both reach uuid columns below (the asset id in the session branch's link
+	// check), and Postgres rejects a malformed one rather than matching
+	// nothing. It names no asset, so it gets the same 404 an unknown id gets.
+	if (!UUID_REGEX.test(sceneId) || !UUID_REGEX.test(assetId)) {
+		return new Response('Asset not found', {
+			status: 404,
 			headers: noStoreHeaders()
 		})
 	}
@@ -85,19 +96,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return auth
 	}
 
-	const authHeaders = auth.headers ?? {}
-
 	/*
 	  Authorization gate first: a non-member gets the same 404 whether or not
-	  the asset exists, so the route is no existence oracle. A membership
-	  lookup rather than `getScene`, which throws for a non-member and turned
-	  that 404 into a 500.
+	  the asset exists, so the route is no existence oracle.
 	*/
 	const membership = await resolveSceneMembership(sceneId, auth.user.id)
 	if (!membership) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: noStoreHeaders(authHeaders)
+			headers: noStoreHeaders()
 		})
 	}
 
@@ -119,21 +126,20 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const publishedModel = serveFromPublishedRow(
 		request,
 		{ sceneId, assetId },
-		previewScene,
-		authHeaders
+		previewScene
 	)
 	if (publishedModel) return publishedModel
 
 	if (!isLinked) {
 		return new Response('Asset not found', {
 			status: 404,
-			headers: noStoreHeaders(authHeaders)
+			headers: noStoreHeaders()
 		})
 	}
 
 	try {
 		const assetData = await downloadAsset(assetId)
-		return assetResponse(assetData.data, assetData.mimeType, authHeaders)
+		return assetResponse(assetData.data, assetData.mimeType)
 	} catch (error) {
 		reportServerError(error, {
 			request,
@@ -141,7 +147,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 		return new Response('Failed to load asset', {
 			status: 500,
-			headers: noStoreHeaders(authHeaders)
+			headers: noStoreHeaders()
 		})
 	}
 }

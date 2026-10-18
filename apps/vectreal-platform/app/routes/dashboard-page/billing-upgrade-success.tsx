@@ -41,8 +41,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	const sessionId = url.searchParams.get('session_id')
 
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
 	const organizationId = userWithDefaults.organization.id
 
 	// Billing writes are restricted to owners/admins
@@ -56,22 +55,19 @@ export async function loader({ request }: Route.LoaderArgs) {
 			role: membership.membership.role
 		})
 	) {
-		throw redirect('/dashboard/billing', { headers })
+		throw redirect('/dashboard/billing')
 	}
 
 	// Direct-update path: the checkout action already updated the subscription
 	// in-place and synced the DB. Plan metadata is carried as query params
 	// (display-only - actual entitlements are governed by the DB, not these params).
 	if (!sessionId) {
-		return data(
-			{
-				planId: url.searchParams.get('plan_id'),
-				billingPeriod: url.searchParams.get('billing_period'),
-				fromPlan: url.searchParams.get('from_plan'),
-				isDirectUpdate: true
-			} satisfies CheckoutData,
-			{ headers }
-		)
+		return data({
+			planId: url.searchParams.get('plan_id'),
+			billingPeriod: url.searchParams.get('billing_period'),
+			fromPlan: url.searchParams.get('from_plan'),
+			isDirectUpdate: true
+		} satisfies CheckoutData)
 	}
 
 	// Stripe Checkout path (new subscribers): sync the completed session.
@@ -91,7 +87,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		reportServerError(error, { request })
 	}
 
-	return data(checkoutData, { headers })
+	return data(checkoutData)
 }
 
 // ---------------------------------------------------------------------------

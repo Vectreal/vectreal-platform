@@ -35,8 +35,3 @@ export function parseSceneRouteParams(params: {
 
 	return { ok: true, value: { projectId, sceneId } }
 }
-
-export const SCENE_ROUTE_PARAM_ERRORS = {
-	missing: 'Project ID and Scene ID are required',
-	malformed: 'Project ID and Scene ID must be valid UUIDs'
-} as const
