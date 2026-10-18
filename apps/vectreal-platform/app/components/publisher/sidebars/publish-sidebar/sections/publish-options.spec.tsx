@@ -18,7 +18,11 @@ import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../../../lib/stores/scene-optimization-store'
-import { presentationAtom } from '../../../../../lib/stores/scene-settings-store'
+import {
+	cameraAtom,
+	hotspotsAtom,
+	presentationAtom
+} from '../../../../../lib/stores/scene-settings-store'
 
 import type { Optimizations } from '@vctrl/core'
 
@@ -137,6 +141,36 @@ describe('the publish panel', () => {
 		fireEvent.click(textureSwitch())
 		expect(store.get(presentationAtom).compressTexturesForGpu).toBe(true)
 		expect(textureSwitch()).toBeChecked()
+	})
+
+	it("offers the way back from a hotspot's camera only once one exists", () => {
+		renderPanel(balancedPreset)
+		expect(
+			screen.getByRole('switch', { name: /Back to scene view/ })
+		).toBeDisabled()
+	})
+
+	it("hides the way back from a hotspot's camera when switched off", () => {
+		const store = renderPanel(balancedPreset, (store) => {
+			store.set(cameraAtom, {
+				cameras: [
+					{ cameraId: 'front', name: 'Front' },
+					{ cameraId: 'knob-camera', kind: 'hotspot', name: 'Knob' }
+				]
+			})
+			store.set(hotspotsAtom, [
+				{
+					id: 'knob',
+					name: 'Knob',
+					worldPosition: [0, 0, 0],
+					linkedCameraId: 'knob-camera'
+				} as never
+			])
+		})
+		const toggle = screen.getByRole('switch', { name: /Back to scene view/ })
+		expect(toggle).toBeChecked()
+		fireEvent.click(toggle)
+		expect(store.get(presentationAtom).showSceneViewReturn).toBe(false)
 	})
 
 	it('forgets the choice once it is switched back to the default', () => {

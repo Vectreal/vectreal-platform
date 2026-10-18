@@ -1,3 +1,4 @@
+import { apiFailureSchema, apiSuccessSchema, cliClientSchema } from '@vctrl/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { loader } from './cli-client'
@@ -24,7 +25,8 @@ describe('GET /api/v1/cli/client', () => {
 
 		expect(response.status).toBe(200)
 		expect(response.headers.get('Cache-Control')).toBe('public, max-age=300')
-		await expect(response.json()).resolves.toEqual({
+		const body = await response.json()
+		expect(body).toEqual({
 			success: true,
 			data: {
 				client_id: 'cli-id',
@@ -32,6 +34,8 @@ describe('GET /api/v1/cli/client', () => {
 				authorization_server: 'https://api.vectreal.com/auth/v1'
 			}
 		})
+		// The SDK the CLI ships with reads exactly what went over the wire.
+		expect(apiSuccessSchema(cliClientSchema).parse(body)).toEqual(body)
 	})
 
 	it('answers 404 where no CLI client is registered', async () => {
@@ -41,5 +45,7 @@ describe('GET /api/v1/cli/client', () => {
 
 		expect(response.status).toBe(404)
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
+		// A refusal the SDK reads as one, not as a body it cannot understand.
+		expect(apiFailureSchema.safeParse(await response.json()).success).toBe(true)
 	})
 })

@@ -23,6 +23,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/vectreal-platform/package.json ./apps/vectreal-platform/
 COPY packages/core/package.json ./packages/core/
 COPY packages/hooks/package.json ./packages/hooks/
+COPY packages/sdk/package.json ./packages/sdk/
 COPY packages/viewer/package.json ./packages/viewer/
 COPY shared/components/package.json ./shared/components/
 COPY shared/utils/package.json ./shared/utils/

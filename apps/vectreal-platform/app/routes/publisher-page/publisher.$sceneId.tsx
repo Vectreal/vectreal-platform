@@ -11,6 +11,7 @@ import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
+import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
 	isPreviewModeAtom,
 	openHotspotInHotspotToolAtom,
@@ -22,6 +23,7 @@ import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
 	heldHotspotCardIdAtom,
+	presentationAtom,
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
 	selectedCameraIdAtom,
@@ -126,6 +128,7 @@ const PublisherPage = () => {
 	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
 	const heldHotspotCardId = useAtomValue(heldHotspotCardIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
+	const presentation = useAtomValue(presentationAtom)
 	// The tool whose panel is open, not the one merely selected. Every in-scene
 	// affordance below scopes to it, so no tool's handles outlive its drawer.
 	const openComposeTool = useAtomValue(openComposeToolAtom)
@@ -292,10 +295,13 @@ const PublisherPage = () => {
 					}
 					/*
 					  A visitor's way back from a hotspot's camera, so only where the
-					  author is looking as a visitor. In the editor the way back is
+					  author is looking as a visitor, and only if the author left it
+					  on, so preview shows what ships. In the editor the way back is
 					  leaving a hotspot camera's view in the Camera tool.
 					*/
-					showSceneViewReturn={isPreviewMode}
+					showSceneViewReturn={
+						isPreviewMode && shouldShowSceneViewReturn(presentation)
+					}
 					/*
 					  The visitor's camera switcher, so preview shows what ships. The
 					  editor switches cameras in the Camera tool, and the selection
