@@ -1,3 +1,5 @@
+import { runWorker } from '../../../../workers/run-worker'
+
 import type {
 	PublishExportMessage,
 	PublishExportOutcome,
@@ -13,61 +15,36 @@ import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
  */
 const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
 
-/**
- * Runs the publish export in its worker. As in `runGeometryOptimizationsInWorker`,
- * the timeout lives here because only this scope can terminate the worker,
- * and an encode left running after a timeout would stack with the retry.
- */
+/** Runs the publish export in its worker, which `runWorker` owns. */
 export function runPublishExportInWorker(
 	request: Omit<PublishExportRequest, 'type'>,
 	onProgress: (progress: PublishExportProgress) => void,
 	timeoutMs = PUBLISH_EXPORT_TIMEOUT_MS
 ): Promise<PublishExportOutcome> {
-	return new Promise((resolve, reject) => {
-		const worker = new Worker(
-			new URL('../../../../workers/publish-export.worker.ts', import.meta.url),
-			{ type: 'module' }
-		)
+	const message: PublishExportRequest = { type: 'export', ...request }
 
-		const settle = (finish: () => void) => {
-			clearTimeout(timer)
-			worker.terminate()
-			finish()
-		}
-
-		const timer = setTimeout(() => {
-			settle(() =>
-				reject(new Error(`Publishing timed out after ${timeoutMs / 1000}s`))
-			)
-		}, timeoutMs)
-
-		worker.onmessage = ({ data }: MessageEvent<PublishExportMessage>) => {
-			switch (data.type) {
-				case 'progress':
-					onProgress(data)
-					break
-				case 'done':
-					settle(() => resolve(data))
-					break
-				case 'error':
-					settle(() => reject(new Error(data.message)))
-					break
+	return runWorker<PublishExportMessage, PublishExportOutcome>(
+		() =>
+			new Worker(
+				new URL(
+					'../../../../workers/publish-export.worker.ts',
+					import.meta.url
+				),
+				{ type: 'module' }
+			),
+		{
+			message,
+			transfer: [request.buffer],
+			timeoutMs,
+			onProgress,
+			toResult: (outcome) => outcome,
+			errors: {
+				timedOut: `Publishing timed out after ${timeoutMs / 1000}s`,
+				undeserializable: 'Publish worker sent an undeserializable message',
+				crashed: 'Publish worker crashed'
 			}
 		}
-
-		worker.onmessageerror = () => {
-			settle(() =>
-				reject(new Error('Publish worker sent an undeserializable message'))
-			)
-		}
-
-		worker.onerror = (error) => {
-			settle(() => reject(new Error(error.message ?? 'Publish worker crashed')))
-		}
-
-		const message: PublishExportRequest = { type: 'export', ...request }
-		worker.postMessage(message, [request.buffer])
-	})
+	)
 }
 
 /** How publish encodes geometry, from the settings the document was derived from. */
