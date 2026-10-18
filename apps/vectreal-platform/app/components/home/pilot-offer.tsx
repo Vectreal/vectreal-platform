@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 
 import { CameraDrawing, CameraObject } from './camera-drawing'
-import { ProductPageSketch, SketchLine } from './product-page-sketch'
+import { ProductPageSketch } from './product-page-sketch'
 import {
 	HOME_PAGE_COPY,
 	PILOT_CONTACT_HREF
@@ -16,10 +16,9 @@ import type { ReactNode } from 'react'
 const COPY = HOME_PAGE_COPY.pilot
 
 /*
-  One drawing per term, in the order a pilot runs: the files you bring, the
-  viewer we build into your site, and the case study we publish together. Each
-  is the hero's camera again, standing in for your product, so the three read
-  as one project rather than three icons.
+  One drawing per term, in the order a project runs: the files you bring, and
+  the viewer we build into your site. Each is the hero's camera again, standing
+  in for your product, so the two read as one project rather than two icons.
 */
 const DRAWINGS: ReactNode[] = [
 	<div
@@ -34,20 +33,7 @@ const DRAWINGS: ReactNode[] = [
 		// The frame around it sets the shape; its own 16:10 would fight the frame's padding.
 		className="aspect-auto h-full"
 		gallery={<CameraObject className="w-4/5" />}
-	/>,
-	<div
-		key="case-study"
-		className="bg-background flex h-full flex-col gap-2 p-2"
-	>
-		<div className="ds-sunken flex min-h-0 flex-1 items-center justify-center rounded-lg">
-			<CameraObject className="w-1/2" />
-		</div>
-		<span className="text-eyebrow text-muted-foreground pt-1">
-			{COPY.caseStudyLabel}
-		</span>
-		<SketchLine className="bg-foreground/20 h-3 w-4/5" />
-		<SketchLine className="h-2 w-3/5" />
-	</div>
+	/>
 ]
 
 /*
@@ -69,7 +55,7 @@ const READING_LINE_BELOW_FRAME_PX = 64
  * whose top has passed a line just below the frame, where a term comes to
  * rest. Beside them it is how far the frame has travelled: it pins level with
  * the first term's top and lets go level with the last term's bottom, and the
- * stages split that travel in thirds. Anything read off the terms' heights got
+ * stages split that travel evenly. Anything read off the terms' heights got
  * one end wrong for some wrap of the copy: a line at the frame's middle never
  * met a short last term, a line at its bottom edge caught the second term from
  * the start, and the term nearest the frame's middle lost to a longer second
@@ -151,14 +137,14 @@ function usePinnedStage(count: number) {
 }
 
 /**
- * The pilot offer, written as terms rather than as features.
+ * The project offer, written as terms rather than as features.
  *
  * Each term has a small drawing of the stage of the project it belongs to, so
  * the offer can be read at a glance before it is read in full.
  *
- * On a wide screen the three sit side by side, and the same camera advancing
- * from sketch to page to case study reads as one project. Stacked on a phone
- * that comparison is gone: one drawing a screen, two of them the same render.
+ * On a wide screen the two sit side by side, and the same camera advancing
+ * from sketch to page reads as one project. Stacked on a phone that comparison
+ * is lost: one drawing a screen.
  * So below `lg` there is one frame, pinned while the terms scroll past it,
  * showing the stage of the term being read: above them on a phone held
  * upright, beside them from `sm`. That includes a phone held sideways, where a
@@ -166,7 +152,7 @@ function usePinnedStage(count: number) {
  * it would be half of it.
  *
  * Upright the column is flex, not grid, because a sticky grid item cannot
- * leave its own row; from `sm` the frame spans all three rows, which gives it
+ * leave its own row; from `sm` the frame spans both rows, which gives it
  * the room.
  */
 export const PilotOffer = () => {
@@ -204,7 +190,7 @@ export const PilotOffer = () => {
 			</div>
 
 			<div
-				className="flex flex-col gap-12 sm:grid sm:grid-cols-2 sm:gap-x-12 lg:grid-cols-3 lg:gap-8"
+				className="flex flex-col gap-12 sm:grid sm:grid-cols-2 sm:gap-x-12 lg:gap-8"
 				data-reveal
 			>
 				{/*
@@ -226,7 +212,7 @@ export const PilotOffer = () => {
 						ref={frame}
 						aria-hidden="true"
 						data-stage={active}
-						className="sticky top-17 z-10 sm:top-20 sm:row-span-3 sm:self-start lg:hidden"
+						className="sticky top-17 z-10 sm:top-20 sm:row-span-2 sm:self-start lg:hidden"
 					>
 						<div className="ds-raised aspect-16/10 overflow-hidden rounded-xl p-1.5">
 							<div className="relative h-full overflow-hidden rounded-lg">
