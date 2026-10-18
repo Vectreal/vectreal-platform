@@ -187,7 +187,7 @@ describe('the presentation action', () => {
 
 	it('refuses a body with nothing it understands as a 400', () => {
 		expect(block).toMatch(
-			/if \(!presentation\) \{\s*return withAdditionalHeaders\(\s*ApiResponse\.badRequest\('Presentation settings are required'\)/
+			/if \(!presentation\) \{\s*return ApiResponse\.badRequest\('Presentation settings are required'\)/
 		)
 	})
 
@@ -202,7 +202,7 @@ describe('the presentation action', () => {
 
 	it('answers a non-member and a non-editor with the same 404', () => {
 		expect(block).toMatch(
-			/!membership \|\|\s*!canPerformDashboardOperation\('scene:update', membership\)\s*\) \{\s*return withAdditionalHeaders\(\s*ApiResponse\.notFound/
+			/!membership \|\|\s*!canPerformDashboardOperation\('scene:update', membership\)\s*\) \{\s*return ApiResponse\.notFound/
 		)
 		expect(block).not.toContain('assertDashboardPermission')
 	})
@@ -488,7 +488,7 @@ describe('the scene mutations', () => {
 	it('maps a billing refusal before reporting an error', () => {
 		const outerCatch = route.slice(route.lastIndexOf('} catch (error) {'))
 		const mapped = outerCatch.search(
-			/const refusal = billingRefusalResponse\(error\)\s*if \(refusal\) return withAdditionalHeaders\(refusal, authHeaders\)/
+			/const refusal = billingRefusalResponse\(error\)\s*if \(refusal\) return refusal/
 		)
 		expect(mapped).toBeGreaterThan(-1)
 		expect(mapped).toBeLessThan(outerCatch.indexOf('reportServerError('))
