@@ -118,9 +118,9 @@ export async function getProject(
  */
 export async function listOrganizationProjects(
 	organizationId: string
-): Promise<Array<{ id: string; name: string; slug: string }>> {
+): Promise<Array<{ id: string; name: string }>> {
 	return await db
-		.select({ id: projects.id, name: projects.name, slug: projects.slug })
+		.select({ id: projects.id, name: projects.name })
 		.from(projects)
 		.where(eq(projects.organizationId, organizationId))
 		.orderBy(asc(projects.name))
@@ -129,7 +129,6 @@ export async function listOrganizationProjects(
 export async function createProject(
 	organizationId: string,
 	name: string,
-	slug: string,
 	userId: string
 ): Promise<typeof projects.$inferSelect> {
 	await verifyOrganizationAccess(db, organizationId, userId)
@@ -152,11 +151,7 @@ export async function createProject(
 
 	const [newProject] = await db
 		.insert(projects)
-		.values({
-			organizationId,
-			name,
-			slug
-		})
+		.values({ organizationId, name })
 		.returning()
 
 	return newProject
@@ -165,7 +160,7 @@ export async function createProject(
 export async function updateProject(
 	projectId: string,
 	updates: Partial<
-		Pick<typeof projects.$inferSelect, 'name' | 'slug' | 'allowedEmbedDomains'>
+		Pick<typeof projects.$inferSelect, 'name' | 'allowedEmbedDomains'>
 	>,
 	userId: string
 ): Promise<typeof projects.$inferSelect> {

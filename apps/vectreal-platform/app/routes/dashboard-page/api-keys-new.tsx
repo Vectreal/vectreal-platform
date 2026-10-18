@@ -313,8 +313,7 @@ export default function ApiKeysNewPage({
 		.filter((p) => p.organizationId === selectedOrgId)
 		.map((p) => ({
 			id: p.project.id,
-			name: p.project.name,
-			slug: p.project.slug
+			name: p.project.name
 		}))
 
 	const isCreateDisabled =

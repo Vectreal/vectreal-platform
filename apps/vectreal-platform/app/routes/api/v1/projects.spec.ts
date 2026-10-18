@@ -26,7 +26,7 @@ beforeEach(() => {
 	})
 	listOrganizationProjects
 		.mockReset()
-		.mockResolvedValue([{ id: 'project-1', name: 'Chairs', slug: 'chairs' }])
+		.mockResolvedValue([{ id: 'project-1', name: 'Chairs' }])
 })
 
 describe('GET /api/v1/projects', () => {
@@ -42,7 +42,7 @@ describe('GET /api/v1/projects', () => {
 		const body = await response.json()
 		expect(apiSuccessSchema(projectListSchema).parse(body)).toEqual(body)
 		expect(body.data).toEqual({
-			projects: [{ id: 'project-1', name: 'Chairs', slug: 'chairs' }]
+			projects: [{ id: 'project-1', name: 'Chairs' }]
 		})
 	})
 

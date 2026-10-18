@@ -218,6 +218,13 @@
       "when": 1792331713090,
       "tag": "0030_organization_membership_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792363280714,
+      "tag": "0031_project_slug_database_default",
+      "breakpoints": true
     }
   ]
 }

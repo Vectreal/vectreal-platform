@@ -92,7 +92,6 @@ export interface ApiKeyWithDetails {
 	projects: Array<{
 		id: string
 		name: string
-		slug: string
 	}>
 }
 
@@ -147,8 +146,7 @@ export async function getAllUserApiKeys(
 					apiKeyId: apiKeyProjects.apiKeyId,
 					project: {
 						id: projects.id,
-						name: projects.name,
-						slug: projects.slug
+						name: projects.name
 					}
 				})
 				.from(apiKeyProjects)
@@ -221,8 +219,7 @@ export async function getApiKeyById(
 		.select({
 			project: {
 				id: projects.id,
-				name: projects.name,
-				slug: projects.slug
+				name: projects.name
 			}
 		})
 		.from(apiKeyProjects)
@@ -352,8 +349,7 @@ export async function createApiKey(
 	const projectDetails = await db
 		.select({
 			id: projects.id,
-			name: projects.name,
-			slug: projects.slug
+			name: projects.name
 		})
 		.from(projects)
 		.where(inArray(projects.id, projectIds))
