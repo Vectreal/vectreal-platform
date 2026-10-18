@@ -8,11 +8,14 @@
  * while the canvas went on offering the tool. A scene tool has to be scoped to
  * its tool, so the predicate lives in one place and is pinned here.
  */
+import { resolveEnvironmentFiles } from '@vctrl/core'
 import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
 import {
 	enterPreviewModeAtom,
+	environmentLoadFailedAtom,
+	failedEnvironmentFilesAtom,
 	cameraToolOpenRequestAtom,
 	exitPreviewModeAtom,
 	isPreviewModeAtom,
@@ -25,11 +28,13 @@ import {
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
+	environmentAtom,
 	exitHotspotCameraAtom,
 	hotspotCameraModeAtom,
 	hotspotsAtom,
 	selectedCameraIdAtom
 } from './scene-settings-store'
+import { defaultEnvOptions } from '../../constants/viewer-defaults'
 
 import type { ProcessState } from '../../types/publisher-config'
 
@@ -300,5 +305,47 @@ describe('the hotspot camera mode across tools', () => {
 
 		store.set(exitPreviewModeAtom)
 		expect(store.get(selectedCameraIdAtom)).toBe('side')
+	})
+})
+
+describe('environmentLoadFailedAtom', () => {
+	const studio = { preset: 'studio-key', environmentResolution: '1k' } as const
+
+	it('holds for the map that failed while the settings still name it', () => {
+		const store = createStore()
+		store.set(environmentAtom, { ...defaultEnvOptions, ...studio })
+		store.set(
+			failedEnvironmentFilesAtom,
+			String(resolveEnvironmentFiles(studio))
+		)
+
+		expect(store.get(environmentLoadFailedAtom)).toBe(true)
+	})
+
+	it('lets go once the settings name another map', () => {
+		const store = createStore()
+		store.set(environmentAtom, { ...defaultEnvOptions, ...studio })
+		store.set(
+			failedEnvironmentFilesAtom,
+			String(resolveEnvironmentFiles(studio))
+		)
+
+		store.set(environmentAtom, {
+			...defaultEnvOptions,
+			...studio,
+			environmentResolution: '4k'
+		})
+
+		expect(store.get(environmentLoadFailedAtom)).toBe(false)
+	})
+
+	it('matches a list of files as the viewer reports it', () => {
+		const files = ['/env/px.png', '/env/nx.png']
+		const store = createStore()
+		store.set(environmentAtom, { ...defaultEnvOptions, files })
+		// What the route stores from `environment_load_failed { files }`.
+		store.set(failedEnvironmentFilesAtom, String([...files]))
+
+		expect(store.get(environmentLoadFailedAtom)).toBe(true)
 	})
 })

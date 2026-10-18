@@ -1,9 +1,11 @@
+import { resolveEnvironmentFiles } from '@vctrl/core'
 import { atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
+	environmentAtom,
 	exitHotspotCameraAtom,
 	selectCameraAtom,
 	selectedCameraIdAtom
@@ -240,9 +242,33 @@ const canEditCameraSettingsAtom = atom(
 	(get) => !get(arePublisherActionsDisabledAtom)
 )
 
+/**
+ * The environment map the viewer last reported it could not load, spelled as
+ * `resolveEnvironmentFiles` spells it, until it reports a map loaded. The
+ * viewer lights such a scene with a neutral room and nothing on the stage says
+ * so, so the Environment panel reads `environmentLoadFailedAtom` to tell the
+ * author.
+ */
+const failedEnvironmentFilesAtom = atom<null | string>(null)
+
+/**
+ * Whether the map the scene's settings name right now is the one that failed.
+ * A different preset or resolution is a different map, which may load; until
+ * the viewer says which, the panel claims nothing about it.
+ */
+const environmentLoadFailedAtom = atom((get) => {
+	const failed = get(failedEnvironmentFilesAtom)
+	return (
+		failed !== null &&
+		failed === String(resolveEnvironmentFiles(get(environmentAtom)))
+	)
+})
+
 export {
 	// atoms
 	processAtom,
+	failedEnvironmentFilesAtom,
+	environmentLoadFailedAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
 	capturedThumbnailFrameAtom,

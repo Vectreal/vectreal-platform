@@ -157,6 +157,8 @@ or sending a host message. `destroy()` discards anything still queued.
 | `hotspot_activated` | `{ hotspotId: string, cameraId: string \| null }` | A visitor clicked a marker. `cameraId` is `null` for one that only reveals content. Not emitted for your own `focusHotspot` call. |
 | `animation_state_changed` | `{ playing, activeClipId, complete }` | Playback started, stopped or advanced. `activeClipId` is `null` in simultaneous mode. |
 | `animation_clip_finished` | `{ clipId: string }` | A single clip ran to its end. |
+| `environment_load_failed` | `{ files: string[] }` | The scene's environment map could not be loaded, so the scene is lit by a neutral room instead. Nothing on the page fails; this is the only sign of it. |
+| `environment_loaded` | `{ files: string[] }` | The environment map loaded and lights the scene, including after an earlier `environment_load_failed`. |
 | `auto_rotate_changed` | `{ enabled: boolean }` | Declared, but the viewer does not currently emit it. |
 | `interaction_event` | `{ eventName, interactionId?, payload? }` | A Publisher-configured `emit_custom_event` interaction fired. |
 
