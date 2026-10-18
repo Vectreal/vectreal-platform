@@ -11,14 +11,14 @@
 
 import { ApiResponse } from '@shared/utils'
 
-import { resolveAgentActor } from '../../../lib/domain/agent/agent-actor.server'
+import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
 import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
 
 import type { Route } from './+types/me'
 import type { Me } from '@vctrl/sdk'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const actor = await resolveAgentActor(request)
+	const actor = await authorizeAgentRequest(request, { scope: 'any' })
 
 	const subscription = await getOrgSubscription(actor.organizationId)
 

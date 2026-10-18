@@ -12,6 +12,7 @@
 
 import { ApiResponse } from '@shared/utils'
 
+import { agentApiError } from '../../../lib/domain/agent/agent-api-response'
 import { findCliClient } from '../../../lib/domain/agent/agent-cli-client.server'
 
 import type { CliClient } from '@vctrl/sdk'
@@ -19,7 +20,11 @@ import type { CliClient } from '@vctrl/sdk'
 export async function loader() {
 	const client = await findCliClient()
 	if (!client) {
-		return ApiResponse.notFound('No CLI client is registered on this server')
+		return agentApiError(
+			404,
+			'not_found',
+			'No CLI client is registered on this server'
+		)
 	}
 
 	return ApiResponse.success(

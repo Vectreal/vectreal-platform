@@ -371,6 +371,65 @@ describe('addressCeiling', () => {
 	})
 })
 
+describe('includeClientIp', () => {
+	const GRANT = {
+		bucket: 'agent-api',
+		maxRequests: 2,
+		windowMs: 60_000,
+		includeClientIp: false,
+		keyParts: ['grant-1']
+	}
+
+	it('holds one key to one count from any address when false', () => {
+		expect(
+			recordRateLimitAttempt(requestFrom('203.0.113.10'), GRANT).limited
+		).toBe(false)
+		expect(
+			recordRateLimitAttempt(requestFrom('198.51.100.7'), GRANT).limited
+		).toBe(false)
+		expect(
+			recordRateLimitAttempt(requestFrom('192.0.2.44'), GRANT).limited
+		).toBe(true)
+	})
+
+	it('still counts each address apart by default', () => {
+		const { includeClientIp: _omit, ...byAddress } = GRANT
+
+		expect(
+			recordRateLimitAttempt(requestFrom('203.0.113.10'), byAddress).limited
+		).toBe(false)
+		expect(
+			recordRateLimitAttempt(requestFrom('203.0.113.10'), byAddress).limited
+		).toBe(false)
+		expect(
+			recordRateLimitAttempt(requestFrom('198.51.100.7'), byAddress).limited
+		).toBe(false)
+	})
+
+	it('leaves the address ceiling keyed by address', () => {
+		const ceiling = { ...GRANT, maxRequests: 10, addressCeiling: 1 }
+
+		expect(
+			recordRateLimitAttempt(requestFrom('203.0.113.10'), {
+				...ceiling,
+				keyParts: ['grant-1']
+			}).limited
+		).toBe(false)
+		expect(
+			recordRateLimitAttempt(requestFrom('203.0.113.10'), {
+				...ceiling,
+				keyParts: ['grant-2']
+			}).limited
+		).toBe(true)
+		expect(
+			recordRateLimitAttempt(requestFrom('198.51.100.7'), {
+				...ceiling,
+				keyParts: ['grant-3']
+			}).limited
+		).toBe(false)
+	})
+})
+
 describe('checkRateLimit', () => {
 	it('does not count the request it is asked about', () => {
 		const request = requestFrom('203.0.113.10')
