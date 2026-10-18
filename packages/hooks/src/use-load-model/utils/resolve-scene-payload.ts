@@ -8,7 +8,6 @@ import {
 import { missingAssetsError } from '@vctrl/core/model-loader'
 
 import type {
-	CameraProps,
 	SceneSettings,
 	SerializedSceneAssetDataMap,
 	ServerSceneData,
@@ -19,24 +18,47 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/*
+  Every settings field, as a total record so that a field added to
+  `SceneSettings` fails to compile here until it is listed. A hand-written list
+  of five legacy names used to sit in this place, which made "dropped" the
+  default for anything newer: a flat payload (a local draft is one) lost its
+  hotspots, normalization, interactions, animation and presentation.
+*/
+const SCENE_SETTINGS_FIELDS = {
+	animation: true,
+	bounds: true,
+	camera: true,
+	interactions: true,
+	controls: true,
+	environment: true,
+	shadows: true,
+	normalization: true,
+	hotspots: true,
+	presentation: true
+} as const satisfies Record<keyof SceneSettings, true>
+
+/** A flat field wins over its nested twin; null and undefined defer to it. */
 function toSceneSettings(payload: ServerScenePayload): SceneSettings {
-	const nestedSettings = isRecord(payload.settings)
-		? (payload.settings as SceneSettings)
+	const settings: Record<string, unknown> = isRecord(payload.settings)
+		? { ...payload.settings }
 		: {}
-	const resolvedCamera = normalizeCameraSettings(
-		(payload.camera ?? nestedSettings.camera) as CameraProps | undefined
-	)
+	for (const field of Object.keys(SCENE_SETTINGS_FIELDS) as Array<
+		keyof SceneSettings
+	>) {
+		const flat = payload[field]
+		if (flat !== undefined && flat !== null) {
+			settings[field] = flat
+		}
+	}
+
+	const merged = settings as SceneSettings
+	const camera = normalizeCameraSettings(merged.camera)
 
 	return {
-		...nestedSettings,
-		bounds: payload.bounds ?? nestedSettings.bounds,
-		camera: resolvedCamera,
-		interactions: normalizeSceneInteractions(nestedSettings.interactions, {
-			camera: resolvedCamera
-		}),
-		controls: payload.controls ?? nestedSettings.controls,
-		environment: payload.environment ?? nestedSettings.environment,
-		shadows: payload.shadows ?? nestedSettings.shadows
+		...merged,
+		camera,
+		interactions: normalizeSceneInteractions(merged.interactions, { camera })
 	}
 }
 
