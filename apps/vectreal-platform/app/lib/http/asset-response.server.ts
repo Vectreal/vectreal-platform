@@ -12,13 +12,20 @@ export const ASSET_CACHE_CONTROL = 'private, max-age=31536000, immutable'
 
 /**
  * Only these MIME types are served verbatim. Anything else (including
- * text/html, image/svg+xml, application/xml, and unknown types) is downgraded
- * to application/octet-stream to prevent stored XSS via client-supplied types.
+ * text/html, application/xml, and unknown types) is downgraded to
+ * application/octet-stream to prevent stored XSS via client-supplied types.
+ *
+ * SVG is served as itself because marker artwork needs it drawn: in an `<img>`
+ * its scripts never run, and opened directly the `sandbox` policy every
+ * response carries below keeps them from running there too. HTML stays out,
+ * since it has no use here that needs the risk.
  */
 const PASSIVE_MIME_TYPES = new Set([
 	'image/png',
 	'image/jpeg',
 	'image/webp',
+	'image/gif',
+	'image/svg+xml',
 	'image/ktx2',
 	'image/avif',
 	'model/gltf-binary',

@@ -3,15 +3,8 @@ import { ImageUp } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { useHotspotEdits } from './use-hotspot-edits'
-import {
-	canUploadHotspotArtwork,
-	HOTSPOT_ARTWORK_MAX_BYTES,
-	HOTSPOT_INLINE_ARTWORK_MAX_KB
-} from '../../../../../lib/domain/scene/hotspot-artwork'
-import {
-	HOTSPOT_IMAGE_MEDIA_TYPES,
-	isAllowedHotspotPayloadUrl
-} from '../../../../../lib/domain/scene/hotspot-urls'
+import { HOTSPOT_ARTWORK_MAX_BYTES } from '../../../../../lib/domain/scene/hotspot-artwork'
+import { HOTSPOT_IMAGE_MEDIA_TYPES } from '../../../../../lib/domain/scene/hotspot-urls'
 import { SettingGroup } from '../../sidebar-section'
 
 import type { HotspotDefinition } from '@vctrl/core'
@@ -77,17 +70,6 @@ export function MarkerArtworkField({
 			dataUrl = await readAsDataUrl(file)
 		} catch {
 			setError('That image could not be read. Pick it again.')
-			return
-		}
-		// Too large to stay inline, it is uploaded on save, and only the types
-		// the asset route serves as images can be.
-		if (
-			!isAllowedHotspotPayloadUrl(dataUrl) &&
-			!canUploadHotspotArtwork(file.type)
-		) {
-			setError(
-				`Use an SVG or GIF under ${HOTSPOT_INLINE_ARTWORK_MAX_KB} KB, or a PNG, JPEG or WebP image.`
-			)
 			return
 		}
 		setError(null)
