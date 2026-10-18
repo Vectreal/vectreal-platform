@@ -5,6 +5,7 @@ import {
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail,
+	shouldShowSceneViewReturn,
 	withCompressTexturesForGpu
 } from './scene-presentation'
 
@@ -44,6 +45,26 @@ describe('normalizePresentationSettings', () => {
 		expect(
 			normalizePresentationSettings([{ showInfoPopover: true }])
 		).toBeUndefined()
+	})
+})
+
+describe('the way back from a hotspot view', () => {
+	it('survives the save path as a boolean, and only as one', () => {
+		expect(
+			normalizePresentationSettings({ showSceneViewReturn: false })
+		).toEqual({ showSceneViewReturn: false })
+		expect(
+			normalizePresentationSettings({ showSceneViewReturn: 'false' })
+		).toBeUndefined()
+	})
+
+	it('is shown unless the author switched it off', () => {
+		expect(shouldShowSceneViewReturn(undefined)).toBe(true)
+		expect(shouldShowSceneViewReturn({})).toBe(true)
+		expect(shouldShowSceneViewReturn({ showSceneViewReturn: true })).toBe(true)
+		expect(shouldShowSceneViewReturn({ showSceneViewReturn: false })).toBe(
+			false
+		)
 	})
 })
 

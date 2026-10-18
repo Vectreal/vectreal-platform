@@ -18,7 +18,7 @@ To revert to draft, click **Revoke publication** and confirm.
 
 ### Show scene info
 
-The **Publish** sidebar's **Viewer** section carries one toggle, **Show scene info**. It adds an info button to the viewer, opening this scene's name and description. Switch it off for a scene whose title and copy already sit on the page around it.
+The **Publish** sidebar's **Viewer** section decides what the viewer draws besides the model. **Show scene info** adds an info button to the viewer, opening this scene's name and description. Switch it off for a scene whose title and copy already sit on the page around it.
 
 A scene with nothing stored for it shows the button, so every scene published before the toggle existed renders exactly as it did. The setting belongs to the scene rather than to one embed: it applies to embeds and to preview links as soon as you save, with nothing to republish.
 
@@ -34,6 +34,17 @@ One embed can drop it without changing the scene: add `cameraControls=0` to the 
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/camera-controls-settings/camera-views.tsx label="Camera switcher"
 present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('cameraControls')
 present packages/viewer/src/components/camera-controls.tsx const LIST_THRESHOLD = 3
+*/}
+
+### Back to scene view
+
+When a visitor clicks a hotspot that has its own camera, the view flies to it and the viewer shows a **Back to scene view** button. It, and Escape inside the viewer, lead back to the camera the visitor was on before, or the scene's default.
+
+To leave it out, switch off **Back to scene view** in the **Publish** sidebar's **Viewer** section. The toggle is offered once a hotspot visitors can click has its own camera. Like the others, it belongs to the scene and applies to embeds and preview links as soon as you save. Switched off, a page around the embed can still lead visitors back with the SDK's [`returnToSceneView()`](/docs/guides/embed-sdk#methods), so hide it only where your page offers that way back itself.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Back to scene view"
+present apps/vectreal-platform/app/components/scene-embed/scene-embed-viewer.tsx showSceneViewReturn={shouldShowSceneViewReturn(
 */}
 
 ### The Vectreal badge

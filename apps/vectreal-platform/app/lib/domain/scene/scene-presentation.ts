@@ -40,10 +40,17 @@ export function normalizePresentationSettings(
 		return undefined
 	}
 
-	const { showInfoPopover, showLoadingThumbnail, compressTexturesForGpu } =
-		presentation as ScenePresentationSettings
+	const {
+		showInfoPopover,
+		showSceneViewReturn,
+		showLoadingThumbnail,
+		compressTexturesForGpu
+	} = presentation as ScenePresentationSettings
 	const normalized: ScenePresentationSettings = {
 		...(typeof showInfoPopover === 'boolean' ? { showInfoPopover } : {}),
+		...(typeof showSceneViewReturn === 'boolean'
+			? { showSceneViewReturn }
+			: {}),
 		...(typeof showLoadingThumbnail === 'boolean'
 			? { showLoadingThumbnail }
 			: {}),
@@ -67,6 +74,17 @@ export function shouldShowInfoPopover(
 	presentation: ScenePresentationSettings | undefined
 ): boolean {
 	return presentation?.showInfoPopover !== false
+}
+
+/**
+ * Whether a published scene draws the viewer's way back from a hotspot's
+ * camera. Absent means shown, for the same reason as `shouldShowInfoPopover`:
+ * every scene saved before the field existed draws it.
+ */
+export function shouldShowSceneViewReturn(
+	presentation: ScenePresentationSettings | undefined | null
+): boolean {
+	return presentation?.showSceneViewReturn !== false
 }
 
 /**
