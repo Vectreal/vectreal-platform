@@ -35,6 +35,7 @@ import {
 } from '../../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
+import { parseSceneRouteParams } from '../../../lib/domain/scene/scene-route-params'
 import { resolveSceneSizeBytes } from '../../../lib/domain/scene/scene-stored-size'
 import {
 	getScene,
@@ -55,12 +56,16 @@ import type { ModelSource } from '@vctrl/hooks/use-load-model'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-	const projectId = params.projectId
-	const sceneId = params.sceneId
-
-	if (!projectId || !sceneId) {
-		throw new Response('Project ID and Scene ID are required', { status: 400 })
+	const parsedParams = parseSceneRouteParams(params)
+	if (!parsedParams.ok) {
+		// A malformed id names no scene, so it is the same 404 as an unknown
+		// one rather than a uuid cast failing in Postgres.
+		throw parsedParams.reason === 'missing'
+			? new Response('Project ID and Scene ID are required', { status: 400 })
+			: new Response('Scene not found', { status: 404 })
 	}
+
+	const { projectId, sceneId } = parsedParams.value
 
 	const { user, headers } = await loadAuthenticatedSession(request)
 

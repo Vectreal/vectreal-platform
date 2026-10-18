@@ -1,6 +1,7 @@
 import { ApiResponse } from '@shared/utils'
 import { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router'
 
+import { UUID_REGEX } from '../../constants/utility-constants'
 import { authorizePreviewRequest } from '../../lib/domain/auth/preview-request-auth.server'
 import { billingRefusalResponse } from '../../lib/domain/billing/billing-refusal-response'
 import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
@@ -48,6 +49,18 @@ import { reportServerError } from '../../lib/observability/report-server-error.s
 
 import type { SceneSettingsAction } from '../../types/api'
 
+/**
+ * Whether the route names a scene id no row could have.
+ *
+ * `:sceneId` reaches uuid columns on every path below, and Postgres rejects a
+ * malformed one outright instead of matching nothing, which surfaced as a 500.
+ * It names no scene, so it gets the same 404 an unknown id gets. Absent is
+ * not malformed: a first save posts to `/api/scenes` with no id at all.
+ */
+function isMalformedSceneId(sceneId: string | undefined): boolean {
+	return Boolean(sceneId) && !UUID_REGEX.test(sceneId as string)
+}
+
 function withAdditionalHeaders(
 	response: Response,
 	additionalHeaders?: HeadersInit
@@ -76,6 +89,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const url = new URL(request.url)
 	const isPreviewRequest = url.searchParams.get('preview') === '1'
 	const previewProjectId = url.searchParams.get('projectId')?.trim() || null
+
+	if (isMalformedSceneId(params.sceneId?.trim())) {
+		return withNoStore(ApiResponse.notFound('Scene not found'))
+	}
 
 	if (isPreviewRequest) {
 		const sceneId = params.sceneId?.trim()
@@ -230,6 +247,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	const previewProjectId = url.searchParams.get('projectId')?.trim() || null
 
 	const routeSceneId = params.sceneId?.trim()
+	if (isMalformedSceneId(routeSceneId)) {
+		return withNoStore(ApiResponse.notFound('Scene not found'))
+	}
+
 	const actionRequest = await parseActionRequest(request)
 	const rawAction = actionRequest.action
 	const action = typeof rawAction === 'string' ? rawAction.trim() : ''

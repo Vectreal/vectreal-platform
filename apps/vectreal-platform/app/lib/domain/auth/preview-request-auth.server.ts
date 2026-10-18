@@ -1,6 +1,7 @@
 import { ApiResponse } from '@shared/utils'
 
 import { validatePreviewApiKeyForProject } from './preview-api-key-auth.server'
+import { UUID_REGEX } from '../../../constants/utility-constants'
 import { getAuthUser } from '../../http/auth.server'
 import { withNoStore } from '../../http/response-headers.server'
 import { hasPreviewTokenCredential } from '../embed/embed-access-policy'
@@ -11,12 +12,19 @@ import { getProject } from '../project/project-repository.server'
  * signed-in user who can open it. Anything else is a `no-store` refusal, and a
  * caller with no right to the project is told the scene does not exist rather
  * than that it is forbidden, so the endpoint cannot be used to probe for ids.
+ * A malformed project id names no project, so it is told the same.
  */
 export async function authorizePreviewRequest(
 	request: Request,
 	projectId: string
 ) {
 	const hasTokenCredential = hasPreviewTokenCredential(request)
+
+	// Checked before either mode: the key lookup and `getProject` both compare
+	// it to a uuid column, which Postgres rejects rather than matching nothing.
+	if (!UUID_REGEX.test(projectId)) {
+		return withNoStore(ApiResponse.notFound('Scene not found'))
+	}
 
 	if (hasTokenCredential) {
 		const validation = await validatePreviewApiKeyForProject({

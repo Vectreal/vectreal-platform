@@ -16,6 +16,8 @@ vi.mock('../project/project-repository.server', () => ({
 
 import { authorizePreviewRequest } from './preview-request-auth.server'
 
+const PROJECT_ID = '5f3c1b2a-7e4d-4a9b-8c6f-1d2e3f4a5b6c'
+
 const withKey = () =>
 	new Request('https://vectreal.test/api/scenes/s?preview=1&token=key')
 const withSession = () =>
@@ -29,14 +31,14 @@ describe('authorizePreviewRequest', () => {
 	it('admits a valid key holder without reading the session', async () => {
 		deps.validatePreviewApiKeyForProject.mockResolvedValue({ ok: true })
 
-		expect(await authorizePreviewRequest(withKey(), 'p1')).toEqual({
+		expect(await authorizePreviewRequest(withKey(), PROJECT_ID)).toEqual({
 			mode: 'apiKey',
 			userId: null
 		})
 		expect(deps.getAuthUser).not.toHaveBeenCalled()
 		expect(deps.validatePreviewApiKeyForProject).toHaveBeenCalledWith({
 			request: expect.any(Request),
-			projectId: 'p1'
+			projectId: PROJECT_ID
 		})
 	})
 
@@ -49,7 +51,7 @@ describe('authorizePreviewRequest', () => {
 
 		const response = (await authorizePreviewRequest(
 			withKey(),
-			'p1'
+			PROJECT_ID
 		)) as Response
 
 		expect(response.status).toBe(status)
@@ -59,14 +61,14 @@ describe('authorizePreviewRequest', () => {
 	it('admits a signed-in user who can open the project, with their headers', async () => {
 		const headers = new Headers({ 'Set-Cookie': 'session=1' })
 		deps.getAuthUser.mockResolvedValue({ user: { id: 'u1' }, headers })
-		deps.getProject.mockResolvedValue({ id: 'p1' })
+		deps.getProject.mockResolvedValue({ id: PROJECT_ID })
 
-		expect(await authorizePreviewRequest(withSession(), 'p1')).toEqual({
+		expect(await authorizePreviewRequest(withSession(), PROJECT_ID)).toEqual({
 			mode: 'session',
 			userId: 'u1',
 			headers
 		})
-		expect(deps.getProject).toHaveBeenCalledWith('p1', 'u1')
+		expect(deps.getProject).toHaveBeenCalledWith(PROJECT_ID, 'u1')
 	})
 
 	it('tells a user outside the project the scene does not exist', async () => {
@@ -75,7 +77,7 @@ describe('authorizePreviewRequest', () => {
 
 		const response = (await authorizePreviewRequest(
 			withSession(),
-			'p1'
+			PROJECT_ID
 		)) as Response
 
 		expect(response.status).toBe(404)
@@ -87,11 +89,29 @@ describe('authorizePreviewRequest', () => {
 
 		const response = (await authorizePreviewRequest(
 			withSession(),
-			'p1'
+			PROJECT_ID
 		)) as Response
 
 		expect(response.status).toBe(404)
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
 		expect(deps.getProject).not.toHaveBeenCalled()
 	})
+
+	it.each([
+		['a key holder', withKey],
+		['a signed-in user', withSession]
+	])(
+		'tells %s a malformed project id the scene does not exist, querying nothing',
+		async (_caller, request) => {
+			const response = (await authorizePreviewRequest(
+				request(),
+				'not-a-uuid'
+			)) as Response
+
+			expect(response.status).toBe(404)
+			expect(response.headers.get('Cache-Control')).toBe('no-store')
+			expect(deps.validatePreviewApiKeyForProject).not.toHaveBeenCalled()
+			expect(deps.getProject).not.toHaveBeenCalled()
+		}
+	)
 })
