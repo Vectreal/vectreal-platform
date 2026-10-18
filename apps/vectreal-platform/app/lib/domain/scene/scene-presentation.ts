@@ -11,7 +11,7 @@ import type { ScenePresentationSettings } from '@vctrl/core'
 /**
  * Narrows an untrusted `presentation` blob to the fields this app understands.
  *
- * `SceneSettingsParser.parseSettingsData` normalizes only `camera`,
+ * `parseSettingsData` (`scene-settings-payload.parser.server.ts`) normalizes only `camera`,
  * `interactions` and `hotspots`; everything else on the settings object is
  * written to its column verbatim from whatever the client posted. That is fine
  * for a shape nothing branches on, and not fine here, because

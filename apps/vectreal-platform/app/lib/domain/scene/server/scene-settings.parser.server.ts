@@ -1,81 +1,36 @@
-import { JSONDocument } from '@gltf-transform/core'
 import { ApiResponse } from '@shared/utils'
-import {
-	normalizeCameraSettings,
-	normalizeSceneAnimation,
-	normalizeSceneInteractions,
-	OptimizationReport,
-	Optimizations
-} from '@vctrl/core'
 
+import {
+	parseGltfJson,
+	parseInitialSceneBytes,
+	parseOptimizationReportField,
+	parseOptimizationSettings,
+	parseProjectId,
+	parsePublishedAssetId,
+	parseSceneAssetIds,
+	parseSceneMeta,
+	parseSourceAssetId,
+	parseTargetFolderId,
+	parseTargetProjectId,
+	parseThumbnailUrl
+} from './scene-settings-fields.parser.server'
+import { checkHotspotArtwork } from './scene-settings-hotspots.parser.server'
+import { parseSettingsData } from './scene-settings-payload.parser.server'
 import { UUID_REGEX } from '../../../../constants/utility-constants'
-import { parseActionRequest } from '../../../http/requests.server'
-import {
-	hotspotArtworkAssetIdFromUrl,
-	isHotspotArtworkPath,
-	isHotspotPayloadUrlShape
-} from '../hotspot-artwork'
-import {
-	isAllowedHotspotLinkUrl,
-	MAX_HOTSPOT_BODY_LENGTH,
-	MAX_HOTSPOT_URL_LENGTH
-} from '../hotspot-urls'
-import { parseOptimizationReport } from '../optimization-report-guard'
-import {
-	applyDefaultCameraFlag,
-	resolveDefaultSceneCameraId
-} from '../scene-camera'
-import { normalizePresentationSettings } from '../scene-presentation'
-import {
-	buildSceneThumbnailUrl,
-	thumbnailAssetIdFromUrl
-} from '../scene-thumbnail-url'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
-import type { SceneMetaState } from '../../../../types/publisher-config'
-import type {
-	CameraProps,
-	CameraTransitionConfig,
-	SceneSettings
-} from '@vctrl/core'
-
-type CameraEntry = NonNullable<CameraProps['cameras']>[number]
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 /**
  * Request parser for scene settings API operations.
  * Handles validation and normalization of incoming requests.
- */
-/**
- * Ceiling on how many hotspots one scene can persist.
  *
- * Sized well above any authored walkthrough and well below a payload that would
- * degrade an embed: a sequenced tour runs to tens of markers, and the occlusion
- * pass is throttled to 15Hz, so the cost only becomes visible in the hundreds.
+ * This module owns which action needs which fields. The settings payload is
+ * parsed in `scene-settings-payload.parser.server.ts`, the camera block and
+ * its transition in `scene-settings-camera.parser.server.ts`, hotspots in
+ * `scene-settings-hotspots.parser.server.ts`, and every other top-level field
+ * in `scene-settings-fields.parser.server.ts`.
  */
-const MAX_HOTSPOTS_PER_SCENE = 200
-
 export class SceneSettingsParser {
-	/**
-	 * Parses and validates scene settings request data.
-	 * @param request - The HTTP request to parse
-	 * @returns Parsed request data or error response
-	 */
-	static async parseSceneSettingsRequest(
-		request: Request
-	): Promise<SceneSettingsRequest | Response> {
-		try {
-			const requestData = await parseActionRequest(request)
-			return this.parseSceneSettingsRequestData(requestData)
-		} catch (error) {
-			console.warn('Failed to parse scene settings request:', error)
-			return ApiResponse.badRequest('Invalid request format')
-		}
-	}
-
 	static parseSceneSettingsRequestData(
 		requestData: Record<string, unknown>
 	): SceneSettingsRequest | Response {
@@ -88,15 +43,15 @@ export class SceneSettingsParser {
 			const rawSceneId = requestData.sceneId as string
 			const sceneId =
 				typeof rawSceneId === 'string' ? rawSceneId.trim() : rawSceneId
-			const projectId = this.parseProjectId(requestData)
+			const projectId = parseProjectId(requestData)
 			if (projectId instanceof Response) {
 				return projectId
 			}
-			const targetProjectId = this.parseTargetProjectId(requestData)
+			const targetProjectId = parseTargetProjectId(requestData)
 			if (targetProjectId instanceof Response) {
 				return targetProjectId
 			}
-			const targetFolderId = this.parseTargetFolderId(requestData)
+			const targetFolderId = parseTargetFolderId(requestData)
 			if (targetFolderId instanceof Response) {
 				return targetFolderId
 			}
@@ -145,7 +100,7 @@ export class SceneSettingsParser {
 			}
 
 			if (action === 'commit-scene-publish') {
-				const publishedAssetId = this.parsePublishedAssetId(requestData)
+				const publishedAssetId = parsePublishedAssetId(requestData)
 				if (publishedAssetId instanceof Response) {
 					return publishedAssetId
 				}
@@ -169,51 +124,48 @@ export class SceneSettingsParser {
 			}
 
 			// Parse settings data (required for save operations)
-			const settings = this.parseSettingsData(requestData)
+			const settings = parseSettingsData(requestData)
 			if (settings instanceof Response) {
 				return settings
 			}
 
-			const gltfJsonData = this.parseGltfJson(requestData)
+			const gltfJsonData = parseGltfJson(requestData)
 			if (gltfJsonData instanceof Response) {
 				return gltfJsonData
 			}
 
-			const optimizationReport = this.parseOptimizationReport(requestData)
+			const optimizationReport = parseOptimizationReportField(requestData)
 			if (optimizationReport instanceof Response) {
 				return optimizationReport
 			}
 
-			const optimizationSettings = this.parseOptimizationSettings(requestData)
+			const optimizationSettings = parseOptimizationSettings(requestData)
 			if (optimizationSettings instanceof Response) {
 				return optimizationSettings
 			}
 
-			const initialSceneBytes = this.parseInitialSceneBytes(requestData)
+			const initialSceneBytes = parseInitialSceneBytes(requestData)
 			if (initialSceneBytes instanceof Response) {
 				return initialSceneBytes
 			}
 
-			const meta = this.parseSceneMeta(requestData)
+			const meta = parseSceneMeta(requestData)
 			if (meta instanceof Response) {
 				return meta
 			}
 
 			if (action === 'commit-scene-save') {
-				const sceneAssetIds = this.parseSceneAssetIds(requestData)
+				const sceneAssetIds = parseSceneAssetIds(requestData)
 				if (sceneAssetIds instanceof Response) {
 					return sceneAssetIds
 				}
 
-				const sourceAssetId = this.parseSourceAssetId(
-					requestData,
-					sceneAssetIds
-				)
+				const sourceAssetId = parseSourceAssetId(requestData, sceneAssetIds)
 				if (sourceAssetId instanceof Response) {
 					return sourceAssetId
 				}
 
-				const thumbnailUrl = this.parseThumbnailUrl(
+				const thumbnailUrl = parseThumbnailUrl(
 					meta.thumbnailUrl,
 					sceneId,
 					sceneAssetIds
@@ -222,7 +174,7 @@ export class SceneSettingsParser {
 					return thumbnailUrl
 				}
 
-				const artworkRefusal = this.checkHotspotArtwork(
+				const artworkRefusal = checkHotspotArtwork(
 					settings.hotspots,
 					sceneId,
 					sceneAssetIds
@@ -291,911 +243,5 @@ export class SceneSettingsParser {
 		}
 
 		return null
-	}
-
-	/**
-	 * Parses settings data from request.
-	 */
-	private static parseSettingsData(
-		requestData: Record<string, unknown>
-	): SceneSettings | Response {
-		let settings: Record<string, unknown> | undefined
-
-		// Try 'settings' field first (current implementation)
-		if (requestData.settings) {
-			if (typeof requestData.settings === 'string') {
-				try {
-					settings = JSON.parse(requestData.settings)
-				} catch (error) {
-					console.warn('Failed to parse settings:', error)
-					return ApiResponse.badRequest('Invalid settings data format')
-				}
-			} else if (
-				typeof requestData.settings === 'object' &&
-				requestData.settings !== null
-			) {
-				settings = requestData.settings as Record<string, unknown>
-			}
-		}
-
-		// Fallback to 'settingsData' field
-		if (!settings && requestData.settingsData) {
-			if (typeof requestData.settingsData === 'string') {
-				try {
-					settings = JSON.parse(requestData.settingsData)
-				} catch (error) {
-					console.warn('Failed to parse settingsData:', error)
-					return ApiResponse.badRequest('Invalid settings data format')
-				}
-			} else if (
-				typeof requestData.settingsData === 'object' &&
-				requestData.settingsData !== null
-			) {
-				settings = requestData.settingsData as Record<string, unknown>
-			}
-		}
-
-		// Validate that we have a valid settings object
-		if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-			console.warn('Invalid settings format:', settings)
-			return ApiResponse.badRequest('Settings must be a valid object')
-		}
-
-		const sceneSettings = settings as SceneSettings
-		const normalizedCamera = this.normalizeCameraSettings(sceneSettings.camera)
-		if (normalizedCamera instanceof Response) {
-			return normalizedCamera
-		}
-
-		let normalizedInteractions: SceneSettings['interactions']
-		try {
-			normalizedInteractions = normalizeSceneInteractions(
-				sceneSettings.interactions,
-				{ camera: normalizedCamera }
-			)
-		} catch (error) {
-			return ApiResponse.badRequest(
-				error instanceof Error
-					? error.message
-					: 'Invalid scene interactions configuration'
-			)
-		}
-
-		let normalizedAnimation: SceneSettings['animation']
-		try {
-			normalizedAnimation = normalizeSceneAnimation(sceneSettings.animation)
-		} catch (error) {
-			return ApiResponse.badRequest(
-				error instanceof Error
-					? error.message
-					: 'Invalid scene animation configuration'
-			)
-		}
-
-		const normalizedHotspots = this.normalizeHotspots(
-			sceneSettings.hotspots,
-			normalizedCamera?.cameras ?? []
-		)
-		if (normalizedHotspots instanceof Response) {
-			return normalizedHotspots
-		}
-
-		return {
-			...sceneSettings,
-			animation: normalizedAnimation,
-			camera: normalizedCamera,
-			interactions: normalizedInteractions,
-			hotspots: normalizedHotspots,
-			presentation: normalizePresentationSettings(sceneSettings.presentation)
-		}
-	}
-
-	private static normalizeCameraSettings(
-		camera?: CameraProps
-	): CameraProps | undefined | Response {
-		if (!camera) {
-			return camera
-		}
-
-		if (!Array.isArray(camera.cameras) || camera.cameras.length === 0) {
-			return ApiResponse.badRequest('camera.cameras must be a non-empty array')
-		}
-
-		// Validate scene-global transition if provided.
-		if (camera.sceneTransition !== undefined) {
-			const normalizedTransition = this.normalizeTransitionConfig(
-				camera.sceneTransition,
-				'camera.sceneTransition'
-			)
-			if (normalizedTransition instanceof Response) {
-				return normalizedTransition
-			}
-		}
-
-		// The viewer hides its switcher only for a literal `false`, so anything
-		// else that is not a boolean would read as "shown" and drop the setting.
-		if (
-			camera.showControls !== undefined &&
-			typeof camera.showControls !== 'boolean'
-		) {
-			return ApiResponse.badRequest('camera.showControls must be a boolean')
-		}
-
-		const normalizedCameras: CameraEntry[] = []
-		const seenCameraIds = new Set<string>()
-
-		for (const [cameraIndex, entry] of camera.cameras.entries()) {
-			if (!isRecord(entry)) {
-				return ApiResponse.badRequest('Each camera must be a valid object')
-			}
-
-			const rawCameraId =
-				typeof entry.cameraId === 'string' && entry.cameraId.trim()
-					? entry.cameraId.trim()
-					: `camera-${cameraIndex + 1}`
-			const rawCameraName =
-				typeof entry.name === 'string' && entry.name.trim()
-					? entry.name.trim()
-					: `Camera ${cameraIndex + 1}`
-
-			if (seenCameraIds.has(rawCameraId)) {
-				return ApiResponse.badRequest(
-					`Duplicate cameraId found: ${rawCameraId}`
-				)
-			}
-			seenCameraIds.add(rawCameraId)
-
-			normalizedCameras.push({
-				...(entry as CameraEntry),
-				cameraId: rawCameraId,
-				name: rawCameraName
-			})
-		}
-
-		const defaultSceneCameraId = resolveDefaultSceneCameraId(normalizedCameras)
-
-		if (!defaultSceneCameraId) {
-			return ApiResponse.badRequest(
-				'camera.cameras must contain at least one scene camera'
-			)
-		}
-
-		const normalizedWithDefault = {
-			...camera,
-			// Always use first scene camera as the active camera
-			activeCameraId: defaultSceneCameraId,
-			cameras: applyDefaultCameraFlag(normalizedCameras)
-		}
-
-		// Apply canonical normalization (which will re-enforce the implicit default)
-		return normalizeCameraSettings(normalizedWithDefault)
-	}
-
-	/**
-	 * Validates hotspot definitions, and normalizes an emptied text field to
-	 * absent.
-	 *
-	 * Returns a new array of new objects rather than the one it was given. The
-	 * normalization has to write somewhere, and writing it into the caller's
-	 * objects would mutate the request payload in place - including, on the
-	 * rejection path, every hotspot before the one that failed. Copying keeps
-	 * this a function of its input, which is what its callers already assume.
-	 */
-	private static normalizeHotspots(
-		hotspots: SceneSettings['hotspots'],
-		cameras: CameraEntry[]
-	): SceneSettings['hotspots'] | Response {
-		if (!hotspots) return hotspots
-		if (!Array.isArray(hotspots)) {
-			return ApiResponse.badRequest('hotspots must be an array')
-		}
-		// Every hotspot mounts its own portal and takes part in the viewer's
-		// occlusion raycast, which every embed visitor then pays for. A structural
-		// ceiling, not a plan limit: entitlements are resolved asynchronously
-		// against an organization this static parser has no handle on, and a
-		// ceiling that cannot be enforced where the write happens is not a ceiling.
-		if (hotspots.length > MAX_HOTSPOTS_PER_SCENE) {
-			return ApiResponse.badRequest(
-				`hotspots must contain at most ${MAX_HOTSPOTS_PER_SCENE} entries`
-			)
-		}
-
-		// Must stay in step with HotspotStylePreset in @vctrl/core and with the
-		// publisher's STYLE_PRESET_OPTIONS. This set omitted 'svg' while both of
-		// those offered it, so choosing SVG rejected the entire scene save.
-		const VALID_STYLE_PRESETS = new Set(['dot', 'image', 'svg'])
-		const cameraIds = new Set(cameras.map((c) => c.cameraId))
-		const seenSequenceIndices = new Set<number>()
-		const seenIds = new Set<string>()
-		const normalized: NonNullable<SceneSettings['hotspots']> = []
-
-		for (const [i, hotspot] of hotspots.entries()) {
-			if (!isRecord(hotspot)) {
-				return ApiResponse.badRequest(`hotspots[${i}] must be a valid object`)
-			}
-			if (typeof hotspot.id !== 'string' || !hotspot.id.trim()) {
-				return ApiResponse.badRequest(`hotspots[${i}].id is required`)
-			}
-			// The id lands in a uuid primary key. Checking it here turns a
-			// stale client still minting the old `hotspot-<timestamp>` format
-			// into a legible 400, rather than a Postgres cast error that fails
-			// the whole scene save without naming a cause.
-			if (!UUID_REGEX.test(hotspot.id)) {
-				return ApiResponse.badRequest(`hotspots[${i}].id must be a UUID`)
-			}
-			if (seenIds.has(hotspot.id)) {
-				return ApiResponse.badRequest(`hotspots has duplicate id ${hotspot.id}`)
-			}
-			seenIds.add(hotspot.id)
-			// Rejections an author can reach from the editor are named by the
-			// marker, not the index: they land in the save panel, where
-			// `hotspots[3]` points at nothing the author can see. A marker with no
-			// name has nothing to be named by, so that one points at how the
-			// panel lists it instead. Type and shape rejections keep the index:
-			// only a client bypassing the editor can produce them.
-			if (typeof hotspot.name !== 'string') {
-				return ApiResponse.badRequest(`hotspots[${i}].name must be a string`)
-			}
-			if (!hotspot.name.trim()) {
-				return ApiResponse.badRequest(
-					'A marker has no name (listed as "Unnamed hotspot"). Name it to save the scene'
-				)
-			}
-			const marker = `Marker "${hotspot.name.trim()}"`
-			if (hotspot.body !== undefined && hotspot.body !== null) {
-				if (typeof hotspot.body !== 'string') {
-					return ApiResponse.badRequest(`hotspots[${i}].body must be a string`)
-				}
-				if (hotspot.body.length > MAX_HOTSPOT_BODY_LENGTH) {
-					return ApiResponse.badRequest(
-						`${marker} has body text longer than ${MAX_HOTSPOT_BODY_LENGTH} characters (body)`
-					)
-				}
-			}
-			if (hotspot.linkUrl !== undefined && hotspot.linkUrl !== null) {
-				if (typeof hotspot.linkUrl !== 'string') {
-					return ApiResponse.badRequest(
-						`hotspots[${i}].linkUrl must be a string`
-					)
-				}
-				// An emptied link is a cleared link, not a bad one:
-				// `isAllowedHotspotLinkUrl('')` is false, so without this branch a
-				// client clearing a link by sending '' had its entire scene save
-				// refused instead of the link cleared.
-				if (
-					hotspot.linkUrl.trim() &&
-					!isAllowedHotspotLinkUrl(hotspot.linkUrl)
-				) {
-					// Checked for every preset, unlike `payloadUrl`. That field is
-					// gated on the preset because rows predating its rule would
-					// otherwise become unsaveable; `link_url` is a new column, so
-					// no stored value can fail this and there is nothing to
-					// grandfather.
-					return ApiResponse.badRequest(
-						`${marker} has a link that is not an https URL of at most ${MAX_HOTSPOT_URL_LENGTH} characters (linkUrl)`
-					)
-				}
-			}
-			if (
-				!Array.isArray(hotspot.worldPosition) ||
-				hotspot.worldPosition.length !== 3 ||
-				!(hotspot.worldPosition as unknown[]).every(
-					(v) => typeof v === 'number'
-				)
-			) {
-				return ApiResponse.badRequest(
-					`hotspots[${i}].worldPosition must be [number, number, number]`
-				)
-			}
-			if (typeof hotspot.visible !== 'boolean') {
-				return ApiResponse.badRequest(
-					`hotspots[${i}].visible must be a boolean`
-				)
-			}
-			if (typeof hotspot.internalOnly !== 'boolean') {
-				return ApiResponse.badRequest(
-					`hotspots[${i}].internalOnly must be a boolean`
-				)
-			}
-			if (!VALID_STYLE_PRESETS.has(hotspot.stylePreset as string)) {
-				return ApiResponse.badRequest(
-					`hotspots[${i}].stylePreset must be 'dot', 'image' or 'svg'`
-				)
-			}
-			if (hotspot.payloadUrl !== undefined && hotspot.payloadUrl !== null) {
-				// Shape and size hold for every preset. The column is unbounded
-				// `text` and is read back into every manifest whatever the preset
-				// says, so a 'dot' marker carrying megabytes of dead string is the
-				// same row bloat the hotspot ceiling above exists to stop.
-				if (typeof hotspot.payloadUrl !== 'string') {
-					return ApiResponse.badRequest(
-						`hotspots[${i}].payloadUrl must be a string`
-					)
-				}
-				if (hotspot.payloadUrl.length > MAX_HOTSPOT_URL_LENGTH) {
-					return ApiResponse.badRequest(
-						`${marker} has an asset URL longer than ${MAX_HOTSPOT_URL_LENGTH} characters (payloadUrl)`
-					)
-				}
-				// The scheme is checked only for the presets that render it. A 'dot'
-				// marker never reaches an `<img src>`, so rejecting a legacy value
-				// there would make an existing scene unsaveable with no field on
-				// screen to correct.
-				// An uploaded artwork path passes on its shape here; which scene it
-				// names and whether the save links its asset are checked with the
-				// commit's asset ids, in `checkHotspotArtwork`.
-				if (
-					hotspot.stylePreset !== 'dot' &&
-					!isHotspotPayloadUrlShape(hotspot.payloadUrl)
-				) {
-					return ApiResponse.badRequest(
-						`${marker} has an asset URL that is neither https nor an inline image (payloadUrl)`
-					)
-				}
-			}
-			if (
-				hotspot.occlusionEnabled !== undefined &&
-				typeof hotspot.occlusionEnabled !== 'boolean'
-			) {
-				return ApiResponse.badRequest(
-					`hotspots[${i}].occlusionEnabled must be a boolean`
-				)
-			}
-			if (
-				hotspot.linkedCameraId !== undefined &&
-				hotspot.linkedCameraId !== null
-			) {
-				if (typeof hotspot.linkedCameraId !== 'string') {
-					return ApiResponse.badRequest(
-						`hotspots[${i}].linkedCameraId must be a string`
-					)
-				}
-				if (!cameraIds.has(hotspot.linkedCameraId)) {
-					return ApiResponse.badRequest(
-						`hotspots[${i}].linkedCameraId references unknown camera '${hotspot.linkedCameraId}'`
-					)
-				}
-			}
-			if (
-				hotspot.sequenceIndex !== undefined &&
-				hotspot.sequenceIndex !== null
-			) {
-				if (
-					typeof hotspot.sequenceIndex !== 'number' ||
-					!Number.isInteger(hotspot.sequenceIndex) ||
-					hotspot.sequenceIndex < 0
-				) {
-					return ApiResponse.badRequest(
-						`hotspots[${i}].sequenceIndex must be a non-negative integer`
-					)
-				}
-				if (seenSequenceIndices.has(hotspot.sequenceIndex)) {
-					return ApiResponse.badRequest(
-						`hotspots has duplicate sequenceIndex ${hotspot.sequenceIndex}`
-					)
-				}
-				seenSequenceIndices.add(hotspot.sequenceIndex)
-			}
-
-			/*
-			  Cleared, not empty.
-
-			  The panel writes `undefined` when an author empties a field, but a
-			  client that normalizes to '' has to land in the same place: the
-			  unsaved-changes comparison folds absent and null together and
-			  deliberately does NOT fold in the empty string, so an '' stored
-			  against a null column would report the scene dirty on every load
-			  and offer a save that changes nothing. Doing it here is what makes
-			  that comparison's stated premise - that no producer sends one -
-			  true rather than hopeful.
-			*/
-			const text = (value: unknown) =>
-				typeof value === 'string' && value.trim() ? value : undefined
-
-			normalized.push({
-				...hotspot,
-				body: text(hotspot.body),
-				linkUrl: text(hotspot.linkUrl)
-			} as NonNullable<SceneSettings['hotspots']>[number])
-		}
-
-		return normalized
-	}
-
-	private static normalizeTransitionConfig(
-		transition: CameraTransitionConfig | undefined,
-		path: string
-	): CameraTransitionConfig | Response | undefined {
-		if (!transition) {
-			return undefined
-		}
-
-		if (!isRecord(transition)) {
-			return ApiResponse.badRequest(`${path} must be an object`)
-		}
-
-		const type = transition.type
-		if (type !== 'linear' && type !== 'object_avoidance' && type !== 'none') {
-			return ApiResponse.badRequest(
-				`${path}.type must be one of linear, object_avoidance, none`
-			)
-		}
-
-		if (typeof transition.duration !== 'undefined') {
-			if (
-				typeof transition.duration !== 'number' ||
-				!Number.isFinite(transition.duration) ||
-				transition.duration < 0
-			) {
-				return ApiResponse.badRequest(
-					`${path}.duration must be a non-negative number`
-				)
-			}
-		}
-
-		if (
-			typeof transition.easing !== 'undefined' &&
-			transition.easing !== 'linear' &&
-			transition.easing !== 'ease_in' &&
-			transition.easing !== 'ease_out' &&
-			transition.easing !== 'ease_in_out'
-		) {
-			return ApiResponse.badRequest(
-				`${path}.easing must be one of linear, ease_in, ease_out, ease_in_out`
-			)
-		}
-
-		if (type === 'object_avoidance') {
-			if (
-				typeof transition.objectAvoidance !== 'undefined' &&
-				!isRecord(transition.objectAvoidance)
-			) {
-				return ApiResponse.badRequest(
-					`${path}.objectAvoidance must be an object when provided`
-				)
-			}
-
-			const objectAvoidance = isRecord(transition.objectAvoidance)
-				? transition.objectAvoidance
-				: {}
-
-			const clearance = objectAvoidance.clearance
-			const arcHeight = objectAvoidance.arcHeight
-			const samples = objectAvoidance.samples
-			const tension = objectAvoidance.tension
-
-			if (
-				typeof clearance !== 'undefined' &&
-				(typeof clearance !== 'number' || !Number.isFinite(clearance))
-			) {
-				return ApiResponse.badRequest(
-					`${path}.objectAvoidance.clearance must be a number`
-				)
-			}
-
-			if (
-				typeof arcHeight !== 'undefined' &&
-				(typeof arcHeight !== 'number' || !Number.isFinite(arcHeight))
-			) {
-				return ApiResponse.badRequest(
-					`${path}.objectAvoidance.arcHeight must be a number`
-				)
-			}
-
-			if (
-				typeof samples !== 'undefined' &&
-				(typeof samples !== 'number' ||
-					!Number.isFinite(samples) ||
-					samples < 2)
-			) {
-				return ApiResponse.badRequest(
-					`${path}.objectAvoidance.samples must be a number >= 2`
-				)
-			}
-
-			if (
-				typeof tension !== 'undefined' &&
-				(typeof tension !== 'number' || !Number.isFinite(tension))
-			) {
-				return ApiResponse.badRequest(
-					`${path}.objectAvoidance.tension must be a number`
-				)
-			}
-
-			return {
-				...transition,
-				type,
-				objectAvoidance: {
-					clearance: typeof clearance === 'number' ? clearance : 2,
-					arcHeight: typeof arcHeight === 'number' ? arcHeight : 2,
-					samples: typeof samples === 'number' ? samples : 24,
-					tension: typeof tension === 'number' ? tension : 0.5
-				}
-			}
-		}
-
-		return transition
-	}
-
-	/**
-	 * Parses GLTF JSON from request.
-	 */
-	private static parseGltfJson(
-		requestData: Record<string, unknown>
-	): JSONDocument | undefined | Response {
-		let gltf: JSONDocument | null = null
-
-		if (requestData.gltfJson) {
-			if (typeof requestData.gltfJson === 'string') {
-				try {
-					gltf = JSON.parse(requestData.gltfJson)
-
-					if (typeof gltf !== 'object' || gltf === null) {
-						return ApiResponse.badRequest('Invalid gltfJson format')
-					}
-				} catch (error) {
-					console.warn('Failed to parse gltfJson:', error)
-					return ApiResponse.badRequest('Invalid gltfJson format')
-				}
-			}
-		}
-
-		// Return undefined if no gltfJson provided (it's optional for some operations)
-		return gltf || undefined
-	}
-
-	private static parseSceneMeta(
-		requestData: Record<string, unknown>
-	): SceneMetaState | Response {
-		const fallbackMeta: SceneMetaState = {
-			name: '',
-			description: '',
-			thumbnailUrl: ''
-		}
-
-		if (!requestData.meta) {
-			return fallbackMeta
-		}
-
-		let payload: unknown = requestData.meta
-
-		if (typeof payload === 'string') {
-			try {
-				payload = JSON.parse(payload)
-			} catch (error) {
-				console.warn('Failed to parse scene meta:', error)
-				return ApiResponse.badRequest('Invalid scene metadata format')
-			}
-		}
-
-		if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-			return ApiResponse.badRequest('Invalid scene metadata format')
-		}
-
-		const candidate = payload as {
-			name?: unknown
-			description?: unknown
-			thumbnailUrl?: unknown
-		}
-
-		return {
-			name: typeof candidate.name === 'string' ? candidate.name : '',
-			description:
-				typeof candidate.description === 'string' ? candidate.description : '',
-			thumbnailUrl:
-				typeof candidate.thumbnailUrl === 'string' ? candidate.thumbnailUrl : ''
-		}
-	}
-
-	/**
-	 * Parses the optimization report from the request, and checks it.
-	 *
-	 * This payload comes from the browser and is persisted into `scene_stats`
-	 * verbatim. The object branch used to accept it on `typeof === 'object'` and
-	 * cast, and the string branch checked only that `JSON.parse` returned a
-	 * non-null object - so a truncated body reached
-	 * `createSceneStatsFromReport`, which dereferences two levels deep, and came
-	 * back as a 500 rather than a 400.
-	 *
-	 * Both branches now go through the same guard, because they were two spellings
-	 * of one payload and only one of them was ever checked.
-	 */
-	private static parseOptimizationReport(
-		requestData: Record<string, unknown>
-	): OptimizationReport | undefined | Response {
-		if (!requestData.optimizationReport) {
-			return undefined
-		}
-
-		let payload: unknown = requestData.optimizationReport
-
-		if (typeof payload === 'string') {
-			try {
-				payload = JSON.parse(payload)
-			} catch (error) {
-				console.warn('Failed to parse optimizationReport:', error)
-				return ApiResponse.badRequest('Invalid optimization report format')
-			}
-		}
-
-		const report = parseOptimizationReport(payload)
-
-		if (!report) {
-			return ApiResponse.badRequest('Invalid optimization report format')
-		}
-
-		return report
-	}
-
-	private static parseOptimizationSettings(
-		requestData: Record<string, unknown>
-	): Optimizations | undefined | Response {
-		if (!requestData.optimizationSettings) {
-			return undefined
-		}
-
-		if (typeof requestData.optimizationSettings === 'string') {
-			try {
-				const parsed = JSON.parse(requestData.optimizationSettings)
-				if (typeof parsed !== 'object' || parsed === null) {
-					return ApiResponse.badRequest('Invalid optimization settings format')
-				}
-
-				return parsed as Optimizations
-			} catch (error) {
-				console.warn('Failed to parse optimizationSettings:', error)
-				return ApiResponse.badRequest('Invalid optimization settings format')
-			}
-		}
-
-		if (typeof requestData.optimizationSettings === 'object') {
-			return requestData.optimizationSettings as Optimizations
-		}
-
-		return undefined
-	}
-
-	private static parseSceneAssetIds(
-		requestData: Record<string, unknown>
-	): string[] | Response {
-		const rawSceneAssetIds = requestData.sceneAssetIds
-
-		if (!rawSceneAssetIds) {
-			return ApiResponse.badRequest('sceneAssetIds is required')
-		}
-
-		let sceneAssetIds: unknown = rawSceneAssetIds
-		if (typeof rawSceneAssetIds === 'string') {
-			try {
-				sceneAssetIds = JSON.parse(rawSceneAssetIds)
-			} catch {
-				return ApiResponse.badRequest(
-					'sceneAssetIds must be a valid JSON array'
-				)
-			}
-		}
-
-		if (!Array.isArray(sceneAssetIds) || sceneAssetIds.length === 0) {
-			return ApiResponse.badRequest('sceneAssetIds must be a non-empty array')
-		}
-
-		const normalizedIds = sceneAssetIds
-			.filter((value): value is string => typeof value === 'string')
-			.map((value) => value.trim())
-			.filter(Boolean)
-
-		if (normalizedIds.length !== sceneAssetIds.length) {
-			return ApiResponse.badRequest('sceneAssetIds contains invalid values')
-		}
-
-		if (!normalizedIds.every((assetId) => UUID_REGEX.test(assetId))) {
-			return ApiResponse.badRequest('sceneAssetIds must contain valid UUIDs')
-		}
-
-		return normalizedIds
-	}
-
-	/**
-	 * The kept original, optional. It is linked under its own role, so it must
-	 * not also arrive as one of the model's assets: one asset cannot be linked
-	 * twice to one scene, and it would be served as part of the model.
-	 */
-	private static parseSourceAssetId(
-		requestData: Record<string, unknown>,
-		sceneAssetIds: string[]
-	): string | undefined | Response {
-		const raw = requestData.sourceAssetId
-		if (raw === undefined || raw === null || raw === '') return undefined
-
-		if (typeof raw !== 'string' || !UUID_REGEX.test(raw.trim())) {
-			return ApiResponse.badRequest('sourceAssetId must be a valid UUID')
-		}
-
-		const sourceAssetId = raw.trim()
-		if (sceneAssetIds.includes(sourceAssetId)) {
-			return ApiResponse.badRequest(
-				'sourceAssetId must not also be one of sceneAssetIds'
-			)
-		}
-
-		return sourceAssetId
-	}
-
-	/**
-	 * The thumbnail a commit stores in `scenes.thumbnail_url`.
-	 *
-	 * Empty means none. Anything else must be this scene's thumbnail route for
-	 * an asset the same commit links, which the save then checks belongs to the
-	 * scene's project. Stored unexamined, the column could name any asset id,
-	 * and the GC counts every asset it names as in use.
-	 */
-	private static checkHotspotArtwork(
-		hotspots: SceneSettings['hotspots'],
-		sceneId: string | undefined,
-		sceneAssetIds: string[]
-	): Response | null {
-		/*
-		  The thumbnail's rule, for the same reason: an artwork path is a
-		  reference to an asset, and stored unexamined it could name any asset id
-		  at all - another scene's, or one this scene never linked. Checked for
-		  every preset, since a stored path outlives a switch back to a dot.
-		*/
-		for (const hotspot of hotspots ?? []) {
-			const payloadUrl = hotspot.payloadUrl
-			if (!payloadUrl || !isHotspotArtworkPath(payloadUrl)) continue
-
-			const assetId =
-				sceneId !== undefined
-					? hotspotArtworkAssetIdFromUrl(sceneId, payloadUrl)
-					: null
-			if (assetId === null || !sceneAssetIds.includes(assetId)) {
-				return ApiResponse.badRequest(
-					`Marker "${hotspot.name.trim()}" has artwork this save does not include. Upload it again (payloadUrl)`
-				)
-			}
-		}
-
-		return null
-	}
-
-	private static parseThumbnailUrl(
-		raw: string,
-		sceneId: string | undefined,
-		sceneAssetIds: string[]
-	): string | Response {
-		const thumbnailUrl = raw.trim()
-		if (!thumbnailUrl) return ''
-
-		const assetId = thumbnailAssetIdFromUrl(thumbnailUrl)
-		const isLinkedThumbnail =
-			sceneId !== undefined &&
-			assetId !== null &&
-			sceneAssetIds.includes(assetId) &&
-			thumbnailUrl === buildSceneThumbnailUrl(sceneId, assetId)
-
-		if (!isLinkedThumbnail) {
-			return ApiResponse.badRequest(
-				"meta.thumbnailUrl must be this scene's thumbnail for an asset the save links"
-			)
-		}
-
-		return thumbnailUrl
-	}
-
-	private static parsePublishedAssetId(
-		requestData: Record<string, unknown>
-	): string | Response {
-		const rawPublishedAssetId = requestData.publishedAssetId
-		if (typeof rawPublishedAssetId !== 'string') {
-			return ApiResponse.badRequest('publishedAssetId is required')
-		}
-
-		const publishedAssetId = rawPublishedAssetId.trim()
-		if (!publishedAssetId) {
-			return ApiResponse.badRequest('publishedAssetId is required')
-		}
-
-		if (!UUID_REGEX.test(publishedAssetId)) {
-			return ApiResponse.badRequest('publishedAssetId must be a valid UUID')
-		}
-
-		return publishedAssetId
-	}
-
-	private static parseInitialSceneBytes(
-		requestData: Record<string, unknown>
-	): number | undefined | Response {
-		const rawInitialSceneBytes = requestData.initialSceneBytes
-
-		if (rawInitialSceneBytes == null) {
-			return undefined
-		}
-
-		const parsedValue =
-			typeof rawInitialSceneBytes === 'number'
-				? rawInitialSceneBytes
-				: typeof rawInitialSceneBytes === 'string'
-					? Number(rawInitialSceneBytes)
-					: NaN
-
-		if (!Number.isFinite(parsedValue) || parsedValue < 0) {
-			return ApiResponse.badRequest(
-				'initialSceneBytes must be a non-negative number'
-			)
-		}
-
-		return Math.round(parsedValue)
-	}
-
-	private static parseTargetProjectId(
-		requestData: Record<string, unknown>
-	): string | undefined | Response {
-		const rawTargetProjectId = requestData.targetProjectId
-		if (typeof rawTargetProjectId === 'undefined') {
-			return undefined
-		}
-
-		if (typeof rawTargetProjectId !== 'string') {
-			return ApiResponse.badRequest('targetProjectId must be a valid UUID')
-		}
-
-		const targetProjectId = rawTargetProjectId.trim()
-		if (!targetProjectId) {
-			return undefined
-		}
-
-		if (!UUID_REGEX.test(targetProjectId)) {
-			return ApiResponse.badRequest('targetProjectId must be a valid UUID')
-		}
-
-		return targetProjectId
-	}
-
-	private static parseProjectId(
-		requestData: Record<string, unknown>
-	): string | undefined | Response {
-		const rawProjectId = requestData.projectId
-		if (typeof rawProjectId === 'undefined') {
-			return undefined
-		}
-
-		if (typeof rawProjectId !== 'string') {
-			return ApiResponse.badRequest('projectId must be a valid UUID')
-		}
-
-		const projectId = rawProjectId.trim()
-		if (!projectId) {
-			return undefined
-		}
-
-		if (!UUID_REGEX.test(projectId)) {
-			return ApiResponse.badRequest('projectId must be a valid UUID')
-		}
-
-		return projectId
-	}
-
-	private static parseTargetFolderId(
-		requestData: Record<string, unknown>
-	): string | null | undefined | Response {
-		const rawTargetFolderId = requestData.targetFolderId
-		if (typeof rawTargetFolderId === 'undefined') {
-			return undefined
-		}
-
-		if (typeof rawTargetFolderId !== 'string') {
-			return ApiResponse.badRequest('targetFolderId must be a valid UUID')
-		}
-
-		const targetFolderId = rawTargetFolderId.trim()
-		if (!targetFolderId) {
-			return null
-		}
-
-		if (!UUID_REGEX.test(targetFolderId)) {
-			return ApiResponse.badRequest('targetFolderId must be a valid UUID')
-		}
-
-		return targetFolderId
 	}
 }
