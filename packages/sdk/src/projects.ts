@@ -7,9 +7,7 @@ import { z } from 'zod'
  * breaking a client that reads `projects`.
  */
 export const projectListSchema = z.object({
-	projects: z.array(
-		z.object({ id: z.string(), name: z.string(), slug: z.string() })
-	)
+	projects: z.array(z.object({ id: z.string(), name: z.string() }))
 })
 
 export type ProjectList = z.infer<typeof projectListSchema>

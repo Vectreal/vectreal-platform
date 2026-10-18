@@ -277,12 +277,7 @@ describe('plan limits refuse at the boundary', () => {
 	*/
 	it('refuses a project at the free plan default, and writes nothing', async () => {
 		await expect(
-			projectRepo.createProject(
-				organizationId,
-				'over quota',
-				`over-${randomUUID()}`,
-				ownerId
-			)
+			projectRepo.createProject(organizationId, 'over quota', ownerId)
 		).rejects.toThrow(/you can have one project/)
 
 		expect(await countProjects()).toBe(1)
@@ -294,7 +289,6 @@ describe('plan limits refuse at the boundary', () => {
 		const created = await projectRepo.createProject(
 			organizationId,
 			'within quota',
-			`within-${randomUUID()}`,
 			ownerId
 		)
 		expect(created.id).toBeTruthy()

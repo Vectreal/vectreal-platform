@@ -267,8 +267,7 @@ export default function ApiKeysEditPage({
 		.filter((p) => p.organizationId === apiKeyData.organization.id)
 		.map((p) => ({
 			id: p.project.id,
-			name: p.project.name,
-			slug: p.project.slug
+			name: p.project.name
 		}))
 
 	// Show error toast

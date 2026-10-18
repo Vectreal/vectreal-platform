@@ -51,7 +51,7 @@ describe('createVectrealClient', () => {
 
 	it('lists the projects with the bearer token and returns what it parsed', async () => {
 		const projects = {
-			projects: [{ id: 'project-1', name: 'Chairs', slug: 'chairs' }]
+			projects: [{ id: 'project-1', name: 'Chairs' }]
 		}
 		const fetch = respond({ success: true, data: projects })
 		const client = createVectrealClient({
