@@ -9,7 +9,8 @@
  * Mutation gates, executed: removing `hotspots` from the field record fails
  * the type-check and the every-field case; restoring the five-name list
  * reddens the every-field case; dropping the null guard reddens the
- * null-defers case.
+ * null-defers case; validating interactions against the nested camera, or
+ * skipping `normalizeCameraSettings`, reddens the flat-camera case.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -95,6 +96,37 @@ describe('resolveServerSceneDataContract settings', () => {
 		)
 
 		expect(resolved.shadows).toEqual(everyField.shadows)
+	})
+
+	it('normalizes a flat camera and checks interactions against it', () => {
+		const flatCamera = {
+			cameras: [{ cameraId: 'front' }, { cameraId: 'side' }]
+		} as SceneSettings['camera']
+		const interactions = [
+			{
+				id: 'go-side',
+				trigger: { type: 'viewer_ready' },
+				actions: [{ type: 'activate_camera', cameraId: 'side' }]
+			}
+		] as unknown as SceneSettings['interactions']
+
+		const resolved = resolveServerSceneDataContract(
+			payload({
+				camera: flatCamera,
+				interactions,
+				// Has no `side`: validating against this one would throw.
+				settings: { camera: { cameras: [{ cameraId: 'front' }] } as never }
+			})
+		)
+
+		expect(resolved.camera?.activeCameraId).toBe('front')
+		expect(resolved.camera?.cameras?.map((c) => c.name)).toEqual([
+			'Camera 1',
+			'Camera 2'
+		])
+		expect(resolved.interactions?.[0]?.actions).toEqual([
+			{ type: 'activate_camera', cameraId: 'side' }
+		])
 	})
 
 	it('normalizes interactions read from the flat payload', () => {
