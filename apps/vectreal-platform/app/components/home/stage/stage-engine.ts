@@ -119,11 +119,12 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	scene.add(ground)
 
 	const passCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
-	const { bakeDirectional, bakeContact, densityPng } = createShadowBaker(
-		renderer,
-		scene,
-		passCam
-	)
+	const {
+		bakeDirectional,
+		bakeContact,
+		densityPng,
+		dispose: disposeShadowBaker
+	} = createShadowBaker(renderer, scene, passCam)
 
 	const normalMat = new THREE.MeshNormalMaterial()
 	let rtN: THREE.WebGLRenderTarget | null = null
@@ -651,6 +652,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			contactTarget?.dispose()
 			bakeTarget?.dispose()
 			loadedShadow?.dispose()
+			disposeShadowBaker()
 			renderer.dispose()
 		}
 	}
