@@ -240,6 +240,6 @@ present  apps/vectreal-platform/app/lib/domain/billing/quota-enforcement.server.
 present  apps/vectreal-platform/app/lib/domain/scene/server/scene-folder-repository.server.ts  assertFolderQuota
 present  apps/vectreal-platform/app/lib/domain/project/project-repository.server.ts       limitKey: 'projects_total'
 present  apps/vectreal-platform/app/lib/domain/organization/organization-repository.server.ts  limitKey: 'org_seats'
-present  apps/vectreal-platform/app/lib/domain/scene/server/scene-settings.operations.server.ts  limitKey: 'scenes_total'
+present  apps/vectreal-platform/app/lib/domain/scene/server/scene-upload.operations.server.ts    limitKey: 'scenes_total'
 present  apps/vectreal-platform/app/routes/dashboard-page/organizations.$organizationId.tsx  error instanceof QuotaExceededError
 ```

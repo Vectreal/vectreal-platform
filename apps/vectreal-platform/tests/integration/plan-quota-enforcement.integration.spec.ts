@@ -35,7 +35,8 @@ type ApiKeyRepo =
 type OrgRepo =
 	typeof import('../../app/lib/domain/organization/organization-repository.server')
 type SceneOps =
-	typeof import('../../app/lib/domain/scene/server/scene-settings.operations.server')
+	typeof import('../../app/lib/domain/scene/server/scene-upload.operations.server') &
+		typeof import('../../app/lib/domain/scene/server/scene-publish.operations.server')
 type Db = ReturnType<typeof import('../../app/db/client').getDbClient>
 
 describe('plan limits refuse at the boundary', () => {
@@ -85,8 +86,10 @@ describe('plan limits refuse at the boundary', () => {
 			await import('../../app/lib/domain/auth/api-key-repository.server')
 		orgRepo =
 			await import('../../app/lib/domain/organization/organization-repository.server')
-		sceneOps =
-			await import('../../app/lib/domain/scene/server/scene-settings.operations.server')
+		sceneOps = {
+			...(await import('../../app/lib/domain/scene/server/scene-upload.operations.server')),
+			...(await import('../../app/lib/domain/scene/server/scene-publish.operations.server'))
+		}
 		db = (await import('../../app/db/client')).getDbClient()
 
 		await db.insert(schema.users).values([
