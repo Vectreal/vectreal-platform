@@ -117,7 +117,9 @@ function shellSurface(theme: 'light' | 'dark'): Rgb {
  */
 function rule(selector: string): string {
 	const body = CSS.match(
-		new RegExp(`\\n\\s*${selector.replace(/[.:]/g, '\\$&')}\\s*\\{([^}]*)\\}`)
+		new RegExp(
+			`\\n\\s*${selector.replace(/[.*+?^${}()|[\]\\:]/g, '\\$&')}\\s*\\{([^}]*)\\}`
+		)
 	)
 	if (!body) throw new Error(`${selector} not found`)
 	return body[1]
