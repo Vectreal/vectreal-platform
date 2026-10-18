@@ -17,8 +17,20 @@ import {
 import { checkHotspotArtwork } from './scene-settings-hotspots.parser.server'
 import { parseSettingsData } from './scene-settings-payload.parser.server'
 import { UUID_REGEX } from '../../../../constants/utility-constants'
+import { normalizePresentationSettings } from '../scene-presentation'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
+import type { ScenePresentationSettings } from '@vctrl/core'
+
+/** The ids an upload or prepare action carries; it has no settings payload. */
+export interface SceneUploadRequest {
+	action: string
+	requestId: string | undefined
+	projectId: string | undefined
+	sceneId: string | undefined
+	targetProjectId: string | undefined
+	targetFolderId: string | null | undefined
+}
 
 /**
  * Request parser for scene settings API operations.
@@ -31,6 +43,75 @@ import type { SceneSettingsRequest } from '../../../../types/api'
  * in `scene-settings-fields.parser.server.ts`.
  */
 export class SceneSettingsParser {
+	/**
+	 * The dashboard's inline title and description edit. A blank name is
+	 * refused; a description that is not a string is stored as none.
+	 */
+	static parseSceneMetadataUpdate(
+		requestData: Record<string, unknown>
+	): { name: string; description: string | null } | Response {
+		const nameRaw = requestData.name
+		const descriptionRaw = requestData.description
+
+		const name = typeof nameRaw === 'string' ? nameRaw.trim() : ''
+		const description =
+			typeof descriptionRaw === 'string' ? descriptionRaw : null
+
+		if (!name) {
+			return ApiResponse.badRequest('Scene name is required')
+		}
+
+		return { name, description }
+	}
+
+	/** The dashboard's single-field presentation write. */
+	static parseScenePresentationUpdate(
+		requestData: Record<string, unknown>
+	): ScenePresentationSettings | Response {
+		const presentation = normalizePresentationSettings(requestData.presentation)
+		if (!presentation) {
+			return ApiResponse.badRequest('Presentation settings are required')
+		}
+
+		return presentation
+	}
+
+	/**
+	 * The ids an upload or prepare action names. Read leniently, unlike the
+	 * commit actions: a value that is not a string is treated as absent, and
+	 * the operations check ownership of whatever survives. A body without a
+	 * `sceneId` string falls back to the route's.
+	 */
+	static parseSceneUploadRequest(
+		requestData: Record<string, unknown>,
+		action: string,
+		routeSceneId: string | undefined
+	): SceneUploadRequest {
+		return {
+			action,
+			requestId:
+				typeof requestData.requestId === 'string'
+					? requestData.requestId.trim()
+					: undefined,
+			projectId:
+				typeof requestData.projectId === 'string'
+					? requestData.projectId.trim() || undefined
+					: undefined,
+			sceneId:
+				typeof requestData.sceneId === 'string'
+					? requestData.sceneId.trim() || undefined
+					: routeSceneId,
+			targetProjectId:
+				typeof requestData.targetProjectId === 'string'
+					? requestData.targetProjectId.trim() || undefined
+					: undefined,
+			targetFolderId:
+				typeof requestData.targetFolderId === 'string'
+					? requestData.targetFolderId.trim() || null
+					: undefined
+		}
+	}
+
 	static parseSceneSettingsRequestData(
 		requestData: Record<string, unknown>
 	): SceneSettingsRequest | Response {

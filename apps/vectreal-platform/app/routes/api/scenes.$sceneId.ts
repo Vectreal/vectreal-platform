@@ -8,7 +8,6 @@ import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboa
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
 import { createEmbedAssetUrls } from '../../lib/domain/embed/embed-asset-signature.server'
 import { buildPreviewAssetUrl } from '../../lib/domain/scene/client/preview-scene-endpoint'
-import { normalizePresentationSettings } from '../../lib/domain/scene/scene-presentation'
 import {
 	getScene,
 	updateSceneMetadata
@@ -344,25 +343,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			return ApiResponse.notFound(`Scene not found with ID: ${routeSceneId}`)
 		}
 
-		const nameRaw = actionRequest.name
-		const descriptionRaw = actionRequest.description
-
-		const name = typeof nameRaw === 'string' ? nameRaw.trim() : ''
-		const description =
-			typeof descriptionRaw === 'string' ? descriptionRaw : null
-
-		if (!name) {
-			return ApiResponse.badRequest('Scene name is required')
+		const metadata = SceneSettingsParser.parseSceneMetadataUpdate(actionRequest)
+		if (metadata instanceof Response) {
+			return metadata
 		}
 
 		try {
 			const updatedScene = await updateSceneMetadata(
 				routeSceneId,
 				authResult.user.id,
-				{
-					name,
-					description
-				}
+				metadata
 			)
 
 			return ApiResponse.success({
@@ -412,11 +402,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			return ApiResponse.notFound('Scene not found')
 		}
 
-		const presentation = normalizePresentationSettings(
-			actionRequest.presentation
-		)
-		if (!presentation) {
-			return ApiResponse.badRequest('Presentation settings are required')
+		const presentation =
+			SceneSettingsParser.parseScenePresentationUpdate(actionRequest)
+		if (presentation instanceof Response) {
+			return presentation
 		}
 
 		try {
@@ -449,29 +438,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		action === 'upload-published-glb'
 
 	const parsedRequest = uploadOrPrepareAction
-		? {
+		? SceneSettingsParser.parseSceneUploadRequest(
+				actionRequest,
 				action,
-				requestId:
-					typeof actionRequest.requestId === 'string'
-						? actionRequest.requestId.trim()
-						: undefined,
-				projectId:
-					typeof actionRequest.projectId === 'string'
-						? actionRequest.projectId.trim() || undefined
-						: undefined,
-				sceneId:
-					typeof actionRequest.sceneId === 'string'
-						? actionRequest.sceneId.trim() || undefined
-						: routeSceneId,
-				targetProjectId:
-					typeof actionRequest.targetProjectId === 'string'
-						? actionRequest.targetProjectId.trim() || undefined
-						: undefined,
-				targetFolderId:
-					typeof actionRequest.targetFolderId === 'string'
-						? actionRequest.targetFolderId.trim() || null
-						: undefined
-			}
+				routeSceneId
+			)
 		: SceneSettingsParser.parseSceneSettingsRequestData(actionRequest)
 
 	if (parsedRequest instanceof Response) {
