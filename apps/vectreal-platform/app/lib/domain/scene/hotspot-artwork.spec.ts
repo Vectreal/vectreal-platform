@@ -4,14 +4,12 @@ import {
 	buildHotspotArtworkUrl,
 	canUploadHotspotArtwork,
 	findNewRemoteArtwork,
-	HOTSPOT_INLINE_ARTWORK_MAX_KB,
 	hotspotArtworkAssetIdFromUrl,
 	hotspotArtworkFileName,
 	isHotspotArtworkAsset,
 	isHotspotArtworkPath,
 	isHotspotPayloadUrlShape
 } from './hotspot-artwork'
-import { isAllowedHotspotPayloadUrl } from './hotspot-urls'
 
 const SCENE_ID = '33333333-3333-4333-8333-333333333333'
 const OTHER_SCENE_ID = '44444444-4444-4444-8444-444444444444'
@@ -113,13 +111,20 @@ describe('hotspot artwork', () => {
 		expect(isHotspotPayloadUrlShape('/api/scenes/x/assets/y')).toBe(false)
 	})
 
-	it.each(['image/tiff', 'image/svg+xml', 'image/gif'])(
-		'refuses to name uploaded artwork of %s, which the asset route will not serve as an image',
-		(type) => {
-			expect(canUploadHotspotArtwork(type)).toBe(false)
-			expect(() => hotspotArtworkFileName(HOTSPOT_ID, type)).toThrow()
-		}
-	)
+	it.each([
+		['image/svg+xml', 'svg'],
+		['image/gif', 'gif']
+	])('uploads %s, which the asset route serves as an image', (type, ext) => {
+		expect(canUploadHotspotArtwork(type)).toBe(true)
+		expect(hotspotArtworkFileName(HOTSPOT_ID, type)).toBe(
+			`hotspot-artwork-${HOTSPOT_ID}.${ext}`
+		)
+	})
+
+	it('refuses to name artwork of a type a marker cannot draw', () => {
+		expect(canUploadHotspotArtwork('image/tiff')).toBe(false)
+		expect(() => hotspotArtworkFileName(HOTSPOT_ID, 'image/tiff')).toThrow()
+	})
 })
 
 describe('findNewRemoteArtwork', () => {
@@ -152,21 +157,5 @@ describe('findNewRemoteArtwork', () => {
 		['no image', undefined]
 	])('lets %s through', (_label, payloadUrl) => {
 		expect(findNewRemoteArtwork([marker(payloadUrl)], [])).toBeNull()
-	})
-})
-
-describe('HOTSPOT_INLINE_ARTWORK_MAX_KB', () => {
-	// The figure both refusals quote: an SVG of that size must stay inline,
-	// and one KB more must not, or the message points at the wrong limit.
-	const svgOf = (kb: number) =>
-		`data:image/svg+xml;base64,${btoa('x'.repeat(kb * 1024))}`
-
-	it('is the largest whole KB that stays inline', () => {
-		expect(
-			isAllowedHotspotPayloadUrl(svgOf(HOTSPOT_INLINE_ARTWORK_MAX_KB))
-		).toBe(true)
-		expect(
-			isAllowedHotspotPayloadUrl(svgOf(HOTSPOT_INLINE_ARTWORK_MAX_KB + 1))
-		).toBe(false)
 	})
 })

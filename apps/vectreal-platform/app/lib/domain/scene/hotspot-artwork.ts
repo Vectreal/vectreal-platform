@@ -1,7 +1,6 @@
 import {
 	HOTSPOT_IMAGE_MEDIA_TYPES,
-	isAllowedHotspotPayloadUrl,
-	MAX_HOTSPOT_URL_LENGTH
+	isAllowedHotspotPayloadUrl
 } from './hotspot-urls'
 
 /**
@@ -40,25 +39,13 @@ export const HOTSPOT_ARTWORK_PREFIX = 'hotspot-artwork-'
  */
 export const HOTSPOT_ARTWORK_MAX_BYTES = 2 * 1024 * 1024
 
-/**
- * The types artwork may be uploaded as: the images the asset route serves as
- * themselves (`asset-response.server.ts`). It sends SVG and GIF as
- * `application/octet-stream`, which a browser will not draw, so those stay on
- * the marker inline, under the inline cap, or are not accepted at all.
- */
 const EXTENSION_BY_MEDIA_TYPE: Record<string, string> = {
 	'image/png': 'png',
 	'image/jpeg': 'jpg',
-	'image/webp': 'webp'
+	'image/webp': 'webp',
+	'image/gif': 'gif',
+	'image/svg+xml': 'svg'
 }
-
-/**
- * The largest file, in whole KB, that always fits the inline cap once base64
- * encoded behind its `data:` prefix: the limit an SVG or GIF works within.
- */
-export const HOTSPOT_INLINE_ARTWORK_MAX_KB = Math.floor(
-	((MAX_HOTSPOT_URL_LENGTH - 64) * 3) / 4 / 1024
-)
 
 /** Whether an image of this type can be uploaded as marker artwork. */
 export function canUploadHotspotArtwork(mediaType: string): boolean {

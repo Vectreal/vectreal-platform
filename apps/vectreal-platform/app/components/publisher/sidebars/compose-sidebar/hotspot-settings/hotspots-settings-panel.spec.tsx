@@ -597,10 +597,9 @@ describe('HotspotsSettingsPanel selection', () => {
 				expect(storedPayload()).toMatch(/^data:image\/png;base64,/)
 			)
 			expect(storedPayload()!.length).toBeGreaterThan(MAX_HOTSPOT_URL_LENGTH)
-			expect(screen.queryByText(/use an svg or gif under/i)).toBeNull()
 		})
 
-		it('refuses an SVG too large to stay inline, which cannot be uploaded', async () => {
+		it('takes an SVG too large to stay inline, for the save to upload', async () => {
 			const input = await openAppearance()
 
 			pick(
@@ -610,8 +609,10 @@ describe('HotspotsSettingsPanel selection', () => {
 				})
 			)
 
-			expect(await screen.findByText(/use an svg or gif under/i)).toBeTruthy()
-			expect(storedPayload()).toBeUndefined()
+			await waitFor(() =>
+				expect(storedPayload()).toMatch(/^data:image\/svg\+xml;base64,/)
+			)
+			expect(screen.queryByText(/use a png/i)).toBeNull()
 		})
 
 		it('says so when the picked file cannot be read', async () => {
