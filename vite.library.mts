@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 
 import postcss, { type AtRule } from 'postcss'
 import type { Plugin } from 'vite'
+import dts, { type PluginOptions } from 'vite-plugin-dts'
 
 /**
  * Whether a module specifier belongs to one of the named packages: the package
@@ -98,6 +99,116 @@ export function manifestExternals(projectRoot: string): Plugin {
 			}
 		}
 	}
+}
+
+// The forms tsc writes: `from '…'` always with a space, `import('…')` without.
+const DECLARATION_IMPORT =
+	/(?:\bfrom\s+|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+|\bdeclare\s+module\s+|<reference\s+(?:types|path)=)["']([^"']+)["']/g
+
+/**
+ * Comments, except the triple-slash directives that are imports themselves.
+ * String literals are matched first and kept, so `"image/*"` or a URL does not
+ * open a comment that swallows the imports after it.
+ */
+const COMMENT =
+	/("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\*[\s\S]*?\*\/|(?<!\/)\/\/(?!\/).*$/gm
+
+/**
+ * Every module a declaration file names: static, dynamic and type references,
+ * `require` imports and module augmentations. Comments are left out, so a
+ * JSDoc example that mentions a package is not mistaken for an import.
+ */
+export function declarationImports(source: string): string[] {
+	const code = source.replace(
+		COMMENT,
+		(_match, literal?: string) => literal ?? ''
+	)
+	return [...code.matchAll(DECLARATION_IMPORT)].map((match) => match[1])
+}
+
+/**
+ * Whether a relative import lands on a declaration file, in the order
+ * TypeScript looks: the file, then a script of the same name, then a folder's
+ * index. A script found first wins and carries no types.
+ */
+function resolvesToDeclaration(target: string): boolean {
+	const base = target.replace(/(\.d)?\.ts$|\.js$/, '')
+	if (existsSync(`${base}.d.ts`)) return true
+	if (existsSync(`${base}.js`)) return false
+	return existsSync(join(base, 'index.d.ts'))
+}
+
+/**
+ * Why a declaration file's import would not resolve once the package is
+ * installed, or undefined when it would: it has to reach a declaration file
+ * inside the published directory, or name a package the manifest declares.
+ */
+export function unpublishableImport(
+	specifier: string,
+	file: string,
+	outDir: string,
+	names: readonly string[]
+): string | undefined {
+	if (specifier.startsWith('.')) {
+		const target = resolve(dirname(file), specifier)
+		if (relative(outDir, target).startsWith('..')) {
+			return `${specifier} leaves the published directory`
+		}
+		return resolvesToDeclaration(target)
+			? undefined
+			: `${specifier} reaches no declaration file`
+	}
+	return isDeclaredDependency(names, specifier)
+		? undefined
+		: `${specifier} is not declared in dependencies or peerDependencies`
+}
+
+/**
+ * Declaration files for a published package, checked before anything ships.
+ *
+ * `pathsToAliases` defaults to true, and it rewrites every tsconfig `paths`
+ * entry into a relative path to its target. The workspace maps `@vctrl/*` to
+ * source files, so hooks, viewer and embed published types importing
+ * `../../../../core/src/index.ts`, a file no tarball contains, and a consumer
+ * got unresolved types. Off, a package keeps the specifier its source wrote.
+ *
+ * Every emitted file is then checked the way an installed copy would resolve
+ * it, and the build fails on the first import that would not. It runs after
+ * the scripts are written, since a script can be what an import lands on.
+ */
+export function publishedDeclarations(
+	projectRoot: string,
+	options: Pick<PluginOptions, 'beforeWriteFile'> = {}
+): Plugin[] {
+	const names = declaredDependencies(projectRoot)
+	let outDir = ''
+
+	const outDirOf: Plugin = {
+		name: 'vctrl-published-declarations',
+		configResolved(config) {
+			outDir = resolve(config.root, config.build.outDir)
+		}
+	}
+
+	return [
+		outDirOf,
+		dts({
+			entryRoot: 'src',
+			tsconfigPath: join(projectRoot, 'tsconfig.lib.json'),
+			pathsToAliases: false,
+			...options,
+			afterBuild(emittedFiles) {
+				for (const [file, source] of emittedFiles) {
+					for (const specifier of declarationImports(source)) {
+						const problem = unpublishableImport(specifier, file, outDir, names)
+						if (problem) {
+							throw new Error(`${relative(outDir, file)}: ${problem}.`)
+						}
+					}
+				}
+			}
+		})
+	].flat()
 }
 
 /**

@@ -10,6 +10,8 @@
 	"dependencies": {
 		"@react-three/drei": "^10.0.7",
 		"@react-three/fiber": "^9.1.2",
+		"@vctrl/core": "latest",
+		"@vctrl/embed": "latest",
 		"@vctrl/hooks": "latest",
 		"@vctrl/viewer": "latest",
 		"postprocessing": "^6.37.3",
@@ -18,7 +20,11 @@
 		"three": "^0.185.1"
 	},
 	"devDependencies": {
+		"@types/react": "19.2.18",
+		"@types/react-dom": "19.2.4",
+		"@types/three": "^0.185.4",
 		"@vitejs/plugin-react": "^6.0.5",
+		"typescript": "^6.0.3",
 		"vite": "^8.2.1"
 	}
 }

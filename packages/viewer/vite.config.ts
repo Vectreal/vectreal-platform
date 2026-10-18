@@ -3,9 +3,12 @@ import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import dts from 'vite-plugin-dts'
 
-import { manifestExternals, scopedStylesheet } from '../../vite.library.mts'
+import {
+	manifestExternals,
+	publishedDeclarations,
+	scopedStylesheet
+} from '../../vite.library.mts'
 
 export default defineConfig({
 	root: import.meta.dirname,
@@ -14,10 +17,7 @@ export default defineConfig({
 	plugins: [
 		tailwindcss(),
 		react(),
-		dts({
-			entryRoot: 'src',
-			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
-		}),
+		publishedDeclarations(import.meta.dirname),
 		manifestExternals(import.meta.dirname),
 		// The published stylesheet matches only inside a viewer, so an app's own
 		// Tailwind classes keep winning everywhere else on its page.
