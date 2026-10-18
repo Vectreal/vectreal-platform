@@ -48,6 +48,9 @@ catalogs:
     vite-plugin-dts:
       specifier: 5.0.3
       version: 5.0.3
+    zod:
+      specifier: ^4.4.3
+      version: 4.4.3
 
 overrides:
   react: 19.2.8
@@ -716,7 +719,7 @@ importers:
         specifier: 'catalog:'
         version: 0.185.1
       zod:
-        specifier: ^4.4.3
+        specifier: 'catalog:'
         version: 4.4.3
 
   packages/core:
@@ -792,6 +795,12 @@ importers:
         specifier: 'catalog:'
         version: 5.0.3(@microsoft/api-extractor@7.58.7(@types/node@22.20.1))(esbuild@0.28.2)(rolldown@1.2.12)(rollup@4.62.4)(typescript@6.0.3)(vite@8.3.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))(webpack@5.105.2(@swc/core@1.15.47(@swc/helpers@0.5.21))(esbuild@0.28.2)(postcss@8.5.26))
     publishDirectory: ../../build/packages/vctrl/hooks
+
+  packages/sdk:
+    dependencies:
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
   packages/viewer:
     dependencies:
