@@ -587,9 +587,14 @@ export class SceneSettingsParser {
 						`hotspots[${i}].payloadUrl must be a string`
 					)
 				}
+				// The two rejections below are named by the marker, not the index:
+				// an author reaches both from the Asset URL field, and they land in
+				// the save panel, where `hotspots[3]` points at nothing they can
+				// see. The name is already known to be present.
+				const marker = `Marker "${hotspot.name.trim()}"`
 				if (hotspot.payloadUrl.length > MAX_HOTSPOT_URL_LENGTH) {
 					return ApiResponse.badRequest(
-						`hotspots[${i}].payloadUrl must be at most ${MAX_HOTSPOT_URL_LENGTH} characters`
+						`${marker} has an asset URL longer than ${MAX_HOTSPOT_URL_LENGTH} characters (payloadUrl)`
 					)
 				}
 				// The scheme is checked only for the presets that render it. A 'dot'
@@ -601,7 +606,7 @@ export class SceneSettingsParser {
 					!isAllowedHotspotPayloadUrl(hotspot.payloadUrl)
 				) {
 					return ApiResponse.badRequest(
-						`hotspots[${i}].payloadUrl must be an https URL or an inline image`
+						`${marker} has an asset URL that is neither https nor an inline image (payloadUrl)`
 					)
 				}
 			}

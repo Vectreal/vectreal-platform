@@ -150,6 +150,37 @@ describe('hotspot ceilings and payload URLs', () => {
 		expect((await bodyOf(result)).error).toMatch(/payloadUrl/)
 	})
 
+	// Both are reachable from the Asset URL field, and the message lands in the
+	// save panel, where an index points at nothing the author can see. The
+	// second marker is the one at fault, so a message built from the wrong
+	// entry, or from the index, cannot pass.
+	it.each([
+		['a scheme it refuses', 'http://cdn.test/badge.png', /neither https/],
+		[
+			'a length over the cap',
+			`https://cdn.test/${'a'.repeat(9000)}.png`,
+			/longer than/
+		]
+	])(
+		'names the marker whose asset URL has %s, not its index',
+		async (_label, payloadUrl, reason) => {
+			const result = parse([
+				hotspot(),
+				hotspot({
+					id: OTHER_ID,
+					name: '  Rear badge ',
+					stylePreset: 'image',
+					payloadUrl
+				})
+			])
+
+			const { error } = await bodyOf(result)
+			expect(error).toContain('Marker "Rear badge"')
+			expect(error).toMatch(reason)
+			expect(error).not.toMatch(/hotspots\[\d\]/)
+		}
+	)
+
 	it('rejects a non-string payloadUrl', async () => {
 		const result = parse([hotspot({ stylePreset: 'image', payloadUrl: 42 })])
 
