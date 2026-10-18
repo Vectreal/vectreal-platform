@@ -5,6 +5,7 @@ import {
 	pgPolicy,
 	pgTable,
 	timestamp,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core'
 import { authUid, authenticatedRole } from 'drizzle-orm/supabase'
@@ -34,6 +35,10 @@ export const organizationMemberships = pgTable(
 		invitedBy: uuid('invited_by').references(() => users.id)
 	},
 	(table) => [
+		uniqueIndex('organization_memberships_user_org_uidx').on(
+			table.userId,
+			table.organizationId
+		),
 		index('organization_memberships_user_id_idx').on(table.userId),
 		index('organization_memberships_organization_id_idx').on(
 			table.organizationId

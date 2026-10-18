@@ -207,7 +207,18 @@ export async function inviteOrganizationMember(
 			invitedAt: new Date(),
 			invitedBy: actorUserId
 		})
+		// A simultaneous invite of the same user passes the check above too.
+		.onConflictDoNothing({
+			target: [
+				organizationMemberships.userId,
+				organizationMemberships.organizationId
+			]
+		})
 		.returning()
+
+	if (!membership) {
+		throw new Error('User is already a member of this organization')
+	}
 
 	return membership
 }
