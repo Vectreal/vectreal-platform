@@ -33,7 +33,9 @@ const MODELS_DIR = join(
 */
 const SOURCE_FILES: Record<string, string> = {
 	rocket: 'rocket-v3.glb',
-	camera: 'camera-source.glb'
+	camera: 'camera-source.glb',
+	'sheen-chair': 'sheen-chair-source.glb',
+	'toy-car': 'toy-car.glb'
 }
 
 describe('sample models', () => {

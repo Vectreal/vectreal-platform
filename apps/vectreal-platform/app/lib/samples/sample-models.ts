@@ -5,6 +5,10 @@ import cameraSourceUrl from '../../assets/models/camera-source.glb?url'
 import cameraUrl from '../../assets/models/camera.glb?url'
 import rocketPreviewUrl from '../../assets/models/rocket-preview.webp?url'
 import rocketUrl from '../../assets/models/rocket-v3.glb?url'
+import sheenChairPreviewUrl from '../../assets/models/sheen-chair-preview.webp?url'
+import sheenChairSourceUrl from '../../assets/models/sheen-chair-source.glb?url'
+import toyCarPreviewUrl from '../../assets/models/toy-car-preview.webp?url'
+import toyCarUrl from '../../assets/models/toy-car.glb?url'
 
 /**
  * Models anyone can try without handing over their own work.
@@ -22,6 +26,19 @@ import rocketUrl from '../../assets/models/rocket-v3.glb?url'
  * Running the wrong pass on either is the instructive half: it is how someone
  * learns the passes are not interchangeable.
  *
+ * THE OTHER TWO show what a model is for once it is light enough to publish,
+ * and both come from Khronos's glTF Sample Assets under CC0 1.0, so nothing
+ * has to carry a credit line:
+ *
+ *   sheen-chair-source.glb  4.13 MB, 2.98 MB of it textures (72%), 7 PNGs
+ *   toy-car.glb             5.42 MB, 1.75 MB of it textures (32%), 109k triangles
+ *
+ * The Sheen Chair (Eric Chadwick for Wayfair) is a product someone could find
+ * in a shop, in fabric sheen. The Toy Car (Guido Odendahl, Eric Chadwick) puts
+ * clearcoat, transmission and sheen on one small object. Both are the files as
+ * Khronos ships them. The chair also carries material variants, which the
+ * viewer does not switch, so it opens on its default fabric.
+ *
  * The camera is also the model the home page draws, untouched: the same file
  * the hero's "Original" figure describes, so what a visitor opens here is what
  * the page said it started from.
@@ -34,10 +51,12 @@ import rocketUrl from '../../assets/models/rocket-v3.glb?url'
  *
  * WHY EACH ONE ALSO CARRIES A PICTURE. Offering a 3D model as underlined text
  * is asking someone to click a thing they cannot see, on a page whose entire
- * argument is that we render 3D well. The previews are captures of these exact
- * models taken through the viewer's own `captureScreenshot`, so they are not an
- * illustration of the model - they are what the stage will show a second after
- * the click. They are trimmed to the model on a transparent background, which
+ * argument is that we render 3D well. The rocket's and the camera's previews are
+ * captures of these exact models taken through the viewer's own
+ * `captureScreenshot`; the toy car's is a three.js render of its file under a
+ * room environment, and the chair reuses article 15's capture of its
+ * compressed copy, which looks the same. None is an illustration of the model:
+ * each is what the stage will show a second after the click. They are trimmed to the model on a transparent background, which
  * is what lets one file sit on both the light and the dark surface.
  */
 export interface SampleModel {
@@ -73,6 +92,24 @@ export const SAMPLE_MODELS: SampleModel[] = [
 		bytes: 18_758_168,
 		hint: 'nine 4K textures',
 		previewUrl: cameraPreviewUrl
+	},
+	{
+		id: 'sheen-chair',
+		url: sheenChairSourceUrl,
+		fileName: 'sheen-chair.glb',
+		label: 'Sheen Chair',
+		bytes: 4_125_648,
+		hint: 'fabric sheen',
+		previewUrl: sheenChairPreviewUrl
+	},
+	{
+		id: 'toy-car',
+		url: toyCarUrl,
+		fileName: 'toy-car.glb',
+		label: 'Toy Car',
+		bytes: 5_422_412,
+		hint: 'clearcoat and glass',
+		previewUrl: toyCarPreviewUrl
 	}
 ]
 
