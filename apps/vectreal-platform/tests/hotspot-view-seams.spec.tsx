@@ -21,8 +21,10 @@ const route = () =>
 	)
 
 describe('the publisher preview', () => {
-	it("offers the visitor's way back and camera switcher only while previewing", () => {
-		expect(route()).toContain('showSceneViewReturn={isPreviewMode}')
+	it("offers the visitor's way back (if the author kept it) and camera switcher only while previewing", () => {
+		expect(route()).toContain(
+			'isPreviewMode && shouldShowSceneViewReturn(presentation)'
+		)
 		expect(route()).toContain('showCameraControls={isPreviewMode}')
 	})
 
