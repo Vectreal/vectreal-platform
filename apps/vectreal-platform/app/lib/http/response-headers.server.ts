@@ -29,23 +29,18 @@ export function noStoreHeaders(init?: HeadersInit): Headers {
  * A scene manifest, revalidated against its ETag.
  *
  * `private, no-cache` lets the browser keep a copy but makes it ask first, so
- * an unchanged manifest costs a 304 and no body. `headers` carries whatever the
- * caller's auth attached, such as a refreshed session cookie.
+ * an unchanged manifest costs a 304 and no body. A refreshed session cookie
+ * reaches either through `sessionCookieMiddleware`.
  */
 export function manifestResponse(
 	request: Request,
 	manifest: unknown,
-	etag: string | null,
-	headers?: HeadersInit
+	etag: string | null
 ): Response {
 	const response =
 		etag && request.headers.get('If-None-Match') === etag
-			? new Response(null, { status: 304, headers: new Headers(headers) })
-			: ApiResponse.success(
-					manifest,
-					200,
-					headers ? { headers: new Headers(headers) } : undefined
-				)
+			? new Response(null, { status: 304 })
+			: ApiResponse.success(manifest, 200)
 
 	const cached = new Headers(response.headers)
 	cached.set('Cache-Control', 'private, no-cache')

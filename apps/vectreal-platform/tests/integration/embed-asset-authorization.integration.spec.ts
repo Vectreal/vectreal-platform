@@ -28,6 +28,10 @@ import {
 	isEmbedServableAssetId,
 	selectEmbedServableAssets
 } from '../../app/lib/domain/scene/embed-asset-policy'
+import {
+	buildHotspotArtworkUrl,
+	hotspotArtworkFileName
+} from '../../app/lib/domain/scene/hotspot-artwork'
 
 /*
   Storage and the session are faked at their boundaries: the session asset
@@ -53,8 +57,7 @@ const sessionUser = vi.hoisted(() => ({ id: '' }))
 
 vi.mock('../../app/lib/http/auth.server', () => ({
 	getAuthUser: async () => ({
-		user: { id: sessionUser.id },
-		headers: new Headers()
+		user: { id: sessionUser.id }
 	})
 }))
 
@@ -239,9 +242,11 @@ describe('embed asset authorization', () => {
 			})
 
 		return selectEmbedServableAssets({
+			sceneId,
 			publishedAssetId: preview!.publishedAssetId,
 			sceneAssets: settingsData?.assets ?? [],
-			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId
+			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId,
+			hotspots: settingsData?.settings?.hotspots
 		})
 	}
 
@@ -759,6 +764,84 @@ describe('embed asset authorization', () => {
 			expect((await signedManifest()).assetRefs).not.toHaveProperty(
 				thumbnailAssetId
 			)
+		})
+
+		/*
+		  Uploaded marker artwork, end to end over real rows: the manifest writes
+		  a signed URL into the marker, the asset route serves exactly that, and a
+		  marker crafted to name a linked texture gets neither.
+		*/
+		it('signs and serves the artwork a marker declares, and nothing it merely names', async () => {
+			const artworkAssetId = randomUUID()
+			const artworkHotspotId = randomUUID()
+			const craftedHotspotId = randomUUID()
+
+			await db.insert(schema.assets).values({
+				id: artworkAssetId,
+				folderId: assetFolderId,
+				name: hotspotArtworkFileName(artworkHotspotId, 'image/png'),
+				type: 'texture',
+				filePath: `smoke/${artworkAssetId}.png`,
+				mimeType: 'image/png',
+				fileSize: 2048,
+				ownerId
+			})
+			await db
+				.insert(schema.sceneAssets)
+				.values({ sceneSettingsId: settingsId, assetId: artworkAssetId })
+			await db.insert(schema.sceneHotspots).values([
+				{
+					id: artworkHotspotId,
+					sceneSettingsId: settingsId,
+					name: 'Badge',
+					visible: true,
+					internalOnly: false,
+					stylePreset: 'image',
+					payloadUrl: buildHotspotArtworkUrl(sceneId, artworkAssetId)
+				},
+				{
+					id: craftedHotspotId,
+					sceneSettingsId: settingsId,
+					name: 'Crafted',
+					visible: true,
+					internalOnly: false,
+					stylePreset: 'image',
+					payloadUrl: buildHotspotArtworkUrl(sceneId, textureAssetId)
+				}
+			])
+
+			try {
+				const manifest = await signedManifest()
+				const payloadOf = (id: string) =>
+					manifest.settings?.hotspots?.find((hotspot) => hotspot.id === id)
+						?.payloadUrl
+
+				const artworkUrl = payloadOf(artworkHotspotId)
+				expect(artworkUrl).toContain('sig=')
+				expect((await fetchSigned(artworkUrl!)).status).toBe(200)
+				expect((await fetchKeyed(artworkAssetId)).status).toBe(200)
+
+				expect(payloadOf(craftedHotspotId)).toBeUndefined()
+				expect((await fetchKeyed(textureAssetId)).status).toBe(404)
+				// The session path never reaches an embed.
+				expect(JSON.stringify(manifest.settings)).not.toContain(
+					buildHotspotArtworkUrl(sceneId, textureAssetId)
+				)
+
+				// Hiding the marker withdraws the artwork from the gate as well.
+				await db
+					.update(schema.sceneHotspots)
+					.set({ visible: false })
+					.where(eq(schema.sceneHotspots.id, artworkHotspotId))
+				expect((await fetchSigned(artworkUrl!)).status).toBe(404)
+			} finally {
+				await db
+					.delete(schema.sceneHotspots)
+					.where(eq(schema.sceneHotspots.sceneSettingsId, settingsId))
+				await db
+					.delete(schema.sceneAssets)
+					.where(eq(schema.sceneAssets.assetId, artworkAssetId))
+			}
 		})
 
 		it('keeps serving the published GLB the same URL named', async () => {

@@ -3,7 +3,7 @@ import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { useOptimizeModel } from '@vctrl/hooks/use-optimize-model'
 import { Provider, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useLayoutEffect } from 'react'
-import { data, Outlet, type MetaFunction } from 'react-router'
+import { Outlet, type MetaFunction } from 'react-router'
 
 import { Route } from './+types/publisher-layout'
 import { useConsent } from '../../components/consent/consent-context'
@@ -58,11 +58,9 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	const hasAuthCookie = hasSupabaseAuthCookie(requestCookieHeader)
 
 	let user: null | User = null
-	let headers = new Headers()
 
 	if (hasAuthCookie) {
 		const supabase = await createSupabaseClient(request)
-		headers = supabase.headers
 		const {
 			data: { user: authUser },
 			error: userError
@@ -210,7 +208,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		imgTo3dEnabled
 	}
 
-	return data(loaderData as PublisherLoaderData, { headers })
+	return loaderData as PublisherLoaderData
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

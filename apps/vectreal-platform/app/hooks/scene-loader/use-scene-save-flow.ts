@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
+	applyHotspotArtworkRewrites,
 	buildOptimizationReportSignature,
 	executeSceneSaveOrchestrator,
 	hasSceneMetaChanged,
@@ -18,6 +19,7 @@ import {
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
+import { hotspotsAtom } from '../../lib/stores/scene-settings-store'
 import { isSceneCurrentLocation } from '../../types/api'
 
 import type { UseSceneSaveFlowArgs } from './contracts'
@@ -72,6 +74,7 @@ export const useSceneSaveFlow = ({
 	const setCurrentLocation = useSetAtom(currentLocationAtom)
 	const setSaveLocation = useSetAtom(saveLocationAtom)
 	const dispatchSaveProgress = useSetAtom(dispatchSaveProgressAtom)
+	const setHotspots = useSetAtom(hotspotsAtom)
 	const capturedThumbnailFrame = useAtomValue(capturedThumbnailFrameAtom)
 	// What the dirty check last said, for a failed save to put back.
 	const hasChangesRef = useRef(false)
@@ -171,6 +174,14 @@ export const useSceneSaveFlow = ({
 					// meanwhile has its own original, which this must not overwrite.
 					if (currentSceneIdRef.current === savedSceneId) {
 						recordSavedSource(result.keptOriginal)
+						// Uploaded artwork now has its address: the editor holds that
+						// rather than the picked image, so the next save relinks it.
+						setHotspots((previous) =>
+							applyHotspotArtworkRewrites(
+								previous,
+								result.hotspotArtworkRewrites
+							)
+						)
 					}
 					return result
 				} catch (error) {
@@ -217,6 +228,7 @@ export const useSceneSaveFlow = ({
 			prepareGltfDocumentForUpload,
 			recordSavedSource,
 			resolveSource,
+			setHotspots,
 			userId
 		]
 	)
@@ -313,8 +325,18 @@ export const useSceneSaveFlow = ({
 				}))
 
 				// Set baselines to the pre-save snapshots so that mid-flight mutations
-				// remain detectable as diffs against the new baseline.
-				setLastSavedSettings(settingsSnapshot)
+				// remain detectable as diffs against the new baseline. Artwork the save
+				// uploaded is at its new address in both the editor and the baseline.
+				const savedSettings = settingsSnapshot.hotspots
+					? {
+							...settingsSnapshot,
+							hotspots: applyHotspotArtworkRewrites(
+								settingsSnapshot.hotspots,
+								result.hotspotArtworkRewrites ?? []
+							)
+						}
+					: settingsSnapshot
+				setLastSavedSettings(savedSettings)
 				setLastSavedSceneMeta(savedSceneMeta)
 
 				// Mark which scene was just saved, so the publish panel can act on the
@@ -323,7 +345,7 @@ export const useSceneSaveFlow = ({
 				setLastSavedSceneId(persistedSceneId ?? null)
 				setOptimisticSaveBaseline({
 					sceneId: persistedSceneId ?? null,
-					settings: settingsSnapshot,
+					settings: savedSettings,
 					sceneMeta: savedSceneMeta,
 					reportSignature: reportSignatureSnapshot
 				})

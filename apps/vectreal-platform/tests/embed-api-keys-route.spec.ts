@@ -2,10 +2,11 @@
  * The route's guards, with the database mocked out.
  *
  * `embed-key-options.spec.ts` proves the shaping rules answer correctly. This
- * one proves the route *asks* them, and asserts the two properties that have no
- * other home: that a non-member is told the project does not exist rather than
- * that they may not see it, and that the rotated session cookie survives every
- * response - including the two `ApiResponse` statics that take no headers.
+ * one proves the route *asks* them, and asserts the property that has no other
+ * home: that a non-member is told the project does not exist rather than that
+ * they may not see it. The rotated session cookie is not this route's to carry:
+ * `sessionCookieMiddleware` puts it on every response, and its spec proves that
+ * through React Router's own handler for a resource route like this one.
  *
  * `dashboard-mutations-execution.spec.ts` is the template for the mocking.
  */
@@ -57,13 +58,9 @@ const routeArgs = (request: Request) =>
 		params: { projectId: PROJECT_ID }
 	}) as unknown as LoaderFunctionArgs & ActionFunctionArgs
 
-/** The rotated Supabase cookie every response has to carry back. */
-const SESSION_COOKIE = 'sb-access-token=rotated; Path=/'
-
 function authenticateAs(role: 'owner' | 'admin' | 'member' | null) {
 	vi.mocked(getAuthUser).mockResolvedValue({
-		user: { id: 'user-1' },
-		headers: new Headers({ 'Set-Cookie': SESSION_COOKIE })
+		user: { id: 'user-1' }
 	} as unknown as Awaited<ReturnType<typeof getAuthUser>>)
 
 	vi.mocked(resolveProjectMembership).mockResolvedValue(
@@ -411,73 +408,5 @@ describe('action', () => {
 			success: false,
 			quota: { limitKey: 'api_keys_per_org', plan: 'free', upgradeTo: 'pro' }
 		})
-	})
-})
-
-describe('the rotated session cookie survives every response', () => {
-	/*
-	  `ApiResponse.badRequest` and `.quotaExceeded` are the only two statics that
-	  accept no headers, so both need the local `withHeaders` wrapper. Dropping it
-	  loses a rotated Supabase cookie and silently desynchronizes the session -
-	  a failure with no symptom at the point it happens.
-	*/
-	it.each([
-		['success', 'admin' as const, 'ok' as const],
-		['quota refusal', 'owner' as const, 'quota' as const],
-		['repository failure', 'owner' as const, 'error' as const],
-		['unsupported intent', 'admin' as const, 'intent' as const]
-	])('carries it on a %s', async (_label, role, outcome) => {
-		authenticateAs(role)
-
-		if (outcome === 'quota') {
-			vi.mocked(createApiKey).mockRejectedValue(
-				new QuotaExceededError({
-					limitKey: 'api_keys_per_org',
-					currentValue: 3,
-					limit: 3,
-					plan: 'free',
-					upgradeTo: 'pro',
-					message: 'limit'
-				})
-			)
-		} else if (outcome === 'error') {
-			vi.mocked(createApiKey).mockRejectedValue(new Error('database is down'))
-		} else {
-			vi.mocked(createApiKey).mockResolvedValue({
-				apiKey: {
-					id: 'k',
-					name: 'k',
-					keyPreview: 'ab3x',
-					active: true,
-					expiresAt: null,
-					revokedAt: null,
-					lastUsedAt: null,
-					createdAt: new Date('2026-08-22')
-				},
-				plaintext: 'vctrl_x'
-			} as unknown as Awaited<ReturnType<typeof createApiKey>>)
-		}
-
-		const body = new FormData()
-		body.set('intent', outcome === 'intent' ? 'destroy' : 'create')
-		body.set('csrf', 'token')
-
-		const response = (await action(
-			routeArgs(
-				new Request(
-					`https://vectreal.com/api/projects/${PROJECT_ID}/api-keys`,
-					{ method: 'POST', body }
-				)
-			)
-		)) as Response
-
-		expect(response.headers.get('Set-Cookie')).toBe(SESSION_COOKIE)
-	})
-
-	it('carries it on the loader too', async () => {
-		authenticateAs('admin')
-		const response = (await loadKeys()) as Response
-
-		expect(response.headers.get('Set-Cookie')).toBe(SESSION_COOKIE)
 	})
 })

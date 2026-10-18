@@ -27,6 +27,16 @@ describe('measuredBytes', () => {
 		expect(measuredBytes([file('a.gltf', 10), file('a.bin', 30)])).toBe(40)
 	})
 
+	it('counts the images an FBX reads from beside it, and nothing else', () => {
+		expect(
+			measuredBytes([
+				file('car.fbx', 10),
+				file('paint.png', 30),
+				file('paint.psd', 900)
+			])
+		).toBe(40)
+	})
+
 	it('counts everything when nothing in it is a model', () => {
 		expect(measuredBytes([file('a.png', 5), file('b.png', 7)])).toBe(12)
 	})

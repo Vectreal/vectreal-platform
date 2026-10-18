@@ -86,6 +86,10 @@ describe('the deployment that has to configure it', () => {
 	const script = () => read('terraform/scripts/setup-fly-secrets.sh')
 	const manifestSection = (from: string, to: string) => {
 		const source = script()
+		// A renamed anchor makes indexOf return -1 and the slice silently widen
+		// to most of the file, where every assertion below would still pass.
+		expect(source, from).toContain(from)
+		expect(source, to).toContain(to)
 		return source.slice(source.indexOf(from), source.indexOf(to))
 	}
 
@@ -104,7 +108,10 @@ describe('the deployment that has to configure it', () => {
 		  array. An unscoped `toContain` here passes on that line instead, and a
 		  mutation replacing the sync loop's array with a literal survived it.
 		*/
-		const sync = manifestSection('sync_fly_secrets()', 'sync_supabase_hook()')
+		const sync = manifestSection(
+			'sync_fly_secrets()',
+			'sync_supabase_auth_hooks()'
+		)
 
 		expect(sync).toContain('for name in "${FLY_SECRETS_REQUIRED[@]}"; do')
 		// Resolved per environment, so staging and production get their own.
@@ -140,7 +147,7 @@ describe('the deployment that has to configure it', () => {
 		*/
 		const verify = manifestSection(
 			'check_env_secrets()',
-			'section "Supabase auth hook'
+			'section "Supabase auth hooks (live values)"'
 		)
 
 		/*

@@ -1,12 +1,6 @@
 import { Button } from '@shared/components/ui/button'
-import {
-	Empty,
-	EmptyContent,
-	EmptyDescription,
-	EmptyHeader
-} from '@shared/components/ui/empty'
 import { useSetAtom } from 'jotai/react'
-import { Plus } from 'lucide-react'
+import { FolderPlus, Plus } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { data, Link, Outlet, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -18,6 +12,7 @@ import {
 	type ProjectRow,
 	type StatusFilter
 } from '../../../components/dashboard'
+import { EmptyState } from '../../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../../components/shared/confirm-destructive-dialog'
 import { useDashboardMutations } from '../../../hooks/use-dashboard-mutations'
 import { useDashboardTableState } from '../../../hooks/use-dashboard-table-state'
@@ -42,7 +37,7 @@ import type { DashboardEntityRef } from '../../../lib/domain/dashboard/dashboard
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch data needed for this specific route
 	const [organizations, userProjects] = await Promise.all([
@@ -98,15 +93,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 		organizations,
 		projectQuotaByOrganization
 	)
-	return data(
-		{
-			organizations,
-			projects: userProjects,
-			scenes,
-			projectCreationCapabilities
-		},
-		{ headers }
-	)
+	return data({
+		organizations,
+		projects: userProjects,
+		scenes,
+		projectCreationCapabilities
+	})
 }
 
 /**
@@ -131,33 +123,50 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../../components/errors'
 
+/*
+  With no projects yet, two things stop creating one: belonging to no
+  organization, and a plan whose project limit is zero or already reached.
+  Each says which, rather than showing a button that does nothing.
+*/
 const EmptyProjectsState = ({
-	showCreateLink = false
+	showCreateLink = false,
+	hasOrganizations
 }: {
 	showCreateLink?: boolean
-}) => (
-	<Empty>
-		<EmptyHeader>No projects found</EmptyHeader>
-		<EmptyDescription>
-			Get started by creating your first project.
-		</EmptyDescription>
-		<EmptyContent>
-			{showCreateLink ? (
-				<Link to="/dashboard/projects/new">
-					<Button>
-						<Plus className="mr-2 h-4 w-4" />
-						Create Your First Project
-					</Button>
-				</Link>
-			) : (
-				<Button disabled>
-					<Plus className="mr-2 h-4 w-4" />
-					Create Project
+	hasOrganizations: boolean
+}) =>
+	!hasOrganizations ? (
+		<EmptyState
+			icon={FolderPlus}
+			title="Projects live in an organization"
+			description="You are not a member of one yet. An invitation from an owner or admin adds you to theirs."
+		/>
+	) : showCreateLink ? (
+		<EmptyState
+			icon={FolderPlus}
+			title="Create your first project"
+			description="A project holds your scenes and the folders that organize them."
+			action={
+				<Button asChild>
+					<Link to="/dashboard/projects/new">
+						<Plus aria-hidden />
+						Create project
+					</Link>
 				</Button>
-			)}
-		</EmptyContent>
-	</Empty>
-)
+			}
+		/>
+	) : (
+		<EmptyState
+			icon={FolderPlus}
+			title="Your plan has no room for a project"
+			description="Your organizations have reached their project limit."
+			action={
+				<Button asChild variant="secondary">
+					<Link to="/dashboard/usage">View usage</Link>
+				</Button>
+			}
+		/>
+	)
 
 const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 	const { organizations, projects, projectCreationCapabilities, scenes } =
@@ -345,7 +354,10 @@ const ProjectsPage = ({ loaderData }: Route.ComponentProps) => {
 						}}
 					/>
 				) : (
-					<EmptyProjectsState showCreateLink={canCreateProjects} />
+					<EmptyProjectsState
+						showCreateLink={canCreateProjects}
+						hasOrganizations={organizations.length > 0}
+					/>
 				)}
 			</div>
 			<ConfirmDestructiveDialog

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { reanchorHotspotsForScale } from './scene-hotspot-reanchor'
+import { reanchorSceneForScale } from './scene-hotspot-reanchor'
 
 import type { CameraHotspotState } from './scene-hotspot-camera-links'
 import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
@@ -38,22 +38,22 @@ const paired = (): CameraHotspotState => ({
 const targetOf = (state: CameraHotspotState, cameraId: string) =>
 	state.camera.cameras?.find((entry) => entry.cameraId === cameraId)?.target
 
-describe('reanchorHotspotsForScale', () => {
+describe('reanchorSceneForScale', () => {
 	it('scales a hotspot by the ratio between the two normalization scales', () => {
-		const next = reanchorHotspotsForScale(paired(), 1, 2)
+		const next = reanchorSceneForScale(paired(), 1, 2)
 
 		expect(next.hotspots[0].worldPosition).toEqual([4, 8, 12])
 	})
 
 	it('turns the hotspot-owned camera to keep looking at the marker', () => {
-		const next = reanchorHotspotsForScale(paired(), 1, 2)
+		const next = reanchorSceneForScale(paired(), 1, 2)
 
 		expect(targetOf(next, 'cam-a')).toEqual([4, 8, 12])
 	})
 
 	it('scales back down when normalization is reverted', () => {
-		const scaled = reanchorHotspotsForScale(paired(), 1, 2)
-		const reverted = reanchorHotspotsForScale(scaled, 2, 1)
+		const scaled = reanchorSceneForScale(paired(), 1, 2)
+		const reverted = reanchorSceneForScale(scaled, 2, 1)
 
 		expect(reverted.hotspots[0].worldPosition).toEqual([2, 4, 6])
 	})
@@ -67,7 +67,7 @@ describe('reanchorHotspotsForScale', () => {
 			camera('cam-a', { kind: 'hotspot', target: [9, 9, 9] })
 		]
 
-		const next = reanchorHotspotsForScale(state, 1, 2)
+		const next = reanchorSceneForScale(state, 1, 2)
 
 		expect(targetOf(next, 'cam-a')).toEqual([4, 8, 12])
 	})
@@ -78,7 +78,7 @@ describe('reanchorHotspotsForScale', () => {
 			hotspots: [hotspot('h1', [1, 0, 0]), hotspot('h2', [0, 0, 3])]
 		}
 
-		const next = reanchorHotspotsForScale(state, 2, 1)
+		const next = reanchorSceneForScale(state, 2, 1)
 
 		expect(next.hotspots.map((h) => h.worldPosition)).toEqual([
 			[0.5, 0, 0],
@@ -98,7 +98,7 @@ describe('reanchorHotspotsForScale', () => {
 			})
 		]
 
-		const next = reanchorHotspotsForScale(state, 1, 0.5)
+		const next = reanchorSceneForScale(state, 1, 0.5)
 
 		expect(
 			next.camera.cameras?.find((entry) => entry.cameraId === 'cam-a')?.position
@@ -124,25 +124,63 @@ describe('reanchorHotspotsForScale', () => {
 			]
 		}
 
-		const next = reanchorHotspotsForScale(state, 1, 0.5)
+		const next = reanchorSceneForScale(state, 1, 0.5)
 		const cam = next.camera.cameras?.find((entry) => entry.cameraId === 'cam-a')
 
 		expect(cam?.position).toEqual([0, 1, 5])
 		expect(cam?.target).toEqual([1, 2, 3])
 	})
 
-	it('leaves a camera the author framed by hand alone', () => {
-		const next = reanchorHotspotsForScale(paired(), 1, 2)
+	it('moves a camera the author framed by hand with the model', () => {
+		// Left behind, a shrink would frame the model from ten times too far,
+		// and the camera would keep looking where the larger model's centre was.
+		const state = paired()
+		state.camera.cameras = [
+			camera('framed', {
+				kind: 'scene',
+				position: [0, 2, 10],
+				target: [0, 1, 0]
+			})
+		]
 
-		expect(
-			next.camera.cameras?.find((entry) => entry.cameraId === 'default')
-		).toEqual(camera('default', { kind: 'scene', position: [0, 1, 3] }))
+		const next = reanchorSceneForScale(state, 1, 0.5)
+
+		expect(next.camera.cameras?.[0]).toEqual(
+			camera('framed', {
+				kind: 'scene',
+				position: [0, 1, 5],
+				target: [0, 0.5, 0]
+			})
+		)
+	})
+
+	it('moves a camera stored before cameras carried a kind', () => {
+		// `kind` is optional and absent means a scene camera, so older scenes
+		// hold framed cameras with no kind at all.
+		const state = paired()
+		state.camera.cameras = [camera('legacy', { position: [4, 0, 0] })]
+
+		const next = reanchorSceneForScale(state, 1, 2)
+
+		expect(next.camera.cameras?.[0].position).toEqual([8, 0, 0])
+	})
+
+	it('leaves a camera with no stored pose as it is', () => {
+		// It opens on the viewer's own framing, which already follows the model.
+		const state = paired()
+		state.camera.cameras = [camera('default', { kind: 'scene' })]
+
+		const next = reanchorSceneForScale(state, 1, 2)
+
+		expect(next.camera.cameras?.[0]).toEqual(
+			camera('default', { kind: 'scene' })
+		)
 	})
 
 	it('returns the state it was given when the scale did not change', () => {
 		const state = paired()
 
-		expect(reanchorHotspotsForScale(state, 3, 3)).toBe(state)
+		expect(reanchorSceneForScale(state, 3, 3)).toBe(state)
 	})
 
 	it.each([
@@ -161,15 +199,15 @@ describe('reanchorHotspotsForScale', () => {
 			// finiteness clauses are the only thing standing in front of the store.
 			const state = paired()
 
-			expect(reanchorHotspotsForScale(state, previous, next)).toBe(state)
+			expect(reanchorSceneForScale(state, previous, next)).toBe(state)
 		}
 	)
 
 	it('composes across an asymmetric pair of changes', () => {
 		// A symmetric round trip cancels, so it cannot tell a correct ratio from an
 		// inverted one on its own.
-		const once = reanchorHotspotsForScale(paired(), 1, 2)
-		const twice = reanchorHotspotsForScale(once, 2, 0.5)
+		const once = reanchorSceneForScale(paired(), 1, 2)
+		const twice = reanchorSceneForScale(once, 2, 0.5)
 
 		expect(twice.hotspots[0].worldPosition).toEqual([1, 2, 3])
 		expect(targetOf(twice, 'cam-a')).toEqual([1, 2, 3])

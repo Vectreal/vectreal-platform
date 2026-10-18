@@ -393,8 +393,9 @@ export const useDashboardHeaderData = (): DynamicHeaderContent => {
 				}
 			}
 
-			case 'settings': {
-				const config = DASHBOARD_CONTENT.settings
+			case 'settings':
+			case 'connected-agents': {
+				const config = DASHBOARD_CONTENT[routeContext]
 				const breadcrumbs: BreadcrumbItem[] = [
 					{ label: 'Dashboard', to: DASHBOARD_ROUTES.DASHBOARD },
 					{ label: config.title, isLast: true }

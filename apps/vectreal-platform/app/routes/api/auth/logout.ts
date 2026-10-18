@@ -19,7 +19,7 @@ export async function action({ request }: Route.ActionArgs) {
 		return csrfCheck
 	}
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	// Sign out the user
 	const { error } = await client.auth.signOut()
@@ -28,8 +28,5 @@ export async function action({ request }: Route.ActionArgs) {
 		return ApiResponse.serverError(error.message)
 	}
 
-	// Return a success response with headers
-	return redirect('/', {
-		headers
-	})
+	return redirect('/')
 }

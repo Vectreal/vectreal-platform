@@ -1,15 +1,9 @@
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle
-} from '@shared/components/ui/empty'
 import { useSetAtom } from 'jotai/react'
 import { FolderOpen } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { DataTable } from './data-table'
+import { EmptyState } from '../layout-components'
 import { createContentColumns, type ContentRow } from './table-columns'
 import { useDashboardMutationStatus } from '../../hooks/use-dashboard-mutations'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
@@ -37,12 +31,10 @@ import {
  * skeletons were the other half - two components, byte-identical apart from
  * drawing six placeholder rows against five.
  *
- * The empty state is the house shape from `organizations.tsx`: media, title and
- * description inside `EmptyHeader`, at `variant="icon"` rather than a
- * hand-picked icon size (the two copies disagreed there too, at 96px and 48px).
- * `FolderSearch` was wrong on both - nothing has been searched. A search that
- * matches nothing is `DataTable`'s own "No results found"; this fires when the
- * container is genuinely empty.
+ * The empty state is `EmptyState`, the one shape every empty region uses.
+ * `FolderSearch` was the wrong icon on both copies: nothing has been searched.
+ * A search that matches nothing is `DataTable`'s own empty row; this fires
+ * when the container is genuinely empty.
  */
 
 /** The folder fields a row needs. Loaders may hold more; this reads five. */
@@ -189,17 +181,11 @@ export function ContentListing({
 					getRowCanSelect={() => true}
 				/>
 			) : (
-				<Empty>
-					<EmptyHeader>
-						<EmptyMedia variant="icon">
-							<FolderOpen />
-						</EmptyMedia>
-						<EmptyTitle>Nothing here yet</EmptyTitle>
-						<EmptyDescription>
-							Upload a model or create a folder to get started.
-						</EmptyDescription>
-					</EmptyHeader>
-				</Empty>
+				<EmptyState
+					icon={FolderOpen}
+					title="Add your first scene"
+					description="Upload a model to make a scene here, or create a folder to organize scenes."
+				/>
 			)}
 		</div>
 	)

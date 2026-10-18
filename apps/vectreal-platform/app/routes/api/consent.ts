@@ -62,10 +62,7 @@ export async function action({ request }: Route.ActionArgs) {
 			null
 		const userAgent = request.headers.get('User-Agent')
 
-		const { client, headers } = await createSupabaseClient(request)
-		for (const [key, value] of headers.entries()) {
-			responseHeaders.append(key, value)
-		}
+		const { client } = await createSupabaseClient(request)
 		const {
 			data: { user }
 		} = await client.auth.getUser()

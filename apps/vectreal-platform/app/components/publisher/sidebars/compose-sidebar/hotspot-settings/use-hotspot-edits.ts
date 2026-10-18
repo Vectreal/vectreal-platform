@@ -68,8 +68,13 @@ export const sequencedFirst = (hotspots: readonly HotspotDefinition[]) => {
 	}
 }
 
+/**
+ * Trimmed, because the save parser refuses a whitespace-only name as no name
+ * and tells the author to look for this label. Untrimmed, a name of one space
+ * was listed blank, and the row that message points at did not exist.
+ */
 export const hotspotDisplayName = (hotspot: HotspotDefinition) =>
-	hotspot.name || 'Unnamed hotspot'
+	hotspot.name.trim() || 'Unnamed hotspot'
 
 /**
  * Every edit the panel makes to a marker. Each one that touches a marker's

@@ -79,9 +79,7 @@ export async function action({
 		return csrfCheck
 	}
 
-	const { user, userWithDefaults, headers } =
-		await loadAuthenticatedUser(request)
-	const responseHeaders = new Headers(headers)
+	const { user, userWithDefaults } = await loadAuthenticatedUser(request)
 
 	/*
 	  The kill switch, which now denies when it cannot be read rather than
@@ -111,9 +109,7 @@ export async function action({
 		}
 
 		const denial = CHECKOUT_GATE_DENIAL[gate.reason]
-		return ApiResponse.error(denial.message, denial.status, {
-			headers: responseHeaders
-		})
+		return ApiResponse.error(denial.message, denial.status)
 	}
 
 	let body: { planId?: unknown; priceId?: unknown; billingPeriod?: unknown }
@@ -164,8 +160,7 @@ export async function action({
 		})
 	) {
 		return ApiResponse.forbidden(
-			'Only organization owners and admins can manage billing',
-			{ headers: responseHeaders }
+			'Only organization owners and admins can manage billing'
 		)
 	}
 
@@ -268,7 +263,7 @@ export async function action({
 			billingPeriod
 		})
 
-		return ApiResponse.created({ redirectUrl }, { headers: responseHeaders })
+		return ApiResponse.created({ redirectUrl })
 	}
 
 	// New subscription - use Stripe-hosted Checkout.
@@ -306,8 +301,5 @@ export async function action({
 		billingPeriod
 	})
 
-	return ApiResponse.created(
-		{ redirectUrl: session.url },
-		{ headers: responseHeaders }
-	)
+	return ApiResponse.created({ redirectUrl: session.url })
 }

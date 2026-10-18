@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Vectreal Platform - Fly.io Secrets + Supabase Hook Sync
+# Vectreal Platform - Fly.io Secrets + Supabase Auth Hook Sync
 # =============================================================================
 # Usage:
 #   ./setup-fly-secrets.sh               # sync both envs
@@ -18,11 +18,16 @@
 #
 # Syncs:
 #   1. Fly.io app secrets (fly secrets set)
-#   2. Supabase send_email hook URI + secret (via Management API)
+#   2. Supabase auth hooks (via Management API): send_email URI + secret, and
+#      custom_access_token, enabled only once its function exists
+#   3. The OAuth 2.1 server, on exactly where the token hook is, and the CLI's
+#      public OAuth client (via the project's Auth admin API)
 #
 # --verify is a gate, not a report: it exits non-zero when a *required* secret
-# is missing or the live hook URI does not match APPLICATION_URL. An optional
-# one that is unset warns and passes, which is what the sync does with it.
+# is missing, when either auth hook is disabled or its live URI drifted, when
+# the token hook's function is missing, when the OAuth server is off, drifted or
+# open to dynamic registration, or when the CLI client is missing or drifted. An optional secret that is unset warns
+# and passes, which is what the sync does with it.
 # =============================================================================
 
 RED='\033[0;31m'
@@ -268,6 +273,136 @@ strip_hook_prefix() {
   printf '%s' "$1" | tr -d '\r\n' | sed -e 's/^v1,whsec_//' -e 's/^whsec_//' | tr -d ' '
 }
 
+# The token hook is a Postgres function (migration 0028), the same one
+# `[auth.hook.custom_access_token]` in supabase/config.toml names for the local
+# stack. send_email stays an HTTP hook because it renders and sends mail from
+# the app; this one only edits claims, on every token Auth issues.
+CUSTOM_ACCESS_TOKEN_HOOK_URI="pg-functions://postgres/public/custom_access_token_hook"
+
+# The OAuth 2.1 server, on exactly where the token hook is: an agent token
+# without the audience that hook writes is refused by /api/v1 anyway. Auth
+# sends the browser to the Site URL plus this path to approve a client, and the
+# app serves it (app/routes/oauth-consent-page). Clients are registered here,
+# never by themselves, so dynamic registration stays off.
+OAUTH_AUTHORIZATION_PATH="/oauth/consent"
+
+# The CLI's pre-registered public client. The app finds it by this name to
+# serve GET /api/v1/cli/client (CLI_OAUTH_CLIENT_NAME in
+# app/lib/domain/agent/agent-cli-client.server.ts), so the id Supabase generates
+# is never copied anywhere. Auth matches redirect URIs exactly, so the CLI
+# listens on the first free one of these fixed ports.
+CLI_OAUTH_CLIENT_NAME="Vectreal CLI"
+CLI_REDIRECT_URIS='["http://127.0.0.1:51730/callback","http://127.0.0.1:51731/callback","http://127.0.0.1:51732/callback"]'
+
+# The PATCH that turns the OAuth server on returns before Auth serves it: for a
+# few seconds the clients endpoint still answers 404 feature_disabled, as it
+# does wherever the server is off. The sync waits that answer out, and only that
+# one, for up to this many tries this many seconds apart.
+CLI_CLIENT_LIST_ATTEMPTS=10
+CLI_CLIENT_LIST_DELAY=3
+
+# Prints the CLI client as JSON, or nothing when it is not registered.
+# Returns 0 when the lookup itself worked, 2 when Auth reports the OAuth server
+# disabled, 1 when it failed any other way.
+find_cli_client() {
+  local supabase_url="$1" secret_key="$2"
+  local response http_code body
+  response=$(curl -s -w "\n%{http_code}" \
+    "${supabase_url}/auth/v1/admin/oauth/clients?per_page=100" \
+    -H "apikey: $secret_key" -H "Authorization: Bearer $secret_key" 2>&1)
+  http_code=$(printf '%s' "$response" | tail -n1)
+  body=$(printf '%s' "$response" | sed '$d')
+  if [[ "$http_code" == 404 && "$(printf '%s' "$body" | jq -r '.error_code?' 2>/dev/null)" == feature_disabled ]]; then
+    return 2
+  fi
+  [[ "$http_code" =~ ^2 ]] || return 1
+  printf '%s' "$body" | jq -c --arg name "$CLI_OAUTH_CLIENT_NAME" \
+    'first(.clients[]? | select(.client_name == $name)) // empty' || return 1
+}
+
+# Whether a CLI client is public with no secret, as the CLI's PKCE exchange
+# needs. A confidential one cannot be turned public in place, so a wrong shape
+# is reported, never repaired: delete the client and run the sync again.
+cli_client_is_public() {
+  [[ "$(printf '%s' "$1" | jq -r '"\(.client_type) \(.token_endpoint_auth_method)"')" == "public none" ]]
+}
+
+# Registers the CLI client when it is missing and puts its redirect URIs back
+# when they drifted. Idempotent: a run that finds it as it should be sends
+# nothing. Returns 0 when the client is as it should be afterwards.
+ensure_cli_client() {
+  local supabase_url="$1" secret_key="$2" label="$3"
+  local client status attempt
+  for (( attempt = 1; ; attempt++ )); do
+    client=$(find_cli_client "$supabase_url" "$secret_key") && status=0 || status=$?
+    (( status == 2 && attempt < CLI_CLIENT_LIST_ATTEMPTS )) || break
+    sleep "$CLI_CLIENT_LIST_DELAY"
+  done
+  if (( status == 2 )); then
+    err "$label - Auth still reports the OAuth server disabled after ${CLI_CLIENT_LIST_ATTEMPTS} tries"
+    return 1
+  elif (( status != 0 )); then
+    err "$label - could not list OAuth clients"
+    return 1
+  fi
+
+  local method url payload
+  if [[ -n "$client" ]] && ! cli_client_is_public "$client"; then
+    err "$label - the \"$CLI_OAUTH_CLIENT_NAME\" client is not public with no secret; delete it and sync again"
+    return 1
+  elif [[ -z "$client" ]]; then
+    method=POST
+    url="${supabase_url}/auth/v1/admin/oauth/clients"
+    payload=$(jq -n --arg name "$CLI_OAUTH_CLIENT_NAME" --argjson uris "$CLI_REDIRECT_URIS" \
+      '{client_name: $name, redirect_uris: $uris, client_type: "public",
+        token_endpoint_auth_method: "none",
+        grant_types: ["authorization_code", "refresh_token"]}')
+  elif [[ "$(printf '%s' "$client" | jq -c '.redirect_uris | sort')" != "$(printf '%s' "$CLI_REDIRECT_URIS" | jq -c 'sort')" ]]; then
+    method=PUT
+    url="${supabase_url}/auth/v1/admin/oauth/clients/$(printf '%s' "$client" | jq -r .client_id)"
+    payload=$(jq -n --argjson uris "$CLI_REDIRECT_URIS" '{redirect_uris: $uris}')
+  else
+    ok "$label - CLI client: $(printf '%s' "$client" | jq -r .client_id)"
+    return 0
+  fi
+
+  local response http_code body
+  response=$(curl -s -w "\n%{http_code}" -X "$method" "$url" \
+    -H "apikey: $secret_key" -H "Authorization: Bearer $secret_key" \
+    -H "Content-Type: application/json" -d "$payload" 2>&1)
+  http_code=$(printf '%s' "$response" | tail -n1)
+  body=$(printf '%s' "$response" | sed '$d')
+  if [[ ! "$http_code" =~ ^2 ]]; then
+    err "$label - HTTP ${http_code} ${method} CLI client: $body"
+    return 1
+  fi
+  ok "$label - CLI client ${method}: $(printf '%s' "$body" | jq -r .client_id)"
+}
+
+# Auth fails every token while the hook names a function that does not exist,
+# so nothing enables it, or calls it healthy, until the function is there.
+# Reads the catalogs, which the read-only role can see whatever 0027 revoked.
+# Returns 0 when present, 1 when absent, 2 when the check itself failed.
+custom_access_token_function_exists() {
+  local project_ref="$1"
+  local sql="select exists (select 1 from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'custom_access_token_hook') as present"
+  local response http_code body
+  response=$(curl -s -w "\n%{http_code}" -X POST \
+    "https://api.supabase.com/v1/projects/${project_ref}/database/query/read-only" \
+    -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg query "$sql" '{query: $query}')" 2>&1)
+  http_code=$(printf '%s' "$response" | tail -n1)
+  body=$(printf '%s' "$response" | sed '$d')
+
+  [[ "$http_code" =~ ^2 ]] || return 2
+  case "$(printf '%s' "$body" | jq -r '.[0].present' 2>/dev/null)" in
+    true) return 0 ;;
+    false) return 1 ;;
+    *) return 2 ;;
+  esac
+}
+
 # ===========================================================================
 # VERIFY MODE
 # ===========================================================================
@@ -333,15 +468,17 @@ if [[ "$MODE" == "verify" ]]; then
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
     check_env_secrets "vectreal-platform"
 
-  section "Supabase auth hook (live value)"
+  section "Supabase auth hooks (live values)"
 
   # The one thing here that is a real drift check rather than a presence check.
-  # The hook URI is what decides whether confirmation emails are delivered at
-  # all, and it lives in Supabase's project config - editable in a dashboard,
-  # invisible to this repo. Reading it back is the only way the repo learns that
-  # someone changed it.
-  check_hook_uri() {
+  # The hooks live in Supabase's project config - editable in a dashboard,
+  # invisible to this repo - and each one decides something for every user:
+  # send_email whether any auth email is delivered, custom_access_token whether
+  # agent tokens carry the audience the API checks. Reading them back is the
+  # only way the repo learns that someone changed one.
+  check_auth_hooks() {
     local project_ref="$1" expected_url="$2" label="$3"
+    local supabase_url="$4" secret_key="$5"
     local expected="${expected_url}/auth/send-email"
 
     if [[ -z "$project_ref" || -z "$expected_url" ]]; then
@@ -371,20 +508,85 @@ if [[ "$MODE" == "verify" ]]; then
       err "$label - send_email hook is DISABLED; no auth email is delivered"
       VERIFY_FAILED+=("$label/hook-disabled")
     elif [[ "$actual" != "$expected" ]]; then
-      err "$label - hook URI drifted"
+      err "$label - send_email hook URI drifted"
       printf "      expected: %s\n      actual:   %s\n" "$expected" "$actual"
       VERIFY_FAILED+=("$label/hook-uri")
     else
-      ok "$label - $actual"
+      ok "$label - send_email: $actual"
     fi
+
+    enabled=$(printf '%s' "$body" | jq -r '.hook_custom_access_token_enabled // false')
+    actual=$(printf '%s' "$body" | jq -r '.hook_custom_access_token_uri // ""')
+
+    if [[ "$enabled" != "true" ]]; then
+      err "$label - custom_access_token hook is DISABLED; agent tokens lack their audience"
+      VERIFY_FAILED+=("$label/token-hook-disabled")
+    elif [[ "$actual" != "$CUSTOM_ACCESS_TOKEN_HOOK_URI" ]]; then
+      err "$label - custom_access_token hook URI drifted"
+      printf "      expected: %s\n      actual:   %s\n" "$CUSTOM_ACCESS_TOKEN_HOOK_URI" "$actual"
+      VERIFY_FAILED+=("$label/token-hook-uri")
+    else
+      ok "$label - custom_access_token: $actual"
+    fi
+
+    enabled=$(printf '%s' "$body" | jq -r '.oauth_server_enabled // false')
+    actual=$(printf '%s' "$body" | jq -r '.oauth_server_authorization_path // ""')
+    if [[ "$enabled" != "true" ]]; then
+      err "$label - OAuth server is DISABLED; no agent can sign in"
+      VERIFY_FAILED+=("$label/oauth-disabled")
+    elif [[ "$actual" != "$OAUTH_AUTHORIZATION_PATH" ]]; then
+      err "$label - OAuth authorization path drifted"
+      printf "      expected: %s\n      actual:   %s\n" "$OAUTH_AUTHORIZATION_PATH" "$actual"
+      VERIFY_FAILED+=("$label/oauth-path")
+    else
+      ok "$label - OAuth server: on, consent at $actual"
+    fi
+    if [[ "$(printf '%s' "$body" | jq -r '.oauth_server_allow_dynamic_registration // false')" != "false" ]]; then
+      err "$label - OAuth dynamic registration is ON; clients must be registered by this script"
+      VERIFY_FAILED+=("$label/oauth-dcr")
+    fi
+
+    local client
+    if ! client=$(find_cli_client "$supabase_url" "$secret_key"); then
+      err "$label - could not list OAuth clients"
+      VERIFY_FAILED+=("$label/cli-client-read")
+    elif [[ -z "$client" ]]; then
+      err "$label - the \"$CLI_OAUTH_CLIENT_NAME\" OAuth client is not registered"
+      VERIFY_FAILED+=("$label/cli-client-missing")
+    elif ! cli_client_is_public "$client"; then
+      err "$label - the \"$CLI_OAUTH_CLIENT_NAME\" client is not public with no secret"
+      VERIFY_FAILED+=("$label/cli-client-shape")
+    elif [[ "$(printf '%s' "$client" | jq -c '.redirect_uris | sort')" != "$(printf '%s' "$CLI_REDIRECT_URIS" | jq -c 'sort')" ]]; then
+      err "$label - CLI client redirect URIs drifted"
+      VERIFY_FAILED+=("$label/cli-client-uris")
+    else
+      ok "$label - CLI client: $(printf '%s' "$client" | jq -r .client_id)"
+    fi
+
+    # Checked whether or not the hook is on: a missing function is what makes
+    # turning it on fail every sign-in, so it is worth knowing before that.
+    custom_access_token_function_exists "$project_ref"
+    case $? in
+      0) ok "$label - custom_access_token_hook function present" ;;
+      1)
+        err "$label - custom_access_token_hook function is MISSING; migration 0028 has not run"
+        VERIFY_FAILED+=("$label/token-hook-function")
+        ;;
+      *)
+        err "$label - could not check for the custom_access_token_hook function"
+        VERIFY_FAILED+=("$label/token-hook-function-read")
+        ;;
+    esac
   }
 
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
-    check_hook_uri "$(resolve SUPABASE_PROJECT_REF STAGING)" \
-      "$(resolve APPLICATION_URL STAGING)" "staging"
+    check_auth_hooks "$(resolve SUPABASE_PROJECT_REF STAGING)" \
+      "$(resolve APPLICATION_URL STAGING)" "staging" \
+      "$(resolve SUPABASE_URL STAGING)" "$(resolve SUPABASE_SECRET_KEY STAGING)"
   [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
-    check_hook_uri "$(resolve SUPABASE_PROJECT_REF PROD)" \
-      "$(resolve APPLICATION_URL PROD)" "prod"
+    check_auth_hooks "$(resolve SUPABASE_PROJECT_REF PROD)" \
+      "$(resolve APPLICATION_URL PROD)" "prod" \
+      "$(resolve SUPABASE_URL PROD)" "$(resolve SUPABASE_SECRET_KEY PROD)"
 
   printf "\n"
   if [[ ${#VERIFY_FAILED[@]} -gt 0 ]]; then
@@ -457,23 +659,65 @@ sync_fly_secrets() {
   fi
 }
 
-sync_supabase_hook() {
+sync_supabase_auth_hooks() {
   local project_ref="$1" hook_secret_raw="$2" app_url="$3" label="$4"
+  local supabase_url="$5" secret_key="$6"
   local hook_uri="${app_url}/auth/send-email"
+
+  # Built with jq rather than interpolated, so no secret or URL can break the
+  # JSON it is sent in.
+  local payload
+  payload=$(jq -n --arg uri "$hook_uri" --arg secrets "$hook_secret_raw" \
+    '{hook_send_email_enabled: true, hook_send_email_uri: $uri, hook_send_email_secrets: $secrets}')
+
+  # The token hook is on exactly where its function exists. On anywhere else it
+  # fails every sign-in, so it is switched off there - even if someone turned it
+  # on by hand - while that environment's send_email hook is still synced and
+  # the token hook is reported as a failure. When the check itself cannot be
+  # read, the live setting is left as it is, because nothing is known either way.
+  local token_hook_ready=false
+  custom_access_token_function_exists "$project_ref"
+  case $? in
+    0)
+      token_hook_ready=true
+      payload=$(printf '%s' "$payload" | jq --arg uri "$CUSTOM_ACCESS_TOKEN_HOOK_URI" \
+        --arg path "$OAUTH_AUTHORIZATION_PATH" \
+        '. + {hook_custom_access_token_enabled: true, hook_custom_access_token_uri: $uri,
+              oauth_server_enabled: true, oauth_server_authorization_path: $path,
+              oauth_server_allow_dynamic_registration: false}')
+      ;;
+    1)
+      err "$label - custom_access_token_hook function is MISSING; run migrations first. Switching the token hook and the OAuth server off"
+      payload=$(printf '%s' "$payload" | jq '. + {hook_custom_access_token_enabled: false, oauth_server_enabled: false}')
+      ;;
+    *) err "$label - could not check for the custom_access_token_hook function; token hook and OAuth server left as they are" ;;
+  esac
+
   local response http_code body
   response=$(curl -s -w "\n%{http_code}" -X PATCH \
     "https://api.supabase.com/v1/projects/${project_ref}/config/auth" \
     -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"hook_send_email_enabled\":true,\"hook_send_email_uri\":\"${hook_uri}\",\"hook_send_email_secrets\":\"${hook_secret_raw}\"}" 2>&1)
+    -d "$payload" 2>&1)
   http_code=$(printf '%s' "$response" | tail -n1)
   body=$(printf '%s' "$response" | sed '$d')
-  if [[ "$http_code" =~ ^2 ]]; then
-    HOOKS_SYNCED+=("$label")
-    ok "$label - URI: $hook_uri"
-  else
+  if [[ ! "$http_code" =~ ^2 ]]; then
     HOOKS_FAILED+=("$label")
     err "$label - HTTP ${http_code}: $body"
+    return
+  fi
+
+  ok "$label - send_email: $hook_uri"
+  if [[ "$token_hook_ready" == "true" ]]; then
+    ok "$label - custom_access_token: $CUSTOM_ACCESS_TOKEN_HOOK_URI"
+    ok "$label - OAuth server: on, consent at $OAUTH_AUTHORIZATION_PATH"
+    if ensure_cli_client "$supabase_url" "$secret_key" "$label"; then
+      HOOKS_SYNCED+=("$label")
+    else
+      HOOKS_FAILED+=("$label/cli_client")
+    fi
+  else
+    HOOKS_FAILED+=("$label/custom_access_token")
   fi
 }
 
@@ -482,15 +726,17 @@ sync_supabase_hook() {
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
   sync_fly_secrets prod "vectreal-platform"
 
-section "Supabase auth hook sync"
+section "Supabase auth hooks sync"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "staging" ]] && \
-  sync_supabase_hook "$(resolve SUPABASE_PROJECT_REF STAGING)" \
+  sync_supabase_auth_hooks "$(resolve SUPABASE_PROJECT_REF STAGING)" \
     "$(resolve SEND_EMAIL_HOOK_SECRET STAGING)" \
-    "$(resolve APPLICATION_URL STAGING)" "staging"
+    "$(resolve APPLICATION_URL STAGING)" "staging" \
+    "$(resolve SUPABASE_URL STAGING)" "$(resolve SUPABASE_SECRET_KEY STAGING)"
 [[ -z "$ENV_FILTER" || "$ENV_FILTER" == "prod" ]] && \
-  sync_supabase_hook "$(resolve SUPABASE_PROJECT_REF PROD)" \
+  sync_supabase_auth_hooks "$(resolve SUPABASE_PROJECT_REF PROD)" \
     "$(resolve SEND_EMAIL_HOOK_SECRET PROD)" \
-    "$(resolve APPLICATION_URL PROD)" "prod"
+    "$(resolve APPLICATION_URL PROD)" "prod" \
+    "$(resolve SUPABASE_URL PROD)" "$(resolve SUPABASE_SECRET_KEY PROD)"
 
 printf "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
 printf "  Fly.io apps updated: ${GREEN}%d${NC}\n" "${#SECRETS_SET[@]}"

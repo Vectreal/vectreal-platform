@@ -22,6 +22,7 @@ on:
       - 'packages/core/**'
       - 'packages/embed/**'
       - 'packages/hooks/**'
+      - 'packages/sdk/**'
       - 'packages/viewer/**'
       - 'packages/viewer-e2e/**'
       - 'shared/**'
@@ -161,6 +162,8 @@ jobs:
     name: Integration Tests
     permissions:
       contents: read
+      # Lets GITHUB_TOKEN pull the service image below.
+      packages: read
     runs-on: ubuntu-22.04
     env:
       NX_DAEMON: 'false'
@@ -171,10 +174,16 @@ jobs:
       # roles and an auth schema - a second description of the database that can
       # drift from the one `supabase start` gives developers. This image already
       # carries them. The tag tracks `[db] major_version` in supabase/config.toml.
-      # Pulled from Supabase's own ECR Public repository, the same digest as
-      # Docker Hub's, whose anonymous limit failed this job with a 429.
+      # Pulled from Supabase's own GHCR package, the same digest as Docker Hub
+      # and ECR Public, and authenticated with GITHUB_TOKEN. Anonymous pulls
+      # from both of those are metered per IP, which GitHub's runners share, so
+      # other tenants used up the quota: Docker Hub failed this job with a 429,
+      # ECR Public with "Data limit exceeded".
       postgres:
-        image: public.ecr.aws/supabase/postgres:17.4.1.075
+        image: ghcr.io/supabase/postgres:17.4.1.075
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
         env:
           POSTGRES_PASSWORD: postgres
         # 54322 is the port `supabase start` publishes and the port the

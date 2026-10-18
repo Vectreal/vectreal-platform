@@ -57,8 +57,7 @@ const membership = {
 
 beforeEach(() => {
 	vi.mocked(getAuthUser).mockResolvedValue({
-		user: { id: USER_ID },
-		headers: new Headers()
+		user: { id: USER_ID }
 	} as never)
 	vi.mocked(downloadAsset).mockResolvedValue({
 		data: new Uint8Array([1, 2, 3]),

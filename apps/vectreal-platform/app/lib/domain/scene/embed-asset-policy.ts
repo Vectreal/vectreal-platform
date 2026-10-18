@@ -5,7 +5,16 @@ import {
 	MESHOPT_EXTENSION
 } from '@vctrl/core/model-loader'
 
-import type { PublishedModelRef, SceneAssetRefMap } from '@vctrl/core'
+import {
+	hotspotArtworkAssetIdFromUrl,
+	isHotspotArtworkAsset
+} from './hotspot-artwork'
+
+import type {
+	HotspotDefinition,
+	PublishedModelRef,
+	SceneAssetRefMap
+} from '@vctrl/core'
 
 /**
  * The single owner of "what may an external embed fetch?".
@@ -44,13 +53,15 @@ export interface PublishedModelRow {
 /**
  * Every asset id an embed is allowed to fetch, and therefore every asset id the
  * embed manifest is allowed to reference. Deliberately a closed set: the
- * optimized GLB, the persisted shadow bake that lives outside it, and the
- * scene's saved thumbnail when its author chose to show it while loading.
+ * optimized GLB, the persisted shadow bake that lives outside it, the scene's
+ * saved thumbnail when its author chose to show it while loading, and the
+ * uploaded artwork of the markers an embed draws.
  */
 export interface EmbedServableAssets {
 	publishedAssetId: string
 	bakeAssetId: string | null
 	thumbnailAssetId: string | null
+	hotspotArtworkAssetIds: readonly string[]
 }
 
 const GLB_MIME_TYPE = 'model/gltf-binary'
@@ -67,16 +78,21 @@ const FALLBACK_GLB_FILENAME = 'scene.glb'
  * assets are deduplicated per project by content hash.
  */
 export function selectEmbedServableAssets({
+	sceneId,
 	publishedAssetId,
 	sceneAssets,
 	bakedShadowAssetId,
-	showsLoadingThumbnail = false
+	showsLoadingThumbnail = false,
+	hotspots
 }: {
+	sceneId: string
 	publishedAssetId: string
 	sceneAssets: readonly EmbedAssetRow[]
 	bakedShadowAssetId?: string | null
 	/** The author's `presentation.showLoadingThumbnail`. */
 	showsLoadingThumbnail?: boolean
+	/** The scene's stored hotspots, before any redaction. */
+	hotspots?: readonly HotspotDefinition[] | null
 }): EmbedServableAssets {
 	const declaredBakeId = bakedShadowAssetId?.trim() || null
 
@@ -96,7 +112,50 @@ export function selectEmbedServableAssets({
 				?.id ?? null)
 		: null
 
-	return { publishedAssetId, bakeAssetId, thumbnailAssetId }
+	return {
+		publishedAssetId,
+		bakeAssetId,
+		thumbnailAssetId,
+		hotspotArtworkAssetIds: selectHotspotArtwork(sceneId, sceneAssets, hotspots)
+	}
+}
+
+/**
+ * The uploaded artwork an embed draws, and therefore may fetch.
+ *
+ * The bake's two-source rule again, because a marker's `payloadUrl` is just as
+ * user-writable through the save path: on its own it could name any asset the
+ * scene links - an original texture, the kept source model - and have it
+ * served to anonymous embed traffic. So the declared id has to be linked to
+ * the scene AND be a row stored as artwork.
+ *
+ * Only markers the embed actually draws declare anything. An internal marker
+ * is dropped from the embed and a hidden one loses its artwork
+ * (`redactSettingsForEmbed`), and a dot never renders an image, so none of
+ * them may unlock a fetch either.
+ */
+function selectHotspotArtwork(
+	sceneId: string,
+	sceneAssets: readonly EmbedAssetRow[],
+	hotspots: readonly HotspotDefinition[] | null | undefined
+): string[] {
+	const declared = new Set(
+		(hotspots ?? [])
+			.filter(
+				(hotspot) =>
+					!hotspot.internalOnly &&
+					hotspot.visible !== false &&
+					hotspot.stylePreset !== 'dot'
+			)
+			.map((hotspot) =>
+				hotspotArtworkAssetIdFromUrl(sceneId, hotspot.payloadUrl)
+			)
+			.filter((assetId): assetId is string => assetId !== null)
+	)
+
+	return sceneAssets
+		.filter((asset) => declared.has(asset.id) && isHotspotArtworkAsset(asset))
+		.map((asset) => asset.id)
 }
 
 export function isEmbedServableAssetId(
@@ -107,7 +166,8 @@ export function isEmbedServableAssetId(
 		assetId === servable.publishedAssetId ||
 		(servable.bakeAssetId !== null && assetId === servable.bakeAssetId) ||
 		(servable.thumbnailAssetId !== null &&
-			assetId === servable.thumbnailAssetId)
+			assetId === servable.thumbnailAssetId) ||
+		servable.hotspotArtworkAssetIds.includes(assetId)
 	)
 }
 

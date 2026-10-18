@@ -4,6 +4,7 @@ import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
 import { buildTextureThumbnailUrls } from './scene-texture-thumbnails'
+import { hotspotArtworkFileName } from '../scene/hotspot-artwork'
 
 const url = (assetId: string) => `/assets/${assetId}`
 
@@ -36,6 +37,24 @@ describe('buildTextureThumbnailUrls', () => {
 		expect(
 			buildTextureThumbnailUrls(
 				[{ id: 't', name: SCENE_THUMBNAIL_FILENAME, mimeType: 'image/webp' }],
+				url
+			)
+		).toEqual({})
+	})
+
+	it("leaves out a marker's uploaded artwork, which is no texture either", () => {
+		expect(
+			buildTextureThumbnailUrls(
+				[
+					{
+						id: 'a',
+						name: hotspotArtworkFileName(
+							'11111111-1111-4111-8111-111111111111',
+							'image/png'
+						),
+						mimeType: 'image/png'
+					}
+				],
 				url
 			)
 		).toEqual({})

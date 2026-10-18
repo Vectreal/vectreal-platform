@@ -30,7 +30,8 @@ export const MAX_HOTSPOT_URL_LENGTH = 8192
  */
 export const MAX_HOTSPOT_BODY_LENGTH = 2000
 
-const ALLOWED_IMAGE_MEDIA_TYPES = [
+/** The image types a marker's artwork may be, inline or uploaded. */
+export const HOTSPOT_IMAGE_MEDIA_TYPES = [
 	'image/png',
 	'image/jpeg',
 	'image/webp',
@@ -62,7 +63,7 @@ export function isAllowedHotspotPayloadUrl(value: string): boolean {
 	const normalized = value.toLowerCase()
 
 	if (normalized.startsWith('data:')) {
-		return ALLOWED_IMAGE_MEDIA_TYPES.includes(dataMediaType(normalized))
+		return HOTSPOT_IMAGE_MEDIA_TYPES.includes(dataMediaType(normalized))
 	}
 
 	return normalized.startsWith('https://') && value.length > 'https://'.length

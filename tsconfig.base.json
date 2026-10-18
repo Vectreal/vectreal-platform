@@ -43,7 +43,8 @@
 			"@vctrl/core/model-exporter": [
 				"packages/core/src/model-exporter/index.ts"
 			],
-			"@vctrl/embed": ["./packages/embed/src/index.ts"]
+			"@vctrl/embed": ["./packages/embed/src/index.ts"],
+			"@vctrl/sdk": ["./packages/sdk/src/index.ts"]
 		},
 		"strict": false,
 		"noUncheckedSideEffectImports": false,

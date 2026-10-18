@@ -35,12 +35,19 @@ export async function action({ request }: Route.ActionArgs) {
 		process.env.APPLICATION_URL || process.env.VECTREAL_URL || requestUrl.origin
 	const applicationUrl = String(appOrigin)
 
-	// Rate-limit before provider validation so invalid-provider probes are throttled too.
+	const knownProvider =
+		typeof provider === 'string' && OAUTH_PROVIDERS.has(provider)
+			? provider
+			: null
+
+	// Rate-limit before provider validation so invalid-provider probes are
+	// throttled too. They share one key: keying on the raw value let a caller
+	// rotate it for a fresh counter on every request.
 	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-social-signin',
 		maxRequests: 30,
 		windowMs: 60 * 1000,
-		keyParts: [typeof provider === 'string' ? provider : 'unknown']
+		keyParts: [knownProvider ?? 'invalid']
 	})
 
 	if (rateLimitResult.limited) {
@@ -55,7 +62,7 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 	}
 
-	if (typeof provider !== 'string' || !OAUTH_PROVIDERS.has(provider)) {
+	if (!knownProvider) {
 		return ApiResponse.badRequest('Invalid provider')
 	}
 
@@ -84,30 +91,31 @@ export async function action({ request }: Route.ActionArgs) {
 		redirectTo += `&utm_source=${encodeURIComponent(utm_source)}`
 	}
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	// Standard OAuth signin
 	const { data, error } = await client.auth.signInWithOAuth({
-		provider: provider as 'google' | 'github',
+		provider: knownProvider as 'google' | 'github',
 		options: { redirectTo }
 	})
 
 	if (error) {
-		reportServerError(error, { request, properties: { provider } })
+		reportServerError(error, {
+			request,
+			properties: { provider: knownProvider }
+		})
 		return ApiResponse.serverError(
 			'Authentication provider is temporarily unavailable'
 		)
 	}
 
 	if (data.url) {
-		return redirect(data.url, {
-			headers
-		})
+		return redirect(data.url)
 	}
 
 	reportServerError(
 		new Error('OAuth initialization returned no redirect URL'),
-		{ request, properties: { provider } }
+		{ request, properties: { provider: knownProvider } }
 	)
 
 	return ApiResponse.serverError(

@@ -114,7 +114,7 @@ const READING_DISPLAY: Partial<
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { userWithDefaults } = await loadAuthenticatedUser(request)
 	const organizationId = userWithDefaults.organization.id
 
 	const [usage, byProject, byType, largest, heaviest, { plan }, perSceneLimit] =
@@ -138,20 +138,17 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const readings = buildReadings(usage)
 	const verdict = describeUsageVerdict(readings, PLAN_DISPLAY_NAMES[plan])
 
-	return data(
-		{
-			usage,
-			readings,
-			verdict,
-			byProject,
-			byType,
-			largest,
-			heaviest,
-			plan,
-			perSceneLimit: perSceneLimit.limit
-		},
-		{ headers }
-	)
+	return data({
+		usage,
+		readings,
+		verdict,
+		byProject,
+		byType,
+		largest,
+		heaviest,
+		plan,
+		perSceneLimit: perSceneLimit.limit
+	})
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'

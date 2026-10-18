@@ -61,7 +61,7 @@ interface ActionData {
 // ─── Loader ───────────────────────────────────────────────────────────────────
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
@@ -72,7 +72,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	// Already confirmed - send straight to onboarding (first-time) or dashboard
 	// (the onboarding page is idempotent; existing users skip through it quickly)
 	if (user?.email_confirmed_at) {
-		return redirect(newAccountDestination(next), { headers })
+		return redirect(newAccountDestination(next))
 	}
 
 	const email = url.searchParams.get('email') ?? ''
@@ -83,7 +83,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	  hardcoded `/onboarding`, so the screen looked like it honoured a return
 	  path and did not; the resend now rebuilds the link with it.
 	*/
-	return data({ email, next }, { headers })
+	return data({ email, next })
 }
 
 // ─── Action ───────────────────────────────────────────────────────────────────
@@ -104,7 +104,9 @@ export async function action({ request }: Route.ActionArgs) {
 	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-email-resend',
 		maxRequests: 3,
-		keyParts: [email.trim().toLowerCase()]
+		keyParts: [email.trim().toLowerCase()],
+		// Each attempt mails the named address; see `auth-signup`.
+		addressCeiling: 10
 	})
 
 	if (rateLimitResult.limited) {
@@ -135,7 +137,7 @@ export async function action({ request }: Route.ActionArgs) {
 		new URL(request.url).origin
 	).toString()
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const { error } = await client.auth.resend({
 		type: 'signup',
 		email: email.trim().toLowerCase(),
@@ -151,7 +153,7 @@ export async function action({ request }: Route.ActionArgs) {
 		reportServerError(error, { request })
 	}
 
-	return data<ActionData>({ sent: true }, { headers })
+	return data<ActionData>({ sent: true })
 }
 
 // ─── Mask email helper ────────────────────────────────────────────────────────

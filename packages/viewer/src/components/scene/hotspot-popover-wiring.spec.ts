@@ -117,6 +117,34 @@ describe('the card is placed by the resolver that was tested', () => {
 		)
 	})
 
+	it('places the name label by the same rule, not a second one', () => {
+		// The label sat at a fixed `bottom-[calc(100%+8px)]`, so a marker near
+		// the top of the frame had its name cut off by the viewer's clip.
+		const labelFrame = marker.split('useFrame((_state, delta) => {')[2]
+
+		expect(labelFrame).toContain('if (!labelShown) {')
+		expect(labelFrame).toContain('measurePlacement(')
+		expect(labelFrame).toContain('const label = labelRef.current')
+		expect(labelFrame).toContain('setLabelPlacement((previous) =>')
+		expect(marker).toContain('ref={labelRef}')
+		expect(marker).toContain(
+			'style={labelStyle(labelPlacement ?? DEFAULT_PLACEMENT)}'
+		)
+		// Both `side` and `offsetX` reach the screen.
+		expect(marker).toContain(
+			"[side === 'above' ? 'bottom' : 'top']: `calc(100% + ${LABEL_CLEARANCE_PX}px)`"
+		)
+		expect(marker).toContain(
+			'transform: `translateX(calc(-50% + ${offsetX}px))`'
+		)
+		// Its gap is from the marker's edge, so the resolver is handed the
+		// measured half-height plus the same clearance the CSS uses.
+		expect(labelFrame).toContain('anchor.offsetHeight / 2 + LABEL_CLEARANCE_PX')
+		// And it stays hidden until it has been measured once.
+		expect(marker).toContain('!labelPlacement && markerClasses.labelUnplaced')
+		expect(marker).not.toContain('bottom-[calc(100%+8px)]')
+	})
+
 	it('gives the open card a portal of its own for the z-index', () => {
 		// Two reasons, both drei's: the marker's wrapper is a stacking context
 		// the card cannot escape, and swapping `zIndexRange` on a mounted `Html`
@@ -192,7 +220,7 @@ describe('the hotspot layer owns which card is open', () => {
 	})
 
 	it('hands each marker its own open state and the toggle', () => {
-		expect(layer).toContain('open={marker.id === openId}')
+		expect(layer).toContain('open={marker.id === shownId}')
 		expect(layer).toContain('handleReveal')
 	})
 
@@ -372,5 +400,36 @@ describe('the card is safe to put inside a third-party page', () => {
 		// The marker's `Html` wrapper is `pointerEvents: 'none'`, so anything
 		// inside it that has to be clickable says so itself.
 		expect(popover).toContain('pointer-events-auto')
+	})
+})
+
+describe('an editing surface can hold the card', () => {
+	it('opens whatever the open-card rule decides, not the click state alone', () => {
+		expect(layer).toContain(
+			'resolveOpenHotspotId(revealedId, openId, occludedIds)'
+		)
+		expect(layer).toContain('open={marker.id === shownId}')
+	})
+
+	it('draws no held card where the host turned cards off', () => {
+		expect(layer).toMatch(
+			/const shownId = revealContent\s*\?\s*resolveOpenHotspotId\(/
+		)
+	})
+
+	it("drops the visitor's last card when a surface takes over or hands back", () => {
+		const reset = layer.split('if (wasHeld !== isHeld) {')[1]?.split('}')[0]
+		expect(reset).toContain('setOpenId(null)')
+	})
+
+	it('leaves a held card to the surface: the toggle does nothing while held', () => {
+		const reveal = layer
+			.split('const handleReveal = useCallback(')[1]
+			?.split('setOpenId(')[0]
+		expect(reveal).toContain('if (isHeld) return')
+	})
+
+	it('reaches the viewer prop the surface sets', () => {
+		expect(viewer).toContain('revealedId={revealedHotspotId}')
 	})
 })

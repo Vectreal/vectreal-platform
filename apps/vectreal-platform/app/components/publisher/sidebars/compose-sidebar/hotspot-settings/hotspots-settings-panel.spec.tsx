@@ -10,12 +10,23 @@
  * editing.
  */
 
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import {
+	act,
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within
+} from '@testing-library/react'
 import { getDefaultStore } from 'jotai'
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 
 import HotspotsSettingsPanel from './hotspots-settings-panel'
-import { MAX_HOTSPOT_BODY_LENGTH } from '../../../../../lib/domain/scene/hotspot-urls'
+import { HOTSPOT_ARTWORK_MAX_BYTES } from '../../../../../lib/domain/scene/hotspot-artwork'
+import {
+	MAX_HOTSPOT_BODY_LENGTH,
+	MAX_HOTSPOT_URL_LENGTH
+} from '../../../../../lib/domain/scene/hotspot-urls'
 import {
 	cameraToolOpenRequestAtom,
 	isClickToPlaceActiveAtom,
@@ -26,6 +37,7 @@ import {
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
+	heldHotspotCardIdAtom,
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { DynamicSidebar } from '../../dynamic-sidebar'
@@ -130,6 +142,7 @@ beforeEach(() => {
 	snapshot.current = null
 	store.set(hotspotsAtom, [])
 	store.set(activeHotspotIdAtom, null)
+	store.set(heldHotspotCardIdAtom, null)
 	store.set(isClickToPlaceActiveAtom, false)
 	store.set(cameraAtom, { cameras: [] })
 })
@@ -489,13 +502,22 @@ describe('HotspotsSettingsPanel selection', () => {
 		expect(screen.getByRole('heading', { name: 'Markers' })).toBeTruthy()
 	})
 
-	it('offers the asset field only for a preset that needs one', async () => {
+	it('lists a marker whose name is only spaces as unnamed', () => {
+		// The save refuses that name as no name and sends the author looking
+		// for this label, so a blank row would be one they could not find.
+		store.set(hotspotsAtom, [{ ...hotspot, name: '   ', sequenceIndex: 0 }])
+		render(<HotspotsSettingsPanel />)
+
+		expect(screen.getByText('Unnamed hotspot')).toBeTruthy()
+	})
+
+	it('offers the image field only for a preset that needs one', async () => {
 		store.set(hotspotsAtom, [{ ...hotspot, sequenceIndex: 0 }])
 		store.set(activeHotspotIdAtom, hotspot.id)
 		const { rerender } = render(<HotspotsSettingsPanel />)
 		await openView('Appearance')
 
-		expect(screen.queryByLabelText('Asset URL')).toBeNull()
+		expect(screen.queryByLabelText('Marker image file')).toBeNull()
 
 		act(() => {
 			store.set(hotspotsAtom, [
@@ -504,7 +526,176 @@ describe('HotspotsSettingsPanel selection', () => {
 		})
 		rerender(<HotspotsSettingsPanel />)
 
-		expect(screen.getByLabelText('Asset URL')).toBeTruthy()
+		expect(screen.getByLabelText('Marker image file')).toBeTruthy()
+	})
+
+	/**
+	 * Artwork is uploaded, never linked: a linked address made every embed
+	 * visitor's browser call a host the author chose.
+	 */
+	describe('the marker image', () => {
+		const openAppearance = async (payloadUrl?: string) => {
+			store.set(hotspotsAtom, [
+				{ ...hotspot, sequenceIndex: 0, stylePreset: 'image', payloadUrl }
+			])
+			store.set(activeHotspotIdAtom, hotspot.id)
+			render(<HotspotsSettingsPanel />)
+			await openView('Appearance')
+			return screen.getByLabelText('Marker image file') as HTMLInputElement
+		}
+		const pick = (input: HTMLInputElement, file: File) =>
+			fireEvent.change(input, { target: { files: [file] } })
+		const storedPayload = () => store.get(hotspotsAtom)[0].payloadUrl
+
+		it('offers no address field to type into', async () => {
+			await openAppearance()
+
+			expect(screen.queryByRole('textbox', { name: /url/i })).toBeNull()
+		})
+
+		it('keeps a picked image on the marker as an inline image', async () => {
+			const input = await openAppearance()
+
+			pick(input, new File(['<svg/>'], 'pin.svg', { type: 'image/svg+xml' }))
+
+			await waitFor(() =>
+				expect(storedPayload()).toMatch(/^data:image\/svg\+xml;base64,/)
+			)
+			expect(screen.getByText('Uploaded image')).toBeTruthy()
+		})
+
+		it.each([
+			['a file that is not an image', 'text/html', 10, /PNG, JPEG/],
+			[
+				'an image over the size cap',
+				'image/png',
+				HOTSPOT_ARTWORK_MAX_BYTES + 1,
+				/under 2 MB/
+			]
+		])('refuses %s and says why', async (_label, type, size, reason) => {
+			const input = await openAppearance()
+			const file = new File(['x'], 'pin', { type })
+			Object.defineProperty(file, 'size', { value: size })
+
+			pick(input, file)
+
+			expect(await screen.findByText(reason)).toBeTruthy()
+			expect(storedPayload()).toBeUndefined()
+		})
+
+		it('takes a PNG too large to stay inline, for the save to upload', async () => {
+			const input = await openAppearance()
+
+			pick(
+				input,
+				new File(['x'.repeat(MAX_HOTSPOT_URL_LENGTH)], 'pin.png', {
+					type: 'image/png'
+				})
+			)
+
+			await waitFor(() =>
+				expect(storedPayload()).toMatch(/^data:image\/png;base64,/)
+			)
+			expect(storedPayload()!.length).toBeGreaterThan(MAX_HOTSPOT_URL_LENGTH)
+			expect(screen.queryByText(/use an svg or gif under/i)).toBeNull()
+		})
+
+		it('refuses an SVG too large to stay inline, which cannot be uploaded', async () => {
+			const input = await openAppearance()
+
+			pick(
+				input,
+				new File([`<svg>${'x'.repeat(8000)}</svg>`], 'pin.svg', {
+					type: 'image/svg+xml'
+				})
+			)
+
+			expect(await screen.findByText(/use an svg or gif under/i)).toBeTruthy()
+			expect(storedPayload()).toBeUndefined()
+		})
+
+		it('says so when the picked file cannot be read', async () => {
+			const input = await openAppearance()
+			const read = vi
+				.spyOn(FileReader.prototype, 'readAsDataURL')
+				.mockImplementation(function (this: FileReader) {
+					this.onerror?.(new ProgressEvent('error') as never)
+				})
+
+			pick(input, new File(['png'], 'pin.png', { type: 'image/png' }))
+
+			expect(await screen.findByText(/could not be read/i)).toBeTruthy()
+			expect(storedPayload()).toBeUndefined()
+			read.mockRestore()
+		})
+
+		it('names the host of a linked image saved before uploads, and replaces it', async () => {
+			const input = await openAppearance('https://cdn.test/pin.png')
+
+			expect(screen.getByText('Linked from cdn.test')).toBeTruthy()
+			expect(screen.getByRole('button', { name: 'Replace image' })).toBeTruthy()
+
+			pick(input, new File(['png'], 'pin.png', { type: 'image/png' }))
+
+			await waitFor(() => expect(storedPayload()).toMatch(/^data:image\/png/))
+		})
+
+		it('removes the image', async () => {
+			await openAppearance(
+				'/api/scenes/33333333-3333-4333-8333-333333333333/assets/55555555-5555-4555-8555-555555555555'
+			)
+
+			expect(screen.getByText('Uploaded image')).toBeTruthy()
+			expect(
+				screen.queryByText(/saved before images were uploaded/i)
+			).toBeNull()
+
+			fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+			expect(storedPayload()).toBeUndefined()
+			expect(screen.getByRole('button', { name: 'Upload image' })).toBeTruthy()
+		})
+	})
+})
+
+/**
+ * The card on the canvas follows the Content view: the author sees the card
+ * they are writing, and it closes when they move on.
+ */
+describe('HotspotsSettingsPanel card on the canvas', () => {
+	const openMarker = () => {
+		store.set(hotspotsAtom, [hotspot])
+		store.set(activeHotspotIdAtom, hotspot.id)
+		return render(<HotspotsSettingsPanel />)
+	}
+
+	it('holds no card at the marker’s top level', () => {
+		openMarker()
+		expect(store.get(heldHotspotCardIdAtom)).toBeNull()
+	})
+
+	it('holds the card of the marker whose content is open', async () => {
+		openMarker()
+		await openView('Content')
+		expect(store.get(heldHotspotCardIdAtom)).toBe(hotspot.id)
+	})
+
+	it('lets go once the author goes back from the content', async () => {
+		openMarker()
+		await openView('Content')
+
+		fireEvent.click(screen.getByRole('button', { name: /^Back to/ }))
+
+		await waitFor(() => expect(store.get(heldHotspotCardIdAtom)).toBeNull())
+	})
+
+	it('lets go when the panel goes, as it does on a tool switch or preview', async () => {
+		const { unmount } = openMarker()
+		await openView('Content')
+
+		unmount()
+
+		expect(store.get(heldHotspotCardIdAtom)).toBeNull()
 	})
 })
 

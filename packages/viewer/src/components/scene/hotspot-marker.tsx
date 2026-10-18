@@ -63,6 +63,16 @@ const ANCHOR_GAP_PX = 22
 const CANVAS_MARGIN_PX = 8
 
 /**
+ * Clearance between the marker's edge and the name label.
+ *
+ * From the EDGE, unlike the card: the label lives inside the marker's own
+ * portal and is offset from the root's box (`calc(100% + 8px)`), so the gap
+ * handed to the placement resolver is half the measured root plus this. The
+ * root is centred on the anchor, which is what keeps the two in one frame.
+ */
+const LABEL_CLEARANCE_PX = 8
+
+/**
  * How often the placement is re-decided while a card is open, in seconds.
  *
  * The card follows its marker for free - both portals are anchored to the same
@@ -74,6 +84,40 @@ const PLACEMENT_INTERVAL_SECONDS = 0.1
 const DEFAULT_PLACEMENT: HotspotPopoverPlacement = {
 	side: 'above',
 	offsetX: 0
+}
+
+const samePlacement = (
+	a: HotspotPopoverPlacement,
+	b: HotspotPopoverPlacement
+): boolean => a.side === b.side && a.offsetX === b.offsetX
+
+/**
+ * Where something floating off the marker should sit, by the one placement
+ * rule the card and the name label share.
+ *
+ * Measured in canvas coordinates: the canvas box is what the viewer clips to,
+ * and an embed inside a scrolled host page then places the same as a full-page
+ * one.
+ */
+function measurePlacement(
+	anchor: HTMLElement,
+	floating: HTMLElement,
+	canvas: HTMLCanvasElement,
+	gap: number
+): HotspotPopoverPlacement {
+	const anchorBox = anchor.getBoundingClientRect()
+	const canvasBox = canvas.getBoundingClientRect()
+
+	return resolveHotspotPopoverPlacement({
+		anchor: {
+			x: anchorBox.left + anchorBox.width / 2 - canvasBox.left,
+			y: anchorBox.top + anchorBox.height / 2 - canvasBox.top
+		},
+		size: { width: floating.offsetWidth, height: floating.offsetHeight },
+		bounds: { width: canvasBox.width, height: canvasBox.height },
+		gap,
+		margin: CANVAS_MARGIN_PX
+	})
 }
 
 /**
@@ -150,9 +194,24 @@ const markerClasses = {
 	// `rounded-full`, never `rounded`: this package clears Tailwind's radius
 	// namespace (see package.css), so every named radius but `full` compiles to
 	// nothing once the package is consumed from npm.
+	// Its vertical offset and horizontal shift come from the placement, as an
+	// inline style: see `labelStyle`.
 	label:
-		'shell-panel text-foreground pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 max-w-[180px] -translate-x-1/2 truncate px-2 py-0.5 text-[11px] leading-[1.4] select-none'
+		'shell-panel text-foreground pointer-events-none absolute left-1/2 max-w-[180px] truncate px-2 py-0.5 text-[11px] leading-[1.4] select-none',
+	labelUnplaced: 'invisible'
 } as const
+
+/**
+ * The label's offset from the marker's box, on the side the placement chose,
+ * and its shift from centred.
+ */
+const labelStyle = ({
+	side,
+	offsetX
+}: HotspotPopoverPlacement): CSSProperties => ({
+	[side === 'above' ? 'bottom' : 'top']: `calc(100% + ${LABEL_CLEARANCE_PX}px)`,
+	transform: `translateX(calc(-50% + ${offsetX}px))`
+})
 
 export interface HotspotMarkerProps {
 	marker: HotspotMarkerModel
@@ -236,6 +295,16 @@ const HotspotMarker = ({
 	const placementElapsed = useRef(PLACEMENT_INTERVAL_SECONDS)
 	const [placement, setPlacement] =
 		useState<HotspotPopoverPlacement>(DEFAULT_PLACEMENT)
+	const labelRef = useRef<HTMLSpanElement>(null)
+	const labelElapsed = useRef(PLACEMENT_INTERVAL_SECONDS)
+	const [labelPlacement, setLabelPlacement] =
+		useState<HotspotPopoverPlacement | null>(null)
+	// The name is already the card's heading, so showing the label over an
+	// open card would print it twice, one above the other.
+	const labelShown = labelVisible && !open
+	// A hidden label forgets where it was, so the next one is measured before
+	// it is drawn rather than flashing at the last marker position's answer.
+	if (!labelShown && labelPlacement) setLabelPlacement(null)
 
 	// Valid here and not one level down: this component is in the R3F tree,
 	// while everything inside the `Html` below is in a ReactDOM root of drei's
@@ -261,27 +330,44 @@ const HotspotMarker = ({
 		if (!anchor || !card) return
 		placementElapsed.current = 0
 
-		const anchorBox = anchor.getBoundingClientRect()
-		const canvasBox = canvas.getBoundingClientRect()
-
-		const next = resolveHotspotPopoverPlacement({
-			anchor: {
-				x: anchorBox.left + anchorBox.width / 2 - canvasBox.left,
-				y: anchorBox.top + anchorBox.height / 2 - canvasBox.top
-			},
-			size: { width: card.offsetWidth, height: card.offsetHeight },
-			bounds: { width: canvasBox.width, height: canvasBox.height },
-			gap: ANCHOR_GAP_PX,
-			margin: CANVAS_MARGIN_PX
-		})
+		const next = measurePlacement(anchor, card, canvas, ANCHOR_GAP_PX)
 
 		// One state write only when the answer moved: this runs in the frame
 		// loop, where an unconditional write would re-render both portals ten
 		// times a second for as long as the card is open.
 		setPlacement((previous) =>
-			previous.side === next.side && previous.offsetX === next.offsetX
-				? previous
-				: next
+			samePlacement(previous, next) ? previous : next
+		)
+	})
+
+	/*
+	  The name label goes through the same rule, on the same cadence, so a
+	  marker near the top of the frame shows its name below it rather than cut
+	  off by the viewer's clip. Its placement is null until the first
+	  measurement and the label stays invisible until then, so a marker at the
+	  edge never draws one clipped frame before flipping.
+	*/
+	useFrame((_state, delta) => {
+		if (!labelShown) {
+			labelElapsed.current = PLACEMENT_INTERVAL_SECONDS
+			return
+		}
+		labelElapsed.current += delta
+		if (labelElapsed.current < PLACEMENT_INTERVAL_SECONDS) return
+
+		const anchor = rootRef.current
+		const label = labelRef.current
+		if (!anchor || !label) return
+		labelElapsed.current = 0
+
+		const next = measurePlacement(
+			anchor,
+			label,
+			canvas,
+			anchor.offsetHeight / 2 + LABEL_CLEARANCE_PX
+		)
+		setLabelPlacement((previous) =>
+			previous && samePlacement(previous, next) ? previous : next
 		)
 	})
 
@@ -533,12 +619,17 @@ const HotspotMarker = ({
 						</div>
 					)}
 
-					{/*
-					  The name is already the card's heading, so showing the label over
-					  an open card would print it twice, one above the other.
-					*/}
-					{labelVisible && !open && (
-						<span className={markerClasses.label}>{marker.name}</span>
+					{labelShown && (
+						<span
+							ref={labelRef}
+							className={cn(
+								markerClasses.label,
+								!labelPlacement && markerClasses.labelUnplaced
+							)}
+							style={labelStyle(labelPlacement ?? DEFAULT_PLACEMENT)}
+						>
+							{marker.name}
+						</span>
 					)}
 				</div>
 			</Html>

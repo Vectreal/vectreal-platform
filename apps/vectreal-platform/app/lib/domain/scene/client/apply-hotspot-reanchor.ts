@@ -1,5 +1,5 @@
 import { cameraAtom, hotspotsAtom } from '../../../stores/scene-settings-store'
-import { reanchorHotspotsForScale } from '../scene-hotspot-reanchor'
+import { reanchorSceneForScale } from '../scene-hotspot-reanchor'
 
 import type { createStore } from 'jotai'
 
@@ -13,12 +13,12 @@ type PublisherStore = ReturnType<typeof createStore>
  * own without failing anything. Writing through the store keeps the caller's
  * handler referentially stable.
  *
- * A scale that did not change needs no guard here: `reanchorHotspotsForScale`
+ * A scale that did not change needs no guard here: `reanchorSceneForScale`
  * returns the state it was given by identity, and jotai compares with `Object.is`
  * before notifying, so setting the same reference back is already a no-op. An
  * early return would be a line no test could ever hold.
  */
-export function applyHotspotReanchor(
+export function applySceneReanchor(
 	store: PublisherStore,
 	previousScale: number,
 	nextScale: number
@@ -28,7 +28,7 @@ export function applyHotspotReanchor(
 		hotspots: store.get(hotspotsAtom)
 	}
 
-	const next = reanchorHotspotsForScale(state, previousScale, nextScale)
+	const next = reanchorSceneForScale(state, previousScale, nextScale)
 
 	store.set(hotspotsAtom, next.hotspots)
 	store.set(cameraAtom, next.camera)

@@ -35,6 +35,7 @@ import {
 } from '../../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
+import { parseSceneRouteParams } from '../../../lib/domain/scene/scene-route-params'
 import { resolveSceneSizeBytes } from '../../../lib/domain/scene/scene-stored-size'
 import {
 	getScene,
@@ -55,14 +56,18 @@ import type { ModelSource } from '@vctrl/hooks/use-load-model'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-	const projectId = params.projectId
-	const sceneId = params.sceneId
-
-	if (!projectId || !sceneId) {
-		throw new Response('Project ID and Scene ID are required', { status: 400 })
+	const parsedParams = parseSceneRouteParams(params)
+	if (!parsedParams.ok) {
+		// A malformed id names no scene, so it is the same 404 as an unknown
+		// one rather than a uuid cast failing in Postgres.
+		throw parsedParams.reason === 'missing'
+			? new Response('Project ID and Scene ID are required', { status: 400 })
+			: new Response('Scene not found', { status: 404 })
 	}
 
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { projectId, sceneId } = parsedParams.value
+
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch project and scene data
 	const [project, scene] = await Promise.all([
@@ -151,29 +156,26 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		}))
 	}
 
-	return data(
-		{
-			project,
-			scene,
-			publishState: {
-				sceneId: scene.id,
-				status: publishedMeta ? ('published' as const) : ('draft' as const),
-				publishedAt: publishedMeta?.publishedAt?.toISOString() ?? null,
-				publishedAssetId: publishedMeta?.publishedAssetId ?? null,
-				publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
-			},
-			folderPath,
-			sceneDetails,
-			textureUrls: buildTextureThumbnailUrls(sceneAssets, (assetId) =>
-				buildPreviewAssetUrl({ sceneId, projectId, assetId })
-			),
-			manifest,
-			presentation,
-			canDeleteScene: canDeleteScene(membership),
-			canUpdateScene: canUpdateScene(membership)
+	return data({
+		project,
+		scene,
+		publishState: {
+			sceneId: scene.id,
+			status: publishedMeta ? ('published' as const) : ('draft' as const),
+			publishedAt: publishedMeta?.publishedAt?.toISOString() ?? null,
+			publishedAssetId: publishedMeta?.publishedAssetId ?? null,
+			publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
 		},
-		{ headers }
-	)
+		folderPath,
+		sceneDetails,
+		textureUrls: buildTextureThumbnailUrls(sceneAssets, (assetId) =>
+			buildPreviewAssetUrl({ sceneId, projectId, assetId })
+		),
+		manifest,
+		presentation,
+		canDeleteScene: canDeleteScene(membership),
+		canUpdateScene: canUpdateScene(membership)
+	})
 }
 
 /**

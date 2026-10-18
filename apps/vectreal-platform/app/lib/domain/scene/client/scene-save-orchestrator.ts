@@ -2,10 +2,16 @@ import { formatFileSize } from '@shared/utils'
 import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { toast } from 'sonner'
 
+import { persistHotspotArtwork } from './hotspot-artwork-save'
 import { postFormWithProgress } from './post-form-with-progress'
 import { buildThumbnailFrameSignature } from './scene-change-detection'
 import { createFileFromDataUrl } from './scene-draft-serialization'
 import { planThumbnailForSave } from './scene-thumbnail-save'
+import {
+	BillingLimitError,
+	createBillingLimitErrorFromResponse,
+	isBillingLimitError
+} from '../../billing/client/billing-limit-error'
 import {
 	buildSceneThumbnailUrl,
 	thumbnailAssetIdFromUrl
@@ -14,14 +20,10 @@ import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
 } from './scene-upload-manifest'
-import {
-	BillingLimitError,
-	createBillingLimitErrorFromResponse,
-	isBillingLimitError
-} from '../../billing/client/billing-limit-error'
 import { SOURCE_MODEL_FILENAME } from '../scene-asset-roles'
 import { resolveDefaultSceneCameraId } from '../scene-camera'
 
+import type { HotspotArtworkRewrite } from './hotspot-artwork-save'
 import type { SaveProgressEvent } from './scene-save-progress'
 import type { SourceToSave } from './scene-source-to-save'
 import type {
@@ -166,6 +168,8 @@ export const executeSceneSaveOrchestrator = async ({
 	(SaveSceneOrchestratorResult | { unchanged: true }) & {
 		/** The original the scene now keeps, or null when it keeps none. */
 		keptOriginal: KeptOriginalRef | null
+		/** Marker artwork the save moved to a scene asset address. */
+		hotspotArtworkRewrites: HotspotArtworkRewrite[]
 	}
 > => {
 	if (!userId) {
@@ -470,6 +474,46 @@ export const executeSceneSaveOrchestrator = async ({
 		}
 	}
 
+	// Marker artwork: a picked image too large to stay inline is uploaded as a
+	// scene asset, and every artwork asset the markers reference is linked below
+	// so the GC keeps it and the embed may serve it.
+	const artwork = await persistHotspotArtwork({
+		hotspots: settingsForSave.hotspots,
+		sceneId: preparedSceneId,
+		existingAssets,
+		upload: async (file) => {
+			const uploadArtworkFormData = new FormData()
+			uploadArtworkFormData.append('action', 'upload-scene-asset')
+			uploadArtworkFormData.append('requestId', requestId)
+			uploadArtworkFormData.append('sceneId', preparedSceneId)
+			if (preparedProjectId) {
+				uploadArtworkFormData.append('projectId', preparedProjectId)
+			}
+			if (options?.targetProjectId) {
+				uploadArtworkFormData.append('targetProjectId', options.targetProjectId)
+			}
+			uploadArtworkFormData.append('kind', 'image')
+			uploadArtworkFormData.append('file', file)
+			onProgress?.({
+				type: 'file-added',
+				file: {
+					key: file.name,
+					group: 'preview',
+					name: 'Marker artwork',
+					bytes: file.size,
+					preview: file
+				}
+			})
+			const uploaded = await uploadFile(file.name, uploadArtworkFormData)
+			return uploaded.assetId as string
+		},
+		readStored: async (url) => {
+			const response = await fetch(url).catch(() => null)
+			return response?.ok ? response.blob() : null
+		}
+	})
+	settingsForSave = { ...settingsForSave, hotspots: artwork.hotspots }
+
 	const maxConcurrentAssetUploads =
 		options?.maxConcurrentAssetUploads ?? MAX_CONCURRENT_ASSET_UPLOADS
 
@@ -674,6 +718,8 @@ export const executeSceneSaveOrchestrator = async ({
 		sceneAssetIds.push(bakedShadowAssetId)
 	}
 
+	sceneAssetIds.push(...artwork.assetIds)
+
 	// Link the current thumbnail (newly uploaded or the existing one) so it is
 	// tracked as a scene asset: this keeps it from being GC'd and lets a superseded
 	// thumbnail become an unlinked GC candidate. It is excluded from the manifest's
@@ -746,12 +792,17 @@ export const executeSceneSaveOrchestrator = async ({
 	onProgress?.({ type: 'saved', unchanged: Boolean(data.unchanged) })
 
 	if (data.unchanged) {
-		return { unchanged: true, keptOriginal }
+		return {
+			unchanged: true,
+			keptOriginal,
+			hotspotArtworkRewrites: artwork.rewrites
+		}
 	}
 
 	return {
 		...data,
 		sceneMeta: sceneMetaForSave,
-		keptOriginal
+		keptOriginal,
+		hotspotArtworkRewrites: artwork.rewrites
 	}
 }

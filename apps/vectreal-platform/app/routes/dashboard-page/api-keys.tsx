@@ -1,12 +1,5 @@
 import { Badge } from '@shared/components/ui/badge'
 import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle
-} from '@shared/components/ui/empty'
-import {
 	Tabs,
 	TabsContent,
 	TabsList,
@@ -41,6 +34,7 @@ import {
 	type ApiKeyRow,
 	type ApiKeyRowValue
 } from '../../components/dashboard'
+import { EmptyState } from '../../components/layout-components'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { FeatureUnavailablePanel } from '../../components/upgrade/feature-unavailable-panel'
 import { useDashboardTableState } from '../../hooks/use-dashboard-table-state'
@@ -119,7 +113,7 @@ function toApiKeyRow(key: ApiKeyWithDetails, value: ApiKeyRowValue): ApiKeyRow {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 
 	const [apiKeys, organizations] = await Promise.all([
 		getAllUserApiKeys(user.id),
@@ -223,14 +217,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 	  response - React Router does not propagate a loader's `headers` onto one,
 	  which is the whole reason that hook exists.
 	*/
-	return data(
-		{
-			keysByOrg: Object.fromEntries(keysByOrg),
-			organizations: adminOrgs,
-			apiKeysAccessByOrg
-		},
-		{ headers }
-	)
+	return data({
+		keysByOrg: Object.fromEntries(keysByOrg),
+		organizations: adminOrgs,
+		apiKeysAccessByOrg
+	})
 }
 
 /**
@@ -250,7 +241,7 @@ interface ApiKeysActionResult {
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -264,25 +255,19 @@ export async function action({ request }: Route.ActionArgs) {
 
 		if (intent === 'revoke') {
 			if (!apiKeyId) {
-				return data<ApiKeysActionResult>(
-					{ error: 'API key ID is required' },
-					{ headers }
-				)
+				return data<ApiKeysActionResult>({ error: 'API key ID is required' })
 			}
 
 			await revokeApiKey(apiKeyId, user.id)
-			return data<ApiKeysActionResult>(
-				{ success: true, message: 'API key revoked successfully' },
-				{ headers }
-			)
+			return data<ApiKeysActionResult>({
+				success: true,
+				message: 'API key revoked successfully'
+			})
 		}
 
 		if (intent === 'rotate') {
 			if (!apiKeyId) {
-				return data<ApiKeysActionResult>(
-					{ error: 'API key ID is required' },
-					{ headers }
-				)
+				return data<ApiKeysActionResult>({ error: 'API key ID is required' })
 			}
 
 			const rotated = await rotateApiKey({ apiKeyId, userId: user.id })
@@ -294,33 +279,29 @@ export async function action({ request }: Route.ActionArgs) {
 			  it back - that would be a round trip to re-fetch what this response
 			  already holds.
 			*/
-			return data<ApiKeysActionResult>(
-				{
-					success: true,
-					message: 'API key rotated.',
-					rotatedKey: {
-						plaintext: rotated.plaintext,
-						name: rotated.apiKey.name,
-						/*
+			return data<ApiKeysActionResult>({
+				success: true,
+				message: 'API key rotated.',
+				rotatedKey: {
+					plaintext: rotated.plaintext,
+					name: rotated.apiKey.name,
+					/*
 						  Read off what was actually written, not assumed. The cipher
 						  returns null rather than throwing when
 						  `EMBED_TOKEN_ENCRYPTION_KEY` is unset, so a rotation can
 						  succeed and still leave nothing to read back - and the dialog
 						  has to say so instead of promising this list will show it.
 						*/
-						recoverable: rotated.apiKey.encryptedKey !== null
-					}
-				},
-				{ headers }
-			)
+					recoverable: rotated.apiKey.encryptedKey !== null
+				}
+			})
 		}
 
-		return data<ApiKeysActionResult>({ error: 'Invalid intent' }, { headers })
+		return data<ApiKeysActionResult>({ error: 'Invalid intent' })
 	} catch (error) {
-		return data<ApiKeysActionResult>(
-			{ error: error instanceof Error ? error.message : 'An error occurred' },
-			{ headers }
-		)
+		return data<ApiKeysActionResult>({
+			error: error instanceof Error ? error.message : 'An error occurred'
+		})
 	}
 }
 
@@ -391,10 +372,13 @@ function OrgApiKeysTable({
 	rows,
 	onEdit,
 	onRevoke,
-	onRotate
+	onRotate,
+	emptyHeadingLevel
 }: {
 	namespace: string
 	rows: ApiKeyRow[]
+	/** One level below whatever heads the table's organization, if anything does. */
+	emptyHeadingLevel: 'h2' | 'h3'
 	onEdit: (keyId: string) => void
 	onRevoke: (keyId: string) => void
 	onRotate: (keyId: string) => void
@@ -433,17 +417,12 @@ function OrgApiKeysTable({
 
 	if (rows.length === 0) {
 		return (
-			<Empty>
-				<EmptyHeader>
-					<EmptyMedia variant="icon">
-						<KeyRound />
-					</EmptyMedia>
-					<EmptyTitle>No API keys</EmptyTitle>
-					<EmptyDescription>
-						Create your first API key to get started
-					</EmptyDescription>
-				</EmptyHeader>
-			</Empty>
+			<EmptyState
+				icon={KeyRound}
+				title="Create your first API key"
+				description="A key lets embeds and previews load scenes from the projects you scope it to."
+				headingLevel={emptyHeadingLevel}
+			/>
 		)
 	}
 
@@ -596,17 +575,12 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 
 	if (organizations.length === 0) {
 		return (
-			<div className="space-y-8 py-6">
-				<Empty>
-					<EmptyMedia>
-						<KeyRound className="text-muted-foreground h-24 w-24" />
-					</EmptyMedia>
-					<EmptyHeader>No organizations</EmptyHeader>
-					<EmptyDescription>
-						You need to be an admin or owner of an organization to manage API
-						keys.
-					</EmptyDescription>
-				</Empty>
+			<div className="py-6">
+				<EmptyState
+					icon={KeyRound}
+					title="API keys belong to an organization you manage"
+					description="Admins and owners create and manage keys. Ask an owner or admin of your organization to change your role."
+				/>
 			</div>
 		)
 	}
@@ -679,6 +653,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 						</div>
 						{apiKeysAccessByOrg[organizations[0].organization.id]?.granted ? (
 							<OrgApiKeysTable
+								emptyHeadingLevel="h3"
 								namespace={`api-keys-${organizations[0].organization.id}`}
 								rows={keysByOrg[organizations[0].organization.id] || []}
 								onEdit={handleEdit}
@@ -727,6 +702,7 @@ export default function ApiKeysPage({ loaderData }: Route.ComponentProps) {
 									</p>
 									{apiKeysAccessByOrg[org.organization.id]?.granted ? (
 										<OrgApiKeysTable
+											emptyHeadingLevel="h2"
 											namespace={`api-keys-${org.organization.id}`}
 											rows={keysByOrg[org.organization.id] || []}
 											onEdit={handleEdit}

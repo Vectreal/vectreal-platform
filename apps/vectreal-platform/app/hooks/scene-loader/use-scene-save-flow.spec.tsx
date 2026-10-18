@@ -8,12 +8,13 @@ import { useSceneSaveFlow } from './use-scene-save-flow'
 import { defaultBoundsOptions } from '../../constants/viewer-defaults'
 import { capturedThumbnailFrameAtom } from '../../lib/stores/publisher-config-store'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
+import { hotspotsAtom } from '../../lib/stores/scene-settings-store'
 
 import type { ScenePersistenceState } from './contracts'
 import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveSceneResult } from '../../types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
-import type { SceneSettings } from '@vctrl/core'
+import type { HotspotDefinition, SceneSettings } from '@vctrl/core'
 
 const {
 	mockSetAtom,
@@ -232,6 +233,57 @@ describe('useSceneSaveFlow', () => {
 	afterEach(() => {
 		vi.clearAllMocks()
 		getDefaultStore().set(capturedThumbnailFrameAtom, null)
+	})
+
+	/*
+	  The save uploads a large picked image and commits the marker at its new
+	  address. Left on the picked image, the editor would upload it again on
+	  every later save.
+	*/
+	it('moves the editor and the baseline to the address uploaded artwork got', async () => {
+		const picked = 'data:image/png;base64,AAAA'
+		const uploaded = '/api/scenes/scene-1/assets/asset-1'
+		const marker = {
+			id: 'hotspot-1',
+			name: 'Badge',
+			payloadUrl: picked
+		} as HotspotDefinition
+		const setHotspots = vi.fn()
+		mockSetAtom.mockImplementation((atom: unknown) =>
+			atom === dispatchSaveProgressAtom
+				? dispatchSaveProgress
+				: atom === hotspotsAtom
+					? setHotspots
+					: vi.fn()
+		)
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({
+			sceneId: 'scene-1',
+			sceneMeta,
+			keptOriginal: null,
+			hotspotArtworkRewrites: [
+				{ hotspotId: 'hotspot-1', from: picked, to: uploaded }
+			]
+		})
+		const apiRef: { current: HarnessApi | null } = { current: null }
+		renderHarnessWith({
+			apiRef,
+			initialCurrentSettings: { hotspots: [marker] },
+			initialLastSavedSettings: null
+		})
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		const update = setHotspots.mock.calls[0][0] as (
+			previous: HotspotDefinition[]
+		) => HotspotDefinition[]
+		expect(update([marker])[0].payloadUrl).toBe(uploaded)
+		await waitFor(() =>
+			expect(
+				apiRef.current?.getLastSavedSettings()?.hotspots?.[0].payloadUrl
+			).toBe(uploaded)
+		)
 	})
 
 	it('hands the save panel every event the save reports', async () => {

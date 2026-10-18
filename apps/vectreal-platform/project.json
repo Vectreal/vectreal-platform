@@ -27,6 +27,14 @@
 		"build": {
 			"executor": "nx:run-commands",
 			"outputs": ["{workspaceRoot}/build/apps/vectreal-platform"],
+			"inputs": [
+				"production",
+				"^production",
+				{ "externalDependencies": ["@react-router/dev"] },
+				{
+					"runtime": "node -e \"try{process.stdout.write(require('crypto').createHash('sha256').update(require('fs').readFileSync('.env.development')).digest('hex'))}catch{}\""
+				}
+			],
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",

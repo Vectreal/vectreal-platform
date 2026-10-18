@@ -255,6 +255,122 @@ describe('recordRateLimitAttempt', () => {
 	})
 })
 
+describe('addressCeiling', () => {
+	const NARROW = { ...LIMIT, maxRequests: 2, addressCeiling: 5 }
+	const asEmail = (n: number) => ({ ...NARROW, keyParts: [`user${n}@x.test`] })
+
+	it('refuses an address that rotates keyParts once the ceiling is reached', () => {
+		const request = requestFrom('203.0.113.10')
+
+		for (let n = 1; n <= NARROW.addressCeiling; n += 1) {
+			expect(recordRateLimitAttempt(request, asEmail(n)).limited).toBe(false)
+		}
+
+		expect(
+			recordRateLimitAttempt(request, asEmail(99)).limited,
+			'a fresh key part reset the only counter there was'
+		).toBe(true)
+		expect(checkRateLimit(request, asEmail(100)).limited).toBe(true)
+	})
+
+	it('still holds each key part to its own narrower limit', () => {
+		const request = requestFrom('203.0.113.10')
+
+		recordRateLimitAttempt(request, asEmail(1))
+		recordRateLimitAttempt(request, asEmail(1))
+
+		expect(recordRateLimitAttempt(request, asEmail(1)).limited).toBe(true)
+		expect(recordRateLimitAttempt(request, asEmail(2)).limited).toBe(false)
+	})
+
+	it('counts each address separately', () => {
+		for (let n = 1; n <= NARROW.addressCeiling; n += 1) {
+			recordRateLimitAttempt(requestFrom('203.0.113.10'), asEmail(n))
+		}
+
+		expect(
+			recordRateLimitAttempt(requestFrom('198.51.100.7'), asEmail(1)).limited
+		).toBe(false)
+	})
+
+	it('records nothing for a request either counter refuses', () => {
+		const request = requestFrom('203.0.113.10')
+		recordRateLimitAttempt(request, asEmail(1))
+		recordRateLimitAttempt(request, asEmail(1))
+
+		// Refused by the narrow counter: the address counter must not grow,
+		// or a caller stuck on one account would also lock out the others.
+		for (let i = 0; i < 10; i += 1) {
+			recordRateLimitAttempt(request, asEmail(1))
+		}
+
+		for (let n = 2; n <= NARROW.addressCeiling - 1; n += 1) {
+			expect(
+				recordRateLimitAttempt(request, asEmail(n)).limited,
+				`email ${n}`
+			).toBe(false)
+		}
+	})
+
+	it('reports the longest wait among the counters that are full', () => {
+		const request = requestFrom('203.0.113.10')
+		recordRateLimitAttempt(request, asEmail(1))
+		vi.advanceTimersByTime(20_000)
+		recordRateLimitAttempt(request, asEmail(2))
+		recordRateLimitAttempt(request, asEmail(2))
+		recordRateLimitAttempt(request, asEmail(3))
+		recordRateLimitAttempt(request, asEmail(4))
+
+		// Both counters are full. The address counter's oldest entry is 20s old
+		// and frees in 40s; email 2's oldest is new and frees in 60s.
+		expect(recordRateLimitAttempt(request, asEmail(2)).retryAfterSeconds).toBe(
+			60
+		)
+	})
+
+	it("reports the address counter's wait when only it is full", () => {
+		const request = requestFrom('203.0.113.10')
+		recordRateLimitAttempt(request, asEmail(1))
+		vi.advanceTimersByTime(20_000)
+		for (let n = 2; n <= NARROW.addressCeiling; n += 1) {
+			recordRateLimitAttempt(request, asEmail(n))
+		}
+
+		// A fresh email's own counter is empty, which on its own would report a
+		// whole window. Only the full counter decides: it frees in 40s.
+		expect(recordRateLimitAttempt(request, asEmail(50)).retryAfterSeconds).toBe(
+			40
+		)
+	})
+
+	it('does not count a request the ceiling refuses against its key part', () => {
+		const request = requestFrom('203.0.113.10')
+		for (let n = 1; n <= NARROW.addressCeiling; n += 1) {
+			recordRateLimitAttempt(request, asEmail(n))
+		}
+		vi.advanceTimersByTime(30_000)
+		for (let i = 0; i < 5; i += 1) {
+			recordRateLimitAttempt(request, asEmail(50))
+		}
+
+		// The address frees at 60s. Had the refused attempts at 30s been
+		// charged to email 50, its own counter would hold it until 90s.
+		vi.advanceTimersByTime(30_000)
+		expect(recordRateLimitAttempt(request, asEmail(50)).limited).toBe(false)
+		expect(recordRateLimitAttempt(request, asEmail(50)).limited).toBe(false)
+	})
+
+	it('leaves a bucket without a ceiling exactly as it was', () => {
+		const request = requestFrom('203.0.113.10')
+		for (let n = 1; n <= 50; n += 1) {
+			expect(
+				recordRateLimitAttempt(request, { ...LIMIT, keyParts: [`${n}`] })
+					.limited
+			).toBe(false)
+		}
+	})
+})
+
 describe('checkRateLimit', () => {
 	it('does not count the request it is asked about', () => {
 		const request = requestFrom('203.0.113.10')

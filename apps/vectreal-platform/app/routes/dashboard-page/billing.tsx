@@ -21,10 +21,12 @@ import { describePlanFit } from '../../lib/domain/billing/plan-fit'
  * under pressure reach the page, so most visits render none of them.
  */
 export async function loader({ request }: Route.LoaderArgs) {
-	const { loaderData, organizationId, headers } =
-		await loadBillingDashboardData(request, {
+	const { loaderData, organizationId } = await loadBillingDashboardData(
+		request,
+		{
 			includeCheckoutOptions: false
-		})
+		}
+	)
 
 	const usage = await loadOrgUsage(organizationId)
 
@@ -37,13 +39,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 	*/
 	const { effectivePlan } = describeBillingSituation(loaderData.billing)
 
-	return data(
-		{
-			...loaderData,
-			planFit: describePlanFit(usage, effectivePlan)
-		},
-		{ headers }
-	)
+	return data({
+		...loaderData,
+		planFit: describePlanFit(usage, effectivePlan)
+	})
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'

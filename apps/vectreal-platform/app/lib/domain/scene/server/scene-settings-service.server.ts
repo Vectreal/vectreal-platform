@@ -1,8 +1,9 @@
-import { SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { and, eq, inArray } from 'drizzle-orm'
 
 import { updateSceneMetadata } from './scene-folder-repository.server'
 import { compareAssetIds } from './scene-settings-assets.server'
+import { findNewRemoteArtwork } from '../hotspot-artwork'
+import { isUrlServedSceneAsset } from '../scene-asset-roles'
 import {
 	getHotspotsBySceneSettingsId,
 	getSceneAssetLinks,
@@ -238,6 +239,18 @@ class SceneSettingsService {
 				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
 				: []
 
+			// Read against the stored rows in the same transaction, so the
+			// grandfathered value is the one this save would overwrite.
+			const remoteArtwork = findNewRemoteArtwork(
+				settings.hotspots,
+				existingHotspots
+			)
+			if (remoteArtwork) {
+				throw new SceneSaveRefusedError(
+					`Marker "${remoteArtwork.name.trim()}" links artwork from another site. Upload the image instead (payloadUrl)`
+				)
+			}
+
 			const settingsChanged = existingSettings
 				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
 				: true
@@ -388,11 +401,11 @@ class SceneSettingsService {
 
 		const { settings, assets: sceneAssetsData } = result
 
-		// Extract asset IDs to download into the manifest. The thumbnail is tracked
-		// as a scene asset (for GC) but served by URL, not rendered, so it is excluded
-		// from the inlined render data to keep the manifest lean.
+		// Extract asset IDs to download into the manifest. The thumbnail and marker
+		// artwork are tracked as scene assets (for GC) but served by URL, not
+		// rendered, so they are excluded from the inlined render data.
 		const assetIds = sceneAssetsData
-			.filter((asset) => asset.name !== SCENE_THUMBNAIL_FILENAME)
+			.filter((asset) => !isUrlServedSceneAsset(asset))
 			.map((asset) => asset.id)
 
 		// Download asset data from cloud storage
@@ -962,6 +975,17 @@ class SceneSettingsService {
 				parentFolderId: null
 			})
 		}
+	}
+}
+
+/**
+ * A save refused for something the author can correct, answered as a 400
+ * naming what to fix rather than as a failure of the save itself.
+ */
+export class SceneSaveRefusedError extends Error {
+	constructor(message: string) {
+		super(message)
+		this.name = 'SceneSaveRefusedError'
 	}
 }
 

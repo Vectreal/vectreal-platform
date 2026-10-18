@@ -156,7 +156,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Organization ID is required', { status: 400 })
 	}
 
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 
 	let detail
 	try {
@@ -174,22 +174,19 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			hasEntitlement(organizationId, 'org_roles')
 		])
 
-	return data(
-		{
-			user,
-			organization: detail.organization,
-			membership: detail.membership,
-			members,
-			projectsTotal,
-			billing: subscription,
-			entitlements: {
-				orgMultiMember: orgMultiMember.granted,
-				orgRoles: orgRoles.granted
-			},
-			isReadOnlyBillingState: isBillingStateReadOnly(subscription.billingState)
+	return data({
+		user,
+		organization: detail.organization,
+		membership: detail.membership,
+		members,
+		projectsTotal,
+		billing: subscription,
+		entitlements: {
+			orgMultiMember: orgMultiMember.granted,
+			orgRoles: orgRoles.granted
 		},
-		{ headers }
-	)
+		isReadOnlyBillingState: isBillingStateReadOnly(subscription.billingState)
+	})
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -198,7 +195,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		throw new Response('Organization ID is required', { status: 400 })
 	}
 
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -214,7 +211,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 					'This organization is currently read-only due to its billing state.',
 				intent
 			},
-			{ status: 403, headers }
+			{ status: 403 }
 		)
 	}
 
@@ -225,10 +222,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 			})
 			await updateOrganizationName(organizationId, user.id, validated.name)
 
-			return data(
-				{ success: true, intent, message: 'Organization name updated.' },
-				{ headers }
-			)
+			return data({
+				success: true,
+				intent,
+				message: 'Organization name updated.'
+			})
 		}
 
 		if (intent === 'invite-member') {
@@ -243,7 +241,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 							'Team members are not available for this organization on the current plan.',
 						intent
 					},
-					{ status: 403, headers }
+					{ status: 403 }
 				)
 			}
 
@@ -264,7 +262,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 								'Admin role assignment requires role-management access on your current plan.',
 							intent
 						},
-						{ status: 403, headers }
+						{ status: 403 }
 					)
 				}
 			}
@@ -277,7 +275,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 							'This email does not belong to a registered user yet. Ask them to sign up first.',
 						intent
 					},
-					{ status: 404, headers }
+					{ status: 404 }
 				)
 			}
 
@@ -288,10 +286,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 				validated.role
 			)
 
-			return data(
-				{ success: true, intent, message: `Invited ${invitedUser.email}.` },
-				{ headers }
-			)
+			return data({
+				success: true,
+				intent,
+				message: `Invited ${invitedUser.email}.`
+			})
 		}
 
 		if (intent === 'update-role') {
@@ -303,7 +302,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 							'Role management is not available for this organization on the current plan.',
 						intent
 					},
-					{ status: 403, headers }
+					{ status: 403 }
 				)
 			}
 
@@ -319,10 +318,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 				validated.role
 			)
 
-			return data(
-				{ success: true, intent, message: 'Member role updated.' },
-				{ headers }
-			)
+			return data({ success: true, intent, message: 'Member role updated.' })
 		}
 
 		if (intent === 'remove-member') {
@@ -340,7 +336,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 							'Team members are not available for this organization on the current plan.',
 						intent
 					},
-					{ status: 403, headers }
+					{ status: 403 }
 				)
 			}
 
@@ -354,29 +350,24 @@ export async function action({ request, params }: Route.ActionArgs) {
 				validated.targetUserId
 			)
 
-			return data(
-				{ success: true, intent, message: 'Member removed.' },
-				{ headers }
-			)
+			return data({ success: true, intent, message: 'Member removed.' })
 		}
 
 		if (intent === 'leave-organization') {
 			await leaveOrganization(organizationId, user.id)
-			return data(
-				{ success: true, intent, message: 'You left the organization.' },
-				{ headers }
-			)
+			return data({
+				success: true,
+				intent,
+				message: 'You left the organization.'
+			})
 		}
 
 		if (intent === 'delete-organization') {
 			await deleteOrganization(organizationId, user.id)
-			return data(
-				{ success: true, intent, message: 'Organization deleted.' },
-				{ headers }
-			)
+			return data({ success: true, intent, message: 'Organization deleted.' })
 		}
 
-		return data({ error: 'Unknown action', intent }, { status: 400, headers })
+		return data({ error: 'Unknown action', intent }, { status: 400 })
 	} catch (error) {
 		/*
 		  A seat refusal is not a server error. `inviteOrganizationMember` began
@@ -397,7 +388,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		  this action answers. Filed.
 		*/
 		if (error instanceof QuotaExceededError) {
-			return data({ error: error.message, intent }, { status: 403, headers })
+			return data({ error: error.message, intent }, { status: 403 })
 		}
 
 		if (error instanceof ZodError) {
@@ -410,7 +401,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 
 			return data(
 				{ error: 'Validation failed', fieldErrors, intent },
-				{ status: 400, headers }
+				{ status: 400 }
 			)
 		}
 
@@ -422,7 +413,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 						: 'Failed to update organization',
 				intent
 			},
-			{ status: 500, headers }
+			{ status: 500 }
 		)
 	}
 }

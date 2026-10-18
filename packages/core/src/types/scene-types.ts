@@ -462,6 +462,15 @@ export interface ScenePresentationSettings {
 	 */
 	showInfoPopover?: boolean
 	/**
+	 * Whether the viewer draws its way back from a hotspot's camera - the
+	 * "Back to scene view" control, and Escape with it.
+	 *
+	 * Absent means shown, which is what every scene saved before this field
+	 * existed already did. Off hides only the control: a host page can still
+	 * send `return_to_scene_view`.
+	 */
+	showSceneViewReturn?: boolean
+	/**
 	 * Whether an embed shows the scene's saved thumbnail behind its loader
 	 * until the 3D scene is ready.
 	 *

@@ -26,22 +26,6 @@ import { ensurePost } from '../../lib/http/requests.server'
 
 import type { ActionFunctionArgs } from 'react-router'
 
-function withHeaders(response: Response, headers?: Headers): Response {
-	if (!headers) {
-		return response
-	}
-
-	const merged = new Headers(response.headers)
-	headers.forEach((value, key) => {
-		merged.append(key, value)
-	})
-
-	return new Response(response.body, {
-		status: response.status,
-		headers: merged
-	})
-}
-
 export async function action({ request }: ActionFunctionArgs) {
 	const methodCheck = ensurePost(request)
 	if (methodCheck) {
@@ -59,7 +43,6 @@ export async function action({ request }: ActionFunctionArgs) {
 	if (authResult instanceof Response) {
 		return authResult
 	}
-	const authHeaders = new Headers(authResult.headers)
 
 	const fields: Record<string, unknown> = {}
 	formData.forEach((value, key) => {
@@ -70,7 +53,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 	const parsed = parseDashboardMutationRequest(fields)
 	if (!parsed.ok) {
-		return withHeaders(ApiResponse.badRequest(parsed.error), authHeaders)
+		return ApiResponse.badRequest(parsed.error)
 	}
 
 	try {
@@ -81,25 +64,22 @@ export async function action({ request }: ActionFunctionArgs) {
 
 		// A 200 here means the request was understood and every target was
 		// attempted. Per-item outcomes live in `results` and `summary`.
-		return withHeaders(ApiResponse.success(result), authHeaders)
+		return ApiResponse.success(result)
 	} catch (error) {
 		if (error instanceof ConfirmationRequiredError) {
-			return withHeaders(ApiResponse.forbidden(error.message), authHeaders)
+			return ApiResponse.forbidden(error.message)
 		}
 
 		if (error instanceof DashboardPermissionError) {
-			return withHeaders(ApiResponse.forbidden(error.message), authHeaders)
+			return ApiResponse.forbidden(error.message)
 		}
 
 		if (error instanceof QuotaExceededError) {
-			return withHeaders(quotaExceededResponse(error), authHeaders)
+			return quotaExceededResponse(error)
 		}
 
-		return withHeaders(
-			ApiResponse.badRequest(
-				error instanceof Error ? error.message : 'Mutation failed'
-			),
-			authHeaders
+		return ApiResponse.badRequest(
+			error instanceof Error ? error.message : 'Mutation failed'
 		)
 	}
 }

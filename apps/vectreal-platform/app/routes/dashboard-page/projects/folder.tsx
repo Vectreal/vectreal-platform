@@ -23,7 +23,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw new Response('Project ID and Folder ID are required', { status: 400 })
 	}
 
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch project and folder data
 	const [project, folder] = await Promise.all([
@@ -50,19 +50,16 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		subfolders.map((subfolder) => subfolder.id)
 	)
 
-	return data(
-		{
-			project,
-			folder,
-			folderPath,
-			subfolders: subfolders.map((subfolder) => ({
-				...subfolder,
-				childCount: subfolderChildCounts.get(subfolder.id) ?? 0
-			})),
-			scenes
-		},
-		{ headers }
-	)
+	return data({
+		project,
+		folder,
+		folderPath,
+		subfolders: subfolders.map((subfolder) => ({
+			...subfolder,
+			childCount: subfolderChildCounts.get(subfolder.id) ?? 0
+		})),
+		scenes
+	})
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

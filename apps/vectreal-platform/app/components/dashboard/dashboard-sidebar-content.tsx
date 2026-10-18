@@ -25,6 +25,7 @@ import {
 } from '@shared/components/ui/sidebar'
 import {
 	ArrowRight,
+	Bot,
 	Building,
 	ChevronsUpDown,
 	CreditCard,
@@ -296,6 +297,16 @@ const DashboardSidebarContent = ({
 										>
 											<Settings />
 											Settings
+										</Link>
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={handleSidebarClose} asChild>
+										<Link
+											to="/dashboard/connected-agents"
+											viewTransition
+											aria-label="Go to Connected agents"
+										>
+											<Bot />
+											Connected agents
 										</Link>
 									</DropdownMenuItem>
 									<DropdownMenuSeparator />

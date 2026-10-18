@@ -12,7 +12,6 @@ import { resolveOptionalUser } from '../../../lib/domain/auth/auth-loader.server
  * user for another.
  */
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await resolveOptionalUser(request)
-	headers.set('Cache-Control', 'no-store')
-	return data({ user }, { headers })
+	const { user } = await resolveOptionalUser(request)
+	return data({ user }, { headers: { 'Cache-Control': 'no-store' } })
 }

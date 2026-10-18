@@ -78,6 +78,10 @@ export default [
 	route('api/contact/webhook', './routes/api/contact/webhook.ts'),
 	route('api/consent', './routes/api/consent.ts'),
 	route('api/theme', './routes/api/theme.ts'),
+	// Agent API: bearer tokens only, resolved by resolveAgentActor.
+	route('api/v1/me', './routes/api/v1/me.ts'),
+	// Public: tells the CLI which OAuth client and redirect ports to use.
+	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [
@@ -305,7 +309,8 @@ export default [
 				'billing/upgrade-canceled',
 				'./routes/dashboard-page/billing-upgrade-canceled.tsx'
 			),
-			route('settings', './routes/dashboard-page/settings.tsx')
+			route('settings', './routes/dashboard-page/settings.tsx'),
+			route('connected-agents', './routes/dashboard-page/connected-agents.tsx')
 		])
 	])
 ] satisfies RouteConfig
