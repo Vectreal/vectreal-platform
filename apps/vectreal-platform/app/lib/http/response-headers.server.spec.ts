@@ -102,7 +102,7 @@ describe('previewDocumentHeaders', () => {
 		)
 
 		expect(route).toMatch(
-			/export function headers\(\{ loaderHeaders \}[^)]*\) \{\s*return previewDocumentHeaders\(loaderHeaders\)/
+			/export function headers\(\{ loaderHeaders, errorHeaders \}[^)]*\) \{\s*return previewDocumentHeaders\(errorHeaders \?\? loaderHeaders\)/
 		)
 	})
 })
