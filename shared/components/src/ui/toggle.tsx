@@ -22,7 +22,7 @@ interface ToggleRowProps extends SwitchRootProps {
 	description?: React.ReactNode
 }
 
-export type ToggleProps = ToggleTileProps | ToggleRowProps
+type ToggleProps = ToggleTileProps | ToggleRowProps
 
 /*
   Surface and content change on one transition. `ds-field-interactive` eases
