@@ -1,0 +1,95 @@
+# .github/workflows/ci-dependabot-auto-merge.yaml
+name: CI - Dependabot Auto-merge
+
+# Queues a Dependabot npm pull request to merge itself once main's ruleset is
+# satisfied, which means the Quality Gate check has passed. Only patch and
+# minor updates qualify; a major, or anything touching the HELD families
+# below, waits for a person. .github/dependabot.yml groups updates so those
+# families never share a pull request with the bumps that do qualify.
+#
+# pull_request_target runs this file as it is on main, never the pull
+# request's version, and nothing here checks out or runs the pull request's
+# code. fetch-metadata refuses a pull request carrying commits Dependabot did
+# not author, so a person pushing to a Dependabot branch drops it out of this
+# path.
+#
+# The ruleset wants one approving review, given here with GITHUB_TOKEN. A
+# push dismisses it, and the synchronize event that push fires approves the
+# new head again. The merge itself is queued with the release GitHub App's
+# token: a merge made with GITHUB_TOKEN starts no workflow, so main's push
+# workflows (release-please, the staging deploy) would never see it.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  auto-merge:
+    name: Queue patch and minor updates
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.actor == 'dependabot[bot]' &&
+      github.repository == 'Vectreal/vectreal-platform'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Read the update
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+
+      - name: Decide
+        id: decide
+        env:
+          ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCIES: ${{ steps.metadata.outputs.dependency-names }}
+        # Only npm qualifies: a GitHub Actions bump edits .github/workflows,
+        # which the release App may not be allowed to write. update-type is
+        # the largest change in the pull request, so a group holding one
+        # major reads as major. Billing, routing, rendering and auth sit
+        # behind the HELD names; their bumps are read by a person even when
+        # semver calls them safe.
+        run: |
+          HELD='^(stripe|react-router|@react-router/.+|three|@types/three|@react-three/.+|supabase|@supabase/.+)$'
+          if [ "$ECOSYSTEM" != 'npm_and_yarn' ]; then
+            echo "Waiting for a person: $ECOSYSTEM update"
+            exit 0
+          fi
+          case "$UPDATE_TYPE" in
+            version-update:semver-patch|version-update:semver-minor) ;;
+            *) echo "Waiting for a person: $UPDATE_TYPE"; exit 0 ;;
+          esac
+          held=$(tr ',' '\n' <<<"$DEPENDENCIES" | sed 's/^ *//' | grep -E "$HELD" || true)
+          if [ -n "$held" ]; then
+            echo "Waiting for a person: $(tr '\n' ' ' <<<"$held")"
+            exit 0
+          fi
+          echo "merge=true" >> "$GITHUB_OUTPUT"
+
+      - name: Approve
+        if: steps.decide.outputs.merge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr review --approve "$PR_URL"
+
+      - name: Create GitHub App token
+        if: steps.decide.outputs.merge == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Queue the merge
+        if: steps.decide.outputs.merge == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"

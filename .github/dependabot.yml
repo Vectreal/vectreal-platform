@@ -1,20 +1,88 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# .github/dependabot.yml
+#
+# Patch and minor updates arrive as one grouped pull request per ecosystem.
+# .github/workflows/ci-dependabot-auto-merge.yaml merges the npm one once the
+# Quality Gate passes; the GitHub Actions one waits for a person. Majors are
+# left out of every catch-all group, so each arrives as its own pull request
+# and waits for a person.
+#
+# The catch-all already moves a family's patches and minors together. Its
+# majors would arrive one package at a time, and one member alone cannot
+# build, so each lockstep family gets a group for its majors. Only majors: a
+# patch sharing a pull request with a pending major would read as major and
+# wait with it. Dependabot puts a dependency in the first group it matches,
+# so the families come before the catch-all.
+#
+# The families the auto-merge workflow holds for a person (stripe, React
+# Router, three, Supabase) are grouped or excluded here too, which keeps them
+# out of the catch-all: a grouped pull request containing one of them would
+# otherwise hold every other bump in it back from merging.
+#
+# Version pins live in the `catalog:` block of pnpm-workspace.yaml, which
+# Dependabot updates in place; a catalog bump touches no package.json.
 
 version: 2
 updates:
-  - package-ecosystem: 'npm' # See documentation for possible values
-    directory: '/' # Location of package manifests
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
       interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Europe/Berlin'
+    # Held pull requests count against this, and Dependabot opens nothing
+    # new once it is reached, the catch-all included. It is set well above
+    # the dozen or so a normal week leaves waiting.
+    open-pull-requests-limit: 20
+    # A release is only offered once it has been public this long, so a
+    # compromised publish is usually yanked before it reaches the lockfile.
+    # Security updates ignore this.
+    cooldown:
+      default-days: 3
+      semver-minor-days: 7
+      semver-major-days: 14
     labels:
       - 'dependencies'
     groups:
-      npm-dependencies:
+      nx-major:
+        update-types:
+          - 'major'
         patterns:
-          - '@nx' # groups nx npm dependencies
+          - 'nx'
+          - '@nx/*'
+      storybook-major:
+        update-types:
+          - 'major'
+        patterns:
+          - 'storybook'
+          - '@storybook/*'
+      vitest-major:
+        update-types:
+          - 'major'
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+      react-router:
+        patterns:
+          - 'react-router'
+          - '@react-router/*'
+      three:
+        patterns:
+          - 'three'
+          - '@types/three'
+          - '@react-three/*'
+      supabase:
+        patterns:
+          - 'supabase'
+          - '@supabase/*'
+      npm-minor-and-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+        patterns:
+          - '*'
+        exclude-patterns:
+          - 'stripe'
     ignore:
       # Each stripe major types `apiVersion` to the one API version it ships
       # with, so a bump that leaves the pin in app/lib/stripe.server.ts behind
@@ -22,11 +90,21 @@ updates:
       - dependency-name: 'stripe'
         update-types: ['version-update:semver-major']
 
-  # GitHub Actions dependencies
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'Europe/Berlin'
+    open-pull-requests-limit: 5
     labels:
       - 'github-actions'
       - 'dependencies'
+    groups:
+      actions-minor-and-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+        patterns:
+          - '*'
