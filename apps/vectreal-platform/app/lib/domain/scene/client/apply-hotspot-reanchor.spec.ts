@@ -9,7 +9,7 @@
 import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
-import { applyHotspotReanchor } from './apply-hotspot-reanchor'
+import { applySceneReanchor } from './apply-hotspot-reanchor'
 import { cameraAtom, hotspotsAtom } from '../../../stores/scene-settings-store'
 
 import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
@@ -45,11 +45,11 @@ const seed = () => {
 const targetOf = (store: ReturnType<typeof createStore>) =>
 	store.get(cameraAtom).cameras?.[0].target
 
-describe('applyHotspotReanchor', () => {
+describe('applySceneReanchor', () => {
 	it('moves the marker', () => {
 		const store = seed()
 
-		applyHotspotReanchor(store, 1, 2)
+		applySceneReanchor(store, 1, 2)
 
 		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([4, 8, 12])
 	})
@@ -57,7 +57,7 @@ describe('applyHotspotReanchor', () => {
 	it('turns the camera that marker owns', () => {
 		const store = seed()
 
-		applyHotspotReanchor(store, 1, 2)
+		applySceneReanchor(store, 1, 2)
 
 		expect(targetOf(store)).toEqual([4, 8, 12])
 	})
@@ -67,7 +67,7 @@ describe('applyHotspotReanchor', () => {
 		// markers still move, by the inverse ratio, onto a model that grew.
 		const store = seed()
 
-		applyHotspotReanchor(store, 2, 1)
+		applySceneReanchor(store, 2, 1)
 
 		expect(store.get(hotspotsAtom)[0].worldPosition).toEqual([1, 2, 3])
 	})
@@ -78,7 +78,7 @@ describe('applyHotspotReanchor', () => {
 		const before = store.get(hotspotsAtom)
 		const camerasBefore = store.get(cameraAtom)
 
-		applyHotspotReanchor(store, 3, 3)
+		applySceneReanchor(store, 3, 3)
 
 		expect(store.get(hotspotsAtom)).toBe(before)
 		expect(store.get(cameraAtom)).toBe(camerasBefore)
@@ -88,7 +88,7 @@ describe('applyHotspotReanchor', () => {
 		const store = seed()
 		const before = store.get(hotspotsAtom)
 
-		applyHotspotReanchor(store, 0, 2)
+		applySceneReanchor(store, 0, 2)
 
 		expect(store.get(hotspotsAtom)).toBe(before)
 	})

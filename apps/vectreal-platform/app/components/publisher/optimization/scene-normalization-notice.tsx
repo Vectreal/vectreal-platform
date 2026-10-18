@@ -6,7 +6,7 @@ import { useAtom, useAtomValue, useStore } from 'jotai/react'
 import { useCallback } from 'react'
 
 import { defaultNormalizationOptions } from '../../../constants/viewer-defaults'
-import { applyHotspotReanchor } from '../../../lib/domain/scene/client/apply-hotspot-reanchor'
+import { applySceneReanchor } from '../../../lib/domain/scene/client/apply-hotspot-reanchor'
 import {
 	normalizationAtom,
 	rawModelDiagonalAtom
@@ -39,7 +39,7 @@ export const SceneNormalizationNotice: FC = () => {
 			// the click, and a snapshot would put the stale bounds back.
 			const current = store.get(normalizationAtom)
 			const next = { ...current, enabled }
-			applyHotspotReanchor(
+			applySceneReanchor(
 				store,
 				resolveNormalizedScale(rawDiagonal, current),
 				resolveNormalizedScale(rawDiagonal, next)
