@@ -104,7 +104,9 @@ export async function action({ request }: Route.ActionArgs) {
 	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-email-resend',
 		maxRequests: 3,
-		keyParts: [email.trim().toLowerCase()]
+		keyParts: [email.trim().toLowerCase()],
+		// Each attempt mails the named address; see `auth-signup`.
+		addressCeiling: 10
 	})
 
 	if (rateLimitResult.limited) {
