@@ -22,7 +22,11 @@ import { getDefaultStore } from 'jotai'
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 
 import HotspotsSettingsPanel from './hotspots-settings-panel'
-import { MAX_HOTSPOT_BODY_LENGTH } from '../../../../../lib/domain/scene/hotspot-urls'
+import { HOTSPOT_ARTWORK_MAX_BYTES } from '../../../../../lib/domain/scene/hotspot-artwork'
+import {
+	MAX_HOTSPOT_BODY_LENGTH,
+	MAX_HOTSPOT_URL_LENGTH
+} from '../../../../../lib/domain/scene/hotspot-urls'
 import {
 	cameraToolOpenRequestAtom,
 	isClickToPlaceActiveAtom,
@@ -507,13 +511,13 @@ describe('HotspotsSettingsPanel selection', () => {
 		expect(screen.getByText('Unnamed hotspot')).toBeTruthy()
 	})
 
-	it('offers the asset field only for a preset that needs one', async () => {
+	it('offers the image field only for a preset that needs one', async () => {
 		store.set(hotspotsAtom, [{ ...hotspot, sequenceIndex: 0 }])
 		store.set(activeHotspotIdAtom, hotspot.id)
 		const { rerender } = render(<HotspotsSettingsPanel />)
 		await openView('Appearance')
 
-		expect(screen.queryByLabelText('Asset URL')).toBeNull()
+		expect(screen.queryByLabelText('Marker image file')).toBeNull()
 
 		act(() => {
 			store.set(hotspotsAtom, [
@@ -522,70 +526,134 @@ describe('HotspotsSettingsPanel selection', () => {
 		})
 		rerender(<HotspotsSettingsPanel />)
 
-		expect(screen.getByLabelText('Asset URL')).toBeTruthy()
+		expect(screen.getByLabelText('Marker image file')).toBeTruthy()
 	})
 
 	/**
-	 * The field's rule is the save parser's rule. Without it, an `http:` or
-	 * scheme-less address looks fine until Save refuses the whole scene.
+	 * Artwork is uploaded, never linked: a linked address made every embed
+	 * visitor's browser call a host the author chose.
 	 */
-	describe('the asset URL the save would refuse', () => {
-		const openAppearance = async () => {
+	describe('the marker image', () => {
+		const openAppearance = async (payloadUrl?: string) => {
 			store.set(hotspotsAtom, [
-				{ ...hotspot, sequenceIndex: 0, stylePreset: 'image' }
+				{ ...hotspot, sequenceIndex: 0, stylePreset: 'image', payloadUrl }
 			])
 			store.set(activeHotspotIdAtom, hotspot.id)
 			render(<HotspotsSettingsPanel />)
 			await openView('Appearance')
-			return screen.getByLabelText('Asset URL')
+			return screen.getByLabelText('Marker image file') as HTMLInputElement
 		}
+		const pick = (input: HTMLInputElement, file: File) =>
+			fireEvent.change(input, { target: { files: [file] } })
+		const storedPayload = () => store.get(hotspotsAtom)[0].payloadUrl
 
-		it.each([
-			['an http address', 'http://cdn.test/pin.png'],
-			['an address with no scheme', 'cdn.test/pin.png'],
-			['an inline document', 'data:text/html,<p>hi</p>']
-		])('marks %s', async (_label, value) => {
-			const field = await openAppearance()
+		it('offers no address field to type into', async () => {
+			await openAppearance()
 
-			fireEvent.change(field, { target: { value } })
+			expect(screen.queryByRole('textbox', { name: /url/i })).toBeNull()
+		})
 
-			const message = screen.getByText(/use an https:\/\/ address/i)
-			expect(field.getAttribute('aria-invalid')).toBe('true')
-			expect(field.getAttribute('aria-describedby')).toBe(
-				message.getAttribute('id')
+		it('keeps a picked image on the marker as an inline image', async () => {
+			const input = await openAppearance()
+
+			pick(input, new File(['<svg/>'], 'pin.svg', { type: 'image/svg+xml' }))
+
+			await waitFor(() =>
+				expect(storedPayload()).toMatch(/^data:image\/svg\+xml;base64,/)
 			)
-		})
-
-		it('gives length as the reason for an https address that is too long', async () => {
-			// The rule refuses it on length alone, so telling the author to use
-			// https:// would point at the one thing already right.
-			const field = await openAppearance()
-
-			fireEvent.change(field, {
-				target: { value: `https://cdn.test/${'a'.repeat(9000)}.png` }
-			})
-
-			expect(field.getAttribute('aria-invalid')).toBe('true')
-			expect(screen.getByText(/too long/i)).toBeTruthy()
-			expect(screen.queryByText(/use an https:\/\/ address/i)).toBeNull()
+			expect(screen.getByText('Uploaded image')).toBeTruthy()
 		})
 
 		it.each([
-			['an https address', 'https://cdn.test/pin.png'],
-			['an inline image', 'data:image/svg+xml,%3Csvg%3E%3C/svg%3E'],
+			['a file that is not an image', 'text/html', 10, /PNG, JPEG/],
 			[
-				'an uploaded artwork path',
+				'an image over the size cap',
+				'image/png',
+				HOTSPOT_ARTWORK_MAX_BYTES + 1,
+				/under 2 MB/
+			]
+		])('refuses %s and says why', async (_label, type, size, reason) => {
+			const input = await openAppearance()
+			const file = new File(['x'], 'pin', { type })
+			Object.defineProperty(file, 'size', { value: size })
+
+			pick(input, file)
+
+			expect(await screen.findByText(reason)).toBeTruthy()
+			expect(storedPayload()).toBeUndefined()
+		})
+
+		it('takes a PNG too large to stay inline, for the save to upload', async () => {
+			const input = await openAppearance()
+
+			pick(
+				input,
+				new File(['x'.repeat(MAX_HOTSPOT_URL_LENGTH)], 'pin.png', {
+					type: 'image/png'
+				})
+			)
+
+			await waitFor(() =>
+				expect(storedPayload()).toMatch(/^data:image\/png;base64,/)
+			)
+			expect(storedPayload()!.length).toBeGreaterThan(MAX_HOTSPOT_URL_LENGTH)
+			expect(screen.queryByText(/use an svg or gif under/i)).toBeNull()
+		})
+
+		it('refuses an SVG too large to stay inline, which cannot be uploaded', async () => {
+			const input = await openAppearance()
+
+			pick(
+				input,
+				new File([`<svg>${'x'.repeat(8000)}</svg>`], 'pin.svg', {
+					type: 'image/svg+xml'
+				})
+			)
+
+			expect(await screen.findByText(/use an svg or gif under/i)).toBeTruthy()
+			expect(storedPayload()).toBeUndefined()
+		})
+
+		it('says so when the picked file cannot be read', async () => {
+			const input = await openAppearance()
+			const read = vi
+				.spyOn(FileReader.prototype, 'readAsDataURL')
+				.mockImplementation(function (this: FileReader) {
+					this.onerror?.(new ProgressEvent('error') as never)
+				})
+
+			pick(input, new File(['png'], 'pin.png', { type: 'image/png' }))
+
+			expect(await screen.findByText(/could not be read/i)).toBeTruthy()
+			expect(storedPayload()).toBeUndefined()
+			read.mockRestore()
+		})
+
+		it('names the host of a linked image saved before uploads, and replaces it', async () => {
+			const input = await openAppearance('https://cdn.test/pin.png')
+
+			expect(screen.getByText('Linked from cdn.test')).toBeTruthy()
+			expect(screen.getByRole('button', { name: 'Replace image' })).toBeTruthy()
+
+			pick(input, new File(['png'], 'pin.png', { type: 'image/png' }))
+
+			await waitFor(() => expect(storedPayload()).toMatch(/^data:image\/png/))
+		})
+
+		it('removes the image', async () => {
+			await openAppearance(
 				'/api/scenes/33333333-3333-4333-8333-333333333333/assets/55555555-5555-4555-8555-555555555555'
-			],
-			['an empty field', '']
-		])('says nothing about %s', async (_label, value) => {
-			const field = await openAppearance()
+			)
 
-			fireEvent.change(field, { target: { value: 'http://cdn.test/a.png' } })
-			fireEvent.change(field, { target: { value } })
+			expect(screen.getByText('Uploaded image')).toBeTruthy()
+			expect(
+				screen.queryByText(/saved before images were uploaded/i)
+			).toBeNull()
 
-			expect(field.getAttribute('aria-invalid')).toBeNull()
-			expect(screen.queryByText(/use an https:\/\/ address/i)).toBeNull()
+			fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
+
+			expect(storedPayload()).toBeUndefined()
+			expect(screen.getByRole('button', { name: 'Upload image' })).toBeTruthy()
 		})
 	})
 })

@@ -1,3 +1,4 @@
+export * from './hotspot-artwork-save'
 export * from './optimization-inference'
 export * from './scene-byte-metrics'
 export * from './scene-change-detection'

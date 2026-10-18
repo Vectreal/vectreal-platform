@@ -2,17 +2,22 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	buildHotspotArtworkUrl,
+	canUploadHotspotArtwork,
+	findNewRemoteArtwork,
+	HOTSPOT_INLINE_ARTWORK_MAX_KB,
 	hotspotArtworkAssetIdFromUrl,
 	hotspotArtworkFileName,
 	isHotspotArtworkAsset,
 	isHotspotArtworkPath,
 	isHotspotPayloadUrlShape
 } from './hotspot-artwork'
+import { isAllowedHotspotPayloadUrl } from './hotspot-urls'
 
 const SCENE_ID = '33333333-3333-4333-8333-333333333333'
 const OTHER_SCENE_ID = '44444444-4444-4444-8444-444444444444'
 const ASSET_ID = '55555555-5555-4555-8555-555555555555'
 const HOTSPOT_ID = '11111111-1111-4111-8111-111111111111'
+const OTHER_HOTSPOT_ID = '66666666-6666-4666-8666-666666666666'
 
 describe('hotspot artwork', () => {
 	it('round-trips the path it builds', () => {
@@ -49,8 +54,8 @@ describe('hotspot artwork', () => {
 	})
 
 	it('names the file by the marker and the image type', () => {
-		expect(hotspotArtworkFileName(HOTSPOT_ID, 'image/svg+xml')).toBe(
-			`hotspot-artwork-${HOTSPOT_ID}.svg`
+		expect(hotspotArtworkFileName(HOTSPOT_ID, 'image/webp')).toBe(
+			`hotspot-artwork-${HOTSPOT_ID}.webp`
 		)
 		expect(hotspotArtworkFileName(HOTSPOT_ID, 'IMAGE/JPEG')).toBe(
 			`hotspot-artwork-${HOTSPOT_ID}.jpg`
@@ -108,7 +113,60 @@ describe('hotspot artwork', () => {
 		expect(isHotspotPayloadUrlShape('/api/scenes/x/assets/y')).toBe(false)
 	})
 
-	it('refuses to name artwork of a type a marker cannot draw', () => {
-		expect(() => hotspotArtworkFileName(HOTSPOT_ID, 'image/tiff')).toThrow()
+	it.each(['image/tiff', 'image/svg+xml', 'image/gif'])(
+		'refuses to name uploaded artwork of %s, which the asset route will not serve as an image',
+		(type) => {
+			expect(canUploadHotspotArtwork(type)).toBe(false)
+			expect(() => hotspotArtworkFileName(HOTSPOT_ID, type)).toThrow()
+		}
+	)
+})
+
+describe('findNewRemoteArtwork', () => {
+	const stored = [{ id: HOTSPOT_ID, payloadUrl: 'https://cdn.test/pin.png' }]
+	const marker = (payloadUrl?: string, id = HOTSPOT_ID) => ({
+		id,
+		name: 'Rear badge',
+		payloadUrl
+	})
+
+	it('lets a linked image already stored on that marker through', () => {
+		expect(
+			findNewRemoteArtwork([marker('https://cdn.test/pin.png')], stored)
+		).toBeNull()
+	})
+
+	it.each([
+		['an edited address', marker('https://cdn.test/other.png')],
+		['a new marker', marker('https://cdn.test/pin.png', OTHER_HOTSPOT_ID)],
+		['a different case of scheme', marker('HTTPS://cdn.test/new.png')]
+	])('names the marker carrying %s', (_label, hotspot) => {
+		expect(findNewRemoteArtwork([hotspot], stored)).toEqual({
+			name: 'Rear badge'
+		})
+	})
+
+	it.each([
+		['an inline image', 'data:image/png;base64,AAAA'],
+		['uploaded artwork', buildHotspotArtworkUrl(SCENE_ID, ASSET_ID)],
+		['no image', undefined]
+	])('lets %s through', (_label, payloadUrl) => {
+		expect(findNewRemoteArtwork([marker(payloadUrl)], [])).toBeNull()
+	})
+})
+
+describe('HOTSPOT_INLINE_ARTWORK_MAX_KB', () => {
+	// The figure both refusals quote: an SVG of that size must stay inline,
+	// and one KB more must not, or the message points at the wrong limit.
+	const svgOf = (kb: number) =>
+		`data:image/svg+xml;base64,${btoa('x'.repeat(kb * 1024))}`
+
+	it('is the largest whole KB that stays inline', () => {
+		expect(
+			isAllowedHotspotPayloadUrl(svgOf(HOTSPOT_INLINE_ARTWORK_MAX_KB))
+		).toBe(true)
+		expect(
+			isAllowedHotspotPayloadUrl(svgOf(HOTSPOT_INLINE_ARTWORK_MAX_KB + 1))
+		).toBe(false)
 	})
 })

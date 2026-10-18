@@ -164,7 +164,7 @@ const HotspotsSettingsPanel = memo(() => {
 					<DrillDownView
 						id="appearance"
 						title="Appearance"
-						caption="A dot, or an image or SVG loaded from a URL."
+						caption="A dot, or an image or SVG you upload."
 					>
 						<MarkerAppearance hotspot={selectedHotspot} />
 					</DrillDownView>

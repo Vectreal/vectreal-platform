@@ -1,6 +1,7 @@
 import {
 	HOTSPOT_IMAGE_MEDIA_TYPES,
-	isAllowedHotspotPayloadUrl
+	isAllowedHotspotPayloadUrl,
+	MAX_HOTSPOT_URL_LENGTH
 } from './hotspot-urls'
 
 /**
@@ -30,12 +31,38 @@ import {
  */
 export const HOTSPOT_ARTWORK_PREFIX = 'hotspot-artwork-'
 
+/**
+ * The largest image a marker accepts, in bytes.
+ *
+ * A marker draws at 28 CSS pixels, so even a crisp 3x icon is a few kilobytes.
+ * The cap is generous for that, and still keeps an author from loading a
+ * full-resolution photograph into every embed visitor's page for one marker.
+ */
+export const HOTSPOT_ARTWORK_MAX_BYTES = 2 * 1024 * 1024
+
+/**
+ * The types artwork may be uploaded as: the images the asset route serves as
+ * themselves (`asset-response.server.ts`). It sends SVG and GIF as
+ * `application/octet-stream`, which a browser will not draw, so those stay on
+ * the marker inline, under the inline cap, or are not accepted at all.
+ */
 const EXTENSION_BY_MEDIA_TYPE: Record<string, string> = {
 	'image/png': 'png',
 	'image/jpeg': 'jpg',
-	'image/webp': 'webp',
-	'image/gif': 'gif',
-	'image/svg+xml': 'svg'
+	'image/webp': 'webp'
+}
+
+/**
+ * The largest file, in whole KB, that always fits the inline cap once base64
+ * encoded behind its `data:` prefix: the limit an SVG or GIF works within.
+ */
+export const HOTSPOT_INLINE_ARTWORK_MAX_KB = Math.floor(
+	((MAX_HOTSPOT_URL_LENGTH - 64) * 3) / 4 / 1024
+)
+
+/** Whether an image of this type can be uploaded as marker artwork. */
+export function canUploadHotspotArtwork(mediaType: string): boolean {
+	return mediaType.toLowerCase() in EXTENSION_BY_MEDIA_TYPE
 }
 
 /** The name a marker's uploaded artwork is stored under. */
@@ -120,4 +147,35 @@ export function hotspotArtworkAssetIdFromUrl(
 	const match = ARTWORK_PATH.exec(value)
 	if (!match || match[1] !== sceneId.toLowerCase()) return null
 	return match[2]
+}
+
+/**
+ * The first marker carrying a remote artwork address it did not already hold
+ * when the scene was last saved, or null.
+ *
+ * Remote artwork makes every embed visitor's browser call a host the author
+ * chose, so new artwork is uploaded instead. A remote address a marker already
+ * stored keeps saving untouched until it is changed: those scenes predate the
+ * rule, and refusing their saves would strand them with nothing to fix the
+ * value but a new upload. Every preset, because a value saved on a dot would
+ * otherwise be grandfathered the moment the marker switched to an image.
+ */
+export function findNewRemoteArtwork(
+	hotspots:
+		| readonly { id: string; name: string; payloadUrl?: string | null }[]
+		| null
+		| undefined,
+	stored: readonly { id: string; payloadUrl?: string | null }[]
+): { name: string } | null {
+	const storedById = new Map(stored.map((row) => [row.id, row.payloadUrl]))
+
+	for (const hotspot of hotspots ?? []) {
+		const payloadUrl = hotspot.payloadUrl
+		if (!payloadUrl || !payloadUrl.toLowerCase().startsWith('https://'))
+			continue
+		if (storedById.get(hotspot.id) === payloadUrl) continue
+		return { name: hotspot.name }
+	}
+
+	return null
 }
