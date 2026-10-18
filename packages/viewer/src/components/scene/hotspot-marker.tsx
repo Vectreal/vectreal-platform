@@ -579,6 +579,8 @@ const HotspotMarker = ({
 							className={cn(
 								bodyClasses,
 								FOCUS_RING,
+								// Its numeral takes the host's face; see CHROME_BUTTON.
+								'[font-family:inherit]',
 								interaction.action !== 'none' && markerClasses.interactive
 							)}
 							aria-label={marker.accessibleName}

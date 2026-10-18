@@ -39,6 +39,9 @@ present packages/viewer/src/hooks/use-held-executor.ts heldRef.current.set(comma
 present packages/viewer/src/components/scene/scene-camera.tsx if (!isFramed) return
 present packages/viewer/src/components/canvas-wrapper.tsx className={cn('outline-none', colorScheme, containerClassName)}
 present packages/viewer/src/package.css @import '../../../shared/components/src/styles/theme.css'
+absent packages/viewer/src/styles.css font-family:
+absent packages/viewer/src/vectreal-viewer.tsx DM_Sans
+present packages/viewer/src/components/chrome-classes.ts [font-family:inherit]
 absent packages/viewer/src/components/animation-controls.tsx absolute
 absent packages/viewer/src/components/camera-controls.tsx bottom-0
 present packages/viewer/src/hooks/use-src-model.ts import('../load-src')
@@ -525,6 +528,10 @@ shares a name with (`--background`, `--foreground`, `--muted-foreground`,
 there rather than your page's. Style that content with your own names, or set
 `theme` to match your page. The hotspot marker keeps its own
 `--vctrl-hotspot-*` tokens, which you can override on the container.
+
+The viewer ships no font and names none: its text takes the typeface of the
+page it sits on. To give it another, set `font-family` on the viewer's container
+(its `className`, or an element around it).
 
 ---
 

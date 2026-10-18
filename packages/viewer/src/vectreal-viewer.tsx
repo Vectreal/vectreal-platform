@@ -893,7 +893,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 			<Canvas
 				frameloop="always"
 				containerClassName={cn(
-					'viewer vctrl-viewer h-full w-full overflow-clip font-[DM_Sans_Variable,sans-serif] text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
+					'viewer vctrl-viewer h-full w-full overflow-clip text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
 					className
 				)}
 				containerBackground={backdrop ? sceneBackdropCss(backdrop) : undefined}
