@@ -25,6 +25,7 @@ const PACKAGES = join(import.meta.dirname, '..', '..', '..', 'packages')
 
 interface Manifest {
 	name: string
+	private?: boolean
 	type?: string
 	main?: string
 	exports?: Record<string, string | Record<string, string>>
@@ -41,8 +42,10 @@ const manifests: Manifest[] = readdirSync(PACKAGES, { withFileTypes: true })
 		}
 	})
 
-const published = manifests.filter((manifest) =>
-	manifest.name.startsWith('@vctrl/')
+// A private package (`@vctrl/sdk` until the CLI ships) has no build to point
+// at, so it resolves from source and is held to none of this.
+const published = manifests.filter(
+	(manifest) => manifest.name.startsWith('@vctrl/') && !manifest.private
 )
 
 describe('ES module entries', () => {

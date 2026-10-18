@@ -32,6 +32,7 @@ catalog:
   three: ^0.185.1
   vite: ^8.3.2
   vite-plugin-dts: 5.0.3
+  zod: ^4.4.3
 
 # One React for the whole graph, not only for the manifests that name it.
 #
