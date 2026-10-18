@@ -12,7 +12,8 @@
  * case that keeps a draft; dropping the id check reddens the other-scene case;
  * dropping the save's `storedSceneRef` write reddens the after-save case;
  * reading `descriptionChanged` from the id alone reddens the description case;
- * resetting `status` on every revalidation reddens the save-result case.
+ * resetting `status` on every revalidation, or only on a name change or only
+ * on another scene, reddens a save-result case.
  */
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -109,6 +110,27 @@ describe('useSceneMetadata drafts', () => {
 		expect(result.current.status).toBe('error')
 
 		rerender({ scene: { ...stored, name: 'Renamed elsewhere' } })
+		expect(result.current.status).toBe('idle')
+	})
+
+	it.each([
+		['the description changed', { description: 'Edited elsewhere' }],
+		['the page moved to another scene', { id: 'scene-2' }]
+	])('clears a save result when %s', async (_, change) => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => Response.json({ error: 'nope' }, { status: 500 }))
+		)
+		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const { result, rerender } = renderMetadata()
+
+		act(() => {
+			result.current.setNameDraft('Camera body')
+		})
+		await act(() => result.current.save())
+		expect(result.current.status).toBe('error')
+
+		rerender({ scene: { ...stored, ...change } })
 		expect(result.current.status).toBe('idle')
 	})
 
