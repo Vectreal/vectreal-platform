@@ -489,6 +489,15 @@ describe('HotspotsSettingsPanel selection', () => {
 		expect(screen.getByRole('heading', { name: 'Markers' })).toBeTruthy()
 	})
 
+	it('lists a marker whose name is only spaces as unnamed', () => {
+		// The save refuses that name as no name and sends the author looking
+		// for this label, so a blank row would be one they could not find.
+		store.set(hotspotsAtom, [{ ...hotspot, name: '   ', sequenceIndex: 0 }])
+		render(<HotspotsSettingsPanel />)
+
+		expect(screen.getByText('Unnamed hotspot')).toBeTruthy()
+	})
+
 	it('offers the asset field only for a preset that needs one', async () => {
 		store.set(hotspotsAtom, [{ ...hotspot, sequenceIndex: 0 }])
 		store.set(activeHotspotIdAtom, hotspot.id)
@@ -505,6 +514,66 @@ describe('HotspotsSettingsPanel selection', () => {
 		rerender(<HotspotsSettingsPanel />)
 
 		expect(screen.getByLabelText('Asset URL')).toBeTruthy()
+	})
+
+	/**
+	 * The field's rule is the save parser's rule. Without it, an `http:` or
+	 * scheme-less address looks fine until Save refuses the whole scene.
+	 */
+	describe('the asset URL the save would refuse', () => {
+		const openAppearance = async () => {
+			store.set(hotspotsAtom, [
+				{ ...hotspot, sequenceIndex: 0, stylePreset: 'image' }
+			])
+			store.set(activeHotspotIdAtom, hotspot.id)
+			render(<HotspotsSettingsPanel />)
+			await openView('Appearance')
+			return screen.getByLabelText('Asset URL')
+		}
+
+		it.each([
+			['an http address', 'http://cdn.test/pin.png'],
+			['an address with no scheme', 'cdn.test/pin.png'],
+			['an inline document', 'data:text/html,<p>hi</p>']
+		])('marks %s', async (_label, value) => {
+			const field = await openAppearance()
+
+			fireEvent.change(field, { target: { value } })
+
+			const message = screen.getByText(/use an https:\/\/ address/i)
+			expect(field.getAttribute('aria-invalid')).toBe('true')
+			expect(field.getAttribute('aria-describedby')).toBe(
+				message.getAttribute('id')
+			)
+		})
+
+		it('gives length as the reason for an https address that is too long', async () => {
+			// The rule refuses it on length alone, so telling the author to use
+			// https:// would point at the one thing already right.
+			const field = await openAppearance()
+
+			fireEvent.change(field, {
+				target: { value: `https://cdn.test/${'a'.repeat(9000)}.png` }
+			})
+
+			expect(field.getAttribute('aria-invalid')).toBe('true')
+			expect(screen.getByText(/too long/i)).toBeTruthy()
+			expect(screen.queryByText(/use an https:\/\/ address/i)).toBeNull()
+		})
+
+		it.each([
+			['an https address', 'https://cdn.test/pin.png'],
+			['an inline image', 'data:image/svg+xml,%3Csvg%3E%3C/svg%3E'],
+			['an empty field', '']
+		])('says nothing about %s', async (_label, value) => {
+			const field = await openAppearance()
+
+			fireEvent.change(field, { target: { value: 'http://cdn.test/a.png' } })
+			fireEvent.change(field, { target: { value } })
+
+			expect(field.getAttribute('aria-invalid')).toBeNull()
+			expect(screen.queryByText(/use an https:\/\/ address/i)).toBeNull()
+		})
 	})
 })
 

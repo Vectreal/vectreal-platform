@@ -514,16 +514,28 @@ export class SceneSettingsParser {
 				return ApiResponse.badRequest(`hotspots has duplicate id ${hotspot.id}`)
 			}
 			seenIds.add(hotspot.id)
-			if (typeof hotspot.name !== 'string' || !hotspot.name.trim()) {
-				return ApiResponse.badRequest(`hotspots[${i}].name is required`)
+			// Rejections an author can reach from the editor are named by the
+			// marker, not the index: they land in the save panel, where
+			// `hotspots[3]` points at nothing the author can see. A marker with no
+			// name has nothing to be named by, so that one points at how the
+			// panel lists it instead. Type and shape rejections keep the index:
+			// only a client bypassing the editor can produce them.
+			if (typeof hotspot.name !== 'string') {
+				return ApiResponse.badRequest(`hotspots[${i}].name must be a string`)
 			}
+			if (!hotspot.name.trim()) {
+				return ApiResponse.badRequest(
+					'A marker has no name (listed as "Unnamed hotspot"). Name it to save the scene'
+				)
+			}
+			const marker = `Marker "${hotspot.name.trim()}"`
 			if (hotspot.body !== undefined && hotspot.body !== null) {
 				if (typeof hotspot.body !== 'string') {
 					return ApiResponse.badRequest(`hotspots[${i}].body must be a string`)
 				}
 				if (hotspot.body.length > MAX_HOTSPOT_BODY_LENGTH) {
 					return ApiResponse.badRequest(
-						`hotspots[${i}].body must be at most ${MAX_HOTSPOT_BODY_LENGTH} characters`
+						`${marker} has body text longer than ${MAX_HOTSPOT_BODY_LENGTH} characters (body)`
 					)
 				}
 			}
@@ -547,7 +559,7 @@ export class SceneSettingsParser {
 					// no stored value can fail this and there is nothing to
 					// grandfather.
 					return ApiResponse.badRequest(
-						`hotspots[${i}].linkUrl must be an https URL of at most ${MAX_HOTSPOT_URL_LENGTH} characters`
+						`${marker} has a link that is not an https URL of at most ${MAX_HOTSPOT_URL_LENGTH} characters (linkUrl)`
 					)
 				}
 			}
@@ -589,7 +601,7 @@ export class SceneSettingsParser {
 				}
 				if (hotspot.payloadUrl.length > MAX_HOTSPOT_URL_LENGTH) {
 					return ApiResponse.badRequest(
-						`hotspots[${i}].payloadUrl must be at most ${MAX_HOTSPOT_URL_LENGTH} characters`
+						`${marker} has an asset URL longer than ${MAX_HOTSPOT_URL_LENGTH} characters (payloadUrl)`
 					)
 				}
 				// The scheme is checked only for the presets that render it. A 'dot'
@@ -601,7 +613,7 @@ export class SceneSettingsParser {
 					!isAllowedHotspotPayloadUrl(hotspot.payloadUrl)
 				) {
 					return ApiResponse.badRequest(
-						`hotspots[${i}].payloadUrl must be an https URL or an inline image`
+						`${marker} has an asset URL that is neither https nor an inline image (payloadUrl)`
 					)
 				}
 			}
