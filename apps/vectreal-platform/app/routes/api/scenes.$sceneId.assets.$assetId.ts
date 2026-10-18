@@ -89,9 +89,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	/*
 	  Authorization gate first: a non-member gets the same 404 whether or not
-	  the asset exists, so the route is no existence oracle. A membership
-	  lookup rather than `getScene`, which throws for a non-member and turned
-	  that 404 into a 500.
+	  the asset exists, so the route is no existence oracle.
 	*/
 	const membership = await resolveSceneMembership(sceneId, auth.user.id)
 	if (!membership) {

@@ -371,7 +371,7 @@ describe('the /preview document', () => {
 
 	it('gates on membership of this scene, in this project', () => {
 		expect(layout).toMatch(
-			/if \(!membership \|\| membership\.projectId !== projectId\) \{\s*return withNoStore\(ApiResponse\.notFound/
+			/if \(!membership \|\| membership\.projectId !== projectId\) \{\s*throw sceneNotFound\(\)/
 		)
 		expect(layout).not.toContain('getScene(')
 	})
