@@ -10,7 +10,14 @@
  * editing.
  */
 
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import {
+	act,
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within
+} from '@testing-library/react'
 import { getDefaultStore } from 'jotai'
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 
@@ -26,6 +33,7 @@ import {
 import {
 	activeHotspotIdAtom,
 	cameraAtom,
+	heldHotspotCardIdAtom,
 	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { DynamicSidebar } from '../../dynamic-sidebar'
@@ -130,6 +138,7 @@ beforeEach(() => {
 	snapshot.current = null
 	store.set(hotspotsAtom, [])
 	store.set(activeHotspotIdAtom, null)
+	store.set(heldHotspotCardIdAtom, null)
 	store.set(isClickToPlaceActiveAtom, false)
 	store.set(cameraAtom, { cameras: [] })
 })
@@ -574,6 +583,47 @@ describe('HotspotsSettingsPanel selection', () => {
 			expect(field.getAttribute('aria-invalid')).toBeNull()
 			expect(screen.queryByText(/use an https:\/\/ address/i)).toBeNull()
 		})
+	})
+})
+
+/**
+ * The card on the canvas follows the Content view: the author sees the card
+ * they are writing, and it closes when they move on.
+ */
+describe('HotspotsSettingsPanel card on the canvas', () => {
+	const openMarker = () => {
+		store.set(hotspotsAtom, [hotspot])
+		store.set(activeHotspotIdAtom, hotspot.id)
+		return render(<HotspotsSettingsPanel />)
+	}
+
+	it('holds no card at the marker’s top level', () => {
+		openMarker()
+		expect(store.get(heldHotspotCardIdAtom)).toBeNull()
+	})
+
+	it('holds the card of the marker whose content is open', async () => {
+		openMarker()
+		await openView('Content')
+		expect(store.get(heldHotspotCardIdAtom)).toBe(hotspot.id)
+	})
+
+	it('lets go once the author goes back from the content', async () => {
+		openMarker()
+		await openView('Content')
+
+		fireEvent.click(screen.getByRole('button', { name: /^Back to/ }))
+
+		await waitFor(() => expect(store.get(heldHotspotCardIdAtom)).toBeNull())
+	})
+
+	it('lets go when the panel goes, as it does on a tool switch or preview', async () => {
+		const { unmount } = openMarker()
+		await openView('Content')
+
+		unmount()
+
+		expect(store.get(heldHotspotCardIdAtom)).toBeNull()
 	})
 })
 

@@ -21,6 +21,7 @@ import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
 import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
+	heldHotspotCardIdAtom,
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
 	selectedCameraIdAtom,
@@ -123,6 +124,7 @@ const PublisherPage = () => {
 
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
 	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
+	const heldHotspotCardId = useAtomValue(heldHotspotCardIdAtom)
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	// The tool whose panel is open, not the one merely selected. Every in-scene
 	// affordance below scopes to it, so no tool's handles outlive its drawer.
@@ -273,6 +275,21 @@ const PublisherPage = () => {
 						openComposeTool === 'hotspots' ? activeHotspotId : null
 					}
 					onHotspotSelect={handleHotspotSelect}
+					/*
+					  Preview leaves the cards to clicks, as a visitor gets them. The
+					  editor holds the card of the hotspot whose content is being
+					  written, and every other card closed, so a card opened in
+					  preview does not outlive it and none stays up under another
+					  tool. Gated on the tool like the selection above, for the
+					  frame the panel's unmount has not yet cleared the atom.
+					*/
+					revealedHotspotId={
+						isPreviewMode
+							? undefined
+							: openComposeTool === 'hotspots'
+								? heldHotspotCardId
+								: null
+					}
 					/*
 					  A visitor's way back from a hotspot's camera, so only where the
 					  author is looking as a visitor. In the editor the way back is

@@ -68,6 +68,13 @@ const hotspotsAtom = atom<HotspotDefinition[]>([])
 const activeHotspotIdAtom = atom<string | null>(null)
 
 /**
+ * The hotspot whose card the editor holds open on the canvas: the one whose
+ * Content view is on screen, written by that view. Null holds every card
+ * closed. See `revealedHotspotId` on the viewer.
+ */
+const heldHotspotCardIdAtom = atom<string | null>(null)
+
+/**
  * Looking through a hotspot's camera in the Camera tool is a mode the author
  * steps into and out of: closing the tool puts back the camera from before.
  *
@@ -172,6 +179,7 @@ const sceneViewerSettingsAtom = atom(
 export {
 	// Vectreal viewer settings atoms
 	activeHotspotIdAtom,
+	heldHotspotCardIdAtom,
 	exitHotspotCameraAtom,
 	hotspotCameraModeAtom,
 	resetHotspotEditingAtom,
