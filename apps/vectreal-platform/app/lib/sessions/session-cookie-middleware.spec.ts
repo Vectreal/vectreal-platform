@@ -1,7 +1,7 @@
 /**
  * The session cookie middleware against the real per-request Supabase client
- * cache. Supabase's own cookie write is stood in for by appending to the
- * client's Headers, which is exactly what its `setAll` does on a refresh.
+ * cache. Supabase's client is stood in for by one that keeps the cookie
+ * writer it was given, so a spec can call it as a token refresh would.
  */
 
 import { createRequestHandler, type ServerBuild } from 'react-router'
@@ -9,6 +9,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sessionCookieMiddleware } from './session-cookie-middleware'
 import { createSupabaseClient } from '../supabase.server'
+
+type SetAll = (
+	cookies: { name: string; value: string; options: object }[]
+) => Promise<void>
+
+vi.mock('@supabase/ssr', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@supabase/ssr')>()),
+	createServerClient: (
+		_url: string,
+		_key: string,
+		options: { cookies: { setAll: SetAll } }
+	) => ({ setAll: options.cookies.setAll })
+}))
 
 const ROTATED = 'sb-127-auth-token=rotated; Path=/; HttpOnly; SameSite=Lax'
 const URL_ = 'https://vectreal.com/dashboard'
@@ -31,8 +44,14 @@ function run(
 }
 
 async function refresh(routeRequest: Request) {
-	const { headers } = await createSupabaseClient(routeRequest)
-	headers.append('Set-Cookie', ROTATED)
+	const { client } = await createSupabaseClient(routeRequest)
+	await (client as unknown as { setAll: SetAll }).setAll([
+		{
+			name: 'sb-127-auth-token',
+			value: 'rotated',
+			options: { path: '/', httpOnly: true, sameSite: 'lax' }
+		}
+	])
 }
 
 beforeEach(() => {
@@ -68,15 +87,6 @@ describe('sessionCookieMiddleware', () => {
 		}, actionRequest)
 
 		expect(loaderClient).toBe(actionClient)
-	})
-
-	it('does not add a cookie the route already forwarded', async () => {
-		const response = await run(async (routeRequest) => {
-			await refresh(routeRequest)
-			return new Response(null, { headers: [['Set-Cookie', ROTATED]] })
-		})
-
-		expect(response.headers.getSetCookie()).toEqual([ROTATED])
 	})
 
 	it('keeps the route’s own cookies beside the session one', async () => {

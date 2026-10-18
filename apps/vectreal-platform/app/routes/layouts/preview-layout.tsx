@@ -104,10 +104,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			})
 		: null
 
-	return data(
-		{ projectId, sceneId, manifest },
-		{ headers: sessionAuth.headers ?? {} }
-	)
+	return data({ projectId, sceneId, manifest })
 }
 
 /**

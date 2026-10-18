@@ -23,7 +23,7 @@ import {
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 
 	const [recentScenes, facts] = await Promise.all([
 		getRecentScenesForUser(user.id, 10),
@@ -44,7 +44,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const [resumeScene = null, ...alsoRecent] = recentScenes
 	const tidbit = pickTidbit(buildTidbits(facts))
 
-	return data({ resumeScene, alsoRecent, tidbit }, { headers })
+	return data({ resumeScene, alsoRecent, tidbit })
 }
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

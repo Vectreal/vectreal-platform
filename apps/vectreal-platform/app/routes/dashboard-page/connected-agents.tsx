@@ -50,7 +50,7 @@ function isOAuthServerOff(error: { code?: string } | null): boolean {
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user } = await loadAuthenticatedUser(request)
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	const [memberships, grants, consents] = await Promise.all([
 		getUserOrganizations(user.id),
@@ -63,7 +63,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 			request,
 			properties: { userId: user.id }
 		})
-		throw data('Could not load connected agents.', { status: 502, headers })
+		throw data('Could not load connected agents.', { status: 502 })
 	}
 
 	const agents = listConnectedAgents({
@@ -74,7 +74,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		)
 	})
 
-	return data({ agents }, { headers })
+	return data({ agents })
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -85,13 +85,13 @@ export async function action({ request }: Route.ActionArgs) {
 	if (csrfCheck) return csrfCheck
 
 	const { user } = await loadAuthenticatedUser(request)
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	const clientId = formData.get('clientId')
 	if (formData.get('intent') !== 'revoke' || typeof clientId !== 'string') {
 		return data<RevokeResult>(
 			{ error: 'Choose an agent to revoke.' },
-			{ status: 400, headers }
+			{ status: 400 }
 		)
 	}
 
@@ -107,7 +107,7 @@ export async function action({ request }: Route.ActionArgs) {
 	if (error && error.status !== 404) {
 		return data<RevokeResult>(
 			{ error: 'Could not revoke this agent. Try again.' },
-			{ status: 502, headers }
+			{ status: 502 }
 		)
 	}
 
@@ -123,14 +123,11 @@ export async function action({ request }: Route.ActionArgs) {
 				error:
 					'The agent is signed out, but its entry could not be removed. Try again.'
 			},
-			{ status: 500, headers }
+			{ status: 500 }
 		)
 	}
 
-	return data<RevokeResult>(
-		{ success: true, message: 'Agent revoked.' },
-		{ headers }
-	)
+	return data<RevokeResult>({ success: true, message: 'Agent revoked.' })
 }
 
 export { DashboardErrorBoundary as ErrorBoundary } from '../../components/errors'

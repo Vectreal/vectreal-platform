@@ -308,9 +308,13 @@ export interface ApiResponse<T = unknown> {
 }
 
 /** User context for authenticated API operations. */
+/**
+ * Who is asking. It carries no headers on purpose: the session cookies
+ * Supabase writes during a request reach the response through
+ * `sessionCookieMiddleware`, so a route has nothing to forward.
+ */
 export interface ApiUserContext {
 	readonly user: User
-	readonly headers?: HeadersInit
 }
 
 /** API error with structured information. */

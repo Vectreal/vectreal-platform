@@ -91,7 +91,7 @@ export async function action({ request }: Route.ActionArgs) {
 		redirectTo += `&utm_source=${encodeURIComponent(utm_source)}`
 	}
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	// Standard OAuth signin
 	const { data, error } = await client.auth.signInWithOAuth({
@@ -110,9 +110,7 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	if (data.url) {
-		return redirect(data.url, {
-			headers
-		})
+		return redirect(data.url)
 	}
 
 	reportServerError(

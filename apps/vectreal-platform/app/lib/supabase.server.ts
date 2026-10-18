@@ -42,7 +42,24 @@ export function runInSupabaseScope<T>(fn: () => Promise<T>): Promise<T> {
 	return requestScope.run({}, fn)
 }
 
-export async function createSupabaseClient(request: Request) {
+/**
+ * This request's Supabase client.
+ *
+ * The cookies it writes (a refreshed session, a sign-in, a sign-out) are kept
+ * here and never handed out: `sessionCookieMiddleware` puts them on whatever
+ * response the request ends with, so no route forwards them, and none can
+ * forward them wrong.
+ */
+export async function createSupabaseClient(
+	request: Request
+): Promise<{ client: SupabaseClient }> {
+	const { client } = await supabaseContext(request)
+	return { client }
+}
+
+async function supabaseContext(
+	request: Request
+): Promise<SupabaseClientContext> {
 	const scope = requestScope.getStore()
 	const cached = scope?.context ?? clientCache.get(request)
 	if (cached) return cached

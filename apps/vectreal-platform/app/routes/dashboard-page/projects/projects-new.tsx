@@ -76,7 +76,7 @@ type ProjectFormValues = z.infer<typeof projectFormSchema>
 
 export async function loader({ request }: Route.LoaderArgs) {
 	// Authenticate without creating default resources as a side effect.
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 
 	// Fetch organizations for project creation form
 	const [organizations, userProjects] = await Promise.all([
@@ -132,11 +132,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 		projectCreationCapabilities
 	}
 
-	return data(loaderData, { headers })
+	return data(loaderData)
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedSession(request)
+	const { user } = await loadAuthenticatedSession(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -164,7 +164,7 @@ export async function action({ request }: Route.ActionArgs) {
 		)
 
 		// Redirect to the new project
-		return redirect(`/dashboard/projects/${project.id}`, { headers })
+		return redirect(`/dashboard/projects/${project.id}`)
 	} catch (error) {
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
@@ -176,23 +176,16 @@ export async function action({ request }: Route.ActionArgs) {
 				}
 			})
 
-			return data(
-				{
-					error: 'Validation failed',
-					fieldErrors
-				},
-				{ headers }
-			)
+			return data({
+				error: 'Validation failed',
+				fieldErrors
+			})
 		}
 
 		// Return general error for display
-		return data(
-			{
-				error:
-					error instanceof Error ? error.message : 'Failed to create project'
-			},
-			{ headers }
-		)
+		return data({
+			error: error instanceof Error ? error.message : 'Failed to create project'
+		})
 	}
 }
 

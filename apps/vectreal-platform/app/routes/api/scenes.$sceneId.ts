@@ -154,12 +154,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				publication
 			)
 
-			return manifestResponse(
-				request,
-				manifest,
-				etag,
-				authContext.mode === 'session' ? authContext.headers : undefined
-			)
+			return manifestResponse(request, manifest, etag)
 		} catch (error) {
 			reportServerError(error, {
 				request,
@@ -176,16 +171,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	const sceneId = params.sceneId?.trim()
 	if (!sceneId) {
-		return ApiResponse.error('Scene ID is required', 400, {
-			headers: new Headers(authResult.headers)
-		})
+		return ApiResponse.error('Scene ID is required', 400)
 	}
 
 	const scene = await getScene(sceneId, authResult.user.id)
 	if (!scene) {
-		return ApiResponse.notFound(`Scene not found with ID: ${sceneId}`, {
-			headers: new Headers(authResult.headers)
-		})
+		return ApiResponse.notFound(`Scene not found with ID: ${sceneId}`)
 	}
 
 	try {
@@ -195,7 +186,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		)
 		const etag = buildSceneManifestEtag(sceneId, manifest.settingsUpdatedAt)
 
-		return manifestResponse(request, manifest, etag, authResult.headers)
+		return manifestResponse(request, manifest, etag)
 	} catch (error) {
 		reportServerError(error, {
 			request,
@@ -203,8 +194,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		})
 		return ApiResponse.error(
 			error instanceof Error ? error.message : 'Failed to load scene',
-			500,
-			{ headers: new Headers(authResult.headers) }
+			500
 		)
 	}
 }

@@ -117,7 +117,7 @@ const ACCOUNT_DELETION_PLAN: DashboardConfirmationPlan = {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { userWithDefaults, headers } = await loadAuthenticatedUser(request)
+	const { userWithDefaults } = await loadAuthenticatedUser(request)
 	const themeMode = parseThemeCookieHeader(request.headers.get('Cookie'))
 
 	const loaderData: SettingsLoaderData = {
@@ -125,15 +125,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 		themeMode
 	}
 
-	return data(loaderData, { headers })
+	return loaderData
 }
 
 export async function action({ request }: Route.ActionArgs) {
-	const {
-		user: authenticatedUser,
-		userWithDefaults,
-		headers
-	} = await loadAuthenticatedUser(request)
+	const { user: authenticatedUser, userWithDefaults } =
+		await loadAuthenticatedUser(request)
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
 	if (csrfCheck) {
@@ -152,27 +149,18 @@ export async function action({ request }: Route.ActionArgs) {
 				name: validated.name
 			})
 
-			return data(
-				{
-					success: true,
-					intent,
-					message: 'Profile updated successfully.',
-					user: updatedUser
-				},
-				{ headers }
-			)
+			return {
+				success: true,
+				intent,
+				message: 'Profile updated successfully.',
+				user: updatedUser
+			}
 		}
 
 		if (intent === 'preferences') {
 			const validated = preferencesSchema.parse({
 				themeMode: formData.get('themeMode')
 			})
-
-			const responseHeaders = new Headers(headers)
-			responseHeaders.append(
-				'Set-Cookie',
-				buildThemeSetCookie(validated.themeMode)
-			)
 
 			return data(
 				{
@@ -181,7 +169,7 @@ export async function action({ request }: Route.ActionArgs) {
 					message: 'Preferences saved successfully.',
 					themeMode: validated.themeMode
 				},
-				{ headers: responseHeaders }
+				{ headers: { 'Set-Cookie': buildThemeSetCookie(validated.themeMode) } }
 			)
 		}
 
@@ -190,8 +178,7 @@ export async function action({ request }: Route.ActionArgs) {
 				confirmationText: formData.get('confirmationText')
 			})
 
-			const { client, headers: supabaseHeaders } =
-				await createSupabaseClient(request)
+			const { client } = await createSupabaseClient(request)
 
 			// Cancel any active Stripe subscription before the DB cascade removes
 			// the subscription record - otherwise Stripe keeps billing the card.
@@ -226,17 +213,10 @@ export async function action({ request }: Route.ActionArgs) {
 				// Continue to redirect even if session cleanup fails.
 			}
 
-			const responseHeaders = new Headers(headers)
-			for (const [key, value] of supabaseHeaders.entries()) {
-				responseHeaders.append(key, value)
-			}
-
-			return redirect('/sign-up?account_deleted=true', {
-				headers: responseHeaders
-			})
+			return redirect('/sign-up?account_deleted=true')
 		}
 
-		return data({ error: 'Unknown settings action.' }, { status: 400, headers })
+		return data({ error: 'Unknown settings action.' }, { status: 400 })
 	} catch (error) {
 		if (error instanceof ZodError) {
 			const fieldErrors: Record<string, string> = {}
@@ -252,7 +232,7 @@ export async function action({ request }: Route.ActionArgs) {
 					intent,
 					fieldErrors
 				},
-				{ status: 400, headers }
+				{ status: 400 }
 			)
 		}
 
@@ -262,7 +242,7 @@ export async function action({ request }: Route.ActionArgs) {
 					error instanceof Error ? error.message : 'Failed to save settings',
 				intent
 			},
-			{ status: 500, headers }
+			{ status: 500 }
 		)
 	}
 }

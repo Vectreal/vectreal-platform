@@ -131,7 +131,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 	const captchaToken =
 		typeof turnstileToken === 'string' ? turnstileToken : undefined
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	let authData: Awaited<
 		ReturnType<typeof client.auth.signInWithPassword>
 	>['data']
@@ -154,7 +154,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 				formError: AUTH_ERROR_MESSAGES.unknown,
 				errorCode: 'unknown'
 			},
-			{ status: 500, headers }
+			{ status: 500 }
 		)
 	}
 
@@ -165,12 +165,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 			props: { method: 'email' }
 		})
 
-		const additionalHeaders = new Headers(headers)
 		const next = getSafeNextPath(new URL(request.url).searchParams.get('next'))
 
-		return redirect(next, {
-			headers: additionalHeaders
-		})
+		return redirect(next)
 	}
 
 	if (authError) {
@@ -203,14 +200,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 				'next',
 				getSafeNextPath(new URL(request.url).searchParams.get('next'))
 			)
-			return redirect(confirmPendingUrl.toString(), {
-				headers: new Headers(headers)
-			})
+			return redirect(confirmPendingUrl.toString())
 		}
 
 		return data<SigninActionData>(
 			{ formError: failure.message, errorCode: failure.code },
-			{ status: failure.status, headers }
+			{ status: failure.status }
 		)
 	}
 
@@ -219,20 +214,19 @@ export async function action({ request, context }: Route.ActionArgs) {
 			formError: AUTH_ERROR_MESSAGES.unknown,
 			errorCode: 'unknown'
 		},
-		{ status: 500, headers }
+		{ status: 500 }
 	)
 }
 
 export const loader = async ({ request }: Route.LoaderArgs) => {
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
 
 	if (user) {
 		return redirect(
-			getSafeNextPath(new URL(request.url).searchParams.get('next')),
-			{ headers }
+			getSafeNextPath(new URL(request.url).searchParams.get('next'))
 		)
 	}
 
@@ -258,20 +252,15 @@ export const loader = async ({ request }: Route.LoaderArgs) => {
 	const nextPath =
 		rawNext && getSafeNextPath(rawNext) === rawNext ? rawNext : null
 
-	return data(
-		{
-			sceneSaved,
-			authErrorCode,
-			authErrorMessage: authErrorCode
-				? AUTH_ERROR_MESSAGES[authErrorCode]
-				: null,
-			nextPath,
-			user: user ?? null,
-			isAuthenticated: !!user,
-			message: user ? 'Already authenticated' : null
-		},
-		{ headers }
-	)
+	return data({
+		sceneSaved,
+		authErrorCode,
+		authErrorMessage: authErrorCode ? AUTH_ERROR_MESSAGES[authErrorCode] : null,
+		nextPath,
+		user: user ?? null,
+		isAuthenticated: !!user,
+		message: user ? 'Already authenticated' : null
+	})
 }
 
 const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {

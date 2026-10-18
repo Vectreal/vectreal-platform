@@ -51,24 +51,20 @@ type InquiryType = ContactInquiryType
 type ActionData = ContactActionData
 
 export async function loader({ request }: Route.LoaderArgs) {
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
 
-	return data(
-		{
-			source: buildContactSource(request),
-			isAuthenticated: Boolean(user),
-			turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
-		},
-		{ headers }
-	)
+	return {
+		source: buildContactSource(request),
+		isAuthenticated: Boolean(user),
+		turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
+	}
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
-	const { client, headers } = await createSupabaseClient(request)
-	const responseHeaders = new Headers(headers)
+	const { client } = await createSupabaseClient(request)
 	const {
 		data: { user }
 	} = await client.auth.getUser()
@@ -90,7 +86,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 				status: 'error',
 				formError: 'Bot verification failed. Please try again.'
 			},
-			{ status: 400, headers: responseHeaders }
+			{ status: 400 }
 		)
 	}
 
@@ -127,10 +123,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 		}
 	}
 
-	return data<ActionData>(result.body, {
-		status: result.status,
-		headers: responseHeaders
-	})
+	return data<ActionData>(result.body, { status: result.status })
 }
 
 export function meta({ error }: Route.MetaArgs) {

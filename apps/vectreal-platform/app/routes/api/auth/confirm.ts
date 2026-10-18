@@ -18,7 +18,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 	const type = searchParams.get('type') as EmailOtpType | null
 	const next = getSafeNextPath(searchParams.get('next'))
 
-	const { client, headers } = await createSupabaseClient(request)
+	const { client } = await createSupabaseClient(request)
 
 	if (token_hash && type) {
 		const { error, data } = await client.auth.verifyOtp({ type, token_hash })
@@ -46,7 +46,7 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 			}
 
 			const destination = type === 'signup' ? newAccountDestination(next) : next
-			return redirect(destination, { headers })
+			return redirect(destination)
 		}
 
 		console.warn('[auth/confirm] OTP verification failed', {
@@ -55,7 +55,5 @@ export const loader = async ({ request, context }: Route.LoaderArgs) => {
 		})
 	}
 
-	return redirect(buildSigninErrorRedirect('verification_failed', next), {
-		headers
-	})
+	return redirect(buildSigninErrorRedirect('verification_failed', next))
 }

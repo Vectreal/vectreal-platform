@@ -78,7 +78,7 @@ const apiKeyEditSchema = z.object({
 type ApiKeyEditValues = z.infer<typeof apiKeyEditSchema>
 
 export async function loader({ request, params }: Route.LoaderArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 	const { keyId } = params
 
 	if (!keyId) {
@@ -99,16 +99,15 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		getOrgSubscription(apiKeyData.organization.id)
 	])
 
-	return data(
-		{
-			/*
+	return data({
+		/*
 			  `user` is deliberately not here. It was, and nothing on this page ever
 			  read it - the full Supabase user carries email, phone, both metadata
 			  bags and the `identities[]` array with per-provider data, which is a
 			  larger payload than the two secret columns this narrowing removed.
 			  Returning the actor "in case" is how a loader grows past its page.
 			*/
-			/*
+		/*
 			  The fields this form reads, named one by one.
 
 			  `getApiKeyById` returns the row as stored, so returning it whole put
@@ -118,28 +117,26 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			  and admins - so nothing here was reachable that is not still
 			  reachable; it simply stops being sent.
 			*/
-			apiKeyData: {
-				apiKey: {
-					name: apiKeyData.apiKey.name,
-					description: apiKeyData.apiKey.description,
-					keyPreview: apiKeyData.apiKey.keyPreview
-				},
-				organization: { id: apiKeyData.organization.id },
-				projects: apiKeyData.projects
+		apiKeyData: {
+			apiKey: {
+				name: apiKeyData.apiKey.name,
+				description: apiKeyData.apiKey.description,
+				keyPreview: apiKeyData.apiKey.keyPreview
 			},
-			userProjects,
-			apiKeyAccess: {
-				granted: entitlement.granted,
-				plan: subscription.plan,
-				upgradeTo: getRecommendedUpgrade(subscription.plan)
-			}
+			organization: { id: apiKeyData.organization.id },
+			projects: apiKeyData.projects
 		},
-		{ headers }
-	)
+		userProjects,
+		apiKeyAccess: {
+			granted: entitlement.granted,
+			plan: subscription.plan,
+			upgradeTo: getRecommendedUpgrade(subscription.plan)
+		}
+	})
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-	const { user, headers } = await loadAuthenticatedUser(request)
+	const { user } = await loadAuthenticatedUser(request)
 	const { keyId } = params
 	const formData = await request.formData()
 	const csrfCheck = await ensureValidCsrfFormData(request, formData)
@@ -180,7 +177,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 						actionAttempted: 'api_key_edit'
 					}
 				},
-				{ status: 403, headers }
+				{ status: 403 }
 			)
 		}
 
@@ -203,7 +200,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			projectIds: validatedData.projectIds
 		})
 
-		return redirect('/dashboard/api-keys', { headers })
+		return redirect('/dashboard/api-keys')
 	} catch (error) {
 		// Handle Zod validation errors
 		if (error instanceof ZodError) {
@@ -215,23 +212,16 @@ export async function action({ request, params }: Route.ActionArgs) {
 				}
 			})
 
-			return data(
-				{
-					error: 'Validation failed',
-					fieldErrors
-				},
-				{ headers }
-			)
+			return data({
+				error: 'Validation failed',
+				fieldErrors
+			})
 		}
 
 		// Return general error for display
-		return data(
-			{
-				error:
-					error instanceof Error ? error.message : 'Failed to update API key'
-			},
-			{ headers }
-		)
+		return data({
+			error: error instanceof Error ? error.message : 'Failed to update API key'
+		})
 	}
 }
 

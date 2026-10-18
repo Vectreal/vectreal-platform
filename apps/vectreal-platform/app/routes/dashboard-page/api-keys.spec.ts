@@ -65,8 +65,7 @@ vi.mock('../../lib/domain/project/project-repository.server', () => ({
 
 vi.mock('../../lib/domain/auth/auth-loader.server', () => ({
 	loadAuthenticatedUser: vi.fn(async () => ({
-		user: { id: USER_ID },
-		headers: new Headers()
+		user: { id: USER_ID }
 	}))
 }))
 
