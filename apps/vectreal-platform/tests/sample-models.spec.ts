@@ -16,6 +16,7 @@ import {
 	HERO_MODEL,
 	fetchSampleModel,
 	HERO_SOURCE_SAMPLE_ID,
+	PASS_SAMPLES,
 	SAMPLE_MODELS,
 	sampleModelById
 } from '../app/lib/samples/sample-models'
@@ -55,9 +56,12 @@ describe('sample models', () => {
 	})
 
 	it('offers one model per pass, so neither mode is undemonstrable', () => {
-		// Two models chosen for opposite reasons: see the module docblock for the
-		// measured geometry/texture split behind each.
-		expect(SAMPLE_MODELS.length).toBeGreaterThanOrEqual(2)
+		// The rocket and the camera, chosen for opposite reasons: see the module
+		// docblock for the measured geometry/texture split behind each.
+		expect(PASS_SAMPLES.map((sample) => sample.id)).toEqual([
+			'rocket',
+			'camera'
+		])
 		expect(new Set(SAMPLE_MODELS.map((sample) => sample.id)).size).toBe(
 			SAMPLE_MODELS.length
 		)

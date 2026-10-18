@@ -432,6 +432,7 @@ let sampleBlock: Promise<void> | null = null
 vi.mock('../app/lib/samples/sample-models', () => ({
 	// Read by the example scenes `useSampleDownload` also opens.
 	HERO_MODEL: { url: '', fileName: 'camera.glb', bytes: 1 },
+	PASS_SAMPLES: [],
 	sampleModelById: (id: string) =>
 		id === 'rocket' ? { id: 'rocket', label: 'Rocket', bytes: 1 } : null,
 	fetchSampleModel: async () => {

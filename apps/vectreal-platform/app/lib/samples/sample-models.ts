@@ -13,10 +13,11 @@ import toyCarUrl from '../../assets/models/toy-car.glb?url'
 /**
  * Models anyone can try without handing over their own work.
  *
- * WHY TWO, AND WHY THESE TWO. The converter offers two passes that do different
- * jobs - Draco compresses geometry, WebP recompresses textures - and a single
- * sample can only demonstrate one of them. These were picked by measuring the
- * split rather than by eye:
+ * THE PASS SAMPLES: THE ROCKET AND THE CAMERA. The converter offers two passes
+ * that do different jobs - Draco compresses geometry, WebP recompresses
+ * textures - and a single sample can only demonstrate one of them. These two
+ * were picked by measuring the split rather than by eye, and they are the only
+ * samples the converter offers (`PASS_SAMPLES`):
  *
  *   rocket-v3.glb       0.92 MB total,  0.31 MB of it textures (34%), 2 images
  *   camera-source.glb  17.89 MB total, 17.24 MB of it textures (96%), 9 images
@@ -26,8 +27,8 @@ import toyCarUrl from '../../assets/models/toy-car.glb?url'
  * Running the wrong pass on either is the instructive half: it is how someone
  * learns the passes are not interchangeable.
  *
- * THE OTHER TWO show what a model is for once it is light enough to publish,
- * and both come from Khronos's glTF Sample Assets under CC0 1.0, so nothing
+ * THE OTHER TWO are the publisher's alone: they show what a model is for once
+ * it is light enough to publish, and both come from Khronos's glTF Sample Assets under CC0 1.0, so nothing
  * has to carry a credit line:
  *
  *   sheen-chair-source.glb  4.13 MB, 2.98 MB of it textures (72%), 7 PNGs
@@ -112,6 +113,11 @@ export const SAMPLE_MODELS: SampleModel[] = [
 		previewUrl: toyCarPreviewUrl
 	}
 ]
+
+/** The two samples that each make one optimization pass visible: what the converter offers. */
+export const PASS_SAMPLES: SampleModel[] = SAMPLE_MODELS.filter(
+	(sample) => sample.id === 'rocket' || sample.id === 'camera'
+)
 
 /** The camera sample: the hero model before optimization. */
 export const HERO_SOURCE_SAMPLE_ID = 'camera'

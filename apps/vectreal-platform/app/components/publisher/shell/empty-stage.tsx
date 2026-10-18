@@ -371,11 +371,13 @@ export const EmptyStage = ({
 						)}
 
 						{/*
-						  Something to open when you have nothing to open. Two models rather
-						  than one, because the optimization passes do different jobs: the
+						  Something to open when you have nothing to open. The rocket and the
+						  camera because the optimization passes do different jobs: the
 						  rocket is two thirds geometry and the camera is nearly all texture,
 						  so each one makes a different pass look like it is working. The
-						  split is measured; see `sample-models.ts`.
+						  chair and the car because they are what a published model is for:
+						  a product from a shop, and materials worth turning. See
+						  `sample-models.ts`.
 
 						  The same width as the scenes shelf, so the tiles match.
 						*/}
