@@ -15,6 +15,11 @@
  * to include the version prefix (e.g. "v2/self-hosting/installation").
  */
 
+/*
+  A literal, not the site map's: `react-router.config.ts` imports this module,
+  and the site map reaches `@vctrl/core` through product-copy, which CI never
+  builds before the config loads. `community-links.spec.ts` holds the two equal.
+*/
 export const GITHUB_REPO = 'https://github.com/Vectreal/vectreal-platform'
 
 export const GITHUB_DEFAULT_BRANCH = 'main'
