@@ -210,7 +210,7 @@ export default function DocsLayout() {
 								href={`${GITHUB_REPO}/tree/${GITHUB_DEFAULT_BRANCH}/${page.sourcePath}`}
 								target="_blank"
 								rel="noreferrer"
-								className="text-muted-foreground/60 hover:text-muted-foreground font-mono text-xs transition-colors"
+								className="text-muted-foreground hover:text-foreground font-mono text-xs transition-colors"
 								aria-label="View source file on GitHub"
 							>
 								{page.sourcePath}

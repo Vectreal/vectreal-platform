@@ -92,7 +92,7 @@ export const SampleTiles: FC<Props> = ({
 									? `Downloading, ${download.percent}%`
 									: formatFileSize(sample.bytes)}
 							</span>
-							<span className="text-muted-foreground/70 block text-xs">
+							<span className="text-muted-foreground block text-xs">
 								{sample.hint}
 							</span>
 							{/* In the tile's padding, so it reports progress without moving anything. */}

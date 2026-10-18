@@ -111,6 +111,34 @@ function shellSurface(theme: 'light' | 'dark'): Rgb {
 	) as Rgb
 }
 
+/**
+ * The body of one utility rule in `theme.css`, so a step's percentage and its
+ * foreground are read from the stylesheet rather than restated here.
+ */
+function rule(selector: string): string {
+	const body = CSS.match(
+		new RegExp(`\\n\\s*${selector.replace(/[.:]/g, '\\$&')}\\s*\\{([^}]*)\\}`)
+	)
+	if (!body) throw new Error(`${selector} not found`)
+	return body[1]
+}
+
+/** The `--foreground` percentage a shell-nested rule mixes over transparent. */
+function nestedPercent(selector: string): number {
+	const match = rule(selector).match(
+		/color-mix\(in oklch, var\(--foreground\) ([\d.]+)%, transparent\)/
+	)
+	if (!match) throw new Error(`${selector} has no foreground tint`)
+	return Number(match[1]) / 100
+}
+
+/** `--foreground` at `alpha` over `base`, the way a translucent tint composites. */
+function tint(theme: 'light' | 'dark', base: Rgb, alpha: number): Rgb {
+	return token('foreground', theme).map((c, i) =>
+		Math.round(c * alpha + base[i] * (1 - alpha))
+	) as Rgb
+}
+
 const AA_TEXT = 4.5
 /** WCAG 1.4.11, for a focus indicator and other non-text affordances. */
 const AA_NON_TEXT = 3
@@ -125,6 +153,68 @@ describe('the shell panel carries its text over any canvas', () => {
 				expect(contrast(token(name, theme), panel)).toBeGreaterThanOrEqual(
 					AA_TEXT
 				)
+			}
+		)
+	})
+})
+
+describe('a nested shell block carries its own secondary text', () => {
+	/*
+	  `--muted-foreground` is solved for the page and the `ds-*` ladder, and on
+	  the shell's tints it fell to 3.8:1 in light and 4.3:1 in dark. The nested
+	  rules redefine it for their subtree, so the measurement only means
+	  something if they still do.
+	*/
+	it('maps muted text through `@theme inline`, so a subtree can redefine it', () => {
+		/*
+		  In a plain `@theme`, `text-muted-foreground` would compile to
+		  `var(--color-muted-foreground)`, resolved once at `:root`, and the
+		  redefinitions below would reach nothing while every ratio still passed.
+		*/
+		const inline = CSS.match(/@theme inline \{([^}]*)\}/)
+		expect(inline?.[1]).toContain(
+			'--color-muted-foreground: var(--muted-foreground)'
+		)
+	})
+
+	it.each(['.shell-nested', '.shell-nested-interactive'])(
+		'%s points muted text at the shell rung',
+		(selector) => {
+			expect(rule(selector)).toContain(
+				'--muted-foreground: var(--shell-muted-foreground)'
+			)
+		}
+	)
+
+	describe.each(['light', 'dark'] as const)('%s', (theme) => {
+		const panel = shellSurface(theme)
+		const nested = tint(theme, panel, nestedPercent('.shell-nested'))
+		const steps = {
+			nested,
+			'hovered interactive': tint(
+				theme,
+				panel,
+				nestedPercent('.shell-nested-interactive:hover')
+			),
+			/*
+			  The deepest step that carries text today: an EmptyState tile on its
+			  well. A hovered interactive block inside a nested one would be
+			  deeper (about 4.3:1) and nothing builds one; nesting one needs this
+			  token solved again first.
+			*/
+			'nested inside nested': tint(
+				theme,
+				nested,
+				nestedPercent('.shell-nested')
+			)
+		}
+
+		it.each(Object.entries(steps))(
+			`shell-muted-foreground reaches ${AA_TEXT}:1 on %s`,
+			(_label, bg) => {
+				expect(
+					contrast(token('shell-muted-foreground', theme), bg)
+				).toBeGreaterThanOrEqual(AA_TEXT)
 			}
 		)
 	})

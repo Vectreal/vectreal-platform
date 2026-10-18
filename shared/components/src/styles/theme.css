@@ -138,6 +138,15 @@
 	--shell-overlay: oklch(0.985 0 0 / 0.88);
 	--shell-border-strong: oklch(0.86 0 0 / 0.75);
 	--shell-border-soft: oklch(0.82 0 0 / 0.35);
+	/*
+	  Secondary text on a nested shell block, which is all `.shell-nested` reads
+	  for `--muted-foreground`. That token is solved against the page and the
+	  `ds-*` ladder; on the shell's tints it fell to 3.8:1 here. This one is
+	  solved for the deepest step that carries text, a nested block inside
+	  another (about 10% foreground over the panel): 4.85:1 there, with the
+	  panel composited over black. `contrast-tokens.spec.ts` pins it.
+	*/
+	--shell-muted-foreground: oklch(0.46 0 0);
 }
 
 .dark {
@@ -205,6 +214,8 @@
 	--shell-overlay: oklch(0.19 0 0 / 0.88);
 	--shell-border-strong: oklch(0.47 0 0 / 0.8);
 	--shell-border-soft: oklch(0.38 0 0 / 0.35);
+	/* 4.88:1 at the same step, with the panel composited over white. */
+	--shell-muted-foreground: oklch(0.74 0 0);
 }
 
 @theme inline {
@@ -290,13 +301,21 @@
 	  Radius is left to the caller. Panels take `rounded-2xl` and inner blocks
 	  `rounded-xl`, and baking one in meant call sites had to override it with
 	  another utility from the same layer — a precedence coin-flip.
+
+	  The surface carries its own foreground: inside it, `text-muted-foreground`
+	  reads `--shell-muted-foreground`, so no call site has to know which ladder
+	  it sits on. `text-muted-foreground` compiles to `var(--muted-foreground)`
+	  (the palette maps through `@theme inline`), which is what lets a subtree
+	  redefine it.
 	*/
 	.shell-nested {
+		--muted-foreground: var(--shell-muted-foreground);
 		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
 	}
 
 	/* Same surface, for blocks that are themselves the control. */
 	.shell-nested-interactive {
+		--muted-foreground: var(--shell-muted-foreground);
 		background-color: color-mix(in oklch, var(--foreground) 5%, transparent);
 		/* The app's motion tokens, with their values for a build that lacks them. */
 		transition: background-color var(--duration-fast, 150ms)
