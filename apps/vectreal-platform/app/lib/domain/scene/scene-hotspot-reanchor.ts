@@ -3,7 +3,8 @@ import { placeHotspot } from './scene-hotspot-camera-links'
 import type { CameraHotspotState } from './scene-hotspot-camera-links'
 
 /**
- * Moves hotspots to follow a change in the model's normalization scale.
+ * Moves hotspots and stored camera poses to follow a change in the model's
+ * normalization scale.
  *
  * A hotspot stores a world-space point captured after the viewer's `<Center>`
  * offset and its normalization scale (`resolveHotspotAnchor`). Neither is
@@ -43,24 +44,26 @@ import type { CameraHotspotState } from './scene-hotspot-camera-links'
  * without scaling the target would leave every hotspot camera aimed at where its
  * marker used to be, which type-checks and breaks no other test.
  *
- * A hotspot's camera stands somewhere too: `addHotspot` writes the view it
- * was added from. Its position and target follow by the same multiply, or
- * opening the hotspot after a shrink would look at the model from where the
- * old, larger one ended. Both move, never one: a camera two hotspots share has
- * no owner for `placeHotspot` to re-aim, and scaling its position alone would
+ * Every stored camera stands somewhere too, in world space: one the author
+ * framed by hand, and a hotspot's own, which `addHotspot` writes from the view
+ * it was added from. Each camera's position and target follow by the same
+ * multiply, or after a shrink it would look at the model from where the old,
+ * larger one ended. Both move, never one: a camera two hotspots share has no
+ * owner for `placeHotspot` to re-aim, and scaling its position alone would
  * turn it away from the model. Rotation needs nothing, because a uniform scale
- * about the origin keeps every direction.
+ * about the origin keeps every direction. A camera with no stored pose has
+ * nothing to move: it opens on the viewer's own framing of the model.
  *
- * Only the scale is corrected here. A camera the author framed by hand, and the
- * shadow light, are also world-space and also stale after a rescale - filed
- * separately, because they are not the hotspot subsystem and fixing them here
- * would put two concerns in one change.
+ * The shadow light needs no entry here. Its stored position is in model-size
+ * units, which the viewer multiplies by the model's measured world radius
+ * (`scene-shadows.tsx`), so it follows a rescale on its own. Scaling it here
+ * as well would move it twice.
  */
 /** A stored position is JSON, so a tuple; the wider three.js forms never persist. */
 const isTuple = (value: unknown): value is [number, number, number] =>
 	Array.isArray(value) && value.length === 3
 
-export function reanchorHotspotsForScale(
+export function reanchorSceneForScale(
 	state: CameraHotspotState,
 	previousScale: number,
 	nextScale: number
@@ -85,20 +88,14 @@ export function reanchorHotspotsForScale(
 		number
 	] => [x * ratio, y * ratio, z * ratio]
 
-	// The camera moves as a whole, position and target together, so it keeps
+	// Each camera moves as a whole, position and target together, so it keeps
 	// looking the way it did. Placing comes after: a camera a hotspot owns is
 	// then re-aimed at its marker, which also corrects a target left stale.
-	const cameras = state.camera.cameras?.map((entry) =>
-		entry.kind === 'hotspot'
-			? {
-					...entry,
-					...(isTuple(entry.position)
-						? { position: scale(entry.position) }
-						: {}),
-					...(entry.target ? { target: scale(entry.target) } : {})
-				}
-			: entry
-	)
+	const cameras = state.camera.cameras?.map((entry) => ({
+		...entry,
+		...(isTuple(entry.position) ? { position: scale(entry.position) } : {}),
+		...(entry.target ? { target: scale(entry.target) } : {})
+	}))
 
 	return state.hotspots.reduce<CameraHotspotState>(
 		(current, hotspot) =>
