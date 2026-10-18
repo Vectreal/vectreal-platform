@@ -1,0 +1,1 @@
+ALTER TABLE "scene_hotspots" ADD COLUMN "linked_animation_clip_id" text;

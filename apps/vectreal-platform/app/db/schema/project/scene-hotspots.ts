@@ -47,6 +47,10 @@ export const sceneHotspots = pgTable(
 		// Linked camera (kind='hotspot') from CameraProps.cameras.
 		linkedCameraId: text('linked_camera_id'),
 
+		// Clip id (deriveAnimationClipId) played once when the hotspot is
+		// activated; null means the hotspot plays nothing.
+		linkedAnimationClipId: text('linked_animation_clip_id'),
+
 		visible: boolean('visible').notNull().default(true),
 		internalOnly: boolean('internal_only').notNull().default(false),
 

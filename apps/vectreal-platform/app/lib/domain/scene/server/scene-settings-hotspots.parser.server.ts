@@ -28,6 +28,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 const MAX_HOTSPOTS_PER_SCENE = 200
 
+/*
+  A clip id is a slug of the clip's name plus a short digest, so it is as long
+  as the name. Real names are short; the bound only stops a client from
+  parking unbounded text in a column per hotspot.
+*/
+const MAX_HOTSPOT_CLIP_ID_LENGTH = 1024
+
 /**
  * Validates hotspot definitions, and normalizes an emptied text field to
  * absent.
@@ -201,6 +208,25 @@ export function normalizeHotspots(
 			if (!cameraIds.has(hotspot.linkedCameraId)) {
 				return ApiResponse.badRequest(
 					`hotspots[${i}].linkedCameraId references unknown camera '${hotspot.linkedCameraId}'`
+				)
+			}
+		}
+		/*
+		  Shape only. The server never sees the model's clips, and the viewer
+		  plays nothing for an id that matches none, the same leniency it shows
+		  a drifted animation config.
+		*/
+		if (
+			hotspot.linkedAnimationClipId !== undefined &&
+			hotspot.linkedAnimationClipId !== null
+		) {
+			if (
+				typeof hotspot.linkedAnimationClipId !== 'string' ||
+				!hotspot.linkedAnimationClipId.trim() ||
+				hotspot.linkedAnimationClipId.length > MAX_HOTSPOT_CLIP_ID_LENGTH
+			) {
+				return ApiResponse.badRequest(
+					`hotspots[${i}].linkedAnimationClipId must be a non-empty string of at most ${MAX_HOTSPOT_CLIP_ID_LENGTH} characters`
 				)
 			}
 		}

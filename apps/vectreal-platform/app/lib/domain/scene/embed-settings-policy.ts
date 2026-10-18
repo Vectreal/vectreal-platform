@@ -94,7 +94,11 @@ export function redactSettingsForEmbed(
 						...hotspot,
 						body: undefined,
 						linkUrl: undefined,
-						payloadUrl: undefined
+						payloadUrl: undefined,
+						// Not a secret: clip names ship in the published model. But a
+						// hidden marker is never drawn and `focus_hotspot` cannot reach
+						// it, so the link can do nothing there.
+						linkedAnimationClipId: undefined
 					}
 				: { ...hotspot, payloadUrl: embedArtworkUrl(hotspot.payloadUrl) }
 		)
