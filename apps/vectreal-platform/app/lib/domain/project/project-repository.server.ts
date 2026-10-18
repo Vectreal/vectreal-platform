@@ -109,6 +109,23 @@ export async function getProject(
 	return result?.project || null
 }
 
+/**
+ * Every project in one organization, by name.
+ *
+ * No membership join: the caller has already established that the actor
+ * belongs to this organization (an agent grant is resolved against a current
+ * membership), and every member role may read its projects.
+ */
+export async function listOrganizationProjects(
+	organizationId: string
+): Promise<Array<{ id: string; name: string; slug: string }>> {
+	return await db
+		.select({ id: projects.id, name: projects.name, slug: projects.slug })
+		.from(projects)
+		.where(eq(projects.organizationId, organizationId))
+		.orderBy(asc(projects.name))
+}
+
 export async function createProject(
 	organizationId: string,
 	name: string,

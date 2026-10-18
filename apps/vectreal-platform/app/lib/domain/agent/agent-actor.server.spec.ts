@@ -6,6 +6,7 @@
  * join is covered by `tests/integration/agent-grant-for-member`.
  */
 
+import { apiFailureSchema } from '@vctrl/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { resolveAgentActor } from './agent-actor.server'
@@ -56,6 +57,9 @@ async function expectInvalidToken(req: Request): Promise<void> {
 	expect(response.headers.get('WWW-Authenticate')).toBe(
 		'Bearer error="invalid_token"'
 	)
+	expect(apiFailureSchema.parse(await response.json()).code).toBe(
+		'invalid_token'
+	)
 }
 
 beforeEach(() => {
@@ -103,6 +107,9 @@ describe('resolveAgentActor', () => {
 	it('refuses a session cookie sent beside the token with 400', async () => {
 		const response = await refusal(request({ Cookie: 'sb-127-auth-token=x' }))
 		expect(response.status).toBe(400)
+		expect(apiFailureSchema.parse(await response.json()).code).toBe(
+			'invalid_request'
+		)
 		expect(auth.getClaims).not.toHaveBeenCalled()
 	})
 

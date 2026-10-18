@@ -1,6 +1,7 @@
 import { cliClientSchema, type CliClient } from './cli-client'
 import { apiFailureSchema, apiSuccessSchema, type ApiFailure } from './envelope'
 import { meSchema, type Me } from './me'
+import { projectListSchema, type ProjectList } from './projects'
 
 import type { z } from 'zod'
 
@@ -18,6 +19,11 @@ export class VectrealApiError extends Error {
 		readonly body?: ApiFailure
 	) {
 		super(message)
+	}
+
+	/** What to branch on: one of `API_ERROR_CODES`, or a newer one. */
+	get code(): string | undefined {
+		return this.body?.code
 	}
 }
 
@@ -107,6 +113,9 @@ export function createVectrealClient({
 	return {
 		/** Who the access token acts as. */
 		me: (): Promise<Me> => get('api/v1/me', meSchema, 'bearer'),
+		/** The projects in the organization the token's grant names. */
+		projects: (): Promise<ProjectList> =>
+			get('api/v1/projects', projectListSchema, 'bearer'),
 		/** How the CLI signs in against this origin. */
 		cliClient: (): Promise<CliClient> =>
 			get('api/v1/cli/client', cliClientSchema, 'public')

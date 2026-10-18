@@ -49,6 +49,22 @@ describe('createVectrealClient', () => {
 		expect(sent(fetch).headers.get('Authorization')).toBe('Bearer token-1')
 	})
 
+	it('lists the projects with the bearer token and returns what it parsed', async () => {
+		const projects = {
+			projects: [{ id: 'project-1', name: 'Chairs', slug: 'chairs' }]
+		}
+		const fetch = respond({ success: true, data: projects })
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await expect(client.projects()).resolves.toEqual(projects)
+		expect(sent(fetch).url).toBe('https://vectreal.com/api/v1/projects')
+		expect(sent(fetch).headers.get('Authorization')).toBe('Bearer token-1')
+	})
+
 	it('asks for the CLI client without a token, even when it has one', async () => {
 		const fetch = respond({ success: true, data: cliClient })
 		const getAccessToken = vi.fn(() => 'token-1')
@@ -87,13 +103,20 @@ describe('createVectrealClient', () => {
 		const client = createVectrealClient({
 			baseUrl: 'https://vectreal.com',
 			getAccessToken: () => 'expired',
-			fetch: respond({ success: false, error: 'Invalid token' }, 401)
+			fetch: respond(
+				{ success: false, error: 'Invalid token', code: 'invalid_token' },
+				401
+			)
 		})
 
 		const error = await client.me().catch((caught: unknown) => caught)
 		expect(error).toBeInstanceOf(VectrealApiError)
 		expect(error).not.toBeInstanceOf(VectrealContractError)
-		expect(error).toMatchObject({ status: 401, message: 'Invalid token' })
+		expect(error).toMatchObject({
+			status: 401,
+			message: 'Invalid token',
+			code: 'invalid_token'
+		})
 	})
 
 	it('hands over the whole refusal, including fields it does not know', async () => {
@@ -109,12 +132,15 @@ describe('createVectrealClient', () => {
 			fetch: respond(refusal, 403)
 		})
 
-		await expect(client.me()).rejects.toMatchObject({
+		const error = await client.me().catch((caught: unknown) => caught)
+		expect(error).toMatchObject({
 			name: 'VectrealApiError',
 			status: 403,
 			message: 'Project limit reached',
 			body: refusal
 		})
+		// A code this client has no entry for still reaches the caller.
+		expect((error as VectrealApiError).code).toBe('quota_exceeded')
 	})
 
 	it('reads a 404 inside the envelope as the refusal it is, not a missing route', async () => {
