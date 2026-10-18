@@ -574,6 +574,59 @@ export const HotspotCameraReturn: Story = {
 	render: hotspotRender
 }
 
+/**
+ * Hotspots that each play a clip once and hold its last frame, with the
+ * scene's own animation program switched off: the clips play because a marker
+ * links them, not because the scene autoplays. The second marker interrupts
+ * the first. Under reduced motion each click poses the clip's last frame.
+ */
+const hotspotClipModel = createHotspotModel('HotspotClipCube')
+// Each ends away from where it starts, so holding the last frame is visible.
+// The markers float in front of the cube so neither is hidden by the turn.
+const hotspotClips = [
+	new AnimationClip('Turn', 1.5, [
+		new NumberKeyframeTrack('.rotation[y]', [0, 1.5], [0, Math.PI / 4])
+	]),
+	new AnimationClip('Lift', 1, [
+		new VectorKeyframeTrack('.position', [0, 1], [0, 0, 0, 0, 0.4, 0])
+	])
+]
+const [turnClipId, liftClipId] = describeAnimationClips(hotspotClips).map(
+	(descriptor) => descriptor.clipId
+)
+
+export const HotspotClips: Story = {
+	parameters: { chromatic: { disableSnapshot: true } },
+	args: {
+		model: hotspotClipModel,
+		animations: hotspotClips,
+		animationOptions: {
+			enabled: false,
+			mode: 'simultaneous',
+			autoplay: true,
+			loopSequence: false,
+			showControls: false,
+			clips: []
+		},
+		hotspots: [
+			{
+				...base('turn', 'Turn once', [-0.35, -0.35, 0.9]),
+				linkedAnimationClipId: turnClipId
+			},
+			{
+				...base('lift', 'Lift once', [0.35, -0.35, 0.9]),
+				linkedAnimationClipId: liftClipId
+			}
+		]
+	},
+	render: (args) => (
+		<VectrealViewer {...args}>
+			<ambientLight intensity={0.8} />
+			<directionalLight position={[3, 4, 2]} intensity={1.4} />
+		</VectrealViewer>
+	)
+}
+
 export const WithPopover: Story = {
 	args: {
 		popover: (

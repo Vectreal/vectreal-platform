@@ -22,14 +22,21 @@ const playing = {
 
 const arrange = ({
 	showControls = false,
-	allowControls
-}: { showControls?: boolean; allowControls?: boolean } = {}) => {
+	allowControls,
+	enabled = true,
+	linksHotspotClips
+}: {
+	showControls?: boolean
+	allowControls?: boolean
+	enabled?: boolean
+	linksHotspotClips?: boolean
+} = {}) => {
 	const onInteractionEvent = vi.fn<(event: ViewerInteractionEvent) => void>()
 	const { result } = renderHook(() =>
 		useAnimationRuntime({
 			animations: [new AnimationClip('Walk', 1, [])],
 			options: {
-				enabled: true,
+				enabled,
 				mode: 'simultaneous',
 				autoplay: true,
 				loopSequence: false,
@@ -37,6 +44,7 @@ const arrange = ({
 				clips: []
 			},
 			hasContent: true,
+			linksHotspotClips,
 			allowControls,
 			onInteractionEvent
 		})
@@ -114,6 +122,30 @@ describe('useAnimationRuntime', () => {
 				arrange({ showControls: false, allowControls: true }).result.current
 					.showControls
 			).toBe(false)
+		})
+	})
+
+	describe('a hotspot clip', () => {
+		it('mounts the runtime with the scene program off', () => {
+			const { result } = arrange({ enabled: false, linksHotspotClips: true })
+
+			expect(result.current.shouldMount).toBe(true)
+		})
+
+		it('mounts nothing when neither the program nor a hotspot asks', () => {
+			const { result } = arrange({ enabled: false })
+
+			expect(result.current.shouldMount).toBe(false)
+		})
+
+		it('never brings the controls with it: they play a program it does not have', () => {
+			const { result } = arrange({
+				enabled: false,
+				linksHotspotClips: true,
+				showControls: true
+			})
+
+			expect(result.current.showControls).toBe(false)
 		})
 	})
 })

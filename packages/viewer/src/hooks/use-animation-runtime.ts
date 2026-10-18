@@ -4,10 +4,10 @@ import { useHeldExecutor } from './use-held-executor'
 
 import type { AnimationPlaybackStatus } from '../components/scene'
 import type {
-	ViewerCommand,
-	ViewerCommandExecutor,
-	ViewerInteractionEvent
-} from '../types/viewer-interactions'
+	AnimationLayerCommand,
+	AnimationLayerExecutor
+} from '../components/scene/scene-animation'
+import type { ViewerInteractionEvent } from '../types/viewer-interactions'
 import type { AnimationSettings } from '@vctrl/core'
 import type { AnimationClip } from 'three'
 
@@ -23,6 +23,11 @@ interface UseAnimationRuntimeOptions {
 	options?: AnimationSettings
 	/** Clears playback state when the viewer empties out. */
 	hasContent: boolean
+	/**
+	 * Whether a drawn hotspot links a clip. Mounts the runtime even when the
+	 * scene's own program is off, since that clip plays regardless of it.
+	 */
+	linksHotspotClips?: boolean
 	/** The host's say over the built-in controls; the scene's settings still have to ask for them. */
 	allowControls?: boolean
 	/** Receives `animation_state_changed` whenever the status changes. */
@@ -35,9 +40,9 @@ export interface AnimationRuntime {
 	shouldMount: boolean
 	/** Whether the built-in playback controls are drawn: the author opted in and the host allows it. */
 	showControls: boolean
-	registerExecutor: (executor: null | ViewerCommandExecutor) => void
+	registerExecutor: (executor: AnimationLayerExecutor | null) => void
 	setStatus: (status: AnimationPlaybackStatus) => void
-	forwardCommand: (command: ViewerCommand) => void
+	forwardCommand: (command: AnimationLayerCommand) => void
 	toggle: () => void
 	restart: () => void
 }
@@ -57,10 +62,11 @@ export function useAnimationRuntime({
 	animations,
 	options,
 	hasContent,
+	linksHotspotClips = false,
 	allowControls = true,
 	onInteractionEvent
 }: UseAnimationRuntimeOptions): AnimationRuntime {
-	const runtime = useHeldExecutor()
+	const runtime = useHeldExecutor<AnimationLayerCommand>()
 	const [status, setStatus] = useState<AnimationPlaybackStatus>(IDLE_STATUS)
 
 	/*
@@ -99,7 +105,7 @@ export function useAnimationRuntime({
 	}, [hasContent])
 
 	const registerExecutor = useCallback(
-		(executor: null | ViewerCommandExecutor) => {
+		(executor: AnimationLayerExecutor | null) => {
 			runtime.register(executor)
 
 			// Reset on unregister, which is the runtime going away: the canvas
@@ -127,13 +133,19 @@ export function useAnimationRuntime({
 	}, [runtime])
 
 	const hasClips = Boolean(animations && animations.length > 0)
-	const shouldMount = hasClips && Boolean(options?.enabled)
+	const programEnabled = Boolean(options?.enabled)
+	const shouldMount = hasClips && (programEnabled || linksHotspotClips)
 
 	return {
 		status,
 		shouldMount,
+		// The controls play the program, so they need one: a runtime mounted only
+		// for hotspot clips has nothing for them to start.
 		showControls:
-			shouldMount && allowControls && Boolean(options?.showControls),
+			shouldMount &&
+			programEnabled &&
+			allowControls &&
+			Boolean(options?.showControls),
 		registerExecutor,
 		setStatus,
 		forwardCommand: runtime.execute,

@@ -91,3 +91,43 @@ export function resolvePlaybackClips(
 		? clampHandoffRepetitions(resolved, settings.loopSequence)
 		: resolved
 }
+
+/**
+ * Resolves the one clip a hotspot plays against the clips the model carries.
+ *
+ * Deliberately blind to the program: a hotspot's clip plays whether the
+ * scene's animation is switched on or not, and whether the program includes
+ * that clip or not. The only thing it takes from a matching config is the
+ * author's speed. Loop shape and start offset belong to the program, and the
+ * reducer forces a one-shot to play once from its first frame.
+ *
+ * Null when the id matches nothing on this model, which is how a link to a
+ * clip removed from a re-uploaded file degrades: the click plays nothing.
+ */
+export function resolveOneShotClip(
+	settings: AnimationSettings | undefined,
+	clips: readonly AnimationClipSource[],
+	clipId: string
+): null | PlaybackClip {
+	const descriptor = describeAnimationClips(clips).find(
+		(entry) => entry.clipId === clipId
+	)
+	if (!descriptor || descriptor.duration <= 0) return null
+
+	const config = Array.isArray(settings?.clips)
+		? settings.clips.find((entry) => entry?.clipId === clipId)
+		: undefined
+	const timeScale =
+		typeof config?.timeScale === 'number' && config.timeScale > 0
+			? config.timeScale
+			: 1
+
+	return {
+		clipId: descriptor.clipId,
+		clipIndex: descriptor.index,
+		duration: descriptor.duration,
+		loop: 'once',
+		timeScale,
+		startOffset: 0
+	}
+}
