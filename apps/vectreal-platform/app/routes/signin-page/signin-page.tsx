@@ -106,7 +106,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-signin',
 		maxRequests: 10,
-		keyParts: [normalizedEmail]
+		keyParts: [normalizedEmail],
+		// Three accounts' worth from one address: enough for a shared office
+		// network, too few to spray one password across many accounts.
+		addressCeiling: 30
 	})
 
 	if (rateLimitResult.limited) {

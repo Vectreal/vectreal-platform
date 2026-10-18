@@ -38,6 +38,22 @@ export interface RateLimitOptions {
 	keyParts?: string[]
 	maxRequests: number
 	windowMs?: number
+	/**
+	 * Most one address may make across every `keyParts` value in the window.
+	 *
+	 * `keyParts` narrows the limit on purpose - one person writing about two
+	 * things is not blocked by their own first message - but a narrow key alone
+	 * resets for whoever rotates the part, so one address could try a password
+	 * against unlimited accounts or mail unlimited inboxes. This coarser count
+	 * sits beside the narrow one, in the same window, and a request is refused
+	 * when either is full.
+	 *
+	 * Every caller `resolveClientIp` cannot identify shares one address,
+	 * `unknown`, and so one ceiling. Only traffic that bypasses Cloudflare lands
+	 * there (and local dev). That is deliberate: the fix is restricting the
+	 * origin to Cloudflare, never a fallback to a header the caller writes.
+	 */
+	addressCeiling?: number
 }
 
 export interface RateLimitResult {
@@ -67,6 +83,29 @@ function buildKey(request: Request, options: RateLimitOptions): string {
 	)
 
 	return [options.bucket, resolveClientIp(request.headers), ...parts].join(':')
+}
+
+/**
+ * Every counter a request is held to, with the maximum each allows.
+ *
+ * The address counter is named apart from the bucket's own (`~address`), so it
+ * cannot collide with a bucket that uses no `keyParts` and keys on the address
+ * already.
+ */
+function countersFor(
+	request: Request,
+	options: RateLimitOptions
+): { key: string; max: number }[] {
+	const counters = [
+		{ key: buildKey(request, options), max: options.maxRequests }
+	]
+	if (options.addressCeiling !== undefined) {
+		counters.push({
+			key: `${options.bucket}~address:${resolveClientIp(request.headers)}`,
+			max: options.addressCeiling
+		})
+	}
+	return counters
 }
 
 function recentTimestamps(key: string, windowStart: number): number[] {
@@ -125,11 +164,34 @@ export function checkRateLimit(
 ): RateLimitResult {
 	const now = Date.now()
 	const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS
-	const recent = recentTimestamps(buildKey(request, options), now - windowMs)
+
+	return combine(
+		countersFor(request, options).map(({ key, max }) => {
+			const recent = recentTimestamps(key, now - windowMs)
+			return {
+				limited: recent.length >= max,
+				retryAfterSeconds: retryAfterSeconds(recent, windowMs, now)
+			}
+		})
+	)
+}
+
+/**
+ * Refused when any counter is full, for as long as the longest wait among the
+ * full ones. With none full, the wait reported is the narrow counter's, which
+ * is what a single-counter caller always got.
+ */
+function combine(results: RateLimitResult[]): RateLimitResult {
+	const full = results.filter((result) => result.limited)
+	if (full.length === 0) {
+		return results[0] as RateLimitResult
+	}
 
 	return {
-		limited: recent.length >= options.maxRequests,
-		retryAfterSeconds: retryAfterSeconds(recent, windowMs, now)
+		limited: true,
+		retryAfterSeconds: Math.max(
+			...full.map((result) => result.retryAfterSeconds)
+		)
 	}
 }
 
@@ -155,21 +217,33 @@ export function recordRateLimitAttempt(
 ): RateLimitResult {
 	const now = Date.now()
 	const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS
-	const key = buildKey(request, options)
+	const counters = countersFor(request, options).map(({ key, max }) => ({
+		key,
+		max,
+		timestamps: recentTimestamps(key, now - windowMs)
+	}))
 
-	const timestamps = recentTimestamps(key, now - windowMs)
-	const limited = timestamps.length >= options.maxRequests
-	if (!limited) {
-		timestamps.push(now)
+	// One refusal records nothing anywhere, for the same reason a single
+	// counter does not record a refused request: counting it would extend the
+	// block it is serving and grow the array past the limit.
+	const limited = counters.some(
+		({ timestamps, max }) => timestamps.length >= max
+	)
+	for (const { key, timestamps } of counters) {
+		if (!limited) {
+			timestamps.push(now)
+		}
+		attempts.set(key, { windowMs, timestamps })
 	}
-	attempts.set(key, { windowMs, timestamps })
 
 	evictStale(now)
 
-	return {
-		limited,
-		retryAfterSeconds: retryAfterSeconds(timestamps, windowMs, now)
-	}
+	return combine(
+		counters.map(({ timestamps, max }) => ({
+			limited: timestamps.length >= max && limited,
+			retryAfterSeconds: retryAfterSeconds(timestamps, windowMs, now)
+		}))
+	)
 }
 
 /** Test seam. Never called by application code. */

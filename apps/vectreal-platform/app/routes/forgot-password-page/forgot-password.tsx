@@ -81,7 +81,9 @@ export async function action({ request }: Route.ActionArgs) {
 	const rateLimitResult = recordRateLimitAttempt(request, {
 		bucket: 'auth-password-reset',
 		maxRequests: 3,
-		keyParts: [normalizedEmail]
+		keyParts: [normalizedEmail],
+		// Each attempt mails the named address; see `auth-signup`.
+		addressCeiling: 10
 	})
 
 	if (rateLimitResult.limited) {
