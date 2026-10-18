@@ -1,5 +1,6 @@
 import { LoaderFunctionArgs } from 'react-router'
 
+import { UUID_REGEX } from '../../constants/utility-constants'
 import { downloadAsset } from '../../lib/domain/asset/asset-storage.server'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-permissions.server'
@@ -23,6 +24,16 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	if (!sceneId || !assetId) {
 		return new Response('Missing scene or asset ID', {
 			status: 400,
+			headers: noStoreHeaders()
+		})
+	}
+
+	// Both reach uuid columns below (the asset id in the session branch's link
+	// check), and Postgres rejects a malformed one rather than matching
+	// nothing. It names no asset, so it gets the same 404 an unknown id gets.
+	if (!UUID_REGEX.test(sceneId) || !UUID_REGEX.test(assetId)) {
+		return new Response('Asset not found', {
+			status: 404,
 			headers: noStoreHeaders()
 		})
 	}
