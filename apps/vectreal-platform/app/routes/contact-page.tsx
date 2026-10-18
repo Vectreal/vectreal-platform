@@ -308,7 +308,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							</CardHeader>
 							<CardContent>
 								{/*
-								  A definition list, not three icon-title-description
+								  A definition list, not icon-title-description
 								  rows. The icons were decorative, they were the
 								  vertical form of the icon-triplet pattern, and in
 								  brand orange they measured 2.88:1 on this card -

@@ -196,7 +196,7 @@ export const PilotOffer = () => {
 				{/*
 				  The frame and every term but the last share a box, and the last
 				  term sits after it. A sticky element lets go where its box ends,
-				  so the frame lets go as the second term leaves, with the last one
+				  so the frame lets go as the first term leaves, with the last one
 				  whole beneath it and already read, and the two scroll on together.
 				  Around all of them, it let go only once the last term had scrolled
 				  under it, and that term left the section half covered. From `sm`
