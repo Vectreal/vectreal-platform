@@ -10,7 +10,9 @@
  *
  * Mutation gates, executed: restoring the unconditional reset reddens every
  * case that keeps a draft; dropping the id check reddens the other-scene case;
- * dropping the save's `storedSceneRef` write reddens the after-save case.
+ * dropping the save's `storedSceneRef` write reddens the after-save case;
+ * reading `descriptionChanged` from the id alone reddens the description case;
+ * resetting `status` on every revalidation reddens the save-result case.
  */
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -43,6 +45,7 @@ function renderMetadata() {
 
 afterEach(() => {
 	vi.unstubAllGlobals()
+	vi.restoreAllMocks()
 })
 
 describe('useSceneMetadata drafts', () => {
@@ -73,6 +76,40 @@ describe('useSceneMetadata drafts', () => {
 
 		expect(result.current.nameDraft).toBe('Renamed elsewhere')
 		expect(result.current.descriptionDraft).toBe('A lens and a body')
+	})
+
+	it('resets the description draft when only the description changed', () => {
+		const { result, rerender } = renderMetadata()
+
+		act(() => {
+			result.current.setNameDraft('Camera body')
+			result.current.setDescriptionDraft('A lens and a body')
+		})
+		rerender({ scene: { ...stored, description: 'Edited elsewhere' } })
+
+		expect(result.current.nameDraft).toBe('Camera body')
+		expect(result.current.descriptionDraft).toBe('Edited elsewhere')
+	})
+
+	it('keeps a save result on screen through an unrelated revalidation', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => Response.json({ error: 'nope' }, { status: 500 }))
+		)
+		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const { result, rerender } = renderMetadata()
+
+		act(() => {
+			result.current.setNameDraft('Camera body')
+		})
+		await act(() => result.current.save())
+		expect(result.current.status).toBe('error')
+
+		rerender({ scene: { ...stored } })
+		expect(result.current.status).toBe('error')
+
+		rerender({ scene: { ...stored, name: 'Renamed elsewhere' } })
+		expect(result.current.status).toBe('idle')
 	})
 
 	it('resets both drafts when the page moves to another scene', () => {
