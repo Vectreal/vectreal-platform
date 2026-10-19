@@ -8,6 +8,11 @@ import {
 	type CreateProjectInput,
 	type ProjectList
 } from './projects'
+import {
+	createdSceneSchema,
+	type CreatedScene,
+	type CreateSceneInput
+} from './scenes'
 
 import type { z } from 'zod'
 
@@ -82,7 +87,11 @@ export function createVectrealClient({
 		}
 	): Promise<z.infer<Data>> {
 		const headers = new Headers({ Accept: 'application/json', ...extraHeaders })
-		if (payload !== undefined) headers.set('Content-Type', 'application/json')
+		// A FormData body leaves Content-Type to fetch, which adds the boundary.
+		const isForm = payload instanceof FormData
+		if (payload !== undefined && !isForm) {
+			headers.set('Content-Type', 'application/json')
+		}
 		if (auth === 'bearer') {
 			if (!getAccessToken) {
 				throw new Error(`${path} needs an access token: pass getAccessToken`)
@@ -93,7 +102,7 @@ export function createVectrealClient({
 		const response = await fetch(new URL(path, base), {
 			method,
 			headers,
-			body: payload === undefined ? undefined : JSON.stringify(payload)
+			body: payload === undefined || isForm ? payload : JSON.stringify(payload)
 		})
 
 		const body: unknown = await response.json().catch(() => undefined)
@@ -154,6 +163,32 @@ export function createVectrealClient({
 				body: input,
 				headers: { 'Idempotency-Key': sfString(idempotencyKey) }
 			}),
+		/**
+		 * Creates a scene in a project from one GLB, stored as it is: nothing is
+		 * re-encoded, so compress it before sending if it should be smaller.
+		 *
+		 * Retrying works as for `createProject`: pass your own `idempotencyKey`
+		 * and send the same name and file again.
+		 */
+		createScene: (
+			projectId: string,
+			{ file, name }: CreateSceneInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<CreatedScene> => {
+			const form = new FormData()
+			form.set('name', name)
+			form.set('file', file)
+			return send(
+				'POST',
+				`api/v1/projects/${encodeURIComponent(projectId)}/scenes`,
+				createdSceneSchema,
+				{
+					auth: 'bearer',
+					body: form,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			)
+		},
 		/** How the CLI signs in against this origin. */
 		cliClient: (): Promise<CliClient> =>
 			send('GET', 'api/v1/cli/client', cliClientSchema, { auth: 'public' })

@@ -134,6 +134,61 @@ describe('createVectrealClient', () => {
 		}
 	)
 
+	it('sends a scene create as multipart with the file, the name and a quoted key', async () => {
+		const scene = { scene: { id: 's1', projectId: 'p/1', name: 'Chair' } }
+		const fetch = respond({ success: true, data: scene }, 201)
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+		const file = new Blob([new Uint8Array([1, 2, 3])])
+
+		await expect(
+			client.createScene(
+				'p/1',
+				{ name: 'Chair', file },
+				{ idempotencyKey: 'k-1' }
+			)
+		).resolves.toEqual(scene)
+		const [url, init] = fetch.mock.calls[0]
+		const headers = new Headers(init?.headers)
+		expect(String(url)).toBe(
+			'https://vectreal.com/api/v1/projects/p%2F1/scenes'
+		)
+		expect(init?.method).toBe('POST')
+		expect(headers.get('Authorization')).toBe('Bearer token-1')
+		// Left to fetch, which writes the multipart boundary.
+		expect(headers.has('Content-Type')).toBe(false)
+		expect(headers.get('Idempotency-Key')).toBe('"k-1"')
+		const form = init?.body as FormData
+		expect(form.get('name')).toBe('Chair')
+		expect(
+			new Uint8Array(await (form.get('file') as Blob).arrayBuffer())
+		).toEqual(new Uint8Array([1, 2, 3]))
+	})
+
+	it.each([
+		[402, 'payment_required'],
+		[403, 'insufficient_plan']
+	])(
+		'surfaces a %i refusal of a scene create with its code',
+		async (status, code) => {
+			const fetch = respond({ success: false, error: 'refused', code }, status)
+			const client = createVectrealClient({
+				baseUrl: 'https://vectreal.com',
+				getAccessToken: () => 'token-1',
+				fetch
+			})
+
+			const error = await client
+				.createScene('p1', { name: 'Chair', file: new Blob([]) })
+				.catch((thrown: unknown) => thrown)
+			expect(error).toBeInstanceOf(VectrealApiError)
+			expect(error).toMatchObject({ status, code })
+		}
+	)
+
 	it('asks for the CLI client without a token, even when it has one', async () => {
 		const fetch = respond({ success: true, data: cliClient })
 		const getAccessToken = vi.fn(() => 'token-1')

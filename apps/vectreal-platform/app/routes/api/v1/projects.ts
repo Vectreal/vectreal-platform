@@ -9,13 +9,14 @@
 import { ApiResponse } from '@shared/utils'
 import { createProjectInputSchema } from '@vctrl/sdk'
 
-import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
-import { agentApiError } from '../../../lib/domain/agent/agent-api-response'
+import {
+	agentApiError,
+	agentBillingRefusal
+} from '../../../lib/domain/agent/agent-api-response'
 import { recordAgentAudit } from '../../../lib/domain/agent/agent-audit.server'
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
 import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
-import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
 import {
 	canPerformDashboardOperation,
 	describeDashboardOperationDenial
@@ -92,23 +93,9 @@ export async function action({ request }: Route.ActionArgs) {
 					{ headers: { 'Cache-Control': 'no-store' } }
 				)
 			} catch (error) {
-				if (!(error instanceof QuotaExceededError)) throw error
-
-				// A refusal, so it is kept and replayed like any outcome: after
-				// upgrading, the agent retries with a new Idempotency-Key.
-				return agentApiError(403, 'quota_exceeded', error.message, {
-					extra: {
-						quota: {
-							limitKey: error.limitKey,
-							currentValue: error.currentValue,
-							limit: error.limit,
-							plan: error.plan,
-							upgradeTo: error.upgradeTo
-						},
-						upgradeUrl: new URL(DASHBOARD_ROUTES.BILLING_UPGRADE, request.url)
-							.href
-					}
-				})
+				const refusal = agentBillingRefusal(error, request)
+				if (!refusal) throw error
+				return refusal
 			}
 		}
 	)
