@@ -408,11 +408,15 @@ export const HOME_PAGE_COPY = {
 		openInPublisher: 'Open in the publisher'
 	},
 	product: {
-		/** In parts: the `underline` one is drawn under, the step the other two lead to. */
+		/**
+		  In parts: the `underline` one is drawn under, the place the three steps
+		  end. The steps themselves are the tabs below it, so the heading names
+		  where they go rather than listing them a second time.
+		*/
 		heading: [
-			'From your file. Prepare, manage, ',
-			{ underline: 'publish' },
-			'.'
+			'From your file to ',
+			{ underline: 'your product page' },
+			', in three steps.'
 		],
 		/** The chain's accessible name: the heading is a sentence, this names the control. */
 		stepsLabel: 'The three steps',
