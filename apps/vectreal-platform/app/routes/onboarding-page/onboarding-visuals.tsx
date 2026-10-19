@@ -1,14 +1,13 @@
 /**
- * The onboarding visual: the site's grain rising from the left edge, and the
- * rocket turning in front of it.
+ * The onboarding visual: the rocket turning over the drafting floor.
  *
  * Lazy-loads the R3F scene so no Three.js code is imported server-side. The
- * grain is the page hero's, not a blurred glow, so onboarding is made of the
- * same material as the pages that led to it.
+ * floor is the site's, calmed for a product surface, so onboarding is made of
+ * the same material as the pages that led to it.
  */
 import { lazy, Suspense } from 'react'
 
-import { DitherGrain } from '../../components/layout-components/dither-grain'
+import { DraftingBackdrop } from '../../components/layout-components/drafting-backdrop'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
 const OnboardingWelcomeScene = lazy(() => import('./onboarding-welcome-client'))
@@ -18,7 +17,7 @@ export function WelcomeVisual() {
 
 	return (
 		<div className="relative isolate h-full w-full overflow-hidden">
-			<DitherGrain origin="left" />
+			<DraftingBackdrop calm focusX={0.5} horizon={0.55} phoneHorizon={0.55} />
 
 			{mounted && (
 				<Suspense fallback={null}>

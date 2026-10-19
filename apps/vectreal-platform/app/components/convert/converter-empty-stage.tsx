@@ -3,8 +3,8 @@ import { ArrowRight, FolderUp, Loader2 } from 'lucide-react'
 
 import { articleFor, type ConvertPair } from '../../lib/convert/convert-pairs'
 import { PASS_SAMPLES } from '../../lib/samples/sample-models'
-import { DitherGrain } from '../layout-components/dither-grain'
 import { DitherSwap } from '../layout-components/dither-swap'
+import { DraftingBackdrop } from '../layout-components/drafting-backdrop'
 import { SampleTiles } from '../layout-components/sample-tiles'
 
 import type { useSampleDownload } from '../../hooks/use-sample-download'
@@ -34,8 +34,9 @@ interface Props {
  *
  * On a wide screen the invitation keeps the bottom-left and the samples take
  * the bottom-right, so the stage's full width is a composition rather than a
- * caption with empty space beside it. The grain is the page's own, rising from
- * the right; it belongs to the empty stage and goes when a model arrives.
+ * caption with empty space beside it. The floor is the site's, calmed for a
+ * work surface, its lines meeting to the right; it belongs to the empty stage
+ * and goes when a model arrives.
  *
  * It is drawn in the home page's sheet language, so the converter is plainly
  * the same product: a figure label naming the conversion, its arrow in the
@@ -44,7 +45,7 @@ interface Props {
  *
  * What it offers depends on the source, samples for GLB and a folder for a
  * glTF bundle, so switching source dissolves the new offer in rather than
- * cutting to it. The grain stays put: it is the stage, not the offer.
+ * cutting to it. The floor stays put: it is the stage, not the offer.
  */
 export function ConverterEmptyStage({
 	pair,
@@ -59,7 +60,7 @@ export function ConverterEmptyStage({
 }: Props) {
 	return (
 		<>
-			<DitherGrain origin="right" />
+			<DraftingBackdrop calm focusX={0.66} horizon={0.45} />
 			<p
 				aria-hidden="true"
 				className="text-eyebrow text-muted-foreground absolute top-4 left-4 flex items-center gap-2"

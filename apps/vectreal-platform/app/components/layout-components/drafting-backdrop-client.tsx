@@ -19,6 +19,8 @@ export interface DraftingBackdropProps {
 	phoneHorizon?: number
 	/** See `DraftingBackdropOptions.travel`. `page` keeps the floor under the reader for the whole of its host. */
 	travel?: DraftingBackdropOptions['travel']
+	/** See `DraftingBackdropOptions.calm`. For the product's work surfaces. */
+	calm?: boolean
 	/** Positions the box. Defaults to filling its nearest positioned ancestor, behind it. */
 	className?: string
 }
@@ -27,7 +29,7 @@ export interface DraftingBackdropProps {
  * The drafting floor behind a section: the site's backdrop.
  *
  * The element it sits in is the floor's host: pointing anywhere in it leans on
- * the floor, its headings and paragraphs (and anything marked
+ * the floor (unless it is `calm`), its headings and paragraphs (and anything marked
  * `data-keep-clear`) thin the lines behind them, and an object marked `data-floor-light` stands in a light on it. The
  * parent must be a stacking context (`isolate`), so the floor sits behind its
  * content and above its surface.
@@ -41,6 +43,7 @@ export default function DraftingBackdropClient({
 	horizon = 0.5,
 	phoneHorizon = 0.68,
 	travel = 'box',
+	calm = false,
 	className
 }: DraftingBackdropProps) {
 	const boxRef = useRef<HTMLDivElement>(null)
@@ -59,6 +62,7 @@ export default function DraftingBackdropClient({
 					reducedMotion: prefersReducedMotion(),
 					host,
 					travel,
+					calm,
 					view: (box) =>
 						box.width < PHONE_PX
 							? { horizon: phoneHorizon, focusX: 0.5 }
@@ -71,7 +75,7 @@ export default function DraftingBackdropClient({
 			cancelled = true
 			dispose?.()
 		}
-	}, [focusX, horizon, phoneHorizon, travel])
+	}, [focusX, horizon, phoneHorizon, travel, calm])
 
 	/*
 	  A canvas keeps its intrinsic height under top and bottom, so a box sizes it

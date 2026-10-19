@@ -13,7 +13,8 @@ import { createCssColorProbe, observeTheme } from '../../lib/theme/theme-probe'
  * surfaces. It is kept to what reads: the display rate only while something is
  * settling, 20 frames a second (simulation included) while only the swell
  * drifts, nothing while the canvas is off screen, and under reduced motion one
- * still frame and no listeners at all.
+ * still frame and no listeners at all. A `calm` floor, for a work surface,
+ * only drifts: no pointer, no ripples, no scroll.
  *
  * Kept out of every route's first load: callers import this module
  * dynamically, so only the canvas element is in the server's HTML.
@@ -39,6 +40,12 @@ export interface DraftingBackdropOptions {
 	  reads as one ground the sections pass over.
 	*/
 	travel?: 'box' | 'page'
+	/**
+	  A work surface's floor: a lower, slower swell in fainter lines, no brand
+	  on its crests, and nothing that answers the pointer or the scroll. It
+	  drifts and nothing else, so it never competes with the task in front of it.
+	*/
+	calm?: boolean
 }
 
 /* The floor, in grid steps. The tight net: 104 by 92 lines a little under half a step apart. */
@@ -58,6 +65,9 @@ const CREST = 0.45
 /** The most brand a crest takes: across a whole scrolling page, crests in full brand swept orange bands through every section. */
 const CREST_BRAND = 0.4
 const SEED = 0x5eed
+/** What `calm` scales: the swell's height, its drift, the brand on its crests and the ink. */
+const LIVELY = { swell: 1, drift: 1, brand: 1, ink: 1 }
+const CALM = { swell: 0.55, drift: 0.5, brand: 0, ink: 0.7 }
 
 /* Tuning: amplitudes in grid steps, time constants in seconds. */
 const DRIFT = 0.03
@@ -82,7 +92,6 @@ const FLOW_TAU = 0.5
 const LINE_WIDTH = 0.5
 const LINE_ALPHA = { light: 0.26, dark: 0.34 }
 const ACCENT_ALPHA = 0.85
-const HORIZON_ALPHA = 0.5
 /** A light on the floor, kept low: at full strength it read as sweetened. */
 const LIGHT_STRENGTH = { light: 0.3, dark: 0.42 }
 /** One path per opacity step and ink, so a frame is 48 strokes however many lines it has. */
@@ -149,6 +158,8 @@ export function createDraftingBackdrop(
 	if (!context) return null
 	const { host, reducedMotion } = options
 	const travel = options.travel ?? 'box'
+	const mood = options.calm ? CALM : LIVELY
+	const listens = !reducedMotion && !options.calm
 
 	const base = new Float32Array(N)
 	const field = new Float32Array(N)
@@ -206,7 +217,7 @@ export function createDraftingBackdrop(
 		for (let pass = 0; pass < 3; pass++) {
 			const t = (y - CAMERA_HEIGHT) / ry
 			point = [nx * t, rz * t]
-			y = swell(point[0], point[1], drift)
+			y = swell(point[0], point[1], drift) * mood.swell
 		}
 		return point
 	}
@@ -324,11 +335,13 @@ export function createDraftingBackdrop(
 	let rippleEnergy = 0
 	let fieldRate = 0
 
-	/** How far the floor has travelled with the scroll, in screens. A section's floor stops at 1, once it has left. */
+	/** How far the floor has travelled with the scroll, in screens. A section's floor stops at 1, once it has left; a calm floor never travels. */
 	const scrolled = () =>
-		travel === 'page'
-			? window.scrollY / Math.max(window.innerHeight, 1)
-			: Math.min(Math.max(-box.top / Math.max(box.height, 1), 0), 1)
+		options.calm
+			? 0
+			: travel === 'page'
+				? window.scrollY / Math.max(window.innerHeight, 1)
+				: Math.min(Math.max(-box.top / Math.max(box.height, 1), 0), 1)
 	const drift = () => phase + scrollProgress * SCROLL_ADVANCE
 
 	function step(dt: number) {
@@ -337,7 +350,7 @@ export function createDraftingBackdrop(
 		flowSpeed +=
 			(Math.min(scrollVelocity * FLOW_GAIN, FLOW_MAX) - flowSpeed) *
 			ease(FLOW_TAU, dt)
-		phase += (DRIFT + flowSpeed) * dt
+		phase += (DRIFT * mood.drift + flowSpeed) * dt
 		// Eased, so the floor follows the page without stepping.
 		scrollProgress += (scrolled() - scrollProgress) * ease(SCROLL_TAU, dt)
 		aim()
@@ -354,7 +367,7 @@ export function createDraftingBackdrop(
 				const k = j * NX + i
 				const x = wx(i)
 				const z = wz(j)
-				base[k] = swell(x, z, d)
+				base[k] = swell(x, z, d) * mood.swell
 				let near = 0
 				if (ground) {
 					const dx = x - ground[0]
@@ -419,7 +432,7 @@ export function createDraftingBackdrop(
 		const dark = document.documentElement.classList.contains('dark')
 		ink.line = rgb('--foreground')
 		ink.accent = rgb('--orange')
-		ink.lineAlpha = dark ? LINE_ALPHA.dark : LINE_ALPHA.light
+		ink.lineAlpha = (dark ? LINE_ALPHA.dark : LINE_ALPHA.light) * mood.ink
 		ink.light = dark ? LIGHT_STRENGTH.dark : LIGHT_STRENGTH.light
 		render()
 	}
@@ -539,7 +552,7 @@ export function createDraftingBackdrop(
 						lift + ((glow[a] + glow[b]) / 2) * 0.22
 					)
 			const brand = Math.max(
-				crest * CREST_BRAND,
+				crest * CREST_BRAND * mood.brand,
 				0.75 * smoothstep(0.15, 0.9, lit)
 			)
 			opacity *= 1 + 0.5 * lit
@@ -559,15 +572,6 @@ export function createDraftingBackdrop(
 		context!.clearRect(0, 0, width, height)
 		context!.lineWidth = LINE_WIDTH
 		context!.lineCap = 'round'
-		// The ruled horizon, thinning out behind copy like every other line.
-		const horizonY = (height / 2) * (1 - FOCAL * Math.tan(pitch))
-		for (let x = 0; x < width; x += 24) {
-			context!.strokeStyle = `rgb(${ink.line} / ${HORIZON_ALPHA * ink.lineAlpha * clearance(x + 12, horizonY)})`
-			context!.beginPath()
-			context!.moveTo(x, horizonY)
-			context!.lineTo(Math.min(x + 24, width), horizonY)
-			context!.stroke()
-		}
 		paths.forEach((path, index) => {
 			const level = (index % BUCKETS) / (BUCKETS - 1)
 			context!.strokeStyle =
@@ -616,7 +620,7 @@ export function createDraftingBackdrop(
 	const stopObservingTheme = observeTheme(readTheme)
 	if (reducedMotion && travel === 'page')
 		window.addEventListener('scroll', onScrollStill, { passive: true })
-	if (!reducedMotion) {
+	if (listens) {
 		host.addEventListener('pointermove', onPointerMove, { passive: true })
 		host.addEventListener('pointerleave', onPointerLeave)
 		host.addEventListener('pointerup', onPointerUp)
