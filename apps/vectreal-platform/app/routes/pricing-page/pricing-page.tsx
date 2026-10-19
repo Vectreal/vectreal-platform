@@ -1,10 +1,9 @@
 import { Button } from '@shared/components/ui/button'
-import { Card } from '@shared/components/ui/card'
 import { useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
 import { PublicErrorBoundary } from '../../components/errors'
-import { PageHero } from '../../components/layout-components'
+import { Band, PageHero, SheetFrame } from '../../components/layout-components'
 import { routeErrorMeta } from '../../components/not-found'
 import {
 	FeatureCompareGrid,
@@ -62,39 +61,24 @@ export default function PricingPage() {
 			/>
 
 			{/*
-			  The rhythm comes from four values and nothing else: 16 inside a
-			  block, 32 from a heading to its content, 64 between sections that
-			  answer the same question, 128 between sections that do not.
-
-			  It had drifted to 138, 80 and 128 between peers, so the largest gap
-			  on the page sat between the hero and the first thing under it while
-			  two page-level sections were 48px apart - the spacing said the
-			  opposite of the structure.
+			  The head runs edge to edge above the sheet frame, as the home hero
+			  does; below it each section is a band. The plans are one band, their
+			  row ruled into the frame as its last line. Enterprise is a band of its
+			  own rather than a fourth card: it has no price, no checkout and a
+			  different next step. The comparison table answers a different
+			  question again, so it is a third.
 			*/}
-			{/*
-			  The rhythm is deliberately uneven. The plan row and the enterprise
-			  card are one thought - here is what you can buy, and here is what to
-			  do if none of it fits - so they sit one grid gap apart, as a row of
-			  the same grid. The comparison table answers a different question and
-			  gets a much wider gap before it. An even `space-y` between all three
-			  said they were three peers.
-			*/}
-			<div className="container-page pb-32">
-				{/*
-				  Three self-serve plans, not four cards. Enterprise has no price,
-				  no checkout and a different next step, so rendering it as a
-				  fourth identical column made the row read as uniform. It is a
-				  card of its own under the three instead, one bento row spanning
-				  their width: the same surface, a different shape.
-				*/}
-				<PricingCardsSection
-					period={period}
-					onPeriodChange={setPeriod}
-					prices={prices}
-				/>
+			<SheetFrame>
+				<Band flush>
+					<PricingCardsSection
+						period={period}
+						onPeriodChange={setPeriod}
+						prices={prices}
+					/>
+				</Band>
 
-				<section aria-labelledby="enterprise-heading" className="mt-6">
-					<Card className="flex flex-col gap-6 rounded-2xl px-6 md:flex-row md:items-end md:justify-between md:p-8">
+				<Band aria-labelledby="enterprise-heading">
+					<div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
 						<div className="max-w-xl space-y-2">
 							<h2 id="enterprise-heading" className="text-h3">
 								{PRICING_PAGE_COPY.enterpriseHeading}
@@ -111,17 +95,11 @@ export default function PricingPage() {
 								<Link to="/docs">Read the docs</Link>
 							</Button>
 						</div>
-					</Card>
-				</section>
+					</div>
+				</Band>
 
-				<section aria-labelledby="comparison-heading" className="mt-32">
+				<Band aria-labelledby="comparison-heading">
 					<div className="mb-8 max-w-xl space-y-2">
-						{/*
-						  Same rung as the Enterprise heading above it. These are peer
-						  sections, and this one was a step louder - so the reference
-						  table read as more important than the conversion path beside
-						  it.
-						*/}
 						<h2 id="comparison-heading" className="text-h3">
 							{PRICING_PAGE_COPY.comparisonHeading}
 						</h2>
@@ -130,8 +108,8 @@ export default function PricingPage() {
 						</p>
 					</div>
 					<FeatureCompareGrid />
-				</section>
-			</div>
+				</Band>
+			</SheetFrame>
 		</main>
 	)
 }

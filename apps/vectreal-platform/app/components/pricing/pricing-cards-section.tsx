@@ -16,7 +16,6 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
-	Card,
 	CardContent,
 	CardDescription,
 	CardFooter,
@@ -62,10 +61,10 @@ const HIGHLIGHTED_LIMITS = PLAN_CARD_LIMIT_KEYS.map((key) => ({
 }))
 
 // ---------------------------------------------------------------------------
-// PlanCard
+// PlanCell
 // ---------------------------------------------------------------------------
 
-interface PlanCardProps {
+interface PlanCellProps {
 	plan: Plan
 	period: 'monthly' | 'annual'
 	prices: BillingCheckoutOptions | null
@@ -79,7 +78,7 @@ interface PlanCardProps {
 	selectablePlans?: readonly Plan[]
 }
 
-function PlanCard({
+function PlanCell({
 	plan,
 	period,
 	prices,
@@ -87,7 +86,7 @@ function PlanCard({
 	selectedPlan,
 	onSelectPlan,
 	selectablePlans
-}: PlanCardProps) {
+}: PlanCellProps) {
 	const limits = PLAN_LIMITS[plan]
 	const name = PLAN_DISPLAY_NAMES[plan]
 	const tagline = PLAN_TAGLINES[plan]
@@ -134,17 +133,19 @@ function PlanCard({
 	const isSelectable = !isSelectMode || isSelectableInSelectMode
 
 	return (
-		<Card
+		/*
+		  A cell of the pricing row, not a card: the row is ruled into the sheet
+		  frame, so the frame's lines separate the plans and no plan sits in a
+		  box. The recommended plan is the one lit pane in the row, standing in
+		  front of its light, set inside its cell so the pane's rim never lies on
+		  the frame's rules; the light must reach past the cell, so nothing here
+		  clips.
+		*/
+		<div
 			className={cn(
-				'group relative h-full overflow-hidden rounded-2xl transition-all',
-				/*
-				  The recommended and selected card sits one step up the ladder.
-				  `ds-overlay` is declared after `ds-raised` at the same specificity,
-				  so it wins on a Card that already carries `ds-raised`. It used to be
-				  `bg-muted`, a utility rather than a rung, so the card people are
-				  meant to choose rendered a plate its neighbours could not match.
-				*/
-				(isSelected || highlighted) && 'ds-overlay',
+				'group text-card-foreground border-foreground/10 relative flex h-full flex-col gap-6 py-10 transition-all not-last:border-b md:not-first:border-l md:not-last:border-b-0 lg:px-6',
+				highlighted && 'ds-lit [--lit-inset:12px] [--lit-radius:1.5rem]',
+				isSelected && !highlighted && 'ds-overlay',
 				// Dimmed when another plan is selected
 				isSelectMode && selectedPlan && !isSelected && 'opacity-60',
 				isSelectMode &&
@@ -187,8 +188,7 @@ function PlanCard({
 						  Deliberately not brand orange. White on #fc6c18 measures
 						  2.88:1, below even the 3:1 large-text floor, and the
 						  accent's job is interactive state rather than decoration. The
-						  card marks itself by sitting a step up the elevation ladder,
-						  which is what `highlight` now does.
+						  plan marks itself by being the row's one lit pane.
 						*/}
 						{highlighted && !isSelectMode && (
 							<Badge className="bg-primary text-primary-foreground">
@@ -321,7 +321,7 @@ function PlanCard({
 					</Button>
 				</CardFooter>
 			)}
-		</Card>
+		</div>
 	)
 }
 
@@ -431,14 +431,16 @@ export function PricingCardsSection({
 
 			{/*
 			  Three across at md, not at sm. At 640px three columns leave 139px of
-			  content inside each card, and the price row needs about 174px - so
-			  the annual discount badge was clipped by the card's own
-			  overflow-hidden and the limit rows ran their label into their value.
-			  The four-column branch this replaced could not be reached.
+			  content inside each cell, and the price row needs about 174px, so the
+			  limit rows ran their label into their value.
+
+			  The row is the band's last row, ruled into the sheet frame from rule
+			  to rule like the home page's format strip; on a phone the plans
+			  stack, ruled between.
 			*/}
-			<div className="grid gap-6 md:grid-cols-3">
+			<div className="border-foreground/10 -mx-(--frame-pad) grid border-t md:grid-cols-3">
 				{PRICING_CARD_PLANS.map((plan) => (
-					<PlanCard
+					<PlanCell
 						key={plan}
 						plan={plan}
 						period={period}
