@@ -35,9 +35,7 @@ export const PreOptimizationSummary: FC<PreOptimizationSummaryProps> = ({
 		>
 			{metrics.map(({ label, value }) => (
 				<div key={label} className="text-center">
-					<p className="text-muted-foreground/60 text-[10px] font-medium tracking-wide uppercase">
-						{label}
-					</p>
+					<p className="text-muted-foreground text-eyebrow">{label}</p>
 					<p className="text-muted-foreground text-sm font-medium tabular-nums">
 						{value}
 					</p>

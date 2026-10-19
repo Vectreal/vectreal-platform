@@ -263,7 +263,7 @@ const OnboardingPage = ({ loaderData }: Route.ComponentProps) => {
 							size="sm"
 							disabled={isSubmitting}
 							onClick={() => submitProfile(undefined, true)}
-							className="text-muted-foreground/50 hover:text-muted-foreground h-8 text-xs"
+							className="text-muted-foreground hover:text-foreground h-8 text-xs"
 						>
 							Skip
 						</Button>

@@ -207,9 +207,7 @@ export function UsageMeter({
 					*/}
 					<span className="text-muted-foreground flex min-w-0 items-center gap-1 text-sm">
 						<span>{label}</span>
-						{monthly ? (
-							<span className="text-muted-foreground/50">/mo</span>
-						) : null}
+						{monthly ? <span>/mo</span> : null}
 						{hint ? <InfoTooltip content={hint} className="size-3.5" /> : null}
 					</span>
 					<span className="flex shrink-0 items-baseline gap-2 tabular-nums">
@@ -230,9 +228,7 @@ export function UsageMeter({
 				<span>
 					{label}
 					{monthly ? (
-						<span className="text-muted-foreground/60 ml-1 tracking-normal normal-case">
-							/mo
-						</span>
+						<span className="ml-1 tracking-normal normal-case">/mo</span>
 					) : null}
 				</span>
 				{hint ? <InfoTooltip content={hint} className="size-3.5" /> : null}

@@ -360,7 +360,7 @@ export const EmptyStage = ({
 												  Third line, as the sample tiles have one, so the two
 												  shelves end level; in the dashboard's own words.
 												*/}
-												<span className="text-muted-foreground/70 block truncate text-xs">
+												<span className="text-muted-foreground block truncate text-xs">
 													Edited <RelativeTime at={scene.updatedAt} />
 												</span>
 											</Link>
