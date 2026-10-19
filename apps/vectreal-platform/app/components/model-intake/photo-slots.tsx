@@ -107,6 +107,9 @@ function PhotoSlot({
 	}
 
 	const inputId = `photo-${n}`
+	// Only ever an object URL from the effect above. Checked where it is used so
+	// a value that is not one never reaches `src`, which CodeQL also asks for.
+	const previewSrc = previewUrl?.startsWith('blob:') ? previewUrl : null
 
 	return (
 		<div className="relative">
@@ -128,9 +131,9 @@ function PhotoSlot({
 					aria-describedby={describedBy}
 					onChange={(event) => pick(event.target.files?.[0] ?? null)}
 				/>
-				{previewUrl && !previewFailed ? (
+				{previewSrc && !previewFailed ? (
 					<img
-						src={previewUrl}
+						src={previewSrc}
 						alt={labels.slot(n)}
 						className="absolute inset-0 h-full w-full object-cover"
 						onError={() => setPreviewFailed(true)}
