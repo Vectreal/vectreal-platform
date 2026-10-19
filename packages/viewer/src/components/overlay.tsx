@@ -45,7 +45,7 @@ const Overlay = ({
 						'vv:absolute vv:inset-0 vv:flex vv:h-full vv:w-full vv:flex-col vv:items-center vv:justify-center vv:gap-4 vv:transition-[opacity,filter] vv:ease-out',
 						isLoaded
 							? 'vv:pointer-events-none vv:opacity-0 vv:blur-[1px]'
-							: 'blur-0 vv:opacity-100'
+							: 'vv:blur-none vv:opacity-100'
 					)}
 					style={{
 						transitionDuration: `${VIEWER_LOADING_FADE_DURATION_MS}ms`

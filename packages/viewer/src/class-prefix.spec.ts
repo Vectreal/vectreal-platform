@@ -22,15 +22,24 @@ const require = createRequire(import.meta.url)
 // makes the literal prose rather than a class list.
 const CLASS_LIKE = /^[a-z0-9!\-[@&*]/
 
+const THEME = join(
+	import.meta.dirname,
+	'../../../shared/components/src/styles/theme.css'
+)
+
 const loadDesignSystem = () =>
 	__unstable__loadDesignSystem(
-		"@import 'tailwindcss/theme'; @import 'tailwindcss/utilities';",
+		// With the shared palette, so `text-foreground` counts as a utility.
+		`@import 'tailwindcss/theme'; @import 'tailwindcss/utilities'; @import '${THEME}';`,
 		{
 			base: import.meta.dirname,
 			loadStylesheet: async (id: string, base: string) => ({
 				path: id,
 				base,
-				content: readFileSync(require.resolve(`${id}.css`), 'utf8')
+				content: readFileSync(
+					id === THEME ? id : require.resolve(`${id}.css`),
+					'utf8'
+				)
 			})
 		}
 	)
@@ -97,6 +106,7 @@ describe('the viewer class prefix', () => {
 	it('reads an unprefixed class as one', async () => {
 		const design = await loadDesignSystem()
 		expect(design.candidatesToCss(['hover:bg-black/5'])[0]).not.toBeNull()
+		expect(design.candidatesToCss(['text-foreground'])[0]).not.toBeNull()
 		expect(design.candidatesToCss(['vv:h-full'])[0]).toBeNull()
 	})
 })

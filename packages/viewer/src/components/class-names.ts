@@ -28,6 +28,19 @@ export function cn(...inputs: ClassValue[]) {
 
 const tokensOf = (classes: string) => classes.split(/\s+/).filter(Boolean)
 
+/** A class without its variants: `md:hover:h-96` is `h-96`. */
+function utilityOf(token: string) {
+	let depth = 0
+	let start = 0
+	for (let index = 0; index < token.length; index++) {
+		const char = token[index]
+		if (char === '[' || char === '(') depth++
+		else if (char === ']' || char === ')') depth--
+		else if (char === ':' && depth === 0) start = index + 1
+	}
+	return token.slice(start)
+}
+
 /**
  * The viewer's classes for an element with a host's `className` added.
  *
@@ -36,16 +49,23 @@ const tokensOf = (classes: string) => classes.split(/\s+/).filter(Boolean)
  * `vv:p-1` too. In Tailwind's own order `p-1 px-2` keeps the vertical padding,
  * but that relies on both rules sharing a layer, and the viewer's sits above
  * the host's, so `vv:p-1` would win the horizontal padding as well.
+ *
+ * Variants are ignored on both sides, for the same reason: the viewer's
+ * unlayered `vv:h-full` beats a host's `md:h-96` at every width, so a host
+ * class under any variant takes the property from the viewer altogether.
+ * The host passes the base as well (`h-full md:h-96`) to keep one.
  */
 export function withHostClasses(own: string, host: string | undefined) {
 	const hostTokens = tokensOf(host ?? '')
 	if (hostTokens.length === 0) return own
-	const hostClasses = hostTokens.join(' ')
+	const hostClasses = hostTokens.map(utilityOf).join(' ')
 	// What the host's classes leave of themselves, so a conflict among them is
 	// not read as one with the viewer's.
 	const hostKept = tokensOf(twMerge(hostClasses)).length
 	const kept = tokensOf(own).filter((token) => {
-		const bare = token.startsWith(PREFIX) ? token.slice(PREFIX.length) : token
+		const bare = utilityOf(
+			token.startsWith(PREFIX) ? token.slice(PREFIX.length) : token
+		)
 		const hostAfter = tokensOf(twMerge(`${bare} ${hostClasses}`))
 		const hostBefore = tokensOf(twMerge(`${hostClasses} ${bare}`))
 		return hostAfter.includes(bare) && hostBefore.length === hostKept + 1

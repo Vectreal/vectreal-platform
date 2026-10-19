@@ -31,12 +31,25 @@ describe('withHostClasses', () => {
 		expect(withHostClasses('vv:flex vv:px-2', 'p-3')).toBe('vv:flex p-3')
 	})
 
-	it('keeps viewer classes under a different variant', () => {
-		expect(withHostClasses(own, 'hidden md:block bg-red-500')).toBe(
-			`${own} hidden md:block bg-red-500`
-		)
-		expect(withHostClasses(own, 'hover:bg-red-500')).not.toContain(
+	it('drops a viewer class a host class touches under any variant', () => {
+		expect(withHostClasses(own, 'md:h-96')).not.toContain('vv:h-full')
+		expect(withHostClasses(own, 'dark:hover:bg-red-500')).not.toContain(
 			'vv:hover:bg-foreground/5'
+		)
+		expect(withHostClasses(own, 'md:p-[calc(1rem+2px)]')).not.toContain(
+			'vv:p-1'
+		)
+	})
+
+	it('reads a colon inside an arbitrary value as part of the class', () => {
+		expect(
+			withHostClasses('vv:flex vv:[font-family:inherit]', '[font-family:serif]')
+		).toBe('vv:flex [font-family:serif]')
+	})
+
+	it('keeps viewer classes on properties the host leaves alone', () => {
+		expect(withHostClasses(own, 'hidden md:block')).toBe(
+			`${own} hidden md:block`
 		)
 	})
 
