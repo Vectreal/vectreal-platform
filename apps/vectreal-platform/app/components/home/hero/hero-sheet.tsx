@@ -18,10 +18,7 @@ import { FigureLabel, Readout } from './hero-readout'
 import styles from './hero-sheet.module.css'
 import { createHeroStore, fallBackToPoster } from './hero-store'
 import { useMountWhenVisibleAndIdle } from './use-mount-when-visible-and-idle'
-import {
-	HOME_PAGE_COPY,
-	PILOT_CONTACT_HREF
-} from '../../../constants/product-copy'
+import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 import {
 	HERO_SOURCE_SAMPLE_ID,
 	publisherSampleHref
@@ -138,7 +135,7 @@ export function HeroSheet() {
 							</Link>
 						</Button>
 						<Button asChild size="lg" variant="secondary">
-							<Link to={PILOT_CONTACT_HREF}>{HERO.secondaryCta}</Link>
+							<Link to="/contact">{HERO.secondaryCta}</Link>
 						</Button>
 					</div>
 				</div>

@@ -55,8 +55,8 @@ describe('the site map', () => {
 		for (const [to, labels] of names) expect([...labels], to).toHaveLength(1)
 	})
 
-	it('offers the pilot from the nav', () => {
-		expect(navLinks.map((link) => link.to)).toContain('/contact?topic=pilot')
+	it('offers the free model from the nav', () => {
+		expect(navLinks.map((link) => link.to)).toContain('/free-model')
 	})
 
 	// The order marketing asked for on 17 Oct 2026: the product first, open source last.

@@ -40,15 +40,16 @@ import type {
 
 /*
   The position these three carry, and the home page argues: companies that sell
-  physical products, putting the 3D files they already have on their own site,
-  with developers as the second reader. Configurators are not named here,
-  because they are built per pilot rather than shipped.
+  physical products, most of which have photos of them rather than 3D files,
+  putting those products in 3D on their own site, with developers as the
+  second reader. Configurators are not named here, because they are built per
+  pilot rather than shipped.
 */
 export const PLATFORM_TAGLINE =
-	'Your products in 3D on your own website: prepare the files you have, embed them on any page, and manage every model in one place.'
+	'Your products in 3D on your own website: from your photos or the 3D file you have, embedded on any page and managed in one place.'
 
 export const PLATFORM_SHORT_DESCRIPTION =
-	'Vectreal takes the 3D files a company already has, optimizes them for the browser, and publishes them as embeds on any website, with a dashboard for projects, scenes, team roles, API keys and allowed domains. The optimizer and format converters run in the browser with no account, and the viewer and embed SDK are open source on npm. The viewer needs no WebGL framework on the embedding page.'
+	'Most brands that sell physical products have photos of them, not 3D files, so Vectreal makes models from photos as a service. The platform takes a 3D file, optimizes it for the browser, and publishes it as an embed on any website, with a dashboard for projects, scenes, team roles, API keys and allowed domains. The optimizer and format converters run in the browser with no account, and the viewer and embed SDK are open source on npm. The viewer needs no WebGL framework on the embedding page.'
 
 /*
   The most-read string in the product: it is DEFAULT_DESCRIPTION and the home
@@ -58,7 +59,7 @@ export const PLATFORM_SHORT_DESCRIPTION =
   the product does. One enumeration, of the pipeline that actually exists.
 */
 export const PLATFORM_SOCIAL_DESCRIPTION =
-	'Start from the 3D files you already have. Vectreal prepares them for the browser, embeds them on any page you own, and keeps track of every model. Open source.'
+	'Your products in 3D on your own site. Bring a 3D file and embed it on any page you own, or send photos and we make the model. Open source.'
 
 // ---------------------------------------------------------------------------
 // Supported upload formats
@@ -346,20 +347,16 @@ export const DOCS_PAGE_COPY = {
 //
 // Written for two readers: a company that sells physical products and wants
 // them in 3D on its own site, and a developer who wants the open-source
-// pieces. Every capability named here ships today. Configurators do not, which
-// is why they appear only inside the pilot offer, as something built per
-// project.
+// pieces. Every capability named here ships today. Configurators do not, so
+// they are not named.
 // ---------------------------------------------------------------------------
 
 /** The contact page's `topic` for a pilot: it preselects a sales inquiry and asks the pilot's questions. */
 export const PILOT_CONTACT_TOPIC = 'pilot'
 
-/** Where every pilot call to action on the site points. */
-export const PILOT_CONTACT_HREF = `/contact?topic=${PILOT_CONTACT_TOPIC}`
-
-/** What the contact form asks when it was opened from a pilot call to action. */
+/** What the contact form asks when it was opened with `?topic=pilot`, the link shared with agencies. */
 export const PILOT_CONTACT_PROMPT =
-	'About your project: tell us what you sell, which 3D or CAD files you have, and where the product views should live.'
+	'About your project: tell us what you sell, whether you have 3D or CAD files or only photos, and where the product views should live.'
 
 /*
   The lowest plan that lets a whole team in with roles (`ALL_PLANS` is in
@@ -433,48 +430,61 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	mission: {
-		label: 'Why we build this',
 		/** One paragraph, in parts: the `key` ones light up in turn as it scrolls through the screen; the `highlight` one is in full ink throughout. */
 		statement: [
-			'Most companies that make physical products ',
-			{ key: 'already have 3D files' },
+			'Most brands that sell physical products ',
+			{ key: 'have photos of them, not 3D files' },
 			'. ',
-			{ highlight: 'Very few can put them on their own website' },
+			{
+				highlight: 'Very few can show those products in 3D on their own website'
+			},
 			' ',
 			{
 				key: 'without an agency, an enterprise platform or a plugin that keeps their data'
 			},
-			'. Vectreal is ',
-			{
-				key: 'the open path from the file you have to a product page that loads fast'
-			},
+			'. We make the model from ',
+			{ key: 'the photos you already have' },
+			', put it on ',
+			{ key: 'a product page that loads fast' },
 			', and ',
 			{ key: 'we build it in public' },
 			'.'
 		],
 		signature: 'Moritz Becker, founder',
-		/** The figure beside the statement: one file, pulled apart into the path it takes. Back to front. */
+		/** The figure beside the statement: one model, pulled apart into the path it takes. Back to front. */
 		layers: {
-			file: 'The file you have',
+			file: 'The raw model',
 			prepared: 'Prepared for the web',
 			page: 'On your product page'
 		}
 	},
+	/**
+	  The free-model offer, the page's first section under the hero. It claims
+	  nothing the `/free-model` page (`MODEL_INTAKE_COPY.en`) does not, so the
+	  offer cannot promise what the intake does not deliver: a service we
+	  perform, never how the model is made.
+	*/
 	pilot: {
-		heading: 'Start a project with us',
-		lead: 'We help you every step of the way, starting from your files and ending with an interactive 3D web experience.',
-		blocks: [
+		heading: 'Your product in 3D, from three photos.',
+		lead: "Send us three photos of one product. We look at them first and tell you whether we can make a model from them. If we can, the first one is free, as GLB and USDZ files for Shopify's own 3D slot.",
+		cta: 'Request a free model',
+		afterCta: 'If you like it, we make five products as a paid pilot.',
+		stepsLabel: 'How it works',
+		steps: [
 			{
-				title: 'Who it is for',
-				body: 'Companies with physical products, and web developers and designers, looking to visualize their products and ideas with interactive 3D.'
+				title: 'Send three photos',
+				body: 'Front, side and back of one product, on a plain background.'
 			},
 			{
-				title: 'What we do',
-				body: 'We prepare your files and embed the product viewer or configurator into your site. You optimize and manage them in Vectreal.'
+				title: 'We check, then make the model',
+				body: 'We tell you whether your photos will work. If they do, we make the model, check it by hand and email you GLB and USDZ files.'
+			},
+			{
+				title: 'It goes on your product page',
+				body: "Upload it to your product's own 3D slot in Shopify. Nothing to install."
 			}
 		],
-		team: 'A small team in Germany. You work directly with the people who build the product.',
-		cta: 'Talk to us'
+		note: 'A model made from photos approximates your product. You see it before anything goes live.'
 	},
 	openSource: {
 		heading: 'Open source, down to the viewer',

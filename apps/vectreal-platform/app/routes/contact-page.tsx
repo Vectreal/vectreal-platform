@@ -232,6 +232,16 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 						*/}
 						<h2 className="sr-only">Send a message</h2>
 						<CardContent className="space-y-6">
+							{/* A brand with one product and only photos has a shorter way in than a message. */}
+							<p className="text-body-sm text-muted-foreground">
+								One product?{' '}
+								<Link
+									to="/free-model"
+									className="text-foreground decoration-muted-foreground hover:decoration-orange underline underline-offset-4 transition-colors duration-150"
+								>
+									Send three photos and get a free model.
+								</Link>
+							</p>
 							<AnimatePresence mode="wait" initial={false}>
 								{showSubmissionResult ? (
 									<motion.div

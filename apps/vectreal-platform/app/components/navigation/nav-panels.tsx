@@ -80,7 +80,7 @@ export function NavPanels({
 		}, ms)
 	}
 
-	// Every navigation closes it, the pilot's query-only one included: keyed on the location, not the path.
+	// Every navigation closes it, a query-only one included: keyed on the location, not the path.
 	const { key: locationKey } = useLocation()
 	useEffect(() => {
 		setOpen(null)
