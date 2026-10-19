@@ -89,9 +89,9 @@ describe('prepareIntakePhotos', () => {
 		).toBe(false)
 	})
 
-	it('caps a photo at 100 megapixels', () => {
-		expect(exceedsPhotoPixelLimit(12_000, 8_000)).toBe(false)
-		expect(exceedsPhotoPixelLimit(12_000, 9_000)).toBe(true)
+	it('caps a photo at 50 megapixels, above a 48 MP phone camera', () => {
+		expect(exceedsPhotoPixelLimit(8_064, 6_048)).toBe(false)
+		expect(exceedsPhotoPixelLimit(8_000, 7_000)).toBe(true)
 	})
 
 	it('refuses anything other than exactly three photos', async () => {

@@ -192,7 +192,14 @@ export function validateIntakeFields(
 	const company = input.company.trim()
 	const message = input.message.trim()
 
-	if (name.length < 2 || name.length > MODEL_INTAKE_MAX_TEXT_LENGTH) {
+	// The name is repeated in the confirmation sent to the given address, so it
+	// may carry no link or markup: otherwise anyone could mail a stranger a URL
+	// in our name.
+	if (
+		name.length < 2 ||
+		name.length > MODEL_INTAKE_MAX_TEXT_LENGTH ||
+		/[<>@:/]|www\./i.test(name)
+	) {
 		fieldErrors.name = 'name'
 	}
 	if (

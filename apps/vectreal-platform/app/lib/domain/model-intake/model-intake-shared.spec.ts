@@ -44,6 +44,9 @@ describe('validateIntakeFields', () => {
 
 	it.each([
 		['name', { name: 'J' }],
+		['name', { name: 'Win at https://spam.example' }],
+		['name', { name: 'visit www.spam.example' }],
+		['name', { name: '<b>Jane</b>' }],
 		['email', { email: 'not-an-email' }],
 		['company', { company: ' ' }],
 		['productType', { productType: 'glassware' }],

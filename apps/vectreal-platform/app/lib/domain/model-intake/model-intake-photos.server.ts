@@ -58,11 +58,11 @@ export async function prepareIntakePhotos(
 }
 
 /**
- * The most pixels a photo may declare: 100 megapixels, well above any phone
- * camera. Checked from the header before decoding, because the HEIC decoder
+ * The most pixels a photo may declare: 50 megapixels, just above a 48 MP
+ * phone camera. Checked from the header before decoding, because the HEIC decoder
  * allocates width x height x 4 bytes up front and has no limit of its own.
  */
-const MAX_PHOTO_PIXELS = 100_000_000
+const MAX_PHOTO_PIXELS = 50_000_000
 
 export function exceedsPhotoPixelLimit(width: number, height: number): boolean {
 	return width * height > MAX_PHOTO_PIXELS
@@ -82,7 +82,14 @@ async function encodePhoto(input: Buffer): Promise<IntakePhoto | null> {
 	try {
 		if (format === 'heif') {
 			const decoded = await decodeHeic({ buffer: input })
-			const bytes = await sharp(Buffer.from(decoded.data as ArrayBuffer), {
+			const pixels = decoded.data
+			// A view on the decoder's pixels, not a second copy of them.
+			const view = Buffer.from(
+				pixels.buffer,
+				pixels.byteOffset,
+				pixels.byteLength
+			)
+			const bytes = await sharp(view, {
 				raw: { width: decoded.width, height: decoded.height, channels: 4 }
 			})
 				.jpeg({ quality: 92 })

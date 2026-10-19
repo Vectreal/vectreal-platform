@@ -3,7 +3,7 @@ declare module 'heic-decode' {
 		width: number
 		height: number
 		/** RGBA, 8 bits per channel. */
-		data: ArrayBuffer | Uint8ClampedArray
+		data: Uint8ClampedArray
 	}
 
 	export default function decode(input: {

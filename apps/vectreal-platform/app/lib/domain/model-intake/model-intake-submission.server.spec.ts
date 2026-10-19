@@ -141,25 +141,33 @@ describe('submitModelIntake', () => {
 		expect(deps.insertIntakeSubmission).not.toHaveBeenCalled()
 	})
 
-	it('refuses a missing consent and reports photo errors in the same answer', async () => {
+	it('refuses bad text with the photo count, without decoding a photo', async () => {
+		const deps = fakes()
+		const formData = form({ consentPhotos: null })
+		formData.delete('photos')
+		formData.append('photos', new File(['p'], 'only.jpg'))
+		const result = await submit(formData, deps)
+		expect(result.status).toBe(400)
+		expect(result.body).toMatchObject({
+			status: 'error',
+			formError: 'validation',
+			fieldErrors: { consentPhotos: 'consent', photos: 'photosCount' }
+		})
+		expect(deps.prepareIntakePhotos).not.toHaveBeenCalled()
+	})
+
+	it('reports a photo that cannot be read', async () => {
 		const deps = fakes({
 			prepareIntakePhotos: vi.fn(async () => ({
 				ok: false as const,
 				fieldErrors: { photos: 'photoType' as const, photoIndex: 2 }
 			}))
 		})
-		const result = await submit(form({ consentPhotos: null }), deps)
-		expect(result.status).toBe(400)
+		const result = await submit(form(), deps)
 		expect(result.body).toMatchObject({
-			status: 'error',
-			formError: 'validation',
-			fieldErrors: {
-				consentPhotos: 'consent',
-				photos: 'photoType',
-				photoIndex: 2
-			}
+			fieldErrors: { photos: 'photoType', photoIndex: 2 }
 		})
-		expect(deps.uploadIntakePhotos).not.toHaveBeenCalled()
+		expect(deps.insertIntakeSubmission).not.toHaveBeenCalled()
 	})
 
 	it('refuses a product type outside the accepted list', async () => {
@@ -175,6 +183,7 @@ describe('submitModelIntake', () => {
 		const deps = fakes({ isRateLimited: () => true })
 		const result = await submit(form(), deps)
 		expect(result.status).toBe(429)
+		expect(deps.prepareIntakePhotos).not.toHaveBeenCalled()
 		expect(deps.uploadIntakePhotos).not.toHaveBeenCalled()
 	})
 

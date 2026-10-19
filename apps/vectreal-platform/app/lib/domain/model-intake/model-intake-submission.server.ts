@@ -11,8 +11,10 @@ import {
 	addRetentionDays,
 	MODEL_INTAKE_CONSENT_VERSION,
 	MODEL_INTAKE_HONEYPOT_FIELD,
+	MODEL_INTAKE_PHOTO_COUNT,
 	MODEL_INTAKE_SIZE_FIELDS,
 	type ModelIntakeActionData,
+	type ModelIntakeFieldErrors,
 	type ModelIntakeBatch,
 	type ModelIntakeFields,
 	type ModelIntakeLocale,
@@ -34,11 +36,15 @@ import {
 import { recordRateLimitAttempt } from '../../http/rate-limit.server'
 import { encryptSensitiveValue } from '../../security/pii-encryption.server'
 
-/** Three requests per address per hour: a brand sends one product, maybe two. */
+/**
+ * Five decodes per address per ten minutes, as the contact form allows. It is
+ * counted after the typed fields pass, so a photo error can be corrected and
+ * sent again without running out.
+ */
 const MODEL_INTAKE_RATE_LIMIT = {
 	bucket: 'model-intake',
-	maxRequests: 3,
-	windowMs: 60 * 60 * 1000
+	maxRequests: 5,
+	windowMs: 10 * 60 * 1000
 } as const
 
 export interface ModelIntakeSubmitResult {
@@ -138,24 +144,31 @@ export async function submitModelIntake(
 		consentFollowUp: formData.get('consentFollowUp') === 'on',
 		consentPhotos: formData.get('consentPhotos') === 'on'
 	})
-	const photos = await deps.prepareIntakePhotos(readPhotos(formData))
+	const files = readPhotos(formData)
+	const refuse = (fieldErrors: ModelIntakeFieldErrors) => ({
+		status: 400,
+		body: {
+			status: 'error' as const,
+			formError: 'validation' as const,
+			fieldErrors,
+			fields
+		},
+		outcome: 'validation' as const
+	})
 
-	if (!validated.ok || !photos.ok) {
-		return {
-			status: 400,
-			body: {
-				status: 'error',
-				formError: 'validation',
-				fieldErrors: {
-					...(validated.ok ? {} : validated.fieldErrors),
-					...(photos.ok ? {} : photos.fieldErrors)
-				},
-				fields
-			},
-			outcome: 'validation'
-		}
+	// The typed fields are checked before anything costly, and so is the photo
+	// count, which needs no decoding.
+	if (!validated.ok) {
+		return refuse({
+			...validated.fieldErrors,
+			...(files.length === MODEL_INTAKE_PHOTO_COUNT
+				? {}
+				: { photos: 'photosCount' as const })
+		})
 	}
 
+	// Before decoding: decoding three large photos is the expensive step, and
+	// the limit exists to bound how often one address can make us do it.
 	if (deps.isRateLimited(args.request)) {
 		return {
 			status: 429,
@@ -163,6 +176,9 @@ export async function submitModelIntake(
 			outcome: 'rate_limit'
 		}
 	}
+
+	const photos = await deps.prepareIntakePhotos(files)
+	if (!photos.ok) return refuse(photos.fieldErrors)
 
 	const value = validated.value
 	const id = deps.newId()
