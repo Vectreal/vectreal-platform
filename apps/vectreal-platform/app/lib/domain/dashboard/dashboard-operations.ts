@@ -28,6 +28,7 @@ export type DashboardOperation =
 	| 'scene-folder:update'
 	| 'scene-folder:move'
 	| 'scene-folder:delete'
+	| 'scene:create'
 	| 'scene:update'
 	| 'scene:move'
 	| 'scene:delete'
@@ -86,6 +87,7 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	'scene-folder:move': ['owner', 'admin', 'member'],
 	'scene-folder:delete': ['owner', 'admin'],
 
+	'scene:create': ['owner', 'admin', 'member'],
 	'scene:update': ['owner', 'admin', 'member'],
 	/** Moving is reorganization, not destruction - members organize their own work. */
 	'scene:move': ['owner', 'admin', 'member'],
@@ -156,6 +158,7 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 	'scene-folder:update': 'rename this folder',
 	'scene-folder:move': 'move this folder',
 	'scene-folder:delete': 'delete this folder',
+	'scene:create': 'create scenes',
 	'scene:update': 'edit this scene',
 	'scene:move': 'move this scene',
 	'scene:delete': 'delete this scene',

@@ -21,6 +21,10 @@ export const API_ERROR_CODES = [
 	'insufficient_role',
 	/** A plan limit; `quota` and `upgradeUrl` say which and where to raise it. */
 	'quota_exceeded',
+	/** The plan does not include this; `upgradeUrl` says where to change plans. */
+	'insufficient_plan',
+	/** The organization's billing needs attention before this works again. */
+	'payment_required',
 	/** This Idempotency-Key was first sent with a different request. Use a new one. */
 	'idempotency_key_reused',
 	/** The first request with this Idempotency-Key is still running. Retry shortly. */

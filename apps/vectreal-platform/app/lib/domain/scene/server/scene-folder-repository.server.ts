@@ -599,6 +599,23 @@ export async function renameScene(
 	return updatedScene
 }
 
+/** The scene columns a metadata update writes. `name` must already be trimmed and non-empty. */
+export function sceneMetadataPatch(params: SceneMetadataUpdateInput) {
+	return {
+		name: params.name,
+		// An omitted field is left as it is; only an explicit empty value
+		// clears it. The scene page's title editor sends no thumbnail, and
+		// folding that into null wiped the thumbnail on every rename.
+		...(params.description !== undefined && {
+			description: params.description?.trim() || null
+		}),
+		...(params.thumbnailUrl !== undefined && {
+			thumbnailUrl: params.thumbnailUrl?.trim() || null
+		}),
+		updatedAt: new Date()
+	}
+}
+
 export async function updateSceneMetadata(
 	sceneId: string,
 	userId: string,
@@ -617,19 +634,7 @@ export async function updateSceneMetadata(
 
 	const [updatedScene] = await db
 		.update(scenes)
-		.set({
-			name: trimmedName,
-			// An omitted field is left as it is; only an explicit empty value
-			// clears it. The scene page's title editor sends no thumbnail, and
-			// folding that into null wiped the thumbnail on every rename.
-			...(params.description !== undefined && {
-				description: params.description?.trim() || null
-			}),
-			...(params.thumbnailUrl !== undefined && {
-				thumbnailUrl: params.thumbnailUrl?.trim() || null
-			}),
-			updatedAt: new Date()
-		})
+		.set(sceneMetadataPatch({ ...params, name: trimmedName }))
 		.where(eq(scenes.id, sceneId))
 		.returning()
 

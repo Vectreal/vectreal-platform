@@ -267,3 +267,130 @@ describe('withIdempotency', () => {
 		expect(repository.releaseIdempotencyKey).toHaveBeenCalledWith(claim)
 	})
 })
+
+describe('withIdempotency with a staged mutation', () => {
+	const attempt = { claimId: 'claim-1' }
+
+	function staged(run = vi.fn(created)) {
+		return {
+			prepare: vi.fn(async () => ({ sceneId: 's1' })),
+			run,
+			undo: vi.fn(async () => undefined)
+		}
+	}
+
+	const post = (mutation: ReturnType<typeof staged>) =>
+		withIdempotency({ grantId: 'g1', request: request(), payload }, mutation)
+
+	it('prepares once under the claim before the transaction opens, and undoes nothing on commit', async () => {
+		const mutation = staged()
+
+		const response = await post(mutation)
+
+		expect(response.status).toBe(201)
+		expect(mutation.prepare).toHaveBeenCalledExactlyOnceWith(attempt)
+		expect(mutation.prepare.mock.invocationCallOrder[0]).toBeLessThan(
+			repository.inIdempotencyTransaction.mock.invocationCallOrder[0]
+		)
+		expect(mutation.run).toHaveBeenCalledExactlyOnceWith(tx, { sceneId: 's1' })
+		expect(committed).toBe(true)
+		expect(mutation.undo).not.toHaveBeenCalled()
+	})
+
+	it('keeps a refusal from prepare without running, then undoes the attempt', async () => {
+		const mutation = staged()
+		mutation.prepare.mockRejectedValue(
+			Response.json(
+				{ success: false, error: 'limit', code: 'quota_exceeded' },
+				{ status: 403 }
+			)
+		)
+
+		const response = await post(mutation)
+
+		expect(response.status).toBe(403)
+		expect(mutation.run).not.toHaveBeenCalled()
+		expect(repository.completeIdempotencyKey).toHaveBeenCalledWith(
+			tx,
+			claim,
+			expect.objectContaining({ statusCode: 403 })
+		)
+		expect(mutation.undo).toHaveBeenCalledExactlyOnceWith(attempt)
+	})
+
+	it('keeps a refusal from run and undoes the attempt, whose files nothing links', async () => {
+		const mutation = staged(
+			vi.fn(async () =>
+				Response.json(
+					{ success: false, error: 'no', code: 'invalid_request' },
+					{ status: 400 }
+				)
+			)
+		)
+
+		const response = await post(mutation)
+
+		expect(response.status).toBe(400)
+		expect(committed).toBe(true)
+		expect(mutation.undo).toHaveBeenCalledExactlyOnceWith(attempt)
+	})
+
+	it.each([
+		['a 5xx', async () => new Response('boom', { status: 503 })],
+		[
+			'a throw',
+			async () => {
+				throw new Error('database down')
+			}
+		]
+	])('undoes the attempt before freeing the key after %s', async (_, run) => {
+		const mutation = staged(vi.fn(run))
+
+		await post(mutation).catch(() => undefined)
+
+		expect(committed).toBe(false)
+		expect(mutation.undo).toHaveBeenCalledExactlyOnceWith(attempt)
+		expect(mutation.undo.mock.invocationCallOrder[0]).toBeLessThan(
+			repository.releaseIdempotencyKey.mock.invocationCallOrder[0]
+		)
+	})
+
+	it('undoes the attempt when prepare fails', async () => {
+		const mutation = staged()
+		const failure = new Error('storage down')
+		mutation.prepare.mockRejectedValue(failure)
+
+		await expect(post(mutation)).rejects.toBe(failure)
+		expect(repository.inIdempotencyTransaction).not.toHaveBeenCalled()
+		expect(mutation.undo).toHaveBeenCalledExactlyOnceWith(attempt)
+		expect(repository.releaseIdempotencyKey).toHaveBeenCalledWith(claim)
+	})
+
+	it('undoes its own attempt when its claim was taken over, leaving the key to the new owner', async () => {
+		repository.completeIdempotencyKey.mockResolvedValue(false)
+		const mutation = staged()
+
+		const response = await refusal(post(mutation))
+
+		expect(response.status).toBe(409)
+		expect(mutation.undo).toHaveBeenCalledExactlyOnceWith(attempt)
+		expect(repository.releaseIdempotencyKey).not.toHaveBeenCalled()
+	})
+
+	it('reports a failed undo and still answers with the rollback', async () => {
+		const mutation = staged(
+			vi.fn(async () => new Response('boom', { status: 503 }))
+		)
+		const undoFailure = new Error('reclaim failed')
+		mutation.undo.mockRejectedValue(undoFailure)
+
+		const response = await post(mutation)
+
+		expect(response.status).toBe(503)
+		expect(reportServerError).toHaveBeenCalledWith(
+			undoFailure,
+			expect.anything()
+		)
+		expect(repository.releaseIdempotencyKey).toHaveBeenCalledWith(claim)
+	})
+})

@@ -72,6 +72,10 @@ export default [
 	// Agent API: bearer tokens only, through authorizeAgentRequest.
 	route('api/v1/me', './routes/api/v1/me.ts'),
 	route('api/v1/projects', './routes/api/v1/projects.ts'),
+	route(
+		'api/v1/projects/:projectId/scenes',
+		'./routes/api/v1/projects.$projectId.scenes.ts'
+	),
 	// Public: tells the CLI which OAuth client and redirect ports to use.
 	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
 

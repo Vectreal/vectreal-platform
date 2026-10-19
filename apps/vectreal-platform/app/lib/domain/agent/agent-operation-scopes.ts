@@ -23,6 +23,7 @@ export const AGENT_OPERATION_SCOPES = {
 	'scene-folder:update': 'projects:write',
 	'scene-folder:move': 'projects:write',
 	'scene-folder:delete': null,
+	'scene:create': 'projects:write',
 	'scene:update': 'scenes:write',
 	'scene:move': 'projects:write',
 	'scene:delete': null,
