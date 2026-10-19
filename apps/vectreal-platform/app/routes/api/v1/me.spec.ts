@@ -5,13 +5,13 @@ import { loader } from './me'
 
 import type { Route } from './+types/me'
 
-const { resolveAgentActor, getOrgSubscription } = vi.hoisted(() => ({
-	resolveAgentActor: vi.fn(),
+const { authorizeAgentRequest, getOrgSubscription } = vi.hoisted(() => ({
+	authorizeAgentRequest: vi.fn(),
 	getOrgSubscription: vi.fn()
 }))
 
-vi.mock('../../../lib/domain/agent/agent-actor.server', () => ({
-	resolveAgentActor
+vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
+	authorizeAgentRequest
 }))
 vi.mock('../../../lib/domain/billing/entitlement-service.server', () => ({
 	getOrgSubscription
@@ -20,7 +20,7 @@ vi.mock('../../../lib/domain/billing/entitlement-service.server', () => ({
 const request = new Request('https://vectreal.com/api/v1/me')
 
 beforeEach(() => {
-	resolveAgentActor.mockReset().mockResolvedValue({
+	authorizeAgentRequest.mockReset().mockResolvedValue({
 		userId: 'user-1',
 		email: null,
 		clientId: 'client-1',
@@ -51,5 +51,9 @@ describe('GET /api/v1/me', () => {
 			plan: { plan: 'pro', billingState: 'active' }
 		})
 		expect(getOrgSubscription).toHaveBeenCalledWith('org-1')
+		// Through the gate, so the grant's rate limit covers it too.
+		expect(authorizeAgentRequest).toHaveBeenCalledWith(request, {
+			scope: 'any'
+		})
 	})
 })

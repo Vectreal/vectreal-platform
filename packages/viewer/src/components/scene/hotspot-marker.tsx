@@ -1,8 +1,8 @@
 import { Html } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { cn } from '../class-names'
 import { FOCUS_RING } from '../focus-ring'
 import { resolveHotspotInteraction } from './hotspot-interaction'
 import HotspotPopover from './hotspot-popover'
@@ -148,17 +148,17 @@ const HTML_WRAPPER_STYLE = { pointerEvents: 'none' } as const
  * 0.18, which was too weak to see.
  */
 const RING_SHADOW =
-	'shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_1px_3px_rgba(0,0,0,0.3)]'
+	'vv:shadow-[0_0_0_1px_rgba(0,0,0,0.3),0_1px_3px_rgba(0,0,0,0.3)]'
 
 const markerClasses = {
-	root: 'vctrl-viewer-hotspot pointer-events-none relative flex items-center justify-center opacity-100 transition-opacity duration-300 ease-out',
+	root: 'vctrl-viewer-hotspot vv:pointer-events-none vv:relative vv:flex vv:items-center vv:justify-center vv:opacity-100 vv:transition-opacity vv:duration-300 vv:ease-out',
 	// Focus overrides the fade: a keyboard user who reaches an occluded marker
 	// has to be able to see which one they are on.
-	occluded: 'opacity-15 focus-within:opacity-100',
+	occluded: 'vv:opacity-15 vv:focus-within:opacity-100',
 	// Sits outside the artwork's own ring rather than flush with the box, so the
 	// resting ring is still visible when the animation is switched off.
 	pulse:
-		'vctrl-hotspot-pulse pointer-events-none absolute -inset-1 rounded-full',
+		'vctrl-hotspot-pulse vv:pointer-events-none vv:absolute vv:-inset-1 vv:rounded-full',
 	// A 24px floor on the box that takes the pointer, which then grows to fit
 	// whatever is inside it. The plain dot is 12px: well under the minimum target
 	// size, and missed by a thumb on a touch screen.
@@ -167,16 +167,13 @@ const markerClasses = {
 	// a descendant of the root: `hotspotColor` writes `--vctrl-hotspot-fill` as an
 	// inline style on the root itself, and an inline declaration beats any
 	// stylesheet rule for the same property on the same element.
-	body: 'vctrl-hotspot-body relative m-0 flex min-h-6 min-w-6 appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 leading-none',
-	live: 'pointer-events-auto',
-	inert: 'pointer-events-none',
-	interactive: 'cursor-pointer',
-	// `font-[600]` and `leading-[1.4]` rather than the named scale: a named value
-	// registers its theme variable in the published stylesheet's `:root, :host`
-	// block, which lands in a host application after hydration. See package.css.
-	dot: `flex shrink-0 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-fill)] font-[600] text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
-	dotPlain: 'h-3 w-3',
-	dotStep: 'h-5 w-5 text-[10px]',
+	body: 'vctrl-hotspot-body vv:relative vv:m-0 vv:flex vv:min-h-6 vv:min-w-6 vv:appearance-none vv:items-center vv:justify-center vv:rounded-full vv:border-0 vv:bg-transparent vv:p-0 vv:leading-none',
+	live: 'vv:pointer-events-auto',
+	inert: 'vv:pointer-events-none',
+	interactive: 'vv:cursor-pointer',
+	dot: `vv:flex vv:shrink-0 vv:items-center vv:justify-center vv:rounded-full vv:bg-[var(--vctrl-hotspot-fill)] vv:font-[600] vv:text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
+	dotPlain: 'vv:h-3 vv:w-3',
+	dotStep: 'vv:h-5 vv:w-5 vv:text-[10px]',
 	// Centring lives in styles.css, where `text-box` can read the rendered
 	// font's own cap metric instead of a constant calibrated to a font this
 	// package names but does not ship.
@@ -185,20 +182,20 @@ const markerClasses = {
 	// to read against arbitrary scene colour behind it. `max-w-none` because a
 	// host application's CSS reset caps images at their container width, which
 	// would squeeze the artwork back down to the 24px target floor.
-	image: `h-7 w-7 max-w-none shrink-0 rounded-full bg-white object-cover ${RING_SHADOW}`,
+	image: `vv:h-7 vv:w-7 vv:max-w-none vv:shrink-0 vv:rounded-full vv:bg-white vv:object-cover ${RING_SHADOW}`,
 	// A vector payload is drawn to sit on the scene directly. A frame would fight
 	// the artwork, so it gets a drop shadow for separation instead.
-	svg: 'h-7 w-7 max-w-none shrink-0 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]',
+	svg: 'vv:h-7 vv:w-7 vv:max-w-none vv:shrink-0 vv:object-contain vv:drop-shadow-[0_1px_3px_rgba(0,0,0,0.45)]',
 	// Offset clear of the artwork rather than overlapping its corner.
-	badge: `absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--vctrl-hotspot-fill)] text-[10px] font-[600] text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
+	badge: `vv:absolute vv:-top-1.5 vv:-right-1.5 vv:flex vv:h-4 vv:w-4 vv:items-center vv:justify-center vv:rounded-full vv:bg-[var(--vctrl-hotspot-fill)] vv:text-[10px] vv:font-[600] vv:text-[var(--vctrl-hotspot-ink)] ${RING_SHADOW}`,
 	// `rounded-full`, never `rounded`: this package clears Tailwind's radius
-	// namespace (see package.css), so every named radius but `full` compiles to
-	// nothing once the package is consumed from npm.
+	// namespace (see utilities.css), so every named radius but `full` compiles
+	// to nothing.
 	// Its vertical offset and horizontal shift come from the placement, as an
 	// inline style: see `labelStyle`.
 	label:
-		'shell-panel text-foreground pointer-events-none absolute left-1/2 max-w-[180px] truncate px-2 py-0.5 text-[11px] leading-[1.4] select-none',
-	labelUnplaced: 'invisible'
+		'shell-panel vv:text-foreground vv:pointer-events-none vv:absolute vv:left-1/2 vv:max-w-[180px] vv:truncate vv:px-2 vv:py-0.5 vv:text-[11px] vv:leading-[1.4] vv:select-none',
+	labelUnplaced: 'vv:invisible'
 } as const
 
 /**
@@ -231,6 +228,8 @@ export interface HotspotMarkerProps {
 	color?: string
 	/** Runs when a hotspot carrying a `linkedCameraId` is activated. */
 	onActivate?: (cameraId: string) => void
+	/** Runs when a hotspot carrying a `linkedAnimationClipId` is activated. */
+	onPlayClip?: (clipId: string) => void
 	/** Runs when a marker is picked on a surface that selects rather than flies. */
 	onSelect?: (id: string) => void
 	/**
@@ -269,6 +268,7 @@ const HotspotMarker = ({
 	current = false,
 	color,
 	onActivate,
+	onPlayClip,
 	onSelect,
 	onActivated,
 	open = false,
@@ -374,6 +374,7 @@ const HotspotMarker = ({
 	const interaction = resolveHotspotInteraction(marker, {
 		occluded,
 		canActivate: !!onActivate,
+		canPlayClip: !!onPlayClip,
 		canSelect: !!onSelect,
 		// Having something to say makes it a button; whether this viewer draws
 		// the card decides only what it announces.
@@ -455,12 +456,20 @@ const HotspotMarker = ({
 		if (interaction.fliesCamera && marker.linkedCameraId) {
 			onActivate?.(marker.linkedCameraId)
 		}
+		// Started with the flight, not after it: the clip is part of what the
+		// click answers, and the flight has no end the viewer reports.
+		if (interaction.playsClip && marker.linkedAnimationClipId) {
+			onPlayClip?.(marker.linkedAnimationClipId)
+		}
 	}, [
 		interaction.action,
 		interaction.fliesCamera,
+		interaction.playsClip,
 		marker.id,
+		marker.linkedAnimationClipId,
 		marker.linkedCameraId,
 		onActivate,
+		onPlayClip,
 		onActivated,
 		onReveal,
 		onSelect
@@ -579,6 +588,8 @@ const HotspotMarker = ({
 							className={cn(
 								bodyClasses,
 								FOCUS_RING,
+								// Its numeral takes the host's face; see CHROME_BUTTON.
+								'vv:[font-family:inherit]',
 								interaction.action !== 'none' && markerClasses.interactive
 							)}
 							aria-label={marker.accessibleName}
@@ -652,7 +663,7 @@ const HotspotMarker = ({
 					  child, so its box is a point at the marker's centre, and the
 					  card's `bottom`/`top` offset is measured from there.
 					*/}
-					<div className="relative">
+					<div className="vv:relative">
 						<HotspotPopover
 							id={popoverId}
 							title={marker.name}

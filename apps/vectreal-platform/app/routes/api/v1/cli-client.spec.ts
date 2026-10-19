@@ -46,6 +46,6 @@ describe('GET /api/v1/cli/client', () => {
 		expect(response.status).toBe(404)
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
 		// A refusal the SDK reads as one, not as a body it cannot understand.
-		expect(apiFailureSchema.safeParse(await response.json()).success).toBe(true)
+		expect(apiFailureSchema.parse(await response.json()).code).toBe('not_found')
 	})
 })

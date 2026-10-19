@@ -20,17 +20,36 @@
 export interface PageChrome {
 	nav: boolean
 	footer: boolean
+	/** Whether the page's primary action is the brand orange: the public site, not the publisher's editor. */
+	brandPrimary: boolean
+	/**
+	 * Whether the nav's primary action is too. Not on the home page, where the
+	 * hero's main action is the one orange primary in view and a second in the
+	 * nav would split it.
+	 */
+	brandNavPrimary: boolean
 }
 
 const PUBLISHER_PATH = '/publisher'
+const HOME_PATHS = new Set(['/', '/home'])
 
 export function routePageChrome(pathname: string): PageChrome {
 	if (
 		pathname === PUBLISHER_PATH ||
 		pathname.startsWith(`${PUBLISHER_PATH}/`)
 	) {
-		return { nav: false, footer: false }
+		return {
+			nav: false,
+			footer: false,
+			brandPrimary: false,
+			brandNavPrimary: false
+		}
 	}
 
-	return { nav: true, footer: true }
+	return {
+		nav: true,
+		footer: true,
+		brandPrimary: true,
+		brandNavPrimary: !HOME_PATHS.has(pathname)
+	}
 }

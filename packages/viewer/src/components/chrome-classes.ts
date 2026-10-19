@@ -10,11 +10,16 @@
  * A button rests muted and brightens over a faint foreground tint, as the
  * Publisher's tool bar does; pressing deepens the tint. Shape and size stay
  * with each control, and a corner is `rounded-full` or spelled out
- * (`rounded-[var(--radius,1rem)]` is the app's `rounded-lg`): the published
- * bundle clears the named radius scale, so `rounded-lg` there draws square.
+ * (`rounded-[var(--radius,1rem)]` is the app's `rounded-lg`): the viewer's
+ * stylesheet clears the named radius scale, so `rounded-lg` draws square.
+ *
+ * `[font-family:inherit]` because a browser gives a button a face of its own
+ * wherever the host has no reset, and the viewer's text takes the host's.
+ * On each control rather than on every button under the root, which would
+ * also override a font a host set on a button of its own inside the viewer.
  */
 export const CHROME_BUTTON =
-	'shell-focus cursor-pointer appearance-none border-0 bg-transparent text-muted-foreground transition-colors duration-150 hover:bg-foreground/5 hover:text-foreground active:bg-foreground/10 motion-reduce:transition-none'
+	'shell-focus vv:cursor-pointer vv:[font-family:inherit] vv:appearance-none vv:border-0 vv:bg-transparent vv:text-muted-foreground vv:transition-colors vv:duration-150 vv:hover:bg-foreground/5 vv:hover:text-foreground vv:active:bg-foreground/10 vv:motion-reduce:transition-none'
 
 /**
  * Where the viewer puts the exported controls it draws itself. The components
@@ -23,7 +28,7 @@ export const CHROME_BUTTON =
  * switcher the bottom center, narrow enough to leave both corners free.
  */
 export const CHROME_PLACEMENT = {
-	animationControls: 'absolute right-0 bottom-0 z-[100] m-2',
+	animationControls: 'vv:absolute vv:right-0 vv:bottom-0 vv:z-[100] vv:m-2',
 	cameraControls:
-		'absolute bottom-0 left-1/2 z-[100] mb-2 max-w-[calc(100%-10rem)] -translate-x-1/2'
+		'vv:absolute vv:bottom-0 vv:left-1/2 vv:z-[100] vv:mb-2 vv:max-w-[calc(100%-10rem)] vv:-translate-x-1/2'
 } as const

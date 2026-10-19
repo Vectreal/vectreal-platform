@@ -177,7 +177,7 @@ describe('the presentation action', () => {
 			'await ensureValidCsrfToken(request, actionRequest.csrf)',
 			'await resolveSceneMembership(',
 			"canPerformDashboardOperation('scene:update', membership)",
-			'normalizePresentationSettings(',
+			'SceneSettingsParser.parseScenePresentationUpdate(actionRequest)',
 			'await updateScenePresentation('
 		].map((step) => block.indexOf(step))
 
@@ -185,9 +185,10 @@ describe('the presentation action', () => {
 		expect([...order].sort((a, b) => a - b)).toEqual(order)
 	})
 
-	it('refuses a body with nothing it understands as a 400', () => {
+	// The parser's refusal is pinned in scene-settings-route-actions.parser.spec.ts.
+	it('returns the parser refusal as it is', () => {
 		expect(block).toMatch(
-			/if \(!presentation\) \{\s*return ApiResponse\.badRequest\('Presentation settings are required'\)/
+			/if \(presentation instanceof Response\) \{\s*return presentation\s*\}/
 		)
 	})
 
@@ -288,7 +289,7 @@ describe('signed embed assets', () => {
 
 describe('the published GLB upload', () => {
 	const operations = read(
-		'lib/domain/scene/server/scene-settings.operations.server.ts'
+		'lib/domain/scene/server/scene-upload.operations.server.ts'
 	)
 	const preview = read(
 		'lib/domain/scene/server/scene-preview-repository.server.ts'
@@ -465,15 +466,15 @@ describe('the scene mutations', () => {
 	}
 
 	it.each([
-		['commit-scene-save', 'saveSceneSettings'],
-		['commit-scene-publish', 'publishScene'],
-		['revoke-scene-publish', 'revokeScenePublish']
+		['commit-scene-save', 'sceneSettingsOps.saveSceneSettings'],
+		['commit-scene-publish', 'scenePublishOps.publishScene'],
+		['revoke-scene-publish', 'scenePublishOps.revokeScenePublish']
 	])(
 		'%s runs inside the idempotency, load and write-lock chain',
 		(action, operation) => {
 			expect(caseBody(action)).toMatch(
 				new RegExp(
-					`await runGuardedSceneMutation\\(\\{[^}]*operation: \\(\\) =>\\s*sceneSettingsOps\\.${operation}\\(`
+					`await runGuardedSceneMutation\\(\\{[^}]*operation: \\(\\) =>\\s*${operation.replace('.', '\\.')}\\(`
 				)
 			)
 		}

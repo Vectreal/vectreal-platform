@@ -18,6 +18,7 @@ import {
 	FormMessage
 } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import {
 	Select,
 	SelectContent,
@@ -72,15 +73,6 @@ const projectEditSchema = z.object({
 		.min(1, 'Project name is required')
 		.min(3, 'Project name must be at least 3 characters')
 		.max(100, 'Project name must be less than 100 characters'),
-	slug: z
-		.string()
-		.min(1, 'Slug is required')
-		.min(3, 'Slug must be at least 3 characters')
-		.max(50, 'Slug must be less than 50 characters')
-		.regex(
-			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-			'Slug must be lowercase letters, numbers, and hyphens only'
-		),
 	allowedEmbedDomains: z.string().optional()
 })
 
@@ -163,12 +155,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 	}
 
 	const name = formData.get('name') as string
-	const slug = formData.get('slug') as string
 	const allowedEmbedDomainsRaw =
 		(formData.get('allowedEmbedDomains') as string | null) ?? ''
 
 	try {
-		const validatedData = projectEditSchema.parse({ name, slug })
+		const validatedData = projectEditSchema.parse({ name })
 		const domainValidation = validateAllowedDomainInput(allowedEmbedDomainsRaw)
 		if (!domainValidation.ok) {
 			return data({
@@ -183,7 +174,6 @@ export async function action({ request, params }: Route.ActionArgs) {
 			projectId,
 			{
 				name: validatedData.name,
-				slug: validatedData.slug,
 				allowedEmbedDomains:
 					domainValidation.patterns.length > 0
 						? domainValidation.patterns.join('\n')
@@ -263,7 +253,6 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		reValidateMode: 'onChange',
 		defaultValues: {
 			name: project.name,
-			slug: project.slug,
 			allowedEmbedDomains: project.allowedEmbedDomains ?? ''
 		}
 	})
@@ -295,7 +284,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 			onAnimationEnd={drawer.onAnimationEnd}
 			direction="right"
 		>
-			<DrawerContent className="max-w-lg!">
+			<DrawerContent className="max-w-form-drawer!">
 				<DrawerHeader className="border-b">
 					<DrawerTitle>Edit Project</DrawerTitle>
 					<DrawerDescription>
@@ -361,37 +350,6 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 								)}
 							/>
 
-							{/* Slug */}
-							<FormField
-								control={form.control}
-								name="slug"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>URL Slug</FormLabel>
-										<FormControl>
-											<Input
-												{...field}
-												name="slug"
-												onChange={(e) => {
-													form.clearErrors('slug')
-													field.onChange(e)
-												}}
-												placeholder="my-project"
-												className="font-mono"
-											/>
-										</FormControl>
-										{fieldState.error ? (
-											<FormMessage />
-										) : (
-											<FormDescription>
-												Used in URLs and must be unique. Changing this may break
-												existing links.
-											</FormDescription>
-										)}
-									</FormItem>
-								)}
-							/>
-
 							<FormField
 								control={form.control}
 								name="allowedEmbedDomains"
@@ -439,7 +397,7 @@ const ProjectsEditPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 								>
 									{form.formState.isSubmitting ? (
 										<>
-											<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+											<LoadingSpinner className="mr-2 size-4" />
 											Saving...
 										</>
 									) : (

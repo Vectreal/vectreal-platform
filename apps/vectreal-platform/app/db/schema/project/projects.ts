@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import { index, pgPolicy, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 import { authenticatedRole } from 'drizzle-orm/supabase'
 
@@ -12,7 +13,16 @@ export const projects = pgTable(
 			.notNull()
 			.references(() => organizations.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
-		slug: text('slug').notNull().unique(),
+		/*
+		  Unread: nothing looks a project up by slug, and the app no longer
+		  writes one. The database fills a unique value instead, so the release
+		  before this one, which still reads it as a required string, keeps
+		  working through a deploy. Dropped once no deployed release reads it.
+		*/
+		slug: text('slug')
+			.notNull()
+			.unique()
+			.default(sql`gen_random_uuid()::text`),
 		allowedEmbedDomains: text('allowed_embed_domains')
 	},
 	(table) => [

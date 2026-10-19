@@ -1,9 +1,8 @@
-import { RegistrationMark } from '@shared/components/assets/icons/registration-mark'
 import { Button } from '@shared/components/ui/button'
-import { cn } from '@shared/utils'
 import { ArrowRight, FolderUp, Loader2 } from 'lucide-react'
 
 import { articleFor, type ConvertPair } from '../../lib/convert/convert-pairs'
+import { PASS_SAMPLES } from '../../lib/samples/sample-models'
 import { DitherGrain } from '../layout-components/dither-grain'
 import { DitherSwap } from '../layout-components/dither-swap'
 import { SampleTiles } from '../layout-components/sample-tiles'
@@ -11,14 +10,6 @@ import { SampleTiles } from '../layout-components/sample-tiles'
 import type { useSampleDownload } from '../../hooks/use-sample-download'
 import type { BundleSourceCopy } from '../../lib/convert/convert-capabilities'
 import type { useModelContext } from '@vctrl/hooks/use-load-model'
-
-/* The four crossings of the stage's frame, inset the way the home hero's sheet sets them. */
-const CORNERS = [
-	'top-4 left-4',
-	'top-4 right-4',
-	'bottom-4 left-4',
-	'bottom-4 right-4'
-] as const
 
 interface Props {
 	pair: ConvertPair
@@ -47,8 +38,8 @@ interface Props {
  * the right; it belongs to the empty stage and goes when a model arrives.
  *
  * It is drawn in the home page's sheet language, so the converter is plainly
- * the same product: registration marks on the frame's corners and a figure
- * label naming the conversion, its arrow in the brand. All of it is quiet; the
+ * the same product: a figure label naming the conversion, its arrow in the
+ * brand. All of it is quiet; the
  * invitation is still the loudest thing on the stage.
  *
  * What it offers depends on the source, samples for GLB and a folder for a
@@ -69,15 +60,9 @@ export function ConverterEmptyStage({
 	return (
 		<>
 			<DitherGrain origin="right" />
-			{CORNERS.map((corner) => (
-				<RegistrationMark
-					key={corner}
-					className={cn('text-foreground/30 absolute size-4', corner)}
-				/>
-			))}
 			<p
 				aria-hidden="true"
-				className="text-eyebrow text-muted-foreground absolute top-4 left-12 flex items-center gap-2"
+				className="text-eyebrow text-muted-foreground absolute top-4 left-4 flex items-center gap-2"
 			>
 				Fig 01 · {pair.fromLabel}
 				<ArrowRight className="text-orange-ink size-3" aria-hidden="true" />
@@ -145,6 +130,7 @@ export function ConverterEmptyStage({
 								label="Or open one of these"
 								onOpen={onOpenSample}
 								download={sampleDownload}
+								samples={PASS_SAMPLES}
 							/>
 						)}
 					</>

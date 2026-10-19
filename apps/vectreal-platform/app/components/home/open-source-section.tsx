@@ -4,6 +4,7 @@ import { Play } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router'
 
+import { ArrowLink } from './arrow-link'
 import { CameraDrawing } from './camera-drawing'
 import { StageBoundary } from './stage/stage-boundary'
 import {
@@ -242,5 +243,15 @@ export const OpenSourceSection = () => (
 		<div data-reveal>
 			<CodeWindow />
 		</div>
+
+		<p
+			className="text-muted-foreground text-body flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4"
+			data-reveal
+		>
+			{COPY.developers.lead}
+			<ArrowLink to="/docs" className="text-foreground">
+				{COPY.developers.cta}
+			</ArrowLink>
+		</p>
 	</div>
 )

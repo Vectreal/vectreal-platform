@@ -270,6 +270,17 @@ function bodyOf(chunks: Uint8Array[], gate = () => Promise.resolve()) {
   after it reads on a slow connection as a click that missed. The tile says
   how far it is until the publisher's own loading surface takes over.
 */
+describe('the samples it offers', () => {
+	it('offers every sample, the chair and the car beside the two pass samples', () => {
+		renderStage()
+
+		for (const label of ['Rocket', 'Camera', 'Sheen Chair', 'Toy Car'])
+			expect(
+				screen.getAllByRole('button', { name: new RegExp(label) }).length
+			).toBeGreaterThan(0)
+	})
+})
+
 describe('a sample on its way down', () => {
 	/** Half the rocket arrives at once; the rest waits for the returned release. */
 	function holdRocketHalfway() {

@@ -134,7 +134,6 @@ export function createProjectColumns({
 					to={`/dashboard/projects/${row.original.id}`}
 					state={{
 						name: row.original.name,
-						description: `Slug: ${row.original.name}`,
 						type: 'project' as const
 					}}
 					viewTransition

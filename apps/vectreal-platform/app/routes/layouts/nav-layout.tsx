@@ -33,13 +33,30 @@ const Layout = () => {
 	return (
 		<CurrentUserProvider>
 			<SiteStructuredData />
+			{/*
+			  The nav and the page each take their own `--primary` scope, because
+			  on the home page only the page's is the brand. The page's wrappers
+			  are `contents`, so they add a scope without adding a box: nothing
+			  below lays out against them.
+			*/}
 			<DocsTocProvider>
-				<div className={cn(!chrome.nav && 'hidden')}>
+				<div
+					className={cn(
+						!chrome.nav && 'hidden',
+						chrome.brandNavPrimary && 'primary-brand'
+					)}
+				>
 					<Navigation />
 				</div>
-				<Outlet />
+				<div className={cn('contents', chrome.brandPrimary && 'primary-brand')}>
+					<Outlet />
+				</div>
 			</DocsTocProvider>
-			{chrome.footer && <Footer />}
+			{chrome.footer && (
+				<div className={cn('contents', chrome.brandPrimary && 'primary-brand')}>
+					<Footer />
+				</div>
+			)}
 		</CurrentUserProvider>
 	)
 }

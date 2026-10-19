@@ -12,17 +12,15 @@ import { describe, expect, it } from 'vitest'
 import { DocsTreeNav } from './docs-tree-nav'
 
 describe('the docs sidebar', () => {
-	it('puts the walkthrough under the browser and repo setup under the code', () => {
+	it('puts the walkthrough under artists and repo setup under developers', () => {
 		render(
 			<MemoryRouter>
 				<DocsTreeNav pathname="/docs/getting-started" />
 			</MemoryRouter>
 		)
 
-		const browser = within(
-			screen.getByRole('region', { name: 'In the browser' })
-		)
-		const code = within(screen.getByRole('region', { name: 'In your code' }))
+		const browser = within(screen.getByRole('region', { name: 'For artists' }))
+		const code = within(screen.getByRole('region', { name: 'For developers' }))
 
 		expect(browser.getByRole('link', { name: 'Your First Model' })).toBeTruthy()
 		expect(browser.queryByRole('link', { name: 'Installation' })).toBeNull()

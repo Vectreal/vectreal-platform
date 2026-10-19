@@ -78,8 +78,9 @@ export default [
 	route('api/contact/webhook', './routes/api/contact/webhook.ts'),
 	route('api/consent', './routes/api/consent.ts'),
 	route('api/theme', './routes/api/theme.ts'),
-	// Agent API: bearer tokens only, resolved by resolveAgentActor.
+	// Agent API: bearer tokens only, through authorizeAgentRequest.
 	route('api/v1/me', './routes/api/v1/me.ts'),
+	route('api/v1/projects', './routes/api/v1/projects.ts'),
 	// Public: tells the CLI which OAuth client and redirect ports to use.
 	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
 

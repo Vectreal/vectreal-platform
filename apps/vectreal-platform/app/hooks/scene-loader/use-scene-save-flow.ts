@@ -1,4 +1,4 @@
-import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
@@ -16,6 +16,7 @@ import {
 import {
 	capturedThumbnailFrameAtom,
 	currentLocationAtom,
+	environmentLoadFailedAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
@@ -76,6 +77,7 @@ export const useSceneSaveFlow = ({
 	const dispatchSaveProgress = useSetAtom(dispatchSaveProgressAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const capturedThumbnailFrame = useAtomValue(capturedThumbnailFrameAtom)
+	const store = useStore()
 	// What the dirty check last said, for a failed save to put back.
 	const hasChangesRef = useRef(false)
 	// The open scene when a save settles, which may not be the one it saved.
@@ -168,7 +170,9 @@ export const useSceneSaveFlow = ({
 						captureSceneThumbnail,
 						captureShadowBake,
 						onProgress: dispatchSaveProgress,
-						source
+						source,
+						// Read when the capture runs, which is after the uploads.
+						isEnvironmentFallback: () => store.get(environmentLoadFailedAtom)
 					})
 					// What it kept describes the scene it saved. Another scene opened
 					// meanwhile has its own original, which this must not overwrite.
@@ -228,6 +232,7 @@ export const useSceneSaveFlow = ({
 			prepareGltfDocumentForUpload,
 			recordSavedSource,
 			resolveSource,
+			store,
 			setHotspots,
 			userId
 		]

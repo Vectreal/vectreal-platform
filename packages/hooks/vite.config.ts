@@ -2,9 +2,11 @@ import * as path from 'path'
 
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import dts from 'vite-plugin-dts'
 
-import { manifestExternals } from '../../vite.library.mts'
+import {
+	manifestExternals,
+	publishedDeclarations
+} from '../../vite.library.mts'
 
 export default defineConfig({
 	root: import.meta.dirname,
@@ -13,10 +15,7 @@ export default defineConfig({
 	resolve: { tsconfigPaths: true },
 	plugins: [
 		react(),
-		dts({
-			entryRoot: 'src',
-			tsconfigPath: path.join(import.meta.dirname, 'tsconfig.lib.json')
-		}),
+		publishedDeclarations(import.meta.dirname),
 		manifestExternals(import.meta.dirname)
 	],
 
@@ -45,7 +44,11 @@ export default defineConfig({
 			// ES modules only: Node.js 20.19, 22.12 and later `require()` them too,
 			// so a CommonJS copy would only add a second instance of each module.
 			formats: ['es'],
-			fileName: (_format, entry) => `${entry}.js`
+			// Each subpath beside its declarations. As `use-load-model.js` at the
+			// root it shadowed the `use-load-model/` folder of types: TypeScript
+			// resolves `./use-load-model` to a script before a folder, which has none.
+			fileName: (_format, entry) =>
+				entry === 'index' ? 'index.js' : `${entry}/index.js`
 		}
 	}
 })

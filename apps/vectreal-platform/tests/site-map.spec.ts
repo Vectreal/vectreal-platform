@@ -15,14 +15,14 @@ import {
 	FOOTER,
 	NAV,
 	entersFunnel,
+	isNavSection,
 	type SiteLink
 } from '../app/lib/navigation/site-map'
 
 const pathOf = (link: SiteLink) => link.to.split('?')[0]
 
 const navLinks: SiteLink[] = [
-	...NAV.panels.flatMap((panel) => panel.links),
-	...NAV.links
+	...NAV.items.flatMap((item) => (isNavSection(item) ? item.links : [item]))
 ]
 const navActions: SiteLink[] = [NAV.signIn, NAV.getStarted]
 const footerLinks: SiteLink[] = FOOTER.sections.flatMap(
@@ -57,6 +57,17 @@ describe('the site map', () => {
 
 	it('offers the pilot from the nav', () => {
 		expect(navLinks.map((link) => link.to)).toContain('/contact?topic=pilot')
+	})
+
+	// The order marketing asked for on 17 Oct 2026: the product first, open source last.
+	it('reads product, pricing, newsroom, docs, then open source', () => {
+		expect(NAV.items.map((item) => item.label)).toEqual([
+			'Product',
+			'Pricing',
+			'Newsroom',
+			'Docs',
+			'Open source'
+		])
 	})
 
 	it('signs in at sign-in, and starts at the publisher', () => {

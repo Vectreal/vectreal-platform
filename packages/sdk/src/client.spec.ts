@@ -49,6 +49,91 @@ describe('createVectrealClient', () => {
 		expect(sent(fetch).headers.get('Authorization')).toBe('Bearer token-1')
 	})
 
+	it('lists the projects with the bearer token and returns what it parsed', async () => {
+		const projects = {
+			projects: [{ id: 'project-1', name: 'Chairs' }]
+		}
+		const fetch = respond({ success: true, data: projects })
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await expect(client.projects()).resolves.toEqual(projects)
+		expect(sent(fetch).url).toBe('https://vectreal.com/api/v1/projects')
+		expect(sent(fetch).headers.get('Authorization')).toBe('Bearer token-1')
+	})
+
+	it('creates a project with POST, a JSON body and the key as an RFC 8941 string', async () => {
+		const created = { project: { id: 'project-9', name: 'Chairs' } }
+		const fetch = respond({ success: true, data: created }, 201)
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await expect(
+			client.createProject(
+				{ name: 'Chairs' },
+				{ idempotencyKey: 'retry "1" \\ a' }
+			)
+		).resolves.toEqual(created)
+		const [url, init] = fetch.mock.calls[0]
+		const headers = new Headers(init?.headers)
+		expect(String(url)).toBe('https://vectreal.com/api/v1/projects')
+		expect(init?.method).toBe('POST')
+		expect(headers.get('Authorization')).toBe('Bearer token-1')
+		expect(headers.get('Content-Type')).toBe('application/json')
+		expect(headers.get('Idempotency-Key')).toBe('"retry \\"1\\" \\\\ a"')
+		expect(JSON.parse(String(init?.body))).toEqual({ name: 'Chairs' })
+	})
+
+	it('gives each create without a key a fresh one', async () => {
+		const fetch = vi.fn<typeof globalThis.fetch>(async () =>
+			Response.json(
+				{ success: true, data: { project: { id: 'p', name: 'Chairs' } } },
+				{ status: 201 }
+			)
+		)
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await client.createProject({ name: 'Chairs' })
+		await client.createProject({ name: 'Chairs' })
+
+		const keys = fetch.mock.calls.map(([, init]) =>
+			new Headers(init?.headers).get('Idempotency-Key')
+		)
+		expect(keys[0]).toMatch(/^"[0-9a-f-]{36}"$/)
+		expect(keys[1]).not.toBe(keys[0])
+	})
+
+	it.each([
+		[409, 'idempotency_in_progress'],
+		[422, 'idempotency_key_reused']
+	])(
+		'surfaces a %i refusal of a create with its code',
+		async (status, code) => {
+			const fetch = respond({ success: false, error: 'refused', code }, status)
+			const client = createVectrealClient({
+				baseUrl: 'https://vectreal.com',
+				getAccessToken: () => 'token-1',
+				fetch
+			})
+
+			const error = await client
+				.createProject({ name: 'Chairs' }, { idempotencyKey: 'k' })
+				.catch((thrown: unknown) => thrown)
+			expect(error).toBeInstanceOf(VectrealApiError)
+			expect(error).toMatchObject({ status, code })
+		}
+	)
+
 	it('asks for the CLI client without a token, even when it has one', async () => {
 		const fetch = respond({ success: true, data: cliClient })
 		const getAccessToken = vi.fn(() => 'token-1')
@@ -87,13 +172,20 @@ describe('createVectrealClient', () => {
 		const client = createVectrealClient({
 			baseUrl: 'https://vectreal.com',
 			getAccessToken: () => 'expired',
-			fetch: respond({ success: false, error: 'Invalid token' }, 401)
+			fetch: respond(
+				{ success: false, error: 'Invalid token', code: 'invalid_token' },
+				401
+			)
 		})
 
 		const error = await client.me().catch((caught: unknown) => caught)
 		expect(error).toBeInstanceOf(VectrealApiError)
 		expect(error).not.toBeInstanceOf(VectrealContractError)
-		expect(error).toMatchObject({ status: 401, message: 'Invalid token' })
+		expect(error).toMatchObject({
+			status: 401,
+			message: 'Invalid token',
+			code: 'invalid_token'
+		})
 	})
 
 	it('hands over the whole refusal, including fields it does not know', async () => {
@@ -109,12 +201,15 @@ describe('createVectrealClient', () => {
 			fetch: respond(refusal, 403)
 		})
 
-		await expect(client.me()).rejects.toMatchObject({
+		const error = await client.me().catch((caught: unknown) => caught)
+		expect(error).toMatchObject({
 			name: 'VectrealApiError',
 			status: 403,
 			message: 'Project limit reached',
 			body: refusal
 		})
+		// A code this client has no entry for still reaches the caller.
+		expect((error as VectrealApiError).code).toBe('quota_exceeded')
 	})
 
 	it('reads a 404 inside the envelope as the refusal it is, not a missing route', async () => {

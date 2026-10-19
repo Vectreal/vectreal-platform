@@ -7,6 +7,7 @@
 */
 import '../../shared/components/src/styles/globals.css'
 import '../../packages/viewer/src/styles.css'
+import '../../packages/viewer/src/utilities.css'
 
 import type { Preview } from '@storybook/react-vite'
 

@@ -5,8 +5,9 @@ package the same way a third-party site would, to catch two classes of
 regression that unit tests and Storybook miss:
 
 - **Packaging**: bad `external` config, missing runtime deps, broken `exports`
-  map, `workspace:*` specifiers leaking into the published manifest, or
-  unresolved imports in the tarball. These only surface once the package is
+  map, `workspace:*` specifiers leaking into the published manifest,
+  unresolved imports in the tarball, or declaration files naming a path the
+  tarball does not contain. These only surface once the package is
   installed from a registry into a clean project.
 - **Runtime crashes**: the viewer failing to mount in a real browser (e.g. a
   hard crash from a bundled dependency, a bad WebGL assumption).
@@ -17,16 +18,20 @@ regression that unit tests and Storybook miss:
 
 1. Boots an ephemeral [Verdaccio](https://verdaccio.org/) registry that proxies
    npmjs for transitive deps (`src/registry/config.yaml`).
-2. Builds and publishes `@vctrl/core`, `@vctrl/hooks`, and `@vctrl/viewer` to it
-   via `nx run <pkg>:copy-md` + `pnpm publish`.
+2. Builds and publishes `@vctrl/core`, `@vctrl/hooks`, `@vctrl/viewer` and
+   `@vctrl/embed` to it via `nx run <pkg>:copy-md` + `pnpm publish`.
 3. Scaffolds a throwaway Vite + React consumer app from `src/consumer-template`
    into a temp dir and `npm install`s `@vctrl/viewer` (plus peer deps) **from
    the local registry** (no monorepo path aliases, the real tarball).
-4. Builds the consumer with Vite 8 (fails on any packaging / unresolved-import
+4. Type-checks the consumer with `tsc` and `skipLibCheck` off
+   (`src/consumer-template/src/published-types.ts` names every published entry
+   point), so a declaration file that does not resolve once installed fails.
+   The Vite build strips types without reading them and cannot see this.
+5. Builds the consumer with Vite 8 (fails on any packaging / unresolved-import
    regression).
-5. Serves the build and runs Playwright (`tests/viewer-render.spec.ts`), which
+6. Serves the build and runs Playwright (`tests/viewer-render.spec.ts`), which
    asserts the viewer mounts and reports no render-time crash.
-6. Starts `vite dev` on the same consumer and runs the same spec again. The dev
+7. Starts `vite dev` on the same consumer and runs the same spec again. The dev
    server pre-bundles installed packages with its own optimizer, a different
    path from the build: `@vctrl/viewer@1.0.0` built and rendered fine but threw
    `Calling require for "react"` in dev, because its output carried an inlined

@@ -73,27 +73,22 @@
 	h2 {
 		@apply text-xl font-light tracking-wide capitalize;
 		margin-top: 4rem !important;
-		scroll-margin-top: 6.5rem;
 	}
 
 	h3 {
 		@apply text-lg font-normal tracking-wide;
-		scroll-margin-top: 6.5rem;
 	}
 
 	h4 {
 		@apply text-base font-normal tracking-wide;
-		scroll-margin-top: 6.5rem;
 	}
 
 	h5 {
 		@apply text-sm font-normal tracking-wide;
-		scroll-margin-top: 6.5rem;
 	}
 
 	h6 {
 		@apply text-xs font-semibold;
-		scroll-margin-top: 6.5rem;
 	}
 
 	h2,
@@ -102,6 +97,12 @@
 	h5,
 	h6 {
 		position: relative;
+		/*
+		  An anchor jump lands the heading where the docs sidebars stop: 16px
+		  under whichever site nav is showing. `use-doc-toc.ts` reads this
+		  same margin back to place its observer, so the two cannot disagree.
+		*/
+		scroll-margin-top: var(--spacing-below-nav);
 
 		a[aria-hidden='true'] {
 			color: var(--color-muted-foreground);

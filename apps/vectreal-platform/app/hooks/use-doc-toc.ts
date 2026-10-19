@@ -1,3 +1,4 @@
+import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { type RefObject, useEffect, useMemo, useState } from 'react'
 
 export interface DocHeading {
@@ -19,6 +20,12 @@ export function useDocToc(
 ) {
 	const [headings, setHeadings] = useState<DocHeading[]>([])
 	const [activeId, setActiveId] = useState<string | null>(null)
+	/*
+	  The site nav swaps at the same breakpoint as `--spacing-below-nav`, so the
+	  observer is rebuilt when it crosses: a phone rotated to portrait otherwise
+	  kept the landscape band while headings landed 12px higher.
+	*/
+	const isMobile = useIsMobile()
 
 	useEffect(() => {
 		const contentRoot = contentRef.current
@@ -54,17 +61,20 @@ export function useDocToc(
 		setHeadings(nextHeadings)
 	}, [contentRef, dependencyKey])
 
+	// Apart from the observer below, which also rebuilds on a breakpoint
+	// crossing: a rotated phone keeps its highlight rather than jumping back.
 	useEffect(() => {
-		if (headings.length === 0) {
-			setActiveId(null)
-			return
-		}
-
 		const hashId = window.location.hash.replace('#', '')
 		if (hashId && headings.some((heading) => heading.id === hashId)) {
 			setActiveId(hashId)
 		} else {
 			setActiveId(headings[0]?.id ?? null)
+		}
+	}, [headings])
+
+	useEffect(() => {
+		if (headings.length === 0) {
+			return
 		}
 
 		const observedIds = new Set(headings.map((heading) => heading.id))
@@ -75,6 +85,15 @@ export function useDocToc(
 		if (headingElements.length === 0) {
 			return
 		}
+
+		/*
+		  The band starts where an anchor jump lands a heading: its resolved
+		  `scroll-margin-top`, which `mdx.module.css` reads from
+		  `--spacing-below-nav`, so the nav each viewport shows is cleared. Read
+		  here rather than restated, since a heading that has just been jumped to
+		  must count as in view.
+		*/
+		const clearance = getComputedStyle(headingElements[0]).scrollMarginTop
 
 		const observer = new IntersectionObserver(
 			(entries) => {
@@ -92,7 +111,7 @@ export function useDocToc(
 				}
 			},
 			{
-				rootMargin: '-96px 0px -65% 0px',
+				rootMargin: `-${clearance} 0px -65% 0px`,
 				threshold: [0, 0.1, 0.5, 1]
 			}
 		)
@@ -114,7 +133,7 @@ export function useDocToc(
 			window.removeEventListener('hashchange', onHashChange)
 			observer.disconnect()
 		}
-	}, [headings])
+	}, [headings, isMobile])
 
 	return useMemo(
 		() => ({

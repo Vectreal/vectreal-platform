@@ -494,6 +494,15 @@ export function convertPairsBySource(): ConvertSourceGroup[] {
 	return groups
 }
 
+/** The same conversion the other way round, where we can perform it; `null` where we cannot. */
+export function reversePair(pair: ConvertPair): ConvertPair | null {
+	return (
+		CONVERT_PAIRS.find(
+			(other) => other.from === pair.to && other.to === pair.from
+		) ?? null
+	)
+}
+
 /** Resolves a URL segment to its pair, or `null` for one that has no page. */
 export function convertPairBySlug(
 	slug: string | undefined

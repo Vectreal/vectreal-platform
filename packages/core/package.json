@@ -39,19 +39,19 @@
 		},
 		"./model-formats": {
 			"types": "./model-formats/index.d.ts",
-			"default": "./model-formats.js"
+			"default": "./model-formats/index.js"
 		},
 		"./model-loader": {
 			"types": "./model-loader/index.d.ts",
-			"default": "./model-loader.js"
+			"default": "./model-loader/index.js"
 		},
 		"./model-optimizer": {
 			"types": "./model-optimizer/index.d.ts",
-			"default": "./model-optimizer.js"
+			"default": "./model-optimizer/index.js"
 		},
 		"./model-exporter": {
 			"types": "./model-exporter/index.d.ts",
-			"default": "./model-exporter.js"
+			"default": "./model-exporter/index.js"
 		}
 	},
 	"peerDependencies": {

@@ -13,6 +13,7 @@ import {
 } from '../lib/convert/convert-pairs'
 import { docsPages } from '../lib/docs/docs-manifest'
 import { markdownTwinPath } from '../lib/markdown/markdown-twin'
+import { COMMUNITY } from '../lib/navigation/site-map'
 import { getNewsArticles } from '../lib/news/news-manifest.server'
 import { SITE_URL } from '../lib/seo'
 
@@ -85,7 +86,7 @@ export function loader() {
 		'',
 		'## Open-Source Packages',
 		...packageLines,
-		`- [GitHub](https://github.com/Vectreal/vectreal-platform): Source code and releases`,
+		`- [GitHub](${COMMUNITY.github}): Source code and releases`,
 		'',
 		'## Pages',
 		`- [Home](${origin}/): Platform overview, features, and getting started`,

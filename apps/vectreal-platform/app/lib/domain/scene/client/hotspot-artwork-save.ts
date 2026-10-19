@@ -2,7 +2,6 @@ import { createFileFromDataUrl } from './scene-draft-serialization'
 import {
 	buildHotspotArtworkUrl,
 	canUploadHotspotArtwork,
-	HOTSPOT_INLINE_ARTWORK_MAX_KB,
 	hotspotArtworkAssetIdFromUrl,
 	hotspotArtworkFileName,
 	isHotspotArtworkPath
@@ -113,7 +112,7 @@ export async function persistHotspotArtwork({
 			if (!image) throw unreadable()
 			if (!canUploadHotspotArtwork(image.type)) {
 				throw new Error(
-					`The image on marker "${hotspot.name.trim()}" is too large to keep inline. Use a PNG, JPEG or WebP image, or an SVG or GIF under ${HOTSPOT_INLINE_ARTWORK_MAX_KB} KB.`
+					`The image on marker "${hotspot.name.trim()}" is not a PNG, JPEG, WebP, GIF or SVG, so nothing was saved. Upload another image.`
 				)
 			}
 			next.push({ ...hotspot, payloadUrl: await uploadAs(hotspot, image) })

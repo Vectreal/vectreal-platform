@@ -60,7 +60,7 @@ export const Footer = () => {
 			<div className="container-page flex flex-col gap-16 pt-32 pb-10">
 				<div className="flex max-w-md flex-col gap-4">
 					<Link to="/" aria-label="Home" className="w-32">
-						<VectrealLogoAnimated className="h-auto w-full" />
+						<VectrealLogoAnimated colored className="h-auto w-full" />
 					</Link>
 					<p className="text-muted-foreground text-body-sm">{FOOTER.tagline}</p>
 				</div>

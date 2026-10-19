@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { resolveHotspotInteraction } from './hotspot-interaction'
 
-const linked = { linkedCameraId: 'camera-1' }
-const unlinked = { linkedCameraId: null }
+const linked = { linkedCameraId: 'camera-1', linkedAnimationClipId: null }
+const unlinked = { linkedCameraId: null, linkedAnimationClipId: null }
+const clipOnly = { linkedCameraId: null, linkedAnimationClipId: 'door-open' }
 
 describe('resolveHotspotInteraction', () => {
 	it('is a button only when there is a camera to reach and somewhere to send it', () => {
@@ -333,6 +334,64 @@ describe('resolveHotspotInteraction', () => {
 			expect(selectedMarker.role).toBe('button')
 			expect(selectedMarker.action).toBe('select')
 			expect(selectedMarker.focusable).toBe(true)
+		})
+	})
+
+	describe('a marker that plays a clip', () => {
+		it('is a button that activates, even with no camera and no content', () => {
+			const interaction = resolveHotspotInteraction(clipOnly, {
+				occluded: false,
+				canActivate: true,
+				canPlayClip: true
+			})
+
+			expect(interaction.role).toBe('button')
+			expect(interaction.action).toBe('activate')
+			expect(interaction.playsClip).toBe(true)
+			expect(interaction.fliesCamera).toBe(false)
+		})
+
+		it('stays inert when the viewer has nowhere to send the clip', () => {
+			const interaction = resolveHotspotInteraction(clipOnly, {
+				occluded: false,
+				canActivate: true
+			})
+
+			expect(interaction.role).toBe('image')
+			expect(interaction.playsClip).toBe(false)
+		})
+
+		it('plays nothing while occluded', () => {
+			const interaction = resolveHotspotInteraction(clipOnly, {
+				occluded: true,
+				canActivate: true,
+				canPlayClip: true
+			})
+
+			expect(interaction.action).toBe('none')
+			expect(interaction.playsClip).toBe(false)
+		})
+
+		it('plays nothing on a surface that selects markers', () => {
+			const interaction = resolveHotspotInteraction(clipOnly, {
+				occluded: false,
+				canActivate: true,
+				canPlayClip: true,
+				canSelect: true
+			})
+
+			expect(interaction.action).toBe('select')
+			expect(interaction.playsClip).toBe(false)
+		})
+
+		it('flies and plays on one click when it links both', () => {
+			const interaction = resolveHotspotInteraction(
+				{ linkedCameraId: 'camera-1', linkedAnimationClipId: 'door-open' },
+				{ occluded: false, canActivate: true, canPlayClip: true }
+			)
+
+			expect(interaction.fliesCamera).toBe(true)
+			expect(interaction.playsClip).toBe(true)
 		})
 	})
 })

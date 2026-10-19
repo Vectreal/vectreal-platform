@@ -5,23 +5,22 @@ import {
 } from './asset-response.server'
 
 describe('sanitizeMimeType', () => {
-	it.each(['image/png', 'image/ktx2', 'model/gltf-binary'])(
-		'passes %s through',
+	it.each([
+		'image/png',
+		'image/gif',
+		'image/svg+xml',
+		'image/ktx2',
+		'model/gltf-binary'
+	])('passes %s through', (type) => {
+		expect(sanitizeMimeType(type)).toBe(type)
+	})
+
+	it.each(['text/html', 'application/xml', '', null, undefined])(
+		'downgrades %s to an opaque download',
 		(type) => {
-			expect(sanitizeMimeType(type)).toBe(type)
+			expect(sanitizeMimeType(type)).toBe('application/octet-stream')
 		}
 	)
-
-	it.each([
-		'text/html',
-		'image/svg+xml',
-		'application/xml',
-		'',
-		null,
-		undefined
-	])('downgrades %s to an opaque download', (type) => {
-		expect(sanitizeMimeType(type)).toBe('application/octet-stream')
-	})
 })
 
 describe('assetResponse', () => {
@@ -37,6 +36,18 @@ describe('assetResponse', () => {
 		expect(response.headers.get('Content-Security-Policy')).toBe('sandbox')
 		expect(response.headers.get('Last-Modified')).toBe('x')
 		expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes)
+	})
+
+	/*
+	  SVG goes out as itself so a marker can draw it, which is only safe because
+	  this policy rides along: opened directly, its scripts stay inert.
+	*/
+	it('sandboxes an SVG it serves as itself', () => {
+		const headers = assetResponse(bytes, 'image/svg+xml').headers
+
+		expect(headers.get('Content-Type')).toBe('image/svg+xml')
+		expect(headers.get('Content-Security-Policy')).toBe('sandbox')
+		expect(headers.get('X-Content-Type-Options')).toBe('nosniff')
 	})
 
 	it('never lets an active type reach the wire', () => {

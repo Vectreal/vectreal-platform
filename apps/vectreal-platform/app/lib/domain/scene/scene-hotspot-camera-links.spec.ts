@@ -5,11 +5,16 @@ import {
 	removeHotspot,
 	placeHotspot,
 	renameHotspot,
-	repointHotspotLinks
+	repointHotspotLinks,
+	repointInteractions
 } from './scene-hotspot-camera-links'
 
 import type { CameraHotspotState } from './scene-hotspot-camera-links'
-import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
+import type {
+	CameraConfig,
+	HotspotDefinition,
+	SceneInteractionDefinition
+} from '@vctrl/core'
 
 const hotspot = (
 	id: string,
@@ -40,6 +45,18 @@ const cameraB = camera('cam-b', { kind: 'hotspot' })
 
 const cameraIds = (state: CameraHotspotState | null) =>
 	state?.camera.cameras?.map((c) => c.cameraId)
+
+const switchTo = (
+	id: string,
+	...cameraIds: string[]
+): SceneInteractionDefinition => ({
+	id,
+	trigger: { source: 'viewer', type: 'viewer_ready' },
+	actions: cameraIds.map((cameraId) => ({
+		type: 'activate_camera' as const,
+		cameraId
+	}))
+})
 
 describe('addHotspot', () => {
 	const cameras = [sceneCamera]
@@ -657,6 +674,86 @@ describe('removeCamera', () => {
 		expect(cameraIds(state)).toEqual(['main', 'cam-a'])
 		expect(state.hotspots[0].linkedCameraId).toBe('cam-a')
 	})
+
+	// An `activate_camera` naming a camera that is gone is the same hard 400 as
+	// a dangling hotspot link.
+	describe('with interactions', () => {
+		const state = (interactions: SceneInteractionDefinition[]) => ({
+			camera: { cameras: [mainCamera, otherCamera, cameraA] },
+			hotspots: [],
+			interactions
+		})
+
+		it('drops an interaction whose only action switched to it', () => {
+			const result = removeCamera(
+				state([switchTo('gone', 'cam-a'), switchTo('kept', 'other')]),
+				'cam-a'
+			)
+			expect(result?.interactions?.map((i) => i.id)).toEqual(['kept'])
+		})
+
+		it('keeps an interaction that still has something to do', () => {
+			const emit = {
+				type: 'emit_custom_event' as const,
+				eventName: 'opened'
+			}
+			const result = removeCamera(
+				state([
+					{
+						...switchTo('mixed', 'cam-a', 'other'),
+						actions: [...switchTo('mixed', 'cam-a', 'other').actions, emit]
+					}
+				]),
+				'cam-a'
+			)
+			expect(result?.interactions?.[0].actions).toEqual([
+				{ type: 'activate_camera', cameraId: 'other' },
+				emit
+			])
+		})
+
+		it('hands back the same list when nothing switched to it', () => {
+			const interactions = [switchTo('kept', 'other')]
+			expect(removeCamera(state(interactions), 'cam-a')?.interactions).toBe(
+				interactions
+			)
+		})
+
+		it('leaves interactions absent when the caller passed none', () => {
+			const result = removeCamera(
+				{ camera: { cameras: [mainCamera, cameraA] }, hotspots: [] },
+				'cam-a'
+			)
+			expect(result?.interactions).toBeUndefined()
+		})
+
+		it('carries them through retiring a hotspot’s camera', () => {
+			const result = removeHotspot(
+				{
+					camera: { cameras: [mainCamera, cameraA] },
+					hotspots: [hotspot('a', { linkedCameraId: 'cam-a' })],
+					interactions: [switchTo('gone', 'cam-a')]
+				},
+				'a'
+			)
+			expect(result.interactions).toEqual([])
+		})
+
+		it('carries them through dropping a stranded camera on relink', () => {
+			const minted = camera('minted', { kind: 'hotspot', position: [4, 2, 6] })
+			const result = relinkHotspot(
+				{
+					camera: { cameras: [mainCamera, minted] },
+					hotspots: [hotspot('a', { linkedCameraId: 'minted' })],
+					interactions: [switchTo('gone', 'minted'), switchTo('kept', 'main')]
+				},
+				'a',
+				'main'
+			)
+			expect(cameraIds(result)).toEqual(['main'])
+			expect(result.interactions?.map((i) => i.id)).toEqual(['kept'])
+		})
+	})
 })
 
 describe('repointHotspotLinks', () => {
@@ -687,5 +784,33 @@ describe('repointHotspotLinks', () => {
 	it('changes nothing when no hotspot points at the old id', () => {
 		const hotspots = [hotspot('a', { linkedCameraId: 'default' })]
 		expect(repointHotspotLinks(hotspots, 'old', 'new')).toEqual(hotspots)
+	})
+})
+
+describe('repointInteractions', () => {
+	it('moves every action that switched to the old id onto the new one', () => {
+		const result = repointInteractions(
+			[switchTo('both', 'side', 'front'), switchTo('other', 'front')],
+			'side',
+			'profile'
+		)
+		expect(result?.map((i) => i.actions)).toEqual([
+			[
+				{ type: 'activate_camera', cameraId: 'profile' },
+				{ type: 'activate_camera', cameraId: 'front' }
+			],
+			[{ type: 'activate_camera', cameraId: 'front' }]
+		])
+	})
+
+	it('hands back the same list when nothing switched to it', () => {
+		const interactions = [switchTo('other', 'front')]
+		expect(repointInteractions(interactions, 'side', 'profile')).toBe(
+			interactions
+		)
+	})
+
+	it('leaves absent interactions absent', () => {
+		expect(repointInteractions(undefined, 'side', 'profile')).toBeUndefined()
 	})
 })

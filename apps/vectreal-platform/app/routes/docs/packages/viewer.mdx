@@ -32,13 +32,17 @@ absent packages/viewer/package.json "require"
 present packages/viewer/src/vectreal-viewer.tsx type: 'hotspot_activated',
 present packages/viewer/src/hooks/use-animation-runtime.ts type: 'animation_state_changed',
 present packages/viewer/src/components/scene/scene-animation.tsx type: 'animation_clip_finished',
+present packages/viewer/src/vectreal-viewer.tsx type: 'environment_load_failed',
 present packages/viewer/src/vectreal-viewer.tsx showAnimationControls?: boolean
 present packages/viewer/src/index.ts default as AnimationControls,
 exists packages/viewer/vitest.config.ts
 present packages/viewer/src/hooks/use-held-executor.ts heldRef.current.set(command.type, command)
 present packages/viewer/src/components/scene/scene-camera.tsx if (!isFramed) return
-present packages/viewer/src/components/canvas-wrapper.tsx className={cn('outline-none', colorScheme, containerClassName)}
+present packages/viewer/src/components/canvas-wrapper.tsx cn('vv:outline-none', colorScheme),
 present packages/viewer/src/package.css @import '../../../shared/components/src/styles/theme.css'
+absent packages/viewer/src/styles.css font-family:
+absent packages/viewer/src/vectreal-viewer.tsx DM_Sans
+present packages/viewer/src/components/chrome-classes.ts [font-family:inherit]
 absent packages/viewer/src/components/animation-controls.tsx absolute
 absent packages/viewer/src/components/camera-controls.tsx bottom-0
 present packages/viewer/src/hooks/use-src-model.ts import('../load-src')
@@ -69,6 +73,33 @@ Or, with a model already hosted somewhere, give it the address:
 > You **must** import the CSS bundle (`@vctrl/viewer/css`) for the viewer to render correctly.
 
 ---
+
+## Styling with `className`
+
+`VectrealViewer`, `AnimationControls`, `CameraControls` and each `InfoPopover` part take a `className`. The viewer writes its own classes with Tailwind's `vv:` prefix, and its stylesheet contains only those, so a class you pass is styled by your stylesheet and nothing in the viewer's competes with it.
+
+Where your class sets a property the viewer also sets on that element, the viewer drops its own class. `className="h-96"` replaces the container's full height. The match is by property, so two cases take more than you might expect:
+
+- `px-2` replaces the controls' `p-1` padding on all four sides, not only the horizontal ones. Pass both axes if you change one.
+- A class under a variant replaces the viewer's at every width and state: `md:h-96` drops the full height below `md` too. Pass the base as well, as in `h-full md:h-96`.
+
+The match reads Tailwind's default scale and arbitrary values. A class from your own theme, such as `h-hero`, is not recognized and the viewer's own wins. Mark it important (`h-hero!`) and it wins instead.
+
+One exception: the controls' surface (background, border, shadow and backdrop blur) comes from a stylesheet rule shared with the Vectreal editor, not from a class, and a class you pass does not override it.
+
+The viewer declares none of Tailwind's theme variables, so content you render inside it, such as a custom `loader` or popover content, resolves `--spacing`, `--text-*` and `--ease-*` from your own theme.
+
+**Upgrading:** earlier releases shipped unprefixed utilities such as `.flex` and `.hidden` in `@vctrl/viewer/css`. Two things change:
+
+- A stylesheet that overrides one of the viewer's classes has to name the prefixed class: `.vctrl-viewer .h-full` becomes `.vctrl-viewer .vv\:h-full`. Passing your class through `className` is simpler and survives the next change of the viewer's classes.
+- A page that styled its own markup with classes it never generated, and that only worked because the viewer's stylesheet happened to contain them, needs to generate those classes itself.
+
+{/* claims
+present packages/viewer/src/utilities.css @import 'tailwindcss/theme' prefix(vv) theme(inline);
+present packages/viewer/src/components/class-names.ts extendTailwindMerge({ prefix: 'vv' })
+present packages/viewer/src/vectreal-viewer.tsx containerClassName={withHostClasses(
+present packages/viewer/src/components/animation-controls.tsx className={withHostClasses(controlClasses.root, className)}
+*/}
 
 ## `VectrealViewer` props
 
@@ -422,6 +453,8 @@ Current commands:
 | `hotspot_activated` | `{ hotspotId: string; cameraId: string \| null }` | A visitor activated a hotspot |
 | `animation_state_changed` | `{ playing: boolean; activeClipId: string \| null; complete: boolean }` | Animation playback started, stopped or advanced |
 | `animation_clip_finished` | `{ clipId: string }` | One animation clip ran to its end |
+| `environment_load_failed` | `{ files: string[] }` | The environment map could not be loaded; the scene is lit by a neutral room instead |
+| `environment_loaded` | `{ files: string[] }` | The environment map loaded, including after an earlier failure |
 
 `ViewerInteractionEvent` also declares `model_loaded` and `auto_rotate_changed`. Both belong to the union a handler has to narrow, and neither is emitted by the current runtime.
 
@@ -525,6 +558,10 @@ shares a name with (`--background`, `--foreground`, `--muted-foreground`,
 there rather than your page's. Style that content with your own names, or set
 `theme` to match your page. The hotspot marker keeps its own
 `--vctrl-hotspot-*` tokens, which you can override on the container.
+
+The viewer ships no font and names none: its text takes the typeface of the
+page it sits on. To give it another, set `font-family` on the viewer's container
+(its `className`, or an element around it).
 
 ---
 

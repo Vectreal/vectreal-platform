@@ -111,7 +111,7 @@ export default function DocsLayout() {
 	return (
 		<div className="container-page flex gap-0 pb-16">
 			<aside
-				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 lg:block"
+				className="top-below-nav sticky hidden h-[calc(100dvh-var(--spacing-below-nav))] w-64 shrink-0 lg:block"
 				aria-label="Docs navigation"
 			>
 				<ScrollArea className="h-full pr-4 pb-8">
@@ -210,7 +210,7 @@ export default function DocsLayout() {
 								href={`${GITHUB_REPO}/tree/${GITHUB_DEFAULT_BRANCH}/${page.sourcePath}`}
 								target="_blank"
 								rel="noreferrer"
-								className="text-muted-foreground/60 hover:text-muted-foreground font-mono text-xs transition-colors"
+								className="text-muted-foreground hover:text-foreground font-mono text-xs transition-colors"
 								aria-label="View source file on GitHub"
 							>
 								{page.sourcePath}
@@ -221,7 +221,7 @@ export default function DocsLayout() {
 			</main>
 
 			<aside
-				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 xl:block"
+				className="top-below-nav sticky hidden h-[calc(100dvh-var(--spacing-below-nav))] w-64 shrink-0 xl:block"
 				aria-label="On this page"
 			>
 				<div className="flex h-full flex-col pl-4">

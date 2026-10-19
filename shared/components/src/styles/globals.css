@@ -350,6 +350,17 @@
 	--container-detail-panel: 26rem;
 
 	/*
+	  The width for a dashboard form drawer: the right-edge sheets that create and
+	  edit API keys and projects. Deliberately wider than the detail panel. A
+	  form holds labelled inputs, scope checkboxes and domain lists, and the
+	  sheet covers a page nobody is working in, so it can take the measure a form
+	  wants. The detail panel's 26rem is set by the publish sidebar, which has to
+	  leave the canvas visible, a constraint a form drawer does not share. Read
+	  it as `max-w-form-drawer`.
+	*/
+	--container-form-drawer: 32rem;
+
+	/*
 	  The reading measure for long-form prose.
 
 	  40rem is roughly 72-78 characters of DM Sans at the body rung, inside the
@@ -370,9 +381,29 @@
 	  `max-w-measure` against `max-w-4xl` without knowing the name.
 	*/
 	--container-measure: 40rem;
+
+	/*
+	  Where content that sticks or scrolls into view stops below the site nav:
+	  the nav's height plus one 16px step. Read it as `top-below-nav`,
+	  `scroll-mt-below-nav` or `var(--spacing-below-nav)`.
+
+	  Two navs, so two values. The desktop nav is 64px at rest (it shrinks once
+	  scrolled, so its resting height is the one to clear); the mobile nav,
+	  which runs to `md`, is 52px and takes the override in `@layer base`
+	  below. The sticky offsets used to restate 68, 80 and 96px by hand, each
+	  picked against one nav or the other.
+	*/
+	--spacing-below-nav: 5rem;
 }
 
 @layer base {
+	/* The mobile nav's value of `--spacing-below-nav`: 52px plus the 16px step. */
+	@media (width < 48rem) {
+		:root {
+			--spacing-below-nav: 4.25rem;
+		}
+	}
+
 	* {
 		@apply border-border;
 	}
@@ -398,6 +429,23 @@
 	:focus-visible {
 		outline: 2px solid var(--ring);
 		outline-offset: 2px;
+	}
+
+	/*
+	  The public site's primary action is the brand. Everywhere else, the
+	  dashboard and the publisher, `--primary` stays the near-black ink the
+	  palette sets.
+
+	  Dark ink on the orange in both themes: white on #fc6c18 is 2.9:1, under
+	  even the large-text threshold, and black is 6.9:1. It is set on a subtree
+	  rather than on :root so portaled UI - tooltips, menus, dialogs - keeps the
+	  ink: a tooltip is an inverted chip, not an action. That works because the
+	  theme maps `--color-primary` with `@theme inline`, so a utility reads
+	  `var(--primary)` where it is used rather than at :root.
+	*/
+	.primary-brand {
+		--primary: var(--orange);
+		--primary-foreground: oklch(0.145 0 0);
 	}
 
 	html {

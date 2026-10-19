@@ -48,6 +48,14 @@ export type EmbedEventMap = {
 		complete: boolean
 	}
 	animation_clip_finished: { clipId: string }
+	/**
+	 * The scene's environment map could not be loaded, and the scene is lit by
+	 * a neutral room instead. Nothing on the page fails, so this is the only
+	 * sign of it.
+	 */
+	environment_load_failed: { files: string[] }
+	/** The environment map has loaded, including after it failed once. */
+	environment_loaded: { files: string[] }
 	hotspot_activated: { hotspotId: string; cameraId: string | null }
 	interaction_event: {
 		interactionId?: string
@@ -443,6 +451,12 @@ export class VectrealEmbed {
 				break
 			case 'animation_clip_finished':
 				this.emit('animation_clip_finished', { clipId: event.clipId })
+				break
+			case 'environment_load_failed':
+				this.emit('environment_load_failed', { files: event.files })
+				break
+			case 'environment_loaded':
+				this.emit('environment_loaded', { files: event.files })
 				break
 			case 'initial_framing_completed':
 				// Translate to model_loaded for embed consumers - signals scene is visible

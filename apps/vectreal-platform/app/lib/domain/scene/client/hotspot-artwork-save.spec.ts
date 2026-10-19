@@ -165,17 +165,27 @@ describe('persistHotspotArtwork', () => {
 		])
 	})
 
-	it.each(['image/svg+xml', 'image/gif'])(
-		'refuses %s too large to stay inline, since the asset route would not serve it as an image',
-		async (type) => {
-			const { upload, result } = run([marker(largeImage(type))])
+	it.each([
+		['image/svg+xml', 'svg'],
+		['image/gif', 'gif']
+	])('uploads a large %s under its own extension', async (type, ext) => {
+		const { upload, result } = run([marker(largeImage(type))])
+		await result
 
-			await expect(result).rejects.toThrow(
-				'marker "Rear badge" is too large to keep inline'
-			)
-			expect(upload).not.toHaveBeenCalled()
-		}
-	)
+		expect(upload.mock.calls[0][0].name).toBe(
+			`hotspot-artwork-${HOTSPOT_ID}.${ext}`
+		)
+	})
+
+	it('stops the save, naming the marker, for a large inline file that is no marker image', async () => {
+		// The picker never stores one; a hand-edited draft could.
+		const { upload, result } = run([marker(largeImage('image/bmp'))])
+
+		await expect(result).rejects.toThrow(
+			'marker "Rear badge" is not a PNG, JPEG, WebP, GIF or SVG'
+		)
+		expect(upload).not.toHaveBeenCalled()
+	})
 })
 
 describe('applyHotspotArtworkRewrites', () => {

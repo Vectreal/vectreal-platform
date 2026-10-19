@@ -11,8 +11,12 @@ import type {
 /** How often to ask the driver whether the programs have finished. */
 const POLL_INTERVAL_MS = 10
 
+interface Program {
+	isReady(): boolean
+}
+
 interface MaterialProperties {
-	currentProgram?: { isReady(): boolean }
+	currentProgram?: Program
 }
 
 interface TextureProperties {
@@ -73,9 +77,16 @@ export const uploadTexturesInSlices = async (
 	}
 }
 
+/** One draw the viewer will make: a scene, through a camera, into a target. */
+export interface ShaderDraw {
+	scene: Scene
+	camera: Camera
+	target: WebGLRenderTarget | null
+}
+
 /**
- * Compiles every material in the scene off the main thread, for the target
- * the scene will actually be drawn into.
+ * Compiles every material of each draw off the main thread, for the target
+ * that draw will actually render into.
  *
  * Left to the first frame, a material compiles inside `render()`, and three
  * then reads the result back synchronously: the page freezes, loader spinner
@@ -86,7 +97,11 @@ export const uploadTexturesInSlices = async (
  *
  * The target matters because three keys a program on its output: a scene
  * compiled for the canvas (sRGB, tone mapped) does not satisfy a draw into
- * the composer's linear buffer, and would only compile everything twice.
+ * the composer's linear buffer, and would only compile everything twice. For
+ * the same reason one material drawn into two targets has two programs, and
+ * each target's is awaited: `currentProgram` names only the one compiled last.
+ * (A transparent double-sided material also gets a back-face program per
+ * target, which `currentProgram` does not name and nothing here awaits.)
  *
  * Polled here rather than through `compileAsync`, whose poll reads each
  * material's program without checking it still exists: a material disposed
@@ -94,32 +109,46 @@ export const uploadTexturesInSlices = async (
  */
 export const warmUpShaders = (
 	gl: WebGLRenderer,
-	scene: Scene,
-	camera: Camera,
-	target: WebGLRenderTarget | null
+	draws: readonly ShaderDraw[]
 ): Promise<void> => {
 	// Programs are keyed while `compile` runs; only the waiting is deferred.
-	// So the target is held for the call alone, and never across the frames
+	// So each target is held for its call alone, and never across the frames
 	// that render while the driver finishes.
 	const previousTarget = gl.getRenderTarget()
-	gl.setRenderTarget(target)
-	let pending: Set<Material>
+	const pending = new Set<{ material: Material; program?: Program }>()
 	try {
-		pending = gl.compile(scene, camera)
+		for (const { scene, camera, target } of draws) {
+			gl.setRenderTarget(target)
+			for (const material of gl.compile(scene, camera)) {
+				const { currentProgram } = gl.properties.get(
+					material
+				) as MaterialProperties
+				pending.add({ material, program: currentProgram })
+			}
+		}
 	} finally {
 		gl.setRenderTarget(previousTarget)
 	}
 
-	const isSettled = (material: Material) => {
-		if (!gl.properties.has(material)) return true
-		const { currentProgram } = gl.properties.get(material) as MaterialProperties
-		return !currentProgram || currentProgram.isReady()
-	}
+	const isSettled = ({
+		material,
+		program
+	}: {
+		material: Material
+		program?: Program
+	}) =>
+		!gl.properties.has(material) ||
+		!program ||
+		// Released: its material was disposed, perhaps already drawn again
+		// with a program of its own. A deleted program never reports ready.
+		(gl.info.programs as unknown as Program[] | null)?.includes(program) ===
+			false ||
+		program.isReady()
 
 	return new Promise((resolve) => {
 		const poll = () => {
-			for (const material of pending) {
-				if (isSettled(material)) pending.delete(material)
+			for (const entry of pending) {
+				if (isSettled(entry)) pending.delete(entry)
 			}
 			if (pending.size === 0) resolve()
 			else setTimeout(poll, POLL_INTERVAL_MS)
@@ -129,8 +158,9 @@ export const warmUpShaders = (
 }
 
 /**
- * Everything the first frame of a scene would otherwise do on the main thread
- * in one go: compile its programs, then upload its textures.
+ * Everything the first frames of a scene would otherwise do on the main
+ * thread in one go: compile the programs of every draw, then upload the
+ * textures they sample.
  *
  * Never rejects. The viewer draws nothing until this settles, and a lost
  * context makes `compile` throw, so a failure only gives the work back to the
@@ -138,15 +168,16 @@ export const warmUpShaders = (
  */
 export const warmUpScene = async (
 	gl: WebGLRenderer,
-	scene: Scene,
-	camera: Camera,
-	target: WebGLRenderTarget | null,
+	draws: readonly ShaderDraw[],
 	isCancelled: () => boolean
 ): Promise<void> => {
 	try {
-		await warmUpShaders(gl, scene, camera, target)
+		await warmUpShaders(gl, draws)
 		if (isCancelled()) return
-		await uploadTexturesInSlices(gl, collectSceneTextures(scene), isCancelled)
+		const textures = new Set(
+			draws.flatMap(({ scene }) => collectSceneTextures(scene))
+		)
+		await uploadTexturesInSlices(gl, [...textures], isCancelled)
 	} catch {
 		return
 	}

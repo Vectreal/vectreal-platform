@@ -54,6 +54,16 @@ export interface RateLimitOptions {
 	 * origin to Cloudflare, never a fallback to a header the caller writes.
 	 */
 	addressCeiling?: number
+	/**
+	 * Whether the narrow key includes the caller's address. Default `true`.
+	 *
+	 * `false` is for a key that already names one caller the server resolved
+	 * itself, such as an agent grant: its limit must not reset when the CLI
+	 * changes networks, and one office NAT must not pool every agent behind it.
+	 * Never set it with a key part the caller chooses. `addressCeiling` keys by
+	 * address either way.
+	 */
+	includeClientIp?: boolean
 }
 
 export interface RateLimitResult {
@@ -82,7 +92,10 @@ function buildKey(request: Request, options: RateLimitOptions): string {
 		part.slice(0, MAX_KEY_PART_LENGTH)
 	)
 
-	return [options.bucket, resolveClientIp(request.headers), ...parts].join(':')
+	const address =
+		options.includeClientIp === false ? [] : [resolveClientIp(request.headers)]
+
+	return [options.bucket, ...address, ...parts].join(':')
 }
 
 /**

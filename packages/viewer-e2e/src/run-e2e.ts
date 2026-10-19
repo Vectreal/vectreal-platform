@@ -3,12 +3,14 @@
  *
  * Pipeline:
  *   1. Boot an ephemeral Verdaccio registry (proxies npmjs for transitive deps).
- *   2. Build and publish @vctrl/core, @vctrl/hooks, @vctrl/viewer to it.
+ *   2. Build and publish @vctrl/core, @vctrl/hooks, @vctrl/viewer and
+ *      @vctrl/embed to it.
  *   3. Scaffold a throwaway Vite + React consumer app in a tmp dir.
- *   4. npm install @vctrl/viewer from the local registry (the real tarball).
- *   5. Build the consumer (catches packaging / unresolved-import regressions).
- *   6. Serve it and run Playwright (catches render-time runtime crashes).
- *   7. Run the same Playwright spec against `vite dev`, whose dependency
+ *   4. npm install the packages from the local registry (the real tarballs).
+ *   5. Type-check the consumer against the installed declarations.
+ *   6. Build the consumer (catches packaging / unresolved-import regressions).
+ *   7. Serve it and run Playwright (catches render-time runtime crashes).
+ *   8. Run the same Playwright spec against `vite dev`, whose dependency
  *      pre-bundling is a different path from the build.
  *
  * Everything is torn down on exit. Nothing touches the public npm registry or
@@ -36,13 +38,13 @@ function resolveVerdaccioBin(): string {
 	return join(dirname(pkgJson), rel)
 }
 
-// Workspace packages to publish, in dependency order. viewer bundles core/shared
-// at build time, but core + hooks are published too so the registry mirrors a
-// real release and any future external dependency would resolve.
+// Workspace packages to publish, in dependency order: core is a dependency of
+// hooks and viewer, so it has to resolve from the registry like any other.
 const PACKAGES = [
 	{ project: 'vctrl/core', dir: 'packages/core' },
 	{ project: 'vctrl/hooks', dir: 'packages/hooks' },
-	{ project: 'vctrl/viewer', dir: 'packages/viewer' }
+	{ project: 'vctrl/viewer', dir: 'packages/viewer' },
+	{ project: 'vctrl/embed', dir: 'packages/embed' }
 ]
 
 const cleanups: Array<() => void> = []
@@ -185,6 +187,49 @@ async function publishPackage(
 	})
 }
 
+/*
+  `tsc` with `skipLibCheck` off, which is the only way it reads a declaration
+  file at all: on, an import that does not resolve quietly becomes `any`. Off,
+  it also checks every third-party declaration the app reaches, and some of
+  those disagree among themselves (three-stdlib with @types/three). So an
+  error located in another package's declarations is printed and left to its
+  owner; every other error fails the gate.
+*/
+async function typeCheck(consumerDir: string, env: NodeJS.ProcessEnv) {
+	const child = spawn('npx', ['tsc', '-p', '.', '--pretty', 'false'], {
+		cwd: consumerDir,
+		env: { ...process.env, ...env },
+		shell: process.platform === 'win32'
+	})
+	let output = ''
+	child.stdout.on('data', (chunk) => (output += chunk))
+	child.stderr.on('data', (chunk) => (output += chunk))
+	// 'close', not 'exit': the pipes can still hold the last of tsc's output
+	// when the process exits, and the last line may be the one that matters.
+	const [code] = (await once(child, 'close')) as [number | null]
+
+	const errors = output.split('\n').filter((line) => /error TS\d+/.test(line))
+	// Foreign means a located error in another package's declarations. One
+	// without a location (a bad option, a missing `types` entry) stops tsc
+	// before it checks anything, so it fails the gate like one of ours.
+	// A third-party copy npm nested under one of ours is still third-party.
+	const ours = errors.filter(
+		(line) =>
+			!line.startsWith('node_modules/') ||
+			/^node_modules\/@vctrl\/[^/]+\/(?!node_modules\/)/.test(line)
+	)
+	for (const line of errors) console.log(line)
+
+	if (ours.length > 0) {
+		throw new Error(
+			`${ours.length} type errors in the published declarations or the consumer`
+		)
+	}
+	if (code !== 0 && errors.length === 0) {
+		throw new Error(`tsc exited with ${code} and reported nothing:\n${output}`)
+	}
+}
+
 // Start `vite <args>` in the consumer, bound to loopback with a fixed port.
 // Vite's own entry runs under this node rather than through `npx`, which would
 // put it a process below the one cleanup kills and leave it serving.
@@ -253,7 +298,7 @@ async function main() {
 		[`registry=${registry}`, 'legacy-peer-deps=true', ''].join('\n')
 	)
 
-	log('installing @vctrl/viewer + @vctrl/hooks + peer deps from local registry')
+	log('installing the published packages + peer deps from local registry')
 	const consumerEnv = cleanChildEnvOverrides()
 	// --ignore-scripts: the @vctrl/core -> @gltf-transform/functions -> ndarray-pixels
 	// chain pulls `sharp` (a native Node binary) as a transitive dependency. A
@@ -266,6 +311,11 @@ async function main() {
 		cwd: consumerDir,
 		env: consumerEnv
 	})
+
+	// The build below strips types without reading them, so nothing else here
+	// would notice declarations that import a path the tarball does not contain.
+	log('type-checking consumer app against the installed declarations')
+	await typeCheck(consumerDir, consumerEnv)
 
 	log('building consumer app (packaging regression gate)')
 	await run('npx', ['vite', 'build'], { cwd: consumerDir, env: consumerEnv })
@@ -293,7 +343,7 @@ async function main() {
 	await runPlaywright(devURL, ci)
 
 	log(
-		'e2e passed: @vctrl/viewer + @vctrl/hooks install, bundle, and render cleanly, built and in dev ✓'
+		'e2e passed: the published packages install, type-check, bundle, and render cleanly, built and in dev ✓'
 	)
 }
 

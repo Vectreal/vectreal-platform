@@ -1,7 +1,9 @@
 import { deriveUniqueSlug } from '@shared/utils'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
 
+import { describeCameraRemoval } from './camera-removal-notice'
 import {
 	applySnapshotToCamera,
 	normalizeCameraState,
@@ -15,19 +17,23 @@ import {
 	resolveDefaultSceneCameraId
 } from '../../../../../lib/domain/scene/scene-camera'
 import {
+	interactionSwitchesTo,
 	removeCamera,
-	repointHotspotLinks
+	repointHotspotLinks,
+	repointInteractions
 } from '../../../../../lib/domain/scene/scene-hotspot-camera-links'
 import {
 	cameraAtom,
 	exitHotspotCameraAtom,
 	hotspotCameraModeAtom,
 	hotspotsAtom,
+	interactionsAtom,
 	selectCameraAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
 import { useOpeningViewCapture } from '../../../shell/use-opening-view'
+import { hotspotDisplayName } from '../hotspot-settings/use-hotspot-edits'
 
 /**
  * The scene's cameras, the one being edited, and every edit to them.
@@ -42,6 +48,7 @@ export function useSceneCameras() {
 	const exitHotspotCamera = useSetAtom(exitHotspotCameraAtom)
 	const hotspotCameraMode = useAtomValue(hotspotCameraModeAtom)
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
+	const [interactions, setInteractions] = useAtom(interactionsAtom)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
 	const { setOpeningView } = useOpeningViewCapture()
 
@@ -177,10 +184,19 @@ export function useSceneCameras() {
 
 	const removeSelected = useCallback(() => {
 		const next = removeCamera(
-			{ camera: normalizedCamera, hotspots },
+			{ camera: normalizedCamera, hotspots, interactions },
 			editorTargetCameraId
 		)
 		if (!next) return
+
+		const notice = describeCameraRemoval(
+			hotspots
+				.filter((hotspot) => hotspot.linkedCameraId === editorTargetCameraId)
+				.map(hotspotDisplayName),
+			(interactions ?? []).filter((interaction) =>
+				interactionSwitchesTo(interaction, editorTargetCameraId)
+			).length
+		)
 
 		// Landing on the first survivor would select a hotspot's camera whenever
 		// one sits ahead of the remaining scene cameras, and the editor treats
@@ -192,6 +208,8 @@ export function useSceneCameras() {
 
 		setCamera(nextCamera)
 		setHotspots(next.hotspots)
+		setInteractions(next.interactions)
+		if (notice) toast.info(notice)
 		// Deleting the hotspot camera the mode stands on ends the mode the way
 		// closing the tool would, back where the author started.
 		if (hotspotCameraMode) exitHotspotCamera()
@@ -201,10 +219,12 @@ export function useSceneCameras() {
 		exitHotspotCamera,
 		hotspotCameraMode,
 		hotspots,
+		interactions,
 		normalizedCamera,
 		selectCamera,
 		setCamera,
-		setHotspots
+		setHotspots,
+		setInteractions
 	])
 
 	/** Renaming re-derives the id from the name, so hotspot links follow it. */
@@ -237,15 +257,18 @@ export function useSceneCameras() {
 			if (newId !== oldId) {
 				setSelectedCameraId(newId)
 				setHotspots(repointHotspotLinks(hotspots, oldId, newId))
+				setInteractions(repointInteractions(interactions, oldId, newId))
 			}
 		},
 		[
 			cameras,
 			hotspots,
+			interactions,
 			normalizedCamera,
 			selectedCamera?.cameraId,
 			setCamera,
 			setHotspots,
+			setInteractions,
 			setSelectedCameraId
 		]
 	)

@@ -23,7 +23,6 @@ import * as React from 'react'
 export interface ProjectOption {
 	id: string
 	name: string
-	slug: string
 }
 
 interface ProjectMultiSelectProps {
@@ -59,7 +58,7 @@ export function ProjectMultiSelect({
 		return projects.filter(
 			(project) =>
 				project.name.toLowerCase().includes(query) ||
-				project.slug.toLowerCase().includes(query)
+				project.id.toLowerCase().includes(query)
 		)
 	}, [projects, searchQuery])
 
@@ -158,7 +157,7 @@ export function ProjectMultiSelect({
 													{project.name}
 												</span>
 												<span className="text-muted-foreground text-xs">
-													{project.slug}
+													{project.id}
 												</span>
 											</div>
 										</div>

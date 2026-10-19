@@ -57,7 +57,6 @@ vi.mock('../../lib/domain/project/project-repository.server', () => ({
 		{
 			id: 'project-1',
 			name: 'Storefront',
-			slug: 'storefront',
 			organizationId: 'org-1'
 		}
 	])
@@ -150,7 +149,7 @@ function storedKey() {
 		},
 		creator: { id: USER_ID, name: 'Moritz', email: 'moritz@acme.test' },
 		organization: { id: ORG_ID, name: 'Acme' },
-		projects: [{ id: 'project-1', name: 'Storefront', slug: 'storefront' }]
+		projects: [{ id: 'project-1', name: 'Storefront' }]
 	}
 }
 

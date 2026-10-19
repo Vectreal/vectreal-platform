@@ -4,7 +4,6 @@ import { cn } from '@shared/utils'
 import { LayoutDashboard } from 'lucide-react'
 import { useLocation, Link } from 'react-router'
 
-import { isNavItemActive } from './nav-items'
 import { NavPanels } from './nav-panels'
 import { NAV, entersFunnel } from '../../lib/navigation/site-map'
 import { DocsBreadcrumb, isDocsPath } from '../docs/docs-breadcrumb'
@@ -83,28 +82,8 @@ function DesktopNav({
 					{onDocs ? (
 						<DocsBreadcrumb pathname={pathname} />
 					) : (
-						<div className="flex shrink-0 items-center gap-0.5">
-							<NavPanels sections={NAV.panels} pathname={pathname} />
-							{NAV.links.map((item) => {
-								const isActive = isNavItemActive(item, pathname)
-								return (
-									<Link
-										key={item.to}
-										to={item.to}
-										viewTransition={entersFunnel(item.to)}
-										// Color alone cannot say "you are here": aria-current is what a screen reader reads it from.
-										aria-current={isActive ? 'page' : undefined}
-										className={cn(
-											'rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
-											isActive
-												? 'text-foreground'
-												: 'text-muted-foreground hover:text-foreground'
-										)}
-									>
-										{item.label}
-									</Link>
-								)
-							})}
+						<div className="flex shrink-0 items-center">
+							<NavPanels items={NAV.items} pathname={pathname} />
 						</div>
 					)}
 

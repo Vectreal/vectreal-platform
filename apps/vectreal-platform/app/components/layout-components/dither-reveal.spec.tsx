@@ -195,6 +195,36 @@ describe('a section revealed on arrival', () => {
 		expect(HTMLElement.prototype.animate).not.toHaveBeenCalled()
 	})
 
+	// A printed page is never scrolled, so nothing below the fold ever arrives.
+	it('is shown when the page is printed before it arrived', () => {
+		const blocks = renderSection()
+
+		act(() => {
+			window.dispatchEvent(new Event('beforeprint'))
+		})
+
+		for (const el of blocks) {
+			expect(el.style.maskImage).toBe('')
+			expect(el.style.transform).toBe('')
+		}
+	})
+
+	it('is seated, not caught mid-grain, when the page is printed mid-arrival', () => {
+		const blocks = renderSection()
+		arrive()
+		flushFrames(100)
+
+		act(() => {
+			window.dispatchEvent(new Event('beforeprint'))
+		})
+		expect(pending.size).toBe(0)
+		for (const el of blocks) expect(el.style.maskImage).toBe('')
+		for (const { value } of vi.mocked(HTMLElement.prototype.animate).mock
+			.results) {
+			expect((value as Animation).cancel).toHaveBeenCalled()
+		}
+	})
+
 	it('leaves nothing hidden or running when it unmounts mid-arrival', () => {
 		const blocks = renderSection()
 		arrive()

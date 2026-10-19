@@ -75,6 +75,13 @@ interface ExecuteSceneSaveOrchestratorParams {
 	onProgress?: (event: SaveProgressEvent) => void
 	/** What the save does with the scene's original. Keeps none when left out. */
 	source?: SourceToSave
+	/**
+	 * Whether the scene's environment map has failed to load and the viewer
+	 * lights it from its neutral room instead, so a capture shows that room's
+	 * light. A reader rather than a value: the capture runs after the uploads,
+	 * and the map can fail in between.
+	 */
+	isEnvironmentFallback?: () => boolean
 }
 
 /** The scene document's key, the same name `existingAssets` lists it under. */
@@ -163,7 +170,8 @@ export const executeSceneSaveOrchestrator = async ({
 	captureSceneThumbnail,
 	captureShadowBake,
 	onProgress,
-	source = { kind: 'none' }
+	source = { kind: 'none' },
+	isEnvironmentFallback = () => false
 }: ExecuteSceneSaveOrchestratorParams): Promise<
 	(SaveSceneOrchestratorResult | { unchanged: true }) & {
 		/** The original the scene now keeps, or null when it keeps none. */
@@ -309,13 +317,23 @@ export const executeSceneSaveOrchestrator = async ({
 			existingAssets?.[SCENE_THUMBNAIL_FILENAME]?.assetId
 	})
 
-	const thumbnailDataUrl =
-		capturedThumbnail ??
-		(needsCapture
-			? ((await captureSceneThumbnail(
-					resolveDefaultSceneCameraId(currentSettings.camera?.cameras)
-				)) ?? pendingCapture)
-			: null)
+	// Whether the image to upload was painted under the fallback room, asked
+	// as close to the painting as the save can: a waiting capture paints the
+	// current frame, environment included, and a fresh one is asked right
+	// after it is taken. A stale capture standing in for a failed one painted
+	// some earlier environment, which the save cannot tell, so it claims none.
+	let thumbnailDataUrl: null | string = null
+	let litByFallback = false
+	if (capturedThumbnail) {
+		thumbnailDataUrl = capturedThumbnail
+		litByFallback = isEnvironmentFallback()
+	} else if (needsCapture) {
+		const fresh = await captureSceneThumbnail(
+			resolveDefaultSceneCameraId(currentSettings.camera?.cameras)
+		)
+		litByFallback = fresh !== null && isEnvironmentFallback()
+		thumbnailDataUrl = fresh ?? pendingCapture
+	}
 
 	let sceneMetaForSave = {
 		...sceneMetaState,
@@ -366,6 +384,14 @@ export const executeSceneSaveOrchestrator = async ({
 					thumbnailUrl: buildSceneThumbnailUrl(
 						preparedSceneId,
 						uploadedThumbnail.assetId
+					)
+				}
+				// The save goes ahead: the author may want the scene stored anyway,
+				// and the Environment panel already says the map failed. What they
+				// cannot see from there is that the preview now carries the room.
+				if (litByFallback) {
+					toast.warning(
+						"The scene's preview image is lit by the neutral room, because its environment map could not be loaded."
 					)
 				}
 			} catch (error) {

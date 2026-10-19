@@ -137,7 +137,7 @@ describe('the site nav', () => {
 		) as HTMLElement
 		expect(
 			within(panel)
-				.getByRole('link', { name: /Pilot projects/ })
+				.getByRole('link', { name: /Start a project/ })
 				.getAttribute('href')
 		).toBe('/contact?topic=pilot')
 
@@ -223,6 +223,58 @@ describe('the site nav', () => {
 		})
 		await wait(300)
 		expect(product.getAttribute('aria-expanded')).toBe('false')
+	})
+
+	/*
+	  The plain links sit between the panels in the bar, inside the same root,
+	  so reaching one has to count as leaving the panel on its own.
+	*/
+	it('closes a panel the mouse opened when the mouse moves onto a plain link', async () => {
+		renderAt('/pricing')
+		const bar = within(desktopBar())
+		const product = bar.getByRole('button', { name: 'Product' })
+		fireEvent.pointerEnter(product, { pointerType: 'mouse' })
+		await wait(150)
+		expect(product.getAttribute('aria-expanded')).toBe('true')
+
+		fireEvent.pointerEnter(bar.getByRole('link', { name: 'Docs' }), {
+			pointerType: 'mouse'
+		})
+		await wait(300)
+		expect(product.getAttribute('aria-expanded')).toBe('false')
+	})
+
+	it('keeps a pressed panel open when the mouse moves onto a plain link', async () => {
+		const { product } = openProduct()
+		fireEvent.pointerEnter(
+			within(desktopBar()).getByRole('link', { name: 'Docs' }),
+			{ pointerType: 'mouse' }
+		)
+		await wait(300)
+		expect(product.getAttribute('aria-expanded')).toBe('true')
+	})
+
+	it('closes a pressed panel when focus moves on to a plain link', () => {
+		const { product } = openProduct()
+		act(() =>
+			within(desktopBar()).getByRole('link', { name: 'Pricing' }).focus()
+		)
+		expect(product.getAttribute('aria-expanded')).toBe('false')
+	})
+
+	it('leaves focus on a plain link when Escape closes a panel the mouse opened', async () => {
+		renderAt('/pricing')
+		const bar = within(desktopBar())
+		const docs = bar.getByRole('link', { name: 'Docs' })
+		act(() => docs.focus())
+		const product = bar.getByRole('button', { name: 'Product' })
+		fireEvent.pointerEnter(product, { pointerType: 'mouse' })
+		await wait(150)
+		expect(product.getAttribute('aria-expanded')).toBe('true')
+
+		fireEvent.keyDown(document, { key: 'Escape' })
+		expect(product.getAttribute('aria-expanded')).toBe('false')
+		expect(document.activeElement).toBe(docs)
 	})
 
 	it('opens nothing for a pointer that passes over a trigger', async () => {

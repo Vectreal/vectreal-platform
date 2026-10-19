@@ -1,4 +1,5 @@
 import { SITE_URL, type SeoPageDefinition } from './seo'
+import { normalizeSlug } from './utils/slug'
 import {
 	PLAN_OFFER_DESCRIPTIONS,
 	PLATFORM_FEATURE_LIST,
@@ -70,7 +71,7 @@ export const LEGAL_PAGE_SEO_BY_PATH: Record<string, SeoPageDefinition> = {
 	'/contact': {
 		title: 'Contact - Vectreal',
 		description:
-			'Contact the Vectreal team for support, enterprise inquiries, or partnerships.',
+			'Contact the Vectreal team for support, a project, or enterprise inquiries.',
 		canonical: '/contact'
 	},
 	'/code-of-conduct': {
@@ -195,13 +196,6 @@ export function buildSiteStructuredData() {
 	]
 }
 
-function nameToSlug(name: string): string {
-	return name
-		.toLowerCase()
-		.replace(/\s+/g, '-')
-		.replace(/[^a-z0-9-]/g, '')
-}
-
 export function buildAuthorPersonJsonLd(author: {
 	name: string
 	role?: string
@@ -211,7 +205,7 @@ export function buildAuthorPersonJsonLd(author: {
 	return {
 		'@context': 'https://schema.org',
 		'@type': 'Person',
-		'@id': `${SITE_URL}/#author-${nameToSlug(author.name)}`,
+		'@id': `${SITE_URL}/#author-${normalizeSlug(author.name)}`,
 		name: author.name,
 		...(author.role ? { jobTitle: author.role } : {}),
 		affiliation: { '@id': `${SITE_URL}/#organization` },
@@ -252,7 +246,7 @@ export function buildNewsArticleJsonLd(
 	article: NewsArticleStructuredDataInput
 ) {
 	const canonicalUrl = `${SITE_URL}${article.canonicalPath}`
-	const authorId = `${SITE_URL}/#author-${nameToSlug(article.authorName)}`
+	const authorId = `${SITE_URL}/#author-${normalizeSlug(article.authorName)}`
 
 	return {
 		'@context': 'https://schema.org',

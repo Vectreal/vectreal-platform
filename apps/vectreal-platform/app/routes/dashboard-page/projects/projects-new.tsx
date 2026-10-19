@@ -18,6 +18,7 @@ import {
 	FormMessage
 } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import {
 	Select,
 	SelectContent,
@@ -25,10 +26,9 @@ import {
 	SelectTrigger,
 	SelectValue
 } from '@shared/components/ui/select'
-import { slugify } from '@shared/utils'
 import { useSetAtom } from 'jotai/react'
 import { AlertCircle, Plus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { data, redirect, Form as RemixForm, useLocation } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
@@ -60,15 +60,6 @@ const projectFormSchema = z.object({
 		.min(1, 'Project name is required')
 		.min(3, 'Project name must be at least 3 characters')
 		.max(100, 'Project name must be less than 100 characters'),
-	slug: z
-		.string()
-		.min(1, 'Slug is required')
-		.min(3, 'Slug must be at least 3 characters')
-		.max(50, 'Slug must be less than 50 characters')
-		.regex(
-			/^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-			'Slug must be lowercase letters, numbers, and hyphens only'
-		),
 	organizationId: z.string().min(1, 'Organization is required')
 })
 
@@ -144,14 +135,12 @@ export async function action({ request }: Route.ActionArgs) {
 	}
 
 	const name = formData.get('name') as string
-	const slug = formData.get('slug') as string
 	const organizationId = formData.get('organizationId') as string
 
 	try {
 		// Validate input
 		const validatedData = projectFormSchema.parse({
 			name,
-			slug,
 			organizationId
 		})
 
@@ -159,7 +148,6 @@ export async function action({ request }: Route.ActionArgs) {
 		const project = await createProject(
 			validatedData.organizationId,
 			validatedData.name,
-			validatedData.slug,
 			user.id
 		)
 
@@ -197,8 +185,6 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 	const csrfToken = useAuthenticityToken()
 
 	const location = useLocation()
-	const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
-
 	// Control drawer open state based on route
 	const isOpen = location.pathname === '/dashboard/projects/new'
 
@@ -210,7 +196,6 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		reValidateMode: 'onChange',
 		defaultValues: {
 			name: '',
-			slug: '',
 			organizationId:
 				organizations.length === 1
 					? organizations[0].organization.id
@@ -230,14 +215,9 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 		}
 	}, [actionData, form])
 
-	// Auto-generate slug when name changes
 	const handleNameChange = (value: string) => {
 		form.clearErrors('name')
 		form.setValue('name', value, { shouldValidate: true })
-		if (!form.getValues('slug') || isGeneratingSlug) {
-			form.setValue('slug', slugify(value), { shouldValidate: true })
-			setIsGeneratingSlug(true)
-		}
 	}
 
 	// Get selected organization ID and check if user can create projects in it
@@ -300,7 +280,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 			onAnimationEnd={drawer.onAnimationEnd}
 			direction="right"
 		>
-			<DrawerContent className="max-w-lg!">
+			<DrawerContent className="max-w-form-drawer!">
 				<DrawerHeader className="border-b">
 					<DrawerTitle>Create New Project</DrawerTitle>
 					<DrawerDescription>
@@ -454,38 +434,6 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 								)}
 							/>
 
-							{/* Slug */}
-							<FormField
-								control={form.control}
-								name="slug"
-								render={({ field, fieldState }) => (
-									<FormItem>
-										<FormLabel>URL Slug</FormLabel>
-										<FormControl>
-											<Input
-												{...field}
-												name="slug"
-												onChange={(e) => {
-													form.clearErrors('slug')
-													field.onChange(e)
-													setIsGeneratingSlug(false)
-												}}
-												placeholder="my-project"
-												className="font-mono"
-											/>
-										</FormControl>
-										{fieldState.error ? (
-											<FormMessage />
-										) : (
-											<FormDescription>
-												Used in URLs and must be unique. Auto-generated from
-												name.
-											</FormDescription>
-										)}
-									</FormItem>
-								)}
-							/>
-
 							{/* Action button */}
 							<DrawerFooter className="px-0 pt-4 pb-0">
 								<Button type="button" variant="outline" onClick={drawer.close}>
@@ -505,7 +453,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 								>
 									{form.formState.isSubmitting ? (
 										<>
-											<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+											<LoadingSpinner className="mr-2 size-4" />
 											Creating...
 										</>
 									) : (

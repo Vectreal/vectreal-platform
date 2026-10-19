@@ -55,6 +55,7 @@
 		},
 		{
 			"plugin": "@nx/vite/plugin",
+			"exclude": ["packages/viewer-e2e/src/consumer-template/**"],
 			"options": {
 				"buildTargetName": "build",
 				"serveTargetName": "serve",

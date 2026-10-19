@@ -1,9 +1,8 @@
-import { cn } from '@shared/utils'
-
 import PauseIcon from './assets/pause-icon'
 import PlayIcon from './assets/play-icon'
 import RestartIcon from './assets/restart-icon'
 import { CHROME_BUTTON } from './chrome-classes'
+import { cn, withHostClasses } from './class-names'
 
 export interface AnimationControlsProps {
 	playing: boolean
@@ -15,12 +14,12 @@ export interface AnimationControlsProps {
 }
 
 const controlClasses = {
-	root: 'vctrl-viewer-animation-controls shell-panel flex items-center gap-0.5 p-1',
+	root: 'vctrl-viewer-animation-controls shell-panel vv:flex vv:items-center vv:gap-0.5 vv:p-1',
 	button: cn(
 		CHROME_BUTTON,
-		'flex h-7 w-7 items-center justify-center rounded-full p-0 leading-none'
+		'vv:flex vv:h-7 vv:w-7 vv:items-center vv:justify-center vv:rounded-full vv:p-0 vv:leading-none'
 	),
-	icon: 'h-3.5 w-3.5'
+	icon: 'vv:h-3.5 vv:w-3.5'
 } as const
 
 /**
@@ -46,7 +45,7 @@ const AnimationControls = ({
 	className
 }: AnimationControlsProps) => (
 	<div
-		className={cn(controlClasses.root, className)}
+		className={withHostClasses(controlClasses.root, className)}
 		role="group"
 		aria-label="Animation playback"
 	>

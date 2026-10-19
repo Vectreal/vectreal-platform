@@ -243,8 +243,7 @@ async function getOrCreateDefaultProjectDb(
 			.insert(projects)
 			.values({
 				organizationId: orgId,
-				name: 'My Project',
-				slug: `my-project-${userId.slice(0, 8)}`
+				name: 'My Project'
 			})
 			.returning()
 		project = newProject

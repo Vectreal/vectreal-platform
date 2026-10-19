@@ -313,8 +313,7 @@ export default function ApiKeysNewPage({
 		.filter((p) => p.organizationId === selectedOrgId)
 		.map((p) => ({
 			id: p.project.id,
-			name: p.project.name,
-			slug: p.project.slug
+			name: p.project.name
 		}))
 
 	const isCreateDisabled =
@@ -372,7 +371,7 @@ export default function ApiKeysNewPage({
 				onAnimationEnd={drawer.onAnimationEnd}
 				direction="right"
 			>
-				<DrawerContent className="max-w-lg!">
+				<DrawerContent className="max-w-form-drawer!">
 					<DrawerHeader className="border-b">
 						<DrawerTitle>Create API Key</DrawerTitle>
 						<DrawerDescription>

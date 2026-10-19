@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Below `lg` one pinned drawing stands for all three terms, so it has to show
+ * Below `lg` one pinned drawing stands for both terms, so it has to show
  * the stage of the term being read, and the terms it has passed must not show
  * around it.
  */
@@ -64,7 +64,7 @@ const tops = (
 	values: number[],
 	left: number,
 	right: number,
-	heights = [180, 180, 180]
+	heights = [180, 180]
 ) =>
 	values.forEach((top, i) =>
 		put(term(i), { top, height: heights[i], left, right })
@@ -92,14 +92,14 @@ describe('the pinned stage', () => {
 		const { container } = renderOffer()
 		pinAbove(container)
 		// The line is 64px under the frame's bottom edge, at 346.
-		placeTerms([-100, 330, 560])
+		placeTerms([-100, 330])
 		scroll()
 		expect(frame(container).dataset.stage).toBe('1')
 
 		const layers = [...frame(container).querySelectorAll('.absolute')]
 		expect(
 			layers.map((layer) => layer.classList.contains('opacity-100'))
-		).toEqual([false, true, false])
+		).toEqual([false, true])
 	})
 
 	/*
@@ -109,11 +109,15 @@ describe('the pinned stage', () => {
 	it('clips each term at the frame bottom edge as it goes under', () => {
 		const { container } = renderOffer()
 		pinAbove(container)
-		placeTerms([-100, 222, 560])
+		placeTerms([-100, 222])
 		scroll()
 		expect(term(0).style.clipPath).toBe('inset(382px 0 0 0)')
 		expect(term(1).style.clipPath).toBe('inset(60px 0 0 0)')
-		expect(term(2).style.clipPath).toBe('')
+
+		placeTerms([222, 560])
+		scroll()
+		expect(term(0).style.clipPath).toBe('inset(60px 0 0 0)')
+		expect(term(1).style.clipPath).toBe('')
 	})
 
 	/*
@@ -123,11 +127,11 @@ describe('the pinned stage', () => {
 	it('lands on the right stage after a jump', () => {
 		const { container } = renderOffer()
 		pinAbove(container)
-		placeTerms([-900, -600, 330])
+		placeTerms([-900, 330])
 		scroll()
-		expect(frame(container).dataset.stage).toBe('2')
+		expect(frame(container).dataset.stage).toBe('1')
 
-		placeTerms([400, 630, 860])
+		placeTerms([400, 630])
 		scroll()
 		expect(frame(container).dataset.stage).toBe('0')
 	})
@@ -135,13 +139,13 @@ describe('the pinned stage', () => {
 	/*
 	  From `sm` the frame sits beside the terms. It pins level with the first
 	  term's top and lets go level with the last term's bottom, and the stages
-	  split that travel in thirds, whatever the terms' heights: every rule read
+	  split that travel evenly, whatever the terms' heights: every rule read
 	  off the heights got one end wrong for some wrap of the copy.
 	*/
 	const beside = (frameTop: number) => {
 		const { container } = renderOffer()
 		// Terms from 100 to 603; the frame, 282 tall, travels 221 between them.
-		tops([100, 287, 515], 500, 950, [139, 180, 88])
+		tops([100, 515], 500, 950, [139, 88])
 		put(frame(container), { top: frameTop, height: 282, left: 24, right: 470 })
 		scroll()
 		return frame(container).dataset.stage
@@ -151,12 +155,16 @@ describe('the pinned stage', () => {
 		expect(beside(100)).toBe('0')
 	})
 
-	it('moves on a third of the way through the frame travel', () => {
-		expect(beside(100 + 221 * 0.4)).toBe('1')
+	it('stays on the first term short of halfway through the frame travel', () => {
+		expect(beside(100 + 221 * 0.4)).toBe('0')
+	})
+
+	it('moves on halfway through the frame travel', () => {
+		expect(beside(100 + 221 * 0.6)).toBe('1')
 	})
 
 	it('ends on a short last term as the frame lets go', () => {
-		expect(beside(603 - 282)).toBe('2')
+		expect(beside(603 - 282)).toBe('1')
 	})
 
 	it('clips nothing beside the terms', () => {
@@ -185,7 +193,7 @@ describe('the pinned stage', () => {
 				const i = HOME_PAGE_COPY.pilot.blocks.findIndex(
 					(block) => block.title === title
 				)
-				const top = [-400, 100, 330][i] ?? 5000
+				const top = [-400, 100][i] ?? 5000
 				return {
 					top,
 					bottom: top + 180,
@@ -196,14 +204,14 @@ describe('the pinned stage', () => {
 			}
 		)
 		const { container } = renderOffer()
-		expect(frame(container).dataset.stage).toBe('2')
+		expect(frame(container).dataset.stage).toBe('1')
 		expect(term(1).style.clipPath).toBe('inset(182px 0 0 0)')
 	})
 
 	it('clears its clips once the frame is hidden, from `lg`', () => {
 		const { container } = renderOffer()
 		pinAbove(container)
-		placeTerms([-100, 222, 560])
+		placeTerms([-100, 222])
 		scroll()
 		expect(term(1).style.clipPath).not.toBe('')
 

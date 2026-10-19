@@ -1,6 +1,6 @@
-import { ApiResponse } from '@shared/utils'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
+import { agentApiError } from './agent-api-response'
 import { evaluateAgentClaims, readBearerToken } from './agent-bearer'
 import { findAgentGrantForMember } from './agent-grant-repository.server'
 
@@ -63,14 +63,16 @@ async function verifyClaims(
 
 /** RFC 6750: a client reads this and signs in again. */
 function invalidToken(): Response {
-	return ApiResponse.unauthorized('Invalid or expired agent token', {
+	return agentApiError(401, 'invalid_token', 'Invalid or expired agent token', {
 		headers: { 'WWW-Authenticate': 'Bearer error="invalid_token"' }
 	})
 }
 
 /**
- * The one place an agent request's bearer token becomes an actor. Every
- * `/api/v1` route starts here; none reads a cookie.
+ * The one place an agent request's bearer token becomes an actor; nothing
+ * reads a cookie. Routes never call it directly: they call
+ * `authorizeAgentRequest`, which adds the grant's rate limit and the scope
+ * (`tests/agent-api-routes.spec.ts` holds every `/api/v1` route to that).
  *
  * In order, each refusal thrown as a Response:
  * 1. the token comes from `Authorization` alone (a session cookie beside it is
@@ -88,7 +90,9 @@ export async function resolveAgentActor(request: Request): Promise<AgentActor> {
 	const bearer = readBearerToken(request)
 	if (!bearer.ok) {
 		throw bearer.reason === 'mixed'
-			? ApiResponse.badRequest(
+			? agentApiError(
+					400,
+					'invalid_request',
 					'Send either an agent token or a session cookie, not both'
 				)
 			: invalidToken()

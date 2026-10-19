@@ -1,11 +1,12 @@
 import { cn } from '@shared/utils'
-import { ArrowRight } from 'lucide-react'
+import { ArrowLeftRight, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router'
 
 import {
 	CONVERT_INDEX_PATH,
 	convertPairPath,
 	convertPairsBySource,
+	reversePair,
 	type ConvertPair
 } from '../../lib/convert/convert-pairs'
 
@@ -26,11 +27,13 @@ import type { ReactNode } from 'react'
  *
  * Every option is a real link, so a crawler reaches every pair from every pair.
  * Choosing a source keeps the current target where that pair exists, and falls
- * back to the source's first target where it does not.
+ * back to the source's first target where it does not. Where the conversion
+ * also runs the other way, a swap turns it round in one step.
  */
 export function ConvertFormatSwitch({ pair }: { pair: ConvertPair }) {
 	const sources = convertPairsBySource()
 	const targets = sources.find((group) => group.from === pair.from)?.pairs ?? []
+	const reverse = reversePair(pair)
 
 	return (
 		<nav
@@ -81,6 +84,18 @@ export function ConvertFormatSwitch({ pair }: { pair: ConvertPair }) {
 					)
 				})}
 			</Group>
+
+			{reverse && (
+				<Link
+					to={convertPairPath(reverse)}
+					viewTransition
+					aria-label={`Swap: convert ${reverse.fromLabel} to ${reverse.toLabel}`}
+					className="text-muted-foreground hover:text-foreground text-body-sm ds-sunken inline-flex items-center gap-2 rounded-xl px-3 py-2 transition-colors"
+				>
+					<ArrowLeftRight className="size-4" aria-hidden="true" />
+					Swap
+				</Link>
+			)}
 
 			<Link
 				to={CONVERT_INDEX_PATH}

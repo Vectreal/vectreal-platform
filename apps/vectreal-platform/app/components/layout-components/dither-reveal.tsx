@@ -50,6 +50,7 @@ function clearFrame(el: HTMLElement) {
  * Once, and only below the fold. A section already on screen when the page
  * hydrates is never hidden, so server-rendered content cannot flash out and
  * back; without script, or under reduced motion, nothing is hidden at all.
+ * Printing seats every block first, since a printed page never scrolls.
  */
 export function DitherReveal({ children }: { children: ReactNode }) {
 	const ref = useRef<HTMLDivElement>(null)
@@ -68,6 +69,16 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 
 		const frames: number[] = []
 		const animations: Animation[] = []
+		/** Every block in its place now, whatever it was doing, and never hidden again. */
+		const seatAtOnce = () => {
+			observer.disconnect()
+			for (const frame of frames) cancelAnimationFrame(frame)
+			for (const animation of animations) animation.cancel()
+			for (const el of blocks) {
+				clearFrame(el)
+				el.style.transform = ''
+			}
+		}
 		const observer = new IntersectionObserver(
 			([entry]) => {
 				if (!entry.isIntersecting) return
@@ -76,10 +87,7 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 				// Jumped past, by an anchor or a fling, or motion was turned off
 				// since the page loaded: seat it at once.
 				if (entry.boundingClientRect.bottom < 0 || prefersReducedMotion()) {
-					for (const el of blocks) {
-						clearFrame(el)
-						el.style.transform = ''
-					}
+					seatAtOnce()
 					return
 				}
 
@@ -130,15 +138,12 @@ export function DitherReveal({ children }: { children: ReactNode }) {
 			{ rootMargin: '100000px 0px -12% 0px' }
 		)
 		observer.observe(root)
+		// A printed page is never scrolled, so a section not reached yet would print blank.
+		window.addEventListener('beforeprint', seatAtOnce)
 
 		return () => {
-			observer.disconnect()
-			for (const frame of frames) cancelAnimationFrame(frame)
-			for (const animation of animations) animation.cancel()
-			for (const el of blocks) {
-				clearFrame(el)
-				el.style.transform = ''
-			}
+			window.removeEventListener('beforeprint', seatAtOnce)
+			seatAtOnce()
 		}
 	}, [])
 

@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ALTER COLUMN "slug" SET DEFAULT gen_random_uuid()::text;

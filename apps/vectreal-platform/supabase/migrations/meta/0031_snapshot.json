@@ -1,5 +1,5 @@
 {
-  "id": "c3ec70a5-37e3-4d82-8637-9743e78d8720",
+  "id": "47f49efe-5863-47d0-adfc-d31bccbe4bdb",
   "prevId": "6b76d441-2e64-4b06-9ed8-34d08076d22f",
   "version": "7",
   "dialect": "postgresql",
@@ -632,7 +632,8 @@
           "name": "slug",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()::text"
         },
         "allowed_embed_domains": {
           "name": "allowed_embed_domains",
@@ -3976,111 +3977,6 @@
           "withCheck": "\"consent_records\".\"user_id\" = (select auth.uid())"
         }
       },
-      "checkConstraints": {},
-      "isRLSEnabled": true
-    },
-    "public.img_to_3d_jobs": {
-      "name": "img_to_3d_jobs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "batch_id": {
-          "name": "batch_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "seed": {
-          "name": "seed",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "params": {
-          "name": "params",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "img_to_3d_jobs_org_created_idx": {
-          "name": "img_to_3d_jobs_org_created_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "img_to_3d_jobs_organization_id_organizations_id_fk": {
-          "name": "img_to_3d_jobs_organization_id_organizations_id_fk",
-          "tableFrom": "img_to_3d_jobs",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "img_to_3d_jobs_created_by_users_id_fk": {
-          "name": "img_to_3d_jobs_created_by_users_id_fk",
-          "tableFrom": "img_to_3d_jobs",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true
     }

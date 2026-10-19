@@ -1,7 +1,6 @@
 import {
 	HOME_PAGE_COPY,
-	OPEN_SOURCE_PACKAGES,
-	PLATFORM_TAGLINE
+	OPEN_SOURCE_PACKAGES
 } from '../../constants/product-copy'
 import { CONVERT_INDEX_PATH } from '../convert/convert-pairs'
 
@@ -32,6 +31,12 @@ export interface SiteSection {
 	links: readonly SiteLink[]
 }
 
+/** One place in the marketing nav: a panel of links, or a link of its own. */
+export type NavItem = SiteSection | SiteLink
+
+export const isNavSection = (item: NavItem): item is SiteSection =>
+	'links' in item
+
 const { repositoryUrl, discordUrl } = HOME_PAGE_COPY.openSource
 
 const PUBLISHER: SiteLink = {
@@ -45,7 +50,7 @@ const CONVERTERS: SiteLink = {
 	description: 'Convert between 3D formats in your browser. No account.'
 }
 const PILOT: SiteLink = {
-	label: 'Pilot projects',
+	label: 'Start a project',
 	to: '/contact?topic=pilot',
 	description: 'We build your product viewer with you, from the files you have.'
 }
@@ -131,10 +136,18 @@ export function entersFunnel(to: string): boolean {
 	)
 }
 
-/** The marketing nav: two panels, three plain links, and the two ways in. */
+/**
+ * The marketing nav, in the order it reads on every screen: the product first,
+ * the open-source packages last, the plain links between. Then the two ways in.
+ */
 export const NAV = {
-	panels: [SITE_SECTIONS.product, SITE_SECTIONS.openSource],
-	links: [PRICING, DOCS, NEWSROOM],
+	items: [
+		SITE_SECTIONS.product,
+		PRICING,
+		NEWSROOM,
+		DOCS,
+		SITE_SECTIONS.openSource
+	] satisfies readonly NavItem[],
 	signIn: { label: 'Sign in', to: '/sign-in' },
 	getStarted: { label: 'Get started', to: PUBLISHER.to }
 } as const
@@ -148,7 +161,8 @@ export const ACCOUNT: readonly SiteLink[] = [
 ]
 
 export const FOOTER = {
-	tagline: PLATFORM_TAGLINE,
+	/** The footer's sign-off, not the site's description: `PLATFORM_TAGLINE` still describes the product to search and llms.txt. */
+	tagline: 'Publish your vision.',
 	sections: [
 		SITE_SECTIONS.product,
 		SITE_SECTIONS.openSource,

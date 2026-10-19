@@ -42,15 +42,15 @@
 		},
 		"./use-load-model": {
 			"types": "./use-load-model/index.d.ts",
-			"default": "./use-load-model.js"
+			"default": "./use-load-model/index.js"
 		},
 		"./use-export-model": {
 			"types": "./use-export-model/index.d.ts",
-			"default": "./use-export-model.js"
+			"default": "./use-export-model/index.js"
 		},
 		"./use-optimize-model": {
 			"types": "./use-optimize-model/index.d.ts",
-			"default": "./use-optimize-model.js"
+			"default": "./use-optimize-model/index.js"
 		}
 	},
 	"peerDependencies": {

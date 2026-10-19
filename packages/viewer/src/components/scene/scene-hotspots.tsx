@@ -81,6 +81,8 @@ export interface SceneHotspotsProps {
 	 */
 	activeCameraId?: string | null
 	onActivateCamera?: (cameraId: string) => void
+	/** Plays a marker's linked clip once. Undefined leaves every clip unplayed. */
+	onPlayClip?: (clipId: string) => void
 	onSelect?: (id: string) => void
 	/**
 	 * Runs when a visitor activates a marker, with the camera it flies or null.
@@ -124,6 +126,7 @@ const SceneHotspots = ({
 	revealedId,
 	activeCameraId,
 	onActivateCamera,
+	onPlayClip,
 	onSelect,
 	onHotspotActivated,
 	onCommandExecutorReady,
@@ -288,9 +291,12 @@ const SceneHotspots = ({
 				setOpenId(marker.id)
 			}
 			if (marker.linkedCameraId) onActivateCamera?.(marker.linkedCameraId)
+			if (marker.linkedAnimationClipId) {
+				onPlayClip?.(marker.linkedAnimationClipId)
+			}
 			invalidate()
 		},
-		[invalidate, onActivateCamera, revealContent]
+		[invalidate, onActivateCamera, onPlayClip, revealContent]
 	)
 
 	useEffect(() => {
@@ -547,6 +553,7 @@ const SceneHotspots = ({
 					current={!!activeCameraId && marker.linkedCameraId === activeCameraId}
 					color={color}
 					onActivate={onActivateCamera}
+					onPlayClip={onPlayClip}
 					onSelect={onSelect}
 					onActivated={onHotspotActivated}
 					open={marker.id === shownId}

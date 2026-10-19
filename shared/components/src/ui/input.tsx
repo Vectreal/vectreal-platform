@@ -11,7 +11,8 @@ import * as React from 'react'
   how a text field ended up curving faster than the panel around it.
 
   `rounded-lg` is `--radius` itself, the one knob the scale derives from, and
-  what `badge` already used.
+  what `badge` already used. A control nested inside another surface takes the
+  concentric radius instead: `TabsTrigger` and the menu items say why.
 */
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
 	return (

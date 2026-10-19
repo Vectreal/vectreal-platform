@@ -413,6 +413,13 @@ export interface HotspotDefinition {
 	 * The camera must exist in CameraProps.cameras.
 	 */
 	linkedCameraId?: string
+	/**
+	 * Clip id (from `deriveAnimationClipId`) that plays once, holding its last
+	 * frame, when a visitor activates this hotspot. Independent of the scene's
+	 * own `animation` program: it plays even when that program is off, and the
+	 * program's per-clip settings other than speed do not apply to it.
+	 */
+	linkedAnimationClipId?: string
 	/** Whether the hotspot dot/overlay is visible to the end user. */
 	visible: boolean
 	/**
@@ -581,18 +588,18 @@ export interface SceneMetaData {
 	thumbnailUrl?: string
 }
 
-/** Raw API payload contract for scene loading. */
-export interface ServerScenePayload {
+/**
+ * Raw API payload contract for scene loading.
+ *
+ * Settings arrive nested under {@link settings}, flat at the top level (a
+ * {@link ServerSceneData} handed back in, as a local draft is), or both. A flat
+ * field wins over its nested twin.
+ */
+export interface ServerScenePayload extends SceneSettings {
 	/** Optional scene metadata payload. */
 	meta?: SceneMetaData
 	/** Optional nested scene settings payload. */
 	settings?: SceneSettings | null
-	/** Legacy flattened settings fields. */
-	bounds?: SceneSettings['bounds']
-	camera?: SceneSettings['camera']
-	controls?: SceneSettings['controls']
-	environment?: SceneSettings['environment']
-	shadows?: SceneSettings['shadows']
 	/** The GLTF JSON structure. */
 	gltfJson: ExtendedGLTFDocument | null
 	/** Binary asset data keyed by asset identifier. */

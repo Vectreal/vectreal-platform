@@ -28,7 +28,7 @@ import {
 	PLAN_LIMITS,
 	RECOMMENDED_UPGRADE
 } from '../../../constants/plan-config'
-import { getDbClient } from '../../../db/client'
+import { getDbClient, type DbExecutor } from '../../../db/client'
 import { orgEntitlementOverrides } from '../../../db/schema/billing/org-entitlement-overrides'
 import { orgLimitOverrides } from '../../../db/schema/billing/org-limit-overrides'
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
@@ -94,10 +94,9 @@ const READ_ONLY_BLOCKED_ENTITLEMENTS: ReadonlySet<EntitlementKey> = new Set([
  * Returns free/none defaults when no subscription row exists.
  */
 export async function getOrgSubscription(
-	organizationId: string
+	organizationId: string,
+	db: DbExecutor = getDbClient()
 ): Promise<OrgSubscriptionRecord> {
-	const db = getDbClient()
-
 	const rows = await db
 		.select({
 			plan: orgSubscriptions.plan,
@@ -174,11 +173,12 @@ export async function hasEntitlement(
  */
 export async function getQuotaLimit(
 	organizationId: string,
-	limitKey: LimitKey
+	limitKey: LimitKey,
+	/** The caller's transaction, if any: a second pooled connection taken
+	 * while a transaction holds one can starve the pool under load. */
+	db: DbExecutor = getDbClient()
 ): Promise<QuotaDecision> {
-	const db = getDbClient()
-
-	const { plan, billingState } = await getOrgSubscription(organizationId)
+	const { plan, billingState } = await getOrgSubscription(organizationId, db)
 	const effectivePlan = resolveEffectivePlan(plan, billingState)
 
 	// Baseline from plan limits matrix

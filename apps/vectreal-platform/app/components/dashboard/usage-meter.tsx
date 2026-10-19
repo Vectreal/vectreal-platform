@@ -1,6 +1,7 @@
 import { Progress } from '@shared/components/ui/progress'
 import { cn } from '@shared/utils'
 
+import { DASHBOARD_LOCALE } from '../../constants/limit-format'
 import { InfoTooltip } from '../info-tooltip'
 
 import type { ReactNode } from 'react'
@@ -98,7 +99,7 @@ interface UsageMeterProps {
 	 * list. They differ only in layout - the reading and its colours are shared.
 	 */
 	variant?: 'tile' | 'row'
-	/** Defaults to `toLocaleString`. Pass one for bytes, requests, and so on. */
+	/** Defaults to `toLocaleString` pinned to `DASHBOARD_LOCALE`. Pass one for bytes, requests, and so on. */
 	format?: (value: number) => string
 	className?: string
 }
@@ -147,7 +148,7 @@ export function UsageMeter({
 	monthly,
 	hint,
 	variant = 'tile',
-	format = (value) => value.toLocaleString(),
+	format = (value) => value.toLocaleString(DASHBOARD_LOCALE),
 	className
 }: UsageMeterProps) {
 	const { unlimited, percent, level } = readUsage(current, limit)
@@ -207,9 +208,7 @@ export function UsageMeter({
 					*/}
 					<span className="text-muted-foreground flex min-w-0 items-center gap-1 text-sm">
 						<span>{label}</span>
-						{monthly ? (
-							<span className="text-muted-foreground/50">/mo</span>
-						) : null}
+						{monthly ? <span>/mo</span> : null}
 						{hint ? <InfoTooltip content={hint} className="size-3.5" /> : null}
 					</span>
 					<span className="flex shrink-0 items-baseline gap-2 tabular-nums">
@@ -230,9 +229,7 @@ export function UsageMeter({
 				<span>
 					{label}
 					{monthly ? (
-						<span className="text-muted-foreground/60 ml-1 tracking-normal normal-case">
-							/mo
-						</span>
+						<span className="ml-1 tracking-normal normal-case">/mo</span>
 					) : null}
 				</span>
 				{hint ? <InfoTooltip content={hint} className="size-3.5" /> : null}

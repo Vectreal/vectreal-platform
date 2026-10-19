@@ -1,7 +1,6 @@
-import { RegistrationMark } from '@shared/components/assets/icons/registration-mark'
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
-import { ArrowRight } from 'lucide-react'
+import { ArrowDown, ArrowRight } from 'lucide-react'
 import {
 	Fragment,
 	lazy,
@@ -60,8 +59,6 @@ const SHEET_VARS = {
 		])
 	)
 } as CSSProperties
-
-const CORNERS = [styles.tl, styles.tr, styles.bl, styles.br] as const
 
 /**
  * The home page's first fold: the headline beside a drawing sheet on which the
@@ -164,25 +161,15 @@ export function HeroSheet() {
 						{HERO.lead}
 					</p>
 					<div className="mt-8 flex flex-col gap-4 sm:flex-row">
-						<Button asChild size="lg" variant="brand">
-							<Link to={PILOT_CONTACT_HREF}>
-								{HERO.primaryCta}
-								<ArrowRight aria-hidden="true" />
-							</Link>
-						</Button>
-						<OwnFileCta
+						<TryItCta
 							store={store}
 							onTry={tryOwnFile}
 							handOffRef={handOffRef}
 						/>
+						<Button asChild size="lg" variant="secondary">
+							<Link to={PILOT_CONTACT_HREF}>{HERO.secondaryCta}</Link>
+						</Button>
 					</div>
-					<ArrowLink
-						to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
-						viewTransition
-						className="text-muted-foreground hover:text-foreground mt-5 transition-colors"
-					>
-						{HERO.sampleCta}
-					</ArrowLink>
 				</div>
 
 				<figure className={cn('ds-sunken', styles.figure)}>
@@ -211,21 +198,28 @@ export function HeroSheet() {
 						/>
 					</div>
 
-					{CORNERS.map((corner) => (
-						<RegistrationMark
-							key={corner}
-							className={cn(styles.mark, corner)}
-						/>
-					))}
-
-					<figcaption ref={readoutRef} className={styles.readout}>
-						<Readout store={store} />
+					{/*
+					  Above what the file holds: a visitor with no file of their own
+					  can open this one. The backdrop stops short of the whole
+					  caption, so the ref is on it rather than on the readout alone.
+					*/}
+					<figcaption ref={readoutRef} className={styles.caption}>
+						<ArrowLink
+							to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
+							viewTransition
+							className="text-muted-foreground hover:text-foreground transition-colors"
+						>
+							{HERO.sampleCta}
+						</ArrowLink>
+						<div className={styles.readout}>
+							<Readout store={store} />
+						</div>
 					</figcaption>
 				</figure>
 
 				<a href="#product-heading" className={cn('text-eyebrow', styles.cue)}>
 					{HERO.foldCue}
-					<span className={styles.cueLine} aria-hidden="true" />
+					<ArrowDown className={styles.cueArrow} aria-hidden="true" />
 				</a>
 
 				{elements && (
@@ -246,12 +240,12 @@ export function HeroSheet() {
 }
 
 /*
-  "Try it on your own file" is a link to the publisher until the stage is live,
-  so it works without script and before the chunk arrives; once the stage can
-  take a file it opens the picker instead. When a dropped file is live, the
-  next step is the visitor's: the same door opens the publisher with it loaded.
+  "Try it out" is a link to the publisher until the stage is live, so it works
+  without script and before the chunk arrives; once the stage can take a file
+  it opens the picker instead. When a dropped file is live, the next step is
+  the visitor's: the same door opens the publisher with it loaded.
 */
-function OwnFileCta({
+function TryItCta({
 	store,
 	onTry,
 	handOffRef
@@ -264,9 +258,10 @@ function OwnFileCta({
 	const [handingOff, setHandingOff] = useState(false)
 	if (!canHandOff) {
 		return (
-			<Button asChild size="lg" variant="secondary">
+			<Button asChild size="lg">
 				<Link to="/publisher" viewTransition onClick={onTry}>
-					{HERO.secondaryCta}
+					{HERO.primaryCta}
+					<ArrowRight aria-hidden="true" />
 				</Link>
 			</Button>
 		)
@@ -280,12 +275,7 @@ function OwnFileCta({
 		}
 	}
 	return (
-		<Button
-			size="lg"
-			variant="secondary"
-			disabled={handingOff}
-			onClick={handOff}
-		>
+		<Button size="lg" disabled={handingOff} onClick={handOff}>
 			{COPY.openInPublisher}
 			<ArrowRight aria-hidden="true" />
 		</Button>

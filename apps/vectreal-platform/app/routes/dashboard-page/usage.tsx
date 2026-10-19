@@ -17,6 +17,7 @@ import {
 } from '../../components/dashboard'
 import { DetailPanelSection } from '../../components/layout-components'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
+import { DASHBOARD_LOCALE } from '../../constants/limit-format'
 import {
 	LIMIT_DISPLAY_LABELS,
 	PLAN_DISPLAY_NAMES,
@@ -109,7 +110,7 @@ const READING_DISPLAY: Partial<
 > = {
 	storage_bytes_total: {
 		hint: STORAGE_USAGE_HINT,
-		format: (value: number) => `${value.toLocaleString()} MB`
+		format: (value: number) => `${value.toLocaleString(DASHBOARD_LOCALE)} MB`
 	}
 }
 
@@ -347,7 +348,10 @@ const UsagePage = () => {
 											</span>
 										</span>
 										<span className="shrink-0 text-xs font-medium tabular-nums">
-											{Math.round(scene.storageBytes / MB).toLocaleString()} MB
+											{Math.round(scene.storageBytes / MB).toLocaleString(
+												DASHBOARD_LOCALE
+											)}{' '}
+											MB
 										</span>
 									</li>
 								))}
@@ -399,7 +403,7 @@ const UsagePage = () => {
 															? '1 scene'
 															: `${project.sceneCount} scenes`}
 														{' \u00b7 '}
-														{mb.toLocaleString()} MB
+														{mb.toLocaleString(DASHBOARD_LOCALE)} MB
 													</span>
 												</div>
 												{share === null ? null : (
@@ -443,13 +447,15 @@ const UsagePage = () => {
 											<span className="text-sm capitalize">{entry.type}</span>
 											<span className="flex shrink-0 items-baseline gap-2 tabular-nums">
 												<span className="text-sm font-medium">
-													{Math.round(entry.storageBytes / MB).toLocaleString()}{' '}
+													{Math.round(entry.storageBytes / MB).toLocaleString(
+														DASHBOARD_LOCALE
+													)}{' '}
 													MB
 												</span>
 												<span className="text-muted-foreground text-xs">
 													{entry.fileCount === 1
 														? '1 file'
-														: `${entry.fileCount.toLocaleString()} files`}
+														: `${entry.fileCount.toLocaleString(DASHBOARD_LOCALE)} files`}
 												</span>
 											</span>
 										</li>
@@ -515,9 +521,9 @@ const UsagePage = () => {
 														</Badge>
 													) : null}
 													<span className="text-xs font-medium tabular-nums">
-														{Math.round(
-															asset.storageBytes / MB
-														).toLocaleString()}{' '}
+														{Math.round(asset.storageBytes / MB).toLocaleString(
+															DASHBOARD_LOCALE
+														)}{' '}
 														MB
 													</span>
 												</span>
@@ -531,8 +537,10 @@ const UsagePage = () => {
 										Flagged at{' '}
 										{Math.round((perSceneLimit * HEAVY_SHARE_OF_SCENE) / MB)}{' '}
 										MB, a quarter of the{' '}
-										{Math.round(perSceneLimit / MB).toLocaleString()} MB a
-										single scene may hold on {PLAN_DISPLAY_NAMES[plan]}.
+										{Math.round(perSceneLimit / MB).toLocaleString(
+											DASHBOARD_LOCALE
+										)}{' '}
+										MB a single scene may hold on {PLAN_DISPLAY_NAMES[plan]}.
 									</p>
 								) : null}
 							</TabsContent>

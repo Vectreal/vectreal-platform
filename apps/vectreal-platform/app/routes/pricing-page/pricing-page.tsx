@@ -1,4 +1,5 @@
 import { Button } from '@shared/components/ui/button'
+import { Card } from '@shared/components/ui/card'
 import { useState } from 'react'
 import { data, Link, useLoaderData } from 'react-router'
 
@@ -72,18 +73,19 @@ export default function PricingPage() {
 			*/}
 			{/*
 			  The rhythm is deliberately uneven. The plan row and the enterprise
-			  band are one thought - here is what you can buy, and here is what to
-			  do if none of it fits - so they sit close. The comparison table
-			  answers a different question and gets a much wider gap before it. An
-			  even `space-y` between all three said they were three peers.
+			  card are one thought - here is what you can buy, and here is what to
+			  do if none of it fits - so they sit one grid gap apart, as a row of
+			  the same grid. The comparison table answers a different question and
+			  gets a much wider gap before it. An even `space-y` between all three
+			  said they were three peers.
 			*/}
 			<div className="container-page pb-32">
 				{/*
 				  Three self-serve plans, not four cards. Enterprise has no price,
 				  no checkout and a different next step, so rendering it as a
-				  fourth identical column made the row read as uniform and told the
-				  reader less than the band below does. The page was already
-				  carrying that band, so Enterprise had been presented twice.
+				  fourth identical column made the row read as uniform. It is a
+				  card of its own under the three instead, one bento row spanning
+				  their width: the same surface, a different shape.
 				*/}
 				<PricingCardsSection
 					period={period}
@@ -91,8 +93,8 @@ export default function PricingPage() {
 					prices={prices}
 				/>
 
-				<section aria-labelledby="enterprise-heading" className="mt-16">
-					<div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+				<section aria-labelledby="enterprise-heading" className="mt-6">
+					<Card className="flex flex-col gap-6 rounded-2xl px-6 md:flex-row md:items-end md:justify-between md:p-8">
 						<div className="max-w-xl space-y-2">
 							<h2 id="enterprise-heading" className="text-h3">
 								{PRICING_PAGE_COPY.enterpriseHeading}
@@ -109,7 +111,7 @@ export default function PricingPage() {
 								<Link to="/docs">Read the docs</Link>
 							</Button>
 						</div>
-					</div>
+					</Card>
 				</section>
 
 				<section aria-labelledby="comparison-heading" className="mt-32">

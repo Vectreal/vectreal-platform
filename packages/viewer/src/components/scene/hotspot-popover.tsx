@@ -1,21 +1,18 @@
-import { cn } from '@shared/utils'
+import { cn } from '../class-names'
 
 import type { HotspotPopoverContent } from './resolve-hotspot-popover'
 import type { HotspotPopoverPlacement } from './resolve-hotspot-popover'
 import type { CSSProperties, KeyboardEvent, RefObject } from 'react'
 
 const popoverClasses = {
-	root: 'vctrl-hotspot-popover shell-panel text-foreground pointer-events-auto absolute left-1/2 w-max max-w-[240px] px-3 py-2 text-left',
-	above: 'bottom-[var(--vctrl-hotspot-popover-gap)]',
-	below: 'top-[var(--vctrl-hotspot-popover-gap)]',
-	// `font-[600]` rather than the named scale: a named weight registers its
-	// theme variable in the published stylesheet's `:root, :host` block, which
-	// lands in a host application after hydration. See package.css.
-	title: 'text-[12px] leading-[1.35] font-[600]',
+	root: 'vctrl-hotspot-popover shell-panel vv:text-foreground vv:pointer-events-auto vv:absolute vv:left-1/2 vv:w-max vv:max-w-[240px] vv:px-3 vv:py-2 vv:text-left',
+	above: 'vv:bottom-[var(--vctrl-hotspot-popover-gap)]',
+	below: 'vv:top-[var(--vctrl-hotspot-popover-gap)]',
+	title: 'vv:text-[12px] vv:leading-[1.35] vv:font-[600]',
 	// `whitespace-pre-wrap` so the line breaks an author typed survive. The body
 	// is plain text, never markup, so this is the only formatting it carries.
-	body: 'mt-1 text-[11px] leading-[1.5] whitespace-pre-wrap opacity-90',
-	link: 'mt-2 inline-block max-w-full truncate text-[11px] leading-[1.5] underline underline-offset-2 opacity-90 hover:opacity-100'
+	body: 'vv:mt-1 vv:text-[11px] vv:leading-[1.5] vv:whitespace-pre-wrap vv:opacity-90',
+	link: 'vv:mt-2 vv:inline-block vv:max-w-full vv:truncate vv:text-[11px] vv:leading-[1.5] vv:underline vv:underline-offset-2 vv:opacity-90 vv:hover:opacity-100'
 } as const
 
 export interface HotspotPopoverProps {

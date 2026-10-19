@@ -61,6 +61,8 @@ export interface HotspotMarker {
 	preset: HotspotStylePreset
 	payloadUrl: string | null
 	linkedCameraId: string | null
+	/** The clip this marker plays once on activation, or null. */
+	linkedAnimationClipId: string | null
 	occlusionEnabled: boolean
 }
 
@@ -267,6 +269,7 @@ function toMarker(
 				: 'dot',
 		payloadUrl,
 		linkedCameraId: text(hotspot.linkedCameraId),
+		linkedAnimationClipId: text(hotspot.linkedAnimationClipId),
 		// Occlusion defaults on: a marker floating in front of the geometry it is
 		// pinned behind reads as a bug, and a scene saved before the field existed
 		// carries no value at all.

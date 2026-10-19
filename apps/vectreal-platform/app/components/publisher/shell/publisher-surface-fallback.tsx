@@ -33,7 +33,12 @@ export function PublisherSurfaceFallback({ surface, onRetry }: Props) {
 	return (
 		<div className="flex h-full w-full items-center justify-center p-6">
 			<section className="ds-raised max-w-md space-y-3 rounded-2xl p-5 text-center">
-				<h2 className="text-h4">Unable to load this scene</h2>
+				{/*
+				  `h1`: this stands in for the stage, the page's main content, and is
+				  the publisher's only other `h1` beside the empty stage it alternates
+				  with. Sidebar panels open around it head their own sections.
+				*/}
+				<h1 className="text-h4">Unable to load this scene</h1>
 				<p className="text-muted-foreground text-sm">
 					{getUploadLoadErrorMessage(error)}
 				</p>

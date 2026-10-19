@@ -26,6 +26,7 @@ interface HotspotLike {
 	linkUrl?: string | null
 	worldPosition?: readonly number[]
 	linkedCameraId?: string | null
+	linkedAnimationClipId?: string | null
 	visible?: boolean
 	internalOnly?: boolean
 	sequenceIndex?: number | null
@@ -88,6 +89,7 @@ const sameHotspot = (a: HotspotLike, b: HotspotLike): boolean =>
 	sameOptional(a.body, b.body) &&
 	sameOptional(a.linkUrl, b.linkUrl) &&
 	sameOptional(a.linkedCameraId, b.linkedCameraId) &&
+	sameOptional(a.linkedAnimationClipId, b.linkedAnimationClipId) &&
 	sameOptional(a.payloadUrl, b.payloadUrl) &&
 	samePosition(a.worldPosition, b.worldPosition)
 

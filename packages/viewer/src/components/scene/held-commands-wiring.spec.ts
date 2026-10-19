@@ -30,7 +30,9 @@ describe('viewer commands are held for the layer that runs them', () => {
 	})
 
 	it('routes animation commands through a held slot', () => {
-		expect(animation).toContain('const runtime = useHeldExecutor()')
+		expect(animation).toContain(
+			'const runtime = useHeldExecutor<AnimationLayerCommand>()'
+		)
 		expect(animation).toContain('forwardCommand: runtime.execute')
 	})
 

@@ -163,8 +163,8 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 	return (
 		<main>
 			<PageHero
-				heading="Launches and engineering notes from building Vectreal."
-				description={`${totalArticles} articles on building, optimizing and publishing 3D for the web.`}
+				heading="Launches, details and engineering notes."
+				description={`${totalArticles} articles on 3D web visualization.`}
 				actions={
 					<>
 						<Button asChild size="sm">
@@ -260,7 +260,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					</Form>
 				</section>
 
-				<section id="news-feed" className="scroll-mt-24 space-y-4">
+				<section id="news-feed" className="scroll-mt-below-nav space-y-4">
 					{articles.length === 0 ? (
 						<EmptyState
 							icon={SearchX}

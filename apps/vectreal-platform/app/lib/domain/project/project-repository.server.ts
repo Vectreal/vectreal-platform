@@ -1,6 +1,6 @@
 import { and, asc, count, eq } from 'drizzle-orm'
 
-import { getDbClient } from '../../../db/client'
+import { getDbClient, type DbExecutor } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { assets } from '../../../db/schema/project/assets'
 import { folders } from '../../../db/schema/project/folders'
@@ -14,7 +14,7 @@ const db = getDbClient()
 type DbClient = typeof db
 
 async function verifyOrganizationAccess(
-	dbClient: DbClient,
+	dbClient: DbExecutor,
 	organizationId: string,
 	userId: string
 ) {
@@ -109,19 +109,36 @@ export async function getProject(
 	return result?.project || null
 }
 
+/**
+ * Every project in one organization, by name.
+ *
+ * No membership join: the caller has already established that the actor
+ * belongs to this organization (an agent grant is resolved against a current
+ * membership), and every member role may read its projects.
+ */
+export async function listOrganizationProjects(
+	organizationId: string
+): Promise<Array<{ id: string; name: string }>> {
+	return await db
+		.select({ id: projects.id, name: projects.name })
+		.from(projects)
+		.where(eq(projects.organizationId, organizationId))
+		.orderBy(asc(projects.name))
+}
+
 export async function createProject(
 	organizationId: string,
 	name: string,
-	slug: string,
-	userId: string
+	userId: string,
+	executor: DbExecutor = db
 ): Promise<typeof projects.$inferSelect> {
-	await verifyOrganizationAccess(db, organizationId, userId)
+	await verifyOrganizationAccess(executor, organizationId, userId)
 
 	await assertWithinQuota({
 		organizationId,
 		limitKey: 'projects_total',
 		measure: async () => {
-			const [row] = await db
+			const [row] = await executor
 				.select({ total: count() })
 				.from(projects)
 				.where(eq(projects.organizationId, organizationId))
@@ -130,16 +147,13 @@ export async function createProject(
 		message: ({ limit }) =>
 			limit === 1
 				? 'Free plan limit reached: you can have one project. Delete an existing project or upgrade to create another.'
-				: `Project limit reached for your plan (${limit}). Delete a project or upgrade to create more.`
+				: `Project limit reached for your plan (${limit}). Delete a project or upgrade to create more.`,
+		executor
 	})
 
-	const [newProject] = await db
+	const [newProject] = await executor
 		.insert(projects)
-		.values({
-			organizationId,
-			name,
-			slug
-		})
+		.values({ organizationId, name })
 		.returning()
 
 	return newProject
@@ -148,7 +162,7 @@ export async function createProject(
 export async function updateProject(
 	projectId: string,
 	updates: Partial<
-		Pick<typeof projects.$inferSelect, 'name' | 'slug' | 'allowedEmbedDomains'>
+		Pick<typeof projects.$inferSelect, 'name' | 'allowedEmbedDomains'>
 	>,
 	userId: string
 ): Promise<typeof projects.$inferSelect> {

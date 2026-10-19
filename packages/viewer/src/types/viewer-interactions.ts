@@ -134,6 +134,31 @@ export interface HotspotActivatedInteractionEvent {
 	cameraId: null | string
 }
 
+/**
+ * Emitted when the scene's environment map could not be loaded.
+ *
+ * The scene stays lit, by a local room instead, so nothing on screen fails and
+ * nothing else tells a host: the lighting and backdrop the author chose are
+ * simply not what a visitor sees. Emitted each time a map is shown and fails;
+ * the viewer tries the map again the next time it is shown, and
+ * `environment_loaded` follows if it then arrives.
+ */
+export interface EnvironmentLoadFailedInteractionEvent {
+	type: 'environment_load_failed'
+	/** The map's file or files, as the scene's environment settings resolve them. */
+	files: string[]
+}
+
+/**
+ * Emitted each time the scene's environment map is shown and lights the
+ * scene, including after an earlier `environment_load_failed` for it.
+ */
+export interface EnvironmentLoadedInteractionEvent {
+	type: 'environment_loaded'
+	/** The map's file or files, as the scene's environment settings resolve them. */
+	files: string[]
+}
+
 /** Emitted when auto-rotate state changes at runtime. */
 export interface AutoRotateChangedInteractionEvent {
 	type: 'auto_rotate_changed'
@@ -162,6 +187,8 @@ export type ViewerInteractionEvent =
 	| AnimationStateChangedInteractionEvent
 	| AutoRotateChangedInteractionEvent
 	| CameraChangedInteractionEvent
+	| EnvironmentLoadFailedInteractionEvent
+	| EnvironmentLoadedInteractionEvent
 	| HotspotActivatedInteractionEvent
 	| InitialFramingCompletedInteractionEvent
 	| ModelLoadedInteractionEvent

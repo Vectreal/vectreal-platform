@@ -155,6 +155,10 @@ export const OneTimeKeyDialog: FC<{
 
 				<div className="space-y-4">
 					<div className="space-y-2">
+						{/*
+						  A paragraph, not a heading: it is the accessible name of the key
+						  box below (`aria-labelledby`), not the start of a section.
+						*/}
 						<p className="text-h4" id={labelId}>
 							{apiKey.name}
 						</p>
@@ -205,7 +209,8 @@ export const OneTimeKeyDialog: FC<{
 					</div>
 
 					<div className="bg-muted space-y-2 rounded-xl p-4">
-						<h4 className="text-h4">Next steps</h4>
+						{/* `h3`: the dialog title is the `h2` this section sits under. */}
+						<h3 className="text-h4">Next steps</h3>
 						<ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
 							{nextSteps.map((step) => (
 								<li key={step}>{step}</li>

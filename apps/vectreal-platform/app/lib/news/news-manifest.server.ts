@@ -1,12 +1,12 @@
 import { isValidElement } from 'react'
 
 import { resolveArticleCta } from './article-cta'
+import { COMMUNITY } from '../navigation/site-map'
 import { normalizeSlug } from '../utils/slug'
 
 import type { NewsArticle, NewsArticleFrontmatter } from './news-article'
 import type { ComponentType, ReactNode } from 'react'
 
-const GITHUB_REPO = 'https://github.com/Vectreal/vectreal-platform'
 const GITHUB_DEFAULT_BRANCH = 'main'
 
 interface MdxNewsModule {
@@ -111,7 +111,7 @@ function toSourcePath(moduleKey: string): string {
 }
 
 function toEditUrl(sourcePath: string): string {
-	return `${GITHUB_REPO}/blob/${GITHUB_DEFAULT_BRANCH}/${sourcePath}`
+	return `${COMMUNITY.github}/blob/${GITHUB_DEFAULT_BRANCH}/${sourcePath}`
 }
 
 function validateFrontmatter(

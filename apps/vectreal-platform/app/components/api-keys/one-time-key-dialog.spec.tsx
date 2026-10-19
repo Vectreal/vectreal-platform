@@ -71,6 +71,24 @@ describe('OneTimeKeyDialog', () => {
 		await waitFor(() => expect(writeText).toHaveBeenCalledWith(FIRST.plaintext))
 	})
 
+	it('nests its section under the dialog title without skipping a level', () => {
+		render(
+			<OneTimeKeyDialog
+				open
+				apiKey={FIRST}
+				reason="created"
+				onClose={vi.fn()}
+			/>
+		)
+
+		expect(screen.getByRole('heading', { level: 2 })).not.toBeNull()
+		expect(
+			screen.getByRole('heading', { level: 3, name: 'Next steps' })
+		).not.toBeNull()
+		// The key's name labels the key box; it is not a section heading.
+		expect(screen.queryByRole('heading', { name: FIRST.name })).toBeNull()
+	})
+
 	it('closes without asking anything', () => {
 		const confirm = vi.spyOn(window, 'confirm')
 		const onClose = vi.fn()

@@ -316,7 +316,7 @@ export const PRICING_PAGE_COPY = {
 	// which fails when an entitlement key is added without a row in the grid.
 	enterpriseHeading: 'Enterprise',
 	enterpriseDescription:
-		'Set your own limits and get a dedicated support channel. Tell us what you need and we will price it.'
+		'Custom limits and a direct line to the team. Tell us what you need and we will price it.'
 } as const
 
 // ---------------------------------------------------------------------------
@@ -326,7 +326,7 @@ export const PRICING_PAGE_COPY = {
 // ---------------------------------------------------------------------------
 
 export const DOCS_PAGE_COPY = {
-	heading: 'From your first upload to a production embed.',
+	heading: 'Docs',
 	description:
 		'Try the publisher with a sample model, with nothing to install and no account. Or build on the open-source packages underneath.',
 	publisherCta: 'Open the publisher',
@@ -352,7 +352,7 @@ export const PILOT_CONTACT_HREF = `/contact?topic=${PILOT_CONTACT_TOPIC}`
 
 /** What the contact form asks when it was opened from a pilot call to action. */
 export const PILOT_CONTACT_PROMPT =
-	'About a pilot: tell us what you sell, which 3D or CAD files you have, and where the product views should live.'
+	'About your project: tell us what you sell, which 3D or CAD files you have, and where the product views should live.'
 
 /*
   The lowest plan that lets a whole team in with roles (`ALL_PLANS` is in
@@ -369,11 +369,12 @@ const TEAM_PLAN =
 export const HOME_PAGE_COPY = {
 	hero: {
 		/** One sentence per line, set as written: the breaks are part of the headline. */
-		heading: ['Your product.', 'Every angle.', 'On your own site.'],
-		/** The problem and what Vectreal does about it, in that order: the headline implies it, this says it. */
-		lead: 'The 3D files you already have are built for engineering, far too heavy for a web page. Vectreal makes them light enough to load with any product page, on your own site.',
-		primaryCta: 'Start a pilot project',
-		secondaryCta: 'Try it on your own file',
+		heading: ['Publish your vision.'],
+		/** What Vectreal does, then who it is for. */
+		lead: 'Convert, optimize, manage and embed your 3D models. Vectreal helps creators, developers and businesses create interactive 3D experiences on their own sites, with one platform to manage them.',
+		/** Into the publisher; once the stage is live it takes the visitor's own file instead. */
+		primaryCta: 'Try it out',
+		secondaryCta: 'Get in touch',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
 		sampleCta: 'No file at hand? Open this camera in the publisher',
 		/** The fold's cue, a link to the first section below. */
@@ -407,8 +408,16 @@ export const HOME_PAGE_COPY = {
 		openInPublisher: 'Open in the publisher'
 	},
 	product: {
-		heading: 'From the file you have to your product page, in three steps',
-		lead: 'Each step is live in the product today.',
+		/**
+		  In parts: the `underline` one is drawn under, the place the three steps
+		  end. The steps themselves are the tabs below it, so the heading names
+		  where they go rather than listing them a second time.
+		*/
+		heading: [
+			'From your file to ',
+			{ underline: 'your product page' },
+			', in three steps.'
+		],
 		/** The chain's accessible name: the heading is a sentence, this names the control. */
 		stepsLabel: 'The three steps',
 		views: {
@@ -426,22 +435,24 @@ export const HOME_PAGE_COPY = {
 				link: 'Compare plans'
 			},
 			embed: {
-				label: 'Embed',
+				label: 'Publish',
 				summary: 'One snippet puts it on your page.',
 				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
 				link: 'See the embed guide',
 				/** The address bar of the product page the view shows the camera on: anyone's shop, not one we name. */
-				pageAddress: 'your-shop.com/products/camera'
+				pageAddress: 'your-store.example/products/camera'
 			}
 		}
 	},
 	mission: {
 		label: 'Why we build this',
-		/** One paragraph, in parts: the `key` ones light up in turn as it scrolls through the screen. */
+		/** One paragraph, in parts: the `key` ones light up in turn as it scrolls through the screen; the `highlight` one is in the brand throughout. */
 		statement: [
 			'Most companies that make physical products ',
 			{ key: 'already have 3D files' },
-			'. Very few can put them on their own website ',
+			'. ',
+			{ highlight: 'Very few can put them on their own website' },
+			' ',
 			{
 				key: 'without an agency, an enterprise platform or a plugin that keeps their data'
 			},
@@ -462,26 +473,20 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	pilot: {
-		heading: 'Start with a pilot project',
-		lead: 'We take your products from the files you already have to a working 3D view on your own site, and we do the setup work with you.',
+		heading: 'Start a project with us',
+		lead: 'We help you every step of the way, starting from your files and ending with an interactive 3D web experience.',
 		blocks: [
 			{
 				title: 'Who it is for',
-				body: 'Companies that sell physical products, such as furniture, machines or consumer goods, and have CAD or 3D exports they want on their own site.'
+				body: 'Companies with physical products, and web developers and designers, looking to visualize their products and ideas with interactive 3D.'
 			},
 			{
 				title: 'What we do',
-				body: 'We prepare your files, build the product viewer or configurator into your site, and host and manage it in Vectreal. Configurators are built per project.'
-			},
-			{
-				title: 'What we ask in return',
-				body: 'Permission to publish the project as a case study, and your honest feedback on what worked and what did not.'
+				body: 'We prepare your files and embed the product viewer or configurator into your site. You optimize and manage them in Vectreal.'
 			}
 		],
 		team: 'A small team in Germany. You work directly with the people who build the product.',
-		/** Over the third drawing: the case study the pilot ends in. */
-		caseStudyLabel: 'Case study',
-		cta: 'Talk to us about a pilot'
+		cta: 'Talk to us'
 	},
 	openSource: {
 		heading: 'Open source, down to the viewer',
@@ -492,27 +497,16 @@ export const HOME_PAGE_COPY = {
 		discordCta: 'Join the Discord',
 		contributingCta: 'How to contribute',
 		packagesLabel: 'Packages',
+		/** The second reader's door, kept to one line under the section. */
+		developers: {
+			lead: 'Developer or 3D artist? The packages behind the publisher are on npm.',
+			cta: 'Read the docs'
+		},
 		/** The pane under the snippet, which runs it. */
 		result: {
 			label: 'Result',
 			run: 'Run this code',
 			failed: 'It would not run in this browser. Try again'
-		}
-	},
-	closing: {
-		heading: ['Bring one product.', 'See it on your own site.'],
-		body: 'Tell us what you sell and which files you have. We will tell you honestly whether a pilot makes sense, and if it does, show you your own product in 3D.',
-		primaryCta: 'Start a pilot project',
-		secondaryCta: 'Try it on your own file',
-		/** The second reader's door, kept to one line under the first. */
-		developers: {
-			lead: 'Developer or 3D artist? The packages behind the publisher are on npm.',
-			cta: 'Read the docs'
-		},
-		/** Over the two halves of the camera: the file you bring, and what it becomes. */
-		figure: {
-			file: 'Your file',
-			page: 'Your product page'
 		}
 	}
 } as const
