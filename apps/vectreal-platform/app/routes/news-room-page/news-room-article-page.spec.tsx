@@ -13,6 +13,10 @@ const capture = vi.fn()
 // One client, as the real hook returns: a fresh object would re-run every effect.
 const client = { capture }
 vi.mock('@posthog/react', () => ({ usePostHog: () => client }))
+// jsdom has no matchMedia; the table of contents rebuilds on the nav breakpoint.
+vi.mock('@shared/components/hooks/use-mobile', () => ({
+	useIsMobile: () => false
+}))
 vi.mock('../../components/consent/consent-context', () => ({
 	useConsent: () => ({ consent: { analytics: true } })
 }))
