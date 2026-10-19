@@ -19,10 +19,15 @@ import type { Camera, Material, WebGLRenderTarget, WebGLRenderer } from 'three'
 const composerBuffer = {
 	name: 'composer input'
 } as unknown as WebGLRenderTarget
+const historyBuffer = {
+	name: 'history'
+} as unknown as WebGLRenderTarget
 
 /**
  * A renderer whose `compile` records the target bound at the time, as three
  * keys programs on it, and whose programs report ready only when told to.
+ * A program is per material and target, as in three: compiling one material
+ * for two targets leaves it two programs, and `currentProgram` the last.
  */
 const fakeRenderer = (materialCount = 1) => {
 	let bound: WebGLRenderTarget | null = null
@@ -31,11 +36,14 @@ const fakeRenderer = (materialCount = 1) => {
 		{ length: materialCount },
 		(_, index) => ({ id: index }) as unknown as Material
 	)
-	const ready = new Map(materials.map((material) => [material, false]))
+	const ready = new Set<string>()
+	const live: Array<{ isReady: () => boolean }> = []
+	const keyOf = (material: Material, target: WebGLRenderTarget | null) =>
+		`${materials.indexOf(material)}:${(target as { name?: string } | null)?.name ?? 'canvas'}`
 	const properties = new Map(
 		materials.map((material) => [
 			material,
-			{ currentProgram: { isReady: () => ready.get(material) } }
+			{} as { currentProgram?: { isReady: () => boolean } }
 		])
 	)
 	const gl = {
@@ -45,8 +53,16 @@ const fakeRenderer = (materialCount = 1) => {
 		},
 		compile: () => {
 			compiledFor.push(bound)
+			for (const material of materials) {
+				const key = keyOf(material, bound)
+				const entry = properties.get(material)
+				if (!entry) continue
+				entry.currentProgram = { isReady: () => ready.has(key) }
+				live.push(entry.currentProgram)
+			}
 			return new Set(materials)
 		},
+		info: { programs: live },
 		properties: {
 			has: (material: Material) => properties.has(material),
 			get: (material: Material) => properties.get(material)
@@ -57,8 +73,17 @@ const fakeRenderer = (materialCount = 1) => {
 		materials,
 		compiledFor,
 		bound: () => bound,
-		finish: (material: Material) => ready.set(material, true),
-		dispose: (material: Material) => properties.delete(material)
+		finish: (material: Material, target: WebGLRenderTarget | null = null) =>
+			ready.add(keyOf(material, target)),
+		dispose: (material: Material) => properties.delete(material),
+		/** Disposed and drawn again: a fresh entry, its old program deleted. */
+		reuse: (material: Material) => {
+			const old = properties.get(material)?.currentProgram
+			live.splice(live.indexOf(old!), 1)
+			properties.set(material, {
+				currentProgram: { isReady: () => false }
+			})
+		}
 	}
 }
 
@@ -83,28 +108,65 @@ describe('warmUpShaders', () => {
 
 	it('compiles for the target the scene will be drawn into', () => {
 		const renderer = fakeRenderer()
-		void warmUpShaders(renderer.gl, scene, camera, composerBuffer)
+		void warmUpShaders(renderer.gl, [{ scene, camera, target: composerBuffer }])
 		expect(renderer.compiledFor).toEqual([composerBuffer])
 	})
 
 	it('gives the target back before the programs finish', () => {
 		const renderer = fakeRenderer()
-		void warmUpShaders(renderer.gl, scene, camera, composerBuffer)
+		void warmUpShaders(renderer.gl, [{ scene, camera, target: composerBuffer }])
 		expect(renderer.bound()).toBeNull()
 	})
 
 	it('waits for every program, not the first', async () => {
 		const renderer = fakeRenderer(2)
-		const warming = warmUpShaders(renderer.gl, scene, camera, null)
+		const warming = warmUpShaders(renderer.gl, [
+			{ scene, camera, target: null }
+		])
 		renderer.finish(renderer.materials[0])
 		expect(await settles(warming)).toBe(false)
 		renderer.finish(renderer.materials[1])
 		expect(await settles(warming)).toBe(true)
 	})
 
+	it('compiles every draw, each for its own target', () => {
+		const renderer = fakeRenderer()
+		void warmUpShaders(renderer.gl, [
+			{ scene, camera, target: composerBuffer },
+			{ scene, camera, target: historyBuffer },
+			{ scene, camera, target: null }
+		])
+		expect(renderer.compiledFor).toEqual([composerBuffer, historyBuffer, null])
+		expect(renderer.bound()).toBeNull()
+	})
+
+	it("waits for each target's program of one material, not only the last", async () => {
+		const renderer = fakeRenderer()
+		const [material] = renderer.materials
+		const warming = warmUpShaders(renderer.gl, [
+			{ scene, camera, target: historyBuffer },
+			{ scene, camera, target: null }
+		])
+		renderer.finish(material, null)
+		expect(await settles(warming)).toBe(false)
+		renderer.finish(material, historyBuffer)
+		expect(await settles(warming)).toBe(true)
+	})
+
+	it('settles when a material is disposed and drawn again while it waits', async () => {
+		const renderer = fakeRenderer()
+		const warming = warmUpShaders(renderer.gl, [
+			{ scene, camera, target: null }
+		])
+		renderer.reuse(renderer.materials[0])
+		expect(await settles(warming)).toBe(true)
+	})
+
 	it('settles when a material is disposed while it waits', async () => {
 		const renderer = fakeRenderer()
-		const warming = warmUpShaders(renderer.gl, scene, camera, null)
+		const warming = warmUpShaders(renderer.gl, [
+			{ scene, camera, target: null }
+		])
 		renderer.dispose(renderer.materials[0])
 		expect(await settles(warming)).toBe(true)
 	})
@@ -121,7 +183,11 @@ describe('warmUpScene', () => {
 		} as unknown as WebGLRenderer
 
 		await expect(
-			warmUpScene(gl, new Scene(), camera, null, () => false)
+			warmUpScene(
+				gl,
+				[{ scene: new Scene(), camera, target: null }],
+				() => false
+			)
 		).resolves.toBeUndefined()
 		expect(renderer.bound()).toBeNull()
 	})

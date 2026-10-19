@@ -376,9 +376,10 @@ const ViewerComposer = ({
 		let cancelled = false
 		void warmUpScene(
 			gl,
-			scene,
-			camera,
-			current.pipeline.composer.inputBuffer,
+			[
+				{ scene, camera, target: current.pipeline.composer.inputBuffer },
+				...current.pipeline.accumulatePass.draws
+			],
 			() => cancelled
 		).then(() => {
 			if (cancelled) return
