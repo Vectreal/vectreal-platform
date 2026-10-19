@@ -1,5 +1,6 @@
 import { useAtom, useSetAtom, useStore } from 'jotai/react'
 import { useCallback } from 'react'
+import { toast } from 'sonner'
 
 import { applyHotspotPlacement } from '../../../../../lib/domain/scene/client/apply-hotspot-placement'
 import {
@@ -8,6 +9,7 @@ import {
 } from '../../../../../lib/domain/scene/scene-camera'
 import {
 	addHotspot,
+	interactionSwitchesTo,
 	relinkHotspot,
 	removeHotspot,
 	renameHotspot
@@ -20,11 +22,17 @@ import {
 	activeHotspotIdAtom,
 	cameraAtom,
 	hotspotsAtom,
+	interactionsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../../../publisher-viewer-capture-context'
+import { describeCameraRemoval } from '../camera-controls-settings/camera-removal-notice'
 
-import type { CameraProps, HotspotDefinition } from '@vctrl/core'
+import type {
+	CameraProps,
+	HotspotDefinition,
+	SceneInteractionDefinition
+} from '@vctrl/core'
 
 /**
  * `scene_hotspots.id` is a uuid primary key, so the hotspot id has to be a real
@@ -56,6 +64,33 @@ const survivingSelectedCameraId = (
 	return resolveDefaultSceneCameraId(cameras) ?? selectedCameraId
 }
 
+/**
+ * Says so when an edit retired a camera that interactions switched to.
+ *
+ * Deleting or relinking a marker can retire the camera it owned, and the
+ * interactions that switched to it go with it. That happens in another panel's
+ * data, so the author hears about it here or not at all. No hotspot is named:
+ * the only one that used the retired camera is the one being edited.
+ */
+const announceRetiredCameras = (
+	interactions: SceneInteractionDefinition[] | undefined,
+	camerasBefore: CameraProps['cameras'],
+	camerasAfter: CameraProps['cameras']
+) => {
+	const kept = new Set(camerasAfter?.map((entry) => entry.cameraId))
+	const retired = (camerasBefore ?? [])
+		.map((entry) => entry.cameraId)
+		.filter((cameraId): cameraId is string => !!cameraId && !kept.has(cameraId))
+
+	const notice = describeCameraRemoval(
+		[],
+		(interactions ?? []).filter((interaction) =>
+			retired.some((cameraId) => interactionSwitchesTo(interaction, cameraId))
+		).length
+	)
+	if (notice) toast.info(notice)
+}
+
 /** The markers in the sequence, in order, and the rest in authoring order. */
 export const sequencedFirst = (hotspots: readonly HotspotDefinition[]) => {
 	const inSequence = hotspots
@@ -85,6 +120,7 @@ export function useHotspotEdits() {
 	const store = useStore()
 	const [hotspots, setHotspots] = useAtom(hotspotsAtom)
 	const [camera, setCamera] = useAtom(cameraAtom)
+	const [interactions, setInteractions] = useAtom(interactionsAtom)
 	const setSelectedId = useSetAtom(activeHotspotIdAtom)
 	const setSelectedCameraId = useSetAtom(selectedCameraIdAtom)
 	const { requestSceneCameraSnapshot } = usePublisherViewerCapture()
@@ -134,13 +170,15 @@ export function useHotspotEdits() {
 	 */
 	const remove = useCallback(
 		(id: string): { remainingInSequence: number } | null => {
-			const next = removeHotspot({ camera, hotspots }, id)
+			const next = removeHotspot({ camera, hotspots, interactions }, id)
 			const survivingOrder = sequencedFirst(next.hotspots).inSequence.map(
 				(hotspot) => hotspot.id
 			)
 
 			setHotspots(reorderSequence(next.hotspots, survivingOrder))
 			setCamera(next.camera)
+			setInteractions(next.interactions)
+			announceRetiredCameras(interactions, camera.cameras, next.camera.cameras)
 			setSelectedCameraId((prev) =>
 				survivingSelectedCameraId(next.camera.cameras, prev)
 			)
@@ -156,8 +194,10 @@ export function useHotspotEdits() {
 		[
 			camera,
 			hotspots,
+			interactions,
 			setCamera,
 			setHotspots,
+			setInteractions,
 			setSelectedCameraId,
 			setSelectedId
 		]
@@ -175,15 +215,29 @@ export function useHotspotEdits() {
 
 	const relink = useCallback(
 		(id: string, linkedCameraId: string | undefined) => {
-			const next = relinkHotspot({ camera, hotspots }, id, linkedCameraId)
+			const next = relinkHotspot(
+				{ camera, hotspots, interactions },
+				id,
+				linkedCameraId
+			)
 
 			setHotspots(next.hotspots)
 			setCamera(next.camera)
+			setInteractions(next.interactions)
+			announceRetiredCameras(interactions, camera.cameras, next.camera.cameras)
 			setSelectedCameraId((prev) =>
 				survivingSelectedCameraId(next.camera.cameras, prev)
 			)
 		},
-		[camera, hotspots, setCamera, setHotspots, setSelectedCameraId]
+		[
+			camera,
+			hotspots,
+			interactions,
+			setCamera,
+			setHotspots,
+			setInteractions,
+			setSelectedCameraId
+		]
 	)
 
 	const setMembership = useCallback(

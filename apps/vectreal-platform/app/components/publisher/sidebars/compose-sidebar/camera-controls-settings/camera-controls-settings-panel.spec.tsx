@@ -6,7 +6,7 @@
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import CameraControlsSettingsPanel from './camera-controls-settings-panel'
 import {
@@ -16,9 +16,15 @@ import {
 import {
 	cameraAtom,
 	hotspotsAtom,
+	interactionsAtom,
 	selectedCameraIdAtom
 } from '../../../../../lib/stores/scene-settings-store'
 import { PublisherViewerCaptureProvider } from '../../../publisher-viewer-capture-context'
+
+const { toastInfo } = vi.hoisted(() => ({ toastInfo: vi.fn() }))
+vi.mock('sonner', () => ({
+	toast: { info: toastInfo, success: vi.fn(), error: vi.fn() }
+}))
 
 // The camera view's sliders measure themselves; jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {
@@ -110,6 +116,79 @@ describe('CameraControlsSettingsPanel and hotspot cameras', () => {
 
 		// Not the default camera: the one the author was on.
 		expect(store.get(selectedCameraIdAtom)).toBe('side')
+	})
+})
+
+/**
+ * Deleting a camera takes what pointed at it along: hotspot links and the
+ * interactions that switched to it. Both would otherwise fail the next save.
+ */
+describe('CameraControlsSettingsPanel deleting a camera', () => {
+	const sceneWithLinkedSide = () => {
+		const store = createStore()
+		store.set(cameraAtom, {
+			cameras: [
+				{ cameraId: 'front', name: 'Front', initial: true },
+				{ cameraId: 'side', name: 'Side' }
+			]
+		})
+		store.set(hotspotsAtom, [
+			{
+				id: 'knob',
+				name: 'Knob',
+				worldPosition: [0, 0, 0],
+				visible: true,
+				internalOnly: false,
+				stylePreset: 'dot',
+				linkedCameraId: 'side'
+			}
+		])
+		store.set(interactionsAtom, [
+			{
+				id: 'to-side',
+				trigger: { source: 'viewer', type: 'viewer_ready' },
+				actions: [{ type: 'activate_camera', cameraId: 'side' }]
+			},
+			{
+				id: 'to-front',
+				trigger: { source: 'viewer', type: 'viewer_ready' },
+				actions: [{ type: 'activate_camera', cameraId: 'front' }]
+			}
+		])
+		return store
+	}
+
+	it('drops the interactions that switched to it and says what it took', async () => {
+		toastInfo.mockClear()
+		const store = sceneWithLinkedSide()
+		renderPanel(store)
+
+		fireEvent.click(await screen.findByRole('button', { name: /Side/ }))
+		await screen.findByRole('heading', { name: 'Side' })
+		fireEvent.click(screen.getByRole('button', { name: /Delete/ }))
+
+		expect(store.get(interactionsAtom)?.map((i) => i.id)).toEqual(['to-front'])
+		expect(store.get(hotspotsAtom)[0].linkedCameraId).toBeUndefined()
+		expect(toastInfo).toHaveBeenCalledWith(
+			'Camera deleted. "Knob" no longer has a camera. 1 interaction no longer switches to it.'
+		)
+	})
+
+	it('says nothing when the camera took nothing with it', async () => {
+		toastInfo.mockClear()
+		const store = sceneWithLinkedSide()
+		store.set(hotspotsAtom, [])
+		store.set(interactionsAtom, [])
+		renderPanel(store)
+
+		fireEvent.click(await screen.findByRole('button', { name: /Side/ }))
+		await screen.findByRole('heading', { name: 'Side' })
+		fireEvent.click(screen.getByRole('button', { name: /Delete/ }))
+
+		expect(store.get(cameraAtom).cameras?.map((c) => c.cameraId)).toEqual([
+			'front'
+		])
+		expect(toastInfo).not.toHaveBeenCalled()
 	})
 })
 

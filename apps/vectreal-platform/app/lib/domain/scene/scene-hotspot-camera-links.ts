@@ -11,11 +11,59 @@
 import { applyDefaultCameraFlag, isLastSceneCamera } from './scene-camera'
 
 import type { CameraLike } from './scene-camera'
-import type { CameraProps, HotspotDefinition } from '@vctrl/core'
+import type {
+	CameraProps,
+	HotspotDefinition,
+	SceneInteractionDefinition
+} from '@vctrl/core'
 
 export interface CameraHotspotState {
 	camera: CameraProps
 	hotspots: HotspotDefinition[]
+	/**
+	 * The scene's interactions, carried by an edit that can remove a camera.
+	 *
+	 * An `activate_camera` action naming a camera that is gone fails server
+	 * validation exactly as a dangling hotspot link does, so removing a camera
+	 * has to reach them too. Absent means the caller does not edit them.
+	 */
+	interactions?: SceneInteractionDefinition[]
+}
+
+/** Whether an interaction switches to the camera. */
+export const interactionSwitchesTo = (
+	interaction: SceneInteractionDefinition,
+	cameraId: string
+): boolean =>
+	interaction.actions.some(
+		(action) =>
+			action.type === 'activate_camera' && action.cameraId === cameraId
+	)
+
+/**
+ * Drops every action that switches to the camera, and every interaction left
+ * with nothing to do: the server refuses an interaction with no actions.
+ *
+ * Returns the same array when nothing names the camera, so an edit that
+ * touches no interaction does not hand the store a new one.
+ */
+function withoutCameraActions(
+	interactions: SceneInteractionDefinition[],
+	cameraId: string
+): SceneInteractionDefinition[] {
+	if (!interactions.some((i) => interactionSwitchesTo(i, cameraId))) {
+		return interactions
+	}
+
+	return interactions.flatMap((interaction) => {
+		if (!interactionSwitchesTo(interaction, cameraId)) return [interaction]
+
+		const actions = interaction.actions.filter(
+			(action) =>
+				action.type !== 'activate_camera' || action.cameraId !== cameraId
+		)
+		return actions.length > 0 ? [{ ...interaction, actions }] : []
+	})
 }
 
 const cameraNameForHotspot = (hotspotName: string): string =>
@@ -157,6 +205,9 @@ const resolveStrandedHotspotCameraId = (
 }
 
 /**
+ * Unlinks the hotspots that pointed at it and drops the interaction actions
+ * that switched to it, so nothing left behind names a camera that is gone.
+ *
  * Refuses, with `null`, to take the only camera or the only one the scene can
  * open on: `resolveDefaultSceneCamera` falls back to the first entry of any
  * kind, so taking the last scene camera away promotes a hotspot camera to the
@@ -178,7 +229,9 @@ export function removeCamera(
 		},
 		hotspots: state.hotspots.map((h) =>
 			h.linkedCameraId === cameraId ? { ...h, linkedCameraId: undefined } : h
-		)
+		),
+		interactions:
+			state.interactions && withoutCameraActions(state.interactions, cameraId)
 	}
 }
 
@@ -205,7 +258,7 @@ export function removeHotspot(
 		hotspotId
 	)
 	const withoutHotspot = {
-		camera: state.camera,
+		...state,
 		hotspots: state.hotspots.filter((h) => h.id !== hotspotId)
 	}
 	if (!ownedCameraId) return withoutHotspot
@@ -228,7 +281,7 @@ export function relinkHotspot(
 		(h) => h.id === hotspotId
 	)?.linkedCameraId
 	const relinked = {
-		camera: state.camera,
+		...state,
 		hotspots: state.hotspots.map((h) =>
 			h.id === hotspotId ? { ...h, linkedCameraId: cameraId } : h
 		)
