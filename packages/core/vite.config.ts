@@ -40,7 +40,8 @@ export default defineConfig({
 				'model-exporter': path.resolve(
 					import.meta.dirname,
 					'src/model-exporter/index.ts'
-				)
+				),
+				node: path.resolve(import.meta.dirname, 'src/node/index.ts')
 			},
 			name: '@vctrl/core',
 			// ES modules only: Node.js 20.19, 22.12 and later `require()` them too,

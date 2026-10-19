@@ -21,20 +21,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * a frozen publisher.
  */
 
-import { WebIO } from '@gltf-transform/core'
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import { ModelExporter } from '@vctrl/core/model-exporter'
-import { compressTexturesToKtx2 } from '@vctrl/core/model-optimizer'
 import { BrowserBasisEncoder } from 'ktx2-encoder'
 
 import type {
 	PublishExportMessage,
 	PublishExportRequest
 } from './publish-export.worker.types'
-import type {
-	Ktx2CompressionReport,
-	Ktx2Encoder
-} from '@vctrl/core/model-optimizer'
+import type { Ktx2Encoder } from '@vctrl/core/model-optimizer'
 
 /** Self-hosted, and matched to the bundled glue by `public-codec-files.spec.ts`. */
 const ENCODER_WASM_URL = '/basis-encoder/basis_encoder.wasm'
@@ -114,23 +108,16 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 	if (type !== 'export') return
 
 	try {
-		const document = await new WebIO()
-			.registerExtensions(ALL_EXTENSIONS)
-			.readBinary(new Uint8Array(buffer))
-
-		let textures: Ktx2CompressionReport | undefined
-		const result = await new ModelExporter().exportDocumentGLBForPublish(
-			document,
+		const result = await new ModelExporter().exportGlbForPublish(
+			new Uint8Array(buffer),
 			{
 				draco,
 				dracoWorthApplying,
-				textures: ktx2
-					? async (clone) => {
-							textures = await compressTexturesToKtx2(clone, {
-								encode: encodeKtx2,
-								onProgress: (texturesDone, texturesTotal) =>
-									post({ type: 'progress', texturesDone, texturesTotal })
-							})
+				ktx2: ktx2
+					? {
+							encode: encodeKtx2,
+							onProgress: (texturesDone, texturesTotal) =>
+								post({ type: 'progress', texturesDone, texturesTotal })
 						}
 					: undefined
 			}
@@ -147,7 +134,7 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 				geometryCodec: result.geometryCodec,
 				geometrySizes: result.geometrySizes,
 				textureBytes: result.textureBytes,
-				textures
+				textures: result.textures
 			},
 			[output]
 		)

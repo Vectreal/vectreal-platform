@@ -156,15 +156,14 @@ const textureLabel = (texture: Texture, index: number) =>
  * never fails a publish. Meant for an export clone: the working document stays
  * in a format the optimizer and editor can read back.
  */
+export interface Ktx2CompressionOptions {
+	encode: Ktx2Encoder
+	onProgress?: (done: number, total: number) => void
+}
+
 export async function compressTexturesToKtx2(
 	document: Document,
-	{
-		encode,
-		onProgress
-	}: {
-		encode: Ktx2Encoder
-		onProgress?: (done: number, total: number) => void
-	}
+	{ encode, onProgress }: Ktx2CompressionOptions
 ): Promise<Ktx2CompressionReport> {
 	const report: Ktx2CompressionReport = { encoded: [], kept: [] }
 	const textures = document

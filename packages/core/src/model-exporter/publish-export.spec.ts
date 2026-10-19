@@ -263,3 +263,21 @@ describe('ModelExporter.exportDocumentGLBForPublish', () => {
 		await expect(optimizer.export()).resolves.toBeInstanceOf(Uint8Array)
 	})
 })
+
+describe('ModelExporter.exportGlbForPublish', () => {
+	it('publishes a GLB exactly as its document would be, when KTX2 is off', async () => {
+		const exporter = new ModelExporter()
+		const glb = await new WebIO().writeBinary(gridDocument())
+
+		const fromGlb = await exporter.exportGlbForPublish(glb, { draco: {} })
+		const fromDocument = await exporter.exportDocumentGLBForPublish(
+			await new WebIO().readBinary(glb),
+			{ draco: {} }
+		)
+
+		expect(fromGlb.geometryCodec).toBe(fromDocument.geometryCodec)
+		expect(fromGlb.geometrySizes).toEqual(fromDocument.geometrySizes)
+		expect(fromGlb.data).toEqual(fromDocument.data)
+		expect(fromGlb.textures).toBeUndefined()
+	})
+})

@@ -23,6 +23,7 @@ catalog:
   '@vitejs/plugin-react': ^6.0.5
   file-saver: ^2.0.5
   jszip: ^3.10.1
+  ktx2-encoder: 0.6.0
   meshoptimizer: ^1.2.0
   postprocessing: ^6.39.4
   # Exact, not a range: the override below applies this to every peer, and a
