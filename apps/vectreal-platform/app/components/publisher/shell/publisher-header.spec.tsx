@@ -7,7 +7,7 @@
  * model is in, so they arrive with it; the way home is there from the start,
  * because the publisher carries no site nav.
  */
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -60,6 +60,44 @@ describe('PublisherHeader', () => {
 		).toBe('/')
 		expect(screen.queryByTestId('scene-name')).toBeNull()
 		expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
+	})
+
+	/*
+	  Signed in, the way out is the dashboard, as the dashboard's own logo is:
+	  someone with an account expects to land on their work, not the landing
+	  page. The label names the destination, since the mark goes two places.
+	*/
+	it('leads a signed-in visitor to the dashboard', () => {
+		renderHeader(true, { id: 'user-1' } as User)
+
+		expect(
+			screen.getByRole('link', { name: 'Dashboard' }).getAttribute('href')
+		).toBe('/dashboard')
+		expect(screen.queryByRole('link', { name: 'Vectreal home' })).toBeNull()
+	})
+
+	/*
+	  The full wordmark while the stage is empty; once a scene's controls take
+	  the row its letters fade off the mark beneath them. The destination does
+	  not change with it.
+	*/
+	it('fades the wordmark to the mark once a scene is open, still leading to the dashboard', () => {
+		// The mark is the link's first svg, the wordmark over it the second.
+		const wordmarkHidden = () =>
+			screen
+				.getByRole('link', { name: 'Dashboard' })
+				.querySelectorAll('svg')[1]
+				?.parentElement?.classList.contains('opacity-0')
+
+		renderHeader(false, { id: 'user-1' } as User)
+		expect(wordmarkHidden()).toBe(false)
+		cleanup()
+
+		renderHeader(true, { id: 'user-1' } as User)
+		expect(wordmarkHidden()).toBe(true)
+		expect(
+			screen.getByRole('link', { name: 'Dashboard' }).getAttribute('href')
+		).toBe('/dashboard')
 	})
 
 	/*
