@@ -18,6 +18,9 @@ import {
 import type { SceneInteractionDefinition } from '@vctrl/core'
 import type { ReactNode } from 'react'
 
+const { toastInfo } = vi.hoisted(() => ({ toastInfo: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { info: toastInfo } }))
+
 vi.mock('../../../publisher-viewer-capture-context', () => ({
 	usePublisherViewerCapture: () => ({
 		requestSceneCameraSnapshot: () => Promise.resolve(null)
@@ -36,6 +39,7 @@ const switchTo = (
 })
 
 function arrange() {
+	toastInfo.mockClear()
 	const store = createStore()
 	store.set(cameraAtom, {
 		cameras: [
@@ -84,6 +88,22 @@ describe('useHotspotEdits and interactions', () => {
 		})
 
 		expect(interactionIds(store)).toEqual(['to-front'])
+		expect(toastInfo).toHaveBeenCalledWith(
+			'Camera deleted. 1 interaction no longer switches to it.'
+		)
+	})
+
+	it('says nothing when the retired camera had no interactions', () => {
+		const { store, edits } = arrange()
+		act(() => {
+			store.set(interactionsAtom, [switchTo('to-front', 'front')])
+		})
+
+		act(() => {
+			edits().remove(HOTSPOT_ID)
+		})
+
+		expect(toastInfo).not.toHaveBeenCalled()
 	})
 
 	it('drops the interactions that switched to a camera a relink stranded', () => {
@@ -97,5 +117,8 @@ describe('useHotspotEdits and interactions', () => {
 			'front'
 		])
 		expect(interactionIds(store)).toEqual(['to-front'])
+		expect(toastInfo).toHaveBeenCalledWith(
+			'Camera deleted. 1 interaction no longer switches to it.'
+		)
 	})
 })

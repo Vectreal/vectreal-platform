@@ -173,6 +173,23 @@ describe('CameraControlsSettingsPanel deleting a camera', () => {
 			'Camera deleted. "Knob" no longer has a camera. 1 interaction no longer switches to it.'
 		)
 	})
+
+	it('says nothing when the camera took nothing with it', async () => {
+		toastInfo.mockClear()
+		const store = sceneWithLinkedSide()
+		store.set(hotspotsAtom, [])
+		store.set(interactionsAtom, [])
+		renderPanel(store)
+
+		fireEvent.click(await screen.findByRole('button', { name: /Side/ }))
+		await screen.findByRole('heading', { name: 'Side' })
+		fireEvent.click(screen.getByRole('button', { name: /Delete/ }))
+
+		expect(store.get(cameraAtom).cameras?.map((c) => c.cameraId)).toEqual([
+			'front'
+		])
+		expect(toastInfo).not.toHaveBeenCalled()
+	})
 })
 
 /**
