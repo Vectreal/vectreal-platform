@@ -19,10 +19,8 @@ describe('the docs sidebar', () => {
 			</MemoryRouter>
 		)
 
-		const browser = within(
-			screen.getByRole('region', { name: 'In the browser' })
-		)
-		const code = within(screen.getByRole('region', { name: 'In your code' }))
+		const browser = within(screen.getByRole('region', { name: 'For artists' }))
+		const code = within(screen.getByRole('region', { name: 'For developers' }))
 
 		expect(browser.getByRole('link', { name: 'Your First Model' })).toBeTruthy()
 		expect(browser.queryByRole('link', { name: 'Installation' })).toBeNull()

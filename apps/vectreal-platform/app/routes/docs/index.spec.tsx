@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The docs index: the publisher first, then two doors.
+ * The docs index: the publisher first, then a bento per path.
  *
  * Its primary action used to be "Start here", which opened repo setup, so a
  * reader who only wanted to try the publisher was sent to clone the repo.
@@ -33,13 +33,13 @@ describe('the docs index', () => {
 	it('opens the publisher with the rocket loading from the browser door', () => {
 		renderPage()
 
-		const link = door('In the browser').getByRole('link', {
+		const link = door('For artists').getByRole('link', {
 			// The row's size line is part of the name: what opening it costs.
 			name: /^Open the rocket sample/
 		})
 		expect(link.getAttribute('href')).toBe('/publisher?sample=rocket')
 		expect(
-			door('In your code').queryByRole('link', { name: /rocket/ })
+			door('For developers').queryByRole('link', { name: /rocket/ })
 		).toBeNull()
 	})
 

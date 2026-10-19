@@ -1,5 +1,5 @@
 import { Button } from '@shared/components/ui/button'
-import { formatFileSize } from '@shared/utils'
+import { cn, formatFileSize } from '@shared/utils'
 import { ArrowRight } from 'lucide-react'
 import { Link, type MetaArgs } from 'react-router'
 
@@ -48,8 +48,11 @@ const quickLinkClass =
 	'text-body-sm decoration-muted-foreground hover:decoration-orange underline underline-offset-4 transition-colors duration-150'
 
 /**
- * One of the manifest's two audiences, as a column of page titles grouped by
- * category in the sidebar's order.
+ * One of the manifest's two paths, as a bento: the path's heading and what it
+ * needs, then a tile per category holding that category's page titles in the
+ * sidebar's order. The first category is the way in, so on a wide screen it
+ * takes a third and the rest share the remaining two, which gives each path
+ * its own shape rather than a row of equal cards.
  *
  * Titles only. Each page's description, the sample tiles, the embed snippet and
  * a live viewer all used to sit on this page too, and together they buried the
@@ -58,15 +61,18 @@ const quickLinkClass =
  * The links state their color: `globals.css` mutes `section li` in
  * `@layer base`, so a link in a list in a section would inherit muted.
  */
-function DocsDoor({
+function DocsPath({
 	audience,
 	start
 }: {
 	audience: (typeof DOC_AUDIENCES)[number]
-	/** The door's quickest way in, under its description. */
+	/** The path's quickest way in, inside its first tile. */
 	start?: React.ReactNode
 }) {
-	const headingId = `docs-door-${audience.id}`
+	const headingId = `docs-path-${audience.id}`
+	const categories = audience.categories.filter(
+		(category) => pagesIn(category).length > 0
+	)
 	return (
 		<section aria-labelledby={headingId}>
 			<h2 id={headingId} className="text-h3">
@@ -75,30 +81,36 @@ function DocsDoor({
 			<p className="text-muted-foreground text-body-sm mt-1">
 				{audience.description}
 			</p>
-			{start}
 
-			<div className="mt-10 space-y-8">
-				{audience.categories
-					.filter((category) => pagesIn(category).length > 0)
-					.map((category) => (
-						<div key={category}>
-							<p className="text-muted-foreground text-eyebrow mb-3">
-								{DOC_CATEGORY_LABELS[category]}
-							</p>
-							<ul className="space-y-2">
-								{pagesIn(category).map((page) => (
-									<li key={page.slug}>
-										<Link
-											to={`/docs/${page.slug}`}
-											className="text-body text-foreground decoration-orange underline-offset-4 hover:underline"
-										>
-											{page.title}
-										</Link>
-									</li>
-								))}
-							</ul>
-						</div>
-					))}
+			<div
+				className={cn(
+					'mt-8 grid gap-4',
+					categories.length > 2 ? 'md:grid-cols-3' : 'md:grid-cols-[1fr_2fr]'
+				)}
+			>
+				{categories.map((category, i) => (
+					<div
+						key={category}
+						className="ds-raised flex flex-col gap-4 rounded-2xl p-6"
+					>
+						<p className="text-muted-foreground text-eyebrow">
+							{DOC_CATEGORY_LABELS[category]}
+						</p>
+						<ul className="space-y-2">
+							{pagesIn(category).map((page) => (
+								<li key={page.slug}>
+									<Link
+										to={`/docs/${page.slug}`}
+										className="text-body text-foreground decoration-orange underline-offset-4 hover:underline"
+									>
+										{page.title}
+									</Link>
+								</li>
+							))}
+						</ul>
+						{i === 0 && start}
+					</div>
+				))}
 			</div>
 		</section>
 	)
@@ -138,13 +150,13 @@ export default function DocsIndexPage() {
 
 			<div className="container-page pb-32">
 				{/*
-				  Two doors, from the manifest's audiences, side by side: the reader
-				  picks by what they are doing. The page used to offer one "Start
-				  here" path that began with contributor setup.
+				  Two paths, from the manifest's audiences, one under the other: the
+				  reader picks by what they are doing. The page used to offer one
+				  "Start here" path that began with contributor setup.
 				*/}
-				<div className="grid gap-16 md:grid-cols-2">
+				<div className="flex flex-col gap-24">
 					{DOC_AUDIENCES.map((audience) => (
-						<DocsDoor
+						<DocsPath
 							key={audience.id}
 							audience={audience}
 							start={
@@ -155,7 +167,7 @@ export default function DocsIndexPage() {
 										previewUrl={rocket.previewUrl}
 										title={DOCS_PAGE_COPY.rocketSampleCta}
 										meta={`${formatFileSize(rocket.bytes)} · ${rocket.hint}`}
-										className="mt-4"
+										className="mt-auto"
 										viewTransition
 									/>
 								)
