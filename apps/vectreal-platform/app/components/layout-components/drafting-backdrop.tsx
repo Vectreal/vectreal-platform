@@ -3,17 +3,20 @@ import { useEffect, useRef } from 'react'
 
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 
-import type { DraftingView } from './drafting-backdrop-engine'
+import type { DraftingBackdropOptions } from './drafting-backdrop-engine'
 
-/** A phone's narrow canvas puts the horizon low and the lines' meeting point in the middle, under the copy. */
+/** Below this width the lines meet in the middle, under the copy. */
 const PHONE_PX = 760
-const PHONE_VIEW: DraftingView = { horizon: 0.68, focusX: 0.5 }
 
 interface DraftingBackdropProps {
 	/** Where the lines meet on a wider canvas, as a fraction of its width: away from the copy. */
 	focusX: number
 	/** Where the horizon sits on a wider canvas, as a fraction of its height. */
 	horizon?: number
+	/** Where it sits on a phone: low by default, so a page head's copy stands in the sky above it. */
+	phoneHorizon?: number
+	/** See `DraftingBackdropOptions.travel`. `page` fixes the floor to the viewport, under the whole page. */
+	travel?: DraftingBackdropOptions['travel']
 	/** Positions the box. Defaults to filling its nearest positioned ancestor, behind it. */
 	className?: string
 }
@@ -21,10 +24,11 @@ interface DraftingBackdropProps {
 /**
  * The drafting floor behind a section: the site's backdrop.
  *
- * The section it sits in is the floor's host: pointing anywhere in it leans on
- * the floor, and text marked `data-keep-clear` inside it thins the lines
- * behind it. The parent must be a stacking context (`isolate`), so the floor
- * sits behind its content and above its surface.
+ * The element it sits in is the floor's host: pointing anywhere in it leans on
+ * the floor, its headings and paragraphs (and anything marked
+ * `data-keep-clear`) thin the lines behind them, and an object marked `data-floor-light` stands in a light on it. The
+ * parent must be a stacking context (`isolate`), so the floor sits behind its
+ * content and above its surface.
  *
  * Only the canvas is in the server's HTML. The engine is imported once the
  * page is running, so no route's first load carries it, and the canvas fades
@@ -33,6 +37,8 @@ interface DraftingBackdropProps {
 export function DraftingBackdrop({
 	focusX,
 	horizon = 0.5,
+	phoneHorizon = 0.68,
+	travel = 'box',
 	className
 }: DraftingBackdropProps) {
 	const ref = useRef<HTMLCanvasElement>(null)
@@ -43,19 +49,26 @@ export function DraftingBackdrop({
 		if (!canvas || !host) return
 		let dispose: (() => void) | undefined
 		let cancelled = false
-		import('./drafting-backdrop-engine').then(({ createDraftingBackdrop }) => {
-			if (cancelled) return
-			dispose = createDraftingBackdrop(canvas, {
-				reducedMotion: prefersReducedMotion(),
-				host,
-				view: (box) => (box.width < PHONE_PX ? PHONE_VIEW : { horizon, focusX })
-			})?.dispose
-		})
+		import('./drafting-backdrop-engine')
+			.then(({ createDraftingBackdrop }) => {
+				if (cancelled) return
+				dispose = createDraftingBackdrop(canvas, {
+					reducedMotion: prefersReducedMotion(),
+					host,
+					travel,
+					view: (box) =>
+						box.width < PHONE_PX
+							? { horizon: phoneHorizon, focusX: 0.5 }
+							: { horizon, focusX }
+				})?.dispose
+			})
+			// A chunk that will not load (a deploy replaced it) leaves the page without its floor, which it can do without.
+			.catch(() => {})
 		return () => {
 			cancelled = true
 			dispose?.()
 		}
-	}, [focusX, horizon])
+	}, [focusX, horizon, phoneHorizon, travel])
 
 	/*
 	  A canvas keeps its intrinsic height under top and bottom, so a box sizes it

@@ -1,5 +1,3 @@
-import { cn } from '@shared/utils'
-
 import { Route } from './+types/home-page'
 import { FormatStrip } from '../../components/home/format-strip'
 import { HeroSheet } from '../../components/home/hero/hero-sheet'
@@ -29,14 +27,20 @@ export function meta(_: Route.MetaArgs) {
   where 128 read as cramped between sections this size.
 */
 /*
-  The floor spans the window, not the measure, its lines meeting on the side
-  away from each section's copy. `main` clips the overflow. The mission statement is
-  left plain, the one quiet beat between the product and the offer.
+  One floor under the whole page, fixed to the viewport: scrolling carries it
+  toward the reader, so the sections read as one ground they pass over rather
+  than a backdrop pasted behind each. The hero's object stands in its light.
+  `isolate` keeps the floor above the page's surface and behind its content.
 */
-const BLEED = 'left-1/2 w-screen -translate-x-1/2'
-
 const HomePage = () => (
-	<main className="overflow-x-clip">
+	<main className="relative isolate overflow-x-clip">
+		<DraftingBackdrop
+			travel="page"
+			focusX={0.66}
+			horizon={0.32}
+			phoneHorizon={0.42}
+			className="fixed"
+		/>
 		<HeroSheet />
 
 		<section aria-labelledby="product-heading" className="container-page mt-32">
@@ -53,9 +57,8 @@ const HomePage = () => (
 
 		<section
 			aria-labelledby="pilot-heading"
-			className="container-page relative isolate mt-32 lg:mt-48"
+			className="container-page mt-32 lg:mt-48"
 		>
-			<DraftingBackdrop focusX={0.72} className={cn(BLEED, '-inset-y-16')} />
 			<DitherReveal>
 				<PilotOffer />
 			</DitherReveal>
@@ -63,9 +66,8 @@ const HomePage = () => (
 
 		<section
 			aria-labelledby="open-source-heading"
-			className="container-page relative isolate mt-32 lg:mt-48"
+			className="container-page mt-32 lg:mt-48"
 		>
-			<DraftingBackdrop focusX={0.28} className={cn(BLEED, '-inset-y-16')} />
 			<DitherReveal>
 				<OpenSourceSection />
 			</DitherReveal>

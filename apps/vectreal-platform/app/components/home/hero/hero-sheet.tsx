@@ -29,7 +29,6 @@ import {
 	HOME_PAGE_COPY,
 	PILOT_CONTACT_HREF
 } from '../../../constants/product-copy'
-import { ditherFadeDownMask } from '../../../lib/dither/dither'
 import {
 	HERO_SOURCE_SAMPLE_ID,
 	publisherSampleHref
@@ -45,10 +44,9 @@ const COPY = HOME_PAGE_COPY.stage
 
 /*
   Set on the section by the server, so the first paint already has the poster in
-  its frame and the sheet's dissolving edge; nothing here waits on script.
+  its frame; nothing here waits on script.
 */
 const SHEET_VARS = {
-	'--sheet-edge': ditherFadeDownMask(24),
 	...Object.fromEntries(
 		Object.entries(HERO_POSTERS).flatMap(([framing, { url, ink }]) => [
 			[`--poster-${framing}`, `url("${url}")`],
@@ -84,8 +82,6 @@ export function HeroSheet() {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const dimsRef = useRef<SVGSVGElement>(null)
 	const scaleRef = useRef<HTMLSpanElement>(null)
-	const readoutRef = useRef<HTMLElement>(null)
-	const backdropRef = useRef<HTMLCanvasElement>(null)
 	const stageWanted = useMountWhenVisibleAndIdle(stageRef)
 
 	useEffect(() => {
@@ -97,19 +93,7 @@ export function HeroSheet() {
 		const canvas = canvasRef.current
 		const dims = dimsRef.current
 		const scale = scaleRef.current
-		const readout = readoutRef.current
-		const backdrop = backdropRef.current
-		if (
-			!sheet ||
-			!copy ||
-			!stage ||
-			!frame ||
-			!canvas ||
-			!dims ||
-			!scale ||
-			!readout ||
-			!backdrop
-		)
+		if (!sheet || !copy || !stage || !frame || !canvas || !dims || !scale)
 			return
 		setElements({
 			sheet,
@@ -118,9 +102,7 @@ export function HeroSheet() {
 			frame,
 			canvas,
 			dims,
-			scale,
-			readout,
-			backdrop
+			scale
 		})
 	}, [stageWanted])
 
@@ -136,18 +118,9 @@ export function HeroSheet() {
 
 	return (
 		<section aria-labelledby="home-heading" className={styles.outer}>
-			<div
-				ref={sheetRef}
-				className={cn('ds-tint-sunken', styles.sheet)}
-				style={SHEET_VARS}
-			>
-				<canvas
-					ref={backdropRef}
-					className={styles.backdrop}
-					aria-hidden="true"
-				/>
-
-				<div ref={copyRef} className={styles.copy}>
+			<div ref={sheetRef} className={styles.sheet} style={SHEET_VARS}>
+				{/* No surface of its own: the page's floor runs under the copy and the object alike. */}
+				<div ref={copyRef} data-keep-clear className={styles.copy}>
 					<h1 id="home-heading" className="text-display">
 						{/* The space keeps the lines apart in the text itself, for copy and search. */}
 						{HERO.heading.map((line, i) => (
@@ -175,7 +148,7 @@ export function HeroSheet() {
 				<figure className={cn('ds-sunken', styles.figure)}>
 					<div ref={stageRef} className={styles.stage} data-phase="poster">
 						<div className={styles.art}>
-							<div ref={frameRef} className={styles.frame}>
+							<div ref={frameRef} data-floor-light className={styles.frame}>
 								<div className={styles.pencil} />
 								<div className={styles.poster} />
 								<div className={styles.front} />
@@ -200,10 +173,10 @@ export function HeroSheet() {
 
 					{/*
 					  Above what the file holds: a visitor with no file of their own
-					  can open this one. The backdrop stops short of the whole
-					  caption, so the ref is on it rather than on the readout alone.
+					  can open this one. The floor thins out behind the whole
+					  caption, not the readout alone.
 					*/}
-					<figcaption ref={readoutRef} className={styles.caption}>
+					<figcaption data-keep-clear className={styles.caption}>
 						<ArrowLink
 							to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
 							viewTransition
