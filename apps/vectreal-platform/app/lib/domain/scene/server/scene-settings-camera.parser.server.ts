@@ -25,14 +25,14 @@ export function parseCameraSettings(
 		return ApiResponse.badRequest('camera.cameras must be a non-empty array')
 	}
 
-	// Validate scene-global transition if provided.
+	// Validate scene-global transition if provided. It is stored as sent.
 	if (camera.sceneTransition !== undefined) {
-		const normalizedTransition = normalizeTransitionConfig(
+		const transitionRefusal = validateTransitionConfig(
 			camera.sceneTransition,
 			'camera.sceneTransition'
 		)
-		if (normalizedTransition instanceof Response) {
-			return normalizedTransition
+		if (transitionRefusal) {
+			return transitionRefusal
 		}
 	}
 
@@ -93,12 +93,21 @@ export function parseCameraSettings(
 	return normalizeCameraSettings(normalizedWithDefault)
 }
 
-function normalizeTransitionConfig(
+/**
+ * Refuses a transition the viewer cannot play, and accepts anything else as
+ * sent.
+ *
+ * A validator, not a normalizer. It used to build a copy with object-avoidance
+ * defaults filled in, and its caller only ever checked that copy for a refusal
+ * and stored the original. The viewer owns those defaults where it plays the
+ * transition, so filling them in here would only have created a second owner.
+ */
+function validateTransitionConfig(
 	transition: CameraTransitionConfig | undefined,
 	path: string
-): CameraTransitionConfig | Response | undefined {
+): Response | null {
 	if (!transition) {
-		return undefined
+		return null
 	}
 
 	if (!isRecord(transition)) {
@@ -190,18 +199,7 @@ function normalizeTransitionConfig(
 				`${path}.objectAvoidance.tension must be a number`
 			)
 		}
-
-		return {
-			...transition,
-			type,
-			objectAvoidance: {
-				clearance: typeof clearance === 'number' ? clearance : 2,
-				arcHeight: typeof arcHeight === 'number' ? arcHeight : 2,
-				samples: typeof samples === 'number' ? samples : 24,
-				tension: typeof tension === 'number' ? tension : 0.5
-			}
-		}
 	}
 
-	return transition
+	return null
 }

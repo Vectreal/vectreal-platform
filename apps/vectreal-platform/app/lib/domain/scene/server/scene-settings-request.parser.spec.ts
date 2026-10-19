@@ -7,9 +7,8 @@ import type { SceneSettingsRequest } from '../../../../types/api'
  * each top-level field is read.
  *
  * Written to pin behavior before the parser was split into modules, so these
- * assert what the parser does, including the parts that look odd (a scene
- * transition is validated but stored as sent; a non-string `gltfJson` is
- * ignored). Change an expectation only on purpose.
+ * assert what the parser does, including the parts that look odd (a
+ * non-string `gltfJson` is ignored). Change an expectation only on purpose.
  */
 
 const SCENE = '11111111-1111-4111-8111-111111111111'
@@ -171,6 +170,9 @@ describe('the scene transition', () => {
 	const transition = (sceneTransition: unknown) =>
 		parse({ settings: { camera: { ...CAMERA, sceneTransition } } })
 
+	// Validated, never rewritten: the viewer fills object-avoidance defaults
+	// where it plays the transition, so the parser storing them would be a
+	// second owner of the same numbers.
 	it('is validated but stored exactly as sent', () => {
 		const sent = { type: 'object_avoidance', objectAvoidance: {} }
 		expect(parsed(transition(sent)).settings?.camera?.sceneTransition).toEqual(
