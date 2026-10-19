@@ -19,7 +19,8 @@ import {
 import {
 	interactionSwitchesTo,
 	removeCamera,
-	repointHotspotLinks
+	repointHotspotLinks,
+	repointInteractions
 } from '../../../../../lib/domain/scene/scene-hotspot-camera-links'
 import {
 	cameraAtom,
@@ -256,15 +257,18 @@ export function useSceneCameras() {
 			if (newId !== oldId) {
 				setSelectedCameraId(newId)
 				setHotspots(repointHotspotLinks(hotspots, oldId, newId))
+				setInteractions(repointInteractions(interactions, oldId, newId))
 			}
 		},
 		[
 			cameras,
 			hotspots,
+			interactions,
 			normalizedCamera,
 			selectedCamera?.cameraId,
 			setCamera,
 			setHotspots,
+			setInteractions,
 			setSelectedCameraId
 		]
 	)
