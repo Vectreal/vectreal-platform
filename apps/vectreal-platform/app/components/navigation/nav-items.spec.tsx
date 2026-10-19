@@ -20,7 +20,7 @@ describe('isNavItemActive', () => {
 	})
 
 	it('never takes a link with a query for the page it leads into', () => {
-		// The pilot opens Contact with a topic; plain Contact must not light the Product panel.
+		// A link that opens Contact with a topic is not plain Contact.
 		expect(isNavItemActive(item('/contact?topic=pilot'), '/contact')).toBe(
 			false
 		)

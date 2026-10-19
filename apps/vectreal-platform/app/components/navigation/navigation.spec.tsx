@@ -137,9 +137,9 @@ describe('the site nav', () => {
 		) as HTMLElement
 		expect(
 			within(panel)
-				.getByRole('link', { name: /Start a project/ })
+				.getByRole('link', { name: /Free 3D model/ })
 				.getAttribute('href')
-		).toBe('/contact?topic=pilot')
+		).toBe('/free-model')
 
 		within(panel).getAllByRole('link')[0].focus()
 		fireEvent.keyDown(document, { key: 'Escape' })
