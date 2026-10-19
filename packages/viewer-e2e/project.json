@@ -3,7 +3,12 @@
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"projectType": "application",
 	"sourceRoot": "packages/viewer-e2e/src",
-	"implicitDependencies": ["vctrl/viewer", "vctrl/core", "vctrl/hooks"],
+	"implicitDependencies": [
+		"vctrl/viewer",
+		"vctrl/core",
+		"vctrl/hooks",
+		"vctrl/embed"
+	],
 	"tags": ["scope:e2e"],
 	"targets": {
 		"e2e": {

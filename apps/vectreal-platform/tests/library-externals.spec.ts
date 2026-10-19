@@ -8,14 +8,24 @@
  * nothing externalized. That half is checked here, from the configs, without a
  * build.
  */
-import { existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	rmSync,
+	writeFileSync
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 
-import { describe, expect, it } from 'vitest'
+import { afterAll, describe, expect, it } from 'vitest'
 
 import {
+	declarationImports,
 	installedPackageName,
-	isDeclaredDependency
+	isDeclaredDependency,
+	unpublishableImport
 } from '../../../vite.library.mts'
 
 const PACKAGES = join(import.meta.dirname, '..', '..', '..', 'packages')
@@ -74,6 +84,112 @@ describe('installedPackageName', () => {
 	)
 })
 
+describe('declarationImports', () => {
+	it('reads augmentations, require imports and path references', () => {
+		const source = [
+			"declare module '@vctrl/core' {}",
+			"import three = require('three');",
+			'/// <reference path="./globals.d.ts" />'
+		].join('\n')
+
+		expect(declarationImports(source)).toEqual([
+			'@vctrl/core',
+			'three',
+			'./globals.d.ts'
+		])
+	})
+
+	it('reads an import after a string that looks like a comment', () => {
+		const source = [
+			'export declare const ACCEPT = "image/*";',
+			'url: "https://example.com"; model: import("./model").Model;',
+			"/** Ends here. */ export * from './after';"
+		].join('\n')
+
+		expect(declarationImports(source)).toEqual(['./model', './after'])
+	})
+
+	it('ignores comments and string-literal types', () => {
+		const source = [
+			"direction: 'from' | 'to';",
+			"/** Extends ThreeBoundsProps from '@react-three/drei'. */",
+			"// import { x } from 'undeclared'"
+		].join('\n')
+
+		expect(declarationImports(source)).toEqual([])
+	})
+
+	it('reads static, dynamic, side-effect and type-reference imports', () => {
+		const source = [
+			"import { Object3D } from 'three';",
+			"export * from './types';",
+			'export type { Props } from "./props";',
+			"onLoad: (model: import('@vctrl/core').Model) => void;",
+			"import './side-effect';",
+			'/// <reference types="vite/client" />'
+		].join('\n')
+
+		expect(declarationImports(source)).toEqual([
+			'three',
+			'./types',
+			'./props',
+			'@vctrl/core',
+			'./side-effect',
+			'vite/client'
+		])
+	})
+})
+
+describe('unpublishableImport', () => {
+	// A published directory as a build leaves it, with a subpath's script
+	// beside its folder of types, which is how core shipped.
+	const outDir = mkdtempSync(join(tmpdir(), 'published-declarations-'))
+	const write = (path: string) => {
+		mkdirSync(dirname(join(outDir, path)), { recursive: true })
+		writeFileSync(join(outDir, path), '')
+	}
+	write('components/scene/resolve-hotspot-markers.d.ts')
+	write('components/scene/model-frame.d.ts')
+	write('types/viewer-types.d.ts')
+	write('model-loader/index.d.ts')
+	write('model-formats/index.d.ts')
+	write('model-formats.js')
+	afterAll(() => rmSync(outDir, { recursive: true, force: true }))
+
+	const file = join(outDir, 'components/scene/resolve-hotspot-markers.d.ts')
+	const declared = ['three', '@vctrl/core']
+
+	it.each([
+		'./model-frame',
+		'./model-frame.js',
+		'../../types/viewer-types',
+		'../../model-loader',
+		'./model-frame.d.ts',
+		'three',
+		'@vctrl/core'
+	])('accepts %s', (specifier) => {
+		expect(
+			unpublishableImport(specifier, file, outDir, declared)
+		).toBeUndefined()
+	})
+
+	it.each([
+		// What the viewer published while tsconfig paths became relative paths.
+		['../../../../core/src/index.ts', 'leaves the published directory'],
+		['../../../sibling', 'leaves the published directory'],
+		// A source file the declaration build never emitted.
+		['./model-context', 'reaches no declaration file'],
+		// The script is found before the folder, and has no types.
+		['../../model-formats', 'reaches no declaration file'],
+		['@shared/utils', 'is not declared'],
+		['@vctrl/viewer', 'is not declared']
+	])('rejects %s', (specifier, reason) => {
+		expect(unpublishableImport(specifier, file, outDir, declared)).toContain(
+			reason
+		)
+	})
+})
+
 const libraryConfigs = readdirSync(PACKAGES, { withFileTypes: true })
 	.filter((entry) => entry.isDirectory())
 	.map((entry) => join(PACKAGES, entry.name, 'vite.config.ts'))
@@ -93,4 +209,16 @@ describe('library builds', () => {
 			.map((plugin: { name?: string } | null) => plugin?.name)
 		expect(names).toContain('vctrl-manifest-externals')
 	})
+
+	it.each(libraryConfigs)(
+		'%s emits its types through publishedDeclarations',
+		async (file) => {
+			const config = (await import(file)).default
+
+			const names = [config.plugins ?? []]
+				.flat(Infinity)
+				.map((plugin: { name?: string } | null) => plugin?.name)
+			expect(names).toContain('vctrl-published-declarations')
+		}
+	)
 })

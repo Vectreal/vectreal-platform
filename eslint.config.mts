@@ -481,8 +481,9 @@ export default defineConfig(tseslint.configs.recommended, [
 		}
 	},
 	{
-		// @vctrl/embed imports only types from @vctrl/viewer, and vite-plugin-dts
-		// inlines them into the emitted declarations. A consumer of the SDK needs
+		// @vctrl/embed imports only types from @vctrl/viewer, and its build ships
+		// the file declaring them inside the package (packages/embed/vite.config.ts),
+		// pointing the emitted declarations at that copy. A consumer of the SDK needs
 		// nothing from the viewer at runtime or at type-check time, so declaring
 		// it as a dependency would pull three and the whole renderer into every
 		// install of a package whose point is to be framework-agnostic.

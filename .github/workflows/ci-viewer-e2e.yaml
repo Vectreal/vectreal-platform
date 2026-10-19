@@ -15,7 +15,10 @@ on:
       - 'packages/viewer-e2e/**'
       - 'packages/core/**'
       - 'packages/hooks/**'
+      - 'packages/embed/**'
       - 'shared/**'
+      - 'vite.library.mts'
+      - 'tsconfig.base.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/ci-viewer-e2e.yaml'
   push:
@@ -26,7 +29,10 @@ on:
       - 'packages/viewer-e2e/**'
       - 'packages/core/**'
       - 'packages/hooks/**'
+      - 'packages/embed/**'
       - 'shared/**'
+      - 'vite.library.mts'
+      - 'tsconfig.base.json'
       - '.github/workflows/ci-viewer-e2e.yaml'
 
 permissions:
