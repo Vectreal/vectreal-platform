@@ -33,13 +33,19 @@ const Layout = () => {
 	return (
 		<CurrentUserProvider>
 			<SiteStructuredData />
-			<DocsTocProvider>
-				<div className={cn(!chrome.nav && 'hidden')}>
-					<Navigation />
-				</div>
-				<Outlet />
-			</DocsTocProvider>
-			{chrome.footer && <Footer />}
+			{/*
+			  `contents`, so the wrapper adds a scope for `--primary` without adding
+			  a box: nothing below lays out against it.
+			*/}
+			<div className={cn('contents', chrome.brandPrimary && 'primary-brand')}>
+				<DocsTocProvider>
+					<div className={cn(!chrome.nav && 'hidden')}>
+						<Navigation />
+					</div>
+					<Outlet />
+				</DocsTocProvider>
+				{chrome.footer && <Footer />}
+			</div>
 		</CurrentUserProvider>
 	)
 }

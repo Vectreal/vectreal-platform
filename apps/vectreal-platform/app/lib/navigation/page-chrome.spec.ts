@@ -13,7 +13,11 @@ describe('routePageChrome', () => {
 			'/news-room/some-article',
 			'/sign-in'
 		]) {
-			expect(routePageChrome(pathname)).toEqual({ nav: true, footer: true })
+			expect(routePageChrome(pathname)).toEqual({
+				nav: true,
+				footer: true,
+				brandPrimary: true
+			})
 		}
 	})
 
@@ -23,10 +27,15 @@ describe('routePageChrome', () => {
 	  It used to keep it and hide it at runtime once a model arrived.
 	*/
 	it('drops the nav on the empty publisher too', () => {
-		expect(routePageChrome('/publisher')).toEqual({ nav: false, footer: false })
+		expect(routePageChrome('/publisher')).toEqual({
+			nav: false,
+			footer: false,
+			brandPrimary: false
+		})
 		expect(routePageChrome('/publisher/')).toEqual({
 			nav: false,
-			footer: false
+			footer: false,
+			brandPrimary: false
 		})
 	})
 
@@ -38,14 +47,16 @@ describe('routePageChrome', () => {
 	it('drops the nav once there is a scene to frame', () => {
 		expect(routePageChrome('/publisher/abc123')).toEqual({
 			nav: false,
-			footer: false
+			footer: false,
+			brandPrimary: false
 		})
 	})
 
 	it('does not let the publisher prefix swallow unrelated paths', () => {
 		expect(routePageChrome('/publisher-guide')).toEqual({
 			nav: true,
-			footer: true
+			footer: true,
+			brandPrimary: true
 		})
 	})
 })

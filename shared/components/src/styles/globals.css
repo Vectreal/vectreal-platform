@@ -431,6 +431,23 @@
 		outline-offset: 2px;
 	}
 
+	/*
+	  The public site's primary action is the brand. Everywhere else, the
+	  dashboard and the publisher, `--primary` stays the near-black ink the
+	  palette sets.
+
+	  Dark ink on the orange in both themes: white on #fc6c18 is 2.9:1, under
+	  even the large-text threshold, and black is 6.9:1. It is set on a subtree
+	  rather than on :root so portaled UI - tooltips, menus, dialogs - keeps the
+	  ink: a tooltip is an inverted chip, not an action. That works because the
+	  theme maps `--color-primary` with `@theme inline`, so a utility reads
+	  `var(--primary)` where it is used rather than at :root.
+	*/
+	.primary-brand {
+		--primary: var(--orange);
+		--primary-foreground: oklch(0.145 0 0);
+	}
+
 	html {
 		font-family: var(--font-sans);
 		font-optical-sizing: auto;
