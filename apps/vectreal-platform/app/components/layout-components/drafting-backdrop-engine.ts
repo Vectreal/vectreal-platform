@@ -217,8 +217,10 @@ export function createDraftingBackdrop(
 		clientY: 0,
 		inside: false,
 		travel: 0,
-		/** The floor point under the pointer, found when the pointer or the page moves rather than every step, so a resting pointer settles. */
-		ground: null as [number, number] | null
+		/** The floor point under the pointer, found when the pointer, the page or the camera moves rather than every step, so a resting pointer settles. */
+		ground: null as [number, number] | null,
+		/** The camera it was found for: a pitch or a size that has moved since leaves it off the cursor. */
+		aimedFor: ''
 	}
 	function aimPointer() {
 		pointer.ground = null
@@ -229,7 +231,9 @@ export function createDraftingBackdrop(
 			pointer.clientY - box.top,
 			drift()
 		)
+		pointer.aimedFor = cameraKey()
 	}
+	const cameraKey = () => `${pitch.toFixed(5)} ${width} ${height}`
 	let lastActive = -Infinity
 	let scrollVelocity = 0
 	let lastScroll = window.scrollY
@@ -339,6 +343,8 @@ export function createDraftingBackdrop(
 		aim()
 
 		const d = drift()
+		// The horizon eases on after the last scroll event, and a canvas can resize: re-aim only when the camera has moved.
+		if (pointer.inside && pointer.aimedFor !== cameraKey()) aimPointer()
 		const ground = pointer.ground
 		const kf = ease(FIELD_TAU, dt)
 		const kg = ease(GLOW_TAU, dt)
