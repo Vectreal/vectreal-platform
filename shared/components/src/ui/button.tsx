@@ -9,20 +9,20 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				default:
-					'bg-primary text-primary-foreground shadow hover:bg-primary/90',
+					'bg-primary text-primary-foreground ds-bevel hover:bg-primary/90',
 				/*
 				  The page's one next step, in the brand. Dark ink in both themes:
 				  white on the orange is under 3:1, black is over 7:1. The hover is
 				  the darker brand rather than an alpha, which `--orange` (a hex)
 				  cannot take inline.
 				*/
-				brand: 'bg-orange text-black shadow hover:bg-dark-orange',
+				brand: 'bg-orange text-black ds-bevel hover:bg-dark-orange',
 				destructive:
-					'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
+					'bg-destructive text-destructive-foreground ds-bevel hover:bg-destructive/90',
 				outline:
-					'border border-input bg-background shadow-sm hover:bg-muted hover:text-muted-foreground',
+					'bg-background ds-control hover:bg-muted hover:text-muted-foreground',
 				secondary:
-					'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
+					'bg-secondary text-secondary-foreground ds-control hover:bg-secondary/80',
 				ghost: 'hover:bg-muted text-foreground hover:text-foreground/90',
 				link: 'text-foreground underline-offset-4 hover:underline'
 			},

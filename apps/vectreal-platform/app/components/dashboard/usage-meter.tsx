@@ -170,7 +170,7 @@ export function UsageMeter({
 	const bar = unlimited ? (
 		// A flat rail rather than no rail: the meters stay aligned in a grid
 		// whether or not a given key is capped on this plan.
-		<div className="ds-sunken h-1 rounded-full" />
+		<div className="ds-tint-sunken h-1 rounded-full" />
 	) : (
 		<Progress
 			value={percent}

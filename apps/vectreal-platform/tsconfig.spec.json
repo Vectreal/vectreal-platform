@@ -24,6 +24,7 @@
 		"../../vitest.shared.mts",
 		"app/**/*.spec.ts",
 		"app/**/*.spec.tsx",
+		"app/types/**/*.d.ts",
 		"tests/**/*.ts",
 		"tests/**/*.tsx"
 	]

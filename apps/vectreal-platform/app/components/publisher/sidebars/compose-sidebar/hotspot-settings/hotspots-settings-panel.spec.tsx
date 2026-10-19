@@ -18,7 +18,9 @@ import {
 	waitFor,
 	within
 } from '@testing-library/react'
+import { describeAnimationClips } from '@vctrl/core'
 import { getDefaultStore } from 'jotai'
+import { AnimationClip } from 'three'
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest'
 
 import HotspotsSettingsPanel from './hotspots-settings-panel'
@@ -55,6 +57,29 @@ const snapshot = vi.hoisted(() => ({
 		fov: number
 	}
 }))
+
+/** The loaded model's clips, which decide whether the clip picker is offered. */
+const model = vi.hoisted(() => ({
+	file: null as null | { animations: AnimationClip[] }
+}))
+
+vi.mock('@vctrl/hooks/use-load-model', () => ({
+	useModelContext: () => ({ file: model.file })
+}))
+
+/*
+  Radix's `Select` measures and captures the pointer while its listbox is open,
+  which jsdom does not implement.
+*/
+globalThis.ResizeObserver ??= class {
+	observe() {}
+	unobserve() {}
+	disconnect() {}
+}
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.setPointerCapture ??= () => {}
+Element.prototype.releasePointerCapture ??= () => {}
+Element.prototype.scrollIntoView ??= () => {}
 
 vi.mock('../../../publisher-viewer-capture-context', () => ({
 	usePublisherViewerCapture: () => ({
@@ -140,6 +165,7 @@ const openView = async (name: string) => {
 
 beforeEach(() => {
 	snapshot.current = null
+	model.file = null
 	store.set(hotspotsAtom, [])
 	store.set(activeHotspotIdAtom, null)
 	store.set(heldHotspotCardIdAtom, null)
@@ -1080,5 +1106,78 @@ describe('HotspotsSettingsPanel linked camera', () => {
 		expect(
 			screen.queryByRole('button', { name: /Open in Camera tool/ })
 		).toBeNull()
+	})
+})
+
+describe('HotspotsSettingsPanel linked animation', () => {
+	const clips = () => [
+		new AnimationClip('Open', 1, []),
+		new AnimationClip('Close', 1, [])
+	]
+	const [openId, closeId] = describeAnimationClips(clips()).map(
+		(clip) => clip.clipId
+	)
+	const picker = () =>
+		screen.queryByRole('combobox', { name: 'Linked animation' })
+
+	/*
+	  By keyboard: Radix opens on pointerdown only for a real pointer event
+	  carrying a `pointerType`, which jsdom does not synthesize.
+	*/
+	const openListbox = () => {
+		fireEvent.keyDown(picker() as HTMLElement, { key: 'ArrowDown' })
+		return screen.getByRole('listbox')
+	}
+	const linkedClip = () => store.get(hotspotsAtom)[0]?.linkedAnimationClipId
+
+	it('is not offered on a model with no clips', () => {
+		model.file = { animations: [] }
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		expect(picker()).toBeNull()
+	})
+
+	it('links the clip the author picks', () => {
+		model.file = { animations: clips() }
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		const options = within(openListbox()).getAllByRole('option')
+		expect(options.map((option) => option.textContent)).toEqual([
+			'None',
+			'Open',
+			'Close'
+		])
+
+		fireEvent.keyDown(options[2], { key: 'Enter' })
+
+		expect(linkedClip()).toBe(closeId)
+	})
+
+	it('unlinks on None', () => {
+		model.file = { animations: clips() }
+		arrange()
+		store.set(hotspotsAtom, [{ ...hotspot, linkedAnimationClipId: openId }])
+		render(<HotspotsSettingsPanel />)
+
+		fireEvent.keyDown(within(openListbox()).getAllByRole('option')[0], {
+			key: 'Enter'
+		})
+
+		expect(linkedClip()).toBeUndefined()
+	})
+
+	it('says so when the linked clip is no longer in the model', () => {
+		model.file = { animations: clips() }
+		arrange()
+		store.set(hotspotsAtom, [
+			{ ...hotspot, linkedAnimationClipId: 'removed-1a2b3c4d' }
+		])
+		render(<HotspotsSettingsPanel />)
+
+		expect(picker()?.textContent).toBe('Clip no longer in model')
+		// Still saved: the label explains the link, it does not clear it.
+		expect(linkedClip()).toBe('removed-1a2b3c4d')
 	})
 })

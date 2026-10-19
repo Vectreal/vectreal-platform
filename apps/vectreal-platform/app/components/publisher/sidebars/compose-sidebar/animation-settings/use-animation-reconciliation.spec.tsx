@@ -14,7 +14,8 @@ import { resolveAnimationDraft } from '../../../../../lib/domain/scene/scene-ani
 import { lastSavedSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	animationAtom,
-	animationDriftAtom
+	animationDriftAtom,
+	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
 
 import type { ReactNode } from 'react'
@@ -101,6 +102,40 @@ describe('useAnimationReconciliation', () => {
 		const drift = store.get(animationDriftAtom)
 		// Run sat at index 1, so its tuning is re-attached to Jump by position.
 		expect(drift?.remapped.map((entry) => entry.clipId)).toEqual([jumpId])
+	})
+
+	it('moves a hotspot linking a renamed clip with it, and leaves other links alone', () => {
+		const [walk] = walkAndRun()
+		const jump = new AnimationClip('Jump', 2, [])
+		model.file = { animations: [walk, jump] }
+		const store = createStore()
+		store.set(animationAtom, savedAgainstWalkAndRun())
+		const [walkId, runId] = describeAnimationClips(walkAndRun()).map(
+			(clip) => clip.clipId
+		)
+		const [, jumpId] = describeAnimationClips([walk, jump]).map(
+			(clip) => clip.clipId
+		)
+		const marker = (id: string, linkedAnimationClipId?: string) => ({
+			id,
+			name: id,
+			worldPosition: [0, 0, 0] as [number, number, number],
+			visible: true,
+			internalOnly: false,
+			stylePreset: 'dot' as const,
+			linkedAnimationClipId
+		})
+		store.set(hotspotsAtom, [
+			marker('on-run', runId),
+			marker('on-walk', walkId),
+			marker('unlinked')
+		])
+
+		runHook(store)
+
+		expect(
+			store.get(hotspotsAtom).map((hotspot) => hotspot.linkedAnimationClipId)
+		).toEqual([jumpId, walkId, undefined])
 	})
 
 	it('drops the report once it is saved, and a later edit does not bring it back', () => {

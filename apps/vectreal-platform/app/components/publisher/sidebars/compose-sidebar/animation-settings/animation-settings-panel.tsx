@@ -29,6 +29,7 @@ import {
 } from './constants'
 import { useModelClips } from './use-animation-reconciliation'
 import {
+	clipLabel,
 	isForeverCutShort,
 	moveAnimationClip,
 	resolveAnimationDraft,
@@ -46,7 +47,6 @@ import { SettingGroup } from '../../sidebar-section'
 
 import type {
 	AnimationClipConfig,
-	AnimationClipDescriptor,
 	AnimationLoopMode,
 	AnimationPlaybackMode,
 	AnimationReconciliation,
@@ -57,9 +57,6 @@ import type { ViewerCommand } from '@vctrl/viewer'
 const COMMIT_DELAY_MS = 250
 
 const clipViewId = (clipId: string) => `clip:${clipId}`
-
-const clipLabel = (descriptor: AnimationClipDescriptor) =>
-	descriptor.name || `Clip ${descriptor.index + 1}`
 
 const pluralize = (count: number, noun: string) =>
 	`${count} ${noun}${count === 1 ? '' : 's'}`

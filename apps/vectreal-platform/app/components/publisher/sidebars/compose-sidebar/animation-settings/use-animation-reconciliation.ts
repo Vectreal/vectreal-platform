@@ -1,15 +1,17 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
-import { useAtom, useAtomValue } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useEffect } from 'react'
 
 import {
 	hasAnimationDrift,
+	remapHotspotClipLinks,
 	resolveAnimationDraft
 } from '../../../../../lib/domain/scene/scene-animation-draft'
 import { lastSavedSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	animationAtom,
-	animationDriftAtom
+	animationDriftAtom,
+	hotspotsAtom
 } from '../../../../../lib/stores/scene-settings-store'
 
 import type { AnimationClip } from 'three'
@@ -46,6 +48,7 @@ export function useAnimationReconciliation() {
 	const isModelLoaded = file !== null
 	const [animation, setAnimation] = useAtom(animationAtom)
 	const [animationDrift, setAnimationDrift] = useAtom(animationDriftAtom)
+	const setHotspots = useSetAtom(hotspotsAtom)
 	const lastSavedSettings = useAtomValue(lastSavedSettingsAtom)
 
 	// The report is news until the author saves what it describes. Cleared
@@ -67,10 +70,24 @@ export function useAnimationReconciliation() {
 		if (!hasAnimationDrift(reconciliation, animation)) return
 
 		setAnimation(reconciliation.settings)
+		// Hotspots linking a renamed clip follow it, in the same write, so the
+		// scene is saved with both halves pointing at the same clip.
+		if (reconciliation.remapped.length > 0) {
+			setHotspots((hotspots) =>
+				remapHotspotClipLinks(hotspots, reconciliation.remapped)
+			)
+		}
 		setAnimationDrift({
 			added: reconciliation.added,
 			dropped: reconciliation.dropped,
 			remapped: reconciliation.remapped
 		})
-	}, [animation, clips, isModelLoaded, setAnimation, setAnimationDrift])
+	}, [
+		animation,
+		clips,
+		isModelLoaded,
+		setAnimation,
+		setAnimationDrift,
+		setHotspots
+	])
 }

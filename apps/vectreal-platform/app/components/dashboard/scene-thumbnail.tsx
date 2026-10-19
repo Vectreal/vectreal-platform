@@ -24,7 +24,7 @@ export function SceneThumbnail({ src, className }: SceneThumbnailProps) {
 	return (
 		<div
 			className={cn(
-				'ds-sunken relative aspect-video w-full shrink-0 overflow-hidden rounded-xl',
+				'ds-tint-sunken relative aspect-video w-full shrink-0 overflow-hidden rounded-xl',
 				className
 			)}
 		>

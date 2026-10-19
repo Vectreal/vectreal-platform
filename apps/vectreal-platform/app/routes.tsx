@@ -115,6 +115,7 @@ export default [
 		// Pricing page
 		route('pricing', './routes/pricing-page/pricing-page.tsx'),
 		route('contact', './routes/contact-page.tsx'),
+		route('free-model', './routes/free-model-page.tsx'),
 
 		// Legal pages
 		layout('./routes/layouts/mdx-layout.tsx', { id: 'legal-mdx-layout' }, [
@@ -136,6 +137,10 @@ export default [
 		// type safety. It compiles to its own lazy chunk that production never
 		// loads, which is a better trade than an untyped route.
 		route('__scenes', './routes/news-room-page/newsroom-scene-preview.tsx'),
+
+		// Dev-only host for the normalize step; its loader 404s outside DEV,
+		// registered unconditionally for the same typegen reason as __scenes.
+		route('__normalize', './routes/normalize-model-page.tsx'),
 
 		// Publisher. Nested here, rather than in its own top-level branch, so the
 		// nav survives navigating into it instead of being torn down and rebuilt.
@@ -311,7 +316,8 @@ export default [
 				'./routes/dashboard-page/billing-upgrade-canceled.tsx'
 			),
 			route('settings', './routes/dashboard-page/settings.tsx'),
-			route('connected-agents', './routes/dashboard-page/connected-agents.tsx')
+			route('connected-agents', './routes/dashboard-page/connected-agents.tsx'),
+			route('intake', './routes/dashboard-page/intake.tsx')
 		])
 	])
 ] satisfies RouteConfig

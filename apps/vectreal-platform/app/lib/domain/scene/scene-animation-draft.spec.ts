@@ -5,6 +5,7 @@ import {
 	hasAnimationDrift,
 	isForeverCutShort,
 	moveAnimationClip,
+	remapHotspotClipLinks,
 	resolveAnimationDraft,
 	updateAnimationClip
 } from './scene-animation-draft'
@@ -176,5 +177,31 @@ describe('isForeverCutShort', () => {
 		})
 
 		expect(isForeverCutShort(lastExcluded, idOf('Run'), clips)).toBe(false)
+	})
+})
+
+describe('remapHotspotClipLinks', () => {
+	const marker = (id: string, linkedAnimationClipId?: string) => ({
+		id,
+		name: id,
+		worldPosition: [0, 0, 0] as [number, number, number],
+		visible: true,
+		internalOnly: false,
+		stylePreset: 'dot' as const,
+		linkedAnimationClipId
+	})
+	const remap = { previousClipId: 'old', clipId: 'new', sourceName: 'New' }
+
+	it('moves a link to the renamed clip', () => {
+		expect(
+			remapHotspotClipLinks([marker('a', 'old')], [remap])[0]
+				.linkedAnimationClipId
+		).toBe('new')
+	})
+
+	it('returns the same array when no link moved', () => {
+		const hotspots = [marker('a', 'kept'), marker('b')]
+
+		expect(remapHotspotClipLinks(hotspots, [remap])).toBe(hotspots)
 	})
 })
