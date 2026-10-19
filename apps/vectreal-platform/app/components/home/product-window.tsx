@@ -219,12 +219,14 @@ export const ProductWindow = () => {
 								value={one}
 								className={cn(
 									/*
-									  A tile in the window, its rule along a square top edge. The
+									  A tile in the window, rounded on every corner; its rule runs
+									  straight along the top edge and the tile's own overflow cuts
+									  it off at the corners rather than bending it round them. The
 									  shared trigger's pill states are forced (`!`), so the active
 									  tile's step up the ladder is forced the same way; the rule
 									  lives in the module.
 									*/
-									'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 overflow-hidden rounded-t-none rounded-b-lg border-0 px-2 pt-4 pb-3 text-left whitespace-normal shadow-none transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] data-[state=active]:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]! data-[state=active]:shadow-none md:px-4 md:pt-5 md:pb-4 dark:data-[state=active]:border-transparent',
+									'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 overflow-hidden rounded-lg border-0 px-2 pt-4 pb-3 text-left whitespace-normal shadow-none transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] data-[state=active]:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]! data-[state=active]:shadow-none md:px-4 md:pt-5 md:pb-4 dark:data-[state=active]:border-transparent',
 									styles.step
 								)}
 							>
