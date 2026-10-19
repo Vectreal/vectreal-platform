@@ -5,7 +5,11 @@ import { MissionStatement } from '../../components/home/mission-statement'
 import { OpenSourceSection } from '../../components/home/open-source-section'
 import { PilotOffer } from '../../components/home/pilot-offer'
 import { ProductWindow } from '../../components/home/product-window'
-import { Reveal, DraftingBackdrop } from '../../components/layout-components'
+import {
+	Band,
+	DraftingBackdrop,
+	SheetFrame
+} from '../../components/layout-components'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
@@ -16,67 +20,43 @@ export function meta(_: Route.MetaArgs) {
 }
 
 /*
-  Each section a different shape: a figure, a product window, a signed
-  statement, an offer, a code panel, and the converters on their own surface,
-  last because they are a product of their own. The rhythm is the spacing reference's
-  steps. The hero and the product window are one argument, so they sit 128
-  apart; everything after starts a new one at 128, and at 192 on a wide screen,
-  where 128 read as cramped between sections this size.
-*/
-/*
-  One floor under the whole page, held under the reader: scrolling carries it
-  toward the reader, so the sections read as one ground they pass over rather
-  than a backdrop pasted behind each. The hero's object stands in its light.
-  `isolate` keeps the floor above the page's surface and behind its content.
+  The hero runs edge to edge; below it one sheet frame holds the page, each
+  section a band inside its rules. Each band a different shape: a product
+  window, a signed statement, an offer, a code panel, and the converters ruled
+  into the frame's last row. The mission statement is the page's one break,
+  full bleed and inverted, with the drafting floor under it; there is no floor
+  anywhere else on the page, so ground and light belong to an object, never to
+  the page as wallpaper.
 */
 const HomePage = () => (
-	<main className="relative isolate overflow-x-clip">
-		<DraftingBackdrop
-			travel="page"
-			focusX={0.66}
-			horizon={0.32}
-			phoneHorizon={0.42}
-		/>
+	<main>
 		<HeroSheet />
 
-		<section aria-labelledby="product-heading" className="container-page mt-32">
-			<Reveal>
+		<SheetFrame>
+			<Band aria-labelledby="product-heading">
 				<ProductWindow />
-			</Reveal>
-		</section>
+			</Band>
 
-		<section aria-label="Mission" className="container-page mt-32 lg:mt-48">
-			<Reveal>
+			<Band
+				aria-label="Mission"
+				inverted
+				backdrop={<DraftingBackdrop focusX={0.72} horizon={0.56} />}
+			>
 				<MissionStatement />
-			</Reveal>
-		</section>
+			</Band>
 
-		<section
-			aria-labelledby="pilot-heading"
-			className="container-page mt-32 lg:mt-48"
-		>
-			<Reveal>
+			<Band aria-labelledby="pilot-heading">
 				<PilotOffer />
-			</Reveal>
-		</section>
+			</Band>
 
-		<section
-			aria-labelledby="open-source-heading"
-			className="container-page mt-32 lg:mt-48"
-		>
-			<Reveal>
+			<Band aria-labelledby="open-source-heading">
 				<OpenSourceSection />
-			</Reveal>
-		</section>
+			</Band>
 
-		<section
-			aria-labelledby="converter-heading"
-			className="container-page mt-32 pb-32 lg:mt-48 lg:pb-48"
-		>
-			<Reveal>
+			<Band aria-labelledby="converter-heading" flush>
 				<FormatStrip />
-			</Reveal>
-		</section>
+			</Band>
+		</SheetFrame>
 	</main>
 )
 

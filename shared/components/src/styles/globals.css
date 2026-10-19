@@ -174,6 +174,19 @@
 	  page, so it widens everywhere rather than in one section.
 	*/
 	--container-max: 90rem;
+	/*
+	  The marketing site's sheet frame: one column, ruled at its edges where a
+	  page uses \`SheetFrame\`, that the nav, the page heads, every section and the footer
+	  share. Content sits `--frame-pad` inside the rules. The product (the
+	  dashboard, the publisher) keeps the wider measure above.
+	*/
+	--frame-max: 80rem;
+	--frame-pad: 0px;
+}
+@media (min-width: 64rem) {
+	:root {
+		--frame-pad: 48px;
+	}
 }
 
 @theme inline {
@@ -684,6 +697,55 @@
 			inset 0 0 0 1px var(--material-rim);
 	}
 
+	/*
+	  A media panel on the marketing site: a matte pane with the light behind
+	  it, the way GitHub sets its product shots (Moritz, 19 Oct 2026). The
+	  glow stands back of the panel (::before), the pane over it (::after)
+	  frosts it into a muted surface, and only a little of it escapes past the
+	  edges. The panel isolates, so the pane's blur reads the glow and nothing
+	  of the page behind it. No rim; the bevel only. Anything inside that has to
+	  be clipped clips on its own wrapper: clipping the panel would cut the
+	  light off at its edge.
+	*/
+	.ds-lit {
+		position: relative;
+		isolation: isolate;
+	}
+	.ds-lit::before,
+	.ds-lit::after {
+		content: '';
+		position: absolute;
+		border-radius: inherit;
+		pointer-events: none;
+	}
+	.ds-lit::before {
+		inset: 6%;
+		z-index: -2;
+		background:
+			radial-gradient(
+				60% 55% at 40% 40%,
+				color-mix(in oklch, var(--orange) 70%, transparent),
+				transparent 75%
+			),
+			radial-gradient(
+				55% 60% at 64% 62%,
+				color-mix(in oklch, var(--orange) 45%, transparent),
+				transparent 75%
+			);
+		filter: blur(48px);
+		opacity: 0.9;
+	}
+	.ds-lit::after {
+		inset: 0;
+		z-index: -1;
+		background: color-mix(
+			in oklch,
+			color-mix(in oklch, var(--foreground) 4%, var(--background)) 58%,
+			transparent
+		);
+		backdrop-filter: blur(48px) saturate(1.15);
+		box-shadow: inset 0 1px 0 var(--material-bevel);
+	}
 	/* Only where a divider genuinely carries meaning. Never to draw a box. */
 	.ds-divider {
 		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
@@ -943,6 +1005,21 @@
 	@media (min-width: 48rem) {
 		.container-page {
 			padding-inline: var(--space-6);
+		}
+	}
+	/*
+	  On the marketing site the measure is the sheet frame's column, so the nav,
+	  the page heads, the sections and the footer start on the frame's line on
+	  every page, not on the home page alone. `nav-layout` marks the scope.
+	*/
+	[data-site='marketing'] .container-page {
+		max-width: calc(var(--frame-max) + 2 * var(--space-4));
+		padding-inline: calc(var(--space-4) + var(--frame-pad));
+	}
+	@media (min-width: 48rem) {
+		[data-site='marketing'] .container-page {
+			max-width: calc(var(--frame-max) + 2 * var(--space-6));
+			padding-inline: calc(var(--space-6) + var(--frame-pad));
 		}
 	}
 }

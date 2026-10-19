@@ -155,26 +155,28 @@ const Result = () => {
 
 const CodeWindow = () => (
 	// Split the way a playground is, from lg: the editor with its title bar on the left, its output the full height of the right half. Stacked below that.
-	<div className="ds-raised text-foreground grid overflow-hidden rounded-2xl lg:grid-cols-2">
-		<div className="min-w-0">
-			<div className="flex items-center gap-2 px-4 py-4" aria-hidden="true">
-				<span className="bg-foreground/15 size-3 rounded-full" />
-				<span className="bg-foreground/15 size-3 rounded-full" />
-				<span className="bg-foreground/15 size-3 rounded-full" />
-				<span className="text-label-xs text-muted-foreground ml-2">
-					product-view.tsx
-				</span>
+	<div className="ds-lit rounded-3xl p-4 sm:p-10 lg:p-16">
+		<div className="ds-raised text-foreground grid overflow-hidden rounded-2xl lg:grid-cols-2">
+			<div className="min-w-0">
+				<div className="flex items-center gap-2 px-4 py-4" aria-hidden="true">
+					<span className="bg-foreground/15 size-3 rounded-full" />
+					<span className="bg-foreground/15 size-3 rounded-full" />
+					<span className="bg-foreground/15 size-3 rounded-full" />
+					<span className="text-label-xs text-muted-foreground ml-2">
+						product-view.tsx
+					</span>
+				</div>
+				<pre
+					tabIndex={0}
+					role="region"
+					aria-label="Installing and using @vctrl/viewer"
+					className="text-body-sm overflow-x-auto px-6 pt-2 pb-8 font-mono leading-relaxed whitespace-pre"
+				>
+					<Code />
+				</pre>
 			</div>
-			<pre
-				tabIndex={0}
-				role="region"
-				aria-label="Installing and using @vctrl/viewer"
-				className="text-body-sm overflow-x-auto px-6 pt-2 pb-8 font-mono leading-relaxed whitespace-pre"
-			>
-				<Code />
-			</pre>
+			<Result />
 		</div>
-		<Result />
 	</div>
 )
 

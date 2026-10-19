@@ -165,16 +165,20 @@ export const PilotOffer = () => {
 			ref={(node) => {
 				terms.current[i] = node
 			}}
-			className="flex flex-col gap-4"
+			className="block"
 		>
 			<div
 				aria-hidden="true"
-				className="ds-raised hidden aspect-16/10 overflow-hidden rounded-xl p-1.5 lg:block"
+				className="ds-lit mb-8 hidden aspect-16/10 rounded-3xl p-8 lg:block"
 			>
-				<div className="h-full overflow-hidden rounded-lg">{DRAWINGS[i]}</div>
+				<div className="h-full overflow-hidden rounded-xl">{DRAWINGS[i]}</div>
 			</div>
-			<h3 className="text-h4 lg:pt-4">{block.title}</h3>
-			<p className="text-muted-foreground text-body">{block.body}</p>
+			{/* Two tones in one run of text, the heading still a heading. */}
+			<h3 className="text-foreground text-body-lg inline font-medium">
+				{block.title}
+			</h3>
+			<span className="text-foreground text-body-lg">.</span>{' '}
+			<p className="text-muted-foreground text-body-lg inline">{block.body}</p>
 		</div>
 	)
 

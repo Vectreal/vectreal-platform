@@ -42,6 +42,7 @@ const Layout = () => {
 			<DocsTocProvider>
 				<div
 					data-material="object"
+					data-site="marketing"
 					className={cn(
 						!chrome.nav && 'hidden',
 						chrome.brandNavPrimary && 'primary-brand'
@@ -52,6 +53,7 @@ const Layout = () => {
 				{/* The publisher is nested here too, and its editor keeps the plate rims. */}
 				<div
 					data-material={chrome.brandPrimary ? 'object' : undefined}
+					data-site={chrome.brandPrimary ? 'marketing' : undefined}
 					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
 				>
 					<Outlet />
@@ -60,6 +62,7 @@ const Layout = () => {
 			{chrome.footer && (
 				<div
 					data-material="object"
+					data-site="marketing"
 					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
 				>
 					<Footer />

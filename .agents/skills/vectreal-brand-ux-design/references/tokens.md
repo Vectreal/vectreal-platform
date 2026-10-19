@@ -133,6 +133,16 @@ holds `touch-action: none`.
 `.container-page` owns the page width and its gutter together: `--container-max`
 (90rem) with `padding-inline` stepping up at 48rem.
 
+The marketing site is narrower. `nav-layout` marks its nav, footer and every
+page outside the publisher with `data-site="marketing"`, and there
+`.container-page` follows the sheet frame: `--frame-max` (80rem) with content
+`--frame-pad` (48px from 64rem) inside the frame's rules, so the nav, page
+heads, sections and footer start on one line on every marketing page. The
+product (dashboard, publisher) keeps the wider measure. That attribute is the
+one switch between the two: a page belongs to whichever side its layout puts it
+on, never to a class at the call site. The consent banner is the exception: it renders
+from `root.tsx` on every page, outside both, and keeps the product measure.
+
 The gutter belongs to the measure, not to the caller. `max-w-7xl` was hardcoded
 at fifteen sites, each choosing its own padding, so a hero at `px-6` sat above a
 body at `px-4` and the content jogged sideways at the seam.
@@ -149,6 +159,8 @@ present  shared/components/src/styles/globals.css                              -
 present  shared/components/src/styles/globals.css                              --z-index-above-nav: 60
 present  shared/components/src/styles/globals.css                              --z-index-select: 120
 present  shared/components/src/styles/globals.css                              max-width: var(--container-max);
+present  shared/components/src/styles/globals.css                              [data-site='marketing'] .container-page
+present  apps/vectreal-platform/app/routes/layouts/nav-layout.tsx               data-site="marketing"
 present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh
 present  shared/utils/src/lib/styling.utils.ts                                 CONTAINER_SCALE
 ```

@@ -23,6 +23,7 @@ export { default as PageHero } from './page-hero'
 export { DraftingBackdrop } from './drafting-backdrop'
 export { Reveal } from './reveal'
 export { FadeSwap } from './fade-swap'
+export { Band, SheetFrame } from './sheet-frame'
 export {
 	DestructiveAction,
 	DestructiveActionButton
