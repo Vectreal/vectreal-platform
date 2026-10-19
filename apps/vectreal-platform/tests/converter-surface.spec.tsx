@@ -432,7 +432,8 @@ let sampleBlock: Promise<void> | null = null
 vi.mock('../app/lib/samples/sample-models', () => ({
 	// Read by the example scenes `useSampleDownload` also opens.
 	HERO_MODEL: { url: '', fileName: 'camera.glb', bytes: 1 },
-	PASS_SAMPLES: [],
+	// Stubs carrying only what the tiles probe reads: which samples it was handed.
+	PASS_SAMPLES: [{ id: 'rocket' }, { id: 'camera' }],
 	sampleModelById: (id: string) =>
 		id === 'rocket' ? { id: 'rocket', label: 'Rocket', bytes: 1 } : null,
 	fetchSampleModel: async () => {
@@ -441,15 +442,19 @@ vi.mock('../app/lib/samples/sample-models', () => ({
 	}
 }))
 
-/* A probe for what the page hands the tiles: which sample, if any, is on its way down. */
+/* A probe for what the page hands the tiles: which samples, and which, if any, is on its way down. */
 vi.mock('../app/components/layout-components/sample-tiles', () => ({
 	SampleTiles: (props: {
 		onOpen: (id: string) => void
 		download?: { id: string } | null
+		samples?: { id: string }[]
 	}) => (
 		<button
 			type="button"
 			data-downloading={props.download?.id ?? ''}
+			data-samples={
+				props.samples?.map((sample) => sample.id).join(' ') ?? 'all'
+			}
 			onClick={() => props.onOpen('rocket')}
 		>
 			sample
@@ -592,6 +597,18 @@ describe('an option the browser cannot carry out is not offered', () => {
 
 		expect(screen.getByRole('checkbox', { name: /Draco/i })).toBeTruthy()
 		expect(screen.queryByRole('checkbox', { name: /WebP/i })).toBeNull()
+	})
+})
+
+describe('the samples it offers', () => {
+	it("offers only the two that make a pass visible, not the publisher's whole shelf", () => {
+		render(<ConverterSurface pair={convertPairBySlug('glb-to-gltf')!} />)
+
+		expect(
+			screen
+				.getByRole('button', { name: 'sample' })
+				.getAttribute('data-samples')
+		).toBe('rocket camera')
 	})
 })
 

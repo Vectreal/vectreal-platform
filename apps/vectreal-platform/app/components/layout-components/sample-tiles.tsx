@@ -2,9 +2,8 @@ import { cn, formatFileSize } from '@shared/utils'
 
 import { SAMPLE_MODELS, sampleModelById } from '../../lib/samples/sample-models'
 
-import type { SampleModel } from '../../lib/samples/sample-models'
-
 import type { SampleDownload } from '../../hooks/use-sample-download'
+import type { SampleModel } from '../../lib/samples/sample-models'
 import type { FC } from 'react'
 
 interface Props {
