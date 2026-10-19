@@ -154,7 +154,7 @@ export function NavPanels({
 							}}
 							onFocus={() => setOpen(null)}
 							className={cn(
-								'rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+								'ds-ghost-interactive rounded-xl px-3 py-1.5 text-sm font-medium',
 								isActive
 									? 'text-foreground'
 									: 'text-muted-foreground hover:text-foreground'
@@ -197,7 +197,7 @@ export function NavPanels({
 								hover(section.label, open ? 0 : HOVER_OPEN_MS)
 							}}
 							className={cn(
-								'inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+								'ds-ghost-interactive inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium',
 								isOpen || isCurrent
 									? 'text-foreground'
 									: 'text-muted-foreground hover:text-foreground'
@@ -263,7 +263,7 @@ function NavPanel({
 					aria-label={section.label}
 					onPointerEnter={onPointerEnter}
 					className={cn(
-						'ds-overlay pointer-events-auto grid gap-1 rounded-2xl p-2 shadow-lg',
+						'ds-overlay pointer-events-auto grid gap-1 rounded-2xl p-2',
 						section.links.length > 3 ? 'grid-cols-4' : 'grid-cols-3'
 					)}
 				>
@@ -295,7 +295,7 @@ function PanelLink({
 		if (event.button === 1) onFollow(true)
 	}
 	const className =
-		'hover:bg-accent focus-visible:bg-accent flex h-full flex-col gap-1 rounded-xl p-4 transition-colors focus-visible:outline-none'
+		'ds-ghost-interactive flex h-full flex-col gap-1 rounded-xl p-4 focus-visible:outline-none'
 	const content = (
 		<>
 			<span className="text-foreground text-sm font-medium">{link.label}</span>

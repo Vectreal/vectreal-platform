@@ -26,6 +26,13 @@ import {
 import { ALL_PLANS, PLAN_ENTITLEMENTS, PLAN_LIMITS } from './plan-config'
 
 import type { EntitlementKey, LimitKey, PaidPlan, Plan } from './plan-config'
+import type {
+	ModelIntakeFieldErrorCode,
+	ModelIntakeFormErrorCode,
+	ModelIntakeLocale,
+	ModelIntakeProductType,
+	ModelIntakeSizeField
+} from '../lib/domain/model-intake/model-intake-shared'
 
 // ---------------------------------------------------------------------------
 // Platform description strings
@@ -409,15 +416,10 @@ export const HOME_PAGE_COPY = {
 	},
 	product: {
 		/**
-		  In parts: the `underline` one is drawn under, the place the three steps
-		  end. The steps themselves are the tabs below it, so the heading names
-		  where they go rather than listing them a second time.
+		  The steps themselves are the tabs below it, so the heading names where
+		  they go rather than listing them a second time.
 		*/
-		heading: [
-			'From your file to ',
-			{ underline: 'your product page' },
-			', in three steps.'
-		],
+		heading: 'From your file to your product page, in three steps.',
 		/** The chain's accessible name: the heading is a sentence, this names the control. */
 		stepsLabel: 'The three steps',
 		views: {
@@ -695,3 +697,292 @@ export const UPGRADE_FEATURE_HIGHLIGHT_KEYS: readonly EntitlementKey[] = [
 	'org_roles',
 	'support_priority'
 ]
+
+// ---------------------------------------------------------------------------
+// Free-model intake (`/free-model`)
+//
+// The single intake for the pilot sales test: a brand sends three photos of
+// one product and gets one 3D model back. It describes a service we perform,
+// "we make the model from your photos", never a product feature, and says
+// "Shopify's own 3D slot", never "integration". German because the letters go
+// to German brands; `?lang=de` picks it. Approved by Moritz before shipping;
+// a German-law check of the consent and privacy lines is advised before the
+// letters go out.
+// ---------------------------------------------------------------------------
+
+/** One copy per locale, so a string missing from either is a compile error. */
+interface ModelIntakeCopy {
+	meta: { title: string; description: string }
+	hero: { heading: string; description: string }
+	/** Switches to the other language; the batch code is kept. */
+	languageLink: string
+	fields: {
+		name: { label: string; placeholder: string }
+		email: { label: string; placeholder: string }
+		company: { label: string }
+		productType: {
+			label: string
+			placeholder: string
+			options: Record<ModelIntakeProductType, string>
+			otherHint: string
+		}
+		photos: {
+			label: string
+			help: string
+			slot: (n: number) => string
+			add: string
+			remove: (n: number) => string
+		}
+		size: {
+			label: string
+			parts: Record<ModelIntakeSizeField, string>
+			help: string
+		}
+		message: { label: string; placeholder: string }
+		consentFollowUp: string
+		consentPhotos: string
+	}
+	privacyNote: string
+	privacyLink: string
+	/** Shown when bot verification cannot load; the address follows it as a link. */
+	turnstileFailed: string
+	submit: string
+	submitting: string
+	next: { heading: string; steps: readonly string[]; note: string }
+	fieldErrors: Record<ModelIntakeFieldErrorCode, (n?: number) => string>
+	formErrors: Record<ModelIntakeFormErrorCode, string>
+	success: {
+		heading: string
+		body: (code: string) => string
+		confirmationFailed: string
+		again: string
+	}
+	confirmationEmail: {
+		subject: (code: string) => string
+		preview: string
+		greeting: (name: string) => string
+		body: string
+		reference: string
+		deletion: string
+		signature: string
+	}
+}
+
+export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
+	en: {
+		meta: {
+			title: 'A free 3D model of your product - Vectreal',
+			description:
+				"Send three photos of one product. We make a 3D model from them and send it back, ready for Shopify's own 3D slot."
+		},
+		hero: {
+			heading: 'A free 3D model of one of your products',
+			description:
+				"Send us three photos of one product. We make the 3D model from your photos and send it back within 48 hours, as GLB and USDZ files for Shopify's own 3D slot."
+		},
+		languageLink: 'Deutsch',
+		fields: {
+			name: { label: 'Your name', placeholder: 'Jane Doe' },
+			email: { label: 'Work email', placeholder: 'you@company.com' },
+			company: { label: 'Company or brand' },
+			productType: {
+				label: 'What kind of product?',
+				placeholder: 'Choose a product type',
+				options: {
+					furniture: 'Furniture and lamps',
+					shoes: 'Shoes',
+					bags: 'Bags and accessories',
+					electronics: 'Small electronics',
+					ceramics: 'Ceramics and kitchenware (no glass, enamel or cast iron)',
+					other: 'Something else'
+				},
+				otherHint: "We'll look at it first and tell you whether we can make it."
+			},
+			photos: {
+				label: 'Three photos of the product',
+				help: 'Front, side and back work best, on a plain background. JPEG, PNG, WebP or HEIC, up to 15 MB each.',
+				slot: (n) => `Photo ${n}`,
+				add: 'Add photo',
+				remove: (n) => `Remove photo ${n}`
+			},
+			size: {
+				label: 'Approximate size in cm (optional)',
+				parts: { height: 'Height', width: 'Width', depth: 'Depth' },
+				help: "So the model has your product's real size."
+			},
+			message: {
+				label: 'Anything we should know? (optional)',
+				placeholder: 'Colors, materials, or a link to the product page.'
+			},
+			consentFollowUp:
+				'Vectreal may email me about this model and about a paid pilot offer. I can withdraw this at any time.',
+			consentPhotos:
+				"I'm allowed to share these photos, and Vectreal may use them to make this model."
+		},
+		privacyNote:
+			'We store your details and photos to make your model, and delete them 90 days after we deliver it unless you book a pilot. The model stays private unless you agree otherwise. To have everything deleted sooner, email info@vectreal.com with your reference code.',
+		privacyLink: 'Privacy policy',
+		turnstileFailed:
+			'Verification could not load, which is usually an extension or a network blocking it. Reload to try again, or email the photos to',
+		submit: 'Send photos',
+		submitting: 'Sending',
+		next: {
+			heading: 'What happens next',
+			steps: [
+				'We make the model from your photos and check it by hand.',
+				'Within 48 hours you get GLB and USDZ files by email.',
+				"You upload them to your product's own 3D slot in Shopify. Nothing to install.",
+				'If you like it, we can make five products as a paid pilot.'
+			],
+			note: 'A model made from photos approximates your product. You see it before anything goes live.'
+		},
+		fieldErrors: {
+			name: () => 'Please enter your name.',
+			email: () => 'Please enter a valid email address.',
+			company: () => 'Please enter your company or brand.',
+			productType: () => 'Please choose a product type.',
+			photosCount: () => 'Please add exactly three photos.',
+			photoType: (n) => `Photo ${n} isn't a JPEG, PNG, WebP or HEIC image.`,
+			photoSize: (n) => `Photo ${n} is larger than 15 MB.`,
+			size: () =>
+				'Please enter a size between 1 and 500 cm, or leave it empty.',
+			message: () => 'Please keep the message under 2,000 characters.',
+			consent: () => 'Please confirm this to send your photos.'
+		},
+		formErrors: {
+			validation: 'Please fix the highlighted fields.',
+			bot: 'Bot verification failed. Please try again.',
+			rateLimit:
+				'Too many requests from this address. Please wait a few minutes and try again.',
+			server:
+				"We couldn't receive your photos right now. Please email them to info@vectreal.com."
+		},
+		success: {
+			heading: 'Photos received',
+			body: (code) =>
+				`We'll email you within 48 hours. Your reference code is ${code}.`,
+			confirmationFailed:
+				"We received your photos but couldn't send the confirmation email. Keep your reference code.",
+			again: 'Send another product'
+		},
+		confirmationEmail: {
+			subject: (code) => `We received your photos (${code})`,
+			preview: 'We are making the 3D model from your photos.',
+			greeting: (name) => `Hi ${name},`,
+			body: "Thanks for sending three photos of your product. We're making the 3D model from your photos and will email you the GLB and USDZ files within 48 hours.",
+			reference: 'Your reference code',
+			deletion:
+				'To have your photos and details deleted, reply to this email with your reference code.',
+			signature: 'Moritz Becker, Vectreal, Hamburg'
+		}
+	},
+	de: {
+		meta: {
+			title: 'Ein kostenloses 3D-Modell Ihres Produkts - Vectreal',
+			description:
+				'Senden Sie drei Fotos eines Produkts. Wir erstellen daraus ein 3D-Modell und schicken es Ihnen zurück, bereit für den 3D-Platz in Shopify.'
+		},
+		hero: {
+			heading: 'Ein kostenloses 3D-Modell eines Ihrer Produkte',
+			description:
+				'Schicken Sie uns drei Fotos eines Produkts. Wir erstellen das 3D-Modell aus Ihren Fotos und senden es Ihnen innerhalb von 48 Stunden zurück, als GLB- und USDZ-Datei für den 3D-Platz in Shopify.'
+		},
+		languageLink: 'English',
+		fields: {
+			name: { label: 'Ihr Name', placeholder: 'Erika Mustermann' },
+			email: { label: 'Geschäftliche E-Mail', placeholder: 'sie@firma.de' },
+			company: { label: 'Firma oder Marke' },
+			productType: {
+				label: 'Welche Art von Produkt?',
+				placeholder: 'Produktart wählen',
+				options: {
+					furniture: 'Möbel und Leuchten',
+					shoes: 'Schuhe',
+					bags: 'Taschen und Accessoires',
+					electronics: 'Kleine Elektronik',
+					ceramics:
+						'Keramik und Küchenware (kein Glas, Emaille oder Gusseisen)',
+					other: 'Etwas anderes'
+				},
+				otherHint:
+					'Wir sehen es uns zuerst an und sagen Ihnen, ob wir es umsetzen können.'
+			},
+			photos: {
+				label: 'Drei Fotos des Produkts',
+				help: 'Am besten von vorne, von der Seite und von hinten, vor einem ruhigen Hintergrund. JPEG, PNG, WebP oder HEIC, bis zu 15 MB pro Foto.',
+				slot: (n) => `Foto ${n}`,
+				add: 'Foto hinzufügen',
+				remove: (n) => `Foto ${n} entfernen`
+			},
+			size: {
+				label: 'Ungefähre Maße in cm (optional)',
+				parts: { height: 'Höhe', width: 'Breite', depth: 'Tiefe' },
+				help: 'Damit das Modell die echte Größe Ihres Produkts hat.'
+			},
+			message: {
+				label: 'Was sollten wir wissen? (optional)',
+				placeholder: 'Farben, Materialien oder ein Link zur Produktseite.'
+			},
+			consentFollowUp:
+				'Vectreal darf mir zu diesem Modell und zu einem kostenpflichtigen Pilotangebot E-Mails senden. Ich kann das jederzeit widerrufen.',
+			consentPhotos:
+				'Ich darf diese Fotos weitergeben, und Vectreal darf sie verwenden, um dieses Modell zu erstellen.'
+		},
+		privacyNote:
+			'Wir speichern Ihre Angaben und Fotos, um Ihr Modell zu erstellen, und löschen sie 90 Tage nach der Lieferung, sofern Sie keinen Pilot buchen. Das Modell bleibt privat, wenn Sie nichts anderes vereinbaren. Für eine frühere Löschung schreiben Sie mit Ihrer Referenznummer an info@vectreal.com.',
+		privacyLink: 'Datenschutzerklärung',
+		turnstileFailed:
+			'Die Prüfung konnte nicht geladen werden, meist weil eine Erweiterung oder das Netzwerk sie blockiert. Laden Sie die Seite neu oder senden Sie die Fotos an',
+		submit: 'Fotos senden',
+		submitting: 'Wird gesendet',
+		next: {
+			heading: 'So geht es weiter',
+			steps: [
+				'Wir erstellen das Modell aus Ihren Fotos und prüfen es von Hand.',
+				'Innerhalb von 48 Stunden erhalten Sie GLB- und USDZ-Dateien per E-Mail.',
+				'Sie laden sie in den 3D-Platz Ihres Produkts in Shopify hoch. Nichts zu installieren.',
+				'Wenn es Ihnen gefällt, setzen wir fünf Produkte als bezahlten Pilot um.'
+			],
+			note: 'Ein Modell aus Fotos bildet Ihr Produkt näherungsweise ab. Sie sehen es, bevor etwas live geht.'
+		},
+		fieldErrors: {
+			name: () => 'Bitte geben Sie Ihren Namen ein.',
+			email: () => 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
+			company: () => 'Bitte geben Sie Ihre Firma oder Marke ein.',
+			productType: () => 'Bitte wählen Sie eine Produktart.',
+			photosCount: () => 'Bitte fügen Sie genau drei Fotos hinzu.',
+			photoType: (n) => `Foto ${n} ist kein JPEG-, PNG-, WebP- oder HEIC-Bild.`,
+			photoSize: (n) => `Foto ${n} ist größer als 15 MB.`,
+			size: () =>
+				'Bitte geben Sie eine Größe zwischen 1 und 500 cm ein oder lassen Sie das Feld leer.',
+			message: () => 'Bitte halten Sie die Nachricht unter 2.000 Zeichen.',
+			consent: () => 'Bitte bestätigen Sie dies, um Ihre Fotos zu senden.'
+		},
+		formErrors: {
+			validation: 'Bitte korrigieren Sie die markierten Felder.',
+			bot: 'Die Bot-Prüfung ist fehlgeschlagen. Bitte versuchen Sie es erneut.',
+			rateLimit:
+				'Zu viele Anfragen von dieser Adresse. Bitte warten Sie einige Minuten und versuchen Sie es erneut.',
+			server:
+				'Wir konnten Ihre Fotos gerade nicht empfangen. Bitte senden Sie sie an info@vectreal.com.'
+		},
+		success: {
+			heading: 'Fotos erhalten',
+			body: (code) =>
+				`Wir melden uns innerhalb von 48 Stunden per E-Mail. Ihre Referenznummer lautet ${code}.`,
+			confirmationFailed:
+				'Wir haben Ihre Fotos erhalten, konnten aber keine Bestätigung per E-Mail senden. Bitte notieren Sie Ihre Referenznummer.',
+			again: 'Weiteres Produkt senden'
+		},
+		confirmationEmail: {
+			subject: (code) => `Wir haben Ihre Fotos erhalten (${code})`,
+			preview: 'Wir erstellen das 3D-Modell aus Ihren Fotos.',
+			greeting: (name) => `Guten Tag ${name},`,
+			body: 'vielen Dank für Ihre drei Produktfotos. Wir erstellen das 3D-Modell aus Ihren Fotos und senden Ihnen die GLB- und USDZ-Dateien innerhalb von 48 Stunden per E-Mail.',
+			reference: 'Ihre Referenznummer',
+			deletion:
+				'Wenn Sie möchten, dass wir Ihre Fotos und Angaben löschen, antworten Sie auf diese E-Mail mit Ihrer Referenznummer.',
+			signature: 'Moritz Becker, Vectreal, Hamburg'
+		}
+	}
+}

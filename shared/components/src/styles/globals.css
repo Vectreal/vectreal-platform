@@ -758,6 +758,33 @@
 			0 24px 56px -22px var(--material-shadow-far);
 	}
 	/*
+	  A row with no plate until it is pointed at, focused or current: nav links,
+	  panel links, drawer rows. It then stands up as a small plate, one step
+	  above whatever it sits on, which is why the fill is a tint rather than a
+	  step mixed against the page: the same row sits on the bar, inside an
+	  overlay panel and on a sheet. The states live here because a Tailwind
+	  variant cannot apply a `ds-*` class, and these are the states a row
+	  reports: `aria-current` for the page you are on, `aria-expanded` for the
+	  section whose panel is open.
+	*/
+	.ds-ghost-interactive {
+		background-color: transparent;
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			background-color var(--duration-fast) var(--ease-out),
+			box-shadow var(--duration-base) var(--ease-out);
+	}
+	.ds-ghost-interactive:hover,
+	.ds-ghost-interactive:focus-visible,
+	.ds-ghost-interactive[aria-current='page'],
+	.ds-ghost-interactive[aria-expanded='true'] {
+		background-color: color-mix(in oklch, var(--foreground) 4%, transparent);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			0 1px 2px var(--material-shadow);
+	}
+	/*
 	  The resting surface of a control (the Slider track, a Toggle).
 	  A tint over whatever the control sits on, for the reason `ds-field` is:
 	  controls sit on the page, on dialogs and on publisher shell panels, and a
