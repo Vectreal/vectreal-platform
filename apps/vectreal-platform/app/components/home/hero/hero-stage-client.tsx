@@ -9,7 +9,6 @@ import {
 } from 'react'
 import { TextureLoader, type Texture } from 'three'
 
-import { createBackdropEngine } from './backdrop-engine'
 import { attachFileDrop } from './file-drop'
 import { HERO_SHADOW_URL } from './hero-assets'
 import { fallBackToPoster } from './hero-store'
@@ -35,8 +34,6 @@ export interface HeroStageElements {
 	canvas: HTMLCanvasElement
 	dims: SVGSVGElement
 	scale: HTMLElement
-	readout: HTMLElement
-	backdrop: HTMLCanvasElement
 }
 
 interface Props {
@@ -167,23 +164,6 @@ export default function HeroStageClient({
 			},
 			{ reducedMotion, posterMode: baking }
 		)
-		const backdrop = baking
-			? null
-			: createBackdropEngine(
-					{
-						canvas: elements.backdrop,
-						sheet,
-						stage,
-						frame,
-						copy: elements.copy,
-						readout: elements.readout
-					},
-					{ reducedMotion, azimuth: engine.azimuth }
-				)
-		if (backdrop) {
-			engine.onFrame(backdrop.draw)
-			elements.backdrop.setAttribute('data-ready', '')
-		}
 
 		const setPhase = (phase: 'poster' | 'drawn' | 'live') =>
 			stage.setAttribute('data-phase', phase)
@@ -322,9 +302,7 @@ export default function HeroStageClient({
 			openFileRef.current = null
 			handOffRef.current = null
 			detachFileDrop?.()
-			backdrop?.dispose()
 			engine.dispose()
-			elements.backdrop.removeAttribute('data-ready')
 		}
 	}, [store, elements, openFileRef, handOffRef, ownFileApi])
 

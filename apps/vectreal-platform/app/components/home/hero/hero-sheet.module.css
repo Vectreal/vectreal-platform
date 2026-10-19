@@ -34,13 +34,8 @@
 	--gap: clamp(32px, 4vw, 80px);
 	--frame-top: 64px; /* the nav's bottom edge: the nav sits on the frame's top rule */
 	--frame-bottom: 32px;
-	/* The backdrop's two inks. The engine reads them as tokens, so the fold (which drops the sheet's surface) keeps them. */
-	--hero-pool: var(--background);
-	--hero-grain: var(--grain);
 
 	position: relative;
-	/* Its own stacking context, so the backdrop at z-index -1 paints over the sheet's surface rather than under it. */
-	isolation: isolate;
 	display: grid;
 	grid-template-columns: var(--copy-w) minmax(0, 1fr);
 	/* The fold is the viewport's height but never shorter than the copy: on a short window the sheet grows and the readout moves down, rather than the copy running into it. */
@@ -50,40 +45,6 @@
 	/* The stage starts 56px below the top rule, so the nav keeps clear air and the model its size. */
 	padding: calc(var(--frame-top) + 56px) var(--gutter)
 		calc(var(--frame-bottom) + 40px);
-}
-:global(.dark) .sheet {
-	--hero-pool: color-mix(in oklch, var(--foreground) 7%, var(--background));
-}
-
-/*
-  The sheet's bottom edge dissolves into the page instead of ending on a line:
-  a band of the sheet's own surface below it, masked by the dither ramp the
-  component passes in as `--sheet-edge`.
-*/
-.sheet::after {
-	content: '';
-	position: absolute;
-	inset: 100% 0 auto;
-	height: 24px;
-	background: inherit;
-	mask-image: var(--sheet-edge);
-	mask-size: 8px 24px;
-	mask-repeat: repeat-x;
-	pointer-events: none;
-}
-
-.backdrop {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	z-index: -1;
-	pointer-events: none;
-	opacity: 0;
-	transition: opacity var(--duration-cinematic) var(--ease-out);
-}
-.backdrop[data-ready] {
-	opacity: 1;
 }
 
 /* margin-block counts toward the row's min-content, so on a short window the copy keeps air above the readout; centered in a tall one, it changes nothing. */
@@ -487,9 +448,6 @@
 		/* The page's own gutter, so the folded card is as wide as every section below it. */
 		padding: 104px var(--space-4) 48px;
 		background: none;
-	}
-	.sheet::after {
-		content: none;
 	}
 	.copy {
 		margin-block: 0;
