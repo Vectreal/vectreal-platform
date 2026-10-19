@@ -36,6 +36,14 @@ export interface HotspotInteraction {
 	 */
 	fliesCamera: boolean
 	/**
+	 * Whether a click should also play the marker's linked clip, once.
+	 *
+	 * Another half of the same activation, for the reason `fliesCamera` is: a
+	 * marker that flies to a door and opens it does both on one click, and the
+	 * clip starts with the flight rather than after it.
+	 */
+	playsClip: boolean
+	/**
 	 * Which state this button announces, or null when it announces none.
 	 *
 	 * A discriminant rather than two booleans: a selection is `aria-pressed` and
@@ -81,10 +89,11 @@ export interface HotspotInteraction {
 }
 
 export function resolveHotspotInteraction(
-	marker: Pick<HotspotMarker, 'linkedCameraId'>,
+	marker: Pick<HotspotMarker, 'linkedAnimationClipId' | 'linkedCameraId'>,
 	{
 		occluded,
 		canActivate,
+		canPlayClip = false,
 		canSelect = false,
 		canReveal = false,
 		revealsInPlace = false,
@@ -100,6 +109,8 @@ export function resolveHotspotInteraction(
 		selected?: boolean
 		/** Whether the viewer was given somewhere to send an activation. */
 		canActivate: boolean
+		/** Whether the viewer was given somewhere to send a clip to play. */
+		canPlayClip?: boolean
 		/**
 		 * Whether this marker has anything to reveal. Content the renderer would
 		 * refuse to draw is not content: `resolveHotspotPopoverContent` decides,
@@ -132,9 +143,10 @@ export function resolveHotspotInteraction(
 	}
 ): HotspotInteraction {
 	const canFly = marker.linkedCameraId !== null && canActivate
+	const canPlay = marker.linkedAnimationClipId !== null && canPlayClip
 	// Selection needs no camera: an editing surface has to be able to pick a
 	// marker that names none, which is the whole point of drawing it.
-	const isButton = canSelect || canReveal || canFly
+	const isButton = canSelect || canReveal || canFly || canPlay
 
 	return {
 		role: isButton ? 'button' : 'image',
@@ -144,13 +156,16 @@ export function resolveHotspotInteraction(
 				? 'select'
 				: canReveal
 					? 'reveal'
-					: canFly
+					: canFly || canPlay
 						? 'activate'
 						: 'none',
 		// Not on an editing surface: there a click picks the marker up, and
 		// flying away from the viewpoint the author is composing in is the one
 		// thing selection exists to avoid.
 		fliesCamera: !occluded && !canSelect && canFly,
+		// Same rule: on an editing surface a click picks the marker up, and
+		// replaying its clip on every pick would move the model being composed.
+		playsClip: !occluded && !canSelect && canPlay,
 		announces: canSelect
 			? 'pressed'
 			: canReveal && revealsInPlace

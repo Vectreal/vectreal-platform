@@ -71,6 +71,7 @@ import { shouldShowCameraControls } from './components/scene/camera-controls-rul
 import { type ClipExtentRegistry } from './components/scene/clip-planes'
 import EnvironmentPrewarm from './components/scene/environment-prewarm'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
+import { prefersReducedMotion } from './components/scene/reduced-motion'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
 import {
 	resolveHotspotViewName,
@@ -615,10 +616,25 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const openingPose = useRef<OpeningPose | null>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
+	// The markers this surface draws, by the same rule `SceneHotspots` draws
+	// them, so a hidden or internal hotspot's camera is never a hotspot view,
+	// and a hidden or internal hotspot's clip never mounts the animation runtime.
+	const hotspotMarkers = useMemo(
+		() =>
+			resolveHotspotMarkers(hotspots, {
+				includeInternal: showInternalHotspots,
+				includeHidden: showHiddenHotspots
+			}),
+		[hotspots, showInternalHotspots, showHiddenHotspots]
+	)
+
 	const animation = useAnimationRuntime({
 		animations,
 		options: animationOptions,
 		hasContent,
+		linksHotspotClips: hotspotMarkers.some(
+			(marker) => marker.linkedAnimationClipId !== null
+		),
 		allowControls: showAnimationControls,
 		onInteractionEvent
 	})
@@ -753,17 +769,6 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	 */
 	const [activeCameraId, setActiveCameraId] = useState<null | string>(null)
 
-	// The markers this surface draws, by the same rule `SceneHotspots` draws
-	// them, so a hidden or internal hotspot's camera is never a hotspot view.
-	const hotspotMarkers = useMemo(
-		() =>
-			resolveHotspotMarkers(hotspots, {
-				includeInternal: showInternalHotspots,
-				includeHidden: showHiddenHotspots
-			}),
-		[hotspots, showInternalHotspots, showHiddenHotspots]
-	)
-
 	const activateCamera = useCallback(
 		(cameraId: string) =>
 			cameraLayer.execute({ type: 'activate_camera', cameraId }),
@@ -861,6 +866,19 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 			executeViewerCommand({ type: 'activate_camera', cameraId })
 		},
 		[executeViewerCommand]
+	)
+
+	const handlePlayHotspotClip = useCallback(
+		(clipId: string) => {
+			// Read at the click, like the camera flight reads it: the visitor's
+			// setting can change while the page is open.
+			forwardAnimationCommand({
+				type: 'play_hotspot_clip',
+				clipId,
+				jumpToEnd: prefersReducedMotion()
+			})
+		},
+		[forwardAnimationCommand]
 	)
 
 	const handleHotspotActivated = useCallback(
@@ -1076,6 +1094,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									revealedId={revealedHotspotId}
 									activeCameraId={activeCameraId}
 									onActivateCamera={handleActivateHotspotCamera}
+									onPlayClip={handlePlayHotspotClip}
 									onSelect={onHotspotSelect}
 									onHotspotActivated={handleHotspotActivated}
 									onCommandExecutorReady={hotspotLayer.register}

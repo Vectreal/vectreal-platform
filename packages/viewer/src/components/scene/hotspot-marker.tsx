@@ -231,6 +231,8 @@ export interface HotspotMarkerProps {
 	color?: string
 	/** Runs when a hotspot carrying a `linkedCameraId` is activated. */
 	onActivate?: (cameraId: string) => void
+	/** Runs when a hotspot carrying a `linkedAnimationClipId` is activated. */
+	onPlayClip?: (clipId: string) => void
 	/** Runs when a marker is picked on a surface that selects rather than flies. */
 	onSelect?: (id: string) => void
 	/**
@@ -269,6 +271,7 @@ const HotspotMarker = ({
 	current = false,
 	color,
 	onActivate,
+	onPlayClip,
 	onSelect,
 	onActivated,
 	open = false,
@@ -374,6 +377,7 @@ const HotspotMarker = ({
 	const interaction = resolveHotspotInteraction(marker, {
 		occluded,
 		canActivate: !!onActivate,
+		canPlayClip: !!onPlayClip,
 		canSelect: !!onSelect,
 		// Having something to say makes it a button; whether this viewer draws
 		// the card decides only what it announces.
@@ -455,12 +459,20 @@ const HotspotMarker = ({
 		if (interaction.fliesCamera && marker.linkedCameraId) {
 			onActivate?.(marker.linkedCameraId)
 		}
+		// Started with the flight, not after it: the clip is part of what the
+		// click answers, and the flight has no end the viewer reports.
+		if (interaction.playsClip && marker.linkedAnimationClipId) {
+			onPlayClip?.(marker.linkedAnimationClipId)
+		}
 	}, [
 		interaction.action,
 		interaction.fliesCamera,
+		interaction.playsClip,
 		marker.id,
+		marker.linkedAnimationClipId,
 		marker.linkedCameraId,
 		onActivate,
+		onPlayClip,
 		onActivated,
 		onReveal,
 		onSelect
