@@ -134,6 +134,10 @@ included:
   between them and no card around the form.
 - **Prose pages are a spec sheet.** The MDX layout puts each `##` heading in a
   left column and its text in the right, with a rule above each heading.
+- **A docs article is head, then a ruled row.** The `#` title and the
+  paragraphs under it run edge to edge as the page head (split off by
+  `remarkDocPageActions`); below its rule, the docs nav, the article and "On
+  this page" are three cells of one row.
 
 **The one exception is the converter's stage.** `converter-surface.tsx` is a
 tool on a marketing page: a stranger drops a file on it and watches the model
@@ -165,6 +169,7 @@ present  apps/vectreal-platform/app/components/home/hero/hero-readout.tsx       
 present  apps/vectreal-platform/app/components/layout-components/sheet-frame.tsx             export const SheetFrame
 present  apps/vectreal-platform/app/components/pricing/pricing-cards-section.tsx            [--lit-inset:12px]
 present  apps/vectreal-platform/app/routes/layouts/mdx-layout.tsx                           <SheetFrame>
+present  apps/vectreal-platform/app/lib/markdown/remark-doc-page-actions.ts                 DocPageHead
 present  apps/vectreal-platform/app/routes/contact-page.tsx                                 lg:border-r
 present  apps/vectreal-platform/app/components/convert/converter-surface.tsx               ds-sunken
 ```
