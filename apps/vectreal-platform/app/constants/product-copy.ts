@@ -436,7 +436,7 @@ export const HOME_PAGE_COPY = {
 				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
 				link: 'See the embed guide',
 				/** The address bar of the product page the view shows the camera on: anyone's shop, not one we name. */
-				pageAddress: 'your-shop.com/products/camera'
+				pageAddress: 'your-store.example/products/camera'
 			}
 		}
 	},
