@@ -83,6 +83,27 @@ describe('hotspot validation', () => {
 		expect(rejected(parse([hotspot({ linkedCameraId: 'cam-1' })]))).toBe(false)
 	})
 
+	it('accepts a linked clip, absent or null', () => {
+		expect(
+			rejected(parse([hotspot({ linkedAnimationClipId: 'door-1a2b3c4d' })]))
+		).toBe(false)
+		expect(rejected(parse([hotspot({ linkedAnimationClipId: null })]))).toBe(
+			false
+		)
+		expect(rejected(parse([hotspot()]))).toBe(false)
+	})
+
+	// Shape only: the server never sees the model's clips, so an id naming a
+	// clip the model lacks is saved and simply plays nothing.
+	it('rejects a linked clip that is not a non-empty bounded string', () => {
+		for (const linkedAnimationClipId of [42, '', '   ', 'x'.repeat(1025)]) {
+			expect(rejected(parse([hotspot({ linkedAnimationClipId })]))).toBe(true)
+		}
+		expect(
+			rejected(parse([hotspot({ linkedAnimationClipId: 'x'.repeat(1024) })]))
+		).toBe(false)
+	})
+
 	it('rejects duplicate sequence indices', () => {
 		expect(
 			rejected(

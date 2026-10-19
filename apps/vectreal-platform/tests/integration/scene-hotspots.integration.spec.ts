@@ -155,6 +155,7 @@ describe('hotspot persistence', () => {
 			payloadUrl: 'https://example.test/marker.svg',
 			body: 'Cast in one piece, then machined flat.',
 			linkUrl: 'https://example.test/spec',
+			linkedAnimationClipId: 'lid-open-1a2b3c4d',
 			occlusionEnabled: false,
 			internalOnly: true,
 			visible: false
@@ -200,6 +201,29 @@ describe('hotspot persistence', () => {
 
 		expect(read.body).toBe('Second draft.')
 		expect(read.linkUrl).toBe('https://a.test/two')
+	})
+
+	it('relinks and unlinks a hotspot’s clip on later saves', async () => {
+		const id = randomUUID()
+		const save = (linkedAnimationClipId?: string) =>
+			db.transaction((tx) =>
+				replaceHotspots(tx, sceneSettingsId, [
+					hotspot({ id, linkedAnimationClipId })
+				])
+			)
+		const read = async () =>
+			(
+				await db.transaction((tx) =>
+					getHotspotsBySceneSettingsId(tx, sceneSettingsId)
+				)
+			)[0]
+
+		await save('lid-open-1a2b3c4d')
+		await save('lid-close-5e6f7a8b')
+		expect((await read()).linkedAnimationClipId).toBe('lid-close-5e6f7a8b')
+
+		await save(undefined)
+		expect((await read()).linkedAnimationClipId).toBeUndefined()
 	})
 
 	it('clears a hotspot\u2019s content when the author empties both fields', async () => {
