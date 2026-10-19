@@ -138,7 +138,8 @@ describe('embed settings policy', () => {
 					stylePreset: 'dot',
 					body: 'Unit cost 12 EUR, do not quote below 40',
 					linkUrl: 'https://internal.test/pricing',
-					payloadUrl: 'https://internal.test/unreleased-render.png'
+					payloadUrl: 'https://internal.test/unreleased-render.png',
+					linkedAnimationClipId: 'door-open-1a2b3c4d'
 				}
 			]
 		})
@@ -152,6 +153,8 @@ describe('embed settings policy', () => {
 		// author's own file, or an inline data URI of it, and a hidden marker
 		// renders none of it.
 		expect(hidden.payloadUrl).toBeUndefined()
+		// A hidden marker is never drawn, so its clip can never play.
+		expect(hidden.linkedAnimationClipId).toBeUndefined()
 	})
 
 	it('leaves a visible hotspot\u2019s content alone', () => {
@@ -165,7 +168,8 @@ describe('embed settings policy', () => {
 					internalOnly: false,
 					stylePreset: 'dot',
 					body: 'Cast in one piece.',
-					linkUrl: 'https://a.test/spec'
+					linkUrl: 'https://a.test/spec',
+					linkedAnimationClipId: 'door-open-1a2b3c4d'
 				}
 			]
 		})
@@ -174,6 +178,7 @@ describe('embed settings policy', () => {
 
 		expect(shown.body).toBe('Cast in one piece.')
 		expect(shown.linkUrl).toBe('https://a.test/spec')
+		expect(shown.linkedAnimationClipId).toBe('door-open-1a2b3c4d')
 	})
 
 	it('does not mutate the settings it was handed', () => {

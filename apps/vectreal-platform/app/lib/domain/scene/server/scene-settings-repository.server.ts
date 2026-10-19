@@ -267,6 +267,7 @@ export async function getHotspotsBySceneSettingsId(
 			number
 		],
 		linkedCameraId: r.linkedCameraId ?? undefined,
+		linkedAnimationClipId: r.linkedAnimationClipId ?? undefined,
 		visible: r.visible,
 		internalOnly: r.internalOnly,
 		sequenceIndex: r.sequenceIndex ?? undefined,
@@ -311,6 +312,7 @@ export async function replaceHotspots(
 				worldPositionY: h.worldPosition[1],
 				worldPositionZ: h.worldPosition[2],
 				linkedCameraId: h.linkedCameraId ?? null,
+				linkedAnimationClipId: h.linkedAnimationClipId ?? null,
 				visible: h.visible,
 				internalOnly: h.internalOnly,
 				sequenceIndex: h.sequenceIndex ?? null,
@@ -335,6 +337,7 @@ export async function replaceHotspots(
 				worldPositionY: sql`excluded.world_position_y`,
 				worldPositionZ: sql`excluded.world_position_z`,
 				linkedCameraId: sql`excluded.linked_camera_id`,
+				linkedAnimationClipId: sql`excluded.linked_animation_clip_id`,
 				visible: sql`excluded.visible`,
 				internalOnly: sql`excluded.internal_only`,
 				sequenceIndex: sql`excluded.sequence_index`,
