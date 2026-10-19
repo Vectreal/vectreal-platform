@@ -340,7 +340,7 @@ export const EmptyStage = ({
 													if (download) event.preventDefault()
 												}}
 												className={cn(
-													'block h-full rounded-xl p-3 transition-[background-color,opacity]',
+													'block h-full rounded-xl p-3 transition-[background-color,box-shadow,opacity]',
 													download
 														? 'ds-raised cursor-default opacity-50'
 														: 'ds-raised-interactive'

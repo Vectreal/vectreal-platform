@@ -75,10 +75,12 @@ layers, read from the `--material-*` colours in `theme.css`:
   little longer.
 - `ds-sunken` and `ds-field` recede: shaded from the top edge inward, with the
   light catching the bottom lip instead. No outer shadow.
-- `ds-raised-interactive` and `ds-overlay-interactive` carry only the edge at
-  rest and take the thrown shadow on hover. They come in lists, and a column of
-  forty shadows reads as noise; the shadow arriving is what makes the hover
-  read as a lift.
+- `ds-raised-interactive` and `ds-overlay-interactive` rest as the plate of
+  their static rung, shadow included, and throw the next rung's longer shadow
+  on hover. Resting equal matters: tiles drop to the static class while
+  disabled mid-action, and a tile that lost or gained a shadow on disabling
+  would read as hovered. A call site with its own `transition-[...]` utility
+  lists `box-shadow` in it, or the lift snaps while the fill eases.
 - `ds-bevel` is a filled action's material (`Button`'s default, brand and
   destructive variants): a white bevel and a dark base, fixed values because
   the fill underneath is the same in both schemes.
@@ -95,10 +97,13 @@ shade beneath it.
 `:root` would bake in the light colours, and a subtree that sets `.dark` on its
 own (an embed, the viewer) would keep them.
 
-**A surface class is a plate, not a tint.** Where a fill only needs the value -
-table stripes, a group band in a table - write the mix as an arbitrary utility,
-as `feature-compare-grid.tsx` does: the material on table rows rules every row
-off.
+**A surface class is a plate. A tint has its own word.** `ds-tint-sunken`,
+`ds-tint-raised` and `ds-tint-overlay` are the same values with no material, for
+fills that are not plates: a progress track, table stripes, a thumbnail's
+placeholder running edge to edge in a card, a list inside a popover that
+already throws its own shadow. On those the material draws lines where none
+belong. The question at a call site is whether the thing stands on the page
+(plate) or colours an area inside something that does (tint).
 
 **Utilities replace the material.** `shadow-*` and `ring-*` set `box-shadow`
 from the utilities layer, which outranks the rungs. That is the escape hatch,
@@ -134,6 +139,7 @@ present  shared/components/src/styles/theme.css                                -
 present  shared/components/src/styles/theme.css                                --material-shadow-far
 present  shared/components/src/styles/globals.css                              .ds-bevel
 present  shared/components/src/styles/globals.css                              .ds-control
+present  shared/components/src/styles/globals.css                              .ds-tint-sunken
 present  shared/components/src/ui/button.tsx                                   ds-bevel
 present  shared/components/src/styles/globals.css                              .ds-raised-interactive
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive

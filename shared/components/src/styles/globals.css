@@ -602,6 +602,36 @@
 			inset 0 0 0 1px var(--material-rim),
 			inset 0 -1px 0 var(--material-bevel);
 	}
+
+	/*
+	  The ladder's values without its material, for fills that are a tint and
+	  not a plate: a progress track, table stripes, a thumbnail's placeholder
+	  well running edge to edge in a card, a list inside a popover that already
+	  throws its own shadow. On those the material draws lines where none
+	  belong, because an inset edge on a 2px track or a striped row is an
+	  outline, not light.
+	*/
+	.ds-tint-sunken {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 2.5%,
+			var(--background)
+		);
+	}
+	.ds-tint-raised {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 4%,
+			var(--background)
+		);
+	}
+	.ds-tint-overlay {
+		background-color: color-mix(
+			in oklch,
+			var(--foreground) 8%,
+			var(--background)
+		);
+	}
 	/*
 	  The ladder self-corrects when it nests. A raised block inside a raised
 	  block steps up on its own, rather than resolving to the same mix as its
@@ -612,9 +642,12 @@
 	  `ds-raised`, so a card dropped onto a raised panel had no edge at all.
 
 	  Same-class nesting only. `ds-overlay` inside `ds-raised` is already an
-	  explicit, deliberate pairing and keeps its value.
+	  explicit, deliberate pairing and keeps its value. A tint steps with its
+	  plate, so a row tinted `ds-tint-raised` inside a raised panel stays
+	  visible against it.
 	*/
-	.ds-raised .ds-raised {
+	.ds-raised .ds-raised,
+	.ds-raised .ds-tint-raised {
 		background-color: color-mix(
 			in oklch,
 			var(--foreground) 8%,
@@ -622,7 +655,9 @@
 		);
 	}
 	.ds-raised .ds-raised .ds-raised,
-	.ds-overlay .ds-overlay {
+	.ds-raised .ds-raised .ds-tint-raised,
+	.ds-overlay .ds-overlay,
+	.ds-overlay .ds-tint-overlay {
 		background-color: color-mix(
 			in oklch,
 			var(--foreground) 12%,
@@ -655,10 +690,10 @@
 
 	/*
 	  Interactive surfaces. Hover lifts the surface exactly one step up the
-	  ladder, so a raised row hovers to overlay. At rest they carry only the
-	  edge, no thrown shadow: these are rows and tiles that come in lists, and
-	  forty shadows in a column read as noise. The shadow arrives on hover,
-	  which is what makes the lift read as a lift. Use these rather than pairing a
+	  ladder, so a raised row hovers to overlay. At rest each is the plate of
+	  its static rung, shadow included, so a tile that is disabled mid-action
+	  (and drops to the static class) does not change height; the hover throws
+	  the next rung's longer shadow, which is what reads as the lift. Use these rather than pairing a
 	  `ds-*` class with a hand-written `hover:bg-foreground/N`: call sites had
 	  drifted to 6%, 8%, 12% and 14%, so equivalent rows hovered to different
 	  values in the same view.
@@ -672,7 +707,9 @@
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
 			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base);
+			inset 0 -1px 0 var(--material-base),
+			0 1px 2px var(--material-shadow),
+			0 12px 32px -18px var(--material-shadow-far);
 		transition:
 			background-color var(--duration-fast) var(--ease-out),
 			box-shadow var(--duration-base) var(--ease-out);
@@ -688,7 +725,7 @@
 			inset 0 0 0 1px var(--material-rim),
 			inset 0 -1px 0 var(--material-base),
 			0 1px 2px var(--material-shadow),
-			0 12px 32px -18px var(--material-shadow-far);
+			0 18px 44px -20px var(--material-shadow-far);
 	}
 	.ds-overlay-interactive {
 		background-color: color-mix(
@@ -699,7 +736,9 @@
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
 			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base);
+			inset 0 -1px 0 var(--material-base),
+			0 1px 2px var(--material-shadow),
+			0 18px 44px -20px var(--material-shadow-far);
 		transition:
 			background-color var(--duration-fast) var(--ease-out),
 			box-shadow var(--duration-base) var(--ease-out);
@@ -715,7 +754,7 @@
 			inset 0 0 0 1px var(--material-rim),
 			inset 0 -1px 0 var(--material-base),
 			0 1px 2px var(--material-shadow),
-			0 18px 44px -20px var(--material-shadow-far);
+			0 24px 56px -22px var(--material-shadow-far);
 	}
 	/*
 	  The resting surface of a control (the Slider track, a Toggle).
