@@ -13,7 +13,6 @@ import { attachFileDrop } from './file-drop'
 import { HERO_SHADOW_URL } from './hero-assets'
 import { fallBackToPoster } from './hero-store'
 import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
-import { readGlbContents } from '../../../lib/samples/glb-contents'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
 import { markHeroSettled } from '../stage/hero-settled'
 import { StageBoundary } from '../stage/stage-boundary'
@@ -162,7 +161,7 @@ export default function HeroStageClient({
 				dims: elements.dims,
 				scale: elements.scale
 			},
-			{ reducedMotion, posterMode: baking }
+			{ reducedMotion, posterMode: baking, floor: true }
 		)
 
 		const setPhase = (phase: 'poster' | 'drawn' | 'live') =>
@@ -212,12 +211,7 @@ export default function HeroStageClient({
 					return
 				}
 				const { buffer, fileName, originalBytes, bytes } = outcome
-				const readout = {
-					fileName,
-					...readGlbContents(buffer),
-					originalBytes,
-					bytes
-				}
+				const readout = { fileName, originalBytes, bytes }
 				await drawThenReveal(
 					buffer,
 					{},
@@ -294,6 +288,8 @@ export default function HeroStageClient({
 			stage.removeAttribute('data-receiving')
 			setPhase('poster')
 			fallBackToPoster(store, frame)
+			// Done with the GPU: the floor stops drifting under the poster. Unmount's dispose is then a no-op.
+			engine.dispose()
 		})
 
 		return () => {

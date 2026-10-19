@@ -395,9 +395,6 @@ export const HOME_PAGE_COPY = {
 		droppedView: 'Elevation',
 		readouts: {
 			file: 'File',
-			materials: 'Materials',
-			vertices: 'Vertices',
-			textures: 'Textures',
 			original: 'Original',
 			size: 'Size',
 			status: 'Status'

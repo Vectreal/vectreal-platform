@@ -16,8 +16,6 @@ import type { ReactNode } from 'react'
 
 const COPY = HOME_PAGE_COPY.stage
 
-const count = new Intl.NumberFormat('en-US')
-
 export function FigureLabel({ store }: { store: HeroStore }) {
 	const view = useHeroState(store, (s) => s.view)
 	const face =
@@ -66,17 +64,6 @@ export function Readout({ store }: { store: HeroStore }) {
 			<div className="contents" aria-live="polite">
 				<Cell label={COPY.readouts.file} className={styles.file}>
 					<span className={styles.value}>{readout.fileName}</span>
-				</Cell>
-				<Cell label={COPY.readouts.materials} className={styles.count}>
-					<span className={styles.value}>
-						{count.format(readout.materials)}
-					</span>
-				</Cell>
-				<Cell label={COPY.readouts.vertices} className={styles.count}>
-					<span className={styles.value}>{count.format(readout.vertices)}</span>
-				</Cell>
-				<Cell label={COPY.readouts.textures} className={styles.count}>
-					<span className={styles.value}>{count.format(readout.textures)}</span>
 				</Cell>
 				{original && (
 					<Cell label={COPY.readouts.original} className={styles.original}>

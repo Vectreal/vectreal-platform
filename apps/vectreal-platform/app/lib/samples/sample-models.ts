@@ -191,8 +191,6 @@ export const HERO_MODEL = {
 	bytes: 946_600,
 	/** The same model before the Balanced preset: the camera sample. Pinned by the spec. */
 	sourceBytes: 18_758_168,
-	/** As `@vctrl/core` reports the served file. Pinned by the spec. */
-	contents: { vertices: 17_702, materials: 4, textures: 9 },
 	/** Which face the line drawing shows. */
 	view: 'Front elevation'
 } as const
