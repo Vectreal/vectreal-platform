@@ -129,6 +129,10 @@ export default [
 		// loads, which is a better trade than an untyped route.
 		route('__scenes', './routes/news-room-page/newsroom-scene-preview.tsx'),
 
+		// Dev-only host for the normalize step; its loader 404s outside DEV,
+		// registered unconditionally for the same typegen reason as __scenes.
+		route('__normalize', './routes/normalize-model-page.tsx'),
+
 		// Publisher. Nested here, rather than in its own top-level branch, so the
 		// nav survives navigating into it instead of being torn down and rebuilt.
 		// It suppresses the nav and the footer through routePageChrome.

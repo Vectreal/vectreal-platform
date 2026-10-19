@@ -19,7 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * transforms, which ModelOptimizer runs on a copy and commits.
  */
 
-import { Transform } from '@gltf-transform/core'
+import { getBounds, Scene, Transform } from '@gltf-transform/core'
 import {
 	dedup,
 	DedupOptions as GltfDedupOptions,
@@ -35,6 +35,7 @@ import { MeshoptSimplifier } from 'meshoptimizer'
 import {
 	DedupOptions,
 	NormalsOptions,
+	PlacementOptions,
 	QuantizeOptions,
 	SimplifyOptions
 } from './types'
@@ -45,6 +46,11 @@ export interface TransformPass<Options> {
 	started: string
 	finished: string
 	transforms: (options: Options) => Transform[]
+	/**
+	 * Kept even when it makes the file larger. Every other pass exists to
+	 * shrink the file, so a result that grows it is reverted.
+	 */
+	mayGrow?: boolean
 }
 
 export const simplifyPass: TransformPass<SimplifyOptions> = {
@@ -76,4 +82,73 @@ export const normalsPass: TransformPass<NormalsOptions> = {
 	started: 'Optimizing normals',
 	finished: 'Normals optimization complete',
 	transforms: (options) => [normals(options as GltfNormalsOptions)]
+}
+
+/**
+ * Stands each scene on the ground at the origin: centered on X and Z, its
+ * lowest point at y = 0, and scaled uniformly when a real-world size is given.
+ * This is what AR viewers such as Quick Look and Shopify's own 3D slot expect,
+ * since they place the model's origin on the floor at its true size.
+ *
+ * The scene's contents move under one new parent node, so the meshes, their
+ * own transforms and any animation of them are left as they were. The node
+ * adds a few bytes, which is why the pass may grow the file.
+ *
+ * Bounds are measured on the meshes' rest pose: a skinned mesh is placed by
+ * where its vertices sit unposed, not where its joints would put them.
+ */
+export function placeOnGround({
+	longestEdgeMeters
+}: PlacementOptions = {}): Transform {
+	return (document) => {
+		const scenes = document.getRoot().listScenes()
+		// Reparenting a node detaches it from every scene that lists it, so a
+		// root shared by two scenes would vanish from the second.
+		const shared = scenes
+			.flatMap((scene) => scene.listChildren())
+			.find(
+				(node) =>
+					node.listParents().filter((parent) => parent instanceof Scene)
+						.length > 1
+			)
+		if (shared) {
+			throw new Error(
+				`Placement cannot move node "${shared.getName()}": more than one scene lists it`
+			)
+		}
+
+		for (const scene of scenes) {
+			const { min, max } = getBounds(scene)
+			const longest = Math.max(
+				max[0] - min[0],
+				max[1] - min[1],
+				max[2] - min[2]
+			)
+			// An empty scene has inverted infinite bounds: nothing to place.
+			if (!Number.isFinite(longest) || longest <= 0) continue
+
+			const scale = longestEdgeMeters ? longestEdgeMeters / longest : 1
+			const placement = document
+				.createNode('placement')
+				.setScale([scale, scale, scale])
+				.setTranslation([
+					(-(min[0] + max[0]) / 2) * scale,
+					-min[1] * scale,
+					(-(min[2] + max[2]) / 2) * scale
+				])
+			for (const child of scene.listChildren()) {
+				scene.removeChild(child)
+				placement.addChild(child)
+			}
+			scene.addChild(placement)
+		}
+	}
+}
+
+export const placementPass: TransformPass<PlacementOptions> = {
+	name: 'placement',
+	started: 'Placing the model on the ground',
+	finished: 'Placement complete',
+	mayGrow: true,
+	transforms: (options) => [placeOnGround(options)]
 }

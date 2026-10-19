@@ -163,13 +163,14 @@ const optimizedBuffer = await optimizer.export()
 
 | Method | Options | Description |
 |---|---|---|
+| `place(opts)` | `PlacementOptions` | Center the model on the ground at the origin, optionally at a real-world size |
 | `simplify(opts)` | `SimplifyOptions` | Mesh simplification |
 | `deduplicate(opts)` | `DedupOptions` | Remove duplicate accessors, meshes, textures and materials |
 | `quantize(opts)` | `QuantizeOptions` | Reduce vertex attribute precision |
 | `optimizeNormals(opts)` | `NormalsOptions` | Recompute/normalize normal data |
 | `compressTextures(opts)` | `TextureCompressOptions` | Texture compression via an injectable encoder (Sharp on Node.js by default) |
 | `compressGeometry(opts)` | `DracoOptions` | Replace the loaded document with a Draco-compressed copy |
-| `optimizeAll(opts)` | see below | Run every pass above except Draco, in a fixed order |
+| `optimizeAll(opts)` | see below | Run every pass above except placement and Draco, in a fixed order |
 
 ### Draco measurement
 
@@ -204,6 +205,14 @@ GLB than leaving the geometry uncompressed.
 | `onProgress(callback)` | Receive `OperationProgress` updates from every pass |
 
 ### Optimization options reference
+
+#### `place(options?: PlacementOptions)`
+
+Centers the model on X and Z and stands its lowest point on y = 0, which is where AR viewers put the floor. The scene's contents move under one new parent node, so meshes, their own transforms and animations are untouched. Unlike the other passes it is kept even though that node makes the file slightly larger.
+
+| Option | Type | Default | Notes |
+|---|---|---|---|
+| `longestEdgeMeters` | `number` | none | Scales uniformly so the longest bounding-box edge has this real-world length. Omitted, the model keeps its size. |
 
 #### `simplify(options?: SimplifyOptions)`
 
