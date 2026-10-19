@@ -276,10 +276,6 @@
 .scale {
 	transition: opacity 500ms;
 }
-/* A file held over the sheet: the figure's label takes the brand, so the drop target answers before the status line does. */
-.sheet[data-dragging] .meta {
-	color: var(--orange-ink);
-}
 .scale[data-gone] {
 	opacity: 0;
 }

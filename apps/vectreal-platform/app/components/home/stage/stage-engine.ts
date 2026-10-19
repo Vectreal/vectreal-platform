@@ -217,8 +217,9 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	let frameY = 0
 	/*
 	  The sample is framed tight, to land exactly on its baked poster: its
-	  bounding sphere is loose, so a sphere fit leaves it small. A dropped file has
-	  no poster and any shape, so it is framed whole, its sphere inside the frame.
+	  bounding sphere is loose, so a sphere fit leaves it small. A model shown
+	  without a poster (the embed stage's) is framed whole, its sphere inside
+	  the frame.
 	*/
 	let matchPoster = true
 
@@ -581,7 +582,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 				poster = false
 			}: { bakedShadow?: THREE.Texture | null; poster?: boolean } = {}
 		) {
-			// Parsed first: a file that will not parse must leave the model on stage, and its framing, as they were.
+			// Parsed before anything on the stage changes, so a file that will not parse leaves the stage as it was.
 			const gltf = await loader.parseAsync(buffer, '')
 			// Torn down while it parsed: placing it now would build render targets on a renderer that is gone.
 			if (disposed) {

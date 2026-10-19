@@ -1,32 +1,17 @@
-import {
-	lazy,
-	Suspense,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-	type RefObject
-} from 'react'
+import { useEffect } from 'react'
 import { TextureLoader, type Texture } from 'three'
 
-import { attachFileDrop } from './file-drop'
 import { HERO_SHADOW_URL } from './hero-assets'
 import { fallBackToPoster } from './hero-store'
 import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
 import { markHeroSettled } from '../stage/hero-settled'
-import { StageBoundary } from '../stage/stage-boundary'
 import { createStageEngine } from '../stage/stage-engine'
 
-import type { OwnFileApi } from './hero-own-file'
-import type { HeroState, HeroStore } from './hero-store'
-
-// A function, not one module-level `lazy`: React caches a rejected import, so a retry after a failed chunk needs a fresh one.
-const loadOwnFile = () => lazy(() => import('./hero-own-file'))
+import type { HeroStore } from './hero-store'
 
 /** The server-rendered sheet's nodes the stage draws into and measures. */
 export interface HeroStageElements {
-	sheet: HTMLElement
 	copy: HTMLElement
 	stage: HTMLElement
 	frame: HTMLElement
@@ -38,8 +23,6 @@ export interface HeroStageElements {
 interface Props {
 	store: HeroStore
 	elements: HeroStageElements
-	openFileRef: RefObject<(() => void) | null>
-	handOffRef: RefObject<(() => Promise<void>) | null>
 }
 
 /** How long the drawing stands as a drawing before the sweep: long enough to read as one, short enough not to read as a wait. */
@@ -101,56 +84,13 @@ async function fetchWithProgress(
 	return buffer.buffer
 }
 
-export default function HeroStageClient({
-	store,
-	elements,
-	openFileRef,
-	handOffRef
-}: Props) {
-	/*
-	  The visitor's-file machinery is a second lazy chunk, mounted on the first
-	  file. `ownFile` is a promise of its api, so a drop that arrives while the
-	  chunk is still loading simply waits for it.
-	*/
-	const [ownFileWanted, setOwnFileWanted] = useState(false)
-	const [HeroOwnFile, setHeroOwnFile] = useState(loadOwnFile)
-	const ownFile = useRef<{
-		api: Promise<OwnFileApi>
-		ready: (api: OwnFileApi) => void
-		fail: () => void
-	} | null>(null)
-	const ownFileApi = useCallback(() => {
-		if (!ownFile.current) {
-			let ready: (api: OwnFileApi) => void = () => {}
-			let fail = () => {}
-			const api = new Promise<OwnFileApi>((resolve, reject) => {
-				ready = resolve
-				fail = () => {
-					ownFile.current = null
-					reject(new Error('The file chunk failed'))
-				}
-			})
-			ownFile.current = { api, ready, fail }
-			setOwnFileWanted(true)
-		}
-		return ownFile.current.api
-	}, [])
-	const onOwnFileReady = useCallback(
-		(api: OwnFileApi) => ownFile.current?.ready(api),
-		[]
-	)
-	const onOwnFileFailed = useCallback(() => {
-		ownFile.current?.fail()
-		setOwnFileWanted(false)
-		setHeroOwnFile(loadOwnFile)
-	}, [])
-
+export default function HeroStageClient({ store, elements }: Props) {
 	useEffect(() => {
 		const reducedMotion = prefersReducedMotion()
 		const baking = bakeMode()
 		const abort = new AbortController()
 		const timers: number[] = []
-		const { sheet, stage, frame } = elements
+		const { stage, frame } = elements
 
 		const engine = createStageEngine(
 			{
@@ -172,73 +112,26 @@ export default function HeroStageClient({
 			)
 
 		/**
-		 * A model on the stage goes the same way whoever brought it: shown as its
-		 * elevation, held long enough to read as a drawing, swept into an object,
-		 * then turned and handed over. Resolves false when the page left first.
+		 * The model on the stage: shown as its elevation, held long enough to read
+		 * as a drawing, swept into an object, then turned and handed over.
 		 */
 		async function drawThenReveal(
 			buffer: ArrayBuffer,
-			show: Parameters<typeof engine.show>[1],
-			drawn: Partial<HeroState>,
-			live: Partial<HeroState>
+			show: Parameters<typeof engine.show>[1]
 		) {
 			await engine.show(buffer, show)
-			stage.removeAttribute('data-turnable')
-			if (abort.signal.aborted) return false
+			if (abort.signal.aborted) return
 			setPhase('drawn')
-			store.set({ status: 'drawn', ...drawn })
+			store.set({ status: 'drawn' })
 			await hold(reducedMotion ? 0 : DRAWN_HOLD_MS)
-			if (abort.signal.aborted) return false
+			if (abort.signal.aborted) return
 			store.set({ status: 'rendering' })
 			await engine.reveal()
-			if (abort.signal.aborted) return false
+			if (abort.signal.aborted) return
 			setPhase('live')
 			stage.setAttribute('data-turnable', '')
-			store.set({ status: 'live', busy: false, view: 'live', ...live })
+			store.set({ status: 'live', busy: false, view: 'live' })
 			markHeroSettled()
-			return true
-		}
-
-		/** A visitor's file: optimized with the publisher's Balanced preset, then drawn like the sample. */
-		async function take(files: File[]) {
-			if (store.get().busy) return
-			store.set({ status: 'optimizing', busy: true, canHandOff: false })
-			try {
-				const outcome = await (await ownFileApi()).prepare(files)
-				if (abort.signal.aborted) return
-				if (!outcome.ok) {
-					store.set({ status: outcome.reason, busy: false })
-					return
-				}
-				const { buffer, fileName, originalBytes, bytes } = outcome
-				const readout = { fileName, originalBytes, bytes }
-				await drawThenReveal(
-					buffer,
-					{},
-					{ view: 'dropped', readout, shownBytes: bytes },
-					{ canHandOff: true }
-				)
-			} catch (error) {
-				if (abort.signal.aborted) return
-				console.error('Hero stage could not take the file', error)
-				store.set({ status: 'failed', busy: false })
-			}
-		}
-
-		// From here the stage takes files: the secondary door opens a picker, and the whole sheet is a drop target.
-		const picker = document.createElement('input')
-		picker.type = 'file'
-		picker.multiple = true
-		picker.addEventListener('change', () => {
-			const files = [...(picker.files ?? [])]
-			picker.value = ''
-			if (files.length) void take(files)
-		})
-		let detachFileDrop: (() => void) | null = null
-		function acceptFiles() {
-			openFileRef.current = () => picker.click()
-			handOffRef.current = async () => (await ownFileApi()).handOff()
-			detachFileDrop = attachFileDrop(sheet, store, (files) => void take(files))
 		}
 
 		async function run() {
@@ -270,15 +163,7 @@ export default function HeroStageClient({
 				})
 				return
 			}
-			if (
-				await drawThenReveal(
-					buffer,
-					{ bakedShadow: await shadow, poster: true },
-					{},
-					{}
-				)
-			)
-				acceptFiles()
+			await drawThenReveal(buffer, { bakedShadow: await shadow, poster: true })
 		}
 
 		run().catch((error: unknown) => {
@@ -295,18 +180,9 @@ export default function HeroStageClient({
 		return () => {
 			abort.abort()
 			for (const timer of timers) window.clearTimeout(timer)
-			openFileRef.current = null
-			handOffRef.current = null
-			detachFileDrop?.()
 			engine.dispose()
 		}
-	}, [store, elements, openFileRef, handOffRef, ownFileApi])
+	}, [store, elements])
 
-	return ownFileWanted ? (
-		<StageBoundary onError={onOwnFileFailed}>
-			<Suspense fallback={null}>
-				<HeroOwnFile onReady={onOwnFileReady} />
-			</Suspense>
-		</StageBoundary>
-	) : null
+	return null
 }
