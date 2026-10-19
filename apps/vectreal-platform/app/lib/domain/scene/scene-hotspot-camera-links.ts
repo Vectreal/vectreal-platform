@@ -400,3 +400,35 @@ export function repointHotspotLinks(
 		h.linkedCameraId === fromCameraId ? { ...h, linkedCameraId: toCameraId } : h
 	)
 }
+
+/**
+ * Follows every interaction that switches to a camera onto its new id, for the
+ * same reason as `repointHotspotLinks`: an `activate_camera` naming the retired
+ * id is refused on save.
+ *
+ * Returns the same list when nothing names the camera, and leaves absent
+ * interactions absent.
+ */
+export function repointInteractions(
+	interactions: SceneInteractionDefinition[] | undefined,
+	fromCameraId: string,
+	toCameraId: string
+): SceneInteractionDefinition[] | undefined {
+	if (!interactions?.some((i) => interactionSwitchesTo(i, fromCameraId))) {
+		return interactions
+	}
+
+	return interactions.map((interaction) =>
+		interactionSwitchesTo(interaction, fromCameraId)
+			? {
+					...interaction,
+					actions: interaction.actions.map((action) =>
+						action.type === 'activate_camera' &&
+						action.cameraId === fromCameraId
+							? { ...action, cameraId: toCameraId }
+							: action
+					)
+				}
+			: interaction
+	)
+}

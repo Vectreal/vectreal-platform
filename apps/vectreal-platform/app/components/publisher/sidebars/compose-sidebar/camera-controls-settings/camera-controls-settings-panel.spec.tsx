@@ -174,6 +174,28 @@ describe('CameraControlsSettingsPanel deleting a camera', () => {
 		)
 	})
 
+	// A rename mints a new id from the name, so what named the old one follows.
+	it('moves the interactions that switched to a renamed camera onto its new id', async () => {
+		const store = sceneWithLinkedSide()
+		renderPanel(store)
+
+		fireEvent.click(await screen.findByRole('button', { name: /Side/ }))
+		await screen.findByRole('heading', { name: 'Side' })
+		const name = screen.getByPlaceholderText('Enter camera name...')
+		fireEvent.change(name, { target: { value: 'Profile' } })
+		fireEvent.keyDown(name, { key: 'Enter' })
+
+		const renamedId = store
+			.get(cameraAtom)
+			.cameras?.find((c) => c.name === 'Profile')?.cameraId
+		expect(renamedId).toBeDefined()
+		expect(renamedId).not.toBe('side')
+		expect(store.get(interactionsAtom)?.[0].actions).toEqual([
+			{ type: 'activate_camera', cameraId: renamedId }
+		])
+		expect(store.get(hotspotsAtom)[0].linkedCameraId).toBe(renamedId)
+	})
+
 	it('says nothing when the camera took nothing with it', async () => {
 		toastInfo.mockClear()
 		const store = sceneWithLinkedSide()
