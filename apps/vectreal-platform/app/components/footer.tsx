@@ -49,8 +49,8 @@ const FooterLink = ({ link }: { link: SiteLink }) =>
  * Every column comes from the site map, so the footer and the nav cannot name
  * a page two ways or forget one. It is grouped by type and space alone: the
  * lines it used to draw between rows separated nothing that alignment did not
- * already separate. Each column's label carries one cell of the page's dither
- * in the brand, so the footer is recognizably the same site as the page above.
+ * already separate. Each column's label carries a small brand square, so the
+ * footer is recognizably the same site as the page above.
  */
 export const Footer = () => {
 	const { setPreferencesOpen } = useConsent()

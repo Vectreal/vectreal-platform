@@ -11,7 +11,6 @@ import {
 	quadVert
 } from './stage-shaders'
 import { SHADOW, createShadowBaker } from './stage-shadow'
-import { DITHER_CELL_PX } from '../../../lib/dither/dither'
 import {
 	createCssColorProbe,
 	observeTheme
@@ -263,7 +262,6 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			beside ? (copyRight - 24) * dpr : -1,
 			beside ? (copyRight + 96) * dpr : -1
 		)
-		uniforms.uCell.value = DITHER_CELL_PX * dpr
 		uniforms.uVFade.value = posterMode || !edgeFade ? 0 : 40 * dpr // a tight band: the frame, not a vignette
 		uniforms.uRes.value.set(w * dpr, h * dpr)
 

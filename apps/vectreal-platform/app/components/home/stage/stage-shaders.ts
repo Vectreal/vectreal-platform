@@ -1,7 +1,5 @@
 import * as THREE from 'three'
 
-import { BAYER4_GLSL, DITHER_CELL_PX } from '../../../lib/dither/dither'
-
 /*
   The stage's GLSL, apart from the engine that drives it: the full-screen quad,
   the drawing overlay, the ground and the shadow blur.
@@ -21,7 +19,6 @@ export const overlayUniforms = () => ({
 	uInk: { value: new THREE.Vector3() },
 	uAccent: { value: new THREE.Vector3() },
 	uFade: { value: new THREE.Vector2(-1, -1) },
-	uCell: { value: DITHER_CELL_PX },
 	uVFade: { value: 0 },
 	uSpan: { value: new THREE.Vector2(0, 1e5) },
 	uReveal: { value: 0 },
@@ -33,12 +30,11 @@ export const overlayFragment = /* glsl */ `
 uniform sampler2D tN; uniform sampler2D tD;
 uniform vec2 uRes, uTexel; uniform float uNear, uFar;
 uniform vec3 uInk, uAccent; uniform int uPass;
-uniform vec2 uFade, uSpan; uniform float uCell, uVFade;
+uniform vec2 uFade, uSpan; uniform float uVFade;
 uniform float uReveal, uLine;
 varying vec2 vUv;
-${BAYER4_GLSL}
 /*
-  One dissolve for every edge the object can meet: toward the copy (uFade) and at
+  One fade for every edge the object can meet: toward the copy (uFade) and at
   the stage's top and bottom (uVFade), so where the canvas ends reads as a frame
   the drawing was set in rather than a crop.
 */
@@ -46,7 +42,7 @@ float kept(){
   float f = 1.0;
   if (uFade.y > uFade.x) { float a = clamp((gl_FragCoord.x - uFade.x) / (uFade.y - uFade.x), 0.0, 1.0); f = a * a * (3.0 - 2.0 * a); }
   if (uVFade > 0.0) { float e = clamp(min(gl_FragCoord.y, uRes.y - gl_FragCoord.y) / uVFade, 0.0, 1.0); f *= e * e * (3.0 - 2.0 * e); }
-  return step(bayer4(floor(gl_FragCoord.xy / uCell)), f);
+  return f;
 }
 float z(vec2 uv){ float d = texture2D(tD, uv).x; return -perspectiveDepthToViewZ(d, uNear, uFar); }
 vec3 n(vec2 uv){ return texture2D(tN, uv).xyz * 2.0 - 1.0; }

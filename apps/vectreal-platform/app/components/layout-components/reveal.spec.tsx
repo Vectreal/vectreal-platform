@@ -8,24 +8,13 @@
 import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DitherReveal } from './dither-reveal'
+import { Reveal } from './reveal'
 
 type Callback = (entries: Partial<IntersectionObserverEntry>[]) => void
 
 let deliver: Callback = () => {}
 let observerOptions: IntersectionObserverInit | undefined
 let reduceMotion = false
-
-// Frames run only when a test flushes them, at the time it names.
-let pending = new Map<number, FrameRequestCallback>()
-let nextFrame = 0
-let now = 0
-function flushFrames(t: number) {
-	now = t
-	const queue = [...pending.values()]
-	pending = new Map()
-	for (const callback of queue) callback(t)
-}
 
 beforeEach(() => {
 	vi.stubGlobal(
@@ -41,14 +30,6 @@ beforeEach(() => {
 	)
 	reduceMotion = false
 	vi.stubGlobal('matchMedia', () => ({ matches: reduceMotion }))
-	pending = new Map()
-	now = 0
-	vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
-		pending.set(++nextFrame, callback)
-		return nextFrame
-	})
-	vi.stubGlobal('cancelAnimationFrame', (id: number) => pending.delete(id))
-	vi.spyOn(performance, 'now').mockImplementation(() => now)
 	// The section starts below the fold.
 	vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
 		top: 5000,
@@ -67,10 +48,10 @@ afterEach(() => {
 
 function renderSection() {
 	const { getByText, unmount } = render(
-		<DitherReveal>
+		<Reveal>
 			<h2 data-reveal>Heading</h2>
 			<p data-reveal>Body</p>
-		</DitherReveal>
+		</Reveal>
 	)
 	return Object.assign([getByText('Heading'), getByText('Body')], { unmount })
 }
@@ -89,7 +70,7 @@ function arrive(bottom = 400) {
 describe('a section revealed on arrival', () => {
 	it('starts hidden below the fold', () => {
 		for (const el of renderSection()) {
-			expect(el.style.maskImage).not.toBe('')
+			expect(el.style.opacity).toBe('0')
 		}
 	})
 
@@ -101,7 +82,7 @@ describe('a section revealed on arrival', () => {
 		} as DOMRect)
 
 		for (const el of renderSection()) {
-			expect(el.style.maskImage).toBe('')
+			expect(el.style.opacity).toBe('')
 			expect(el.style.transform).toBe('')
 		}
 	})
@@ -110,7 +91,7 @@ describe('a section revealed on arrival', () => {
 		reduceMotion = true
 
 		for (const el of renderSection()) {
-			expect(el.style.maskImage).toBe('')
+			expect(el.style.opacity).toBe('')
 			expect(el.style.transform).toBe('')
 		}
 	})
@@ -132,7 +113,7 @@ describe('a section revealed on arrival', () => {
 		arrive(-200)
 
 		for (const el of blocks) {
-			expect(el.style.maskImage).toBe('')
+			expect(el.style.opacity).toBe('')
 			expect(el.style.transform).toBe('')
 		}
 		expect(HTMLElement.prototype.animate).not.toHaveBeenCalled()
@@ -163,24 +144,22 @@ describe('a section revealed on arrival', () => {
 		expect(cancel).toHaveBeenCalledTimes(blocks.length)
 	})
 
-	it('resolves from the grain to solid as each block seats', () => {
-		const [heading, body] = renderSection()
-		const hidden = heading.style.maskImage
+	it('fades each block up in document order, one stagger apart', () => {
+		const blocks = renderSection()
 		arrive()
 
-		// Part way: some grain, neither hidden nor solid.
-		flushFrames(100)
-		expect(heading.style.maskImage).not.toBe('')
-		expect(heading.style.maskImage).not.toBe(hidden)
-
-		// The heading has seated; the body, one stagger behind, has not yet.
-		flushFrames(360)
-		expect(heading.style.maskImage).toBe('')
-		expect(body.style.maskImage).not.toBe('')
-
-		flushFrames(430)
-		expect(body.style.maskImage).toBe('')
-		expect(pending.size).toBe(0)
+		const calls = vi.mocked(HTMLElement.prototype.animate).mock.calls
+		expect(calls).toHaveLength(blocks.length)
+		const delays = calls.map(
+			([, options]) => (options as KeyframeAnimationOptions).delay
+		)
+		expect(delays[0]).toBe(0)
+		expect(delays[1]).toBeGreaterThan(0)
+		for (const [keyframes] of calls) {
+			const frames = keyframes as Keyframe[]
+			expect(frames[0]?.opacity).toBe(0)
+			expect(frames.at(-1)?.opacity).toBe(1)
+		}
 	})
 
 	it('is shown at once when motion was turned off after the page loaded', () => {
@@ -189,7 +168,7 @@ describe('a section revealed on arrival', () => {
 		arrive()
 
 		for (const el of blocks) {
-			expect(el.style.maskImage).toBe('')
+			expect(el.style.opacity).toBe('')
 			expect(el.style.transform).toBe('')
 		}
 		expect(HTMLElement.prototype.animate).not.toHaveBeenCalled()
@@ -204,21 +183,19 @@ describe('a section revealed on arrival', () => {
 		})
 
 		for (const el of blocks) {
-			expect(el.style.maskImage).toBe('')
+			expect(el.style.opacity).toBe('')
 			expect(el.style.transform).toBe('')
 		}
 	})
 
-	it('is seated, not caught mid-grain, when the page is printed mid-arrival', () => {
+	it('is shown, not caught mid-fade, when the page is printed mid-arrival', () => {
 		const blocks = renderSection()
 		arrive()
-		flushFrames(100)
 
 		act(() => {
 			window.dispatchEvent(new Event('beforeprint'))
 		})
-		expect(pending.size).toBe(0)
-		for (const el of blocks) expect(el.style.maskImage).toBe('')
+		for (const el of blocks) expect(el.style.opacity).toBe('')
 		for (const { value } of vi.mocked(HTMLElement.prototype.animate).mock
 			.results) {
 			expect((value as Animation).cancel).toHaveBeenCalled()
@@ -228,14 +205,11 @@ describe('a section revealed on arrival', () => {
 	it('leaves nothing hidden or running when it unmounts mid-arrival', () => {
 		const blocks = renderSection()
 		arrive()
-		flushFrames(100)
 
 		blocks.unmount()
-		expect(pending.size).toBe(0)
-		flushFrames(200)
 
 		for (const el of blocks) {
-			expect(el.style.maskImage).toBe('')
+			expect(el.style.opacity).toBe('')
 			expect(el.style.transform).toBe('')
 		}
 		for (const { value } of vi.mocked(HTMLElement.prototype.animate).mock
