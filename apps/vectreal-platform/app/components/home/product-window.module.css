@@ -1,9 +1,9 @@
 @reference '../../../../../shared/components/src/styles/globals.css';
 
 /*
-  A step's tile carries a rule along its top edge, full bleed, and the tile's
-  rounded corners clip it rather than bend it: the rule stays a straight line. The rule reports where the reader is: the
-  active step's is drawn in the brand, the others stay faint. While the window cycles, the active step's
+  A step carries a rule along its top edge, as wide as the step. The rule
+  reports where the reader is: the active step's is drawn in the brand, the
+  others stay faint. While the window cycles, the active step's
   rule fills from left to right over the dwell: the fill is the clock, its
   moving end sharp and the way it has come fading out behind it. Once the
   reader has taken over, the step they chose draws full and solid, quickly.

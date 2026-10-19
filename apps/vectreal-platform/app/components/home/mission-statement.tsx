@@ -129,8 +129,8 @@ export const MissionStatement = () => {
 						typeof part === 'string' ? (
 							part
 						) : 'highlight' in part ? (
-							// The problem, in the brand from the start: it does not wait to light up like the key phrases.
-							<span key={part.highlight} className="text-orange-ink">
+							// The problem, in full ink from the start: it does not wait to light up like the key phrases. The brand is kept for the promise the paragraph ends on, so a screen carries one orange phrase.
+							<span key={part.highlight} className="text-foreground">
 								{part.highlight}
 							</span>
 						) : (
