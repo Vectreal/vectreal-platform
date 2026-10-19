@@ -1,7 +1,10 @@
 import { describeAnimationClips } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
-import { resolvePlaybackClips } from './resolve-playback-clips'
+import {
+	resolveOneShotClip,
+	resolvePlaybackClips
+} from './resolve-playback-clips'
 
 import type { AnimationClipConfig, AnimationSettings } from '@vctrl/core'
 
@@ -221,5 +224,42 @@ describe('resolvePlaybackClips', () => {
 				undefined
 			])
 		})
+	})
+})
+
+describe('resolveOneShotClip', () => {
+	it('resolves a clip the program does not play, or with the program off', () => {
+		const off = settings([config('Spin', { enabled: false })], {
+			enabled: false
+		})
+
+		expect(resolveOneShotClip(off, model, idOf('Spin'))).toEqual({
+			clipId: idOf('Spin'),
+			clipIndex: 0,
+			duration: 2,
+			loop: 'once',
+			timeScale: 1,
+			startOffset: 0
+		})
+		expect(resolveOneShotClip(undefined, model, idOf('Idle'))?.clipIndex).toBe(
+			1
+		)
+	})
+
+	it('takes only the speed from a matching config', () => {
+		const tuned = settings([
+			config('Spin', { timeScale: 2, startOffset: 1, loop: 'ping_pong' })
+		])
+
+		expect(resolveOneShotClip(tuned, model, idOf('Spin'))).toMatchObject({
+			timeScale: 2,
+			startOffset: 0,
+			loop: 'once'
+		})
+	})
+
+	it('resolves nothing for an unmatched or zero-length clip', () => {
+		expect(resolveOneShotClip(undefined, model, 'missing')).toBeNull()
+		expect(resolveOneShotClip(undefined, model, idOf('Empty'))).toBeNull()
 	})
 })

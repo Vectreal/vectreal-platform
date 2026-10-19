@@ -82,3 +82,44 @@ describe('AccumulatePass history', () => {
 		expect(sourceOf(draws, draws.at(-1)!.input)).toBe(moving.texture)
 	})
 })
+
+/**
+ * What three keys this pass's program on: whether it draws to the canvas
+ * (output color space) or into any target (the working color space). Its
+ * material is not tone mapped, so nothing else about a target matters.
+ */
+const outputOf = (target: WebGLRenderTarget | null) =>
+	target === null ? 'canvas' : 'target'
+
+describe('AccumulatePass warm-up', () => {
+	it('names a draw for every output it renders into', () => {
+		const pass = new AccumulatePass()
+		pass.renderToScreen = true
+		const { renderer, draws } = recordingRenderer(pass)
+
+		pass.present(false)
+		pass.render(renderer, frame())
+		pass.present(true)
+		pass.render(renderer, frame())
+		pass.accumulate(0)
+		pass.render(renderer, frame())
+		pass.accumulate(1)
+		pass.render(renderer, frame())
+		pass.presentHistory(renderer)
+
+		const rendered = new Set(draws.map(({ target }) => outputOf(target)))
+		const warmed = new Set(pass.draws.map(({ target }) => outputOf(target)))
+		expect(rendered.size).toBe(2)
+		expect(warmed).toEqual(rendered)
+	})
+
+	it('warms its own material', () => {
+		const pass = new AccumulatePass()
+		for (const { scene } of pass.draws) {
+			const materials = scene.children.map(
+				(child) => (child as { material?: unknown }).material
+			)
+			expect(materials).toContain(pass.fullscreenMaterial)
+		}
+	})
+})

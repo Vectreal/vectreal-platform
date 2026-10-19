@@ -103,7 +103,7 @@ export function buildTidbits(facts: DashboardFacts): Tidbit[] {
 			tidbits.push({
 				id: 'biggest-cut',
 				figure: `${Math.floor(share * 100)}%`,
-				caption: `of ${cut.sceneName} is gone: ${formatFileSize(cut.initialBytes)} down to ${formatFileSize(cut.currentBytes)}.`
+				caption: `smaller for ${cut.sceneName}: ${formatFileSize(cut.initialBytes)} down to ${formatFileSize(cut.currentBytes)}.`
 			})
 		}
 	}

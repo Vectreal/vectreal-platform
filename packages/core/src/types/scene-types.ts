@@ -413,6 +413,13 @@ export interface HotspotDefinition {
 	 * The camera must exist in CameraProps.cameras.
 	 */
 	linkedCameraId?: string
+	/**
+	 * Clip id (from `deriveAnimationClipId`) that plays once, holding its last
+	 * frame, when a visitor activates this hotspot. Independent of the scene's
+	 * own `animation` program: it plays even when that program is off, and the
+	 * program's per-clip settings other than speed do not apply to it.
+	 */
+	linkedAnimationClipId?: string
 	/** Whether the hotspot dot/overlay is visible to the end user. */
 	visible: boolean
 	/**

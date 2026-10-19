@@ -71,7 +71,7 @@ export const LEGAL_PAGE_SEO_BY_PATH: Record<string, SeoPageDefinition> = {
 	'/contact': {
 		title: 'Contact - Vectreal',
 		description:
-			'Contact the Vectreal team for support, enterprise inquiries, or partnerships.',
+			'Contact the Vectreal team for support, a project, or enterprise inquiries.',
 		canonical: '/contact'
 	},
 	'/code-of-conduct': {

@@ -2,7 +2,7 @@ import { usePostHog } from '@posthog/react'
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router'
 
-import { buildErrorReport } from './error-report'
+import { buildErrorReport, type ErrorSource } from './error-report'
 
 /**
  * The one path by which a rendered error leaves the browser.
@@ -32,7 +32,10 @@ import { buildErrorReport } from './error-report'
  *     promise working as written, and it is the reason the server sink is not
  *     optional.
  */
-export function useErrorReport(error: unknown): void {
+export function useErrorReport(
+	error: unknown,
+	source: Exclude<ErrorSource, 'server'> = 'client-boundary'
+): void {
 	const posthog = usePostHog()
 	/*
 	  The router's location, not `window.location`. They agree in a browser -
@@ -56,12 +59,12 @@ export function useErrorReport(error: unknown): void {
 		if (reported.current === error) return
 
 		const report = buildErrorReport(error, {
-			source: 'client-boundary',
+			source,
 			pathname
 		})
 		if (!report) return
 
 		reported.current = error
 		posthog?.captureException(report.error, report.properties)
-	}, [error, pathname, posthog])
+	}, [error, pathname, posthog, source])
 }

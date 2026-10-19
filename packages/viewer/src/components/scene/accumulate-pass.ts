@@ -9,6 +9,8 @@ import {
 	type WebGLRenderer
 } from 'three'
 
+import type { ShaderDraw } from './shader-warmup'
+
 const vertexShader = /* glsl */ `
 varying vec2 vUv;
 void main() {
@@ -88,6 +90,20 @@ export class AccumulatePass extends Pass {
 	accumulate(sample: number) {
 		this.mode = 'accumulate'
 		this.sample = sample
+	}
+
+	/**
+	 * The draws this pass makes, for the shader warm-up. Its one material has
+	 * a program per output: the linear history targets, first drawn once the
+	 * viewer comes to rest, and the canvas, drawn on every frame. Left to the
+	 * first frame that needs it, the history's compiled on the main thread a
+	 * second or so after the scene was revealed.
+	 */
+	get draws(): ShaderDraw[] {
+		return [
+			{ scene: this.scene, camera: this.camera, target: this.read },
+			{ scene: this.scene, camera: this.camera, target: null }
+		]
 	}
 
 	/** Redraws the last presented frame onto the canvas. */

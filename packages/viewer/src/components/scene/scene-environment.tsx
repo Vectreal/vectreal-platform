@@ -4,7 +4,7 @@ import {
 	EnvironmentProps,
 	resolveEnvironmentFiles
 } from '@vctrl/core'
-import { memo } from 'react'
+import { memo, useEffect, useRef } from 'react'
 
 import LoadFailureBoundary from '../load-failure-boundary'
 import { useRoomEnvironment } from './room-environment'
@@ -61,6 +61,32 @@ const FallbackEnvironment = ({
 	return null
 }
 
+interface SceneEnvironmentProps extends EnvironmentProps {
+	/** Called with the map's files when they fail to load. */
+	onLoadFailed?: (files: string[]) => void
+	/** Called with the map's files once they light the scene. */
+	onLoaded?: (files: string[]) => void
+}
+
+/**
+ * Committed only beside a map that rendered: a map that throws or is still
+ * loading keeps everything in its boundary from committing.
+ */
+const LoadedSignal = ({ onLoaded }: { onLoaded: () => void }) => {
+	const onLoadedRef = useRef(onLoaded)
+	onLoadedRef.current = onLoaded
+	// Once each time the map is shown: the boundary around it is keyed by the
+	// map's files, so another map or a remount mounts a new signal. The ref is
+	// for StrictMode, which runs a mount effect twice in development.
+	const signalled = useRef(false)
+	useEffect(() => {
+		if (signalled.current) return
+		signalled.current = true
+		onLoadedRef.current()
+	}, [])
+	return null
+}
+
 /**
  * Sets up the environment for a scene.
  *
@@ -69,39 +95,48 @@ const FallbackEnvironment = ({
  * the failure, so the shader warm-up compiles against the environment the
  * scene is shown with either way. The failure is forgotten, so the map is
  * downloaded again the next time it is shown, but not while it is on screen.
+ * `onLoadFailed` and `onLoaded` are the only word of either that leaves the
+ * canvas.
  */
-const SceneEnvironment = memo((props: EnvironmentProps) => {
-	const environment = { ...defaultEnvOptions, ...props }
-	const {
-		background,
-		backgroundBlurriness,
-		backgroundIntensity,
-		environmentIntensity,
-		scene
-	} = environment
-	const files = resolveEnvironmentFiles(environment)
+const SceneEnvironment = memo(
+	({ onLoadFailed, onLoaded, ...props }: SceneEnvironmentProps) => {
+		const environment = { ...defaultEnvOptions, ...props }
+		const {
+			background,
+			backgroundBlurriness,
+			backgroundIntensity,
+			environmentIntensity,
+			scene
+		} = environment
+		const files = resolveEnvironmentFiles(environment)
+		const fileList = Array.isArray(files) ? files : [files]
 
-	return (
-		<LoadFailureBoundary
-			key={String(files)}
-			onError={() => forgetEnvironmentFiles(files)}
-			fallback={
-				<FallbackEnvironment
+		return (
+			<LoadFailureBoundary
+				key={String(files)}
+				onError={() => {
+					forgetEnvironmentFiles(files)
+					onLoadFailed?.(fileList)
+				}}
+				fallback={
+					<FallbackEnvironment
+						environmentIntensity={environmentIntensity}
+						scene={scene}
+					/>
+				}
+			>
+				<Environment
+					files={files}
+					background={background}
+					backgroundBlurriness={backgroundBlurriness}
+					backgroundIntensity={backgroundIntensity}
 					environmentIntensity={environmentIntensity}
 					scene={scene}
 				/>
-			}
-		>
-			<Environment
-				files={files}
-				background={background}
-				backgroundBlurriness={backgroundBlurriness}
-				backgroundIntensity={backgroundIntensity}
-				environmentIntensity={environmentIntensity}
-				scene={scene}
-			/>
-		</LoadFailureBoundary>
-	)
-})
+				<LoadedSignal onLoaded={() => onLoaded?.(fileList)} />
+			</LoadFailureBoundary>
+		)
+	}
+)
 
 export default SceneEnvironment

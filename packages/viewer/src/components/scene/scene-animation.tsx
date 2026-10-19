@@ -7,7 +7,10 @@ import {
 	isProgramActive,
 	reducePlayback
 } from './animation-playback'
-import { resolvePlaybackClips } from './resolve-playback-clips'
+import {
+	resolveOneShotClip,
+	resolvePlaybackClips
+} from './resolve-playback-clips'
 
 import type {
 	PlaybackAction,
@@ -17,7 +20,6 @@ import type {
 } from './animation-playback'
 import type {
 	ViewerCommand,
-	ViewerCommandExecutor,
 	ViewerInteractionEvent
 } from '../../types/viewer-interactions'
 import type { AnimationLoopMode, AnimationSettings } from '@vctrl/core'
@@ -53,11 +55,35 @@ export const defaultAnimationOptions: AnimationSettings = {
  */
 const MAX_FRAME_DELTA = 0.25
 
+/**
+ * Plays the clip a hotspot links, once, when a visitor activates it.
+ *
+ * Internal to the viewer: it is not a `ViewerCommand`, so the embed protocol
+ * neither forwards nor documents it. A host reaches the same behavior through
+ * `focus_hotspot`, which does what clicking the marker does.
+ */
+export interface PlayHotspotClipCommand {
+	type: 'play_hotspot_clip'
+	clipId: string
+	/** Pose the clip's last frame instead of playing it: reduced motion. */
+	jumpToEnd: boolean
+}
+
+/** Everything the animation layer runs: the public commands plus the hotspot one. */
+export type AnimationLayerCommand = PlayHotspotClipCommand | ViewerCommand
+
+export interface AnimationLayerExecutor {
+	execute: (command: AnimationLayerCommand) => void
+}
+
 /** The slice of playback the viewer shell needs in order to render. */
 export interface AnimationPlaybackStatus {
 	playing: boolean
 	complete: boolean
-	/** The clip driving a sequence; null in simultaneous mode. */
+	/**
+	 * The clip a hotspot is playing, else the clip driving a sequence; null in
+	 * simultaneous mode.
+	 */
 	activeClipId: null | string
 	/** Whether model geometry is currently being driven. */
 	active: boolean
@@ -68,7 +94,7 @@ interface SceneAnimationProps {
 	model: Object3D
 	animations: AnimationClip[]
 	options?: AnimationSettings
-	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
+	onCommandExecutorReady?: (executor: AnimationLayerExecutor | null) => void
 	onInteractionEvent?: (event: ViewerInteractionEvent) => void
 	onPlaybackStatusChange?: (status: AnimationPlaybackStatus) => void
 }
@@ -95,9 +121,10 @@ function readStatus(state: PlaybackState): AnimationPlaybackStatus {
 		playing: state.isPlaying,
 		complete: state.isComplete,
 		activeClipId:
-			state.mode === 'sequence'
+			state.oneShotClipId ??
+			(state.mode === 'sequence'
 				? (state.clips[state.activeIndex]?.clipId ?? null)
-				: null,
+				: null),
 		active: isProgramActive(state)
 	}
 }
@@ -151,6 +178,8 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 	// unregisters with null on every re-run of that effect.
 	const animationsRef = useRef(animations)
 	animationsRef.current = animations
+	const optionsRef = useRef(options)
+	optionsRef.current = options
 	const onInteractionEventRef = useRef(onInteractionEvent)
 	onInteractionEventRef.current = onInteractionEvent
 	const onPlaybackStatusChangeRef = useRef(onPlaybackStatusChange)
@@ -358,8 +387,22 @@ const SceneAnimation = (props: SceneAnimationProps) => {
 	}, [mixer, model])
 
 	const executeViewerCommand = useCallback(
-		(command: ViewerCommand) => {
+		(command: AnimationLayerCommand) => {
 			switch (command.type) {
+				case 'play_hotspot_clip': {
+					const clip = resolveOneShotClip(
+						optionsRef.current,
+						animationsRef.current,
+						command.clipId
+					)
+					if (!clip) return
+					dispatch({
+						type: 'play_clip_once',
+						clip,
+						jumpToEnd: command.jumpToEnd
+					})
+					return
+				}
 				case 'set_animation_playing':
 					dispatch({ type: command.playing ? 'play' : 'pause' })
 					return
