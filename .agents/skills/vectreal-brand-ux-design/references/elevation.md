@@ -26,10 +26,14 @@ the material makes it read as a plate in space.
   Note it sets a **background-color**, not a border colour: it is the fill of a
   hairline *element*, so putting it on a row alongside `border-b` tints the whole
   row instead of its border. A border that needs a colour wants `border-border`.
-- `ds-lit` — a media panel on the marketing site: a matte glass pane with an
-  orange glow set behind it, frosted into a muted surface, a little of the
-  light escaping past its edges. It holds a product shot, a code window or a
-  drawing, never copy. No rim, the bevel only. It must not clip
+- `ds-lit` — a media panel on the marketing site: a frosted glass plate in
+  front of a light, the recipe of `.prototype-visual/cards.html`. The light
+  stands behind the panel's foot and runs from a hot core through the brand
+  to nothing, spilling past the sides and over the top. The plate's hairline
+  rim warms from the bottom where the light reaches it, and a thin hot line
+  marks where the light wraps the top edge. Its colours are the `--lit-*`
+  tokens in `theme.css`, one set per scheme. It holds a product shot, a code
+  window or a drawing, never copy. It must not clip
   (`overflow-hidden` would cut the light off at its edge), so anything inside
   that needs clipping clips on its own wrapper.
 - `ds-raised-interactive` / `ds-overlay-interactive` — hover lifts exactly one
@@ -187,6 +191,7 @@ present  shared/components/src/styles/globals.css                              .
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
 present  shared/components/src/styles/globals.css                              .ds-ghost-interactive
 present  shared/components/src/styles/globals.css                              .ds-lit::after
+present  shared/components/src/styles/theme.css                                --lit-core
 present  eslint.config.mts                                                     ghost|lit|tint-raised
 present  apps/vectreal-platform/app/components/layout-components/sheet-frame.tsx  export const Band
 present  shared/components/src/styles/theme.css                                --material-plate-rim

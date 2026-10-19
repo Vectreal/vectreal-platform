@@ -698,13 +698,17 @@
 	}
 
 	/*
-	  A media panel on the marketing site: a matte pane with the light behind
-	  it, the way GitHub sets its product shots (Moritz, 19 Oct 2026). The
-	  glow stands back of the panel (::before), the pane over it (::after)
-	  frosts it into a muted surface, and only a little of it escapes past the
-	  edges. The panel isolates, so the pane's blur reads the glow and nothing
-	  of the page behind it. No rim; the bevel only. Anything inside that has to
-	  be clipped clips on its own wrapper: clipping the panel would cut the
+	  A media panel on the marketing site: a glass plate standing in front of a
+	  light, the way GitHub backlights its panels (Moritz, 19 Oct 2026; the
+	  prototype is `.prototype-visual/cards.html`). The light (::before) stands
+	  behind the panel's foot and throws up past its sides and over its top,
+	  running from a hot core through the brand to nothing. The plate (::after)
+	  frosts it, and its hairline rim warms where the light reaches it, from
+	  the bottom up; a thin hot line marks where the light wraps the top edge.
+	  The plate's blur frosts the light and whatever of the page stands behind
+	  the panel, the floor included. The hot line is drawn under the panel's
+	  content, so content keeps clear of the top edge. Anything inside that has
+	  to be clipped clips on its own wrapper: clipping the panel would cut the
 	  light off at its edge.
 	*/
 	.ds-lit {
@@ -719,32 +723,46 @@
 		pointer-events: none;
 	}
 	.ds-lit::before {
-		inset: 6%;
+		inset: -14% -16% 4%;
 		z-index: -2;
-		background:
-			radial-gradient(
-				60% 55% at 40% 40%,
-				color-mix(in oklch, var(--orange) 70%, transparent),
-				transparent 75%
-			),
-			radial-gradient(
-				55% 60% at 64% 62%,
-				color-mix(in oklch, var(--orange) 45%, transparent),
-				transparent 75%
-			);
+		background: radial-gradient(
+			58% 70% at 50% 78%,
+			var(--lit-core) 0%,
+			var(--lit-mid) 20%,
+			var(--lit-edge) 48%,
+			transparent 70%
+		);
 		filter: blur(48px);
-		opacity: 0.9;
+		opacity: var(--lit-strength);
 	}
+	/* Three layers on one box: the hot line along the top edge, the plate, and the rim showing in its 1px border. */
 	.ds-lit::after {
 		inset: 0;
 		z-index: -1;
-		background: color-mix(
-			in oklch,
-			color-mix(in oklch, var(--foreground) 4%, var(--background)) 58%,
-			transparent
-		);
-		backdrop-filter: blur(48px) saturate(1.15);
-		box-shadow: inset 0 1px 0 var(--material-bevel);
+		border: 1px solid transparent;
+		background:
+			linear-gradient(
+					90deg,
+					transparent,
+					var(--lit-leak) 40%,
+					var(--lit-leak-core) 50%,
+					var(--lit-leak) 60%,
+					transparent
+				)
+				top center / 64% 1px no-repeat border-box,
+			linear-gradient(var(--lit-plate), var(--lit-plate)) padding-box,
+			linear-gradient(
+					to top,
+					rgb(var(--orange-rgb) / 0.5),
+					rgb(var(--orange-rgb) / 0.12) 30%,
+					var(--lit-rim-side) 60%,
+					var(--lit-rim-top)
+				)
+				border-box;
+		backdrop-filter: blur(14px) saturate(1.4);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			var(--lit-shadow);
 	}
 	/* Only where a divider genuinely carries meaning. Never to draw a box. */
 	.ds-divider {
