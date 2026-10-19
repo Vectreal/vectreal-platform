@@ -32,7 +32,8 @@ interface PhotoSlotsProps {
  * Each slot is a real `<input type="file" name="photos">`, so the form posts
  * the files in slot order with no client state in the way, and the photos stay
  * picked across a failed submit because the inputs are never remounted. The
- * preview is an object URL, revoked when the slot changes or unmounts.
+ * preview is the decoded photo drawn on a canvas, so no URL made from the
+ * picked file is ever handed to the DOM.
  *
  * Browsers that cannot decode HEIC show no preview for it, so a slot falls
  * back to the file name: the server converts it either way.
@@ -59,6 +60,26 @@ export function PhotoSlots({
 	)
 }
 
+/** The square preview's backing size: sharp on a slot of about 170 CSS pixels at 3x. */
+const PREVIEW_PIXELS = 512
+
+/** Draws the photo's centered square over the whole canvas, as object-fit: cover would. */
+function drawCovering(context: CanvasRenderingContext2D, bitmap: ImageBitmap) {
+	const side = Math.min(bitmap.width, bitmap.height)
+	context.clearRect(0, 0, PREVIEW_PIXELS, PREVIEW_PIXELS)
+	context.drawImage(
+		bitmap,
+		(bitmap.width - side) / 2,
+		(bitmap.height - side) / 2,
+		side,
+		side,
+		0,
+		0,
+		PREVIEW_PIXELS,
+		PREVIEW_PIXELS
+	)
+}
+
 function PhotoSlot({
 	n,
 	labels,
@@ -74,18 +95,28 @@ function PhotoSlot({
 }) {
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [file, setFile] = useState<File | null>(null)
-	const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-	const [previewFailed, setPreviewFailed] = useState(false)
+	const canvasRef = useRef<HTMLCanvasElement>(null)
+	const [previewShown, setPreviewShown] = useState(false)
 
 	useEffect(() => {
-		if (!file) {
-			setPreviewUrl(null)
-			return
+		setPreviewShown(false)
+		if (!file) return
+		let cancelled = false
+		createImageBitmap(file).then(
+			(bitmap) => {
+				const context = canvasRef.current?.getContext('2d')
+				if (!cancelled && context) {
+					drawCovering(context, bitmap)
+					setPreviewShown(true)
+				}
+				bitmap.close()
+			},
+			// Undecodable here (HEIC outside Safari): the slot shows the file name.
+			() => undefined
+		)
+		return () => {
+			cancelled = true
 		}
-		const url = URL.createObjectURL(file)
-		setPreviewUrl(url)
-		setPreviewFailed(false)
-		return () => URL.revokeObjectURL(url)
 	}, [file])
 
 	const pick = (picked: File | null) => {
@@ -107,9 +138,6 @@ function PhotoSlot({
 	}
 
 	const inputId = `photo-${n}`
-	// Only ever an object URL from the effect above. Checked where it is used so
-	// a value that is not one never reaches `src`, which CodeQL also asks for.
-	const previewSrc = previewUrl?.startsWith('blob:') ? previewUrl : null
 
 	return (
 		<div className="relative">
@@ -131,14 +159,18 @@ function PhotoSlot({
 					aria-describedby={describedBy}
 					onChange={(event) => pick(event.target.files?.[0] ?? null)}
 				/>
-				{previewSrc && !previewFailed ? (
-					<img
-						src={previewSrc}
-						alt={labels.slot(n)}
-						className="absolute inset-0 h-full w-full object-cover"
-						onError={() => setPreviewFailed(true)}
-					/>
-				) : (
+				<canvas
+					ref={canvasRef}
+					width={PREVIEW_PIXELS}
+					height={PREVIEW_PIXELS}
+					role="img"
+					aria-label={labels.slot(n)}
+					className={cn(
+						'absolute inset-0 h-full w-full',
+						!previewShown && 'hidden'
+					)}
+				/>
+				{previewShown ? null : (
 					<>
 						<ImagePlus
 							aria-hidden="true"
