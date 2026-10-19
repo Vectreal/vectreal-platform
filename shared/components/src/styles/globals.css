@@ -642,9 +642,11 @@
 	  `ds-raised`, so a card dropped onto a raised panel had no edge at all.
 
 	  Same-class nesting only. `ds-overlay` inside `ds-raised` is already an
-	  explicit, deliberate pairing and keeps its value. A tint steps with its
-	  plate, so a row tinted `ds-tint-raised` inside a raised panel stays
-	  visible against it.
+	  explicit, deliberate pairing and keeps its value. A raised tint steps
+	  with its plate, so a row tinted `ds-tint-raised` inside a raised panel
+	  stays visible against it. `ds-tint-overlay` does not step: it is the
+	  fill of content that fills an overlay edge to edge (`Command` in a
+	  popover), which should read as the overlay itself.
 	*/
 	.ds-raised .ds-raised,
 	.ds-raised .ds-tint-raised {
@@ -656,8 +658,7 @@
 	}
 	.ds-raised .ds-raised .ds-raised,
 	.ds-raised .ds-raised .ds-tint-raised,
-	.ds-overlay .ds-overlay,
-	.ds-overlay .ds-tint-overlay {
+	.ds-overlay .ds-overlay {
 		background-color: color-mix(
 			in oklch,
 			var(--foreground) 12%,
