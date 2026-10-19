@@ -1,6 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
-import { ArrowDown, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import {
 	Fragment,
 	lazy,
@@ -82,7 +82,25 @@ export function HeroSheet() {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const dimsRef = useRef<SVGSVGElement>(null)
 	const scaleRef = useRef<HTMLSpanElement>(null)
+	const captionRef = useRef<HTMLElement>(null)
 	const stageWanted = useMountWhenVisibleAndIdle(stageRef)
+
+	// The stage runs on under the readout row to the fold's edge, so the floor does. How far that is depends on the readout's type, so it is measured; the stylesheet's default holds until then.
+	useEffect(() => {
+		const sheet = sheetRef.current
+		const caption = captionRef.current
+		if (!sheet || !caption) return
+		const measure = () => {
+			const below =
+				sheet.getBoundingClientRect().bottom -
+				caption.getBoundingClientRect().top
+			sheet.style.setProperty('--below', `${Math.round(below)}px`)
+		}
+		const observer = new ResizeObserver(measure)
+		observer.observe(sheet)
+		observer.observe(caption)
+		return () => observer.disconnect()
+	}, [])
 
 	useEffect(() => {
 		if (!stageWanted) return
@@ -119,8 +137,7 @@ export function HeroSheet() {
 	return (
 		<section aria-labelledby="home-heading" className={styles.outer}>
 			<div ref={sheetRef} className={styles.sheet} style={SHEET_VARS}>
-				{/* No surface of its own: the page's floor runs under the copy and the object alike. */}
-				<div ref={copyRef} data-keep-clear className={styles.copy}>
+				<div ref={copyRef} className={styles.copy}>
 					<h1 id="home-heading" className="text-display">
 						{/* The space keeps the lines apart in the text itself, for copy and search. */}
 						{HERO.heading.map((line, i) => (
@@ -145,10 +162,10 @@ export function HeroSheet() {
 					</div>
 				</div>
 
-				<figure className={cn('ds-sunken', styles.figure)}>
+				<figure className={styles.figure}>
 					<div ref={stageRef} className={styles.stage} data-phase="poster">
 						<div className={styles.art}>
-							<div ref={frameRef} data-floor-light className={styles.frame}>
+							<div ref={frameRef} className={styles.frame}>
 								<div className={styles.pencil} />
 								<div className={styles.poster} />
 								<div className={styles.front} />
@@ -171,12 +188,8 @@ export function HeroSheet() {
 						/>
 					</div>
 
-					{/*
-					  Above what the file holds: a visitor with no file of their own
-					  can open this one. The floor thins out behind the whole
-					  caption, not the readout alone.
-					*/}
-					<figcaption data-keep-clear className={styles.caption}>
+					{/* Above what the file holds: a visitor with no file of their own can open this one. */}
+					<figcaption ref={captionRef} className={styles.caption}>
 						<ArrowLink
 							to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
 							viewTransition
@@ -190,9 +203,9 @@ export function HeroSheet() {
 					</figcaption>
 				</figure>
 
-				<a href="#product-heading" className={cn('text-eyebrow', styles.cue)}>
+				<a href="#product-heading" className={styles.cue}>
+					<span className={styles.cueTrack} aria-hidden="true" />
 					{HERO.foldCue}
-					<ArrowDown className={styles.cueArrow} aria-hidden="true" />
 				</a>
 
 				{elements && (

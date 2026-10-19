@@ -10,9 +10,6 @@ export type HeroStatus = keyof typeof HOME_PAGE_COPY.stage.status
 /** What the readout says about the model on the stage. */
 export interface HeroReadout {
 	fileName: string
-	materials: number
-	vertices: number
-	textures: number
 	/** The size before optimization, when there is one to compare against. */
 	originalBytes: number | null
 	bytes: number
@@ -36,7 +33,6 @@ const HERO_INITIAL_STATE: HeroState = {
 	busy: true,
 	readout: {
 		fileName: HERO_MODEL.fileName,
-		...HERO_MODEL.contents,
 		originalBytes: HERO_MODEL.sourceBytes,
 		bytes: HERO_MODEL.bytes
 	},

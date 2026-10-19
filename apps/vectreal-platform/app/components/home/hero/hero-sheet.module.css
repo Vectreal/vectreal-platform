@@ -22,10 +22,25 @@
 	/* The gutter is measured on the section, so it has to be a container. */
 	container-type: inline-size;
 	position: relative;
+	isolation: isolate;
+}
+
+/* The camera stands in a pool of its own light on the floor drawn in its scene. */
+.frame::before {
+	content: '';
+	position: absolute;
+	inset: 56% -4% 2%;
+	z-index: -1;
+	background: radial-gradient(
+		closest-side,
+		color-mix(in oklch, var(--orange) 34%, transparent),
+		color-mix(in oklch, var(--orange) 10%, transparent) 55%,
+		transparent
+	);
+	filter: blur(24px);
 }
 
 .sheet {
-	/* The sheet frame's line, so the copy starts where every section below it does. */
 	--gutter: calc(
 		max(var(--space-6), calc((100cqw - var(--frame-max)) / 2)) +
 			var(--frame-pad)
@@ -35,6 +50,8 @@
 	--gap: clamp(32px, 4vw, 80px);
 	--frame-top: 64px; /* the nav's bottom edge: the nav sits on the frame's top rule */
 	--frame-bottom: 32px;
+	/* How far below the first row the fold runs: measured by the component, this is the wide layout's value so the server-rendered poster is already in place. */
+	--below: 232px;
 
 	position: relative;
 	display: grid;
@@ -75,8 +92,10 @@
 	--frame-zoom: 1.12;
 	--frame-y: 0.03;
 
+	/* The canvas runs on under the readout row to the fold's edge, so the floor in its scene does; the frame keeps to the first row by subtracting it back. */
 	grid-area: 1 / 1 / 2 / 3;
 	margin-inline: calc(-1 * var(--gutter));
+	margin-bottom: calc(-1 * var(--below));
 	min-height: 0;
 	position: relative;
 	container-type: size;
@@ -99,7 +118,7 @@
 	--clear: 48px;
 	--room: calc(100cqw - 2 * var(--gutter) - var(--copy-w) - var(--gap));
 	--box: min(
-		100cqh,
+		calc(100cqh - var(--below)),
 		75cqw,
 		calc(
 			(var(--room) - 2 * var(--clear)) * 3 /
@@ -112,7 +131,7 @@
 	);
 
 	position: absolute;
-	top: calc((100cqh - var(--box)) / 2);
+	top: calc((100cqh - var(--below) - var(--box)) / 2);
 	left: calc(var(--cx) - var(--box) * 2 / 3);
 	height: var(--box);
 	aspect-ratio: 4 / 3;
@@ -268,6 +287,9 @@
 /* Under the model: the way in for a visitor with no file, then what the file holds. */
 .caption {
 	grid-area: 2 / 2;
+	/* Over the canvas, which now runs on under it. */
+	position: relative;
+	z-index: 2;
 	padding-top: 24px;
 	display: flex;
 	flex-direction: column;
@@ -276,9 +298,9 @@
 }
 /*
   The readout: an eyebrow over a number. Type and alignment are the whole
-  structure, no rules and no box. The file, what it weighed, what it weighs now
-  and its status take the first line; the three counts close it as one quiet
-  line, value first, the way the folded sheet sets them.
+  structure, no rules and no box. The file, what it weighed and what it weighs
+  now: the file's story and nothing else, since a row of counts beside it read
+  as clutter. The status closes it as one quiet line.
 */
 .readout {
 	--v-size: clamp(20px, 1.8vw, 28px);
@@ -300,28 +322,16 @@
 .size {
 	grid-area: 1 / 3;
 }
+/* The status is a quiet line under the figures, so it reports without competing with them. */
 .status {
-	grid-area: 1 / 4;
-}
-.count {
-	--v-size: 15px;
-	grid-row: 2;
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
-}
-.count .label {
-	order: 1;
-	margin: 0;
-	text-transform: lowercase;
-	letter-spacing: 0;
-	font-size: 13px;
+	grid-area: 2 / 1 / 3 / 4;
 }
 
 /*
-  The fold's cue, in the corner the copy leaves: a word over an arrow that
-  settles down once, pointing at what is below. It goes as the page moves,
-  where the browser can tie it to the scroll.
+  The fold's cue, in the corner the copy leaves: a hairline with a light
+  running down it, and the word beside it in the readout's quiet type, so it
+  reads as part of the caption row rather than a button. It goes as the page
+  moves, where the browser can tie it to the scroll.
 */
 .cue {
 	grid-area: 2 / 1;
@@ -330,26 +340,51 @@
 	position: relative;
 	z-index: 2;
 	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 8px;
-	color: var(--foreground);
+	align-items: flex-end;
+	gap: 12px;
+	font-size: 13px;
+	line-height: 1;
+	color: var(--muted-foreground);
 	transition: color var(--duration-fast);
 }
 .cue:hover,
 .cue:focus-visible {
-	color: var(--orange-ink);
+	color: var(--foreground);
 }
-.cueArrow {
-	width: 24px;
-	height: 24px;
-	color: var(--orange-ink);
-	animation: cue-settle var(--duration-cinematic) 600ms var(--ease-out) both;
+.cueTrack {
+	position: relative;
+	overflow: hidden;
+	width: 1px;
+	height: 48px;
+	background: color-mix(in oklch, var(--foreground) 14%, transparent);
 }
-@keyframes cue-settle {
-	from {
-		opacity: 0;
-		transform: translateY(-12px);
+.cueTrack::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		to bottom,
+		transparent,
+		var(--orange) 70%,
+		transparent
+	);
+	transform: translateY(-100%);
+	animation: cue-run 2.8s var(--ease-in-out) 1.2s infinite;
+}
+@keyframes cue-run {
+	0% {
+		transform: translateY(-100%);
+	}
+	60%,
+	100% {
+		transform: translateY(100%);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.cueTrack::after {
+		animation: none;
+		transform: none;
+		opacity: 0.6;
 	}
 }
 @supports (animation-timeline: scroll()) {
@@ -407,16 +442,13 @@
 	opacity: 0;
 }
 .status {
-	justify-self: end;
-	text-align: right;
 	min-width: 0;
 }
 /*
-  The status is smaller type in a box at least as tall as a value line, so its
-  label sits on the same row as the others. It wraps rather than clipping: it
-  gets whatever the six figures leave, which near the fold is less than its
-  longest message. The readout aligns its cells at the top, so a second line
-  grows down and the labels stay in one row.
+  The status is smaller type. Folded, it stands in the first row beside the
+  file, in a box at least as tall as a value line so its label lines up with
+  the others; it wraps rather than clipping. Wide, it drops its label and
+  becomes the muted line under the figures.
 */
 .status .value {
 	font-family: var(--font-sans);
@@ -424,7 +456,6 @@
 	letter-spacing: 0;
 	display: flex;
 	align-items: center;
-	justify-content: flex-end;
 	gap: 8px;
 	white-space: normal;
 	min-height: calc(var(--v-size) * 1.2);
@@ -439,6 +470,17 @@
 }
 .value[data-live] .dot {
 	background: var(--orange);
+}
+
+@media (min-width: 900px) {
+	.status .label {
+		display: none;
+	}
+	.status .value {
+		min-height: 0;
+		font-size: 13px;
+		color: var(--muted-foreground);
+	}
 }
 
 /* Every screen below 900px folds to the same thing: copy, then the figure as a card with the readout inside it. */
@@ -463,7 +505,9 @@
 	.stage {
 		--frame-zoom: 1;
 		--frame-y: 0;
+		--below: 0px;
 		margin-inline: 0;
+		margin-bottom: 0;
 		aspect-ratio: 4 / 3;
 	}
 	.frame {
@@ -489,9 +533,8 @@
 	/*
 	  Folded, the readout is a spec sheet in two columns: the file and its
 	  status on the first line, what it weighed and what it weighs now on the
-	  second, the left side set left and the right side set right. The three
-	  counts close it as one quiet line, value first. A grid of five equal
-	  cells read as clutter, and the status sat alone under it.
+	  second, the left side set left and the right side set right. A grid of
+	  equal cells read as clutter.
 	*/
 	.cue {
 		display: none;
@@ -525,16 +568,8 @@
 	.size {
 		grid-row: 2;
 	}
-	.count {
-		grid-row: 3;
-		grid-column: span 2;
-		margin-top: -4px;
-	}
-	.count:nth-child(3) {
-		justify-self: center;
-	}
-	.count:nth-child(4) {
-		justify-self: end;
+	.status .value {
+		justify-content: flex-end;
 	}
 	.scale {
 		display: none;
@@ -549,8 +584,7 @@
 
 @media (prefers-reduced-motion: reduce) {
 	.dims :global(.draw),
-	.dims text,
-	.cueArrow {
+	.dims text {
 		animation: none;
 		stroke-dashoffset: 0;
 		opacity: 1;
