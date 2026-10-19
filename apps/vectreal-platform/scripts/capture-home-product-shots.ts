@@ -196,9 +196,10 @@ async function capturePrepare(context: BrowserContext, theme: string) {
 	// does to it. The camera the page puts in this viewport is the Balanced
 	// result, so the drawer shows the preset applied to this very file. The
 	// size line on the publish card opens the drawer on its own, leaving the
-	// rest of the viewport free for the stage.
+	// rest of the viewport free for the stage. The drawer opens on Original;
+	// choosing a preset runs it.
 	await page.getByRole('button', { name: /MB · / }).click()
-	await page.getByRole('button', { name: 'Apply Optimizations' }).click()
+	await page.getByRole('button', { name: /^Balanced/ }).click()
 	await page
 		.getByText('Optimization result', { exact: false })
 		.waitFor({ timeout: 180_000 })

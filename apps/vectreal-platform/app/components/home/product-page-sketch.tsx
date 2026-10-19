@@ -99,9 +99,10 @@ export const ProductPageSketch = ({
 			</div>
 		)}
 
+		{/* One bounded row: an auto row grows to the product column's full height and pushes the gallery's foot out of the 16:10 frame. */}
 		<div
 			className={cn(
-				'grid min-h-0 flex-1',
+				'grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)]',
 				compact ? 'grid-cols-[3fr_2fr] gap-3' : 'gap-6 sm:grid-cols-[3fr_2fr]'
 			)}
 		>

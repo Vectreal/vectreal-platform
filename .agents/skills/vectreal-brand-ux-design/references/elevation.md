@@ -30,6 +30,13 @@ the material makes it read as a plate in space.
   step. Use these rather than pairing a `ds-*` class with a hand-written hover
   background: call sites had drifted to 6%, 8%, 12% and 14%, so equivalent rows
   hovered to different values in the same view.
+- `ds-ghost-interactive` — a row with no plate until it is pointed at, focused,
+  or current (`aria-current="page"`, `aria-expanded="true"`): nav links, nav
+  panel links, drawer rows. It then stands up as a small plate one step above
+  whatever it sits on. Its fill is a tint, not a step, because the same row
+  sits on the nav bar, in an overlay panel and on a sheet. The states are in
+  the rung itself because a variant cannot apply a `ds-*` class; a row that
+  is current for another reason is not yet covered.
 
 The ladder self-corrects when it nests, so a `Card` dropped onto a raised panel
 still has an edge. Same-class nesting only, and the steps are:
@@ -81,6 +88,13 @@ layers, read from the `--material-*` colours in `theme.css`:
   disabled mid-action, and a tile that lost or gained a shadow on disabling
   would read as hovered. A call site with its own `transition-[...]` utility
   lists `box-shadow` in it, or the lift snaps while the fill eases.
+- `ds-ghost-interactive` has no material at rest and takes the raised edge
+  (bevel, rim, a 1px shadow) when it stands up: small enough for a nav row,
+  without the far shadow a card throws.
+- A shared component that forces its own fill with `!` (`TabsTrigger`'s
+  active state) beats any ladder class on the same element. Put the plate on
+  a parent and let the trigger fill it transparently, as the home page's
+  product window does with its step tiles.
 - `ds-bevel` is a filled action's material (`Button`'s default, brand and
   destructive variants): a white bevel and a dark base, fixed values because
   the fill underneath is the same in both schemes.
@@ -143,6 +157,10 @@ present  shared/components/src/styles/globals.css                              .
 present  shared/components/src/ui/button.tsx                                   ds-bevel
 present  shared/components/src/styles/globals.css                              .ds-raised-interactive
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
+present  shared/components/src/styles/globals.css                              .ds-ghost-interactive
+present  apps/vectreal-platform/app/components/navigation/nav-panels.tsx       ds-ghost-interactive
+absent   apps/vectreal-platform/app/components/navigation/nav-panels.tsx       hover:bg-accent
+absent   apps/vectreal-platform/app/components/navigation/mobile-nav.tsx       bg-accent
 present  shared/components/src/styles/globals.css                              .ds-divider
 present  shared/components/src/styles/globals.css                              .ds-sunken
 present  shared/components/src/styles/globals.css                              .ds-field

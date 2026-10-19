@@ -177,18 +177,7 @@ export const ProductWindow = () => {
 		<Tabs value={view} onValueChange={choose} className="gap-12">
 			<div className="max-w-3xl">
 				<h2 id="product-heading" className="text-headline" data-reveal>
-					{COPY.heading.map((part) =>
-						typeof part === 'string' ? (
-							part
-						) : (
-							<span
-								key={part.underline}
-								className="decoration-orange underline decoration-2 underline-offset-[0.15em]"
-							>
-								{part.underline}
-							</span>
-						)
-					)}
+					{COPY.heading}
 				</h2>
 			</div>
 
@@ -214,38 +203,50 @@ export const ProductWindow = () => {
 						className="grid h-auto w-full grid-cols-3 items-stretch gap-2 bg-transparent p-0 md:gap-3 lg:col-span-2"
 					>
 						{VIEW_ORDER.map((one, index) => (
-							<TabsTrigger
+							/*
+							  The plate is the trigger's parent because the shared trigger
+							  forces its own active fill (`!`), which would beat a ladder
+							  class on the trigger itself. Each step is a plate in the
+							  window, and the chosen one stands a rung above the others.
+							*/
+							<div
 								key={one}
-								value={one}
+								role="presentation"
 								className={cn(
-									/*
+									'flex rounded-lg',
+									one === view ? 'ds-overlay' : 'ds-raised-interactive'
+								)}
+							>
+								<TabsTrigger
+									value={one}
+									className={cn(
+										/*
 									  A tile in the window, rounded on every corner; its rule runs
 									  straight along the top edge and the tile's own overflow cuts
 									  it off at the corners rather than bending it round them. The
-									  shared trigger's pill states are forced (`!`), so the active
-									  tile's step up the ladder is forced the same way; the rule
-									  lives in the module.
+									  rule lives in the module.
 									*/
-									'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 overflow-hidden rounded-lg border-0 px-2 pt-4 pb-3 text-left whitespace-normal shadow-none transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] data-[state=active]:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]! data-[state=active]:shadow-none md:px-4 md:pt-5 md:pb-4 dark:data-[state=active]:border-transparent',
-									styles.step
-								)}
-							>
-								{/* Number over label on a phone: three tiles across leave no room for both on one line. */}
-								<span className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
-									<span className="text-eyebrow text-orange-ink tabular-nums">
-										{String(index + 1).padStart(2, '0')}
+										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 overflow-hidden rounded-lg border-0 px-2 pt-4 pb-3 text-left whitespace-normal shadow-none transition-colors data-[state=active]:bg-transparent! data-[state=active]:shadow-none md:px-4 md:pt-5 md:pb-4 dark:data-[state=active]:border-transparent',
+										styles.step
+									)}
+								>
+									{/* Number over label on a phone: three tiles across leave no room for both on one line. */}
+									<span className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
+										<span className="text-eyebrow text-orange-ink tabular-nums">
+											{String(index + 1).padStart(2, '0')}
+										</span>
+										<span className="text-h3">{COPY.views[one].label}</span>
 									</span>
-									<span className="text-h3">{COPY.views[one].label}</span>
-								</span>
-								<span className="text-body-sm text-muted-foreground hidden md:block">
-									{COPY.views[one].summary}
-								</span>
-								<span
-									className={styles.fill}
-									aria-hidden="true"
-									onAnimationEnd={advance}
-								/>
-							</TabsTrigger>
+									<span className="text-body-sm text-muted-foreground hidden md:block">
+										{COPY.views[one].summary}
+									</span>
+									<span
+										className={styles.fill}
+										aria-hidden="true"
+										onAnimationEnd={advance}
+									/>
+								</TabsTrigger>
+							</div>
 						))}
 					</TabsList>
 
