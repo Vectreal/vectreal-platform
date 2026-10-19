@@ -232,6 +232,13 @@
       "when": 1792365855763,
       "tag": "0032_agent_idempotency_and_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792381874862,
+      "tag": "0033_swift_firedrake",
+      "breakpoints": true
     }
   ]
 }
