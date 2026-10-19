@@ -94,6 +94,7 @@ export const MissionStatement = () => {
 				ref={ref}
 				data-reveal
 				data-apart={apart ? '' : undefined}
+				data-floor-light
 				className={cn(styles.stack, 'lg:order-2')}
 			>
 				<div className={styles.scene}>

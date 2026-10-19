@@ -26,6 +26,12 @@ the material makes it read as a plate in space.
   Note it sets a **background-color**, not a border colour: it is the fill of a
   hairline *element*, so putting it on a row alongside `border-b` tints the whole
   row instead of its border. A border that needs a colour wants `border-border`.
+- `ds-lit` — a media panel on the marketing site: a matte glass pane with an
+  orange glow set behind it, frosted into a muted surface, a little of the
+  light escaping past its edges. It holds a product shot, a code window or a
+  drawing, never copy. No rim, the bevel only. It must not clip
+  (`overflow-hidden` would cut the light off at its edge), so anything inside
+  that needs clipping clips on its own wrapper.
 - `ds-raised-interactive` / `ds-overlay-interactive` — hover lifts exactly one
   step. Use these rather than pairing a `ds-*` class with a hand-written hover
   background: call sites had drifted to 6%, 8%, 12% and 14%, so equivalent rows
@@ -61,6 +67,13 @@ The ladder's own comment in `globals.css` states the intent: the system separate
 surfaces by **value and light, not by outlines**. That is the reason to reach for a `ds-*`
 step before adding a border, not a ban on borders — `ds-divider` is in the ladder
 and the `ui/` primitives use borders where an edge carries meaning.
+
+One place groups with lines on purpose: `SheetFrame` and `Band`
+(`layout-components/sheet-frame.tsx`), the marketing pages' drafting frame.
+Hairline rules run down the measure's edges and across the page between
+sections, GitHub's composition, which Moritz chose on 19 Oct 2026 after a
+page-wide floor left the sections ungrouped. The rules are the page's frame;
+they never draw a box around a piece of content.
 
 ## The surface material
 
@@ -173,6 +186,9 @@ present  shared/components/src/ui/button.tsx                                   d
 present  shared/components/src/styles/globals.css                              .ds-raised-interactive
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
 present  shared/components/src/styles/globals.css                              .ds-ghost-interactive
+present  shared/components/src/styles/globals.css                              .ds-lit::after
+present  eslint.config.mts                                                     ghost|lit|tint-raised
+present  apps/vectreal-platform/app/components/layout-components/sheet-frame.tsx  export const Band
 present  shared/components/src/styles/theme.css                                --material-plate-rim
 present  shared/components/src/styles/theme.css                                [data-material='object']
 present  apps/vectreal-platform/app/routes/layouts/nav-layout.tsx               data-material="object"

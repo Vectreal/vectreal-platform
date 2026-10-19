@@ -25,9 +25,10 @@
 }
 
 .sheet {
-	--gutter: max(
-		var(--space-6),
-		calc((100cqw - var(--container-max)) / 2 + var(--space-6))
+	/* The sheet frame's line, so the copy starts where every section below it does. */
+	--gutter: calc(
+		max(var(--space-6), calc((100cqw - var(--frame-max)) / 2)) +
+			var(--frame-pad)
 	);
 	/* Fluid, so a landscape tablet keeps the sheet; the grid column and every frame calculation read this one value. */
 	--copy-w: clamp(20rem, 42cqw, 34rem);

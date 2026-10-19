@@ -34,13 +34,6 @@ export interface DraftingBackdropOptions {
 	/** Read every frame, so a layout change moves the floor with it. */
 	view: (canvas: DOMRect) => DraftingView
 	/**
-	  `box`: the floor belongs to a section and lifts its horizon as the
-	  section scrolls away. `page`: the canvas is fixed to the viewport, and
-	  scrolling the page carries the floor toward the viewer, so the whole page
-	  reads as one ground the sections pass over.
-	*/
-	travel?: 'box' | 'page'
-	/**
 	  A work surface's floor: a lower, slower swell in fainter lines, no brand
 	  on its crests, and nothing that answers the pointer or the scroll. It
 	  drifts and nothing else, so it never competes with the task in front of it.
@@ -81,7 +74,7 @@ const PULSE_AMP = 0.22
 const RIPPLE_DAMP = 0.988
 const RIPPLE_HZ = 60
 const SCROLL_RISE = 0.07
-/** How far one screen of scroll carries the floor, in noise units. */
+/** How far the swell advances while its section scrolls away, in noise units. */
 const SCROLL_ADVANCE = 0.9
 const SCROLL_TAU = 0.35
 const FLOW_GAIN = 0.0006
@@ -157,7 +150,6 @@ export function createDraftingBackdrop(
 	const context = canvas.getContext('2d')
 	if (!context) return null
 	const { host, reducedMotion } = options
-	const travel = options.travel ?? 'box'
 	const mood = options.calm ? CALM : LIVELY
 	const listens = !reducedMotion && !options.calm
 
@@ -304,16 +296,6 @@ export function createDraftingBackdrop(
 		aimPointer()
 		wake()
 	}
-	// Under reduced motion nothing moves, but a floor fixed under the page still redraws where the copy and the object now are.
-	let stillFrame = 0
-	const onScrollStill = () => {
-		if (!stillFrame)
-			stillFrame = requestAnimationFrame(() => {
-				stillFrame = 0
-				render()
-			})
-	}
-
 	function pulse(gx: number, gz: number, amplitude: number, radius: number) {
 		const reach = radius * 2.5
 		for (let j = 1; j < NZ - 1; j++) {
@@ -335,13 +317,11 @@ export function createDraftingBackdrop(
 	let rippleEnergy = 0
 	let fieldRate = 0
 
-	/** How far the floor has travelled with the scroll, in screens. A section's floor stops at 1, once it has left; a calm floor never travels. */
+	/** How far the section has scrolled away, 0 to 1: the floor lifts its horizon as it goes. A calm floor never travels. */
 	const scrolled = () =>
 		options.calm
 			? 0
-			: travel === 'page'
-				? window.scrollY / Math.max(window.innerHeight, 1)
-				: Math.min(Math.max(-box.top / Math.max(box.height, 1), 0), 1)
+			: Math.min(Math.max(-box.top / Math.max(box.height, 1), 0), 1)
 	const drift = () => phase + scrollProgress * SCROLL_ADVANCE
 
 	function step(dt: number) {
@@ -429,7 +409,9 @@ export function createDraftingBackdrop(
 			resolveColor(style.getPropertyValue(token))
 				.map((channel) => Math.round(channel * 255))
 				.join(' ')
-		const dark = document.documentElement.classList.contains('dark')
+		// Light ink means a dark ground. Read from the canvas, not the document's theme, so a floor in a band set in the opposite scheme takes that scheme's strengths.
+		const [r, g, b] = resolveColor(style.getPropertyValue('--foreground'))
+		const dark = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5
 		ink.line = rgb('--foreground')
 		ink.accent = rgb('--orange')
 		ink.lineAlpha = (dark ? LINE_ALPHA.dark : LINE_ALPHA.light) * mood.ink
@@ -618,8 +600,6 @@ export function createDraftingBackdrop(
 	const resize = new ResizeObserver(() => render())
 	resize.observe(canvas)
 	const stopObservingTheme = observeTheme(readTheme)
-	if (reducedMotion && travel === 'page')
-		window.addEventListener('scroll', onScrollStill, { passive: true })
 	if (listens) {
 		host.addEventListener('pointermove', onPointerMove, { passive: true })
 		host.addEventListener('pointerleave', onPointerLeave)
@@ -636,7 +616,6 @@ export function createDraftingBackdrop(
 	return {
 		dispose() {
 			cancelAnimationFrame(raf)
-			cancelAnimationFrame(stillFrame)
 			intersection.disconnect()
 			content.disconnect()
 			resize.disconnect()
@@ -646,7 +625,6 @@ export function createDraftingBackdrop(
 			host.removeEventListener('pointerup', onPointerUp)
 			host.removeEventListener('pointerdown', onPointerDown)
 			window.removeEventListener('scroll', onScroll)
-			window.removeEventListener('scroll', onScrollStill)
 		}
 	}
 }

@@ -3,8 +3,6 @@ import { useEffect, useRef } from 'react'
 
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 
-import type { DraftingBackdropOptions } from './drafting-backdrop-engine'
-
 /** Below this width the lines meet in the middle, under the copy. */
 const PHONE_PX = 760
 const EDGE_FADE =
@@ -17,8 +15,6 @@ export interface DraftingBackdropProps {
 	horizon?: number
 	/** Where it sits on a phone: low by default, so a page head's copy stands in the sky above it. */
 	phoneHorizon?: number
-	/** See `DraftingBackdropOptions.travel`. `page` keeps the floor under the reader for the whole of its host. */
-	travel?: DraftingBackdropOptions['travel']
 	/** See `DraftingBackdropOptions.calm`. For the product's work surfaces. */
 	calm?: boolean
 	/** Positions the box. Defaults to filling its nearest positioned ancestor, behind it. */
@@ -42,7 +38,6 @@ export default function DraftingBackdropClient({
 	focusX,
 	horizon = 0.5,
 	phoneHorizon = 0.68,
-	travel = 'box',
 	calm = false,
 	className
 }: DraftingBackdropProps) {
@@ -61,7 +56,6 @@ export default function DraftingBackdropClient({
 				dispose = createDraftingBackdrop(canvas, {
 					reducedMotion: prefersReducedMotion(),
 					host,
-					travel,
 					calm,
 					view: (box) =>
 						box.width < PHONE_PX
@@ -75,40 +69,27 @@ export default function DraftingBackdropClient({
 			cancelled = true
 			dispose?.()
 		}
-	}, [focusX, horizon, phoneHorizon, travel, calm])
+	}, [focusX, horizon, phoneHorizon, calm])
 
 	/*
 	  A canvas keeps its intrinsic height under top and bottom, so a box sizes it
 	  and it fills the box. The floor fades out toward its top and bottom edges,
 	  so it never ends on a straight cut.
-
-	  A page floor is one screen tall and sticks to the viewport inside the box,
-	  which spans its host: it stays under the reader while they scroll, and
-	  leaves with the host's last screen instead of covering what follows it.
 	*/
-	const canvasElement = (
-		<canvas
-			ref={ref}
-			className="block size-full opacity-0 transition-opacity duration-(--duration-cinematic) ease-(--ease-out) data-painted:opacity-100 motion-reduce:transition-none"
-		/>
-	)
 	return (
 		<div
 			ref={boxRef}
 			aria-hidden="true"
 			className={cn(
 				'pointer-events-none absolute inset-0 -z-1',
-				travel === 'box' && EDGE_FADE,
+				EDGE_FADE,
 				className
 			)}
 		>
-			{travel === 'page' ? (
-				<div className={cn('sticky top-0 h-dvh', EDGE_FADE)}>
-					{canvasElement}
-				</div>
-			) : (
-				canvasElement
-			)}
+			<canvas
+				ref={ref}
+				className="block size-full opacity-0 transition-opacity duration-(--duration-cinematic) ease-(--ease-out) data-painted:opacity-100 motion-reduce:transition-none"
+			/>
 		</div>
 	)
 }

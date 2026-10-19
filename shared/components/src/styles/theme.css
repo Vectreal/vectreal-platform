@@ -38,9 +38,12 @@
 	  The brand as text and as a small mark. --orange on white is about 2.9:1,
 	  under AA for any text, so the light theme writes it a step deeper
 	  (about 5.2:1); on the dark background --orange itself passes, so the dark
-	  theme points back at it. Fills and lines keep --orange.
+	  theme points back at it. Fills and lines keep --orange. A band set in the
+	  opposite scheme (the marketing sheet's inverted band) takes the other
+	  theme's ink, `--orange-ink-inverse`.
 	*/
 	--orange-ink: #c2410c;
+	--orange-ink-inverse: var(--orange);
 
 	/* Semantic tokens - light theme */
 	--background: oklch(1 0 0);
@@ -167,6 +170,7 @@
 .dark {
 	color-scheme: dark;
 	--orange-ink: var(--orange);
+	--orange-ink-inverse: #c2410c;
 
 	/* Semantic tokens - dark theme */
 	--background: oklch(0.145 0 0);
