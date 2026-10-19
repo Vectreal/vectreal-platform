@@ -7,6 +7,8 @@ import type { DraftingBackdropOptions } from './drafting-backdrop-engine'
 
 /** Below this width the lines meet in the middle, under the copy. */
 const PHONE_PX = 760
+const EDGE_FADE =
+	'[mask-image:linear-gradient(to_bottom,transparent,black_96px,black_calc(100%-96px),transparent)]'
 
 interface DraftingBackdropProps {
 	/** Where the lines meet on a wider canvas, as a fraction of its width: away from the copy. */
@@ -15,7 +17,7 @@ interface DraftingBackdropProps {
 	horizon?: number
 	/** Where it sits on a phone: low by default, so a page head's copy stands in the sky above it. */
 	phoneHorizon?: number
-	/** See `DraftingBackdropOptions.travel`. `page` fixes the floor to the viewport, under the whole page. */
+	/** See `DraftingBackdropOptions.travel`. `page` keeps the floor under the reader for the whole of its host. */
 	travel?: DraftingBackdropOptions['travel']
 	/** Positions the box. Defaults to filling its nearest positioned ancestor, behind it. */
 	className?: string
@@ -41,11 +43,12 @@ export function DraftingBackdrop({
 	travel = 'box',
 	className
 }: DraftingBackdropProps) {
+	const boxRef = useRef<HTMLDivElement>(null)
 	const ref = useRef<HTMLCanvasElement>(null)
 
 	useEffect(() => {
 		const canvas = ref.current
-		const host = canvas?.parentElement?.parentElement
+		const host = boxRef.current?.parentElement
 		if (!canvas || !host) return
 		let dispose: (() => void) | undefined
 		let cancelled = false
@@ -72,21 +75,36 @@ export function DraftingBackdrop({
 
 	/*
 	  A canvas keeps its intrinsic height under top and bottom, so a box sizes it
-	  and it fills the box. The floor fades out toward the box's top and bottom
-	  edges, so it never ends on a straight cut where its section does.
+	  and it fills the box. The floor fades out toward its top and bottom edges,
+	  so it never ends on a straight cut.
+
+	  A page floor is one screen tall and sticks to the viewport inside the box,
+	  which spans its host: it stays under the reader while they scroll, and
+	  leaves with the host's last screen instead of covering what follows it.
 	*/
+	const canvasElement = (
+		<canvas
+			ref={ref}
+			className="block size-full opacity-0 transition-opacity duration-(--duration-cinematic) ease-(--ease-out) data-painted:opacity-100 motion-reduce:transition-none"
+		/>
+	)
 	return (
 		<div
+			ref={boxRef}
 			aria-hidden="true"
 			className={cn(
-				'pointer-events-none absolute inset-0 -z-1 [mask-image:linear-gradient(to_bottom,transparent,black_96px,black_calc(100%-96px),transparent)]',
+				'pointer-events-none absolute inset-0 -z-1',
+				travel === 'box' && EDGE_FADE,
 				className
 			)}
 		>
-			<canvas
-				ref={ref}
-				className="block size-full opacity-0 transition-opacity duration-(--duration-cinematic) ease-(--ease-out) data-painted:opacity-100 motion-reduce:transition-none"
-			/>
+			{travel === 'page' ? (
+				<div className={cn('sticky top-0 h-dvh', EDGE_FADE)}>
+					{canvasElement}
+				</div>
+			) : (
+				canvasElement
+			)}
 		</div>
 	)
 }

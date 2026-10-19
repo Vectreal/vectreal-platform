@@ -94,8 +94,8 @@ const CLEAR_FLOOR = 0.12
 const IDLE_FRAME_MS = 50
 /** How long after the reader last did something the floor still runs at the display rate. */
 const SETTLE_MS = 1500
-/** Below this change per step the pointer's rise counts as settled, even with the pointer resting on it. */
-const SETTLED_DELTA = 1e-4
+/** Below this rate, in grid steps a second, the pointer's rise counts as settled, even with the pointer resting on it. */
+const SETTLED_RATE = 2e-3
 
 const smoothstep = (a: number, b: number, x: number) => {
 	const t = Math.min(Math.max((x - a) / (b - a), 0), 1)
@@ -212,7 +212,24 @@ export function createDraftingBackdrop(
 	}
 
 	/* ---- input ---- */
-	const pointer = { clientX: 0, clientY: 0, inside: false, travel: 0 }
+	const pointer = {
+		clientX: 0,
+		clientY: 0,
+		inside: false,
+		travel: 0,
+		/** The floor point under the pointer, found when the pointer or the page moves rather than every step, so a resting pointer settles. */
+		ground: null as [number, number] | null
+	}
+	function aimPointer() {
+		pointer.ground = null
+		if (!pointer.inside || !measure()) return
+		aim()
+		pointer.ground = unproject(
+			pointer.clientX - box.left,
+			pointer.clientY - box.top,
+			drift()
+		)
+	}
 	let lastActive = -Infinity
 	let scrollVelocity = 0
 	let lastScroll = window.scrollY
@@ -228,14 +245,18 @@ export function createDraftingBackdrop(
 		pointer.clientY = event.clientY
 		// A finger only leans on the floor while it is down.
 		pointer.inside = event.pointerType !== 'touch' || event.pressure > 0
+		aimPointer()
 		lastActive = performance.now()
 		wake()
 	}
 	const onPointerLeave = () => {
 		pointer.inside = false
+		pointer.ground = null
 	}
 	const onPointerUp = (event: PointerEvent) => {
-		if (event.pointerType === 'touch') pointer.inside = false
+		if (event.pointerType !== 'touch') return
+		pointer.inside = false
+		pointer.ground = null
 	}
 	const onPointerDown = (event: PointerEvent) => {
 		// A press on a control belongs to the control.
@@ -264,7 +285,18 @@ export function createDraftingBackdrop(
 		lastScroll = window.scrollY
 		lastScrollAt = now
 		lastActive = now
+		// A wheel scroll under a still mouse moves the page past it, so the rise moves with the page.
+		aimPointer()
 		wake()
+	}
+	// Under reduced motion nothing moves, but a floor fixed under the page still redraws where the copy and the object now are.
+	let stillFrame = 0
+	const onScrollStill = () => {
+		if (!stillFrame)
+			stillFrame = requestAnimationFrame(() => {
+				stillFrame = 0
+				render()
+			})
 	}
 
 	function pulse(gx: number, gz: number, amplitude: number, radius: number) {
@@ -286,7 +318,7 @@ export function createDraftingBackdrop(
 	let wakeLevel = 0
 	let rippleClock = 0
 	let rippleEnergy = 0
-	let fieldDelta = 0
+	let fieldRate = 0
 
 	/** How far the floor has travelled with the scroll, in screens. A section's floor stops at 1, once it has left. */
 	const scrolled = () =>
@@ -307,13 +339,10 @@ export function createDraftingBackdrop(
 		aim()
 
 		const d = drift()
-		// The pointer is kept in viewport coordinates, so a wheel scroll under a still mouse moves the rise with the page.
-		const ground = pointer.inside
-			? unproject(pointer.clientX - box.left, pointer.clientY - box.top, d)
-			: null
+		const ground = pointer.ground
 		const kf = ease(FIELD_TAU, dt)
 		const kg = ease(GLOW_TAU, dt)
-		fieldDelta = 0
+		let fieldDelta = 0
 		for (let j = 0; j < NZ; j++) {
 			for (let i = 0; i < NX; i++) {
 				const k = j * NX + i
@@ -332,6 +361,7 @@ export function createDraftingBackdrop(
 				glow[k] += (near - glow[k]) * kg
 			}
 		}
+		fieldRate = dt > 0 ? fieldDelta / dt : 0
 
 		// Ripples: a damped wave equation at a fixed rate whatever the frame rate, fed the pointer's smoothed wake.
 		wakeLevel +=
@@ -366,7 +396,7 @@ export function createDraftingBackdrop(
 	/** Whether the floor is still moving because of the reader, and so earns the display rate. */
 	const settling = () =>
 		performance.now() - lastActive < SETTLE_MS ||
-		fieldDelta > SETTLED_DELTA ||
+		fieldRate > SETTLED_RATE ||
 		rippleEnergy > 1e-5 ||
 		flowSpeed > 0.004 ||
 		Math.abs(scrolled() - scrollProgress) > 1e-3
@@ -388,10 +418,36 @@ export function createDraftingBackdrop(
 		render()
 	}
 
-	/** Boxes of the host's elements that are in view, relative to the canvas. */
+	/*
+	  The elements the floor reads, found once and again only when the host's
+	  content changes, so a frame measures them rather than searching the page.
+	  Text inside an element that already keeps clear is left to it, and text
+	  on a ladder surface is skipped: the surface hides the floor anyway.
+	*/
+	const CLEAR = 'h1, h2, p, [data-keep-clear]'
+	const LIGHT = '[data-floor-light]'
+	const found = new Map<string, Element[]>()
+	const nodesOf = (selector: string) => {
+		let nodes = found.get(selector)
+		if (!nodes) {
+			nodes = [...host.querySelectorAll(selector)]
+			if (selector === CLEAR)
+				nodes = nodes.filter(
+					(node) =>
+						!node.parentElement?.closest(CLEAR) &&
+						!node.closest('[class*="ds-"]')
+				)
+			found.set(selector, nodes)
+		}
+		return nodes
+	}
+	const content = new MutationObserver(() => found.clear())
+	content.observe(host, { childList: true, subtree: true })
+
+	/** Boxes of the elements that are in view, relative to the canvas. */
 	const boxesOf = (selector: string) => {
 		const boxes: [number, number, number, number][] = []
-		for (const node of host.querySelectorAll(selector)) {
+		for (const node of nodesOf(selector)) {
 			const r = node.getBoundingClientRect()
 			if (r.bottom < box.top || r.top > box.bottom || !r.width) continue
 			boxes.push([
@@ -417,18 +473,18 @@ export function createDraftingBackdrop(
 		aim()
 
 		// Headings and paragraphs keep clear of the lines on their own; anything else that is read, by marking.
-		const clears = boxesOf('h1, h2, p, [data-keep-clear]')
+		const clears = boxesOf(CLEAR)
+		// The nearest text decides, so text beside text never thins the lines twice.
 		const clearance = (x: number, y: number) => {
-			let kept = 1
+			let nearest = Infinity
 			for (const c of clears)
-				kept *=
-					CLEAR_FLOOR +
-					(1 - CLEAR_FLOOR) *
-						smoothstep(0, CLEAR_SOFT_PX, distanceToBox(x, y, c))
-			return kept
+				nearest = Math.min(nearest, distanceToBox(x, y, c))
+			return (
+				CLEAR_FLOOR + (1 - CLEAR_FLOOR) * smoothstep(0, CLEAR_SOFT_PX, nearest)
+			)
 		}
 		// A light stands where an object stands: across the bottom of its box, as wide as the object.
-		const lights = boxesOf('[data-floor-light]').map(([l, t, r, b]) => ({
+		const lights = boxesOf(LIGHT).map(([l, t, r, b]) => ({
 			x: (l + r) / 2,
 			y: b - (b - t) * 0.15,
 			rx: (r - l) * 0.6,
@@ -552,6 +608,8 @@ export function createDraftingBackdrop(
 	const resize = new ResizeObserver(() => render())
 	resize.observe(canvas)
 	const stopObservingTheme = observeTheme(readTheme)
+	if (reducedMotion && travel === 'page')
+		window.addEventListener('scroll', onScrollStill, { passive: true })
 	if (!reducedMotion) {
 		host.addEventListener('pointermove', onPointerMove, { passive: true })
 		host.addEventListener('pointerleave', onPointerLeave)
@@ -568,7 +626,9 @@ export function createDraftingBackdrop(
 	return {
 		dispose() {
 			cancelAnimationFrame(raf)
+			cancelAnimationFrame(stillFrame)
 			intersection.disconnect()
+			content.disconnect()
 			resize.disconnect()
 			stopObservingTheme()
 			host.removeEventListener('pointermove', onPointerMove)
@@ -576,6 +636,7 @@ export function createDraftingBackdrop(
 			host.removeEventListener('pointerup', onPointerUp)
 			host.removeEventListener('pointerdown', onPointerDown)
 			window.removeEventListener('scroll', onScroll)
+			window.removeEventListener('scroll', onScrollStill)
 		}
 	}
 }

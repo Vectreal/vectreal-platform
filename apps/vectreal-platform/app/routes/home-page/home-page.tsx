@@ -27,7 +27,7 @@ export function meta(_: Route.MetaArgs) {
   where 128 read as cramped between sections this size.
 */
 /*
-  One floor under the whole page, fixed to the viewport: scrolling carries it
+  One floor under the whole page, held under the reader: scrolling carries it
   toward the reader, so the sections read as one ground they pass over rather
   than a backdrop pasted behind each. The hero's object stands in its light.
   `isolate` keeps the floor above the page's surface and behind its content.
@@ -39,7 +39,6 @@ const HomePage = () => (
 			focusX={0.66}
 			horizon={0.32}
 			phoneHorizon={0.42}
-			className="fixed"
 		/>
 		<HeroSheet />
 
