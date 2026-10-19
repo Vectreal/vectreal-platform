@@ -67,8 +67,24 @@ describe('ModelOptimizer.place', () => {
 		const optimizer = new ModelOptimizer()
 		await optimizer.loadFromBuffer(await new WebIO().writeBinary(document))
 
-		await expect(optimizer.place({ longestEdgeMeters: 1 })).resolves.toBe(
-			undefined
-		)
+		await optimizer.place({ longestEdgeMeters: 1 })
+
+		const placed = await new WebIO().readBinary(await optimizer.export())
+		expect(placed.getRoot().listScenes()[0].listChildren()).toHaveLength(0)
+		expect(placed.getRoot().listNodes()).toHaveLength(0)
+	})
+
+	it('refuses a root node two scenes share, rather than moving it out of one', async () => {
+		const document = await new WebIO().readBinary(await offsetBoxGlb())
+		const [root] = document.getRoot().listScenes()[0].listChildren()
+		document.createScene('variant').addChild(root)
+		const optimizer = new ModelOptimizer()
+		await optimizer.loadFromBuffer(await new WebIO().writeBinary(document))
+
+		await expect(optimizer.place()).rejects.toThrow(/more than one scene/)
+		const kept = await new WebIO().readBinary(await optimizer.export())
+		for (const scene of kept.getRoot().listScenes()) {
+			expect(scene.listChildren()).toHaveLength(1)
+		}
 	})
 })

@@ -19,7 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * transforms, which ModelOptimizer runs on a copy and commits.
  */
 
-import { getBounds, Transform } from '@gltf-transform/core'
+import { getBounds, Scene, Transform } from '@gltf-transform/core'
 import {
 	dedup,
 	DedupOptions as GltfDedupOptions,
@@ -93,12 +93,31 @@ export const normalsPass: TransformPass<NormalsOptions> = {
  * The scene's contents move under one new parent node, so the meshes, their
  * own transforms and any animation of them are left as they were. The node
  * adds a few bytes, which is why the pass may grow the file.
+ *
+ * Bounds are measured on the meshes' rest pose: a skinned mesh is placed by
+ * where its vertices sit unposed, not where its joints would put them.
  */
 export function placeOnGround({
 	longestEdgeMeters
 }: PlacementOptions = {}): Transform {
 	return (document) => {
-		for (const scene of document.getRoot().listScenes()) {
+		const scenes = document.getRoot().listScenes()
+		// Reparenting a node detaches it from every scene that lists it, so a
+		// root shared by two scenes would vanish from the second.
+		const shared = scenes
+			.flatMap((scene) => scene.listChildren())
+			.find(
+				(node) =>
+					node.listParents().filter((parent) => parent instanceof Scene)
+						.length > 1
+			)
+		if (shared) {
+			throw new Error(
+				`Placement cannot move node "${shared.getName()}": more than one scene lists it`
+			)
+		}
+
+		for (const scene of scenes) {
 			const { min, max } = getBounds(scene)
 			const longest = Math.max(
 				max[0] - min[0],
