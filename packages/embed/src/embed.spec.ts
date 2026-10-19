@@ -135,3 +135,66 @@ describe('VectrealEmbed.seekAnimationClip', () => {
 		embed.destroy()
 	})
 })
+
+function viewerEvent(from: HTMLIFrameElement, event: object) {
+	window.dispatchEvent(
+		new MessageEvent('message', {
+			origin: ORIGIN,
+			source: from.contentWindow,
+			data: {
+				source: HOSTED_PREVIEW_VIEWER_SOURCE,
+				type: 'viewer_event',
+				sceneId: 'scene-a',
+				event
+			}
+		})
+	)
+}
+
+describe('VectrealEmbed environment fallback', () => {
+	it('passes on which map loaded', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onLoaded = vi.fn()
+		embed.on('environment_loaded', onLoaded)
+
+		viewerEvent(own, {
+			type: 'environment_loaded',
+			files: ['https://maps.example/studio.hdr']
+		})
+
+		expect(onLoaded).toHaveBeenCalledWith({
+			files: ['https://maps.example/studio.hdr']
+		})
+		embed.destroy()
+	})
+
+	// The scene stays lit by a room, so this event is all the host page gets.
+	it('passes on which map failed', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onFailed = vi.fn()
+		embed.on('environment_load_failed', onFailed)
+
+		window.dispatchEvent(
+			new MessageEvent('message', {
+				origin: ORIGIN,
+				source: own.contentWindow,
+				data: {
+					source: HOSTED_PREVIEW_VIEWER_SOURCE,
+					type: 'viewer_event',
+					sceneId: 'scene-a',
+					event: {
+						type: 'environment_load_failed',
+						files: ['https://maps.example/studio.hdr']
+					}
+				}
+			})
+		)
+
+		expect(onFailed).toHaveBeenCalledWith({
+			files: ['https://maps.example/studio.hdr']
+		})
+		embed.destroy()
+	})
+})

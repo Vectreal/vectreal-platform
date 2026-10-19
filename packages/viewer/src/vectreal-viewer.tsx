@@ -806,6 +806,17 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		[noteCamera, onInteractionEvent]
 	)
 
+	const handleEnvironmentLoadFailed = useCallback(
+		(files: string[]) =>
+			handleInteractionEvent({ type: 'environment_load_failed', files }),
+		[handleInteractionEvent]
+	)
+	const handleEnvironmentLoaded = useCallback(
+		(files: string[]) =>
+			handleInteractionEvent({ type: 'environment_loaded', files }),
+		[handleInteractionEvent]
+	)
+
 	/**
 	 * Escape inside the viewer leaves a hotspot's camera, like the control.
 	 *
@@ -962,7 +973,11 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 				<Suspense fallback={null}>
 					{hasContent && (
 						<>
-							<SceneEnvironment {...envOptions} />
+							<SceneEnvironment
+								{...envOptions}
+								onLoadFailed={handleEnvironmentLoadFailed}
+								onLoaded={handleEnvironmentLoaded}
+							/>
 							{/* <Perf /> */}
 							<ScenePostProcessing
 								enabled={enablePostProcessing}
