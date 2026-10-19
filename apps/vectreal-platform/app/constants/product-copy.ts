@@ -422,20 +422,16 @@ export const HOME_PAGE_COPY = {
 		views: {
 			prepare: {
 				label: 'Prepare',
-				summary:
-					'Drop in your file and keep the lightest version that still looks right.',
 				body: `Upload ${SUPPORTED_FORMAT_NAMES.join(', ')}. Pick a preset, compare before and after, and download the result without an account.`,
 				link: 'Open the optimizer'
 			},
 			manage: {
 				label: 'Manage',
-				summary: 'Every scene, project and API key in one place.',
 				body: `Projects, folders and scenes in one place, with API keys and allowed domains for every embed. From the ${PLAN_DISPLAY_NAMES[TEAM_PLAN]} plan up, your whole team works in it, and owners, admins and members each get the actions their role allows.`,
 				link: 'Compare plans'
 			},
 			embed: {
 				label: 'Publish',
-				summary: 'One snippet puts it on your page.',
 				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
 				link: 'See the embed guide',
 				/** The address bar of the product page the view shows the camera on: anyone's shop, not one we name. */

@@ -98,9 +98,10 @@ const DWELL_MS = 7000
  * Every screenshot and caption is server-rendered, and switching only changes
  * which one is shown.
  *
- * The views are the workflow's three steps, set as a numbered row above the
- * scene in workflow order, so the page says how short the
- * path is before it shows any of it. The window walks through them on its own: the active step's
+ * The views are the workflow's three steps, set as a numbered list beside the
+ * app in workflow order, so the page says how short the path is before it
+ * shows any of it. The chosen step's explanation sits under the list; all
+ * three share one cell, so nothing beside them moves on a switch. The window walks through them on its own: the active step's
  * rule fills over its dwell and hands on to the next. Hovering or
  * focusing the window pauses it, so nobody loses a caption mid-read; so does
  * the window being off screen. A click hands it over to the reader for good,
@@ -175,7 +176,13 @@ export const ProductWindow = () => {
 	}, [])
 
 	return (
-		<Tabs value={view} onValueChange={choose} className="gap-12">
+		<Tabs
+			value={view}
+			onValueChange={choose}
+			// Drawn as a column, so it reads and steps as one: up and down move between the steps.
+			orientation="vertical"
+			className="gap-12"
+		>
 			<div className="max-w-3xl">
 				<h2 id="product-heading" className="text-headline" data-reveal>
 					{COPY.heading}
@@ -195,109 +202,114 @@ export const ProductWindow = () => {
 					if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false)
 				}}
 			>
-				{/* No window around it all: the steps and the copy sit on the page, and the app is the one object on it. */}
+				{/* The steps as a list beside the app, the active one's explanation under it; the app stands in a lit panel, flush to its right and bottom edges. */}
 				<div
 					data-reveal
-					className="grid gap-8 lg:grid-cols-[1fr_18rem] lg:gap-x-12"
+					className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-center lg:gap-16"
 				>
-					<TabsList
-						aria-label={COPY.stepsLabel}
-						className="grid h-auto w-full grid-cols-3 items-stretch gap-4 bg-transparent p-0 md:gap-8 lg:col-span-2"
-					>
-						{VIEW_ORDER.map((one, index) => (
-							<TabsTrigger
-								key={one}
-								value={one}
-								className={cn(
-									/*
-									  A step is type on the page, not a tile: its rule along the top
-									  reports where the reader is and, while the window cycles, how
-									  long the step has left. The rule lives in the module. The
-									  shared trigger's active fill is forced (`!`), so it is forced
-									  off the same way.
-									*/
-									'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 rounded-none border-0 px-0 pt-5 pb-1 text-left whitespace-normal shadow-none transition-colors data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent',
-									styles.step
-								)}
-							>
-								{/* Number over label on a phone: three steps across leave no room for both on one line. */}
-								<span className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
-									<span className="text-eyebrow text-orange-ink tabular-nums">
-										{String(index + 1).padStart(2, '0')}
+					<div className="flex flex-col gap-6">
+						<TabsList
+							aria-label={COPY.stepsLabel}
+							className="flex h-auto w-full flex-col items-stretch gap-0 bg-transparent p-0"
+						>
+							{VIEW_ORDER.map((one, index) => (
+								<TabsTrigger
+									key={one}
+									value={one}
+									className={cn(
+										/*
+										  A step is type on the page, not a tile: its rule under the title
+										  reports where the reader is and, while the window cycles, how
+										  long the step has left. The rule lives in the module. The
+										  shared trigger's active fill is forced (`!`), so it is forced
+										  off the same way.
+										*/
+										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 rounded-none border-0 px-0 pt-5 pb-5 text-left whitespace-normal shadow-none transition-colors data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent',
+										styles.step
+									)}
+								>
+									<span className="flex items-baseline gap-3">
+										<span className="text-eyebrow text-orange-ink tabular-nums">
+											{String(index + 1).padStart(2, '0')}
+										</span>
+										<span className="text-h3">{COPY.views[one].label}</span>
 									</span>
-									<span className="text-h3">{COPY.views[one].label}</span>
-								</span>
-								<span className="text-body-sm text-muted-foreground hidden md:block">
-									{COPY.views[one].summary}
-								</span>
-								<span
-									className={styles.fill}
-									aria-hidden="true"
-									onAnimationEnd={advance}
-								/>
-							</TabsTrigger>
-						))}
-					</TabsList>
-
-					<div
-						ref={sceneRef}
-						className="ds-raised relative grid overflow-hidden rounded-2xl"
-					>
-						{VIEW_ORDER.map((one) => (
-							<div
-								key={one}
-								aria-hidden={one !== view}
-								// Invisible rather than hidden: the product page's gallery is measured while it waits.
-								// The chosen view fades in over the one it replaces; the rest stay invisible, still laid out.
-								className={cn(
-									'transition-opacity duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] motion-reduce:transition-none',
-									one === view && 'z-1 opacity-100',
-									one === previous && 'opacity-100',
-									one !== view && one !== previous && 'invisible opacity-0'
-								)}
-							>
-								{one === 'embed' ? (
-									<ProductPageSketch
-										gallery={
-											<div ref={embedSlotRef} className="absolute inset-0" />
-										}
+									<span
+										className={styles.fill}
+										aria-hidden="true"
+										onAnimationEnd={advance}
 									/>
-								) : (
-									<ThemedShot view={one} />
-								)}
-							</div>
-						))}
-						<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
-							<ProductStage
-								visible={!offscreen}
-								place={stagePlace}
-								hint={view === 'embed'}
-							/>
+								</TabsTrigger>
+							))}
+						</TabsList>
+
+						{/* All three captions share one cell, so the column keeps the tallest's height and nothing beside it moves on a switch. The chosen one fades up on top; the one it replaces leaves at once, so only one caption is ever in the tab order. */}
+						<div className="grid">
+							{VIEW_ORDER.map((one) => (
+								<TabsContent
+									key={one}
+									value={one}
+									forceMount
+									className="flex flex-col gap-4 transition-[opacity,translate] duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] data-[state=active]:z-1 data-[state=inactive]:invisible data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 motion-reduce:transition-none"
+								>
+									<p className="text-muted-foreground text-body">
+										{COPY.views[one].body}
+									</p>
+									<ArrowLink
+										to={VIEW_LINKS[one]}
+										viewTransition={entersFunnel(VIEW_LINKS[one])}
+										className="text-foreground"
+									>
+										{COPY.views[one].link}
+									</ArrowLink>
+								</TabsContent>
+							))}
 						</div>
 					</div>
-
-					{VIEW_ORDER.map((one) => (
-						<TabsContent
-							key={one}
-							value={one}
-							forceMount
-							className="flex flex-col gap-4 data-[state=inactive]:hidden lg:pt-2"
-						>
-							<p className="text-eyebrow text-muted-foreground">
-								{COPY.views[one].label}
-							</p>
-							<p className="text-muted-foreground text-body">
-								{COPY.views[one].body}
-							</p>
-							<ArrowLink
-								to={VIEW_LINKS[one]}
-								viewTransition={entersFunnel(VIEW_LINKS[one])}
-								className="text-foreground"
+					<div className="ds-lit rounded-3xl">
+						{/* The app sits in the pane's top-left padding, flush to its right and bottom edges; this wrapper rounds its corner to the pane's. Clipping here, not on the panel, which would cut off the light behind it. */}
+						<div className="overflow-hidden rounded-3xl pt-8 pl-6 sm:pt-12 sm:pl-12">
+							<div
+								ref={sceneRef}
+								className="ds-raised relative grid overflow-hidden rounded-tl-2xl"
 							>
-								{COPY.views[one].link}
-							</ArrowLink>
-						</TabsContent>
-					))}
+								{VIEW_ORDER.map((one) => (
+									<div
+										key={one}
+										aria-hidden={one !== view}
+										// Invisible rather than hidden: the product page's gallery is measured while it waits.
+										// The chosen view fades in over the one it replaces; the rest stay invisible, still laid out.
+										className={cn(
+											'transition-opacity duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] motion-reduce:transition-none',
+											one === view && 'z-1 opacity-100',
+											one === previous && 'opacity-100',
+											one !== view && one !== previous && 'invisible opacity-0'
+										)}
+									>
+										{one === 'embed' ? (
+											<ProductPageSketch
+												gallery={
+													<div
+														ref={embedSlotRef}
+														className="absolute inset-0"
+													/>
+												}
+											/>
+										) : (
+											<ThemedShot view={one} />
+										)}
+									</div>
+								))}
+								<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
+									<ProductStage
+										visible={!offscreen}
+										place={stagePlace}
+										hint={view === 'embed'}
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</Tabs>
