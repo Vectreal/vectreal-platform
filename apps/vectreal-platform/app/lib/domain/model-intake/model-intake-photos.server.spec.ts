@@ -2,13 +2,40 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import sharp from 'sharp'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
 	exceedsPhotoPixelLimit,
 	prepareIntakePhotos
 } from './model-intake-photos.server'
 import { MODEL_INTAKE_MAX_PHOTO_BYTES } from './model-intake-shared'
+
+/**
+ * When set, libheif reports this size for the fixture's first image, as a
+ * crafted file whose header sharp reads one way and libheif another would.
+ */
+const libheifSize = vi.hoisted(() => ({
+	current: null as null | { width: number; height: number },
+	decoded: 0
+}))
+
+vi.mock('heic-decode', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('heic-decode')>()
+	return {
+		all: async (input: Parameters<typeof actual.all>[0]) => {
+			const images = await actual.all(input)
+			const reported = libheifSize.current
+			const shown = images.map((image) => ({
+				...(reported ?? { width: image.width, height: image.height }),
+				decode: () => {
+					libheifSize.decoded += 1
+					return image.decode()
+				}
+			}))
+			return Object.assign(shown, { dispose: () => images.dispose() })
+		}
+	}
+})
 
 const HEIC_FIXTURE = path.resolve(
 	__dirname,
@@ -92,6 +119,32 @@ describe('prepareIntakePhotos', () => {
 	it('caps a photo at 50 megapixels, above a 48 MP phone camera', () => {
 		expect(exceedsPhotoPixelLimit(8_064, 6_048)).toBe(false)
 		expect(exceedsPhotoPixelLimit(8_000, 7_000)).toBe(true)
+	})
+
+	it('refuses a photo that declares no size', () => {
+		expect(exceedsPhotoPixelLimit(0, 6_048)).toBe(true)
+		expect(exceedsPhotoPixelLimit(8_064, 0)).toBe(true)
+	})
+
+	it('checks the size libheif will allocate, not only the one sharp read', async () => {
+		const heic = await readFile(HEIC_FIXTURE)
+		const jpeg = await jpegWithGps()
+		libheifSize.current = { width: 20_000, height: 20_000 }
+		libheifSize.decoded = 0
+		try {
+			const result = await prepareIntakePhotos([
+				file(heic, 'IMG_0001.HEIC', 'image/heic'),
+				file(jpeg, 'b.jpg'),
+				file(jpeg, 'c.jpg')
+			])
+			expect(result).toEqual({
+				ok: false,
+				fieldErrors: { photos: 'photoType', photoIndex: 1 }
+			})
+			expect(libheifSize.decoded).toBe(0)
+		} finally {
+			libheifSize.current = null
+		}
 	})
 
 	it('refuses anything other than exactly three photos', async () => {

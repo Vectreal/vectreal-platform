@@ -6,7 +6,15 @@ declare module 'heic-decode' {
 		data: Uint8ClampedArray
 	}
 
-	export default function decode(input: {
+	/** One image of the file, sized from its header and not yet decoded. */
+	interface HeicImage {
+		width: number
+		height: number
+		decode(): Promise<DecodedImage>
+	}
+
+	/** Every image in the file. `dispose` frees libheif's memory for all of them. */
+	export function all(input: {
 		buffer: ArrayBuffer | Uint8Array
-	}): Promise<DecodedImage>
+	}): Promise<HeicImage[] & { dispose(): void }>
 }

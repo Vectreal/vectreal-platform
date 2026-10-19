@@ -1,4 +1,4 @@
-import decodeHeic from 'heic-decode'
+import { all as readHeicImages } from 'heic-decode'
 import sharp from 'sharp'
 
 import {
@@ -59,13 +59,44 @@ export async function prepareIntakePhotos(
 
 /**
  * The most pixels a photo may declare: 50 megapixels, just above a 48 MP
- * phone camera. Checked from the header before decoding, because the HEIC decoder
- * allocates width x height x 4 bytes up front and has no limit of its own.
+ * phone camera. Checked before decoding, because the HEIC decoder allocates
+ * width x height x 4 bytes up front and has no limit of its own. A photo that
+ * declares no size is refused too: nothing would bound what decoding it costs.
  */
 const MAX_PHOTO_PIXELS = 50_000_000
 
 export function exceedsPhotoPixelLimit(width: number, height: number): boolean {
-	return width * height > MAX_PHOTO_PIXELS
+	return !(width > 0 && height > 0) || width * height > MAX_PHOTO_PIXELS
+}
+
+/**
+ * Decodes the first image of a HEIC file into JPEG.
+ *
+ * The pixel limit is checked again on the size libheif itself reports, which
+ * is the size it allocates. sharp read the size from its own parse of the
+ * header, and two parsers can disagree about one crafted file.
+ */
+async function heicToJpeg(input: Buffer): Promise<Buffer | null> {
+	const images = await readHeicImages({ buffer: input })
+	try {
+		const [first] = images
+		if (exceedsPhotoPixelLimit(first.width, first.height)) return null
+		const decoded = await first.decode()
+		const pixels = decoded.data
+		// A view on the decoder's pixels, not a second copy of them.
+		const view = Buffer.from(
+			pixels.buffer,
+			pixels.byteOffset,
+			pixels.byteLength
+		)
+		return await sharp(view, {
+			raw: { width: decoded.width, height: decoded.height, channels: 4 }
+		})
+			.jpeg({ quality: 92 })
+			.toBuffer()
+	} finally {
+		images.dispose()
+	}
 }
 
 async function encodePhoto(input: Buffer): Promise<IntakePhoto | null> {
@@ -81,20 +112,8 @@ async function encodePhoto(input: Buffer): Promise<IntakePhoto | null> {
 
 	try {
 		if (format === 'heif') {
-			const decoded = await decodeHeic({ buffer: input })
-			const pixels = decoded.data
-			// A view on the decoder's pixels, not a second copy of them.
-			const view = Buffer.from(
-				pixels.buffer,
-				pixels.byteOffset,
-				pixels.byteLength
-			)
-			const bytes = await sharp(view, {
-				raw: { width: decoded.width, height: decoded.height, channels: 4 }
-			})
-				.jpeg({ quality: 92 })
-				.toBuffer()
-			return { bytes, ...OUTPUT_BY_FORMAT.jpeg }
+			const bytes = await heicToJpeg(input)
+			return bytes ? { bytes, ...OUTPUT_BY_FORMAT.jpeg } : null
 		}
 
 		const image = sharp(input).rotate()
