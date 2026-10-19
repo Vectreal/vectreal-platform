@@ -28,5 +28,14 @@ export type {
 	ProjectList
 } from './projects'
 
-export { createdSceneSchema, createSceneInputSchema } from './scenes'
-export type { CreatedScene, CreateSceneInput } from './scenes'
+export {
+	createdSceneSchema,
+	createSceneInputSchema,
+	scenePublicationSchema
+} from './scenes'
+export type {
+	CreatedScene,
+	CreateSceneInput,
+	PublishSceneInput,
+	ScenePublication
+} from './scenes'

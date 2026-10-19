@@ -296,12 +296,28 @@ describe('the published GLB upload', () => {
 	)
 
 	it('records the extensions the GLB declares', () => {
-		const upload = operations.slice(
-			operations.indexOf('export async function uploadPublishedGlb(')
+		const store = operations.slice(
+			operations.indexOf('export async function storePublishedGlb(')
 		)
-		expect(upload).toMatch(
-			/^[\s\S]{0,1500}?metadata: \{ gltfExtensionsUsed: readGlbExtensionsUsed\(bytes\) \}/
+		expect(store).toMatch(
+			/^[\s\S]{0,1500}?metadata: \{ gltfExtensionsUsed: readGlbExtensionsUsed\(params\.bytes\) \}/
 		)
+	})
+
+	// The browser's upload and the v1 publication route both store through it.
+	it.each([
+		[
+			'the browser upload',
+			operations.slice(
+				operations.indexOf('export async function uploadPublishedGlb(')
+			)
+		],
+		[
+			'the v1 publication route',
+			read('routes/api/v1/scenes.$sceneId.publication.ts')
+		]
+	])('stores %s through storePublishedGlb', (_, source) => {
+		expect(source).toContain('await storePublishedGlb(')
 	})
 
 	it('hands those extensions to the manifest', () => {

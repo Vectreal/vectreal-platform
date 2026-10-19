@@ -10,8 +10,11 @@ import {
 } from './projects'
 import {
 	createdSceneSchema,
+	scenePublicationSchema,
 	type CreatedScene,
-	type CreateSceneInput
+	type CreateSceneInput,
+	type PublishSceneInput,
+	type ScenePublication
 } from './scenes'
 
 import type { z } from 'zod'
@@ -73,7 +76,7 @@ export function createVectrealClient({
 	const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
 
 	async function send<Data extends z.ZodType>(
-		method: 'GET' | 'POST',
+		method: 'GET' | 'POST' | 'DELETE',
 		path: string,
 		data: Data,
 		{
@@ -189,6 +192,43 @@ export function createVectrealClient({
 				}
 			)
 		},
+		/**
+		 * Publishes a scene with the GLB visitors will load. Nothing is
+		 * re-encoded on the server, so send the compressed export (Draco, KTX2),
+		 * as the publisher does. Publishing again replaces the GLB.
+		 */
+		publishScene: (
+			sceneId: string,
+			{ file }: PublishSceneInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<ScenePublication> => {
+			const form = new FormData()
+			form.set('file', file)
+			return send(
+				'POST',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/publication`,
+				scenePublicationSchema,
+				{
+					auth: 'bearer',
+					body: form,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			)
+		},
+		/** Takes a scene offline. A scene that was not published stays a draft. */
+		unpublishScene: (
+			sceneId: string,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<ScenePublication> =>
+			send(
+				'DELETE',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/publication`,
+				scenePublicationSchema,
+				{
+					auth: 'bearer',
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			),
 		/** How the CLI signs in against this origin. */
 		cliClient: (): Promise<CliClient> =>
 			send('GET', 'api/v1/cli/client', cliClientSchema, { auth: 'public' })

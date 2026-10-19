@@ -189,6 +189,62 @@ describe('createVectrealClient', () => {
 		}
 	)
 
+	it('publishes a scene as multipart with the file and a quoted key', async () => {
+		const publication = {
+			publication: {
+				sceneId: 's/1',
+				status: 'published',
+				publishedAt: '2026-10-19T08:00:00.000Z'
+			}
+		}
+		const fetch = respond({ success: true, data: publication })
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await expect(
+			client.publishScene(
+				's/1',
+				{ file: new Blob([new Uint8Array([7])]) },
+				{ idempotencyKey: 'k-2' }
+			)
+		).resolves.toEqual(publication)
+		const [url, init] = fetch.mock.calls[0]
+		const headers = new Headers(init?.headers)
+		expect(String(url)).toBe(
+			'https://vectreal.com/api/v1/scenes/s%2F1/publication'
+		)
+		expect(init?.method).toBe('POST')
+		expect(headers.has('Content-Type')).toBe(false)
+		expect(headers.get('Idempotency-Key')).toBe('"k-2"')
+		expect((init?.body as FormData).get('file')).toBeInstanceOf(Blob)
+	})
+
+	it('takes a scene offline with DELETE, no body and a quoted key', async () => {
+		const publication = {
+			publication: { sceneId: 's1', status: 'draft', publishedAt: null }
+		}
+		const fetch = respond({ success: true, data: publication })
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await expect(
+			client.unpublishScene('s1', { idempotencyKey: 'k-3' })
+		).resolves.toEqual(publication)
+		const [url, init] = fetch.mock.calls[0]
+		expect(String(url)).toBe(
+			'https://vectreal.com/api/v1/scenes/s1/publication'
+		)
+		expect(init?.method).toBe('DELETE')
+		expect(init?.body).toBeUndefined()
+		expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('"k-3"')
+	})
+
 	it('asks for the CLI client without a token, even when it has one', async () => {
 		const fetch = respond({ success: true, data: cliClient })
 		const getAccessToken = vi.fn(() => 'token-1')

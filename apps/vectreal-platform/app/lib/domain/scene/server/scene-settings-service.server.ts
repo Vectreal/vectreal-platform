@@ -93,6 +93,13 @@ function linkedAssetIdsOf({
 	return sourceAssetId ? [...sceneAssetIds, sourceAssetId] : sceneAssetIds
 }
 
+type PublishSceneParams = {
+	sceneId: string
+	projectId: string
+	userId: string
+	publishedAssetId: string
+}
+
 /**
  * Data service for scene settings operations.
  * Focuses purely on data access and manipulation.
@@ -132,10 +139,11 @@ class SceneSettingsService {
 	 */
 	async getPublishedAssetBytes(
 		assetId: string,
-		projectId: string
+		projectId: string,
+		executor: DbExecutor = this.db
 	): Promise<number> {
-		await this.assertAssetsBelongToProject([assetId], projectId)
-		const [record] = await this.db
+		await this.assertAssetsBelongToProject([assetId], projectId, executor)
+		const [record] = await executor
 			.select({ fileSize: assets.fileSize })
 			.from(assets)
 			.where(eq(assets.id, assetId))
@@ -224,9 +232,7 @@ class SceneSettingsService {
 		}
 
 		// Post-commit so storage deletes stay out of the DB transaction.
-		await this.garbageCollectUnreferencedAssets(
-			saveResult.removedAssetIds ?? []
-		)
+		await this.collectUnreferencedAssets(saveResult.removedAssetIds ?? [])
 
 		return saveResult.savedSettings
 	}
@@ -420,7 +426,7 @@ class SceneSettingsService {
 	 * never fails the save. The cross-scene reference check guards assets shared via
 	 * the project's dedup folder (e.g. an identical texture used by another scene).
 	 */
-	private async garbageCollectUnreferencedAssets(candidateAssetIds: string[]) {
+	async collectUnreferencedAssets(candidateAssetIds: string[]) {
 		if (candidateAssetIds.length === 0) return
 
 		try {
@@ -612,77 +618,10 @@ class SceneSettingsService {
 		}
 	}
 
-	async publishSceneFromAssetId(params: {
-		sceneId: string
-		projectId: string
-		userId: string
-		publishedAssetId: string
-	}) {
-		const { sceneId, projectId, userId, publishedAssetId } = params
-
-		await this.assertAssetsBelongToProject([publishedAssetId], projectId)
-
-		const published = await this.db.transaction(async (tx) => {
-			const latestSettings = await getSceneSettingsBySceneId(tx, sceneId)
-
-			// Captured before the delete: once the row is gone the outgoing GLB has
-			// no reference left anywhere, so nothing would ever collect it.
-			const [outgoing] = await tx
-				.select({ assetId: scenePublished.assetId })
-				.from(scenePublished)
-				.where(eq(scenePublished.sceneId, sceneId))
-				.limit(1)
-
-			// Publish saves first whenever anything is unsaved, so the saved scene is
-			// what this GLB was exported from.
-			const sourceFingerprint = await readPublishSource(tx, sceneId)
-
-			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
-
-			const [publishedRecord] = await tx
-				.insert(scenePublished)
-				.values({
-					sceneId,
-					assetId: publishedAssetId,
-					sceneSettingsId: latestSettings?.id,
-					sourceFingerprint,
-					publishedBy: userId
-				})
-				.returning()
-
-			await tx
-				.update(scenes)
-				.set({
-					status: 'published',
-					updatedAt: new Date()
-				})
-				.where(eq(scenes.id, sceneId))
-
-			const [assetRecord] = await tx
-				.select()
-				.from(assets)
-				.where(eq(assets.id, publishedAssetId))
-				.limit(1)
-
-			/*
-			  The scene's size is the GLB it now publishes, as stored. Written on
-			  its own: the save-time upsert would also overwrite what the last
-			  save recorded, the optimization settings among it, with nothing.
-			*/
-			const currentSceneBytes = assetRecord?.fileSize ?? null
-			await tx
-				.insert(sceneStats)
-				.values({ sceneId, createdBy: userId, currentSceneBytes })
-				.onConflictDoUpdate({
-					target: sceneStats.sceneId,
-					set: { currentSceneBytes, updatedAt: new Date() }
-				})
-
-			return {
-				record: { ...publishedRecord, asset: assetRecord ?? null },
-				previousAssetId: outgoing?.assetId ?? null
-			}
-		})
+	async publishSceneFromAssetId(params: PublishSceneParams) {
+		const published = await this.db.transaction((tx) =>
+			this.publishSceneWithin(tx, params)
+		)
 
 		// No same-id special case: republishing byte-identical content dedupes to
 		// the row we just re-published, so `selectUnreferencedAssetIds` sees the
@@ -690,47 +629,98 @@ class SceneSettingsService {
 		// on `previousAssetId !== publishedAssetId` here would put a second copy
 		// of that rule in front of the one function that owns it.
 		if (published.previousAssetId) {
-			await this.garbageCollectUnreferencedAssets([published.previousAssetId])
+			await this.collectUnreferencedAssets([published.previousAssetId])
 		}
 
 		return published.record
 	}
 
+	/**
+	 * The publish writes on a transaction the caller owns and commits, the asset
+	 * check included, so nothing reaches for a second pooled connection. The
+	 * GLB it replaced is returned, not collected: storage deletes wait for the
+	 * caller's commit (`collectUnreferencedAssets`).
+	 */
+	async publishSceneWithin(
+		tx: SceneSettingsTransaction,
+		{ sceneId, projectId, userId, publishedAssetId }: PublishSceneParams
+	) {
+		await this.assertAssetsBelongToProject([publishedAssetId], projectId, tx)
+
+		const latestSettings = await getSceneSettingsBySceneId(tx, sceneId)
+
+		// Captured before the delete: once the row is gone the outgoing GLB has
+		// no reference left anywhere, so nothing would ever collect it.
+		const [outgoing] = await tx
+			.select({ assetId: scenePublished.assetId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+			.limit(1)
+
+		// Publish saves first whenever anything is unsaved, so the saved scene is
+		// what this GLB was exported from.
+		const sourceFingerprint = await readPublishSource(tx, sceneId)
+
+		await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
+
+		const [publishedRecord] = await tx
+			.insert(scenePublished)
+			.values({
+				sceneId,
+				assetId: publishedAssetId,
+				sceneSettingsId: latestSettings?.id,
+				sourceFingerprint,
+				publishedBy: userId
+			})
+			.returning()
+
+		await tx
+			.update(scenes)
+			.set({
+				status: 'published',
+				updatedAt: new Date()
+			})
+			.where(eq(scenes.id, sceneId))
+
+		const [assetRecord] = await tx
+			.select()
+			.from(assets)
+			.where(eq(assets.id, publishedAssetId))
+			.limit(1)
+
+		/*
+		  The scene's size is the GLB it now publishes, as stored. Written on
+		  its own: the save-time upsert would also overwrite what the last
+		  save recorded, the optimization settings among it, with nothing.
+		*/
+		const currentSceneBytes = assetRecord?.fileSize ?? null
+		await tx
+			.insert(sceneStats)
+			.values({ sceneId, createdBy: userId, currentSceneBytes })
+			.onConflictDoUpdate({
+				target: sceneStats.sceneId,
+				set: { currentSceneBytes, updatedAt: new Date() }
+			})
+
+		return {
+			record: { ...publishedRecord, asset: assetRecord ?? null },
+			previousAssetId: outgoing?.assetId ?? null
+		}
+	}
+
 	async revokeScenePublication(params: { sceneId: string; userId: string }) {
 		const { sceneId } = params
 
-		const publishedAssetId = await this.db.transaction(async (tx) => {
-			const [publishedRecord] = await tx
-				.select({ assetId: scenePublished.assetId })
-				.from(scenePublished)
-				.where(eq(scenePublished.sceneId, sceneId))
-				.limit(1)
-
-			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
-
-			await tx
-				.update(scenes)
-				.set({
-					status: 'draft',
-					updatedAt: new Date()
-				})
-				.where(eq(scenes.id, sceneId))
-
-			// The size was the published GLB's, and there is none now.
-			await tx
-				.update(sceneStats)
-				.set({ currentSceneBytes: null, updatedAt: new Date() })
-				.where(eq(sceneStats.sceneId, sceneId))
-
-			return publishedRecord?.assetId ?? null
-		})
+		const publishedAssetId = await this.db.transaction((tx) =>
+			this.revokeScenePublicationWithin(tx, sceneId)
+		)
 
 		// Reference-checked, because uploads are content-addressed and reused: the
 		// GLB this scene published can be the same row another scene published.
 		// `scene_published.asset_id` is ON DELETE CASCADE, so deleting it
 		// unconditionally would cascade that scene's publish row away with it.
 		if (publishedAssetId) {
-			await this.garbageCollectUnreferencedAssets([publishedAssetId])
+			await this.collectUnreferencedAssets([publishedAssetId])
 		}
 
 		return {
@@ -738,6 +728,39 @@ class SceneSettingsService {
 			status: 'draft' as const,
 			revoked: true as const
 		}
+	}
+
+	/**
+	 * Takes the scene offline on the caller's transaction. Returns the GLB it
+	 * unlinked, or null, for the caller to collect after its commit.
+	 */
+	async revokeScenePublicationWithin(
+		tx: SceneSettingsTransaction,
+		sceneId: string
+	): Promise<string | null> {
+		const [publishedRecord] = await tx
+			.select({ assetId: scenePublished.assetId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+			.limit(1)
+
+		await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
+
+		await tx
+			.update(scenes)
+			.set({
+				status: 'draft',
+				updatedAt: new Date()
+			})
+			.where(eq(scenes.id, sceneId))
+
+		// The size was the published GLB's, and there is none now.
+		await tx
+			.update(sceneStats)
+			.set({ currentSceneBytes: null, updatedAt: new Date() })
+			.where(eq(sceneStats.sceneId, sceneId))
+
+		return publishedRecord?.assetId ?? null
 	}
 
 	/**

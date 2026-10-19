@@ -19,3 +19,23 @@ export const createdSceneSchema = z.object({
 })
 
 export type CreatedScene = z.infer<typeof createdSceneSchema>
+
+/**
+ * `POST` and `DELETE /api/v1/scenes/:sceneId/publication`: whether the scene
+ * is live. `publishedAt` is set while it is published and null once offline.
+ */
+export const scenePublicationSchema = z.object({
+	publication: z.object({
+		sceneId: z.string(),
+		status: z.enum(['published', 'draft']),
+		publishedAt: z.iso.datetime().nullable()
+	})
+})
+
+export type ScenePublication = z.infer<typeof scenePublicationSchema>
+
+/** What `publishScene` sends: the GLB visitors will load, compressed already. */
+export type PublishSceneInput = {
+	/** One self-contained glTF 2.0 binary, as the publisher's export makes it. */
+	file: Blob
+}

@@ -16,10 +16,9 @@ import type {
  *
  * `billingState` is carried because the answer differs. An entitlement withheld
  * by the plan is a 403 and an upgrade; the same entitlement withheld because
- * billing went read-only is a 402 and a payment. `publishScene` still makes
- * that distinction inline and returns the response itself. That is a free
- * choice rather than a constraint - the route maps this error to the same two
- * responses, byte for byte - so either shape is correct there.
+ * billing went read-only is a 402 and a payment. The response mappings
+ * (`billingRefusalResponse`, and `agentBillingRefusal` for v1) make that
+ * distinction, so a thrower only says which entitlement is missing and why.
  */
 export class EntitlementRequiredError extends Error {
 	readonly entitlementKey: EntitlementKey
