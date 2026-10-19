@@ -1,6 +1,6 @@
-import { cn } from '@shared/utils'
 import { type MetaFunction, Outlet } from 'react-router'
 
+import { SheetFrame } from '../../components/layout-components'
 import { buildMeta, buildPageMeta, getRootMeta } from '../../lib/seo'
 import { getLegalPageSeo } from '../../lib/seo-registry'
 import styles from '../../styles/mdx.module.css'
@@ -22,8 +22,10 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 
 export default function MdxLayout() {
 	return (
-		<div className={cn(styles.root, 'px-6 py-20 md:px-8')}>
-			<Outlet />
-		</div>
+		<SheetFrame>
+			<div className={styles.root}>
+				<Outlet />
+			</div>
+		</SheetFrame>
 	)
 }

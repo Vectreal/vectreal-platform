@@ -1,9 +1,8 @@
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card'
 import { useEffect, useState } from 'react'
 import { data, Link, useNavigation } from 'react-router'
 
 import { PublicErrorBoundary } from '../components/errors'
-import { PageHero } from '../components/layout-components'
+import { PageHero, SheetFrame } from '../components/layout-components'
 import { ModelIntakeForm, ModelIntakeResult } from '../components/model-intake'
 import { routeErrorMeta } from '../components/not-found'
 import { MODEL_INTAKE_COPY } from '../constants/product-copy'
@@ -148,11 +147,12 @@ export default function FreeModelPage({
 				}
 			/>
 
-			<div className="container-page pb-32">
-				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-					<Card className="h-full rounded-2xl">
-						<h2 className="sr-only">{copy.submit}</h2>
-						<CardContent className="space-y-6">
+			{/* The form and what happens next are two cells of one row under the head, as on /contact. */}
+			<SheetFrame>
+				<div className="border-foreground/10 border-t">
+					<div className="mx-(--frame-x) grid lg:grid-cols-[1.15fr_0.85fr]">
+						<section className="border-foreground/10 space-y-6 py-16 lg:border-r lg:px-(--frame-pad) lg:py-24">
+							<h2 className="sr-only">{copy.submit}</h2>
 							{actionData?.status === 'success' && !showForm ? (
 								<ModelIntakeResult
 									locale={locale}
@@ -187,14 +187,10 @@ export default function FreeModelPage({
 									/>
 								</>
 							)}
-						</CardContent>
-					</Card>
+						</section>
 
-					<section>
-						<CardHeader>
+						<section className="border-foreground/10 space-y-4 border-t py-16 lg:border-t-0 lg:px-(--frame-pad) lg:py-24">
 							<h2 className="text-h4">{copy.next.heading}</h2>
-						</CardHeader>
-						<CardContent className="space-y-4">
 							<ol className="text-body-sm list-decimal space-y-3 pl-5">
 								{copy.next.steps.map((step) => (
 									<li key={step}>{step}</li>
@@ -203,10 +199,10 @@ export default function FreeModelPage({
 							<p className="text-muted-foreground text-body-sm">
 								{copy.next.note}
 							</p>
-						</CardContent>
-					</section>
+						</section>
+					</div>
 				</div>
-			</div>
+			</SheetFrame>
 		</main>
 	)
 }

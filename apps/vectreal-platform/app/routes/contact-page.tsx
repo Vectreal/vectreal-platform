@@ -1,5 +1,4 @@
 import { usePostHog } from '@posthog/react'
-import { Card, CardContent, CardHeader } from '@shared/components/ui/card'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Mail } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -17,7 +16,7 @@ import {
 	ContactSuccessResult
 } from '../components/contact'
 import { PublicErrorBoundary } from '../components/errors'
-import { PageHero } from '../components/layout-components'
+import { PageHero, SheetFrame } from '../components/layout-components'
 import { routeErrorMeta } from '../components/not-found'
 import {
 	PILOT_CONTACT_PROMPT,
@@ -127,11 +126,11 @@ export function meta({ error }: Route.MetaArgs) {
 }
 
 /*
-  Brand orange on a light card measures 2.88:1, below AA for body text, so the
+  Brand orange on the light page measures 2.88:1, below AA for body text, so the
   accent marks the link through its underline rather than by colouring the text.
 
   The underline is `decoration-muted-foreground`, not `decoration-border`:
-  `--border` against `--card` is about 1.1:1, which removed the resting
+  `--border` against `--background` is about 1.1:1, which removed the resting
   affordance along with the colour and left a reader with no cue that the text
   was a link at all.
 */
@@ -222,16 +221,22 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 				}
 			/>
 
-			<div className="container-page pb-32">
-				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-					<Card className="group relative h-full overflow-hidden rounded-2xl">
-						{/*
-						  No visible header: what it would say is the page's description.
-						  The heading stays for screen readers, so the form is still a
-						  section the page can be navigated by.
-						*/}
-						<h2 className="sr-only">Send a message</h2>
-						<CardContent className="space-y-6">
+			{/*
+			  The head runs edge to edge above the frame. Below it the form and the
+			  notes beside it are two cells of one row, starting on the rule under
+			  the head, with a column rule between them rather than a card around
+			  the form.
+			*/}
+			<SheetFrame>
+				<div className="border-foreground/10 border-t">
+					<div className="mx-(--frame-x) grid lg:grid-cols-[1.15fr_0.85fr]">
+						<section className="border-foreground/10 space-y-6 py-16 lg:border-r lg:px-(--frame-pad) lg:py-24">
+							{/*
+							  No visible header: what it would say is the page's description.
+							  The heading stays for screen readers, so the form is still a
+							  section the page can be navigated by.
+							*/}
+							<h2 className="sr-only">Send a message</h2>
 							<AnimatePresence mode="wait" initial={false}>
 								{showSubmissionResult ? (
 									<motion.div
@@ -298,20 +303,16 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 									</motion.div>
 								)}
 							</AnimatePresence>
-						</CardContent>
-					</Card>
+						</section>
 
-					<div className="space-y-6">
-						<section>
-							<CardHeader>
-								<h2 className="text-h4">Where this goes</h2>
-							</CardHeader>
-							<CardContent>
+						<div className="border-foreground/10 space-y-12 border-t py-16 lg:border-t-0 lg:px-(--frame-pad) lg:py-24">
+							<section>
+								<h2 className="text-h4 mb-4">Where this goes</h2>
 								{/*
 								  A definition list, not icon-title-description
 								  rows. The icons were decorative, they were the
 								  vertical form of the icon-triplet pattern, and in
-								  brand orange they measured 2.88:1 on this card -
+								  brand orange they measured 2.88:1 on this page -
 								  under the 3:1 floor for a graphical object.
 								*/}
 								<dl className="space-y-4">
@@ -324,32 +325,30 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 										</div>
 									))}
 								</dl>
-							</CardContent>
-						</section>
+							</section>
 
-						<section>
-							<CardHeader>
-								<h2 className="text-h4">Elsewhere</h2>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								<Link className={LINK_CLASS} to="/pricing">
-									View pricing and plans
-								</Link>
-								<Link className={LINK_CLASS} to="/docs">
-									Read integration docs
-								</Link>
-								<a className={LINK_CLASS} href="mailto:info@vectreal.com">
-									Email the team directly
-								</a>
-								<p className="text-muted-foreground text-label-xs flex items-center gap-2 pt-2">
-									<Mail className="h-3.5 w-3.5" />
-									We usually reply within one business day.
-								</p>
-							</CardContent>
-						</section>
+							<section>
+								<h2 className="text-h4 mb-4">Elsewhere</h2>
+								<div className="space-y-3">
+									<Link className={LINK_CLASS} to="/pricing">
+										View pricing and plans
+									</Link>
+									<Link className={LINK_CLASS} to="/docs">
+										Read integration docs
+									</Link>
+									<a className={LINK_CLASS} href="mailto:info@vectreal.com">
+										Email the team directly
+									</a>
+									<p className="text-muted-foreground text-label-xs flex items-center gap-2 pt-2">
+										<Mail className="h-3.5 w-3.5" />
+										We usually reply within one business day.
+									</p>
+								</div>
+							</section>
+						</div>
 					</div>
 				</div>
-			</div>
+			</SheetFrame>
 		</main>
 	)
 }
