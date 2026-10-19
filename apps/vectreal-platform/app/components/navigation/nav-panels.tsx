@@ -14,9 +14,13 @@ import { Link, useLocation } from 'react-router'
 import { isNavItemActive } from './nav-items'
 import { dissolveIn } from '../../lib/dither/dither'
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
-import { entersFunnel } from '../../lib/navigation/site-map'
+import { entersFunnel, isNavSection } from '../../lib/navigation/site-map'
 
-import type { SiteLink, SiteSection } from '../../lib/navigation/site-map'
+import type {
+	NavItem,
+	SiteLink,
+	SiteSection
+} from '../../lib/navigation/site-map'
 
 /** Long enough that a pointer crossing the bar on its way down the page opens nothing. */
 const HOVER_OPEN_MS = 120
@@ -42,7 +46,8 @@ const isMouse = (event: PointerEvent) => event.pointerType === 'mouse'
 type Open = { label: string; by: 'hover' | 'press' } | null
 
 /**
- * The nav's categories: a button each, opening a panel of links under the bar.
+ * The nav's places, in order: a category is a button opening a panel of links
+ * under the bar, a page of its own is a plain link beside them.
  *
  * Built as the WAI-ARIA disclosure navigation rather than on Radix's
  * NavigationMenu, which would put about 5 KB gzipped more on every page's first
@@ -53,10 +58,10 @@ type Open = { label: string; by: 'hover' | 'press' } | null
  * short intent delay; touch and keyboard open on press.
  */
 export function NavPanels({
-	sections,
+	items,
 	pathname
 }: {
-	sections: readonly SiteSection[]
+	items: readonly NavItem[]
 	pathname: string
 }) {
 	const [open, setOpen] = useState<Open>(null)
@@ -124,7 +129,28 @@ export function NavPanels({
 				if (next && !rootRef.current?.contains(next)) setOpen(null)
 			}}
 		>
-			{sections.map((section) => {
+			{items.map((item) => {
+				if (!isNavSection(item)) {
+					const isActive = isNavItemActive(item, pathname)
+					return (
+						<Link
+							key={item.to}
+							to={item.to}
+							viewTransition={entersFunnel(item.to)}
+							// Color alone cannot say "you are here": aria-current is what a screen reader reads it from.
+							aria-current={isActive ? 'page' : undefined}
+							className={cn(
+								'rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+								isActive
+									? 'text-foreground'
+									: 'text-muted-foreground hover:text-foreground'
+							)}
+						>
+							{item.label}
+						</Link>
+					)
+				}
+				const section = item
 				const isOpen = open?.label === section.label
 				const isCurrent = section.links.some(
 					(link) => !link.external && isNavItemActive(link, pathname)

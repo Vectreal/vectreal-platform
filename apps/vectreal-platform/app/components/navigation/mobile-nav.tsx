@@ -15,7 +15,14 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 
 import { isNavItemActive } from './nav-items'
-import { ACCOUNT, NAV, type SiteLink } from '../../lib/navigation/site-map'
+import {
+	ACCOUNT,
+	NAV,
+	isNavSection,
+	type NavItem,
+	type SiteLink,
+	type SiteSection
+} from '../../lib/navigation/site-map'
 import { DocsBreadcrumb, isDocsPath } from '../docs/docs-breadcrumb'
 import { ThemeToggleButton } from '../theme-toggle-button'
 import { UserAvatar, userFirstName } from '../user-menu'
@@ -77,6 +84,20 @@ const DrawerLink = ({
  * drawer rather than a dropdown of its own, so a docs page does not show the
  * docs picker, an account menu and a site menu side by side.
  */
+/** The nav's items as the drawer lists them: each category alone, and each run of plain pages as one list. */
+function groupNavItems(
+	items: readonly NavItem[]
+): (SiteSection | { pages: SiteLink[] })[] {
+	const groups: (SiteSection | { pages: SiteLink[] })[] = []
+	for (const item of items) {
+		const last = groups.at(-1)
+		if (isNavSection(item)) groups.push(item)
+		else if (last && 'pages' in last) last.pages.push(item)
+		else groups.push({ pages: [item] })
+	}
+	return groups
+}
+
 function MobileNav({
 	user,
 	onLogout,
@@ -219,27 +240,31 @@ function MobileNav({
 					</div>
 
 					<div className="flex flex-1 flex-col gap-8 px-4 py-8">
-						{NAV.panels.map((section) => (
-							<section key={section.label} aria-label={section.label}>
-								<h2 className="text-eyebrow text-muted-foreground px-3">
-									{section.label}
-								</h2>
-								<ul className="mt-2 flex flex-col">
-									{section.links.map((link) => (
+						{/* The bar's order: a category is a titled group, and the pages between two of them share one list. */}
+						{groupNavItems(NAV.items).map((group) =>
+							'links' in group ? (
+								<section key={group.label} aria-label={group.label}>
+									<h2 className="text-eyebrow text-muted-foreground px-3">
+										{group.label}
+									</h2>
+									<ul className="mt-2 flex flex-col">
+										{group.links.map((link) => (
+											<li key={link.to}>
+												<DrawerLink link={link} pathname={pathname} />
+											</li>
+										))}
+									</ul>
+								</section>
+							) : (
+								<ul key={group.pages[0].to} className="flex flex-col">
+									{group.pages.map((link) => (
 										<li key={link.to}>
 											<DrawerLink link={link} pathname={pathname} />
 										</li>
 									))}
 								</ul>
-							</section>
-						))}
-						<ul className="flex flex-col">
-							{NAV.links.map((link) => (
-								<li key={link.to}>
-									<DrawerLink link={link} pathname={pathname} />
-								</li>
-							))}
-						</ul>
+							)
+						)}
 					</div>
 
 					<div className="flex items-center justify-between px-7 pb-6">

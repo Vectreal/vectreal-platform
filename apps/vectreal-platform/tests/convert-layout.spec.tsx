@@ -20,6 +20,7 @@ import {
 	CONVERT_INDEX_COPY,
 	CONVERT_INDEX_PATH,
 	CONVERT_PAIRS,
+	convertPairBySlug,
 	convertPairPath
 } from '../app/lib/convert/convert-pairs'
 import ConvertIndexPage from '../app/routes/convert-page/convert-index'
@@ -187,5 +188,25 @@ describe('the index is the chooser, so it carries the links itself', () => {
 				)
 			).toEqual(expected)
 		}
+	})
+})
+
+describe('the format switch turns a conversion round', () => {
+	it('swaps to the reverse pair where it exists', async () => {
+		renderAt('/convert/glb-to-gltf')
+
+		const swap = await screen.findByRole('link', {
+			name: 'Swap: convert glTF to GLB'
+		})
+		expect(swap.getAttribute('href')).toBe(
+			convertPairPath(convertPairBySlug('gltf-to-glb')!)
+		)
+	})
+
+	it('offers no swap where the reverse cannot be performed', async () => {
+		renderAt('/convert/glb-to-usdz')
+
+		await screen.findByRole('heading', { level: 1 })
+		expect(screen.queryByRole('link', { name: /^Swap/ })).toBeNull()
 	})
 })

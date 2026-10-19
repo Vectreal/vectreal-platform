@@ -31,6 +31,12 @@ export interface SiteSection {
 	links: readonly SiteLink[]
 }
 
+/** One place in the marketing nav: a panel of links, or a link of its own. */
+export type NavItem = SiteSection | SiteLink
+
+export const isNavSection = (item: NavItem): item is SiteSection =>
+	'links' in item
+
 const { repositoryUrl, discordUrl } = HOME_PAGE_COPY.openSource
 
 const PUBLISHER: SiteLink = {
@@ -130,10 +136,18 @@ export function entersFunnel(to: string): boolean {
 	)
 }
 
-/** The marketing nav: two panels, three plain links, and the two ways in. */
+/**
+ * The marketing nav, in the order it reads on every screen: the product first,
+ * the open-source packages last, the plain links between. Then the two ways in.
+ */
 export const NAV = {
-	panels: [SITE_SECTIONS.product, SITE_SECTIONS.openSource],
-	links: [PRICING, DOCS, NEWSROOM],
+	items: [
+		SITE_SECTIONS.product,
+		PRICING,
+		NEWSROOM,
+		DOCS,
+		SITE_SECTIONS.openSource
+	] satisfies readonly NavItem[],
 	signIn: { label: 'Sign in', to: '/sign-in' },
 	getStarted: { label: 'Get started', to: PUBLISHER.to }
 } as const
