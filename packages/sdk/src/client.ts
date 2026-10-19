@@ -1,7 +1,13 @@
 import { cliClientSchema, type CliClient } from './cli-client'
 import { apiFailureSchema, apiSuccessSchema, type ApiFailure } from './envelope'
 import { meSchema, type Me } from './me'
-import { projectListSchema, type ProjectList } from './projects'
+import {
+	createdProjectSchema,
+	projectListSchema,
+	type CreatedProject,
+	type CreateProjectInput,
+	type ProjectList
+} from './projects'
 
 import type { z } from 'zod'
 
@@ -61,12 +67,22 @@ export function createVectrealClient({
 	// Relative paths against a base ending in `/`, so a base with a path keeps it.
 	const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
 
-	async function get<Data extends z.ZodType>(
+	async function send<Data extends z.ZodType>(
+		method: 'GET' | 'POST',
 		path: string,
 		data: Data,
-		auth: 'bearer' | 'public'
+		{
+			auth,
+			body: payload,
+			headers: extraHeaders
+		}: {
+			auth: 'bearer' | 'public'
+			body?: unknown
+			headers?: Record<string, string>
+		}
 	): Promise<z.infer<Data>> {
-		const headers = new Headers({ Accept: 'application/json' })
+		const headers = new Headers({ Accept: 'application/json', ...extraHeaders })
+		if (payload !== undefined) headers.set('Content-Type', 'application/json')
 		if (auth === 'bearer') {
 			if (!getAccessToken) {
 				throw new Error(`${path} needs an access token: pass getAccessToken`)
@@ -74,7 +90,11 @@ export function createVectrealClient({
 			headers.set('Authorization', `Bearer ${await getAccessToken()}`)
 		}
 
-		const response = await fetch(new URL(path, base), { headers })
+		const response = await fetch(new URL(path, base), {
+			method,
+			headers,
+			body: payload === undefined ? undefined : JSON.stringify(payload)
+		})
 
 		const body: unknown = await response.json().catch(() => undefined)
 
@@ -112,14 +132,37 @@ export function createVectrealClient({
 
 	return {
 		/** Who the access token acts as. */
-		me: (): Promise<Me> => get('api/v1/me', meSchema, 'bearer'),
+		me: (): Promise<Me> =>
+			send('GET', 'api/v1/me', meSchema, { auth: 'bearer' }),
 		/** The projects in the organization the token's grant names. */
 		projects: (): Promise<ProjectList> =>
-			get('api/v1/projects', projectListSchema, 'bearer'),
+			send('GET', 'api/v1/projects', projectListSchema, { auth: 'bearer' }),
+		/**
+		 * Creates a project in the grant's organization.
+		 *
+		 * To retry safely after a timeout, pass your own `idempotencyKey` and
+		 * send it again unchanged: the server answers with the first outcome for
+		 * a day instead of creating a second project. Without one, each call
+		 * gets a fresh key and is a new operation.
+		 */
+		createProject: (
+			input: CreateProjectInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<CreatedProject> =>
+			send('POST', 'api/v1/projects', createdProjectSchema, {
+				auth: 'bearer',
+				body: input,
+				headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+			}),
 		/** How the CLI signs in against this origin. */
 		cliClient: (): Promise<CliClient> =>
-			get('api/v1/cli/client', cliClientSchema, 'public')
+			send('GET', 'api/v1/cli/client', cliClientSchema, { auth: 'public' })
 	}
 }
 
 export type VectrealClient = ReturnType<typeof createVectrealClient>
+
+/** An RFC 8941 String, which is what `Idempotency-Key` carries. */
+function sfString(value: string): string {
+	return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}

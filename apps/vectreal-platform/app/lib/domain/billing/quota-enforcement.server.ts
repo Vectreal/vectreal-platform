@@ -26,6 +26,7 @@ import {
 import { QuotaExceededError } from './quota-exceeded-error'
 
 import type { LimitKey } from '../../../constants/plan-config'
+import type { DbExecutor } from '../../../db/client'
 
 export async function assertWithinQuota(params: {
 	organizationId: string
@@ -36,10 +37,23 @@ export async function assertWithinQuota(params: {
 	adds?: number
 	/** Built only on refusal, so it can name the limit it hit. */
 	message: (context: { limit: number; current: number }) => string
+	/** The transaction `measure` runs in, so the limit is read there too. */
+	executor?: DbExecutor
 }): Promise<void> {
-	const { organizationId, limitKey, measure, adds = 1, message } = params
+	const {
+		organizationId,
+		limitKey,
+		measure,
+		adds = 1,
+		message,
+		executor
+	} = params
 
-	const { limit, effectivePlan } = await getQuotaLimit(organizationId, limitKey)
+	const { limit, effectivePlan } = await getQuotaLimit(
+		organizationId,
+		limitKey,
+		executor
+	)
 	if (limit === null) {
 		return
 	}

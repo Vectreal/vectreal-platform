@@ -225,6 +225,13 @@
       "when": 1792363280714,
       "tag": "0031_project_slug_database_default",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792365855763,
+      "tag": "0032_agent_idempotency_and_audit",
+      "breakpoints": true
     }
   ]
 }

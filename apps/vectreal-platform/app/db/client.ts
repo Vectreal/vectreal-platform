@@ -35,3 +35,13 @@ export function getDbClient() {
 	cachedClient = drizzle({ client, schema })
 	return cachedClient
 }
+
+type DbClient = ReturnType<typeof getDbClient>
+
+/** What `db.transaction` hands its callback. */
+export type DbTransaction = Parameters<
+	Parameters<DbClient['transaction']>[0]
+>[0]
+
+/** Either one: for a write that runs alone or inside a caller's transaction. */
+export type DbExecutor = DbClient | DbTransaction

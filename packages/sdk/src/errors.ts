@@ -14,7 +14,17 @@ export const API_ERROR_CODES = [
 	'insufficient_scope',
 	/** Too many requests for this grant; wait `Retry-After` seconds. */
 	'rate_limited',
-	'not_found'
+	'not_found',
+	/** The method is not one this route answers. */
+	'method_not_allowed',
+	/** The user's role in the organization does not allow this, whatever the scope. */
+	'insufficient_role',
+	/** A plan limit; `quota` and `upgradeUrl` say which and where to raise it. */
+	'quota_exceeded',
+	/** This Idempotency-Key was first sent with a different request. Use a new one. */
+	'idempotency_key_reused',
+	/** The first request with this Idempotency-Key is still running. Retry shortly. */
+	'idempotency_in_progress'
 ] as const
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number]
