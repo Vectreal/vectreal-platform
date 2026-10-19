@@ -62,7 +62,16 @@ function FeatureCheck({ granted }: { granted: boolean }) {
   a band across four columns, and the fill sits a step under the group bands so
   the two never read as the same thing. The sticky label cell carries the row's
   own fill, or the stripe would break under it while the table scrolls.
+
+  The values of `ds-sunken` and `ds-raised`, as plain fills. The classes
+  themselves carry the surface material, an edge and a shadow, which on table
+  rows would rule every row off: a stripe is a tint, not a plate.
 */
+const STRIPE_FILL =
+	'bg-[color-mix(in_oklch,var(--foreground)_2.5%,var(--background))]'
+const GROUP_FILL =
+	'bg-[color-mix(in_oklch,var(--foreground)_4%,var(--background))]'
+
 function FeatureMatrixRow({
 	label,
 	plans,
@@ -72,9 +81,9 @@ function FeatureMatrixRow({
 	plans: { plan: Plan; granted: boolean }[]
 	striped: boolean
 }) {
-	const fill = striped ? 'ds-sunken' : 'bg-background'
+	const fill = striped ? STRIPE_FILL : 'bg-background'
 	return (
-		<tr className={cn(striped && 'ds-sunken')}>
+		<tr className={cn(striped && STRIPE_FILL)}>
 			{/*
 			  The label column is sticky. A phone shows 343px of the table, so
 			  scrolling right to reach Business and Enterprise used to carry the
@@ -163,7 +172,7 @@ export function FeatureCompareGrid() {
 					<tbody>
 						{ENTITLEMENT_FEATURE_GROUPS.map(({ label, features }) => (
 							<React.Fragment key={label}>
-								<tr className="ds-raised">
+								<tr className={GROUP_FILL}>
 									{/*
 									  No scope. This header labels the rows beneath it, and
 									  `colgroup` scopes to a column group - it told assistive

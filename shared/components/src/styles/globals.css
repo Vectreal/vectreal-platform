@@ -512,10 +512,25 @@
 
 @layer components {
 	/* ---- Surface elevation ----
-	  Vectreal separates surfaces by value, not by outlines: "matte flat
-	  surfaces, no hard borders". A 1px border at app-chrome contrast reads as a
-	  drawn box; a few percent of foreground mixed into the background reads as
-	  depth.
+	  Vectreal separates surfaces by value and by light, not by outlines. A 1px
+	  border at app-chrome contrast reads as a drawn box; a few percent of
+	  foreground mixed into the background, with an edge that catches light
+	  from above and a soft shadow below, reads as a plate in space.
+
+	  Each rung is two things. Its value is the mix below. Its material is the
+	  box-shadow: a bright bevel on the top edge, a hairline rim, a faint shade
+	  on the bottom edge, then the shadow it throws, all from the
+	  `--material-*` colours in `theme.css`. Raised and overlay surfaces lift;
+	  sunken surfaces and fields recede, shaded from the top inside instead.
+
+	  The shadow stack is written out in every rung rather than shared through
+	  a custom property, on purpose: a property composed at `:root` would bake
+	  in the light scheme's colours, and an element that sets `.dark` on its
+	  own subtree (an embed, the viewer) would keep them.
+
+	  A utility that sets `box-shadow` (`shadow-*`, `ring-*`) replaces the
+	  material on that element, because utilities outrank this layer. That is
+	  the intended escape hatch, and why a focus ring still shows on a field.
 
 	  These are theme-aware by construction, unlike the `--surface-0/1/2` tokens,
 	  which are fixed dark values for the always-dark marketing sections. Mixing
@@ -555,6 +570,12 @@
 			var(--foreground) 4%,
 			var(--background)
 		);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			inset 0 -1px 0 var(--material-base),
+			0 1px 2px var(--material-shadow),
+			0 12px 32px -18px var(--material-shadow-far);
 	}
 	.ds-overlay {
 		background-color: color-mix(
@@ -562,13 +583,24 @@
 			var(--foreground) 8%,
 			var(--background)
 		);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			inset 0 -1px 0 var(--material-base),
+			0 1px 2px var(--material-shadow),
+			0 18px 44px -20px var(--material-shadow-far);
 	}
+	/* A well: shaded from its top edge inward, with the light catching its bottom lip. */
 	.ds-sunken {
 		background-color: color-mix(
 			in oklch,
 			var(--foreground) 2.5%,
 			var(--background)
 		);
+		box-shadow:
+			inset 0 1px 2px var(--material-shadow),
+			inset 0 0 0 1px var(--material-rim),
+			inset 0 -1px 0 var(--material-bevel);
 	}
 	/*
 	  The ladder self-corrects when it nests. A raised block inside a raised
@@ -611,6 +643,9 @@
 	*/
 	.ds-field {
 		background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+		box-shadow:
+			inset 0 1px 1px var(--material-shadow),
+			inset 0 0 0 1px var(--material-rim);
 	}
 
 	/* Only where a divider genuinely carries meaning. Never to draw a box. */
@@ -620,7 +655,10 @@
 
 	/*
 	  Interactive surfaces. Hover lifts the surface exactly one step up the
-	  ladder, so a raised row hovers to overlay. Use these rather than pairing a
+	  ladder, so a raised row hovers to overlay. At rest they carry only the
+	  edge, no thrown shadow: these are rows and tiles that come in lists, and
+	  forty shadows in a column read as noise. The shadow arrives on hover,
+	  which is what makes the lift read as a lift. Use these rather than pairing a
 	  `ds-*` class with a hand-written `hover:bg-foreground/N`: call sites had
 	  drifted to 6%, 8%, 12% and 14%, so equivalent rows hovered to different
 	  values in the same view.
@@ -631,7 +669,13 @@
 			var(--foreground) 4%,
 			var(--background)
 		);
-		transition: background-color var(--duration-fast) var(--ease-out);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			inset 0 -1px 0 var(--material-base);
+		transition:
+			background-color var(--duration-fast) var(--ease-out),
+			box-shadow var(--duration-base) var(--ease-out);
 	}
 	.ds-raised-interactive:hover {
 		background-color: color-mix(
@@ -639,6 +683,12 @@
 			var(--foreground) 8%,
 			var(--background)
 		);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			inset 0 -1px 0 var(--material-base),
+			0 1px 2px var(--material-shadow),
+			0 12px 32px -18px var(--material-shadow-far);
 	}
 	.ds-overlay-interactive {
 		background-color: color-mix(
@@ -646,7 +696,13 @@
 			var(--foreground) 8%,
 			var(--background)
 		);
-		transition: background-color var(--duration-fast) var(--ease-out);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			inset 0 -1px 0 var(--material-base);
+		transition:
+			background-color var(--duration-fast) var(--ease-out),
+			box-shadow var(--duration-base) var(--ease-out);
 	}
 	.ds-overlay-interactive:hover {
 		background-color: color-mix(
@@ -654,6 +710,12 @@
 			var(--foreground) 12%,
 			var(--background)
 		);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			inset 0 -1px 0 var(--material-base),
+			0 1px 2px var(--material-shadow),
+			0 18px 44px -20px var(--material-shadow-far);
 	}
 	/*
 	  The resting surface of a control (the Slider track, a Toggle).
@@ -663,7 +725,35 @@
 	*/
 	.ds-field-interactive {
 		background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+		box-shadow:
+			inset 0 1px 1px var(--material-shadow),
+			inset 0 0 0 1px var(--material-rim);
 		transition: background-color var(--duration-fast) var(--ease-out);
+	}
+
+	/*
+	  A filled action's material: a bevel of light along its top edge, a shade
+	  along its bottom, and a small shadow, so a button reads as something you
+	  press rather than a coloured rectangle. Fixed white and black rather than
+	  the material tokens, because the fill underneath (ink, orange, red) is
+	  the same in both schemes.
+	*/
+	.ds-bevel {
+		box-shadow:
+			inset 0 1px 0 oklch(1 0 0 / 0.2),
+			inset 0 -1px 0 oklch(0 0 0 / 0.14),
+			0 1px 2px var(--material-shadow),
+			0 4px 10px -6px var(--material-shadow-far);
+	}
+	/*
+	  A neutral control's material: the raised rung's edge at button size, with
+	  its rim outside so it is the control's whole outline.
+	*/
+	.ds-control {
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			0 0 0 1px var(--material-rim),
+			0 1px 2px var(--material-shadow);
 	}
 	.ds-field-interactive:hover {
 		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);

@@ -1,11 +1,14 @@
 # Elevation
 
-Owner of: the `ds-*` ladder, and when a surface is allowed a shadow.
+Owner of: the `ds-*` ladder, the surface material, and when a surface is allowed
+a shadow.
 
 ## The `ds-*` ladder
 
 Every step is `color-mix(in oklch, var(--foreground) N%, var(--background))`, so
-the whole ladder tracks the theme from one pair of tokens.
+the whole ladder tracks the theme from one pair of tokens. Every step also
+carries the surface material, below: the value says how high a surface sits,
+the material makes it read as a plate in space.
 
 - `ds-raised` (4%) — cards, table containers, anything sitting on the page
 - `ds-overlay` (8%) — popovers, menus, rows hovered on top of raised
@@ -48,25 +51,71 @@ and the card inside it resolves to 8%. It used to draw an orange bar instead.
 divides rather than punching a hole in it.
 
 The ladder's own comment in `globals.css` states the intent: the system separates
-surfaces by **value, not by outlines**. That is the reason to reach for a `ds-*`
+surfaces by **value and light, not by outlines**. That is the reason to reach for a `ds-*`
 step before adding a border, not a ban on borders — `ds-divider` is in the ladder
 and the `ui/` primitives use borders where an edge carries meaning.
 
+## The surface material
+
+Decided by Moritz on 19 Oct 2026, after the "cards with depth" study of
+github.com's backlit panels: surfaces get real depth, project wide, and the
+depth comes from light rather than from outlines.
+
+The light comes from above. So every rung's `box-shadow` is the same four
+layers, read from the `--material-*` colours in `theme.css`:
+
+| Layer | What it is | Token |
+| --- | --- | --- |
+| `inset 0 1px 0` | the bevel: the top edge catching light | `--material-bevel` |
+| `inset 0 0 0 1px` | the rim: a hairline barely darker than the surface | `--material-rim` |
+| `inset 0 -1px 0` | the base: the bottom edge, a touch darker | `--material-base` |
+| outer shadows | what the plate throws: a tight contact shadow and a wide soft one | `--material-shadow`, `--material-shadow-far` |
+
+- `ds-raised` and `ds-overlay` lift: all four layers, overlay's far shadow a
+  little longer.
+- `ds-sunken` and `ds-field` recede: shaded from the top edge inward, with the
+  light catching the bottom lip instead. No outer shadow.
+- `ds-raised-interactive` and `ds-overlay-interactive` carry only the edge at
+  rest and take the thrown shadow on hover. They come in lists, and a column of
+  forty shadows reads as noise; the shadow arriving is what makes the hover
+  read as a lift.
+- `ds-bevel` is a filled action's material (`Button`'s default, brand and
+  destructive variants): a white bevel and a dark base, fixed values because
+  the fill underneath is the same in both schemes.
+- `ds-control` is a neutral control's (`Button`'s outline and secondary): the
+  raised edge at button size, with its rim outside so it is the outline.
+- `.shell-panel` already floats as glass; it takes the bevel.
+
+Light mode keeps the rim faint and the shadow warm, so a plate reads as a
+shadow on paper and not an ink outline. Dark mode's shadow is the page's own
+black, deeper, because a dark surface separates from a darker page only by the
+shade beneath it.
+
+**The stack is written out in every rung.** A shared custom property composed at
+`:root` would bake in the light colours, and a subtree that sets `.dark` on its
+own (an embed, the viewer) would keep them.
+
+**A surface class is a plate, not a tint.** Where a fill only needs the value -
+table stripes, a group band in a table - write the mix as an arbitrary utility,
+as `feature-compare-grid.tsx` does: the material on table rows rules every row
+off.
+
+**Utilities replace the material.** `shadow-*` and `ring-*` set `box-shadow`
+from the utilities layer, which outranks the rungs. That is the escape hatch,
+and why a field's focus ring still shows.
+
 ## Shadows
 
-**Page surfaces use the ladder. Only portalled overlays carry a shadow.**
+**Page surfaces take their shadow from the material.** A raw Tailwind
+`shadow-*` on a `ds-*` surface replaces the material with a generic shadow and
+is wrong on any new surface. Portalled overlays (dialogs, popovers, menus) keep
+their larger `shadow-*`: they float over arbitrary content, and the plate's
+shadow is sized for a surface sitting on the page.
 
-The `ds-*` ladder exists to replace shadow with value-mixing, and a shadow on a
-raised card is the ladder plus a second, contradictory depth cue. Overlays are
-the legitimate exception: a dialog or popover floats over arbitrary content and
-value alone does not separate it.
-
-There is no `--shadow-*` token scale. Raw Tailwind `shadow-sm` / `-md` / `-lg`
-/ `-xl` is used across a few dozen call sites, almost all in
-`shared/components/src/ui/` and the publisher. (A census is deliberately not
-given here: the last one said 44 and was wrong within a month, and the number is
-not what the rule turns on.) Introducing a scale is a filed catalogue row, not a thing to
-do in passing — but the rule above governs any *new* surface today.
+There is no `--shadow-*` token scale beyond the material. Raw Tailwind
+`shadow-sm` / `-md` / `-lg` / `-xl` survives at a few dozen call sites, almost
+all in `shared/components/src/ui/` and the publisher. (A census is deliberately
+not given here: the last one said 44 and was wrong within a month.)
 
 `rounded-2xl shadow-lg p-6` is the untouched shadcn card default and is banned on
 marketing surfaces by [anti-ai-look.md](anti-ai-look.md).
@@ -81,6 +130,11 @@ arbitrary-utility form `routes/docs/index.tsx` uses. (`navigation-menu.tsx`
 writes the same value as a `group-data-[…]` variant rather than a `hover:` one.)
 
 ```claims
+present  shared/components/src/styles/theme.css                                --material-bevel
+present  shared/components/src/styles/theme.css                                --material-shadow-far
+present  shared/components/src/styles/globals.css                              .ds-bevel
+present  shared/components/src/styles/globals.css                              .ds-control
+present  shared/components/src/ui/button.tsx                                   ds-bevel
 present  shared/components/src/styles/globals.css                              .ds-raised-interactive
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
 present  shared/components/src/styles/globals.css                              .ds-divider
