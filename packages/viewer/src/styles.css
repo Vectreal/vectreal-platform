@@ -56,7 +56,17 @@
 	*/
 	--vctrl-hotspot-internal-ring: #6366f1;
 
-	font-family: 'DM Sans Variable', sans-serif;
+	/*
+	  No font-family, on purpose: the viewer's text (the info popover, the
+	  controls, the hotspot label and numeral) takes the typeface of the page it
+	  sits on, as the rest of that page's content does. It used to name DM Sans,
+	  which this package never shipped, so on any site that had not loaded it
+	  the name only meant a fallback nobody chose. Vectreal's own pages load DM
+	  Sans for their body text, and the viewer inherits it there. A host that
+	  wants another face sets font-family on the viewer's container. The
+	  viewer's own buttons are told to inherit (`CHROME_BUTTON`), since a
+	  browser gives a button a face of its own wherever a host has no reset.
+	*/
 }
 
 /*
@@ -70,15 +80,16 @@
 
   `text-box` trims the box to the cap/baseline edges, so what flex centres is
   the ink. The browser reads the metric out of whatever font actually rendered,
-  which is the whole point: this package names DM Sans but does not ship it, so
-  a consumer's fallback font decides those metrics, and any constant written
-  here would be calibrated to a font that may never load.
+  which is the whole point: the viewer takes its host's typeface, so the host's
+  font decides those metrics, and any constant written here would be
+  calibrated to one font among many.
 
   The fallback is a fixed nudge for engines without `text-box` (Firefox as of
-  this writing). It is DM Sans's asymmetry specifically, and it is deliberately
-  a last resort rather than the primary mechanism: a sub-pixel transform is also
-  at the mercy of the renderer's hinting, so the same 0.05em lands differently
-  on a hinted Linux rasterizer than on macOS.
+  this writing). It was measured on DM Sans, so on any other face it is only
+  approximate, and it is deliberately a last resort rather than the primary
+  mechanism: a sub-pixel transform is also at the mercy of the renderer's
+  hinting, so the same 0.05em lands differently on a hinted Linux rasterizer
+  than on macOS.
 */
 .vctrl-hotspot-numeral {
 	display: block;

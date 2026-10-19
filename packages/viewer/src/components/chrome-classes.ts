@@ -12,9 +12,14 @@
  * with each control, and a corner is `rounded-full` or spelled out
  * (`rounded-[var(--radius,1rem)]` is the app's `rounded-lg`): the published
  * bundle clears the named radius scale, so `rounded-lg` there draws square.
+ *
+ * `[font-family:inherit]` because a browser gives a button a face of its own
+ * wherever the host has no reset, and the viewer's text takes the host's.
+ * On each control rather than on every button under the root, which would
+ * also override a font a host set on a button of its own inside the viewer.
  */
 export const CHROME_BUTTON =
-	'shell-focus cursor-pointer appearance-none border-0 bg-transparent text-muted-foreground transition-colors duration-150 hover:bg-foreground/5 hover:text-foreground active:bg-foreground/10 motion-reduce:transition-none'
+	'shell-focus cursor-pointer [font-family:inherit] appearance-none border-0 bg-transparent text-muted-foreground transition-colors duration-150 hover:bg-foreground/5 hover:text-foreground active:bg-foreground/10 motion-reduce:transition-none'
 
 /**
  * Where the viewer puts the exported controls it draws itself. The components
