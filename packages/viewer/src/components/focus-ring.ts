@@ -7,4 +7,4 @@
  * distinguishable from the marker itself whatever colour it is.
  */
 export const FOCUS_RING =
-	'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white focus-visible:shadow-[0_0_0_4px_rgba(0,0,0,0.5)]'
+	'vv:focus-visible:outline-2 vv:focus-visible:outline-offset-2 vv:focus-visible:outline-white vv:focus-visible:shadow-[0_0_0_4px_rgba(0,0,0,0.5)]'

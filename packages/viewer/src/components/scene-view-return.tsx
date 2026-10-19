@@ -1,8 +1,8 @@
-import { cn } from '@shared/utils'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import ChevronLeftIcon from './assets/chevron-left-icon'
 import { CHROME_BUTTON } from './chrome-classes'
+import { cn } from './class-names'
 
 interface SceneViewReturnProps {
 	/** The hotspot the view is standing at, or null when it is not at one. */
@@ -17,12 +17,12 @@ interface SceneViewReturnProps {
 }
 
 const classes = {
-	root: 'vctrl-viewer-scene-view-return shell-panel absolute top-0 left-1/2 z-[100] m-2 -translate-x-1/2 p-1',
+	root: 'vctrl-viewer-scene-view-return shell-panel vv:absolute vv:top-0 vv:left-1/2 vv:z-[100] vv:m-2 vv:-translate-x-1/2 vv:p-1',
 	button: cn(
 		CHROME_BUTTON,
-		'flex h-7 items-center gap-1 rounded-full py-0 pr-3 pl-2 text-xs leading-none font-medium whitespace-nowrap'
+		'vv:flex vv:h-7 vv:items-center vv:gap-1 vv:rounded-full vv:py-0 vv:pr-3 vv:pl-2 vv:text-xs vv:leading-none vv:font-medium vv:whitespace-nowrap'
 	),
-	icon: 'h-3.5 w-3.5'
+	icon: 'vv:h-3.5 vv:w-3.5'
 } as const
 
 const ReturnButton = ({
@@ -89,7 +89,7 @@ const SceneViewReturn = ({
 
 	return (
 		<>
-			<div className="sr-only" role="status" aria-live="polite">
+			<div className="vv:sr-only" role="status" aria-live="polite">
 				{announcement}
 			</div>
 			{hotspotName !== null && (

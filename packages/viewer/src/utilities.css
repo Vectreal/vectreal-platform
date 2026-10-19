@@ -1,0 +1,38 @@
+/*
+  The Tailwind utilities the viewer's components use, under the `vv` prefix.
+
+  Every class in the viewer's source is written `vv:…`, and this is the one
+  stylesheet that generates them, for every consumer: the published bundle,
+  and the platform and Storybook, which compile the viewer from source. A
+  host's own Tailwind ignores a `vv:` class, so the viewer never adds to the
+  host's utilities and the host never adds to the viewer's (see
+  `components/class-names.ts`).
+
+  `theme(inline)` writes each value into the rule, so no theme variable is
+  declared on the viewer: content a host renders inside it still resolves
+  `--spacing`, `--text-*` and `--ease-*` to the host's own theme.
+*/
+@import 'tailwindcss/theme' prefix(vv) theme(inline);
+@import 'tailwindcss/utilities' source(none);
+
+@source './';
+@source not './**/*.spec.{ts,tsx}';
+@source not './**/*.stories.{ts,tsx}';
+
+/*
+  The palette's Tailwind names (`vv:bg-shell-surface`, `vv:text-foreground`)
+  without its rules. The rules reach the published bundle through
+  `package.css`; the platform and Storybook already load them from
+  `globals.css`, and a second copy here, unlayered, would beat theirs.
+*/
+@import '../../../shared/components/src/styles/theme.css' reference;
+
+/*
+  The corner-radius scale belongs to whoever is embedding the viewer. The
+  viewer uses `rounded-full`, which takes no token, and one explicit radius in
+  `info-popover.tsx`; clearing the scale keeps a named one from creeping in
+  with Tailwind's values rather than the host's.
+*/
+@theme {
+	--radius-*: initial;
+}

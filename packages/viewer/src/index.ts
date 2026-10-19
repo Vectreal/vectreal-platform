@@ -1,4 +1,5 @@
 import './styles.css'
+import './utilities.css'
 
 export {
 	default as VectrealViewer,

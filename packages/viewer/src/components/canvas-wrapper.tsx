@@ -1,8 +1,8 @@
 import { PerformanceMonitor } from '@react-three/drei'
 import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
-import { cn } from '@shared/utils'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { cn, withHostClasses } from './class-names'
 import {
 	type ViewerTheme,
 	useViewerColorScheme
@@ -180,7 +180,10 @@ const Canvas = ({
 	return (
 		<div
 			ref={setContainer}
-			className={cn('outline-none', colorScheme, containerClassName)}
+			className={withHostClasses(
+				cn('vv:outline-none', colorScheme),
+				containerClassName
+			)}
 			style={
 				containerBackground ? { background: containerBackground } : undefined
 			}
@@ -199,8 +202,8 @@ const Canvas = ({
 					dpr={props.dpr ?? [MIN_DPR, dprCap]}
 					frameloop={!isPageVisible ? 'never' : (props.frameloop ?? 'demand')}
 					className={cn(
-						'h-full w-full opacity-0 transition-opacity ease-out',
-						canvasVisible && shouldShowCanvasContent && 'opacity-100'
+						'vv:h-full vv:w-full vv:opacity-0 vv:transition-opacity vv:ease-out',
+						canvasVisible && shouldShowCanvasContent && 'vv:opacity-100'
 					)}
 					style={{
 						transitionDuration: `${VIEWER_MODEL_FADE_DURATION_MS}ms`

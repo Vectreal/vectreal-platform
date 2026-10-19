@@ -89,9 +89,11 @@ describe('the card is placed by the resolver that was tested', () => {
 		// the canvas.
 		expect(popover).not.toContain('calc(100%')
 		expect(popover).toContain(
-			"above: 'bottom-[var(--vctrl-hotspot-popover-gap)]'"
+			"above: 'vv:bottom-[var(--vctrl-hotspot-popover-gap)]'"
 		)
-		expect(popover).toContain("below: 'top-[var(--vctrl-hotspot-popover-gap)]'")
+		expect(popover).toContain(
+			"below: 'vv:top-[var(--vctrl-hotspot-popover-gap)]'"
+		)
 		// And being centre-relative, it has to clear half the 24px hit box -
 		// 14px for the image and svg presets.
 		const gap = /const ANCHOR_GAP_PX = (\d+)/.exec(marker)?.[1]

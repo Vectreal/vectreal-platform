@@ -1,5 +1,6 @@
-import { cn } from '@shared/utils'
 import { useEffect, useState } from 'react'
+
+import { cn, withHostClasses } from './class-names'
 
 import type { ViewerLoadingThumbnail } from '../types/viewer-types'
 
@@ -15,7 +16,7 @@ interface LoadingThumbnailBackdropProps {
 const resolveBlurClass = (blur: ViewerLoadingThumbnail['blur']) => {
 	if (blur === false) return null
 	if (typeof blur === 'string') return blur
-	return 'blur-sm'
+	return 'vv:blur-sm'
 }
 
 const LoadingThumbnailBackdrop = ({
@@ -37,26 +38,37 @@ const LoadingThumbnailBackdrop = ({
 	return (
 		<div
 			className={cn(
-				'absolute inset-0 overflow-hidden transition-opacity duration-700 ease-out',
-				isLoaded ? 'opacity-0' : isEntered ? 'opacity-100' : 'opacity-0'
+				'vv:absolute vv:inset-0 vv:overflow-hidden vv:transition-opacity vv:duration-700 vv:ease-out',
+				isLoaded
+					? 'vv:opacity-0'
+					: isEntered
+						? 'vv:opacity-100'
+						: 'vv:opacity-0'
 			)}
 		>
 			<img
 				src={thumbnail.src}
 				alt={thumbnail.alt || 'Viewer loading thumbnail'}
-				className={cn(
-					'h-full w-full transition-transform duration-700 ease-out',
-					thumbnail.objectFit === 'contain' ? 'object-contain' : 'object-cover',
-					resolveBlurClass(thumbnail.blur),
-					isLoaded ? 'scale-100' : isEntered ? 'scale-105' : 'scale-110',
-					// Last so a consumer's class wins any conflict through twMerge.
+				className={withHostClasses(
+					cn(
+						'vv:h-full vv:w-full vv:transition-transform vv:duration-700 vv:ease-out',
+						thumbnail.objectFit === 'contain'
+							? 'vv:object-contain'
+							: 'vv:object-cover',
+						resolveBlurClass(thumbnail.blur),
+						isLoaded
+							? 'vv:scale-100'
+							: isEntered
+								? 'vv:scale-105'
+								: 'vv:scale-110'
+					),
 					thumbnail.className
 				)}
 			/>
 			{thumbnail.scrim !== false && (
 				<>
-					<div className="bg-background/35 absolute inset-0" />
-					<div className="from-background/60 via-background/15 absolute inset-0 bg-gradient-to-b to-transparent" />
+					<div className="vv:bg-background/35 vv:absolute vv:inset-0" />
+					<div className="vv:from-background/60 vv:via-background/15 vv:absolute vv:inset-0 vv:bg-gradient-to-b vv:to-transparent" />
 				</>
 			)}
 		</div>

@@ -1,5 +1,4 @@
-import { cn } from '@shared/utils'
-
+import { cn } from './class-names'
 import LoadingShadowPlane from './loading-shadow-plane'
 import LoadingThumbnailBackdrop from './loading-thumbnail-backdrop'
 import { isViewerChromeVisible } from './overlay-chrome-visibility'
@@ -43,10 +42,10 @@ const Overlay = ({
 			{showLoader && loader && (
 				<div
 					className={cn(
-						'absolute inset-0 flex h-full w-full flex-col items-center justify-center gap-4 transition-[opacity,filter] ease-out',
+						'vv:absolute vv:inset-0 vv:flex vv:h-full vv:w-full vv:flex-col vv:items-center vv:justify-center vv:gap-4 vv:transition-[opacity,filter] vv:ease-out',
 						isLoaded
-							? 'pointer-events-none opacity-0 blur-[1px]'
-							: 'blur-0 opacity-100'
+							? 'vv:pointer-events-none vv:opacity-0 vv:blur-[1px]'
+							: 'vv:blur-none vv:opacity-100'
 					)}
 					style={{
 						transitionDuration: `${VIEWER_LOADING_FADE_DURATION_MS}ms`
@@ -74,8 +73,10 @@ const Overlay = ({
 					<LoadingShadowPlane />
 					<div
 						className={cn(
-							'relative z-10 transition-[opacity,transform] duration-500 ease-out',
-							isLoaded ? 'translate-y-1 opacity-0' : 'translate-y-0 opacity-100'
+							'vv:relative vv:z-10 vv:transition-[opacity,transform] vv:duration-500 vv:ease-out',
+							isLoaded
+								? 'vv:translate-y-1 vv:opacity-0'
+								: 'vv:translate-y-0 vv:opacity-100'
 						)}
 					>
 						{loader}

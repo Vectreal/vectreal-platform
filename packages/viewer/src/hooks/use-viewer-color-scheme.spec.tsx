@@ -78,7 +78,7 @@ describe("the viewer root's scheme class", () => {
 	it('is resolved from the theme prop and set on the container', () => {
 		expect(wrapper).toContain('const colorScheme = useViewerColorScheme(theme)')
 		expect(wrapper).toMatch(
-			/className=\{cn\('outline-none', colorScheme, containerClassName\)\}/
+			/cn\('vv:outline-none', colorScheme\),\s*containerClassName/
 		)
 	})
 })
