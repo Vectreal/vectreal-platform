@@ -11,7 +11,6 @@ import {
 	HOME_PAGE_COPY,
 	OPEN_SOURCE_PACKAGES
 } from '../../constants/product-copy'
-import { DitherGrain } from '../layout-components'
 
 const COPY = HOME_PAGE_COPY.openSource
 
@@ -109,7 +108,7 @@ const Result = () => {
 		setState('running')
 	}
 
-	// In full ink on the page's grain, the way the hero draws it: at 40% it read as an empty well rather than a result waiting to run.
+	// In full ink, the way the hero draws it: at 40% it read as an empty well rather than a result waiting to run.
 	const drawing = (
 		<div className="text-foreground absolute inset-0 flex items-center justify-center p-10">
 			<CameraDrawing className="w-full max-w-sm" />
@@ -123,7 +122,6 @@ const Result = () => {
 			// Edge to edge in its half: the window's own corners round it, so it needs no margin or radius of its own.
 			className="ds-tint-sunken relative isolate aspect-16/10 lg:aspect-auto"
 		>
-			<DitherGrain origin="bottom" />
 			<span className="text-label-xs text-muted-foreground absolute top-4 left-5">
 				{COPY.result.label}
 			</span>

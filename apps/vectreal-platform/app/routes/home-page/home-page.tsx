@@ -7,7 +7,10 @@ import { MissionStatement } from '../../components/home/mission-statement'
 import { OpenSourceSection } from '../../components/home/open-source-section'
 import { PilotOffer } from '../../components/home/pilot-offer'
 import { ProductWindow } from '../../components/home/product-window'
-import { DitherGrain, DitherReveal } from '../../components/layout-components'
+import {
+	DitherReveal,
+	DraftingBackdrop
+} from '../../components/layout-components'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
@@ -26,8 +29,8 @@ export function meta(_: Route.MetaArgs) {
   where 128 read as cramped between sections this size.
 */
 /*
-  The grain spans the window, not the measure: it rises from the screen's edge
-  the way the hero's does. `main` clips the overflow. The mission statement is
+  The floor spans the window, not the measure, its lines meeting on the side
+  away from each section's copy. `main` clips the overflow. The mission statement is
   left plain, the one quiet beat between the product and the offer.
 */
 const BLEED = 'left-1/2 w-screen -translate-x-1/2'
@@ -52,7 +55,7 @@ const HomePage = () => (
 			aria-labelledby="pilot-heading"
 			className="container-page relative isolate mt-32 lg:mt-48"
 		>
-			<DitherGrain origin="right" className={cn(BLEED, '-inset-y-16')} />
+			<DraftingBackdrop focusX={0.72} className={cn(BLEED, '-inset-y-16')} />
 			<DitherReveal>
 				<PilotOffer />
 			</DitherReveal>
@@ -62,7 +65,7 @@ const HomePage = () => (
 			aria-labelledby="open-source-heading"
 			className="container-page relative isolate mt-32 lg:mt-48"
 		>
-			<DitherGrain origin="left" className={cn(BLEED, '-inset-y-16')} />
+			<DraftingBackdrop focusX={0.28} className={cn(BLEED, '-inset-y-16')} />
 			<DitherReveal>
 				<OpenSourceSection />
 			</DitherReveal>

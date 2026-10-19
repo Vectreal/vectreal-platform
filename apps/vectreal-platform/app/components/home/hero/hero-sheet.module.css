@@ -34,9 +34,6 @@
 	--gap: clamp(32px, 4vw, 80px);
 	--frame-top: 64px; /* the nav's bottom edge: the nav sits on the frame's top rule */
 	--frame-bottom: 32px;
-	/* The backdrop's two inks. The engine reads them as tokens, so the fold (which drops the sheet's surface) keeps them. */
-	--hero-pool: var(--background);
-	--hero-grain: var(--grain);
 
 	position: relative;
 	/* Its own stacking context, so the backdrop at z-index -1 paints over the sheet's surface rather than under it. */
@@ -50,9 +47,6 @@
 	/* The stage starts 56px below the top rule, so the nav keeps clear air and the model its size. */
 	padding: calc(var(--frame-top) + 56px) var(--gutter)
 		calc(var(--frame-bottom) + 40px);
-}
-:global(.dark) .sheet {
-	--hero-pool: color-mix(in oklch, var(--foreground) 7%, var(--background));
 }
 
 /*
@@ -79,6 +73,8 @@
 	height: 100%;
 	z-index: -1;
 	pointer-events: none;
+	/* The floor's near rows thin out before the sheet ends, so the net never stops on the sheet's edge. */
+	mask-image: linear-gradient(to bottom, black 55%, transparent);
 	opacity: 0;
 	transition: opacity var(--duration-cinematic) var(--ease-out);
 }

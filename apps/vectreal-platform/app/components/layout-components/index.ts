@@ -21,6 +21,7 @@ export { InlineNotice } from './inline-notice'
 export { SampleTiles } from './sample-tiles'
 export { default as PageHero } from './page-hero'
 export { DitherGrain } from './dither-grain'
+export { DraftingBackdrop } from './drafting-backdrop'
 export { DitherReveal } from './dither-reveal'
 export { DitherSwap } from './dither-swap'
 export {

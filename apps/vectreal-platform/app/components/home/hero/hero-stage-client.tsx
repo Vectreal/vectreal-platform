@@ -9,13 +9,13 @@ import {
 } from 'react'
 import { TextureLoader, type Texture } from 'three'
 
-import { createBackdropEngine } from './backdrop-engine'
 import { attachFileDrop } from './file-drop'
 import { HERO_SHADOW_URL } from './hero-assets'
 import { fallBackToPoster } from './hero-store'
 import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
 import { readGlbContents } from '../../../lib/samples/glb-contents'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
+import { createDraftingBackdrop } from '../../layout-components/drafting-backdrop-engine'
 import { markHeroSettled } from '../stage/hero-settled'
 import { StageBoundary } from '../stage/stage-boundary'
 import { createStageEngine } from '../stage/stage-engine'
@@ -45,6 +45,11 @@ interface Props {
 	openFileRef: RefObject<(() => void) | null>
 	handOffRef: RefObject<(() => Promise<void>) | null>
 }
+
+/** The sheet folds to one column below this width; the floor's horizon rises with it, over the object. */
+const FOLDED = '(max-width: 899px)'
+/** The light under the object, kept low: at full strength it read as sweetened. */
+const LIGHT_STRENGTH = { light: 0.3, dark: 0.42 }
 
 /** How long the drawing stands as a drawing before the sweep: long enough to read as one, short enough not to read as a wait. */
 const DRAWN_HOLD_MS = 600
@@ -169,21 +174,42 @@ export default function HeroStageClient({
 		)
 		const backdrop = baking
 			? null
-			: createBackdropEngine(
-					{
-						canvas: elements.backdrop,
-						sheet,
-						stage,
-						frame,
-						copy: elements.copy,
-						readout: elements.readout
+			: createDraftingBackdrop(elements.backdrop, {
+					reducedMotion,
+					host: sheet,
+					// A high horizon, so the object stands on the floor rather than in front of a sky; the lines meet under it.
+					view: (box) => {
+						const f = frame.getBoundingClientRect()
+						return {
+							horizon: matchMedia(FOLDED).matches ? 0.2 : 0.3,
+							focusX: (f.left + f.width / 2 - box.left) / box.width
+						}
 					},
-					{ reducedMotion, azimuth: engine.azimuth }
-				)
-		if (backdrop) {
-			engine.onFrame(backdrop.draw)
-			elements.backdrop.setAttribute('data-ready', '')
-		}
+					keepClear: () => [elements.copy, elements.readout],
+					light: (box) => {
+						// Where the object stands: under the frame's center, low in the stage, as wide as the stage allows.
+						const s = stage.getBoundingClientRect()
+						const f = frame.getBoundingClientRect()
+						const cx = f.left + f.width / 2 - s.left
+						const cy = s.height * 0.62
+						const radius = Math.min(cx, s.width - cx, cy, s.height - cy)
+						return {
+							// The key light is fixed in the world, so as the camera orbits the lit patch slides the other way.
+							x:
+								s.left -
+								box.left +
+								cx -
+								Math.sin(engine.azimuth()) * radius * 0.22,
+							y: s.top - box.top + cy,
+							rx: radius * 0.9,
+							ry: radius * 0.32,
+							strength: document.documentElement.classList.contains('dark')
+								? LIGHT_STRENGTH.dark
+								: LIGHT_STRENGTH.light
+						}
+					}
+				})
+		if (backdrop) elements.backdrop.setAttribute('data-ready', '')
 
 		const setPhase = (phase: 'poster' | 'drawn' | 'live') =>
 			stage.setAttribute('data-phase', phase)

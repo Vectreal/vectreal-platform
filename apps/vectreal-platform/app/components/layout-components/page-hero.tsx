@@ -1,7 +1,7 @@
 import { cn } from '@shared/utils'
 import { type ReactNode } from 'react'
 
-import { DitherGrain } from './dither-grain'
+import { DraftingBackdrop } from './drafting-backdrop'
 
 interface PageHeroProps {
 	heading: ReactNode
@@ -60,14 +60,15 @@ const PageHero = ({
 			  introduces.
 			*/}
 			{/*
-			  The home hero's grain, still, rising from the left behind the
-			  heading: every marketing page opens in the material the home page
-			  opens in. It is texture in the page's own foreground, not a color,
-			  so it is not the brand wash removed above coming back.
+			  The drafting floor, its lines meeting to the right of the heading:
+			  every marketing page opens on the floor the home page stands its
+			  object on. It is drawn in the page's own foreground, with the brand
+			  only where a swell crests, so it is not the brand wash removed above
+			  coming back.
 			*/}
-			<DitherGrain origin="left" />
+			<DraftingBackdrop focusX={0.66} horizon={0.4} />
 			<div className="container-page pt-32 pb-16">
-				<div className="space-y-4">
+				<div data-keep-clear className="space-y-4">
 					<h1 className="text-display max-w-4xl">{heading}</h1>
 
 					{description && (
