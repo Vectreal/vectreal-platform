@@ -16,7 +16,7 @@ import { PUBLISHER_EXAMPLE_PARAM } from '../../../lib/samples/example-scenes'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
 import { RelativeTime } from '../../dashboard/relative-time'
 import { SceneThumbnail } from '../../dashboard/scene-thumbnail'
-import { DitherGrain } from '../../layout-components/dither-grain'
+import { DraftingBackdrop } from '../../layout-components/drafting-backdrop'
 import { SampleTiles } from '../../layout-components/sample-tiles'
 
 import type { ExampleScene } from '../../../lib/samples/example-scenes'
@@ -68,7 +68,7 @@ let stageHasArrived = false
  */
 const ARRIVAL_STEP_MS = 110
 /*
-  The first group waits for the grain behind it, which can only paint once the
+  The first group waits for the floor behind it, which can only paint once the
   page is running: content landing on a bare stage and the ground arriving
   under it afterwards read as two things loading rather than one arriving.
 */
@@ -229,10 +229,10 @@ export const EmptyStage = ({
 				isDragActive && 'ring-2 ring-[rgb(var(--orange-rgb))] ring-inset'
 			)}
 		>
-			<DitherGrain origin="right" />
+			<DraftingBackdrop calm focusX={0.66} horizon={0.45} />
 
 			{/*
-			  The column scrolls, not the stage, so the grain and the drop ring stay
+			  The column scrolls, not the stage, so the floor and the drop ring stay
 			  put. `my-auto` in it rather than a centered flex box: on a short stage
 			  the content can outgrow it, and a centered box taller than its
 			  container loses its top where no scroll reaches it.

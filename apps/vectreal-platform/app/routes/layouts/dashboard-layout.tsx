@@ -226,14 +226,11 @@ const DashboardLayout = () => {
 
 					{/*
 					  The scroller spans the whole inset and the page measure sits
-					  inside it, rather than the scroller being the measure. As one
-					  element, nothing a page drew could reach past the measure's
-					  gutter, so the overview's dither stopped short of the inset's
-					  edge. `@container` lets a page bleed to exactly this width.
-					  The scene page sizes itself from this row's height at `xl`, so
-					  its wrapper carries that height on.
+					  inside it, so the scrollbar sits at the inset's edge rather than
+					  the measure's. The scene page sizes itself from this row's
+					  height at `xl`, so its wrapper carries that height on.
 					*/}
-					<div className="@container row-start-2 min-h-0 overflow-x-clip overflow-y-auto">
+					<div className="row-start-2 min-h-0 overflow-x-clip overflow-y-auto">
 						<div
 							className={cn(
 								'px-4',
