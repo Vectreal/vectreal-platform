@@ -89,7 +89,10 @@ One exception: the controls' surface (background, border, shadow and backdrop bl
 
 The viewer declares none of Tailwind's theme variables, so content you render inside it, such as a custom `loader` or popover content, resolves `--spacing`, `--text-*` and `--ease-*` from your own theme.
 
-**Upgrading:** earlier releases shipped unprefixed utilities such as `.flex` and `.hidden` in `@vctrl/viewer/css`. A page that styled its own markup with classes it never generated, and that only worked because the viewer's stylesheet happened to contain them, needs to generate those classes itself.
+**Upgrading:** earlier releases shipped unprefixed utilities such as `.flex` and `.hidden` in `@vctrl/viewer/css`. Two things change:
+
+- A stylesheet that overrides one of the viewer's classes has to name the prefixed class: `.vctrl-viewer .h-full` becomes `.vctrl-viewer .vv\:h-full`. Passing your class through `className` is simpler and survives the next change of the viewer's classes.
+- A page that styled its own markup with classes it never generated, and that only worked because the viewer's stylesheet happened to contain them, needs to generate those classes itself.
 
 {/* claims
 present packages/viewer/src/utilities.css @import 'tailwindcss/theme' prefix(vv) theme(inline);
