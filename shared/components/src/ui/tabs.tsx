@@ -44,6 +44,12 @@ function TabsTrigger({
 		<TabsPrimitive.Trigger
 			data-slot="tabs-trigger"
 			className={cn(
+				// `rounded-md` on purpose, the one control kept off the `rounded-lg`
+				// that `input.tsx` records. A trigger never stands alone: it sits
+				// inside `TabsList` (`rounded-lg`, 16px) inset by `p-[3px]`, so the
+				// concentric inner arc is 13px and `rounded-md` (12px) is within a
+				// pixel of it. At `rounded-lg` it would curve faster than the list
+				// around it, the fault `command.tsx` records for menu items.
 				"data-[state=active]:bg-background/50! dark:data-[state=active]:text-foreground focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className
 			)}

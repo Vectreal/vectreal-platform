@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { render } from '@testing-library/react'
 import {
+	type ComponentProps,
 	Component,
+	StrictMode,
 	type ReactNode,
 	Suspense,
 	useEffect,
@@ -77,9 +79,11 @@ const failing = new Set<string>()
 const cachedFailures = new Set<string>()
 const cacheKey = (files: unknown) => JSON.stringify(files)
 
-const renderEnvironment = (props: EnvironmentProps) => {
+type SceneEnvironmentProps = ComponentProps<typeof SceneEnvironment>
+
+const renderEnvironment = (props: SceneEnvironmentProps) => {
 	const hostError = vi.fn()
-	const view = (next: EnvironmentProps) => (
+	const view = (next: SceneEnvironmentProps) => (
 		<HostBoundary onError={hostError}>
 			<Suspense fallback={<p>loading</p>}>
 				<SceneEnvironment {...next} />
@@ -91,7 +95,7 @@ const renderEnvironment = (props: EnvironmentProps) => {
 	return {
 		...result,
 		hostError,
-		rerenderWith: (next: EnvironmentProps) => result.rerender(view(next))
+		rerenderWith: (next: SceneEnvironmentProps) => result.rerender(view(next))
 	}
 }
 
@@ -147,6 +151,54 @@ describe('SceneEnvironment', () => {
 		expect(hostError).not.toHaveBeenCalled()
 		expect(queryByText('crashed')).toBeNull()
 		expect(useRoomEnvironment).toHaveBeenLastCalledWith(0.7, target)
+	})
+
+	it('tells its owner which map failed, once, as a list', () => {
+		failing.add(cacheKey('/env/studio.hdr'))
+		const onLoadFailed = vi.fn()
+
+		const { rerenderWith } = renderEnvironment({
+			files: '/env/studio.hdr',
+			onLoadFailed
+		})
+		rerenderWith({
+			files: '/env/studio.hdr',
+			environmentIntensity: 2,
+			onLoadFailed
+		})
+
+		expect(onLoadFailed).toHaveBeenCalledOnce()
+		expect(onLoadFailed).toHaveBeenCalledWith(['/env/studio.hdr'])
+	})
+
+	it('says it loaded, once, and not that it failed, when the map loads', () => {
+		const onLoadFailed = vi.fn()
+		const onLoaded = vi.fn()
+
+		const { rerenderWith } = renderEnvironment({
+			files: '/env/studio.hdr',
+			onLoadFailed,
+			onLoaded
+		})
+		rerenderWith({
+			files: '/env/studio.hdr',
+			environmentIntensity: 2,
+			onLoadFailed,
+			onLoaded: vi.fn()
+		})
+
+		expect(onLoadFailed).not.toHaveBeenCalled()
+		expect(onLoaded).toHaveBeenCalledOnce()
+		expect(onLoaded).toHaveBeenCalledWith(['/env/studio.hdr'])
+	})
+
+	it('does not say a failed map loaded', () => {
+		failing.add(cacheKey('/env/studio.hdr'))
+		const onLoaded = vi.fn()
+
+		renderEnvironment({ files: '/env/studio.hdr', onLoaded })
+
+		expect(onLoaded).not.toHaveBeenCalled()
 	})
 
 	it('has the room in place before the shader warm-up compiles', () => {
@@ -258,5 +310,21 @@ describe('SceneEnvironment', () => {
 		const { getByText } = renderEnvironment({ files: '/env/studio.hdr' })
 
 		expect(getByText('loading')).not.toBeNull()
+	})
+})
+
+describe('SceneEnvironment under StrictMode', () => {
+	it('says a map loaded once, though mount effects run twice', () => {
+		const onLoaded = vi.fn()
+
+		render(
+			<StrictMode>
+				<Suspense fallback={null}>
+					<SceneEnvironment files="/env/studio.hdr" onLoaded={onLoaded} />
+				</Suspense>
+			</StrictMode>
+		)
+
+		expect(onLoaded).toHaveBeenCalledOnce()
 	})
 })

@@ -179,9 +179,6 @@ export const ProductWindow = () => {
 				<h2 id="product-heading" className="text-headline" data-reveal>
 					{COPY.heading}
 				</h2>
-				<p className="text-muted-foreground text-body-lg mt-6" data-reveal>
-					{COPY.lead}
-				</p>
 			</div>
 
 			<div

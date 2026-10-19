@@ -41,6 +41,7 @@ vi.mock('../app/lib/domain/embed/hosted-preview-bridge', () => ({
 const searchParams = { current: new URLSearchParams() }
 
 vi.mock('react-router', () => ({
+	useLocation: () => ({ pathname: '/embed/project/scene' }),
 	useSearchParams: () => [searchParams.current, () => undefined]
 }))
 

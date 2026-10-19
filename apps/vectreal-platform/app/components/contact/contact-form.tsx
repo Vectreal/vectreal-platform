@@ -117,7 +117,6 @@ export function ContactForm({
 					<SelectContent>
 						<SelectItem value="support">Product support</SelectItem>
 						<SelectItem value="sales">Sales and plans</SelectItem>
-						<SelectItem value="partnership">Partnership</SelectItem>
 						<SelectItem value="other">Other</SelectItem>
 					</SelectContent>
 				</Select>

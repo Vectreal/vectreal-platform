@@ -14,6 +14,7 @@ import {
 import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
 import { shouldShowInfoPopover } from '../../lib/domain/scene/scene-presentation'
+import { useErrorReport } from '../../lib/observability/use-error-report'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
 import type { SceneEmbedManifestResponse } from '../../types/api'
@@ -170,7 +171,20 @@ const SceneEmbedPage = ({
 		return () => bridgeRef.current.onCommandExecutorReady?.(null)
 	}, [hasSceneData, viewerExecutor])
 
+	/*
+	  A missing environment map leaves the scene lit by a neutral room and the
+	  page working, so nothing else reports it: the room is what visitors of
+	  this embed see until somebody notices.
+	*/
+	const [environmentFailure, setEnvironmentFailure] = useState<Error>()
+	useErrorReport(environmentFailure, 'client-fallback')
+
 	const onInteractionEvent = useCallback((event: ViewerInteractionEvent) => {
+		if (event.type === 'environment_load_failed') {
+			setEnvironmentFailure(
+				new Error(`Environment map failed to load: ${event.files.join(', ')}`)
+			)
+		}
 		bridgeRef.current.onInteractionEvent?.(event)
 	}, [])
 

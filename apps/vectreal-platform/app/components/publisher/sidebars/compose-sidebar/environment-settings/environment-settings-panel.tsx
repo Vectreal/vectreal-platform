@@ -19,7 +19,7 @@ import {
 	EnvironmentProps,
 	EnvironmentResolution
 } from '@vctrl/core'
-import { useAtom } from 'jotai/react'
+import { useAtom, useAtomValue } from 'jotai/react'
 import { Image as ImageIcon } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
@@ -29,6 +29,7 @@ import {
 	withBackgroundMode
 } from './background-mode'
 import StageColorField from './stage-color-field'
+import { environmentLoadFailedAtom } from '../../../../../lib/stores/publisher-config-store'
 import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { SettingGroup } from '../../sidebar-section'
@@ -107,6 +108,7 @@ const BACKGROUND_CAPTIONS: Record<BackgroundMode, string> = {
 
 const EnvironmentSettings = () => {
 	const [environment, setEnvironment] = useAtom(environmentAtom)
+	const environmentLoadFailed = useAtomValue(environmentLoadFailedAtom)
 	const [path, setPath] = useState<string[]>([])
 	const backgroundMode = backgroundModeOf(environment)
 	const backdrop = environment.backdrop
@@ -193,6 +195,13 @@ const EnvironmentSettings = () => {
 							))}
 						</ToggleGroup>
 					</div>
+					{/* `alert`, which is announced as it appears, unlike an inserted `status`. */}
+					{environmentLoadFailed && (
+						<p role="alert" className="text-destructive text-xs">
+							This map could not be loaded, so the scene is lit by a neutral
+							room instead.
+						</p>
+					)}
 				</SettingGroup>
 
 				<Slider

@@ -1,7 +1,6 @@
 import {
 	HOME_PAGE_COPY,
-	OPEN_SOURCE_PACKAGES,
-	PLATFORM_TAGLINE
+	OPEN_SOURCE_PACKAGES
 } from '../../constants/product-copy'
 import { CONVERT_INDEX_PATH } from '../convert/convert-pairs'
 
@@ -45,7 +44,7 @@ const CONVERTERS: SiteLink = {
 	description: 'Convert between 3D formats in your browser. No account.'
 }
 const PILOT: SiteLink = {
-	label: 'Pilot projects',
+	label: 'Start a project',
 	to: '/contact?topic=pilot',
 	description: 'We build your product viewer with you, from the files you have.'
 }
@@ -148,7 +147,8 @@ export const ACCOUNT: readonly SiteLink[] = [
 ]
 
 export const FOOTER = {
-	tagline: PLATFORM_TAGLINE,
+	/** The footer's sign-off, not the site's description: `PLATFORM_TAGLINE` still describes the product to search and llms.txt. */
+	tagline: 'Publish your vision.',
 	sections: [
 		SITE_SECTIONS.product,
 		SITE_SECTIONS.openSource,

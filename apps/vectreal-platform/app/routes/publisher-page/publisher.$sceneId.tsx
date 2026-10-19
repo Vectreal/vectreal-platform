@@ -13,6 +13,7 @@ import { useAnimationReconciliation } from '../../components/publisher/sidebars/
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
+	failedEnvironmentFilesAtom,
 	isPreviewModeAtom,
 	openHotspotInHotspotToolAtom,
 	sceneMetaAtom,
@@ -181,6 +182,8 @@ const PublisherPage = () => {
 		complete: false
 	})
 
+	const setFailedEnvironmentFiles = useSetAtom(failedEnvironmentFilesAtom)
+
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
 			if (event.type === 'camera_changed' && event.cameraId) {
@@ -192,9 +195,15 @@ const PublisherPage = () => {
 					complete: event.complete
 				})
 			}
+			// The viewer's own account of its map, failed or recovered.
+			if (event.type === 'environment_load_failed') {
+				setFailedEnvironmentFiles(String(event.files))
+			} else if (event.type === 'environment_loaded') {
+				setFailedEnvironmentFiles(null)
+			}
 			captureOpeningView(event)
 		},
-		[captureOpeningView, setSelectedCameraId]
+		[captureOpeningView, setFailedEnvironmentFiles, setSelectedCameraId]
 	)
 
 	/**

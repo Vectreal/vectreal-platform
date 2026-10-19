@@ -53,7 +53,7 @@ const classes = {
 	// Marked the way the shared menus mark an item, by tint rather than a ring:
 	// a ring is clipped by the scrolling list and outweighs the rows around it.
 	option:
-		'text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:bg-foreground/10 focus-visible:text-foreground flex w-full cursor-pointer appearance-none items-center gap-2 rounded-[var(--radius,1rem)] border-0 bg-transparent px-3 py-2 text-left text-xs outline-hidden transition-colors duration-150 motion-reduce:transition-none',
+		'text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:bg-foreground/10 focus-visible:text-foreground flex w-full cursor-pointer appearance-none [font-family:inherit] items-center gap-2 rounded-[var(--radius,1rem)] border-0 bg-transparent px-3 py-2 text-left text-xs outline-hidden transition-colors duration-150 motion-reduce:transition-none',
 	icon: 'h-3.5 w-3.5 shrink-0'
 } as const
 

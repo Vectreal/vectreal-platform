@@ -34,6 +34,11 @@ export interface PlaybackState {
 	 * "configured but never started", which need `resume` and `start` respectively.
 	 */
 	hasStarted: boolean
+	/**
+	 * The clip a hotspot started, which has displaced the program until the
+	 * program is played again. Null while the program owns the mixer.
+	 */
+	oneShotClipId: null | string
 }
 
 export type PlaybackAction =
@@ -47,6 +52,12 @@ export type PlaybackAction =
 	  }
 	| { type: 'pause' }
 	| { type: 'play' }
+	| {
+			type: 'play_clip_once'
+			clip: PlaybackClip
+			/** Pose the clip at its last frame without playing it. */
+			jumpToEnd: boolean
+	  }
 	| { type: 'restart' }
 	| { type: 'retune'; clips: PlaybackClip[] }
 	| { type: 'seek_clip'; clipId: string; time: number }
@@ -75,13 +86,18 @@ export function initialPlaybackState(): PlaybackState {
 		activeIndex: -1,
 		completed: [],
 		isComplete: false,
-		hasStarted: false
+		hasStarted: false,
+		oneShotClipId: null
 	}
 }
 
 /** Whether the model's geometry is currently being driven. */
 export function isProgramActive(state: PlaybackState): boolean {
-	return state.isPlaying && state.clips.length > 0
+	// A one-shot needs the mixer ticking even when the program has no clips of
+	// its own, which is every scene whose program is switched off.
+	return (
+		state.isPlaying && (state.clips.length > 0 || state.oneShotClipId !== null)
+	)
 }
 
 /** Starts the program from the beginning, in whichever mode is configured. */
@@ -94,7 +110,8 @@ function startFromBeginning(state: PlaybackState): PlaybackTransition {
 				activeIndex: -1,
 				completed: [],
 				isComplete: false,
-				hasStarted: false
+				hasStarted: false,
+				oneShotClipId: null
 			},
 			effects: [{ type: 'stop_all' }]
 		}
@@ -117,9 +134,51 @@ function startFromBeginning(state: PlaybackState): PlaybackTransition {
 			activeIndex: state.mode === 'sequence' ? 0 : -1,
 			completed: [],
 			isComplete: false,
-			hasStarted: true
+			hasStarted: true,
+			oneShotClipId: null
 		},
 		effects
+	}
+}
+
+/**
+ * Plays one clip once, on its own, holding its last frame.
+ *
+ * Whatever was running stops first: a hotspot's clip is the answer to the
+ * click, and blending it with a looping program would show neither. The clip
+ * is forced to play once whatever the program says about it, because the clamp
+ * that holds the closing pose only applies to a clip that can end.
+ *
+ * `jumpToEnd` is the reduced-motion form. The clip is started, paused and
+ * moved to its end in one step, so the model shows where the motion would have
+ * left it without the motion, the same way a camera flight becomes a cut.
+ */
+function playClipOnce(
+	state: PlaybackState,
+	source: PlaybackClip,
+	jumpToEnd: boolean
+): PlaybackTransition {
+	const clip: PlaybackClip = { ...source, loop: 'once', startOffset: 0 }
+
+	return {
+		state: {
+			...state,
+			oneShotClipId: clip.clipId,
+			isPlaying: !jumpToEnd,
+			isComplete: jumpToEnd,
+			completed: [],
+			hasStarted: true
+		},
+		effects: [
+			{ type: 'stop_all' },
+			{ type: 'start', clip },
+			...(jumpToEnd
+				? [
+						{ type: 'pause_all' as const },
+						{ type: 'seek' as const, clipId: clip.clipId, time: clip.duration }
+					]
+				: [])
+		]
 	}
 }
 
@@ -200,6 +259,7 @@ function seekClip(
 
 	const seek: PlaybackEffect = { type: 'seek', clipId, time }
 	const isRunning =
+		state.oneShotClipId === null &&
 		state.hasStarted &&
 		(state.mode === 'simultaneous' || state.activeIndex === index)
 	if (isRunning) {
@@ -225,7 +285,8 @@ function seekClip(
 			activeIndex: state.mode === 'sequence' ? index : -1,
 			completed: [],
 			isComplete: false,
-			hasStarted: true
+			hasStarted: true,
+			oneShotClipId: null
 		},
 		effects: [
 			{ type: 'stop_all' },
@@ -283,7 +344,10 @@ export function reducePlayback(
 					...state,
 					clips: state.clips.map((clip) => byId.get(clip.clipId) ?? clip)
 				},
+				// The one-shot's action is not the program's, even when it plays the
+				// same clip: retuning it would hand it the program's loop shape.
 				effects: state.clips
+					.filter((clip) => clip.clipId !== state.oneShotClipId)
 					.map((clip) => byId.get(clip.clipId))
 					.filter((clip): clip is PlaybackClip => Boolean(clip))
 					.map((clip) => ({ type: 'retune' as const, clip }))
@@ -294,14 +358,27 @@ export function reducePlayback(
 			return startFromBeginning(state)
 
 		case 'play': {
+			if (state.isPlaying) return { state, effects: [] }
+
+			if (state.oneShotClipId !== null) {
+				// A paused one-shot resumes. A finished one gives the mixer back to
+				// the program, and with no program its closing pose simply stays.
+				if (!state.isComplete) {
+					return {
+						state: { ...state, isPlaying: true },
+						effects: [{ type: 'resume', clipId: state.oneShotClipId }]
+					}
+				}
+				if (state.clips.length === 0) return { state, effects: [] }
+				return startFromBeginning(state)
+			}
+
 			if (state.clips.length === 0) return { state, effects: [] }
 
 			// A finished program's play button means "again", not "resume at the end".
 			if (state.isComplete || !state.hasStarted) {
 				return startFromBeginning(state)
 			}
-
-			if (state.isPlaying) return { state, effects: [] }
 
 			const resuming =
 				state.mode === 'sequence'
@@ -332,6 +409,19 @@ export function reducePlayback(
 		case 'clip_finished': {
 			if (!state.isPlaying) return { state, effects: [] }
 
+			if (state.oneShotClipId !== null) {
+				// Only the one-shot can finish now: everything else was stopped when
+				// it started, and an interrupted one-shot no longer matches the id.
+				if (action.clipId !== state.oneShotClipId) {
+					return { state, effects: [] }
+				}
+				// Emit nothing: the clip clamps, so leaving it alone holds the pose.
+				return {
+					state: { ...state, isPlaying: false, isComplete: true },
+					effects: []
+				}
+			}
+
 			if (state.mode === 'sequence') {
 				// Guard against a stale event from a program that has since been
 				// reconfigured: only the clip currently holding the chain advances it.
@@ -352,6 +442,9 @@ export function reducePlayback(
 
 		case 'seek_clip':
 			return seekClip(state, action.clipId, action.time)
+
+		case 'play_clip_once':
+			return playClipOnce(state, action.clip, action.jumpToEnd)
 
 		default:
 			return { state, effects: [] }

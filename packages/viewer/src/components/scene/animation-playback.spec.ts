@@ -479,4 +479,142 @@ describe('isProgramActive', () => {
 		const paused = reducePlayback(playing, { type: 'pause' }).state
 		expect(isProgramActive(paused)).toBe(false)
 	})
+
+	describe('play_clip_once', () => {
+		const once = (
+			clipId: string,
+			jumpToEnd = false,
+			overrides: Partial<PlaybackClip> = {}
+		): PlaybackAction => ({
+			type: 'play_clip_once',
+			clip: clip(clipId, overrides),
+			jumpToEnd
+		})
+
+		it('stops whatever ran, then starts the clip once from its first frame', () => {
+			const { state, effects } = run([
+				configure([clip('a')], { autoplay: true }),
+				once('door', false, { loop: 'repeat', startOffset: 1.5 })
+			])
+
+			expect(effects).toEqual([
+				{ type: 'stop_all' },
+				{
+					type: 'start',
+					clip: clip('door', { loop: 'once', startOffset: 0 })
+				}
+			])
+			expect(state.isPlaying).toBe(true)
+			expect(state.oneShotClipId).toBe('door')
+		})
+
+		it('runs the mixer even when the program has no clips', () => {
+			const { state } = run([configure([]), once('door')])
+
+			expect(isProgramActive(state)).toBe(true)
+		})
+
+		it('holds the closing pose when the clip finishes', () => {
+			const { state, effects } = run([
+				configure([]),
+				once('door'),
+				{ type: 'clip_finished', clipId: 'door' }
+			])
+
+			expect(effects).toEqual([])
+			expect(state.isPlaying).toBe(false)
+			expect(state.isComplete).toBe(true)
+			expect(isProgramActive(state)).toBe(false)
+		})
+
+		it('lets the next clip interrupt it, and ignores the interrupted one finishing', () => {
+			const { state, effects } = run([
+				configure([]),
+				once('door'),
+				once('lid'),
+				{ type: 'clip_finished', clipId: 'door' }
+			])
+
+			expect(effects).toEqual([])
+			expect(state.oneShotClipId).toBe('lid')
+			expect(state.isPlaying).toBe(true)
+		})
+
+		it('poses the last frame without playing under reduced motion', () => {
+			const { state, effects } = run([configure([]), once('door', true)])
+
+			expect(effects).toEqual([
+				{ type: 'stop_all' },
+				{
+					type: 'start',
+					clip: clip('door', { loop: 'once', startOffset: 0 })
+				},
+				{ type: 'pause_all' },
+				{ type: 'seek', clipId: 'door', time: 2 }
+			])
+			expect(state.isPlaying).toBe(false)
+			expect(isProgramActive(state)).toBe(false)
+		})
+
+		it('resumes a paused clip on play', () => {
+			const { state, effects } = run([
+				configure([clip('a')]),
+				once('door'),
+				{ type: 'pause' },
+				{ type: 'play' }
+			])
+
+			expect(effects).toEqual([{ type: 'resume', clipId: 'door' }])
+			expect(state.oneShotClipId).toBe('door')
+		})
+
+		it('hands the mixer back to the program on play once it has finished', () => {
+			const { state, effects } = run([
+				configure([clip('a')]),
+				once('door'),
+				{ type: 'clip_finished', clipId: 'door' },
+				{ type: 'play' }
+			])
+
+			expect(effects).toEqual([
+				{ type: 'stop_all' },
+				{ type: 'start', clip: clip('a') }
+			])
+			expect(state.oneShotClipId).toBeNull()
+		})
+
+		it('keeps the closing pose on play when there is no program', () => {
+			const { state, effects } = run([
+				configure([]),
+				once('door'),
+				{ type: 'clip_finished', clipId: 'door' },
+				{ type: 'play' }
+			])
+
+			expect(effects).toEqual([])
+			expect(state.oneShotClipId).toBe('door')
+		})
+
+		it('never retunes the one-shot with the program settings of the same clip', () => {
+			const { effects } = run([
+				configure([clip('door')], { autoplay: true }),
+				once('door'),
+				{ type: 'retune', clips: [clip('door', { timeScale: 3 })] }
+			])
+
+			expect(effects).toEqual([])
+		})
+
+		it('gives a scrubbed program clip the mixer back', () => {
+			const { state, effects } = run([
+				configure([clip('a')], { autoplay: true }),
+				once('door'),
+				{ type: 'seek_clip', clipId: 'a', time: 1 }
+			])
+
+			expect(effects[0]).toEqual({ type: 'stop_all' })
+			expect(effects).toContainEqual({ type: 'start', clip: clip('a') })
+			expect(state.oneShotClipId).toBeNull()
+		})
+	})
 })

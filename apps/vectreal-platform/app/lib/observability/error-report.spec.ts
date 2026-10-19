@@ -214,6 +214,15 @@ describe('buildErrorReport', () => {
 		expect(report?.properties.request_method).toBe('GET')
 	})
 
+	it('keeps a fallback the page survived off the critical path', () => {
+		const report = buildErrorReport(new Error('map missing'), {
+			source: 'client-fallback',
+			pathname: '/embed/project/scene'
+		})
+		expect(report?.properties.on_critical_path).toBe(false)
+		expect(report?.properties.error_source).toBe('client-fallback')
+	})
+
 	it('leaves a path off the funnel unmarked', () => {
 		const report = buildErrorReport(new Error('boom'), {
 			source: 'client-boundary',

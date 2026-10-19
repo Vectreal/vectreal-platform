@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useRef } from 'react'
 
-import type {
-	ViewerCommand,
-	ViewerCommandExecutor
-} from '../types/viewer-interactions'
+import type { ViewerCommand } from '../types/viewer-interactions'
 
-export interface HeldExecutor extends ViewerCommandExecutor {
-	register: (executor: null | ViewerCommandExecutor) => void
+export interface HeldExecutor<
+	Command extends { type: string } = ViewerCommand
+> {
+	execute: (command: Command) => void
+	register: (executor: null | { execute: (command: Command) => void }) => void
 }
 
 /**
@@ -23,20 +23,27 @@ export interface HeldExecutor extends ViewerCommandExecutor {
  * were last sent: a camera asked for three times while off screen should fly
  * once, to the last one.
  */
-export function useHeldExecutor(): HeldExecutor {
-	const executorRef = useRef<null | ViewerCommandExecutor>(null)
-	const heldRef = useRef(new Map<ViewerCommand['type'], ViewerCommand>())
+export function useHeldExecutor<
+	Command extends { type: string } = ViewerCommand
+>(): HeldExecutor<Command> {
+	const executorRef = useRef<null | { execute: (command: Command) => void }>(
+		null
+	)
+	const heldRef = useRef(new Map<Command['type'], Command>())
 
-	const register = useCallback((executor: null | ViewerCommandExecutor) => {
-		executorRef.current = executor
-		if (!executor) return
+	const register = useCallback(
+		(executor: null | { execute: (command: Command) => void }) => {
+			executorRef.current = executor
+			if (!executor) return
 
-		const held = [...heldRef.current.values()]
-		heldRef.current.clear()
-		for (const command of held) executor.execute(command)
-	}, [])
+			const held = [...heldRef.current.values()]
+			heldRef.current.clear()
+			for (const command of held) executor.execute(command)
+		},
+		[]
+	)
 
-	const execute = useCallback((command: ViewerCommand) => {
+	const execute = useCallback((command: Command) => {
 		if (executorRef.current) {
 			executorRef.current.execute(command)
 			return

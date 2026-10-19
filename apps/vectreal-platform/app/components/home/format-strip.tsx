@@ -8,7 +8,7 @@ import {
 } from '../../lib/convert/convert-pairs'
 
 const COPY = {
-	label: 'Reads the files you already have',
+	label: 'Convert 3D files online. For free.',
 	lead: 'Each one converts in your browser, with no account and no upload.'
 } as const
 

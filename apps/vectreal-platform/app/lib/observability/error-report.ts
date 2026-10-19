@@ -20,7 +20,11 @@ import {
  * @see report-server-error.server.ts - the server sink, called by entry.server
  */
 
-export type ErrorSource = 'client-boundary' | 'server'
+/**
+ * Where a report came from. `client-fallback` is a failure the page survived
+ * by showing something else, so it is reported but nothing on screen broke.
+ */
+export type ErrorSource = 'client-boundary' | 'client-fallback' | 'server'
 
 export type ErrorReport = {
 	/**
@@ -164,8 +168,14 @@ export function buildErrorReport(
 				: new Error(`${error.status} ${error.statusText || 'Error'}`.trim())
 	}
 
+	/*
+	  A fallback is a failure the page survived, so it must not read as the
+	  funnel breaking: that boolean is what pages someone.
+	*/
 	const criticalFlows =
-		pathname === undefined ? [] : criticalFlowsForPathname(pathname)
+		pathname === undefined || source === 'client-fallback'
+			? []
+			: criticalFlowsForPathname(pathname)
 
 	return {
 		error: toError(reportable),
