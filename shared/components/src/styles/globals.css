@@ -715,11 +715,17 @@
 		position: relative;
 		isolation: isolate;
 	}
+	/*
+	  `--lit-inset` and `--lit-radius` set the plate inside its element rather
+	  than on it: a lit cell in a ruled row keeps the frame's lines as its
+	  edges, and the plate stands as a pane inside them, so its rim never lies
+	  on a rule.
+	*/
 	.ds-lit::before,
 	.ds-lit::after {
 		content: '';
 		position: absolute;
-		border-radius: inherit;
+		border-radius: var(--lit-radius, inherit);
 		pointer-events: none;
 	}
 	.ds-lit::before {
@@ -737,7 +743,7 @@
 	}
 	/* Three layers on one box: the hot line along the top edge, the plate, and the rim showing in its 1px border. */
 	.ds-lit::after {
-		inset: 0;
+		inset: var(--lit-inset, 0);
 		z-index: -1;
 		border: 1px solid transparent;
 		background:

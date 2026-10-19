@@ -3,7 +3,12 @@ import { Outlet, useLocation } from 'react-router'
 import { ConvertChooser } from '../../components/convert/convert-chooser'
 import { ConvertFormatSwitch } from '../../components/convert/convert-format-switch'
 import { PublicErrorBoundary } from '../../components/errors'
-import { FadeSwap, PageHero } from '../../components/layout-components'
+import {
+	Band,
+	FadeSwap,
+	PageHero,
+	SheetFrame
+} from '../../components/layout-components'
 import {
 	CONVERT_INDEX_COPY,
 	CONVERT_INDEX_PATH,
@@ -69,17 +74,34 @@ export default function ConvertLayout() {
 				}
 				actions={pair && <ConvertFormatSwitch pair={pair} />}
 			/>
-			<div className="container-page pb-32">
-				<Outlet />
-				{pair && (
-					<section aria-labelledby="every-converter" className="mt-32">
-						<h2 id="every-converter" className="text-h2 mb-16">
-							Every converter
-						</h2>
-						<ConvertChooser current={pair.slug} groupHeading="h3" />
-					</section>
+			{/*
+			  A pair page is two bands: the converter, then every converter, ruled
+			  into the frame as that band's last row. The index is that row alone,
+			  straight under the head: a band around it would only open on an empty
+			  cell, so the row's own top rule is the one under the head.
+			*/}
+			<SheetFrame>
+				{pair ? (
+					<>
+						<Band aria-label="Converter">
+							<Outlet />
+						</Band>
+						<Band aria-labelledby="every-converter" flush>
+							<h2 id="every-converter" className="text-h2 mb-16">
+								Every converter
+							</h2>
+							<ConvertChooser current={pair.slug} groupHeading="h3" />
+						</Band>
+					</>
+				) : (
+					<div className="border-foreground/10 border-t">
+						{/* Up a pixel, so the row's own top rule lies on this one, which runs edge to edge as every band's does. */}
+						<div className="mx-(--frame-x) -mt-px px-(--frame-pad)">
+							<Outlet />
+						</div>
+					</div>
 				)}
-			</div>
+			</SheetFrame>
 		</main>
 	)
 }

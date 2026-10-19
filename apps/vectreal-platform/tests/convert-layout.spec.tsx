@@ -14,7 +14,7 @@
  */
 import { render, screen } from '@testing-library/react'
 import { createRoutesStub } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	CONVERT_INDEX_COPY,
@@ -42,6 +42,11 @@ function renderAt(pathname: string) {
 
 	return render(<Stub initialEntries={[pathname]} />)
 }
+
+/* The page's bands reveal on scroll. Under reduced motion they render at once and never reach for IntersectionObserver, which jsdom lacks. */
+beforeEach(() => {
+	vi.stubGlobal('matchMedia', () => ({ matches: true }))
+})
 
 describe('the converter layout heads the page from the path', () => {
 	it('titles the index with the family copy', async () => {

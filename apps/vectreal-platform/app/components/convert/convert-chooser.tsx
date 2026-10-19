@@ -47,9 +47,11 @@ export function ConvertChooser({
 		/*
 		  One column per destination on a wide screen, so the three read as the
 		  three choices they are and the page's width is used, rather than a
-		  stack of rows each a third full.
+		  stack of rows each a third full. The columns are cells ruled into the
+		  sheet frame from rule to rule, the band's last row, as on the home
+		  page's format strip; stacked, a rule runs between them.
 		*/
-		<div className="grid gap-16 lg:grid-cols-3 lg:gap-12">
+		<div className="border-foreground/10 -mx-(--frame-pad) grid border-t lg:grid-cols-3">
 			{groups.map((group) => (
 				/*
 				  A labelled region per destination. The label is the half of the
@@ -57,7 +59,11 @@ export function ConvertChooser({
 				  GLB", and without the region name a screen reader never hears what
 				  it converts *to*.
 				*/
-				<section key={group.to} aria-label={`To ${group.toLabel}`}>
+				<section
+					key={group.to}
+					aria-label={`To ${group.toLabel}`}
+					className="border-foreground/10 py-12 not-last:border-b lg:px-(--frame-pad) lg:not-first:border-l lg:not-last:border-b-0"
+				>
 					<div className="flex items-baseline gap-2">
 						<GroupHeading className="text-h3 text-foreground">
 							{group.toLabel}
