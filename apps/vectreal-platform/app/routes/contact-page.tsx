@@ -1,10 +1,5 @@
 import { usePostHog } from '@posthog/react'
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader
-} from '@shared/components/ui/card'
+import { Card, CardContent, CardHeader } from '@shared/components/ui/card'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Mail } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -152,10 +147,6 @@ const CONTACT_ROUTING = [
 		term: 'Sales',
 		definition:
 			'Business and enterprise questions, security review, and custom contracts.'
-	},
-	{
-		term: 'Partnerships',
-		definition: 'Agencies, platform partnerships, and ecosystem collaboration.'
 	}
 ] as const
 
@@ -223,28 +214,23 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 		<main>
 			<PageHero
 				heading="Tell us what you are building"
-				description="Whether you need product support, a business plan discussion, or a partnership conversation, this form routes you straight to the right team."
+				description={
+					<>
+						{isPilot && <span className="block">{PILOT_CONTACT_PROMPT}</span>}
+						We usually respond within one business day.
+					</>
+				}
 			/>
 
 			<div className="container-page pb-32">
 				<div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
 					<Card className="group relative h-full overflow-hidden rounded-2xl">
-						<CardHeader>
-							{/*
-							  A real <h2>, not CardTitle. CardTitle renders a <div>, so all
-							  three section titles on this page were styled text and the page
-							  offered nothing below the h1 to navigate by. Its defaults also
-							  carry `capitalize`, which is what rendered this "Send A Message"
-							  after the copy was deliberately set in sentence case.
-							*/}
-							<h2 className="text-h3">Send a message</h2>
-							<CardDescription>
-								{isPilot && (
-									<span className="block">{PILOT_CONTACT_PROMPT}</span>
-								)}
-								We usually respond within one business day.
-							</CardDescription>
-						</CardHeader>
+						{/*
+						  No visible header: what it would say is the page's description.
+						  The heading stays for screen readers, so the form is still a
+						  section the page can be navigated by.
+						*/}
+						<h2 className="sr-only">Send a message</h2>
 						<CardContent className="space-y-6">
 							<AnimatePresence mode="wait" initial={false}>
 								{showSubmissionResult ? (
@@ -322,7 +308,7 @@ export default function ContactPage({ actionData }: Route.ComponentProps) {
 							</CardHeader>
 							<CardContent>
 								{/*
-								  A definition list, not three icon-title-description
+								  A definition list, not icon-title-description
 								  rows. The icons were decorative, they were the
 								  vertical form of the icon-triplet pattern, and in
 								  brand orange they measured 2.88:1 on this card -

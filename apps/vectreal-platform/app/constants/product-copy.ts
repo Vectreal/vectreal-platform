@@ -352,7 +352,7 @@ export const PILOT_CONTACT_HREF = `/contact?topic=${PILOT_CONTACT_TOPIC}`
 
 /** What the contact form asks when it was opened from a pilot call to action. */
 export const PILOT_CONTACT_PROMPT =
-	'About a pilot: tell us what you sell, which 3D or CAD files you have, and where the product views should live.'
+	'About your project: tell us what you sell, which 3D or CAD files you have, and where the product views should live.'
 
 /*
   The lowest plan that lets a whole team in with roles (`ALL_PLANS` is in
@@ -369,9 +369,9 @@ const TEAM_PLAN =
 export const HOME_PAGE_COPY = {
 	hero: {
 		/** One sentence per line, set as written: the breaks are part of the headline. */
-		heading: ['Your product.', 'Every angle.', 'On your own site.'],
-		/** The problem and what Vectreal does about it, in that order: the headline implies it, this says it. */
-		lead: 'The 3D files you already have are built for engineering, far too heavy for a web page. Vectreal makes them light enough to load with any product page, on your own site.',
+		heading: ['Publish your vision.'],
+		/** What Vectreal does, then who it is for. */
+		lead: 'Convert, optimize, manage and embed your 3D models. Vectreal helps creators, developers and businesses create interactive 3D experiences on their own sites, with one platform to manage them.',
 		primaryCta: 'Start a pilot project',
 		secondaryCta: 'Try it on your own file',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
@@ -407,8 +407,7 @@ export const HOME_PAGE_COPY = {
 		openInPublisher: 'Open in the publisher'
 	},
 	product: {
-		heading: 'From the file you have to your product page, in three steps',
-		lead: 'Each step is live in the product today.',
+		heading: 'From your file. Prepare, manage, publish.',
 		/** The chain's accessible name: the heading is a sentence, this names the control. */
 		stepsLabel: 'The three steps',
 		views: {
@@ -426,7 +425,7 @@ export const HOME_PAGE_COPY = {
 				link: 'Compare plans'
 			},
 			embed: {
-				label: 'Embed',
+				label: 'Publish',
 				summary: 'One snippet puts it on your page.',
 				body: 'One snippet puts a scene on your site. Allow only the domains you own, and drive the camera from your page with the JavaScript SDK.',
 				link: 'See the embed guide',
@@ -462,26 +461,20 @@ export const HOME_PAGE_COPY = {
 		}
 	},
 	pilot: {
-		heading: 'Start with a pilot project',
-		lead: 'We take your products from the files you already have to a working 3D view on your own site, and we do the setup work with you.',
+		heading: 'Start a project with us',
+		lead: 'We help you every step of the way, starting from your files and ending with an interactive 3D web experience.',
 		blocks: [
 			{
 				title: 'Who it is for',
-				body: 'Companies that sell physical products, such as furniture, machines or consumer goods, and have CAD or 3D exports they want on their own site.'
+				body: 'Companies with physical products, and web developers and designers, looking to visualize their products and ideas with interactive 3D.'
 			},
 			{
 				title: 'What we do',
-				body: 'We prepare your files, build the product viewer or configurator into your site, and host and manage it in Vectreal. Configurators are built per project.'
-			},
-			{
-				title: 'What we ask in return',
-				body: 'Permission to publish the project as a case study, and your honest feedback on what worked and what did not.'
+				body: 'We prepare your files and embed the product viewer or configurator into your site. You optimize and manage them in Vectreal.'
 			}
 		],
 		team: 'A small team in Germany. You work directly with the people who build the product.',
-		/** Over the third drawing: the case study the pilot ends in. */
-		caseStudyLabel: 'Case study',
-		cta: 'Talk to us about a pilot'
+		cta: 'Talk to us'
 	},
 	openSource: {
 		heading: 'Open source, down to the viewer',
