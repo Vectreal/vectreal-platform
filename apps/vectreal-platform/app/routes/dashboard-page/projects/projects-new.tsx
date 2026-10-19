@@ -18,6 +18,7 @@ import {
 	FormMessage
 } from '@shared/components/ui/form'
 import { Input } from '@shared/components/ui/input'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import {
 	Select,
 	SelectContent,
@@ -452,7 +453,7 @@ const ProjectsNewPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 								>
 									{form.formState.isSubmitting ? (
 										<>
-											<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+											<LoadingSpinner className="mr-2 size-4" />
 											Creating...
 										</>
 									) : (

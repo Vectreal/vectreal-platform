@@ -77,7 +77,7 @@ const HeroSceneClient = ({ vertical }: HeroSceneClientProps) => {
 	}, [])
 
 	return (
-		<div className="relative h-full w-full overflow-hidden max-md:h-[50vh] max-md:min-h-[300px] max-sm:h-[50vh]">
+		<div className="relative h-full w-full">
 			<VectrealViewer
 				theme="dark"
 				loader={<CenteredSpinner text="Loading model..." />}

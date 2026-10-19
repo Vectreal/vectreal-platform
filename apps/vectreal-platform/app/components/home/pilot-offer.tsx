@@ -204,15 +204,14 @@ export const PilotOffer = () => {
 				*/}
 				<div className="flex flex-col gap-12 sm:contents">
 					{/*
-					  16px under the 52px mobile nav. From `sm` it stands at 80px,
-					  clear of both navs: the mobile one runs to `md`, and the 56px
-					  desktop one takes over there.
+					  16px under whichever nav is showing: `top-below-nav` carries
+					  the mobile nav's value until `md` and the desktop nav's after.
 					*/}
 					<div
 						ref={frame}
 						aria-hidden="true"
 						data-stage={active}
-						className="sticky top-17 z-10 sm:top-20 sm:row-span-2 sm:self-start lg:hidden"
+						className="top-below-nav sticky z-10 sm:row-span-2 sm:self-start lg:hidden"
 					>
 						<div className="ds-raised aspect-16/10 overflow-hidden rounded-xl p-1.5">
 							<div className="relative h-full overflow-hidden rounded-lg">

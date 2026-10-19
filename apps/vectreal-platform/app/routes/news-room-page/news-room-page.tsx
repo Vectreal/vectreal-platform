@@ -260,7 +260,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 					</Form>
 				</section>
 
-				<section id="news-feed" className="scroll-mt-24 space-y-4">
+				<section id="news-feed" className="scroll-mt-below-nav space-y-4">
 					{articles.length === 0 ? (
 						<EmptyState
 							icon={SearchX}

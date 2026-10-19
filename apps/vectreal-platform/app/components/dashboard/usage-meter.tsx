@@ -1,6 +1,7 @@
 import { Progress } from '@shared/components/ui/progress'
 import { cn } from '@shared/utils'
 
+import { DASHBOARD_LOCALE } from '../../constants/limit-format'
 import { InfoTooltip } from '../info-tooltip'
 
 import type { ReactNode } from 'react'
@@ -98,7 +99,7 @@ interface UsageMeterProps {
 	 * list. They differ only in layout - the reading and its colours are shared.
 	 */
 	variant?: 'tile' | 'row'
-	/** Defaults to `toLocaleString`. Pass one for bytes, requests, and so on. */
+	/** Defaults to `toLocaleString` pinned to `DASHBOARD_LOCALE`. Pass one for bytes, requests, and so on. */
 	format?: (value: number) => string
 	className?: string
 }
@@ -147,7 +148,7 @@ export function UsageMeter({
 	monthly,
 	hint,
 	variant = 'tile',
-	format = (value) => value.toLocaleString(),
+	format = (value) => value.toLocaleString(DASHBOARD_LOCALE),
 	className
 }: UsageMeterProps) {
 	const { unlimited, percent, level } = readUsage(current, limit)
