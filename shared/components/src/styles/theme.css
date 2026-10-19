@@ -163,6 +163,13 @@
 	--material-base: oklch(0.3 0.01 60 / 0.1);
 	--material-shadow: oklch(0.3 0.03 60 / 0.07);
 	--material-shadow-far: oklch(0.3 0.03 60 / 0.14);
+	/*
+	  A plate's side and bottom edges, apart from a field's or a control's: the
+	  public site turns these off (`data-material="object"`), so a plate there
+	  reads as an object lit from above rather than a drawn rectangle.
+	*/
+	--material-plate-rim: var(--material-rim);
+	--material-plate-lip: var(--material-base);
 }
 
 .dark {
@@ -243,6 +250,20 @@
 	--material-base: oklch(1 0 0 / 0.025);
 	--material-shadow: oklch(0 0 0 / 0.35);
 	--material-shadow-far: oklch(0 0 0 / 0.55);
+	--material-plate-rim: var(--material-rim);
+	--material-plate-lip: var(--material-base);
+}
+
+/*
+  The public site's plates are objects, not containers: an outline on all four
+  sides of a fill a few percent off the page read as a drawn box. There the
+  edge is the light along the top and the shadow beneath, and nothing else.
+  Fields and controls keep their rim, since an input without an edge is not
+  findable.
+*/
+[data-material='object'] {
+	--material-plate-rim: transparent;
+	--material-plate-lip: transparent;
 }
 
 @theme inline {

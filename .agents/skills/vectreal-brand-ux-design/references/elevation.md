@@ -78,6 +78,19 @@ layers, read from the `--material-*` colours in `theme.css`:
 | `inset 0 -1px 0` | the base: the bottom edge, a touch darker | `--material-base` |
 | outer shadows | what the plate throws: a tight contact shadow and a wide soft one | `--material-shadow`, `--material-shadow-far` |
 
+On a plate (`ds-raised`, `ds-overlay` and their interactive rungs) the rim and
+base read through `--material-plate-rim` and `--material-plate-lip`, which
+default to the rim and base. The public site (`nav-layout`) sets
+`data-material="object"`, which turns both off: there a plate is an object lit
+from above, its edge the bevel and the shadow beneath. Moritz decided this on
+19 Oct 2026 after a design review found the four-sided rim made marketing
+plates read as boxes. Fields, controls and wells keep their rim everywhere,
+since an input without an edge cannot be found.
+
+Objects, not containers, on the public site: a plate is for something the
+reader uses or that stands for the product (the app window, the browser mock,
+a pricing plan). Copy, lists of names and step labels sit on the page.
+
 - `ds-raised` and `ds-overlay` lift: all four layers, overlay's far shadow a
   little longer.
 - `ds-sunken` and `ds-field` recede: shaded from the top edge inward, with the
@@ -158,6 +171,9 @@ present  shared/components/src/ui/button.tsx                                   d
 present  shared/components/src/styles/globals.css                              .ds-raised-interactive
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
 present  shared/components/src/styles/globals.css                              .ds-ghost-interactive
+present  shared/components/src/styles/theme.css                                --material-plate-rim
+present  shared/components/src/styles/theme.css                                [data-material='object']
+present  apps/vectreal-platform/app/routes/layouts/nav-layout.tsx               data-material="object"
 present  apps/vectreal-platform/app/components/navigation/nav-panels.tsx       ds-ghost-interactive
 absent   apps/vectreal-platform/app/components/navigation/nav-panels.tsx       hover:bg-accent
 absent   apps/vectreal-platform/app/components/navigation/mobile-nav.tsx       bg-accent

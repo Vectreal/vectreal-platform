@@ -194,64 +194,53 @@ export const ProductWindow = () => {
 					if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false)
 				}}
 			>
+				{/* No window around it all: the steps and the copy sit on the page, and the app is the one object on it. */}
 				<div
 					data-reveal
-					className="ds-raised grid gap-4 rounded-2xl p-2 md:p-3 lg:grid-cols-[1fr_18rem] lg:gap-3"
+					className="grid gap-8 lg:grid-cols-[1fr_18rem] lg:gap-x-12"
 				>
 					<TabsList
 						aria-label={COPY.stepsLabel}
-						className="grid h-auto w-full grid-cols-3 items-stretch gap-2 bg-transparent p-0 md:gap-3 lg:col-span-2"
+						className="grid h-auto w-full grid-cols-3 items-stretch gap-4 bg-transparent p-0 md:gap-8 lg:col-span-2"
 					>
 						{VIEW_ORDER.map((one, index) => (
-							/*
-							  The plate is the trigger's parent because the shared trigger
-							  forces its own active fill (`!`), which would beat a ladder
-							  class on the trigger itself. Only the chosen step is a
-							  plate; the others answer the pointer with their text alone,
-							  because any fill they took on hover read as chosen.
-							*/
-							<div
+							<TabsTrigger
 								key={one}
-								role="presentation"
-								className={cn('flex rounded-lg', one === view && 'ds-overlay')}
-							>
-								<TabsTrigger
-									value={one}
-									className={cn(
-										/*
-									  A tile in the window, rounded on every corner; its rule runs
-									  straight along the top edge and the tile's own overflow cuts
-									  it off at the corners rather than bending it round them. The
-									  rule lives in the module.
+								value={one}
+								className={cn(
+									/*
+									  A step is type on the page, not a tile: its rule along the top
+									  reports where the reader is and, while the window cycles, how
+									  long the step has left. The rule lives in the module. The
+									  shared trigger's active fill is forced (`!`), so it is forced
+									  off the same way.
 									*/
-										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 overflow-hidden rounded-lg border-0 px-2 pt-4 pb-3 text-left whitespace-normal shadow-none transition-colors data-[state=active]:bg-transparent! data-[state=active]:shadow-none md:px-4 md:pt-5 md:pb-4 dark:data-[state=active]:border-transparent',
-										styles.step
-									)}
-								>
-									{/* Number over label on a phone: three tiles across leave no room for both on one line. */}
-									<span className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
-										<span className="text-eyebrow text-orange-ink tabular-nums">
-											{String(index + 1).padStart(2, '0')}
-										</span>
-										<span className="text-h3">{COPY.views[one].label}</span>
+									'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 rounded-none border-0 px-0 pt-5 pb-1 text-left whitespace-normal shadow-none transition-colors data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent',
+									styles.step
+								)}
+							>
+								{/* Number over label on a phone: three steps across leave no room for both on one line. */}
+								<span className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
+									<span className="text-eyebrow text-orange-ink tabular-nums">
+										{String(index + 1).padStart(2, '0')}
 									</span>
-									<span className="text-body-sm text-muted-foreground hidden md:block">
-										{COPY.views[one].summary}
-									</span>
-									<span
-										className={styles.fill}
-										aria-hidden="true"
-										onAnimationEnd={advance}
-									/>
-								</TabsTrigger>
-							</div>
+									<span className="text-h3">{COPY.views[one].label}</span>
+								</span>
+								<span className="text-body-sm text-muted-foreground hidden md:block">
+									{COPY.views[one].summary}
+								</span>
+								<span
+									className={styles.fill}
+									aria-hidden="true"
+									onAnimationEnd={advance}
+								/>
+							</TabsTrigger>
 						))}
 					</TabsList>
 
-					{/* Concentric with the window: its 28px corner less the padding between them. */}
 					<div
 						ref={sceneRef}
-						className="relative grid overflow-hidden rounded-xl md:rounded-lg"
+						className="ds-raised relative grid overflow-hidden rounded-2xl"
 					>
 						{VIEW_ORDER.map((one) => (
 							<div
@@ -291,7 +280,7 @@ export const ProductWindow = () => {
 							key={one}
 							value={one}
 							forceMount
-							className="flex flex-col gap-4 px-4 pt-2 pb-4 data-[state=inactive]:hidden lg:pt-4"
+							className="flex flex-col gap-4 data-[state=inactive]:hidden lg:pt-2"
 						>
 							<p className="text-eyebrow text-muted-foreground">
 								{COPY.views[one].label}

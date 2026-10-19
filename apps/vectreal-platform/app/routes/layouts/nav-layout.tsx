@@ -41,6 +41,7 @@ const Layout = () => {
 			*/}
 			<DocsTocProvider>
 				<div
+					data-material="object"
 					className={cn(
 						!chrome.nav && 'hidden',
 						chrome.brandNavPrimary && 'primary-brand'
@@ -48,12 +49,18 @@ const Layout = () => {
 				>
 					<Navigation />
 				</div>
-				<div className={cn('contents', chrome.brandPrimary && 'primary-brand')}>
+				<div
+					data-material="object"
+					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
+				>
 					<Outlet />
 				</div>
 			</DocsTocProvider>
 			{chrome.footer && (
-				<div className={cn('contents', chrome.brandPrimary && 'primary-brand')}>
+				<div
+					data-material="object"
+					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
+				>
 					<Footer />
 				</div>
 			)}

@@ -29,16 +29,17 @@ const FORMATS = IMPORTABLE_FORMAT_IDS.map((id) => {
 })
 
 /**
- * The converters, last on the page and on their own surface: a product of
- * their own, free and with no account, rather than a feature of the one above.
- * The formats are set as large type in one row.
+ * The converters, last on the page: a product of their own, free and with no
+ * account, rather than a feature of the one above. The formats are set as
+ * large type in one row, straight on the page: a surface around five words
+ * only boxed the type in.
  *
  * Still, not a carousel: five names fit across the measure, and a loop would
  * only move them out of reach. The brand is the hover, the one thing the row
  * asks the reader to do.
  */
 export const FormatStrip = () => (
-	<div className="ds-raised flex flex-col gap-10 rounded-2xl p-6 md:p-12">
+	<div className="flex flex-col gap-10">
 		<div className="flex flex-col gap-4">
 			<h2 id="converter-heading" className="text-h2" data-reveal>
 				{COPY.heading}
