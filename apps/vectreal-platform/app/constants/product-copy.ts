@@ -372,8 +372,9 @@ export const HOME_PAGE_COPY = {
 		heading: ['Publish your vision.'],
 		/** What Vectreal does, then who it is for. */
 		lead: 'Convert, optimize, manage and embed your 3D models. Vectreal helps creators, developers and businesses create interactive 3D experiences on their own sites, with one platform to manage them.',
-		primaryCta: 'Start a pilot project',
-		secondaryCta: 'Try it on your own file',
+		/** Into the publisher; once the stage is live it takes the visitor's own file instead. */
+		primaryCta: 'Try it out',
+		secondaryCta: 'Get in touch',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
 		sampleCta: 'No file at hand? Open this camera in the publisher',
 		/** The fold's cue, a link to the first section below. */
@@ -407,7 +408,12 @@ export const HOME_PAGE_COPY = {
 		openInPublisher: 'Open in the publisher'
 	},
 	product: {
-		heading: 'From your file. Prepare, manage, publish.',
+		/** In parts: the `underline` one is drawn under, the step the other two lead to. */
+		heading: [
+			'From your file. Prepare, manage, ',
+			{ underline: 'publish' },
+			'.'
+		],
 		/** The chain's accessible name: the heading is a sentence, this names the control. */
 		stepsLabel: 'The three steps',
 		views: {
@@ -440,7 +446,9 @@ export const HOME_PAGE_COPY = {
 		statement: [
 			'Most companies that make physical products ',
 			{ key: 'already have 3D files' },
-			'. Very few can put them on their own website ',
+			'. ',
+			{ highlight: 'Very few can put them on their own website' },
+			' ',
 			{
 				key: 'without an agency, an enterprise platform or a plugin that keeps their data'
 			},
@@ -485,27 +493,16 @@ export const HOME_PAGE_COPY = {
 		discordCta: 'Join the Discord',
 		contributingCta: 'How to contribute',
 		packagesLabel: 'Packages',
+		/** The second reader's door, kept to one line under the section. */
+		developers: {
+			lead: 'Developer or 3D artist? The packages behind the publisher are on npm.',
+			cta: 'Read the docs'
+		},
 		/** The pane under the snippet, which runs it. */
 		result: {
 			label: 'Result',
 			run: 'Run this code',
 			failed: 'It would not run in this browser. Try again'
-		}
-	},
-	closing: {
-		heading: ['Bring one product.', 'See it on your own site.'],
-		body: 'Tell us what you sell and which files you have. We will tell you honestly whether a pilot makes sense, and if it does, show you your own product in 3D.',
-		primaryCta: 'Start a pilot project',
-		secondaryCta: 'Try it on your own file',
-		/** The second reader's door, kept to one line under the first. */
-		developers: {
-			lead: 'Developer or 3D artist? The packages behind the publisher are on npm.',
-			cta: 'Read the docs'
-		},
-		/** Over the two halves of the camera: the file you bring, and what it becomes. */
-		figure: {
-			file: 'Your file',
-			page: 'Your product page'
 		}
 	}
 } as const

@@ -99,9 +99,9 @@ const DWELL_MS = 7000
  * Every screenshot and caption is server-rendered, and switching only changes
  * which one is shown.
  *
- * The views are the workflow's three steps, set above the window as a chain
- * numbered in workflow order, so the page says how short the path is before it
- * shows any of it. The window walks through them on its own: the active step's
+ * The views are the workflow's three steps, set as a row of tiles at the top
+ * of the window and numbered in workflow order, so the page says how short the
+ * path is before it shows any of it. The window walks through them on its own: the active step's
  * rule fills over its dwell and hands on to the next. Hovering or
  * focusing the window pauses it, so nobody loses a caption mid-read; so does
  * the window being off screen. A click hands it over to the reader for good,
@@ -177,7 +177,18 @@ export const ProductWindow = () => {
 		<Tabs value={view} onValueChange={choose} className="gap-12">
 			<div className="max-w-3xl">
 				<h2 id="product-heading" className="text-headline" data-reveal>
-					{COPY.heading}
+					{COPY.heading.map((part) =>
+						typeof part === 'string' ? (
+							part
+						) : (
+							<span
+								key={part.underline}
+								className="decoration-orange underline decoration-2 underline-offset-[0.15em]"
+							>
+								{part.underline}
+							</span>
+						)
+					)}
 				</h2>
 			</div>
 
@@ -194,43 +205,48 @@ export const ProductWindow = () => {
 					if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false)
 				}}
 			>
-				<TabsList
-					aria-label={COPY.stepsLabel}
-					data-reveal
-					className="grid h-auto w-full grid-cols-3 items-start gap-4 bg-transparent p-0 md:gap-8"
-				>
-					{VIEW_ORDER.map((one, index) => (
-						<TabsTrigger
-							key={one}
-							value={one}
-							className={cn(
-								// The shared trigger's pill states are forced (`!`), so they are cleared the same way; the step's own styles live in the module.
-								'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 rounded-none border-0 px-0 pt-5 pb-0 text-left whitespace-normal shadow-none data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent dark:data-[state=active]:bg-transparent',
-								styles.step
-							)}
-						>
-							<span className="flex items-baseline gap-3">
-								<span className="text-eyebrow text-orange-ink tabular-nums">
-									{String(index + 1).padStart(2, '0')}
-								</span>
-								<span className="text-h3">{COPY.views[one].label}</span>
-							</span>
-							<span className="text-body-sm text-muted-foreground hidden md:block">
-								{COPY.views[one].summary}
-							</span>
-							<span
-								className={styles.fill}
-								aria-hidden="true"
-								onAnimationEnd={advance}
-							/>
-						</TabsTrigger>
-					))}
-				</TabsList>
-
 				<div
 					data-reveal
 					className="ds-raised grid gap-4 rounded-2xl p-2 md:p-3 lg:grid-cols-[1fr_18rem] lg:gap-3"
 				>
+					<TabsList
+						aria-label={COPY.stepsLabel}
+						className="grid h-auto w-full grid-cols-3 items-stretch gap-2 bg-transparent p-0 md:gap-3 lg:col-span-2"
+					>
+						{VIEW_ORDER.map((one, index) => (
+							<TabsTrigger
+								key={one}
+								value={one}
+								className={cn(
+									/*
+									  A tile in the window, its rule along a square top edge. The
+									  shared trigger's pill states are forced (`!`), so the active
+									  tile's step up the ladder is forced the same way; the rule
+									  lives in the module.
+									*/
+									'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 overflow-hidden rounded-t-none rounded-b-lg border-0 px-2 pt-4 pb-3 text-left whitespace-normal shadow-none transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] data-[state=active]:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]! data-[state=active]:shadow-none md:px-4 md:pt-5 md:pb-4 dark:data-[state=active]:border-transparent',
+									styles.step
+								)}
+							>
+								{/* Number over label on a phone: three tiles across leave no room for both on one line. */}
+								<span className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
+									<span className="text-eyebrow text-orange-ink tabular-nums">
+										{String(index + 1).padStart(2, '0')}
+									</span>
+									<span className="text-h3">{COPY.views[one].label}</span>
+								</span>
+								<span className="text-body-sm text-muted-foreground hidden md:block">
+									{COPY.views[one].summary}
+								</span>
+								<span
+									className={styles.fill}
+									aria-hidden="true"
+									onAnimationEnd={advance}
+								/>
+							</TabsTrigger>
+						))}
+					</TabsList>
+
 					{/* Concentric with the window: its 28px corner less the padding between them. */}
 					<div
 						ref={sceneRef}

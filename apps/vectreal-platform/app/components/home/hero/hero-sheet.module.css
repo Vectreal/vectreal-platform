@@ -10,9 +10,8 @@
 
   A drafting frame holds it together: the content edges, the nav's bottom edge
   (`--frame-top`) and a line above the fold's edge (`--frame-bottom`). The nav
-  rests on the frame rather than stacking a second row under it. Registration
-  marks sit on the four crossings and the figure label runs along the bottom
-  line, where a drawing keeps its title block.
+  rests on the frame rather than stacking a second row under it. The figure
+  label runs along the bottom line, where a drawing keeps its title block.
 
   This file is the single owner of where the model is framed. The frame box is
   placed here, by CSS, so the server-rendered poster is in the right place at
@@ -299,45 +298,25 @@
 	opacity: 0;
 }
 
-.mark {
-	position: absolute;
-	width: 16px;
-	height: 16px;
-	margin: -8px; /* center each mark on its crossing */
-	color: color-mix(in oklch, var(--foreground) 30%, transparent);
-	transition: color var(--duration-fast);
-}
-.sheet[data-dragging] .mark {
-	color: var(--orange);
-}
-.tl,
-.bl {
-	left: var(--gutter);
-}
-.tr,
-.br {
-	right: var(--gutter);
-}
-.tl,
-.tr {
-	top: var(--frame-top);
-}
-.bl,
-.br {
-	bottom: var(--frame-bottom);
-}
-
 /*
   The readout: an eyebrow over a number. Type and alignment are the whole
   structure, no rules and no box. The file, what it weighed, what it weighs now
   and its status take the first line; the three counts close it as one quiet
   line, value first, the way the folded sheet sets them.
 */
+/* Under the model: the way in for a visitor with no file, then what the file holds. */
+.caption {
+	grid-area: 2 / 2;
+	padding-top: 24px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 20px;
+}
 .readout {
 	--v-size: clamp(20px, 1.8vw, 28px);
 
-	grid-area: 2 / 2;
-	padding-top: 24px;
+	align-self: stretch;
 	display: grid;
 	grid-template-columns: repeat(3, auto) minmax(0, 1fr);
 	column-gap: clamp(24px, 2.4vw, 40px);
@@ -373,9 +352,9 @@
 }
 
 /*
-  The fold's cue, in the corner the copy leaves: a word and a rule that draws
-  down once, pointing at what is below. It goes as the page moves, where the
-  browser can tie it to the scroll.
+  The fold's cue, in the corner the copy leaves: a word over an arrow that
+  settles down once, pointing at what is below. It goes as the page moves,
+  where the browser can tie it to the scroll.
 */
 .cue {
 	grid-area: 2 / 1;
@@ -386,24 +365,24 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 12px;
-	color: var(--muted-foreground);
+	gap: 8px;
+	color: var(--foreground);
 	transition: color var(--duration-fast);
 }
 .cue:hover,
 .cue:focus-visible {
-	color: var(--foreground);
+	color: var(--orange-ink);
 }
-.cueLine {
-	width: 1px;
-	height: 40px;
-	background: linear-gradient(var(--orange), transparent);
-	transform-origin: top;
-	animation: cue-draw var(--duration-cinematic) 600ms var(--ease-out) both;
+.cueArrow {
+	width: 24px;
+	height: 24px;
+	color: var(--orange-ink);
+	animation: cue-settle var(--duration-cinematic) 600ms var(--ease-out) both;
 }
-@keyframes cue-draw {
+@keyframes cue-settle {
 	from {
-		transform: scaleY(0);
+		opacity: 0;
+		transform: translateY(-12px);
 	}
 }
 @supports (animation-timeline: scroll()) {
@@ -543,25 +522,6 @@
 		right: 44px;
 		flex-direction: row;
 	}
-	.mark {
-		margin: 0;
-	}
-	.tl,
-	.bl {
-		left: 16px;
-	}
-	.tr,
-	.br {
-		right: 16px;
-	}
-	.tl,
-	.tr {
-		top: 16px;
-	}
-	.bl,
-	.br {
-		bottom: 16px;
-	}
 	/*
 	  Folded, the readout is a spec sheet in two columns: the file and its
 	  status on the first line, what it weighed and what it weighs now on the
@@ -572,10 +532,13 @@
 	.cue {
 		display: none;
 	}
-	.readout {
-		--v-size: 20px;
+	.caption {
 		padding: 0;
 		margin: 0 24px 40px;
+		gap: 24px;
+	}
+	.readout {
+		--v-size: 20px;
 		grid-template-columns: repeat(6, minmax(0, 1fr));
 		column-gap: 16px;
 		row-gap: 20px;
@@ -623,7 +586,7 @@
 @media (prefers-reduced-motion: reduce) {
 	.dims :global(.draw),
 	.dims text,
-	.cueLine {
+	.cueArrow {
 		animation: none;
 		stroke-dashoffset: 0;
 		opacity: 1;
