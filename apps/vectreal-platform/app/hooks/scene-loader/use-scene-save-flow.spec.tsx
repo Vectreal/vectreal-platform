@@ -421,9 +421,11 @@ describe('useSceneSaveFlow', () => {
 			await apiRef.current?.saveSceneSettings()
 		})
 
-		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
-			expect.objectContaining({ environmentFellBack: true })
-		)
+		const [{ isEnvironmentFallback }] =
+			mockExecuteSceneSaveOrchestrator.mock.calls[0]
+		expect(isEnvironmentFallback()).toBe(true)
+		store.set(failedEnvironmentFilesAtom, null)
+		expect(isEnvironmentFallback()).toBe(false)
 	})
 
 	it('sends the original the save resolves to, and records it', async () => {
