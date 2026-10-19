@@ -769,12 +769,12 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		meta: {
 			title: 'A free 3D model of your product - Vectreal',
 			description:
-				"Send three photos of one product. We make a 3D model from them and send it back, ready for Shopify's own 3D slot."
+				"Send three photos of one product. If we can make a 3D model from them, we send it back ready for Shopify's own 3D slot."
 		},
 		hero: {
 			heading: 'A free 3D model of one of your products',
 			description:
-				"Send us three photos of one product. We make the 3D model from your photos and send it back within 48 hours, as GLB and USDZ files for Shopify's own 3D slot."
+				"Send us three photos of one product. We look at them first and tell you whether we can make a model from them. If we can, we send it back as GLB and USDZ files for Shopify's own 3D slot."
 		},
 		languageLink: 'Deutsch',
 		fields: {
@@ -825,8 +825,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		next: {
 			heading: 'What happens next',
 			steps: [
-				'We make the model from your photos and check it by hand.',
-				'Within 48 hours you get GLB and USDZ files by email.',
+				'We look at your photos and tell you whether we can make a model from them.',
+				'If we can, we make it, check it by hand and email you GLB and USDZ files.',
 				"You upload them to your product's own 3D slot in Shopify. Nothing to install.",
 				'If you like it, we can make five products as a paid pilot.'
 			],
@@ -856,16 +856,16 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		success: {
 			heading: 'Photos received',
 			body: (code) =>
-				`We'll email you within 48 hours. Your reference code is ${code}.`,
+				`We'll look at your photos and email you. Your reference code is ${code}.`,
 			confirmationFailed:
 				"We received your photos but couldn't send the confirmation email. Keep your reference code.",
 			again: 'Send another product'
 		},
 		confirmationEmail: {
 			subject: (code) => `We received your photos (${code})`,
-			preview: 'We are making the 3D model from your photos.',
+			preview: 'We are looking at your photos.',
 			greeting: (name) => `Hi ${name},`,
-			body: "Thanks for sending three photos of your product. We're making the 3D model from your photos and will email you the GLB and USDZ files within 48 hours.",
+			body: "Thanks for sending three photos of your product. We'll look at them and email you whether we can make a 3D model from them. If we can, we send you the GLB and USDZ files.",
 			reference: 'Your reference code',
 			deletion:
 				'To have your photos and details deleted, reply to this email with your reference code.',
@@ -876,12 +876,12 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		meta: {
 			title: 'Ein kostenloses 3D-Modell Ihres Produkts - Vectreal',
 			description:
-				'Senden Sie drei Fotos eines Produkts. Wir erstellen daraus ein 3D-Modell und schicken es Ihnen zurück, bereit für den 3D-Platz in Shopify.'
+				'Senden Sie drei Fotos eines Produkts. Wenn wir daraus ein 3D-Modell erstellen können, schicken wir es Ihnen zurück, bereit für den 3D-Platz in Shopify.'
 		},
 		hero: {
 			heading: 'Ein kostenloses 3D-Modell eines Ihrer Produkte',
 			description:
-				'Schicken Sie uns drei Fotos eines Produkts. Wir erstellen das 3D-Modell aus Ihren Fotos und senden es Ihnen innerhalb von 48 Stunden zurück, als GLB- und USDZ-Datei für den 3D-Platz in Shopify.'
+				'Schicken Sie uns drei Fotos eines Produkts. Wir sehen sie uns zuerst an und sagen Ihnen, ob wir daraus ein Modell erstellen können. Wenn ja, senden wir es Ihnen als GLB- und USDZ-Datei für den 3D-Platz in Shopify zurück.'
 		},
 		languageLink: 'English',
 		fields: {
@@ -934,8 +934,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		next: {
 			heading: 'So geht es weiter',
 			steps: [
-				'Wir erstellen das Modell aus Ihren Fotos und prüfen es von Hand.',
-				'Innerhalb von 48 Stunden erhalten Sie GLB- und USDZ-Dateien per E-Mail.',
+				'Wir sehen uns Ihre Fotos an und sagen Ihnen, ob wir daraus ein Modell erstellen können.',
+				'Wenn ja, erstellen wir es, prüfen es von Hand und senden Ihnen GLB- und USDZ-Dateien per E-Mail.',
 				'Sie laden sie in den 3D-Platz Ihres Produkts in Shopify hoch. Nichts zu installieren.',
 				'Wenn es Ihnen gefällt, setzen wir fünf Produkte als bezahlten Pilot um.'
 			],
@@ -965,16 +965,16 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		success: {
 			heading: 'Fotos erhalten',
 			body: (code) =>
-				`Wir melden uns innerhalb von 48 Stunden per E-Mail. Ihre Referenznummer lautet ${code}.`,
+				`Wir sehen uns Ihre Fotos an und melden uns per E-Mail. Ihre Referenznummer lautet ${code}.`,
 			confirmationFailed:
 				'Wir haben Ihre Fotos erhalten, konnten aber keine Bestätigung per E-Mail senden. Bitte notieren Sie Ihre Referenznummer.',
 			again: 'Weiteres Produkt senden'
 		},
 		confirmationEmail: {
 			subject: (code) => `Wir haben Ihre Fotos erhalten (${code})`,
-			preview: 'Wir erstellen das 3D-Modell aus Ihren Fotos.',
+			preview: 'Wir sehen uns Ihre Fotos an.',
 			greeting: (name) => `Guten Tag ${name},`,
-			body: 'vielen Dank für Ihre drei Produktfotos. Wir erstellen das 3D-Modell aus Ihren Fotos und senden Ihnen die GLB- und USDZ-Dateien innerhalb von 48 Stunden per E-Mail.',
+			body: 'vielen Dank für Ihre drei Produktfotos. Wir sehen sie uns an und teilen Ihnen per E-Mail mit, ob wir daraus ein 3D-Modell erstellen können. Wenn ja, senden wir Ihnen die GLB- und USDZ-Dateien.',
 			reference: 'Ihre Referenznummer',
 			deletion:
 				'Wenn Sie möchten, dass wir Ihre Fotos und Angaben löschen, antworten Sie auf diese E-Mail mit Ihrer Referenznummer.',
