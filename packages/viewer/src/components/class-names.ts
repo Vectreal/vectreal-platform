@@ -28,17 +28,53 @@ export function cn(...inputs: ClassValue[]) {
 
 const tokensOf = (classes: string) => classes.split(/\s+/).filter(Boolean)
 
-/** A class without its variants: `md:hover:h-96` is `h-96`. */
-function utilityOf(token: string) {
+/** A class split into its variants and its utility: `md:h-96` is `md`, `h-96`. */
+function partsOf(token: string) {
+	const parts: string[] = []
 	let depth = 0
 	let start = 0
 	for (let index = 0; index < token.length; index++) {
 		const char = token[index]
 		if (char === '[' || char === '(') depth++
 		else if (char === ']' || char === ')') depth--
-		else if (char === ':' && depth === 0) start = index + 1
+		else if (char === ':' && depth === 0) {
+			parts.push(token.slice(start, index))
+			start = index + 1
+		}
 	}
-	return token.slice(start)
+	return { variants: parts, utility: token.slice(start) }
+}
+
+/*
+  Variants that move a class onto other elements or boxes: an arbitrary
+  selector (`[&_p]:m-0` styles the paragraphs inside), the child variants and
+  the pseudo-elements. Such a class never meets one on the element itself.
+*/
+const ELSEWHERE = new Set([
+	'*',
+	'**',
+	'before',
+	'after',
+	'placeholder',
+	'file',
+	'marker',
+	'selection',
+	'backdrop',
+	'first-letter',
+	'first-line'
+])
+
+/**
+ * The utility a class sets on the element it is written on, or `null` when it
+ * styles something else.
+ */
+function ownUtility(token: string) {
+	const { variants, utility } = partsOf(token)
+	return variants.some(
+		(variant) => variant.startsWith('[') || ELSEWHERE.has(variant)
+	)
+		? null
+		: utility
 }
 
 /**
@@ -53,19 +89,25 @@ function utilityOf(token: string) {
  * Variants are ignored on both sides, for the same reason: the viewer's
  * unlayered `vv:h-full` beats a host's `md:h-96` at every width, so a host
  * class under any variant takes the property from the viewer altogether.
- * The host passes the base as well (`h-full md:h-96`) to keep one.
+ * The host passes the base as well (`h-full md:h-96`) to keep one. A class
+ * that styles other elements (`[&_p]:m-0`) is left out of the comparison on
+ * either side.
  */
 export function withHostClasses(own: string, host: string | undefined) {
 	const hostTokens = tokensOf(host ?? '')
 	if (hostTokens.length === 0) return own
-	const hostClasses = hostTokens.map(utilityOf).join(' ')
+	const hostClasses = hostTokens
+		.map(ownUtility)
+		.filter((utility) => utility !== null)
+		.join(' ')
 	// What the host's classes leave of themselves, so a conflict among them is
 	// not read as one with the viewer's.
 	const hostKept = tokensOf(twMerge(hostClasses)).length
 	const kept = tokensOf(own).filter((token) => {
-		const bare = utilityOf(
+		const bare = ownUtility(
 			token.startsWith(PREFIX) ? token.slice(PREFIX.length) : token
 		)
+		if (bare === null || hostClasses === '') return true
 		const hostAfter = tokensOf(twMerge(`${bare} ${hostClasses}`))
 		const hostBefore = tokensOf(twMerge(`${hostClasses} ${bare}`))
 		return hostAfter.includes(bare) && hostBefore.length === hostKept + 1

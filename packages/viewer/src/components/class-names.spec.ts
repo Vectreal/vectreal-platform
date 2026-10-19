@@ -47,6 +47,17 @@ describe('withHostClasses', () => {
 		).toBe('vv:flex [font-family:serif]')
 	})
 
+	it('compares only classes that style the element itself', () => {
+		const root =
+			'vv:h-full vv:[&_p]:m-0 vv:[&_button]:border-0 vv:[&_a]:text-inherit'
+		expect(withHostClasses(root, 'mx-auto border text-white')).toBe(
+			`${root} mx-auto border text-white`
+		)
+		expect(withHostClasses('vv:m-2 vv:flex', '[&_p]:m-4 before:mt-1')).toBe(
+			'vv:m-2 vv:flex [&_p]:m-4 before:mt-1'
+		)
+	})
+
 	it('keeps viewer classes on properties the host leaves alone', () => {
 		expect(withHostClasses(own, 'hidden md:block')).toBe(
 			`${own} hidden md:block`
