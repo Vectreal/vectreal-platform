@@ -24,6 +24,8 @@ export const AGENT_OPERATION_SCOPES = {
 	'scene-folder:move': 'projects:write',
 	'scene-folder:delete': null,
 	'scene:create': 'projects:write',
+	'scene:publish': 'scenes:publish',
+	'scene:unpublish': 'scenes:publish',
 	'scene:update': 'scenes:write',
 	'scene:move': 'projects:write',
 	'scene:delete': null,

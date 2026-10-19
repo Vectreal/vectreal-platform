@@ -29,6 +29,8 @@ export type DashboardOperation =
 	| 'scene-folder:move'
 	| 'scene-folder:delete'
 	| 'scene:create'
+	| 'scene:publish'
+	| 'scene:unpublish'
 	| 'scene:update'
 	| 'scene:move'
 	| 'scene:delete'
@@ -88,6 +90,9 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	'scene-folder:delete': ['owner', 'admin'],
 
 	'scene:create': ['owner', 'admin', 'member'],
+	/** Any member may publish in the publisher today; this keeps that rule. */
+	'scene:publish': ['owner', 'admin', 'member'],
+	'scene:unpublish': ['owner', 'admin', 'member'],
 	'scene:update': ['owner', 'admin', 'member'],
 	/** Moving is reorganization, not destruction - members organize their own work. */
 	'scene:move': ['owner', 'admin', 'member'],
@@ -159,6 +164,8 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 	'scene-folder:move': 'move this folder',
 	'scene-folder:delete': 'delete this folder',
 	'scene:create': 'create scenes',
+	'scene:publish': 'publish this scene',
+	'scene:unpublish': 'take this scene offline',
 	'scene:update': 'edit this scene',
 	'scene:move': 'move this scene',
 	'scene:delete': 'delete this scene',

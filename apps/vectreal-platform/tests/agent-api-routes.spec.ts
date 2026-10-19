@@ -81,6 +81,7 @@ describe('agent API routes', () => {
 				'/api/v1/me',
 				'/api/v1/projects',
 				'/api/v1/projects/:projectid/scenes',
+				'/api/v1/scenes/:sceneid/publication',
 				'/api/v1/cli/client'
 			])
 		)

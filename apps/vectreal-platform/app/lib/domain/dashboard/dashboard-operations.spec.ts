@@ -27,6 +27,8 @@ const EXPECTED: Record<DashboardOperation, MembershipRole[]> = {
 	'scene-folder:move': ['owner', 'admin', 'member'],
 	'scene-folder:delete': ['owner', 'admin'],
 	'scene:create': ['owner', 'admin', 'member'],
+	'scene:publish': ['owner', 'admin', 'member'],
+	'scene:unpublish': ['owner', 'admin', 'member'],
 	'scene:update': ['owner', 'admin', 'member'],
 	'scene:move': ['owner', 'admin', 'member'],
 	'scene:delete': ['owner', 'admin'],

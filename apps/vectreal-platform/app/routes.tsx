@@ -76,6 +76,10 @@ export default [
 		'api/v1/projects/:projectId/scenes',
 		'./routes/api/v1/projects.$projectId.scenes.ts'
 	),
+	route(
+		'api/v1/scenes/:sceneId/publication',
+		'./routes/api/v1/scenes.$sceneId.publication.ts'
+	),
 	// Public: tells the CLI which OAuth client and redirect ports to use.
 	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
 

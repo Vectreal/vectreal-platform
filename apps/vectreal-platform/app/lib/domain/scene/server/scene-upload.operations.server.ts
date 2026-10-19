@@ -323,6 +323,39 @@ export async function uploadSceneGltf(
 	}
 }
 
+/**
+ * Stores the GLB a publish will point at, with the extensions it uses
+ * recorded on the row: the embed reads them to load only the decoders the
+ * file needs. Linked to nothing until the publish commits, so `requestId`
+ * names the batch a failed publish reclaims.
+ */
+export async function storePublishedGlb(params: {
+	sceneId: string
+	userId: string
+	projectId: string
+	bytes: Uint8Array
+	fileName?: string
+	mimeType?: string
+	requestId?: string
+}) {
+	const [uploadResult] = await uploadSceneAssets(
+		params.sceneId,
+		params.userId,
+		params.projectId,
+		[
+			{
+				fileName: params.fileName ?? 'scene.glb',
+				data: params.bytes,
+				mimeType: params.mimeType ?? 'model/gltf-binary',
+				type: 'buffer',
+				metadata: { gltfExtensionsUsed: readGlbExtensionsUsed(params.bytes) }
+			}
+		],
+		params.requestId
+	)
+	return uploadResult
+}
+
 export async function uploadPublishedGlb(
 	request: SceneSettingsRequest,
 	userId: string,
@@ -330,23 +363,15 @@ export async function uploadPublishedGlb(
 ): Promise<Response> {
 	try {
 		const { sceneId, projectId } = await prepareSceneUpload(request, userId)
-		const bytes = new Uint8Array(await file.arrayBuffer())
-
-		const [uploadResult] = await uploadSceneAssets(
+		const uploadResult = await storePublishedGlb({
 			sceneId,
 			userId,
 			projectId,
-			[
-				{
-					fileName: file.name || 'scene.glb',
-					data: bytes,
-					mimeType: file.type || 'model/gltf-binary',
-					type: 'buffer',
-					metadata: { gltfExtensionsUsed: readGlbExtensionsUsed(bytes) }
-				}
-			],
-			request.requestId
-		)
+			bytes: new Uint8Array(await file.arrayBuffer()),
+			fileName: file.name || 'scene.glb',
+			mimeType: file.type || 'model/gltf-binary',
+			requestId: request.requestId
+		})
 
 		return ApiResponse.success({
 			sceneId,
