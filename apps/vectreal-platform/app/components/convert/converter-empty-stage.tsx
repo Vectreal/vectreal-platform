@@ -2,6 +2,7 @@ import { Button } from '@shared/components/ui/button'
 import { ArrowRight, FolderUp, Loader2 } from 'lucide-react'
 
 import { articleFor, type ConvertPair } from '../../lib/convert/convert-pairs'
+import { PASS_SAMPLES } from '../../lib/samples/sample-models'
 import { DitherGrain } from '../layout-components/dither-grain'
 import { DitherSwap } from '../layout-components/dither-swap'
 import { SampleTiles } from '../layout-components/sample-tiles'
@@ -129,6 +130,7 @@ export function ConverterEmptyStage({
 								label="Or open one of these"
 								onOpen={onOpenSample}
 								download={sampleDownload}
+								samples={PASS_SAMPLES}
 							/>
 						)}
 					</>

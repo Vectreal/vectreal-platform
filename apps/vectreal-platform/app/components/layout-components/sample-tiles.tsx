@@ -3,6 +3,7 @@ import { cn, formatFileSize } from '@shared/utils'
 import { SAMPLE_MODELS, sampleModelById } from '../../lib/samples/sample-models'
 
 import type { SampleDownload } from '../../hooks/use-sample-download'
+import type { SampleModel } from '../../lib/samples/sample-models'
 import type { FC } from 'react'
 
 interface Props {
@@ -13,10 +14,12 @@ interface Props {
 	className?: string
 	/** The sample on its way down, from `useSampleDownload`: its tile shows how far, and neither takes a second click. */
 	download?: SampleDownload
+	/** Which samples to offer. The publisher offers all of them; the converter only the two that show its passes. */
+	samples?: SampleModel[]
 }
 
 /**
- * Two models you can open, shown rather than described.
+ * Models you can open, shown rather than described.
  *
  * Both the converter's empty state and the publisher's empty stage used to offer
  * these as a sentence - "Nothing to hand? Open Rocket (944 KB, mostly geometry)
@@ -32,13 +35,14 @@ export const SampleTiles: FC<Props> = ({
 	onOpen,
 	label,
 	className,
-	download = null
+	download = null,
+	samples = SAMPLE_MODELS
 }) => (
 	<div className={className}>
 		<p className="text-muted-foreground text-eyebrow mb-3">{label}</p>
 
 		<ul className="grid grid-cols-2 gap-4 sm:max-w-md">
-			{SAMPLE_MODELS.map((sample) => {
+			{samples.map((sample) => {
 				const isDownloading = download?.id === sample.id
 				return (
 					<li key={sample.id}>
