@@ -106,6 +106,7 @@ export default [
 		// Pricing page
 		route('pricing', './routes/pricing-page/pricing-page.tsx'),
 		route('contact', './routes/contact-page.tsx'),
+		route('free-model', './routes/free-model-page.tsx'),
 
 		// Legal pages
 		layout('./routes/layouts/mdx-layout.tsx', { id: 'legal-mdx-layout' }, [
@@ -302,7 +303,8 @@ export default [
 				'./routes/dashboard-page/billing-upgrade-canceled.tsx'
 			),
 			route('settings', './routes/dashboard-page/settings.tsx'),
-			route('connected-agents', './routes/dashboard-page/connected-agents.tsx')
+			route('connected-agents', './routes/dashboard-page/connected-agents.tsx'),
+			route('intake', './routes/dashboard-page/intake.tsx')
 		])
 	])
 ] satisfies RouteConfig

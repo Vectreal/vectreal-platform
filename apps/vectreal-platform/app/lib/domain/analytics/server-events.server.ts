@@ -15,6 +15,9 @@ export type ServerAnalyticsEvent =
 	| { name: 'contact_form_submitted'; props: Record<string, unknown> }
 	| { name: 'contact_form_submit_failed'; props: Record<string, unknown> }
 	| { name: 'contact_form_blocked'; props: Record<string, unknown> }
+	| { name: 'model_intake_submitted'; props: Record<string, unknown> }
+	| { name: 'model_intake_submit_failed'; props: Record<string, unknown> }
+	| { name: 'model_intake_blocked'; props: Record<string, unknown> }
 
 /**
  * Send a server-side analytics event, but only with the visitor's consent.

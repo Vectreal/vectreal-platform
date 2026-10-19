@@ -301,6 +301,22 @@
 				"command": "pnpm exec tsx scripts/purge-orphaned-assets.ts"
 			}
 		},
+		"purge-model-intake": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/purge-model-intake.ts"
+			}
+		},
+		"generate-intake-qr": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/generate-intake-qr.ts"
+			}
+		},
 		"backfill-asset-names": {
 			"executor": "nx:run-commands",
 			"cache": false,
