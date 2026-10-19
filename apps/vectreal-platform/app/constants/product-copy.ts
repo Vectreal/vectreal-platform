@@ -379,7 +379,7 @@ export const HOME_PAGE_COPY = {
 		heading: ['Publish your vision.'],
 		/** What Vectreal does, then who it is for. */
 		lead: 'Convert, optimize, manage and embed your 3D models. Vectreal helps creators, developers and businesses create interactive 3D experiences on their own sites, with one platform to manage them.',
-		/** Into the publisher; once the stage is live it takes the visitor's own file instead. */
+		/** Into the publisher, where a visitor brings their own file. */
 		primaryCta: 'Try it out',
 		secondaryCta: 'Get in touch',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
@@ -391,8 +391,6 @@ export const HOME_PAGE_COPY = {
 		figure: 'Fig 01',
 		/** The label once the drawing has turned into the object. */
 		liveView: 'Live view',
-		/** A dropped file's face is not known, so it is only ever an elevation. */
-		droppedView: 'Elevation',
 		readouts: {
 			file: 'File',
 			original: 'Original',
@@ -403,13 +401,8 @@ export const HOME_PAGE_COPY = {
 			loading: 'Loading',
 			drawn: 'Drawn from the file',
 			rendering: 'Rendering',
-			live: 'Live. Drag to turn',
-			dragging: 'Release to draw your file',
-			optimizing: 'Optimizing your file',
-			unsupported: 'That file type cannot be drawn here',
-			failed: 'That file could not be drawn'
-		},
-		openInPublisher: 'Open in the publisher'
+			live: 'Live. Drag to turn'
+		}
 	},
 	product: {
 		/**

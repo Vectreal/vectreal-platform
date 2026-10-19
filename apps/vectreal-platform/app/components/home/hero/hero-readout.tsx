@@ -18,12 +18,7 @@ const COPY = HOME_PAGE_COPY.stage
 
 export function FigureLabel({ store }: { store: HeroStore }) {
 	const view = useHeroState(store, (s) => s.view)
-	const face =
-		view === 'live'
-			? COPY.liveView
-			: view === 'dropped'
-				? COPY.droppedView
-				: HERO_MODEL.view
+	const face = view === 'live' ? COPY.liveView : HERO_MODEL.view
 	return (
 		<span className="text-eyebrow">
 			{COPY.figure} · {face}
@@ -49,31 +44,23 @@ function Cell({
 }
 
 /*
-  The readout is a polite live region, so what the stage finds in a dropped file
-  is announced. The download counter is not: it lives in its own cell, outside
-  the announced text, or a screen reader would read every frame of it.
+  The file on the stage is always the hero model, so its name and original size
+  are known on the server. The download counter lives in its own cell.
 */
+const ORIGINAL = inUnitOf(HERO_MODEL.sourceBytes, HERO_MODEL.sourceBytes)
+
 export function Readout({ store }: { store: HeroStore }) {
-	const readout = useHeroState(store, (s) => s.readout)
-	const original =
-		readout.originalBytes === null
-			? null
-			: inUnitOf(readout.originalBytes, readout.originalBytes)
 	return (
 		<>
-			<div className="contents" aria-live="polite">
-				<Cell label={COPY.readouts.file} className={styles.file}>
-					<span className={styles.value}>{readout.fileName}</span>
-				</Cell>
-				{original && (
-					<Cell label={COPY.readouts.original} className={styles.original}>
-						<span className={styles.value}>
-							{original.value}
-							<small>{original.unit}</small>
-						</span>
-					</Cell>
-				)}
-			</div>
+			<Cell label={COPY.readouts.file} className={styles.file}>
+				<span className={styles.value}>{HERO_MODEL.fileName}</span>
+			</Cell>
+			<Cell label={COPY.readouts.original} className={styles.original}>
+				<span className={styles.value}>
+					{ORIGINAL.value}
+					<small>{ORIGINAL.unit}</small>
+				</span>
+			</Cell>
 			<SizeCell store={store} />
 			<StatusCell store={store} />
 		</>
@@ -81,7 +68,7 @@ export function Readout({ store }: { store: HeroStore }) {
 }
 
 function SizeCell({ store }: { store: HeroStore }) {
-	const total = useHeroState(store, (s) => s.readout.bytes)
+	const total = HERO_MODEL.bytes
 	const shown = useHeroState(store, (s) => s.shownBytes)
 	const got = inUnitOf(shown, total)
 	const of = inUnitOf(total, total)
