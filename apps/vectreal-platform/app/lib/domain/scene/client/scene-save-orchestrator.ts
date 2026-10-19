@@ -75,6 +75,11 @@ interface ExecuteSceneSaveOrchestratorParams {
 	onProgress?: (event: SaveProgressEvent) => void
 	/** What the save does with the scene's original. Keeps none when left out. */
 	source?: SourceToSave
+	/**
+	 * Whether the scene's environment map failed to load and the viewer lit it
+	 * from its neutral room instead, so a capture shows that room's light.
+	 */
+	environmentFellBack?: boolean
 }
 
 /** The scene document's key, the same name `existingAssets` lists it under. */
@@ -163,7 +168,8 @@ export const executeSceneSaveOrchestrator = async ({
 	captureSceneThumbnail,
 	captureShadowBake,
 	onProgress,
-	source = { kind: 'none' }
+	source = { kind: 'none' },
+	environmentFellBack = false
 }: ExecuteSceneSaveOrchestratorParams): Promise<
 	(SaveSceneOrchestratorResult | { unchanged: true }) & {
 		/** The original the scene now keeps, or null when it keeps none. */
@@ -366,6 +372,14 @@ export const executeSceneSaveOrchestrator = async ({
 					thumbnailUrl: buildSceneThumbnailUrl(
 						preparedSceneId,
 						uploadedThumbnail.assetId
+					)
+				}
+				// The save goes ahead: the author may want the scene stored anyway,
+				// and the Environment panel already says the map failed. What they
+				// cannot see from there is that the preview now carries the room.
+				if (environmentFellBack) {
+					toast.warning(
+						"The scene's preview image is lit by the neutral room, because its environment map could not be loaded."
 					)
 				}
 			} catch (error) {

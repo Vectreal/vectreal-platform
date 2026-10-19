@@ -1,14 +1,21 @@
 // @vitest-environment jsdom
 import { act, render, waitFor } from '@testing-library/react'
+import { resolveEnvironmentFiles } from '@vctrl/core'
 import { getDefaultStore } from 'jotai'
 import { useEffect, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSceneSaveFlow } from './use-scene-save-flow'
 import { defaultBoundsOptions } from '../../constants/viewer-defaults'
-import { capturedThumbnailFrameAtom } from '../../lib/stores/publisher-config-store'
+import {
+	capturedThumbnailFrameAtom,
+	failedEnvironmentFilesAtom
+} from '../../lib/stores/publisher-config-store'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
-import { hotspotsAtom } from '../../lib/stores/scene-settings-store'
+import {
+	environmentAtom,
+	hotspotsAtom
+} from '../../lib/stores/scene-settings-store'
 
 import type { ScenePersistenceState } from './contracts'
 import type { SceneMetaState } from '../../types/publisher-config'
@@ -233,6 +240,7 @@ describe('useSceneSaveFlow', () => {
 	afterEach(() => {
 		vi.clearAllMocks()
 		getDefaultStore().set(capturedThumbnailFrameAtom, null)
+		getDefaultStore().set(failedEnvironmentFilesAtom, null)
 	})
 
 	/*
@@ -397,6 +405,24 @@ describe('useSceneSaveFlow', () => {
 
 		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
 			expect.objectContaining({ capturedThumbnailFrame: record })
+		)
+	})
+
+	it('tells the save whether the environment map fell back', async () => {
+		const store = getDefaultStore()
+		store.set(
+			failedEnvironmentFilesAtom,
+			String(resolveEnvironmentFiles(store.get(environmentAtom)))
+		)
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
+		const apiRef = renderHarness()
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
+			expect.objectContaining({ environmentFellBack: true })
 		)
 	})
 

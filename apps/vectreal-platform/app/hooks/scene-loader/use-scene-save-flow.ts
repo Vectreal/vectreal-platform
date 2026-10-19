@@ -16,6 +16,7 @@ import {
 import {
 	capturedThumbnailFrameAtom,
 	currentLocationAtom,
+	environmentLoadFailedAtom,
 	saveLocationAtom
 } from '../../lib/stores/publisher-config-store'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
@@ -76,6 +77,7 @@ export const useSceneSaveFlow = ({
 	const dispatchSaveProgress = useSetAtom(dispatchSaveProgressAtom)
 	const setHotspots = useSetAtom(hotspotsAtom)
 	const capturedThumbnailFrame = useAtomValue(capturedThumbnailFrameAtom)
+	const environmentFellBack = useAtomValue(environmentLoadFailedAtom)
 	// What the dirty check last said, for a failed save to put back.
 	const hasChangesRef = useRef(false)
 	// The open scene when a save settles, which may not be the one it saved.
@@ -168,7 +170,8 @@ export const useSceneSaveFlow = ({
 						captureSceneThumbnail,
 						captureShadowBake,
 						onProgress: dispatchSaveProgress,
-						source
+						source,
+						environmentFellBack
 					})
 					// What it kept describes the scene it saved. Another scene opened
 					// meanwhile has its own original, which this must not overwrite.
@@ -220,6 +223,7 @@ export const useSceneSaveFlow = ({
 			currentSceneId,
 			currentSettings,
 			dispatchSaveProgress,
+			environmentFellBack,
 			lastSavedSceneMeta,
 			lastSavedSettings,
 			sceneMetaState,
