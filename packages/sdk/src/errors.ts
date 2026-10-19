@@ -25,6 +25,12 @@ export const API_ERROR_CODES = [
 	'insufficient_plan',
 	/** The organization's billing needs attention before this works again. */
 	'payment_required',
+	/** The scene is a draft; publish it before asking for its embed. */
+	'scene_not_published',
+	/** The project has no embed key that works; create one first. */
+	'embed_key_required',
+	/** The embed key asked for is revoked or expired; pick or create another. */
+	'embed_key_unusable',
 	/** This Idempotency-Key was first sent with a different request. Use a new one. */
 	'idempotency_key_reused',
 	/** The first request with this Idempotency-Key is still running. Retry shortly. */

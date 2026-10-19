@@ -1,4 +1,16 @@
 import { cliClientSchema, type CliClient } from './cli-client'
+import {
+	allowedDomainsSchema,
+	createdEmbedKeySchema,
+	embedKeyListSchema,
+	sceneEmbedSchema,
+	type AllowedDomains,
+	type CreatedEmbedKey,
+	type CreateEmbedKeyInput,
+	type EmbedKeyList,
+	type SceneEmbed,
+	type SetAllowedDomainsInput
+} from './embed'
 import { apiFailureSchema, apiSuccessSchema, type ApiFailure } from './envelope'
 import { meSchema, type Me } from './me'
 import {
@@ -76,7 +88,7 @@ export function createVectrealClient({
 	const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
 
 	async function send<Data extends z.ZodType>(
-		method: 'GET' | 'POST' | 'DELETE',
+		method: 'GET' | 'POST' | 'PUT' | 'DELETE',
 		path: string,
 		data: Data,
 		{
@@ -229,6 +241,78 @@ export function createVectrealClient({
 					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
 				}
 			),
+		/** A project's embed keys, usable first. Tokens are not included. */
+		listEmbedKeys: (projectId: string): Promise<EmbedKeyList> =>
+			send(
+				'GET',
+				`api/v1/projects/${encodeURIComponent(projectId)}/embed-keys`,
+				embedKeyListSchema,
+				{ auth: 'bearer' }
+			),
+		/**
+		 * Creates an embed key for one project; it expires after 90 days. The
+		 * answer names the key but carries no token: `getSceneEmbed` puts it in
+		 * the snippet.
+		 */
+		createEmbedKey: (
+			projectId: string,
+			input: CreateEmbedKeyInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<CreatedEmbedKey> =>
+			send(
+				'POST',
+				`api/v1/projects/${encodeURIComponent(projectId)}/embed-keys`,
+				createdEmbedKeySchema,
+				{
+					auth: 'bearer',
+					body: input,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			),
+		/** The sites that may show a project's embeds. */
+		getAllowedDomains: (projectId: string): Promise<AllowedDomains> =>
+			send(
+				'GET',
+				`api/v1/projects/${encodeURIComponent(projectId)}/allowed-domains`,
+				allowedDomainsSchema,
+				{ auth: 'bearer' }
+			),
+		/**
+		 * Replaces the sites that may show a project's embeds, and answers with
+		 * the list as stored. Send the whole list: one left out stops working.
+		 */
+		setAllowedDomains: (
+			projectId: string,
+			input: SetAllowedDomainsInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<AllowedDomains> =>
+			send(
+				'PUT',
+				`api/v1/projects/${encodeURIComponent(projectId)}/allowed-domains`,
+				allowedDomainsSchema,
+				{
+					auth: 'bearer',
+					body: input,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			),
+		/**
+		 * The embed for a published scene, token included: the iframe URL and
+		 * two snippets to paste. Uses `keyId` when given, else the project's best
+		 * usable key.
+		 */
+		getSceneEmbed: (
+			sceneId: string,
+			{ keyId }: { keyId?: string } = {}
+		): Promise<SceneEmbed> => {
+			const query = keyId ? `?${new URLSearchParams({ keyId })}` : ''
+			return send(
+				'GET',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/embed${query}`,
+				sceneEmbedSchema,
+				{ auth: 'bearer' }
+			)
+		},
 		/** How the CLI signs in against this origin. */
 		cliClient: (): Promise<CliClient> =>
 			send('GET', 'api/v1/cli/client', cliClientSchema, { auth: 'public' })

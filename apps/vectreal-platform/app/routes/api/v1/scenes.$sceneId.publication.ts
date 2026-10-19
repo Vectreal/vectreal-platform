@@ -15,7 +15,6 @@
 
 import { ApiResponse } from '@shared/utils'
 
-import { UUID_REGEX } from '../../../constants/utility-constants'
 import {
 	agentApiError,
 	agentBillingRefusal
@@ -25,13 +24,9 @@ import { readAgentGlbUpload } from '../../../lib/domain/agent/agent-glb-upload.s
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
 import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { resolveAgentScene } from '../../../lib/domain/agent/agent-resource.server'
 import { reclaimUploadBatch } from '../../../lib/domain/asset/asset-reclaim.server'
-import {
-	canPerformDashboardOperation,
-	describeDashboardOperationDenial,
-	type DashboardOperation
-} from '../../../lib/domain/dashboard/dashboard-operations'
-import { resolveSceneMembership } from '../../../lib/domain/dashboard/dashboard-permissions.server'
+import { type DashboardOperation } from '../../../lib/domain/dashboard/dashboard-operations'
 import {
 	assertPublishLimits,
 	requirePublishEntitlement
@@ -62,7 +57,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 	const actor = await authorizeAgentRequest(request, {
 		scope: AGENT_OPERATION_SCOPES[operation]
 	})
-	const scene = await resolveScene(params.sceneId, actor, operation)
+	const scene = await resolveAgentScene(params.sceneId, actor, operation)
 
 	return operation === 'scene:publish'
 		? publish(request, actor, scene)
@@ -70,38 +65,6 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 type ResolvedScene = { sceneId: string; projectId: string }
-
-/**
- * The scene, or a 404 that does not say whether it exists: a malformed id,
- * one the user cannot see and one outside the grant's organization all answer
- * alike, so ids cannot be probed.
- */
-async function resolveScene(
-	sceneId: string | undefined,
-	actor: AgentActor,
-	operation: DashboardOperation
-): Promise<ResolvedScene> {
-	const membership =
-		sceneId &&
-		UUID_REGEX.test(sceneId) &&
-		(await resolveSceneMembership(sceneId, actor.userId))
-	if (
-		!sceneId ||
-		!membership ||
-		membership.organizationId !== actor.organizationId ||
-		!membership.projectId
-	) {
-		throw agentApiError(404, 'not_found', 'No such scene.')
-	}
-	if (!canPerformDashboardOperation(operation, membership)) {
-		throw agentApiError(
-			403,
-			'insufficient_role',
-			describeDashboardOperationDenial(operation, membership.role)
-		)
-	}
-	return { sceneId, projectId: membership.projectId }
-}
 
 async function publish(
 	request: Request,

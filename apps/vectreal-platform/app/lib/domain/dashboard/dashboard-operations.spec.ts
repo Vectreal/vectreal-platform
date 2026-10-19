@@ -21,6 +21,7 @@ const ROLES: MembershipRole[] = ['owner', 'admin', 'member']
 const EXPECTED: Record<DashboardOperation, MembershipRole[]> = {
 	'project:create': ['owner', 'admin', 'member'],
 	'project:update': ['owner', 'admin'],
+	'project-embed-domains:update': ['owner', 'admin'],
 	'project:delete': ['owner'],
 	'scene-folder:create': ['owner', 'admin', 'member'],
 	'scene-folder:update': ['owner', 'admin'],

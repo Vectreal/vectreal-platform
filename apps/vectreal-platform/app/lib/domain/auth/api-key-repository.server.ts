@@ -2,7 +2,7 @@ import { and, count, eq, inArray, isNull } from 'drizzle-orm'
 
 import { generateApiKey } from './api-key-generator.server'
 import { resolveApiKeyState } from './api-key-lifecycle'
-import { getDbClient } from '../../../db/client'
+import { getDbClient, type DbExecutor } from '../../../db/client'
 import { apiKeyProjects } from '../../../db/schema/auth/api-key-projects'
 import { apiKeys } from '../../../db/schema/auth/api-keys'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
@@ -16,7 +16,7 @@ import { assertDashboardPermission } from '../dashboard/dashboard-permissions.se
 
 const db = getDbClient()
 
-type DbClient = typeof db
+type DbClient = DbExecutor
 
 /** The operations this module is allowed to assert. */
 type ApiKeyOperation = Extract<DashboardOperation, `api-key:${string}`>
@@ -252,9 +252,10 @@ export interface CreateApiKeyParams {
  * excluded one.
  */
 export async function countLiveApiKeys(
-	organizationId: string
+	organizationId: string,
+	executor: DbExecutor = db
 ): Promise<number> {
-	const [row] = await db
+	const [row] = await executor
 		.select({ total: count() })
 		.from(apiKeys)
 		.where(
@@ -267,16 +268,20 @@ export async function countLiveApiKeys(
  * Create a new API key
  * @returns The created key details with the plaintext key. Also stored, encrypted,
  * on the row itself, so the embed panel can offer this key again later.
+ *
+ * Every read and write goes through `executor`, so a v1 route can run the
+ * whole create, quota included, inside the transaction that keeps its outcome.
  */
 export async function createApiKey(
-	params: CreateApiKeyParams
+	params: CreateApiKeyParams,
+	executor: DbExecutor = db
 ): Promise<ApiKeyWithDetails & { plaintext: string }> {
 	const { userId, organizationId, name, description, projectIds, expiresAt } =
 		params
 
 	// Verify user is admin/owner of organization
 	await verifyOrganizationAdminAccess(
-		db,
+		executor,
 		organizationId,
 		userId,
 		'api-key:create'
@@ -285,19 +290,20 @@ export async function createApiKey(
 	await assertWithinQuota({
 		organizationId,
 		limitKey: 'api_keys_per_org',
-		measure: () => countLiveApiKeys(organizationId),
+		measure: () => countLiveApiKeys(organizationId, executor),
 		message: ({ limit }) =>
-			`API key limit reached for your plan (${limit}). Revoke a key or upgrade to create more.`
+			`API key limit reached for your plan (${limit}). Revoke a key or upgrade to create more.`,
+		executor
 	})
 
 	// Verify all projects belong to organization
-	await verifyProjectsInOrganization(db, projectIds, organizationId)
+	await verifyProjectsInOrganization(executor, projectIds, organizationId)
 
 	// Generate API key
 	const { plaintext, hashed, preview } = generateApiKey()
 
 	// Insert API key
-	const [newKey] = await db
+	const [newKey] = await executor
 		.insert(apiKeys)
 		.values({
 			userId,
@@ -320,7 +326,7 @@ export async function createApiKey(
 		.returning()
 
 	// Insert project mappings
-	await db.insert(apiKeyProjects).values(
+	await executor.insert(apiKeyProjects).values(
 		projectIds.map((projectId) => ({
 			apiKeyId: newKey.id,
 			projectId
@@ -328,7 +334,7 @@ export async function createApiKey(
 	)
 
 	// Fetch creator and organization details
-	const [creator] = await db
+	const [creator] = await executor
 		.select({
 			id: users.id,
 			name: users.name,
@@ -337,7 +343,7 @@ export async function createApiKey(
 		.from(users)
 		.where(eq(users.id, userId))
 
-	const [organization] = await db
+	const [organization] = await executor
 		.select({
 			id: organizations.id,
 			name: organizations.name
@@ -346,7 +352,7 @@ export async function createApiKey(
 		.where(eq(organizations.id, organizationId))
 
 	// Fetch project details
-	const projectDetails = await db
+	const projectDetails = await executor
 		.select({
 			id: projects.id,
 			name: projects.name
