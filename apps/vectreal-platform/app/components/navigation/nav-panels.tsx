@@ -30,8 +30,8 @@ const HOVER_CLOSE_MS = 200
 const HOVER_CLICK_MS = 600
 const DISSOLVE_MS = 180
 
-const panelId = (section: SiteSection) =>
-	`nav-panel-${section.label.toLowerCase().replace(/\s+/g, '-')}`
+const panelId = (label: string) =>
+	`nav-panel-${label.toLowerCase().replace(/\s+/g, '-')}`
 
 const isMouse = (event: PointerEvent) => event.pointerType === 'mouse'
 
@@ -52,7 +52,10 @@ type Open = { label: string; by: 'hover' | 'press' } | null
  * Built as the WAI-ARIA disclosure navigation rather than on Radix's
  * NavigationMenu, which would put about 5 KB gzipped more on every page's first
  * load for behavior two buttons need. Each panel follows its button in the
- * DOM, so Tab walks from a trigger into its links and on to the next trigger.
+ * DOM, so Tab walks from a trigger into its links and on to whatever comes
+ * next in the bar. The plain links share the root, so reaching one counts as
+ * leaving the panel: pointing at it closes a panel the mouse opened, and
+ * focusing it closes any.
  * Escape closes and hands focus back to the trigger; a click outside, focus
  * moving elsewhere, or a navigation closes too. A mouse opens on hover after a
  * short intent delay; touch and keyboard open on press.
@@ -92,9 +95,14 @@ export function NavPanels({
 		const onKey = (event: KeyboardEvent) => {
 			if (event.key !== 'Escape') return
 			setOpen(null)
-			// Focus goes back to the trigger only from inside the nav: a panel opened by hover must not pull it out of a form field.
-			if (rootRef.current?.contains(document.activeElement))
-				triggers.current.get(openLabel)?.focus()
+			// Focus goes back to the trigger only from the trigger or its panel: a panel opened by hover must not pull it out of a form field, or off a plain link beside it.
+			const trigger = triggers.current.get(openLabel)
+			const active = document.activeElement
+			if (
+				active === trigger ||
+				document.getElementById(panelId(openLabel))?.contains(active)
+			)
+				trigger?.focus()
 		}
 		const onPointerDown = (event: globalThis.PointerEvent) => {
 			if (!rootRef.current?.contains(event.target as Node)) setOpen(null)
@@ -139,6 +147,12 @@ export function NavPanels({
 							viewTransition={entersFunnel(item.to)}
 							// Color alone cannot say "you are here": aria-current is what a screen reader reads it from.
 							aria-current={isActive ? 'page' : undefined}
+							onPointerEnter={(event) => {
+								// Pointing at a page of its own leaves the panel: one the mouse opened goes, as when the pointer leaves the bar.
+								if (isMouse(event) && open?.by !== 'press')
+									hover(null, HOVER_CLOSE_MS)
+							}}
+							onFocus={() => setOpen(null)}
 							className={cn(
 								'rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
 								isActive
@@ -164,7 +178,7 @@ export function NavPanels({
 							}}
 							type="button"
 							aria-expanded={isOpen}
-							aria-controls={panelId(section)}
+							aria-controls={panelId(section.label)}
 							onClick={(event) => {
 								window.clearTimeout(timer.current)
 								// Only a pointer's click can finish a hover; Enter and Space report no clicks (detail 0).
@@ -200,7 +214,7 @@ export function NavPanels({
 						</button>
 						{isOpen && (
 							<NavPanel
-								id={panelId(section)}
+								id={panelId(section.label)}
 								section={section}
 								pathname={pathname}
 								onPointerEnter={() => window.clearTimeout(timer.current)}

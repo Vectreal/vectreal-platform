@@ -74,16 +74,6 @@ const DrawerLink = ({
 	)
 }
 
-/**
- * The phone's bar and drawer. The bar settles the way the desktop bar does;
- * the drawer lists the same site map the desktop panels and the footer read,
- * grouped the same way, with the reader's own block on top: their account
- * when signed in, the way in when not.
- *
- * The bar has one menu control. Signed in it is the avatar, which opens this
- * drawer rather than a dropdown of its own, so a docs page does not show the
- * docs picker, an account menu and a site menu side by side.
- */
 /** The nav's items as the drawer lists them: each category alone, and each run of plain pages as one list. */
 function groupNavItems(
 	items: readonly NavItem[]
@@ -98,6 +88,16 @@ function groupNavItems(
 	return groups
 }
 
+/**
+ * The phone's bar and drawer. The bar settles the way the desktop bar does;
+ * the drawer lists the same site map the desktop panels and the footer read,
+ * grouped the same way, with the reader's own block on top: their account
+ * when signed in, the way in when not.
+ *
+ * The bar has one menu control. Signed in it is the avatar, which opens this
+ * drawer rather than a dropdown of its own, so a docs page does not show the
+ * docs picker, an account menu and a site menu side by side.
+ */
 function MobileNav({
 	user,
 	onLogout,
