@@ -165,6 +165,27 @@
 	*/
 	--material-plate-rim: var(--material-rim);
 	--material-plate-lip: var(--material-base);
+
+	/*
+	  The `ds-lit` light and the plate in front of it. The light runs from a
+	  hot core through the brand to nothing; on paper it is warmer and weaker,
+	  where it reads as tint. The plate is frosted glass, its rim brightest on
+	  top where the room light falls, and the leak is where the backlight wraps
+	  its top edge.
+	*/
+	--lit-core: rgb(252 132 60 / 0.7);
+	--lit-mid: rgb(252 108 24 / 0.42);
+	--lit-edge: rgb(252 108 24 / 0.1);
+	--lit-strength: 0.3;
+	--lit-plate: rgb(255 255 255 / 0.74);
+	--lit-rim-top: rgb(255 255 255 / 0.95);
+	--lit-rim-side: rgb(20 16 12 / 0.07);
+	--lit-leak: rgb(255 190 150 / 0.36);
+	--lit-leak-core: rgb(255 225 205 / 0.45);
+	/* On paper the shadow itself is warm: the light reaches the ground under the plate. */
+	--lit-shadow:
+		0 1px 1px rgb(40 24 8 / 0.04), 0 6px 16px -6px rgb(60 30 8 / 0.11),
+		0 36px 72px -36px rgb(160 70 16 / 0.26);
 }
 
 .dark {
@@ -247,6 +268,19 @@
 	--material-shadow-far: oklch(0 0 0 / 0.55);
 	--material-plate-rim: var(--material-rim);
 	--material-plate-lip: var(--material-base);
+
+	--lit-core: rgb(252 140 70 / 0.75);
+	--lit-mid: rgb(252 108 24 / 0.45);
+	--lit-edge: rgb(252 108 24 / 0.12);
+	--lit-strength: 0.42;
+	--lit-plate: rgb(18 16 15 / 0.76);
+	--lit-rim-top: rgb(255 255 255 / 0.16);
+	--lit-rim-side: rgb(255 255 255 / 0.06);
+	--lit-leak: rgb(255 190 150 / 0.44);
+	--lit-leak-core: rgb(255 225 205 / 0.55);
+	--lit-shadow:
+		0 1px 1px rgb(0 0 0 / 0.4), 0 24px 48px -24px rgb(0 0 0 / 0.8),
+		0 30px 80px -40px rgb(252 108 24 / 0.14);
 }
 
 /*
