@@ -24,21 +24,51 @@ import { registerMeshoptDecoder } from '../meshopt/meshopt-codec'
 import { DRACO_EXTENSION } from '../model-loader/glb-extensions'
 
 /**
+ * Draco's Emscripten modules, from wherever the caller can load them: in Node,
+ * the `draco3d` package. Each is asked for once, when first needed.
+ *
+ * Each must resolve to the module with no `then` of its own. An Emscripten
+ * module that keeps one resolves with itself, and the promise chain
+ * re-assimilates it forever.
+ */
+export interface DracoModules {
+	encoder: () => Promise<unknown>
+	decoder: () => Promise<unknown>
+}
+
+/**
  * Registers the geometry codecs on one WebIO, each once: the decoders before
  * the first read, the Draco encoder only when a Draco step first needs it.
  * `ModelLoader`, `ModelExporter` and `ModelOptimizer` each hold one for their
  * own WebIO.
+ *
+ * Draco comes from `dracoModules` when given, and otherwise from the scripts
+ * at `dracoPath`, which only a browser or worker can load.
  */
 export class GeometryCodecs {
 	private io: WebIO
 	private dracoPath: string
+	private dracoModules: DracoModules | undefined
 	private dracoEncoderRegistration: Promise<void> | null = null
 	private dracoDecoderRegistration: Promise<void> | null = null
 	private meshoptRegistration: Promise<void> | null = null
 
-	constructor(io: WebIO, dracoPath: string) {
+	constructor(io: WebIO, dracoPath: string, dracoModules?: DracoModules) {
 		this.io = io
 		this.dracoPath = dracoPath
+		this.dracoModules = dracoModules
+	}
+
+	/** The Draco module of `kind`, or a refusal saying why there is none. */
+	private loadDraco(kind: 'encoder' | 'decoder'): Promise<unknown> {
+		if (this.dracoModules) return this.dracoModules[kind]()
+		return canLoadDracoInBrowser()
+			? loadDracoModule(kind, this.dracoPath)
+			: Promise.reject(
+					new Error(
+						`Draco ${kind === 'encoder' ? 'encoding' : 'decoding'} needs a browser (window or worker), or Draco modules passed in`
+					)
+				)
 	}
 
 	/**
@@ -46,19 +76,11 @@ export class GeometryCodecs {
 	 * primitives after `document.transform(draco(...))`.
 	 */
 	registerDracoEncoder(): Promise<void> {
-		if (!this.dracoEncoderRegistration) {
-			this.dracoEncoderRegistration = canLoadDracoInBrowser()
-				? loadDracoModule('encoder', this.dracoPath).then((encoderModule) => {
-						this.io.registerDependencies({
-							'draco3d.encoder': encoderModule
-						})
-					})
-				: Promise.reject(
-						new Error(
-							'Draco encoding requires a browser (window or worker) environment'
-						)
-					)
-		}
+		this.dracoEncoderRegistration ??= this.loadDraco('encoder').then(
+			(encoderModule) => {
+				this.io.registerDependencies({ 'draco3d.encoder': encoderModule })
+			}
+		)
 		return this.dracoEncoderRegistration
 	}
 
@@ -71,22 +93,23 @@ export class GeometryCodecs {
 	 * `dracoPath`, which a page that never serves Draco content has no reason to
 	 * host. Its failure is the model's failure, and names the path it tried.
 	 *
-	 * Outside a browser or worker there is no Draco decoder to load, and
-	 * meshopt's can fail to compile where WebAssembly is blocked. Either way
-	 * other content is unaffected, and content needing the missing decoder
-	 * throws glTF-Transform's own "install extension dependency" error.
+	 * Outside a browser or worker, without `dracoModules`, there is no Draco
+	 * decoder to load, and meshopt's can fail to compile where WebAssembly is
+	 * blocked. Either way other content is unaffected. Content needing the
+	 * missing decoder fails to read: glTF-Transform's own "install extension
+	 * dependency" error for meshopt, and for Draco a TypeError from inside its
+	 * reader.
 	 */
 	registerDecoders(extensionsUsed: readonly string[] | null): Promise<void> {
 		this.meshoptRegistration ??= registerMeshoptDecoder(this.io).catch(() => {})
 		const needsDraco =
 			extensionsUsed === null || extensionsUsed.includes(DRACO_EXTENSION)
-		if (needsDraco && canLoadDracoInBrowser()) {
-			this.dracoDecoderRegistration ??= loadDracoModule(
-				'decoder',
-				this.dracoPath
-			).then((decoderModule) => {
-				this.io.registerDependencies({ 'draco3d.decoder': decoderModule })
-			})
+		if (needsDraco && (this.dracoModules || canLoadDracoInBrowser())) {
+			this.dracoDecoderRegistration ??= this.loadDraco('decoder').then(
+				(decoderModule) => {
+					this.io.registerDependencies({ 'draco3d.decoder': decoderModule })
+				}
+			)
 			return Promise.all([
 				this.meshoptRegistration,
 				this.dracoDecoderRegistration

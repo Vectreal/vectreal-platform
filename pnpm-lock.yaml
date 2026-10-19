@@ -33,6 +33,9 @@ catalogs:
     jszip:
       specifier: ^3.10.1
       version: 3.10.1
+    ktx2-encoder:
+      specifier: 0.6.0
+      version: 0.6.0
     meshoptimizer:
       specifier: ^1.2.0
       version: 1.2.0
@@ -565,9 +568,6 @@ importers:
       '@gltf-transform/core':
         specifier: 'catalog:'
         version: 4.4.2
-      '@gltf-transform/extensions':
-        specifier: 'catalog:'
-        version: 4.4.2
       '@hookform/resolvers':
         specifier: ^5.7.1
         version: 5.7.1(@sinclair/typebox@0.34.52)(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.85.0(react@19.2.8))(typanion@3.14.0)(valibot@1.4.2(typescript@6.0.3))(zod@4.4.3)
@@ -656,7 +656,7 @@ importers:
         specifier: ^2.20.2
         version: 2.20.2(@babel/core@8.0.1)(@babel/template@8.0.0)(@types/react@19.2.18)(react@19.2.8)
       ktx2-encoder:
-        specifier: 0.6.0
+        specifier: 'catalog:'
         version: 0.6.0
       lucide-react:
         specifier: ^1.30.0
@@ -727,9 +727,15 @@ importers:
       '@react-three/drei':
         specifier: 'catalog:'
         version: 10.7.8(@react-three/fiber@9.7.0(@types/react@19.2.18)(immer@11.1.16)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1))(@types/react@19.2.18)(@types/three@0.185.4)(immer@11.1.16)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.185.1)
+      draco3d:
+        specifier: 1.5.7
+        version: 1.5.7
       jszip:
         specifier: 'catalog:'
         version: 3.10.1
+      ktx2-encoder:
+        specifier: 'catalog:'
+        version: 0.6.0
       meshoptimizer:
         specifier: 'catalog:'
         version: 1.2.0

@@ -12,18 +12,16 @@ import type {
  * results reach the main thread.
  */
 const mocks = vi.hoisted(() => ({
-	exportDocumentGLBForPublish: vi.fn(),
-	compressTexturesToKtx2: vi.fn(),
+	exportGlbForPublish: vi.fn(),
+	/** Stands in for the KTX2 pass, handed what the worker passed as `ktx2`. */
+	compressTextures: vi.fn(),
 	encode: vi.fn()
 }))
 
 vi.mock('@vctrl/core/model-exporter', () => ({
 	ModelExporter: class {
-		exportDocumentGLBForPublish = mocks.exportDocumentGLBForPublish
+		exportGlbForPublish = mocks.exportGlbForPublish
 	}
-}))
-vi.mock('@vctrl/core/model-optimizer', () => ({
-	compressTexturesToKtx2: mocks.compressTexturesToKtx2
 }))
 vi.mock('ktx2-encoder', () => ({
 	BrowserBasisEncoder: class {
@@ -52,25 +50,20 @@ beforeEach(async () => {
 		(message: PublishExportMessage, options: { transfer: unknown }) =>
 			posted.push({ message, transfer: options.transfer })
 	)
-	mocks.compressTexturesToKtx2.mockImplementation(
-		async (_document, { onProgress }) => {
-			onProgress(0, 1)
-			return report
-		}
-	)
-	mocks.exportDocumentGLBForPublish.mockImplementation(
-		async (
-			document: Document,
-			options: { textures?: (d: Document) => Promise<void> }
-		) => {
-			await options.textures?.(document)
-			return {
-				data: new Uint8Array([1, 2, 3]),
-				geometryCodec: 'meshopt',
-				geometrySizes: { none: 3, meshopt: 2 },
-				textureBytes: 7
-			}
-		}
+	mocks.compressTextures.mockImplementation(async ({ onProgress }) => {
+		onProgress(0, 1)
+		return report
+	})
+	mocks.exportGlbForPublish.mockImplementation(
+		async (_glb: Uint8Array, options: { ktx2?: unknown }) => ({
+			data: new Uint8Array([1, 2, 3]),
+			geometryCodec: 'meshopt',
+			geometrySizes: { none: 3, meshopt: 2 },
+			textureBytes: 7,
+			textures: options.ktx2
+				? await mocks.compressTextures(options.ktx2)
+				: undefined
+		})
 	)
 	vi.resetModules()
 	await import('./publish-export.worker')
@@ -88,14 +81,14 @@ describe('the publish export worker', () => {
 			ktx2: true
 		})
 
-		expect(mocks.exportDocumentGLBForPublish).toHaveBeenCalledWith(
-			expect.any(Document),
+		expect(mocks.exportGlbForPublish).toHaveBeenCalledWith(
+			expect.any(Uint8Array),
 			expect.objectContaining({
 				draco: { method: 'edgebreaker' },
 				dracoWorthApplying: false
 			})
 		)
-		expect(mocks.compressTexturesToKtx2).toHaveBeenCalledOnce()
+		expect(mocks.compressTextures).toHaveBeenCalledOnce()
 		expect(messages).toContainEqual({
 			type: 'progress',
 			texturesDone: 0,
@@ -118,25 +111,23 @@ describe('the publish export worker', () => {
 	it('leaves textures alone when KTX2 is off', async () => {
 		const messages = await send({ dracoWorthApplying: true, ktx2: false })
 
-		expect(mocks.compressTexturesToKtx2).not.toHaveBeenCalled()
+		expect(mocks.compressTextures).not.toHaveBeenCalled()
 		expect(messages.at(-1)).toMatchObject({ type: 'done', textures: undefined })
 	})
 
 	it('encodes through the self-hosted wasm at the size it was given', async () => {
-		mocks.compressTexturesToKtx2.mockImplementation(
-			async (_document, { encode }) => {
-				await encode(
-					{
-						image: new Uint8Array(4),
-						mimeType: 'image/webp',
-						width: 8,
-						height: 4
-					},
-					{ isUASTC: false }
-				)
-				return report
-			}
-		)
+		mocks.compressTextures.mockImplementation(async ({ encode }) => {
+			await encode(
+				{
+					image: new Uint8Array(4),
+					mimeType: 'image/webp',
+					width: 8,
+					height: 4
+				},
+				{ isUASTC: false }
+			)
+			return report
+		})
 
 		await send({ dracoWorthApplying: true, ktx2: true })
 
@@ -151,7 +142,7 @@ describe('the publish export worker', () => {
 	})
 
 	it('reports a failure instead of throwing it away', async () => {
-		mocks.exportDocumentGLBForPublish.mockRejectedValue(
+		mocks.exportGlbForPublish.mockRejectedValue(
 			new Error('Draco encoder failed')
 		)
 
@@ -205,20 +196,18 @@ describe('the publish export worker', () => {
 				decode = options.imageDecoder
 				return new Uint8Array(1)
 			})
-			mocks.compressTexturesToKtx2.mockImplementation(
-				async (_document, { encode }) => {
-					await encode(
-						{
-							image: new Uint8Array(4),
-							mimeType: 'image/webp',
-							width: 2,
-							height: 2
-						},
-						{}
-					)
-					return report
-				}
-			)
+			mocks.compressTextures.mockImplementation(async ({ encode }) => {
+				await encode(
+					{
+						image: new Uint8Array(4),
+						mimeType: 'image/webp',
+						width: 2,
+						height: 2
+					},
+					{}
+				)
+				return report
+			})
 			await send({ dracoWorthApplying: true, ktx2: true })
 			return decode as (bytes: Uint8Array) => Promise<{ data: Uint8Array }>
 		}
