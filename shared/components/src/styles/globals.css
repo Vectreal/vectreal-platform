@@ -381,9 +381,29 @@
 	  `max-w-measure` against `max-w-4xl` without knowing the name.
 	*/
 	--container-measure: 40rem;
+
+	/*
+	  Where content that sticks or scrolls into view stops below the site nav:
+	  the nav's height plus one 16px step. Read it as `top-below-nav`,
+	  `scroll-mt-below-nav` or `var(--spacing-below-nav)`.
+
+	  Two navs, so two values. The desktop nav is 64px at rest (it shrinks once
+	  scrolled, so its resting height is the one to clear); the mobile nav,
+	  which runs to `md`, is 52px and takes the override in `@layer base`
+	  below. The sticky offsets used to restate 68, 80 and 96px by hand, each
+	  picked against one nav or the other.
+	*/
+	--spacing-below-nav: 5rem;
 }
 
 @layer base {
+	/* The mobile nav's value of `--spacing-below-nav`: 52px plus the 16px step. */
+	@media (width < 48rem) {
+		:root {
+			--spacing-below-nav: 4.25rem;
+		}
+	}
+
 	* {
 		@apply border-border;
 	}

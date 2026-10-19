@@ -9,25 +9,25 @@ interface HeroSceneProps {
 	vertical?: boolean
 }
 
+/*
+  The frame is owned here, once, for all three states. The server render, the
+  loading fallback and the loaded scene each drew their own, and on a phone the
+  first two were 25rem while the scene was half the viewport, so the page jumped
+  when the model arrived. `svh` rather than `vh`, so the frame is measured
+  against the viewport with the browser's toolbars shown, the one that is
+  actually on screen when the page opens.
+*/
 const HeroScene = ({ vertical }: HeroSceneProps) => {
 	const isMounted = useIsClientMounted()
 
-	if (!isMounted) {
-		return (
-			<div className="relative h-full w-full overflow-hidden max-md:h-[50vh] max-md:min-h-[300px] max-sm:h-100" />
-		)
-	}
-
 	return (
-		<Suspense
-			fallback={
-				<div className="relative h-full w-full overflow-hidden max-md:h-[50vh] max-md:min-h-[300px] max-sm:h-100">
-					<CenteredSpinner />
-				</div>
-			}
-		>
-			<HeroSceneClient vertical={vertical} />
-		</Suspense>
+		<div className="relative h-full w-full overflow-hidden max-md:h-[50svh] max-md:min-h-[300px]">
+			{isMounted ? (
+				<Suspense fallback={<CenteredSpinner />}>
+					<HeroSceneClient vertical={vertical} />
+				</Suspense>
+			) : null}
+		</div>
 	)
 }
 

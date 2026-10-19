@@ -50,6 +50,13 @@ const Z_INDEX_TIERS = [
 const CONTAINER_SCALE = ['detail-panel', 'form-drawer', 'measure']
 
 /**
+ * The app's named `--spacing-*` values, for the same reason as the container
+ * names: tailwind-merge reads a spacing class as a number, a fraction or an
+ * arbitrary value, so `cn('top-0', 'top-below-nav')` would keep both.
+ */
+const SPACING_SCALE = ['below-nav']
+
+/**
  * The type scale declared as `.text-*` in `globals.css`, for the third time and
  * the same reason.
  *
@@ -110,7 +117,11 @@ const TYPE_SCALE_RUNGS = [
 const twMerge = extendTailwindMerge({
 	extend: {
 		classGroups: { z: [{ z: Z_INDEX_TIERS }] },
-		theme: { container: CONTAINER_SCALE, text: TYPE_SCALE_RUNGS }
+		theme: {
+			container: CONTAINER_SCALE,
+			spacing: SPACING_SCALE,
+			text: TYPE_SCALE_RUNGS
+		}
 	}
 })
 
@@ -118,4 +129,4 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs))
 }
 
-export { CONTAINER_SCALE, TYPE_SCALE_RUNGS, Z_INDEX_TIERS }
+export { CONTAINER_SCALE, SPACING_SCALE, TYPE_SCALE_RUNGS, Z_INDEX_TIERS }

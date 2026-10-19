@@ -111,7 +111,7 @@ export default function DocsLayout() {
 	return (
 		<div className="container-page flex gap-0 pb-16">
 			<aside
-				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 lg:block"
+				className="top-below-nav sticky hidden h-[calc(100dvh-var(--spacing-below-nav))] w-64 shrink-0 lg:block"
 				aria-label="Docs navigation"
 			>
 				<ScrollArea className="h-full pr-4 pb-8">
@@ -221,7 +221,7 @@ export default function DocsLayout() {
 			</main>
 
 			<aside
-				className="sticky top-20 hidden h-[calc(100dvh-5rem)] w-64 shrink-0 xl:block"
+				className="top-below-nav sticky hidden h-[calc(100dvh-var(--spacing-below-nav))] w-64 shrink-0 xl:block"
 				aria-label="On this page"
 			>
 				<div className="flex h-full flex-col pl-4">

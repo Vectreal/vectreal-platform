@@ -6,6 +6,7 @@
 import { Button } from '@shared/components/ui/button'
 import { Checkbox } from '@shared/components/ui/checkbox'
 import { Input } from '@shared/components/ui/input'
+import { LoadingSpinner } from '@shared/components/ui/loading-spinner'
 import {
 	Table,
 	TableBody,
@@ -173,7 +174,7 @@ export function DataTable<TData extends RowData>({
 
 				{isUpdating && (
 					<div className="text-muted-foreground flex items-center gap-2 text-sm">
-						<div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+						<LoadingSpinner className="size-4" />
 						<span>{updatingLabel}</span>
 					</div>
 				)}
