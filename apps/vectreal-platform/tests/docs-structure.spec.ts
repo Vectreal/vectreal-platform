@@ -3,8 +3,8 @@
  *
  * The docs used to be one reading path that began with contributor setup, so
  * someone who only wanted to try the publisher was sent to clone the repo.
- * Every category now belongs to one of two readers, "In the browser" or "In
- * your code". These hold that, hold the manifest to the routes and files that
+ * Every category now belongs to one of two paths, "For artists" (in the
+ * browser) or "For developers" (in your own code). These hold that, hold the manifest to the routes and files that
  * exist, and hold the old addresses to the pages they became, so a link in a
  * README on npm or in an article still lands.
  */

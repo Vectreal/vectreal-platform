@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * The docs index: the publisher first, then two doors.
+ * The docs index: the publisher first, then a bento per path.
  *
  * Its primary action used to be "Start here", which opened repo setup, so a
  * reader who only wanted to try the publisher was sent to clone the repo.
@@ -19,7 +19,7 @@ const renderPage = () =>
 		</MemoryRouter>
 	)
 
-const door = (label: string) =>
+const path = (label: string) =>
 	within(screen.getByRole('region', { name: label }))
 
 describe('the docs index', () => {
@@ -30,20 +30,20 @@ describe('the docs index', () => {
 		expect(link.getAttribute('href')).toBe('/publisher')
 	})
 
-	it('opens the publisher with the rocket loading from the browser door', () => {
+	it('opens the publisher with the rocket loading from the artists path', () => {
 		renderPage()
 
-		const link = door('In the browser').getByRole('link', {
+		const link = path('For artists').getByRole('link', {
 			// The row's size line is part of the name: what opening it costs.
 			name: /^Open the rocket sample/
 		})
 		expect(link.getAttribute('href')).toBe('/publisher?sample=rocket')
 		expect(
-			door('In your code').queryByRole('link', { name: /rocket/ })
+			path('For developers').queryByRole('link', { name: /rocket/ })
 		).toBeNull()
 	})
 
-	it('lists every docs page once, behind the door its category belongs to', () => {
+	it('lists every docs page once, on the path its category belongs to', () => {
 		renderPage()
 
 		for (const page of docsPages) {
@@ -51,16 +51,16 @@ describe('the docs index', () => {
 				candidate.categories.includes(page.category)
 			)
 			const href = `/docs/${page.slug}`
-			const inDoor = door(audience?.label ?? '')
+			const onPath = path(audience?.label ?? '')
 				.getAllByRole('link')
 				.filter((link) => link.getAttribute('href') === href)
 			const onPage = screen
 				.getAllByRole('link')
 				.filter((link) => link.getAttribute('href') === href)
 
-			expect(inDoor, href).toHaveLength(1)
+			expect(onPath, href).toHaveLength(1)
 			expect(onPage, href).toHaveLength(1)
-			expect(inDoor[0]?.textContent).toBe(page.title)
+			expect(onPath[0]?.textContent).toBe(page.title)
 		}
 	})
 })

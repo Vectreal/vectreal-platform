@@ -77,10 +77,11 @@ export type DocAudienceId = 'browser' | 'code'
  * The categories used to be one reading path, and it began with contributor
  * setup: the docs' own "Start here", the sidebar and the footer's "Getting
  * started" all sent someone who only wanted to try the publisher to cloning
- * the repo and starting Supabase. Grouping by what the reader wants to do
- * rather than who they are: a shop owner fitting a viewer is neither an artist
- * nor a developer, but knows whether they are working in the browser or in
- * their own code.
+ * the repo and starting Supabase. The split is still by what the reader does,
+ * in the browser or in their own code, but it is labelled by the reader who
+ * usually does it, artists and developers, which is shorter and is how
+ * marketing talks about them. The descriptions
+ * keep saying what each path needs, for the shop owner who is neither.
  *
  * Every category sits in exactly one audience; `docs-manifest.spec.ts` holds
  * that, so a new category that no reader would find fails the build.
@@ -93,14 +94,14 @@ export const DOC_AUDIENCES: readonly {
 }[] = [
 	{
 		id: 'browser',
-		label: 'In the browser',
+		label: 'For artists',
 		description:
 			'No install and no account. Start from a sample or your own file.',
 		categories: ['getting-started', 'guides']
 	},
 	{
 		id: 'code',
-		label: 'In your code',
+		label: 'For developers',
 		description:
 			'Packages on npm, the embed SDK, and running Vectreal yourself.',
 		categories: ['packages', 'self-hosting', 'contributing']

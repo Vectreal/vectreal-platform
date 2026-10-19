@@ -326,7 +326,7 @@ export const PRICING_PAGE_COPY = {
 // ---------------------------------------------------------------------------
 
 export const DOCS_PAGE_COPY = {
-	heading: 'From your first upload to a production embed.',
+	heading: 'Docs',
 	description:
 		'Try the publisher with a sample model, with nothing to install and no account. Or build on the open-source packages underneath.',
 	publisherCta: 'Open the publisher',
