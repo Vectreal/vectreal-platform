@@ -31,6 +31,24 @@ decoration wearing the costume of feedback, and
 Frequent, low-novelty actions should carry the least motion. A control someone
 uses forty times an hour does not want a spring.
 
+## The marketing frame's one arrival
+
+`Band` wraps its section in `Reveal` (`layout-components/reveal.tsx`): the
+first time a band scrolls into view, each block marked `data-reveal` fades up a
+short way into place, one after another. By the test above that is
+decoration. Moritz chose it knowingly for every marketing band, so it is the
+one arrival motion on the site, and its terms are the rule:
+
+- Opacity and transform only, on the compositor.
+- Once, and only below the fold. A band already on screen at hydration is
+  never hidden.
+- Nothing is hidden without script, under reduced motion, or in print.
+
+**No dither, anywhere.** Fades, reveals and crossfades never dissolve through a
+mask image. The dither dissolves this replaced swapped a mask every frame and
+flashed whenever a frame landed before the new mask had decoded. The noise
+grain went with them.
+
 ## Reduced motion
 
 Respect `prefers-reduced-motion`. The rule: a Framer component calls
@@ -66,4 +84,7 @@ present  shared/components/src/styles/globals.css                              -
 present  shared/components/src/styles/globals.css                              --duration-cinematic: 700ms
 present  shared/components/src/styles/globals.css                              --ease-out: cubic-bezier(0.16, 1, 0.3, 1)
 present  shared/components/src/styles/globals.css                              prefers-reduced-motion
+present  apps/vectreal-platform/app/components/layout-components/sheet-frame.tsx  <Reveal>
+absent   apps/vectreal-platform/app/components/layout-components/reveal.tsx     maskImage
+absent   shared/components/src/styles/globals.css                              --grain
 ```
