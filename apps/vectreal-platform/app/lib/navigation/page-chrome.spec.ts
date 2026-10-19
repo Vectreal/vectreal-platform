@@ -5,8 +5,6 @@ import { routePageChrome } from './page-chrome'
 describe('routePageChrome', () => {
 	it('gives public pages both nav and footer', () => {
 		for (const pathname of [
-			'/',
-			'/home',
 			'/pricing',
 			'/contact',
 			'/docs/guides/upload',
@@ -16,7 +14,23 @@ describe('routePageChrome', () => {
 			expect(routePageChrome(pathname)).toEqual({
 				nav: true,
 				footer: true,
-				brandPrimary: true
+				brandPrimary: true,
+				brandNavPrimary: true
+			})
+		}
+	})
+
+	/*
+	  The hero's main action is the one orange primary in view on the home page,
+	  so the nav's "Get started" keeps the ink there and only there.
+	*/
+	it('keeps the nav primary ink on the home page, and the page primary brand', () => {
+		for (const pathname of ['/', '/home']) {
+			expect(routePageChrome(pathname)).toEqual({
+				nav: true,
+				footer: true,
+				brandPrimary: true,
+				brandNavPrimary: false
 			})
 		}
 	})
@@ -30,12 +44,14 @@ describe('routePageChrome', () => {
 		expect(routePageChrome('/publisher')).toEqual({
 			nav: false,
 			footer: false,
-			brandPrimary: false
+			brandPrimary: false,
+			brandNavPrimary: false
 		})
 		expect(routePageChrome('/publisher/')).toEqual({
 			nav: false,
 			footer: false,
-			brandPrimary: false
+			brandPrimary: false,
+			brandNavPrimary: false
 		})
 	})
 
@@ -48,7 +64,8 @@ describe('routePageChrome', () => {
 		expect(routePageChrome('/publisher/abc123')).toEqual({
 			nav: false,
 			footer: false,
-			brandPrimary: false
+			brandPrimary: false,
+			brandNavPrimary: false
 		})
 	})
 
@@ -56,7 +73,8 @@ describe('routePageChrome', () => {
 		expect(routePageChrome('/publisher-guide')).toEqual({
 			nav: true,
 			footer: true,
-			brandPrimary: true
+			brandPrimary: true,
+			brandNavPrimary: true
 		})
 	})
 })
