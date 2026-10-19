@@ -195,6 +195,9 @@ importers:
       framer-motion:
         specifier: ^13.0.0
         version: 13.0.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      heic-decode:
+        specifier: ^2.1.0
+        version: 2.1.0
       idb:
         specifier: ^8.0.3
         version: 8.0.3
