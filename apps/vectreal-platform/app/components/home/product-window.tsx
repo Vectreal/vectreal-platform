@@ -99,8 +99,8 @@ const DWELL_MS = 7000
  * Every screenshot and caption is server-rendered, and switching only changes
  * which one is shown.
  *
- * The views are the workflow's three steps, set as a row of tiles at the top
- * of the window and numbered in workflow order, so the page says how short the
+ * The views are the workflow's three steps, set as a numbered row above the
+ * scene in workflow order, so the page says how short the
  * path is before it shows any of it. The window walks through them on its own: the active step's
  * rule fills over its dwell and hands on to the next. Hovering or
  * focusing the window pauses it, so nobody loses a caption mid-read; so does

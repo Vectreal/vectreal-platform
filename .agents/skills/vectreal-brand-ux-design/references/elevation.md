@@ -78,14 +78,17 @@ layers, read from the `--material-*` colours in `theme.css`:
 | `inset 0 -1px 0` | the base: the bottom edge, a touch darker | `--material-base` |
 | outer shadows | what the plate throws: a tight contact shadow and a wide soft one | `--material-shadow`, `--material-shadow-far` |
 
-On a plate (`ds-raised`, `ds-overlay` and their interactive rungs) the rim and
-base read through `--material-plate-rim` and `--material-plate-lip`, which
-default to the rim and base. The public site (`nav-layout`) sets
+On a plate (`ds-raised`, `ds-overlay` and their interactive rungs) the rim
+and base read through `--material-plate-rim` and `--material-plate-lip`,
+which default to the rim and base. The public site (`nav-layout`, outside the
+publisher) sets
 `data-material="object"`, which turns both off: there a plate is an object lit
 from above, its edge the bevel and the shadow beneath. Moritz decided this on
 19 Oct 2026 after a design review found the four-sided rim made marketing
 plates read as boxes. Fields, controls and wells keep their rim everywhere,
-since an input without an edge cannot be found.
+since an input without an edge cannot be found. Shared menus, popovers and
+selects add `shadow-md`, which replaces the whole material, rim included, on
+every route.
 
 Objects, not containers, on the public site: a plate is for something the
 reader uses or that stands for the product (the app window, the browser mock,
@@ -106,8 +109,7 @@ a pricing plan). Copy, lists of names and step labels sit on the page.
   without the far shadow a card throws.
 - A shared component that forces its own fill with `!` (`TabsTrigger`'s
   active state) beats any ladder class on the same element. Put the plate on
-  a parent and let the trigger fill it transparently, as the home page's
-  product window does with its step tiles.
+  a parent and let the trigger fill it transparently.
 - `ds-bevel` is a filled action's material (`Button`'s default, brand and
   destructive variants): a white bevel and a dark base, fixed values because
   the fill underneath is the same in both schemes.

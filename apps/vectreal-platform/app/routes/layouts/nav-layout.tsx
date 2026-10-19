@@ -49,8 +49,9 @@ const Layout = () => {
 				>
 					<Navigation />
 				</div>
+				{/* The publisher is nested here too, and its editor keeps the plate rims. */}
 				<div
-					data-material="object"
+					data-material={chrome.brandPrimary ? 'object' : undefined}
 					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
 				>
 					<Outlet />
