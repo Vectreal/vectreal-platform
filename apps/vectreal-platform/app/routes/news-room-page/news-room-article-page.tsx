@@ -274,9 +274,9 @@ function NewsRoomArticle({
 				{copied ? 'Link copied to clipboard' : ''}
 			</p>
 			{/*
-			  `max-w-measure` is the whole point of this column. `mdx.module.css`
-			  says of `.docsContent` that it "fills the flex content column, no
-			  max-width", which on a wide screen ran a line of body copy past
+			  `max-w-measure` is the whole point of this column. `.docsContent` in
+			  `mdx.module.css` sets no max-width, which on a wide screen ran a line
+			  of body copy past
 			  1200px - roughly 140 characters, about twice the distance an eye
 			  reliably returns from.
 

@@ -416,7 +416,7 @@
 	}
 }
 
-/* Docs layout MDX (fills the flex content column, no max-width) ─────────── */
+/* Docs MDX: the frame's middle column, or the page head (no max-width) ──── */
 .docsContent {
 	@apply flex flex-col gap-8;
 }
