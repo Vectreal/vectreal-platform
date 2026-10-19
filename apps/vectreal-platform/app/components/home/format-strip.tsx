@@ -1,6 +1,7 @@
 import { IMPORTABLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { Link } from 'react-router'
 
+import { ArrowLink } from './arrow-link'
 import {
 	CONVERT_INDEX_PATH,
 	CONVERT_PAIRS,
@@ -8,8 +9,9 @@ import {
 } from '../../lib/convert/convert-pairs'
 
 const COPY = {
-	label: 'Convert 3D files online. For free.',
-	lead: 'Each one converts in your browser, with no account and no upload.'
+	heading: 'Convert 3D files online. For free.',
+	lead: 'Each one converts in your browser, with no account and no upload.',
+	all: 'All converters'
 } as const
 
 /*
@@ -27,19 +29,21 @@ const FORMATS = IMPORTABLE_FORMAT_IDS.map((id) => {
 })
 
 /**
- * The formats, low on the page, set as large type in one row.
+ * The converters, last on the page and on their own surface: a product of
+ * their own, free and with no account, rather than a feature of the one above.
+ * The formats are set as large type in one row.
  *
  * Still, not a carousel: five names fit across the measure, and a loop would
  * only move them out of reach. The brand is the hover, the one thing the row
  * asks the reader to do.
  */
 export const FormatStrip = () => (
-	<div className="flex flex-col gap-8">
-		<div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-			<h2 className="text-eyebrow text-muted-foreground" data-reveal>
-				{COPY.label}
+	<div className="ds-raised flex flex-col gap-10 rounded-2xl p-6 md:p-12">
+		<div className="flex flex-col gap-4">
+			<h2 id="converter-heading" className="text-h2" data-reveal>
+				{COPY.heading}
 			</h2>
-			<p className="text-muted-foreground text-body-sm" data-reveal>
+			<p className="text-muted-foreground text-body-lg" data-reveal>
 				{COPY.lead}
 			</p>
 		</div>
@@ -58,5 +62,12 @@ export const FormatStrip = () => (
 				</li>
 			))}
 		</ul>
+		<ArrowLink
+			to={CONVERT_INDEX_PATH}
+			viewTransition
+			className="text-foreground"
+		>
+			{COPY.all}
+		</ArrowLink>
 	</div>
 )

@@ -42,7 +42,9 @@ const LAYERS: { label: string; value?: string; art: ReactNode }[] = [
 
 /* Each key phrase's place among the key phrases, which staggers when it lights. */
 const keyIndex = (part: number) =>
-	COPY.statement.slice(0, part).filter((one) => typeof one !== 'string').length
+	COPY.statement
+		.slice(0, part)
+		.filter((one) => typeof one !== 'string' && 'key' in one).length
 
 /**
  * Why the company exists: one paragraph, and beside it the path it names.
@@ -126,6 +128,11 @@ export const MissionStatement = () => {
 					{COPY.statement.map((part, i) =>
 						typeof part === 'string' ? (
 							part
+						) : 'highlight' in part ? (
+							// The problem, in the brand from the start: it does not wait to light up like the key phrases.
+							<span key={part.highlight} className="text-orange-ink">
+								{part.highlight}
+							</span>
 						) : (
 							<span
 								key={part.key}

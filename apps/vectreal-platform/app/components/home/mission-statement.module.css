@@ -63,7 +63,9 @@
   The statement's key phrases, lit by default. Where the browser can tie an
   animation to the paragraph's place on screen, they start muted with the rest
   and light one after another as it crosses the middle of the viewport; the
-  last one, the promise the paragraph ends on, lights in the brand.
+  last one, the promise the paragraph ends on, lights in the brand. The problem
+  the paragraph names is a highlight, not a key: it is in the brand from the
+  start and does not take part in this.
 */
 .key {
 	color: var(--foreground);
