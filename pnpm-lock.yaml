@@ -792,6 +792,9 @@ importers:
       '@vctrl/core':
         specifier: workspace:^
         version: link:../../build/packages/vctrl/core
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       n8ao:
         specifier: ^1.10.1
         version: 1.10.1(postprocessing@6.39.4(three@0.185.1))(three@0.185.1)
@@ -801,6 +804,9 @@ importers:
       react:
         specifier: 19.2.8
         version: 19.2.8
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
       three:
         specifier: 'catalog:'
         version: 0.185.1

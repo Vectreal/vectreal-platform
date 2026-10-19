@@ -3,13 +3,8 @@
   the controls' entrances. No Tailwind here, and no palette: the controls take
   the shared one from `theme.css` through the scheme class on the viewer root.
 
-  The utilities the components use come from whoever compiles them. A host
-  that builds the viewer from source, as the platform and Storybook do, scans
-  it and emits them in its own `utilities` layer. The published bundle gets
-  them from `package.css`. Importing them here as well gave the platform a
-  second, unlayered copy that loaded after its own and beat every layered
-  utility in the app: `hidden md:flex` stayed hidden and `border border-b-2`
-  drew a 1px bottom edge, anywhere on a page that had loaded the viewer.
+  The utilities the components use, all `vv:` classes, come from
+  `utilities.css`, for every consumer.
 */
 
 .viewer {

@@ -1,12 +1,12 @@
 /**
- * Tailwind's utilities reach the viewer from exactly one place per consumer.
+ * The viewer's utilities come from one stylesheet, `utilities.css`, under the
+ * `vv` prefix, for the published bundle and for a host that compiles the
+ * viewer from source alike.
  *
- * `styles.css` once imported them itself, unlayered. A host that compiles the
- * viewer from source (the platform, Storybook) already generates them in its
- * own `utilities` layer, and the viewer's copy loaded later and beat every
- * layered utility in the app: `hidden md:flex` stayed hidden, `border
- * border-b-2` drew a 1px bottom edge. Only the published bundle, whose
- * consumers cannot scan the source, ships them.
+ * Unprefixed, they collided with the host's own: the platform once got a
+ * second, unlayered copy that beat every layered utility in the app (`hidden
+ * md:flex` stayed hidden), and on npm a host's class on the viewer lost to the
+ * viewer's copy of it. A `vv:` class is one no host generates.
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -51,15 +51,39 @@ describe('the viewer stylesheet split', () => {
 		expect(importers).toEqual([])
 	})
 
-	it('gives the published bundle the theme, utilities and the app palette', () => {
-		expect(importsOf(read('package.css'))).toEqual([
+	it('generates every utility under the vv prefix, for every consumer', () => {
+		const utilities = read('utilities.css')
+		expect(importsOf(utilities)).toEqual([
 			'tailwindcss/theme',
+			'tailwindcss/utilities',
+			'../../../shared/components/src/styles/theme.css'
+		])
+		// The prefix keeps a host's class from ever being one of the viewer's
+		// rules; `inline` keeps the theme's variables off the viewer root.
+		expect(utilities).toContain(
+			"@import 'tailwindcss/theme' prefix(vv) theme(inline);"
+		)
+		expect(utilities).toContain("@import 'tailwindcss/utilities' source(none);")
+		// Rules from the shared palette arrive once, from `globals.css` in the
+		// app and from `package.css` in the bundle.
+		expect(utilities).toContain(
+			"@import '../../../shared/components/src/styles/theme.css' reference;"
+		)
+		expect(utilities).toContain('--radius-*: initial;')
+		expect(read('index.ts')).toContain("import './utilities.css'")
+	})
+
+	it('gives the published bundle the app palette and generates nothing else', () => {
+		expect(importsOf(read('package.css'))).toEqual([
 			'tailwindcss/utilities',
 			// The shared palette and shell recipe, so the controls the viewer
 			// draws can look like the Publisher's on a page we do not own.
 			'../../../shared/components/src/styles/theme.css'
 		])
-		expect(read('package.css')).toContain('--radius-*: initial;')
+		expect(read('package.css')).toContain(
+			"@import 'tailwindcss/utilities' source(none);"
+		)
+		expect(read('package.css')).not.toContain('@source')
 	})
 
 	it('builds the published entry from the source entry plus package.css', () => {

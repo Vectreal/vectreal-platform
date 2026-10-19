@@ -16,7 +16,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
-import { cn } from '@shared/utils'
 import {
 	resolveEnvironmentFiles,
 	resolveNormalizedScale,
@@ -54,6 +53,7 @@ import {
 	SceneViewReturn
 } from './components'
 import { CHROME_PLACEMENT } from './components/chrome-classes'
+import { withHostClasses } from './components/class-names'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -921,8 +921,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		<Suspense fallback={loader}>
 			<Canvas
 				frameloop="always"
-				containerClassName={cn(
-					'viewer vctrl-viewer h-full w-full overflow-clip text-base [&_a]:text-inherit [&_a]:no-underline [&_button]:border-0 [&_p]:m-0',
+				containerClassName={withHostClasses(
+					'viewer vctrl-viewer vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0',
 					className
 				)}
 				containerBackground={backdrop ? sceneBackdropCss(backdrop) : undefined}
@@ -1157,7 +1157,7 @@ const VectrealViewer = memo(
 					) : errorFallback !== undefined ? (
 						errorFallback
 					) : (
-						<p role="alert" className="text-sm opacity-70">
+						<p role="alert" className="vv:text-sm vv:opacity-70">
 							This model could not be loaded.
 						</p>
 					)

@@ -1,6 +1,6 @@
 const LoadingShadowPlane = () => {
 	return (
-		<div className="bg-background/45 pointer-events-none absolute top-1/2 left-1/2 z-0 h-24 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full blur-2xl" />
+		<div className="vv:bg-background/45 vv:pointer-events-none vv:absolute vv:top-1/2 vv:left-1/2 vv:z-0 vv:h-24 vv:w-44 vv:-translate-x-1/2 vv:-translate-y-1/2 vv:rounded-full vv:blur-2xl" />
 	)
 }
 

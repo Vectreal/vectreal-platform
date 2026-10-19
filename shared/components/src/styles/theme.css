@@ -274,8 +274,20 @@
 }
 
 @layer utilities {
+	/*
+	  Written as declarations, not `@apply`: the published viewer compiles this
+	  file under Tailwind's `vv` prefix, where `@apply` accepts only `vv:`
+	  utilities, and the app compiles it without one. The values are Tailwind's
+	  `border`, `shadow-xl` and `backdrop-blur-xl`.
+	*/
 	.shell-panel {
-		@apply bg-shell-surface border-shell-border-soft border shadow-xl backdrop-blur-xl;
+		border: 1px solid var(--shell-border-soft);
+		background-color: var(--shell-surface);
+		box-shadow:
+			0 20px 25px -5px rgb(0 0 0 / 0.1),
+			0 8px 10px -6px rgb(0 0 0 / 0.1);
+		-webkit-backdrop-filter: blur(24px);
+		backdrop-filter: blur(24px);
 		/*
 		  `rounded-xl`, spelled out: the published viewer clears the radius scale
 		  (see `packages/viewer/src/package.css`), so the utility does not exist
@@ -325,7 +337,11 @@
 		background-color: color-mix(in oklch, var(--foreground) 9%, transparent);
 	}
 
-	.shell-focus {
-		@apply focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none;
+	/* A 2px `--ring` outside a 2px `--background` gap, as `ring-2 ring-offset-2`. */
+	.shell-focus:focus-visible {
+		outline-style: none;
+		box-shadow:
+			0 0 0 2px var(--background),
+			0 0 0 4px var(--ring);
 	}
 }

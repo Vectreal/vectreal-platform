@@ -1,4 +1,3 @@
-import { cn } from '@shared/utils'
 import {
 	useCallback,
 	useEffect,
@@ -13,6 +12,7 @@ import CheckIcon from './assets/check-icon'
 import ChevronLeftIcon from './assets/chevron-left-icon'
 import ChevronRightIcon from './assets/chevron-right-icon'
 import { CHROME_BUTTON } from './chrome-classes'
+import { cn, withHostClasses } from './class-names'
 
 export interface CameraControlsOption {
 	cameraId: string
@@ -41,20 +41,20 @@ export interface CameraControlsProps {
 const LIST_THRESHOLD = 3
 
 const classes = {
-	root: 'vctrl-viewer-camera-controls shell-panel text-foreground flex items-center gap-0.5 p-1',
+	root: 'vctrl-viewer-camera-controls shell-panel vv:text-foreground vv:flex vv:items-center vv:gap-0.5 vv:p-1',
 	arrow: cn(
 		CHROME_BUTTON,
-		'flex h-7 w-7 shrink-0 items-center justify-center rounded-full p-0 leading-none disabled:cursor-default disabled:opacity-40 disabled:hover:bg-transparent'
+		'vv:flex vv:h-7 vv:w-7 vv:shrink-0 vv:items-center vv:justify-center vv:rounded-full vv:p-0 vv:leading-none vv:disabled:cursor-default vv:disabled:opacity-40 vv:disabled:hover:bg-transparent'
 	),
 	label:
-		'flex h-7 min-w-0 items-center justify-center gap-2 rounded-full px-3 text-xs leading-none font-medium sm:min-w-32',
-	counter: 'text-muted-foreground text-[11px] tabular-nums',
-	list: 'shell-panel absolute bottom-full left-1/2 mb-2 flex max-h-64 w-56 -translate-x-1/2 flex-col overflow-y-auto p-1',
+		'vv:flex vv:h-7 vv:min-w-0 vv:items-center vv:justify-center vv:gap-2 vv:rounded-full vv:px-3 vv:text-xs vv:leading-none vv:font-medium vv:sm:min-w-32',
+	counter: 'vv:text-muted-foreground vv:text-[11px] vv:tabular-nums',
+	list: 'shell-panel vv:absolute vv:bottom-full vv:left-1/2 vv:mb-2 vv:flex vv:max-h-64 vv:w-56 vv:-translate-x-1/2 vv:flex-col vv:overflow-y-auto vv:p-1',
 	// Marked the way the shared menus mark an item, by tint rather than a ring:
 	// a ring is clipped by the scrolling list and outweighs the rows around it.
 	option:
-		'text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:bg-foreground/10 focus-visible:text-foreground flex w-full cursor-pointer appearance-none [font-family:inherit] items-center gap-2 rounded-[var(--radius,1rem)] border-0 bg-transparent px-3 py-2 text-left text-xs outline-hidden transition-colors duration-150 motion-reduce:transition-none',
-	icon: 'h-3.5 w-3.5 shrink-0'
+		'vv:text-muted-foreground vv:hover:bg-foreground/5 vv:hover:text-foreground vv:focus-visible:bg-foreground/10 vv:focus-visible:text-foreground vv:flex vv:w-full vv:cursor-pointer vv:appearance-none vv:[font-family:inherit] vv:items-center vv:gap-2 vv:rounded-[var(--radius,1rem)] vv:border-0 vv:bg-transparent vv:px-3 vv:py-2 vv:text-left vv:text-xs vv:outline-hidden vv:transition-colors vv:duration-150 vv:motion-reduce:transition-none',
+	icon: 'vv:h-3.5 vv:w-3.5 vv:shrink-0'
 } as const
 
 const cameraName = (camera: CameraControlsOption | null | undefined) =>
@@ -123,7 +123,7 @@ const CameraControls = ({
 	const label = (
 		<>
 			{/* Announced on change so the camera is not a purely visual state. */}
-			<span className="truncate" aria-live="polite">
+			<span className="vv:truncate" aria-live="polite">
 				{activeName}
 			</span>
 			{isCyclable && !isOffList ? (
@@ -136,7 +136,7 @@ const CameraControls = ({
 
 	return (
 		<div
-			className={cn(classes.root, className)}
+			className={withHostClasses(classes.root, className)}
 			role="group"
 			aria-label="Cameras"
 		>
@@ -278,7 +278,7 @@ const CameraList = ({
 	return (
 		<div
 			ref={rootRef}
-			className="relative min-w-0"
+			className="vv:relative vv:min-w-0"
 			onKeyDown={handleKeyDown}
 			/*
 			  Focus leaving the control closes the list, whether it moved to
@@ -293,7 +293,11 @@ const CameraList = ({
 			<button
 				ref={triggerRef}
 				type="button"
-				className={cn(CHROME_BUTTON, classes.label, 'text-foreground w-full')}
+				className={cn(
+					CHROME_BUTTON,
+					classes.label,
+					'vv:text-foreground vv:w-full'
+				)}
 				onMouseDown={keepFocus}
 				onClick={() => (isOpen ? close(true) : setIsOpen(true))}
 				aria-haspopup="listbox"
@@ -326,16 +330,16 @@ const CameraList = ({
 								className={cn(
 									classes.option,
 									// Marked by its check, not filled: a solid row fights the surface.
-									isActive && 'text-foreground'
+									isActive && 'vv:text-foreground'
 								)}
 								onClick={() => {
 									onSelect(camera.cameraId)
 									close(true)
 								}}
 							>
-								<span className="truncate">{cameraName(camera)}</span>
+								<span className="vv:truncate">{cameraName(camera)}</span>
 								{isActive ? (
-									<CheckIcon className={cn(classes.icon, 'ml-auto')} />
+									<CheckIcon className={cn(classes.icon, 'vv:ml-auto')} />
 								) : null}
 							</button>
 						)
