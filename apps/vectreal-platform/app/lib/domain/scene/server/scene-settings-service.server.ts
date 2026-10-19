@@ -151,6 +151,16 @@ class SceneSettingsService {
 		return record?.fileSize ?? 0
 	}
 
+	/** Whether visitors can load the scene: it has a published GLB. */
+	async isScenePublished(sceneId: string): Promise<boolean> {
+		const [record] = await this.db
+			.select({ sceneId: scenePublished.sceneId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+			.limit(1)
+		return record !== undefined
+	}
+
 	/**
 	 * Retrieves project ID associated with a scene.
 	 * @param sceneId - The scene ID

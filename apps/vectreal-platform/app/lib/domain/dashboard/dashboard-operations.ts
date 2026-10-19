@@ -23,6 +23,7 @@ export type DashboardEntityType = 'project' | 'folder' | 'scene'
 export type DashboardOperation =
 	| 'project:create'
 	| 'project:update'
+	| 'project-embed-domains:update'
 	| 'project:delete'
 	| 'scene-folder:create'
 	| 'scene-folder:update'
@@ -76,6 +77,12 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 > = {
 	'project:create': ['owner', 'admin', 'member'],
 	'project:update': ['owner', 'admin'],
+	/**
+	 * Which sites may show the project's embeds. Its own operation, apart from
+	 * `project:update`, so an agent scoped to embeds can set it without being
+	 * able to rename the project.
+	 */
+	'project-embed-domains:update': ['owner', 'admin'],
 	/**
 	 * Owner-only, which diverges from the `canManageProject` RLS predicate
 	 * (owner|admin). The divergence is deliberate and inert - see the module
@@ -158,6 +165,7 @@ export class DashboardPermissionError extends Error {
 const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 	'project:create': 'create projects',
 	'project:update': 'edit this project',
+	'project-embed-domains:update': "change this project's allowed domains",
 	'project:delete': 'delete this project',
 	'scene-folder:create': 'create folders',
 	'scene-folder:update': 'rename this folder',

@@ -18,6 +18,7 @@ import type { DashboardOperation } from '../dashboard/dashboard-operations'
 export const AGENT_OPERATION_SCOPES = {
 	'project:create': 'projects:write',
 	'project:update': 'projects:write',
+	'project-embed-domains:update': 'embed:manage',
 	'project:delete': null,
 	'scene-folder:create': 'projects:write',
 	'scene-folder:update': 'projects:write',

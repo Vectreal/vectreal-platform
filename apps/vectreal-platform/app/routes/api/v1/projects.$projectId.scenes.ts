@@ -14,7 +14,6 @@
 import { ApiResponse } from '@shared/utils'
 import { createSceneInputSchema } from '@vctrl/sdk'
 
-import { UUID_REGEX } from '../../../constants/utility-constants'
 import { withSceneSettingsDefaults } from '../../../constants/viewer-defaults'
 import {
 	agentApiError,
@@ -25,13 +24,9 @@ import { readAgentGlbUpload } from '../../../lib/domain/agent/agent-glb-upload.s
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
 import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { resolveAgentProject } from '../../../lib/domain/agent/agent-resource.server'
 import { reclaimUploadBatch } from '../../../lib/domain/asset/asset-reclaim.server'
 import { uploadSceneAssets } from '../../../lib/domain/asset/asset-storage.server'
-import {
-	canPerformDashboardOperation,
-	describeDashboardOperationDenial
-} from '../../../lib/domain/dashboard/dashboard-operations'
-import { resolveProjectMembership } from '../../../lib/domain/dashboard/dashboard-permissions.server'
 import {
 	SPLIT_BIN_FILE_NAME,
 	SPLIT_GLTF_FILE_NAME
@@ -56,24 +51,11 @@ export async function action({ request, params }: Route.ActionArgs) {
 		scope: AGENT_OPERATION_SCOPES['scene:create']
 	})
 
-	// A project outside the grant's organization answers like one that does
-	// not exist, so ids cannot be probed.
-	// A malformed id would fail the uuid cast as a 500; it names no project.
-	const { projectId } = params
-	const membership =
-		projectId &&
-		UUID_REGEX.test(projectId) &&
-		(await resolveProjectMembership(projectId, actor.userId))
-	if (!membership || membership.organizationId !== actor.organizationId) {
-		throw agentApiError(404, 'not_found', 'No such project.')
-	}
-	if (!canPerformDashboardOperation('scene:create', membership)) {
-		throw agentApiError(
-			403,
-			'insufficient_role',
-			describeDashboardOperationDenial('scene:create', membership.role)
-		)
-	}
+	const { projectId } = await resolveAgentProject(
+		params.projectId,
+		actor,
+		'scene:create'
+	)
 
 	const { form, split: gltf, fileSha256 } = await readAgentGlbUpload(request)
 	const input = createSceneInputSchema.safeParse({ name: form.get('name') })

@@ -9,9 +9,9 @@ import { deleteStorageObjects } from '../asset/asset-storage.server'
 import { assertWithinQuota } from '../billing/quota-enforcement.server'
 import { assertDashboardPermission } from '../dashboard/dashboard-permissions.server'
 
-const db = getDbClient()
+import type { DashboardOperation } from '../dashboard/dashboard-operations'
 
-type DbClient = typeof db
+const db = getDbClient()
 
 async function verifyOrganizationAccess(
 	dbClient: DbExecutor,
@@ -37,7 +37,7 @@ async function verifyOrganizationAccess(
 }
 
 async function getProjectWithMembership(
-	dbClient: DbClient,
+	dbClient: DbExecutor,
 	projectId: string,
 	userId: string
 ) {
@@ -159,23 +159,45 @@ export async function createProject(
 	return newProject
 }
 
+/** Which operation lets an actor change each editable project field. */
+const PROJECT_FIELD_OPERATIONS: Record<
+	'name' | 'allowedEmbedDomains',
+	DashboardOperation
+> = {
+	name: 'project:update',
+	allowedEmbedDomains: 'project-embed-domains:update'
+}
+
 export async function updateProject(
 	projectId: string,
 	updates: Partial<
 		Pick<typeof projects.$inferSelect, 'name' | 'allowedEmbedDomains'>
 	>,
-	userId: string
+	userId: string,
+	executor: DbExecutor = db
 ): Promise<typeof projects.$inferSelect> {
-	const result = await getProjectWithMembership(db, projectId, userId)
+	const result = await getProjectWithMembership(executor, projectId, userId)
 	const { project, membership } = result || {}
 
 	if (!project || !membership) {
 		throw new Error('Project not found or access denied')
 	}
 
-	assertDashboardPermission('project:update', { role: membership.role })
+	// Every field answers to its own operation, and a field without one is
+	// refused, so a field added to `updates` cannot skip the check.
+	const fields = Object.keys(updates) as (keyof typeof updates)[]
+	if (fields.length === 0) {
+		throw new Error('Nothing to update')
+	}
+	for (const field of fields) {
+		const operation = PROJECT_FIELD_OPERATIONS[field]
+		if (!operation) {
+			throw new Error(`Project field ${String(field)} cannot be updated`)
+		}
+		assertDashboardPermission(operation, { role: membership.role })
+	}
 
-	const [updatedProject] = await db
+	const [updatedProject] = await executor
 		.update(projects)
 		.set(updates)
 		.where(eq(projects.id, projectId))
