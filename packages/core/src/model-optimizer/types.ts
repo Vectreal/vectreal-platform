@@ -50,6 +50,14 @@ export interface NormalsOptions {
 	overwrite?: boolean
 }
 
+export interface PlacementOptions {
+	/**
+	 * Real-world length of the model's longest bounding-box edge, in meters
+	 * (glTF's unit). Omitted, the model keeps its size.
+	 */
+	longestEdgeMeters?: number
+}
+
 export interface DracoOptions {
 	/** Compression method. Edgebreaker gives higher compression; sequential preserves vertex order. */
 	method?: 'edgebreaker' | 'sequential'

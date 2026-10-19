@@ -55,6 +55,7 @@ import {
 import {
 	dedupPass,
 	normalsPass,
+	placementPass,
 	quantizePass,
 	simplifyPass,
 	TransformPass
@@ -65,6 +66,7 @@ import {
 	DracoOptions,
 	NormalsOptions,
 	OptimizationReport,
+	PlacementOptions,
 	QuantizeOptions,
 	SimplifyOptions,
 	TextureBinaryPayload,
@@ -232,6 +234,16 @@ export class ModelOptimizer {
 		await this.runPass(normalsPass, options)
 	}
 
+	/**
+	 * Center the model on the ground at the origin, optionally at a real-world
+	 * size. See {@link placeOnGround}.
+	 *
+	 * @param options - Placement options
+	 */
+	public async place(options: PlacementOptions = {}): Promise<void> {
+		await this.runPass(placementPass, options)
+	}
+
 	private async runPass<Options>(
 		pass: TransformPass<Options>,
 		options: Options
@@ -239,7 +251,12 @@ export class ModelOptimizer {
 		this.ensureModelLoaded()
 
 		this.emitProgress(pass.started, 0)
-		await this.applyTransforms(pass.transforms(options), pass.name)
+		await this.applyTransforms(
+			pass.transforms(options),
+			pass.name,
+			undefined,
+			pass.mayGrow
+		)
 		this.emitProgress(pass.finished, 100)
 	}
 
@@ -852,7 +869,8 @@ export class ModelOptimizer {
 	private async applyTransforms(
 		transforms: Transform[],
 		operationName: string,
-		ticket = this.currency.currentTicket()
+		ticket = this.currency.currentTicket(),
+		mayGrow = false
 	): Promise<void> {
 		// Asked before the document is: a reset or a failed load that retired
 		// the ticket also cleared the document, and returning quietly then
@@ -876,7 +894,7 @@ export class ModelOptimizer {
 			// Before either outcome: a retired step neither commits nor reverts.
 			this.currency.ensureCurrent(ticket)
 
-			if (newSize > originalSize) {
+			if (!mayGrow && newSize > originalSize) {
 				console.warn(
 					`${operationName} increased model size (${originalSize} → ${newSize} bytes), reverting changes.`
 				)
