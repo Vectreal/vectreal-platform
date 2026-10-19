@@ -442,7 +442,7 @@ export const HOME_PAGE_COPY = {
 	},
 	mission: {
 		label: 'Why we build this',
-		/** One paragraph, in parts: the `key` ones light up in turn as it scrolls through the screen. */
+		/** One paragraph, in parts: the `key` ones light up in turn as it scrolls through the screen; the `highlight` one is in the brand throughout. */
 		statement: [
 			'Most companies that make physical products ',
 			{ key: 'already have 3D files' },

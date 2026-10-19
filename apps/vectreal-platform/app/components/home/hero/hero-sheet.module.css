@@ -2,8 +2,8 @@
 
 /*
   The hero is a drawing sheet: one grid that fills the fold. Copy and stage share
-  the first row. In the second, the readout stands under the model, in the
-  stage's column, and the fold's cue takes the corner under the copy, so
+  the first row. In the second, the caption (the sample link, then the readout)
+  stands under the model, in the stage's column, and the fold's cue takes the corner under the copy, so
   nothing can overlap and nothing can be pushed out of the fold. The stage alone
   runs full-bleed; the content keeps the page measure (`.container-page`), so the headline, the nav's logo and
   every section below start on one line.
@@ -290,20 +290,19 @@
 	gap: 24px;
 	pointer-events: none;
 	color: var(--muted-foreground);
+	transition: color var(--duration-fast);
 }
 .scale {
 	transition: opacity 500ms;
+}
+/* A file held over the sheet: the figure's label takes the brand, so the drop target answers before the status line does. */
+.sheet[data-dragging] .meta {
+	color: var(--orange-ink);
 }
 .scale[data-gone] {
 	opacity: 0;
 }
 
-/*
-  The readout: an eyebrow over a number. Type and alignment are the whole
-  structure, no rules and no box. The file, what it weighed, what it weighs now
-  and its status take the first line; the three counts close it as one quiet
-  line, value first, the way the folded sheet sets them.
-*/
 /* Under the model: the way in for a visitor with no file, then what the file holds. */
 .caption {
 	grid-area: 2 / 2;
@@ -313,6 +312,12 @@
 	align-items: flex-start;
 	gap: 20px;
 }
+/*
+  The readout: an eyebrow over a number. Type and alignment are the whole
+  structure, no rules and no box. The file, what it weighed, what it weighs now
+  and its status take the first line; the three counts close it as one quiet
+  line, value first, the way the folded sheet sets them.
+*/
 .readout {
 	--v-size: clamp(20px, 1.8vw, 28px);
 

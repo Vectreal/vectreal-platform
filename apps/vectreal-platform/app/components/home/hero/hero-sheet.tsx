@@ -84,7 +84,7 @@ export function HeroSheet() {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const dimsRef = useRef<SVGSVGElement>(null)
 	const scaleRef = useRef<HTMLSpanElement>(null)
-	const readoutRef = useRef<HTMLDivElement>(null)
+	const readoutRef = useRef<HTMLElement>(null)
 	const backdropRef = useRef<HTMLCanvasElement>(null)
 	const stageWanted = useMountWhenVisibleAndIdle(stageRef)
 
@@ -198,19 +198,20 @@ export function HeroSheet() {
 						/>
 					</div>
 
-					{/* Above what the file holds: a visitor with no file of their own can open this one. */}
-					<figcaption className={styles.caption}>
+					{/*
+					  Above what the file holds: a visitor with no file of their own
+					  can open this one. The backdrop stops short of the whole
+					  caption, so the ref is on it rather than on the readout alone.
+					*/}
+					<figcaption ref={readoutRef} className={styles.caption}>
 						<ArrowLink
 							to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
 							viewTransition
-							className={cn(
-								'text-muted-foreground hover:text-foreground transition-colors',
-								styles.sample
-							)}
+							className="text-muted-foreground hover:text-foreground transition-colors"
 						>
 							{HERO.sampleCta}
 						</ArrowLink>
-						<div ref={readoutRef} className={styles.readout}>
+						<div className={styles.readout}>
 							<Readout store={store} />
 						</div>
 					</figcaption>
