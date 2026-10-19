@@ -196,9 +196,10 @@ async function capturePrepare(context: BrowserContext, theme: string) {
 	// does to it. The camera the page puts in this viewport is the Balanced
 	// result, so the drawer shows the preset applied to this very file. The
 	// size line on the publish card opens the drawer on its own, leaving the
-	// rest of the viewport free for the stage.
+	// rest of the viewport free for the stage. The drawer opens on Original;
+	// choosing a preset runs it.
 	await page.getByRole('button', { name: /MB · / }).click()
-	await page.getByRole('button', { name: 'Apply Optimizations' }).click()
+	await page.getByRole('button', { name: /^Balanced/ }).click()
 	await page
 		.getByText('Optimization result', { exact: false })
 		.waitFor({ timeout: 180_000 })
@@ -315,6 +316,9 @@ async function signedInSession(): Promise<Session | null> {
  * work. Its thumbnail is blanked for the shot and its box recorded: the live
  * camera shrinks into it. CAPTURE_MANAGE_PATH pins a different page.
  */
+/** The first theme's workspace fact, which the second theme waits for. */
+let manageFact: string | null = null
+
 async function captureManage(context: BrowserContext, theme: string) {
 	const page = await context.newPage()
 
@@ -322,6 +326,20 @@ async function captureManage(context: BrowserContext, theme: string) {
 		`${BASE_URL}${process.env.CAPTURE_MANAGE_PATH ?? '/dashboard'}`
 	)
 	await page.waitForLoadState('networkidle')
+
+	/*
+	  The overview's workspace fact is drawn at random per visit, and the page
+	  swaps one theme's frame for the other's: reload until this theme shows
+	  the fact the first one did.
+	*/
+	const fact = page.locator('.text-stat').first()
+	for (let attempt = 0; manageFact && attempt < 30; attempt++) {
+		if ((await fact.textContent()) === manageFact) break
+		await page.reload({ waitUntil: 'networkidle' })
+	}
+	if (manageFact && (await fact.textContent()) !== manageFact)
+		throw new Error(`The overview never drew the fact "${manageFact}" again.`)
+	manageFact ??= await fact.textContent()
 
 	/*
 	  The overview features the most recently edited scene under "Jump back in",
@@ -337,8 +355,9 @@ async function captureManage(context: BrowserContext, theme: string) {
 	const card = page
 		.locator('.group\\/card')
 		.filter({ has: page.getByText(name, { exact: true }) })
+	// In the featured band the thumbnail is its pointer shortcut, the one link kept out of the accessibility tree.
 	const thumbnail = (await featured.count())
-		? featured.locator('div.relative > div').first()
+		? featured.locator('a[aria-hidden="true"] > *').first()
 		: (await card.count())
 			? card.first().locator('a > div').first()
 			: null

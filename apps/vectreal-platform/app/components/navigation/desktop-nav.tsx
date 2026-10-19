@@ -50,9 +50,10 @@ function DesktopNav({
 		<nav
 			data-scrolled={scrolled || undefined}
 			className={cn(
-				'z-nav fixed top-0 right-0 left-0 transition-colors',
+				'z-nav fixed top-0 right-0 left-0 transition-[background-color,box-shadow]',
 				SETTLE,
-				scrolled ? 'bg-background' : 'bg-transparent',
+				// Scrolled, the bar is a plate the page passes under: its material's shadow is the edge.
+				scrolled ? 'ds-raised' : 'bg-transparent',
 				className
 			)}
 			aria-label="Main navigation"
@@ -124,14 +125,6 @@ function DesktopNav({
 					</div>
 				</div>
 			</div>
-			<div
-				aria-hidden="true"
-				className={cn(
-					'ds-divider absolute inset-x-0 bottom-0 h-px transition-opacity',
-					SETTLE,
-					scrolled ? 'opacity-100' : 'opacity-0'
-				)}
-			/>
 		</nav>
 	)
 }
