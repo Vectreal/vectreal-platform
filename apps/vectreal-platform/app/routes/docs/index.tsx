@@ -36,7 +36,7 @@ export function meta({ error }: MetaArgs) {
   day it is added to the manifest, which is the only place a contributor is
   told to register one.
 */
-// The sample offered from the browser door: the one under a megabyte.
+// The sample offered on the artists' path: the one under a megabyte.
 const rocket = requireSampleModel('rocket')
 
 const pagesIn = (category: DocCategory) =>
@@ -50,9 +50,9 @@ const quickLinkClass =
 /**
  * One of the manifest's two paths, as a bento: the path's heading and what it
  * needs, then a tile per category holding that category's page titles in the
- * sidebar's order. The first category is the way in, so on a wide screen it
- * takes a third and the rest share the remaining two, which gives each path
- * its own shape rather than a row of equal cards.
+ * sidebar's order. On a wide screen a path with two categories gives the first,
+ * the way in, a third and the second two thirds; a path with three sets them
+ * as three equal tiles.
  *
  * Titles only. Each page's description, the sample tiles, the embed snippet and
  * a live viewer all used to sit on this page too, and together they buried the

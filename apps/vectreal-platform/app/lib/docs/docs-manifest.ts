@@ -78,9 +78,9 @@ export type DocAudienceId = 'browser' | 'code'
  * setup: the docs' own "Start here", the sidebar and the footer's "Getting
  * started" all sent someone who only wanted to try the publisher to cloning
  * the repo and starting Supabase. The split is still by what the reader does,
- * in the browser or in their own code; since the 17 Oct 2026 polishing session
- * it is labelled by the reader who usually does it, artists and developers,
- * which is shorter and is how marketing talks about them. The descriptions
+ * in the browser or in their own code, but it is labelled by the reader who
+ * usually does it, artists and developers, which is shorter and is how
+ * marketing talks about them. The descriptions
  * keep saying what each path needs, for the shop owner who is neither.
  *
  * Every category sits in exactly one audience; `docs-manifest.spec.ts` holds

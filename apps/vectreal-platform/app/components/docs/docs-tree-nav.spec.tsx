@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 import { DocsTreeNav } from './docs-tree-nav'
 
 describe('the docs sidebar', () => {
-	it('puts the walkthrough under the browser and repo setup under the code', () => {
+	it('puts the walkthrough under artists and repo setup under developers', () => {
 		render(
 			<MemoryRouter>
 				<DocsTreeNav pathname="/docs/getting-started" />
