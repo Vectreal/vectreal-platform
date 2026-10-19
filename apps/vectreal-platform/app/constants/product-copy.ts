@@ -316,7 +316,7 @@ export const PRICING_PAGE_COPY = {
 	// which fails when an entitlement key is added without a row in the grid.
 	enterpriseHeading: 'Enterprise',
 	enterpriseDescription:
-		'Set your own limits and get a dedicated support channel. Tell us what you need and we will price it.'
+		'Custom limits and a direct line to the team. Tell us what you need and we will price it.'
 } as const
 
 // ---------------------------------------------------------------------------
