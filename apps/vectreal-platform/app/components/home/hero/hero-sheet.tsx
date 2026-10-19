@@ -138,7 +138,7 @@ export function HeroSheet() {
 		<section aria-labelledby="home-heading" className={styles.outer}>
 			<div
 				ref={sheetRef}
-				className={cn('ds-sunken', styles.sheet)}
+				className={cn('ds-tint-sunken', styles.sheet)}
 				style={SHEET_VARS}
 			>
 				<canvas

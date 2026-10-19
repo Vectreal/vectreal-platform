@@ -68,7 +68,7 @@ export function SceneAssetsSection({
 					{initial.map((asset) => (
 						<SceneAssetListItem
 							key={asset.id}
-							className="ds-raised"
+							className="ds-tint-raised"
 							{...(assetPropsById.get(asset.id) ||
 								buildAssetListItemProps(asset, textureUrls))}
 						/>
@@ -90,7 +90,7 @@ export function SceneAssetsSection({
 								{extra.map((asset) => (
 									<SceneAssetListItem
 										key={asset.id}
-										className="ds-raised"
+										className="ds-tint-raised"
 										{...(assetPropsById.get(asset.id) ||
 											buildAssetListItemProps(asset, textureUrls))}
 									/>

@@ -278,7 +278,7 @@ describe('design-system classes reject a variant', () => {
 		...new Set([...css.matchAll(pattern)].map((match) => match[1]))
 	]
 	const RUNGS = classesMatching(/^\t+\.(text-[a-z0-9-]+) \{$/gm)
-	const SURFACES = classesMatching(/^\t+\.(ds-[a-z]+) \{$/gm)
+	const SURFACES = classesMatching(/^\t+\.(ds-[a-z-]+) \{$/gm)
 
 	it('finds the classes it is supposed to be guarding', () => {
 		/*
@@ -294,7 +294,7 @@ describe('design-system classes reject a variant', () => {
 		*/
 		expect(RUNGS).toContain('text-h4')
 		expect(RUNGS).toHaveLength(11)
-		expect(SURFACES).toHaveLength(5)
+		expect(SURFACES).toHaveLength(13)
 	})
 
 	it.each([...RUNGS, ...SURFACES])('rejects hover:%s', async (className) => {

@@ -121,7 +121,7 @@ const Result = () => {
 			role="region"
 			aria-label={COPY.result.label}
 			// Edge to edge in its half: the window's own corners round it, so it needs no margin or radius of its own.
-			className="ds-sunken relative isolate aspect-16/10 lg:aspect-auto"
+			className="ds-tint-sunken relative isolate aspect-16/10 lg:aspect-auto"
 		>
 			<DitherGrain origin="bottom" />
 			<span className="text-label-xs text-muted-foreground absolute top-4 left-5">

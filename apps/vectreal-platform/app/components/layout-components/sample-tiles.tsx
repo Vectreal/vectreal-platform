@@ -59,7 +59,7 @@ export const SampleTiles: FC<Props> = ({
 								// `h-full`: the captions are different lengths and one wraps to a
 								// second line at 375px, which left the two tiles different
 								// heights in a two-column grid.
-								'group relative block h-full w-full rounded-xl p-3 text-left transition-[background-color,opacity]',
+								'group relative block h-full w-full rounded-xl p-3 text-left transition-[background-color,box-shadow,opacity]',
 								// The ladder's own hover step, as the publisher's scene tiles beside
 								// these use; flat while a download holds them.
 								download ? 'ds-raised cursor-default' : 'ds-raised-interactive',
@@ -103,7 +103,7 @@ export const SampleTiles: FC<Props> = ({
 							{isDownloading && (
 								<span
 									aria-hidden="true"
-									className="ds-sunken absolute inset-x-3 bottom-1.5 h-0.5 overflow-hidden rounded-full"
+									className="ds-tint-sunken absolute inset-x-3 bottom-1.5 h-0.5 overflow-hidden rounded-full"
 								>
 									<span
 										className="bg-orange block h-full rounded-full transition-[width] duration-(--duration-fast) motion-reduce:transition-none"

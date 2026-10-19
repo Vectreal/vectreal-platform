@@ -147,6 +147,22 @@
 	  panel composited over black. `contrast-tokens.spec.ts` pins it.
 	*/
 	--shell-muted-foreground: oklch(0.46 0 0);
+
+	/*
+	  The material every surface is made of: how its edge catches light, and
+	  the shadow it throws. `globals.css` composes these into the `ds-*` rungs;
+	  they live here because they are colours that change with the scheme.
+
+	  The light comes from above. So the top edge carries a bright bevel, the
+	  sides a hairline barely darker than the surface, the bottom edge a
+	  touch more, and the shadow falls below, warm rather than grey so it reads
+	  as a shadow on paper and not a smudge of ink.
+	*/
+	--material-bevel: oklch(1 0 0 / 0.9);
+	--material-rim: oklch(0.3 0.01 60 / 0.045);
+	--material-base: oklch(0.3 0.01 60 / 0.1);
+	--material-shadow: oklch(0.3 0.03 60 / 0.07);
+	--material-shadow-far: oklch(0.3 0.03 60 / 0.14);
 }
 
 .dark {
@@ -216,6 +232,17 @@
 	--shell-border-soft: oklch(0.38 0 0 / 0.35);
 	/* 4.88:1 at the same step, with the panel composited over white. */
 	--shell-muted-foreground: oklch(0.74 0 0);
+
+	/*
+	  In the dark the bevel is a faint lift of light rather than a white line,
+	  and the shadow is the page's own black, deeper, because a dark surface
+	  only separates from a darker page by the shade beneath it.
+	*/
+	--material-bevel: oklch(1 0 0 / 0.07);
+	--material-rim: oklch(1 0 0 / 0.06);
+	--material-base: oklch(1 0 0 / 0.025);
+	--material-shadow: oklch(0 0 0 / 0.35);
+	--material-shadow-far: oklch(0 0 0 / 0.55);
 }
 
 @theme inline {
@@ -283,7 +310,9 @@
 	.shell-panel {
 		border: 1px solid var(--shell-border-soft);
 		background-color: var(--shell-surface);
+		/* The material's bevel, so a panel's top edge catches light like every other surface. */
 		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
 			0 20px 25px -5px rgb(0 0 0 / 0.1),
 			0 8px 10px -6px rgb(0 0 0 / 0.1);
 		-webkit-backdrop-filter: blur(24px);
