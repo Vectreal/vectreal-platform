@@ -17,5 +17,13 @@ export type { ApiErrorCode } from './errors'
 export { meSchema } from './me'
 export type { Me } from './me'
 
-export { projectListSchema } from './projects'
-export type { ProjectList } from './projects'
+export {
+	createdProjectSchema,
+	createProjectInputSchema,
+	projectListSchema
+} from './projects'
+export type {
+	CreatedProject,
+	CreateProjectInput,
+	ProjectList
+} from './projects'

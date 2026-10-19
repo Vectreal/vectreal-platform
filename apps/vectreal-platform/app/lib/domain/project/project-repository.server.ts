@@ -1,6 +1,6 @@
 import { and, asc, count, eq } from 'drizzle-orm'
 
-import { getDbClient } from '../../../db/client'
+import { getDbClient, type DbExecutor } from '../../../db/client'
 import { organizationMemberships } from '../../../db/schema/core/organization-memberships'
 import { assets } from '../../../db/schema/project/assets'
 import { folders } from '../../../db/schema/project/folders'
@@ -14,7 +14,7 @@ const db = getDbClient()
 type DbClient = typeof db
 
 async function verifyOrganizationAccess(
-	dbClient: DbClient,
+	dbClient: DbExecutor,
 	organizationId: string,
 	userId: string
 ) {
@@ -129,15 +129,16 @@ export async function listOrganizationProjects(
 export async function createProject(
 	organizationId: string,
 	name: string,
-	userId: string
+	userId: string,
+	executor: DbExecutor = db
 ): Promise<typeof projects.$inferSelect> {
-	await verifyOrganizationAccess(db, organizationId, userId)
+	await verifyOrganizationAccess(executor, organizationId, userId)
 
 	await assertWithinQuota({
 		organizationId,
 		limitKey: 'projects_total',
 		measure: async () => {
-			const [row] = await db
+			const [row] = await executor
 				.select({ total: count() })
 				.from(projects)
 				.where(eq(projects.organizationId, organizationId))
@@ -146,10 +147,11 @@ export async function createProject(
 		message: ({ limit }) =>
 			limit === 1
 				? 'Free plan limit reached: you can have one project. Delete an existing project or upgrade to create another.'
-				: `Project limit reached for your plan (${limit}). Delete a project or upgrade to create more.`
+				: `Project limit reached for your plan (${limit}). Delete a project or upgrade to create more.`,
+		executor
 	})
 
-	const [newProject] = await db
+	const [newProject] = await executor
 		.insert(projects)
 		.values({ organizationId, name })
 		.returning()
