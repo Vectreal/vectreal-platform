@@ -29,8 +29,8 @@ const show = (el: HTMLElement) => {
  * the same at any frame rate; the dither dissolve it replaced swapped a mask
  * image every frame and flashed when a frame beat the mask's decode.
  *
- * `motion.md` calls arrival motion on scroll decoration. The user asked for it
- * on the home page knowingly: a decision for this page, not a precedent.
+ * `motion.md` calls arrival motion on scroll decoration. Moritz chose it
+ * knowingly for every marketing band, and `motion.md` records its terms.
  *
  * Once, and only below the fold. A section already on screen when the page
  * hydrates is never hidden, so server-rendered content cannot flash out and

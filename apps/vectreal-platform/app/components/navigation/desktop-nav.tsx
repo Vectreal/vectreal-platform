@@ -30,7 +30,7 @@ const SETTLE =
  * heading does. Once content runs under it, it settles once onto the page's
  * own color, a little shorter, with a hairline under it that is there only
  * while something is beneath. It never blurs and never hides: a blurred band
- * fought the page's dither, and a bar that leaves on the way down is gone just
+ * fought the dither the page had then, and a bar that leaves on the way down is gone just
  * when a reader wants to move on.
  *
  * On the docs the breadcrumb takes the place of the marketing links, so a docs

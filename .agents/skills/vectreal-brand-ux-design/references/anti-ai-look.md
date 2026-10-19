@@ -56,7 +56,8 @@ header component - that is what a system produces when nothing chose.
 - Decorative 3D blobs and abstract ambient shapes
 - Stock photography of people at laptops
 - Emoji standing in for icons
-- Fade-up on scroll applied to every section
+- Fade-up on scroll applied to every section, unless it is the one arrival
+  [motion.md](motion.md) records for the marketing frame
 
 **Copy**
 - "seamlessly", "robust", "powerful", "unlock the power of", "effortlessly",
@@ -107,6 +108,39 @@ believes the page has ended and stops. Show the top of the next thing.
 affordance, not flattened into an icon grid. That is the honest alternative to a
 three-column feature row.
 
+## The marketing page
+
+Decided by Moritz on 19 and 20 Oct 2026, from a study of github.com's
+composition. Every page on the marketing side of the `data-site` switch
+([tokens.md](tokens.md)) is built the same way, sign-in and the docs index
+included:
+
+- **The head runs edge to edge above the frame.** The home hero, or
+  `PageHero` on any other page, sits outside `SheetFrame`, so the frame's rules
+  start under it.
+- **Every section below it is a `Band`** inside `SheetFrame`
+  ([elevation.md](elevation.md) owns the rules themselves).
+- **A row of things is ruled cells, not cards.** The cells run from rule to
+  rule and are ruled between, stacking with a rule between them on a phone.
+  `format-strip.tsx` is the pattern, and pricing's plans, the converter
+  chooser and the docs index follow it. A band whose last row is cells is
+  `flush`, so it ends on the sheet's rule.
+- **One thing in a row may be lit.** The recommended plan is a `ds-lit` pane
+  set inside its cell (`--lit-inset`, `--lit-radius`), so its rim never lies on
+  a rule. Lit panes are for media and for that one pick, never for a block of
+  text.
+- **A form is a cell of its own.** On `/contact` and `/free-model` the form
+  and its notes are two cells of one row under the head, with a column rule
+  between them and no card around the form.
+- **Prose pages are a spec sheet.** The MDX layout puts each `##` heading in a
+  left column and its text in the right, with a rule above each heading.
+
+**The one exception is the converter's stage.** `converter-surface.tsx` is a
+tool on a marketing page: a stranger drops a file on it and watches the model
+load. It keeps the product's surfaces (the `ds-sunken` well and the
+publisher's controls), because that is what makes it read as the real tool
+rather than a picture of one. The page around it follows the rules above.
+
 ## When a rule and this file disagree
 
 This file describes intent. [tokens.md](tokens.md),
@@ -128,4 +162,9 @@ absent   apps/vectreal-platform/app/routes/home-page/home-page.tsx              
 absent   apps/vectreal-platform/app/routes/home-page/home-page.tsx                         animate-pulse
 absent   apps/vectreal-platform/app/routes/home-page/home-page.tsx                         hbr.org
 present  apps/vectreal-platform/app/components/home/hero/hero-readout.tsx                   HERO_MODEL.sourceBytes
+present  apps/vectreal-platform/app/components/layout-components/sheet-frame.tsx             export const SheetFrame
+present  apps/vectreal-platform/app/components/pricing/pricing-cards-section.tsx            [--lit-inset:12px]
+present  apps/vectreal-platform/app/routes/layouts/mdx-layout.tsx                           <SheetFrame>
+present  apps/vectreal-platform/app/routes/contact-page.tsx                                 lg:border-r
+present  apps/vectreal-platform/app/components/convert/converter-surface.tsx               ds-sunken
 ```
