@@ -5,10 +5,7 @@ import { MissionStatement } from '../../components/home/mission-statement'
 import { OpenSourceSection } from '../../components/home/open-source-section'
 import { PilotOffer } from '../../components/home/pilot-offer'
 import { ProductWindow } from '../../components/home/product-window'
-import {
-	DitherReveal,
-	DraftingBackdrop
-} from '../../components/layout-components'
+import { Reveal, DraftingBackdrop } from '../../components/layout-components'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
@@ -43,42 +40,42 @@ const HomePage = () => (
 		<HeroSheet />
 
 		<section aria-labelledby="product-heading" className="container-page mt-32">
-			<DitherReveal>
+			<Reveal>
 				<ProductWindow />
-			</DitherReveal>
+			</Reveal>
 		</section>
 
 		<section aria-label="Mission" className="container-page mt-32 lg:mt-48">
-			<DitherReveal>
+			<Reveal>
 				<MissionStatement />
-			</DitherReveal>
+			</Reveal>
 		</section>
 
 		<section
 			aria-labelledby="pilot-heading"
 			className="container-page mt-32 lg:mt-48"
 		>
-			<DitherReveal>
+			<Reveal>
 				<PilotOffer />
-			</DitherReveal>
+			</Reveal>
 		</section>
 
 		<section
 			aria-labelledby="open-source-heading"
 			className="container-page mt-32 lg:mt-48"
 		>
-			<DitherReveal>
+			<Reveal>
 				<OpenSourceSection />
-			</DitherReveal>
+			</Reveal>
 		</section>
 
 		<section
 			aria-labelledby="converter-heading"
 			className="container-page mt-32 pb-32 lg:mt-48 lg:pb-48"
 		>
-			<DitherReveal>
+			<Reveal>
 				<FormatStrip />
-			</DitherReveal>
+			</Reveal>
 		</section>
 	</main>
 )

@@ -120,8 +120,8 @@
 
 /*
   Everything drawn on the stage besides the live canvas (the poster, the
-  dimensions) fades out where it reaches under the copy. The shader dithers the
-  live frame; these follow with the same zone as a plain fade.
+  dimensions) fades out where it reaches under the copy, in the same zone the
+  shader fades the live frame.
 */
 .art {
 	position: absolute;

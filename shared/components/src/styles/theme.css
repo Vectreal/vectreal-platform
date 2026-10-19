@@ -45,14 +45,6 @@
 	/* Semantic tokens - light theme */
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0 0);
-	/*
-	  The ink of the site's ordered dither: the hero's backdrop and every
-	  section grain (`DitherGrain`) paint their cells in it, so the material is
-	  one strength everywhere. It has to read as a texture on its own, not as a
-	  smudge on the background: at 7% it disappeared on most screens, and at
-	  14% it competed with the content set on it.
-	*/
-	--grain: color-mix(in oklch, var(--foreground) 11%, var(--background));
 	--card: oklch(1 0 0);
 	--card-foreground: oklch(0.145 0 0);
 	--popover: oklch(1 0 0);
@@ -179,7 +171,6 @@
 	/* Semantic tokens - dark theme */
 	--background: oklch(0.145 0 0);
 	--foreground: oklch(0.985 0 0);
-	--grain: color-mix(in oklch, var(--foreground) 13%, var(--background));
 	--card: oklch(0.145 0 0);
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.145 0 0);

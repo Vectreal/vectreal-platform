@@ -12,8 +12,7 @@ import {
 import { Link, useLocation } from 'react-router'
 
 import { isNavItemActive } from './nav-items'
-import { dissolveIn } from '../../lib/dither/dither'
-import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
+import { fadeIn, prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel, isNavSection } from '../../lib/navigation/site-map'
 
 import type {
@@ -28,7 +27,7 @@ const HOVER_OPEN_MS = 120
 const HOVER_CLOSE_MS = 200
 /** A click this soon after hover opened the panel is the same gesture, not a second press. */
 const HOVER_CLICK_MS = 600
-const DISSOLVE_MS = 180
+const FADE_MS = 180
 
 const panelId = (label: string) =>
 	`nav-panel-${label.toLowerCase().replace(/\s+/g, '-')}`
@@ -244,11 +243,11 @@ function NavPanel({
 }) {
 	const ref = useRef<HTMLDivElement>(null)
 
-	// It arrives through the page's own dither, the way the product window changes views: the dissolve reports that something opened.
+	// It fades down into place: the arrival reports that something opened.
 	useLayoutEffect(() => {
 		const el = ref.current
 		if (!el || prefersReducedMotion()) return
-		return dissolveIn(el, DISSOLVE_MS)
+		return fadeIn(el, { ms: FADE_MS, rise: -4 })
 	}, [])
 
 	return (

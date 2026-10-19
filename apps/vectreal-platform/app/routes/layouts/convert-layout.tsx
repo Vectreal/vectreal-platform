@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router'
 import { ConvertChooser } from '../../components/convert/convert-chooser'
 import { ConvertFormatSwitch } from '../../components/convert/convert-format-switch'
 import { PublicErrorBoundary } from '../../components/errors'
-import { DitherSwap, PageHero } from '../../components/layout-components'
+import { FadeSwap, PageHero } from '../../components/layout-components'
 import {
 	CONVERT_INDEX_COPY,
 	CONVERT_INDEX_PATH,
@@ -29,8 +29,8 @@ import {
  * still starts in the first screen, now at the page's full width.
  *
  * Switching pairs keeps this layout mounted, so what changes changes in place:
- * the two format names in the heading and the description dissolve through the
- * page's dither, and the description keeps two lines' room so a shorter one
+ * the two format names in the heading and the description fade in, and the
+ * description keeps two lines' room so a shorter one
  * does not pull the switcher and the stage up under the reader's pointer.
  *
  * Below the converter, every converter again, grouped the way the index groups
@@ -51,9 +51,8 @@ export default function ConvertLayout() {
 				heading={
 					pair ? (
 						<>
-							<DitherSwap value={pair.fromLabel}>{pair.fromLabel}</DitherSwap>{' '}
-							to <DitherSwap value={pair.toLabel}>{pair.toLabel}</DitherSwap>{' '}
-							converter
+							<FadeSwap value={pair.fromLabel}>{pair.fromLabel}</FadeSwap> to{' '}
+							<FadeSwap value={pair.toLabel}>{pair.toLabel}</FadeSwap> converter
 						</>
 					) : (
 						CONVERT_INDEX_COPY.title
@@ -61,9 +60,9 @@ export default function ConvertLayout() {
 				}
 				description={
 					pair ? (
-						<DitherSwap value={pair.slug} className="min-h-[2lh]">
+						<FadeSwap value={pair.slug} className="min-h-[2lh]">
 							{pair.description}
-						</DitherSwap>
+						</FadeSwap>
 					) : (
 						CONVERT_INDEX_COPY.description
 					)

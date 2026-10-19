@@ -1,6 +1,6 @@
 /*
   The canvases that paint with the page's color tokens (the hero stage, its
-  backdrop, the dither grain) and the hooks that follow the theme each carried
+  floor) and the hooks that follow the theme each carried
   their own copy of the pieces below.
 */
 

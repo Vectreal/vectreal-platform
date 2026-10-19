@@ -18,7 +18,6 @@ import manageLightUrl from '../../assets/home/product/manage-light.webp?url'
 import prepareDarkUrl from '../../assets/home/product/prepare-dark.webp?url'
 import prepareLightUrl from '../../assets/home/product/prepare-light.webp?url'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
-import { dissolveIn } from '../../lib/dither/dither'
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel } from '../../lib/navigation/site-map'
 
@@ -85,8 +84,8 @@ function ThemedShot({ view }: { view: keyof typeof SHOT_URLS }) {
 	)
 }
 
-/** How long the dissolve between two screenshots takes, one mask frame per step. */
-const DISSOLVE_MS = 400
+/** How long the next screenshot takes to fade in over the last: `--duration-slow`, which the shots' transition uses. */
+const FADE_MS = 400
 
 /** How long each view stands while the window cycles on its own. */
 const DWELL_MS = 7000
@@ -107,10 +106,8 @@ const DWELL_MS = 7000
  * the window being off screen. A click hands it over to the reader for good,
  * and reduced motion never starts it.
  *
- * The screenshots share one cell, so a switch dissolves the new view over the
- * old through the page's dither rather than crossfading: the incoming shot's
- * mask steps through the matrix's seventeen states while the outgoing one
- * stays beneath it.
+ * The screenshots share one cell, so a switch fades the new view in over the
+ * old one, which stays solid beneath it until the fade is done.
  */
 export const ProductWindow = () => {
 	const [view, setView] = useState<ProductView>('prepare')
@@ -119,8 +116,9 @@ export const ProductWindow = () => {
 	const [held, setHeld] = useState(false)
 	const [offscreen, setOffscreen] = useState(true)
 	const windowRef = useRef<HTMLDivElement>(null)
-	const shots = useRef<Partial<Record<ProductView, HTMLDivElement | null>>>({})
-	const cancelDissolve = useRef(() => {})
+	const cancelFade = useRef(() => {})
+	// Whether a view is still fading in: `previous` is then the one solid view, and stays it.
+	const fading = useRef(false)
 	const sceneRef = useRef<HTMLDivElement>(null)
 	const embedSlotRef = useRef<HTMLDivElement>(null)
 
@@ -132,18 +130,21 @@ export const ProductWindow = () => {
 
 	const switchTo = (next: string) => {
 		if (!isProductView(next) || next === view) return
-		// Cancelling also clears the mask, so a switch mid-dissolve never leaves a partly masked shot underneath.
-		cancelDissolve.current()
+		cancelFade.current()
 		setView(next)
-		const shot = shots.current[next]
-		if (!shot || prefersReducedMotion()) {
+		if (prefersReducedMotion()) {
+			fading.current = false
 			setPrevious(null)
 			return
 		}
-		setPrevious(view)
-		cancelDissolve.current = dissolveIn(shot, DISSOLVE_MS, () =>
+		// The last solid view stays under the next until it has faded in, so the panel never dips between the two. A switch mid-fade keeps that view underneath rather than the half-faded one.
+		if (!fading.current) setPrevious(view)
+		fading.current = true
+		const timer = window.setTimeout(() => {
+			fading.current = false
 			setPrevious(null)
-		)
+		}, FADE_MS)
+		cancelFade.current = () => window.clearTimeout(timer)
 	}
 
 	// The reader chose a view: the window stops cycling and stays where they put it.
@@ -169,7 +170,7 @@ export const ProductWindow = () => {
 		observer.observe(node)
 		return () => {
 			observer.disconnect()
-			cancelDissolve.current()
+			cancelFade.current()
 		}
 	}, [])
 
@@ -245,14 +246,14 @@ export const ProductWindow = () => {
 						{VIEW_ORDER.map((one) => (
 							<div
 								key={one}
-								ref={(node) => {
-									shots.current[one] = node
-								}}
 								aria-hidden={one !== view}
 								// Invisible rather than hidden: the product page's gallery is measured while it waits.
+								// The chosen view fades in over the one it replaces; the rest stay invisible, still laid out.
 								className={cn(
-									'[grid-area:1/1]',
-									one === view ? 'z-1' : one !== previous && 'invisible'
+									'transition-opacity duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] motion-reduce:transition-none',
+									one === view && 'z-1 opacity-100',
+									one === previous && 'opacity-100',
+									one !== view && one !== previous && 'invisible opacity-0'
 								)}
 							>
 								{one === 'embed' ? (

@@ -3,8 +3,8 @@ import { ArrowRight, FolderUp, Loader2 } from 'lucide-react'
 
 import { articleFor, type ConvertPair } from '../../lib/convert/convert-pairs'
 import { PASS_SAMPLES } from '../../lib/samples/sample-models'
-import { DitherSwap } from '../layout-components/dither-swap'
 import { DraftingBackdrop } from '../layout-components/drafting-backdrop'
+import { FadeSwap } from '../layout-components/fade-swap'
 import { SampleTiles } from '../layout-components/sample-tiles'
 
 import type { useSampleDownload } from '../../hooks/use-sample-download'
@@ -44,7 +44,7 @@ interface Props {
  * invitation is still the loudest thing on the stage.
  *
  * What it offers depends on the source, samples for GLB and a folder for a
- * glTF bundle, so switching source dissolves the new offer in rather than
+ * glTF bundle, so switching source fades the new offer in rather than
  * cutting to it. The floor stays put: it is the stage, not the offer.
  */
 export function ConverterEmptyStage({
@@ -69,7 +69,7 @@ export function ConverterEmptyStage({
 				<ArrowRight className="text-orange-ink size-3" aria-hidden="true" />
 				{pair.toLabel}
 			</p>
-			<DitherSwap
+			<FadeSwap
 				as="div"
 				value={pair.from}
 				className="grid min-h-[17rem] content-end gap-8 p-6 sm:min-h-[20rem] sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end"
@@ -136,7 +136,7 @@ export function ConverterEmptyStage({
 						)}
 					</>
 				)}
-			</DitherSwap>
+			</FadeSwap>
 		</>
 	)
 }
