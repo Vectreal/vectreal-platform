@@ -4,6 +4,8 @@ import * as THREE from 'three'
 const DRIFT = 0.03
 /** The floor only ever moves slowly, so 20 frames a second is enough for it. */
 const FRAME_MS = 50
+/** How long the floor takes to spread out from under the model when it first appears. */
+const GROW_MS = 3600
 
 /** Uniforms the floor reads from the stage, so a theme or layout change reaches both. */
 interface SharedUniforms {
@@ -50,7 +52,9 @@ export function createSceneFloor(
 		uCenter: { value: new THREE.Vector2() },
 		uStep: { value: 1 },
 		uReach: { value: 1 },
-		uTime: { value: 0 }
+		uTime: { value: 0 },
+		/** How far the floor has spread from under the model, 0 to 1. Whole from the start under reduced motion. */
+		uGrow: { value: animate ? 0 : 1 }
 	}
 	const geometry = new THREE.PlaneGeometry(1, 1, 256, 256)
 	const material = new THREE.ShaderMaterial({
@@ -88,7 +92,7 @@ void main() {
 		fragmentShader: `
 uniform vec3 uInk, uAccent;
 uniform vec2 uCenter, uFade, uRes;
-uniform float uStep, uReach;
+uniform float uStep, uReach, uGrow;
 varying vec2 vW;
 varying float vH;
 void main() {
@@ -109,6 +113,9 @@ void main() {
   fade *= mix(0.12, 1.0, toCopy) * toFoot * toTop;
   pool *= toFoot * toCopy;
   float a = line * fade * (0.22 + 0.4 * pool) + pool * 0.14;
+  /* It appears by spreading out from under the model, a soft-edged ring on the ground, rather than all at once. */
+  float front = uGrow * 1.15;
+  a *= 1.0 - smoothstep(front - 0.18, front, d);
   gl_FragColor = vec4(color * a, a);
 }`
 	})
@@ -136,12 +143,20 @@ void main() {
 	if (animate) {
 		visibility.observe(canvas)
 		let last = 0
+		let grownFrom = 0
 		const tick = (now: number) => {
 			raf = requestAnimationFrame(tick)
-			if (now - last < FRAME_MS) return
+			// While it spreads it runs at the display rate, so the ring moves smoothly; after that the drift needs only 20 frames a second.
+			const growing = uniforms.uGrow.value < 1
+			if (!growing && now - last < FRAME_MS) return
 			const dt = last ? Math.min(now - last, 100) / 1000 : 0
 			last = now
 			if (!onScreen || document.hidden || !camera) return
+			if (growing) {
+				grownFrom ||= now
+				const k = Math.min((now - grownFrom) / GROW_MS, 1)
+				uniforms.uGrow.value = 1 - Math.pow(1 - k, 3)
+			}
 			uniforms.uTime.value += DRIFT * dt
 			render(camera)
 		}
