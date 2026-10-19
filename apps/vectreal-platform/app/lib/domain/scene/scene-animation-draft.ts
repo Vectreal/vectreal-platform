@@ -16,10 +16,17 @@ import { describeAnimationClips, reconcileSceneAnimation } from '@vctrl/core'
 
 import type {
 	AnimationClipConfig,
+	AnimationClipDescriptor,
+	AnimationClipRemap,
 	AnimationClipSource,
 	AnimationReconciliation,
-	AnimationSettings
+	AnimationSettings,
+	HotspotDefinition
 } from '@vctrl/core'
+
+/** How the Publisher names a clip: its glTF name, or its place for an unnamed one. */
+export const clipLabel = (descriptor: AnimationClipDescriptor) =>
+	descriptor.name || `Clip ${descriptor.index + 1}`
 
 /**
  * Reconciles the saved config against the model's clips, with animation off
@@ -135,4 +142,33 @@ export function isForeverCutShort(
 	const mustHandOff = settings.loopSequence || index < playing.length - 1
 
 	return isForever && mustHandOff
+}
+
+/**
+ * The hotspots with their clip links following a rename.
+ *
+ * A clip renamed in the source file gets a new id, and reconciliation
+ * re-attaches the animation config to it by position. A hotspot linking the
+ * old id would otherwise play nothing from then on, with no sign of why, so
+ * its link moves with the config. A link to a clip the model dropped is left
+ * as saved: the viewer plays nothing for it, and the panel says so.
+ *
+ * Returns the same array when no link moved, so writing it back is a no-op.
+ */
+export function remapHotspotClipLinks(
+	hotspots: HotspotDefinition[],
+	remapped: readonly AnimationClipRemap[]
+): HotspotDefinition[] {
+	const nextId = new Map(
+		remapped.map((remap) => [remap.previousClipId, remap.clipId])
+	)
+	let changed = false
+	const next = hotspots.map((hotspot) => {
+		const clipId =
+			hotspot.linkedAnimationClipId && nextId.get(hotspot.linkedAnimationClipId)
+		if (!clipId) return hotspot
+		changed = true
+		return { ...hotspot, linkedAnimationClipId: clipId }
+	})
+	return changed ? next : hotspots
 }
