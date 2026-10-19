@@ -206,16 +206,14 @@ export const ProductWindow = () => {
 							/*
 							  The plate is the trigger's parent because the shared trigger
 							  forces its own active fill (`!`), which would beat a ladder
-							  class on the trigger itself. Each step is a plate in the
-							  window, and the chosen one stands a rung above the others.
+							  class on the trigger itself. Only the chosen step is a
+							  plate; the others answer the pointer with their text alone,
+							  because any fill they took on hover read as chosen.
 							*/
 							<div
 								key={one}
 								role="presentation"
-								className={cn(
-									'flex rounded-lg',
-									one === view ? 'ds-overlay' : 'ds-raised-interactive'
-								)}
+								className={cn('flex rounded-lg', one === view && 'ds-overlay')}
 							>
 								<TabsTrigger
 									value={one}
