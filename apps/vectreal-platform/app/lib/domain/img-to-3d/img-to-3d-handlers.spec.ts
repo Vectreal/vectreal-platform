@@ -55,20 +55,28 @@ function harness(overrides: Partial<ImgTo3dHandlerDeps> = {}) {
 		)
 	}
 	const jobs = {
-		insert: vi.fn(async (records: readonly ImgTo3dJobRecord[]) => {
-			for (const record of records) rows.set(record.id, record)
-		}),
+		// Every fake row counts as recent; the 24-hour window and the lock are
+		// the query's, held by tests/integration/img-to-3d-jobs.
+		insertWithinDailyLimit: vi.fn(
+			async (
+				records: readonly ImgTo3dJobRecord[],
+				userId: string,
+				limit: number
+			) => {
+				const started = [...rows.values()].filter(
+					(row) => row.createdBy === userId
+				).length
+				if (started + records.length > limit) return false
+				for (const record of records) rows.set(record.id, record)
+				return true
+			}
+		),
 		findForOrganization: vi.fn(async (jobId: string, organizationId: string) =>
 			rows.get(jobId)?.organizationId === organizationId ? { id: jobId } : null
 		),
 		remove: vi.fn(async (jobId: string) => {
 			rows.delete(jobId)
-		}),
-		// Every fake row counts as recent; the 24-hour window is the query's.
-		countStartedInLastDay: vi.fn(
-			async (userId: string) =>
-				[...rows.values()].filter((row) => row.createdBy === userId).length
-		)
+		})
 	}
 	let ids = 0
 	let seeds = 100
@@ -101,7 +109,12 @@ function submission(seedCount = '3'): Request {
 	body.set(IMG_TO_3D_FIELDS.textureSize, '2048')
 	body.set(IMG_TO_3D_FIELDS.decimationTarget, '200000')
 	body.set(IMG_TO_3D_FIELDS.seedCount, seedCount)
-	return new Request(ENDPOINT, { method: 'POST', body })
+	// Undici does not derive a length for a form body; a browser always sends one.
+	return new Request(ENDPOINT, {
+		method: 'POST',
+		body,
+		headers: { 'Content-Length': '1024' }
+	})
 }
 
 async function readBody(response: Response) {
@@ -147,7 +160,7 @@ describe('a caller the gate refuses', () => {
 			const response = await call(deps)
 
 			expect(response.status).toBe(404)
-			expect(jobs.insert).not.toHaveBeenCalled()
+			expect(jobs.insertWithinDailyLimit).not.toHaveBeenCalled()
 			expect(jobs.findForOrganization).not.toHaveBeenCalled()
 			expect(runtime.submit).not.toHaveBeenCalled()
 			expect(runtime.status).not.toHaveBeenCalled()
@@ -170,18 +183,46 @@ describe('a caller the gate refuses', () => {
 	)
 
 	it.each(routes)(
-		'passes an unauthenticated %s through untouched',
+		'answers a signed-out %s with 404, not the 401 that would confirm it',
 		async (_, call) => {
-			const redirect = new Response(null, { status: 401 })
-			const { deps } = harness({ authenticate: async () => redirect })
+			const { deps, jobs, runtime } = harness({
+				authenticate: async () => new Response(null, { status: 401 })
+			})
 
-			expect(await call(deps)).toBe(redirect)
+			expect((await call(deps)).status).toBe(404)
+			expect(jobs.insertWithinDailyLimit).not.toHaveBeenCalled()
+			expect(runtime.submit).not.toHaveBeenCalled()
+		}
+	)
+
+	it.each([
+		['submit', 'PUT', handleSubmitImgTo3dGeneration],
+		[
+			'status',
+			'DELETE',
+			(request: Request, deps: ImgTo3dHandlerDeps) =>
+				handleImgTo3dGenerationStatus(request, uuid(1), deps)
+		],
+		[
+			'artifact',
+			'POST',
+			(request: Request, deps: ImgTo3dHandlerDeps) =>
+				handleImgTo3dGenerationArtifact(request, uuid(1), deps)
+		]
+	] as const)(
+		'answers a %s %s with 404 before looking at the method',
+		async (_, method, call) => {
+			const { deps } = harness({ resolveAccess: async () => null })
+
+			const response = await call(new Request(ENDPOINT, { method }), deps)
+
+			expect(response.status).toBe(404)
 		}
 	)
 })
 
 describe('handleSubmitImgTo3dGeneration', () => {
-	it('answers anything but POST with 405', async () => {
+	it('answers anything but POST with 405 once admitted', async () => {
 		const { deps } = harness()
 		const response = await handleSubmitImgTo3dGeneration(
 			new Request(ENDPOINT),
@@ -189,6 +230,31 @@ describe('handleSubmitImgTo3dGeneration', () => {
 		)
 		expect(response.status).toBe(405)
 	})
+
+	it.each([
+		['too long', String(10 * 1024 * 1024 + 64 * 1024 + 1)],
+		['missing', null]
+	])(
+		'refuses a body whose length is %s before reading it',
+		async (_, length) => {
+			const { deps, jobs } = harness()
+			const request = new Request(ENDPOINT, {
+				method: 'POST',
+				body: 'x',
+				headers: length ? { 'Content-Length': length } : {}
+			})
+			const formData = vi.spyOn(request, 'formData')
+
+			const response = await handleSubmitImgTo3dGeneration(request, deps)
+
+			expect(response.status).toBe(413)
+			expect(await readBody(response)).toMatchObject({
+				error: 'image_too_large'
+			})
+			expect(formData).not.toHaveBeenCalled()
+			expect(jobs.insertWithinDailyLimit).not.toHaveBeenCalled()
+		}
+	)
 
 	it('records nothing when the CSRF check fails', async () => {
 		const refusal = new Response(null, { status: 403 })
@@ -199,7 +265,7 @@ describe('handleSubmitImgTo3dGeneration', () => {
 		const response = await handleSubmitImgTo3dGeneration(submission(), deps)
 
 		expect(response.status).toBe(403)
-		expect(jobs.insert).not.toHaveBeenCalled()
+		expect(jobs.insertWithinDailyLimit).not.toHaveBeenCalled()
 		expect(runtime.submit).not.toHaveBeenCalled()
 	})
 
@@ -212,7 +278,7 @@ describe('handleSubmitImgTo3dGeneration', () => {
 		expect(await readBody(response)).toMatchObject({
 			error: 'invalid_settings'
 		})
-		expect(jobs.insert).not.toHaveBeenCalled()
+		expect(jobs.insertWithinDailyLimit).not.toHaveBeenCalled()
 	})
 
 	it('records one job per seed for the payer, then starts each', async () => {
@@ -251,26 +317,28 @@ describe('handleSubmitImgTo3dGeneration', () => {
 		)
 	})
 
-	it('starts a batch that reaches the daily limit exactly', async () => {
+	it('reserves the batch against the caller’s own daily limit', async () => {
 		const { deps, jobs } = harness()
-		jobs.countStartedInLastDay.mockResolvedValue(IMG_TO_3D_DAILY_JOB_LIMIT - 3)
 
 		const response = await handleSubmitImgTo3dGeneration(submission('3'), deps)
 
 		expect(response.status).toBe(202)
-		expect(jobs.countStartedInLastDay).toHaveBeenCalledWith('user-1')
+		expect(jobs.insertWithinDailyLimit).toHaveBeenCalledWith(
+			expect.any(Array),
+			'user-1',
+			IMG_TO_3D_DAILY_JOB_LIMIT
+		)
 	})
 
-	it('refuses a batch that would pass the daily limit, before recording or starting anything', async () => {
+	it('starts nothing when the limit refuses the batch', async () => {
 		const { deps, jobs, runtime } = harness()
-		jobs.countStartedInLastDay.mockResolvedValue(IMG_TO_3D_DAILY_JOB_LIMIT - 2)
+		jobs.insertWithinDailyLimit.mockResolvedValue(false)
 
 		const response = await handleSubmitImgTo3dGeneration(submission('3'), deps)
 
 		expect(response.status).toBe(429)
 		expect(response.headers.getSetCookie()).toHaveLength(2)
 		expect(await readBody(response)).toMatchObject({ error: 'daily_limit' })
-		expect(jobs.insert).not.toHaveBeenCalled()
 		expect(runtime.submit).not.toHaveBeenCalled()
 	})
 

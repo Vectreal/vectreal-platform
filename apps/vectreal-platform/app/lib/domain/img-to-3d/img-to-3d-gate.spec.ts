@@ -73,30 +73,25 @@ describe('isImgTo3dEnabled', () => {
 })
 
 describe('isImgTo3dMockMode', () => {
-	it('is on when asked for outside production', () => {
-		expect(
-			isImgTo3dMockMode({
-				IMG_TO_3D_MOCK_MODE: 'true',
-				NODE_ENV: 'development'
-			})
-		).toBe(true)
+	it('is on when asked for in a development build', () => {
+		expect(isImgTo3dMockMode({ IMG_TO_3D_MOCK_MODE: 'true' }, true)).toBe(true)
 	})
 
-	it('is never on in production, whatever the env var says', () => {
+	it('is never on in a production build, whatever the environment says', () => {
 		expect(
-			isImgTo3dMockMode({ IMG_TO_3D_MOCK_MODE: 'true', NODE_ENV: 'production' })
+			isImgTo3dMockMode(
+				{ IMG_TO_3D_MOCK_MODE: 'true', NODE_ENV: 'development' },
+				false
+			)
 		).toBe(false)
 	})
 
 	it.each([undefined, 'false', '1', 'TRUE'])(
 		'is off when the env var is %s',
 		(value) => {
-			expect(
-				isImgTo3dMockMode({
-					IMG_TO_3D_MOCK_MODE: value,
-					NODE_ENV: 'development'
-				})
-			).toBe(false)
+			expect(isImgTo3dMockMode({ IMG_TO_3D_MOCK_MODE: value }, true)).toBe(
+				false
+			)
 		}
 	)
 })

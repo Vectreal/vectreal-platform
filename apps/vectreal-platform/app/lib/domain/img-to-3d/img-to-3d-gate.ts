@@ -71,11 +71,14 @@ export async function isImgTo3dEnabled(
 /**
  * Mock mode fakes the runtime with a fixture, so it spends nothing and there
  * is nothing to authorize; it is how local development and tests run without
- * PostHog or a GPU. Never in production, so a stray env var there can neither
- * show the panel to everyone nor serve a fixture instead of a model.
+ * PostHog or a GPU. Only in a development build: `import.meta.env.DEV` is
+ * fixed when the bundle is built, so no environment a production build is
+ * started with, `NODE_ENV` included, can show the panel to everyone or serve
+ * a fixture instead of a model.
  */
 export function isImgTo3dMockMode(
-	env: Record<string, string | undefined> = process.env
+	env: Record<string, string | undefined> = process.env,
+	isDevBuild: boolean = import.meta.env?.DEV === true
 ): boolean {
-	return env.IMG_TO_3D_MOCK_MODE === 'true' && env.NODE_ENV !== 'production'
+	return isDevBuild && env.IMG_TO_3D_MOCK_MODE === 'true'
 }

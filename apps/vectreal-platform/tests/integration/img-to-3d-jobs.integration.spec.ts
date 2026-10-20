@@ -17,7 +17,7 @@
 
 import { randomUUID } from 'node:crypto'
 
-import { inArray } from 'drizzle-orm'
+import { inArray, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 type Schema = typeof import('../../app/db/schema')
@@ -29,7 +29,7 @@ const PARAMS = {
 	resolution: 1024,
 	textureSize: 2048,
 	decimationTarget: 200_000
-}
+} as const
 
 describe('image-to-3D job store', () => {
 	// Loaded in `beforeAll`: these modules call `getDbClient()` on import.
@@ -39,6 +39,7 @@ describe('image-to-3D job store', () => {
 
 	const userId = randomUUID()
 	const otherUserId = randomUUID()
+	const racerId = randomUUID()
 	const orgId = randomUUID()
 	const otherOrgId = randomUUID()
 	const batchId = randomUUID()
@@ -47,34 +48,48 @@ describe('image-to-3D job store', () => {
 	const dayOld = randomUUID()
 	const othersJob = randomUUID()
 
+	const row = (id: string, createdBy: string, organizationId: string) => ({
+		id,
+		organizationId,
+		createdBy,
+		batchId,
+		seed: 1,
+		params: PARAMS
+	})
+
 	beforeAll(async () => {
 		schema = await import('../../app/db/schema')
 		;({ imgTo3dJobStore: jobs } =
 			await import('../../app/lib/domain/img-to-3d/img-to-3d-job-repository.server'))
 		db = (await import('../../app/db/client')).getDbClient()
 
-		await db.insert(schema.users).values([
-			{ id: userId, email: `img-${userId}@smoke.test`, name: 'Generator' },
-			{ id: otherUserId, email: `img-${otherUserId}@smoke.test`, name: 'Other' }
-		])
+		await db.insert(schema.users).values(
+			[userId, otherUserId, racerId].map((id) => ({
+				id,
+				email: `img-${id}@smoke.test`,
+				name: 'Generator'
+			}))
+		)
 		await db.insert(schema.organizations).values([
 			{ id: orgId, name: `smoke-${orgId}`, ownerId: userId },
 			{ id: otherOrgId, name: `smoke-${otherOrgId}`, ownerId: otherUserId }
 		])
 
-		const row = (id: string, createdBy: string, organizationId: string) => ({
-			id,
-			organizationId,
-			createdBy,
-			batchId,
-			seed: 1,
-			params: PARAMS
-		})
 		// Through the store, as the submit handler writes them.
-		await jobs.insert([
-			...recent.map((id) => row(id, userId, orgId)),
-			row(othersJob, otherUserId, otherOrgId)
-		])
+		expect(
+			await jobs.insertWithinDailyLimit(
+				recent.map((id) => row(id, userId, orgId)),
+				userId,
+				60
+			)
+		).toBe(true)
+		expect(
+			await jobs.insertWithinDailyLimit(
+				[row(othersJob, otherUserId, otherOrgId)],
+				otherUserId,
+				60
+			)
+		).toBe(true)
 		// Just outside the window: written directly, since the store stamps now.
 		await db.insert(schema.imgTo3dJobs).values({
 			...row(dayOld, userId, orgId),
@@ -88,12 +103,70 @@ describe('image-to-3D job store', () => {
 			.where(inArray(schema.organizations.id, [orgId, otherOrgId]))
 		await db
 			.delete(schema.users)
-			.where(inArray(schema.users.id, [userId, otherUserId]))
+			.where(inArray(schema.users.id, [userId, otherUserId, racerId]))
 	})
 
-	it('counts only this person’s jobs from the last 24 hours', async () => {
-		expect(await jobs.countStartedInLastDay(userId)).toBe(recent.length)
-		expect(await jobs.countStartedInLastDay(otherUserId)).toBe(1)
+	it('counts only this person’s jobs from the last 24 hours against the limit', async () => {
+		const extra = randomUUID()
+		// Two recent jobs of theirs; the day-old one and the other person's do not count.
+		expect(
+			await jobs.insertWithinDailyLimit([row(extra, userId, orgId)], userId, 3)
+		).toBe(true)
+		expect(
+			await jobs.insertWithinDailyLimit(
+				[row(randomUUID(), userId, orgId)],
+				userId,
+				3
+			)
+		).toBe(false)
+		await jobs.remove(extra)
+	})
+
+	it('records nothing from a refused batch', async () => {
+		const refused = [randomUUID(), randomUUID()]
+
+		expect(
+			await jobs.insertWithinDailyLimit(
+				refused.map((id) => row(id, userId, orgId)),
+				userId,
+				3
+			)
+		).toBe(false)
+		expect(await jobs.findForOrganization(refused[0], orgId)).toBeNull()
+	})
+
+	it('waits for a concurrent reservation by the same person, then counts what it wrote', async () => {
+		// The other writer, held open mid-transaction: it has taken the lock and
+		// used up the limit, but not committed. Racing two real calls cannot
+		// show this, because they rarely overlap on a fresh pool.
+		let release!: () => void
+		const held = new Promise<void>((resolve) => (release = resolve))
+		let locked!: () => void
+		const lockTaken = new Promise<void>((resolve) => (locked = resolve))
+
+		const writer = db.transaction(async (tx) => {
+			await tx.execute(
+				sql`select pg_advisory_xact_lock(hashtext(${`img-to-3d:${racerId}`}))`
+			)
+			await tx
+				.insert(schema.imgTo3dJobs)
+				.values(row(randomUUID(), racerId, orgId))
+			locked()
+			await held
+		})
+		await lockTaken
+
+		let settled = false
+		const reservation = jobs
+			.insertWithinDailyLimit([row(randomUUID(), racerId, orgId)], racerId, 1)
+			.finally(() => (settled = true))
+
+		await new Promise((resolve) => setTimeout(resolve, 300))
+		expect(settled).toBe(false)
+
+		release()
+		await writer
+		expect(await reservation).toBe(false)
 	})
 
 	it('finds a job only for the organization that owns it', async () => {
@@ -103,10 +176,8 @@ describe('image-to-3D job store', () => {
 		expect(await jobs.findForOrganization(othersJob, orgId)).toBeNull()
 	})
 
-	it('removes a job, which then no longer counts', async () => {
+	it('removes a job', async () => {
 		await jobs.remove(recent[1])
-
 		expect(await jobs.findForOrganization(recent[1], orgId)).toBeNull()
-		expect(await jobs.countStartedInLastDay(userId)).toBe(recent.length - 1)
 	})
 })

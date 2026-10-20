@@ -85,9 +85,9 @@ describe('getImgTo3dRuntime', () => {
 		expect(getImgTo3dRuntime()).not.toBe(liveImgTo3dRuntime)
 	})
 
-	it('calls the real runtime in production even with mock mode set', () => {
+	it('calls the real runtime in a production build even with mock mode set', () => {
 		vi.stubEnv('IMG_TO_3D_MOCK_MODE', 'true')
-		vi.stubEnv('NODE_ENV', 'production')
+		vi.stubEnv('DEV', false)
 		expect(getImgTo3dRuntime()).toBe(liveImgTo3dRuntime)
 	})
 })
@@ -238,6 +238,22 @@ describe('the live runtime client', () => {
 		await expect(liveImgTo3dRuntime.status(JOB)).rejects.toMatchObject({
 			kind: 'runtime_unavailable',
 			outcomeUnknown: true
+		})
+	})
+
+	it('treats a runtime 5xx as possibly acted on, since the edge may answer after the job was taken', async () => {
+		configured(Response.json({ success: false }, { status: 504 }))
+		await expect(liveImgTo3dRuntime.status(JOB)).rejects.toMatchObject({
+			kind: 'runtime_unavailable',
+			outcomeUnknown: true
+		})
+	})
+
+	it('treats a runtime 4xx as a definite refusal', async () => {
+		configured(Response.json({ success: false }, { status: 422 }))
+		await expect(liveImgTo3dRuntime.status(JOB)).rejects.toMatchObject({
+			kind: 'runtime_rejected',
+			outcomeUnknown: false
 		})
 	})
 

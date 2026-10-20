@@ -71,10 +71,10 @@ describe('resolveImgTo3dAccess', () => {
 		expect(posthog.evaluateFlags).not.toHaveBeenCalled()
 	})
 
-	it('asks the flag in production even with mock mode set', async () => {
+	it('asks the flag in a production build even with mock mode set', async () => {
 		flag.value = false
 		vi.stubEnv('IMG_TO_3D_MOCK_MODE', 'true')
-		vi.stubEnv('NODE_ENV', 'production')
+		vi.stubEnv('DEV', false)
 
 		expect(await resolveImgTo3dAccess(user)).toBeNull()
 	})

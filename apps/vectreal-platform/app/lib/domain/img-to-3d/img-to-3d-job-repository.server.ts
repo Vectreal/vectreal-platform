@@ -8,9 +8,33 @@ import type { ImgTo3dJobRecord, ImgTo3dJobStore } from './img-to-3d-handlers'
 const db = getDbClient()
 
 export const imgTo3dJobStore: ImgTo3dJobStore = {
-	async insert(jobs: readonly ImgTo3dJobRecord[]): Promise<void> {
-		if (jobs.length === 0) return
-		await db.insert(imgTo3dJobs).values([...jobs])
+	/**
+	 * Counts and inserts in one transaction, under a lock held per person, so
+	 * two submits sent at once cannot both read a count from before the other
+	 * inserted.
+	 */
+	async insertWithinDailyLimit(
+		jobs: readonly ImgTo3dJobRecord[],
+		userId: string,
+		limit: number
+	): Promise<boolean> {
+		return db.transaction(async (tx) => {
+			await tx.execute(
+				sql`select pg_advisory_xact_lock(hashtext(${`img-to-3d:${userId}`}))`
+			)
+			const [row] = await tx
+				.select({ started: count() })
+				.from(imgTo3dJobs)
+				.where(
+					and(
+						eq(imgTo3dJobs.createdBy, userId),
+						gt(imgTo3dJobs.createdAt, sql`now() - interval '24 hours'`)
+					)
+				)
+			if ((row?.started ?? 0) + jobs.length > limit) return false
+			if (jobs.length > 0) await tx.insert(imgTo3dJobs).values([...jobs])
+			return true
+		})
 	},
 
 	/** The job, only if it belongs to `organizationId`. */
@@ -33,18 +57,5 @@ export const imgTo3dJobStore: ImgTo3dJobStore = {
 
 	async remove(jobId: string): Promise<void> {
 		await db.delete(imgTo3dJobs).where(eq(imgTo3dJobs.id, jobId))
-	},
-
-	async countStartedInLastDay(userId: string): Promise<number> {
-		const [row] = await db
-			.select({ started: count() })
-			.from(imgTo3dJobs)
-			.where(
-				and(
-					eq(imgTo3dJobs.createdBy, userId),
-					gt(imgTo3dJobs.createdAt, sql`now() - interval '24 hours'`)
-				)
-			)
-		return row?.started ?? 0
 	}
 }

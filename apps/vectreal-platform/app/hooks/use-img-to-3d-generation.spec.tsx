@@ -8,7 +8,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useImgTo3dGeneration } from './use-img-to-3d-generation'
+import {
+	MAX_CONSECUTIVE_POLL_FAILURES,
+	useImgTo3dGeneration
+} from './use-img-to-3d-generation'
 
 vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
@@ -56,7 +59,9 @@ function polls(): number {
 }
 
 async function startOne(
-	loadModel: (files: File[]) => Promise<unknown> = async () => undefined
+	loadModel: (files: File[]) => Promise<{ status: string }> = async () => ({
+		status: 'ready'
+	})
 ) {
 	const hook = renderHook(() => useImgTo3dGeneration(loadModel))
 	await act(() =>
@@ -128,20 +133,75 @@ describe('useImgTo3dGeneration', () => {
 		})
 	})
 
-	it('ends a variant the server refuses, instead of polling it forever', async () => {
+	it('ends a variant the runtime does not know at once', async () => {
 		route = (url) =>
-			url.endsWith(JOB) ? refusal('Not found', 404) : submitted()
+			url.endsWith(JOB) ? refusal('runtime_rejected', 404) : submitted()
 		const { result } = await startOne()
 
 		await pollOnce()
 		expect(result.current.candidates[0]).toMatchObject({
 			status: 'failed',
-			error: 'unexpected'
+			error: 'runtime_rejected'
 		})
 
 		const settled = polls()
 		await pollOnce()
 		expect(polls()).toBe(settled)
+	})
+
+	it('rides out a gate 404, which a failed flag evaluation also produces', async () => {
+		let answer: Response | null = refusal('Not found', 404)
+		route = (url) => {
+			if (!url.endsWith(JOB)) return submitted()
+			const next = answer ?? envelope(jobState('processing'))
+			answer = null
+			return next
+		}
+		const { result } = await startOne()
+
+		await pollOnce()
+		expect(result.current.candidates[0].status).toBe('queued')
+
+		await pollOnce()
+		expect(result.current.candidates[0].status).toBe('processing')
+	})
+
+	it('gives a variant up after too many failed polls in a row, and stops', async () => {
+		route = (url) =>
+			url.endsWith(JOB) ? refusal('runtime_unavailable', 503) : submitted()
+		const { result } = await startOne()
+
+		for (let i = 1; i < MAX_CONSECUTIVE_POLL_FAILURES; i++) await pollOnce()
+		expect(result.current.candidates[0].status).toBe('queued')
+
+		await pollOnce()
+		expect(result.current.candidates[0]).toMatchObject({
+			status: 'failed',
+			error: 'runtime_unavailable'
+		})
+
+		const settled = polls()
+		await pollOnce()
+		expect(polls()).toBe(settled)
+	})
+
+	it('counts only failures in a row: a good poll starts the count again', async () => {
+		let failing = true
+		route = (url) => {
+			if (!url.endsWith(JOB)) return submitted()
+			return failing
+				? refusal('runtime_unavailable', 503)
+				: envelope(jobState('processing'))
+		}
+		const { result } = await startOne()
+
+		for (let i = 1; i < MAX_CONSECUTIVE_POLL_FAILURES; i++) await pollOnce()
+		failing = false
+		await pollOnce()
+		failing = true
+		for (let i = 1; i < MAX_CONSECUTIVE_POLL_FAILURES; i++) await pollOnce()
+
+		expect(result.current.candidates[0].status).toBe('processing')
 	})
 
 	it.each([
@@ -183,7 +243,7 @@ describe('useImgTo3dGeneration', () => {
 				: url.endsWith(JOB)
 					? envelope(jobState('succeeded'))
 					: submitted()
-		const loadModel = vi.fn(async (_files: File[]) => undefined)
+		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
 		const { result } = await startOne(loadModel)
 		await pollOnce()
 
@@ -192,6 +252,24 @@ describe('useImgTo3dGeneration', () => {
 		const [[files]] = loadModel.mock.calls
 		expect(files[0].name).toBe('chair-7.glb')
 		expect(files[0].type).toBe('model/gltf-binary')
+	})
+
+	it('shows a load the publisher refused as a failed open', async () => {
+		route = (url) =>
+			url.endsWith('/artifact')
+				? new Response('glb')
+				: url.endsWith(JOB)
+					? envelope(jobState('succeeded'))
+					: submitted()
+		const { result } = await startOne(async () => ({ status: 'error' }))
+		await pollOnce()
+
+		await act(() => result.current.loadCandidate(JOB))
+
+		expect(result.current.candidates[0]).toMatchObject({
+			status: 'succeeded',
+			error: 'open_failed'
+		})
 	})
 
 	it('clears a failed open once the variant is opened again', async () => {

@@ -9,7 +9,13 @@ import {
 	SelectValue
 } from '@shared/components/ui/select'
 import { cn } from '@shared/utils'
-import { useEffect, useState, type FormEvent } from 'react'
+import {
+	useEffect,
+	useRef,
+	useState,
+	type DragEvent,
+	type FormEvent
+} from 'react'
 
 import {
 	DEFAULT_IMG_TO_3D_PARAMS,
@@ -87,6 +93,7 @@ export const GenerateFromImage = ({ generation, className }: Props) => {
 	const { candidates, isSubmitting, submitError, loadingJobId } = generation
 
 	const [image, setImage] = useState<File | null>(null)
+	const imageInput = useRef<HTMLInputElement>(null)
 	const [resolution, setResolution] = useState<ImgTo3dResolution>(
 		DEFAULT_IMG_TO_3D_PARAMS.resolution
 	)
@@ -110,6 +117,28 @@ export const GenerateFromImage = ({ generation, className }: Props) => {
 		triangles >= IMG_TO_3D_DECIMATION_TARGET.min &&
 		triangles <= IMG_TO_3D_DECIMATION_TARGET.max
 
+	/*
+	  The panel sits on the empty stage, whose dropzone takes every drop as a
+	  3D model. A photo dropped here is this form's, so the panel claims drag
+	  events before they bubble to the stage, and puts the image in the field.
+	*/
+	const claimDrag = (event: DragEvent) => {
+		event.preventDefault()
+		event.stopPropagation()
+	}
+	const handleDrop = (event: DragEvent) => {
+		claimDrag(event)
+		const file = event.dataTransfer.files[0]
+		if (
+			!file ||
+			!(IMG_TO_3D_IMAGE_TYPES as readonly string[]).includes(file.type)
+		) {
+			return
+		}
+		setImage(file)
+		if (imageInput.current) imageInput.current.files = event.dataTransfer.files
+	}
+
 	const handleSubmit = (event: FormEvent) => {
 		event.preventDefault()
 		if (!image || !trianglesValid) return
@@ -125,6 +154,9 @@ export const GenerateFromImage = ({ generation, className }: Props) => {
 		<section
 			aria-labelledby="generate-from-image-label"
 			className={cn('ds-raised w-full rounded-xl p-5 text-left', className)}
+			onDragEnter={claimDrag}
+			onDragOver={claimDrag}
+			onDrop={handleDrop}
 		>
 			<p
 				id="generate-from-image-label"
@@ -137,6 +169,7 @@ export const GenerateFromImage = ({ generation, className }: Props) => {
 				<div className="grid gap-2 sm:col-span-2">
 					<Label htmlFor="generate-image">Product photo</Label>
 					<Input
+						ref={imageInput}
 						id="generate-image"
 						type="file"
 						accept={IMG_TO_3D_IMAGE_TYPES.join(',')}

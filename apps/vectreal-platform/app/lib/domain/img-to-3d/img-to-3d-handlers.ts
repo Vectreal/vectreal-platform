@@ -2,6 +2,7 @@ import { ApiResponse } from '@shared/utils'
 
 import {
 	IMG_TO_3D_DAILY_JOB_LIMIT,
+	IMG_TO_3D_MAX_IMAGE_BYTES,
 	parseImgTo3dSubmission,
 	type ImgTo3dErrorKind,
 	type ImgTo3dGenerationParams,
@@ -71,15 +72,21 @@ export interface ImgTo3dJobRecord {
 }
 
 export interface ImgTo3dJobStore {
-	insert(jobs: readonly ImgTo3dJobRecord[]): Promise<void>
+	/**
+	 * Records `jobs` unless that would take `userId` past `limit` jobs in the
+	 * last 24 hours, atomically; `false` when refused, with nothing recorded.
+	 */
+	insertWithinDailyLimit(
+		jobs: readonly ImgTo3dJobRecord[],
+		userId: string,
+		limit: number
+	): Promise<boolean>
 	/** The job, only if it belongs to `organizationId`. */
 	findForOrganization(
 		jobId: string,
 		organizationId: string
 	): Promise<{ id: string } | null>
 	remove(jobId: string): Promise<void>
-	/** Jobs `userId` started in the last 24 hours, for the daily limit. */
-	countStartedInLastDay(userId: string): Promise<number>
 }
 
 export interface ImgTo3dHandlerDeps {
@@ -103,10 +110,15 @@ const UUID_PATTERN =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /*
-  404, not 403, for a refused caller and for a job outside their organization:
-  a 403 would confirm that the endpoint, or the job id, exists.
+  404, not 401 or 403, for a signed-out or refused caller and for a job outside
+  their organization: anything else would confirm that the endpoint, or the job
+  id, exists. For the same reason nothing about the request, its method
+  included, is looked at before the caller is admitted.
 */
 const NOT_FOUND = 'Not found'
+
+/** The image plus the form's other fields and boundaries, generously. */
+const MAX_SUBMIT_BYTES = IMG_TO_3D_MAX_IMAGE_BYTES + 64 * 1024
 
 /**
  * Auth cookies are appended, not set: Supabase can rotate more than one in a
@@ -150,7 +162,7 @@ async function admit(
 	{ user: User; organizationId: string; headers?: HeadersInit } | Response
 > {
 	const auth = await deps.authenticate(request)
-	if (auth instanceof Response) return auth
+	if (auth instanceof Response) return ApiResponse.notFound(NOT_FOUND)
 
 	const access = await deps.resolveAccess(auth.user)
 	if (!access) {
@@ -160,7 +172,7 @@ async function admit(
 	return { ...auth, organizationId: access.organizationId }
 }
 
-/** Admitted, and the job is theirs; or the response that says otherwise. */
+/** Admitted, asking with GET, and the job is theirs; or the response that says otherwise. */
 async function admitToJob(
 	request: Request,
 	jobId: string | undefined,
@@ -168,6 +180,9 @@ async function admitToJob(
 ) {
 	const admitted = await admit(request, deps)
 	if (admitted instanceof Response) return admitted
+	if (request.method !== 'GET') {
+		return withAuthHeaders(ApiResponse.methodNotAllowed(), admitted.headers)
+	}
 
 	// Checked before the query: Postgres rejects a malformed uuid with an error.
 	const job =
@@ -205,14 +220,23 @@ export async function handleSubmitImgTo3dGeneration(
 	request: Request,
 	deps: ImgTo3dHandlerDeps
 ): Promise<Response> {
-	if (request.method !== 'POST') {
-		return ApiResponse.methodNotAllowed()
-	}
-
 	const admitted = await admit(request, deps)
 	if (admitted instanceof Response) return admitted
 	const respond = (response: Response) =>
 		withAuthHeaders(response, admitted.headers)
+
+	if (request.method !== 'POST') {
+		return respond(ApiResponse.methodNotAllowed())
+	}
+
+	// Checked before the body is read, which buffers all of it in memory.
+	// Browsers always send a length with a form; a request without one is refused.
+	const length = Number(request.headers.get('Content-Length') ?? NaN)
+	if (!Number.isFinite(length) || length > MAX_SUBMIT_BYTES) {
+		return respond(
+			ApiResponse.error('image_too_large' satisfies ImgTo3dErrorKind, 413)
+		)
+	}
 
 	let formData: FormData
 	try {
@@ -228,15 +252,6 @@ export async function handleSubmitImgTo3dGeneration(
 	if (!parsed.ok) return respond(ApiResponse.badRequest(parsed.error))
 
 	const { image, seedCount, ...params } = parsed.submission
-
-	// Counted before anything is recorded, so a refused request costs nothing.
-	const started = await deps.jobs.countStartedInLastDay(admitted.user.id)
-	if (started + seedCount > IMG_TO_3D_DAILY_JOB_LIMIT) {
-		return respond(
-			ApiResponse.error('daily_limit' satisfies ImgTo3dErrorKind, 429)
-		)
-	}
-
 	const batchId = deps.newId()
 	const records: ImgTo3dJobRecord[] = distinctSeeds(
 		seedCount,
@@ -249,7 +264,17 @@ export async function handleSubmitImgTo3dGeneration(
 		seed,
 		params
 	}))
-	await deps.jobs.insert(records)
+	// Nothing is sent unless every job was recorded within the limit.
+	const reserved = await deps.jobs.insertWithinDailyLimit(
+		records,
+		admitted.user.id,
+		IMG_TO_3D_DAILY_JOB_LIMIT
+	)
+	if (!reserved) {
+		return respond(
+			ApiResponse.error('daily_limit' satisfies ImgTo3dErrorKind, 429)
+		)
+	}
 
 	const runtime = deps.runtime()
 	const outcomes = await Promise.all(

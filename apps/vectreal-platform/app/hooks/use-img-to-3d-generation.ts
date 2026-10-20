@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 
 import {
@@ -15,6 +15,12 @@ import {
 const ENDPOINT = '/api/img-to-3d/generations'
 /** Used until the runtime says how long to wait. */
 const DEFAULT_POLL_MS = 2_000
+/**
+ * Polls in a row that may pass before a job is given up on: a minute or two
+ * at the usual interval, so a brief outage is ridden out and a lasting one
+ * ends instead of polling for as long as the tab is open.
+ */
+export const MAX_CONSECUTIVE_POLL_FAILURES = 30
 
 export interface ImgTo3dCandidate {
 	readonly jobId: string
@@ -39,11 +45,15 @@ class ImgTo3dRequestError extends Error {
 	}
 
 	/**
-	 * Asking again will get the same answer: the job is gone, not ours, or
-	 * refused. A 5xx, a timeout or a rate limit may pass, and so may a 401,
-	 * which a brief Supabase Auth failure also produces; those poll on.
+	 * Asking again will get the same answer: the runtime does not know the job
+	 * (a 404 it sent, `runtime_rejected`), or the request was refused. A 5xx, a
+	 * timeout or a rate limit may pass, and so may a 401, which a brief Supabase
+	 * Auth failure also produces. So may the gate's plain 404: it is evaluated
+	 * against PostHog on every poll, and a failed evaluation denies. Those poll
+	 * on, up to `MAX_CONSECUTIVE_POLL_FAILURES`.
 	 */
 	get isFinal(): boolean {
+		if (this.status === 404) return this.kind === 'runtime_rejected'
 		return (
 			this.status >= 400 &&
 			this.status < 500 &&
@@ -88,7 +98,8 @@ function baseName(fileName: string): string {
  * takes, so it arrives as a new scene with its optimization baseline.
  */
 export function useImgTo3dGeneration(
-	loadModel: (files: File[]) => Promise<unknown>
+	/** `uploadFiles`, which reports a failed load in its result rather than throwing. */
+	loadModel: (files: File[]) => Promise<{ readonly status: string }>
 ) {
 	const csrf = useAuthenticityToken()
 	const [candidates, setCandidates] = useState<readonly ImgTo3dCandidate[]>([])
@@ -98,6 +109,8 @@ export function useImgTo3dGeneration(
 	const [pollAfterMs, setPollAfterMs] = useState(DEFAULT_POLL_MS)
 	// Bumped after each round, so the effect below schedules the next one.
 	const [pollRound, setPollRound] = useState(0)
+	// Failed polls in a row, per job; a successful one clears its count.
+	const pollFailures = useRef(new Map<string, number>())
 
 	/*
 	  A string, so the effect below restarts when the set of pending jobs
@@ -131,10 +144,19 @@ export function useImgTo3dGeneration(
 							error: state.status === 'failed' ? 'generation_failed' : null
 						})
 						if (state.pollAfterMs > 0) nextDelays.push(state.pollAfterMs)
+						pollFailures.current.delete(jobId)
 					} catch (error) {
-						// A poll that may pass leaves the job pending; a refusal ends it.
-						if (error instanceof ImgTo3dRequestError && error.isFinal) {
-							updates.set(jobId, { status: 'failed', error: error.kind })
+						if (controller.signal.aborted) return
+						// A poll that may pass leaves the job pending, until too many
+						// in a row; a refusal ends it at once.
+						const failures = (pollFailures.current.get(jobId) ?? 0) + 1
+						pollFailures.current.set(jobId, failures)
+						const final = error instanceof ImgTo3dRequestError && error.isFinal
+						if (final || failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+							updates.set(jobId, {
+								status: 'failed',
+								error: kindOf(error, 'runtime_unavailable')
+							})
 						}
 					}
 				})
@@ -226,7 +248,9 @@ export function useImgTo3dGeneration(
 					`${candidate.sourceName}-${candidate.seed}.glb`,
 					{ type: 'model/gltf-binary' }
 				)
-				await loadModel([file])
+				const result = await loadModel([file])
+				// `uploadFiles` has already said why in a toast.
+				if (result.status !== 'ready') throw new Error('open_failed')
 			} catch (error) {
 				setCandidates((current) =>
 					current.map((c) =>

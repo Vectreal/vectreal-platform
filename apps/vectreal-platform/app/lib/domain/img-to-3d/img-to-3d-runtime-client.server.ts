@@ -99,9 +99,11 @@ async function readRuntimeError(response: Response): Promise<never> {
 	const detail = `The runtime answered ${response.status}: ${
 		typeof payload?.error === 'string' ? payload.error : 'no error body'
 	}`
-	// A runtime 5xx is our upstream failing, not the caller's request.
+	// A runtime 5xx is our upstream failing, not the caller's request. It may
+	// come from Modal's edge after the container took the job, so the outcome
+	// of a submit answered with one is unknown; polling settles it.
 	throw response.status >= 500
-		? new ImgTo3dRuntimeError('runtime_unavailable', 502, detail)
+		? new ImgTo3dRuntimeError('runtime_unavailable', 502, detail, true)
 		: new ImgTo3dRuntimeError('runtime_rejected', response.status, detail)
 }
 
