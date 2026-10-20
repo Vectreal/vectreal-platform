@@ -47,6 +47,17 @@ export type {
 	ProjectList
 } from './projects'
 
+export {
+	ENVIRONMENT_PRESETS,
+	sceneBoundsSchema,
+	sceneControlsSchema,
+	sceneEnvironmentSchema,
+	sceneLookSchema,
+	sceneNormalizationSchema,
+	sceneShadowsSchema
+} from './scene-settings'
+export type { SceneLook } from './scene-settings'
+
 export { endedSessionSchema } from './session'
 export type { EndedSession } from './session'
 
