@@ -245,6 +245,73 @@ describe('createVectrealClient', () => {
 		expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('"k-3"')
 	})
 
+	describe('scene settings', () => {
+		const settings = {
+			settings: {
+				environment: { preset: 'night-city' },
+				camera: { activeCameraId: 'default' },
+				hotspots: []
+			}
+		}
+		const client = (fetch: typeof globalThis.fetch) =>
+			createVectrealClient({
+				baseUrl: 'https://vectreal.com',
+				getAccessToken: () => 'token-1',
+				fetch
+			})
+
+		it("lists a project's scenes with GET", async () => {
+			const scenes = {
+				scenes: [
+					{
+						id: 's1',
+						name: 'Chair',
+						status: 'draft',
+						updatedAt: '2026-10-20T08:00:00.000Z'
+					}
+				]
+			}
+			const fetch = respond({ success: true, data: scenes })
+
+			await expect(client(fetch).listScenes('p 1')).resolves.toEqual(scenes)
+			expect(sent(fetch).url).toBe(
+				'https://vectreal.com/api/v1/projects/p%201/scenes'
+			)
+		})
+
+		it("reads a scene's settings with GET", async () => {
+			const fetch = respond({ success: true, data: settings })
+
+			await expect(client(fetch).getSceneSettings('s1')).resolves.toEqual(
+				settings
+			)
+			expect(sent(fetch).url).toBe(
+				'https://vectreal.com/api/v1/scenes/s1/settings'
+			)
+		})
+
+		it('changes settings with PATCH, a JSON body and a quoted key', async () => {
+			const fetch = respond({ success: true, data: settings })
+
+			await expect(
+				client(fetch).updateSceneSettings(
+					's1',
+					{ environment: { preset: 'night-city' } },
+					{ idempotencyKey: 'k-4' }
+				)
+			).resolves.toEqual(settings)
+			const [url, init] = fetch.mock.calls[0]
+			expect(String(url)).toBe('https://vectreal.com/api/v1/scenes/s1/settings')
+			expect(init?.method).toBe('PATCH')
+			expect(JSON.parse(String(init?.body))).toEqual({
+				environment: { preset: 'night-city' }
+			})
+			const headers = new Headers(init?.headers)
+			expect(headers.get('Content-Type')).toBe('application/json')
+			expect(headers.get('Idempotency-Key')).toBe('"k-4"')
+		})
+	})
+
 	describe('embeds', () => {
 		const embedKey = {
 			id: 'k1',

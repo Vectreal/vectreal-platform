@@ -92,6 +92,10 @@ export default [
 		'api/v1/scenes/:sceneId/embed',
 		'./routes/api/v1/scenes.$sceneId.embed.ts'
 	),
+	route(
+		'api/v1/scenes/:sceneId/settings',
+		'./routes/api/v1/scenes.$sceneId.settings.ts'
+	),
 	// Public: tells the CLI which OAuth client and redirect ports to use.
 	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
 	route('api/v1/session', './routes/api/v1/session.ts'),

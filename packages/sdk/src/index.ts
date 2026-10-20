@@ -54,9 +54,15 @@ export {
 	sceneEnvironmentSchema,
 	sceneLookSchema,
 	sceneNormalizationSchema,
-	sceneShadowsSchema
+	sceneSettingsSchema,
+	sceneShadowsSchema,
+	updateSceneSettingsInputSchema
 } from './scene-settings'
-export type { SceneLook } from './scene-settings'
+export type {
+	SceneLook,
+	SceneSettingsDocument,
+	UpdateSceneSettingsInput
+} from './scene-settings'
 
 export { endedSessionSchema } from './session'
 export type { EndedSession } from './session'
@@ -64,11 +70,13 @@ export type { EndedSession } from './session'
 export {
 	createdSceneSchema,
 	createSceneInputSchema,
+	sceneListSchema,
 	scenePublicationSchema
 } from './scenes'
 export type {
 	CreatedScene,
 	CreateSceneInput,
 	PublishSceneInput,
+	SceneList,
 	ScenePublication
 } from './scenes'

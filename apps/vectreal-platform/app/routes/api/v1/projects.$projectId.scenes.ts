@@ -1,4 +1,8 @@
 /**
+ * GET  /api/v1/projects/:projectId/scenes  the project's scenes, the most
+ *                                          recently edited first. Needs
+ *                                          `projects:read`; answers
+ *                                          `{ scenes: [{ id, name, status, updatedAt }] }`.
  * POST /api/v1/projects/:projectId/scenes  creates a scene from one GLB.
  *                                          Multipart: `file`, the GLB, and
  *                                          `name`. Needs `projects:write` and
@@ -31,17 +35,38 @@ import {
 	SPLIT_BIN_FILE_NAME,
 	SPLIT_GLTF_FILE_NAME
 } from '../../../lib/domain/scene/glb-container'
+import { getProjectsScenes } from '../../../lib/domain/scene/server/scene-folder-repository.server'
 import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-settings-service.server'
 import { prepareSceneUpload } from '../../../lib/domain/scene/server/scene-upload.operations.server'
 
 import type { Route } from './+types/projects.$projectId.scenes'
-import type { CreatedScene } from '@vctrl/sdk'
+import type { CreatedScene, SceneList } from '@vctrl/sdk'
 
-// Listing scenes is not served yet. Gated anyway, so the route never tells a
-// caller without a token anything.
-export async function loader({ request }: Route.LoaderArgs) {
-	await authorizeAgentRequest(request, { scope: 'projects:read' })
-	return methodNotAllowed()
+export async function loader({ request, params }: Route.LoaderArgs) {
+	const actor = await authorizeAgentRequest(request, {
+		scope: AGENT_OPERATION_SCOPES['project:read']
+	})
+	const { projectId } = await resolveAgentProject(
+		params.projectId,
+		actor,
+		'project:read'
+	)
+
+	const scenes = (await getProjectsScenes([projectId], actor.userId)).get(
+		projectId
+	)
+	return ApiResponse.success(
+		{
+			scenes: (scenes ?? []).map((scene) => ({
+				id: scene.id,
+				name: scene.name,
+				status: scene.status,
+				updatedAt: scene.updatedAt.toISOString()
+			}))
+		} satisfies SceneList,
+		200,
+		{ headers: { 'Cache-Control': 'no-store' } }
+	)
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
@@ -145,7 +170,10 @@ export async function action({ request, params }: Route.ActionArgs) {
 }
 
 function methodNotAllowed(): Response {
-	return agentApiError(405, 'method_not_allowed', 'This route answers POST.', {
-		headers: { Allow: 'POST' }
-	})
+	return agentApiError(
+		405,
+		'method_not_allowed',
+		'This route answers GET and POST.',
+		{ headers: { Allow: 'GET, POST' } }
+	)
 }

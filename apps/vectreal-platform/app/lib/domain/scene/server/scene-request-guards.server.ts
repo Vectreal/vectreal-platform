@@ -65,18 +65,20 @@ export async function runWithHeavySceneActionLimit(
 	}
 }
 
+/**
+ * Runs `operation` while holding the scene's write lock, or answers `busy`
+ * (by default a 409) when another save holds it. The API passes its own
+ * answer, so an agent gets the refusal in the v1 shape.
+ */
 export async function runWithSceneWriteLock(
 	sceneId: string,
 	holderKey: string,
-	operation: () => Promise<Response>
+	operation: () => Promise<Response>,
+	busy: () => Response = () =>
+		ApiResponse.error('Scene is currently being processed. Retry shortly.', 409)
 ): Promise<Response> {
 	const acquiredLock = await acquireSceneWriteLock({ sceneId, holderKey })
-	if (!acquiredLock) {
-		return ApiResponse.error(
-			'Scene is currently being processed. Retry shortly.',
-			409
-		)
-	}
+	if (!acquiredLock) return busy()
 
 	try {
 		return await operation()
