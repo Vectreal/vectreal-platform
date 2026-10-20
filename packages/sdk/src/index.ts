@@ -8,6 +8,25 @@ export {
 } from './client'
 export type { VectrealClient, VectrealClientOptions } from './client'
 
+export {
+	allowedDomainsSchema,
+	createdEmbedKeySchema,
+	createEmbedKeyInputSchema,
+	embedKeyListSchema,
+	embedKeySchema,
+	sceneEmbedSchema,
+	setAllowedDomainsInputSchema
+} from './embed'
+export type {
+	AllowedDomains,
+	CreatedEmbedKey,
+	CreateEmbedKeyInput,
+	EmbedKey,
+	EmbedKeyList,
+	SceneEmbed,
+	SetAllowedDomainsInput
+} from './embed'
+
 export { apiFailureSchema, apiSuccessSchema } from './envelope'
 export type { ApiFailure } from './envelope'
 
@@ -27,3 +46,29 @@ export type {
 	CreateProjectInput,
 	ProjectList
 } from './projects'
+
+export {
+	ENVIRONMENT_PRESETS,
+	sceneBoundsSchema,
+	sceneControlsSchema,
+	sceneEnvironmentSchema,
+	sceneLookSchema,
+	sceneNormalizationSchema,
+	sceneShadowsSchema
+} from './scene-settings'
+export type { SceneLook } from './scene-settings'
+
+export { endedSessionSchema } from './session'
+export type { EndedSession } from './session'
+
+export {
+	createdSceneSchema,
+	createSceneInputSchema,
+	scenePublicationSchema
+} from './scenes'
+export type {
+	CreatedScene,
+	CreateSceneInput,
+	PublishSceneInput,
+	ScenePublication
+} from './scenes'

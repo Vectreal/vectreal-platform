@@ -41,15 +41,20 @@ export const STALE_CLAIM_MS = 2 * 60 * 1000
  * failed, and what lets an abandoned claim be taken over. A 5xx or an
  * exception rolls back and releases the key, so the retry runs.
  *
+ * A mutation that writes files passes `{ prepare, run, undo }` instead (see
+ * `StagedMutation`): storage cannot join the transaction, so the files are
+ * written first and taken back if it does not commit.
+ *
  * Call it after `authorizeAgentRequest`, so a refusal there never takes a key.
  */
-export async function withIdempotency(
+export async function withIdempotency<Prepared>(
 	{
 		grantId,
 		request,
 		payload
 	}: { grantId: string; request: Request; payload: unknown },
-	run: (tx: DbTransaction) => Promise<Response>
+	mutation:
+		((tx: DbTransaction) => Promise<Response>) | StagedMutation<Prepared>
 ): Promise<Response> {
 	const key = readIdempotencyKey(request)
 	if (!key) {
@@ -78,13 +83,30 @@ export async function withIdempotency(
 		if (!claim) throw inProgress()
 	}
 	const held = claim
+	const { prepare, run, undo } =
+		typeof mutation === 'function'
+			? {
+					prepare: undefined,
+					run: (tx: DbTransaction) => mutation(tx),
+					undo: undefined
+				}
+			: mutation
+	const undoAttempt = async () =>
+		undo?.({ claimId: held.claimId }).catch((undoError: unknown) =>
+			reportServerError(undoError, { request })
+		)
 
 	try {
-		return await inIdempotencyTransaction(async (tx) => {
-			const response = await run(tx).catch((error: unknown) => {
-				if (error instanceof Response) return error
-				throw error
-			})
+		// Before the transaction opens, so no pooled connection waits on storage.
+		const prepared = prepare
+			? await answerOf(prepare({ claimId: held.claimId }))
+			: (undefined as Prepared)
+
+		const response = await inIdempotencyTransaction(async (tx) => {
+			const response =
+				prepared instanceof Response
+					? prepared
+					: await answerOf(run(tx, prepared))
 			if (response.status >= 500) throw new RolledBack(response)
 
 			const kept = await completeIdempotencyKey(tx, held, {
@@ -94,7 +116,12 @@ export async function withIdempotency(
 			if (!kept) throw new ClaimTakenOver()
 			return response
 		})
+		// A kept refusal, from either phase, commits only its outcome: nothing
+		// links what `prepare` made.
+		if (!response.ok) await undoAttempt()
+		return response
 	} catch (error) {
+		await undoAttempt()
 		// Another request holds the key now and does the work; ours is undone.
 		if (error instanceof ClaimTakenOver) throw inProgress()
 
@@ -104,6 +131,39 @@ export async function withIdempotency(
 		if (error instanceof RolledBack) return error.response
 		throw error
 	}
+}
+
+/** The attempt a staged mutation runs under: one per claim, so one per batch of files. */
+export type IdempotentAttempt = { claimId: string }
+
+/**
+ * A mutation with work that cannot join the transaction, such as storage
+ * uploads.
+ *
+ * - `prepare` runs once per attempt, after the key is claimed and before the
+ *   transaction opens. A Response it returns or throws is the outcome, kept
+ *   like one from `run`.
+ * - `run` gets the transaction and what `prepare` made.
+ * - `undo` runs whenever the attempt did not succeed: after a rollback,
+ *   before the key is freed, and after a kept refusal from either phase. It
+ *   must leave alone anything the attempt's outcome references, and tolerate
+ *   an attempt that prepared nothing.
+ *
+ * An attempt that dies between `prepare` and the commit never reaches `undo`;
+ * whatever it made has to be swept by something else.
+ */
+export type StagedMutation<Prepared> = {
+	prepare: (attempt: IdempotentAttempt) => Promise<Prepared | Response>
+	run: (tx: DbTransaction, prepared: Prepared) => Promise<Response>
+	undo: (attempt: IdempotentAttempt) => Promise<void>
+}
+
+/** A thrown Response is an answer, like a returned one. */
+function answerOf<T>(work: Promise<T>): Promise<T | Response> {
+	return work.catch((error: unknown) => {
+		if (error instanceof Response) return error
+		throw error
+	})
 }
 
 /** Carries a 5xx out of the transaction, rolling back whatever it wrote. */

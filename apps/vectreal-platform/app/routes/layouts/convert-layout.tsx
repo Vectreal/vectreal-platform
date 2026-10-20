@@ -3,7 +3,12 @@ import { Outlet, useLocation } from 'react-router'
 import { ConvertChooser } from '../../components/convert/convert-chooser'
 import { ConvertFormatSwitch } from '../../components/convert/convert-format-switch'
 import { PublicErrorBoundary } from '../../components/errors'
-import { DitherSwap, PageHero } from '../../components/layout-components'
+import {
+	Band,
+	FadeSwap,
+	PageHero,
+	SheetFrame
+} from '../../components/layout-components'
 import {
 	CONVERT_INDEX_COPY,
 	CONVERT_INDEX_PATH,
@@ -29,8 +34,8 @@ import {
  * still starts in the first screen, now at the page's full width.
  *
  * Switching pairs keeps this layout mounted, so what changes changes in place:
- * the two format names in the heading and the description dissolve through the
- * page's dither, and the description keeps two lines' room so a shorter one
+ * the two format names in the heading and the description fade in, and the
+ * description keeps two lines' room so a shorter one
  * does not pull the switcher and the stage up under the reader's pointer.
  *
  * Below the converter, every converter again, grouped the way the index groups
@@ -51,9 +56,8 @@ export default function ConvertLayout() {
 				heading={
 					pair ? (
 						<>
-							<DitherSwap value={pair.fromLabel}>{pair.fromLabel}</DitherSwap>{' '}
-							to <DitherSwap value={pair.toLabel}>{pair.toLabel}</DitherSwap>{' '}
-							converter
+							<FadeSwap value={pair.fromLabel}>{pair.fromLabel}</FadeSwap> to{' '}
+							<FadeSwap value={pair.toLabel}>{pair.toLabel}</FadeSwap> converter
 						</>
 					) : (
 						CONVERT_INDEX_COPY.title
@@ -61,26 +65,43 @@ export default function ConvertLayout() {
 				}
 				description={
 					pair ? (
-						<DitherSwap value={pair.slug} className="min-h-[2lh]">
+						<FadeSwap value={pair.slug} className="min-h-[2lh]">
 							{pair.description}
-						</DitherSwap>
+						</FadeSwap>
 					) : (
 						CONVERT_INDEX_COPY.description
 					)
 				}
 				actions={pair && <ConvertFormatSwitch pair={pair} />}
 			/>
-			<div className="container-page pb-32">
-				<Outlet />
-				{pair && (
-					<section aria-labelledby="every-converter" className="mt-32">
-						<h2 id="every-converter" className="text-h2 mb-16">
-							Every converter
-						</h2>
-						<ConvertChooser current={pair.slug} groupHeading="h3" />
-					</section>
+			{/*
+			  A pair page is two bands: the converter, then every converter, ruled
+			  into the frame as that band's last row. The index is that row alone,
+			  straight under the head: a band around it would only open on an empty
+			  cell, so the row's own top rule is the one under the head.
+			*/}
+			<SheetFrame>
+				{pair ? (
+					<>
+						<Band aria-label="Converter">
+							<Outlet />
+						</Band>
+						<Band aria-labelledby="every-converter" flush>
+							<h2 id="every-converter" className="text-h2 mb-16">
+								Every converter
+							</h2>
+							<ConvertChooser current={pair.slug} groupHeading="h3" />
+						</Band>
+					</>
+				) : (
+					<div className="border-foreground/10 border-t">
+						{/* Up a pixel, so the row's own top rule lies on this one, which runs edge to edge as every band's does. */}
+						<div className="mx-(--frame-x) -mt-px px-(--frame-pad)">
+							<Outlet />
+						</div>
+					</div>
 				)}
-			</div>
+			</SheetFrame>
 		</main>
 	)
 }

@@ -7,42 +7,21 @@ import type { HOME_PAGE_COPY } from '../../../constants/product-copy'
 
 export type HeroStatus = keyof typeof HOME_PAGE_COPY.stage.status
 
-/** What the readout says about the model on the stage. */
-export interface HeroReadout {
-	fileName: string
-	materials: number
-	vertices: number
-	textures: number
-	/** The size before optimization, when there is one to compare against. */
-	originalBytes: number | null
-	bytes: number
-}
-
 export interface HeroState {
 	status: HeroStatus
 	/** Orange dot: something is in progress. */
 	busy: boolean
-	readout: HeroReadout
-	/** Bytes shown so far while the model downloads; equals `readout.bytes` once it has. */
+	/** Bytes shown so far while the model downloads; equals `HERO_MODEL.bytes` once it has. */
 	shownBytes: number
-	/** Whose face the figure label names: the hero model's, a dropped file's, or the live object. */
-	view: 'hero' | 'dropped' | 'live'
-	/** A dropped file on the stage can be handed to the publisher. */
-	canHandOff: boolean
+	/** Whose face the figure label names: the hero model's, or the live object. */
+	view: 'hero' | 'live'
 }
 
 const HERO_INITIAL_STATE: HeroState = {
 	status: 'loading',
 	busy: true,
-	readout: {
-		fileName: HERO_MODEL.fileName,
-		...HERO_MODEL.contents,
-		originalBytes: HERO_MODEL.sourceBytes,
-		bytes: HERO_MODEL.bytes
-	},
 	shownBytes: 0,
-	view: 'hero',
-	canHandOff: false
+	view: 'hero'
 }
 
 /**

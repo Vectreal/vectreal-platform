@@ -50,6 +50,31 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 
+/*
+  A hit area of at least 44px around a target drawn smaller, the size Apple
+  and WCAG 2.5.5 ask for a finger: an invisible layer centred on the element,
+  so nothing drawn moves. The element has to be positioned (`relative`, or
+  already absolute) for the layer to centre on it, which is why this sets no
+  position itself: an absolutely placed button keeps its place. Where two
+  targets sit closer than 44px apart their layers would overlap, so those give
+  themselves the room on coarse pointers instead (`pointer-coarse:`). Coarse
+  pointers only: under a mouse the layer would widen every hover and let the
+  footer's closer rows overlap.
+*/
+@utility tap-target {
+	@media (pointer: coarse) {
+		&::after {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: max(100%, 44px);
+			height: max(100%, 44px);
+			translate: -50% -50%;
+		}
+	}
+}
+
 :root {
 	/*
 	  Corner radii - confidently rounded, never tight.
@@ -174,6 +199,19 @@
 	  page, so it widens everywhere rather than in one section.
 	*/
 	--container-max: 90rem;
+	/*
+	  The marketing site's sheet frame: one column, ruled at its edges where a
+	  page uses \`SheetFrame\`, that the nav, the page heads, every section and the footer
+	  share. Content sits `--frame-pad` inside the rules. The product (the
+	  dashboard, the publisher) keeps the wider measure above.
+	*/
+	--frame-max: 80rem;
+	--frame-pad: 0px;
+}
+@media (min-width: 64rem) {
+	:root {
+		--frame-pad: 48px;
+	}
 }
 
 @theme inline {
@@ -572,8 +610,8 @@
 		);
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
-			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base),
+			inset 0 0 0 1px var(--material-plate-rim),
+			inset 0 -1px 0 var(--material-plate-lip),
 			0 1px 2px var(--material-shadow),
 			0 12px 32px -18px var(--material-shadow-far);
 	}
@@ -585,8 +623,8 @@
 		);
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
-			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base),
+			inset 0 0 0 1px var(--material-plate-rim),
+			inset 0 -1px 0 var(--material-plate-lip),
 			0 1px 2px var(--material-shadow),
 			0 18px 44px -20px var(--material-shadow-far);
 	}
@@ -684,6 +722,79 @@
 			inset 0 0 0 1px var(--material-rim);
 	}
 
+	/*
+	  A media panel on the marketing site: a glass plate standing in front of a
+	  light, the way GitHub backlights its panels (Moritz, 19 Oct 2026; the
+	  prototype is `.prototype-visual/cards.html`). The light (::before) stands
+	  behind the panel's foot and throws up past its sides and over its top,
+	  running from a hot core through the brand to nothing. The plate (::after)
+	  frosts it, and its hairline rim warms where the light reaches it, from
+	  the bottom up; a thin hot line marks where the light wraps the top edge.
+	  The plate's blur frosts the light and whatever of the page stands behind
+	  the panel, the floor included. The hot line is drawn under the panel's
+	  content, so content keeps clear of the top edge. Anything inside that has
+	  to be clipped clips on its own wrapper: clipping the panel would cut the
+	  light off at its edge.
+	*/
+	.ds-lit {
+		position: relative;
+		isolation: isolate;
+	}
+	/*
+	  `--lit-inset` and `--lit-radius` set the plate inside its element rather
+	  than on it: a lit cell in a ruled row keeps the frame's lines as its
+	  edges, and the plate stands as a pane inside them, so its rim never lies
+	  on a rule.
+	*/
+	.ds-lit::before,
+	.ds-lit::after {
+		content: '';
+		position: absolute;
+		border-radius: var(--lit-radius, inherit);
+		pointer-events: none;
+	}
+	.ds-lit::before {
+		inset: -14% -16% 4%;
+		z-index: -2;
+		background: radial-gradient(
+			58% 70% at 50% 78%,
+			var(--lit-core) 0%,
+			var(--lit-mid) 20%,
+			var(--lit-edge) 48%,
+			transparent 70%
+		);
+		filter: blur(48px);
+		opacity: var(--lit-strength);
+	}
+	/* Three layers on one box: the hot line along the top edge, the plate, and the rim showing in its 1px border. */
+	.ds-lit::after {
+		inset: var(--lit-inset, 0);
+		z-index: -1;
+		border: 1px solid transparent;
+		background:
+			linear-gradient(
+					90deg,
+					transparent,
+					var(--lit-leak) 40%,
+					var(--lit-leak-core) 50%,
+					var(--lit-leak) 60%,
+					transparent
+				)
+				top center / 64% 1px no-repeat border-box,
+			linear-gradient(var(--lit-plate), var(--lit-plate)) padding-box,
+			linear-gradient(
+					to top,
+					rgb(var(--orange-rgb) / 0.5),
+					rgb(var(--orange-rgb) / 0.12) 30%,
+					var(--lit-rim-side) 60%,
+					var(--lit-rim-top)
+				)
+				border-box;
+		backdrop-filter: blur(14px) saturate(1.4);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			var(--lit-shadow);
+	}
 	/* Only where a divider genuinely carries meaning. Never to draw a box. */
 	.ds-divider {
 		background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
@@ -707,8 +818,8 @@
 		);
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
-			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base),
+			inset 0 0 0 1px var(--material-plate-rim),
+			inset 0 -1px 0 var(--material-plate-lip),
 			0 1px 2px var(--material-shadow),
 			0 12px 32px -18px var(--material-shadow-far);
 		transition:
@@ -723,8 +834,8 @@
 		);
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
-			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base),
+			inset 0 0 0 1px var(--material-plate-rim),
+			inset 0 -1px 0 var(--material-plate-lip),
 			0 1px 2px var(--material-shadow),
 			0 18px 44px -20px var(--material-shadow-far);
 	}
@@ -736,8 +847,8 @@
 		);
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
-			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base),
+			inset 0 0 0 1px var(--material-plate-rim),
+			inset 0 -1px 0 var(--material-plate-lip),
 			0 1px 2px var(--material-shadow),
 			0 18px 44px -20px var(--material-shadow-far);
 		transition:
@@ -752,10 +863,37 @@
 		);
 		box-shadow:
 			inset 0 1px 0 var(--material-bevel),
-			inset 0 0 0 1px var(--material-rim),
-			inset 0 -1px 0 var(--material-base),
+			inset 0 0 0 1px var(--material-plate-rim),
+			inset 0 -1px 0 var(--material-plate-lip),
 			0 1px 2px var(--material-shadow),
 			0 24px 56px -22px var(--material-shadow-far);
+	}
+	/*
+	  A row with no plate until it is pointed at, focused or current: nav links,
+	  panel links, drawer rows. It then stands up as a small plate, one step
+	  above whatever it sits on, which is why the fill is a tint rather than a
+	  step mixed against the page: the same row sits on the bar, inside an
+	  overlay panel and on a sheet. The states live here because a Tailwind
+	  variant cannot apply a `ds-*` class, and these are the states a row
+	  reports: `aria-current` for the page you are on, `aria-expanded` for the
+	  section whose panel is open.
+	*/
+	.ds-ghost-interactive {
+		background-color: transparent;
+		transition:
+			color var(--duration-fast) var(--ease-out),
+			background-color var(--duration-fast) var(--ease-out),
+			box-shadow var(--duration-base) var(--ease-out);
+	}
+	.ds-ghost-interactive:hover,
+	.ds-ghost-interactive:focus-visible,
+	.ds-ghost-interactive[aria-current='page'],
+	.ds-ghost-interactive[aria-expanded='true'] {
+		background-color: color-mix(in oklch, var(--foreground) 4%, transparent);
+		box-shadow:
+			inset 0 1px 0 var(--material-bevel),
+			inset 0 0 0 1px var(--material-rim),
+			0 1px 2px var(--material-shadow);
 	}
 	/*
 	  The resting surface of a control (the Slider track, a Toggle).
@@ -916,6 +1054,21 @@
 	@media (min-width: 48rem) {
 		.container-page {
 			padding-inline: var(--space-6);
+		}
+	}
+	/*
+	  On the marketing site the measure is the sheet frame's column, so the nav,
+	  the page heads, the sections and the footer start on the frame's line on
+	  every page, not on the home page alone. `nav-layout` marks the scope.
+	*/
+	[data-site='marketing'] .container-page {
+		max-width: calc(var(--frame-max) + 2 * var(--space-4));
+		padding-inline: calc(var(--space-4) + var(--frame-pad));
+	}
+	@media (min-width: 48rem) {
+		[data-site='marketing'] .container-page {
+			max-width: calc(var(--frame-max) + 2 * var(--space-6));
+			padding-inline: calc(var(--space-6) + var(--frame-pad));
 		}
 	}
 }

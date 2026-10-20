@@ -1,4 +1,16 @@
 import { cliClientSchema, type CliClient } from './cli-client'
+import {
+	allowedDomainsSchema,
+	createdEmbedKeySchema,
+	embedKeyListSchema,
+	sceneEmbedSchema,
+	type AllowedDomains,
+	type CreatedEmbedKey,
+	type CreateEmbedKeyInput,
+	type EmbedKeyList,
+	type SceneEmbed,
+	type SetAllowedDomainsInput
+} from './embed'
 import { apiFailureSchema, apiSuccessSchema, type ApiFailure } from './envelope'
 import { meSchema, type Me } from './me'
 import {
@@ -8,6 +20,15 @@ import {
 	type CreateProjectInput,
 	type ProjectList
 } from './projects'
+import {
+	createdSceneSchema,
+	scenePublicationSchema,
+	type CreatedScene,
+	type CreateSceneInput,
+	type PublishSceneInput,
+	type ScenePublication
+} from './scenes'
+import { endedSessionSchema, type EndedSession } from './session'
 
 import type { z } from 'zod'
 
@@ -68,7 +89,7 @@ export function createVectrealClient({
 	const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
 
 	async function send<Data extends z.ZodType>(
-		method: 'GET' | 'POST',
+		method: 'GET' | 'POST' | 'PUT' | 'DELETE',
 		path: string,
 		data: Data,
 		{
@@ -82,7 +103,11 @@ export function createVectrealClient({
 		}
 	): Promise<z.infer<Data>> {
 		const headers = new Headers({ Accept: 'application/json', ...extraHeaders })
-		if (payload !== undefined) headers.set('Content-Type', 'application/json')
+		// A FormData body leaves Content-Type to fetch, which adds the boundary.
+		const isForm = payload instanceof FormData
+		if (payload !== undefined && !isForm) {
+			headers.set('Content-Type', 'application/json')
+		}
 		if (auth === 'bearer') {
 			if (!getAccessToken) {
 				throw new Error(`${path} needs an access token: pass getAccessToken`)
@@ -93,7 +118,7 @@ export function createVectrealClient({
 		const response = await fetch(new URL(path, base), {
 			method,
 			headers,
-			body: payload === undefined ? undefined : JSON.stringify(payload)
+			body: payload === undefined || isForm ? payload : JSON.stringify(payload)
 		})
 
 		const body: unknown = await response.json().catch(() => undefined)
@@ -154,6 +179,147 @@ export function createVectrealClient({
 				body: input,
 				headers: { 'Idempotency-Key': sfString(idempotencyKey) }
 			}),
+		/**
+		 * Creates a scene in a project from one GLB, stored as it is: nothing is
+		 * re-encoded, so compress it before sending if it should be smaller.
+		 *
+		 * Retrying works as for `createProject`: pass your own `idempotencyKey`
+		 * and send the same name and file again.
+		 */
+		createScene: (
+			projectId: string,
+			{ file, name }: CreateSceneInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<CreatedScene> => {
+			const form = new FormData()
+			form.set('name', name)
+			form.set('file', file)
+			return send(
+				'POST',
+				`api/v1/projects/${encodeURIComponent(projectId)}/scenes`,
+				createdSceneSchema,
+				{
+					auth: 'bearer',
+					body: form,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			)
+		},
+		/**
+		 * Publishes a scene with the GLB visitors will load. Nothing is
+		 * re-encoded on the server, so send the compressed export (Draco, KTX2),
+		 * as the publisher does. Publishing again replaces the GLB.
+		 */
+		publishScene: (
+			sceneId: string,
+			{ file }: PublishSceneInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<ScenePublication> => {
+			const form = new FormData()
+			form.set('file', file)
+			return send(
+				'POST',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/publication`,
+				scenePublicationSchema,
+				{
+					auth: 'bearer',
+					body: form,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			)
+		},
+		/** Takes a scene offline. A scene that was not published stays a draft. */
+		unpublishScene: (
+			sceneId: string,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<ScenePublication> =>
+			send(
+				'DELETE',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/publication`,
+				scenePublicationSchema,
+				{
+					auth: 'bearer',
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			),
+		/** A project's embed keys, usable first. Tokens are not included. */
+		listEmbedKeys: (projectId: string): Promise<EmbedKeyList> =>
+			send(
+				'GET',
+				`api/v1/projects/${encodeURIComponent(projectId)}/embed-keys`,
+				embedKeyListSchema,
+				{ auth: 'bearer' }
+			),
+		/**
+		 * Creates an embed key for one project; it expires after 90 days. The
+		 * answer names the key but carries no token: `getSceneEmbed` puts it in
+		 * the snippet.
+		 */
+		createEmbedKey: (
+			projectId: string,
+			input: CreateEmbedKeyInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<CreatedEmbedKey> =>
+			send(
+				'POST',
+				`api/v1/projects/${encodeURIComponent(projectId)}/embed-keys`,
+				createdEmbedKeySchema,
+				{
+					auth: 'bearer',
+					body: input,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			),
+		/** The sites that may show a project's embeds. */
+		getAllowedDomains: (projectId: string): Promise<AllowedDomains> =>
+			send(
+				'GET',
+				`api/v1/projects/${encodeURIComponent(projectId)}/allowed-domains`,
+				allowedDomainsSchema,
+				{ auth: 'bearer' }
+			),
+		/**
+		 * Replaces the sites that may show a project's embeds, and answers with
+		 * the list as stored. Send the whole list: one left out stops working.
+		 */
+		setAllowedDomains: (
+			projectId: string,
+			input: SetAllowedDomainsInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<AllowedDomains> =>
+			send(
+				'PUT',
+				`api/v1/projects/${encodeURIComponent(projectId)}/allowed-domains`,
+				allowedDomainsSchema,
+				{
+					auth: 'bearer',
+					body: input,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			),
+		/**
+		 * The embed for a published scene, token included: the iframe URL and
+		 * two snippets to paste. Uses `keyId` when given, else the project's best
+		 * usable key.
+		 */
+		getSceneEmbed: (
+			sceneId: string,
+			{ keyId }: { keyId?: string } = {}
+		): Promise<SceneEmbed> => {
+			const query = keyId ? `?${new URLSearchParams({ keyId })}` : ''
+			return send(
+				'GET',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/embed${query}`,
+				sceneEmbedSchema,
+				{ auth: 'bearer' }
+			)
+		},
+		/**
+		 * Ends the session the token belongs to: it and its refresh token stop
+		 * working. The agent's grant stays; revoking it is the dashboard's job.
+		 */
+		endSession: (): Promise<EndedSession> =>
+			send('DELETE', 'api/v1/session', endedSessionSchema, { auth: 'bearer' }),
 		/** How the CLI signs in against this origin. */
 		cliClient: (): Promise<CliClient> =>
 			send('GET', 'api/v1/cli/client', cliClientSchema, { auth: 'public' })

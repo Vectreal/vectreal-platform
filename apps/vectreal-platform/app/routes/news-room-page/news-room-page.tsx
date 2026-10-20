@@ -7,9 +7,11 @@ import { data, Form, Link, useNavigation } from 'react-router'
 import { useConsent } from '../../components/consent/consent-context'
 import { PublicErrorBoundary } from '../../components/errors'
 import {
+	Band,
 	CtaPanel,
 	EmptyState,
-	PageHero
+	PageHero,
+	SheetFrame
 } from '../../components/layout-components'
 import { ArticleRow } from '../../components/layout-components/article-row'
 import { FeaturedArticle } from '../../components/layout-components/featured-article'
@@ -180,8 +182,17 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				}
 			/>
 
-			<div className="container-page pb-32">
+			<SheetFrame>
 				{/*
+				  The feed is one band: the filters, the featured article and the
+				  list, which is ruled into the frame as the band's last rows. With
+				  no results it keeps its padding, since nothing is ruled in.
+				*/}
+				<Band
+					aria-label="Articles"
+					flush={articles.length > 0 && remainingArticles.length > 0}
+				>
+					{/*
 				  One axis, not three.
 
 				  This row held fifteen controls in three visual treatments: a search
@@ -195,88 +206,90 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 				  and third axis on a twelve-article index, competing with the one
 				  people actually use.
 				*/}
-				<section
-					aria-label="Filter articles"
-					className="mb-8 flex flex-wrap items-center justify-between gap-4"
-				>
-					<div className="flex flex-wrap items-center gap-1">
-						<Button
-							variant={filters.category ? 'ghost' : 'secondary'}
-							size="sm"
-							asChild
-						>
-							<Link
-								to={buildNewsRoomPath(filters, { category: '' })}
-								aria-current={filters.category ? undefined : 'true'}
-							>
-								All
-							</Link>
-						</Button>
-						{categories.map((topic) => (
+					<section
+						aria-label="Filter articles"
+						className="mb-8 flex flex-wrap items-center justify-between gap-4"
+					>
+						<div className="flex flex-wrap items-center gap-1">
 							<Button
-								key={topic}
-								variant={filters.category === topic ? 'secondary' : 'ghost'}
+								variant={filters.category ? 'ghost' : 'secondary'}
 								size="sm"
 								asChild
 							>
 								<Link
-									to={buildNewsRoomPath(filters, { category: topic })}
-									aria-current={filters.category === topic ? 'true' : undefined}
+									to={buildNewsRoomPath(filters, { category: '' })}
+									aria-current={filters.category ? undefined : 'true'}
 								>
-									{topic}
+									All
 								</Link>
 							</Button>
-						))}
-					</div>
+							{categories.map((topic) => (
+								<Button
+									key={topic}
+									variant={filters.category === topic ? 'secondary' : 'ghost'}
+									size="sm"
+									asChild
+								>
+									<Link
+										to={buildNewsRoomPath(filters, { category: topic })}
+										aria-current={
+											filters.category === topic ? 'true' : undefined
+										}
+									>
+										{topic}
+									</Link>
+								</Button>
+							))}
+						</div>
 
-					<Form method="get" className="flex items-center gap-2">
-						<input type="hidden" name="category" value={filters.category} />
-						<label className="ds-sunken inline-flex h-9 items-center gap-2 rounded-full px-3">
-							<Search className="text-muted-foreground h-4 w-4 shrink-0" />
-							<input
-								type="search"
-								name="q"
-								defaultValue={filters.query}
-								placeholder="Search articles"
-								aria-label="Search newsroom articles"
-								className="text-body-sm placeholder:text-muted-foreground w-40 bg-transparent md:w-48"
-							/>
-						</label>
-						{/*
+						<Form method="get" className="flex items-center gap-2">
+							<input type="hidden" name="category" value={filters.category} />
+							<label className="ds-sunken inline-flex h-9 items-center gap-2 rounded-full px-3">
+								<Search className="text-muted-foreground h-4 w-4 shrink-0" />
+								<input
+									type="search"
+									name="q"
+									defaultValue={filters.query}
+									placeholder="Search articles"
+									aria-label="Search newsroom articles"
+									className="text-body-sm placeholder:text-muted-foreground w-40 bg-transparent md:w-48"
+								/>
+							</label>
+							{/*
 						  Not disabled while searching. Disabling the element that has
 						  focus moves focus to the body, so the reader lands above the
 						  results they asked for. The label change is the pending signal,
 						  and it announces because the button keeps focus. Re-submitting
 						  a GET is harmless - the router aborts the in-flight navigation.
 						*/}
-						<Button
-							type="submit"
-							variant="ghost"
-							size="sm"
-							aria-busy={isSearching}
-						>
-							{isSearching ? 'Searching' : 'Search'}
-						</Button>
-					</Form>
-				</section>
+							<Button
+								type="submit"
+								variant="ghost"
+								size="sm"
+								aria-busy={isSearching}
+							>
+								{isSearching ? 'Searching' : 'Search'}
+							</Button>
+						</Form>
+					</section>
 
-				<section id="news-feed" className="scroll-mt-below-nav space-y-4">
-					{articles.length === 0 ? (
-						<EmptyState
-							icon={SearchX}
-							title="No matching posts"
-							/*
+					<section id="news-feed" className="scroll-mt-below-nav space-y-4">
+						{articles.length === 0 ? (
+							<EmptyState
+								icon={SearchX}
+								title="No matching posts"
+								/*
 							  Echo the query back. "No matching posts" alone leaves the
 							  reader checking the field to see what was actually searched.
 							*/
-							description={`${
-								filters.query
-									? `Nothing matched "${filters.query}".`
-									: 'Nothing matched those filters.'
-							} Try another topic or clear your filters.`}
-							action={
-								<>
-									{/*
+								description={`${
+									filters.query
+										? `Nothing matched "${filters.query}".`
+										: 'Nothing matched those filters.'
+								} Try another topic or clear your filters.`}
+								action={
+									<>
+										{/*
 								  Whichever filter is actually set is the one offered. With a
 								  query, clearing it keeps the topic - the old link went to a
 								  bare /news-room, so recovering from one typo threw away the
@@ -284,57 +297,65 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 								  the same link would have pointed at the page the reader is
 								  already on: a primary action that goes nowhere.
 								*/}
-									<Button size="sm" asChild>
-										{filters.query ? (
-											<Link to={buildNewsRoomPath(filters, { query: '' })}>
-												Clear search
-											</Link>
-										) : (
-											<Link to="/news-room">Show all articles</Link>
-										)}
-									</Button>
-									<Button variant="ghost" size="sm" asChild>
-										<Link to="/sign-up">Create free account</Link>
-									</Button>
-								</>
-							}
-						/>
-					) : (
-						<>
-							{featuredArticle ? (
-								<FeaturedArticle article={featuredArticle} />
-							) : null}
-
-							{remainingArticles.length > 0 ? (
-								<div className="mt-16 flex flex-col gap-2">
-									{remainingArticles.map((article) => (
-										<ArticleRow key={article.slug} article={article} />
-									))}
-								</div>
-							) : null}
-
-							<CtaPanel
-								className="mt-32"
-								heading="Turn ideas from these articles into live 3D experiences."
-								description="Create a free account to publish your first scene and keep shipping faster with Vectreal."
-								actions={
-									<>
-										<Button asChild>
-											<Link to="/sign-up">
-												Start free
-												<ArrowRight className="h-4 w-4" />
-											</Link>
+										<Button size="sm" asChild>
+											{filters.query ? (
+												<Link to={buildNewsRoomPath(filters, { query: '' })}>
+													Clear search
+												</Link>
+											) : (
+												<Link to="/news-room">Show all articles</Link>
+											)}
 										</Button>
-										<Button variant="ghost" asChild>
-											<Link to="/pricing">Compare plans</Link>
+										<Button variant="ghost" size="sm" asChild>
+											<Link to="/sign-up">Create free account</Link>
 										</Button>
 									</>
 								}
 							/>
-						</>
-					)}
-				</section>
-			</div>
+						) : (
+							<>
+								{featuredArticle ? (
+									<FeaturedArticle article={featuredArticle} />
+								) : null}
+
+								{remainingArticles.length > 0 ? (
+									<div className="border-foreground/10 -mx-(--frame-pad) mt-16 border-t">
+										{remainingArticles.map((article) => (
+											<ArticleRow
+												key={article.slug}
+												article={article}
+												className="last:border-b-0"
+											/>
+										))}
+									</div>
+								) : null}
+							</>
+						)}
+					</section>
+				</Band>
+
+				{articles.length > 0 ? (
+					<Band aria-label="Start publishing">
+						<CtaPanel
+							heading="Turn ideas from these articles into live 3D experiences."
+							description="Create a free account to publish your first scene and keep shipping faster with Vectreal."
+							actions={
+								<>
+									<Button asChild>
+										<Link to="/sign-up">
+											Start free
+											<ArrowRight className="h-4 w-4" />
+										</Link>
+									</Button>
+									<Button variant="ghost" asChild>
+										<Link to="/pricing">Compare plans</Link>
+									</Button>
+								</>
+							}
+						/>
+					</Band>
+				) : null}
+			</SheetFrame>
 		</main>
 	)
 }

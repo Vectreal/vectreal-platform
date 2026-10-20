@@ -6,10 +6,12 @@ import { useRef } from 'react'
 import { type MetaFunction, Link, Outlet, useLocation } from 'react-router'
 
 import { PageHandoffMenu } from '../../components/ai-handoff/ai-handoff-menu'
+import frame from '../../components/docs/doc-page-frame.module.css'
 import { DocsPageToc } from '../../components/docs/docs-page-toc'
 import { usePublishDocsToc } from '../../components/docs/docs-toc-context'
 import { DocsTreeNav } from '../../components/docs/docs-tree-nav'
 import { PublicErrorBoundary } from '../../components/errors'
+import { SheetFrame } from '../../components/layout-components'
 import { routeErrorMeta } from '../../components/not-found'
 import { useDocToc } from '../../hooks/use-doc-toc'
 import {
@@ -27,7 +29,7 @@ import {
 	buildDocsPageSeo,
 	PUBLIC_SEO_PAGES
 } from '../../lib/seo-registry'
-import styles from '../../styles/mdx.module.css'
+import { shareCardMeta } from '../../lib/share-cards'
 
 import type { RootLoader } from '../../root'
 
@@ -58,6 +60,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 			return buildPageMeta(
 				{
 					...PUBLIC_SEO_PAGES.docs,
+					...shareCardMeta('docs'),
 					canonical: args.location.pathname,
 					structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
 				},
@@ -73,6 +76,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 						title: page.title,
 						description: page.description
 					}),
+					...shareCardMeta('docs'),
 					structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
 				},
 				getRootMeta(args)
@@ -91,7 +95,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
  */
 export default function DocsLayout() {
 	const { pathname } = useLocation()
-	const contentRef = useRef<HTMLDivElement | null>(null)
+	const contentRef = useRef<HTMLElement | null>(null)
 
 	// Derive the slug from the URL: strip the leading "/docs" segment.
 	const slug = pathname.replace(/^\/docs\/?/, '').replace(/\/$/, '')
@@ -109,140 +113,144 @@ export default function DocsLayout() {
 	}
 
 	return (
-		<div className="container-page flex gap-0 pb-16">
-			<aside
-				className="top-below-nav sticky hidden h-[calc(100dvh-var(--spacing-below-nav))] w-64 shrink-0 lg:block"
-				aria-label="Docs navigation"
-			>
-				<ScrollArea className="h-full pr-4 pb-8">
-					<DocsTreeNav pathname={pathname} />
-				</ScrollArea>
-			</aside>
-
-			<main className="min-w-0 flex-1 lg:px-8">
-				{/*
-				  Prose styles only for a page the manifest knows. They style bare
-				  elements, so anything else here, such as the not-found state, had
-				  its buttons turned into orange prose links.
-				*/}
-				<article
-					ref={contentRef}
-					className={cn('mt-24', page && styles.docsContent)}
-				>
+		<SheetFrame>
+			{/*
+			  One grid for the page, placed by class in `doc-page-frame.module.css`.
+			  The route renders its head and its article (split by
+			  `remarkDocPageActions`) straight into `<main>`, a subgrid, so the head
+			  can span every column; the sidebars follow it outside `<main>`.
+			  Prose styles come with those two, so anything else here, such as the
+			  not-found state, keeps its own buttons rather than orange prose links.
+			*/}
+			<div className={frame.frame}>
+				<main ref={contentRef} className={frame.main}>
 					<Outlet />
-				</article>
 
-				<div className="mt-16 flex flex-col gap-5">
-					<div className="flex items-center justify-between gap-3">
-						{previous ? (
-							<Button
-								variant="ghost"
-								asChild
-								// At most half the row each, the title cut short: a button does not wrap, so a long title widened a phone's page.
-								className="h-10 max-w-1/2 min-w-0 px-3 py-2"
-							>
-								<Link
-									to={toDocHref(previous.slug)}
-									viewTransition
-									className="group"
+					<div className={cn(frame.footer, 'mt-16 flex flex-col gap-5')}>
+						<div className="flex items-center justify-between gap-3">
+							{previous ? (
+								<Button
+									variant="ghost"
+									asChild
+									// At most half the row each, the title cut short: a button does not wrap, so a long title widened a phone's page.
+									className="h-10 max-w-1/2 min-w-0 px-3 py-2"
 								>
-									<span className="text-muted-foreground group-hover:text-foreground inline-flex min-w-0 items-center gap-2 text-sm transition-colors">
-										<ChevronLeft
-											className="h-4 w-4 shrink-0"
-											aria-hidden="true"
-										/>
-										<span className="truncate">{previous.title}</span>
-									</span>
-								</Link>
-							</Button>
-						) : (
-							<span className="h-10 w-10" />
-						)}
+									<Link
+										to={toDocHref(previous.slug)}
+										viewTransition
+										className="group"
+									>
+										<span className="text-muted-foreground group-hover:text-foreground inline-flex min-w-0 items-center gap-2 text-sm transition-colors">
+											<ChevronLeft
+												className="h-4 w-4 shrink-0"
+												aria-hidden="true"
+											/>
+											<span className="truncate">{previous.title}</span>
+										</span>
+									</Link>
+								</Button>
+							) : (
+								<span className="h-10 w-10" />
+							)}
 
-						{next ? (
-							<Button
-								variant="ghost"
-								asChild
-								// At most half the row each, the title cut short: a button does not wrap, so a long title widened a phone's page.
-								className="h-10 max-w-1/2 min-w-0 px-3 py-2"
-							>
-								<Link
-									to={toDocHref(next.slug)}
-									viewTransition
-									className="group"
+							{next ? (
+								<Button
+									variant="ghost"
+									asChild
+									// At most half the row each, the title cut short: a button does not wrap, so a long title widened a phone's page.
+									className="h-10 max-w-1/2 min-w-0 px-3 py-2"
 								>
-									<span className="text-muted-foreground group-hover:text-foreground inline-flex min-w-0 items-center gap-2 text-sm transition-colors">
-										<span className="truncate">{next.title}</span>
-										<ChevronRight
-											className="h-4 w-4 shrink-0"
-											aria-hidden="true"
-										/>
-									</span>
-								</Link>
-							</Button>
-						) : (
-							<span className="h-10 w-10" />
-						)}
-					</div>
+									<Link
+										to={toDocHref(next.slug)}
+										viewTransition
+										className="group"
+									>
+										<span className="text-muted-foreground group-hover:text-foreground inline-flex min-w-0 items-center gap-2 text-sm transition-colors">
+											<span className="truncate">{next.title}</span>
+											<ChevronRight
+												className="h-4 w-4 shrink-0"
+												aria-hidden="true"
+											/>
+										</span>
+									</Link>
+								</Button>
+							) : (
+								<span className="h-10 w-10" />
+							)}
+						</div>
 
-					<div className="text-muted-foreground mt-6 flex flex-wrap items-center gap-3 text-sm">
-						{editUrl && (
-							<Button
-								variant="ghost"
-								size="sm"
-								asChild
-								className="text-muted-foreground hover:text-foreground h-auto gap-1.5 px-2 py-1 text-xs"
-							>
+						<div className="text-muted-foreground mt-6 flex flex-wrap items-center gap-3 text-sm">
+							{editUrl && (
+								<Button
+									variant="ghost"
+									size="sm"
+									asChild
+									className="text-muted-foreground hover:text-foreground h-auto gap-1.5 px-2 py-1 text-xs"
+								>
+									<a
+										href={editUrl}
+										target="_blank"
+										rel="noreferrer"
+										aria-label={`Edit ${page?.title ?? 'this page'} on GitHub`}
+									>
+										<Pencil className="h-3 w-3" aria-hidden="true" />
+										Edit on GitHub
+									</a>
+								</Button>
+							)}
+
+							{page?.sourcePath && (
 								<a
-									href={editUrl}
+									href={`${GITHUB_REPO}/tree/${GITHUB_DEFAULT_BRANCH}/${page.sourcePath}`}
 									target="_blank"
 									rel="noreferrer"
-									aria-label={`Edit ${page?.title ?? 'this page'} on GitHub`}
+									className="text-muted-foreground hover:text-foreground font-mono text-xs transition-colors"
+									aria-label="View source file on GitHub"
 								>
-									<Pencil className="h-3 w-3" aria-hidden="true" />
-									Edit on GitHub
+									{page.sourcePath}
 								</a>
-							</Button>
-						)}
-
-						{page?.sourcePath && (
-							<a
-								href={`${GITHUB_REPO}/tree/${GITHUB_DEFAULT_BRANCH}/${page.sourcePath}`}
-								target="_blank"
-								rel="noreferrer"
-								className="text-muted-foreground hover:text-foreground font-mono text-xs transition-colors"
-								aria-label="View source file on GitHub"
-							>
-								{page.sourcePath}
-							</a>
-						)}
+							)}
+						</div>
 					</div>
-				</div>
-			</main>
+				</main>
 
-			<aside
-				className="top-below-nav sticky hidden h-[calc(100dvh-var(--spacing-below-nav))] w-64 shrink-0 xl:block"
-				aria-label="On this page"
-			>
-				<div className="flex h-full flex-col pl-4">
-					{page ? (
-						<PageHandoffMenu
-							surface="docs"
-							htmlPath={`/docs/${page.slug}`}
-							title={page.title}
-							className="mb-6"
-						/>
-					) : null}
-					<p className="text-muted-foreground text-eyebrow mb-3 px-1">
-						On this page
-					</p>
-					{/* Fills what the rows above leave, rather than a height measured for them. */}
-					<ScrollArea className="min-h-0 flex-1 pr-2 pb-8">
-						<DocsPageToc headings={headings} activeId={activeId} />
-					</ScrollArea>
+				<div className={frame.navCell}>
+					<aside
+						className="top-below-nav sticky h-[calc(100dvh-var(--spacing-below-nav))]"
+						aria-label="Docs navigation"
+					>
+						<ScrollArea className="h-full pb-8">
+							<DocsTreeNav pathname={pathname} />
+						</ScrollArea>
+					</aside>
 				</div>
-			</aside>
-		</div>
+
+				<div className={frame.tocCell}>
+					<aside
+						className="top-below-nav sticky h-[calc(100dvh-var(--spacing-below-nav))]"
+						aria-label="On this page"
+					>
+						<div className="flex h-full flex-col">
+							{page ? (
+								<PageHandoffMenu
+									surface="docs"
+									htmlPath={`/docs/${page.slug}`}
+									title={page.title}
+									className="mb-6"
+								/>
+							) : null}
+							<p className="text-muted-foreground text-eyebrow mb-3 px-1">
+								On this page
+							</p>
+							{/* Fills what the rows above leave, rather than a height measured for them. */}
+							<ScrollArea className="min-h-0 flex-1 pr-2 pb-8">
+								<DocsPageToc headings={headings} activeId={activeId} />
+							</ScrollArea>
+						</div>
+					</aside>
+				</div>
+			</div>
+		</SheetFrame>
 	)
 }
 

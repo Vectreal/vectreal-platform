@@ -1,6 +1,9 @@
 import { and, eq, inArray } from 'drizzle-orm'
 
-import { updateSceneMetadata } from './scene-folder-repository.server'
+import {
+	sceneMetadataPatch,
+	updateSceneMetadata
+} from './scene-folder-repository.server'
 import { compareAssetIds } from './scene-settings-assets.server'
 import { findNewRemoteArtwork } from '../hotspot-artwork'
 import { isUrlServedSceneAsset } from '../scene-asset-roles'
@@ -15,7 +18,7 @@ import {
 	type SceneSettingsTransaction,
 	upsertSceneSettings
 } from './scene-settings-repository.server'
-import { getDbClient } from '../../../../db/client'
+import { getDbClient, type DbExecutor } from '../../../../db/client'
 import {
 	assets,
 	folders,
@@ -75,6 +78,28 @@ async function readPublishSource(
 	})
 }
 
+type SaveSceneFromAssetIdsParams = Omit<SaveSceneSettingsParams, 'gltfJson'> & {
+	sceneAssetIds: string[]
+	/** The kept original. Left out, any original the scene had is unlinked. */
+	sourceAssetId?: string | null
+}
+
+// Every id the scene will link, the original included, so dropping the
+// original reads as a change and leaves it to the GC.
+function linkedAssetIdsOf({
+	sceneAssetIds,
+	sourceAssetId
+}: SaveSceneFromAssetIdsParams): string[] {
+	return sourceAssetId ? [...sceneAssetIds, sourceAssetId] : sceneAssetIds
+}
+
+type PublishSceneParams = {
+	sceneId: string
+	projectId: string
+	userId: string
+	publishedAssetId: string
+}
+
 /**
  * Data service for scene settings operations.
  * Focuses purely on data access and manipulation.
@@ -84,13 +109,14 @@ class SceneSettingsService {
 
 	async assertAssetsBelongToProject(
 		assetIds: string[],
-		projectId: string
+		projectId: string,
+		executor: DbExecutor = this.db
 	): Promise<void> {
 		if (assetIds.length === 0) {
 			throw new Error('At least one asset ID is required')
 		}
 
-		const records = await this.db
+		const records = await executor
 			.select({ assetId: assets.id, projectId: folders.projectId })
 			.from(assets)
 			.innerJoin(folders, eq(assets.folderId, folders.id))
@@ -113,15 +139,26 @@ class SceneSettingsService {
 	 */
 	async getPublishedAssetBytes(
 		assetId: string,
-		projectId: string
+		projectId: string,
+		executor: DbExecutor = this.db
 	): Promise<number> {
-		await this.assertAssetsBelongToProject([assetId], projectId)
-		const [record] = await this.db
+		await this.assertAssetsBelongToProject([assetId], projectId, executor)
+		const [record] = await executor
 			.select({ fileSize: assets.fileSize })
 			.from(assets)
 			.where(eq(assets.id, assetId))
 			.limit(1)
 		return record?.fileSize ?? 0
+	}
+
+	/** Whether visitors can load the scene: it has a published GLB. */
+	async isScenePublished(sceneId: string): Promise<boolean> {
+		const [record] = await this.db
+			.select({ sceneId: scenePublished.sceneId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+			.limit(1)
+		return record !== undefined
 	}
 
 	/**
@@ -184,12 +221,79 @@ class SceneSettingsService {
 		return result
 	}
 
-	async saveSceneSettingsFromAssetIds(
-		params: Omit<SaveSceneSettingsParams, 'gltfJson'> & {
-			sceneAssetIds: string[]
-			/** The kept original. Left out, any original the scene had is unlinked. */
-			sourceAssetId?: string | null
+	async saveSceneSettingsFromAssetIds(params: SaveSceneFromAssetIdsParams) {
+		await this.assertAssetsBelongToProject(
+			linkedAssetIdsOf(params),
+			params.projectId
+		)
+
+		const saveResult = await this.db.transaction((tx) =>
+			this.saveInTransaction(tx, params)
+		)
+
+		await this.updateSceneAggregateMetadata(
+			params.sceneId,
+			params.userId,
+			params.meta
+		)
+
+		if ('unchanged' in saveResult && saveResult.unchanged) {
+			return saveResult
 		}
+
+		// Post-commit so storage deletes stay out of the DB transaction.
+		await this.collectUnreferencedAssets(saveResult.removedAssetIds ?? [])
+
+		return saveResult.savedSettings
+	}
+
+	/**
+	 * The same save, on a transaction the caller owns and commits, for a
+	 * mutation that has to commit alongside other rows (an agent's kept
+	 * idempotency outcome). Every read and write stays on `tx`: a second pooled
+	 * connection taken while `tx` holds one can starve the pool.
+	 *
+	 * Nothing is garbage-collected here, because storage deletes must wait for
+	 * the caller's commit. The ids this save unlinked are returned for the caller
+	 * to collect afterwards.
+	 */
+	async saveSceneSettingsWithin(
+		tx: SceneSettingsTransaction,
+		params: SaveSceneFromAssetIdsParams
+	) {
+		await this.assertAssetsBelongToProject(
+			linkedAssetIdsOf(params),
+			params.projectId,
+			tx
+		)
+
+		const saveResult = await this.saveInTransaction(tx, params)
+
+		const name = params.meta.name?.trim()
+		if (name) {
+			await tx
+				.update(scenes)
+				.set(
+					sceneMetadataPatch({
+						name,
+						description: params.meta.description,
+						thumbnailUrl: params.meta.thumbnailUrl
+					})
+				)
+				.where(eq(scenes.id, params.sceneId))
+		}
+
+		return 'unchanged' in saveResult && saveResult.unchanged
+			? { settings: saveResult, removedAssetIds: [] as string[] }
+			: {
+					settings: saveResult.savedSettings,
+					removedAssetIds: saveResult.removedAssetIds
+				}
+	}
+
+	private async saveInTransaction(
+		tx: SceneSettingsTransaction,
+		params: SaveSceneFromAssetIdsParams
 	) {
 		const {
 			sceneId,
@@ -205,147 +309,125 @@ class SceneSettingsService {
 			optimizationSettings,
 			initialSceneBytes
 		} = params
-		// Every id the scene will link, the original included, so dropping the
-		// original reads as a change and leaves it to the GC below.
-		const linkedAssetIds = sourceAssetId
-			? [...sceneAssetIds, sourceAssetId]
-			: sceneAssetIds
+		const linkedAssetIds = linkedAssetIdsOf(params)
 
-		await this.assertAssetsBelongToProject(linkedAssetIds, projectId)
-
-		const saveResult = await this.db.transaction(async (tx) => {
-			const scene = await this.ensureSceneExists(tx, {
-				sceneId,
-				projectId,
-				userId,
-				sceneMeta: meta,
-				preferredFolderId: targetFolderId
-			})
-
-			const { updatedScene, hasLocationChange } =
-				await this.applyTargetLocation(
-					tx,
-					scene,
-					targetProjectId,
-					targetFolderId
-				)
-
-			const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
-			const existingLinks = existingSettings
-				? await getSceneAssetLinks(tx, existingSettings.id)
-				: { assetIds: [], sourceAssetId: null }
-			const existingAssetIds = existingLinks.assetIds
-			const existingHotspots = existingSettings
-				? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
-				: []
-
-			// Read against the stored rows in the same transaction, so the
-			// grandfathered value is the one this save would overwrite.
-			const remoteArtwork = findNewRemoteArtwork(
-				settings.hotspots,
-				existingHotspots
-			)
-			if (remoteArtwork) {
-				throw new SceneSaveRefusedError(
-					`Marker "${remoteArtwork.name.trim()}" links artwork from another site. Upload the image instead (payloadUrl)`
-				)
-			}
-
-			const settingsChanged = existingSettings
-				? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
-				: true
-			// The same ids can still change roles: a model asset kept as the
-			// original, or the reverse, has to be relinked.
-			const assetsChanged =
-				compareAssetIds(linkedAssetIds, existingAssetIds) ||
-				existingLinks.sourceAssetId !== sourceAssetId
-
-			/*
-			  Draco and the GPU texture default are applied at publish, so a pass
-			  that changes only those rebuilds a byte-identical document: same
-			  assets, same settings. Its settings still change what publish ships,
-			  and `describePublishSource` reads them from the stats, so the save
-			  has to write them.
-			*/
-			const [existingStats] = optimizationSettings
-				? await tx
-						.select({ optimizationSettings: sceneStats.optimizationSettings })
-						.from(sceneStats)
-						.where(eq(sceneStats.sceneId, sceneId))
-						.limit(1)
-				: []
-			const optimizationSettingsChanged =
-				optimizationSettings !== undefined &&
-				!(
-					existingStats?.optimizationSettings &&
-					optimizationsMatch(
-						optimizationSettings,
-						existingStats.optimizationSettings
-					)
-				)
-
-			if (
-				existingSettings &&
-				!settingsChanged &&
-				!assetsChanged &&
-				!optimizationSettingsChanged &&
-				!hasLocationChange
-			) {
-				return { ...existingSettings, unchanged: true }
-			}
-
-			// Assets this scene no longer links (superseded bake/thumbnail, textures
-			// dropped by a model change). Candidates for GC once the new links commit.
-			const newAssetIdSet = new Set(linkedAssetIds)
-			const removedAssetIds = existingAssetIds.filter(
-				(id) => !newAssetIdSet.has(id)
-			)
-
-			const savedSettings = await upsertSceneSettings(tx, {
-				sceneId: updatedScene.id,
-				createdBy: userId,
-				settings
-			})
-
-			if (!existingSettings || assetsChanged) {
-				await replaceSceneAssets(
-					tx,
-					savedSettings.id,
-					sceneAssetIds,
-					sourceAssetId
-				)
-			}
-
-			// Always sync hotspots - the client is authoritative on the full list.
-			await replaceHotspots(tx, savedSettings.id, settings.hotspots ?? [])
-
-			if (optimizationReport || optimizationSettings) {
-				await this.upsertSceneStats(tx, {
-					report: optimizationReport,
-					optimizationSettings,
-					sceneId: updatedScene.id,
-					userId,
-					initialSceneBytes,
-					label: 'latest',
-					description: 'Latest scene statistics'
-				})
-			}
-
-			return { savedSettings, unchanged: false as const, removedAssetIds }
+		const scene = await this.ensureSceneExists(tx, {
+			sceneId,
+			projectId,
+			userId,
+			sceneMeta: meta,
+			preferredFolderId: targetFolderId
 		})
 
-		await this.updateSceneAggregateMetadata(sceneId, userId, meta)
-
-		if ('unchanged' in saveResult && saveResult.unchanged) {
-			return saveResult
-		}
-
-		// Post-commit so storage deletes stay out of the DB transaction.
-		await this.garbageCollectUnreferencedAssets(
-			saveResult.removedAssetIds ?? []
+		const { updatedScene, hasLocationChange } = await this.applyTargetLocation(
+			tx,
+			scene,
+			targetProjectId,
+			targetFolderId
 		)
 
-		return saveResult.savedSettings
+		const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
+		const existingLinks = existingSettings
+			? await getSceneAssetLinks(tx, existingSettings.id)
+			: { assetIds: [], sourceAssetId: null }
+		const existingAssetIds = existingLinks.assetIds
+		const existingHotspots = existingSettings
+			? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
+			: []
+
+		// Read against the stored rows in the same transaction, so the
+		// grandfathered value is the one this save would overwrite.
+		const remoteArtwork = findNewRemoteArtwork(
+			settings.hotspots,
+			existingHotspots
+		)
+		if (remoteArtwork) {
+			throw new SceneSaveRefusedError(
+				`Marker "${remoteArtwork.name.trim()}" links artwork from another site. Upload the image instead (payloadUrl)`
+			)
+		}
+
+		const settingsChanged = existingSettings
+			? haveSceneSettingsChanged(settings, existingSettings, existingHotspots)
+			: true
+		// The same ids can still change roles: a model asset kept as the
+		// original, or the reverse, has to be relinked.
+		const assetsChanged =
+			compareAssetIds(linkedAssetIds, existingAssetIds) ||
+			existingLinks.sourceAssetId !== sourceAssetId
+
+		/*
+		  Draco and the GPU texture default are applied at publish, so a pass
+		  that changes only those rebuilds a byte-identical document: same
+		  assets, same settings. Its settings still change what publish ships,
+		  and `describePublishSource` reads them from the stats, so the save
+		  has to write them.
+		*/
+		const [existingStats] = optimizationSettings
+			? await tx
+					.select({ optimizationSettings: sceneStats.optimizationSettings })
+					.from(sceneStats)
+					.where(eq(sceneStats.sceneId, sceneId))
+					.limit(1)
+			: []
+		const optimizationSettingsChanged =
+			optimizationSettings !== undefined &&
+			!(
+				existingStats?.optimizationSettings &&
+				optimizationsMatch(
+					optimizationSettings,
+					existingStats.optimizationSettings
+				)
+			)
+
+		if (
+			existingSettings &&
+			!settingsChanged &&
+			!assetsChanged &&
+			!optimizationSettingsChanged &&
+			!hasLocationChange
+		) {
+			return { ...existingSettings, unchanged: true }
+		}
+
+		// Assets this scene no longer links (superseded bake/thumbnail, textures
+		// dropped by a model change). Candidates for GC once the new links commit.
+		const newAssetIdSet = new Set(linkedAssetIds)
+		const removedAssetIds = existingAssetIds.filter(
+			(id) => !newAssetIdSet.has(id)
+		)
+
+		const savedSettings = await upsertSceneSettings(tx, {
+			sceneId: updatedScene.id,
+			createdBy: userId,
+			settings
+		})
+
+		if (!existingSettings || assetsChanged) {
+			await replaceSceneAssets(
+				tx,
+				savedSettings.id,
+				sceneAssetIds,
+				sourceAssetId
+			)
+		}
+
+		// Always sync hotspots - the client is authoritative on the full list.
+		await replaceHotspots(tx, savedSettings.id, settings.hotspots ?? [])
+
+		if (optimizationReport || optimizationSettings) {
+			await this.upsertSceneStats(tx, {
+				report: optimizationReport,
+				optimizationSettings,
+				sceneId: updatedScene.id,
+				userId,
+				initialSceneBytes,
+				label: 'latest',
+				description: 'Latest scene statistics'
+			})
+		}
+
+		return { savedSettings, unchanged: false as const, removedAssetIds }
 	}
 
 	/**
@@ -354,7 +436,7 @@ class SceneSettingsService {
 	 * never fails the save. The cross-scene reference check guards assets shared via
 	 * the project's dedup folder (e.g. an identical texture used by another scene).
 	 */
-	private async garbageCollectUnreferencedAssets(candidateAssetIds: string[]) {
+	async collectUnreferencedAssets(candidateAssetIds: string[]) {
 		if (candidateAssetIds.length === 0) return
 
 		try {
@@ -546,77 +628,10 @@ class SceneSettingsService {
 		}
 	}
 
-	async publishSceneFromAssetId(params: {
-		sceneId: string
-		projectId: string
-		userId: string
-		publishedAssetId: string
-	}) {
-		const { sceneId, projectId, userId, publishedAssetId } = params
-
-		await this.assertAssetsBelongToProject([publishedAssetId], projectId)
-
-		const published = await this.db.transaction(async (tx) => {
-			const latestSettings = await getSceneSettingsBySceneId(tx, sceneId)
-
-			// Captured before the delete: once the row is gone the outgoing GLB has
-			// no reference left anywhere, so nothing would ever collect it.
-			const [outgoing] = await tx
-				.select({ assetId: scenePublished.assetId })
-				.from(scenePublished)
-				.where(eq(scenePublished.sceneId, sceneId))
-				.limit(1)
-
-			// Publish saves first whenever anything is unsaved, so the saved scene is
-			// what this GLB was exported from.
-			const sourceFingerprint = await readPublishSource(tx, sceneId)
-
-			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
-
-			const [publishedRecord] = await tx
-				.insert(scenePublished)
-				.values({
-					sceneId,
-					assetId: publishedAssetId,
-					sceneSettingsId: latestSettings?.id,
-					sourceFingerprint,
-					publishedBy: userId
-				})
-				.returning()
-
-			await tx
-				.update(scenes)
-				.set({
-					status: 'published',
-					updatedAt: new Date()
-				})
-				.where(eq(scenes.id, sceneId))
-
-			const [assetRecord] = await tx
-				.select()
-				.from(assets)
-				.where(eq(assets.id, publishedAssetId))
-				.limit(1)
-
-			/*
-			  The scene's size is the GLB it now publishes, as stored. Written on
-			  its own: the save-time upsert would also overwrite what the last
-			  save recorded, the optimization settings among it, with nothing.
-			*/
-			const currentSceneBytes = assetRecord?.fileSize ?? null
-			await tx
-				.insert(sceneStats)
-				.values({ sceneId, createdBy: userId, currentSceneBytes })
-				.onConflictDoUpdate({
-					target: sceneStats.sceneId,
-					set: { currentSceneBytes, updatedAt: new Date() }
-				})
-
-			return {
-				record: { ...publishedRecord, asset: assetRecord ?? null },
-				previousAssetId: outgoing?.assetId ?? null
-			}
-		})
+	async publishSceneFromAssetId(params: PublishSceneParams) {
+		const published = await this.db.transaction((tx) =>
+			this.publishSceneWithin(tx, params)
+		)
 
 		// No same-id special case: republishing byte-identical content dedupes to
 		// the row we just re-published, so `selectUnreferencedAssetIds` sees the
@@ -624,47 +639,98 @@ class SceneSettingsService {
 		// on `previousAssetId !== publishedAssetId` here would put a second copy
 		// of that rule in front of the one function that owns it.
 		if (published.previousAssetId) {
-			await this.garbageCollectUnreferencedAssets([published.previousAssetId])
+			await this.collectUnreferencedAssets([published.previousAssetId])
 		}
 
 		return published.record
 	}
 
+	/**
+	 * The publish writes on a transaction the caller owns and commits, the asset
+	 * check included, so nothing reaches for a second pooled connection. The
+	 * GLB it replaced is returned, not collected: storage deletes wait for the
+	 * caller's commit (`collectUnreferencedAssets`).
+	 */
+	async publishSceneWithin(
+		tx: SceneSettingsTransaction,
+		{ sceneId, projectId, userId, publishedAssetId }: PublishSceneParams
+	) {
+		await this.assertAssetsBelongToProject([publishedAssetId], projectId, tx)
+
+		const latestSettings = await getSceneSettingsBySceneId(tx, sceneId)
+
+		// Captured before the delete: once the row is gone the outgoing GLB has
+		// no reference left anywhere, so nothing would ever collect it.
+		const [outgoing] = await tx
+			.select({ assetId: scenePublished.assetId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+			.limit(1)
+
+		// Publish saves first whenever anything is unsaved, so the saved scene is
+		// what this GLB was exported from.
+		const sourceFingerprint = await readPublishSource(tx, sceneId)
+
+		await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
+
+		const [publishedRecord] = await tx
+			.insert(scenePublished)
+			.values({
+				sceneId,
+				assetId: publishedAssetId,
+				sceneSettingsId: latestSettings?.id,
+				sourceFingerprint,
+				publishedBy: userId
+			})
+			.returning()
+
+		await tx
+			.update(scenes)
+			.set({
+				status: 'published',
+				updatedAt: new Date()
+			})
+			.where(eq(scenes.id, sceneId))
+
+		const [assetRecord] = await tx
+			.select()
+			.from(assets)
+			.where(eq(assets.id, publishedAssetId))
+			.limit(1)
+
+		/*
+		  The scene's size is the GLB it now publishes, as stored. Written on
+		  its own: the save-time upsert would also overwrite what the last
+		  save recorded, the optimization settings among it, with nothing.
+		*/
+		const currentSceneBytes = assetRecord?.fileSize ?? null
+		await tx
+			.insert(sceneStats)
+			.values({ sceneId, createdBy: userId, currentSceneBytes })
+			.onConflictDoUpdate({
+				target: sceneStats.sceneId,
+				set: { currentSceneBytes, updatedAt: new Date() }
+			})
+
+		return {
+			record: { ...publishedRecord, asset: assetRecord ?? null },
+			previousAssetId: outgoing?.assetId ?? null
+		}
+	}
+
 	async revokeScenePublication(params: { sceneId: string; userId: string }) {
 		const { sceneId } = params
 
-		const publishedAssetId = await this.db.transaction(async (tx) => {
-			const [publishedRecord] = await tx
-				.select({ assetId: scenePublished.assetId })
-				.from(scenePublished)
-				.where(eq(scenePublished.sceneId, sceneId))
-				.limit(1)
-
-			await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
-
-			await tx
-				.update(scenes)
-				.set({
-					status: 'draft',
-					updatedAt: new Date()
-				})
-				.where(eq(scenes.id, sceneId))
-
-			// The size was the published GLB's, and there is none now.
-			await tx
-				.update(sceneStats)
-				.set({ currentSceneBytes: null, updatedAt: new Date() })
-				.where(eq(sceneStats.sceneId, sceneId))
-
-			return publishedRecord?.assetId ?? null
-		})
+		const publishedAssetId = await this.db.transaction((tx) =>
+			this.revokeScenePublicationWithin(tx, sceneId)
+		)
 
 		// Reference-checked, because uploads are content-addressed and reused: the
 		// GLB this scene published can be the same row another scene published.
 		// `scene_published.asset_id` is ON DELETE CASCADE, so deleting it
 		// unconditionally would cascade that scene's publish row away with it.
 		if (publishedAssetId) {
-			await this.garbageCollectUnreferencedAssets([publishedAssetId])
+			await this.collectUnreferencedAssets([publishedAssetId])
 		}
 
 		return {
@@ -672,6 +738,39 @@ class SceneSettingsService {
 			status: 'draft' as const,
 			revoked: true as const
 		}
+	}
+
+	/**
+	 * Takes the scene offline on the caller's transaction. Returns the GLB it
+	 * unlinked, or null, for the caller to collect after its commit.
+	 */
+	async revokeScenePublicationWithin(
+		tx: SceneSettingsTransaction,
+		sceneId: string
+	): Promise<string | null> {
+		const [publishedRecord] = await tx
+			.select({ assetId: scenePublished.assetId })
+			.from(scenePublished)
+			.where(eq(scenePublished.sceneId, sceneId))
+			.limit(1)
+
+		await tx.delete(scenePublished).where(eq(scenePublished.sceneId, sceneId))
+
+		await tx
+			.update(scenes)
+			.set({
+				status: 'draft',
+				updatedAt: new Date()
+			})
+			.where(eq(scenes.id, sceneId))
+
+		// The size was the published GLB's, and there is none now.
+		await tx
+			.update(sceneStats)
+			.set({ currentSceneBytes: null, updatedAt: new Date() })
+			.where(eq(sceneStats.sceneId, sceneId))
+
+		return publishedRecord?.assetId ?? null
 	}
 
 	/**

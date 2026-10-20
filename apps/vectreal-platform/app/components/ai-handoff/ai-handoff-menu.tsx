@@ -151,9 +151,9 @@ export const PageHandoffMenu: FC<{
 )
 
 /**
- * The docs page's row inside its content, at the end of the introduction
+ * The docs page's row inside its content, at the end of the page's head
  * (`remark-doc-page-actions.ts` puts it there). Below `xl` only: from `xl` the
- * contents rail carries it beside the title instead.
+ * contents rail beside the article carries it instead.
  */
 export const DocPageActions: FC = () => {
 	const slug = useLocation()
@@ -167,9 +167,8 @@ export const DocPageActions: FC = () => {
 			surface="docs"
 			htmlPath={`/docs/${page.slug}`}
 			title={page.title}
-			// The prose column is a flex column with a 32px gap; pulled up by half
-			// of it so the row reads as part of the introduction it closes.
-			className="-mt-4 xl:hidden"
+			// The last row of the page's head, under its introduction; from `xl` the contents rail holds it.
+			className="pt-2 xl:hidden"
 		/>
 	)
 }

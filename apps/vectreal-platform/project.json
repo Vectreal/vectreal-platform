@@ -131,6 +131,14 @@
 				"parallel": false
 			}
 		},
+		"supabase-register-cli-client": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"commands": ["bash scripts/register-local-cli-client.sh"],
+				"parallel": false
+			}
+		},
 		"supabase-db-reset": {
 			"executor": "nx:run-commands",
 			"options": {
@@ -275,6 +283,17 @@
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"command": "pnpm exec tsx scripts/gen-newsroom-thumbnails.ts"
+			}
+		},
+		"bake-share-cards": {
+			"executor": "nx:run-commands",
+			"outputs": [
+				"{projectRoot}/public/media/images/share",
+				"{projectRoot}/app/lib/share-cards.baked.json"
+			],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/bake-share-cards.ts"
 			}
 		},
 		"capture-product-shots": {

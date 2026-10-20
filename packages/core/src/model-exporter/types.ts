@@ -14,6 +14,10 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+import type {
+	Ktx2CompressionOptions,
+	Ktx2CompressionReport
+} from '../model-optimizer/ktx2-compression'
 import type { SerializedAsset } from '../types'
 import type { GeometryCodec, GeometryCodecSizes } from './geometry-codec'
 import type { Document } from '@gltf-transform/core'
@@ -45,6 +49,19 @@ export interface PublishExportResult extends GLBExportResult {
 	geometrySizes?: GeometryCodecSizes
 	/** Image bytes the GLB carries, after `textures` rewrote them. */
 	textureBytes: number
+}
+
+export interface GlbPublishOptions extends Omit<
+	PublishExportOptions,
+	'textures'
+> {
+	/** Encodes the textures to KTX2; absent, they ship as they are. */
+	ktx2?: Ktx2CompressionOptions
+}
+
+export interface GlbPublishResult extends PublishExportResult {
+	/** Which textures were encoded and which kept; absent without `ktx2`. */
+	textures?: Ktx2CompressionReport
 }
 
 export interface GLTFExportResult {

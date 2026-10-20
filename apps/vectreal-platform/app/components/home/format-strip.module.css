@@ -1,0 +1,12 @@
+/*
+  On a phone the formats still share one row, five cells in about 340px, where
+  the headline rung's smallest size no longer fits a name like ".glTF". So the
+  size alone steps down to the h3 rung's; the rest of the headline rung (face,
+  weight, tracking) stays. A `sm:` variant cannot do this: rungs live in
+  `@layer components`, where a variant emits nothing.
+*/
+@media (max-width: 39.99rem) {
+	.format {
+		font-size: var(--text-h3);
+	}
+}

@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
+import { createSceneFloor } from './scene-floor'
 import {
 	groundFragment,
 	overlayFragment,
@@ -11,7 +12,6 @@ import {
 	quadVert
 } from './stage-shaders'
 import { SHADOW, createShadowBaker } from './stage-shadow'
-import { DITHER_CELL_PX } from '../../../lib/dither/dither'
 import {
 	createCssColorProbe,
 	observeTheme
@@ -49,6 +49,8 @@ export interface StageOptions {
 	posterMode?: boolean
 	/** Dissolve the model into the page in a band at the stage's top and bottom edges. On by default. */
 	edgeFade?: boolean
+	/** Stand the model on the drafting floor, drawn in the scene, and keep the tilt to a band. The home hero only: a 2D floor behind a freely orbiting model never agreed with its shadow. */
+	floor?: boolean
 }
 
 /** The sequence's timings, in milliseconds: from poster to a camera in the reader's hands in about three seconds, not six. */
@@ -57,9 +59,21 @@ const TIMING = { sweep: 1400, turn: 1000 }
 /** Drawn square to the sheet, then turned high enough to see the ground its shadow lies on. */
 const ELEVATION = { az: 0.03, el: 0.05 }
 const OBJECT = { az: 0.5, el: 0.3 }
+/*
+  How far the reader may tilt the camera over the floor, as elevations in radians.
+  The turn is free; the tilt stops hard at a band around the object's pose
+  (OrbitControls clamps it; damping only eases the drag), so the floor never
+  swings under or flattens into a line.
+*/
+const TILT = { min: 0.05, max: 0.5 }
 
 export function createStageEngine(el: StageElements, options: StageOptions) {
-	const { reducedMotion, posterMode = false, edgeFade = true } = options
+	const {
+		reducedMotion,
+		posterMode = false,
+		edgeFade = true,
+		floor: withFloor = false
+	} = options
 	const renderer = new THREE.WebGLRenderer({
 		canvas: el.canvas,
 		antialias: true,
@@ -89,6 +103,11 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	controls.enableZoom = false
 	controls.enablePan = false
 	controls.enableDamping = true
+	if (withFloor) {
+		controls.dampingFactor = 0.06
+		controls.minPolarAngle = Math.PI / 2 - TILT.max
+		controls.maxPolarAngle = Math.PI / 2 - TILT.min
+	}
 	controls.enabled = false
 	/*
 	  OrbitControls claims every touch gesture on the canvas, and the canvas spans
@@ -130,6 +149,20 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	let rtN: THREE.WebGLRenderTarget | null = null
 
 	const uniforms = overlayUniforms()
+
+	const sceneFloor =
+		withFloor && !posterMode
+			? createSceneFloor(
+					el.canvas,
+					{
+						uInk: uniforms.uInk,
+						uAccent: uniforms.uAccent,
+						uFade: uniforms.uFade,
+						uRes: uniforms.uRes
+					},
+					{ animate: !reducedMotion }
+				)
+			: null
 	const overlay = new THREE.ShaderMaterial({
 		transparent: true,
 		premultipliedAlpha: true,
@@ -184,8 +217,9 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	let frameY = 0
 	/*
 	  The sample is framed tight, to land exactly on its baked poster: its
-	  bounding sphere is loose, so a sphere fit leaves it small. A dropped file has
-	  no poster and any shape, so it is framed whole, its sphere inside the frame.
+	  bounding sphere is loose, so a sphere fit leaves it small. A model shown
+	  without a poster (the embed stage's) is framed whole, its sphere inside
+	  the frame.
 	*/
 	let matchPoster = true
 
@@ -219,10 +253,12 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		renderer.autoClear = false
 		renderer.render(quadScene, passCam)
 		renderer.autoClear = true
+		sceneFloor?.render(camera)
 		listeners.frame?.()
 	}
 	let raf = 0
 	let disposed = false
+
 	function request() {
 		if (!raf)
 			raf = requestAnimationFrame(() => {
@@ -244,6 +280,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		const h = Math.ceil(rect.height)
 		if (!w || !h) return
 		renderer.setSize(w, h) // whole pixels: a canvas stretched over a fractional height leaves a dark fringe
+		sceneFloor?.resize(w, h, renderer.getPixelRatio())
 		camera.aspect = w / h
 		const style = getComputedStyle(el.stage)
 		frameZoom = parseFloat(style.getPropertyValue('--frame-zoom')) || 1
@@ -263,7 +300,6 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			beside ? (copyRight - 24) * dpr : -1,
 			beside ? (copyRight + 96) * dpr : -1
 		)
-		uniforms.uCell.value = DITHER_CELL_PX * dpr
 		uniforms.uVFade.value = posterMode || !edgeFade ? 0 : 40 * dpr // a tight band: the frame, not a vignette
 		uniforms.uRes.value.set(w * dpr, h * dpr)
 
@@ -438,6 +474,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 
 		const u = (ground.material as THREE.ShaderMaterial).uniforms
 		ground.visible = false // the bakes must not see the previous model's shadow
+		sceneFloor?.place(target, radius)
 		const extent = Math.max(size.x, size.z) * SHADOW.planeScale
 		ground.scale.set(extent, extent, 1)
 		ground.position.set(target.x, 0.001, target.z)
@@ -545,7 +582,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 				poster = false
 			}: { bakedShadow?: THREE.Texture | null; poster?: boolean } = {}
 		) {
-			// Parsed first: a file that will not parse must leave the model on stage, and its framing, as they were.
+			// Parsed before anything on the stage changes, so a file that will not parse leaves the stage as it was.
 			const gltf = await loader.parseAsync(buffer, '')
 			// Torn down while it parsed: placing it now would build render targets on a renderer that is gone.
 			if (disposed) {
@@ -641,9 +678,11 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			return cropToFrame()
 		},
 		dispose() {
+			if (disposed) return
 			disposed = true
 			running?.cancel()
 			cancelAnimationFrame(raf)
+			sceneFloor?.dispose()
 			stopObservingTheme()
 			resizeObserver.disconnect()
 			controls.dispose()

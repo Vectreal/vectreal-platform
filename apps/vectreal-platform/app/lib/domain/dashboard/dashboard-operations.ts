@@ -23,11 +23,15 @@ export type DashboardEntityType = 'project' | 'folder' | 'scene'
 export type DashboardOperation =
 	| 'project:create'
 	| 'project:update'
+	| 'project-embed-domains:update'
 	| 'project:delete'
 	| 'scene-folder:create'
 	| 'scene-folder:update'
 	| 'scene-folder:move'
 	| 'scene-folder:delete'
+	| 'scene:create'
+	| 'scene:publish'
+	| 'scene:unpublish'
 	| 'scene:update'
 	| 'scene:move'
 	| 'scene:delete'
@@ -74,6 +78,12 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	'project:create': ['owner', 'admin', 'member'],
 	'project:update': ['owner', 'admin'],
 	/**
+	 * Which sites may show the project's embeds. Its own operation, apart from
+	 * `project:update`, so an agent scoped to embeds can set it without being
+	 * able to rename the project.
+	 */
+	'project-embed-domains:update': ['owner', 'admin'],
+	/**
 	 * Owner-only, which diverges from the `canManageProject` RLS predicate
 	 * (owner|admin). The divergence is deliberate and inert - see the module
 	 * comment on RLS - and deleting a project cascades every scene, folder and
@@ -86,6 +96,10 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	'scene-folder:move': ['owner', 'admin', 'member'],
 	'scene-folder:delete': ['owner', 'admin'],
 
+	'scene:create': ['owner', 'admin', 'member'],
+	/** Any member may publish in the publisher today; this keeps that rule. */
+	'scene:publish': ['owner', 'admin', 'member'],
+	'scene:unpublish': ['owner', 'admin', 'member'],
 	'scene:update': ['owner', 'admin', 'member'],
 	/** Moving is reorganization, not destruction - members organize their own work. */
 	'scene:move': ['owner', 'admin', 'member'],
@@ -151,11 +165,15 @@ export class DashboardPermissionError extends Error {
 const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 	'project:create': 'create projects',
 	'project:update': 'edit this project',
+	'project-embed-domains:update': "change this project's allowed domains",
 	'project:delete': 'delete this project',
 	'scene-folder:create': 'create folders',
 	'scene-folder:update': 'rename this folder',
 	'scene-folder:move': 'move this folder',
 	'scene-folder:delete': 'delete this folder',
+	'scene:create': 'create scenes',
+	'scene:publish': 'publish this scene',
+	'scene:unpublish': 'take this scene offline',
 	'scene:update': 'edit this scene',
 	'scene:move': 'move this scene',
 	'scene:delete': 'delete this scene',

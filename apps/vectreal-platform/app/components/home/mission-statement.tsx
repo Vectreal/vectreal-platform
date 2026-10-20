@@ -22,8 +22,8 @@ const size = (bytes: number) => {
 }
 
 /*
-  Back to front, the path the statement describes: the file as it arrives, the
-  same file prepared, and the result on a page. The sizes are the hero camera's
+  Back to front, the path the statement describes: the model as it starts, the
+  same model prepared, and the result on a page. The sizes are the hero camera's
   own, read from the sample record the spec pins to the files.
 */
 const LAYERS: { label: string; value?: string; art: ReactNode }[] = [
@@ -50,14 +50,14 @@ const keyIndex = (part: number) =>
  * Why the company exists: one paragraph, and beside it the path it names.
  *
  * The figure is the hero's camera pulled apart, the way an exploded drawing
- * separates an assembly: the file you have, the file prepared, the product on
+ * separates an assembly: the raw model, the model prepared, the product on
  * your page. The statement says what the company is for; the figure says the
  * same thing to someone who reads pictures first, so the words can be set as a
  * caption instead of carrying the section alone.
  *
  * The statement is set large and muted, and its key phrases light up one after
  * another as it scrolls through the middle of the screen, so a reader skimming
- * past still takes away the four things it says. That is the browser's own
+ * past still takes away what it says. That is the browser's own
  * scroll timeline, with no script: where it has none, or motion is reduced, the
  * phrases are simply lit.
  *
@@ -94,6 +94,7 @@ export const MissionStatement = () => {
 				ref={ref}
 				data-reveal
 				data-apart={apart ? '' : undefined}
+				data-floor-light
 				className={cn(styles.stack, 'lg:order-2')}
 			>
 				<div className={styles.scene}>
@@ -118,19 +119,16 @@ export const MissionStatement = () => {
 			</div>
 
 			<div>
-				<p className="text-eyebrow text-muted-foreground" data-reveal>
-					{COPY.label}
-				</p>
 				<blockquote
-					className={cn('text-h2 text-muted-foreground mt-6', styles.statement)}
+					className={cn('text-h2 text-muted-foreground', styles.statement)}
 					data-reveal
 				>
 					{COPY.statement.map((part, i) =>
 						typeof part === 'string' ? (
 							part
 						) : 'highlight' in part ? (
-							// The problem, in the brand from the start: it does not wait to light up like the key phrases.
-							<span key={part.highlight} className="text-orange-ink">
+							// The problem, in full ink from the start: it does not wait to light up like the key phrases. The brand is kept for the promise the paragraph ends on, so a screen carries one orange phrase.
+							<span key={part.highlight} className="text-foreground">
 								{part.highlight}
 							</span>
 						) : (

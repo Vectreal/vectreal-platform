@@ -11,7 +11,6 @@ import {
 	HOME_PAGE_COPY,
 	OPEN_SOURCE_PACKAGES
 } from '../../constants/product-copy'
-import { DitherGrain } from '../layout-components'
 
 const COPY = HOME_PAGE_COPY.openSource
 
@@ -109,7 +108,7 @@ const Result = () => {
 		setState('running')
 	}
 
-	// In full ink on the page's grain, the way the hero draws it: at 40% it read as an empty well rather than a result waiting to run.
+	// In full ink, the way the hero draws it: at 40% it read as an empty well rather than a result waiting to run.
 	const drawing = (
 		<div className="text-foreground absolute inset-0 flex items-center justify-center p-10">
 			<CameraDrawing className="w-full max-w-sm" />
@@ -123,7 +122,6 @@ const Result = () => {
 			// Edge to edge in its half: the window's own corners round it, so it needs no margin or radius of its own.
 			className="ds-tint-sunken relative isolate aspect-16/10 lg:aspect-auto"
 		>
-			<DitherGrain origin="bottom" />
 			<span className="text-label-xs text-muted-foreground absolute top-4 left-5">
 				{COPY.result.label}
 			</span>
@@ -144,7 +142,7 @@ const Result = () => {
 						size="sm"
 						variant="brand"
 						onClick={run}
-						className="absolute right-4 bottom-4 rounded-full"
+						className="tap-target absolute right-4 bottom-4 rounded-full"
 					>
 						<Play className="size-3.5" aria-hidden="true" />
 						{state === 'failed' ? COPY.result.failed : COPY.result.run}
@@ -157,26 +155,28 @@ const Result = () => {
 
 const CodeWindow = () => (
 	// Split the way a playground is, from lg: the editor with its title bar on the left, its output the full height of the right half. Stacked below that.
-	<div className="ds-raised text-foreground grid overflow-hidden rounded-2xl lg:grid-cols-2">
-		<div className="min-w-0">
-			<div className="flex items-center gap-2 px-4 py-4" aria-hidden="true">
-				<span className="bg-foreground/15 size-3 rounded-full" />
-				<span className="bg-foreground/15 size-3 rounded-full" />
-				<span className="bg-foreground/15 size-3 rounded-full" />
-				<span className="text-label-xs text-muted-foreground ml-2">
-					product-view.tsx
-				</span>
+	<div className="ds-lit rounded-3xl p-4 sm:p-10 lg:p-16">
+		<div className="ds-raised text-foreground grid overflow-hidden rounded-2xl lg:grid-cols-2">
+			<div className="min-w-0">
+				<div className="flex items-center gap-2 px-4 py-4" aria-hidden="true">
+					<span className="bg-foreground/15 size-3 rounded-full" />
+					<span className="bg-foreground/15 size-3 rounded-full" />
+					<span className="bg-foreground/15 size-3 rounded-full" />
+					<span className="text-label-xs text-muted-foreground ml-2">
+						product-view.tsx
+					</span>
+				</div>
+				<pre
+					tabIndex={0}
+					role="region"
+					aria-label="Installing and using @vctrl/viewer"
+					className="text-body-sm overflow-x-auto px-6 pt-2 pb-8 font-mono leading-relaxed whitespace-pre"
+				>
+					<Code />
+				</pre>
 			</div>
-			<pre
-				tabIndex={0}
-				role="region"
-				aria-label="Installing and using @vctrl/viewer"
-				className="text-body-sm overflow-x-auto px-6 pt-2 pb-8 font-mono leading-relaxed whitespace-pre"
-			>
-				<Code />
-			</pre>
+			<Result />
 		</div>
-		<Result />
 	</div>
 )
 
@@ -204,13 +204,13 @@ export const OpenSourceSection = () => (
 					<h3 className="text-eyebrow text-muted-foreground">
 						{COPY.packagesLabel}
 					</h3>
-					<ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+					<ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 pointer-coarse:gap-y-7">
 						{OPEN_SOURCE_PACKAGES.map((pkg) => (
 							<li key={pkg.name}>
 								<Link
 									to={new URL(pkg.docs).pathname}
 									title={pkg.description}
-									className="text-foreground text-body-sm font-mono underline-offset-4 hover:underline"
+									className="text-foreground text-body-sm tap-target relative font-mono underline-offset-4 hover:underline"
 								>
 									{pkg.name}
 								</Link>
@@ -219,21 +219,24 @@ export const OpenSourceSection = () => (
 					</ul>
 				</div>
 
-				<div className="flex flex-wrap gap-4" data-reveal>
-					<Button asChild>
+				<div
+					className="flex flex-col gap-4 sm:flex-row sm:flex-wrap"
+					data-reveal
+				>
+					<Button asChild className="tap-target relative">
 						<a href={COPY.repositoryUrl} target="_blank" rel="noreferrer">
 							<GithubLogo className="size-4" />
 							{COPY.repositoryCta}
 							<span className="sr-only"> (opens in a new tab)</span>
 						</a>
 					</Button>
-					<Button asChild variant="ghost">
+					<Button asChild variant="ghost" className="tap-target relative">
 						<a href={COPY.discordUrl} target="_blank" rel="noreferrer">
 							{COPY.discordCta}
 							<span className="sr-only"> (opens in a new tab)</span>
 						</a>
 					</Button>
-					<Button asChild variant="ghost">
+					<Button asChild variant="ghost" className="tap-target relative">
 						<Link to="/docs/contributing">{COPY.contributingCta}</Link>
 					</Button>
 				</div>

@@ -52,6 +52,10 @@
 		"./model-exporter": {
 			"types": "./model-exporter/index.d.ts",
 			"default": "./model-exporter/index.js"
+		},
+		"./node": {
+			"types": "./node/index.d.ts",
+			"default": "./node/index.js"
 		}
 	},
 	"peerDependencies": {
@@ -66,7 +70,9 @@
 		"@gltf-transform/core": "catalog:",
 		"@gltf-transform/extensions": "catalog:",
 		"@gltf-transform/functions": "catalog:",
+		"draco3d": "1.5.7",
 		"jszip": "catalog:",
+		"ktx2-encoder": "catalog:",
 		"meshoptimizer": "catalog:",
 		"three": "catalog:"
 	},

@@ -1,0 +1,164 @@
+@reference '../../../../../shared/components/src/styles/globals.css';
+
+/*
+  A docs page in the marketing frame (`SheetFrame`): the page's head edge to
+  edge across the top, a rule under it, then one row between the frame's
+  column rules - the docs navigation, the article, and "On this page" - with a
+  rule between each. The side columns hold their content sticky while the
+  article scrolls; their rules run the row's full height because they belong
+  to the cells, not to the sticky content.
+
+  The navigation appears at `lg` and the contents at `xl`, as before. Below
+  `lg` the page is the head, its rule and the article, and the frame's column
+  rules are hidden as they are on every marketing page.
+
+  `<main>` holds the head, the article and the pager, and is a subgrid of the
+  frame, so they sit on the frame's tracks while the two sidebars stay outside
+  it as landmarks of their own, after it in reading order. Everything in it is
+  placed by class, so a route that renders no head (the not-found state) still
+  lands in the article's column.
+*/
+.frame {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	/* The head, the article, the pager, and the rest of a short page's height under the pager rather than between them. */
+	grid-template-rows: auto auto 1fr;
+	margin-inline: var(--frame-x);
+}
+/* Without a head (the not-found state) nothing else clears the fixed nav. */
+.frame:not(:has(.head)) {
+	padding-top: var(--spacing-below-nav);
+}
+@media (min-width: 64rem) {
+	.frame {
+		grid-template-columns: 18rem minmax(0, 1fr);
+	}
+}
+@media (min-width: 80rem) {
+	.frame {
+		grid-template-columns: 18rem minmax(0, 1fr) 18rem;
+	}
+}
+
+.main {
+	display: grid;
+	grid-column: 1 / -1;
+	grid-row: 1 / -1;
+	grid-template-columns: subgrid;
+	grid-template-rows: subgrid;
+}
+
+/*
+  The article, or whatever the route renders instead, starts level with the
+  sidebars, 48px under the head's rule, and `--frame-pad` inside the column
+  rules. `min-width: 0` lets a wide table scroll inside the column instead of
+  widening it.
+*/
+.main > * {
+	grid-column: 2;
+	grid-row: 2;
+	min-width: 0;
+	padding-top: 48px;
+}
+@media (max-width: 63.99rem) {
+	.main > * {
+		grid-column: 1;
+	}
+}
+@media (min-width: 64rem) {
+	.main > * {
+		padding-inline: var(--frame-pad);
+	}
+}
+
+/*
+  The head spans the frame. Inside it, one layer runs out to the window's
+  edges: the head is centred in the sheet, so a 100vw layer pulled left by half
+  the difference lands on them, and the sheet clips what passes the window. It
+  carries the ground, which covers the frame's column rules (they sit behind
+  the sheet's content), the rule under the head, the drafting floor, and the
+  text, pulled back in to the head's own width (`cqi`, the head being an
+  inline-size container) so it starts `--frame-pad` inside the column rules as
+  every page head's does.
+*/
+.head {
+	container-type: inline-size;
+	grid-column: 1 / -1;
+	grid-row: 1;
+	padding: 0;
+}
+.bleed {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	width: 100vw;
+	margin-left: calc(50cqi - 50vw);
+	padding-block: 128px 64px;
+	background: var(--color-background);
+	border-bottom: 1px solid var(--rule);
+}
+.intro {
+	width: 100cqi;
+	margin-left: calc(50vw - 50cqi);
+	padding-inline: var(--frame-pad);
+}
+
+/*
+  The page head's type, as `PageHero` sets it. Two classes deep so it wins over
+  the prose rules in `mdx.module.css` whatever order the two modules load in.
+*/
+.head .intro {
+	gap: var(--space-4);
+
+	> h1 {
+		font-size: var(--text-display);
+		max-width: 56rem;
+	}
+
+	> p {
+		@apply text-muted-foreground max-w-3xl;
+		font-size: var(--text-body-lg);
+		opacity: 1;
+	}
+}
+
+/*
+  The article's opening heading drops the space the prose rules set above
+  every `##` (with `!important`, which is why this needs it too): the rule
+  above is the break here.
+*/
+.body > :first-child {
+	margin-top: 0 !important;
+}
+
+.footer {
+	grid-row: 3;
+	padding-top: 0;
+	padding-bottom: 96px;
+}
+
+.navCell,
+.tocCell {
+	display: none;
+	grid-row: 2 / span 2;
+}
+.navCell {
+	grid-column: 1;
+	border-right: 1px solid var(--rule);
+	padding: 48px 24px 0 var(--frame-pad);
+}
+.tocCell {
+	grid-column: 3;
+	border-left: 1px solid var(--rule);
+	padding: 48px 24px 0;
+}
+@media (min-width: 64rem) {
+	.navCell {
+		display: block;
+	}
+}
+@media (min-width: 80rem) {
+	.tocCell {
+		display: block;
+	}
+}

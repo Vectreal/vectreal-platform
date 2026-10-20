@@ -1,13 +1,15 @@
-import { cn } from '@shared/utils'
-
 import { Route } from './+types/home-page'
 import { FormatStrip } from '../../components/home/format-strip'
 import { HeroSheet } from '../../components/home/hero/hero-sheet'
 import { MissionStatement } from '../../components/home/mission-statement'
 import { OpenSourceSection } from '../../components/home/open-source-section'
-import { PilotOffer } from '../../components/home/pilot-offer'
+import { PilotBand } from '../../components/home/pilot-band'
 import { ProductWindow } from '../../components/home/product-window'
-import { DitherGrain, DitherReveal } from '../../components/layout-components'
+import {
+	Band,
+	DraftingBackdrop,
+	SheetFrame
+} from '../../components/layout-components'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
 
@@ -18,64 +20,43 @@ export function meta(_: Route.MetaArgs) {
 }
 
 /*
-  Each section a different shape: a figure, a product window, a signed
-  statement, an offer, a code panel, and the converters on their own surface,
-  last because they are a product of their own. The rhythm is the spacing reference's
-  steps. The hero and the product window are one argument, so they sit 128
-  apart; everything after starts a new one at 128, and at 192 on a wide screen,
-  where 128 read as cramped between sections this size.
+  The hero runs edge to edge; below it one sheet frame holds the page, each
+  section a band inside its rules. Each band a different shape: the free-model
+  offer first, then a product window, a signed statement, a code panel, and the
+  converters ruled into the frame's last row. The mission statement is the page's one break,
+  full bleed and inverted, with the drafting floor under it; there is no floor
+  anywhere else on the page, so ground and light belong to an object, never to
+  the page as wallpaper.
 */
-/*
-  The grain spans the window, not the measure: it rises from the screen's edge
-  the way the hero's does. `main` clips the overflow. The mission statement is
-  left plain, the one quiet beat between the product and the offer.
-*/
-const BLEED = 'left-1/2 w-screen -translate-x-1/2'
-
 const HomePage = () => (
-	<main className="overflow-x-clip">
+	<main>
 		<HeroSheet />
 
-		<section aria-labelledby="product-heading" className="container-page mt-32">
-			<DitherReveal>
+		<SheetFrame>
+			<Band aria-labelledby="product-heading">
 				<ProductWindow />
-			</DitherReveal>
-		</section>
+			</Band>
 
-		<section aria-label="Mission" className="container-page mt-32 lg:mt-48">
-			<DitherReveal>
+			<Band
+				aria-label="Mission"
+				inverted
+				backdrop={<DraftingBackdrop focusX={0.72} horizon={0.56} />}
+			>
 				<MissionStatement />
-			</DitherReveal>
-		</section>
+			</Band>
 
-		<section
-			aria-labelledby="pilot-heading"
-			className="container-page relative isolate mt-32 lg:mt-48"
-		>
-			<DitherGrain origin="right" className={cn(BLEED, '-inset-y-16')} />
-			<DitherReveal>
-				<PilotOffer />
-			</DitherReveal>
-		</section>
+			<Band aria-labelledby="pilot-heading">
+				<PilotBand />
+			</Band>
 
-		<section
-			aria-labelledby="open-source-heading"
-			className="container-page relative isolate mt-32 lg:mt-48"
-		>
-			<DitherGrain origin="left" className={cn(BLEED, '-inset-y-16')} />
-			<DitherReveal>
+			<Band aria-labelledby="open-source-heading">
 				<OpenSourceSection />
-			</DitherReveal>
-		</section>
+			</Band>
 
-		<section
-			aria-labelledby="converter-heading"
-			className="container-page mt-32 pb-32 lg:mt-48 lg:pb-48"
-		>
-			<DitherReveal>
+			<Band aria-labelledby="converter-heading" flush>
 				<FormatStrip />
-			</DitherReveal>
-		</section>
+			</Band>
+		</SheetFrame>
 	</main>
 )
 

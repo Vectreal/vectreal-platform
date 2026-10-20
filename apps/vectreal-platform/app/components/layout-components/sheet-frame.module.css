@@ -1,0 +1,81 @@
+@reference '../../../../../shared/components/src/styles/globals.css';
+
+/*
+  The marketing sheet: two hairline column rules down the page measure's
+  content edges, a rule across the page between sections, and each section a
+  band inside the rules. The one place on the site that groups with lines:
+  the rules are the page's drafting frame, never a box drawn around content.
+*/
+.sheet {
+	--rule: color-mix(in oklch, var(--foreground) 11%, transparent);
+	/* Where the rules stand: the measure's content edge, never closer to the window than its gutter. */
+	--frame-x: max(var(--space-4), calc((100% - var(--frame-max)) / 2));
+	/* The page's scheme, held so an inverted band can swap it. */
+	--page-bg: var(--background);
+	--page-fg: var(--foreground);
+
+	position: relative;
+	isolation: isolate;
+	overflow-x: clip;
+	border-bottom: 1px solid var(--rule);
+}
+@media (min-width: 48rem) {
+	.sheet {
+		--frame-x: max(var(--space-6), calc((100% - var(--frame-max)) / 2));
+	}
+}
+
+/* Below 64rem the measure has no inner padding, so column rules would touch the type: the bands' rules group alone there. */
+.rules {
+	position: absolute;
+	inset-block: 0;
+	inset-inline: var(--frame-x);
+	z-index: -1;
+	pointer-events: none;
+	border-inline: 1px solid var(--rule);
+}
+@media (max-width: 63.99rem) {
+	.rules {
+		display: none;
+	}
+}
+
+.band {
+	border-top: 1px solid var(--rule);
+}
+/* 64px between a band's rule and its content until the measure is wide enough for the frame's padding, 128px from there: steps of the spacing rhythm. */
+.cell {
+	margin-inline: var(--frame-x);
+	padding: 64px var(--frame-pad);
+}
+@media (min-width: 64rem) {
+	.cell {
+		padding-block: 128px;
+	}
+}
+/* A band whose last row is ruled into the frame ends on the sheet's rule, not in padding. */
+.cell[data-flush] {
+	padding-bottom: 0;
+}
+
+/*
+  The sheet's one break: edge to edge, over the column rules, in the opposite
+  scheme. Its ground sits a step short of the page's ink rather than a straight
+  swap, so it breaks the flow without glaring.
+*/
+.inverted {
+	--background: color-mix(in oklch, var(--page-fg) 84%, var(--page-bg));
+	--foreground: var(--page-bg);
+	--muted-foreground: color-mix(in oklch, var(--page-bg) 55%, var(--page-fg));
+	/* The brand as text on the swapped ground: the other theme's ink, which passes there. */
+	--orange-ink: var(--orange-ink-inverse);
+
+	position: relative;
+	isolation: isolate;
+	background: var(--background);
+	color: var(--foreground);
+	border-top-color: transparent;
+}
+.inverted + .band {
+	border-top-color: transparent;
+}

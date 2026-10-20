@@ -1,7 +1,9 @@
+import { cn } from '@shared/utils'
 import { IMPORTABLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { Link } from 'react-router'
 
 import { ArrowLink } from './arrow-link'
+import styles from './format-strip.module.css'
 import {
 	CONVERT_INDEX_PATH,
 	CONVERT_PAIRS,
@@ -29,45 +31,54 @@ const FORMATS = IMPORTABLE_FORMAT_IDS.map((id) => {
 })
 
 /**
- * The converters, last on the page and on their own surface: a product of
- * their own, free and with no account, rather than a feature of the one above.
- * The formats are set as large type in one row.
+ * The converters, last on the page: a product of their own, free and with no
+ * account, rather than a feature of the one above. The formats are the
+ * section's last row, large type in cells ruled into the sheet frame from
+ * rule to rule, one row however many formats the table lists, a phone's
+ * included, where the type steps down to fit (`format-strip.module.css`).
+ * The band ends on the sheet's rule, so the cells' rules are the frame's own
+ * lines rather than a box around the type.
  *
- * Still, not a carousel: five names fit across the measure, and a loop would
- * only move them out of reach. The brand is the hover, the one thing the row
- * asks the reader to do.
+ * Not a carousel: the names fit across the measure, and a loop would only
+ * move them out of reach. The brand is the hover, the one thing the row asks
+ * the reader to do.
  */
 export const FormatStrip = () => (
-	<div className="ds-raised flex flex-col gap-10 rounded-2xl p-6 md:p-12">
-		<div className="flex flex-col gap-4">
-			<h2 id="converter-heading" className="text-h2" data-reveal>
-				{COPY.heading}
-			</h2>
-			<p className="text-muted-foreground text-body-lg" data-reveal>
-				{COPY.lead}
-			</p>
+	<div className="flex flex-col gap-12">
+		<div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+			<div className="flex flex-col gap-4">
+				<h2 id="converter-heading" className="text-h2" data-reveal>
+					{COPY.heading}
+				</h2>
+				<p className="text-muted-foreground text-body-lg" data-reveal>
+					{COPY.lead}
+				</p>
+			</div>
+			<ArrowLink
+				to={CONVERT_INDEX_PATH}
+				viewTransition
+				className="text-foreground"
+			>
+				{COPY.all}
+			</ArrowLink>
 		</div>
 		<ul
-			className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-4"
+			className="border-foreground/10 -mx-(--frame-pad) grid auto-cols-fr grid-flow-col border-t"
 			data-reveal
 		>
 			{FORMATS.map((format) => (
-				<li key={format.id}>
+				<li key={format.id} className="border-foreground/10 not-first:border-l">
 					<Link
 						to={format.to}
-						className="text-headline hover:text-orange-ink focus-visible:text-orange-ink transition-colors"
+						className={cn(
+							'text-headline hover:text-orange-ink focus-visible:text-orange-ink hover:bg-foreground/3 block py-7 text-center transition-colors duration-(--duration-base) sm:py-12',
+							styles.format
+						)}
 					>
 						.{format.label}
 					</Link>
 				</li>
 			))}
 		</ul>
-		<ArrowLink
-			to={CONVERT_INDEX_PATH}
-			viewTransition
-			className="text-foreground"
-		>
-			{COPY.all}
-		</ArrowLink>
 	</div>
 )

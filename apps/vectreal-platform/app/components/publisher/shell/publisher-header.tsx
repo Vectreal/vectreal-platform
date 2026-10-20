@@ -1,5 +1,11 @@
+import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { VectrealLogoSmall } from '@shared/components/assets/icons/vectreal-logo-small'
 import { Separator } from '@shared/components/ui/separator'
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger
+} from '@shared/components/ui/tooltip'
 import { cn } from '@shared/utils'
 import { Link, useLocation } from 'react-router'
 
@@ -62,6 +68,12 @@ export const PublisherHeader: FC<PublisherHeaderProps> = ({
 	const isPublished = Boolean(publishedAt)
 	// Back to this page, a scene route included: signed out there, the scene is not loaded and the stage is empty.
 	const { pathname } = useLocation()
+	const homeHref = user ? '/dashboard' : '/'
+	const homeLabel = user ? 'Dashboard' : 'Vectreal home'
+	// Says more than the label, since a screen reader reads both when the tooltip opens on focus.
+	const homeHint = user
+		? 'Back to your dashboard'
+		: 'Back to the Vectreal home page'
 
 	// The header is positioned with a z-index, which makes it a stacking context:
 	// everything inside is capped at the header's own level. Sitting below the
@@ -75,17 +87,53 @@ export const PublisherHeader: FC<PublisherHeaderProps> = ({
 			)}
 		>
 			{/*
-			  The way back to the site. The publisher carries no site nav, and a
-			  signed-out visitor has no account menu either, so without this the
-			  only exit was the browser's back button.
+			  The way out. The publisher carries no site nav, and a signed-out
+			  visitor has no account menu either, so without this the only exit was
+			  the browser's back button. Signed in, it leads to the dashboard, where
+			  the dashboard's own logo leads too: someone with an account expects to
+			  land on their work, not on the landing page. Signed out it leads home.
+			  The tooltip says which, since the same mark goes to two places.
+
+			  The full wordmark while the stage is empty and the header has room;
+			  the mark alone once a scene's controls take the row.
 			*/}
-			<Link
-				to="/"
-				aria-label="Vectreal home"
-				className="flex size-9 shrink-0 items-center justify-center rounded-xl"
-			>
-				<VectrealLogoSmall className="text-orange size-5" />
-			</Link>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<Link
+						to={homeHref}
+						viewTransition
+						aria-label={homeLabel}
+						className="flex h-9 shrink-0 items-center rounded-xl px-2"
+					>
+						{/*
+						  One mark under the whole wordmark, so the exchange is a hand-over
+						  rather than a swap: the letters fade off the mark while the link
+						  narrows to it, and the scene's name comes in after them.
+						*/}
+						<span
+							className={cn(
+								'relative block h-5 overflow-hidden transition-[width] duration-(--duration-slow) ease-(--ease-out) motion-reduce:transition-none',
+								showSceneControls ? 'w-5' : 'w-[calc(var(--spacing)*5*400/120)]'
+							)}
+						>
+							<VectrealLogoSmall className="text-orange absolute top-0 left-0 size-5" />
+							<span
+								className={cn(
+									'absolute top-0 left-0 h-5 transition-opacity duration-(--duration-base) ease-(--ease-out) motion-reduce:transition-none',
+									showSceneControls && 'opacity-0'
+								)}
+							>
+								<VectrealLogoAnimated
+									animated={false}
+									colored
+									className="h-5 w-auto"
+								/>
+							</span>
+						</span>
+					</Link>
+				</TooltipTrigger>
+				<TooltipContent side="bottom">{homeHint}</TooltipContent>
+			</Tooltip>
 
 			<div
 				className={cn(
@@ -93,11 +141,14 @@ export const PublisherHeader: FC<PublisherHeaderProps> = ({
 					actionsDisabled && 'pointer-events-none opacity-45 saturate-50'
 				)}
 			>
+				{/* Pushed in from the left as the wordmark leaves, a beat after it, so the name takes the room the letters gave up. */}
 				{showSceneControls && (
-					<SceneNameAndLocation
-						authenticated={!!user}
-						className="max-w-[min(30rem,100%)]"
-					/>
+					<div className="animate-in fade-in-0 slide-in-from-left-3 fill-mode-both delay-150 duration-(--duration-slow) ease-(--ease-out) motion-reduce:animate-none">
+						<SceneNameAndLocation
+							authenticated={!!user}
+							className="max-w-[min(30rem,100%)]"
+						/>
+					</div>
 				)}
 			</div>
 

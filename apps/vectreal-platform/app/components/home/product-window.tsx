@@ -18,7 +18,6 @@ import manageLightUrl from '../../assets/home/product/manage-light.webp?url'
 import prepareDarkUrl from '../../assets/home/product/prepare-dark.webp?url'
 import prepareLightUrl from '../../assets/home/product/prepare-light.webp?url'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
-import { dissolveIn } from '../../lib/dither/dither'
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel } from '../../lib/navigation/site-map'
 
@@ -85,8 +84,8 @@ function ThemedShot({ view }: { view: keyof typeof SHOT_URLS }) {
 	)
 }
 
-/** How long the dissolve between two screenshots takes, one mask frame per step. */
-const DISSOLVE_MS = 400
+/** How long the next screenshot takes to fade in over the last: `--duration-slow`, which the shots' transition uses. */
+const FADE_MS = 400
 
 /** How long each view stands while the window cycles on its own. */
 const DWELL_MS = 7000
@@ -99,18 +98,17 @@ const DWELL_MS = 7000
  * Every screenshot and caption is server-rendered, and switching only changes
  * which one is shown.
  *
- * The views are the workflow's three steps, set as a row of tiles at the top
- * of the window and numbered in workflow order, so the page says how short the
- * path is before it shows any of it. The window walks through them on its own: the active step's
+ * The views are the workflow's three steps, set as a numbered list beside the
+ * app in workflow order, so the page says how short the path is before it
+ * shows any of it. The chosen step's explanation sits under the list; all
+ * three share one cell, so nothing beside them moves on a switch. The window walks through them on its own: the active step's
  * rule fills over its dwell and hands on to the next. Hovering or
  * focusing the window pauses it, so nobody loses a caption mid-read; so does
  * the window being off screen. A click hands it over to the reader for good,
  * and reduced motion never starts it.
  *
- * The screenshots share one cell, so a switch dissolves the new view over the
- * old through the page's dither rather than crossfading: the incoming shot's
- * mask steps through the matrix's seventeen states while the outgoing one
- * stays beneath it.
+ * The screenshots share one cell, so a switch fades the new view in over the
+ * old one, which stays solid beneath it until the fade is done.
  */
 export const ProductWindow = () => {
 	const [view, setView] = useState<ProductView>('prepare')
@@ -119,8 +117,9 @@ export const ProductWindow = () => {
 	const [held, setHeld] = useState(false)
 	const [offscreen, setOffscreen] = useState(true)
 	const windowRef = useRef<HTMLDivElement>(null)
-	const shots = useRef<Partial<Record<ProductView, HTMLDivElement | null>>>({})
-	const cancelDissolve = useRef(() => {})
+	const cancelFade = useRef(() => {})
+	// Whether a view is still fading in: `previous` is then the one solid view, and stays it.
+	const fading = useRef(false)
 	const sceneRef = useRef<HTMLDivElement>(null)
 	const embedSlotRef = useRef<HTMLDivElement>(null)
 
@@ -132,18 +131,21 @@ export const ProductWindow = () => {
 
 	const switchTo = (next: string) => {
 		if (!isProductView(next) || next === view) return
-		// Cancelling also clears the mask, so a switch mid-dissolve never leaves a partly masked shot underneath.
-		cancelDissolve.current()
+		cancelFade.current()
 		setView(next)
-		const shot = shots.current[next]
-		if (!shot || prefersReducedMotion()) {
+		if (prefersReducedMotion()) {
+			fading.current = false
 			setPrevious(null)
 			return
 		}
-		setPrevious(view)
-		cancelDissolve.current = dissolveIn(shot, DISSOLVE_MS, () =>
+		// The last solid view stays under the next until it has faded in, so the panel never dips between the two. A switch mid-fade keeps that view underneath rather than the half-faded one.
+		if (!fading.current) setPrevious(view)
+		fading.current = true
+		const timer = window.setTimeout(() => {
+			fading.current = false
 			setPrevious(null)
-		)
+		}, FADE_MS)
+		cancelFade.current = () => window.clearTimeout(timer)
 	}
 
 	// The reader chose a view: the window stops cycling and stays where they put it.
@@ -169,26 +171,21 @@ export const ProductWindow = () => {
 		observer.observe(node)
 		return () => {
 			observer.disconnect()
-			cancelDissolve.current()
+			cancelFade.current()
 		}
 	}, [])
 
 	return (
-		<Tabs value={view} onValueChange={choose} className="gap-12">
+		<Tabs
+			value={view}
+			onValueChange={choose}
+			// Drawn as a column, so it reads and steps as one: up and down move between the steps.
+			orientation="vertical"
+			className="gap-12"
+		>
 			<div className="max-w-3xl">
 				<h2 id="product-heading" className="text-headline" data-reveal>
-					{COPY.heading.map((part) =>
-						typeof part === 'string' ? (
-							part
-						) : (
-							<span
-								key={part.underline}
-								className="decoration-orange underline decoration-2 underline-offset-[0.15em]"
-							>
-								{part.underline}
-							</span>
-						)
-					)}
+					{COPY.heading}
 				</h2>
 			</div>
 
@@ -205,110 +202,118 @@ export const ProductWindow = () => {
 					if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false)
 				}}
 			>
+				{/* The steps as a list beside the app, the active one's explanation under it; the app stands in a lit panel, flush to its right and bottom edges. */}
 				<div
 					data-reveal
-					className="ds-raised grid gap-4 rounded-2xl p-2 md:p-3 lg:grid-cols-[1fr_18rem] lg:gap-3"
+					className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-center lg:gap-16"
 				>
-					<TabsList
-						aria-label={COPY.stepsLabel}
-						className="grid h-auto w-full grid-cols-3 items-stretch gap-2 bg-transparent p-0 md:gap-3 lg:col-span-2"
-					>
-						{VIEW_ORDER.map((one, index) => (
-							<TabsTrigger
-								key={one}
-								value={one}
-								className={cn(
-									/*
-									  A tile in the window, rounded on every corner; its rule runs
-									  straight along the top edge and the tile's own overflow cuts
-									  it off at the corners rather than bending it round them. The
-									  shared trigger's pill states are forced (`!`), so the active
-									  tile's step up the ladder is forced the same way; the rule
-									  lives in the module.
-									*/
-									'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 overflow-hidden rounded-lg border-0 px-2 pt-4 pb-3 text-left whitespace-normal shadow-none transition-colors hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))] data-[state=active]:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]! data-[state=active]:shadow-none md:px-4 md:pt-5 md:pb-4 dark:data-[state=active]:border-transparent',
-									styles.step
-								)}
-							>
-								{/* Number over label on a phone: three tiles across leave no room for both on one line. */}
-								<span className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-3">
-									<span className="text-eyebrow text-orange-ink tabular-nums">
-										{String(index + 1).padStart(2, '0')}
+					<div className="flex flex-col gap-6">
+						<TabsList
+							aria-label={COPY.stepsLabel}
+							className="flex h-auto w-full flex-col items-stretch gap-0 bg-transparent p-0"
+						>
+							{VIEW_ORDER.map((one, index) => (
+								<TabsTrigger
+									key={one}
+									value={one}
+									className={cn(
+										/*
+										  A step is type on the page, not a tile: its rule under the title
+										  reports where the reader is and, while the window cycles, how
+										  long the step has left. The rule lives in the module. The
+										  shared trigger's active fill is forced (`!`), so it is forced
+										  off the same way.
+										*/
+										'text-muted-foreground hover:text-foreground data-[state=active]:text-foreground h-auto flex-col items-start justify-start gap-2 rounded-none border-0 px-0 pt-5 pb-5 text-left whitespace-normal shadow-none transition-colors data-[state=active]:bg-transparent! data-[state=active]:shadow-none dark:data-[state=active]:border-transparent',
+										styles.step
+									)}
+								>
+									<span className="flex items-baseline gap-3">
+										<span className="text-eyebrow text-orange-ink tabular-nums">
+											{String(index + 1).padStart(2, '0')}
+										</span>
+										<span className="text-h3">{COPY.views[one].label}</span>
 									</span>
-									<span className="text-h3">{COPY.views[one].label}</span>
-								</span>
-								<span className="text-body-sm text-muted-foreground hidden md:block">
-									{COPY.views[one].summary}
-								</span>
-								<span
-									className={styles.fill}
-									aria-hidden="true"
-									onAnimationEnd={advance}
-								/>
-							</TabsTrigger>
-						))}
-					</TabsList>
-
-					{/* Concentric with the window: its 28px corner less the padding between them. */}
-					<div
-						ref={sceneRef}
-						className="relative grid overflow-hidden rounded-xl md:rounded-lg"
-					>
-						{VIEW_ORDER.map((one) => (
-							<div
-								key={one}
-								ref={(node) => {
-									shots.current[one] = node
-								}}
-								aria-hidden={one !== view}
-								// Invisible rather than hidden: the product page's gallery is measured while it waits.
-								className={cn(
-									'[grid-area:1/1]',
-									one === view ? 'z-1' : one !== previous && 'invisible'
-								)}
-							>
-								{one === 'embed' ? (
-									<ProductPageSketch
-										gallery={
-											<div ref={embedSlotRef} className="absolute inset-0" />
-										}
+									<span
+										className={styles.fill}
+										aria-hidden="true"
+										onAnimationEnd={advance}
 									/>
-								) : (
-									<ThemedShot view={one} />
-								)}
-							</div>
-						))}
-						<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
-							<ProductStage
-								visible={!offscreen}
-								place={stagePlace}
-								hint={view === 'embed'}
-							/>
+								</TabsTrigger>
+							))}
+						</TabsList>
+
+						{/* All three captions share one cell, so the column keeps the tallest's height and nothing beside it moves on a switch. The chosen one fades up on top; the one it replaces leaves at once, so only one caption is ever in the tab order. */}
+						<div className="grid">
+							{VIEW_ORDER.map((one) => (
+								<TabsContent
+									key={one}
+									value={one}
+									forceMount
+									className="flex flex-col gap-4 transition-[opacity,translate] duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] data-[state=active]:z-1 data-[state=inactive]:invisible data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 motion-reduce:transition-none"
+								>
+									<p className="text-muted-foreground text-body">
+										{COPY.views[one].body}
+									</p>
+									<ArrowLink
+										to={VIEW_LINKS[one]}
+										viewTransition={entersFunnel(VIEW_LINKS[one])}
+										className="text-foreground"
+									>
+										{COPY.views[one].link}
+									</ArrowLink>
+								</TabsContent>
+							))}
 						</div>
 					</div>
-
-					{VIEW_ORDER.map((one) => (
-						<TabsContent
-							key={one}
-							value={one}
-							forceMount
-							className="flex flex-col gap-4 px-4 pt-2 pb-4 data-[state=inactive]:hidden lg:pt-4"
-						>
-							<p className="text-eyebrow text-muted-foreground">
-								{COPY.views[one].label}
-							</p>
-							<p className="text-muted-foreground text-body">
-								{COPY.views[one].body}
-							</p>
-							<ArrowLink
-								to={VIEW_LINKS[one]}
-								viewTransition={entersFunnel(VIEW_LINKS[one])}
-								className="text-foreground"
+					<div className="ds-lit rounded-3xl">
+						{/* The app sits in the pane's top-left padding, flush to its right and bottom edges; this wrapper rounds its corner to the pane's. Clipping here, not on the panel, which would cut off the light behind it. */}
+						<div className="overflow-hidden rounded-3xl pt-8 pl-6 sm:pt-12 sm:pl-12">
+							<div
+								ref={sceneRef}
+								// Below `sm` the screenshots are drawn at 2.1 times the pane's width and cropped to their top-left, where each step's panel sits, so they can be read; the pane clips the rest.
+								className="ds-raised relative grid overflow-hidden rounded-tl-2xl max-sm:w-[210%]"
 							>
-								{COPY.views[one].link}
-							</ArrowLink>
-						</TabsContent>
-					))}
+								{VIEW_ORDER.map((one) => (
+									<div
+										key={one}
+										aria-hidden={one !== view}
+										// Invisible rather than hidden: the product page's gallery is measured while it waits.
+										// The chosen view fades in over the one it replaces; the rest stay invisible, still laid out.
+										className={cn(
+											'transition-opacity duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] motion-reduce:transition-none',
+											// The shop page is a drawing, legible at any size, and its point is the live camera in the middle of it: below `sm` it takes the pane's own width (1 / 2.1 of the scene) and the screenshots' height, a page shaped like a phone's, rather than a crop.
+											one === 'embed' && 'max-sm:w-[calc(100%/2.1)]',
+											one === view && 'z-1 opacity-100',
+											one === previous && 'opacity-100',
+											one !== view && one !== previous && 'invisible opacity-0'
+										)}
+									>
+										{one === 'embed' ? (
+											<ProductPageSketch
+												className="max-sm:aspect-auto max-sm:h-full"
+												gallery={
+													<div
+														ref={embedSlotRef}
+														className="absolute inset-0"
+													/>
+												}
+											/>
+										) : (
+											<ThemedShot view={one} />
+										)}
+									</div>
+								))}
+								<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
+									<ProductStage
+										visible={!offscreen}
+										place={stagePlace}
+										hint={view === 'embed'}
+									/>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</Tabs>

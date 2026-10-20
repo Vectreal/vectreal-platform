@@ -6,7 +6,6 @@ import { Link } from 'react-router'
 import { RelativeTime } from './relative-time'
 import { SceneStatusTag } from './scene-status'
 import { SceneThumbnail } from './scene-thumbnail'
-import { DitherGrain } from '../layout-components/dither-grain'
 
 import type { SceneSummary } from './scene-card'
 import type { Tidbit } from '../../lib/domain/dashboard/dashboard-tidbits'
@@ -134,10 +133,9 @@ function FirstScene() {
 /**
  * One fact drawn from this person's own work, a different one each visit.
  *
- * Set on the page's dither, the same printed grain the marketing pages, the
- * converters and the publisher's empty stage stand on, so the dashboard reads
- * as the same place. A figure rather than a character or a greeting: the point
- * is that the numbers are theirs, and true.
+ * Set on the page itself: dense UI keeps no scene behind it. A figure rather
+ * than a character or a greeting: the point is that the numbers are theirs,
+ * and true.
  */
 function TidbitFigure({ tidbit }: { tidbit: Tidbit }) {
 	return (
@@ -165,18 +163,7 @@ export function DashboardOverview({
 	tidbit
 }: DashboardOverviewProps) {
 	return (
-		<section className="relative isolate">
-			{/*
-			  Out to the edges of the dashboard's scroller rather than the page
-			  measure, as ground under the page instead of a patch inside it. The
-			  measure is centered in that scroller, so the band's center is its
-			  center too.
-			*/}
-			<DitherGrain
-				origin="right"
-				className="right-auto left-1/2 w-[100cqw] -translate-x-1/2"
-			/>
-
+		<section>
 			<div className="grid gap-10 py-12 lg:min-h-112 lg:grid-cols-[minmax(0,1fr)_minmax(0,18rem)] lg:items-center lg:gap-16">
 				<div className="animate-arrive" style={arrivalDelay(0)}>
 					{resumeScene ? <ResumeCard scene={resumeScene} /> : <FirstScene />}

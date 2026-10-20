@@ -12,8 +12,7 @@ import {
 import { Link, useLocation } from 'react-router'
 
 import { isNavItemActive } from './nav-items'
-import { dissolveIn } from '../../lib/dither/dither'
-import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
+import { fadeIn, prefersReducedMotion } from '../../lib/motion/motion-tokens'
 import { entersFunnel, isNavSection } from '../../lib/navigation/site-map'
 
 import type {
@@ -28,7 +27,7 @@ const HOVER_OPEN_MS = 120
 const HOVER_CLOSE_MS = 200
 /** A click this soon after hover opened the panel is the same gesture, not a second press. */
 const HOVER_CLICK_MS = 600
-const DISSOLVE_MS = 180
+const FADE_MS = 180
 
 const panelId = (label: string) =>
 	`nav-panel-${label.toLowerCase().replace(/\s+/g, '-')}`
@@ -81,7 +80,7 @@ export function NavPanels({
 		}, ms)
 	}
 
-	// Every navigation closes it, the pilot's query-only one included: keyed on the location, not the path.
+	// Every navigation closes it, a query-only one included: keyed on the location, not the path.
 	const { key: locationKey } = useLocation()
 	useEffect(() => {
 		setOpen(null)
@@ -154,7 +153,7 @@ export function NavPanels({
 							}}
 							onFocus={() => setOpen(null)}
 							className={cn(
-								'rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+								'ds-ghost-interactive rounded-xl px-3 py-1.5 text-sm font-medium',
 								isActive
 									? 'text-foreground'
 									: 'text-muted-foreground hover:text-foreground'
@@ -197,7 +196,7 @@ export function NavPanels({
 								hover(section.label, open ? 0 : HOVER_OPEN_MS)
 							}}
 							className={cn(
-								'inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
+								'ds-ghost-interactive inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium',
 								isOpen || isCurrent
 									? 'text-foreground'
 									: 'text-muted-foreground hover:text-foreground'
@@ -244,11 +243,11 @@ function NavPanel({
 }) {
 	const ref = useRef<HTMLDivElement>(null)
 
-	// It arrives through the page's own dither, the way the product window changes views: the dissolve reports that something opened.
+	// It fades down into place: the arrival reports that something opened.
 	useLayoutEffect(() => {
 		const el = ref.current
 		if (!el || prefersReducedMotion()) return
-		return dissolveIn(el, DISSOLVE_MS)
+		return fadeIn(el, { ms: FADE_MS, rise: -4 })
 	}, [])
 
 	return (
@@ -263,7 +262,7 @@ function NavPanel({
 					aria-label={section.label}
 					onPointerEnter={onPointerEnter}
 					className={cn(
-						'ds-overlay pointer-events-auto grid gap-1 rounded-2xl p-2 shadow-lg',
+						'ds-overlay pointer-events-auto grid gap-1 rounded-2xl p-2',
 						section.links.length > 3 ? 'grid-cols-4' : 'grid-cols-3'
 					)}
 				>
@@ -295,7 +294,7 @@ function PanelLink({
 		if (event.button === 1) onFollow(true)
 	}
 	const className =
-		'hover:bg-accent focus-visible:bg-accent flex h-full flex-col gap-1 rounded-xl p-4 transition-colors focus-visible:outline-none'
+		'ds-ghost-interactive flex h-full flex-col gap-1 rounded-xl p-4 focus-visible:outline-none'
 	const content = (
 		<>
 			<span className="text-foreground text-sm font-medium">{link.label}</span>

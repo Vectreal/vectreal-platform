@@ -16,6 +16,7 @@ import {
 	convertPairPath
 } from '../../lib/convert/convert-pairs'
 import { buildPageMeta } from '../../lib/seo'
+import { convertShareCardSlug, shareCardMeta } from '../../lib/share-cards'
 
 import type { Route } from './+types/convert.$pair'
 
@@ -51,6 +52,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 	return buildPageMeta({
 		title: `${pair.title} - Vectreal`,
 		description: pair.description,
+		...shareCardMeta(convertShareCardSlug(pair.slug)),
 		canonical: convertPairPath(pair)
 	})
 }

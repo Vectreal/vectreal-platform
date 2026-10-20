@@ -921,8 +921,9 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		<Suspense fallback={loader}>
 			<Canvas
 				frameloop="always"
+				// `isolate` keeps the chrome's `z-[100]` inside the viewer, so it orders the viewer's own layers and never the host page's: without it the camera switcher drew over a dashboard sheet.
 				containerClassName={withHostClasses(
-					'viewer vctrl-viewer vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0',
+					'viewer vctrl-viewer vv:isolate vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0',
 					className
 				)}
 				containerBackground={backdrop ? sceneBackdropCss(backdrop) : undefined}

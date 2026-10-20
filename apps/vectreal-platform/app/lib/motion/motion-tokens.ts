@@ -75,3 +75,38 @@ export function prefersReducedMotion(): boolean {
 		window.matchMedia('(prefers-reduced-motion: reduce)').matches
 	)
 }
+
+/**
+ * Fades an element in on the compositor: opacity, and a short rise when
+ * `rise` is given (negative drops it in from above). Returns a cancel that
+ * leaves it fully shown.
+ *
+ * Opacity and transform only, so it runs off the main thread and looks the
+ * same at any frame rate. The dither dissolves it replaced swapped a mask
+ * image every frame, which flashed whenever a frame landed before the new
+ * mask was decoded.
+ */
+export function fadeIn(
+	el: HTMLElement,
+	{
+		ms = duration.slow * 1000,
+		rise = 0,
+		delay = 0
+	}: { ms?: number; rise?: number; delay?: number } = {},
+	onDone?: () => void
+): () => void {
+	const animation = el.animate(
+		[
+			{ opacity: 0, transform: `translateY(${rise}px)` },
+			{ opacity: 1, transform: 'none' }
+		],
+		{
+			duration: ms,
+			delay,
+			easing: `cubic-bezier(${ease.out.join(', ')})`,
+			fill: 'backwards'
+		}
+	)
+	animation.finished.then(() => onDone?.()).catch(() => {})
+	return () => animation.cancel()
+}

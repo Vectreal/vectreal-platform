@@ -26,8 +26,20 @@ import JSZip from 'jszip'
 import { Material, Mesh, MeshPhysicalMaterial, Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
-import { loadMeshoptEncoder } from '../meshopt/meshopt-codec'
+import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
+import {
+	GeometryCodecs,
+	type DracoModules
+} from '../geometry-codecs/geometry-codecs'
+import {
+	loadMeshoptEncoder,
+	stripDecodedMeshoptExtension
+} from '../meshopt/meshopt-codec'
+import { readGlbExtensionsUsed } from '../model-loader/glb-extensions'
+import {
+	compressTexturesToKtx2,
+	type Ktx2CompressionReport
+} from '../model-optimizer/ktx2-compression'
 import { OperationProgress } from '../types'
 import {
 	GeometryCodec,
@@ -39,6 +51,8 @@ import { threeObjectToGLB } from './three-object-glb'
 import {
 	ExportResult,
 	GLBExportResult,
+	GlbPublishOptions,
+	GlbPublishResult,
 	GLTFExportResult,
 	PublishExportOptions,
 	PublishExportResult,
@@ -141,12 +155,17 @@ export class ModelExporter {
 	private progressCallback?: (progress: OperationProgress) => void
 	private codecs: GeometryCodecs
 
-	constructor(options?: { dracoPath?: string }) {
+	/**
+	 * `dracoModules` is how Draco reaches an exporter outside a browser; see
+	 * `createNodePublishCodecs` in `@vctrl/core/node`.
+	 */
+	constructor(options?: { dracoPath?: string; dracoModules?: DracoModules }) {
 		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 		this.threeExporter = new GLTFExporter()
 		this.codecs = new GeometryCodecs(
 			this.io,
-			options?.dracoPath ?? DEFAULT_DRACO_PATH
+			options?.dracoPath ?? DEFAULT_DRACO_PATH,
+			options?.dracoModules
 		)
 	}
 
@@ -287,6 +306,38 @@ export class ModelExporter {
 			geometrySizes,
 			textureBytes
 		}
+	}
+
+	/**
+	 * A GLB as the GLB its scene is published as: the publisher's worker and an
+	 * agent's CLI both run this, so a scene published either way is encoded
+	 * alike. Draco or meshopt input is decoded first, which in Node needs
+	 * `dracoModules`.
+	 *
+	 * `ktx2` encodes the textures to KTX2 with the caller's encoder; without it
+	 * they ship as they are.
+	 */
+	public async exportGlbForPublish(
+		glb: Uint8Array,
+		{ ktx2, ...geometry }: GlbPublishOptions = {}
+	): Promise<GlbPublishResult> {
+		await this.codecs.registerDecoders(readGlbExtensionsUsed(glb))
+		const document = await this.io.readBinary(glb)
+		// Decoded on read; left attached, they would demand their encoders on
+		// write even where this export applies no codec.
+		stripDecodedDracoExtension(document)
+		stripDecodedMeshoptExtension(document)
+
+		let textures: Ktx2CompressionReport | undefined
+		const result = await this.exportDocumentGLBForPublish(document, {
+			...geometry,
+			textures: ktx2
+				? async (clone) => {
+						textures = await compressTexturesToKtx2(clone, ktx2)
+					}
+				: undefined
+		})
+		return { ...result, textures }
 	}
 
 	private async measureGeometryCodecs(

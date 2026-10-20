@@ -20,8 +20,10 @@ interface ArticleRowProps {
  *
  * The date column is tabular-nums so the rail stays optically straight.
  *
- * Each row is a raised surface that lifts one step on hover, which is what
- * says it is a link; the title is not underlined as well.
+ * The rows are ruled into the sheet frame from rule to rule, with a rule
+ * under each, rather than each sitting in a box of its own. The faint fill on
+ * hover is what says a row is a link, as on the home page's format strip; the
+ * title is not underlined as well.
  */
 export function ArticleRow({ article, className }: ArticleRowProps) {
 	return (
@@ -29,7 +31,7 @@ export function ArticleRow({ article, className }: ArticleRowProps) {
 			to={`/news-room/${article.slug}`}
 			viewTransition
 			className={cn(
-				'ds-raised-interactive grid items-baseline gap-x-6 gap-y-1 rounded-2xl px-6 py-5',
+				'border-foreground/10 hover:bg-foreground/3 focus-visible:bg-foreground/3 grid items-baseline gap-x-6 gap-y-1 border-b py-6 transition-colors duration-(--duration-base) lg:px-(--frame-pad)',
 				'grid-cols-1 md:grid-cols-[7rem_1fr_6rem]',
 				className
 			)}

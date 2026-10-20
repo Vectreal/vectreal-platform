@@ -7,7 +7,7 @@
  */
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import DocsIndexPage from './index'
 import { DOC_AUDIENCES, docsPages } from '../../lib/docs/docs-manifest'
@@ -21,6 +21,11 @@ const renderPage = () =>
 
 const path = (label: string) =>
 	within(screen.getByRole('region', { name: label }))
+
+/* The page's bands reveal on scroll. Under reduced motion they render at once and never reach for IntersectionObserver, which jsdom lacks. */
+beforeEach(() => {
+	vi.stubGlobal('matchMedia', () => ({ matches: true }))
+})
 
 describe('the docs index', () => {
 	it('opens the publisher from the hero, not repo setup', () => {

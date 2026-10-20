@@ -3,14 +3,22 @@ import { count, eq } from 'drizzle-orm'
 
 import { assertParsed } from './scene-operation-context.server'
 import { sceneSettingsService } from './scene-settings-service.server'
-import { isBillingStateReadOnly } from '../../../../constants/plan-config'
-import { getDbClient } from '../../../../db/client'
+import {
+	isBillingStateReadOnly,
+	type EntitlementKey,
+	type Plan
+} from '../../../../constants/plan-config'
+import { getDbClient, type DbExecutor } from '../../../../db/client'
 import { projects } from '../../../../db/schema/project/projects'
 import { scenePublished } from '../../../../db/schema/project/scene-published'
 import { scenes } from '../../../../db/schema/project/scenes'
 import { reportServerError } from '../../../observability/report-server-error.server'
 import { reclaimUploadBatch } from '../../asset/asset-reclaim.server'
-import { isRoutableDomainError } from '../../billing/entitlement-required-error'
+import { billingRefusalResponse } from '../../billing/billing-refusal-response'
+import {
+	EntitlementRequiredError,
+	isRoutableDomainError
+} from '../../billing/entitlement-required-error'
 import {
 	hasEntitlement,
 	getRecommendedUpgrade,
@@ -38,6 +46,126 @@ async function getSceneProjectId(sceneId: string): Promise<string> {
 		throw new Error(`Scene not found with ID: ${sceneId}`)
 	}
 	return projectId
+}
+
+/**
+ * The plan and billing state allow publishing in this organization, or an
+ * `EntitlementRequiredError` saying which of the two is missing. Read-only
+ * billing is a payment, not an upgrade, so its message says so; the response
+ * mapping (`billingRefusalResponse`, `agentBillingRefusal`) picks the status.
+ */
+export async function requirePublishEntitlement(organizationId: string) {
+	const entitlementKey: EntitlementKey = 'scene_publish'
+	const decision = await hasEntitlement(organizationId, entitlementKey)
+	if (!decision.granted) {
+		throw new EntitlementRequiredError({
+			entitlementKey,
+			plan: decision.effectivePlan,
+			billingState: decision.billingState,
+			upgradeTo: getRecommendedUpgrade(decision.effectivePlan),
+			message: isBillingStateReadOnly(decision.billingState)
+				? 'Publishing is unavailable: payment required to restore access.'
+				: 'Publishing is not available on your current plan.'
+		})
+	}
+	return decision
+}
+
+/**
+ * The plan limits a publish must stay within, measured on `executor` so a
+ * caller holding a transaction reads them there: the concurrent-publish count
+ * (only when the scene is not already published) and the per-scene size of
+ * the stored GLB. Throws `QuotaExceededError`.
+ */
+export async function assertPublishLimits(
+	executor: DbExecutor,
+	params: {
+		sceneId: string
+		projectId: string
+		organizationId: string
+		effectivePlan: Plan
+		publishedAssetId: string
+	}
+): Promise<void> {
+	const {
+		sceneId,
+		projectId,
+		organizationId,
+		effectivePlan,
+		publishedAssetId
+	} = params
+
+	const [existingPublish] = await executor
+		.select({ sceneId: scenePublished.sceneId })
+		.from(scenePublished)
+		.where(eq(scenePublished.sceneId, sceneId))
+		.limit(1)
+
+	// Enforce concurrent publish quota only when this scene is not already published.
+	if (!existingPublish) {
+		const useProjectScopedLimit = effectivePlan === 'free'
+		const [{ totalPublished }] = useProjectScopedLimit
+			? await executor
+					.select({ totalPublished: count(scenePublished.sceneId) })
+					.from(scenePublished)
+					.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
+					.where(eq(scenes.projectId, projectId))
+			: await executor
+					.select({ totalPublished: count(scenePublished.sceneId) })
+					.from(scenePublished)
+					.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
+					.innerJoin(projects, eq(projects.id, scenes.projectId))
+					.where(eq(projects.organizationId, organizationId))
+
+		/*
+		  `getQuotaLimit`, not a usage counter: the count above already is the
+		  usage. The `checkQuota` branch that used to be OR'd in here read
+		  counters nothing wrote, so its `hard_limit_exceeded` case could never
+		  fire and this gate worked only because of the row count. That helper
+		  is deleted; the limit side, which reads plan config and per-org
+		  overrides, is the half that always worked.
+		*/
+		const { limit } = await getQuotaLimit(
+			organizationId,
+			'scenes_published_concurrent',
+			executor
+		)
+
+		if (limit !== null && totalPublished >= limit) {
+			const upgradeTo = getRecommendedUpgrade(effectivePlan)
+			throw new QuotaExceededError({
+				limitKey: 'scenes_published_concurrent',
+				currentValue: totalPublished,
+				limit,
+				plan: effectivePlan,
+				upgradeTo,
+				message: useProjectScopedLimit
+					? 'Free plan limit reached: you can publish up to 3 scenes concurrently in this project.'
+					: 'Published scene limit reached for your plan. Upgrade to publish more scenes concurrently.'
+			})
+		}
+	}
+
+	/*
+	  The plan's scene size limits the published GLB, which is what a visitor
+	  downloads, at the size the server stored it. The client used to report
+	  the figure, and it reported whichever size it had measured last.
+	*/
+	const publishedBytes = await sceneSettingsService.getPublishedAssetBytes(
+		publishedAssetId,
+		projectId,
+		executor
+	)
+	await assertWithinQuota({
+		organizationId,
+		limitKey: 'storage_bytes_per_scene',
+		measure: async () => publishedBytes,
+		// The measurement is the file itself, not a count it would add to.
+		adds: 0,
+		message: () =>
+			'Scene exceeds the maximum size for your plan. Optimize further or upgrade.',
+		executor
+	})
 }
 
 export async function publishScene(
@@ -77,91 +205,24 @@ export async function publishScene(
 			throw new Error('Project not found or access denied')
 		}
 
-		const publishEntitlement = await hasEntitlement(
-			project.organizationId,
-			'scene_publish'
-		)
+		// Returned rather than thrown: the route's request guard records an
+		// outcome only for a returned response, and leaves a thrown one pending.
+		const entitlement = await requirePublishEntitlement(
+			project.organizationId
+		).catch((error: unknown) => {
+			const refusal = billingRefusalResponse(error)
+			if (!refusal) throw error
+			return refusal
+		})
+		if (entitlement instanceof Response) return entitlement
+		const { effectivePlan } = entitlement
 
-		if (!publishEntitlement.granted) {
-			if (isBillingStateReadOnly(publishEntitlement.billingState)) {
-				return ApiResponse.paymentRequired(
-					'Publishing is unavailable: payment required to restore access.'
-				)
-			}
-			return ApiResponse.forbidden(
-				'Publishing is not available on your current plan.'
-			)
-		}
-
-		const db = getDbClient()
-		const [existingPublish] = await db
-			.select({ sceneId: scenePublished.sceneId })
-			.from(scenePublished)
-			.where(eq(scenePublished.sceneId, sceneId))
-			.limit(1)
-
-		// Enforce concurrent publish quota only when this scene is not already published.
-		if (!existingPublish) {
-			const effectivePlan = publishEntitlement.effectivePlan
-			const useProjectScopedLimit = effectivePlan === 'free'
-			const [{ totalPublished }] = useProjectScopedLimit
-				? await db
-						.select({ totalPublished: count(scenePublished.sceneId) })
-						.from(scenePublished)
-						.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
-						.where(eq(scenes.projectId, projectId))
-				: await db
-						.select({ totalPublished: count(scenePublished.sceneId) })
-						.from(scenePublished)
-						.innerJoin(scenes, eq(scenes.id, scenePublished.sceneId))
-						.innerJoin(projects, eq(projects.id, scenes.projectId))
-						.where(eq(projects.organizationId, project.organizationId))
-
-			/*
-			  `getQuotaLimit`, not a usage counter: the count above already is the
-			  usage. The `checkQuota` branch that used to be OR'd in here read
-			  counters nothing wrote, so its `hard_limit_exceeded` case could never
-			  fire and this gate worked only because of the row count. That helper
-			  is deleted; the limit side, which reads plan config and per-org
-			  overrides, is the half that always worked.
-			*/
-			const { limit } = await getQuotaLimit(
-				project.organizationId,
-				'scenes_published_concurrent'
-			)
-
-			if (limit !== null && totalPublished >= limit) {
-				const upgradeTo = getRecommendedUpgrade(effectivePlan)
-				throw new QuotaExceededError({
-					limitKey: 'scenes_published_concurrent',
-					currentValue: totalPublished,
-					limit,
-					plan: effectivePlan,
-					upgradeTo,
-					message: useProjectScopedLimit
-						? 'Free plan limit reached: you can publish up to 3 scenes concurrently in this project.'
-						: 'Published scene limit reached for your plan. Upgrade to publish more scenes concurrently.'
-				})
-			}
-		}
-
-		/*
-		  The plan's scene size limits the published GLB, which is what a visitor
-		  downloads, at the size the server stored it. The client used to report
-		  the figure, and it reported whichever size it had measured last.
-		*/
-		const publishedBytes = await sceneSettingsService.getPublishedAssetBytes(
-			publishedAssetId,
-			projectId
-		)
-		await assertWithinQuota({
+		await assertPublishLimits(getDbClient(), {
+			sceneId,
+			projectId,
 			organizationId: project.organizationId,
-			limitKey: 'storage_bytes_per_scene',
-			measure: async () => publishedBytes,
-			// The measurement is the file itself, not a count it would add to.
-			adds: 0,
-			message: () =>
-				'Scene exceeds the maximum size for your plan. Optimize further or upgrade.'
+			effectivePlan,
+			publishedAssetId
 		})
 
 		const result = await sceneSettingsService.publishSceneFromAssetId({

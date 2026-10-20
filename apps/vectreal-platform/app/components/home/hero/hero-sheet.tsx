@@ -1,6 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
-import { ArrowDown, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import {
 	Fragment,
 	lazy,
@@ -8,9 +8,7 @@ import {
 	useEffect,
 	useRef,
 	useState,
-	type CSSProperties,
-	type MouseEvent,
-	type RefObject
+	type CSSProperties
 } from 'react'
 import { Link } from 'react-router'
 
@@ -18,18 +16,9 @@ import { HERO_POSTERS } from './hero-assets'
 import { ArrowLink } from '../arrow-link'
 import { FigureLabel, Readout } from './hero-readout'
 import styles from './hero-sheet.module.css'
-import {
-	createHeroStore,
-	fallBackToPoster,
-	useHeroState,
-	type HeroStore
-} from './hero-store'
+import { createHeroStore, fallBackToPoster } from './hero-store'
 import { useMountWhenVisibleAndIdle } from './use-mount-when-visible-and-idle'
-import {
-	HOME_PAGE_COPY,
-	PILOT_CONTACT_HREF
-} from '../../../constants/product-copy'
-import { ditherFadeDownMask } from '../../../lib/dither/dither'
+import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 import {
 	HERO_SOURCE_SAMPLE_ID,
 	publisherSampleHref
@@ -41,14 +30,12 @@ import type { HeroStageElements } from './hero-stage-client'
 const HeroStageClient = lazy(() => import('./hero-stage-client'))
 
 const HERO = HOME_PAGE_COPY.hero
-const COPY = HOME_PAGE_COPY.stage
 
 /*
   Set on the section by the server, so the first paint already has the poster in
-  its frame and the sheet's dissolving edge; nothing here waits on script.
+  its frame; nothing here waits on script.
 */
 const SHEET_VARS = {
-	'--sheet-edge': ditherFadeDownMask(24),
 	...Object.fromEntries(
 		Object.entries(HERO_POSTERS).flatMap(([framing, { url, ink }]) => [
 			[`--poster-${framing}`, `url("${url}")`],
@@ -74,8 +61,6 @@ const SHEET_VARS = {
 export function HeroSheet() {
 	const [store] = useState(createHeroStore)
 	const [elements, setElements] = useState<HeroStageElements | null>(null)
-	const openFileRef = useRef<(() => void) | null>(null)
-	const handOffRef = useRef<(() => Promise<void>) | null>(null)
 
 	const sheetRef = useRef<HTMLDivElement>(null)
 	const copyRef = useRef<HTMLDivElement>(null)
@@ -84,69 +69,51 @@ export function HeroSheet() {
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const dimsRef = useRef<SVGSVGElement>(null)
 	const scaleRef = useRef<HTMLSpanElement>(null)
-	const readoutRef = useRef<HTMLElement>(null)
-	const backdropRef = useRef<HTMLCanvasElement>(null)
+	const captionRef = useRef<HTMLElement>(null)
 	const stageWanted = useMountWhenVisibleAndIdle(stageRef)
+
+	// The stage runs on under the readout row to the fold's edge, so the floor does. How far that is depends on the readout's type, so it is measured; the stylesheet's default holds until then.
+	useEffect(() => {
+		const sheet = sheetRef.current
+		const caption = captionRef.current
+		if (!sheet || !caption) return
+		const measure = () => {
+			const below =
+				sheet.getBoundingClientRect().bottom -
+				caption.getBoundingClientRect().top
+			sheet.style.setProperty('--below', `${Math.round(below)}px`)
+		}
+		const observer = new ResizeObserver(measure)
+		observer.observe(sheet)
+		observer.observe(caption)
+		return () => observer.disconnect()
+	}, [])
 
 	useEffect(() => {
 		if (!stageWanted) return
-		const sheet = sheetRef.current
 		const copy = copyRef.current
 		const stage = stageRef.current
 		const frame = frameRef.current
 		const canvas = canvasRef.current
 		const dims = dimsRef.current
 		const scale = scaleRef.current
-		const readout = readoutRef.current
-		const backdrop = backdropRef.current
-		if (
-			!sheet ||
-			!copy ||
-			!stage ||
-			!frame ||
-			!canvas ||
-			!dims ||
-			!scale ||
-			!readout ||
-			!backdrop
-		)
-			return
+		if (!copy || !stage || !frame || !canvas || !dims || !scale) return
 		setElements({
-			sheet,
 			copy,
 			stage,
 			frame,
 			canvas,
 			dims,
-			scale,
-			readout,
-			backdrop
+			scale
 		})
 	}, [stageWanted])
 
 	// The stage could not run at all: no WebGL, or the chunk would not load.
 	const stageFailed = () => fallBackToPoster(store, frameRef.current)
 
-	// Before the stage can take a file, the door stays a plain link to the publisher.
-	const tryOwnFile = (event: MouseEvent) => {
-		if (!openFileRef.current) return
-		event.preventDefault()
-		openFileRef.current()
-	}
-
 	return (
 		<section aria-labelledby="home-heading" className={styles.outer}>
-			<div
-				ref={sheetRef}
-				className={cn('ds-tint-sunken', styles.sheet)}
-				style={SHEET_VARS}
-			>
-				<canvas
-					ref={backdropRef}
-					className={styles.backdrop}
-					aria-hidden="true"
-				/>
-
+			<div ref={sheetRef} className={styles.sheet} style={SHEET_VARS}>
 				<div ref={copyRef} className={styles.copy}>
 					<h1 id="home-heading" className="text-display">
 						{/* The space keeps the lines apart in the text itself, for copy and search. */}
@@ -161,18 +128,24 @@ export function HeroSheet() {
 						{HERO.lead}
 					</p>
 					<div className="mt-8 flex flex-col gap-4 sm:flex-row">
-						<TryItCta
-							store={store}
-							onTry={tryOwnFile}
-							handOffRef={handOffRef}
-						/>
-						<Button asChild size="lg" variant="secondary">
-							<Link to={PILOT_CONTACT_HREF}>{HERO.secondaryCta}</Link>
+						<Button asChild size="lg" className="tap-target relative">
+							<Link to="/publisher" viewTransition>
+								{HERO.primaryCta}
+								<ArrowRight aria-hidden="true" />
+							</Link>
+						</Button>
+						<Button
+							asChild
+							size="lg"
+							variant="secondary"
+							className="tap-target relative"
+						>
+							<Link to="/contact">{HERO.secondaryCta}</Link>
 						</Button>
 					</div>
 				</div>
 
-				<figure className={cn('ds-sunken', styles.figure)}>
+				<figure className={styles.figure}>
 					<div ref={stageRef} className={styles.stage} data-phase="poster">
 						<div className={styles.art}>
 							<div ref={frameRef} className={styles.frame}>
@@ -198,12 +171,8 @@ export function HeroSheet() {
 						/>
 					</div>
 
-					{/*
-					  Above what the file holds: a visitor with no file of their own
-					  can open this one. The backdrop stops short of the whole
-					  caption, so the ref is on it rather than on the readout alone.
-					*/}
-					<figcaption ref={readoutRef} className={styles.caption}>
+					{/* Above what the file holds: a visitor with no file of their own can open this one. */}
+					<figcaption ref={captionRef} className={styles.caption}>
 						<ArrowLink
 							to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
 							viewTransition
@@ -217,67 +186,19 @@ export function HeroSheet() {
 					</figcaption>
 				</figure>
 
-				<a href="#product-heading" className={cn('text-eyebrow', styles.cue)}>
+				<a href="#product-heading" className={styles.cue}>
+					<span className={styles.cueTrack} aria-hidden="true" />
 					{HERO.foldCue}
-					<ArrowDown className={styles.cueArrow} aria-hidden="true" />
 				</a>
 
 				{elements && (
 					<StageBoundary onError={stageFailed}>
 						<Suspense fallback={null}>
-							<HeroStageClient
-								store={store}
-								elements={elements}
-								openFileRef={openFileRef}
-								handOffRef={handOffRef}
-							/>
+							<HeroStageClient store={store} elements={elements} />
 						</Suspense>
 					</StageBoundary>
 				)}
 			</div>
 		</section>
-	)
-}
-
-/*
-  "Try it out" is a link to the publisher until the stage is live, so it works
-  without script and before the chunk arrives; once the stage can take a file
-  it opens the picker instead. When a dropped file is live, the next step is
-  the visitor's: the same door opens the publisher with it loaded.
-*/
-function TryItCta({
-	store,
-	onTry,
-	handOffRef
-}: {
-	store: HeroStore
-	onTry: (event: MouseEvent) => void
-	handOffRef: RefObject<(() => Promise<void>) | null>
-}) {
-	const canHandOff = useHeroState(store, (s) => s.canHandOff)
-	const [handingOff, setHandingOff] = useState(false)
-	if (!canHandOff) {
-		return (
-			<Button asChild size="lg">
-				<Link to="/publisher" viewTransition onClick={onTry}>
-					{HERO.primaryCta}
-					<ArrowRight aria-hidden="true" />
-				</Link>
-			</Button>
-		)
-	}
-	const handOff = async () => {
-		setHandingOff(true)
-		try {
-			await handOffRef.current?.()
-		} finally {
-			setHandingOff(false)
-		}
-	}
-	return (
-		<Button size="lg" disabled={handingOff} onClick={handOff}>
-			{COPY.openInPublisher}
-			<ArrowRight aria-hidden="true" />
-		</Button>
 	)
 }

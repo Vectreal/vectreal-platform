@@ -10,7 +10,7 @@ import type { SiteLink } from '../../lib/navigation/site-map'
  * Home is matched exactly because it would otherwise prefix-match every path.
  * `/home` is the same page for signed-in visitors, so both spellings count.
  * Anything else matches its own path and the paths under it, by whole segment.
- * A link with a query, like the pilot's, never matches: a pathname has none.
+ * A link with a query never matches: a pathname has none.
  */
 export function isNavItemActive(
 	item: Pick<SiteLink, 'to'>,

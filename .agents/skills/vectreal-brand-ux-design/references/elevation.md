@@ -26,10 +26,27 @@ the material makes it read as a plate in space.
   Note it sets a **background-color**, not a border colour: it is the fill of a
   hairline *element*, so putting it on a row alongside `border-b` tints the whole
   row instead of its border. A border that needs a colour wants `border-border`.
+- `ds-lit` — a media panel on the marketing site: a frosted glass plate in
+  front of a light, the recipe of `.prototype-visual/cards.html`. The light
+  stands behind the panel's foot and runs from a hot core through the brand
+  to nothing, spilling past the sides and over the top. The plate's hairline
+  rim warms from the bottom where the light reaches it, and a thin hot line
+  marks where the light wraps the top edge. Its colours are the `--lit-*`
+  tokens in `theme.css`, one set per scheme. It holds a product shot, a code
+  window or a drawing, never copy. It must not clip
+  (`overflow-hidden` would cut the light off at its edge), so anything inside
+  that needs clipping clips on its own wrapper.
 - `ds-raised-interactive` / `ds-overlay-interactive` — hover lifts exactly one
   step. Use these rather than pairing a `ds-*` class with a hand-written hover
   background: call sites had drifted to 6%, 8%, 12% and 14%, so equivalent rows
   hovered to different values in the same view.
+- `ds-ghost-interactive` — a row with no plate until it is pointed at, focused,
+  or current (`aria-current="page"`, `aria-expanded="true"`): nav links, nav
+  panel links, drawer rows. It then stands up as a small plate one step above
+  whatever it sits on. Its fill is a tint, not a step, because the same row
+  sits on the nav bar, in an overlay panel and on a sheet. The states are in
+  the rung itself because a variant cannot apply a `ds-*` class; a row that
+  is current for another reason is not yet covered.
 
 The ladder self-corrects when it nests, so a `Card` dropped onto a raised panel
 still has an edge. Same-class nesting only, and the steps are:
@@ -55,6 +72,13 @@ surfaces by **value and light, not by outlines**. That is the reason to reach fo
 step before adding a border, not a ban on borders — `ds-divider` is in the ladder
 and the `ui/` primitives use borders where an edge carries meaning.
 
+One place groups with lines on purpose: `SheetFrame` and `Band`
+(`layout-components/sheet-frame.tsx`), the marketing pages' drafting frame.
+Hairline rules run down the measure's edges and across the page between
+sections, GitHub's composition, which Moritz chose on 19 Oct 2026 after a
+page-wide floor left the sections ungrouped. The rules are the page's frame;
+they never draw a box around a piece of content.
+
 ## The surface material
 
 Decided by Moritz on 19 Oct 2026, after the "cards with depth" study of
@@ -71,6 +95,22 @@ layers, read from the `--material-*` colours in `theme.css`:
 | `inset 0 -1px 0` | the base: the bottom edge, a touch darker | `--material-base` |
 | outer shadows | what the plate throws: a tight contact shadow and a wide soft one | `--material-shadow`, `--material-shadow-far` |
 
+On a plate (`ds-raised`, `ds-overlay` and their interactive rungs) the rim
+and base read through `--material-plate-rim` and `--material-plate-lip`,
+which default to the rim and base. The public site (`nav-layout`, outside the
+publisher) sets
+`data-material="object"`, which turns both off: there a plate is an object lit
+from above, its edge the bevel and the shadow beneath. Moritz decided this on
+19 Oct 2026 after a design review found the four-sided rim made marketing
+plates read as boxes. Fields, controls and wells keep their rim everywhere,
+since an input without an edge cannot be found. Shared menus, popovers and
+selects add `shadow-md`, which replaces the whole material, rim included, on
+every route.
+
+Objects, not containers, on the public site: a plate is for something the
+reader uses or that stands for the product (the app window, the browser mock,
+a pricing plan). Copy, lists of names and step labels sit on the page.
+
 - `ds-raised` and `ds-overlay` lift: all four layers, overlay's far shadow a
   little longer.
 - `ds-sunken` and `ds-field` recede: shaded from the top edge inward, with the
@@ -81,6 +121,12 @@ layers, read from the `--material-*` colours in `theme.css`:
   disabled mid-action, and a tile that lost or gained a shadow on disabling
   would read as hovered. A call site with its own `transition-[...]` utility
   lists `box-shadow` in it, or the lift snaps while the fill eases.
+- `ds-ghost-interactive` has no material at rest and takes the raised edge
+  (bevel, rim, a 1px shadow) when it stands up: small enough for a nav row,
+  without the far shadow a card throws.
+- A shared component that forces its own fill with `!` (`TabsTrigger`'s
+  active state) beats any ladder class on the same element. Put the plate on
+  a parent and let the trigger fill it transparently.
 - `ds-bevel` is a filled action's material (`Button`'s default, brand and
   destructive variants): a white bevel and a dark base, fixed values because
   the fill underneath is the same in both schemes.
@@ -143,6 +189,17 @@ present  shared/components/src/styles/globals.css                              .
 present  shared/components/src/ui/button.tsx                                   ds-bevel
 present  shared/components/src/styles/globals.css                              .ds-raised-interactive
 present  shared/components/src/styles/globals.css                              .ds-overlay-interactive
+present  shared/components/src/styles/globals.css                              .ds-ghost-interactive
+present  shared/components/src/styles/globals.css                              .ds-lit::after
+present  shared/components/src/styles/theme.css                                --lit-core
+present  eslint.config.mts                                                     ghost|lit|tint-raised
+present  apps/vectreal-platform/app/components/layout-components/sheet-frame.tsx  export const Band
+present  shared/components/src/styles/theme.css                                --material-plate-rim
+present  shared/components/src/styles/theme.css                                [data-material='object']
+present  apps/vectreal-platform/app/routes/layouts/nav-layout.tsx               data-material="object"
+present  apps/vectreal-platform/app/components/navigation/nav-panels.tsx       ds-ghost-interactive
+absent   apps/vectreal-platform/app/components/navigation/nav-panels.tsx       hover:bg-accent
+absent   apps/vectreal-platform/app/components/navigation/mobile-nav.tsx       bg-accent
 present  shared/components/src/styles/globals.css                              .ds-divider
 present  shared/components/src/styles/globals.css                              .ds-sunken
 present  shared/components/src/styles/globals.css                              .ds-field

@@ -10,8 +10,7 @@ import { CONVERT_INDEX_PATH } from '../convert/convert-pairs'
   The desktop nav, the phone drawer and the footer each used to write their own
   list of the site, and they drifted apart the way copies do: five links against
   five different columns, "Docs" in one and "Docs Home" in another, and the
-  pilot project, the home page's main action, in none of them. They all
-  read this now, so a page is added, renamed or moved here and nowhere else.
+  home page's main offer in none of them. They all read this now, so a page is added, renamed or moved here and nowhere else.
 
   Pure data, with no React, so the specs that hold the three surfaces to it can
   import it without rendering anything.
@@ -50,9 +49,9 @@ const CONVERTERS: SiteLink = {
 	description: 'Convert between 3D formats in your browser. No account.'
 }
 const PILOT: SiteLink = {
-	label: 'Start a project',
-	to: '/contact?topic=pilot',
-	description: 'We build your product viewer with you, from the files you have.'
+	label: 'Free 3D model',
+	to: '/free-model',
+	description: 'Send three photos of one product. We make the model.'
 }
 const GITHUB: SiteLink = {
 	label: 'GitHub',

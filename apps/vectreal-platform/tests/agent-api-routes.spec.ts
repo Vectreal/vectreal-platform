@@ -80,6 +80,11 @@ describe('agent API routes', () => {
 			expect.arrayContaining([
 				'/api/v1/me',
 				'/api/v1/projects',
+				'/api/v1/projects/:projectid/scenes',
+				'/api/v1/projects/:projectid/embed-keys',
+				'/api/v1/projects/:projectid/allowed-domains',
+				'/api/v1/scenes/:sceneid/publication',
+				'/api/v1/scenes/:sceneid/embed',
 				'/api/v1/cli/client'
 			])
 		)

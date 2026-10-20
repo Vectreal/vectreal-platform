@@ -1,0 +1,61 @@
+/*
+  A link preview, 1200 by 630. It is laid out at half that and captured at
+  twice the pixel ratio, so the floor's lines come out two pixels wide and
+  survive the thumbnail a chat app shrinks the card to.
+
+  The wordmark stands on the horizon with the page as its caption under it.
+  Both stay inside the middle 315 by 315 (630 by 630 captured): WhatsApp and
+  iMessage crop a preview to that square, and nothing outside it may matter.
+*/
+.card {
+	position: relative;
+	isolation: isolate;
+	display: grid;
+	align-content: center;
+	justify-items: center;
+	width: 600px;
+	height: 315px;
+	padding-bottom: 8px;
+	overflow: hidden;
+	background: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-sans);
+	text-align: center;
+}
+
+.wordmark {
+	height: 44px;
+}
+
+.eyebrow {
+	margin-top: 22px;
+	color: var(--orange);
+	font-size: 10px;
+	font-weight: 500;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+
+.caption {
+	max-width: 290px;
+	margin-top: 18px;
+	color: color-mix(in oklch, var(--foreground) 80%, transparent);
+	font-family: var(--font-heading);
+	font-size: 20px;
+	font-weight: 400;
+	letter-spacing: -0.02em;
+	line-height: 1.05;
+	text-wrap: balance;
+}
+
+.eyebrow + .caption {
+	margin-top: 8px;
+}
+
+.floor {
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	width: 100%;
+	height: 100%;
+}

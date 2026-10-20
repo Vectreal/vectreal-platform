@@ -3,6 +3,7 @@ import {
 	normalizeSceneAnimation,
 	normalizeSceneInteractions
 } from '@vctrl/core'
+import { sceneLookSchema } from '@vctrl/sdk'
 
 import { parseCameraSettings } from './scene-settings-camera.parser.server'
 import { normalizeHotspots } from './scene-settings-hotspots.parser.server'
@@ -10,8 +11,17 @@ import { normalizePresentationSettings } from '../scene-presentation'
 
 import type { SceneSettings } from '@vctrl/core'
 
+type LookSections = Pick<
+	SceneSettings,
+	'bounds' | 'controls' | 'environment' | 'shadows' | 'normalization'
+>
+
 /**
  * Parses settings data from request.
+ *
+ * The look sections go through `sceneLookSchema`, which drops keys it does
+ * not know and refuses known keys of the wrong type; the other sections have
+ * their own normalizers below.
  */
 export function parseSettingsData(
 	requestData: Record<string, unknown>
@@ -58,6 +68,17 @@ export function parseSettingsData(
 		return ApiResponse.badRequest('Settings must be a valid object')
 	}
 
+	const look = sceneLookSchema.safeParse(settings)
+	if (!look.success) {
+		const [issue] = look.error.issues
+		return ApiResponse.badRequest(
+			`Invalid scene settings at ${issue.path.join('.')}: ${issue.message}`
+		)
+	}
+	// Typed as core's sections, so the schema cannot drift from the types the
+	// viewer reads.
+	const lookSections: LookSections = look.data
+
 	const sceneSettings = settings as SceneSettings
 	const normalizedCamera = parseCameraSettings(sceneSettings.camera)
 	if (normalizedCamera instanceof Response) {
@@ -99,6 +120,7 @@ export function parseSettingsData(
 
 	return {
 		...sceneSettings,
+		...lookSections,
 		animation: normalizedAnimation,
 		camera: normalizedCamera,
 		interactions: normalizedInteractions,

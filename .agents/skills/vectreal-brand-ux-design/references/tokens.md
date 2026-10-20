@@ -128,10 +128,30 @@ viewport, which overhangs persistent mobile browser chrome: bottom-anchored UI
 goes behind the bar and the page is left scrolled with no way back when a canvas
 holds `touch-action: none`.
 
+## Tap targets
+
+Anything a finger can press gets a hit area of at least 44px on a coarse
+pointer, whatever size it is drawn. `tap-target` (in `globals.css`) adds an
+invisible layer of that size centred on the element, so nothing drawn moves;
+the element needs `relative` (or is already absolute). Where two targets sit
+closer than 44px apart, their layers would overlap, so they also take a
+`pointer-coarse:` gap that gives each one its own 44px, as the footer's link
+lists and social icons do. Under a mouse none of this applies.
+
 ## Page measure
 
 `.container-page` owns the page width and its gutter together: `--container-max`
 (90rem) with `padding-inline` stepping up at 48rem.
+
+The marketing site is narrower. `nav-layout` marks its nav, footer and every
+page outside the publisher with `data-site="marketing"`, and there
+`.container-page` follows the sheet frame: `--frame-max` (80rem) with content
+`--frame-pad` (48px from 64rem) inside the frame's rules, so the nav, page
+heads, sections and footer start on one line on every marketing page. The
+product (dashboard, publisher) keeps the wider measure. That attribute is the
+one switch between the two: a page belongs to whichever side its layout puts it
+on, never to a class at the call site. The consent banner is the exception: it renders
+from `root.tsx` on every page, outside both, and keeps the product measure.
 
 The gutter belongs to the measure, not to the caller. `max-w-7xl` was hardcoded
 at fifteen sites, each choosing its own padding, so a hero at `px-6` sat above a
@@ -149,6 +169,10 @@ present  shared/components/src/styles/globals.css                              -
 present  shared/components/src/styles/globals.css                              --z-index-above-nav: 60
 present  shared/components/src/styles/globals.css                              --z-index-select: 120
 present  shared/components/src/styles/globals.css                              max-width: var(--container-max);
+present  shared/components/src/styles/globals.css                              [data-site='marketing'] .container-page
+present  apps/vectreal-platform/app/routes/layouts/nav-layout.tsx               data-site="marketing"
 present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh
 present  shared/utils/src/lib/styling.utils.ts                                 CONTAINER_SCALE
+present  shared/components/src/styles/globals.css                              @utility tap-target
+present  apps/vectreal-platform/app/components/footer.tsx                      pointer-coarse:gap-7
 ```

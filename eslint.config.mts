@@ -176,7 +176,7 @@ export default defineConfig(tseslint.configs.recommended, [
 					  `hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]`.
 					*/
 					selector:
-						'Literal[value=/(^|\\s)[a-z][a-z0-9-]*(\\[[^\\]]*\\])?(\\/[a-z-]+)?:(ds-(raised|overlay|sunken|field|divider|bevel|control|tint-raised|tint-overlay|tint-sunken)|text-(display|headline|h2|h3|h4|stat|body-lg|body-sm|body|eyebrow|label-xs))/]',
+						'Literal[value=/(^|\\s)[a-z][a-z0-9-]*(\\[[^\\]]*\\])?(\\/[a-z-]+)?:(ds-(raised|overlay|sunken|field|divider|bevel|control|ghost|lit|tint-raised|tint-overlay|tint-sunken)|text-(display|headline|h2|h3|h4|stat|body-lg|body-sm|body|eyebrow|label-xs))/]',
 					message:
 						'Tailwind variants cannot be applied to ds-* or text-* design-system classes: they are @layer components rules, not utilities, so this generates nothing. Use an arbitrary value, e.g. hover:bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))].'
 				},
@@ -453,8 +453,8 @@ export default defineConfig(tseslint.configs.recommended, [
 		}
 	},
 	{
-		// The product-shot capture, home-hero bake and model normalize scripts
-		// drive a browser with Playwright. They are run by hand against a local stack and never
+		// The product-shot capture, home-hero and share-card bakes and model
+		// normalize scripts drive a browser with Playwright. They are run by hand against a local stack and never
 		// imported by the app, so
 		// Playwright is a tool of the repository, satisfied by the root
 		// devDependency, and not something the app depends on. Declaring it would
@@ -469,6 +469,7 @@ export default defineConfig(tseslint.configs.recommended, [
 						...dependencyCheckOptions.ignoredFiles,
 						'{projectRoot}/scripts/capture-home-product-shots.ts',
 						'{projectRoot}/scripts/bake-home-hero.ts',
+						'{projectRoot}/scripts/bake-share-cards.ts',
 						'{projectRoot}/scripts/normalize-generated-model.ts',
 						// The markdown-twin transform runs in the Vite config graph,
 						// imported by vite.config.ts and vitest.config.ts, so its remark

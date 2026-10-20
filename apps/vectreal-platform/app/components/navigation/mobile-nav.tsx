@@ -48,10 +48,10 @@ const DrawerLink = ({
 	pathname: string
 }) => {
 	const className = cn(
-		'block rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+		'ds-ghost-interactive block rounded-xl px-3 py-2.5 text-sm font-medium',
 		!link.external && isNavItemActive(link, pathname)
-			? 'bg-accent text-foreground'
-			: 'text-muted-foreground hover:bg-accent hover:text-foreground'
+			? 'text-foreground'
+			: 'text-muted-foreground hover:text-foreground'
 	)
 	return link.external ? (
 		<a href={link.to} target="_blank" rel="noreferrer" className={className}>
@@ -134,9 +134,9 @@ function MobileNav({
 			<nav
 				data-scrolled={scrolled || undefined}
 				className={cn(
-					'z-nav fixed top-0 right-0 left-0 items-center justify-between p-2 transition-colors',
+					'z-nav fixed top-0 right-0 left-0 items-center justify-between p-2 transition-[background-color,box-shadow]',
 					SETTLE,
-					scrolled ? 'bg-background' : 'bg-transparent',
+					scrolled ? 'ds-raised' : 'bg-transparent',
 					className
 				)}
 				aria-label="Main navigation"
@@ -145,7 +145,7 @@ function MobileNav({
 					<div className="flex shrink-0 items-center">
 						<Link
 							to="/"
-							className="flex shrink-0 items-center px-3 py-1"
+							className="tap-target relative flex shrink-0 items-center px-3 py-1"
 							aria-label="Home"
 						>
 							<VectrealLogoAnimated
@@ -160,7 +160,7 @@ function MobileNav({
 						<Button
 							variant={user ? 'secondary' : 'ghost'}
 							size="icon"
-							className="shrink-0 rounded-xl"
+							className="tap-target relative shrink-0 rounded-xl"
 							onClick={() => setDrawerOpen((o) => !o)}
 							// The avatar says "account" to a sighted reader; the name has to say it to everyone else.
 							aria-label={
@@ -176,14 +176,6 @@ function MobileNav({
 						</Button>
 					</div>
 				</div>
-				<div
-					aria-hidden="true"
-					className={cn(
-						'ds-divider absolute inset-x-0 bottom-0 h-px transition-opacity',
-						SETTLE,
-						scrolled ? 'opacity-100' : 'opacity-0'
-					)}
-				/>
 			</nav>
 
 			<Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>

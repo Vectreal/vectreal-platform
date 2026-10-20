@@ -38,21 +38,16 @@
 	  The brand as text and as a small mark. --orange on white is about 2.9:1,
 	  under AA for any text, so the light theme writes it a step deeper
 	  (about 5.2:1); on the dark background --orange itself passes, so the dark
-	  theme points back at it. Fills and lines keep --orange.
+	  theme points back at it. Fills and lines keep --orange. A band set in the
+	  opposite scheme (the marketing sheet's inverted band) takes the other
+	  theme's ink, `--orange-ink-inverse`.
 	*/
 	--orange-ink: #c2410c;
+	--orange-ink-inverse: var(--orange);
 
 	/* Semantic tokens - light theme */
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0 0);
-	/*
-	  The ink of the site's ordered dither: the hero's backdrop and every
-	  section grain (`DitherGrain`) paint their cells in it, so the material is
-	  one strength everywhere. It has to read as a texture on its own, not as a
-	  smudge on the background: at 7% it disappeared on most screens, and at
-	  14% it competed with the content set on it.
-	*/
-	--grain: color-mix(in oklch, var(--foreground) 11%, var(--background));
 	--card: oklch(1 0 0);
 	--card-foreground: oklch(0.145 0 0);
 	--popover: oklch(1 0 0);
@@ -163,16 +158,44 @@
 	--material-base: oklch(0.3 0.01 60 / 0.1);
 	--material-shadow: oklch(0.3 0.03 60 / 0.07);
 	--material-shadow-far: oklch(0.3 0.03 60 / 0.14);
+	/*
+	  A plate's side and bottom edges, apart from a field's or a control's: the
+	  public site turns these off (`data-material="object"`), so a plate there
+	  reads as an object lit from above rather than a drawn rectangle.
+	*/
+	--material-plate-rim: var(--material-rim);
+	--material-plate-lip: var(--material-base);
+
+	/*
+	  The `ds-lit` light and the plate in front of it. The light runs from a
+	  hot core through the brand to nothing; on paper it is warmer and weaker,
+	  where it reads as tint. The plate is frosted glass, its rim brightest on
+	  top where the room light falls, and the leak is where the backlight wraps
+	  its top edge.
+	*/
+	--lit-core: rgb(252 132 60 / 0.7);
+	--lit-mid: rgb(252 108 24 / 0.42);
+	--lit-edge: rgb(252 108 24 / 0.1);
+	--lit-strength: 0.3;
+	--lit-plate: rgb(255 255 255 / 0.74);
+	--lit-rim-top: rgb(255 255 255 / 0.95);
+	--lit-rim-side: rgb(20 16 12 / 0.07);
+	--lit-leak: rgb(255 190 150 / 0.36);
+	--lit-leak-core: rgb(255 225 205 / 0.45);
+	/* On paper the shadow itself is warm: the light reaches the ground under the plate. */
+	--lit-shadow:
+		0 1px 1px rgb(40 24 8 / 0.04), 0 6px 16px -6px rgb(60 30 8 / 0.11),
+		0 36px 72px -36px rgb(160 70 16 / 0.26);
 }
 
 .dark {
 	color-scheme: dark;
 	--orange-ink: var(--orange);
+	--orange-ink-inverse: #c2410c;
 
 	/* Semantic tokens - dark theme */
 	--background: oklch(0.145 0 0);
 	--foreground: oklch(0.985 0 0);
-	--grain: color-mix(in oklch, var(--foreground) 13%, var(--background));
 	--card: oklch(0.145 0 0);
 	--card-foreground: oklch(0.985 0 0);
 	--popover: oklch(0.145 0 0);
@@ -243,6 +266,33 @@
 	--material-base: oklch(1 0 0 / 0.025);
 	--material-shadow: oklch(0 0 0 / 0.35);
 	--material-shadow-far: oklch(0 0 0 / 0.55);
+	--material-plate-rim: var(--material-rim);
+	--material-plate-lip: var(--material-base);
+
+	--lit-core: rgb(252 140 70 / 0.75);
+	--lit-mid: rgb(252 108 24 / 0.45);
+	--lit-edge: rgb(252 108 24 / 0.12);
+	--lit-strength: 0.42;
+	--lit-plate: rgb(18 16 15 / 0.76);
+	--lit-rim-top: rgb(255 255 255 / 0.16);
+	--lit-rim-side: rgb(255 255 255 / 0.06);
+	--lit-leak: rgb(255 190 150 / 0.44);
+	--lit-leak-core: rgb(255 225 205 / 0.55);
+	--lit-shadow:
+		0 1px 1px rgb(0 0 0 / 0.4), 0 24px 48px -24px rgb(0 0 0 / 0.8),
+		0 30px 80px -40px rgb(252 108 24 / 0.14);
+}
+
+/*
+  The public site's plates are objects, not containers: an outline on all four
+  sides of a fill a few percent off the page read as a drawn box. There the
+  edge is the light along the top and the shadow beneath, and nothing else.
+  Fields and controls keep their rim, since an input without an edge is not
+  findable.
+*/
+[data-material='object'] {
+	--material-plate-rim: transparent;
+	--material-plate-lip: transparent;
 }
 
 @theme inline {

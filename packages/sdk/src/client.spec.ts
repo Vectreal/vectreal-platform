@@ -134,6 +134,220 @@ describe('createVectrealClient', () => {
 		}
 	)
 
+	it('sends a scene create as multipart with the file, the name and a quoted key', async () => {
+		const scene = { scene: { id: 's1', projectId: 'p/1', name: 'Chair' } }
+		const fetch = respond({ success: true, data: scene }, 201)
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+		const file = new Blob([new Uint8Array([1, 2, 3])])
+
+		await expect(
+			client.createScene(
+				'p/1',
+				{ name: 'Chair', file },
+				{ idempotencyKey: 'k-1' }
+			)
+		).resolves.toEqual(scene)
+		const [url, init] = fetch.mock.calls[0]
+		const headers = new Headers(init?.headers)
+		expect(String(url)).toBe(
+			'https://vectreal.com/api/v1/projects/p%2F1/scenes'
+		)
+		expect(init?.method).toBe('POST')
+		expect(headers.get('Authorization')).toBe('Bearer token-1')
+		// Left to fetch, which writes the multipart boundary.
+		expect(headers.has('Content-Type')).toBe(false)
+		expect(headers.get('Idempotency-Key')).toBe('"k-1"')
+		const form = init?.body as FormData
+		expect(form.get('name')).toBe('Chair')
+		expect(
+			new Uint8Array(await (form.get('file') as Blob).arrayBuffer())
+		).toEqual(new Uint8Array([1, 2, 3]))
+	})
+
+	it.each([
+		[402, 'payment_required'],
+		[403, 'insufficient_plan']
+	])(
+		'surfaces a %i refusal of a scene create with its code',
+		async (status, code) => {
+			const fetch = respond({ success: false, error: 'refused', code }, status)
+			const client = createVectrealClient({
+				baseUrl: 'https://vectreal.com',
+				getAccessToken: () => 'token-1',
+				fetch
+			})
+
+			const error = await client
+				.createScene('p1', { name: 'Chair', file: new Blob([]) })
+				.catch((thrown: unknown) => thrown)
+			expect(error).toBeInstanceOf(VectrealApiError)
+			expect(error).toMatchObject({ status, code })
+		}
+	)
+
+	it('publishes a scene as multipart with the file and a quoted key', async () => {
+		const publication = {
+			publication: {
+				sceneId: 's/1',
+				status: 'published',
+				publishedAt: '2026-10-19T08:00:00.000Z'
+			}
+		}
+		const fetch = respond({ success: true, data: publication })
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await expect(
+			client.publishScene(
+				's/1',
+				{ file: new Blob([new Uint8Array([7])]) },
+				{ idempotencyKey: 'k-2' }
+			)
+		).resolves.toEqual(publication)
+		const [url, init] = fetch.mock.calls[0]
+		const headers = new Headers(init?.headers)
+		expect(String(url)).toBe(
+			'https://vectreal.com/api/v1/scenes/s%2F1/publication'
+		)
+		expect(init?.method).toBe('POST')
+		expect(headers.has('Content-Type')).toBe(false)
+		expect(headers.get('Idempotency-Key')).toBe('"k-2"')
+		expect((init?.body as FormData).get('file')).toBeInstanceOf(Blob)
+	})
+
+	it('takes a scene offline with DELETE, no body and a quoted key', async () => {
+		const publication = {
+			publication: { sceneId: 's1', status: 'draft', publishedAt: null }
+		}
+		const fetch = respond({ success: true, data: publication })
+		const client = createVectrealClient({
+			baseUrl: 'https://vectreal.com',
+			getAccessToken: () => 'token-1',
+			fetch
+		})
+
+		await expect(
+			client.unpublishScene('s1', { idempotencyKey: 'k-3' })
+		).resolves.toEqual(publication)
+		const [url, init] = fetch.mock.calls[0]
+		expect(String(url)).toBe(
+			'https://vectreal.com/api/v1/scenes/s1/publication'
+		)
+		expect(init?.method).toBe('DELETE')
+		expect(init?.body).toBeUndefined()
+		expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('"k-3"')
+	})
+
+	describe('embeds', () => {
+		const embedKey = {
+			id: 'k1',
+			name: 'Shop',
+			keyPreview: 'abcd',
+			expiresAt: '2027-01-17T00:00:00.000Z',
+			lastUsedAt: null,
+			revoked: false,
+			expired: false,
+			usable: true
+		}
+		const clientFor = (fetch: ReturnType<typeof respond>) =>
+			createVectrealClient({
+				baseUrl: 'https://vectreal.com',
+				getAccessToken: () => 'token-1',
+				fetch
+			})
+
+		it("lists a project's embed keys with GET", async () => {
+			const fetch = respond({ success: true, data: { embedKeys: [embedKey] } })
+
+			await expect(clientFor(fetch).listEmbedKeys('p 1')).resolves.toEqual({
+				embedKeys: [embedKey]
+			})
+			const [url, init] = fetch.mock.calls[0]
+			expect(String(url)).toBe(
+				'https://vectreal.com/api/v1/projects/p%201/embed-keys'
+			)
+			expect(init?.method).toBe('GET')
+		})
+
+		it('creates an embed key with POST, a JSON body and a quoted key', async () => {
+			const fetch = respond({ success: true, data: { embedKey } }, 201)
+
+			await expect(
+				clientFor(fetch).createEmbedKey(
+					'p1',
+					{ name: 'Shop' },
+					{ idempotencyKey: 'k-4' }
+				)
+			).resolves.toEqual({ embedKey })
+			const [url, init] = fetch.mock.calls[0]
+			expect(String(url)).toBe(
+				'https://vectreal.com/api/v1/projects/p1/embed-keys'
+			)
+			expect(init?.method).toBe('POST')
+			expect(JSON.parse(String(init?.body))).toEqual({ name: 'Shop' })
+			expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('"k-4"')
+		})
+
+		it('reads and replaces allowed domains with GET and PUT', async () => {
+			const domains = { allowedDomains: ['example.com'] }
+			const getFetch = respond({ success: true, data: domains })
+			const putFetch = respond({ success: true, data: domains })
+
+			await expect(
+				clientFor(getFetch).getAllowedDomains('p1')
+			).resolves.toEqual(domains)
+			await expect(
+				clientFor(putFetch).setAllowedDomains(
+					'p1',
+					{ domains: ['example.com'] },
+					{ idempotencyKey: 'k-5' }
+				)
+			).resolves.toEqual(domains)
+
+			const url = 'https://vectreal.com/api/v1/projects/p1/allowed-domains'
+			expect(String(getFetch.mock.calls[0][0])).toBe(url)
+			const [putUrl, init] = putFetch.mock.calls[0]
+			expect(String(putUrl)).toBe(url)
+			expect(init?.method).toBe('PUT')
+			expect(JSON.parse(String(init?.body))).toEqual({
+				domains: ['example.com']
+			})
+			expect(new Headers(init?.headers).get('Idempotency-Key')).toBe('"k-5"')
+		})
+
+		it('asks for a scene embed, naming the key only when given', async () => {
+			const embed = {
+				embed: {
+					keyId: 'k1',
+					url: 'https://vectreal.com/embed/p1/s1?token=t',
+					iframeSnippet: '<iframe></iframe>',
+					sdkSnippet: '<script></script>',
+					previewUrl: 'https://vectreal.com/preview/p1/s1',
+					allowedDomains: []
+				}
+			}
+			const bare = respond({ success: true, data: embed })
+			const named = respond({ success: true, data: embed })
+
+			await expect(clientFor(bare).getSceneEmbed('s1')).resolves.toEqual(embed)
+			await clientFor(named).getSceneEmbed('s1', { keyId: 'k 1' })
+
+			expect(String(bare.mock.calls[0][0])).toBe(
+				'https://vectreal.com/api/v1/scenes/s1/embed'
+			)
+			expect(String(named.mock.calls[0][0])).toBe(
+				'https://vectreal.com/api/v1/scenes/s1/embed?keyId=k+1'
+			)
+		})
+	})
+
 	it('asks for the CLI client without a token, even when it has one', async () => {
 		const fetch = respond({ success: true, data: cliClient })
 		const getAccessToken = vi.fn(() => 'token-1')

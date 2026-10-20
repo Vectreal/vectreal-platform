@@ -4,7 +4,7 @@ import { ArrowRight } from 'lucide-react'
 import { Link, type MetaArgs } from 'react-router'
 
 import { PublicErrorBoundary } from '../../components/errors'
-import { PageHero } from '../../components/layout-components'
+import { Band, PageHero, SheetFrame } from '../../components/layout-components'
 import { ModelLinkRow } from '../../components/layout-components/model-link-row'
 import { routeErrorMeta } from '../../components/not-found'
 import { DOCS_PAGE_COPY } from '../../constants/product-copy'
@@ -21,10 +21,11 @@ import {
 } from '../../lib/samples/sample-models'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import { shareCardMeta } from '../../lib/share-cards'
 
 export function meta({ error }: MetaArgs) {
 	if (error) return routeErrorMeta(error)
-	return buildPageMeta(PUBLIC_SEO_PAGES.docs)
+	return buildPageMeta({ ...PUBLIC_SEO_PAGES.docs, ...shareCardMeta('docs') })
 }
 
 /*
@@ -63,18 +64,21 @@ const quickLinkClass =
  */
 function DocsPath({
 	audience,
-	start
+	start,
+	closed = false
 }: {
 	audience: (typeof DOC_AUDIENCES)[number]
-	/** The path's quickest way in, inside its first tile. */
+	/** The path's quickest way in, inside its first cell. */
 	start?: React.ReactNode
+	/** Something follows the cells inside the band, so the row closes on a rule of its own. */
+	closed?: boolean
 }) {
 	const headingId = `docs-path-${audience.id}`
 	const categories = audience.categories.filter(
 		(category) => pagesIn(category).length > 0
 	)
 	return (
-		<section aria-labelledby={headingId}>
+		<>
 			<h2 id={headingId} className="text-h3">
 				{audience.label}
 			</h2>
@@ -82,16 +86,22 @@ function DocsPath({
 				{audience.description}
 			</p>
 
+			{/*
+			  The categories are cells ruled into the sheet frame from rule to rule,
+			  not tiles: a list of links reads as a table of contents, and the
+			  frame's lines already group it.
+			*/}
 			<div
 				className={cn(
-					'mt-8 grid gap-4',
+					'border-foreground/10 -mx-(--frame-pad) mt-8 grid border-t',
+					closed && 'border-b',
 					categories.length > 2 ? 'md:grid-cols-3' : 'md:grid-cols-[1fr_2fr]'
 				)}
 			>
 				{categories.map((category, i) => (
 					<div
 						key={category}
-						className="ds-raised flex flex-col gap-4 rounded-2xl p-6"
+						className="border-foreground/10 flex flex-col gap-4 py-10 not-last:border-b md:px-6 md:not-first:border-l md:not-last:border-b-0 lg:px-(--frame-pad)"
 					>
 						<p className="text-muted-foreground text-eyebrow">
 							{DOC_CATEGORY_LABELS[category]}
@@ -112,7 +122,7 @@ function DocsPath({
 					</div>
 				))}
 			</div>
-		</section>
+		</>
 	)
 }
 
@@ -148,59 +158,68 @@ export default function DocsIndexPage() {
 				}
 			/>
 
-			<div className="container-page pb-32">
-				{/*
-				  Two paths, from the manifest's audiences, one under the other: the
-				  reader picks by what they are doing. The page used to offer one
-				  "Start here" path that began with contributor setup.
-				*/}
-				<div className="flex flex-col gap-24">
-					{DOC_AUDIENCES.map((audience) => (
-						<DocsPath
+			{/*
+			  Two paths, from the manifest's audiences, one band each: the reader
+			  picks by what they are doing. The page used to offer one "Start here"
+			  path that began with contributor setup. Every path's cells end on the
+			  next band's rule but the last one's, which the quick links follow.
+			*/}
+			<SheetFrame>
+				{DOC_AUDIENCES.map((audience, i) => {
+					const last = i === DOC_AUDIENCES.length - 1
+					return (
+						<Band
 							key={audience.id}
-							audience={audience}
-							start={
-								audience.id === 'browser' && (
-									/* The publisher with a model already on its way, so there is nothing to hand over first. */
-									<ModelLinkRow
-										to={publisherSampleHref('rocket')}
-										previewUrl={rocket.previewUrl}
-										title={DOCS_PAGE_COPY.rocketSampleCta}
-										meta={`${formatFileSize(rocket.bytes)} · ${rocket.hint}`}
-										className="mt-auto"
-										viewTransition
-									/>
-								)
-							}
-						/>
-					))}
-				</div>
-
-				<div className="mt-24 flex flex-wrap items-center gap-x-6 gap-y-2">
-					<span className="text-muted-foreground text-eyebrow">
-						{DOCS_PAGE_COPY.quickLinksLabel}
-					</span>
-					<a
-						className={quickLinkClass}
-						href={COMMUNITY.github}
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						GitHub
-					</a>
-					<a
-						className={quickLinkClass}
-						href={COMMUNITY.discord}
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						Discord
-					</a>
-					<Link className={quickLinkClass} to="/changelog">
-						Changelog
-					</Link>
-				</div>
-			</div>
+							aria-labelledby={`docs-path-${audience.id}`}
+							flush={!last}
+						>
+							<DocsPath
+								audience={audience}
+								closed={last}
+								start={
+									audience.id === 'browser' && (
+										/* The publisher with a model already on its way, so there is nothing to hand over first. */
+										<ModelLinkRow
+											to={publisherSampleHref('rocket')}
+											previewUrl={rocket.previewUrl}
+											title={DOCS_PAGE_COPY.rocketSampleCta}
+											meta={`${formatFileSize(rocket.bytes)} · ${rocket.hint}`}
+											className="mt-auto"
+											viewTransition
+										/>
+									)
+								}
+							/>
+							{last && (
+								<div className="mt-24 flex flex-wrap items-center gap-x-6 gap-y-2">
+									<span className="text-muted-foreground text-eyebrow">
+										{DOCS_PAGE_COPY.quickLinksLabel}
+									</span>
+									<a
+										className={quickLinkClass}
+										href={COMMUNITY.github}
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										GitHub
+									</a>
+									<a
+										className={quickLinkClass}
+										href={COMMUNITY.discord}
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										Discord
+									</a>
+									<Link className={quickLinkClass} to="/changelog">
+										Changelog
+									</Link>
+								</div>
+							)}
+						</Band>
+					)
+				})}
+			</SheetFrame>
 		</main>
 	)
 }

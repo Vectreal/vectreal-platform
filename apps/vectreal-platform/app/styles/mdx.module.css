@@ -323,12 +323,100 @@
 	}
 }
 
-/* Full-page centred MDX (about, contact, legal pages) ───────────────────── */
+/*
+  Full-page MDX (about, changelog, legal pages) as a spec sheet in the
+  marketing frame: each `##` heading in the left column, its text in the right,
+  and a rule across the frame above every heading. The MDX is a flat run of
+  elements, so the grid places them by tag: a heading starts a row in the
+  left column, and everything after it fills the right one until the next.
+*/
 .root {
-	@apply mx-auto flex max-w-lg flex-col gap-8 md:max-w-4xl;
+	--head-pad: 5rem;
+	--row-gap: 2rem;
+	--section-gap: 4rem; /* the shared `h2` margin-top above */
+
+	/* `cqi` below is this box's width, so a heading's rule can span both columns. */
+	container-type: inline-size;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	row-gap: var(--row-gap);
+	margin-inline: var(--frame-x);
+	padding: var(--head-pad) var(--frame-pad) 8rem;
+
+	/* The rule above each section replaces the break the source marks with `---`. */
+	> hr {
+		display: none;
+	}
+
+	> h2::before {
+		content: '';
+		position: absolute;
+		top: calc(var(--section-gap) / -2);
+		left: calc(-1 * var(--frame-pad));
+		width: calc(100cqi + 2 * var(--frame-pad));
+		border-top: 1px solid var(--rule);
+	}
+
+	/*
+	  The title and any intro under it (a "Last updated" line) are the page
+	  head, which runs edge to edge above the frame as every marketing head
+	  does. Each block of the head grounds itself and the gap above it on the
+	  page's background, over the column rules; the last one carries that
+	  ground down to the first section's rule.
+	*/
+	> :not(h2, h2 ~ *) {
+		position: relative;
+		z-index: 0;
+	}
+	/* Opacity would thin the ground with the text, so the head dims its prose by colour instead. */
+	> p:not(h2 ~ *) {
+		opacity: 1;
+		color: color-mix(in oklch, var(--color-foreground) 80%, transparent);
+	}
+	> :is(ul, ol):not(h2 ~ *) {
+		opacity: 1;
+		color: color-mix(in oklch, var(--color-foreground) 85%, transparent);
+	}
+	> :not(h2, h2 ~ *)::before {
+		content: '';
+		position: absolute;
+		z-index: -1;
+		top: calc(-1 * var(--row-gap));
+		bottom: 0;
+		/* Past both window edges from any column; the sheet clips what overflows. */
+		inset-inline: -100vw;
+		background: var(--color-background);
+	}
+	> h1::before {
+		top: calc(-1 * var(--head-pad));
+	}
+	> :not(h2, h2 ~ *):has(+ h2)::before {
+		bottom: calc(-1 * (var(--row-gap) + var(--section-gap) / 2));
+	}
+}
+@media (min-width: 48rem) {
+	.root {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+		column-gap: 3rem;
+
+		> * {
+			grid-column: 2;
+		}
+		> h1 {
+			grid-column: 1 / -1;
+		}
+		/* Auto-placement moves a left-column item to a new row, so each heading opens its section's row. */
+		> h2 {
+			grid-column: 1;
+		}
+		/* The section's first block shares the heading's row, so it takes the same space above to start level with it. */
+		> h2 + * {
+			margin-top: var(--section-gap);
+		}
+	}
 }
 
-/* Docs layout MDX (fills the flex content column, no max-width) ─────────── */
+/* Docs MDX: the frame's middle column, or the page head (no max-width) ──── */
 .docsContent {
 	@apply flex flex-col gap-8;
 }

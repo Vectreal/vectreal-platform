@@ -11,7 +11,6 @@ import { fileURLToPath } from 'node:url'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { readGlbContents } from '../app/lib/samples/glb-contents'
 import {
 	HERO_MODEL,
 	fetchSampleModel,
@@ -72,11 +71,7 @@ describe('sample models', () => {
 		expect(sampleModelById('not-a-sample')).toBeNull()
 	})
 
-	/*
-	  The home page prints the hero model's size and contents beside it, so they
-	  are claims like a sample's size. The contents are read with the same
-	  function the stage prints them with.
-	*/
+	/* The home page prints the hero model's size beside it, so it is a claim like a sample's size. */
 	describe('hero model', () => {
 		const bytes = () => readFileSync(join(MODELS_DIR, HERO_MODEL.fileName))
 
@@ -88,15 +83,6 @@ describe('sample models', () => {
 
 		it('is a real GLB', () => {
 			expect(bytes().subarray(0, 4).toString('utf8')).toBe('glTF')
-		})
-
-		it('declares the contents it actually has', () => {
-			const file = bytes()
-			expect(HERO_MODEL.contents).toEqual(
-				readGlbContents(
-					file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength)
-				)
-			)
 		})
 
 		it('claims the camera sample as its source, which it is smaller than', () => {
