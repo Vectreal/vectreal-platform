@@ -268,6 +268,7 @@ class SceneSettingsService {
 		)
 
 		const saveResult = await this.saveInTransaction(tx, params)
+		const unchanged = 'unchanged' in saveResult && saveResult.unchanged
 
 		const name = params.meta.name?.trim()
 		if (name) {
@@ -281,14 +282,38 @@ class SceneSettingsService {
 					})
 				)
 				.where(eq(scenes.id, params.sceneId))
+		} else if (!unchanged) {
+			// A save that keeps the name is still an edit; lists sort by this.
+			await tx
+				.update(scenes)
+				.set({ updatedAt: new Date() })
+				.where(eq(scenes.id, params.sceneId))
 		}
 
-		return 'unchanged' in saveResult && saveResult.unchanged
+		return unchanged
 			? { settings: saveResult, removedAssetIds: [] as string[] }
 			: {
 					settings: saveResult.savedSettings,
 					removedAssetIds: saveResult.removedAssetIds
 				}
+	}
+
+	/**
+	 * A scene's stored settings and the assets it links, read in `tx`, or null
+	 * for a scene with no settings row. What a settings-only save needs: it
+	 * keeps every link as it is.
+	 */
+	async readSceneSettingsWithin(tx: SceneSettingsTransaction, sceneId: string) {
+		const row = await getSceneSettingsBySceneId(tx, sceneId)
+		if (!row) return null
+
+		const hotspots = await getHotspotsBySceneSettingsId(tx, row.id)
+		const links = await getSceneAssetLinks(tx, row.id)
+		return {
+			settings: rowToSceneSettings(row, hotspots),
+			sceneAssetIds: links.assetIds.filter((id) => id !== links.sourceAssetId),
+			sourceAssetId: links.sourceAssetId
+		}
 	}
 
 	private async saveInTransaction(

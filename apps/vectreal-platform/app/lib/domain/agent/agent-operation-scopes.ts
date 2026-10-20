@@ -16,6 +16,7 @@ import type { DashboardOperation } from '../dashboard/dashboard-operations'
  * in the organization, through the dashboard operation table.
  */
 export const AGENT_OPERATION_SCOPES = {
+	'project:read': 'projects:read',
 	'project:create': 'projects:write',
 	'project:update': 'projects:write',
 	'project-embed-domains:update': 'embed:manage',
@@ -24,6 +25,7 @@ export const AGENT_OPERATION_SCOPES = {
 	'scene-folder:update': 'projects:write',
 	'scene-folder:move': 'projects:write',
 	'scene-folder:delete': null,
+	'scene:read': 'projects:read',
 	'scene:create': 'projects:write',
 	'scene:publish': 'scenes:publish',
 	'scene:unpublish': 'scenes:publish',

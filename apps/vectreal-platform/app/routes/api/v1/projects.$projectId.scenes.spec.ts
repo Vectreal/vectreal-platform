@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto'
 import {
 	apiFailureSchema,
 	apiSuccessSchema,
-	createdSceneSchema
+	createdSceneSchema,
+	sceneListSchema
 } from '@vctrl/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -24,8 +25,16 @@ const mocks = vi.hoisted(() => ({
 	prepareSceneUpload: vi.fn(),
 	uploadSceneAssets: vi.fn(),
 	reclaimUploadBatch: vi.fn(),
-	saveSceneSettingsWithin: vi.fn()
+	saveSceneSettingsWithin: vi.fn(),
+	getProjectsScenes: vi.fn()
 }))
+
+vi.mock(
+	'../../../lib/domain/scene/server/scene-folder-repository.server',
+	() => ({
+		getProjectsScenes: mocks.getProjectsScenes
+	})
+)
 
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
 	authorizeAgentRequest: mocks.authorizeAgentRequest
@@ -164,6 +173,89 @@ beforeEach(() => {
 	)
 })
 
+describe('GET /api/v1/projects/:projectId/scenes', () => {
+	const list = (projectId = PROJECT) =>
+		loader({
+			request: new Request(url),
+			params: { projectId }
+		} as unknown as Route.LoaderArgs)
+
+	it('lists the project’s scenes as the user sees them, behind projects:read', async () => {
+		const updatedAt = new Date('2026-10-20T08:00:00.000Z')
+		mocks.getProjectsScenes.mockResolvedValue(
+			new Map([
+				[
+					PROJECT,
+					[
+						{
+							id: 'scene-1',
+							name: 'Chair',
+							status: 'published',
+							updatedAt,
+							folderId: null
+						}
+					]
+				]
+			])
+		)
+
+		const response = await list()
+
+		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(
+			expect.any(Request),
+			{ scope: 'projects:read' }
+		)
+		expect(mocks.resolveProjectMembership).toHaveBeenCalledWith(
+			PROJECT,
+			'user-1'
+		)
+		expect(mocks.getProjectsScenes).toHaveBeenCalledWith([PROJECT], 'user-1')
+		expect(response.headers.get('Cache-Control')).toBe('no-store')
+		expect(
+			apiSuccessSchema(sceneListSchema).parse(await response.json()).data
+		).toEqual({
+			scenes: [
+				{
+					id: 'scene-1',
+					name: 'Chair',
+					status: 'published',
+					updatedAt: updatedAt.toISOString()
+				}
+			]
+		})
+	})
+
+	it('answers an empty project with an empty list', async () => {
+		mocks.getProjectsScenes.mockResolvedValue(new Map([[PROJECT, []]]))
+
+		const response = await list()
+
+		expect(await response.json()).toMatchObject({ data: { scenes: [] } })
+	})
+
+	it('answers 404 for a project in another organization, and lists nothing', async () => {
+		mocks.resolveProjectMembership.mockResolvedValue({
+			organizationId: 'org-2',
+			projectId: PROJECT,
+			role: 'owner'
+		})
+
+		const { response, body } = await refusal(list())
+
+		expect(response.status).toBe(404)
+		expect(body.code).toBe('not_found')
+		expect(mocks.getProjectsScenes).not.toHaveBeenCalled()
+	})
+
+	it('answers the gate refusal before resolving the project', async () => {
+		const gate = new Response(null, { status: 401 })
+		mocks.authorizeAgentRequest.mockRejectedValue(gate)
+
+		await expect(list()).rejects.toBe(gate)
+		expect(mocks.resolveProjectMembership).not.toHaveBeenCalled()
+	})
+})
+
 describe('POST /api/v1/projects/:projectId/scenes', () => {
 	it('stores the GLB as glTF and bin, saves the scene in the transaction, audits it and answers 201', async () => {
 		const request = post()
@@ -258,19 +350,8 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 		const response = await act(new Request(url, { method: 'PUT' }))
 
 		expect(response.status).toBe(405)
-		expect(response.headers.get('Allow')).toBe('POST')
+		expect(response.headers.get('Allow')).toBe('GET, POST')
 		expect(mocks.authorizeAgentRequest).not.toHaveBeenCalled()
-	})
-
-	it('answers a GET with 405 behind the gate', async () => {
-		const request = new Request(url)
-
-		const response = await loader({ request } as Route.LoaderArgs)
-
-		expect(response.status).toBe(405)
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'projects:read'
-		})
 	})
 
 	it('answers the gate refusal and stores nothing', async () => {

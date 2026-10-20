@@ -21,11 +21,18 @@ import {
 	type ProjectList
 } from './projects'
 import {
+	sceneSettingsSchema,
+	type SceneSettingsDocument,
+	type UpdateSceneSettingsInput
+} from './scene-settings'
+import {
 	createdSceneSchema,
+	sceneListSchema,
 	scenePublicationSchema,
 	type CreatedScene,
 	type CreateSceneInput,
 	type PublishSceneInput,
+	type SceneList,
 	type ScenePublication
 } from './scenes'
 import { endedSessionSchema, type EndedSession } from './session'
@@ -89,7 +96,7 @@ export function createVectrealClient({
 	const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
 
 	async function send<Data extends z.ZodType>(
-		method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+		method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
 		path: string,
 		data: Data,
 		{
@@ -205,6 +212,47 @@ export function createVectrealClient({
 				}
 			)
 		},
+		/** A project's scenes, the most recently edited first. */
+		listScenes: (projectId: string): Promise<SceneList> =>
+			send(
+				'GET',
+				`api/v1/projects/${encodeURIComponent(projectId)}/scenes`,
+				sceneListSchema,
+				{ auth: 'bearer' }
+			),
+		/** How a scene looks and behaves: every settings section, defaults filled in. */
+		getSceneSettings: (sceneId: string): Promise<SceneSettingsDocument> =>
+			send(
+				'GET',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/settings`,
+				sceneSettingsSchema,
+				{ auth: 'bearer' }
+			),
+		/**
+		 * Changes a scene's settings and answers with them as stored. Each
+		 * section sent replaces that section whole, so read it first and send it
+		 * back changed; sections left out stay as they are. The model and its
+		 * files are untouched, and so is the stored shadow bake.
+		 *
+		 * Live embeds of the scene show the change at once, as a save in the
+		 * publisher does. A save running at the same moment answers 409
+		 * `scene_busy`: retry with the same `idempotencyKey`.
+		 */
+		updateSceneSettings: (
+			sceneId: string,
+			input: UpdateSceneSettingsInput,
+			{ idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+		): Promise<SceneSettingsDocument> =>
+			send(
+				'PATCH',
+				`api/v1/scenes/${encodeURIComponent(sceneId)}/settings`,
+				sceneSettingsSchema,
+				{
+					auth: 'bearer',
+					body: input,
+					headers: { 'Idempotency-Key': sfString(idempotencyKey) }
+				}
+			),
 		/**
 		 * Publishes a scene with the GLB visitors will load. Nothing is
 		 * re-encoded on the server, so send the compressed export (Draco, KTX2),

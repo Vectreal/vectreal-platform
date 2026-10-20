@@ -152,3 +152,59 @@ export const sceneLookSchema = z.object({
 })
 
 export type SceneLook = z.infer<typeof sceneLookSchema>
+
+/*
+  The other five sections are normalized on the server by rules that also
+  read the model (camera ids, clip names, hotspot anchors), so the contract
+  carries them as JSON and the server's answer is what was stored.
+*/
+const section = z.record(z.string(), z.unknown())
+
+const sceneSettingsSections = {
+	...sceneLookSchema.shape,
+	camera: section.optional(),
+	interactions: z.array(section).optional(),
+	animation: section.optional(),
+	presentation: section.optional(),
+	hotspots: z.array(section).optional()
+}
+
+/** `GET` and `PATCH /api/v1/scenes/:sceneId/settings`: the scene's settings. */
+export const sceneSettingsSchema = z.object({
+	settings: z.object(sceneSettingsSections)
+})
+
+export type SceneSettingsDocument = z.infer<typeof sceneSettingsSchema>
+
+/**
+ * `PATCH /api/v1/scenes/:sceneId/settings`: the sections to change. Each one
+ * sent replaces the stored section whole; those left out stay as they are.
+ *
+ * Only the sections a save changes alone. When the publisher changes the
+ * camera, hotspots, interactions, animation or normalization, it also derives
+ * other state from the loaded model: a marker's own camera, clips matched to
+ * the model's, positions moved to a new scale. The server has no model to
+ * derive from, so those sections are read-only here, and sending one is
+ * refused rather than ignored.
+ */
+export const updateSceneSettingsInputSchema = z.strictObject({
+	bounds: sceneBoundsSchema.optional(),
+	controls: sceneControlsSchema.optional(),
+	environment: sceneEnvironmentSchema.optional(),
+	shadows: sceneShadowsSchema.optional(),
+	// The viewer's chrome. `compressTexturesForGpu` is accepted so a section
+	// read from `GET` can be sent back, and ignored: the publisher stores it
+	// against the optimization preset, which the server does not decide.
+	presentation: z
+		.strictObject({
+			showInfoPopover: z.boolean().optional(),
+			showSceneViewReturn: z.boolean().optional(),
+			showLoadingThumbnail: z.boolean().optional(),
+			compressTexturesForGpu: z.boolean().optional()
+		})
+		.optional()
+})
+
+export type UpdateSceneSettingsInput = z.infer<
+	typeof updateSceneSettingsInputSchema
+>

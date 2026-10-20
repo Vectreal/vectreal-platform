@@ -19,6 +19,7 @@ const ROLES: MembershipRole[] = ['owner', 'admin', 'member']
  * one fails if a rule is loosened by accident.
  */
 const EXPECTED: Record<DashboardOperation, MembershipRole[]> = {
+	'project:read': ['owner', 'admin', 'member'],
 	'project:create': ['owner', 'admin', 'member'],
 	'project:update': ['owner', 'admin'],
 	'project-embed-domains:update': ['owner', 'admin'],
@@ -27,6 +28,7 @@ const EXPECTED: Record<DashboardOperation, MembershipRole[]> = {
 	'scene-folder:update': ['owner', 'admin'],
 	'scene-folder:move': ['owner', 'admin', 'member'],
 	'scene-folder:delete': ['owner', 'admin'],
+	'scene:read': ['owner', 'admin', 'member'],
 	'scene:create': ['owner', 'admin', 'member'],
 	'scene:publish': ['owner', 'admin', 'member'],
 	'scene:unpublish': ['owner', 'admin', 'member'],

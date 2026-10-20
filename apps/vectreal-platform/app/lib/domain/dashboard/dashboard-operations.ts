@@ -21,6 +21,7 @@ export type MembershipRole = 'owner' | 'admin' | 'member'
 export type DashboardEntityType = 'project' | 'folder' | 'scene'
 
 export type DashboardOperation =
+	| 'project:read'
 	| 'project:create'
 	| 'project:update'
 	| 'project-embed-domains:update'
@@ -29,6 +30,7 @@ export type DashboardOperation =
 	| 'scene-folder:update'
 	| 'scene-folder:move'
 	| 'scene-folder:delete'
+	| 'scene:read'
 	| 'scene:create'
 	| 'scene:publish'
 	| 'scene:unpublish'
@@ -75,6 +77,8 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	DashboardOperation,
 	readonly MembershipRole[]
 > = {
+	/** Every member sees the organization's projects and what is in them. */
+	'project:read': ['owner', 'admin', 'member'],
 	'project:create': ['owner', 'admin', 'member'],
 	'project:update': ['owner', 'admin'],
 	/**
@@ -96,6 +100,7 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 	'scene-folder:move': ['owner', 'admin', 'member'],
 	'scene-folder:delete': ['owner', 'admin'],
 
+	'scene:read': ['owner', 'admin', 'member'],
 	'scene:create': ['owner', 'admin', 'member'],
 	/** Any member may publish in the publisher today; this keeps that rule. */
 	'scene:publish': ['owner', 'admin', 'member'],
@@ -163,6 +168,7 @@ export class DashboardPermissionError extends Error {
 }
 
 const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
+	'project:read': 'view this project',
 	'project:create': 'create projects',
 	'project:update': 'edit this project',
 	'project-embed-domains:update': "change this project's allowed domains",
@@ -171,6 +177,7 @@ const OPERATION_SUBJECTS: Record<DashboardOperation, string> = {
 	'scene-folder:update': 'rename this folder',
 	'scene-folder:move': 'move this folder',
 	'scene-folder:delete': 'delete this folder',
+	'scene:read': 'view this scene',
 	'scene:create': 'create scenes',
 	'scene:publish': 'publish this scene',
 	'scene:unpublish': 'take this scene offline',

@@ -27,6 +27,8 @@ export const API_ERROR_CODES = [
 	'payment_required',
 	/** The scene is a draft; publish it before asking for its embed. */
 	'scene_not_published',
+	/** Someone is saving the scene right now, in the publisher or another agent. Retry shortly. */
+	'scene_busy',
 	/** The project has no embed key that works; create one first. */
 	'embed_key_required',
 	/** The embed key asked for is revoked or expired; pick or create another. */

@@ -85,6 +85,7 @@ describe('agent API routes', () => {
 				'/api/v1/projects/:projectid/allowed-domains',
 				'/api/v1/scenes/:sceneid/publication',
 				'/api/v1/scenes/:sceneid/embed',
+				'/api/v1/scenes/:sceneid/settings',
 				'/api/v1/cli/client'
 			])
 		)

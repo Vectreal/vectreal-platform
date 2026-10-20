@@ -20,6 +20,20 @@ export const createdSceneSchema = z.object({
 
 export type CreatedScene = z.infer<typeof createdSceneSchema>
 
+/** `GET /api/v1/projects/:projectId/scenes`: the project's scenes, newest edit first. */
+export const sceneListSchema = z.object({
+	scenes: z.array(
+		z.object({
+			id: z.string(),
+			name: z.string(),
+			status: z.enum(['draft', 'published', 'archived']),
+			updatedAt: z.iso.datetime()
+		})
+	)
+})
+
+export type SceneList = z.infer<typeof sceneListSchema>
+
 /**
  * `POST` and `DELETE /api/v1/scenes/:sceneId/publication`: whether the scene
  * is live. `publishedAt` is set while it is published and null once offline.
