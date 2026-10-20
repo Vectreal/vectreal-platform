@@ -131,8 +131,8 @@
 		"@typescript-eslint/eslint-plugin": "8.66.0",
 		"@typescript-eslint/parser": "8.66.0",
 		"@vitejs/plugin-react": "catalog:",
-		"@vitest/coverage-v8": "4.1.10",
-		"@vitest/ui": "4.1.10",
+		"@vitest/coverage-v8": "4.1.11",
+		"@vitest/ui": "4.1.11",
 		"babel-plugin-react-compiler": "1.0.0",
 		"chromatic": "^18.1.0",
 		"drizzle-kit": "^0.31.10",
@@ -168,7 +168,7 @@
 		"supabase": "^2.113.0",
 		"tailwindcss": "^4.3.3",
 		"tslib": "^2.8.1",
-		"tsx": "^4.20.6",
+		"tsx": "^4.23.15",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "8.66.0",
 		"unified": "^11.0.5",
@@ -177,7 +177,7 @@
 		"vite": "catalog:",
 		"vite-plugin-devtools-json": "^1.1.0",
 		"vite-plugin-dts": "catalog:",
-		"vitest": "4.1.10"
+		"vitest": "4.1.11"
 	},
 	"nx": {
 		"includedScripts": []
