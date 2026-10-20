@@ -96,14 +96,18 @@ async function readRuntimeError(response: Response): Promise<never> {
 	const payload = (await response.json().catch(() => null)) as {
 		error?: unknown
 	} | null
+	// The runtime app answers every error with this envelope (`_err` in web.py);
+	// Modal's edge and gateways do not.
+	const fromRuntime = typeof payload?.error === 'string'
 	const detail = `The runtime answered ${response.status}: ${
-		typeof payload?.error === 'string' ? payload.error : 'no error body'
+		fromRuntime ? payload.error : 'no error body'
 	}`
-	// A runtime 5xx is our upstream failing, not the caller's request. It may
-	// come from Modal's edge after the container took the job, so the outcome
-	// of a submit answered with one is unknown; polling settles it.
+	// A runtime 5xx is our upstream failing, not the caller's request. One from
+	// the runtime itself is definite (a failed spawn releases the job first);
+	// one from the edge may come after the container took the job, so the
+	// outcome of a submit answered with it is unknown, and polling settles it.
 	throw response.status >= 500
-		? new ImgTo3dRuntimeError('runtime_unavailable', 502, detail, true)
+		? new ImgTo3dRuntimeError('runtime_unavailable', 502, detail, !fromRuntime)
 		: new ImgTo3dRuntimeError('runtime_rejected', response.status, detail)
 }
 

@@ -241,11 +241,24 @@ describe('the live runtime client', () => {
 		})
 	})
 
-	it('treats a runtime 5xx as possibly acted on, since the edge may answer after the job was taken', async () => {
-		configured(Response.json({ success: false }, { status: 504 }))
+	it('treats a 5xx from the edge as possibly acted on, since it may answer after the job was taken', async () => {
+		configured(new Response('<html>Gateway Timeout</html>', { status: 504 }))
 		await expect(liveImgTo3dRuntime.status(JOB)).rejects.toMatchObject({
 			kind: 'runtime_unavailable',
 			outcomeUnknown: true
+		})
+	})
+
+	it('treats a 5xx from the runtime itself as definite: a failed spawn releases the job', async () => {
+		configured(
+			Response.json(
+				{ success: false, error: 'Could not start generation: boom' },
+				{ status: 502 }
+			)
+		)
+		await expect(liveImgTo3dRuntime.status(JOB)).rejects.toMatchObject({
+			kind: 'runtime_unavailable',
+			outcomeUnknown: false
 		})
 	})
 
