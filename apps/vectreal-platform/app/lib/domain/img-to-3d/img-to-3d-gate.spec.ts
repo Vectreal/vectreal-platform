@@ -9,8 +9,7 @@ import {
 
 const subject = {
 	userId: 'user-1',
-	email: 'me@vectreal.com',
-	organizationId: 'org-1'
+	email: 'me@vectreal.com'
 }
 
 function source(flag: unknown): ImgTo3dFlagSource {
@@ -52,17 +51,13 @@ describe('isImgTo3dEnabled', () => {
 		expect(await isImgTo3dEnabled(failing, subject)).toBe(false)
 	})
 
-	it('evaluates with the properties a release condition targets, supplied by the server', async () => {
+	it('evaluates with the email alone, so only a person can be let in', async () => {
 		const flags = source(true)
 		await isImgTo3dEnabled(flags, subject)
 
 		expect(flags.evaluateFlags).toHaveBeenCalledWith('user-1', {
 			flagKeys: [IMG_TO_3D_FLAG],
-			personProperties: {
-				email: 'me@vectreal.com',
-				organization_id: 'org-1'
-			},
-			groups: { organization: 'org-1' }
+			personProperties: { email: 'me@vectreal.com' }
 		})
 	})
 
@@ -72,9 +67,7 @@ describe('isImgTo3dEnabled', () => {
 
 		expect(flags.evaluateFlags).toHaveBeenCalledWith(
 			'user-1',
-			expect.objectContaining({
-				personProperties: { organization_id: 'org-1' }
-			})
+			expect.objectContaining({ personProperties: {} })
 		)
 	})
 })

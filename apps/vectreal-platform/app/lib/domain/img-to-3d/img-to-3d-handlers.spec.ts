@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { IMG_TO_3D_FIELDS, type ImgTo3dJobState } from './img-to-3d-contract'
+import {
+	IMG_TO_3D_DAILY_JOB_LIMIT,
+	IMG_TO_3D_FIELDS,
+	type ImgTo3dJobState
+} from './img-to-3d-contract'
 import {
 	handleImgTo3dGenerationArtifact,
 	handleImgTo3dGenerationStatus,
@@ -59,7 +63,12 @@ function harness(overrides: Partial<ImgTo3dHandlerDeps> = {}) {
 		),
 		remove: vi.fn(async (jobId: string) => {
 			rows.delete(jobId)
-		})
+		}),
+		// Every fake row counts as recent; the 24-hour window is the query's.
+		countStartedInLastDay: vi.fn(
+			async (userId: string) =>
+				[...rows.values()].filter((row) => row.createdBy === userId).length
+		)
 	}
 	let ids = 0
 	let seeds = 100
@@ -240,6 +249,29 @@ describe('handleSubmitImgTo3dGeneration', () => {
 				decimationTarget: 200_000
 			})
 		)
+	})
+
+	it('starts a batch that reaches the daily limit exactly', async () => {
+		const { deps, jobs } = harness()
+		jobs.countStartedInLastDay.mockResolvedValue(IMG_TO_3D_DAILY_JOB_LIMIT - 3)
+
+		const response = await handleSubmitImgTo3dGeneration(submission('3'), deps)
+
+		expect(response.status).toBe(202)
+		expect(jobs.countStartedInLastDay).toHaveBeenCalledWith('user-1')
+	})
+
+	it('refuses a batch that would pass the daily limit, before recording or starting anything', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.countStartedInLastDay.mockResolvedValue(IMG_TO_3D_DAILY_JOB_LIMIT - 2)
+
+		const response = await handleSubmitImgTo3dGeneration(submission('3'), deps)
+
+		expect(response.status).toBe(429)
+		expect(response.headers.getSetCookie()).toHaveLength(2)
+		expect(await readBody(response)).toMatchObject({ error: 'daily_limit' })
+		expect(jobs.insert).not.toHaveBeenCalled()
+		expect(runtime.submit).not.toHaveBeenCalled()
 	})
 
 	it('never runs the same seed twice in one batch', async () => {

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, count, eq, gt, sql } from 'drizzle-orm'
 
 import { getDbClient } from '../../../db/client'
 import { imgTo3dJobs } from '../../../db/schema/generation/img-to-3d-jobs'
@@ -33,5 +33,18 @@ export const imgTo3dJobStore: ImgTo3dJobStore = {
 
 	async remove(jobId: string): Promise<void> {
 		await db.delete(imgTo3dJobs).where(eq(imgTo3dJobs.id, jobId))
+	},
+
+	async countStartedInLastDay(userId: string): Promise<number> {
+		const [row] = await db
+			.select({ started: count() })
+			.from(imgTo3dJobs)
+			.where(
+				and(
+					eq(imgTo3dJobs.createdBy, userId),
+					gt(imgTo3dJobs.createdAt, sql`now() - interval '24 hours'`)
+				)
+			)
+		return row?.started ?? 0
 	}
 }

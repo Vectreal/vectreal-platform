@@ -47,16 +47,12 @@ describe('resolveImgTo3dAccess', () => {
 		})
 	})
 
-	it('evaluates the flag for this user and that organization', async () => {
+	it('evaluates the flag for this user by their email', async () => {
 		await resolveImgTo3dAccess(user)
 
 		expect(posthog.evaluateFlags).toHaveBeenCalledWith('user-1', {
 			flagKeys: [IMG_TO_3D_FLAG],
-			personProperties: {
-				email: 'me@vectreal.com',
-				organization_id: 'org-of-user-1'
-			},
-			groups: { organization: 'org-of-user-1' }
+			personProperties: { email: 'me@vectreal.com' }
 		})
 	})
 

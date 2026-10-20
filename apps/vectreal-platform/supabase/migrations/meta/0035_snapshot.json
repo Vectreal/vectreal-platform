@@ -1,5 +1,5 @@
 {
-  "id": "3662724a-5fb1-42ad-bb92-a77748fda9dc",
+  "id": "ab3eb9b4-58e8-43db-b99c-ff6b5fc8c02a",
   "prevId": "3a789f5f-42cd-48ea-b842-171d5a7bbd50",
   "version": "7",
   "dialect": "postgresql",
@@ -4487,6 +4487,27 @@
           "columns": [
             {
               "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "img_to_3d_jobs_created_by_created_idx": {
+          "name": "img_to_3d_jobs_created_by_created_idx",
+          "columns": [
+            {
+              "expression": "created_by",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

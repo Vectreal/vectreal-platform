@@ -18,23 +18,19 @@ import type { User } from '@supabase/supabase-js'
 export async function resolveImgTo3dAccess(
 	user: User
 ): Promise<{ organizationId: string } | null> {
+	if (!(await isImgTo3dEnabledFor(user))) return null
 	const organization = await getOrCreateDefaultOrganization(user.id)
-	const enabled = await isImgTo3dEnabledFor(user, organization.id)
-	return enabled ? { organizationId: organization.id } : null
+	return { organizationId: organization.id }
 }
 
-/** For a caller that has already resolved the organization. */
-export async function isImgTo3dEnabledFor(
-	user: User,
-	organizationId: string
-): Promise<boolean> {
+/** Whether the panel is drawn; the routes ask `resolveImgTo3dAccess`. */
+export async function isImgTo3dEnabledFor(user: User): Promise<boolean> {
 	if (isImgTo3dMockMode()) {
 		return true
 	}
 
 	return isImgTo3dEnabled(getPosthogClient(), {
 		userId: user.id,
-		email: user.email ?? null,
-		organizationId
+		email: user.email ?? null
 	})
 }

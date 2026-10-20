@@ -47,6 +47,11 @@ export const imgTo3dJobs = pgTable(
 		index('img_to_3d_jobs_org_created_idx').on(
 			table.organizationId,
 			table.createdAt
+		),
+		// The daily limit counts a person's jobs over the last 24 hours.
+		index('img_to_3d_jobs_created_by_created_idx').on(
+			table.createdBy,
+			table.createdAt
 		)
 	]
 ).enableRLS()

@@ -28,7 +28,6 @@ export interface ImgTo3dFlagSource {
 		options: {
 			flagKeys: string[]
 			personProperties: Record<string, string>
-			groups: Record<string, string>
 		}
 	): Promise<{ getFlag(key: string): unknown }>
 }
@@ -36,19 +35,17 @@ export interface ImgTo3dFlagSource {
 export interface ImgTo3dGateSubject {
 	readonly userId: string
 	readonly email: string | null
-	readonly organizationId: string
 }
 
 /**
- * Evaluated with the properties a release condition would target, passed in
- * rather than read from stored profiles: `PostHogIdentify` only identifies
- * someone who accepted analytics, so a condition on a stored email would
- * silently miss anyone who declined. Passed by the server, so a browser cannot
- * claim them either.
+ * Evaluated with the email passed in rather than read from a stored profile:
+ * `PostHogIdentify` only identifies someone who accepted analytics, so a
+ * condition on a stored email would silently miss anyone who declined. Passed
+ * by the server, so a browser cannot claim it either.
  *
- * `organization_id` is a person property so organizations can be targeted on
- * PostHog's free tier; `groups` makes a group-level condition work too, should
- * Group Analytics ever be enabled.
+ * The email is the only property sent, and no group: the flag is released to
+ * one person, and a condition that could match an organization would let its
+ * whole membership spend GPU money. `model-intake-admin` is gated the same way.
  */
 export async function isImgTo3dEnabled(
 	flags: ImgTo3dFlagSource | null | undefined,
@@ -61,11 +58,7 @@ export async function isImgTo3dEnabled(
 	try {
 		const evaluation = await flags.evaluateFlags(subject.userId, {
 			flagKeys: [IMG_TO_3D_FLAG],
-			personProperties: {
-				...(subject.email ? { email: subject.email } : {}),
-				organization_id: subject.organizationId
-			},
-			groups: { organization: subject.organizationId }
+			personProperties: subject.email ? { email: subject.email } : {}
 		})
 
 		// `true` and nothing else: a multivariate variant string is not a yes.

@@ -13,6 +13,13 @@ export const IMG_TO_3D_DECIMATION_TARGET = { min: 10_000, max: 1_000_000 }
 /** Seeds per image: one generation each, so several can be compared. */
 export const IMG_TO_3D_SEED_COUNT = { min: 1, max: 3 }
 export const IMG_TO_3D_MAX_SEED = 2 ** 31 - 1
+/**
+ * Generations one person may start in any 24 hours, every variant counted.
+ * The runtime runs one job at a time on one GPU, so this bounds the queue a
+ * single account can build, and with it the spend: about twenty photos at
+ * three variants each.
+ */
+export const IMG_TO_3D_DAILY_JOB_LIMIT = 60
 
 export const IMG_TO_3D_IMAGE_TYPES = [
 	'image/png',
@@ -171,6 +178,7 @@ export const IMG_TO_3D_ERROR_KINDS = [
 	'image_type',
 	'image_too_large',
 	'invalid_settings',
+	'daily_limit',
 	'runtime_unavailable',
 	'runtime_rejected',
 	'generation_failed',
@@ -185,6 +193,7 @@ export const IMG_TO_3D_ERROR_COPY: Record<ImgTo3dErrorKind, string> = {
 	image_type: 'The image must be a PNG, JPEG or WebP.',
 	image_too_large: `The image must be ${IMG_TO_3D_MAX_IMAGE_BYTES / (1024 * 1024)} MB or smaller.`,
 	invalid_settings: 'These settings are outside what generation accepts.',
+	daily_limit: `That would pass ${IMG_TO_3D_DAILY_JOB_LIMIT} generations in 24 hours. Try fewer variants, or again later.`,
 	runtime_unavailable:
 		'The generation runtime is not reachable. Trying again usually works.',
 	runtime_rejected: 'The generation runtime refused this request.',

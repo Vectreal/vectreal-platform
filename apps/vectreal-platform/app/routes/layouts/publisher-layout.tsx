@@ -83,11 +83,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	// Resolve the org's per-scene size limit concurrently with the scene queries
 	// below (rather than serially after them) so it never adds latency to the hot
 	// publisher-load path.
-	const organizationPromise = user?.id
-		? getOrCreateDefaultOrganization(user.id)
-		: null
-	const maxSceneBytesPromise: Promise<number | null> = organizationPromise
-		? organizationPromise.then((organization) =>
+	const maxSceneBytesPromise: Promise<number | null> = user?.id
+		? getOrCreateDefaultOrganization(user.id).then((organization) =>
 				getQuotaLimit(organization.id, 'storage_bytes_per_scene').then(
 					({ limit }) => limit
 				)
@@ -103,11 +100,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	  explicit yes from the flag is a no.
 	*/
 	const imgTo3dEnabledPromise: Promise<boolean> =
-		!sceneId && user && organizationPromise
-			? organizationPromise.then((organization) =>
-					isImgTo3dEnabledFor(user, organization.id)
-				)
-			: Promise.resolve(false)
+		!sceneId && user ? isImgTo3dEnabledFor(user) : Promise.resolve(false)
 
 	/*
 	  Offered on the empty stage, so only where there is one: signed in, with no

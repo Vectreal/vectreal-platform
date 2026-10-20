@@ -1,6 +1,7 @@
 import { ApiResponse } from '@shared/utils'
 
 import {
+	IMG_TO_3D_DAILY_JOB_LIMIT,
 	parseImgTo3dSubmission,
 	type ImgTo3dErrorKind,
 	type ImgTo3dGenerationParams,
@@ -77,6 +78,8 @@ export interface ImgTo3dJobStore {
 		organizationId: string
 	): Promise<{ id: string } | null>
 	remove(jobId: string): Promise<void>
+	/** Jobs `userId` started in the last 24 hours, for the daily limit. */
+	countStartedInLastDay(userId: string): Promise<number>
 }
 
 export interface ImgTo3dHandlerDeps {
@@ -225,6 +228,15 @@ export async function handleSubmitImgTo3dGeneration(
 	if (!parsed.ok) return respond(ApiResponse.badRequest(parsed.error))
 
 	const { image, seedCount, ...params } = parsed.submission
+
+	// Counted before anything is recorded, so a refused request costs nothing.
+	const started = await deps.jobs.countStartedInLastDay(admitted.user.id)
+	if (started + seedCount > IMG_TO_3D_DAILY_JOB_LIMIT) {
+		return respond(
+			ApiResponse.error('daily_limit' satisfies ImgTo3dErrorKind, 429)
+		)
+	}
+
 	const batchId = deps.newId()
 	const records: ImgTo3dJobRecord[] = distinctSeeds(
 		seedCount,
