@@ -40,3 +40,5 @@ docs/superpowers/*
 docs/superpowers
 .superpowers
 tmp
+# Supabase CLI link cache, left when `supabase link` runs from the repo root
+supabase/.temp/
