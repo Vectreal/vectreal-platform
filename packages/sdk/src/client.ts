@@ -28,6 +28,7 @@ import {
 	type PublishSceneInput,
 	type ScenePublication
 } from './scenes'
+import { endedSessionSchema, type EndedSession } from './session'
 
 import type { z } from 'zod'
 
@@ -313,6 +314,12 @@ export function createVectrealClient({
 				{ auth: 'bearer' }
 			)
 		},
+		/**
+		 * Ends the session the token belongs to: it and its refresh token stop
+		 * working. The agent's grant stays; revoking it is the dashboard's job.
+		 */
+		endSession: (): Promise<EndedSession> =>
+			send('DELETE', 'api/v1/session', endedSessionSchema, { auth: 'bearer' }),
 		/** How the CLI signs in against this origin. */
 		cliClient: (): Promise<CliClient> =>
 			send('GET', 'api/v1/cli/client', cliClientSchema, { auth: 'public' })

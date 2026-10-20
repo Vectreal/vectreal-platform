@@ -20,6 +20,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..')
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8')
 
 const SCRIPT = read('terraform/scripts/setup-fly-secrets.sh')
+// The CLI client's constants and functions, shared with the local registration.
+const CLI_LIB = read('terraform/scripts/lib/cli-oauth-client.sh')
 
 function between(source: string, from: string, to: string): string {
 	const start = source.indexOf(from)
@@ -110,7 +112,7 @@ describe('the hosted OAuth server and CLI client', () => {
 	})
 
 	it('registers the CLI as a public client with no secret', () => {
-		const ensure = between(SCRIPT, 'ensure_cli_client() {', '\n}\n')
+		const ensure = between(CLI_LIB, 'ensure_cli_client() {', '\n}\n')
 
 		expect(ensure).toContain('client_type: "public"')
 		expect(ensure).toContain('token_endpoint_auth_method: "none"')
@@ -143,7 +145,7 @@ describe('the hosted OAuth server and CLI client', () => {
 		]
 	])('judges %j public with no secret: exit %i', (client, status) => {
 		// Run, not read: the predicate decides whether sync trusts the client.
-		const predicate = between(SCRIPT, 'cli_client_is_public() {', '\n}\n')
+		const predicate = between(CLI_LIB, 'cli_client_is_public() {', '\n}\n')
 		const result = spawnSync(
 			'bash',
 			[
@@ -158,15 +160,30 @@ describe('the hosted OAuth server and CLI client', () => {
 		expect(result.status).toBe(status)
 	})
 
+	it('reads the CLI client from the shared lib, as the local registration does', () => {
+		const source =
+			'source "$(dirname "${BASH_SOURCE[0]}")/lib/cli-oauth-client.sh"'
+		expect(SCRIPT).toContain(source)
+		// Sourced before the sync and verify functions that call into it run.
+		expect(SCRIPT.indexOf(source)).toBeLessThan(
+			SCRIPT.indexOf('sync_supabase_auth_hooks() {')
+		)
+		expect(
+			read('apps/vectreal-platform/scripts/register-local-cli-client.sh')
+		).toContain('terraform/scripts/lib/cli-oauth-client.sh')
+	})
+
 	it('finds the client by the name the app looks it up by', () => {
-		const scriptName = SCRIPT.match(/^CLI_OAUTH_CLIENT_NAME="([^"\n]+)"$/m)?.[1]
+		const scriptName = CLI_LIB.match(
+			/^CLI_OAUTH_CLIENT_NAME="([^"\n]+)"$/m
+		)?.[1]
 		const appName = read(
 			'apps/vectreal-platform/app/lib/domain/agent/agent-cli-client.server.ts'
 		).match(/export const CLI_OAUTH_CLIENT_NAME = '([^'\n]+)'/)?.[1]
 
 		expect(scriptName).toBe('Vectreal CLI')
 		expect(appName).toBe(scriptName)
-		expect(between(SCRIPT, 'find_cli_client() {', '\n}\n')).toContain(
+		expect(between(CLI_LIB, 'find_cli_client() {', '\n}\n')).toContain(
 			'select(.client_name == $name)'
 		)
 	})
@@ -187,7 +204,7 @@ describe('the CLI client step after the PATCH', () => {
 		client_type: 'public',
 		token_endpoint_auth_method: 'none',
 		redirect_uris: JSON.parse(
-			SCRIPT.match(/^CLI_REDIRECT_URIS='([^'\n]+)'$/m)?.[1] ?? 'null'
+			CLI_LIB.match(/^CLI_REDIRECT_URIS='([^'\n]+)'$/m)?.[1] ?? 'null'
 		)
 	}
 
@@ -199,7 +216,7 @@ describe('the CLI client step after the PATCH', () => {
 				JSON.stringify(responses.map(([body, code]) => `${body}\n${code}`))
 			)
 			writeFileSync(join(dir, 'calls'), '0')
-			const constants = SCRIPT.match(
+			const constants = CLI_LIB.match(
 				/^(CLI_OAUTH_CLIENT_NAME|CLI_REDIRECT_URIS|CLI_CLIENT_LIST_ATTEMPTS|CLI_CLIENT_LIST_DELAY)=.*$/gm
 			)
 			const stubs = `
@@ -220,9 +237,9 @@ err() { echo "err: $*"; }`
 					[
 						...(constants ?? []),
 						stubs,
-						between(SCRIPT, 'find_cli_client() {', '\n}\n') + '\n}',
-						between(SCRIPT, 'cli_client_is_public() {', '\n}\n') + '\n}',
-						between(SCRIPT, 'ensure_cli_client() {', '\n}\n') + '\n}',
+						between(CLI_LIB, 'find_cli_client() {', '\n}\n') + '\n}',
+						between(CLI_LIB, 'cli_client_is_public() {', '\n}\n') + '\n}',
+						between(CLI_LIB, 'ensure_cli_client() {', '\n}\n') + '\n}',
 						'ensure_cli_client https://auth.test key staging'
 					].join('\n')
 				],
@@ -283,14 +300,15 @@ err() { echo "err: $*"; }`
 	})
 
 	it('waits only in the sync, never in --verify', () => {
-		const ensure = between(SCRIPT, 'ensure_cli_client() {', '\n}\n')
+		const ensure = between(CLI_LIB, 'ensure_cli_client() {', '\n}\n')
 
 		// The wait lives in ensure_cli_client alone, and only the sync calls it.
 		expect(ensure).toContain('sleep "$CLI_CLIENT_LIST_DELAY"')
 		expect(
-			SCRIPT.replace(ensure, '').match(/CLI_CLIENT_LIST_(ATTEMPTS|DELAY)\b/g)
+			CLI_LIB.replace(ensure, '').match(/CLI_CLIENT_LIST_(ATTEMPTS|DELAY)\b/g)
 		).toEqual(['CLI_CLIENT_LIST_ATTEMPTS', 'CLI_CLIENT_LIST_DELAY'])
-		expect(SCRIPT.match(/ensure_cli_client\b/g)).toHaveLength(2)
+		expect(SCRIPT).not.toMatch(/CLI_CLIENT_LIST_(ATTEMPTS|DELAY)\b/)
+		expect(SCRIPT.match(/ensure_cli_client\b/g)).toHaveLength(1)
 		expect(verify).not.toContain('sleep')
 	})
 })
