@@ -1,3 +1,4 @@
+import { SHARE_CARD_SIZE, shareCardImagePath } from './share-card-paths'
 import {
 	PLATFORM_SOCIAL_DESCRIPTION,
 	SUPPORTED_FORMAT_NAMES
@@ -32,13 +33,11 @@ const DEFAULT_TITLE =
 	'Vectreal - Your platform for creating and sharing 3D scenes.'
 const DEFAULT_DESCRIPTION = PLATFORM_SOCIAL_DESCRIPTION
 const DEFAULT_KEYWORDS = `3D, scenes, platform, Vectreal, create, share, ${SUPPORTED_FORMAT_NAMES.join(', ')}, 3D model optimization, embeddable 3D viewer`
-// TODO: replace with a 1200x630 PNG at public/media/images/og-default.png for summary_large_image cards.
-// Until then the 512x512 icon is used, which requires DEFAULT_TWITTER_CARD = 'summary'.
-const DEFAULT_OG_IMAGE = '/android-chrome-512x512.png'
+// The site's share card, baked by `scripts/bake-share-cards.ts`. A page with a card of its own passes it through `shareCardMeta`.
+const DEFAULT_OG_IMAGE = shareCardImagePath('default')
 const DEFAULT_OG_IMAGE_ALT = 'Vectreal platform'
 const DEFAULT_LOCALE = 'en_US'
-// 'summary' matches the square 512x512 fallback icon. Switch to 'summary_large_image' once DEFAULT_OG_IMAGE is 1200x630.
-const DEFAULT_TWITTER_CARD = 'summary'
+const DEFAULT_TWITTER_CARD = 'summary_large_image'
 
 type JsonLd = Record<string, unknown>
 
@@ -60,14 +59,14 @@ export interface BuildMetaOptions {
 	imageAlt?: string
 	/**
 	 * Width of the Open Graph image in pixels.
-	 * Only emit when you know the exact dimensions of the image.
-	 * Omit when using the default 512×512 icon.
+	 * Only emit when you know the exact dimensions of the image. The default
+	 * card's are emitted whenever no `image` is passed.
 	 */
 	imageWidth?: number
 	/**
 	 * Height of the Open Graph image in pixels.
-	 * Only emit when you know the exact dimensions of the image.
-	 * Omit when using the default 512×512 icon.
+	 * Only emit when you know the exact dimensions of the image. The default
+	 * card's are emitted whenever no `image` is passed.
 	 */
 	imageHeight?: number
 	/** Open Graph content type, defaults to website. */
@@ -160,6 +159,11 @@ export function buildMeta(
 	const twitterCard = options.twitterCard ?? DEFAULT_TWITTER_CARD
 	const socialImage = toAbsoluteUrl(options.image ?? DEFAULT_OG_IMAGE)
 	const socialImageAlt = options.imageAlt ?? DEFAULT_OG_IMAGE_ALT
+	// The default card's size is known; a caller's own image reports its own or none.
+	const imageWidth = options.image ? options.imageWidth : SHARE_CARD_SIZE.width
+	const imageHeight = options.image
+		? options.imageHeight
+		: SHARE_CARD_SIZE.height
 
 	const baseMeta: MetaDescriptor[] = [
 		{
@@ -267,18 +271,18 @@ export function buildMeta(
 	// Convert map values back to array
 	const metaItems = Array.from(metaMap.values())
 
-	// Only emit image dimensions when explicitly known — omitting them is safer
-	// than emitting incorrect values (e.g. 1200x630 for the 512x512 default icon).
-	if (options.imageWidth !== undefined) {
+	// Only emit image dimensions when known: omitting them is safer than
+	// emitting values that do not match the image.
+	if (imageWidth !== undefined) {
 		metaItems.push({
 			property: 'og:image:width',
-			content: String(options.imageWidth)
+			content: String(imageWidth)
 		})
 	}
-	if (options.imageHeight !== undefined) {
+	if (imageHeight !== undefined) {
 		metaItems.push({
 			property: 'og:image:height',
-			content: String(options.imageHeight)
+			content: String(imageHeight)
 		})
 	}
 

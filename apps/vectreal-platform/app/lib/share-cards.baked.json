@@ -1,0 +1,61 @@
+{
+	"default": {
+		"caption": "Show your products in 3D on your own website"
+	},
+	"pricing": {
+		"eyebrow": "Pricing",
+		"caption": "Start free. Pay when your scenes go live."
+	},
+	"free-model-en": {
+		"caption": "A free 3D model of your product"
+	},
+	"free-model-de": {
+		"caption": "Ein kostenloses 3D-Modell Ihres Produkts"
+	},
+	"docs": {
+		"eyebrow": "Docs",
+		"caption": "Everything you need to build with the Vectreal Platform and its open-source packages."
+	},
+	"converters": {
+		"caption": "3D format converters"
+	},
+	"convert-glb-to-gltf": {
+		"caption": "GLB to glTF converter"
+	},
+	"convert-glb-to-usdz": {
+		"caption": "GLB to USDZ converter"
+	},
+	"convert-gltf-to-glb": {
+		"caption": "glTF to GLB converter"
+	},
+	"convert-gltf-to-usdz": {
+		"caption": "glTF to USDZ converter"
+	},
+	"convert-stl-to-glb": {
+		"caption": "STL to GLB converter"
+	},
+	"convert-stl-to-gltf": {
+		"caption": "STL to glTF converter"
+	},
+	"convert-stl-to-usdz": {
+		"caption": "STL to USDZ converter"
+	},
+	"convert-fbx-to-glb": {
+		"caption": "FBX to GLB converter"
+	},
+	"convert-fbx-to-gltf": {
+		"caption": "FBX to glTF converter"
+	},
+	"convert-fbx-to-usdz": {
+		"caption": "FBX to USDZ converter"
+	},
+	"convert-obj-to-glb": {
+		"caption": "OBJ to GLB converter"
+	},
+	"convert-obj-to-gltf": {
+		"caption": "OBJ to glTF converter"
+	},
+	"convert-obj-to-usdz": {
+		"caption": "OBJ to USDZ converter"
+	}
+}
