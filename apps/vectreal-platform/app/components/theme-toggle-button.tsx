@@ -37,6 +37,7 @@ export function ThemeToggleButton() {
 			type="button"
 			variant="ghost"
 			size="sm"
+			className="tap-target relative"
 			onClick={handleToggle}
 			aria-label={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}
 			title={isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'}

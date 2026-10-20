@@ -128,13 +128,18 @@ export function HeroSheet() {
 						{HERO.lead}
 					</p>
 					<div className="mt-8 flex flex-col gap-4 sm:flex-row">
-						<Button asChild size="lg">
+						<Button asChild size="lg" className="tap-target relative">
 							<Link to="/publisher" viewTransition>
 								{HERO.primaryCta}
 								<ArrowRight aria-hidden="true" />
 							</Link>
 						</Button>
-						<Button asChild size="lg" variant="secondary">
+						<Button
+							asChild
+							size="lg"
+							variant="secondary"
+							className="tap-target relative"
+						>
 							<Link to="/contact">{HERO.secondaryCta}</Link>
 						</Button>
 					</div>

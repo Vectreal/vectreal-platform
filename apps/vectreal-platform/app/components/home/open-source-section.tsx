@@ -142,7 +142,7 @@ const Result = () => {
 						size="sm"
 						variant="brand"
 						onClick={run}
-						className="absolute right-4 bottom-4 rounded-full"
+						className="tap-target absolute right-4 bottom-4 rounded-full"
 					>
 						<Play className="size-3.5" aria-hidden="true" />
 						{state === 'failed' ? COPY.result.failed : COPY.result.run}
@@ -204,13 +204,13 @@ export const OpenSourceSection = () => (
 					<h3 className="text-eyebrow text-muted-foreground">
 						{COPY.packagesLabel}
 					</h3>
-					<ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+					<ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 pointer-coarse:gap-y-7">
 						{OPEN_SOURCE_PACKAGES.map((pkg) => (
 							<li key={pkg.name}>
 								<Link
 									to={new URL(pkg.docs).pathname}
 									title={pkg.description}
-									className="text-foreground text-body-sm font-mono underline-offset-4 hover:underline"
+									className="text-foreground text-body-sm tap-target relative font-mono underline-offset-4 hover:underline"
 								>
 									{pkg.name}
 								</Link>
@@ -220,20 +220,20 @@ export const OpenSourceSection = () => (
 				</div>
 
 				<div className="flex flex-wrap gap-4" data-reveal>
-					<Button asChild>
+					<Button asChild className="tap-target relative">
 						<a href={COPY.repositoryUrl} target="_blank" rel="noreferrer">
 							<GithubLogo className="size-4" />
 							{COPY.repositoryCta}
 							<span className="sr-only"> (opens in a new tab)</span>
 						</a>
 					</Button>
-					<Button asChild variant="ghost">
+					<Button asChild variant="ghost" className="tap-target relative">
 						<a href={COPY.discordUrl} target="_blank" rel="noreferrer">
 							{COPY.discordCta}
 							<span className="sr-only"> (opens in a new tab)</span>
 						</a>
 					</Button>
-					<Button asChild variant="ghost">
+					<Button asChild variant="ghost" className="tap-target relative">
 						<Link to="/docs/contributing">{COPY.contributingCta}</Link>
 					</Button>
 				</div>

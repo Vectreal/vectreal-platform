@@ -50,6 +50,31 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 
+/*
+  A hit area of at least 44px around a target drawn smaller, the size Apple
+  and WCAG 2.5.5 ask for a finger: an invisible layer centred on the element,
+  so nothing drawn moves. The element has to be positioned (`relative`, or
+  already absolute) for the layer to centre on it, which is why this sets no
+  position itself: an absolutely placed button keeps its place. Where two
+  targets sit closer than 44px apart their layers would overlap, so those give
+  themselves the room on coarse pointers instead (`pointer-coarse:`). Coarse
+  pointers only: under a mouse the layer would widen every hover and let the
+  footer's closer rows overlap.
+*/
+@utility tap-target {
+	@media (pointer: coarse) {
+		&::after {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: max(100%, 44px);
+			height: max(100%, 44px);
+			translate: -50% -50%;
+		}
+	}
+}
+
 :root {
 	/*
 	  Corner radii - confidently rounded, never tight.
