@@ -41,12 +41,12 @@ import type {
 /*
   The position these three carry, and the home page argues: companies that sell
   physical products, most of which have photos of them rather than 3D files,
-  putting those products in 3D on their own site, with developers as the
+  putting those products in 3D on their website, with developers as the
   second reader. Configurators are not named here, because they are built per
   pilot rather than shipped.
 */
 export const PLATFORM_TAGLINE =
-	'Your products in 3D on your own website: from your photos or the 3D file you have, embedded on any page and managed in one place.'
+	'Your products in 3D on your website: from your photos or the 3D file you have, embedded on any page and managed in one place.'
 
 export const PLATFORM_SHORT_DESCRIPTION =
 	'Most brands that sell physical products have photos of them, not 3D files, so Vectreal makes models from photos as a service. The platform takes a 3D file, optimizes it for the browser, and publishes it as an embed on any website, with a dashboard for projects, scenes, team roles, API keys and allowed domains. The optimizer and format converters run in the browser with no account, and the viewer and embed SDK are open source on npm. The viewer needs no WebGL framework on the embedding page.'
@@ -59,7 +59,7 @@ export const PLATFORM_SHORT_DESCRIPTION =
   the product does. One enumeration, of the pipeline that actually exists.
 */
 export const PLATFORM_SOCIAL_DESCRIPTION =
-	'Your products in 3D on your own site. Bring a 3D file and embed it on any page you own, or send photos and we make the model. Open source.'
+	'Your products in 3D on your website. Bring a 3D file and embed it on any page you own, or send photos and we make the model. Open source.'
 
 // ---------------------------------------------------------------------------
 // Supported upload formats
@@ -346,7 +346,7 @@ export const DOCS_PAGE_COPY = {
 // Home page
 //
 // Written for two readers: a company that sells physical products and wants
-// them in 3D on its own site, and a developer who wants the open-source
+// them in 3D on its website, and a developer who wants the open-source
 // pieces. Every capability named here ships today. Configurators do not, so
 // they are not named.
 // ---------------------------------------------------------------------------
@@ -375,7 +375,7 @@ export const HOME_PAGE_COPY = {
 		/** One sentence per line, set as written: the breaks are part of the headline. */
 		heading: ['Publish your vision.'],
 		/** What Vectreal does, then who it is for. */
-		lead: 'Convert, optimize, manage and embed your 3D models. Vectreal helps creators, developers and businesses create interactive 3D experiences on their own sites, with one platform to manage them.',
+		lead: 'Convert, optimize, manage and embed your 3D models. Vectreal helps creators, developers and businesses create interactive 3D experiences on their websites, with one platform to manage them.',
 		/** Into the publisher, where a visitor brings their own file. */
 		primaryCta: 'Try it out',
 		secondaryCta: 'Get in touch',
@@ -436,7 +436,7 @@ export const HOME_PAGE_COPY = {
 			{ key: 'have photos of them, not 3D files' },
 			'. ',
 			{
-				highlight: 'Very few can show those products in 3D on their own website'
+				highlight: 'Very few can show those products in 3D on their website'
 			},
 			' ',
 			{
