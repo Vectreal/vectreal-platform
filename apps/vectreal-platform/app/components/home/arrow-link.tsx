@@ -8,7 +8,7 @@ export function ArrowLink({ className, children, ...props }: LinkProps) {
 		<Link
 			{...props}
 			className={cn(
-				'text-body-sm inline-flex w-fit items-center gap-1 underline-offset-4 hover:underline',
+				'text-body-sm tap-target relative inline-flex w-fit items-center gap-1 underline-offset-4 hover:underline',
 				className as string
 			)}
 		>

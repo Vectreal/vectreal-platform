@@ -128,6 +128,16 @@ viewport, which overhangs persistent mobile browser chrome: bottom-anchored UI
 goes behind the bar and the page is left scrolled with no way back when a canvas
 holds `touch-action: none`.
 
+## Tap targets
+
+Anything a finger can press gets a hit area of at least 44px on a coarse
+pointer, whatever size it is drawn. `tap-target` (in `globals.css`) adds an
+invisible layer of that size centred on the element, so nothing drawn moves;
+the element needs `relative` (or is already absolute). Where two targets sit
+closer than 44px apart, their layers would overlap, so they also take a
+`pointer-coarse:` gap that gives each one its own 44px, as the footer's link
+lists and social icons do. Under a mouse none of this applies.
+
 ## Page measure
 
 `.container-page` owns the page width and its gutter together: `--container-max`
@@ -163,4 +173,6 @@ present  shared/components/src/styles/globals.css                              [
 present  apps/vectreal-platform/app/routes/layouts/nav-layout.tsx               data-site="marketing"
 present  apps/vectreal-platform/app/routes/layouts/dashboard-layout.tsx        h-svh
 present  shared/utils/src/lib/styling.utils.ts                                 CONTAINER_SCALE
+present  shared/components/src/styles/globals.css                              @utility tap-target
+present  apps/vectreal-platform/app/components/footer.tsx                      pointer-coarse:gap-7
 ```

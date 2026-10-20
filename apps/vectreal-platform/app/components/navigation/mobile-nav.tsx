@@ -145,7 +145,7 @@ function MobileNav({
 					<div className="flex shrink-0 items-center">
 						<Link
 							to="/"
-							className="flex shrink-0 items-center px-3 py-1"
+							className="tap-target relative flex shrink-0 items-center px-3 py-1"
 							aria-label="Home"
 						>
 							<VectrealLogoAnimated
@@ -160,7 +160,7 @@ function MobileNav({
 						<Button
 							variant={user ? 'secondary' : 'ghost'}
 							size="icon"
-							className="shrink-0 rounded-xl"
+							className="tap-target relative shrink-0 rounded-xl"
 							onClick={() => setDrawerOpen((o) => !o)}
 							// The avatar says "account" to a sighted reader; the name has to say it to everyone else.
 							aria-label={
