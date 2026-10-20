@@ -47,6 +47,9 @@ export type {
 	ProjectList
 } from './projects'
 
+export { endedSessionSchema } from './session'
+export type { EndedSession } from './session'
+
 export {
 	createdSceneSchema,
 	createSceneInputSchema,
