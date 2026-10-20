@@ -271,7 +271,8 @@ export const ProductWindow = () => {
 						<div className="overflow-hidden rounded-3xl pt-8 pl-6 sm:pt-12 sm:pl-12">
 							<div
 								ref={sceneRef}
-								className="ds-raised relative grid overflow-hidden rounded-tl-2xl"
+								// Below `sm` the screenshots are drawn at 2.1 times the pane's width and cropped to their top-left, where each step's panel sits, so they can be read; the pane clips the rest.
+								className="ds-raised relative grid overflow-hidden rounded-tl-2xl max-sm:w-[210%]"
 							>
 								{VIEW_ORDER.map((one) => (
 									<div
@@ -281,6 +282,8 @@ export const ProductWindow = () => {
 										// The chosen view fades in over the one it replaces; the rest stay invisible, still laid out.
 										className={cn(
 											'transition-opacity duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] motion-reduce:transition-none',
+											// The shop page is a drawing, legible at any size, and its point is the live camera in the middle of it: below `sm` it takes the pane's own width (1 / 2.1 of the scene) and the screenshots' height, a page shaped like a phone's, rather than a crop.
+											one === 'embed' && 'max-sm:w-[calc(100%/2.1)]',
 											one === view && 'z-1 opacity-100',
 											one === previous && 'opacity-100',
 											one !== view && one !== previous && 'invisible opacity-0'
@@ -288,6 +291,7 @@ export const ProductWindow = () => {
 									>
 										{one === 'embed' ? (
 											<ProductPageSketch
+												className="max-sm:aspect-auto max-sm:h-full"
 												gallery={
 													<div
 														ref={embedSlotRef}

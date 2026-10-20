@@ -219,7 +219,10 @@ export const OpenSourceSection = () => (
 					</ul>
 				</div>
 
-				<div className="flex flex-wrap gap-4" data-reveal>
+				<div
+					className="flex flex-col gap-4 sm:flex-row sm:flex-wrap"
+					data-reveal
+				>
 					<Button asChild className="tap-target relative">
 						<a href={COPY.repositoryUrl} target="_blank" rel="noreferrer">
 							<GithubLogo className="size-4" />

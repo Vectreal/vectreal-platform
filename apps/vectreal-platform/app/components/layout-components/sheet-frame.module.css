@@ -43,9 +43,10 @@
 .band {
 	border-top: 1px solid var(--rule);
 }
+/* 64px between a band's rule and its content until the measure is wide enough for the frame's padding, 128px from there: steps of the spacing rhythm. */
 .cell {
 	margin-inline: var(--frame-x);
-	padding: 96px var(--frame-pad);
+	padding: 64px var(--frame-pad);
 }
 @media (min-width: 64rem) {
 	.cell {

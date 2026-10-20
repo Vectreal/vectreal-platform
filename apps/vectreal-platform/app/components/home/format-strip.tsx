@@ -1,7 +1,9 @@
+import { cn } from '@shared/utils'
 import { IMPORTABLE_FORMAT_IDS, modelFormat } from '@vctrl/core/model-formats'
 import { Link } from 'react-router'
 
 import { ArrowLink } from './arrow-link'
+import styles from './format-strip.module.css'
 import {
 	CONVERT_INDEX_PATH,
 	CONVERT_PAIRS,
@@ -32,9 +34,10 @@ const FORMATS = IMPORTABLE_FORMAT_IDS.map((id) => {
  * The converters, last on the page: a product of their own, free and with no
  * account, rather than a feature of the one above. The formats are the
  * section's last row, large type in cells ruled into the sheet frame from
- * rule to rule, one row however many formats the table lists; on a phone
- * they stack, ruled between. The band ends on the sheet's rule, so the cells'
- * rules are the frame's own lines rather than a box around the type.
+ * rule to rule, one row however many formats the table lists, a phone's
+ * included, where the type steps down to fit (`format-strip.module.css`).
+ * The band ends on the sheet's rule, so the cells' rules are the frame's own
+ * lines rather than a box around the type.
  *
  * Not a carousel: the names fit across the measure, and a loop would only
  * move them out of reach. The brand is the hover, the one thing the row asks
@@ -60,17 +63,17 @@ export const FormatStrip = () => (
 			</ArrowLink>
 		</div>
 		<ul
-			className="border-foreground/10 -mx-(--frame-pad) grid border-t sm:auto-cols-fr sm:grid-flow-col"
+			className="border-foreground/10 -mx-(--frame-pad) grid auto-cols-fr grid-flow-col border-t"
 			data-reveal
 		>
 			{FORMATS.map((format) => (
-				<li
-					key={format.id}
-					className="border-foreground/10 not-last:border-b sm:not-first:border-l sm:not-last:border-b-0"
-				>
+				<li key={format.id} className="border-foreground/10 not-first:border-l">
 					<Link
 						to={format.to}
-						className="text-headline hover:text-orange-ink focus-visible:text-orange-ink hover:bg-foreground/3 block py-8 text-center transition-colors duration-(--duration-base) sm:py-12"
+						className={cn(
+							'text-headline hover:text-orange-ink focus-visible:text-orange-ink hover:bg-foreground/3 block py-7 text-center transition-colors duration-(--duration-base) sm:py-12',
+							styles.format
+						)}
 					>
 						.{format.label}
 					</Link>
