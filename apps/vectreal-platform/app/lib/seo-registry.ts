@@ -27,7 +27,7 @@ export interface BreadcrumbItem {
 
 export const PUBLIC_SEO_PAGES = {
 	home: {
-		title: 'Vectreal - Show your products in 3D on your own website',
+		title: 'Vectreal - Show your products in 3D on your website',
 		description: PLATFORM_SOCIAL_DESCRIPTION,
 		canonical: '/'
 	},
