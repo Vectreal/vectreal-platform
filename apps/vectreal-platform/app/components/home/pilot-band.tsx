@@ -7,8 +7,8 @@ import { HOME_PAGE_COPY } from '../../constants/product-copy'
 const COPY = HOME_PAGE_COPY.pilot
 
 /**
- * The free-model offer, first under the hero: what we do for a brand that has
- * photos of its products and no 3D files, which is most of them.
+ * The free-model offer, after the mission statement: what we do for a brand
+ * that has photos of its products and no 3D files, which is most of them.
  *
  * The offer and its call to action on one side, the three steps on the other
  * as ruled rows, numbered because they happen in that order. On a phone they

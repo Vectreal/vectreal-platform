@@ -33,10 +33,6 @@ const HomePage = () => (
 		<HeroSheet />
 
 		<SheetFrame>
-			<Band aria-labelledby="pilot-heading">
-				<PilotBand />
-			</Band>
-
 			<Band aria-labelledby="product-heading">
 				<ProductWindow />
 			</Band>
@@ -47,6 +43,10 @@ const HomePage = () => (
 				backdrop={<DraftingBackdrop focusX={0.72} horizon={0.56} />}
 			>
 				<MissionStatement />
+			</Band>
+
+			<Band aria-labelledby="pilot-heading">
+				<PilotBand />
 			</Band>
 
 			<Band aria-labelledby="open-source-heading">
