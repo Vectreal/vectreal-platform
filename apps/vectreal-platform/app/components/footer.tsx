@@ -25,7 +25,7 @@ const SOCIAL = [
 
 /* Orange is the site's interactive state, so a link the pointer is on lights in it. */
 const LINK_CLASS =
-	'text-muted-foreground hover:text-orange-ink focus-visible:text-orange-ink text-body-sm transition-colors'
+	'text-muted-foreground hover:text-orange-ink focus-visible:text-orange-ink text-body-sm tap-target relative transition-colors'
 
 const FooterLink = ({ link }: { link: SiteLink }) =>
 	link.external ? (
@@ -59,7 +59,7 @@ export const Footer = () => {
 		<footer className="bg-background w-full">
 			<div className="container-page flex flex-col gap-16 pt-32 pb-10">
 				<div className="flex max-w-md flex-col gap-4">
-					<Link to="/" aria-label="Home" className="w-32">
+					<Link to="/" aria-label="Home" className="tap-target relative w-32">
 						<VectrealLogoAnimated colored className="h-auto w-full" />
 					</Link>
 					<p className="text-muted-foreground text-body-sm">{FOOTER.tagline}</p>
@@ -75,7 +75,7 @@ export const Footer = () => {
 								<span className="bg-orange size-1" aria-hidden="true" />
 								{section.label}
 							</h2>
-							<ul className="mt-4 flex flex-col gap-3">
+							<ul className="mt-4 flex flex-col gap-3 pointer-coarse:gap-6">
 								{section.links.map((link) => (
 									<li key={link.to}>
 										<FooterLink link={link} />
@@ -90,8 +90,8 @@ export const Footer = () => {
 					<small className="text-body-sm">
 						© {new Date().getFullYear()} Vectreal
 					</small>
-					<div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-						<ul className="flex items-center gap-4">
+					<div className="flex flex-wrap items-center gap-x-6 gap-y-4 pointer-coarse:gap-y-6">
+						<ul className="flex items-center gap-4 pointer-coarse:gap-7">
 							{SOCIAL.map(({ label, href, Icon }) => (
 								<li key={label}>
 									<a
@@ -99,7 +99,7 @@ export const Footer = () => {
 										target="_blank"
 										rel="noreferrer"
 										aria-label={label}
-										className="hover:text-orange-ink focus-visible:text-orange-ink block transition-colors"
+										className="hover:text-orange-ink focus-visible:text-orange-ink tap-target relative block transition-colors"
 									>
 										<Icon className="size-4" />
 									</a>
@@ -108,7 +108,7 @@ export const Footer = () => {
 						</ul>
 						<button
 							type="button"
-							className="text-body-sm hover:text-foreground transition-colors"
+							className="text-body-sm hover:text-foreground tap-target relative transition-colors"
 							onClick={() => setPreferencesOpen(true)}
 						>
 							Cookie preferences

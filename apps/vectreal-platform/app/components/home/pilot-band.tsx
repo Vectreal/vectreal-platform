@@ -31,7 +31,12 @@ export const PilotBand = () => (
 					className="mt-10 flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center"
 					data-reveal
 				>
-					<Button asChild size="lg" variant="brand" className="w-full sm:w-fit">
+					<Button
+						asChild
+						size="lg"
+						variant="brand"
+						className="tap-target relative w-full sm:w-fit"
+					>
 						<Link to="/free-model">
 							{COPY.cta}
 							<ArrowRight aria-hidden="true" />

@@ -131,6 +131,14 @@
 				"parallel": false
 			}
 		},
+		"supabase-register-cli-client": {
+			"executor": "nx:run-commands",
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"commands": ["bash scripts/register-local-cli-client.sh"],
+				"parallel": false
+			}
+		},
 		"supabase-db-reset": {
 			"executor": "nx:run-commands",
 			"options": {

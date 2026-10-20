@@ -94,6 +94,7 @@ export default [
 	),
 	// Public: tells the CLI which OAuth client and redirect ports to use.
 	route('api/v1/cli/client', './routes/api/v1/cli-client.ts'),
+	route('api/v1/session', './routes/api/v1/session.ts'),
 
 	/// PAGES
 	layout('./routes/layouts/nav-layout.tsx', [
