@@ -90,6 +90,13 @@ describe("a host class on the viewer's root", () => {
 		)
 	})
 
+	it("isolates the viewer, so the chrome's z-index never reaches the host page", () => {
+		const rootClasses = source('vectreal-viewer.tsx').match(
+			/containerClassName=\{withHostClasses\(\s*'([^']*)'/
+		)?.[1]
+		expect(rootClasses?.split(' ')).toContain('vv:isolate')
+	})
+
 	it('goes through the host merge on the loading thumbnail', () => {
 		expect(source('components', 'loading-thumbnail-backdrop.tsx')).toMatch(
 			/withHostClasses\([\s\S]*?\),\s*thumbnail\.className\s*\)/
