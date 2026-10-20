@@ -29,6 +29,7 @@ import {
 	buildDocsPageSeo,
 	PUBLIC_SEO_PAGES
 } from '../../lib/seo-registry'
+import { shareCardMeta } from '../../lib/share-cards'
 
 import type { RootLoader } from '../../root'
 
@@ -59,6 +60,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 			return buildPageMeta(
 				{
 					...PUBLIC_SEO_PAGES.docs,
+					...shareCardMeta('docs'),
 					canonical: args.location.pathname,
 					structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
 				},
@@ -74,6 +76,7 @@ export const meta: MetaFunction<undefined, { root: RootLoader }> = (args) =>
 						title: page.title,
 						description: page.description
 					}),
+					...shareCardMeta('docs'),
 					structuredData: buildBreadcrumbListJsonLd(breadcrumbItems)
 				},
 				getRootMeta(args)

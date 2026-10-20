@@ -21,10 +21,11 @@ import {
 } from '../../lib/samples/sample-models'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import { shareCardMeta } from '../../lib/share-cards'
 
 export function meta({ error }: MetaArgs) {
 	if (error) return routeErrorMeta(error)
-	return buildPageMeta(PUBLIC_SEO_PAGES.docs)
+	return buildPageMeta({ ...PUBLIC_SEO_PAGES.docs, ...shareCardMeta('docs') })
 }
 
 /*

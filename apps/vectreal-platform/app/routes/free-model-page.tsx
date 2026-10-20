@@ -18,6 +18,7 @@ import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { verifyTurnstileToken } from '../lib/http/turnstile.server'
 import { reportServerError } from '../lib/observability/report-server-error.server'
 import { buildPageMeta } from '../lib/seo'
+import { shareCardMeta } from '../lib/share-cards'
 
 import type { Route } from './+types/free-model-page'
 import type { PostHogContext } from '../lib/posthog/posthog-middleware'
@@ -98,8 +99,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export function meta({ error, loaderData }: Route.MetaArgs) {
 	if (error) return routeErrorMeta(error)
-	const copy = MODEL_INTAKE_COPY[loaderData?.locale ?? 'en'].meta
-	return buildPageMeta({ ...copy, canonical: '/free-model' })
+	const locale = loaderData?.locale ?? 'en'
+	return buildPageMeta({
+		...MODEL_INTAKE_COPY[locale].meta,
+		...shareCardMeta(`free-model-${locale}`),
+		canonical: '/free-model'
+	})
 }
 
 export default function FreeModelPage({

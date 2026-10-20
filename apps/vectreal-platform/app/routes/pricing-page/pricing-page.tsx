@@ -14,6 +14,7 @@ import { getCheckoutOptions } from '../../lib/domain/billing/billing-dashboard-l
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildPageMeta } from '../../lib/seo'
 import { PUBLIC_SEO_PAGES } from '../../lib/seo-registry'
+import { shareCardMeta } from '../../lib/share-cards'
 
 import type { Route } from './+types/pricing-page'
 
@@ -35,7 +36,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export function meta({ error }: Route.MetaArgs) {
 	if (error) return routeErrorMeta(error)
-	return buildPageMeta(PUBLIC_SEO_PAGES.pricing)
+	return buildPageMeta({
+		...PUBLIC_SEO_PAGES.pricing,
+		...shareCardMeta('pricing')
+	})
 }
 
 // ---------------------------------------------------------------------------
