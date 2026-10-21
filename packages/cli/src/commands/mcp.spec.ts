@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import { type CliContext } from '../context'
+import { saveSession, writeConfig } from '../credentials'
 import { memoryStore } from '../test-support'
 import { mcpOperationContext, routeConsoleToStderr } from './mcp'
 
@@ -50,9 +51,19 @@ describe('mcpOperationContext', () => {
 	})
 	const exportForPublish = async (glb: Uint8Array) => glb
 
+	const signedIn = (context: CliContext, origin: string) =>
+		saveSession(context.store, origin, {
+			clientId: 'cli-client',
+			authorizationServer: `${origin}/auth/v1`,
+			accessToken: 'a',
+			refreshToken: 'r',
+			expiresAt: Date.now() + 3_600_000
+		})
+
 	it("reads the project Claude Code names over the working directory, on the link's origin", () => {
 		const project = linkedDir('http://localhost:4200')
 		const context = cliContext({ env: { CLAUDE_PROJECT_DIR: project } })
+		signedIn(context, 'http://localhost:4200')
 
 		const operations = mcpOperationContext(
 			context,
@@ -67,16 +78,115 @@ describe('mcpOperationContext', () => {
 		})
 	})
 
-	it('uses a named origin over the link, and then defaults to no project', () => {
-		const context = cliContext({ cwd: linkedDir('http://localhost:4200') })
+	it('matches a link written with a trailing slash to its session', () => {
+		const context = cliContext({ cwd: linkedDir('http://localhost:4200/') })
+		signedIn(context, 'http://localhost:4200')
 
 		const operations = mcpOperationContext(
 			context,
-			{ json: false, origin: 'https://vectreal.com' },
+			{ json: false },
+			exportForPublish
+		)
+
+		expect(operations.origin).toBe('http://localhost:4200')
+		expect(operations.defaultProjectId).toBe('p-linked')
+	})
+
+	it('ignores a link to an origin with no session here', () => {
+		const context = cliContext({ cwd: linkedDir('https://elsewhere.example') })
+
+		const operations = mcpOperationContext(
+			context,
+			{ json: false },
 			exportForPublish
 		)
 
 		expect(operations.origin).toBe('https://vectreal.com')
+		expect(operations.defaultProjectId).toBeUndefined()
+	})
+
+	it('ignores a link to an origin the CLI refuses, even with a session stored under it', () => {
+		const context = cliContext({ cwd: linkedDir('http://evil.example') })
+		signedIn(context, 'http://evil.example')
+
+		const operations = mcpOperationContext(
+			context,
+			{ json: false },
+			exportForPublish
+		)
+
+		expect(operations.origin).toBe('https://vectreal.com')
+		expect(operations.defaultProjectId).toBeUndefined()
+	})
+
+	const STAGING = 'https://staging.vectreal.test'
+	it.each([
+		['--origin', { origin: STAGING }, {}, STAGING],
+		[
+			'--origin naming the default',
+			{ origin: 'https://vectreal.com' },
+			{},
+			'https://vectreal.com'
+		],
+		['VECTREAL_ORIGIN', {}, { VECTREAL_ORIGIN: STAGING }, STAGING],
+		[
+			'VECTREAL_ORIGIN under an empty --origin',
+			{ origin: '' },
+			{ VECTREAL_ORIGIN: STAGING },
+			STAGING
+		]
+	])(
+		'uses an origin named by %s over a trusted link, with no default project',
+		(_source, named, env, expected) => {
+			const context = cliContext({
+				cwd: linkedDir('http://localhost:4200'),
+				env
+			})
+			signedIn(context, 'http://localhost:4200')
+
+			const operations = mcpOperationContext(
+				context,
+				{ json: false, ...named },
+				exportForPublish
+			)
+
+			expect(operations.origin).toBe(expected)
+			expect(operations.defaultProjectId).toBeUndefined()
+		}
+	)
+
+	it('uses a trusted link over the saved default origin', () => {
+		const context = cliContext({ cwd: linkedDir('http://localhost:4200') })
+		signedIn(context, 'http://localhost:4200')
+		writeConfig(context.configDir, {
+			defaultOrigin: 'https://saved.vectreal.test'
+		})
+
+		const operations = mcpOperationContext(
+			context,
+			{ json: false },
+			exportForPublish
+		)
+
+		expect(operations.origin).toBe('http://localhost:4200')
+		expect(operations.defaultProjectId).toBe('p-linked')
+	})
+
+	it('falls back to the saved origin past an untrusted link, and takes no project from a link to that same origin', () => {
+		const context = cliContext({
+			cwd: linkedDir('https://saved.vectreal.test')
+		})
+		writeConfig(context.configDir, {
+			defaultOrigin: 'https://saved.vectreal.test'
+		})
+
+		const operations = mcpOperationContext(
+			context,
+			{ json: false },
+			exportForPublish
+		)
+
+		expect(operations.origin).toBe('https://saved.vectreal.test')
 		expect(operations.defaultProjectId).toBeUndefined()
 	})
 
