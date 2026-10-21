@@ -1,13 +1,27 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+	mkdtempSync,
+	readFileSync,
+	realpathSync,
+	symlinkSync,
+	writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { type CliContext } from './context'
 import { loadSession, readConfig, saveSession } from './credentials'
 import { EXIT } from './errors'
-import { browserCommand, HELP, invocationDir, run } from './main'
+import {
+	browserCommand,
+	HELP,
+	invocationDir,
+	isMainModule,
+	launchRecipe,
+	run
+} from './main'
 import {
 	fakeAuthorizationServer,
 	freePort,
@@ -383,5 +397,73 @@ describe('browserCommand', () => {
 			'rundll32',
 			['url.dll,FileProtocolHandler', url]
 		])
+	})
+})
+
+describe('launchRecipe', () => {
+	const from = (
+		script: string,
+		tsconfig?: string,
+		platform: NodeJS.Platform = 'darwin'
+	) =>
+		launchRecipe({
+			execPath: '/usr/bin/node',
+			execArgv: ['--import', 'tsx'],
+			script,
+			tsconfig,
+			cwd: '/repo',
+			platform
+		})
+
+	it('starts this CLI again as it runs now, with an absolute tsx config', () => {
+		expect(
+			from('/repo/packages/cli/src/main.ts', 'packages/cli/tsconfig.lib.json')
+		).toEqual({
+			command: '/usr/bin/node',
+			args: ['--import', 'tsx', '/repo/packages/cli/src/main.ts'],
+			env: { TSX_TSCONFIG_PATH: '/repo/packages/cli/tsconfig.lib.json' }
+		})
+		expect(from('/usr/local/lib/node_modules/@vctrl/cli/main.js').env).toEqual(
+			{}
+		)
+	})
+
+	it("runs through npx, not npx's cache, when npx started it", () => {
+		expect(
+			from('/Users/a/.npm/_npx/0a1b2c/node_modules/@vctrl/cli/main.js')
+		).toEqual({ command: 'npx', args: ['-y', '@vctrl/cli'], env: {} })
+	})
+
+	it('runs npx through cmd on Windows, where npx is a .cmd file', () => {
+		expect(
+			from(
+				'C:\\Users\\a\\AppData\\Local\\npm-cache\\_npx\\0a1b2c\\node_modules\\.bin\\vectreal',
+				undefined,
+				'win32'
+			)
+		).toEqual({
+			command: 'cmd',
+			args: ['/c', 'npx', '-y', '@vctrl/cli'],
+			env: {}
+		})
+	})
+})
+
+describe('isMainModule', () => {
+	it("knows itself through npm's bin link, and nothing else", () => {
+		const dir = mkdtempSync(join(tmpdir(), 'vectreal-bin-'))
+		const real = join(dir, 'main.js')
+		writeFileSync(real, '')
+		const link = join(dir, 'vectreal')
+		symlinkSync(real, link)
+		// Node names a module by its real path, and the temp dir may be a link.
+		const self = pathToFileURL(realpathSync(real)).href
+
+		expect(isMainModule(self, real)).toBe(true)
+		expect(isMainModule(self, link)).toBe(true)
+		expect(isMainModule(pathToFileURL(join(dir, 'other.js')).href, link)).toBe(
+			false
+		)
+		expect(isMainModule(self, undefined)).toBe(false)
 	})
 })

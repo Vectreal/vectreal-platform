@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { stdin, stdout } from 'node:process'
 import { createInterface } from 'node:readline/promises'
@@ -186,25 +187,69 @@ function processContext(): CliContext {
 				}
 			: undefined,
 		openBrowser,
-		launch: launchRecipe()
+		launch: launchRecipe({
+			execPath: process.execPath,
+			execArgv: process.execArgv,
+			script: process.argv[1] ?? '',
+			tsconfig: process.env.TSX_TSCONFIG_PATH,
+			cwd: process.cwd(),
+			platform: process.platform
+		})
 	}
 }
 
 /**
- * The command that started this process: node, its flags (tsx's loader when
- * run from the workspace) and the script. tsx hands its --tsconfig to the
- * process as a path relative to where it ran, so that is made absolute.
+ * How to start this CLI again, for `vectreal mcp install`: the same Node, flags
+ * (tsx's loader when run from the workspace) and script. tsx hands its
+ * --tsconfig to the process as a path relative to where it ran, so that is
+ * made absolute. Run through npx, the script sits in npx's cache, which npm may
+ * clear, so the recipe is the npx command itself. On Windows npx is a `.cmd`
+ * file, which a client spawning without a shell cannot start, so it goes
+ * through `cmd /c`.
  */
-function launchRecipe(): CliContext['launch'] {
-	const tsconfig = process.env.TSX_TSCONFIG_PATH
+export function launchRecipe({
+	execPath,
+	execArgv,
+	script,
+	tsconfig,
+	cwd,
+	platform
+}: {
+	execPath: string
+	execArgv: string[]
+	script: string
+	tsconfig: string | undefined
+	cwd: string
+	platform: NodeJS.Platform
+}): CliContext['launch'] {
+	if (/[\\/]_npx[\\/]/.test(script)) {
+		const npx = ['npx', '-y', '@vctrl/cli']
+		return platform === 'win32'
+			? { command: 'cmd', args: ['/c', ...npx], env: {} }
+			: { command: 'npx', args: npx.slice(1), env: {} }
+	}
 	return {
-		command: process.execPath,
-		args: [...process.execArgv, process.argv[1] ?? ''],
-		env: tsconfig ? { TSX_TSCONFIG_PATH: resolve(process.cwd(), tsconfig) } : {}
+		command: execPath,
+		args: [...execArgv, script],
+		env: tsconfig ? { TSX_TSCONFIG_PATH: resolve(cwd, tsconfig) } : {}
 	}
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+/**
+ * Whether Node was asked to run this module. npm installs the `vectreal` bin
+ * as a link to the real file, and Node names the module by the file, so the
+ * script is compared once its links are resolved.
+ */
+export function isMainModule(
+	moduleUrl: string,
+	script: string | undefined
+): boolean {
+	return script !== undefined
+		? moduleUrl === pathToFileURL(realpathSync(script)).href
+		: false
+}
+
+if (isMainModule(import.meta.url, process.argv[1])) {
 	void run(process.argv.slice(2), processContext()).then((code) => {
 		process.exitCode = code
 	})

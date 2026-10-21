@@ -623,6 +623,9 @@ importers:
       '@vctrl/hooks':
         specifier: workspace:*
         version: link:../../build/packages/vctrl/hooks
+      '@vctrl/sdk':
+        specifier: workspace:*
+        version: link:../../build/packages/vctrl/sdk
       '@vctrl/viewer':
         specifier: workspace:*
         version: link:../../build/packages/vctrl/viewer
@@ -730,7 +733,7 @@ importers:
         version: link:../../build/packages/vctrl/core
       '@vctrl/sdk':
         specifier: workspace:*
-        version: link:../sdk
+        version: link:../../build/packages/vctrl/sdk
       sharp:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@22.19.17)
@@ -747,6 +750,7 @@ importers:
       '@modelcontextprotocol/client':
         specifier: 2.3.1
         version: 2.3.1
+    publishDirectory: ../../build/packages/vctrl/cli
 
   packages/core:
     dependencies:
@@ -833,6 +837,7 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.4.3
+    publishDirectory: ../../build/packages/vctrl/sdk
 
   packages/viewer:
     dependencies:

@@ -12,7 +12,15 @@
 		{
 			"type": "linked-versions",
 			"groupName": "vectreal-monorepo",
-			"components": ["workspace", "core", "hooks", "viewer", "embed"]
+			"components": [
+				"workspace",
+				"core",
+				"hooks",
+				"viewer",
+				"embed",
+				"sdk",
+				"cli"
+			]
 		}
 	],
 	"packages": {
@@ -40,6 +48,28 @@
 			"release-type": "node",
 			"component": "embed",
 			"package-name": "@vctrl/embed"
+		},
+		"packages/sdk": {
+			"release-type": "node",
+			"component": "sdk",
+			"package-name": "@vctrl/sdk"
+		},
+		"packages/cli": {
+			"release-type": "node",
+			"component": "cli",
+			"package-name": "@vctrl/cli",
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "server.json",
+					"jsonpath": "$.version"
+				},
+				{
+					"type": "json",
+					"path": "server.json",
+					"jsonpath": "$.packages[0].version"
+				}
+			]
 		}
 	}
 }

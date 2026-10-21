@@ -11,6 +11,7 @@
 			"options": {
 				"lintFilePatterns": [
 					"packages/sdk/src/**/*.ts",
+					"packages/sdk/vite.config.ts",
 					"packages/sdk/vitest.config.ts",
 					"packages/sdk/package.json"
 				]
@@ -23,6 +24,7 @@
 				"fix": true,
 				"lintFilePatterns": [
 					"packages/sdk/src/**/*.ts",
+					"packages/sdk/vite.config.ts",
 					"packages/sdk/vitest.config.ts",
 					"packages/sdk/package.json"
 				]
@@ -34,6 +36,39 @@
 			"options": {
 				"cwd": "packages/sdk",
 				"command": "tsc --noEmit -p tsconfig.lib.json && tsc --noEmit -p tsconfig.spec.json"
+			}
+		},
+		"build": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/sdk",
+				"configFile": "packages/sdk/vite.config.ts"
+			}
+		},
+		"build-ci": {
+			"executor": "@nx/vite:build",
+			"outputs": ["{options.outputPath}"],
+			"options": {
+				"outputPath": "build/packages/vctrl/sdk",
+				"configFile": "packages/sdk/vite.config.ts"
+			}
+		},
+		"copy-md": {
+			"dependsOn": ["build"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"commands": ["rsync -rat packages/sdk/*.md build/packages/vctrl/sdk/"]
+			}
+		},
+		"publish": {
+			"dependsOn": ["copy-md"],
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "pnpm publish --no-git-checks --access public",
+				"cwd": "packages/sdk"
 			}
 		}
 	}

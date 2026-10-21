@@ -501,6 +501,27 @@ export default defineConfig(tseslint.configs.recommended, [
 		}
 	},
 	{
+		// @vctrl/core loads sharp, Node's image decoder for the KTX2 publish
+		// export, through a specifier no bundler resolves, and declares none
+		// itself (packages/core/src/node/index.ts). The CLI is what runs that
+		// export, so it has to bring sharp, though no file of its own imports it.
+		// test-support.ts is the specs' helper, outside the published build.
+		files: ['packages/cli/package.json'],
+		rules: {
+			'@nx/dependency-checks': [
+				'error',
+				{
+					...dependencyCheckOptions,
+					ignoredFiles: [
+						...dependencyCheckOptions.ignoredFiles,
+						'{projectRoot}/src/test-support.ts'
+					],
+					ignoredDependencies: ['sharp']
+				}
+			]
+		}
+	},
+	{
 		files: ['**/*.json'],
 		ignores: ['**/node_modules/**', '**/package.json'],
 		plugins: { json },

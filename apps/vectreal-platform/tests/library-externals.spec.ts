@@ -190,34 +190,47 @@ describe('unpublishableImport', () => {
 	})
 })
 
-const libraryConfigs = readdirSync(PACKAGES, { withFileTypes: true })
+const packageConfigs = readdirSync(PACKAGES, { withFileTypes: true })
 	.filter((entry) => entry.isDirectory())
 	.map((entry) => join(PACKAGES, entry.name, 'vite.config.ts'))
 	.filter((file) => existsSync(file))
 
-describe('library builds', () => {
-	it('finds the library configs', () => {
-		expect(libraryConfigs.length).toBeGreaterThanOrEqual(4)
-	})
+// The CLI builds an executable (`build.ssr`), not a library: it externalizes
+// the same way, but publishes no types.
+const EXECUTABLE_CONFIGS = [join(PACKAGES, 'cli', 'vite.config.ts')]
+const libraryConfigs = packageConfigs.filter(
+	(file) => !EXECUTABLE_CONFIGS.includes(file)
+)
 
-	it.each(libraryConfigs)('%s registers manifestExternals', async (file) => {
-		const config = (await import(file)).default
-
-		expect(config.build?.lib, file).toBeTruthy()
-		const names = [config.plugins ?? []]
+const pluginNames = async (file: string) => {
+	const config = (await import(file)).default
+	return {
+		config,
+		names: [config.plugins ?? []]
 			.flat(Infinity)
 			.map((plugin: { name?: string } | null) => plugin?.name)
+	}
+}
+
+describe('package builds', () => {
+	it('finds the library and executable configs', () => {
+		expect(libraryConfigs.length).toBeGreaterThanOrEqual(5)
+		expect(packageConfigs).toEqual(expect.arrayContaining(EXECUTABLE_CONFIGS))
+	})
+
+	it.each(packageConfigs)('%s registers manifestExternals', async (file) => {
+		const { config, names } = await pluginNames(file)
+
+		const kind = EXECUTABLE_CONFIGS.includes(file) ? 'ssr' : 'lib'
+		expect(config.build?.[kind], file).toBeTruthy()
 		expect(names).toContain('vctrl-manifest-externals')
 	})
 
 	it.each(libraryConfigs)(
 		'%s emits its types through publishedDeclarations',
 		async (file) => {
-			const config = (await import(file)).default
+			const { names } = await pluginNames(file)
 
-			const names = [config.plugins ?? []]
-				.flat(Infinity)
-				.map((plugin: { name?: string } | null) => plugin?.name)
 			expect(names).toContain('vctrl-published-declarations')
 		}
 	)
