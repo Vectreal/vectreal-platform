@@ -137,6 +137,7 @@ describe('GET /api/v1/scenes/:sceneId/embed', () => {
 
 		const expectedUrl = `${ORIGIN}/embed/${PROJECT}/${SCENE}?token=token-${KEY_LIVE}`
 		expect(embed).toMatchObject({
+			projectId: PROJECT,
 			keyId: KEY_LIVE,
 			url: expectedUrl,
 			previewUrl: `${ORIGIN}/preview/${PROJECT}/${SCENE}`,
@@ -183,6 +184,8 @@ describe('GET /api/v1/scenes/:sceneId/embed', () => {
 		expect(response.status).toBe(409)
 		expect(body.code).toBe('embed_key_required')
 		expect(body.error).toContain(`/api/v1/projects/${PROJECT}/embed-keys`)
+		// Named so a client can create the key without knowing the scene's project.
+		expect(body.projectId).toBe(PROJECT)
 	})
 
 	it('answers 409 embed_key_unusable for a named key that is revoked', async () => {

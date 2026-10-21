@@ -1,12 +1,12 @@
 import { spawn } from 'node:child_process'
+import { resolve } from 'node:path'
 import { stdin, stdout } from 'node:process'
 import { createInterface } from 'node:readline/promises'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
-import { VectrealApiError, VectrealContractError } from '@vctrl/sdk'
-
 import { init } from './commands/init'
+import { installMcp, serveMcp } from './commands/mcp'
 import { login, logout, whoami } from './commands/session-commands'
 import { type CliContext } from './context'
 import {
@@ -15,7 +15,13 @@ import {
 	fileStore,
 	keychainStore
 } from './credentials'
-import { EXIT, NotSignedInError, UsageError } from './errors'
+import {
+	describeError,
+	EXIT,
+	isRefusedToken,
+	NotSignedInError,
+	UsageError
+} from './errors'
 
 export const HELP = `Usage: vectreal <command> [options]
 
@@ -24,6 +30,9 @@ Commands:
   logout     End the session and forget it here
   whoami     Show who the session acts as
   init       Link this directory to a project (--project <id> or --create <name>)
+  mcp        Serve the Vectreal tools to an agent over stdio (MCP)
+  mcp install
+             Register that server in this directory's .mcp.json
 
 Options:
   --origin <url>   The Vectreal server (default: the last one signed in to,
@@ -73,6 +82,7 @@ export async function run(
 		context.err(HELP)
 		return EXIT.usage
 	}
+	const subcommand = command === 'mcp' ? extra.shift() : undefined
 	if (extra.length > 0) {
 		context.err(`Unexpected arguments: ${extra.join(' ')}\n\n${HELP}`)
 		return EXIT.usage
@@ -96,6 +106,11 @@ export async function run(
 					project: values.project,
 					create: values.create
 				})
+			case 'mcp':
+				if (subcommand === undefined) return await serveMcp(context, options)
+				if (subcommand === 'install') return installMcp(context, options)
+				context.err(`Unknown mcp command: ${subcommand}\n\n${HELP}`)
+				return EXIT.usage
 			default:
 				context.err(`Unknown command: ${command}\n\n${HELP}`)
 				return EXIT.usage
@@ -107,28 +122,6 @@ export async function run(
 		}
 		return isRefusedToken(error) ? EXIT.notSignedIn : EXIT.failure
 	}
-}
-
-/**
- * The API refused the token itself. A revoked session's access token still
- * verifies until it expires, so this, not a failed refresh, is how a CLI
- * whose access was revoked from the dashboard first hears of it.
- */
-function isRefusedToken(error: unknown): error is VectrealApiError {
-	return error instanceof VectrealApiError && error.code === 'invalid_token'
-}
-
-function describeError(error: unknown): string {
-	if (isRefusedToken(error)) {
-		return `The server no longer accepts this session (${error.message}). Run: vectreal login`
-	}
-	if (error instanceof VectrealApiError) {
-		return `The server refused (${error.status}${error.code ? `, ${error.code}` : ''}): ${error.message}`
-	}
-	if (error instanceof VectrealContractError) {
-		return `${error.message}. Is this a Vectreal server, and is the CLI up to date?`
-	}
-	return error instanceof Error ? error.message : String(error)
 }
 
 /**
@@ -192,7 +185,22 @@ function processContext(): CliContext {
 					}
 				}
 			: undefined,
-		openBrowser
+		openBrowser,
+		launch: launchRecipe()
+	}
+}
+
+/**
+ * The command that started this process: node, its flags (tsx's loader when
+ * run from the workspace) and the script. tsx hands its --tsconfig to the
+ * process as a path relative to where it ran, so that is made absolute.
+ */
+function launchRecipe(): CliContext['launch'] {
+	const tsconfig = process.env.TSX_TSCONFIG_PATH
+	return {
+		command: process.execPath,
+		args: [...process.execArgv, process.argv[1] ?? ''],
+		env: tsconfig ? { TSX_TSCONFIG_PATH: resolve(process.cwd(), tsconfig) } : {}
 	}
 }
 

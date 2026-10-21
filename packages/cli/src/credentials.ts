@@ -60,7 +60,8 @@ export function configDir(env = process.env): string {
 }
 
 /** A file's JSON, or undefined when it is missing or not JSON (a torn write). */
-function readJson(path: string): unknown {
+/** A JSON file's contents; undefined when it is missing or not JSON. */
+export function readJson(path: string): unknown {
 	if (!existsSync(path)) return undefined
 	try {
 		return JSON.parse(readFileSync(path, 'utf8'))

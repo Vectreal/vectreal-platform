@@ -18,8 +18,33 @@ Without `-s`, pnpm prints its own banner to stdout before the CLI does, which br
 | `vectreal whoami [--json]` | Shows the user, organization, role and scopes the session acts as. |
 | `vectreal init [--project <id> \| --create <name>]` | Links the current directory to a project by writing `.vectreal/project.json`. |
 | `vectreal logout` | Ends the session on the server and forgets it here. |
+| `vectreal mcp` | Serves the Vectreal tools to an agent over stdio (MCP) until the agent closes the stream. |
+| `vectreal mcp install [--origin <url>]` | Registers that server in the current directory's `.mcp.json`, launched the way this CLI was. |
 
 The origin is `--origin`, then `VECTREAL_ORIGIN`, then the last one signed in to, then `https://vectreal.com`. Plain http is allowed on localhost only.
+
+## The MCP server
+
+`vectreal mcp` gives an agent these tools:
+
+| Tool | Does |
+| --- | --- |
+| `search_docs`, `read_doc` | Search and read the Vectreal docs. No sign-in needed. |
+| `whoami`, `list_projects`, `create_project`, `list_scenes` | Who the session is, and the organization's projects and scenes. |
+| `create_scene_from_file` | Uploads a local GLB as a draft scene, as it is. |
+| `get_scene_settings`, `update_scene_settings` | Read every settings section; change environment, controls, bounds, shadows and presentation. |
+| `publish_scene`, `unpublish_scene` | Compress a local GLB as the publisher does (Draco, KTX2) and publish it; take a scene offline. |
+| `get_embed_snippet` | The snippet and preview URL for a published scene, creating an embed key and allowing domains when asked. |
+
+Tools that take `projectId` default to the project `vectreal init` linked. The server finds that project in `CLAUDE_PROJECT_DIR` when the agent sets it, else in the directory it was started from. It signs in with the stored session, so run `vectreal login` first; a tool called without one says so.
+
+To register it with Claude Code, run this in the project directory:
+
+```bash
+pnpm -s --dir <path to this repo> vectreal mcp install
+```
+
+The entry it writes names paths on this machine. Keep `.mcp.json` out of version control until `@vctrl/cli` is on npm.
 
 ## Output and exit codes
 

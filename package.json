@@ -185,6 +185,6 @@
 	"scripts": {
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"vectreal": "tsx packages/cli/src/main.ts"
+		"vectreal": "tsx --tsconfig packages/cli/tsconfig.lib.json packages/cli/src/main.ts"
 	}
 }

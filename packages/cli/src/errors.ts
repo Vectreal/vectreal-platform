@@ -1,3 +1,5 @@
+import { VectrealApiError, VectrealContractError } from '@vctrl/sdk'
+
 /**
  * Exit codes, documented in `vectreal --help`. Scripts and the later scene
  * commands branch on them, so a value never changes meaning.
@@ -23,4 +25,26 @@ export class NotSignedInError extends Error {
 	constructor(origin: string) {
 		super(`Not signed in to ${origin}. Run: vectreal login`)
 	}
+}
+
+/**
+ * The API refused the token itself. A revoked session's access token still
+ * verifies until it expires, so this, not a failed refresh, is how a CLI
+ * whose access was revoked from the dashboard first hears of it.
+ */
+export function isRefusedToken(error: unknown): error is VectrealApiError {
+	return error instanceof VectrealApiError && error.code === 'invalid_token'
+}
+
+export function describeError(error: unknown): string {
+	if (isRefusedToken(error)) {
+		return `The server no longer accepts this session (${error.message}). Run: vectreal login`
+	}
+	if (error instanceof VectrealApiError) {
+		return `The server refused (${error.status}${error.code ? `, ${error.code}` : ''}): ${error.message}`
+	}
+	if (error instanceof VectrealContractError) {
+		return `${error.message}. Is this a Vectreal server, and is the CLI up to date?`
+	}
+	return error instanceof Error ? error.message : String(error)
 }

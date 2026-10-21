@@ -21,6 +21,8 @@ export interface CliContext {
 	/** Asks a question on the terminal; undefined when there is no terminal. */
 	ask?: (question: string) => Promise<string>
 	openBrowser: (url: string) => void
+	/** How to start this CLI again, as an agent's MCP config must. */
+	launch: { command: string; args: string[]; env: Record<string, string> }
 }
 
 export interface GlobalOptions {

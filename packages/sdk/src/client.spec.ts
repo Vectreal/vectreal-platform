@@ -392,6 +392,7 @@ describe('createVectrealClient', () => {
 		it('asks for a scene embed, naming the key only when given', async () => {
 			const embed = {
 				embed: {
+					projectId: 'p1',
 					keyId: 'k1',
 					url: 'https://vectreal.com/embed/p1/s1?token=t',
 					iframeSnippet: '<iframe></iframe>',
