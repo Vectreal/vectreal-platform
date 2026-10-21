@@ -25,6 +25,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * Node only. Nothing in a browser bundle imports this subpath.
  */
 
+// Pulled in by reference, not by the package's include list, so a project that
+// compiles this file from source (the CLI) gets the module's types too. An
+// ambient module declaration has no import form.
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="./draco3d.d.ts" />
 import draco3d from 'draco3d'
 /*
   Resolved through the package's `node` condition, which loads its own Basis

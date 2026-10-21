@@ -61,6 +61,8 @@ export type SetAllowedDomainsInput = z.infer<
 /** `GET /api/v1/scenes/:sceneId/embed`: ready to paste, token included. */
 export const sceneEmbedSchema = z.object({
 	embed: z.object({
+		/** The scene's project: the one its keys and allowed domains belong to. */
+		projectId: z.string(),
 		/** The key whose token the URL and snippets carry. */
 		keyId: z.string(),
 		/** The iframe URL a visitor's browser loads. */

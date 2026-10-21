@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
+import { z } from 'zod'
+
 import {
 	type CliContext,
 	type GlobalOptions,
@@ -8,10 +10,24 @@ import {
 	signedInClient,
 	targetOrigin
 } from '../context'
+import { readJson } from '../credentials'
 import { UsageError } from '../errors'
 
 /** Where a directory records its project: read by `vectreal mcp` and the scene commands. */
 export const PROJECT_FILE = join('.vectreal', 'project.json')
+
+const projectLinkSchema = z.object({
+	origin: z.string(),
+	projectId: z.string()
+})
+
+/** The project `vectreal init` linked `dir` to, or null. */
+export function readProjectLink(
+	dir: string
+): z.infer<typeof projectLinkSchema> | null {
+	const parsed = projectLinkSchema.safeParse(readJson(join(dir, PROJECT_FILE)))
+	return parsed.success ? parsed.data : null
+}
 
 /**
  * Links the current directory to a project in the signed-in organization:

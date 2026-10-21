@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -66,7 +66,12 @@ function fakeContext(
 				? route(request)
 				: Response.json({ success: false, error: 'Not found' }, { status: 404 })
 		},
-		openBrowser: () => undefined
+		openBrowser: () => undefined,
+		launch: {
+			command: '/usr/bin/node',
+			args: ['--import', 'file:///repo/tsx/loader.mjs', '/repo/cli/main.ts'],
+			env: { TSX_TSCONFIG_PATH: '/repo/cli/tsconfig.lib.json' }
+		}
 	}
 	return { context, out, err, requests, ok }
 }
@@ -298,6 +303,60 @@ describe('vectreal', () => {
 
 		context.ask = undefined
 		expect(await run(['init', '--origin', ORIGIN], context)).toBe(EXIT.usage)
+	})
+})
+
+describe('vectreal mcp install', () => {
+	const mcpConfig = (context: CliContext) =>
+		JSON.parse(readFileSync(join(context.cwd, '.mcp.json'), 'utf8'))
+
+	it('registers the server launched as this CLI was, keeping every other entry', async () => {
+		const { context } = fakeContext()
+		writeFileSync(
+			join(context.cwd, '.mcp.json'),
+			JSON.stringify({ mcpServers: { other: { command: 'other' } } })
+		)
+
+		expect(await run(['mcp', 'install'], context)).toBe(EXIT.ok)
+		expect(mcpConfig(context)).toEqual({
+			mcpServers: {
+				other: { command: 'other' },
+				vectreal: {
+					type: 'stdio',
+					command: '/usr/bin/node',
+					args: [
+						'--import',
+						'file:///repo/tsx/loader.mjs',
+						'/repo/cli/main.ts',
+						'mcp'
+					],
+					env: { TSX_TSCONFIG_PATH: '/repo/cli/tsconfig.lib.json' }
+				}
+			}
+		})
+	})
+
+	it('passes a named origin on to the server', async () => {
+		const { context } = fakeContext()
+
+		await run(['mcp', 'install', '--origin', ORIGIN], context)
+
+		expect(mcpConfig(context).mcpServers.vectreal.args.slice(-3)).toEqual([
+			'mcp',
+			'--origin',
+			ORIGIN
+		])
+	})
+
+	it('refuses to overwrite a .mcp.json it cannot read, and an unknown subcommand', async () => {
+		const { context } = fakeContext()
+		writeFileSync(join(context.cwd, '.mcp.json'), '{ not json')
+
+		expect(await run(['mcp', 'install'], context)).toBe(EXIT.usage)
+		expect(readFileSync(join(context.cwd, '.mcp.json'), 'utf8')).toBe(
+			'{ not json'
+		)
+		expect(await run(['mcp', 'remove'], context)).toBe(EXIT.usage)
 	})
 })
 

@@ -85,7 +85,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		throw agentApiError(
 			409,
 			'embed_key_required',
-			`The project has no embed key that works. Create one with POST /api/v1/projects/${projectId}/embed-keys.`
+			`The project has no embed key that works. Create one with POST /api/v1/projects/${projectId}/embed-keys.`,
+			{ extra: { projectId } }
 		)
 	}
 	if (!isEmbedKeyUsable(key) || key.value === null) {
@@ -104,6 +105,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	return ApiResponse.success(
 		{
 			embed: {
+				projectId,
 				keyId: key.id,
 				url,
 				iframeSnippet: buildResponsiveEmbedSnippet({ src: url }),
