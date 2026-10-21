@@ -11,10 +11,12 @@ import {
 	signedInClient,
 	targetOrigin
 } from '../context'
+import { loadSession } from '../credentials'
 import { EXIT, UsageError } from '../errors'
+import { readProjectLink } from './init'
 import { createVectrealMcpServer } from '../mcp/register-operations'
 import { OPERATIONS, type OperationContext } from '../operations'
-import { readProjectLink } from './init'
+import { normalizeOrigin } from '../origin'
 
 /** The CLI's version, as the MCP server reports it. */
 const VERSION = '0.0.0'
@@ -35,6 +37,24 @@ export function routeConsoleToStderr(target: Console): void {
 }
 
 /**
+ * The origin a project link names, when it may be used: a valid origin the
+ * user is signed in to. The file arrives with any repository the user clones,
+ * so a link to a host they never signed in to would point the docs tools at
+ * it, whatever it serves, and is ignored.
+ */
+function trustedLinkOrigin(
+	context: CliContext,
+	linked: string
+): string | undefined {
+	try {
+		const origin = normalizeOrigin(linked)
+		return loadSession(context.store, origin) ? origin : undefined
+	} catch {
+		return undefined
+	}
+}
+
+/**
  * The project directory and the context the tools run in. Claude Code names
  * the project in CLAUDE_PROJECT_DIR rather than promising the working
  * directory. The linked project's origin is used unless one is named, and its
@@ -47,12 +67,14 @@ export function mcpOperationContext(
 ): OperationContext {
 	const projectDir = context.env.CLAUDE_PROJECT_DIR || context.cwd
 	const link = readProjectLink(projectDir)
-	const named = options.origin ?? context.env.VECTREAL_ORIGIN
-	const origin = named || !link ? targetOrigin(context, options) : link.origin
+	const named = options.origin || context.env.VECTREAL_ORIGIN
+	const linked =
+		!named && link ? trustedLinkOrigin(context, link.origin) : undefined
+	const origin = linked ?? targetOrigin(context, options)
 	return {
 		origin,
 		client: signedInClient(context, origin),
-		defaultProjectId: link?.origin === origin ? link.projectId : undefined,
+		defaultProjectId: linked ? link?.projectId : undefined,
 		projectDir,
 		fetch: context.fetch,
 		readFile: async (path) => readFile(path),
