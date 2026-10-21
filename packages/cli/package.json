@@ -1,10 +1,38 @@
 {
 	"name": "@vctrl/cli",
-	"version": "0.0.0",
+	"version": "2.1.0",
 	"mcpName": "io.github.Vectreal/vectreal",
-	"private": true,
+	"description": "Sign in to Vectreal, link a directory to a project, and serve the Vectreal MCP tools to AI agents.",
+	"bugs": {
+		"url": "https://github.com/Vectreal/vectreal-platform/issues"
+	},
+	"homepage": "https://vectreal.com/docs/agents",
+	"keywords": [
+		"vectreal",
+		"3d",
+		"cli",
+		"mcp",
+		"agent",
+		"gltf",
+		"glb",
+		"embed"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Vectreal/vectreal-platform.git"
+	},
 	"license": "AGPL-3.0-only",
 	"type": "module",
+	"bin": {
+		"vectreal": "./main.js"
+	},
+	"engines": {
+		"node": ">=22.22.0"
+	},
+	"publishConfig": {
+		"access": "public",
+		"directory": "../../build/packages/vctrl/cli"
+	},
 	"dependencies": {
 		"@gltf-transform/core": "catalog:",
 		"@modelcontextprotocol/server": "2.3.1",

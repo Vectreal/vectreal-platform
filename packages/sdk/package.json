@@ -1,14 +1,39 @@
 {
 	"name": "@vctrl/sdk",
-	"version": "0.0.0",
-	"private": true,
+	"version": "2.1.0",
+	"description": "Typed client and zod schemas for Vectreal's agent API (/api/v1): projects, scenes, settings, publishing and embeds.",
+	"bugs": {
+		"url": "https://github.com/Vectreal/vectreal-platform/issues"
+	},
+	"homepage": "https://vectreal.com/docs/agents/api",
+	"keywords": [
+		"vectreal",
+		"3d",
+		"api",
+		"sdk",
+		"agent",
+		"mcp",
+		"gltf",
+		"glb"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Vectreal/vectreal-platform.git"
+	},
 	"license": "AGPL-3.0-only",
 	"type": "module",
 	"sideEffects": false,
-	"main": "./src/index.ts",
-	"types": "./src/index.ts",
+	"main": "./index.js",
+	"types": "./index.d.ts",
+	"publishConfig": {
+		"access": "public",
+		"directory": "../../build/packages/vctrl/sdk"
+	},
 	"exports": {
-		".": "./src/index.ts"
+		".": {
+			"types": "./index.d.ts",
+			"default": "./index.js"
+		}
 	},
 	"dependencies": {
 		"zod": "catalog:"

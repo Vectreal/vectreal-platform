@@ -9,12 +9,12 @@
 		"source": "github",
 		"subfolder": "packages/cli"
 	},
-	"version": "0.0.0",
+	"version": "2.1.0",
 	"packages": [
 		{
 			"registryType": "npm",
 			"identifier": "@vctrl/cli",
-			"version": "0.0.0",
+			"version": "2.1.0",
 			"transport": {
 				"type": "stdio"
 			},

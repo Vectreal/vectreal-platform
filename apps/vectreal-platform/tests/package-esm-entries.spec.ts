@@ -29,6 +29,7 @@ interface Manifest {
 	type?: string
 	main?: string
 	exports?: Record<string, string | Record<string, string>>
+	bin?: Record<string, string>
 }
 
 const manifests: Manifest[] = readdirSync(PACKAGES, { withFileTypes: true })
@@ -42,30 +43,38 @@ const manifests: Manifest[] = readdirSync(PACKAGES, { withFileTypes: true })
 		}
 	})
 
-// A private package (`@vctrl/sdk` until the CLI ships) has no build to point
-// at, so it resolves from source and is held to none of this.
+// A private package has no build to point at, so it resolves from source and
+// is held to none of this.
 const published = manifests.filter(
 	(manifest) => manifest.name.startsWith('@vctrl/') && !manifest.private
 )
+// An executable (`@vctrl/cli`) is run through its `bin`, not imported, so it
+// has no `main` or `exports`.
+const libraries = published.filter((manifest) => !manifest.bin)
 
 describe('ES module entries', () => {
 	it('finds the published packages', () => {
-		expect(published.map((manifest) => manifest.name)).toEqual(
+		expect(libraries.map((manifest) => manifest.name)).toEqual(
 			expect.arrayContaining([
 				'@vctrl/core',
 				'@vctrl/hooks',
 				'@vctrl/viewer',
-				'@vctrl/embed'
+				'@vctrl/embed',
+				'@vctrl/sdk'
 			])
 		)
+		expect(published.map((manifest) => manifest.name)).toContain('@vctrl/cli')
 	})
 
 	it.each(published)('$name is an ES module package', (manifest) => {
 		expect(manifest.type, manifest.name).toBe('module')
-		expect(manifest.main ?? '', manifest.name).toMatch(/\.js$/)
+		const entries = manifest.bin ? Object.values(manifest.bin) : [manifest.main]
+		expect(entries.length, manifest.name).toBeGreaterThan(0)
+		for (const entry of entries)
+			expect(entry ?? '', manifest.name).toMatch(/\.js$/)
 	})
 
-	it.each(published)(
+	it.each(libraries)(
 		'$name resolves every export through default',
 		(manifest) => {
 			const entries = Object.entries(manifest.exports ?? {})
