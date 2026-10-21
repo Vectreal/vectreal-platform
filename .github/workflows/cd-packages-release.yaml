@@ -26,6 +26,8 @@ jobs:
       hooks_version: ${{ steps.release.outputs['packages/hooks--version'] }}
       viewer_version: ${{ steps.release.outputs['packages/viewer--version'] }}
       embed_version: ${{ steps.release.outputs['packages/embed--version'] }}
+      sdk_version: ${{ steps.release.outputs['packages/sdk--version'] }}
+      cli_version: ${{ steps.release.outputs['packages/cli--version'] }}
 
     steps:
       - name: Create GitHub App token
@@ -59,6 +61,8 @@ jobs:
           HOOKS_VERSION: ${{ steps.release.outputs['packages/hooks--version'] }}
           VIEWER_VERSION: ${{ steps.release.outputs['packages/viewer--version'] }}
           EMBED_VERSION: ${{ steps.release.outputs['packages/embed--version'] }}
+          SDK_VERSION: ${{ steps.release.outputs['packages/sdk--version'] }}
+          CLI_VERSION: ${{ steps.release.outputs['packages/cli--version'] }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
         run: |
@@ -101,6 +105,12 @@ jobs:
             echo
             echo "### @vctrl/embed (${EMBED_VERSION:-unchanged})"
             extract_section "packages/embed/CHANGELOG.md" "$EMBED_VERSION"
+            echo
+            echo "### @vctrl/sdk (${SDK_VERSION:-unchanged})"
+            extract_section "packages/sdk/CHANGELOG.md" "$SDK_VERSION"
+            echo
+            echo "### @vctrl/cli (${CLI_VERSION:-unchanged})"
+            extract_section "packages/cli/CHANGELOG.md" "$CLI_VERSION"
           } > release-notes.md
 
           gh release edit "$TAG_NAME" --notes-file release-notes.md
@@ -193,10 +203,10 @@ jobs:
 
       - name: Build released packages
         # copy-md chains build, so this produces the publishable output for all
-        # four packages. Each package's publishConfig.directory points pnpm at
+        # six packages. Each package's publishConfig.directory points pnpm at
         # that output, and `pnpm publish` substitutes the `workspace:` and
         # `catalog:` specifiers itself.
-        run: pnpm nx run-many -t copy-md -p vctrl/core vctrl/hooks vctrl/viewer vctrl/embed
+        run: pnpm nx run-many -t copy-md -p vctrl/core vctrl/hooks vctrl/viewer vctrl/embed vctrl/sdk vctrl/cli
         shell: bash
 
       - name: Guard - no unresolved specifiers in the packed tarballs
@@ -206,7 +216,7 @@ jobs:
           # `pnpm publish` substitutes `workspace:` and `catalog:` while packing,
           # so the built manifest still carries them and only the tarball shows
           # what consumers receive. Pack each package and read that.
-          for p in core hooks viewer embed; do
+          for p in core hooks viewer embed sdk cli; do
             rm -rf /tmp/packcheck && mkdir -p /tmp/packcheck
             ( cd "packages/$p" && pnpm pack --pack-destination /tmp/packcheck >/dev/null )
             tar -xzf /tmp/packcheck/*.tgz -C /tmp/packcheck
@@ -283,7 +293,8 @@ jobs:
           npm view @vctrl/viewer name --json || true
 
       - name: Publish packages to npm (idempotent, OIDC + provenance)
-        # Publish core first so its version exists for hooks' `^<version>` dep.
+        # Publish core first so its version exists for hooks' `^<version>` dep,
+        # and the SDK before the CLI, which depends on it and on core.
         # Each package is skipped if that exact version is already on npm, so
         # this is safe to re-run and to trigger manually via workflow_dispatch.
         # `pnpm publish` (nx publish target) delegates to npm on pnpm 10, so the
@@ -294,7 +305,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: 'true'
         run: |
           set -euo pipefail
-          for p in core hooks viewer embed; do
+          for p in core hooks viewer embed sdk cli; do
             dir="build/packages/vctrl/$p"
             name=$(node -p "require('./$dir/package.json').name")
             version=$(node -p "require('./$dir/package.json').version")

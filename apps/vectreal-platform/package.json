@@ -15,6 +15,7 @@
 		"@vctrl/core": "workspace:*",
 		"@vctrl/embed": "workspace:*",
 		"@vctrl/hooks": "workspace:*",
+		"@vctrl/sdk": "workspace:*",
 		"@shared/components": "workspace:*",
 		"@shared/utils": "workspace:*",
 		"@vctrl/viewer": "workspace:*",

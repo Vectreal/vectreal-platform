@@ -14,12 +14,13 @@ import {
 import { loadSession } from '../credentials'
 import { EXIT, UsageError } from '../errors'
 import { readProjectLink } from './init'
+import packageJson from '../../package.json' with { type: 'json' }
 import { createVectrealMcpServer } from '../mcp/register-operations'
 import { OPERATIONS, type OperationContext } from '../operations'
 import { normalizeOrigin } from '../origin'
 
 /** The CLI's version, as the MCP server reports it. */
-const VERSION = '0.0.0'
+const VERSION = packageJson.version
 
 /** Where `vectreal mcp install` registers the server: Claude Code's project file. */
 export const MCP_CONFIG_FILE = '.mcp.json'

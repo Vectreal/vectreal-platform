@@ -2,7 +2,11 @@
 
 The contract for Vectreal's agent API, `/api/v1`: zod schemas for every response and a typed client that parses them. The platform's routes answer through the same schemas, so a change to either side fails the other's type check.
 
-Private for now. It ships to npm with the Vectreal CLI, which is its first consumer.
+```bash
+npm install @vctrl/sdk
+```
+
+The Vectreal CLI, `@vctrl/cli`, is its first consumer. The [API reference](https://vectreal.com/docs/agents/api) lists every endpoint, scope and error code.
 
 ```ts
 import { createVectrealClient } from '@vctrl/sdk'
