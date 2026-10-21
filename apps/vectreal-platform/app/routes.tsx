@@ -235,6 +235,14 @@ export default [
 					route('hooks', './routes/docs/packages/hooks.mdx'),
 					route('core', './routes/docs/packages/core.mdx')
 				]),
+				// Agents and API
+				...prefix('agents', [
+					index('./routes/docs/agents/index.mdx', {
+						id: 'docs-agents-index'
+					}),
+					route('cli', './routes/docs/agents/cli.mdx'),
+					route('api', './routes/docs/agents/api.mdx')
+				]),
 				// Run It Yourself
 				...prefix('self-hosting', [
 					index('./routes/docs/self-hosting/index.mdx', {

@@ -1,0 +1,15 @@
+{
+	"name": "vectreal",
+	"description": "Vectreal plugins for Claude Code: publish 3D models to any website from your agent.",
+	"owner": {
+		"name": "Vectreal",
+		"url": "https://vectreal.com"
+	},
+	"plugins": [
+		{
+			"name": "vectreal",
+			"source": "./plugins/vectreal",
+			"description": "The Vectreal MCP server and a skill for publishing 3D models to any website from Claude Code."
+		}
+	]
+}

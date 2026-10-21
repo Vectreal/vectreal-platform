@@ -164,8 +164,16 @@ export const PLATFORM_FEATURE_LIST = [
 	'JavaScript embed SDK for camera control, scroll interactions, and events',
 	'Domain allowlist for embed security',
 	'API key authentication for external embeds',
-	'Team collaboration with role-based access'
+	'Team collaboration with role-based access',
+	'MCP server and CLI for AI agents to upload, publish and embed scenes'
 ] as const
+
+/**
+ * What an AI agent can do with Vectreal, for /llms.txt. True of the shipped
+ * `vectreal mcp` tools and `/api/v1`: nothing an agent is granted can delete.
+ */
+export const AGENT_ACCESS_DESCRIPTION =
+	'AI agents such as Claude Code, Cursor and VS Code can work with Vectreal through its MCP server, part of the @vctrl/cli package: upload a GLB as a scene, describe the model, change its look, publish it compressed, and get the embed snippet for a page. The user approves each agent for one organization and a set of scopes, and no scope can delete anything.'
 
 // ---------------------------------------------------------------------------
 // Plan names and per-plan copy

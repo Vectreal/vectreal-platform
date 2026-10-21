@@ -1,6 +1,7 @@
 {
 	"name": "@vctrl/cli",
 	"version": "0.0.0",
+	"mcpName": "io.github.Vectreal/vectreal",
 	"private": true,
 	"license": "AGPL-3.0-only",
 	"type": "module",

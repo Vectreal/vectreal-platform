@@ -2,7 +2,7 @@ import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { Bot } from 'lucide-react'
 import { useState } from 'react'
-import { data, useFetcher, useRevalidator } from 'react-router'
+import { data, Link, useFetcher, useRevalidator } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import { toast } from 'sonner'
 
@@ -253,6 +253,11 @@ export default function ConnectedAgentsPage({
 					icon={Bot}
 					title="Connect your first agent"
 					description="Sign in to Vectreal from a CLI or an AI agent and approve it. It shows up here with what it may do, and you can revoke it at any time."
+					action={
+						<Button asChild variant="secondary">
+							<Link to="/docs/agents">Set up an agent</Link>
+						</Button>
+					}
 				/>
 			</div>
 		)
