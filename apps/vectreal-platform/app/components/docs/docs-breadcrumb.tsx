@@ -17,9 +17,13 @@ import { getDocTrail } from '../../lib/docs/docs-manifest'
  * Whether a path is a docs page: the nav is the docs bar there. The pages
  * under `/docs/`, which the docs layout wraps; the landing at `/docs` is a
  * page of its own, with the contents on the page and no rail to stand in for.
+ *
+ * A trailing slash is dropped first. The prerenderer renders `/docs` as
+ * `/docs/`, so without it the baked HTML carried the docs bar, the browser at
+ * `/docs` rendered the site bar, and hydration failed on the landing.
  */
 export function isDocsPath(pathname: string) {
-	return pathname.startsWith('/docs/')
+	return pathname.replace(/\/$/, '').startsWith('/docs/')
 }
 
 /**

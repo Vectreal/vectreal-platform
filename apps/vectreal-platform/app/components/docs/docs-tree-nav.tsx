@@ -19,6 +19,11 @@ function toDocHref(docSlug: string) {
 }
 
 export function DocsTreeNav({ pathname, onNavigate }: DocsTreeNavProps) {
+	// Prerendered pages are rendered at `/docs/<slug>/`. Compared as is, no item
+	// matched in the baked HTML, and hydration keeps the server's attributes, so
+	// a fresh load never marked the current page.
+	const current = pathname.replace(/\/$/, '')
+
 	return (
 		<nav>
 			{/* Grouped by what the reader is doing, so the browser's pages are not read as the preamble to repo setup. */}
@@ -39,7 +44,7 @@ export function DocsTreeNav({ pathname, onNavigate }: DocsTreeNavProps) {
 								<ul className="space-y-0.5">
 									{pages.map((docPage) => {
 										const href = toDocHref(docPage.slug)
-										const isActive = pathname === href
+										const isActive = current === href
 
 										return (
 											<li key={docPage.slug}>
