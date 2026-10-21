@@ -13,9 +13,11 @@ import { useAnimationReconciliation } from '../../components/publisher/sidebars/
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
+	currentSceneIdAtom,
 	failedEnvironmentFilesAtom,
 	isPreviewModeAtom,
 	openHotspotInHotspotToolAtom,
+	openingFramedAtom,
 	sceneMetaAtom,
 	openComposeToolAtom
 } from '../../lib/stores/publisher-config-store'
@@ -183,6 +185,8 @@ const PublisherPage = () => {
 	})
 
 	const setFailedEnvironmentFiles = useSetAtom(failedEnvironmentFilesAtom)
+	const currentSceneId = useAtomValue(currentSceneIdAtom)
+	const setOpeningFramed = useSetAtom(openingFramedAtom)
 
 	const handleInteractionEvent = useCallback(
 		(event: ViewerInteractionEvent) => {
@@ -201,9 +205,19 @@ const PublisherPage = () => {
 			} else if (event.type === 'environment_loaded') {
 				setFailedEnvironmentFiles(null)
 			}
+			if (event.type === 'initial_framing_completed') {
+				setOpeningFramed({ sceneId: currentSceneId, file })
+			}
 			captureOpeningView(event)
 		},
-		[captureOpeningView, setFailedEnvironmentFiles, setSelectedCameraId]
+		[
+			captureOpeningView,
+			currentSceneId,
+			file,
+			setFailedEnvironmentFiles,
+			setOpeningFramed,
+			setSelectedCameraId
+		]
 	)
 
 	/**

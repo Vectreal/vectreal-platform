@@ -26,6 +26,7 @@ import { buildPublishSidebarViewModel } from './sidebars/publish-sidebar/publish
 import { ToolSidebar } from './sidebars/tool-sidebar'
 import { useSceneSizeInitializer } from './sidebars/use-scene-size-initializer'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
+import { useFirstOpenFill } from '../../hooks/scene-loader/use-first-open-fill'
 import { useOpenExampleScene } from '../../hooks/scene-loader/use-open-example-scene'
 import { useImgTo3dGeneration } from '../../hooks/use-img-to-3d-generation'
 import { useLocationChangeState } from '../../hooks/use-location-change-state'
@@ -244,6 +245,8 @@ const OverlayControls = ({
 		onRequireAuth: handleRequireAuthForSave,
 		saveSceneSettings
 	})
+	// A scene an agent saved has no thumbnail or bake until a browser makes them.
+	useFirstOpenFill({ saveSceneSettings, saveAvailability, saveLocationTarget })
 
 	const publishSidebarViewModel = useMemo(
 		() =>

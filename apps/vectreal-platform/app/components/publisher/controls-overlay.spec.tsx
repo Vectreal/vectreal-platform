@@ -121,6 +121,9 @@ vi.mock('../../hooks/use-optimization-drawer-flow', () => ({
 vi.mock('../../hooks/use-location-change-state', () => ({
 	useLocationChangeState: () => ({ hasUnsavedLocationChange: false })
 }))
+vi.mock('../../hooks/scene-loader/use-first-open-fill', () => ({
+	useFirstOpenFill: vi.fn()
+}))
 
 const loaderData: PublisherLoaderData = {
 	isMobileRequest: false,
