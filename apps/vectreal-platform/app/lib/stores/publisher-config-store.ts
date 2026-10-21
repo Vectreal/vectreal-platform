@@ -20,6 +20,7 @@ import type {
 } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type { SceneSettings } from '@vctrl/core'
+import type { ModelFile } from '@vctrl/hooks/use-load-model'
 
 /**
  * Publisher UI preferences. Deliberately holds no load lifecycle: whether a
@@ -57,6 +58,16 @@ const lastSavedSceneMetaAtom = atom<SceneMetaState | null>(null)
 // its actions target the just-saved scene during the window before the route
 // param catches up, rather than triggering a second save.
 const lastSavedSceneIdAtom = atom<string | null>(null)
+
+// The scene and model whose opening frame the viewer has settled on, as it
+// reports with `initial_framing_completed`. The first-open fill waits for it:
+// before then a thumbnail capture would paint a frame the scene never opens
+// into. The model is kept because a previous scene's model can still frame
+// after the route has moved on.
+const openingFramedAtom = atom<{
+	sceneId: string | null
+	file: ModelFile | null
+} | null>(null)
 
 // The scene the publisher is editing. Seeded from the route and cleared when a
 // dropped file starts a new unsaved scene, which is what keeps first-save
@@ -293,6 +304,7 @@ export {
 	lastSavedSettingsAtom,
 	lastSavedSceneMetaAtom,
 	lastSavedSceneIdAtom,
+	openingFramedAtom,
 	processInitialState,
 	sceneMetaInitialState
 }
