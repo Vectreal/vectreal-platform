@@ -2,8 +2,10 @@ import { VectrealApiError, type VectrealClient } from '@vctrl/sdk'
 import { describe, expect, it, vi } from 'vitest'
 
 import { UsageError } from '../errors'
+import { corners, glbOf, meshDocument } from '../test-support'
 import { parseDocPages, readDoc, searchDocPages, searchDocs } from './docs'
 import { OPERATIONS, type Operation, type OperationContext } from './index'
+import { readModelInNode } from './publish-export'
 
 const GLB = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0])
 const EXPORTED = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 9])
@@ -22,6 +24,9 @@ function fakeContext(overrides: Partial<OperationContext> = {}) {
 		createScene: vi.fn(async () => ({ scene: { id: 's1' } })),
 		publishScene: vi.fn(async () => ({ publication: { status: 'published' } })),
 		getSceneEmbed: vi.fn(async () => embed),
+		getSceneSettings: vi.fn(async () => ({
+			settings: { normalization: { enabled: true, minSize: 0.5, maxSize: 5 } }
+		})),
 		createEmbedKey: vi.fn(async () => ({ embedKey: { id: 'k-new' } })),
 		setAllowedDomains: vi.fn(
 			async (_project: string, { domains }: { domains: string[] }) => ({
@@ -42,6 +47,7 @@ function fakeContext(overrides: Partial<OperationContext> = {}) {
 			return bytes
 		}),
 		exportForPublish: vi.fn(async () => EXPORTED),
+		readModel: readModelInNode,
 		...overrides
 	}
 	return { context, client, files }
@@ -110,6 +116,48 @@ describe('create_scene_from_file', () => {
 			call('create_scene_from_file', { path: 'chair.gltf' }, context)
 		).rejects.toThrow(/not a GLB/)
 		expect(client.createScene).not.toHaveBeenCalled()
+	})
+})
+
+describe('describe_model', () => {
+	it("reads a local GLB without signing in, and applies a named scene's normalization", async () => {
+		const { context, client, files } = fakeContext()
+		// 20 units tall: past the 5-unit cap, so normalization changes the scale.
+		const tower = await glbOf(
+			meshDocument(corners([0, 0, 0], [1, 20, 1])).document
+		)
+		files.set('/work/models/tower.glb', tower)
+
+		const plain = (await call(
+			'describe_model',
+			{ path: 'models/tower.glb' },
+			context
+		)) as { file: string; bytes: number; viewer: { scale: number } }
+		expect(plain).toMatchObject({
+			file: '/work/models/tower.glb',
+			bytes: tower.byteLength,
+			viewer: { scale: 1, normalization: false }
+		})
+		expect(client.getSceneSettings).not.toHaveBeenCalled()
+
+		const scaled = (await call(
+			'describe_model',
+			{ path: 'models/tower.glb', sceneId: 's1' },
+			context
+		)) as { viewer: { scale: number; normalization: boolean } }
+		expect(client.getSceneSettings).toHaveBeenCalledWith('s1')
+		expect(scaled.viewer.normalization).toBe(true)
+		expect(scaled.viewer.scale).toBeLessThan(1)
+	})
+
+	it('refuses a file that is not a GLB, and is a read', async () => {
+		const { context, files } = fakeContext()
+		files.set('/work/models/chair.obj', new TextEncoder().encode('v 0 0 0'))
+
+		await expect(
+			call('describe_model', { path: 'models/chair.obj' }, context)
+		).rejects.toThrow(UsageError)
+		expect(operation('describe_model').readOnly).toBe(true)
 	})
 })
 

@@ -2,6 +2,7 @@ import { readDoc, searchDocs } from './docs'
 import {
 	createProject,
 	createSceneFromFile,
+	describeModel,
 	getEmbedSnippet,
 	getSceneSettings,
 	listProjects,
@@ -23,6 +24,7 @@ export const OPERATIONS = [
 	createProject,
 	listScenes,
 	createSceneFromFile,
+	describeModel,
 	getSceneSettings,
 	updateSceneSettings,
 	publishScene,

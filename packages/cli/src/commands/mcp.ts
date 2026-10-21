@@ -63,7 +63,7 @@ function trustedLinkOrigin(
 export function mcpOperationContext(
 	context: CliContext,
 	options: GlobalOptions,
-	exportForPublish: OperationContext['exportForPublish']
+	codecs: Pick<OperationContext, 'exportForPublish' | 'readModel'>
 ): OperationContext {
 	const projectDir = context.env.CLAUDE_PROJECT_DIR || context.cwd
 	const link = readProjectLink(projectDir)
@@ -78,7 +78,7 @@ export function mcpOperationContext(
 		projectDir,
 		fetch: context.fetch,
 		readFile: async (path) => readFile(path),
-		exportForPublish
+		...codecs
 	}
 }
 
@@ -89,11 +89,14 @@ export async function serveMcp(
 ): Promise<number> {
 	routeConsoleToStderr(console)
 	// Loaded after the reroute: Emscripten binds console.log when its module loads.
-	const { exportForPublishInNode } =
+	const { exportForPublishInNode, readModelInNode } =
 		await import('../operations/publish-export')
 	const server = createVectrealMcpServer(
 		OPERATIONS,
-		mcpOperationContext(context, options, exportForPublishInNode),
+		mcpOperationContext(context, options, {
+			exportForPublish: exportForPublishInNode,
+			readModel: readModelInNode
+		}),
 		VERSION
 	)
 	const closed = new Promise<void>((resolve) => {

@@ -32,6 +32,7 @@ The origin is `--origin`, then `VECTREAL_ORIGIN`, then the last one signed in to
 | `search_docs`, `read_doc` | Search and read the Vectreal docs. No sign-in needed. |
 | `whoami`, `list_projects`, `create_project`, `list_scenes` | Who the session is, and the organization's projects and scenes. |
 | `create_scene_from_file` | Uploads a local GLB as a draft scene, as it is. |
+| `describe_model` | A local GLB's size, meshes, materials and animation clips, and where the viewer places it, without rendering it. |
 | `get_scene_settings`, `update_scene_settings` | Read every settings section; change environment, controls, bounds, shadows and presentation. |
 | `publish_scene`, `unpublish_scene` | Compress a local GLB as the publisher does (Draco, KTX2) and publish it; take a scene offline. |
 | `get_embed_snippet` | The snippet and preview URL for a published scene, creating an embed key and allowing domains when asked. |

@@ -49,7 +49,12 @@ describe('mcpOperationContext', () => {
 		launch: { command: 'node', args: [], env: {} },
 		...overrides
 	})
-	const exportForPublish = async (glb: Uint8Array) => glb
+	const codecs = {
+		exportForPublish: async (glb: Uint8Array) => glb,
+		readModel: async () => {
+			throw new Error('not read here')
+		}
+	}
 
 	const signedIn = (context: CliContext, origin: string) =>
 		saveSession(context.store, origin, {
@@ -65,11 +70,7 @@ describe('mcpOperationContext', () => {
 		const context = cliContext({ env: { CLAUDE_PROJECT_DIR: project } })
 		signedIn(context, 'http://localhost:4200')
 
-		const operations = mcpOperationContext(
-			context,
-			{ json: false },
-			exportForPublish
-		)
+		const operations = mcpOperationContext(context, { json: false }, codecs)
 
 		expect(operations).toMatchObject({
 			projectDir: project,
@@ -82,11 +83,7 @@ describe('mcpOperationContext', () => {
 		const context = cliContext({ cwd: linkedDir('http://localhost:4200/') })
 		signedIn(context, 'http://localhost:4200')
 
-		const operations = mcpOperationContext(
-			context,
-			{ json: false },
-			exportForPublish
-		)
+		const operations = mcpOperationContext(context, { json: false }, codecs)
 
 		expect(operations.origin).toBe('http://localhost:4200')
 		expect(operations.defaultProjectId).toBe('p-linked')
@@ -95,11 +92,7 @@ describe('mcpOperationContext', () => {
 	it('ignores a link to an origin with no session here', () => {
 		const context = cliContext({ cwd: linkedDir('https://elsewhere.example') })
 
-		const operations = mcpOperationContext(
-			context,
-			{ json: false },
-			exportForPublish
-		)
+		const operations = mcpOperationContext(context, { json: false }, codecs)
 
 		expect(operations.origin).toBe('https://vectreal.com')
 		expect(operations.defaultProjectId).toBeUndefined()
@@ -109,11 +102,7 @@ describe('mcpOperationContext', () => {
 		const context = cliContext({ cwd: linkedDir('http://evil.example') })
 		signedIn(context, 'http://evil.example')
 
-		const operations = mcpOperationContext(
-			context,
-			{ json: false },
-			exportForPublish
-		)
+		const operations = mcpOperationContext(context, { json: false }, codecs)
 
 		expect(operations.origin).toBe('https://vectreal.com')
 		expect(operations.defaultProjectId).toBeUndefined()
@@ -147,7 +136,7 @@ describe('mcpOperationContext', () => {
 			const operations = mcpOperationContext(
 				context,
 				{ json: false, ...named },
-				exportForPublish
+				codecs
 			)
 
 			expect(operations.origin).toBe(expected)
@@ -162,11 +151,7 @@ describe('mcpOperationContext', () => {
 			defaultOrigin: 'https://saved.vectreal.test'
 		})
 
-		const operations = mcpOperationContext(
-			context,
-			{ json: false },
-			exportForPublish
-		)
+		const operations = mcpOperationContext(context, { json: false }, codecs)
 
 		expect(operations.origin).toBe('http://localhost:4200')
 		expect(operations.defaultProjectId).toBe('p-linked')
@@ -180,11 +165,7 @@ describe('mcpOperationContext', () => {
 			defaultOrigin: 'https://saved.vectreal.test'
 		})
 
-		const operations = mcpOperationContext(
-			context,
-			{ json: false },
-			exportForPublish
-		)
+		const operations = mcpOperationContext(context, { json: false }, codecs)
 
 		expect(operations.origin).toBe('https://saved.vectreal.test')
 		expect(operations.defaultProjectId).toBeUndefined()
@@ -194,7 +175,7 @@ describe('mcpOperationContext', () => {
 		const operations = mcpOperationContext(
 			cliContext(),
 			{ json: false },
-			exportForPublish
+			codecs
 		)
 
 		expect(operations.origin).toBe('https://vectreal.com')

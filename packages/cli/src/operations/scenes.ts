@@ -9,6 +9,7 @@ import {
 import { z } from 'zod'
 
 import { UsageError } from '../errors'
+import { describeDocument } from './describe-model'
 import { defineOperation, type OperationContext, projectFor } from './operation'
 
 const projectId = z
@@ -106,6 +107,35 @@ export const createSceneFromFile = defineOperation({
 			name,
 			file: blobOf(bytes)
 		})
+	}
+})
+
+export const describeModel = defineOperation({
+	name: 'describe_model',
+	title: 'Describe a model',
+	description:
+		"A local GLB's size, meshes, materials and animation clips, read from the file without rendering it. `viewer` gives the scale and bounds where the viewer places the model (centered on x and z, resting on y = 0), the space hotspots and cameras use; pass sceneId to apply that scene's normalization, which is otherwise off.",
+	input: z.object({
+		path: filePath,
+		sceneId: sceneId
+			.optional()
+			.describe(
+				'A scene made from this file, whose normalization the viewer applies.'
+			)
+	}),
+	readOnly: true,
+	destructive: false,
+	run: async (input, context) => {
+		const { absolute, bytes } = await readGlb(input.path, context)
+		const normalization = input.sceneId
+			? (await context.client.getSceneSettings(input.sceneId)).settings
+					.normalization
+			: undefined
+		return {
+			file: absolute,
+			bytes: bytes.byteLength,
+			...describeDocument(await context.readModel(bytes), normalization)
+		}
 	}
 })
 
