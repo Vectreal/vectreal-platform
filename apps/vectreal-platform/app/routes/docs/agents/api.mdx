@@ -1,0 +1,109 @@
+# API Reference
+
+The HTTP API behind the MCP tools, at `https://vectreal.com/api/v1`. It covers what an agent needs to put a model on a page: projects, scenes, settings, publishing, embed keys and allowed domains.
+
+---
+
+## Authentication
+
+Every request carries an OAuth access token:
+
+```http
+Authorization: Bearer <access token>
+```
+
+Tokens come from Vectreal's OAuth sign-in, where the user approves the agent on the consent page for one organization and a set of scopes. The [CLI](/docs/agents/cli) is the client that signs in today: `vectreal login` runs the flow and keeps the session. A request that also carries a Vectreal session cookie is refused, so a browser cannot be made to call the API with its own sign-in.
+
+The user can revoke an approval under **Connected agents** in the dashboard, which signs that agent out at once.
+
+## Scopes
+
+| Scope | Lets the agent |
+|---|---|
+| `projects:read` | See projects, folders, scenes and their settings. Always granted. |
+| `projects:write` | Create projects, folders and scenes (uploading a GLB as a new scene is this), and rename or move them. |
+| `scenes:write` | Change scene settings. |
+| `scenes:publish` | Publish scenes and take them offline again. |
+| `embed:manage` | Create embed keys and edit the domains they work on. |
+
+No scope can delete anything, or touch billing, members or organization settings. A scope never lets an agent do more than the user's role in the organization allows: both have to agree.
+
+## Endpoints
+
+| Method | Path | Scope | Does |
+|---|---|---|---|
+| `GET` | `/api/v1/me` | any | The user, the organization and role, the plan, and the granted scopes |
+| `GET` | `/api/v1/projects` | `projects:read` | The organization's projects |
+| `POST` | `/api/v1/projects` | `projects:write` | Creates a project: `{ "name": "..." }` |
+| `GET` | `/api/v1/projects/{projectId}/scenes` | `projects:read` | A project's scenes, the most recently edited first |
+| `POST` | `/api/v1/projects/{projectId}/scenes` | `projects:write` | Creates a draft scene from a GLB: multipart `file` and `name` |
+| `GET` | `/api/v1/projects/{projectId}/embed-keys` | `embed:manage` | The project's embed keys |
+| `POST` | `/api/v1/projects/{projectId}/embed-keys` | `embed:manage` | Creates an embed key |
+| `GET` | `/api/v1/projects/{projectId}/allowed-domains` | `embed:manage` | The domains the project's embeds work on |
+| `PUT` | `/api/v1/projects/{projectId}/allowed-domains` | `embed:manage` | Replaces that list: `{ "domains": ["..."] }` |
+| `GET` | `/api/v1/scenes/{sceneId}/settings` | `projects:read` | Every settings section, defaults filled in |
+| `PATCH` | `/api/v1/scenes/{sceneId}/settings` | `scenes:write` | Replaces the environment, controls, bounds, shadows or presentation sections sent |
+| `POST` | `/api/v1/scenes/{sceneId}/publication` | `scenes:publish` | Publishes the GLB sent as multipart `file`, stored as sent: compress it first, as `publish_scene` does |
+| `DELETE` | `/api/v1/scenes/{sceneId}/publication` | `scenes:publish` | Takes the scene offline |
+| `GET` | `/api/v1/scenes/{sceneId}/embed` | `embed:manage` | The iframe snippet and preview URL for a published scene |
+| `DELETE` | `/api/v1/session` | any | Ends this session. The approval stays until the user revokes it |
+| `GET` | `/api/v1/cli/client` | none | The CLI's OAuth client and authorization server. Needs no token |
+
+A request the approval lacks the scope for is refused with `403` before any id is looked at. Past that, a scene or project the agent cannot see answers `404`, never `403`, so ids cannot be probed.
+
+A settings change reaches live embeds at once, as a save in the publisher does.
+
+## Responses
+
+A success is wrapped in an envelope:
+
+```json
+{ "success": true, "data": { "projects": [] } }
+```
+
+A refusal carries a message and a stable `code` to branch on:
+
+```json
+{ "success": false, "error": "This agent was not granted scenes:publish", "code": "insufficient_scope", "scope": "scenes:publish" }
+```
+
+## Idempotency
+
+Every `POST`, `PUT`, `PATCH` and `DELETE` above, except `DELETE /api/v1/session`, needs an `Idempotency-Key` header: a string of up to 255 printable ASCII characters, unique to the change you mean.
+
+```http
+Idempotency-Key: "8f14e45f-ceea-467f-a0e6-1a2b3c4d5e6f"
+```
+
+- **Missing or malformed key:** `400`. Nothing runs.
+- **A new key:** the request runs, and its outcome is kept for 24 hours.
+- **The same key with the same request:** the kept outcome again, success or refusal, with `Idempotent-Replayed: true`. Retrying after a timeout is always safe.
+- **The same key while the first request still runs:** `409` with `idempotency_in_progress`. Retry shortly.
+- **The same key with a different request:** `422` with `idempotency_key_reused`. Use a new key.
+
+A server error releases the key, so a retry with the same key runs again. A refusal for a plan limit is an outcome, so it is replayed: after upgrading, retry with a new key.
+
+## Rate limits
+
+Each approval has a request budget. Past it, the API answers `429` with `rate_limited` and a `Retry-After` header in seconds.
+
+## Error codes
+
+| Code | Means |
+|---|---|
+| `invalid_token` | The token is missing, invalid, expired or revoked. Sign in again. |
+| `invalid_request` | The request is malformed: a missing field, a bad header, or a token sent together with a session cookie. |
+| `insufficient_scope` | The approval lacks a scope, which `scope` names. Ask the user to approve it. |
+| `rate_limited` | Too many requests. Wait `Retry-After` seconds. |
+| `not_found` | The resource does not exist, or the agent cannot see it. |
+| `method_not_allowed` | The route does not answer this method. |
+| `insufficient_role` | The user's role in the organization does not allow this, whatever the scope. |
+| `quota_exceeded` | A plan limit. `quota` and `upgradeUrl` say which and where to raise it. |
+| `insufficient_plan` | The plan does not include this. `upgradeUrl` says where to change plans. |
+| `payment_required` | The organization's billing needs attention before this works again. |
+| `scene_not_published` | The scene is a draft. Publish it before asking for its embed. |
+| `scene_busy` | Someone is saving the scene right now, in the publisher or another agent. Retry shortly. |
+| `embed_key_required` | The project has no embed key that works. Create one first. |
+| `embed_key_unusable` | The embed key asked for is revoked or expired. Pick or create another. |
+| `idempotency_key_reused` | This `Idempotency-Key` was first sent with a different request. Use a new one. |
+| `idempotency_in_progress` | The first request with this `Idempotency-Key` is still running. Retry shortly. |

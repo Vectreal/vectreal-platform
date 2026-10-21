@@ -1,4 +1,5 @@
 import {
+	AGENT_ACCESS_DESCRIPTION,
 	OPEN_SOURCE_PACKAGES,
 	PLAN_OFFER_DESCRIPTIONS,
 	PLATFORM_SHORT_DESCRIPTION,
@@ -83,6 +84,11 @@ export function loader() {
 		'## Pricing',
 		...planLines,
 		`- See [/pricing](${origin}/pricing) for current rates.`,
+		'',
+		'## For AI Agents',
+		AGENT_ACCESS_DESCRIPTION,
+		`- [Agents and MCP](${origin}${markdownTwinPath('/docs/agents')}): Set up the MCP server in Claude Code, Cursor or VS Code`,
+		`- [API Reference](${origin}${markdownTwinPath('/docs/agents/api')}): Endpoints, scopes, Idempotency-Key policy and error codes`,
 		'',
 		'## Open-Source Packages',
 		...packageLines,

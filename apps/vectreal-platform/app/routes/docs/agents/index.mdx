@@ -1,0 +1,112 @@
+# Agents and MCP
+
+Let an AI agent publish 3D models for you. The Vectreal MCP server gives agents such as Claude Code, Cursor and VS Code a set of tools: upload a GLB as a scene, read and change its look, publish it compressed the way the publisher does, and get the embed snippet for a page.
+
+---
+
+## How it works
+
+The server is part of the Vectreal CLI, `@vctrl/cli`. It runs on your machine and talks to your agent over stdio. It signs in with the session the CLI keeps after you approve it in the browser, so every call acts as you, in the organization you chose, with only the permissions you granted.
+
+You need Node.js 22.22 or later.
+
+## Step 1 - Sign in
+
+```bash
+npx -y @vctrl/cli login
+```
+
+Your browser opens Vectreal's consent page. Pick the organization the agent works in and what it may do, then approve. The session is stored in your operating system's keychain, or, where there is none, in a file only you can read. It shows up under **Connected agents** in the dashboard, where you can revoke it at any time.
+
+Run this once per machine. To link a directory to a project, so the tools use it when a call names none, run this in that directory:
+
+```bash
+npx -y @vctrl/cli init --project <project id>
+```
+
+## Step 2 - Add the server to your agent
+
+### Claude Code
+
+```bash
+claude mcp add vectreal -- npx -y @vctrl/cli mcp
+```
+
+Or install the Vectreal plugin, which adds the server and a skill that walks the agent through publishing a model:
+
+```bash
+claude plugin marketplace add Vectreal/vectreal-platform
+claude plugin install vectreal@vectreal
+```
+
+### Cursor
+
+[Add Vectreal to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=vectreal&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkB2Y3RybC9jbGkiLCJtY3AiXX0=) opens Cursor and installs the server.
+
+Or add it to `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "vectreal": {
+      "command": "npx",
+      "args": ["-y", "@vctrl/cli", "mcp"]
+    }
+  }
+}
+```
+
+### VS Code
+
+```bash
+code --add-mcp '{"name":"vectreal","type":"stdio","command":"npx","args":["-y","@vctrl/cli","mcp"]}'
+```
+
+Or add it to `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "vectreal": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@vctrl/cli", "mcp"]
+    }
+  }
+}
+```
+
+### Any other MCP client
+
+Run `npx -y @vctrl/cli mcp` as a stdio server. The server is also listed in the MCP Registry as `io.github.Vectreal/vectreal`.
+
+## Tools
+
+| Tool | What it does |
+|---|---|
+| `search_docs`, `read_doc` | Search and read these docs. No sign-in needed. |
+| `whoami` | The signed-in user, the organization, its plan and the granted scopes. |
+| `list_projects`, `create_project` | The organization's projects, and a new one. |
+| `list_scenes` | A project's scenes, the most recently edited first. |
+| `create_scene_from_file` | Uploads a local GLB as a new draft scene, stored as it is. |
+| `describe_model` | A local GLB's size, meshes, materials and animation clips, and where the viewer places it. Nothing is rendered or uploaded. |
+| `get_scene_settings`, `update_scene_settings` | Read every settings section; change the environment, controls, bounds, shadows and presentation. |
+| `publish_scene` | Compresses the GLB as the publisher does (Draco geometry, KTX2 textures) and publishes it. |
+| `unpublish_scene` | Takes a scene offline. |
+| `get_embed_snippet` | The iframe snippet and preview URL for a published scene. It creates an embed key when the project has none, and adds the domains you name to the allowed list. |
+
+Tools that take a `projectId` use the linked project when the call names none.
+
+## What agents cannot do
+
+- **Delete anything.** Projects, folders and scenes are deleted in the dashboard only.
+- **Billing, members and organization settings.** None of these are open to agents.
+- **Hotspots, cameras, animation and normalization.** An agent can read these settings, but changes go through the publisher for now.
+- **Thumbnails and baked shadows.** An agent's machine renders nothing, so a scene it creates has neither until you first open it in the publisher, which fills both automatically.
+
+What an agent may do is also limited by your role in the organization: an agent never does more than you could do yourself.
+
+## Next
+
+- [CLI reference](/docs/agents/cli): every command and option.
+- [API reference](/docs/agents/api): the HTTP API the tools call, for building your own integration.

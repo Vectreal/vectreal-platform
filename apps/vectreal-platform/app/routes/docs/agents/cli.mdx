@@ -1,0 +1,48 @@
+# CLI Reference
+
+`@vctrl/cli` signs you in to Vectreal, links a directory to a project, and serves the MCP tools to an agent.
+
+---
+
+## Install
+
+Run it with `npx`, or install it globally to get the `vectreal` command:
+
+```bash
+npx -y @vctrl/cli <command>
+npm install -g @vctrl/cli
+```
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `vectreal login` | Signs in through the browser and keeps the session in the operating system's keychain, or in a file only you can read where there is none. |
+| `vectreal logout` | Ends the session on the server and forgets it on this machine. The approval stays under **Connected agents** until you revoke it. |
+| `vectreal whoami` | Shows the user, organization, role and scopes the session acts as. |
+| `vectreal init --project <id>` | Links this directory to an existing project, in `.vectreal/project.json`. |
+| `vectreal init --create <name>` | Creates a project and links this directory to it. |
+| `vectreal mcp` | Serves the Vectreal tools to an agent over stdio. See [Agents and MCP](/docs/agents). |
+| `vectreal mcp install` | Adds that server to this directory's `.mcp.json`, keeping any other servers there. |
+
+## Options
+
+| Option | Meaning |
+|---|---|
+| `--origin <url>` | The Vectreal server. Defaults to the last one you signed in to, else `https://vectreal.com`. `VECTREAL_ORIGIN` sets it too. |
+| `--json` | Prints the result as JSON. |
+| `--no-browser` | `login` only: prints the sign-in URL instead of opening a browser. |
+| `-h`, `--help` | Shows the help. |
+
+## The linked project
+
+`vectreal init` writes the project's id and the server's origin to `.vectreal/project.json`. The MCP tools use that project when a call names none. The link's origin is used only when it is a valid URL and you are signed in to it, so a link that arrives with a cloned repository cannot point the tools at another server.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Done |
+| `1` | Failed |
+| `2` | Wrong usage |
+| `3` | Not signed in: run `vectreal login` |

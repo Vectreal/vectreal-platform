@@ -31,7 +31,12 @@ export function editOnGithubUrl(sourcePath: string): string {
 
 /** Top-level groupings shown in the sidebar. */
 export type DocCategory =
-	'getting-started' | 'guides' | 'packages' | 'self-hosting' | 'contributing'
+	| 'getting-started'
+	| 'guides'
+	| 'packages'
+	| 'agents'
+	| 'self-hosting'
+	| 'contributing'
 
 export interface DocPage {
 	/**
@@ -65,6 +70,7 @@ export const DOC_CATEGORY_LABELS: Record<DocCategory, string> = {
 	'getting-started': 'Getting Started',
 	guides: 'Guides',
 	packages: 'Packages and SDK',
+	agents: 'Agents and API',
 	'self-hosting': 'Run It Yourself',
 	contributing: 'Contributing'
 }
@@ -103,8 +109,8 @@ export const DOC_AUDIENCES: readonly {
 		id: 'code',
 		label: 'For developers',
 		description:
-			'Packages on npm, the embed SDK, and running Vectreal yourself.',
-		categories: ['packages', 'self-hosting', 'contributing']
+			'Packages on npm, the embed SDK, agents and the API, and running Vectreal yourself.',
+		categories: ['packages', 'agents', 'self-hosting', 'contributing']
 	}
 ]
 
@@ -261,6 +267,40 @@ export const docsPages: DocPage[] = [
 		sourcePath:
 			'apps/vectreal-platform/app/routes/docs/self-hosting/deployment.mdx',
 		category: 'self-hosting',
+		order: 2,
+		version: 'latest'
+	},
+
+	// ──────────────────────────────────────────────────────────────────────────
+	// Agents and API
+	// ──────────────────────────────────────────────────────────────────────────
+	{
+		slug: 'agents',
+		title: 'Agents and MCP',
+		description:
+			'Let Claude Code, Cursor or VS Code upload, publish and embed your 3D models through the Vectreal MCP server.',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/agents/index.mdx',
+		category: 'agents',
+		order: 0,
+		version: 'latest'
+	},
+	{
+		slug: 'agents/cli',
+		title: 'CLI Reference',
+		description:
+			'Sign in, link a directory to a project, and serve the MCP tools with @vctrl/cli.',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/agents/cli.mdx',
+		category: 'agents',
+		order: 1,
+		version: 'latest'
+	},
+	{
+		slug: 'agents/api',
+		title: 'API Reference',
+		description:
+			'The /api/v1 endpoints, scopes, Idempotency-Key policy and error codes behind the MCP tools.',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/agents/api.mdx',
+		category: 'agents',
 		order: 2,
 		version: 'latest'
 	},

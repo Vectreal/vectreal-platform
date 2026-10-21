@@ -1,0 +1,10 @@
+{
+	"name": "vectreal",
+	"displayName": "Vectreal",
+	"description": "Upload, publish and embed 3D models on any website: the Vectreal MCP server and a skill for the publishing flow.",
+	"author": { "name": "Vectreal", "url": "https://vectreal.com" },
+	"homepage": "https://vectreal.com/docs/agents",
+	"repository": "https://github.com/Vectreal/vectreal-platform",
+	"license": "AGPL-3.0-only",
+	"keywords": ["3d", "glb", "gltf", "embed", "mcp"]
+}
