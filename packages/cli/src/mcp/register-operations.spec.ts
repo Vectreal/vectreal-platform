@@ -43,7 +43,10 @@ async function connect(
 		projectDir: '/work',
 		fetch: fetchImpl,
 		readFile: async () => new Uint8Array(),
-		exportForPublish: async (glb) => glb
+		exportForPublish: async (glb) => glb,
+		readModel: async () => {
+			throw new Error('not read here')
+		}
 	}
 	const server = createVectrealMcpServer(OPERATIONS, context, '0.0.0')
 	const [clientSide, serverSide] = InMemoryTransport.createLinkedPair()

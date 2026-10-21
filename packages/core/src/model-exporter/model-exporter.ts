@@ -309,6 +309,19 @@ export class ModelExporter {
 	}
 
 	/**
+	 * A GLB as a Document, its Draco or meshopt geometry decoded, which in Node
+	 * needs `dracoModules`. The decoded extensions are taken off: left attached,
+	 * they would demand their encoders on write even where no codec applies.
+	 */
+	public async readGlbDocument(glb: Uint8Array): Promise<Document> {
+		await this.codecs.registerDecoders(readGlbExtensionsUsed(glb))
+		const document = await this.io.readBinary(glb)
+		stripDecodedDracoExtension(document)
+		stripDecodedMeshoptExtension(document)
+		return document
+	}
+
+	/**
 	 * A GLB as the GLB its scene is published as: the publisher's worker and an
 	 * agent's CLI both run this, so a scene published either way is encoded
 	 * alike. Draco or meshopt input is decoded first, which in Node needs
@@ -321,12 +334,7 @@ export class ModelExporter {
 		glb: Uint8Array,
 		{ ktx2, ...geometry }: GlbPublishOptions = {}
 	): Promise<GlbPublishResult> {
-		await this.codecs.registerDecoders(readGlbExtensionsUsed(glb))
-		const document = await this.io.readBinary(glb)
-		// Decoded on read; left attached, they would demand their encoders on
-		// write even where this export applies no codec.
-		stripDecodedDracoExtension(document)
-		stripDecodedMeshoptExtension(document)
+		const document = await this.readGlbDocument(glb)
 
 		let textures: Ktx2CompressionReport | undefined
 		const result = await this.exportDocumentGLBForPublish(document, {

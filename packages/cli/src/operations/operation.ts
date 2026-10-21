@@ -1,3 +1,4 @@
+import { type Document } from '@gltf-transform/core'
 import { type VectrealClient } from '@vctrl/sdk'
 import { type z } from 'zod'
 
@@ -24,6 +25,8 @@ export interface OperationContext {
 		glb: Uint8Array,
 		options: { draco: boolean; ktx2: boolean }
 	) => Promise<Uint8Array>
+	/** A GLB as a Document, its Draco or meshopt geometry decoded. */
+	readModel: (glb: Uint8Array) => Promise<Document>
 }
 
 /** One thing an agent can do, independent of how it is asked. */

@@ -716,6 +716,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@gltf-transform/core':
+        specifier: 'catalog:'
+        version: 4.4.2
       '@modelcontextprotocol/server':
         specifier: 2.3.1
         version: 2.3.1
@@ -731,10 +734,16 @@ importers:
       sharp:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@22.19.17)
+      three:
+        specifier: 'catalog:'
+        version: 0.185.1
       zod:
         specifier: 'catalog:'
         version: 4.4.3
     devDependencies:
+      '@gltf-transform/extensions':
+        specifier: 'catalog:'
+        version: 4.4.2
       '@modelcontextprotocol/client':
         specifier: 2.3.1
         version: 2.3.1

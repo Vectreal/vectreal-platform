@@ -5,14 +5,17 @@
 	"license": "AGPL-3.0-only",
 	"type": "module",
 	"dependencies": {
+		"@gltf-transform/core": "catalog:",
 		"@modelcontextprotocol/server": "2.3.1",
 		"@napi-rs/keyring": "^2.1.2",
 		"@vctrl/core": "workspace:*",
 		"@vctrl/sdk": "workspace:*",
 		"sharp": "^0.35.5",
+		"three": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@gltf-transform/extensions": "catalog:",
 		"@modelcontextprotocol/client": "2.3.1"
 	}
 }
