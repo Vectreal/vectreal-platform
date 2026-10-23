@@ -35,11 +35,12 @@ export const AGENT_SCOPE_DESCRIPTIONS: Record<
 	},
 	'projects:write': {
 		label: 'Create and organize',
-		description: 'Create projects, folders and scenes, and rename or move them.'
+		description:
+			'Create projects, folders and scenes, including uploading a model as a new scene, and rename or move them.'
 	},
 	'scenes:write': {
-		label: 'Edit scenes',
-		description: 'Upload models and change scene settings.'
+		label: 'Edit scene settings',
+		description: 'Change the settings of existing scenes.'
 	},
 	'scenes:publish': {
 		label: 'Publish scenes',
