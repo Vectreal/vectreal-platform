@@ -1,13 +1,13 @@
 /**
  * How often the occlusion pass runs, in seconds.
  *
- * Not every frame. Each test is a recursive raycast over the whole model, and
- * there is no BVH in this stack, so per-frame testing multiplies a full triangle
- * traversal by the number of hotspots for the entire duration of any orbit. At
- * 15Hz the marker's own 300ms opacity transition still covers the step, and the
- * pass keeps running while the camera is still, which a camera-motion trigger
- * does not: an animated model can swing in front of a hotspot with nobody
- * touching the controls.
+ * Not every frame. Each test walks the whole model, one bounds tree per mesh
+ * (see `isRayBlocked`), and per-frame testing would multiply that walk by the
+ * number of hotspots for the entire duration of any orbit. At 15Hz the
+ * marker's own 300ms opacity transition still covers the step, and the pass
+ * keeps running while the camera is still, which a camera-motion trigger does
+ * not: an animated model can swing in front of a hotspot with nobody touching
+ * the controls.
  */
 export const OCCLUSION_INTERVAL_SECONDS = 1 / 15
 

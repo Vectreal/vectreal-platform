@@ -363,6 +363,20 @@ export default defineConfig(({ command }) => {
 							*/
 							if (id.endsWith('/packages/viewer/src/load-src.ts')) return
 
+							/*
+							  The hotspot occlusion query, also reached only through
+							  `import()`, and the only importer of three-mesh-bvh.
+							  Bucketed with the viewer it put about 13KB gz on every
+							  embed, hotspots or not.
+							*/
+							if (
+								id.endsWith(
+									'/packages/viewer/src/components/scene/occlusion-raycast.ts'
+								)
+							) {
+								return
+							}
+
 							return 'vendor-vectreal-viewer'
 						}
 					}
