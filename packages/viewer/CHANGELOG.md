@@ -1,5 +1,52 @@
 # Changelog
 
+## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.1.0...viewer-v3.0.0) (2026-10-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **viewer:** @vctrl/viewer's stylesheet now ships only `vv:`-prefixed utilities. A stylesheet that overrides a viewer class must name the prefixed one (`.vctrl-viewer .h-full` becomes `.vctrl-viewer .vv\:h-full`), or pass the class through `className`, which now wins over the viewer's own. A page that relied on the viewer's stylesheet for unprefixed utilities on its own markup must generate them itself.
+
+### Features
+
+* **publisher:** animation tool for the clips a model carries ([#987](https://github.com/Vectreal/vectreal-platform/issues/987)) ([4b7425d](https://github.com/Vectreal/vectreal-platform/commit/4b7425de0ef97b61729c301f1c80e7813987e190))
+* **publisher:** hold a hotspot's card open while its content is edited ([#1087](https://github.com/Vectreal/vectreal-platform/issues/1087)) ([be5b934](https://github.com/Vectreal/vectreal-platform/commit/be5b9344cfe93c3db5d04bb0694e431fe1a285e9))
+* **publisher:** let authors hide the camera switcher from the Camera tool ([#1021](https://github.com/Vectreal/vectreal-platform/issues/1021)) ([11ca4e3](https://github.com/Vectreal/vectreal-platform/commit/11ca4e3546ca2465ec6dae481ca1ada0c4fea32c))
+* **viewer:** draw a camera switcher when a scene has more than one camera ([#1019](https://github.com/Vectreal/vectreal-platform/issues/1019)) ([64f7925](https://github.com/Vectreal/vectreal-platform/commit/64f792523dc6681de697e93a5577d4baa81c315d))
+* **viewer:** give scenes a stage for the shadow to land on ([#1000](https://github.com/Vectreal/vectreal-platform/issues/1000)) ([2a03d3b](https://github.com/Vectreal/vectreal-platform/commit/2a03d3b1098779676a70079809401145b2e83733))
+* **viewer:** load a model from a URL with the src prop ([#1046](https://github.com/Vectreal/vectreal-platform/issues/1046)) ([a34a96f](https://github.com/Vectreal/vectreal-platform/commit/a34a96ffd2a2adf250dd157eb9fb51b49ebb61c4))
+* **viewer:** play a hotspot's linked clip once on activation ([#1113](https://github.com/Vectreal/vectreal-platform/issues/1113)) ([14d16ca](https://github.com/Vectreal/vectreal-platform/commit/14d16ca9ecc09ecf04b7ca683d2d8b8e10063826))
+* **viewer:** tell the host when the environment map falls back to the room ([#1114](https://github.com/Vectreal/vectreal-platform/issues/1114)) ([ac875ac](https://github.com/Vectreal/vectreal-platform/commit/ac875ac697b1de0c7dd581901130aa39adb3f6be))
+
+
+### Bug Fixes
+
+* five small catalogue fixes across the embed SDK, viewer and publisher ([#1024](https://github.com/Vectreal/vectreal-platform/issues/1024)) ([2ec80e9](https://github.com/Vectreal/vectreal-platform/commit/2ec80e960a83a9dc4730b7b746014ff586bb39b6))
+* **packages:** publish declarations that resolve once installed ([#1111](https://github.com/Vectreal/vectreal-platform/issues/1111)) ([55e57a1](https://github.com/Vectreal/vectreal-platform/commit/55e57a127b4360aa0bd7ad196f75d299963a7726))
+* **storybook:** stop injecting implicit actions into every on* prop ([#994](https://github.com/Vectreal/vectreal-platform/issues/994)) ([d83e393](https://github.com/Vectreal/vectreal-platform/commit/d83e393476a42aa7822d995acaa5b87533ddc6ea)), closes [#993](https://github.com/Vectreal/vectreal-platform/issues/993)
+* **viewer:** fit the clip planes to the shadow ground and light handle ([#1001](https://github.com/Vectreal/vectreal-platform/issues/1001)) ([713918b](https://github.com/Vectreal/vectreal-platform/commit/713918b79f77676fe30ed003d92e0f9d5a34c64f))
+* **viewer:** frame the model on first view, not the whole bounds group ([#998](https://github.com/Vectreal/vectreal-platform/issues/998)) ([cdd1620](https://github.com/Vectreal/vectreal-platform/commit/cdd1620850c8021d051a3cbea4590d510c88222c))
+* **viewer:** isolate the viewer so its controls never draw over the host page ([#1165](https://github.com/Vectreal/vectreal-platform/issues/1165)) ([b11a2c6](https://github.com/Vectreal/vectreal-platform/commit/b11a2c61f1deabc0aa5bb17a3dd22fd2aadf9a72))
+* **viewer:** keep the hotspot name label inside the canvas ([#1080](https://github.com/Vectreal/vectreal-platform/issues/1080)) ([0237ac1](https://github.com/Vectreal/vectreal-platform/commit/0237ac139dcafd68ac1e1e0bc720af1013395212))
+* **viewer:** own the accumulative shadow bake ([#984](https://github.com/Vectreal/vectreal-platform/issues/984)) ([c6f83f7](https://github.com/Vectreal/vectreal-platform/commit/c6f83f7e5613ba2c0f5516d1d10b37d44162a342)), closes [#980](https://github.com/Vectreal/vectreal-platform/issues/980) [#983](https://github.com/Vectreal/vectreal-platform/issues/983)
+* **viewer:** prefix the viewer's utilities so a host's classes win ([#1125](https://github.com/Vectreal/vectreal-platform/issues/1125)) ([ff6f722](https://github.com/Vectreal/vectreal-platform/commit/ff6f7229b56f5684831fc814bef30f785772694a))
+* **viewer:** render a capture of a pose-less camera from where the scene opened ([#1057](https://github.com/Vectreal/vectreal-platform/issues/1057)) ([b02664d](https://github.com/Vectreal/vectreal-platform/commit/b02664d80edeb79930a3fee448b22f5cdb0b6b08))
+* **viewer:** render a screenshot through its own camera, so a camera flight is never disturbed ([#1036](https://github.com/Vectreal/vectreal-platform/issues/1036)) ([c49a18c](https://github.com/Vectreal/vectreal-platform/commit/c49a18c0c7bc29870339aa35d4d3077ea2cde2ec))
+* **viewer:** take the host's typeface instead of naming DM Sans ([#1115](https://github.com/Vectreal/vectreal-platform/issues/1115)) ([5357eaf](https://github.com/Vectreal/vectreal-platform/commit/5357eaf44af30f8ba2ba84543c85bd4660dac877))
+
+
+### Performance Improvements
+
+* **viewer:** test hotspot occlusion against per-geometry bounds trees ([#1184](https://github.com/Vectreal/vectreal-platform/issues/1184)) ([4158728](https://github.com/Vectreal/vectreal-platform/commit/415872880a8ad89ac7fae53c3619f841374754c8))
+* **viewer:** warm the accumulate pass's history program with the scene ([#1112](https://github.com/Vectreal/vectreal-platform/issues/1112)) ([803051b](https://github.com/Vectreal/vectreal-platform/commit/803051beb142eaf97210e4a429940d15d4b3979c))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.0.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v2.0.0...viewer-v2.1.0) (2026-10-10)
 
 

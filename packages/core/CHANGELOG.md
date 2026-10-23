@@ -1,5 +1,31 @@
 # Changelog
 
+## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/core-v2.1.0...core-v3.0.0) (2026-10-23)
+
+
+### Features
+
+* **cli:** describe_model, a model's bounds, meshes, materials and clips where the viewer places it ([#1177](https://github.com/Vectreal/vectreal-platform/issues/1177)) ([3b8dc04](https://github.com/Vectreal/vectreal-platform/commit/3b8dc04e10aa2d206063c327c88ab00f46ae11dc))
+* **cli:** vectreal mcp, a stdio MCP server over one operations module ([#1174](https://github.com/Vectreal/vectreal-platform/issues/1174)) ([d476f1b](https://github.com/Vectreal/vectreal-platform/commit/d476f1b5d691d730539c121007eeadd488043c8d))
+* **core:** the publish export runs in Node.js with Draco and KTX2 ([#1156](https://github.com/Vectreal/vectreal-platform/issues/1156)) ([9d15473](https://github.com/Vectreal/vectreal-platform/commit/9d1547306e39dd37ed3559ab454d323f7bf68a05))
+* **hooks:** load a model from a URL ([#1045](https://github.com/Vectreal/vectreal-platform/issues/1045)) ([645fa06](https://github.com/Vectreal/vectreal-platform/commit/645fa06eb76999505afcdc6d9fbaac2c3eb1f68c))
+* **normalize:** place generated models at real size inside a 15 MB budget ([#1138](https://github.com/Vectreal/vectreal-platform/issues/1138)) ([367ec5a](https://github.com/Vectreal/vectreal-platform/commit/367ec5a91fe1c9b4bdfbecc0a25880d8f1065ddc))
+* **publisher:** let authors hide the way back from a hotspot view ([#1083](https://github.com/Vectreal/vectreal-platform/issues/1083)) ([0fd8f64](https://github.com/Vectreal/vectreal-platform/commit/0fd8f64406dd96c3fc9ffaba78885cec0f897a19))
+* **viewer:** draw a camera switcher when a scene has more than one camera ([#1019](https://github.com/Vectreal/vectreal-platform/issues/1019)) ([64f7925](https://github.com/Vectreal/vectreal-platform/commit/64f792523dc6681de697e93a5577d4baa81c315d))
+* **viewer:** give scenes a stage for the shadow to land on ([#1000](https://github.com/Vectreal/vectreal-platform/issues/1000)) ([2a03d3b](https://github.com/Vectreal/vectreal-platform/commit/2a03d3b1098779676a70079809401145b2e83733))
+* **viewer:** load a model from a URL with the src prop ([#1046](https://github.com/Vectreal/vectreal-platform/issues/1046)) ([a34a96f](https://github.com/Vectreal/vectreal-platform/commit/a34a96ffd2a2adf250dd157eb9fb51b49ebb61c4))
+* **viewer:** play a hotspot's linked clip once on activation ([#1113](https://github.com/Vectreal/vectreal-platform/issues/1113)) ([14d16ca](https://github.com/Vectreal/vectreal-platform/commit/14d16ca9ecc09ecf04b7ca683d2d8b8e10063826))
+
+
+### Bug Fixes
+
+* **core:** advance the optimizer's revision on every document commit ([#1037](https://github.com/Vectreal/vectreal-platform/issues/1037)) ([d40bb3a](https://github.com/Vectreal/vectreal-platform/commit/d40bb3a8061d7500f1843473e06554966e1ab8b7))
+* **core:** carry FBX and OBJ materials, images and alpha through conversion, and ignore Sketchfab's non-color vertex colors ([#1073](https://github.com/Vectreal/vectreal-platform/issues/1073)) ([675c748](https://github.com/Vectreal/vectreal-platform/commit/675c748bf0ec5a9fcea69c60e3334d724dfef954))
+* **core:** keep a texture's MIME type when naming it ([#1041](https://github.com/Vectreal/vectreal-platform/issues/1041)) ([907b8aa](https://github.com/Vectreal/vectreal-platform/commit/907b8aa59253828b98caf714f73d8dfd285d9085))
+* **core:** keep FBX animation, lights, cameras and up axis through conversion ([#982](https://github.com/Vectreal/vectreal-platform/issues/982)) ([07fa6f1](https://github.com/Vectreal/vectreal-platform/commit/07fa6f1aa9824761f572f22deaf2de9191feceae))
+* **hooks:** keep every settings field a flat scene payload carries ([#1096](https://github.com/Vectreal/vectreal-platform/issues/1096)) ([837dca9](https://github.com/Vectreal/vectreal-platform/commit/837dca903392bc5cc0ebf5e5f12f749955468ae5))
+* **packages:** publish declarations that resolve once installed ([#1111](https://github.com/Vectreal/vectreal-platform/issues/1111)) ([55e57a1](https://github.com/Vectreal/vectreal-platform/commit/55e57a127b4360aa0bd7ad196f75d299963a7726))
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/core-v2.0.0...core-v2.1.0) (2026-10-10)
 
 
