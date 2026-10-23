@@ -353,7 +353,7 @@ describe('a host can take the hotspot UI over', () => {
 	})
 
 	it('stops raycasting for an occlusion nobody can see', () => {
-		expect(layer).toContain('if (model && showMarkers) {')
+		expect(layer).toContain('if (model && showMarkers && isRayBlocked) {')
 	})
 
 	it('withholds the reveal handler rather than branching inside the marker', () => {

@@ -869,6 +869,9 @@ importers:
       three:
         specifier: 'catalog:'
         version: 0.185.1
+      three-mesh-bvh:
+        specifier: ^0.8.3
+        version: 0.8.3(three@0.185.1)
     devDependencies:
       '@shared/components':
         specifier: workspace:*
