@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v2.1.0...hooks-v3.0.0) (2026-10-23)
+
+
+### Features
+
+* **hooks:** load a model from a URL ([#1045](https://github.com/Vectreal/vectreal-platform/issues/1045)) ([645fa06](https://github.com/Vectreal/vectreal-platform/commit/645fa06eb76999505afcdc6d9fbaac2c3eb1f68c))
+
+
+### Bug Fixes
+
+* **core:** carry FBX and OBJ materials, images and alpha through conversion, and ignore Sketchfab's non-color vertex colors ([#1073](https://github.com/Vectreal/vectreal-platform/issues/1073)) ([675c748](https://github.com/Vectreal/vectreal-platform/commit/675c748bf0ec5a9fcea69c60e3334d724dfef954))
+* **hooks:** keep every settings field a flat scene payload carries ([#1096](https://github.com/Vectreal/vectreal-platform/issues/1096)) ([837dca9](https://github.com/Vectreal/vectreal-platform/commit/837dca903392bc5cc0ebf5e5f12f749955468ae5))
+* **hooks:** report optimizer failures instead of leaving state that contradicts them ([#1028](https://github.com/Vectreal/vectreal-platform/issues/1028)) ([0bf9d0a](https://github.com/Vectreal/vectreal-platform/commit/0bf9d0aa9e510dd9f46419e07dee0ea53f8dbf5f))
+* **packages:** publish declarations that resolve once installed ([#1111](https://github.com/Vectreal/vectreal-platform/issues/1111)) ([55e57a1](https://github.com/Vectreal/vectreal-platform/commit/55e57a127b4360aa0bd7ad196f75d299963a7726))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.0.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v2.0.0...hooks-v2.1.0) (2026-10-10)
 
 

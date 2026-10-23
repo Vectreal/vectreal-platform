@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v2.1.0...embed-v3.0.0) (2026-10-23)
+
+
+### Features
+
+* **viewer:** tell the host when the environment map falls back to the room ([#1114](https://github.com/Vectreal/vectreal-platform/issues/1114)) ([ac875ac](https://github.com/Vectreal/vectreal-platform/commit/ac875ac697b1de0c7dd581901130aa39adb3f6be))
+
+
+### Bug Fixes
+
+* five small catalogue fixes across the embed SDK, viewer and publisher ([#1024](https://github.com/Vectreal/vectreal-platform/issues/1024)) ([2ec80e9](https://github.com/Vectreal/vectreal-platform/commit/2ec80e960a83a9dc4730b7b746014ff586bb39b6))
+* **packages:** publish declarations that resolve once installed ([#1111](https://github.com/Vectreal/vectreal-platform/issues/1111)) ([55e57a1](https://github.com/Vectreal/vectreal-platform/commit/55e57a127b4360aa0bd7ad196f75d299963a7726))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/viewer bumped to 3.0.0
+
 ## [2.1.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v2.0.0...embed-v2.1.0) (2026-10-10)
 
 
