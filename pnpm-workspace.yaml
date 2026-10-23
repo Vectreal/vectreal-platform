@@ -52,6 +52,10 @@ overrides:
   # GHSA-r53p-7pc4-xj5r and GHSA-2gqq-gqf2-x968, and no 23.x release moves it.
   # Drop this once nx ships a pin at or above 7.29.1.
   undici@7.29.0: 7.29.1
+  # @nx/web pulls in http-server, whose http-proxy resolves follow-redirects
+  # 1.16.0 (GHSA alerts 455 and 456, fixed in 1.16.1). Dev-only, but no nx 23.x
+  # release moves it. Drop this once the lockfile resolves 1.16.1 on its own.
+  follow-redirects@1.16.0: 1.16.1
 
 onlyBuiltDependencies:
   - '@swc/core'
