@@ -70,7 +70,7 @@
 		"@gltf-transform/core": "catalog:",
 		"@gltf-transform/extensions": "catalog:",
 		"@gltf-transform/functions": "catalog:",
-		"draco3d": "1.5.7",
+		"draco3d": "1.5.9",
 		"jszip": "catalog:",
 		"ktx2-encoder": "catalog:",
 		"meshoptimizer": "catalog:",
