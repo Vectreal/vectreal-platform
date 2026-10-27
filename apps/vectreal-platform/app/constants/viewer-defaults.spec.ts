@@ -1,8 +1,10 @@
+import { resolveSceneViewCameras } from '@vctrl/viewer/hotspots'
 import { describe, expect, it } from 'vitest'
 
 import {
 	defaultShadowsOptions,
-	normalizeShadowOptions
+	normalizeShadowOptions,
+	withSceneSettingsDefaults
 } from './viewer-defaults'
 
 /**
@@ -64,5 +66,30 @@ describe('normalizeShadowOptions', () => {
 			...defaultShadowsOptions.contact,
 			enabled: true
 		})
+	})
+})
+
+/**
+ * The Publisher, an article's example scene and a restored draft all read a
+ * scene through here, and none of them through the server read. An example's
+ * cameras and an old draft's starting camera carry no `kind`, and the viewer
+ * reads an untagged camera that a hotspot links as that hotspot's close-up.
+ */
+describe('withSceneSettingsDefaults camera kinds', () => {
+	it('keeps an untagged scene camera a view when a hotspot links it', () => {
+		const { camera } = withSceneSettingsDefaults({
+			camera: {
+				cameras: [
+					{ cameraId: 'default', name: 'Default Camera', initial: true },
+					{ cameraId: 'detail', name: 'Detail' }
+				]
+			}
+		})
+
+		expect(
+			resolveSceneViewCameras(camera.cameras, [
+				{ linkedCameraId: 'default' }
+			]).map((entry) => entry.cameraId)
+		).toEqual(['default', 'detail'])
 	})
 })

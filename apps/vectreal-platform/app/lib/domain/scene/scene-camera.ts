@@ -75,6 +75,44 @@ export const isPairedHotspotCamera = (entry: CameraLike): boolean =>
 		entry.cameraId !== undefined &&
 		PAIRED_HOTSPOT_CAMERA_ID.test(entry.cameraId))
 
+/**
+ * A scene's cameras with `kind: 'scene'` written on every untagged camera
+ * that is not a hotspot's minted pair. The minted pairs are left as they are.
+ *
+ * The viewer reads an untagged camera that a hotspot links as that hotspot's
+ * close-up. That is right for a pair saved before the tag existed, and wrong
+ * for a scene camera an author linked: the Publisher's starting camera was
+ * saved untagged, so linking it dropped the scene's own view out of the
+ * camera switcher and left the way back with nowhere to lead.
+ *
+ * Only ever `'scene'`, and only where every rule here already reads the camera
+ * as a scene camera (`isSceneCamera` takes a missing `kind` as one), so the
+ * one reader this changes is the viewer's guess. The minted pairs keep their
+ * missing tag on purpose. Writing `'hotspot'` on them would move a scene's
+ * opening view off one an author pinned, and would hand them to the
+ * destructive ownership rule, which keys on the tag alone.
+ */
+export function withSceneCameraKinds<Camera extends { cameras?: CameraLike[] }>(
+	camera: Camera
+): Camera {
+	const cameras = camera.cameras
+	if (
+		!cameras?.some(
+			(entry) => entry.kind === undefined && !isPairedHotspotCamera(entry)
+		)
+	) {
+		return camera
+	}
+	return {
+		...camera,
+		cameras: cameras.map((entry) =>
+			entry.kind === undefined && !isPairedHotspotCamera(entry)
+				? { ...entry, kind: 'scene' }
+				: entry
+		)
+	}
+}
+
 export function resolveDefaultSceneCamera<Entry extends CameraLike>(
 	cameras: Entry[] | null | undefined
 ): Entry | null {

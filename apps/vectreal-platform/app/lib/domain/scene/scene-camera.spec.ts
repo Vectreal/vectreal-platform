@@ -3,9 +3,13 @@ import {
 	buildDefaultCameraSignature,
 	isLastSceneCamera,
 	isPairedHotspotCamera,
+	withSceneCameraKinds,
 	isSceneCamera,
 	resolveDefaultSceneCameraId
 } from './scene-camera'
+import { defaultCameraOptions } from '../../../constants/viewer-defaults'
+
+import type { CameraLike } from './scene-camera'
 
 describe('isSceneCamera', () => {
 	it('treats an explicit scene camera and a legacy entry without a kind as scene cameras', () => {
@@ -244,5 +248,63 @@ describe('isPairedHotspotCamera', () => {
 
 	it('claims nothing when there is no id and no tag', () => {
 		expect(isPairedHotspotCamera({})).toBe(false)
+	})
+})
+
+describe('withSceneCameraKinds', () => {
+	const minted = 'hotspot-camera-1755000000000-a1b2c3'
+	const kinds = (cameras: CameraLike[]) =>
+		withSceneCameraKinds({ cameras }).cameras?.map((entry) => entry.kind)
+
+	it('tags an untagged camera that is not a minted pair as a scene camera', () => {
+		expect(
+			kinds([
+				{ cameraId: 'default' },
+				// Composed by hand and named like a pair; a slug, not a minted id.
+				{ cameraId: 'hotspot-camera-1' }
+			])
+		).toEqual(['scene', 'scene'])
+	})
+
+	it('leaves a minted pair untagged, so no rule keyed on the tag adopts it', () => {
+		expect(kinds([{ cameraId: minted }])).toEqual([undefined])
+	})
+
+	it('keeps a kind that is already there', () => {
+		expect(
+			kinds([
+				{ cameraId: 'default', kind: 'hotspot' },
+				{ cameraId: minted, kind: 'scene' }
+			])
+		).toEqual(['hotspot', 'scene'])
+	})
+
+	it('changes nothing any rule here reads', () => {
+		const before: CameraLike[] = [
+			{ cameraId: minted },
+			{ cameraId: 'default' },
+			{ cameraId: 'side' }
+		]
+		const after = withSceneCameraKinds({ cameras: before }).cameras ?? []
+		expect(after.map(isSceneCamera)).toEqual(before.map(isSceneCamera))
+		expect(after.map(isPairedHotspotCamera)).toEqual(
+			before.map(isPairedHotspotCamera)
+		)
+		expect(resolveDefaultSceneCameraId(after)).toBe(
+			resolveDefaultSceneCameraId(before)
+		)
+	})
+
+	it('has nothing to tag in the camera a new scene starts with', () => {
+		// That camera reaches the viewer before any save or read: the Publisher
+		// edits it in place, and a hotspot can link it from the first minute.
+		const cameras = defaultCameraOptions.cameras ?? []
+		expect(cameras.length).toBeGreaterThan(0)
+		expect(cameras.every((entry) => entry.kind === 'scene')).toBe(true)
+	})
+
+	it('returns the same settings when nothing needed tagging', () => {
+		const camera = { cameras: [{ cameraId: 'default', kind: 'scene' }] }
+		expect(withSceneCameraKinds(camera)).toBe(camera)
 	})
 })
