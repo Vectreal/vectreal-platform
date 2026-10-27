@@ -2,6 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box3, Raycaster, Vector3 } from 'three'
 
+import { isInertWhileOccluded } from './hotspot-interaction'
 import HotspotMarker from './hotspot-marker'
 import {
 	OCCLUSION_INTERVAL_SECONDS,
@@ -237,22 +238,42 @@ const SceneHotspots = ({
 	)
 
 	/**
-	 * An open card closes when its marker goes behind the model or leaves the
-	 * list.
+	 * The occluded markers that also take no input. A marker its author made
+	 * clickable behind the model is faded but otherwise a marker like any other,
+	 * so the card rules below, like the marker's own, read this set rather than
+	 * `occludedIds`.
+	 */
+	const selecting = !!onSelect
+	const inertIds = useMemo<ReadonlySet<string>>(() => {
+		if (occludedIds.size === 0) return occludedIds
+		const inert = new Set<string>()
+		for (const marker of markers) {
+			if (isInertWhileOccluded(marker, occludedIds.has(marker.id), selecting)) {
+				inert.add(marker.id)
+			}
+		}
+		return inert
+	}, [markers, occludedIds, selecting])
+
+	/**
+	 * An open card closes when its marker goes behind the model and turns
+	 * inert, or leaves the list.
 	 *
-	 * An occluded marker takes no pointer events and offers no action, so a card
+	 * An inert marker takes no pointer events and offers no action, so a card
 	 * left open over hidden geometry would be the one state with no way to
 	 * dismiss it - and it would be describing something the visitor cannot see.
+	 * A clickable one can still close its own card, and its author chose to let
+	 * it speak from behind the model.
 	 */
 	useEffect(() => {
 		if (!openId) return
 		if (
-			occludedIds.has(openId) ||
+			inertIds.has(openId) ||
 			!markers.some((marker) => marker.id === openId)
 		) {
 			setOpenId(null)
 		}
-	}, [markers, occludedIds, openId])
+	}, [inertIds, markers, openId])
 
 	/**
 	 * An open card closes when the view leaves the camera its marker flew to,
@@ -556,7 +577,7 @@ const SceneHotspots = ({
 	// `revealContent` off draws no card from any source, held ones included,
 	// for the reason `focusHotspot` gives above.
 	const shownId = revealContent
-		? resolveOpenHotspotId(revealedId, openId, occludedIds)
+		? resolveOpenHotspotId(revealedId, openId, inertIds)
 		: null
 
 	// Under `frameloop="demand"` a held card would otherwise wait for an

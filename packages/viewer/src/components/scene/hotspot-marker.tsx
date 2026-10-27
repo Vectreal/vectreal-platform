@@ -155,6 +155,9 @@ const markerClasses = {
 	// Focus overrides the fade: a keyboard user who reaches an occluded marker
 	// has to be able to see which one they are on.
 	occluded: 'vv:opacity-15 vv:focus-within:opacity-100',
+	// One that still takes clicks comes up under the pointer too, so a visitor
+	// can see what they are about to press before they press it.
+	occludedClickable: 'vv:hover:opacity-100',
 	// Sits outside the artwork's own ring rather than flush with the box, so the
 	// resting ring is still visible when the animation is switched off.
 	pulse:
@@ -569,7 +572,13 @@ const HotspotMarker = ({
 			>
 				<div
 					ref={rootRef}
-					className={cn(markerClasses.root, occluded && markerClasses.occluded)}
+					className={cn(
+						markerClasses.root,
+						occluded && markerClasses.occluded,
+						occluded &&
+							marker.clickableWhenOccluded &&
+							markerClasses.occludedClickable
+					)}
 					style={colorStyle}
 					data-selected={selected || undefined}
 					data-hidden={marker.hidden || undefined}

@@ -253,6 +253,13 @@
       "when": 1792523619861,
       "tag": "0035_hard_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793136022656,
+      "tag": "0036_famous_lila_cheney",
+      "breakpoints": true
     }
   ]
 }

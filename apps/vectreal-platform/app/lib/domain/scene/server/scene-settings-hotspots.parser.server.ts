@@ -197,6 +197,14 @@ export function normalizeHotspots(
 			)
 		}
 		if (
+			hotspot.clickableWhenOccluded !== undefined &&
+			typeof hotspot.clickableWhenOccluded !== 'boolean'
+		) {
+			return ApiResponse.badRequest(
+				`hotspots[${i}].clickableWhenOccluded must be a boolean`
+			)
+		}
+		if (
 			hotspot.linkedCameraId !== undefined &&
 			hotspot.linkedCameraId !== null
 		) {

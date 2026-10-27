@@ -33,6 +33,7 @@ interface HotspotLike {
 	stylePreset?: string
 	payloadUrl?: string | null
 	occlusionEnabled?: boolean
+	clickableWhenOccluded?: boolean
 }
 
 /**
@@ -85,6 +86,7 @@ const sameHotspot = (a: HotspotLike, b: HotspotLike): boolean =>
 	// Absent means enabled, which is what the column defaults to and what the
 	// authoring panel falls back to.
 	(a.occlusionEnabled ?? true) === (b.occlusionEnabled ?? true) &&
+	(a.clickableWhenOccluded ?? false) === (b.clickableWhenOccluded ?? false) &&
 	(a.sequenceIndex ?? null) === (b.sequenceIndex ?? null) &&
 	sameOptional(a.body, b.body) &&
 	sameOptional(a.linkUrl, b.linkUrl) &&

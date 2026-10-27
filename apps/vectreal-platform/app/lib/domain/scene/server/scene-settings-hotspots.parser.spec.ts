@@ -63,6 +63,16 @@ describe('hotspot validation', () => {
 		expect(rejected(parse([hotspot({ occlusionEnabled: 'yes' })]))).toBe(true)
 	})
 
+	it('accepts clickableWhenOccluded as a boolean or absent, and nothing else', () => {
+		expect(rejected(parse([hotspot({ clickableWhenOccluded: true })]))).toBe(
+			false
+		)
+		expect(rejected(parse([hotspot({ clickableWhenOccluded: false })]))).toBe(
+			false
+		)
+		expect(rejected(parse([hotspot({ clickableWhenOccluded: 1 })]))).toBe(true)
+	})
+
 	// The id lands in a uuid primary key. Catching it here is what turns a
 	// stale client into a 400 instead of a failed transaction.
 	it('rejects the legacy non-uuid id format', async () => {

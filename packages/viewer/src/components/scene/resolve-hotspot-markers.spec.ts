@@ -302,6 +302,23 @@ describe('resolveHotspotMarkers', () => {
 				false
 			])
 		})
+
+		it('makes a marker clickable behind the model only where it fades at all', () => {
+			const markers = resolveHotspotMarkers([
+				hotspot({ id: 'asked', clickableWhenOccluded: true }),
+				hotspot({
+					id: 'never-fades',
+					occlusionEnabled: false,
+					clickableWhenOccluded: true
+				}),
+				hotspot({ id: 'unset' })
+			])
+			expect(markers.map((marker) => marker.clickableWhenOccluded)).toEqual([
+				true,
+				false,
+				false
+			])
+		})
 	})
 
 	describe('an editing surface drawing more than a visitor sees', () => {

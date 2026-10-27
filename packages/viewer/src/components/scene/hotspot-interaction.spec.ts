@@ -1,10 +1,25 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveHotspotInteraction } from './hotspot-interaction'
+import {
+	isInertWhileOccluded,
+	resolveHotspotInteraction
+} from './hotspot-interaction'
 
-const linked = { linkedCameraId: 'camera-1', linkedAnimationClipId: null }
-const unlinked = { linkedCameraId: null, linkedAnimationClipId: null }
-const clipOnly = { linkedCameraId: null, linkedAnimationClipId: 'door-open' }
+const linked = {
+	linkedCameraId: 'camera-1',
+	linkedAnimationClipId: null,
+	clickableWhenOccluded: false
+}
+const unlinked = {
+	linkedCameraId: null,
+	linkedAnimationClipId: null,
+	clickableWhenOccluded: false
+}
+const clipOnly = {
+	linkedCameraId: null,
+	linkedAnimationClipId: 'door-open',
+	clickableWhenOccluded: false
+}
 
 describe('resolveHotspotInteraction', () => {
 	it('is a button only when there is a camera to reach and somewhere to send it', () => {
@@ -386,12 +401,70 @@ describe('resolveHotspotInteraction', () => {
 
 		it('flies and plays on one click when it links both', () => {
 			const interaction = resolveHotspotInteraction(
-				{ linkedCameraId: 'camera-1', linkedAnimationClipId: 'door-open' },
+				{
+					linkedCameraId: 'camera-1',
+					linkedAnimationClipId: 'door-open',
+					clickableWhenOccluded: false
+				},
 				{ occluded: false, canActivate: true, canPlayClip: true }
 			)
 
 			expect(interaction.fliesCamera).toBe(true)
 			expect(interaction.playsClip).toBe(true)
 		})
+	})
+})
+
+describe('a marker its author made clickable behind the model', () => {
+	const reachable = { ...linked, clickableWhenOccluded: true }
+
+	it('is inert only when occluded and not made clickable', () => {
+		expect(isInertWhileOccluded(linked, true)).toBe(true)
+		expect(isInertWhileOccluded(linked, false)).toBe(false)
+		expect(isInertWhileOccluded(reachable, true)).toBe(false)
+	})
+
+	it('behaves while occluded exactly as it does in view', () => {
+		const options = { canActivate: true, canPlayClip: true, canReveal: true }
+		expect(
+			resolveHotspotInteraction(reachable, { ...options, occluded: true })
+		).toEqual(
+			resolveHotspotInteraction(reachable, { ...options, occluded: false })
+		)
+	})
+
+	it('still flies its camera, takes the pointer and stays a tab stop', () => {
+		const interaction = resolveHotspotInteraction(reachable, {
+			occluded: true,
+			canActivate: true
+		})
+		expect(interaction.action).toBe('activate')
+		expect(interaction.fliesCamera).toBe(true)
+		expect(interaction.pointerEvents).toBe('auto')
+		expect(interaction.focusable).toBe(true)
+	})
+
+	it('stays inert behind the model on an editing surface', () => {
+		// There a press on the model places a marker or starts an orbit.
+		expect(isInertWhileOccluded(reachable, true, true)).toBe(true)
+		const interaction = resolveHotspotInteraction(reachable, {
+			occluded: true,
+			canActivate: true,
+			canSelect: true
+		})
+		expect(interaction.action).toBe('none')
+		expect(interaction.pointerEvents).toBe('none')
+		expect(interaction.focusable).toBe(false)
+	})
+
+	it('still gives way to the gizmo once selected', () => {
+		expect(
+			resolveHotspotInteraction(reachable, {
+				occluded: true,
+				canActivate: true,
+				canSelect: true,
+				selected: true
+			}).pointerEvents
+		).toBe('none')
 	})
 })

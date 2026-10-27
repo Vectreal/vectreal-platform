@@ -1,0 +1,1 @@
+ALTER TABLE "scene_hotspots" ADD COLUMN "clickable_when_occluded" boolean DEFAULT false NOT NULL;
