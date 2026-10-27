@@ -438,6 +438,12 @@ export interface HotspotDefinition {
 	 * When false the hotspot renders at full opacity regardless of depth.
 	 */
 	occlusionEnabled?: boolean
+	/**
+	 * Whether a marker faded behind the model still takes clicks and focus.
+	 * Read only while `occlusionEnabled` is on. Absent means false: a faded
+	 * marker is inert, which is how every scene behaved before this existed.
+	 */
+	clickableWhenOccluded?: boolean
 }
 
 // ---------------------------------------------------------------------------

@@ -121,7 +121,7 @@ present packages/viewer/src/components/animation-controls.tsx className={withHos
 | `envOptions` | `EnvironmentProps` | No | Drei `Environment` configuration |
 | `shadowsOptions` | `ShadowsProps` | No | Shadow behavior configuration |
 | `normalizationOptions` | `NormalizationOptions` | No | Clamps the model's bounding-box diagonal at runtime, without touching the model data |
-| `hotspots` | `HotspotDefinition[]` | No | Point-of-interest markers anchored in world space. Each can carry a body and a link, and fly a linked camera |
+| `hotspots` | `HotspotDefinition[]` | No | Point-of-interest markers anchored in world space. Each can carry a body and a link, and fly a linked camera. Behind the model a marker fades (`occlusionEnabled`, default `true`) and takes no input unless `clickableWhenOccluded` is `true` |
 | `hotspotColor` | `string` | No | Overrides the marker fill. The default is neutral so it does not compete with the product. The step numeral stays dark ink, so a dark or saturated fill needs `--vctrl-hotspot-ink` overridden on the container |
 | `showHotspotMarkers` | `boolean` | No | Draws the markers, default `true`. `false` leaves them resolved but undrawn, so a host can still reach them by id |
 | `revealHotspotContent` | `boolean` | No | Opens a card on click, default `true`. `false` still flies the camera and still reports the activation |

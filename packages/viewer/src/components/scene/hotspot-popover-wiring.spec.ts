@@ -226,10 +226,15 @@ describe('the hotspot layer owns which card is open', () => {
 		expect(layer).toContain('handleReveal')
 	})
 
-	it('closes a card whose marker went behind the model or left the list', () => {
-		// An occluded marker takes no pointer events and offers no action, so a
-		// card left open over it is the one state with no way to dismiss.
-		expect(layer).toContain('occludedIds.has(openId)')
+	it('closes a card whose marker went inert behind the model or left the list', () => {
+		// An inert marker takes no pointer events and offers no action, so a
+		// card left open over it is the one state with no way to dismiss. One
+		// its author made clickable keeps its card.
+		expect(layer).toContain('inertIds.has(openId)')
+		expect(layer).not.toContain('occludedIds.has(openId)')
+		expect(layer).toContain(
+			'isInertWhileOccluded(marker, occludedIds.has(marker.id), selecting)'
+		)
 		expect(layer).toContain('!markers.some((marker) => marker.id === openId)')
 	})
 
@@ -408,7 +413,7 @@ describe('the card is safe to put inside a third-party page', () => {
 describe('an editing surface can hold the card', () => {
 	it('opens whatever the open-card rule decides, not the click state alone', () => {
 		expect(layer).toContain(
-			'resolveOpenHotspotId(revealedId, openId, occludedIds)'
+			'resolveOpenHotspotId(revealedId, openId, inertIds)'
 		)
 		expect(layer).toContain('open={marker.id === shownId}')
 	})

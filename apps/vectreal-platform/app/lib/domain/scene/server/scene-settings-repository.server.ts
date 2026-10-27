@@ -273,7 +273,8 @@ export async function getHotspotsBySceneSettingsId(
 		sequenceIndex: r.sequenceIndex ?? undefined,
 		stylePreset: r.stylePreset,
 		payloadUrl: r.payloadUrl ?? undefined,
-		occlusionEnabled: r.occlusionEnabled
+		occlusionEnabled: r.occlusionEnabled,
+		clickableWhenOccluded: r.clickableWhenOccluded
 	}))
 }
 
@@ -318,7 +319,8 @@ export async function replaceHotspots(
 				sequenceIndex: h.sequenceIndex ?? null,
 				stylePreset: h.stylePreset,
 				payloadUrl: h.payloadUrl ?? null,
-				occlusionEnabled: h.occlusionEnabled ?? true
+				occlusionEnabled: h.occlusionEnabled ?? true,
+				clickableWhenOccluded: h.clickableWhenOccluded ?? false
 			}))
 		)
 		.onConflictDoUpdate({
@@ -344,6 +346,7 @@ export async function replaceHotspots(
 				stylePreset: sql`excluded.style_preset`,
 				payloadUrl: sql`excluded.payload_url`,
 				occlusionEnabled: sql`excluded.occlusion_enabled`,
+				clickableWhenOccluded: sql`excluded.clickable_when_occluded`,
 				updatedAt: new Date()
 			}
 		})

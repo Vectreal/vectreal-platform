@@ -19,7 +19,6 @@ import {
 	ArrowUpRight,
 	Crosshair,
 	Eye,
-	Layers,
 	ListOrdered,
 	Move3d,
 	Palette,
@@ -30,6 +29,13 @@ import { useEffect, useMemo } from 'react'
 
 import { AXES, AxisField } from './axis-field'
 import { MarkerArtworkField } from './marker-artwork-field'
+import {
+	describeOcclusionBehavior,
+	OCCLUSION_BEHAVIOR_OPTIONS,
+	occlusionBehaviorOf,
+	occlusionPatch,
+	type OcclusionBehavior
+} from './occlusion-behavior'
 import { useHotspotEdits } from './use-hotspot-edits'
 import {
 	isAllowedHotspotLinkUrl,
@@ -82,6 +88,7 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 	// In the mobile sheet the canvas is out of reach, so placing on the model
 	// is neither offered nor described: the coordinates are how it moves.
 	const coversCanvas = useSidebarCoversCanvas()
+	const occlusionBehavior = occlusionBehaviorOf(hotspot)
 	const styleLabel = STYLE_PRESET_OPTIONS.find(
 		(option) => option.value === hotspot.stylePreset
 	)?.label
@@ -133,16 +140,35 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 						edits.update(hotspot.id, { internalOnly: enabled })
 					}
 				/>
-				<Toggle
-					layout="tile"
-					label="Hide behind model"
-					icon={<Layers />}
-					checked={hotspot.occlusionEnabled ?? true}
-					onCheckedChange={(enabled) =>
-						edits.update(hotspot.id, { occlusionEnabled: enabled })
-					}
-				/>
 			</div>
+
+			<SettingGroup
+				label="Behind the model"
+				description={describeOcclusionBehavior(
+					occlusionBehavior,
+					!!linkedCamera
+				)}
+			>
+				<ToggleGroup
+					type="single"
+					aria-label="Behind the model"
+					value={occlusionBehavior}
+					onValueChange={(value) => {
+						if (value) {
+							edits.update(
+								hotspot.id,
+								occlusionPatch(value as OcclusionBehavior)
+							)
+						}
+					}}
+				>
+					{OCCLUSION_BEHAVIOR_OPTIONS.map((option) => (
+						<ToggleGroupItem key={option.value} value={option.value}>
+							{option.label}
+						</ToggleGroupItem>
+					))}
+				</ToggleGroup>
+			</SettingGroup>
 
 			<SettingGroup
 				label="Linked camera"

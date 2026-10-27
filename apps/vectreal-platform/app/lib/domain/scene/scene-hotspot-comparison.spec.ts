@@ -66,6 +66,24 @@ describe('haveHotspotsChanged', () => {
 		).toBe(true)
 	})
 
+	it('detects a marker made clickable behind the model', () => {
+		expect(
+			haveHotspotsChanged(
+				[hotspot({ clickableWhenOccluded: true })],
+				[hotspot()]
+			)
+		).toBe(true)
+	})
+
+	it('reads an absent clickableWhenOccluded as false, matching the column default', () => {
+		expect(
+			haveHotspotsChanged(
+				[hotspot({ clickableWhenOccluded: undefined })],
+				[hotspot({ clickableWhenOccluded: false })]
+			)
+		).toBe(false)
+	})
+
 	it('detects a style preset change', () => {
 		expect(
 			haveHotspotsChanged([hotspot({ stylePreset: 'svg' })], [hotspot()])

@@ -59,6 +59,13 @@ export const sceneHotspots = pgTable(
 		// existed read back as the behaviour their author saw.
 		occlusionEnabled: boolean('occlusion_enabled').notNull().default(true),
 
+		// Whether a marker faded by occlusion still takes clicks. Defaults false,
+		// so rows written before this column existed keep the inert fade their
+		// author saw.
+		clickableWhenOccluded: boolean('clickable_when_occluded')
+			.notNull()
+			.default(false),
+
 		// 0-based sequence position; null means not in any sequence.
 		sequenceIndex: integer('sequence_index'),
 

@@ -12,7 +12,7 @@ export interface HotspotInteraction {
 	 */
 	role: 'button' | 'image'
 	/**
-	 * What a click does. `none` while occluded, and for a marker that offers
+	 * What a click does. `none` while occluded and inert, and for a marker that offers
 	 * nothing.
 	 *
 	 * Precedence is select, then reveal, then activate. Selecting beats
@@ -57,7 +57,7 @@ export interface HotspotInteraction {
 	 */
 	announces: 'pressed' | 'expanded' | null
 	/**
-	 * False while occluded, so an invisible marker is not a tab stop. Focus that
+	 * False while occluded and inert, so an invisible marker is not a tab stop. Focus that
 	 * is already on it survives, which `disabled` would not allow.
 	 *
 	 * True for a marker that offers nothing to do, which is not a contradiction:
@@ -67,8 +67,8 @@ export interface HotspotInteraction {
 	 */
 	focusable: boolean
 	/**
-	 * `none` while occluded. A marker faded almost out of sight must not still
-	 * swallow a click: it would fly the camera somewhere from a target the
+	 * `none` while occluded and inert. A marker faded almost out of sight must
+	 * not swallow a click its author did not ask it to take: it would fly the camera somewhere from a target the
 	 * visitor cannot see, and it would pop a label for a marker behind the model.
 	 *
 	 * Also `none` for the marker an editing surface has selected. A surface that
@@ -88,8 +88,34 @@ export interface HotspotInteraction {
 	pointerEvents: 'auto' | 'none'
 }
 
+/**
+ * Whether the model hides this marker from input as well as from sight.
+ *
+ * The one place the author's choice is read. An occluded marker is faded
+ * either way; whether it is also inert is theirs to decide, because the
+ * default - a marker faded behind the model takes nothing - suits a marker
+ * the visitor should find by turning the model, and is a dead end for one the
+ * author wants reachable from any side, which a linked camera then brings
+ * into view.
+ *
+ * An editing surface (`selecting`) keeps every occluded marker inert. There a
+ * press on the model places a marker or starts an orbit, and a marker behind
+ * the model would take that press for a selection the author cannot see. The
+ * choice is a visitor's experience, and preview is where the author sees it.
+ */
+export function isInertWhileOccluded(
+	marker: Pick<HotspotMarker, 'clickableWhenOccluded'>,
+	occluded: boolean,
+	selecting = false
+): boolean {
+	return occluded && (selecting || !marker.clickableWhenOccluded)
+}
+
 export function resolveHotspotInteraction(
-	marker: Pick<HotspotMarker, 'linkedAnimationClipId' | 'linkedCameraId'>,
+	marker: Pick<
+		HotspotMarker,
+		'clickableWhenOccluded' | 'linkedAnimationClipId' | 'linkedCameraId'
+	>,
 	{
 		occluded,
 		canActivate,
@@ -142,6 +168,10 @@ export function resolveHotspotInteraction(
 		canSelect?: boolean
 	}
 ): HotspotInteraction {
+	// A marker the author made clickable behind the model behaves exactly as
+	// an unoccluded one for a visitor, so every rule below reads `inert`, not
+	// `occluded`.
+	const inert = isInertWhileOccluded(marker, occluded, canSelect)
 	const canFly = marker.linkedCameraId !== null && canActivate
 	const canPlay = marker.linkedAnimationClipId !== null && canPlayClip
 	// Selection needs no camera: an editing surface has to be able to pick a
@@ -150,7 +180,7 @@ export function resolveHotspotInteraction(
 
 	return {
 		role: isButton ? 'button' : 'image',
-		action: occluded
+		action: inert
 			? 'none'
 			: canSelect
 				? 'select'
@@ -162,19 +192,19 @@ export function resolveHotspotInteraction(
 		// Not on an editing surface: there a click picks the marker up, and
 		// flying away from the viewpoint the author is composing in is the one
 		// thing selection exists to avoid.
-		fliesCamera: !occluded && !canSelect && canFly,
+		fliesCamera: !inert && !canSelect && canFly,
 		// Same rule: on an editing surface a click picks the marker up, and
 		// replaying its clip on every pick would move the model being composed.
-		playsClip: !occluded && !canSelect && canPlay,
+		playsClip: !inert && !canSelect && canPlay,
 		announces: canSelect
 			? 'pressed'
 			: canReveal && revealsInPlace
 				? 'expanded'
 				: null,
-		// Not `isButton && !occluded`. A marker with nothing to activate is still
+		// Not `isButton && !inert`. A marker with nothing to activate is still
 		// a marker with a name, and focus is what reveals that name where hover
 		// cannot - which is every keyboard, and every touch device.
-		focusable: !occluded,
-		pointerEvents: occluded || selected ? 'none' : 'auto'
+		focusable: !inert,
+		pointerEvents: inert || selected ? 'none' : 'auto'
 	}
 }

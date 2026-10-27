@@ -9,7 +9,9 @@
  * how leaving the editor's content view closes a card no click opened.
  * `undefined` hands the cards back to the visitor.
  *
- * Occlusion hides either one. A held card is not cleared by it, so the card
+ * Occlusion hides either one, when it also leaves the marker inert: the set
+ * passed in holds only those, since a marker the author made clickable behind
+ * the model keeps its card. A held card is not cleared by it, so the card
  * comes back when the author orbits the marker back into view; a visitor's
  * card is closed outright, by the layer, because nothing would reopen it.
  *
@@ -18,8 +20,8 @@
 export function resolveOpenHotspotId(
 	held: string | null | undefined,
 	opened: string | null,
-	occludedIds: ReadonlySet<string>
+	inertIds: ReadonlySet<string>
 ): string | null {
 	const id = held === undefined ? opened : held
-	return id !== null && !occludedIds.has(id) ? id : null
+	return id !== null && !inertIds.has(id) ? id : null
 }

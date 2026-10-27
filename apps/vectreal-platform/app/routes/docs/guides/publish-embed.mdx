@@ -47,6 +47,42 @@ present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar
 present apps/vectreal-platform/app/components/scene-embed/scene-embed-viewer.tsx showSceneViewReturn={shouldShowSceneViewReturn(
 */}
 
+### Hotspots behind the model
+
+Each hotspot decides what happens when the model sits between the visitor and the marker. Pick it under **Behind the model** when you select the hotspot in the **Hotspots** tool:
+
+| Choice | What a visitor sees and can do |
+| --- | --- |
+| **Show** | The marker is drawn over the model from every side and is always clickable. |
+| **Fade** | The marker fades while the model is in front of it, and takes no clicks or keyboard focus until the visitor turns the model to see it. An open card closes when its marker goes behind the model. This is what a new hotspot starts with, and what every hotspot saved before the choice existed does. |
+| **Fade, clickable** | The marker fades the same way but stays clickable and reachable by keyboard, and its card stays open. It comes back to full strength under the pointer. Link a camera to it, so a click also brings the marker into view. |
+
+**Fade** suits a marker the visitor should find by turning the model. A marker placed on the far side looks unreachable from the front with it, so if a hotspot has to work from anywhere, use **Fade, clickable** or **Show**.
+
+While you edit, markers behind the model stay unclickable whichever you pick, so a click on the model places a marker or turns the view rather than picking up one you cannot see. Switch to preview to try what a visitor gets.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/hotspot-settings/marker-views.tsx label="Behind the model"
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/hotspot-settings/occlusion-behavior.ts { value: 'fade_clickable', label: 'Fade, clickable' }
+present apps/vectreal-platform/app/db/schema/project/scene-hotspots.ts boolean('clickable_when_occluded')
+present packages/viewer/src/components/scene/hotspot-marker.tsx occludedClickable: 'vv:hover:opacity-100'
+present packages/viewer/src/components/scene/hotspot-interaction.ts return occluded && (selecting || !marker.clickableWhenOccluded)
+*/}
+
+### Hotspot cameras
+
+Adding a hotspot in the Publisher also adds a camera of its own, framed from where you stood, and links the two. A click on the marker flies the view to that camera. That camera is the hotspot's close-up rather than a view of the scene: it is not one of the cameras the [camera switcher](#camera-switcher) steps through, and while the view stands there the viewer offers [Back to scene view](#back-to-scene-view).
+
+**Linked camera** can also name one of the scene's own cameras, any you added in the **Camera** tool. A click then flies the view to that camera like the switcher would. It stays in the switcher, and no **Back to scene view** appears there, because the visitor is already standing in a view of the scene.
+
+Visitors cannot step from one hotspot's camera to the next with the switcher. They click the next marker, and the way back still leads to the scene camera they started from.
+
+{/* claims
+present apps/vectreal-platform/app/lib/domain/scene/scene-hotspot-camera-links.ts kind: 'hotspot',
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/camera-controls-settings/use-scene-cameras.ts kind: 'scene'
+present packages/viewer/src/components/scene/scene-view-return.ts camera.kind === 'hotspot' ||
+*/}
+
 ### The Vectreal badge
 
 Embeds carry a small **Vectreal** badge in the top right corner of the viewer on the free plan, linking back to vectreal.com. Paid plans do not.

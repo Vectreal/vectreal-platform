@@ -1181,3 +1181,35 @@ describe('HotspotsSettingsPanel linked animation', () => {
 		expect(linkedClip()).toBe('removed-1a2b3c4d')
 	})
 })
+
+/**
+ * The fade and the click are one question in the panel, asked where the author
+ * lands after creating a marker, so the inert default is a choice they can see.
+ */
+describe('HotspotsSettingsPanel behind the model', () => {
+	it('writes both fields for the choice, and says what a visitor gets', () => {
+		arrange()
+		render(<HotspotsSettingsPanel />)
+
+		expect(screen.getByText(/can’t be clicked/)).toBeTruthy()
+
+		act(() => {
+			fireEvent.click(screen.getByRole('radio', { name: 'Fade, clickable' }))
+		})
+
+		expect(store.get(hotspotsAtom)[0]).toMatchObject({
+			occlusionEnabled: true,
+			clickableWhenOccluded: true
+		})
+		expect(screen.getByText(/flies its camera round to it/)).toBeTruthy()
+
+		act(() => {
+			fireEvent.click(screen.getByRole('radio', { name: 'Show' }))
+		})
+
+		expect(store.get(hotspotsAtom)[0]).toMatchObject({
+			occlusionEnabled: false,
+			clickableWhenOccluded: false
+		})
+	})
+})

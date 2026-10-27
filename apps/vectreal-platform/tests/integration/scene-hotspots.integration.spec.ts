@@ -58,6 +58,7 @@ describe('hotspot persistence', () => {
 		internalOnly: false,
 		stylePreset: 'dot',
 		occlusionEnabled: true,
+		clickableWhenOccluded: false,
 		...overrides
 	})
 
@@ -156,7 +157,8 @@ describe('hotspot persistence', () => {
 			body: 'Cast in one piece, then machined flat.',
 			linkUrl: 'https://example.test/spec',
 			linkedAnimationClipId: 'lid-open-1a2b3c4d',
-			occlusionEnabled: false,
+			occlusionEnabled: true,
+			clickableWhenOccluded: true,
 			internalOnly: true,
 			visible: false
 		})
@@ -201,6 +203,35 @@ describe('hotspot persistence', () => {
 
 		expect(read.body).toBe('Second draft.')
 		expect(read.linkUrl).toBe('https://a.test/two')
+	})
+
+	it('changes what a hotspot does behind the model on later saves', async () => {
+		const id = randomUUID()
+		const save = (
+			behind: Pick<
+				HotspotDefinition,
+				'clickableWhenOccluded' | 'occlusionEnabled'
+			>
+		) =>
+			db.transaction((tx) =>
+				replaceHotspots(tx, sceneSettingsId, [hotspot({ id, ...behind })])
+			)
+		const read = async () =>
+			(
+				await db.transaction((tx) =>
+					getHotspotsBySceneSettingsId(tx, sceneSettingsId)
+				)
+			)[0]
+
+		// The publisher's three choices, each written over the last.
+		for (const behind of [
+			{ occlusionEnabled: true, clickableWhenOccluded: true },
+			{ occlusionEnabled: false, clickableWhenOccluded: false },
+			{ occlusionEnabled: true, clickableWhenOccluded: false }
+		]) {
+			await save(behind)
+			expect(await read()).toMatchObject(behind)
+		}
 	})
 
 	it('relinks and unlinks a hotspot’s clip on later saves', async () => {

@@ -529,6 +529,52 @@ export const HotspotOcclusion: Story = {
 }
 
 /**
+ * The rear marker fades behind the model but stays clickable: hover brings it
+ * to full strength, and a click flies to its camera round the back. The
+ * rear marker beside it fades the default way and takes nothing until the
+ * model is turned.
+ */
+export const HotspotClickableBehindModel: Story = {
+	parameters: { chromatic: { disableSnapshot: true } },
+	args: {
+		model: hotspotModel,
+		hotspots: [
+			{
+				...base('rear-clickable', 'Rear, clickable', [0.2, 0.85, -0.62]),
+				body: 'Reached from the front: the camera flew round.',
+				clickableWhenOccluded: true,
+				linkedCameraId: 'rear-camera'
+			},
+			base('rear-inert', 'Rear, inert', [-0.2, 0.85, -0.62])
+		],
+		cameraOptions: {
+			activeCameraId: 'opening',
+			cameras: [
+				{
+					cameraId: 'opening',
+					name: 'Opening view',
+					position: [0.9, 1.5, 3.2],
+					target: [0, 0.6, 0]
+				},
+				{
+					cameraId: 'rear-camera',
+					name: 'Rear',
+					kind: 'hotspot',
+					position: [0.6, 1.2, -2.6],
+					target: [0, 0.7, -0.6]
+				}
+			]
+		}
+	},
+	render: (args) => (
+		<VectrealViewer {...args}>
+			<ambientLight intensity={0.8} />
+			<directionalLight position={[3, 4, 2]} intensity={1.4} />
+		</VectrealViewer>
+	)
+}
+
+/**
  * Click either marker: the view flies to that hotspot's camera, and "Back to
  * scene view" appears at the top. It returns to the scene camera you clicked
  * from, however many markers you hopped through, and Escape inside the viewer

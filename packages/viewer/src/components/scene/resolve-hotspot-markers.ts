@@ -64,6 +64,12 @@ export interface HotspotMarker {
 	/** The clip this marker plays once on activation, or null. */
 	linkedAnimationClipId: string | null
 	occlusionEnabled: boolean
+	/**
+	 * Whether the marker still takes clicks and focus while the model hides
+	 * it. Never true without `occlusionEnabled`: a marker that never fades is
+	 * never hidden, so the question does not arise.
+	 */
+	clickableWhenOccluded: boolean
 }
 
 export interface ResolveHotspotMarkersOptions {
@@ -273,7 +279,12 @@ function toMarker(
 		// Occlusion defaults on: a marker floating in front of the geometry it is
 		// pinned behind reads as a bug, and a scene saved before the field existed
 		// carries no value at all.
-		occlusionEnabled: hotspot.occlusionEnabled !== false
+		occlusionEnabled: hotspot.occlusionEnabled !== false,
+		// Off unless the author asked: a scene saved before the field existed
+		// carries no value, and its faded markers were inert.
+		clickableWhenOccluded:
+			hotspot.occlusionEnabled !== false &&
+			hotspot.clickableWhenOccluded === true
 	}
 }
 
