@@ -3,6 +3,8 @@ import {
 	NORMALIZATION_DEFAULT_MIN_SIZE
 } from '@vctrl/core'
 
+import { withSceneCameraKinds } from '../lib/domain/scene/scene-camera'
+
 import type {
 	BoundsProps,
 	CameraProps,
@@ -27,6 +29,9 @@ export const defaultCameraOptions: CameraProps = {
 		{
 			cameraId: 'default',
 			name: 'Default Camera',
+			// Tagged so a hotspot that links it does not read as owning it; see
+			// `withCameraKinds`.
+			kind: 'scene',
 			fov: 60,
 			initial: true
 		}
@@ -209,7 +214,9 @@ export function withSceneSettingsDefaults(settings: SceneSettings) {
 		bounds: settings.bounds ?? defaultBoundsOptions,
 		environment: settings.environment ?? defaultEnvOptions,
 		interactions: settings.interactions,
-		camera: settings.camera ?? defaultCameraOptions,
+		camera: settings.camera
+			? withSceneCameraKinds(settings.camera)
+			: defaultCameraOptions,
 		controls: settings.controls ?? defaultControlsOptions,
 		shadows: normalizeShadowOptions(settings.shadows),
 		normalization: settings.normalization ?? defaultNormalizationOptions,

@@ -13,6 +13,7 @@ import {
 	SceneSettingsWithAssets
 } from '../../../../types/api'
 import { SCENE_ASSET_ROLE } from '../scene-asset-roles'
+import { withSceneCameraKinds } from '../scene-camera'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
 
 import type {
@@ -49,7 +50,8 @@ export function rowToSceneSettings(
 	return {
 		animation: row.animation ?? undefined,
 		bounds: row.bounds ?? undefined,
-		camera: row.camera ?? undefined,
+		// The embed manifest reads this, not `withSceneSettingsDefaults`.
+		camera: row.camera ? withSceneCameraKinds(row.camera) : undefined,
 		controls: row.controls ?? undefined,
 		environment: row.environment ?? undefined,
 		interactions: row.interactions ?? undefined,

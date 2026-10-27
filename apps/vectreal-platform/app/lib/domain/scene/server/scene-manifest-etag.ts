@@ -11,6 +11,15 @@ export interface ManifestPublication {
 }
 
 /**
+ * What the manifest body is built from besides the stored row. Bump it when
+ * the same saved settings start producing a different body, or a browser
+ * holding the old body revalidates, gets a 304, and keeps it.
+ *
+ * 2: cameras read untagged gain `kind: 'scene'` (`withSceneCameraKinds`).
+ */
+const MANIFEST_FORMAT = 'v2'
+
+/**
  * Returns a weak ETag for the scene manifest based on the scene ID and the
  * timestamp of the last settings save. Returns null when no timestamp is
  * available so callers can skip caching headers entirely.
@@ -37,8 +46,10 @@ export function buildSceneManifestEtag(
 	publication: ManifestPublication | null = null
 ): string | null {
 	if (!settingsUpdatedAt) return null
-	if (!publication) return `W/"scene-${sceneId}-${settingsUpdatedAt}"`
+	if (!publication) {
+		return `W/"scene-${MANIFEST_FORMAT}-${sceneId}-${settingsUpdatedAt}"`
+	}
 	const { assetId, publishedAt, assetUrlsVersion, caller } = publication
 	const callerSuffix = caller === 'session' ? '-session' : ''
-	return `W/"scene-embed-${sceneId}-${settingsUpdatedAt}-${assetId}-${publishedAt.toISOString()}-${assetUrlsVersion ?? 'unsigned'}${callerSuffix}"`
+	return `W/"scene-embed-${MANIFEST_FORMAT}-${sceneId}-${settingsUpdatedAt}-${assetId}-${publishedAt.toISOString()}-${assetUrlsVersion ?? 'unsigned'}${callerSuffix}"`
 }
