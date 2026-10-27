@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.1.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.0.0...workspace-v3.1.0) (2026-10-27)
+
+
+### Features
+
+* **hotspots:** let a marker behind the model stay clickable ([#1202](https://github.com/Vectreal/vectreal-platform/issues/1202)) ([79de557](https://github.com/Vectreal/vectreal-platform/commit/79de55762967c8a77324efa272ebe97b02aa0e28))
+
+
+### Bug Fixes
+
+* **scene:** keep a linked scene camera a view of the scene ([#1203](https://github.com/Vectreal/vectreal-platform/issues/1203)) ([62e944f](https://github.com/Vectreal/vectreal-platform/commit/62e944f4568dcee108b0477933694113789a5a76))
+* **viewer:** fly between cameras continuously, aimed and model-aware ([#1201](https://github.com/Vectreal/vectreal-platform/issues/1201)) ([961a123](https://github.com/Vectreal/vectreal-platform/commit/961a123bf89b64c50d72fd29154e6a3aa8a7ad97))
+
 ## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v2.1.0...workspace-v3.0.0) (2026-10-23)
 
 

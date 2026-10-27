@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/Vectreal/vectreal-platform/compare/sdk-v3.0.0...sdk-v3.1.0) (2026-10-27)
+
+
+### Miscellaneous Chores
+
+* **sdk:** Synchronize vectreal-monorepo versions
+
 ## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/sdk-v2.1.0...sdk-v3.0.0) (2026-10-23)
 
 

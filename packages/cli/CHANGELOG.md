@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.1.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.0.0...cli-v3.1.0) (2026-10-27)
+
+
+### Miscellaneous Chores
+
+* **cli:** Synchronize vectreal-monorepo versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.1.0
+    * @vctrl/sdk bumped to 3.1.0
+
 ## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v2.1.0...cli-v3.0.0) (2026-10-23)
 
 
