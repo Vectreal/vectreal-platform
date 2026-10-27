@@ -3,7 +3,7 @@ title: "Camera Presets, Transitions, and the Single Biggest Quality Lever in 3D 
 slug: "camera-presets-and-transitions"
 excerpt: "Multi-camera scenes, smart transitions, and the small set of decisions that turn a flat embed into a presentation people actually finish watching."
 publishedAt: "2026-05-06"
-updatedAt: "2026-10-12"
+updatedAt: "2026-10-27"
 category: "guides"
 tags:
 - "camera"
@@ -146,18 +146,9 @@ Scenes default to **1000 ms** (one second) with Smooth easing, which is what a s
 
 #### Smart (object_avoidance)
 
-A path-aware transition. The camera does not move in a straight line - it computes an arc that lifts over obstacles between the start and end positions. This is the transition that turns a model viewer into something that feels like a guided tour.
+The camera orbits rather than travelling in a straight line. It swings around the model, zooms at an even pace, and keeps the point it is looking at in frame for the whole move. Where a straight line would pass through the model, the path goes around it instead, at a distance that scales with the model's size, so a small product and a large one fly the same shape.
 
-Smart is opt-in. When you pick it, a **Path settings** entry appears below the easing options with four parameters:
-
-| Parameter | What it controls | Range | Sensible default |
-|---|---|---|---|
-| Obstacle Margin | Extra space the path keeps from any obstacle. | 0–20 | 2 |
-| Path Height | How high the path arcs over obstacles. | 0–20 | 2 |
-| Path Smoothness | Number of samples along the arc. Higher is smoother but more expensive. | 2–128 | 24 |
-| Path Curve | How tightly the path follows the arc shape. | 0–1 | 0.5 |
-
-Smart is the option to turn on when your scene has geometry between your cameras - interior architecture, a product with multiple components, a scene with a stage element. For a single object on a turntable, Linear is usually enough. The Publisher also warns that Smart framing is still unpredictable on some scenes, so watch the move in preview before you publish.
+There is nothing to tune beyond duration and easing. Smart is the option to turn on when your cameras sit on different sides of the model, or when a hotspot camera moves in close to a detail: the move reads as one continuous turn rather than a slide. For cameras on the same side of a single object, Linear is usually enough. Smart steers around the model's overall bounds, not around individual walls, so check a move between rooms of an interior in preview before you publish.
 
 ---
 
@@ -198,10 +189,10 @@ The visitor lands on Hero, can drag to inspect, can switch to Detail to see the 
 #### Architectural interior
 
 **Cameras:** Entry (Wide 90°), Living Area (Standard 60°), Detail (Telephoto 35° on a finish or fixture).
-**Transitions:** Smart, with Path Height 3, Obstacle Margin 2, Path Smoothness 32. Duration Slow (2000 ms) - interiors need time to read.
+**Transitions:** Smart, Duration Slow (2000 ms) - interiors need time to read.
 **Interaction:** Zoom on. Auto-rotate off. Vertical Limit 100° to allow looking slightly down at floor finishes.
 
-Smart transitions are doing real work here - without them, switching between cameras inside a building cuts straight through walls.
+Smart keeps each room's focal point in frame as the camera turns toward the next one. It steers around the model's overall bounds rather than individual walls, so watch any move that crosses a wall in preview.
 
 #### Guided product demo (presentation mode)
 

@@ -43,6 +43,10 @@
 			"types": "./hotspots.d.ts",
 			"default": "./hotspots.js"
 		},
+		"./camera-flight": {
+			"types": "./camera-flight.d.ts",
+			"default": "./camera-flight.js"
+		},
 		"./css": "./style.css"
 	},
 	"dependencies": {

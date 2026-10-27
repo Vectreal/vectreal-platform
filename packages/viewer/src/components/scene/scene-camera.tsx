@@ -3,25 +3,27 @@ import { useFrame, useThree } from '@react-three/fiber'
 import {
 	CameraProps,
 	CameraTransitionConfig,
-	CameraTransitionEasing,
 	CameraTransitionType
 } from '@vctrl/core'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
-	CatmullRomCurve3,
 	Euler,
 	type Object3D,
 	PerspectiveCamera,
 	Quaternion,
+	Sphere,
 	Vector3,
 	Vector3Tuple
 } from 'three'
 
+import { sampleCameraFlight } from './camera-flight'
 import { cameraSelectionSignature } from './camera-selection-signature'
 import { applyInitialFraming } from './initial-framing'
+import { worldBounds } from './model-measurement'
 import { withOpeningPose } from './opening-pose'
 import { prefersReducedMotion } from './reduced-motion'
 
+import type { CameraFlight, CameraFlightFrame } from './camera-flight'
 import type { CameraSelectionSignature } from './camera-selection-signature'
 import type { InitialFramingControls } from './initial-framing'
 import type { OpeningPose } from './opening-pose'
@@ -77,20 +79,11 @@ interface SceneCameraProps extends CameraProps {
 }
 
 type CameraTransitionRuntime = {
-	type: CameraTransitionType
+	flight: CameraFlight
 	startAtMs: number
 	durationMs: number
-	startPosition: Vector3
-	endPosition: Vector3
-	startQuaternion: Quaternion
-	endQuaternion: Quaternion
-	startFov: number
-	endFov: number
-	startTarget: Vector3
-	endTarget: Vector3
-	easing?: CameraTransitionEasing
-	objectAvoidanceSamples?: number
-	curve?: CatmullRomCurve3
+	/** Reused every frame, so a flight allocates once. */
+	frame: CameraFlightFrame
 }
 
 export type ResolvedCameraSelection = {
@@ -103,10 +96,6 @@ export type ResolvedCameraSelection = {
 }
 
 const DEFAULT_TRANSITION_DURATION_MS = 1000
-const DEFAULT_OBJECT_AVOIDANCE_CLEARANCE = 2
-const DEFAULT_OBJECT_AVOIDANCE_ARC_HEIGHT = 2
-const DEFAULT_OBJECT_AVOIDANCE_SAMPLES = 24
-const DEFAULT_OBJECT_AVOIDANCE_TENSION = 0.5
 
 function hasSerializableVector3(value: unknown): boolean {
 	return (
@@ -194,20 +183,6 @@ function resolveTransition(
 	}
 }
 
-function applyEasing(t: number, easing?: CameraTransitionEasing): number {
-	switch (easing) {
-		case 'ease_in':
-			return t * t
-		case 'ease_out':
-			return 1 - (1 - t) * (1 - t)
-		case 'ease_in_out':
-			return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-		case 'linear':
-		default:
-			return t
-	}
-}
-
 export function resolveCameraSelection(
 	cameras: CameraProps['cameras'],
 	activeCameraId: CameraProps['activeCameraId'],
@@ -280,54 +255,6 @@ export function resolveCameraSelection(
 	}
 }
 
-function buildObjectAvoidanceCurve(
-	startPosition: Vector3,
-	endPosition: Vector3,
-	center: Vector3,
-	transition: CameraTransitionConfig
-): CatmullRomCurve3 {
-	const clearance =
-		transition.objectAvoidance?.clearance ?? DEFAULT_OBJECT_AVOIDANCE_CLEARANCE
-	const arcHeight =
-		transition.objectAvoidance?.arcHeight ?? DEFAULT_OBJECT_AVOIDANCE_ARC_HEIGHT
-	const tension =
-		transition.objectAvoidance?.tension ?? DEFAULT_OBJECT_AVOIDANCE_TENSION
-
-	const startDirection = startPosition.clone().sub(center).normalize()
-	const endDirection = endPosition.clone().sub(center).normalize()
-
-	let normalDirection = startDirection.clone().add(endDirection)
-	if (normalDirection.lengthSq() < 0.0001) {
-		normalDirection = startDirection.clone().cross(new Vector3(0, 1, 0))
-		if (normalDirection.lengthSq() < 0.0001) {
-			normalDirection = new Vector3(1, 0, 0)
-		}
-	}
-	normalDirection.normalize()
-
-	const radius =
-		Math.max(
-			startPosition.distanceTo(center),
-			endPosition.distanceTo(center),
-			1
-		) + clearance
-
-	const midpoint = center
-		.clone()
-		.add(normalDirection.clone().multiplyScalar(radius))
-		.add(new Vector3(0, arcHeight, 0))
-
-	const controlA = startPosition.clone().lerp(midpoint, 0.5)
-	const controlB = endPosition.clone().lerp(midpoint, 0.5)
-
-	return new CatmullRomCurve3(
-		[startPosition.clone(), controlA, controlB, endPosition.clone()],
-		false,
-		'catmullrom',
-		tension
-	)
-}
-
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
@@ -395,6 +322,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	*/
 	const sceneTransitionRef = useRef(sceneTransition)
 	sceneTransitionRef.current = sceneTransition
+	// Read when a flight starts, for the same reason: a model swap must not
+	// re-register the executor before the new model is framed.
+	const modelRef = useRef(model)
+	modelRef.current = model
 
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
@@ -462,38 +393,33 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				return
 			}
 
-			const startQuaternion = activeCamera.quaternion.clone()
-			const endQuaternion = new Quaternion().setFromEuler(
-				selection.targetRotation
-			)
-
 			const runtime: CameraTransitionRuntime = {
-				type: normalizedType,
+				flight: {
+					type: normalizedType,
+					from: {
+						position: activeCamera.position.clone(),
+						target: controls?.target?.clone() ?? new Vector3(0, 0, 0),
+						fov: activeCamera.fov
+					},
+					to: {
+						position: selection.targetPosition.clone(),
+						target: selection.targetLookAt.clone(),
+						fov: selection.targetFov
+					},
+					easing: selection.transition.easing,
+					bounds: modelRef.current
+						? worldBounds(modelRef.current).getBoundingSphere(new Sphere())
+						: null
+				},
 				startAtMs:
 					typeof performance !== 'undefined' ? performance.now() : Date.now(),
 				durationMs,
-				startPosition: activeCamera.position.clone(),
-				endPosition: selection.targetPosition.clone(),
-				startQuaternion,
-				endQuaternion,
-				startFov: activeCamera.fov,
-				endFov: selection.targetFov,
-				startTarget: controls?.target?.clone() ?? new Vector3(0, 0, 0),
-				endTarget: selection.targetLookAt.clone(),
-				easing: selection.transition.easing,
-				objectAvoidanceSamples:
-					selection.transition.objectAvoidance?.samples ??
-					DEFAULT_OBJECT_AVOIDANCE_SAMPLES
-			}
-
-			if (normalizedType === 'object_avoidance') {
-				const controlsTarget = selection.targetLookAt
-				runtime.curve = buildObjectAvoidanceCurve(
-					runtime.startPosition,
-					runtime.endPosition,
-					controlsTarget,
-					selection.transition
-				)
+				frame: {
+					position: new Vector3(),
+					target: new Vector3(),
+					fov: activeCamera.fov,
+					quaternion: new Quaternion()
+				}
 			}
 
 			transitionRuntime.current = runtime
@@ -693,55 +619,32 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	useFrame(() => {
 		if (transitionRuntime.current) {
 			const runtime = transitionRuntime.current
+			const activeCamera = sceneCamera as PerspectiveCamera
 			const now =
 				typeof performance !== 'undefined' ? performance.now() : Date.now()
 			const rawProgress = Math.min(
 				1,
 				Math.max(0, (now - runtime.startAtMs) / runtime.durationMs)
 			)
-			const easedProgress = applyEasing(rawProgress, runtime.easing)
-
-			if (runtime.type === 'object_avoidance' && runtime.curve) {
-				const samples =
-					runtime.objectAvoidanceSamples ?? DEFAULT_OBJECT_AVOIDANCE_SAMPLES
-				const splineProgress = Math.min(
-					1,
-					Math.max(0, Math.round(easedProgress * samples) / samples)
-				)
-				;(sceneCamera as PerspectiveCamera).position.copy(
-					runtime.curve.getPoint(splineProgress)
-				)
-			} else {
-				;(sceneCamera as PerspectiveCamera).position.lerpVectors(
-					runtime.startPosition,
-					runtime.endPosition,
-					easedProgress
-				)
-			}
-
-			;(sceneCamera as PerspectiveCamera).quaternion.slerpQuaternions(
-				runtime.startQuaternion,
-				runtime.endQuaternion,
-				easedProgress
+			const frame = sampleCameraFlight(
+				runtime.flight,
+				rawProgress,
+				runtime.frame,
+				activeCamera.up
 			)
-			;(sceneCamera as PerspectiveCamera).fov =
-				runtime.startFov + (runtime.endFov - runtime.startFov) * easedProgress
-			;(sceneCamera as PerspectiveCamera).updateProjectionMatrix()
 
+			activeCamera.position.copy(frame.position)
+			activeCamera.quaternion.copy(frame.quaternion)
+			activeCamera.fov = frame.fov
+			activeCamera.updateProjectionMatrix()
+
+			// The target the frame was aimed at, so update()'s lookAt agrees.
 			if (controls?.target) {
-				controls.target.lerpVectors(
-					runtime.startTarget,
-					runtime.endTarget,
-					easedProgress
-				)
+				controls.target.copy(frame.target)
 				controls.update?.()
 			}
 
 			if (rawProgress >= 1) {
-				if (controls?.target) {
-					controls.target.copy(runtime.endTarget)
-				}
-				controls?.update?.()
 				transitionRuntime.current = null
 			}
 

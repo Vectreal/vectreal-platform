@@ -57,23 +57,16 @@ export type CameraTransitionEasing =
 
 /**
  * Object-avoidance transition parameters.
+ *
+ * @deprecated Ignored by the viewer since Smart flies in orbit space: its
+ * clearance follows the model's size and its path is sampled continuously, so
+ * none of these has anything left to set. Still accepted, so scenes saved with
+ * them keep loading.
  */
 export interface CameraObjectAvoidanceConfig {
-	/**
-	 * Adds additional radius around the avoidance sphere.
-	 */
 	clearance?: number
-	/**
-	 * Relative arc height used to build spline control points.
-	 */
 	arcHeight?: number
-	/**
-	 * Number of interpolation samples along the spline.
-	 */
 	samples?: number
-	/**
-	 * Catmull-Rom tension parameter.
-	 */
 	tension?: number
 }
 
@@ -84,6 +77,7 @@ export interface CameraTransitionConfig {
 	type: CameraTransitionType
 	duration?: number
 	easing?: CameraTransitionEasing
+	/** @deprecated Ignored by the viewer; see `CameraObjectAvoidanceConfig`. */
 	objectAvoidance?: CameraObjectAvoidanceConfig
 }
 

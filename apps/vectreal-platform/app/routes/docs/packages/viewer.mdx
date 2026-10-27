@@ -224,6 +224,28 @@ Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-spe
 />
 ```
 
+### Sampling a flight outside the viewer
+
+`sampleCameraFlight` is the flight between two cameras as a pure function of raw progress, the same one the viewer samples every frame. A renderer that draws frames itself, out of order or at a fixed rate, calls it per frame and gets the path the viewer flies. Import it from `@vctrl/viewer/camera-flight`, which needs only `three`, or from the package root.
+
+```ts
+import { sampleCameraFlight } from '@vctrl/viewer/camera-flight'
+import { Sphere, Vector3 } from 'three'
+
+const flight = {
+  type: 'object_avoidance', // or 'linear'
+  from: { position: new Vector3(0, 1, 4), target: new Vector3(), fov: 50 },
+  to: { position: new Vector3(0, 0.3, -1), target: new Vector3(0, 0, -0.4), fov: 40 },
+  easing: 'ease_in_out',
+  bounds: new Sphere(new Vector3(), 0.6) // the model's world bounding sphere
+}
+
+// rawProgress = elapsed / duration, 0 to 1, linear in time
+const { position, target, fov, quaternion } = sampleCameraFlight(flight, rawProgress)
+```
+
+`quaternion` looks at `target`, so it can be applied to a camera directly. Pass a reused frame object as the third argument to sample without allocating. `easeFlightProgress` is the easing on its own.
+
 ---
 
 ## Controls options (`ControlsProps`)

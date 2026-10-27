@@ -8,36 +8,22 @@ import {
 } from '@shared/components/ui/toggle-group'
 import { cn } from '@shared/utils'
 import { useAtomValue } from 'jotai/react'
-import {
-	Camera,
-	Check,
-	Link,
-	Pin,
-	Plus,
-	Route,
-	Spline,
-	Trash2
-} from 'lucide-react'
+import { Camera, Check, Link, Pin, Plus, Route, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import {
 	DEFAULT_TRANSITION_DURATION,
 	DEFAULT_TRANSITION_EASING,
 	TRANSITION_EASING_OPTIONS,
-	TRANSITION_TYPE_OPTIONS,
-	withAvoidanceDefaults,
-	type ObjectAvoidanceKey
+	TRANSITION_TYPE_OPTIONS
 } from './camera-state'
 import { useCameraSwitcherSetting } from './use-camera-switcher-setting'
 import { useSceneTransition } from './use-scene-transition'
 import { canEditCameraSettingsAtom } from '../../../../../lib/stores/publisher-config-store'
-import { InlineNotice } from '../../../../layout-components'
 import { DrillDownTrigger } from '../../drill-down'
-import { FieldSlider } from '../../field-slider'
 import { SettingGroup, SettingRow } from '../../sidebar-section'
 
 import type { SceneCameras } from './use-scene-cameras'
-import type { FieldConfig } from '../../../../../types/settings-field'
 import type { CameraTransitionEasing, CameraTransitionType } from '@vctrl/core'
 
 const FOV_PRESETS: SliderPreset[] = [
@@ -50,41 +36,6 @@ const DURATION_PRESETS: SliderPreset[] = [
 	{ value: 0, label: 'Instant' },
 	{ value: 500, label: 'Quick' },
 	{ value: 2000, label: 'Slow' }
-]
-
-const AVOIDANCE_FIELDS: FieldConfig<ObjectAvoidanceKey>[] = [
-	{
-		key: 'clearance',
-		label: 'Obstacle margin',
-		min: 0,
-		max: 20,
-		step: 0.1,
-		formatValue: (value) => value.toFixed(1)
-	},
-	{
-		key: 'arcHeight',
-		label: 'Path height',
-		min: 0,
-		max: 20,
-		step: 0.1,
-		formatValue: (value) => value.toFixed(1)
-	},
-	{
-		key: 'samples',
-		label: 'Path smoothness',
-		min: 2,
-		max: 128,
-		step: 1,
-		formatValue: (value) => `${Math.round(value)}`
-	},
-	{
-		key: 'tension',
-		label: 'Path curve',
-		min: 0,
-		max: 1,
-		step: 0.01,
-		formatValue: (value) => value.toFixed(2)
-	}
 ]
 
 /** How long "View captured" stays on the button after a capture. */
@@ -320,14 +271,6 @@ export function TransitionSettings() {
 				))}
 			</ToggleGroup>
 
-			{transition.type === 'object_avoidance' && (
-				<InlineNotice>
-					Smart transitions solve a path around the model. Framing is still
-					unpredictable on some scenes, so check the result in preview before
-					publishing.
-				</InlineNotice>
-			)}
-
 			{transition.type !== 'none' && (
 				<>
 					<Slider
@@ -362,27 +305,6 @@ export function TransitionSettings() {
 					</SettingGroup>
 				</>
 			)}
-
-			{transition.type === 'object_avoidance' && (
-				<DrillDownTrigger to="path" icon={<Spline />} label="Path settings" />
-			)}
 		</>
 	)
-}
-
-/** How a smart transition's path clears the model. */
-export function PathSettings() {
-	const isLocked = useIsCameraEditingLocked()
-	const { transition, setAvoidance } = useSceneTransition()
-	const avoidance = withAvoidanceDefaults(transition.objectAvoidance)
-
-	return AVOIDANCE_FIELDS.map((field) => (
-		<FieldSlider
-			key={field.key}
-			field={field}
-			value={avoidance[field.key]}
-			onChange={setAvoidance}
-			disabled={isLocked}
-		/>
-	))
 }

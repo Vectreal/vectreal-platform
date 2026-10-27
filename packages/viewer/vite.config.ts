@@ -35,7 +35,13 @@ export default defineConfig({
 				index: path.resolve(import.meta.dirname, 'src/index.package.ts'),
 				// Dependency-free, so a consumer that only needs the hotspot list
 				// rules does not pull React, three and drei in behind them.
-				hotspots: path.resolve(import.meta.dirname, 'src/hotspots.ts')
+				hotspots: path.resolve(import.meta.dirname, 'src/hotspots.ts'),
+				// `three` only: the flight as a pure function, for a renderer that
+				// samples frames itself.
+				'camera-flight': path.resolve(
+					import.meta.dirname,
+					'src/camera-flight.ts'
+				)
 			},
 			name: '@vctrl/viewer',
 			// ES modules only: Node.js 20.19, 22.12 and later `require()` them too,

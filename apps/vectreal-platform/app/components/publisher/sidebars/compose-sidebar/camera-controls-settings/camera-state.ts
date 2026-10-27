@@ -13,11 +13,6 @@ import type { SceneCameraSnapshot } from '@vctrl/viewer'
 
 export type CameraEntry = NonNullable<CameraProps['cameras']>[number]
 
-type ObjectAvoidance = Required<
-	NonNullable<CameraTransitionConfig['objectAvoidance']>
->
-export type ObjectAvoidanceKey = keyof ObjectAvoidance
-
 export const TRANSITION_TYPE_OPTIONS: {
 	value: CameraTransitionType
 	label: string
@@ -40,25 +35,6 @@ export const TRANSITION_EASING_OPTIONS: {
 export const DEFAULT_TRANSITION_DURATION = 1000
 export const DEFAULT_TRANSITION_EASING: CameraTransitionEasing = 'ease_in_out'
 
-const DEFAULT_OBJECT_AVOIDANCE: ObjectAvoidance = {
-	clearance: 2,
-	arcHeight: 2,
-	samples: 24,
-	tension: 0.5
-}
-
-/** Every avoidance parameter, saved ones kept and the rest at their default. */
-export function withAvoidanceDefaults(
-	saved: CameraTransitionConfig['objectAvoidance']
-): ObjectAvoidance {
-	return {
-		clearance: saved?.clearance ?? DEFAULT_OBJECT_AVOIDANCE.clearance,
-		arcHeight: saved?.arcHeight ?? DEFAULT_OBJECT_AVOIDANCE.arcHeight,
-		samples: saved?.samples ?? DEFAULT_OBJECT_AVOIDANCE.samples,
-		tension: saved?.tension ?? DEFAULT_OBJECT_AVOIDANCE.tension
-	}
-}
-
 /**
  * The scene transition with every field its type uses filled in, so the
  * editor can spread it into an edit without re-applying defaults.
@@ -75,15 +51,13 @@ export function normalizeTransition(
 		easing: transition?.easing ?? DEFAULT_TRANSITION_EASING
 	}
 
-	if (transition?.type === 'object_avoidance') {
-		return {
-			type: 'object_avoidance',
-			...timing,
-			objectAvoidance: withAvoidanceDefaults(transition.objectAvoidance)
-		}
+	// A saved `objectAvoidance` is dropped: Smart takes its clearance from
+	// the model's size, and the viewer no longer reads those fields.
+	return {
+		type:
+			transition?.type === 'object_avoidance' ? 'object_avoidance' : 'linear',
+		...timing
 	}
-
-	return { type: 'linear', ...timing }
 }
 
 export function applySnapshotToCamera(

@@ -6,6 +6,14 @@ export {
 export { default as SceneBounds, defaultBoundsOptions } from './scene-bounds'
 export { default as SceneCamera, defaultCameraOptions } from './scene-camera'
 export {
+	easeFlightProgress,
+	sampleCameraFlight,
+	SMART_FLIGHT_CLEARANCE,
+	type CameraFlight,
+	type CameraFlightFrame,
+	type CameraFlightPose
+} from './camera-flight'
+export {
 	default as SceneControls,
 	defaultControlsOptions
 } from './scene-controls'
