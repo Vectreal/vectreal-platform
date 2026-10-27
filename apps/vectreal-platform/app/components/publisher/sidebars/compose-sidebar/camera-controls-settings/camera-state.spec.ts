@@ -16,22 +16,26 @@ describe('normalizeTransition', () => {
 		})
 	})
 
-	it('fills a smart path parameter by parameter, keeping what was saved', () => {
+	it('drops the path parameters a smart move saved before they lost meaning', () => {
 		expect(
 			normalizeTransition({
 				type: 'object_avoidance',
 				duration: 400,
-				objectAvoidance: { samples: 64 }
+				objectAvoidance: {
+					clearance: 2,
+					arcHeight: 2,
+					samples: 24,
+					tension: 0.5
+				}
 			})
 		).toEqual({
 			type: 'object_avoidance',
 			duration: 400,
-			easing: 'ease_in_out',
-			objectAvoidance: { clearance: 2, arcHeight: 2, samples: 64, tension: 0.5 }
+			easing: 'ease_in_out'
 		})
 	})
 
-	it('keeps the timing and drops the path when a smart move becomes linear', () => {
+	it('keeps the timing when a smart move becomes linear', () => {
 		const smart = normalizeTransition({
 			type: 'object_avoidance',
 			duration: 400,

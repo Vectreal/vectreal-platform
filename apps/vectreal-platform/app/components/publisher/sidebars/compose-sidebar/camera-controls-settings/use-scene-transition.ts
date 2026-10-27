@@ -4,9 +4,7 @@ import { useCallback, useMemo } from 'react'
 import {
 	normalizeCameraState,
 	normalizeTransition,
-	withAvoidanceDefaults,
-	withDefaultCameraFlag,
-	type ObjectAvoidanceKey
+	withDefaultCameraFlag
 } from './camera-state'
 import { cameraAtom } from '../../../../../lib/stores/scene-settings-store'
 
@@ -39,7 +37,7 @@ export function useSceneTransition() {
 		[setCamera]
 	)
 
-	/** Keeps the timing and path the new type can use, and defaults the rest. */
+	/** Keeps the timing the new type can use, and defaults the rest. */
 	const setType = useCallback(
 		(type: CameraTransitionType) => {
 			write(normalizeTransition({ ...transition, type }))
@@ -62,19 +60,5 @@ export function useSceneTransition() {
 		[transition, write]
 	)
 
-	const setAvoidance = useCallback(
-		(key: ObjectAvoidanceKey, value: number) => {
-			if (transition.type !== 'object_avoidance') return
-			write({
-				...transition,
-				objectAvoidance: {
-					...withAvoidanceDefaults(transition.objectAvoidance),
-					[key]: key === 'samples' ? Math.max(2, Math.round(value)) : value
-				}
-			})
-		},
-		[transition, write]
-	)
-
-	return { transition, setType, setDuration, setEasing, setAvoidance }
+	return { transition, setType, setDuration, setEasing }
 }

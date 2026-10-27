@@ -1,12 +1,7 @@
 import { useAtom, useSetAtom } from 'jotai/react'
 import { memo, useCallback, useEffect, useState } from 'react'
 
-import {
-	CameraDetail,
-	CameraList,
-	PathSettings,
-	TransitionSettings
-} from './camera-views'
+import { CameraDetail, CameraList, TransitionSettings } from './camera-views'
 import { useSceneCameras } from './use-scene-cameras'
 import { cameraToolOpenRequestAtom } from '../../../../../lib/stores/publisher-config-store'
 import { exitHotspotCameraAtom } from '../../../../../lib/stores/scene-settings-store'
@@ -79,14 +74,6 @@ const CameraControlsSettingsPanel = memo(() => {
 				caption="How the view moves when a viewer switches cameras."
 			>
 				<TransitionSettings />
-			</DrillDownView>
-
-			<DrillDownView
-				id="path"
-				title="Path settings"
-				caption="How the smart path clears the model on its way to the next camera."
-			>
-				<PathSettings />
 			</DrillDownView>
 		</DrillDown>
 	)
