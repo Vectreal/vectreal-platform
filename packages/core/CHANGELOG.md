@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.0.0...core-v3.1.0) (2026-10-27)
+
+
+### Features
+
+* **hotspots:** let a marker behind the model stay clickable ([#1202](https://github.com/Vectreal/vectreal-platform/issues/1202)) ([79de557](https://github.com/Vectreal/vectreal-platform/commit/79de55762967c8a77324efa272ebe97b02aa0e28))
+
+
+### Bug Fixes
+
+* **viewer:** fly between cameras continuously, aimed and model-aware ([#1201](https://github.com/Vectreal/vectreal-platform/issues/1201)) ([961a123](https://github.com/Vectreal/vectreal-platform/commit/961a123bf89b64c50d72fd29154e6a3aa8a7ad97))
+
 ## [3.0.0](https://github.com/Vectreal/vectreal-platform/compare/core-v2.1.0...core-v3.0.0) (2026-10-23)
 
 
