@@ -317,3 +317,52 @@ jobs:
             ( cd "$dir" && npm pack --dry-run )
             npx nx run "vctrl/$p:publish"
           done
+
+      # The MCP Registry listing for @vctrl/cli. It has to come from here: the
+      # registry grants the io.github.Vectreal namespace through this job's OIDC
+      # token, and its interactive login cannot publish to an org namespace
+      # (modelcontextprotocol/registry#1468). The registry validates against the
+      # npm package, so this runs after the publish above.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4
+
+      - name: Download and verify mcp-publisher
+        shell: bash
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.2
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "$archive.sigstore.json"
+
+      - name: Publish @vctrl/cli to the MCP Registry (idempotent, OIDC)
+        # server.json's version follows the CLI's through release-please's extra
+        # files. Skipped when that version is already listed, so a re-run or a
+        # manual dispatch does not fail on a duplicate.
+        shell: bash
+        run: |
+          set -euo pipefail
+          name=$(node -p "require('./packages/cli/server.json').name")
+          version=$(node -p "require('./packages/cli/server.json').version")
+          url="https://registry.modelcontextprotocol.io/v0.1/servers/${name//\//%2F}/versions/$version"
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' "$url")
+          if [[ "$status" == "200" ]]; then
+            echo "✓ $name@$version already in the MCP Registry — skipping"
+            exit 0
+          fi
+          if [[ "$status" != "404" ]]; then
+            echo "Unexpected status $status from $url"
+            exit 1
+          fi
+          echo "→ Publishing $name@$version to the MCP Registry"
+          ./mcp-publisher login github-oidc
+          ( cd packages/cli && ../../mcp-publisher publish )
