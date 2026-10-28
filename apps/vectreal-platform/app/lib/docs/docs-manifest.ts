@@ -234,6 +234,16 @@ export const docsPages: DocPage[] = [
 		order: 4,
 		version: 'latest'
 	},
+	{
+		slug: 'packages/sdk',
+		title: '@vctrl/sdk',
+		description:
+			'A typed client for the /api/v1 agent API, with the zod schemas the platform answers through.',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/packages/sdk.mdx',
+		category: 'packages',
+		order: 5,
+		version: 'latest'
+	},
 
 	// ──────────────────────────────────────────────────────────────────────────
 	// Run It Yourself

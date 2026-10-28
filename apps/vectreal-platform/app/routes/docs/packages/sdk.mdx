@@ -1,0 +1,124 @@
+# @vctrl/sdk
+
+[![NPM Downloads](https://img.shields.io/npm/dm/%40vctrl%2Fsdk?logo=npm&logoColor=%23fc6c18&label=%40vctrl%2Fsdk%20%7C%20NPM%20Downloads&color=%23fc6c18)](https://www.npmjs.com/package/@vctrl/sdk)
+
+A typed client for Vectreal's agent API, `/api/v1`, and the zod schemas behind it. The platform's routes answer through the same schemas, so a change on either side fails the other's type check. The [Vectreal CLI](/docs/agents/cli) and its MCP server are built on it.
+
+---
+
+## Installation
+
+```bash
+npm install @vctrl/sdk
+# or
+pnpm add @vctrl/sdk
+```
+
+**Module format:** ES modules only. It runs wherever `fetch`, `FormData` and `crypto.randomUUID` are globals: current Node.js, browsers, and edge runtimes.
+
+{/* claims
+present packages/sdk/package.json "type": "module"
+present packages/sdk/src/client.ts export function createVectrealClient({
+present packages/sdk/src/client.ts getAccessToken?: () => string | Promise<string>
+present packages/sdk/src/client.ts fetch?: typeof globalThis.fetch
+present packages/sdk/src/client.ts { idempotencyKey = crypto.randomUUID() }: { idempotencyKey?: string } = {}
+present packages/sdk/src/client.ts export class VectrealApiError extends Error {
+present packages/sdk/src/client.ts export class VectrealContractError extends Error {
+present packages/sdk/src/index.ts export { API_ERROR_CODES } from './errors'
+*/}
+
+---
+
+## Quick start
+
+```ts
+import { createVectrealClient } from '@vctrl/sdk'
+
+const vectreal = createVectrealClient({
+	baseUrl: 'https://vectreal.com',
+	getAccessToken: () => token
+})
+
+const { organization, scopes } = await vectreal.me()
+const { projects } = await vectreal.projects()
+```
+
+`getAccessToken` returns an OAuth access token from Vectreal's consent flow, which `vectreal login` runs for you. It is called before every request that needs one, so it can refresh the token first. Pass `fetch` to use your own implementation.
+
+---
+
+## Methods
+
+Every method sends one request and parses the answer with its schema. The scope each endpoint needs and the shape of each answer are in the [API reference](/docs/agents/api).
+
+| Method | Request |
+|---|---|
+| `me()` | `GET /api/v1/me`: who the token acts as, its organization and its scopes |
+| `projects()` | `GET /api/v1/projects` |
+| `createProject(input, options?)` | `POST /api/v1/projects` |
+| `listScenes(projectId)` | `GET /api/v1/projects/{projectId}/scenes`, most recently edited first |
+| `createScene(projectId, { name, file }, options?)` | `POST /api/v1/projects/{projectId}/scenes`: a draft scene from one GLB |
+| `getSceneSettings(sceneId)` | `GET /api/v1/scenes/{sceneId}/settings` |
+| `updateSceneSettings(sceneId, input, options?)` | `PATCH /api/v1/scenes/{sceneId}/settings`: each section sent replaces that section whole |
+| `publishScene(sceneId, { file }, options?)` | `POST /api/v1/scenes/{sceneId}/publication`: the GLB visitors load |
+| `unpublishScene(sceneId, options?)` | `DELETE /api/v1/scenes/{sceneId}/publication` |
+| `listEmbedKeys(projectId)` | `GET /api/v1/projects/{projectId}/embed-keys` |
+| `createEmbedKey(projectId, input, options?)` | `POST /api/v1/projects/{projectId}/embed-keys` |
+| `getAllowedDomains(projectId)` | `GET /api/v1/projects/{projectId}/allowed-domains` |
+| `setAllowedDomains(projectId, input, options?)` | `PUT /api/v1/projects/{projectId}/allowed-domains`: replaces the whole list |
+| `getSceneEmbed(sceneId, { keyId }?)` | `GET /api/v1/scenes/{sceneId}/embed`: the iframe URL and snippets, token included |
+| `endSession()` | `DELETE /api/v1/session`: the token and its refresh token stop working |
+
+Neither `createScene` nor `publishScene` re-encodes the model on the server. Send the GLB already compressed if it should be smaller.
+
+{/* claims
+present packages/sdk/src/client.ts me: (): Promise<Me> =>
+present packages/sdk/src/client.ts projects: (): Promise<ProjectList> =>
+present packages/sdk/src/client.ts createProject: (
+present packages/sdk/src/client.ts listScenes: (projectId: string): Promise<SceneList> =>
+present packages/sdk/src/client.ts createScene: (
+present packages/sdk/src/client.ts getSceneSettings: (sceneId: string): Promise<SceneSettingsDocument> =>
+present packages/sdk/src/client.ts updateSceneSettings: (
+present packages/sdk/src/client.ts publishScene: (
+present packages/sdk/src/client.ts unpublishScene: (
+present packages/sdk/src/client.ts listEmbedKeys: (projectId: string): Promise<EmbedKeyList> =>
+present packages/sdk/src/client.ts createEmbedKey: (
+present packages/sdk/src/client.ts getAllowedDomains: (projectId: string): Promise<AllowedDomains> =>
+present packages/sdk/src/client.ts setAllowedDomains: (
+present packages/sdk/src/client.ts getSceneEmbed: (
+present packages/sdk/src/client.ts endSession: (): Promise<EndedSession> =>
+*/}
+
+---
+
+## Retrying writes
+
+Every write sends an `Idempotency-Key`. Without one of your own, each call gets a fresh key and is a new operation. To retry safely after a timeout, pass the same `idempotencyKey` and the same input again: the server answers with the first outcome instead of doing the work twice.
+
+```ts
+const idempotencyKey = crypto.randomUUID()
+
+const { project } = await vectreal.createProject(
+	{ name: 'Spring catalogue' },
+	{ idempotencyKey }
+)
+```
+
+A settings update that meets a save in progress answers `409 scene_busy`. Retry it with the same key.
+
+---
+
+## Errors
+
+| Error | Meaning |
+|---|---|
+| `VectrealApiError` | The server refused the request. It carries the HTTP status, the error code and the message. |
+| `VectrealContractError` | The answer did not match its schema: the client and the server disagree on a shape, not on the request. |
+
+`API_ERROR_CODES` lists every code the API answers with, and the [API reference](/docs/agents/api#error-codes) says what each one means.
+
+---
+
+## Schemas
+
+Every request body and response has an exported zod schema, for example `sceneSettingsSchema` and `updateSceneSettingsInputSchema`, with a matching type such as `SceneSettingsDocument`. Use them to validate data you build before sending it, or to type your own wrapper.

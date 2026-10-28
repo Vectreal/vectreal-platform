@@ -43,6 +43,8 @@ Built on [Three.js](https://github.com/mrdoob/three.js), [React Three Fiber](htt
 | Hooks package    | `packages/hooks/`         | `@vctrl/hooks` browser-side loading, optimization, and export hooks                     |
 | Core package     | `packages/core/`          | `@vctrl/core` isomorphic model processing pipeline (Node.js, browser, Web Worker)       |
 | Embed package    | `packages/embed/`         | `@vctrl/embed` framework-agnostic SDK for controlling embedded 3D scenes                 |
+| SDK package      | `packages/sdk/`           | `@vctrl/sdk` typed client and zod schemas for the `/api/v1` agent API                   |
+| CLI package      | `packages/cli/`           | `@vctrl/cli` the `vectreal` command and its MCP server for agents                       |
 | Shared libraries | `shared/`                 | Shared UI components and utilities                                                      |
 | Infrastructure   | `terraform/`              | Cloudflare DNS, Turnstile widgets, and Fly.io secret sync scripts                       |
 
@@ -176,6 +178,8 @@ The platform app uses:
 | `@vctrl/hooks`  | Browser-side hooks for loading, optimizing, and exporting models | [Hooks docs](https://vectreal.com/docs/packages/hooks)   |
 | `@vctrl/core`   | Isomorphic (Node.js + browser) loading, optimization, and export utilities | [Core docs](https://vectreal.com/docs/packages/core)     |
 | `@vctrl/embed`  | Framework-agnostic SDK for controlling embedded 3D scenes         | [Embed docs](https://vectreal.com/docs/packages/embed)   |
+| `@vctrl/sdk`    | Typed client and zod schemas for the `/api/v1` agent API          | [SDK docs](https://vectreal.com/docs/packages/sdk)       |
+| `@vctrl/cli`    | The `vectreal` command and its MCP server for Claude Code, Cursor and VS Code | [CLI docs](https://vectreal.com/docs/agents/cli) |
 
 ## Deployment
 

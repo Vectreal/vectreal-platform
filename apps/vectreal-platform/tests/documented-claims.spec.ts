@@ -147,6 +147,7 @@ const CLAIM_CARRYING_DOCS = [
 	'apps/vectreal-platform/app/routes/docs/packages/hooks.mdx',
 	'apps/vectreal-platform/app/routes/docs/packages/viewer.mdx',
 	'apps/vectreal-platform/app/routes/docs/packages/embed.mdx',
+	'apps/vectreal-platform/app/routes/docs/packages/sdk.mdx',
 	/*
 	  The guide names publisher controls by their on-screen labels, which are
 	  strings in components the page cannot see change.
