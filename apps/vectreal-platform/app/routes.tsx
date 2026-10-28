@@ -233,7 +233,8 @@ export default [
 					route('embed', './routes/docs/packages/embed.mdx'),
 					route('viewer', './routes/docs/packages/viewer.mdx'),
 					route('hooks', './routes/docs/packages/hooks.mdx'),
-					route('core', './routes/docs/packages/core.mdx')
+					route('core', './routes/docs/packages/core.mdx'),
+					route('sdk', './routes/docs/packages/sdk.mdx')
 				]),
 				// Agents and API
 				...prefix('agents', [
