@@ -47,11 +47,14 @@ catalog:
 overrides:
   react: 'catalog:'
   react-dom: 'catalog:'
-  # nx 23.3.0 pins undici to exactly 7.29.0, which carries GHSA-w293-vg96-wgc3,
-  # GHSA-2jfj-6hjv-fm6j, GHSA-pmjh-fq2x-6v4x, GHSA-8436-99hf-9mmv,
-  # GHSA-r53p-7pc4-xj5r and GHSA-2gqq-gqf2-x968, and no 23.x release moves it.
-  # Drop this once nx ships a pin at or above 7.29.1.
-  undici@7.29.0: 7.29.1
+  # nx 23.3.0 pins undici to exactly 7.29.0, and no 23.x release moves it. 7.29.1
+  # closed six advisories; 7.30.1 closes GHSA-4w7w-5xrc-9h26, GHSA-2m5v-pch6-74hx,
+  # GHSA-qrxm-fqhp-jwvm and GHSA-xjj6-f33q-929c. Drop this once nx ships a pin at
+  # or above 7.30.1.
+  undici@7.29.0: 7.30.1
+  # express 5 resolves body-parser 2.3.0, which carries GHSA-27r3-jxmh-p828; the
+  # server parses request bodies with it. Drop this once express requires 2.4.0.
+  body-parser@>=2.0.0 <2.4.0: 2.4.0
   # @nx/web pulls in http-server, whose http-proxy resolves follow-redirects
   # 1.16.0 (GHSA alerts 455 and 456, fixed in 1.16.1). Dev-only, but no nx 23.x
   # release moves it. Drop this once the lockfile resolves 1.16.1 on its own.
