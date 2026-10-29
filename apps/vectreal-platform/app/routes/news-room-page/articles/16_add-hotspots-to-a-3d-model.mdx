@@ -1,0 +1,119 @@
+---
+title: "How to add hotspots to a 3D model"
+slug: "add-hotspots-to-a-3d-model"
+excerpt: "A hotspot marks a detail on a 3D model that people would otherwise miss. When a visitor clicks it, the camera moves to a view you set for that detail and a card opens with your text and, if you want one, a link. In the Vectreal Publisher you place markers by clicking the model and number them in the order you'd like them visited."
+publishedAt: "2026-10-29"
+updatedAt: "2026-10-29"
+category: "guides"
+tags:
+  - "publisher"
+  - "viewer"
+  - "camera"
+  - "embed"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/media/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+
+voice: A
+author_persona: moritz
+type: "Practical Guide"
+premise: capability
+pillar: Quality
+seo_cluster: "3D on the web / 3d model hotspots"
+cta: https://vectreal.com/publisher
+sceneImage: "/media/images/newsroom/scene-add-hotspots-to-a-3d-model.webp"
+coverImage: "/media/images/newsroom/og-add-hotspots-to-a-3d-model.webp"
+---
+
+<video src="/media/images/newsroom/16/hotspot-tour.mp4" poster="/media/images/newsroom/16/hotspot-tour-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera turns slowly on a dark floor with three small numbered markers on it. The view flies in close to the lens, then back out, then down to the top dial, and the camera turns on as it was."></video>
+
+## Why put hotspots on a 3D model?
+
+A car, a motorcycle, a bike or a chair each come with loads of details you won't recognise at first sight. A 3D model lets someone turn the thing around, but turning it around doesn't tell them where to look. Hotspots are how the person who builds the scene tells them: look here, and here, and this one deserves a closer look.
+
+Before, that job went to a couple of photos with explanations next to them, or text drawn into the image itself. With hotspots the explanation sits on the part it's about, and the model turns into a tour the visitor can go into, deciding for themselves how deep they want to go.
+
+The name is hard to misunderstand. A hotspot is the hottest thing about whatever you're showing off: something people must look at, or something good enough to deserve its own deep dive.
+
+## What happens when a visitor clicks a hotspot?
+
+First, the camera moves, which for me is the centrepiece. Each hotspot can have its own camera view, so one click flies the view in to the detail you picked, framed the way you framed it, instead of leaving the visitor to zoom in and hunt for it.
+
+At the same time a card opens with the hotspot's name, your text and a link if you've added one. The link shows the address it goes to, such as example.com, so the label can't drift away from where it points. A **Back to scene view** button at the top takes the visitor back to the view they came from. Escape closes the card, and a second Escape takes them back too.
+
+![Two views of the same vintage camera. On the left the whole camera, with three numbered markers on its lens, its top dial and its viewfinder. On the right the view after the lens marker is clicked: close in on the lens, with its card open.](/media/images/newsroom/16/hotspot-views.webp)
+
+Markers pulse slowly so they read as something to click. For visitors who've asked their system for reduced motion, the pulse stops and the view arrives at a hotspot without the flight.
+
+## How do I add a hotspot in the Publisher?
+
+
+1. Turn the view in the [Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=add-hotspots-to-a-3d-model) until it shows the detail the way you want visitors to see it. A new hotspot's camera starts where you're standing.
+2. Open **Hotspots** in the toolbar and click **Add marker**. Once there's one, the button is just **Add**.
+3. Switch on **Place on model** and click the detail on the model. The marker moves there, its camera turns to face it, and Place on model switches itself off again. You can also drag the marker in the scene, or type its position under **Position**.
+4. Under **Content**, give it a **Name**, the **Body** text a visitor reads, and a **Link** if it should lead somewhere. Links have to start with https://.
+5. Under **Appearance**, keep the dot or upload an image or SVG of your own as the marker.
+
+To reframe a hotspot's view later, use **Open in Camera tool**, turn the view, and click **Set camera to current view**. **Linked camera** can also point a marker at any other camera in the scene, or at none, for a card that opens without moving the view.
+
+For an order, switch on **In sequence** for each marker that belongs in it and drag them into place. Markers in the sequence show their number; one without a number still works, it just isn't part of the order.
+
+Two switches decide who sees a marker. **Visible** off hides it from visitors. **Editor only** keeps it as a note for yourself and leaves it out of what you publish, together with its camera. **Behind the model** decides what a marker does when the model is in front of it: **Fade**, the default, fades it and stops it taking clicks until the visitor turns the model; **Fade, clickable** fades it but lets a click fly its camera round to it; **Show** draws it over the model from every side.
+
+## How does the camera get there?
+
+The move uses the scene's camera transition, which you set under **Camera**, in **Transitions**: **Instant**, **Linear** or **Smart**, with a duration and an easing. Linear goes in a straight line. That's fine for a detail facing the visitor, but when the detail is round the back the straight line can pass through the model. Smart arcs around the model instead. Whichever you pick, watch the move in preview before you publish, from the view a visitor starts on. [Camera presets and transitions](https://vectreal.com/news-room/camera-presets-and-transitions?utm_source=newsroom&utm_medium=article&utm_campaign=add-hotspots-to-a-3d-model) goes through the settings in detail.
+
+## Can a hotspot play an animation?
+
+Yes, when the model has animation clips. **Linked animation** under the marker picks a clip that plays once when a visitor clicks the marker and then holds its last frame, so a lid opens and stays open while the camera shows what's inside. It plays even when the scene's own animation is switched off. Visitors who've asked for reduced motion see the model jump straight to the clip's last frame.
+
+## Where should a hotspot link to?
+
+Wherever the detail leads. On a product page that might be another scene showing only that part, where it can be configured, or the accessory, the spec sheet, the size guide. Each hotspot takes one link, and it opens in a new tab.
+
+## Hotspots in the open-source viewer
+
+I built hotspots into the open package as well as the platform, so anyone using the Vectreal viewer in their own code can highlight things programmatically. The markers, the cards, the camera flights and the way back are all in [`@vctrl/viewer`](https://github.com/vectreal/vectreal-platform), AGPL-3.0 like the rest of the project. It's a React component built on React Three Fiber; if it isn't in your app yet, [the React viewer guide](https://vectreal.com/news-room/react-viewer-integration?utm_source=newsroom&utm_medium=article&utm_campaign=add-hotspots-to-a-3d-model) sets it up first.
+
+```tsx
+import type { HotspotDefinition } from '@vctrl/core'
+import { VectrealViewer } from '@vctrl/viewer'
+import '@vctrl/viewer/css'
+
+const hotspots: HotspotDefinition[] = [
+	{
+		id: 'lens',
+		name: 'Lens',
+		body: 'What a visitor reads when they open this marker.',
+		worldPosition: [0, 0.12, 0.18],
+		visible: true,
+		internalOnly: false,
+		stylePreset: 'dot'
+	}
+]
+
+export function ProductModel() {
+	return (
+		<VectrealViewer
+			src="https://cdn.example.com/models/camera.glb"
+			hotspots={hotspots}
+			onInteractionEvent={(event) => {
+				if (event.type === 'hotspot_activated') {
+					console.log(`Opened ${event.hotspotId}`)
+				}
+			}}
+		/>
+	)
+}
+```
+
+Give a hotspot a `linkedCameraId` from the cameras in `cameraOptions` and a click flies there. `revealHotspotContent={false}` keeps the flight but leaves the card to you, and `showSceneViewReturn={false}` drops the way back. The type comes from `@vctrl/core`, and the camera shape is in the package's README.
+
+## Try it
+
+Drop a GLB, FBX or STL file into the [Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=add-hotspots-to-a-3d-model), or the folder that holds a glTF or OBJ, open **Hotspots** and add a marker on the first detail you'd point out to someone in person. You can try it without an account and sign in when you want to save. Before you publish, walk through the hotspots the way a visitor will in [preview mode](https://vectreal.com/news-room/preview-a-scene-the-way-it-will-be-embedded?utm_source=newsroom&utm_medium=article&utm_campaign=add-hotspots-to-a-3d-model).
