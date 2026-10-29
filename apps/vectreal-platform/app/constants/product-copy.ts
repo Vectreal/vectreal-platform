@@ -115,6 +115,20 @@ export const OPEN_SOURCE_PACKAGES = [
 			'Framework-agnostic JavaScript SDK for controlling Vectreal embedded 3D scenes from any web page. Includes a CDN script-tag build.',
 		npm: 'https://www.npmjs.com/package/@vctrl/embed',
 		docs: 'https://vectreal.com/docs/guides/embed-sdk'
+	},
+	{
+		name: '@vctrl/sdk',
+		description:
+			"A typed client for Vectreal's agent API, with the zod schemas every response is parsed through.",
+		npm: 'https://www.npmjs.com/package/@vctrl/sdk',
+		docs: 'https://vectreal.com/docs/packages/sdk'
+	},
+	{
+		name: '@vctrl/cli',
+		description:
+			'The Vectreal command line and its MCP server: sign in once, then let a terminal or an agent upload, publish and embed scenes.',
+		npm: 'https://www.npmjs.com/package/@vctrl/cli',
+		docs: 'https://vectreal.com/docs/agents/cli'
 	}
 ] as const
 

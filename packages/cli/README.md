@@ -2,13 +2,17 @@
 
 The Vectreal command line: sign in once, then let a terminal or an agent act for you in the organization you chose.
 
-Private for now. Until it ships to npm, run it from the workspace root with pnpm's `-s`:
+Run it with `npx`, or install it globally to get the `vectreal` command:
 
 ```bash
-pnpm -s vectreal login
+npx -y @vctrl/cli login
 ```
 
-Without `-s`, pnpm prints its own banner to stdout before the CLI does, which breaks anything reading `--json` output.
+```bash
+npm install -g @vctrl/cli
+```
+
+Setup for Claude Code, Cursor and VS Code is in the [agents docs](https://vectreal.com/docs/agents).
 
 ## Commands
 
@@ -42,10 +46,18 @@ Tools that take `projectId` default to the project `vectreal init` linked. The s
 To register it with Claude Code, run this in the project directory:
 
 ```bash
-pnpm -s --dir <path to this repo> vectreal mcp install
+claude mcp add vectreal -- npx -y @vctrl/cli mcp
 ```
 
-The entry it writes names paths on this machine. Keep `.mcp.json` out of version control until `@vctrl/cli` is on npm.
+Or let the CLI write the entry into the current directory's `.mcp.json`:
+
+```bash
+npx -y @vctrl/cli mcp install
+```
+
+Run from `npx`, the entry it writes is `npx -y @vctrl/cli mcp`, so `.mcp.json` can be committed. Run from a checkout of this repository, it names paths on that machine instead.
+
+The server is also listed in the MCP Registry as `io.github.Vectreal/vectreal`.
 
 ## Output and exit codes
 
@@ -73,3 +85,5 @@ pnpm nx run vectreal-platform:supabase-register-cli-client
 ```bash
 pnpm -s vectreal login --origin http://localhost:4200
 ```
+
+From a checkout, use pnpm's `-s`: without it, pnpm prints its own banner to stdout before the CLI does, which breaks anything reading `--json` output.
