@@ -81,7 +81,7 @@ export const ArticleCtaPanel: FC<Props> = ({
 		return (
 			<CtaPanel
 				className={className}
-				heading="Hand it to your agent"
+				heading="Ask your agent"
 				description={cta.prompt}
 				actions={
 					<AiHandoffActions
