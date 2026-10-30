@@ -1,24 +1,27 @@
 import type { HotspotDefinition } from '@vctrl/core'
 
 /**
- * What a marker does when the model is in front of it: one choice in the
- * editor, two fields on the hotspot.
+ * What a marker does when the model is in front of it: one behavior, asked in
+ * two steps and stored as two fields on the hotspot.
  *
- * Asked as one question because the second field only means something under
- * the first, and because the default - fade and stop taking clicks - is the
- * part authors trip over: a marker placed on the far side looks broken from
- * the front until someone turns the model. Showing all three outcomes side by
- * side is what tells the author the choice exists at all.
+ * The editor asks it in two steps, show or fade, then whether a faded marker
+ * still takes clicks, because the second field only means something under the
+ * first. Fade is the default and the part authors trip over: a marker placed on
+ * the far side looks broken from the front until someone turns the model. The
+ * clickable switch sits right under the default, so the way out is in view
+ * from the moment a marker is created.
  */
-export type OcclusionBehavior = 'show' | 'fade' | 'fade_clickable'
+export const OCCLUSION_BEHAVIORS = ['show', 'fade', 'fade_clickable'] as const
 
-export const OCCLUSION_BEHAVIOR_OPTIONS: {
-	value: OcclusionBehavior
+export type OcclusionBehavior = (typeof OCCLUSION_BEHAVIORS)[number]
+
+/** The first step: whether the marker fades at all. */
+export const OCCLUSION_VISIBILITY_OPTIONS: {
+	value: Exclude<OcclusionBehavior, 'fade_clickable'>
 	label: string
 }[] = [
 	{ value: 'show', label: 'Show' },
-	{ value: 'fade', label: 'Fade' },
-	{ value: 'fade_clickable', label: 'Fade, clickable' }
+	{ value: 'fade', label: 'Fade' }
 ]
 
 /** The choice a saved hotspot stands for, read with the viewer's defaults. */

@@ -223,7 +223,7 @@ describe('hotspot persistence', () => {
 				)
 			)[0]
 
-		// The publisher's three choices, each written over the last.
+		// The three behind-the-model outcomes, each written over the last.
 		for (const behind of [
 			{ occlusionEnabled: true, clickableWhenOccluded: true },
 			{ occlusionEnabled: false, clickableWhenOccluded: false },

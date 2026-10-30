@@ -31,10 +31,9 @@ import { AXES, AxisField } from './axis-field'
 import { MarkerArtworkField } from './marker-artwork-field'
 import {
 	describeOcclusionBehavior,
-	OCCLUSION_BEHAVIOR_OPTIONS,
+	OCCLUSION_VISIBILITY_OPTIONS,
 	occlusionBehaviorOf,
-	occlusionPatch,
-	type OcclusionBehavior
+	occlusionPatch
 } from './occlusion-behavior'
 import { useHotspotEdits } from './use-hotspot-edits'
 import {
@@ -152,22 +151,35 @@ export function MarkerOverview({ hotspot }: MarkerViewProps) {
 				<ToggleGroup
 					type="single"
 					aria-label="Behind the model"
-					value={occlusionBehavior}
+					value={occlusionBehavior === 'show' ? 'show' : 'fade'}
 					onValueChange={(value) => {
-						if (value) {
-							edits.update(
-								hotspot.id,
-								occlusionPatch(value as OcclusionBehavior)
-							)
+						// Clicking the active item again deselects it with ''. Fade from
+						// Show starts inert, the viewer's default.
+						if (value === 'show' || value === 'fade') {
+							edits.update(hotspot.id, occlusionPatch(value))
 						}
 					}}
 				>
-					{OCCLUSION_BEHAVIOR_OPTIONS.map((option) => (
+					{OCCLUSION_VISIBILITY_OPTIONS.map((option) => (
 						<ToggleGroupItem key={option.value} value={option.value}>
 							{option.label}
 						</ToggleGroupItem>
 					))}
 				</ToggleGroup>
+				{occlusionBehavior !== 'show' && (
+					<Toggle
+						layout="row"
+						label="Clickable while faded"
+						checked={occlusionBehavior === 'fade_clickable'}
+						onCheckedChange={(clickable) =>
+							edits.update(
+								hotspot.id,
+								occlusionPatch(clickable ? 'fade_clickable' : 'fade')
+							)
+						}
+						className="pt-1"
+					/>
+				)}
 			</SettingGroup>
 
 			<SettingGroup

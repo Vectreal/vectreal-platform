@@ -1183,8 +1183,8 @@ describe('HotspotsSettingsPanel linked animation', () => {
 })
 
 /**
- * The fade and the click are one question in the panel, asked where the author
- * lands after creating a marker, so the inert default is a choice they can see.
+ * The fade and the click are asked together where the author lands after
+ * creating a marker, so the inert default is a choice they can see.
  */
 describe('HotspotsSettingsPanel behind the model', () => {
 	it('writes both fields for the choice, and says what a visitor gets', () => {
@@ -1194,7 +1194,9 @@ describe('HotspotsSettingsPanel behind the model', () => {
 		expect(screen.getByText(/can’t be clicked/)).toBeTruthy()
 
 		act(() => {
-			fireEvent.click(screen.getByRole('radio', { name: 'Fade, clickable' }))
+			fireEvent.click(
+				screen.getByRole('switch', { name: 'Clickable while faded' })
+			)
 		})
 
 		expect(store.get(hotspotsAtom)[0]).toMatchObject({
@@ -1211,5 +1213,24 @@ describe('HotspotsSettingsPanel behind the model', () => {
 			occlusionEnabled: false,
 			clickableWhenOccluded: false
 		})
+		// Nothing to make clickable once the marker no longer fades.
+		expect(
+			screen.queryByRole('switch', { name: 'Clickable while faded' })
+		).toBeNull()
+
+		// Fading again starts inert, not with the click it had before.
+		act(() => {
+			fireEvent.click(screen.getByRole('radio', { name: 'Fade' }))
+		})
+
+		expect(store.get(hotspotsAtom)[0]).toMatchObject({
+			occlusionEnabled: true,
+			clickableWhenOccluded: false
+		})
+		expect(
+			screen
+				.getByRole('switch', { name: 'Clickable while faded' })
+				.getAttribute('aria-checked')
+		).toBe('false')
 	})
 })

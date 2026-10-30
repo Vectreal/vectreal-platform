@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	describeOcclusionBehavior,
-	OCCLUSION_BEHAVIOR_OPTIONS,
+	OCCLUSION_BEHAVIORS,
 	occlusionBehaviorOf,
 	occlusionPatch
 } from './occlusion-behavior'
@@ -32,12 +32,9 @@ describe('occlusionBehaviorOf', () => {
 })
 
 describe('occlusionPatch', () => {
-	it.each(OCCLUSION_BEHAVIOR_OPTIONS.map((option) => option.value))(
-		'reads back as the %s it wrote',
-		(behavior) => {
-			expect(occlusionBehaviorOf(occlusionPatch(behavior))).toBe(behavior)
-		}
-	)
+	it.each(OCCLUSION_BEHAVIORS)('reads back as the %s it wrote', (behavior) => {
+		expect(occlusionBehaviorOf(occlusionPatch(behavior))).toBe(behavior)
+	})
 
 	it('clears the clickable flag when the marker stops fading', () => {
 		expect(occlusionPatch('show')).toEqual({
