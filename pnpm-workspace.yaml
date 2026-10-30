@@ -18,8 +18,8 @@ catalog:
   '@gltf-transform/extensions': ^4.4.2
   '@gltf-transform/functions': ^4.4.2
   '@nx/vite': 23.3.0
-  '@react-three/drei': ^10.7.8
-  '@react-three/fiber': ^9.7.0
+  '@react-three/drei': ^10.7.9
+  '@react-three/fiber': ^9.8.2
   '@vitejs/plugin-react': ^6.0.5
   file-saver: ^2.0.5
   jszip: ^3.10.1
@@ -30,7 +30,7 @@ catalog:
   # range would let 19.2.8 and a newer 19.x both satisfy it again.
   react: 19.2.8
   react-dom: 19.2.8
-  three: ^0.185.1
+  three: ^0.186.1
   vite: ^8.3.3
   vite-plugin-dts: 5.0.3
   zod: ^4.6.6
