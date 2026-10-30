@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.1.0...core-v3.2.0) (2026-10-30)
+
+
+### Miscellaneous Chores
+
+* **core:** Synchronize vectreal-monorepo versions
+
 ## [3.1.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.0.0...core-v3.1.0) (2026-10-27)
 
 

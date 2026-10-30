@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.1.0...cli-v3.2.0) (2026-10-30)
+
+
+### Features
+
+* **open-source:** list @vctrl/sdk and @vctrl/cli with the other packages ([#1209](https://github.com/Vectreal/vectreal-platform/issues/1209)) ([9ce7302](https://github.com/Vectreal/vectreal-platform/commit/9ce730267e3c3ae32169c3ba6a6885705355a5bd))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.2.0
+    * @vctrl/sdk bumped to 3.2.0
+
 ## [3.1.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.0.0...cli-v3.1.0) (2026-10-27)
 
 
