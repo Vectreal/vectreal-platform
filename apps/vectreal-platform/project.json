@@ -46,7 +46,7 @@
 			"outputs": ["{workspaceRoot}/build/apps/vectreal-platform"],
 			"options": {
 				"cwd": "apps/vectreal-platform",
-				"command": "react-router build && pnpm exec tsx scripts/check-route-js-budget.ts"
+				"command": "react-router build && pnpm exec tsx scripts/check-route-js-budget.ts && pnpm exec tsx scripts/check-news-body-chunks.ts"
 			}
 		},
 		"dev": {

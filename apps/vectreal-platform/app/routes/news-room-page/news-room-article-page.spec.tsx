@@ -50,10 +50,14 @@ function scrollTo(y: number) {
   That is the path that carried the first article's state into the second.
 */
 describe('a newsroom article followed from another', () => {
+	// Today rather than the epoch: an article dated after the clock is
+	// scheduled, and a scheduled article is never a cross-link.
+	const START = Date.now()
+
 	beforeEach(() => {
 		capture.mockClear()
 		vi.useFakeTimers({ toFake: ['Date'] })
-		vi.setSystemTime(0)
+		vi.setSystemTime(START)
 		Object.defineProperty(document.documentElement, 'scrollHeight', {
 			configurable: true,
 			value: 2000
@@ -95,7 +99,7 @@ describe('a newsroom article followed from another', () => {
 
 		// Read the first article to the end over a minute.
 		act(() => scrollTo(1000))
-		vi.setSystemTime(60_000)
+		vi.setSystemTime(START + 60_000)
 		act(() => scrollTo(0))
 
 		const card = document.querySelector(`a[href$="/news-room/${second.slug}"]`)
@@ -126,7 +130,7 @@ describe('a newsroom article followed from another', () => {
 	it("measures the second article's read from its own start and scroll", async () => {
 		const { second } = await openFirstThenRelated()
 
-		vi.setSystemTime(65_000)
+		vi.setSystemTime(START + 65_000)
 		cleanup()
 
 		expect(eventsFor('newsroom_article_read_completed', second.slug)).toEqual([

@@ -2,6 +2,7 @@ import { Card } from '@shared/components/ui/card'
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
+import { ScheduledLabel } from './scheduled-label'
 import { newsroomMorphNames } from '../../lib/news/article-view-transition'
 import { formatNewsDate } from '../../lib/news/news-article'
 import { SCENE_SURFACE } from '../../lib/newsroom-thumbnail/palette'
@@ -93,6 +94,12 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
 						{formatNewsDate(article.publishedAt)} · {article.readingTimeMinutes}{' '}
 						min read
 					</p>
+
+					<ScheduledLabel
+						publishedAt={article.publishedAt}
+						className="vt-news-text text-label-xs mt-2"
+						style={{ color: SCENE_SURFACE.mutedText }}
+					/>
 				</div>
 
 				<div

@@ -15,6 +15,7 @@ import { AdjacentPager, AuthorCard } from '../../components/layout-components'
 import { ArticleCard } from '../../components/layout-components/article-card'
 import { ArticleCtaPanel } from '../../components/layout-components/article-cta-panel'
 import { ArticleHero } from '../../components/layout-components/article-hero'
+import { ScheduledLabel } from '../../components/layout-components/scheduled-label'
 import { notFoundMeta, routeErrorMeta } from '../../components/not-found'
 import { useConsentedCapture } from '../../hooks/use-consented-capture'
 import { useDocToc } from '../../hooks/use-doc-toc'
@@ -299,6 +300,11 @@ function NewsRoomArticle({
 						Draft
 					</Badge>
 				) : null}
+
+				<ScheduledLabel
+					publishedAt={article.publishedAt}
+					className="text-muted-foreground text-label-xs mt-4 mb-6"
+				/>
 
 				<ArticleHero
 					slug={article.slug}
