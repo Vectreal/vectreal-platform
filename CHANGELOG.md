@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.2.0...workspace-v3.3.0) (2026-10-30)
+
+
+### Features
+
+* **newsroom:** add an ask-your-agent call to action ([#1212](https://github.com/Vectreal/vectreal-platform/issues/1212)) ([660c122](https://github.com/Vectreal/vectreal-platform/commit/660c1227acc6ebee074582629002decc33c72ea5))
+
+
+### Bug Fixes
+
+* **publisher:** ask behind-the-model as show or fade plus a clickable switch ([#1214](https://github.com/Vectreal/vectreal-platform/issues/1214)) ([183197c](https://github.com/Vectreal/vectreal-platform/commit/183197c6dc2b920e408dcddf192f47e78ba4f956))
+
 ## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.1.0...workspace-v3.2.0) (2026-10-30)
 
 

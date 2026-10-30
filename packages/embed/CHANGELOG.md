@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v3.2.0...embed-v3.3.0) (2026-10-30)
+
+
+### Miscellaneous Chores
+
+* **embed:** Synchronize vectreal-monorepo versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/viewer bumped to 3.3.0
+
 ## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v3.1.0...embed-v3.2.0) (2026-10-30)
 
 
