@@ -33,7 +33,7 @@
 		"@shared/utils": "workspace:*",
 		"class-variance-authority": "^0.7.1",
 		"cmdk": "^1.1.1",
-		"framer-motion": "^13.0.0",
+		"framer-motion": "^14.1.0",
 		"lucide-react": "^1.30.0",
 		"react": "catalog:",
 		"react-day-picker": "^10.0.1",
