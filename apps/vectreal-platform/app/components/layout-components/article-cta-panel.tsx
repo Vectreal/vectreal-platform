@@ -1,10 +1,11 @@
 import { Button } from '@shared/components/ui/button'
 import { formatFileSize } from '@shared/utils'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, MessageSquareCode } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { CtaPanel } from './cta-panel'
 import { ModelLinkRow } from './model-link-row'
+import { buildTaskPrompt } from '../../lib/ai-handoff/ai-handoff-targets'
 import { CONVERT_INDEX_COPY } from '../../lib/convert/convert-pairs'
 import {
 	exampleSceneById,
@@ -14,13 +15,20 @@ import {
 	publisherSampleHref,
 	requireSampleModel
 } from '../../lib/samples/sample-models'
+import { AiHandoffActions } from '../ai-handoff/ai-handoff-menu'
 
 import type { ArticleCta, ArticleCtaShortcut } from '../../lib/news/article-cta'
 import type { FC } from 'react'
 
 interface Props {
 	cta: ArticleCta
-	/** Reports which action was taken: `primary`, or the id of the model opened. */
+	/** The article's own path and title, which an agent prompt points at. */
+	htmlPath: string
+	title: string
+	/**
+	 * Reports which action was taken: `primary`, the id of the model opened,
+	 * or for an agent ask, `copy` or the id of the assistant opened.
+	 */
 	onAction: (action: string) => void
 	className?: string
 }
@@ -57,7 +65,47 @@ function shortcutLink({ type, id }: ArticleCtaShortcut) {
  * The model beside the button is a slim row rather than tiles: it is a
  * shortcut to the same place, and two large pictures read as a second ask.
  */
-export const ArticleCtaPanel: FC<Props> = ({ cta, onAction, className }) => {
+export const ArticleCtaPanel: FC<Props> = ({
+	cta,
+	htmlPath,
+	title,
+	onAction,
+	className
+}) => {
+	if (cta.kind === 'agent') {
+		/*
+		  The panel shows the task alone, which is what the reader is agreeing
+		  to. What the copy action and the links carry also points the assistant
+		  at the article, so a pasted prompt is not a task out of context.
+		*/
+		return (
+			<CtaPanel
+				className={className}
+				heading="Ask your agent"
+				description={cta.prompt}
+				actions={
+					<AiHandoffActions
+						className="-ml-2"
+						copyLabel="Copy prompt"
+						copyIcon={MessageSquareCode}
+						copyValue={() =>
+							buildTaskPrompt('agent', htmlPath, title, cta.prompt)
+						}
+						copyMessages={{
+							success: 'Prompt copied',
+							failure: 'Could not copy the prompt. Try again in a moment.',
+							unavailable: 'This browser does not allow copying here.'
+						}}
+						prompt={(kind) =>
+							buildTaskPrompt(kind, htmlPath, title, cta.prompt)
+						}
+						onAction={onAction}
+					/>
+				}
+			/>
+		)
+	}
+
 	if (cta.kind === 'convert') {
 		return (
 			<CtaPanel

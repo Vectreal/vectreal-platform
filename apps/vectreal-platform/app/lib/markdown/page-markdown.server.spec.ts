@@ -1,9 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { getArticleMarkdown, getDocMarkdown } from './page-markdown.server'
 import { publishedLimit } from '../../constants/product-copy'
 import { docsPages } from '../docs/docs-manifest'
-import { getNewsArticles } from '../news/news-manifest.server'
+import { getNewsArticle, getNewsArticles } from '../news/news-manifest.server'
+
+// The real manifest, with a seam to give one article an agent cta no article has yet.
+vi.mock('../news/news-manifest.server', async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import('../news/news-manifest.server')>()
+	return { ...actual, getNewsArticle: vi.fn(actual.getNewsArticle) }
+})
 
 /*
   Every real page through the real plugin. This is the gate a new MDX
@@ -69,6 +76,22 @@ describe('markdown twins', () => {
 		expect(getDocMarkdown('packages/viewer')).toMatch(
 			/```tsx[\s\S]*export default function App\(\)/
 		)
+	})
+
+	it('ends an agent-cta article on the task its panel hands over', () => {
+		const article = getNewsArticle('api-keys-101')
+		if (!article) throw new Error('api-keys-101 is missing')
+		const prompt =
+			'Add an API key to my project and load a private scene with it.'
+		vi.mocked(getNewsArticle).mockReturnValueOnce({
+			...article,
+			cta: { kind: 'agent', prompt }
+		})
+
+		expect(getArticleMarkdown('api-keys-101')).toMatch(
+			new RegExp(`\\n\\n## Next step\\n\\n${prompt}\\n$`)
+		)
+		expect(getArticleMarkdown('api-keys-101')).not.toContain('## Next step')
 	})
 
 	it('answers null for a page that does not exist', () => {

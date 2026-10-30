@@ -19,11 +19,16 @@ import { SITE_URL } from '../seo'
  * A publisher ask also carries one model to open straight away: the example
  * the article showed, or a sample. The panel offers it as a shortcut beside the
  * main button, so a reader with nothing to hand still has a first step.
+ *
+ * An agent ask hands the reader's next step to their own AI assistant instead:
+ * `prompt` is the task, one sentence, which the panel wraps in a prompt that
+ * points the assistant at the article first.
  */
 export type ArticleCta =
 	| { kind: 'publisher'; shortcut: ArticleCtaShortcut }
 	/** `to` is a same-origin path, ready for `<Link to>`. */
 	| { kind: 'convert'; to: string }
+	| { kind: 'agent'; prompt: string }
 
 export interface ArticleCtaShortcut {
 	type: 'sample' | 'example'
@@ -31,6 +36,11 @@ export interface ArticleCtaShortcut {
 }
 
 const PUBLISHER_PATH = '/publisher'
+
+const AGENT_CTA = 'agent'
+
+/** Long enough for one task sentence, short enough to read in the panel. */
+export const AGENT_CTA_PROMPT_MAX_LENGTH = 200
 
 /**
  * An article without `cta:` ends on the publisher, as every article body did
@@ -46,16 +56,27 @@ export const DEFAULT_ARTICLE_CTA: ArticleCta = {
  * Reads the `cta:` URL an author wrote, absolute on vectreal.com or a path,
  * as one of the destinations the panel knows how to present: the publisher,
  * optionally naming a sample or an example scene, or the converters,
- * optionally naming a pair.
+ * optionally naming a pair. Or `agent`, with the task in `ctaPrompt`.
  *
  * Returns null for anything else, including a sample, example or pair that
  * does not exist, which the manifest treats as invalid frontmatter: a typo'd
- * URL must not ship as the article's only call to action.
+ * URL must not ship as the article's only call to action. So does `agent`
+ * without a prompt, or with one longer than a sentence.
  */
 export function resolveArticleCta(
-	value: string | undefined
+	value: string | undefined,
+	prompt?: string
 ): ArticleCta | null {
 	if (value === undefined) return DEFAULT_ARTICLE_CTA
+
+	if (value === AGENT_CTA) {
+		// One line wherever it lands: a YAML block scalar must not add breaks to the twin or the links.
+		const task =
+			typeof prompt === 'string' ? prompt.replace(/\s+/g, ' ').trim() : ''
+		return task && task.length <= AGENT_CTA_PROMPT_MAX_LENGTH
+			? { kind: 'agent', prompt: task }
+			: null
+	}
 
 	// Not `URL.canParse`: this runs in the client bundle, and Safari before 17 lacks it.
 	let url: URL
