@@ -354,6 +354,8 @@ function NewsRoomArticle({
 
 				<ArticleCtaPanel
 					cta={article.cta}
+					htmlPath={`/news-room/${article.slug}`}
+					title={article.title}
 					onAction={(action) =>
 						captureConsented('newsroom_cta_clicked', {
 							slug: article.slug,

@@ -1,6 +1,6 @@
 import { isValidElement } from 'react'
 
-import { resolveArticleCta } from './article-cta'
+import { AGENT_CTA_PROMPT_MAX_LENGTH, resolveArticleCta } from './article-cta'
 import { COMMUNITY } from '../navigation/site-map'
 import { normalizeSlug } from '../utils/slug'
 
@@ -187,11 +187,11 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			return null
 		}
 
-		const cta = resolveArticleCta(frontmatter?.cta)
+		const cta = resolveArticleCta(frontmatter?.cta, frontmatter?.ctaPrompt)
 		if (!cta) {
 			if (DEV) {
 				console.warn(
-					`Newsroom article skipped (${moduleKey}): cta must be a vectreal.com /publisher or /convert URL.`
+					`Newsroom article skipped (${moduleKey}): cta must be a vectreal.com /publisher or /convert URL, or agent with a ctaPrompt of at most ${AGENT_CTA_PROMPT_MAX_LENGTH} characters.`
 				)
 			}
 			return null

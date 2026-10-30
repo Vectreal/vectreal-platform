@@ -39,11 +39,16 @@ export function getDocMarkdown(slug: string): string | null {
  * draft outside dev, which `getNewsArticle` already withholds.
  *
  * An article's title and standfirst live in frontmatter rather than the body,
- * so they are put back on top here, from the manifest that renders them.
+ * so they are put back on top here, from the manifest that renders them. An
+ * article that hands its next step to the reader's agent ends on that task,
+ * so an agent reading the twin sees the hand-off the page's panel offers.
  */
 export function getArticleMarkdown(slug: string): string | null {
 	const article = getNewsArticle(slug)
 	const body = article ? twinsBySourcePath.get(article.sourcePath) : undefined
 	if (!article || body === undefined) return null
-	return `# ${article.title}\n\n${article.excerpt}\n\n${body}`
+	const markdown = `# ${article.title}\n\n${article.excerpt}\n\n${body}`
+	return article.cta.kind === 'agent'
+		? `${markdown.trimEnd()}\n\n## Next step\n\n${article.cta.prompt}\n`
+		: markdown
 }

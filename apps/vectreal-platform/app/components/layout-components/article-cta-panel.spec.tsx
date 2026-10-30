@@ -4,6 +4,10 @@ import { createRoutesStub, useLocation } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ArticleCtaPanel } from './article-cta-panel'
+import {
+	AI_HANDOFF_TARGETS,
+	buildTaskPrompt
+} from '../../lib/ai-handoff/ai-handoff-targets'
 import { DEFAULT_ARTICLE_CTA } from '../../lib/news/article-cta'
 
 import type { ArticleCta } from '../../lib/news/article-cta'
@@ -17,7 +21,14 @@ function renderPanel(cta: ArticleCta, onAction = vi.fn()) {
 	const Stub = createRoutesStub([
 		{
 			path: '/',
-			Component: () => <ArticleCtaPanel cta={cta} onAction={onAction} />
+			Component: () => (
+				<ArticleCtaPanel
+					cta={cta}
+					htmlPath="/news-room/add-hotspots"
+					title="Add hotspots"
+					onAction={onAction}
+				/>
+			)
 		},
 		{ path: '/publisher', Component: Destination },
 		{ path: '/convert', Component: Destination }
@@ -55,5 +66,35 @@ describe('ArticleCtaPanel', () => {
 		fireEvent.click(screen.getByRole('link', { name: /rocket sample/i }))
 		expect(onAction).toHaveBeenCalledWith('rocket')
 		expect(screen.getByText('at /publisher?sample=rocket')).toBeTruthy()
+	})
+
+	describe('with an agent cta', () => {
+		const task = 'Add a hotspot to my model.'
+		const agentCta: ArticleCta = { kind: 'agent', prompt: task }
+
+		it('shows the task and links to every assistant with its own prompt', () => {
+			renderPanel(agentCta)
+			expect(screen.getByText(task)).toBeTruthy()
+			expect(hrefs()).toEqual(
+				AI_HANDOFF_TARGETS.map((target) =>
+					target.buildUrl(
+						buildTaskPrompt(
+							target.kind,
+							'/news-room/add-hotspots',
+							'Add hotspots',
+							task
+						)
+					)
+				)
+			)
+		})
+
+		it('reports the assistant opened, or the copy', () => {
+			const onAction = renderPanel(agentCta)
+			fireEvent.click(screen.getByRole('link', { name: 'Open in Claude Code' }))
+			expect(onAction).toHaveBeenCalledWith('claude-code')
+			fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }))
+			expect(onAction).toHaveBeenCalledWith('copy')
+		})
 	})
 })

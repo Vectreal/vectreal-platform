@@ -20,6 +20,8 @@ export interface AiHandoffTarget {
 	buildUrl: (prompt: string) => string
 }
 
+const twinUrl = (htmlPath: string) => `${SITE_URL}${markdownTwinPath(htmlPath)}`
+
 const withParam = (base: string, name: string, prompt: string) =>
 	`${base}?${name}=${encodeURIComponent(prompt)}`
 
@@ -64,8 +66,25 @@ export function buildPagePrompt(
 	htmlPath: string,
 	title: string
 ): string {
-	const url = `${SITE_URL}${markdownTwinPath(htmlPath)}`
+	const url = twinUrl(htmlPath)
 	return kind === 'chat'
 		? `Read ${url} so I can ask you questions about "${title}" on Vectreal.`
 		: `Read ${url} ("${title}" on Vectreal) and help me apply it in this project.`
+}
+
+/**
+ * The prompt that hands over an article's next step, `task`, rather than the
+ * article itself. A coding agent does it in the reader's project; a chat walks
+ * them through it, for a reader who wants to understand it before doing it.
+ */
+export function buildTaskPrompt(
+	kind: AiHandoffKind,
+	htmlPath: string,
+	title: string,
+	task: string
+): string {
+	const read = `Read ${twinUrl(htmlPath)} ("${title}" on Vectreal)`
+	return kind === 'chat'
+		? `${read}, then walk me through this: ${task}`
+		: `${read}, then do this in this project: ${task}`
 }

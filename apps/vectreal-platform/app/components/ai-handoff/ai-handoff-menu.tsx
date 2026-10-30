@@ -55,9 +55,7 @@ const IconAction: FC<{ label: string; children: ReactNode }> = ({
 	</Tooltip>
 )
 
-export interface AiHandoffMenuProps {
-	/** Analytics surface: where on the site the row sits. */
-	surface: string
+export interface AiHandoffActionsProps {
 	/** The copy action's name, shown as its tooltip and accessible name. */
 	copyLabel: string
 	/** What the copy action looks like: a page by default, a prompt otherwise. */
@@ -67,29 +65,29 @@ export interface AiHandoffMenuProps {
 	copyMessages: { success: string; failure: string; unavailable: string }
 	/** The prompt each target opens with, by the kind of tool it is. */
 	prompt: (kind: AiHandoffKind) => string
+	/** Reports which action was taken: `copy`, or the target's id. */
+	onAction: (action: 'copy' | AiHandoffTarget['id']) => void
 	className?: string
 }
 
 /**
- * One quiet line: "Ask AI", then a copy action and a link per chat or coding
- * agent. Icon buttons with tooltips rather than a menu, so the targets are in
- * view without a sentence explaining that they exist.
+ * A copy action and a link per chat or coding agent. Icon buttons with
+ * tooltips rather than a menu, so the targets are in view without a sentence
+ * explaining that they exist.
  */
-export const AiHandoffMenu: FC<AiHandoffMenuProps> = ({
-	surface,
+export const AiHandoffActions: FC<AiHandoffActionsProps> = ({
 	copyLabel,
 	copyIcon: CopyIcon = FileText,
 	copyValue,
 	copyMessages,
 	prompt,
+	onAction,
 	className
 }) => {
 	const clipboard = useClipboardCopy()
-	const capture = useConsentedCapture()
 
 	return (
 		<div className={cn('flex items-center gap-0.5', className)}>
-			<span className="text-muted-foreground text-body-sm mr-1.5">Ask AI</span>
 			<IconAction label={copyLabel}>
 				<Button
 					variant="ghost"
@@ -97,7 +95,7 @@ export const AiHandoffMenu: FC<AiHandoffMenuProps> = ({
 					className={ICON_BUTTON}
 					aria-label={copyLabel}
 					onClick={() => {
-						capture('ai_handoff_clicked', { surface, target: 'copy' })
+						onAction('copy')
 						void clipboard.copy('copy', copyValue, copyMessages)
 					}}
 				>
@@ -115,9 +113,7 @@ export const AiHandoffMenu: FC<AiHandoffMenuProps> = ({
 								target="_blank"
 								rel="noreferrer"
 								aria-label={label}
-								onClick={() =>
-									capture('ai_handoff_clicked', { surface, target: target.id })
-								}
+								onClick={() => onAction(target.id)}
 							>
 								<Icon className="size-4" />
 							</a>
@@ -125,6 +121,35 @@ export const AiHandoffMenu: FC<AiHandoffMenuProps> = ({
 					</IconAction>
 				)
 			})}
+		</div>
+	)
+}
+
+export interface AiHandoffMenuProps extends Omit<
+	AiHandoffActionsProps,
+	'onAction'
+> {
+	/** Analytics surface: where on the site the row sits. */
+	surface: string
+}
+
+/** One quiet line: "Ask AI", then the hand-off actions. */
+export const AiHandoffMenu: FC<AiHandoffMenuProps> = ({
+	surface,
+	className,
+	...actions
+}) => {
+	const capture = useConsentedCapture()
+
+	return (
+		<div className={cn('flex items-center gap-0.5', className)}>
+			<span className="text-muted-foreground text-body-sm mr-1.5">Ask AI</span>
+			<AiHandoffActions
+				{...actions}
+				onAction={(target) =>
+					capture('ai_handoff_clicked', { surface, target })
+				}
+			/>
 		</div>
 	)
 }

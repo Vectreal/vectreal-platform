@@ -37,8 +37,10 @@ export interface NewsArticleFrontmatter {
 	heroSeed?: number
 	/** Replaces the generated hero with a real image. Use sparingly - see the spec. */
 	heroImage?: string
-	/** Where the closing panel sends the reader: a vectreal.com /publisher or /convert URL. See `resolveArticleCta`. */
+	/** Where the closing panel sends the reader: a vectreal.com /publisher or /convert URL, or `agent`. See `resolveArticleCta`. */
 	cta?: string
+	/** With `cta: agent`, the task handed to the reader's assistant: one sentence, at most 200 characters. */
+	ctaPrompt?: string
 	draft?: boolean
 }
 

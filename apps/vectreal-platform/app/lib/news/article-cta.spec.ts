@@ -1,4 +1,8 @@
-import { DEFAULT_ARTICLE_CTA, resolveArticleCta } from './article-cta'
+import {
+	AGENT_CTA_PROMPT_MAX_LENGTH,
+	DEFAULT_ARTICLE_CTA,
+	resolveArticleCta
+} from './article-cta'
 
 describe('resolveArticleCta', () => {
 	it('ends an article without cta on the publisher, with the rocket beside it', () => {
@@ -59,5 +63,37 @@ describe('resolveArticleCta', () => {
 		).toBeNull()
 		expect(resolveArticleCta('/publisher?utm_source=newsroom')).toBeNull()
 		expect(resolveArticleCta('/convert?utm_source=newsroom')).toBeNull()
+	})
+
+	it("hands the task in ctaPrompt to the reader's agent, trimmed", () => {
+		expect(
+			resolveArticleCta('agent', '  Add hotspots to my own model.  ')
+		).toEqual({ kind: 'agent', prompt: 'Add hotspots to my own model.' })
+		expect(resolveArticleCta('agent', 'Add hotspots\nto my model.\n')).toEqual({
+			kind: 'agent',
+			prompt: 'Add hotspots to my model.'
+		})
+		const longest = 'a'.repeat(AGENT_CTA_PROMPT_MAX_LENGTH)
+		expect(resolveArticleCta('agent', longest)).toEqual({
+			kind: 'agent',
+			prompt: longest
+		})
+	})
+
+	it('rejects an agent cta without a prompt', () => {
+		expect(resolveArticleCta('agent')).toBeNull()
+		expect(resolveArticleCta('agent', '')).toBeNull()
+		expect(resolveArticleCta('agent', '   ')).toBeNull()
+	})
+
+	it('rejects a prompt longer than one sentence', () => {
+		expect(
+			resolveArticleCta('agent', 'a'.repeat(AGENT_CTA_PROMPT_MAX_LENGTH + 1))
+		).toBeNull()
+	})
+
+	it('reads agent only as the whole value', () => {
+		expect(resolveArticleCta('/agent', 'Do it.')).toBeNull()
+		expect(resolveArticleCta('Agent', 'Do it.')).toBeNull()
 	})
 })
