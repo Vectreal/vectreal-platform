@@ -23,8 +23,16 @@ export function loader({ request }: LoaderFunctionArgs) {
 		? getDocMarkdown(htmlPath.slice('/docs/'.length))
 		: getArticleMarkdown(htmlPath.slice('/news-room/'.length))
 
+	/*
+	  `no-store`, because Cloudflare respects this path's origin headers and
+	  caches a 404 that has none for minutes. The twin of a scheduled article is
+	  a 404 on production until its `publishedAt`, and must stop being one then.
+	*/
 	if (markdown === null) {
-		throw new Response('Not found', { status: 404 })
+		throw new Response('Not found', {
+			status: 404,
+			headers: { 'Cache-Control': 'no-store' }
+		})
 	}
 
 	return new Response(markdown, {

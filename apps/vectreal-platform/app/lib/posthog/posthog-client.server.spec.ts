@@ -192,7 +192,8 @@ describe('the shared client', () => {
 	const files = [
 		...sources(join(APP_ROOT, 'app')),
 		...sources(join(APP_ROOT, 'scripts')),
-		join(APP_ROOT, 'server.mjs')
+		join(APP_ROOT, 'server.mjs'),
+		join(APP_ROOT, 'server-app.mjs')
 	].map((file) => ({ file, source: readFileSync(file, 'utf8') }))
 
 	const others = files.filter(({ file }) => file !== CLIENT_MODULE)

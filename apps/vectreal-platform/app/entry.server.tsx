@@ -28,6 +28,13 @@ import type {
 
 export const streamTimeout = 5_000
 
+/*
+  Not a React Router export: `server.mjs` reads it from the server build to
+  keep a scheduled article's prerendered files from being served on
+  production before its time. See `createServerApp` in `server-app.mjs`.
+*/
+export { isUnpublishedNewsPath } from './lib/news/news-manifest.server'
+
 function applyDefaultCacheHeaders(
 	request: Request,
 	responseHeaders: Headers,
