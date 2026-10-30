@@ -55,15 +55,15 @@ Each hotspot decides what happens when the model sits between the visitor and th
 | --- | --- |
 | **Show** | The marker is drawn over the model from every side and is always clickable. |
 | **Fade** | The marker fades while the model is in front of it, and takes no clicks or keyboard focus until the visitor turns the model to see it. An open card closes when its marker goes behind the model. This is what a new hotspot starts with, and what every hotspot saved before the choice existed does. |
-| **Fade, clickable** | The marker fades the same way but stays clickable and reachable by keyboard, and its card stays open. It comes back to full strength under the pointer. Link a camera to it, so a click also brings the marker into view. |
+| **Fade**, with **Clickable while faded** on | The marker fades the same way but stays clickable and reachable by keyboard, and its card stays open. It comes back to full strength under the pointer. Link a camera to it, so a click also brings the marker into view. |
 
-**Fade** suits a marker the visitor should find by turning the model. A marker placed on the far side looks unreachable from the front with it, so if a hotspot has to work from anywhere, use **Fade, clickable** or **Show**.
+**Fade** suits a marker the visitor should find by turning the model. A marker placed on the far side looks unreachable from the front with it, so if a hotspot has to work from anywhere, switch on **Clickable while faded** or use **Show**.
 
 While you edit, markers behind the model stay unclickable whichever you pick, so a click on the model places a marker or turns the view rather than picking up one you cannot see. Switch to preview to try what a visitor gets.
 
 {/* claims
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/hotspot-settings/marker-views.tsx label="Behind the model"
-present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/hotspot-settings/occlusion-behavior.ts { value: 'fade_clickable', label: 'Fade, clickable' }
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/hotspot-settings/marker-views.tsx label="Clickable while faded"
 present apps/vectreal-platform/app/db/schema/project/scene-hotspots.ts boolean('clickable_when_occluded')
 present packages/viewer/src/components/scene/hotspot-marker.tsx occludedClickable: 'vv:hover:opacity-100'
 present packages/viewer/src/components/scene/hotspot-interaction.ts return occluded && (selecting || !marker.clickableWhenOccluded)
