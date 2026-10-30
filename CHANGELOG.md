@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.1.0...workspace-v3.2.0) (2026-10-30)
+
+
+### Features
+
+* **open-source:** list @vctrl/sdk and @vctrl/cli with the other packages ([#1209](https://github.com/Vectreal/vectreal-platform/issues/1209)) ([9ce7302](https://github.com/Vectreal/vectreal-platform/commit/9ce730267e3c3ae32169c3ba6a6885705355a5bd))
+
+
+### Bug Fixes
+
+* **deps:** close the critical and high Dependabot alerts ([#1208](https://github.com/Vectreal/vectreal-platform/issues/1208)) ([4b9613c](https://github.com/Vectreal/vectreal-platform/commit/4b9613cbcc4b734ada78dc59c9bdae1f56c34851))
+
 ## [3.1.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.0.0...workspace-v3.1.0) (2026-10-27)
 
 
