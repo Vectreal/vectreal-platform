@@ -54,6 +54,7 @@ export function rowToSceneSettings(
 		camera: row.camera ? withSceneCameraKinds(row.camera) : undefined,
 		controls: row.controls ?? undefined,
 		environment: row.environment ?? undefined,
+		lighting: row.lighting ?? undefined,
 		interactions: row.interactions ?? undefined,
 		normalization: row.normalization ?? undefined,
 		presentation: row.presentation ?? undefined,

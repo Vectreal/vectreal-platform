@@ -4,6 +4,7 @@ import {
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
+	LightingSettings,
 	NormalizationOptions,
 	ScenePresentationSettings,
 	SceneSettings,
@@ -38,6 +39,7 @@ export const sceneSettings = pgTable(
 		camera: json('camera').$type<CameraProps>(), // cameraAtom data
 		controls: json('controls').$type<ControlsProps>(), // controlsAtom data
 		environment: json('environment').$type<EnvironmentProps>(), // environmentAtom data
+		lighting: json('lighting').$type<LightingSettings>(), // supersedes environment and shadows
 		interactions: json('interactions').$type<SceneSettings['interactions']>(), // interactionsAtom data
 		shadows: json('shadows').$type<ShadowsProps>(), // shadowsAtom data
 		normalization: json('normalization').$type<NormalizationOptions>(), // normalizationAtom data

@@ -212,6 +212,9 @@ export function withSceneSettingsDefaults(settings: SceneSettings) {
 	return {
 		animation: settings.animation,
 		bounds: settings.bounds ?? defaultBoundsOptions,
+		// Passed through as stored: `resolveLighting` fills it, and answers for
+		// a scene without one from `environment` and `shadows`.
+		lighting: settings.lighting,
 		environment: settings.environment ?? defaultEnvOptions,
 		interactions: settings.interactions,
 		camera: settings.camera

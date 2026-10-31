@@ -49,6 +49,7 @@ to match:
 | Dropped selections | `@vctrl/core/model-loader` | What a reference inside a model means: `selectionKey`, `referenceIn`, `referenceKeyIn` |
 | Remote models | `@vctrl/core/model-loader` | A model at a URL, as the files a drop would give: `fetchModelFiles`, `ModelFetchError` |
 | Scene asset helpers | `@vctrl/core` | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
+| Scene lighting | `@vctrl/core` | How a scene is lit, as stored and as drawn: `LightingSettings`, `resolveLighting`, `MAX_SCENE_LIGHTS` |
 
 ---
 
@@ -384,6 +385,56 @@ export async function POST(request: Request) {
   })
 }
 ```
+
+---
+
+## Scene lighting
+
+A scene is lit by an environment map and up to three studio lights, and every
+shadow it shows comes from those lights. `SceneSettings.lighting` stores that,
+typed as `LightingSettings`:
+
+| Field | Meaning |
+|---|---|
+| `environment` | The HDR (`map`), its `resolution`, its `intensity`, and a `rotation` in degrees that turns the lights with it |
+| `lights` | Up to `MAX_SCENE_LIGHTS` (3), one per `role`: `key`, `fill` or `rim`. Each has an `azimuth` and `elevation` in degrees, a `size` (angular diameter, which sets how soft its shadows are), an `intensity` and a `color` |
+| `ground` | Whether a floor under the model receives its shadows |
+| `background` | The environment map, a `color` or `gradient` stage, or `none` |
+| `occlusion` | Screen-space ambient occlusion: `off` or `live` |
+
+A light's `intensity` is relative to the environment's own diffuse light: 1 is as
+bright as the whole environment. So the environment's brightness scales every
+light, and a shadow's darkness follows from the ratio alone: ground a light
+cannot reach keeps `1 / (1 + intensity)` of the light it would get. There is no
+shadow opacity or direction to set; to change a shadow, change its light.
+
+Read lighting only through `resolveLighting(settings)`. It returns a
+`ResolvedLighting` with every field filled, and it also answers for a scene saved
+before `lighting` existed, by migrating its `environment` and `shadows`. The
+shadow's own light becomes the key, placed where that light stood, about as
+soft, and as strong as the old shadow was dark, up to the strength of the whole
+environment. That light used to reach only the ground; now it lights the model
+too, so a migrated scene's model gets brighter on the lit side and its darkest
+shadows come out lighter. A scene whose shadows were off gets no light and looks
+as it did.
+
+```ts
+import { resolveLighting } from '@vctrl/core'
+
+const { environment, lights, ground } = resolveLighting(scene.settings)
+```
+
+The viewer still draws from `environment` and `shadows`; `lighting` is stored
+and resolved, and the viewer moves to it in its next minor release. Until then,
+keep writing `environment` and `shadows` for a scene you want drawn as set.
+They stay readable afterwards for every scene saved before `lighting`.
+
+{/* claims
+present packages/core/src/types/scene-types.ts export const MAX_SCENE_LIGHTS = 3
+present packages/core/src/scene-lighting/resolve-lighting.ts export function resolveLighting
+present packages/core/src/scene-lighting/resolve-lighting.ts const MIGRATED_MAX_KEY_INTENSITY = 1
+present packages/sdk/src/scene-settings.ts lighting: sceneLightingSchema.optional()
+*/}
 
 ---
 

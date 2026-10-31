@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /*
-  How a scene looks: the five settings sections the viewer passes to its 3D
+  How a scene looks: the settings sections the viewer passes to its 3D
   components as they are stored. Every scene save, the publisher's included,
   goes through this schema, so it says what may be stored, and the viewer runs
   inside customers' pages with whatever that is.
@@ -13,7 +13,8 @@ import { z } from 'zod'
   The hosted HDR for `preset` is the only environment a scene can have.
 
   A key it names with the wrong type is refused. Limits sit only where a value
-  costs visitors: how often and how large the shadow bake renders.
+  costs visitors: how often and how large the shadow bake renders, and how
+  many lights draw a shadow.
 */
 
 // zod 4 refuses Infinity and NaN for any number already.
@@ -69,6 +70,16 @@ export const sceneControlsSchema = z.object({
 	maxDistance: nonNegative.optional()
 })
 
+/** A flat stage the viewer paints behind the model. */
+const sceneStageSchema = z.discriminatedUnion('type', [
+	z.object({ type: z.literal('color'), color: hexColor }),
+	z.object({
+		type: z.literal('gradient'),
+		top: hexColor,
+		bottom: hexColor
+	})
+])
+
 export const sceneEnvironmentSchema = z.object({
 	preset: z.enum(ENVIRONMENT_PRESETS).optional(),
 	environmentResolution: z.enum(['1k', '4k']).optional(),
@@ -76,16 +87,7 @@ export const sceneEnvironmentSchema = z.object({
 	background: z.boolean().optional(),
 	backgroundIntensity: nonNegative.optional(),
 	backgroundBlurriness: nonNegative.optional(),
-	backdrop: z
-		.discriminatedUnion('type', [
-			z.object({ type: z.literal('color'), color: hexColor }),
-			z.object({
-				type: z.literal('gradient'),
-				top: hexColor,
-				bottom: hexColor
-			})
-		])
-		.optional()
+	backdrop: sceneStageSchema.optional()
 })
 
 export const sceneShadowsSchema = z.object({
@@ -136,6 +138,67 @@ export const sceneShadowsSchema = z.object({
 		.optional()
 })
 
+/** A scene has at most one light per role, so at most three lights. */
+export const SCENE_LIGHT_ROLES = ['key', 'fill', 'rim'] as const
+
+/**
+ * How a scene is lit: an environment and up to three studio lights, from which
+ * every shadow follows. Supersedes `environment` and `shadows`, which stay
+ * accepted for scenes saved before it.
+ */
+export const sceneLightingSchema = z.object({
+	environment: z
+		.object({
+			map: z.enum(ENVIRONMENT_PRESETS).optional(),
+			resolution: z.enum(['1k', '4k']).optional(),
+			intensity: nonNegative.optional(),
+			rotation: finite.optional()
+		})
+		.optional(),
+	lights: z
+		.array(
+			z.object({
+				role: z.enum(SCENE_LIGHT_ROLES),
+				enabled: z.boolean().optional(),
+				azimuth: finite.optional(),
+				elevation: finite.min(-90).max(90).optional(),
+				size: finite.min(0).max(180).optional(),
+				intensity: nonNegative.optional(),
+				color: hexColor.optional()
+			})
+		)
+		// One light per role, which also caps a scene at three.
+		.refine(
+			(lights) =>
+				new Set(lights.map((light) => light.role)).size === lights.length,
+			'Each light role may appear once.'
+		)
+		.optional(),
+	ground: z.object({ enabled: z.boolean().optional() }).optional(),
+	background: z
+		.discriminatedUnion('type', [
+			z.object({
+				type: z.literal('environment'),
+				intensity: nonNegative.optional(),
+				blur: nonNegative.optional()
+			}),
+			...sceneStageSchema.options,
+			z.object({ type: z.literal('none') })
+		])
+		.optional(),
+	occlusion: z
+		.object({
+			mode: z.enum(['off', 'live']).optional(),
+			live: z
+				.object({
+					intensity: nonNegative.optional(),
+					atRest: z.boolean().optional()
+				})
+				.optional()
+		})
+		.optional()
+})
+
 export const sceneNormalizationSchema = z.object({
 	enabled: z.boolean(),
 	minSize: nonNegative.optional(),
@@ -146,6 +209,7 @@ export const sceneNormalizationSchema = z.object({
 export const sceneLookSchema = z.object({
 	bounds: sceneBoundsSchema.optional(),
 	controls: sceneControlsSchema.optional(),
+	lighting: sceneLightingSchema.optional(),
 	environment: sceneEnvironmentSchema.optional(),
 	shadows: sceneShadowsSchema.optional(),
 	normalization: sceneNormalizationSchema.optional()

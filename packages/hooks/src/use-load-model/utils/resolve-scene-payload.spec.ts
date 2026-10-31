@@ -36,6 +36,7 @@ const everyField: Required<SceneSettings> = {
 	camera: {} as Required<SceneSettings>['camera'],
 	interactions: [],
 	controls: { enabled: true } as Required<SceneSettings>['controls'],
+	lighting: { ground: { enabled: true } },
 	environment: { preset: 'studio' } as Required<SceneSettings>['environment'],
 	shadows: { type: 'contact' } as Required<SceneSettings>['shadows'],
 	normalization: { enabled: true } as Required<SceneSettings>['normalization'],
