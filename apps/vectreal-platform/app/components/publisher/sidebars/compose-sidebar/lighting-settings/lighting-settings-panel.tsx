@@ -34,9 +34,11 @@ import {
 	withSetup,
 	wrapDegrees
 } from './lighting-edits'
+import { OcclusionBakeSection } from './occlusion-bake-section'
 import StageColorField from './stage-color-field'
 import { ThumbnailGrid } from './thumbnail-grid'
 import { useLightingDraft } from './use-lighting-draft'
+import { useOcclusionBakePreview } from './use-occlusion-bake-preview'
 import {
 	environmentThumbnail,
 	lightingSetupThumbnail
@@ -48,8 +50,26 @@ import {
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { SettingGroup } from '../../sidebar-section'
 
-/** Baked is set through the API until the Bake section lands; it still has to read true here. */
-const OCCLUSION_SUMMARY = { off: 'Off', live: 'On', baked: 'Baked' } as const
+type OcclusionMode = keyof typeof OCCLUSION_CAPTIONS
+
+const OCCLUSION_CAPTIONS = {
+	off: 'Darkens creases and tight gaps on the model. Live draws it as the view moves; Baked writes it into the model when you publish.',
+	live: "Drawn every frame while the view moves. 'Only when still' skips it during orbiting.",
+	baked:
+		"Raytraced into the model's own textures when you publish, so it costs nothing to draw and shows in any glTF viewer."
+} as const
+
+const OCCLUSION_MODES: { mode: OcclusionMode; label: string }[] = [
+	{ mode: 'off', label: 'Off' },
+	{ mode: 'live', label: 'Live' },
+	{ mode: 'baked', label: 'Baked' }
+]
+
+const OCCLUSION_SUMMARY = {
+	off: 'Off',
+	live: 'Live',
+	baked: 'Baked'
+} as const satisfies Record<OcclusionMode, string>
 
 const SETUP_OPTIONS = LIGHTING_SETUPS.map((setup) => ({
 	value: setup.id,
@@ -140,6 +160,7 @@ const LightingSettings = () => {
 
 	const resolved = resolveLighting({ lighting })
 	const { environment, background, occlusion } = resolved
+	const bakePreview = useOcclusionBakePreview()
 	const setup = matchingSetup(lighting)
 	const enabledLights = resolved.lights.filter((light) => light.enabled)
 
@@ -416,50 +437,75 @@ const LightingSettings = () => {
 			<DrillDownView
 				id="occlusion"
 				title="Ambient occlusion"
-				caption="Darkens creases and tight gaps on the model. It is drawn every frame while the view moves; 'Only when still' skips it during orbiting."
+				caption={OCCLUSION_CAPTIONS[occlusion.mode]}
 			>
-				<Toggle
-					label="Ambient occlusion"
-					checked={occlusion.mode === 'live'}
-					onCheckedChange={(on) =>
-						commit((prev) => ({
-							...prev,
-							occlusion: { ...prev.occlusion, mode: on ? 'live' : 'off' }
-						}))
-					}
-				/>
-				<Toggle
-					label="Only when still"
-					disabled={occlusion.mode !== 'live'}
-					checked={occlusion.live.atRest}
-					onCheckedChange={(atRest) =>
-						commit((prev) => ({
-							...prev,
-							occlusion: {
-								...prev.occlusion,
-								live: { ...prev.occlusion?.live, atRest }
+				<ToggleGroup
+					type="single"
+					aria-label="Ambient occlusion"
+					value={occlusion.mode}
+					onValueChange={(mode) => {
+						if (mode)
+							commit((prev) => ({
+								...prev,
+								occlusion: {
+									...prev.occlusion,
+									mode: mode as OcclusionMode
+								}
+							}))
+					}}
+				>
+					{OCCLUSION_MODES.map((entry) => (
+						<ToggleGroupItem key={entry.mode} value={entry.mode}>
+							{entry.label}
+						</ToggleGroupItem>
+					))}
+				</ToggleGroup>
+
+				{occlusion.mode === 'live' && (
+					<>
+						<Toggle
+							label="Only when still"
+							checked={occlusion.live.atRest}
+							onCheckedChange={(atRest) =>
+								commit((prev) => ({
+									...prev,
+									occlusion: {
+										...prev.occlusion,
+										live: { ...prev.occlusion?.live, atRest }
+									}
+								}))
 							}
-						}))
-					}
-				/>
-				<Slider
-					label="Strength"
-					min={0.5}
-					max={4}
-					step={0.1}
-					presets={OCCLUSION_PRESETS}
-					disabled={occlusion.mode !== 'live'}
-					value={occlusion.live.intensity}
-					onValueChange={(intensity) =>
-						preview((prev) => ({
-							...prev,
-							occlusion: {
-								...prev.occlusion,
-								live: { ...prev.occlusion?.live, intensity }
+						/>
+						<Slider
+							label="Strength"
+							min={0.5}
+							max={4}
+							step={0.1}
+							presets={OCCLUSION_PRESETS}
+							value={occlusion.live.intensity}
+							onValueChange={(intensity) =>
+								preview((prev) => ({
+									...prev,
+									occlusion: {
+										...prev.occlusion,
+										live: { ...prev.occlusion?.live, intensity }
+									}
+								}))
 							}
-						}))
-					}
-				/>
+						/>
+					</>
+				)}
+
+				{occlusion.mode === 'baked' && (
+					<OcclusionBakeSection
+						preview={bakePreview.preview}
+						canBake={bakePreview.canBake}
+						isOptimizing={bakePreview.isOptimizing}
+						isAnimated={bakePreview.isAnimated}
+						onBake={() => void bakePreview.bake()}
+						onShownChange={bakePreview.setShown}
+					/>
+				)}
 			</DrillDownView>
 		</DrillDown>
 	)

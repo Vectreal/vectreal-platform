@@ -11,6 +11,7 @@ import { PublisherLoading } from '../../components/publisher/shell/publisher-loa
 import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
+import { useShownOcclusionBake } from '../../components/publisher/sidebars/compose-sidebar/lighting-settings/use-occlusion-bake-preview'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
@@ -159,6 +160,11 @@ const PublisherPage = () => {
 			(light) =>
 				light.role === editedLightRole && light.enabled && light.intensity > 0
 		)
+	// A bake preview is a copy of the model; the other tools act on the model
+	// itself, so the copy shows only inside the Lighting tool.
+	const shownOcclusionBake = useShownOcclusionBake(
+		openComposeTool === 'lighting'
+	)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
 		'Scene thumbnail preview'
@@ -284,7 +290,11 @@ const PublisherPage = () => {
 				<ClientVectrealViewer
 					model={file?.model}
 					modelKey={modelKey}
-					displayedModel={comparedModel?.model}
+					/*
+					  Holding to compare an optimization wins over a bake preview: it
+					  is the more deliberate, shorter act.
+					*/
+					displayedModel={comparedModel?.model ?? shownOcclusionBake}
 					animations={file?.animations}
 					animationOptions={animation}
 					/*

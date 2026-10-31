@@ -11,8 +11,8 @@ import type { Material, Mesh, Object3D, Texture } from 'three'
 /** The key that holds the comparison anywhere outside a text field. */
 export const COMPARE_HOLD_KEY = '\\'
 
-/** Frees what a built source holds on the GPU. It is never shown again. */
-const disposeModel = (model: Object3D) => {
+/** Frees what a built model holds on the GPU. It is never shown again. */
+export const disposeModel = (model: Object3D) => {
 	model.traverse((node) => {
 		const mesh = node as Mesh
 		if (!mesh.isMesh) return
