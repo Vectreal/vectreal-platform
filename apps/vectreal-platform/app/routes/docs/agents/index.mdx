@@ -103,7 +103,7 @@ Tools that take a `projectId` use the linked project when the call names none.
 - **Billing, members and organization settings.** None of these are open to agents.
 - **Hotspots, cameras, animation and normalization.** An agent can read these settings, but changes go through the publisher for now.
 - **Thumbnails and baked shadows.** An agent's machine renders nothing, so a scene it creates has neither until you first open it in the publisher, which fills both automatically.
-- **Baked ambient occlusion.** Baking needs a GPU. An agent can set `lighting.occlusion.mode` to `baked`, but only publishing from the publisher bakes it.
+- **Baked ambient occlusion.** Baking needs a GPU. An agent can set `lighting.occlusion.mode` to `baked`, but only publishing from the publisher bakes it, and embeds show no ambient occlusion until then.
 
 What an agent may do is also limited by your role in the organization: an agent never does more than you could do yourself.
 

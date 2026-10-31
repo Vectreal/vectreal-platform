@@ -205,6 +205,20 @@ describe('publish_scene', () => {
 		expect(client.publishScene).toHaveBeenCalledOnce()
 		expect(result).toMatchObject({ warnings: [BAKED_OCCLUSION_WARNING] })
 	})
+
+	it('still publishes when the settings it checks cannot be read', async () => {
+		const { context, client } = fakeContext()
+		client.getSceneSettings.mockRejectedValueOnce(new Error('No such scene.'))
+
+		const result = await call(
+			'publish_scene',
+			{ sceneId: 's1', path: 'models/chair.glb' },
+			context
+		)
+
+		expect(client.publishScene).toHaveBeenCalledOnce()
+		expect(result).not.toHaveProperty('warnings')
+	})
 })
 
 describe('get_embed_snippet', () => {

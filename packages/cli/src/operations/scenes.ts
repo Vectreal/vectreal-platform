@@ -185,7 +185,11 @@ export const publishScene = defineOperation({
 	destructive: false,
 	run: async ({ sceneId, path, draco, ktx2 }, context) => {
 		const { bytes } = await readGlb(path, context)
-		const { settings } = await context.client.getSceneSettings(sceneId)
+		// Only for the warning: a scene whose settings cannot be read still publishes.
+		const settings = await context.client
+			.getSceneSettings(sceneId)
+			.then((response) => response.settings)
+			.catch(() => undefined)
 		const exported = await context.exportForPublish(bytes, { draco, ktx2 })
 		const published = await context.client.publishScene(sceneId, {
 			file: blobOf(exported)
@@ -193,7 +197,7 @@ export const publishScene = defineOperation({
 		return {
 			...published,
 			bytes: { source: bytes.length, published: exported.length },
-			...(resolveLighting(settings).occlusion.mode === 'baked'
+			...(settings && resolveLighting(settings).occlusion.mode === 'baked'
 				? { warnings: [BAKED_OCCLUSION_WARNING] }
 				: {})
 		}

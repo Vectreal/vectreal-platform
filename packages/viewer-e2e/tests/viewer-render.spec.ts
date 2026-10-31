@@ -243,6 +243,8 @@ test('publishing bakes occlusion on the GPU into the GLB, from the published cor
 	// Every texel above was read from the published GLB: a PNG in the floor's
 	// occlusion slot, on the first UV set.
 	expect(bake.storedPng).toBe(true)
+	// A GPU reset mid-bake fails the bake rather than ship what it read back.
+	expect(bake.contextLoss).toMatch(/GPU reset/)
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
 	expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
 })
@@ -270,6 +272,7 @@ declare global {
 					mirrored: number
 					canopy: number
 					storedPng: boolean
+					contextLoss: string
 			  }
 			| { status: 'error'; error: string }
 	}

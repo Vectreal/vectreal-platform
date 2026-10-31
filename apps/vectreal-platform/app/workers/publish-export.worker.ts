@@ -110,8 +110,11 @@ async function bakeOcclusion(
 ): Promise<NonNullable<PublishExportOutcome['occlusion']>> {
 	let renderer: WebGLRenderer | undefined
 	try {
-		renderer = new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) })
-		return await bakeOcclusionIntoDocument(document, renderer)
+		return await bakeOcclusionIntoDocument(
+			document,
+			() =>
+				(renderer = new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) }))
+		)
 	} catch (error) {
 		return {
 			failed: error instanceof Error ? error.message : 'Occlusion bake failed'

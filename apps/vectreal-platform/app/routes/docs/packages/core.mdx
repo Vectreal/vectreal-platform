@@ -536,13 +536,14 @@ the page or trip the GPU's watchdog.
 
 **`bakeOcclusionIntoDocument(document, renderer, options?)`** runs all of the
 above in one step and returns which materials were baked and which skipped,
-by name. Pass it to `ModelExporter.exportGlbForPublish` as `occlusion`, which
+by name. `renderer` is a function that returns one, called only when some
+material can be baked. Pass it to `ModelExporter.exportGlbForPublish` as `occlusion`, which
 bakes the published copy before its textures are encoded:
 
 ```ts
 await new ModelExporter().exportGlbForPublish(glb, {
 	occlusion: async (copy) => {
-		report = await bakeOcclusionIntoDocument(copy, renderer)
+		report = await bakeOcclusionIntoDocument(copy, () => renderer)
 	},
 	ktx2: { encode }
 })

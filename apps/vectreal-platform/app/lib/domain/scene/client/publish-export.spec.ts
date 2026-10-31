@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	occlusionBakeWarning,
 	projectPublishedGlbBytes,
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
@@ -34,7 +35,8 @@ const run = (onProgress = vi.fn(), timeoutMs = 1_000) =>
 			buffer: new ArrayBuffer(4),
 			draco: {},
 			dracoWorthApplying: true,
-			ktx2: true
+			ktx2: true,
+			occlusion: false
 		},
 		onProgress,
 		timeoutMs
@@ -180,5 +182,36 @@ describe('resolvePublishGeometryOptions', () => {
 		expect(
 			resolvePublishGeometryOptions(draco, report(true)).dracoWorthApplying
 		).toBe(true)
+	})
+})
+
+describe('occlusionBakeWarning', () => {
+	it('stays quiet for a material that kept its own occlusion map', () => {
+		expect(
+			occlusionBakeWarning({
+				baked: ['body'],
+				skipped: [{ material: 'tyre', reason: 'existing-occlusion' }]
+			})
+		).toBeNull()
+	})
+
+	it('counts the materials that missed out and names the first', () => {
+		expect(
+			occlusionBakeWarning({
+				baked: [],
+				skipped: [
+					{ material: 'tyre', reason: 'existing-occlusion' },
+					{ material: 'wheel', reason: 'shared-geometry' },
+					{ material: 'decal', reason: 'tiling-uvs' }
+				]
+			})
+		).toEqual({
+			message: '2 materials could not take baked ambient occlusion.',
+			description: 'wheel: its mesh is placed more than once'
+		})
+	})
+
+	it('says nothing when no bake was asked for', () => {
+		expect(occlusionBakeWarning(undefined)).toBeNull()
 	})
 })

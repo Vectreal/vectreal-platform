@@ -75,7 +75,13 @@ beforeEach(async () => {
 		onProgress(0, 1)
 		return report
 	})
-	mocks.bakeOcclusionIntoDocument.mockResolvedValue(occlusionReport)
+	// Asks for its renderer, as the real bake does when it has a material.
+	mocks.bakeOcclusionIntoDocument.mockImplementation(
+		async (_document: Document, renderer: () => unknown) => {
+			renderer()
+			return occlusionReport
+		}
+	)
 	vi.stubGlobal('OffscreenCanvas', class {})
 	mocks.exportGlbForPublish.mockImplementation(
 		async (
@@ -84,16 +90,18 @@ beforeEach(async () => {
 				ktx2?: unknown
 				occlusion?: (document: Document) => Promise<void>
 			}
-		) => ({
-			...(await options.occlusion?.(exportedDocument)),
-			data: new Uint8Array([1, 2, 3]),
-			geometryCodec: 'meshopt',
-			geometrySizes: { none: 3, meshopt: 2 },
-			textureBytes: 7,
-			textures: options.ktx2
-				? await mocks.compressTextures(options.ktx2)
-				: undefined
-		})
+		) => {
+			await options.occlusion?.(exportedDocument)
+			return {
+				data: new Uint8Array([1, 2, 3]),
+				geometryCodec: 'meshopt',
+				geometrySizes: { none: 3, meshopt: 2 },
+				textureBytes: 7,
+				textures: options.ktx2
+					? await mocks.compressTextures(options.ktx2)
+					: undefined
+			}
+		}
 	)
 	vi.resetModules()
 	await import('./publish-export.worker')
@@ -154,7 +162,7 @@ describe('the publish export worker', () => {
 
 		expect(mocks.bakeOcclusionIntoDocument).toHaveBeenCalledWith(
 			exportedDocument,
-			expect.any(Object)
+			expect.any(Function)
 		)
 		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
 		expect(messages.at(-1)).toMatchObject({
@@ -178,8 +186,11 @@ describe('the publish export worker', () => {
 	})
 
 	it('publishes without occlusion when the bake fails, and says why', async () => {
-		mocks.bakeOcclusionIntoDocument.mockRejectedValue(
-			new Error('WebGL 2 is unavailable')
+		mocks.bakeOcclusionIntoDocument.mockImplementation(
+			async (_document: Document, renderer: () => unknown) => {
+				renderer()
+				throw new Error('WebGL 2 is unavailable')
+			}
 		)
 
 		const messages = await send({

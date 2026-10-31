@@ -14,15 +14,19 @@ export interface OcclusionBakeReport {
 
 /**
  * Plans, bakes, encodes and writes in one step: what publishing runs on the
- * copy it ships. Needs a browser or worker with WebGL 2.
+ * copy it ships. Needs a browser or worker with WebGL 2, and asks for a
+ * renderer only when some material can be baked.
  */
 export async function bakeOcclusionIntoDocument(
 	document: Document,
-	renderer: WebGLRenderer,
+	renderer: () => WebGLRenderer,
 	options?: OcclusionBakeOptions
 ): Promise<OcclusionBakeReport> {
 	const plan = planOcclusionBake(document)
-	const baked = await bakeOcclusion(plan, renderer, options)
+	const baked =
+		plan.targets.length > 0
+			? await bakeOcclusion(plan, renderer(), options)
+			: []
 	writeOcclusionBake(
 		document,
 		await Promise.all(

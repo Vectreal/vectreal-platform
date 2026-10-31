@@ -19,10 +19,24 @@ left as it is. When the scene's lighting has ambient occlusion set to
 **baked** (`lighting.occlusion.mode: 'baked'` through the API), publishing
 also raytraces it into each material's own occlusion map before compressing.
 Any glTF viewer shows it, and it costs nothing to draw. Baking runs in your
-browser and needs WebGL 2. A material it cannot bake is named in a warning,
-with the reason; the [core reference](/docs/packages/core#occlusion-bake) lists
-them. If the bake fails as a whole, the scene still publishes, without it, and
-the warning says so.
+browser and needs WebGL 2. When materials cannot be baked, a warning counts
+them and names the first with its reason; the
+[core reference](/docs/packages/core#occlusion-bake) lists the reasons. A
+material whose model brought its own occlusion map keeps it and is not counted.
+If the bake fails as a whole, the scene still publishes, without it, and the
+warning says so.
+
+The baked map lives in the published file, so switching ambient occlusion to or
+from **baked** takes effect on the next publish from the Publisher. Until then,
+embeds draw the file they have with the new setting: switched to baked, they
+show no ambient occlusion; switched away, the old baked map stays, under live
+occlusion if that is on.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx resolveLighting({ lighting }).occlusion.mode === 'baked'
+present apps/vectreal-platform/app/workers/publish-export.worker.ts return await bakeOcclusionIntoDocument(
+present apps/vectreal-platform/app/lib/domain/scene/client/publish-export.ts could not be baked, so the scene was published without it
+*/}
 
 > **Draft scenes are never accessible to external embed principals.** They remain viewable only by authenticated collaborators with project access.
 

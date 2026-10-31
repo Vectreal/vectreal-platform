@@ -115,7 +115,7 @@ async function bake() {
 		let report: OcclusionBakeReport | undefined
 		const published = await new ModelExporter().exportGlbForPublish(glb, {
 			occlusion: async (document) => {
-				report = await bakeOcclusionIntoDocument(document, renderer, {
+				report = await bakeOcclusionIntoDocument(document, () => renderer, {
 					resolution: SIZE,
 					samples: 64,
 					distance: 0.25
@@ -151,10 +151,37 @@ async function bake() {
 	}
 }
 
+/*
+  The GPU resetting mid-bake: the context is lost after the first pass and
+  three asks for it back. The bake has to fail, not ship whatever it read.
+*/
+async function bakeThroughContextLoss(): Promise<string> {
+	const renderer = new WebGLRenderer()
+	const lose = renderer.getContext().getExtension('WEBGL_lose_context')
+	try {
+		const baking = bakeOcclusionIntoDocument(floorScene(), () => renderer, {
+			resolution: SIZE,
+			samples: 64,
+			distance: 0.25
+		})
+		setTimeout(() => {
+			lose?.loseContext()
+			setTimeout(() => lose?.restoreContext())
+		})
+		await baking
+		return 'baked'
+	} catch (error) {
+		return String(error)
+	} finally {
+		renderer.dispose()
+	}
+}
+
 export function OcclusionBakeCase() {
 	useEffect(() => {
-		bake().then(
-			(result) => (window.__BAKE_E2E__ = result),
+		Promise.all([bake(), bakeThroughContextLoss()]).then(
+			([result, contextLoss]) =>
+				(window.__BAKE_E2E__ = { ...result, contextLoss }),
 			(error) =>
 				(window.__BAKE_E2E__ = { status: 'error', error: String(error) })
 		)
