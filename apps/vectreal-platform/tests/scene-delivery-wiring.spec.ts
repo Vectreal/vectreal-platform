@@ -524,6 +524,18 @@ describe('legacy lighting in the embed manifest', () => {
 	})
 })
 
+describe('lighting reaches the app viewers', () => {
+	it('draws a published scene from its lighting, not the legacy keys', () => {
+		// The manifest carries both; the legacy keys are for old viewers only.
+		expect(read('components/scene-embed/scene-embed-viewer.tsx')).toContain(
+			'lighting={sceneData?.lighting}'
+		)
+		expect(read('components/examples/example-scene-client.tsx')).toContain(
+			'lighting={settings.lighting}'
+		)
+	})
+})
+
 describe('uploaded marker artwork', () => {
 	const manifest = read('lib/domain/scene/server/scene-manifest.server.ts')
 	const serving = read('lib/domain/embed/embed-asset-serving.server.ts')

@@ -44,6 +44,7 @@ export default function ExampleSceneClient({
 			boundsOptions={settings.bounds}
 			cameraOptions={settings.camera}
 			controlsOptions={settings.controls}
+			lighting={settings.lighting}
 			envOptions={settings.environment}
 			shadowsOptions={settings.shadows}
 			normalizationOptions={settings.normalization}
