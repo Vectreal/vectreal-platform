@@ -91,6 +91,13 @@ const LEGACY_MIN_AMBIENT = 0.05
 */
 const MIGRATED_MAX_KEY_INTENSITY = 1
 
+/*
+  How much a legacy light at the horizon is taken to reach the ground, so its
+  strength stays finite. `toLegacyLighting` floors it the same way, so a
+  scene survives the round trip.
+*/
+export const LEGACY_MIN_REACH = 0.05
+
 const degrees = (radians: number) => (radians * 180) / Math.PI
 
 /**
@@ -239,8 +246,8 @@ function migrateLegacyKey({
 	const halfWidth = (light.radius ?? D.lightRadius) / 2
 	const elevation = Math.atan2(y, horizontal)
 	// A low light reaches the ground at a slant, so it takes more strength to
-	// block as much; floored so a light at the horizon stays finite.
-	const reach = Math.max(Math.sin(elevation), 0.05)
+	// block as much.
+	const reach = Math.max(Math.sin(elevation), LEGACY_MIN_REACH)
 
 	return {
 		...DEFAULT_LIGHT,
