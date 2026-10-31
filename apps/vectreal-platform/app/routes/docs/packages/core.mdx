@@ -430,6 +430,35 @@ the legacy `envOptions` and `shadowsOptions`, which stay readable for every
 scene saved before `lighting`. See [Lighting](/docs/packages/viewer#lighting-lightingsettings)
 for what the viewer does with each field.
 
+### Lighting setups
+
+`LIGHTING_SETUPS` holds the setups the Lighting tool offers, each a whole look:
+a map, up to three lights, their sizes and the balance between them. Each light
+stands on one of its map's own bright regions, so the reflection of a softbox or
+the sun on a glossy surface sits where the light that casts the model's shadow
+stands. Turning a setup (`environment.rotation`) turns the map and its lights
+together.
+
+The regions are measured, not placed by eye. `ENVIRONMENT_LIGHTS` lists every
+hosted map's brightest regions as a direction, a size and a share of the map's
+light; `pnpm nx run vectreal-platform:measure-environment-lights` reads the maps
+and writes it again when a map changes. An evenly lit map, such as
+`outdoor-overcast`, has none, and its setup lights with the environment alone.
+
+```ts
+import { LIGHTING_SETUPS } from '@vctrl/core'
+
+const product = LIGHTING_SETUPS.find(({ id }) => id === 'product')
+scene.settings.lighting = product?.lighting
+```
+
+{/* claims
+present packages/core/src/scene-lighting/lighting-setups.ts export const LIGHTING_SETUPS
+present packages/core/src/scene-lighting/environment-lights.ts export const ENVIRONMENT_LIGHTS
+present apps/vectreal-platform/project.json measure-environment-lights
+present packages/core/src/scene-lighting/environment-lights.ts 'outdoor-overcast': []
+*/}
+
 {/* claims
 present packages/core/src/types/scene-types.ts export const MAX_SCENE_LIGHTS = 3
 present packages/core/src/scene-lighting/resolve-lighting.ts export function resolveLighting
