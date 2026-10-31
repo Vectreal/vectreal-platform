@@ -196,7 +196,8 @@ export const sceneLightingSchema = z.object({
 				})
 				.optional()
 		})
-		.optional()
+		.optional(),
+	bake: z.object({ lights: z.boolean().optional() }).optional()
 })
 
 export const sceneNormalizationSchema = z.object({

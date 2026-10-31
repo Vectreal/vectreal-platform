@@ -31,6 +31,16 @@ declare global {
 					mirrored: number
 					canopy: number
 					storedPng: boolean
+					lights: {
+						baked: string[]
+						scale: number
+						under: number
+						far: number
+						mirrored: number
+						canopy: number
+						shared: number
+						loaded: boolean
+					}
 					contextLoss: string
 			  }
 			| { status: 'error'; error: string }

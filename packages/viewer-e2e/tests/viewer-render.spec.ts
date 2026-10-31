@@ -243,6 +243,25 @@ test('publishing bakes occlusion on the GPU into the GLB, from the published cor
 	// Every texel above was read from the published GLB: a PNG in the floor's
 	// occlusion slot, on the first UV set.
 	expect(bake.storedPng).toBe(true)
+	// The light map, baked after the occlusion on the same renderer, from one
+	// small light overhead: full light in the open, none under the box or the
+	// canopy, and the right way up. Stored as the square root of its share of
+	// the scale, so full light reads 255.
+	expect(bake.lights.baked).toEqual(['floor'])
+	expect(bake.lights.scale).toBeCloseTo(1)
+	expect(bake.lights.far).toBeGreaterThan(245)
+	expect(bake.lights.mirrored).toBeGreaterThan(245)
+	expect(bake.lights.under).toBeLessThan(10)
+	expect(bake.lights.canopy).toBeLessThan(10)
+	// Open floor and the scrap under the box share these texels: half lit,
+	// which stores as the square root of a half, about 180. A sum would clip
+	// to full light.
+	expect(bake.lights.shared).toBeGreaterThan(140)
+	expect(bake.lights.shared).toBeLessThan(215)
+	// Three's loader reads it back as a switched-off light map carrying the
+	// lights it was baked from.
+	expect(bake.lights.loaded).toBe(true)
+
 	// A GPU reset mid-bake fails the bake rather than ship what it read back.
 	expect(bake.contextLoss).toMatch(/GPU reset/)
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
@@ -272,6 +291,16 @@ declare global {
 					mirrored: number
 					canopy: number
 					storedPng: boolean
+					lights: {
+						baked: string[]
+						scale: number
+						under: number
+						far: number
+						mirrored: number
+						canopy: number
+						shared: number
+						loaded: boolean
+					}
 					contextLoss: string
 			  }
 			| { status: 'error'; error: string }

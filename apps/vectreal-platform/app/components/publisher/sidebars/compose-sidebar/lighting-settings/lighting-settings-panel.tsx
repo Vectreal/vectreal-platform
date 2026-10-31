@@ -1,3 +1,4 @@
+import { Button } from '@shared/components/ui/button'
 import { Slider, type SliderPreset } from '@shared/components/ui/slider'
 import { Toggle } from '@shared/components/ui/toggle'
 import {
@@ -15,9 +16,16 @@ import {
 	type SceneLightRole
 } from '@vctrl/core'
 import { useAtomValue, useSetAtom } from 'jotai/react'
-import { Contrast, Globe, Image as ImageIcon, Lightbulb } from 'lucide-react'
+import {
+	Contrast,
+	Globe,
+	Image as ImageIcon,
+	Layers,
+	Lightbulb
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { BakeSection } from './bake-section'
 import {
 	LIGHT_CAPTIONS,
 	LIGHT_LABELS,
@@ -34,11 +42,10 @@ import {
 	withSetup,
 	wrapDegrees
 } from './lighting-edits'
-import { OcclusionBakeSection } from './occlusion-bake-section'
 import StageColorField from './stage-color-field'
 import { ThumbnailGrid } from './thumbnail-grid'
+import { useBakePreview } from './use-bake-preview'
 import { useLightingDraft } from './use-lighting-draft'
-import { useOcclusionBakePreview } from './use-occlusion-bake-preview'
 import {
 	environmentThumbnail,
 	lightingSetupThumbnail
@@ -48,7 +55,7 @@ import {
 	environmentLoadFailedAtom
 } from '../../../../../lib/stores/publisher-config-store'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
-import { SettingGroup } from '../../sidebar-section'
+import { PanelCaption, SettingGroup } from '../../sidebar-section'
 
 type OcclusionMode = keyof typeof OCCLUSION_CAPTIONS
 
@@ -58,6 +65,16 @@ const OCCLUSION_CAPTIONS = {
 	baked:
 		"Raytraced into the model's own textures when you publish, so it costs nothing to draw and shows in any glTF viewer."
 } as const
+
+/** What the Bake view's trigger says is baked. */
+const bakeSummary = (occlusion: boolean, lights: boolean) =>
+	occlusion && lights
+		? 'Occlusion, lights'
+		: occlusion
+			? 'Occlusion'
+			: lights
+				? 'Lights'
+				: 'Off'
 
 const OCCLUSION_MODES: { mode: OcclusionMode; label: string }[] = [
 	{ mode: 'off', label: 'Off' },
@@ -159,8 +176,8 @@ const LightingSettings = () => {
 	}, [editedRole, setEditedLightRole])
 
 	const resolved = resolveLighting({ lighting })
-	const { environment, background, occlusion } = resolved
-	const bakePreview = useOcclusionBakePreview()
+	const { environment, background, occlusion, bake } = resolved
+	const bakePreview = useBakePreview()
 	const setup = matchingSetup(lighting)
 	const enabledLights = resolved.lights.filter((light) => light.enabled)
 
@@ -230,6 +247,12 @@ const LightingSettings = () => {
 						icon={<Contrast />}
 						label="Ambient occlusion"
 						summary={OCCLUSION_SUMMARY[occlusion.mode]}
+					/>
+					<DrillDownTrigger
+						to="bake"
+						icon={<Layers />}
+						label="Bake"
+						summary={bakeSummary(occlusion.mode === 'baked', bake.lights)}
 					/>
 				</div>
 
@@ -497,7 +520,45 @@ const LightingSettings = () => {
 				)}
 
 				{occlusion.mode === 'baked' && (
-					<OcclusionBakeSection
+					<Button
+						variant="outline"
+						className="w-full"
+						onClick={() => setPath(['bake'])}
+					>
+						Preview the bake
+					</Button>
+				)}
+			</DrillDownView>
+
+			<DrillDownView
+				id="bake"
+				title="Bake"
+				caption="Written into the model when you publish. Preview it here before it ships."
+			>
+				{/*
+				  The Ambient occlusion view owns the mode; a second switch here
+				  could only guess which mode switching the bake off returns to.
+				*/}
+				<DrillDownTrigger
+					to="occlusion"
+					icon={<Contrast />}
+					label="Ambient occlusion"
+					summary={OCCLUSION_SUMMARY[occlusion.mode]}
+				/>
+				<Toggle
+					label="Studio lights"
+					description="Their light and soft shadows, written into a light map. Best on matte products; other glTF viewers show the model without them."
+					checked={bake.lights}
+					onCheckedChange={(lights) =>
+						commit((prev) => ({ ...prev, bake: { ...prev.bake, lights } }))
+					}
+				/>
+				{bake.lights && enabledLights.length === 0 && (
+					<PanelCaption>Turn a light on to bake it.</PanelCaption>
+				)}
+
+				{bakePreview.bakesAnything && (
+					<BakeSection
 						preview={bakePreview.preview}
 						canBake={bakePreview.canBake}
 						isOptimizing={bakePreview.isOptimizing}

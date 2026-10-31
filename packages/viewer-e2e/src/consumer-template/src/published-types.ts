@@ -5,6 +5,7 @@
   contain fails here rather than turning into `any` in somebody's editor.
 */
 export type * as Core from '@vctrl/core'
+export type * as CoreLightBake from '@vctrl/core/light-bake'
 export type * as CoreModelExporter from '@vctrl/core/model-exporter'
 export type * as CoreModelFormats from '@vctrl/core/model-formats'
 export type * as CoreModelLoader from '@vctrl/core/model-loader'

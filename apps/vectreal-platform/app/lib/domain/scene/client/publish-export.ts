@@ -1,3 +1,5 @@
+import { litLights, resolveLighting } from '@vctrl/core'
+
 import { runWorker } from '../../../../workers/run-worker'
 
 import type {
@@ -6,7 +8,11 @@ import type {
 	PublishExportProgress,
 	PublishExportRequest
 } from '../../../../workers/publish-export.worker.types'
-import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
+import type {
+	DracoCompressionReport,
+	LightingSettings,
+	Optimizations
+} from '@vctrl/core'
 import type { OcclusionBakeSkipReason } from '@vctrl/core/occlusion-bake'
 
 /**
@@ -90,21 +96,48 @@ export async function projectPublishedGlbBytes(
 			buffer: workingGlb.slice().buffer as ArrayBuffer,
 			...geometry,
 			ktx2: false,
-			occlusion: false
+			occlusion: false,
+			lights: false
 		},
 		() => {}
 	)
 	return buffer.byteLength
 }
 
-/** Why a material took no baked occlusion, as the author reads it. */
+/**
+ * What publishing bakes for `lighting`: occlusion when it is set to baked, and
+ * the studio lights when they are set to bake and any is on. The Lighting
+ * tool's preview asks for the same, so it shows what will ship.
+ */
+export function publishBakes(
+	lighting: LightingSettings | undefined
+): Pick<PublishExportRequest, 'occlusion' | 'lights'> {
+	const resolved = resolveLighting({ lighting })
+	return {
+		occlusion: resolved.occlusion.mode === 'baked',
+		lights:
+			resolved.bake.lights && litLights(resolved).length > 0
+				? { lights: resolved.lights, environment: resolved.environment }
+				: false
+	}
+}
+
+/** Why a material took no bake, as the author reads it. */
 export const OCCLUSION_SKIP_REASONS: Record<OcclusionBakeSkipReason, string> = {
 	'existing-occlusion': 'it has an occlusion map already, which is kept',
 	'shared-geometry': 'its mesh is placed more than once',
 	skinned: 'a skin moves it',
 	'no-uv0': 'it has no UVs',
 	'tiling-uvs': 'its UVs repeat the texture',
-	'overlapping-uvs': 'parts of it share the same UVs'
+	'overlapping-uvs': 'parts of it share the same UVs',
+	'double-sided':
+		'it is drawn from both sides, which one light map cannot light',
+	animated: 'an animation moves it, and a light map holds one pose',
+	'moving-shadows':
+		'another part moves or repeats, and its shadow here cannot be baked',
+	'cutout-shadows':
+		'a cutout casts a shadow here, which the bake would draw solid',
+	unlit: 'it is unlit, so there is no light to bake'
 }
 
 /** The warning a publish owes the author about its occlusion bake, if any. */
@@ -127,6 +160,26 @@ export function occlusionBakeWarning(
 	if (!first) return null
 	return {
 		message: `${missed.length} material${rest.length === 0 ? '' : 's'} could not take baked ambient occlusion.`,
+		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
+	}
+}
+
+/** The warning a publish owes the author about its light bake, if any. */
+export function lightBakeWarning(
+	lights: PublishExportOutcome['lights']
+): { message: string; description: string } | null {
+	if (!lights) return null
+	if ('failed' in lights) {
+		return {
+			message:
+				'The studio lights could not be baked, so the scene was published with them live.',
+			description: lights.failed
+		}
+	}
+	const [first, ...rest] = lights.skipped
+	if (!first) return null
+	return {
+		message: `${lights.skipped.length} material${rest.length === 0 ? '' : 's'} could not take the baked lights and keep${rest.length === 0 ? 's' : ''} them live.`,
 		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
 	}
 }

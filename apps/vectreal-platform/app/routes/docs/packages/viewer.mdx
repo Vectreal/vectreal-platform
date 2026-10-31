@@ -309,6 +309,20 @@ to change a shadow, change its light. The type and the migration rules live in
 While the model animates, the ground switches to a live contact shadow that
 follows the moving geometry.
 
+### Baked lights
+
+A model published with its studio lights baked carries a light map on each
+baked material, under the `VECTREAL_lightmap` extension (see
+[`@vctrl/core`](/docs/packages/core#light-bake)). The viewer draws a material's
+map while the scene's `lighting` has the signature the map was baked from, in
+place of the lights' live diffuse light. Their highlights stay live. The map is
+scaled by the environment's measured light and `environment.intensity`, as the
+live lights are. The lights keep their shadow maps, which then shade only
+their highlights. Change a light or the rotation, or turn `bake.lights` off,
+and no map matches any more: the viewer draws the lights live until the model
+is baked again. This applies to the model the viewer draws, including
+`displayedModel`.
+
 ### Before `lighting`: `envOptions` and `shadowsOptions`
 
 Both props still work and are deprecated. Without `lighting`, the viewer reads

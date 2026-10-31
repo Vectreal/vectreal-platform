@@ -25,6 +25,7 @@ import type {
 	SceneLightRole,
 	SceneSettings
 } from '@vctrl/core'
+import type { LightBakeReport } from '@vctrl/core/light-bake'
 import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
 import type { Object3D } from 'three'
@@ -304,22 +305,32 @@ const environmentFilesOf = (
 const editedLightRoleAtom = atom<SceneLightRole | null>(null)
 
 /**
- * A preview of the occlusion publishing would bake, for the working document
- * it was made from. View state only: publishing bakes again.
+ * A preview of what publishing would bake, for the working document and the
+ * bakes it was made from. View state only: publishing bakes again.
  */
-interface OcclusionBakePreview {
+interface BakePreview {
 	status: 'baking' | 'ready' | 'failed'
-	/** The document and optimization pass it was baked from. */
-	source: { document: unknown; passRevision: number }
+	/**
+	 * The document and optimization pass it was baked from, and what was
+	 * baked, down to the lights a light map holds.
+	 */
+	source: { document: unknown; passRevision: number; bakes: string }
 	/** Whether the viewer shows it in place of the model. */
 	shown: boolean
 	model?: Object3D
-	report?: OcclusionBakeReport
+	/**
+	 * One per bake that ran. A bake that failed says why, while the other is
+	 * shown, as publishing ships it.
+	 */
+	reports?: {
+		occlusion?: OcclusionBakeReport | { failed: string }
+		lights?: LightBakeReport | { failed: string }
+	}
 	durationMs?: number
 	error?: string
 }
 
-const occlusionBakePreviewAtom = atom<OcclusionBakePreview | null>(null)
+const bakePreviewAtom = atom<BakePreview | null>(null)
 
 export {
 	// atoms
@@ -328,7 +339,7 @@ export {
 	environmentLoadFailedAtom,
 	environmentFilesOf,
 	editedLightRoleAtom,
-	occlusionBakePreviewAtom,
+	bakePreviewAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
 	capturedThumbnailFrameAtom,
@@ -358,4 +369,4 @@ export {
 	sceneMetaInitialState
 }
 
-export type { OcclusionBakePreview }
+export type { BakePreview }

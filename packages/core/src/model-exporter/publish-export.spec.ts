@@ -299,7 +299,7 @@ describe('ModelExporter.exportGlbForPublish', () => {
 
 		const encoded: string[] = []
 		const result = await new ModelExporter().exportGlbForPublish(glb, {
-			occlusion: async (document) => {
+			bake: async (document) => {
 				const [material] = document.getRoot().listMaterials()
 				material.setOcclusionTexture(
 					document
@@ -329,7 +329,7 @@ describe('ModelExporter.exportGlbForPublish', () => {
 		const glb = await new WebIO().writeBinary(gridDocument())
 
 		const result = await new ModelExporter().exportGlbForPublish(glb, {
-			occlusion: async (document) => {
+			bake: async (document) => {
 				document.createMaterial('baked')
 			}
 		})

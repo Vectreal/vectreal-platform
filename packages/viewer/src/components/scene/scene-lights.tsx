@@ -1,8 +1,9 @@
 import { useEnvironment } from '@react-three/drei'
-import { memo, Suspense, useMemo, useState } from 'react'
+import { memo, Suspense, useLayoutEffect, useMemo, useState } from 'react'
 import { Object3D } from 'three'
 
 import LoadFailureBoundary from '../load-failure-boundary'
+import { applyBakedLights, drawnLightsSignature } from './baked-lights'
 import {
 	environmentIrradiance,
 	LIGHT_DISTANCE_FACTOR,
@@ -37,6 +38,11 @@ interface SceneLightsProps {
 	environmentFiles: string | string[]
 	/** The model the lights aim at and shadow; sizes their shadow cameras. */
 	model?: Object3D
+	/**
+	 * What the scene draws in place of `model`, if anything. Whichever is drawn
+	 * has its baked lights applied.
+	 */
+	displayedModel?: Object3D
 	/** Re-measures the model when normalization rescales it. */
 	normalizationOptions?: NormalizationOptions
 }
@@ -57,7 +63,14 @@ interface LightRigProps extends Omit<SceneLightsProps, 'environmentFiles'> {
  * map cannot load.
  */
 const SceneLights = memo(({ environmentFiles, ...props }: SceneLightsProps) => {
-	if (litLights(props.lighting).length === 0) return null
+	const isLit = litLights(props.lighting).length > 0
+	const drawn = props.displayedModel ?? props.model
+	// No light is on, so no map matches the lighting: each turns off.
+	useLayoutEffect(() => {
+		if (!isLit && drawn) applyBakedLights(drawn, '', 0)
+	}, [isLit, drawn])
+
+	if (!isLit) return null
 	return (
 		<LoadFailureBoundary
 			key={String(environmentFiles)}
@@ -89,10 +102,16 @@ const MeasuredLightRig = ({ environmentFiles, ...props }: SceneLightsProps) => {
 const LightRig = ({
 	lighting,
 	model,
+	displayedModel,
 	normalizationOptions,
 	irradiance
 }: LightRigProps) => {
 	const { radius, height } = useModelMetrics(model, normalizationOptions)
+	useBakedLights(
+		displayedModel ?? model,
+		lighting,
+		irradiance * lighting.environment.intensity
+	)
 	// The model sits on the ground, centered under the origin, so its center
 	// is half its height up.
 	const center = useMemo<[number, number, number]>(
@@ -119,6 +138,21 @@ const LightRig = ({
 			))}
 		</>
 	)
+}
+
+/**
+ * Applies the drawn model's baked lights for `lighting`, at `intensity`,
+ * before the frame that shows them.
+ */
+function useBakedLights(
+	drawn: Object3D | undefined,
+	lighting: ResolvedLighting,
+	intensity: number
+) {
+	const signature = useMemo(() => drawnLightsSignature(lighting), [lighting])
+	useLayoutEffect(() => {
+		if (drawn) applyBakedLights(drawn, signature, intensity)
+	}, [drawn, signature, intensity])
 }
 
 interface SceneLightProps {

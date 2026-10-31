@@ -45,6 +45,7 @@
 				"packages/core/src/model-exporter/index.ts"
 			],
 			"@vctrl/core/node": ["packages/core/src/node/index.ts"],
+			"@vctrl/core/light-bake": ["packages/core/src/light-bake/index.ts"],
 			"@vctrl/core/occlusion-bake": [
 				"packages/core/src/occlusion-bake/index.ts"
 			],

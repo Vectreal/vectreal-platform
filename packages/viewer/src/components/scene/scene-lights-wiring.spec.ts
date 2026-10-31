@@ -43,4 +43,14 @@ describe('the scene lights', () => {
 		expect(lights).toContain('rotation={lighting.environment.rotation}')
 		expect(lights).toContain('lightDirection(light, rotation)')
 	})
+
+	it('apply the baked lights of whatever is drawn, for the lighting shown', () => {
+		expect(viewer).toMatch(
+			/<SceneLights[^>]*model=\{model\}\s+displayedModel=\{displayedModel\}/
+		)
+		expect(lights).toContain('displayedModel ?? model')
+		expect(lights).toContain(
+			'useMemo(() => drawnLightsSignature(lighting), [lighting])'
+		)
+	})
 })

@@ -33,7 +33,8 @@ describe('resolveLighting for a scene saved with lighting', () => {
 			],
 			ground: { enabled: false },
 			background: { type: 'none' },
-			occlusion: { mode: 'off', live: { intensity: 1.4, atRest: false } }
+			occlusion: { mode: 'off', live: { intensity: 1.4, atRest: false } },
+			bake: { lights: false }
 		})
 	})
 
@@ -84,6 +85,12 @@ describe('resolveLighting for a scene saved with lighting', () => {
 		).toEqual({ type: 'none' })
 	})
 
+	it('keeps the choice to bake the lights', () => {
+		expect(
+			resolveLighting({ lighting: { bake: { lights: true } } }).bake
+		).toEqual({ lights: true })
+	})
+
 	it('keeps a default where a field is present but undefined', () => {
 		const resolved = resolveLighting({
 			lighting: {
@@ -119,7 +126,8 @@ describe('resolveLighting for a scene saved before lighting', () => {
 			lights: [],
 			ground: { enabled: false },
 			background: { type: 'none' },
-			occlusion: { mode: 'off', live: { intensity: 1.4, atRest: false } }
+			occlusion: { mode: 'off', live: { intensity: 1.4, atRest: false } },
+			bake: { lights: false }
 		})
 	})
 

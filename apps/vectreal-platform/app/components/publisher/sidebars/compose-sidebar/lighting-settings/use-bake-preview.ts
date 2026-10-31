@@ -1,14 +1,17 @@
-import { resolveLighting } from '@vctrl/core'
+import { bakedLightsSignature } from '@vctrl/core'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { ModelLoader } from '@vctrl/core/model-loader'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
-import { runPublishExportInWorker } from '../../../../../lib/domain/scene/client/publish-export'
 import {
-	occlusionBakePreviewAtom,
-	type OcclusionBakePreview
+	publishBakes,
+	runPublishExportInWorker
+} from '../../../../../lib/domain/scene/client/publish-export'
+import {
+	bakePreviewAtom,
+	type BakePreview
 } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
@@ -17,18 +20,40 @@ import { disposeModel } from '../../../optimization/use-hold-to-compare'
 import type { Object3D } from 'three'
 
 /**
- * The preview, while it still belongs to the document on screen. A new model
- * or optimization pass leaves it describing something else, so it reads as
- * no preview at all.
+ * What publishing would bake now, as the request and as a key: a preview made
+ * for another key shows what will not ship. A light map is keyed by the
+ * lights it holds, so moving one makes the preview stale.
  */
-function useCurrentPreview(): OcclusionBakePreview | null {
-	const preview = useAtomValue(occlusionBakePreviewAtom)
+function useRequestedBakes() {
+	const lighting = useAtomValue(lightingAtom)
+	return useMemo(() => {
+		const request = publishBakes(lighting)
+		return {
+			request,
+			key: JSON.stringify({
+				occlusion: request.occlusion,
+				lights: request.lights && bakedLightsSignature(request.lights)
+			}),
+			any: request.occlusion || Boolean(request.lights)
+		}
+	}, [lighting])
+}
+
+/**
+ * The preview, while it still belongs to the document on screen and to what
+ * publishing would bake. A new model, optimization pass or bake leaves it
+ * describing something else, so it reads as no preview at all.
+ */
+function useCurrentPreview(): BakePreview | null {
+	const preview = useAtomValue(bakePreviewAtom)
 	const { optimizer } = useModelContext(true)
 	const { passRevision } = useAtomValue(optimizationRuntimeAtom)
+	const { key } = useRequestedBakes()
 	const document = optimizer?._getDocument?.()
 	return preview &&
 		preview.source.document === document &&
-		preview.source.passRevision === passRevision
+		preview.source.passRevision === passRevision &&
+		preview.source.bakes === key
 		? preview
 		: null
 }
@@ -38,8 +63,8 @@ function useCurrentPreview(): OcclusionBakePreview | null {
   panel: a preview gone stale is cleared, and a baked model is freed only once
   the viewer has stopped drawing it, after the commit that replaced it.
 */
-function usePreviewLifetime(current: OcclusionBakePreview | null) {
-	const [preview, setPreview] = useAtom(occlusionBakePreviewAtom)
+function usePreviewLifetime(current: BakePreview | null) {
+	const [preview, setPreview] = useAtom(bakePreviewAtom)
 	const drawnRef = useRef<Object3D | undefined>(undefined)
 
 	useEffect(() => {
@@ -62,55 +87,63 @@ function usePreviewLifetime(current: OcclusionBakePreview | null) {
 	)
 }
 
+/** How many materials a bake reached; none when it failed. */
+export const bakedCount = (
+	report: { baked: string[] } | { failed: string } | undefined
+) => (report && 'baked' in report ? report.baked.length : 0)
+
+/** Whether a finished preview changed anything a viewer would draw. */
+export const bakedAnything = (preview: BakePreview | null) =>
+	bakedCount(preview?.reports?.occlusion) +
+		bakedCount(preview?.reports?.lights) >
+	0
+
 /**
  * The baked model the viewer shows in place of the model: only while
- * `isLightingOpen`, the occlusion is set to baked, and the author shows it.
- * Call it once, from the publisher route: it also owns the preview's lifetime.
+ * `isLightingOpen` and the author shows it. Call it once, from the publisher
+ * route: it also owns the preview's lifetime.
  */
-export function useShownOcclusionBake(
-	isLightingOpen: boolean
-): Object3D | undefined {
+export function useShownBake(isLightingOpen: boolean): Object3D | undefined {
 	const preview = useCurrentPreview()
 	usePreviewLifetime(preview)
-	const lighting = useAtomValue(lightingAtom)
 	return isLightingOpen &&
-		resolveLighting({ lighting }).occlusion.mode === 'baked' &&
 		preview?.status === 'ready' &&
 		// A bake that changed nothing has no switch to turn it off, and its copy
 		// would only freeze an animated model in its rest pose.
-		Boolean(preview.report?.baked.length) &&
+		bakedAnything(preview) &&
 		preview.shown
 		? preview.model
 		: undefined
 }
 
 /**
- * Bakes the occlusion publishing would bake, off the main thread: the publish
- * worker runs with only the bake on, and its GLB is shown in place of the
- * model. One preview at a time; baking again replaces it.
+ * Bakes what publishing would bake, off the main thread: the publish worker
+ * runs with only the bakes on, and its GLB is shown in place of the model.
+ * One preview at a time; baking again replaces it.
  */
-export function useOcclusionBakePreview() {
-	const [, setPreview] = useAtom(occlusionBakePreviewAtom)
+export function useBakePreview() {
+	const [, setPreview] = useAtom(bakePreviewAtom)
 	const preview = useCurrentPreview()
 	const { optimizer, file } = useModelContext(true)
 	const { passRevision, isPending } = useAtomValue(optimizationRuntimeAtom)
+	const bakes = useRequestedBakes()
 	const exporter = useMemo(() => new ModelExporter(), [])
 	const loader = useMemo(() => new ModelLoader(), [])
 	const document = optimizer?._getDocument?.()
 
 	// A pass rewrites the document in place, so a bake mid-pass would capture
 	// a model that is neither the one before nor the one after.
-	const canBake = Boolean(document) && !isPending
+	const canBake = Boolean(document) && !isPending && bakes.any
 
 	const bake = useCallback(async () => {
-		if (!document || isPending) return
-		const source = { document, passRevision }
+		if (!document || isPending || !bakes.any) return
+		const source = { document, passRevision, bakes: bakes.key }
 		const started = performance.now()
 		// The model it replaces is freed once the viewer lets go of it.
 		setPreview({ status: 'baking', source, shown: true })
 		// Written only while this bake is still the latest one; a result that
 		// lost was never drawn, so it is freed at once.
-		const settle = (next: OcclusionBakePreview) =>
+		const settle = (next: BakePreview) =>
 			setPreview((current) => {
 				if (current?.source !== source) {
 					if (next.model) disposeModel(next.model)
@@ -126,13 +159,23 @@ export function useOcclusionBakePreview() {
 					buffer: data.slice().buffer as ArrayBuffer,
 					dracoWorthApplying: true,
 					ktx2: false,
-					occlusion: true
+					...bakes.request
 				},
 				() => {}
 			)
-			const report = result.occlusion
-			if (!report || 'failed' in report) {
-				throw new Error(report?.failed ?? 'Ambient occlusion was not baked')
+			const reports = { occlusion: result.occlusion, lights: result.lights }
+			// Publishing ships whichever bake worked, so the preview fails only
+			// when none did.
+			const outcomes = [reports.occlusion, reports.lights].filter(
+				(report) => report !== undefined
+			)
+			const failure = outcomes.find((report) => 'failed' in report)
+			if (
+				failure &&
+				'failed' in failure &&
+				outcomes.every((r) => 'failed' in r)
+			) {
+				throw new Error(failure.failed)
 			}
 			const { scene } = await loader.loadToThreeJS(
 				new File([result.buffer], 'baked.glb', { type: 'model/gltf-binary' })
@@ -142,7 +185,7 @@ export function useOcclusionBakePreview() {
 				source,
 				shown: true,
 				model: scene,
-				report,
+				reports,
 				durationMs: performance.now() - started
 			})
 		} catch (error) {
@@ -153,7 +196,7 @@ export function useOcclusionBakePreview() {
 				error: error instanceof Error ? error.message : String(error)
 			})
 		}
-	}, [document, exporter, isPending, loader, passRevision, setPreview])
+	}, [bakes, document, exporter, isPending, loader, passRevision, setPreview])
 
 	const setShown = useCallback(
 		(shown: boolean) =>
@@ -164,6 +207,8 @@ export function useOcclusionBakePreview() {
 	return {
 		preview,
 		canBake,
+		/** Whether the lighting asks for any bake at all. */
+		bakesAnything: bakes.any,
 		isOptimizing: isPending,
 		// The viewer draws the preview unanimated, in its rest pose.
 		isAnimated: Boolean(file?.animations?.length),

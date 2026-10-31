@@ -26,7 +26,7 @@ describe('the publisher viewer during a compare', () => {
 		expect(publisherPage).toContain('model={file?.model}')
 		// A bake preview is drawn the same way, and a held compare wins over it.
 		expect(publisherPage).toContain(
-			'displayedModel={comparedModel?.model ?? shownOcclusionBake}'
+			'displayedModel={comparedModel?.model ?? shownBake}'
 		)
 	})
 })

@@ -14,8 +14,8 @@ export const LIGHT_ROLES: readonly SceneLightRole[] = ['key', 'fill', 'rim']
 /*
   The parts of the lighting a setup decides. A setup is still the same setup
   turned, or at another resolution, so neither counts against a match. The
-  background and ambient occlusion are composition: a setup leaves them alone
-  and matches with them changed. Picking a setup does set its own turn.
+  background, ambient occlusion and what is baked are composition: a setup
+  leaves them alone and matches with them changed. Picking a setup does set its own turn.
 */
 const lookOf = (lighting: LightingSettings) => {
 	const { environment, lights, ground } = resolveLighting({ lighting })
@@ -37,7 +37,7 @@ export function matchingSetup(
 	return LIGHTING_SETUPS.find((setup) => lookOf(setup.lighting) === look)
 }
 
-/** `setup`'s look, keeping the author's resolution, background and occlusion. */
+/** `setup`'s look, keeping the author's resolution, background, occlusion and bake. */
 export function withSetup(
 	lighting: LightingSettings,
 	setup: LightingSetup
@@ -49,7 +49,8 @@ export function withSetup(
 			resolution: lighting.environment?.resolution
 		},
 		background: lighting.background ?? setup.lighting.background,
-		occlusion: lighting.occlusion
+		occlusion: lighting.occlusion,
+		bake: lighting.bake
 	}
 }
 

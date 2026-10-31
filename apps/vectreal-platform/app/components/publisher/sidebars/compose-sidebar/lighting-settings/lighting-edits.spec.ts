@@ -55,7 +55,8 @@ describe('withSetup', () => {
 			...softStudio.lighting,
 			environment: { map: 'night-city', resolution: '4k' },
 			background: { type: 'gradient', top: '#000000', bottom: '#111111' },
-			occlusion: { mode: 'live', live: { atRest: true } }
+			occlusion: { mode: 'live', live: { atRest: true } },
+			bake: { lights: true }
 		}
 
 		const next = withSetup(current, product)
@@ -65,6 +66,7 @@ describe('withSetup', () => {
 		expect(next.lights).toEqual(product.lighting.lights)
 		expect(next.background).toEqual(current.background)
 		expect(next.occlusion).toEqual(current.occlusion)
+		expect(next.bake).toEqual(current.bake)
 		expect(matchingSetup(next)?.id).toBe(product.id)
 	})
 })

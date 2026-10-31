@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	lightBakeWarning,
 	occlusionBakeWarning,
 	projectPublishedGlbBytes,
+	publishBakes,
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
 } from './publish-export'
@@ -36,7 +38,8 @@ const run = (onProgress = vi.fn(), timeoutMs = 1_000) =>
 			draco: {},
 			dracoWorthApplying: true,
 			ktx2: true,
-			occlusion: false
+			occlusion: false,
+			lights: false
 		},
 		onProgress,
 		timeoutMs
@@ -134,7 +137,8 @@ describe('projectPublishedGlbBytes', () => {
 			draco: { quantizePosition: 14 },
 			dracoWorthApplying: false,
 			ktx2: false,
-			occlusion: false
+			occlusion: false,
+			lights: false
 		})
 
 		worker.reply({
@@ -213,5 +217,65 @@ describe('occlusionBakeWarning', () => {
 
 	it('says nothing when no bake was asked for', () => {
 		expect(occlusionBakeWarning(undefined)).toBeNull()
+	})
+})
+
+describe('publishBakes', () => {
+	const key = { role: 'key' as const, azimuth: 30, elevation: 40 }
+
+	it('bakes occlusion only when it is set to baked', () => {
+		expect(publishBakes({ occlusion: { mode: 'baked' } }).occlusion).toBe(true)
+		expect(publishBakes({ occlusion: { mode: 'live' } }).occlusion).toBe(false)
+	})
+
+	it('hands over the resolved lights when they are set to bake', () => {
+		const { lights } = publishBakes({
+			lights: [key],
+			environment: { rotation: 15 },
+			bake: { lights: true }
+		})
+
+		expect(lights).toMatchObject({
+			environment: { rotation: 15 },
+			lights: [{ role: 'key', azimuth: 30, elevation: 40, enabled: true }]
+		})
+	})
+
+	it('bakes no lights unless asked, or when none is on', () => {
+		expect(publishBakes({ lights: [key] }).lights).toBe(false)
+		expect(
+			publishBakes({
+				lights: [{ ...key, enabled: false }],
+				bake: { lights: true }
+			}).lights
+		).toBe(false)
+	})
+})
+
+describe('lightBakeWarning', () => {
+	it('says the scene shipped with live lights when the bake failed', () => {
+		expect(lightBakeWarning({ failed: 'WebGL 2 is unavailable' })).toEqual({
+			message:
+				'The studio lights could not be baked, so the scene was published with them live.',
+			description: 'WebGL 2 is unavailable'
+		})
+	})
+
+	it('counts the materials that kept live lights and names the first', () => {
+		expect(
+			lightBakeWarning({
+				baked: ['body'],
+				skipped: [{ material: 'wheel', reason: 'shared-geometry' }]
+			})
+		).toEqual({
+			message:
+				'1 material could not take the baked lights and keeps them live.',
+			description: 'wheel: its mesh is placed more than once'
+		})
+	})
+
+	it('stays quiet when everything took the bake, or nothing was asked', () => {
+		expect(lightBakeWarning({ baked: ['body'], skipped: [] })).toBeNull()
+		expect(lightBakeWarning(undefined)).toBeNull()
 	})
 })
