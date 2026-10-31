@@ -1,4 +1,5 @@
 import { cn } from '@shared/utils'
+import { aimLegacyLight } from '@vctrl/core'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -110,7 +111,10 @@ const PublisherPage = () => {
 			shadowLightCommitTimer.current = setTimeout(() => {
 				setShadows((prev) => ({
 					...prev,
-					light: { ...prev.light, position }
+					light: {
+						...prev.light,
+						position: aimLegacyLight(prev.light?.position, position)
+					}
 				}))
 			}, SHADOW_LIGHT_COMMIT_DEBOUNCE_MS)
 		},

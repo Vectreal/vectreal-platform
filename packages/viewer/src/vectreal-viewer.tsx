@@ -18,8 +18,8 @@ import { Center } from '@react-three/drei'
 import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import {
 	resolveEnvironmentFiles,
+	resolveLighting,
 	resolveNormalizedScale,
-	resolveSceneBackdrop,
 	sceneBackdropCss
 } from '@vctrl/core'
 import {
@@ -29,6 +29,7 @@ import {
 	ControlsProps,
 	EnvironmentProps,
 	HotspotDefinition,
+	LightingSettings,
 	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
@@ -63,6 +64,7 @@ import {
 	resolveHotspotCameraTargets,
 	resolveHotspotMarkers,
 	SceneHotspots,
+	SceneLights,
 	SceneModel,
 	ScenePostProcessing,
 	SceneShadows
@@ -73,6 +75,7 @@ import EnvironmentPrewarm from './components/scene/environment-prewarm'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { prefersReducedMotion } from './components/scene/reduced-motion'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
+import { litLights } from './components/scene/scene-lighting'
 import {
 	resolveHotspotViewName,
 	resolveSceneViewCameras
@@ -230,12 +233,26 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	controlsOptions?: ControlsProps
 
 	/**
-	 * Options for the react-three environment components with custom hdr map presets.
+	 * How the scene is lit: an environment map and up to three studio lights,
+	 * from which every shadow follows. Wins over `envOptions` and
+	 * `shadowsOptions`; see `LightingSettings` in `@vctrl/core`.
+	 */
+	lighting?: LightingSettings
+
+	/**
+	 * The environment as scenes stored it before `lighting`. Read, with
+	 * `shadowsOptions`, through `resolveLighting` when `lighting` is absent.
+	 * `files` still names a custom map in either case.
+	 *
+	 * @deprecated Pass `lighting`; `files` stays supported here.
 	 */
 	envOptions?: EnvironmentProps
 
 	/**
-	 * Options for the shadows.
+	 * Shadows as scenes stored them before `lighting`. Their light becomes the
+	 * scene's key light, which now lights the model too.
+	 *
+	 * @deprecated Pass `lighting`.
 	 */
 	shadowsOptions?: ShadowsProps
 
@@ -421,7 +438,10 @@ export interface VectrealViewerProps extends PropsWithChildren {
 
 	/**
 	 * Called with a new shadow light position (model-size units) when the in-scene
-	 * handle is dragged. Store this back into `shadowsOptions.light.position`.
+	 * handle is dragged. Only its direction is meaningful: the handle is drawn
+	 * at a fixed distance, while the stored distance sets the light's size.
+	 * Store it back with `aimLegacyLight` from `@vctrl/core`, which keeps the
+	 * stored distance.
 	 */
 	onShadowLightChange?: (position: [number, number, number]) => void
 
@@ -524,6 +544,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		boundsOptions,
 		cameraOptions,
 		controlsOptions,
+		lighting,
 		envOptions,
 		shadowsOptions,
 		normalizationOptions,
@@ -561,17 +582,34 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 
 	const hasContent = !!(model || children)
 
+	// One answer to how the scene is lit, for scenes saved either way.
+	const resolvedLighting = useMemo(
+		() =>
+			lighting
+				? resolveLighting({ lighting })
+				: resolveLighting({ environment: envOptions, shadows: shadowsOptions }),
+		[lighting, envOptions, shadowsOptions]
+	)
+	const { environment, background, occlusion } = resolvedLighting
+	const sceneFiles =
+		envOptions?.files ??
+		resolveEnvironmentFiles({
+			preset: environment.map,
+			environmentResolution: environment.resolution
+		})
+	const sceneFilesKey = String(sceneFiles)
 	// Prefetched as soon as a surface says which environment it wants, which
 	// can be long before there is content to light: the map is otherwise only
 	// requested once the model has loaded and the scene mounts. A surface that
 	// has not decided yet prefetches nothing rather than the default.
-	const environmentFiles = envOptions
-		? resolveEnvironmentFiles(envOptions)
-		: null
-	const environmentFilesKey = environmentFiles && String(environmentFiles)
+	const environmentFiles = lighting || envOptions ? sceneFiles : null
+	const environmentFilesKey = environmentFiles && sceneFilesKey
 	// Painted by the viewer itself, so every surface shows the same stage
 	// rather than whatever its own page happens to be behind the canvas.
-	const backdrop = resolveSceneBackdrop(envOptions)
+	const backdrop =
+		background.type === 'color' || background.type === 'gradient'
+			? background
+			: null
 	useEffect(() => {
 		if (environmentFiles) preloadEnvironmentFiles(environmentFiles)
 		// Keyed on the file list's value: the array is rebuilt on every render.
@@ -913,10 +951,11 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
 		Boolean(loader)
 	)
-	const shadowsEnabled = shadowsOptions?.enabled ?? false
-	// AO is gated on shadows being enabled so toggling shadows off also turns
-	// AO off.
-	const aoEnabled = shadowsEnabled && (shadowsOptions?.ao ?? false)
+	// Shadow maps are drawn for the lights, and the ground's bake needs the
+	// model to cast into it.
+	const shadowsEnabled =
+		litLights(resolvedLighting).length > 0 || resolvedLighting.ground.enabled
+	const aoEnabled = occlusion.mode === 'live'
 	return (
 		<Suspense fallback={loader}>
 			<Canvas
@@ -974,9 +1013,10 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 					/>
 				}
 				enableViewportRendering={enableViewportRendering}
-				// 'percentage' = PCFShadowMap. The accumulative shadow bake softens its
-				// own shadow by jittering its lights, so the realtime filter just needs
-				// to be enabled. (A bare `shadows` would use the deprecated PCFSoftShadowMap.)
+				// 'percentage' = PCFShadowMap, which three 0.185 softens by each
+				// light's `shadow.radius`; the ground bake softens its own shadow by
+				// jittering its lights. (A bare `shadows` would ask for the deprecated
+				// PCFSoftShadowMap.)
 				shadows={shadowsEnabled ? 'percentage' : false}
 				// The composer antialiases inside its own buffers and presents a
 				// full-screen quad, so a multisampled canvas would only cost memory
@@ -993,7 +1033,21 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 					{hasContent && (
 						<>
 							<SceneEnvironment
-								{...envOptions}
+								files={sceneFiles}
+								environmentIntensity={environment.intensity}
+								rotation={environment.rotation}
+								background={background.type === 'environment'}
+								backgroundIntensity={
+									background.type === 'environment'
+										? background.intensity
+										: undefined
+								}
+								backgroundBlurriness={
+									background.type === 'environment'
+										? background.blur
+										: undefined
+								}
+								scene={envOptions?.scene}
 								onLoadFailed={handleEnvironmentLoadFailed}
 								onLoaded={handleEnvironmentLoaded}
 							/>
@@ -1001,8 +1055,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 							<ScenePostProcessing
 								enabled={enablePostProcessing}
 								ao={aoEnabled}
-								aoIntensity={shadowsOptions?.aoIntensity}
-								aoAtRest={shadowsOptions?.aoAtRest}
+								aoIntensity={occlusion.live.intensity}
+								aoAtRest={occlusion.live.atRest}
 								model={model}
 								active={animation.status.active}
 								onShadersReady={handleShadersReady}
@@ -1070,11 +1124,17 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 										/>
 									</Center>
 								)}
+								<SceneLights
+									lighting={resolvedLighting}
+									environmentFiles={sceneFiles}
+									model={model}
+									normalizationOptions={normalizationOptions}
+								/>
 								<SceneShadows
+									lighting={resolvedLighting}
 									model={model}
 									displayedModel={displayedModel}
 									normalizationOptions={normalizationOptions}
-									{...shadowsOptions}
 									isModelAnimating={animation.status.active}
 									lightEditable={shadowLightEditable}
 									onLightChange={onShadowLightChange}

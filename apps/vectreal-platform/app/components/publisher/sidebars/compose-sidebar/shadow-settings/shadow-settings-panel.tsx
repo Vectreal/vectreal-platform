@@ -4,22 +4,13 @@ import {
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
 import { useAtom } from 'jotai/react'
-import {
-	Circle,
-	Contrast,
-	Pause,
-	SlidersHorizontal,
-	Sun,
-	SunDim
-} from 'lucide-react'
+import { Contrast, Pause, SlidersHorizontal, Sun, SunDim } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
 	ambientToDarkness,
 	darknessToAmbient,
-	SHADOW_ADVANCED_FIELDS,
 	SHADOW_AO_INTENSITY_FIELD,
-	SHADOW_CONTACT_FIELDS,
 	SHADOW_DARKNESS_KEY,
 	SHADOW_PRESETS,
 	SHADOW_PRIMARY_FIELDS,
@@ -135,16 +126,6 @@ const ShadowSettingsPanel = () => {
 			return
 		}
 
-		// Nested contact/ground-shadow params (e.g. "contact.blur").
-		if (key.startsWith('contact.')) {
-			const contactKey = key.slice('contact.'.length)
-			scheduleCommit({
-				...draft,
-				contact: { ...draft.contact, [contactKey]: value }
-			})
-			return
-		}
-
 		scheduleCommit({ ...draft, [key]: value })
 	}
 
@@ -162,19 +143,9 @@ const ShadowSettingsPanel = () => {
 			)
 		}
 
-		if (key.startsWith('contact.')) {
-			const contactKey = key.slice('contact.'.length)
-			return (
-				(draft.contact?.[
-					contactKey as keyof NonNullable<ShadowsProps['contact']>
-				] as number) ?? 0
-			)
-		}
-
 		return (draft[key as keyof ShadowsProps] as number) ?? 0
 	}
 
-	const contactEnabled = draft.contact?.enabled ?? false
 	const aoEnabled = draft.ao ?? false
 
 	return (
@@ -221,12 +192,6 @@ const ShadowSettingsPanel = () => {
 								summary={activePreset?.label ?? 'Custom'}
 							/>
 							<DrillDownTrigger
-								to="ground"
-								icon={<Circle />}
-								label="Ground shadow"
-								summary={contactEnabled ? 'On' : 'Off'}
-							/>
-							<DrillDownTrigger
 								to="advanced"
 								icon={<SlidersHorizontal />}
 								label="Advanced"
@@ -244,7 +209,7 @@ const ShadowSettingsPanel = () => {
 			<DrillDownView
 				id="directional"
 				title="Directional shadow"
-				caption="The baked shadow cast by the scene light. Drag the light handle in the scene to change its angle."
+				caption="The scene's key light, which lights the model and casts its shadows. Drag the light handle in the scene to change its angle."
 			>
 				{SHADOW_PRIMARY_FIELDS.map((field) => (
 					<FieldSlider
@@ -257,46 +222,10 @@ const ShadowSettingsPanel = () => {
 			</DrillDownView>
 
 			<DrillDownView
-				id="ground"
-				title="Ground shadow"
-				caption="A soft pool under the model, independent of the light, so it stays grounded."
-			>
-				<div className="grid grid-cols-3 gap-2">
-					<Toggle
-						layout="tile"
-						label="Ground shadow"
-						icon={<Circle />}
-						checked={contactEnabled}
-						// The ground shadow's enabled flag is nested under `contact`.
-						onCheckedChange={(enabled) =>
-							commitNow({ ...draft, contact: { ...draft.contact, enabled } })
-						}
-					/>
-				</div>
-				{SHADOW_CONTACT_FIELDS.map((field) => (
-					<FieldSlider
-						key={field.key}
-						field={field}
-						disabled={!contactEnabled}
-						value={getFieldValue(field.key)}
-						onChange={handleFieldChange}
-					/>
-				))}
-			</DrillDownView>
-
-			<DrillDownView
 				id="advanced"
 				title="Advanced"
 				caption="Ambient occlusion darkens crevices on the model and costs GPU while the view moves; 'Only when still' skips it during orbiting."
 			>
-				{SHADOW_ADVANCED_FIELDS.map((field) => (
-					<FieldSlider
-						key={field.key}
-						field={field}
-						value={getFieldValue(field.key)}
-						onChange={handleFieldChange}
-					/>
-				))}
 				<div className="grid grid-cols-3 gap-2">
 					<Toggle
 						layout="tile"

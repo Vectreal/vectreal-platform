@@ -7,6 +7,7 @@ import {
 	Mesh,
 	MeshStandardMaterial,
 	NumberKeyframeTrack,
+	SphereGeometry,
 	VectorKeyframeTrack
 } from 'three'
 
@@ -151,6 +152,83 @@ export const StageGradient: Story = {
 			backdrop: { type: 'gradient', top: '#fafafa', bottom: '#d4d4d8' }
 		},
 		shadowsOptions: { ...defaultShadowsOptions, enabled: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/** Blocks for self-shadow, and a sphere whose highlights show each light. */
+const createLightingModel = () => {
+	const model = createOcclusionModel()
+	const sphere = new Mesh(
+		new SphereGeometry(0.3, 64, 32),
+		new MeshStandardMaterial({ color: '#d4d4d8', roughness: 0.25 })
+	)
+	sphere.position.set(-0.45, 0.7, 0.45)
+	model.add(sphere)
+	return model
+}
+
+/**
+ * Three studio lights. Every shadow comes from them: the key's direction and
+ * size shape the ground shadow and the model's own, the fill lifts the shadow
+ * side, and the rim draws an edge from behind.
+ */
+export const StudioLights: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createLightingModel(),
+		envOptions: undefined,
+		lighting: {
+			environment: { map: 'studio-soft', intensity: 0.8 },
+			lights: [
+				{ role: 'key', azimuth: 40, elevation: 45, size: 15, intensity: 0.7 },
+				{ role: 'fill', azimuth: -60, elevation: 25, size: 60, intensity: 0.2 },
+				{ role: 'rim', azimuth: 170, elevation: 30, size: 10, intensity: 0.5 }
+			],
+			ground: { enabled: true },
+			background: { type: 'color', color: '#f4f4f5' }
+		}
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * No studio light: the environment alone lights the model, and the ground
+ * shows only where the model hides the sky from it.
+ */
+export const EnvironmentOnly: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createLightingModel(),
+		envOptions: undefined,
+		lighting: {
+			environment: { map: 'outdoor-overcast' },
+			ground: { enabled: true },
+			background: { type: 'color', color: '#f4f4f5' }
+		}
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * A scene saved before `lighting`, with the publisher's angled "Studio" shadow.
+ * Its shadow's light becomes the key and now lights the model from the side
+ * its shadow falls away from.
+ */
+export const LegacyAngledShadow: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createLightingModel(),
+		envOptions: {
+			...defaultEnvOptions,
+			backdrop: { type: 'color', color: '#f4f4f5' }
+		},
+		shadowsOptions: {
+			...defaultShadowsOptions,
+			enabled: true,
+			opacity: 0.9,
+			light: { ambient: 0.3, radius: 0.8, position: [2, 3, 2] }
+		}
 	},
 	render: (args) => <VectrealViewer {...args} />
 }

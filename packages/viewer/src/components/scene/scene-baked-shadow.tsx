@@ -2,6 +2,8 @@ import { useTexture } from '@react-three/drei'
 import { useMemo } from 'react'
 import { Color } from 'three'
 
+import { GROUND_EDGE_FADE } from './ground-edge-fade'
+
 interface SceneBakedShadowProps {
 	/** URL of the persisted shadow-density PNG (alpha channel = density). */
 	url: string
@@ -25,13 +27,14 @@ const VERTEX_SHADER = /* glsl */ `
 // shadow color. Opacity and color stay adjustable without a re-bake because the
 // stored texture is pure density (see captureShadowDensity).
 const FRAGMENT_SHADER = /* glsl */ `
+	${GROUND_EDGE_FADE}
 	varying vec2 vUv;
 	uniform sampler2D uMap;
 	uniform vec3 uColor;
 	uniform float uOpacity;
 	void main() {
 		float density = texture2D(uMap, vUv).a;
-		gl_FragColor = vec4(uColor, density * uOpacity);
+		gl_FragColor = vec4(uColor, density * uOpacity * groundEdgeFade(vUv));
 	}
 `
 

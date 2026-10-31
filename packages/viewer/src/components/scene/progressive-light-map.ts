@@ -39,6 +39,7 @@ export class ProgressiveLightMap {
 	private readonly averagingWindow = { value: 100 }
 	private lights: Array<{ object: Light; intensity: number }> = []
 	private meshes: Array<{ object: Mesh; material: Material | Material[] }> = []
+	private bakeLights: Object3D | null = null
 	private readonly clearColor = new Color()
 
 	constructor(
@@ -87,9 +88,8 @@ export class ProgressiveLightMap {
 	}
 
 	/**
-	 * Empties both buffers and snapshots the scene's meshes and lights, which
-	 * every following frame draws. Call again to bake a changed scene.
-	 * `bakeLights` holds the lights doing the baking, which must stay lit.
+	 * Empties both buffers. Call again to bake a changed scene. `bakeLights`
+	 * holds the lights doing the baking, which must stay lit.
 	 */
 	clear(bakeLights: Object3D) {
 		const { renderer } = this
@@ -103,28 +103,54 @@ export class ProgressiveLightMap {
 		}
 		renderer.setRenderTarget(previousTarget)
 		renderer.setClearColor(this.clearColor, clearAlpha)
+		this.bakeLights = bakeLights
+	}
 
+	/**
+	 * Runs `draw`, which accumulates frames with {@link update}, with the scene
+	 * silenced and the bake's own lights shown, and always puts both back, so
+	 * a frame that throws cannot leave the model hidden or the scene unlit.
+	 */
+	silenced(draw: () => void) {
+		const bakeLights = this.bakeLights
+		this.prepare()
+		if (bakeLights) bakeLights.visible = true
+		try {
+			draw()
+		} finally {
+			if (bakeLights) bakeLights.visible = false
+			this.finish()
+		}
+	}
+
+	/**
+	 * Silences the scene so only the bake's own lights reach the plane. Reads
+	 * the scene here, every frame, rather than once at {@link clear}: lights
+	 * and meshes can be added or changed while a bake runs without restarting
+	 * it, and each one must be silenced, and put back by {@link finish} as it
+	 * was that frame.
+	 */
+	private prepare() {
 		this.lights = []
 		this.meshes = []
 		this.scene.traverse((object) => {
 			if ((object as Mesh).geometry) {
 				const mesh = object as Mesh
 				this.meshes.push({ object: mesh, material: mesh.material })
-			} else if ((object as Light).isLight && object.parent !== bakeLights) {
+				mesh.material = this.discardMaterial
+			} else if (
+				(object as Light).isLight &&
+				object.parent !== this.bakeLights
+			) {
 				const light = object as Light
 				this.lights.push({ object: light, intensity: light.intensity })
+				light.intensity = 0
 			}
 		})
 	}
 
-	/** Silences the scene so only the bake's own lights reach the plane. */
-	prepare() {
-		for (const light of this.lights) light.object.intensity = 0
-		for (const mesh of this.meshes) mesh.object.material = this.discardMaterial
-	}
-
 	/** Restores what {@link prepare} silenced. */
-	finish() {
+	private finish() {
 		for (const light of this.lights) light.object.intensity = light.intensity
 		for (const mesh of this.meshes) mesh.object.material = mesh.material
 	}
@@ -138,13 +164,22 @@ export class ProgressiveLightMap {
 		this.previousMap.value = this.buffers[1 - this.writeIndex].texture
 		this.writeIndex = 1 - this.writeIndex
 
-		const background = scene.background
+		// The bake's hemisphere samples stand in for the environment, so the
+		// environment itself must not light the plane too: three lights a
+		// Lambert material with `scene.environment`, which would add a floor no
+		// shadow reaches.
+		const { background, environment } = scene
 		const previousTarget = renderer.getRenderTarget()
 		scene.background = null
-		renderer.setRenderTarget(write)
-		renderer.render(scene, camera)
-		renderer.setRenderTarget(previousTarget)
-		scene.background = background
+		scene.environment = null
+		try {
+			renderer.setRenderTarget(write)
+			renderer.render(scene, camera)
+		} finally {
+			renderer.setRenderTarget(previousTarget)
+			scene.background = background
+			scene.environment = environment
+		}
 	}
 
 	dispose() {
