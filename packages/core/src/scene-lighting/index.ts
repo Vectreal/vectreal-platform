@@ -5,3 +5,4 @@ export {
 	type ResolvedLighting,
 	type ResolvedSceneLight
 } from './resolve-lighting'
+export { toLegacyLighting } from './to-legacy-lighting'

@@ -1,3 +1,5 @@
+import { toLegacyLighting } from '@vctrl/core'
+
 import { shouldShowLoadingThumbnail } from '../scene-presentation'
 import { sceneSettingsService } from './scene-settings-service.server'
 import { reportServerError } from '../../../observability/report-server-error.server'
@@ -191,7 +193,9 @@ export async function composeEmbedSceneManifest(
 		}
 	}
 
-	const settings = settingsData.settings
+	// Viewers released before `lighting` read only the legacy keys.
+	const settings =
+		settingsData.settings && toLegacyLighting(settingsData.settings)
 	const servable = selectEmbedServableAssets({
 		sceneId,
 		publishedAssetId: published.assetId,

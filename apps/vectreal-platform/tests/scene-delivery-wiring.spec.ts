@@ -512,6 +512,18 @@ describe('the scene mutations', () => {
 	})
 })
 
+describe('legacy lighting in the embed manifest', () => {
+	const manifest = read('lib/domain/scene/server/scene-manifest.server.ts')
+
+	it('derives the keys old viewers read before anything else reads the settings', () => {
+		// Ahead of the asset gate and the redaction, so both see the shape the
+		// embed is served; `toLegacyLighting` keeps the bake pointer for the gate.
+		expect(manifest).toMatch(
+			/const settings =\s*settingsData\.settings && toLegacyLighting\(settingsData\.settings\)\s*const servable = selectEmbedServableAssets/
+		)
+	})
+})
+
 describe('uploaded marker artwork', () => {
 	const manifest = read('lib/domain/scene/server/scene-manifest.server.ts')
 	const serving = read('lib/domain/embed/embed-asset-serving.server.ts')

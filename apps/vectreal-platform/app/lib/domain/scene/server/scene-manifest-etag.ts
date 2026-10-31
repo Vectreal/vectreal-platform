@@ -16,8 +16,10 @@ export interface ManifestPublication {
  * holding the old body revalidates, gets a 304, and keeps it.
  *
  * 2: cameras read untagged gain `kind: 'scene'` (`withSceneCameraKinds`).
+ * 3: a scene saved with `lighting` gains the legacy `environment` and
+ *    `shadows` derived from it (`toLegacyLighting`).
  */
-const MANIFEST_FORMAT = 'v2'
+const MANIFEST_FORMAT = 'v3'
 
 /**
  * Returns a weak ETag for the scene manifest based on the scene ID and the

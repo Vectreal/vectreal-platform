@@ -5,7 +5,7 @@ import { buildSceneManifestEtag } from './scene-manifest-etag'
 describe('buildSceneManifestEtag', () => {
 	it('builds a weak etag from scene id and settings timestamp', () => {
 		expect(buildSceneManifestEtag('s1', '2026-07-03T10:00:00.000Z')).toBe(
-			'W/"scene-v2-s1-2026-07-03T10:00:00.000Z"'
+			'W/"scene-v3-s1-2026-07-03T10:00:00.000Z"'
 		)
 	})
 
@@ -74,7 +74,7 @@ describe('buildSceneManifestEtag', () => {
 		it('never shares a tag between a key holder and a member', () => {
 			const member = { ...publication, caller: 'session' as const }
 			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, member)).toBe(
-				'W/"scene-embed-v2-s1-2026-07-03T10:00:00.000Z-glb-1-2026-07-03T09:00:00.000Z-unsigned-session"'
+				'W/"scene-embed-v3-s1-2026-07-03T10:00:00.000Z-glb-1-2026-07-03T09:00:00.000Z-unsigned-session"'
 			)
 			expect(buildSceneManifestEtag('s1', settingsUpdatedAt, member)).not.toBe(
 				buildSceneManifestEtag('s1', settingsUpdatedAt, publication)
