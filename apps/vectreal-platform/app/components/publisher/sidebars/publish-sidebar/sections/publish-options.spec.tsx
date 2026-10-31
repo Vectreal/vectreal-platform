@@ -21,6 +21,7 @@ import {
 import {
 	cameraAtom,
 	hotspotsAtom,
+	lightingAtom,
 	presentationAtom
 } from '../../../../../lib/stores/scene-settings-store'
 
@@ -393,6 +394,81 @@ describe('the publish panel', () => {
 			expect.stringContaining('1 texture could not be GPU-compressed'),
 			{ description: 'KTX2 was more than 3× its size' }
 		)
+	})
+
+	it('bakes occlusion only when the lighting says baked', async () => {
+		for (const mode of ['off', 'live', 'baked'] as const) {
+			renderPanel(balancedPreset, (store) =>
+				store.set(lightingAtom, { occlusion: { mode } })
+			)
+			fireEvent.click(
+				screen.getAllByRole('button', { name: 'Publish Scene' }).at(-1)!
+			)
+		}
+		await waitFor(() =>
+			expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(3)
+		)
+
+		expect(
+			mocks.runPublishExportInWorker.mock.calls.map(
+				([request]) => request.occlusion
+			)
+		).toEqual([false, false, true])
+	})
+
+	it('names a material the bake skipped, and still publishes', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: {
+				baked: ['body'],
+				skipped: [{ material: 'wheel', reason: 'shared-geometry' }]
+			}
+		})
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		expect(mocks.toastWarning).toHaveBeenCalledWith(
+			'1 material could not take baked ambient occlusion.',
+			{ description: 'wheel: its mesh is placed more than once' }
+		)
+	})
+
+	it('says so when the bake failed, and still publishes', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { failed: 'WebGL 2 is unavailable' }
+		})
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		expect(mocks.toastWarning).toHaveBeenCalledWith(
+			'Ambient occlusion could not be baked, so the scene was published without it.',
+			{ description: 'WebGL 2 is unavailable' }
+		)
+	})
+
+	it('says nothing about the bake when the publish itself fails', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { failed: 'WebGL 2 is unavailable' }
+		})
+		mocks.publishSceneFromGlb.mockRejectedValue(new Error('network down'))
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await screen.findByText('network down')
+		expect(mocks.toastWarning).not.toHaveBeenCalled()
 	})
 
 	// Revoking deletes the published GLB, so its size stops describing the scene.

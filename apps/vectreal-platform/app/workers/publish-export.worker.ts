@@ -15,19 +15,24 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 /**
- * Encodes the GLB a scene is published as, off the main thread: textures to
- * KTX2, then geometry in whichever of Draco and meshopt ships it cheapest.
+ * Encodes the GLB a scene is published as, off the main thread: ambient
+ * occlusion baked in when asked, textures to KTX2, then geometry in whichever
+ * of Draco and meshopt ships it cheapest.
  * Each is seconds of CPU per texture or mesh, and on the main thread that was
  * a frozen publisher.
  */
 
 import { ModelExporter } from '@vctrl/core/model-exporter'
+import { bakeOcclusionIntoDocument } from '@vctrl/core/occlusion-bake'
 import { BrowserBasisEncoder } from 'ktx2-encoder'
+import { WebGLRenderer } from 'three'
 
 import type {
 	PublishExportMessage,
+	PublishExportOutcome,
 	PublishExportRequest
 } from './publish-export.worker.types'
+import type { Document } from '@gltf-transform/core'
 import type { Ktx2Encoder } from '@vctrl/core/model-optimizer'
 
 /** Self-hosted, and matched to the bundled glue by `public-codec-files.spec.ts`. */
@@ -99,20 +104,47 @@ const encodeKtx2: Ktx2Encoder = ({ image, width, height }, options) =>
 		imageDecoder: (bytes) => decodeRgba(bytes, width, height)
 	})
 
+/** A renderer of its own for the bake, on a canvas nothing displays. */
+async function bakeOcclusion(
+	document: Document
+): Promise<NonNullable<PublishExportOutcome['occlusion']>> {
+	let renderer: WebGLRenderer | undefined
+	try {
+		return await bakeOcclusionIntoDocument(
+			document,
+			() =>
+				(renderer = new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) }))
+		)
+	} catch (error) {
+		return {
+			failed: error instanceof Error ? error.message : 'Occlusion bake failed'
+		}
+	} finally {
+		renderer?.dispose()
+	}
+}
+
 function post(message: PublishExportMessage, transfer: Transferable[] = []) {
 	self.postMessage(message, { transfer })
 }
 
 self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
-	const { type, buffer, draco, dracoWorthApplying, ktx2 } = event.data
+	const { type, buffer, draco, dracoWorthApplying, ktx2, occlusion } =
+		event.data
 	if (type !== 'export') return
 
+	let occlusionReport: PublishExportOutcome['occlusion']
 	try {
 		const result = await new ModelExporter().exportGlbForPublish(
 			new Uint8Array(buffer),
 			{
 				draco,
 				dracoWorthApplying,
+				occlusion: occlusion
+					? async (document) => {
+							occlusionReport = await bakeOcclusion(document)
+						}
+					: undefined,
 				ktx2: ktx2
 					? {
 							encode: encodeKtx2,
@@ -134,7 +166,8 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 				geometryCodec: result.geometryCodec,
 				geometrySizes: result.geometrySizes,
 				textureBytes: result.textureBytes,
-				textures: result.textures
+				textures: result.textures,
+				occlusion: occlusionReport
 			},
 			[output]
 		)

@@ -201,7 +201,7 @@ test('a model loads from a URL through src, and a bad one shows the fallback', a
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
-test('occlusion bakes on the GPU from the published core and lands in the GLB', async ({
+test('publishing bakes occlusion on the GPU into the GLB, from the published core', async ({
 	page
 }) => {
 	const pageErrors: string[] = []
@@ -224,7 +224,7 @@ test('occlusion bakes on the GPU from the published core and lands in the GLB', 
 	if (bake?.status !== 'baked') throw new Error(bake?.error ?? 'no bake')
 
 	// The floor is baked; the box and canopy have no UVs, so they only cast.
-	expect(bake.targets).toEqual(['floor'])
+	expect(bake.baked).toEqual(['floor'])
 	expect(bake.skipped).toEqual(['box:no-uv0', 'canopy:no-uv0'])
 
 	// Dark under the box, partly open beside it, open far from it. The open
@@ -240,8 +240,11 @@ test('occlusion bakes on the GPU from the published core and lands in the GLB', 
 	expect(bake.canopy).toBeGreaterThan(70)
 	expect(bake.canopy).toBeLessThan(170)
 
-	// Encoded as PNG and stored as the floor's occlusion texture in the GLB.
+	// Every texel above was read from the published GLB: a PNG in the floor's
+	// occlusion slot, on the first UV set.
 	expect(bake.storedPng).toBe(true)
+	// A GPU reset mid-bake fails the bake rather than ship what it read back.
+	expect(bake.contextLoss).toMatch(/GPU reset/)
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
 	expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
 })
@@ -261,7 +264,7 @@ declare global {
 		__BAKE_E2E__?:
 			| {
 					status: 'baked'
-					targets: string[]
+					baked: string[]
 					skipped: string[]
 					under: number
 					beside: number
@@ -269,6 +272,7 @@ declare global {
 					mirrored: number
 					canopy: number
 					storedPng: boolean
+					contextLoss: string
 			  }
 			| { status: 'error'; error: string }
 	}

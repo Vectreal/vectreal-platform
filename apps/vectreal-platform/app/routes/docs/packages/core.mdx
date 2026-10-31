@@ -401,7 +401,7 @@ typed as `LightingSettings`:
 | `lights` | Up to `MAX_SCENE_LIGHTS` (3), one per `role`: `key`, `fill` or `rim`. Each has an `azimuth` and `elevation` in degrees, a `size` (angular diameter, which sets how soft its shadows are), an `intensity` and a `color` |
 | `ground` | Whether a floor under the model receives its shadows |
 | `background` | The environment map, a `color` or `gradient` stage, or `none` |
-| `occlusion` | Screen-space ambient occlusion: `off` or `live` |
+| `occlusion` | Ambient occlusion: `off`, `live` (screen space, every frame) or `baked` (raytraced into the model's textures when it is published) |
 
 A light's `intensity` is relative to the environment's own diffuse light: 1 is as
 bright as the whole environment. So the environment's brightness scales every
@@ -534,6 +534,21 @@ the page or trip the GPU's watchdog.
 `occlusionTexture` at full strength, read from the first UV set.
 `encodeOcclusionPng` makes the PNG in a browser or worker.
 
+**`bakeOcclusionIntoDocument(document, renderer, options?)`** runs all of the
+above in one step and returns which materials were baked and which skipped,
+by name. `renderer` is a function that returns one, called only when some
+material can be baked. Pass it to `ModelExporter.exportGlbForPublish` as `occlusion`, which
+bakes the published copy before its textures are encoded:
+
+```ts
+await new ModelExporter().exportGlbForPublish(glb, {
+	occlusion: async (copy) => {
+		report = await bakeOcclusionIntoDocument(copy, () => renderer)
+	},
+	ktx2: { encode }
+})
+```
+
 **`occlusionBakeSignature(plan, options)`** identifies a bake by everything that
 changes its pixels, so a bake made for a preview can be reused while the
 signature still matches.
@@ -545,6 +560,8 @@ present packages/core/src/occlusion-bake/options.ts samples: 256,
 present packages/core/src/occlusion-bake/options.ts distance: 0.25
 present packages/core/src/occlusion-bake/plan.ts material.getAlphaMode() === 'BLEND'
 present packages/core/src/occlusion-bake/bake-occlusion.ts const MAX_SAMPLES = 2048
+present packages/core/src/model-exporter/model-exporter.ts await occlusion?.(clone)
+present packages/core/src/types/scene-types.ts mode?: 'off' | 'live' | 'baked'
 present packages/core/src/occlusion-bake/plan.ts node.getExtension('EXT_mesh_gpu_instancing')
 present packages/core/src/occlusion-bake/bake-occlusion.ts plan.primitives.filter(castsOcclusion)
 */}

@@ -48,6 +48,9 @@ import {
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { SettingGroup } from '../../sidebar-section'
 
+/** Baked is set through the API until the Bake section lands; it still has to read true here. */
+const OCCLUSION_SUMMARY = { off: 'Off', live: 'On', baked: 'Baked' } as const
+
 const SETUP_OPTIONS = LIGHTING_SETUPS.map((setup) => ({
 	value: setup.id,
 	label: setup.label,
@@ -205,7 +208,7 @@ const LightingSettings = () => {
 						to="occlusion"
 						icon={<Contrast />}
 						label="Ambient occlusion"
-						summary={occlusion.mode === 'live' ? 'On' : 'Off'}
+						summary={OCCLUSION_SUMMARY[occlusion.mode]}
 					/>
 				</div>
 

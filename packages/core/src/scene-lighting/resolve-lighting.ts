@@ -9,6 +9,7 @@ import type {
 	SceneBackdrop,
 	SceneLight,
 	SceneLightingBackground,
+	SceneOcclusionSettings,
 	SceneSettings,
 	ShadowsProps
 } from '../types'
@@ -28,7 +29,7 @@ export interface ResolvedLighting {
 	ground: { enabled: boolean }
 	background: SceneLightingBackground
 	occlusion: {
-		mode: 'off' | 'live'
+		mode: NonNullable<SceneOcclusionSettings['mode']>
 		live: { intensity: number; atRest: boolean }
 	}
 }

@@ -280,4 +280,66 @@ describe('ModelExporter.exportGlbForPublish', () => {
 		expect(fromGlb.data).toEqual(fromDocument.data)
 		expect(fromGlb.textures).toBeUndefined()
 	})
+
+	it('bakes occlusion into the published copy before its textures are encoded', async () => {
+		// One grey pixel; the fake encoder below never decodes it.
+		const png = Uint8Array.from(
+			atob(
+				'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNoAAAAggCBd81ytgAAAABJRU5ErkJggg=='
+			),
+			(c) => c.charCodeAt(0)
+		)
+		const source = gridDocument()
+		source
+			.getRoot()
+			.listMeshes()[0]
+			.listPrimitives()[0]
+			.setMaterial(source.createMaterial('body'))
+		const glb = await new WebIO().writeBinary(source)
+
+		const encoded: string[] = []
+		const result = await new ModelExporter().exportGlbForPublish(glb, {
+			occlusion: async (document) => {
+				const [material] = document.getRoot().listMaterials()
+				material.setOcclusionTexture(
+					document
+						.createTexture('body_occlusion')
+						.setImage(png)
+						.setMimeType('image/png')
+				)
+			},
+			ktx2: {
+				encode: async ({ mimeType }) => {
+					encoded.push(mimeType)
+					return new Uint8Array(4)
+				}
+			}
+		})
+
+		expect(encoded).toEqual(['image/png'])
+		expect(result.textures?.encoded).toEqual(['body_occlusion'])
+		const published = await new WebIO()
+			.registerExtensions(ALL_EXTENSIONS)
+			.readBinary(result.data)
+		const [material] = published.getRoot().listMaterials()
+		expect(material.getOcclusionTexture()?.getMimeType()).toBe('image/ktx2')
+	})
+
+	it('bakes occlusion without KTX2 too', async () => {
+		const glb = await new WebIO().writeBinary(gridDocument())
+
+		const result = await new ModelExporter().exportGlbForPublish(glb, {
+			occlusion: async (document) => {
+				document.createMaterial('baked')
+			}
+		})
+
+		const published = await new WebIO().readBinary(result.data)
+		expect(
+			published
+				.getRoot()
+				.listMaterials()
+				.map((material) => material.getName())
+		).toEqual(['baked'])
+	})
 })

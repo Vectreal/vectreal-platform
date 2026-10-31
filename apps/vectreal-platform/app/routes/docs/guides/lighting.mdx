@@ -111,6 +111,14 @@ The environment lights the model whichever background you choose. With
 every frame while the view moves, so it is off by default. **Only when still**
 draws it once the view stops, and **Strength** sets how dark it gets.
 
+It can also be baked: raytraced into the model's own textures when the scene
+is published, so it costs nothing to draw and any glTF viewer shows it. Set
+`lighting.occlusion.mode` to `baked` through the
+[scene settings API](/docs/agents/api); the panel then reads **Baked**, and
+switching the toggle on goes back to drawing it live.
+[Publishing](/docs/guides/publish-embed#publishing-a-scene) says what baking
+needs and what it skips.
+
 ---
 
 ## Scenes saved before the Lighting tool
@@ -138,4 +146,5 @@ present packages/core/src/scene-lighting/lighting-setups.ts export const DEFAULT
 present packages/sdk/src/scene-settings.ts lighting: sceneLightingSchema.optional(),
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/color-temperature.ts export const NEUTRAL_KELVIN = 6600
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Ground shadow"
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx baked: 'Baked'
 */}

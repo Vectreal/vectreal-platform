@@ -134,6 +134,11 @@ export async function bakeOcclusion(
 	const previousAutoClear = renderer.autoClear
 	// Every pass adds to the last; an automatic clear would keep only the final one.
 	renderer.autoClear = false
+	// Watched for the whole bake: three asks the browser to restore a lost
+	// context, and a restored one reads back as an empty, all-white bake.
+	let contextLost = false
+	const onContextLost = () => (contextLost = true)
+	renderer.domElement.addEventListener('webglcontextlost', onContextLost)
 
 	const baked: BakedOcclusion[] = []
 	let scene = new Scene()
@@ -165,12 +170,16 @@ export async function bakeOcclusion(
 			renderer.render(resolveScene, camera)
 			const pixels = new Uint8Array(size * size * 4)
 			renderer.readRenderTargetPixels(resolved, 0, 0, size, size, pixels)
+			if (contextLost || renderer.getContext().isContextLost()) {
+				throw new Error('The GPU reset while baking ambient occlusion')
+			}
 			fillGutter(pixels, size)
 			baked.push({ material, size, pixels })
 
 			disposeGeometries(scene)
 		}
 	} finally {
+		renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
 		disposeGeometries(scene)
 		renderer.autoClear = previousAutoClear
 		renderer.setRenderTarget(previousTarget)

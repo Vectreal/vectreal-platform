@@ -327,23 +327,26 @@ export class ModelExporter {
 	 * alike. Draco or meshopt input is decoded first, which in Node needs
 	 * `dracoModules`.
 	 *
-	 * `ktx2` encodes the textures to KTX2 with the caller's encoder; without it
-	 * they ship as they are.
+	 * `occlusion` bakes ambient occlusion into the copy first. `ktx2` then
+	 * encodes the textures, baked ones included, with the caller's encoder;
+	 * without it they ship as they are.
 	 */
 	public async exportGlbForPublish(
 		glb: Uint8Array,
-		{ ktx2, ...geometry }: GlbPublishOptions = {}
+		{ ktx2, occlusion, ...geometry }: GlbPublishOptions = {}
 	): Promise<GlbPublishResult> {
 		const document = await this.readGlbDocument(glb)
 
 		let textures: Ktx2CompressionReport | undefined
 		const result = await this.exportDocumentGLBForPublish(document, {
 			...geometry,
-			textures: ktx2
-				? async (clone) => {
-						textures = await compressTexturesToKtx2(clone, ktx2)
-					}
-				: undefined
+			textures:
+				ktx2 || occlusion
+					? async (clone) => {
+							await occlusion?.(clone)
+							if (ktx2) textures = await compressTexturesToKtx2(clone, ktx2)
+						}
+					: undefined
 		})
 		return { ...result, textures }
 	}

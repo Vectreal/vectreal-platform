@@ -414,11 +414,13 @@ export type SceneLightingBackground =
 	| { type: 'none' }
 
 /**
- * Screen-space ambient occlusion: darkening in creases and tight gaps, drawn
- * every frame while the view moves, so it is off unless chosen.
+ * Ambient occlusion: darkening in creases and tight gaps. Off unless chosen.
+ * `live` draws it in screen space every frame while the view moves. `baked`
+ * raytraces it into the model's own textures when the scene is published, so
+ * it costs nothing to draw and shows in any glTF viewer.
  */
 export interface SceneOcclusionSettings {
-	mode?: 'off' | 'live'
+	mode?: 'off' | 'live' | 'baked'
 	live?: {
 		/** Higher is darker. */
 		intensity?: number

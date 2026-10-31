@@ -1,9 +1,8 @@
 import { Document, WebIO } from '@gltf-transform/core'
+import { ModelExporter } from '@vctrl/core/model-exporter'
 import {
-	bakeOcclusion,
-	encodeOcclusionPng,
-	planOcclusionBake,
-	writeOcclusionBake
+	bakeOcclusionIntoDocument,
+	type OcclusionBakeReport
 } from '@vctrl/core/occlusion-bake'
 import { useEffect } from 'react'
 import { WebGLRenderer } from 'three'
@@ -90,45 +89,89 @@ function floorScene() {
 }
 
 /** The floor's occlusion at a UV, 0 dark to 255 open. */
-const texelAt = (pixels: Uint8Array, u: number, v: number) =>
+const texelAt = (pixels: ArrayLike<number>, u: number, v: number) =>
 	pixels[(Math.floor(v * SIZE) * SIZE + Math.floor(u * SIZE)) * 4]
 
+/** A PNG's red channel, row 0 at the top as glTF reads it. */
+async function decodePng(png: Uint8Array) {
+	const bitmap = await createImageBitmap(
+		new Blob([png as Uint8Array<ArrayBuffer>], { type: 'image/png' })
+	)
+	const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
+	const context = canvas.getContext('2d')!
+	context.drawImage(bitmap, 0, 0)
+	return context.getImageData(0, 0, bitmap.width, bitmap.height).data
+}
+
+/*
+  The publish path end to end: the scene as a GLB, through the same export the
+  publisher's worker runs with occlusion baked in, then the occlusion map read
+  back out of the published file.
+*/
 async function bake() {
-	const document = floorScene()
-	const plan = planOcclusionBake(document)
+	const glb = await new WebIO().writeBinary(floorScene())
 	const renderer = new WebGLRenderer()
 	try {
-		const [floor] = await bakeOcclusion(plan, renderer, {
+		let report: OcclusionBakeReport | undefined
+		const published = await new ModelExporter().exportGlbForPublish(glb, {
+			occlusion: async (document) => {
+				report = await bakeOcclusionIntoDocument(document, () => renderer, {
+					resolution: SIZE,
+					samples: 64,
+					distance: 0.25
+				})
+			}
+		})
+		const floor = (await new WebIO().readBinary(published.data))
+			.getRoot()
+			.listMaterials()
+			.find((material) => material.getName() === 'floor')
+		const texture = floor?.getOcclusionTexture()
+		const image = texture?.getImage()
+		if (!report || !image) throw new Error('No occlusion map was published')
+		const pixels = await decodePng(image)
+
+		return {
+			status: 'baked' as const,
+			baked: report.baked,
+			skipped: report.skipped.map(
+				({ material, reason }) => `${material}:${reason}`
+			),
+			under: texelAt(pixels, 0.7, 0.2),
+			beside: texelAt(pixels, 0.7, 0.33),
+			far: texelAt(pixels, 0.95, 0.95),
+			mirrored: texelAt(pixels, 0.7, 0.8),
+			canopy: texelAt(pixels, 0.25, 0.5),
+			storedPng:
+				texture?.getMimeType() === 'image/png' &&
+				floor?.getOcclusionTextureInfo()?.getTexCoord() === 0
+		}
+	} finally {
+		renderer.dispose()
+	}
+}
+
+/*
+  The GPU resetting mid-bake: the context is lost after the first pass and
+  three asks for it back. The bake has to fail, not ship whatever it read.
+*/
+async function bakeThroughContextLoss(): Promise<string> {
+	const renderer = new WebGLRenderer()
+	const lose = renderer.getContext().getExtension('WEBGL_lose_context')
+	try {
+		const baking = bakeOcclusionIntoDocument(floorScene(), () => renderer, {
 			resolution: SIZE,
 			samples: 64,
 			distance: 0.25
 		})
-		const png = await encodeOcclusionPng(floor)
-		writeOcclusionBake(document, [
-			{ material: floor.material, image: png, mimeType: 'image/png' }
-		])
-		const io = new WebIO()
-		const reread = await io.readBinary(await io.writeBinary(document))
-		const stored = reread
-			.getRoot()
-			.listMaterials()
-			.find((material) => material.getName() === 'floor')
-
-		return {
-			status: 'baked' as const,
-			targets: plan.targets.map(({ material }) => material.getName()),
-			skipped: plan.skipped.map(
-				({ material, reason }) => `${material.getName()}:${reason}`
-			),
-			under: texelAt(floor.pixels, 0.7, 0.2),
-			beside: texelAt(floor.pixels, 0.7, 0.33),
-			far: texelAt(floor.pixels, 0.95, 0.95),
-			mirrored: texelAt(floor.pixels, 0.7, 0.8),
-			canopy: texelAt(floor.pixels, 0.25, 0.5),
-			storedPng:
-				stored?.getOcclusionTexture()?.getMimeType() === 'image/png' &&
-				stored.getOcclusionTexture()?.getImage()?.[1] === 0x50
-		}
+		setTimeout(() => {
+			lose?.loseContext()
+			setTimeout(() => lose?.restoreContext())
+		})
+		await baking
+		return 'baked'
+	} catch (error) {
+		return String(error)
 	} finally {
 		renderer.dispose()
 	}
@@ -136,8 +179,9 @@ async function bake() {
 
 export function OcclusionBakeCase() {
 	useEffect(() => {
-		bake().then(
-			(result) => (window.__BAKE_E2E__ = result),
+		Promise.all([bake(), bakeThroughContextLoss()]).then(
+			([result, contextLoss]) =>
+				(window.__BAKE_E2E__ = { ...result, contextLoss }),
 			(error) =>
 				(window.__BAKE_E2E__ = { status: 'error', error: String(error) })
 		)

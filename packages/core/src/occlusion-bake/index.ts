@@ -1,4 +1,8 @@
 export {
+	bakeOcclusionIntoDocument,
+	type OcclusionBakeReport
+} from './bake-into-document'
+export {
 	bakeOcclusion,
 	encodeOcclusionPng,
 	type BakedOcclusion

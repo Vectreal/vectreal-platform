@@ -7,6 +7,7 @@ import type {
 	PublishExportRequest
 } from '../../../../workers/publish-export.worker.types'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
+import type { OcclusionBakeSkipReason } from '@vctrl/core/occlusion-bake'
 
 /**
  * Budget for one publish export. KTX2 encoding takes seconds per texture, so
@@ -76,8 +77,9 @@ export function resolvePublishGeometryOptions(
 
 /**
  * The size `workingGlb` publishes at, encoded the way publish encodes it.
- * Exact except for GPU texture encoding, which takes seconds per texture and
- * is left to publish: without it, publish ships the textures as they are.
+ * Exact except for GPU texture encoding and baked occlusion, which take
+ * seconds and are left to publish: without them, publish ships the textures
+ * as they are.
  */
 export async function projectPublishedGlbBytes(
 	workingGlb: Uint8Array,
@@ -87,9 +89,44 @@ export async function projectPublishedGlbBytes(
 		{
 			buffer: workingGlb.slice().buffer as ArrayBuffer,
 			...geometry,
-			ktx2: false
+			ktx2: false,
+			occlusion: false
 		},
 		() => {}
 	)
 	return buffer.byteLength
+}
+
+/** Why a material took no baked occlusion, as the author reads it. */
+export const OCCLUSION_SKIP_REASONS: Record<OcclusionBakeSkipReason, string> = {
+	'existing-occlusion': 'it has an occlusion map already, which is kept',
+	'shared-geometry': 'its mesh is placed more than once',
+	skinned: 'a skin moves it',
+	'no-uv0': 'it has no UVs',
+	'tiling-uvs': 'its UVs repeat the texture',
+	'overlapping-uvs': 'parts of it share the same UVs'
+}
+
+/** The warning a publish owes the author about its occlusion bake, if any. */
+export function occlusionBakeWarning(
+	occlusion: PublishExportOutcome['occlusion']
+): { message: string; description: string } | null {
+	if (!occlusion) return null
+	if ('failed' in occlusion) {
+		return {
+			message:
+				'Ambient occlusion could not be baked, so the scene was published without it.',
+			description: occlusion.failed
+		}
+	}
+	// A material that brought its own occlusion map keeps it, as intended.
+	const missed = occlusion.skipped.filter(
+		({ reason }) => reason !== 'existing-occlusion'
+	)
+	const [first, ...rest] = missed
+	if (!first) return null
+	return {
+		message: `${missed.length} material${rest.length === 0 ? '' : 's'} could not take baked ambient occlusion.`,
+		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
+	}
 }
