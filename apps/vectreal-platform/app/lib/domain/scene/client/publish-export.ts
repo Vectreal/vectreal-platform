@@ -76,8 +76,9 @@ export function resolvePublishGeometryOptions(
 
 /**
  * The size `workingGlb` publishes at, encoded the way publish encodes it.
- * Exact except for GPU texture encoding, which takes seconds per texture and
- * is left to publish: without it, publish ships the textures as they are.
+ * Exact except for GPU texture encoding and baked occlusion, which take
+ * seconds and are left to publish: without them, publish ships the textures
+ * as they are.
  */
 export async function projectPublishedGlbBytes(
 	workingGlb: Uint8Array,
@@ -87,7 +88,8 @@ export async function projectPublishedGlbBytes(
 		{
 			buffer: workingGlb.slice().buffer as ArrayBuffer,
 			...geometry,
-			ktx2: false
+			ktx2: false,
+			occlusion: false
 		},
 		() => {}
 	)

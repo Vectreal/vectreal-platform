@@ -188,7 +188,7 @@ export const sceneLightingSchema = z.object({
 		.optional(),
 	occlusion: z
 		.object({
-			mode: z.enum(['off', 'live']).optional(),
+			mode: z.enum(['off', 'live', 'baked']).optional(),
 			live: z
 				.object({
 					intensity: nonNegative.optional(),

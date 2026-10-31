@@ -131,7 +131,8 @@ describe('projectPublishedGlbBytes', () => {
 			type: 'export',
 			draco: { quantizePosition: 14 },
 			dracoWorthApplying: false,
-			ktx2: false
+			ktx2: false,
+			occlusion: false
 		})
 
 		worker.reply({

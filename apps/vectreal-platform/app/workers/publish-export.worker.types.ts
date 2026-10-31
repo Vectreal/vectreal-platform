@@ -20,6 +20,7 @@ import type {
 	PublishExportOptions
 } from '@vctrl/core/model-exporter'
 import type { Ktx2CompressionReport } from '@vctrl/core/model-optimizer'
+import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
 
 /** Message sent TO the worker. The buffer should be transferred. */
 export interface PublishExportRequest {
@@ -29,6 +30,8 @@ export interface PublishExportRequest {
 	draco?: PublishExportOptions['draco']
 	dracoWorthApplying: boolean
 	ktx2: boolean
+	/** Bake ambient occlusion into the published GLB. */
+	occlusion: boolean
 }
 
 export interface PublishExportProgress {
@@ -45,6 +48,11 @@ export interface PublishExportOutcome {
 	textureBytes: number
 	/** Present when KTX2 encoding ran. */
 	textures?: Ktx2CompressionReport
+	/**
+	 * Present when occlusion was asked for: what was baked, or why nothing was.
+	 * A failed bake publishes the model without it rather than not at all.
+	 */
+	occlusion?: OcclusionBakeReport | { failed: string }
 }
 
 /** Messages received FROM the worker. */

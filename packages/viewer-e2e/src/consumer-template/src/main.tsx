@@ -23,7 +23,7 @@ declare global {
 		__BAKE_E2E__?:
 			| {
 					status: 'baked'
-					targets: string[]
+					baked: string[]
 					skipped: string[]
 					under: number
 					beside: number

@@ -15,12 +15,22 @@ const mocks = vi.hoisted(() => ({
 	exportGlbForPublish: vi.fn(),
 	/** Stands in for the KTX2 pass, handed what the worker passed as `ktx2`. */
 	compressTextures: vi.fn(),
-	encode: vi.fn()
+	encode: vi.fn(),
+	bakeOcclusionIntoDocument: vi.fn(),
+	disposeRenderer: vi.fn()
 }))
 
 vi.mock('@vctrl/core/model-exporter', () => ({
 	ModelExporter: class {
 		exportGlbForPublish = mocks.exportGlbForPublish
+	}
+}))
+vi.mock('@vctrl/core/occlusion-bake', () => ({
+	bakeOcclusionIntoDocument: mocks.bakeOcclusionIntoDocument
+}))
+vi.mock('three', () => ({
+	WebGLRenderer: class {
+		dispose = mocks.disposeRenderer
 	}
 }))
 vi.mock('ktx2-encoder', () => ({
@@ -31,13 +41,24 @@ vi.mock('ktx2-encoder', () => ({
 
 const posted: Array<{ message: PublishExportMessage; transfer: unknown }> = []
 const report = { encoded: ['color'], kept: [] }
+const occlusionReport = {
+	baked: ['body'],
+	skipped: [{ material: 'glass', reason: 'no-uv0' }]
+}
+/** What the export hands its `occlusion` hook. */
+const exportedDocument = new Document()
 
-async function send(request: Omit<PublishExportRequest, 'type' | 'buffer'>) {
+async function send({
+	occlusion = false,
+	...request
+}: Omit<PublishExportRequest, 'type' | 'buffer' | 'occlusion'> & {
+	occlusion?: boolean
+}) {
 	const buffer = (await new WebIO().writeBinary(new Document())).slice()
 		.buffer as ArrayBuffer
 	await (
 		self.onmessage as (event: MessageEvent<PublishExportRequest>) => unknown
-	)({ data: { type: 'export', buffer, ...request } } as MessageEvent)
+	)({ data: { type: 'export', buffer, occlusion, ...request } } as MessageEvent)
 	return posted.map(({ message }) => message)
 }
 
@@ -54,8 +75,17 @@ beforeEach(async () => {
 		onProgress(0, 1)
 		return report
 	})
+	mocks.bakeOcclusionIntoDocument.mockResolvedValue(occlusionReport)
+	vi.stubGlobal('OffscreenCanvas', class {})
 	mocks.exportGlbForPublish.mockImplementation(
-		async (_glb: Uint8Array, options: { ktx2?: unknown }) => ({
+		async (
+			_glb: Uint8Array,
+			options: {
+				ktx2?: unknown
+				occlusion?: (document: Document) => Promise<void>
+			}
+		) => ({
+			...(await options.occlusion?.(exportedDocument)),
 			data: new Uint8Array([1, 2, 3]),
 			geometryCodec: 'meshopt',
 			geometrySizes: { none: 3, meshopt: 2 },
@@ -113,6 +143,56 @@ describe('the publish export worker', () => {
 
 		expect(mocks.compressTextures).not.toHaveBeenCalled()
 		expect(messages.at(-1)).toMatchObject({ type: 'done', textures: undefined })
+	})
+
+	it('bakes occlusion into the published copy when asked, and reports it', async () => {
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true
+		})
+
+		expect(mocks.bakeOcclusionIntoDocument).toHaveBeenCalledWith(
+			exportedDocument,
+			expect.any(Object)
+		)
+		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
+		expect(messages.at(-1)).toMatchObject({
+			type: 'done',
+			occlusion: occlusionReport
+		})
+	})
+
+	it('bakes nothing unless asked', async () => {
+		const messages = await send({ dracoWorthApplying: true, ktx2: false })
+
+		expect(mocks.exportGlbForPublish).toHaveBeenCalledWith(
+			expect.any(Uint8Array),
+			expect.objectContaining({ occlusion: undefined })
+		)
+		expect(mocks.bakeOcclusionIntoDocument).not.toHaveBeenCalled()
+		expect(messages.at(-1)).toMatchObject({
+			type: 'done',
+			occlusion: undefined
+		})
+	})
+
+	it('publishes without occlusion when the bake fails, and says why', async () => {
+		mocks.bakeOcclusionIntoDocument.mockRejectedValue(
+			new Error('WebGL 2 is unavailable')
+		)
+
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true
+		})
+
+		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
+		expect(messages.at(-1)).toMatchObject({
+			type: 'done',
+			occlusion: { failed: 'WebGL 2 is unavailable' }
+		})
 	})
 
 	it('encodes through the self-hosted wasm at the size it was given', async () => {

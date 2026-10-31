@@ -1,5 +1,6 @@
 import { basename, extname, resolve } from 'node:path'
 
+import { resolveLighting } from '@vctrl/core'
 import {
 	createProjectInputSchema,
 	createSceneInputSchema,
@@ -165,11 +166,15 @@ export const updateSceneSettings = defineOperation({
 		context.client.updateSceneSettings(sceneId, settings)
 })
 
+/** Baking raytraces on a GPU, which a terminal does not have. */
+export const BAKED_OCCLUSION_WARNING =
+	"This scene's lighting asks for baked ambient occlusion, which only the Publisher can bake: it was published without it. Publish from the Publisher to bake it, or set lighting.occlusion.mode to 'live' or 'off'."
+
 export const publishScene = defineOperation({
 	name: 'publish_scene',
 	title: 'Publish a scene',
 	description:
-		"Compresses a local GLB the way the publisher exports it (Draco geometry and KTX2 textures, each on unless turned off) and publishes it as what the scene's visitors load. Send the GLB the scene was created from. Publishing again replaces it.",
+		"Compresses a local GLB the way the publisher exports it (Draco geometry and KTX2 textures, each on unless turned off) and publishes it as what the scene's visitors load. Send the GLB the scene was created from. Publishing again replaces it. Ambient occlusion the scene's lighting asks to bake is not baked here, which needs a GPU: the result warns, and publishing from the Publisher bakes it.",
 	input: z.object({
 		sceneId,
 		path: filePath,
@@ -180,13 +185,17 @@ export const publishScene = defineOperation({
 	destructive: false,
 	run: async ({ sceneId, path, draco, ktx2 }, context) => {
 		const { bytes } = await readGlb(path, context)
+		const { settings } = await context.client.getSceneSettings(sceneId)
 		const exported = await context.exportForPublish(bytes, { draco, ktx2 })
 		const published = await context.client.publishScene(sceneId, {
 			file: blobOf(exported)
 		})
 		return {
 			...published,
-			bytes: { source: bytes.length, published: exported.length }
+			bytes: { source: bytes.length, published: exported.length },
+			...(resolveLighting(settings).occlusion.mode === 'baked'
+				? { warnings: [BAKED_OCCLUSION_WARNING] }
+				: {})
 		}
 	}
 })
