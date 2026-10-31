@@ -295,7 +295,6 @@
 				"command": "pnpm exec tsx scripts/measure-environment-lights.ts && pnpm exec prettier --write ../../packages/core/src/scene-lighting/environment-lights.ts"
 			}
 		},
-<<<<<<< HEAD
 		"render-lighting-thumbnails": {
 			"executor": "nx:run-commands",
 			"outputs": ["{projectRoot}/public/media/images/lighting"],
@@ -304,8 +303,6 @@
 				"command": "pnpm exec tsx scripts/render-lighting-thumbnails.ts"
 			}
 		},
-=======
->>>>>>> origin/main
 		"bake-share-cards": {
 			"executor": "nx:run-commands",
 			"outputs": [
