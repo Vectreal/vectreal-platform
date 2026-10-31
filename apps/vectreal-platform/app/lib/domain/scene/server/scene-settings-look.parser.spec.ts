@@ -1,14 +1,16 @@
-import { ENVIRONMENT_PRESETS } from '@vctrl/sdk'
+import { MAX_SCENE_LIGHTS } from '@vctrl/core'
+import { ENVIRONMENT_PRESETS, SCENE_LIGHT_ROLES } from '@vctrl/sdk'
 import { expectTypeOf } from 'vitest'
 
 import { SceneSettingsParser } from './scene-settings.parser.server'
 import { withSceneSettingsDefaults } from '../../../../constants/viewer-defaults'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
-import type { EnvironmentKey } from '@vctrl/core'
+import type { EnvironmentKey, SceneLightRole } from '@vctrl/core'
 
 /**
- * Bounds, controls, environment, shadows and normalization on the save path.
+ * Bounds, controls, lighting, environment, shadows and normalization on the
+ * save path.
  * The viewer spreads these into its 3D components as stored, so what the
  * parser lets through is what runs in every embed.
  */
@@ -132,5 +134,50 @@ describe('look settings on the save path', () => {
 		expectTypeOf<
 			(typeof ENVIRONMENT_PRESETS)[number]
 		>().toEqualTypeOf<EnvironmentKey>()
+	})
+
+	it('keeps a lighting section as the tool writes it', () => {
+		const lighting = {
+			environment: { map: 'studio-key', intensity: 0.8, rotation: 140 },
+			lights: [
+				{ role: 'key', azimuth: 30, elevation: 50, size: 18, intensity: 1.5 },
+				{ role: 'rim', azimuth: 210, color: '#cfe0ff' }
+			],
+			ground: { enabled: true },
+			background: { type: 'gradient', top: '#fafafa', bottom: '#d4d4d8' },
+			occlusion: { mode: 'live', live: { intensity: 1.2, atRest: true } }
+		}
+		expect(parsed(parse({ lighting })).lighting).toEqual(lighting)
+	})
+
+	it('refuses a fourth light and a second light in one role', async () => {
+		const lights = (roles: string[]) => ({
+			lighting: { lights: roles.map((role) => ({ role })) }
+		})
+		expect(
+			await refusal(parse(lights(['key', 'fill', 'rim', 'key'])))
+		).toContain('lighting.lights')
+		expect(await refusal(parse(lights(['key', 'key'])))).toContain(
+			'lighting.lights'
+		)
+	})
+
+	it('refuses a lighting stage that is not hex', async () => {
+		expect(
+			await refusal(
+				parse({
+					lighting: { background: { type: 'color', color: 'tomato' } }
+				})
+			)
+		).toContain('lighting.background')
+	})
+
+	it('names the same light roles, and so the same limit, as core', () => {
+		// A role core gains and the schema lacks would refuse every save of a
+		// scene that uses it; the limit is one light per role.
+		expectTypeOf<
+			(typeof SCENE_LIGHT_ROLES)[number]
+		>().toEqualTypeOf<SceneLightRole>()
+		expect(SCENE_LIGHT_ROLES).toHaveLength(MAX_SCENE_LIGHTS)
 	})
 })

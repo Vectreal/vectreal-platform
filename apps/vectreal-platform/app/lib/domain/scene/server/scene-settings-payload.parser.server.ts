@@ -13,7 +13,12 @@ import type { SceneSettings } from '@vctrl/core'
 
 type LookSections = Pick<
 	SceneSettings,
-	'bounds' | 'controls' | 'environment' | 'shadows' | 'normalization'
+	| 'bounds'
+	| 'controls'
+	| 'lighting'
+	| 'environment'
+	| 'shadows'
+	| 'normalization'
 >
 
 /**
