@@ -45,6 +45,9 @@ catalogs:
     three:
       specifier: ^0.185.1
       version: 0.185.1
+    three-mesh-bvh:
+      specifier: ^0.8.3
+      version: 0.8.3
     vite:
       specifier: ^8.3.3
       version: 8.3.4
@@ -783,6 +786,9 @@ importers:
       three:
         specifier: 'catalog:'
         version: 0.185.1
+      three-mesh-bvh:
+        specifier: 'catalog:'
+        version: 0.8.3(three@0.185.1)
     devDependencies:
       '@nx/vite':
         specifier: 'catalog:'
@@ -871,7 +877,7 @@ importers:
         specifier: 'catalog:'
         version: 0.185.1
       three-mesh-bvh:
-        specifier: ^0.8.3
+        specifier: 'catalog:'
         version: 0.8.3(three@0.185.1)
     devDependencies:
       '@shared/components':

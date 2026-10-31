@@ -53,6 +53,10 @@
 			"types": "./model-exporter/index.d.ts",
 			"default": "./model-exporter/index.js"
 		},
+		"./occlusion-bake": {
+			"types": "./occlusion-bake/index.d.ts",
+			"default": "./occlusion-bake/index.js"
+		},
 		"./node": {
 			"types": "./node/index.d.ts",
 			"default": "./node/index.js"
@@ -74,7 +78,8 @@
 		"jszip": "catalog:",
 		"ktx2-encoder": "catalog:",
 		"meshoptimizer": "catalog:",
-		"three": "catalog:"
+		"three": "catalog:",
+		"three-mesh-bvh": "catalog:"
 	},
 	"devDependencies": {
 		"@nx/vite": "catalog:",

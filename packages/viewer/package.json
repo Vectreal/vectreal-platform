@@ -57,7 +57,7 @@
 		"postprocessing": "catalog:",
 		"clsx": "^2.1.1",
 		"tailwind-merge": "^3.6.0",
-		"three-mesh-bvh": "^0.8.3"
+		"three-mesh-bvh": "catalog:"
 	},
 	"peerDependencies": {
 		"three": "catalog:",

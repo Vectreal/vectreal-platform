@@ -201,6 +201,51 @@ test('a model loads from a URL through src, and a bad one shows the fallback', a
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
+test('occlusion bakes on the GPU from the published core and lands in the GLB', async ({
+	page
+}) => {
+	const pageErrors: string[] = []
+	page.on('pageerror', (err) => pageErrors.push(err.message))
+	// A shader that fails to compile is logged, not thrown.
+	const consoleErrors: string[] = []
+	page.on('console', (msg) => {
+		if (msg.type() === 'error') consoleErrors.push(msg.text())
+	})
+
+	await page.goto('/?occlusion-bake')
+	await page.waitForFunction(
+		() => window.__BAKE_E2E__ !== undefined,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+	const bake = await page.evaluate(() => window.__BAKE_E2E__)
+	if (bake?.status !== 'baked') throw new Error(bake?.error ?? 'no bake')
+
+	// The floor is baked; the box and canopy have no UVs, so they only cast.
+	expect(bake.targets).toEqual(['floor'])
+	expect(bake.skipped).toEqual(['box:no-uv0', 'canopy:no-uv0'])
+
+	// Dark under the box, partly open beside it, open far from it. The open
+	// texel at the box's mirror image across v = 0.5 proves the bake is read
+	// back the right way up: row 0 is v = 0.
+	expect(bake.under).toBeLessThan(40)
+	expect(bake.beside).toBeGreaterThan(bake.under)
+	expect(bake.beside).toBeLessThan(235)
+	expect(bake.far).toBeGreaterThan(245)
+	expect(bake.mirrored).toBeGreaterThan(245)
+	// About half the rays rise steeply enough to meet the canopy. A bake that
+	// kept only some of its samples, or aimed them all one way, misses this.
+	expect(bake.canopy).toBeGreaterThan(70)
+	expect(bake.canopy).toBeLessThan(170)
+
+	// Encoded as PNG and stored as the floor's occlusion texture in the GLB.
+	expect(bake.storedPng).toBe(true)
+	expect(pageErrors, pageErrors.join('\n')).toEqual([])
+	expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
+})
+
 declare global {
 	interface Window {
 		__VIEWER_E2E__?: { status: 'mounted' | 'crashed'; error?: string }
@@ -213,5 +258,18 @@ declare global {
 		}
 		__SRC_READY__?: boolean
 		__SRC_MISSING__?: string[]
+		__BAKE_E2E__?:
+			| {
+					status: 'baked'
+					targets: string[]
+					skipped: string[]
+					under: number
+					beside: number
+					far: number
+					mirrored: number
+					canopy: number
+					storedPng: boolean
+			  }
+			| { status: 'error'; error: string }
 	}
 }
