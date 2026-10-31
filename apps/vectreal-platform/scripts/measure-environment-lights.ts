@@ -23,27 +23,13 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { resolveEnvironmentFiles, type EnvironmentKey } from '@vctrl/core'
+import {
+	ENVIRONMENT_KEYS,
+	resolveEnvironmentFiles,
+	type EnvironmentKey
+} from '@vctrl/core'
 import { FloatType } from 'three'
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js'
-
-const ENVIRONMENT_KEYS: readonly EnvironmentKey[] = [
-	'nature-moonlit',
-	'nature-park',
-	'nature-park-overcast',
-	'nature-snow',
-	'night-building',
-	'night-city',
-	'night-pure-sky',
-	'night-stars',
-	'outdoor-golden-hour',
-	'outdoor-noon',
-	'outdoor-overcast',
-	'outdoor-sky',
-	'studio-key',
-	'studio-natural',
-	'studio-soft'
-]
 
 /** Regions kept per map, brightest first. */
 const MAX_REGIONS = 4
