@@ -179,6 +179,8 @@ function cardDocument({
 	morphed = false,
 	staticBody = false,
 	cutout = false,
+	ktx2Mask = false,
+	brokenMask = false,
 	glass = false,
 	unlit = false
 } = {}) {
@@ -206,6 +208,26 @@ function cardDocument({
 				.setDoubleSided(doubleSided)
 				.setAlphaMode(cutout ? 'MASK' : 'OPAQUE')
 		)
+	if (ktx2Mask) {
+		primitive
+			.getMaterial()!
+			.setBaseColorTexture(
+				document
+					.createTexture()
+					.setImage(new Uint8Array(4))
+					.setMimeType('image/ktx2')
+			)
+	}
+	if (brokenMask) {
+		primitive
+			.getMaterial()!
+			.setBaseColorTexture(
+				document
+					.createTexture()
+					.setImage(new Uint8Array(4))
+					.setMimeType('image/png')
+			)
+	}
 	if (glass) {
 		primitive
 			.getMaterial()!
@@ -323,9 +345,19 @@ describe('bakeLightsIntoDocument', () => {
 		])
 	})
 
-	it('leaves everything to the live lights while a cutout casts', async () => {
+	it('bakes past a cutout whose mask it can read', async () => {
+		await expect(
+			bakeLightsIntoDocument(
+				cardDocument({ cutout: true, staticBody: true }),
+				lighting(),
+				noRenderer
+			)
+		).rejects.toThrow('nothing here can be baked')
+	})
+
+	it('leaves everything to the live lights while an unreadable cutout casts', async () => {
 		const report = await bakeLightsIntoDocument(
-			cardDocument({ cutout: true, staticBody: true }),
+			cardDocument({ cutout: true, ktx2Mask: true, staticBody: true }),
 			lighting(),
 			noRenderer
 		)
@@ -339,11 +371,29 @@ describe('bakeLightsIntoDocument', () => {
 	it('still bakes past a cutout that lets light through', async () => {
 		await expect(
 			bakeLightsIntoDocument(
-				cardDocument({ cutout: true, glass: true, staticBody: true }),
+				cardDocument({
+					cutout: true,
+					ktx2Mask: true,
+					glass: true,
+					staticBody: true
+				}),
 				lighting(),
 				noRenderer
 			)
 		).rejects.toThrow('nothing here can be baked')
+	})
+
+	it('leaves everything to the live lights while a mask that did not decode casts', async () => {
+		const report = await bakeLightsIntoDocument(
+			cardDocument({ cutout: true, brokenMask: true, staticBody: true }),
+			lighting(),
+			noRenderer
+		)
+
+		expect(report.skipped).toEqual([
+			{ material: 'label', reason: 'cutout-shadows' },
+			{ material: 'body', reason: 'cutout-shadows' }
+		])
 	})
 
 	it('bakes no light into an unlit material', async () => {

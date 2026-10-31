@@ -66,6 +66,34 @@ function sceneOf(
 	return scene
 }
 
+/** Turns `node` with a one-channel rotation animation. */
+function animate(document: Document, node: ReturnType<Document['createNode']>) {
+	const sampler = document
+		.createAnimationSampler()
+		.setInput(
+			document
+				.createAccessor()
+				.setType('SCALAR')
+				.setArray(new Float32Array([0, 1]))
+		)
+		.setOutput(
+			document
+				.createAccessor()
+				.setType('VEC4')
+				.setArray(new Float32Array([0, 0, 0, 1, 0, 0.7, 0, 0.7]))
+		)
+	document
+		.createAnimation()
+		.addSampler(sampler)
+		.addChannel(
+			document
+				.createAnimationChannel()
+				.setTargetNode(node)
+				.setTargetPath('rotation')
+				.setSampler(sampler)
+		)
+}
+
 const reasons = (plan: ReturnType<typeof planOcclusionBake>) =>
 	plan.skipped.map(({ material, reason }) => [material.getName(), reason])
 
@@ -235,6 +263,50 @@ describe('planOcclusionBake', () => {
 		expect(reasons(planOcclusionBake(document))).toEqual([['cloth', 'skinned']])
 	})
 
+	it('skips a part an animation moves through its parent, or morph targets reshape', () => {
+		const document = new Document()
+		const lid = document
+			.createNode('hinge')
+			.addChild(
+				document
+					.createNode()
+					.setMesh(
+						document
+							.createMesh()
+							.addPrimitive(
+								grid(document).setMaterial(document.createMaterial('lid'))
+							)
+					)
+			)
+		const morphed = grid(document)
+			.setMaterial(document.createMaterial('blob'))
+			.addTarget(
+				document
+					.createPrimitiveTarget()
+					.setAttribute(
+						'POSITION',
+						document
+							.createAccessor()
+							.setType('VEC3')
+							.setArray(new Float32Array(12))
+					)
+			)
+		document
+			.createScene()
+			.addChild(lid)
+			.addChild(
+				document
+					.createNode()
+					.setMesh(document.createMesh().addPrimitive(morphed))
+			)
+		animate(document, lid)
+
+		expect(reasons(planOcclusionBake(document))).toEqual([
+			['lid', 'animated'],
+			['blob', 'animated']
+		])
+	})
+
 	it('ignores UVs of vertices no triangle draws', () => {
 		const document = new Document()
 		const material = document.createMaterial('pruned')
@@ -337,6 +409,18 @@ describe('castsOcclusion', () => {
 				.setMesh(part())
 				.setExtension('EXT_mesh_gpu_instancing', instancing)
 		)
+		scene.addChild(
+			document
+				.createNode('never drawn')
+				.setMesh(
+					part(
+						document.createMaterial().setAlphaMode('MASK').setAlphaCutoff(1.5)
+					)
+				)
+		)
+		const animated = document.createNode('animated').setMesh(part())
+		scene.addChild(animated)
+		animate(document, animated)
 
 		const casts = planOcclusionBake(document).primitives.map((entry) => [
 			entry.node.getName(),
@@ -347,7 +431,9 @@ describe('castsOcclusion', () => {
 			['solid', true],
 			['glass', false],
 			['skinned', false],
-			['instanced', false]
+			['instanced', false],
+			['never drawn', false],
+			['animated', false]
 		])
 	})
 })

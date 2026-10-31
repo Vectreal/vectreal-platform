@@ -26,10 +26,7 @@ export type OcclusionBakeSkipReason =
 	 * back of a lit card would draw the front's light, or its darkness.
 	 */
 	| 'double-sided'
-	/**
-	 * Light bake only: an animation turns, moves or reshapes it, and a map
-	 * holds the rest pose's light.
-	 */
+	/** An animation turns, moves or reshapes it, and a bake holds one pose. */
 	| 'animated'
 	/**
 	 * Light bake only: another part moves, or is drawn more than once, and a
@@ -37,8 +34,9 @@ export type OcclusionBakeSkipReason =
 	 */
 	| 'moving-shadows'
 	/**
-	 * Light bake only: a cutout casts a shadow here, and the bake traces it as
-	 * solid, so leaves would cast rectangles.
+	 * Light bake only: a cutout whose mask the bake did not read (KTX2, an
+	 * image that does not decode, too many masks) casts a shadow here, and is
+	 * traced as solid, so leaves would cast rectangles.
 	 */
 	| 'cutout-shadows'
 	/** Light bake only: it is unlit, so no light reaches it to bake. */
@@ -73,13 +71,21 @@ export function isGlass(material: Material | null): boolean {
 }
 
 /*
-  Whether a part darkens the others. Glass lets light through. A skinned or
-  GPU-instanced part is not drawn where its node puts it, so casting from there
-  would darken the wrong place; it casts nothing rather than that.
+  Whether a part darkens the others. Glass lets light through, and so does a
+  cutout whose cutoff no alpha reaches: it is never drawn. A skinned,
+  animated or GPU-instanced part is not always drawn where its node puts it,
+  so casting from there would darken the wrong place; it casts nothing rather
+  than that.
 */
-export function castsOcclusion({ node, material }: ScenePrimitive): boolean {
+export function castsOcclusion({
+	node,
+	material,
+	animated
+}: ScenePrimitive): boolean {
 	return (
 		!isGlass(material) &&
+		!(material?.getAlphaMode() === 'MASK' && material.getAlphaCutoff() > 1) &&
+		!animated &&
 		!node.getSkin() &&
 		!node.getExtension('EXT_mesh_gpu_instancing')
 	)
@@ -141,6 +147,7 @@ function skipReason(
 		return 'shared-geometry'
 	}
 	if (drawn.some(({ node }) => node.getSkin())) return 'skinned'
+	if (drawn.some(({ animated }) => animated)) return 'animated'
 	const uvs = drawn.map(({ primitive }) => readUvs(primitive))
 	if (uvs.some((uv) => !uv)) return 'no-uv0'
 	if (drawn.some(({ primitive }, i) => tiles(uvs[i]!, primitive))) {

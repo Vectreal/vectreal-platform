@@ -150,8 +150,10 @@ is reflection, which stays live either way. A few limits:
   the light of its rest pose. And while any part moves, or is drawn more than
   once, the whole model keeps live light: the map would hold that part's
   shadow where it stood, not where it goes. The same goes while a cutout
-  material (alpha mask) casts a shadow, since the bake would draw its leaves
-  as solid cards. An unlit material has no light to bake.
+  material (alpha mask) casts a shadow whose mask the bake cannot read, since
+  it would draw its leaves as solid cards: a KTX2 texture, one that does not
+  decode, or any past the first 64 masks it can read. An unlit
+  material has no light to bake.
 - The lights still cast live shadows, which now shade only their highlights,
   so a baked setup costs about as much to draw as a live one.
 

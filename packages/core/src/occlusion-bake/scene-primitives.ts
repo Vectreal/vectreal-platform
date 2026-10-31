@@ -14,6 +14,11 @@ export interface ScenePrimitive {
 	material: Material | null
 	/** Column-major, as glTF stores it. */
 	worldMatrix: number[]
+	/**
+	 * An animation turns, moves or reshapes it: a channel targets its node or
+	 * an ancestor, or it has morph targets. A bake holds its rest pose only.
+	 */
+	animated: boolean
 }
 
 /*
@@ -26,11 +31,22 @@ export function listScenePrimitives(document: Document): ScenePrimitive[] {
 	const scene = root.getDefaultScene() ?? root.listScenes()[0]
 	if (!scene) return []
 
+	const targeted = new Set(
+		root
+			.listAnimations()
+			.flatMap((animation) => animation.listChannels())
+			.map((channel) => channel.getTargetNode())
+	)
+	// Children move with their parent.
+	const moves = (node: Node | null): boolean =>
+		node !== null && (targeted.has(node) || moves(node.getParentNode()))
+
 	const primitives: ScenePrimitive[] = []
 	scene.traverse((node) => {
 		const mesh = node.getMesh()
 		if (!mesh) return
 		const worldMatrix = Array.from(node.getWorldMatrix())
+		const moved = moves(node)
 		for (const primitive of mesh.listPrimitives()) {
 			if (primitive.getMode() !== Primitive.Mode['TRIANGLES']) continue
 			primitives.push({
@@ -38,7 +54,8 @@ export function listScenePrimitives(document: Document): ScenePrimitive[] {
 				mesh,
 				primitive,
 				material: primitive.getMaterial(),
-				worldMatrix
+				worldMatrix,
+				animated: moved || primitive.listTargets().length > 0
 			})
 		}
 	})
