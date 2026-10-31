@@ -31,6 +31,7 @@ const SCENE_SETTINGS_FIELDS = {
 	camera: true,
 	interactions: true,
 	controls: true,
+	lighting: true,
 	environment: true,
 	shadows: true,
 	normalization: true,
