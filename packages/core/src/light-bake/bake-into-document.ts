@@ -4,6 +4,7 @@ import {
 	bakeReport,
 	type OcclusionBakeReport
 } from '../occlusion-bake/bake-into-document'
+import { decodeCutoutMasks } from '../occlusion-bake/cutouts'
 import {
 	castsOcclusion,
 	planOcclusionBake,
@@ -11,12 +12,11 @@ import {
 	type OcclusionBakeSkipReason,
 	type OcclusionBakeTarget
 } from '../occlusion-bake/plan'
-import { type ScenePrimitive } from '../occlusion-bake/scene-primitives'
 import { encodeBakePng } from '../occlusion-bake/uv-trace'
 import { bakedLightsSignature } from '../scene-lighting/baked-lights'
 
 import type { ResolvedLighting } from '../scene-lighting/resolve-lighting'
-import type { Document, Material, Node } from '@gltf-transform/core'
+import type { Document, Material } from '@gltf-transform/core'
 import type { WebGLRenderer } from 'three'
 
 /** What a light bake did, by material name; the same shape as the occlusion report. */
@@ -36,7 +36,15 @@ export async function bakeLightsIntoDocument(
 	options?: LightBakeOptions
 ): Promise<LightBakeReport> {
 	const planned = planOcclusionBake(document, { existingOcclusion: 'bake' })
-	const skipReason = lightSkipReasons(planned, animatedNodes(document))
+	// A cutout casts solid where its mask did not decode or found no layer,
+	// so the bake must know which before it plans; the trace decodes again.
+	const casting = planned.primitives.filter(castsOcclusion)
+	const { layerOf } = await decodeCutoutMasks(casting)
+	const castsSolidCutout = casting.some(
+		({ material }) =>
+			material?.getAlphaMode() === 'MASK' && !layerOf.has(material)
+	)
+	const skipReason = lightSkipReasons(planned, castsSolidCutout)
 	const plan: OcclusionBakePlan = {
 		...planned,
 		targets: [],
@@ -65,51 +73,32 @@ export async function bakeLightsIntoDocument(
 	return bakeReport(document, baked, plan.skipped)
 }
 
-/** Every node an animation moves; their children move with them. */
-function animatedNodes(document: Document): Set<Node> {
-	return new Set(
-		document
-			.getRoot()
-			.listAnimations()
-			.flatMap((animation) => animation.listChannels())
-			.map((channel) => channel.getTargetNode())
-			.filter((node): node is Node => node !== null)
-	)
-}
-
 /*
   What a light map cannot hold that occlusion can. Light depends on which way
-  a surface faces, so a surface seen from both sides, or turned or reshaped by
-  an animation, would carry the rest pose's light into every other. And the
+  a surface faces, so a surface seen from both sides would carry one side's
+  light onto the other. (The planner already skips animated parts.) And the
   map holds every shadow on a surface in place of the live lights' own: a part
   that moves would leave its rest-pose shadow behind, and one drawn several
   times casts nothing in the bake, so while any part does either, the rest is
-  left to the live lights too. So is it while a cutout casts: the bake traces
-  every caster as solid. An unlit material draws no light, baked or live.
+  left to the live lights too. So is it while a cutout casts as solid, its
+  mask unread: KTX2, an image that does not decode, or one past the layers
+  the bake reads. An unlit material draws no light, baked or live.
 */
 function lightSkipReasons(
 	plan: OcclusionBakePlan,
-	moving: Set<Node>
+	castsSolidCutout: boolean
 ): (target: OcclusionBakeTarget) => OcclusionBakeSkipReason | undefined {
-	const moves = (node: Node | null): boolean =>
-		node !== null && (moving.has(node) || moves(node.getParentNode()))
-	const animated = ({ node, primitive }: ScenePrimitive) =>
-		moves(node) || primitive.listTargets().length > 0
 	const castsUnbakeable = plan.primitives.some(
 		(part) =>
-			animated(part) ||
+			part.animated ||
 			part.node.getSkin() !== null ||
 			part.node.getExtension('EXT_mesh_gpu_instancing') !== null
 	)
-	const castsCutout = plan.primitives.some(
-		(part) => castsOcclusion(part) && part.material?.getAlphaMode() === 'MASK'
-	)
-	return ({ material, primitives }) => {
+	return ({ material }) => {
 		if (material.getExtension('KHR_materials_unlit')) return 'unlit'
 		if (material.getDoubleSided()) return 'double-sided'
-		if (primitives.some(animated)) return 'animated'
 		if (castsUnbakeable) return 'moving-shadows'
-		if (castsCutout) return 'cutout-shadows'
+		if (castsSolidCutout) return 'cutout-shadows'
 		return undefined
 	}
 }

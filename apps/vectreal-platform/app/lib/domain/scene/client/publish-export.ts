@@ -132,11 +132,11 @@ export const OCCLUSION_SKIP_REASONS: Record<OcclusionBakeSkipReason, string> = {
 	'overlapping-uvs': 'parts of it share the same UVs',
 	'double-sided':
 		'it is drawn from both sides, which one light map cannot light',
-	animated: 'an animation moves it, and a light map holds one pose',
+	animated: 'an animation moves it, and a bake holds one pose',
 	'moving-shadows':
 		'another part moves or repeats, and its shadow here cannot be baked',
 	'cutout-shadows':
-		'a cutout casts a shadow here, which the bake would draw solid',
+		'a cutout whose mask cannot be read casts a shadow here, which the bake would draw solid',
 	unlit: 'it is unlit, so there is no light to bake'
 }
 

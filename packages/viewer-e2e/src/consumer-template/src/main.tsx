@@ -38,6 +38,9 @@ declare global {
 						far: number
 						mirrored: number
 						canopy: number
+						leafSolid: number
+						leafClearU: number
+						leafClearV: number
 						shared: number
 						loaded: boolean
 					}

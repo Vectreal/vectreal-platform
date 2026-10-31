@@ -65,8 +65,10 @@ const boxCorners = (
   floor carries no
   normals and the whole scene is mirrored, so the normals the baker computes
   have to survive the reversed winding.
+  With `mask`, a leaf card hangs over a third spot, alpha-masked by that
+  image, so only its opaque texels may shade the floor.
 */
-function floorScene() {
+function floorScene(mask?: Uint8Array) {
 	const document = new Document()
 	document.createBuffer()
 	const accessor = (type: 'VEC2' | 'VEC3' | 'SCALAR', values: number[]) =>
@@ -124,7 +126,52 @@ function floorScene() {
 					)
 			)
 	)
+	if (mask) {
+		const leaf = document
+			.createPrimitive()
+			.setAttribute(
+				'POSITION',
+				accessor(
+					'VEC3',
+					[0.1, 0.15, 0.05, 0.3, 0.15, 0.05, 0.3, 0.15, 0.25, 0.1, 0.15, 0.25]
+				)
+			)
+			.setAttribute('TEXCOORD_0', accessor('VEC2', [0, 0, 1, 0, 1, 1, 0, 1]))
+			.setIndices(accessor('SCALAR', [0, 1, 2, 0, 2, 3]))
+			.setMaterial(
+				document
+					.createMaterial('leaf')
+					.setAlphaMode('MASK')
+					.setBaseColorTexture(
+						document.createTexture().setImage(mask).setMimeType('image/png')
+					)
+			)
+		document.getRoot().listMeshes()[0].addPrimitive(leaf)
+	}
 	return document
+}
+
+/*
+  Four texels as a PNG, row 0 at UV v = 0: opaque only where u > 0.5 and
+  v < 0.5, so a mask read upside down or mirrored shades the wrong spot.
+*/
+async function quadrantPng(): Promise<Uint8Array> {
+	const clear = [255, 255, 255, 0]
+	const opaque = [255, 255, 255, 255]
+	const canvas = new OffscreenCanvas(2, 2)
+	canvas
+		.getContext('2d')!
+		.putImageData(
+			new ImageData(
+				new Uint8ClampedArray([...clear, ...opaque, ...clear, ...clear]),
+				2,
+				2
+			),
+			0,
+			0
+		)
+	const blob = await canvas.convertToBlob({ type: 'image/png' })
+	return new Uint8Array(await blob.arrayBuffer())
 }
 
 /** One small light straight overhead: the canopy and the box each block it. */
@@ -158,7 +205,7 @@ async function decodePng(png: Uint8Array) {
   back out of the published file.
 */
 async function bake() {
-	const glb = await new WebIO().writeBinary(floorScene())
+	const glb = await new WebIO().writeBinary(floorScene(await quadrantPng()))
 	const renderer = new WebGLRenderer()
 	try {
 		let report: OcclusionBakeReport | undefined
@@ -233,6 +280,9 @@ async function bake() {
 				far: texelAt(light, 0.95, 0.95),
 				mirrored: texelAt(light, 0.7, 0.8),
 				canopy: texelAt(light, 0.25, 0.5),
+				leafSolid: texelAt(light, 0.25, 0.1),
+				leafClearU: texelAt(light, 0.15, 0.1),
+				leafClearV: texelAt(light, 0.25, 0.2),
 				shared: texelAt(light, 0.915, 0.065),
 				loaded: Boolean(
 					loaded?.lightMap &&

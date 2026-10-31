@@ -1,14 +1,15 @@
+import { readableCutout } from './cutouts'
 import { castsOcclusion, type OcclusionBakePlan } from './plan'
 
 import type { OcclusionBakeOptions } from './options'
 
 /** Raised whenever the baker's output changes for the same input. */
-const OCCLUSION_BAKE_VERSION = 1
+const OCCLUSION_BAKE_VERSION = 2
 
 /*
   Identifies a bake by everything that changes its pixels: where every
   triangle is, its normals and UVs, which materials are baked and which cast
-  no occlusion, and the options. A bake made for a preview is reused at publish
+  no occlusion, the mask each cutout casts through, and the options. A bake made for a preview is reused at publish
   only while this still matches.
 */
 export function occlusionBakeSignature(
@@ -39,6 +40,23 @@ export function occlusionBakeSignature(
 		])
 		for (const semantic of ['POSITION', 'NORMAL', 'TEXCOORD_0']) {
 			hash.array(primitive.getAttribute(semantic)?.getArray())
+		}
+		const cutout = castsOcclusion(entry) ? readableCutout(material) : undefined
+		if (cutout) {
+			hash.numbers([
+				cutout.cutoff,
+				cutout.alphaFactor,
+				cutout.texCoord,
+				...cutout.uvTransform,
+				...cutout.wrap
+			])
+			hash.array(cutout.image)
+			hash.array(primitive.getAttribute('COLOR_0')?.getArray())
+			hash.array(
+				primitive.getAttribute(`TEXCOORD_${cutout.texCoord}`)?.getArray()
+			)
+		} else {
+			hash.numbers([-1])
 		}
 		hash.array(primitive.getIndices()?.getArray())
 	}

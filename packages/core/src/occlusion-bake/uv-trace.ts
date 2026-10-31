@@ -4,9 +4,13 @@ import {
 	BufferGeometry,
 	Color,
 	CustomBlending,
+	ClampToEdgeWrapping,
+	DataArrayTexture,
+	DataTexture,
 	DoubleSide,
 	GLSL3,
 	HalfFloatType,
+	LinearFilter,
 	Matrix3,
 	Matrix4,
 	Mesh,
@@ -14,6 +18,8 @@ import {
 	OneFactor,
 	OrthographicCamera,
 	PlaneGeometry,
+	RedFormat,
+	RGBAFormat,
 	Scene,
 	ShaderMaterial,
 	UnsignedByteType,
@@ -22,8 +28,20 @@ import {
 	type IUniform,
 	type WebGLRenderer
 } from 'three'
-import { BVHShaderGLSL, MeshBVH, MeshBVHUniformStruct } from 'three-mesh-bvh'
+import {
+	BVHShaderGLSL,
+	FloatVertexAttributeTexture,
+	MeshBVH,
+	MeshBVHUniformStruct
+} from 'three-mesh-bvh'
 
+import {
+	cutoutVertexAlphas,
+	cutoutUvs,
+	decodeCutoutMasks,
+	MASK_SIZE,
+	type CutoutLayers
+} from './cutouts'
 import { castsOcclusion, readUvs, type OcclusionBakeTarget } from './plan'
 import { triangleIndices, type ScenePrimitive } from './scene-primitives'
 
@@ -72,11 +90,14 @@ export const SAMPLES_PER_PASS = 16
 const GUTTER = 8
 /** How far a ray starts off its surface, as a share of the scene diagonal. */
 const RAY_BIAS = 5e-4
+/** Cutout texels a ray passes through before it counts as blocked. */
+const MAX_CUTOUT_HITS = 8
 
 /*
   Raytraces each target material in the space of its first UV set: every
   triangle is drawn at its UVs, and each texel traces rays from the surface
   point it covers into a BVH of the whole scene that `castsOcclusion` admits.
+  An alpha-masked caster blocks a ray only where its mask is opaque.
   Rays run a few at a time, yielding between draws, so a slow GPU is not reset
   and the page stays responsive. Undefined when nothing in the scene blocks a
   ray, which leaves the result to the caller.
@@ -87,7 +108,8 @@ export async function traceInUvSpace(
 ): Promise<UvBake[] | undefined> {
 	const { size, samples } = trace
 	const casting = trace.primitives.filter(castsOcclusion)
-	const occluder = mergedOccluders(casting)
+	const cutouts = await decodeCutoutMasks(casting)
+	const occluder = mergedOccluders(casting, cutouts.layerOf)
 	if (!occluder) return undefined
 	// Sized by what casts and what is baked: a skinned or instanced part is not
 	// drawn where its node puts it, so its bind pose would misjudge the scale.
@@ -101,13 +123,36 @@ export async function traceInUvSpace(
 	const bvh = new MeshBVH(occluder)
 	const bvhUniform = new MeshBVHUniformStruct()
 	bvhUniform.updateFrom(bvh)
+	const cutoutUvTexture = new FloatVertexAttributeTexture()
+	cutoutUvTexture.updateFrom(occluder.getAttribute('cutout') as BufferAttribute)
+	const cutoutMasks = new DataArrayTexture(
+		cutouts.layers,
+		MASK_SIZE,
+		MASK_SIZE,
+		cutouts.layers.length / (MASK_SIZE * MASK_SIZE)
+	)
+	cutoutMasks.format = RedFormat
+	cutoutMasks.minFilter = cutoutMasks.magFilter = LinearFilter
+	// Each layer wraps as its own texture does, in the shader.
+	cutoutMasks.wrapS = cutoutMasks.wrapT = ClampToEdgeWrapping
+	cutoutMasks.needsUpdate = true
+	const cutoutParams = new DataTexture(
+		cutouts.params,
+		cutouts.params.length / 4,
+		1,
+		RGBAFormat
+	)
+	cutoutParams.needsUpdate = true
 
 	const traceMaterial = new ShaderMaterial({
 		glslVersion: GLSL3,
-		defines: { BVH_STACK_DEPTH: 60 },
+		defines: { BVH_STACK_DEPTH: 60, MAX_CUTOUT_HITS },
 		uniforms: {
 			...trace.uniforms,
 			bvh: { value: bvhUniform },
+			cutoutUvs: { value: cutoutUvTexture },
+			cutoutMasks: { value: cutoutMasks },
+			cutoutParams: { value: cutoutParams },
 			diagonal: { value: diagonal },
 			bias: { value: RAY_BIAS * diagonal },
 			firstSample: { value: 0 },
@@ -210,6 +255,9 @@ export async function traceInUvSpace(
 		resolveMaterial.dispose()
 		disposeGeometries(resolveScene)
 		bvhUniform.dispose()
+		cutoutUvTexture.dispose()
+		cutoutMasks.dispose()
+		cutoutParams.dispose()
 		occluder.dispose()
 	}
 	return baked
@@ -270,32 +318,57 @@ function worldBounds(
 	)
 }
 
-/** Every occluding triangle in world space, as one geometry for the BVH. */
+/*
+  Every occluding triangle in world space, as one geometry for the BVH. Each
+  vertex carries `cutout`: its mask UV, its mask layer and its vertex alpha,
+  or a layer of -1 where the part is solid.
+*/
 function mergedOccluders(
-	primitives: ScenePrimitive[]
+	primitives: ScenePrimitive[],
+	layerOf: CutoutLayers['layerOf']
 ): BufferGeometry | undefined {
 	const positions: Float32Array[] = []
+	const cutouts: Float32Array[] = []
 	const indices: number[] = []
 	let offset = 0
-	for (const { primitive, worldMatrix } of primitives) {
+	for (const { primitive, material, worldMatrix } of primitives) {
 		const world = worldPositions(primitive, worldMatrix)
+		const count = world.length / 3
 		const triangles = triangleIndices(primitive)
 		for (let i = 0; i < triangles.length; i++)
 			indices.push(triangles[i] + offset)
 		positions.push(world)
-		offset += world.length / 3
+		const cutout = new Float32Array(count * 4)
+		const mask = material ? layerOf.get(material) : undefined
+		const uvs = mask && cutoutUvs(primitive, mask.mask)
+		const alphas = mask && cutoutVertexAlphas(primitive)
+		for (let i = 0; i < count; i++) {
+			cutout[i * 4] = uvs?.[i * 2] ?? 0
+			cutout[i * 4 + 1] = uvs?.[i * 2 + 1] ?? 0
+			cutout[i * 4 + 2] = mask?.layer ?? -1
+			cutout[i * 4 + 3] = alphas?.[i] ?? 0
+		}
+		cutouts.push(cutout)
+		offset += count
 	}
 	if (indices.length === 0) return undefined
 
-	const merged = new Float32Array(offset * 3)
+	return new BufferGeometry()
+		.setAttribute('position', new BufferAttribute(concat(positions), 3))
+		.setAttribute('cutout', new BufferAttribute(concat(cutouts), 4))
+		.setIndex(new BufferAttribute(new Uint32Array(indices), 1))
+}
+
+function concat(parts: Float32Array[]): Float32Array {
+	const merged = new Float32Array(
+		parts.reduce((total, part) => total + part.length, 0)
+	)
 	let at = 0
-	for (const part of positions) {
+	for (const part of parts) {
 		merged.set(part, at)
 		at += part.length
 	}
-	return new BufferGeometry()
-		.setAttribute('position', new BufferAttribute(merged, 3))
-		.setIndex(new BufferAttribute(new Uint32Array(indices), 1))
+	return merged
 }
 
 /** One target primitive in world space with the normals and UVs the tracer reads. */
@@ -379,12 +452,16 @@ void main() {
 const TRACE_PRELUDE = /* glsl */ `
 precision highp isampler2D;
 precision highp usampler2D;
+precision highp sampler2DArray;
 
 ${BVHShaderGLSL.common_functions}
 ${BVHShaderGLSL.bvh_struct_definitions}
 ${BVHShaderGLSL.bvh_ray_functions}
 
 uniform BVH bvh;
+uniform sampler2D cutoutUvs;
+uniform sampler2DArray cutoutMasks;
+uniform sampler2D cutoutParams;
 uniform float diagonal;
 uniform float bias;
 uniform int firstSample;
@@ -427,14 +504,36 @@ vec3 aroundAxis(vec3 axis, float x, float y, float z) {
 	return normalize(tangent * x + bitangent * y + axis * z);
 }
 
+// A mask coordinate wrapped as glTF's sampler says: 0 repeat, 1 clamp, 2 mirror.
+float wrapped(float x, float mode) {
+	if (mode > 1.5) return 1.0 - abs(mod(x, 2.0) - 1.0);
+	if (mode > 0.5) return clamp(x, 0.0, 1.0);
+	return fract(x);
+}
+
+// Whether anything opaque lies within maxDistance along the ray. A hit on a
+// cutout's clear texel is passed through, and the ray goes on from there.
 bool blocked(vec3 origin, vec3 direction, float maxDistance) {
 	uvec4 faceIndices;
 	vec3 faceNormal;
 	vec3 barycoord;
 	float side;
 	float dist;
-	bool hit = bvhIntersectFirstHit(bvh, origin, direction, faceIndices, faceNormal, barycoord, side, dist);
-	return hit && dist <= maxDistance;
+	for (int i = 0; i < MAX_CUTOUT_HITS; i++) {
+		bool hit = bvhIntersectFirstHit(bvh, origin, direction, faceIndices, faceNormal, barycoord, side, dist);
+		if (!hit || dist > maxDistance) return false;
+		vec4 cutout = textureSampleBarycoord(cutoutUvs, barycoord, faceIndices.xyz);
+		if (cutout.z < -0.5) return true;
+		int layer = int(round(cutout.z));
+		vec4 params = texelFetch(cutoutParams, ivec2(layer, 0), 0);
+		vec2 wrap = params.rg * 255.0;
+		vec2 uv = vec2(wrapped(cutout.x, wrap.x), wrapped(cutout.y, wrap.y));
+		float alpha = texture(cutoutMasks, vec3(uv, float(layer))).r * cutout.w;
+		if (alpha >= params.b) return true;
+		origin += direction * (dist + bias);
+		maxDistance -= dist + bias;
+	}
+	return true;
 }
 `
 

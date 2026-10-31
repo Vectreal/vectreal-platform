@@ -8,16 +8,37 @@ import { occlusionBakeSignature } from './signature'
 function quadDocument({
 	translation = [0, 0, 0] as [number, number, number],
 	uvMax = 1,
-	alphaMode = 'OPAQUE' as 'OPAQUE' | 'BLEND'
+	alphaMode = 'OPAQUE' as 'OPAQUE' | 'BLEND' | 'MASK',
+	cutoff = 0.5,
+	mask = undefined as Uint8Array | undefined,
+	wrapS = 10497 as 10497 | 33071,
+	vertexAlpha = undefined as number | undefined
 } = {}) {
 	const document = new Document()
-	const vec = (type: 'VEC2' | 'VEC3', values: number[]) =>
+	const vec = (type: 'VEC2' | 'VEC3' | 'VEC4', values: number[]) =>
 		document.createAccessor().setType(type).setArray(new Float32Array(values))
 	const primitive = document
 		.createPrimitive()
 		.setAttribute('POSITION', vec('VEC3', [0, 0, 0, 1, 0, 0, 0, 1, 0]))
 		.setAttribute('TEXCOORD_0', vec('VEC2', [0, 0, uvMax, 0, 0, uvMax]))
-		.setMaterial(document.createMaterial('m').setAlphaMode(alphaMode))
+	if (vertexAlpha !== undefined) {
+		primitive.setAttribute(
+			'COLOR_0',
+			vec('VEC4', [1, 1, 1, vertexAlpha, 1, 1, 1, 1, 1, 1, 1, 1])
+		)
+	}
+	primitive.setMaterial(
+		document
+			.createMaterial('m')
+			.setAlphaMode(alphaMode)
+			.setAlphaCutoff(cutoff)
+			.setBaseColorTexture(
+				mask
+					? document.createTexture().setImage(mask).setMimeType('image/png')
+					: null
+			)
+	)
+	primitive.getMaterial()!.getBaseColorTextureInfo()?.setWrapS(wrapS)
 	document
 		.createScene()
 		.addChild(
@@ -45,6 +66,42 @@ describe('occlusionBakeSignature', () => {
 		expect(signatureOf(quadDocument({ translation: [0, 1, 0] }))).not.toBe(base)
 		expect(signatureOf(quadDocument({ uvMax: 0.5 }))).not.toBe(base)
 		expect(signatureOf(quadDocument({ alphaMode: 'BLEND' }))).not.toBe(base)
+		const cutout = signatureOf(
+			quadDocument({ alphaMode: 'MASK', mask: new Uint8Array([1]) })
+		)
+		expect(cutout).not.toBe(base)
+		expect(
+			signatureOf(
+				quadDocument({ alphaMode: 'MASK', mask: new Uint8Array([2]) })
+			)
+		).not.toBe(cutout)
+		expect(
+			signatureOf(
+				quadDocument({
+					alphaMode: 'MASK',
+					mask: new Uint8Array([1]),
+					cutoff: 0.6
+				})
+			)
+		).not.toBe(cutout)
+		expect(
+			signatureOf(
+				quadDocument({
+					alphaMode: 'MASK',
+					mask: new Uint8Array([1]),
+					wrapS: 33071
+				})
+			)
+		).not.toBe(cutout)
+		expect(
+			signatureOf(
+				quadDocument({
+					alphaMode: 'MASK',
+					mask: new Uint8Array([1]),
+					vertexAlpha: 0.5
+				})
+			)
+		).not.toBe(cutout)
 		expect(
 			signatureOf(quadDocument(), {
 				...DEFAULT_OCCLUSION_BAKE_OPTIONS,

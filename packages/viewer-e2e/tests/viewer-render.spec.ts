@@ -223,8 +223,9 @@ test('publishing bakes occlusion on the GPU into the GLB, from the published cor
 	const bake = await page.evaluate(() => window.__BAKE_E2E__)
 	if (bake?.status !== 'baked') throw new Error(bake?.error ?? 'no bake')
 
-	// The floor is baked; the box and canopy have no UVs, so they only cast.
-	expect(bake.baked).toEqual(['floor'])
+	// The floor and leaf are baked; the box and canopy have no UVs, so they
+	// only cast.
+	expect(bake.baked).toEqual(['floor', 'leaf'])
 	expect(bake.skipped).toEqual(['box:no-uv0', 'canopy:no-uv0'])
 
 	// Dark under the box, partly open beside it, open far from it. The open
@@ -247,12 +248,19 @@ test('publishing bakes occlusion on the GPU into the GLB, from the published cor
 	// small light overhead: full light in the open, none under the box or the
 	// canopy, and the right way up. Stored as the square root of its share of
 	// the scale, so full light reads 255.
-	expect(bake.lights.baked).toEqual(['floor'])
+	expect(bake.lights.baked).toEqual(['floor', 'leaf'])
 	expect(bake.lights.scale).toBeCloseTo(1)
 	expect(bake.lights.far).toBeGreaterThan(245)
 	expect(bake.lights.mirrored).toBeGreaterThan(245)
 	expect(bake.lights.under).toBeLessThan(10)
 	expect(bake.lights.canopy).toBeLessThan(10)
+	// The leaf shades the floor only under its opaque quadrant, the one at
+	// low v: read upside down, the shadow lands on leafClearV instead. The
+	// occlusion bake casts through the same ray test, but one quadrant of a
+	// small card moves its wide-angle occlusion too little to assert here.
+	expect(bake.lights.leafSolid).toBeLessThan(10)
+	expect(bake.lights.leafClearU).toBeGreaterThan(245)
+	expect(bake.lights.leafClearV).toBeGreaterThan(245)
 	// Open floor and the scrap under the box share these texels: half lit,
 	// which stores as the square root of a half, about 180. A sum would clip
 	// to full light.

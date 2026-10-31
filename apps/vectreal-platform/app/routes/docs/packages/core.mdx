@@ -507,16 +507,21 @@ reason:
 | `existing-occlusion` | It has an occlusion texture already, which is kept |
 | `shared-geometry` | One mesh is placed more than once, by several nodes or GPU instancing, and each copy is occluded differently |
 | `skinned` | A skin moves it, so no one bake fits every pose |
+| `animated` | An animation channel moves its node or a parent, or it has morph targets, so the bake would hold only the rest pose |
 | `no-uv0` | It has no first UV set |
 | `tiling-uvs` | Its UVs repeat the texture |
 | `overlapping-uvs` | Two parts share texels, as mirrored halves usually do |
 
-Every triangle in the scene casts occlusion, skipped or not, with three
+Every triangle in the scene casts occlusion, skipped or not, with a few
 exceptions (`castsOcclusion` answers for each part). Glass, meaning a material
 with `KHR_materials_transmission` or blended transparency, is baked like any
-surface but lets the rays through. A skinned or GPU-instanced part casts
-nothing, because the viewer draws it somewhere other than where its node puts
-it.
+surface but lets the rays through. An alpha-masked part (a leaf card, say)
+blocks rays only where its base color alpha reaches its cutoff, read from a
+PNG, JPEG or WebP texture, times its vertex color alpha. A mask in any other
+format, such as KTX2, one that does not decode, and any past the first 64
+readable masks cast as solid. A masked part whose cutoff is above 1 is never
+drawn, so it casts nothing. A skinned, animated or GPU-instanced part casts nothing, because the
+viewer does not always draw it where its node puts it.
 
 **`bakeOcclusion(plan, renderer, options?)`** needs a browser or a worker with a
 `WebGLRenderer` (an `OffscreenCanvas` one works). It returns RGBA bytes per
@@ -591,13 +596,11 @@ It plans with `planOcclusionBake(document, { existingOcclusion: 'bake' })`, so
 it skips materials for the same reasons, except that an occlusion texture does
 not stop it: bake ambient occlusion first, then the lights. It also skips a
 double-sided material, as `double-sided`: one map cannot light both its sides.
-And it skips, as `animated`, a material on a node an animation moves (or under
-one), or with morph targets, because the map holds the rest pose's light.
 While any part moves, is skinned or is GPU-instanced, it skips every other
 material as `moving-shadows`: a map replaces the live shadows, and it cannot
 hold the shadow of a part that moves or is drawn more than once. While an
-alpha-masked part casts, it skips them as `cutout-shadows`, because the bake
-traces every caster as solid. An unlit material is skipped as `unlit`. The options are
+alpha-masked part casts as solid, it skips them as
+`cutout-shadows`, because that part is traced as solid. An unlit material is skipped as `unlit`. The options are
 `resolution` (512) and `samples` (128 rays per light per texel).
 
 There is no ratified glTF light map, so the map is written under a Vectreal
