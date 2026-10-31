@@ -295,6 +295,14 @@
 				"command": "pnpm exec tsx scripts/measure-environment-lights.ts && pnpm exec prettier --write ../../packages/core/src/scene-lighting/environment-lights.ts"
 			}
 		},
+		"render-lighting-thumbnails": {
+			"executor": "nx:run-commands",
+			"outputs": ["{projectRoot}/public/media/images/lighting"],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/render-lighting-thumbnails.ts"
+			}
+		},
 		"bake-share-cards": {
 			"executor": "nx:run-commands",
 			"outputs": [
