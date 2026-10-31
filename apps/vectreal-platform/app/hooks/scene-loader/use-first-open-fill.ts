@@ -86,7 +86,7 @@ export function useFirstOpenFill({
 		savedMeta && savedSettings
 			? planFirstOpenFill({
 					thumbnailUrl: savedMeta.thumbnailUrl,
-					shadows: savedSettings.shadows
+					settings: savedSettings
 				})
 			: null
 	const needsBake = plan?.bake === true

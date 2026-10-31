@@ -1,5 +1,5 @@
 import { cn } from '@shared/utils'
-import { aimLegacyLight } from '@vctrl/core'
+import { aimLight, resolveLighting } from '@vctrl/core'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -15,6 +15,7 @@ import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-vi
 import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
 	currentSceneIdAtom,
+	editedLightRoleAtom,
 	failedEnvironmentFilesAtom,
 	isPreviewModeAtom,
 	openHotspotInHotspotToolAtom,
@@ -27,11 +28,11 @@ import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
 	heldHotspotCardIdAtom,
+	lightingAtom,
 	presentationAtom,
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
-	selectedCameraIdAtom,
-	shadowsAtom
+	selectedCameraIdAtom
 } from '../../lib/stores/scene-settings-store'
 import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbnail'
 
@@ -86,20 +87,23 @@ const PublisherPage = () => {
 	// shadows, animation and hotspots keep following the loaded model.
 	const comparedModel = useAtomValue(comparedModelAtom)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
-	const setShadows = useSetAtom(shadowsAtom)
+	const setLighting = useSetAtom(lightingAtom)
+	const editedLightRole = useAtomValue(editedLightRoleAtom)
 	const {
 		animation,
 		bounds,
 		camera,
 		controls,
 		environment,
+		lighting,
 		shadows,
 		normalization,
 		hotspots
 	} = useAtomValue(sceneViewerSettingsAtom)
 
-	// Persist drags of the in-scene shadow light handle. Debounced so a drag
-	// commits one re-bake when the user settles, not on every pointer move.
+	// Persist drags of the in-scene light handle into the light it aims.
+	// Debounced so a drag commits one re-bake when the user settles, not on
+	// every pointer move.
 	const shadowLightCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(
 		null
 	)
@@ -109,16 +113,20 @@ const PublisherPage = () => {
 				clearTimeout(shadowLightCommitTimer.current)
 			}
 			shadowLightCommitTimer.current = setTimeout(() => {
-				setShadows((prev) => ({
-					...prev,
-					light: {
-						...prev.light,
-						position: aimLegacyLight(prev.light?.position, position)
+				setLighting((prev) => {
+					const direction = aimLight(position, prev.environment?.rotation ?? 0)
+					return {
+						...prev,
+						lights: (prev.lights ?? []).map((light) =>
+							light.role === editedLightRole
+								? { ...light, ...direction }
+								: light
+						)
 					}
-				}))
+				})
 			}, SHADOW_LIGHT_COMMIT_DEBOUNCE_MS)
 		},
-		[setShadows]
+		[setLighting, editedLightRole]
 	)
 	// Clear any pending shadow-light commit on unmount so a debounced setShadows
 	// can't fire into an unmounted tree (e.g. navigating away mid-drag).
@@ -141,10 +149,16 @@ const PublisherPage = () => {
 	const openComposeTool = useAtomValue(openComposeToolAtom)
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const openHotspotInHotspotTool = useSetAtom(openHotspotInHotspotToolAtom)
-	// The in-scene light handle only belongs to the shadow tool, so show it only
-	// while that tool's panel is open (and shadows are on).
-	const isShadowToolActive =
-		openComposeTool === 'shadow' && (shadows?.enabled ?? false)
+	// The in-scene light handle belongs to the light the Lighting tool has
+	// open, so show it only while that tool's panel is open on a light.
+	const isLightHandleActive =
+		openComposeTool === 'lighting' &&
+		editedLightRole !== null &&
+		// The lights the viewer draws a handle for: on and with any strength.
+		resolveLighting({ lighting }).lights.some(
+			(light) =>
+				light.role === editedLightRole && light.enabled && light.intensity > 0
+		)
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
 		'Scene thumbnail preview'
@@ -281,11 +295,13 @@ const PublisherPage = () => {
 					showAnimationControls={isPreviewMode}
 					cameraOptions={cameraOptions}
 					controlsOptions={controls}
+					lighting={lighting}
 					envOptions={environment}
 					shadowsOptions={shadows}
 					bakedShadow={bakedShadow}
 					onShadowBakeReady={registerShadowBakeCapture}
-					shadowLightEditable={isShadowToolActive}
+					shadowLightEditable={isLightHandleActive}
+					editableLightRole={editedLightRole ?? undefined}
 					hotspots={hotspots}
 					/*
 					  The publisher is the surface those two flags exist for: it is where
@@ -298,7 +314,7 @@ const PublisherPage = () => {
 					showHiddenHotspots
 					/*
 					  Gated on the tool, like `onHotspotSelect` below it. Left ungated
-					  the ring stayed on after switching to the shadow or camera tool,
+					  the ring stayed on after switching to the lighting or camera tool,
 					  where there is no gizmo and no way to clear it from the canvas.
 					*/
 					selectedHotspotId={

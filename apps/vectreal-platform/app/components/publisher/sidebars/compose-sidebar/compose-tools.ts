@@ -1,18 +1,16 @@
 import {
 	Camera,
 	Clapperboard,
+	Lightbulb,
 	Locate,
-	MountainSnow,
-	MousePointer2,
-	Tornado
+	MousePointer2
 } from 'lucide-react'
 
 import { AnimationToolSettings } from './animation-settings'
 import { CameraControlsSettings } from './camera-controls-settings'
-import { EnvironmentSettings } from './environment-settings'
 import { HotspotsSettings } from './hotspot-settings'
 import InteractionControlsSettings from './interaction-controls-settings-panel'
-import { ShadowSettings } from './shadow-settings'
+import { LightingSettings } from './lighting-settings'
 
 import type { ComposeTool } from '../../../../types/publisher-config'
 import type { LucideIcon } from 'lucide-react'
@@ -29,22 +27,13 @@ interface ComposeToolDefinition {
 
 const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 	{
-		value: 'environment',
-		label: 'Environment',
-		shortLabel: 'Environment',
+		value: 'lighting',
+		label: 'Lighting',
+		shortLabel: 'Lighting',
 		description:
-			'Shape ambient lighting, reflections, and the scene background.',
-		icon: MountainSnow,
-		component: EnvironmentSettings
-	},
-	{
-		value: 'shadow',
-		label: 'Shadows',
-		shortLabel: 'Shadows',
-		description:
-			'Adjust contact and soft shadows without opening a full settings stack.',
-		icon: Tornado,
-		component: ShadowSettings
+			'Light the model with a studio setup: the environment, up to three lights and the shadows they cast.',
+		icon: Lightbulb,
+		component: LightingSettings
 	},
 	{
 		value: 'camera-controls',

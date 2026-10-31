@@ -301,3 +301,22 @@ function migrateLegacyBackground(
 		? stageOrNone(environment.backdrop)
 		: { type: 'none' }
 }
+
+/**
+ * The direction a light stands in, read from a point along it: the in-scene
+ * handle's position, in any units. Relative to the environment's `rotation`,
+ * as a light's azimuth is stored, so the light stays put on the map when the
+ * setup turns. A point below the horizon aims the light along it.
+ */
+export function aimLight(
+	toward: [number, number, number],
+	rotation: number
+): { azimuth: number; elevation: number } {
+	const [x, y, z] = toward
+	const azimuth = degrees(Math.atan2(x, z)) - rotation
+	return {
+		// Kept in [-180, 180).
+		azimuth: ((((azimuth + 180) % 360) + 360) % 360) - 180,
+		elevation: degrees(Math.atan2(y, Math.hypot(x, z)))
+	}
+}

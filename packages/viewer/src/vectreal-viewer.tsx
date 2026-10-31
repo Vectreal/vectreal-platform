@@ -30,6 +30,7 @@ import {
 	EnvironmentProps,
 	HotspotDefinition,
 	LightingSettings,
+	SceneLightRole,
 	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
@@ -348,10 +349,16 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	// these. See the package README for the slim-embed surface.
 
 	/**
-	 * When true, renders an in-scene draggable handle for aiming the shadow light.
+	 * When true, renders an in-scene draggable handle for aiming a light.
 	 * Intended for editing surfaces (e.g. the publisher), not public viewers.
 	 */
 	shadowLightEditable?: boolean
+
+	/**
+	 * The light the handle aims, when `lighting` has several: the key when
+	 * absent. Its drags arrive through `onShadowLightChange`.
+	 */
+	editableLightRole?: SceneLightRole
 
 	/**
 	 * When true, hotspots marked `internalOnly` are drawn as well. Intended for
@@ -557,6 +564,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		showCameraControls = true,
 		// Editor affordances
 		shadowLightEditable,
+		editableLightRole,
 		showInternalHotspots = false,
 		showHiddenHotspots = false,
 		selectedHotspotId = null,
@@ -1137,6 +1145,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									normalizationOptions={normalizationOptions}
 									isModelAnimating={animation.status.active}
 									lightEditable={shadowLightEditable}
+									editableLightRole={editableLightRole}
 									onLightChange={onShadowLightChange}
 									staticBake={staticShadowBake}
 									bakedShadow={bakedShadow}

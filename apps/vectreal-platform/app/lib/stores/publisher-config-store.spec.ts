@@ -32,6 +32,7 @@ import {
 	exitHotspotCameraAtom,
 	hotspotCameraModeAtom,
 	hotspotsAtom,
+	lightingAtom,
 	selectedCameraIdAtom
 } from './scene-settings-store'
 import { defaultEnvOptions } from '../../constants/viewer-defaults'
@@ -82,7 +83,7 @@ describe('openComposeToolAtom', () => {
 		// The default is a real tool, not null, which is the other half of the trap.
 		const store = createStore()
 
-		expect(processInitialState.activeComposeTool).toBe('environment')
+		expect(processInitialState.activeComposeTool).toBe('lighting')
 		expect(store.get(openComposeToolAtom)).toBeNull()
 	})
 
@@ -94,10 +95,10 @@ describe('openComposeToolAtom', () => {
 		})
 		store.set(processAtom, (previous) => ({
 			...previous,
-			activeComposeTool: 'shadow'
+			activeComposeTool: 'lighting'
 		}))
 
-		expect(store.get(openComposeToolAtom)).toBe('shadow')
+		expect(store.get(openComposeToolAtom)).toBe('lighting')
 	})
 })
 
@@ -147,7 +148,7 @@ describe('preview mode', () => {
 	it('keeps the first snapshot when entered twice', () => {
 		const store = storeWith({
 			mode: 'compose',
-			activeComposeTool: 'shadow',
+			activeComposeTool: 'lighting',
 			showSidebar: true
 		})
 
@@ -156,7 +157,7 @@ describe('preview mode', () => {
 		store.set(enterPreviewModeAtom)
 		store.set(exitPreviewModeAtom)
 
-		expect(store.get(openComposeToolAtom)).toBe('shadow')
+		expect(store.get(openComposeToolAtom)).toBe('lighting')
 	})
 
 	describe('camera', () => {
@@ -309,32 +310,38 @@ describe('the hotspot camera mode across tools', () => {
 })
 
 describe('environmentLoadFailedAtom', () => {
-	const studio = { preset: 'studio-key', environmentResolution: '1k' } as const
+	const studio = { map: 'studio-key', resolution: '1k' } as const
 
-	it('holds for the map that failed while the settings still name it', () => {
+	it('holds for the map that failed while the lighting still names it', () => {
 		const store = createStore()
-		store.set(environmentAtom, { ...defaultEnvOptions, ...studio })
+		store.set(lightingAtom, { environment: studio })
 		store.set(
 			failedEnvironmentFilesAtom,
-			String(resolveEnvironmentFiles(studio))
+			String(
+				resolveEnvironmentFiles({
+					preset: studio.map,
+					environmentResolution: studio.resolution
+				})
+			)
 		)
 
 		expect(store.get(environmentLoadFailedAtom)).toBe(true)
 	})
 
-	it('lets go once the settings name another map', () => {
+	it('lets go once the lighting names another map', () => {
 		const store = createStore()
-		store.set(environmentAtom, { ...defaultEnvOptions, ...studio })
+		store.set(lightingAtom, { environment: studio })
 		store.set(
 			failedEnvironmentFilesAtom,
-			String(resolveEnvironmentFiles(studio))
+			String(
+				resolveEnvironmentFiles({
+					preset: studio.map,
+					environmentResolution: studio.resolution
+				})
+			)
 		)
 
-		store.set(environmentAtom, {
-			...defaultEnvOptions,
-			...studio,
-			environmentResolution: '4k'
-		})
+		store.set(lightingAtom, { environment: { ...studio, resolution: '4k' } })
 
 		expect(store.get(environmentLoadFailedAtom)).toBe(false)
 	})

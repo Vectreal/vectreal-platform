@@ -45,6 +45,7 @@ import type {
 	BakeBasis,
 	NormalizationOptions,
 	ResolvedLighting,
+	SceneLightRole,
 	ShadowsProps
 } from '@vctrl/core'
 
@@ -199,9 +200,11 @@ interface SceneShadowsOwnProps {
 	 */
 	isModelAnimating?: boolean
 	/**
-	 * When true, renders an in-scene draggable handle for aiming the key light.
+	 * When true, renders an in-scene draggable handle for aiming a light.
 	 */
 	lightEditable?: boolean
+	/** The light the handle aims; the key, or the first lit light, when absent. */
+	editableLightRole?: SceneLightRole
 	/**
 	 * When true, the bake runs in a single synchronous pass on mount instead of
 	 * fading in across frames. Intended for read-only/preview contexts so the
@@ -414,6 +417,7 @@ const SceneShadows = memo(
 		isModelAnimating = false,
 		lightEditable = false,
 		onLightChange,
+		editableLightRole,
 		staticBake = false,
 		bakedShadow,
 		onShadowBakeReady,
@@ -598,9 +602,11 @@ const SceneShadows = memo(
 			if (holdRef.current) holdRef.current.passesChanged = true
 		}, [enabled, isModelAnimating, showsPersistedBake, sized, bake])
 
-		// The handle aims the key light, or the first light there is.
+		// The handle aims the light being edited, else the key, else the first.
 		const handleLight =
-			lights.find((light) => light.role === 'key') ?? lights[0]
+			lights.find((light) => light.role === editableLightRole) ??
+			lights.find((light) => light.role === 'key') ??
+			lights[0]
 		const handlePosition = useMemo(
 			() =>
 				handleLight

@@ -126,6 +126,7 @@ const SceneEmbedViewer = memo(
 					cameraOptions={sceneData?.camera}
 					controlsOptions={sceneData?.controls}
 					envOptions={sceneData ? sceneData.environment : environment}
+					lighting={sceneData?.lighting}
 					normalizationOptions={sceneData?.normalization}
 					/*
 					  Straight from the scene's own settings, and never with

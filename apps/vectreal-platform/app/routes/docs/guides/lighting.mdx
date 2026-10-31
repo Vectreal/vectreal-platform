@@ -1,0 +1,141 @@
+# Lighting
+
+The **Lighting** tool in the Publisher sets how a scene is lit: the environment
+it reflects, up to three studio lights, and the ground their shadows land on.
+There are no shadow settings of their own. Every shadow follows from the
+lights, so moving a light moves its shadow, and a softer light casts a softer
+one.
+
+---
+
+## Setups
+
+A setup is a whole look in one click: an environment, the lights placed on
+that environment's own bright spots, and the balance between them. Each
+thumbnail shows a chrome ball and a grey ball lit by it.
+
+| Setup | Looks like |
+|---|---|
+| **Soft studio** | Even, wrapping light with a gentle shadow. The default. |
+| **Product** | A smaller key with a fill and a rim, for crisp highlights and a defined shadow |
+| **Dramatic** | A small, strong key and a rim over a dim environment |
+| **Overhead** | A key from almost straight above, the shadow pooled under the model |
+| **Daylight** | An outdoor sky with a small sun as the key, for a sharp shadow |
+| **Golden hour** | A low, warm sun with a cool fill from the other side |
+| **Overcast** | A soft sky and no added lights, for an almost shadowless look |
+| **Night** | A dim city with a cool key and a warm rim |
+
+Picking a setup keeps the background, the environment's resolution and the
+ambient occlusion you chose. Change any light, the environment or the ground
+afterwards and the label above the grid reads **Custom**. Pick the setup again
+to go back to it.
+
+**Turn** rotates the environment and every light together, so the reflections,
+the shading and the shadow stay in agreement. Turning does not count as an
+edit: the setup stays selected.
+
+---
+
+## Environment
+
+The environment is a panoramic image that lights the model and shows in its
+reflections. There are fifteen, grouped as **Studio**, **Outdoor**, **Nature**
+and **Night**. Picking one keeps the lights where they are.
+
+- **Brightness** scales the environment, and every light with it, because a
+  light's strength is measured against the environment.
+- **Resolution** is 1k or 4k. 4k sharpens reflections on glossy models and takes
+  longer to download.
+
+If a map cannot be loaded, the scene is lit by a neutral room instead and the
+panel says so.
+
+---
+
+## Lights
+
+A scene has up to three lights, one per role:
+
+- **Key light**, the main light, which shapes the model and casts the shadow it
+  stands on.
+- **Fill light**, which softens the shadows the key leaves on the model.
+- **Rim light**, which lights the model from behind to lift its edge off the
+  background.
+
+Open a light to change it:
+
+| Setting | What it does |
+|---|---|
+| **On** | Turns the light off without losing where it was |
+| **Strength** | 1 is as bright as the whole environment |
+| **Softness** | The light's size, in degrees as seen from the model. Larger is a softer light and a softer shadow |
+| **Direction** | Degrees around the model, before **Turn** is added |
+| **Height** | Degrees above the horizon; 90 is straight overhead |
+| **Color** | A color temperature from 2000 K (warm) to 10000 K (cool); 6600 K is neutral white |
+
+While the Lighting tool is open, the scene shows a handle for the light you
+have open, or for the key light. Drag it to aim the light.
+
+A shadow's darkness follows from the lights alone. Ground that a light cannot
+reach keeps `1 / (1 + strength × sin(height))` of the light it would get, so an
+overhead light at strength 1 leaves its shadow at half the brightness around
+it.
+
+---
+
+## Ground shadow
+
+**Ground shadow** puts a floor under the model that catches the shadows its
+lights cast. The floor itself is invisible: only the shadow shows, over
+whatever is behind the model.
+
+---
+
+## Background
+
+| Background | Behind the model |
+|---|---|
+| **None** | Nothing. An embed shows the page it sits on. |
+| **Color** | A flat stage in one color |
+| **Gradient** | A stage shading from a top color to a bottom color |
+| **HDRI** | The environment image itself, with **Blur** and **Brightness** |
+
+The environment lights the model whichever background you choose. With
+**HDRI**, the image has no floor, so a ground shadow has nothing to land on.
+
+---
+
+## Ambient occlusion
+
+**Ambient occlusion** darkens creases and tight gaps on the model. It is drawn
+every frame while the view moves, so it is off by default. **Only when still**
+draws it once the view stops, and **Strength** sets how dark it gets.
+
+---
+
+## Scenes saved before the Lighting tool
+
+A scene saved with the earlier Environment and Shadows tools is lit from those
+settings, translated into an environment and, if it cast a shadow, a key light, and opens in the
+Lighting tool that way. Saving it stores the lighting. Embeds running an older
+`@vctrl/viewer` keep working: the server derives the older settings from the
+lighting for them.
+
+---
+
+## From code
+
+The scene settings API reads and changes lighting as the `lighting` section:
+`GET` and `PATCH /api/v1/scenes/{sceneId}/settings`, or `updateSceneSettings`
+in [`@vctrl/sdk`](/docs/packages/sdk). The section sent replaces the stored one
+whole. Once a scene has a `lighting` section it supersedes `environment` and
+`shadows`, which describe only a scene saved before it, so change `lighting`. The [`@vctrl/core`](/docs/packages/core) package exports the setups as
+`LIGHTING_SETUPS`.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/compose-tools.ts label: 'Lighting',
+present packages/core/src/scene-lighting/lighting-setups.ts export const DEFAULT_LIGHTING_SETUP: LightingSetupId = 'soft-studio'
+present packages/sdk/src/scene-settings.ts lighting: sceneLightingSchema.optional(),
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/color-temperature.ts export const NEUTRAL_KELVIN = 6600
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Ground shadow"
+*/}
