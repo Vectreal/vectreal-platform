@@ -1,8 +1,7 @@
 import { cn } from '@shared/utils'
-import { aimLight, resolveLighting } from '@vctrl/core'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import AnimationPlaybackBar from '../../components/publisher/animation-playback-bar'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
@@ -16,7 +15,6 @@ import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-vi
 import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
 	currentSceneIdAtom,
-	editedLightRoleAtom,
 	failedEnvironmentFilesAtom,
 	isPreviewModeAtom,
 	openHotspotInHotspotToolAtom,
@@ -29,7 +27,6 @@ import {
 	activeHotspotIdAtom,
 	bakedShadowSourceAtom,
 	heldHotspotCardIdAtom,
-	lightingAtom,
 	presentationAtom,
 	rawModelDiagonalAtom,
 	sceneViewerSettingsAtom,
@@ -62,11 +59,6 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 	return defaultShouldRevalidate
 }
 
-// Debounce window (ms) for committing shadow-light drags. Long enough to
-// coalesce a continuous pointer drag into a single re-bake, short enough that
-// the commit feels immediate once the user lets go.
-const SHADOW_LIGHT_COMMIT_DEBOUNCE_MS = 80
-
 /**
  * The publisher's canvas.
  *
@@ -88,8 +80,6 @@ const PublisherPage = () => {
 	// shadows, animation and hotspots keep following the loaded model.
 	const comparedModel = useAtomValue(comparedModelAtom)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
-	const setLighting = useSetAtom(lightingAtom)
-	const editedLightRole = useAtomValue(editedLightRoleAtom)
 	const {
 		animation,
 		bounds,
@@ -102,44 +92,6 @@ const PublisherPage = () => {
 		hotspots
 	} = useAtomValue(sceneViewerSettingsAtom)
 
-	// Persist drags of the in-scene light handle into the light it aims.
-	// Debounced so a drag commits one re-bake when the user settles, not on
-	// every pointer move.
-	const shadowLightCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(
-		null
-	)
-	const handleShadowLightChange = useCallback(
-		(position: [number, number, number]) => {
-			if (shadowLightCommitTimer.current) {
-				clearTimeout(shadowLightCommitTimer.current)
-			}
-			shadowLightCommitTimer.current = setTimeout(() => {
-				setLighting((prev) => {
-					const direction = aimLight(position, prev.environment?.rotation ?? 0)
-					return {
-						...prev,
-						lights: (prev.lights ?? []).map((light) =>
-							light.role === editedLightRole
-								? { ...light, ...direction }
-								: light
-						)
-					}
-				})
-			}, SHADOW_LIGHT_COMMIT_DEBOUNCE_MS)
-		},
-		[setLighting, editedLightRole]
-	)
-	// Clear any pending shadow-light commit on unmount so a debounced setShadows
-	// can't fire into an unmounted tree (e.g. navigating away mid-drag).
-	useEffect(
-		() => () => {
-			if (shadowLightCommitTimer.current) {
-				clearTimeout(shadowLightCommitTimer.current)
-			}
-		},
-		[]
-	)
-
 	const [selectedCameraId, setSelectedCameraId] = useAtom(selectedCameraIdAtom)
 	const [activeHotspotId, setActiveHotspotId] = useAtom(activeHotspotIdAtom)
 	const heldHotspotCardId = useAtomValue(heldHotspotCardIdAtom)
@@ -150,16 +102,6 @@ const PublisherPage = () => {
 	const openComposeTool = useAtomValue(openComposeToolAtom)
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const openHotspotInHotspotTool = useSetAtom(openHotspotInHotspotToolAtom)
-	// The in-scene light handle belongs to the light the Lighting tool has
-	// open, so show it only while that tool's panel is open on a light.
-	const isLightHandleActive =
-		openComposeTool === 'lighting' &&
-		editedLightRole !== null &&
-		// The lights the viewer draws a handle for: on and with any strength.
-		resolveLighting({ lighting }).lights.some(
-			(light) =>
-				light.role === editedLightRole && light.enabled && light.intensity > 0
-		)
 	// A bake preview is a copy of the model; the other tools act on the model
 	// itself, so the copy shows only inside the Lighting tool.
 	const shownBake = useShownBake(openComposeTool === 'lighting')
@@ -308,8 +250,6 @@ const PublisherPage = () => {
 					shadowsOptions={shadows}
 					bakedShadow={bakedShadow}
 					onShadowBakeReady={registerShadowBakeCapture}
-					shadowLightEditable={isLightHandleActive}
-					editableLightRole={editedLightRole ?? undefined}
 					hotspots={hotspots}
 					/*
 					  The publisher is the surface those two flags exist for: it is where
@@ -360,7 +300,6 @@ const PublisherPage = () => {
 					*/
 					showCameraControls={isPreviewMode}
 					onHotspotPositionSetterReady={registerHotspotPositionSetter}
-					onShadowLightChange={handleShadowLightChange}
 					normalizationOptions={normalization}
 					boundsOptions={bounds}
 					loadingThumbnail={loadingThumbnail}

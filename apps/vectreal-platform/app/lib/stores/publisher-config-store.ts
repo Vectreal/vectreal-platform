@@ -20,11 +20,7 @@ import type {
 	SceneMetaState
 } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
-import type {
-	LightingSettings,
-	SceneLightRole,
-	SceneSettings
-} from '@vctrl/core'
+import type { LightingSettings, SceneSettings } from '@vctrl/core'
 import type { LightBakeReport } from '@vctrl/core/light-bake'
 import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
@@ -127,7 +123,7 @@ const toolSidebarStateAtom = selectAtom(
  * button while the canvas goes on offering the tool's gizmo.
  *
  * That predicate already existed twice, written by hand: the rail's own
- * `value === activeComposeTool && showSidebar`, and the light handle's
+ * `value === activeComposeTool && showSidebar`, and a scene affordance's
  * copy of it. The hotspot editor wrote a third version that omitted
  * `showSidebar`, which is exactly the drift a shared derivation prevents. Scene
  * affordances read this; nothing reads `activeComposeTool` to mean "active".
@@ -299,12 +295,6 @@ const environmentFilesOf = (
 	})
 
 /**
- * The light the Lighting tool has open, which the in-scene handle aims, or
- * null while no light is open.
- */
-const editedLightRoleAtom = atom<SceneLightRole | null>(null)
-
-/**
  * A preview of what publishing would bake, for the working document and the
  * bakes it was made from. View state only: publishing bakes again.
  */
@@ -338,7 +328,6 @@ export {
 	failedEnvironmentFilesAtom,
 	environmentLoadFailedAtom,
 	environmentFilesOf,
-	editedLightRoleAtom,
 	bakePreviewAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
