@@ -57,12 +57,10 @@ describe('the accumulative shadow bake', () => {
 			'frames',
 			'scale',
 			'light.amount',
-			'light.radius',
+			'light.sources',
 			'light.ambient',
+			'light.distance',
 			'light.intensity',
-			'px',
-			'py',
-			'pz',
 			'light.bias',
 			'light.size',
 			'light.near',
@@ -87,10 +85,10 @@ describe('the accumulative shadow bake', () => {
 	})
 
 	it('keeps its own lights lit while it silences the scene', () => {
-		expect(lightMap).toContain(
-			'(object as Light).isLight && object.parent !== bakeLights'
-		)
+		// What `silenced` does is `progressive-light-map.spec.ts`; this is that
+		// the bake goes through it.
 		expect(bake).toContain('map.clear(lights)')
+		expect(bake).toContain('map.silenced(() => {')
 	})
 })
 

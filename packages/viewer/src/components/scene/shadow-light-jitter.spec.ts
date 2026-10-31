@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import { createSeededRandom, jitterLightPositions } from './shadow-light-jitter'
 
+const key = { position: [1, 2, 2] as const, radius: 0.8, weight: 1 }
 const options = {
-	position: [1, 2, 2] as const,
-	radius: 0.8,
+	sources: [key],
 	ambient: 0.3,
+	distance: 3,
 	amount: 64
 }
 
@@ -47,15 +48,15 @@ describe('jitterLightPositions', () => {
 		})
 		for (const light of lights) {
 			light.forEach((axis, i) => {
-				expect(Math.abs(axis - options.position[i])).toBeLessThanOrEqual(
-					options.radius / 2
+				expect(Math.abs(axis - key.position[i])).toBeLessThanOrEqual(
+					key.radius / 2
 				)
 			})
 		}
 	})
 
-	it('puts fill samples on the upper hemisphere at the key light distance', () => {
-		const distance = Math.hypot(...options.position)
+	it('puts environment samples on the upper hemisphere at its distance', () => {
+		const { distance } = options
 		const lights = jitterLightPositions(createSeededRandom(3), {
 			...options,
 			ambient: 1
@@ -73,11 +74,37 @@ describe('jitterLightPositions', () => {
 		})
 		const nearKey = lights.filter((light) =>
 			light.every(
-				(axis, i) => Math.abs(axis - options.position[i]) <= options.radius / 2
+				(axis, i) => Math.abs(axis - key.position[i]) <= key.radius / 2
 			)
 		).length
 		// Hemisphere samples can land in the box too, so this only bounds it.
 		expect(nearKey / lights.length).toBeGreaterThan(0.6)
 		expect(nearKey / lights.length).toBeLessThan(0.8)
+	})
+
+	it('splits light samples between lights by strength', () => {
+		const rim = { position: [-2, 1, -2] as const, radius: 0.2, weight: 3 }
+		const lights = jitterLightPositions(createSeededRandom(5), {
+			...options,
+			sources: [key, rim],
+			ambient: 0,
+			amount: 4000
+		})
+		const nearRim = lights.filter((light) =>
+			light.every((axis, i) => Math.abs(axis - rim.position[i]) <= 0.1)
+		).length
+		expect(nearRim / lights.length).toBeGreaterThan(0.7)
+		expect(nearRim / lights.length).toBeLessThan(0.8)
+	})
+
+	it('samples only the environment when there is no light', () => {
+		const lights = jitterLightPositions(createSeededRandom(6), {
+			...options,
+			sources: [],
+			ambient: 0
+		})
+		for (const light of lights) {
+			expect(Math.hypot(...light)).toBeCloseTo(options.distance, 9)
+		}
 	})
 })

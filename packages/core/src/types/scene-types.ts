@@ -395,8 +395,9 @@ export interface SceneLight {
 	 * Strength relative to the environment's own diffuse light: 1 is as bright
 	 * as the whole environment. Relative, so the environment's brightness
 	 * scales the lights with it, and a shadow's darkness follows from the
-	 * ratio alone: ground the light cannot reach keeps `1 / (1 + intensity)` of
-	 * the light it would get.
+	 * ratio alone: ground the light cannot reach keeps
+	 * `1 / (1 + intensity * sin(elevation))` of the light it would get, which
+	 * is `1 / (1 + intensity)` for a light overhead.
 	 */
 	intensity?: number
 	/** `#rrggbb` hex. */

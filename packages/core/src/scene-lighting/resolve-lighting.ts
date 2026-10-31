@@ -4,6 +4,7 @@ import {
 } from '../scene-environment'
 
 import type {
+	AccumulativeShadowLight,
 	EnvironmentProps,
 	SceneBackdrop,
 	SceneLight,
@@ -236,17 +237,46 @@ function migrateLegacyKey({
 	  distance gives the angle the light covered.
 	*/
 	const halfWidth = (light.radius ?? D.lightRadius) / 2
+	const elevation = Math.atan2(y, horizontal)
+	// A low light reaches the ground at a slant, so it takes more strength to
+	// block as much; floored so a light at the horizon stays finite.
+	const reach = Math.max(Math.sin(elevation), 0.05)
 
 	return {
 		...DEFAULT_LIGHT,
 		role: 'key',
 		// Straight overhead has no azimuth; atan2(0, 0) answers 0.
 		azimuth: degrees(Math.atan2(x, z)),
-		elevation: degrees(Math.atan2(y, horizontal)),
+		elevation: degrees(elevation),
 		size: distance > 0 ? degrees(2 * Math.atan(halfWidth / distance)) : 0,
-		// Ground the light cannot reach keeps 1 / (1 + intensity) of its light.
-		intensity: Math.min(blocked / (1 - blocked), MIGRATED_MAX_KEY_INTENSITY)
+		// Ground the light cannot reach keeps
+		// 1 / (1 + intensity * sin(elevation)) of its light.
+		intensity: Math.min(
+			blocked / (1 - blocked) / reach,
+			MIGRATED_MAX_KEY_INTENSITY
+		)
 	}
+}
+
+/**
+ * A legacy key light turned to point along `toward`, at the distance it
+ * already had. The in-scene handle says only which way the light is, while
+ * {@link resolveLighting} reads the distance as the light's size, so turning
+ * the light must not change it.
+ */
+export function aimLegacyLight(
+	position: AccumulativeShadowLight['position'],
+	toward: [number, number, number]
+): [number, number, number] {
+	const distance = Math.hypot(
+		...((position ?? LEGACY_LIGHTING_DEFAULTS.lightPosition) as number[])
+	)
+	const length = Math.hypot(...toward)
+	return toward.map((axis) => (axis / length) * distance) as [
+		number,
+		number,
+		number
+	]
 }
 
 function migrateLegacyBackground(

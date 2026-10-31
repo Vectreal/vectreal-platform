@@ -14,7 +14,7 @@ import {
 	type WebGLRenderer
 } from 'three'
 
-import type { BakeBasis, ShadowsProps } from '@vctrl/core'
+import type { BakeBasis, ResolvedSceneLight } from '@vctrl/core'
 
 /**
  * Resolution (px, square) of the persisted shadow-density PNG. Independent of the
@@ -51,39 +51,38 @@ const fnv1aHex = (input: string): string => {
 	return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
+/** What the ground bake is computed from, apart from the model. */
+export interface BakeSignatureOptions {
+	/** The lights the bake samples: on, and giving any light. */
+	lights: ReadonlyArray<
+		Pick<ResolvedSceneLight, 'azimuth' | 'elevation' | 'size' | 'intensity'>
+	>
+	/** The environment's rotation, which turns the lights. */
+	rotation: number
+	frames: number
+	scale: number
+	resolution: number
+}
+
 /**
  * Deterministic signature of everything that changes the BAKED shadow density,
- * hashed into a compact token. Covers the COMPLETE set of bake inputs: the bake
- * light, frame count, plane scale, resolution, alphaTest, colorBlend, cutoffScale
- * and the model fingerprint (footprint, radius, vertex count). Hashing a complete,
- * canonically-ordered serialization means any change to any input is caught and
- * nothing can be silently omitted (the previous hand-listed form missed
- * alphaTest/colorBlend/cutoffScale, which bake into the density and are not
- * reapplied live — cutoffScale scales the auto-calibrated alphaTest that the
- * captured density is computed against).
+ * hashed into a compact token: the lights the bake samples, the environment's
+ * rotation, the bake's frame count, plane scale and resolution, and the model
+ * fingerprint (footprint, radius, vertex count). Hashing a complete,
+ * canonically ordered serialization means no input can be silently left out.
  *
- * Deliberately excludes `opacity` and `color` — those are applied live on top of
- * the stored density at render time, so recoloring or dimming the shadow never
- * invalidates a persisted bake. Computed identically at capture and load time so
- * the two can be compared. The `v2:` prefix versions the format so tokens from an
- * older format never collide (they simply mismatch and trigger one re-bake).
+ * A light's color and the environment's brightness are not in it: the stored
+ * density is a ratio, and neither changes it. Computed identically at capture
+ * and load time so the two can be compared. The `v3:` prefix versions the
+ * format: a token from before scene lighting simply mismatches, and that scene
+ * bakes once more.
  */
 export const computeBakeSignature = (
-	options: Pick<
-		ShadowsProps,
-		| 'light'
-		| 'frames'
-		| 'scale'
-		| 'resolution'
-		| 'alphaTest'
-		| 'colorBlend'
-		| 'cutoffScale'
-	>,
+	options: BakeSignatureOptions,
 	footprint: number,
 	radius: number,
 	fingerprint: number
 ): string => {
-	const light = options.light ?? {}
 	const canonical = [
 		`fp:${fingerprint}`,
 		`ft:${footprint.toFixed(3)}`,
@@ -91,21 +90,16 @@ export const computeBakeSignature = (
 		`fr:${options.frames}`,
 		`sc:${options.scale}`,
 		`rs:${options.resolution}`,
-		`at:${options.alphaTest}`,
-		`cb:${options.colorBlend}`,
-		`ct:${options.cutoffScale}`,
-		`lp:${(light.position ?? []).map((n) => (n ?? 0).toFixed(3)).join(',')}`,
-		`lr:${light.radius}`,
-		`la:${light.ambient}`,
-		`ln:${light.amount}`,
-		`li:${light.intensity}`,
-		`lb:${light.bias}`
+		`ro:${options.rotation.toFixed(3)}`,
+		...options.lights.map(
+			(light) =>
+				`l:${[light.azimuth, light.elevation, light.size, light.intensity]
+					.map((n) => n.toFixed(3))
+					.join(',')}`
+		)
 	].join('|')
-	return `v2:${fnv1aHex(canonical)}`
+	return `v3:${fnv1aHex(canonical)}`
 }
-
-/** The settings a bake signature covers. */
-export type BakeSignatureOptions = Parameters<typeof computeBakeSignature>[0]
 
 /**
  * Whether a persisted bake still shows what a live bake would.

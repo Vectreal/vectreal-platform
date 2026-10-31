@@ -106,33 +106,6 @@ export const SHADOW_PRESETS: ShadowPreset[] = [
 ]
 
 /**
- * Advanced shadow controls - hidden in collapsed section.
- * Scale is a multiple of the model's largest dimension, so the shadow plane
- * stays proportioned to the subject regardless of model size.
- */
-export const SHADOW_ADVANCED_FIELDS: FieldConfig[] = [
-	{
-		key: 'scale',
-		label: 'Shadow Scale',
-		min: 1,
-		max: 12,
-		step: 0.1,
-		formatValue: (value) => value.toFixed(1)
-	},
-	{
-		// Trim on the auto-calibrated cutoff (viewer measures the lit-plane
-		// brightness per environment). 1 = pure auto; below deepens (risks ground
-		// haze), above lightens.
-		key: 'cutoffScale',
-		label: 'Cutoff Trim',
-		min: 0.85,
-		max: 1.1,
-		step: 0.01,
-		formatValue: (value) => `${Math.round(value * 100)}%`
-	}
-]
-
-/**
  * Strength control for ambient occlusion (top-level `aoIntensity`). Shown only
  * while AO is enabled.
  */
@@ -144,43 +117,3 @@ export const SHADOW_AO_INTENSITY_FIELD: FieldConfig = {
 	step: 0.1,
 	formatValue: (value) => value.toFixed(1)
 }
-
-/**
- * Controls for the soft contact/ground shadow (nested `contact.*`). Shown as
- * their own section, only while the ground shadow is enabled. Plane size and
- * capture height are derived from the model automatically.
- */
-export const SHADOW_CONTACT_FIELDS: FieldConfig[] = [
-	{
-		key: 'contact.opacity',
-		label: 'Opacity',
-		min: 0,
-		max: 1,
-		step: 0.01,
-		formatValue: (value) => value.toFixed(2)
-	},
-	{
-		key: 'contact.blur',
-		label: 'Softness',
-		min: 0.5,
-		max: 8,
-		step: 0.1,
-		formatValue: (value) => value.toFixed(1)
-	},
-	{
-		key: 'contact.scale',
-		label: 'Spread',
-		min: 1,
-		max: 4,
-		step: 0.1,
-		formatValue: (value) => value.toFixed(1)
-	},
-	{
-		key: 'contact.reach',
-		label: 'Reach',
-		min: 0.05,
-		max: 1.5,
-		step: 0.05,
-		formatValue: (value) => `${Math.round(value * 100)}%`
-	}
-]

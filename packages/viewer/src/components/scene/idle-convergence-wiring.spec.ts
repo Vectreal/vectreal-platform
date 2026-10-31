@@ -57,8 +57,8 @@ describe('AO held for rest runs only while the viewer is at rest', () => {
 		expect(composer).toContain("jittering = plan.kind === 'accumulate'")
 	})
 
-	it('reaches the composer from the shadow settings', () => {
-		expect(viewer).toContain('aoAtRest={shadowsOptions?.aoAtRest}')
+	it("reaches the composer from the scene's lighting", () => {
+		expect(viewer).toContain('aoAtRest={occlusion.live.atRest}')
 	})
 })
 

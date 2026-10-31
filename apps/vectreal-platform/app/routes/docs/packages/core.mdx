@@ -405,7 +405,8 @@ typed as `LightingSettings`:
 A light's `intensity` is relative to the environment's own diffuse light: 1 is as
 bright as the whole environment. So the environment's brightness scales every
 light, and a shadow's darkness follows from the ratio alone: ground a light
-cannot reach keeps `1 / (1 + intensity)` of the light it would get. There is no
+cannot reach keeps `1 / (1 + intensity × sin(elevation))` of the light it would
+get, so `1 / (1 + intensity)` for a light straight overhead. There is no
 shadow opacity or direction to set; to change a shadow, change its light.
 
 Read lighting only through `resolveLighting(settings)`. It returns a
@@ -424,10 +425,10 @@ import { resolveLighting } from '@vctrl/core'
 const { environment, lights, ground } = resolveLighting(scene.settings)
 ```
 
-The viewer still draws from `environment` and `shadows`; `lighting` is stored
-and resolved, and the viewer moves to it in its next minor release. Until then,
-keep writing `environment` and `shadows` for a scene you want drawn as set.
-They stay readable afterwards for every scene saved before `lighting`.
+`@vctrl/viewer` draws every scene through `resolveLighting`: pass `lighting`, or
+the legacy `envOptions` and `shadowsOptions`, which stay readable for every
+scene saved before `lighting`. See [Lighting](/docs/packages/viewer#lighting-lightingsettings)
+for what the viewer does with each field.
 
 {/* claims
 present packages/core/src/types/scene-types.ts export const MAX_SCENE_LIGHTS = 3

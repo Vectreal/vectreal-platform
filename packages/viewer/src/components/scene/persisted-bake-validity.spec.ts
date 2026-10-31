@@ -7,13 +7,11 @@ import {
 } from './shadow-bake'
 
 const options: BakeSignatureOptions = {
-	light: { position: [0, 2.5, 0], radius: 0.8, amount: 8 },
+	lights: [{ azimuth: 30, elevation: 50, size: 20, intensity: 1 }],
+	rotation: 0,
 	frames: 48,
 	scale: 2.5,
-	resolution: 1024,
-	alphaTest: 3,
-	colorBlend: 2,
-	cutoffScale: 1
+	resolution: 1024
 }
 
 /** The editor model the bake was captured on. */
@@ -48,6 +46,24 @@ describe('isPersistedBakeValid', () => {
 		it('refuses it once a shadow setting changes', () => {
 			expect(
 				isPersistedBakeValid(baked, { ...options, frames: 24 }, publishedModel)
+			).toBe(false)
+		})
+
+		it('refuses it once a light moves, or the environment turns it', () => {
+			const moved = {
+				...options,
+				lights: [{ ...options.lights[0], elevation: 60 }]
+			}
+			expect(isPersistedBakeValid(baked, moved, publishedModel)).toBe(false)
+			expect(
+				isPersistedBakeValid(
+					baked,
+					{ ...options, rotation: 45 },
+					publishedModel
+				)
+			).toBe(false)
+			expect(
+				isPersistedBakeValid(baked, { ...options, lights: [] }, publishedModel)
 			).toBe(false)
 		})
 	})

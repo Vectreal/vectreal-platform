@@ -94,12 +94,12 @@ describe('a displayed model only changes what is drawn', () => {
 		const passes = between(
 			sceneShadows,
 			'}, [displayedModel])',
-			'if (!options.enabled) return null'
+			'if (!enabled) return null'
 		)
 		expect(passes).toContain(
 			'if (holdRef.current) holdRef.current.passesChanged = true'
 		)
-		expect(passes).toContain('contactShadow')
+		expect(passes).toContain('bake]')
 		expect(hold).toContain('passesChanged: false')
 		expect(hold).toMatch(
 			/if \(hold\.passesChanged\)\s+setShadowGeneration\(\(generation\) => generation \+ 1\)/
@@ -112,7 +112,6 @@ describe('a displayed model only changes what is drawn', () => {
 			'<Fragment key={shadowGeneration}>',
 			'</Fragment>'
 		)
-		expect(live).toContain('{sized && contactShadow}')
 		expect(live).toMatch(/\bbake\s*\) : null\}/)
 	})
 })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveLighting } from '.'
+import { aimLegacyLight, LEGACY_LIGHTING_DEFAULTS, resolveLighting } from '.'
 
 describe('resolveLighting for a scene saved with lighting', () => {
 	it('fills every field a partial save leaves out', () => {
@@ -175,6 +175,17 @@ describe('resolveLighting for a scene saved before lighting', () => {
 		)
 	})
 
+	it('asks more of a low legacy light, which reaches the ground at a slant', () => {
+		const [key] = resolveLighting({
+			shadows: {
+				enabled: true,
+				light: { position: [1, 1, 0], ambient: 0.6 },
+				opacity: 0.9
+			}
+		}).lights
+		expect(key.intensity).toBeCloseTo(0.36 / 0.64 / Math.SQRT1_2)
+	})
+
 	it('never gives a migrated key more than the whole environment', () => {
 		// The darkest preset and the default would otherwise ask for 11x and 1.7x.
 		for (const [ambient, opacity] of [
@@ -228,5 +239,27 @@ describe('resolveLighting for a scene saved before lighting', () => {
 				environment: { backdrop: { type: 'color', color: 'tomato' } }
 			}).background
 		).toEqual({ type: 'none' })
+	})
+})
+
+describe('aimLegacyLight', () => {
+	it('turns the light and keeps its distance, which is its size', () => {
+		const aimed = aimLegacyLight([0, 3, 4], [2, 0, 0])
+		expect(aimed).toEqual([5, 0, 0])
+		const before = resolveLighting({
+			shadows: { enabled: true, light: { position: [0, 3, 4] } }
+		}).lights[0]
+		const after = resolveLighting({
+			shadows: { enabled: true, light: { position: aimed } }
+		}).lights[0]
+		expect(after.size).toBeCloseTo(before.size)
+		expect(after.azimuth).toBeCloseTo(90)
+	})
+
+	it('keeps the default distance for a light never moved', () => {
+		const aimed = aimLegacyLight(undefined, [0, 0, 7])
+		expect(Math.hypot(...aimed)).toBeCloseTo(
+			Math.hypot(...LEGACY_LIGHTING_DEFAULTS.lightPosition)
+		)
 	})
 })
