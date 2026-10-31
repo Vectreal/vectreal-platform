@@ -33,9 +33,9 @@ export const LIGHT_LABELS: Record<SceneLightRole, string> = {
 }
 
 export const LIGHT_CAPTIONS: Record<SceneLightRole, string> = {
-	key: 'The main light. It shapes the model and casts the shadow it stands on. Drag the handle in the scene to move it.',
-	fill: 'Softens the shadows the key leaves on the model. Drag the handle in the scene to move it.',
-	rim: 'Lights the model from behind, to lift its edge off the background. Drag the handle in the scene to move it.'
+	key: 'The main light. It shapes the model and casts the shadow it stands on.',
+	fill: 'Softens the shadows the key leaves on the model.',
+	rim: 'Lights the model from behind, to lift its edge off the background.'
 }
 
 /** The view id of a light's own settings. */

@@ -12,10 +12,9 @@ import {
 	resolveLighting,
 	type EnvironmentKey,
 	type EnvironmentResolution,
-	type LightingSetupId,
-	type SceneLightRole
+	type LightingSetupId
 } from '@vctrl/core'
-import { useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtomValue } from 'jotai/react'
 import {
 	Contrast,
 	Globe,
@@ -23,7 +22,7 @@ import {
 	Layers,
 	Lightbulb
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { BakeSection } from './bake-section'
 import {
@@ -42,6 +41,7 @@ import {
 	withSetup,
 	wrapDegrees
 } from './lighting-edits'
+import { formatDegrees, LightingGlobe } from './lighting-globe'
 import StageColorField from './stage-color-field'
 import { ThumbnailGrid } from './thumbnail-grid'
 import { useBakePreview } from './use-bake-preview'
@@ -50,10 +50,7 @@ import {
 	environmentThumbnail,
 	lightingSetupThumbnail
 } from '../../../../../lib/lighting/lighting-thumbnails'
-import {
-	editedLightRoleAtom,
-	environmentLoadFailedAtom
-} from '../../../../../lib/stores/publisher-config-store'
+import { environmentLoadFailedAtom } from '../../../../../lib/stores/publisher-config-store'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { PanelCaption, SettingGroup } from '../../sidebar-section'
 
@@ -114,12 +111,6 @@ const ENVIRONMENT_OPTIONS = ENVIRONMENT_GROUPS.map((group) => ({
 
 const RESOLUTION_OPTIONS: EnvironmentResolution[] = ['1k', '4k']
 
-const TURN_PRESETS: SliderPreset[] = [
-	{ value: -90, label: 'Left' },
-	{ value: 0, label: 'Front' },
-	{ value: 90, label: 'Right' }
-]
-
 const BRIGHTNESS_PRESETS: SliderPreset[] = [
 	{ value: 0.3, label: 'Dim' },
 	{ value: 1, label: 'Normal' },
@@ -156,24 +147,11 @@ const BACKGROUND_CAPTIONS: Record<BackgroundType, string> = {
 		'The environment map fills the view behind the model. It has no floor, so a ground shadow has nothing to land on.'
 }
 
-const formatDegrees = (value: number) => `${Math.round(value)}°`
-
-/** The light whose handle the scene shows: the one open, else the key. */
-const roleOpenIn = (path: string[]): SceneLightRole =>
-	LIGHT_ROLES.find((role) => path.includes(lightViewId(role))) ?? 'key'
-
 const LightingSettings = () => {
 	const draft = useLightingDraft()
 	const { lighting, commit, preview } = draft
 	const environmentLoadFailed = useAtomValue(environmentLoadFailedAtom)
-	const setEditedLightRole = useSetAtom(editedLightRoleAtom)
 	const [path, setPath] = useState<string[]>([])
-
-	const editedRole = roleOpenIn(path)
-	useEffect(() => {
-		setEditedLightRole(editedRole)
-		return () => setEditedLightRole(null)
-	}, [editedRole, setEditedLightRole])
 
 	const resolved = resolveLighting({ lighting })
 	const { environment, background, occlusion, bake } = resolved
@@ -198,21 +176,22 @@ const LightingSettings = () => {
 					/>
 				</SettingGroup>
 
-				<Slider
+				<SettingGroup
 					label="Turn"
-					min={-180}
-					max={180}
-					step={1}
-					presets={TURN_PRESETS}
-					formatValue={formatDegrees}
-					value={wrapDegrees(environment.rotation)}
-					onValueChange={(rotation) =>
-						preview((prev) => ({
-							...prev,
-							environment: { ...prev.environment, rotation }
-						}))
-					}
-				/>
+					value={formatDegrees(wrapDegrees(environment.rotation))}
+				>
+					<LightingGlobe
+						rotation={wrapDegrees(environment.rotation)}
+						map={environment.map}
+						lights={resolved.lights}
+						onRotationChange={(rotation) =>
+							preview((prev) => ({
+								...prev,
+								environment: { ...prev.environment, rotation }
+							}))
+						}
+					/>
+				</SettingGroup>
 
 				<div className="space-y-2">
 					<DrillDownTrigger

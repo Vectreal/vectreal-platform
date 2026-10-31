@@ -30,9 +30,14 @@ ambient occlusion you chose. Change any light, the environment or the ground
 afterwards and the label above the grid reads **Custom**. Pick the setup again
 to go back to it.
 
-**Turn** rotates the environment and every light together, so the reflections,
-the shading and the shadow stay in agreement. Turning does not count as an
-edit: the setup stays selected.
+**Turn** is the globe under the setups: the sky around the model, seen from its
+front, with the horizon, the environment's bright regions and a dot for each
+light in its color. Drag it sideways to rotate the environment and every light
+together, so the reflections, the shading and the shadow stay in agreement.
+Arrow keys turn it a degree at a time and Page Up and Page Down ten (Shift
+multiplies either by ten), and a double-click turns it back to the front. It turns about the vertical axis
+only: tilting would lift the environment's horizon off the ground. Turning
+does not count as an edit: the setup stays selected.
 
 ---
 
@@ -72,9 +77,6 @@ Open a light to change it:
 | **Direction** | Degrees around the model, before **Turn** is added |
 | **Height** | Degrees above the horizon; 90 is straight overhead |
 | **Color** | A color temperature from 2000 K (warm) to 10000 K (cool); 6600 K is neutral white |
-
-While the Lighting tool is open, the scene shows a handle for the light you
-have open, or for the key light. Drag it to aim the light.
 
 A shadow's darkness follows from the lights alone. Ground that a light cannot
 reach keeps `1 / (1 + strength × sin(height))` of the light it would get, so an

@@ -351,12 +351,19 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	/**
 	 * When true, renders an in-scene draggable handle for aiming a light.
 	 * Intended for editing surfaces (e.g. the publisher), not public viewers.
+	 *
+	 * @deprecated A light aimed on its own leaves the environment's bright
+	 * region it was set against. Turn the environment, and every light with
+	 * it, through `lighting.environment.rotation` instead. Removed in the next
+	 * major version.
 	 */
 	shadowLightEditable?: boolean
 
 	/**
 	 * The light the handle aims, when `lighting` has several: the key when
 	 * absent. Its drags arrive through `onShadowLightChange`.
+	 *
+	 * @deprecated With `shadowLightEditable`.
 	 */
 	editableLightRole?: SceneLightRole
 
@@ -449,6 +456,8 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * at a fixed distance, while the stored distance sets the light's size.
 	 * Store it back with `aimLegacyLight` from `@vctrl/core`, which keeps the
 	 * stored distance.
+	 *
+	 * @deprecated With `shadowLightEditable`.
 	 */
 	onShadowLightChange?: (position: [number, number, number]) => void
 

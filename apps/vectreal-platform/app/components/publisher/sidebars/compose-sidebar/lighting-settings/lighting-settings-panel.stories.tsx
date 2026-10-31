@@ -1,8 +1,7 @@
-import { aimLight } from '@vctrl/core'
 import { ModelProvider } from '@vctrl/hooks/use-load-model'
 import { VectrealViewer } from '@vctrl/viewer'
-import { createStore, Provider, useAtom, useAtomValue } from 'jotai'
-import { useCallback, useMemo } from 'react'
+import { createStore, Provider, useAtomValue } from 'jotai'
+import { useMemo } from 'react'
 import {
 	Group,
 	Mesh,
@@ -13,10 +12,7 @@ import {
 
 import { BakeSection } from './bake-section'
 import LightingSettings from './lighting-settings-panel'
-import {
-	editedLightRoleAtom,
-	type BakePreview
-} from '../../../../../lib/stores/publisher-config-store'
+import { type BakePreview } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
@@ -56,34 +52,9 @@ function sampleModel() {
 }
 
 function Scene() {
-	const [lighting, setLighting] = useAtom(lightingAtom)
-	const editedRole = useAtomValue(editedLightRoleAtom)
+	const lighting = useAtomValue(lightingAtom)
 	const model = useMemo(sampleModel, [])
-
-	// As the publisher route aims it, without the route's debounce.
-	const aimEditedLight = useCallback(
-		(position: [number, number, number]) =>
-			setLighting((prev) => {
-				const direction = aimLight(position, prev.environment?.rotation ?? 0)
-				return {
-					...prev,
-					lights: (prev.lights ?? []).map((light) =>
-						light.role === editedRole ? { ...light, ...direction } : light
-					)
-				}
-			}),
-		[setLighting, editedRole]
-	)
-
-	return (
-		<VectrealViewer
-			model={model}
-			lighting={lighting}
-			shadowLightEditable={editedRole !== null}
-			editableLightRole={editedRole ?? undefined}
-			onShadowLightChange={aimEditedLight}
-		/>
-	)
+	return <VectrealViewer model={model} lighting={lighting} />
 }
 
 function PanelOverScene() {
