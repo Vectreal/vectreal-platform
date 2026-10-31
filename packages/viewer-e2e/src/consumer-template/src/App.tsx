@@ -2,6 +2,8 @@ import { useLoadModel } from '@vctrl/hooks'
 import { VectrealViewer } from '@vctrl/viewer'
 import { Component, useEffect, useState, type ReactNode } from 'react'
 
+import { OcclusionBakeCase } from './OcclusionBakeCase'
+
 /*
   Three hotspots covering the visibility contract, so a real browser proves what
   a jsdom seam test only asserts: a public marker draws, and the two a visitor
@@ -177,9 +179,9 @@ function SrcCase() {
 }
 
 export default function App() {
-	if (new URLSearchParams(window.location.search).has('src-case')) {
-		return <SrcCase />
-	}
+	const search = new URLSearchParams(window.location.search)
+	if (search.has('src-case')) return <SrcCase />
+	if (search.has('occlusion-bake')) return <OcclusionBakeCase />
 
 	// Like a real host: an inline callback that re-renders the page on every
 	// viewer event, so each render hands the viewer a new function. A camera a
