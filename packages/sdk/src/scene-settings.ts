@@ -254,6 +254,7 @@ export type SceneSettingsDocument = z.infer<typeof sceneSettingsSchema>
 export const updateSceneSettingsInputSchema = z.strictObject({
 	bounds: sceneBoundsSchema.optional(),
 	controls: sceneControlsSchema.optional(),
+	lighting: sceneLightingSchema.optional(),
 	environment: sceneEnvironmentSchema.optional(),
 	shadows: sceneShadowsSchema.optional(),
 	// The viewer's chrome. `compressTexturesForGpu` is accepted so a section

@@ -1,4 +1,8 @@
-import { describeAnimationClips } from '@vctrl/core'
+import {
+	describeAnimationClips,
+	LIGHTING_SETUPS,
+	type LightingSetupId
+} from '@vctrl/core'
 import { fn } from 'storybook/test'
 import {
 	AnimationClip,
@@ -208,6 +212,86 @@ export const EnvironmentOnly: Story = {
 		}
 	},
 	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * A lighting reference, the way an HDR is read on set: a chrome ball shows the
+ * environment and where its lights sit, a matte grey ball and block show each
+ * light's direction, softness and shadow.
+ */
+const createReferenceModel = () => {
+	const model = new Group()
+	const chrome = new Mesh(
+		new SphereGeometry(0.35, 96, 48),
+		new MeshStandardMaterial({
+			color: '#ffffff',
+			metalness: 1,
+			roughness: 0.04
+		})
+	)
+	chrome.position.set(-0.45, 0.35, 0)
+	const matte = new Mesh(
+		new SphereGeometry(0.35, 96, 48),
+		new MeshStandardMaterial({ color: '#9a9a9e', roughness: 0.9 })
+	)
+	matte.position.set(0.45, 0.35, 0)
+	const block = new Mesh(
+		new BoxGeometry(0.3, 0.7, 0.3),
+		new MeshStandardMaterial({ color: '#b8b8bc', roughness: 0.7 })
+	)
+	block.position.set(0, 0.35, -0.55)
+	for (const mesh of [chrome, matte, block]) {
+		mesh.castShadow = true
+		mesh.receiveShadow = true
+	}
+	model.add(chrome, matte, block)
+	return model
+}
+
+/**
+ * Every lighting setup on the reference model. A light's highlight on the
+ * chrome ball should sit on the reflection of the map's own light it stands
+ * on, and the shadows should fall away from it.
+ */
+export const LightingSetups: StoryObj<
+	VectrealViewerProps & { setup: LightingSetupId }
+> = {
+	parameters: timeDependentCapture,
+	argTypes: {
+		setup: {
+			control: 'select',
+			options: LIGHTING_SETUPS.map((setup) => setup.id)
+		}
+	},
+	args: {
+		model: createReferenceModel(),
+		envOptions: undefined,
+		setup: 'soft-studio',
+		// Close and slightly above, as a reference shot is framed.
+		cameraOptions: {
+			activeCameraId: 'reference',
+			cameras: [
+				{
+					cameraId: 'reference',
+					name: 'Reference',
+					position: [0, 0.55, 1.6],
+					target: [0, 0.12, 0]
+				}
+			]
+		}
+	},
+	render: ({ setup, ...args }) => {
+		const { lighting } = LIGHTING_SETUPS.find(({ id }) => id === setup)!
+		return (
+			<VectrealViewer
+				{...args}
+				lighting={{
+					...lighting,
+					background: { type: 'environment', intensity: 1, blur: 0.6 }
+				}}
+			/>
+		)
+	}
 }
 
 /**

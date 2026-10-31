@@ -74,7 +74,10 @@ export const buildOptimizationReportSignature = (
  */
 export const buildThumbnailFrameSignature = (
 	settings:
-		| Pick<SceneSettings, 'camera' | 'environment' | 'normalization'>
+		| Pick<
+				SceneSettings,
+				'camera' | 'environment' | 'lighting' | 'normalization'
+		  >
 		| null
 		| undefined
 ): string => {
@@ -82,6 +85,8 @@ export const buildThumbnailFrameSignature = (
 	return canonicalize({
 		camera: buildDefaultCameraSignature(cameras),
 		environment: settings?.environment ?? null,
+		// The lights change the frame as much as the map does.
+		lighting: settings?.lighting ?? null,
 		normalization: settings?.normalization ?? null
 	})
 }

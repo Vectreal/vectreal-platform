@@ -1,3 +1,4 @@
+import { resolveLighting } from '@vctrl/core'
 import { useSetAtom } from 'jotai/react'
 import { useCallback } from 'react'
 
@@ -6,6 +7,7 @@ import {
 	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
+	defaultLighting,
 	defaultNormalizationOptions,
 	defaultPresentationOptions,
 	defaultShadowsOptions,
@@ -37,6 +39,7 @@ import {
 	environmentAtom,
 	hotspotsAtom,
 	interactionsAtom,
+	lightingAtom,
 	normalizationAtom,
 	presentationAtom,
 	rawModelDiagonalAtom,
@@ -60,6 +63,7 @@ export function useApplySceneSettings() {
 	const setAnimationDrift = useSetAtom(animationDriftAtom)
 	const setBounds = useSetAtom(boundsAtom)
 	const setEnv = useSetAtom(environmentAtom)
+	const setLighting = useSetAtom(lightingAtom)
 	const setInteractions = useSetAtom(interactionsAtom)
 	const setCamera = useSetAtom(cameraAtom)
 	const setControls = useSetAtom(controlsAtom)
@@ -98,11 +102,18 @@ export function useApplySceneSettings() {
 				normalization,
 				presentation
 			} = withSceneSettingsDefaults(settings)
+			// A scene saved before `lighting` opens with the lighting it meant, so
+			// the Lighting tool edits it from there and a save writes `lighting`.
+			// Only here, in the editor: a server read that filled it would store
+			// a frozen copy of the old settings on the next write, and an edit to
+			// `environment` or `shadows` would stop showing.
+			const lighting = settings.lighting ?? resolveLighting(settings)
 
 			setAnimation(settings.animation)
 			setAnimationDrift(null)
 			setBounds(bounds)
 			setEnv(environment)
+			setLighting(lighting)
 			setInteractions(settings.interactions)
 			setCamera(camera)
 			setControls(controls)
@@ -122,6 +133,7 @@ export function useApplySceneSettings() {
 							animation: settings.animation,
 							bounds,
 							environment,
+							lighting,
 							interactions: settings.interactions,
 							camera,
 							controls,
@@ -144,6 +156,7 @@ export function useApplySceneSettings() {
 			setHotspots,
 			setInteractions,
 			setLastSavedSettings,
+			setLighting,
 			setNormalization,
 			setPresentation,
 			setSelectedCameraId,
@@ -166,6 +179,7 @@ export function useResetSceneState() {
 	const setAnimationDrift = useSetAtom(animationDriftAtom)
 	const setBounds = useSetAtom(boundsAtom)
 	const setEnv = useSetAtom(environmentAtom)
+	const setLighting = useSetAtom(lightingAtom)
 	const setInteractions = useSetAtom(interactionsAtom)
 	const setCamera = useSetAtom(cameraAtom)
 	const setControls = useSetAtom(controlsAtom)
@@ -192,6 +206,7 @@ export function useResetSceneState() {
 		setAnimationDrift(null)
 		setBounds(defaultBoundsOptions)
 		setEnv(defaultEnvOptions)
+		setLighting(defaultLighting)
 		setInteractions(undefined)
 		setCamera(defaultCameraOptions)
 		setControls(defaultControlsOptions)
@@ -223,6 +238,7 @@ export function useResetSceneState() {
 		setCamera,
 		setControls,
 		setEnv,
+		setLighting,
 		setHotspots,
 		setInteractions,
 		setKeptOriginal,

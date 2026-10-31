@@ -5,6 +5,7 @@ import {
 	defaultCameraOptions,
 	defaultControlsOptions,
 	defaultEnvOptions,
+	defaultLighting,
 	defaultNormalizationOptions,
 	defaultPresentationOptions,
 	defaultShadowsOptions
@@ -22,6 +23,7 @@ import type {
 	ControlsProps,
 	EnvironmentProps,
 	HotspotDefinition,
+	LightingSettings,
 	NormalizationOptions,
 	ScenePresentationSettings,
 	SceneSettings,
@@ -54,6 +56,12 @@ const selectedCameraIdAtom = atom<string>(
 )
 const controlsAtom = atom<ControlsProps>(defaultControlsOptions)
 const environmentAtom = atom<EnvironmentProps>(defaultEnvOptions)
+/**
+ * How the scene is lit: what the Lighting tool edits and a save writes. The
+ * legacy `environment` and `shadows` stay readable for what only they carry
+ * (`shadows.baked`, the persisted ground bake); the viewer draws from this.
+ */
+const lightingAtom = atom<LightingSettings>(defaultLighting)
 const interactionsAtom = atom<SceneSettings['interactions']>(undefined)
 const shadowsAtom = atom<ShadowsProps>(defaultShadowsOptions)
 const normalizationAtom = atom<NormalizationOptions>(
@@ -168,6 +176,7 @@ const sceneViewerSettingsAtom = atom(
 			camera: get(cameraAtom),
 			controls: get(controlsAtom),
 			environment: get(environmentAtom),
+			lighting: get(lightingAtom),
 			interactions: get(interactionsAtom),
 			shadows: get(shadowsAtom),
 			normalization: get(normalizationAtom),
@@ -193,6 +202,7 @@ export {
 	environmentAtom,
 	hotspotsAtom,
 	interactionsAtom,
+	lightingAtom,
 	normalizationAtom,
 	presentationAtom,
 	rawModelDiagonalAtom,

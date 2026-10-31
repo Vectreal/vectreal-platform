@@ -90,7 +90,7 @@ Run `npx -y @vctrl/cli mcp` as a stdio server. The server is also listed in the 
 | `list_scenes` | A project's scenes, the most recently edited first. |
 | `create_scene_from_file` | Uploads a local GLB as a new draft scene, stored as it is. |
 | `describe_model` | A local GLB's size, meshes, materials and animation clips, and where the viewer places it. Nothing is rendered or uploaded. |
-| `get_scene_settings`, `update_scene_settings` | Read every settings section; change the environment, controls, bounds, shadows and presentation. |
+| `get_scene_settings`, `update_scene_settings` | Read every settings section; change the lighting, environment, controls, bounds, shadows and presentation. Lighting supersedes environment and shadows once a scene has it. |
 | `publish_scene` | Compresses the GLB as the publisher does (Draco geometry, KTX2 textures) and publishes it. It cannot bake ambient occlusion: when the scene's lighting asks for it, the result carries a warning. |
 | `unpublish_scene` | Takes a scene offline. |
 | `get_embed_snippet` | The iframe snippet and preview URL for a published scene. It creates an embed key when the project has none, and adds the domains you name to the allowed list. |

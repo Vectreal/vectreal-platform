@@ -320,12 +320,22 @@ lights the model too. Fields that only tuned the old shadow (`opacity`,
 `envOptions.files` still names a custom environment map, with or without
 `lighting`.
 
+A viewer released before `lighting` still renders a newly saved scene: its
+embed manifest carries the legacy `environment` and `shadows` derived from
+`lighting` by `toLegacyLighting` in `@vctrl/core`. That viewer knows one light,
+which shadows only the ground, and no rotation, so it shows the environment
+unturned, the key as the shadow's direction and size, and every lit light in
+the shadow's darkness. Fill and rim lights, and light on the model, need this
+release. The derived keys go away with the deprecated props in the next major.
+
 {/* claims
 present packages/viewer/src/vectreal-viewer.tsx lighting?: LightingSettings
 present packages/viewer/src/vectreal-viewer.tsx resolveLighting({ environment: envOptions, shadows: shadowsOptions })
 present packages/viewer/src/vectreal-viewer.tsx envOptions?.files ??
 present packages/viewer/src/components/scene/scene-lights.tsx light.intensity * irradiance * lighting.environment.intensity
 present packages/viewer/src/components/scene/scene-lighting.ts blockedShare: 1 / (1 + onGround)
+present apps/vectreal-platform/app/lib/domain/scene/server/scene-manifest.server.ts toLegacyLighting(settingsData.settings)
+present packages/core/src/scene-lighting/to-legacy-lighting.ts ambient: 1 / (1 + strength)
 */}
 
 ---

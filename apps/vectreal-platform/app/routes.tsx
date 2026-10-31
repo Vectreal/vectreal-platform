@@ -225,6 +225,7 @@ export default [
 					route('upload', './routes/docs/guides/upload.mdx'),
 					route('convert', './routes/docs/guides/convert.mdx'),
 					route('optimize', './routes/docs/guides/optimize.mdx'),
+					route('lighting', './routes/docs/guides/lighting.mdx'),
 					route('publish-embed', './routes/docs/guides/publish-embed.mdx'),
 					route('embed-sdk', './routes/docs/guides/embed-sdk.mdx')
 				]),

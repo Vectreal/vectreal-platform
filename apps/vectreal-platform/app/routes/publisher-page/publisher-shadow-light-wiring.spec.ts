@@ -1,10 +1,11 @@
 /**
- * The light handle turns the legacy key light without resizing it.
+ * The light handle aims the light the Lighting tool has open.
  *
  * A source guard: the route module cannot be imported by a test. The viewer
- * draws the handle at a fixed distance while the stored distance is the
- * light's size, so storing the dragged position as it comes would sharpen or
- * soften the shadow on every drag. `aimLegacyLight` is tested in core.
+ * reports the dragged handle as a position, while a light is stored as a
+ * direction relative to the environment's rotation, so the position has to be
+ * turned back by that rotation and written to the open light, not the key.
+ * `aimLight` is tested in core.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -17,9 +18,27 @@ const publisher = readFileSync(
 )
 
 describe('the publisher light handle', () => {
-	it('stores the dragged direction at the distance the light already had', () => {
+	it('stores the dragged direction relative to the environment rotation', () => {
 		expect(publisher).toMatch(
-			/position: aimLegacyLight\(prev\.light\?\.position, position\)/
+			/aimLight\(position, prev\.environment\?\.rotation \?\? 0\)/
+		)
+	})
+
+	it('moves the light the panel has open', () => {
+		expect(publisher).toMatch(
+			/light\.role === editedLightRole\s*\?\s*\{ \.\.\.light, \.\.\.direction \}/
+		)
+		expect(publisher).toContain(
+			'editableLightRole={editedLightRole ?? undefined}'
+		)
+	})
+
+	// The viewer draws a handle only for a light it draws (`litLights`), and
+	// otherwise falls back to another light, so a handle shown for an unlit
+	// one would sit on that other light and move this one.
+	it('shows the handle only for a light the viewer draws', () => {
+		expect(publisher).toMatch(
+			/light\.role === editedLightRole && light\.enabled && light\.intensity > 0/
 		)
 	})
 })

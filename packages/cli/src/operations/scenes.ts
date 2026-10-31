@@ -144,7 +144,7 @@ export const getSceneSettings = defineOperation({
 	name: 'get_scene_settings',
 	title: 'Read scene settings',
 	description:
-		'Every settings section of a scene (environment, controls, bounds, shadows, presentation, camera, hotspots, interactions, animation, normalization), defaults filled in.',
+		'Every settings section of a scene (lighting, environment, controls, bounds, shadows, presentation, camera, hotspots, interactions, animation, normalization), defaults filled in.',
 	input: z.object({ sceneId }),
 	readOnly: true,
 	destructive: false,
@@ -155,7 +155,7 @@ export const updateSceneSettings = defineOperation({
 	name: 'update_scene_settings',
 	title: 'Change scene settings',
 	description:
-		'Replaces the environment, controls, bounds, shadows or presentation sections sent; each section sent is stored whole with the keys it leaves out at their defaults, so read the section with get_scene_settings and send it back changed. Camera, hotspots, interactions, animation and normalization are read-only here. Live embeds show the change at once.',
+		'Replaces the lighting, environment, controls, bounds, shadows or presentation sections sent; each section sent is stored whole with the keys it leaves out at their defaults, so read the section with get_scene_settings and send it back changed. Camera, hotspots, interactions, animation and normalization are read-only here. Lighting supersedes environment and shadows: those two only show on a scene with no lighting section, so change lighting. Live embeds show the change at once.',
 	input: z.object({
 		sceneId,
 		settings: updateSceneSettingsInputSchema

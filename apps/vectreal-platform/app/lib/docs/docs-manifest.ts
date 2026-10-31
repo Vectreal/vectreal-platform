@@ -169,6 +169,16 @@ export const docsPages: DocPage[] = [
 		version: 'latest'
 	},
 	{
+		slug: 'guides/lighting',
+		title: 'Lighting',
+		description:
+			'Lighting setups, the environment, key, fill and rim lights, the ground shadow, and the background.',
+		sourcePath: 'apps/vectreal-platform/app/routes/docs/guides/lighting.mdx',
+		category: 'guides',
+		order: 3,
+		version: 'latest'
+	},
+	{
 		slug: 'guides/publish-embed',
 		title: 'Publishing & Embedding',
 		description:
@@ -176,7 +186,7 @@ export const docsPages: DocPage[] = [
 		sourcePath:
 			'apps/vectreal-platform/app/routes/docs/guides/publish-embed.mdx',
 		category: 'guides',
-		order: 3,
+		order: 4,
 		version: 'latest'
 	},
 	{
