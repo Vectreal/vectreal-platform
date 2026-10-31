@@ -2,6 +2,7 @@
 export type SidebarMode = 'optimize' | 'compose'
 export type ComposeTool =
 	| 'lighting'
+	| 'background'
 	| 'camera-controls'
 	| 'interaction-controls'
 	| 'hotspots'

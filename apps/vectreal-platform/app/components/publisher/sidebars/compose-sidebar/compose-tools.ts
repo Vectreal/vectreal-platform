@@ -1,12 +1,14 @@
 import {
 	Camera,
 	Clapperboard,
+	Image,
 	Lightbulb,
 	Locate,
 	MousePointer2
 } from 'lucide-react'
 
 import { AnimationToolSettings } from './animation-settings'
+import { BackgroundSettings } from './background-settings'
 import { CameraControlsSettings } from './camera-controls-settings'
 import { HotspotsSettings } from './hotspot-settings'
 import InteractionControlsSettings from './interaction-controls-settings-panel'
@@ -34,6 +36,15 @@ const COMPOSE_TOOL_DEFINITIONS: ComposeToolDefinition[] = [
 			'Light the model with a studio setup: the environment, up to three lights and the shadows they cast.',
 		icon: Lightbulb,
 		component: LightingSettings
+	},
+	{
+		value: 'background',
+		label: 'Background',
+		shortLabel: 'Background',
+		description:
+			'Choose what sits behind the model: nothing, a color, a gradient or the environment itself.',
+		icon: Image,
+		component: BackgroundSettings
 	},
 	{
 		value: 'camera-controls',
