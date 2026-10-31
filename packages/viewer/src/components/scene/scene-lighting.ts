@@ -1,8 +1,10 @@
+import { lightDirection } from '@vctrl/core'
 import { DataUtils, HalfFloatType, type Texture } from 'three'
 
 import type { JitterSource } from './shadow-light-jitter'
-import type { ResolvedLighting, ResolvedSceneLight } from '@vctrl/core'
+import type { ResolvedSceneLight } from '@vctrl/core'
 
+export { lightDirection, litLights } from '@vctrl/core'
 /**
  * How far from the model's center the lights stand, in multiples of its
  * bounding radius. Far enough to clear any model; a light's apparent size
@@ -11,32 +13,6 @@ import type { ResolvedLighting, ResolvedSceneLight } from '@vctrl/core'
 export const LIGHT_DISTANCE_FACTOR = 2.5
 
 const RADIANS = Math.PI / 180
-
-/**
- * Unit vector from the model toward a light: `azimuth` around the vertical
- * axis (0 toward +Z, 90 toward +X), turned by the environment's rotation so
- * the lights stay where the environment's own bright regions are.
- *
- * Adding the rotation to the azimuth matches three.js: it looks the map up
- * with the transpose of `environmentRotation`, so what the map holds at
- * azimuth `a` is drawn at `a + rotation`.
- */
-export function lightDirection(
-	light: Pick<ResolvedSceneLight, 'azimuth' | 'elevation'>,
-	rotation: number
-): [number, number, number] {
-	const azimuth = (light.azimuth + rotation) * RADIANS
-	const elevation = light.elevation * RADIANS
-	return [
-		Math.sin(azimuth) * Math.cos(elevation),
-		Math.sin(elevation),
-		Math.cos(azimuth) * Math.cos(elevation)
-	]
-}
-
-/** The lights that contribute anything. */
-export const litLights = (lighting: ResolvedLighting) =>
-	lighting.lights.filter((light) => light.enabled && light.intensity > 0)
 
 /** What the ground bake reads of a light. */
 export type GroundBakeLight = Pick<

@@ -15,7 +15,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, WebIO } from '@gltf-transform/core'
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
 	cloneDocument,
 	draco,
@@ -26,28 +25,12 @@ import JSZip from 'jszip'
 import { Material, Mesh, MeshPhysicalMaterial, Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
-import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
-import {
-	GeometryCodecs,
-	type DracoModules
-} from '../geometry-codecs/geometry-codecs'
-import {
-	loadMeshoptEncoder,
-	stripDecodedMeshoptExtension
-} from '../meshopt/meshopt-codec'
-import { readGlbExtensionsUsed } from '../model-loader/glb-extensions'
-import {
-	compressTexturesToKtx2,
-	type Ktx2CompressionReport
-} from '../model-optimizer/ktx2-compression'
-import { OperationProgress } from '../types'
 import {
 	GeometryCodec,
 	GeometryCodecSizes,
 	gzipSize,
 	pickGeometryCodec
 } from './geometry-codec'
-import { threeObjectToGLB } from './three-object-glb'
 import {
 	ExportResult,
 	GLBExportResult,
@@ -58,6 +41,23 @@ import {
 	PublishExportResult,
 	USDZExportResult
 } from './types'
+import { stripDecodedDracoExtension } from '../draco/strip-decoded-draco-extension'
+import {
+	GeometryCodecs,
+	type DracoModules
+} from '../geometry-codecs/geometry-codecs'
+import { IO_EXTENSIONS } from '../io-extensions'
+import {
+	loadMeshoptEncoder,
+	stripDecodedMeshoptExtension
+} from '../meshopt/meshopt-codec'
+import { readGlbExtensionsUsed } from '../model-loader/glb-extensions'
+import {
+	compressTexturesToKtx2,
+	type Ktx2CompressionReport
+} from '../model-optimizer/ktx2-compression'
+import { OperationProgress } from '../types'
+import { threeObjectToGLB } from './three-object-glb'
 
 const DEFAULT_DRACO_PATH = '/draco/'
 
@@ -160,7 +160,7 @@ export class ModelExporter {
 	 * `createNodePublishCodecs` in `@vctrl/core/node`.
 	 */
 	constructor(options?: { dracoPath?: string; dracoModules?: DracoModules }) {
-		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
+		this.io = new WebIO().registerExtensions(IO_EXTENSIONS)
 		this.threeExporter = new GLTFExporter()
 		this.codecs = new GeometryCodecs(
 			this.io,
@@ -327,13 +327,13 @@ export class ModelExporter {
 	 * alike. Draco or meshopt input is decoded first, which in Node needs
 	 * `dracoModules`.
 	 *
-	 * `occlusion` bakes ambient occlusion into the copy first. `ktx2` then
-	 * encodes the textures, baked ones included, with the caller's encoder;
-	 * without it they ship as they are.
+	 * `bake` bakes into the copy first: ambient occlusion, light maps. `ktx2`
+	 * then encodes the textures, baked ones included, with the caller's
+	 * encoder; without it they ship as they are.
 	 */
 	public async exportGlbForPublish(
 		glb: Uint8Array,
-		{ ktx2, occlusion, ...geometry }: GlbPublishOptions = {}
+		{ ktx2, bake, ...geometry }: GlbPublishOptions = {}
 	): Promise<GlbPublishResult> {
 		const document = await this.readGlbDocument(glb)
 
@@ -341,9 +341,9 @@ export class ModelExporter {
 		const result = await this.exportDocumentGLBForPublish(document, {
 			...geometry,
 			textures:
-				ktx2 || occlusion
+				ktx2 || bake
 					? async (clone) => {
-							await occlusion?.(clone)
+							await bake?.(clone)
 							if (ktx2) textures = await compressTexturesToKtx2(clone, ktx2)
 						}
 					: undefined

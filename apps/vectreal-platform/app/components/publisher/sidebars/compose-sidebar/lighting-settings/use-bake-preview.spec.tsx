@@ -8,11 +8,8 @@ import { createStore, Provider } from 'jotai'
 import { Group } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-	useOcclusionBakePreview,
-	useShownOcclusionBake
-} from './use-occlusion-bake-preview'
-import { occlusionBakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
+import { useBakePreview, useShownBake } from './use-bake-preview'
+import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 
@@ -41,14 +38,22 @@ vi.mock('@vctrl/core/model-loader', () => ({
 		loadToThreeJS = mocks.loadToThreeJS
 	}
 }))
-vi.mock('../../../../../lib/domain/scene/client/publish-export', () => ({
-	runPublishExportInWorker: mocks.runPublishExportInWorker
-}))
+vi.mock(
+	'../../../../../lib/domain/scene/client/publish-export',
+	async (importOriginal) => ({
+		...(await importOriginal<object>()),
+		runPublishExportInWorker: mocks.runPublishExportInWorker
+	})
+)
 vi.mock('../../../optimization/use-hold-to-compare', () => ({
 	disposeModel: mocks.disposeModel
 }))
 
 const report = { baked: ['body'], skipped: [] }
+const litLighting = {
+	lights: [{ role: 'key' as const, azimuth: 30 }],
+	bake: { lights: true }
+}
 
 function setup(lightingOpen = true) {
 	const store = createStore()
@@ -61,9 +66,9 @@ function setup(lightingOpen = true) {
 	const rendered: { shown?: unknown } = {}
 	const hook = renderHook(
 		() => {
-			const shown = useShownOcclusionBake(lightingOpen)
+			const shown = useShownBake(lightingOpen)
 			rendered.shown = shown
-			return { preview: useOcclusionBakePreview(), shown }
+			return { preview: useBakePreview(), shown }
 		},
 		{ wrapper }
 	)
@@ -81,7 +86,7 @@ beforeEach(() => {
 	mocks.loadToThreeJS.mockImplementation(async () => ({ scene: new Group() }))
 })
 
-describe('the occlusion bake preview', () => {
+describe('the bake preview', () => {
 	it('bakes in the publish worker with only the bake on, and shows the result', async () => {
 		const { hook } = setup()
 
@@ -96,9 +101,105 @@ describe('the occlusion bake preview', () => {
 		)
 		expect(hook.result.current.preview.preview).toMatchObject({
 			status: 'ready',
-			report
+			reports: { occlusion: report }
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('bakes the studio lights publishing would bake, and shows them', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			lights: report
+		})
+		const { store, hook } = setup()
+		act(() => store.set(lightingAtom, litLighting))
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledWith(
+			expect.objectContaining({
+				occlusion: false,
+				lights: expect.objectContaining({
+					lights: [expect.objectContaining({ role: 'key', azimuth: 30 })]
+				})
+			}),
+			expect.any(Function)
+		)
+		expect(hook.result.current.preview.preview?.reports).toEqual({
+			occlusion: undefined,
+			lights: report
+		})
+		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('drops a light bake once a baked light moves', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			lights: report
+		})
+		const { store, hook } = setup()
+		act(() => store.set(lightingAtom, litLighting))
+		await act(() => hook.result.current.preview.bake())
+
+		act(() =>
+			store.set(lightingAtom, {
+				...litLighting,
+				lights: [{ role: 'key', azimuth: 31 }]
+			})
+		)
+
+		expect(hook.result.current.preview.preview).toBeNull()
+		expect(hook.result.current.shown).toBeUndefined()
+	})
+
+	it('reports a failed light bake instead of showing anything', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			lights: { failed: 'The GPU reset while baking the studio lights' }
+		})
+		const { store, hook } = setup()
+		act(() => store.set(lightingAtom, litLighting))
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview).toMatchObject({
+			status: 'failed',
+			error: 'The GPU reset while baking the studio lights'
+		})
+		expect(mocks.loadToThreeJS).not.toHaveBeenCalled()
+	})
+
+	it('shows the bake that worked when the other failed, as publishing ships it', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: report,
+			lights: { failed: 'The GPU reset while baking the studio lights' }
+		})
+		const { store, hook } = setup()
+		act(() =>
+			store.set(lightingAtom, { ...litLighting, occlusion: { mode: 'baked' } })
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview).toMatchObject({
+			status: 'ready',
+			reports: {
+				occlusion: report,
+				lights: { failed: 'The GPU reset while baking the studio lights' }
+			}
+		})
+		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('has nothing to bake until the lighting asks for a bake', async () => {
+		const { store, hook } = setup()
+		act(() => store.set(lightingAtom, { occlusion: { mode: 'live' } }))
+
+		expect(hook.result.current.preview.bakesAnything).toBe(false)
+		expect(hook.result.current.preview.canBake).toBe(false)
+		await act(() => hook.result.current.preview.bake())
+		expect(mocks.runPublishExportInWorker).not.toHaveBeenCalled()
 	})
 
 	it('shows the model as it is when the author switches the bake off', async () => {
@@ -176,7 +277,7 @@ describe('the occlusion bake preview', () => {
 			first = hook.result.current.preview.bake()
 		})
 		await act(() => hook.result.current.preview.bake())
-		const latest = store.get(occlusionBakePreviewAtom)?.model
+		const latest = store.get(bakePreviewAtom)?.model
 
 		await act(async () => {
 			finishFirst({ buffer: new ArrayBuffer(8), occlusion: report })
@@ -184,7 +285,7 @@ describe('the occlusion bake preview', () => {
 		})
 
 		await waitFor(() => expect(mocks.disposeModel).toHaveBeenCalled())
-		expect(store.get(occlusionBakePreviewAtom)?.model).toBe(latest)
+		expect(store.get(bakePreviewAtom)?.model).toBe(latest)
 		expect(mocks.disposeModel).not.toHaveBeenCalledWith(latest)
 	})
 
@@ -205,7 +306,7 @@ describe('the occlusion bake preview', () => {
 	it('clears and frees a preview once it has gone stale', async () => {
 		const { store, hook } = setup()
 		await act(() => hook.result.current.preview.bake())
-		const baked = store.get(occlusionBakePreviewAtom)?.model
+		const baked = store.get(bakePreviewAtom)?.model
 
 		act(() =>
 			store.set(optimizationRuntimeAtom, (runtime) => ({
@@ -214,14 +315,14 @@ describe('the occlusion bake preview', () => {
 			}))
 		)
 
-		await waitFor(() => expect(store.get(occlusionBakePreviewAtom)).toBeNull())
+		await waitFor(() => expect(store.get(bakePreviewAtom)).toBeNull())
 		expect(mocks.disposeModel).toHaveBeenCalledWith(baked)
 	})
 
 	it('frees a replaced bake only after the viewer has let go of it', async () => {
 		const { store, hook, rendered } = setup()
 		await act(() => hook.result.current.preview.bake())
-		const first = store.get(occlusionBakePreviewAtom)?.model
+		const first = store.get(bakePreviewAtom)?.model
 
 		let finish: (value: unknown) => void = () => {}
 		mocks.runPublishExportInWorker.mockImplementationOnce(
@@ -253,12 +354,12 @@ describe('the occlusion bake preview', () => {
 	it('frees the bake when the publisher closes', async () => {
 		const { store, hook } = setup()
 		await act(() => hook.result.current.preview.bake())
-		const baked = store.get(occlusionBakePreviewAtom)?.model
+		const baked = store.get(bakePreviewAtom)?.model
 
 		hook.unmount()
 
 		expect(mocks.disposeModel).toHaveBeenCalledWith(baked)
-		expect(store.get(occlusionBakePreviewAtom)).toBeNull()
+		expect(store.get(bakePreviewAtom)).toBeNull()
 	})
 
 	it('keeps the model as it is when the bake changed nothing', async () => {

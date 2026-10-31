@@ -6,7 +6,7 @@ import { corners, glbOf, meshDocument } from '../test-support'
 import { parseDocPages, readDoc, searchDocPages, searchDocs } from './docs'
 import { OPERATIONS, type Operation, type OperationContext } from './index'
 import { readModelInNode } from './publish-export'
-import { BAKED_OCCLUSION_WARNING } from './scenes'
+import { BAKED_LIGHTS_WARNING, BAKED_OCCLUSION_WARNING } from './scenes'
 
 const GLB = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0])
 const EXPORTED = new Uint8Array([0x67, 0x6c, 0x54, 0x46, 9])
@@ -204,6 +204,29 @@ describe('publish_scene', () => {
 		expect(client.getSceneSettings).toHaveBeenCalledWith('s1')
 		expect(client.publishScene).toHaveBeenCalledOnce()
 		expect(result).toMatchObject({ warnings: [BAKED_OCCLUSION_WARNING] })
+	})
+
+	it('warns that it cannot bake the studio lights either', async () => {
+		const { context, client } = fakeContext()
+		client.getSceneSettings.mockResolvedValueOnce({
+			settings: {
+				lighting: {
+					occlusion: { mode: 'baked' },
+					lights: [{ role: 'key' }],
+					bake: { lights: true }
+				}
+			}
+		} as never)
+
+		const result = await call(
+			'publish_scene',
+			{ sceneId: 's1', path: 'models/chair.glb' },
+			context
+		)
+
+		expect(result).toMatchObject({
+			warnings: [BAKED_OCCLUSION_WARNING, BAKED_LIGHTS_WARNING]
+		})
 	})
 
 	it('still publishes when the settings it checks cannot be read', async () => {

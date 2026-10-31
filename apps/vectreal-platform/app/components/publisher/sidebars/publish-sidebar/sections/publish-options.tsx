@@ -1,11 +1,10 @@
 import { Toggle } from '@shared/components/ui/toggle'
-import { resolveLighting } from '@vctrl/core'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { Loader2 } from 'lucide-react'
-import { useCallback, useRef, useState, type FC } from 'react'
+import { useCallback, useMemo, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
@@ -17,7 +16,9 @@ import {
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { optimizationsMatch } from '../../../../../lib/domain/scene/client/optimization-inference'
 import {
+	lightBakeWarning,
 	occlusionBakeWarning,
+	publishBakes,
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
 } from '../../../../../lib/domain/scene/client/publish-export'
@@ -87,8 +88,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
 	const lighting = useAtomValue(lightingAtom)
-	const bakesOcclusion =
-		resolveLighting({ lighting }).occlusion.mode === 'baked'
+	const bakes = useMemo(() => publishBakes(lighting), [lighting])
 	const sceneViewReturn = useSceneViewReturnSetting()
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
@@ -146,7 +146,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					buffer: workingGlb.slice().buffer as ArrayBuffer,
 					...resolvePublishGeometryOptions(optimizations, dracoReport),
 					ktx2: compressTextures,
-					occlusion: bakesOcclusion
+					...bakes
 				},
 				setExportProgress
 			)
@@ -205,11 +205,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			}))
 
 			// Only once it shipped: the warning says what the published file lacks.
-			const occlusionWarning = occlusionBakeWarning(result.occlusion)
-			if (occlusionWarning) {
-				toast.warning(occlusionWarning.message, {
-					description: occlusionWarning.description
-				})
+			for (const warning of [
+				occlusionBakeWarning(result.occlusion),
+				lightBakeWarning(result.lights)
+			]) {
+				if (warning) {
+					toast.warning(warning.message, { description: warning.description })
+				}
 			}
 
 			const publishStateUpdate: ScenePublishStateResponse =
@@ -257,7 +259,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		optimizations,
 		dracoReport,
 		compressTextures,
-		bakesOcclusion,
+		bakes,
 		isOptimizing,
 		passRevision
 	])

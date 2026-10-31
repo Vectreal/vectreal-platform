@@ -452,6 +452,14 @@ export interface LightingSettings {
 	ground?: { enabled?: boolean }
 	background?: SceneLightingBackground
 	occlusion?: SceneOcclusionSettings
+	/**
+	 * What publishing bakes into the model. `lights` bakes the studio lights'
+	 * diffuse light and soft shadows into a light map the Vectreal viewer draws
+	 * in place of their live diffuse light and shadows; their highlights stay
+	 * live. Other glTF viewers ignore the map and show the model without the
+	 * studio lights.
+	 */
+	bake?: { lights?: boolean }
 }
 
 /** Key, fill and rim: the classic studio setup, one light per role. */

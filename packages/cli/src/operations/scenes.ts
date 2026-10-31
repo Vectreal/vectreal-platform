@@ -1,6 +1,6 @@
 import { basename, extname, resolve } from 'node:path'
 
-import { resolveLighting } from '@vctrl/core'
+import { litLights, resolveLighting } from '@vctrl/core'
 import {
 	createProjectInputSchema,
 	createSceneInputSchema,
@@ -170,11 +170,29 @@ export const updateSceneSettings = defineOperation({
 export const BAKED_OCCLUSION_WARNING =
 	"This scene's lighting asks for baked ambient occlusion, which only the Publisher can bake: it was published without it. Publish from the Publisher to bake it, or set lighting.occlusion.mode to 'live' or 'off'."
 
+/** The light maps are raytraced too. */
+export const BAKED_LIGHTS_WARNING =
+	"This scene's lighting asks for its studio lights to be baked, which only the Publisher can do: it was published with them live. Publish from the Publisher to bake them, or set lighting.bake.lights to false."
+
+/** What a scene's lighting asks to bake that this publish could not. */
+function unbakedWarnings(
+	settings: Parameters<typeof resolveLighting>[0]
+): string[] {
+	if (!settings) return []
+	const lighting = resolveLighting(settings)
+	return [
+		...(lighting.occlusion.mode === 'baked' ? [BAKED_OCCLUSION_WARNING] : []),
+		...(lighting.bake.lights && litLights(lighting).length > 0
+			? [BAKED_LIGHTS_WARNING]
+			: [])
+	]
+}
+
 export const publishScene = defineOperation({
 	name: 'publish_scene',
 	title: 'Publish a scene',
 	description:
-		"Compresses a local GLB the way the publisher exports it (Draco geometry and KTX2 textures, each on unless turned off) and publishes it as what the scene's visitors load. Send the GLB the scene was created from. Publishing again replaces it. Ambient occlusion the scene's lighting asks to bake is not baked here, which needs a GPU: the result warns, and publishing from the Publisher bakes it.",
+		"Compresses a local GLB the way the publisher exports it (Draco geometry and KTX2 textures, each on unless turned off) and publishes it as what the scene's visitors load. Send the GLB the scene was created from. Publishing again replaces it. Ambient occlusion and studio lights the scene's lighting asks to bake are not baked here, which needs a GPU: the result warns, and publishing from the Publisher bakes them.",
 	input: z.object({
 		sceneId,
 		path: filePath,
@@ -194,12 +212,11 @@ export const publishScene = defineOperation({
 		const published = await context.client.publishScene(sceneId, {
 			file: blobOf(exported)
 		})
+		const warnings = unbakedWarnings(settings)
 		return {
 			...published,
 			bytes: { source: bytes.length, published: exported.length },
-			...(settings && resolveLighting(settings).occlusion.mode === 'baked'
-				? { warnings: [BAKED_OCCLUSION_WARNING] }
-				: {})
+			...(warnings.length > 0 ? { warnings } : {})
 		}
 	}
 })

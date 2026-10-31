@@ -1,5 +1,9 @@
 import { bakeOcclusion, encodeOcclusionPng } from './bake-occlusion'
-import { planOcclusionBake, type OcclusionBakeSkipReason } from './plan'
+import {
+	planOcclusionBake,
+	type OcclusionBakePlan,
+	type OcclusionBakeSkipReason
+} from './plan'
 import { writeOcclusionBake } from './write-occlusion'
 
 import type { OcclusionBakeOptions } from './options'
@@ -38,12 +42,21 @@ export async function bakeOcclusionIntoDocument(
 		)
 	)
 
+	return bakeReport(document, baked, plan.skipped)
+}
+
+/** A bake's outcome by material name, the unnamed numbered as the file lists them. */
+export function bakeReport(
+	document: Document,
+	baked: { material: Material }[],
+	skipped: OcclusionBakePlan['skipped']
+): OcclusionBakeReport {
 	const materials = document.getRoot().listMaterials()
 	const label = (material: Material) =>
 		material.getName() || `material ${materials.indexOf(material) + 1}`
 	return {
 		baked: baked.map(({ material }) => label(material)),
-		skipped: plan.skipped.map(({ material, reason }) => ({
+		skipped: skipped.map(({ material, reason }) => ({
 			material: label(material),
 			reason
 		}))

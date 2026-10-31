@@ -15,17 +15,18 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, GLTF, WebIO } from '@gltf-transform/core'
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 
 import { GeometryCodecs } from '../geometry-codecs/geometry-codecs'
+import { IO_EXTENSIONS } from '../io-extensions'
 import { modelFormatForFileName, type ModelFormat } from '../model-formats'
+import { registerBakedLightmap } from './baked-lightmap-plugin'
+import { referenceIn, selectionKey } from './dropped-selection'
 import { missingAssetsError } from './missing-assets'
 import { OperationProgress } from '../types'
 import {
 	getThreeDracoLoader,
 	prepareThreeDracoDecoder
 } from './draco-three-loader'
-import { referenceIn, selectionKey } from './dropped-selection'
 import {
 	KTX2_EXTENSION,
 	MESHOPT_EXTENSION,
@@ -104,7 +105,7 @@ export class ModelLoader {
 		dracoDecoderPath?: string
 		ktx2TranscoderPath?: string
 	}) {
-		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
+		this.io = new WebIO().registerExtensions(IO_EXTENSIONS)
 		this.dracoDecoderPath = options?.dracoDecoderPath ?? DRACO_DECODER_PATH
 		this.codecs = new GeometryCodecs(this.io, this.dracoDecoderPath)
 		this.ktx2TranscoderPath =
@@ -136,6 +137,7 @@ export class ModelLoader {
 
 		const loader = new GLTFLoader(manager)
 		registerNonColorVertexColors(loader)
+		registerBakedLightmap(loader)
 		loader.setDRACOLoader(dracoLoader)
 		if (meshoptDecoder) loader.setMeshoptDecoder(meshoptDecoder)
 		if (ktx2Loader) loader.setKTX2Loader(ktx2Loader)

@@ -9,6 +9,7 @@
 	},
 	"dependencies": {
 		"@gltf-transform/core": "^4.4.2",
+		"@gltf-transform/extensions": "^4.4.2",
 		"@react-three/drei": "^10.0.7",
 		"@react-three/fiber": "^9.1.2",
 		"@vctrl/core": "latest",

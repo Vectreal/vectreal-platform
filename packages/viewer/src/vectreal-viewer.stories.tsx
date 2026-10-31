@@ -1,12 +1,21 @@
 import {
+	BAKED_LIGHTMAP_USER_DATA,
+	bakedLightsSignature,
 	describeAnimationClips,
 	LIGHTING_SETUPS,
-	type LightingSetupId
+	lightDirection,
+	litLights,
+	resolveLighting,
+	type LightingSettings,
+	type LightingSetupId,
+	type ResolvedLighting
 } from '@vctrl/core'
 import { fn } from 'storybook/test'
 import {
 	AnimationClip,
 	BoxGeometry,
+	Color,
+	DataTexture,
 	Group,
 	Mesh,
 	MeshStandardMaterial,
@@ -292,6 +301,101 @@ export const LightingSetups: StoryObj<
 			/>
 		)
 	}
+}
+
+const BAKED_LIGHTING: LightingSettings = {
+	environment: { map: 'studio-soft', intensity: 0.8 },
+	lights: [
+		{ role: 'key', azimuth: 60, elevation: 25, size: 10, intensity: 1.5 },
+		{ role: 'fill', azimuth: -70, elevation: 15, size: 40, intensity: 0.3 }
+	],
+	background: { type: 'color', color: '#f4f4f5' }
+}
+
+/*
+  The light map the publish bake writes for a sphere, worked out here instead
+  of raytraced: a sphere cannot shadow itself, so each texel's light is the
+  lights' strength by the cosine to its normal, in SphereGeometry's own UVs.
+*/
+function sphereLightmap(lighting: ResolvedLighting, size = 128) {
+	const lights = litLights(lighting)
+	const scale = lights.reduce((sum, light) => {
+		const { r, g, b } = new Color(light.color)
+		return sum + light.intensity * Math.max(r, g, b)
+	}, 0)
+	const data = new Uint8Array(size * size * 4)
+	for (let row = 0; row < size; row++) {
+		for (let column = 0; column < size; column++) {
+			const phi = ((column + 0.5) / size) * 2 * Math.PI
+			const theta = (1 - (row + 0.5) / size) * Math.PI
+			const normal = [
+				-Math.cos(phi) * Math.sin(theta),
+				Math.cos(theta),
+				Math.sin(phi) * Math.sin(theta)
+			]
+			const light = [0, 0, 0]
+			for (const entry of lights) {
+				const [x, y, z] = lightDirection(entry, lighting.environment.rotation)
+				const facing = Math.max(
+					normal[0] * x + normal[1] * y + normal[2] * z,
+					0
+				)
+				const { r, g, b } = new Color(entry.color)
+				;[r, g, b].forEach((channel, c) => {
+					light[c] += entry.intensity * channel * facing
+				})
+			}
+			const i = (row * size + column) * 4
+			light.forEach((value, c) => {
+				data[i + c] = Math.round(Math.sqrt(value / scale) * 255)
+			})
+			data[i + 3] = 255
+		}
+	}
+	const texture = new DataTexture(data, size, size)
+	texture.needsUpdate = true
+	return { texture, scale }
+}
+
+const createBakedLightsSphere = (baked: boolean) => {
+	const lighting = resolveLighting({ lighting: BAKED_LIGHTING })
+	const material = new MeshStandardMaterial({
+		color: '#b8b8bc',
+		roughness: 0.9
+	})
+	if (baked) {
+		const { texture, scale } = sphereLightmap(lighting)
+		material.lightMap = texture
+		material.lightMapIntensity = 0
+		material.userData[BAKED_LIGHTMAP_USER_DATA] = {
+			scale,
+			signature: bakedLightsSignature(lighting)
+		}
+	}
+	return new Group().add(new Mesh(new SphereGeometry(0.5, 96, 48), material))
+}
+
+/**
+ * Baked lights against live ones: the right sphere carries the light map
+ * publishing bakes, the left is lit live. They should read the same, the
+ * baked one without live shadow maps and with its highlights still live.
+ */
+export const BakedLights: Story = {
+	parameters: timeDependentCapture,
+	render: (args) => (
+		<div style={{ display: 'flex', height: '100%' }}>
+			{[false, true].map((baked) => (
+				<div key={String(baked)} style={{ flex: 1 }}>
+					<VectrealViewer
+						{...args}
+						model={createBakedLightsSphere(baked)}
+						envOptions={undefined}
+						lighting={BAKED_LIGHTING}
+					/>
+				</div>
+			))}
+		</div>
+	)
 }
 
 /**

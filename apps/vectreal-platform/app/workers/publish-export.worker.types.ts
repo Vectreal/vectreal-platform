@@ -14,6 +14,8 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
+import type { ResolvedLighting } from '@vctrl/core'
+import type { LightBakeReport } from '@vctrl/core/light-bake'
 import type {
 	GeometryCodec,
 	GeometryCodecSizes,
@@ -32,6 +34,8 @@ export interface PublishExportRequest {
 	ktx2: boolean
 	/** Bake ambient occlusion into the published GLB. */
 	occlusion: boolean
+	/** Bake these studio lights into the published GLB's light maps, or none. */
+	lights: Pick<ResolvedLighting, 'lights' | 'environment'> | false
 }
 
 export interface PublishExportProgress {
@@ -53,6 +57,8 @@ export interface PublishExportOutcome {
 	 * A failed bake publishes the model without it rather than not at all.
 	 */
 	occlusion?: OcclusionBakeReport | { failed: string }
+	/** Present when the lights were asked for, as `occlusion` is. */
+	lights?: LightBakeReport | { failed: string }
 }
 
 /** Messages received FROM the worker. */

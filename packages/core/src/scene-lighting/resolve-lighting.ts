@@ -32,6 +32,7 @@ export interface ResolvedLighting {
 		mode: NonNullable<SceneOcclusionSettings['mode']>
 		live: { intensity: number; atRest: boolean }
 	}
+	bake: { lights: boolean }
 }
 
 const DEFAULT_ENVIRONMENT: ResolvedLighting['environment'] = {
@@ -137,7 +138,8 @@ export function resolveLighting(
 		occlusion: {
 			mode: lighting.occlusion?.mode ?? 'off',
 			live: filled(DEFAULT_OCCLUSION_LIVE, lighting.occlusion?.live)
-		}
+		},
+		bake: { lights: lighting.bake?.lights ?? false }
 	}
 }
 
@@ -211,7 +213,8 @@ function migrateLegacyLighting({
 				intensity: shadows.aoIntensity ?? D.aoIntensity,
 				atRest: shadows.aoAtRest ?? D.aoAtRest
 			}
-		}
+		},
+		bake: { lights: false }
 	}
 }
 

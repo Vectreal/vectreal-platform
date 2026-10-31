@@ -21,6 +21,28 @@ export type OcclusionBakeSkipReason =
 	| 'tiling-uvs'
 	/** Two parts share texels, as mirrored halves usually do. */
 	| 'overlapping-uvs'
+	/**
+	 * Light bake only: it is drawn from both sides, and a map lights one. The
+	 * back of a lit card would draw the front's light, or its darkness.
+	 */
+	| 'double-sided'
+	/**
+	 * Light bake only: an animation turns, moves or reshapes it, and a map
+	 * holds the rest pose's light.
+	 */
+	| 'animated'
+	/**
+	 * Light bake only: another part moves, or is drawn more than once, and a
+	 * map cannot hold the shadow it casts here.
+	 */
+	| 'moving-shadows'
+	/**
+	 * Light bake only: a cutout casts a shadow here, and the bake traces it as
+	 * solid, so leaves would cast rectangles.
+	 */
+	| 'cutout-shadows'
+	/** Light bake only: it is unlit, so no light reaches it to bake. */
+	| 'unlit'
 
 /** A material that can be baked, with every primitive that draws it. */
 export interface OcclusionBakeTarget {
@@ -70,7 +92,15 @@ const OVERLAP_GRID = 256
 /** Share of covered texels that may be drawn twice before the UVs count as overlapping. */
 const OVERLAP_ALLOWANCE = 0.02
 
-export function planOcclusionBake(document: Document): OcclusionBakePlan {
+/**
+ * Which materials a bake into the first UV set can take, and why the others
+ * cannot. `existingOcclusion: 'bake'` is for a bake that is not occlusion,
+ * such as the light map, which an occlusion texture does not stand in for.
+ */
+export function planOcclusionBake(
+	document: Document,
+	{ existingOcclusion = 'keep' }: { existingOcclusion?: 'keep' | 'bake' } = {}
+): OcclusionBakePlan {
 	const primitives = listScenePrimitives(document)
 	const placements = new Map<ScenePrimitive['mesh'], number>()
 	const seenNodes = new Set<ScenePrimitive['node']>()
@@ -93,7 +123,10 @@ export function planOcclusionBake(document: Document): OcclusionBakePlan {
 
 	const plan: OcclusionBakePlan = { targets: [], skipped: [], primitives }
 	for (const [material, drawn] of byMaterial) {
-		const reason = skipReason(material, drawn, placements)
+		const reason =
+			existingOcclusion === 'keep' && material.getOcclusionTexture()
+				? 'existing-occlusion'
+				: skipReason(drawn, placements)
 		if (reason) plan.skipped.push({ material, reason })
 		else plan.targets.push({ material, primitives: drawn })
 	}
@@ -101,11 +134,9 @@ export function planOcclusionBake(document: Document): OcclusionBakePlan {
 }
 
 function skipReason(
-	material: Material,
 	drawn: ScenePrimitive[],
 	placements: Map<ScenePrimitive['mesh'], number>
 ): OcclusionBakeSkipReason | undefined {
-	if (material.getOcclusionTexture()) return 'existing-occlusion'
 	if (drawn.some(({ mesh }) => (placements.get(mesh) ?? 0) > 1)) {
 		return 'shared-geometry'
 	}

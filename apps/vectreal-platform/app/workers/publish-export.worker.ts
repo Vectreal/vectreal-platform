@@ -16,12 +16,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 /**
  * Encodes the GLB a scene is published as, off the main thread: ambient
- * occlusion baked in when asked, textures to KTX2, then geometry in whichever
+ * occlusion and the studio lights baked in when asked, textures to KTX2, then geometry in whichever
  * of Draco and meshopt ships it cheapest.
  * Each is seconds of CPU per texture or mesh, and on the main thread that was
  * a frozen publisher.
  */
 
+import { bakeLightsIntoDocument } from '@vctrl/core/light-bake'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { bakeOcclusionIntoDocument } from '@vctrl/core/occlusion-bake'
 import { BrowserBasisEncoder } from 'ktx2-encoder'
@@ -32,7 +33,6 @@ import type {
 	PublishExportOutcome,
 	PublishExportRequest
 } from './publish-export.worker.types'
-import type { Document } from '@gltf-transform/core'
 import type { Ktx2Encoder } from '@vctrl/core/model-optimizer'
 
 /** Self-hosted, and matched to the bundled glue by `public-codec-files.spec.ts`. */
@@ -104,23 +104,15 @@ const encodeKtx2: Ktx2Encoder = ({ image, width, height }, options) =>
 		imageDecoder: (bytes) => decodeRgba(bytes, width, height)
 	})
 
-/** A renderer of its own for the bake, on a canvas nothing displays. */
-async function bakeOcclusion(
-	document: Document
-): Promise<NonNullable<PublishExportOutcome['occlusion']>> {
-	let renderer: WebGLRenderer | undefined
+/** A failed bake publishes the model without it, so its error is reported, not thrown. */
+async function attempt<T>(
+	bake: () => Promise<T>,
+	fallback: string
+): Promise<T | { failed: string }> {
 	try {
-		return await bakeOcclusionIntoDocument(
-			document,
-			() =>
-				(renderer = new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) }))
-		)
+		return await bake()
 	} catch (error) {
-		return {
-			failed: error instanceof Error ? error.message : 'Occlusion bake failed'
-		}
-	} finally {
-		renderer?.dispose()
+		return { failed: error instanceof Error ? error.message : fallback }
 	}
 }
 
@@ -129,22 +121,42 @@ function post(message: PublishExportMessage, transfer: Transferable[] = []) {
 }
 
 self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
-	const { type, buffer, draco, dracoWorthApplying, ktx2, occlusion } =
+	const { type, buffer, draco, dracoWorthApplying, ktx2, occlusion, lights } =
 		event.data
 	if (type !== 'export') return
 
 	let occlusionReport: PublishExportOutcome['occlusion']
+	let lightsReport: PublishExportOutcome['lights']
+	// One renderer for both bakes, on a canvas nothing displays, made only
+	// when a bake has something to bake.
+	let renderer: WebGLRenderer | undefined
+	const bakeRenderer = () =>
+		(renderer ??= new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) }))
 	try {
 		const result = await new ModelExporter().exportGlbForPublish(
 			new Uint8Array(buffer),
 			{
 				draco,
 				dracoWorthApplying,
-				occlusion: occlusion
-					? async (document) => {
-							occlusionReport = await bakeOcclusion(document)
-						}
-					: undefined,
+				bake:
+					occlusion || lights
+						? async (document) => {
+								// Occlusion first: the light bake bakes past it.
+								if (occlusion) {
+									occlusionReport = await attempt(
+										() => bakeOcclusionIntoDocument(document, bakeRenderer),
+										'Occlusion bake failed'
+									)
+								}
+								if (lights) {
+									lightsReport = await attempt(
+										() =>
+											bakeLightsIntoDocument(document, lights, bakeRenderer),
+										'Light bake failed'
+									)
+								}
+							}
+						: undefined,
 				ktx2: ktx2
 					? {
 							encode: encodeKtx2,
@@ -167,7 +179,8 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 				geometrySizes: result.geometrySizes,
 				textureBytes: result.textureBytes,
 				textures: result.textures,
-				occlusion: occlusionReport
+				occlusion: occlusionReport,
+				lights: lightsReport
 			},
 			[output]
 		)
@@ -176,5 +189,7 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 			type: 'error',
 			message: error instanceof Error ? error.message : 'Publish export failed'
 		})
+	} finally {
+		renderer?.dispose()
 	}
 }

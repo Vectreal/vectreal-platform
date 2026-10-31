@@ -101,6 +101,23 @@ describe('planOcclusionBake', () => {
 		])
 	})
 
+	it('bakes past an occlusion texture for a bake that is not occlusion', () => {
+		const document = new Document()
+		const material = document
+			.createMaterial('baked')
+			.setOcclusionTexture(document.createTexture())
+		sceneOf(
+			document,
+			document.createMesh().addPrimitive(grid(document).setMaterial(material))
+		)
+
+		const plan = planOcclusionBake(document, { existingOcclusion: 'bake' })
+
+		expect(plan.targets.map(({ material }) => material.getName())).toEqual([
+			'baked'
+		])
+	})
+
 	it('skips a material with no first UV set', () => {
 		const document = new Document()
 		const material = document.createMaterial('plain')

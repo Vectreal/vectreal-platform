@@ -53,6 +53,10 @@
 			"types": "./model-exporter/index.d.ts",
 			"default": "./model-exporter/index.js"
 		},
+		"./light-bake": {
+			"types": "./light-bake/index.d.ts",
+			"default": "./light-bake/index.js"
+		},
 		"./occlusion-bake": {
 			"types": "./occlusion-bake/index.d.ts",
 			"default": "./occlusion-bake/index.js"

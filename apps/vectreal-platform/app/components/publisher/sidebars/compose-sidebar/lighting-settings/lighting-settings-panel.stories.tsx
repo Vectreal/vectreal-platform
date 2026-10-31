@@ -11,11 +11,11 @@ import {
 	TorusKnotGeometry
 } from 'three'
 
+import { BakeSection } from './bake-section'
 import LightingSettings from './lighting-settings-panel'
-import { OcclusionBakeSection } from './occlusion-bake-section'
 import {
 	editedLightRoleAtom,
-	type OcclusionBakePreview
+	type BakePreview
 } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 
@@ -111,14 +111,14 @@ function PanelOverScene() {
 
 export const Panel: Story = { render: () => <PanelOverScene /> }
 
-const SOURCE = { document: null, passRevision: 0 }
+const SOURCE = { document: null, passRevision: 0, bakes: '' }
 
 const BAKE_STATES: {
 	title: string
 	canBake: boolean
 	isOptimizing?: boolean
 	isAnimated?: boolean
-	preview: OcclusionBakePreview | null
+	preview: BakePreview | null
 }[] = [
 	{ title: 'No model', canBake: false, preview: null },
 	{
@@ -140,13 +140,19 @@ const BAKE_STATES: {
 			status: 'ready',
 			source: SOURCE,
 			shown: true,
-			durationMs: 1640,
-			report: {
-				baked: ['Body', 'Sole', 'Laces'],
-				skipped: [
-					{ material: 'Logo', reason: 'tiling-uvs' },
-					{ material: 'Eyelet', reason: 'shared-geometry' }
-				]
+			durationMs: 3280,
+			reports: {
+				occlusion: {
+					baked: ['Body', 'Sole', 'Laces'],
+					skipped: [
+						{ material: 'Logo', reason: 'tiling-uvs' },
+						{ material: 'Eyelet', reason: 'shared-geometry' }
+					]
+				},
+				lights: {
+					baked: ['Body', 'Sole', 'Laces', 'Logo'],
+					skipped: [{ material: 'Eyelet', reason: 'shared-geometry' }]
+				}
 			}
 		}
 	},
@@ -159,7 +165,7 @@ const BAKE_STATES: {
 			source: SOURCE,
 			shown: true,
 			durationMs: 920,
-			report: { baked: ['Robot'], skipped: [] }
+			reports: { occlusion: { baked: ['Robot'], skipped: [] } }
 		}
 	},
 	{
@@ -170,9 +176,25 @@ const BAKE_STATES: {
 			source: SOURCE,
 			shown: true,
 			durationMs: 40,
-			report: {
-				baked: [],
-				skipped: [{ material: 'Material', reason: 'no-uv0' }]
+			reports: {
+				occlusion: {
+					baked: [],
+					skipped: [{ material: 'Material', reason: 'no-uv0' }]
+				}
+			}
+		}
+	},
+	{
+		title: 'Lights failed',
+		canBake: true,
+		preview: {
+			status: 'ready',
+			source: SOURCE,
+			shown: true,
+			durationMs: 2100,
+			reports: {
+				occlusion: { baked: ['Body', 'Sole'], skipped: [] },
+				lights: { failed: 'The GPU reset while baking the studio lights' }
 			}
 		}
 	},
@@ -188,15 +210,15 @@ const BAKE_STATES: {
 	}
 ]
 
-/** Every state of the Bake section, as the Ambient occlusion view shows it. */
-export const BakeSection: Story = {
+/** Every state of the Bake section, as the Bake view shows it. */
+export const BakeStates: Story = {
 	parameters: { layout: 'padded', dualTheme: true },
 	render: () => (
 		<div className="flex flex-wrap gap-4">
 			{BAKE_STATES.map((state) => (
 				<div key={state.title} className="shell-panel w-[21rem] space-y-4 p-4">
 					<h3 className="text-foreground text-sm font-medium">{state.title}</h3>
-					<OcclusionBakeSection
+					<BakeSection
 						preview={state.preview}
 						canBake={state.canBake}
 						isOptimizing={state.isOptimizing ?? false}

@@ -1136,6 +1136,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									lighting={resolvedLighting}
 									environmentFiles={sceneFiles}
 									model={model}
+									displayedModel={displayedModel}
 									normalizationOptions={normalizationOptions}
 								/>
 								<SceneShadows

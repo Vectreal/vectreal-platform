@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
 	compressTextures: vi.fn(),
 	encode: vi.fn(),
 	bakeOcclusionIntoDocument: vi.fn(),
+	bakeLightsIntoDocument: vi.fn(),
+	createRenderer: vi.fn(),
 	disposeRenderer: vi.fn()
 }))
 
@@ -28,8 +30,14 @@ vi.mock('@vctrl/core/model-exporter', () => ({
 vi.mock('@vctrl/core/occlusion-bake', () => ({
 	bakeOcclusionIntoDocument: mocks.bakeOcclusionIntoDocument
 }))
+vi.mock('@vctrl/core/light-bake', () => ({
+	bakeLightsIntoDocument: mocks.bakeLightsIntoDocument
+}))
 vi.mock('three', () => ({
 	WebGLRenderer: class {
+		constructor() {
+			mocks.createRenderer()
+		}
 		dispose = mocks.disposeRenderer
 	}
 }))
@@ -45,20 +53,42 @@ const occlusionReport = {
 	baked: ['body'],
 	skipped: [{ material: 'glass', reason: 'no-uv0' }]
 }
-/** What the export hands its `occlusion` hook. */
+const lightsReport = { baked: ['body'], skipped: [] }
+const lighting = {
+	environment: {
+		map: 'nature-park',
+		resolution: '1k',
+		intensity: 1,
+		rotation: 0
+	},
+	lights: [
+		{
+			role: 'key',
+			enabled: true,
+			azimuth: 45,
+			elevation: 45,
+			size: 20,
+			intensity: 1,
+			color: '#ffffff'
+		}
+	]
+} satisfies PublishExportRequest['lights']
+/** What the export hands its `bake` hook. */
 const exportedDocument = new Document()
 
 async function send({
 	occlusion = false,
+	lights = false,
 	...request
-}: Omit<PublishExportRequest, 'type' | 'buffer' | 'occlusion'> & {
-	occlusion?: boolean
-}) {
+}: Omit<PublishExportRequest, 'type' | 'buffer' | 'occlusion' | 'lights'> &
+	Partial<Pick<PublishExportRequest, 'occlusion' | 'lights'>>) {
 	const buffer = (await new WebIO().writeBinary(new Document())).slice()
 		.buffer as ArrayBuffer
 	await (
 		self.onmessage as (event: MessageEvent<PublishExportRequest>) => unknown
-	)({ data: { type: 'export', buffer, occlusion, ...request } } as MessageEvent)
+	)({
+		data: { type: 'export', buffer, occlusion, lights, ...request }
+	} as MessageEvent)
 	return posted.map(({ message }) => message)
 }
 
@@ -88,10 +118,10 @@ beforeEach(async () => {
 			_glb: Uint8Array,
 			options: {
 				ktx2?: unknown
-				occlusion?: (document: Document) => Promise<void>
+				bake?: (document: Document) => Promise<void>
 			}
 		) => {
-			await options.occlusion?.(exportedDocument)
+			await options.bake?.(exportedDocument)
 			return {
 				data: new Uint8Array([1, 2, 3]),
 				geometryCodec: 'meshopt',
@@ -176,12 +206,77 @@ describe('the publish export worker', () => {
 
 		expect(mocks.exportGlbForPublish).toHaveBeenCalledWith(
 			expect.any(Uint8Array),
-			expect.objectContaining({ occlusion: undefined })
+			expect.objectContaining({ bake: undefined })
 		)
 		expect(mocks.bakeOcclusionIntoDocument).not.toHaveBeenCalled()
+		expect(mocks.bakeLightsIntoDocument).not.toHaveBeenCalled()
+		expect(mocks.createRenderer).not.toHaveBeenCalled()
 		expect(messages.at(-1)).toMatchObject({
 			type: 'done',
-			occlusion: undefined
+			occlusion: undefined,
+			lights: undefined
+		})
+	})
+
+	it('bakes the lights after the occlusion, on the same renderer, and reports both', async () => {
+		const order: string[] = []
+		mocks.bakeOcclusionIntoDocument.mockImplementation(
+			async (_document: Document, renderer: () => unknown) => {
+				order.push('occlusion')
+				renderer()
+				return occlusionReport
+			}
+		)
+		mocks.bakeLightsIntoDocument.mockImplementation(
+			async (
+				_document: Document,
+				_lighting: unknown,
+				renderer: () => unknown
+			) => {
+				order.push('lights')
+				renderer()
+				return lightsReport
+			}
+		)
+
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true,
+			lights: lighting
+		})
+
+		expect(order).toEqual(['occlusion', 'lights'])
+		expect(mocks.bakeLightsIntoDocument).toHaveBeenCalledWith(
+			exportedDocument,
+			lighting,
+			expect.any(Function)
+		)
+		expect(mocks.createRenderer).toHaveBeenCalledOnce()
+		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
+		expect(messages.at(-1)).toMatchObject({
+			type: 'done',
+			occlusion: occlusionReport,
+			lights: lightsReport
+		})
+	})
+
+	it('publishes without the lights when their bake fails, keeping the occlusion', async () => {
+		mocks.bakeLightsIntoDocument.mockRejectedValue(
+			new Error('The GPU reset while baking the studio lights')
+		)
+
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true,
+			lights: lighting
+		})
+
+		expect(messages.at(-1)).toMatchObject({
+			type: 'done',
+			occlusion: occlusionReport,
+			lights: { failed: 'The GPU reset while baking the studio lights' }
 		})
 	})
 
