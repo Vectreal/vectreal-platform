@@ -25,7 +25,9 @@ import type {
 	SceneLightRole,
 	SceneSettings
 } from '@vctrl/core'
+import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
+import type { Object3D } from 'three'
 
 /**
  * Publisher UI preferences. Deliberately holds no load lifecycle: whether a
@@ -301,6 +303,24 @@ const environmentFilesOf = (
  */
 const editedLightRoleAtom = atom<SceneLightRole | null>(null)
 
+/**
+ * A preview of the occlusion publishing would bake, for the working document
+ * it was made from. View state only: publishing bakes again.
+ */
+interface OcclusionBakePreview {
+	status: 'baking' | 'ready' | 'failed'
+	/** The document and optimization pass it was baked from. */
+	source: { document: unknown; passRevision: number }
+	/** Whether the viewer shows it in place of the model. */
+	shown: boolean
+	model?: Object3D
+	report?: OcclusionBakeReport
+	durationMs?: number
+	error?: string
+}
+
+const occlusionBakePreviewAtom = atom<OcclusionBakePreview | null>(null)
+
 export {
 	// atoms
 	processAtom,
@@ -308,6 +328,7 @@ export {
 	environmentLoadFailedAtom,
 	environmentFilesOf,
 	editedLightRoleAtom,
+	occlusionBakePreviewAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
 	capturedThumbnailFrameAtom,
@@ -336,3 +357,5 @@ export {
 	processInitialState,
 	sceneMetaInitialState
 }
+
+export type { OcclusionBakePreview }

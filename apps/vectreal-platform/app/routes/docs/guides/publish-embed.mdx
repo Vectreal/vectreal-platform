@@ -16,7 +16,8 @@ To revert to draft, click **Revoke publication** and confirm.
 
 Publishing compresses a copy of the model for visitors; the scene you edit is
 left as it is. When the scene's lighting has ambient occlusion set to
-**baked** (`lighting.occlusion.mode: 'baked'` through the API), publishing
+**baked** (in the Lighting tool's Ambient occlusion view, or
+`lighting.occlusion.mode: 'baked'` through the API), publishing
 also raytraces it into each material's own occlusion map before compressing.
 Any glTF viewer shows it, and it costs nothing to draw. Baking runs in your
 browser and needs WebGL 2. When materials cannot be baked, a warning counts

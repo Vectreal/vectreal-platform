@@ -107,17 +107,22 @@ The environment lights the model whichever background you choose. With
 
 ## Ambient occlusion
 
-**Ambient occlusion** darkens creases and tight gaps on the model. It is drawn
-every frame while the view moves, so it is off by default. **Only when still**
-draws it once the view stops, and **Strength** sets how dark it gets.
+**Ambient occlusion** darkens creases and tight gaps on the model. It is off by
+default, and has two ways to be on:
 
-It can also be baked: raytraced into the model's own textures when the scene
-is published, so it costs nothing to draw and any glTF viewer shows it. Set
-`lighting.occlusion.mode` to `baked` through the
-[scene settings API](/docs/agents/api); the panel then reads **Baked**, and
-switching the toggle on goes back to drawing it live.
-[Publishing](/docs/guides/publish-embed#publishing-a-scene) says what baking
-needs and what it skips.
+- **Live** draws it every frame while the view moves. **Only when still** draws
+  it once the view stops, and **Strength** sets how dark it gets.
+- **Baked** raytraces it into the model's own textures when the scene is
+  published, so it costs nothing to draw and any glTF viewer shows it.
+
+With **Baked** chosen, **Preview the bake** runs the same bake publishing will,
+in the background, and shows the result on the model while the Lighting tool is
+open. **Show the bake** switches between the baked model and the model as it
+is, to compare. The panel then says how many materials were baked and how long
+it took, and lists each material it could not bake with the reason. A new
+optimization pass or model discards the preview; publishing bakes again either
+way. [Publishing](/docs/guides/publish-embed#publishing-a-scene) says what
+baking needs.
 
 ---
 
@@ -146,5 +151,7 @@ present packages/core/src/scene-lighting/lighting-setups.ts export const DEFAULT
 present packages/sdk/src/scene-settings.ts lighting: sceneLightingSchema.optional(),
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/color-temperature.ts export const NEUTRAL_KELVIN = 6600
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Ground shadow"
-present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx baked: 'Baked'
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx { mode: 'baked', label: 'Baked' }
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/occlusion-bake-section.tsx 'Preview the bake'
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/occlusion-bake-section.tsx label="Show the bake"
 */}
