@@ -17,6 +17,7 @@ import {
 import {
 	cameraAtom,
 	environmentAtom,
+	lightingAtom,
 	normalizationAtom
 } from '../../../lib/stores/scene-settings-store'
 
@@ -45,6 +46,10 @@ describe('setting the opening view', () => {
 		const openingCamera = { cameraId: 'cam-main', name: 'Main', fov: 50 }
 		store.set(cameraAtom, { cameras: [openingCamera] })
 		store.set(environmentAtom, environment)
+		const lighting = {
+			environment: { map: 'studio-key', rotation: 30 }
+		} as const
+		store.set(lightingAtom, lighting)
 		const normalization = { enabled: true, maxSize: 3 }
 		store.set(normalizationAtom, normalization)
 		const wrapper = ({ children }: { children: ReactNode }) => (
@@ -60,6 +65,7 @@ describe('setting the opening view', () => {
 			frame: buildThumbnailFrameSignature({
 				camera: { cameras: [{ ...openingCamera, ...snapshot }] },
 				environment,
+				lighting,
 				normalization
 			})
 		})

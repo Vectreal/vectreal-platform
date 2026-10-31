@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { aimLegacyLight, LEGACY_LIGHTING_DEFAULTS, resolveLighting } from '.'
+import {
+	aimLegacyLight,
+	aimLight,
+	LEGACY_LIGHTING_DEFAULTS,
+	resolveLighting
+} from '.'
 
 describe('resolveLighting for a scene saved with lighting', () => {
 	it('fills every field a partial save leaves out', () => {
@@ -261,5 +266,29 @@ describe('aimLegacyLight', () => {
 		expect(Math.hypot(...aimed)).toBeCloseTo(
 			Math.hypot(...LEGACY_LIGHTING_DEFAULTS.lightPosition)
 		)
+	})
+})
+
+describe('aimLight', () => {
+	const toward = (azimuth: number, elevation: number) => {
+		const a = (azimuth * Math.PI) / 180
+		const e = (elevation * Math.PI) / 180
+		return [
+			Math.sin(a) * Math.cos(e) * 3,
+			Math.sin(e) * 3,
+			Math.cos(a) * Math.cos(e) * 3
+		] as [number, number, number]
+	}
+
+	it('reads the direction a point stands in', () => {
+		const aimed = aimLight(toward(70, 35), 0)
+		expect(aimed.azimuth).toBeCloseTo(70)
+		expect(aimed.elevation).toBeCloseTo(35)
+	})
+
+	it('stores the azimuth on the map, before the environment turns it', () => {
+		// The viewer draws a light at azimuth + rotation.
+		expect(aimLight(toward(100, 20), 60).azimuth).toBeCloseTo(40)
+		expect(aimLight(toward(-170, 20), 60).azimuth).toBeCloseTo(130)
 	})
 })

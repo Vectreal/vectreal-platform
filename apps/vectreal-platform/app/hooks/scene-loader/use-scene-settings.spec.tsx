@@ -19,7 +19,8 @@ import { lastSavedSettingsAtom } from '../../lib/stores/publisher-config-store'
 import {
 	animationAtom,
 	animationDriftAtom,
-	hotspotsAtom
+	hotspotsAtom,
+	lightingAtom
 } from '../../lib/stores/scene-settings-store'
 
 import type {
@@ -72,6 +73,23 @@ describe('useApplySceneSettings', () => {
 		apply(settings, { isSavedBaseline: false })
 
 		expect(store.get(lastSavedSettingsAtom)).toBeNull()
+	})
+})
+
+describe('a scene saved before lighting', () => {
+	it('opens in the editor with its lighting migrated, as the baseline too', () => {
+		const { store, apply } = arrange()
+		const legacy: SceneSettings = {
+			environment: { preset: 'night-city' },
+			shadows: { enabled: true }
+		}
+
+		apply(legacy, { isSavedBaseline: true })
+
+		const lighting = store.get(lightingAtom)
+		expect(lighting.environment?.map).toBe('night-city')
+		expect(lighting.lights?.map((light) => light.role)).toEqual(['key'])
+		expect(store.get(lastSavedSettingsAtom)?.lighting).toBe(lighting)
 	})
 })
 

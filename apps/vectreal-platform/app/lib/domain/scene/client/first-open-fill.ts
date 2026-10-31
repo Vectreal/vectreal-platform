@@ -1,4 +1,4 @@
-import { normalizeShadowOptions } from '../../../../constants/viewer-defaults'
+import { resolveLighting } from '@vctrl/core'
 
 import type { SceneSettings } from '@vctrl/core'
 import type { ShadowBakeResult } from '@vctrl/viewer'
@@ -9,19 +9,19 @@ import type { ShadowBakeResult } from '@vctrl/viewer'
  * publisher's save captures the thumbnail from the opening camera and
  * persists a settled bake, so one save on first open fills both.
  *
- * A bake is asked for only with shadows on: off, the viewer bakes nothing.
- * Null when nothing is missing.
+ * A bake is asked for only with the ground on: off, the viewer bakes
+ * nothing. Null when nothing is missing.
  */
 export function planFirstOpenFill({
 	thumbnailUrl,
-	shadows
+	settings = {}
 }: {
 	thumbnailUrl?: string
-	shadows?: SceneSettings['shadows']
+	settings?: Pick<SceneSettings, 'lighting' | 'environment' | 'shadows'>
 }): { thumbnail: boolean; bake: boolean } | null {
 	const thumbnail = !thumbnailUrl
 	const bake =
-		normalizeShadowOptions(shadows).enabled === true && !shadows?.baked
+		resolveLighting(settings).ground.enabled && !settings.shadows?.baked
 	return thumbnail || bake ? { thumbnail, bake } : null
 }
 

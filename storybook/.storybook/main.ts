@@ -26,6 +26,14 @@ const config: StorybookConfig = {
 		// visual regression-tested them.
 		'../../apps/vectreal-platform/app/components/**/*.@(mdx|stories.@(js|jsx|ts|tsx))'
 	],
+	// The Lighting tool's thumbnails, at the path the app serves them from.
+	// Only that folder: the rest of the app's media is tens of megabytes.
+	staticDirs: [
+		{
+			from: '../../apps/vectreal-platform/public/media/images/lighting',
+			to: '/media/images/lighting'
+		}
+	],
 	addons: [getAbsolutePath('@storybook/addon-docs')],
 	docs: {
 		docsMode: true

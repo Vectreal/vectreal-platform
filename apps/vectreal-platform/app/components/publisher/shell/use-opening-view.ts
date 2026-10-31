@@ -12,6 +12,7 @@ import {
 import {
 	cameraAtom,
 	environmentAtom,
+	lightingAtom,
 	normalizationAtom
 } from '../../../lib/stores/scene-settings-store'
 import { usePublisherViewerCapture } from '../publisher-viewer-capture-context'
@@ -112,6 +113,7 @@ export function useOpeningViewCapture() {
 					frame: buildThumbnailFrameSignature({
 						camera: store.get(cameraAtom),
 						environment: store.get(environmentAtom),
+						lighting: store.get(lightingAtom),
 						normalization: store.get(normalizationAtom)
 					})
 				})

@@ -128,4 +128,14 @@ describe('withSceneSettingsDefaults lighting', () => {
 		const lighting = { lights: [{ role: 'key' as const, azimuth: 30 }] }
 		expect(withSceneSettingsDefaults({ lighting }).lighting).toBe(lighting)
 	})
+
+	// The API stores what this returns on every PATCH. A lighting filled in
+	// here would freeze a legacy scene's old environment and shadows, and its
+	// next environment edit would not show.
+	it('leaves a scene saved before lighting without one', () => {
+		const settings = withSceneSettingsDefaults({
+			environment: { preset: 'night-city' }
+		})
+		expect(settings.lighting).toBeUndefined()
+	})
 })

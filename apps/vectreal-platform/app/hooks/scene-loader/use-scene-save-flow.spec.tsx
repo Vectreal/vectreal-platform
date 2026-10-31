@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { act, render, waitFor } from '@testing-library/react'
-import { resolveEnvironmentFiles } from '@vctrl/core'
 import { getDefaultStore } from 'jotai'
 import { useEffect, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -9,12 +8,14 @@ import { useSceneSaveFlow } from './use-scene-save-flow'
 import { defaultBoundsOptions } from '../../constants/viewer-defaults'
 import {
 	capturedThumbnailFrameAtom,
+	environmentFilesOf,
 	failedEnvironmentFilesAtom
 } from '../../lib/stores/publisher-config-store'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
 import {
 	environmentAtom,
-	hotspotsAtom
+	hotspotsAtom,
+	lightingAtom
 } from '../../lib/stores/scene-settings-store'
 
 import type { ScenePersistenceState } from './contracts'
@@ -412,7 +413,9 @@ describe('useSceneSaveFlow', () => {
 		const store = getDefaultStore()
 		store.set(
 			failedEnvironmentFilesAtom,
-			String(resolveEnvironmentFiles(store.get(environmentAtom)))
+			String(
+				environmentFilesOf(store.get(environmentAtom), store.get(lightingAtom))
+			)
 		)
 		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
 		const apiRef = renderHarness()
