@@ -102,9 +102,6 @@ const PublisherPage = () => {
 	const openComposeTool = useAtomValue(openComposeToolAtom)
 	const isPreviewMode = useAtomValue(isPreviewModeAtom)
 	const openHotspotInHotspotTool = useSetAtom(openHotspotInHotspotToolAtom)
-	// A bake preview is a copy of the model; the other tools act on the model
-	// itself, so the copy shows only inside the Lighting tool.
-	const shownBake = useShownBake(openComposeTool === 'lighting')
 	const loadingThumbnail = toViewerLoadingThumbnail(
 		sceneMeta.thumbnailUrl,
 		'Scene thumbnail preview'
@@ -146,6 +143,19 @@ const PublisherPage = () => {
 	const [animationStatus, setAnimationStatus] = useState({
 		playing: false,
 		complete: false
+	})
+
+	// The same rule the viewer mounts its animation runtime by
+	// (`useAnimationRuntime`): without it nothing can move the model off its
+	// bind pose, so an applied bake can stay on screen in every tool.
+	const canAnimate =
+		(file?.animations?.length ?? 0) > 0 &&
+		(Boolean(animation?.enabled) ||
+			Boolean(hotspots?.some((hotspot) => hotspot.linkedAnimationClipId)))
+	const shownBake = useShownBake({
+		isLightingOpen: openComposeTool === 'lighting',
+		canAnimate,
+		isAnimating: animationStatus.playing
 	})
 
 	const setFailedEnvironmentFiles = useSetAtom(failedEnvironmentFilesAtom)
