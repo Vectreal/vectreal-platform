@@ -71,6 +71,25 @@ function isArticleSource(id: string): boolean {
 	)
 }
 
+const UNSAFE_IN_SOURCE: Record<string, string> = {
+	'<': '\\u003C',
+	'>': '\\u003E',
+	'\u2028': '\\u2028',
+	'\u2029': '\\u2029'
+}
+
+/**
+ * A string as a JavaScript literal in emitted source. `JSON.stringify` quotes
+ * it and escapes control characters; the rest are the characters that still
+ * change what surrounding markup or older parsers make of it.
+ */
+function toJsLiteral(value: string): string {
+	return JSON.stringify(value).replace(
+		/[<>\u2028\u2029]/g,
+		(char) => UNSAFE_IN_SOURCE[char]
+	)
+}
+
 /** `output.chunkFileNames`: Vite's default, except for an article body. */
 export function newsArticleChunkFileNames(chunk: Rolldown.PreRenderedChunk) {
 	const id = chunk.facadeModuleId
@@ -110,7 +129,7 @@ export function newsArticleBodiesPlugin(): Plugin {
 
 			const entries = [...ids].map(
 				([bodyId, file]) =>
-					`${JSON.stringify(bodyId)}: () => import(${JSON.stringify(path.join(directory, file))})`
+					`${toJsLiteral(bodyId)}: () => import(${toJsLiteral(path.join(directory, file))})`
 			)
 			return `export default {\n${entries.join(',\n')}\n}\n`
 		},
