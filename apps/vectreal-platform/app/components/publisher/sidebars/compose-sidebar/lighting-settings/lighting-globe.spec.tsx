@@ -31,6 +31,36 @@ describe('projectOnGlobe', () => {
 		expect(projectOnGlobe({ azimuth: 90, elevation: 0 }, -90).x).toBeCloseTo(0)
 	})
 
+	it('is seen from the camera, whose side is its center', () => {
+		const fromRight = { azimuth: 90, elevation: 0 }
+		// Looking from +X, a light at +X faces the camera and +Z is on its left.
+		const facing = projectOnGlobe({ azimuth: 90, elevation: 0 }, 0, fromRight)
+		expect(facing.x).toBeCloseTo(0)
+		expect(facing.front).toBe(true)
+		expect(
+			projectOnGlobe({ azimuth: 0, elevation: 0 }, 0, fromRight).x
+		).toBeCloseTo(-1)
+
+		// Looking straight down, the zenith is the center.
+		const zenith = projectOnGlobe({ azimuth: 0, elevation: 90 }, 0, {
+			azimuth: 0,
+			elevation: 90
+		})
+		expect(zenith.x).toBeCloseTo(0)
+		expect(zenith.y).toBeCloseTo(0)
+	})
+
+	it('is seen from below when the camera orbits under the model', () => {
+		const below = { azimuth: 0, elevation: -30 }
+		// The near horizon rises above the center, and the zenith turns away.
+		expect(
+			projectOnGlobe({ azimuth: 0, elevation: 0 }, 0, below).y
+		).toBeLessThan(0)
+		expect(projectOnGlobe({ azimuth: 0, elevation: 90 }, 0, below).front).toBe(
+			false
+		)
+	})
+
 	it('turns a quarter of the globe for a drag of a quarter of its circumference', () => {
 		expect(dragDegrees((Math.PI / 2) * 60, 60)).toBeCloseTo(90)
 	})
@@ -154,5 +184,27 @@ describe('LightingGlobe', () => {
 		const { globe, onRotationChange } = renderGlobe(75)
 		fireEvent.doubleClick(globe)
 		expect(onRotationChange).toHaveBeenCalledWith(0)
+	})
+
+	it('draws the near horizon below the center from above, above it from below', () => {
+		// The near horizon is the solid arc; its sweep flag picks the lower half
+		// (0) or the upper one (1) going left to right.
+		const nearSweep = (elevation: number) => {
+			const { container, unmount } = render(
+				<LightingGlobe
+					rotation={0}
+					onRotationChange={() => {}}
+					map="studio-key"
+					lights={[]}
+					view={{ azimuth: 0, elevation }}
+				/>
+			)
+			const near = container.querySelector('path[stroke-opacity="0.45"]')
+			const flag = near?.getAttribute('d')?.match(/0 0 ([01]) \S+ \S+$/)?.[1]
+			unmount()
+			return flag
+		}
+		expect(nearSweep(30)).toBe('0')
+		expect(nearSweep(-30)).toBe('1')
 	})
 })

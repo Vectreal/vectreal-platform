@@ -9,8 +9,10 @@ import { useId, useRef } from 'react'
 
 import {
 	dragDegrees,
-	GLOBE_TILT,
+	DEFAULT_GLOBE_VIEW,
+	globeTilt,
 	projectOnGlobe,
+	type GlobeView,
 	type GlobePoint
 } from './globe-projection'
 import { LIGHT_LABELS } from './light-views'
@@ -40,13 +42,15 @@ export interface LightingGlobeProps {
 	onRotationChange: (rotation: number) => void
 	map: EnvironmentKey
 	lights: ResolvedSceneLight[]
+	/** Where the orbit camera looks from, so the globe matches the scene on screen. */
+	view?: GlobeView
 	className?: string
 }
 
 /**
  * Turns the whole setup around the model: the environment and every light
  * with it, about the vertical axis only, so the environment's horizon stays on
- * the ground. Drawn as the sky seen from the model's front: its horizon, the
+ * the ground. Drawn as the sky seen from the orbit camera: its horizon, the
  * environment's bright regions, and each light in its color. Dragging sideways
  * turns it; to assistive technology it is a slider in degrees. Its label and
  * value belong to the setting group it sits in.
@@ -56,6 +60,7 @@ export function LightingGlobe({
 	onRotationChange,
 	map,
 	lights,
+	view = DEFAULT_GLOBE_VIEW,
 	className
 }: LightingGlobeProps) {
 	const id = useId()
@@ -103,7 +108,12 @@ export function LightingGlobe({
 	}
 	const endDrag = () => (drag.current = null)
 
-	const horizonRy = RADIUS * Math.sin((GLOBE_TILT * Math.PI) / 180)
+	const tilt = globeTilt(view)
+	const horizonRy = RADIUS * Math.abs(Math.sin((tilt * Math.PI) / 180))
+	// Arc sweeps, left to right: the near half of the horizon is the lower one
+	// seen from above, the upper one seen from below.
+	const nearSweep = tilt < 0 ? 1 : 0
+	const farSweep = 1 - nearSweep
 	const meridians = Array.from(
 		{ length: 360 / MERIDIAN_STEP },
 		(_, i) => i * MERIDIAN_STEP
@@ -111,18 +121,19 @@ export function LightingGlobe({
 		Array.from({ length: MERIDIAN_SAMPLES + 1 }, (_, k) =>
 			projectOnGlobe(
 				{ azimuth, elevation: (90 * k) / MERIDIAN_SAMPLES },
-				rotation
+				rotation,
+				view
 			)
 		)
 	)
 	const regions = ENVIRONMENT_LIGHTS[map].map((region) => ({
 		region,
-		point: projectOnGlobe(region, rotation)
+		point: projectOnGlobe(region, rotation, view)
 	}))
 	// The lights the scene draws.
 	const shown = litLights({ lights }).map((light) => ({
 		light,
-		point: projectOnGlobe(light, rotation)
+		point: projectOnGlobe(light, rotation, view)
 	}))
 
 	return (
@@ -168,19 +179,19 @@ export function LightingGlobe({
 				<circle cx={CENTER} cy={CENTER} r={RADIUS} fill={`url(#${shadeId})`} />
 				{/* The ground: the globe below its horizon. */}
 				<path
-					d={`M ${CENTER - RADIUS} ${CENTER} A ${RADIUS} ${RADIUS} 0 0 0 ${CENTER + RADIUS} ${CENTER} A ${RADIUS} ${horizonRy} 0 0 1 ${CENTER - RADIUS} ${CENTER} Z`}
+					d={`M ${CENTER - RADIUS} ${CENTER} A ${RADIUS} ${RADIUS} 0 0 0 ${CENTER + RADIUS} ${CENTER} A ${RADIUS} ${horizonRy} 0 0 ${farSweep} ${CENTER - RADIUS} ${CENTER} Z`}
 					fill="currentColor"
 					fillOpacity={0.08}
 				/>
 				<path
-					d={`M ${CENTER - RADIUS} ${CENTER} A ${RADIUS} ${horizonRy} 0 0 1 ${CENTER + RADIUS} ${CENTER}`}
+					d={`M ${CENTER - RADIUS} ${CENTER} A ${RADIUS} ${horizonRy} 0 0 ${farSweep} ${CENTER + RADIUS} ${CENTER}`}
 					fill="none"
 					stroke="currentColor"
 					strokeOpacity={0.12}
 					strokeDasharray="2 3"
 				/>
 				<path
-					d={`M ${CENTER - RADIUS} ${CENTER} A ${RADIUS} ${horizonRy} 0 0 0 ${CENTER + RADIUS} ${CENTER}`}
+					d={`M ${CENTER - RADIUS} ${CENTER} A ${RADIUS} ${horizonRy} 0 0 ${nearSweep} ${CENTER + RADIUS} ${CENTER}`}
 					fill="none"
 					stroke="currentColor"
 					strokeOpacity={0.45}

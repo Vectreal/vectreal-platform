@@ -42,7 +42,10 @@ import {
 	environmentThumbnail,
 	lightingSetupThumbnail
 } from '../../../../../lib/lighting/lighting-thumbnails'
-import { environmentLoadFailedAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	environmentLoadFailedAtom,
+	viewDirectionAtom
+} from '../../../../../lib/stores/publisher-config-store'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { PanelCaption, SettingGroup } from '../../sidebar-section'
 
@@ -95,6 +98,7 @@ const LightingSettings = () => {
 	const draft = useLightingDraft()
 	const { lighting, commit, preview } = draft
 	const environmentLoadFailed = useAtomValue(environmentLoadFailedAtom)
+	const view = useAtomValue(viewDirectionAtom)
 	const [path, setPath] = useState<string[]>([])
 
 	const resolved = resolveLighting({ lighting })
@@ -155,6 +159,7 @@ const LightingSettings = () => {
 						rotation={wrapDegrees(environment.rotation)}
 						map={environment.map}
 						lights={resolved.lights}
+						view={view ?? undefined}
 						onRotationChange={(rotation) =>
 							preview((prev) => ({
 								...prev,

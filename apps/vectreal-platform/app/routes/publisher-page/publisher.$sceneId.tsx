@@ -16,6 +16,7 @@ import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presenta
 import {
 	currentSceneIdAtom,
 	failedEnvironmentFilesAtom,
+	viewDirectionAtom,
 	isPreviewModeAtom,
 	openHotspotInHotspotToolAtom,
 	openingFramedAtom,
@@ -159,6 +160,7 @@ const PublisherPage = () => {
 	})
 
 	const setFailedEnvironmentFiles = useSetAtom(failedEnvironmentFilesAtom)
+	const setViewDirection = useSetAtom(viewDirectionAtom)
 	const currentSceneId = useAtomValue(currentSceneIdAtom)
 	const setOpeningFramed = useSetAtom(openingFramedAtom)
 
@@ -245,6 +247,7 @@ const PublisherPage = () => {
 					  is the more deliberate, shorter act.
 					*/
 					displayedModel={comparedModel?.model ?? shownBake}
+					onViewChange={setViewDirection}
 					animations={file?.animations}
 					animationOptions={animation}
 					/*

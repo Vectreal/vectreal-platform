@@ -61,6 +61,7 @@ import {
 	SceneBounds,
 	SceneCamera,
 	SceneControls,
+	type ViewerView,
 	SceneEnvironment,
 	resolveHotspotCameraTargets,
 	resolveHotspotMarkers,
@@ -510,6 +511,14 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	onInteractionEvent?: (event: ViewerInteractionEvent) => void
 
 	/**
+	 * Called as the orbit camera moves, with where it looks from in the lights'
+	 * terms: `azimuth` in degrees around the vertical axis (0 from +Z, 90 from
+	 * +X) and `elevation` above the horizon. Turns under half a degree are not
+	 * reported. Pass a stable function.
+	 */
+	onViewChange?: (view: ViewerView) => void
+
+	/**
 	 * Callback that receives a command executor for imperative viewer actions.
 	 */
 	onCommandExecutorReady?: (executor: null | ViewerCommandExecutor) => void
@@ -594,7 +603,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		onCameraSnapshotCaptureReady,
 		onInteractionEvent,
 		onCommandExecutorReady,
-		onRawDiagonalComputed
+		onRawDiagonalComputed,
+		onViewChange
 	} = props
 
 	const hasContent = !!(model || children)
@@ -1081,6 +1091,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 							<SceneControls
 								{...controlsOptions}
 								enabledOverride={controlsEnabledOverride}
+								onViewChange={onViewChange}
 								{...(autoRotateOverride !== null
 									? {
 											autoRotate: autoRotateOverride.enabled,

@@ -322,6 +322,15 @@ interface BakePreview {
 
 const bakePreviewAtom = atom<BakePreview | null>(null)
 
+/**
+ * Where the viewer's orbit camera looks from, as it last reported (degrees,
+ * in the lights' terms), so the Lighting globe can be drawn from the same
+ * side. Null until the viewer reports.
+ */
+const viewDirectionAtom = atom<{ azimuth: number; elevation: number } | null>(
+	null
+)
+
 export {
 	// atoms
 	processAtom,
@@ -329,6 +338,7 @@ export {
 	environmentLoadFailedAtom,
 	environmentFilesOf,
 	bakePreviewAtom,
+	viewDirectionAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
 	capturedThumbnailFrameAtom,

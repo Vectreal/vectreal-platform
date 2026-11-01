@@ -15,7 +15,8 @@ export {
 } from './camera-flight'
 export {
 	default as SceneControls,
-	defaultControlsOptions
+	defaultControlsOptions,
+	type ViewerView
 } from './scene-controls'
 export {
 	default as SceneEnvironment,
