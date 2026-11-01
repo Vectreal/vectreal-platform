@@ -15,13 +15,7 @@ import {
 	type LightingSetupId
 } from '@vctrl/core'
 import { useAtomValue } from 'jotai/react'
-import {
-	Contrast,
-	Globe,
-	Image as ImageIcon,
-	Layers,
-	Lightbulb
-} from 'lucide-react'
+import { Contrast, Globe, Layers, Lightbulb } from 'lucide-react'
 import { useState } from 'react'
 
 import { BakeSection } from './bake-section'
@@ -34,15 +28,12 @@ import {
 	lightViewId
 } from './light-views'
 import {
-	type BackgroundType,
-	backgroundOfType,
 	LIGHT_ROLES,
 	matchingSetup,
 	withSetup,
 	wrapDegrees
 } from './lighting-edits'
 import { formatDegrees, LightingGlobe } from './lighting-globe'
-import StageColorField from './stage-color-field'
 import { ThumbnailGrid } from './thumbnail-grid'
 import { useBakePreview } from './use-bake-preview'
 import { useLightingDraft } from './use-lighting-draft'
@@ -117,35 +108,11 @@ const BRIGHTNESS_PRESETS: SliderPreset[] = [
 	{ value: 2.5, label: 'Bright' }
 ]
 
-const BACKGROUND_BLUR_PRESETS: SliderPreset[] = [
-	{ value: 0, label: 'Sharp' },
-	{ value: 0.3, label: 'Soft' },
-	{ value: 0.8, label: 'Blurred' }
-]
-
 const OCCLUSION_PRESETS: SliderPreset[] = [
 	{ value: 0.8, label: 'Light' },
 	{ value: 1.4, label: 'Normal' },
 	{ value: 3, label: 'Deep' }
 ]
-
-const BACKGROUNDS: { type: BackgroundType; label: string; summary: string }[] =
-	[
-		{ type: 'none', label: 'None', summary: 'Transparent' },
-		{ type: 'color', label: 'Color', summary: 'Color' },
-		{ type: 'gradient', label: 'Gradient', summary: 'Gradient' },
-		{ type: 'environment', label: 'HDRI', summary: 'Environment' }
-	]
-
-const BACKGROUND_CAPTIONS: Record<BackgroundType, string> = {
-	none: 'Nothing behind the model: an embed shows the page it sits on, and the ground shadow lands on it.',
-	color:
-		'A flat stage behind the model, for its shadow to land on. The environment still lights it.',
-	gradient:
-		'A stage that shades from top to bottom, for the shadow to land on. The environment still lights it.',
-	environment:
-		'The environment map fills the view behind the model. It has no floor, so a ground shadow has nothing to land on.'
-}
 
 const LightingSettings = () => {
 	const draft = useLightingDraft()
@@ -154,7 +121,7 @@ const LightingSettings = () => {
 	const [path, setPath] = useState<string[]>([])
 
 	const resolved = resolveLighting({ lighting })
-	const { environment, background, occlusion, bake } = resolved
+	const { environment, occlusion, bake } = resolved
 	const bakePreview = useBakePreview()
 	const setup = matchingSetup(lighting)
 	const enabledLights = resolved.lights.filter((light) => light.enabled)
@@ -210,15 +177,6 @@ const LightingSettings = () => {
 								: enabledLights
 										.map((light) => LIGHT_LABELS[light.role].split(' ')[0])
 										.join(', ')
-						}
-					/>
-					<DrillDownTrigger
-						to="background"
-						icon={<ImageIcon />}
-						label="Background"
-						summary={
-							BACKGROUNDS.find((entry) => entry.type === background.type)
-								?.summary
 						}
 					/>
 					<DrillDownTrigger
@@ -333,108 +291,6 @@ const LightingSettings = () => {
 					<LightSettings role={role} {...draft} />
 				</DrillDownView>
 			))}
-
-			<DrillDownView
-				id="background"
-				title="Background"
-				caption={BACKGROUND_CAPTIONS[background.type]}
-			>
-				<ToggleGroup
-					type="single"
-					aria-label="Background"
-					value={background.type}
-					onValueChange={(value) => {
-						if (value)
-							commit((prev) => ({
-								...prev,
-								background: backgroundOfType(
-									value as BackgroundType,
-									prev.background
-								)
-							}))
-					}}
-				>
-					{BACKGROUNDS.map((entry) => (
-						<ToggleGroupItem key={entry.type} value={entry.type}>
-							{entry.label}
-						</ToggleGroupItem>
-					))}
-				</ToggleGroup>
-
-				{background.type === 'environment' && (
-					<>
-						<Slider
-							label="Blur"
-							min={0}
-							max={1}
-							step={0.01}
-							presets={BACKGROUND_BLUR_PRESETS}
-							value={background.blur ?? 0}
-							onValueChange={(blur) =>
-								preview((prev) => ({
-									...prev,
-									background: { ...background, blur }
-								}))
-							}
-						/>
-						<Slider
-							label="Brightness"
-							min={0}
-							max={3}
-							step={0.01}
-							mapping={valueMappings.quadratic}
-							presets={BRIGHTNESS_PRESETS}
-							value={background.intensity ?? 1}
-							onValueChange={(intensity) =>
-								preview((prev) => ({
-									...prev,
-									background: { ...background, intensity }
-								}))
-							}
-						/>
-					</>
-				)}
-
-				{background.type === 'color' && (
-					<StageColorField
-						label="Color"
-						value={background.color}
-						onChange={(color) =>
-							preview((prev) => ({
-								...prev,
-								background: { type: 'color', color }
-							}))
-						}
-					/>
-				)}
-
-				{background.type === 'gradient' && (
-					<>
-						<StageColorField
-							label="Top"
-							value={background.top}
-							onChange={(top) =>
-								preview((prev) =>
-									prev.background?.type === 'gradient'
-										? { ...prev, background: { ...prev.background, top } }
-										: prev
-								)
-							}
-						/>
-						<StageColorField
-							label="Bottom"
-							value={background.bottom}
-							onChange={(bottom) =>
-								preview((prev) =>
-									prev.background?.type === 'gradient'
-										? { ...prev, background: { ...prev.background, bottom } }
-										: prev
-								)
-							}
-						/>
-					</>
-				)}
-			</DrillDownView>
 
 			<DrillDownView
 				id="occlusion"
