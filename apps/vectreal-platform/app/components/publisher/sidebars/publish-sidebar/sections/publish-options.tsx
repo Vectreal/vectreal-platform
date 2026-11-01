@@ -34,6 +34,10 @@ import {
 	processAtom
 } from '../../../../../lib/stores/publisher-config-store'
 import {
+	dispatchSaveProgressAtom,
+	runningOperationAtom
+} from '../../../../../lib/stores/save-progress-store'
+import {
 	documentOptimizationsAtom,
 	optimizationRuntimeAtom
 } from '../../../../../lib/stores/scene-optimization-store'
@@ -57,7 +61,6 @@ import type {
 	ScenePublishStateResponse
 } from '../../../../../types/api'
 import type { SaveSceneFn } from '../../../../../types/publisher-scene'
-import type { PublishExportProgress } from '../../../../../workers/publish-export.worker.types'
 
 type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 
@@ -74,8 +77,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 }) => {
 	const [publishStatus, setPublishStatus] = useState<PublishStatus>('idle')
 	const [publishError, setPublishError] = useState<string | null>(null)
-	const [exportProgress, setExportProgress] =
-		useState<PublishExportProgress | null>(null)
+	const dispatchProgress = useSetAtom(dispatchSaveProgressAtom)
 	const { optimizer, file } = useModelContext(true)
 	const navigate = useNavigate()
 	const revalidator = useRevalidator()
@@ -99,6 +101,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
 	const compressTextures = useCompressesTexturesForGpu()
 	const canPublish = Boolean(optimizer?.isReady)
+	// A save already running finishes before a publish starts.
+	const isSaveRunning = useAtomValue(runningOperationAtom) === 'save'
 	const isWorking = publishStatus === 'saving' || publishStatus === 'publishing'
 
 	const handlePublish = useCallback(async () => {
@@ -119,8 +123,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 		setPublishStatus('saving')
 		setPublishError(null)
+		const requiresSaveBeforePublish = !sceneId || hasUnsavedChanges
+		dispatchProgress({
+			type: 'publish-started',
+			saves: requiresSaveBeforePublish
+		})
 		try {
-			const requiresSaveBeforePublish = !sceneId || hasUnsavedChanges
 			let targetSceneId = sceneId
 
 			if (requiresSaveBeforePublish) {
@@ -143,6 +151,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			}
 
 			setPublishStatus('publishing')
+			dispatchProgress({ type: 'publish-step', key: 'export' })
 
 			const { data: workingGlb } =
 				await exporterRef.current.exportDocumentGLB(document)
@@ -153,7 +162,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					ktx2: compressTextures,
 					...bakes
 				},
-				setExportProgress
+				({ texturesDone, texturesTotal }) =>
+					dispatchProgress({
+						type: 'publish-step',
+						key: 'textures',
+						done: texturesDone,
+						total: texturesTotal
+					})
 			)
 			const glbData = new Uint8Array(result.buffer)
 
@@ -166,10 +181,21 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			}
 
 			const baseName = file?.name?.replace(/\.[^/.]+$/, '') || 'scene'
+			const reportUpload = (fraction: number) =>
+				dispatchProgress({
+					type: 'publish-step',
+					key: 'upload',
+					done: Math.round(glbData.byteLength * fraction),
+					total: glbData.byteLength
+				})
+			reportUpload(0)
 			const publishResult = await publishSceneFromGlb({
 				sceneId: targetSceneId,
 				baseFileName: baseName,
-				glbData
+				glbData,
+				onUploadProgress: reportUpload,
+				onCommitting: () =>
+					dispatchProgress({ type: 'publish-step', key: 'commit' })
 			})
 
 			// Only once it has shipped, and only if the document exported is the
@@ -223,6 +249,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				publishResult.publishState
 
 			setPublishStatus('success')
+			dispatchProgress({ type: 'published' })
 			revalidator.revalidate()
 			toast.success('Scene published successfully.')
 			return publishStateUpdate
@@ -243,12 +270,15 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			setPublishError(
 				error instanceof Error ? error.message : 'Failed to publish scene'
 			)
+			dispatchProgress({
+				type: 'publish-failed',
+				message:
+					error instanceof Error ? error.message : 'Failed to publish scene'
+			})
 			toast.error(
 				error instanceof Error ? error.message : 'Failed to publish scene'
 			)
 			return
-		} finally {
-			setExportProgress(null)
 		}
 	}, [
 		canPublish,
@@ -266,7 +296,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		compressTextures,
 		bakes,
 		isOptimizing,
-		passRevision
+		passRevision,
+		dispatchProgress
 	])
 
 	const handleToggleInfoPopover = useCallback(
@@ -294,19 +325,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation]
 	)
 
-	const statusText =
-		publishStatus === 'saving'
-			? 'Saving latest scene changes before publishing...'
-			: publishStatus === 'publishing'
-				? exportProgress &&
-					exportProgress.texturesDone < exportProgress.texturesTotal
-					? `Compressing textures for the GPU (${exportProgress.texturesDone + 1} of ${exportProgress.texturesTotal})...`
-					: 'Publishing optimized scene...'
-				: publishStatus === 'error'
-					? publishError || 'Publishing failed. Retry to continue.'
-					: hasUnsavedChanges
-						? 'Publish will save your latest changes first.'
-						: 'Scene is ready to publish.'
+	const statusText = isWorking
+		? 'Publishing. The progress panel shows each step.'
+		: publishStatus === 'error'
+			? publishError || 'Publishing failed. Retry to continue.'
+			: hasUnsavedChanges
+				? 'Publish will save your latest changes first.'
+				: 'Scene is ready to publish.'
 
 	// Revoking deletes the published GLB, so the size it gave the scene goes
 	// with it, here as on the server; what the scene stores describes it again.
@@ -413,11 +438,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 				publishState={publishState}
 				onPublish={handlePublish}
 				isPublishActionPending={isWorking}
-				isPublishActionDisabled={!canPublish}
+				isPublishActionDisabled={!canPublish || isSaveRunning}
 				publishDisabledReason={
 					!canPublish
 						? 'Model is not ready yet. Load and optimize your scene first.'
-						: undefined
+						: isSaveRunning
+							? 'Saving. Publish once the save finishes.'
+							: undefined
 				}
 				publishDialogTitle="Publish Scene?"
 				publishDialogDescription="This creates or updates the published GLB for this scene and makes it available as your current published version."

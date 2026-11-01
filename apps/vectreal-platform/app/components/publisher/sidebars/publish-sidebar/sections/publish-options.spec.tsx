@@ -15,6 +15,10 @@ import {
 	originalPreset
 } from '../../../../../constants/optimizations'
 import {
+	dispatchSaveProgressAtom,
+	savePanelAtom
+} from '../../../../../lib/stores/save-progress-store'
+import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../../../lib/stores/scene-optimization-store'
@@ -65,13 +69,17 @@ vi.mock('../../../../../lib/domain/scene/client/scene-publish', () => ({
 vi.mock('../../../../publishing/scene-publish-state-control', () => ({
 	ScenePublishStateControl: ({
 		onPublish,
-		onStateChange
+		onStateChange,
+		isPublishActionDisabled
 	}: {
 		onPublish: () => void
 		onStateChange?: (state: { status: 'draft' | 'published' }) => void
+		isPublishActionDisabled?: boolean
 	}) => (
 		<>
-			<button onClick={onPublish}>Publish Scene</button>
+			<button onClick={onPublish} disabled={isPublishActionDisabled}>
+				Publish Scene
+			</button>
 			<button onClick={() => onStateChange?.({ status: 'draft' })}>
 				Revoke
 			</button>
@@ -219,25 +227,99 @@ describe('the publish panel', () => {
 				})
 			}
 		)
-		renderPanel(balancedPreset)
+		const store = renderPanel(balancedPreset)
+		const step = (key: string) =>
+			store.get(savePanelAtom)?.publish?.steps.find((s) => s.key === key)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
 
-		expect(
-			await screen.findByText(/Compressing textures for the GPU \(1 of 2\)/)
-		).toBeInTheDocument()
+		await waitFor(() =>
+			expect(step('textures')).toMatchObject({
+				state: 'active',
+				done: 0,
+				total: 2
+			})
+		)
 
 		finish({ buffer: PUBLISHED.slice().buffer, geometryCodec: 'none' })
 		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
 
 		// A second publish that has not reported yet shows no stale count.
 		mocks.runPublishExportInWorker.mockImplementation(
 			() => new Promise(() => {})
 		)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
-		expect(
-			await screen.findByText('Publishing optimized scene...')
-		).toBeInTheDocument()
-		expect(screen.queryByText(/Compressing textures/)).toBeNull()
+		await waitFor(() =>
+			expect(step('export')).toMatchObject({ state: 'active' })
+		)
+		expect(step('textures')).toBeUndefined()
+	})
+
+	it('reports the upload in bytes, then the commit', async () => {
+		const store = renderPanel(balancedPreset)
+		let committing = false
+		mocks.publishSceneFromGlb.mockImplementation(
+			async ({
+				onUploadProgress,
+				onCommitting
+			}: {
+				onUploadProgress: (fraction: number) => void
+				onCommitting: () => void
+			}) => {
+				onUploadProgress(0.5)
+				const upload = store
+					.get(savePanelAtom)
+					?.publish?.steps.find((s) => s.key === 'upload')
+				expect(upload).toMatchObject({
+					state: 'active',
+					done: PUBLISHED.byteLength / 2,
+					total: PUBLISHED.byteLength
+				})
+				onCommitting()
+				committing =
+					store
+						.get(savePanelAtom)
+						?.publish?.steps.find((s) => s.key === 'commit')?.state === 'active'
+				return {
+					response: {},
+					publishState: { sceneId: 'scene-1', status: 'published' }
+				}
+			}
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
+		expect(committing).toBe(true)
+	})
+
+	it('waits out a save before it publishes', () => {
+		renderPanel(balancedPreset, (store) =>
+			store.set(dispatchSaveProgressAtom, { type: 'preparing' })
+		)
+
+		expect(screen.getByRole('button', { name: 'Publish Scene' })).toBeDisabled()
+	})
+
+	it('marks the step that failed', async () => {
+		const store = renderPanel(balancedPreset)
+		mocks.runPublishExportInWorker.mockRejectedValue(new Error('GPU reset'))
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(store.get(savePanelAtom)?.status).toBe('failed'))
+		expect(store.get(savePanelAtom)).toMatchObject({
+			message: 'GPU reset',
+			publish: {
+				steps: [
+					{ key: 'export', state: 'failed' },
+					{ key: 'upload', state: 'waiting' },
+					{ key: 'commit', state: 'waiting' }
+				]
+			}
+		})
 	})
 
 	it('publishes what the worker encoded, with geometry and texture codecs on', async () => {

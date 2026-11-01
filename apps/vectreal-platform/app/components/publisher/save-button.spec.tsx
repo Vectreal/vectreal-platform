@@ -10,9 +10,11 @@
  */
 
 import { render, screen } from '@testing-library/react'
+import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 
 import SaveButton from './save-button'
+import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
 
 import type { SaveAvailabilityState } from '../../lib/domain/scene'
 
@@ -70,5 +72,20 @@ describe('SaveButton', () => {
 
 		expect(screen.getByRole('button')).toHaveTextContent('Sign In to Save')
 		expect(screen.getByRole('button')).toBeEnabled()
+	})
+
+	it('waits out a publish, which saves first itself', () => {
+		const store = createStore()
+		store.set(dispatchSaveProgressAtom, {
+			type: 'publish-started',
+			saves: true
+		})
+		render(
+			<Provider store={store}>
+				{renderSaveButton({ canSave: true, reason: 'ready' })}
+			</Provider>
+		)
+
+		expect(screen.getByRole('button')).toBeDisabled()
 	})
 })

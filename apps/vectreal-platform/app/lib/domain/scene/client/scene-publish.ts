@@ -1,3 +1,4 @@
+import { postFormWithProgress } from './post-form-with-progress'
 import { createSceneRequestId } from './scene-request-id'
 import { buildSceneUploadFileDescriptor } from './scene-upload-manifest'
 import { createBillingLimitErrorFromResponse } from '../../billing/client/billing-limit-error'
@@ -11,6 +12,10 @@ interface PublishSceneFromGlbInput {
 	sceneId: string
 	baseFileName: string
 	glbData: Uint8Array
+	/** The upload's share sent so far, 0 to 1. */
+	onUploadProgress?: (fraction: number) => void
+	/** The GLB is stored and the publish is being committed. */
+	onCommitting?: () => void
 }
 
 interface PublishSceneFromGlbResult {
@@ -34,7 +39,9 @@ function normalizeError(payload: unknown, status: number, fallback: string) {
 export async function publishSceneFromGlb({
 	sceneId,
 	baseFileName,
-	glbData
+	glbData,
+	onUploadProgress = () => {},
+	onCommitting
 }: PublishSceneFromGlbInput): Promise<PublishSceneFromGlbResult> {
 	// One id for the upload and the commit. It gives the server a scope for
 	// reclaiming the GLB when the commit is refused on entitlement or quota, and
@@ -53,10 +60,11 @@ export async function publishSceneFromGlb({
 	)
 	uploadFormData.append('file', uploadDescriptor.file)
 
-	const uploadResponse = await fetch(`/api/scenes/${sceneId}`, {
-		method: 'POST',
-		body: uploadFormData
-	})
+	const uploadResponse = await postFormWithProgress(
+		`/api/scenes/${sceneId}`,
+		uploadFormData,
+		onUploadProgress
+	)
 
 	const uploadPayload = await uploadResponse.json()
 	const uploadBillingLimitError = createBillingLimitErrorFromResponse(
@@ -89,6 +97,7 @@ export async function publishSceneFromGlb({
 		throw new Error('Upload response is missing assetId')
 	}
 
+	onCommitting?.()
 	const publishFormData = new FormData()
 	publishFormData.append('action', 'commit-scene-publish')
 	publishFormData.append('sceneId', sceneId)
