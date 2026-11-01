@@ -2,7 +2,7 @@ import { Button } from '@shared/components/ui/button'
 import { Toggle } from '@shared/components/ui/toggle'
 import { Loader2 } from 'lucide-react'
 
-import { bakedAnything } from './use-bake-preview'
+import { bakedAnything, drawingLabel } from './use-bake-preview'
 import { OCCLUSION_SKIP_REASONS } from '../../../../../lib/domain/scene/client/publish-export'
 import { InlineNotice } from '../../../../layout-components'
 import { PanelCaption } from '../../sidebar-section'
@@ -104,7 +104,7 @@ export function BakeSection({
 			>
 				{isBaking && <Loader2 className="animate-spin" aria-hidden />}
 				{isBaking
-					? 'Drawing the finish'
+					? drawingLabel(preview.progress)
 					: preview
 						? 'Preview again'
 						: 'Preview it on the model'}

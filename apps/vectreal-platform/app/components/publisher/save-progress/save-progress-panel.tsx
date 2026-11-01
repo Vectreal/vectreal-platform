@@ -5,6 +5,7 @@ import { useAtomValue, useSetAtom } from 'jotai/react'
 import {
 	Box,
 	Check,
+	Contrast,
 	ChevronDown,
 	CircleAlert,
 	CloudCheck,
@@ -14,6 +15,7 @@ import {
 	History,
 	Image as ImageIcon,
 	Layers,
+	Lightbulb,
 	Package,
 	RotateCw,
 	SlidersHorizontal,
@@ -68,6 +70,8 @@ const GROUP_META: Record<SaveFileGroup, { label: string; icon: ReactNode }> = {
 
 const STEP_META: Record<PublishStepKey, { label: string; icon: ReactNode }> = {
 	export: { label: 'Preparing the published file', icon: <Package /> },
+	occlusion: { label: 'Drawing the depth', icon: <Contrast /> },
+	lights: { label: 'Drawing the studio lights', icon: <Lightbulb /> },
 	textures: { label: 'Compressing textures for the GPU', icon: <Layers /> },
 	upload: { label: 'Uploading the published file', icon: <CloudUpload /> },
 	commit: { label: 'Publishing', icon: <Globe /> }
@@ -286,7 +290,9 @@ const describeRunningStep = (step: PublishStep) =>
 		? 'Working'
 		: step.key === 'upload'
 			? `${formatFileSize(step.done)} of ${formatFileSize(step.total)}`
-			: `${step.done} of ${step.total}`
+			: step.key === 'occlusion' || step.key === 'lights'
+				? `${Math.round((step.done / step.total) * 100)}%`
+				: `${step.done} of ${step.total}`
 
 const PublishStepRow: FC<{ step: PublishStep }> = ({ step }) => {
 	const { label, icon } = STEP_META[step.key]

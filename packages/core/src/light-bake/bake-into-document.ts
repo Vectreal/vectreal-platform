@@ -33,7 +33,8 @@ export async function bakeLightsIntoDocument(
 	document: Document,
 	lighting: Pick<ResolvedLighting, 'lights' | 'environment'>,
 	renderer: () => WebGLRenderer,
-	options?: LightBakeOptions
+	options?: LightBakeOptions,
+	onProgress?: (fraction: number) => void
 ): Promise<LightBakeReport> {
 	const planned = planOcclusionBake(document, { existingOcclusion: 'bake' })
 	// A cutout casts solid where its mask did not decode or found no layer,
@@ -57,7 +58,7 @@ export async function bakeLightsIntoDocument(
 	}
 	const baked =
 		plan.targets.length > 0
-			? await bakeLights(plan, lighting, renderer(), options)
+			? await bakeLights(plan, lighting, renderer(), options, onProgress)
 			: []
 	writeLightmaps(
 		document,

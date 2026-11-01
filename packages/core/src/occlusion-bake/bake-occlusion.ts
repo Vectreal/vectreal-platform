@@ -20,7 +20,8 @@ const MAX_SAMPLES = 2048
 export async function bakeOcclusion(
 	plan: OcclusionBakePlan,
 	renderer: WebGLRenderer,
-	options: OcclusionBakeOptions = DEFAULT_OCCLUSION_BAKE_OPTIONS
+	options: OcclusionBakeOptions = DEFAULT_OCCLUSION_BAKE_OPTIONS,
+	onProgress?: (fraction: number) => void
 ): Promise<BakedOcclusion[]> {
 	const { resolution: size, distance } = options
 	const baked = await traceInUvSpace(renderer, {
@@ -32,7 +33,8 @@ export async function bakeOcclusion(
 		uniforms: { reach: { value: distance } },
 		resolveFragment: RESOLVE_FRAGMENT,
 		empty: [255, 255, 255, 255],
-		label: 'ambient occlusion'
+		label: 'ambient occlusion',
+		onProgress
 	})
 	// Nothing casts, so nothing is occluded.
 	return (

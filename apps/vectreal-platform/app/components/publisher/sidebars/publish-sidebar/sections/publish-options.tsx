@@ -162,15 +162,31 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					ktx2: compressTextures,
 					...bakes
 				},
-				({ texturesDone, texturesTotal }) =>
-					dispatchProgress({
-						type: 'publish-step',
-						key: 'textures',
-						done: texturesDone,
-						total: texturesTotal
-					})
+				(progress) =>
+					dispatchProgress(
+						progress.stage === 'textures'
+							? {
+									type: 'publish-step',
+									key: 'textures',
+									done: progress.texturesDone,
+									total: progress.texturesTotal
+								}
+							: {
+									type: 'publish-step',
+									key: progress.stage,
+									done: progress.fraction,
+									total: 1
+								}
+					)
 			)
 			const glbData = new Uint8Array(result.buffer)
+			// It ships without a bake that failed, so that row must not read as done.
+			for (const key of ['occlusion', 'lights'] as const) {
+				const outcome = result[key]
+				if (outcome && 'failed' in outcome) {
+					dispatchProgress({ type: 'publish-step-failed', key })
+				}
+			}
 
 			const keptTextures = result.textures?.kept ?? []
 			if (keptTextures.length > 0) {
