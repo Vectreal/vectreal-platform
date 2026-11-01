@@ -91,6 +91,7 @@ Or, with a model already hosted somewhere, give it the address:
 | `onCommandExecutorReady`       | `(executor: ViewerCommandExecutor \| null) => void`     | No       | Receives a minimal imperative runtime command executor                           |
 | `onShadowBakeReady`            | `(capture: ShadowBakeCapture \| null) => void`          | No       | Receives a function that captures the settled shadow bake as a density PNG       |
 | `onShadowLightChange`          | `(position: [number, number, number]) => void`          | No       | Called with a new shadow light position, in model-size units, while the handle is dragged. Deprecated: turn `lighting.environment.rotation` instead, which moves every light with the environment |
+| `onViewChange` | `(view: ViewerView) => void` | No | Called as the orbit camera moves, with where it looks from: `azimuth` in degrees around the vertical axis (0 from +Z, 90 from +X) and `elevation` above the horizon, as the scene's lights measure them. Turns under half a degree are not reported. Pass a stable function |
 | `onRawDiagonalComputed`        | `(diagonal: number) => void`                            | No       | Called with the pre-normalization bounding-box diagonal whenever the model changes |
 
 ### Notes on content source

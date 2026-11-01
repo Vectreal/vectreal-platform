@@ -29,4 +29,18 @@ describe('the publisher bake preview', () => {
 			/const canAnimate =\s*\(file\?\.animations\?\.length \?\? 0\) > 0 &&\s*\(Boolean\(animation\?\.enabled\) \|\|\s*Boolean\(hotspots\?\.some\(\(hotspot\) => hotspot\.linkedAnimationClipId\)\)\)/
 		)
 	})
+
+	it('keeps where the orbit camera looks from, for the Lighting globe', () => {
+		expect(publisher).toMatch(/onViewChange=\{setViewDirection\}/)
+		expect(publisher).toMatch(/useSetAtom\(viewDirectionAtom\)/)
+		const panel = readFileSync(
+			join(
+				import.meta.dirname,
+				'../../components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx'
+			),
+			'utf8'
+		)
+		expect(panel).toMatch(/const view = useAtomValue\(viewDirectionAtom\)/)
+		expect(panel).toMatch(/<LightingGlobe[^>]*view=\{view \?\? undefined\}/)
+	})
 })
