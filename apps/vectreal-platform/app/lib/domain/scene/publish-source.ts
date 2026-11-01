@@ -3,9 +3,14 @@ import { PERSISTED_BAKE_FILENAME } from '@vctrl/core'
 import { optimizationsMatch } from './client/optimization-inference'
 import { isUrlServedSceneAsset } from './scene-asset-roles'
 import { shouldCompressTexturesForGpu } from './scene-presentation'
+import { bakesKey } from './studio-finish'
 import { originalPreset } from '../../../constants/optimizations'
 
-import type { Optimizations, ScenePresentationSettings } from '@vctrl/core'
+import type {
+	LightingSettings,
+	Optimizations,
+	ScenePresentationSettings
+} from '@vctrl/core'
 
 /**
  * Describes what a publish of a saved scene is made from, so the server can
@@ -15,8 +20,11 @@ import type { Optimizations, ScenePresentationSettings } from '@vctrl/core'
  * so a settings save is already on every embed and is deliberately left out
  * here: counting it would report changes as unpublished that visitors already
  * see. What the GLB depends on is the model document (its glTF JSON, buffers
- * and textures) and what publish encodes it with: Draco, and GPU texture
- * compression, which is a presentation setting but changes the file.
+ * and textures), what publish encodes it with: Draco, and GPU texture
+ * compression, which is a presentation setting but changes the file; and
+ * what it bakes in, from the lighting. The bakes join the description only
+ * when there are any, so a scene that bakes nothing describes itself as it
+ * did before they existed.
  *
  * Asset ids stand in for the document because uploads are content-addressed:
  * a save reuses a stored asset only when its name and hash match, so the same
@@ -30,13 +38,15 @@ import type { Optimizations, ScenePresentationSettings } from '@vctrl/core'
 export function describePublishSource({
 	assets,
 	optimizationSettings,
-	presentation
+	presentation,
+	lighting
 }: {
 	/** The scene's linked assets, without its kept original. */
 	assets: readonly { id: string; name: string; mimeType: string | null }[]
 	/** As saved; a scene saved as the original upload stores none. */
 	optimizationSettings: Optimizations | null | undefined
 	presentation: ScenePresentationSettings | null | undefined
+	lighting: LightingSettings | null | undefined
 }): string {
 	const modelAssetIds = assets
 		.filter(
@@ -49,13 +59,15 @@ export function describePublishSource({
 	const optimizations = optimizationSettings ?? originalPreset
 	const { enabled: dracoEnabled = false, ...dracoOptions } =
 		optimizations.draco ?? {}
+	const bakes = bakesKey(lighting ?? undefined)
 
 	return JSON.stringify({
 		model: modelAssetIds,
 		draco: dracoEnabled ? canonicalDracoOptions(dracoOptions) : null,
 		gpuTextures: shouldCompressTexturesForGpu(presentation, {
 			isOriginalPreset: optimizationsMatch(optimizations, originalPreset)
-		})
+		}),
+		...(bakes ? { bakes } : {})
 	})
 }
 

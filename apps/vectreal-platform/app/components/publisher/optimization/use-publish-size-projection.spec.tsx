@@ -10,6 +10,7 @@ import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	usePublishedFileIsCurrent,
 	usePublishSizeProjection,
 	useSizeExcludesTextureEncoding
 } from './use-publish-size-projection'
@@ -26,7 +27,10 @@ import {
 	optimizationAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
-import { presentationAtom } from '../../../lib/stores/scene-settings-store'
+import {
+	lightingAtom,
+	presentationAtom
+} from '../../../lib/stores/scene-settings-store'
 
 import type {
 	PublishedEncoding,
@@ -234,6 +238,46 @@ describe('usePublishSizeProjection', () => {
 			}))
 		)
 		await waitFor(() => expect(runtime().optimizedSceneBytes).toBeNull())
+	})
+
+	// The bakes ship inside the file, so an unsaved change to them leaves the
+	// published one behind; a live light does not.
+	it('reads the published file as behind once a baked light moves unsaved', async () => {
+		const key = { role: 'key' as const, azimuth: 30 }
+		const baked = { lights: [key], bake: { lights: true } }
+		store.set(lastSavedSettingsAtom, {
+			presentation: {},
+			lighting: baked
+		} as never)
+		store.set(lightingAtom, baked)
+		store.set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			latestSceneStats: {
+				currentSceneBytes: 995,
+				publishedIsCurrent: true
+			} as never
+		}))
+		const wrapper = ({ children }: { children: ReactNode }) =>
+			createElement(Provider, { store }, children)
+		const { result } = renderHook(() => usePublishedFileIsCurrent(), {
+			wrapper
+		})
+		expect(result.current).toBe(true)
+
+		act(() =>
+			store.set(lightingAtom, { ...baked, lights: [{ ...key, azimuth: 31 }] })
+		)
+		expect(result.current).toBe(false)
+
+		act(() => store.set(lightingAtom, { lights: [key] }))
+		expect(result.current).toBe(false)
+		act(() =>
+			store.set(lastSavedSettingsAtom, {
+				presentation: {},
+				lighting: { lights: [{ ...key, azimuth: 50 }] }
+			} as never)
+		)
+		expect(result.current).toBe(true)
 	})
 
 	it('keeps an unpublished scene’s projection while a pass runs', async () => {

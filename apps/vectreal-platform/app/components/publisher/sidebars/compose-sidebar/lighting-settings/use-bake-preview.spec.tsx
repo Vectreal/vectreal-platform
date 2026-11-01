@@ -12,11 +12,15 @@ import {
 	drawingLabel,
 	type ShownBakeContext,
 	useBakePreview,
+	usePublishExport,
 	useShownBake
 } from './use-bake-preview'
 import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
-import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
+import {
+	lightingAtom,
+	presentationAtom
+} from '../../../../../lib/stores/scene-settings-store'
 
 import type { ReactNode } from 'react'
 
@@ -79,7 +83,11 @@ function setup(
 		() => {
 			const shown = useShownBake(viewer)
 			rendered.shown = shown
-			return { preview: useBakePreview(), shown }
+			return {
+				preview: useBakePreview(),
+				publishExport: usePublishExport(),
+				shown
+			}
 		},
 		{ wrapper }
 	)
@@ -98,21 +106,21 @@ beforeEach(() => {
 })
 
 describe('the bake preview', () => {
-	it('bakes in the publish worker with only the bake on, and shows the result', async () => {
+	it('runs the export publishing would, and keeps its file beside the result shown', async () => {
 		const { hook } = setup()
 
 		await act(() => hook.result.current.preview.bake())
 
-		expect(mocks.runPublishExportInWorker).toHaveBeenCalledWith(
-			expect.objectContaining({ occlusion: true, ktx2: false }),
-			expect.any(Function)
-		)
-		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).not.toHaveProperty(
-			'draco'
-		)
+		const [request] = mocks.runPublishExportInWorker.mock.calls[0]
+		expect(request).toEqual({
+			buffer: expect.any(ArrayBuffer),
+			...hook.result.current.publishExport.request
+		})
+		expect(request).toMatchObject({ occlusion: true })
 		expect(hook.result.current.preview.preview).toMatchObject({
 			status: 'ready',
-			reports: { occlusion: report }
+			reports: { occlusion: report },
+			outcome: { buffer: expect.any(ArrayBuffer), occlusion: report }
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
 	})
@@ -173,6 +181,37 @@ describe('the bake preview', () => {
 			lights: report
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('encodes the textures for the GPU when publishing would', async () => {
+		const { store, hook } = setup()
+		act(() =>
+			store.set(presentationAtom, (prev) => ({
+				...prev,
+				compressTexturesForGpu: true
+			}))
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
+			ktx2: true
+		})
+	})
+
+	it('goes stale once publishing would encode the textures differently', async () => {
+		const { store, hook } = setup()
+		await act(() => hook.result.current.preview.bake())
+		expect(hook.result.current.preview.preview).not.toBeNull()
+
+		act(() =>
+			store.set(presentationAtom, (prev) => ({
+				...prev,
+				compressTexturesForGpu: !hook.result.current.publishExport.request.ktx2
+			}))
+		)
+
+		expect(hook.result.current.preview.preview).toBeNull()
 	})
 
 	it('drops a light bake once a baked light moves', async () => {

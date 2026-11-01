@@ -22,7 +22,8 @@ const HOTSPOT_ID = '11111111-1111-4111-8111-111111111111'
 const base = {
 	assets: model,
 	optimizationSettings: balancedPreset,
-	presentation: {}
+	presentation: {},
+	lighting: undefined
 }
 
 describe('describePublishSource', () => {
@@ -147,5 +148,28 @@ describe('describePublishSource', () => {
 		expect(describePublishSource({ ...base, optimizationSettings: null })).toBe(
 			describePublishSource({ ...base, optimizationSettings: originalPreset })
 		)
+	})
+
+	it('changes with what the lighting bakes in, and not with live lighting', () => {
+		const key = { role: 'key' as const, azimuth: 30 }
+		const baked = { lights: [key], bake: { lights: true } }
+
+		expect(describePublishSource({ ...base, lighting: baked })).not.toBe(
+			describePublishSource(base)
+		)
+		expect(
+			describePublishSource({
+				...base,
+				lighting: { ...baked, lights: [{ ...key, azimuth: 31 }] }
+			})
+		).not.toBe(describePublishSource({ ...base, lighting: baked }))
+		// Live lights are drawn by the embed, so the file is the same.
+		expect(
+			describePublishSource({ ...base, lighting: { lights: [key] } })
+		).toBe(describePublishSource(base))
+	})
+
+	it('describes a scene that bakes nothing as it did before bakes existed', () => {
+		expect(JSON.parse(describePublishSource(base))).not.toHaveProperty('bakes')
 	})
 })

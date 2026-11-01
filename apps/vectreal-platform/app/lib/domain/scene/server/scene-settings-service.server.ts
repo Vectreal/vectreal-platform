@@ -74,7 +74,8 @@ async function readPublishSource(
 	return describePublishSource({
 		assets: saved.assets,
 		optimizationSettings: stats?.optimizationSettings,
-		presentation: saved.settings.presentation
+		presentation: saved.settings.presentation,
+		lighting: saved.settings.lighting
 	})
 }
 

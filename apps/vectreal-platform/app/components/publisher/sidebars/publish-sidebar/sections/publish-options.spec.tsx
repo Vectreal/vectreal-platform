@@ -14,6 +14,7 @@ import {
 	balancedPreset,
 	originalPreset
 } from '../../../../../constants/optimizations'
+import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	dispatchSaveProgressAtom,
 	savePanelAtom
@@ -36,7 +37,8 @@ const mocks = vi.hoisted(() => ({
 	toastSuccess: vi.fn(),
 	runPublishExportInWorker: vi.fn(),
 	publishSceneFromGlb: vi.fn(),
-	toastWarning: vi.fn()
+	toastWarning: vi.fn(),
+	loadToThreeJS: vi.fn()
 }))
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
@@ -44,6 +46,11 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 		optimizer: { isReady: true, _getDocument: mocks.getDocument },
 		file: { name: 'shoe.glb' }
 	})
+}))
+vi.mock('@vctrl/core/model-loader', () => ({
+	ModelLoader: class {
+		loadToThreeJS = mocks.loadToThreeJS
+	}
 }))
 vi.mock('react-router', () => ({
 	useNavigate: () => vi.fn(),
@@ -585,6 +592,48 @@ describe('the publish panel', () => {
 			{ key: 'upload', state: 'done' },
 			{ key: 'commit', state: 'done' }
 		])
+	})
+
+	it('shows the finish it published, and ships that file again without exporting', async () => {
+		const scene = {}
+		mocks.loadToThreeJS.mockResolvedValue({ scene })
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { baked: ['body'], skipped: [] }
+		})
+		const store = renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)).toMatchObject({
+				status: 'ready',
+				shown: true,
+				model: scene
+			})
+		)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(2)
+		)
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledOnce()
+		expect(mocks.publishSceneFromGlb.mock.calls[1][0].glbData).toEqual(
+			PUBLISHED
+		)
+	})
+
+	it('leaves the model as it is when the publish bakes nothing', async () => {
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
+		expect(store.get(bakePreviewAtom)).toBeNull()
+		expect(mocks.loadToThreeJS).not.toHaveBeenCalled()
 	})
 
 	it('says nothing about the bake when the publish itself fails', async () => {

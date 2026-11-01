@@ -5,7 +5,7 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { Loader2, Sparkles } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState, type FC } from 'react'
+import { useCallback, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
@@ -19,8 +19,6 @@ import { optimizationsMatch } from '../../../../../lib/domain/scene/client/optim
 import {
 	lightBakeWarning,
 	occlusionBakeWarning,
-	publishBakes,
-	resolvePublishGeometryOptions,
 	runPublishExportInWorker
 } from '../../../../../lib/domain/scene/client/publish-export'
 import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
@@ -41,10 +39,7 @@ import {
 	documentOptimizationsAtom,
 	optimizationRuntimeAtom
 } from '../../../../../lib/stores/scene-optimization-store'
-import {
-	lightingAtom,
-	presentationAtom
-} from '../../../../../lib/stores/scene-settings-store'
+import { presentationAtom } from '../../../../../lib/stores/scene-settings-store'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -54,6 +49,11 @@ import { LoadingThumbnailToggle } from '../../../../publishing/loading-thumbnail
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
 import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
 import { itemVariants } from '../../animation'
+import {
+	useCurrentPreview,
+	usePublishExport,
+	useShowPublishedFinish
+} from '../../compose-sidebar/lighting-settings/use-bake-preview'
 import { SidebarSection, SidebarSectionContent } from '../../sidebar-section'
 
 import type {
@@ -85,17 +85,18 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	// The settings the document was derived from decide the publish-time
 	// Draco repack, not edits in the panel that were never applied.
 	const optimizations = useAtomValue(documentOptimizationsAtom)
-	const {
-		dracoReport,
-		isPending: isOptimizing,
-		passRevision
-	} = useAtomValue(optimizationRuntimeAtom)
+	const { isPending: isOptimizing, passRevision } = useAtomValue(
+		optimizationRuntimeAtom
+	)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const setProcessState = useSetAtom(processAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
-	const lighting = useAtomValue(lightingAtom)
-	const bakes = useMemo(() => publishBakes(lighting), [lighting])
+	const publishExport = usePublishExport()
+	const bakes = publishExport.request
+	// A preview of the current export is the file this publish would make.
+	const preview = useCurrentPreview()
+	const showPublishedFinish = useShowPublishedFinish()
 	const sceneViewReturn = useSceneViewReturnSetting()
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
@@ -153,32 +154,41 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			setPublishStatus('publishing')
 			dispatchProgress({ type: 'publish-step', key: 'export' })
 
-			const { data: workingGlb } =
-				await exporterRef.current.exportDocumentGLB(document)
-			const result = await runPublishExportInWorker(
-				{
-					buffer: workingGlb.slice().buffer as ArrayBuffer,
-					...resolvePublishGeometryOptions(optimizations, dracoReport),
-					ktx2: compressTextures,
-					...bakes
-				},
-				(progress) =>
-					dispatchProgress(
-						progress.stage === 'textures'
-							? {
-									type: 'publish-step',
-									key: 'textures',
-									done: progress.texturesDone,
-									total: progress.texturesTotal
-								}
-							: {
-									type: 'publish-step',
-									key: progress.stage,
-									done: progress.fraction,
-									total: 1
-								}
+			// A current preview already is the file this publish would make.
+			let result = preview?.status === 'ready' ? preview.outcome : undefined
+			if (!result) {
+				const { data: workingGlb } =
+					await exporterRef.current.exportDocumentGLB(document)
+				result = await runPublishExportInWorker(
+					{
+						buffer: workingGlb.slice().buffer as ArrayBuffer,
+						...publishExport.request
+					},
+					(progress) =>
+						dispatchProgress(
+							progress.stage === 'textures'
+								? {
+										type: 'publish-step',
+										key: 'textures',
+										done: progress.texturesDone,
+										total: progress.texturesTotal
+									}
+								: {
+										type: 'publish-step',
+										key: progress.stage,
+										done: progress.fraction,
+										total: 1
+									}
+						)
+				)
+				if (publishExport.bakesAnything) {
+					// Shown on the model too, so the publisher shows what shipped.
+					void showPublishedFinish(
+						{ document, passRevision, bakes: publishExport.key },
+						result
 					)
-			)
+				}
+			}
 			const glbData = new Uint8Array(result.buffer)
 			// It ships without a bake that failed, so that row must not read as done.
 			for (const key of ['occlusion', 'lights'] as const) {
@@ -307,10 +317,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		setOptimizationRuntime,
 		setUpgradeModal,
 		file,
-		optimizations,
-		dracoReport,
-		compressTextures,
-		bakes,
+		preview,
+		publishExport,
+		showPublishedFinish,
 		isOptimizing,
 		passRevision,
 		dispatchProgress

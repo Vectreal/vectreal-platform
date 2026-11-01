@@ -9,12 +9,16 @@ import {
 	resolvePublishGeometryOptions
 } from '../../../lib/domain/scene/client/publish-export'
 import { shouldCompressTexturesForGpu } from '../../../lib/domain/scene/scene-presentation'
+import { bakesKey } from '../../../lib/domain/scene/studio-finish'
 import { lastSavedSettingsAtom } from '../../../lib/stores/publisher-config-store'
 import {
 	documentOptimizationsAtom,
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
-import { presentationAtom } from '../../../lib/stores/scene-settings-store'
+import {
+	lightingAtom,
+	presentationAtom
+} from '../../../lib/stores/scene-settings-store'
 
 /**
  * Whether publish encodes this scene's textures for the GPU: the author's
@@ -31,9 +35,10 @@ export function useCompressesTexturesForGpu(): boolean {
 /**
  * Whether the published file is what publishing now would ship. The server
  * answers for the saved scene (`publishedIsCurrent`); what it cannot see is
- * anything this tab has not saved yet that changes the file, which is a pass
- * or the GPU texture switch. Every other unsaved edit is a setting, and an
- * embed reads those live once saved, so it leaves the published file current.
+ * anything this tab has not saved yet that changes the file, which is a pass,
+ * the GPU texture switch or what the lighting bakes in. Every other unsaved
+ * edit is a setting, and an embed reads those live once saved, so it leaves
+ * the published file current.
  *
  * Read by both claims about the published file: the publish card's status and
  * whether the size shown is the published one.
@@ -41,6 +46,7 @@ export function useCompressesTexturesForGpu(): boolean {
 export function usePublishedFileIsCurrent(): boolean {
 	const optimizations = useAtomValue(documentOptimizationsAtom)
 	const presentation = useAtomValue(presentationAtom)
+	const lighting = useAtomValue(lightingAtom)
 	const lastSavedSettings = useAtomValue(lastSavedSettingsAtom)
 	const { passRevision, savedPassRevision, latestSceneStats } = useAtomValue(
 		optimizationRuntimeAtom
@@ -61,7 +67,9 @@ export function usePublishedFileIsCurrent(): boolean {
 	return (
 		latestSceneStats?.publishedIsCurrent !== false &&
 		passRevision === savedPassRevision &&
-		compressesTextures === savedCompressesTextures
+		compressesTextures === savedCompressesTextures &&
+		(!lastSavedSettings ||
+			bakesKey(lighting) === bakesKey(lastSavedSettings.lighting))
 	)
 }
 
