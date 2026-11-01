@@ -120,8 +120,8 @@ export function BakeSection({
 			<div role="status" className="space-y-3">
 				{isBaking && (
 					<PanelCaption>
-						Drawing in the background. Your device may slow down until it is
-						done.
+						Drawing in the background. You can keep working; it finishes sooner
+						while the view is still.
 					</PanelCaption>
 				)}
 				{reports && (

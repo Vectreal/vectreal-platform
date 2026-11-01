@@ -153,8 +153,9 @@ reflection, which stays live either way. A few limits:
 **Preview it on the model** draws what publishing will, in the background, and
 shows the result in every tool. A model with animation the viewer can play is
 the exception: the finish holds its rest pose, so it shows only in the Lighting
-tool, and not while a clip plays. Drawing it is heavy work for
-the graphics card, so the page may slow down until it is done. **Show studio
+tool, and not while a clip plays. It draws in short slices
+that leave the graphics card room for the page, so you can keep working while it
+runs. It finishes sooner while the view is still. **Show studio
 finish** switches between the finished model and the model as it is, to
 compare. The settings then say how long it took and, for each part, how many
 materials took it, and list each material that could not with the reason. If
