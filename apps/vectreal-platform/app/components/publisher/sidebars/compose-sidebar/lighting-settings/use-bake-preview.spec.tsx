@@ -12,11 +12,19 @@ import {
 	drawingLabel,
 	type ShownBakeContext,
 	useBakePreview,
+	usePublishExport,
+	useShowPublishedFinish,
 	useShownBake
 } from './use-bake-preview'
-import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	bakePreviewAtom,
+	type BakePreview
+} from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
-import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
+import {
+	lightingAtom,
+	presentationAtom
+} from '../../../../../lib/stores/scene-settings-store'
 
 import type { ReactNode } from 'react'
 
@@ -79,7 +87,11 @@ function setup(
 		() => {
 			const shown = useShownBake(viewer)
 			rendered.shown = shown
-			return { preview: useBakePreview(), shown }
+			return {
+				preview: useBakePreview(),
+				publishExport: usePublishExport(),
+				shown
+			}
 		},
 		{ wrapper }
 	)
@@ -98,21 +110,21 @@ beforeEach(() => {
 })
 
 describe('the bake preview', () => {
-	it('bakes in the publish worker with only the bake on, and shows the result', async () => {
+	it('runs the export publishing would, and keeps its file beside the result shown', async () => {
 		const { hook } = setup()
 
 		await act(() => hook.result.current.preview.bake())
 
-		expect(mocks.runPublishExportInWorker).toHaveBeenCalledWith(
-			expect.objectContaining({ occlusion: true, ktx2: false }),
-			expect.any(Function)
-		)
-		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).not.toHaveProperty(
-			'draco'
-		)
+		const [request] = mocks.runPublishExportInWorker.mock.calls[0]
+		expect(request).toEqual({
+			buffer: expect.any(ArrayBuffer),
+			...hook.result.current.publishExport.request
+		})
+		expect(request).toMatchObject({ occlusion: true })
 		expect(hook.result.current.preview.preview).toMatchObject({
 			status: 'ready',
-			reports: { occlusion: report }
+			reports: { occlusion: report },
+			outcome: { buffer: expect.any(ArrayBuffer), occlusion: report }
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
 	})
@@ -173,6 +185,37 @@ describe('the bake preview', () => {
 			lights: report
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('encodes the textures for the GPU when publishing would', async () => {
+		const { store, hook } = setup()
+		act(() =>
+			store.set(presentationAtom, (prev) => ({
+				...prev,
+				compressTexturesForGpu: true
+			}))
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(mocks.runPublishExportInWorker.mock.calls[0][0]).toMatchObject({
+			ktx2: true
+		})
+	})
+
+	it('goes stale once publishing would encode the textures differently', async () => {
+		const { store, hook } = setup()
+		await act(() => hook.result.current.preview.bake())
+		expect(hook.result.current.preview.preview).not.toBeNull()
+
+		act(() =>
+			store.set(presentationAtom, (prev) => ({
+				...prev,
+				compressTexturesForGpu: !hook.result.current.publishExport.request.ktx2
+			}))
+		)
+
+		expect(hook.result.current.preview.preview).toBeNull()
 	})
 
 	it('drops a light bake once a baked light moves', async () => {
@@ -459,5 +502,49 @@ describe('the bake preview', () => {
 		const { hook } = setup()
 
 		expect(hook.result.current.preview.canBake).toBe(false)
+	})
+})
+
+describe('showing what a publish exported', () => {
+	const outcome = { buffer: new ArrayBuffer(8), occlusion: report }
+	const show = (current: BakePreview | null) => {
+		const store = createStore()
+		store.set(bakePreviewAtom, current)
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<Provider store={store}>{children}</Provider>
+		)
+		const { result } = renderHook(() => useShowPublishedFinish(), { wrapper })
+		return { store, show: result.current }
+	}
+	const source = { document: {}, passRevision: 0, bakes: 'published' }
+
+	it('leaves a preview of other lights, asked for since, in place', async () => {
+		const newer: BakePreview = {
+			status: 'baking',
+			source: { ...source, bakes: 'moved a light' },
+			shown: true
+		}
+		const { store, show: showFinish } = show(newer)
+
+		await act(() => showFinish(source, outcome as never))
+
+		expect(store.get(bakePreviewAtom)).toBe(newer)
+		expect(mocks.disposeModel).toHaveBeenCalledOnce()
+	})
+
+	it('keeps a preview of the same export hidden when the author hid it', async () => {
+		const { store, show: showFinish } = show({
+			status: 'ready',
+			source,
+			shown: false
+		})
+
+		await act(() => showFinish(source, outcome as never))
+
+		expect(store.get(bakePreviewAtom)).toMatchObject({
+			status: 'ready',
+			shown: false,
+			outcome
+		})
 	})
 })

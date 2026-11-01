@@ -20,6 +20,10 @@ import type {
 	SceneMetaState
 } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
+import type {
+	PublishExportOutcome,
+	PublishExportProgress
+} from '../../workers/publish-export.worker.types'
 import type { LightingSettings, SceneSettings } from '@vctrl/core'
 import type { LightBakeReport } from '@vctrl/core/light-bake'
 import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
@@ -307,8 +311,8 @@ interface BakePreview {
 	source: { document: unknown; passRevision: number; bakes: string }
 	/** Whether the viewer shows it in place of the model. */
 	shown: boolean
-	/** While baking: the bake drawing now and its share drawn, once it reports. */
-	progress?: { stage: 'occlusion' | 'lights'; fraction: number }
+	/** While baking: the step running now and how far it has come, once it reports. */
+	progress?: PublishExportProgress
 	model?: Object3D
 	/**
 	 * One per bake that ran. A bake that failed says why, while the other is
@@ -318,6 +322,11 @@ interface BakePreview {
 		occlusion?: OcclusionBakeReport | { failed: string }
 		lights?: LightBakeReport | { failed: string }
 	}
+	/**
+	 * Once ready: the file exactly as publishing would ship it for `source`,
+	 * which publish uploads rather than exporting again.
+	 */
+	outcome?: PublishExportOutcome
 	durationMs?: number
 	error?: string
 }

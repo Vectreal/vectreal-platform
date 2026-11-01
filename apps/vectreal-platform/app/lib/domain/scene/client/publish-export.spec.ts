@@ -4,7 +4,6 @@ import {
 	lightBakeWarning,
 	occlusionBakeWarning,
 	projectPublishedGlbBytes,
-	publishBakes,
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
 } from './publish-export'
@@ -217,38 +216,6 @@ describe('occlusionBakeWarning', () => {
 
 	it('says nothing when no bake was asked for', () => {
 		expect(occlusionBakeWarning(undefined)).toBeNull()
-	})
-})
-
-describe('publishBakes', () => {
-	const key = { role: 'key' as const, azimuth: 30, elevation: 40 }
-
-	it('bakes occlusion only when it is set to baked', () => {
-		expect(publishBakes({ occlusion: { mode: 'baked' } }).occlusion).toBe(true)
-		expect(publishBakes({ occlusion: { mode: 'live' } }).occlusion).toBe(false)
-	})
-
-	it('hands over the resolved lights when they are set to bake', () => {
-		const { lights } = publishBakes({
-			lights: [key],
-			environment: { rotation: 15 },
-			bake: { lights: true }
-		})
-
-		expect(lights).toMatchObject({
-			environment: { rotation: 15 },
-			lights: [{ role: 'key', azimuth: 30, elevation: 40, enabled: true }]
-		})
-	})
-
-	it('bakes no lights unless asked, or when none is on', () => {
-		expect(publishBakes({ lights: [key] }).lights).toBe(false)
-		expect(
-			publishBakes({
-				lights: [{ ...key, enabled: false }],
-				bake: { lights: true }
-			}).lights
-		).toBe(false)
 	})
 })
 

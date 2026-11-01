@@ -7,7 +7,7 @@ import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
 import { hotspotArtworkFileName } from './hotspot-artwork'
-import { describePublishSource } from './publish-source'
+import { describePublishSource, publishSourceMatches } from './publish-source'
 import {
 	balancedPreset,
 	originalPreset
@@ -22,7 +22,8 @@ const HOTSPOT_ID = '11111111-1111-4111-8111-111111111111'
 const base = {
 	assets: model,
 	optimizationSettings: balancedPreset,
-	presentation: {}
+	presentation: {},
+	lighting: undefined
 }
 
 describe('describePublishSource', () => {
@@ -147,5 +148,65 @@ describe('describePublishSource', () => {
 		expect(describePublishSource({ ...base, optimizationSettings: null })).toBe(
 			describePublishSource({ ...base, optimizationSettings: originalPreset })
 		)
+	})
+
+	it('changes with what the lighting bakes in, and not with live lighting', () => {
+		const key = { role: 'key' as const, azimuth: 30 }
+		const baked = { lights: [key], bake: { lights: true } }
+
+		expect(describePublishSource({ ...base, lighting: baked })).not.toBe(
+			describePublishSource(base)
+		)
+		expect(
+			describePublishSource({
+				...base,
+				lighting: { ...baked, lights: [{ ...key, azimuth: 31 }] }
+			})
+		).not.toBe(describePublishSource({ ...base, lighting: baked }))
+		// Live lights are drawn by the embed, so the file is the same.
+		expect(
+			describePublishSource({ ...base, lighting: { lights: [key] } })
+		).toBe(describePublishSource(base))
+	})
+})
+
+describe('publishSourceMatches', () => {
+	const baked = {
+		...base,
+		lighting: { lights: [{ role: 'key' as const }], bake: { lights: true } }
+	}
+	const withoutBakes = (description: string) => {
+		const { bakes: _bakes, ...rest } = JSON.parse(description)
+		return JSON.stringify(rest)
+	}
+
+	it('reads a publish recorded before bakes were described as current', () => {
+		const current = describePublishSource(baked)
+		expect(publishSourceMatches(withoutBakes(current), current)).toBe(true)
+	})
+
+	it('still sees a model change in a publish recorded before bakes', () => {
+		const current = describePublishSource({ ...baked, assets: model.slice(1) })
+		expect(
+			publishSourceMatches(withoutBakes(describePublishSource(baked)), current)
+		).toBe(false)
+	})
+
+	it('reads a scene published baking nothing as behind once it bakes', () => {
+		expect(
+			publishSourceMatches(
+				describePublishSource(base),
+				describePublishSource(baked)
+			)
+		).toBe(false)
+	})
+
+	it('compares the bakes of a publish that recorded them', () => {
+		expect(
+			publishSourceMatches(
+				describePublishSource(baked),
+				describePublishSource(base)
+			)
+		).toBe(false)
 	})
 })

@@ -21,7 +21,7 @@ const model = vi.hoisted(() => ({ loaded: false, bake: vi.fn() }))
 vi.mock('./use-bake-preview', async (original) => {
 	const actual = await original<typeof import('./use-bake-preview')>()
 	const { publishBakes } =
-		await import('../../../../../lib/domain/scene/client/publish-export')
+		await import('../../../../../lib/domain/scene/studio-finish')
 	return {
 		...actual,
 		useBakePreview: () => {

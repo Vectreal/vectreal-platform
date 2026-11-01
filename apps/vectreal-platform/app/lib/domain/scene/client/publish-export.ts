@@ -1,5 +1,3 @@
-import { litLights, resolveLighting } from '@vctrl/core'
-
 import { runWorker } from '../../../../workers/run-worker'
 
 import type {
@@ -8,11 +6,7 @@ import type {
 	PublishExportProgress,
 	PublishExportRequest
 } from '../../../../workers/publish-export.worker.types'
-import type {
-	DracoCompressionReport,
-	LightingSettings,
-	Optimizations
-} from '@vctrl/core'
+import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
 import type { OcclusionBakeSkipReason } from '@vctrl/core/occlusion-bake'
 
 /**
@@ -102,24 +96,6 @@ export async function projectPublishedGlbBytes(
 		() => {}
 	)
 	return buffer.byteLength
-}
-
-/**
- * What publishing bakes for `lighting`: occlusion when it is set to baked, and
- * the studio lights when they are set to bake and any is on. The Lighting
- * tool's preview asks for the same, so it shows what will ship.
- */
-export function publishBakes(
-	lighting: LightingSettings | undefined
-): Pick<PublishExportRequest, 'occlusion' | 'lights'> {
-	const resolved = resolveLighting({ lighting })
-	return {
-		occlusion: resolved.occlusion.mode === 'baked',
-		lights:
-			resolved.bake.lights && litLights(resolved).length > 0
-				? { lights: resolved.lights, environment: resolved.environment }
-				: false
-	}
 }
 
 /** Why a material took no bake, as the author reads it. */

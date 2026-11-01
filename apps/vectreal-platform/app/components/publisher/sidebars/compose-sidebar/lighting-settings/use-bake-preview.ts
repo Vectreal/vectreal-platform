@@ -1,4 +1,3 @@
-import { bakedLightsSignature } from '@vctrl/core'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { ModelLoader } from '@vctrl/core/model-loader'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
@@ -6,37 +5,49 @@ import { useAtom, useAtomValue } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import {
-	publishBakes,
+	resolvePublishGeometryOptions,
 	runPublishExportInWorker
 } from '../../../../../lib/domain/scene/client/publish-export'
+import {
+	bakesKey,
+	publishBakes
+} from '../../../../../lib/domain/scene/studio-finish'
 import {
 	bakePreviewAtom,
 	type BakePreview
 } from '../../../../../lib/stores/publisher-config-store'
-import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
+import {
+	documentOptimizationsAtom,
+	optimizationRuntimeAtom
+} from '../../../../../lib/stores/scene-optimization-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { disposeModel } from '../../../optimization/use-hold-to-compare'
+import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
 
+import type { PublishExportOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { Object3D } from 'three'
 
 /**
- * What publishing would bake now, as the request and as a key: a preview made
- * for another key shows what will not ship. A light map is keyed by the
- * lights it holds, so moving one makes the preview stale.
+ * What publishing would export now, as the request and as a key: the bakes,
+ * down to the lights a light map holds, and the codecs it encodes with. The
+ * preview runs this exact export, so a preview with the current key is the
+ * file publishing would ship, and publish uploads it as it is.
  */
-function useRequestedBakes() {
+export function usePublishExport() {
 	const lighting = useAtomValue(lightingAtom)
+	// The settings the document was derived from, as publish reads them.
+	const optimizations = useAtomValue(documentOptimizationsAtom)
+	const { dracoReport } = useAtomValue(optimizationRuntimeAtom)
+	const ktx2 = useCompressesTexturesForGpu()
 	return useMemo(() => {
-		const request = publishBakes(lighting)
+		const bakes = publishBakes(lighting)
+		const geometry = resolvePublishGeometryOptions(optimizations, dracoReport)
 		return {
-			request,
-			key: JSON.stringify({
-				occlusion: request.occlusion,
-				lights: request.lights && bakedLightsSignature(request.lights)
-			}),
-			any: request.occlusion || Boolean(request.lights)
+			request: { ...geometry, ktx2, ...bakes },
+			key: JSON.stringify({ bakes: bakesKey(lighting), ...geometry, ktx2 }),
+			bakesAnything: bakes.occlusion || Boolean(bakes.lights)
 		}
-	}, [lighting])
+	}, [lighting, optimizations, dracoReport, ktx2])
 }
 
 /**
@@ -44,11 +55,11 @@ function useRequestedBakes() {
  * publishing would bake. A new model, optimization pass or bake leaves it
  * describing something else, so it reads as no preview at all.
  */
-function useCurrentPreview(): BakePreview | null {
+export function useCurrentPreview(): BakePreview | null {
 	const preview = useAtomValue(bakePreviewAtom)
 	const { optimizer } = useModelContext(true)
 	const { passRevision } = useAtomValue(optimizationRuntimeAtom)
-	const { key } = useRequestedBakes()
+	const { key } = usePublishExport()
 	const document = optimizer?._getDocument?.()
 	return preview &&
 		preview.source.document === document &&
@@ -92,11 +103,78 @@ export const bakedCount = (
 	report: { baked: string[] } | { failed: string } | undefined
 ) => (report && 'baked' in report ? report.baked.length : 0)
 
-/** What a preview says while it draws: which bake, and how far it has come. */
-export const drawingLabel = (progress: BakePreview['progress']) =>
-	progress
-		? `Drawing the ${progress.stage === 'occlusion' ? 'depth' : 'studio lights'} (${Math.round(progress.fraction * 100)}%)`
-		: 'Drawing the finish'
+/** What a preview says while it draws: which step, and how far it has come. */
+export const drawingLabel = (progress: BakePreview['progress']) => {
+	if (!progress) return 'Drawing the finish'
+	if (progress.stage === 'textures') {
+		return `Compressing textures (${progress.texturesDone} of ${progress.texturesTotal})`
+	}
+	return `Drawing the ${progress.stage === 'occlusion' ? 'depth' : 'studio lights'} (${Math.round(progress.fraction * 100)}%)`
+}
+
+/*
+  A finished export as a preview to show: the bakes it reports, its file
+  loaded for the viewer, and the file itself, which publish ships unchanged.
+  Throws when every bake failed, since then it has nothing to show; publish
+  ships whichever bake worked.
+*/
+async function finishedPreview(
+	loader: ModelLoader,
+	source: BakePreview['source'],
+	outcome: PublishExportOutcome,
+	durationMs?: number
+): Promise<BakePreview> {
+	const reports = { occlusion: outcome.occlusion, lights: outcome.lights }
+	const outcomes = [reports.occlusion, reports.lights].filter(
+		(report) => report !== undefined
+	)
+	const failure = outcomes.find((report) => 'failed' in report)
+	if (failure && 'failed' in failure && outcomes.every((r) => 'failed' in r)) {
+		throw new Error(failure.failed)
+	}
+	const { scene } = await loader.loadToThreeJS(
+		new File([outcome.buffer], 'baked.glb', { type: 'model/gltf-binary' })
+	)
+	return {
+		status: 'ready',
+		source,
+		shown: true,
+		model: scene,
+		reports,
+		outcome,
+		durationMs
+	}
+}
+
+/**
+ * Shows what a publish just exported as the preview, so the publisher shows
+ * the finish it shipped. For an export run with the document and request on
+ * screen; a failure to show it leaves the publish as it was.
+ */
+export function useShowPublishedFinish() {
+	const [, setPreview] = useAtom(bakePreviewAtom)
+	const loader = useMemo(() => new ModelLoader(), [])
+	return useCallback(
+		async (source: BakePreview['source'], outcome: PublishExportOutcome) => {
+			try {
+				const next = await finishedPreview(loader, source, outcome)
+				setPreview((current) => {
+					// A preview asked for since, of other lights or codecs, is the
+					// author's newer request and stays.
+					if (current && current.source.bakes !== source.bakes) {
+						if (next.model) disposeModel(next.model)
+						return current
+					}
+					// One of the same export still drawing is dropped when it lands.
+					return { ...next, shown: current?.shown ?? true }
+				})
+			} catch {
+				// Every bake failed; the publish already warned about it.
+			}
+		},
+		[loader, setPreview]
+	)
+}
 
 /** Whether a finished preview changed anything a viewer would draw. */
 export const bakedAnything = (preview: BakePreview | null) =>
@@ -153,18 +231,18 @@ export function useBakePreview() {
 	const preview = useCurrentPreview()
 	const { optimizer, file } = useModelContext(true)
 	const { passRevision, isPending } = useAtomValue(optimizationRuntimeAtom)
-	const bakes = useRequestedBakes()
+	const publishExport = usePublishExport()
 	const exporter = useMemo(() => new ModelExporter(), [])
 	const loader = useMemo(() => new ModelLoader(), [])
 	const document = optimizer?._getDocument?.()
 
 	// A pass rewrites the document in place, so a bake mid-pass would capture
 	// a model that is neither the one before nor the one after.
-	const canBake = Boolean(document) && !isPending && bakes.any
+	const canBake = Boolean(document) && !isPending && publishExport.bakesAnything
 
 	const bake = useCallback(async () => {
-		if (!document || isPending || !bakes.any) return
-		const source = { document, passRevision, bakes: bakes.key }
+		if (!document || isPending || !publishExport.bakesAnything) return
+		const source = { document, passRevision, bakes: publishExport.key }
 		const started = performance.now()
 		// The model it replaces is freed once the viewer lets go of it.
 		setPreview({ status: 'baking', source, shown: true })
@@ -186,43 +264,21 @@ export function useBakePreview() {
 
 		try {
 			const { data } = await exporter.exportDocumentGLB(document)
-			const result = await runPublishExportInWorker(
+			const outcome = await runPublishExportInWorker(
 				{
 					buffer: data.slice().buffer as ArrayBuffer,
-					dracoWorthApplying: true,
-					ktx2: false,
-					...bakes.request
+					...publishExport.request
 				},
-				(progress) => {
-					// Textures are not encoded here, so only the bakes report.
-					if (progress.stage !== 'textures') report(progress)
-				}
+				report
 			)
-			const reports = { occlusion: result.occlusion, lights: result.lights }
-			// Publishing ships whichever bake worked, so the preview fails only
-			// when none did.
-			const outcomes = [reports.occlusion, reports.lights].filter(
-				(report) => report !== undefined
+			settle(
+				await finishedPreview(
+					loader,
+					source,
+					outcome,
+					performance.now() - started
+				)
 			)
-			const failure = outcomes.find((report) => 'failed' in report)
-			if (
-				failure &&
-				'failed' in failure &&
-				outcomes.every((r) => 'failed' in r)
-			) {
-				throw new Error(failure.failed)
-			}
-			const { scene } = await loader.loadToThreeJS(
-				new File([result.buffer], 'baked.glb', { type: 'model/gltf-binary' })
-			)
-			settle({
-				status: 'ready',
-				source,
-				shown: true,
-				model: scene,
-				reports,
-				durationMs: performance.now() - started
-			})
 		} catch (error) {
 			settle({
 				status: 'failed',
@@ -231,7 +287,15 @@ export function useBakePreview() {
 				error: error instanceof Error ? error.message : String(error)
 			})
 		}
-	}, [bakes, document, exporter, isPending, loader, passRevision, setPreview])
+	}, [
+		publishExport,
+		document,
+		exporter,
+		isPending,
+		loader,
+		passRevision,
+		setPreview
+	])
 
 	const setShown = useCallback(
 		(shown: boolean) =>
@@ -243,7 +307,7 @@ export function useBakePreview() {
 		preview,
 		canBake,
 		/** Whether the lighting asks for any bake at all. */
-		bakesAnything: bakes.any,
+		bakesAnything: publishExport.bakesAnything,
 		isOptimizing: isPending,
 		// The viewer draws the preview unanimated, in its rest pose.
 		isAnimated: Boolean(file?.animations?.length),
