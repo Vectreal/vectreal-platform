@@ -21,19 +21,33 @@ import type {
 import type { Ktx2Encoder } from '@vctrl/core/model-optimizer'
 
 /**
- * The most encode workers a publish runs. Each holds its own encoder wasm and
- * a texture's pixels at up to 2048², so past this the memory grows for less
- * and less time saved.
+ * The most encode workers a publish runs. Each holds its own encoder wasm,
+ * whose heap grows to its largest encode and never shrinks, so past this the
+ * memory grows for less and less time saved.
  */
 export const MAX_KTX2_ENCODE_WORKERS = 4
 
-/** How many encode workers this device runs: one core stays with the page. */
-export function ktx2EncodeWorkerCount(
-	hardwareConcurrency = navigator.hardwareConcurrency
-) {
+/**
+ * Encode workers where the browser does not say how much memory the device
+ * has. Safari reports four or eight cores on a phone as on a Mac, and a phone
+ * tab that runs out of memory is killed rather than a texture failing.
+ */
+const KTX2_ENCODE_WORKERS_UNKNOWN_MEMORY = 2
+
+/**
+ * How many encode workers this device runs: one core stays with the page, and
+ * each worker gets 2 GB of what `navigator.deviceMemory` reports.
+ */
+export function ktx2EncodeWorkerCount({
+	hardwareConcurrency,
+	deviceMemory
+}: { hardwareConcurrency?: number; deviceMemory?: number } = navigator) {
+	const byMemory = deviceMemory
+		? Math.floor(deviceMemory / 2)
+		: KTX2_ENCODE_WORKERS_UNKNOWN_MEMORY
 	return Math.max(
 		1,
-		Math.min(MAX_KTX2_ENCODE_WORKERS, (hardwareConcurrency || 2) - 1)
+		Math.min(MAX_KTX2_ENCODE_WORKERS, (hardwareConcurrency || 2) - 1, byMemory)
 	)
 }
 
@@ -55,9 +69,13 @@ export function createKtx2EncoderPool(
 	const started = new Set<Worker>()
 	const idle: Worker[] = []
 
+	// A worker can fail after it replied, while it sits idle, so it leaves
+	// both lists: handed another texture, a dead worker would never answer.
 	const retire = (worker: Worker) => {
 		worker.terminate()
 		started.delete(worker)
+		const at = idle.indexOf(worker)
+		if (at !== -1) idle.splice(at, 1)
 	}
 
 	const encode: Ktx2Encoder = (source, options) => {

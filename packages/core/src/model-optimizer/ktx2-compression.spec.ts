@@ -225,28 +225,48 @@ describe('compressTexturesToKtx2', () => {
 
 	it('reports in document order however the encodes finish', async () => {
 		const document = texturedDocument()
-		// The first texture finishes last.
+		document
+			.createTexture('roughness')
+			.setImage(webpHeader(256, 256))
+			.setMimeType('image/webp')
+		// Each texture finishes after the one behind it in the document.
+		const delays = new Map([
+			[1024, 10],
+			[2048, 5],
+			[256, 0]
+		])
+		const finished: number[] = []
 		const encode = vi.fn(async ({ width }: { width: number }) => {
-			if (width === 1024) await new Promise((resolve) => setTimeout(resolve, 5))
-			else throw new Error('too large')
-			return ktx2Bytes()
+			await new Promise((resolve) => setTimeout(resolve, delays.get(width)))
+			finished.push(width)
+			return new Uint8Array([width >> 8, width & 0xff])
 		})
 		const onProgress = vi.fn()
 
 		const report = await compressTexturesToKtx2(document, {
 			encode,
-			concurrency: 2,
+			concurrency: 3,
 			onProgress
 		})
 
-		expect(report).toEqual({
-			encoded: ['color'],
-			kept: [{ texture: 'normal', reason: 'too large' }]
-		})
+		expect(finished).toEqual([256, 2048, 1024])
+		expect(report.encoded).toEqual(['color', 'normal', 'roughness'])
+		// Each texture carries its own encode, not whichever finished first.
+		expect(
+			document
+				.getRoot()
+				.listTextures()
+				.map((texture) => Array.from(texture.getImage() as Uint8Array))
+		).toEqual([
+			[1024 >> 8, 1024 & 0xff],
+			[2048 >> 8, 2048 & 0xff],
+			[256 >> 8, 256 & 0xff]
+		])
 		expect(onProgress.mock.calls).toEqual([
-			[0, 2],
-			[1, 2],
-			[2, 2]
+			[0, 3],
+			[1, 3],
+			[2, 3],
+			[3, 3]
 		])
 	})
 })

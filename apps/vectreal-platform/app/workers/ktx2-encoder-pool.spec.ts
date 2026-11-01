@@ -101,6 +101,19 @@ describe('createKtx2EncoderPool', () => {
 		expect(workers).toHaveLength(2)
 	})
 
+	it('drops a worker that fails while idle, rather than hand it the next texture', async () => {
+		const { encoders, workers } = pool()
+
+		const first = encoders.encode(source(4), options)
+		workers[0].reply({ ktx2: new Uint8Array([1]) })
+		await first
+		workers[0].crash('Aw, snap')
+
+		void encoders.encode(source(8), options)
+		expect(workers).toHaveLength(2)
+		expect(workers[1].requests[0].source.width).toBe(8)
+	})
+
 	it('ends every worker it started', () => {
 		const { encoders, workers } = pool()
 		void encoders.encode(source(4), options)
@@ -116,15 +129,32 @@ describe('createKtx2EncoderPool', () => {
 
 describe('ktx2EncodeWorkerCount', () => {
 	it('leaves one core to the page', () => {
-		expect(ktx2EncodeWorkerCount(3)).toBe(2)
+		expect(
+			ktx2EncodeWorkerCount({ hardwareConcurrency: 3, deviceMemory: 8 })
+		).toBe(2)
 	})
 
 	it(`runs no more than ${MAX_KTX2_ENCODE_WORKERS}`, () => {
-		expect(ktx2EncodeWorkerCount(16)).toBe(MAX_KTX2_ENCODE_WORKERS)
+		expect(
+			ktx2EncodeWorkerCount({ hardwareConcurrency: 16, deviceMemory: 32 })
+		).toBe(MAX_KTX2_ENCODE_WORKERS)
+	})
+
+	it('gives each worker 2 GB of the memory the device reports', () => {
+		expect(
+			ktx2EncodeWorkerCount({ hardwareConcurrency: 8, deviceMemory: 4 })
+		).toBe(2)
+		expect(
+			ktx2EncodeWorkerCount({ hardwareConcurrency: 8, deviceMemory: 0.5 })
+		).toBe(1)
+	})
+
+	it('runs two where the browser does not say how much memory there is', () => {
+		expect(ktx2EncodeWorkerCount({ hardwareConcurrency: 8 })).toBe(2)
 	})
 
 	it('runs one on a single core, or when the browser does not say', () => {
-		expect(ktx2EncodeWorkerCount(1)).toBe(1)
-		expect(ktx2EncodeWorkerCount(0)).toBe(1)
+		expect(ktx2EncodeWorkerCount({ hardwareConcurrency: 1 })).toBe(1)
+		expect(ktx2EncodeWorkerCount({ deviceMemory: 8 })).toBe(1)
 	})
 })
