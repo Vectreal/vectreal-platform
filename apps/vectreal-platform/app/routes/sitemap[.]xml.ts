@@ -10,6 +10,7 @@ import {
 import { docsPages } from '../lib/docs/docs-manifest'
 import { PUBLIC_CACHE_CONTROL } from '../lib/http/cacheable-public-paths.server'
 import { getNewsArticles } from '../lib/news/news-manifest.server'
+import { lastChangedAt } from '../lib/news/news-schedule'
 
 interface SitemapEntry {
 	path: string
@@ -158,7 +159,9 @@ export async function loader() {
 		.filter((article) => Boolean(article.publishedAt))
 		.map((article) => ({
 			path: `/news-room/${article.slug}`,
-			lastmod: toDateOnly(article.updatedAt ?? article.publishedAt),
+			lastmod: toDateOnly(
+				lastChangedAt(article.publishedAt, article.updatedAt)
+			),
 			changefreq: 'never' as const,
 			priority: '0.7'
 		}))

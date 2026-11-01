@@ -151,6 +151,18 @@ export function newsSlugFromRequestPath(pathname: string): string | null {
 	return slug && !slug.includes('/') ? slug : null
 }
 
+/**
+ * When an article last changed for its readers: `updatedAt`, but never before
+ * it went live. An article revised ahead of a future `publishedAt` changed
+ * for readers only then, and a sitemap `lastmod` before that would be false.
+ */
+export function lastChangedAt(publishedAt: string, updatedAt?: string): string {
+	return updatedAt &&
+		resolvePublishedAt(updatedAt) > resolvePublishedAt(publishedAt)
+		? updatedAt
+		: publishedAt
+}
+
 const scheduledForFormatter = new Intl.DateTimeFormat('en-US', {
 	timeZone: NEWS_SCHEDULE_TIME_ZONE,
 	month: 'short',
