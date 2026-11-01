@@ -1,5 +1,6 @@
 /**
- * The viewer shows a bake preview only inside the Lighting tool. That it is
+ * The viewer shows a bake preview in every tool unless the model can be
+ * animated, and then only inside the Lighting tool while no clip plays. That it is
  * drawn as `displayedModel` is pinned in `compare-displayed-model.spec.ts`.
  *
  * A source guard: the route module cannot be imported by a test. Which preview
@@ -16,9 +17,16 @@ const publisher = readFileSync(
 )
 
 describe('the publisher bake preview', () => {
-	it('asks for the preview only while the Lighting tool is open', () => {
+	it('tells the preview which tool is open and what animation is doing', () => {
+		const call = publisher.match(/useShownBake\(\{([^}]*)\}\)/)?.[1] ?? ''
+		expect(call).toMatch(/isLightingOpen: openComposeTool === 'lighting'/)
+		expect(call).toMatch(/\bcanAnimate,/)
+		expect(call).toMatch(/isAnimating: animationStatus\.playing/)
+	})
+
+	it('counts a model as animatable when the viewer would mount its runtime', () => {
 		expect(publisher).toMatch(
-			/useShownBake\(\s*openComposeTool === 'lighting'\s*\)/
+			/const canAnimate =\s*\(file\?\.animations\?\.length \?\? 0\) > 0 &&\s*\(Boolean\(animation\?\.enabled\) \|\|\s*Boolean\(hotspots\?\.some\(\(hotspot\) => hotspot\.linkedAnimationClipId\)\)\)/
 		)
 	})
 })

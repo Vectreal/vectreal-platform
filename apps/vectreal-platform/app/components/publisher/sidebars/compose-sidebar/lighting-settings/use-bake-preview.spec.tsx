@@ -8,7 +8,11 @@ import { createStore, Provider } from 'jotai'
 import { Group } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useBakePreview, useShownBake } from './use-bake-preview'
+import {
+	type ShownBakeContext,
+	useBakePreview,
+	useShownBake
+} from './use-bake-preview'
 import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
@@ -55,7 +59,13 @@ const litLighting = {
 	bake: { lights: true }
 }
 
-function setup(lightingOpen = true) {
+function setup(
+	viewer: ShownBakeContext = {
+		isLightingOpen: false,
+		canAnimate: false,
+		isAnimating: false
+	}
+) {
 	const store = createStore()
 	store.set(lightingAtom, { occlusion: { mode: 'baked' } })
 	const wrapper = ({ children }: { children: ReactNode }) => (
@@ -66,7 +76,7 @@ function setup(lightingOpen = true) {
 	const rendered: { shown?: unknown } = {}
 	const hook = renderHook(
 		() => {
-			const shown = useShownBake(lightingOpen)
+			const shown = useShownBake(viewer)
 			rendered.shown = shown
 			return { preview: useBakePreview(), shown }
 		},
@@ -211,15 +221,48 @@ describe('the bake preview', () => {
 		expect(hook.result.current.shown).toBeUndefined()
 	})
 
-	it('shows the bake only inside the Lighting tool and while set to baked', async () => {
-		const closed = setup(false)
-		await act(() => closed.hook.result.current.preview.bake())
-		expect(closed.hook.result.current.shown).toBeUndefined()
+	it('shows the bake outside the Lighting tool when nothing can pose the model, while set to baked', async () => {
+		const { store, hook } = setup()
+		await act(() => hook.result.current.preview.bake())
+		expect(hook.result.current.shown).toBeInstanceOf(Group)
 
-		const open = setup()
-		await act(() => open.hook.result.current.preview.bake())
-		act(() => open.store.set(lightingAtom, { occlusion: { mode: 'live' } }))
-		expect(open.hook.result.current.shown).toBeUndefined()
+		act(() => store.set(lightingAtom, { occlusion: { mode: 'live' } }))
+		expect(hook.result.current.shown).toBeUndefined()
+	})
+
+	it('keeps an animatable model live outside the Lighting tool, where it may be posed', async () => {
+		const { store, hook } = setup({
+			isLightingOpen: false,
+			canAnimate: true,
+			isAnimating: false
+		})
+		await act(() => hook.result.current.preview.bake())
+
+		expect(store.get(bakePreviewAtom)?.status).toBe('ready')
+		expect(hook.result.current.shown).toBeUndefined()
+	})
+
+	it('shows an animatable model baked inside the Lighting tool while no clip plays', async () => {
+		const { hook } = setup({
+			isLightingOpen: true,
+			canAnimate: true,
+			isAnimating: false
+		})
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('shows the live model while a clip plays, even inside the Lighting tool', async () => {
+		const { store, hook } = setup({
+			isLightingOpen: true,
+			canAnimate: true,
+			isAnimating: true
+		})
+		await act(() => hook.result.current.preview.bake())
+
+		expect(store.get(bakePreviewAtom)?.status).toBe('ready')
+		expect(hook.result.current.shown).toBeUndefined()
 	})
 
 	it('drops a preview made for another optimization pass', async () => {
