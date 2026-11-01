@@ -307,6 +307,8 @@ interface BakePreview {
 	source: { document: unknown; passRevision: number; bakes: string }
 	/** Whether the viewer shows it in place of the model. */
 	shown: boolean
+	/** While baking: the bake drawing now and its share drawn, once it reports. */
+	progress?: { stage: 'occlusion' | 'lights'; fraction: number }
 	model?: Object3D
 	/**
 	 * One per bake that ran. A bake that failed says why, while the other is

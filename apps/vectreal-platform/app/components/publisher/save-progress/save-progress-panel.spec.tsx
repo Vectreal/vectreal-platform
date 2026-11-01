@@ -263,6 +263,28 @@ describe('SaveProgressPanel', () => {
 			expect(screen.queryByText('Scene settings')).toBeNull()
 		})
 
+		it('says how much of a bake is drawn as a share', () => {
+			renderPanel({
+				...uploadingGlb,
+				publish: {
+					steps: [
+						{ key: 'export', done: 0, total: 0, state: 'done' },
+						{ key: 'lights', done: 0.4, total: 1, state: 'active' },
+						{ key: 'upload', done: 0, total: 0, state: 'waiting' }
+					]
+				}
+			})
+
+			fireEvent.click(screen.getByRole('button', { name: 'Show save details' }))
+			expect(
+				screen.getAllByText('Drawing the studio lights').length
+			).toBeGreaterThan(0)
+			expect(screen.getAllByText('40%').length).toBeGreaterThan(0)
+			expect(
+				screen.getByRole('progressbar').getAttribute('aria-valuenow')
+			).toBe('40')
+		})
+
 		it('opens collapsed even when it starts with nothing to save', () => {
 			const { store } = renderPanel({
 				status: 'saved',

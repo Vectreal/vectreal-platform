@@ -92,6 +92,8 @@ export interface UvTrace {
 	empty: [number, number, number, number]
 	/** Names the bake in the error a GPU reset raises. */
 	label: string
+	/** How much of the bake is drawn, 0 to 1, after each slice. */
+	onProgress?: (fraction: number) => void
 }
 
 /** Texels the bake is spread past each UV island, so mipmaps do not blend in the empty texture. */
@@ -227,6 +229,9 @@ export async function traceInUvSpace(
 	)
 	// Carried from slice to slice and target to target, so it is measured once.
 	let budget = FIRST_SLICE_BUDGET
+	// Texel-rays, so a target counts by its share of the work.
+	const work = trace.targets.length * size * size * samples
+	let worked = 0
 
 	const baked: UvBake[] = []
 	let scene = new Scene()
@@ -283,6 +288,8 @@ export async function traceInUvSpace(
 					await nextTask()
 				}
 				throwIfLost()
+				worked += tile.width * tile.height * passSamples
+				trace.onProgress?.(worked / work)
 			}
 
 			resolveMaterial.uniforms['accumulated'].value = accumulation.texture

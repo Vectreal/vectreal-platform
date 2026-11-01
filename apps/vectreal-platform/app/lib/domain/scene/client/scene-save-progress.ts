@@ -33,10 +33,13 @@ export type SaveProgressEvent =
 	| { type: 'failed'; message: string }
 
 /** A publish's own steps, in the order they run. */
-export type PublishStepKey = 'export' | 'textures' | 'upload' | 'commit'
+export type PublishStepKey =
+	'export' | 'occlusion' | 'lights' | 'textures' | 'upload' | 'commit'
 
 const PUBLISH_STEP_ORDER: PublishStepKey[] = [
 	'export',
+	'occlusion',
+	'lights',
 	'textures',
 	'upload',
 	'commit'
@@ -46,10 +49,13 @@ export type PublishProgressEvent =
 	/** `saves`: unsaved changes are saved first, reported as a save's events. */
 	| { type: 'publish-started'; saves: boolean }
 	/**
-	 * A step runs, with how far it has come where that is known: textures
-	 * count, the upload counts bytes. Every step before it has finished.
+	 * A step runs, with how far it has come where that is known: a bake
+	 * counts its share drawn out of 1, textures count, the upload counts
+	 * bytes. Every step before it has finished.
 	 */
 	| { type: 'publish-step'; key: PublishStepKey; done?: number; total?: number }
+	/** A bake failed, and the publish goes on without it. */
+	| { type: 'publish-step-failed'; key: 'occlusion' | 'lights' }
 	| { type: 'published' }
 	/**
 	 * The publish ended without shipping, for whatever reason, its own save
@@ -140,26 +146,32 @@ const waitingStep = (key: PublishStepKey): PublishStep => ({
 })
 
 /*
-  Runs `key` and finishes every step before it. Textures run only when GPU
-  compression is on, so that step joins the list the first time it reports.
+  Runs `key` and finishes every step before it. The bakes and textures run
+  only when asked for, so each joins the list the first time it reports.
 */
+const listStep = (steps: PublishStep[], key: PublishStepKey): PublishStep[] =>
+	steps.some((step) => step.key === key)
+		? steps
+		: [...steps, waitingStep(key)].sort(
+				(a, b) =>
+					PUBLISH_STEP_ORDER.indexOf(a.key) - PUBLISH_STEP_ORDER.indexOf(b.key)
+			)
+
+/** Finished, unless it failed: a failed bake stays failed while the publish goes on. */
+const finish = (step: PublishStep): PublishStep =>
+	step.state === 'failed' ? step : { ...step, state: 'done' }
+
 const runStep = (
 	steps: PublishStep[],
 	key: PublishStepKey,
 	done = 0,
 	total = 0
 ): PublishStep[] => {
-	const listed = steps.some((step) => step.key === key)
-		? steps
-		: [...steps, waitingStep(key)].sort(
-				(a, b) =>
-					PUBLISH_STEP_ORDER.indexOf(a.key) - PUBLISH_STEP_ORDER.indexOf(b.key)
-			)
 	const at = PUBLISH_STEP_ORDER.indexOf(key)
-	return listed.map((step) => {
+	return listStep(steps, key).map((step) => {
 		const order = PUBLISH_STEP_ORDER.indexOf(step.key)
 		if (step.key === key) return { ...step, done, total, state: 'active' }
-		return order < at ? { ...step, state: 'done' } : step
+		return order < at ? finish(step) : step
 	})
 }
 
@@ -202,13 +214,20 @@ const reducePublishProgress = (
 					steps: runStep(publish.steps, event.key, event.done, event.total)
 				}
 			}
+		case 'publish-step-failed':
+			return {
+				...state,
+				publish: {
+					steps: listStep(publish.steps, event.key).map((step) =>
+						step.key === event.key ? { ...step, state: 'failed' } : step
+					)
+				}
+			}
 		case 'published':
 			return {
 				...state,
 				status: 'published',
-				publish: {
-					steps: publish.steps.map((step) => ({ ...step, state: 'done' }))
-				}
+				publish: { steps: publish.steps.map(finish) }
 			}
 		case 'failed':
 		case 'publish-failed':
@@ -304,6 +323,7 @@ export const reduceSaveProgress = (
 		// one whose save already failed keeps showing that save's failure.
 		case 'publish-started':
 		case 'publish-step':
+		case 'publish-step-failed':
 		case 'published':
 		case 'publish-failed':
 			return state

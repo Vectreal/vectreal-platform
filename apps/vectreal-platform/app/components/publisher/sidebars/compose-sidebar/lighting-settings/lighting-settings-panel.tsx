@@ -192,6 +192,7 @@ const LightingSettings = () => {
 
 				<StudioFinishCard
 					status={status}
+					progress={bakePreview.preview?.progress}
 					canPreview={bakePreview.canBake}
 					isOptimizing={bakePreview.isOptimizing}
 					onAdd={addFinish}

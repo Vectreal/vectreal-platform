@@ -92,6 +92,12 @@ export const bakedCount = (
 	report: { baked: string[] } | { failed: string } | undefined
 ) => (report && 'baked' in report ? report.baked.length : 0)
 
+/** What a preview says while it draws: which bake, and how far it has come. */
+export const drawingLabel = (progress: BakePreview['progress']) =>
+	progress
+		? `Drawing the ${progress.stage === 'occlusion' ? 'depth' : 'studio lights'} (${Math.round(progress.fraction * 100)}%)`
+		: 'Drawing the finish'
+
 /** Whether a finished preview changed anything a viewer would draw. */
 export const bakedAnything = (preview: BakePreview | null) =>
 	bakedCount(preview?.reports?.occlusion) +
@@ -172,6 +178,11 @@ export function useBakePreview() {
 				}
 				return next
 			})
+		// The worker reports before it finishes, so this lands only while baking.
+		const report = (progress: NonNullable<BakePreview['progress']>) =>
+			setPreview((current) =>
+				current?.source === source ? { ...current, progress } : current
+			)
 
 		try {
 			const { data } = await exporter.exportDocumentGLB(document)
@@ -182,7 +193,10 @@ export function useBakePreview() {
 					ktx2: false,
 					...bakes.request
 				},
-				() => {}
+				(progress) => {
+					// Textures are not encoded here, so only the bakes report.
+					if (progress.stage !== 'textures') report(progress)
+				}
 			)
 			const reports = { occlusion: result.occlusion, lights: result.lights }
 			// Publishing ships whichever bake worked, so the preview fails only
