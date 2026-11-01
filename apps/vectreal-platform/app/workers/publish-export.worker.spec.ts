@@ -15,7 +15,9 @@ const mocks = vi.hoisted(() => ({
 	exportGlbForPublish: vi.fn(),
 	/** Stands in for the KTX2 pass, handed what the worker passed as `ktx2`. */
 	compressTextures: vi.fn(),
-	encode: vi.fn(),
+	createEncoderPool: vi.fn(),
+	poolEncode: vi.fn(),
+	disposePool: vi.fn(),
 	bakeOcclusionIntoDocument: vi.fn(),
 	bakeLightsIntoDocument: vi.fn(),
 	createRenderer: vi.fn(),
@@ -41,10 +43,12 @@ vi.mock('three', () => ({
 		dispose = mocks.disposeRenderer
 	}
 }))
-vi.mock('ktx2-encoder', () => ({
-	BrowserBasisEncoder: class {
-		encode = mocks.encode
-	}
+vi.mock('./ktx2-encoder-pool', () => ({
+	createKtx2EncoderPool: (createWorker: () => Worker) => {
+		mocks.createEncoderPool(createWorker)
+		return { encode: mocks.poolEncode, dispose: mocks.disposePool }
+	},
+	ktx2EncodeWorkerCount: () => 3
 }))
 
 const posted: Array<{ message: PublishExportMessage; transfer: unknown }> = []
@@ -341,30 +345,41 @@ describe('the publish export worker', () => {
 		})
 	})
 
-	it('encodes through the self-hosted wasm at the size it was given', async () => {
-		mocks.compressTextures.mockImplementation(async ({ encode }) => {
-			await encode(
-				{
-					image: new Uint8Array(4),
-					mimeType: 'image/webp',
-					width: 8,
-					height: 4
-				},
-				{ isUASTC: false }
-			)
-			return report
-		})
+	it('encodes textures through its pool, as many at once as it has workers, and ends the pool', async () => {
+		const started: string[] = []
+		vi.stubGlobal(
+			'Worker',
+			class {
+				constructor(url: URL, options: WorkerOptions) {
+					started.push(`${url.pathname} ${options.type}`)
+				}
+			}
+		)
+		await send({ dracoWorthApplying: true, ktx2: true })
+
+		expect(mocks.createEncoderPool).toHaveBeenCalledOnce()
+		mocks.createEncoderPool.mock.calls[0][0]()
+		expect(started).toEqual([
+			expect.stringMatching(/\/ktx2-encode\.worker\.ts module$/)
+		])
+		expect(mocks.compressTextures).toHaveBeenCalledWith(
+			expect.objectContaining({ encode: mocks.poolEncode, concurrency: 3 })
+		)
+		expect(mocks.disposePool).toHaveBeenCalledOnce()
+	})
+
+	it('ends the pool when the export fails', async () => {
+		mocks.exportGlbForPublish.mockRejectedValue(new Error('Out of memory'))
 
 		await send({ dracoWorthApplying: true, ktx2: true })
 
-		expect(mocks.encode).toHaveBeenCalledWith(
-			new Uint8Array(4),
-			expect.objectContaining({
-				isUASTC: false,
-				wasmUrl: '/basis-encoder/basis_encoder.wasm',
-				imageDecoder: expect.any(Function)
-			})
-		)
+		expect(mocks.disposePool).toHaveBeenCalledOnce()
+	})
+
+	it('starts no encode workers when KTX2 is off', async () => {
+		await send({ dracoWorthApplying: true, ktx2: false })
+
+		expect(mocks.createEncoderPool).not.toHaveBeenCalled()
 	})
 
 	it('reports a failure instead of throwing it away', async () => {
@@ -377,92 +392,5 @@ describe('the publish export worker', () => {
 		expect(messages).toEqual([
 			{ type: 'error', message: 'Draco encoder failed' }
 		])
-	})
-
-	describe('reading a texture back for the encoder', () => {
-		const FRAMEBUFFER_COMPLETE = 0x8cd5
-		const NO_ERROR = 0
-
-		/** A WebGL2 context whose read-back outcome the case decides. */
-		function stubWebGl(status: number, error: number) {
-			const gl = {
-				FRAMEBUFFER_COMPLETE,
-				NO_ERROR,
-				createTexture: vi.fn(() => ({})),
-				createFramebuffer: vi.fn(() => ({})),
-				bindTexture: vi.fn(),
-				texImage2D: vi.fn(),
-				bindFramebuffer: vi.fn(),
-				framebufferTexture2D: vi.fn(),
-				checkFramebufferStatus: vi.fn(() => status),
-				readPixels: vi.fn((...args: unknown[]) => {
-					;(args[6] as Uint8Array).fill(200)
-				}),
-				getError: vi.fn(() => error),
-				deleteFramebuffer: vi.fn(),
-				deleteTexture: vi.fn()
-			}
-			vi.stubGlobal(
-				'OffscreenCanvas',
-				class {
-					getContext = () => gl
-				}
-			)
-			vi.stubGlobal(
-				'createImageBitmap',
-				vi.fn(async () => ({ close: vi.fn() }))
-			)
-			return gl
-		}
-
-		async function decoderFor() {
-			let decode:
-				((bytes: Uint8Array) => Promise<{ data: Uint8Array }>) | undefined
-			mocks.encode.mockImplementation(async (_image, options) => {
-				decode = options.imageDecoder
-				return new Uint8Array(1)
-			})
-			mocks.compressTextures.mockImplementation(async ({ encode }) => {
-				await encode(
-					{
-						image: new Uint8Array(4),
-						mimeType: 'image/webp',
-						width: 2,
-						height: 2
-					},
-					{}
-				)
-				return report
-			})
-			await send({ dracoWorthApplying: true, ktx2: true })
-			return decode as (bytes: Uint8Array) => Promise<{ data: Uint8Array }>
-		}
-
-		it('hands the encoder the pixels it read', async () => {
-			stubWebGl(FRAMEBUFFER_COMPLETE, NO_ERROR)
-			const decode = await decoderFor()
-
-			const { data } = await decode(new Uint8Array(4))
-			expect(data).toHaveLength(2 * 2 * 4)
-			expect(data.every((value) => value === 200)).toBe(true)
-		})
-
-		it('refuses a texture the framebuffer cannot read, rather than ship it black', async () => {
-			const gl = stubWebGl(0, NO_ERROR)
-			const decode = await decoderFor()
-
-			await expect(decode(new Uint8Array(4))).rejects.toThrow(
-				/read the texture/
-			)
-			expect(gl.readPixels).not.toHaveBeenCalled()
-			expect(gl.deleteTexture).toHaveBeenCalled()
-		})
-
-		it('refuses a texture WebGL reported an error for', async () => {
-			stubWebGl(FRAMEBUFFER_COMPLETE, 0x0505)
-			const decode = await decoderFor()
-
-			await expect(decode(new Uint8Array(4))).rejects.toThrow(/1285/)
-		})
 	})
 })
