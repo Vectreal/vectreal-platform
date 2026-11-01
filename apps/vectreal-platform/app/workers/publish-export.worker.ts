@@ -25,84 +25,18 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import { bakeLightsIntoDocument } from '@vctrl/core/light-bake'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { bakeOcclusionIntoDocument } from '@vctrl/core/occlusion-bake'
-import { BrowserBasisEncoder } from 'ktx2-encoder'
 import { WebGLRenderer } from 'three'
+
+import {
+	createKtx2EncoderPool,
+	ktx2EncodeWorkerCount
+} from './ktx2-encoder-pool'
 
 import type {
 	PublishExportMessage,
 	PublishExportOutcome,
 	PublishExportRequest
 } from './publish-export.worker.types'
-import type { Ktx2Encoder } from '@vctrl/core/model-optimizer'
-
-/** Self-hosted, and matched to the bundled glue by `public-codec-files.spec.ts`. */
-const ENCODER_WASM_URL = '/basis-encoder/basis_encoder.wasm'
-
-const basisEncoder = new BrowserBasisEncoder()
-
-let pixelReader: WebGL2RenderingContext | null = null
-
-/**
- * A texture's pixels as straight RGBA at the size it is encoded at, rows top
- * first. Read through WebGL rather than a 2D canvas, which stores colour
- * premultiplied and loses the colour of any texel with little alpha.
- */
-async function decodeRgba(bytes: Uint8Array, width: number, height: number) {
-	const bitmap = await createImageBitmap(
-		new Blob([bytes as Uint8Array<ArrayBuffer>]),
-		{
-			resizeWidth: width,
-			resizeHeight: height,
-			resizeQuality: 'high',
-			premultiplyAlpha: 'none',
-			colorSpaceConversion: 'none'
-		}
-	)
-	try {
-		pixelReader ??= new OffscreenCanvas(1, 1).getContext('webgl2', {
-			premultipliedAlpha: false
-		})
-		const gl = pixelReader
-		if (!gl) throw new Error('WebGL2 is unavailable to read texture pixels')
-
-		const texture = gl.createTexture()
-		const framebuffer = gl.createFramebuffer()
-		gl.bindTexture(gl.TEXTURE_2D, texture)
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap)
-		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer)
-		gl.framebufferTexture2D(
-			gl.FRAMEBUFFER,
-			gl.COLOR_ATTACHMENT0,
-			gl.TEXTURE_2D,
-			texture,
-			0
-		)
-		const data = new Uint8Array(width * height * 4)
-		const readable =
-			gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE
-		if (readable) {
-			gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, data)
-		}
-		const error = gl.getError()
-		gl.deleteFramebuffer(framebuffer)
-		gl.deleteTexture(texture)
-		// Unchecked, a failed upload reads back as zeros and ships black.
-		if (!readable || error !== gl.NO_ERROR) {
-			throw new Error(`WebGL could not read the texture back (${error})`)
-		}
-
-		return { data, width, height }
-	} finally {
-		bitmap.close()
-	}
-}
-
-const encodeKtx2: Ktx2Encoder = ({ image, width, height }, options) =>
-	basisEncoder.encode(image, {
-		...options,
-		wasmUrl: ENCODER_WASM_URL,
-		imageDecoder: (bytes) => decodeRgba(bytes, width, height)
-	})
 
 /** A failed bake publishes the model without it, so its error is reported, not thrown. */
 async function attempt<T>(
@@ -132,6 +66,15 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 	let renderer: WebGLRenderer | undefined
 	const bakeRenderer = () =>
 		(renderer ??= new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) }))
+	// Textures encode in workers of their own, several at once.
+	const encoders = ktx2
+		? createKtx2EncoderPool(
+				() =>
+					new Worker(new URL('./ktx2-encode.worker.ts', import.meta.url), {
+						type: 'module'
+					})
+			)
+		: undefined
 	try {
 		const result = await new ModelExporter().exportGlbForPublish(
 			new Uint8Array(buffer),
@@ -157,9 +100,10 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 								}
 							}
 						: undefined,
-				ktx2: ktx2
+				ktx2: encoders
 					? {
-							encode: encodeKtx2,
+							encode: encoders.encode,
+							concurrency: ktx2EncodeWorkerCount(),
 							onProgress: (texturesDone, texturesTotal) =>
 								post({ type: 'progress', texturesDone, texturesTotal })
 						}
@@ -191,5 +135,6 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 		})
 	} finally {
 		renderer?.dispose()
+		encoders?.dispose()
 	}
 }

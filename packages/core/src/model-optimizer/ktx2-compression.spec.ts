@@ -197,4 +197,56 @@ describe('compressTexturesToKtx2', () => {
 			[2, 2]
 		])
 	})
+
+	it('encodes up to `concurrency` textures at once', async () => {
+		const document = texturedDocument()
+		document
+			.createTexture('roughness')
+			.setImage(webpHeader(256, 256))
+			.setMimeType('image/webp')
+		let running = 0
+		let mostAtOnce = 0
+		const encode = vi.fn(async () => {
+			mostAtOnce = Math.max(mostAtOnce, ++running)
+			await new Promise((resolve) => setTimeout(resolve))
+			running--
+			return ktx2Bytes()
+		})
+
+		const report = await compressTexturesToKtx2(document, {
+			encode,
+			concurrency: 2
+		})
+
+		expect(encode).toHaveBeenCalledTimes(3)
+		expect(mostAtOnce).toBe(2)
+		expect(report.encoded).toEqual(['color', 'normal', 'roughness'])
+	})
+
+	it('reports in document order however the encodes finish', async () => {
+		const document = texturedDocument()
+		// The first texture finishes last.
+		const encode = vi.fn(async ({ width }: { width: number }) => {
+			if (width === 1024) await new Promise((resolve) => setTimeout(resolve, 5))
+			else throw new Error('too large')
+			return ktx2Bytes()
+		})
+		const onProgress = vi.fn()
+
+		const report = await compressTexturesToKtx2(document, {
+			encode,
+			concurrency: 2,
+			onProgress
+		})
+
+		expect(report).toEqual({
+			encoded: ['color'],
+			kept: [{ texture: 'normal', reason: 'too large' }]
+		})
+		expect(onProgress.mock.calls).toEqual([
+			[0, 2],
+			[1, 2],
+			[2, 2]
+		])
+	})
 })

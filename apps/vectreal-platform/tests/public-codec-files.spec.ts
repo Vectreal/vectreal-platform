@@ -46,9 +46,9 @@ describe('where the loaders and the encoder look for them', () => {
 		expect(published(`${KTX2_TRANSCODER_PATH}basis_transcoder.wasm`)).toBe(true)
 	})
 
-	it('serves the encoder wasm the publish worker fetches', () => {
+	it('serves the encoder wasm the encode worker fetches', () => {
 		const worker = readFileSync(
-			join(APP_ROOT, 'app/workers/publish-export.worker.ts'),
+			join(APP_ROOT, 'app/workers/ktx2-encode.worker.ts'),
 			'utf8'
 		)
 		const wasmUrl = worker.match(/const ENCODER_WASM_URL = '([^']+)'/)?.[1]

@@ -158,12 +158,21 @@ const textureLabel = (texture: Texture, index: number) =>
  */
 export interface Ktx2CompressionOptions {
 	encode: Ktx2Encoder
+	/**
+	 * How many textures `encode` is handed at once. Encoding takes seconds of
+	 * CPU per texture, so an encoder that spreads them over threads takes as
+	 * many as it has.
+	 */
+	concurrency?: number
+	/** Textures encoded so far, counted as each one finishes. */
 	onProgress?: (done: number, total: number) => void
 }
 
+type EncodeOutcome = { ktx2: Uint8Array } | { kept: string }
+
 export async function compressTexturesToKtx2(
 	document: Document,
-	{ encode, onProgress }: Ktx2CompressionOptions
+	{ encode, concurrency = 1, onProgress }: Ktx2CompressionOptions
 ): Promise<Ktx2CompressionReport> {
 	const report: Ktx2CompressionReport = { encoded: [], kept: [] }
 	const textures = document
@@ -173,16 +182,10 @@ export async function compressTexturesToKtx2(
 			(texture) => texture.getImage() && texture.getMimeType() !== 'image/ktx2'
 		)
 
-	for (const [index, texture] of textures.entries()) {
-		onProgress?.(index, textures.length)
-		const label = textureLabel(texture, index)
+	const encodeTexture = async (texture: Texture): Promise<EncodeOutcome> => {
 		const image = texture.getImage() as Uint8Array
 		const size = readTextureSize(texture)
-
-		if (!size) {
-			report.kept.push({ texture: label, reason: 'its size could not be read' })
-			continue
-		}
+		if (!size) return { kept: 'its size could not be read' }
 
 		const [width, height] = ktx2EncodeSize(size)
 		let ktx2: Uint8Array
@@ -192,27 +195,47 @@ export async function compressTexturesToKtx2(
 				basisOptionsForSlots(listTextureSlots(texture))
 			)
 		} catch (error) {
-			report.kept.push({
-				texture: label,
-				reason: error instanceof Error ? error.message : String(error)
-			})
-			continue
+			return { kept: error instanceof Error ? error.message : String(error) }
 		}
 
 		if (ktx2.byteLength > image.byteLength * KTX2_MAX_GROWTH) {
-			report.kept.push({
-				texture: label,
-				reason: `KTX2 was more than ${KTX2_MAX_GROWTH}× its size`
-			})
+			return { kept: `KTX2 was more than ${KTX2_MAX_GROWTH}× its size` }
+		}
+		return { ktx2 }
+	}
+
+	// Each lane takes the next texture until none are left, so `concurrency`
+	// encodes run at once however long each one takes.
+	const outcomes: EncodeOutcome[] = []
+	let next = 0
+	let done = 0
+	onProgress?.(0, textures.length)
+	const lane = async () => {
+		while (next < textures.length) {
+			const index = next++
+			outcomes[index] = await encodeTexture(textures[index])
+			onProgress?.(++done, textures.length)
+		}
+	}
+	await Promise.all(
+		Array.from({ length: Math.min(concurrency, textures.length) }, lane)
+	)
+
+	// Applied in document order, so the report reads the same however the
+	// encodes interleaved.
+	for (const [index, texture] of textures.entries()) {
+		const label = textureLabel(texture, index)
+		const outcome = outcomes[index]
+		if ('kept' in outcome) {
+			report.kept.push({ texture: label, reason: outcome.kept })
 			continue
 		}
 
 		const uri = texture.getURI()
-		texture.setImage(ktx2).setMimeType('image/ktx2')
+		texture.setImage(outcome.ktx2).setMimeType('image/ktx2')
 		if (uri) texture.setURI(uri.replace(/(\.[^./]*)?$/, '.ktx2'))
 		report.encoded.push(label)
 	}
-	onProgress?.(textures.length, textures.length)
 
 	if (report.encoded.length > 0) {
 		document.createExtension(KHRTextureBasisu).setRequired(true)
