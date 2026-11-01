@@ -23,6 +23,7 @@ import {
 	getOrCreateDefaultOrganization,
 	userExists
 } from '../../user/user-repository.server'
+import { STUDIO_FINISH_FILENAME } from '../scene-asset-roles'
 
 import type { EntitlementKey } from '../../../../constants/plan-config'
 import type { SceneSettingsRequest } from '../../../../types/api'
@@ -247,7 +248,13 @@ export async function uploadSceneAsset(
 					fileName: file.name,
 					data: bytes,
 					mimeType: file.type || 'application/octet-stream',
-					type: kind
+					type: kind,
+					// A studio finish loads as a model of its own, so it records the
+					// extensions it uses the way a published GLB does: a model that
+					// records none is loaded without the decoders it needs.
+					...(file.name === STUDIO_FINISH_FILENAME
+						? { metadata: { gltfExtensionsUsed: readGlbExtensionsUsed(bytes) } }
+						: {})
 				}
 			],
 			request.requestId

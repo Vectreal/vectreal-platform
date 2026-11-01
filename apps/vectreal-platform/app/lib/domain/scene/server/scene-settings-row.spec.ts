@@ -20,13 +20,17 @@ import { sceneSettings } from '../../../../db/schema'
 // `DATABASE_URL`; nothing here touches the database. Hoisted above the import.
 vi.mock('../../../../db/client', () => ({ getDbClient: () => null }))
 
-/** Columns that describe the row rather than the scene's settings. */
+/**
+ * Columns that describe the row rather than the scene's settings. The saved
+ * studio finish is a record of a file the draft keeps, which no embed reads.
+ */
 const ROW_COLUMNS = new Set([
 	'id',
 	'sceneId',
 	'createdAt',
 	'updatedAt',
-	'createdBy'
+	'createdBy',
+	'studioFinish'
 ])
 
 describe('rowToSceneSettings', () => {

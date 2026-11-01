@@ -123,6 +123,7 @@ export async function saveSceneSettings(
 				settings: validationResult.settings,
 				sceneAssetIds: validationResult.sceneAssetIds,
 				sourceAssetId: request.sourceAssetId,
+				studioFinish: request.studioFinish,
 				optimizationReport: request.optimizationReport,
 				optimizationSettings: request.optimizationSettings,
 				initialSceneBytes: request.initialSceneBytes

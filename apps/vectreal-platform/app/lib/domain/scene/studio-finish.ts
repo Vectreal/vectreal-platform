@@ -1,7 +1,27 @@
 import { bakedLightsSignature, litLights, resolveLighting } from '@vctrl/core'
 
-import type { PublishExportRequest } from '../../../workers/publish-export.worker.types'
+import type {
+	PublishExportOutcome,
+	PublishExportRequest
+} from '../../../workers/publish-export.worker.types'
 import type { LightingSettings } from '@vctrl/core'
+
+/**
+ * What a draft records about the studio finish it saved: the publish
+ * fingerprint it was made for, so it is shown only while the scene would
+ * still publish the same file, and what each bake did, which decides whether
+ * there is anything to show.
+ */
+export interface SavedStudioFinish {
+	source: string
+	reports: Pick<PublishExportOutcome, 'occlusion' | 'lights'>
+}
+
+/** The studio finish a save sends: its file and what each bake did. */
+export interface StudioFinishToSave {
+	bytes: ArrayBuffer
+	reports: SavedStudioFinish['reports']
+}
 
 /**
  * What publishing bakes for `lighting`: occlusion when it is set to baked, and

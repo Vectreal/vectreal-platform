@@ -25,6 +25,8 @@ import { scenes } from './scenes'
 import { users } from '../core/users'
 import { canAccessScene, canManageScene, isUserSelf } from '../rls'
 
+import type { SavedStudioFinish } from '../../../lib/domain/scene/studio-finish'
+
 export const sceneSettings = pgTable(
 	'scene_settings',
 	{
@@ -45,6 +47,9 @@ export const sceneSettings = pgTable(
 		normalization: json('normalization').$type<NormalizationOptions>(), // normalizationAtom data
 		presentation: json('presentation').$type<ScenePresentationSettings>(), // presentationAtom data
 		animation: json('animation').$type<AnimationSettings>(), // animationAtom data
+		// The saved studio finish's fingerprint and reports; its file is the
+		// `studio-finish` scene asset. Not a setting: no embed reads it.
+		studioFinish: json('studio_finish').$type<SavedStudioFinish>(),
 
 		// Audit fields
 		createdAt: timestamp('created_at').defaultNow().notNull(),

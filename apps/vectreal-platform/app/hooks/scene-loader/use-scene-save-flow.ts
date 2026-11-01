@@ -68,6 +68,7 @@ export const useSceneSaveFlow = ({
 		prepareGltfDocumentForUpload,
 		captureSceneThumbnail,
 		captureShadowBake,
+		captureStudioFinish,
 		resolveSource,
 		recordSavedSource
 	} = actions
@@ -169,6 +170,7 @@ export const useSceneSaveFlow = ({
 						prepareGltfDocumentForUpload,
 						captureSceneThumbnail,
 						captureShadowBake,
+						captureStudioFinish,
 						onProgress: dispatchSaveProgress,
 						source,
 						// Read when the capture runs, which is after the uploads.
@@ -220,6 +222,7 @@ export const useSceneSaveFlow = ({
 			captureSceneThumbnail,
 			capturedThumbnailFrame,
 			captureShadowBake,
+			captureStudioFinish,
 			createRequestId,
 			currentSceneId,
 			currentSettings,

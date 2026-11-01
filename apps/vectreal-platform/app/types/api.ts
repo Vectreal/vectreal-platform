@@ -4,6 +4,7 @@ import { assets, sceneSettings } from '../db/schema'
 
 import type { ProcessState, SceneMetaState } from './publisher-config'
 import type { SceneSummary } from '../components/dashboard/scene-card'
+import type { SavedStudioFinish } from '../lib/domain/scene/studio-finish'
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
 import type {
@@ -55,12 +56,20 @@ export interface SceneConfigData extends SceneSettings {
 
 export type SceneSettingsRecord = typeof sceneSettings.$inferSelect
 
+/** A studio finish a save links: its file and what each bake did. */
+export type SaveStudioFinish = {
+	assetId: string
+	reports: SavedStudioFinish['reports']
+}
+
 export type SceneSettingsWithAssets = {
 	settings: SceneSettingsRecord
-	/** The model on screen: every link but the kept original. */
+	/** The model on screen: every link but the kept original and the finish. */
 	assets: SceneAssetRecord[]
 	/** The original the model was optimized from, when the scene keeps one. */
 	sourceAsset: SceneAssetRecord | null
+	/** The saved studio finish's file, current or not; see `resolveSceneFinish`. */
+	finishAsset: SceneAssetRecord | null
 }
 
 export type SceneSettingsUpsertInput = {
@@ -92,6 +101,8 @@ export interface SceneSettingsRequest extends Partial<BaseSceneParams> {
 	readonly sceneAssetIds?: string[]
 	/** The kept original, linked apart from the model's assets. */
 	readonly sourceAssetId?: string
+	/** The studio finish this save made; null drops it, absent keeps it. */
+	readonly studioFinish?: SaveStudioFinish | null
 	readonly publishedAssetId?: string
 	readonly optimizationReport?: OptimizationReport
 	readonly optimizationSettings?: Optimizations
@@ -293,6 +304,16 @@ export interface PublisherLoaderData {
 	readonly recentScenes: readonly SceneSummary[]
 	/** Signed in with no scene open, and allowed to generate a model from an image. */
 	readonly imgTo3dEnabled: boolean
+	/** The open scene's saved studio finish while it is current; null otherwise. */
+	readonly savedFinish: SavedFinishRef | null
+}
+
+/** A saved studio finish as the publisher restores it. */
+export interface SavedFinishRef {
+	url: string
+	reports: SavedStudioFinish['reports']
+	/** The bakes it was saved for, as `bakesKey` writes them. */
+	bakes: string | null
 }
 
 // ============================================================================

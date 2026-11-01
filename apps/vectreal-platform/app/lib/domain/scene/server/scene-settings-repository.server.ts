@@ -12,7 +12,7 @@ import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
 } from '../../../../types/api'
-import { SCENE_ASSET_ROLE } from '../scene-asset-roles'
+import { SCENE_ASSET_ROLE, sceneAssetRole } from '../scene-asset-roles'
 import { withSceneCameraKinds } from '../scene-camera'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
 
@@ -113,15 +113,20 @@ export async function getSceneSettingsWithAssetsRow(
 		.innerJoin(assets, eq(sceneAssets.assetId, assets.id))
 		.where(eq(sceneAssets.sceneSettingsId, settings.id))
 
-	// The one place links are read, so the kept original is told apart here
-	// and no reader downstream can take it for part of the model.
+	// The one place links are read, so the kept original and the studio finish
+	// are told apart here and no reader downstream can take them for the model.
+	const roleOf = (sa: (typeof sceneAssetsData)[number]) =>
+		sceneAssetRole(sa.usageType, sa.asset.name)
 	return {
 		settings,
 		assets: sceneAssetsData
-			.filter((sa) => sa.usageType !== SCENE_ASSET_ROLE.source)
+			.filter((sa) => roleOf(sa) === SCENE_ASSET_ROLE.model)
 			.map((sa) => sa.asset),
 		sourceAsset:
-			sceneAssetsData.find((sa) => sa.usageType === SCENE_ASSET_ROLE.source)
+			sceneAssetsData.find((sa) => roleOf(sa) === SCENE_ASSET_ROLE.source)
+				?.asset ?? null,
+		finishAsset:
+			sceneAssetsData.find((sa) => roleOf(sa) === SCENE_ASSET_ROLE.finish)
 				?.asset ?? null
 	}
 }
@@ -134,21 +139,35 @@ function buildSceneSettingsValues(params: SceneSettingsUpsertInput) {
 	}
 }
 
-/** What a scene links: every asset, and which of them is its kept original. */
+/**
+ * What a scene links: every asset, and which of them are its kept original
+ * and its studio finish.
+ */
 export async function getSceneAssetLinks(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string
-): Promise<{ assetIds: string[]; sourceAssetId: string | null }> {
+): Promise<{
+	assetIds: string[]
+	sourceAssetId: string | null
+	finishAssetId: string | null
+}> {
 	const links = await tx
-		.select({ assetId: sceneAssets.assetId, usageType: sceneAssets.usageType })
+		.select({
+			assetId: sceneAssets.assetId,
+			usageType: sceneAssets.usageType,
+			name: assets.name
+		})
 		.from(sceneAssets)
+		.innerJoin(assets, eq(sceneAssets.assetId, assets.id))
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
+	const linked = (role: string) =>
+		links.find((link) => sceneAssetRole(link.usageType, link.name) === role)
+			?.assetId ?? null
 
 	return {
 		assetIds: links.map((link) => link.assetId),
-		sourceAssetId:
-			links.find((link) => link.usageType === SCENE_ASSET_ROLE.source)
-				?.assetId ?? null
+		sourceAssetId: linked(SCENE_ASSET_ROLE.source),
+		finishAssetId: linked(SCENE_ASSET_ROLE.finish)
 	}
 }
 
@@ -196,27 +215,28 @@ export async function upsertSceneSettings(
 	return newSettings
 }
 
+/** The links a scene keeps beside its model, by role; null links nothing. */
+export interface SceneAssetExtras {
+	sourceAssetId?: string | null
+	finishAssetId?: string | null
+}
+
 export async function linkSceneAssets(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string,
 	assetIds: string[],
-	sourceAssetId: string | null = null
+	{ sourceAssetId = null, finishAssetId = null }: SceneAssetExtras = {}
 ) {
+	const extra = (assetId: string | null, usageType: string) =>
+		assetId ? [{ sceneSettingsId, assetId, usageType }] : []
 	const links = [
 		...assetIds.map((assetId) => ({
 			sceneSettingsId,
 			assetId,
 			usageType: SCENE_ASSET_ROLE.model
 		})),
-		...(sourceAssetId
-			? [
-					{
-						sceneSettingsId,
-						assetId: sourceAssetId,
-						usageType: SCENE_ASSET_ROLE.source
-					}
-				]
-			: [])
+		...extra(sourceAssetId, SCENE_ASSET_ROLE.source),
+		...extra(finishAssetId, SCENE_ASSET_ROLE.finish)
 	]
 	if (links.length === 0) return
 
@@ -227,13 +247,13 @@ export async function replaceSceneAssets(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string,
 	assetIds: string[],
-	sourceAssetId: string | null = null
+	extras: SceneAssetExtras = {}
 ) {
 	await tx
 		.delete(sceneAssets)
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 
-	await linkSceneAssets(tx, sceneSettingsId, assetIds, sourceAssetId)
+	await linkSceneAssets(tx, sceneSettingsId, assetIds, extras)
 }
 
 // ---------------------------------------------------------------------------

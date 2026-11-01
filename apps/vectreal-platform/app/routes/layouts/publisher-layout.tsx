@@ -9,6 +9,7 @@ import { Route } from './+types/publisher-layout'
 import { useConsent } from '../../components/consent/consent-context'
 import ControlsOverlay from '../../components/publisher/controls-overlay'
 import { PublisherViewerCaptureProvider } from '../../components/publisher/publisher-viewer-capture-context'
+import { useRestoreSavedFinish } from '../../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { getQuotaLimit } from '../../lib/domain/billing/entitlement-service.server'
@@ -21,6 +22,7 @@ import {
 } from '../../lib/domain/scene/server/scene-folder-repository.server'
 import { buildSceneManifest } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
 import { getOrCreateDefaultOrganization } from '../../lib/domain/user/user-repository.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
 import { buildMeta } from '../../lib/seo'
@@ -37,6 +39,7 @@ import { identifyMobileRequest } from '../../lib/utils/identify-mobile-request'
 
 import type {
 	PublishedSceneMetaResponse,
+	SavedFinishRef,
 	PublisherLoaderData,
 	SceneManifestResponse
 } from '../../types/api'
@@ -125,6 +128,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 
 	let sceneManifest: SceneManifestResponse | null = null
 	let publishedMeta: PublishedSceneMetaResponse | null = null
+	let savedFinish: SavedFinishRef | null = null
 
 	if (sceneId && user?.id) {
 		const scene = await getScene(sceneId, user.id)
@@ -135,22 +139,29 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		projectId = scene.projectId
 		currentFolderId = scene.folderId
 
-		const [project, folder, manifest, scenePublishedMeta] = await Promise.all([
-			getProject(scene.projectId, user.id),
-			scene.folderId
-				? getSceneFolder(scene.folderId, user.id)
-				: Promise.resolve(null),
-			buildSceneManifest(
-				sceneId,
-				(assetId) => `/api/scenes/${sceneId}/assets/${assetId}`
-			),
-			getPublishedScenePreview(scene.projectId, sceneId).catch(() => null)
-		])
+		const [project, folder, manifest, scenePublishedMeta, finish] =
+			await Promise.all([
+				getProject(scene.projectId, user.id),
+				scene.folderId
+					? getSceneFolder(scene.folderId, user.id)
+					: Promise.resolve(null),
+				buildSceneManifest(
+					sceneId,
+					(assetId) => `/api/scenes/${sceneId}/assets/${assetId}`
+				),
+				getPublishedScenePreview(scene.projectId, sceneId).catch(() => null),
+				sceneSettingsService.resolveSceneFinish(sceneId).catch(() => null)
+			])
 
 		currentProjectName = project?.name ?? null
 		currentFolderName = folder?.name ?? null
 		sceneManifest = manifest
 		publishedMeta = scenePublishedMeta
+		savedFinish = finish && {
+			url: `/api/scenes/${sceneId}/assets/${finish.asset.id}`,
+			reports: finish.reports,
+			bakes: finish.bakes
+		}
 	} else if (!sceneId && user?.id) {
 		// New scene - read project/folder context from URL search params
 		const url = new URL(request.url)
@@ -198,7 +209,8 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		publishedMeta,
 		maxSceneBytes,
 		recentScenes,
-		imgTo3dEnabled
+		imgTo3dEnabled,
+		savedFinish
 	}
 
 	return loaderData as PublisherLoaderData
@@ -232,6 +244,7 @@ const PublisherLayoutContent = ({
 	const setSaveLocation = useSetAtom(saveLocationAtom)
 	const setMaxSceneBytes = useSetAtom(maxSceneBytesAtom)
 	useAuthResumeRevalidation({ enabled: Boolean(loaderData.user) })
+	useRestoreSavedFinish(loaderData.savedFinish)
 
 	const { currentLocation, projectId, maxSceneBytes } = loaderData
 	useLayoutEffect(() => {

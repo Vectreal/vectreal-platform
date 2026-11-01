@@ -29,13 +29,15 @@ const {
 	mockExecuteSceneSaveOrchestrator,
 	dispatchSaveProgress,
 	resolveSource,
-	recordSavedSource
+	recordSavedSource,
+	captureStudioFinish
 } = vi.hoisted(() => ({
 	mockSetAtom: vi.fn(),
 	mockExecuteSceneSaveOrchestrator: vi.fn(),
 	dispatchSaveProgress: vi.fn(),
 	resolveSource: vi.fn(),
-	recordSavedSource: vi.fn()
+	recordSavedSource: vi.fn(),
+	captureStudioFinish: vi.fn()
 }))
 
 vi.mock('jotai/react', async () => {
@@ -153,6 +155,7 @@ function SceneSaveFlowHarness({
 		prepareGltfDocumentForUpload: vi.fn().mockResolvedValue(null),
 		captureSceneThumbnail: vi.fn().mockResolvedValue(null),
 		captureShadowBake: vi.fn().mockResolvedValue(null),
+		captureStudioFinish,
 		resolveSource,
 		recordSavedSource
 	}))
@@ -406,6 +409,19 @@ describe('useSceneSaveFlow', () => {
 
 		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
 			expect.objectContaining({ capturedThumbnailFrame: record })
+		)
+	})
+
+	it('hands the save what it keeps of the studio finish', async () => {
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
+		const apiRef = renderHarness()
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
+			expect.objectContaining({ captureStudioFinish })
 		)
 	})
 

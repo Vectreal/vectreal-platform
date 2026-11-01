@@ -51,6 +51,7 @@ import { describePublishSource, publishSourceMatches } from '../publish-source'
 import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
+import type { SavedStudioFinish } from '../studio-finish'
 import type {
 	ExtendedGLTFDocument,
 	OptimizationReport,
@@ -83,15 +84,27 @@ type SaveSceneFromAssetIdsParams = Omit<SaveSceneSettingsParams, 'gltfJson'> & {
 	sceneAssetIds: string[]
 	/** The kept original. Left out, any original the scene had is unlinked. */
 	sourceAssetId?: string | null
+	/**
+	 * The studio finish the save made for exactly what it saves, recorded
+	 * against the publish fingerprint it commits; null drops the scene's
+	 * finish. Left out, as a save that only edits settings leaves it, the
+	 * stored finish stays, and is shown only while it still matches.
+	 */
+	studioFinish?: {
+		assetId: string
+		reports: SavedStudioFinish['reports']
+	} | null
 }
 
-// Every id the scene will link, the original included, so dropping the
-// original reads as a change and leaves it to the GC.
+// Every id the request names, so each is checked to belong to the project.
 function linkedAssetIdsOf({
 	sceneAssetIds,
-	sourceAssetId
+	sourceAssetId,
+	studioFinish
 }: SaveSceneFromAssetIdsParams): string[] {
-	return sourceAssetId ? [...sceneAssetIds, sourceAssetId] : sceneAssetIds
+	return [sceneAssetIds, sourceAssetId, studioFinish?.assetId]
+		.flat()
+		.filter((id): id is string => typeof id === 'string')
 }
 
 type PublishSceneParams = {
@@ -312,7 +325,9 @@ class SceneSettingsService {
 		const links = await getSceneAssetLinks(tx, row.id)
 		return {
 			settings: rowToSceneSettings(row, hotspots),
-			sceneAssetIds: links.assetIds.filter((id) => id !== links.sourceAssetId),
+			sceneAssetIds: links.assetIds.filter(
+				(id) => id !== links.sourceAssetId && id !== links.finishAssetId
+			),
 			sourceAssetId: links.sourceAssetId
 		}
 	}
@@ -331,11 +346,11 @@ class SceneSettingsService {
 			settings,
 			sceneAssetIds,
 			sourceAssetId = null,
+			studioFinish,
 			optimizationReport,
 			optimizationSettings,
 			initialSceneBytes
 		} = params
-		const linkedAssetIds = linkedAssetIdsOf(params)
 
 		const scene = await this.ensureSceneExists(tx, {
 			sceneId,
@@ -355,8 +370,17 @@ class SceneSettingsService {
 		const existingSettings = await getSceneSettingsBySceneId(tx, sceneId)
 		const existingLinks = existingSettings
 			? await getSceneAssetLinks(tx, existingSettings.id)
-			: { assetIds: [], sourceAssetId: null }
+			: { assetIds: [], sourceAssetId: null, finishAssetId: null }
 		const existingAssetIds = existingLinks.assetIds
+		const finishAssetId =
+			studioFinish === undefined
+				? existingLinks.finishAssetId
+				: (studioFinish?.assetId ?? null)
+		// Every id the scene will link, the original and the finish included, so
+		// dropping either reads as a change and leaves it to the GC.
+		const linkedAssetIds = [sceneAssetIds, sourceAssetId, finishAssetId]
+			.flat()
+			.filter((id): id is string => id !== null)
 		const existingHotspots = existingSettings
 			? await getHotspotsBySceneSettingsId(tx, existingSettings.id)
 			: []
@@ -380,7 +404,8 @@ class SceneSettingsService {
 		// original, or the reverse, has to be relinked.
 		const assetsChanged =
 			compareAssetIds(linkedAssetIds, existingAssetIds) ||
-			existingLinks.sourceAssetId !== sourceAssetId
+			existingLinks.sourceAssetId !== sourceAssetId ||
+			existingLinks.finishAssetId !== finishAssetId
 
 		/*
 		  Draco and the GPU texture default are applied at publish, so a pass
@@ -430,12 +455,10 @@ class SceneSettingsService {
 		})
 
 		if (!existingSettings || assetsChanged) {
-			await replaceSceneAssets(
-				tx,
-				savedSettings.id,
-				sceneAssetIds,
-				sourceAssetId
-			)
+			await replaceSceneAssets(tx, savedSettings.id, sceneAssetIds, {
+				sourceAssetId,
+				finishAssetId
+			})
 		}
 
 		// Always sync hotspots - the client is authoritative on the full list.
@@ -451,6 +474,20 @@ class SceneSettingsService {
 				label: 'latest',
 				description: 'Latest scene statistics'
 			})
+		}
+
+		// Recorded last, against everything this save wrote: the finish shows
+		// only while the scene would still publish the file it is.
+		if (studioFinish !== undefined) {
+			await tx
+				.update(sceneSettings)
+				.set({
+					studioFinish: studioFinish && {
+						source: (await readPublishSource(tx, updatedScene.id)) ?? '',
+						reports: studioFinish.reports
+					}
+				})
+				.where(eq(sceneSettings.id, savedSettings.id))
 		}
 
 		return { savedSettings, unchanged: false as const, removedAssetIds }
@@ -797,6 +834,23 @@ class SceneSettingsService {
 			.where(eq(sceneStats.sceneId, sceneId))
 
 		return publishedRecord?.assetId ?? null
+	}
+
+	/**
+	 * The scene's saved studio finish while it is current: its file and what
+	 * each bake did. Null when there is none, or once a save, a pass or a
+	 * lighting change has left it describing a file publishing no longer ships.
+	 */
+	async resolveSceneFinish(sceneId: string) {
+		return this.db.transaction(async (tx) => {
+			const saved = await getSceneSettingsWithAssetsRow(tx, sceneId)
+			const finish = saved?.settings.studioFinish
+			if (!saved?.finishAsset || !finish) return null
+			const current = await readPublishSource(tx, sceneId)
+			if (finish.source !== current) return null
+			const { bakes = null } = JSON.parse(current) as { bakes?: string | null }
+			return { asset: saved.finishAsset, reports: finish.reports, bakes }
+		})
 	}
 
 	/**
