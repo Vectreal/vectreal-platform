@@ -1,6 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { Toggle } from '@shared/components/ui/toggle'
-import { ChevronRight, Loader2, Sparkles } from 'lucide-react'
+import { ChevronRight, Loader2 } from 'lucide-react'
 import { useId } from 'react'
 
 import { bakedAnything } from './use-bake-preview'
@@ -66,7 +66,6 @@ export function StudioFinishCard({
 			className="shell-nested space-y-3 rounded-xl p-3"
 		>
 			<div className="flex items-center gap-2 text-sm font-medium">
-				<Sparkles aria-hidden className="text-orange-ink size-4 shrink-0" />
 				<h3 id={titleId} className="flex-1 text-sm font-medium">
 					Studio finish
 				</h3>
