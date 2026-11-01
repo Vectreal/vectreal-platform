@@ -159,6 +159,7 @@ describe('the publish export worker', () => {
 		expect(mocks.compressTextures).toHaveBeenCalledOnce()
 		expect(messages).toContainEqual({
 			type: 'progress',
+			stage: 'textures',
 			texturesDone: 0,
 			texturesTotal: 1
 		})
@@ -192,6 +193,8 @@ describe('the publish export worker', () => {
 
 		expect(mocks.bakeOcclusionIntoDocument).toHaveBeenCalledWith(
 			exportedDocument,
+			expect.any(Function),
+			undefined,
 			expect.any(Function)
 		)
 		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
@@ -199,6 +202,41 @@ describe('the publish export worker', () => {
 			type: 'done',
 			occlusion: occlusionReport
 		})
+	})
+
+	it('reports how far each bake has drawn, a few times a second and always its end', async () => {
+		const reportDrawn = async (onProgress: (fraction: number) => void) => {
+			onProgress(0.25)
+			// Sooner than the interval after the last, so held back.
+			onProgress(0.5)
+			onProgress(1)
+		}
+		mocks.bakeOcclusionIntoDocument.mockImplementation(
+			async (_d, _r, _o, onProgress) => {
+				await reportDrawn(onProgress)
+				return occlusionReport
+			}
+		)
+		mocks.bakeLightsIntoDocument.mockImplementation(
+			async (_d, _l, _r, _o, onProgress) => {
+				await reportDrawn(onProgress)
+				return lightsReport
+			}
+		)
+
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true,
+			lights: lighting
+		})
+
+		expect(messages.filter(({ type }) => type === 'progress')).toEqual([
+			{ type: 'progress', stage: 'occlusion', fraction: 0.25 },
+			{ type: 'progress', stage: 'occlusion', fraction: 1 },
+			{ type: 'progress', stage: 'lights', fraction: 0.25 },
+			{ type: 'progress', stage: 'lights', fraction: 1 }
+		])
 	})
 
 	it('bakes nothing unless asked', async () => {
@@ -250,6 +288,8 @@ describe('the publish export worker', () => {
 		expect(mocks.bakeLightsIntoDocument).toHaveBeenCalledWith(
 			exportedDocument,
 			lighting,
+			expect.any(Function),
+			undefined,
 			expect.any(Function)
 		)
 		expect(mocks.createRenderer).toHaveBeenCalledOnce()

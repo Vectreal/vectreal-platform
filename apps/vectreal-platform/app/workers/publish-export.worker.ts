@@ -120,6 +120,20 @@ function post(message: PublishExportMessage, transfer: Transferable[] = []) {
 	self.postMessage(message, { transfer })
 }
 
+/** How often a bake reports, at most: a slice ends every few milliseconds. */
+const BAKE_PROGRESS_INTERVAL_MS = 100
+
+/** Posts how far a bake has drawn, throttled, and always its end. */
+function bakeProgress(stage: 'occlusion' | 'lights') {
+	let postedAt = -Infinity
+	return (fraction: number) => {
+		const now = performance.now()
+		if (fraction < 1 && now - postedAt < BAKE_PROGRESS_INTERVAL_MS) return
+		postedAt = now
+		post({ type: 'progress', stage, fraction })
+	}
+}
+
 self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 	const { type, buffer, draco, dracoWorthApplying, ktx2, occlusion, lights } =
 		event.data
@@ -144,14 +158,26 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 								// Occlusion first: the light bake bakes past it.
 								if (occlusion) {
 									occlusionReport = await attempt(
-										() => bakeOcclusionIntoDocument(document, bakeRenderer),
+										() =>
+											bakeOcclusionIntoDocument(
+												document,
+												bakeRenderer,
+												undefined,
+												bakeProgress('occlusion')
+											),
 										'Occlusion bake failed'
 									)
 								}
 								if (lights) {
 									lightsReport = await attempt(
 										() =>
-											bakeLightsIntoDocument(document, lights, bakeRenderer),
+											bakeLightsIntoDocument(
+												document,
+												lights,
+												bakeRenderer,
+												undefined,
+												bakeProgress('lights')
+											),
 										'Light bake failed'
 									)
 								}
@@ -161,7 +187,12 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 					? {
 							encode: encodeKtx2,
 							onProgress: (texturesDone, texturesTotal) =>
-								post({ type: 'progress', texturesDone, texturesTotal })
+								post({
+									type: 'progress',
+									stage: 'textures',
+									texturesDone,
+									texturesTotal
+								})
 						}
 					: undefined
 			}

@@ -54,7 +54,8 @@ export async function bakeLights(
 	plan: OcclusionBakePlan,
 	lighting: Pick<ResolvedLighting, 'lights' | 'environment'>,
 	renderer: WebGLRenderer,
-	options: LightBakeOptions = DEFAULT_LIGHT_BAKE_OPTIONS
+	options: LightBakeOptions = DEFAULT_LIGHT_BAKE_OPTIONS,
+	onProgress?: (fraction: number) => void
 ): Promise<BakedLightmap[]> {
 	const lights = litLights(lighting).slice(0, LIGHT_SLOTS)
 	const scale = lightmapScale({ lights })
@@ -90,7 +91,8 @@ export async function bakeLights(
 		},
 		resolveFragment: RESOLVE_FRAGMENT,
 		empty: [0, 0, 0, 255],
-		label: 'the studio lights'
+		label: 'the studio lights',
+		onProgress
 	})
 	// Undefined when nothing casts, so every target is glass: it throws no
 	// shadow to bake, and the live lights draw it as well as a map would.

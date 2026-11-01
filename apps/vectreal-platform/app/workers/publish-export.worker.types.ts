@@ -38,11 +38,11 @@ export interface PublishExportRequest {
 	lights: Pick<ResolvedLighting, 'lights' | 'environment'> | false
 }
 
-export interface PublishExportProgress {
-	/** Textures encoded so far, out of `total`, while KTX2 runs. */
-	texturesDone: number
-	texturesTotal: number
-}
+export type PublishExportProgress =
+	/** Textures encoded so far, out of `texturesTotal`, while KTX2 runs. */
+	| { stage: 'textures'; texturesDone: number; texturesTotal: number }
+	/** How much of a bake is drawn, 0 to 1. */
+	| { stage: 'occlusion' | 'lights'; fraction: number }
 
 export interface PublishExportOutcome {
 	buffer: ArrayBuffer

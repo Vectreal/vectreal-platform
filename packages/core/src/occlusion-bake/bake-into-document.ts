@@ -24,12 +24,13 @@ export interface OcclusionBakeReport {
 export async function bakeOcclusionIntoDocument(
 	document: Document,
 	renderer: () => WebGLRenderer,
-	options?: OcclusionBakeOptions
+	options?: OcclusionBakeOptions,
+	onProgress?: (fraction: number) => void
 ): Promise<OcclusionBakeReport> {
 	const plan = planOcclusionBake(document)
 	const baked =
 		plan.targets.length > 0
-			? await bakeOcclusion(plan, renderer(), options)
+			? await bakeOcclusion(plan, renderer(), options, onProgress)
 			: []
 	writeOcclusionBake(
 		document,

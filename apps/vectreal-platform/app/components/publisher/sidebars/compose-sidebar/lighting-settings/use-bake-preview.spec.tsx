@@ -9,6 +9,7 @@ import { Group } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	drawingLabel,
 	type ShownBakeContext,
 	useBakePreview,
 	useShownBake
@@ -114,6 +115,38 @@ describe('the bake preview', () => {
 			reports: { occlusion: report }
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('says which bake is drawing and how far, until the preview is ready', async () => {
+		let finish: (value: unknown) => void = () => {}
+		mocks.runPublishExportInWorker.mockImplementation(
+			(_request, onProgress: (progress: object) => void) => {
+				onProgress({ stage: 'occlusion', fraction: 0.4 })
+				return new Promise((resolve) => {
+					finish = resolve
+				})
+			}
+		)
+		const { hook } = setup()
+
+		act(() => void hook.result.current.preview.bake())
+		await waitFor(() =>
+			expect(hook.result.current.preview.preview?.progress).toEqual({
+				stage: 'occlusion',
+				fraction: 0.4
+			})
+		)
+		expect(drawingLabel(hook.result.current.preview.preview?.progress)).toBe(
+			'Drawing the depth (40%)'
+		)
+
+		await act(async () =>
+			finish({ buffer: new ArrayBuffer(8), occlusion: report })
+		)
+		await waitFor(() =>
+			expect(hook.result.current.preview.preview?.status).toBe('ready')
+		)
+		expect(hook.result.current.preview.preview?.progress).toBeUndefined()
 	})
 
 	it('bakes the studio lights publishing would bake, and shows them', async () => {

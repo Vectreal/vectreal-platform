@@ -221,7 +221,7 @@ describe('the publish panel', () => {
 		let finish: (value: unknown) => void = () => {}
 		mocks.runPublishExportInWorker.mockImplementation(
 			(_request, onProgress: (p: object) => void) => {
-				onProgress({ texturesDone: 0, texturesTotal: 2 })
+				onProgress({ stage: 'textures', texturesDone: 0, texturesTotal: 2 })
 				return new Promise((resolve) => {
 					finish = resolve
 				})
@@ -255,6 +255,28 @@ describe('the publish panel', () => {
 			expect(step('export')).toMatchObject({ state: 'active' })
 		)
 		expect(step('textures')).toBeUndefined()
+	})
+
+	it('shows each bake as a step, in the order they run', async () => {
+		mocks.runPublishExportInWorker.mockImplementation(
+			(_request, onProgress: (p: object) => void) => {
+				onProgress({ stage: 'occlusion', fraction: 1 })
+				onProgress({ stage: 'lights', fraction: 0.4 })
+				return new Promise(() => {})
+			}
+		)
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.publish?.steps).toMatchObject([
+				{ key: 'export', state: 'done' },
+				{ key: 'occlusion', state: 'done' },
+				{ key: 'lights', state: 'active', done: 0.4, total: 1 },
+				{ key: 'upload', state: 'waiting' },
+				{ key: 'commit', state: 'waiting' }
+			])
+		)
 	})
 
 	it('reports the upload in bytes, then the commit', async () => {
@@ -535,6 +557,34 @@ describe('the publish panel', () => {
 			'The studio finish could not add depth, so the scene was published without it.',
 			{ description: 'WebGL 2 is unavailable' }
 		)
+	})
+
+	it('keeps a bake that failed partway marked failed once the scene ships', async () => {
+		mocks.runPublishExportInWorker.mockImplementation(
+			async (_request, onProgress: (progress: object) => void) => {
+				onProgress({ stage: 'occlusion', fraction: 0.4 })
+				onProgress({ stage: 'lights', fraction: 1 })
+				return {
+					buffer: PUBLISHED.slice().buffer,
+					geometryCodec: 'none',
+					occlusion: { failed: 'The GPU reset while baking ambient occlusion' },
+					lights: { baked: ['body'], skipped: [] }
+				}
+			}
+		)
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
+		expect(store.get(savePanelAtom)?.publish?.steps).toMatchObject([
+			{ key: 'export', state: 'done' },
+			{ key: 'occlusion', state: 'failed' },
+			{ key: 'lights', state: 'done' },
+			{ key: 'upload', state: 'done' },
+			{ key: 'commit', state: 'done' }
+		])
 	})
 
 	it('says nothing about the bake when the publish itself fails', async () => {

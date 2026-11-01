@@ -3,7 +3,7 @@ import { Toggle } from '@shared/components/ui/toggle'
 import { ChevronRight, Loader2 } from 'lucide-react'
 import { useId } from 'react'
 
-import { bakedAnything } from './use-bake-preview'
+import { bakedAnything, drawingLabel } from './use-bake-preview'
 import { useDrillDownNavigation } from '../../drill-down'
 import { PanelCaption } from '../../sidebar-section'
 
@@ -37,6 +37,8 @@ export const FINISH_STATUS_LABELS = {
 
 interface StudioFinishCardProps {
 	status: FinishStatus
+	/** How far the preview has drawn, while it draws. */
+	progress?: BakePreview['progress']
 	/** False until a model is loaded, and while an optimization pass runs. */
 	canPreview: boolean
 	isOptimizing: boolean
@@ -51,6 +53,7 @@ interface StudioFinishCardProps {
  */
 export function StudioFinishCard({
 	status,
+	progress,
 	canPreview,
 	isOptimizing,
 	onAdd,
@@ -104,7 +107,7 @@ export function StudioFinishCard({
 				// Not disabled: a disabled button drops focus to the page.
 				<Button variant="outline" className="w-full" aria-disabled>
 					<Loader2 className="animate-spin" aria-hidden />
-					Drawing the finish
+					{drawingLabel(progress)}
 				</Button>
 			)}
 			{(status === 'applied' || status === 'compare') && (
