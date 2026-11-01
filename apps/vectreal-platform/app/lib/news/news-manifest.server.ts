@@ -1,8 +1,9 @@
 import { isValidElement } from 'react'
 
 import { AGENT_CTA_PROMPT_MAX_LENGTH, resolveArticleCta } from './article-cta'
+import { isArticleBodyChunkPath, newsBodyId } from './news-body-chunks'
+import { articleMediaPaths } from './news-media-paths'
 import {
-	isArticleBodyChunkPath,
 	isNewsArticleLive,
 	isScheduledAt,
 	newsSlugFromRequestPath,
@@ -100,25 +101,22 @@ function calculateReadingTimeMinutes(content: string): number {
 	return Math.max(1, Math.ceil(words / 100))
 }
 
-function getComponentTextSource(
+function renderBody(
 	component: ComponentType<Record<string, unknown>> | undefined
-): string {
+): ReactNode {
 	if (typeof component !== 'function') {
-		return ''
+		return null
 	}
 
 	// Class components are not directly callable in TypeScript.
 	if ('prototype' in component && component.prototype?.isReactComponent) {
-		return ''
+		return null
 	}
 
 	try {
-		const rendered = (
-			component as (props: Record<string, unknown>) => ReactNode
-		)({})
-		return extractTextFromReactNode(rendered)
+		return (component as (props: Record<string, unknown>) => ReactNode)({})
 	} catch {
-		return ''
+		return null
 	}
 }
 
@@ -210,6 +208,9 @@ function validateFrontmatter(
 	return { isValid: true }
 }
 
+/** Every `/media/` path each article uses, by slug: body and frontmatter. */
+const mediaBySlug = new Map<string, Set<string>>()
+
 const allArticles: NewsArticle[] = Object.entries(articleModules)
 	.map<NewsArticle | null>(([moduleKey, { default: Body, frontmatter }]) => {
 		const validation = validateFrontmatter(moduleKey, frontmatter)
@@ -242,6 +243,7 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			normalizeSlug(fileName.replace(/\.mdx$/i, ''))
 
 		const sourcePath = toSourcePath(moduleKey)
+		const body = renderBody(Body)
 
 		const article: NewsArticle = {
 			slug,
@@ -269,11 +271,21 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			cta,
 			draft: Boolean(frontmatter?.draft),
 			readingTimeMinutes: calculateReadingTimeMinutes(
-				getComponentTextSource(Body)
+				extractTextFromReactNode(body)
 			),
 			sourcePath,
+			bodyId: newsBodyId(sourcePath),
 			editUrl: toEditUrl(sourcePath)
 		}
+
+		mediaBySlug.set(
+			slug,
+			articleMediaPaths(body, [
+				article.coverImage,
+				article.sceneImage,
+				article.heroImage
+			])
+		)
 
 		return article
 	})
@@ -338,13 +350,25 @@ export function isUnpublishedNewsPath(
 	if (path === null) return false
 
 	const slug = newsSlugFromRequestPath(path)
-	return withheld.some(
-		(article) =>
-			article.slug.toLowerCase() === slug ||
-			isArticleBodyChunkPath(article.sourcePath, path) ||
-			[article.coverImage, article.sceneImage, article.heroImage].some(
-				(image) => image !== undefined && image.toLowerCase() === path
-			)
+	if (
+		withheld.some(
+			(article) =>
+				article.slug.toLowerCase() === slug ||
+				isArticleBodyChunkPath(article.bodyId, path)
+		)
+	) {
+		return true
+	}
+
+	// A file a visible article also uses stays up: the author photo, or a
+	// video one piece borrows from another.
+	const usedBy = (article: NewsArticle) =>
+		mediaBySlug.get(article.slug)?.has(path) ?? false
+	return (
+		withheld.some(usedBy) &&
+		!allArticles.some(
+			(article) => isVisibleHere(article, now) && usedBy(article)
+		)
 	)
 }
 

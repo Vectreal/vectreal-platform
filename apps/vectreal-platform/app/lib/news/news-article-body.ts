@@ -1,12 +1,15 @@
 import { lazy } from 'react'
+import bodyLoaders from 'virtual:news-article-bodies'
 
 import type { ComponentType, LazyExoticComponent } from 'react'
 
 type ArticleBody = ComponentType<Record<string, unknown>>
 
 /*
-  One article's compiled MDX, loaded on its own. The glob is lazy, so each body
-  is a separate chunk and the article page carries only a table of loaders.
+  One article's compiled MDX, loaded on its own. Each body is a separate chunk
+  and the article page carries only a table of loaders, keyed by an opaque id
+  (`news-body-chunks.ts`) so the table names no article: a scheduled
+  one's slug would otherwise ship to every visitor before its time.
 
   The page renders the body with no Suspense boundary of its own, on purpose.
   On the server that holds back the shell until the body is ready, so the HTML
@@ -14,25 +17,13 @@ type ArticleBody = ComponentType<Record<string, unknown>>
   behind a script. In the browser, hydration and navigation both run in a
   transition, which keeps the current screen up until the chunk arrives.
 */
-const loaders = import.meta.glob<ArticleBody>(
-	'../../routes/news-room-page/articles/*.mdx',
-	{ import: 'default' }
-)
-
 const bodies = new Map<string, LazyExoticComponent<ArticleBody>>(
-	Object.entries(loaders).map(([moduleKey, load]) => [
-		fileNameOf(moduleKey),
-		lazy(() => load().then((Body) => ({ default: Body })))
-	])
+	Object.entries(bodyLoaders).map(([bodyId, load]) => [bodyId, lazy(load)])
 )
 
-function fileNameOf(path: string): string {
-	return path.slice(path.lastIndexOf('/') + 1)
-}
-
-/** The body of the article at `sourcePath`, as the manifest gives it. */
+/** The body of the article with `bodyId`, as the manifest gives it. */
 export function getArticleBody(
-	sourcePath: string
+	bodyId: string
 ): LazyExoticComponent<ArticleBody> | undefined {
-	return bodies.get(fileNameOf(sourcePath))
+	return bodies.get(bodyId)
 }

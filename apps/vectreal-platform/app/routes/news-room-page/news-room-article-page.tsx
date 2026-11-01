@@ -137,7 +137,7 @@ function NewsRoomArticle({
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const captureConsented = useConsentedCapture()
-	const ArticleComponent = getArticleBody(article.sourcePath)
+	const ArticleComponent = getArticleBody(article.bodyId)
 	const contentRef = useRef<HTMLDivElement | null>(null)
 	const viewTrackedRef = useRef(false)
 	const scrollTrackedMilestones = useRef(new Set<number>())

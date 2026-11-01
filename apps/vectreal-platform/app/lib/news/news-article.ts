@@ -79,6 +79,8 @@ export interface NewsArticle {
 	draft: boolean
 	readingTimeMinutes: number
 	sourcePath: string
+	/** Which body chunk to load: opaque, so no bundle names an article. */
+	bodyId: string
 	editUrl: string
 }
 

@@ -41,9 +41,9 @@ const [scheduled, published] = getPublishedNewsArticles()
 const BEFORE = resolvePublishedAt(scheduled.publishedAt) - 60_000
 const AFTER = resolvePublishedAt(scheduled.publishedAt) + 60_000
 
-// What Vite names the lazy chunk holding an article's compiled body.
-const bodyChunk = ({ sourcePath }: NewsArticle) =>
-	`/assets/${sourcePath.slice(sourcePath.lastIndexOf('/') + 1, -'.mdx'.length)}-Ab_3-xYz.js`
+// What the build names the lazy chunk holding an article's compiled body.
+const bodyChunk = ({ bodyId }: NewsArticle) =>
+	`/assets/news-body-${bodyId}-Ab_3-xYz.js`
 
 const PRODUCTION = 'https://vectreal.com'
 const STAGING = 'https://staging.vectreal.com'
@@ -142,6 +142,49 @@ describe('isUnpublishedNewsPath', () => {
 
 	it('needs the stand-in to name its og image, or the image case proves nothing', () => {
 		expect(scheduled.coverImage).toMatch(/^\/media\//)
+	})
+})
+
+describe('media an article body uses', () => {
+	/*
+	  Real articles stand in, each with a clock that makes it and every newer
+	  article scheduled. The publisher walkthrough's body shows an upload
+	  screenshot no other article uses. The camera presets article borrows the
+	  walkthrough's camera video, so with the camera article scheduled and the
+	  walkthrough published, that video has to stay up.
+	*/
+	const all = getPublishedNewsArticles(Number.MAX_SAFE_INTEGER)
+	const bySlug = (slug: string) => all.find((article) => article.slug === slug)!
+	const walkthrough = bySlug('the-vectreal-publisher-walkthrough')
+	const cameras = bySlug('camera-presets-and-transitions')
+	const beforeWalkthrough = resolvePublishedAt(walkthrough.publishedAt) - 60_000
+	const beforeCameras = resolvePublishedAt(cameras.publishedAt) - 60_000
+	const ownScreenshot = '/media/images/newsroom/02/01-publisher-upload.jpeg'
+	const borrowedVideo = '/media/images/newsroom/02/camera-preview.mp4'
+
+	it('has the stand-ins it relies on', () => {
+		expect(beforeWalkthrough).toBeLessThan(beforeCameras)
+	})
+
+	it('withholds a file only scheduled articles use, in any spelling', () => {
+		deployAs(PRODUCTION, beforeWalkthrough)
+		expect(isUnpublishedNewsPath(ownScreenshot)).toBe(true)
+		expect(isUnpublishedNewsPath(ownScreenshot.toUpperCase())).toBe(true)
+		expect(isUnpublishedNewsPath(`/x/..${ownScreenshot}`)).toBe(true)
+		expect(isUnpublishedNewsPath(borrowedVideo)).toBe(true)
+	})
+
+	it('serves a file a published article also uses', () => {
+		deployAs(PRODUCTION, beforeCameras)
+		expect(isUnpublishedNewsPath(borrowedVideo)).toBe(false)
+		expect(isUnpublishedNewsPath(ownScreenshot)).toBe(false)
+	})
+
+	it('serves them on staging and once the time passes', () => {
+		deployAs(STAGING, beforeWalkthrough)
+		expect(isUnpublishedNewsPath(ownScreenshot)).toBe(false)
+		deployAs(PRODUCTION, resolvePublishedAt(walkthrough.publishedAt))
+		expect(isUnpublishedNewsPath(ownScreenshot)).toBe(false)
 	})
 })
 

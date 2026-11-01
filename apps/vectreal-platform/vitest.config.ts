@@ -7,6 +7,7 @@ import { configDefaults, defineConfig, mergeConfig } from 'vitest/config'
 import sharedConfig, { vctrlSourcePlugin } from '../../vitest.shared.mts'
 import { mdxMarkdownPlugin } from './app/lib/markdown/mdx-to-markdown.ts'
 import { remarkDocPageActions } from './app/lib/markdown/remark-doc-page-actions.ts'
+import { newsArticleBodiesPlugin } from './app/lib/news/news-body-chunks.ts'
 
 export default mergeConfig(
 	sharedConfig,
@@ -23,6 +24,7 @@ export default mergeConfig(
 			*/
 			vctrlSourcePlugin(['core', 'hooks']),
 			mdxMarkdownPlugin(),
+			newsArticleBodiesPlugin(),
 			// Must mirror vite.config.ts. Without the frontmatter plugins the MDX
 			// modules compile but export no `frontmatter`, so the news and docs
 			// manifests resolve to zero entries and any test over them passes

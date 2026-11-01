@@ -1,3 +1,4 @@
+import { matchRoutes, type RouteObject } from 'react-router'
 import { describe, expect, it } from 'vitest'
 
 import { docsPages } from '../app/lib/docs/docs-manifest'
@@ -31,7 +32,11 @@ describe('/llms.txt links the markdown twins', () => {
 	})
 
 	it('links only twins the route table actually serves', async () => {
-		const served = new Set(routes.map((route) => `/${route.path}`))
+		// Articles share one twin route, so matching is the only honest check.
+		const servesTwin = (path: string) =>
+			matchRoutes(routes as unknown as RouteObject[], path)
+				?.at(-1)
+				?.route.id?.startsWith('markdown-twin:') ?? false
 		const linked = [
 			...(await load('llms')).matchAll(
 				/\]\(https:\/\/vectreal\.com(\/[^)]+\.md)\)/g
@@ -39,7 +44,7 @@ describe('/llms.txt links the markdown twins', () => {
 		].map((match) => match[1])
 
 		expect(linked.length).toBeGreaterThan(docsPages.length)
-		expect(linked.filter((path) => !served.has(path))).toEqual([])
+		expect(linked.filter((path) => !servesTwin(path))).toEqual([])
 	})
 
 	it('names the one-file version', async () => {

@@ -151,30 +151,6 @@ export function newsSlugFromRequestPath(pathname: string): string | null {
 	return slug && !slug.includes('/') ? slug : null
 }
 
-/**
- * Whether `path` (as `normalizeRequestPath` returns it) is the client chunk
- * holding the compiled body of the article at `sourcePath`.
- *
- * The lazy glob in `news-article-body.ts` gives every article its own chunk,
- * which Vite names `/assets/<file name>-<hash>.js`. `build-ci` checks that
- * against the real build (`scripts/check-news-body-chunks.ts`), because a
- * change of naming would put scheduled bodies back on production early. A
- * longer file name that starts with this one would match too, which errs
- * toward withholding.
- */
-export function isArticleBodyChunkPath(
-	sourcePath: string,
-	path: string
-): boolean {
-	const fileName = sourcePath.slice(sourcePath.lastIndexOf('/') + 1)
-	const prefix = `/assets/${fileName.replace(/\.mdx$/i, '')}-`.toLowerCase()
-	return (
-		path.startsWith(prefix) &&
-		path.endsWith('.js') &&
-		!path.slice(prefix.length).includes('/')
-	)
-}
-
 const scheduledForFormatter = new Intl.DateTimeFormat('en-US', {
 	timeZone: NEWS_SCHEDULE_TIME_ZONE,
 	month: 'short',
