@@ -12,8 +12,10 @@ import {
 
 import { BakeSection } from './bake-section'
 import LightingSettings from './lighting-settings-panel'
+import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import { type BakePreview } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
+import { DrillDown, DrillDownView } from '../../drill-down'
 
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
@@ -98,14 +100,14 @@ const BAKE_STATES: {
 		isOptimizing: true,
 		preview: null
 	},
-	{ title: 'Ready to bake', canBake: true, preview: null },
+	{ title: 'Ready to preview', canBake: true, preview: null },
 	{
-		title: 'Baking',
+		title: 'Drawing',
 		canBake: true,
 		preview: { status: 'baking', source: SOURCE, shown: true }
 	},
 	{
-		title: 'Baked',
+		title: 'Shown',
 		canBake: true,
 		preview: {
 			status: 'ready',
@@ -128,7 +130,7 @@ const BAKE_STATES: {
 		}
 	},
 	{
-		title: 'Baked, animated model',
+		title: 'Shown, animated model',
 		canBake: true,
 		isAnimated: true,
 		preview: {
@@ -140,7 +142,7 @@ const BAKE_STATES: {
 		}
 	},
 	{
-		title: 'Nothing bakeable',
+		title: 'Nothing to finish',
 		canBake: true,
 		preview: {
 			status: 'ready',
@@ -181,8 +183,8 @@ const BAKE_STATES: {
 	}
 ]
 
-/** Every state of the Bake section, as the Bake view shows it. */
-export const BakeStates: Story = {
+/** Every state of the preview, as the Studio finish view shows it. */
+export const FinishPreviewStates: Story = {
 	parameters: { layout: 'padded', dualTheme: true },
 	render: () => (
 		<div className="flex flex-wrap gap-4">
@@ -197,6 +199,35 @@ export const BakeStates: Story = {
 						onBake={() => {}}
 						onShownChange={() => {}}
 					/>
+				</div>
+			))}
+		</div>
+	)
+}
+
+/** The card on the Lighting tool's root, off and then through each preview state. */
+export const FinishCardStates: Story = {
+	parameters: { layout: 'padded', dualTheme: true },
+	render: () => (
+		<div className="flex flex-wrap gap-4">
+			{[
+				{ title: 'Off', canBake: false, isOptimizing: false, preview: null },
+				...BAKE_STATES
+			].map((state, index) => (
+				<div key={state.title} className="shell-panel w-[21rem] space-y-4 p-4">
+					<h3 className="text-foreground text-sm font-medium">{state.title}</h3>
+					<DrillDown path={[]} onPathChange={() => {}} rootTitle="Lighting">
+						<DrillDownView id="root">
+							<StudioFinishCard
+								status={finishStatus(index > 0, state.preview)}
+								canPreview={state.canBake}
+								isOptimizing={state.isOptimizing ?? false}
+								onAdd={() => {}}
+								onPreview={() => {}}
+								onShownChange={() => {}}
+							/>
+						</DrillDownView>
+					</DrillDown>
 				</div>
 			))}
 		</div>

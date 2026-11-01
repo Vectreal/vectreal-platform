@@ -52,7 +52,7 @@ function BakeReport({
 				<span className="text-muted-foreground">
 					{report.baked.length > 0
 						? plural(report.baked.length, 'material')
-						: 'Nothing baked'}
+						: 'Nothing drawn'}
 				</span>
 			</p>
 			{report.skipped.length > 0 && (
@@ -72,9 +72,9 @@ function BakeReport({
 }
 
 /**
- * What publishing will bake, tried out before it ships: a preview of the same
- * bakes shown on the model, a switch to compare it with the model as it is,
- * and what each bake reached and what it could not.
+ * The studio finish tried out before it ships: a preview of what publishing
+ * will draw, shown on the model, a switch to compare it with the model as it
+ * is, and what each part reached and what it could not.
  */
 export function BakeSection({
 	preview,
@@ -103,34 +103,36 @@ export function BakeSection({
 				onClick={isBaking ? undefined : onBake}
 			>
 				{isBaking && <Loader2 className="animate-spin" aria-hidden />}
-				{isBaking ? 'Baking' : preview ? 'Bake again' : 'Preview the bake'}
+				{isBaking
+					? 'Drawing the finish'
+					: preview
+						? 'Preview again'
+						: 'Preview it on the model'}
 			</Button>
 			{!canBake && (
 				<PanelCaption>
 					{isOptimizing
 						? 'Available once the optimization finishes.'
-						: 'Load a model to preview the bake.'}
+						: 'Load a model to preview the studio finish.'}
 				</PanelCaption>
 			)}
 
 			<div role="status" className="space-y-3">
 				{isBaking && (
 					<PanelCaption>
-						Baking in the background. You can keep working.
+						Drawing in the background. Your device may slow down until it is
+						done.
 					</PanelCaption>
 				)}
 				{reports && (
 					<>
 						<p className="text-sm">
 							{hasBake
-								? `Baked in ${((ready?.durationMs ?? 0) / 1000).toFixed(1)} s.`
-								: 'No material on this model can take a bake.'}
+								? `Drawn in ${((ready?.durationMs ?? 0) / 1000).toFixed(1)} s.`
+								: 'No material on this model can take the studio finish.'}
 						</p>
 						{reports.occlusion && (
-							<BakeReport
-								label="Ambient occlusion"
-								report={reports.occlusion}
-							/>
+							<BakeReport label="Depth" report={reports.occlusion} />
 						)}
 						{reports.lights && (
 							<BakeReport label="Studio lights" report={reports.lights} />
@@ -142,14 +144,14 @@ export function BakeSection({
 			{hasBake && (
 				<>
 					<Toggle
-						label="Show the bake"
+						label="Show studio finish"
 						checked={Boolean(ready?.shown)}
 						onCheckedChange={onShownChange}
 					/>
 					{isAnimated && (
 						<PanelCaption>
-							The bake is shown in the rest pose; the published model still
-							plays its animation.
+							Shown in the rest pose; the published model still plays its
+							animation.
 						</PanelCaption>
 					)}
 				</>
@@ -157,7 +159,7 @@ export function BakeSection({
 
 			{preview?.status === 'failed' && (
 				<InlineNotice tone="error" role="alert">
-					The bake failed: {preview.error}
+					The studio finish failed: {preview.error}
 				</InlineNotice>
 			)}
 		</>

@@ -26,7 +26,7 @@ thumbnail shows a chrome ball and a grey ball lit by it.
 | **Night** | A dim city with a cool key and a warm rim |
 
 Picking a setup keeps the background, the environment's resolution and the
-ambient occlusion you chose. Change any light, the environment or the ground
+studio finish you chose. Change any light, the environment or the ground
 afterwards and the label above the grid reads **Custom**. Pick the setup again
 to go back to it.
 
@@ -110,68 +110,64 @@ The environment lights the model whichever background you choose. With
 
 ---
 
-## Ambient occlusion
+## Studio finish
 
-**Ambient occlusion** darkens creases and tight gaps on the model. It is off by
-default, and has two ways to be on:
+**Studio finish** draws soft shadows and depth into the model when the scene
+is published. The viewer then shows them at no cost, rather than working them
+out every frame. It sits on the Lighting tool's front page: **Add studio
+finish** turns it on and previews it on the model, and **Settings and report**
+opens its settings.
 
-- **Live** draws it every frame while the view moves. **Only when still** draws
-  it once the view stops, and **Strength** sets how dark it gets.
-- **Baked** raytraces it into the model's own textures when the scene is
-  published, so it costs nothing to draw and any glTF viewer shows it.
-
-With **Baked** chosen, **Preview the bake** opens [Bake](#bake), where you can
-see it on the model before you publish.
-
----
-
-## Bake
-
-**Bake** writes lighting into the model when the scene is published, so the
-viewer draws it rather than working it out. Choose what to bake:
-
-| Setting | What it bakes |
+| Setting | What it draws in |
 |---|---|
-| **Ambient occlusion** | Opens the Ambient occlusion view, where **Baked** writes the darkening in creases into the model's own textures. Any glTF viewer shows it. |
+| **Depth** | Ambient occlusion: the darkening in creases and tight gaps, raytraced into the model's own textures. Any glTF viewer shows it. |
 | **Studio lights** | The light and soft shadows the lights cast on the model, written into a light map. The Vectreal viewer draws the map in place of the lights' live light and shadows. Their highlights stay live. |
 
-Baked studio lights look best on matte products, where the soft shadows a
-model casts on itself are what you see. On shiny surfaces most of what you see
-is reflection, which stays live either way. A few limits:
+The finish looks best on matte products, where the soft shadows a model casts
+on itself are what you see. On shiny surfaces most of what you see is
+reflection, which stays live either way. A few limits:
 
 - The light map is stored in a Vectreal extension, `VECTREAL_lightmap`. Other
-  glTF viewers ignore it and show the model with the environment and ambient
-  occlusion but without the studio lights. So does an older `@vctrl/viewer`.
+  glTF viewers ignore it and show the model with the environment and depth
+  but without the studio lights. So does an older `@vctrl/viewer`.
 - The map holds the lights as they were when you published. If you change a
   light or **Turn** afterwards, the viewer draws the lights live until you
-  publish again. The environment's brightness, and the map itself, scale baked
-  light just as they scale live light.
-- The bake follows the model's shape, not its normal maps, so fine surface
-  detail does not shade baked light.
-- A material that cannot be baked keeps live light. On top of the reasons
-  ambient occlusion lists, that includes a material drawn from both sides,
-  such as a label or a leaf: one map cannot light its front and back. So does
-  a part an animation turns, moves or reshapes, because the map holds only
-  the light of its rest pose. And while any part moves, or is drawn more than
+  publish again. The environment's brightness, and the map itself, scale the
+  drawn-in light just as they scale live light.
+- The finish follows the model's shape, not its normal maps, so fine surface
+  detail does not shade it.
+- A material that cannot take the finish keeps live light. On top of the
+  reasons depth lists, that includes a material drawn from both sides, such
+  as a label or a leaf: one map cannot light its front and back. So does a
+  part an animation turns, moves or reshapes, because the map holds only the
+  light of its rest pose. And while any part moves, or is drawn more than
   once, the whole model keeps live light: the map would hold that part's
   shadow where it stood, not where it goes. The same goes while a cutout
-  material (alpha mask) casts a shadow whose mask the bake cannot read, since
-  it would draw its leaves as solid cards: a KTX2 texture, one that does not
-  decode, or any past the first 64 masks it can read. An unlit
-  material has no light to bake.
+  material (alpha mask) casts a shadow whose mask the finish cannot read,
+  since it would draw its leaves as solid cards: a KTX2 texture, one that does
+  not decode, or any past the first 64 masks it can read. An unlit material
+  has no light to draw in.
 - The lights still cast live shadows, which now shade only their highlights,
-  so a baked setup costs about as much to draw as a live one.
+  so a finished setup costs about as much to draw as a live one.
 
-**Preview the bake** runs the same bakes publishing will, in the background, and
-shows the result on the model while the Lighting tool is open. **Show the bake**
-switches between the baked model and the model as it is, to compare. The panel
-then says how long it took and, for each bake, how many materials took it, and
-lists each material that could not with the reason. If one bake fails, the
-preview shows the other and says why, as publishing ships it. Changing what is baked, or
-a baked light, discards the preview, as does a new optimization pass or model.
-Publishing bakes again either way.
-[Publishing](/docs/guides/publish-embed#publishing-a-scene) says what baking
+**Preview it on the model** draws what publishing will, in the background, and
+shows the result while the Lighting tool is open. Drawing it is heavy work for
+the graphics card, so the page may slow down until it is done. **Show studio
+finish** switches between the finished model and the model as it is, to
+compare. The settings then say how long it took and, for each part, how many
+materials took it, and list each material that could not with the reason. If
+one part fails, the preview shows the other and says why, as publishing ships
+it. Changing what the finish draws, or a light it draws, discards the preview,
+as does a new optimization pass or model. Publishing draws it again either way.
+[Publishing](/docs/guides/publish-embed#publishing-a-scene) says what it
 needs.
+
+### Live occlusion
+
+Without **Depth**, ambient occlusion can be drawn live instead, in the same
+settings. **Live** draws it every frame while the view moves, **Only when
+still** draws it once the view stops, and **Strength** sets how dark it gets.
+Turning **Depth** on replaces it, and turning Depth off hands it back to live.
 
 ---
 
@@ -200,9 +196,11 @@ present packages/core/src/scene-lighting/lighting-setups.ts export const DEFAULT
 present packages/sdk/src/scene-settings.ts lighting: sceneLightingSchema.optional(),
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/color-temperature.ts export const NEUTRAL_KELVIN = 6600
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Ground shadow"
-present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx { mode: 'baked', label: 'Baked' }
-present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/bake-section.tsx 'Preview the bake'
-present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/bake-section.tsx label="Show the bake"
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Depth"
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-edits.ts mode: finish.depth ? 'baked' : 'live'
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/studio-finish-card.tsx Add studio finish
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/bake-section.tsx 'Preview it on the model'
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/bake-section.tsx label="Show studio finish"
 present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Studio lights"
 present packages/core/src/scene-lighting/baked-lights.ts export const LIGHTMAP_EXTENSION = 'VECTREAL_lightmap'
 present packages/core/src/scene-lighting/baked-lights.ts rotation: round(lighting.environment.rotation),

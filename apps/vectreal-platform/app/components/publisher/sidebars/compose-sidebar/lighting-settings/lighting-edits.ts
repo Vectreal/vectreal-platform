@@ -153,3 +153,23 @@ export function backgroundOfType(
 			return { type }
 	}
 }
+
+/**
+ * `prev` with studio finish's parts switched. Depth is baked occlusion, and
+ * switching it off hands the occlusion back to live, the nearest thing to
+ * what was baked: the one place the mode moves between live and baked.
+ */
+export function withFinish(
+	prev: LightingSettings,
+	finish: { depth?: boolean; lights?: boolean }
+): LightingSettings {
+	return {
+		...prev,
+		...(finish.depth !== undefined && {
+			occlusion: { ...prev.occlusion, mode: finish.depth ? 'baked' : 'live' }
+		}),
+		...(finish.lights !== undefined && {
+			bake: { ...prev.bake, lights: finish.lights }
+		})
+	}
+}
