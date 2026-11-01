@@ -8,6 +8,7 @@ import {
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
 } from '../../../../../lib/domain/scene/client/publish-export'
+import { STUDIO_FINISH_FILENAME } from '../../../../../lib/domain/scene/scene-asset-roles'
 import {
 	bakesKey,
 	publishBakes
@@ -24,6 +25,8 @@ import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { disposeModel } from '../../../optimization/use-hold-to-compare'
 import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
 
+import type { StudioFinishToSave } from '../../../../../lib/domain/scene/studio-finish'
+import type { SavedFinishRef } from '../../../../../types/api'
 import type { PublishExportOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { Object3D } from 'three'
 
@@ -147,6 +150,71 @@ async function finishedPreview(
 }
 
 /**
+ * Restores the studio finish saved with the open scene as the preview, once
+ * the document is loaded and the saved lighting has hydrated: until then the
+ * key on screen describes the defaults, and the restored preview would read
+ * as stale at once. Once per finish; a finish the author has moved past is
+ * not brought back. It has no export stats, so publish exports afresh, and a
+ * save keeps the stored finish rather than sending it again.
+ */
+export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
+	const [preview, setPreview] = useAtom(bakePreviewAtom)
+	const { optimizer } = useModelContext(true)
+	const { passRevision, isPending } = useAtomValue(optimizationRuntimeAtom)
+	const lighting = useAtomValue(lightingAtom)
+	const { key } = usePublishExport()
+	const loader = useMemo(() => new ModelLoader(), [])
+	const restoredRef = useRef<string | null>(null)
+	const document = optimizer?._getDocument?.()
+	const hydrated = Boolean(saved) && bakesKey(lighting) === saved?.bakes
+
+	useEffect(() => {
+		if (!saved || !document || isPending || preview || !hydrated) return
+		if (restoredRef.current === saved.url) return
+		restoredRef.current = saved.url
+		const source = { document, passRevision, bakes: key }
+		void (async () => {
+			try {
+				const response = await fetch(saved.url)
+				if (!response.ok) return
+				const { scene } = await loader.loadToThreeJS(
+					new File([await response.arrayBuffer()], STUDIO_FINISH_FILENAME, {
+						type: 'model/gltf-binary'
+					})
+				)
+				setPreview((current) => {
+					// A preview the author started meanwhile is theirs.
+					if (current) {
+						disposeModel(scene)
+						return current
+					}
+					return {
+						status: 'ready',
+						source,
+						shown: true,
+						model: scene,
+						reports: saved.reports,
+						restored: true
+					}
+				})
+			} catch {
+				// The scene opens without its finish, as it did before one was saved.
+			}
+		})()
+	}, [
+		saved,
+		document,
+		isPending,
+		preview,
+		hydrated,
+		passRevision,
+		key,
+		loader,
+		setPreview
+	])
+}
+
+/**
  * Shows what a publish just exported as the preview, so the publisher shows
  * the finish it shipped. For an export run with the document and request on
  * screen; a failure to show it leaves the publish as it was.
@@ -174,6 +242,41 @@ export function useShowPublishedFinish() {
 		},
 		[loader, setPreview]
 	)
+}
+
+const anyBakeFailed = (outcome: PublishExportOutcome) =>
+	[outcome.occlusion, outcome.lights].some(
+		(report) => report !== undefined && 'failed' in report
+	)
+
+/**
+ * A current preview's file, when every bake in it worked: what publish ships
+ * as it is. A failed bake may well work on a second try, so that one is
+ * baked again instead.
+ */
+export const reusableFinish = (preview: BakePreview | null) =>
+	preview?.status === 'ready' &&
+	preview.outcome &&
+	!anyBakeFailed(preview.outcome)
+		? preview.outcome
+		: undefined
+
+/**
+ * What a save keeps of a current preview: its file and reports, when it is
+ * reusable and drew anything; null when there is none, which drops the
+ * stored finish; undefined for the restored one, which keeps it.
+ */
+export function studioFinishToSave(
+	preview: BakePreview | null
+): StudioFinishToSave | null | undefined {
+	// The finish the save keeps stored, unchanged and still current.
+	if (preview?.status === 'ready' && preview.restored) return undefined
+	const outcome = reusableFinish(preview)
+	if (!outcome || !bakedAnything(preview)) return null
+	return {
+		bytes: outcome.buffer,
+		reports: { occlusion: outcome.occlusion, lights: outcome.lights }
+	}
 }
 
 /** Whether a finished preview changed anything a viewer would draw. */

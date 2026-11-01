@@ -11,11 +11,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	drawingLabel,
 	type ShownBakeContext,
+	studioFinishToSave,
 	useBakePreview,
 	usePublishExport,
+	useRestoreSavedFinish,
 	useShowPublishedFinish,
 	useShownBake
 } from './use-bake-preview'
+import { bakesKey } from '../../../../../lib/domain/scene/studio-finish'
 import {
 	bakePreviewAtom,
 	type BakePreview
@@ -546,5 +549,104 @@ describe('showing what a publish exported', () => {
 			shown: false,
 			outcome
 		})
+	})
+})
+
+describe('the finish a save keeps', () => {
+	const source = { document: {}, passRevision: 0, bakes: 'k' }
+	const outcome = { buffer: new ArrayBuffer(8), occlusion: report }
+
+	it('is the current preview’s file and reports, when every bake worked', () => {
+		expect(
+			studioFinishToSave({
+				status: 'ready',
+				source,
+				shown: true,
+				reports: { occlusion: report },
+				outcome: outcome as never
+			})
+		).toEqual({ bytes: outcome.buffer, reports: { occlusion: report } })
+	})
+
+	it('is none when the bakes drew nothing, which leaves nothing to show', () => {
+		const nothing = {
+			baked: [],
+			skipped: [{ material: 'glass', reason: 'no-uv0' }]
+		}
+		expect(
+			studioFinishToSave({
+				status: 'ready',
+				source,
+				shown: true,
+				reports: { occlusion: nothing as never },
+				outcome: { ...outcome, occlusion: nothing } as never
+			})
+		).toBeNull()
+	})
+
+	it('is none without a current preview, which drops the stored one', () => {
+		expect(studioFinishToSave(null)).toBeNull()
+	})
+
+	it('keeps the stored finish while its restored preview is current', () => {
+		expect(
+			studioFinishToSave({
+				status: 'ready',
+				source,
+				shown: true,
+				reports: { occlusion: report },
+				restored: true
+			})
+		).toBeUndefined()
+	})
+})
+
+describe('restoring the finish saved with the scene', () => {
+	const lighting = { occlusion: { mode: 'baked' as const } }
+	const restore = (bakes: string | null) => {
+		const store = createStore()
+		store.set(lightingAtom, lighting)
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<Provider store={store}>{children}</Provider>
+		)
+		renderHook(
+			() =>
+				useRestoreSavedFinish({
+					url: '/api/scenes/s1/assets/finish',
+					reports: { occlusion: report },
+					bakes
+				}),
+			{ wrapper }
+		)
+		return store
+	}
+
+	it('shows it once the saved lighting is on screen', async () => {
+		const fetchSpy = vi.fn(async () => new Response(new ArrayBuffer(8)))
+		vi.stubGlobal('fetch', fetchSpy)
+
+		const store = restore(bakesKey(lighting))
+
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)).toMatchObject({
+				status: 'ready',
+				restored: true,
+				reports: { occlusion: report }
+			})
+		)
+		expect(fetchSpy).toHaveBeenCalledWith('/api/scenes/s1/assets/finish')
+		vi.unstubAllGlobals()
+	})
+
+	it('waits while the lighting on screen is not the one it was saved for', async () => {
+		const fetchSpy = vi.fn()
+		vi.stubGlobal('fetch', fetchSpy)
+
+		const store = restore('{"occlusion":false,"lights":"other"}')
+		await act(async () => {})
+
+		expect(fetchSpy).not.toHaveBeenCalled()
+		expect(store.get(bakePreviewAtom)).toBeNull()
+		vi.unstubAllGlobals()
 	})
 })

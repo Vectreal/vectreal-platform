@@ -1,6 +1,6 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useRevalidator } from 'react-router'
 
 import { usePrepareGltfDocument } from './scene-loader/use-scene-document-export'
@@ -10,6 +10,10 @@ import { useSceneSource } from './scene-loader/use-scene-source'
 import { useSceneUpload } from './scene-loader/use-scene-upload'
 import { usePublisherViewerCapture } from '../components/publisher/publisher-viewer-capture-context'
 import { OPENING_VIEW_CAPTURE_OPTIONS } from '../components/publisher/shell/use-opening-view'
+import {
+	studioFinishToSave,
+	useCurrentPreview
+} from '../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
 import { createSceneRequestId as createRequestId } from '../lib/domain/scene/client/scene-request-id'
 import {
 	recordSavedOriginal,
@@ -153,6 +157,17 @@ export function usePublisherScene({
 		[requestSceneScreenshot]
 	)
 
+	// Read when a save starts: the preview the author drew for what is saved.
+	const currentPreview = useCurrentPreview()
+	const currentPreviewRef = useRef(currentPreview)
+	useEffect(() => {
+		currentPreviewRef.current = currentPreview
+	}, [currentPreview])
+	const captureStudioFinish = useCallback(
+		() => studioFinishToSave(currentPreviewRef.current),
+		[]
+	)
+
 	const captureShadowBake = useCallback(async () => {
 		try {
 			return await requestShadowBake()
@@ -235,6 +250,7 @@ export function usePublisherScene({
 			prepareGltfDocumentForUpload,
 			captureSceneThumbnail,
 			captureShadowBake,
+			captureStudioFinish,
 			resolveSource,
 			recordSavedSource
 		}

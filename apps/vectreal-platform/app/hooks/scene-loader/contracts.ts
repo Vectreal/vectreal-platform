@@ -1,5 +1,6 @@
 import type { KeptOriginalRef } from '../../lib/domain/scene/client/scene-save-orchestrator'
 import type { SourceToSave } from '../../lib/domain/scene/client/scene-source-to-save'
+import type { StudioFinishToSave } from '../../lib/domain/scene/studio-finish'
 import type { SceneMetaState } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type { SceneOptimizationRuntimeState } from '../../types/scene-optimization'
@@ -59,6 +60,11 @@ export interface SceneSaveFlowActions {
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: (targetCameraId?: string) => Promise<null | string>
 	captureShadowBake: () => Promise<ShadowBakeResult | null>
+	/**
+	 * The studio finish this save keeps, read when it starts: null keeps none,
+	 * undefined leaves the stored one as it is.
+	 */
+	captureStudioFinish: () => StudioFinishToSave | null | undefined
 	/** What this save does with the scene's original, read when it starts. */
 	resolveSource: () => SourceToSave
 	/**

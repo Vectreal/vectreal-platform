@@ -327,6 +327,8 @@ interface BakePreview {
 	 * which publish uploads rather than exporting again.
 	 */
 	outcome?: PublishExportOutcome
+	/** Restored from the finish saved with the scene, which has no `outcome`. */
+	restored?: true
 	durationMs?: number
 	error?: string
 }

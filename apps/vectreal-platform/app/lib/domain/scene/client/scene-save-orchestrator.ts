@@ -20,16 +20,21 @@ import {
 	buildImageMimeLookup,
 	buildSceneUploadFileDescriptor
 } from './scene-upload-manifest'
-import { SOURCE_MODEL_FILENAME } from '../scene-asset-roles'
+import {
+	SOURCE_MODEL_FILENAME,
+	STUDIO_FINISH_FILENAME
+} from '../scene-asset-roles'
 import { resolveDefaultSceneCameraId } from '../scene-camera'
 
 import type { HotspotArtworkRewrite } from './hotspot-artwork-save'
 import type { SaveProgressEvent } from './scene-save-progress'
 import type { SourceToSave } from './scene-source-to-save'
+import type { SaveStudioFinish } from '../../../../types/api'
 import type {
 	CapturedThumbnailFrame,
 	SceneMetaState
 } from '../../../../types/publisher-config'
+import type { StudioFinishToSave } from '../studio-finish'
 import type { SceneSettings } from '@vctrl/core'
 import type { ShadowBakeResult } from '@vctrl/viewer'
 
@@ -72,6 +77,13 @@ interface ExecuteSceneSaveOrchestratorParams {
 	/** Captures the scene from `targetCameraId`, or the live view without one. */
 	captureSceneThumbnail: (targetCameraId?: string) => Promise<null | string>
 	captureShadowBake?: () => Promise<ShadowBakeResult | null>
+	/**
+	 * The studio finish to save with the draft: the file the preview drew for
+	 * exactly what is being saved, or null when there is none, which drops the
+	 * stored one. Left out, or returning undefined, the save leaves the
+	 * stored finish as it is.
+	 */
+	captureStudioFinish?: () => StudioFinishToSave | null | undefined
 	onProgress?: (event: SaveProgressEvent) => void
 	/** What the save does with the scene's original. Keeps none when left out. */
 	source?: SourceToSave
@@ -169,6 +181,7 @@ export const executeSceneSaveOrchestrator = async ({
 	prepareGltfDocumentForUpload,
 	captureSceneThumbnail,
 	captureShadowBake,
+	captureStudioFinish,
 	onProgress,
 	source = { kind: 'none' },
 	isEnvironmentFallback = () => false
@@ -737,6 +750,77 @@ export const executeSceneSaveOrchestrator = async ({
 		}
 	}
 
+	// The studio finish, linked apart from the model so only the draft's own
+	// surfaces show it. Bytes the server already holds are not sent again. It
+	// is best effort: a failed upload saves the scene without a finish.
+	let studioFinish: SaveStudioFinish | null | undefined
+	const finish = captureStudioFinish?.()
+	if (finish !== undefined) studioFinish = null
+	if (finish) {
+		const bytes = new Uint8Array(finish.bytes)
+		onProgress?.({
+			type: 'file-added',
+			file: {
+				key: STUDIO_FINISH_FILENAME,
+				group: 'model',
+				name: 'Studio finish',
+				bytes: bytes.byteLength,
+				preview: null
+			}
+		})
+		try {
+			const existingFinish = existingAssets?.[STUDIO_FINISH_FILENAME]
+			if (
+				existingFinish &&
+				(await hashBytes(bytes)) === existingFinish.contentHash
+			) {
+				studioFinish = {
+					assetId: existingFinish.assetId,
+					reports: finish.reports
+				}
+				onProgress?.({
+					type: 'file-done',
+					key: STUDIO_FINISH_FILENAME,
+					reused: true
+				})
+			} else {
+				const uploadFinishFormData = new FormData()
+				uploadFinishFormData.append('action', 'upload-scene-asset')
+				uploadFinishFormData.append('requestId', requestId)
+				uploadFinishFormData.append('sceneId', preparedSceneId)
+				if (preparedProjectId) {
+					uploadFinishFormData.append('projectId', preparedProjectId)
+				}
+				if (options?.targetProjectId) {
+					uploadFinishFormData.append(
+						'targetProjectId',
+						options.targetProjectId
+					)
+				}
+				uploadFinishFormData.append('kind', 'buffer')
+				uploadFinishFormData.append(
+					'file',
+					new File([bytes], STUDIO_FINISH_FILENAME, {
+						type: 'model/gltf-binary'
+					})
+				)
+				const uploadedFinish = await uploadFile(
+					STUDIO_FINISH_FILENAME,
+					uploadFinishFormData
+				)
+				studioFinish = {
+					assetId: uploadedFinish.assetId as string,
+					reports: finish.reports
+				}
+			}
+		} catch (error) {
+			console.warn('[scene-settings] studio finish upload failed', {
+				sceneId: preparedSceneId,
+				error: error instanceof Error ? error.message : String(error)
+			})
+		}
+	}
+
 	// Link the persisted shadow bake into the scene's asset set so the server
 	// downloads it into the manifest (base64-inlined alongside the model assets)
 	// and every surface loads it in parallel, with no separate request.
@@ -777,6 +861,9 @@ export const executeSceneSaveOrchestrator = async ({
 	formData.append('sceneAssetIds', JSON.stringify(sceneAssetIds))
 	if (sourceAssetId) {
 		formData.append('sourceAssetId', sourceAssetId)
+	}
+	if (studioFinish !== undefined) {
+		formData.append('studioFinish', JSON.stringify(studioFinish))
 	}
 	formData.append('optimizationSettings', JSON.stringify(optimizationSettings))
 

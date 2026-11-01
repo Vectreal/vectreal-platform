@@ -50,6 +50,7 @@ import { ScenePublishStateControl } from '../../../../publishing/scene-publish-s
 import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
 import { itemVariants } from '../../animation'
 import {
+	reusableFinish,
 	useCurrentPreview,
 	usePublishExport,
 	useShowPublishedFinish
@@ -61,14 +62,8 @@ import type {
 	ScenePublishStateResponse
 } from '../../../../../types/api'
 import type { SaveSceneFn } from '../../../../../types/publisher-scene'
-import type { PublishExportOutcome } from '../../../../../workers/publish-export.worker.types'
 
 type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
-
-const anyBakeFailed = (outcome: PublishExportOutcome | undefined) =>
-	[outcome?.occlusion, outcome?.lights].some(
-		(report) => report !== undefined && 'failed' in report
-	)
 
 interface PublishOptionsProps {
 	sceneId?: string
@@ -162,10 +157,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 			// A current preview already is the file this publish would make,
 			// unless a bake in it failed, which baking again may well not.
-			let result =
-				preview?.status === 'ready' && !anyBakeFailed(preview.outcome)
-					? preview.outcome
-					: undefined
+			let result = reusableFinish(preview)
 			if (!result) {
 				const { data: workingGlb } =
 					await exporterRef.current.exportDocumentGLB(document)
