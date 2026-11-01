@@ -79,11 +79,10 @@ interface ExecuteSceneSaveOrchestratorParams {
 	captureShadowBake?: () => Promise<ShadowBakeResult | null>
 	/**
 	 * The studio finish to save with the draft: the file the preview drew for
-	 * exactly what is being saved, or null when there is none, which drops the
-	 * stored one. Left out, or returning undefined, the save leaves the
-	 * stored finish as it is.
+	 * exactly what is being saved. Without one the stored finish stays as it
+	 * is; the server shows it only while it still matches the scene.
 	 */
-	captureStudioFinish?: () => StudioFinishToSave | null | undefined
+	captureStudioFinish?: () => StudioFinishToSave | undefined
 	onProgress?: (event: SaveProgressEvent) => void
 	/** What the save does with the scene's original. Keeps none when left out. */
 	source?: SourceToSave
@@ -198,6 +197,9 @@ export const executeSceneSaveOrchestrator = async ({
 	}
 
 	onProgress?.({ type: 'preparing' })
+	// Read with the settings, before anything awaits: a finish drawn while the
+	// save runs was drawn for lighting this save does not write.
+	const finish = captureStudioFinish?.()
 	const requestId = createRequestId()
 	const gltfJsonToSend = await prepareGltfDocumentForUpload()
 	if (!gltfJsonToSend) {
@@ -753,9 +755,7 @@ export const executeSceneSaveOrchestrator = async ({
 	// The studio finish, linked apart from the model so only the draft's own
 	// surfaces show it. Bytes the server already holds are not sent again. It
 	// is best effort: a failed upload saves the scene without a finish.
-	let studioFinish: SaveStudioFinish | null | undefined
-	const finish = captureStudioFinish?.()
-	if (finish !== undefined) studioFinish = null
+	let studioFinish: SaveStudioFinish | undefined
 	if (finish) {
 		const bytes = new Uint8Array(finish.bytes)
 		onProgress?.({

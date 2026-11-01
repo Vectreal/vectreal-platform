@@ -21,6 +21,7 @@ import {
 import { bakesKey } from '../../../../../lib/domain/scene/studio-finish'
 import {
 	bakePreviewAtom,
+	processAtom,
 	type BakePreview
 } from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
@@ -581,11 +582,11 @@ describe('the finish a save keeps', () => {
 				reports: { occlusion: nothing as never },
 				outcome: { ...outcome, occlusion: nothing } as never
 			})
-		).toBeNull()
+		).toBeUndefined()
 	})
 
-	it('is none without a current preview, which drops the stored one', () => {
-		expect(studioFinishToSave(null)).toBeNull()
+	it('is none without a current preview, which keeps the stored one', () => {
+		expect(studioFinishToSave(null)).toBeUndefined()
 	})
 
 	it('keeps the stored finish while its restored preview is current', () => {
@@ -603,9 +604,13 @@ describe('the finish a save keeps', () => {
 
 describe('restoring the finish saved with the scene', () => {
 	const lighting = { occlusion: { mode: 'baked' as const } }
-	const restore = (bakes: string | null) => {
+	const restore = (
+		bakes: string | null,
+		prepare: (store: ReturnType<typeof createStore>) => void = () => {}
+	) => {
 		const store = createStore()
 		store.set(lightingAtom, lighting)
+		prepare(store)
 		const wrapper = ({ children }: { children: ReactNode }) => (
 			<Provider store={store}>{children}</Provider>
 		)
@@ -646,6 +651,50 @@ describe('restoring the finish saved with the scene', () => {
 		await act(async () => {})
 
 		expect(fetchSpy).not.toHaveBeenCalled()
+		expect(store.get(bakePreviewAtom)).toBeNull()
+		vi.unstubAllGlobals()
+	})
+
+	it('waits while the scene has changes since it opened', async () => {
+		const fetchSpy = vi.fn()
+		vi.stubGlobal('fetch', fetchSpy)
+
+		restore(bakesKey(lighting), (store) =>
+			store.set(processAtom, (state) => ({ ...state, hasUnsavedChanges: true }))
+		)
+		await act(async () => {})
+
+		expect(fetchSpy).not.toHaveBeenCalled()
+		vi.unstubAllGlobals()
+	})
+
+	it('waits while an optimization pass is newer than the saved one', async () => {
+		const fetchSpy = vi.fn()
+		vi.stubGlobal('fetch', fetchSpy)
+
+		restore(bakesKey(lighting), (store) =>
+			store.set(optimizationRuntimeAtom, (runtime) => ({
+				...runtime,
+				passRevision: 1
+			}))
+		)
+		await act(async () => {})
+
+		expect(fetchSpy).not.toHaveBeenCalled()
+		vi.unstubAllGlobals()
+	})
+
+	it('restores once: a finish cleared later is not brought back', async () => {
+		const fetchSpy = vi.fn(async () => new Response(new ArrayBuffer(8)))
+		vi.stubGlobal('fetch', fetchSpy)
+
+		const store = restore(bakesKey(lighting))
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)).toMatchObject({ restored: true })
+		)
+		await act(async () => store.set(bakePreviewAtom, null))
+
+		expect(fetchSpy).toHaveBeenCalledTimes(1)
 		expect(store.get(bakePreviewAtom)).toBeNull()
 		vi.unstubAllGlobals()
 	})

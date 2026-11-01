@@ -1,6 +1,6 @@
 /**
  * A save keeps the studio finish the preview drew for exactly what it saves,
- * so the draft's own surfaces show it, and drops one that no longer matches.
+ * so the draft's own surfaces show it, and otherwise leaves the stored one.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -17,8 +17,7 @@ const finish: StudioFinishToSave = {
 }
 
 async function save(
-	captureStudioFinish:
-		(() => StudioFinishToSave | null | undefined) | undefined,
+	captureStudioFinish: (() => StudioFinishToSave | undefined) | undefined,
 	existingAssets: Record<string, { assetId: string; contentHash: string }> = {}
 ) {
 	const uploaded: string[] = []
@@ -87,14 +86,37 @@ describe('a saved studio finish', () => {
 		expect(studioFinish).toEqual({ assetId: 'finish-old', reports })
 	})
 
-	it('drops the stored finish when no current one was drawn', async () => {
-		const { uploaded, studioFinish } = await save(() => null)
+	it('reads the finish when the save starts, not after its uploads', async () => {
+		const reads: string[] = []
+		stubSceneApi(async (form) => {
+			reads.push(String(form.get('action')))
+			return ok({ sceneId: 's1', projectId: 'p1', existingAssets: {} })
+		})
+		await executeSceneSaveOrchestrator({
+			userId: 'u1',
+			currentSceneId: 's1',
+			currentSettings: {},
+			sceneMetaState: { name: 'Chair' } as never,
+			lastSavedSceneMeta: { name: 'Chair' } as never,
+			lastSavedSettings: {} as never,
+			optimizationSettings: {},
+			optimizationReport: null,
+			createRequestId: () => 'req-1',
+			prepareGltfDocumentForUpload: async () => ({
+				data: { asset: { version: '2.0' } },
+				assets: new Map()
+			}),
+			captureSceneThumbnail: async () => null,
+			captureStudioFinish: () => {
+				reads.push('capture')
+				return undefined
+			}
+		}).catch(() => {})
 
-		expect(uploaded).toEqual([])
-		expect(studioFinish).toBeNull()
+		expect(reads[0]).toBe('capture')
 	})
 
-	it('leaves the stored finish alone when told to keep it, or not asked', async () => {
+	it('leaves the stored finish alone when there is none to send', async () => {
 		expect((await save(() => undefined)).studioFinish).toBe('omitted')
 		expect((await save(undefined)).studioFinish).toBe('omitted')
 	})

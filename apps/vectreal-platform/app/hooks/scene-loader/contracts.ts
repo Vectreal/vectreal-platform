@@ -60,11 +60,8 @@ export interface SceneSaveFlowActions {
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: (targetCameraId?: string) => Promise<null | string>
 	captureShadowBake: () => Promise<ShadowBakeResult | null>
-	/**
-	 * The studio finish this save keeps, read when it starts: null keeps none,
-	 * undefined leaves the stored one as it is.
-	 */
-	captureStudioFinish: () => StudioFinishToSave | null | undefined
+	/** The studio finish this save sends, read when it starts; none keeps the stored one. */
+	captureStudioFinish: () => StudioFinishToSave | undefined
 	/** What this save does with the scene's original, read when it starts. */
 	resolveSource: () => SourceToSave
 	/**

@@ -39,6 +39,25 @@ export const SOURCE_MODEL_FILENAME = 'source.glb'
 export const STUDIO_FINISH_FILENAME = 'studio-finish.glb'
 
 /**
+ * What a link is for. A link without a role is part of the model, as every
+ * reader takes it. The studio finish is known by its name too: a release that
+ * predates its role relinks it as part of the model, and it must not stay so.
+ */
+export function sceneAssetRole(
+	usageType: string | null,
+	name: string
+): SceneAssetRole {
+	if (usageType === SCENE_ASSET_ROLE.source) return SCENE_ASSET_ROLE.source
+	if (
+		usageType === SCENE_ASSET_ROLE.finish ||
+		name === STUDIO_FINISH_FILENAME
+	) {
+		return SCENE_ASSET_ROLE.finish
+	}
+	return SCENE_ASSET_ROLE.model
+}
+
+/**
  * A linked asset that is drawn from its own URL and is never part of the
  * model: the scene thumbnail, and a marker's uploaded artwork.
  *

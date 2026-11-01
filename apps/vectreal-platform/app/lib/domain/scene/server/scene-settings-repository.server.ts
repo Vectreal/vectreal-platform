@@ -12,7 +12,7 @@ import {
 	SceneSettingsUpsertInput,
 	SceneSettingsWithAssets
 } from '../../../../types/api'
-import { SCENE_ASSET_ROLE } from '../scene-asset-roles'
+import { SCENE_ASSET_ROLE, sceneAssetRole } from '../scene-asset-roles'
 import { withSceneCameraKinds } from '../scene-camera'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
 
@@ -115,19 +115,19 @@ export async function getSceneSettingsWithAssetsRow(
 
 	// The one place links are read, so the kept original and the studio finish
 	// are told apart here and no reader downstream can take them for the model.
-	const linked = (role: string) =>
-		sceneAssetsData.find((sa) => sa.usageType === role)?.asset ?? null
+	const roleOf = (sa: (typeof sceneAssetsData)[number]) =>
+		sceneAssetRole(sa.usageType, sa.asset.name)
 	return {
 		settings,
 		assets: sceneAssetsData
-			.filter(
-				(sa) =>
-					sa.usageType !== SCENE_ASSET_ROLE.source &&
-					sa.usageType !== SCENE_ASSET_ROLE.finish
-			)
+			.filter((sa) => roleOf(sa) === SCENE_ASSET_ROLE.model)
 			.map((sa) => sa.asset),
-		sourceAsset: linked(SCENE_ASSET_ROLE.source),
-		finishAsset: linked(SCENE_ASSET_ROLE.finish)
+		sourceAsset:
+			sceneAssetsData.find((sa) => roleOf(sa) === SCENE_ASSET_ROLE.source)
+				?.asset ?? null,
+		finishAsset:
+			sceneAssetsData.find((sa) => roleOf(sa) === SCENE_ASSET_ROLE.finish)
+				?.asset ?? null
 	}
 }
 
@@ -152,11 +152,17 @@ export async function getSceneAssetLinks(
 	finishAssetId: string | null
 }> {
 	const links = await tx
-		.select({ assetId: sceneAssets.assetId, usageType: sceneAssets.usageType })
+		.select({
+			assetId: sceneAssets.assetId,
+			usageType: sceneAssets.usageType,
+			name: assets.name
+		})
 		.from(sceneAssets)
+		.innerJoin(assets, eq(sceneAssets.assetId, assets.id))
 		.where(eq(sceneAssets.sceneSettingsId, sceneSettingsId))
 	const linked = (role: string) =>
-		links.find((link) => link.usageType === role)?.assetId ?? null
+		links.find((link) => sceneAssetRole(link.usageType, link.name) === role)
+			?.assetId ?? null
 
 	return {
 		assetIds: links.map((link) => link.assetId),

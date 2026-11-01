@@ -218,24 +218,32 @@ describe('the studio finish a draft keeps', () => {
 		expect(JSON.stringify(manifest)).not.toMatch(/token=|sig=|signature/)
 	})
 
-	it('is never an asset an embed may fetch', async () => {
+	// The embed's asset policy serves what this lists, so leaving it out here
+	// is what keeps the finish off every embed.
+	it('is not among the assets an embed is served from', async () => {
 		const { sceneId, finishId } = await draftWithFinish()
-		const { isEmbedServableAssetId, selectEmbedServableAssets } =
-			await import('../../app/lib/domain/scene/embed-asset-policy')
+
 		const settingsData =
 			await sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
 				includeGltfJson: false
 			})
 
-		const servable = selectEmbedServableAssets({
-			sceneId,
-			publishedAssetId: randomUUID(),
-			sceneAssets: settingsData?.assets ?? [],
-			bakedShadowAssetId: settingsData?.settings?.shadows?.baked?.assetId,
-			hotspots: settingsData?.settings?.hotspots
-		})
+		expect(settingsData?.assets.map(({ id }) => id)).not.toContain(finishId)
+	})
 
-		expect(isEmbedServableAssetId(finishId, servable)).toBe(false)
+	// A release from before the role relinks every asset as part of the model.
+	it('is still the finish after an older release relinks it as the model', async () => {
+		const { sceneId, finishId } = await draftWithFinish()
+		await db
+			.update(schema.sceneAssets)
+			.set({ usageType: 'gltf-asset' })
+			.where(eq(schema.sceneAssets.assetId, finishId))
+
+		const modelAssets = await sceneSettingsService.getSceneAssetRecords(sceneId)
+		expect(modelAssets.map(({ id }) => id)).not.toContain(finishId)
+		expect(
+			await sceneSettingsService.resolveSceneFinish(sceneId)
+		).toMatchObject({ asset: { id: finishId } })
 	})
 
 	it('leaves a published scene current, since the published file is not it', async () => {

@@ -15,6 +15,7 @@ import {
 } from '../../../../../lib/domain/scene/studio-finish'
 import {
 	bakePreviewAtom,
+	hasUnsavedChangesAtom,
 	type BakePreview
 } from '../../../../../lib/stores/publisher-config-store'
 import {
@@ -160,18 +161,29 @@ async function finishedPreview(
 export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 	const [preview, setPreview] = useAtom(bakePreviewAtom)
 	const { optimizer } = useModelContext(true)
-	const { passRevision, isPending } = useAtomValue(optimizationRuntimeAtom)
+	const { passRevision, savedPassRevision, isPending } = useAtomValue(
+		optimizationRuntimeAtom
+	)
+	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
 	const lighting = useAtomValue(lightingAtom)
 	const { key } = usePublishExport()
 	const loader = useMemo(() => new ModelLoader(), [])
-	const restoredRef = useRef<string | null>(null)
+	const attemptedRef = useRef(false)
 	const document = optimizer?._getDocument?.()
-	const hydrated = Boolean(saved) && bakesKey(lighting) === saved?.bakes
+	// The scene on screen is still the one the finish was saved for: no pass,
+	// codec or lighting change since it opened.
+	const asSaved =
+		Boolean(saved) &&
+		bakesKey(lighting) === saved?.bakes &&
+		passRevision === savedPassRevision &&
+		!hasUnsavedChanges
 
 	useEffect(() => {
-		if (!saved || !document || isPending || preview || !hydrated) return
-		if (restoredRef.current === saved.url) return
-		restoredRef.current = saved.url
+		if (!saved || !document || isPending || preview || !asSaved) return
+		// Once, for the scene as it opened. A later save's finish is the
+		// preview already on screen, and one left behind stays behind.
+		if (attemptedRef.current) return
+		attemptedRef.current = true
 		const source = { document, passRevision, bakes: key }
 		void (async () => {
 			try {
@@ -206,7 +218,7 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 		document,
 		isPending,
 		preview,
-		hydrated,
+		asSaved,
 		passRevision,
 		key,
 		loader,
@@ -262,17 +274,16 @@ export const reusableFinish = (preview: BakePreview | null) =>
 		: undefined
 
 /**
- * What a save keeps of a current preview: its file and reports, when it is
- * reusable and drew anything; null when there is none, which drops the
- * stored finish; undefined for the restored one, which keeps it.
+ * What a save sends of a current preview: its file and reports, when it is
+ * reusable and drew anything. Nothing otherwise, which leaves the stored
+ * finish as it is: the server shows that one only while it still matches
+ * the scene, so a stale one is never shown and the next finish replaces it.
  */
 export function studioFinishToSave(
 	preview: BakePreview | null
-): StudioFinishToSave | null | undefined {
-	// The finish the save keeps stored, unchanged and still current.
-	if (preview?.status === 'ready' && preview.restored) return undefined
+): StudioFinishToSave | undefined {
 	const outcome = reusableFinish(preview)
-	if (!outcome || !bakedAnything(preview)) return null
+	if (!outcome || !bakedAnything(preview)) return undefined
 	return {
 		bytes: outcome.buffer,
 		reports: { occlusion: outcome.occlusion, lights: outcome.lights }
