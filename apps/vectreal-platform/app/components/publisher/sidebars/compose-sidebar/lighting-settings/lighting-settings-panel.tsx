@@ -1,4 +1,3 @@
-import { Button } from '@shared/components/ui/button'
 import { Slider, type SliderPreset } from '@shared/components/ui/slider'
 import { Toggle } from '@shared/components/ui/toggle'
 import {
@@ -15,8 +14,8 @@ import {
 	type LightingSetupId
 } from '@vctrl/core'
 import { useAtomValue } from 'jotai/react'
-import { Contrast, Globe, Layers, Lightbulb } from 'lucide-react'
-import { useState } from 'react'
+import { Globe, Lightbulb } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 import { BakeSection } from './bake-section'
 import {
@@ -30,10 +29,12 @@ import {
 import {
 	LIGHT_ROLES,
 	matchingSetup,
+	withFinish,
 	withSetup,
 	wrapDegrees
 } from './lighting-edits'
 import { formatDegrees, LightingGlobe } from './lighting-globe'
+import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import { ThumbnailGrid } from './thumbnail-grid'
 import { useBakePreview } from './use-bake-preview'
 import { useLightingDraft } from './use-lighting-draft'
@@ -45,36 +46,12 @@ import { environmentLoadFailedAtom } from '../../../../../lib/stores/publisher-c
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { PanelCaption, SettingGroup } from '../../sidebar-section'
 
-type OcclusionMode = keyof typeof OCCLUSION_CAPTIONS
-
-const OCCLUSION_CAPTIONS = {
-	off: 'Darkens creases and tight gaps on the model. Live draws it as the view moves; Baked writes it into the model when you publish.',
-	live: "Drawn every frame while the view moves. 'Only when still' skips it during orbiting.",
-	baked:
-		"Raytraced into the model's own textures when you publish, so it costs nothing to draw and shows in any glTF viewer."
-} as const
-
-/** What the Bake view's trigger says is baked. */
-const bakeSummary = (occlusion: boolean, lights: boolean) =>
-	occlusion && lights
-		? 'Occlusion, lights'
-		: occlusion
-			? 'Occlusion'
-			: lights
-				? 'Lights'
-				: 'Off'
-
-const OCCLUSION_MODES: { mode: OcclusionMode; label: string }[] = [
+const OCCLUSION_MODES = [
 	{ mode: 'off', label: 'Off' },
-	{ mode: 'live', label: 'Live' },
-	{ mode: 'baked', label: 'Baked' }
-]
+	{ mode: 'live', label: 'Live' }
+] as const
 
-const OCCLUSION_SUMMARY = {
-	off: 'Off',
-	live: 'Live',
-	baked: 'Baked'
-} as const satisfies Record<OcclusionMode, string>
+type LiveOcclusionMode = (typeof OCCLUSION_MODES)[number]['mode']
 
 const SETUP_OPTIONS = LIGHTING_SETUPS.map((setup) => ({
 	value: setup.id,
@@ -125,6 +102,33 @@ const LightingSettings = () => {
 	const bakePreview = useBakePreview()
 	const setup = matchingSetup(lighting)
 	const enabledLights = resolved.lights.filter((light) => light.enabled)
+
+	const depth = occlusion.mode === 'baked'
+	const status = finishStatus(bakePreview.bakesAnything, bakePreview.preview)
+
+	/*
+	  Adding the finish previews it too, once the render with the new lighting
+	  has given `bake` the request to draw: called from the click, it would
+	  draw what the lighting asked for before.
+	*/
+	const [previewQueued, setPreviewQueued] = useState(false)
+	const { canBake, bake: drawPreview, bakesAnything } = bakePreview
+	useEffect(() => {
+		if (!previewQueued) return
+		// Turned off again before it could draw: nobody is waiting for it now.
+		if (!bakesAnything) setPreviewQueued(false)
+		else if (canBake) {
+			setPreviewQueued(false)
+			void drawPreview()
+		}
+	}, [previewQueued, bakesAnything, canBake, drawPreview])
+
+	const addFinish = () => {
+		commit((prev) =>
+			withFinish(prev, { depth: true, lights: enabledLights.length > 0 })
+		)
+		setPreviewQueued(true)
+	}
 
 	const selectSetup = (id: LightingSetupId) => {
 		const chosen = LIGHTING_SETUPS.find((entry) => entry.id === id)
@@ -179,19 +183,16 @@ const LightingSettings = () => {
 										.join(', ')
 						}
 					/>
-					<DrillDownTrigger
-						to="occlusion"
-						icon={<Contrast />}
-						label="Ambient occlusion"
-						summary={OCCLUSION_SUMMARY[occlusion.mode]}
-					/>
-					<DrillDownTrigger
-						to="bake"
-						icon={<Layers />}
-						label="Bake"
-						summary={bakeSummary(occlusion.mode === 'baked', bake.lights)}
-					/>
 				</div>
+
+				<StudioFinishCard
+					status={status}
+					canPreview={bakePreview.canBake}
+					isOptimizing={bakePreview.isOptimizing}
+					onAdd={addFinish}
+					onPreview={() => void bakePreview.bake()}
+					onShownChange={bakePreview.setShown}
+				/>
 
 				<Toggle
 					label="Ground shadow"
@@ -293,31 +294,73 @@ const LightingSettings = () => {
 			))}
 
 			<DrillDownView
-				id="occlusion"
-				title="Ambient occlusion"
-				caption={OCCLUSION_CAPTIONS[occlusion.mode]}
+				id="finish"
+				title="Studio finish"
+				caption="Drawn into the model's own textures when you publish, so any viewer shows it at no cost. It holds one pose and suits matte products best."
 			>
-				<ToggleGroup
-					type="single"
-					aria-label="Ambient occlusion"
-					value={occlusion.mode}
-					onValueChange={(mode) => {
-						if (mode)
-							commit((prev) => ({
-								...prev,
-								occlusion: {
-									...prev.occlusion,
-									mode: mode as OcclusionMode
-								}
-							}))
-					}}
+				<Toggle
+					label="Depth"
+					description="Darkens creases and tight gaps. Any glTF viewer shows it."
+					checked={depth}
+					onCheckedChange={(on) =>
+						commit((prev) => withFinish(prev, { depth: on }))
+					}
+				/>
+				<Toggle
+					label="Studio lights"
+					description="Their light and soft shadows, written into a light map. Other glTF viewers show the model without them."
+					checked={bake.lights}
+					onCheckedChange={(lights) =>
+						commit((prev) => withFinish(prev, { lights }))
+					}
+				/>
+				{bake.lights && enabledLights.length === 0 && (
+					<PanelCaption>Turn a light on to draw it in.</PanelCaption>
+				)}
+
+				{bakePreview.bakesAnything && (
+					<BakeSection
+						preview={bakePreview.preview}
+						canBake={bakePreview.canBake}
+						isOptimizing={bakePreview.isOptimizing}
+						isAnimated={bakePreview.isAnimated}
+						onBake={() => void bakePreview.bake()}
+						onShownChange={bakePreview.setShown}
+					/>
+				)}
+
+				<SettingGroup
+					label="Live occlusion"
+					description={
+						depth
+							? 'Depth from the studio finish takes its place.'
+							: "Darkens creases as the view moves, drawn every frame. 'Only when still' skips it while orbiting."
+					}
 				>
-					{OCCLUSION_MODES.map((entry) => (
-						<ToggleGroupItem key={entry.mode} value={entry.mode}>
-							{entry.label}
-						</ToggleGroupItem>
-					))}
-				</ToggleGroup>
+					{!depth && (
+						<ToggleGroup
+							type="single"
+							aria-label="Live occlusion"
+							value={occlusion.mode}
+							onValueChange={(mode) => {
+								if (mode)
+									commit((prev) => ({
+										...prev,
+										occlusion: {
+											...prev.occlusion,
+											mode: mode as LiveOcclusionMode
+										}
+									}))
+							}}
+						>
+							{OCCLUSION_MODES.map((entry) => (
+								<ToggleGroupItem key={entry.mode} value={entry.mode}>
+									{entry.label}
+								</ToggleGroupItem>
+							))}
+						</ToggleGroup>
+					)}
+				</SettingGroup>
 
 				{occlusion.mode === 'live' && (
 					<>
@@ -352,55 +395,6 @@ const LightingSettings = () => {
 							}
 						/>
 					</>
-				)}
-
-				{occlusion.mode === 'baked' && (
-					<Button
-						variant="outline"
-						className="w-full"
-						onClick={() => setPath(['bake'])}
-					>
-						Preview the bake
-					</Button>
-				)}
-			</DrillDownView>
-
-			<DrillDownView
-				id="bake"
-				title="Bake"
-				caption="Written into the model when you publish. Preview it here before it ships."
-			>
-				{/*
-				  The Ambient occlusion view owns the mode; a second switch here
-				  could only guess which mode switching the bake off returns to.
-				*/}
-				<DrillDownTrigger
-					to="occlusion"
-					icon={<Contrast />}
-					label="Ambient occlusion"
-					summary={OCCLUSION_SUMMARY[occlusion.mode]}
-				/>
-				<Toggle
-					label="Studio lights"
-					description="Their light and soft shadows, written into a light map. Best on matte products; other glTF viewers show the model without them."
-					checked={bake.lights}
-					onCheckedChange={(lights) =>
-						commit((prev) => ({ ...prev, bake: { ...prev.bake, lights } }))
-					}
-				/>
-				{bake.lights && enabledLights.length === 0 && (
-					<PanelCaption>Turn a light on to bake it.</PanelCaption>
-				)}
-
-				{bakePreview.bakesAnything && (
-					<BakeSection
-						preview={bakePreview.preview}
-						canBake={bakePreview.canBake}
-						isOptimizing={bakePreview.isOptimizing}
-						isAnimated={bakePreview.isAnimated}
-						onBake={() => void bakePreview.bake()}
-						onShownChange={bakePreview.setShown}
-					/>
 				)}
 			</DrillDownView>
 		</DrillDown>

@@ -432,7 +432,7 @@ describe('the publish panel', () => {
 
 		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
 		expect(mocks.toastWarning).toHaveBeenCalledWith(
-			'1 material could not take baked ambient occlusion.',
+			"1 material could not take the studio finish's depth.",
 			{ description: 'wheel: its mesh is placed more than once' }
 		)
 	})
@@ -450,7 +450,7 @@ describe('the publish panel', () => {
 
 		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
 		expect(mocks.toastWarning).toHaveBeenCalledWith(
-			'Ambient occlusion could not be baked, so the scene was published without it.',
+			'The studio finish could not add depth, so the scene was published without it.',
 			{ description: 'WebGL 2 is unavailable' }
 		)
 	})

@@ -168,11 +168,11 @@ export const updateSceneSettings = defineOperation({
 
 /** Baking raytraces on a GPU, which a terminal does not have. */
 export const BAKED_OCCLUSION_WARNING =
-	"This scene's lighting asks for baked ambient occlusion, which only the Publisher can bake: it was published without it. Publish from the Publisher to bake it, or set lighting.occlusion.mode to 'live' or 'off'."
+	"This scene's lighting asks for a studio finish with depth (baked ambient occlusion), which only the Publisher can draw: it was published without it. Publish from the Publisher to add it, or set lighting.occlusion.mode to 'live' or 'off'."
 
 /** The light maps are raytraced too. */
 export const BAKED_LIGHTS_WARNING =
-	"This scene's lighting asks for its studio lights to be baked, which only the Publisher can do: it was published with them live. Publish from the Publisher to bake them, or set lighting.bake.lights to false."
+	"This scene's lighting asks for a studio finish with its studio lights (baked into a light map), which only the Publisher can draw: it was published with them live. Publish from the Publisher to add it, or set lighting.bake.lights to false."
 
 /** What a scene's lighting asks to bake that this publish could not. */
 function unbakedWarnings(

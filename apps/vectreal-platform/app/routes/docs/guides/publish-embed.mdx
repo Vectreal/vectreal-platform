@@ -15,21 +15,20 @@ Publishing transitions a scene from **draft** to **published** status. Only publ
 To revert to draft, click **Revoke publication** and confirm.
 
 Publishing compresses a copy of the model for visitors; the scene you edit is
-left as it is. When the scene's lighting has ambient occlusion set to
-**baked** (in the Lighting tool's Ambient occlusion view, or
-`lighting.occlusion.mode: 'baked'` through the API), publishing
-also raytraces it into each material's own occlusion map before compressing.
+left as it is. When the scene's lighting has a
+[studio finish](/docs/guides/lighting#studio-finish) with **Depth** (or
+`lighting.occlusion.mode: 'baked'` through the API), publishing also raytraces
+ambient occlusion into each material's own occlusion map before compressing.
 Any glTF viewer shows it, and it costs nothing to draw. Baking runs in your
 browser and needs WebGL 2. When materials cannot be baked, a warning counts
 them and names the first with its reason; the
 [core reference](/docs/packages/core#occlusion-bake) lists the reasons. A
 material whose model brought its own occlusion map keeps it and is not counted.
-If the bake fails as a whole, the scene still publishes, without it, and the
+If depth fails as a whole, the scene still publishes, without it, and the
 warning says so.
 
-When the lighting bakes its studio lights (**Studio lights** in the Lighting
-tool's [Bake](/docs/guides/lighting#bake) view, or `lighting.bake.lights: true`
-through the API), publishing also raytraces their light and soft shadows into a
+When the studio finish draws in the studio lights (**Studio lights** in its
+settings, or `lighting.bake.lights: true` through the API), publishing also raytraces their light and soft shadows into a
 light map for each material, after the ambient occlusion. Only the Vectreal
 viewer draws it; other glTF viewers show the model without the studio lights.
 Materials that cannot take it, and a bake that fails, are reported the same
@@ -47,7 +46,7 @@ live lights back at once.
 present apps/vectreal-platform/app/lib/domain/scene/client/publish-export.ts occlusion: resolved.occlusion.mode === 'baked',
 present apps/vectreal-platform/app/workers/publish-export.worker.ts () => bakeOcclusionIntoDocument(document, bakeRenderer),
 present apps/vectreal-platform/app/workers/publish-export.worker.ts bakeLightsIntoDocument(document, lights, bakeRenderer),
-present apps/vectreal-platform/app/lib/domain/scene/client/publish-export.ts could not be baked, so the scene was published without it
+present apps/vectreal-platform/app/lib/domain/scene/client/publish-export.ts could not add depth, so the scene was published without it
 present apps/vectreal-platform/app/lib/domain/scene/client/publish-export.ts so the scene was published with them live.
 */}
 

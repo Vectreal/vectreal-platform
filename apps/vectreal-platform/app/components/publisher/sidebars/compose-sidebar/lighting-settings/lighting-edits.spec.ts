@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { hexToKelvin, kelvinToHex, NEUTRAL_KELVIN } from './color-temperature'
 import {
 	backgroundOfType,
+	withFinish,
 	matchingSetup,
 	withLight,
 	withLightAdded,
@@ -148,5 +149,22 @@ describe('color temperature', () => {
 			expect(kelvinToHex(hexToKelvin(hex))).toBe(hex)
 		}
 		expect(hexToKelvin(kelvinToHex(3200))).toBe(3200)
+	})
+})
+
+describe('withFinish', () => {
+	it('bakes the occlusion for Depth and hands it back to live without it', () => {
+		const on = withFinish({ occlusion: { mode: 'off' } }, { depth: true })
+		expect(on.occlusion?.mode).toBe('baked')
+		expect(withFinish(on, { depth: false }).occlusion?.mode).toBe('live')
+	})
+
+	it('switches the studio lights without touching the occlusion', () => {
+		const lighting: LightingSettings = {
+			occlusion: { mode: 'live', live: { intensity: 2 } }
+		}
+		const next = withFinish(lighting, { lights: true })
+		expect(next.bake?.lights).toBe(true)
+		expect(next.occlusion).toBe(lighting.occlusion)
 	})
 })

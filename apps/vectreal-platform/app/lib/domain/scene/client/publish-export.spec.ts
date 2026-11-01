@@ -210,7 +210,7 @@ describe('occlusionBakeWarning', () => {
 				]
 			})
 		).toEqual({
-			message: '2 materials could not take baked ambient occlusion.',
+			message: "2 materials could not take the studio finish's depth.",
 			description: 'wheel: its mesh is placed more than once'
 		})
 	})
@@ -256,7 +256,7 @@ describe('lightBakeWarning', () => {
 	it('says the scene shipped with live lights when the bake failed', () => {
 		expect(lightBakeWarning({ failed: 'WebGL 2 is unavailable' })).toEqual({
 			message:
-				'The studio lights could not be baked, so the scene was published with them live.',
+				'The studio finish could not draw the studio lights, so the scene was published with them live.',
 			description: 'WebGL 2 is unavailable'
 		})
 	})
@@ -269,7 +269,7 @@ describe('lightBakeWarning', () => {
 			})
 		).toEqual({
 			message:
-				'1 material could not take the baked lights and keeps them live.',
+				"1 material could not take the studio finish's lights and keeps them live.",
 			description: 'wheel: its mesh is placed more than once'
 		})
 	})

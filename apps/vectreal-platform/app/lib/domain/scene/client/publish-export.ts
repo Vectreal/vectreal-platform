@@ -148,7 +148,7 @@ export function occlusionBakeWarning(
 	if ('failed' in occlusion) {
 		return {
 			message:
-				'Ambient occlusion could not be baked, so the scene was published without it.',
+				'The studio finish could not add depth, so the scene was published without it.',
 			description: occlusion.failed
 		}
 	}
@@ -159,7 +159,7 @@ export function occlusionBakeWarning(
 	const [first, ...rest] = missed
 	if (!first) return null
 	return {
-		message: `${missed.length} material${rest.length === 0 ? '' : 's'} could not take baked ambient occlusion.`,
+		message: `${missed.length} material${rest.length === 0 ? '' : 's'} could not take the studio finish's depth.`,
 		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
 	}
 }
@@ -172,14 +172,14 @@ export function lightBakeWarning(
 	if ('failed' in lights) {
 		return {
 			message:
-				'The studio lights could not be baked, so the scene was published with them live.',
+				'The studio finish could not draw the studio lights, so the scene was published with them live.',
 			description: lights.failed
 		}
 	}
 	const [first, ...rest] = lights.skipped
 	if (!first) return null
 	return {
-		message: `${lights.skipped.length} material${rest.length === 0 ? '' : 's'} could not take the baked lights and keep${rest.length === 0 ? 's' : ''} them live.`,
+		message: `${lights.skipped.length} material${rest.length === 0 ? '' : 's'} could not take the studio finish's lights and keep${rest.length === 0 ? 's' : ''} them live.`,
 		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
 	}
 }

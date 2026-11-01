@@ -1,9 +1,10 @@
+import { Button } from '@shared/components/ui/button'
 import { Toggle } from '@shared/components/ui/toggle'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Sparkles } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
@@ -28,7 +29,10 @@ import {
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
-import { hasUnsavedChangesAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	hasUnsavedChangesAtom,
+	processAtom
+} from '../../../../../lib/stores/publisher-config-store'
 import {
 	documentOptimizationsAtom,
 	optimizationRuntimeAtom
@@ -86,6 +90,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	} = useAtomValue(optimizationRuntimeAtom)
 	const setOptimizationRuntime = useSetAtom(optimizationRuntimeAtom)
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
+	const setProcessState = useSetAtom(processAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
 	const lighting = useAtomValue(lightingAtom)
 	const bakes = useMemo(() => publishBakes(lighting), [lighting])
@@ -374,6 +379,31 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						label="GPU-compressed textures"
 						description="Keeps textures compressed on the GPU, so the scene appears sooner and uses less memory, most of all on phones. Publishing takes longer. Off by default on the Original preset."
 					/>
+					{/* Its payoff shows only once it is on, so it is offered where publishing is decided. */}
+					{canPublish && !bakes.occlusion && !bakes.lights && (
+						<div className="space-y-2">
+							<p className="text-muted-foreground text-xs">
+								A studio finish draws soft shadows and depth into the model, so
+								every view shows them at no cost.
+							</p>
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() =>
+									setProcessState((prev) => ({
+										...prev,
+										mode: 'compose',
+										activeComposeTool: 'lighting',
+										showSidebar: true,
+										showPublishPanel: false
+									}))
+								}
+							>
+								<Sparkles aria-hidden />
+								Add studio finish
+							</Button>
+						</div>
+					)}
 				</SidebarSectionContent>
 			</SidebarSection>
 
