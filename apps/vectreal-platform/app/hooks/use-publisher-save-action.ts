@@ -12,6 +12,7 @@ import {
 	processAtom,
 	showPublishPanelAtom
 } from '../lib/stores/publisher-config-store'
+import { runningOperationAtom } from '../lib/stores/save-progress-store'
 import {
 	buildUpgradeModalState,
 	upgradeModalAtom
@@ -49,6 +50,8 @@ export const usePublisherSaveAction = ({
 			await onRequireAuth?.()
 			return
 		}
+		// A publish saves first itself, and the panel shows one run at a time.
+		if (store.get(runningOperationAtom) === 'publish') return
 
 		setProcessState((prev) => ({ ...prev, isSaving: true }))
 

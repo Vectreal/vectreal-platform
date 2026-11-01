@@ -12,6 +12,7 @@ import {
 	enterPreviewModeAtom,
 	processAtom
 } from '../lib/stores/publisher-config-store'
+import { dispatchSaveProgressAtom } from '../lib/stores/save-progress-store'
 
 import type { ReactNode } from 'react'
 
@@ -74,6 +75,31 @@ describe('usePublisherSaveAction', () => {
 		expect(toastError).toHaveBeenCalledWith(
 			expect.stringContaining('disk full')
 		)
+	})
+
+	it('does not start a save while a publish runs its own', async () => {
+		const store = createStore()
+		store.set(dispatchSaveProgressAtom, {
+			type: 'publish-started',
+			saves: false
+		})
+		const saveSceneSettings = vi.fn()
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<Provider store={store}>{children}</Provider>
+		)
+		const { result } = renderHook(
+			() =>
+				usePublisherSaveAction({
+					sceneId: 's1',
+					userId: 'u1',
+					saveSceneSettings
+				}),
+			{ wrapper }
+		)
+
+		await act(() => result.current.handleSaveScene())
+
+		expect(saveSceneSettings).not.toHaveBeenCalled()
 	})
 
 	it('toasts a failure while preview mode hides the save panel', async () => {
