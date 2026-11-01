@@ -61,8 +61,14 @@ import type {
 	ScenePublishStateResponse
 } from '../../../../../types/api'
 import type { SaveSceneFn } from '../../../../../types/publisher-scene'
+import type { PublishExportOutcome } from '../../../../../workers/publish-export.worker.types'
 
 type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
+
+const anyBakeFailed = (outcome: PublishExportOutcome | undefined) =>
+	[outcome?.occlusion, outcome?.lights].some(
+		(report) => report !== undefined && 'failed' in report
+	)
 
 interface PublishOptionsProps {
 	sceneId?: string
@@ -154,8 +160,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			setPublishStatus('publishing')
 			dispatchProgress({ type: 'publish-step', key: 'export' })
 
-			// A current preview already is the file this publish would make.
-			let result = preview?.status === 'ready' ? preview.outcome : undefined
+			// A current preview already is the file this publish would make,
+			// unless a bake in it failed, which baking again may well not.
+			let result =
+				preview?.status === 'ready' && !anyBakeFailed(preview.outcome)
+					? preview.outcome
+					: undefined
 			if (!result) {
 				const { data: workingGlb } =
 					await exporterRef.current.exportDocumentGLB(document)

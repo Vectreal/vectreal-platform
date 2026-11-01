@@ -13,9 +13,13 @@ import {
 	type ShownBakeContext,
 	useBakePreview,
 	usePublishExport,
+	useShowPublishedFinish,
 	useShownBake
 } from './use-bake-preview'
-import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	bakePreviewAtom,
+	type BakePreview
+} from '../../../../../lib/stores/publisher-config-store'
 import { optimizationRuntimeAtom } from '../../../../../lib/stores/scene-optimization-store'
 import {
 	lightingAtom,
@@ -498,5 +502,49 @@ describe('the bake preview', () => {
 		const { hook } = setup()
 
 		expect(hook.result.current.preview.canBake).toBe(false)
+	})
+})
+
+describe('showing what a publish exported', () => {
+	const outcome = { buffer: new ArrayBuffer(8), occlusion: report }
+	const show = (current: BakePreview | null) => {
+		const store = createStore()
+		store.set(bakePreviewAtom, current)
+		const wrapper = ({ children }: { children: ReactNode }) => (
+			<Provider store={store}>{children}</Provider>
+		)
+		const { result } = renderHook(() => useShowPublishedFinish(), { wrapper })
+		return { store, show: result.current }
+	}
+	const source = { document: {}, passRevision: 0, bakes: 'published' }
+
+	it('leaves a preview of other lights, asked for since, in place', async () => {
+		const newer: BakePreview = {
+			status: 'baking',
+			source: { ...source, bakes: 'moved a light' },
+			shown: true
+		}
+		const { store, show: showFinish } = show(newer)
+
+		await act(() => showFinish(source, outcome as never))
+
+		expect(store.get(bakePreviewAtom)).toBe(newer)
+		expect(mocks.disposeModel).toHaveBeenCalledOnce()
+	})
+
+	it('keeps a preview of the same export hidden when the author hid it', async () => {
+		const { store, show: showFinish } = show({
+			status: 'ready',
+			source,
+			shown: false
+		})
+
+		await act(() => showFinish(source, outcome as never))
+
+		expect(store.get(bakePreviewAtom)).toMatchObject({
+			status: 'ready',
+			shown: false,
+			outcome
+		})
 	})
 })

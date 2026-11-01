@@ -625,6 +625,33 @@ describe('the publish panel', () => {
 		)
 	})
 
+	it('bakes again rather than ship a finish one of whose bakes failed', async () => {
+		mocks.loadToThreeJS.mockResolvedValue({ scene: {} })
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { baked: ['body'], skipped: [] },
+			lights: { failed: 'The GPU reset while baking the studio lights' }
+		})
+		const store = renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, {
+				occlusion: { mode: 'baked' },
+				lights: [{ role: 'key', azimuth: 30 }],
+				bake: { lights: true }
+			})
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)?.status).toBe('ready')
+		)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(2)
+		)
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(2)
+	})
+
 	it('leaves the model as it is when the publish bakes nothing', async () => {
 		const store = renderPanel(balancedPreset)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))

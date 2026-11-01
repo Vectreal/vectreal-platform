@@ -7,7 +7,7 @@ import { PERSISTED_BAKE_FILENAME, SCENE_THUMBNAIL_FILENAME } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
 import { hotspotArtworkFileName } from './hotspot-artwork'
-import { describePublishSource } from './publish-source'
+import { describePublishSource, publishSourceMatches } from './publish-source'
 import {
 	balancedPreset,
 	originalPreset
@@ -168,8 +168,45 @@ describe('describePublishSource', () => {
 			describePublishSource({ ...base, lighting: { lights: [key] } })
 		).toBe(describePublishSource(base))
 	})
+})
 
-	it('describes a scene that bakes nothing as it did before bakes existed', () => {
-		expect(JSON.parse(describePublishSource(base))).not.toHaveProperty('bakes')
+describe('publishSourceMatches', () => {
+	const baked = {
+		...base,
+		lighting: { lights: [{ role: 'key' as const }], bake: { lights: true } }
+	}
+	const withoutBakes = (description: string) => {
+		const { bakes: _bakes, ...rest } = JSON.parse(description)
+		return JSON.stringify(rest)
+	}
+
+	it('reads a publish recorded before bakes were described as current', () => {
+		const current = describePublishSource(baked)
+		expect(publishSourceMatches(withoutBakes(current), current)).toBe(true)
+	})
+
+	it('still sees a model change in a publish recorded before bakes', () => {
+		const current = describePublishSource({ ...baked, assets: model.slice(1) })
+		expect(
+			publishSourceMatches(withoutBakes(describePublishSource(baked)), current)
+		).toBe(false)
+	})
+
+	it('reads a scene published baking nothing as behind once it bakes', () => {
+		expect(
+			publishSourceMatches(
+				describePublishSource(base),
+				describePublishSource(baked)
+			)
+		).toBe(false)
+	})
+
+	it('compares the bakes of a publish that recorded them', () => {
+		expect(
+			publishSourceMatches(
+				describePublishSource(baked),
+				describePublishSource(base)
+			)
+		).toBe(false)
 	})
 })

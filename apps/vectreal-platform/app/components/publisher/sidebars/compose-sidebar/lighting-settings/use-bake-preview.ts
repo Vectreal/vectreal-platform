@@ -157,8 +157,17 @@ export function useShowPublishedFinish() {
 	return useCallback(
 		async (source: BakePreview['source'], outcome: PublishExportOutcome) => {
 			try {
-				// Replaces a preview still drawing, whose own result is then dropped.
-				setPreview(await finishedPreview(loader, source, outcome))
+				const next = await finishedPreview(loader, source, outcome)
+				setPreview((current) => {
+					// A preview asked for since, of other lights or codecs, is the
+					// author's newer request and stays.
+					if (current && current.source.bakes !== source.bakes) {
+						if (next.model) disposeModel(next.model)
+						return current
+					}
+					// One of the same export still drawing is dropped when it lands.
+					return { ...next, shown: current?.shown ?? true }
+				})
 			} catch {
 				// Every bake failed; the publish already warned about it.
 			}

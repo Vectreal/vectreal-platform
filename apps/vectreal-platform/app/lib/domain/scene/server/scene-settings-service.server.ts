@@ -47,7 +47,7 @@ import {
 	selectUnreferencedAssetIds
 } from '../../asset/asset-storage.server'
 import { optimizationsMatch } from '../client/optimization-inference'
-import { describePublishSource } from '../publish-source'
+import { describePublishSource, publishSourceMatches } from '../publish-source'
 import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 
 import type { SceneMetaState } from '../../../../types/publisher-config'
@@ -825,8 +825,12 @@ class SceneSettingsService {
 			  nothing is published, or when the row predates the fingerprint and
 			  so cannot say.
 			*/
+			const current = published?.sourceFingerprint
+				? await readPublishSource(tx, sceneId)
+				: null
 			const publishedIsCurrent = published?.sourceFingerprint
-				? published.sourceFingerprint === (await readPublishSource(tx, sceneId))
+				? current !== null &&
+					publishSourceMatches(published.sourceFingerprint, current)
 				: null
 
 			return { ...stats, publishedIsCurrent }

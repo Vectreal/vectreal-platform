@@ -22,9 +22,7 @@ import type {
  * see. What the GLB depends on is the model document (its glTF JSON, buffers
  * and textures), what publish encodes it with: Draco, and GPU texture
  * compression, which is a presentation setting but changes the file; and
- * what it bakes in, from the lighting. The bakes join the description only
- * when there are any, so a scene that bakes nothing describes itself as it
- * did before they existed.
+ * what it bakes in, from the lighting, null when nothing is baked.
  *
  * Asset ids stand in for the document because uploads are content-addressed:
  * a save reuses a stored asset only when its name and hash match, so the same
@@ -59,16 +57,31 @@ export function describePublishSource({
 	const optimizations = optimizationSettings ?? originalPreset
 	const { enabled: dracoEnabled = false, ...dracoOptions } =
 		optimizations.draco ?? {}
-	const bakes = bakesKey(lighting ?? undefined)
-
 	return JSON.stringify({
 		model: modelAssetIds,
 		draco: dracoEnabled ? canonicalDracoOptions(dracoOptions) : null,
 		gpuTextures: shouldCompressTexturesForGpu(presentation, {
 			isOriginalPreset: optimizationsMatch(optimizations, originalPreset)
 		}),
-		...(bakes ? { bakes } : {})
+		bakes: bakesKey(lighting ?? undefined)
 	})
+}
+
+/**
+ * Whether a published file's description still matches the saved scene's. A
+ * description recorded before the bakes joined it has no `bakes` at all and
+ * says nothing about them, so they are left out of that comparison: a scene
+ * published with bakes then does not read as behind for a change it never
+ * made. Every later description has `bakes`, null when nothing was baked,
+ * so with the current one's stripped it can never match.
+ */
+export function publishSourceMatches(published: string, current: string) {
+	if (published === current) return true
+	const { bakes: _bakes, ...rest } = JSON.parse(current) as Record<
+		string,
+		unknown
+	>
+	return JSON.stringify(rest) === published
 }
 
 /**

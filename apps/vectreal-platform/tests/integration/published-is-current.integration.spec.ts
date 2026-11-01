@@ -220,7 +220,9 @@ describe('whether the published file is current', () => {
 		expect(await isCurrent(sceneId)).toBe(true)
 
 		const baked = { lights: [key], bake: { lights: true } }
+		// Published baking nothing, the file has no light map to keep current.
 		await save(sceneId, model, { lighting: baked })
+		expect(await isCurrent(sceneId)).toBe(false)
 		await publish(sceneId)
 		await save(sceneId, model, {
 			lighting: { ...baked, lights: [{ ...key, azimuth: 31 }] }
@@ -253,6 +255,27 @@ describe('whether the published file is current', () => {
 		})
 
 		expect(await isCurrent(sceneId)).toBeNull()
+	})
+
+	it('reads a publish recorded before bakes were described as current', async () => {
+		const { sceneId, model } = await publishedScene()
+		const baked = {
+			lights: [{ role: 'key' as const, azimuth: 30 }],
+			bake: { lights: true }
+		}
+		await save(sceneId, model, { lighting: baked })
+		await publish(sceneId)
+		const [row] = await db
+			.select({ sourceFingerprint: schema.scenePublished.sourceFingerprint })
+			.from(schema.scenePublished)
+			.where(eq(schema.scenePublished.sceneId, sceneId))
+		const { bakes: _bakes, ...recorded } = JSON.parse(row.sourceFingerprint!)
+		await db
+			.update(schema.scenePublished)
+			.set({ sourceFingerprint: JSON.stringify(recorded) })
+			.where(eq(schema.scenePublished.sceneId, sceneId))
+
+		expect(await isCurrent(sceneId)).toBe(true)
 	})
 
 	it('cannot say for a publish made before it was recorded', async () => {
