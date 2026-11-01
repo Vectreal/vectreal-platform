@@ -269,6 +269,12 @@ test('publishing bakes occlusion on the GPU into the GLB, from the published cor
 	// Three's loader reads it back as a switched-off light map carrying the
 	// lights it was baked from.
 	expect(bake.lights.loaded).toBe(true)
+	// The bake is drawn in fenced slices: unsliced, two materials with four
+	// occlusion and two light passes each took twelve draws, and the first ray
+	// alone is split into tiles. No slice is drawn before the last one's fence
+	// has signaled.
+	expect(bake.slices.fences).toBeGreaterThan(12)
+	expect(bake.slices.early).toBe(0)
 
 	// A GPU reset mid-bake fails the bake rather than ship what it read back.
 	expect(bake.contextLoss).toMatch(/GPU reset/)
@@ -309,6 +315,7 @@ declare global {
 						shared: number
 						loaded: boolean
 					}
+					slices: { fences: number; early: number }
 					contextLoss: string
 			  }
 			| { status: 'error'; error: string }

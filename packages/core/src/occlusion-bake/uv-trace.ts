@@ -42,6 +42,16 @@ import {
 	MASK_SIZE,
 	type CutoutLayers
 } from './cutouts'
+import {
+	FIRST_SLICE_BUDGET,
+	gpuSettled,
+	gpuTimeMs,
+	type GpuTimer,
+	MAX_SAMPLES_PER_DRAW,
+	nextSliceBudget,
+	slicesOf,
+	UNFENCED_SLICE_BUDGET
+} from './gpu-slices'
 import { castsOcclusion, readUvs, type OcclusionBakeTarget } from './plan'
 import { triangleIndices, type ScenePrimitive } from './scene-primitives'
 
@@ -84,8 +94,6 @@ export interface UvTrace {
 	label: string
 }
 
-/** Rays per draw. A draw that runs too long is killed by the GPU watchdog. */
-export const SAMPLES_PER_PASS = 16
 /** Texels the bake is spread past each UV island, so mipmaps do not blend in the empty texture. */
 const GUTTER = 8
 /** How far a ray starts off its surface, as a share of the scene diagonal. */
@@ -98,8 +106,9 @@ const MAX_CUTOUT_HITS = 8
   triangle is drawn at its UVs, and each texel traces rays from the surface
   point it covers into a BVH of the whole scene that `castsOcclusion` admits.
   An alpha-masked caster blocks a ray only where its mask is opaque.
-  Rays run a few at a time, yielding between draws, so a slow GPU is not reset
-  and the page stays responsive. Undefined when nothing in the scene blocks a
+  Rays run in slices of a few milliseconds, each waiting for the GPU to finish
+  the last, so a slow GPU is not reset and the page's frames are never queued
+  behind more than one slice. Undefined when nothing in the scene blocks a
   ray, which leaves the result to the caller.
 */
 export async function traceInUvSpace(
@@ -156,7 +165,7 @@ export async function traceInUvSpace(
 			diagonal: { value: diagonal },
 			bias: { value: RAY_BIAS * diagonal },
 			firstSample: { value: 0 },
-			passSamples: { value: SAMPLES_PER_PASS },
+			passSamples: { value: MAX_SAMPLES_PER_DRAW },
 			totalSamples: { value: samples }
 		},
 		vertexShader: TRACE_VERTEX,
@@ -204,6 +213,20 @@ export async function traceInUvSpace(
 	let contextLost = false
 	const onContextLost = () => (contextLost = true)
 	renderer.domElement.addEventListener('webglcontextlost', onContextLost)
+	const gl = renderer.getContext() as WebGL2RenderingContext
+	const throwIfLost = () => {
+		if (contextLost || gl.isContextLost()) {
+			throw new Error(`The GPU reset while baking ${trace.label}`)
+		}
+	}
+	// The bake's own GPU time, where the browser offers it: the wall clock also
+	// counts the page's frames, and would shrink the bake to nothing while the
+	// view is moving.
+	const timer: GpuTimer | null = gl.getExtension(
+		'EXT_disjoint_timer_query_webgl2'
+	)
+	// Carried from slice to slice and target to target, so it is measured once.
+	let budget = FIRST_SLICE_BUDGET
 
 	const baked: UvBake[] = []
 	let scene = new Scene()
@@ -217,17 +240,49 @@ export async function traceInUvSpace(
 			}
 
 			renderer.setClearColor(0x000000, 0)
+			accumulation.scissorTest = false
 			renderer.setRenderTarget(accumulation)
 			renderer.clear()
-			for (let first = 0; first < samples; first += SAMPLES_PER_PASS) {
-				traceMaterial.uniforms['firstSample'].value = first
-				traceMaterial.uniforms['passSamples'].value = Math.min(
-					SAMPLES_PER_PASS,
-					samples - first
-				)
+			accumulation.scissorTest = true
+			const slices = slicesOf(size, samples, () => budget)
+			for (const { tile, firstSample, samples: passSamples } of slices) {
+				traceMaterial.uniforms['firstSample'].value = firstSample
+				traceMaterial.uniforms['passSamples'].value = passSamples
+				accumulation.scissor.set(tile.x, tile.y, tile.width, tile.height)
+				// Applies the target's scissor, which three reads only here.
 				renderer.setRenderTarget(accumulation)
-				renderer.render(scene, camera)
-				await nextTask()
+				const query = timer && gl.createQuery()
+				if (timer && query) gl.beginQuery(timer.TIME_ELAPSED_EXT, query)
+				const start = performance.now()
+				try {
+					renderer.render(scene, camera)
+				} catch (error) {
+					// An open query would refuse every later one on this context.
+					if (timer && query) {
+						gl.endQuery(timer.TIME_ELAPSED_EXT)
+						gl.deleteQuery(query)
+					}
+					throw error
+				}
+				if (timer && query) gl.endQuery(timer.TIME_ELAPSED_EXT)
+				const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)
+				if (fence) {
+					await gpuSettled(gl, fence)
+					const wallMs = performance.now() - start
+					const elapsed =
+						(timer && query && gpuTimeMs(gl, timer, query)) ?? wallMs
+					budget = nextSliceBudget(
+						budget,
+						tile.width * tile.height * passSamples,
+						elapsed,
+						size * size * MAX_SAMPLES_PER_DRAW
+					)
+				} else {
+					if (query) gl.deleteQuery(query)
+					budget = UNFENCED_SLICE_BUDGET
+					await nextTask()
+				}
+				throwIfLost()
 			}
 
 			resolveMaterial.uniforms['accumulated'].value = accumulation.texture
@@ -235,9 +290,7 @@ export async function traceInUvSpace(
 			renderer.render(resolveScene, camera)
 			const pixels = new Uint8Array(size * size * 4)
 			renderer.readRenderTargetPixels(resolved, 0, 0, size, size, pixels)
-			if (contextLost || renderer.getContext().isContextLost()) {
-				throw new Error(`The GPU reset while baking ${trace.label}`)
-			}
+			throwIfLost()
 			fillGutter(pixels, size, trace.empty)
 			baked.push({ material, size, pixels })
 

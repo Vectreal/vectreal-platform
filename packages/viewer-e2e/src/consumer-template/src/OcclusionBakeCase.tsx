@@ -207,6 +207,34 @@ async function decodePng(png: Uint8Array) {
 async function bake() {
 	const glb = await new WebIO().writeBinary(floorScene(await quadrantPng()))
 	const renderer = new WebGLRenderer()
+	// Counts the bake's GPU slices by their fences, and the draws issued while
+	// the last fence had not yet been seen to signal: each slice should wait
+	// out the one before it is drawn.
+	const gl = renderer.getContext() as WebGL2RenderingContext
+	const slices = { fences: 0, early: 0 }
+	let waiting = false
+	const fenceSync = gl.fenceSync.bind(gl)
+	const clientWaitSync = gl.clientWaitSync.bind(gl)
+	const drawElements = gl.drawElements.bind(gl)
+	const drawArrays = gl.drawArrays.bind(gl)
+	gl.drawElements = (mode, count, type, offset) => {
+		if (waiting) slices.early++
+		drawElements(mode, count, type, offset)
+	}
+	gl.drawArrays = (mode, first, count) => {
+		if (waiting) slices.early++
+		drawArrays(mode, first, count)
+	}
+	gl.fenceSync = (condition, flags) => {
+		slices.fences++
+		waiting = true
+		return fenceSync(condition, flags)
+	}
+	gl.clientWaitSync = (sync, flags, timeout) => {
+		const status = clientWaitSync(sync, flags, timeout)
+		if (status !== gl.TIMEOUT_EXPIRED) waiting = false
+		return status
+	}
 	try {
 		let report: OcclusionBakeReport | undefined
 		let lightsReport: LightBakeReport | undefined
@@ -289,7 +317,8 @@ async function bake() {
 					loaded.lightMapIntensity === 0 &&
 					loadedInfo?.signature === bakedLightsSignature(OVERHEAD)
 				)
-			}
+			},
+			slices
 		}
 	} finally {
 		renderer.dispose()

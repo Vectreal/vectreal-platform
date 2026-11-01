@@ -44,6 +44,7 @@ declare global {
 						shared: number
 						loaded: boolean
 					}
+					slices: { fences: number; early: number }
 					contextLoss: string
 			  }
 			| { status: 'error'; error: string }
