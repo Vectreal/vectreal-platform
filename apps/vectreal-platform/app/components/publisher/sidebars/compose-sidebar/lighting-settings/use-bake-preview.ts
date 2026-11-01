@@ -98,15 +98,36 @@ export const bakedAnything = (preview: BakePreview | null) =>
 		bakedCount(preview?.reports?.lights) >
 	0
 
+/** What the viewer is doing with the model the bake would stand in for. */
+export interface ShownBakeContext {
+	isLightingOpen: boolean
+	/** Whether the viewer can pose the model: it has clips the runtime may play. */
+	canAnimate: boolean
+	/** Whether a clip is playing right now. */
+	isAnimating: boolean
+}
+
 /**
- * The baked model the viewer shows in place of the model: only while
- * `isLightingOpen` and the author shows it. Call it once, from the publisher
- * route: it also owns the preview's lifetime.
+ * The baked model the viewer shows in place of the model, while the author
+ * shows it. Call it once, from the publisher route: it also owns the
+ * preview's lifetime.
+ *
+ * The viewer never animates the copy it draws in place of the model, so the
+ * copy only matches the model while the model rests in its bind pose. A model
+ * nothing can pose keeps the copy in every tool. One the runtime can pose,
+ * by playing, pausing mid-clip, scrubbing or holding a clip's closing pose,
+ * keeps it only inside the Lighting tool, where the author asked to look at
+ * the bake, and never while a clip plays.
  */
-export function useShownBake(isLightingOpen: boolean): Object3D | undefined {
+export function useShownBake({
+	isLightingOpen,
+	canAnimate,
+	isAnimating
+}: ShownBakeContext): Object3D | undefined {
 	const preview = useCurrentPreview()
 	usePreviewLifetime(preview)
-	return isLightingOpen &&
+	const matchesModel = !canAnimate || (isLightingOpen && !isAnimating)
+	return matchesModel &&
 		preview?.status === 'ready' &&
 		// A bake that changed nothing has no switch to turn it off, and its copy
 		// would only freeze an animated model in its rest pose.
