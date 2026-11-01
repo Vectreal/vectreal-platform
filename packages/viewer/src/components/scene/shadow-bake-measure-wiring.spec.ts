@@ -21,7 +21,6 @@ const shadows = readFileSync(
 describe('live shadow bakes', () => {
 	it('mount only once the model is sized', () => {
 		expect(shadows).toMatch(/\) : sized \? \([\s\S]*?\bbake\s*\) : null\}/)
-		expect(shadows).toContain('{sized && contactShadow}')
 	})
 
 	it('treat a viewer of children alone as sized', () => {

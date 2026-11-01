@@ -498,7 +498,11 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 	})
 
 	it.each([
-		['a section the API does not have', { lighting: {} }],
+		['a section the API does not have', { grid: {} }],
+		[
+			'two lights of one role',
+			{ lighting: { lights: [{ role: 'key' }, { role: 'key' }] } }
+		],
 		['a section that is not an object', { environment: 'night' }],
 		['a look value of the wrong type', { shadows: { opacity: 'dark' } }],
 		// The publisher derives other state from the model when these change.

@@ -37,8 +37,8 @@ const panel = read(
 	'publisher',
 	'sidebars',
 	'compose-sidebar',
-	'environment-settings',
-	'environment-settings-panel.tsx'
+	'lighting-settings',
+	'lighting-settings-panel.tsx'
 )
 const embedPage = read(
 	'app',
@@ -67,7 +67,7 @@ describe('environment_load_failed', () => {
 		)
 	})
 
-	it('is shown in the Environment panel', () => {
+	it('is shown in the Lighting panel', () => {
 		expect(panel).toContain('useAtomValue(environmentLoadFailedAtom)')
 		expect(panel).toMatch(/\{environmentLoadFailed && \(\s*<p role="alert"/)
 	})

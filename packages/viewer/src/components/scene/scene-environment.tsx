@@ -4,7 +4,8 @@ import {
 	EnvironmentProps,
 	resolveEnvironmentFiles
 } from '@vctrl/core'
-import { memo, useEffect, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
+import { Euler } from 'three'
 
 import LoadFailureBoundary from '../load-failure-boundary'
 import { useRoomEnvironment } from './room-environment'
@@ -62,6 +63,11 @@ const FallbackEnvironment = ({
 }
 
 interface SceneEnvironmentProps extends EnvironmentProps {
+	/**
+	 * Degrees around the vertical axis. Turns the map's light, its reflections
+	 * and, when it is the background, the background together.
+	 */
+	rotation?: number
 	/** Called with the map's files when they fail to load. */
 	onLoadFailed?: (files: string[]) => void
 	/** Called with the map's files once they light the scene. */
@@ -99,8 +105,17 @@ const LoadedSignal = ({ onLoaded }: { onLoaded: () => void }) => {
  * canvas.
  */
 const SceneEnvironment = memo(
-	({ onLoadFailed, onLoaded, ...props }: SceneEnvironmentProps) => {
+	({
+		onLoadFailed,
+		onLoaded,
+		rotation = 0,
+		...props
+	}: SceneEnvironmentProps) => {
 		const environment = { ...defaultEnvOptions, ...props }
+		const euler = useMemo(
+			() => new Euler(0, (rotation * Math.PI) / 180, 0),
+			[rotation]
+		)
 		const {
 			background,
 			backgroundBlurriness,
@@ -131,6 +146,8 @@ const SceneEnvironment = memo(
 					backgroundBlurriness={backgroundBlurriness}
 					backgroundIntensity={backgroundIntensity}
 					environmentIntensity={environmentIntensity}
+					environmentRotation={euler}
+					backgroundRotation={euler}
 					scene={scene}
 				/>
 				<LoadedSignal onLoaded={() => onLoaded?.(fileList)} />

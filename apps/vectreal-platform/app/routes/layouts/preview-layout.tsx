@@ -13,12 +13,14 @@ import { resolveSceneMembership } from '../../lib/domain/dashboard/dashboard-per
 import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
 import { buildEmbedPath } from '../../lib/domain/embed/embed-snippet'
 import {
+	buildDraftFinishManifest,
 	buildInlineEmbedManifest,
 	EmbedSettingsReadFailure
 } from '../../lib/domain/embed/inline-embed-manifest.server'
 import { parseSceneRouteParams } from '../../lib/domain/scene/scene-route-params'
 import { readEmbedSceneSettings } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
+import { sceneSettingsService } from '../../lib/domain/scene/server/scene-settings-service.server'
 import { getAuthUser } from '../../lib/http/auth.server'
 import {
 	previewDocumentHeaders,
@@ -83,15 +85,15 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	/*
 	  A published scene previews as what a visitor gets: the published GLB and
 	  the embed's settings, inline so the model starts loading on hydration.
-	  A draft has no such artefact and loads the working scene, as it always
-	  has. The settings are read alongside the publication and dropped unread
-	  for a draft, the way `/embed` reads them.
+	  A draft shows the studio finish saved with it while that is current, and
+	  otherwise loads the working scene, as it always has.
 	*/
-	const [previewScene, settingsData] = await Promise.all([
+	const [previewScene, settingsData, finish] = await Promise.all([
 		getPublishedScenePreview(projectId, sceneId),
 		readEmbedSceneSettings(sceneId).catch(
 			(error: unknown) => new EmbedSettingsReadFailure(error)
-		)
+		),
+		sceneSettingsService.resolveSceneFinish(sceneId).catch(() => null)
 	])
 	const manifest = previewScene
 		? await buildInlineEmbedManifest(request, {
@@ -102,7 +104,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 				token: null,
 				allowUnsignedWithoutToken: true
 			})
-		: null
+		: finish
+			? await buildDraftFinishManifest(request, {
+					projectId,
+					sceneId,
+					finish: finish.asset,
+					settingsData
+				})
+			: null
 
 	return data({ projectId, sceneId, manifest })
 }
@@ -136,7 +145,10 @@ export function ErrorBoundary() {
 
 /** What the preview route needs from this layout. */
 export interface PreviewLayoutContext {
-	/** The published scene's manifest; null for a draft, or when not inlined. */
+	/**
+	 * The published scene's manifest, or a draft's with its saved studio
+	 * finish; null for any other draft, or when not inlined.
+	 */
 	manifest: SceneEmbedManifestResponse | null
 }
 

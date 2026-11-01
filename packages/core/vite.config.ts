@@ -41,6 +41,14 @@ export default defineConfig({
 					import.meta.dirname,
 					'src/model-exporter/index.ts'
 				),
+				'light-bake': path.resolve(
+					import.meta.dirname,
+					'src/light-bake/index.ts'
+				),
+				'occlusion-bake': path.resolve(
+					import.meta.dirname,
+					'src/occlusion-bake/index.ts'
+				),
 				node: path.resolve(import.meta.dirname, 'src/node/index.ts')
 			},
 			name: '@vctrl/core',

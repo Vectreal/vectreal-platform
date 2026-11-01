@@ -15,7 +15,8 @@ export {
 } from './camera-flight'
 export {
 	default as SceneControls,
-	defaultControlsOptions
+	defaultControlsOptions,
+	type ViewerView
 } from './scene-controls'
 export {
 	default as SceneEnvironment,
@@ -31,5 +32,6 @@ export {
 } from './resolve-hotspot-markers'
 export { default as SceneModel } from './scene-model'
 export { default as ScenePostProcessing } from './scene-postprocessing'
+export { default as SceneLights } from './scene-lights'
 export { default as SceneShadows, defaultShadowsOptions } from './scene-shadows'
 export type { ModelKey } from './model-frame'

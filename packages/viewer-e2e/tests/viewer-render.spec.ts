@@ -201,6 +201,87 @@ test('a model loads from a URL through src, and a bad one shows the fallback', a
 	expect(pageErrors, pageErrors.join('\n')).toEqual([])
 })
 
+test('publishing bakes occlusion on the GPU into the GLB, from the published core', async ({
+	page
+}) => {
+	const pageErrors: string[] = []
+	page.on('pageerror', (err) => pageErrors.push(err.message))
+	// A shader that fails to compile is logged, not thrown.
+	const consoleErrors: string[] = []
+	page.on('console', (msg) => {
+		if (msg.type() === 'error') consoleErrors.push(msg.text())
+	})
+
+	await page.goto('/?occlusion-bake')
+	await page.waitForFunction(
+		() => window.__BAKE_E2E__ !== undefined,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+	const bake = await page.evaluate(() => window.__BAKE_E2E__)
+	if (bake?.status !== 'baked') throw new Error(bake?.error ?? 'no bake')
+
+	// The floor and leaf are baked; the box and canopy have no UVs, so they
+	// only cast.
+	expect(bake.baked).toEqual(['floor', 'leaf'])
+	expect(bake.skipped).toEqual(['box:no-uv0', 'canopy:no-uv0'])
+
+	// Dark under the box, partly open beside it, open far from it. The open
+	// texel at the box's mirror image across v = 0.5 proves the bake is read
+	// back the right way up: row 0 is v = 0.
+	expect(bake.under).toBeLessThan(40)
+	expect(bake.beside).toBeGreaterThan(bake.under)
+	expect(bake.beside).toBeLessThan(235)
+	expect(bake.far).toBeGreaterThan(245)
+	expect(bake.mirrored).toBeGreaterThan(245)
+	// About half the rays rise steeply enough to meet the canopy. A bake that
+	// kept only some of its samples, or aimed them all one way, misses this.
+	expect(bake.canopy).toBeGreaterThan(70)
+	expect(bake.canopy).toBeLessThan(170)
+
+	// Every texel above was read from the published GLB: a PNG in the floor's
+	// occlusion slot, on the first UV set.
+	expect(bake.storedPng).toBe(true)
+	// The light map, baked after the occlusion on the same renderer, from one
+	// small light overhead: full light in the open, none under the box or the
+	// canopy, and the right way up. Stored as the square root of its share of
+	// the scale, so full light reads 255.
+	expect(bake.lights.baked).toEqual(['floor', 'leaf'])
+	expect(bake.lights.scale).toBeCloseTo(1)
+	expect(bake.lights.far).toBeGreaterThan(245)
+	expect(bake.lights.mirrored).toBeGreaterThan(245)
+	expect(bake.lights.under).toBeLessThan(10)
+	expect(bake.lights.canopy).toBeLessThan(10)
+	// The leaf shades the floor only under its opaque quadrant, the one at
+	// low v: read upside down, the shadow lands on leafClearV instead. The
+	// occlusion bake casts through the same ray test, but one quadrant of a
+	// small card moves its wide-angle occlusion too little to assert here.
+	expect(bake.lights.leafSolid).toBeLessThan(10)
+	expect(bake.lights.leafClearU).toBeGreaterThan(245)
+	expect(bake.lights.leafClearV).toBeGreaterThan(245)
+	// Open floor and the scrap under the box share these texels: half lit,
+	// which stores as the square root of a half, about 180. A sum would clip
+	// to full light.
+	expect(bake.lights.shared).toBeGreaterThan(140)
+	expect(bake.lights.shared).toBeLessThan(215)
+	// Three's loader reads it back as a switched-off light map carrying the
+	// lights it was baked from.
+	expect(bake.lights.loaded).toBe(true)
+	// The bake is drawn in fenced slices: unsliced, two materials with four
+	// occlusion and two light passes each took twelve draws, and the first ray
+	// alone is split into tiles. No slice is drawn before the last one's fence
+	// has signaled.
+	expect(bake.slices.fences).toBeGreaterThan(12)
+	expect(bake.slices.early).toBe(0)
+
+	// A GPU reset mid-bake fails the bake rather than ship what it read back.
+	expect(bake.contextLoss).toMatch(/GPU reset/)
+	expect(pageErrors, pageErrors.join('\n')).toEqual([])
+	expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
+})
+
 declare global {
 	interface Window {
 		__VIEWER_E2E__?: { status: 'mounted' | 'crashed'; error?: string }
@@ -213,5 +294,30 @@ declare global {
 		}
 		__SRC_READY__?: boolean
 		__SRC_MISSING__?: string[]
+		__BAKE_E2E__?:
+			| {
+					status: 'baked'
+					baked: string[]
+					skipped: string[]
+					under: number
+					beside: number
+					far: number
+					mirrored: number
+					canopy: number
+					storedPng: boolean
+					lights: {
+						baked: string[]
+						scale: number
+						under: number
+						far: number
+						mirrored: number
+						canopy: number
+						shared: number
+						loaded: boolean
+					}
+					slices: { fences: number; early: number }
+					contextLoss: string
+			  }
+			| { status: 'error'; error: string }
 	}
 }

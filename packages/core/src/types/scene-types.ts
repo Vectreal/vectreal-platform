@@ -362,6 +362,110 @@ export interface ShadowsProps extends ThreeAccumulativeShadowsProps {
 }
 
 /**
+ * The part a studio light plays. It names the light in the publisher and in
+ * presets; the viewer renders every role alike. A scene has at most one light
+ * per role, which is also what caps it at {@link MAX_SCENE_LIGHTS}.
+ */
+export type SceneLightRole = 'key' | 'fill' | 'rim'
+
+/**
+ * A soft area light at an infinite distance, placed relative to the
+ * environment so turning the environment turns the light with it.
+ *
+ * It lights the model, shadows the model and shadows the ground. Every shadow
+ * a scene shows comes from these lights, so none has controls of its own.
+ */
+export interface SceneLight {
+	role: SceneLightRole
+	/** Off keeps the light's placement for when it is turned back on. */
+	enabled?: boolean
+	/**
+	 * Degrees around the vertical axis, before the environment's rotation is
+	 * added: 0 lights the model from +Z, 90 from +X.
+	 */
+	azimuth?: number
+	/** Degrees above the horizon; 90 is straight overhead. */
+	elevation?: number
+	/**
+	 * Angular diameter in degrees, as the light appears from the model. The
+	 * softness of every shadow it casts follows from it.
+	 */
+	size?: number
+	/**
+	 * Strength relative to the environment's own diffuse light: 1 is as bright
+	 * as the whole environment. Relative, so the environment's brightness
+	 * scales the lights with it, and a shadow's darkness follows from the
+	 * ratio alone: ground the light cannot reach keeps
+	 * `1 / (1 + intensity * sin(elevation))` of the light it would get, which
+	 * is `1 / (1 + intensity)` for a light overhead.
+	 */
+	intensity?: number
+	/** `#rrggbb` hex. */
+	color?: string
+}
+
+/** What the viewer shows behind the model. */
+export type SceneLightingBackground =
+	/** The environment map itself. */
+	| { type: 'environment'; intensity?: number; blur?: number }
+	/** A flat stage the viewer paints behind its transparent canvas. */
+	| SceneBackdrop
+	/** Nothing: the viewer stays transparent and the page shows through. */
+	| { type: 'none' }
+
+/**
+ * Ambient occlusion: darkening in creases and tight gaps. Off unless chosen.
+ * `live` draws it in screen space every frame while the view moves. `baked`
+ * raytraces it into the model's own textures when the scene is published, so
+ * it costs nothing to draw and shows in any glTF viewer.
+ */
+export interface SceneOcclusionSettings {
+	mode?: 'off' | 'live' | 'baked'
+	live?: {
+		/** Higher is darker. */
+		intensity?: number
+		/** Draw it only once the view is still. */
+		atRest?: boolean
+	}
+}
+
+/**
+ * How a scene is lit: an environment map and up to three studio lights, from
+ * which every shadow follows.
+ *
+ * Supersedes {@link SceneSettings.environment} and
+ * {@link SceneSettings.shadows}. Read it through `resolveLighting`, which also
+ * answers for scenes saved before it existed.
+ */
+export interface LightingSettings {
+	environment?: {
+		map?: EnvironmentKey
+		resolution?: EnvironmentResolution
+		/** Brightness of the environment, and with it of every light. */
+		intensity?: number
+		/** Degrees around the vertical axis; turns the lights with it. */
+		rotation?: number
+	}
+	/** At most {@link MAX_SCENE_LIGHTS}, one per role. None is valid. */
+	lights?: SceneLight[]
+	/** A floor under the model that receives its shadows. */
+	ground?: { enabled?: boolean }
+	background?: SceneLightingBackground
+	occlusion?: SceneOcclusionSettings
+	/**
+	 * What publishing bakes into the model. `lights` bakes the studio lights'
+	 * diffuse light and soft shadows into a light map the Vectreal viewer draws
+	 * in place of their live diffuse light and shadows; their highlights stay
+	 * live. Other glTF viewers ignore the map and show the model without the
+	 * studio lights.
+	 */
+	bake?: { lights?: boolean }
+}
+
+/** Key, fill and rim: the classic studio setup, one light per role. */
+export const MAX_SCENE_LIGHTS = 3
+
+/**
  * Options for runtime model size normalization.
  * The viewer clamps the model's bounding-box diagonal to [minSize, maxSize]
  * by applying a uniform scale to the model root group.
@@ -511,9 +615,18 @@ export interface SceneSettings {
 	interactions?: SceneInteractionDefinition[]
 	/** Camera controls configuration */
 	controls?: ControlsProps
-	/** Environment/lighting configuration */
+	/** How the scene is lit. Read it through `resolveLighting`. */
+	lighting?: LightingSettings
+	/**
+	 * The environment as scenes stored it before {@link lighting}. Still read,
+	 * through `resolveLighting`, when a scene has no `lighting`.
+	 */
 	environment?: EnvironmentProps
-	/** Shadow rendering settings */
+	/**
+	 * Shadows as scenes stored them before {@link lighting}, with a light of
+	 * their own that lit nothing else. Still read, through `resolveLighting`,
+	 * when a scene has no `lighting`.
+	 */
 	shadows?: ShadowsProps
 	/** Runtime model size normalization. Does not modify the underlying glTF data. */
 	normalization?: NormalizationOptions

@@ -7,6 +7,7 @@ import type {
 	PublishExportRequest
 } from '../../../../workers/publish-export.worker.types'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
+import type { OcclusionBakeSkipReason } from '@vctrl/core/occlusion-bake'
 
 /**
  * Budget for one publish export. KTX2 encoding takes seconds per texture, so
@@ -76,8 +77,9 @@ export function resolvePublishGeometryOptions(
 
 /**
  * The size `workingGlb` publishes at, encoded the way publish encodes it.
- * Exact except for GPU texture encoding, which takes seconds per texture and
- * is left to publish: without it, publish ships the textures as they are.
+ * Exact except for GPU texture encoding and baked occlusion, which take
+ * seconds and are left to publish: without them, publish ships the textures
+ * as they are.
  */
 export async function projectPublishedGlbBytes(
 	workingGlb: Uint8Array,
@@ -87,9 +89,73 @@ export async function projectPublishedGlbBytes(
 		{
 			buffer: workingGlb.slice().buffer as ArrayBuffer,
 			...geometry,
-			ktx2: false
+			ktx2: false,
+			occlusion: false,
+			lights: false
 		},
 		() => {}
 	)
 	return buffer.byteLength
+}
+
+/** Why a material took no bake, as the author reads it. */
+export const OCCLUSION_SKIP_REASONS: Record<OcclusionBakeSkipReason, string> = {
+	'existing-occlusion': 'it has an occlusion map already, which is kept',
+	'shared-geometry': 'its mesh is placed more than once',
+	skinned: 'a skin moves it',
+	'no-uv0': 'it has no UVs',
+	'tiling-uvs': 'its UVs repeat the texture',
+	'overlapping-uvs': 'parts of it share the same UVs',
+	'double-sided':
+		'it is drawn from both sides, which one light map cannot light',
+	animated: 'an animation moves it, and a bake holds one pose',
+	'moving-shadows':
+		'another part moves or repeats, and its shadow here cannot be baked',
+	'cutout-shadows':
+		'a cutout whose mask cannot be read casts a shadow here, which the bake would draw solid',
+	unlit: 'it is unlit, so there is no light to bake'
+}
+
+/** The warning a publish owes the author about its occlusion bake, if any. */
+export function occlusionBakeWarning(
+	occlusion: PublishExportOutcome['occlusion']
+): { message: string; description: string } | null {
+	if (!occlusion) return null
+	if ('failed' in occlusion) {
+		return {
+			message:
+				'The studio finish could not add depth, so the scene was published without it.',
+			description: occlusion.failed
+		}
+	}
+	// A material that brought its own occlusion map keeps it, as intended.
+	const missed = occlusion.skipped.filter(
+		({ reason }) => reason !== 'existing-occlusion'
+	)
+	const [first, ...rest] = missed
+	if (!first) return null
+	return {
+		message: `${missed.length} material${rest.length === 0 ? '' : 's'} could not take the studio finish's depth.`,
+		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
+	}
+}
+
+/** The warning a publish owes the author about its light bake, if any. */
+export function lightBakeWarning(
+	lights: PublishExportOutcome['lights']
+): { message: string; description: string } | null {
+	if (!lights) return null
+	if ('failed' in lights) {
+		return {
+			message:
+				'The studio finish could not draw the studio lights, so the scene was published with them live.',
+			description: lights.failed
+		}
+	}
+	const [first, ...rest] = lights.skipped
+	if (!first) return null
+	return {
+		message: `${lights.skipped.length} material${rest.length === 0 ? '' : 's'} could not take the studio finish's lights and keep${rest.length === 0 ? 's' : ''} them live.`,
+		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
+	}
 }

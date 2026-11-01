@@ -1,0 +1,210 @@
+# Lighting
+
+The **Lighting** tool in the Publisher sets how a scene is lit: the environment
+it reflects, up to three studio lights, and the ground their shadows land on.
+There are no shadow settings of their own. Every shadow follows from the
+lights, so moving a light moves its shadow, and a softer light casts a softer
+one.
+
+---
+
+## Setups
+
+A setup is a whole look in one click: an environment, the lights placed on
+that environment's own bright spots, and the balance between them. Each
+thumbnail shows a chrome ball and a grey ball lit by it.
+
+| Setup | Looks like |
+|---|---|
+| **Soft studio** | Even, wrapping light with a gentle shadow. The default. |
+| **Product** | A smaller key with a fill and a rim, for crisp highlights and a defined shadow |
+| **Dramatic** | A small, strong key and a rim over a dim environment |
+| **Overhead** | A key from almost straight above, the shadow pooled under the model |
+| **Daylight** | An outdoor sky with a small sun as the key, for a sharp shadow |
+| **Golden hour** | A low, warm sun with a cool fill from the other side |
+| **Overcast** | A soft sky and no added lights, for an almost shadowless look |
+| **Night** | A dim city with a cool key and a warm rim |
+
+Picking a setup keeps the background, the environment's resolution and the
+studio finish you chose. Change any light, the environment or the ground
+afterwards and the label above the grid reads **Custom**. Pick the setup again
+to go back to it.
+
+**Turn** is the globe under the setups: the sky around the model, seen from
+where the camera is, so it follows as you orbit the scene. It shows the horizon, the environment's bright regions and a dot for each
+light in its color. Drag it sideways to rotate the environment and every light
+together, so the reflections, the shading and the shadow stay in agreement.
+Arrow keys turn it a degree at a time and Page Up and Page Down ten (Shift
+multiplies either by ten), and a double-click turns it back to the front. It turns about the vertical axis
+only: tilting would lift the environment's horizon off the ground. Turning
+does not count as an edit: the setup stays selected.
+
+---
+
+## Environment
+
+The environment is a panoramic image that lights the model and shows in its
+reflections. There are fifteen, grouped as **Studio**, **Outdoor**, **Nature**
+and **Night**. Picking one keeps the lights where they are.
+
+- **Brightness** scales the environment, and every light with it, because a
+  light's strength is measured against the environment.
+- **Resolution** is 1k or 4k. 4k sharpens reflections on glossy models and takes
+  longer to download.
+
+If a map cannot be loaded, the scene is lit by a neutral room instead and the
+panel says so.
+
+---
+
+## Lights
+
+A scene has up to three lights, one per role:
+
+- **Key light**, the main light, which shapes the model and casts the shadow it
+  stands on.
+- **Fill light**, which softens the shadows the key leaves on the model.
+- **Rim light**, which lights the model from behind to lift its edge off the
+  background.
+
+Open a light to change it:
+
+| Setting | What it does |
+|---|---|
+| **On** | Turns the light off without losing where it was |
+| **Strength** | 1 is as bright as the whole environment |
+| **Softness** | The light's size, in degrees as seen from the model. Larger is a softer light and a softer shadow |
+| **Direction** | Degrees around the model, before **Turn** is added |
+| **Height** | Degrees above the horizon; 90 is straight overhead |
+| **Color** | A color temperature from 2000 K (warm) to 10000 K (cool); 6600 K is neutral white |
+
+A shadow's darkness follows from the lights alone. Ground that a light cannot
+reach keeps `1 / (1 + strength × sin(height))` of the light it would get, so an
+overhead light at strength 1 leaves its shadow at half the brightness around
+it.
+
+---
+
+## Ground shadow
+
+**Ground shadow** puts a floor under the model that catches the shadows its
+lights cast. The floor itself is invisible: only the shadow shows, over
+whatever is behind the model.
+
+---
+
+## Background
+
+What sits behind the model is set in its own tool, **Background**, next to
+Lighting. It is saved with the lighting.
+
+| Background | Behind the model |
+|---|---|
+| **None** | Nothing. An embed shows the page it sits on. |
+| **Color** | A flat stage in one color |
+| **Gradient** | A stage shading from a top color to a bottom color |
+| **HDRI** | The environment image itself, with **Blur** and **Brightness** |
+
+The environment lights the model whichever background you choose. With
+**HDRI**, the image has no floor, so a ground shadow has nothing to land on.
+
+---
+
+## Studio finish
+
+**Studio finish** draws soft shadows and depth into the model when the scene
+is published. The viewer then shows them at no cost, rather than working them
+out every frame. It sits on the Lighting tool's front page: **Add studio
+finish** turns it on and previews it on the model, and **Settings and report**
+opens its settings.
+
+| Setting | What it draws in |
+|---|---|
+| **Depth** | Ambient occlusion: the darkening in creases and tight gaps, raytraced into the model's own textures. Any glTF viewer shows it. |
+| **Studio lights** | The light and soft shadows the lights cast on the model, written into a light map. The Vectreal viewer draws the map in place of the lights' live light and shadows. Their highlights stay live. |
+
+The finish looks best on matte products, where the soft shadows a model casts
+on itself are what you see. On shiny surfaces most of what you see is
+reflection, which stays live either way. A few limits:
+
+- The light map is stored in a Vectreal extension, `VECTREAL_lightmap`. Other
+  glTF viewers ignore it and show the model with the environment and depth
+  but without the studio lights. So does an older `@vctrl/viewer`.
+- The map holds the lights as they were when you published. If you change a
+  light or **Turn** afterwards, the viewer draws the lights live until you
+  publish again. The environment's brightness, and the map itself, scale the
+  drawn-in light just as they scale live light.
+- The finish follows the model's shape, not its normal maps, so fine surface
+  detail does not shade it.
+- A material that cannot take the finish keeps live light. On top of the
+  reasons depth lists, that includes a material drawn from both sides, such
+  as a label or a leaf: one map cannot light its front and back. So does a
+  part an animation turns, moves or reshapes, because the map holds only the
+  light of its rest pose. And while any part moves, or is drawn more than
+  once, the whole model keeps live light: the map would hold that part's
+  shadow where it stood, not where it goes. The same goes while a cutout
+  material (alpha mask) casts a shadow whose mask the finish cannot read,
+  since it would draw its leaves as solid cards: a KTX2 texture, one that does
+  not decode, or any past the first 64 masks it can read. An unlit material
+  has no light to draw in.
+- The lights still cast live shadows, which now shade only their highlights,
+  so a finished setup costs about as much to draw as a live one.
+
+**Preview it on the model** draws what publishing will, in the background, and
+shows the result in every tool. A model with animation the viewer can play is
+the exception: the finish holds its rest pose, so it shows only in the Lighting
+tool, and not while a clip plays. It draws in short slices
+that leave the graphics card room for the page, so you can keep working while it
+runs. It finishes sooner while the view is still. **Show studio
+finish** switches between the finished model and the model as it is, to
+compare. The settings then say how long it took and, for each part, how many
+materials took it, and list each material that could not with the reason. If
+one part fails, the preview shows the other and says why, as publishing ships
+it. Changing what the finish draws, or a light it draws, discards the preview,
+as does a new optimization pass or model. Publishing draws it again either way.
+[Publishing](/docs/guides/publish-embed#publishing-a-scene) says what it
+needs.
+
+### Live occlusion
+
+Without **Depth**, ambient occlusion can be drawn live instead, in the same
+settings. **Live** draws it every frame while the view moves, **Only when
+still** draws it once the view stops, and **Strength** sets how dark it gets.
+Turning **Depth** on replaces it, and turning Depth off hands it back to live.
+
+---
+
+## Scenes saved before the Lighting tool
+
+A scene saved with the earlier Environment and Shadows tools is lit from those
+settings, translated into an environment and, if it cast a shadow, a key light, and opens in the
+Lighting tool that way. Saving it stores the lighting. Embeds running an older
+`@vctrl/viewer` keep working: the server derives the older settings from the
+lighting for them.
+
+---
+
+## From code
+
+The scene settings API reads and changes lighting as the `lighting` section:
+`GET` and `PATCH /api/v1/scenes/{sceneId}/settings`, or `updateSceneSettings`
+in [`@vctrl/sdk`](/docs/packages/sdk). The section sent replaces the stored one
+whole. Once a scene has a `lighting` section it supersedes `environment` and
+`shadows`, which describe only a scene saved before it, so change `lighting`. The [`@vctrl/core`](/docs/packages/core) package exports the setups as
+`LIGHTING_SETUPS`.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/compose-tools.ts label: 'Lighting',
+present packages/core/src/scene-lighting/lighting-setups.ts export const DEFAULT_LIGHTING_SETUP: LightingSetupId = 'soft-studio'
+present packages/sdk/src/scene-settings.ts lighting: sceneLightingSchema.optional(),
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/color-temperature.ts export const NEUTRAL_KELVIN = 6600
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Ground shadow"
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Depth"
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-edits.ts mode: finish.depth ? 'baked' : 'live'
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/studio-finish-card.tsx Add studio finish
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/bake-section.tsx 'Preview it on the model'
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/bake-section.tsx label="Show studio finish"
+present apps/vectreal-platform/app/components/publisher/sidebars/compose-sidebar/lighting-settings/lighting-settings-panel.tsx label="Studio lights"
+present packages/core/src/scene-lighting/baked-lights.ts export const LIGHTMAP_EXTENSION = 'VECTREAL_lightmap'
+present packages/core/src/scene-lighting/baked-lights.ts rotation: round(lighting.environment.rotation),
+*/}

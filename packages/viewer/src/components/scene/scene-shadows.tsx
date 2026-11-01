@@ -1,5 +1,6 @@
 import { ContactShadows } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
+import { resolveLighting } from '@vctrl/core'
 import {
 	Fragment,
 	memo,
@@ -25,6 +26,13 @@ import {
 import { measureModel, worldBounds } from './model-measurement'
 import SceneBakedShadow from './scene-baked-shadow'
 import {
+	groundBakeInputs,
+	groundBakeSources,
+	LIGHT_DISTANCE_FACTOR,
+	lightDirection,
+	litLights
+} from './scene-lighting'
+import {
 	captureShadowDensity,
 	computeBakeSignature,
 	isPersistedBakeValid,
@@ -33,20 +41,23 @@ import {
 import ShadowLightGizmo from './shadow-light-gizmo'
 
 import type { BakedShadow, ShadowBakeCapture } from '../../types/viewer-types'
-import type { BakeBasis, NormalizationOptions, ShadowsProps } from '@vctrl/core'
+import type {
+	BakeBasis,
+	NormalizationOptions,
+	ResolvedLighting,
+	SceneLightRole,
+	ShadowsProps
+} from '@vctrl/core'
 
-// Accumulative shadows: high-quality baked soft shadows for a static subject.
-// The shadow is baked into the receiving plane's UV space from jittered bake
-// lights, independent of the camera, so camera auto-rotate (which orbits the
-// camera, not the model) keeps the bake valid while rotating. The bake lights
-// only feed the bake and do not light the rest of the scene.
-//
-// The numeric controls below are expressed RELATIVE to the model's measured
-// size (see `contentScale`): the plane scale and light radius are multiples of
-// the model's largest dimension, and the light position is in model-size units.
-// This keeps the bake correctly proportioned for any model — the shadow geometry
-// is otherwise fixed in world units while model normalization is off by default,
-// so a small model would cast a shadow far too tiny to survive the alpha cutoff.
+/**
+ * What this viewer filled in for a legacy `shadowsOptions` field left out.
+ * Nothing here reads it any more: legacy shadows reach the viewer through
+ * `resolveLighting`, whose `LEGACY_LIGHTING_DEFAULTS` must stay equal to it
+ * (the app's `viewer-defaults.spec.ts` checks), and it is still exported for
+ * integrations that spread it into `shadowsOptions`.
+ *
+ * @deprecated Use `lighting` and `resolveLighting` from `@vctrl/core`.
+ */
 export const defaultShadowsOptions: ShadowsProps = {
 	enabled: false,
 	// Spread the bake across frames so it fades in smoothly rather than hitching
@@ -134,9 +145,36 @@ const defaultContactFallback = {
 	color: '#000000'
 }
 
-// Every field is optional: the caller's config is merged over
-// `defaultShadowsOptions` below, so a partial config is always valid.
-type SceneShadowsProps = Partial<ShadowsProps> & {
+/*
+  The ground bake's quality. Not settings: what a shadow looks like follows
+  from the lights, and these only decide how faithfully it is drawn. The plane
+  is a multiple of the model's footprint: wide enough for a low light's long
+  shadow to fade out before the plane's edge, tight enough that the shadow
+  still fills a fair share of the fixed-resolution light map.
+*/
+const GROUND_BAKE = {
+	frames: 48,
+	scale: 4,
+	resolution: 1024,
+	// The cutoff a temporal bake ramps toward before calibration replaces it;
+	// see `defaultShadowsOptions.alphaTest`.
+	alphaTest: 3,
+	colorBlend: 2,
+	amount: 8,
+	intensity: Math.PI * 2,
+	bias: 0.001
+}
+
+/**
+ * Either the scene's resolved lighting or, as before it, shadow settings,
+ * which are resolved into lighting here.
+ */
+type SceneShadowsProps = SceneShadowsOwnProps &
+	Partial<Omit<ShadowsProps, keyof SceneShadowsOwnProps>>
+
+interface SceneShadowsOwnProps {
+	/** The scene's lighting, resolved; its lights cast the ground's shadow. */
+	lighting?: ResolvedLighting
 	/**
 	 * The loaded model. Used only to measure the subject's world-space size so the
 	 * bake can be proportioned to it.
@@ -162,20 +200,21 @@ type SceneShadowsProps = Partial<ShadowsProps> & {
 	 */
 	isModelAnimating?: boolean
 	/**
-	 * When true, renders an in-scene draggable handle for aiming the shadow light.
+	 * When true, renders an in-scene draggable handle for aiming a light.
 	 */
 	lightEditable?: boolean
+	/** The light the handle aims; the key, or the first lit light, when absent. */
+	editableLightRole?: SceneLightRole
 	/**
-	 * When true, the accumulative shadow bakes in a single synchronous pass on
-	 * mount (drei `temporal={false}`) instead of fading in across frames. Intended
-	 * for read-only/preview contexts so the shadow is present immediately rather
-	 * than building up every time a scene opens. The editor keeps the temporal
-	 * fade-in for responsive tweaking.
+	 * When true, the bake runs in a single synchronous pass on mount instead of
+	 * fading in across frames. Intended for read-only/preview contexts so the
+	 * shadow is present immediately rather than building up every time a scene
+	 * opens. The editor keeps the temporal fade-in for responsive tweaking.
 	 */
 	staticBake?: boolean
 	/**
-	 * Called with a new light position in MODEL-SIZE units when the handle is
-	 * dragged (i.e. ready to store back into `light.position`).
+	 * Called with the key light's new position, in units of the model's bounding
+	 * radius, when the handle is dragged: the legacy `shadows.light.position`.
 	 */
 	onLightChange?: (position: [number, number, number]) => void
 	/**
@@ -358,85 +397,76 @@ const ShadowBakeCapture = ({
 }
 
 /**
- * Adaptive scene shadows: accumulative (baked, high quality) for a static
- * subject, contact (cheaper, live) while the model animates.
+ * The ground under the model and the shadows the scene's lights cast on it.
  *
- * Both drei shadow components render on the default `useFrame` priority and do
- * not take over the render loop — r3f's automatic `gl.render` still runs, so the
- * scene (and the baked shadow plane) draws normally. ContactShadows clears its
- * own render target each frame as long as `gl.autoClear` is at its default
- * (`true`); nothing here forces it off.
+ * Baked into the plane's UV space from jittered samples of every light, and of
+ * the environment's hemisphere, independent of the camera: camera auto-rotate
+ * orbits the camera, not the model, and keeps the bake valid. While the model
+ * animates, a cheaper live contact shadow tracks the moving geometry instead.
+ *
+ * The bake renders on the default `useFrame` priority and does not take over
+ * the render loop, so r3f's automatic `gl.render` still draws the scene and
+ * the baked plane.
  */
 const SceneShadows = memo(
 	({
+		lighting: resolvedLighting,
 		model,
 		displayedModel,
 		normalizationOptions,
 		isModelAnimating = false,
 		lightEditable = false,
 		onLightChange,
+		editableLightRole,
 		staticBake = false,
 		bakedShadow,
 		onShadowBakeReady,
 		clipExtents,
-		...props
+		...legacyShadows
 	}: SceneShadowsProps) => {
-		const { footprint, radius, height, vertexCount, measured, sized } =
-			useModelMetrics(model, normalizationOptions)
+		// Shadow settings from before `lighting`, as a caller composing the
+		// scene components passes them; keyed by value, since a caller spreads
+		// them fresh on every render.
+		const legacyKey = resolvedLighting ? '' : JSON.stringify(legacyShadows)
+		const lighting = useMemo(
+			() =>
+				resolvedLighting ??
+				resolveLighting({ shadows: legacyShadows as ShadowsProps }),
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			[resolvedLighting, legacyKey]
+		)
+		const { footprint, radius, vertexCount, measured, sized } = useModelMetrics(
+			model,
+			normalizationOptions
+		)
 		const apiRef = useRef<ShadowBakeApi | null>(null)
 		// While the light handle is dragged, bake a coarse, fast preview so the
 		// shadow tracks the light, then settle to full quality on release.
 		const [previewing, setPreviewing] = useState(false)
 
-		// Merge incoming params over the defaults, which fill any gaps. Callers
-		// reading persisted settings normalize them first, so a partially
-		// populated stored row still arrives as a complete config.
-		const options = {
-			...defaultShadowsOptions,
-			...props,
-			enabled: props.enabled ?? defaultShadowsOptions.enabled,
-			light: {
-				...defaultShadowsOptions.light,
-				...props.light
-			},
-			contact: {
-				...defaultShadowsOptions.contact,
-				...props.contact
-			}
-		}
-
-		// Resolve the relative controls to world units for the current model. The
-		// plane and penumbra follow the horizontal footprint; the light distance and
-		// shadow camera follow the bounding radius so the light always clears the
-		// model regardless of its aspect ratio.
-		const planeScale =
-			(options.scale ?? defaultShadowsOptions.scale!) * footprint
-		const lightRadius =
-			(options.light.radius ?? defaultShadowsOptions.light!.radius!) * footprint
-		// Source array is stable (it comes from the stored config / a constant), so
-		// memoizing keeps the resolved world-space position referentially stable
-		// across re-renders that don't actually move the light.
-		const lightPositionSource =
-			options.light.position ?? defaultShadowsOptions.light!.position!
-		const lightPosition = useMemo(
-			() =>
-				lightPositionSource.map((axis) => axis * radius) as [
-					number,
-					number,
-					number
-				],
-			[lightPositionSource, radius]
+		const enabled = lighting.ground.enabled
+		const rotation = lighting.environment.rotation
+		// Keyed on the lights' values, not the resolved array, which is built
+		// fresh by every resolve: an unrelated re-render must not re-bake.
+		const lights = litLights(lighting)
+		const bakeInputs = groundBakeInputs(lights)
+		const bakeKey = JSON.stringify(bakeInputs)
+		const bakeLights = useMemo(
+			() => bakeInputs,
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			[bakeKey]
+		)
+		const ground = useMemo(
+			() => groundBakeSources(bakeLights, rotation, radius),
+			[bakeLights, rotation, radius]
 		)
 
-		const frames = previewing
-			? Math.min(PREVIEW_FRAMES, options.frames ?? PREVIEW_FRAMES)
-			: options.frames
-
+		const planeScale = GROUND_BAKE.scale * footprint
+		const frames = previewing ? PREVIEW_FRAMES : GROUND_BAKE.frames
 		// In a read-only/preview context, bake in one synchronous pass on mount so
-		// the shadow is present immediately instead of building up over many frames
-		// (the bake runs every frame in a layout effect when temporal is off). The editor
-		// keeps the temporal fade-in so live tweaks don't hard-hitch.
-		const temporal = staticBake ? false : options.temporal
+		// the shadow is present immediately instead of building up over many frames.
+		// The editor keeps the temporal fade-in so live tweaks don't hard-hitch.
+		const temporal = !staticBake
 
 		// Memoized so its identity changes only with a bake input: the hold effect
 		// below watches it to learn that the bake changed during a hold.
@@ -444,26 +474,23 @@ const SceneShadows = memo(
 			() => (
 				<AccumulativeShadowBake
 					ref={apiRef}
-					temporal={temporal ?? true}
-					frames={frames ?? defaultShadowsOptions.frames!}
-					alphaTest={options.alphaTest ?? defaultShadowsOptions.alphaTest!}
-					cutoffScale={options.cutoffScale ?? 1}
-					opacity={options.opacity ?? defaultShadowsOptions.opacity!}
+					temporal={temporal}
+					frames={frames}
+					alphaTest={GROUND_BAKE.alphaTest}
+					cutoffScale={1}
+					// Darkness comes from the lights' share of all the light alone.
+					opacity={1}
 					scale={planeScale}
-					resolution={options.resolution ?? defaultShadowsOptions.resolution!}
-					colorBlend={options.colorBlend ?? defaultShadowsOptions.colorBlend!}
-					color={options.color ?? '#000000'}
+					resolution={GROUND_BAKE.resolution}
+					colorBlend={GROUND_BAKE.colorBlend}
+					color="#000000"
 					light={{
-						amount:
-							options.light.amount ?? defaultShadowsOptions.light!.amount!,
-						radius: lightRadius,
-						ambient:
-							options.light.ambient ?? defaultShadowsOptions.light!.ambient!,
-						intensity:
-							options.light.intensity ??
-							defaultShadowsOptions.light!.intensity!,
-						position: lightPosition,
-						bias: options.light.bias ?? defaultShadowsOptions.light!.bias!,
+						amount: GROUND_BAKE.amount,
+						sources: ground.sources,
+						ambient: ground.ambient,
+						distance: ground.distance,
+						intensity: GROUND_BAKE.intensity,
+						bias: GROUND_BAKE.bias,
 						size: SHADOW_CAMERA_SIZE_FACTOR * radius,
 						mapSize: 1024,
 						// Scale the shadow camera depth range to the model. A fixed near
@@ -475,80 +502,16 @@ const SceneShadows = memo(
 					}}
 				/>
 			),
-			[
-				temporal,
-				frames,
-				options.alphaTest,
-				options.cutoffScale,
-				options.opacity,
-				planeScale,
-				options.resolution,
-				options.colorBlend,
-				options.color,
-				options.light.amount,
-				options.light.ambient,
-				options.light.intensity,
-				options.light.bias,
-				lightPosition,
-				lightRadius,
-				radius
-			]
+			[temporal, frames, planeScale, ground, radius]
 		)
-
-		// Soft contact/ground shadow under the directional bake. Memoized for the
-		// same reason as the bake (drei ContactShadows also re-bakes on re-render),
-		// so opening the shadow tool / moving the gizmo doesn't rebuild it.
-		//
-		// `far` is the depth camera's capture height: only geometry between the floor
-		// and `far` darkens, weighted by how close it is to the floor. A SMALL far
-		// (low `reach`) compresses that gradient into a thin near-ground band, so the
-		// falloff between touching and slightly-raised geometry is steep — true
-		// contact AO (only wheels/underbelly), not a uniform silhouette pool. A small
-		// floor keeps the camera from degenerating on near-flat models.
-		const contactScale =
-			(options.contact.scale ?? defaultShadowsOptions.contact!.scale!) *
-			footprint
-		const contactShadow = useMemo(() => {
-			if (!options.contact.enabled) return null
-			const reach =
-				options.contact.reach ?? defaultShadowsOptions.contact!.reach!
-			return (
-				<ContactShadows
-					frames={1}
-					scale={contactScale}
-					far={Math.max(reach * height, radius * 0.03)}
-					blur={options.contact.blur ?? defaultShadowsOptions.contact!.blur!}
-					opacity={
-						options.contact.opacity ?? defaultShadowsOptions.contact!.opacity!
-					}
-					resolution={1024}
-					color={options.color ?? '#000000'}
-					// Sit just below the accumulative plane so the directional cast reads
-					// on top of the ground pool.
-					position={[0, -radius * 0.002, 0]}
-				/>
-			)
-		}, [
-			options.contact.enabled,
-			contactScale,
-			options.contact.blur,
-			options.contact.opacity,
-			options.contact.reach,
-			options.color,
-			height,
-			radius
-		])
 
 		// The ground the shadows are drawn on: a square centered under the model,
 		// as wide as the widest shadow plane drawn. It reaches well past the
 		// model, so the clip planes have to know about it.
-		const animatingScale =
-			(options.scale ?? defaultContactFallback.scale) * footprint
-		const groundScale = isModelAnimating
-			? animatingScale
-			: Math.max(planeScale, options.contact.enabled ? contactScale : 0)
+		const animatingScale = defaultContactFallback.scale * footprint
+		const groundScale = isModelAnimating ? animatingScale : planeScale
 		const groundExtent = useMemo<ClipExtent[] | null>(() => {
-			if (!options.enabled) return null
+			if (!enabled) return null
 			const half = groundScale / 2
 			return [
 				{
@@ -561,42 +524,22 @@ const SceneShadows = memo(
 					]
 				}
 			]
-		}, [options.enabled, groundScale])
+		}, [enabled, groundScale])
 		useClipExtents(clipExtents, groundExtent)
 
 		// The bake inputs a signature covers. A persisted bake is reused only while
-		// it still matches; any change to the light/frames/scale/alphaTest/colorBlend/
-		// model re-bakes live (and the next save re-persists). Uses `options.frames`
-		// (the full count, not the drag-preview reduction). Memoized on primitive
-		// inputs, not the freshly-spread `options`/`options.light` objects, so the
-		// signatures below are not re-serialized and re-hashed on every render.
+		// it still matches; any change to a light, the rotation or the model
+		// re-bakes live (and the next save re-persists). Uses the full frame
+		// count, not the drag-preview reduction.
 		const bakeOptions = useMemo(
 			() => ({
-				light: options.light,
-				frames: options.frames,
-				scale: options.scale,
-				resolution: options.resolution,
-				alphaTest: options.alphaTest,
-				colorBlend: options.colorBlend,
-				cutoffScale: options.cutoffScale
+				lights: bakeLights,
+				rotation,
+				frames: GROUND_BAKE.frames,
+				scale: GROUND_BAKE.scale,
+				resolution: GROUND_BAKE.resolution
 			}),
-			// Keyed on the light's fields, not its object, which is spread fresh on
-			// every render; see above.
-			// eslint-disable-next-line react-hooks/exhaustive-deps
-			[
-				options.frames,
-				options.scale,
-				options.resolution,
-				options.alphaTest,
-				options.colorBlend,
-				options.cutoffScale,
-				options.light.position,
-				options.light.radius,
-				options.light.ambient,
-				options.light.amount,
-				options.light.intensity,
-				options.light.bias
-			]
+			[bakeLights, rotation]
 		)
 		const bakeBasis = useMemo(
 			() => ({ footprint, radius, vertexCount }),
@@ -623,13 +566,12 @@ const SceneShadows = memo(
 			usePersistedBake && bakedShadow?.url !== failedBakeUrl
 
 		// Every live shadow pass captures the meshes drawn when it starts: the
-		// bake snapshots them on restart, the contact pool renders once. So while
-		// the viewer draws another object, a bake that has not settled starts
-		// over on it, and once the model is drawn again the passes start over on
-		// the model unless they had settled before the hold. Restarting reuses
-		// the bake's render targets, so the passes remount only when they changed
-		// during the hold. A layout effect, so no frame renders between the swap
-		// and the restart.
+		// bake snapshots them on restart. So while the viewer draws another
+		// object, a bake that has not settled starts over on it, and once the
+		// model is drawn again the bake starts over on the model unless it had
+		// settled before the hold. Restarting reuses the bake's render targets,
+		// so the bake remounts only when it changed during the hold. A layout
+		// effect, so no frame renders between the swap and the restart.
 		const [shadowGeneration, setShadowGeneration] = useState(0)
 		const holdRef = useRef<{
 			settledBake: ShadowBakeApi | null
@@ -658,23 +600,33 @@ const SceneShadows = memo(
 		// hold starts in is still recorded.
 		useLayoutEffect(() => {
 			if (holdRef.current) holdRef.current.passesChanged = true
-		}, [
-			options.enabled,
-			isModelAnimating,
-			showsPersistedBake,
-			sized,
-			bake,
-			contactShadow
-		])
+		}, [enabled, isModelAnimating, showsPersistedBake, sized, bake])
 
-		if (!options.enabled) return null
+		// The handle aims the light being edited, else the key, else the first.
+		const handleLight =
+			lights.find((light) => light.role === editableLightRole) ??
+			lights.find((light) => light.role === 'key') ??
+			lights[0]
+		const handlePosition = useMemo(
+			() =>
+				handleLight
+					? (lightDirection(handleLight, rotation).map(
+							(axis) => axis * LIGHT_DISTANCE_FACTOR * radius
+						) as [number, number, number])
+					: null,
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+			[handleLight?.azimuth, handleLight?.elevation, rotation, radius]
+		)
+
+		if (!enabled) return null
 
 		if (isModelAnimating) {
 			return (
 				<ContactShadows
-					opacity={options.opacity ?? defaultContactFallback.opacity}
+					// As dark as ground every light is blocked from.
+					opacity={1 - ground.blockedShare}
 					scale={animatingScale}
-					color={options.color ?? defaultContactFallback.color}
+					color={defaultContactFallback.color}
 					blur={defaultContactFallback.blur}
 					far={defaultContactFallback.far * radius}
 				/>
@@ -684,8 +636,6 @@ const SceneShadows = memo(
 		return (
 			<>
 				<Fragment key={shadowGeneration}>
-					{sized && contactShadow}
-
 					{showsPersistedBake && bakedShadow ? (
 						// Load-time fast path: render the stored bake, no recomputation.
 						<LoadFailureBoundary
@@ -696,8 +646,8 @@ const SceneShadows = memo(
 								<SceneBakedShadow
 									url={bakedShadow.url}
 									planeScale={planeScale}
-									opacity={options.opacity ?? defaultShadowsOptions.opacity!}
-									color={options.color ?? '#000000'}
+									opacity={1}
+									color="#000000"
 								/>
 							</Suspense>
 						</LoadFailureBoundary>
@@ -721,9 +671,9 @@ const SceneShadows = memo(
 					/>
 				)}
 
-				{lightEditable && onLightChange && (
+				{lightEditable && onLightChange && handlePosition && (
 					<ShadowLightGizmo
-						position={lightPosition}
+						position={handlePosition}
 						minDistance={radius * 1.3}
 						clipExtents={clipExtents}
 						onDragStart={() => setPreviewing(true)}

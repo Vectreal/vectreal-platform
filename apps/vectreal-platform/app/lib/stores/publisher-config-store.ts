@@ -7,6 +7,7 @@ import {
 	cameraAtom,
 	environmentAtom,
 	exitHotspotCameraAtom,
+	lightingAtom,
 	selectCameraAtom,
 	selectedCameraIdAtom
 } from './scene-settings-store'
@@ -19,8 +20,15 @@ import type {
 	SceneMetaState
 } from '../../types/publisher-config'
 import type { SaveLocationTarget } from '../../types/publisher-scene'
-import type { SceneSettings } from '@vctrl/core'
+import type {
+	PublishExportOutcome,
+	PublishExportProgress
+} from '../../workers/publish-export.worker.types'
+import type { LightingSettings, SceneSettings } from '@vctrl/core'
+import type { LightBakeReport } from '@vctrl/core/light-bake'
+import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
+import type { Object3D } from 'three'
 
 /**
  * Publisher UI preferences. Deliberately holds no load lifecycle: whether a
@@ -29,7 +37,7 @@ import type { ModelFile } from '@vctrl/hooks/use-load-model'
  */
 const processInitialState: ProcessState = {
 	mode: 'optimize',
-	activeComposeTool: 'environment',
+	activeComposeTool: 'lighting',
 	showSidebar: false,
 	showPublishPanel: false,
 	isSaving: false,
@@ -112,14 +120,14 @@ const toolSidebarStateAtom = selectAtom(
  * The compose tool whose panel is actually open, or null when none is.
  *
  * `activeComposeTool` on its own answers a different question: which tool is
- * *selected*. It is never null, it defaults to `environment` before the author
+ * *selected*. It is never null, it defaults to `lighting` before the author
  * has opened anything, and closing a drawer flips `showSidebar` while leaving it
  * exactly where it was. So a scene affordance that reads it directly stays live
  * after the tool that owns it has closed - the tool bar stops highlighting the
  * button while the canvas goes on offering the tool's gizmo.
  *
  * That predicate already existed twice, written by hand: the rail's own
- * `value === activeComposeTool && showSidebar`, and the shadow light handle's
+ * `value === activeComposeTool && showSidebar`, and a scene affordance's
  * copy of it. The hotspot editor wrote a third version that omitted
  * `showSidebar`, which is exactly the drift a shared derivation prevents. Scene
  * affordances read this; nothing reads `activeComposeTool` to mean "active".
@@ -257,7 +265,7 @@ const canEditCameraSettingsAtom = atom(
  * The environment map the viewer last reported it could not load, spelled as
  * `resolveEnvironmentFiles` spells it, until it reports a map loaded. The
  * viewer lights such a scene with a neutral room and nothing on the stage says
- * so, so the Environment panel reads `environmentLoadFailedAtom` to tell the
+ * so, so the Lighting panel reads `environmentLoadFailedAtom` to tell the
  * author.
  */
 const failedEnvironmentFilesAtom = atom<null | string>(null)
@@ -271,15 +279,79 @@ const environmentLoadFailedAtom = atom((get) => {
 	const failed = get(failedEnvironmentFilesAtom)
 	return (
 		failed !== null &&
-		failed === String(resolveEnvironmentFiles(get(environmentAtom)))
+		failed ===
+			String(environmentFilesOf(get(environmentAtom), get(lightingAtom)))
 	)
 })
+
+/**
+ * The map the viewer loads for a scene, spelled as it spells it: the custom
+ * `files` a scene names, else its lighting's hosted map.
+ */
+const environmentFilesOf = (
+	environment: Pick<SceneSettings, 'environment'>['environment'],
+	lighting: LightingSettings
+) =>
+	environment?.files ??
+	resolveEnvironmentFiles({
+		preset: lighting.environment?.map,
+		environmentResolution: lighting.environment?.resolution
+	})
+
+/**
+ * A preview of what publishing would bake, for the working document and the
+ * bakes it was made from. View state only: publishing bakes again.
+ */
+interface BakePreview {
+	status: 'baking' | 'ready' | 'failed'
+	/**
+	 * The document and optimization pass it was baked from, and what was
+	 * baked, down to the lights a light map holds.
+	 */
+	source: { document: unknown; passRevision: number; bakes: string }
+	/** Whether the viewer shows it in place of the model. */
+	shown: boolean
+	/** While baking: the step running now and how far it has come, once it reports. */
+	progress?: PublishExportProgress
+	model?: Object3D
+	/**
+	 * One per bake that ran. A bake that failed says why, while the other is
+	 * shown, as publishing ships it.
+	 */
+	reports?: {
+		occlusion?: OcclusionBakeReport | { failed: string }
+		lights?: LightBakeReport | { failed: string }
+	}
+	/**
+	 * Once ready: the file exactly as publishing would ship it for `source`,
+	 * which publish uploads rather than exporting again.
+	 */
+	outcome?: PublishExportOutcome
+	/** Restored from the finish saved with the scene, which has no `outcome`. */
+	restored?: true
+	durationMs?: number
+	error?: string
+}
+
+const bakePreviewAtom = atom<BakePreview | null>(null)
+
+/**
+ * Where the viewer's orbit camera looks from, as it last reported (degrees,
+ * in the lights' terms), so the Lighting globe can be drawn from the same
+ * side. Null until the viewer reports.
+ */
+const viewDirectionAtom = atom<{ azimuth: number; elevation: number } | null>(
+	null
+)
 
 export {
 	// atoms
 	processAtom,
 	failedEnvironmentFilesAtom,
 	environmentLoadFailedAtom,
+	environmentFilesOf,
+	bakePreviewAtom,
+	viewDirectionAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
 	capturedThumbnailFrameAtom,
@@ -308,3 +380,5 @@ export {
 	processInitialState,
 	sceneMetaInitialState
 }
+
+export type { BakePreview }

@@ -5,6 +5,35 @@ import type {
 	SceneBackdrop
 } from '../types'
 
+/** Every hosted environment map, in the order a picker lists them. */
+export const ENVIRONMENT_KEYS = [
+	'studio-soft',
+	'studio-key',
+	'studio-natural',
+	'outdoor-noon',
+	'outdoor-golden-hour',
+	'outdoor-overcast',
+	'outdoor-sky',
+	'nature-park',
+	'nature-park-overcast',
+	'nature-snow',
+	'nature-moonlit',
+	'night-city',
+	'night-building',
+	'night-pure-sky',
+	'night-stars'
+] as const satisfies readonly EnvironmentKey[]
+
+// A key missing from the list fails to compile here.
+type MissingEnvironmentKey = Exclude<
+	EnvironmentKey,
+	(typeof ENVIRONMENT_KEYS)[number]
+>
+const everyEnvironmentKey: [MissingEnvironmentKey] extends [never]
+	? true
+	: MissingEnvironmentKey = true
+void everyEnvironmentKey
+
 /** The environment a scene is lit by when it names none. */
 export const DEFAULT_ENVIRONMENT_PRESET: EnvironmentKey = 'studio-natural'
 

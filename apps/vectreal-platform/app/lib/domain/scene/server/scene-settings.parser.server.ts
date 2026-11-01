@@ -10,6 +10,7 @@ import {
 	parseSceneAssetIds,
 	parseSceneMeta,
 	parseSourceAssetId,
+	parseStudioFinish,
 	parseTargetFolderId,
 	parseTargetProjectId,
 	parseThumbnailUrl
@@ -246,6 +247,14 @@ export class SceneSettingsParser {
 					return sourceAssetId
 				}
 
+				const studioFinish = parseStudioFinish(requestData, [
+					...sceneAssetIds,
+					...(sourceAssetId ? [sourceAssetId] : [])
+				])
+				if (studioFinish instanceof Response) {
+					return studioFinish
+				}
+
 				const thumbnailUrl = parseThumbnailUrl(
 					meta.thumbnailUrl,
 					sceneId,
@@ -275,6 +284,7 @@ export class SceneSettingsParser {
 					settings,
 					sceneAssetIds,
 					sourceAssetId,
+					studioFinish,
 					gltfJson: undefined,
 					optimizationReport: optimizationReport || undefined,
 					optimizationSettings: optimizationSettings || undefined,

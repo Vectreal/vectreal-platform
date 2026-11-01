@@ -77,7 +77,7 @@ Or, with a model already hosted somewhere, give it the address:
 | `onHotspotSelect`              | `(id: string) => void`                                  | No       | Picks a marker instead of activating it. Passing it makes selection win over both content and camera |
 | `revealedHotspotId`            | `string \| null`                                        | No       | Holds this marker's card open, or every card closed with `null`. Undefined leaves cards to visitors' clicks. Editing surfaces only |
 | `onHotspotPositionSetterReady`  | `(setter: HotspotPositionSetter \| null) => void`        | No       | Receives a setter that moves a marker without moving the hotspot, for a drag gizmo. Editing surfaces only |
-| `shadowLightEditable`          | `boolean`                                               | No       | Renders an in-scene draggable handle for aiming the shadow light. Editing surfaces only |
+| `shadowLightEditable`          | `boolean`                                               | No       | Renders an in-scene draggable handle for aiming the shadow light. Editing surfaces only. Deprecated: turn `lighting.environment.rotation` instead, which moves every light with the environment |
 | `staticShadowBake`             | `boolean`                                               | No       | Bakes the accumulative shadow in one pass on mount instead of fading it in, default `false` |
 | `bakedShadow`                  | `BakedShadow`                                           | No       | A persisted shadow bake to render instead of recomputing one                     |
 | `popover`                      | `React.ReactNode`                                       | No       | Optional info popover slot. Its content is unmounted until the viewer reaches `ready`, after the loader's cross-fade |
@@ -90,7 +90,8 @@ Or, with a model already hosted somewhere, give it the address:
 | `onInteractionEvent`           | `(event: ViewerInteractionEvent) => void`               | No       | Receives viewer lifecycle and runtime interaction events                         |
 | `onCommandExecutorReady`       | `(executor: ViewerCommandExecutor \| null) => void`     | No       | Receives a minimal imperative runtime command executor                           |
 | `onShadowBakeReady`            | `(capture: ShadowBakeCapture \| null) => void`          | No       | Receives a function that captures the settled shadow bake as a density PNG       |
-| `onShadowLightChange`          | `(position: [number, number, number]) => void`          | No       | Called with a new shadow light position, in model-size units, while the handle is dragged |
+| `onShadowLightChange`          | `(position: [number, number, number]) => void`          | No       | Called with a new shadow light position, in model-size units, while the handle is dragged. Deprecated: turn `lighting.environment.rotation` instead, which moves every light with the environment |
+| `onViewChange` | `(view: ViewerView) => void` | No | Called as the orbit camera moves, with where it looks from: `azimuth` in degrees around the vertical axis (0 from +Z, 90 from +X) and `elevation` above the horizon, as the scene's lights measure them. Turns under half a degree are not reported. Pass a stable function |
 | `onRawDiagonalComputed`        | `(diagonal: number) => void`                            | No       | Called with the pre-normalization bounding-box diagonal whenever the model changes |
 
 ### Notes on content source
@@ -112,7 +113,9 @@ your own state, with progress and errors in one place, use `useLoadModel`'s
 
 A still viewer stops drawing. Once the camera stops it renders a few dozen extra frames to smooth edges and settle ambient occlusion, then draws nothing until something changes. Moving objects are detected on their own, so `children` that animate in `useFrame` keep rendering. A child that changes only a material, a uniform or a texture must call `invalidate()` from `useThree`, the same contract React Three Fiber sets for on-demand rendering.
 
-The editor affordances exist for editing surfaces such as the Publisher: `shadowLightEditable`, `staticShadowBake`, `bakedShadow`, `onShadowBakeReady`, `onShadowLightChange`, and the hotspot props above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect`, `revealedHotspotId` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them.
+The editor affordances exist for editing surfaces such as the Publisher: `staticShadowBake`, `bakedShadow`, `onShadowBakeReady`, and the hotspot props above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect`, `revealedHotspotId` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them.
+
+`shadowLightEditable`, `editableLightRole` and `onShadowLightChange` are deprecated and go in the next major version: a light aimed on its own leaves the environment's bright region it was set against. Turn `lighting.environment.rotation` instead, which moves every light with the environment.
 
 ---
 

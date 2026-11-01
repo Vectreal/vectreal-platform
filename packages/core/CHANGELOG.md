@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.2.0...core-v3.3.0) (2026-11-01)
+
+
+### Features
+
+* **app:** render chrome-ball thumbnails for every lighting setup and map ([#1220](https://github.com/Vectreal/vectreal-platform/issues/1220)) ([ce50b5c](https://github.com/Vectreal/vectreal-platform/commit/ce50b5c3a5de0dca7291b87c3ec73d01d31f135d))
+* bake ambient occlusion into the published GLB when the lighting says baked ([#1223](https://github.com/Vectreal/vectreal-platform/issues/1223)) ([4aac0f1](https://github.com/Vectreal/vectreal-platform/commit/4aac0f12f379a3ce770f0d9bd9144a50e34dd302))
+* **core:** add the lighting scene setting and resolveLighting ([#1216](https://github.com/Vectreal/vectreal-platform/issues/1216)) ([a614386](https://github.com/Vectreal/vectreal-platform/commit/a614386c5a3984c68c4baca6870bf1d4d2549fd2))
+* **core:** bake ambient occlusion into a glTF document's own textures ([#1222](https://github.com/Vectreal/vectreal-platform/issues/1222)) ([80db24e](https://github.com/Vectreal/vectreal-platform/commit/80db24e373a95c8d4c163dbc0d724791c341a608))
+* **core:** serve legacy environment and shadows derived from lighting ([#1218](https://github.com/Vectreal/vectreal-platform/issues/1218)) ([f4a586d](https://github.com/Vectreal/vectreal-platform/commit/f4a586ddfe4307d11e53b8179de7a17bda3b4ce7))
+* **core:** ship lighting setups placed on each map's measured lights ([#1219](https://github.com/Vectreal/vectreal-platform/issues/1219)) ([04b8be4](https://github.com/Vectreal/vectreal-platform/commit/04b8be4f1f0311ab1753fe8280d3ca8181f32e6d))
+* **lighting:** bake the studio lights into a light map at publish ([#1225](https://github.com/Vectreal/vectreal-platform/issues/1225)) ([54f093c](https://github.com/Vectreal/vectreal-platform/commit/54f093c74423eadd6a98ac0c3d71dfd9ef48e0b6))
+* **publisher:** one Lighting tool replaces Environment and Shadows ([#1221](https://github.com/Vectreal/vectreal-platform/issues/1221)) ([d575394](https://github.com/Vectreal/vectreal-platform/commit/d575394c6d5ed92a8515f7206bf1bab4f296b1e0))
+* **publisher:** show how far the studio finish has drawn ([#1237](https://github.com/Vectreal/vectreal-platform/issues/1237)) ([9a4c6e3](https://github.com/Vectreal/vectreal-platform/commit/9a4c6e32da649da5944136576dacd2036eb5026d))
+* **viewer:** draw scenes from lighting, with lights that light and shadow the model ([#1217](https://github.com/Vectreal/vectreal-platform/issues/1217)) ([9b187f9](https://github.com/Vectreal/vectreal-platform/commit/9b187f93f5688a1a163998281daa40edf1df3199))
+
+
+### Bug Fixes
+
+* **bake:** skip animated parts and trace cutouts by their mask ([#1226](https://github.com/Vectreal/vectreal-platform/issues/1226)) ([a745e42](https://github.com/Vectreal/vectreal-platform/commit/a745e42d5bce6f22712aedc69723f6d3b984a7d5))
+
+
+### Performance Improvements
+
+* **core:** bake on the GPU in fenced, time-sized slices so the page keeps drawing ([#1232](https://github.com/Vectreal/vectreal-platform/issues/1232)) ([eac82ac](https://github.com/Vectreal/vectreal-platform/commit/eac82ac511bdd2942538e0b8a7241762d5bab14c))
+* **publisher:** encode publish textures on several cores ([#1238](https://github.com/Vectreal/vectreal-platform/issues/1238)) ([43ccac8](https://github.com/Vectreal/vectreal-platform/commit/43ccac84cecfa843b696f63e1e920138dd2695b7))
+
 ## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.1.0...core-v3.2.0) (2026-10-30)
 
 

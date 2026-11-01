@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.2.0...cli-v3.3.0) (2026-11-01)
+
+
+### Features
+
+* bake ambient occlusion into the published GLB when the lighting says baked ([#1223](https://github.com/Vectreal/vectreal-platform/issues/1223)) ([4aac0f1](https://github.com/Vectreal/vectreal-platform/commit/4aac0f12f379a3ce770f0d9bd9144a50e34dd302))
+* **lighting:** bake the studio lights into a light map at publish ([#1225](https://github.com/Vectreal/vectreal-platform/issues/1225)) ([54f093c](https://github.com/Vectreal/vectreal-platform/commit/54f093c74423eadd6a98ac0c3d71dfd9ef48e0b6))
+* **publisher:** merge ambient occlusion and baking into one Studio finish surface ([#1230](https://github.com/Vectreal/vectreal-platform/issues/1230)) ([cafdb0d](https://github.com/Vectreal/vectreal-platform/commit/cafdb0d97c8b26a6385922e06557bea6f12eeefb))
+* **publisher:** one Lighting tool replaces Environment and Shadows ([#1221](https://github.com/Vectreal/vectreal-platform/issues/1221)) ([d575394](https://github.com/Vectreal/vectreal-platform/commit/d575394c6d5ed92a8515f7206bf1bab4f296b1e0))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.3.0
+    * @vctrl/sdk bumped to 3.3.0
+
 ## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.1.0...cli-v3.2.0) (2026-10-30)
 
 

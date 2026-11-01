@@ -118,8 +118,9 @@ present packages/viewer/src/components/animation-controls.tsx className={withHos
 | `boundsOptions` | `BoundsProps` | No | Scene bounds/framing behavior |
 | `cameraOptions` | `CameraProps` | No | Perspective camera configuration |
 | `controlsOptions` | `ControlsProps` | No | OrbitControls configuration |
-| `envOptions` | `EnvironmentProps` | No | Drei `Environment` configuration |
-| `shadowsOptions` | `ShadowsProps` | No | Shadow behavior configuration |
+| `lighting` | `LightingSettings` | No | How the scene is lit: environment, up to three studio lights, ground, background and ambient occlusion. See [Lighting](#lighting-lightingsettings) |
+| `envOptions` | `EnvironmentProps` | No | Deprecated: the environment as scenes stored it before `lighting`, read when `lighting` is absent. `files` still names a custom map |
+| `shadowsOptions` | `ShadowsProps` | No | Deprecated: shadows as scenes stored them before `lighting`; their light becomes the key light |
 | `normalizationOptions` | `NormalizationOptions` | No | Clamps the model's bounding-box diagonal at runtime, without touching the model data |
 | `hotspots` | `HotspotDefinition[]` | No | Point-of-interest markers anchored in world space. Each can carry a body and a link, and fly a linked camera. Behind the model a marker fades (`occlusionEnabled`, default `true`) and takes no input unless `clickableWhenOccluded` is `true` |
 | `hotspotColor` | `string` | No | Overrides the marker fill. The default is neutral so it does not compete with the product. The step numeral stays dark ink, so a dark or saturated fill needs `--vctrl-hotspot-ink` overridden on the container |
@@ -136,7 +137,7 @@ present packages/viewer/src/components/animation-controls.tsx className={withHos
 | `onHotspotSelect` | `(id: string) => void` | No | Picks a marker instead of activating it. Passing it makes selection win over both content and camera |
 | `revealedHotspotId` | `string \| null` | No | Holds this marker's card open, or every card closed with `null`. Undefined leaves cards to visitors' clicks. Editing surfaces only |
 | `onHotspotPositionSetterReady` | `(setter: HotspotPositionSetter \| null) => void` | No | Receives a setter that moves a marker without moving the hotspot, for a drag gizmo. Editing surfaces only |
-| `shadowLightEditable` | `boolean` | No | Renders an in-scene draggable handle for aiming the shadow light. Editing surfaces only |
+| `shadowLightEditable` | `boolean` | No | Renders an in-scene draggable handle for aiming the key light. Editing surfaces only. Deprecated: turn `lighting.environment.rotation` instead, which moves every light with the environment |
 | `staticShadowBake` | `boolean` | No | Bakes the accumulative shadow in one pass on mount instead of fading it in (default `false`) |
 | `bakedShadow` | `BakedShadow` | No | A persisted shadow bake to render instead of recomputing one |
 | `popover` | `React.ReactNode` | No | Optional info popover slot. Its content is unmounted until the viewer reaches `ready`, after the loader's cross-fade |
@@ -149,7 +150,8 @@ present packages/viewer/src/components/animation-controls.tsx className={withHos
 | `onInteractionEvent` | `(event: ViewerInteractionEvent) => void` | No | Receives viewer lifecycle and runtime interaction events |
 | `onCommandExecutorReady` | `(executor: ViewerCommandExecutor \| null) => void` | No | Receives a minimal imperative runtime command executor |
 | `onShadowBakeReady` | `(capture: ShadowBakeCapture \| null) => void` | No | Receives a function that captures the settled shadow bake as a density PNG |
-| `onShadowLightChange` | `(position: [number, number, number]) => void` | No | Called with a new shadow light position, in model-size units, while the handle is dragged |
+| `onShadowLightChange` | `(position: [number, number, number]) => void` | No | Called with the key light's new position, in units of the model's bounding radius, while the handle is dragged (the legacy `shadowsOptions.light.position`). Deprecated: turn `lighting.environment.rotation` instead, which moves every light with the environment |
+| `onViewChange` | `(view: ViewerView) => void` | No | Called as the orbit camera moves, with where it looks from: `azimuth` in degrees around the vertical axis (0 from +Z, 90 from +X) and `elevation` above the horizon, as the scene's lights measure them. Turns under half a degree are not reported. Pass a stable function |
 | `onRawDiagonalComputed` | `(diagonal: number) => void` | No | Called with the pre-normalization bounding-box diagonal whenever the model changes |
 
 ### Notes on content source
@@ -171,7 +173,9 @@ your own state, with progress and errors in one place, use `useLoadModel`'s
 
 A still viewer stops drawing. Once the camera stops it renders a few dozen extra frames to smooth edges and settle ambient occlusion, then draws nothing until something changes. Moving objects are detected on their own, so `children` that animate in `useFrame` keep rendering. A child that changes only a material, a uniform or a texture must call `invalidate()` from `useThree`, the same contract React Three Fiber sets for on-demand rendering.
 
-The editor affordances exist for editing surfaces such as the Publisher: `shadowLightEditable`, `staticShadowBake`, `onShadowBakeReady`, `onShadowLightChange`, and the hotspot props above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect`, `revealedHotspotId` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them. Embedded viewers do pass the scene's saved bake as `bakedShadow`, so the shadow renders on load without re-baking.
+The editor affordances exist for editing surfaces such as the Publisher: `staticShadowBake`, `onShadowBakeReady`, and the hotspot props above - `selectedHotspotId`, `showInternalHotspots`, `showHiddenHotspots`, `onHotspotSelect`, `revealedHotspotId` and `onHotspotPositionSetterReady`. Public and embedded viewers omit them. Embedded viewers do pass the scene's saved bake as `bakedShadow`, so the shadow renders on load without re-baking.
+
+`shadowLightEditable`, `editableLightRole` and `onShadowLightChange` are deprecated and go in the next major version: a light aimed on its own leaves the environment's bright region it was set against. Turn `lighting.environment.rotation` instead, which moves every light with the environment.
 
 ---
 
@@ -270,44 +274,90 @@ Based on [@react-three/drei OrbitControls](https://github.com/pmndrs/drei#orbitc
 
 ---
 
-## Environment options (`EnvironmentProps`)
+## Lighting (`LightingSettings`)
 
-Configures the [@react-three/drei `Environment`](https://github.com/pmndrs/drei#environment) component. The viewer does not use Drei's `Stage`; framing is handled by `SceneBounds` and `SceneCamera`.
-
-`envOptions` supports a typed preset system from `@vctrl/core`:
-
-| Option | Type | Description |
-|---|---|---|
-| `preset` | `EnvironmentKey` | Preset key such as `studio-key`, `outdoor-noon`, `night-city` |
-| `environmentResolution` | `'1k' \| '4k'` | Resolution variant for environment assets |
-| `background` | `boolean` | Render environment as scene background |
-| `backgroundBlurriness` | `number` | Blur strength when background is enabled |
-| `backgroundIntensity` | `number` | Background intensity multiplier |
-| `environmentIntensity` | `number` | Lighting intensity multiplier |
-| `files` | `string \| string[]` | Custom environment files |
-| `backdrop` | `SceneBackdrop` | A stage painted behind the model while `background` is off: `{ type: 'color', color }` or `{ type: 'gradient', top, bottom }`, `#rrggbb` hex. The environment still lights the model. Absent leaves the viewer transparent |
+A scene is lit by an environment map and up to three studio lights, and every
+shadow comes from those lights: they light the model, shadow the model, and
+cast its shadow on the ground. There is no shadow opacity or direction to set;
+to change a shadow, change its light. The type and the migration rules live in
+[`@vctrl/core`](/docs/packages/core#scene-lighting).
 
 ```jsx
 <VectrealViewer
-  envOptions={{
-    preset: 'studio-key',
-    environmentResolution: '1k',
-    background: true,
-    backgroundBlurriness: 0.2,
-    environmentIntensity: 1,
-    backgroundIntensity: 1,
+  lighting={{
+    environment: { map: 'studio-soft', intensity: 0.8, rotation: 0 },
+    lights: [
+      { role: 'key', azimuth: 40, elevation: 45, size: 15, intensity: 0.7 },
+      { role: 'fill', azimuth: -60, elevation: 25, size: 60, intensity: 0.2 },
+      { role: 'rim', azimuth: 170, elevation: 30, size: 10, intensity: 0.5 }
+    ],
+    ground: { enabled: true },
+    background: { type: 'color', color: '#f4f4f5' }
   }}
 />
 ```
 
+| Field | What the viewer does with it |
+|---|---|
+| `environment.map`, `resolution` | Loads the hosted HDR that lights the model and gives it reflections |
+| `environment.intensity` | Brightness of the environment, and with it of every light |
+| `environment.rotation` | Turns the map, its reflections, the background and the lights together, in degrees |
+| `lights[]` | One directional light each, at most one per `role` (`key`, `fill`, `rim`). `azimuth` is degrees around the vertical axis (0 lights from +Z, 90 from +X, before the rotation), `elevation` degrees above the horizon |
+| `lights[].intensity` | Relative to the environment's own light, which the viewer measures from the map: 1 is as bright as the whole environment |
+| `lights[].size` | Angular diameter in degrees. The ground shadow is baked from it exactly; the model's own shadow is softened by the shadow-map filter, which only approximates it |
+| `ground.enabled` | Bakes the ground shadow from every light, weighted by strength. Ground every light is blocked from keeps `1 / (1 + Σ strength × sin(elevation))` of its light. With no lights, the ground darkens only where the model hides the sky |
+| `background` | `environment` (with `intensity` and `blur`), a `color` or `gradient` stage painted behind the canvas (`#rrggbb` hex), or `none` for a transparent viewer |
+| `occlusion` | Screen-space ambient occlusion (N8AO): `off` or `live`, with `live.intensity` and `live.atRest` (draw it only once the view is still) |
+
+While the model animates, the ground switches to a live contact shadow that
+follows the moving geometry.
+
+### Baked lights
+
+A model published with its studio lights baked carries a light map on each
+baked material, under the `VECTREAL_lightmap` extension (see
+[`@vctrl/core`](/docs/packages/core#light-bake)). The viewer draws a material's
+map while the scene's `lighting` has the signature the map was baked from, in
+place of the lights' live diffuse light. Their highlights stay live. The map is
+scaled by the environment's measured light and `environment.intensity`, as the
+live lights are. The lights keep their shadow maps, which then shade only
+their highlights. Change a light or the rotation, or turn `bake.lights` off,
+and no map matches any more: the viewer draws the lights live until the model
+is baked again. This applies to the model the viewer draws, including
+`displayedModel`.
+
+### Before `lighting`: `envOptions` and `shadowsOptions`
+
+Both props still work and are deprecated. Without `lighting`, the viewer reads
+them through `resolveLighting`: the environment carries over exactly, and the
+shadow's own light becomes the key, placed where it stood and capped at the
+environment's strength. That light used to reach only the ground; it now
+lights the model too. Fields that only tuned the old shadow (`opacity`,
+`alphaTest`, `contact`, `frames`, `resolution`) are no longer read.
+`envOptions.files` still names a custom environment map, with or without
+`lighting`.
+
+A viewer released before `lighting` still renders a newly saved scene: its
+embed manifest carries the legacy `environment` and `shadows` derived from
+`lighting` by `toLegacyLighting` in `@vctrl/core`. That viewer knows one light,
+which shadows only the ground, and no rotation, so it shows the environment
+unturned, the key as the shadow's direction and size, and every lit light in
+the shadow's darkness. Fill and rim lights, and light on the model, need this
+release. The derived keys go away with the deprecated props in the next major.
+
+{/* claims
+present packages/viewer/src/vectreal-viewer.tsx lighting?: LightingSettings
+present packages/viewer/src/vectreal-viewer.tsx resolveLighting({ environment: envOptions, shadows: shadowsOptions })
+present packages/viewer/src/vectreal-viewer.tsx envOptions?.files ??
+present packages/viewer/src/components/scene/scene-lights.tsx light.intensity * irradiance * lighting.environment.intensity
+present packages/viewer/src/components/scene/scene-lighting.ts blockedShare: 1 / (1 + onGround)
+present apps/vectreal-platform/app/lib/domain/scene/server/scene-manifest.server.ts toLegacyLighting(settingsData.settings)
+present packages/core/src/scene-lighting/to-legacy-lighting.ts ambient: 1 / (1 + strength)
+*/}
+
 ---
 
-## Bounds and shadows
-
-| Prop | Type | Summary |
-|---|---|---|
-| `boundsOptions` | `BoundsProps` | Pass-through to Drei `Bounds` behavior |
-| `shadowsOptions` | `ShadowsProps` | Baked accumulative shadow, with an optional contact pass |
+## Bounds
 
 ### boundsOptions (`BoundsProps`)
 
@@ -331,81 +381,6 @@ Example:
     clip: false,
     margin: 1.25,
     maxDuration: 300
-  }}
-/>
-```
-
-### shadowsOptions (`ShadowsProps`)
-
-**Shadows are off by default** (`enabled` defaults to `false`), so every example below needs `enabled: true` to render anything.
-
-Whatever you pass is merged over the defaults below and rendered as Drei `AccumulativeShadows`. The soft ground pool is not a separate mode, it is an opt-in extra pass configured under the nested `contact` key.
-
-Several numeric options are relative to the model's measured size rather than world units: `scale` is a multiple of the model footprint, and `light.radius` and `light.position` are in model-size units. This keeps the bake proportioned for any model.
-
-Viewer defaults:
-
-| Option | Default |
-|---|---|
-| `enabled` | `false` |
-| `temporal` | `true` |
-| `frames` | `48` |
-| `alphaTest` | `3.0` |
-| `cutoffScale` | `1` |
-| `opacity` | `0.9` |
-| `scale` | `2.5` |
-| `resolution` | `1024` |
-| `colorBlend` | `2` |
-| `color` | `'#000000'` |
-| `ao` | `false` |
-| `aoIntensity` | `1.4` |
-| `aoAtRest` | `false` |
-
-`alphaTest` is not a discard threshold. In Drei's `SoftShadowMaterial` the shadow alpha is `max(0, 1 - planeBrightness / alphaTest) * opacity`, so it sits between the shadowed and lit brightness of the bake plane. Shadow depth is driven by `light.ambient`, not by `alphaTest`. `ao` enables screen-space crevice occlusion (N8AO). It costs GPU time on every frame while the view moves and settles once it is still, which is why it is opt-in. `aoAtRest` draws it only once the view is still, so orbiting costs nothing extra; the occlusion then drops out during motion and settles back in afterwards.
-
-Nested light defaults (`shadowsOptions.light`):
-
-| Option | Default |
-|---|---|
-| `intensity` | `Math.PI * 2` |
-| `amount` | `8` |
-| `radius` | `0.8` |
-| `ambient` | `0.3` |
-| `position` | `[0, 2.5, 0]` |
-| `bias` | `0.001` |
-
-Nested contact defaults (`shadowsOptions.contact`), an optional soft ground pass baked once under the directional bake:
-
-| Option | Default |
-|---|---|
-| `enabled` | `false` |
-| `opacity` | `0.6` |
-| `blur` | `3` |
-| `scale` | `1.5` |
-| `reach` | `0.35` |
-
-Example:
-
-```jsx
-<VectrealViewer
-  shadowsOptions={{
-    enabled: true,
-    temporal: true,
-    frames: 48,
-    opacity: 0.9,
-    scale: 2.5,
-    resolution: 1024,
-    light: {
-      amount: 8,
-      radius: 0.8,
-      ambient: 0.3,
-      position: [1, 2.5, 1]
-    },
-    contact: {
-      enabled: true,
-      opacity: 0.6,
-      blur: 3
-    }
   }}
 />
 ```
@@ -540,7 +515,7 @@ from a viewer default and override a field:
 | `SceneCamera` | `defaultCameraOptions` |
 | `SceneControls` | `defaultControlsOptions` |
 | `SceneEnvironment` | `defaultEnvOptions` |
-| `SceneShadows` | `defaultShadowsOptions` |
+| `SceneShadows` | none: pass resolved `lighting`, or legacy shadow props it resolves itself |
 | `SceneHotspots` | none |
 | `SceneModel` | none |
 | `ScenePostProcessing` | none |

@@ -127,6 +127,7 @@ vi.mock('../../hooks/scene-loader/use-first-open-fill', () => ({
 
 const loaderData: PublisherLoaderData = {
 	isMobileRequest: false,
+	savedFinish: null,
 	user: null,
 	sceneId: null,
 	projectId: null,

@@ -5,12 +5,18 @@ import { useAtomValue, useSetAtom } from 'jotai/react'
 import {
 	Box,
 	Check,
+	Contrast,
 	ChevronDown,
 	CircleAlert,
 	CloudCheck,
+	CloudUpload,
 	File as FileIcon,
+	Globe,
 	History,
 	Image as ImageIcon,
+	Layers,
+	Lightbulb,
+	Package,
 	RotateCw,
 	SlidersHorizontal,
 	X
@@ -18,7 +24,12 @@ import {
 import { useEffect, useId, useRef, useState } from 'react'
 
 import { ProgressRing } from './progress-ring'
-import { summarizeSaveProgress } from '../../../lib/domain/scene/client/scene-save-progress'
+import {
+	isProgressFinished as isFinished,
+	isSaveInFlight,
+	saveStepStatus,
+	summarizeSaveProgress
+} from '../../../lib/domain/scene/client/scene-save-progress'
 import { duration, ease } from '../../../lib/motion/motion-tokens'
 import {
 	isPreviewModeAtom,
@@ -30,6 +41,8 @@ import {
 } from '../../../lib/stores/save-progress-store'
 
 import type {
+	PublishStep,
+	PublishStepKey,
 	SaveFileGroup,
 	SaveGroupSummary,
 	SavePanelFile,
@@ -55,8 +68,14 @@ const GROUP_META: Record<SaveFileGroup, { label: string; icon: ReactNode }> = {
 	preview: { label: 'Preview', icon: <ImageIcon /> }
 }
 
-const isFinished = (status: SavePanelState['status']) =>
-	status === 'saved' || status === 'unchanged'
+const STEP_META: Record<PublishStepKey, { label: string; icon: ReactNode }> = {
+	export: { label: 'Preparing the published file', icon: <Package /> },
+	occlusion: { label: 'Drawing the depth', icon: <Contrast /> },
+	lights: { label: 'Drawing the studio lights', icon: <Lightbulb /> },
+	textures: { label: 'Compressing textures for the GPU', icon: <Layers /> },
+	upload: { label: 'Uploading the published file', icon: <CloudUpload /> },
+	commit: { label: 'Publishing', icon: <Globe /> }
+}
 
 /** Opens and closes by height, so the panel grows rather than jumps. */
 const Reveal: FC<{
@@ -265,7 +284,48 @@ const SettingsRow: FC<{ status: SavePanelState['status'] }> = ({ status }) => (
 	</div>
 )
 
-const headline = (state: SavePanelState, sceneName: string) => {
+/** How far a running step has come, in its own unit. */
+const describeRunningStep = (step: PublishStep) =>
+	step.total === 0
+		? 'Working'
+		: step.key === 'upload'
+			? `${formatFileSize(step.done)} of ${formatFileSize(step.total)}`
+			: step.key === 'occlusion' || step.key === 'lights'
+				? `${Math.round((step.done / step.total) * 100)}%`
+				: `${step.done} of ${step.total}`
+
+const PublishStepRow: FC<{ step: PublishStep }> = ({ step }) => {
+	const { label, icon } = STEP_META[step.key]
+	return (
+		<div className="flex items-center gap-2 px-2 py-1.5">
+			<span className="text-muted-foreground [&_svg]:size-4" aria-hidden>
+				{icon}
+			</span>
+			<span className="min-w-0 flex-1">
+				<span className="block text-sm">{label}</span>
+				<span className="text-muted-foreground block text-[11px] tabular-nums">
+					{step.state === 'done'
+						? 'Done'
+						: step.state === 'failed'
+							? "Didn't complete"
+							: step.state === 'active'
+								? describeRunningStep(step)
+								: 'Waiting'}
+				</span>
+			</span>
+			<StateMark
+				state={step.state}
+				percent={step.total > 0 ? (step.done / step.total) * 100 : 0}
+			/>
+		</div>
+	)
+}
+
+const headline = (
+	state: SavePanelState,
+	sceneName: string,
+	activeStep: PublishStep | null
+) => {
 	switch (state.status) {
 		case 'preparing':
 			return 'Preparing scene'
@@ -273,12 +333,16 @@ const headline = (state: SavePanelState, sceneName: string) => {
 			return `Saving ${sceneName || 'scene'}`
 		case 'committing':
 			return 'Saving settings'
+		case 'publishing':
+			return activeStep ? STEP_META[activeStep.key].label : 'Publishing'
 		case 'saved':
 			return 'Saved'
 		case 'unchanged':
 			return 'Already up to date'
+		case 'published':
+			return 'Published'
 		case 'failed':
-			return "Save didn't complete"
+			return state.publish ? "Publish didn't complete" : "Save didn't complete"
 	}
 }
 
@@ -325,17 +389,22 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 	// The previews are object URLs; leaving the publisher must free them.
 	useEffect(() => dismiss, [dismiss])
 
-	// Each save opens collapsed, whatever the last one was left as.
+	const summary = state ? summarizeSaveProgress(state) : null
+	const isRunning = isSaveInFlight(state)
+
+	// Each save or publish opens collapsed, whatever the last one was left as.
+	// Keyed on starting to run, since a publish with nothing to save never
+	// passes through `preparing`.
+	const wasRunningRef = useRef(false)
 	useEffect(() => {
-		if (status === 'preparing') {
+		if (isRunning && !wasRunningRef.current) {
 			setIsExpanded(false)
 			setOpenGroup(null)
 		}
-	}, [status])
-
-	const summary = state ? summarizeSaveProgress(state) : null
-	const isRunning =
-		status === 'preparing' || status === 'uploading' || status === 'committing'
+		wasRunningRef.current = isRunning
+	}, [isRunning])
+	const title =
+		state && summary ? headline(state, sceneName, summary.activeStep) : ''
 
 	// Only keyboard focus holds the panel open: a click leaves focus on the
 	// button it pressed, which would otherwise pin a finished save on screen.
@@ -370,13 +439,13 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 		<>
 			{/* Mounted for the publisher's lifetime, so the first headline is announced too; only the headline is, since the byte count changes every tick. */}
 			<span aria-live="polite" className="sr-only">
-				{state && !isPreviewMode ? headline(state, sceneName) : ''}
+				{state && !isPreviewMode ? title : ''}
 			</span>
 			<AnimatePresence>
 				{state && summary && !isPreviewMode && (
 					<motion.section
 						key="save-progress"
-						aria-label="Save progress"
+						aria-label={state.publish ? 'Publish progress' : 'Save progress'}
 						initial={{ opacity: 0, y: 8 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 8 }}
@@ -405,11 +474,13 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 								) : (
 									<span
 										role="progressbar"
-										aria-label="Saved so far"
+										aria-label={
+											state.publish ? 'Published so far' : 'Saved so far'
+										}
 										aria-valuemin={0}
 										aria-valuemax={100}
 										aria-valuenow={
-											state.status === 'preparing'
+											state.status === 'preparing' || summary.percent === null
 												? undefined
 												: Math.round(summary.percent)
 										}
@@ -426,7 +497,7 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 							<span className="grid min-w-0 flex-1">
 								<AnimatePresence initial={false}>
 									<motion.span
-										key={headline(state, sceneName)}
+										key={title}
 										initial={{ opacity: 0, y: 4 }}
 										animate={{ opacity: 1, y: 0 }}
 										exit={{ opacity: 0, y: -4 }}
@@ -434,7 +505,7 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 										aria-hidden
 										className="col-start-1 row-start-1 truncate text-sm font-medium"
 									>
-										{headline(state, sceneName)}
+										{title}
 									</motion.span>
 								</AnimatePresence>
 								<span className="text-muted-foreground truncate text-[11px] tabular-nums">
@@ -442,9 +513,13 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 										? state.message
 										: state.status === 'preparing'
 											? 'Exporting the model and its preview'
-											: isFinished(state.status)
-												? formatFileSize(summary.bytes)
-												: `${formatFileSize(summary.sent)} of ${formatFileSize(summary.bytes)}`}
+											: summary.activeStep
+												? describeRunningStep(summary.activeStep)
+												: state.status === 'published'
+													? 'Live for every embed'
+													: isFinished(state.status)
+														? formatFileSize(summary.bytes)
+														: `${formatFileSize(summary.sent)} of ${formatFileSize(summary.bytes)}`}
 								</span>
 							</span>
 							<button
@@ -514,13 +589,22 @@ export const SaveProgressPanel: FC<SaveProgressPanelProps> = ({ onRetry }) => {
 										</motion.li>
 									))}
 								</AnimatePresence>
-								<li>
-									<SettingsRow status={state.status} />
-								</li>
+								{/* A publish with nothing to save stores no settings. */}
+								{(!state.publish || state.files.length > 0) && (
+									<li>
+										<SettingsRow status={saveStepStatus(state)} />
+									</li>
+								)}
+								{state.publish?.steps.map((step) => (
+									<li key={step.key}>
+										<PublishStepRow step={step} />
+									</li>
+								))}
 							</ul>
 						</Reveal>
 
-						<Reveal show={status === 'failed'}>
+						{/* A publish is retried from its own card, which owns its options. */}
+						<Reveal show={status === 'failed' && !state.publish}>
 							<Button
 								type="button"
 								size="sm"

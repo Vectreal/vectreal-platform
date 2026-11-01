@@ -1,4 +1,6 @@
 import {
+	DEFAULT_LIGHTING_SETUP,
+	LIGHTING_SETUPS,
 	NORMALIZATION_DEFAULT_MAX_SIZE,
 	NORMALIZATION_DEFAULT_MIN_SIZE
 } from '@vctrl/core'
@@ -10,6 +12,7 @@ import type {
 	CameraProps,
 	ControlsProps,
 	EnvironmentProps,
+	LightingSettings,
 	NormalizationOptions,
 	SceneSettings,
 	ScenePresentationSettings,
@@ -201,6 +204,11 @@ export const defaultNormalizationOptions: Required<NormalizationOptions> = {
 	maxSize: NORMALIZATION_DEFAULT_MAX_SIZE
 }
 
+/** The lighting a new scene starts with: the default setup. */
+export const defaultLighting: LightingSettings = LIGHTING_SETUPS.find(
+	({ id }) => id === DEFAULT_LIGHTING_SETUP
+)!.lighting
+
 /**
  * A scene's settings with every absent group filled from the defaults above.
  *
@@ -212,6 +220,7 @@ export function withSceneSettingsDefaults(settings: SceneSettings) {
 	return {
 		animation: settings.animation,
 		bounds: settings.bounds ?? defaultBoundsOptions,
+		lighting: settings.lighting,
 		environment: settings.environment ?? defaultEnvOptions,
 		interactions: settings.interactions,
 		camera: settings.camera

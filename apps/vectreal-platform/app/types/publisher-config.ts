@@ -1,8 +1,8 @@
 //// Process state
 export type SidebarMode = 'optimize' | 'compose'
 export type ComposeTool =
-	| 'environment'
-	| 'shadow'
+	| 'lighting'
+	| 'background'
 	| 'camera-controls'
 	| 'interaction-controls'
 	| 'hotspots'

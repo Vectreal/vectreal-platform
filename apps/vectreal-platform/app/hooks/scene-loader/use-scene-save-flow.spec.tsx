@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { act, render, waitFor } from '@testing-library/react'
-import { resolveEnvironmentFiles } from '@vctrl/core'
 import { getDefaultStore } from 'jotai'
 import { useEffect, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -9,12 +8,14 @@ import { useSceneSaveFlow } from './use-scene-save-flow'
 import { defaultBoundsOptions } from '../../constants/viewer-defaults'
 import {
 	capturedThumbnailFrameAtom,
+	environmentFilesOf,
 	failedEnvironmentFilesAtom
 } from '../../lib/stores/publisher-config-store'
 import { dispatchSaveProgressAtom } from '../../lib/stores/save-progress-store'
 import {
 	environmentAtom,
-	hotspotsAtom
+	hotspotsAtom,
+	lightingAtom
 } from '../../lib/stores/scene-settings-store'
 
 import type { ScenePersistenceState } from './contracts'
@@ -28,13 +29,15 @@ const {
 	mockExecuteSceneSaveOrchestrator,
 	dispatchSaveProgress,
 	resolveSource,
-	recordSavedSource
+	recordSavedSource,
+	captureStudioFinish
 } = vi.hoisted(() => ({
 	mockSetAtom: vi.fn(),
 	mockExecuteSceneSaveOrchestrator: vi.fn(),
 	dispatchSaveProgress: vi.fn(),
 	resolveSource: vi.fn(),
-	recordSavedSource: vi.fn()
+	recordSavedSource: vi.fn(),
+	captureStudioFinish: vi.fn()
 }))
 
 vi.mock('jotai/react', async () => {
@@ -152,6 +155,7 @@ function SceneSaveFlowHarness({
 		prepareGltfDocumentForUpload: vi.fn().mockResolvedValue(null),
 		captureSceneThumbnail: vi.fn().mockResolvedValue(null),
 		captureShadowBake: vi.fn().mockResolvedValue(null),
+		captureStudioFinish,
 		resolveSource,
 		recordSavedSource
 	}))
@@ -408,11 +412,26 @@ describe('useSceneSaveFlow', () => {
 		)
 	})
 
+	it('hands the save what it keeps of the studio finish', async () => {
+		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
+		const apiRef = renderHarness()
+
+		await act(async () => {
+			await apiRef.current?.saveSceneSettings()
+		})
+
+		expect(mockExecuteSceneSaveOrchestrator).toHaveBeenCalledWith(
+			expect.objectContaining({ captureStudioFinish })
+		)
+	})
+
 	it('tells the save whether the environment map fell back', async () => {
 		const store = getDefaultStore()
 		store.set(
 			failedEnvironmentFilesAtom,
-			String(resolveEnvironmentFiles(store.get(environmentAtom)))
+			String(
+				environmentFilesOf(store.get(environmentAtom), store.get(lightingAtom))
+			)
 		)
 		mockExecuteSceneSaveOrchestrator.mockResolvedValue({ unchanged: true })
 		const apiRef = renderHarness()

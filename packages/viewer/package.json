@@ -1,5 +1,5 @@
 {
-	"version": "3.2.0",
+	"version": "3.3.0",
 	"name": "@vctrl/viewer",
 	"description": "vctrl/viewer is a React component library for rendering and interacting with 3D models. It's part of the vectreal ecosystem and is designed to work seamlessly with the vctrl/hooks package for model loading and management.",
 	"bugs": {
@@ -57,7 +57,7 @@
 		"postprocessing": "catalog:",
 		"clsx": "^2.1.1",
 		"tailwind-merge": "^3.6.0",
-		"three-mesh-bvh": "^0.8.3"
+		"three-mesh-bvh": "catalog:"
 	},
 	"peerDependencies": {
 		"three": "catalog:",

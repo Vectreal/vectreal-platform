@@ -90,8 +90,8 @@ Run `npx -y @vctrl/cli mcp` as a stdio server. The server is also listed in the 
 | `list_scenes` | A project's scenes, the most recently edited first. |
 | `create_scene_from_file` | Uploads a local GLB as a new draft scene, stored as it is. |
 | `describe_model` | A local GLB's size, meshes, materials and animation clips, and where the viewer places it. Nothing is rendered or uploaded. |
-| `get_scene_settings`, `update_scene_settings` | Read every settings section; change the environment, controls, bounds, shadows and presentation. |
-| `publish_scene` | Compresses the GLB as the publisher does (Draco geometry, KTX2 textures) and publishes it. |
+| `get_scene_settings`, `update_scene_settings` | Read every settings section; change the lighting, environment, controls, bounds, shadows and presentation. Lighting supersedes environment and shadows once a scene has it. |
+| `publish_scene` | Compresses the GLB as the publisher does (Draco geometry, KTX2 textures) and publishes it. It cannot draw a studio finish (baked ambient occlusion or studio lights): when the scene's lighting asks for one, the result carries a warning. |
 | `unpublish_scene` | Takes a scene offline. |
 | `get_embed_snippet` | The iframe snippet and preview URL for a published scene. It creates an embed key when the project has none, and adds the domains you name to the allowed list. |
 
@@ -103,6 +103,7 @@ Tools that take a `projectId` use the linked project when the call names none.
 - **Billing, members and organization settings.** None of these are open to agents.
 - **Hotspots, cameras, animation and normalization.** An agent can read these settings, but changes go through the publisher for now.
 - **Thumbnails and baked shadows.** An agent's machine renders nothing, so a scene it creates has neither until you first open it in the publisher, which fills both automatically.
+- **Studio finish (baked ambient occlusion and lights).** Drawing it needs a GPU. An agent can set `lighting.occlusion.mode` to `baked` or `lighting.bake.lights` to `true`, but only publishing from the publisher bakes them. Until then embeds show no ambient occlusion, and draw the studio lights live.
 
 What an agent may do is also limited by your role in the organization: an agent never does more than you could do yourself.
 

@@ -49,6 +49,8 @@ to match:
 | Dropped selections | `@vctrl/core/model-loader` | What a reference inside a model means: `selectionKey`, `referenceIn`, `referenceKeyIn` |
 | Remote models | `@vctrl/core/model-loader` | A model at a URL, as the files a drop would give: `fetchModelFiles`, `ModelFetchError` |
 | Scene asset helpers | `@vctrl/core` | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
+| Scene lighting | `@vctrl/core` | How a scene is lit, as stored and as drawn: `LightingSettings`, `resolveLighting`, `MAX_SCENE_LIGHTS` |
+| Occlusion bake | `@vctrl/core/occlusion-bake` | Bake ambient occlusion into a model's own textures: `planOcclusionBake`, `bakeOcclusion`, `writeOcclusionBake` |
 
 ---
 
@@ -384,6 +386,253 @@ export async function POST(request: Request) {
   })
 }
 ```
+
+---
+
+## Scene lighting
+
+A scene is lit by an environment map and up to three studio lights, and every
+shadow it shows comes from those lights. `SceneSettings.lighting` stores that,
+typed as `LightingSettings`:
+
+| Field | Meaning |
+|---|---|
+| `environment` | The HDR (`map`), its `resolution`, its `intensity`, and a `rotation` in degrees that turns the lights with it |
+| `lights` | Up to `MAX_SCENE_LIGHTS` (3), one per `role`: `key`, `fill` or `rim`. Each has an `azimuth` and `elevation` in degrees, a `size` (angular diameter, which sets how soft its shadows are), an `intensity` and a `color` |
+| `ground` | Whether a floor under the model receives its shadows |
+| `background` | The environment map, a `color` or `gradient` stage, or `none` |
+| `occlusion` | Ambient occlusion: `off`, `live` (screen space, every frame) or `baked` (raytraced into the model's textures when it is published) |
+| `bake` | `lights: true` bakes the studio lights into a light map when the scene is published; see [Light bake](#light-bake) |
+
+A light's `intensity` is relative to the environment's own diffuse light: 1 is as
+bright as the whole environment. So the environment's brightness scales every
+light, and a shadow's darkness follows from the ratio alone: ground a light
+cannot reach keeps `1 / (1 + intensity × sin(elevation))` of the light it would
+get, so `1 / (1 + intensity)` for a light straight overhead. There is no
+shadow opacity or direction to set; to change a shadow, change its light.
+
+Read lighting only through `resolveLighting(settings)`. It returns a
+`ResolvedLighting` with every field filled, and it also answers for a scene saved
+before `lighting` existed, by migrating its `environment` and `shadows`. The
+shadow's own light becomes the key, placed where that light stood, about as
+soft, and as strong as the old shadow was dark, up to the strength of the whole
+environment. That light used to reach only the ground; now it lights the model
+too, so a migrated scene's model gets brighter on the lit side and its darkest
+shadows come out lighter. A scene whose shadows were off gets no light and looks
+as it did.
+
+```ts
+import { resolveLighting } from '@vctrl/core'
+
+const { environment, lights, ground } = resolveLighting(scene.settings)
+```
+
+`@vctrl/viewer` draws every scene through `resolveLighting`: pass `lighting`, or
+the legacy `envOptions` and `shadowsOptions`, which stay readable for every
+scene saved before `lighting`. See [Lighting](/docs/packages/viewer#lighting-lightingsettings)
+for what the viewer does with each field.
+
+### Lighting setups
+
+`LIGHTING_SETUPS` holds the setups the Lighting tool offers, each a whole look:
+a map, up to three lights, their sizes and the balance between them. Each light
+stands on one of its map's own bright regions, so the reflection of a softbox or
+the sun on a glossy surface sits where the light that casts the model's shadow
+stands. Turning a setup (`environment.rotation`) turns the map and its lights
+together.
+
+The regions are measured, not placed by eye. `ENVIRONMENT_LIGHTS` lists every
+hosted map's brightest regions as a direction, a size and a share of the map's
+light; `pnpm nx run vectreal-platform:measure-environment-lights` reads the maps
+and writes it again when a map changes. An evenly lit map, such as
+`outdoor-overcast`, has none, and its setup lights with the environment alone.
+
+```ts
+import { LIGHTING_SETUPS } from '@vctrl/core'
+
+const product = LIGHTING_SETUPS.find(({ id }) => id === 'product')
+scene.settings.lighting = product?.lighting
+```
+
+{/* claims
+present packages/core/src/scene-lighting/lighting-setups.ts export const LIGHTING_SETUPS
+present packages/core/src/scene-lighting/environment-lights.ts export const ENVIRONMENT_LIGHTS
+present apps/vectreal-platform/project.json measure-environment-lights
+present packages/core/src/scene-lighting/environment-lights.ts 'outdoor-overcast': []
+*/}
+
+{/* claims
+present packages/core/src/types/scene-types.ts export const MAX_SCENE_LIGHTS = 3
+present packages/core/src/scene-lighting/resolve-lighting.ts export function resolveLighting
+present packages/core/src/scene-lighting/resolve-lighting.ts const MIGRATED_MAX_KEY_INTENSITY = 1
+present packages/sdk/src/scene-settings.ts lighting: sceneLightingSchema.optional()
+*/}
+
+## Occlusion bake
+
+`@vctrl/core/occlusion-bake` raytraces ambient occlusion (the darkening in
+creases, gaps and where parts touch) into each material's standard glTF
+`occlusionTexture`. Any glTF viewer applies it, and it dims only environment
+and ambient light, never a direct light. It runs in three steps:
+
+```ts
+import {
+	bakeOcclusion,
+	encodeOcclusionPng,
+	planOcclusionBake,
+	writeOcclusionBake
+} from '@vctrl/core/occlusion-bake'
+
+const plan = planOcclusionBake(document)
+const baked = await bakeOcclusion(plan, renderer)
+writeOcclusionBake(
+	document,
+	await Promise.all(
+		baked.map(async (bake) => ({
+			material: bake.material,
+			image: await encodeOcclusionPng(bake),
+			mimeType: 'image/png' as const
+		}))
+	)
+)
+```
+
+**`planOcclusionBake(document)`** decides which materials can be baked. The bake
+lives in the first UV set, so a material is baked only where one texel of it
+means one place on the model. The others are listed in `plan.skipped` with the
+reason:
+
+| Reason | Meaning |
+|---|---|
+| `existing-occlusion` | It has an occlusion texture already, which is kept |
+| `shared-geometry` | One mesh is placed more than once, by several nodes or GPU instancing, and each copy is occluded differently |
+| `skinned` | A skin moves it, so no one bake fits every pose |
+| `animated` | An animation channel moves its node or a parent, or it has morph targets, so the bake would hold only the rest pose |
+| `no-uv0` | It has no first UV set |
+| `tiling-uvs` | Its UVs repeat the texture |
+| `overlapping-uvs` | Two parts share texels, as mirrored halves usually do |
+
+Every triangle in the scene casts occlusion, skipped or not, with a few
+exceptions (`castsOcclusion` answers for each part). Glass, meaning a material
+with `KHR_materials_transmission` or blended transparency, is baked like any
+surface but lets the rays through. An alpha-masked part (a leaf card, say)
+blocks rays only where its base color alpha reaches its cutoff, read from a
+PNG, JPEG or WebP texture, times its vertex color alpha. A mask in any other
+format, such as KTX2, one that does not decode, and any past the first 64
+readable masks cast as solid. A masked part whose cutoff is above 1 is never
+drawn, so it casts nothing. A skinned, animated or GPU-instanced part casts nothing, because the
+viewer does not always draw it where its node puts it.
+
+**`bakeOcclusion(plan, renderer, options?)`** needs a browser or a worker with a
+`WebGLRenderer` (an `OffscreenCanvas` one works). It returns RGBA bytes per
+material, row 0 at the top of the image. The options:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `resolution` | 512 | Texture width and height in pixels |
+| `samples` | 256 | Rays per texel, at most 2048; more is smoother and slower |
+| `distance` | 0.25 | How far a ray looks for an occluder, as a share of the scene's bounding box diagonal |
+
+It runs the rays a few at a time and yields between them, so it does not freeze
+the page or trip the GPU's watchdog.
+
+**`writeOcclusionBake(document, images)`** stores each image as its material's
+`occlusionTexture` at full strength, read from the first UV set.
+`encodeOcclusionPng` makes the PNG in a browser or worker.
+
+**`bakeOcclusionIntoDocument(document, renderer, options?)`** runs all of the
+above in one step and returns which materials were baked and which skipped,
+by name. `renderer` is a function that returns one, called only when some
+material can be baked. Pass it to `ModelExporter.exportGlbForPublish` as `bake`, which
+bakes the published copy before its textures are encoded:
+
+```ts
+await new ModelExporter().exportGlbForPublish(glb, {
+	bake: async (copy) => {
+		report = await bakeOcclusionIntoDocument(copy, () => renderer)
+	},
+	ktx2: { encode }
+})
+```
+
+**`occlusionBakeSignature(plan, options)`** identifies a bake by everything that
+changes its pixels, so a bake made for a preview can be reused while the
+signature still matches.
+
+{/* claims
+present packages/core/package.json "./occlusion-bake": {
+present packages/core/src/occlusion-bake/options.ts resolution: 512,
+present packages/core/src/occlusion-bake/options.ts samples: 256,
+present packages/core/src/occlusion-bake/options.ts distance: 0.25
+present packages/core/src/occlusion-bake/plan.ts material.getAlphaMode() === 'BLEND'
+present packages/core/src/occlusion-bake/bake-occlusion.ts const MAX_SAMPLES = 2048
+present packages/core/src/model-exporter/model-exporter.ts await bake?.(clone)
+present packages/core/src/types/scene-types.ts mode?: 'off' | 'live' | 'baked'
+present packages/core/src/occlusion-bake/plan.ts node.getExtension('EXT_mesh_gpu_instancing')
+present packages/core/src/occlusion-bake/uv-trace.ts trace.primitives.filter(castsOcclusion)
+*/}
+
+---
+
+## Light bake
+
+`@vctrl/core/light-bake` raytraces the studio lights' diffuse light and soft
+shadows into a light map for each material, in its first UV set. Each texel
+samples every light that is on across its angular size, so a larger light casts
+a softer shadow. Glass lets the light through, as in the occlusion bake.
+
+```ts
+import { resolveLighting } from '@vctrl/core'
+import { bakeLightsIntoDocument } from '@vctrl/core/light-bake'
+
+const report = await bakeLightsIntoDocument(
+	document,
+	resolveLighting(scene.settings),
+	() => renderer
+)
+```
+
+It plans with `planOcclusionBake(document, { existingOcclusion: 'bake' })`, so
+it skips materials for the same reasons, except that an occlusion texture does
+not stop it: bake ambient occlusion first, then the lights. It also skips a
+double-sided material, as `double-sided`: one map cannot light both its sides.
+While any part moves, is skinned or is GPU-instanced, it skips every other
+material as `moving-shadows`: a map replaces the live shadows, and it cannot
+hold the shadow of a part that moves or is drawn more than once. While an
+alpha-masked part casts as solid, it skips them as
+`cutout-shadows`, because that part is traced as solid. An unlit material is skipped as `unlit`. The options are
+`resolution` (512) and `samples` (128 rays per light per texel).
+
+There is no ratified glTF light map, so the map is written under a Vectreal
+extension, `VECTREAL_lightmap`, on each material:
+
+| Field | Meaning |
+|---|---|
+| `lightmapTexture` | A PNG, read from the first UV set. Each texel stores the square root of its share of `scale`, which keeps precision in the shadows |
+| `scale` | The light a full texel holds: the lights' strengths added up, each by its brightest color channel. In the units of a light's `intensity`, relative to the environment |
+| `signature` | `bakedLightsSignature` of the lighting it was baked from |
+
+Read and write it through `IO_EXTENSIONS` from `@vctrl/core/light-bake`, which `ModelLoader`, `ModelOptimizer`
+and `ModelExporter` register: glTF-Transform drops an extension it does not
+know. `ModelLoader` hands it to three as the material's `lightMap`, at
+`lightMapIntensity` 0 so that a renderer unaware of the encoding adds nothing,
+with the `scale` and `signature` on `userData.vectrealLightmap`.
+[`@vctrl/viewer`](/docs/packages/viewer#baked-lights) draws it while the
+scene's lighting has the same signature.
+
+`bakedLightsSignature(lighting)` covers the lights that are on, with their
+placement after **Turn**, size, strength and color. It leaves out the
+environment map and its brightness, which scale baked light at draw time just
+as they scale live light.
+
+{/* claims
+present packages/core/package.json "./light-bake": {
+present packages/core/src/light-bake/bake-lights.ts samples: 128
+present packages/core/src/light-bake/bake-into-document.ts planOcclusionBake(document, { existingOcclusion: 'bake' })
+present packages/core/src/model-loader/baked-lightmap-plugin.ts params.lightMapIntensity = 0
+present packages/core/src/io-extensions.ts export const IO_EXTENSIONS = [...ALL_EXTENSIONS, VectrealLightmap]
+present packages/core/src/scene-lighting/baked-lights.ts export const BAKED_LIGHTMAP_USER_DATA = 'vectrealLightmap'
+*/}
 
 ---
 

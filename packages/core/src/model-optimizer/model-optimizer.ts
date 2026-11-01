@@ -15,7 +15,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import { Document, JSONDocument, Transform, WebIO } from '@gltf-transform/core'
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import {
 	cloneDocument,
 	inspect,
@@ -24,6 +23,7 @@ import {
 import { Object3D } from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 
+import { IO_EXTENSIONS } from '../io-extensions'
 import { OperationProgress } from '../types'
 import {
 	DocumentCurrency,
@@ -127,7 +127,7 @@ export class ModelOptimizer {
 	private dracoReport: DracoCompressionReport | null = null
 
 	constructor(options?: { dracoPath?: string }) {
-		this.io = new WebIO().registerExtensions(ALL_EXTENSIONS)
+		this.io = new WebIO().registerExtensions(IO_EXTENSIONS)
 		this.exporter = new GLTFExporter()
 		this.codecs = new GeometryCodecs(
 			this.io,

@@ -1,7 +1,10 @@
+import { LEGACY_LIGHTING_DEFAULTS } from '@vctrl/core'
+import { defaultShadowsOptions as viewerShadowDefaults } from '@vctrl/viewer'
 import { resolveSceneViewCameras } from '@vctrl/viewer/hotspots'
 import { describe, expect, it } from 'vitest'
 
 import {
+	defaultEnvOptions,
 	defaultShadowsOptions,
 	normalizeShadowOptions,
 	withSceneSettingsDefaults
@@ -91,5 +94,48 @@ describe('withSceneSettingsDefaults camera kinds', () => {
 				{ linkedCameraId: 'default' }
 			]).map((entry) => entry.cameraId)
 		).toEqual(['default', 'detail'])
+	})
+})
+
+/**
+ * `resolveLighting` migrates a scene saved before `lighting` by assuming what
+ * the viewer filled in for each absent field. Core cannot import these
+ * defaults, so it carries its own copy; this holds it to the app's and the
+ * viewer's, which embeds render through, until the legacy shapes are deleted. A drift here moves the migrated shadow of every
+ * scene that never touched the field.
+ */
+describe('LEGACY_LIGHTING_DEFAULTS', () => {
+	it('matches the defaults the viewer applied to legacy scenes', () => {
+		const D = LEGACY_LIGHTING_DEFAULTS
+		for (const shadows of [defaultShadowsOptions, viewerShadowDefaults]) {
+			expect(D.shadowsEnabled).toBe(shadows.enabled)
+			expect(D.lightPosition).toEqual(shadows.light?.position)
+			expect(D.lightRadius).toBe(shadows.light?.radius)
+			expect(D.lightAmbient).toBe(shadows.light?.ambient)
+			expect(D.opacity).toBe(shadows.opacity)
+			expect(D.ao).toBe(shadows.ao)
+			expect(D.aoIntensity).toBe(shadows.aoIntensity)
+			expect(D.aoAtRest).toBe(shadows.aoAtRest)
+		}
+		expect(D.environmentIntensity).toBe(defaultEnvOptions.environmentIntensity)
+		expect(D.backgroundIntensity).toBe(defaultEnvOptions.backgroundIntensity)
+		expect(D.backgroundBlurriness).toBe(defaultEnvOptions.backgroundBlurriness)
+	})
+})
+
+describe('withSceneSettingsDefaults lighting', () => {
+	it('passes a stored lighting through, so a read-modify-write keeps it', () => {
+		const lighting = { lights: [{ role: 'key' as const, azimuth: 30 }] }
+		expect(withSceneSettingsDefaults({ lighting }).lighting).toBe(lighting)
+	})
+
+	// The API stores what this returns on every PATCH. A lighting filled in
+	// here would freeze a legacy scene's old environment and shadows, and its
+	// next environment edit would not show.
+	it('leaves a scene saved before lighting without one', () => {
+		const settings = withSceneSettingsDefaults({
+			environment: { preset: 'night-city' }
+		})
+		expect(settings.lighting).toBeUndefined()
 	})
 })

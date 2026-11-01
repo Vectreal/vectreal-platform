@@ -194,6 +194,14 @@ export default defineConfig(({ command }) => {
 		},
 		assetsInclude: ['**/*.gltf', '**/*.glb', '**/*.hdr'],
 		resolve: { tsconfigPaths: true },
+		/*
+		  `future.unstable_optimizeDeps` hands the dev dependency scan every
+		  route module, but workers are started with `new Worker(new URL(...))`,
+		  which the scan does not follow. A dependency only a worker imports was
+		  then found on first use, and Vite answered with a full page reload.
+		  React Router's entries are merged with these, not replaced.
+		*/
+		optimizeDeps: { entries: ['app/workers/*.worker.ts'] },
 		plugins: [
 			tailwindcss(),
 			// Before `mdx()`: it serves `*.mdx?markdown` the MDX plugin would claim.

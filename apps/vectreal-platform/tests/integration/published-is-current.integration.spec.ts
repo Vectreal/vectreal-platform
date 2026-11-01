@@ -211,6 +211,25 @@ describe('whether the published file is current', () => {
 		expect(await isCurrent(sceneId)).toBe(false)
 	})
 
+	// The bakes are inside the file; live lights are drawn by the embed.
+	it('is not once a light the file has baked in moves, and stays through a live one', async () => {
+		const { sceneId, model } = await publishedScene()
+		const key = { role: 'key' as const, azimuth: 30 }
+
+		await save(sceneId, model, { lighting: { lights: [key] } })
+		expect(await isCurrent(sceneId)).toBe(true)
+
+		const baked = { lights: [key], bake: { lights: true } }
+		// Published baking nothing, the file has no light map to keep current.
+		await save(sceneId, model, { lighting: baked })
+		expect(await isCurrent(sceneId)).toBe(false)
+		await publish(sceneId)
+		await save(sceneId, model, {
+			lighting: { ...baked, lights: [{ ...key, azimuth: 31 }] }
+		})
+		expect(await isCurrent(sceneId)).toBe(false)
+	})
+
 	// Embeds read settings live, so a saved setting is already published.
 	it('stays current through a settings save, a new thumbnail and a new bake', async () => {
 		const { sceneId, model } = await publishedScene()
@@ -236,6 +255,27 @@ describe('whether the published file is current', () => {
 		})
 
 		expect(await isCurrent(sceneId)).toBeNull()
+	})
+
+	it('reads a publish recorded before bakes were described as current', async () => {
+		const { sceneId, model } = await publishedScene()
+		const baked = {
+			lights: [{ role: 'key' as const, azimuth: 30 }],
+			bake: { lights: true }
+		}
+		await save(sceneId, model, { lighting: baked })
+		await publish(sceneId)
+		const [row] = await db
+			.select({ sourceFingerprint: schema.scenePublished.sourceFingerprint })
+			.from(schema.scenePublished)
+			.where(eq(schema.scenePublished.sceneId, sceneId))
+		const { bakes: _bakes, ...recorded } = JSON.parse(row.sourceFingerprint!)
+		await db
+			.update(schema.scenePublished)
+			.set({ sourceFingerprint: JSON.stringify(recorded) })
+			.where(eq(schema.scenePublished.sceneId, sceneId))
+
+		expect(await isCurrent(sceneId)).toBe(true)
 	})
 
 	it('cannot say for a publish made before it was recorded', async () => {

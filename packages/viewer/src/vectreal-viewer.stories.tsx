@@ -1,12 +1,26 @@
-import { describeAnimationClips } from '@vctrl/core'
+import {
+	BAKED_LIGHTMAP_USER_DATA,
+	bakedLightsSignature,
+	describeAnimationClips,
+	LIGHTING_SETUPS,
+	lightDirection,
+	litLights,
+	resolveLighting,
+	type LightingSettings,
+	type LightingSetupId,
+	type ResolvedLighting
+} from '@vctrl/core'
 import { fn } from 'storybook/test'
 import {
 	AnimationClip,
 	BoxGeometry,
+	Color,
+	DataTexture,
 	Group,
 	Mesh,
 	MeshStandardMaterial,
 	NumberKeyframeTrack,
+	SphereGeometry,
 	VectorKeyframeTrack
 } from 'three'
 
@@ -151,6 +165,258 @@ export const StageGradient: Story = {
 			backdrop: { type: 'gradient', top: '#fafafa', bottom: '#d4d4d8' }
 		},
 		shadowsOptions: { ...defaultShadowsOptions, enabled: true }
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/** Blocks for self-shadow, and a sphere whose highlights show each light. */
+const createLightingModel = () => {
+	const model = createOcclusionModel()
+	const sphere = new Mesh(
+		new SphereGeometry(0.3, 64, 32),
+		new MeshStandardMaterial({ color: '#d4d4d8', roughness: 0.25 })
+	)
+	sphere.position.set(-0.45, 0.7, 0.45)
+	model.add(sphere)
+	return model
+}
+
+/**
+ * Three studio lights. Every shadow comes from them: the key's direction and
+ * size shape the ground shadow and the model's own, the fill lifts the shadow
+ * side, and the rim draws an edge from behind.
+ */
+export const StudioLights: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createLightingModel(),
+		envOptions: undefined,
+		lighting: {
+			environment: { map: 'studio-soft', intensity: 0.8 },
+			lights: [
+				{ role: 'key', azimuth: 40, elevation: 45, size: 15, intensity: 0.7 },
+				{ role: 'fill', azimuth: -60, elevation: 25, size: 60, intensity: 0.2 },
+				{ role: 'rim', azimuth: 170, elevation: 30, size: 10, intensity: 0.5 }
+			],
+			ground: { enabled: true },
+			background: { type: 'color', color: '#f4f4f5' }
+		}
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * No studio light: the environment alone lights the model, and the ground
+ * shows only where the model hides the sky from it.
+ */
+export const EnvironmentOnly: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createLightingModel(),
+		envOptions: undefined,
+		lighting: {
+			environment: { map: 'outdoor-overcast' },
+			ground: { enabled: true },
+			background: { type: 'color', color: '#f4f4f5' }
+		}
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
+ * A lighting reference, the way an HDR is read on set: a chrome ball shows the
+ * environment and where its lights sit, a matte grey ball and block show each
+ * light's direction, softness and shadow.
+ */
+const createReferenceModel = () => {
+	const model = new Group()
+	const chrome = new Mesh(
+		new SphereGeometry(0.35, 96, 48),
+		new MeshStandardMaterial({
+			color: '#ffffff',
+			metalness: 1,
+			roughness: 0.04
+		})
+	)
+	chrome.position.set(-0.45, 0.35, 0)
+	const matte = new Mesh(
+		new SphereGeometry(0.35, 96, 48),
+		new MeshStandardMaterial({ color: '#9a9a9e', roughness: 0.9 })
+	)
+	matte.position.set(0.45, 0.35, 0)
+	const block = new Mesh(
+		new BoxGeometry(0.3, 0.7, 0.3),
+		new MeshStandardMaterial({ color: '#b8b8bc', roughness: 0.7 })
+	)
+	block.position.set(0, 0.35, -0.55)
+	for (const mesh of [chrome, matte, block]) {
+		mesh.castShadow = true
+		mesh.receiveShadow = true
+	}
+	model.add(chrome, matte, block)
+	return model
+}
+
+/**
+ * Every lighting setup on the reference model. A light's highlight on the
+ * chrome ball should sit on the reflection of the map's own light it stands
+ * on, and the shadows should fall away from it.
+ */
+export const LightingSetups: StoryObj<
+	VectrealViewerProps & { setup: LightingSetupId }
+> = {
+	parameters: timeDependentCapture,
+	argTypes: {
+		setup: {
+			control: 'select',
+			options: LIGHTING_SETUPS.map((setup) => setup.id)
+		}
+	},
+	args: {
+		model: createReferenceModel(),
+		envOptions: undefined,
+		setup: 'soft-studio',
+		// Close and slightly above, as a reference shot is framed.
+		cameraOptions: {
+			activeCameraId: 'reference',
+			cameras: [
+				{
+					cameraId: 'reference',
+					name: 'Reference',
+					position: [0, 0.55, 1.6],
+					target: [0, 0.12, 0]
+				}
+			]
+		}
+	},
+	render: ({ setup, ...args }) => {
+		const { lighting } = LIGHTING_SETUPS.find(({ id }) => id === setup)!
+		return (
+			<VectrealViewer
+				{...args}
+				lighting={{
+					...lighting,
+					background: { type: 'environment', intensity: 1, blur: 0.6 }
+				}}
+			/>
+		)
+	}
+}
+
+const BAKED_LIGHTING: LightingSettings = {
+	environment: { map: 'studio-soft', intensity: 0.8 },
+	lights: [
+		{ role: 'key', azimuth: 60, elevation: 25, size: 10, intensity: 1.5 },
+		{ role: 'fill', azimuth: -70, elevation: 15, size: 40, intensity: 0.3 }
+	],
+	background: { type: 'color', color: '#f4f4f5' }
+}
+
+/*
+  The light map the publish bake writes for a sphere, worked out here instead
+  of raytraced: a sphere cannot shadow itself, so each texel's light is the
+  lights' strength by the cosine to its normal, in SphereGeometry's own UVs.
+*/
+function sphereLightmap(lighting: ResolvedLighting, size = 128) {
+	const lights = litLights(lighting)
+	const scale = lights.reduce((sum, light) => {
+		const { r, g, b } = new Color(light.color)
+		return sum + light.intensity * Math.max(r, g, b)
+	}, 0)
+	const data = new Uint8Array(size * size * 4)
+	for (let row = 0; row < size; row++) {
+		for (let column = 0; column < size; column++) {
+			const phi = ((column + 0.5) / size) * 2 * Math.PI
+			const theta = (1 - (row + 0.5) / size) * Math.PI
+			const normal = [
+				-Math.cos(phi) * Math.sin(theta),
+				Math.cos(theta),
+				Math.sin(phi) * Math.sin(theta)
+			]
+			const light = [0, 0, 0]
+			for (const entry of lights) {
+				const [x, y, z] = lightDirection(entry, lighting.environment.rotation)
+				const facing = Math.max(
+					normal[0] * x + normal[1] * y + normal[2] * z,
+					0
+				)
+				const { r, g, b } = new Color(entry.color)
+				;[r, g, b].forEach((channel, c) => {
+					light[c] += entry.intensity * channel * facing
+				})
+			}
+			const i = (row * size + column) * 4
+			light.forEach((value, c) => {
+				data[i + c] = Math.round(Math.sqrt(value / scale) * 255)
+			})
+			data[i + 3] = 255
+		}
+	}
+	const texture = new DataTexture(data, size, size)
+	texture.needsUpdate = true
+	return { texture, scale }
+}
+
+const createBakedLightsSphere = (baked: boolean) => {
+	const lighting = resolveLighting({ lighting: BAKED_LIGHTING })
+	const material = new MeshStandardMaterial({
+		color: '#b8b8bc',
+		roughness: 0.9
+	})
+	if (baked) {
+		const { texture, scale } = sphereLightmap(lighting)
+		material.lightMap = texture
+		material.lightMapIntensity = 0
+		material.userData[BAKED_LIGHTMAP_USER_DATA] = {
+			scale,
+			signature: bakedLightsSignature(lighting)
+		}
+	}
+	return new Group().add(new Mesh(new SphereGeometry(0.5, 96, 48), material))
+}
+
+/**
+ * Baked lights against live ones: the right sphere carries the light map
+ * publishing bakes, the left is lit live. They should read the same, the
+ * baked one without live shadow maps and with its highlights still live.
+ */
+export const BakedLights: Story = {
+	parameters: timeDependentCapture,
+	render: (args) => (
+		<div style={{ display: 'flex', height: '100%' }}>
+			{[false, true].map((baked) => (
+				<div key={String(baked)} style={{ flex: 1 }}>
+					<VectrealViewer
+						{...args}
+						model={createBakedLightsSphere(baked)}
+						envOptions={undefined}
+						lighting={BAKED_LIGHTING}
+					/>
+				</div>
+			))}
+		</div>
+	)
+}
+
+/**
+ * A scene saved before `lighting`, with the publisher's angled "Studio" shadow.
+ * Its shadow's light becomes the key and now lights the model from the side
+ * its shadow falls away from.
+ */
+export const LegacyAngledShadow: Story = {
+	parameters: timeDependentCapture,
+	args: {
+		model: createLightingModel(),
+		envOptions: {
+			...defaultEnvOptions,
+			backdrop: { type: 'color', color: '#f4f4f5' }
+		},
+		shadowsOptions: {
+			...defaultShadowsOptions,
+			enabled: true,
+			opacity: 0.9,
+			light: { ambient: 0.3, radius: 0.8, position: [2, 3, 2] }
+		}
 	},
 	render: (args) => <VectrealViewer {...args} />
 }

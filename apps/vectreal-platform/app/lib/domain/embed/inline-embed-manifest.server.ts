@@ -1,5 +1,6 @@
 import { createEmbedAssetUrls } from './embed-asset-signature.server'
 import { reportServerError } from '../../observability/report-server-error.server'
+import { extensionsUsedFromMetadata } from '../scene/embed-asset-policy'
 import {
 	composeEmbedSceneManifest,
 	type EmbedSceneSettings
@@ -9,7 +10,10 @@ import {
 	type PublishedScenePreview
 } from '../scene/server/scene-preview-repository.server'
 
-import type { SceneEmbedManifestResponse } from '../../../types/api'
+import type {
+	SceneAssetRecord,
+	SceneEmbedManifestResponse
+} from '../../../types/api'
 
 /**
  * A settings read that failed, held as a value so a loader can read settings
@@ -63,6 +67,45 @@ export async function buildInlineEmbedManifest(
 			toPublishedModelRow(previewScene),
 			settingsData,
 			assetUrls.buildAssetUrl
+		)
+	} catch (error) {
+		reportServerError(error, { request, properties: { sceneId, projectId } })
+		return null
+	}
+}
+
+/**
+ * A draft's manifest with its saved studio finish as the model, for the
+ * scene's own members on its own surfaces. Its URLs carry no signature and no
+ * key, so they authenticate only by a member's cookie: the draft finish never
+ * reaches an embed. Null when it cannot be built, and the page then loads the
+ * working scene as it always has.
+ */
+export async function buildDraftFinishManifest(
+	request: Request,
+	params: {
+		projectId: string
+		sceneId: string
+		finish: SceneAssetRecord
+		settingsData: EmbedSceneSettings | EmbedSettingsReadFailure
+	}
+): Promise<SceneEmbedManifestResponse | null> {
+	const { projectId, sceneId, finish, settingsData } = params
+	try {
+		if (settingsData instanceof EmbedSettingsReadFailure) {
+			throw settingsData.cause
+		}
+		return await composeEmbedSceneManifest(
+			sceneId,
+			{
+				assetId: finish.id,
+				fileName: finish.name,
+				mimeType: finish.mimeType,
+				byteSize: finish.fileSize,
+				extensionsUsed: extensionsUsedFromMetadata(finish.metadata)
+			},
+			settingsData,
+			(assetId) => `/api/scenes/${sceneId}/assets/${assetId}`
 		)
 	} catch (error) {
 		reportServerError(error, { request, properties: { sceneId, projectId } })

@@ -222,4 +222,95 @@ describe('SaveProgressPanel', () => {
 		fireEvent.click(screen.getByRole('button', { name: /Retry/ }))
 		expect(onRetry).toHaveBeenCalledOnce()
 	})
+	describe('while publishing', () => {
+		const uploadingGlb: SavePanelState = {
+			status: 'publishing',
+			message: null,
+			files: [],
+			publish: {
+				steps: [
+					{ key: 'export', done: 0, total: 0, state: 'done' },
+					{ key: 'textures', done: 3, total: 3, state: 'done' },
+					{
+						key: 'upload',
+						done: 500_000,
+						total: 2_000_000,
+						state: 'active'
+					},
+					{ key: 'commit', done: 0, total: 0, state: 'waiting' }
+				]
+			}
+		}
+
+		it('names the running step and how far it has come', () => {
+			renderPanel(uploadingGlb)
+
+			expect(
+				screen.getByRole('region', { name: 'Publish progress' })
+			).toBeTruthy()
+			expect(screen.getAllByText('Uploading the published file')).toBeTruthy()
+			expect(
+				screen.getByRole('progressbar').getAttribute('aria-valuenow')
+			).toBe('25')
+		})
+
+		it('lists every step, and no settings when nothing was saved', () => {
+			renderPanel(uploadingGlb)
+
+			fireEvent.click(screen.getByRole('button', { name: 'Show save details' }))
+			expect(screen.getByText('Compressing textures for the GPU')).toBeTruthy()
+			expect(screen.getByText('Publishing')).toBeTruthy()
+			expect(screen.queryByText('Scene settings')).toBeNull()
+		})
+
+		it('says how much of a bake is drawn as a share', () => {
+			renderPanel({
+				...uploadingGlb,
+				publish: {
+					steps: [
+						{ key: 'export', done: 0, total: 0, state: 'done' },
+						{ key: 'lights', done: 0.4, total: 1, state: 'active' },
+						{ key: 'upload', done: 0, total: 0, state: 'waiting' }
+					]
+				}
+			})
+
+			fireEvent.click(screen.getByRole('button', { name: 'Show save details' }))
+			expect(
+				screen.getAllByText('Drawing the studio lights').length
+			).toBeGreaterThan(0)
+			expect(screen.getAllByText('40%').length).toBeGreaterThan(0)
+			expect(
+				screen.getByRole('progressbar').getAttribute('aria-valuenow')
+			).toBe('40')
+		})
+
+		it('opens collapsed even when it starts with nothing to save', () => {
+			const { store } = renderPanel({
+				status: 'saved',
+				message: null,
+				files: []
+			})
+			fireEvent.click(screen.getByRole('button', { name: 'Show save details' }))
+			expect(
+				screen.getByRole('button', { name: 'Hide save details' })
+			).toBeTruthy()
+
+			act(() => store.set(savePanelAtom, uploadingGlb))
+
+			expect(
+				screen.getByRole('button', { name: 'Show save details' })
+			).toBeTruthy()
+		})
+
+		it('leaves retrying a failed publish to the publish card', () => {
+			renderPanel({
+				...uploadingGlb,
+				status: 'failed',
+				message: 'Network'
+			})
+
+			expect(screen.queryByRole('button', { name: /Retry/ })).toBeNull()
+		})
+	})
 })

@@ -1,5 +1,6 @@
 import { basename, extname, resolve } from 'node:path'
 
+import { litLights, resolveLighting } from '@vctrl/core'
 import {
 	createProjectInputSchema,
 	createSceneInputSchema,
@@ -143,7 +144,7 @@ export const getSceneSettings = defineOperation({
 	name: 'get_scene_settings',
 	title: 'Read scene settings',
 	description:
-		'Every settings section of a scene (environment, controls, bounds, shadows, presentation, camera, hotspots, interactions, animation, normalization), defaults filled in.',
+		'Every settings section of a scene (lighting, environment, controls, bounds, shadows, presentation, camera, hotspots, interactions, animation, normalization), defaults filled in.',
 	input: z.object({ sceneId }),
 	readOnly: true,
 	destructive: false,
@@ -154,7 +155,7 @@ export const updateSceneSettings = defineOperation({
 	name: 'update_scene_settings',
 	title: 'Change scene settings',
 	description:
-		'Replaces the environment, controls, bounds, shadows or presentation sections sent; each section sent is stored whole with the keys it leaves out at their defaults, so read the section with get_scene_settings and send it back changed. Camera, hotspots, interactions, animation and normalization are read-only here. Live embeds show the change at once.',
+		'Replaces the lighting, environment, controls, bounds, shadows or presentation sections sent; each section sent is stored whole with the keys it leaves out at their defaults, so read the section with get_scene_settings and send it back changed. Camera, hotspots, interactions, animation and normalization are read-only here. Lighting supersedes environment and shadows: those two only show on a scene with no lighting section, so change lighting. Live embeds show the change at once.',
 	input: z.object({
 		sceneId,
 		settings: updateSceneSettingsInputSchema
@@ -165,11 +166,33 @@ export const updateSceneSettings = defineOperation({
 		context.client.updateSceneSettings(sceneId, settings)
 })
 
+/** Baking raytraces on a GPU, which a terminal does not have. */
+export const BAKED_OCCLUSION_WARNING =
+	"This scene's lighting asks for a studio finish with depth (baked ambient occlusion), which only the Publisher can draw: it was published without it. Publish from the Publisher to add it, or set lighting.occlusion.mode to 'live' or 'off'."
+
+/** The light maps are raytraced too. */
+export const BAKED_LIGHTS_WARNING =
+	"This scene's lighting asks for a studio finish with its studio lights (baked into a light map), which only the Publisher can draw: it was published with them live. Publish from the Publisher to add it, or set lighting.bake.lights to false."
+
+/** What a scene's lighting asks to bake that this publish could not. */
+function unbakedWarnings(
+	settings: Parameters<typeof resolveLighting>[0]
+): string[] {
+	if (!settings) return []
+	const lighting = resolveLighting(settings)
+	return [
+		...(lighting.occlusion.mode === 'baked' ? [BAKED_OCCLUSION_WARNING] : []),
+		...(lighting.bake.lights && litLights(lighting).length > 0
+			? [BAKED_LIGHTS_WARNING]
+			: [])
+	]
+}
+
 export const publishScene = defineOperation({
 	name: 'publish_scene',
 	title: 'Publish a scene',
 	description:
-		"Compresses a local GLB the way the publisher exports it (Draco geometry and KTX2 textures, each on unless turned off) and publishes it as what the scene's visitors load. Send the GLB the scene was created from. Publishing again replaces it.",
+		"Compresses a local GLB the way the publisher exports it (Draco geometry and KTX2 textures, each on unless turned off) and publishes it as what the scene's visitors load. Send the GLB the scene was created from. Publishing again replaces it. Ambient occlusion and studio lights the scene's lighting asks to bake are not baked here, which needs a GPU: the result warns, and publishing from the Publisher bakes them.",
 	input: z.object({
 		sceneId,
 		path: filePath,
@@ -180,13 +203,20 @@ export const publishScene = defineOperation({
 	destructive: false,
 	run: async ({ sceneId, path, draco, ktx2 }, context) => {
 		const { bytes } = await readGlb(path, context)
+		// Only for the warning: a scene whose settings cannot be read still publishes.
+		const settings = await context.client
+			.getSceneSettings(sceneId)
+			.then((response) => response.settings)
+			.catch(() => undefined)
 		const exported = await context.exportForPublish(bytes, { draco, ktx2 })
 		const published = await context.client.publishScene(sceneId, {
 			file: blobOf(exported)
 		})
+		const warnings = unbakedWarnings(settings)
 		return {
 			...published,
-			bytes: { source: bytes.length, published: exported.length }
+			bytes: { source: bytes.length, published: exported.length },
+			...(warnings.length > 0 ? { warnings } : {})
 		}
 	}
 })

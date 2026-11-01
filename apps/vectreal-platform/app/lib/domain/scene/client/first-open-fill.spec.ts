@@ -5,7 +5,7 @@ import { planFirstOpenFill, waitForSettledBake } from './first-open-fill'
 const bake = { dataUrl: 'data:image/png;base64,AA==', signature: 'v2:1' }
 
 describe('planFirstOpenFill', () => {
-	it('asks for a thumbnail when none is stored, and for a bake only with shadows on and none stored', () => {
+	it('asks for a thumbnail when none is stored, and for a bake only with the ground on and none stored', () => {
 		expect(planFirstOpenFill({ thumbnailUrl: '' })).toEqual({
 			thumbnail: true,
 			bake: false
@@ -13,19 +13,40 @@ describe('planFirstOpenFill', () => {
 		expect(
 			planFirstOpenFill({
 				thumbnailUrl: '/api/scenes/s1/thumbnail/a1',
-				shadows: { enabled: true }
+				settings: { shadows: { enabled: true } }
 			})
 		).toEqual({ thumbnail: false, bake: true })
 		expect(
 			planFirstOpenFill({
 				thumbnailUrl: '/api/scenes/s1/thumbnail/a1',
-				shadows: { enabled: true, baked: { assetId: 'b1', signature: 'v2:1' } }
+				settings: { lighting: { ground: { enabled: true } } }
+			})
+		).toEqual({ thumbnail: false, bake: true })
+		expect(
+			planFirstOpenFill({
+				thumbnailUrl: '/api/scenes/s1/thumbnail/a1',
+				// The lighting is what the viewer draws; stale legacy keys are not.
+				settings: {
+					lighting: { ground: { enabled: false } },
+					shadows: { enabled: true }
+				}
 			})
 		).toBeNull()
 		expect(
 			planFirstOpenFill({
 				thumbnailUrl: '/api/scenes/s1/thumbnail/a1',
-				shadows: { enabled: false }
+				settings: {
+					shadows: {
+						enabled: true,
+						baked: { assetId: 'b1', signature: 'v2:1' }
+					}
+				}
+			})
+		).toBeNull()
+		expect(
+			planFirstOpenFill({
+				thumbnailUrl: '/api/scenes/s1/thumbnail/a1',
+				settings: { shadows: { enabled: false } }
 			})
 		).toBeNull()
 	})

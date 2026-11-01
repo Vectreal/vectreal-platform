@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	lightBakeWarning,
+	occlusionBakeWarning,
 	projectPublishedGlbBytes,
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
@@ -34,7 +36,9 @@ const run = (onProgress = vi.fn(), timeoutMs = 1_000) =>
 			buffer: new ArrayBuffer(4),
 			draco: {},
 			dracoWorthApplying: true,
-			ktx2: true
+			ktx2: true,
+			occlusion: false,
+			lights: false
 		},
 		onProgress,
 		timeoutMs
@@ -131,7 +135,9 @@ describe('projectPublishedGlbBytes', () => {
 			type: 'export',
 			draco: { quantizePosition: 14 },
 			dracoWorthApplying: false,
-			ktx2: false
+			ktx2: false,
+			occlusion: false,
+			lights: false
 		})
 
 		worker.reply({
@@ -179,5 +185,64 @@ describe('resolvePublishGeometryOptions', () => {
 		expect(
 			resolvePublishGeometryOptions(draco, report(true)).dracoWorthApplying
 		).toBe(true)
+	})
+})
+
+describe('occlusionBakeWarning', () => {
+	it('stays quiet for a material that kept its own occlusion map', () => {
+		expect(
+			occlusionBakeWarning({
+				baked: ['body'],
+				skipped: [{ material: 'tyre', reason: 'existing-occlusion' }]
+			})
+		).toBeNull()
+	})
+
+	it('counts the materials that missed out and names the first', () => {
+		expect(
+			occlusionBakeWarning({
+				baked: [],
+				skipped: [
+					{ material: 'tyre', reason: 'existing-occlusion' },
+					{ material: 'wheel', reason: 'shared-geometry' },
+					{ material: 'decal', reason: 'tiling-uvs' }
+				]
+			})
+		).toEqual({
+			message: "2 materials could not take the studio finish's depth.",
+			description: 'wheel: its mesh is placed more than once'
+		})
+	})
+
+	it('says nothing when no bake was asked for', () => {
+		expect(occlusionBakeWarning(undefined)).toBeNull()
+	})
+})
+
+describe('lightBakeWarning', () => {
+	it('says the scene shipped with live lights when the bake failed', () => {
+		expect(lightBakeWarning({ failed: 'WebGL 2 is unavailable' })).toEqual({
+			message:
+				'The studio finish could not draw the studio lights, so the scene was published with them live.',
+			description: 'WebGL 2 is unavailable'
+		})
+	})
+
+	it('counts the materials that kept live lights and names the first', () => {
+		expect(
+			lightBakeWarning({
+				baked: ['body'],
+				skipped: [{ material: 'wheel', reason: 'shared-geometry' }]
+			})
+		).toEqual({
+			message:
+				"1 material could not take the studio finish's lights and keeps them live.",
+			description: 'wheel: its mesh is placed more than once'
+		})
+	})
+
+	it('stays quiet when everything took the bake, or nothing was asked', () => {
+		expect(lightBakeWarning({ baked: ['body'], skipped: [] })).toBeNull()
+		expect(lightBakeWarning(undefined)).toBeNull()
 	})
 })

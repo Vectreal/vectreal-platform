@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { isSaveActionBlocked } from '../../lib/domain/scene'
 import { isSavingAtom } from '../../lib/stores/publisher-config-store'
+import { runningOperationAtom } from '../../lib/stores/save-progress-store'
 
 import type { SaveAvailabilityState } from '../../lib/domain/scene'
 import type {
@@ -58,8 +59,13 @@ const SaveButton = ({
 		saveSceneSettings
 	})
 
+	// A publish saves first itself; Save waits for it to end.
+	const isPublishing = useAtomValue(runningOperationAtom) === 'publish'
 	const isSaveDisabled =
-		forceDisabled || isSaving || isSaveActionBlocked(saveAvailability)
+		forceDisabled ||
+		isSaving ||
+		isPublishing ||
+		isSaveActionBlocked(saveAvailability)
 
 	const saveVisual = justSaved
 		? {

@@ -14,6 +14,11 @@ import {
 	balancedPreset,
 	originalPreset
 } from '../../../../../constants/optimizations'
+import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	dispatchSaveProgressAtom,
+	savePanelAtom
+} from '../../../../../lib/stores/save-progress-store'
 import {
 	optimizationAtom,
 	optimizationRuntimeAtom
@@ -21,6 +26,7 @@ import {
 import {
 	cameraAtom,
 	hotspotsAtom,
+	lightingAtom,
 	presentationAtom
 } from '../../../../../lib/stores/scene-settings-store'
 
@@ -31,7 +37,8 @@ const mocks = vi.hoisted(() => ({
 	toastSuccess: vi.fn(),
 	runPublishExportInWorker: vi.fn(),
 	publishSceneFromGlb: vi.fn(),
-	toastWarning: vi.fn()
+	toastWarning: vi.fn(),
+	loadToThreeJS: vi.fn()
 }))
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
@@ -39,6 +46,11 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 		optimizer: { isReady: true, _getDocument: mocks.getDocument },
 		file: { name: 'shoe.glb' }
 	})
+}))
+vi.mock('@vctrl/core/model-loader', () => ({
+	ModelLoader: class {
+		loadToThreeJS = mocks.loadToThreeJS
+	}
 }))
 vi.mock('react-router', () => ({
 	useNavigate: () => vi.fn(),
@@ -64,13 +76,17 @@ vi.mock('../../../../../lib/domain/scene/client/scene-publish', () => ({
 vi.mock('../../../../publishing/scene-publish-state-control', () => ({
 	ScenePublishStateControl: ({
 		onPublish,
-		onStateChange
+		onStateChange,
+		isPublishActionDisabled
 	}: {
 		onPublish: () => void
 		onStateChange?: (state: { status: 'draft' | 'published' }) => void
+		isPublishActionDisabled?: boolean
 	}) => (
 		<>
-			<button onClick={onPublish}>Publish Scene</button>
+			<button onClick={onPublish} disabled={isPublishActionDisabled}>
+				Publish Scene
+			</button>
 			<button onClick={() => onStateChange?.({ status: 'draft' })}>
 				Revoke
 			</button>
@@ -212,31 +228,127 @@ describe('the publish panel', () => {
 		let finish: (value: unknown) => void = () => {}
 		mocks.runPublishExportInWorker.mockImplementation(
 			(_request, onProgress: (p: object) => void) => {
-				onProgress({ texturesDone: 0, texturesTotal: 2 })
+				onProgress({ stage: 'textures', texturesDone: 0, texturesTotal: 2 })
 				return new Promise((resolve) => {
 					finish = resolve
 				})
 			}
 		)
-		renderPanel(balancedPreset)
+		const store = renderPanel(balancedPreset)
+		const step = (key: string) =>
+			store.get(savePanelAtom)?.publish?.steps.find((s) => s.key === key)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
 
-		expect(
-			await screen.findByText(/Compressing textures for the GPU \(1 of 2\)/)
-		).toBeInTheDocument()
+		await waitFor(() =>
+			expect(step('textures')).toMatchObject({
+				state: 'active',
+				done: 0,
+				total: 2
+			})
+		)
 
 		finish({ buffer: PUBLISHED.slice().buffer, geometryCodec: 'none' })
 		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
 
 		// A second publish that has not reported yet shows no stale count.
 		mocks.runPublishExportInWorker.mockImplementation(
 			() => new Promise(() => {})
 		)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
-		expect(
-			await screen.findByText('Publishing optimized scene...')
-		).toBeInTheDocument()
-		expect(screen.queryByText(/Compressing textures/)).toBeNull()
+		await waitFor(() =>
+			expect(step('export')).toMatchObject({ state: 'active' })
+		)
+		expect(step('textures')).toBeUndefined()
+	})
+
+	it('shows each bake as a step, in the order they run', async () => {
+		mocks.runPublishExportInWorker.mockImplementation(
+			(_request, onProgress: (p: object) => void) => {
+				onProgress({ stage: 'occlusion', fraction: 1 })
+				onProgress({ stage: 'lights', fraction: 0.4 })
+				return new Promise(() => {})
+			}
+		)
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.publish?.steps).toMatchObject([
+				{ key: 'export', state: 'done' },
+				{ key: 'occlusion', state: 'done' },
+				{ key: 'lights', state: 'active', done: 0.4, total: 1 },
+				{ key: 'upload', state: 'waiting' },
+				{ key: 'commit', state: 'waiting' }
+			])
+		)
+	})
+
+	it('reports the upload in bytes, then the commit', async () => {
+		const store = renderPanel(balancedPreset)
+		let committing = false
+		mocks.publishSceneFromGlb.mockImplementation(
+			async ({
+				onUploadProgress,
+				onCommitting
+			}: {
+				onUploadProgress: (fraction: number) => void
+				onCommitting: () => void
+			}) => {
+				onUploadProgress(0.5)
+				const upload = store
+					.get(savePanelAtom)
+					?.publish?.steps.find((s) => s.key === 'upload')
+				expect(upload).toMatchObject({
+					state: 'active',
+					done: PUBLISHED.byteLength / 2,
+					total: PUBLISHED.byteLength
+				})
+				onCommitting()
+				committing =
+					store
+						.get(savePanelAtom)
+						?.publish?.steps.find((s) => s.key === 'commit')?.state === 'active'
+				return {
+					response: {},
+					publishState: { sceneId: 'scene-1', status: 'published' }
+				}
+			}
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
+		expect(committing).toBe(true)
+	})
+
+	it('waits out a save before it publishes', () => {
+		renderPanel(balancedPreset, (store) =>
+			store.set(dispatchSaveProgressAtom, { type: 'preparing' })
+		)
+
+		expect(screen.getByRole('button', { name: 'Publish Scene' })).toBeDisabled()
+	})
+
+	it('marks the step that failed', async () => {
+		const store = renderPanel(balancedPreset)
+		mocks.runPublishExportInWorker.mockRejectedValue(new Error('GPU reset'))
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(store.get(savePanelAtom)?.status).toBe('failed'))
+		expect(store.get(savePanelAtom)).toMatchObject({
+			message: 'GPU reset',
+			publish: {
+				steps: [
+					{ key: 'export', state: 'failed' },
+					{ key: 'upload', state: 'waiting' },
+					{ key: 'commit', state: 'waiting' }
+				]
+			}
+		})
 	})
 
 	it('publishes what the worker encoded, with geometry and texture codecs on', async () => {
@@ -393,6 +505,178 @@ describe('the publish panel', () => {
 			expect.stringContaining('1 texture could not be GPU-compressed'),
 			{ description: 'KTX2 was more than 3× its size' }
 		)
+	})
+
+	it('bakes occlusion only when the lighting says baked', async () => {
+		for (const mode of ['off', 'live', 'baked'] as const) {
+			renderPanel(balancedPreset, (store) =>
+				store.set(lightingAtom, { occlusion: { mode } })
+			)
+			fireEvent.click(
+				screen.getAllByRole('button', { name: 'Publish Scene' }).at(-1)!
+			)
+		}
+		await waitFor(() =>
+			expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(3)
+		)
+
+		expect(
+			mocks.runPublishExportInWorker.mock.calls.map(
+				([request]) => request.occlusion
+			)
+		).toEqual([false, false, true])
+	})
+
+	it('names a material the bake skipped, and still publishes', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: {
+				baked: ['body'],
+				skipped: [{ material: 'wheel', reason: 'shared-geometry' }]
+			}
+		})
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		expect(mocks.toastWarning).toHaveBeenCalledWith(
+			"1 material could not take the studio finish's depth.",
+			{ description: 'wheel: its mesh is placed more than once' }
+		)
+	})
+
+	it('says so when the bake failed, and still publishes', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { failed: 'WebGL 2 is unavailable' }
+		})
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		expect(mocks.toastWarning).toHaveBeenCalledWith(
+			'The studio finish could not add depth, so the scene was published without it.',
+			{ description: 'WebGL 2 is unavailable' }
+		)
+	})
+
+	it('keeps a bake that failed partway marked failed once the scene ships', async () => {
+		mocks.runPublishExportInWorker.mockImplementation(
+			async (_request, onProgress: (progress: object) => void) => {
+				onProgress({ stage: 'occlusion', fraction: 0.4 })
+				onProgress({ stage: 'lights', fraction: 1 })
+				return {
+					buffer: PUBLISHED.slice().buffer,
+					geometryCodec: 'none',
+					occlusion: { failed: 'The GPU reset while baking ambient occlusion' },
+					lights: { baked: ['body'], skipped: [] }
+				}
+			}
+		)
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
+		expect(store.get(savePanelAtom)?.publish?.steps).toMatchObject([
+			{ key: 'export', state: 'done' },
+			{ key: 'occlusion', state: 'failed' },
+			{ key: 'lights', state: 'done' },
+			{ key: 'upload', state: 'done' },
+			{ key: 'commit', state: 'done' }
+		])
+	})
+
+	it('shows the finish it published, and ships that file again without exporting', async () => {
+		const scene = {}
+		mocks.loadToThreeJS.mockResolvedValue({ scene })
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { baked: ['body'], skipped: [] }
+		})
+		const store = renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)).toMatchObject({
+				status: 'ready',
+				shown: true,
+				model: scene
+			})
+		)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(2)
+		)
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledOnce()
+		expect(mocks.publishSceneFromGlb.mock.calls[1][0].glbData).toEqual(
+			PUBLISHED
+		)
+	})
+
+	it('bakes again rather than ship a finish one of whose bakes failed', async () => {
+		mocks.loadToThreeJS.mockResolvedValue({ scene: {} })
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { baked: ['body'], skipped: [] },
+			lights: { failed: 'The GPU reset while baking the studio lights' }
+		})
+		const store = renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, {
+				occlusion: { mode: 'baked' },
+				lights: [{ role: 'key', azimuth: 30 }],
+				bake: { lights: true }
+			})
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)?.status).toBe('ready')
+		)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+		await waitFor(() =>
+			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(2)
+		)
+		expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(2)
+	})
+
+	it('leaves the model as it is when the publish bakes nothing', async () => {
+		const store = renderPanel(balancedPreset)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
+		expect(store.get(bakePreviewAtom)).toBeNull()
+		expect(mocks.loadToThreeJS).not.toHaveBeenCalled()
+	})
+
+	it('says nothing about the bake when the publish itself fails', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: PUBLISHED.slice().buffer,
+			geometryCodec: 'none',
+			occlusion: { failed: 'WebGL 2 is unavailable' }
+		})
+		mocks.publishSceneFromGlb.mockRejectedValue(new Error('network down'))
+		renderPanel(balancedPreset, (store) =>
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+		)
+		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
+
+		await screen.findByText('network down')
+		expect(mocks.toastWarning).not.toHaveBeenCalled()
 	})
 
 	// Revoking deletes the published GLB, so its size stops describing the scene.

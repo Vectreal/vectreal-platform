@@ -197,4 +197,76 @@ describe('compressTexturesToKtx2', () => {
 			[2, 2]
 		])
 	})
+
+	it('encodes up to `concurrency` textures at once', async () => {
+		const document = texturedDocument()
+		document
+			.createTexture('roughness')
+			.setImage(webpHeader(256, 256))
+			.setMimeType('image/webp')
+		let running = 0
+		let mostAtOnce = 0
+		const encode = vi.fn(async () => {
+			mostAtOnce = Math.max(mostAtOnce, ++running)
+			await new Promise((resolve) => setTimeout(resolve))
+			running--
+			return ktx2Bytes()
+		})
+
+		const report = await compressTexturesToKtx2(document, {
+			encode,
+			concurrency: 2
+		})
+
+		expect(encode).toHaveBeenCalledTimes(3)
+		expect(mostAtOnce).toBe(2)
+		expect(report.encoded).toEqual(['color', 'normal', 'roughness'])
+	})
+
+	it('reports in document order however the encodes finish', async () => {
+		const document = texturedDocument()
+		document
+			.createTexture('roughness')
+			.setImage(webpHeader(256, 256))
+			.setMimeType('image/webp')
+		// Each texture finishes after the one behind it in the document.
+		const delays = new Map([
+			[1024, 10],
+			[2048, 5],
+			[256, 0]
+		])
+		const finished: number[] = []
+		const encode = vi.fn(async ({ width }: { width: number }) => {
+			await new Promise((resolve) => setTimeout(resolve, delays.get(width)))
+			finished.push(width)
+			return new Uint8Array([width >> 8, width & 0xff])
+		})
+		const onProgress = vi.fn()
+
+		const report = await compressTexturesToKtx2(document, {
+			encode,
+			concurrency: 3,
+			onProgress
+		})
+
+		expect(finished).toEqual([256, 2048, 1024])
+		expect(report.encoded).toEqual(['color', 'normal', 'roughness'])
+		// Each texture carries its own encode, not whichever finished first.
+		expect(
+			document
+				.getRoot()
+				.listTextures()
+				.map((texture) => Array.from(texture.getImage() as Uint8Array))
+		).toEqual([
+			[1024 >> 8, 1024 & 0xff],
+			[2048 >> 8, 2048 & 0xff],
+			[256 >> 8, 256 & 0xff]
+		])
+		expect(onProgress.mock.calls).toEqual([
+			[0, 3],
+			[1, 3],
+			[2, 3],
+			[3, 3]
+		])
+	})
 })

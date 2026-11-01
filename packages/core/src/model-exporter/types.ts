@@ -57,6 +57,13 @@ export interface GlbPublishOptions extends Omit<
 > {
 	/** Encodes the textures to KTX2; absent, they ship as they are. */
 	ktx2?: Ktx2CompressionOptions
+	/**
+	 * Bakes into the published copy (ambient occlusion, light maps), before
+	 * its textures are encoded so the baked maps are encoded with them.
+	 * Injected, like the KTX2 encoder, because baking needs a GPU this module
+	 * does not assume.
+	 */
+	bake?: (document: Document) => Promise<void>
 }
 
 export interface GlbPublishResult extends PublishExportResult {

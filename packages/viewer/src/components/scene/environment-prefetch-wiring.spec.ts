@@ -31,8 +31,10 @@ describe('environment prefetch', () => {
 
 	it('prefetches the same file, and only once a surface names one', () => {
 		expect(viewer).toMatch(
-			/const environmentFiles = envOptions\s*\?\s*resolveEnvironmentFiles\(envOptions\)\s*:\s*null/
+			/const environmentFiles = lighting \|\| envOptions \? sceneFiles : null/
 		)
+		// The file the scene loads, so the prefetch is never thrown away.
+		expect(viewer).toContain('files={sceneFiles}')
 		expect(viewer).toMatch(
 			/useEffect\(\(\) => \{\s*if \(environmentFiles\) preloadEnvironmentFiles\(environmentFiles\)\s*(\/\/.*\s*)*\}, \[environmentFilesKey\]\)/
 		)

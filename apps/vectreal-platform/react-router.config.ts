@@ -53,5 +53,8 @@ export default {
 	routeDiscovery: {
 		mode: 'initial'
 	},
-	splitRouteModules: true
+	splitRouteModules: true,
+	future: {
+		unstable_optimizeDeps: true
+	}
 } satisfies Config

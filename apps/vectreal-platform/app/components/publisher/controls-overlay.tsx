@@ -402,7 +402,14 @@ const OverlayControls = ({
 								// under that space must stay draggable.
 								'pointer-events-none absolute top-0 right-0 bottom-0 flex w-60 flex-col justify-end gap-2',
 								PUBLISHER_EDGE_INSET,
-								PUBLISHER_LAYER.card
+								PUBLISHER_LAYER.card,
+								// Beside the publish panel while it is open, so a publish
+								// started there shows its progress. It slides as the panel
+								// does (`DynamicSidebar`: 0.3 s, ease in and out).
+								'transition-[right] duration-300 ease-in-out motion-reduce:transition-none',
+								showPublishPanel &&
+									!isMobile &&
+									'right-[calc(var(--container-detail-panel)+1rem)]'
 							)}
 						>
 							<SaveProgressPanel onRetry={() => void handleSaveScene()} />

@@ -16,10 +16,15 @@ import {
 	type Texture
 } from 'three'
 
+import { GROUND_EDGE_FADE } from './ground-edge-fade'
 import { ProgressiveLightMap } from './progressive-light-map'
 import { measureLitBrightness } from './shadow-bake'
 import { calibratedAlphaTest } from './shadow-cutoff-calibration'
-import { createSeededRandom, jitterLightPositions } from './shadow-light-jitter'
+import {
+	createSeededRandom,
+	type JitterSource,
+	jitterLightPositions
+} from './shadow-light-jitter'
 
 /**
  * Seed for the light jitter. Fixed, and reset on every restart, so the same
@@ -42,12 +47,13 @@ export interface ShadowBakeApi {
 
 interface BakeLight {
 	amount: number
-	/** Jitter box width around `position`; the penumbra softness. */
-	radius: number
+	/** The scene's lights, each jittered over its own box; the penumbrae. */
+	sources: readonly JitterSource[]
 	/** Fraction of samples spread over the hemisphere; the shadow fill. */
 	ambient: number
+	/** Radius of that hemisphere. */
+	distance: number
 	intensity: number
-	position: [number, number, number]
 	bias: number
 	/** Half-extent of each light's orthographic shadow camera. */
 	size: number
@@ -86,6 +92,7 @@ const SOFT_SHADOW_VERTEX = /* glsl */ `
 `
 
 const SOFT_SHADOW_FRAGMENT = /* glsl */ `
+	${GROUND_EDGE_FADE}
 	varying vec2 vUv;
 	uniform sampler2D map;
 	uniform vec3 color;
@@ -95,7 +102,7 @@ const SOFT_SHADOW_FRAGMENT = /* glsl */ `
 	void main() {
 		vec4 light = texture2D(map, vUv);
 		float brightness = light.r + light.g + light.b;
-		gl_FragColor = vec4(color * light.r * blend, max(0.0, 1.0 - brightness / cutoff) * opacity);
+		gl_FragColor = vec4(color * light.r * blend, max(0.0, 1.0 - brightness / cutoff) * opacity * groundEdgeFade(vUv));
 		#include <tonemapping_fragment>
 		#include <colorspace_fragment>
 	}
@@ -173,17 +180,15 @@ const AccumulativeShadowBake = forwardRef<
 			const lights = lightsRef.current
 			if (!plane || !lights) return
 			const { props: current, camera: view, lightMap: map } = live.current
-			lights.visible = true
-			map.prepare()
-			for (let frame = 0; frame < frameCount; frame++) {
-				const positions = jitterLightPositions(state.random, current.light)
-				lights.children.forEach((child, i) =>
-					child.position.set(...positions[i])
-				)
-				map.update(plane, view, blendFor(current.frames))
-			}
-			lights.visible = false
-			map.finish()
+			map.silenced(() => {
+				for (let frame = 0; frame < frameCount; frame++) {
+					const positions = jitterLightPositions(state.random, current.light)
+					lights.children.forEach((child, i) =>
+						child.position.set(...positions[i])
+					)
+					map.update(plane, view, blendFor(current.frames))
+				}
+			})
 			uniforms.map.value = map.texture
 		}
 
@@ -278,7 +283,6 @@ const AccumulativeShadowBake = forwardRef<
 	// Bake again whenever a bake input changes. A layout effect, so a static
 	// bake is complete before the first frame that shows it; the lights' new
 	// props are already applied by then, since child commits land first.
-	const [px, py, pz] = light.position
 	useLayoutEffect(() => {
 		bake.restart()
 	}, [
@@ -288,12 +292,10 @@ const AccumulativeShadowBake = forwardRef<
 		frames,
 		scale,
 		light.amount,
-		light.radius,
+		light.sources,
 		light.ambient,
+		light.distance,
 		light.intensity,
-		px,
-		py,
-		pz,
 		light.bias,
 		light.size,
 		light.near,

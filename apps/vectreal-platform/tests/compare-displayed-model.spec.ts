@@ -24,6 +24,9 @@ const publisherPage = readFileSync(
 describe('the publisher viewer during a compare', () => {
 	it('keeps the loaded model and draws the compared one', () => {
 		expect(publisherPage).toContain('model={file?.model}')
-		expect(publisherPage).toContain('displayedModel={comparedModel?.model}')
+		// A bake preview is drawn the same way, and a held compare wins over it.
+		expect(publisherPage).toContain(
+			'displayedModel={comparedModel?.model ?? shownBake}'
+		)
 	})
 })

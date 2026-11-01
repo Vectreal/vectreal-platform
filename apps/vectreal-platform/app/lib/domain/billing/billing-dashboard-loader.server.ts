@@ -6,6 +6,7 @@ import {
 	isNull,
 	max,
 	ne,
+	notInArray,
 	or,
 	sql,
 	sum
@@ -32,7 +33,10 @@ import {
 import { orgSubscriptions } from '../../../db/schema/billing/subscriptions'
 import { getStripeClient } from '../../stripe.server'
 import { loadAuthenticatedUser } from '../auth/auth-loader.server'
-import { SCENE_ASSET_ROLE } from '../scene/scene-asset-roles'
+import {
+	SCENE_ASSET_ROLE,
+	STUDIO_FINISH_FILENAME
+} from '../scene/scene-asset-roles'
 
 import type {
 	BillingCheckoutOption,
@@ -418,8 +422,12 @@ export async function loadHeaviestScenes(
 				// A link without a role is part of the model, as every reader takes it.
 				or(
 					isNull(sceneAssets.usageType),
-					ne(sceneAssets.usageType, SCENE_ASSET_ROLE.source)
-				)
+					notInArray(sceneAssets.usageType, [
+						SCENE_ASSET_ROLE.source,
+						SCENE_ASSET_ROLE.finish
+					])
+				),
+				ne(assets.name, STUDIO_FINISH_FILENAME)
 			)
 		)
 		.groupBy(

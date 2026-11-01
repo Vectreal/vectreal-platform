@@ -13,9 +13,9 @@ import type { UpdateSceneSettingsInput } from '@vctrl/sdk'
  * A scene's settings with `patch` applied: each section it names replaces the
  * stored one, and every other section stays as stored.
  *
- * A sent section is filled over that section's defaults, so it is stored
- * whole, as a publisher save stores it. Defaults fill a section only when it
- * is absent (`withSceneSettingsDefaults`), so a partial one stored as sent
+ * A sent section other than `lighting` is filled over that section's
+ * defaults, so it is stored whole, as a publisher save stores it. Defaults
+ * fill a section only when it is absent (`withSceneSettingsDefaults`), so a partial one stored as sent
  * would hand the keys it leaves out to the viewer's own defaults, which
  * differ, and an empty presentation would normalize to nothing, which the
  * save leaves as stored.
@@ -39,6 +39,9 @@ export function applySceneSettingsPatch(
 	if (patch.controls) {
 		merged.controls = { ...defaultControlsOptions, ...patch.controls }
 	}
+	// Stored as sent: `resolveLighting` is its only reader and fills what it
+	// leaves out the same way for every surface.
+	if (patch.lighting) merged.lighting = patch.lighting
 	if (patch.environment) {
 		merged.environment = { ...defaultEnvOptions, ...patch.environment }
 	}

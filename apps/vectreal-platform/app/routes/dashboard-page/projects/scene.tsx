@@ -23,6 +23,7 @@ import {
 import { buildTextureThumbnailUrls } from '../../../lib/domain/dashboard/scene-texture-thumbnails'
 import { buildInternalPreviewPath } from '../../../lib/domain/embed/embed-snippet'
 import {
+	buildDraftFinishManifest,
 	buildInlineEmbedManifest,
 	EmbedSettingsReadFailure
 } from '../../../lib/domain/embed/inline-embed-manifest.server'
@@ -111,9 +112,13 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 	/*
 	  A published scene shows what a visitor gets, from the manifest an embed
-	  receives, inline so the viewer starts on hydration. A draft keeps loading
+	  receives, inline so the viewer starts on hydration. A draft shows the
+	  studio finish saved with it while that is current, and otherwise loads
 	  the working scene from the server.
 	*/
+	const finish = publishedMeta
+		? null
+		: await sceneSettingsService.resolveSceneFinish(sceneId).catch(() => null)
 	const manifest = publishedMeta
 		? await buildInlineEmbedManifest(request, {
 				projectId,
@@ -123,7 +128,14 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 				token: null,
 				allowUnsignedWithoutToken: true
 			})
-		: null
+		: finish
+			? await buildDraftFinishManifest(request, {
+					projectId,
+					sceneId,
+					finish: finish.asset,
+					settingsData
+				})
+			: null
 	// Null only when the read failed, so the toggle can tell "unknown" apart
 	// from "nothing stored".
 	const presentation =

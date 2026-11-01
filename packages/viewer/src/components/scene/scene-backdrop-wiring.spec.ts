@@ -24,9 +24,15 @@ const canvas = read('..', 'canvas-wrapper.tsx')
 const sceneModel = read('scene-model.tsx')
 
 describe('the scene backdrop', () => {
-	it('is resolved from the scene environment, through the one rule', () => {
+	it("is resolved from the scene's lighting, through the one rule", () => {
+		// `resolveLighting` lets a stage through only as hex, and gives way to
+		// the environment map while it is the background.
+		expect(viewer).toContain('resolveLighting({ lighting })')
 		expect(viewer).toContain(
-			'const backdrop = resolveSceneBackdrop(envOptions)'
+			'resolveLighting({ environment: envOptions, shadows: shadowsOptions })'
+		)
+		expect(viewer).toMatch(
+			/const backdrop =\s*background\.type === 'color' \|\| background\.type === 'gradient'\s*\? background\s*: null/
 		)
 	})
 

@@ -9,6 +9,7 @@ import {
 	thumbnailAssetIdFromUrl
 } from '../scene-thumbnail-url'
 
+import type { SaveStudioFinish } from '../../../../types/api'
 import type { SceneMetaState } from '../../../../types/publisher-config'
 
 /**
@@ -211,6 +212,64 @@ export function parseSourceAssetId(
 	}
 
 	return sourceAssetId
+}
+
+/**
+ * The studio finish the save made, optional: absent keeps the stored one,
+ * null drops it. Linked under its own role, so it must be none of the other
+ * ids the save links. The reports are what each bake did, as the export
+ * worker wrote them.
+ */
+export function parseStudioFinish(
+	requestData: Record<string, unknown>,
+	linkedIds: string[]
+): SaveStudioFinish | null | undefined | Response {
+	const raw = requestData.studioFinish
+	if (raw === undefined || raw === '') return undefined
+	let parsed: unknown
+	try {
+		parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+	} catch {
+		return ApiResponse.badRequest('studioFinish must be JSON')
+	}
+	if (parsed === null) return null
+	const { assetId, reports } = (parsed ?? {}) as Record<string, unknown>
+	if (typeof assetId !== 'string' || !UUID_REGEX.test(assetId)) {
+		return ApiResponse.badRequest('studioFinish.assetId must be a valid UUID')
+	}
+	if (linkedIds.includes(assetId)) {
+		return ApiResponse.badRequest(
+			'studioFinish.assetId must not also be linked as another asset'
+		)
+	}
+	if (!isBakeReports(reports)) {
+		return ApiResponse.badRequest('studioFinish.reports is malformed')
+	}
+	return { assetId, reports }
+}
+
+const isStrings = (value: unknown): value is string[] =>
+	Array.isArray(value) && value.every((item) => typeof item === 'string')
+
+const isBakeReport = (value: unknown) => {
+	if (value === undefined) return true
+	if (!value || typeof value !== 'object') return false
+	const report = value as Record<string, unknown>
+	if ('failed' in report) return typeof report.failed === 'string'
+	return (
+		isStrings(report.baked) &&
+		Array.isArray(report.skipped) &&
+		report.skipped.every(
+			(entry) =>
+				typeof entry?.material === 'string' && typeof entry?.reason === 'string'
+		)
+	)
+}
+
+function isBakeReports(value: unknown): value is SaveStudioFinish['reports'] {
+	if (!value || typeof value !== 'object') return false
+	const { occlusion, lights } = value as Record<string, unknown>
+	return isBakeReport(occlusion) && isBakeReport(lights)
 }
 
 /**

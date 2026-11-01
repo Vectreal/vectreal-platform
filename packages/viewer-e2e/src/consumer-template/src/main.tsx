@@ -20,6 +20,34 @@ declare global {
 		}
 		__SRC_READY__?: boolean
 		__SRC_MISSING__?: string[]
+		__BAKE_E2E__?:
+			| {
+					status: 'baked'
+					baked: string[]
+					skipped: string[]
+					under: number
+					beside: number
+					far: number
+					mirrored: number
+					canopy: number
+					storedPng: boolean
+					lights: {
+						baked: string[]
+						scale: number
+						under: number
+						far: number
+						mirrored: number
+						canopy: number
+						leafSolid: number
+						leafClearU: number
+						leafClearV: number
+						shared: number
+						loaded: boolean
+					}
+					slices: { fences: number; early: number }
+					contextLoss: string
+			  }
+			| { status: 'error'; error: string }
 	}
 }
 
