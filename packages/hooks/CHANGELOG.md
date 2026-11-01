@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.2.0...hooks-v3.3.0) (2026-11-01)
+
+
+### Features
+
+* **core:** add the lighting scene setting and resolveLighting ([#1216](https://github.com/Vectreal/vectreal-platform/issues/1216)) ([a614386](https://github.com/Vectreal/vectreal-platform/commit/a614386c5a3984c68c4baca6870bf1d4d2549fd2))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.3.0
+
 ## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.1.0...hooks-v3.2.0) (2026-10-30)
 
 

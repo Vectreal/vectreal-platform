@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.2.0...viewer-v3.3.0) (2026-11-01)
+
+
+### Features
+
+* **app:** render chrome-ball thumbnails for every lighting setup and map ([#1220](https://github.com/Vectreal/vectreal-platform/issues/1220)) ([ce50b5c](https://github.com/Vectreal/vectreal-platform/commit/ce50b5c3a5de0dca7291b87c3ec73d01d31f135d))
+* **core:** bake ambient occlusion into a glTF document's own textures ([#1222](https://github.com/Vectreal/vectreal-platform/issues/1222)) ([80db24e](https://github.com/Vectreal/vectreal-platform/commit/80db24e373a95c8d4c163dbc0d724791c341a608))
+* **core:** ship lighting setups placed on each map's measured lights ([#1219](https://github.com/Vectreal/vectreal-platform/issues/1219)) ([04b8be4](https://github.com/Vectreal/vectreal-platform/commit/04b8be4f1f0311ab1753fe8280d3ca8181f32e6d))
+* **lighting:** bake the studio lights into a light map at publish ([#1225](https://github.com/Vectreal/vectreal-platform/issues/1225)) ([54f093c](https://github.com/Vectreal/vectreal-platform/commit/54f093c74423eadd6a98ac0c3d71dfd9ef48e0b6))
+* **publisher:** draw the Turn globe from the orbit camera ([#1231](https://github.com/Vectreal/vectreal-platform/issues/1231)) ([5786bd3](https://github.com/Vectreal/vectreal-platform/commit/5786bd3aca4a293bcb2a4cd4ebc3e277248c853c))
+* **publisher:** one Lighting tool replaces Environment and Shadows ([#1221](https://github.com/Vectreal/vectreal-platform/issues/1221)) ([d575394](https://github.com/Vectreal/vectreal-platform/commit/d575394c6d5ed92a8515f7206bf1bab4f296b1e0))
+* **publisher:** turn the lighting with a yaw-only globe ([#1227](https://github.com/Vectreal/vectreal-platform/issues/1227)) ([d279aa8](https://github.com/Vectreal/vectreal-platform/commit/d279aa8777dd7d495beaaf721a47bb87e05a962e))
+* **viewer:** draw scenes from lighting, with lights that light and shadow the model ([#1217](https://github.com/Vectreal/vectreal-platform/issues/1217)) ([9b187f9](https://github.com/Vectreal/vectreal-platform/commit/9b187f93f5688a1a163998281daa40edf1df3199))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.3.0
+
 ## [3.2.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.1.0...viewer-v3.2.0) (2026-10-30)
 
 
