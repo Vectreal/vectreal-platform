@@ -102,6 +102,7 @@ COPY --from=deps --chown=nodejs:nodejs /app/apps/vectreal-platform/node_modules 
 COPY --from=deps --chown=nodejs:nodejs /app/package.json ./package.json
 COPY --from=build --chown=nodejs:nodejs /app/build/apps/vectreal-platform ./build/apps/vectreal-platform
 COPY --chown=nodejs:nodejs apps/vectreal-platform/server.mjs ./apps/vectreal-platform/server.mjs
+COPY --chown=nodejs:nodejs apps/vectreal-platform/server-app.mjs ./apps/vectreal-platform/server-app.mjs
 
 USER nodejs
 

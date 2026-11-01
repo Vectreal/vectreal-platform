@@ -240,13 +240,13 @@ describe('the presentation write', () => {
 
 describe('the codec files: Draco decoder, KTX2 transcoder and encoder', () => {
 	const server = readFileSync(
-		join(import.meta.dirname, '..', 'server.mjs'),
+		join(import.meta.dirname, '..', 'server-app.mjs'),
 		'utf8'
 	)
 
 	it('are cached for a day, ahead of the uncached static fallback', () => {
 		const mount = server.match(
-			/for \(const codecDir of (\[[^\]]*\])\) \{\n\tapp\.use\(\n\t\t`\/\$\{codecDir\}`,\n\t\texpress\.static\(path\.join\(CLIENT_DIR, codecDir\), \{\n\t\t\tmaxAge: '1d',/
+			/for \(const codecDir of (\[[^\]]*\])\) \{\n\t\tapp\.use\(\n\t\t\t`\/\$\{codecDir\}`,\n\t\t\texpress\.static\(path\.join\(clientDir, codecDir\), \{\n\t\t\t\tmaxAge: '1d',/
 		)
 		expect(mount).not.toBeNull()
 		expect(JSON.parse(mount![1].replaceAll("'", '"'))).toEqual([
@@ -255,7 +255,7 @@ describe('the codec files: Draco decoder, KTX2 transcoder and encoder', () => {
 			'basis-encoder'
 		])
 		expect(mount!.index).toBeLessThan(
-			server.indexOf('app.use(express.static(CLIENT_DIR, { redirect: false }))')
+			server.indexOf('app.use(express.static(clientDir, { redirect: false }))')
 		)
 	})
 })

@@ -13,6 +13,10 @@ import { defineConfig, type PluginOption, type Rolldown } from 'vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 
 import { mdxMarkdownPlugin } from './app/lib/markdown/mdx-to-markdown.ts'
+import {
+	newsArticleBodiesPlugin,
+	newsArticleChunkFileNames
+} from './app/lib/news/news-body-chunks.ts'
 import { remarkDocPageActions } from './app/lib/markdown/remark-doc-page-actions.ts'
 
 /**
@@ -202,6 +206,7 @@ export default defineConfig(({ command }) => {
 			tailwindcss(),
 			// Before `mdx()`: it serves `*.mdx?markdown` the MDX plugin would claim.
 			mdxMarkdownPlugin(),
+			newsArticleBodiesPlugin(),
 			mdx({
 				format: 'mdx',
 				remarkPlugins: [
@@ -272,6 +277,8 @@ export default defineConfig(({ command }) => {
 					warn(warning)
 				},
 				output: {
+					// Article bodies are named by an opaque id, never their file name.
+					chunkFileNames: newsArticleChunkFileNames,
 					manualChunks(id) {
 						if (
 							id.includes('/shared/components/') ||

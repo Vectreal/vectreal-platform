@@ -1,6 +1,7 @@
 import { cn } from '@shared/utils'
 import { Link } from 'react-router'
 
+import { ScheduledLabel } from './scheduled-label'
 import { formatNewsDate } from '../../lib/news/news-article'
 
 import type { NewsArticle } from '../../lib/news/news-article'
@@ -45,6 +46,10 @@ export function ArticleRow({ article, className }: ArticleRowProps) {
 				<p className="text-muted-foreground text-body-sm line-clamp-2 max-w-[68ch]">
 					{article.excerpt}
 				</p>
+				<ScheduledLabel
+					publishedAt={article.publishedAt}
+					className="text-muted-foreground text-label-xs mt-2"
+				/>
 			</div>
 
 			<span className="text-muted-foreground text-eyebrow order-3 md:order-none md:pt-1 md:text-right">

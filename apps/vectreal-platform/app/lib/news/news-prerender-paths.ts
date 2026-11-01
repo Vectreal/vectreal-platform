@@ -29,20 +29,32 @@ function getFrontmatterSlug(frontmatter: string): string | undefined {
 	return normalizedSlug || undefined
 }
 
-export function getNewsPrerenderPaths(): string[] {
+/**
+ * Every article page to prerender, scheduled ones included: the prerendered
+ * files are the same on staging, which shows a scheduled article early, and on
+ * production, where `server.mjs` withholds them until `publishedAt`
+ * (`news-schedule.ts`). Drafts are left out.
+ *
+ * `/news-room` itself is not here. It renders per request, so an article
+ * appears in it once live without a deploy; prerendered, it would also have
+ * listed every scheduled article on production from the day of the build.
+ */
+export function getNewsPrerenderPaths(
+	directory = NEWS_ARTICLES_DIRECTORY
+): string[] {
 	let articleFiles: string[] = []
 
 	try {
-		articleFiles = readdirSync(NEWS_ARTICLES_DIRECTORY).filter((fileName) =>
+		articleFiles = readdirSync(directory).filter((fileName) =>
 			/\.mdx?$/i.test(fileName)
 		)
 	} catch {
-		return [NEWS_INDEX_PATH]
+		return []
 	}
 
-	const articlePaths = articleFiles
+	return articleFiles
 		.map((fileName) => {
-			const filePath = join(NEWS_ARTICLES_DIRECTORY, fileName)
+			const filePath = join(directory, fileName)
 			const source = readFileSync(filePath, 'utf8')
 			const frontmatter = getFrontmatterBlock(source)
 
@@ -61,6 +73,4 @@ export function getNewsPrerenderPaths(): string[] {
 			return `${NEWS_INDEX_PATH}/${slug}`
 		})
 		.filter((path): path is string => path !== null)
-
-	return [NEWS_INDEX_PATH, ...articlePaths]
 }

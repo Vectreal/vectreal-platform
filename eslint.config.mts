@@ -478,7 +478,10 @@ export default defineConfig(tseslint.configs.recommended, [
 						// packages are build tooling beside @mdx-js/rollup in the root
 						// manifest. Only the twins' strings reach the server bundle.
 						'{projectRoot}/app/lib/markdown/mdx-to-markdown.ts',
-						'{projectRoot}/app/lib/markdown/remark-doc-page-actions.ts'
+						'{projectRoot}/app/lib/markdown/remark-doc-page-actions.ts',
+						// The article-body plugin, in the same config graph. The server
+						// bundle reads its naming rule too, but `vite` is a type import.
+						'{projectRoot}/app/lib/news/news-body-chunks.ts'
 					]
 				}
 			]

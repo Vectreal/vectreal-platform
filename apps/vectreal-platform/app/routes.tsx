@@ -7,19 +7,12 @@ import {
 } from '@react-router/dev/routes'
 
 import { docsPages } from './lib/docs/docs-manifest'
-import { getNewsPrerenderPaths } from './lib/news/news-prerender-paths'
 
 /*
-  Every docs page and published article, as markdown (see
-  `page-markdown[.]md.ts`). Listed from the manifests the prerender list reads,
-  so a page that exists has a twin and one that does not cannot.
+  Every docs page as markdown (see `page-markdown[.]md.ts`), listed from the
+  docs manifest so a page that exists has a twin and one that does not cannot.
 */
-const MARKDOWN_TWIN_PATHS = [
-	...docsPages.map((page) => `docs/${page.slug}.md`),
-	...getNewsPrerenderPaths()
-		.filter((path) => path.startsWith('/news-room/'))
-		.map((path) => `${path.slice(1)}.md`)
-]
+const DOCS_MARKDOWN_TWIN_PATHS = docsPages.map((page) => `docs/${page.slug}.md`)
 
 export default [
 	// Health check endpoint for Docker and monitoring
@@ -30,11 +23,21 @@ export default [
 	route('sitemap.xml', './routes/sitemap[.]xml.ts'),
 	route('llms.txt', './routes/llms[.]txt.ts'),
 	route('llms-full.txt', './routes/llms-full[.]txt.ts'),
-	...MARKDOWN_TWIN_PATHS.map((path) =>
+	...DOCS_MARKDOWN_TWIN_PATHS.map((path) =>
 		route(path, './routes/page-markdown[.]md.ts', {
 			id: `markdown-twin:${path}`
 		})
 	),
+	/*
+	  Every article's markdown twin is this one route, never one per slug: the
+	  route list reaches every visitor's browser, so a route per article would
+	  name a scheduled article before its time. A param followed by a suffix is
+	  not documented React Router syntax, so `news-schedule-build.spec.ts` pins
+	  how the installed version matches it.
+	*/
+	route('news-room/:slug.md', './routes/page-markdown[.]md.ts', {
+		id: 'markdown-twin:news-room'
+	}),
 
 	/// API
 	route(

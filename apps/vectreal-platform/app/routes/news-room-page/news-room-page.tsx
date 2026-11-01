@@ -61,7 +61,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 	const query = url.searchParams.get('q')?.trim() ?? ''
 	const category = url.searchParams.get('category')?.trim() ?? ''
 
-	let articles = [...getNewsArticles()]
+	/*
+	  Rendered per request rather than prerendered, so a scheduled article
+	  appears here once its time has passed, without a deploy. Anonymous
+	  responses are cached at the edge for five minutes by the site-wide
+	  default (`PUBLIC_CACHE_CONTROL`), which is how late it can appear.
+	*/
+	const now = Date.now()
+	const allArticles = getNewsArticles(now)
+	let articles = allArticles
 
 	if (query) {
 		articles = articles.filter((article) => {
@@ -81,9 +89,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 		articles = articles.filter((article) => article.category === category)
 	}
 
-	articles.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
-
 	return data({
+		// Newest first, as the manifest orders them.
 		articles,
 		/*
 		  The unfiltered total. `articles` above is already narrowed by query,
@@ -91,18 +98,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 		  "1 articles" on a single match and "0 articles" directly above the
 		  empty state.
 		*/
-		totalArticles: getNewsArticles().length,
+		totalArticles: allArticles.length,
 		/*
 		  Unfiltered for the same reason. The hero sits above the filter row and
 		  describes the whole newsroom, so its "Read the latest" has to mean the
 		  newest article - not the newest match, which under a filter disagreed
 		  with the count beside it and on zero matches pointed at the empty state.
 		*/
-		latestSlug: getNewsArticles()
-			.map(({ publishedAt, slug }) => ({ publishedAt, slug }))
-			.sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0]
-			?.slug,
-		categories: getNewsCategories(),
+		latestSlug: allArticles[0]?.slug,
+		categories: getNewsCategories(now),
 		filters: {
 			query,
 			category

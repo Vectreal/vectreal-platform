@@ -13,9 +13,10 @@ import {
 	convertPairPath
 } from '../lib/convert/convert-pairs'
 import { docsPages } from '../lib/docs/docs-manifest'
+import { PUBLIC_CACHE_CONTROL } from '../lib/http/cacheable-public-paths.server'
 import { markdownTwinPath } from '../lib/markdown/markdown-twin'
 import { COMMUNITY } from '../lib/navigation/site-map'
-import { getNewsArticles } from '../lib/news/news-manifest.server'
+import { getPublishedNewsArticles } from '../lib/news/news-manifest.server'
 import { SITE_URL } from '../lib/seo'
 
 /**
@@ -44,7 +45,9 @@ export function loader() {
 		})
 	]
 
-	const articleLinks = getNewsArticles()
+	// Published ones only, on staging too: these links name production, where a
+	// scheduled article is a 404 until its time.
+	const articleLinks = getPublishedNewsArticles()
 		.filter((article) => !article.draft)
 		.map(
 			(article) =>
@@ -133,8 +136,9 @@ export function loader() {
 	return new Response(body, {
 		headers: {
 			'Content-Type': 'text/plain; charset=utf-8',
-			'Cache-Control':
-				'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'
+			// Five minutes, like the newsroom index, so a scheduled article is
+			// listed soon after it goes live.
+			'Cache-Control': PUBLIC_CACHE_CONTROL
 		}
 	})
 }

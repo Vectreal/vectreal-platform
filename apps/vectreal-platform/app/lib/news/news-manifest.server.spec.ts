@@ -14,9 +14,9 @@ describe('news manifest', () => {
 	})
 
 	it('finds a body for every article it lists', () => {
-		// The page renders whatever `getArticleBody` returns for the path the
-		// manifest hands it, so a path the two disagree on is an empty article.
+		// The page renders whatever `getArticleBody` returns for the id the
+		// manifest hands it, so an id the two disagree on is an empty article.
 		for (const article of getNewsArticles())
-			expect(getArticleBody(article.sourcePath), article.slug).toBeDefined()
+			expect(getArticleBody(article.bodyId), article.slug).toBeDefined()
 	})
 })

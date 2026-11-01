@@ -20,6 +20,15 @@ export interface NewsArticleFrontmatter {
 	title: string
 	slug?: string
 	excerpt: string
+	/**
+	 * When the article goes live, as ISO 8601. A future value schedules it: it
+	 * can be merged and deployed now, is shown early on staging with a
+	 * "Scheduled for" label, and appears on production on its own at this time.
+	 *
+	 * Without an offset it is Europe/Berlin time: `2026-11-03` is 00:00 that day
+	 * in Berlin, `2026-11-03T09:00` is 09:00 in Berlin. Add `Z` or an offset to
+	 * mean another zone. See `news-schedule.ts`.
+	 */
 	publishedAt: string
 	updatedAt?: string
 	category: string
@@ -41,6 +50,7 @@ export interface NewsArticleFrontmatter {
 	cta?: string
 	/** With `cta: agent`, the task handed to the reader's assistant: one sentence, at most 200 characters. */
 	ctaPrompt?: string
+	/** Never shown outside the dev server, whatever `publishedAt` says. */
 	draft?: boolean
 }
 
@@ -69,6 +79,8 @@ export interface NewsArticle {
 	draft: boolean
 	readingTimeMinutes: number
 	sourcePath: string
+	/** Which body chunk to load: opaque, so no bundle names an article. */
+	bodyId: string
 	editUrl: string
 }
 

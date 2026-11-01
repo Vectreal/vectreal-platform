@@ -8,6 +8,7 @@ import {
 	resolveDeploymentOrigin
 } from '../lib/deployment-origin'
 import { docsPages } from '../lib/docs/docs-manifest'
+import { PUBLIC_CACHE_CONTROL } from '../lib/http/cacheable-public-paths.server'
 import { getNewsArticles } from '../lib/news/news-manifest.server'
 
 interface SitemapEntry {
@@ -54,8 +55,9 @@ function buildXml(entries: SitemapEntry[], baseUrl: string): string {
  *  2. News Room articles (sourced from the news manifest)
  *  3. Documentation pages (sourced from the docs manifest)
  *
- * Cached at the CDN layer for one hour (s-maxage=3600) and revalidated in the
- * background for up to 24 hours.
+ * Cached at the CDN layer for five minutes (`PUBLIC_CACHE_CONTROL`), the
+ * window the newsroom index uses too: a scheduled article is listed here
+ * within minutes of its `publishedAt`, without a deploy.
  *
  * Not prerendered, for the same reason as robots.txt: the origin has to be the
  * one this deployment actually answers on, so that a mirror's sitemap describes
@@ -198,8 +200,7 @@ export async function loader() {
 	return new Response(xml, {
 		headers: {
 			'Content-Type': 'application/xml; charset=utf-8',
-			'Cache-Control':
-				'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400'
+			'Cache-Control': PUBLIC_CACHE_CONTROL
 		}
 	})
 }
