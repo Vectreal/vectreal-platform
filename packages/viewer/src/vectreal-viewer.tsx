@@ -691,6 +691,12 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	  ref, so a screenshot from that camera shows what the viewer shows.
 	*/
 	const openingPose = useRef<OpeningPose | null>(null)
+	/*
+	  Resets SceneCamera's viewport fit to a bounds fit. SceneCamera fills it;
+	  SceneModel calls it before its own refit, which frames the model for this
+	  viewport whatever camera was in view.
+	*/
+	const resetCameraFraming = useRef<(() => void) | null>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	// The markers this surface draws, by the same rule `SceneHotspots` draws
@@ -1147,6 +1153,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									distanceLimits={orbitDistanceLimits}
 									transitionOverride={transitionOverride}
 									openingPose={openingPose}
+									framingReset={resetCameraFraming}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									model={model}
@@ -1185,6 +1192,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 											onRawDiagonalComputed={onRawDiagonalComputed}
 											clipExtents={clipExtents}
 											distanceLimits={orbitDistanceLimits}
+											framingReset={resetCameraFraming}
 											openingPose={openingPose}
 										/>
 									</Center>

@@ -101,6 +101,43 @@ describe('the camera layer fits what it shows', () => {
 		)
 	})
 
+	it('reports the progress of the pose the camera holds, not the clock’s', () => {
+		expect(flight).toMatch(
+			/const progress = useCallback\(\(\) => \{\s*return runtimeRef\.current\?\.shown \?\? null\s*\}/
+		)
+		const frame = slice(flight, 'useFrame(() => {', 'invalidate()\n\t})')
+		expect(frame).toContain(
+			'runtime.shown = easeFlightProgress(rawProgress, runtime.flight.easing)'
+		)
+		expect(frame.indexOf('runtime.shown =')).toBeGreaterThan(
+			frame.indexOf('activeCamera.position.copy(frame.position)')
+		)
+	})
+
+	it('resets the fit before SceneModel’s refit frames the model for this viewport', () => {
+		const reset = slice(
+			camera,
+			'framingReset.current = () => {',
+			'return () => {'
+		)
+		expect(reset).toContain(
+			'framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)'
+		)
+		expect(reset).toContain('syncDistanceLimits()')
+		const refit = slice(
+			model,
+			'framingReset?.current?.()',
+			'bounds.refresh(objectRef.current).fit()'
+		)
+		expect(refit).toContain('framingReset?.current?.()')
+		for (const layer of ['<SceneCamera', '<SceneModel']) {
+			const start = viewer.indexOf(layer)
+			expect(viewer.slice(start, viewer.indexOf('/>', start))).toContain(
+				'framingReset={resetCameraFraming}'
+			)
+		}
+	})
+
 	it('hands the view to the destination when a flight lands', () => {
 		expect(camera).toMatch(
 			/useCameraFlight\(modelRef, \(\) => \{\s*framing\.current\?\.land\(\)\s*syncDistanceLimits\(\)/

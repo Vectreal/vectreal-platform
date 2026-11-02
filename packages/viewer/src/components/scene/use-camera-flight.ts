@@ -27,6 +27,8 @@ type CameraFlightRuntime = {
 	durationMs: number
 	/** Reused every frame, so a flight allocates once. */
 	frame: CameraFlightFrame
+	/** The eased progress of the pose last written to the camera. */
+	shown: number
 }
 
 export interface CameraFlightRunner {
@@ -42,7 +44,11 @@ export interface CameraFlightRunner {
 	) => void
 	/** Drops the flight in progress, leaving the camera where it is. */
 	stop: () => void
-	/** The eased progress of the flight in progress, or null without one. */
+	/**
+	 * The eased progress of the pose the camera holds, or null without a
+	 * flight. The pose of the last frame drawn, not the clock's: a paused
+	 * frameloop (a hidden pane) leaves the camera mid-flight while time runs on.
+	 */
 	progress: () => number | null
 	/**
 	 * The ends of the flight in progress, for refitting them in place when the
@@ -107,7 +113,8 @@ export function useCameraFlight(
 					target: new Vector3(),
 					fov: activeCamera.fov,
 					quaternion: new Quaternion()
-				}
+				},
+				shown: 0
 			}
 			invalidate()
 		},
@@ -119,12 +126,7 @@ export function useCameraFlight(
 	}, [])
 
 	const progress = useCallback(() => {
-		const runtime = runtimeRef.current
-		if (!runtime) return null
-		return easeFlightProgress(
-			Math.min(1, (now() - runtime.startAtMs) / runtime.durationMs),
-			runtime.flight.easing
-		)
+		return runtimeRef.current?.shown ?? null
 	}, [])
 
 	const ends = useCallback(() => {
@@ -152,6 +154,7 @@ export function useCameraFlight(
 		activeCamera.quaternion.copy(frame.quaternion)
 		activeCamera.fov = frame.fov
 		activeCamera.updateProjectionMatrix()
+		runtime.shown = easeFlightProgress(rawProgress, runtime.flight.easing)
 
 		// The target the frame was aimed at, so update()'s lookAt agrees.
 		if (controls?.target) {

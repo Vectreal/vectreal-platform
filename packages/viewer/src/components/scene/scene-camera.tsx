@@ -77,6 +77,11 @@ interface SceneCameraProps extends CameraProps {
 	 * viewport fit (`CameraFraming.distanceLimits`), so it owns writing them.
 	 */
 	distanceLimits?: OrbitDistanceLimits
+	/**
+	 * Filled here with a reset of the viewport fit to a bounds fit, for
+	 * `SceneModel`'s refit, which moves the camera outside this layer.
+	 */
+	framingReset?: RefObject<(() => void) | null>
 }
 
 export type ResolvedCameraSelection = {
@@ -145,6 +150,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
 		distanceLimits,
+		framingReset,
 		hasContent: hasModel = false,
 		model,
 		onInitialFramingComplete,
@@ -540,6 +546,17 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		startTransition,
 		transitionOverride
 	])
+
+	useEffect(() => {
+		if (!framingReset) return
+		framingReset.current = () => {
+			framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)
+			syncDistanceLimits()
+		}
+		return () => {
+			framingReset.current = null
+		}
+	}, [framingReset, sceneCamera, syncDistanceLimits])
 
 	// The controls were recreated, or the host changed its limits: either way
 	// the controls now hold the host's raw limits, whether or not the fit moved.

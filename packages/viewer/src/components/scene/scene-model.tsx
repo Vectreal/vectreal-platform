@@ -100,6 +100,11 @@ interface ModelProps {
 	/** The host's orbit distance limits, before the viewport fit scales them. */
 	distanceLimits?: OrbitDistanceLimits
 	/**
+	 * Resets the camera layer's viewport fit (see `SceneCamera`), called before
+	 * a refit here frames the model for this viewport.
+	 */
+	framingReset?: RefObject<(() => void) | null>
+	/**
 	 * The backdrop the viewer paints behind its transparent canvas. Painted
 	 * under the screenshot too, so a thumbnail shows the scene as it is seen.
 	 */
@@ -264,6 +269,7 @@ const SceneModel = memo((props: ModelProps) => {
 		onRawDiagonalComputed,
 		clipExtents,
 		distanceLimits,
+		framingReset,
 		openingPose
 	} = props
 	const bounds = useBounds()
@@ -527,10 +533,13 @@ const SceneModel = memo((props: ModelProps) => {
 		const isFirstMount = !mountedRef.current
 		mountedRef.current = true
 		if (isFirstMount && !normalizationOptions?.enabled) return
+		// The fit frames the model for this viewport, whatever camera was in view,
+		// and its limits must not clamp it to that camera's fit.
+		framingReset?.current?.()
 		// Framing only — near/far are handled dynamically by the useFrame above, so
 		// rescaling/normalization no longer leaves stale clipping planes behind.
 		bounds.refresh(objectRef.current).fit()
-	}, [bounds, normalizationOptions?.enabled, frame])
+	}, [bounds, framingReset, normalizationOptions?.enabled, frame])
 
 	useEffect(() => {
 		onScreenshotCaptureReady?.(captureScreenshot)
