@@ -35,6 +35,12 @@ export const streamTimeout = 5_000
 */
 export { isUnpublishedNewsPath } from './lib/news/news-manifest.server'
 
+/*
+  Also read by `server.mjs`, which starts it once listening: it tells search
+  engines when an article goes live. See `news-indexnow.server.ts`.
+*/
+export { startIndexNowSubmissions } from './lib/news/news-indexnow.server'
+
 function applyDefaultCacheHeaders(
 	request: Request,
 	responseHeaders: Headers,

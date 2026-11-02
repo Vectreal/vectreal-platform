@@ -4,6 +4,7 @@ import {
 	formatScheduledFor,
 	isNewsArticleLive,
 	isScheduledAt,
+	lastChangedAt,
 	newsSlugFromRequestPath,
 	resolvePublishedAt
 } from './news-schedule'
@@ -115,6 +116,26 @@ describe('newsSlugFromRequestPath', () => {
 		'/news-room/%E0%A4%A'
 	])('finds no article in %s', (pathname) => {
 		expect(newsSlugFromRequestPath(pathname)).toBeNull()
+	})
+})
+
+describe('lastChangedAt', () => {
+	it('is the update once it comes after going live', () => {
+		expect(lastChangedAt('2026-11-03', '2026-11-10')).toBe('2026-11-10')
+	})
+
+	it('is the go-live time when the update was made before it', () => {
+		expect(lastChangedAt('2026-11-03T09:00', '2026-11-01')).toBe(
+			'2026-11-03T09:00'
+		)
+		// Same day, earlier hour, Berlin time.
+		expect(lastChangedAt('2026-11-03T09:00', '2026-11-03T08:00')).toBe(
+			'2026-11-03T09:00'
+		)
+	})
+
+	it('is the go-live time when there is no update', () => {
+		expect(lastChangedAt('2026-11-03')).toBe('2026-11-03')
 	})
 })
 

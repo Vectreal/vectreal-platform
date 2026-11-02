@@ -11,6 +11,7 @@ import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 
 import * as entryServer from '../app/entry.server'
+import { startIndexNowSubmissions } from '../app/lib/news/news-indexnow.server'
 import { isUnpublishedNewsPath } from '../app/lib/news/news-manifest.server'
 import { getNewsPrerenderPaths } from '../app/lib/news/news-prerender-paths'
 
@@ -81,5 +82,15 @@ describe('entry.server', () => {
 		expect((entryServer as Record<string, unknown>).isUnpublishedNewsPath).toBe(
 			isUnpublishedNewsPath
 		)
+	})
+
+	it('exports the IndexNow checks server.mjs starts once listening', () => {
+		expect(
+			(entryServer as Record<string, unknown>).startIndexNowSubmissions
+		).toBe(startIndexNowSubmissions)
+
+		const server = readFileSync(join(__dirname, '../server.mjs'), 'utf8')
+		const listen = server.slice(server.indexOf('app.listen('))
+		expect(listen).toMatch(/startIndexNowSubmissions\(\)/)
 	})
 })
