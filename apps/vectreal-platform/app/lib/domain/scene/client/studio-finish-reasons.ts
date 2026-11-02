@@ -87,11 +87,11 @@ export const STUDIO_FINISH_FAILURES = {
 		reported: false
 	},
 	stalled: {
-		message: 'Drawing stopped making progress. Try again, or try Depth alone.',
+		message: 'Drawing stopped making progress. Close other tabs and try again.',
 		reported: true
 	},
 	'timed-out': {
-		message: `Drawing took over ${PUBLISH_EXPORT_TIMEOUT_MS / 60_000} minutes. Try depth alone, fewer lights or a lighter model.`,
+		message: `Drawing took over ${PUBLISH_EXPORT_TIMEOUT_MS / 60_000} minutes. Try a lighter model, or fewer lights.`,
 		reported: false
 	},
 	'worker-stopped': {

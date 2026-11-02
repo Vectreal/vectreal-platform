@@ -67,6 +67,10 @@ describe('the words for each reason', () => {
 			expect(message).not.toMatch(/[!—]/)
 		}
 	})
+
+	it('never send the author to the other bake, since it may be the one that failed', () => {
+		for (const message of all) expect(message).not.toMatch(/depth|alone/i)
+	})
 })
 
 describe('failuresToReport', () => {
