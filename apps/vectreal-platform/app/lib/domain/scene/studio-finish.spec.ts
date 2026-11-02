@@ -54,6 +54,14 @@ describe('bakesKey', () => {
 			})
 		)
 	})
+
+	it('names that depth is baked, not how, so a finish drawn with other rays stays current', () => {
+		// The key a saved finish and a published file are matched by: a scene
+		// baked before the bake's rays changed must not read as stale.
+		expect(bakesKey({ occlusion: { mode: 'baked' } })).toBe(
+			JSON.stringify({ occlusion: true, lights: false })
+		)
+	})
 })
 
 describe('eligibleBakes', () => {

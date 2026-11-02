@@ -105,7 +105,7 @@ describe('occlusionBakeSignature', () => {
 		expect(
 			signatureOf(quadDocument(), {
 				...DEFAULT_OCCLUSION_BAKE_OPTIONS,
-				samples: 64
+				samples: DEFAULT_OCCLUSION_BAKE_OPTIONS.samples * 2
 			})
 		).not.toBe(base)
 	})
