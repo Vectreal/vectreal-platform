@@ -314,20 +314,58 @@ describe('the publish export worker', () => {
 			).toEqual([['card', 'too-detailed']])
 		})
 
-		it.each([
-			[
-				'its WebAssembly would not load',
-				'Failed to fetch dynamically imported module'
-			],
-			[
-				'xatlas refused a part',
-				'unwrapPrimitives: Generated an unexpected number of atlas meshes'
-			]
-		])(
-			'reports a layout that failed because %s as unexpected, never as too detailed',
-			async (_, detail) => {
-				exporting(quadDocument({ uvs: false }))
+		describe('when the layout fails for a reason other than size', () => {
+			const detail = 'Failed to fetch dynamically imported module'
+			beforeEach(async () => {
+				// The real planners behind the bakes, so each says what it would take.
+				const { planOcclusionBake, bakeReport } =
+					await import('@vctrl/core/occlusion-bake')
+				const { planLightBake } = await import('@vctrl/core/light-bake')
 				mocks.writeBakeUvs.mockRejectedValueOnce(new Error(detail))
+				mocks.bakeOcclusionIntoDocument.mockImplementation(
+					async (document: Document, _r, _o, _p, layout) => {
+						const plan = planOcclusionBake(document, { layout })
+						return bakeReport(document, plan.targets, plan.skipped)
+					}
+				)
+				mocks.bakeLightsIntoDocument.mockImplementation(
+					async (document: Document, _l, _r, _o, _p, layout) => {
+						const plan = await planLightBake(document, layout)
+						return bakeReport(document, plan.targets, plan.skipped)
+					}
+				)
+			})
+
+			it('bakes what never needed it as before, the rest skipped for its own UVs, the failure kept for error tracking', async () => {
+				const document = quadDocument({ uvs: true })
+				const raw = quadDocument({ uvs: false })
+				const part = raw.getRoot().listMeshes()[0].listPrimitives()[0]
+				const copy = document
+					.createPrimitive()
+					.setAttribute(
+						'POSITION',
+						document
+							.createAccessor()
+							.setType('VEC3')
+							.setArray(part.getAttribute('POSITION')!.getArray())
+					)
+					.setIndices(
+						document
+							.createAccessor()
+							.setType('SCALAR')
+							.setArray(part.getIndices()!.getArray())
+					)
+					.setMaterial(document.createMaterial('raw'))
+				document
+					.getRoot()
+					.listScenes()[0]
+					.addChild(
+						document
+							.createNode()
+							.setTranslation([0, 0, 2])
+							.setMesh(document.createMesh().addPrimitive(copy))
+					)
+				exporting(document)
 
 				const messages = await send({
 					dracoWorthApplying: true,
@@ -336,15 +374,33 @@ describe('the publish export worker', () => {
 					lights: lighting
 				})
 
-				expect(mocks.bakeOcclusionIntoDocument).not.toHaveBeenCalled()
-				expect(mocks.bakeLightsIntoDocument).not.toHaveBeenCalled()
+				const skipped = [{ material: 'raw', reason: 'no-uv0' }]
+				expect(messages.at(-1)).toMatchObject({
+					type: 'done',
+					occlusion: { baked: ['card'], skipped },
+					lights: { baked: ['card'], skipped },
+					uvLayoutFailure: detail
+				})
+			})
+
+			it('is the outcome when nothing is left to bake', async () => {
+				exporting(quadDocument({ uvs: false }))
+
+				const messages = await send({
+					dracoWorthApplying: true,
+					ktx2: false,
+					occlusion: true,
+					lights: lighting
+				})
+
 				expect(messages.at(-1)).toMatchObject({
 					type: 'done',
 					occlusion: { failed: 'unexpected', detail },
-					lights: { failed: 'unexpected', detail }
+					lights: { failed: 'unexpected', detail },
+					uvLayoutFailure: detail
 				})
-			}
-		)
+			})
+		})
 
 		it('lays out nothing, and says nothing, when no bake was asked for', async () => {
 			exporting(quadDocument({ uvs: false }))

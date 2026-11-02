@@ -77,6 +77,12 @@ export interface PublishExportOutcome {
 	occlusion?: BakePassOutcome
 	/** Present when the lights were asked for, as `occlusion` is. */
 	lights?: BakePassOutcome
+	/**
+	 * Why the UV set laid out for the bakes failed for a reason other than
+	 * size. The bakes went on without it, so it is for error tracking, not the
+	 * author, unless no bake had anything left to take.
+	 */
+	uvLayoutFailure?: string
 }
 
 /** Messages received FROM the worker. */

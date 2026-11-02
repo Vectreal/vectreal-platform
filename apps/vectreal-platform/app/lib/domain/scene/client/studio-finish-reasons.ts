@@ -210,15 +210,21 @@ export function lightBakeWarning(
  */
 export function failuresToReport({
 	failure,
-	reports
+	reports,
+	uvLayoutFailure
 }: {
 	failure?: StudioFinishFailure
 	reports?: BakeReports
+	/** A UV layout that failed while the bakes went on without it. */
+	uvLayoutFailure?: string
 }): StudioFinishFailure[] {
 	const found = [
 		failure,
 		passFailure(reports?.occlusion),
-		passFailure(reports?.lights)
+		passFailure(reports?.lights),
+		uvLayoutFailure === undefined
+			? undefined
+			: { reason: 'unexpected' as const, detail: uvLayoutFailure }
 	].filter((each) => each !== undefined)
 	// A failed run's own failure is also one of its bakes', so once each.
 	return found.filter(

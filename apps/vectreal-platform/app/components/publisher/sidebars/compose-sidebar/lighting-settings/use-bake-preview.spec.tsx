@@ -446,6 +446,33 @@ describe('the bake preview', () => {
 		)
 	})
 
+	it('reports a UV layout that failed once, while the bakes it did not cost are shown', async () => {
+		const detail = 'Failed to fetch dynamically imported module'
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: {
+				baked: ['body'],
+				skipped: [{ material: 'trim', reason: 'tiling-uvs' }]
+			},
+			uvLayoutFailure: detail
+		})
+		const { store, hook } = setup()
+		act(() => store.set(lightingAtom, { occlusion: { mode: 'baked' } }))
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview?.status).toBe('ready')
+		// The hook sees the same report on every render: one distinct error.
+		const reported = new Set(
+			mocks.reportError.mock.calls
+				.map(([error]) => error)
+				.filter((error) => error !== undefined)
+		)
+		expect([...reported].map((error) => error.message)).toEqual([
+			`Studio finish unexpected: ${detail}`
+		])
+	})
+
 	it('names every fatal failure of a run in its one report', async () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: new ArrayBuffer(8),

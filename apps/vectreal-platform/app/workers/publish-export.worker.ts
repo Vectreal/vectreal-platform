@@ -130,6 +130,7 @@ async function exportForPublish({
 }: PublishExportRequest) {
 	let occlusionReport: PublishExportOutcome['occlusion']
 	let lightsReport: PublishExportOutcome['lights']
+	let uvLayoutFailure: string | undefined
 	// On a canvas nothing displays. Each bake attempt makes its own, only when
 	// it has something to bake, and `bakeWithRecovery` disposes it, so a GPU
 	// reset in one bake never reaches the next. A failed bake publishes the
@@ -164,17 +165,19 @@ async function exportForPublish({
 								}
 								if (layout?.primitives.length) {
 									post({ type: 'progress', stage: 'uvs' })
-									let failure: BakeFailure | undefined
 									try {
 										await writeBakeUvs(layout)
 									} catch (error) {
-										// Not the model's size: its WebAssembly would not load, or
-										// xatlas refused a part. A fault to report, not to simplify.
-										failure = {
-											failed: 'unexpected',
-											detail:
-												error instanceof Error ? error.message : String(error)
-										}
+										/*
+										  Not the model's size: its WebAssembly would not load, or
+										  xatlas refused a part. A fault to report, not to simplify,
+										  and no cost to the materials that never needed it: the
+										  bakes go on as without a layout, and the ones that needed
+										  it keep their own UV reasons.
+										*/
+										uvLayoutFailure =
+											error instanceof Error ? error.message : String(error)
+										layout = undefined
 									}
 									// The layout is done, so its time limit no longer runs.
 									post({
@@ -182,11 +185,6 @@ async function exportForPublish({
 										stage: occlusion ? 'occlusion' : 'lights',
 										fraction: 0
 									})
-									if (failure) {
-										if (occlusion) occlusionReport = failure
-										if (lights) lightsReport = failure
-										return
-									}
 								}
 								// Occlusion first: the light bake bakes past it.
 								if (occlusion) {
@@ -217,6 +215,23 @@ async function exportForPublish({
 										bakeRenderer,
 										DEFAULT_LIGHT_BAKE_OPTIONS
 									)
+								}
+								// With nothing left to bake, the failure is the outcome.
+								const reports = [occlusionReport, lightsReport]
+								if (
+									uvLayoutFailure !== undefined &&
+									reports.every(
+										(report) =>
+											!report ||
+											('baked' in report && report.baked.length === 0)
+									)
+								) {
+									const failure: BakeFailure = {
+										failed: 'unexpected',
+										detail: uvLayoutFailure
+									}
+									if (occlusion) occlusionReport = failure
+									if (lights) lightsReport = failure
 								}
 							}
 						: undefined,
@@ -249,7 +264,8 @@ async function exportForPublish({
 				textureBytes: result.textureBytes,
 				textures: result.textures,
 				occlusion: occlusionReport,
-				lights: lightsReport
+				lights: lightsReport,
+				uvLayoutFailure
 			},
 			[output]
 		)
