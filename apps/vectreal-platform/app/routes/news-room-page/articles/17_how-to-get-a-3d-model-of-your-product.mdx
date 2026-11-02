@@ -1,0 +1,144 @@
+---
+title: "How to get a 3D model of your product"
+slug: "how-to-get-a-3d-model-of-your-product"
+excerpt: "There are six routes: scan it with a phone, hire a 3D artist, convert the CAD files it was designed in, license an existing model, generate one from photos with AI, or use a marketplace's own program. Which one fits depends on the product's surface, whether CAD files exist and how exact the model has to be. Whichever you pick, ask for a GLB, the file web viewers load."
+publishedAt: "2026-11-02T18:00"
+updatedAt: "2026-11-02"
+category: "concepts"
+tags:
+  - "glb"
+  - "formats"
+  - "publisher"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/media/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+
+voice: A
+author_persona: moritz
+type: "Comparison / Positioning"
+premise: capability
+pillar: Quality
+seo_cluster: "3D on the web / get a 3D model of a product"
+cta: https://vectreal.com/publisher
+sceneImage: "/media/images/newsroom/scene-how-to-get-a-3d-model-of-your-product.webp"
+coverImage: "/media/images/newsroom/og-how-to-get-a-3d-model-of-your-product.webp"
+---
+
+<video src="/media/images/newsroom/17/six-ways-one-file.mp4" poster="/media/images/newsroom/17/six-ways-one-file-poster.webp" autoPlay muted loop playsInline aria-label="Six routes to a 3D model listed down the left: Phone scan, 3D artist, CAD, Licensed model, AI from photos and Platform tools. A thin line runs from each into a real camera turning slowly on a lit floor, with GLB under it, and an orange pulse runs down one route at a time while its name lights up."></video>
+
+## Which route fits which product?
+
+| Route | Works best for | The catch | Ends in a GLB? |
+| --- | --- | --- | --- |
+| Phone scan | Rigid objects with some texture that you can walk around | Shiny, see-through, thin or single-colour surfaces | Most apps export one. Apple's Object Capture writes USDZ |
+| 3D artist or studio | Products that scan badly, or don't exist yet | Only as accurate as the photos and measurements you hand over | Yes, if you ask for it |
+| CAD from engineering | Products that were designed in CAD | Far too heavy as delivered, with internal parts nobody sees | After conversion |
+| Licensed model | Generic items, props, placeholders | Someone else's model, and the licence may not cover a public page | Depends on the listing |
+| AI from photos | Drafts, placeholders, objects in the background | The sides the photos don't show are guessed | Yes, most export GLB |
+| Platform tools | Sellers on Shopify, Amazon (US) or Google | Amazon's and Google's results stay on their platform | Shopify's scanner saves a file; the others don't hand one over |
+
+The routes combine, too: a scan or an AI draft is a fair thing to hand an artist to finish. The sections below go through each one: what it's for, what goes wrong, and what you end up holding.
+
+## Can I scan my product with my phone?
+
+Yes, if the product is rigid and its surface has something for the software to hold on to. A photogrammetry app takes dozens of overlapping photos, or a video, while you walk around the object, matches points between the images and rebuilds a textured mesh from them. [Polycam](https://learn.poly.cam/hc/en-us/articles/48565771018772-Which-Capture-Mode-Should-I-Use), [KIRI Engine](https://www.kiriengine.app/features/photo-scan), [Scaniverse](https://community.scaniverse.com/t/which-formats-can-scaniverse-export-to/50) and Epic's [RealityScan](https://www.realityscan.com/news/realityscan-mobile-is-now-available-for-android-devices) all do this.
+
+The surface of the product decides a lot. Apple's capture guide says to avoid objects that are ["very thin in one dimension, highly reflective, transparent, or translucent"](https://developer.apple.com/documentation/realitykit/capturing-photographs-for-realitykit-object-capture), and warns that a single solid colour or a very smooth surface may not give the software enough to work with. KIRI calls shiny surfaces [the most difficult case](https://www.kiriengine.app/blog/why-is-my-scan-all-over-the-place), with aluminium cans and plastic bottles as its examples.
+
+How you shoot matters too. Apple asks for about 70% overlap between neighbouring photos, soft even light and fixed camera settings, and says that below 50% overlap the reconstruction may fail.
+
+I've used Polycam and like the control it gives you over the capture. It can give nice results, but they depend on the light on the object, how carefully you capture it and the phone you capture with, and under studio lighting they get a lot better.
+
+What comes out depends on the app:
+
+- **Polycam** exports glTF on its free plan; OBJ, FBX, USDZ and the other mesh formats need a paid plan ([Polycam](https://learn.poly.cam/hc/en-us/articles/27756102599572-What-File-Types-Can-Polycam-Export)).
+- **KIRI Engine** and **Scaniverse** export GLB ([KIRI](https://www.kiriengine.app/features/export-formats), [Scaniverse](https://community.scaniverse.com/t/which-formats-can-scaniverse-export-to/50)).
+- **RealityScan** saves GLB on Android and OBJ on iOS ([CG Channel, June 2024](https://www.cgchannel.com/2024/06/realityscan-1-5-saves-3d-models-directly-to-your-phone/)).
+- **Apple's Object Capture**, the engine behind Reality Composer and several other iPhone apps, writes [USDZ](https://developer.apple.com/documentation/realitykit/creating-3d-objects-from-photographs), which needs converting to GLB before most web viewers will load it. It needs an iPhone or iPad with LiDAR, or a recent Mac.
+
+Check the size of what arrives. Apple says depth data lets it work out the real-world size; without it you may have to scale the model yourself.
+
+Some apps also capture Gaussian splats, which rebuild the object as millions of soft coloured blobs instead of triangles. Polycam recommends them for [objects with reflections or transparency](https://learn.poly.cam/hc/en-us/articles/48565771018772-Which-Capture-Mode-Should-I-Use). But a splat isn't a mesh: the glTF extension for splats reached [release candidate in February 2026](https://www.khronos.org/news/press/gltf-gaussian-splatting-press-release), and a viewer without splat support shows a point cloud instead. KIRI and Polycam can turn a splat capture into a mesh, and that mesh is what a standard web viewer loads.
+
+## What should I ask a 3D artist for?
+
+A modeller builds the product by hand in 3D software from your photos and measurements. This is the route for anything glossy, transparent or not manufactured yet, and for when you need a clean, light file rather than a dense scan.
+
+People hire through the [Shopify Partner Directory](https://help.shopify.com/en/manual/products/product-media/expert-3d-model), [Upwork](https://www.upwork.com/hire/3d-artists/), Fiverr and CGTrader's freelancer pages. Amazon's [guide for sellers](https://m.media-amazon.com/images/G/01/imaging/3D/Getting_Started_With_3D_Content_on_Amazon_-_Spring_2023_US.pdf) names three pre-vetted creators: Hexa, Loft3Di and SuperDNA 3D Lab.
+
+**What to hand over.** Shopify's guide for merchants asks for photos from multiple angles, well lit and with the whole product in focus, measurements in millimetres, and technical drawings or CAD files if you have them. Its [checklist for modellers](https://help.shopify.com/partners/resources/creating-3d-models/3d-model-standards-checklist) adds that the number and quality of your photos affects how long the modelling takes. The model can only be as accurate as that reference.
+
+**What to ask for:**
+
+- **A GLB.** Shopify's merchant guide caps it at 15 MB; its modeller checklist aims for about 4 MB.
+- **Real-world scale.** Khronos' [commerce guidelines](https://github.com/KhronosGroup/3DC-Asset-Creation/blob/main/asset-creation-guidelines/RealtimeAssetCreationGuidelines.md) say 1 unit is 1 metre, the model is 1:1 with the real item, and the bottom centre of the product sits at 0,0,0.
+- **Metallic-roughness materials.** Khronos says the specular-glossiness workflow is not recommended.
+- **Textures no larger than 2048 × 2048 px** for mobile web, per Shopify's checklist.
+
+Neither Khronos nor Shopify puts a number on the triangle count. Both say to use as much geometry as the realism needs and no more, so agree on a file size instead and let the modeller hit it. Expect each product, and often each colour variant, to be its own job.
+
+## Can I use the CAD files from engineering?
+
+If the product was designed in CAD, its exact shape already exists, in STEP, IGES, SolidWorks, Parasolid, JT, CATIA or Creo files. Nobody has to measure anything.
+
+The catch is that CAD isn't a mesh. It stores exact surfaces, and to be displayed they have to be cut into triangles, [tessellated](https://docs.unity.com/en-us/asset-transformer-studio/2026.5.0/manual/data-preparation-fundamentals/about-tessellation), where more triangles mean more detail and more work for the visitor's device. An engineering assembly also holds every screw and bracket inside the housing. Unity's Asset Transformer has a function just for [deleting parts that can't be seen from outside](https://docs.unity.com/en-us/asset-transformer-sdk/2026.4/manual/functions/deleteoccluded). And CAD carries shape rather than looks, so plan a materials pass if the web model has to look like the finished product.
+
+Tools that convert CAD to GLB:
+
+- **Unity Asset Transformer**, which was called Pixyz until [June 2025](https://discussions.unity.com/t/pixyz-is-now-unity-asset-transformer/1659247). It imports all the formats above, removes hidden parts and reduces meshes.
+- **CAD Exchanger**, a desktop app with a [STEP to GLB](https://cadexchanger.com/step-to-glb/) conversion, plus an SDK and a command-line batch tool.
+- **Rhino 8**, which imports STEP, IGES and SolidWorks files and [exports GLB](https://docs.mcneel.com/rhino/8/help/en-us/fileio/gltf_import_export.htm) with optional Draco compression.
+- **Onshape**, which exports parts and assemblies [straight to GLB](https://cad.onshape.com/help/Content/File/exporting_files.htm).
+- **Blender**, through the free [STEP Importer](https://extensions.blender.org/add-ons/step-importer/) extension for Blender 5.1 and later.
+
+## Can I buy a ready-made model?
+
+For generic things, yes: a chair like thousands of others, a standard part, the props around your product. A model of your own product only exists if someone already made it.
+
+Epic's [Fab](https://dev.epicgames.com/documentation/fab/asset-file-format-and-structure-requirements-in-fab) replaced the Sketchfab Store in [October 2024](https://sketchfab.com/blogs/community/sketchfab-update-what-you-need-to-know-now-that-fabs-live/). Sketchfab still offers free downloads where the owner allows them, converted automatically to [GLB](https://help.sketchfab.com/en/articles/16152669-gltf-glb-and-usdz), and in August 2026 Epic announced that Sketchfab and ArtStation are [becoming part of KitBash](https://www.epicgames.com/site/news/kitbash-acquires-artstation-and-sketchfab). CGTrader and TurboSquid sell models too.
+
+Read the licence before you build a page around one, for three things:
+
+- **Commercial use.** Editorial models on [CGTrader](https://help.cgtrader.com/hc/en-us/articles/360015193418-What-is-the-difference-between-Royalty-Free-and-Editorial-licenses) and [TurboSquid](https://www.turbosquid.com/licensing) can't be used to sell or promote anything, and neither can a Sketchfab model under CC BY-NC.
+- **Brands.** TurboSquid doesn't license the products its models depict, so clearing a brand is on you.
+- **A public web page.** A GLB in a web viewer is a file the visitor's browser downloads. TurboSquid requires models to be in formats that can't be opened in publicly available software, and WebGL use beyond game-engine exports needs its approval in advance. CGTrader's [royalty-free licence](https://help.cgtrader.com/hc/en-us/articles/360015124437) wants the model built into a product so nobody can retrieve it on its own, and suggests talking to the seller. Fab's [licence](https://www.fab.com/cla) forbids redistributing an asset on its own.
+
+## Can AI make a 3D model from product photos?
+
+As a file, yes. [Meshy](https://docs.meshy.ai/en/api/multi-image-to-3d) takes one to four photos of the same object, [Tripo](https://docs.comfy.org/built-in-nodes/TripoImageToModelNodeV2.md) one, or two to four ordered front, left, back and right, and [Rodin Gen-2](https://fal.ai/models/fal-ai/hyper3d/rodin/v2/llms.txt) up to five. All three are hosted services and hand back a GLB. Open models run on your own hardware: Microsoft's [TRELLIS.2](https://huggingface.co/microsoft/TRELLIS.2-4B/blob/main/README.md) is MIT-licensed and needs an NVIDIA GPU with 24 GB of memory, and Tencent's [Hunyuan3D 2.1](https://huggingface.co/tencent/Hunyuan3D-2.1/blob/main/LICENSE) has a licence that doesn't apply in the European Union, the United Kingdom or South Korea.
+
+Whether the result is your product is a separate question. Meshy's own docs put it plainly: ["A single image has no information about the back,"](https://docs.meshy.ai/en/webapp/image-to-3d) so the back is guessed, and more photos from more angles mean less guessing. A cluttered background can merge several objects into one distorted mesh. TRELLIS.2 says its raw meshes may have small holes. Scale isn't measured at all: in Meshy you type in the height. And the defaults can be heavy, up to 500,000 triangles in Rodin's case.
+
+That makes AI good for drafts, placeholders and objects in the background of a scene, and for giving an artist a rough shape to start from. Before a generated model goes on a product page, hold it next to the real thing.
+
+## Do Shopify, Amazon or Google make models for sellers?
+
+**Shopify** has a [3D scanner](https://help.shopify.com/en/manual/products/product-media/3d-scanner) in the Shopify app, for iPhone 12 Pro and later and iPad Pros from 2021 on, running iOS 17 or later. It takes three scans and 10 to 15 minutes, and the product has to measure at least 8 cm in each direction. The model goes straight into the product's media, or into the Files app if you want the file; Shopify's page doesn't name the format. The surfaces that are hard for any scan are hard here too: smooth, single-colour, reflective, soft or very thin. For anything that won't scan, merchants hire a Partner through Shopify's directory, who delivers a GLB.
+
+**Amazon**'s guide for sellers lists three routes: upload your own model, use a vetted creator, or scan the product with the Amazon Seller app on an iPhone. The scanning tool was announced in [July 2024](https://sellercentral.amazon.com/seller-forums/discussions/t/33bb149b-1dfb-4334-ac37-410137358732) for brand-registered sellers in the US: an artist reviews the scan, the model takes about three weeks and lands on your listing at no cost. Eligibility depends on the category and the product, so check in Seller Central before you count on it. The model lives on the Amazon listing; neither the guide nor the announcement describes handing you a file for your own site.
+
+**Google** makes 360° spins rather than models. For US merchants, its AI builds a spin from at least five product photos and shows it on Search. Google's [help page](https://support.google.com/merchants/answer/13671720?hl=en-GB) says it can't create a glTF from images, and viewing a product in your own room still needs a GLB you supply.
+
+## What should the file be when it arrives?
+
+<video src="/media/images/newsroom/17/check-the-file.mp4" poster="/media/images/newsroom/17/check-the-file-poster.webp" autoPlay muted loop playsInline aria-label="A camera stands on a lit floor, front on, looking finished. The view turns quickly to its back, which is smeared into streaks, with the strap lugs missing and a piece of the base gone. From the same view it dissolves into the real camera, its leather, badge and strap lugs back in place."></video>
+
+Whichever route you took, the same five things:
+
+1. **A GLB.** One file with the mesh, materials and textures inside, and the format web viewers load. [The best 3D file formats for the web](https://vectreal.com/news-room/best-3d-file-formats-for-the-web?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-get-a-3d-model-of-your-product) goes into why, and how much compressing it saves.
+2. **Real-world scale**, in metres, with the product standing at the origin.
+3. **Metallic-roughness materials.**
+4. **A size a phone can handle.** Shopify's checklist aims for about 4 MB, with textures up to 2048 px.
+5. **Opened and checked before you sign off.** Turn it round, look underneath, compare it with the product. [How to open a GLB file](https://vectreal.com/news-room/how-to-open-a-glb-file?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-get-a-3d-model-of-your-product) lists the ways to look at one without installing anything.
+
+That last check is the cheapest moment to catch a missing part, a hole underneath or a back that was guessed.
+
+## Then put it on a page
+
+Once you have the file, drop it into the [Vectreal Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-get-a-3d-model-of-your-product). It's open source, and I work on it. It takes a GLB, FBX or STL file, or the folder that holds a glTF or OBJ, and in the browser you set the lighting, shadows and camera, then publish it as an embed, an iframe you paste into any page. You can try it without an account and sign in when you want to save. [How to add a 3D model to a website](https://vectreal.com/news-room/how-to-add-3d-model-to-website?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-get-a-3d-model-of-your-product) walks through the embed.
+
+*Sources checked on 29 October 2026. Prices are left out on purpose.*
