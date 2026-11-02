@@ -89,6 +89,31 @@ describe('VECTREAL_lightmap', () => {
 		).toBe('image/ktx2')
 	})
 
+	it('writes a layout’s map once, read from the layout’s UV set by every material on it', async () => {
+		const document = new Document()
+		document.createBuffer()
+		const [body, trim, card] = ['body', 'trim', 'card'].map((name) =>
+			document.createMaterial(name)
+		)
+		writeLightmaps(document, 'baked-from', [
+			{ material: body, scale: 2, image, texCoord: 2 },
+			{ material: trim, scale: 2, image, texCoord: 2 },
+			{ material: card, scale: 2, image: image.slice() }
+		])
+		const io = new NodeIO().registerExtensions(IO_EXTENSIONS)
+		const read = await io.readBinary(await io.writeBinary(document))
+
+		const lightmaps = read
+			.getRoot()
+			.listMaterials()
+			.map((material) => material.getExtension<Lightmap>(LIGHTMAP_EXTENSION))
+		expect(read.getRoot().listTextures()).toHaveLength(2)
+		expect(lightmaps[0]?.getTexture()).toBe(lightmaps[1]?.getTexture())
+		expect(
+			lightmaps.map((map) => map?.getTextureInfo()?.getTexCoord())
+		).toEqual([2, 2, 0])
+	})
+
 	it('writes nothing when nothing was baked', async () => {
 		const document = new Document()
 		document.createMaterial('body')

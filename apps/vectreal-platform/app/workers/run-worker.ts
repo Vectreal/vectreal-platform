@@ -24,6 +24,8 @@ interface RunWorkerOptions<Reply extends WorkerReply, Result> {
 	message: unknown
 	transfer: Transferable[]
 	timeoutMs: number
+	/** Ends the run early, rejecting with the signal's reason. */
+	signal?: AbortSignal
 	onProgress: (progress: Extract<Reply, { type: 'progress' }>) => void
 	toResult: (done: Extract<Reply, { type: 'done' }>) => Result
 	/** The caller's own wording, since the UI surfaces these as they are. */
@@ -49,6 +51,7 @@ export function runWorker<Reply extends WorkerReply, Result>(
 		message,
 		transfer,
 		timeoutMs,
+		signal,
 		onProgress,
 		toResult,
 		errors
@@ -61,9 +64,12 @@ export function runWorker<Reply extends WorkerReply, Result>(
 		// timer is never left pending.
 		const settle = (finish: () => void) => {
 			clearTimeout(timer)
+			signal?.removeEventListener('abort', abort)
 			worker.terminate()
 			finish()
 		}
+		const abort = () => settle(() => reject(signal?.reason))
+		signal?.addEventListener('abort', abort)
 
 		const timer = setTimeout(() => {
 			settle(() => reject(new WorkerRunError('timed-out', errors.timedOut)))

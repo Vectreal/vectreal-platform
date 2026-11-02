@@ -45,4 +45,26 @@ describe('writeOcclusionBake', () => {
 		expect(stored.getOcclusionTextureInfo()?.getTexCoord()).toBe(0)
 		expect(stored.getOcclusionStrength()).toBe(1)
 	})
+
+	it('writes a layout’s map once, read from the layout’s UV set by every material on it', async () => {
+		const document = new Document()
+		document.createBuffer()
+		const [body, trim, card] = ['body', 'trim', 'card'].map((name) =>
+			document.createMaterial(name)
+		)
+		const own = PNG.slice()
+
+		writeOcclusionBake(document, [
+			{ material: body, image: PNG, mimeType: 'image/png', texCoord: 2 },
+			{ material: trim, image: PNG, mimeType: 'image/png', texCoord: 2 },
+			{ material: card, image: own, mimeType: 'image/png' }
+		])
+
+		expect(body.getOcclusionTexture()).toBe(trim.getOcclusionTexture())
+		expect(card.getOcclusionTexture()).not.toBe(body.getOcclusionTexture())
+		expect(document.getRoot().listTextures()).toHaveLength(2)
+		expect(body.getOcclusionTextureInfo()?.getTexCoord()).toBe(2)
+		expect(trim.getOcclusionTextureInfo()?.getTexCoord()).toBe(2)
+		expect(card.getOcclusionTextureInfo()?.getTexCoord()).toBe(0)
+	})
 })

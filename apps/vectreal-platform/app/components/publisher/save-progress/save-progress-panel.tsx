@@ -11,6 +11,7 @@ import {
 	CloudCheck,
 	CloudUpload,
 	File as FileIcon,
+	Grid2x2,
 	Globe,
 	History,
 	Image as ImageIcon,
@@ -70,6 +71,7 @@ const GROUP_META: Record<SaveFileGroup, { label: string; icon: ReactNode }> = {
 
 const STEP_META: Record<PublishStepKey, { label: string; icon: ReactNode }> = {
 	export: { label: 'Preparing the published file', icon: <Package /> },
+	uvs: { label: 'Preparing the model', icon: <Grid2x2 /> },
 	occlusion: { label: 'Drawing the depth', icon: <Contrast /> },
 	lights: { label: 'Drawing the studio lights', icon: <Lightbulb /> },
 	textures: { label: 'Compressing textures for the GPU', icon: <Layers /> },

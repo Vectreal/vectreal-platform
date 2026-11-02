@@ -87,7 +87,8 @@
 		"ktx2-encoder": "catalog:",
 		"meshoptimizer": "catalog:",
 		"three": "catalog:",
-		"three-mesh-bvh": "catalog:"
+		"three-mesh-bvh": "catalog:",
+		"watlas": "1.0.1"
 	},
 	"devDependencies": {
 		"@nx/vite": "catalog:",

@@ -34,10 +34,11 @@ export type SaveProgressEvent =
 
 /** A publish's own steps, in the order they run. */
 export type PublishStepKey =
-	'export' | 'occlusion' | 'lights' | 'textures' | 'upload' | 'commit'
+	'export' | 'uvs' | 'occlusion' | 'lights' | 'textures' | 'upload' | 'commit'
 
 const PUBLISH_STEP_ORDER: PublishStepKey[] = [
 	'export',
+	'uvs',
 	'occlusion',
 	'lights',
 	'textures',

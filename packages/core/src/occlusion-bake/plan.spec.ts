@@ -347,6 +347,79 @@ describe('planOcclusionBake', () => {
 	})
 })
 
+describe('planOcclusionBake with a layout made for the bake', () => {
+	/** One clean card and one whose UVs repeat, each its own material. */
+	function hybrid() {
+		const document = new Document()
+		const clean = document.createMaterial('clean')
+		const tiled = document.createMaterial('tiled')
+		sceneOf(
+			document,
+			document.createMesh().addPrimitive(grid(document).setMaterial(clean)),
+			document
+				.createMesh()
+				.addPrimitive(grid(document, { uvMax: 2 }).setMaterial(tiled))
+		)
+		return { document, clean, tiled }
+	}
+
+	it('bakes a material on its own UVs, and one whose UVs fail on the layout', () => {
+		const { document, clean, tiled } = hybrid()
+
+		const plan = planOcclusionBake(document, {
+			layout: { texCoord: 2, materials: new Map([[tiled, undefined]]) }
+		})
+
+		expect(
+			plan.targets.map(({ material, texCoord }) => [material, texCoord])
+		).toEqual([
+			[clean, 0],
+			[tiled, 2]
+		])
+		expect(plan.skipped).toEqual([])
+	})
+
+	it('skips one the layout could not take, with the layout’s reason', () => {
+		const { document, tiled } = hybrid()
+
+		const plan = planOcclusionBake(document, {
+			layout: { texCoord: 2, materials: new Map([[tiled, 'too-detailed']]) }
+		})
+
+		expect(plan.skipped).toEqual([{ material: tiled, reason: 'too-detailed' }])
+	})
+
+	it('bakes a material on the layout in its set, though the layout has filled the first set too', () => {
+		// A layout fills every lower set a part lacks, so its own UVs now pass.
+		const { document, clean } = hybrid()
+
+		const plan = planOcclusionBake(document, {
+			layout: { texCoord: 2, materials: new Map([[clean, undefined]]) }
+		})
+
+		expect(
+			plan.targets.find(({ material }) => material === clean)?.texCoord
+		).toBe(2)
+	})
+
+	it('puts nothing on the layout that fails for a reason a layout does not fix', () => {
+		const document = new Document()
+		const shared = document.createMaterial('shared')
+		const mesh = document
+			.createMesh()
+			.addPrimitive(grid(document, { uvMax: 2 }).setMaterial(shared))
+		sceneOf(document, mesh, mesh)
+
+		const plan = planOcclusionBake(document, {
+			layout: { texCoord: 1, materials: new Map([[shared, undefined]]) }
+		})
+
+		expect(plan.skipped).toEqual([
+			{ material: shared, reason: 'shared-geometry' }
+		])
+	})
+})
+
 describe('isGlass', () => {
 	it('is true for transmission and for blended transparency, false otherwise', () => {
 		const document = new Document()

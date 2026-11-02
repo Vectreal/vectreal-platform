@@ -182,6 +182,32 @@ describe('ModelExporter.exportDocumentGLBForPublish', () => {
 		expect(result.geometrySizes?.meshopt).toBeUndefined()
 	})
 
+	it('measures the geometry it ships, as a bake that lays out UVs left it', async () => {
+		const measure = (textures?: (copy: Document) => Promise<void>) =>
+			new ModelExporter().exportDocumentGLBForPublish(gridDocument(), {
+				draco: {},
+				textures
+			})
+		const plain = await measure()
+
+		const laidOut = await measure(async (copy) => {
+			const [primitive] = copy.getRoot().listMeshes()[0].listPrimitives()
+			const count = primitive.getAttribute('POSITION')!.getCount()
+			primitive.setAttribute(
+				'TEXCOORD_1',
+				copy
+					.createAccessor()
+					.setType('VEC2')
+					.setArray(new Float32Array(count * 2).map((_, i) => i / count))
+					.setBuffer(copy.getRoot().listBuffers()[0])
+			)
+		})
+
+		expect(laidOut.geometrySizes!.none).toBeGreaterThan(
+			plain.geometrySizes!.none
+		)
+	})
+
 	it('measures geometry without the textures every codec would share', async () => {
 		const source = gridDocument()
 		const texture = source

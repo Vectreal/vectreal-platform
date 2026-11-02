@@ -167,19 +167,21 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					},
 					(progress) =>
 						dispatchProgress(
-							progress.stage === 'textures'
-								? {
-										type: 'publish-step',
-										key: 'textures',
-										done: progress.texturesDone,
-										total: progress.texturesTotal
-									}
-								: {
-										type: 'publish-step',
-										key: progress.stage,
-										done: progress.fraction,
-										total: 1
-									}
+							progress.stage === 'uvs'
+								? { type: 'publish-step', key: 'uvs' }
+								: progress.stage === 'textures'
+									? {
+											type: 'publish-step',
+											key: 'textures',
+											done: progress.texturesDone,
+											total: progress.texturesTotal
+										}
+									: {
+											type: 'publish-step',
+											key: progress.stage,
+											done: progress.fraction,
+											total: 1
+										}
 						)
 				)
 				if (publishExport.bakesAnything) {

@@ -107,8 +107,9 @@ function usePreviewLifetime(current: BakePreview | null) {
 	// hiding the preview, so one failure is reported once.
 	const failure = current?.failure
 	const reports = current?.reports
+	const uvLayoutFailure = current?.outcome?.uvLayoutFailure
 	const reportable = useMemo(() => {
-		const reported = failuresToReport({ failure, reports })
+		const reported = failuresToReport({ failure, reports, uvLayoutFailure })
 		// One report per run, naming every fault in it.
 		return reported.length > 0
 			? new Error(
@@ -117,7 +118,7 @@ function usePreviewLifetime(current: BakePreview | null) {
 						.join('; ')}`
 				)
 			: undefined
-	}, [failure, reports])
+	}, [failure, reports, uvLayoutFailure])
 	useErrorReport(reportable, 'client-fallback')
 
 	useEffect(() => {
@@ -147,6 +148,7 @@ export const bakedCount = (report: BakePassOutcome | undefined) =>
 /** What a preview says while it draws: which step, and how far it has come. */
 export const drawingLabel = (progress: BakePreview['progress']) => {
 	if (!progress) return 'Drawing the finish'
+	if (progress.stage === 'uvs') return 'Preparing the model'
 	if (progress.stage === 'textures') {
 		return `Compressing textures (${progress.texturesDone} of ${progress.texturesTotal})`
 	}

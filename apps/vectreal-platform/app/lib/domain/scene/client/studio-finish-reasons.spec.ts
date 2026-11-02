@@ -64,6 +64,20 @@ describe('the words for each reason', () => {
 })
 
 describe('failuresToReport', () => {
+	it('reports a UV layout that failed once, whether or not it became the outcome', () => {
+		const detail = 'Failed to fetch dynamically imported module'
+		const failed = { failed: 'unexpected' as const, detail }
+
+		for (const reports of [
+			{ occlusion: { baked: ['body'], skipped: [] } },
+			{ occlusion: failed, lights: failed }
+		]) {
+			expect(failuresToReport({ reports, uvLayoutFailure: detail })).toEqual([
+				{ reason: 'unexpected', detail }
+			])
+		}
+	})
+
 	it('reports a browser without WebGL 2 and bugs, not what the author can fix', () => {
 		expect(
 			failuresToReport({

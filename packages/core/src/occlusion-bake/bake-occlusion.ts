@@ -39,10 +39,11 @@ export async function bakeOcclusion(
 	// Nothing casts, so nothing is occluded.
 	return (
 		baked ??
-		plan.targets.map(({ material }) => ({
+		plan.targets.map(({ material, texCoord }) => ({
 			material,
 			size,
-			pixels: new Uint8Array(size * size * 4).fill(255)
+			pixels: new Uint8Array(size * size * 4).fill(255),
+			texCoord
 		}))
 	)
 }

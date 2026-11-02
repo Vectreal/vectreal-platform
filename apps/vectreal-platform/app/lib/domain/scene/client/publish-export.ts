@@ -1,4 +1,7 @@
-import { PUBLISH_EXPORT_TIMEOUT_MS } from './studio-finish-reasons'
+import {
+	PUBLISH_EXPORT_TIMEOUT_MS,
+	UV_LAYOUT_TIMEOUT_MS
+} from './studio-finish-reasons'
 import { runWorker, WorkerRunError } from '../../../../workers/run-worker'
 
 import type {
@@ -20,6 +23,9 @@ export type PublishExportInput = Omit<
 	glb: Uint8Array
 }
 
+/** A UV layout ran past `UV_LAYOUT_TIMEOUT_MS`, so its worker was stopped. */
+class UvLayoutTimedOut extends Error {}
+
 /**
  * Runs the publish export in a worker. A worker that crashes, which is the
  * browser running out of memory, is run once more: `runWorker` has already
@@ -28,19 +34,53 @@ export type PublishExportInput = Omit<
  * take as long again. The budget (`PUBLISH_EXPORT_TIMEOUT_MS`) is generous,
  * since KTX2 takes seconds per texture; it exists so a stuck encoder cannot
  * hold the publish button forever.
+ *
+ * Laying out a UV set for the bakes is one call that cannot be stopped from
+ * inside, so its own limit stops the worker, and the export runs again
+ * without it, its materials reported as too detailed. A layout that crashed
+ * the worker is not tried again either, and neither is one that ran out of
+ * time when the run after it crashes.
  */
 export async function runPublishExportInWorker(
 	input: PublishExportInput,
 	onProgress: (progress: PublishExportProgress) => void,
-	timeoutMs = PUBLISH_EXPORT_TIMEOUT_MS
+	timeoutMs = PUBLISH_EXPORT_TIMEOUT_MS,
+	uvLayoutTimeoutMs = UV_LAYOUT_TIMEOUT_MS
 ): Promise<PublishExportOutcome> {
+	let request = input
+	let laying = false
+	const withoutLayout = () => {
+		request = { ...request, generateUvs: false }
+	}
+	const run = () => {
+		laying = false
+		return runPublishExportOnce(
+			request,
+			(progress) => {
+				laying = progress.stage === 'uvs'
+				onProgress(progress)
+			},
+			timeoutMs,
+			uvLayoutTimeoutMs
+		)
+	}
+	const runWithinLayoutLimit = async () => {
+		try {
+			return await run()
+		} catch (error) {
+			if (!(error instanceof UvLayoutTimedOut)) throw error
+			withoutLayout()
+			return run()
+		}
+	}
 	try {
-		return await runPublishExportOnce(input, onProgress, timeoutMs)
+		return await runWithinLayoutLimit()
 	} catch (error) {
 		if (!(error instanceof WorkerRunError && error.failure === 'crashed')) {
 			throw error
 		}
-		return runPublishExportOnce(input, onProgress, timeoutMs)
+		if (laying) withoutLayout()
+		return runWithinLayoutLimit()
 	}
 }
 
@@ -79,30 +119,55 @@ export function planStudioFinishInWorker(
 	)
 }
 
-/** One run, in a worker `runWorker` owns, handed a copy of the GLB to keep. */
-function runPublishExportOnce(
+/**
+ * One run, in a worker `runWorker` owns, handed a copy of the GLB to keep.
+ * A UV layout's limit runs from its progress until the next.
+ */
+async function runPublishExportOnce(
 	{ glb, ...request }: PublishExportInput,
 	onProgress: (progress: PublishExportProgress) => void,
-	timeoutMs: number
+	timeoutMs: number,
+	uvLayoutTimeoutMs: number
 ): Promise<PublishExportOutcome> {
 	const buffer = glb.slice().buffer as ArrayBuffer
 	const message: PublishExportRequest = { type: 'export', buffer, ...request }
+	const layout = new AbortController()
+	let layoutTimer: ReturnType<typeof setTimeout> | undefined
 
-	return runWorker<PublishExportMessage, PublishExportOutcome>(
-		createPublishWorker,
-		{
-			message,
-			transfer: [buffer],
-			timeoutMs,
-			onProgress,
-			toResult: (outcome) => outcome,
-			errors: {
-				timedOut: `Publishing timed out after ${timeoutMs / 1000}s`,
-				undeserializable: 'Publish worker sent an undeserializable message',
-				crashed: 'Publish worker crashed'
+	try {
+		return await runWorker<PublishExportMessage, PublishExportOutcome>(
+			createPublishWorker,
+			{
+				message,
+				transfer: [buffer],
+				timeoutMs,
+				signal: layout.signal,
+				onProgress: (progress) => {
+					clearTimeout(layoutTimer)
+					if (progress.stage === 'uvs') {
+						layoutTimer = setTimeout(
+							() =>
+								layout.abort(
+									new UvLayoutTimedOut(
+										`Laying out UVs timed out after ${uvLayoutTimeoutMs / 1000}s`
+									)
+								),
+							uvLayoutTimeoutMs
+						)
+					}
+					onProgress(progress)
+				},
+				toResult: (outcome) => outcome,
+				errors: {
+					timedOut: `Publishing timed out after ${timeoutMs / 1000}s`,
+					undeserializable: 'Publish worker sent an undeserializable message',
+					crashed: 'Publish worker crashed'
+				}
 			}
-		}
-	)
+		)
+	} finally {
+		clearTimeout(layoutTimer)
+	}
 }
 
 /** How publish encodes geometry, from the settings the document was derived from. */
