@@ -314,27 +314,37 @@ describe('the publish export worker', () => {
 			).toEqual([['card', 'too-detailed']])
 		})
 
-		it('bakes on without the layout when it cannot be made, its materials reported as too detailed', async () => {
-			exporting(quadDocument({ uvs: false }))
-			mocks.writeBakeUvs.mockRejectedValueOnce(
-				new Error('Failed to fetch dynamically imported module')
-			)
+		it.each([
+			[
+				'its WebAssembly would not load',
+				'Failed to fetch dynamically imported module'
+			],
+			[
+				'xatlas refused a part',
+				'unwrapPrimitives: Generated an unexpected number of atlas meshes'
+			]
+		])(
+			'reports a layout that failed because %s as unexpected, never as too detailed',
+			async (_, detail) => {
+				exporting(quadDocument({ uvs: false }))
+				mocks.writeBakeUvs.mockRejectedValueOnce(new Error(detail))
 
-			const messages = await send({
-				dracoWorthApplying: true,
-				ktx2: false,
-				occlusion: true
-			})
+				const messages = await send({
+					dracoWorthApplying: true,
+					ktx2: false,
+					occlusion: true,
+					lights: lighting
+				})
 
-			const layout = layoutOf(mocks.bakeOcclusionIntoDocument.mock.calls[0])
-			expect(
-				[...layout!.materials].map(([material, reason]) => [
-					material.getName(),
-					reason
-				])
-			).toEqual([['card', 'too-detailed']])
-			expect(messages.at(-1)).toMatchObject({ type: 'done' })
-		})
+				expect(mocks.bakeOcclusionIntoDocument).not.toHaveBeenCalled()
+				expect(mocks.bakeLightsIntoDocument).not.toHaveBeenCalled()
+				expect(messages.at(-1)).toMatchObject({
+					type: 'done',
+					occlusion: { failed: 'unexpected', detail },
+					lights: { failed: 'unexpected', detail }
+				})
+			}
+		)
 
 		it('lays out nothing, and says nothing, when no bake was asked for', async () => {
 			exporting(quadDocument({ uvs: false }))

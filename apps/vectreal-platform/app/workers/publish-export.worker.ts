@@ -58,6 +58,7 @@ import type {
 	StudioFinishPlanMessage,
 	StudioFinishPlanRequest
 } from './publish-export.worker.types'
+import type { BakeFailure } from '@vctrl/core/occlusion-bake'
 
 function post(
 	message: PublishExportMessage | StudioFinishPlanMessage,
@@ -163,12 +164,17 @@ async function exportForPublish({
 								}
 								if (layout?.primitives.length) {
 									post({ type: 'progress', stage: 'uvs' })
+									let failure: BakeFailure | undefined
 									try {
 										await writeBakeUvs(layout)
-									} catch {
-										// xatlas refused a part, or its WebAssembly would not load:
-										// the bakes go on without the layout, as without the time.
-										layout = withoutBakeUvs(layout, 'too-detailed')
+									} catch (error) {
+										// Not the model's size: its WebAssembly would not load, or
+										// xatlas refused a part. A fault to report, not to simplify.
+										failure = {
+											failed: 'unexpected',
+											detail:
+												error instanceof Error ? error.message : String(error)
+										}
 									}
 									// The layout is done, so its time limit no longer runs.
 									post({
@@ -176,6 +182,11 @@ async function exportForPublish({
 										stage: occlusion ? 'occlusion' : 'lights',
 										fraction: 0
 									})
+									if (failure) {
+										if (occlusion) occlusionReport = failure
+										if (lights) lightsReport = failure
+										return
+									}
 								}
 								// Occlusion first: the light bake bakes past it.
 								if (occlusion) {

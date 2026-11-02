@@ -519,7 +519,7 @@ target's `texCoord`. The others are listed in `plan.skipped` with the reason:
 | `no-uv0` | It has no first UV set |
 | `tiling-uvs` | Its UVs repeat the texture |
 | `overlapping-uvs` | Two parts share texels, as mirrored halves usually do |
-| `too-detailed` | It would need a UV set laid out for it, and the parts that need one exceed `MAX_LAYOUT_TRIANGLES` (one million triangles) ran past the publisher's time limit, or could not be laid out |
+| `too-detailed` | It would need a UV set laid out for it, and the parts that need one exceed `MAX_LAYOUT_TRIANGLES` (one million triangles) or ran past the publisher's time limit |
 | `no-free-uv-set` | It would need a UV set laid out for it, and its parts already use every set up to `TEXCOORD_3`, the last three.js reads |
 
 **`planBakeUvs(document)`** plans that layout without making it: which

@@ -354,6 +354,31 @@ describe('writeBakeUvs', () => {
 		expect(card.listAttributes()).toEqual(attributes)
 	})
 
+	it('throws when xatlas refuses a part, and changes nothing a part draws', async () => {
+		const { document } = model()
+		const drawn = () =>
+			tiledPrimitives(document).map((primitive) => [
+				corners(primitive, 'POSITION'),
+				corners(primitive, 'TEXCOORD_0'),
+				primitive.getAttribute('TEXCOORD_1')
+			])
+		const before = drawn()
+		const refusing = {
+			Initialize: async () => {},
+			Atlas: class {
+				addMesh() {
+					throw new Error('xatlas: invalid mesh')
+				}
+			}
+		}
+
+		await expect(
+			writeBakeUvs(planBakeUvs(document)!, refusing as Watlas)
+		).rejects.toThrow('xatlas: invalid mesh')
+		// Compacted before xatlas sees them, so the same corners, no new set.
+		expect(drawn()).toEqual(before)
+	})
+
 	it('lays out once per watlas instance, since a second layout drifts', async () => {
 		const watlas = await freshWatlas()
 		await writeBakeUvs(planBakeUvs(model().document)!, watlas)
