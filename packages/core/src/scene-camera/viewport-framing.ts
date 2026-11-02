@@ -217,6 +217,12 @@ export class CameraFraming {
 		flight: { from: OrbitPose; to: OrbitPose } | null = null
 	): boolean {
 		this.viewportAspect = viewportAspect
+		// A fit taken on a viewport with no area (a canvas measured before
+		// layout) had no aspect to be framed at: it takes this one, unmoved.
+		if (!isFramingAspect(this.view.aspect)) this.view = framedAt(viewportAspect)
+		if (this.destination && !isFramingAspect(this.destination.aspect)) {
+			this.destination = framedAt(viewportAspect)
+		}
 		if (flight && this.destination) {
 			const from = refitToViewport(
 				flight.from.position,
@@ -291,7 +297,7 @@ export class CameraFraming {
 		const scale = blend(this.view.scale, this.destination.scale)
 		return {
 			aspect:
-				scale > 1
+				scale > 1 && isFramingAspect(this.viewportAspect)
 					? scale * this.viewportAspect
 					: blend(this.view.aspect, this.destination.aspect),
 			scale

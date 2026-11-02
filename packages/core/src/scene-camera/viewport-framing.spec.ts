@@ -332,6 +332,29 @@ describe('CameraFraming', () => {
 		expect(framing.view).toEqual({ aspect: 2.5, scale: 2.5 })
 	})
 
+	it('takes the first real viewport for a fit made before the canvas had an area', () => {
+		const framing = new CameraFraming(Infinity)
+		const view = at(10)
+
+		expect(framing.refit(0.5, view)).toBe(false)
+		expect(view.position.z).toBe(10)
+		expect(framing.view).toEqual({ aspect: 0.5, scale: 1 })
+	})
+
+	it('does not compound the fit of a pose whose target is derived from its rotation', () => {
+		// Stored with a position and rotation but no target, so the target sits
+		// at the live distance, which already carries the fit on screen.
+		const cameras: CameraConfig[] = [
+			{ cameraId: 'legacy', position: [0, 0, 10], rotation: [0, 0, 0] }
+		]
+		const live = { ...at(30), fov: 50, viewportAspect: 0.5 }
+
+		const pose = resolveCameraPose(cameras, 'legacy', live)
+
+		expect(pose.position.distanceTo(pose.target)).toBeCloseTo(30)
+		expect(pose.framing).toEqual({ aspect: 0.5, scale: 1 })
+	})
+
 	it('moves the interrupted start with the viewport from its blended fit', () => {
 		const framing = new CameraFraming(1)
 		framing.fly({ aspect: 3, scale: 3 })

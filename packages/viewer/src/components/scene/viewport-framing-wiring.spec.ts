@@ -120,16 +120,18 @@ describe('the camera layer fits what it shows', () => {
 			'framingReset.current = () => {',
 			'return () => {'
 		)
-		expect(reset).toContain(
-			'framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)'
+		expect(reset.indexOf('flight.stop()')).toBeGreaterThan(-1)
+		expect(reset.indexOf('flight.stop()')).toBeLessThan(
+			reset.indexOf(
+				'framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)'
+			)
 		)
 		expect(reset).toContain('syncDistanceLimits()')
-		const refit = slice(
-			model,
-			'framingReset?.current?.()',
-			'bounds.refresh(objectRef.current).fit()'
+		const call = model.indexOf('framingReset?.current?.()')
+		expect(call).toBeGreaterThan(-1)
+		expect(call).toBeLessThan(
+			model.indexOf('bounds.refresh(objectRef.current).fit()')
 		)
-		expect(refit).toContain('framingReset?.current?.()')
 		for (const layer of ['<SceneCamera', '<SceneModel']) {
 			const start = viewer.indexOf(layer)
 			expect(viewer.slice(start, viewer.indexOf('/>', start))).toContain(

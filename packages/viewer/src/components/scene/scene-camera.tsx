@@ -550,13 +550,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	useEffect(() => {
 		if (!framingReset) return
 		framingReset.current = () => {
+			// The refit replaces whatever a flight was flying to.
+			flight.stop()
 			framing.current?.reset(viewportAspectOf(sceneCamera) ?? 1)
 			syncDistanceLimits()
 		}
 		return () => {
 			framingReset.current = null
 		}
-	}, [framingReset, sceneCamera, syncDistanceLimits])
+	}, [flight, framingReset, sceneCamera, syncDistanceLimits])
 
 	// The controls were recreated, or the host changed its limits: either way
 	// the controls now hold the host's raw limits, whether or not the fit moved.

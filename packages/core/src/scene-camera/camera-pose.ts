@@ -176,9 +176,16 @@ export function resolveCameraPose(
 			: rawTargetLookAt
 
 	// Fitted last, about the target, so the camera only moves along its view.
+	// A target derived from the rotation sits at the live distance, which
+	// already carries the fit on screen, so that pose counts as framed at the
+	// live aspect: fitting it again compounded the fit on every switch.
+	const derivedTarget = hasPosition && !hasTarget && hasRotation
 	const framing = hasPosition
 		? {
-				aspect: resolveFramingAspect(selectedCamera.framingAspect),
+				aspect:
+					derivedTarget && live.viewportAspect !== undefined
+						? live.viewportAspect
+						: resolveFramingAspect(selectedCamera.framingAspect),
 				scale: 1
 			}
 		: null
