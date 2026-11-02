@@ -29,7 +29,9 @@ describe('a new rendition of the same model keeps the view', () => {
 		)
 
 		expect(refit).toContain('bounds.refresh(objectRef.current).fit()')
-		expect(refit).toContain('[bounds, normalizationOptions?.enabled, frame]')
+		expect(refit).toContain(
+			'[bounds, framingReset, normalizationOptions?.enabled, frame]'
+		)
 	})
 
 	it('measures the scale from the same frame as the centering', () => {

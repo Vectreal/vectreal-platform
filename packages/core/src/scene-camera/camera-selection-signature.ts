@@ -1,3 +1,5 @@
+import { isFramingAspect } from './viewport-framing'
+
 import type { CameraProps } from '../types'
 
 /**
@@ -53,7 +55,10 @@ export function cameraSelectionSignature(
 		position: triple(camera?.position),
 		target: triple(camera?.target ?? camera?.lookAt),
 		rotation: triple(camera?.rotation),
-		fov: typeof camera?.fov === 'number' ? camera.fov : null
+		fov: typeof camera?.fov === 'number' ? camera.fov : null,
+		framingAspect: isFramingAspect(camera?.framingAspect)
+			? camera.framingAspect
+			: null
 	}) as CameraSelectionSignature
 }
 

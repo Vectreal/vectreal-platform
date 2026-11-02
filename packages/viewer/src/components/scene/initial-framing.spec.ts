@@ -341,9 +341,10 @@ describe('SceneCamera frames the first view through applyInitialFraming', () => 
 
 	it('calls it right after applying the selection, with live controls', () => {
 		// Comment lines between the two calls are skipped only whole, so a
-		// commented-out call cannot satisfy the match.
+		// commented-out call cannot satisfy the match. The one statement allowed
+		// between them is the fit's reset ahead of a bounds fit.
 		expect(source).toMatch(
-			/applyCameraInstantly\(selection\)\s*(?:\/\/[^\n]*\n\s*)*applyInitialFraming\(\s*bounds,\s*model,\s*sceneCamera,\s*getThreeState\(\)\.controls as InitialFramingControls \| null,\s*boundsEnabled\s*\)/
+			/applyCameraInstantly\(selection\)\s*(?:\/\/[^\n]*\n\s*)*(?:if \(boundsEnabled\) \{\s*framing\.current\.reset\([^)]*\) \?\? 1\)\s*syncDistanceLimits\(\)\s*\}\s*)?(?:\/\/[^\n]*\n\s*)*applyInitialFraming\(\s*bounds,\s*model,\s*sceneCamera,\s*getThreeState\(\)\.controls as InitialFramingControls \| null,\s*boundsEnabled\s*\)/
 		)
 		// `get` reads the store when called; a selector returning the state
 		// would hand back this render's snapshot instead.

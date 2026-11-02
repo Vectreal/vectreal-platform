@@ -1,3 +1,5 @@
+import { isFramingAspect } from './viewport-framing'
+
 import type { CameraConfig, CameraProps } from '../types'
 
 /**
@@ -28,6 +30,7 @@ export const DEFAULT_CAMERA: CameraConfig = {
  * 2. Resolves a stable `activeCameraId` that points to the first scene camera
  * 3. Fills missing camera ids/names
  * 4. Keeps `initial` flag aligned with the active camera
+ * 5. Drops a `framingAspect` that `isFramingAspect` refuses
  *
  * The semantic is: the first scene camera is ALWAYS the default unless explicitly
  * reordered by the user (moving a camera to the front via the pin action).
@@ -39,11 +42,17 @@ export function normalizeCameraSettings(
 		return camera
 	}
 
-	const normalizedCameras = camera.cameras.map((entry, index) => ({
-		...entry,
-		cameraId: entry.cameraId || `camera-${index + 1}`,
-		name: entry.name || `Camera ${index + 1}`
-	}))
+	const normalizedCameras = camera.cameras.map((entry, index) => {
+		const { framingAspect, ...rest } = entry
+		return {
+			...rest,
+			cameraId: entry.cameraId || `camera-${index + 1}`,
+			name: entry.name || `Camera ${index + 1}`,
+			// Dropped rather than repaired: an absent aspect has a defined meaning
+			// in the viewer, a malformed one does not.
+			...(isFramingAspect(framingAspect) ? { framingAspect } : {})
+		}
+	})
 
 	// Find the first scene camera (non-hotspot)
 	const firstSceneCameraId = normalizedCameras.find(isSceneCamera)?.cameraId

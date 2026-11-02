@@ -113,7 +113,7 @@ describe('the opening pose is shared with the capture', () => {
 			model.indexOf('onScreenshotCaptureReady?.(captureScreenshot)')
 		)
 		expect(capture).toMatch(
-			/resolveCameraSelection\(\s*cameraOptions\.cameras,\s*targetCameraConfig\.cameraId,[\s\S]*?openingPose\.current\s*\)/
+			/resolveCameraPose\(\s*cameraOptions\.cameras,\s*targetCameraConfig\.cameraId,[\s\S]*?openingPose\.current\s*\)/
 		)
 	})
 })

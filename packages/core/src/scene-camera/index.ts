@@ -34,3 +34,17 @@ export {
 	type CameraFlightPose
 } from './camera-flight'
 export { clampToOrbitLimits, type OrbitLimits } from './orbit-limits'
+export {
+	CameraFraming,
+	framingScale,
+	isFramingAspect,
+	LEGACY_FRAMING_ASPECT,
+	MAX_FRAMING_SCALE,
+	refitToViewport,
+	resolveFramingAspect,
+	scaleOrbitDistanceLimits,
+	scaleOrbitOffset,
+	type OrbitDistanceLimits,
+	type OrbitPose,
+	type ViewportFraming
+} from './viewport-framing'

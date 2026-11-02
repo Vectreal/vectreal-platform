@@ -41,6 +41,14 @@ describe('cameraSelectionSignature', () => {
 		)
 	})
 
+	it('changes when the author re-captures it on another viewport', () => {
+		// Same pose, framed at another aspect: the fit it is shown with changes.
+		const pose = { position: [0, 1, 2] as [number, number, number] }
+		expect(sign([camera({ ...pose, framingAspect: 1.2 })])).not.toBe(
+			sign([camera({ ...pose, framingAspect: 1.8 })])
+		)
+	})
+
 	it('changes when the author re-aims it', () => {
 		expect(sign([camera({ target: [0, 0, 0] })])).not.toBe(
 			sign([camera({ target: [1, 2, 3] })])

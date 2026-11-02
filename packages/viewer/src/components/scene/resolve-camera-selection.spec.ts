@@ -12,8 +12,10 @@ import { resolveCameraSelection } from './scene-camera'
 
 import type { CameraConfig } from '@vctrl/core'
 
+// 16:9, the aspect a camera without `framingAspect` counts as framed at, so
+// every pose here is shown as stored; `viewport-framing.spec.ts` covers the fit.
 const live = () => {
-	const camera = new PerspectiveCamera(42, 1.5, 0.1, 100)
+	const camera = new PerspectiveCamera(42, 16 / 9, 0.1, 100)
 	camera.position.set(0, 0, 8)
 	return camera
 }

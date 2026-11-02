@@ -1,6 +1,9 @@
-import { clampToOrbitLimits } from '@vctrl/core/scene-camera'
+import {
+	clampToOrbitLimits,
+	scaleOrbitDistanceLimits
+} from '@vctrl/core/scene-camera'
 
-import type { OrbitLimits } from '@vctrl/core/scene-camera'
+import type { OrbitDistanceLimits, OrbitLimits } from '@vctrl/core/scene-camera'
 import type { Euler, PerspectiveCamera, Vector3 } from 'three'
 
 /**
@@ -12,6 +15,28 @@ export type CapturePose = {
 	position: Vector3
 	fov: number
 } & ({ lookAt: Vector3; limits?: OrbitLimits } | { rotation: Euler })
+
+/**
+ * The live controls' limits with the host's distance limits as it set them.
+ *
+ * The live controls carry distance limits scaled with the viewport fit of the
+ * view on screen (`CameraFraming.distanceLimits`). A capture renders a stored
+ * pose without that fit, so it is held to the limits the pose was stored
+ * within; the scaled ones could push it out, or let it through, by the fit of
+ * a different camera.
+ */
+export function unfittedOrbitLimits(
+	controls: OrbitLimits,
+	limits: OrbitDistanceLimits
+): OrbitLimits {
+	return {
+		minPolarAngle: controls.minPolarAngle,
+		maxPolarAngle: controls.maxPolarAngle,
+		minAzimuthAngle: controls.minAzimuthAngle,
+		maxAzimuthAngle: controls.maxAzimuthAngle,
+		...scaleOrbitDistanceLimits(limits, 1)
+	}
+}
 
 /**
  * A camera of the capture's own, posed for one screenshot.

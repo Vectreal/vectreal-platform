@@ -645,12 +645,14 @@ The camera model the viewer runs on, without a renderer. It needs only `three`, 
 |---|---|
 | `isSceneCamera(camera)` | Whether a camera is one a scene opens on and switches between (a missing `kind` counts) rather than a hotspot's close-up |
 | `normalizeCameraSettings(camera)` | The stored settings with ids, names and the initial camera filled in |
-| `resolveCameraPose(cameras, cameraId, live, openingPose?)` | Where a stored camera puts the view. Missing parts of the pose are completed from `live`, the camera currently shown |
+| `resolveCameraPose(cameras, cameraId, live, openingPose?)` | Where a stored camera puts the view. Missing parts of the pose are completed from `live`, the camera currently shown; with `live.viewportAspect` the position is fitted to that viewport |
 | `sampleCameraFlight(flight, progress, out?, up?)` | The pose at one moment of the flight between two cameras, as the viewer flies it |
 | `easeFlightProgress(t, easing?)` | The flight's easing on its own |
 | `clampToOrbitLimits(position, target, up, limits)` | Where orbit controls with these limits would hold a position |
 | `resolveHotspotCameraTargets(cameras, hotspots)` | Hotspot cameras aimed at their hotspots, where the author set no target |
 | `cameraSelectionSignature(cameras, cameraId)` | A comparable string of what was stored for a camera, to tell an edit from a switch |
+| `framingScale(framingAspect, viewportAspect)` | How far a camera framed at one aspect backs off its target on a narrower viewport to keep the framed width in view: `min(MAX_FRAMING_SCALE, max(1, framingAspect / viewportAspect))` |
+| `CameraFraming` | Which fit the view on screen carries, through instant moves, flights and resizes, and the orbit distance limits scaled to match |
 
 ```ts
 import { resolveCameraPose } from '@vctrl/core/scene-camera'
@@ -659,9 +661,10 @@ import { Vector3 } from 'three'
 const pose = resolveCameraPose(scene.camera?.cameras, 'detail', {
   position: new Vector3(0, 1, 4),
   target: new Vector3(),
-  fov: 50
+  fov: 50,
+  viewportAspect: 9 / 16 // optional: fit the pose to this viewport
 })
-// pose.position, pose.target, pose.rotation, pose.fov
+// pose.position, pose.target, pose.rotation, pose.fov, pose.framing
 ```
 
 ---

@@ -8,6 +8,8 @@
  * all; both ends go through here so neither of them owns the contract.
  */
 
+import { framingScale } from '@vctrl/core'
+
 import { applyDefaultCameraFlag, isLastSceneCamera } from './scene-camera'
 
 import type { CameraLike } from './scene-camera'
@@ -73,14 +75,46 @@ const cameraNameForHotspot = (hotspotName: string): string =>
  * Where a new hotspot's camera stands: the editor's view as the hotspot was
  * added.
  *
- * Position and field of view only, never a target or a rotation. The hotspot
- * is placed after it is added, and a camera with no target of its own is aimed
- * at its hotspot wherever that ends up (`resolveHotspotCameraTargets`); a
- * captured target would keep it looking at the middle of the model.
+ * Position, field of view and the aspect they were framed at, never a target
+ * or a rotation. The hotspot is placed after it is added, and a camera with no
+ * target of its own is aimed at its hotspot wherever that ends up
+ * (`resolveHotspotCameraTargets`); a captured target would keep it looking at
+ * the middle of the model.
  */
 export interface HotspotCameraPose {
 	position: [number, number, number]
 	fov: number
+	framingAspect: number
+}
+
+/**
+ * Where the editor stands, for a new hotspot camera, from a camera snapshot.
+ *
+ * A snapshot stores its pose without the viewport fit, taken off about the
+ * orbit target (`CameraFraming.storedPose`). A hotspot camera is aimed at its
+ * hotspot instead, so the viewer would put the fit back on about a different
+ * point and stand it somewhere the editor never was. The fit comes off where
+ * it went on, and the camera is framed at the viewport it was taken on, so it
+ * stands exactly where the editor stood there.
+ */
+export function hotspotCameraPoseFromSnapshot(snapshot: {
+	position: [number, number, number]
+	target: [number, number, number]
+	fov: number
+	framingAspect: number
+	viewportAspect: number
+}): HotspotCameraPose {
+	const { position, target } = snapshot
+	const fit = framingScale(snapshot.framingAspect, snapshot.viewportAspect)
+	return {
+		position: [
+			target[0] + (position[0] - target[0]) * fit,
+			target[1] + (position[1] - target[1]) * fit,
+			target[2] + (position[2] - target[2]) * fit
+		],
+		fov: snapshot.fov,
+		framingAspect: snapshot.viewportAspect
+	}
 }
 
 /**
@@ -116,7 +150,9 @@ export function addHotspot(
 					kind: 'hotspot',
 					name: cameraNameForHotspot(hotspot.name),
 					fov: pose?.fov ?? 60,
-					...(pose ? { position: pose.position } : {})
+					...(pose
+						? { position: pose.position, framingAspect: pose.framingAspect }
+						: {})
 				}
 			]
 		},

@@ -21,9 +21,12 @@ import type { ReactNode } from 'react'
 const { toastInfo } = vi.hoisted(() => ({ toastInfo: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { info: toastInfo } }))
 
+const { cameraSnapshot } = vi.hoisted(() => ({
+	cameraSnapshot: { current: null as unknown }
+}))
 vi.mock('../../../publisher-viewer-capture-context', () => ({
 	usePublisherViewerCapture: () => ({
-		requestSceneCameraSnapshot: () => Promise.resolve(null)
+		requestSceneCameraSnapshot: () => Promise.resolve(cameraSnapshot.current)
 	})
 }))
 
@@ -40,6 +43,7 @@ const switchTo = (
 
 function arrange() {
 	toastInfo.mockClear()
+	cameraSnapshot.current = null
 	const store = createStore()
 	store.set(cameraAtom, {
 		cameras: [
@@ -120,5 +124,31 @@ describe('useHotspotEdits and interactions', () => {
 		expect(toastInfo).toHaveBeenCalledWith(
 			'Camera deleted. 1 interaction no longer switches to it.'
 		)
+	})
+})
+
+describe('useHotspotEdits adding a marker', () => {
+	it('starts the new camera at the view on screen, fit included', async () => {
+		const { store, edits } = arrange()
+		// A phone (aspect 1) showing a camera framed at 2: the live pose sits at
+		// twice the stored distance, and the new camera keeps what is on screen.
+		cameraSnapshot.current = {
+			position: [0, 0, 2],
+			rotation: [0, 0, 0],
+			target: [0, 0, 0],
+			fov: 50,
+			framingAspect: 2,
+			viewportAspect: 1
+		}
+
+		await act(() => edits().add())
+
+		const minted = store
+			.get(cameraAtom)
+			.cameras?.find(
+				(c) => c.kind === 'hotspot' && c.cameraId !== 'knob-camera'
+			)
+		expect(minted?.position).toEqual([0, 0, 4])
+		expect(minted?.framingAspect).toBe(1)
 	})
 })

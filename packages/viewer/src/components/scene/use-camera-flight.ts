@@ -1,5 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { sampleCameraFlight } from '@vctrl/core/scene-camera'
+import {
+	easeFlightProgress,
+	sampleCameraFlight
+} from '@vctrl/core/scene-camera'
 import { useCallback, useMemo, useRef, type RefObject } from 'react'
 import {
 	type Object3D,
@@ -24,6 +27,8 @@ type CameraFlightRuntime = {
 	durationMs: number
 	/** Reused every frame, so a flight allocates once. */
 	frame: CameraFlightFrame
+	/** The eased progress of the pose last written to the camera. */
+	shown: number
 }
 
 export interface CameraFlightRunner {
@@ -39,6 +44,17 @@ export interface CameraFlightRunner {
 	) => void
 	/** Drops the flight in progress, leaving the camera where it is. */
 	stop: () => void
+	/**
+	 * The eased progress of the pose the camera holds, or null without a
+	 * flight. The pose of the last frame drawn, not the clock's: a paused
+	 * frameloop (a hidden pane) leaves the camera mid-flight while time runs on.
+	 */
+	progress: () => number | null
+	/**
+	 * The ends of the flight in progress, for refitting them in place when the
+	 * viewport changes shape; null without one.
+	 */
+	ends: () => { from: CameraFlightPose; to: CameraFlightPose } | null
 }
 
 const now = () =>
@@ -50,10 +66,12 @@ const now = () =>
  * orbit controls.
  *
  * `modelRef` is read when a flight starts, for Smart's clearance, so a model
- * swap does not change the runner's identity.
+ * swap does not change the runner's identity. `onLand` runs on the frame a
+ * flight arrives, read when it does for the same reason.
  */
 export function useCameraFlight(
-	modelRef: RefObject<Object3D | null | undefined>
+	modelRef: RefObject<Object3D | null | undefined>,
+	onLand?: () => void
 ): CameraFlightRunner {
 	const { camera: sceneCamera } = useThree()
 	const invalidate = useThree((state) => state.invalidate)
@@ -64,6 +82,8 @@ export function useCameraFlight(
 		  }
 		| undefined
 	const runtimeRef = useRef<CameraFlightRuntime | null>(null)
+	const onLandRef = useRef(onLand)
+	onLandRef.current = onLand
 
 	const start = useCallback<CameraFlightRunner['start']>(
 		(to, type, durationMs, easing) => {
@@ -93,7 +113,8 @@ export function useCameraFlight(
 					target: new Vector3(),
 					fov: activeCamera.fov,
 					quaternion: new Quaternion()
-				}
+				},
+				shown: 0
 			}
 			invalidate()
 		},
@@ -102,6 +123,15 @@ export function useCameraFlight(
 
 	const stop = useCallback(() => {
 		runtimeRef.current = null
+	}, [])
+
+	const progress = useCallback(() => {
+		return runtimeRef.current?.shown ?? null
+	}, [])
+
+	const ends = useCallback(() => {
+		const runtime = runtimeRef.current
+		return runtime ? { from: runtime.flight.from, to: runtime.flight.to } : null
 	}, [])
 
 	useFrame(() => {
@@ -124,6 +154,7 @@ export function useCameraFlight(
 		activeCamera.quaternion.copy(frame.quaternion)
 		activeCamera.fov = frame.fov
 		activeCamera.updateProjectionMatrix()
+		runtime.shown = easeFlightProgress(rawProgress, runtime.flight.easing)
 
 		// The target the frame was aimed at, so update()'s lookAt agrees.
 		if (controls?.target) {
@@ -133,10 +164,14 @@ export function useCameraFlight(
 
 		if (rawProgress >= 1) {
 			runtimeRef.current = null
+			onLandRef.current?.()
 		}
 
 		invalidate()
 	})
 
-	return useMemo(() => ({ start, stop }), [start, stop])
+	return useMemo(
+		() => ({ start, stop, progress, ends }),
+		[start, stop, progress, ends]
+	)
 }
