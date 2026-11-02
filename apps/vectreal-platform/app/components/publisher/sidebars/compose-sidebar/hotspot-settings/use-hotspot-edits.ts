@@ -9,6 +9,7 @@ import {
 } from '../../../../../lib/domain/scene/scene-camera'
 import {
 	addHotspot,
+	hotspotCameraPoseFromSnapshot,
 	interactionSwitchesTo,
 	relinkHotspot,
 	removeHotspot,
@@ -150,13 +151,7 @@ export function useHotspotEdits() {
 		const next = addHotspot(
 			{ camera: store.get(cameraAtom), hotspots: store.get(hotspotsAtom) },
 			ids,
-			snapshot
-				? {
-						position: snapshot.position,
-						fov: snapshot.fov,
-						framingAspect: snapshot.framingAspect
-					}
-				: undefined
+			snapshot ? hotspotCameraPoseFromSnapshot(snapshot) : undefined
 		)
 
 		setHotspots(next.hotspots)

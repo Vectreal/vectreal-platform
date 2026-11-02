@@ -1,5 +1,6 @@
 import {
 	addHotspot,
+	hotspotCameraPoseFromSnapshot,
 	relinkHotspot,
 	removeCamera,
 	removeHotspot,
@@ -56,6 +57,35 @@ const switchTo = (
 		type: 'activate_camera' as const,
 		cameraId
 	}))
+})
+
+describe('hotspotCameraPoseFromSnapshot', () => {
+	it('stands the camera where the editor stood, framed at that viewport', () => {
+		// On a phone the editor's view is backed off 2x about the orbit target;
+		// the snapshot stores it unfitted. The hotspot camera, aimed at its
+		// hotspot rather than that target, must not be re-fitted about another point.
+		const pose = hotspotCameraPoseFromSnapshot({
+			position: [0, 1, 5],
+			target: [0, 1, 0],
+			fov: 45,
+			framingAspect: 1,
+			viewportAspect: 0.5
+		})
+
+		expect(pose).toEqual({ position: [0, 1, 10], fov: 45, framingAspect: 0.5 })
+	})
+
+	it('keeps a pose that carries no fit as it is', () => {
+		expect(
+			hotspotCameraPoseFromSnapshot({
+				position: [3, 1, 5],
+				target: [0, 0, 0],
+				fov: 50,
+				framingAspect: 1.6,
+				viewportAspect: 1.6
+			})
+		).toEqual({ position: [3, 1, 5], fov: 50, framingAspect: 1.6 })
+	})
 })
 
 describe('addHotspot', () => {

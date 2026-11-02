@@ -188,15 +188,8 @@ export class CameraFraming {
 	 * the destination's from the distance limits, and the new flight's first
 	 * frames clamped inward.
 	 */
-	fly(
-		framing: ViewportFraming | null,
-		viewportAspect: number,
-		progress: number | null = null
-	): void {
-		const from =
-			this.destination && progress !== null
-				? blendFraming(this.view, this.destination, progress, viewportAspect)
-				: this.view
+	fly(framing: ViewportFraming | null, progress: number | null = null): void {
+		const from = this.blendAt(progress)
 		this.view = from
 		// A copy when there is no fit of its own: the two ends must not share
 		// one object, or a refit would scale it once for both.
@@ -240,19 +233,44 @@ export class CameraFraming {
 	}
 
 	/**
-	 * The pose on screen as a camera stores it: without the fit, and with the
-	 * aspect that fit was made for. Stored that way, a pose captured on any
-	 * viewport is shown again as it was framed. Storing the fitted pose with the
-	 * live aspect instead made a phone's backed-off view the camera's framing,
-	 * and a desktop then showed the subject at a quarter of its size.
+	 * The pose on screen as a camera stores it: without the fit, and framed at
+	 * the width the screen shows, `scale` times the live aspect. Shown again
+	 * anywhere, it frames that width.
+	 *
+	 * Storing the fitted pose with the live aspect made a phone's backed-off
+	 * view the camera's framing, and a desktop then showed the subject at a
+	 * quarter of its size. Storing the camera's own aspect instead lost the
+	 * width an author framed on a viewport wider than it, where the fit sits at
+	 * scale 1, and narrower viewports then cropped it.
+	 *
+	 * `progress` is the eased progress of a flight in progress, whose pose sits
+	 * between its two ends' fits.
 	 */
 	storedPose(
 		position: Vector3,
-		target: Vector3
+		target: Vector3,
+		viewportAspect: number,
+		progress: number | null = null
 	): { position: Vector3; framingAspect: number } {
+		const { scale } = this.blendAt(progress)
 		return {
-			position: scaleOrbitOffset(position.clone(), target, 1 / this.view.scale),
-			framingAspect: this.view.aspect
+			position: scaleOrbitOffset(position.clone(), target, 1 / scale),
+			framingAspect: scale * viewportAspect
+		}
+	}
+
+	/**
+	 * The fit of the live pose: the view's, or part-way through a flight at
+	 * `progress`, the two ends' aspects and scales each blended geometrically,
+	 * as the flight takes distance.
+	 */
+	private blendAt(progress: number | null): ViewportFraming {
+		if (!this.destination || progress === null) return this.view
+		const t = Math.min(1, Math.max(0, progress))
+		const blend = (from: number, to: number) => from ** (1 - t) * to ** t
+		return {
+			aspect: blend(this.view.aspect, this.destination.aspect),
+			scale: blend(this.view.scale, this.destination.scale)
 		}
 	}
 
@@ -269,20 +287,4 @@ export class CameraFraming {
 			Math.max(from, to)
 		)
 	}
-}
-
-/**
- * The fit of a pose part-way through a flight: the two ends' scales blended
- * geometrically at `progress`, framed so that `framingScale` gives that scale
- * on this viewport and moves with it from here.
- */
-function blendFraming(
-	from: ViewportFraming,
-	to: ViewportFraming,
-	progress: number,
-	viewportAspect: number
-): ViewportFraming {
-	const t = Math.min(1, Math.max(0, progress))
-	const scale = from.scale ** (1 - t) * to.scale ** t
-	return { aspect: scale * viewportAspect, scale }
 }

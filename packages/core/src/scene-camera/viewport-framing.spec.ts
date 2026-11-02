@@ -218,7 +218,7 @@ describe('CameraFraming', () => {
 	it('refits both ends of a flight on its own fits', () => {
 		const framing = new CameraFraming(2)
 		framing.show({ aspect: 2, scale: 1 })
-		framing.fly({ aspect: 4, scale: 1 }, 2)
+		framing.fly({ aspect: 4, scale: 1 })
 		const flight = { from: at(10), to: at(5) }
 
 		expect(framing.refit(1, null, flight)).toBe(true)
@@ -230,7 +230,7 @@ describe('CameraFraming', () => {
 	it('gives a destination without a fit of its own a copy, not the same object', () => {
 		const framing = new CameraFraming(2)
 		framing.show({ aspect: 2, scale: 1 })
-		framing.fly(null, 2)
+		framing.fly(null)
 		const flight = { from: at(10), to: at(6) }
 
 		framing.refit(1, null, flight)
@@ -241,7 +241,7 @@ describe('CameraFraming', () => {
 
 	it('hands the view to the destination when the flight lands', () => {
 		const framing = new CameraFraming(1)
-		framing.fly({ aspect: 3, scale: 3 }, 1)
+		framing.fly({ aspect: 3, scale: 3 })
 		framing.land()
 		expect(framing.view).toEqual({ aspect: 3, scale: 3 })
 		expect(framing.destination).toBeNull()
@@ -249,7 +249,7 @@ describe('CameraFraming', () => {
 
 	it('spans both ends of a flight in its distance limits', () => {
 		const framing = new CameraFraming(1)
-		framing.fly({ aspect: 3, scale: 3 }, 1)
+		framing.fly({ aspect: 3, scale: 3 })
 		expect(framing.distanceLimits({ minDistance: 1, maxDistance: 10 })).toEqual(
 			{
 				minDistance: 1,
@@ -263,8 +263,8 @@ describe('CameraFraming', () => {
 		// sits near B's fit; dropping it would clamp the first frames inward.
 		const framing = new CameraFraming(1)
 		framing.show({ aspect: 1, scale: 1 })
-		framing.fly({ aspect: 3, scale: 3 }, 1)
-		framing.fly({ aspect: 1, scale: 1 }, 1, 0.5)
+		framing.fly({ aspect: 3, scale: 3 })
+		framing.fly({ aspect: 1, scale: 1 }, 0.5)
 
 		expect(framing.view.scale).toBeCloseTo(Math.sqrt(3))
 		expect(framing.distanceLimits({ maxDistance: 10 }).maxDistance).toBeCloseTo(
@@ -274,8 +274,8 @@ describe('CameraFraming', () => {
 
 	it('moves the interrupted start with the viewport from its blended fit', () => {
 		const framing = new CameraFraming(1)
-		framing.fly({ aspect: 3, scale: 3 }, 1)
-		framing.fly({ aspect: 1, scale: 1 }, 1, 0.5)
+		framing.fly({ aspect: 3, scale: 3 })
+		framing.fly({ aspect: 1, scale: 1 }, 0.5)
 		const flight = { from: at(10), to: at(10) }
 
 		framing.refit(0.5, null, flight)
@@ -299,7 +299,7 @@ describe('CameraFraming', () => {
 		const framing = new CameraFraming(0.4625)
 		framing.show(phone.framing)
 
-		const captured = framing.storedPose(phone.position, phone.target)
+		const captured = framing.storedPose(phone.position, phone.target, 0.4625)
 		const desktop = resolveCameraPose(
 			[
 				{
@@ -312,7 +312,7 @@ describe('CameraFraming', () => {
 			{ ...live, viewportAspect: 16 / 9 }
 		)
 
-		expect(captured.framingAspect).toBe(LEGACY_FRAMING_ASPECT)
+		expect(captured.framingAspect).toBeCloseTo(LEGACY_FRAMING_ASPECT)
 		expect(
 			desktop.position.toArray().map((axis) => Math.round(axis * 1e6) / 1e6)
 		).toEqual(stored)
@@ -321,10 +321,48 @@ describe('CameraFraming', () => {
 	it('stores a view nothing fitted at the live aspect, as it stands', () => {
 		const framing = new CameraFraming(1.2)
 		const view = at(7)
-		expect(framing.storedPose(view.position, view.target)).toEqual({
+		expect(framing.storedPose(view.position, view.target, 1.2)).toEqual({
 			position: new Vector3(0, 0, 7),
 			framingAspect: 1.2
 		})
 		expect(view.position.z).toBe(7)
+	})
+
+	it('stores the width framed on a viewport wider than the camera’s own aspect', () => {
+		// A 16:9 camera on a 2:1 desktop sits at scale 1, so the screen shows a
+		// 2:1 width. Stored as 16:9, a 16:9 viewport would crop what was framed.
+		const framing = new CameraFraming(2)
+		framing.show({ aspect: 16 / 9, scale: 1 })
+		const view = at(8)
+
+		expect(framing.storedPose(view.position, view.target, 2)).toEqual({
+			position: new Vector3(0, 0, 8),
+			framingAspect: 2
+		})
+	})
+
+	it('stores a pose captured mid-flight at the fit between the two ends', () => {
+		const framing = new CameraFraming(1)
+		framing.fly({ aspect: 4, scale: 4 })
+		const view = at(20)
+
+		const stored = framing.storedPose(view.position, view.target, 1, 0.5)
+
+		// Half-way between fits of 1 and 4, geometrically, is 2.
+		expect(stored.position.z).toBeCloseTo(10)
+		expect(stored.framingAspect).toBeCloseTo(2)
+	})
+
+	it('keeps the cameras’ own aspects through an interruption, so a viewport neither needs a fit for moves nothing', () => {
+		// Two 16:9 cameras on a 2:1 desktop, both at scale 1. Narrowing to 16:9
+		// needs no back-off for either, mid-flight or not.
+		const framing = new CameraFraming(2)
+		framing.show({ aspect: 16 / 9, scale: 1 })
+		framing.fly({ aspect: 16 / 9, scale: 1 })
+		framing.fly(null, 0.5)
+		const flight = { from: at(10), to: at(10) }
+
+		expect(framing.refit(16 / 9, null, flight)).toBe(false)
+		expect(flight.from.position.z).toBe(10)
 	})
 })

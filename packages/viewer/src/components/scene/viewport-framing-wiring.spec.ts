@@ -53,6 +53,11 @@ describe('the camera layer fits what it shows', () => {
 			'const startTransition'
 		)
 		expect(instant).toContain('framing.current?.show(selection.framing)')
+		// The pose shown now wins over a flight still playing.
+		expect(instant.indexOf('flight.stop()')).toBeGreaterThan(-1)
+		expect(instant.indexOf('flight.stop()')).toBeLessThan(
+			instant.indexOf('framing.current?.show(')
+		)
 		expect(instant.indexOf('syncDistanceLimits()')).toBeGreaterThan(-1)
 		expect(instant.indexOf('syncDistanceLimits()')).toBeLessThan(
 			instant.indexOf('controls.update?.()')
@@ -65,8 +70,8 @@ describe('the camera layer fits what it shows', () => {
 			'const startTransition = useCallback(',
 			'const executeViewerCommand'
 		)
-		expect(start).toMatch(
-			/framing\.current\?\.fly\(\s*selection\.framing,\s*viewportAspectOf\(sceneCamera\) \?\? 1,\s*flight\.progress\(\)\s*\)/
+		expect(start).toContain(
+			'framing.current?.fly(selection.framing, flight.progress())'
 		)
 		expect(start.indexOf('flight.progress()')).toBeLessThan(
 			start.indexOf('flight.start(')
@@ -112,8 +117,9 @@ describe('the camera layer fits what it shows', () => {
 			'onCameraSnapshotCaptureReady?.(captureCameraSnapshot)'
 		)
 		expect(snapshot).toMatch(
-			/framing\.current\?\.storedPose\(\s*activeCamera\.position,\s*controlsTarget\s*\)/
+			/framing\.current\?\.storedPose\(\s*activeCamera\.position,\s*controlsTarget,\s*activeCamera\.aspect,\s*flight\.progress\(\)\s*\)/
 		)
+		expect(snapshot).toContain('viewportAspect: activeCamera.aspect')
 		expect(snapshot).toMatch(
 			/position: \[stored\.position\.x, stored\.position\.y, stored\.position\.z\]/
 		)
@@ -124,8 +130,8 @@ describe('the camera layer fits what it shows', () => {
 			'const completeInitialFraming',
 			"type: 'initial_framing_completed'"
 		)
-		expect(opening).toContain(
-			'framing.current.storedPose(cameraPosition, target)'
+		expect(opening).toMatch(
+			/framing\.current\.storedPose\(\s*cameraPosition,\s*target,\s*\(sceneCamera as PerspectiveCamera\)\.aspect\s*\)/
 		)
 		expect(opening).toContain('framingAspect: stored.framingAspect')
 	})

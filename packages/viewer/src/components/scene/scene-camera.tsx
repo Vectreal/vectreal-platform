@@ -253,7 +253,9 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			// As a camera stores it: without the fit on screen (`storedPose`).
 			const stored = framing.current?.storedPose(
 				activeCamera.position,
-				controlsTarget
+				controlsTarget,
+				activeCamera.aspect,
+				flight.progress()
 			) ?? {
 				position: activeCamera.position,
 				framingAspect: activeCamera.aspect
@@ -268,9 +270,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				],
 				target: [controlsTarget.x, controlsTarget.y, controlsTarget.z],
 				fov: activeCamera.fov,
-				framingAspect: stored.framingAspect
+				framingAspect: stored.framingAspect,
+				viewportAspect: activeCamera.aspect
 			}
-		}, [controls?.target, sceneCamera])
+		}, [controls?.target, flight, sceneCamera])
 
 	useEffect(() => {
 		onCameraSnapshotCaptureReady?.(captureCameraSnapshot)
@@ -283,6 +286,9 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const applyCameraInstantly = useCallback(
 		(selection: ResolvedCameraSelection) => {
 			const activeCamera = sceneCamera as PerspectiveCamera
+			// The pose shown now wins over a flight still playing, which would
+			// otherwise land over it with a fit the framing no longer tracks.
+			flight.stop()
 			activeCamera.position.copy(selection.targetPosition)
 			activeCamera.rotation.copy(selection.targetRotation)
 			activeCamera.fov = selection.targetFov
@@ -296,7 +302,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			}
 			invalidate()
 		},
-		[controls, invalidate, sceneCamera, syncDistanceLimits]
+		[controls, flight, invalidate, sceneCamera, syncDistanceLimits]
 	)
 
 	const startTransition = useCallback(
@@ -314,17 +320,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				durationMs === 0 ||
 				prefersReducedMotion()
 			) {
-				flight.stop()
 				applyCameraInstantly(selection)
 				return
 			}
 
 			// Read before `start`, which replaces the flight it measures.
-			framing.current?.fly(
-				selection.framing,
-				viewportAspectOf(sceneCamera) ?? 1,
-				flight.progress()
-			)
+			framing.current?.fly(selection.framing, flight.progress())
 			flight.start(
 				{
 					position: selection.targetPosition,
@@ -337,7 +338,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			)
 			syncDistanceLimits()
 		},
-		[applyCameraInstantly, flight, sceneCamera, syncDistanceLimits]
+		[applyCameraInstantly, flight, syncDistanceLimits]
 	)
 
 	const executeViewerCommand = useCallback(
@@ -597,7 +598,11 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			// without the fit on screen so it is fitted afresh wherever it is shown.
 			if (previousSelectionKey.current && framing.current) {
 				const target = controlsTarget ?? new Vector3(0, 0, 0)
-				const stored = framing.current.storedPose(cameraPosition, target)
+				const stored = framing.current.storedPose(
+					cameraPosition,
+					target,
+					(sceneCamera as PerspectiveCamera).aspect
+				)
 				openingPose.current = {
 					cameraId: previousSelectionKey.current,
 					position: stored.position.toArray(),
