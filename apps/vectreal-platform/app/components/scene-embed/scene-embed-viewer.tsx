@@ -1,9 +1,10 @@
 import { cn } from '@shared/utils'
-import { memo, useMemo } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 
 import { normalizeShadowOptions } from '../../constants/viewer-defaults'
 import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
+import { useErrorReport } from '../../lib/observability/use-error-report'
 import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
 
@@ -11,7 +12,11 @@ import type { EmbedHotspotPresentation } from '../../lib/domain/embed/embed-pres
 import type { EmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import type { EnvironmentProps } from '@vctrl/core'
 import type { ModelFile, ServerSceneData } from '@vctrl/hooks/use-load-model'
-import type { VectrealViewerProps, ViewerLoadingThumbnail } from '@vctrl/viewer'
+import type {
+	VectrealViewerProps,
+	ViewerInteractionEvent,
+	ViewerLoadingThumbnail
+} from '@vctrl/viewer'
 import type { ReactNode } from 'react'
 
 export interface SceneEmbedViewerProps {
@@ -65,6 +70,8 @@ export interface SceneEmbedViewerProps {
 	 * environment map alongside the model. `sceneData` wins once it exists.
 	 */
 	environment?: EnvironmentProps
+	/** The surface's own failure state, where the viewer's default does not fit. */
+	renderFailure?: VectrealViewerProps['renderFailure']
 	onCommandExecutorReady?: VectrealViewerProps['onCommandExecutorReady']
 	onInteractionEvent?: VectrealViewerProps['onInteractionEvent']
 }
@@ -89,6 +96,7 @@ const SceneEmbedViewer = memo(
 		branding,
 		theme,
 		environment,
+		renderFailure,
 		onCommandExecutorReady,
 		onInteractionEvent
 	}: SceneEmbedViewerProps) => {
@@ -115,6 +123,21 @@ const SceneEmbedViewer = memo(
 			const basis = shadowsOptions.baked?.basis
 			return source && basis ? { ...source, basis } : source
 		}, [shadowsOptions, sceneData?.assetData, sceneData?.assetRefs])
+
+		// Reported here so every surface showing a scene reports it the same way.
+		// The viewer draws its own failure state; the page around it is fine, so
+		// this is a fallback rather than a broken page.
+		const [renderError, setRenderError] = useState<Error>()
+		useErrorReport(renderError, 'client-fallback')
+		const handleInteractionEvent = useCallback(
+			(event: ViewerInteractionEvent) => {
+				if (event.type === 'render_failed') {
+					setRenderError(new Error(`Viewer stopped drawing: ${event.reason}`))
+				}
+				onInteractionEvent?.(event)
+			},
+			[onInteractionEvent]
+		)
 
 		return (
 			<div className={cn('relative h-full w-full', className)}>
@@ -171,8 +194,9 @@ const SceneEmbedViewer = memo(
 						) : undefined
 					}
 					theme={theme}
+					renderFailure={renderFailure}
 					onCommandExecutorReady={onCommandExecutorReady}
-					onInteractionEvent={onInteractionEvent}
+					onInteractionEvent={handleInteractionEvent}
 					/*
 					  Mounted while the model is still downloading, so the viewer's
 					  code, its WebGL context and the environment map load alongside

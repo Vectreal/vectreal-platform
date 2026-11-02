@@ -3,6 +3,12 @@ import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn, withHostClasses } from './class-names'
+import ContextLossListener from './context-loss-listener'
+import RenderFailure from './render-failure'
+import {
+	type ContextLossEvent,
+	useContextLossRecovery
+} from '../hooks/use-context-loss-recovery'
 import {
 	type ViewerTheme,
 	useViewerColorScheme
@@ -50,6 +56,10 @@ interface CanvasComponentProps extends CanvasProps {
 	 * focus management. Must be referentially stable.
 	 */
 	onContainerChange?: (node: HTMLDivElement | null) => void
+	/** Told when the browser takes the WebGL context away, gives it back, or the viewer gives up. */
+	onContextLossEvent?: (event: ContextLossEvent) => void
+	/** Replaces the default failure state; receives the retry. */
+	renderFailure?: (retry: () => void) => React.ReactNode
 }
 
 /**
@@ -79,6 +89,8 @@ const Canvas = ({
 	enableViewportRendering = true,
 	loadingState = 'loading',
 	onContainerChange,
+	onContextLossEvent,
+	renderFailure,
 	...props
 }: CanvasComponentProps) => {
 	const getInitialPageVisibility = () =>
@@ -95,6 +107,7 @@ const Canvas = ({
 	const mountedRef = useRef(false)
 	const fadeFrameRef = useRef<number | null>(null)
 	const fadeFrameNestedRef = useRef<number | null>(null)
+	const contextLoss = useContextLossRecovery(onContextLossEvent)
 	const [containerRef, isInViewport] = useViewportDetection(
 		enableViewportRendering,
 		{ rootMargin: '100% 0px' }
@@ -126,7 +139,7 @@ const Canvas = ({
 	// Three.js state — camera position, transition runtime, controls target — which
 	// causes camera drift when the tab regains focus. isInViewport still gates the
 	// full unmount because off-screen viewers should free the WebGL context.
-	const shouldRenderCanvas = isReady && isInViewport
+	const shouldRenderCanvas = isReady && isInViewport && !contextLoss.failed
 	const shouldShowCanvasContent = loadingState !== 'loading'
 
 	useEffect(() => {
@@ -199,6 +212,9 @@ const Canvas = ({
 			{shouldRenderCanvas && (
 				<ThreeCanvas
 					{...props}
+					// A new key is a new canvas and a new context, mounted after a
+					// lost context comes back or on a retry.
+					key={contextLoss.canvasKey}
 					dpr={props.dpr ?? [MIN_DPR, dprCap]}
 					frameloop={!isPageVisible ? 'never' : (props.frameloop ?? 'demand')}
 					className={cn(
@@ -237,11 +253,23 @@ const Canvas = ({
 							}
 						/>
 					)}
+					<ContextLossListener
+						onContextLost={contextLoss.onContextLost}
+						onContextRestored={contextLoss.onContextRestored}
+						onUnmount={contextLoss.onCanvasUnmount}
+					/>
 					{children}
 				</ThreeCanvas>
 			)}
 
-			{overlay}
+			{/* The overlay's loader and controls belong to a scene that is drawing. */}
+			{!contextLoss.failed ? (
+				overlay
+			) : renderFailure ? (
+				renderFailure(contextLoss.retry)
+			) : (
+				<RenderFailure onRetry={contextLoss.retry} />
+			)}
 		</div>
 	)
 }

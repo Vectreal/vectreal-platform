@@ -282,8 +282,77 @@ test('publishing bakes occlusion on the GPU into the GLB, from the published cor
 	expect(consoleErrors, consoleErrors.join('\n')).toEqual([])
 })
 
+test('a lost WebGL context is redrawn when it comes back, and says so when it does not', async ({
+	page
+}) => {
+	// What a phone does when a page runs short of graphics memory. The canvas
+	// used to stay blank for good, with nothing on screen saying why.
+	test.setTimeout(60000)
+	const pageErrors: string[] = []
+	page.on('pageerror', (err) => pageErrors.push(err.message))
+	const assetRequests: string[] = []
+	page.on('request', (request) => {
+		if (/\.(hdr|glb|exr|ktx2|png|jpe?g|webp)(\?|$)/.test(request.url())) {
+			assetRequests.push(request.url())
+		}
+	})
+
+	await page.goto('/')
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{ timeout: 30000 }
+	)
+	const host = page.getByTestId('viewer-host')
+	const failure = host.getByRole('alert')
+	const loseContext = () =>
+		page.evaluate(() => {
+			const canvas = document.querySelector(
+				'[data-testid="viewer-host"] canvas'
+			) as HTMLCanvasElement
+			canvas.dataset.lostOnce = 'true'
+			const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+			const extension = gl?.getExtension('WEBGL_lose_context')
+			if (!extension) throw new Error('WEBGL_lose_context is not available')
+			window.__LOSE_CONTEXT__ = extension
+			extension.loseContext()
+		})
+	const eventsSoFar = () => page.evaluate(() => window.__VIEWER_EVENTS__ ?? [])
+
+	// Lost and handed back: a fresh canvas draws the scene the viewer already
+	// holds, without asking the network for any of it again.
+	const requestsBeforeLoss = assetRequests.length
+	await loseContext()
+	await page.evaluate(() => window.__LOSE_CONTEXT__?.restoreContext())
+	await expect(host.locator('canvas:not([data-lost-once])')).toHaveCount(1)
+	expect(await eventsSoFar()).toEqual(
+		expect.arrayContaining(['context_lost', 'context_restored'])
+	)
+	await expect(failure).toHaveCount(0)
+	await page.waitForTimeout(1500)
+	expect(assetRequests.slice(requestsBeforeLoss)).toEqual([])
+
+	// Lost again right after: the viewer stops and says so rather than leave
+	// an empty frame.
+	await loseContext()
+	await expect(failure).toHaveText(
+		"This scene couldn't be shown on this device.Try again"
+	)
+	await expect(host.locator('canvas')).toHaveCount(0)
+	expect(await eventsSoFar()).toContain('render_failed')
+
+	// And a visitor can ask for another go.
+	await failure.getByRole('button', { name: 'Try again' }).click()
+	await expect(failure).toHaveCount(0)
+	await expect(host.locator('canvas')).toHaveCount(1)
+
+	expect(pageErrors, pageErrors.join('\n')).toEqual([])
+})
+
 declare global {
 	interface Window {
+		__VIEWER_EVENTS__?: string[]
+		__LOSE_CONTEXT__?: WEBGL_lose_context
 		__VIEWER_E2E__?: { status: 'mounted' | 'crashed'; error?: string }
 		__HOOKS_E2E__?: { status: 'ok' | 'crashed'; error?: string }
 		__VIEWER_READY__?: boolean
