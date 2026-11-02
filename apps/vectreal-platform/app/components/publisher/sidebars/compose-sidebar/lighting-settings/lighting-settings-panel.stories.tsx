@@ -14,10 +14,14 @@ import { BakeSection } from './bake-section'
 import LightingSettings from './lighting-settings-panel'
 import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import { nothingCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
-import { type BakePreview } from '../../../../../lib/stores/publisher-config-store'
+import {
+	studioFinishPlanAtom,
+	type BakePreview
+} from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownView } from '../../drill-down'
 
+import type { StudioFinishPlan } from '../../../../../workers/publish-export.worker.types'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 /**
@@ -60,8 +64,18 @@ function Scene() {
 	return <VectrealViewer model={model} lighting={lighting} />
 }
 
-function PanelOverScene() {
-	const store = useMemo(createStore, [])
+function PanelOverScene({ plan }: { plan?: StudioFinishPlan }) {
+	const store = useMemo(() => {
+		const store = createStore()
+		// Planned for the document on screen: none, as no model is loaded here.
+		if (plan) {
+			store.set(studioFinishPlanAtom, {
+				source: { document: undefined, passRevision: 0 },
+				plan
+			})
+		}
+		return store
+	}, [plan])
 	return (
 		<Provider store={store}>
 			<ModelProvider>
@@ -84,6 +98,40 @@ function PanelOverScene() {
 }
 
 export const Panel: Story = { render: () => <PanelOverScene /> }
+
+const TILING_UVS = {
+	baked: [],
+	skipped: [
+		{ material: 'Porsche_911GT3_Body', reason: 'tiling-uvs' as const },
+		{ material: 'Porsche_911GT3_Interior', reason: 'tiling-uvs' as const },
+		{ material: 'Porsche_911GT3_Glass', reason: 'overlapping-uvs' as const }
+	]
+}
+
+/**
+ * A model whose UVs no bake can use, as planned when it loads: the finish
+ * says so before any preview. Open Settings and report for each toggle.
+ */
+export const PanelWithNothingToFinish: Story = {
+	render: () => (
+		<PanelOverScene plan={{ occlusion: TILING_UVS, lights: TILING_UVS }} />
+	)
+}
+
+/** Depth has nothing to take while the studio lights do. */
+export const PanelWithDepthOff: Story = {
+	render: () => (
+		<PanelOverScene
+			plan={{
+				occlusion: {
+					baked: [],
+					skipped: [{ material: 'Body', reason: 'existing-occlusion' as const }]
+				},
+				lights: { baked: ['Body'], skipped: [] }
+			}}
+		/>
+	)
+}
 
 const SOURCE = { document: null, passRevision: 0, bakes: '' }
 

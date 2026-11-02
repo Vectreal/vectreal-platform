@@ -4,6 +4,8 @@ import {
 	BAKE_SKIP_REASONS,
 	failuresToReport,
 	failWith,
+	ineligibleCaption,
+	NOTHING_TO_FINISH,
 	skippedByReason,
 	nothingCaption,
 	lightBakeWarning,
@@ -248,5 +250,35 @@ describe('nothingCaption', () => {
 			nothingCaption({ occlusion: { baked: [], skipped: [] } })
 		).toBeUndefined()
 		expect(nothingCaption(undefined)).toBeUndefined()
+	})
+})
+
+describe('ineligibleCaption', () => {
+	it('says why a bake can take nothing, in the words of its most common reason', () => {
+		expect(
+			ineligibleCaption({
+				baked: [],
+				skipped: [
+					{ material: 'body', reason: 'tiling-uvs' },
+					{ material: 'trim', reason: 'tiling-uvs' },
+					{ material: 'glass', reason: 'no-uv0' }
+				]
+			})
+		).toBe(`2 materials: ${BAKE_SKIP_REASONS['tiling-uvs']}`)
+	})
+
+	it('says nothing while the bake can take a material', () => {
+		expect(
+			ineligibleCaption({
+				baked: ['body'],
+				skipped: [{ material: 'glass', reason: 'no-uv0' }]
+			})
+		).toBeUndefined()
+	})
+
+	it('still says so for a model with no material to name', () => {
+		expect(ineligibleCaption({ baked: [], skipped: [] })).toBe(
+			NOTHING_TO_FINISH
+		)
 	})
 })

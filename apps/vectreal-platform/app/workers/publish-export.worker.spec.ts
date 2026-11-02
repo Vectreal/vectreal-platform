@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type {
 	PublishExportMessage,
-	PublishExportRequest
+	PublishExportRequest,
+	StudioFinishPlanRequest
 } from './publish-export.worker.types'
 
 /**
@@ -13,6 +14,7 @@ import type {
  */
 const mocks = vi.hoisted(() => ({
 	exportGlbForPublish: vi.fn(),
+	readGlbDocument: vi.fn(),
 	/** Stands in for the KTX2 pass, handed what the worker passed as `ktx2`. */
 	compressTextures: vi.fn(),
 	createEncoderPool: vi.fn(),
@@ -37,20 +39,29 @@ interface FakeRenderer {
 vi.mock('@vctrl/core/model-exporter', () => ({
 	ModelExporter: class {
 		exportGlbForPublish = mocks.exportGlbForPublish
+		readGlbDocument = mocks.readGlbDocument
 	}
 }))
-// The real recovery, so these cover how the worker relies on it.
-vi.mock('@vctrl/core/occlusion-bake', async () => ({
-	bakeOcclusionIntoDocument: mocks.bakeOcclusionIntoDocument,
-	bakeWithRecovery: (
-		await vi.importActual<
-			typeof import('../../../../packages/core/src/occlusion-bake/bake-outcome')
-		>('../../../../packages/core/src/occlusion-bake/bake-outcome')
-	).bakeWithRecovery,
-	DEFAULT_OCCLUSION_BAKE_OPTIONS: OCCLUSION_OPTIONS
-}))
-vi.mock('@vctrl/core/light-bake', () => ({
+// The real recovery and planners, so these cover how the worker relies on them.
+vi.mock('@vctrl/core/occlusion-bake', async () => {
+	const core = await vi.importActual<
+		typeof import('../../../../packages/core/src/occlusion-bake')
+	>('../../../../packages/core/src/occlusion-bake')
+	return {
+		bakeOcclusionIntoDocument: mocks.bakeOcclusionIntoDocument,
+		bakeWithRecovery: core.bakeWithRecovery,
+		bakeReport: core.bakeReport,
+		planOcclusionBake: core.planOcclusionBake,
+		DEFAULT_OCCLUSION_BAKE_OPTIONS: OCCLUSION_OPTIONS
+	}
+})
+vi.mock('@vctrl/core/light-bake', async () => ({
 	bakeLightsIntoDocument: mocks.bakeLightsIntoDocument,
+	planLightBake: (
+		await vi.importActual<
+			typeof import('../../../../packages/core/src/light-bake/bake-into-document')
+		>('../../../../packages/core/src/light-bake/bake-into-document')
+	).planLightBake,
 	DEFAULT_LIGHT_BAKE_OPTIONS: LIGHT_OPTIONS
 }))
 vi.mock('three', () => ({
@@ -494,5 +505,107 @@ describe('the publish export worker', () => {
 		expect(messages).toEqual([
 			{ type: 'error', message: 'Draco encoder failed' }
 		])
+	})
+})
+
+/** One quad, its UVs inside the unit square, or none at all. */
+function quadDocument({ uvs }: { uvs: boolean }) {
+	const document = new Document()
+	const buffer = document.createBuffer()
+	const primitive = document
+		.createPrimitive()
+		.setAttribute(
+			'POSITION',
+			document
+				.createAccessor()
+				.setBuffer(buffer)
+				.setType('VEC3')
+				.setArray(new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0]))
+		)
+		.setIndices(
+			document
+				.createAccessor()
+				.setBuffer(buffer)
+				.setType('SCALAR')
+				.setArray(new Uint16Array([0, 1, 2, 0, 2, 3]))
+		)
+		.setMaterial(document.createMaterial('card'))
+	if (uvs) {
+		primitive.setAttribute(
+			'TEXCOORD_0',
+			document
+				.createAccessor()
+				.setBuffer(buffer)
+				.setType('VEC2')
+				.setArray(new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]))
+		)
+	}
+	document
+		.createScene()
+		.addChild(
+			document
+				.createNode()
+				.setMesh(document.createMesh().addPrimitive(primitive))
+		)
+	return document
+}
+
+async function sendPlan() {
+	const buffer = new ArrayBuffer(4)
+	await (
+		self.onmessage as (event: MessageEvent<StudioFinishPlanRequest>) => unknown
+	)({ data: { type: 'plan', buffer } } as MessageEvent)
+	return { buffer, messages: posted.map(({ message }) => message) }
+}
+
+describe('planning the studio finish in the publish worker', () => {
+	it('answers which materials each bake would take, and bakes nothing', async () => {
+		mocks.readGlbDocument.mockResolvedValue(quadDocument({ uvs: true }))
+
+		const { buffer, messages } = await sendPlan()
+
+		expect(mocks.readGlbDocument).toHaveBeenCalledWith(new Uint8Array(buffer))
+		expect(messages).toEqual([
+			{
+				type: 'done',
+				occlusion: { baked: ['card'], skipped: [] },
+				lights: { baked: ['card'], skipped: [] }
+			}
+		])
+		expect(mocks.exportGlbForPublish).not.toHaveBeenCalled()
+		expect(mocks.createRenderer).not.toHaveBeenCalled()
+	})
+
+	it('names why a bake would take nothing', async () => {
+		mocks.readGlbDocument.mockResolvedValue(quadDocument({ uvs: false }))
+
+		const { messages } = await sendPlan()
+
+		const skipped = [{ material: 'card', reason: 'no-uv0' }]
+		expect(messages).toEqual([
+			{
+				type: 'done',
+				occlusion: { baked: [], skipped },
+				lights: { baked: [], skipped }
+			}
+		])
+	})
+
+	it('ignores a request it does not know', async () => {
+		await (self.onmessage as (event: MessageEvent) => unknown)({
+			data: { type: 'unknown' }
+		} as MessageEvent)
+
+		expect(posted).toEqual([])
+		expect(mocks.exportGlbForPublish).not.toHaveBeenCalled()
+		expect(mocks.readGlbDocument).not.toHaveBeenCalled()
+	})
+
+	it('reports a model it cannot read instead of throwing it away', async () => {
+		mocks.readGlbDocument.mockRejectedValue(new Error('Not a GLB'))
+
+		const { messages } = await sendPlan()
+
+		expect(messages).toEqual([{ type: 'error', message: 'Not a GLB' }])
 	})
 })

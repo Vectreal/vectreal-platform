@@ -11,6 +11,7 @@ import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
 import { useShownBake } from '../../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
+import { usePlanStudioFinish } from '../../components/publisher/sidebars/compose-sidebar/lighting-settings/use-studio-finish-plan'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
 import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
 import {
@@ -158,6 +159,7 @@ const PublisherPage = () => {
 		canAnimate,
 		isAnimating: animationStatus.playing
 	})
+	usePlanStudioFinish()
 
 	const setFailedEnvironmentFiles = useSetAtom(failedEnvironmentFilesAtom)
 	const setViewDirection = useSetAtom(viewDirectionAtom)

@@ -15,7 +15,10 @@ import {
 	originalPreset
 } from '../../../../../constants/optimizations'
 import { STUDIO_FINISH_FAILURES } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
-import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
+import {
+	bakePreviewAtom,
+	studioFinishPlanAtom
+} from '../../../../../lib/stores/publisher-config-store'
 import {
 	dispatchSaveProgressAtom,
 	savePanelAtom
@@ -158,6 +161,32 @@ describe('the publish panel', () => {
 		fireEvent.click(textureSwitch())
 		expect(store.get(presentationAtom).compressTexturesForGpu).toBe(true)
 		expect(textureSwitch()).toBeChecked()
+	})
+
+	it('offers the studio finish only while the lighting asks for none', () => {
+		renderPanel(balancedPreset)
+		expect(
+			screen.getByRole('button', { name: 'Add studio finish' })
+		).toBeTruthy()
+	})
+
+	it('offers no studio finish already asked for, even one the model cannot take', () => {
+		renderPanel(balancedPreset, (store) => {
+			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
+			store.set(studioFinishPlanAtom, {
+				source: { document: mocks.getDocument(), passRevision: 0 },
+				plan: {
+					occlusion: {
+						baked: [],
+						skipped: [{ material: 'Body', reason: 'tiling-uvs' }]
+					},
+					lights: { baked: [], skipped: [] }
+				}
+			})
+		})
+		expect(
+			screen.queryByRole('button', { name: 'Add studio finish' })
+		).toBeNull()
 	})
 
 	it("offers the way back from a hotspot's camera only once one exists", () => {

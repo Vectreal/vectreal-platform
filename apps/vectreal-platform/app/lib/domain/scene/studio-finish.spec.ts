@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { bakesKey, publishBakes } from './studio-finish'
+import { bakesKey, eligibleBakes, publishBakes } from './studio-finish'
 
 describe('publishBakes', () => {
 	const key = { role: 'key' as const, azimuth: 30, elevation: 40 }
@@ -53,5 +53,40 @@ describe('bakesKey', () => {
 				lights: [{ ...key, azimuth: 31 }]
 			})
 		)
+	})
+})
+
+describe('eligibleBakes', () => {
+	const takes = { baked: ['body'], skipped: [] }
+	const takesNothing = {
+		baked: [],
+		skipped: [{ material: 'body', reason: 'tiling-uvs' as const }]
+	}
+	const lights = publishBakes({
+		lights: [{ role: 'key', azimuth: 30, elevation: 40 }],
+		bake: { lights: true }
+	}).lights
+	const asked = { occlusion: true, lights }
+
+	it('runs every bake asked for until there is a plan', () => {
+		expect(eligibleBakes(asked, null)).toEqual(asked)
+	})
+
+	it('drops each bake the plan says no material can take', () => {
+		expect(
+			eligibleBakes(asked, { occlusion: takesNothing, lights: takes })
+		).toEqual({ occlusion: false, lights })
+		expect(
+			eligibleBakes(asked, { occlusion: takes, lights: takesNothing })
+		).toEqual({ occlusion: true, lights: false })
+	})
+
+	it('never adds a bake that was not asked for', () => {
+		expect(
+			eligibleBakes(
+				{ occlusion: false, lights: false },
+				{ occlusion: takes, lights: takes }
+			)
+		).toEqual({ occlusion: false, lights: false })
 	})
 })

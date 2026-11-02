@@ -4,6 +4,7 @@ import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue } from 'jotai/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 
+import { useStudioFinishPlan } from './use-studio-finish-plan'
 import {
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
@@ -18,6 +19,7 @@ import {
 import { STUDIO_FINISH_FILENAME } from '../../../../../lib/domain/scene/scene-asset-roles'
 import {
 	bakesKey,
+	eligibleBakes,
 	publishBakes
 } from '../../../../../lib/domain/scene/studio-finish'
 import { useErrorReport } from '../../../../../lib/observability/use-error-report'
@@ -54,15 +56,22 @@ export function usePublishExport() {
 	const optimizations = useAtomValue(documentOptimizationsAtom)
 	const { dracoReport } = useAtomValue(optimizationRuntimeAtom)
 	const ktx2 = useCompressesTexturesForGpu()
+	const plan = useStudioFinishPlan()
 	return useMemo(() => {
-		const bakes = publishBakes(lighting)
+		// The key stays the lighting's: a bake with nothing to take draws the
+		// same file whether it runs or not, so the plan landing leaves a
+		// preview made before it current.
+		const asked = publishBakes(lighting)
+		const bakes = eligibleBakes(asked, plan)
 		const geometry = resolvePublishGeometryOptions(optimizations, dracoReport)
 		return {
 			request: { ...geometry, ktx2, ...bakes },
 			key: JSON.stringify({ bakes: bakesKey(lighting), ...geometry, ktx2 }),
-			bakesAnything: bakes.occlusion || Boolean(bakes.lights)
+			bakesAnything: bakes.occlusion || Boolean(bakes.lights),
+			/** Whether the lighting asks for any bake, whether or not it can run. */
+			asksAnything: asked.occlusion || Boolean(asked.lights)
 		}
-	}, [lighting, optimizations, dracoReport, ktx2])
+	}, [lighting, optimizations, dracoReport, ktx2, plan])
 }
 
 /**
@@ -468,8 +477,10 @@ export function useBakePreview() {
 	return {
 		preview,
 		canBake,
-		/** Whether the lighting asks for any bake at all. */
+		/** Whether any bake will run: asked for, and able to take a material. */
 		bakesAnything: publishExport.bakesAnything,
+		/** Whether the lighting asks for any bake at all. */
+		asksAnything: publishExport.asksAnything,
 		isOptimizing: isPending,
 		// The viewer draws the preview unanimated, in its rest pose.
 		isAnimated: Boolean(file?.animations?.length),

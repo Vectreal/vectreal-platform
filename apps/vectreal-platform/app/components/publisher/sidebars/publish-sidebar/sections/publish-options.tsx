@@ -94,7 +94,6 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const setProcessState = useSetAtom(processAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
 	const publishExport = usePublishExport()
-	const bakes = publishExport.request
 	// A preview of the current export is the file this publish would make.
 	const preview = useCurrentPreview()
 	const showPublishedFinish = useShowPublishedFinish()
@@ -432,7 +431,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						description="Keeps textures compressed on the GPU, so the scene appears sooner and uses less memory, most of all on phones. Publishing takes longer. Off by default on the Original preset."
 					/>
 					{/* Its payoff shows only once it is on, so it is offered where publishing is decided. */}
-					{canPublish && !bakes.occlusion && !bakes.lights && (
+					{canPublish && !publishExport.asksAnything && (
 						<div className="space-y-2">
 							<p className="text-muted-foreground text-xs">
 								A studio finish draws soft shadows and depth into the model, so

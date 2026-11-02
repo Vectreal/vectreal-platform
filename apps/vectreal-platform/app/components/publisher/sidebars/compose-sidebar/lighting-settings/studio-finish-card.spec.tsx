@@ -16,10 +16,12 @@ import {
 	BAKE_SKIP_REASONS,
 	nothingCaption
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
+import { studioFinishPlanAtom } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownView } from '../../drill-down'
 
 import type { BakePreview } from '../../../../../lib/stores/publisher-config-store'
+import type { StudioFinishPlan } from '../../../../../workers/publish-export.worker.types'
 import type { LightingSettings as Lighting } from '@vctrl/core'
 
 // The sliders and the globe measure themselves; jsdom has no ResizeObserver.
@@ -56,11 +58,24 @@ describe('finishStatus', () => {
 		expect(finishStatus(true, ready(false, ['Body']))).toBe('compare')
 		expect(finishStatus(true, ready(true, []))).toBe('nothing')
 	})
+
+	it('has nothing to finish, asked for or not, once the plan finds no material it can take', () => {
+		expect(finishStatus(false, null, false)).toBe('nothing')
+		expect(finishStatus(true, ready(true, ['Body']), false)).toBe('nothing')
+		expect(finishStatus(false, null, true)).toBe('off')
+	})
 })
 
-const renderPanel = (lighting: Lighting) => {
+const renderPanel = (lighting: Lighting, plan?: StudioFinishPlan) => {
 	const store = createStore()
 	store.set(lightingAtom, lighting)
+	// Planned for the document on screen: none, as no model is loaded here.
+	if (plan) {
+		store.set(studioFinishPlanAtom, {
+			source: { document: undefined, passRevision: 0 },
+			plan
+		})
+	}
 	render(
 		<Provider store={store}>
 			<ModelProvider>
@@ -99,6 +114,145 @@ describe('adding the studio finish', () => {
 			null
 		)
 		expect(screen.queryByRole('button', { name: /^Bake/ })).toBe(null)
+	})
+})
+
+describe('a bake the plan says no material can take', () => {
+	const tiling = {
+		baked: [],
+		skipped: [{ material: 'Body', reason: 'tiling-uvs' as const }]
+	}
+	const takes = { baked: ['Body'], skipped: [] }
+	const finish = { ...product.lighting, occlusion: { mode: 'baked' as const } }
+
+	it('is off and cannot be turned on, and says why, while the saved setting stays', async () => {
+		const store = renderPanel(finish, { occlusion: tiling, lights: takes })
+		fireEvent.click(screen.getByRole('button', { name: /Settings and report/ }))
+
+		const depth = await screen.findByRole('switch', { name: /Depth/ })
+		expect(depth).toHaveProperty('disabled', true)
+		expect(depth.getAttribute('aria-checked')).toBe('false')
+		expect(
+			screen.getByText(`1 material: ${BAKE_SKIP_REASONS['tiling-uvs']}`)
+		).toBeTruthy()
+		expect(
+			screen.getByRole('switch', { name: /Studio lights/ })
+		).toHaveProperty('disabled', false)
+		expect(store.get(lightingAtom).occlusion?.mode).toBe('baked')
+		// Saved as the finish's, so live occlusion still stays out of it.
+		expect(screen.queryByText('Live')).toBe(null)
+		expect(
+			screen.getByText('Depth from the studio finish takes its place.')
+		).toBeTruthy()
+	})
+
+	it('has nothing to finish when the one bake asked for can take nothing', () => {
+		renderPanel(
+			{
+				...product.lighting,
+				occlusion: { mode: 'baked' },
+				bake: { lights: false }
+			},
+			{ occlusion: tiling, lights: takes }
+		)
+
+		expect(screen.getByText('Nothing to finish')).toBeTruthy()
+		expect(screen.queryByRole('button', { name: 'Add studio finish' })).toBe(
+			null
+		)
+	})
+
+	it('adds only the bakes that can run, leaving depth that cannot as it is', () => {
+		const store = renderPanel(
+			{ ...product.lighting, occlusion: { mode: 'off' } },
+			{ occlusion: tiling, lights: takes }
+		)
+
+		fireEvent.click(screen.getByRole('button', { name: 'Add studio finish' }))
+
+		expect(store.get(lightingAtom).occlusion?.mode).toBe('off')
+		expect(store.get(lightingAtom).bake?.lights).toBe(true)
+	})
+
+	it('offers nothing to add when only the lights could take it and none is on, and says why depth cannot', () => {
+		const lightsSkipSome = {
+			baked: ['Body'],
+			skipped: [
+				{ material: 'Lamp', reason: 'double-sided' as const },
+				{ material: 'Grille', reason: 'double-sided' as const }
+			]
+		}
+		renderPanel(overcast.lighting, {
+			occlusion: tiling,
+			lights: lightsSkipSome
+		})
+
+		expect(screen.getByText('Nothing to finish')).toBeTruthy()
+		expect(screen.queryByRole('button', { name: 'Add studio finish' })).toBe(
+			null
+		)
+		expect(
+			screen.getByText(`1 material: ${BAKE_SKIP_REASONS['tiling-uvs']}`)
+		).toBeTruthy()
+	})
+
+	it('counts a light at no intensity as no light, as publishing does', () => {
+		renderPanel(
+			{
+				...product.lighting,
+				occlusion: { mode: 'off' },
+				lights: product.lighting.lights?.map((light) => ({
+					...light,
+					intensity: 0
+				}))
+			},
+			{ occlusion: tiling, lights: takes }
+		)
+
+		expect(screen.getByText('Nothing to finish')).toBeTruthy()
+		expect(screen.queryByRole('button', { name: 'Add studio finish' })).toBe(
+			null
+		)
+	})
+
+	it('explains nothing to finish by the bake asked for, not the other one', () => {
+		renderPanel(
+			{
+				...product.lighting,
+				occlusion: { mode: 'off' },
+				bake: { lights: true }
+			},
+			{
+				occlusion: {
+					baked: ['Body'],
+					skipped: [
+						{ material: 'Trim', reason: 'no-uv0' },
+						{ material: 'Sole', reason: 'no-uv0' }
+					]
+				},
+				lights: {
+					baked: [],
+					skipped: [{ material: 'Body', reason: 'double-sided' }]
+				}
+			}
+		)
+
+		expect(screen.getByText('Nothing to finish')).toBeTruthy()
+		expect(
+			screen.getByText(`1 material: ${BAKE_SKIP_REASONS['double-sided']}`)
+		).toBeTruthy()
+	})
+
+	it('leaves nothing to add when neither bake can take a material', () => {
+		renderPanel(product.lighting, { occlusion: tiling, lights: tiling })
+
+		expect(screen.getByText('Nothing to finish')).toBeTruthy()
+		expect(screen.queryByRole('button', { name: 'Add studio finish' })).toBe(
+			null
+		)
+		expect(
+			screen.getByText(`1 material: ${BAKE_SKIP_REASONS['tiling-uvs']}`)
+		).toBeTruthy()
 	})
 })
 

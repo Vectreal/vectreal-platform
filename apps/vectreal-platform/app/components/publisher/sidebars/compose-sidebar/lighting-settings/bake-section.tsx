@@ -6,6 +6,7 @@ import { bakedAnything, drawingLabel } from './use-bake-preview'
 import {
 	BAKE_RECOVERY_NOTES,
 	BAKE_SKIP_REASONS,
+	NOTHING_TO_FINISH,
 	skippedByReason,
 	STUDIO_FINISH_FAILURES
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
@@ -140,7 +141,7 @@ export function BakeSection({
 						<p className="text-sm">
 							{hasBake
 								? `Drawn in ${((ready?.durationMs ?? 0) / 1000).toFixed(1)} s.`
-								: 'No material on this model can take the studio finish.'}
+								: NOTHING_TO_FINISH}
 						</p>
 						{reports.occlusion && (
 							<BakeReport label="Depth" report={reports.occlusion} />
