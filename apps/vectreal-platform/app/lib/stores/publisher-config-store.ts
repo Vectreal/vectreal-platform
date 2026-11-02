@@ -22,7 +22,8 @@ import type {
 import type { SaveLocationTarget } from '../../types/publisher-scene'
 import type {
 	PublishExportOutcome,
-	PublishExportProgress
+	PublishExportProgress,
+	StudioFinishPlan
 } from '../../workers/publish-export.worker.types'
 import type { StudioFinishFailure } from '../domain/scene/client/studio-finish-reasons'
 import type { LightingSettings, SceneSettings } from '@vctrl/core'
@@ -333,6 +334,18 @@ interface BakePreview {
 const bakePreviewAtom = atom<BakePreview | null>(null)
 
 /**
+ * Which materials each studio finish bake could take, for the document and
+ * optimization pass it was planned from. Read through `useStudioFinishPlan`,
+ * which ignores a plan made for any other document or pass.
+ */
+interface StudioFinishPlanState {
+	source: { document: unknown; passRevision: number }
+	plan: StudioFinishPlan
+}
+
+const studioFinishPlanAtom = atom<StudioFinishPlanState | null>(null)
+
+/**
  * Where the viewer's orbit camera looks from, as it last reported (degrees,
  * in the lights' terms), so the Lighting globe can be drawn from the same
  * side. Null until the viewer reports.
@@ -348,6 +361,7 @@ export {
 	environmentLoadFailedAtom,
 	environmentFilesOf,
 	bakePreviewAtom,
+	studioFinishPlanAtom,
 	viewDirectionAtom,
 	currentSceneIdAtom,
 	sceneMetaAtom,
@@ -378,4 +392,4 @@ export {
 	sceneMetaInitialState
 }
 
-export type { BakePreview }
+export type { BakePreview, StudioFinishPlanState }

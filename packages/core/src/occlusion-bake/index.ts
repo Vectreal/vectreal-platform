@@ -9,6 +9,7 @@ export {
 } from './bake-outcome'
 export {
 	bakeOcclusionIntoDocument,
+	bakeReport,
 	type OcclusionBakeReport
 } from './bake-into-document'
 export {

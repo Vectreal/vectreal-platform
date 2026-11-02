@@ -2,7 +2,8 @@ import { bakedLightsSignature, litLights, resolveLighting } from '@vctrl/core'
 
 import type {
 	PublishExportOutcome,
-	PublishExportRequest
+	PublishExportRequest,
+	StudioFinishPlan
 } from '../../../workers/publish-export.worker.types'
 import type { LightingSettings } from '@vctrl/core'
 
@@ -38,6 +39,22 @@ export function publishBakes(
 			resolved.bake.lights && litLights(resolved).length > 0
 				? { lights: resolved.lights, environment: resolved.environment }
 				: false
+	}
+}
+
+/**
+ * The bakes asked for, less any the plan says no material can take: a bake
+ * with nothing to draw is never run, by the preview or by publishing. Without
+ * a plan, as while it is still being made, every bake asked for runs.
+ */
+export function eligibleBakes(
+	bakes: Pick<PublishExportRequest, 'occlusion' | 'lights'>,
+	plan: StudioFinishPlan | null
+): Pick<PublishExportRequest, 'occlusion' | 'lights'> {
+	if (!plan) return bakes
+	return {
+		occlusion: bakes.occlusion && plan.occlusion.baked.length > 0,
+		lights: plan.lights.baked.length > 0 ? bakes.lights : false
 	}
 }
 

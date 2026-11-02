@@ -36,6 +36,34 @@ export async function bakeLightsIntoDocument(
 	options?: LightBakeOptions,
 	onProgress?: (fraction: number) => void
 ): Promise<LightBakeReport> {
+	const plan = await planLightBake(document)
+	const baked =
+		plan.targets.length > 0
+			? await bakeLights(plan, lighting, renderer(), options, onProgress)
+			: []
+	writeLightmaps(
+		document,
+		bakedLightsSignature(lighting),
+		await Promise.all(
+			baked.map(async (bake) => ({
+				material: bake.material,
+				scale: bake.scale,
+				image: await encodeBakePng(bake)
+			}))
+		)
+	)
+	return bakeReport(document, baked, plan.skipped)
+}
+
+/**
+ * Which materials the light bake can take, and why the others cannot: the
+ * occlusion planner's answer, less what a light map cannot hold. Needs no
+ * GPU, so it can say before a bake whether one would draw anything. Async
+ * because it decodes the cutout masks.
+ */
+export async function planLightBake(
+	document: Document
+): Promise<OcclusionBakePlan> {
 	const planned = planOcclusionBake(document, { existingOcclusion: 'bake' })
 	// A cutout casts solid where its mask did not decode or found no layer,
 	// so the bake must know which before it plans; the trace decodes again.
@@ -56,22 +84,7 @@ export async function bakeLightsIntoDocument(
 		if (reason) plan.skipped.push({ material: target.material, reason })
 		else plan.targets.push(target)
 	}
-	const baked =
-		plan.targets.length > 0
-			? await bakeLights(plan, lighting, renderer(), options, onProgress)
-			: []
-	writeLightmaps(
-		document,
-		bakedLightsSignature(lighting),
-		await Promise.all(
-			baked.map(async (bake) => ({
-				material: bake.material,
-				scale: bake.scale,
-				image: await encodeBakePng(bake)
-			}))
-		)
-	)
-	return bakeReport(document, baked, plan.skipped)
+	return plan
 }
 
 /*

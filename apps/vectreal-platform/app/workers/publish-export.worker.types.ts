@@ -76,3 +76,22 @@ export type PublishExportMessage =
 	| ({ type: 'progress' } & PublishExportProgress)
 	| ({ type: 'done' } & PublishExportOutcome)
 	| { type: 'error'; message: string }
+
+/**
+ * Asks which materials each bake could take, without baking: the same
+ * planners the export bakes with, so the answer cannot drift from the bake.
+ */
+export interface StudioFinishPlanRequest {
+	type: 'plan'
+	/** The working document as an uncompressed GLB. */
+	buffer: ArrayBuffer
+}
+
+/** What each bake would take, `baked` naming the materials it would bake. */
+export interface StudioFinishPlan {
+	occlusion: OcclusionBakeReport
+	lights: OcclusionBakeReport
+}
+
+export type StudioFinishPlanMessage =
+	({ type: 'done' } & StudioFinishPlan) | { type: 'error'; message: string }

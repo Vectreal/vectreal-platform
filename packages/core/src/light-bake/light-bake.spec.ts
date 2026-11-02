@@ -11,7 +11,11 @@ import {
 } from '@gltf-transform/extensions'
 import { describe, expect, it } from 'vitest'
 
-import { bakeLightsIntoDocument, writeLightmaps } from './bake-into-document'
+import {
+	bakeLightsIntoDocument,
+	planLightBake,
+	writeLightmaps
+} from './bake-into-document'
 import { lightmapScale } from './bake-lights'
 import { type Lightmap } from './extension'
 import { IO_EXTENSIONS } from '../io-extensions'
@@ -417,5 +421,66 @@ describe('bakeLightsIntoDocument', () => {
 		)
 
 		expect(report.skipped).toEqual([{ material: 'label', reason: 'animated' }])
+	})
+})
+
+describe('planLightBake', () => {
+	const material = (target: { material: { getName(): string } }) =>
+		target.material.getName()
+
+	it('plans a bake that has something to take', async () => {
+		const plan = await planLightBake(cardDocument({ staticBody: true }))
+
+		expect(plan.targets.map(material)).toEqual(['label', 'body'])
+		expect(plan.skipped).toEqual([])
+	})
+
+	it('names what the bake would skip, without a renderer', async () => {
+		const cases = [
+			{ options: { doubleSided: true }, skipped: [['label', 'double-sided']] },
+			{
+				options: { animatedParent: true, staticBody: true },
+				skipped: [
+					['label', 'animated'],
+					['body', 'moving-shadows']
+				]
+			},
+			{
+				options: { cutout: true, ktx2Mask: true, staticBody: true },
+				skipped: [
+					['label', 'cutout-shadows'],
+					['body', 'cutout-shadows']
+				]
+			},
+			{ options: { unlit: true }, skipped: [['label', 'unlit']] }
+		]
+		for (const { options, skipped } of cases) {
+			const plan = await planLightBake(cardDocument(options))
+
+			expect(plan.targets).toEqual([])
+			expect(
+				plan.skipped.map(({ material: each, reason }) => [
+					each.getName(),
+					reason
+				])
+			).toEqual(skipped)
+		}
+	})
+
+	it('is the plan the bake runs', async () => {
+		const options = { animatedParent: true, staticBody: true }
+		const plan = await planLightBake(cardDocument(options))
+		const baked = await bakeLightsIntoDocument(
+			cardDocument(options),
+			lighting(),
+			noRenderer
+		)
+
+		expect(baked.skipped).toEqual(
+			plan.skipped.map(({ material: each, reason }) => ({
+				material: each.getName(),
+				reason
+			}))
+		)
 	})
 })

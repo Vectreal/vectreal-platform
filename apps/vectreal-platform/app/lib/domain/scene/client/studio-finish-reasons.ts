@@ -7,6 +7,7 @@ import type {
 import type {
 	BakeFailureReason,
 	BakeRecovery,
+	OcclusionBakeReport,
 	OcclusionBakeSkipReason
 } from '@vctrl/core/occlusion-bake'
 
@@ -258,4 +259,18 @@ export function nothingCaption(reports: BakeReports | undefined) {
 	if (!top) return undefined
 	const count = top.materials.length
 	return `${count} material${count === 1 ? '' : 's'}: ${BAKE_SKIP_REASONS[top.reason]}`
+}
+
+/** What the finish says when no material on the model can take it. */
+export const NOTHING_TO_FINISH =
+	'No material on this model can take the studio finish.'
+
+/**
+ * Why one bake can take no material on this model, as its plan says before
+ * anything is drawn: the reason most materials share. None while it can
+ * take one.
+ */
+export function ineligibleCaption(plan: OcclusionBakeReport) {
+	if (plan.baked.length > 0) return undefined
+	return nothingCaption({ occlusion: plan }) ?? NOTHING_TO_FINISH
 }

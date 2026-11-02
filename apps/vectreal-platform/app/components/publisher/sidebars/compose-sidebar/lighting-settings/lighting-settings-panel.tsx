@@ -8,6 +8,7 @@ import { valueMappings } from '@shared/utils'
 import {
 	ENVIRONMENT_KEYS,
 	LIGHTING_SETUPS,
+	litLights,
 	resolveLighting,
 	type EnvironmentKey,
 	type EnvironmentResolution,
@@ -39,7 +40,11 @@ import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import { ThumbnailGrid } from './thumbnail-grid'
 import { useBakePreview } from './use-bake-preview'
 import { useLightingDraft } from './use-lighting-draft'
-import { nothingCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
+import { useStudioFinishPlan } from './use-studio-finish-plan'
+import {
+	ineligibleCaption,
+	nothingCaption
+} from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import {
 	environmentThumbnail,
 	lightingSetupThumbnail
@@ -121,8 +126,45 @@ const LightingSettings = () => {
 	const setup = matchingSetup(lighting)
 	const enabledLights = resolved.lights.filter((light) => light.enabled)
 
-	const depth = occlusion.mode === 'baked'
-	const status = finishStatus(bakePreview.bakesAnything, bakePreview.preview)
+	// Said before any preview: a bake no material can take is off, and why.
+	const plan = useStudioFinishPlan()
+	const depthCaption = plan && ineligibleCaption(plan.occlusion)
+	const lightsCaption = plan && ineligibleCaption(plan.lights)
+	// Saved as the finish's, so live occlusion stays out of it either way.
+	const depthSaved = occlusion.mode === 'baked'
+	const depth = depthSaved && !depthCaption
+	// A light that is on and gives light, as publishing decides it.
+	const drawsLight = litLights(resolved).length > 0
+	// What adding the finish turns on: each bake that can take a material,
+	// the lights only while one is on to draw.
+	const addable = {
+		depth: !depthCaption,
+		lights: !lightsCaption && drawsLight
+	}
+	// Asked for and nothing it asks for can run, or not asked for and adding
+	// it would turn nothing on: there is nothing to finish either way.
+	const takesAnything = bakePreview.asksAnything
+		? bakePreview.bakesAnything
+		: addable.depth || addable.lights
+	// Why, from the bakes in question: those asked for, else those the plan
+	// rules out. Lights waiting for a light have their own caption.
+	const nothingReports = plan && {
+		occlusion: (bakePreview.asksAnything ? depthSaved : true)
+			? plan.occlusion
+			: undefined,
+		lights: (
+			bakePreview.asksAnything
+				? bake.lights && drawsLight
+				: Boolean(lightsCaption)
+		)
+			? plan.lights
+			: undefined
+	}
+	const status = finishStatus(
+		bakePreview.asksAnything,
+		bakePreview.preview,
+		takesAnything
+	)
 
 	/*
 	  Adding the finish previews it too, once the render with the new lighting
@@ -142,8 +184,12 @@ const LightingSettings = () => {
 	}, [previewQueued, bakesAnything, canBake, drawPreview])
 
 	const addFinish = () => {
+		// Depth that cannot bake is left as it is, not switched to live.
 		commit((prev) =>
-			withFinish(prev, { depth: true, lights: enabledLights.length > 0 })
+			withFinish(prev, {
+				depth: addable.depth || undefined,
+				lights: addable.lights
+			})
 		)
 		setPreviewQueued(true)
 	}
@@ -207,7 +253,11 @@ const LightingSettings = () => {
 				<StudioFinishCard
 					status={status}
 					progress={bakePreview.preview?.progress}
-					nothingCaption={nothingCaption(bakePreview.preview?.reports)}
+					nothingCaption={nothingCaption(
+						takesAnything
+							? bakePreview.preview?.reports
+							: (nothingReports ?? undefined)
+					)}
 					canPreview={bakePreview.canBake}
 					isOptimizing={bakePreview.isOptimizing}
 					onAdd={addFinish}
@@ -323,19 +373,23 @@ const LightingSettings = () => {
 					label="Depth"
 					description="Darkens creases and tight gaps. Any glTF viewer shows it."
 					checked={depth}
+					disabled={Boolean(depthCaption)}
 					onCheckedChange={(on) =>
 						commit((prev) => withFinish(prev, { depth: on }))
 					}
 				/>
+				{depthCaption && <PanelCaption>{depthCaption}</PanelCaption>}
 				<Toggle
 					label="Studio lights"
 					description="Their light and soft shadows, written into a light map. Other glTF viewers show the model without them."
-					checked={bake.lights}
+					checked={bake.lights && !lightsCaption}
+					disabled={Boolean(lightsCaption)}
 					onCheckedChange={(lights) =>
 						commit((prev) => withFinish(prev, { lights }))
 					}
 				/>
-				{bake.lights && enabledLights.length === 0 && (
+				{lightsCaption && <PanelCaption>{lightsCaption}</PanelCaption>}
+				{!lightsCaption && bake.lights && enabledLights.length === 0 && (
 					<PanelCaption>Turn a light on to draw it in.</PanelCaption>
 				)}
 
@@ -353,12 +407,12 @@ const LightingSettings = () => {
 				<SettingGroup
 					label="Live occlusion"
 					description={
-						depth
+						depthSaved
 							? 'Depth from the studio finish takes its place.'
 							: "Darkens creases as the view moves, drawn every frame. 'Only when still' skips it while orbiting."
 					}
 				>
-					{!depth && (
+					{!depthSaved && (
 						<ToggleGroup
 							type="single"
 							aria-label="Live occlusion"

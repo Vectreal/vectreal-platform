@@ -20,17 +20,23 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * of Draco and meshopt ships it cheapest.
  * Each is seconds of CPU per texture or mesh, and on the main thread that was
  * a frozen publisher.
+ *
+ * It also answers which materials each bake could take, with the planners
+ * the bakes run, before anything is baked.
  */
 
 import {
 	bakeLightsIntoDocument,
-	DEFAULT_LIGHT_BAKE_OPTIONS
+	DEFAULT_LIGHT_BAKE_OPTIONS,
+	planLightBake
 } from '@vctrl/core/light-bake'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import {
 	bakeOcclusionIntoDocument,
+	bakeReport,
 	bakeWithRecovery,
-	DEFAULT_OCCLUSION_BAKE_OPTIONS
+	DEFAULT_OCCLUSION_BAKE_OPTIONS,
+	planOcclusionBake
 } from '@vctrl/core/occlusion-bake'
 import { WebGLRenderer } from 'three'
 
@@ -42,10 +48,15 @@ import {
 import type {
 	PublishExportMessage,
 	PublishExportOutcome,
-	PublishExportRequest
+	PublishExportRequest,
+	StudioFinishPlanMessage,
+	StudioFinishPlanRequest
 } from './publish-export.worker.types'
 
-function post(message: PublishExportMessage, transfer: Transferable[] = []) {
+function post(
+	message: PublishExportMessage | StudioFinishPlanMessage,
+	transfer: Transferable[] = []
+) {
 	self.postMessage(message, { transfer })
 }
 
@@ -63,11 +74,43 @@ function bakeProgress(stage: 'occlusion' | 'lights') {
 	}
 }
 
-self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
-	const { type, buffer, draco, dracoWorthApplying, ktx2, occlusion, lights } =
-		event.data
-	if (type !== 'export') return
+self.onmessage = (
+	event: MessageEvent<PublishExportRequest | StudioFinishPlanRequest>
+) => {
+	if (event.data.type === 'plan') return planStudioFinish(event.data)
+	if (event.data.type === 'export') return exportForPublish(event.data)
+}
 
+/** Which materials each bake would take, as the bakes themselves plan it. */
+async function planStudioFinish({ buffer }: StudioFinishPlanRequest) {
+	try {
+		const document = await new ModelExporter().readGlbDocument(
+			new Uint8Array(buffer)
+		)
+		const occlusion = planOcclusionBake(document)
+		const lights = await planLightBake(document)
+		post({
+			type: 'done',
+			occlusion: bakeReport(document, occlusion.targets, occlusion.skipped),
+			lights: bakeReport(document, lights.targets, lights.skipped)
+		})
+	} catch (error) {
+		post({
+			type: 'error',
+			message:
+				error instanceof Error ? error.message : 'Studio finish plan failed'
+		})
+	}
+}
+
+async function exportForPublish({
+	buffer,
+	draco,
+	dracoWorthApplying,
+	ktx2,
+	occlusion,
+	lights
+}: PublishExportRequest) {
 	let occlusionReport: PublishExportOutcome['occlusion']
 	let lightsReport: PublishExportOutcome['lights']
 	// On a canvas nothing displays. Each bake attempt makes its own, only when

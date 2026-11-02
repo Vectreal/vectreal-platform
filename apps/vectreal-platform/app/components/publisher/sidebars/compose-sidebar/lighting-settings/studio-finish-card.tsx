@@ -12,11 +12,16 @@ import type { BakePreview } from '../../../../../lib/stores/publisher-config-sto
 export type FinishStatus =
 	'off' | 'on' | 'drawing' | 'applied' | 'compare' | 'nothing' | 'failed'
 
-/** Where the studio finish stands, from what the lighting asks and the preview. */
+/**
+ * Where the studio finish stands, from what the lighting asks, the preview,
+ * and whether the plan found any material it could take.
+ */
 export function finishStatus(
 	requested: boolean,
-	preview: BakePreview | null
+	preview: BakePreview | null,
+	takesAnything = true
 ): FinishStatus {
+	if (!takesAnything) return 'nothing'
 	if (!requested) return 'off'
 	if (!preview) return 'on'
 	if (preview.status === 'baking') return 'drawing'

@@ -5,7 +5,10 @@ import type {
 	PublishExportMessage,
 	PublishExportOutcome,
 	PublishExportProgress,
-	PublishExportRequest
+	PublishExportRequest,
+	StudioFinishPlan,
+	StudioFinishPlanMessage,
+	StudioFinishPlanRequest
 } from '../../../../workers/publish-export.worker.types'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
 
@@ -41,6 +44,41 @@ export async function runPublishExportInWorker(
 	}
 }
 
+const createPublishWorker = () =>
+	new Worker(
+		new URL('../../../../workers/publish-export.worker.ts', import.meta.url),
+		{ type: 'module' }
+	)
+
+/**
+ * Which materials each bake of the studio finish could take in the working
+ * GLB, planned in the publish worker by the planners the bakes run. Planning
+ * reads every triangle's UVs, a few hundred milliseconds on a large model,
+ * so it stays off the main thread.
+ */
+export function planStudioFinishInWorker(
+	glb: Uint8Array,
+	timeoutMs = PUBLISH_EXPORT_TIMEOUT_MS
+): Promise<StudioFinishPlan> {
+	const buffer = glb.slice().buffer as ArrayBuffer
+	const message: StudioFinishPlanRequest = { type: 'plan', buffer }
+	return runWorker<StudioFinishPlanMessage, StudioFinishPlan>(
+		createPublishWorker,
+		{
+			message,
+			transfer: [buffer],
+			timeoutMs,
+			onProgress: () => {},
+			toResult: ({ occlusion, lights }) => ({ occlusion, lights }),
+			errors: {
+				timedOut: `Planning the studio finish timed out after ${timeoutMs / 1000}s`,
+				undeserializable: 'Publish worker sent an undeserializable message',
+				crashed: 'Publish worker crashed'
+			}
+		}
+	)
+}
+
 /** One run, in a worker `runWorker` owns, handed a copy of the GLB to keep. */
 function runPublishExportOnce(
 	{ glb, ...request }: PublishExportInput,
@@ -51,14 +89,7 @@ function runPublishExportOnce(
 	const message: PublishExportRequest = { type: 'export', buffer, ...request }
 
 	return runWorker<PublishExportMessage, PublishExportOutcome>(
-		() =>
-			new Worker(
-				new URL(
-					'../../../../workers/publish-export.worker.ts',
-					import.meta.url
-				),
-				{ type: 'module' }
-			),
+		createPublishWorker,
 		{
 			message,
 			transfer: [buffer],

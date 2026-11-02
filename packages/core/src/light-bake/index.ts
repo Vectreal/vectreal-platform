@@ -1,5 +1,6 @@
 export {
 	bakeLightsIntoDocument,
+	planLightBake,
 	writeLightmaps,
 	type LightBakeReport,
 	type LightmapImage
