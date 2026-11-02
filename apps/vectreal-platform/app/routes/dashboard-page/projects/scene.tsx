@@ -8,7 +8,8 @@ import {
 	InlineEditableMetadataField,
 	SceneAside,
 	ScenePreviewOverlay,
-	SceneRenderFailure
+	SceneRenderFailure,
+	SceneShadowNote
 } from '../../../components/dashboard'
 import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
@@ -36,6 +37,7 @@ import {
 	buildPreviewSceneEndpoint
 } from '../../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
+import { isPublishedShadowNotStored } from '../../../lib/domain/scene/ground-bake-note'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import { parseSceneRouteParams } from '../../../lib/domain/scene/scene-route-params'
 import { resolveSceneSizeBytes } from '../../../lib/domain/scene/scene-stored-size'
@@ -144,6 +146,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			? null
 			: (settingsData?.settings?.presentation ?? {})
 
+	const shadowNotStored = isPublishedShadowNotStored({
+		isPublished: Boolean(publishedMeta),
+		manifest
+	})
+
 	const additionalMetrics = stats?.additionalMetrics as
 		SceneAdditionalMetrics | null | undefined
 
@@ -186,6 +193,7 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		),
 		manifest,
 		presentation,
+		shadowNotStored,
 		canDeleteScene: canDeleteScene(membership),
 		canUpdateScene: canUpdateScene(membership)
 	})
@@ -234,6 +242,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		textureUrls,
 		publishState,
 		presentation,
+		shadowNotStored,
 		canDeleteScene,
 		canUpdateScene
 	} = loaderData
@@ -404,6 +413,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						/>
 						<ScenePreviewOverlay previewPath={previewPath} />
 					</section>
+					{shadowNotStored ? <SceneShadowNote /> : null}
 					<DetailPanelSection surface="raised" contentClassName="space-y-6">
 						<header className="space-y-4">
 							{/*
