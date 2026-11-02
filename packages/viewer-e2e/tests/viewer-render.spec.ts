@@ -119,6 +119,57 @@ test('a visitor can leave the camera a hotspot flew them to', async ({
 	await expect(marker).toHaveAttribute('aria-expanded', 'false')
 })
 
+test('a camera switch flies in a host that follows camera_changed', async ({
+	page
+}) => {
+	test.setTimeout(60000)
+
+	await page.goto('/?camera-echo')
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true && !!window.__CAMERA_ECHO__,
+		undefined,
+		{ timeout: 30000 }
+	)
+
+	// Where the camera stood before the switch: the bounds fit may have moved
+	// the opening camera off its stored pose.
+	const start = await page.evaluate(
+		async () => (await window.__CAMERA_ECHO__?.())?.position ?? null
+	)
+	expect(start).not.toBeNull()
+
+	await page.getByRole('button', { name: 'Next camera' }).click()
+
+	// Where it stands every frame until it lands. The 2000 ms move can take
+	// several seconds of frames under software GL on a loaded runner.
+	const side = [6, 0.5, 0]
+	const samples = await page.evaluate(async (side) => {
+		const positions: number[][] = []
+		const until = performance.now() + 15000
+		while (performance.now() < until) {
+			const snapshot = await window.__CAMERA_ECHO__?.()
+			if (snapshot) {
+				positions.push(snapshot.position)
+				const [x, y, z] = snapshot.position
+				if (Math.hypot(x - side[0], y - side[1], z - side[2]) < 0.05) break
+			}
+			await new Promise((resolve) => requestAnimationFrame(resolve))
+		}
+		return positions
+	}, side)
+
+	const distance = (a: number[], b: number[]) =>
+		Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+	const from = start as number[]
+	expect(distance(from, side)).toBeGreaterThan(2)
+	// A switch that lands at once has no pose between the two ends.
+	const between = samples.filter(
+		(position) => distance(position, from) > 1 && distance(position, side) > 1
+	)
+	expect(between.length, JSON.stringify(samples)).toBeGreaterThan(0)
+	expect(distance(samples[samples.length - 1], side)).toBeLessThan(0.05)
+})
+
 test('a scene whose environment map cannot be downloaded still renders', async ({
 	page
 }) => {
