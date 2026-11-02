@@ -5,7 +5,7 @@ import {
 	failuresToReport,
 	failWith,
 	skippedByReason,
-	topSkipCaption,
+	nothingCaption,
 	lightBakeWarning,
 	occlusionBakeWarning,
 	STUDIO_FINISH_FAILURES,
@@ -32,7 +32,7 @@ describe('studioFinishFailure', () => {
 		).toEqual({ reason: 'timed-out', detail: 'whatever' })
 		expect(
 			studioFinishFailure(new WorkerRunError('crashed', 'Uncaught RangeError'))
-		).toEqual({ reason: 'out-of-memory', detail: 'Uncaught RangeError' })
+		).toEqual({ reason: 'worker-stopped', detail: 'Uncaught RangeError' })
 	})
 
 	it('calls anything else unexpected, keeping its words for the log', () => {
@@ -75,6 +75,14 @@ describe('failuresToReport', () => {
 			{ reason: 'no-webgl', detail: 'no context' },
 			{ reason: 'unexpected', detail: 'bug' }
 		])
+	})
+
+	it('reports a stopped worker, which may be a failed load or a bug', () => {
+		expect(
+			failuresToReport({
+				failure: { reason: 'worker-stopped', detail: '' }
+			})
+		).toEqual([{ reason: 'worker-stopped', detail: '' }])
 	})
 
 	it('has nothing to report for bakes that worked', () => {
@@ -191,10 +199,10 @@ describe('skippedByReason', () => {
 	})
 })
 
-describe('topSkipCaption', () => {
+describe('nothingCaption', () => {
 	it('names the reason most materials share, and how many', () => {
 		expect(
-			topSkipCaption({
+			nothingCaption({
 				occlusion: {
 					baked: [],
 					skipped: [
@@ -214,7 +222,7 @@ describe('topSkipCaption', () => {
 
 	it('speaks of one material as one', () => {
 		expect(
-			topSkipCaption({
+			nothingCaption({
 				occlusion: {
 					baked: [],
 					skipped: [{ material: 'Logo', reason: 'unlit' }]
@@ -223,13 +231,22 @@ describe('topSkipCaption', () => {
 		).toBe(`1 material: ${BAKE_SKIP_REASONS.unlit}`)
 	})
 
-	it('has no caption when nothing was skipped', () => {
+	it('names a failed bake before what was skipped', () => {
 		expect(
-			topSkipCaption({ occlusion: { baked: [], skipped: [] } })
-		).toBeUndefined()
+			nothingCaption({
+				occlusion: { failed: 'no-webgl', detail: 'x' },
+				lights: {
+					baked: [],
+					skipped: [{ material: 'Body', reason: 'no-uv0' }]
+				}
+			})
+		).toBe(STUDIO_FINISH_FAILURES['no-webgl'].message)
+	})
+
+	it('has no caption when nothing failed or was skipped', () => {
 		expect(
-			topSkipCaption({ occlusion: { failed: 'no-webgl', detail: 'x' } })
+			nothingCaption({ occlusion: { baked: [], skipped: [] } })
 		).toBeUndefined()
-		expect(topSkipCaption(undefined)).toBeUndefined()
+		expect(nothingCaption(undefined)).toBeUndefined()
 	})
 })

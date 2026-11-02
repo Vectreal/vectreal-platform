@@ -19,8 +19,12 @@ export type StudioFinishFailureReason =
 	| BakeFailureReason
 	/** The export ran past its budget, so it was stopped. */
 	| 'timed-out'
-	/** The worker died, which is the browser running out of memory. */
-	| 'out-of-memory'
+	/**
+	 * The worker stopped twice without answering: most often the browser out
+	 * of memory, but a script that failed to load or an uncaught bug ends the
+	 * same way, so it is also reported.
+	 */
+	| 'worker-stopped'
 	/** The model could not be turned into a file, or the result read back. */
 	| 'unprepared'
 
@@ -37,40 +41,41 @@ type BakeReports = Pick<PublishExportOutcome, 'occlusion' | 'lights'>
 export const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
 
 /**
- * What the author reads for each failure, and whether it is theirs to act on
- * or a fault to report: a browser without WebGL 2, or a bug.
+ * What the author reads for each failure, and whether it goes to error
+ * tracking: a browser without WebGL 2, a bug, or a failure that may be one.
+ * What only the author can fix (a reset, a scene too heavy) is not.
  */
 export const STUDIO_FINISH_FAILURES = {
 	'no-webgl': {
 		message:
 			"This browser can't draw the studio finish. Turn on hardware acceleration or try another browser.",
-		kind: 'fatal'
+		reported: true
 	},
 	'gpu-reset': {
 		message:
 			'The graphics card reset while drawing. Close other heavy tabs and try again.',
-		kind: 'action'
+		reported: false
 	},
 	'timed-out': {
 		message: `Drawing took over ${PUBLISH_EXPORT_TIMEOUT_MS / 60_000} minutes. Try depth alone, fewer lights or a lighter model.`,
-		kind: 'action'
+		reported: false
 	},
-	'out-of-memory': {
+	'worker-stopped': {
 		message:
-			'The browser ran out of memory while drawing. Close other tabs and try again.',
-		kind: 'action'
+			'The browser stopped the drawing, often for lack of memory. Close other tabs and try again.',
+		reported: true
 	},
 	unprepared: {
 		message: "The model couldn't be prepared for the studio finish.",
-		kind: 'fatal'
+		reported: true
 	},
 	unexpected: {
 		message: 'Something went wrong while drawing. Try again.',
-		kind: 'fatal'
+		reported: true
 	}
 } as const satisfies Record<
 	StudioFinishFailureReason,
-	{ message: string; kind: 'action' | 'fatal' }
+	{ message: string; reported: boolean }
 >
 
 /** Why a material took no bake, and what would let it. */
@@ -97,9 +102,15 @@ export const BAKE_RECOVERY_NOTES = {
 	'lower-detail': 'Drawn at lower detail after a graphics reset.'
 } as const satisfies Record<BakeRecovery, string | undefined>
 
-/** A failure that already knows its reason, thrown to the one place that shows it. */
+/**
+ * A failure that already knows its reason, thrown to the one place that shows
+ * it, with what each bake reported when every one of them failed.
+ */
 export class StudioFinishError extends Error {
-	constructor(readonly failure: StudioFinishFailure) {
+	constructor(
+		readonly failure: StudioFinishFailure,
+		readonly reports?: BakeReports
+	) {
 		super(failure.detail)
 		this.name = 'StudioFinishError'
 	}
@@ -121,7 +132,7 @@ export function studioFinishFailure(error: unknown): StudioFinishFailure {
 	const detail = messageOf(error)
 	if (error instanceof WorkerRunError) {
 		if (error.failure === 'timed-out') return { reason: 'timed-out', detail }
-		if (error.failure === 'crashed') return { reason: 'out-of-memory', detail }
+		if (error.failure === 'crashed') return { reason: 'worker-stopped', detail }
 	}
 	return { reason: 'unexpected', detail }
 }
@@ -199,7 +210,7 @@ export function failuresToReport({
 		passFailure(reports?.lights)
 	]
 		.filter((found) => found !== undefined)
-		.filter(({ reason }) => STUDIO_FINISH_FAILURES[reason].kind === 'fatal')
+		.filter(({ reason }) => STUDIO_FINISH_FAILURES[reason].reported)
 }
 
 /** Materials a bake skipped for one reason, in the order the file lists them. */
@@ -229,10 +240,14 @@ export function skippedByReason(
 }
 
 /**
- * The one line that says why nothing took the finish: the reason most
- * materials share, in its own words. None when nothing was skipped.
+ * The one line that says why nothing took the finish: a bake that failed,
+ * which the author may be able to fix, else the reason most materials share,
+ * in its own words. None when nothing failed or was skipped.
  */
-export function topSkipCaption(reports: BakeReports | undefined) {
+export function nothingCaption(reports: BakeReports | undefined) {
+	const failure =
+		passFailure(reports?.occlusion) ?? passFailure(reports?.lights)
+	if (failure) return STUDIO_FINISH_FAILURES[failure.reason].message
 	const [top] = skippedByReason(reports?.occlusion, reports?.lights)
 	if (!top) return undefined
 	const count = top.materials.length

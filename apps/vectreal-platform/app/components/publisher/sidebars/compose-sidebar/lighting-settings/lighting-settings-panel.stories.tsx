@@ -13,7 +13,7 @@ import {
 import { BakeSection } from './bake-section'
 import LightingSettings from './lighting-settings-panel'
 import { finishStatus, StudioFinishCard } from './studio-finish-card'
-import { topSkipCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
+import { nothingCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { type BakePreview } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownView } from '../../drill-down'
@@ -282,7 +282,7 @@ export const FinishCardStates: Story = {
 						<DrillDownView id="root">
 							<StudioFinishCard
 								status={finishStatus(index > 0, state.preview)}
-								nothingCaption={topSkipCaption(state.preview?.reports)}
+								nothingCaption={nothingCaption(state.preview?.reports)}
 								canPreview={state.canBake}
 								isOptimizing={state.isOptimizing ?? false}
 								onAdd={() => {}}

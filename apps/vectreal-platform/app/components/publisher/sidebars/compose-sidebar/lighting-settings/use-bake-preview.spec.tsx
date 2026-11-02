@@ -441,7 +441,29 @@ describe('the bake preview', () => {
 		)
 	})
 
-	it('says the browser ran out of memory when the worker crashed twice', async () => {
+	it('reports a fatal failure of the second bake when the first failed for a reason the author can fix', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: { failed: 'gpu-reset', detail: 'reset' },
+			lights: { failed: 'unexpected', detail: 'undefined is not a function' }
+		})
+		const { store, hook } = setup()
+		act(() =>
+			store.set(lightingAtom, { ...litLighting, occlusion: { mode: 'baked' } })
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview).toMatchObject({
+			status: 'failed',
+			failure: { reason: 'gpu-reset' }
+		})
+		expect(lastReported()?.message).toBe(
+			'Studio finish unexpected: undefined is not a function'
+		)
+	})
+
+	it('says the browser stopped the drawing when the worker crashed twice, and reports it', async () => {
 		mocks.runPublishExportInWorker.mockRejectedValue(
 			new WorkerRunError('crashed', 'Publish worker crashed')
 		)
@@ -451,7 +473,7 @@ describe('the bake preview', () => {
 
 		expect(hook.result.current.preview.preview).toMatchObject({
 			status: 'failed',
-			failure: { reason: 'out-of-memory', detail: 'Publish worker crashed' }
+			failure: { reason: 'worker-stopped', detail: 'Publish worker crashed' }
 		})
 	})
 
@@ -676,6 +698,39 @@ describe('showing what a publish exported', () => {
 			shown: false,
 			outcome
 		})
+	})
+	it('shows a publish whose every bake failed as a failed preview, with why', async () => {
+		const failedOutcome = {
+			buffer: new ArrayBuffer(8),
+			occlusion: { failed: 'no-webgl', detail: 'Error creating WebGL context.' }
+		}
+		const { store, show: showFinish } = show(null)
+
+		await act(() => showFinish(source, failedOutcome as never))
+
+		expect(store.get(bakePreviewAtom)).toMatchObject({
+			status: 'failed',
+			source,
+			failure: { reason: 'no-webgl', detail: 'Error creating WebGL context.' }
+		})
+	})
+
+	it('leaves a newer request in place when a published finish failed', async () => {
+		const newer: BakePreview = {
+			status: 'baking',
+			source: { ...source, bakes: 'moved a light' },
+			shown: true
+		}
+		const { store, show: showFinish } = show(newer)
+
+		await act(() =>
+			showFinish(source, {
+				buffer: new ArrayBuffer(8),
+				occlusion: { failed: 'unexpected', detail: 'x' }
+			} as never)
+		)
+
+		expect(store.get(bakePreviewAtom)).toBe(newer)
 	})
 })
 

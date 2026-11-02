@@ -39,7 +39,7 @@ import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import { ThumbnailGrid } from './thumbnail-grid'
 import { useBakePreview } from './use-bake-preview'
 import { useLightingDraft } from './use-lighting-draft'
-import { topSkipCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
+import { nothingCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import {
 	environmentThumbnail,
 	lightingSetupThumbnail
@@ -207,7 +207,7 @@ const LightingSettings = () => {
 				<StudioFinishCard
 					status={status}
 					progress={bakePreview.preview?.progress}
-					nothingCaption={topSkipCaption(bakePreview.preview?.reports)}
+					nothingCaption={nothingCaption(bakePreview.preview?.reports)}
 					canPreview={bakePreview.canBake}
 					isOptimizing={bakePreview.isOptimizing}
 					onAdd={addFinish}

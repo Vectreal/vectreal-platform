@@ -155,7 +155,7 @@ async function finishedPreview(
 	)
 	const failure = passFailure(outcomes[0])
 	if (failure && outcomes.every((report) => 'failed' in report)) {
-		throw new StudioFinishError(failure)
+		throw new StudioFinishError(failure, reports)
 	}
 	const { scene } = await loader
 		.loadToThreeJS(
@@ -170,6 +170,24 @@ async function finishedPreview(
 		reports,
 		outcome,
 		durationMs
+	}
+}
+
+/** A preview that drew nothing, with why, and every bake's report it has. */
+function failedPreview(
+	source: BakePreview['source'],
+	error: unknown
+): BakePreview {
+	const failure = studioFinishFailure(error)
+	console.warn('Studio finish failed:', failure)
+	return {
+		status: 'failed',
+		source,
+		shown: true,
+		failure,
+		...(error instanceof StudioFinishError && error.reports
+			? { reports: error.reports }
+			: {})
 	}
 }
 
@@ -271,8 +289,14 @@ export function useShowPublishedFinish() {
 					// One of the same export still drawing is dropped when it lands.
 					return { ...next, shown: current?.shown ?? true }
 				})
-			} catch {
-				// Every bake failed; the publish already warned about it.
+			} catch (error) {
+				// Every bake failed. The publish already warned about it; the
+				// preview says so too, as one that failed would.
+				setPreview((current) =>
+					current && current.source.bakes !== source.bakes
+						? current
+						: failedPreview(source, error)
+				)
 			}
 		},
 		[loader, setPreview]
@@ -416,9 +440,7 @@ export function useBakePreview() {
 				)
 			)
 		} catch (error) {
-			const failure = studioFinishFailure(error)
-			console.warn('Studio finish preview failed:', failure)
-			settle({ status: 'failed', source, shown: true, failure })
+			settle(failedPreview(source, error))
 		}
 	}, [
 		publishExport,

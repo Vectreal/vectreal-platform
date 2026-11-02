@@ -14,7 +14,7 @@ import LightingSettings from './lighting-settings-panel'
 import { finishStatus, StudioFinishCard } from './studio-finish-card'
 import {
 	BAKE_SKIP_REASONS,
-	topSkipCaption
+	nothingCaption
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownView } from '../../drill-down'
@@ -121,7 +121,7 @@ describe('the card when nothing took the finish', () => {
 		)
 
 	it('says why in one line', () => {
-		const caption = topSkipCaption({
+		const caption = nothingCaption({
 			occlusion: {
 				baked: [],
 				skipped: [
