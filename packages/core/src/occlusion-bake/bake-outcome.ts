@@ -73,11 +73,16 @@ const isReset = (error: unknown, renderer: WebGLRenderer | undefined) =>
   stands.
 */
 function release(renderer: WebGLRenderer | undefined) {
-	try {
-		renderer?.dispose()
-		renderer?.forceContextLoss()
-	} catch {
-		// Nothing left to free.
+	// Apart, so a dispose that throws still lets the context go.
+	for (const free of [
+		() => renderer?.dispose(),
+		() => renderer?.forceContextLoss()
+	]) {
+		try {
+			free()
+		} catch {
+			// Nothing left to free.
+		}
 	}
 }
 

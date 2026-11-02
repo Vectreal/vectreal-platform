@@ -172,9 +172,11 @@ describe('bakeWithRecovery', () => {
 		}
 	})
 
-	it('still resolves when freeing a renderer throws', async () => {
+	it('still resolves, and lets the context go, when dispose throws', async () => {
+		const made: ReturnType<typeof fakeRenderer>[] = []
 		const make = vi.fn(() => {
 			const renderer = fakeRenderer()
+			made.push(renderer)
 			renderer.dispose.mockImplementation(() => {
 				throw new Error('context already gone')
 			})
@@ -189,6 +191,7 @@ describe('bakeWithRecovery', () => {
 			OPTIONS
 		)
 		expect(result).toEqual({ baked: ['Body'], skipped: [] })
+		expect(made[0].forceContextLoss).toHaveBeenCalledOnce()
 	})
 
 	it('keeps the reset as the reason when the browser then refuses a new context', async () => {
