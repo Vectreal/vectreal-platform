@@ -35,6 +35,7 @@ import {
 	MeshBVHUniformStruct
 } from 'three-mesh-bvh'
 
+import { BakeError } from './bake-outcome'
 import {
 	cutoutVertexAlphas,
 	cutoutUvs,
@@ -218,7 +219,10 @@ export async function traceInUvSpace(
 	const gl = renderer.getContext() as WebGL2RenderingContext
 	const throwIfLost = () => {
 		if (contextLost || gl.isContextLost()) {
-			throw new Error(`The GPU reset while baking ${trace.label}`)
+			throw new BakeError(
+				'gpu-reset',
+				`The GPU reset while baking ${trace.label}`
+			)
 		}
 	}
 	// The bake's own GPU time, where the browser offers it: the wall clock also
