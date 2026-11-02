@@ -224,6 +224,10 @@ export default function App() {
 					onInteractionEvent={(event) => {
 						// The scene has framed and drawn: what the markers wait for.
 						if (event.type === 'viewer_ready') window.__VIEWER_READY__ = true
+						window.__VIEWER_EVENTS__ = [
+							...(window.__VIEWER_EVENTS__ ?? []),
+							event.type
+						]
 						setLastEvent(event.type)
 					}}
 					onCommandExecutorReady={() => {
