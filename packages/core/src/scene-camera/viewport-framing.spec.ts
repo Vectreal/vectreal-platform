@@ -305,6 +305,33 @@ describe('CameraFraming', () => {
 		).toBeGreaterThanOrEqual(live.z - 1e-9)
 	})
 
+	it('keeps an interrupted fit consistent when one end is clamped, so a small resize moves the camera a little', () => {
+		// A 2:1 viewport flying from a camera framed narrower than it (scale 1)
+		// to one framed at 3 (scale 1.5), interrupted half-way at scale 1.25.
+		const framing = new CameraFraming(2)
+		framing.show({ aspect: 0.5, scale: 1 })
+		framing.fly({ aspect: 3, scale: 1.5 })
+		framing.show(null, 0.5)
+		const view = at(12.5)
+
+		framing.refit(1.99, view)
+
+		// The view frames the 2.5 width on screen: 0.5% narrower, 0.5% farther.
+		expect(framing.view.scale).toBeCloseTo(2.5 / 1.99)
+		expect(view.position.z).toBeCloseTo((12.5 * 2.5) / 1.99 / 1.25)
+	})
+
+	it('frames an interrupted fit at the viewport as it is after a resize', () => {
+		// Opened on a 2:1 desktop, the window narrowed to 1:1, then a flight
+		// from fit 2 to fit 3 is interrupted half-way.
+		const framing = new CameraFraming(2)
+		framing.refit(1, at(10))
+		framing.fly({ aspect: 3, scale: 3 })
+		framing.show(null, 0.5)
+
+		expect(framing.view).toEqual({ aspect: 2.5, scale: 2.5 })
+	})
+
 	it('moves the interrupted start with the viewport from its blended fit', () => {
 		const framing = new CameraFraming(1)
 		framing.fly({ aspect: 3, scale: 3 })

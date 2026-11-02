@@ -150,6 +150,8 @@ export class CameraFraming {
 	view: ViewportFraming
 	/** The fit of the flight's destination while one plays. */
 	destination: ViewportFraming | null = null
+	/** The live viewport's aspect, as last given. */
+	private viewportAspect: number
 
 	/**
 	 * A view nothing has fitted yet (the live camera's own pose, or a bounds
@@ -159,11 +161,13 @@ export class CameraFraming {
 	 * browser's address bar collapsing, applied the whole jump at once.
 	 */
 	constructor(viewportAspect: number) {
+		this.viewportAspect = viewportAspect
 		this.view = framedAt(viewportAspect)
 	}
 
 	/** Starts over: see the constructor. */
 	reset(viewportAspect: number): void {
+		this.viewportAspect = viewportAspect
 		this.view = framedAt(viewportAspect)
 		this.destination = null
 	}
@@ -184,9 +188,9 @@ export class CameraFraming {
 	 *
 	 * When it replaces a flight still playing, the live pose lies part-way
 	 * between that flight's ends, so its fit is the blend at `progress`, the
-	 * interrupted flight's eased progress (see `blendAt`). Keeping the interrupted flight's start fit instead dropped
-	 * the destination's from the distance limits, and the new flight's first
-	 * frames clamped inward.
+	 * interrupted flight's eased progress (see `blendAt`). Keeping the
+	 * interrupted flight's start fit instead dropped the destination's from the
+	 * distance limits, and the new flight's first frames clamped inward.
 	 */
 	fly(framing: ViewportFraming | null, progress: number | null = null): void {
 		const from = this.blendAt(progress)
@@ -212,6 +216,7 @@ export class CameraFraming {
 		view: OrbitPose | null,
 		flight: { from: OrbitPose; to: OrbitPose } | null = null
 	): boolean {
+		this.viewportAspect = viewportAspect
 		if (flight && this.destination) {
 			const from = refitToViewport(
 				flight.from.position,
@@ -261,7 +266,16 @@ export class CameraFraming {
 
 	/**
 	 * The fit of the live pose: the view's, or part-way through a flight at
-	 * `progress`, the two ends' aspects and scales each blended linearly.
+	 * `progress`, the two ends' scales blended linearly, framed at the width
+	 * that shows on the live viewport.
+	 *
+	 * The aspect follows from the scale, so `framingScale(aspect, live)` gives
+	 * the scale back and the next refit starts from the pose as it is. Blending
+	 * the two ends' aspects as well disagreed with the scale whenever an end
+	 * was clamped (a camera framed narrower than the viewport sits at 1), and a
+	 * resize of half a percent then moved the camera by a fifth. At a scale of
+	 * 1 both ends are unfitted, so any aspect up to the live one is consistent,
+	 * and the blend of theirs keeps the cameras' own.
 	 *
 	 * Linear, because no flight puts the camera farther out than that: a
 	 * straight flight lerps the position, whose offset from the target is then
@@ -274,9 +288,13 @@ export class CameraFraming {
 		if (!this.destination || progress === null) return this.view
 		const t = Math.min(1, Math.max(0, progress))
 		const blend = (from: number, to: number) => from + (to - from) * t
+		const scale = blend(this.view.scale, this.destination.scale)
 		return {
-			aspect: blend(this.view.aspect, this.destination.aspect),
-			scale: blend(this.view.scale, this.destination.scale)
+			aspect:
+				scale > 1
+					? scale * this.viewportAspect
+					: blend(this.view.aspect, this.destination.aspect),
+			scale
 		}
 	}
 
