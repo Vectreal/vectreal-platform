@@ -52,8 +52,17 @@ export type PublishExportProgress =
 	| { stage: 'uvs' }
 	/** Textures encoded so far, out of `texturesTotal`, while KTX2 runs. */
 	| { stage: 'textures'; texturesDone: number; texturesTotal: number }
-	/** How much of a bake is drawn, 0 to 1. */
-	| { stage: 'occlusion' | 'lights'; fraction: number }
+	/**
+	 * How much of a bake is drawn, 0 to 1, and whether its GPU times slices
+	 * itself, once a bake has a renderer to ask. `ended` once the bake is
+	 * over, however it went: `fraction` stays at what it drew.
+	 */
+	| {
+			stage: 'occlusion' | 'lights'
+			fraction: number
+			gpuTimer?: boolean
+			ended?: true
+	  }
 
 /**
  * What one bake did, and how it recovered if the GPU reset under it, or why
