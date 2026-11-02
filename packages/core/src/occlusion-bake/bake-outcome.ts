@@ -41,7 +41,10 @@ export interface BakeDetail {
 	samples: number
 }
 
-/** Half the texels a side and half the rays: about an eighth of the work. */
+/**
+ * Half the texels a side and half the rays: a quarter of the texels, and half
+ * the rays each unless the bake already caps them lower.
+ */
 export function lowerDetail<Options extends BakeDetail>(
 	options: Options
 ): Options {
@@ -63,10 +66,25 @@ const isReset = (error: unknown, renderer: WebGLRenderer | undefined) =>
 	(error instanceof BakeError && error.reason === 'gpu-reset') ||
 	Boolean(renderer?.getContext().isContextLost())
 
+/*
+  Frees an attempt's renderer and its WebGL context: `dispose` leaves the
+  context alive until garbage collection, and a page gets about sixteen.
+  Whatever cleaning up throws on a context already gone, the bake's outcome
+  stands.
+*/
+function release(renderer: WebGLRenderer | undefined) {
+	try {
+		renderer?.dispose()
+		renderer?.forceContextLoss()
+	} catch {
+		// Nothing left to free.
+	}
+}
+
 /**
  * Runs a bake with the renderers it needs and repairs a GPU reset on its
  * own: once again as asked, then once at `lowerDetail`. Each attempt gets a
- * renderer of its own, made only if the bake asks for one and disposed
+ * renderer of its own, made only if the bake asks for one and released
  * however the attempt ends, so a reset never reaches the next attempt or the
  * next bake. Resolves either way: the report, with how it recovered if it
  * had to, or why it drew nothing.
@@ -84,7 +102,7 @@ export async function bakeWithRecovery<
 		{ options, recovered: 'retried' },
 		{ options: lowerDetail(options), recovered: 'lower-detail' }
 	]
-	let failure: BakeFailure = { failed: 'unexpected', detail: '' }
+	let reset: BakeFailure | undefined
 	for (const attempt of attempts) {
 		let renderer: WebGLRenderer | undefined
 		let rendererFailed = false
@@ -104,12 +122,14 @@ export async function bakeWithRecovery<
 				: report
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error)
-			if (rendererFailed) return { failed: 'no-webgl', detail }
+			// A browser may refuse new contexts for a while after a reset, so a
+			// renderer that cannot be made then is still the reset's doing.
+			if (rendererFailed) return reset ?? { failed: 'no-webgl', detail }
 			if (!isReset(error, renderer)) return { failed: 'unexpected', detail }
-			failure = { failed: 'gpu-reset', detail }
+			reset = { failed: 'gpu-reset', detail }
 		} finally {
-			renderer?.dispose()
+			release(renderer)
 		}
 	}
-	return failure
+	return reset!
 }

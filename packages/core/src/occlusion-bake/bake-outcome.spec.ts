@@ -10,8 +10,12 @@ const OPTIONS = { resolution: 512, samples: 256, distance: 0.25 }
 function fakeRenderer({ lost = false } = {}) {
 	return {
 		dispose: vi.fn(),
+		forceContextLoss: vi.fn(),
 		getContext: () => ({ isContextLost: () => lost })
-	} as unknown as WebGLRenderer & { dispose: ReturnType<typeof vi.fn> }
+	} as unknown as WebGLRenderer & {
+		dispose: ReturnType<typeof vi.fn>
+		forceContextLoss: ReturnType<typeof vi.fn>
+	}
 }
 
 /** Makes a fresh fake per call and keeps each one to inspect. */
@@ -150,6 +154,62 @@ describe('bakeWithRecovery', () => {
 		})
 		expect(bake).toHaveBeenCalledOnce()
 		expect(made[0].dispose).toHaveBeenCalledOnce()
+	})
+
+	it('releases each renderer’s WebGL context, not only its resources', async () => {
+		const { make, made } = rendererFactory()
+		await bakeWithRecovery(
+			async (renderer) => {
+				renderer()
+				if (made.length < 2) throw reset()
+				return { baked: [], skipped: [] }
+			},
+			make,
+			OPTIONS
+		)
+		for (const renderer of made) {
+			expect(renderer.forceContextLoss).toHaveBeenCalledOnce()
+		}
+	})
+
+	it('still resolves when freeing a renderer throws', async () => {
+		const make = vi.fn(() => {
+			const renderer = fakeRenderer()
+			renderer.dispose.mockImplementation(() => {
+				throw new Error('context already gone')
+			})
+			return renderer
+		})
+		const result = await bakeWithRecovery(
+			async (renderer) => {
+				renderer()
+				return { baked: ['Body'], skipped: [] }
+			},
+			make,
+			OPTIONS
+		)
+		expect(result).toEqual({ baked: ['Body'], skipped: [] })
+	})
+
+	it('keeps the reset as the reason when the browser then refuses a new context', async () => {
+		let calls = 0
+		const make = vi.fn(() => {
+			if (calls++ > 0)
+				throw new Error('Web page caused context loss and was blocked')
+			return fakeRenderer()
+		})
+		const result = await bakeWithRecovery(
+			async (renderer) => {
+				renderer()
+				throw reset()
+			},
+			make,
+			OPTIONS
+		)
+		expect(result).toEqual({
+			failed: 'gpu-reset',
+			detail: 'The GPU reset while baking x'
+		})
 	})
 })
 

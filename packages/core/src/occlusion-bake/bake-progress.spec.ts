@@ -82,7 +82,8 @@ function idleRenderer({ lost = false } = {}): WebGLRenderer {
 		clear: () => {},
 		render: () => {},
 		readRenderTargetPixels: () => {},
-		dispose: () => {}
+		dispose: () => {},
+		forceContextLoss: () => {}
 	} as unknown as WebGLRenderer
 }
 
