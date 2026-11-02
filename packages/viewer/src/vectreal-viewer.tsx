@@ -77,6 +77,10 @@ import {
 import { shouldShowCameraControls } from './components/scene/camera-controls-rule'
 import { type ClipExtentRegistry } from './components/scene/clip-planes'
 import EnvironmentPrewarm from './components/scene/environment-prewarm'
+import {
+	type LiveBakeSkipReason,
+	type LiveShadowBake
+} from './components/scene/live-bake-budget'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { prefersReducedMotion } from './components/scene/reduced-motion'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
@@ -449,6 +453,15 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	bakedShadow?: BakedShadow
 
 	/**
+	 * Who may bake the ground shadow live where no valid stored bake exists:
+	 * `always`, or `within-budget`, which draws a contact shadow instead on a
+	 * phone or tablet, or when one bake frame would issue more than
+	 * `LIVE_BAKE_DRAW_BUDGET` draw calls, and emits `shadow_bake_skipped`. For
+	 * surfaces that only show scenes. Default: `always`.
+	 */
+	liveShadowBake?: LiveShadowBake
+
+	/**
 	 * Receives a function that captures the settled shadow bake as a density PNG,
 	 * for persistence. Intended for editing surfaces that save scenes.
 	 */
@@ -602,6 +615,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		onHotspotPositionSetterReady,
 		staticShadowBake = false,
 		bakedShadow,
+		liveShadowBake,
 		onShadowBakeReady,
 		onShadowLightChange,
 		// Slots
@@ -888,6 +902,21 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		[noteCamera, onInteractionEvent]
 	)
 
+	const handleLiveBakeSkipped = useCallback(
+		({
+			reason,
+			estimatedDraws
+		}: {
+			reason: LiveBakeSkipReason
+			estimatedDraws: number
+		}) =>
+			handleInteractionEvent({
+				type: 'shadow_bake_skipped',
+				reason,
+				estimatedDraws
+			}),
+		[handleInteractionEvent]
+	)
 	const handleEnvironmentLoadFailed = useCallback(
 		(files: string[]) =>
 			handleInteractionEvent({ type: 'environment_load_failed', files }),
@@ -1196,6 +1225,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									staticBake={staticShadowBake}
 									bakedShadow={bakedShadow}
 									onShadowBakeReady={onShadowBakeReady}
+									liveBake={liveShadowBake}
+									onLiveBakeSkipped={handleLiveBakeSkipped}
 									clipExtents={clipExtents}
 								/>
 								<SceneHotspots

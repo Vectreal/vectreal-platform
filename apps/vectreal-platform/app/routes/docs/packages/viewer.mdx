@@ -30,6 +30,8 @@ pnpm add @vctrl/viewer
 present packages/viewer/package.json "type": "module"
 absent packages/viewer/package.json "require"
 present packages/viewer/src/vectreal-viewer.tsx type: 'hotspot_activated',
+present packages/viewer/src/vectreal-viewer.tsx type: 'shadow_bake_skipped',
+present packages/viewer/src/components/scene/live-bake-budget.ts LIVE_BAKE_DRAW_BUDGET = 30_000
 present packages/viewer/src/hooks/use-animation-runtime.ts type: 'animation_state_changed',
 present packages/viewer/src/components/scene/scene-animation.tsx type: 'animation_clip_finished',
 present packages/viewer/src/vectreal-viewer.tsx type: 'environment_load_failed',
@@ -142,7 +144,8 @@ present packages/viewer/src/components/animation-controls.tsx className={withHos
 | `onHotspotPositionSetterReady` | `(setter: HotspotPositionSetter \| null) => void` | No | Receives a setter that moves a marker without moving the hotspot, for a drag gizmo. Editing surfaces only |
 | `shadowLightEditable` | `boolean` | No | Renders an in-scene draggable handle for aiming the key light. Editing surfaces only. Deprecated: turn `lighting.environment.rotation` instead, which moves every light with the environment |
 | `staticShadowBake` | `boolean` | No | Bakes the accumulative shadow in one pass on mount instead of fading it in (default `false`) |
-| `bakedShadow` | `BakedShadow` | No | A persisted shadow bake to render instead of recomputing one |
+| `bakedShadow` | `BakedShadow` | No | A persisted shadow bake to render instead of recomputing one. A bake whose signature is from an earlier format is kept as long as it carries its `basis` |
+| `liveShadowBake` | `'always' \| 'within-budget'` | No | Where no valid stored bake exists, `within-budget` draws a contact shadow instead of baking live on a phone or tablet, or when one bake frame would issue more than `LIVE_BAKE_DRAW_BUDGET` (30,000) draw calls, and emits `shadow_bake_skipped`. Default `always` |
 | `popover` | `React.ReactNode` | No | Optional info popover slot. Its content is unmounted until the viewer reaches `ready`, after the loader's cross-fade |
 | `loader` | `React.ReactNode` | No | Custom loading UI, default is a built-in spinner. `loader={null}` renders no loader and skips the `loaded` cross-fade, taking the viewer from `loading` straight to `ready` |
 | `errorFallback` | `React.ReactNode` | No | Shown in place of `loader` when `src` could not be loaded. Default is a one-line message; `null` shows nothing |
@@ -459,6 +462,7 @@ Current commands:
 | `context_lost` | none | The browser took the WebGL context away, as a phone does when the page runs short of graphics memory; the canvas is blank until one of the next two follows |
 | `context_restored` | none | The browser gave the context back; the viewer redraws the scene it holds without loading it again |
 | `render_failed` | `{ reason: 'context_lost' }` | The context did not come back within 3 seconds, or was lost again within a minute of a restore; the viewer shows that the scene could not be shown, with a **Try again** button |
+| `shadow_bake_skipped` | `{ reason: 'touch_device' \| 'over_budget'; estimatedDraws: number }` | With `liveShadowBake="within-budget"`, the viewer drew a contact shadow instead of baking the ground shadow live. Publishing the scene again stores a bake every device shows |
 
 `ViewerInteractionEvent` also declares `model_loaded` and `auto_rotate_changed`. Both belong to the union a handler has to narrow, and neither is emitted by the current runtime.
 

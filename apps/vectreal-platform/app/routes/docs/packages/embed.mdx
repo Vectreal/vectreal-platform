@@ -155,6 +155,10 @@ type EmbedEventMap = {
   context_lost: void
   context_restored: void
   render_failed: { reason: 'context_lost' }
+  shadow_bake_skipped: {
+    reason: 'touch_device' | 'over_budget'
+    estimatedDraws: number
+  }
   auto_rotate_changed: { enabled: boolean }
   interaction_event: {
     interactionId?: string
