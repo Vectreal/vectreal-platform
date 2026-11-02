@@ -2,6 +2,7 @@ import { useLoadModel } from '@vctrl/hooks'
 import { VectrealViewer } from '@vctrl/viewer'
 import { Component, useEffect, useState, type ReactNode } from 'react'
 
+import { CameraEchoCase } from './CameraEchoCase'
 import { OcclusionBakeCase } from './OcclusionBakeCase'
 
 /*
@@ -182,6 +183,7 @@ export default function App() {
 	const search = new URLSearchParams(window.location.search)
 	if (search.has('src-case')) return <SrcCase />
 	if (search.has('occlusion-bake')) return <OcclusionBakeCase />
+	if (search.has('camera-echo')) return <CameraEchoCase />
 
 	// Like a real host: an inline callback that re-renders the page on every
 	// viewer event, so each render hands the viewer a new function. A camera a

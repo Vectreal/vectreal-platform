@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client'
 
 import App from './App'
 
+import type { SceneCameraSnapshotCapture } from '@vctrl/viewer'
+
 declare global {
 	interface Window {
 		__VIEWER_E2E__?: {
@@ -13,6 +15,7 @@ declare global {
 		}
 		__VIEWER_READY__?: boolean
 		__VIEWER_EVENTS__?: string[]
+		__CAMERA_ECHO__?: SceneCameraSnapshotCapture
 		__HOOKS_E2E__?: { status: 'ok' | 'crashed'; error?: string }
 		__SRC_E2E__?: {
 			status: 'loaded' | 'error'
