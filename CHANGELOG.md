@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.3.0...workspace-v3.4.0) (2026-11-02)
+
+
+### Features
+
+* **core:** add a scene-camera module holding the viewer's camera math ([#1246](https://github.com/Vectreal/vectreal-platform/issues/1246)) ([ba34185](https://github.com/Vectreal/vectreal-platform/commit/ba341851cb2498750f5b1637f93a33903b0394bb))
+* **core:** repair a studio bake after a GPU reset and say why one failed ([#1244](https://github.com/Vectreal/vectreal-platform/issues/1244)) ([fbc72ae](https://github.com/Vectreal/vectreal-platform/commit/fbc72ae08939c5c5419fdab0af1171ea1f1c1bab))
+* **newsroom:** schedule articles by publishedAt with a staging preview ([#1215](https://github.com/Vectreal/vectreal-platform/issues/1215)) ([019ba59](https://github.com/Vectreal/vectreal-platform/commit/019ba592e2214c5b37c14d2a8d8f143707f6c011))
+* **newsroom:** tell search engines when an article goes live ([#1241](https://github.com/Vectreal/vectreal-platform/issues/1241)) ([a806033](https://github.com/Vectreal/vectreal-platform/commit/a8060331fecf274b09665509ca33650b37e885bf))
+* **publisher:** explain and repair a studio finish that did not apply ([#1247](https://github.com/Vectreal/vectreal-platform/issues/1247)) ([0fe2fda](https://github.com/Vectreal/vectreal-platform/commit/0fe2fda873d88c5ffb7eaaa3461259fa55452ce7))
+* **publisher:** name each mark on the lighting globe ([#1249](https://github.com/Vectreal/vectreal-platform/issues/1249)) ([e47e7e7](https://github.com/Vectreal/vectreal-platform/commit/e47e7e79f717616ff5dfd9c454c2d3ef67b1bb18))
+
+
+### Bug Fixes
+
+* **publisher:** wrap studio finish report text in the sidebar ([#1243](https://github.com/Vectreal/vectreal-platform/issues/1243)) ([9da0474](https://github.com/Vectreal/vectreal-platform/commit/9da0474513cc23b50b3f66a22aad61d9d1ad81b8))
+* **viewer:** recover from a lost WebGL context or say the scene could not be shown ([#1248](https://github.com/Vectreal/vectreal-platform/issues/1248)) ([1948045](https://github.com/Vectreal/vectreal-platform/commit/1948045eccdbbed26fbd79d4d1aec9e8dc3e20cf))
+
+
+### Performance Improvements
+
+* **publisher:** preload lighting thumbnails as content-hashed assets ([#1245](https://github.com/Vectreal/vectreal-platform/issues/1245)) ([ca80b85](https://github.com/Vectreal/vectreal-platform/commit/ca80b855e54678ff9c34b7dce6ea8cd31aa2aff2))
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.2.0...workspace-v3.3.0) (2026-11-01)
 
 

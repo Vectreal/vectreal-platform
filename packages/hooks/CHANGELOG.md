@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.3.0...hooks-v3.4.0) (2026-11-02)
+
+
+### Miscellaneous Chores
+
+* **hooks:** Synchronize vectreal-monorepo versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.4.0
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/hooks-v3.2.0...hooks-v3.3.0) (2026-11-01)
 
 
