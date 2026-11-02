@@ -111,21 +111,56 @@ export function nextSliceBudget(
 }
 
 /**
- * Resolves once the GPU has run everything submitted before the fence, polling
- * without blocking and yielding a task between polls. Also resolves when the
- * wait fails, as it does on a lost context: the caller checks for that.
+ * The GPU's share of each slice the wall clock timed, where the GPU cannot
+ * time it itself (no browser on Apple devices can). The wall clock also counts
+ * what every slice costs however little it draws: the flush, the fence's
+ * round trip, the polling. Paced on that, a slice whose fixed cost alone is
+ * over `TARGET_SLICE_MS` shrinks to the smallest budget and never grows back,
+ * and a bake of a minute takes hours. The fastest slice so far is that fixed
+ * cost at most, so it is taken off every slice.
+ */
+export function wallClockSliceTimer(): (wallMs: number) => number {
+	let floorMs = Infinity
+	return (wallMs) => {
+		floorMs = Math.min(floorMs, wallMs)
+		return wallMs - floorMs
+	}
+}
+
+/** How long the GPU may take to finish one slice before the bake gives up. */
+export const FENCE_TIMEOUT_MS = 30_000
+/**
+ * The most one gap between polls counts towards `FENCE_TIMEOUT_MS`. A page
+ * that is hidden or suspended stops polling, and its time away is not the
+ * GPU's.
+ */
+const MAX_POLL_GAP_MS = 100
+
+/**
+ * Whether the GPU ran everything submitted before the fence, polling without
+ * blocking and yielding a task between polls. Also true when the wait fails,
+ * as it does on a lost context: the caller checks for that. False when
+ * `timeoutMs` of polling passed without an answer.
  */
 export async function gpuSettled(
 	gl: WebGL2RenderingContext,
-	fence: WebGLSync
-): Promise<void> {
+	fence: WebGLSync,
+	timeoutMs = FENCE_TIMEOUT_MS
+): Promise<boolean> {
 	try {
 		// The first poll flushes, or a fence still in the command buffer never signals.
 		let flags: number = gl.SYNC_FLUSH_COMMANDS_BIT
+		let waitedMs = 0
+		let polledAt = performance.now()
 		while (gl.clientWaitSync(fence, flags, 0) === gl.TIMEOUT_EXPIRED) {
 			flags = 0
 			await yieldTask()
+			const now = performance.now()
+			waitedMs += Math.min(now - polledAt, MAX_POLL_GAP_MS)
+			polledAt = now
+			if (waitedMs >= timeoutMs) return false
 		}
+		return true
 	} finally {
 		gl.deleteSync(fence)
 	}

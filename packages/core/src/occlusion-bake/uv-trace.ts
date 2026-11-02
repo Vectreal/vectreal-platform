@@ -51,7 +51,8 @@ import {
 	MAX_SAMPLES_PER_DRAW,
 	nextSliceBudget,
 	slicesOf,
-	UNFENCED_SLICE_BUDGET
+	UNFENCED_SLICE_BUDGET,
+	wallClockSliceTimer
 } from './gpu-slices'
 import { castsOcclusion, readUvs, type OcclusionBakeTarget } from './plan'
 import { triangleIndices, type ScenePrimitive } from './scene-primitives'
@@ -277,6 +278,7 @@ export async function traceInUvSpace(
 	)
 	// Carried from slice to slice and target to target, so it is measured once.
 	let budget = FIRST_SLICE_BUDGET
+	const wallClockGpuMs = wallClockSliceTimer()
 	// Texel-rays, so a map counts by its share of the work.
 	const work = sheets.reduce((sum, sheet) => sum + sheet.size ** 2, 0) * samples
 	let worked = 0
@@ -326,10 +328,19 @@ export async function traceInUvSpace(
 				if (timer && query) gl.endQuery(timer.TIME_ELAPSED_EXT)
 				const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)
 				if (fence) {
-					await gpuSettled(gl, fence)
+					if (!(await gpuSettled(gl, fence))) {
+						if (timer && query) gl.deleteQuery(query)
+						throw new BakeError(
+							'stalled',
+							`The GPU did not finish a slice of ${trace.label} at ${((worked / work) * 100).toFixed(2)}% (GPU timer: ${timer ? 'yes' : 'no'})`
+						)
+					}
 					const wallMs = performance.now() - start
-					const elapsed =
-						(timer && query && gpuTimeMs(gl, timer, query)) ?? wallMs
+					// Where the GPU times slices, a slice it has no time for yet is
+					// left to the whole wall clock, which only ever overstates it.
+					const elapsed = timer
+						? ((query && gpuTimeMs(gl, timer, query)) ?? wallMs)
+						: wallClockGpuMs(wallMs)
 					budget = nextSliceBudget(
 						budget,
 						tile.width * tile.height * passSamples,

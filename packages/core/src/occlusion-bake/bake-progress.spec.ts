@@ -61,13 +61,37 @@ function twoQuads() {
 }
 
 /**
- * A renderer whose GPU finishes at once and offers neither fences nor timers,
- * its context lost from the start when `lost` says so.
+ * A renderer whose GPU finishes at once, its context lost from the start when
+ * `lost` says so. It offers no fences, unless `fence` says whether its fences
+ * signal at once or never, and no timer, unless `timer` asks for one whose
+ * results are never in.
  */
-function idleRenderer({ lost = false } = {}): WebGLRenderer {
+function idleRenderer({
+	lost = false,
+	fence,
+	timer = false
+}: {
+	lost?: boolean
+	fence?: 'signals' | 'never'
+	timer?: boolean
+} = {}): WebGLRenderer {
 	const gl = {
-		getExtension: () => null,
-		fenceSync: () => null,
+		SYNC_FLUSH_COMMANDS_BIT: 1,
+		TIMEOUT_EXPIRED: 0x911b,
+		CONDITION_SATISFIED: 0x911c,
+		getExtension: (name: string) =>
+			timer && name === 'EXT_disjoint_timer_query_webgl2'
+				? { TIME_ELAPSED_EXT: 0x88bf, GPU_DISJOINT_EXT: 0x8fbb }
+				: null,
+		createQuery: vi.fn(() => ({})),
+		beginQuery: () => {},
+		endQuery: () => {},
+		deleteQuery: vi.fn(),
+		getQueryParameter: () => false,
+		getParameter: () => false,
+		fenceSync: () => (fence ? {} : null),
+		clientWaitSync: () => (fence === 'never' ? 0x911b : 0x911c),
+		deleteSync: () => {},
 		isContextLost: () => lost
 	}
 	return {
@@ -149,6 +173,93 @@ describe('bake progress', () => {
 
 		await expect(bake).rejects.toBeInstanceOf(BakeError)
 		await expect(bake).rejects.toMatchObject({ reason: 'gpu-reset' })
+	})
+
+	describe('where only the wall clock times a slice', () => {
+		// Every slice takes 20 ms however little it draws: two reads of a clock
+		// that moves 10 ms a read.
+		beforeEach(() => {
+			let now = 0
+			vi.spyOn(performance, 'now').mockImplementation(() => (now += 10))
+		})
+		afterEach(() => vi.restoreAllMocks())
+
+		it('grows its slices past a fixed cost over the target', async () => {
+			const renderer = idleRenderer({ fence: 'signals' })
+			const render = vi.spyOn(renderer, 'render')
+
+			await bakeOcclusionIntoDocument(twoQuads(), () => renderer, {
+				resolution: 64,
+				samples: 64,
+				distance: 0.25
+			})
+
+			// At the smallest slice it would take 2,048 draws.
+			expect(render.mock.calls.length).toBeLessThan(50)
+		})
+
+		it('fails as stalled, not retried, when a slice never finishes', async () => {
+			let made = 0
+
+			const result = await bakeWithRecovery(
+				(renderer, options) =>
+					bakeOcclusionIntoDocument(twoQuads(), renderer, options),
+				() => (made++, idleRenderer({ fence: 'never' })),
+				{ resolution: 16, samples: 4, distance: 0.25 }
+			)
+
+			expect(result).toMatchObject({ failed: 'stalled' })
+			expect(made).toBe(1)
+		})
+
+		it('frees the timer query of a slice that never finishes', async () => {
+			const renderer = idleRenderer({ fence: 'never', timer: true })
+			const gl = renderer.getContext() as unknown as {
+				createQuery: ReturnType<typeof vi.fn>
+				deleteQuery: ReturnType<typeof vi.fn>
+			}
+
+			await bakeWithRecovery(
+				(make, options) => bakeOcclusionIntoDocument(twoQuads(), make, options),
+				() => renderer,
+				{ resolution: 16, samples: 4, distance: 0.25 }
+			)
+
+			expect(gl.createQuery).toHaveBeenCalledOnce()
+			expect(gl.deleteQuery).toHaveBeenCalledOnce()
+		})
+
+		it('draws again when a slice never finished because the context was lost', async () => {
+			const renderers = [
+				idleRenderer({ fence: 'never', lost: true }),
+				idleRenderer({ fence: 'signals' })
+			]
+			let made = 0
+
+			const result = await bakeWithRecovery(
+				(renderer, options) =>
+					bakeOcclusionIntoDocument(twoQuads(), renderer, options),
+				() => renderers[made++],
+				{ resolution: 16, samples: 4, distance: 0.25 }
+			)
+
+			expect(result).toMatchObject({ recovered: 'retried' })
+		})
+
+		it('leaves a slice the GPU timer has no time for to the whole wall clock', async () => {
+			// Untimed and taking 20 ms each, slices stay small: the wall clock
+			// only ever overstates a slice where the GPU times the rest.
+			const renderer = idleRenderer({ fence: 'signals', timer: true })
+			const render = vi.spyOn(renderer, 'render')
+
+			await bakeOcclusionIntoDocument(twoQuads(), () => renderer, {
+				resolution: 64,
+				samples: 64,
+				distance: 0.25
+			})
+
+			expect(render.mock.calls.length).toBeGreaterThan(1000)
+		})
 	})
 
 	it('recovers from a reset by drawing again on a fresh renderer', async () => {

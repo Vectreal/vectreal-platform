@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+	FIRST_SLICE_BUDGET,
 	gpuSettled,
 	gpuTimeMs,
 	MAX_SAMPLES_PER_DRAW,
@@ -8,7 +9,8 @@ import {
 	nextSliceBudget,
 	slicesOf,
 	TARGET_SLICE_MS,
-	type Slice
+	type Slice,
+	wallClockSliceTimer
 } from './gpu-slices'
 
 /** How many slices traced each ray of each texel. */
@@ -149,6 +151,56 @@ describe('nextSliceBudget', () => {
 	})
 })
 
+describe('wallClockSliceTimer', () => {
+	/*
+	  Paces slices as the tracer does where only the wall clock times them:
+	  each slice takes `overheadMs` however little it draws, plus its work at
+	  `rate` texel-rays per millisecond. Returns the budget after `slices`.
+	*/
+	function pacedBudget(
+		overheadMs: number,
+		rate: number,
+		time: (wallMs: number) => number,
+		slices = 200
+	) {
+		const max = 2048 * 2048 * 16
+		let budget = FIRST_SLICE_BUDGET
+		for (let i = 0; i < slices; i++) {
+			budget = nextSliceBudget(
+				budget,
+				budget,
+				time(overheadMs + budget / rate),
+				max
+			)
+		}
+		return budget
+	}
+
+	it.each([0, 7, 20])(
+		'paces to the GPU work with %i ms of fixed cost per slice',
+		(overheadMs) => {
+			const rate = 20_000
+			const budget = pacedBudget(overheadMs, rate, wallClockSliceTimer())
+			// Within a factor of two of the GPU's own `TARGET_SLICE_MS`.
+			expect(budget).toBeGreaterThan((rate * TARGET_SLICE_MS) / 2)
+			expect(budget).toBeLessThan(rate * TARGET_SLICE_MS * 2)
+		}
+	)
+
+	it('takes nothing off a slice slower than the fastest one', () => {
+		const time = wallClockSliceTimer()
+		expect(time(10)).toBe(0)
+		expect(time(16)).toBe(6)
+		expect(time(8)).toBe(0)
+		expect(time(20)).toBe(12)
+	})
+
+	it('is what keeps a fixed cost past the target from pinning the budget', () => {
+		// The wall clock as it is: every slice reads as too slow.
+		expect(pacedBudget(7, 20_000, (wallMs) => wallMs)).toBe(MIN_SLICE_BUDGET)
+	})
+})
+
 /*
   A WebGL2 context whose fence reports each status in `statuses` in turn, one
   per poll.
@@ -201,9 +253,38 @@ describe('gpuSettled', () => {
 
 	it('stops waiting when the wait fails, as on a lost context', async () => {
 		const { gl } = fencedContext([0x911b, 0x911d])
-		await gpuSettled(gl as never, {} as WebGLSync)
+		expect(await gpuSettled(gl as never, {} as WebGLSync)).toBe(true)
 		expect(gl.clientWaitSync).toHaveBeenCalledTimes(2)
 		expect(gl.deleteSync).toHaveBeenCalledOnce()
+	})
+
+	describe('with a fence that never signals', () => {
+		afterEach(() => vi.restoreAllMocks())
+
+		/** A clock that moves by each step in turn, then by the last one. */
+		const clock = (steps: number[]) => {
+			let now = 0
+			let call = 0
+			vi.spyOn(performance, 'now').mockImplementation(
+				() => (now += steps[Math.min(call++, steps.length - 1)])
+			)
+		}
+
+		it('gives up once its polling has waited the timeout', async () => {
+			const { gl } = fencedContext(Array(1000).fill(0x911b))
+			clock([0, 10])
+			expect(await gpuSettled(gl as never, {} as WebGLSync, 200)).toBe(false)
+			// The first poll, then one every 10 ms up to 200.
+			expect(gl.clientWaitSync).toHaveBeenCalledTimes(20)
+			expect(gl.deleteSync).toHaveBeenCalledOnce()
+		})
+
+		it('does not count a page away as the GPU taking long', async () => {
+			// An hour suspended between two polls, then the fence signals.
+			const { gl } = fencedContext([0x911b, 0x911b, 0x911c])
+			clock([0, 3_600_000, 1])
+			expect(await gpuSettled(gl as never, {} as WebGLSync, 200)).toBe(true)
+		})
 	})
 })
 

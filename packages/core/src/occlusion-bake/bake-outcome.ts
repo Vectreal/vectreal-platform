@@ -9,6 +9,8 @@ export type BakeFailureReason =
 	| 'no-webgl'
 	/** The GPU reset mid-bake on every attempt. */
 	| 'gpu-reset'
+	/** The GPU stopped answering: a slice of the bake never finished. */
+	| 'stalled'
 	/** Anything else, which is more likely a bug than the scene. */
 	| 'unexpected'
 
@@ -130,7 +132,11 @@ export async function bakeWithRecovery<
 			// A browser may refuse new contexts for a while after a reset, so a
 			// renderer that cannot be made then is still the reset's doing.
 			if (rendererFailed) return reset ?? { failed: 'no-webgl', detail }
-			if (!isReset(error, renderer)) return { failed: 'unexpected', detail }
+			if (!isReset(error, renderer)) {
+				// A failure raised on purpose keeps its reason.
+				const failed = error instanceof BakeError ? error.reason : 'unexpected'
+				return { failed, detail }
+			}
 			reset = { failed: 'gpu-reset', detail }
 		} finally {
 			release(renderer)
