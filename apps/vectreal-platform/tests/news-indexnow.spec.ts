@@ -1,24 +1,24 @@
 /**
  * Search engines hear about an article when it goes live on production, once,
- * and not from staging. The newest real article stands in for one going live:
- * the clock is set around its `publishedAt`, when every other article is
- * already published.
+ * and not from staging. A real article stands in for one going live (see
+ * `news-stand-in.ts`): the clock is set around its `publishedAt`, with no
+ * other article going live within a day of it.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { getStandInArticles } from './news-stand-in'
 import {
 	INDEXNOW_KEY,
 	articleUrlsLiveBetween,
 	startIndexNowSubmissions,
 	submitToIndexNow
 } from '../app/lib/news/news-indexnow.server'
-import { getPublishedNewsArticles } from '../app/lib/news/news-manifest.server'
 import { resolvePublishedAt } from '../app/lib/news/news-schedule'
 
-const [newest, previous] = getPublishedNewsArticles()
+const { standIn: newest, previous } = getStandInArticles()
 const LIVE_AT = resolvePublishedAt(newest.publishedAt)
 const MINUTE = 60_000
 const newestUrl = `https://vectreal.com/news-room/${newest.slug}`
