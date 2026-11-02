@@ -50,12 +50,10 @@ describe('studioFinishFailure', () => {
 })
 
 describe('the words for each reason', () => {
-	// Read as the author reads them: each failure's words for either bake too.
+	// Read as the author reads them.
 	const all = [
-		...Object.keys(STUDIO_FINISH_FAILURES).flatMap((reason) =>
-			([undefined, 'occlusion', 'lights'] as const).map((pass) =>
-				failureMessage(reason as keyof typeof STUDIO_FINISH_FAILURES, pass)
-			)
+		...Object.keys(STUDIO_FINISH_FAILURES).map((reason) =>
+			failureMessage(reason as keyof typeof STUDIO_FINISH_FAILURES)
 		),
 		...Object.values(BAKE_SKIP_REASONS)
 	]
@@ -66,6 +64,10 @@ describe('the words for each reason', () => {
 			expect(message.length).toBeLessThanOrEqual(110)
 			expect(message).not.toMatch(/[!—]/)
 		}
+	})
+
+	it('never send the author to the other bake, since it may be the one that failed', () => {
+		for (const message of all) expect(message).not.toMatch(/depth|alone/i)
 	})
 })
 

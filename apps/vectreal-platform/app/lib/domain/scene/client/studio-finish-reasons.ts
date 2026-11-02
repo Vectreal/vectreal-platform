@@ -55,25 +55,19 @@ export const UV_LAYOUT_TIMEOUT_MS = 60_000
  */
 export const BAKE_STALL_TIMEOUT_MS = 60_000
 
-/** A bake of the studio finish, when a failure is one bake's. */
-export type StudioFinishPass = 'occlusion' | 'lights'
-
 /**
- * What the author reads for a failure: its `message`, or its words for the
- * bake that failed where it has some, since advice that suits one bake can
- * name the other as the way out.
+ * What the author reads for a failure. It never names a bake as the way
+ * out, since either bake may be the one that failed.
  */
 interface FailureCopy {
 	message: string
-	byPass?: Partial<Record<StudioFinishPass, string>>
 	reported: boolean
 }
 
 /**
  * What the author reads for each failure, and whether it goes to error
  * tracking: a browser without WebGL 2, a bug, or a failure that may be one.
- * What only the author can fix (a reset, a scene too heavy) is not. Read the
- * words through `failureMessage`, which picks a bake's own.
+ * What only the author can fix (a reset, a scene too heavy) is not.
  */
 export const STUDIO_FINISH_FAILURES = {
 	'no-webgl': {
@@ -87,11 +81,11 @@ export const STUDIO_FINISH_FAILURES = {
 		reported: false
 	},
 	stalled: {
-		message: 'Drawing stopped making progress. Try again, or try Depth alone.',
+		message: 'Drawing stopped making progress. Close other tabs and try again.',
 		reported: true
 	},
 	'timed-out': {
-		message: `Drawing took over ${PUBLISH_EXPORT_TIMEOUT_MS / 60_000} minutes. Try depth alone, fewer lights or a lighter model.`,
+		message: `Drawing took over ${PUBLISH_EXPORT_TIMEOUT_MS / 60_000} minutes. Try a lighter model, or fewer lights.`,
 		reported: false
 	},
 	'worker-stopped': {
@@ -109,13 +103,9 @@ export const STUDIO_FINISH_FAILURES = {
 	}
 } as const satisfies Record<StudioFinishFailureReason, FailureCopy>
 
-/** The words for a failure, the failed bake's own where it has them. */
-export function failureMessage(
-	reason: StudioFinishFailureReason,
-	pass?: StudioFinishPass
-): string {
-	const copy: FailureCopy = STUDIO_FINISH_FAILURES[reason]
-	return (pass && copy.byPass?.[pass]) ?? copy.message
+/** The words for a failure. */
+export function failureMessage(reason: StudioFinishFailureReason): string {
+	return STUDIO_FINISH_FAILURES[reason].message
 }
 
 /** Why a material took no bake, and what would let it. */
@@ -199,7 +189,7 @@ export function occlusionBakeWarning(
 		return {
 			message:
 				'The studio finish could not add depth, so the scene was published without it.',
-			description: failureMessage(failure.reason, 'occlusion')
+			description: failureMessage(failure.reason)
 		}
 	}
 	if (!('baked' in occlusion)) return null
@@ -225,7 +215,7 @@ export function lightBakeWarning(
 		return {
 			message:
 				'The studio finish could not draw the studio lights, so the scene was published with them live.',
-			description: failureMessage(failure.reason, 'lights')
+			description: failureMessage(failure.reason)
 		}
 	}
 	if (!('baked' in lights)) return null
@@ -303,7 +293,7 @@ export function skippedByReason(
 export function nothingCaption(reports: BakeReports | undefined) {
 	for (const pass of ['occlusion', 'lights'] as const) {
 		const failure = passFailure(reports?.[pass])
-		if (failure) return failureMessage(failure.reason, pass)
+		if (failure) return failureMessage(failure.reason)
 	}
 	const [top] = skippedByReason(reports?.occlusion, reports?.lights)
 	if (!top) return undefined
