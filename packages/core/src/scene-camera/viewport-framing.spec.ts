@@ -1,6 +1,7 @@
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
+import { easeFlightProgress, sampleCameraFlight } from './camera-flight'
 import { resolveCameraPose } from './camera-pose'
 import {
 	CameraFraming,
@@ -266,9 +267,9 @@ describe('CameraFraming', () => {
 		framing.fly({ aspect: 3, scale: 3 })
 		framing.fly({ aspect: 1, scale: 1 }, 0.5)
 
-		expect(framing.view.scale).toBeCloseTo(Math.sqrt(3))
+		expect(framing.view.scale).toBeCloseTo(2)
 		expect(framing.distanceLimits({ maxDistance: 10 }).maxDistance).toBeCloseTo(
-			10 * Math.sqrt(3)
+			20
 		)
 	})
 
@@ -280,7 +281,28 @@ describe('CameraFraming', () => {
 		framing.show(null, 0.5)
 
 		expect(framing.destination).toBeNull()
-		expect(framing.view.scale).toBeCloseTo(Math.sqrt(3))
+		expect(framing.view.scale).toBeCloseTo(2)
+	})
+
+	it('never clamps a straight flight interrupted mid-way inward', () => {
+		// A at the host's maxDistance (fit 1), flown straight to B backed off 3x
+		// on the same line. Half-way the camera sits at twice the limit.
+		const maxDistance = 10
+		const framing = new CameraFraming(1)
+		framing.fly({ aspect: 3, scale: 3 })
+		const flight = {
+			type: 'linear' as const,
+			from: { ...at(maxDistance), fov: 50 },
+			to: { ...at(3 * maxDistance), fov: 50 }
+		}
+		const live = sampleCameraFlight(flight, 0.5).position
+
+		framing.show(null, easeFlightProgress(0.5))
+
+		expect(live.z).toBeCloseTo(20)
+		expect(
+			framing.distanceLimits({ maxDistance }).maxDistance
+		).toBeGreaterThanOrEqual(live.z - 1e-9)
 	})
 
 	it('moves the interrupted start with the viewport from its blended fit', () => {
@@ -291,7 +313,7 @@ describe('CameraFraming', () => {
 
 		framing.refit(0.5, null, flight)
 
-		// The blend was framed so this viewport reads it as √3; half as wide doubles it.
+		// The blend was framed so this viewport reads it as 2; half as wide doubles it.
 		expect(flight.from.position.z).toBeCloseTo(20)
 	})
 
@@ -355,13 +377,13 @@ describe('CameraFraming', () => {
 	it('stores a pose captured mid-flight at the fit between the two ends', () => {
 		const framing = new CameraFraming(1)
 		framing.fly({ aspect: 4, scale: 4 })
-		const view = at(20)
+		const view = at(25)
 
 		const stored = framing.storedPose(view.position, view.target, 1, 0.5)
 
-		// Half-way between fits of 1 and 4, geometrically, is 2.
+		// Half-way between fits of 1 and 4 is 2.5.
 		expect(stored.position.z).toBeCloseTo(10)
-		expect(stored.framingAspect).toBeCloseTo(2)
+		expect(stored.framingAspect).toBeCloseTo(2.5)
 	})
 
 	it('keeps the cameras’ own aspects through an interruption, so a viewport neither needs a fit for moves nothing', () => {

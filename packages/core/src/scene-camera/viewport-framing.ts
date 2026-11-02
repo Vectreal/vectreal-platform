@@ -184,8 +184,7 @@ export class CameraFraming {
 	 *
 	 * When it replaces a flight still playing, the live pose lies part-way
 	 * between that flight's ends, so its fit is the blend at `progress`, the
-	 * interrupted flight's eased progress, taken geometrically as the flight
-	 * takes distance. Keeping the interrupted flight's start fit instead dropped
+	 * interrupted flight's eased progress (see `blendAt`). Keeping the interrupted flight's start fit instead dropped
 	 * the destination's from the distance limits, and the new flight's first
 	 * frames clamped inward.
 	 */
@@ -262,13 +261,19 @@ export class CameraFraming {
 
 	/**
 	 * The fit of the live pose: the view's, or part-way through a flight at
-	 * `progress`, the two ends' aspects and scales each blended geometrically,
-	 * as the flight takes distance.
+	 * `progress`, the two ends' aspects and scales each blended linearly.
+	 *
+	 * Linear, because no flight puts the camera farther out than that: a
+	 * straight flight lerps the position, whose offset from the target is then
+	 * no longer than the lerp of the two ends' offsets, and a smart flight lerps
+	 * the radius geometrically, which is shorter still. A geometric blend sat
+	 * below a straight flight's distance, and the scaled `maxDistance` clamped
+	 * the camera inward when the flight was interrupted.
 	 */
 	private blendAt(progress: number | null): ViewportFraming {
 		if (!this.destination || progress === null) return this.view
 		const t = Math.min(1, Math.max(0, progress))
-		const blend = (from: number, to: number) => from ** (1 - t) * to ** t
+		const blend = (from: number, to: number) => from + (to - from) * t
 		return {
 			aspect: blend(this.view.aspect, this.destination.aspect),
 			scale: blend(this.view.scale, this.destination.scale)
