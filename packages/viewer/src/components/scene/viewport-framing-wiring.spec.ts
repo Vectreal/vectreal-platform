@@ -46,14 +46,37 @@ describe('the camera layer fits what it shows', () => {
 		)
 	})
 
+	it('resets the fit before a bounds fit, so update() clamps it to the host’s own limits', () => {
+		const init = slice(
+			camera,
+			'const initializeCamera = useCallback(',
+			'if (!hasInitialFramingCompleted.current)'
+		)
+		const reset = init.indexOf(
+			'framing.current.reset(viewportAspectOf(sceneCamera) ?? 1)'
+		)
+		expect(reset).toBeGreaterThan(
+			init.indexOf('applyCameraInstantly(selection)')
+		)
+		expect(init.indexOf('syncDistanceLimits()', reset)).toBeLessThan(
+			init.indexOf('applyInitialFraming(')
+		)
+	})
+
 	it('records the fit of a pose shown at once, before update() clamps it', () => {
 		const instant = slice(
 			camera,
 			'const applyCameraInstantly = useCallback(',
 			'const startTransition'
 		)
-		expect(instant).toContain('framing.current?.show(selection.framing)')
-		// The pose shown now wins over a flight still playing.
+		expect(instant).toContain(
+			'framing.current?.show(selection.framing, progress)'
+		)
+		// The pose shown now wins over a flight still playing, read before it stops.
+		expect(instant).toContain('const progress = flight.progress()')
+		expect(instant.indexOf('flight.progress()')).toBeLessThan(
+			instant.indexOf('flight.stop()')
+		)
 		expect(instant.indexOf('flight.stop()')).toBeGreaterThan(-1)
 		expect(instant.indexOf('flight.stop()')).toBeLessThan(
 			instant.indexOf('framing.current?.show(')

@@ -170,10 +170,11 @@ export class CameraFraming {
 
 	/**
 	 * A pose shown at once. `null` is a pose read off the live camera, which
-	 * keeps the fit already in view.
+	 * keeps the fit already in view: part-way through a flight it replaces,
+	 * the blend at `progress`, as for `fly`.
 	 */
-	show(framing: ViewportFraming | null): void {
-		if (framing) this.view = framing
+	show(framing: ViewportFraming | null, progress: number | null = null): void {
+		this.view = framing ?? this.blendAt(progress)
 		this.destination = null
 	}
 

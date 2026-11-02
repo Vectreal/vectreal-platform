@@ -288,12 +288,15 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			const activeCamera = sceneCamera as PerspectiveCamera
 			// The pose shown now wins over a flight still playing, which would
 			// otherwise land over it with a fit the framing no longer tracks.
+			// Its progress is read first: a pose with no position of its own
+			// stays where the flight left the camera.
+			const progress = flight.progress()
 			flight.stop()
 			activeCamera.position.copy(selection.targetPosition)
 			activeCamera.rotation.copy(selection.targetRotation)
 			activeCamera.fov = selection.targetFov
 			activeCamera.updateProjectionMatrix()
-			framing.current?.show(selection.framing)
+			framing.current?.show(selection.framing, progress)
 			// Before update(), which clamps the distance to them.
 			syncDistanceLimits()
 			if (controls?.target) {
@@ -408,6 +411,13 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				sceneTransition
 			)
 			applyCameraInstantly(selection)
+			// The fit about to be made frames the model for this viewport, whatever
+			// the camera was framed at. Reset before it, so update() clamps it
+			// against the host's own limits rather than the stored camera's fit.
+			if (boundsEnabled) {
+				framing.current.reset(viewportAspectOf(sceneCamera) ?? 1)
+				syncDistanceLimits()
+			}
 			// Read from the store rather than this render's `controls`: this runs
 			// from a timeout, and the fit's target is lost if it lands on a closure
 			// captured before OrbitControls registered.
@@ -418,12 +428,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				getThreeState().controls as InitialFramingControls | null,
 				boundsEnabled
 			)
-			// The fit framed the model for this viewport, whatever the camera was
-			// framed at.
-			if (boundsEnabled) {
-				framing.current.reset(viewportAspectOf(sceneCamera) ?? 1)
-				syncDistanceLimits()
-			}
 
 			if (!hasInitialFramingCompleted.current) {
 				isWaitingForStableFrame.current = true

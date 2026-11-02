@@ -272,6 +272,17 @@ describe('CameraFraming', () => {
 		)
 	})
 
+	it('keeps the blended fit when a pose with no position of its own interrupts a flight', () => {
+		// A to B (fit 1 to 3), stopped half-way by an edit to a camera with no
+		// stored pose: the camera stays where the flight left it.
+		const framing = new CameraFraming(1)
+		framing.fly({ aspect: 3, scale: 3 })
+		framing.show(null, 0.5)
+
+		expect(framing.destination).toBeNull()
+		expect(framing.view.scale).toBeCloseTo(Math.sqrt(3))
+	})
+
 	it('moves the interrupted start with the viewport from its blended fit', () => {
 		const framing = new CameraFraming(1)
 		framing.fly({ aspect: 3, scale: 3 })
