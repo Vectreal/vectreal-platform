@@ -1,6 +1,6 @@
 import { ContactShadows } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { resolveLighting } from '@vctrl/core'
+import { GROUND_BAKE_SIGNATURE_INPUTS, resolveLighting } from '@vctrl/core'
 import {
 	Fragment,
 	memo,
@@ -23,6 +23,13 @@ import {
 	type ClipExtentRegistry,
 	useClipExtents
 } from './clip-planes'
+import {
+	estimateLiveBakeDraws,
+	hasCoarsePrimaryPointer,
+	type LiveBakeSkipReason,
+	liveBakeSkipReason,
+	type LiveShadowBake
+} from './live-bake-budget'
 import { measureModel, worldBounds } from './model-measurement'
 import SceneBakedShadow from './scene-baked-shadow'
 import {
@@ -153,9 +160,7 @@ const defaultContactFallback = {
   still fills a fair share of the fixed-resolution light map.
 */
 const GROUND_BAKE = {
-	frames: 48,
-	scale: 4,
-	resolution: 1024,
+	...GROUND_BAKE_SIGNATURE_INPUTS,
 	// The cutoff a temporal bake ramps toward before calibration replaces it;
 	// see `defaultShadowsOptions.alphaTest`.
 	alphaTest: 3,
@@ -233,6 +238,17 @@ interface SceneShadowsOwnProps {
 	 * persistence). Intended for editing surfaces that save scenes.
 	 */
 	onShadowBakeReady?: (capture: ShadowBakeCapture | null) => void
+	/**
+	 * Who may bake the ground shadow live where no valid stored bake exists.
+	 * `within-budget` draws the contact shadow instead on a touch-first device
+	 * or over {@link LIVE_BAKE_DRAW_BUDGET}. Default: `always`.
+	 */
+	liveBake?: LiveShadowBake
+	/** Told each time the contact shadow is drawn in place of a live bake. */
+	onLiveBakeSkipped?: (skip: {
+		reason: LiveBakeSkipReason
+		estimatedDraws: number
+	}) => void
 }
 
 interface ModelMetrics {
@@ -421,6 +437,8 @@ const SceneShadows = memo(
 		staticBake = false,
 		bakedShadow,
 		onShadowBakeReady,
+		liveBake = 'always',
+		onLiveBakeSkipped,
 		clipExtents,
 		...legacyShadows
 	}: SceneShadowsProps) => {
@@ -549,21 +567,52 @@ const SceneShadows = memo(
 			() => computeBakeSignature(bakeOptions, footprint, radius, vertexCount),
 			[bakeOptions, footprint, radius, vertexCount]
 		)
+		// A surface that saves bakes is one whose settings can move on from the
+		// stored bake's, so only a surface that never saves keeps an older
+		// format's token: there the settings are the ones it was saved with.
+		const acceptOlderFormat = !onShadowBakeReady
 		const usePersistedBake = useMemo(
 			() =>
 				Boolean(
 					bakedShadow &&
-					isPersistedBakeValid(bakedShadow, bakeOptions, {
-						...bakeBasis,
-						measured
-					})
+					isPersistedBakeValid(
+						bakedShadow,
+						bakeOptions,
+						{ ...bakeBasis, measured },
+						{ acceptOlderFormat }
+					)
 				),
-			[bakedShadow, bakeOptions, bakeBasis, measured]
+			[bakedShadow, bakeOptions, bakeBasis, measured, acceptOlderFormat]
 		)
 		// A stored bake whose image failed to load gives way to a live bake.
 		const [failedBakeUrl, setFailedBakeUrl] = useState<string | null>(null)
 		const showsPersistedBake =
 			usePersistedBake && bakedShadow?.url !== failedBakeUrl
+
+		// Read once: a device does not change what its primary pointer is.
+		const [coarsePointer] = useState(hasCoarsePrimaryPointer)
+		const estimatedDraws = useMemo(() => {
+			const { meshCount, transmissive } = model
+				? measureModel(model)
+				: { meshCount: 0, transmissive: false }
+			return estimateLiveBakeDraws({
+				meshCount,
+				bakeShadowLights: GROUND_BAKE.amount,
+				sceneLights: lights.length,
+				transmissive
+			})
+		}, [model, lights.length])
+		const skipReason =
+			showsPersistedBake || !sized
+				? null
+				: liveBakeSkipReason({ mode: liveBake, coarsePointer, estimatedDraws })
+		const onLiveBakeSkippedRef = useRef(onLiveBakeSkipped)
+		onLiveBakeSkippedRef.current = onLiveBakeSkipped
+		useEffect(() => {
+			if (enabled && skipReason) {
+				onLiveBakeSkippedRef.current?.({ reason: skipReason, estimatedDraws })
+			}
+		}, [enabled, skipReason, estimatedDraws, model])
 
 		// Every live shadow pass captures the meshes drawn when it starts: the
 		// bake snapshots them on restart. So while the viewer draws another
@@ -600,7 +649,7 @@ const SceneShadows = memo(
 		// hold starts in is still recorded.
 		useLayoutEffect(() => {
 			if (holdRef.current) holdRef.current.passesChanged = true
-		}, [enabled, isModelAnimating, showsPersistedBake, sized, bake])
+		}, [enabled, isModelAnimating, showsPersistedBake, skipReason, sized, bake])
 
 		// The handle aims the light being edited, else the key, else the first.
 		const handleLight =
@@ -620,18 +669,23 @@ const SceneShadows = memo(
 
 		if (!enabled) return null
 
-		if (isModelAnimating) {
-			return (
-				<ContactShadows
-					// As dark as ground every light is blocked from.
-					opacity={1 - ground.blockedShare}
-					scale={animatingScale}
-					color={defaultContactFallback.color}
-					blur={defaultContactFallback.blur}
-					far={defaultContactFallback.far * radius}
-				/>
-			)
-		}
+		// Tracks a moving model by rendering it every frame; stands in for a
+		// bake this viewer may not run by rendering a still model once. Left
+		// rendering every frame, the stand-in redrew all 1,664 of the Porsche's
+		// meshes about five times a frame, for as long as the page was open.
+		const contactShadow = (frames: number) => (
+			<ContactShadows
+				frames={frames}
+				// As dark as ground every light is blocked from.
+				opacity={1 - ground.blockedShare}
+				scale={animatingScale}
+				color={defaultContactFallback.color}
+				blur={defaultContactFallback.blur}
+				far={defaultContactFallback.far * radius}
+			/>
+		)
+
+		if (isModelAnimating) return contactShadow(Infinity)
 
 		return (
 			<>
@@ -651,6 +705,8 @@ const SceneShadows = memo(
 								/>
 							</Suspense>
 						</LoadFailureBoundary>
+					) : skipReason ? (
+						contactShadow(1)
 					) : sized ? (
 						// Not before: the bake runs on mount, so a bake sized from the
 						// placeholder metrics is thrown away when the real ones land.

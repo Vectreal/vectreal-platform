@@ -184,6 +184,13 @@ const SceneEmbedViewer = memo(
 					)}
 					shadowsOptions={shadowsOptions}
 					bakedShadow={bakedShadow}
+					/*
+					  Every surface here only shows a scene, and the dashboard and
+					  embeds are opened on phones: a scene with no valid stored bake
+					  draws a contact shadow there rather than bake live, which a
+					  heavy model can take the WebGL context down with.
+					*/
+					liveShadowBake="within-budget"
 					loadingThumbnail={loadingThumbnail}
 					popover={
 						popover || branding ? (

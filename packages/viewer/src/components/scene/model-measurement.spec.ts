@@ -9,6 +9,7 @@ import {
 	Group,
 	Mesh,
 	MeshBasicMaterial,
+	MeshPhysicalMaterial,
 	Skeleton,
 	SkinnedMesh,
 	Uint16BufferAttribute,
@@ -67,6 +68,30 @@ afterEach(() => {
 })
 
 describe('measureModel', () => {
+	it('counts the meshes a pass draws, and whether any transmits', () => {
+		// What the live bake's draw estimate is made of.
+		const subject = new Group()
+		subject.add(new Mesh(new BoxGeometry(), new MeshBasicMaterial()))
+		subject.add(new Mesh(new BoxGeometry(), new MeshBasicMaterial()))
+		expect(measureModel(subject)).toMatchObject({
+			meshCount: 2,
+			transmissive: false
+		})
+
+		const glass = new Group()
+		glass.add(new Mesh(new BoxGeometry(), new MeshBasicMaterial()))
+		glass.add(
+			new Mesh(new BoxGeometry(), [
+				new MeshBasicMaterial(),
+				new MeshPhysicalMaterial({ transmission: 1 })
+			])
+		)
+		expect(measureModel(glass)).toMatchObject({
+			meshCount: 2,
+			transmissive: true
+		})
+	})
+
 	it('walks a model once, however many consumers ask', () => {
 		const walk = vi.spyOn(Box3.prototype, 'setFromObject')
 		const subject = model()

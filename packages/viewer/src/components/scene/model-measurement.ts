@@ -1,4 +1,4 @@
-import { Box3, type Object3D } from 'three'
+import { Box3, type Material, type Mesh, type Object3D } from 'three'
 
 import { computeModelFingerprint } from './shadow-bake'
 
@@ -8,6 +8,10 @@ export interface ModelMeasurement {
 	bounds: Box3
 	/** Total vertex count, the bake signature's geometric fingerprint. */
 	vertexCount: number
+	/** Meshes, each one draw in every pass that draws the model. */
+	meshCount: number
+	/** Whether any material transmits light, which adds a transmission pass. */
+	transmissive: boolean
 }
 
 const measurements = new WeakMap<Object3D, ModelMeasurement>()
@@ -29,10 +33,29 @@ export const measureModel = (model: Object3D): ModelMeasurement => {
 
 	const measurement = {
 		bounds: measureInParentSpace(model),
-		vertexCount: computeModelFingerprint(model)
+		vertexCount: computeModelFingerprint(model),
+		...countDraws(model)
 	}
 	if (!measurement.bounds.isEmpty()) measurements.set(model, measurement)
 	return measurement
+}
+
+const countDraws = (model: Object3D) => {
+	let meshCount = 0
+	let transmissive = false
+	model.traverse((object) => {
+		const mesh = object as Mesh
+		if (!mesh.isMesh) return
+		meshCount += 1
+		const materials: Material[] = Array.isArray(mesh.material)
+			? mesh.material
+			: [mesh.material]
+		transmissive ||= materials.some(
+			(material) =>
+				((material as { transmission?: number }).transmission ?? 0) > 0
+		)
+	})
+	return { meshCount, transmissive }
 }
 
 /**

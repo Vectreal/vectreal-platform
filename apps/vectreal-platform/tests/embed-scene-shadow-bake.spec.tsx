@@ -42,6 +42,14 @@ describe('the published scene’s shadow bake', () => {
 		expect(props.staticShadowBake).toBeFalsy()
 	})
 
+	it('keeps a visitor’s device off a live bake it cannot hold', () => {
+		// The dashboard, /preview and every embed draw through this component,
+		// and a phone opening a heavy scene with no valid stored bake lost the
+		// WebGL context to the live bake.
+		render(<SceneEmbedViewer file={null} theme="system" />)
+		expect(captured.at(-1)?.liveShadowBake).toBe('within-budget')
+	})
+
 	describe('stored with the basis it was baked on', () => {
 		const basis = { footprint: 1.2, radius: 0.9, vertexCount: 18_432 }
 		const bakeRef = {

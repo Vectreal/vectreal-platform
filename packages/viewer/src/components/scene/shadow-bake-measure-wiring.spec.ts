@@ -43,7 +43,7 @@ describe('live shadow bakes', () => {
 describe('a persisted bake', () => {
 	it('is chosen by the validity rule, with its basis', () => {
 		expect(shadows).toMatch(
-			/const usePersistedBake = useMemo\([\s\S]*?isPersistedBakeValid\(bakedShadow, bakeOptions, \{\s*\.\.\.bakeBasis,\s*measured\s*\}\)/
+			/const usePersistedBake = useMemo\([\s\S]*?isPersistedBakeValid\(\s*bakedShadow,\s*bakeOptions,\s*\{\s*\.\.\.bakeBasis,\s*measured\s*\},/
 		)
 	})
 

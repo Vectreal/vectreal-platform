@@ -69,6 +69,16 @@ export type EmbedEventMap = {
 	 * this device. A visitor can still ask it to try again.
 	 */
 	render_failed: { reason: 'context_lost' }
+	/**
+	 * The viewer drew a contact shadow in place of baking the ground shadow
+	 * live, because the scene has no valid stored bake and this device or the
+	 * scene is over the live-bake budget. Publishing the scene again stores a
+	 * bake every device shows.
+	 */
+	shadow_bake_skipped: {
+		reason: 'touch_device' | 'over_budget'
+		estimatedDraws: number
+	}
 	hotspot_activated: { hotspotId: string; cameraId: string | null }
 	interaction_event: {
 		interactionId?: string
@@ -479,6 +489,12 @@ export class VectrealEmbed {
 				break
 			case 'render_failed':
 				this.emit('render_failed', { reason: event.reason })
+				break
+			case 'shadow_bake_skipped':
+				this.emit('shadow_bake_skipped', {
+					reason: event.reason,
+					estimatedDraws: event.estimatedDraws
+				})
 				break
 			case 'initial_framing_completed':
 				// Translate to model_loaded for embed consumers - signals scene is visible

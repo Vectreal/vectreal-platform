@@ -14,8 +14,6 @@ import {
 	type WebGLRenderer
 } from 'three'
 
-import type { BakeBasis, ResolvedSceneLight } from '@vctrl/core'
-
 /**
  * Resolution (px, square) of the persisted shadow-density PNG. Independent of the
  * bake's own `resolution` (which controls bake quality); the stored mask is a
@@ -39,99 +37,13 @@ export const computeModelFingerprint = (model: Object3D): number => {
 	return vertices
 }
 
-// Synchronous FNV-1a hash → 8-char hex. Used to fold the canonical bake-input
-// serialization into a short, stable token. Sync (no crypto.subtle) because the
-// signature is derived in render.
-const fnv1aHex = (input: string): string => {
-	let hash = 0x811c9dc5
-	for (let i = 0; i < input.length; i++) {
-		hash ^= input.charCodeAt(i)
-		hash = Math.imul(hash, 0x01000193)
-	}
-	return (hash >>> 0).toString(16).padStart(8, '0')
-}
-
-/** What the ground bake is computed from, apart from the model. */
-export interface BakeSignatureOptions {
-	/** The lights the bake samples: on, and giving any light. */
-	lights: ReadonlyArray<
-		Pick<ResolvedSceneLight, 'azimuth' | 'elevation' | 'size' | 'intensity'>
-	>
-	/** The environment's rotation, which turns the lights. */
-	rotation: number
-	frames: number
-	scale: number
-	resolution: number
-}
-
-/**
- * Deterministic signature of everything that changes the BAKED shadow density,
- * hashed into a compact token: the lights the bake samples, the environment's
- * rotation, the bake's frame count, plane scale and resolution, and the model
- * fingerprint (footprint, radius, vertex count). Hashing a complete,
- * canonically ordered serialization means no input can be silently left out.
- *
- * A light's color and the environment's brightness are not in it: the stored
- * density is a ratio, and neither changes it. Computed identically at capture
- * and load time so the two can be compared. The `v3:` prefix versions the
- * format: a token from before scene lighting simply mismatches, and that scene
- * bakes once more.
- */
-export const computeBakeSignature = (
-	options: BakeSignatureOptions,
-	footprint: number,
-	radius: number,
-	fingerprint: number
-): string => {
-	const canonical = [
-		`fp:${fingerprint}`,
-		`ft:${footprint.toFixed(3)}`,
-		`rd:${radius.toFixed(3)}`,
-		`fr:${options.frames}`,
-		`sc:${options.scale}`,
-		`rs:${options.resolution}`,
-		`ro:${options.rotation.toFixed(3)}`,
-		...options.lights.map(
-			(light) =>
-				`l:${[light.azimuth, light.elevation, light.size, light.intensity]
-					.map((n) => n.toFixed(3))
-					.join(',')}`
-		)
-	].join('|')
-	return `v3:${fnv1aHex(canonical)}`
-}
-
-/**
- * Whether a persisted bake still shows what a live bake would.
- *
- * With a stored basis, the bake is checked against the measurements it was
- * baked on, so only a change to the shadow settings invalidates it. Without
- * one, it is checked against the loaded model - and trusted until that model
- * is measured, rather than spawning the very live bake the stored one exists
- * to avoid.
- */
-export const isPersistedBakeValid = (
-	baked: { signature: string; basis?: BakeBasis },
-	options: BakeSignatureOptions,
-	model: BakeBasis & { measured: boolean }
-): boolean => {
-	if (baked.basis) {
-		const { footprint, radius, vertexCount } = baked.basis
-		return (
-			computeBakeSignature(options, footprint, radius, vertexCount) ===
-			baked.signature
-		)
-	}
-	if (!model.measured) return true
-	return (
-		computeBakeSignature(
-			options,
-			model.footprint,
-			model.radius,
-			model.vertexCount
-		) === baked.signature
-	)
-}
+// The signature and the rule for a stored bake live in `@vctrl/core`, so the
+// dashboard asks the question the viewer's gate asks, without the viewer.
+export {
+	computeBakeSignature,
+	isPersistedBakeValid,
+	type BakeSignatureOptions
+} from '@vctrl/core'
 
 const DENSITY_VERTEX = /* glsl */ `
 	varying vec2 vUv;
