@@ -1,4 +1,24 @@
-import type { CameraProps } from '../types'
+import type { CameraConfig, CameraProps } from '../types'
+
+/**
+ * Scene cameras are the ones a viewer can open on and switch between. Entries
+ * with another `kind` (a hotspot's close-up) are reached through their marker.
+ * A missing `kind` predates the field and means "scene".
+ *
+ * The one definition. Normalization, the viewer's opening camera and the
+ * platform's default-camera and embed rules all ask it, so they cannot drift
+ * apart on which camera a scene opens on.
+ */
+export const isSceneCamera = (camera: { kind?: string }): boolean =>
+	!camera.kind || camera.kind === 'scene'
+
+/** The camera a scene falls back to when it stores none. */
+export const DEFAULT_CAMERA: CameraConfig = {
+	cameraId: 'default',
+	name: 'Default Camera',
+	fov: 60,
+	initial: true
+}
 
 /**
  * Normalizes the canonical camera payload and enforces implicit first-camera defaults.
@@ -26,9 +46,7 @@ export function normalizeCameraSettings(
 	}))
 
 	// Find the first scene camera (non-hotspot)
-	const firstSceneCameraId = normalizedCameras.find(
-		(entry) => !entry.kind || entry.kind === 'scene'
-	)?.cameraId
+	const firstSceneCameraId = normalizedCameras.find(isSceneCamera)?.cameraId
 
 	if (!firstSceneCameraId) {
 		return camera

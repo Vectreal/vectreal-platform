@@ -1,5 +1,7 @@
+import { isSceneCamera } from '@vctrl/core'
+
 import { isHotspotArtworkPath } from './hotspot-artwork'
-import { isPairedHotspotCamera, isSceneCamera } from './scene-camera'
+import { isPairedHotspotCamera } from './scene-camera'
 
 import type { SceneSettings } from '@vctrl/core'
 

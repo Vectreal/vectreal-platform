@@ -230,10 +230,10 @@ Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-spe
 
 ### Sampling a flight outside the viewer
 
-`sampleCameraFlight` is the flight between two cameras as a pure function of raw progress, the same one the viewer samples every frame. A renderer that draws frames itself, out of order or at a fixed rate, calls it per frame and gets the path the viewer flies. Import it from `@vctrl/viewer/camera-flight`, which needs only `three`, or from the package root.
+`sampleCameraFlight` is the flight between two cameras as a pure function of raw progress, the same one the viewer samples every frame. A renderer that draws frames itself, out of order or at a fixed rate, calls it per frame and gets the path the viewer flies. It is defined in `@vctrl/core/scene-camera`, which needs only `three`. The older `@vctrl/viewer/camera-flight` entry point and the viewer's root export still work, but are deprecated and may be removed in `@vctrl/viewer` 4.0.0.
 
 ```ts
-import { sampleCameraFlight } from '@vctrl/viewer/camera-flight'
+import { sampleCameraFlight } from '@vctrl/core/scene-camera'
 import { Sphere, Vector3 } from 'three'
 
 const flight = {

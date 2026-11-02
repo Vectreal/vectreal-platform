@@ -1,4 +1,4 @@
-import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
+import type { CameraConfig, HotspotDefinition } from '../types'
 
 /**
  * Aims a hotspot's camera at its hotspot, where the author never said otherwise.

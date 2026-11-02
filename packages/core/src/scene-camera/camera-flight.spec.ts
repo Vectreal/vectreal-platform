@@ -8,7 +8,7 @@ import {
 	type CameraFlight
 } from './camera-flight'
 
-import type { CameraTransitionEasing } from '@vctrl/core'
+import type { CameraTransitionEasing } from '../types'
 
 const EASINGS: CameraTransitionEasing[] = [
 	'linear',

@@ -34,6 +34,10 @@ import {
 	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
+import {
+	resolveHotspotCameraTargets,
+	type OpeningPose
+} from '@vctrl/core/scene-camera'
 // import { Perf } from 'r3f-perf'
 import {
 	memo,
@@ -63,7 +67,6 @@ import {
 	SceneControls,
 	type ViewerView,
 	SceneEnvironment,
-	resolveHotspotCameraTargets,
 	resolveHotspotMarkers,
 	SceneHotspots,
 	SceneLights,
@@ -89,7 +92,6 @@ import { useSrcModel } from './hooks/use-src-model'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
-import type { OpeningPose } from './components/scene/opening-pose'
 import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type { SrcLoadOptions, SrcModel } from './load-src'
 import type {

@@ -49,6 +49,10 @@ export default defineConfig({
 					import.meta.dirname,
 					'src/occlusion-bake/index.ts'
 				),
+				'scene-camera': path.resolve(
+					import.meta.dirname,
+					'src/scene-camera/index.ts'
+				),
 				node: path.resolve(import.meta.dirname, 'src/node/index.ts')
 			},
 			name: '@vctrl/core',

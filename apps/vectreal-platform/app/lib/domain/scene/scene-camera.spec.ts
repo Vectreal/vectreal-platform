@@ -1,26 +1,16 @@
+import { isSceneCamera } from '@vctrl/core'
+
 import {
 	applyDefaultCameraFlag,
 	buildDefaultCameraSignature,
 	isLastSceneCamera,
 	isPairedHotspotCamera,
 	withSceneCameraKinds,
-	isSceneCamera,
 	resolveDefaultSceneCameraId
 } from './scene-camera'
 import { defaultCameraOptions } from '../../../constants/viewer-defaults'
 
 import type { CameraLike } from './scene-camera'
-
-describe('isSceneCamera', () => {
-	it('treats an explicit scene camera and a legacy entry without a kind as scene cameras', () => {
-		expect(isSceneCamera({ kind: 'scene' })).toBe(true)
-		expect(isSceneCamera({})).toBe(true)
-	})
-
-	it('excludes navigational entries', () => {
-		expect(isSceneCamera({ kind: 'hotspot' })).toBe(false)
-	})
-})
 
 describe('resolveDefaultSceneCameraId', () => {
 	it('picks the first scene camera, skipping hotspots ahead of it', () => {

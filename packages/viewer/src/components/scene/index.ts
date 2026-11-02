@@ -7,12 +7,13 @@ export { default as SceneBounds, defaultBoundsOptions } from './scene-bounds'
 export { default as SceneCamera, defaultCameraOptions } from './scene-camera'
 export {
 	easeFlightProgress,
+	resolveHotspotCameraTargets,
 	sampleCameraFlight,
 	SMART_FLIGHT_CLEARANCE,
 	type CameraFlight,
 	type CameraFlightFrame,
 	type CameraFlightPose
-} from './camera-flight'
+} from '../../camera-core-aliases'
 export {
 	default as SceneControls,
 	defaultControlsOptions,
@@ -22,7 +23,6 @@ export {
 	default as SceneEnvironment,
 	defaultEnvOptions
 } from './scene-environment'
-export { resolveHotspotCameraTargets } from './resolve-hotspot-camera-targets'
 export { default as SceneHotspots } from './scene-hotspots'
 export type { HotspotPositionSetter } from './scene-hotspots'
 export {
