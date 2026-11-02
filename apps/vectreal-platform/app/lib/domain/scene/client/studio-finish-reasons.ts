@@ -64,6 +64,10 @@ export const STUDIO_FINISH_FAILURES = {
 			'The graphics card reset while drawing. Close other heavy tabs and try again.',
 		reported: false
 	},
+	stalled: {
+		message: 'Drawing stopped making progress. Try again, or try Depth alone.',
+		reported: true
+	},
 	'timed-out': {
 		message: `Drawing took over ${PUBLISH_EXPORT_TIMEOUT_MS / 60_000} minutes. Try depth alone, fewer lights or a lighter model.`,
 		reported: false
