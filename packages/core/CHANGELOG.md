@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.3.0...core-v3.4.0) (2026-11-02)
+
+
+### Features
+
+* **core:** add a scene-camera module holding the viewer's camera math ([#1246](https://github.com/Vectreal/vectreal-platform/issues/1246)) ([ba34185](https://github.com/Vectreal/vectreal-platform/commit/ba341851cb2498750f5b1637f93a33903b0394bb))
+* **core:** repair a studio bake after a GPU reset and say why one failed ([#1244](https://github.com/Vectreal/vectreal-platform/issues/1244)) ([fbc72ae](https://github.com/Vectreal/vectreal-platform/commit/fbc72ae08939c5c5419fdab0af1171ea1f1c1bab))
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.2.0...core-v3.3.0) (2026-11-01)
 
 

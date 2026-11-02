@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.3.0...viewer-v3.4.0) (2026-11-02)
+
+
+### Features
+
+* **core:** add a scene-camera module holding the viewer's camera math ([#1246](https://github.com/Vectreal/vectreal-platform/issues/1246)) ([ba34185](https://github.com/Vectreal/vectreal-platform/commit/ba341851cb2498750f5b1637f93a33903b0394bb))
+
+
+### Bug Fixes
+
+* **viewer:** recover from a lost WebGL context or say the scene could not be shown ([#1248](https://github.com/Vectreal/vectreal-platform/issues/1248)) ([1948045](https://github.com/Vectreal/vectreal-platform/commit/1948045eccdbbed26fbd79d4d1aec9e8dc3e20cf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.4.0
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.2.0...viewer-v3.3.0) (2026-11-01)
 
 
