@@ -34,10 +34,10 @@ function BakeReport({
 }) {
 	if ('failed' in report) {
 		return (
-			<div className="space-y-1 text-xs">
+			<div className="space-y-1 text-xs wrap-anywhere">
 				<p className="flex justify-between gap-2 text-sm">
-					<span>{label}</span>
-					<span className="text-destructive">Failed</span>
+					<span className="min-w-0">{label}</span>
+					<span className="text-destructive shrink-0">Failed</span>
 				</p>
 				<p className="text-muted-foreground">
 					Publishing ships the model without it: {report.failed}
@@ -46,10 +46,10 @@ function BakeReport({
 		)
 	}
 	return (
-		<div className="space-y-1 text-xs">
+		<div className="space-y-1 text-xs wrap-anywhere">
 			<p className="flex justify-between gap-2 text-sm">
-				<span>{label}</span>
-				<span className="text-muted-foreground">
+				<span className="min-w-0">{label}</span>
+				<span className="text-muted-foreground shrink-0">
 					{report.baked.length > 0
 						? plural(report.baked.length, 'material')
 						: 'Nothing drawn'}
@@ -158,7 +158,7 @@ export function BakeSection({
 			)}
 
 			{preview?.status === 'failed' && (
-				<InlineNotice tone="error" role="alert">
+				<InlineNotice tone="error" role="alert" className="wrap-anywhere">
 					The studio finish failed: {preview.error}
 				</InlineNotice>
 			)}
