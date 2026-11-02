@@ -29,6 +29,8 @@ sceneImage: "/media/images/newsroom/scene-publish-3d-models-from-your-ai-agent.w
 coverImage: "/media/images/newsroom/og-publish-3d-models-from-your-ai-agent.webp"
 ---
 
+<video src="/media/images/newsroom/18/agent-publishes.mp4" poster="/media/images/newsroom/18/agent-publishes-poster.webp" autoPlay muted loop playsInline aria-label="A one-line request, Put helmet.glb on my page, with a ground shadow, sits over a dim flight helmet floating in the dark, then moves up to the top. One at a time the agent's five tool calls appear by name, describe_model, create_scene_from_file, update_scene_settings, publish_scene and get_embed_snippet, while a row of five dashes fills in. Then a plain web page titled Flight helmet shows the helmet in its embed, standing on a ground shadow."></video>
+
 ## Why an MCP server and not an assistant inside Vectreal?
 
 Because people already have an agent. Everyone is building with their own, in their own environment, and nobody is tied to a proprietary assistant inside a 3D product, so I didn't see much point in building one in. An MCP server goes the other way: it lets the agent you already use do the publishing, inside the same session where it's writing your page, and automate more around it.
@@ -50,7 +52,7 @@ The agent works it out from the server's tools:
 | --- | --- |
 | `describe_model` | Reads a local GLB's size, meshes, materials and animation clips without uploading anything |
 | `create_scene_from_file` | Uploads the GLB as a new draft scene |
-| `get_scene_settings`, `update_scene_settings` | Reads every setting; changes the environment, controls, bounds, shadows and presentation |
+| `get_scene_settings`, `update_scene_settings` | Reads every setting; changes the lighting, environment, controls, bounds, shadows and presentation |
 | `publish_scene` | Compresses the GLB the way the Publisher does, Draco for geometry and KTX2 for textures, on your machine, and publishes it |
 | `get_embed_snippet` | Returns the iframe snippet and a preview link, creating an embed key if the project has none and adding the domains you name to its allowed list |
 | `list_projects`, `create_project`, `list_scenes`, `unpublish_scene`, `whoami` | Finds its way around your organization |
