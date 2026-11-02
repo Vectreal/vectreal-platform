@@ -49,6 +49,8 @@ const renderedLoad = vi.hoisted(() => ({ id: 1 }))
 const drawer = vi.hoisted(() => ({ open: true }))
 /** Whether the optimizer holds a model; `setSource` takes it out while loading. */
 const optimizerReady = vi.hoisted(() => ({ current: true }))
+/** The optimizer's report of its latest run. */
+const optimizerReport = vi.hoisted(() => ({ current: null as unknown }))
 /** Re-renders the hook under test, as the optimizer's own state change does. */
 const rerenderHook = vi.hoisted(() => ({ current: () => {} }))
 /**
@@ -75,7 +77,7 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 		optimizer: {
 			isReady: optimizerReady.current,
 			isPreparing: false,
-			report: null,
+			report: optimizerReport.current,
 			info: null,
 			getSource: () => optimizerSource.current,
 			setSource
@@ -113,6 +115,7 @@ beforeEach(() => {
 	refreshOptimizedSizeInfo.mockReset()
 	optimizerSource.current = new Uint8Array([1])
 	optimizerReady.current = true
+	optimizerReport.current = null
 	loads.latest = 1
 	renderedLoad.id = 1
 	drawer.open = true
@@ -166,6 +169,30 @@ describe('useOptimizationProcess', () => {
 			}))
 		)
 		expect(result.current.hasCompletedOptimizationPass).toBe(true)
+	})
+
+	it('counts the meshes before and after only when the run merged them', () => {
+		const meshesCount = { before: 1664, after: 21 }
+		const report = (appliedOptimizations: string[]) => ({
+			appliedOptimizations,
+			stats: {
+				verticesCount: { before: 9, after: 9 },
+				primitivesCount: { before: 3, after: 3 },
+				materialsCount: { before: 1, after: 1 },
+				textureBytes: { before: 0, after: 0 },
+				texturesCount: { before: 0, after: 0 },
+				textureResolutions: { before: [], after: [] },
+				meshBytes: { before: 0, after: 0 },
+				meshesCount
+			}
+		})
+		optimizerReport.current = report(['deduplication'])
+		const { result } = renderProcess()
+		expect(result.current.mergedMeshesCount).toBeNull()
+
+		optimizerReport.current = report(['deduplication', 'mesh merging'])
+		act(() => rerenderHook.current())
+		expect(result.current.mergedMeshesCount).toEqual(meshesCount)
 	})
 
 	it('reports the size as computing while it is projected', () => {

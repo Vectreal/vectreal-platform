@@ -19,10 +19,20 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * transforms, which ModelOptimizer runs on a copy and commits.
  */
 
-import { getBounds, Scene, Transform } from '@gltf-transform/core'
+import {
+	Document,
+	getBounds,
+	type mat4,
+	Node,
+	Primitive,
+	Scene,
+	Transform
+} from '@gltf-transform/core'
 import {
 	dedup,
 	DedupOptions as GltfDedupOptions,
+	flatten,
+	join,
 	normals,
 	NormalsOptions as GltfNormalsOptions,
 	quantize,
@@ -47,10 +57,37 @@ export interface TransformPass<Options> {
 	finished: string
 	transforms: (options: Options) => Transform[]
 	/**
-	 * Kept even when it makes the file larger. Every other pass exists to
-	 * shrink the file, so a result that grows it is reverted.
+	 * Whether the result is worth committing. By default, when the file did
+	 * not grow: most passes exist to shrink it, so one that grows it is
+	 * reverted.
 	 */
-	mayGrow?: boolean
+	keeps?: (change: PassChange) => boolean
+}
+
+/** A pass's result next to what it ran on. */
+export interface PassChange {
+	before: Document
+	after: Document
+	sizeBefore: number
+	sizeAfter: number
+}
+
+/** The default: kept when the file is no larger. */
+export const keepsWhenNoLarger = ({ sizeBefore, sizeAfter }: PassChange) =>
+	sizeAfter <= sizeBefore
+
+/**
+ * How many primitives the scenes draw, each once per node that holds it. A
+ * node no scene reaches draws nothing, and pruning it is no saving.
+ */
+const countDrawnPrimitives = (document: Document) => {
+	let count = 0
+	for (const scene of document.getRoot().listScenes()) {
+		scene.traverse((node) => {
+			count += node.getMesh()?.listPrimitives().length ?? 0
+		})
+	}
+	return count
 }
 
 export const simplifyPass: TransformPass<SimplifyOptions> = {
@@ -69,6 +106,209 @@ export const dedupPass: TransformPass<DedupOptions> = {
 	finished: 'Deduplication complete',
 	transforms: (options) => [dedup(options as GltfDedupOptions)]
 }
+
+/**
+ * Merges meshes that share a material into one, so the viewer draws each
+ * material once rather than once per part. Imported CAD and car models are
+ * often hundreds or thousands of small parts on a handful of materials: the
+ * Porsche is 1,664 meshes on 20 materials, and every one is a draw call in
+ * each pass of every frame.
+ *
+ * `flatten` lifts every node to the scene root, keeping its world transform,
+ * so siblings across the old hierarchy can join; {@link placeStillParts}
+ * writes each part's place into its vertices; `join` then merges primitives
+ * with the same material and vertex layout into one. None of them touches an
+ * animated node or anything below one, a joint or a skinned or morphing mesh,
+ * so a clip still finds every node it moves. Vertices keep their own UVs, so
+ * baked textures read the same.
+ *
+ * It may grow the file: a mesh reused by several nodes becomes one copy per
+ * use, and joined indices can need a wider type. Its saving is in draw calls,
+ * not bytes, so it is kept when the scene draws fewer primitives, and only
+ * then.
+ */
+export const mergePass: TransformPass<void> = {
+	name: 'mesh merging',
+	started: 'Merging meshes',
+	finished: 'Mesh merging complete',
+	// Kept for fewer draws, whatever the size; with none fewer it changed
+	// nothing worth keeping, and would leave quantized vertices as floats.
+	keeps: ({ before, after }) =>
+		countDrawnPrimitives(after) < countDrawnPrimitives(before),
+	transforms: () => [flatten(), placeStillParts(), join({ filter: isJoinable })]
+}
+
+/** A node that does not move what it holds. */
+const IDENTITY: mat4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+
+const isAtOrigin = (node: Node) =>
+	node.getMatrix().every((value, i) => value === IDENTITY[i])
+
+/**
+ * Whether `join` may merge a part: one standing at the origin, so joining
+ * moves none of its vertices, drawn as plain triangles, and with nothing on
+ * its node or primitives that `join` would drop or spread to the others, such
+ * as material variants or a node hidden by `KHR_node_visibility`. Strips,
+ * fans and line strips join with primitive-restart indices, which three.js
+ * does not read.
+ */
+const isJoinable = (node: Node) =>
+	isAtOrigin(node) &&
+	node.listExtensions().length === 0 &&
+	(node.getMesh()?.listPrimitives() ?? []).every(
+		(primitive) =>
+			primitive.getMode() === Primitive.Mode['TRIANGLES'] &&
+			primitive.listExtensions().length === 0
+	)
+
+/**
+ * Moves the transform of every still part at the scene root into its
+ * vertices, so the part's node stands at the origin.
+ *
+ * `join` merges only parts at the origin. Left to itself it would keep the
+ * first part's node and move the others into its space, and a viewer measures
+ * a mesh by its own box carried through its node: a rotated node gives a box
+ * larger than the vertices, and the merged Porsche measured 2% of its height
+ * lower than it is, the ground and the framing with it. At the origin, the box
+ * a viewer measures is the vertices' own.
+ *
+ * The vertices are moved here rather than by glTF-Transform, whose 4.4.2
+ * transform zeroes a quantized normal and rotates a tangent from its own
+ * half-written result. Each part gets its own copy of what it moves, so a
+ * mesh or accessor another part shares stays where it was.
+ *
+ * Left as they are: animated nodes, joints, skinned, morphing and instanced
+ * meshes and nodes with children, which something else moves or hangs from;
+ * a node carrying a camera or a light, which would move with it; a volume
+ * material, whose thickness is measured in the mesh's own space; and a
+ * mirrored part drawn as strips or fans, whose winding cannot be turned.
+ */
+export function placeStillParts(): Transform {
+	return (document) => {
+		const root = document.getRoot()
+		const pinned = new Set<Node>([
+			...root
+				.listAnimations()
+				.flatMap((animation) => animation.listChannels())
+				.map((channel) => channel.getTargetNode())
+				.filter((node): node is Node => node !== null),
+			...root.listSkins().flatMap((skin) => skin.listJoints())
+		])
+		for (const scene of root.listScenes()) {
+			for (const node of scene.listChildren()) {
+				const mesh = node.getMesh()
+				const matrix = node.getMatrix()
+				const mirrored = determinant3(matrix) < 0
+				if (
+					!mesh ||
+					isAtOrigin(node) ||
+					pinned.has(node) ||
+					node.getSkin() ||
+					node.getCamera() ||
+					node.listExtensions().length > 0 ||
+					node.listChildren().length > 0 ||
+					mesh
+						.listPrimitives()
+						.some(
+							(primitive) =>
+								primitive.listTargets().length > 0 ||
+								primitive.getMaterial()?.getExtension('KHR_materials_volume') ||
+								(mirrored &&
+									primitive.getMode() !== Primitive.Mode['TRIANGLES'])
+						)
+				) {
+					continue
+				}
+				// A copy keeps the mesh's name, extras and extensions.
+				const placed = mesh.clone()
+				for (const primitive of placed.listPrimitives()) {
+					placed
+						.removePrimitive(primitive)
+						.addPrimitive(placePrimitive(primitive.clone(), matrix))
+				}
+				node.setMesh(placed).setMatrix(IDENTITY)
+			}
+		}
+	}
+}
+
+/** Writes `matrix` into the primitive's own copies of what it moves. */
+function placePrimitive(primitive: Primitive, matrix: mat4): Primitive {
+	const [a, b, c, , d, e, f, , g, h, k] = matrix
+	// The cofactors of the upper 3x3: its inverse transpose times its
+	// determinant, which is how a normal moves.
+	const cofactors = [
+		e * k - f * h,
+		f * g - d * k,
+		d * h - e * g,
+		c * h - b * k,
+		a * k - c * g,
+		b * g - a * h,
+		b * f - c * e,
+		c * d - a * f,
+		a * e - b * d
+	]
+	const sign = Math.sign(determinant3(matrix)) || 1
+	const linear = (v: number[], m: number[], stride: number) =>
+		[0, 1, 2].map(
+			(row) =>
+				m[row] * v[0] + m[row + stride] * v[1] + m[row + 2 * stride] * v[2]
+		)
+	const unit = (v: number[]) => {
+		const length = Math.hypot(v[0], v[1], v[2]) || 1
+		return v.map((value) => value / length)
+	}
+	const moves: Record<string, (v: number[]) => number[]> = {
+		POSITION: (v) =>
+			linear(v, matrix, 4).map((value, i) => value + matrix[12 + i]),
+		NORMAL: (v) => unit(linear(v, cofactors, 3).map((value) => value * sign)),
+		TANGENT: (v) => [...unit(linear(v, matrix, 4)), (v[3] ?? 1) * sign]
+	}
+	for (const [semantic, move] of Object.entries(moves)) {
+		const source = primitive.getAttribute(semantic)
+		if (!source) continue
+		const size = source.getElementSize()
+		const moved = new Float32Array(source.getCount() * size)
+		const element: number[] = []
+		for (let i = 0; i < source.getCount(); i++) {
+			moved.set(move(source.getElement(i, element)), i * size)
+		}
+		primitive.setAttribute(
+			semantic,
+			source.clone().setArray(moved).setNormalized(false)
+		)
+	}
+	if (sign < 0 && primitive.getMode() === Primitive.Mode['TRIANGLES']) {
+		turnWinding(primitive)
+	}
+	return primitive
+}
+
+/** Turns every triangle's corners the other way round, in its own indices. */
+function turnWinding(primitive: Primitive): void {
+	const count = primitive.getAttribute('POSITION')?.getCount() ?? 0
+	const source = primitive.getIndices()
+	const indices = source
+		? Array.from(source.getArray() ?? [])
+		: Array.from({ length: count }, (_, i) => i)
+	for (let i = 0; i + 2 < indices.length; i += 3) {
+		;[indices[i + 1], indices[i + 2]] = [indices[i + 2], indices[i + 1]]
+	}
+	const array =
+		count > 65535 ? new Uint32Array(indices) : new Uint16Array(indices)
+	primitive.setIndices(
+		(source
+			? source.clone()
+			: Document.fromGraph(primitive.getGraph())!
+					.createAccessor()
+					.setType('SCALAR')
+		).setArray(array)
+	)
+}
+
+/** The determinant of a matrix's upper 3x3: below zero, it mirrors. */
+const determinant3 = ([a, b, c, , d, e, f, , g, h, k]: mat4) =>
+	a * (e * k - f * h) - b * (d * k - f * g) + c * (d * h - e * g)
 
 export const quantizePass: TransformPass<QuantizeOptions> = {
 	name: 'quantization',
@@ -149,6 +389,6 @@ export const placementPass: TransformPass<PlacementOptions> = {
 	name: 'placement',
 	started: 'Placing the model on the ground',
 	finished: 'Placement complete',
-	mayGrow: true,
+	keeps: () => true,
 	transforms: (options) => [placeOnGround(options)]
 }

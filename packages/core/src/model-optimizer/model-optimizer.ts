@@ -54,10 +54,13 @@ import {
 } from './texture-payload'
 import {
 	dedupPass,
+	keepsWhenNoLarger,
+	mergePass,
 	normalsPass,
 	placementPass,
 	quantizePass,
 	simplifyPass,
+	type PassChange,
 	TransformPass
 } from './transform-passes'
 import {
@@ -217,6 +220,14 @@ export class ModelOptimizer {
 	}
 
 	/**
+	 * Merge meshes that share a material, to cut draw calls. See
+	 * {@link mergePass}.
+	 */
+	public async mergeMeshes(): Promise<void> {
+		await this.runPass(mergePass, undefined)
+	}
+
+	/**
 	 * Apply quantization optimization.
 	 *
 	 * @param options - Quantization options
@@ -255,7 +266,7 @@ export class ModelOptimizer {
 			pass.transforms(options),
 			pass.name,
 			undefined,
-			pass.mayGrow
+			pass.keeps
 		)
 		this.emitProgress(pass.finished, 100)
 	}
@@ -870,7 +881,7 @@ export class ModelOptimizer {
 		transforms: Transform[],
 		operationName: string,
 		ticket = this.currency.currentTicket(),
-		mayGrow = false
+		keeps: (change: PassChange) => boolean = keepsWhenNoLarger
 	): Promise<void> {
 		// Asked before the document is: a reset or a failed load that retired
 		// the ticket also cleared the document, and returning quietly then
@@ -894,9 +905,16 @@ export class ModelOptimizer {
 			// Before either outcome: a retired step neither commits nor reverts.
 			this.currency.ensureCurrent(ticket)
 
-			if (!mayGrow && newSize > originalSize) {
+			if (
+				!keeps({
+					before: document,
+					after: workingDoc,
+					sizeBefore: originalSize,
+					sizeAfter: newSize
+				})
+			) {
 				console.warn(
-					`${operationName} increased model size (${originalSize} → ${newSize} bytes), reverting changes.`
+					`${operationName} made no improvement worth keeping (${originalSize} → ${newSize} bytes), reverting changes.`
 				)
 				return
 			}

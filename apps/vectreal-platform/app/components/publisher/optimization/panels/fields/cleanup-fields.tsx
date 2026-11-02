@@ -3,7 +3,7 @@ import { useOptimizationSettings } from '../../use-optimization-settings'
 
 import type { FC } from 'react'
 
-const CLEANUP_KEYS = ['dedup', 'normals', 'quantize'] as const
+const CLEANUP_KEYS = ['dedup', 'merge', 'normals', 'quantize'] as const
 
 /**
  * The cheap, non-destructive passes. Grouped together because none of them

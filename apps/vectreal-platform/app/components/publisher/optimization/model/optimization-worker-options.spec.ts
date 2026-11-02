@@ -7,6 +7,7 @@ describe('buildWorkerOptions', () => {
 	it('includes only enabled geometry steps', () => {
 		expect(Object.keys(buildWorkerOptions(balancedPreset))).toEqual([
 			'dedup',
+			'merge',
 			'draco'
 		])
 	})

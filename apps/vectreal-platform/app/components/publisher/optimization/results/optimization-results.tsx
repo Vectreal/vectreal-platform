@@ -11,7 +11,7 @@ import type { resolveSceneMetrics } from '../../../../lib/domain/scene'
 import type { PublishedEncoding } from '../../../../types/scene-optimization'
 import type { SimplificationOutcome } from '../model'
 import type { SizeInfo } from '../use-optimization-process'
-import type { DracoCompressionReport } from '@vctrl/core'
+import type { BeforeAfterMetric, DracoCompressionReport } from '@vctrl/core'
 import type { FC } from 'react'
 
 interface OptimizationResultsProps {
@@ -21,6 +21,8 @@ interface OptimizationResultsProps {
 	/** Present once this document has been published; then it leads. */
 	publishedEncoding?: PublishedEncoding | null
 	simplificationOutcome: SimplificationOutcome | null
+	/** Meshes before and after, when the displayed run merged them. */
+	mergedMeshesCount: BeforeAfterMetric | null
 }
 
 const CODEC_LABELS = {
@@ -51,7 +53,8 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 	resolvedMetrics,
 	dracoReport,
 	publishedEncoding,
-	simplificationOutcome
+	simplificationOutcome,
+	mergedMeshesCount
 }) => {
 	const ktx2 = publishedEncoding?.ktx2Textures
 	const { reductionPercent, deltaLabel } = describeSizeChange(
@@ -156,6 +159,20 @@ export const OptimizationResults: FC<OptimizationResultsProps> = ({
 						— the deviation limit was reached first. Raise it to allow more
 						reduction, at the cost of shape accuracy.
 					</p>
+				) : null}
+
+				{/*
+				  Each mesh is drawn on its own, so this is the count merging
+				  exists to bring down. Shown only once a run merged, like the
+				  triangle reduction above.
+				*/}
+				{mergedMeshesCount ? (
+					<MetricRow label="Meshes">
+						<BeforeAfter
+							before={formatCount(mergedMeshesCount.before)}
+							after={formatCount(mergedMeshesCount.after)}
+						/>
+					</MetricRow>
 				) : null}
 
 				<MetricRow label="Texture size">

@@ -18,6 +18,9 @@ import type { Optimizations } from '@vctrl/core'
  */
 const IGNORED_FIELDS = new Set(['name'])
 
+/** What a step with no entry does: nothing. */
+const NOT_RUN = { enabled: false }
+
 function isEqual(a: unknown, b: unknown): boolean {
 	if (a === b) return true
 	if (Array.isArray(a) && Array.isArray(b)) {
@@ -52,14 +55,17 @@ export const optimizationsMatch = (
 	a: Optimizations,
 	b: Optimizations
 ): boolean => {
-	// The union of both sides' keys, so an optimization one side is missing
-	// entirely and one it has spare are both differences. Settings saved before
-	// a step existed hit the first case.
+	// The union of both sides' keys, so a step either side has counts. A step
+	// one side has no entry for never ran there, which is what a disabled entry
+	// says too: settings saved before a step existed still match a preset that
+	// leaves it off, and differ from one that turns it on.
 	const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<
 		keyof Optimizations
 	>
 
-	return [...keys].every((key) => entryMatches(a[key], b[key]))
+	return [...keys].every((key) =>
+		entryMatches(a[key] ?? NOT_RUN, b[key] ?? NOT_RUN)
+	)
 }
 
 /**

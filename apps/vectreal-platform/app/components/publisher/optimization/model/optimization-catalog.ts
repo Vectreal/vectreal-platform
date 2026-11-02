@@ -66,6 +66,17 @@ export const OPTIMIZATION_CATALOG: readonly OptimizationDefinition[] = [
 		isDestructive: false
 	},
 	{
+		key: 'merge',
+		phase: 'geometry',
+		stepLabel: 'Mesh merging',
+		title: 'Merge meshes',
+		description:
+			'Combines parts that share a material so the scene draws faster',
+		tooltip:
+			'Draws each material once instead of every part on its own, which matters most on phones. Animated and rigged parts are left as they are.',
+		isDestructive: false
+	},
+	{
 		key: 'quantize',
 		phase: 'geometry',
 		stepLabel: 'Vertex quantization',
