@@ -1,5 +1,6 @@
 import {
 	DEFAULT_LIGHTING_SETUP,
+	DEFAULT_SCENE_TRANSITION,
 	LIGHTING_SETUPS,
 	NORMALIZATION_DEFAULT_MAX_SIZE,
 	NORMALIZATION_DEFAULT_MIN_SIZE
@@ -39,14 +40,10 @@ export const defaultCameraOptions: CameraProps = {
 			initial: true
 		}
 	],
-	// Linear rather than object avoidance. The avoidance path solves a curve
-	// around the model and still produces unpredictable framing on some scenes,
-	// so it is opt-in from the camera panel instead of the default everyone gets.
-	sceneTransition: {
-		type: 'linear',
-		duration: 1000,
-		easing: 'ease_in_out'
-	}
+	// Smart, the viewer's own default (`DEFAULT_SCENE_TRANSITION`): it keeps
+	// clear of the model's bounds, so a new scene's first moves turn around the
+	// subject rather than through it.
+	sceneTransition: DEFAULT_SCENE_TRANSITION
 }
 /*
   How dragging the scene feels, as one choice. OrbitControls applies

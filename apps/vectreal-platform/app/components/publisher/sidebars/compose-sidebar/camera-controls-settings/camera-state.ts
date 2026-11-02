@@ -1,4 +1,5 @@
 import { slugify } from '@shared/utils'
+import { DEFAULT_SCENE_TRANSITION } from '@vctrl/core'
 
 import { defaultCameraOptions } from './constants'
 import { applyDefaultCameraFlag } from '../../../../../lib/domain/scene/scene-camera'
@@ -32,9 +33,6 @@ export const TRANSITION_EASING_OPTIONS: {
 	{ value: 'ease_in_out', label: 'Smooth' }
 ]
 
-export const DEFAULT_TRANSITION_DURATION = 1000
-export const DEFAULT_TRANSITION_EASING: CameraTransitionEasing = 'ease_in_out'
-
 /**
  * The scene transition with every field its type uses filled in, so the
  * editor can spread it into an edit without re-applying defaults.
@@ -47,15 +45,14 @@ export function normalizeTransition(
 	}
 
 	const timing = {
-		duration: transition?.duration ?? DEFAULT_TRANSITION_DURATION,
-		easing: transition?.easing ?? DEFAULT_TRANSITION_EASING
+		duration: transition?.duration ?? DEFAULT_SCENE_TRANSITION.duration,
+		easing: transition?.easing ?? DEFAULT_SCENE_TRANSITION.easing
 	}
 
 	// A saved `objectAvoidance` is dropped: Smart takes its clearance from
 	// the model's size, and the viewer no longer reads those fields.
 	return {
-		type:
-			transition?.type === 'object_avoidance' ? 'object_avoidance' : 'linear',
+		type: transition?.type ?? DEFAULT_SCENE_TRANSITION.type,
 		...timing
 	}
 }

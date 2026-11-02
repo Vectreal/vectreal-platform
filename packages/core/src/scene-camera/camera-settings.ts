@@ -1,6 +1,10 @@
 import { isFramingAspect } from './viewport-framing'
 
-import type { CameraConfig, CameraProps } from '../types'
+import type {
+	CameraConfig,
+	CameraProps,
+	CameraTransitionConfig
+} from '../types'
 
 /**
  * Scene cameras are the ones a viewer can open on and switch between. Entries
@@ -20,6 +24,23 @@ export const DEFAULT_CAMERA: CameraConfig = {
 	name: 'Default Camera',
 	fov: 60,
 	initial: true
+}
+
+/**
+ * How a scene that stores no transition moves between cameras: Smart, over a
+ * second, eased at both ends.
+ *
+ * Smart flies in orbit space and keeps `SMART_FLIGHT_CLEARANCE` outside the
+ * model's bounding sphere, so a move between cameras on opposite sides turns
+ * around the subject rather than passing through it, and the clearance scales
+ * with the model. A scene that stores a transition keeps it.
+ */
+export const DEFAULT_SCENE_TRANSITION: Readonly<
+	Required<Pick<CameraTransitionConfig, 'type' | 'duration' | 'easing'>>
+> = {
+	type: 'object_avoidance',
+	duration: 1000,
+	easing: 'ease_in_out'
 }
 
 /**

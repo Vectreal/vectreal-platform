@@ -8,7 +8,7 @@
 import { Euler, PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { resolveCameraSelection } from './scene-camera'
+import { defaultCameraOptions, resolveCameraSelection } from './scene-camera'
 
 import type { CameraConfig } from '@vctrl/core'
 
@@ -77,16 +77,25 @@ describe('which camera is selected', () => {
 })
 
 describe('the transition', () => {
-	it('defaults to a one-second eased linear flight', () => {
+	it('defaults to a one-second eased Smart flight', () => {
 		expect(resolve([cam('front')]).transition).toEqual({
-			type: 'linear',
+			type: 'object_avoidance',
 			duration: 1000,
 			easing: 'ease_in_out'
 		})
 	})
 
-	it('keeps a scene transition with a type', () => {
-		const transition = { type: 'none' as const }
+	it('is the default a host gets when it passes no transition', () => {
+		expect(defaultCameraOptions.sceneTransition).toEqual(
+			resolve([cam('front')]).transition
+		)
+	})
+
+	it.each([
+		{ type: 'none' as const },
+		{ type: 'linear' as const },
+		{ type: 'linear' as const, duration: 400, easing: 'linear' as const }
+	])('keeps a scene transition with a type: $type', (transition) => {
 		expect(
 			resolveCameraSelection(
 				[cam('front')],
