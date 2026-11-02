@@ -70,14 +70,29 @@ function post(
 /** How often a bake reports, at most: a slice ends every few milliseconds. */
 const BAKE_PROGRESS_INTERVAL_MS = 100
 
-/** Posts how far a bake has drawn, throttled, and always its end. */
-function bakeProgress(stage: 'occlusion' | 'lights') {
+/**
+ * Reports a bake: its start, how far it has drawn, throttled and always to
+ * the last slice, and its end however it went, at what it drew, with
+ * whether its GPU times slices itself: a stalled bake's report says so.
+ */
+function bakeProgress(
+	stage: 'occlusion' | 'lights',
+	gpuTimer: () => boolean | undefined
+) {
 	let postedAt = -Infinity
-	return (fraction: number) => {
-		const now = performance.now()
-		if (fraction < 1 && now - postedAt < BAKE_PROGRESS_INTERVAL_MS) return
-		postedAt = now
-		post({ type: 'progress', stage, fraction })
+	let drawn = 0
+	const report = (fraction: number, ended?: true) =>
+		post({ type: 'progress', stage, fraction, gpuTimer: gpuTimer(), ended })
+	return {
+		start: () => post({ type: 'progress', stage, fraction: 0 }),
+		onProgress: (fraction: number) => {
+			drawn = fraction
+			const now = performance.now()
+			if (fraction < 1 && now - postedAt < BAKE_PROGRESS_INTERVAL_MS) return
+			postedAt = now
+			report(fraction)
+		},
+		end: () => report(drawn, true)
 	}
 }
 
@@ -135,8 +150,12 @@ async function exportForPublish({
 	// it has something to bake, and `bakeWithRecovery` disposes it, so a GPU
 	// reset in one bake never reaches the next. A failed bake publishes the
 	// model without it, so its reason is reported, not thrown.
-	const bakeRenderer = () =>
-		new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) })
+	let gpuTimer: boolean | undefined
+	const bakeRenderer = () => {
+		const renderer = new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) })
+		gpuTimer = renderer.extensions.has('EXT_disjoint_timer_query_webgl2')
+		return renderer
+	}
 	// Textures encode in workers of their own, several at once.
 	const encoders = ktx2
 		? createKtx2EncoderPool(
@@ -179,29 +198,34 @@ async function exportForPublish({
 											error instanceof Error ? error.message : String(error)
 										layout = undefined
 									}
-									// The layout is done, so its time limit no longer runs.
-									post({
-										type: 'progress',
-										stage: occlusion ? 'occlusion' : 'lights',
-										fraction: 0
-									})
 								}
+								/*
+								  Each bake reports its start, before the seconds it spends
+								  on its scene ahead of the first slice, and its end however
+								  it ended, drawn or not: a limit runs on a bake between
+								  the two, and on nothing after it.
+								*/
 								// Occlusion first: the light bake bakes past it.
 								if (occlusion) {
+									const progress = bakeProgress('occlusion', () => gpuTimer)
+									progress.start()
 									occlusionReport = await bakeWithRecovery(
 										(renderer, options) =>
 											bakeOcclusionIntoDocument(
 												document,
 												renderer,
 												options,
-												bakeProgress('occlusion'),
+												progress.onProgress,
 												layout
 											),
 										bakeRenderer,
 										DEFAULT_OCCLUSION_BAKE_OPTIONS
 									)
+									progress.end()
 								}
 								if (lights) {
+									const progress = bakeProgress('lights', () => gpuTimer)
+									progress.start()
 									lightsReport = await bakeWithRecovery(
 										(renderer, options) =>
 											bakeLightsIntoDocument(
@@ -209,12 +233,13 @@ async function exportForPublish({
 												lights,
 												renderer,
 												options,
-												bakeProgress('lights'),
+												progress.onProgress,
 												layout
 											),
 										bakeRenderer,
 										DEFAULT_LIGHT_BAKE_OPTIONS
 									)
+									progress.end()
 								}
 								// With nothing left to bake, the failure is the outcome.
 								const reports = [occlusionReport, lightsReport]

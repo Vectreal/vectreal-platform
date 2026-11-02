@@ -49,9 +49,31 @@ export const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
 export const UV_LAYOUT_TIMEOUT_MS = 60_000
 
 /**
+ * How long a bake may go without reporting before it is stopped as stalled.
+ * A bake reports every tenth of a second while it draws; the longest quiet
+ * stretch is before its first slice, under two seconds on a desktop.
+ */
+export const BAKE_STALL_TIMEOUT_MS = 60_000
+
+/** A bake of the studio finish, when a failure is one bake's. */
+export type StudioFinishPass = 'occlusion' | 'lights'
+
+/**
+ * What the author reads for a failure: its `message`, or its words for the
+ * bake that failed where it has some, since advice that suits one bake can
+ * name the other as the way out.
+ */
+interface FailureCopy {
+	message: string
+	byPass?: Partial<Record<StudioFinishPass, string>>
+	reported: boolean
+}
+
+/**
  * What the author reads for each failure, and whether it goes to error
  * tracking: a browser without WebGL 2, a bug, or a failure that may be one.
- * What only the author can fix (a reset, a scene too heavy) is not.
+ * What only the author can fix (a reset, a scene too heavy) is not. Read the
+ * words through `failureMessage`, which picks a bake's own.
  */
 export const STUDIO_FINISH_FAILURES = {
 	'no-webgl': {
@@ -85,10 +107,16 @@ export const STUDIO_FINISH_FAILURES = {
 		message: 'Something went wrong while drawing. Try again.',
 		reported: true
 	}
-} as const satisfies Record<
-	StudioFinishFailureReason,
-	{ message: string; reported: boolean }
->
+} as const satisfies Record<StudioFinishFailureReason, FailureCopy>
+
+/** The words for a failure, the failed bake's own where it has them. */
+export function failureMessage(
+	reason: StudioFinishFailureReason,
+	pass?: StudioFinishPass
+): string {
+	const copy: FailureCopy = STUDIO_FINISH_FAILURES[reason]
+	return (pass && copy.byPass?.[pass]) ?? copy.message
+}
 
 /** Why a material took no bake, and what would let it. */
 export const BAKE_SKIP_REASONS = {
@@ -170,7 +198,7 @@ export function occlusionBakeWarning(
 		return {
 			message:
 				'The studio finish could not add depth, so the scene was published without it.',
-			description: STUDIO_FINISH_FAILURES[failure.reason].message
+			description: failureMessage(failure.reason, 'occlusion')
 		}
 	}
 	if (!('baked' in occlusion)) return null
@@ -196,7 +224,7 @@ export function lightBakeWarning(
 		return {
 			message:
 				'The studio finish could not draw the studio lights, so the scene was published with them live.',
-			description: STUDIO_FINISH_FAILURES[failure.reason].message
+			description: failureMessage(failure.reason, 'lights')
 		}
 	}
 	if (!('baked' in lights)) return null
@@ -272,9 +300,10 @@ export function skippedByReason(
  * in its own words. None when nothing failed or was skipped.
  */
 export function nothingCaption(reports: BakeReports | undefined) {
-	const failure =
-		passFailure(reports?.occlusion) ?? passFailure(reports?.lights)
-	if (failure) return STUDIO_FINISH_FAILURES[failure.reason].message
+	for (const pass of ['occlusion', 'lights'] as const) {
+		const failure = passFailure(reports?.[pass])
+		if (failure) return failureMessage(failure.reason, pass)
+	}
 	const [top] = skippedByReason(reports?.occlusion, reports?.lights)
 	if (!top) return undefined
 	const count = top.materials.length

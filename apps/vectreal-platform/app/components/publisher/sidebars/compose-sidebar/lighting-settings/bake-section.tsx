@@ -7,8 +7,9 @@ import {
 	BAKE_RECOVERY_NOTES,
 	BAKE_SKIP_REASONS,
 	NOTHING_TO_FINISH,
+	failureMessage,
 	skippedByReason,
-	STUDIO_FINISH_FAILURES
+	type StudioFinishPass
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { InlineNotice } from '../../../../layout-components'
 import { PanelCaption } from '../../sidebar-section'
@@ -33,9 +34,11 @@ const plural = (count: number, noun: string) =>
 /** What one bake did: how many materials took it, and why the others did not. */
 function BakeReport({
 	label,
+	pass,
 	report
 }: {
 	label: string
+	pass: StudioFinishPass
 	report: BakePassOutcome
 }) {
 	if ('failed' in report) {
@@ -46,8 +49,8 @@ function BakeReport({
 					<span className="text-destructive shrink-0">Failed</span>
 				</p>
 				<p className="text-muted-foreground">
-					{STUDIO_FINISH_FAILURES[report.failed].message} Publishing ships the
-					model without it.
+					{failureMessage(report.failed, pass)} Publishing ships the model
+					without it.
 				</p>
 			</div>
 		)
@@ -144,10 +147,18 @@ export function BakeSection({
 								: NOTHING_TO_FINISH}
 						</p>
 						{reports.occlusion && (
-							<BakeReport label="Depth" report={reports.occlusion} />
+							<BakeReport
+								label="Depth"
+								pass="occlusion"
+								report={reports.occlusion}
+							/>
 						)}
 						{reports.lights && (
-							<BakeReport label="Studio lights" report={reports.lights} />
+							<BakeReport
+								label="Studio lights"
+								pass="lights"
+								report={reports.lights}
+							/>
 						)}
 					</>
 				)}
@@ -171,8 +182,7 @@ export function BakeSection({
 
 			{preview?.status === 'failed' && (
 				<InlineNotice tone="error" role="alert" className="wrap-anywhere">
-					{preview.failure &&
-						STUDIO_FINISH_FAILURES[preview.failure.reason].message}
+					{preview.failure && failureMessage(preview.failure.reason)}
 				</InlineNotice>
 			)}
 		</>

@@ -42,9 +42,18 @@ const run = (onProgress = vi.fn(), timeoutMs = 1_000) =>
 		timeoutMs
 	)
 
+/** The page, shown until a test hides it. */
+const page = Object.assign(new EventTarget(), { hidden: false })
+const setHidden = (hidden: boolean) => {
+	page.hidden = hidden
+	page.dispatchEvent(new Event('visibilitychange'))
+}
+
 beforeEach(() => {
 	FakeWorker.instances = []
 	vi.stubGlobal('Worker', FakeWorker)
+	page.hidden = false
+	vi.stubGlobal('document', page)
 	vi.useFakeTimers()
 })
 
@@ -254,6 +263,155 @@ describe('runPublishExportInWorker', () => {
 		worker.reply(done)
 		await expect(pending).resolves.toBe(done)
 		expect(FakeWorker.instances).toHaveLength(1)
+	})
+
+	describe('a bake that stops reporting', () => {
+		const STALL_MS = 500
+		const bake = (lights = false) =>
+			runPublishExportInWorker(
+				{
+					glb: new Uint8Array(4),
+					dracoWorthApplying: true,
+					ktx2: false,
+					occlusion: true,
+					lights: lights && { lights: [], environment: {} as never }
+				},
+				vi.fn(),
+				10_000,
+				10_000,
+				STALL_MS
+			)
+		const done = { type: 'done', buffer: new ArrayBuffer(2) }
+
+		it('is stopped, and the export runs again without it, reporting it as stalled', async () => {
+			const pending = bake()
+			const stalling = lastWorker()
+			stalling.reply({
+				type: 'progress',
+				stage: 'occlusion',
+				fraction: 0.25,
+				gpuTimer: false
+			})
+			vi.advanceTimersByTime(STALL_MS)
+			await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+
+			expect(stalling.terminate).toHaveBeenCalled()
+			expect(lastWorker().postMessage.mock.calls[0][0]).toMatchObject({
+				occlusion: false
+			})
+			lastWorker().reply(done)
+			await expect(pending).resolves.toEqual({
+				...done,
+				occlusion: {
+					failed: 'stalled',
+					detail:
+						'occlusion made no progress for 0.5s at 25.00% (GPU timer: no)'
+				}
+			})
+		})
+
+		it('runs on while it keeps reporting', async () => {
+			const pending = bake()
+			const worker = lastWorker()
+			for (const fraction of [0, 0.25, 0.5]) {
+				worker.reply({ type: 'progress', stage: 'occlusion', fraction })
+				vi.advanceTimersByTime(STALL_MS - 1)
+			}
+
+			worker.reply(done)
+			await expect(pending).resolves.toBe(done)
+			expect(FakeWorker.instances).toHaveLength(1)
+		})
+
+		it('is not stopped once it has ended, drawn or not', async () => {
+			const pending = bake()
+			const worker = lastWorker()
+			worker.reply({
+				type: 'progress',
+				stage: 'occlusion',
+				fraction: 0.25,
+				ended: true
+			})
+			vi.advanceTimersByTime(STALL_MS * 10)
+
+			worker.reply(done)
+			await expect(pending).resolves.toBe(done)
+			expect(worker.terminate).toHaveBeenCalledOnce()
+		})
+
+		it('is not counted against while the page is hidden', async () => {
+			const pending = bake()
+			const worker = lastWorker()
+			worker.reply({ type: 'progress', stage: 'occlusion', fraction: 0.25 })
+			vi.advanceTimersByTime(STALL_MS - 100)
+			setHidden(true)
+			vi.advanceTimersByTime(STALL_MS * 10)
+			expect(worker.terminate).not.toHaveBeenCalled()
+
+			// Shown again, its limit starts over.
+			setHidden(false)
+			vi.advanceTimersByTime(STALL_MS - 1)
+			expect(worker.terminate).not.toHaveBeenCalled()
+			vi.advanceTimersByTime(1)
+			await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+			lastWorker().reply(done)
+			await expect(pending).resolves.toMatchObject({
+				occlusion: { failed: 'stalled' }
+			})
+		})
+
+		it('keeps the other bake, and stops it too if it stalls in turn', async () => {
+			const pending = bake(true)
+			lastWorker().reply({ type: 'progress', stage: 'occlusion', fraction: 0 })
+			vi.advanceTimersByTime(STALL_MS)
+			await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+			expect(lastWorker().postMessage.mock.calls[0][0]).toMatchObject({
+				occlusion: false,
+				lights: { lights: [] }
+			})
+
+			lastWorker().reply({ type: 'progress', stage: 'lights', fraction: 0.5 })
+			vi.advanceTimersByTime(STALL_MS)
+			await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(3))
+			expect(lastWorker().postMessage.mock.calls[0][0]).toMatchObject({
+				occlusion: false,
+				lights: false
+			})
+
+			lastWorker().reply(done)
+			await expect(pending).resolves.toMatchObject({
+				occlusion: { failed: 'stalled' },
+				lights: {
+					failed: 'stalled',
+					detail:
+						'lights made no progress for 0.5s at 50.00% (GPU timer: unknown)'
+				}
+			})
+		})
+	})
+
+	it('pauses a UV layout’s limit while the page is hidden', async () => {
+		const pending = runPublishExportInWorker(
+			{
+				glb: new Uint8Array(4),
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				lights: false
+			},
+			vi.fn(),
+			10_000,
+			500
+		)
+		const worker = lastWorker()
+		worker.reply({ type: 'progress', stage: 'uvs' })
+		setHidden(true)
+		vi.advanceTimersByTime(5_000)
+
+		expect(worker.terminate).not.toHaveBeenCalled()
+		const done = { type: 'done', buffer: new ArrayBuffer(2) }
+		worker.reply(done)
+		await expect(pending).resolves.toBe(done)
 	})
 
 	it('cancels its timeout once the worker has answered', async () => {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	BAKE_SKIP_REASONS,
+	failureMessage,
 	failuresToReport,
 	failWith,
 	ineligibleCaption,
@@ -49,8 +50,13 @@ describe('studioFinishFailure', () => {
 })
 
 describe('the words for each reason', () => {
+	// Read as the author reads them: each failure's words for either bake too.
 	const all = [
-		...Object.values(STUDIO_FINISH_FAILURES).map(({ message }) => message),
+		...Object.keys(STUDIO_FINISH_FAILURES).flatMap((reason) =>
+			([undefined, 'occlusion', 'lights'] as const).map((pass) =>
+				failureMessage(reason as keyof typeof STUDIO_FINISH_FAILURES, pass)
+			)
+		),
 		...Object.values(BAKE_SKIP_REASONS)
 	]
 

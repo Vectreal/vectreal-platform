@@ -25,7 +25,9 @@ const mocks = vi.hoisted(() => ({
 	writeBakeUvs: vi.fn(),
 	createRenderer: vi.fn(),
 	disposeRenderer: vi.fn(),
-	forceContextLoss: vi.fn()
+	forceContextLoss: vi.fn(),
+	/** Whether the renderers the mock makes have a GPU timer. */
+	gpuTimer: false
 }))
 
 /** The options the worker bakes with, as core's defaults stand in the mock. */
@@ -79,6 +81,10 @@ vi.mock('three', () => ({
 		dispose = mocks.disposeRenderer
 		forceContextLoss = mocks.forceContextLoss
 		getContext = () => ({ isContextLost: () => this.lost })
+		extensions = {
+			has: (name: string) =>
+				name === 'EXT_disjoint_timer_query_webgl2' && mocks.gpuTimer
+		}
 	}
 }))
 vi.mock('./ktx2-encoder-pool', () => ({
@@ -137,6 +143,7 @@ async function send({
 beforeEach(async () => {
 	posted.length = 0
 	vi.clearAllMocks()
+	mocks.gpuTimer = false
 	vi.stubGlobal('self', globalThis)
 	vi.stubGlobal(
 		'postMessage',
@@ -412,7 +419,7 @@ describe('the publish export worker', () => {
 		})
 	})
 
-	it('reports how far each bake has drawn, a few times a second and always its end', async () => {
+	it('reports each bake’s start, then how far it has drawn, a few times a second and always its end', async () => {
 		const reportDrawn = async (onProgress: (fraction: number) => void) => {
 			onProgress(0.25)
 			// Sooner than the interval after the last, so held back.
@@ -440,12 +447,67 @@ describe('the publish export worker', () => {
 		})
 
 		expect(messages.filter(({ type }) => type === 'progress')).toEqual([
+			{ type: 'progress', stage: 'occlusion', fraction: 0 },
 			{ type: 'progress', stage: 'occlusion', fraction: 0.25 },
 			{ type: 'progress', stage: 'occlusion', fraction: 1 },
+			{ type: 'progress', stage: 'occlusion', fraction: 1, ended: true },
+			{ type: 'progress', stage: 'lights', fraction: 0 },
 			{ type: 'progress', stage: 'lights', fraction: 0.25 },
-			{ type: 'progress', stage: 'lights', fraction: 1 }
+			{ type: 'progress', stage: 'lights', fraction: 1 },
+			{ type: 'progress', stage: 'lights', fraction: 1, ended: true }
 		])
 	})
+
+	it('reports the end of a bake that drew nothing or failed, at what it drew, so no limit outlives it', async () => {
+		// The occlusion bake has nothing to draw; the light bake fails.
+		mocks.bakeOcclusionIntoDocument.mockResolvedValue({
+			baked: [],
+			skipped: []
+		})
+		mocks.bakeLightsIntoDocument.mockRejectedValue(new Error('no'))
+
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true,
+			lights: lighting
+		})
+
+		expect(messages.filter(({ type }) => type === 'progress')).toEqual([
+			{ type: 'progress', stage: 'occlusion', fraction: 0 },
+			{ type: 'progress', stage: 'occlusion', fraction: 0, ended: true },
+			{ type: 'progress', stage: 'lights', fraction: 0 },
+			{ type: 'progress', stage: 'lights', fraction: 0, ended: true }
+		])
+	})
+
+	it.each([true, false])(
+		'says with each report whether the GPU times slices itself (%s)',
+		async (gpuTimer) => {
+			mocks.gpuTimer = gpuTimer
+			mocks.bakeOcclusionIntoDocument.mockImplementation(
+				async (_d, renderer: () => unknown, _o, onProgress) => {
+					renderer()
+					onProgress(1)
+					return occlusionReport
+				}
+			)
+
+			const messages = await send({
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				lights: false
+			})
+
+			expect(messages).toContainEqual({
+				type: 'progress',
+				stage: 'occlusion',
+				fraction: 1,
+				gpuTimer
+			})
+		}
+	)
 
 	it('bakes nothing unless asked', async () => {
 		const messages = await send({ dracoWorthApplying: true, ktx2: false })

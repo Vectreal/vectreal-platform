@@ -1,4 +1,5 @@
 import {
+	BAKE_STALL_TIMEOUT_MS,
 	PUBLISH_EXPORT_TIMEOUT_MS,
 	UV_LAYOUT_TIMEOUT_MS
 } from './studio-finish-reasons'
@@ -26,6 +27,16 @@ export type PublishExportInput = Omit<
 /** A UV layout ran past `UV_LAYOUT_TIMEOUT_MS`, so its worker was stopped. */
 class UvLayoutTimedOut extends Error {}
 
+/** A bake went `BAKE_STALL_TIMEOUT_MS` without reporting, so its worker was stopped. */
+class BakeStalled extends Error {
+	constructor(
+		readonly stage: 'occlusion' | 'lights',
+		message: string
+	) {
+		super(message)
+	}
+}
+
 /**
  * Runs the publish export in a worker. A worker that crashes, which is the
  * browser running out of memory, is run once more: `runWorker` has already
@@ -40,15 +51,21 @@ class UvLayoutTimedOut extends Error {}
  * without it, its materials reported as too detailed. A layout that crashed
  * the worker is not tried again either, and neither is one that ran out of
  * time when the run after it crashes.
+ *
+ * A bake that stops reporting is stopped the same way, and the export runs
+ * again without it, reporting it as stalled, as a bake that failed on the
+ * GPU publishes the model without it.
  */
 export async function runPublishExportInWorker(
 	input: PublishExportInput,
 	onProgress: (progress: PublishExportProgress) => void,
 	timeoutMs = PUBLISH_EXPORT_TIMEOUT_MS,
-	uvLayoutTimeoutMs = UV_LAYOUT_TIMEOUT_MS
+	uvLayoutTimeoutMs = UV_LAYOUT_TIMEOUT_MS,
+	stallTimeoutMs = BAKE_STALL_TIMEOUT_MS
 ): Promise<PublishExportOutcome> {
 	let request = input
 	let laying = false
+	let stalled: Pick<PublishExportOutcome, 'occlusion' | 'lights'> | undefined
 	const withoutLayout = () => {
 		request = { ...request, generateUvs: false }
 	}
@@ -60,27 +77,38 @@ export async function runPublishExportInWorker(
 				laying = progress.stage === 'uvs'
 				onProgress(progress)
 			},
-			timeoutMs,
-			uvLayoutTimeoutMs
+			{ timeoutMs, uvLayoutTimeoutMs, stallTimeoutMs }
 		)
 	}
-	const runWithinLayoutLimit = async () => {
+	// Each limit turns something off, so this runs at most once per layout
+	// and once per bake.
+	const runWithinLimits = async (): Promise<PublishExportOutcome> => {
 		try {
-			return await run()
+			const outcome = await run()
+			return stalled ? { ...outcome, ...stalled } : outcome
 		} catch (error) {
-			if (!(error instanceof UvLayoutTimedOut)) throw error
-			withoutLayout()
-			return run()
+			if (error instanceof UvLayoutTimedOut) {
+				withoutLayout()
+			} else if (error instanceof BakeStalled) {
+				stalled = {
+					...stalled,
+					[error.stage]: { failed: 'stalled', detail: error.message }
+				}
+				request = { ...request, [error.stage]: false }
+			} else {
+				throw error
+			}
+			return runWithinLimits()
 		}
 	}
 	try {
-		return await runWithinLayoutLimit()
+		return await runWithinLimits()
 	} catch (error) {
 		if (!(error instanceof WorkerRunError && error.failure === 'crashed')) {
 			throw error
 		}
 		if (laying) withoutLayout()
-		return runWithinLayoutLimit()
+		return runWithinLimits()
 	}
 }
 
@@ -120,19 +148,65 @@ export function planStudioFinishInWorker(
 }
 
 /**
+ * The error a quiet stage is stopped with, when that stage has a limit of
+ * its own: a layout until its end, a bake until its next report.
+ */
+function stageLimit(
+	progress: PublishExportProgress,
+	{ uvLayoutTimeoutMs, stallTimeoutMs }: RunLimits
+): { ms: number; error: () => Error } | undefined {
+	if (progress.stage === 'uvs') {
+		return {
+			ms: uvLayoutTimeoutMs,
+			error: () =>
+				new UvLayoutTimedOut(
+					`Laying out UVs timed out after ${uvLayoutTimeoutMs / 1000}s`
+				)
+		}
+	}
+	// Encoding reports per texture, and not at all for geometry, so only the
+	// export's own budget bounds it, as it does whatever follows a bake.
+	if (progress.stage === 'textures' || progress.ended) return undefined
+	const { stage, fraction, gpuTimer } = progress
+	return {
+		ms: stallTimeoutMs,
+		error: () =>
+			new BakeStalled(
+				stage,
+				`${stage} made no progress for ${stallTimeoutMs / 1000}s at ${(fraction * 100).toFixed(2)}% (GPU timer: ${gpuTimer === undefined ? 'unknown' : gpuTimer ? 'yes' : 'no'})`
+			)
+	}
+}
+
+interface RunLimits {
+	timeoutMs: number
+	uvLayoutTimeoutMs: number
+	stallTimeoutMs: number
+}
+
+/**
  * One run, in a worker `runWorker` owns, handed a copy of the GLB to keep.
- * A UV layout's limit runs from its progress until the next.
+ * A stage's limit runs from its progress until the next, and only while the
+ * page is shown: a hidden page's worker may be paused, and the time away is
+ * not the stage's.
  */
 async function runPublishExportOnce(
 	{ glb, ...request }: PublishExportInput,
 	onProgress: (progress: PublishExportProgress) => void,
-	timeoutMs: number,
-	uvLayoutTimeoutMs: number
+	limits: RunLimits
 ): Promise<PublishExportOutcome> {
 	const buffer = glb.slice().buffer as ArrayBuffer
 	const message: PublishExportRequest = { type: 'export', buffer, ...request }
-	const layout = new AbortController()
-	let layoutTimer: ReturnType<typeof setTimeout> | undefined
+	const stopped = new AbortController()
+	let limit: ReturnType<typeof stageLimit>
+	let limitTimer: ReturnType<typeof setTimeout> | undefined
+	const arm = () => {
+		clearTimeout(limitTimer)
+		if (!limit || document.hidden) return
+		const { ms, error } = limit
+		limitTimer = setTimeout(() => stopped.abort(error()), ms)
+	}
+	document.addEventListener('visibilitychange', arm)
 
 	try {
 		return await runWorker<PublishExportMessage, PublishExportOutcome>(
@@ -140,33 +214,24 @@ async function runPublishExportOnce(
 			{
 				message,
 				transfer: [buffer],
-				timeoutMs,
-				signal: layout.signal,
+				timeoutMs: limits.timeoutMs,
+				signal: stopped.signal,
 				onProgress: (progress) => {
-					clearTimeout(layoutTimer)
-					if (progress.stage === 'uvs') {
-						layoutTimer = setTimeout(
-							() =>
-								layout.abort(
-									new UvLayoutTimedOut(
-										`Laying out UVs timed out after ${uvLayoutTimeoutMs / 1000}s`
-									)
-								),
-							uvLayoutTimeoutMs
-						)
-					}
+					limit = stageLimit(progress, limits)
+					arm()
 					onProgress(progress)
 				},
 				toResult: (outcome) => outcome,
 				errors: {
-					timedOut: `Publishing timed out after ${timeoutMs / 1000}s`,
+					timedOut: `Publishing timed out after ${limits.timeoutMs / 1000}s`,
 					undeserializable: 'Publish worker sent an undeserializable message',
 					crashed: 'Publish worker crashed'
 				}
 			}
 		)
 	} finally {
-		clearTimeout(layoutTimer)
+		clearTimeout(limitTimer)
+		document.removeEventListener('visibilitychange', arm)
 	}
 }
 
