@@ -441,6 +441,24 @@ describe('the bake preview', () => {
 		)
 	})
 
+	it('names every fatal failure of a run in its one report', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: { failed: 'no-webgl', detail: 'no context' },
+			lights: { failed: 'unexpected', detail: 'undefined is not a function' }
+		})
+		const { store, hook } = setup()
+		act(() =>
+			store.set(lightingAtom, { ...litLighting, occlusion: { mode: 'baked' } })
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(lastReported()?.message).toBe(
+			'Studio finish no-webgl: no context; unexpected: undefined is not a function'
+		)
+	})
+
 	it('reports a fatal failure of the second bake when the first failed for a reason the author can fix', async () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: new ArrayBuffer(8),

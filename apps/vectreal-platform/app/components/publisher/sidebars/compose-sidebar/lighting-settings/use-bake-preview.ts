@@ -99,8 +99,15 @@ function usePreviewLifetime(current: BakePreview | null) {
 	const failure = current?.failure
 	const reports = current?.reports
 	const reportable = useMemo(() => {
-		const [first] = failuresToReport({ failure, reports })
-		return first && new Error(`Studio finish ${first.reason}: ${first.detail}`)
+		const reported = failuresToReport({ failure, reports })
+		// One report per run, naming every fault in it.
+		return reported.length > 0
+			? new Error(
+					`Studio finish ${reported
+						.map(({ reason, detail }) => `${reason}: ${detail}`)
+						.join('; ')}`
+				)
+			: undefined
 	}, [failure, reports])
 	useErrorReport(reportable, 'client-fallback')
 

@@ -204,13 +204,19 @@ export function failuresToReport({
 	failure?: StudioFinishFailure
 	reports?: BakeReports
 }): StudioFinishFailure[] {
-	return [
+	const found = [
 		failure,
 		passFailure(reports?.occlusion),
 		passFailure(reports?.lights)
-	]
-		.filter((found) => found !== undefined)
-		.filter(({ reason }) => STUDIO_FINISH_FAILURES[reason].reported)
+	].filter((each) => each !== undefined)
+	// A failed run's own failure is also one of its bakes', so once each.
+	return found.filter(
+		(each, index) =>
+			STUDIO_FINISH_FAILURES[each.reason].reported &&
+			found.findIndex(
+				(other) => other.reason === each.reason && other.detail === each.detail
+			) === index
+	)
 }
 
 /** Materials a bake skipped for one reason, in the order the file lists them. */
