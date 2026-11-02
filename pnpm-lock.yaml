@@ -789,6 +789,9 @@ importers:
       three-mesh-bvh:
         specifier: 'catalog:'
         version: 0.8.3(three@0.185.1)
+      watlas:
+        specifier: 1.0.1
+        version: 1.0.1
     devDependencies:
       '@nx/vite':
         specifier: 'catalog:'
@@ -11256,6 +11259,9 @@ packages:
   watchpack@2.6.3:
     resolution: {integrity: sha512-s3NZy0QpTY9qGqzc0wtz4qI28z3+5qKbbAec4MV4G9N3CfgZ9wgvQRr0cl2jh/tqkWG1NWHkmVMHZpCamev5Wg==}
     engines: {node: '>=10.13.0'}
+
+  watlas@1.0.1:
+    resolution: {integrity: sha512-TmB++BFqEQY19cPNby5iszACZd8t6uauB7YdObkqhWarhed79OMPS8wufoDSo0p85A/8QW/aqZwEJf+nD4emSw==}
 
   wcwidth@1.0.1:
     resolution: {integrity: sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==}
@@ -23401,6 +23407,8 @@ snapshots:
     dependencies:
       graceful-fs: 4.2.11
     optional: true
+
+  watlas@1.0.1: {}
 
   wcwidth@1.0.1:
     dependencies:
