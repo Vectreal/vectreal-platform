@@ -133,11 +133,12 @@ const optimizedBuffer = await optimizer.export()
 | `place(opts)` | `PlacementOptions` | Center the model on the ground at the origin, optionally at a real-world size |
 | `simplify(opts)`         | `SimplifyOptions`        | Mesh simplification                                                                                        |
 | `deduplicate(opts)`      | `DedupOptions`           | Remove duplicate accessors, meshes, textures and materials                                                 |
+| `mergeMeshes()`          | none                     | Merge meshes that share a material, to cut draw calls                                                      |
 | `quantize(opts)`         | `QuantizeOptions`        | Reduce vertex attribute precision                                                                          |
 | `optimizeNormals(opts)`  | `NormalsOptions`         | Recompute or normalize normal data                                                                         |
 | `compressTextures(opts)` | `TextureCompressOptions` | Texture compression via injected encoder (Sharp in Node.js, OffscreenCanvas in browser via `@vctrl/hooks`) |
 | `compressGeometry(opts)` | `DracoOptions`           | Replace the loaded document with a Draco-compressed copy                                                   |
-| `optimizeAll(opts)`      | see below                | Run every pass above except placement and Draco, in a fixed order                                                        |
+| `optimizeAll(opts)`      | see below                | Run every pass above except placement, mesh merging and Draco, in a fixed order                                                        |
 
 ### Draco measurement
 
@@ -175,7 +176,7 @@ GLB than leaving the geometry uncompressed.
 
 #### `place(options?: PlacementOptions)`
 
-Centers the model on X and Z and stands its lowest point on y = 0, which is where AR viewers put the floor. The scene's contents move under one new parent node, so meshes, their own transforms and animations are untouched. Unlike the other passes it is kept even though that node makes the file slightly larger.
+Centers the model on X and Z and stands its lowest point on y = 0, which is where AR viewers put the floor. The scene's contents move under one new parent node, so meshes, their own transforms and animations are untouched. Unlike the size-reducing passes, it is kept even though that node makes the file slightly larger.
 
 | Option | Type | Default | Notes |
 |---|---|---|---|
@@ -191,6 +192,10 @@ Centers the model on X and Z and stands its lowest point on y = 0, which is wher
 #### `deduplicate(options?: DedupOptions)`
 
 Removes duplicate accessors, meshes, textures and materials via glTF-Transform `dedup()`.
+
+#### `mergeMeshes()`
+
+Flattens the scene graph, writes each still part's transform into its vertices, and joins primitives that share a material and vertex layout, via glTF-Transform `flatten()` and `join()`, so the model draws in one call per material instead of one per part. World positions, normals, tangents and texture coordinates are kept. Animated nodes and everything below them, joints, skinned, morphing and instanced meshes, nodes carrying a camera, a light or another extension, volume materials, primitives with material variants and mirrored strips or fans are left as they are, and only parts drawn as plain triangles are joined. Empty nodes, and the nodes of parts joined into another, are removed with their names and extras. The result is kept when the scene draws fewer primitives, even if the file grew (a mesh used by several nodes becomes one copy per node), and reverted when it does not.
 
 #### `quantize(options?: QuantizeOptions)`
 

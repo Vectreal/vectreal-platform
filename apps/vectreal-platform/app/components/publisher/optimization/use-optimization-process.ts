@@ -348,6 +348,15 @@ export const useOptimizationProcess = ({
 		[report, didSimplify, plannedOptimizations.simplification]
 	)
 
+	// The same reading as simplification's: what the displayed run did. Only
+	// the in-memory report carries the before and after, so a reopened scene
+	// shows no mesh row, as it shows no triangle reduction.
+	const didMerge =
+		report?.appliedOptimizations?.includes('mesh merging') ?? false
+	const mergedMeshesCount = didMerge
+		? (report?.stats.meshesCount ?? null)
+		: null
+
 	return {
 		info,
 		report,
@@ -359,6 +368,7 @@ export const useOptimizationProcess = ({
 		dracoReport: runtimeDracoReport ?? null,
 		publishedEncoding: optimizationRuntime.publishedEncoding,
 		simplificationOutcome,
+		mergedMeshesCount,
 		resolvedMetrics,
 		isPending,
 		isLoadingOriginal,

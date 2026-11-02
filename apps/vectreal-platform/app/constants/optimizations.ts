@@ -16,6 +16,10 @@ import type { Optimizations } from '@vctrl/core'
  *   compounds precision loss. It stays available in the advanced panel as the
  *   fallback for anyone who turns Draco off.
  *
+ * Mesh merging is always on. A model in hundreds of parts draws each one on
+ * its own, and a phone that has to bake its shadow live can lose the scene
+ * under that load; merging changes nothing a visitor can see.
+ *
  * Mesh simplification is off everywhere. It is genuinely destructive (it can
  * leave holes and shading seams) and is opt-in from the advanced panel only.
  */
@@ -23,6 +27,7 @@ import type { Optimizations } from '@vctrl/core'
 const sharedGeometry = {
 	quantize: { enabled: false },
 	dedup: { enabled: true },
+	merge: { enabled: true },
 	normals: { enabled: false },
 	simplification: { enabled: false, ratio: 0.5, error: 0.005 },
 	draco: { enabled: true, method: 'edgebreaker' }
@@ -37,6 +42,7 @@ const sharedGeometry = {
 export const originalPreset: Optimizations = {
 	...sharedGeometry,
 	dedup: { enabled: false },
+	merge: { enabled: false },
 	draco: { ...sharedGeometry.draco, enabled: false },
 	texture: {
 		enabled: false,

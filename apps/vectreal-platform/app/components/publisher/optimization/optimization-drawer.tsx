@@ -65,6 +65,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 		dracoReport,
 		publishedEncoding,
 		simplificationOutcome,
+		mergedMeshesCount,
 		resolvedMetrics,
 		sizeInfo,
 		isPending,
@@ -256,6 +257,7 @@ const OptimizationDrawer: FC<OptimizationDrawerProps> = ({
 													dracoReport={dracoReport}
 													publishedEncoding={publishedEncoding}
 													simplificationOutcome={simplificationOutcome}
+													mergedMeshesCount={mergedMeshesCount}
 												/>
 											) : (
 												<PreOptimizationSummary

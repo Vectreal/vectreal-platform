@@ -35,7 +35,8 @@ const props = (
 		reductionPercent: 75
 	} as DracoCompressionReport,
 	publishedEncoding,
-	simplificationOutcome: null
+	simplificationOutcome: null,
+	mergedMeshesCount: null
 })
 
 describe('the optimization breakdown', () => {
@@ -78,6 +79,25 @@ describe('the optimization breakdown', () => {
 		expect(
 			screen.getByText('Geometry (uncompressed)').parentElement
 		).toHaveTextContent('Not compressed')
+	})
+
+	it('counts the meshes before and after a run that merged them', () => {
+		render(
+			<OptimizationResults
+				{...props(null)}
+				mergedMeshesCount={{ before: 1664, after: 21 }}
+			/>
+		)
+
+		const row = screen.getByText('Meshes').parentElement
+		expect(row).toHaveTextContent('1,664')
+		expect(row).toHaveTextContent('21')
+	})
+
+	it('shows no mesh count when the run did not merge', () => {
+		render(<OptimizationResults {...props(null)} />)
+
+		expect(screen.queryByText('Meshes')).toBeNull()
 	})
 
 	it('counts the textures that shipped as KTX2', () => {

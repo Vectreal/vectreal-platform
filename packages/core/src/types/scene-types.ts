@@ -789,6 +789,9 @@ export interface DedupOptimization extends BaseOptimization, DedupOptions {}
 
 export interface NormalsOptimization extends BaseOptimization, NormalsOptions {}
 
+/** Merging meshes that share a material has nothing to set but whether it runs. */
+export type MergeOptimization = BaseOptimization
+
 export interface DracoCompressOptimization
 	extends BaseOptimization, DracoOptions {}
 
@@ -797,6 +800,7 @@ export type Optimizations = {
 	texture: TextureOptimization
 	quantize: QuantizeOptimization
 	dedup: DedupOptimization
+	merge: MergeOptimization
 	normals: NormalsOptimization
 	draco: DracoCompressOptimization
 }

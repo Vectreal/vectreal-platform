@@ -69,13 +69,18 @@ describe('listEnabledKeys', () => {
 	it('returns enabled keys in execution order, texture last', () => {
 		expect(listEnabledKeys(balancedPreset)).toEqual([
 			'dedup',
+			'merge',
 			'draco',
 			'texture'
 		])
 	})
 
 	it('excludes texture from the geometry list', () => {
-		expect(listEnabledGeometryKeys(balancedPreset)).toEqual(['dedup', 'draco'])
+		expect(listEnabledGeometryKeys(balancedPreset)).toEqual([
+			'dedup',
+			'merge',
+			'draco'
+		])
 	})
 
 	it('treats a missing entry as disabled', () => {

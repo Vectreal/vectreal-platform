@@ -3,6 +3,7 @@ import { applyOptimizationChange } from '../../../../components/publisher/optimi
 import {
 	balancedPreset,
 	optimizationPresets,
+	originalPreset,
 	qualityPreset,
 	smallestPreset
 } from '../../../../constants/optimizations'
@@ -81,6 +82,22 @@ describe('inferOptimizationPreset', () => {
 		} as unknown as Optimizations
 
 		expect(inferOptimizationPreset(legacy)).toBe('custom')
+	})
+
+	// Saved before mesh merging existed: no entry is a step that never ran.
+	const withoutMerge = (preset: Optimizations) => {
+		const { merge: _merge, ...rest } = preset
+		return rest as Optimizations
+	}
+
+	it('reads a step with no entry as one that did not run', () => {
+		expect(inferOptimizationPreset(withoutMerge(originalPreset))).toBe(
+			'original'
+		)
+	})
+
+	it('reports custom when a preset runs a step the settings have no entry for', () => {
+		expect(inferOptimizationPreset(withoutMerge(balancedPreset))).toBe('custom')
 	})
 })
 

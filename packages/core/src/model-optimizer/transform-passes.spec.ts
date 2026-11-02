@@ -106,6 +106,16 @@ const PASSES = [
 			expect(position?.getComponentSize()).toBeLessThan(4)
 		}
 	},
+	{
+		method: 'mergeMeshes',
+		run: (optimizer: ModelOptimizer) => optimizer.mergeMeshes(),
+		name: 'mesh merging',
+		progress: ['Merging meshes', 'Mesh merging complete'],
+		fixture: {},
+		effect: (document: Document) => {
+			expect(primitives(document)).toHaveLength(1)
+		}
+	},
 	// Its options reach the transform: without `overwrite` it leaves the
 	// sideways normals the fixture gives it alone.
 	{

@@ -47,6 +47,9 @@ export type WorkerOptimizationOptions = {
  * Draco must come last: every other step operates on decoded accessors, so
  * measuring compression before them would measure the wrong geometry.
  * Simplification comes first so the cheaper passes work on the smaller mesh.
+ * Merging follows deduplication, which turns identical materials into one
+ * that merging can then join across, and comes before quantization, since
+ * joining has to undo quantization to move vertices.
  *
  * `optimization-catalog.ts` lists the same steps with their UI copy, and a spec
  * asserts the two orders agree.
@@ -54,6 +57,7 @@ export type WorkerOptimizationOptions = {
 export const GEOMETRY_STEP_ORDER = [
 	'simplification',
 	'dedup',
+	'merge',
 	'quantize',
 	'normals',
 	'draco'

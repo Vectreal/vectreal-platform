@@ -68,6 +68,7 @@ const STEP_RUNNERS: {
 } = {
 	simplification: (optimizer, options) => optimizer.simplify(options),
 	dedup: (optimizer, options) => optimizer.deduplicate(options),
+	merge: (optimizer) => optimizer.mergeMeshes(),
 	quantize: (optimizer, options) => optimizer.quantize(options),
 	normals: (optimizer, options) => optimizer.optimizeNormals(options),
 	draco: (optimizer, options) => optimizer.measureDracoCompression(options)
