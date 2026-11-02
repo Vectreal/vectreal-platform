@@ -20,6 +20,9 @@ interface ThumbnailGridProps<V extends string> {
  * a radio group: picking the current one again is a valid way to undo edits
  * made since, which a radio cannot express.
  *
+ * Not lazy: the Lighting panel preloads every thumbnail as it opens, so
+ * each is in the cache by the time its grid mounts.
+ *
  * The current one is marked the way every on state in the publisher is, its
  * label filling with the foreground, so it reads without color vision and
  * apart from the hover plate.
@@ -51,7 +54,6 @@ export function ThumbnailGrid<V extends string>({
 							alt=""
 							width={240}
 							height={240}
-							loading="lazy"
 							decoding="async"
 							draggable={false}
 							className="aspect-[4/3] w-full object-cover"

@@ -19,7 +19,7 @@ import { ENVIRONMENT_KEYS, LIGHTING_SETUPS } from '@vctrl/core'
 import sharp from 'sharp'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
-const OUTPUT_DIR = path.resolve(scriptDir, '../public/media/images/lighting')
+const OUTPUT_DIR = path.resolve(scriptDir, '../app/assets/lighting')
 const STORYBOOK_URL = process.env.STORYBOOK_URL ?? 'http://localhost:6006'
 
 /** The story's frame is 320 CSS pixels; written at this size, 2x a card. */

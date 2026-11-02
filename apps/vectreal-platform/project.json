@@ -297,7 +297,7 @@
 		},
 		"render-lighting-thumbnails": {
 			"executor": "nx:run-commands",
-			"outputs": ["{projectRoot}/public/media/images/lighting"],
+			"outputs": ["{projectRoot}/app/assets/lighting"],
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"command": "pnpm exec tsx scripts/render-lighting-thumbnails.ts"

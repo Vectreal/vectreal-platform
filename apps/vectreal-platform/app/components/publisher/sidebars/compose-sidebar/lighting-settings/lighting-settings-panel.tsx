@@ -16,6 +16,7 @@ import {
 import { useAtomValue } from 'jotai/react'
 import { Globe, Lightbulb } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { preload } from 'react-dom'
 
 import { BakeSection } from './bake-section'
 import {
@@ -80,6 +81,16 @@ const ENVIRONMENT_OPTIONS = ENVIRONMENT_GROUPS.map((group) => ({
 	)
 }))
 
+/*
+  Every thumbnail the tool can show, requested as the panel opens. The
+  Environment view mounts only once the root has finished leaving, so asking
+  for its tiles there put a round trip after the view was already on screen.
+*/
+const THUMBNAIL_SOURCES = [
+	...SETUP_OPTIONS,
+	...ENVIRONMENT_OPTIONS.flatMap(({ options }) => options)
+].map(({ src }) => src)
+
 const RESOLUTION_OPTIONS: EnvironmentResolution[] = ['1k', '4k']
 
 const BRIGHTNESS_PRESETS: SliderPreset[] = [
@@ -95,6 +106,8 @@ const OCCLUSION_PRESETS: SliderPreset[] = [
 ]
 
 const LightingSettings = () => {
+	for (const src of THUMBNAIL_SOURCES) preload(src, { as: 'image' })
+
 	const draft = useLightingDraft()
 	const { lighting, commit, preview } = draft
 	const environmentLoadFailed = useAtomValue(environmentLoadFailedAtom)
