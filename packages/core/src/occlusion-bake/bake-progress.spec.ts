@@ -1,12 +1,14 @@
 /**
- * How far a bake reports it has come. The slicing loop runs against a
- * renderer that draws nothing, so this covers the count, not the image; the
+ * How far a bake reports it has come, and how it ends when the GPU resets
+ * under it. The slicing loop runs against a renderer that draws nothing, so
+ * this covers the count and the reason, not the image; the
  * GPU bake itself runs in `vctrl/viewer-e2e`.
  */
 import { Document } from '@gltf-transform/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { bakeOcclusionIntoDocument } from './bake-into-document'
+import { BakeError, bakeWithRecovery } from './bake-outcome'
 import { bakeLightsIntoDocument } from '../light-bake/bake-into-document'
 import { resolveLighting } from '../scene-lighting/resolve-lighting'
 
@@ -58,12 +60,15 @@ function twoQuads() {
 	return document
 }
 
-/** A renderer whose GPU finishes at once and offers neither fences nor timers. */
-function idleRenderer(): WebGLRenderer {
+/**
+ * A renderer whose GPU finishes at once and offers neither fences nor timers,
+ * its context lost from the start when `lost` says so.
+ */
+function idleRenderer({ lost = false } = {}): WebGLRenderer {
 	const gl = {
 		getExtension: () => null,
 		fenceSync: () => null,
-		isContextLost: () => false
+		isContextLost: () => lost
 	}
 	return {
 		autoClear: true,
@@ -76,7 +81,9 @@ function idleRenderer(): WebGLRenderer {
 		setRenderTarget: () => {},
 		clear: () => {},
 		render: () => {},
-		readRenderTargetPixels: () => {}
+		readRenderTargetPixels: () => {},
+		dispose: () => {},
+		forceContextLoss: () => {}
 	} as unknown as WebGLRenderer
 }
 
@@ -108,7 +115,7 @@ describe('bake progress', () => {
 
 		await bakeOcclusionIntoDocument(
 			twoQuads(),
-			idleRenderer,
+			() => idleRenderer(),
 			{ resolution: 16, samples: 4, distance: 0.25 },
 			(fraction) => fractions.push(fraction)
 		)
@@ -125,11 +132,40 @@ describe('bake progress', () => {
 		await bakeLightsIntoDocument(
 			twoQuads(),
 			lighting,
-			idleRenderer,
+			() => idleRenderer(),
 			{ resolution: 16, samples: 4 },
 			(fraction) => fractions.push(fraction)
 		)
 
 		expectRisesToOne(fractions)
+	})
+
+	it('throws a GPU reset as its reason, not only as words', async () => {
+		const bake = bakeOcclusionIntoDocument(
+			twoQuads(),
+			() => idleRenderer({ lost: true }),
+			{ resolution: 16, samples: 4, distance: 0.25 }
+		)
+
+		await expect(bake).rejects.toBeInstanceOf(BakeError)
+		await expect(bake).rejects.toMatchObject({ reason: 'gpu-reset' })
+	})
+
+	it('recovers from a reset by drawing again on a fresh renderer', async () => {
+		const renderers = [idleRenderer({ lost: true }), idleRenderer()]
+		let made = 0
+
+		const result = await bakeWithRecovery(
+			(renderer, options) =>
+				bakeOcclusionIntoDocument(twoQuads(), renderer, options),
+			() => renderers[made++],
+			{ resolution: 16, samples: 4, distance: 0.25 }
+		)
+
+		expect(result).toEqual({
+			baked: ['left', 'right'],
+			skipped: [],
+			recovered: 'retried'
+		})
 	})
 })

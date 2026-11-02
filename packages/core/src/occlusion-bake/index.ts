@@ -1,4 +1,13 @@
 export {
+	BakeError,
+	bakeWithRecovery,
+	lowerDetail,
+	type BakeDetail,
+	type BakeFailure,
+	type BakeFailureReason,
+	type BakeRecovery
+} from './bake-outcome'
+export {
 	bakeOcclusionIntoDocument,
 	type OcclusionBakeReport
 } from './bake-into-document'
