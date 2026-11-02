@@ -345,7 +345,12 @@ describe('CameraFraming', () => {
 		// Stored with a position and rotation but no target, so the target sits
 		// at the live distance, which already carries the fit on screen.
 		const cameras: CameraConfig[] = [
-			{ cameraId: 'legacy', position: [0, 0, 10], rotation: [0, 0, 0] }
+			{
+				cameraId: 'legacy',
+				name: 'Legacy',
+				position: [0, 0, 10],
+				rotation: [0, 0, 0]
+			}
 		]
 		const live = { ...at(30), fov: 50, viewportAspect: 0.5 }
 
