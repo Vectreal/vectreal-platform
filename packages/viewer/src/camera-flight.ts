@@ -7,8 +7,11 @@
  * viewer flies, rather than replaying a copy that drifts from it.
  *
  * A separate entry point for the reason `hotspots` is one: the package root
- * pulls in React, drei and the stylesheet. This one needs `three` alone, which
- * is a peer dependency anyway.
+ * pulls in React, drei and the stylesheet. This one needs `three` and
+ * `@vctrl/core/scene-camera` alone.
+ *
+ * @deprecated The flight is defined in `@vctrl/core/scene-camera` now; import
+ * it from there. This entry point may be removed in `@vctrl/viewer` 4.0.0.
  */
 
 export {
@@ -18,4 +21,4 @@ export {
 	type CameraFlight,
 	type CameraFlightFrame,
 	type CameraFlightPose
-} from './components/scene/camera-flight'
+} from './camera-core-aliases'

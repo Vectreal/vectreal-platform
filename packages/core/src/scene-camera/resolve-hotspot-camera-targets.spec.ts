@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { resolveHotspotCameraTargets } from './resolve-hotspot-camera-targets'
 
-import type { CameraConfig, HotspotDefinition } from '@vctrl/core'
+import type { CameraConfig, HotspotDefinition } from '../types'
 
 const hotspot = (
 	overrides: Partial<HotspotDefinition> & Pick<HotspotDefinition, 'id'>

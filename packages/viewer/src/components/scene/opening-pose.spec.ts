@@ -1,10 +1,10 @@
+import { withOpeningPose } from '@vctrl/core/scene-camera'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { withOpeningPose } from './opening-pose'
 import { resolveCameraSelection } from './scene-camera'
 
-import type { OpeningPose } from './opening-pose'
+import type { OpeningPose } from '@vctrl/core/scene-camera'
 
 const opening: OpeningPose = {
 	cameraId: 'default',

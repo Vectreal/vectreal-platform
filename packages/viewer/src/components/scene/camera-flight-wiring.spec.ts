@@ -13,13 +13,14 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
+// The flight runtime moved out of `scene-camera.tsx` into its own hook.
 const camera = readFileSync(
-	join(import.meta.dirname, 'scene-camera.tsx'),
+	join(import.meta.dirname, 'use-camera-flight.ts'),
 	'utf8'
 )
 
 const frameLoopStart = camera.indexOf('useFrame(() => {')
-const frameLoopEnd = camera.indexOf('isWaitingForStableFrame.current ||')
+const frameLoopEnd = camera.indexOf('return useMemo(')
 const frameLoop = camera.slice(frameLoopStart, frameLoopEnd)
 
 describe('the camera flight frame loop', () => {
@@ -49,11 +50,11 @@ describe('the camera flight frame loop', () => {
 		)
 		// A dependency on the model would re-register the executor on a swap.
 		const start = camera.slice(
-			camera.indexOf('const startTransition = useCallback('),
-			camera.indexOf('const executeViewerCommand')
+			camera.indexOf('const start = useCallback'),
+			camera.indexOf('const stop = useCallback')
 		)
 		expect(start).toContain(
-			'[applyCameraInstantly, controls?.target, invalidate, sceneCamera]'
+			'[controls?.target, invalidate, modelRef, sceneCamera]'
 		)
 	})
 })

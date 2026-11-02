@@ -29,6 +29,7 @@ pnpm add @vctrl/core
 | Dropped selections  | `@vctrl/core/model-loader`    | What a reference inside a model means: `selectionKey`, `referenceIn`, `referenceKeyIn`            |
 | Remote models       | `@vctrl/core/model-loader`    | A model at a URL, as the files a drop would give: `fetchModelFiles`, `ModelFetchError`            |
 | Scene asset helpers | `@vctrl/core`                 | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
+| Scene cameras       | `@vctrl/core/scene-camera`    | Which camera a scene opens on, what a stored camera resolves to, and the flight between two: `resolveCameraPose`, `sampleCameraFlight`, `isSceneCamera` |
 
 ---
 

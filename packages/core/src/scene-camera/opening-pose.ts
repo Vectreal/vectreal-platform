@@ -1,4 +1,4 @@
-import type { CameraConfig } from '@vctrl/core'
+import type { CameraConfig } from '../types'
 
 /** The view the viewer settled on at load, and the camera it was framed for. */
 export interface OpeningPose {

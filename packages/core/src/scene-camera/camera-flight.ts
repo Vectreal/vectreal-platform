@@ -1,6 +1,6 @@
 import { Matrix4, Quaternion, Spherical, Vector3 } from 'three'
 
-import type { CameraTransitionEasing, CameraTransitionType } from '@vctrl/core'
+import type { CameraTransitionEasing, CameraTransitionType } from '../types'
 import type { Sphere } from 'three'
 
 /**
