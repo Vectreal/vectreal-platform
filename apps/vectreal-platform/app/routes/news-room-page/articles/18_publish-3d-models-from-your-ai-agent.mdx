@@ -1,0 +1,120 @@
+---
+title: "Publish 3D models from your AI agent"
+slug: "publish-3d-models-from-your-ai-agent"
+excerpt: "The Vectreal MCP server lets the coding agent you already work with, in Claude Code, Cursor or VS Code, upload a GLB, set its lighting and shadows, publish it compressed and hand back the embed code. It runs on your machine through the Vectreal CLI, and you sign in once in the browser and choose what the agent may do."
+publishedAt: "2026-11-02T18:00"
+updatedAt: "2026-11-02"
+category: "guides"
+tags:
+  - "api"
+  - "publisher"
+  - "embed"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/media/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+
+voice: A
+author_persona: moritz
+type: "Integration Guide"
+premise: capability
+pillar: Open Source
+seo_cluster: "3D on the web / MCP server for 3D models"
+cta: agent
+ctaPrompt: "Set up the Vectreal MCP server in this project, then publish my GLB and give me the embed code."
+sceneImage: "/media/images/newsroom/scene-publish-3d-models-from-your-ai-agent.webp"
+coverImage: "/media/images/newsroom/og-publish-3d-models-from-your-ai-agent.webp"
+---
+
+## Why an MCP server and not an assistant inside Vectreal?
+
+Because people already have an agent. Everyone is building with their own, in their own environment, and nobody is tied to a proprietary assistant inside a 3D product, so I didn't see much point in building one in. An MCP server goes the other way: it lets the agent you already use do the publishing, inside the same session where it's writing your page, and automate more around it.
+
+It's for people who are moving away from clicking through front ends themselves and towards workflows that live in an agent session. This is the first version, and it needs an agent that can run a command on your machine, so a coding agent rather than a chat window.
+
+## What can the agent do?
+
+Ask for the outcome in plain words:
+
+```text
+Publish ./models/camera.glb to my "Product pages" project with a soft studio light
+and a ground shadow, then give me the embed code for shop.example.com.
+```
+
+The agent works it out from the server's tools:
+
+| Tool | What it does |
+| --- | --- |
+| `describe_model` | Reads a local GLB's size, meshes, materials and animation clips without uploading anything |
+| `create_scene_from_file` | Uploads the GLB as a new draft scene |
+| `get_scene_settings`, `update_scene_settings` | Reads every setting; changes the environment, controls, bounds, shadows and presentation |
+| `publish_scene` | Compresses the GLB the way the Publisher does, Draco for geometry and KTX2 for textures, on your machine, and publishes it |
+| `get_embed_snippet` | Returns the iframe snippet and a preview link, creating an embed key if the project has none and adding the domains you name to its allowed list |
+| `list_projects`, `create_project`, `list_scenes`, `unpublish_scene`, `whoami` | Finds its way around your organization |
+| `search_docs`, `read_doc` | Reads the Vectreal docs, without signing in |
+
+The tools take GLB files. An FBX, OBJ or STL turns into one on the [converter pages](https://vectreal.com/convert?utm_source=newsroom&utm_medium=article&utm_campaign=publish-3d-models-from-your-ai-agent), in the browser and without an account.
+
+## How do I set it up?
+
+You need Node.js 22.22 or later.
+
+**1. Sign in once.**
+
+```bash
+npx -y @vctrl/cli login
+```
+
+Your browser opens Vectreal's consent page. Pick the organization the agent works in and what it may do, then approve. The session is kept in your operating system's keychain, and it shows up under **Connected agents** in the dashboard, where you can revoke it whenever you want.
+
+**2. Add the server to your agent.** In Claude Code:
+
+```bash
+claude mcp add vectreal -- npx -y @vctrl/cli mcp
+```
+
+Or install the Vectreal plugin for Claude Code, which adds the server and a skill that walks the agent through publishing a model:
+
+```bash
+claude plugin marketplace add Vectreal/vectreal-platform
+claude plugin install vectreal@vectreal
+```
+
+For Cursor, VS Code or any other MCP client, it's the same command, `npx -y @vctrl/cli mcp`, run as a stdio server. The [agents docs](https://vectreal.com/docs/agents?utm_source=newsroom&utm_medium=article&utm_campaign=publish-3d-models-from-your-ai-agent) have the config for each.
+
+**3. Optionally, link a folder to a project**, so the agent uses it when you don't name one:
+
+```bash
+npx -y @vctrl/cli init --project <project id>
+```
+
+You don't have to type any of this yourself. Even without coding experience, you can tell your agent to look up the Vectreal MCP server and work out how to set it up. What's left for you is to sign in, allow the agent to publish, and hand it back.
+
+## What will it never do?
+
+It can't delete anything: projects, folders and scenes are deleted in the dashboard only, and billing, members and organization settings aren't open to agents at all. The agent also never does more than your own role in the organization allows.
+
+One step is still yours: open a new scene once in the Publisher. The agent's machine renders nothing, so the scene's thumbnail and its baked shadow are made the first time you open it there.
+
+## Can I add it to the Claude app?
+
+Not yet. It isn't a connector you switch on in Claude's settings. The server runs on your machine, started by your agent, which is why it needs one that can run local commands. Making it something you can add to your Claude setup directly is what I'm working on next. I don't have a date for it.
+
+## Why give an agent a publishing tool at all?
+
+Any agent can build a 3D viewer from scratch with three.js or React Three Fiber, with its own loading, environment and shadows. A lot can go wrong on the way, and what comes out isn't controlled or shareable unless someone puts the work in. With the scene, the compression and the embed handled by a few tool calls, the agent has far less to get right, and it can spend its effort on the page itself.
+
+The same scene opens in the Publisher whenever you want to take over by hand, to add [hotspots](https://vectreal.com/news-room/add-hotspots-to-a-3d-model?utm_source=newsroom&utm_medium=article&utm_campaign=publish-3d-models-from-your-ai-agent) or camera views.
+
+## Hand it to your agent
+
+You don't have to set any of this up by hand. Give this to Claude Code, Cursor or whichever agent works in your project:
+
+```text
+Set up the Vectreal MCP server in this project, then publish my GLB and give me the embed code.
+```
+
+It'll ask you to sign in once in the browser. If you'd rather understand it first, ask Claude or ChatGPT the same thing and let it walk you through this page. The CLI is open source, AGPL-3.0 like the rest of the project.

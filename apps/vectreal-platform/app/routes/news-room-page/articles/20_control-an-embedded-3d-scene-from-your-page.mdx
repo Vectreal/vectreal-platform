@@ -1,0 +1,165 @@
+---
+title: "Control an embedded 3D scene from your page"
+slug: "control-an-embedded-3d-scene-from-your-page"
+excerpt: "With @vctrl/embed, the page around a Vectreal embed can fly the scene's camera, open a hotspot, switch auto-rotate and zoom on or off, and hear which hotspot a visitor clicked. It works with any framework or none, from npm or a script tag, and the most common settings need no JavaScript at all, only parameters on the iframe's URL."
+publishedAt: "2026-11-08T18:00"
+updatedAt: "2026-11-08"
+category: "guides"
+tags:
+  - "embed"
+  - "camera"
+  - "viewer"
+author:
+    name: "Moritz Becker"
+    role: "Founder at Vectreal"
+    bio: "Building open infrastructure for practical 3D on the web."
+    avatar: "/media/images/author-image.jpeg"
+    linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
+draft: false
+
+voice: A
+author_persona: moritz
+type: "Integration Guide"
+premise: capability
+pillar: Individuality
+seo_cluster: "3D on the web / control embedded 3D viewer"
+cta: agent
+ctaPrompt: "Add a button to my page that flies my embedded Vectreal scene to a hotspot, and keep a list of its hotspots in step with the viewer."
+sceneImage: "/media/images/newsroom/scene-control-an-embedded-3d-scene-from-your-page.webp"
+coverImage: "/media/images/newsroom/og-control-an-embedded-3d-scene-from-your-page.webp"
+---
+
+## Why would my page need to talk to the scene?
+
+An embedded scene normally sits in its box. The page can't tell it to do anything, and it can't tell the page what a visitor did inside it. I built the embed SDK to get more control over that iframe: for anyone who has a specific idea of what the integration should do, with camera moves, their own interactions, or a scene that follows the page as it scrolls instead of sitting beside it.
+
+## Can I set it up without JavaScript?
+
+For the opening state, yes. Add parameters to the iframe's `src`:
+
+```html
+<iframe
+	src="https://vectreal.com/embed/<projectId>/<sceneId>?token=YOUR_PREVIEW_KEY&camera=hero&autoRotate=0"
+	style="width: 100%; height: 480px; border: 0;"
+	allow="autoplay; xr-spatial-tracking"
+	allowfullscreen
+></iframe>
+```
+
+| Parameter | Does |
+| --- | --- |
+| `camera=<id>` | Opens on one of the scene's saved cameras |
+| `autoRotate=0` or `1` | Turns auto-rotate off or on |
+| `transition=none`, `linear` or `object_avoidance` | Sets how the camera moves; `object_avoidance` is the transition called Smart in the Publisher, which arcs around the model |
+| `hotspots=0` | Draws no markers, while the hotspots stay reachable from your code |
+| `hotspotContent=0` | Keeps the markers and the camera flights, but draws no card, so your page can show the text instead |
+| `cameraControls=0` | Hides the viewer's camera switcher, for when your page switches cameras itself |
+| `hotspotColor=%23fc6c18` | Sets the marker colour, as a URL-encoded hex value |
+| `theme=light`, `dark` or `system` | Matches the viewer's controls to your page |
+
+None of them changes the saved scene, so two pages can embed the same scene differently.
+
+## How do I fly the camera from a button?
+
+Load the SDK, hand it the iframe, and call it. This works on any page, with no build step:
+
+```html
+<button id="show-lens">Show the lens</button>
+
+<script src="https://unpkg.com/@vctrl/embed/vectreal-embed.umd.js"></script>
+<script>
+	const embed = new VectrealEmbed.VectrealEmbed(document.querySelector('iframe'))
+	const showLens = document.getElementById('show-lens')
+
+	embed.ready().then(({ hotspots }) => {
+		const lens = hotspots.find((hotspot) => hotspot.name === 'Lens')
+		showLens.addEventListener('click', () => embed.focusHotspot(lens.id))
+	})
+</script>
+```
+
+`ready()` resolves once the scene has loaded and lists its cameras and the hotspots a visitor can see, each with its id, name, linked camera and place in the sequence. `focusHotspot` opens the hotspot's card and flies to its camera, exactly as a visitor's click would. `activateCamera` switches to any saved camera, and `returnToSceneView` brings the view back out.
+
+With a bundler, it's the same API from npm:
+
+```bash
+npm install @vctrl/embed
+```
+
+```ts
+import { VectrealEmbed } from '@vctrl/embed'
+```
+
+## How do I keep my own panel in step with the scene?
+
+Listen for the click. Every time a visitor opens a marker, the SDK tells your page which one:
+
+```js
+embed.on('hotspot_activated', ({ hotspotId }) => {
+	document
+		.querySelectorAll('[data-hotspot]')
+		.forEach((item) => item.classList.toggle('active', item.dataset.hotspot === hotspotId))
+})
+```
+
+Pair it with `hotspotContent=0` and your page draws the text itself, in your own layout, while the viewer keeps the markers and the camera flights. Or hide the markers with `hotspots=0` and build the whole navigation on the page from the list `ready()` returns, ordered by each hotspot's `step`.
+
+The list carries ids, names and cameras, but no body text or links. The card text stays in one place, the scene, so a second copy on your page can't drift away from it.
+
+## Can the scene follow the page as it scrolls?
+
+Yes, and your page decides how. Give each section of the page the id of the camera it should show, from the list `ready()` returns, and switch when the section comes into view:
+
+```js
+embed.setTransition({ type: 'object_avoidance', duration: 1200, easing: 'ease_in_out' })
+embed.setZoomEnabled(false)
+
+const sections = document.querySelectorAll('[data-camera]')
+const observer = new IntersectionObserver(
+	(entries) => {
+		entries
+			.filter((entry) => entry.isIntersecting)
+			.forEach((entry) => embed.activateCamera(entry.target.dataset.camera))
+	},
+	{ threshold: 0.6 }
+)
+
+sections.forEach((section) => observer.observe(section))
+```
+
+Turning scroll-zoom off matters here, so scrolling the page doesn't zoom the model instead. The same kind of switch exists for `setControlsEnabled`, `setPanEnabled` and `setAutoRotate`, and the animation calls, `setAnimationPlaying`, `restartAnimation` and `seekAnimationClip`, let the page start a clip when the visitor gets to it. Calls made before the scene is ready wait and run once it is.
+
+## Is it only for React?
+
+No. The embed SDK is plain JavaScript and talks to the iframe through `postMessage`. Any page can use it, whatever it's built with.
+
+The open packages for showing a model run from building it all yourself to having it managed:
+
+| Package | What you get | Framework |
+| --- | --- | --- |
+| `@vctrl/core` | Loading, optimizing and exporting models | Any JavaScript runtime |
+| `@vctrl/hooks` | Model loading and state as React hooks | React |
+| `@vctrl/viewer` | The viewer as a component in your own app, with the files on your hosting | React |
+| `@vctrl/embed` | A scene published from the Publisher, in an iframe your page controls | None |
+
+The embed asks the least of your code and still gives the page control, whatever it's built with. That saves development time, and it helps if an AI agent is writing the page. An agent can build a viewer from scratch with three.js or React Three Fiber, but loading, environment and shadows are a lot to get right, and the result isn't shareable unless someone does that work too. Handed a published scene and a dozen calls, it can spend its effort on the page.
+
+All of them are AGPL-3.0, in the [repository](https://github.com/Vectreal/vectreal-platform).
+
+## Is the key in the iframe safe?
+
+It's public by design. The preview key in the iframe's URL is read-only and reaches published scenes only, and your project's list of allowed domains decides which sites can load it. You set that list in the dashboard, under Projects.
+
+## Where is this going?
+
+Right now the SDK is about the camera and interaction. Next I want the page to change the scene itself: swap a material, the lighting or a variant, within whatever the scene's author allows, which is where configurators start. The groundwork is the asset system behind scenes, which is meant to let materials, textures and environment maps be shared between scenes instead of uploaded again for each one.
+
+## Hand it to your agent
+
+With an embedded scene on your page, give this to the agent that works on your site:
+
+```text
+Add a button to my page that flies my embedded Vectreal scene to a hotspot, and keep a list of its hotspots in step with the viewer.
+```
+
+It can read this page and the SDK and write the wiring for whatever your site is built with. If the scene has no hotspots yet, [add hotspots to a 3D model](https://vectreal.com/news-room/add-hotspots-to-a-3d-model?utm_source=newsroom&utm_medium=article&utm_campaign=control-an-embedded-3d-scene-from-your-page) goes through it, and the full list of methods and events is in the [embed SDK guide](https://vectreal.com/docs/guides/embed-sdk?utm_source=newsroom&utm_medium=article&utm_campaign=control-an-embedded-3d-scene-from-your-page).

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { docsPages } from '../app/lib/docs/docs-manifest'
 import { getDocMarkdown } from '../app/lib/markdown/page-markdown.server'
-import { getNewsArticles } from '../app/lib/news/news-manifest.server'
+import { getPublishedNewsArticles } from '../app/lib/news/news-manifest.server'
 import routes from '../app/routes'
 
 const ORIGIN = 'https://vectreal.com'
@@ -26,7 +26,7 @@ describe('/llms.txt links the markdown twins', () => {
 
 	it('points every published article at its twin', async () => {
 		const body = await load('llms')
-		for (const article of getNewsArticles().filter((a) => !a.draft)) {
+		for (const article of getPublishedNewsArticles()) {
 			expect(body).toContain(`](${ORIGIN}/news-room/${article.slug}.md)`)
 		}
 	})
