@@ -3,11 +3,10 @@
  *
  * The Lighting tool shows a chrome ball for each, rendered once and
  * committed; a setup or map added without rerunning
- * `render-lighting-thumbnails` would show a broken image.
+ * `render-lighting-thumbnails` would show a broken image. The URLs come from
+ * an `import.meta.glob` over the committed files, so a missing file has no
+ * URL at all.
  */
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
-
 import { ENVIRONMENT_KEYS, LIGHTING_SETUPS } from '@vctrl/core'
 import { describe, expect, it } from 'vitest'
 
@@ -16,15 +15,16 @@ import {
 	lightingSetupThumbnail
 } from '../app/lib/lighting/lighting-thumbnails'
 
-const served = (url: string) =>
-	existsSync(join(import.meta.dirname, '..', 'public', url))
-
 describe('lighting thumbnails', () => {
 	it.each(LIGHTING_SETUPS.map(({ id }) => id))('setup %s has one', (id) => {
-		expect(served(lightingSetupThumbnail(id))).toBe(true)
+		expect(lightingSetupThumbnail(id)).toMatch(
+			new RegExp(`/setups/${id}\\.webp`)
+		)
 	})
 
 	it.each(ENVIRONMENT_KEYS)('map %s has one', (key) => {
-		expect(served(environmentThumbnail(key))).toBe(true)
+		expect(environmentThumbnail(key)).toMatch(
+			new RegExp(`/environments/${key}\\.webp`)
+		)
 	})
 })
