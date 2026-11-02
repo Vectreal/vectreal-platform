@@ -22,8 +22,9 @@ export type OcclusionBakeSkipReason =
 	/** Two parts share texels, as mirrored halves usually do. */
 	| 'overlapping-uvs'
 	/**
-	 * Light bake only: it is drawn from both sides, and a map lights one. The
-	 * back of a lit card would draw the front's light, or its darkness.
+	 * No longer produced: the light bake skipped double-sided materials until
+	 * it learned to bake them from their front. Kept so a report saved
+	 * before then still reads.
 	 */
 	| 'double-sided'
 	/** An animation turns, moves or reshapes it, and a bake holds one pose. */

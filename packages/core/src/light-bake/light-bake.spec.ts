@@ -338,19 +338,6 @@ const noRenderer = () => {
 }
 
 describe('bakeLightsIntoDocument', () => {
-	it('leaves a double-sided material to the live lights', async () => {
-		const report = await bakeLightsIntoDocument(
-			cardDocument({ doubleSided: true }),
-			lighting(),
-			noRenderer
-		)
-
-		expect(report).toEqual({
-			baked: [],
-			skipped: [{ material: 'label', reason: 'double-sided' }]
-		})
-	})
-
 	it('leaves a part an animation turns, through its parent, to the live lights', async () => {
 		const report = await bakeLightsIntoDocument(
 			cardDocument({ animatedParent: true }),
@@ -460,9 +447,15 @@ describe('planLightBake', () => {
 		expect(plan.skipped).toEqual([])
 	})
 
+	it('takes a double-sided material, baked from its front as occlusion is', async () => {
+		const plan = await planLightBake(cardDocument({ doubleSided: true }))
+
+		expect(plan.targets.map(material)).toEqual(['label'])
+		expect(plan.skipped).toEqual([])
+	})
+
 	it('names what the bake would skip, without a renderer', async () => {
 		const cases = [
-			{ options: { doubleSided: true }, skipped: [['label', 'double-sided']] },
 			{
 				options: { animatedParent: true, staticBody: true },
 				skipped: [

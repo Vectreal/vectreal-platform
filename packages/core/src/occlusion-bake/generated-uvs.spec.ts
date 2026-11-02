@@ -5,6 +5,7 @@
  * watlas.
  */
 import { Document, type Material, type Primitive } from '@gltf-transform/core'
+import { KHRMaterialsUnlit } from '@gltf-transform/extensions'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
@@ -418,7 +419,10 @@ describe('planBakeUvsFor', () => {
 
 	it('lays out no material the light bake skips for another reason when only it was asked for', async () => {
 		const { document, tiled } = model()
-		tiled.setDoubleSided(true)
+		tiled.setExtension(
+			'KHR_materials_unlit',
+			document.createExtension(KHRMaterialsUnlit).createUnlit()
+		)
 
 		expect(
 			await planBakeUvsFor(document, { occlusion: false, lights: true })
@@ -432,7 +436,12 @@ describe('planBakeUvsFor', () => {
 	it('finds a set among the parts the bakes asked for take, whatever the others carry', async () => {
 		const { document } = model()
 		// Every set a viewer reads is in use here, but the light bake skips it.
-		const full = document.createMaterial('full').setDoubleSided(true)
+		const full = document
+			.createMaterial('full')
+			.setExtension(
+				'KHR_materials_unlit',
+				document.createExtension(KHRMaterialsUnlit).createUnlit()
+			)
 		document
 			.getRoot()
 			.listScenes()[0]

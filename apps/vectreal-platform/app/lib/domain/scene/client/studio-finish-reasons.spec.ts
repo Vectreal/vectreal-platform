@@ -176,12 +176,12 @@ describe('lightBakeWarning', () => {
 		expect(
 			lightBakeWarning({
 				baked: ['body'],
-				skipped: [{ material: 'wheel', reason: 'double-sided' }]
+				skipped: [{ material: 'wheel', reason: 'unlit' }]
 			})
 		).toEqual({
 			message:
 				"1 material could not take the studio finish's lights and keeps them live.",
-			description: 'wheel: Double-sided. Make it single-sided to bake light.'
+			description: "wheel: Unlit, so there's no light to bake."
 		})
 	})
 

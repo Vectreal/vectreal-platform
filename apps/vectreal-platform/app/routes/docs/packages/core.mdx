@@ -625,9 +625,9 @@ const report = await bakeLightsIntoDocument(
 
 It plans with `planOcclusionBake(document, { existingOcclusion: 'bake', layout })`, so
 it skips materials for the same reasons, except that an occlusion texture does
-not stop it: bake ambient occlusion first, then the lights. It also skips a
-double-sided material, as `double-sided`: one map cannot light both its sides.
-While any part moves, is skinned or is GPU-instanced, it skips every other
+not stop it: bake ambient occlusion first, then the lights. A double-sided
+material is baked from its authored normal, as occlusion is, so its back face
+shows the same light as its front. While any part moves, is skinned or is GPU-instanced, it skips every other
 material as `moving-shadows`: a map replaces the live shadows, and it cannot
 hold the shadow of a part that moves or is drawn more than once. While an
 alpha-masked part casts as solid, it skips them as

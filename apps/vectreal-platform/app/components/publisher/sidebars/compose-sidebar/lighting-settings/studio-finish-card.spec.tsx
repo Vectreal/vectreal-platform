@@ -178,8 +178,8 @@ describe('a bake the plan says no material can take', () => {
 		const lightsSkipSome = {
 			baked: ['Body'],
 			skipped: [
-				{ material: 'Lamp', reason: 'double-sided' as const },
-				{ material: 'Grille', reason: 'double-sided' as const }
+				{ material: 'Lamp', reason: 'unlit' as const },
+				{ material: 'Grille', reason: 'unlit' as const }
 			]
 		}
 		renderPanel(overcast.lighting, {
@@ -232,14 +232,14 @@ describe('a bake the plan says no material can take', () => {
 				},
 				lights: {
 					baked: [],
-					skipped: [{ material: 'Body', reason: 'double-sided' }]
+					skipped: [{ material: 'Body', reason: 'unlit' }]
 				}
 			}
 		)
 
 		expect(screen.getByText('Nothing to finish')).toBeTruthy()
 		expect(
-			screen.getByText(`1 material: ${BAKE_SKIP_REASONS['double-sided']}`)
+			screen.getByText(`1 material: ${BAKE_SKIP_REASONS.unlit}`)
 		).toBeTruthy()
 	})
 

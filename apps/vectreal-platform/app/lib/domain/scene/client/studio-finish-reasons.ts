@@ -127,7 +127,8 @@ export const BAKE_SKIP_REASONS = {
 	'no-uv0': 'No UVs. Unwrap it in your 3D tool.',
 	'tiling-uvs': 'Its UVs repeat. Unwrap it into one tile.',
 	'overlapping-uvs': 'Its UVs overlap. Unwrap it without stacked parts.',
-	'double-sided': 'Double-sided. Make it single-sided to bake light.',
+	'double-sided':
+		'Double-sided, which no longer stops a bake. Publish again to light it.',
 	'moving-shadows': 'Another part moves, so light here stays live.',
 	'cutout-shadows': "A cutout mask can't be read, so light here stays live.",
 	unlit: "Unlit, so there's no light to bake.",

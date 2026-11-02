@@ -136,9 +136,11 @@ export async function planBakeUvsFor(
 }
 
 /*
-  What a light map cannot hold that occlusion can. Light depends on which way
-  a surface faces, so a surface seen from both sides would carry one side's
-  light onto the other. (The planner already skips animated parts.) And the
+  What a light map cannot hold that occlusion can. (The planner already skips
+  animated parts.) A double-sided surface is baked from its authored normal,
+  as occlusion is, and its back shows the front's light: models are mostly
+  open shells drawn double-sided, nearly all with that normal facing out, so
+  skipping them would leave most models no baked light at all. The
   map holds every shadow on a surface in place of the live lights' own: a part
   that moves would leave its rest-pose shadow behind, and one drawn several
   times casts nothing in the bake, so while any part does either, the rest is
@@ -158,7 +160,6 @@ function lightSkipReasons(
 	)
 	return ({ material }) => {
 		if (material.getExtension('KHR_materials_unlit')) return 'unlit'
-		if (material.getDoubleSided()) return 'double-sided'
 		if (castsUnbakeable) return 'moving-shadows'
 		if (castsSolidCutout) return 'cutout-shadows'
 		return undefined
