@@ -120,11 +120,13 @@ function main() {
 			for (const [what, marker] of Object.entries(FORBIDDEN))
 				if (!found.has(what) && marker.test(text)) found.set(what, file)
 		}
-		const kb = Math.round(bytes / 1024)
+		// Compared in bytes: rounded to whole KB first, a route up to half a KB
+		// over its budget read as on it and passed.
+		const kb = (bytes / 1024).toFixed(1)
 		console.log(
-			`${route.padEnd(34)} ${String(kb).padStart(4)} KB gz of ${budget}, ${closure.size} chunks`
+			`${route.padEnd(34)} ${kb.padStart(6)} KB gz of ${budget}, ${closure.size} chunks`
 		)
-		if (kb > budget)
+		if (bytes > budget * 1024)
 			failures.push(`${route}: ${kb} KB gz is over its ${budget} KB budget`)
 		for (const [what, file] of found)
 			failures.push(`${route}: ${what} on its first load, via ${file}`)
