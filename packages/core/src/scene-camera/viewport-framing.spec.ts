@@ -283,4 +283,48 @@ describe('CameraFraming', () => {
 		// The blend was framed so this viewport reads it as √3; half as wide doubles it.
 		expect(flight.from.position.z).toBeCloseTo(20)
 	})
+
+	it('stores a pose captured on a phone so a desktop shows it as framed', () => {
+		// A 16:9 camera shown on a phone held upright is backed off 3.6x. The
+		// author captures that view; on a desktop it must come back as stored.
+		const stored = [0, 1, 10] as [number, number, number]
+		const live = { position: new Vector3(), target: new Vector3(), fov: 50 }
+		const cameras: CameraConfig[] = [
+			{ cameraId: 'hero', name: 'Hero', position: stored, target: [0, 1, 0] }
+		]
+		const phone = resolveCameraPose(cameras, 'hero', {
+			...live,
+			viewportAspect: 0.4625
+		})
+		const framing = new CameraFraming(0.4625)
+		framing.show(phone.framing)
+
+		const captured = framing.storedPose(phone.position, phone.target)
+		const desktop = resolveCameraPose(
+			[
+				{
+					...cameras[0],
+					position: captured.position.toArray(),
+					framingAspect: captured.framingAspect
+				}
+			],
+			'hero',
+			{ ...live, viewportAspect: 16 / 9 }
+		)
+
+		expect(captured.framingAspect).toBe(LEGACY_FRAMING_ASPECT)
+		expect(
+			desktop.position.toArray().map((axis) => Math.round(axis * 1e6) / 1e6)
+		).toEqual(stored)
+	})
+
+	it('stores a view nothing fitted at the live aspect, as it stands', () => {
+		const framing = new CameraFraming(1.2)
+		const view = at(7)
+		expect(framing.storedPose(view.position, view.target)).toEqual({
+			position: new Vector3(0, 0, 7),
+			framingAspect: 1.2
+		})
+		expect(view.position.z).toBe(7)
+	})
 })

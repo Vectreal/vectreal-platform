@@ -10,7 +10,6 @@ import {
 	cameraSelectionSignature,
 	DEFAULT_CAMERA,
 	resolveCameraPose,
-	scaleOrbitOffset,
 	type CameraSelectionSignature,
 	type OpeningPose,
 	type OrbitDistanceLimits,
@@ -251,13 +250,17 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		useCallback<SceneCameraSnapshotCapture>(async () => {
 			const activeCamera = sceneCamera as PerspectiveCamera
 			const controlsTarget = controls?.target ?? new Vector3(0, 0, 0)
+			// As a camera stores it: without the fit on screen (`storedPose`).
+			const stored = framing.current?.storedPose(
+				activeCamera.position,
+				controlsTarget
+			) ?? {
+				position: activeCamera.position,
+				framingAspect: activeCamera.aspect
+			}
 
 			return {
-				position: [
-					activeCamera.position.x,
-					activeCamera.position.y,
-					activeCamera.position.z
-				],
+				position: [stored.position.x, stored.position.y, stored.position.z],
 				rotation: [
 					activeCamera.rotation.x,
 					activeCamera.rotation.y,
@@ -265,8 +268,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				],
 				target: [controlsTarget.x, controlsTarget.y, controlsTarget.z],
 				fov: activeCamera.fov,
-				// The pose is what is on screen, so it was framed at this aspect.
-				framingAspect: activeCamera.aspect
+				framingAspect: stored.framingAspect
 			}
 		}, [controls?.target, sceneCamera])
 
@@ -593,19 +595,14 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			isWaitingForStableFrame.current = false
 			// The view a camera with no pose of its own comes back to, stored
 			// without the fit on screen so it is fitted afresh wherever it is shown.
-			if (previousSelectionKey.current) {
+			if (previousSelectionKey.current && framing.current) {
 				const target = controlsTarget ?? new Vector3(0, 0, 0)
-				const view = framing.current?.view
+				const stored = framing.current.storedPose(cameraPosition, target)
 				openingPose.current = {
 					cameraId: previousSelectionKey.current,
-					position: scaleOrbitOffset(
-						cameraPosition.clone(),
-						target,
-						1 / (view?.scale ?? 1)
-					).toArray(),
+					position: stored.position.toArray(),
 					target: target.toArray(),
-					framingAspect:
-						view?.aspect ?? (sceneCamera as PerspectiveCamera).aspect
+					framingAspect: stored.framingAspect
 				}
 			}
 			setIsFramed(true)

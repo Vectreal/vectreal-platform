@@ -105,15 +105,29 @@ describe('the camera layer fits what it shows', () => {
 		)
 	})
 
-	it('records the aspect with every snapshot and the opening pose', () => {
-		expect(camera).toContain('framingAspect: activeCamera.aspect')
+	it('stores what is on screen without its fit, in snapshots and the opening pose', () => {
+		const snapshot = slice(
+			camera,
+			'const captureCameraSnapshot =',
+			'onCameraSnapshotCaptureReady?.(captureCameraSnapshot)'
+		)
+		expect(snapshot).toMatch(
+			/framing\.current\?\.storedPose\(\s*activeCamera\.position,\s*controlsTarget\s*\)/
+		)
+		expect(snapshot).toMatch(
+			/position: \[stored\.position\.x, stored\.position\.y, stored\.position\.z\]/
+		)
+		expect(snapshot).toContain('framingAspect: stored.framingAspect')
+
 		const opening = slice(
 			camera,
 			'const completeInitialFraming',
 			"type: 'initial_framing_completed'"
 		)
-		expect(opening).toMatch(/framingAspect:\s*view\?\.aspect/)
-		expect(opening).toContain('1 / (view?.scale ?? 1)')
+		expect(opening).toContain(
+			'framing.current.storedPose(cameraPosition, target)'
+		)
+		expect(opening).toContain('framingAspect: stored.framingAspect')
 	})
 
 	it('is handed the host’s distance limits by the viewer', () => {

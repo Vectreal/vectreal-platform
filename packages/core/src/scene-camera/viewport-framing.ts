@@ -239,6 +239,23 @@ export class CameraFraming {
 			: false
 	}
 
+	/**
+	 * The pose on screen as a camera stores it: without the fit, and with the
+	 * aspect that fit was made for. Stored that way, a pose captured on any
+	 * viewport is shown again as it was framed. Storing the fitted pose with the
+	 * live aspect instead made a phone's backed-off view the camera's framing,
+	 * and a desktop then showed the subject at a quarter of its size.
+	 */
+	storedPose(
+		position: Vector3,
+		target: Vector3
+	): { position: Vector3; framingAspect: number } {
+		return {
+			position: scaleOrbitOffset(position.clone(), target, 1 / this.view.scale),
+			framingAspect: this.view.aspect
+		}
+	}
+
 	/** The host's limits scaled for the view, or spanning both ends of a flight. */
 	distanceLimits(limits: OrbitDistanceLimits): {
 		minDistance: number
