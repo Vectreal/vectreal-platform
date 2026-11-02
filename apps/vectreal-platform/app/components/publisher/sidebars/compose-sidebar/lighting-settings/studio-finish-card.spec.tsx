@@ -44,7 +44,7 @@ describe('finishStatus', () => {
 				status: 'failed',
 				source: SOURCE,
 				shown: true,
-				error: 'x'
+				failure: { reason: 'unexpected', detail: 'x' }
 			})
 		).toBe('failed')
 		expect(finishStatus(true, ready(true, ['Body']))).toBe('applied')

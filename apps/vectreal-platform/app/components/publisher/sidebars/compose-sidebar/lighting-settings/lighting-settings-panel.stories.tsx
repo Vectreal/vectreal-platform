@@ -158,6 +158,23 @@ const BAKE_STATES: {
 		}
 	},
 	{
+		title: 'Drawn at lower detail',
+		canBake: true,
+		preview: {
+			status: 'ready',
+			source: SOURCE,
+			shown: true,
+			durationMs: 6400,
+			reports: {
+				occlusion: {
+					baked: ['Body', 'Sole'],
+					skipped: [],
+					recovered: 'lower-detail'
+				}
+			}
+		}
+	},
+	{
 		title: 'Lights failed',
 		canBake: true,
 		preview: {
@@ -167,7 +184,10 @@ const BAKE_STATES: {
 			durationMs: 2100,
 			reports: {
 				occlusion: { baked: ['Body', 'Sole'], skipped: [] },
-				lights: { failed: 'The GPU reset while baking the studio lights' }
+				lights: {
+					failed: 'gpu-reset',
+					detail: 'The GPU reset while baking the studio lights'
+				}
 			}
 		}
 	},
@@ -192,7 +212,8 @@ const BAKE_STATES: {
 					]
 				},
 				lights: {
-					failed:
+					failed: 'unexpected',
+					detail:
 						'WebGLRenderer:_framebuffer_incomplete_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_on_target_0'
 				}
 			}
@@ -205,7 +226,10 @@ const BAKE_STATES: {
 			status: 'failed',
 			source: SOURCE,
 			shown: true,
-			error: 'The GPU reset while baking ambient occlusion'
+			failure: {
+				reason: 'no-webgl',
+				detail: 'Error creating WebGL context.'
+			}
 		}
 	}
 ]

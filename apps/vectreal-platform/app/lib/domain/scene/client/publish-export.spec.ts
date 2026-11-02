@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
-	lightBakeWarning,
-	occlusionBakeWarning,
 	projectPublishedGlbBytes,
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
@@ -33,7 +31,7 @@ const lastWorker = () => FakeWorker.instances[FakeWorker.instances.length - 1]
 const run = (onProgress = vi.fn(), timeoutMs = 1_000) =>
 	runPublishExportInWorker(
 		{
-			buffer: new ArrayBuffer(4),
+			glb: new Uint8Array(4),
 			draco: {},
 			dracoWorthApplying: true,
 			ktx2: true,
@@ -95,12 +93,48 @@ describe('runPublishExportInWorker', () => {
 		expect(lastWorker().terminate).toHaveBeenCalled()
 	})
 
-	it('rejects and terminates when the worker crashes', async () => {
+	it('runs a crashed export once more, in a fresh worker started after the first is gone', async () => {
+		const pending = run()
+		const crashed = lastWorker()
+		crashed.onerror?.({ message: 'out of memory' })
+		await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+
+		const retry = lastWorker()
+		// Terminated before the retry started, so two copies are never alive.
+		expect(crashed.terminate.mock.invocationCallOrder[0]).toBeLessThan(
+			retry.postMessage.mock.invocationCallOrder[0]
+		)
+		// A copy of its own: the first went to the crashed worker.
+		const [message, transfer] = retry.postMessage.mock.calls[0]
+		expect(transfer).toEqual([message.buffer])
+		expect(message.buffer).not.toBe(crashed.postMessage.mock.calls[0][0].buffer)
+
+		const done = { type: 'done', buffer: new ArrayBuffer(2) }
+		retry.reply(done)
+		await expect(pending).resolves.toBe(done)
+	})
+
+	it('rejects as a crash when the retry crashes too, and stops there', async () => {
 		const pending = run()
 		lastWorker().onerror?.({ message: 'out of memory' })
+		await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+		lastWorker().onerror?.({ message: 'out of memory' })
 
-		await expect(pending).rejects.toThrow('out of memory')
+		await expect(pending).rejects.toMatchObject({
+			name: 'WorkerRunError',
+			failure: 'crashed',
+			message: 'out of memory'
+		})
+		expect(FakeWorker.instances).toHaveLength(2)
 		expect(lastWorker().terminate).toHaveBeenCalled()
+	})
+
+	it('does not run a timed-out export again', async () => {
+		const pending = run(vi.fn(), 1_000)
+		vi.advanceTimersByTime(1_000)
+
+		await expect(pending).rejects.toMatchObject({ failure: 'timed-out' })
+		expect(FakeWorker.instances).toHaveLength(1)
 	})
 
 	it('rejects and terminates on a message that fails structured clone', async () => {
@@ -185,64 +219,5 @@ describe('resolvePublishGeometryOptions', () => {
 		expect(
 			resolvePublishGeometryOptions(draco, report(true)).dracoWorthApplying
 		).toBe(true)
-	})
-})
-
-describe('occlusionBakeWarning', () => {
-	it('stays quiet for a material that kept its own occlusion map', () => {
-		expect(
-			occlusionBakeWarning({
-				baked: ['body'],
-				skipped: [{ material: 'tyre', reason: 'existing-occlusion' }]
-			})
-		).toBeNull()
-	})
-
-	it('counts the materials that missed out and names the first', () => {
-		expect(
-			occlusionBakeWarning({
-				baked: [],
-				skipped: [
-					{ material: 'tyre', reason: 'existing-occlusion' },
-					{ material: 'wheel', reason: 'shared-geometry' },
-					{ material: 'decal', reason: 'tiling-uvs' }
-				]
-			})
-		).toEqual({
-			message: "2 materials could not take the studio finish's depth.",
-			description: 'wheel: its mesh is placed more than once'
-		})
-	})
-
-	it('says nothing when no bake was asked for', () => {
-		expect(occlusionBakeWarning(undefined)).toBeNull()
-	})
-})
-
-describe('lightBakeWarning', () => {
-	it('says the scene shipped with live lights when the bake failed', () => {
-		expect(lightBakeWarning({ failed: 'WebGL 2 is unavailable' })).toEqual({
-			message:
-				'The studio finish could not draw the studio lights, so the scene was published with them live.',
-			description: 'WebGL 2 is unavailable'
-		})
-	})
-
-	it('counts the materials that kept live lights and names the first', () => {
-		expect(
-			lightBakeWarning({
-				baked: ['body'],
-				skipped: [{ material: 'wheel', reason: 'shared-geometry' }]
-			})
-		).toEqual({
-			message:
-				"1 material could not take the studio finish's lights and keeps them live.",
-			description: 'wheel: its mesh is placed more than once'
-		})
-	})
-
-	it('stays quiet when everything took the bake, or nothing was asked', () => {
-		expect(lightBakeWarning({ baked: ['body'], skipped: [] })).toBeNull()
-		expect(lightBakeWarning(undefined)).toBeNull()
 	})
 })

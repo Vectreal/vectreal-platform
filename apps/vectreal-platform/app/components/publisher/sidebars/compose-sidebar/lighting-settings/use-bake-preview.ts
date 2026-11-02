@@ -8,11 +8,19 @@ import {
 	resolvePublishGeometryOptions,
 	runPublishExportInWorker
 } from '../../../../../lib/domain/scene/client/publish-export'
+import {
+	failuresToReport,
+	failWith,
+	passFailure,
+	StudioFinishError,
+	studioFinishFailure
+} from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { STUDIO_FINISH_FILENAME } from '../../../../../lib/domain/scene/scene-asset-roles'
 import {
 	bakesKey,
 	publishBakes
 } from '../../../../../lib/domain/scene/studio-finish'
+import { useErrorReport } from '../../../../../lib/observability/use-error-report'
 import {
 	bakePreviewAtom,
 	hasUnsavedChangesAtom,
@@ -28,7 +36,10 @@ import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-s
 
 import type { StudioFinishToSave } from '../../../../../lib/domain/scene/studio-finish'
 import type { SavedFinishRef } from '../../../../../types/api'
-import type { PublishExportOutcome } from '../../../../../workers/publish-export.worker.types'
+import type {
+	BakePassOutcome,
+	PublishExportOutcome
+} from '../../../../../workers/publish-export.worker.types'
 import type { Object3D } from 'three'
 
 /**
@@ -82,6 +93,17 @@ function usePreviewLifetime(current: BakePreview | null) {
 	const [preview, setPreview] = useAtom(bakePreviewAtom)
 	const drawnRef = useRef<Object3D | undefined>(undefined)
 
+	// A finish that fails leaves the publisher working, so nothing else would
+	// report it. Keyed on the failure and reports, which survive showing and
+	// hiding the preview, so one failure is reported once.
+	const failure = current?.failure
+	const reports = current?.reports
+	const reportable = useMemo(() => {
+		const [first] = failuresToReport({ failure, reports })
+		return first && new Error(`Studio finish ${first.reason}: ${first.detail}`)
+	}, [failure, reports])
+	useErrorReport(reportable, 'client-fallback')
+
 	useEffect(() => {
 		if (preview && !current) setPreview(null)
 	}, [current, preview, setPreview])
@@ -103,9 +125,8 @@ function usePreviewLifetime(current: BakePreview | null) {
 }
 
 /** How many materials a bake reached; none when it failed. */
-export const bakedCount = (
-	report: { baked: string[] } | { failed: string } | undefined
-) => (report && 'baked' in report ? report.baked.length : 0)
+export const bakedCount = (report: BakePassOutcome | undefined) =>
+	report && 'baked' in report ? report.baked.length : 0
 
 /** What a preview says while it draws: which step, and how far it has come. */
 export const drawingLabel = (progress: BakePreview['progress']) => {
@@ -119,8 +140,8 @@ export const drawingLabel = (progress: BakePreview['progress']) => {
 /*
   A finished export as a preview to show: the bakes it reports, its file
   loaded for the viewer, and the file itself, which publish ships unchanged.
-  Throws when every bake failed, since then it has nothing to show; publish
-  ships whichever bake worked.
+  Throws the first bake's reason when every bake failed, since then it has
+  nothing to show; publish ships whichever bake worked.
 */
 async function finishedPreview(
 	loader: ModelLoader,
@@ -132,13 +153,15 @@ async function finishedPreview(
 	const outcomes = [reports.occlusion, reports.lights].filter(
 		(report) => report !== undefined
 	)
-	const failure = outcomes.find((report) => 'failed' in report)
-	if (failure && 'failed' in failure && outcomes.every((r) => 'failed' in r)) {
-		throw new Error(failure.failed)
+	const failure = passFailure(outcomes[0])
+	if (failure && outcomes.every((report) => 'failed' in report)) {
+		throw new StudioFinishError(failure)
 	}
-	const { scene } = await loader.loadToThreeJS(
-		new File([outcome.buffer], 'baked.glb', { type: 'model/gltf-binary' })
-	)
+	const { scene } = await loader
+		.loadToThreeJS(
+			new File([outcome.buffer], 'baked.glb', { type: 'model/gltf-binary' })
+		)
+		.catch(failWith('unprepared'))
 	return {
 		status: 'ready',
 		source,
@@ -377,12 +400,11 @@ export function useBakePreview() {
 			)
 
 		try {
-			const { data } = await exporter.exportDocumentGLB(document)
+			const { data } = await exporter
+				.exportDocumentGLB(document)
+				.catch(failWith('unprepared'))
 			const outcome = await runPublishExportInWorker(
-				{
-					buffer: data.slice().buffer as ArrayBuffer,
-					...publishExport.request
-				},
+				{ glb: data, ...publishExport.request },
 				report
 			)
 			settle(
@@ -394,12 +416,9 @@ export function useBakePreview() {
 				)
 			)
 		} catch (error) {
-			settle({
-				status: 'failed',
-				source,
-				shown: true,
-				error: error instanceof Error ? error.message : String(error)
-			})
+			const failure = studioFinishFailure(error)
+			console.warn('Studio finish preview failed:', failure)
+			settle({ status: 'failed', source, shown: true, failure })
 		}
 	}, [
 		publishExport,

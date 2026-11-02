@@ -1,4 +1,5 @@
-import { runWorker } from '../../../../workers/run-worker'
+import { PUBLISH_EXPORT_TIMEOUT_MS } from './studio-finish-reasons'
+import { runWorker, WorkerRunError } from '../../../../workers/run-worker'
 
 import type {
 	PublishExportMessage,
@@ -7,22 +8,47 @@ import type {
 	PublishExportRequest
 } from '../../../../workers/publish-export.worker.types'
 import type { DracoCompressionReport, Optimizations } from '@vctrl/core'
-import type { OcclusionBakeSkipReason } from '@vctrl/core/occlusion-bake'
+
+/** The request a caller makes: the working GLB's bytes, not a buffer to give away. */
+export type PublishExportInput = Omit<
+	PublishExportRequest,
+	'type' | 'buffer'
+> & {
+	glb: Uint8Array
+}
 
 /**
- * Budget for one publish export. KTX2 encoding takes seconds per texture, so
- * this is generous; it exists so a stuck encoder cannot hold the publish
- * button forever.
+ * Runs the publish export in a worker. A worker that crashes, which is the
+ * browser running out of memory, is run once more: `runWorker` has already
+ * terminated it, and with it the copy it was given, so the retry gets a fresh
+ * copy without two ever being alive. A timeout is not retried; it would only
+ * take as long again. The budget (`PUBLISH_EXPORT_TIMEOUT_MS`) is generous,
+ * since KTX2 takes seconds per texture; it exists so a stuck encoder cannot
+ * hold the publish button forever.
  */
-const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
-
-/** Runs the publish export in its worker, which `runWorker` owns. */
-export function runPublishExportInWorker(
-	request: Omit<PublishExportRequest, 'type'>,
+export async function runPublishExportInWorker(
+	input: PublishExportInput,
 	onProgress: (progress: PublishExportProgress) => void,
 	timeoutMs = PUBLISH_EXPORT_TIMEOUT_MS
 ): Promise<PublishExportOutcome> {
-	const message: PublishExportRequest = { type: 'export', ...request }
+	try {
+		return await runPublishExportOnce(input, onProgress, timeoutMs)
+	} catch (error) {
+		if (!(error instanceof WorkerRunError && error.failure === 'crashed')) {
+			throw error
+		}
+		return runPublishExportOnce(input, onProgress, timeoutMs)
+	}
+}
+
+/** One run, in a worker `runWorker` owns, handed a copy of the GLB to keep. */
+function runPublishExportOnce(
+	{ glb, ...request }: PublishExportInput,
+	onProgress: (progress: PublishExportProgress) => void,
+	timeoutMs: number
+): Promise<PublishExportOutcome> {
+	const buffer = glb.slice().buffer as ArrayBuffer
+	const message: PublishExportRequest = { type: 'export', buffer, ...request }
 
 	return runWorker<PublishExportMessage, PublishExportOutcome>(
 		() =>
@@ -35,7 +61,7 @@ export function runPublishExportInWorker(
 			),
 		{
 			message,
-			transfer: [request.buffer],
+			transfer: [buffer],
 			timeoutMs,
 			onProgress,
 			toResult: (outcome) => outcome,
@@ -87,7 +113,7 @@ export async function projectPublishedGlbBytes(
 ): Promise<number> {
 	const { buffer } = await runPublishExportInWorker(
 		{
-			buffer: workingGlb.slice().buffer as ArrayBuffer,
+			glb: workingGlb,
 			...geometry,
 			ktx2: false,
 			occlusion: false,
@@ -96,66 +122,4 @@ export async function projectPublishedGlbBytes(
 		() => {}
 	)
 	return buffer.byteLength
-}
-
-/** Why a material took no bake, as the author reads it. */
-export const OCCLUSION_SKIP_REASONS: Record<OcclusionBakeSkipReason, string> = {
-	'existing-occlusion': 'it has an occlusion map already, which is kept',
-	'shared-geometry': 'its mesh is placed more than once',
-	skinned: 'a skin moves it',
-	'no-uv0': 'it has no UVs',
-	'tiling-uvs': 'its UVs repeat the texture',
-	'overlapping-uvs': 'parts of it share the same UVs',
-	'double-sided':
-		'it is drawn from both sides, which one light map cannot light',
-	animated: 'an animation moves it, and a bake holds one pose',
-	'moving-shadows':
-		'another part moves or repeats, and its shadow here cannot be baked',
-	'cutout-shadows':
-		'a cutout whose mask cannot be read casts a shadow here, which the bake would draw solid',
-	unlit: 'it is unlit, so there is no light to bake'
-}
-
-/** The warning a publish owes the author about its occlusion bake, if any. */
-export function occlusionBakeWarning(
-	occlusion: PublishExportOutcome['occlusion']
-): { message: string; description: string } | null {
-	if (!occlusion) return null
-	if ('failed' in occlusion) {
-		return {
-			message:
-				'The studio finish could not add depth, so the scene was published without it.',
-			description: occlusion.failed
-		}
-	}
-	// A material that brought its own occlusion map keeps it, as intended.
-	const missed = occlusion.skipped.filter(
-		({ reason }) => reason !== 'existing-occlusion'
-	)
-	const [first, ...rest] = missed
-	if (!first) return null
-	return {
-		message: `${missed.length} material${rest.length === 0 ? '' : 's'} could not take the studio finish's depth.`,
-		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
-	}
-}
-
-/** The warning a publish owes the author about its light bake, if any. */
-export function lightBakeWarning(
-	lights: PublishExportOutcome['lights']
-): { message: string; description: string } | null {
-	if (!lights) return null
-	if ('failed' in lights) {
-		return {
-			message:
-				'The studio finish could not draw the studio lights, so the scene was published with them live.',
-			description: lights.failed
-		}
-	}
-	const [first, ...rest] = lights.skipped
-	if (!first) return null
-	return {
-		message: `${lights.skipped.length} material${rest.length === 0 ? '' : 's'} could not take the studio finish's lights and keep${rest.length === 0 ? 's' : ''} them live.`,
-		description: `${first.material}: ${OCCLUSION_SKIP_REASONS[first.reason]}`
-	}
 }

@@ -2,6 +2,23 @@
 type WorkerReply =
 	{ type: 'progress' } | { type: 'done' } | { type: 'error'; message: string }
 
+/** How a run ended without the worker answering. */
+export type WorkerRunFailure = 'timed-out' | 'undeserializable' | 'crashed'
+
+/**
+ * A run that ended without an answer, by how it ended, so a caller can retry
+ * a crash or explain a timeout without reading the words.
+ */
+export class WorkerRunError extends Error {
+	constructor(
+		readonly failure: WorkerRunFailure,
+		message: string
+	) {
+		super(message)
+		this.name = 'WorkerRunError'
+	}
+}
+
 interface RunWorkerOptions<Reply extends WorkerReply, Result> {
 	/** The request, transferred rather than copied where `transfer` says so. */
 	message: unknown
@@ -49,7 +66,7 @@ export function runWorker<Reply extends WorkerReply, Result>(
 		}
 
 		const timer = setTimeout(() => {
-			settle(() => reject(new Error(errors.timedOut)))
+			settle(() => reject(new WorkerRunError('timed-out', errors.timedOut)))
 		}, timeoutMs)
 
 		worker.onmessage = ({ data }: MessageEvent<Reply>) => {
@@ -68,11 +85,15 @@ export function runWorker<Reply extends WorkerReply, Result>(
 		// Neither onmessage nor onerror fires when a message fails structured
 		// clone, so without this the run would hang until the timeout.
 		worker.onmessageerror = () => {
-			settle(() => reject(new Error(errors.undeserializable)))
+			settle(() =>
+				reject(new WorkerRunError('undeserializable', errors.undeserializable))
+			)
 		}
 
 		worker.onerror = (error) => {
-			settle(() => reject(new Error(error.message ?? errors.crashed)))
+			settle(() =>
+				reject(new WorkerRunError('crashed', error.message ?? errors.crashed))
+			)
 		}
 
 		worker.postMessage(message, transfer)

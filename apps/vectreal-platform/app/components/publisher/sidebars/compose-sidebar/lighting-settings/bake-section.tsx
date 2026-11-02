@@ -3,12 +3,16 @@ import { Toggle } from '@shared/components/ui/toggle'
 import { Loader2 } from 'lucide-react'
 
 import { bakedAnything, drawingLabel } from './use-bake-preview'
-import { OCCLUSION_SKIP_REASONS } from '../../../../../lib/domain/scene/client/publish-export'
+import {
+	BAKE_RECOVERY_NOTES,
+	BAKE_SKIP_REASONS,
+	STUDIO_FINISH_FAILURES
+} from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { InlineNotice } from '../../../../layout-components'
 import { PanelCaption } from '../../sidebar-section'
 
 import type { BakePreview } from '../../../../../lib/stores/publisher-config-store'
-import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
+import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'
 
 interface BakeSectionProps {
 	preview: BakePreview | null
@@ -30,7 +34,7 @@ function BakeReport({
 	report
 }: {
 	label: string
-	report: OcclusionBakeReport | { failed: string }
+	report: BakePassOutcome
 }) {
 	if ('failed' in report) {
 		return (
@@ -40,7 +44,8 @@ function BakeReport({
 					<span className="text-destructive shrink-0">Failed</span>
 				</p>
 				<p className="text-muted-foreground">
-					Publishing ships the model without it: {report.failed}
+					{STUDIO_FINISH_FAILURES[report.failed].message} Publishing ships the
+					model without it.
 				</p>
 			</div>
 		)
@@ -55,13 +60,18 @@ function BakeReport({
 						: 'Nothing drawn'}
 				</span>
 			</p>
+			{report.recovered && BAKE_RECOVERY_NOTES[report.recovered] && (
+				<p className="text-muted-foreground">
+					{BAKE_RECOVERY_NOTES[report.recovered]}
+				</p>
+			)}
 			{report.skipped.length > 0 && (
 				<ul className="space-y-1">
 					{report.skipped.map(({ material, reason }, index) => (
 						<li key={`${material}-${index}`}>
 							{material}
 							<span className="text-muted-foreground">
-								: {OCCLUSION_SKIP_REASONS[reason]}
+								: {BAKE_SKIP_REASONS[reason]}
 							</span>
 						</li>
 					))}
@@ -159,7 +169,8 @@ export function BakeSection({
 
 			{preview?.status === 'failed' && (
 				<InlineNotice tone="error" role="alert" className="wrap-anywhere">
-					The studio finish failed: {preview.error}
+					{preview.failure &&
+						STUDIO_FINISH_FAILURES[preview.failure.reason].message}
 				</InlineNotice>
 			)}
 		</>
