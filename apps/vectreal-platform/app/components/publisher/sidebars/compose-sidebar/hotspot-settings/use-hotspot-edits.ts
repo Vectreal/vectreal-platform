@@ -150,7 +150,13 @@ export function useHotspotEdits() {
 		const next = addHotspot(
 			{ camera: store.get(cameraAtom), hotspots: store.get(hotspotsAtom) },
 			ids,
-			snapshot ? { position: snapshot.position, fov: snapshot.fov } : undefined
+			snapshot
+				? {
+						position: snapshot.position,
+						fov: snapshot.fov,
+						framingAspect: snapshot.framingAspect
+					}
+				: undefined
 		)
 
 		setHotspots(next.hotspots)

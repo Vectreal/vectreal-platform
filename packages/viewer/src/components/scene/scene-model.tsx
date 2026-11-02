@@ -1,6 +1,7 @@
 import { useBounds } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { resolveNormalizedScale } from '@vctrl/core'
+import { resolveCameraPose } from '@vctrl/core/scene-camera'
 import {
 	memo,
 	useCallback,
@@ -23,8 +24,11 @@ import {
 import { resolveClipPlanes, type ClipExtentRegistry } from './clip-planes'
 import { useModelFrame, type ModelKey } from './model-frame'
 import { worldBounds } from './model-measurement'
-import { resolveCameraSelection } from './scene-camera'
-import { buildCaptureCamera, type CapturePose } from './screenshot-pose'
+import {
+	buildCaptureCamera,
+	unfittedOrbitLimits,
+	type CapturePose
+} from './screenshot-pose'
 
 import type {
 	SceneScreenshotCapture,
@@ -35,7 +39,11 @@ import type {
 	NormalizationOptions,
 	SceneBackdrop
 } from '@vctrl/core'
-import type { OpeningPose, OrbitLimits } from '@vctrl/core/scene-camera'
+import type {
+	OpeningPose,
+	OrbitDistanceLimits,
+	OrbitLimits
+} from '@vctrl/core/scene-camera'
 
 /**
  * Anisotropic filtering keeps textures sharp on surfaces seen at a glancing
@@ -89,6 +97,8 @@ interface ModelProps {
 	 * there, as the viewer shows it.
 	 */
 	openingPose: RefObject<OpeningPose | null>
+	/** The host's orbit distance limits, before the viewport fit scales them. */
+	distanceLimits?: OrbitDistanceLimits
 	/**
 	 * The backdrop the viewer paints behind its transparent canvas. Painted
 	 * under the screenshot too, so a thumbnail shows the scene as it is seen.
@@ -253,6 +263,7 @@ const SceneModel = memo((props: ModelProps) => {
 		normalizationOptions,
 		onRawDiagonalComputed,
 		clipExtents,
+		distanceLimits,
 		openingPose
 	} = props
 	const bounds = useBounds()
@@ -370,26 +381,31 @@ const SceneModel = memo((props: ModelProps) => {
 					// Resolved by the viewer's camera rule, so fallbacks (a missing
 					// target, fov or position) read the live values at capture start,
 					// and a camera with no pose at all stands where the scene opened.
-					const selection = resolveCameraSelection(
+					// Without a viewport aspect, so not fitted: the capture crops the
+					// frame to its own output, and a fit for the canvas would shrink
+					// the subject by however narrow the canvas happens to be.
+					const resolved = resolveCameraPose(
 						cameraOptions.cameras,
 						targetCameraConfig.cameraId,
-						controls?.target?.clone() ?? new Vector3(),
-						activeCamera,
-						undefined,
+						{
+							position: activeCamera.position,
+							target: controls?.target?.clone() ?? new Vector3(),
+							fov: activeCamera.fov
+						},
 						openingPose.current
 					)
 
 					pose = controls?.target
 						? {
-								position: selection.targetPosition,
-								fov: selection.targetFov,
-								lookAt: selection.targetLookAt,
-								limits: controls
+								position: resolved.position,
+								fov: resolved.fov,
+								lookAt: resolved.target,
+								limits: unfittedOrbitLimits(controls, distanceLimits ?? {})
 							}
 						: {
-								position: selection.targetPosition,
-								fov: selection.targetFov,
-								rotation: selection.targetRotation
+								position: resolved.position,
+								fov: resolved.fov,
+								rotation: resolved.rotation
 							}
 				}
 			} else if (options.mode === 'auto-fit') {
@@ -412,6 +428,8 @@ const SceneModel = memo((props: ModelProps) => {
 						fov: activeCamera.fov,
 						lookAt: framing.target,
 						limits: controls
+							? unfittedOrbitLimits(controls, distanceLimits ?? {})
+							: undefined
 					}
 				}
 			}
@@ -450,6 +468,7 @@ const SceneModel = memo((props: ModelProps) => {
 			camera,
 			cameraOptions,
 			controls,
+			distanceLimits,
 			fitClipPlanes,
 			gl,
 			invalidate,

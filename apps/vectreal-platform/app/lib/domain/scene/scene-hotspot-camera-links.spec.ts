@@ -93,14 +93,16 @@ describe('addHotspot', () => {
 	it('stands the paired camera at a captured pose, aimed by its hotspot', () => {
 		const result = addHotspot({ camera: { cameras }, hotspots: [] }, ids, {
 			position: [3, 1, 5],
-			fov: 45
+			fov: 45,
+			framingAspect: 1.25
 		})
 		expect(result.camera.cameras?.[1]).toEqual({
 			cameraId: 'new-camera',
 			kind: 'hotspot',
 			name: 'New Hotspot Camera',
 			fov: 45,
-			position: [3, 1, 5]
+			position: [3, 1, 5],
+			framingAspect: 1.25
 		})
 	})
 

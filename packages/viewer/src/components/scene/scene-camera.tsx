@@ -6,11 +6,15 @@ import {
 	CameraTransitionType
 } from '@vctrl/core'
 import {
+	CameraFraming,
 	cameraSelectionSignature,
 	DEFAULT_CAMERA,
 	resolveCameraPose,
+	scaleOrbitOffset,
 	type CameraSelectionSignature,
-	type OpeningPose
+	type OpeningPose,
+	type OrbitDistanceLimits,
+	type ViewportFraming
 } from '@vctrl/core/scene-camera'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
@@ -24,6 +28,7 @@ import {
 import { applyInitialFraming } from './initial-framing'
 import { prefersReducedMotion } from './reduced-motion'
 import { useCameraFlight } from './use-camera-flight'
+import { viewportAspectOf } from './viewport-aspect'
 
 import type { InitialFramingControls } from './initial-framing'
 import type {
@@ -68,6 +73,11 @@ interface SceneCameraProps extends CameraProps {
 	 * too.
 	 */
 	openingPose: RefObject<OpeningPose | null>
+	/**
+	 * The host's orbit distance limits. The camera layer scales them with the
+	 * viewport fit (`CameraFraming.distanceLimits`), so it owns writing them.
+	 */
+	distanceLimits?: OrbitDistanceLimits
 }
 
 export type ResolvedCameraSelection = {
@@ -77,6 +87,8 @@ export type ResolvedCameraSelection = {
 	targetFov: number
 	targetLookAt: Vector3
 	transition: CameraTransitionConfig
+	/** The fit `targetPosition` carries for the live viewport; see `resolveCameraPose`. */
+	framing: ViewportFraming | null
 }
 
 const DEFAULT_TRANSITION_DURATION_MS = 1000
@@ -96,8 +108,8 @@ function resolveTransition(
 }
 
 /**
- * The camera `activeCameraId` resolves to, posed (`resolveCameraPose`), with
- * the transition the viewer flies to it with.
+ * The camera `activeCameraId` resolves to, posed (`resolveCameraPose`) and
+ * fitted to the live viewport, with the transition the viewer flies to it with.
  */
 export function resolveCameraSelection(
 	cameras: CameraProps['cameras'],
@@ -113,7 +125,8 @@ export function resolveCameraSelection(
 		{
 			position: sceneCamera.position,
 			target: currentControlsTarget,
-			fov: sceneCamera.fov
+			fov: sceneCamera.fov,
+			viewportAspect: viewportAspectOf(sceneCamera)
 		},
 		openingPose
 	)
@@ -124,13 +137,15 @@ export function resolveCameraSelection(
 		targetRotation: pose.rotation,
 		targetFov: pose.fov,
 		targetLookAt: pose.target,
-		transition: resolveTransition(sceneTransition)
+		transition: resolveTransition(sceneTransition),
+		framing: pose.framing
 	}
 }
 
 export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
+		distanceLimits,
 		hasContent: hasModel = false,
 		model,
 		onInitialFramingComplete,
@@ -148,6 +163,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const MAX_STABILIZATION_DURATION_MS = 500
 
 	const { camera: sceneCamera } = useThree()
+	const size = useThree((state) => state.size)
 	const invalidate = useThree((state) => state.invalidate)
 	const getThreeState = useThree((state) => state.get)
 	const controls = useThree((state) => state.controls) as
@@ -198,7 +214,38 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	// re-register the executor before the new model is framed.
 	const modelRef = useRef(model)
 	modelRef.current = model
-	const flight = useCameraFlight(modelRef)
+	const distanceLimitsRef = useRef<OrbitDistanceLimits>({})
+	distanceLimitsRef.current = distanceLimits ?? {}
+	/** Which fit is on screen (`CameraFraming`). Started afresh by each framing. */
+	const framing = useRef<CameraFraming | null>(null)
+
+	/*
+	  The host's limits, scaled for the fit on screen. Read from the store: this
+	  also runs from the framing timeout, before `controls` in this render's
+	  closure has registered.
+	*/
+	const syncDistanceLimits = useCallback(() => {
+		const orbit = getThreeState().controls as {
+			minDistance?: number
+			maxDistance?: number
+		} | null
+		if (
+			!framing.current ||
+			typeof orbit?.minDistance !== 'number' ||
+			typeof orbit.maxDistance !== 'number'
+		) {
+			return
+		}
+		Object.assign(
+			orbit,
+			framing.current.distanceLimits(distanceLimitsRef.current)
+		)
+	}, [getThreeState])
+
+	const flight = useCameraFlight(modelRef, () => {
+		framing.current?.land()
+		syncDistanceLimits()
+	})
 
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
@@ -217,7 +264,9 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 					activeCamera.rotation.z
 				],
 				target: [controlsTarget.x, controlsTarget.y, controlsTarget.z],
-				fov: activeCamera.fov
+				fov: activeCamera.fov,
+				// The pose is what is on screen, so it was framed at this aspect.
+				framingAspect: activeCamera.aspect
 			}
 		}, [controls?.target, sceneCamera])
 
@@ -236,13 +285,16 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			activeCamera.rotation.copy(selection.targetRotation)
 			activeCamera.fov = selection.targetFov
 			activeCamera.updateProjectionMatrix()
+			framing.current?.show(selection.framing)
+			// Before update(), which clamps the distance to them.
+			syncDistanceLimits()
 			if (controls?.target) {
 				controls.target.copy(selection.targetLookAt)
 				controls.update?.()
 			}
 			invalidate()
 		},
-		[controls, invalidate, sceneCamera]
+		[controls, invalidate, sceneCamera, syncDistanceLimits]
 	)
 
 	const startTransition = useCallback(
@@ -265,6 +317,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				return
 			}
 
+			// Read before `start`, which replaces the flight it measures.
+			framing.current?.fly(
+				selection.framing,
+				viewportAspectOf(sceneCamera) ?? 1,
+				flight.progress()
+			)
 			flight.start(
 				{
 					position: selection.targetPosition,
@@ -275,8 +333,9 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				durationMs,
 				selection.transition.easing
 			)
+			syncDistanceLimits()
 		},
-		[applyCameraInstantly, flight]
+		[applyCameraInstantly, flight, sceneCamera, syncDistanceLimits]
 	)
 
 	const executeViewerCommand = useCallback(
@@ -337,6 +396,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const initializeCamera = useCallback(
 		(sceneCamera: PerspectiveCamera) => {
 			const initialControlsTarget = controls?.target ?? new Vector3(0, 0, 0)
+			framing.current = new CameraFraming(viewportAspectOf(sceneCamera) ?? 1)
 			const selection = resolveCameraSelection(
 				cameras,
 				activeCameraId,
@@ -355,6 +415,12 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				getThreeState().controls as InitialFramingControls | null,
 				boundsEnabled
 			)
+			// The fit framed the model for this viewport, whatever the camera was
+			// framed at.
+			if (boundsEnabled) {
+				framing.current.reset(viewportAspectOf(sceneCamera) ?? 1)
+				syncDistanceLimits()
+			}
 
 			if (!hasInitialFramingCompleted.current) {
 				isWaitingForStableFrame.current = true
@@ -383,7 +449,8 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			controls?.target,
 			getThreeState,
 			model,
-			sceneTransition
+			sceneTransition,
+			syncDistanceLimits
 		]
 	)
 
@@ -467,6 +534,47 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		transitionOverride
 	])
 
+	// The controls were recreated, or the host changed its limits: either way
+	// the controls now hold the host's raw limits, whether or not the fit moved.
+	useEffect(() => {
+		syncDistanceLimits()
+	}, [
+		controls,
+		distanceLimits?.maxDistance,
+		distanceLimits?.minDistance,
+		syncDistanceLimits
+	])
+
+	/*
+	  The viewport changed shape: refit what is on screen, or both ends of a
+	  flight (`CameraFraming.refit`). Once per resize, with no allocations, and
+	  not debounced: a debounce would hold the old fit while a container
+	  animates and then jump. An orthographic camera is not fitted.
+	*/
+	useEffect(() => {
+		const aspect = viewportAspectOf(sceneCamera)
+		const target = controls?.target
+		if (!framing.current || aspect === undefined || !target) return
+		const moved = framing.current.refit(
+			aspect,
+			{ position: sceneCamera.position, target },
+			flight.ends()
+		)
+		if (!moved) return
+
+		syncDistanceLimits()
+		controls?.update?.()
+		invalidate()
+	}, [
+		controls,
+		flight,
+		invalidate,
+		sceneCamera,
+		size.height,
+		size.width,
+		syncDistanceLimits
+	])
+
 	useFrame(() => {
 		if (
 			!isWaitingForStableFrame.current ||
@@ -483,12 +591,21 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		const completeInitialFraming = () => {
 			hasInitialFramingCompleted.current = true
 			isWaitingForStableFrame.current = false
-			// The view a camera with no pose of its own comes back to.
+			// The view a camera with no pose of its own comes back to, stored
+			// without the fit on screen so it is fitted afresh wherever it is shown.
 			if (previousSelectionKey.current) {
+				const target = controlsTarget ?? new Vector3(0, 0, 0)
+				const view = framing.current?.view
 				openingPose.current = {
 					cameraId: previousSelectionKey.current,
-					position: cameraPosition.toArray(),
-					target: (controlsTarget ?? new Vector3(0, 0, 0)).toArray()
+					position: scaleOrbitOffset(
+						cameraPosition.clone(),
+						target,
+						1 / (view?.scale ?? 1)
+					).toArray(),
+					target: target.toArray(),
+					framingAspect:
+						view?.aspect ?? (sceneCamera as PerspectiveCamera).aspect
 				}
 			}
 			setIsFramed(true)

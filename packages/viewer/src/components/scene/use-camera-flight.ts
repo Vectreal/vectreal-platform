@@ -1,5 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { sampleCameraFlight } from '@vctrl/core/scene-camera'
+import {
+	easeFlightProgress,
+	sampleCameraFlight
+} from '@vctrl/core/scene-camera'
 import { useCallback, useMemo, useRef, type RefObject } from 'react'
 import {
 	type Object3D,
@@ -39,6 +42,13 @@ export interface CameraFlightRunner {
 	) => void
 	/** Drops the flight in progress, leaving the camera where it is. */
 	stop: () => void
+	/** The eased progress of the flight in progress, or null without one. */
+	progress: () => number | null
+	/**
+	 * The ends of the flight in progress, for refitting them in place when the
+	 * viewport changes shape; null without one.
+	 */
+	ends: () => { from: CameraFlightPose; to: CameraFlightPose } | null
 }
 
 const now = () =>
@@ -50,10 +60,12 @@ const now = () =>
  * orbit controls.
  *
  * `modelRef` is read when a flight starts, for Smart's clearance, so a model
- * swap does not change the runner's identity.
+ * swap does not change the runner's identity. `onLand` runs on the frame a
+ * flight arrives, read when it does for the same reason.
  */
 export function useCameraFlight(
-	modelRef: RefObject<Object3D | null | undefined>
+	modelRef: RefObject<Object3D | null | undefined>,
+	onLand?: () => void
 ): CameraFlightRunner {
 	const { camera: sceneCamera } = useThree()
 	const invalidate = useThree((state) => state.invalidate)
@@ -64,6 +76,8 @@ export function useCameraFlight(
 		  }
 		| undefined
 	const runtimeRef = useRef<CameraFlightRuntime | null>(null)
+	const onLandRef = useRef(onLand)
+	onLandRef.current = onLand
 
 	const start = useCallback<CameraFlightRunner['start']>(
 		(to, type, durationMs, easing) => {
@@ -104,6 +118,20 @@ export function useCameraFlight(
 		runtimeRef.current = null
 	}, [])
 
+	const progress = useCallback(() => {
+		const runtime = runtimeRef.current
+		if (!runtime) return null
+		return easeFlightProgress(
+			Math.min(1, (now() - runtime.startAtMs) / runtime.durationMs),
+			runtime.flight.easing
+		)
+	}, [])
+
+	const ends = useCallback(() => {
+		const runtime = runtimeRef.current
+		return runtime ? { from: runtime.flight.from, to: runtime.flight.to } : null
+	}, [])
+
 	useFrame(() => {
 		const runtime = runtimeRef.current
 		if (!runtime) return
@@ -133,10 +161,14 @@ export function useCameraFlight(
 
 		if (rawProgress >= 1) {
 			runtimeRef.current = null
+			onLandRef.current?.()
 		}
 
 		invalidate()
 	})
 
-	return useMemo(() => ({ start, stop }), [start, stop])
+	return useMemo(
+		() => ({ start, stop, progress, ends }),
+		[start, stop, progress, ends]
+	)
 }

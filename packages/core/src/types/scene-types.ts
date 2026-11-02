@@ -95,6 +95,16 @@ export type CameraConfig = PerspectiveCameraProps & {
 	kind?: CameraKind
 	initial?: boolean // Indicates if this camera should be the default view when the scene loads
 	target?: [number, number, number]
+	/**
+	 * The viewport's width over its height when this camera's pose was framed.
+	 *
+	 * `fov` is vertical, so a narrower viewport shows less of the frame's width.
+	 * The viewer backs the camera off its target on any viewport narrower than
+	 * this, so the width that was framed stays in view. Absent on cameras saved
+	 * before it was recorded, which count as framed at 16:9; anything other than
+	 * a finite positive number reads as absent (`isFramingAspect`).
+	 */
+	framingAspect?: number
 }
 
 /**

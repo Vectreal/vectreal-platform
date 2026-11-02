@@ -2,8 +2,14 @@ import { Euler, Vector3, type Vector3Tuple } from 'three'
 
 import { DEFAULT_CAMERA, isSceneCamera } from './camera-settings'
 import { withOpeningPose } from './opening-pose'
+import {
+	framingScale,
+	resolveFramingAspect,
+	scaleOrbitOffset
+} from './viewport-framing'
 
 import type { OpeningPose } from './opening-pose'
+import type { ViewportFraming } from './viewport-framing'
 import type { CameraProps } from '../types'
 
 /**
@@ -22,6 +28,12 @@ export interface LiveCameraState {
 	/** The orbit target the live camera looks at. */
 	target: Vector3
 	fov: number
+	/**
+	 * The viewport's width over its height. With it, a stored position is
+	 * fitted to the viewport (`framingScale`); without it, as for a capture
+	 * that crops the frame itself, the pose is returned as stored.
+	 */
+	viewportAspect?: number
 }
 
 export interface ResolvedCameraPose {
@@ -31,6 +43,11 @@ export interface ResolvedCameraPose {
 	rotation: Euler
 	target: Vector3
 	fov: number
+	/**
+	 * The fit `position` carries. Null when the camera stores no position, so
+	 * its position is the live camera's and carries whatever fit is in view.
+	 */
+	framing: ViewportFraming | null
 }
 
 function hasSerializableVector3(value: unknown): boolean {
@@ -158,11 +175,24 @@ export function resolveCameraPose(
 					.add(forward.clone().multiplyScalar(fallbackOrbitRadius))
 			: rawTargetLookAt
 
+	// Fitted last, about the target, so the camera only moves along its view.
+	const framing = hasPosition
+		? {
+				aspect: resolveFramingAspect(selectedCamera.framingAspect),
+				scale: 1
+			}
+		: null
+	if (framing && live.viewportAspect !== undefined) {
+		framing.scale = framingScale(framing.aspect, live.viewportAspect)
+		scaleOrbitOffset(position, target, framing.scale)
+	}
+
 	return {
 		cameraId: selectedCamera.cameraId ?? 'default',
 		position,
 		rotation: rawRotation,
 		target,
-		fov: typeof selectedCamera.fov === 'number' ? selectedCamera.fov : live.fov
+		fov: typeof selectedCamera.fov === 'number' ? selectedCamera.fov : live.fov,
+		framing
 	}
 }

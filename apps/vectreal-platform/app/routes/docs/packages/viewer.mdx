@@ -415,7 +415,9 @@ The callback types are exported from `@vctrl/viewer` as `SceneScreenshotCapture`
 
 ## Camera snapshot callback
 
-`onCameraSnapshotCaptureReady(capture)` gives you a function that captures the current viewer camera pose as `{ position, rotation, target, fov }`.
+`onCameraSnapshotCaptureReady(capture)` gives you a function that captures the current viewer camera pose as `{ position, rotation, target, fov, framingAspect }`.
+
+`framingAspect` is the viewport's width over its height at capture. Save it on the camera with the pose: on a narrower viewport (a phone, a slim embed) the viewer backs the camera off its target until the width you framed fits again, keeping the field of view, and scales any `minDistance` and `maxDistance` you set by the same factor. A wider viewport shows the pose as stored. Cameras without it are treated as framed at 16:9.
 
 This is useful when building camera authoring tools or when you need to persist the current camera framing from surrounding UI.
 

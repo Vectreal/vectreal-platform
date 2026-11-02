@@ -95,7 +95,8 @@ export function useOpeningViewCapture() {
 										position: snapshot.position,
 										rotation: snapshot.rotation,
 										target: snapshot.target,
-										fov: snapshot.fov
+										fov: snapshot.fov,
+										framingAspect: snapshot.framingAspect
 									}
 								: entry
 						)

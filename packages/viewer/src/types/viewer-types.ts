@@ -19,6 +19,11 @@ export interface SceneCameraSnapshot {
 	rotation: [number, number, number]
 	target: [number, number, number]
 	fov: number
+	/**
+	 * The viewport's width over its height at capture. Store it as the
+	 * camera's `framingAspect` so the pose keeps its framing on other viewports.
+	 */
+	framingAspect: number
 }
 
 export type SceneCameraSnapshotCapture =

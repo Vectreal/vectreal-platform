@@ -73,14 +73,16 @@ const cameraNameForHotspot = (hotspotName: string): string =>
  * Where a new hotspot's camera stands: the editor's view as the hotspot was
  * added.
  *
- * Position and field of view only, never a target or a rotation. The hotspot
- * is placed after it is added, and a camera with no target of its own is aimed
- * at its hotspot wherever that ends up (`resolveHotspotCameraTargets`); a
- * captured target would keep it looking at the middle of the model.
+ * Position, field of view and the aspect they were framed at, never a target
+ * or a rotation. The hotspot is placed after it is added, and a camera with no
+ * target of its own is aimed at its hotspot wherever that ends up
+ * (`resolveHotspotCameraTargets`); a captured target would keep it looking at
+ * the middle of the model.
  */
 export interface HotspotCameraPose {
 	position: [number, number, number]
 	fov: number
+	framingAspect: number
 }
 
 /**
@@ -116,7 +118,9 @@ export function addHotspot(
 					kind: 'hotspot',
 					name: cameraNameForHotspot(hotspot.name),
 					fov: pose?.fov ?? 60,
-					...(pose ? { position: pose.position } : {})
+					...(pose
+						? { position: pose.position, framingAspect: pose.framingAspect }
+						: {})
 				}
 			]
 		},

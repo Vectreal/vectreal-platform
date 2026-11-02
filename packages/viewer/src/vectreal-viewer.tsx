@@ -830,6 +830,16 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		[rawDiagonal, normalizationOptions]
 	)
 
+	// Primitives as dependencies, so an inline `controlsOptions` does not
+	// re-sync the camera layer's limits on every render.
+	const orbitDistanceLimits = useMemo(
+		() => ({
+			minDistance: controlsOptions?.minDistance,
+			maxDistance: controlsOptions?.maxDistance
+		}),
+		[controlsOptions?.minDistance, controlsOptions?.maxDistance]
+	)
+
 	const aimedCameras = useMemo(
 		() => resolveHotspotCameraTargets(cameraOptions?.cameras, hotspots),
 		[cameraOptions?.cameras, hotspots]
@@ -1134,6 +1144,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 								<SceneCamera
 									{...cameraOptions}
 									cameras={aimedCameras}
+									distanceLimits={orbitDistanceLimits}
 									transitionOverride={transitionOverride}
 									openingPose={openingPose}
 									boundsEnabled={boundsEnabled}
@@ -1173,6 +1184,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 											normalizationOptions={normalizationOptions}
 											onRawDiagonalComputed={onRawDiagonalComputed}
 											clipExtents={clipExtents}
+											distanceLimits={orbitDistanceLimits}
 											openingPose={openingPose}
 										/>
 									</Center>

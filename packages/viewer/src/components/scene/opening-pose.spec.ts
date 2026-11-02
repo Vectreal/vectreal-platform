@@ -9,7 +9,8 @@ import type { OpeningPose } from '@vctrl/core/scene-camera'
 const opening: OpeningPose = {
 	cameraId: 'default',
 	position: [0, 3.5, 23.6],
-	target: [0, 3.5, 0]
+	target: [0, 3.5, 0],
+	framingAspect: 1
 }
 
 describe('withOpeningPose', () => {
@@ -25,7 +26,8 @@ describe('withOpeningPose', () => {
 			name: 'Default',
 			fov: 60,
 			position: [0, 3.5, 23.6],
-			target: [0, 3.5, 0]
+			target: [0, 3.5, 0],
+			framingAspect: 1
 		})
 	})
 

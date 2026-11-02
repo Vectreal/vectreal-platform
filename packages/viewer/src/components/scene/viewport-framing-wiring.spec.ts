@@ -1,0 +1,147 @@
+/**
+ * The viewport fit is wired into the camera layer and kept out of captures.
+ *
+ * A source guard, because `SceneCamera` needs a WebGL context this package's
+ * runner does not have, and dropping any of these calls type-checks cleanly:
+ * core's `viewport-framing.spec.ts` keeps passing while a phone crops the
+ * subject again, or a thumbnail shrinks.
+ */
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+import { describe, expect, it } from 'vitest'
+
+const read = (path: string) =>
+	readFileSync(join(import.meta.dirname, path), 'utf8')
+
+const camera = read('scene-camera.tsx')
+const flight = read('use-camera-flight.ts')
+const model = read('scene-model.tsx')
+const viewer = read('../../vectreal-viewer.tsx')
+
+const slice = (source: string, start: string, end: string) =>
+	source.slice(
+		source.indexOf(start),
+		source.indexOf(end, source.indexOf(start))
+	)
+
+describe('the camera layer fits what it shows', () => {
+	it('resolves every selection for the live viewport, perspective cameras only', () => {
+		const resolve = slice(
+			camera,
+			'export function resolveCameraSelection(',
+			'export const SceneCamera'
+		)
+		expect(resolve).toContain('viewportAspect: viewportAspectOf(sceneCamera)')
+	})
+
+	it('starts each framing at the live aspect, before the first pose is shown', () => {
+		const init = slice(
+			camera,
+			'const initializeCamera = useCallback(',
+			'applyCameraInstantly(selection)'
+		)
+		expect(init).toContain(
+			'framing.current = new CameraFraming(viewportAspectOf(sceneCamera) ?? 1)'
+		)
+	})
+
+	it('records the fit of a pose shown at once, before update() clamps it', () => {
+		const instant = slice(
+			camera,
+			'const applyCameraInstantly = useCallback(',
+			'const startTransition'
+		)
+		expect(instant).toContain('framing.current?.show(selection.framing)')
+		expect(instant.indexOf('syncDistanceLimits()')).toBeGreaterThan(-1)
+		expect(instant.indexOf('syncDistanceLimits()')).toBeLessThan(
+			instant.indexOf('controls.update?.()')
+		)
+	})
+
+	it('carries an interrupted flight’s progress into the next one', () => {
+		const start = slice(
+			camera,
+			'const startTransition = useCallback(',
+			'const executeViewerCommand'
+		)
+		expect(start).toMatch(
+			/framing\.current\?\.fly\(\s*selection\.framing,\s*viewportAspectOf\(sceneCamera\) \?\? 1,\s*flight\.progress\(\)\s*\)/
+		)
+		expect(start.indexOf('flight.progress()')).toBeLessThan(
+			start.indexOf('flight.start(')
+		)
+	})
+
+	it('hands the view to the destination when a flight lands', () => {
+		expect(camera).toMatch(
+			/useCameraFlight\(modelRef, \(\) => \{\s*framing\.current\?\.land\(\)\s*syncDistanceLimits\(\)/
+		)
+		const landing = slice(flight, 'if (rawProgress >= 1) {', 'invalidate()')
+		expect(landing).toContain('onLandRef.current?.()')
+	})
+
+	it('refits the view, or both flight ends, on resize', () => {
+		const resize = slice(
+			camera,
+			'const aspect = viewportAspectOf(sceneCamera)',
+			'useFrame('
+		)
+		expect(resize).toMatch(
+			/framing\.current\.refit\(\s*aspect,\s*\{ position: sceneCamera\.position, target \},\s*flight\.ends\(\)\s*\)/
+		)
+		expect(resize).toContain('size.width')
+		expect(resize).toContain('size.height')
+	})
+
+	it('re-syncs the limits whenever the controls are recreated, fit moved or not', () => {
+		const resync = slice(
+			camera,
+			'// The controls were recreated',
+			'useEffect(() => {\n\t\tconst aspect'
+		)
+		expect(resync).toMatch(
+			/useEffect\(\(\) => \{\s*syncDistanceLimits\(\)\s*\}, \[\s*controls,/
+		)
+	})
+
+	it('records the aspect with every snapshot and the opening pose', () => {
+		expect(camera).toContain('framingAspect: activeCamera.aspect')
+		const opening = slice(
+			camera,
+			'const completeInitialFraming',
+			"type: 'initial_framing_completed'"
+		)
+		expect(opening).toMatch(/framingAspect:\s*view\?\.aspect/)
+		expect(opening).toContain('1 / (view?.scale ?? 1)')
+	})
+
+	it('is handed the host’s distance limits by the viewer', () => {
+		expect(
+			viewer.match(/distanceLimits=\{orbitDistanceLimits\}/g)
+		).toHaveLength(2)
+	})
+})
+
+describe('captures render the stored pose', () => {
+	const capture = slice(
+		model,
+		'if (options.targetCameraId && cameraOptions?.cameras) {',
+		'// Two frames let the scene settle'
+	)
+
+	it('resolves the camera without a viewport, so the pose is not fitted', () => {
+		const resolve = slice(capture, 'resolveCameraPose(', 'openingPose.current')
+		expect(resolve).not.toContain('viewportAspect')
+		expect(capture).not.toContain('resolveCameraSelection(')
+	})
+
+	it('clamps against the host’s unscaled limits, in both capture modes', () => {
+		expect(
+			capture.match(
+				/unfittedOrbitLimits\(controls, distanceLimits \?\? \{\}\)/g
+			)
+		).toHaveLength(2)
+		expect(capture).not.toMatch(/limits: controls\s*[},]/)
+	})
+})

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { Euler, PerspectiveCamera, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { buildCaptureCamera } from './screenshot-pose'
+import { buildCaptureCamera, unfittedOrbitLimits } from './screenshot-pose'
 
 const liveCamera = () => {
 	const camera = new PerspectiveCamera(50, 16 / 9, 0.1, 100)
@@ -171,17 +171,19 @@ describe('the scene screenshot', () => {
 		)
 	})
 
-	it("holds both posed captures to the live controls' limits", () => {
+	// The live controls carry limits scaled by the viewport fit of the view on
+	// screen; a capture renders an unfitted pose, so it takes the host's own.
+	it("holds both posed captures to the controls' angles and the host's distance limits", () => {
 		expect(
 			capture.match(
-				/lookAt: (selection\.targetLookAt|framing\.target),\s*limits: controls/g
+				/lookAt: (resolved\.target|framing\.target),\s*limits:[^,}]*unfittedOrbitLimits\(controls, distanceLimits \?\? \{\}\)/g
 			)
 		).toHaveLength(2)
 	})
 
 	it("resolves a target camera's pose with the viewer's camera resolver", () => {
 		expect(capture).toMatch(
-			/const selection = resolveCameraSelection\(\s*cameraOptions\.cameras,\s*targetCameraConfig\.cameraId,/
+			/const resolved = resolveCameraPose\(\s*cameraOptions\.cameras,\s*targetCameraConfig\.cameraId,/
 		)
 	})
 
@@ -189,5 +191,39 @@ describe('the scene screenshot', () => {
 		expect(capture).toMatch(
 			/solveAutoFitFraming\(object, activeCamera\)[\s\S]{0,200}?fov: activeCamera\.fov/
 		)
+	})
+})
+
+describe('unfittedOrbitLimits', () => {
+	it('holds a capture to the host’s distance limits, not the fit-scaled live ones', () => {
+		// The view on screen is fitted 3x, so the live controls carry 3x limits.
+		const live = {
+			minPolarAngle: 0.1,
+			maxPolarAngle: 1.5,
+			minAzimuthAngle: -1,
+			maxAzimuthAngle: 1,
+			minDistance: 6,
+			maxDistance: 30
+		}
+
+		expect(
+			unfittedOrbitLimits(live, { minDistance: 2, maxDistance: 10 })
+		).toEqual({ ...live, minDistance: 2, maxDistance: 10 })
+	})
+
+	it('leaves the distance unbounded where the host set no limit', () => {
+		const live = {
+			minPolarAngle: 0,
+			maxPolarAngle: Math.PI,
+			minAzimuthAngle: -Infinity,
+			maxAzimuthAngle: Infinity,
+			minDistance: 3,
+			maxDistance: 9
+		}
+
+		expect(unfittedOrbitLimits(live, {})).toMatchObject({
+			minDistance: 0,
+			maxDistance: Infinity
+		})
 	})
 })

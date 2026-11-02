@@ -3,8 +3,11 @@ import type { CameraConfig } from '../types'
 /** The view the viewer settled on at load, and the camera it was framed for. */
 export interface OpeningPose {
 	cameraId: string
+	/** Without the viewport fit, which is applied again wherever it is shown. */
 	position: [number, number, number]
 	target: [number, number, number]
+	/** The aspect the opening view was framed at. */
+	framingAspect: number
 }
 
 /**
@@ -32,6 +35,7 @@ export function withOpeningPose<T extends CameraConfig>(
 	return {
 		...camera,
 		position: openingPose.position,
-		target: openingPose.target
+		target: openingPose.target,
+		framingAspect: openingPose.framingAspect
 	}
 }
