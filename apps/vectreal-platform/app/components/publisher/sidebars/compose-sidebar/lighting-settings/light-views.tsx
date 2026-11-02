@@ -38,6 +38,16 @@ export const LIGHT_CAPTIONS: Record<SceneLightRole, string> = {
 	rim: 'Lights the model from behind, to lift its edge off the background.'
 }
 
+/** What each mark on the Turn globe does, a few words each, for its glossary. */
+export const LIGHT_GLOSSARY: Record<SceneLightRole, string> = {
+	key: 'Main light, casts the shadow',
+	fill: "Softens the key's shadows",
+	rim: 'Lifts the edge from behind'
+}
+
+export const BRIGHT_SPOT_LABEL = 'Bright spot'
+export const BRIGHT_SPOT_GLOSSARY = 'Where the environment glows'
+
 /** The view id of a light's own settings. */
 export const lightViewId = (role: SceneLightRole) => `light-${role}`
 
