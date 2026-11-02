@@ -136,11 +136,12 @@ reflection, which stays live either way. A few limits:
   drawn-in light just as they scale live light.
 - The finish follows the model's shape, not its normal maps, so fine surface
   detail does not shade it.
+- A material drawn from both sides, such as a label or a leaf, takes the
+  light that falls on the side its normals face, and its back shows the same
+  light.
 - A material that cannot take the finish keeps live light. On top of the
-  reasons depth lists, that includes a material drawn from both sides, such
-  as a label or a leaf: one map cannot light its front and back. So does a
-  part an animation turns, moves or reshapes, because the map holds only the
-  light of its rest pose. And while any part moves, or is drawn more than
+  reasons depth lists, that includes a part an animation turns, moves or
+  reshapes, because the map holds only the light of its rest pose. And while any part moves, or is drawn more than
   once, the whole model keeps live light: the map would hold that part's
   shadow where it stood, not where it goes. The same goes while a cutout
   material (alpha mask) casts a shadow whose mask the finish cannot read,
