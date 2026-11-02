@@ -86,7 +86,7 @@ describe('BakeSection', () => {
 		expect(screen.queryByText(BAKE_RECOVERY_NOTES['lower-detail'])).toBeNull()
 	})
 
-	it('names each material it skipped with what would let it take the finish', () => {
+	it('lists what it skipped one line per reason, the materials after it', () => {
 		renderSection({
 			status: 'ready',
 			source: SOURCE,
@@ -94,13 +94,20 @@ describe('BakeSection', () => {
 			reports: {
 				occlusion: {
 					baked: ['Body'],
-					skipped: [{ material: 'Logo', reason: 'tiling-uvs' }]
+					skipped: [
+						{ material: 'Logo', reason: 'tiling-uvs' },
+						{ material: 'Eyelet', reason: 'shared-geometry' },
+						{ material: 'Lace tip', reason: 'shared-geometry' }
+					]
 				}
 			}
 		})
 
-		expect(screen.getByRole('listitem').textContent).toBe(
-			`Logo: ${BAKE_SKIP_REASONS['tiling-uvs']}`
-		)
+		expect(
+			screen.getAllByRole('listitem').map((item) => item.textContent)
+		).toEqual([
+			`${BAKE_SKIP_REASONS['shared-geometry']} Eyelet, Lace tip`,
+			`${BAKE_SKIP_REASONS['tiling-uvs']} Logo`
+		])
 	})
 })

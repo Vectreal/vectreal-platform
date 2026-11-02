@@ -30,6 +30,9 @@ export interface StudioFinishFailure {
 	detail: string
 }
 
+/** What each bake of one finish did. */
+type BakeReports = Pick<PublishExportOutcome, 'occlusion' | 'lights'>
+
 /** How long a publish export may run, so the timeout can say it. */
 export const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
 
@@ -188,7 +191,7 @@ export function failuresToReport({
 	reports
 }: {
 	failure?: StudioFinishFailure
-	reports?: Pick<PublishExportOutcome, 'occlusion' | 'lights'>
+	reports?: BakeReports
 }): StudioFinishFailure[] {
 	return [
 		failure,
@@ -197,4 +200,41 @@ export function failuresToReport({
 	]
 		.filter((found) => found !== undefined)
 		.filter(({ reason }) => STUDIO_FINISH_FAILURES[reason].kind === 'fatal')
+}
+
+/** Materials a bake skipped for one reason, in the order the file lists them. */
+export interface SkippedGroup {
+	reason: OcclusionBakeSkipReason
+	materials: string[]
+}
+
+/**
+ * What the bakes skipped, one group per reason, the most materials first. A
+ * material both bakes skipped for the same reason counts once.
+ */
+export function skippedByReason(
+	...outcomes: (BakePassOutcome | undefined)[]
+): SkippedGroup[] {
+	const groups = new Map<OcclusionBakeSkipReason, Set<string>>()
+	for (const outcome of outcomes) {
+		if (!outcome || !('skipped' in outcome)) continue
+		for (const { material, reason } of outcome.skipped) {
+			groups.set(reason, (groups.get(reason) ?? new Set()).add(material))
+		}
+	}
+	// Stable, so a tie keeps the order the reasons first appeared in.
+	return [...groups]
+		.map(([reason, materials]) => ({ reason, materials: [...materials] }))
+		.sort((a, b) => b.materials.length - a.materials.length)
+}
+
+/**
+ * The one line that says why nothing took the finish: the reason most
+ * materials share, in its own words. None when nothing was skipped.
+ */
+export function topSkipCaption(reports: BakeReports | undefined) {
+	const [top] = skippedByReason(reports?.occlusion, reports?.lights)
+	if (!top) return undefined
+	const count = top.materials.length
+	return `${count} material${count === 1 ? '' : 's'}: ${BAKE_SKIP_REASONS[top.reason]}`
 }

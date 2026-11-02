@@ -11,8 +11,13 @@ import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
 
 import LightingSettings from './lighting-settings-panel'
-import { finishStatus } from './studio-finish-card'
+import { finishStatus, StudioFinishCard } from './studio-finish-card'
+import {
+	BAKE_SKIP_REASONS,
+	topSkipCaption
+} from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
+import { DrillDown, DrillDownView } from '../../drill-down'
 
 import type { BakePreview } from '../../../../../lib/stores/publisher-config-store'
 import type { LightingSettings as Lighting } from '@vctrl/core'
@@ -94,5 +99,50 @@ describe('adding the studio finish', () => {
 			null
 		)
 		expect(screen.queryByRole('button', { name: /^Bake/ })).toBe(null)
+	})
+})
+
+describe('the card when nothing took the finish', () => {
+	const renderCard = (nothingCaption?: string) =>
+		render(
+			<DrillDown path={[]} onPathChange={() => {}} rootTitle="Lighting">
+				<DrillDownView id="root">
+					<StudioFinishCard
+						status="nothing"
+						nothingCaption={nothingCaption}
+						canPreview
+						isOptimizing={false}
+						onAdd={() => {}}
+						onPreview={() => {}}
+						onShownChange={() => {}}
+					/>
+				</DrillDownView>
+			</DrillDown>
+		)
+
+	it('says why in one line', () => {
+		const caption = topSkipCaption({
+			occlusion: {
+				baked: [],
+				skipped: [
+					{ material: 'Body', reason: 'no-uv0' },
+					{ material: 'Sole', reason: 'no-uv0' }
+				]
+			}
+		})
+		renderCard(caption)
+
+		expect(
+			screen.getByText(`2 materials: ${BAKE_SKIP_REASONS['no-uv0']}`)
+		).toBeTruthy()
+	})
+
+	it('adds no line when there is no reason to give', () => {
+		const { container } = renderCard(undefined)
+		const captions = container.querySelectorAll('p')
+
+		expect([...captions].map((p) => p.textContent)).toEqual([
+			'Soft shadows and depth, drawn into the model once, so every view shows them at no cost.'
+		])
 	})
 })

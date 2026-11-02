@@ -6,6 +6,7 @@ import { bakedAnything, drawingLabel } from './use-bake-preview'
 import {
 	BAKE_RECOVERY_NOTES,
 	BAKE_SKIP_REASONS,
+	skippedByReason,
 	STUDIO_FINISH_FAILURES
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { InlineNotice } from '../../../../layout-components'
@@ -67,11 +68,11 @@ function BakeReport({
 			)}
 			{report.skipped.length > 0 && (
 				<ul className="space-y-1">
-					{report.skipped.map(({ material, reason }, index) => (
-						<li key={`${material}-${index}`}>
-							{material}
+					{skippedByReason(report).map(({ reason, materials }) => (
+						<li key={reason}>
+							{BAKE_SKIP_REASONS[reason]}{' '}
 							<span className="text-muted-foreground">
-								: {BAKE_SKIP_REASONS[reason]}
+								{materials.join(', ')}
 							</span>
 						</li>
 					))}

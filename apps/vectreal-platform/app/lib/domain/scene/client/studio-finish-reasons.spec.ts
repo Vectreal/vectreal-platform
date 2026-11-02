@@ -4,6 +4,8 @@ import {
 	BAKE_SKIP_REASONS,
 	failuresToReport,
 	failWith,
+	skippedByReason,
+	topSkipCaption,
 	lightBakeWarning,
 	occlusionBakeWarning,
 	STUDIO_FINISH_FAILURES,
@@ -156,5 +158,78 @@ describe('lightBakeWarning', () => {
 	it('stays quiet when everything took the bake, or nothing was asked', () => {
 		expect(lightBakeWarning({ baked: ['body'], skipped: [] })).toBeNull()
 		expect(lightBakeWarning(undefined)).toBeNull()
+	})
+})
+
+describe('skippedByReason', () => {
+	it('merges the materials that share a reason, most materials first', () => {
+		expect(
+			skippedByReason({
+				baked: [],
+				skipped: [
+					{ material: 'Logo', reason: 'tiling-uvs' },
+					{ material: 'Body', reason: 'no-uv0' },
+					{ material: 'Sole', reason: 'no-uv0' }
+				]
+			})
+		).toEqual([
+			{ reason: 'no-uv0', materials: ['Body', 'Sole'] },
+			{ reason: 'tiling-uvs', materials: ['Logo'] }
+		])
+	})
+
+	it('counts a material both bakes skipped for one reason once', () => {
+		const skipped = [{ material: 'Body', reason: 'no-uv0' as const }]
+		expect(
+			skippedByReason(
+				{ baked: [], skipped },
+				{ baked: [], skipped },
+				{ failed: 'gpu-reset', detail: 'x' },
+				undefined
+			)
+		).toEqual([{ reason: 'no-uv0', materials: ['Body'] }])
+	})
+})
+
+describe('topSkipCaption', () => {
+	it('names the reason most materials share, and how many', () => {
+		expect(
+			topSkipCaption({
+				occlusion: {
+					baked: [],
+					skipped: [
+						{ material: 'Logo', reason: 'tiling-uvs' },
+						{ material: 'Body', reason: 'no-uv0' },
+						{ material: 'Sole', reason: 'no-uv0' },
+						{ material: 'Laces', reason: 'no-uv0' }
+					]
+				},
+				lights: {
+					baked: [],
+					skipped: [{ material: 'Logo', reason: 'tiling-uvs' }]
+				}
+			})
+		).toBe(`3 materials: ${BAKE_SKIP_REASONS['no-uv0']}`)
+	})
+
+	it('speaks of one material as one', () => {
+		expect(
+			topSkipCaption({
+				occlusion: {
+					baked: [],
+					skipped: [{ material: 'Logo', reason: 'unlit' }]
+				}
+			})
+		).toBe(`1 material: ${BAKE_SKIP_REASONS.unlit}`)
+	})
+
+	it('has no caption when nothing was skipped', () => {
+		expect(
+			topSkipCaption({ occlusion: { baked: [], skipped: [] } })
+		).toBeUndefined()
+		expect(
+			topSkipCaption({ occlusion: { failed: 'no-webgl', detail: 'x' } })
+		).toBeUndefined()
+		expect(topSkipCaption(undefined)).toBeUndefined()
 	})
 })
