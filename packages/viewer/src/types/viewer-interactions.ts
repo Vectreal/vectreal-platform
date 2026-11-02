@@ -159,6 +159,20 @@ export interface EnvironmentLoadedInteractionEvent {
 	files: string[]
 }
 
+/**
+ * Emitted when the viewer draws a contact shadow in place of baking the
+ * ground shadow live, because the scene has no valid stored bake and the
+ * viewer was asked to stay within budget (`liveShadowBake="within-budget"`).
+ * Publishing the scene again stores a bake every device shows.
+ */
+export interface ShadowBakeSkippedInteractionEvent {
+	type: 'shadow_bake_skipped'
+	/** A phone or tablet, or more draw calls per bake frame than the budget. */
+	reason: 'touch_device' | 'over_budget'
+	/** Draw calls one bake frame would have issued. */
+	estimatedDraws: number
+}
+
 /** Emitted when auto-rotate state changes at runtime. */
 export interface AutoRotateChangedInteractionEvent {
 	type: 'auto_rotate_changed'
@@ -192,6 +206,7 @@ export type ViewerInteractionEvent =
 	| HotspotActivatedInteractionEvent
 	| InitialFramingCompletedInteractionEvent
 	| ModelLoadedInteractionEvent
+	| ShadowBakeSkippedInteractionEvent
 	| ViewerReadyInteractionEvent
 
 /** App-facing imperative handle for executing viewer runtime commands. */

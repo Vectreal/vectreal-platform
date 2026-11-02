@@ -159,6 +159,7 @@ or sending a host message. `destroy()` discards anything still queued.
 | `animation_clip_finished` | `{ clipId: string }` | A single clip ran to its end. |
 | `environment_load_failed` | `{ files: string[] }` | The scene's environment map could not be loaded, so the scene is lit by a neutral room instead. Nothing on the page fails; this is the only sign of it. |
 | `environment_loaded` | `{ files: string[] }` | The environment map loaded and lights the scene, including after an earlier `environment_load_failed`. |
+| `shadow_bake_skipped` | `{ reason: 'touch_device' \| 'over_budget', estimatedDraws: number }` | The scene has no valid stored shadow bake, and the viewer drew a soft contact shadow instead of baking one live, because the visitor is on a phone or tablet or the scene is too heavy. Publishing the scene again from the Publisher stores a bake every device shows. |
 | `auto_rotate_changed` | `{ enabled: boolean }` | Declared, but the viewer does not currently emit it. |
 | `interaction_event` | `{ eventName, interactionId?, payload? }` | A Publisher-configured `emit_custom_event` interaction fired. |
 

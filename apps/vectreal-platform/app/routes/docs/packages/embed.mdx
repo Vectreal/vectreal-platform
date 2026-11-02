@@ -152,6 +152,10 @@ type EmbedEventMap = {
   animation_clip_finished: { clipId: string }
   environment_load_failed: { files: string[] }
   environment_loaded: { files: string[] }
+  shadow_bake_skipped: {
+    reason: 'touch_device' | 'over_budget'
+    estimatedDraws: number
+  }
   auto_rotate_changed: { enabled: boolean }
   interaction_event: {
     interactionId?: string

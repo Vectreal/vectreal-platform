@@ -198,3 +198,24 @@ describe('VectrealEmbed environment fallback', () => {
 		embed.destroy()
 	})
 })
+
+describe('VectrealEmbed skipped shadow bake', () => {
+	it('passes on why the viewer drew a contact shadow instead', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onSkipped = vi.fn()
+		embed.on('shadow_bake_skipped', onSkipped)
+
+		viewerEvent(own, {
+			type: 'shadow_bake_skipped',
+			reason: 'touch_device',
+			estimatedDraws: 21_632
+		})
+
+		expect(onSkipped).toHaveBeenCalledWith({
+			reason: 'touch_device',
+			estimatedDraws: 21_632
+		})
+		embed.destroy()
+	})
+})

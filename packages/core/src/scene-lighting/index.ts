@@ -13,6 +13,14 @@ export {
 	type BakedLightmapInfo
 } from './baked-lights'
 export { lightDirection, litLights } from './light-direction'
+export {
+	computeBakeSignature,
+	GROUND_BAKE_SIGNATURE_INPUTS,
+	groundBakeSignatureOptions,
+	isGroundBakeMissing,
+	isPersistedBakeValid,
+	type BakeSignatureOptions
+} from './ground-bake-signature'
 export { toLegacyLighting } from './to-legacy-lighting'
 export { ENVIRONMENT_LIGHTS, type EnvironmentLight } from './environment-lights'
 export {
