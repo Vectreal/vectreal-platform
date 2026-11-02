@@ -7,13 +7,12 @@ import {
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
 import { cn } from '@shared/utils'
+import { DEFAULT_SCENE_TRANSITION } from '@vctrl/core'
 import { useAtomValue } from 'jotai/react'
 import { Camera, Check, Link, Pin, Plus, Route, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import {
-	DEFAULT_TRANSITION_DURATION,
-	DEFAULT_TRANSITION_EASING,
 	TRANSITION_EASING_OPTIONS,
 	TRANSITION_TYPE_OPTIONS
 } from './camera-state'
@@ -281,7 +280,7 @@ export function TransitionSettings() {
 						presets={DURATION_PRESETS}
 						formatValue={(value) => `${Math.round(value)} ms`}
 						disabled={isLocked}
-						value={transition.duration ?? DEFAULT_TRANSITION_DURATION}
+						value={transition.duration ?? DEFAULT_SCENE_TRANSITION.duration}
 						onValueChange={setDuration}
 					/>
 
@@ -289,7 +288,7 @@ export function TransitionSettings() {
 						<ToggleGroup
 							type="single"
 							aria-label="Transition easing"
-							value={transition.easing ?? DEFAULT_TRANSITION_EASING}
+							value={transition.easing ?? DEFAULT_SCENE_TRANSITION.easing}
 							disabled={isLocked}
 							onValueChange={(value) => {
 								if (value) setEasing(value as CameraTransitionEasing)

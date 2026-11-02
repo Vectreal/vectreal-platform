@@ -8,9 +8,9 @@ import { describe, expect, it } from 'vitest'
 import { normalizeTransition } from './camera-state'
 
 describe('normalizeTransition', () => {
-	it('reads a scene with no transition as a smooth one-second move', () => {
+	it('reads a scene with no transition as a smooth one-second Smart move', () => {
 		expect(normalizeTransition(undefined)).toEqual({
-			type: 'linear',
+			type: 'object_avoidance',
 			duration: 1000,
 			easing: 'ease_in_out'
 		})
@@ -46,6 +46,14 @@ describe('normalizeTransition', () => {
 			type: 'linear',
 			duration: 400,
 			easing: 'ease_out'
+		})
+	})
+
+	it('keeps a stored linear move linear', () => {
+		expect(normalizeTransition({ type: 'linear' })).toEqual({
+			type: 'linear',
+			duration: 1000,
+			easing: 'ease_in_out'
 		})
 	})
 

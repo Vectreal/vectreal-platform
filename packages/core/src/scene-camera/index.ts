@@ -11,6 +11,7 @@
  */
 export {
 	DEFAULT_CAMERA,
+	DEFAULT_SCENE_TRANSITION,
 	isSceneCamera,
 	normalizeCameraSettings
 } from './camera-settings'

@@ -9,6 +9,7 @@ import {
 	CameraFraming,
 	cameraSelectionSignature,
 	DEFAULT_CAMERA,
+	DEFAULT_SCENE_TRANSITION,
 	resolveCameraPose,
 	type CameraSelectionSignature,
 	type OpeningPose,
@@ -45,11 +46,7 @@ import type { SceneCameraSnapshotCapture } from '../../types/viewer-types'
  */
 export const defaultCameraOptions: CameraProps = {
 	activeCameraId: 'default',
-	sceneTransition: {
-		type: 'linear',
-		duration: 1000,
-		easing: 'ease_in_out'
-	},
+	sceneTransition: DEFAULT_SCENE_TRANSITION,
 	cameras: [DEFAULT_CAMERA]
 }
 
@@ -95,8 +92,6 @@ export type ResolvedCameraSelection = {
 	framing: ViewportFraming | null
 }
 
-const DEFAULT_TRANSITION_DURATION_MS = 1000
-
 function resolveTransition(
 	sceneTransition: CameraTransitionConfig | undefined
 ): CameraTransitionConfig {
@@ -104,11 +99,7 @@ function resolveTransition(
 		return sceneTransition
 	}
 
-	return {
-		type: 'linear',
-		duration: DEFAULT_TRANSITION_DURATION_MS,
-		easing: 'ease_in_out'
-	}
+	return DEFAULT_SCENE_TRANSITION
 }
 
 /**
@@ -320,7 +311,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				selection.transition.type ?? 'none'
 			const durationMs = Math.max(
 				0,
-				selection.transition.duration ?? DEFAULT_TRANSITION_DURATION_MS
+				selection.transition.duration ?? DEFAULT_SCENE_TRANSITION.duration
 			)
 
 			// A visitor who asked for less motion arrives without the flight.

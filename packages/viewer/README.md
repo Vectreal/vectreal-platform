@@ -144,7 +144,7 @@ type CameraProps = {
 }
 ```
 
-Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera. `showControls: false` keeps the viewer's camera switcher off for this scene; absent, it shows whenever there are two or more scene cameras.
+Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-specific camera switching metadata. Transitions between cameras are configured once at the scene level via `sceneTransition`, not per camera. Without one, a switch flies Smart (`object_avoidance`): one second, eased at both ends, keeping clear of the model's bounds so the camera turns around the subject rather than through it. Pass `sceneTransition: { type: 'linear' }` for a straight move, or `{ type: 'none' }` to cut. `showControls: false` keeps the viewer's camera switcher off for this scene; absent, it shows whenever there are two or more scene cameras.
 
 ```tsx
 <VectrealViewer
