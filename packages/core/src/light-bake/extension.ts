@@ -27,7 +27,7 @@ interface LightmapDef {
 
 /**
  * A material's baked studio lights: the diffuse light they deliver, read from
- * the first UV set, with the `scale` that turns its encoding back into light
+ * the UV set its texture info names, with the `scale` that turns its encoding back into light
  * and the `signature` of the lights it was baked from.
  */
 export class Lightmap extends ExtensionProperty<ILightmap> {

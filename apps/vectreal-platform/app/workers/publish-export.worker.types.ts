@@ -39,9 +39,17 @@ export interface PublishExportRequest {
 	occlusion: boolean
 	/** Bake these studio lights into the published GLB's light maps, or none. */
 	lights: Pick<ResolvedLighting, 'lights' | 'environment'> | false
+	/**
+	 * Lay out a UV set for the materials whose own UVs a bake cannot use.
+	 * False reports them as too detailed instead: a layout already ran past
+	 * its time limit.
+	 */
+	generateUvs?: boolean
 }
 
 export type PublishExportProgress =
+	/** A UV set is being laid out for the bakes, with no measure of how far. */
+	| { stage: 'uvs' }
 	/** Textures encoded so far, out of `texturesTotal`, while KTX2 runs. */
 	| { stage: 'textures'; texturesDone: number; texturesTotal: number }
 	/** How much of a bake is drawn, 0 to 1. */

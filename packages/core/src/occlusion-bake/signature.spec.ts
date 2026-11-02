@@ -109,4 +109,26 @@ describe('occlusionBakeSignature', () => {
 			})
 		).not.toBe(base)
 	})
+
+	it('changes with the UV set a target is baked in, even one holding the same UVs', () => {
+		const document = quadDocument({ uvMax: 2 })
+		const [primitive] = document.getRoot().listMeshes()[0].listPrimitives()
+		// A layout's set is baked at its own size, so the same UVs bake differently.
+		primitive.setAttribute(
+			'TEXCOORD_1',
+			primitive.getAttribute('TEXCOORD_0')!.clone()
+		)
+		const material = primitive.getMaterial()!
+		const plan = planOcclusionBake(document, {
+			layout: { texCoord: 1, materials: new Map([[material, undefined]]) }
+		})
+		const other = {
+			...plan,
+			targets: plan.targets.map((target) => ({ ...target, texCoord: 0 }))
+		}
+
+		expect(
+			occlusionBakeSignature(plan, DEFAULT_OCCLUSION_BAKE_OPTIONS)
+		).not.toBe(occlusionBakeSignature(other, DEFAULT_OCCLUSION_BAKE_OPTIONS))
+	})
 })

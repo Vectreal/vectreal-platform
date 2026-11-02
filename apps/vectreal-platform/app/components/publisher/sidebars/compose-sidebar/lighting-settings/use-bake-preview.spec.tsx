@@ -31,6 +31,7 @@ import {
 } from '../../../../../lib/stores/scene-settings-store'
 import { WorkerRunError } from '../../../../../workers/run-worker'
 
+import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { ReactNode } from 'react'
 
 const mocks = vi.hoisted(() => ({
@@ -140,6 +141,10 @@ describe('the bake preview', () => {
 			outcome: { buffer: expect.any(ArrayBuffer), occlusion: report }
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
+	})
+
+	it('says the model is being prepared, without a measure, while a UV set is laid out', () => {
+		expect(drawingLabel({ stage: 'uvs' })).toBe('Preparing the model')
 	})
 
 	it('says which bake is drawing and how far, until the preview is ready', async () => {
@@ -805,7 +810,8 @@ describe('restoring the finish saved with the scene', () => {
 	const lighting = { occlusion: { mode: 'baked' as const } }
 	const restore = (
 		bakes: string | null,
-		prepare: (store: ReturnType<typeof createStore>) => void = () => {}
+		prepare: (store: ReturnType<typeof createStore>) => void = () => {},
+		reports: { occlusion: BakePassOutcome } = { occlusion: report }
 	) => {
 		const store = createStore()
 		store.set(lightingAtom, lighting)
@@ -817,7 +823,7 @@ describe('restoring the finish saved with the scene', () => {
 			() =>
 				useRestoreSavedFinish({
 					url: '/api/scenes/s1/assets/finish',
-					reports: { occlusion: report },
+					reports,
 					bakes
 				}),
 			{ wrapper }
@@ -839,6 +845,29 @@ describe('restoring the finish saved with the scene', () => {
 			})
 		)
 		expect(fetchSpy).toHaveBeenCalledWith('/api/scenes/s1/assets/finish')
+		vi.unstubAllGlobals()
+	})
+
+	it('shows a finish saved before a bake could lay out its own UVs as it was saved, without baking again', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(new ArrayBuffer(8)))
+		)
+		const older = {
+			baked: [],
+			skipped: [{ material: 'body', reason: 'tiling-uvs' as const }]
+		}
+
+		const store = restore(bakesKey(lighting), undefined, { occlusion: older })
+
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)).toMatchObject({
+				status: 'ready',
+				restored: true,
+				reports: { occlusion: older }
+			})
+		)
+		expect(mocks.runPublishExportInWorker).not.toHaveBeenCalled()
 		vi.unstubAllGlobals()
 	})
 

@@ -147,6 +147,23 @@ describe('a publish', () => {
 		expect(summary.percent).toBe(25)
 	})
 
+	it('lists preparing the model only when a UV set is laid out, before the bake', () => {
+		const state = fold([
+			{ type: 'publish-started', saves: false },
+			{ type: 'publish-step', key: 'export' },
+			{ type: 'publish-step', key: 'uvs' },
+			{ type: 'publish-step', key: 'occlusion', done: 0.5, total: 1 }
+		])
+
+		expect(stepStates(state)).toEqual([
+			'export:done',
+			'uvs:done',
+			'occlusion:active',
+			'upload:waiting',
+			'commit:waiting'
+		])
+	})
+
 	it('has no percent while a step cannot say how far it has come', () => {
 		const state = fold([
 			{ type: 'publish-started', saves: false },

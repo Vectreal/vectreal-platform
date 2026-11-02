@@ -283,8 +283,9 @@ export class ModelExporter {
 		const workingDoc = cloneDocument(document)
 		if (textures) await textures(workingDoc)
 
+		// The copy it ships: a bake that lays out a UV set changes its geometry.
 		const geometrySizes = draco
-			? await this.measureGeometryCodecs(document, draco, dracoWorthApplying)
+			? await this.measureGeometryCodecs(workingDoc, draco, dracoWorthApplying)
 			: undefined
 		const geometryCodec = geometrySizes
 			? pickGeometryCodec(geometrySizes)

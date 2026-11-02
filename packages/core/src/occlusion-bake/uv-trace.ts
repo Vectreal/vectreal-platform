@@ -59,13 +59,16 @@ import { triangleIndices, type ScenePrimitive } from './scene-primitives'
 import type { Material } from '@gltf-transform/core'
 
 /**
- * One material's bake as RGBA bytes, `size` by `size`. Row 0 is the top of
- * the image, where glTF puts UV v = 0.
+ * One material's bake as RGBA bytes, `size` by `size`, drawn in UV set
+ * `texCoord` (0 when absent). Row 0 is the top of the image, where glTF puts
+ * UV v = 0. Materials on one layout made for the bake share one bake: their
+ * `pixels` are the same array.
  */
 export interface UvBake {
 	material: Material
 	size: number
 	pixels: Uint8Array
+	texCoord?: number
 }
 
 /** What a tracer draws and how its sum becomes bytes. */
@@ -99,6 +102,46 @@ export interface UvTrace {
 
 /** Texels the bake is spread past each UV island, so mipmaps do not blend in the empty texture. */
 const GUTTER = 8
+/**
+ * How many times a material's own size the map of a layout made for the bake
+ * is, a side: it holds every part on the layout, so 2048 at the default 512,
+ * and halves with it when a bake recovers at lower detail.
+ */
+export const LAYOUT_SIZE_SCALE = 4
+
+/** What one map holds: a material on its own UVs, or every one on a layout. */
+interface Sheet {
+	materials: Material[]
+	primitives: ScenePrimitive[]
+	texCoord: number
+	size: number
+}
+
+/** One map per material on its own UVs, one per layout made for the bake. */
+function sheetsOf(targets: OcclusionBakeTarget[], size: number): Sheet[] {
+	const sheets: Sheet[] = []
+	const layouts = new Map<number, Sheet>()
+	for (const { material, primitives, texCoord = 0 } of targets) {
+		if (texCoord === 0) {
+			sheets.push({ materials: [material], primitives, texCoord, size })
+			continue
+		}
+		let sheet = layouts.get(texCoord)
+		if (!sheet) {
+			sheet = {
+				materials: [],
+				primitives: [],
+				texCoord,
+				size: size * LAYOUT_SIZE_SCALE
+			}
+			layouts.set(texCoord, sheet)
+			sheets.push(sheet)
+		}
+		sheet.materials.push(material)
+		sheet.primitives.push(...primitives)
+	}
+	return sheets
+}
 /** How far a ray starts off its surface, as a share of the scene diagonal. */
 const RAY_BIAS = 5e-4
 /** Cutout texels a ray passes through before it counts as blocked. */
@@ -199,6 +242,7 @@ export async function traceInUvSpace(
 		})
 	const accumulation = target(HalfFloatType)
 	const resolved = target(UnsignedByteType)
+	const sheets = sheetsOf(trace.targets, size)
 	const camera = new OrthographicCamera()
 	const resolveScene = new Scene().add(
 		new Mesh(new PlaneGeometry(2, 2), resolveMaterial)
@@ -233,17 +277,23 @@ export async function traceInUvSpace(
 	)
 	// Carried from slice to slice and target to target, so it is measured once.
 	let budget = FIRST_SLICE_BUDGET
-	// Texel-rays, so a target counts by its share of the work.
-	const work = trace.targets.length * size * size * samples
+	// Texel-rays, so a map counts by its share of the work.
+	const work = sheets.reduce((sum, sheet) => sum + sheet.size ** 2, 0) * samples
 	let worked = 0
 
 	const baked: UvBake[] = []
 	let scene = new Scene()
 	try {
-		for (const { material, primitives } of trace.targets) {
+		for (const sheet of sheets) {
+			const { size } = sheet
+			accumulation.setSize(size, size)
+			resolved.setSize(size, size)
 			scene = new Scene()
-			for (const entry of primitives) {
-				const mesh = new Mesh(surfaceGeometry(entry), traceMaterial)
+			for (const entry of sheet.primitives) {
+				const mesh = new Mesh(
+					surfaceGeometry(entry, sheet.texCoord),
+					traceMaterial
+				)
 				mesh.frustumCulled = false
 				scene.add(mesh)
 			}
@@ -303,7 +353,9 @@ export async function traceInUvSpace(
 			renderer.readRenderTargetPixels(resolved, 0, 0, size, size, pixels)
 			throwIfLost()
 			fillGutter(pixels, size, trace.empty)
-			baked.push({ material, size, pixels })
+			for (const material of sheet.materials) {
+				baked.push({ material, size, pixels, texCoord: sheet.texCoord })
+			}
 
 			disposeGeometries(scene)
 		}
@@ -435,14 +487,17 @@ function concat(parts: Float32Array[]): Float32Array {
 	return merged
 }
 
-/** One target primitive in world space with the normals and UVs the tracer reads. */
-function surfaceGeometry({ primitive, worldMatrix }: ScenePrimitive) {
+/** One target primitive in world space with the normals and the UV set the tracer reads. */
+function surfaceGeometry(
+	{ primitive, worldMatrix }: ScenePrimitive,
+	texCoord: number
+) {
 	const geometry = new BufferGeometry()
 		.setAttribute(
 			'position',
 			new BufferAttribute(worldPositions(primitive, worldMatrix), 3)
 		)
-		.setAttribute('uv', new BufferAttribute(readUvs(primitive)!, 2))
+		.setAttribute('uv', new BufferAttribute(readUvs(primitive, texCoord)!, 2))
 		.setIndex(
 			new BufferAttribute(Uint32Array.from(triangleIndices(primitive)), 1)
 		)

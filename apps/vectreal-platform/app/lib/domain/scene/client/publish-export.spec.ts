@@ -145,6 +145,117 @@ describe('runPublishExportInWorker', () => {
 		expect(lastWorker().terminate).toHaveBeenCalled()
 	})
 
+	it('stops a UV layout past its limit, and exports again without one', async () => {
+		const onProgress = vi.fn()
+		const pending = runPublishExportInWorker(
+			{
+				glb: new Uint8Array(4),
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				lights: false
+			},
+			onProgress,
+			10_000,
+			500
+		)
+		const laying = lastWorker()
+		laying.reply({ type: 'progress', stage: 'uvs' })
+		vi.advanceTimersByTime(500)
+		await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+
+		expect(laying.terminate).toHaveBeenCalled()
+		expect(onProgress).toHaveBeenCalledWith({ type: 'progress', stage: 'uvs' })
+		const retry = lastWorker()
+		expect(retry.postMessage.mock.calls[0][0]).toMatchObject({
+			occlusion: true,
+			generateUvs: false
+		})
+		const done = { type: 'done', buffer: new ArrayBuffer(2) }
+		retry.reply(done)
+		await expect(pending).resolves.toBe(done)
+	})
+
+	it('does not lay out again after a layout crashed the worker', async () => {
+		const pending = runPublishExportInWorker(
+			{
+				glb: new Uint8Array(4),
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				lights: false
+			},
+			vi.fn(),
+			10_000,
+			500
+		)
+		const laying = lastWorker()
+		laying.reply({ type: 'progress', stage: 'uvs' })
+		laying.onerror?.({ message: 'out of memory' })
+		await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+
+		const retry = lastWorker()
+		expect(retry.postMessage.mock.calls[0][0]).toMatchObject({
+			generateUvs: false
+		})
+		const done = { type: 'done', buffer: new ArrayBuffer(2) }
+		retry.reply(done)
+		await expect(pending).resolves.toBe(done)
+	})
+
+	it('does not lay out again after a layout ran out of time and the run after it crashed', async () => {
+		const pending = runPublishExportInWorker(
+			{
+				glb: new Uint8Array(4),
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				lights: false
+			},
+			vi.fn(),
+			10_000,
+			500
+		)
+		lastWorker().reply({ type: 'progress', stage: 'uvs' })
+		vi.advanceTimersByTime(500)
+		await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(2))
+		lastWorker().onerror?.({ message: 'out of memory' })
+		await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(3))
+
+		expect(lastWorker().postMessage.mock.calls[0][0]).toMatchObject({
+			generateUvs: false
+		})
+		const done = { type: 'done', buffer: new ArrayBuffer(2) }
+		lastWorker().reply(done)
+		await expect(pending).resolves.toBe(done)
+	})
+
+	it('stops counting a UV layout’s limit once the bake after it reports', async () => {
+		const pending = runPublishExportInWorker(
+			{
+				glb: new Uint8Array(4),
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				lights: false
+			},
+			vi.fn(),
+			10_000,
+			500
+		)
+		const worker = lastWorker()
+		worker.reply({ type: 'progress', stage: 'uvs' })
+		vi.advanceTimersByTime(400)
+		worker.reply({ type: 'progress', stage: 'occlusion', fraction: 0.5 })
+		vi.advanceTimersByTime(1_000)
+
+		expect(worker.terminate).not.toHaveBeenCalled()
+		const done = { type: 'done', buffer: new ArrayBuffer(2) }
+		worker.reply(done)
+		await expect(pending).resolves.toBe(done)
+		expect(FakeWorker.instances).toHaveLength(1)
+	})
+
 	it('cancels its timeout once the worker has answered', async () => {
 		const pending = run(vi.fn(), 1_000)
 		lastWorker().reply({ type: 'error', message: 'no' })

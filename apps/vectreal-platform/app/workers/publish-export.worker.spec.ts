@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 	disposePool: vi.fn(),
 	bakeOcclusionIntoDocument: vi.fn(),
 	bakeLightsIntoDocument: vi.fn(),
+	writeBakeUvs: vi.fn(),
 	createRenderer: vi.fn(),
 	disposeRenderer: vi.fn(),
 	forceContextLoss: vi.fn()
@@ -52,18 +53,23 @@ vi.mock('@vctrl/core/occlusion-bake', async () => {
 		bakeWithRecovery: core.bakeWithRecovery,
 		bakeReport: core.bakeReport,
 		planOcclusionBake: core.planOcclusionBake,
+		planBakeUvs: core.planBakeUvs,
+		withoutBakeUvs: core.withoutBakeUvs,
+		writeBakeUvs: mocks.writeBakeUvs,
 		DEFAULT_OCCLUSION_BAKE_OPTIONS: OCCLUSION_OPTIONS
 	}
 })
-vi.mock('@vctrl/core/light-bake', async () => ({
-	bakeLightsIntoDocument: mocks.bakeLightsIntoDocument,
-	planLightBake: (
-		await vi.importActual<
-			typeof import('../../../../packages/core/src/light-bake/bake-into-document')
-		>('../../../../packages/core/src/light-bake/bake-into-document')
-	).planLightBake,
-	DEFAULT_LIGHT_BAKE_OPTIONS: LIGHT_OPTIONS
-}))
+vi.mock('@vctrl/core/light-bake', async () => {
+	const core = await vi.importActual<
+		typeof import('../../../../packages/core/src/light-bake/bake-into-document')
+	>('../../../../packages/core/src/light-bake/bake-into-document')
+	return {
+		bakeLightsIntoDocument: mocks.bakeLightsIntoDocument,
+		planLightBake: core.planLightBake,
+		planBakeUvsFor: core.planBakeUvsFor,
+		DEFAULT_LIGHT_BAKE_OPTIONS: LIGHT_OPTIONS
+	}
+})
 vi.mock('three', () => ({
 	WebGLRenderer: class implements FakeRenderer {
 		lost = false
@@ -231,13 +237,112 @@ describe('the publish export worker', () => {
 			exportedDocument,
 			expect.any(Function),
 			OCCLUSION_OPTIONS,
-			expect.any(Function)
+			expect.any(Function),
+			// Every material bakes on its own UVs, so there is no layout.
+			undefined
 		)
 		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
 		expect(mocks.forceContextLoss).toHaveBeenCalledOnce()
 		expect(messages.at(-1)).toMatchObject({
 			type: 'done',
 			occlusion: occlusionReport
+		})
+	})
+
+	describe('with a material whose own UVs a bake cannot use', () => {
+		/** Exports `document` instead, so its bake hook sees that model. */
+		const exporting = (document: Document) =>
+			mocks.exportGlbForPublish.mockImplementationOnce(
+				async (
+					_glb: Uint8Array,
+					options: { bake?: (document: Document) => Promise<void> }
+				) => {
+					await options.bake?.(document)
+					return { data: new Uint8Array([1]), geometryCodec: 'none' }
+				}
+			)
+		const layoutOf = (call: unknown[] | undefined) =>
+			call?.at(-1) as
+				| { texCoord: number; materials: Map<{ getName(): string }, unknown> }
+				| undefined
+
+		it('lays out a UV set once, says so first, and bakes both in it', async () => {
+			exporting(quadDocument({ uvs: false }))
+			mocks.bakeLightsIntoDocument.mockResolvedValue(lightsReport)
+
+			const messages = await send({
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				lights: lighting
+			})
+
+			expect(mocks.writeBakeUvs).toHaveBeenCalledOnce()
+			const [planned] = mocks.writeBakeUvs.mock.calls[0]
+			expect(planned.texCoord).toBe(1)
+			expect(planned.primitives).toHaveLength(1)
+			expect(messages.slice(0, 2)).toEqual([
+				{ type: 'progress', stage: 'uvs' },
+				// The layout is done: the limit on it stops here.
+				{ type: 'progress', stage: 'occlusion', fraction: 0 }
+			])
+			const occlusionLayout = layoutOf(
+				mocks.bakeOcclusionIntoDocument.mock.calls[0]
+			)
+			expect(occlusionLayout).toBe(planned)
+			expect(layoutOf(mocks.bakeLightsIntoDocument.mock.calls[0])).toBe(planned)
+		})
+
+		it('lays out nothing when told not to, and reports its materials as too detailed', async () => {
+			exporting(quadDocument({ uvs: false }))
+
+			const messages = await send({
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true,
+				generateUvs: false
+			})
+
+			expect(mocks.writeBakeUvs).not.toHaveBeenCalled()
+			expect(messages).not.toContainEqual({ type: 'progress', stage: 'uvs' })
+			const layout = layoutOf(mocks.bakeOcclusionIntoDocument.mock.calls[0])
+			expect(
+				[...layout!.materials].map(([material, reason]) => [
+					material.getName(),
+					reason
+				])
+			).toEqual([['card', 'too-detailed']])
+		})
+
+		it('bakes on without the layout when it cannot be made, its materials reported as too detailed', async () => {
+			exporting(quadDocument({ uvs: false }))
+			mocks.writeBakeUvs.mockRejectedValueOnce(
+				new Error('Failed to fetch dynamically imported module')
+			)
+
+			const messages = await send({
+				dracoWorthApplying: true,
+				ktx2: false,
+				occlusion: true
+			})
+
+			const layout = layoutOf(mocks.bakeOcclusionIntoDocument.mock.calls[0])
+			expect(
+				[...layout!.materials].map(([material, reason]) => [
+					material.getName(),
+					reason
+				])
+			).toEqual([['card', 'too-detailed']])
+			expect(messages.at(-1)).toMatchObject({ type: 'done' })
+		})
+
+		it('lays out nothing, and says nothing, when no bake was asked for', async () => {
+			exporting(quadDocument({ uvs: false }))
+
+			const messages = await send({ dracoWorthApplying: true, ktx2: false })
+
+			expect(mocks.writeBakeUvs).not.toHaveBeenCalled()
+			expect(messages).not.toContainEqual({ type: 'progress', stage: 'uvs' })
 		})
 	})
 
@@ -327,7 +432,8 @@ describe('the publish export worker', () => {
 			lighting,
 			expect.any(Function),
 			LIGHT_OPTIONS,
-			expect.any(Function)
+			expect.any(Function),
+			undefined
 		)
 		expect(mocks.createRenderer).toHaveBeenCalledTimes(2)
 		expect(mocks.disposeRenderer).toHaveBeenCalledTimes(2)
@@ -509,7 +615,13 @@ describe('the publish export worker', () => {
 })
 
 /** One quad, its UVs inside the unit square, or none at all. */
-function quadDocument({ uvs }: { uvs: boolean }) {
+function quadDocument({
+	uvs,
+	textured = false
+}: {
+	uvs: boolean
+	textured?: boolean
+}) {
 	const document = new Document()
 	const buffer = document.createBuffer()
 	const primitive = document
@@ -530,6 +642,9 @@ function quadDocument({ uvs }: { uvs: boolean }) {
 				.setArray(new Uint16Array([0, 1, 2, 0, 2, 3]))
 		)
 		.setMaterial(document.createMaterial('card'))
+	if (textured) {
+		primitive.getMaterial()!.setBaseColorTexture(document.createTexture())
+	}
 	if (uvs) {
 		primitive.setAttribute(
 			'TEXCOORD_0',
@@ -576,8 +691,26 @@ describe('planning the studio finish in the publish worker', () => {
 		expect(mocks.createRenderer).not.toHaveBeenCalled()
 	})
 
-	it('names why a bake would take nothing', async () => {
+	it('plans a UV set for a material without its own, so both bakes would take it', async () => {
 		mocks.readGlbDocument.mockResolvedValue(quadDocument({ uvs: false }))
+
+		const { messages } = await sendPlan()
+
+		expect(messages).toEqual([
+			{
+				type: 'done',
+				occlusion: { baked: ['card'], skipped: [] },
+				lights: { baked: ['card'], skipped: [] }
+			}
+		])
+		expect(mocks.writeBakeUvs).not.toHaveBeenCalled()
+	})
+
+	it('names why a bake would take nothing', async () => {
+		// A texture reads the UVs it lacks, so a layout would move it.
+		mocks.readGlbDocument.mockResolvedValue(
+			quadDocument({ uvs: false, textured: true })
+		)
 
 		const { messages } = await sendPlan()
 

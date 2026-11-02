@@ -42,6 +42,13 @@ type BakeReports = Pick<PublishExportOutcome, 'occlusion' | 'lights'>
 export const PUBLISH_EXPORT_TIMEOUT_MS = 10 * 60_000
 
 /**
+ * How long laying out a UV set for the bakes may take before its materials
+ * are reported as too detailed instead. A phone takes about 30 seconds on
+ * the slowest model measured.
+ */
+export const UV_LAYOUT_TIMEOUT_MS = 60_000
+
+/**
  * What the author reads for each failure, and whether it goes to error
  * tracking: a browser without WebGL 2, a bug, or a failure that may be one.
  * What only the author can fix (a reset, a scene too heavy) is not.
@@ -91,7 +98,10 @@ export const BAKE_SKIP_REASONS = {
 	'double-sided': 'Double-sided. Make it single-sided to bake light.',
 	'moving-shadows': 'Another part moves, so light here stays live.',
 	'cutout-shadows': "A cutout mask can't be read, so light here stays live.",
-	unlit: "Unlit, so there's no light to bake."
+	unlit: "Unlit, so there's no light to bake.",
+	'too-detailed':
+		'Too detailed to prepare here. Simplify it in the optimizer, then try again.',
+	'no-free-uv-set': "Uses every UV set, so there's none to bake into."
 } as const satisfies Record<OcclusionBakeSkipReason, string>
 
 /**

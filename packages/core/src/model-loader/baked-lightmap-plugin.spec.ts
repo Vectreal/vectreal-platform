@@ -50,6 +50,19 @@ describe('the baked light map, as three loads it', () => {
 		})
 	})
 
+	it('reads from the UV set it names, and from the first when it names none', async () => {
+		const read = async (lightmapTexture: object) =>
+			(
+				await materialParams({
+					VECTREAL_lightmap: { lightmapTexture, scale: 1, signature: 's' }
+				})
+			).lightMap?.channel
+
+		expect(await read({ index: 0, texCoord: 2 })).toBe(2)
+		// As a file published before a bake could lay out its own set.
+		expect(await read({ index: 0 })).toBe(0)
+	})
+
 	it('leaves a material without one alone', async () => {
 		const params = await materialParams()
 

@@ -25,10 +25,20 @@ export {
 	castsOcclusion,
 	isGlass,
 	planOcclusionBake,
+	UV_SKIP_REASONS,
+	type BakeUvLayout,
 	type OcclusionBakePlan,
 	type OcclusionBakeSkipReason,
 	type OcclusionBakeTarget
 } from './plan'
+export {
+	MAX_LAYOUT_TRIANGLES,
+	planBakeUvs,
+	withoutBakeUvs,
+	writeBakeUvs,
+	type PlannedBakeUvs,
+	type Watlas
+} from './generated-uvs'
 export { type ScenePrimitive } from './scene-primitives'
 export { occlusionBakeSignature } from './signature'
 export { writeOcclusionBake, type BakedOcclusionImage } from './write-occlusion'

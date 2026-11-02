@@ -21,6 +21,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * Each is seconds of CPU per texture or mesh, and on the main thread that was
  * a frozen publisher.
  *
+ * A material whose own UVs a bake cannot use is baked in a UV set laid out
+ * for it here, once per worker: a second layout in one worker would drift.
+ *
  * It also answers which materials each bake could take, with the planners
  * the bakes run, before anything is baked.
  */
@@ -28,6 +31,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 import {
 	bakeLightsIntoDocument,
 	DEFAULT_LIGHT_BAKE_OPTIONS,
+	planBakeUvsFor,
 	planLightBake
 } from '@vctrl/core/light-bake'
 import { ModelExporter } from '@vctrl/core/model-exporter'
@@ -36,7 +40,9 @@ import {
 	bakeReport,
 	bakeWithRecovery,
 	DEFAULT_OCCLUSION_BAKE_OPTIONS,
-	planOcclusionBake
+	planOcclusionBake,
+	withoutBakeUvs,
+	writeBakeUvs
 } from '@vctrl/core/occlusion-bake'
 import { WebGLRenderer } from 'three'
 
@@ -81,14 +87,23 @@ self.onmessage = (
 	if (event.data.type === 'export') return exportForPublish(event.data)
 }
 
-/** Which materials each bake would take, as the bakes themselves plan it. */
+/**
+ * Which materials each bake would take, as the bakes themselves plan it,
+ * with the UV set an export of both would lay out, planned but not made. An
+ * export of one bake lays out no more than that, so it takes at least what
+ * the plan says.
+ */
 async function planStudioFinish({ buffer }: StudioFinishPlanRequest) {
 	try {
 		const document = await new ModelExporter().readGlbDocument(
 			new Uint8Array(buffer)
 		)
-		const occlusion = planOcclusionBake(document)
-		const lights = await planLightBake(document)
+		const layout = await planBakeUvsFor(document, {
+			occlusion: true,
+			lights: true
+		})
+		const occlusion = planOcclusionBake(document, { layout })
+		const lights = await planLightBake(document, layout)
 		post({
 			type: 'done',
 			occlusion: bakeReport(document, occlusion.targets, occlusion.skipped),
@@ -109,7 +124,8 @@ async function exportForPublish({
 	dracoWorthApplying,
 	ktx2,
 	occlusion,
-	lights
+	lights,
+	generateUvs = true
 }: PublishExportRequest) {
 	let occlusionReport: PublishExportOutcome['occlusion']
 	let lightsReport: PublishExportOutcome['lights']
@@ -137,6 +153,30 @@ async function exportForPublish({
 				bake:
 					occlusion || lights
 						? async (document) => {
+								// Laid out before either bake, so both bake in the one set.
+								let layout = await planBakeUvsFor(document, {
+									occlusion,
+									lights: Boolean(lights)
+								})
+								if (layout && !generateUvs) {
+									layout = withoutBakeUvs(layout, 'too-detailed')
+								}
+								if (layout?.primitives.length) {
+									post({ type: 'progress', stage: 'uvs' })
+									try {
+										await writeBakeUvs(layout)
+									} catch {
+										// xatlas refused a part, or its WebAssembly would not load:
+										// the bakes go on without the layout, as without the time.
+										layout = withoutBakeUvs(layout, 'too-detailed')
+									}
+									// The layout is done, so its time limit no longer runs.
+									post({
+										type: 'progress',
+										stage: occlusion ? 'occlusion' : 'lights',
+										fraction: 0
+									})
+								}
 								// Occlusion first: the light bake bakes past it.
 								if (occlusion) {
 									occlusionReport = await bakeWithRecovery(
@@ -145,7 +185,8 @@ async function exportForPublish({
 												document,
 												renderer,
 												options,
-												bakeProgress('occlusion')
+												bakeProgress('occlusion'),
+												layout
 											),
 										bakeRenderer,
 										DEFAULT_OCCLUSION_BAKE_OPTIONS
@@ -159,7 +200,8 @@ async function exportForPublish({
 												lights,
 												renderer,
 												options,
-												bakeProgress('lights')
+												bakeProgress('lights'),
+												layout
 											),
 										bakeRenderer,
 										DEFAULT_LIGHT_BAKE_OPTIONS

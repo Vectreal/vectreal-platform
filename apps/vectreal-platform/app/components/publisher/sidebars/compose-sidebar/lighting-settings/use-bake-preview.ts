@@ -147,6 +147,7 @@ export const bakedCount = (report: BakePassOutcome | undefined) =>
 /** What a preview says while it draws: which step, and how far it has come. */
 export const drawingLabel = (progress: BakePreview['progress']) => {
 	if (!progress) return 'Drawing the finish'
+	if (progress.stage === 'uvs') return 'Preparing the model'
 	if (progress.stage === 'textures') {
 		return `Compressing textures (${progress.texturesDone} of ${progress.texturesTotal})`
 	}

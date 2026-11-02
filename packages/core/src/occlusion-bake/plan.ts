@@ -41,12 +41,46 @@ export type OcclusionBakeSkipReason =
 	| 'cutout-shadows'
 	/** Light bake only: it is unlit, so no light reaches it to bake. */
 	| 'unlit'
+	/**
+	 * Its UVs could not take a bake, and the UV set made for the bake could
+	 * not be either: the parts that needed one are too detailed to lay out
+	 * in time.
+	 */
+	| 'too-detailed'
+	/**
+	 * Its UVs could not take a bake, and every UV set a viewer reads is in
+	 * use, so there is none left to lay one out in.
+	 */
+	| 'no-free-uv-set'
 
 /** A material that can be baked, with every primitive that draws it. */
 export interface OcclusionBakeTarget {
 	material: Material
 	primitives: ScenePrimitive[]
+	/**
+	 * The UV set the bake is drawn into and read from: the one laid out for
+	 * the bake when the material is on it, else 0, its own. 0 when absent.
+	 */
+	texCoord?: number
 }
+
+/**
+ * A UV set laid out for the bake, for the materials whose own UVs cannot
+ * take one: see `planBakeUvs`. Each such material is on it, or says why not.
+ */
+export interface BakeUvLayout {
+	/** The set it is, or will be, written to. */
+	texCoord: number
+	/** Each material it was made for: undefined when on it, else why not. */
+	materials: ReadonlyMap<Material, OcclusionBakeSkipReason | undefined>
+}
+
+/** Why a material's own UVs cannot take a bake, which a layout made for it fixes. */
+export const UV_SKIP_REASONS: readonly OcclusionBakeSkipReason[] = [
+	'no-uv0',
+	'tiling-uvs',
+	'overlapping-uvs'
+]
 
 export interface OcclusionBakePlan {
 	targets: OcclusionBakeTarget[]
@@ -99,13 +133,18 @@ const OVERLAP_GRID = 256
 const OVERLAP_ALLOWANCE = 0.02
 
 /**
- * Which materials a bake into the first UV set can take, and why the others
- * cannot. `existingOcclusion: 'bake'` is for a bake that is not occlusion,
- * such as the light map, which an occlusion texture does not stand in for.
+ * Which materials a bake can take, and why the others cannot. A material
+ * on `layout`, a set laid out for the bake, is baked there; any other is
+ * baked in its first UV set when that can take it.
+ * `existingOcclusion: 'bake'` is for a bake that is not occlusion, such as
+ * the light map, which an occlusion texture does not stand in for.
  */
 export function planOcclusionBake(
 	document: Document,
-	{ existingOcclusion = 'keep' }: { existingOcclusion?: 'keep' | 'bake' } = {}
+	{
+		existingOcclusion = 'keep',
+		layout
+	}: { existingOcclusion?: 'keep' | 'bake'; layout?: BakeUvLayout } = {}
 ): OcclusionBakePlan {
 	const primitives = listScenePrimitives(document)
 	const placements = new Map<ScenePrimitive['mesh'], number>()
@@ -129,12 +168,25 @@ export function planOcclusionBake(
 
 	const plan: OcclusionBakePlan = { targets: [], skipped: [], primitives }
 	for (const [material, drawn] of byMaterial) {
-		const reason =
+		let reason =
 			existingOcclusion === 'keep' && material.getOcclusionTexture()
 				? 'existing-occlusion'
 				: skipReason(drawn, placements)
+		let texCoord = 0
+		/*
+		  The layout decides for every material it was planned for, even one
+		  whose own UVs pass now: writing it fills each lower set a part lacks
+		  with its UVs, so a part that had none has them in the first set too.
+		*/
+		if (
+			(!reason || UV_SKIP_REASONS.includes(reason)) &&
+			layout?.materials.has(material)
+		) {
+			reason = layout.materials.get(material)
+			texCoord = layout.texCoord
+		}
 		if (reason) plan.skipped.push({ material, reason })
-		else plan.targets.push({ material, primitives: drawn })
+		else plan.targets.push({ material, primitives: drawn, texCoord })
 	}
 	return plan
 }
@@ -160,9 +212,12 @@ function skipReason(
 	return undefined
 }
 
-/** TEXCOORD_0 as plain floats, decoded when the file stores them normalized. */
-export function readUvs(primitive: Primitive): Float32Array | undefined {
-	const accessor = primitive.getAttribute('TEXCOORD_0')
+/** A UV set, TEXCOORD_0 by default, as plain floats, decoded when the file stores them normalized. */
+export function readUvs(
+	primitive: Primitive,
+	texCoord = 0
+): Float32Array | undefined {
+	const accessor = primitive.getAttribute(`TEXCOORD_${texCoord}`)
 	if (!accessor) return undefined
 	const count = accessor.getCount()
 	const uvs = new Float32Array(count * 2)

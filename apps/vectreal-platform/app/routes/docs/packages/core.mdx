@@ -503,10 +503,12 @@ writeOcclusionBake(
 )
 ```
 
-**`planOcclusionBake(document)`** decides which materials can be baked. The bake
-lives in the first UV set, so a material is baked only where one texel of it
-means one place on the model. The others are listed in `plan.skipped` with the
-reason:
+**`planOcclusionBake(document, { layout? })`** decides which materials can be
+baked, and in which UV set. A material is baked in its first UV set where one
+texel of it means one place on the model. Where it fails that for a UV reason
+alone (`no-uv0`, `tiling-uvs` or `overlapping-uvs`), a `layout` from
+`planBakeUvs` bakes it in a UV set laid out for the bake instead, named by the
+target's `texCoord`. The others are listed in `plan.skipped` with the reason:
 
 | Reason | Meaning |
 |---|---|
@@ -517,6 +519,24 @@ reason:
 | `no-uv0` | It has no first UV set |
 | `tiling-uvs` | Its UVs repeat the texture |
 | `overlapping-uvs` | Two parts share texels, as mirrored halves usually do |
+| `too-detailed` | It would need a UV set laid out for it, and the parts that need one exceed `MAX_LAYOUT_TRIANGLES` (one million triangles) ran past the publisher's time limit, or could not be laid out |
+| `no-free-uv-set` | It would need a UV set laid out for it, and its parts already use every set up to `TEXCOORD_3`, the last three.js reads |
+
+**`planBakeUvs(document)`** plans that layout without making it: which
+materials need one, and the set it goes in, the first none of their parts
+carries, so nothing a material reads is replaced. A material with a texture
+that reads a UV set its parts lack keeps `no-uv0`: the layout would fill that
+set too and move the texture. **`writeBakeUvs(planned)`** then lays out one
+atlas across every part on it with glTF-Transform's `unwrapPrimitives` and
+[watlas](https://github.com/toji/watlas) (xatlas compiled to WebAssembly),
+loaded on first use. Parts gain vertices along the layout's seams; what they
+draw does not change. One watlas instance lays out the same parts the same way
+only once, so it lays out once per instance and refuses a second.
+**`planBakeUvsFor(document, { occlusion, lights })`**, from
+`@vctrl/core/light-bake`, narrows the layout to the materials the bakes asked
+for would take, so no part is laid out for a bake that skips it anyway. A
+layout fills every lower UV set a part lacks, so a material on it is baked in
+the layout's set even where its first set now passes.
 
 Every triangle in the scene casts occlusion, skipped or not, with a few
 exceptions (`castsOcclusion` answers for each part). Glass, meaning a material
@@ -543,10 +563,11 @@ It runs the rays a few at a time and yields between them, so it does not freeze
 the page or trip the GPU's watchdog.
 
 **`writeOcclusionBake(document, images)`** stores each image as its material's
-`occlusionTexture` at full strength, read from the first UV set.
+`occlusionTexture` at full strength, read from the UV set it was baked in.
+Materials baked in one layout share its one texture.
 `encodeOcclusionPng` makes the PNG in a browser or worker.
 
-**`bakeOcclusionIntoDocument(document, renderer, options?)`** runs all of the
+**`bakeOcclusionIntoDocument(document, renderer, options?, onProgress?, layout?)`** runs all of the
 above in one step and returns which materials were baked and which skipped,
 by name. `renderer` is a function that returns one, called only when some
 material can be baked. Pass it to `ModelExporter.exportGlbForPublish` as `bake`, which
@@ -576,6 +597,9 @@ present packages/core/src/model-exporter/model-exporter.ts await bake?.(clone)
 present packages/core/src/types/scene-types.ts mode?: 'off' | 'live' | 'baked'
 present packages/core/src/occlusion-bake/plan.ts node.getExtension('EXT_mesh_gpu_instancing')
 present packages/core/src/occlusion-bake/uv-trace.ts trace.primitives.filter(castsOcclusion)
+present packages/core/src/occlusion-bake/generated-uvs.ts export const MAX_LAYOUT_TRIANGLES = 1_000_000
+present packages/core/src/occlusion-bake/generated-uvs.ts const LAST_UV_SET = 3
+present packages/core/src/occlusion-bake/generated-uvs.ts overwrite: false
 */}
 
 ---
@@ -583,7 +607,8 @@ present packages/core/src/occlusion-bake/uv-trace.ts trace.primitives.filter(cas
 ## Light bake
 
 `@vctrl/core/light-bake` raytraces the studio lights' diffuse light and soft
-shadows into a light map for each material, in its first UV set. Each texel
+shadows into a light map for each material, in the UV set the occlusion bake
+would use, a layout's included. Each texel
 samples every light that is on across its angular size, so a larger light casts
 a softer shadow. Glass lets the light through, as in the occlusion bake.
 
@@ -598,7 +623,7 @@ const report = await bakeLightsIntoDocument(
 )
 ```
 
-It plans with `planOcclusionBake(document, { existingOcclusion: 'bake' })`, so
+It plans with `planOcclusionBake(document, { existingOcclusion: 'bake', layout })`, so
 it skips materials for the same reasons, except that an occlusion texture does
 not stop it: bake ambient occlusion first, then the lights. It also skips a
 double-sided material, as `double-sided`: one map cannot light both its sides.
@@ -614,7 +639,7 @@ extension, `VECTREAL_lightmap`, on each material:
 
 | Field | Meaning |
 |---|---|
-| `lightmapTexture` | A PNG, read from the first UV set. Each texel stores the square root of its share of `scale`, which keeps precision in the shadows |
+| `lightmapTexture` | A PNG, read from the UV set its `texCoord` names. Each texel stores the square root of its share of `scale`, which keeps precision in the shadows |
 | `scale` | The light a full texel holds: the lights' strengths added up, each by its brightest color channel. In the units of a light's `intensity`, relative to the environment |
 | `signature` | `bakedLightsSignature` of the lighting it was baked from |
 
@@ -634,7 +659,8 @@ as they scale live light.
 {/* claims
 present packages/core/package.json "./light-bake": {
 present packages/core/src/light-bake/bake-lights.ts samples: 128
-present packages/core/src/light-bake/bake-into-document.ts planOcclusionBake(document, { existingOcclusion: 'bake' })
+present packages/core/src/light-bake/bake-into-document.ts existingOcclusion: 'bake',
+present packages/core/src/model-loader/baked-lightmap-plugin.ts texture.channel = def.lightmapTexture.texCoord ?? 0
 present packages/core/src/model-loader/baked-lightmap-plugin.ts params.lightMapIntensity = 0
 present packages/core/src/io-extensions.ts export const IO_EXTENSIONS = [...ALL_EXTENSIONS, VectrealLightmap]
 present packages/core/src/scene-lighting/baked-lights.ts export const BAKED_LIGHTMAP_USER_DATA = 'vectrealLightmap'

@@ -4,11 +4,11 @@ import { castsOcclusion, type OcclusionBakePlan } from './plan'
 import type { OcclusionBakeOptions } from './options'
 
 /** Raised whenever the baker's output changes for the same input. */
-const OCCLUSION_BAKE_VERSION = 2
+const OCCLUSION_BAKE_VERSION = 3
 
 /*
   Identifies a bake by everything that changes its pixels: where every
-  triangle is, its normals and UVs, which materials are baked and which cast
+  triangle is, its normals and the UVs it is baked in, which materials are baked and which cast
   no occlusion, the mask each cutout casts through, and the options. A bake made for a preview is reused at publish
   only while this still matches.
 */
@@ -24,7 +24,10 @@ export function occlusionBakeSignature(
 		options.distance
 	])
 
-	const targets = new Set<unknown>(plan.targets.map(({ material }) => material))
+	// The UV set each target is baked in, its own or one laid out for the bake.
+	const targets = new Map<unknown, number>(
+		plan.targets.map(({ material, texCoord = 0 }) => [material, texCoord])
+	)
 	const materialIndex = new Map<unknown, number>()
 	for (const { material } of plan.primitives) {
 		if (!materialIndex.has(material))
@@ -36,9 +39,14 @@ export function occlusionBakeSignature(
 		hash.numbers([
 			materialIndex.get(material) ?? -1,
 			targets.has(material) ? 1 : 0,
+			targets.get(material) ?? -1,
 			castsOcclusion(entry) ? 1 : 0
 		])
-		for (const semantic of ['POSITION', 'NORMAL', 'TEXCOORD_0']) {
+		for (const semantic of [
+			'POSITION',
+			'NORMAL',
+			`TEXCOORD_${targets.get(material) ?? 0}`
+		]) {
 			hash.array(primitive.getAttribute(semantic)?.getArray())
 		}
 		const cutout = castsOcclusion(entry) ? readableCutout(material) : undefined
