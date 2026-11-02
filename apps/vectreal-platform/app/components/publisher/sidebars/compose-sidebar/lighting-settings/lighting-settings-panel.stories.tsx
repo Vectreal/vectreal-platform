@@ -13,6 +13,7 @@ import {
 import { BakeSection } from './bake-section'
 import LightingSettings from './lighting-settings-panel'
 import { finishStatus, StudioFinishCard } from './studio-finish-card'
+import { nothingCaption } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { type BakePreview } from '../../../../../lib/stores/publisher-config-store'
 import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownView } from '../../drill-down'
@@ -152,7 +153,29 @@ const BAKE_STATES: {
 			reports: {
 				occlusion: {
 					baked: [],
-					skipped: [{ material: 'Material', reason: 'no-uv0' }]
+					skipped: [
+						{ material: 'Body', reason: 'no-uv0' },
+						{ material: 'Sole', reason: 'no-uv0' },
+						{ material: 'Laces', reason: 'no-uv0' },
+						{ material: 'Logo', reason: 'tiling-uvs' }
+					]
+				}
+			}
+		}
+	},
+	{
+		title: 'Drawn at lower detail',
+		canBake: true,
+		preview: {
+			status: 'ready',
+			source: SOURCE,
+			shown: true,
+			durationMs: 6400,
+			reports: {
+				occlusion: {
+					baked: ['Body', 'Sole'],
+					skipped: [],
+					recovered: 'lower-detail'
 				}
 			}
 		}
@@ -167,7 +190,10 @@ const BAKE_STATES: {
 			durationMs: 2100,
 			reports: {
 				occlusion: { baked: ['Body', 'Sole'], skipped: [] },
-				lights: { failed: 'The GPU reset while baking the studio lights' }
+				lights: {
+					failed: 'gpu-reset',
+					detail: 'The GPU reset while baking the studio lights'
+				}
 			}
 		}
 	},
@@ -188,11 +214,17 @@ const BAKE_STATES: {
 							material:
 								'Sneaker_Upper_Mesh_Knit_Primary_Material_Variant_002_Final_v3',
 							reason: 'overlapping-uvs'
+						},
+						{
+							material:
+								'Sneaker_Tongue_Mesh_Knit_Secondary_Material_Variant_007_Final_v2',
+							reason: 'overlapping-uvs'
 						}
 					]
 				},
 				lights: {
-					failed:
+					failed: 'unexpected',
+					detail:
 						'WebGLRenderer:_framebuffer_incomplete_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_on_target_0'
 				}
 			}
@@ -205,7 +237,10 @@ const BAKE_STATES: {
 			status: 'failed',
 			source: SOURCE,
 			shown: true,
-			error: 'The GPU reset while baking ambient occlusion'
+			failure: {
+				reason: 'no-webgl',
+				detail: 'Error creating WebGL context.'
+			}
 		}
 	}
 ]
@@ -247,6 +282,7 @@ export const FinishCardStates: Story = {
 						<DrillDownView id="root">
 							<StudioFinishCard
 								status={finishStatus(index > 0, state.preview)}
+								nothingCaption={nothingCaption(state.preview?.reports)}
 								canPreview={state.canBake}
 								isOptimizing={state.isOptimizing ?? false}
 								onAdd={() => {}}

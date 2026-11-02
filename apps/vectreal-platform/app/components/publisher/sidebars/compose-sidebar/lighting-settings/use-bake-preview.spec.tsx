@@ -29,6 +29,7 @@ import {
 	lightingAtom,
 	presentationAtom
 } from '../../../../../lib/stores/scene-settings-store'
+import { WorkerRunError } from '../../../../../workers/run-worker'
 
 import type { ReactNode } from 'react'
 
@@ -37,7 +38,8 @@ const mocks = vi.hoisted(() => ({
 	runPublishExportInWorker: vi.fn(),
 	loadToThreeJS: vi.fn(),
 	exportDocumentGLB: vi.fn(),
-	disposeModel: vi.fn()
+	disposeModel: vi.fn(),
+	reportError: vi.fn()
 }))
 
 vi.mock('@vctrl/hooks/use-load-model', () => ({
@@ -65,6 +67,12 @@ vi.mock(
 vi.mock('../../../optimization/use-hold-to-compare', () => ({
 	disposeModel: mocks.disposeModel
 }))
+vi.mock('../../../../../lib/observability/use-error-report', () => ({
+	useErrorReport: mocks.reportError
+}))
+
+/** What the last render handed error tracking, if anything. */
+const lastReported = () => mocks.reportError.mock.calls.at(-1)?.[0]
 
 const report = { baked: ['body'], skipped: [] }
 const litLighting = {
@@ -111,6 +119,7 @@ beforeEach(() => {
 		occlusion: report
 	})
 	mocks.loadToThreeJS.mockImplementation(async () => ({ scene: new Group() }))
+	vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
 describe('the bake preview', () => {
@@ -121,7 +130,7 @@ describe('the bake preview', () => {
 
 		const [request] = mocks.runPublishExportInWorker.mock.calls[0]
 		expect(request).toEqual({
-			buffer: expect.any(ArrayBuffer),
+			glb: expect.any(Uint8Array),
 			...hook.result.current.publishExport.request
 		})
 		expect(request).toMatchObject({ occlusion: true })
@@ -245,7 +254,7 @@ describe('the bake preview', () => {
 	it('reports a failed light bake instead of showing anything', async () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: new ArrayBuffer(8),
-			lights: { failed: 'The GPU reset while baking the studio lights' }
+			lights: { failed: 'gpu-reset', detail: 'GPU reset while baking body' }
 		})
 		const { store, hook } = setup()
 		act(() => store.set(lightingAtom, litLighting))
@@ -254,16 +263,18 @@ describe('the bake preview', () => {
 
 		expect(hook.result.current.preview.preview).toMatchObject({
 			status: 'failed',
-			error: 'The GPU reset while baking the studio lights'
+			failure: { reason: 'gpu-reset', detail: 'GPU reset while baking body' }
 		})
 		expect(mocks.loadToThreeJS).not.toHaveBeenCalled()
+		// The author can act on a reset, so it is not a fault to report.
+		expect(lastReported()).toBeUndefined()
 	})
 
 	it('shows the bake that worked when the other failed, as publishing ships it', async () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: new ArrayBuffer(8),
 			occlusion: report,
-			lights: { failed: 'The GPU reset while baking the studio lights' }
+			lights: { failed: 'gpu-reset', detail: 'GPU reset while baking body' }
 		})
 		const { store, hook } = setup()
 		act(() =>
@@ -276,7 +287,7 @@ describe('the bake preview', () => {
 			status: 'ready',
 			reports: {
 				occlusion: report,
-				lights: { failed: 'The GPU reset while baking the studio lights' }
+				lights: { failed: 'gpu-reset', detail: 'GPU reset while baking body' }
 			}
 		})
 		expect(hook.result.current.shown).toBeInstanceOf(Group)
@@ -374,7 +385,7 @@ describe('the bake preview', () => {
 	it('reports a failed bake instead of showing anything', async () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: new ArrayBuffer(8),
-			occlusion: { failed: 'WebGL 2 is unavailable' }
+			occlusion: { failed: 'no-webgl', detail: 'Error creating WebGL context.' }
 		})
 		const { hook } = setup()
 
@@ -382,10 +393,165 @@ describe('the bake preview', () => {
 
 		expect(hook.result.current.preview.preview).toMatchObject({
 			status: 'failed',
-			error: 'WebGL 2 is unavailable'
+			failure: { reason: 'no-webgl', detail: 'Error creating WebGL context.' }
 		})
 		expect(mocks.loadToThreeJS).not.toHaveBeenCalled()
 		expect(hook.result.current.shown).toBeUndefined()
+	})
+
+	it('reports a fatal failure to error tracking once, by its reason and detail', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: { failed: 'no-webgl', detail: 'Error creating WebGL context.' }
+		})
+		const { hook } = setup()
+
+		await act(() => hook.result.current.preview.bake())
+		const reported = lastReported()
+		act(() => hook.result.current.preview.setShown(false))
+
+		expect(reported).toBeInstanceOf(Error)
+		expect(reported.message).toBe(
+			'Studio finish no-webgl: Error creating WebGL context.'
+		)
+		expect(mocks.reportError).toHaveBeenLastCalledWith(
+			reported,
+			'client-fallback'
+		)
+		// Hiding the preview is not a new failure.
+		expect(lastReported()).toBe(reported)
+	})
+
+	it('reports a fatal bake that failed beside one that worked', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: report,
+			lights: { failed: 'unexpected', detail: 'undefined is not a function' }
+		})
+		const { store, hook } = setup()
+		act(() =>
+			store.set(lightingAtom, { ...litLighting, occlusion: { mode: 'baked' } })
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview?.status).toBe('ready')
+		expect(lastReported()?.message).toBe(
+			'Studio finish unexpected: undefined is not a function'
+		)
+	})
+
+	it('names every fatal failure of a run in its one report', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: { failed: 'no-webgl', detail: 'no context' },
+			lights: { failed: 'unexpected', detail: 'undefined is not a function' }
+		})
+		const { store, hook } = setup()
+		act(() =>
+			store.set(lightingAtom, { ...litLighting, occlusion: { mode: 'baked' } })
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(lastReported()?.message).toBe(
+			'Studio finish no-webgl: no context; unexpected: undefined is not a function'
+		)
+	})
+
+	it('reports a fatal failure of the second bake when the first failed for a reason the author can fix', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: { failed: 'gpu-reset', detail: 'reset' },
+			lights: { failed: 'unexpected', detail: 'undefined is not a function' }
+		})
+		const { store, hook } = setup()
+		act(() =>
+			store.set(lightingAtom, { ...litLighting, occlusion: { mode: 'baked' } })
+		)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview).toMatchObject({
+			status: 'failed',
+			failure: { reason: 'gpu-reset' }
+		})
+		expect(lastReported()?.message).toBe(
+			'Studio finish unexpected: undefined is not a function'
+		)
+	})
+
+	it('says the browser stopped the drawing when the worker crashed twice, and reports it', async () => {
+		mocks.runPublishExportInWorker.mockRejectedValue(
+			new WorkerRunError('crashed', 'Publish worker crashed')
+		)
+		const { hook } = setup()
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview).toMatchObject({
+			status: 'failed',
+			failure: { reason: 'worker-stopped', detail: 'Publish worker crashed' }
+		})
+	})
+
+	it('says the export ran out of time when the worker timed out', async () => {
+		mocks.runPublishExportInWorker.mockRejectedValue(
+			new WorkerRunError('timed-out', 'Publishing timed out after 600s')
+		)
+		const { hook } = setup()
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview?.failure?.reason).toBe(
+			'timed-out'
+		)
+	})
+
+	it('says the model could not be prepared when it cannot be exported', async () => {
+		mocks.exportDocumentGLB.mockRejectedValue(new Error('Invalid accessor'))
+		const { hook } = setup()
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview).toMatchObject({
+			status: 'failed',
+			failure: { reason: 'unprepared', detail: 'Invalid accessor' }
+		})
+		expect(mocks.runPublishExportInWorker).not.toHaveBeenCalled()
+	})
+
+	it('says the model could not be prepared when the baked file will not load', async () => {
+		mocks.loadToThreeJS.mockRejectedValue(new Error('Unexpected end of GLB'))
+		const { hook } = setup()
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview?.failure).toEqual({
+			reason: 'unprepared',
+			detail: 'Unexpected end of GLB'
+		})
+	})
+
+	it('keeps lower detail on the bake’s report, never in the lighting', async () => {
+		mocks.runPublishExportInWorker.mockResolvedValue({
+			buffer: new ArrayBuffer(8),
+			occlusion: { ...report, recovered: 'lower-detail' }
+		})
+		const { store, hook } = setup()
+		const lighting = store.get(lightingAtom)
+
+		await act(() => hook.result.current.preview.bake())
+
+		expect(hook.result.current.preview.preview?.reports?.occlusion).toEqual({
+			...report,
+			recovered: 'lower-detail'
+		})
+		expect(store.get(lightingAtom)).toBe(lighting)
+		expect(hook.result.current.publishExport.request).toMatchObject({
+			occlusion: true
+		})
+		expect(hook.result.current.shown).toBeInstanceOf(Group)
 	})
 
 	it('frees a bake that finishes after a newer one started', async () => {
@@ -550,6 +716,39 @@ describe('showing what a publish exported', () => {
 			shown: false,
 			outcome
 		})
+	})
+	it('shows a publish whose every bake failed as a failed preview, with why', async () => {
+		const failedOutcome = {
+			buffer: new ArrayBuffer(8),
+			occlusion: { failed: 'no-webgl', detail: 'Error creating WebGL context.' }
+		}
+		const { store, show: showFinish } = show(null)
+
+		await act(() => showFinish(source, failedOutcome as never))
+
+		expect(store.get(bakePreviewAtom)).toMatchObject({
+			status: 'failed',
+			source,
+			failure: { reason: 'no-webgl', detail: 'Error creating WebGL context.' }
+		})
+	})
+
+	it('leaves a newer request in place when a published finish failed', async () => {
+		const newer: BakePreview = {
+			status: 'baking',
+			source: { ...source, bakes: 'moved a light' },
+			shown: true
+		}
+		const { store, show: showFinish } = show(newer)
+
+		await act(() =>
+			showFinish(source, {
+				buffer: new ArrayBuffer(8),
+				occlusion: { failed: 'unexpected', detail: 'x' }
+			} as never)
+		)
+
+		expect(store.get(bakePreviewAtom)).toBe(newer)
 	})
 })
 

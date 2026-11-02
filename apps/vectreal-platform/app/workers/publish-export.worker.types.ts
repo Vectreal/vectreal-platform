@@ -15,14 +15,17 @@ You should have received a copy of the GNU Affero General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>. */
 
 import type { ResolvedLighting } from '@vctrl/core'
-import type { LightBakeReport } from '@vctrl/core/light-bake'
 import type {
 	GeometryCodec,
 	GeometryCodecSizes,
 	PublishExportOptions
 } from '@vctrl/core/model-exporter'
 import type { Ktx2CompressionReport } from '@vctrl/core/model-optimizer'
-import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
+import type {
+	BakeFailure,
+	BakeRecovery,
+	OcclusionBakeReport
+} from '@vctrl/core/occlusion-bake'
 
 /** Message sent TO the worker. The buffer should be transferred. */
 export interface PublishExportRequest {
@@ -44,6 +47,13 @@ export type PublishExportProgress =
 	/** How much of a bake is drawn, 0 to 1. */
 	| { stage: 'occlusion' | 'lights'; fraction: number }
 
+/**
+ * What one bake did, and how it recovered if the GPU reset under it, or why
+ * it drew nothing. The light bake reports in the occlusion bake's shape.
+ */
+export type BakePassOutcome =
+	(OcclusionBakeReport & { recovered?: BakeRecovery }) | BakeFailure
+
 export interface PublishExportOutcome {
 	buffer: ArrayBuffer
 	geometryCodec: GeometryCodec
@@ -56,9 +66,9 @@ export interface PublishExportOutcome {
 	 * Present when occlusion was asked for: what was baked, or why nothing was.
 	 * A failed bake publishes the model without it rather than not at all.
 	 */
-	occlusion?: OcclusionBakeReport | { failed: string }
+	occlusion?: BakePassOutcome
 	/** Present when the lights were asked for, as `occlusion` is. */
-	lights?: LightBakeReport | { failed: string }
+	lights?: BakePassOutcome
 }
 
 /** Messages received FROM the worker. */
