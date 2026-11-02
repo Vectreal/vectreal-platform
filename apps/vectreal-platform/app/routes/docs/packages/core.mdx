@@ -556,7 +556,7 @@ material, row 0 at the top of the image. The options:
 | Option | Default | Meaning |
 |---|---|---|
 | `resolution` | 512 | Texture width and height in pixels |
-| `samples` | 256 | Rays per texel, at most 2048; more is smoother and slower |
+| `samples` | 64 | Rays per texel, at most 2048; more is smoother and slower |
 | `distance` | 0.25 | How far a ray looks for an occluder, as a share of the scene's bounding box diagonal |
 
 It runs the rays a few at a time and yields between them, so it does not freeze
@@ -589,7 +589,7 @@ signature still matches.
 {/* claims
 present packages/core/package.json "./occlusion-bake": {
 present packages/core/src/occlusion-bake/options.ts resolution: 512,
-present packages/core/src/occlusion-bake/options.ts samples: 256,
+present packages/core/src/occlusion-bake/options.ts samples: 64,
 present packages/core/src/occlusion-bake/options.ts distance: 0.25
 present packages/core/src/occlusion-bake/plan.ts material.getAlphaMode() === 'BLEND'
 present packages/core/src/occlusion-bake/bake-occlusion.ts const MAX_SAMPLES = 2048

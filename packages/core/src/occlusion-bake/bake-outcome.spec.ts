@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { BakeError, bakeWithRecovery, lowerDetail } from './bake-outcome'
+import { DEFAULT_OCCLUSION_BAKE_OPTIONS } from './options'
 
 import type { WebGLRenderer } from 'three'
 
@@ -224,5 +225,9 @@ describe('lowerDetail', () => {
 			distance: 0.25
 		})
 		expect(OPTIONS.resolution).toBe(512)
+	})
+
+	it('still has rays to halve at the default depth bake', () => {
+		expect(lowerDetail(DEFAULT_OCCLUSION_BAKE_OPTIONS).samples).toBe(32)
 	})
 })
