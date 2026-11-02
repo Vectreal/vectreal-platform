@@ -53,7 +53,7 @@ describe('the opening pose is wired into SceneCamera', () => {
 	it('leaves it out of an edit to the camera already in view', () => {
 		// Changing a pose-less camera's field of view must not fly it home.
 		const edit = source.slice(
-			source.indexOf('if (previousSelectionKey.current === selectionKey) {'),
+			source.indexOf('if (inView?.cameraId === selectionKey) {'),
 			source.indexOf('startTransition(selection)')
 		)
 		expect(edit).toContain('applyCameraInstantly(')

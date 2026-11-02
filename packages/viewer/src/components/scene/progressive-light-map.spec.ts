@@ -3,6 +3,7 @@ import {
 	Color,
 	DirectionalLight,
 	Group,
+	LinearFilter,
 	Mesh,
 	MeshBasicMaterial,
 	PerspectiveCamera,
@@ -98,5 +99,16 @@ describe('ProgressiveLightMap', () => {
 		lightMap.update(new Mesh(), new PerspectiveCamera(), 1)
 		expect(litBy).toBeNull()
 		expect(scene.environment).toBe(environment)
+	})
+
+	it('draws the shadow filtered, whichever buffer was written last', () => {
+		// The ground plane magnifies this texture; nearest filtering drew every
+		// texel as a hard square on a close-up.
+		const lightMap = new ProgressiveLightMap(stubRenderer(), new Scene(), 8)
+		for (let frame = 0; frame < 2; frame++) {
+			expect(lightMap.texture.magFilter).toBe(LinearFilter)
+			expect(lightMap.texture.minFilter).toBe(LinearFilter)
+			lightMap.update(new Mesh(), new PerspectiveCamera(), 1)
+		}
 	})
 })

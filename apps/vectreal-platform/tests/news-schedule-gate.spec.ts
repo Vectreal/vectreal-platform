@@ -6,9 +6,9 @@
  * sitemap and `llms.txt`. On staging it is reachable and listed early, and on
  * production it appears on its own once the time passes.
  *
- * The newest real article stands in for a scheduled one: the clock is set a
- * minute before its `publishedAt`, which makes it scheduled with every other
- * article already published.
+ * A real article stands in for a scheduled one (see `news-stand-in.ts`): the
+ * clock is set a minute before its `publishedAt`, which makes it scheduled and
+ * the article before it published.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -25,6 +25,7 @@ import {
 	vi
 } from 'vitest'
 
+import { getStandInArticles } from './news-stand-in'
 import {
 	getNewsArticles,
 	getPublishedNewsArticles,
@@ -37,7 +38,7 @@ import { createServerApp } from '../server-app.mjs'
 import type { NewsArticle } from '../app/lib/news/news-article'
 import type { Server } from 'node:http'
 
-const [scheduled, published] = getPublishedNewsArticles()
+const { standIn: scheduled, previous: published } = getStandInArticles()
 const BEFORE = resolvePublishedAt(scheduled.publishedAt) - 60_000
 const AFTER = resolvePublishedAt(scheduled.publishedAt) + 60_000
 
@@ -67,7 +68,7 @@ afterEach(() => {
 const slugs = (articles: NewsArticle[]) => articles.map(({ slug }) => slug)
 
 describe('the stand-in article', () => {
-	it('is newer than every other, so the clock makes it the only scheduled one', () => {
+	it('is newer than the article before it, so the clock leaves that one published', () => {
 		expect(resolvePublishedAt(published.publishedAt)).toBeLessThan(BEFORE)
 	})
 })

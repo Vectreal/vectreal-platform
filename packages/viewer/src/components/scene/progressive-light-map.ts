@@ -3,10 +3,10 @@ import {
 	Color,
 	HalfFloatType,
 	type Light,
+	LinearFilter,
 	type Material,
 	type Mesh,
 	MeshLambertMaterial,
-	NearestFilter,
 	type Object3D,
 	type Scene,
 	ShaderMaterial,
@@ -22,9 +22,10 @@ import {
  *
  * Ported from drei's `ProgressiveLightMap` (MIT, pmndrs/drei, itself based on
  * zalo's "Progressive Light Map Accumulator") so the viewer owns the bake's
- * lifecycle. Two departures: `texture` is always the buffer written last (drei's
- * plane always reads the second buffer, which holds the frame before last when
- * the frame count is even), and `dispose()` frees what the constructor
+ * lifecycle. Three departures: `texture` is always the buffer written last
+ * (drei's plane always reads the second buffer, which holds the frame before
+ * last when the frame count is even), it is filtered linearly rather than
+ * nearest (see the constructor), and `dispose()` frees what the constructor
  * allocates.
  */
 export class ProgressiveLightMap {
@@ -47,10 +48,15 @@ export class ProgressiveLightMap {
 		private readonly scene: Scene,
 		resolution: number
 	) {
+		// Linear where drei uses nearest. The ground plane draws its shadow from
+		// this texture, magnified: a close-up spreads one texel over tens of
+		// screen pixels, which nearest draws as a hard square. Accumulating reads
+		// each texel at its own center, where the two filters agree, so the bake
+		// itself is unchanged.
 		const options = {
 			type: HalfFloatType,
-			magFilter: NearestFilter,
-			minFilter: NearestFilter
+			magFilter: LinearFilter,
+			minFilter: LinearFilter
 		}
 		this.buffers = [
 			new WebGLRenderTarget(resolution, resolution, options),

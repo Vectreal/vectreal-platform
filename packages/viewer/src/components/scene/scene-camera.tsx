@@ -95,6 +95,12 @@ export type ResolvedCameraSelection = {
 	framing: ViewportFraming | null
 }
 
+/** A camera by id, with what was stored for it (`cameraSelectionSignature`). */
+type CameraSelection = {
+	cameraId: string
+	signature: CameraSelectionSignature
+}
+
 const DEFAULT_TRANSITION_DURATION_MS = 1000
 
 function resolveTransition(
@@ -194,18 +200,20 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const previousControlsTarget = useRef<Vector3 | null>(null)
 	const stabilizationFrameCount = useRef(0)
 	const stabilizationStartedAt = useRef<number | null>(null)
-	/** The camera in view, by whichever route it got there. */
-	const previousSelectionKey = useRef<string | null>(null)
+	/**
+	 * The camera in view, by whichever route it got there, signed as it was
+	 * when it came into view. The signature tells a host following the view
+	 * (`camera_changed` written back as `activeCameraId`) from an edit to the
+	 * camera in view: the first must leave a flight to it playing.
+	 */
+	const viewSelection = useRef<CameraSelection | null>(null)
 	/**
 	 * The selection the props last asked for. Kept apart from the camera in
 	 * view because a command (a marker click, a host call) moves the view
 	 * without touching the props: compared against the view, any unrelated
 	 * re-render after a command read as "the props changed" and flew back.
 	 */
-	const requestedSelection = useRef<{
-		cameraId: string
-		signature: CameraSelectionSignature
-	} | null>(null)
+	const requestedSelection = useRef<CameraSelection | null>(null)
 
 	/*
 	  Read by the command executor when a command runs, not when it was created.
@@ -370,7 +378,10 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			}
 
 			startTransition(nextSelection)
-			previousSelectionKey.current = nextSelection.cameraId
+			viewSelection.current = {
+				cameraId: nextSelection.cameraId,
+				signature: cameraSelectionSignature(cameras, nextSelection.cameraId)
+			}
 			onInteractionEvent?.({
 				type: 'camera_changed',
 				cameraId: nextSelection.cameraId
@@ -447,11 +458,11 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			}
 
 			initializedCameraPosition.current = true
-			previousSelectionKey.current = selection.cameraId
 			requestedSelection.current = {
 				cameraId: selection.cameraId,
 				signature: cameraSelectionSignature(cameras, selection.cameraId)
 			}
+			viewSelection.current = requestedSelection.current
 		},
 		[
 			activeCameraId,
@@ -512,9 +523,23 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		}
 		requestedSelection.current = { cameraId: selectionKey, signature }
 
+		const inView = viewSelection.current
+		// The props asking, unedited, for the camera a flight is taking the view
+		// to: a host following the view (`camera_changed` written back), the
+		// publisher among them. Applying it would stop the flight a command just
+		// started, at its first frame. Once landed, the same request puts the
+		// camera back on its stored pose, below.
+		if (
+			inView?.cameraId === selectionKey &&
+			inView.signature === signature &&
+			flight.progress() !== null
+		) {
+			return
+		}
+
 		// Only animate when switching between cameras; apply property edits instantly
 		// so sidebar changes don't re-trigger the transition for the active camera.
-		if (previousSelectionKey.current === selectionKey) {
+		if (inView?.cameraId === selectionKey) {
 			// Without the opening pose: an edit to the camera in view, such as its
 			// field of view, must not pull a camera with no pose of its own back to
 			// where the scene opened.
@@ -530,7 +555,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		} else {
 			startTransition(selection)
 		}
-		previousSelectionKey.current = selectionKey
+		viewSelection.current = requestedSelection.current
 		onInteractionEvent?.({
 			type: 'camera_changed',
 			cameraId: selection.cameraId
@@ -540,6 +565,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		applyCameraInstantly,
 		cameras,
 		controls?.target,
+		flight,
 		onInteractionEvent,
 		openingPose,
 		sceneCamera,
@@ -619,7 +645,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			isWaitingForStableFrame.current = false
 			// The view a camera with no pose of its own comes back to, stored
 			// without the fit on screen so it is fitted afresh wherever it is shown.
-			if (previousSelectionKey.current && framing.current) {
+			if (viewSelection.current && framing.current) {
 				const target = controlsTarget ?? new Vector3(0, 0, 0)
 				const stored = framing.current.storedPose(
 					cameraPosition,
@@ -627,7 +653,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 					(sceneCamera as PerspectiveCamera).aspect
 				)
 				openingPose.current = {
-					cameraId: previousSelectionKey.current,
+					cameraId: viewSelection.current.cameraId,
 					position: stored.position.toArray(),
 					target: target.toArray(),
 					framingAspect: stored.framingAspect
@@ -636,7 +662,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			setIsFramed(true)
 			onInteractionEvent?.({
 				type: 'initial_framing_completed',
-				cameraId: previousSelectionKey.current
+				cameraId: viewSelection.current?.cameraId ?? null
 			})
 			onInitialFramingComplete?.()
 		}
