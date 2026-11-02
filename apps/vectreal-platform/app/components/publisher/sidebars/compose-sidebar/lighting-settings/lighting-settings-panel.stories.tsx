@@ -172,6 +172,33 @@ const BAKE_STATES: {
 		}
 	},
 	{
+		// Exported names run long with no spaces, and must wrap in the sidebar.
+		title: 'Long material names',
+		canBake: true,
+		preview: {
+			status: 'ready',
+			source: SOURCE,
+			shown: true,
+			durationMs: 2100,
+			reports: {
+				occlusion: {
+					baked: ['Body'],
+					skipped: [
+						{
+							material:
+								'Sneaker_Upper_Mesh_Knit_Primary_Material_Variant_002_Final_v3',
+							reason: 'overlapping-uvs'
+						}
+					]
+				},
+				lights: {
+					failed:
+						'WebGLRenderer:_framebuffer_incomplete_FRAMEBUFFER_INCOMPLETE_ATTACHMENT_on_target_0'
+				}
+			}
+		}
+	},
+	{
 		title: 'Failed',
 		canBake: true,
 		preview: {
