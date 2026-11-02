@@ -5,28 +5,27 @@ import {
 	CameraTransitionConfig,
 	CameraTransitionType
 } from '@vctrl/core'
+import {
+	cameraSelectionSignature,
+	DEFAULT_CAMERA,
+	resolveCameraPose,
+	type CameraSelectionSignature,
+	type OpeningPose
+} from '@vctrl/core/scene-camera'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import {
-	Euler,
+	type Euler,
 	type Object3D,
 	PerspectiveCamera,
 	Quaternion,
-	Sphere,
-	Vector3,
-	Vector3Tuple
+	Vector3
 } from 'three'
 
-import { sampleCameraFlight } from './camera-flight'
-import { cameraSelectionSignature } from './camera-selection-signature'
 import { applyInitialFraming } from './initial-framing'
-import { worldBounds } from './model-measurement'
-import { withOpeningPose } from './opening-pose'
 import { prefersReducedMotion } from './reduced-motion'
+import { useCameraFlight } from './use-camera-flight'
 
-import type { CameraFlight, CameraFlightFrame } from './camera-flight'
-import type { CameraSelectionSignature } from './camera-selection-signature'
 import type { InitialFramingControls } from './initial-framing'
-import type { OpeningPose } from './opening-pose'
 import type {
 	ViewerCommand,
 	ViewerCommandExecutor,
@@ -47,14 +46,7 @@ export const defaultCameraOptions: CameraProps = {
 		duration: 1000,
 		easing: 'ease_in_out'
 	},
-	cameras: [
-		{
-			cameraId: 'default',
-			name: 'Default Camera',
-			fov: 60,
-			initial: true
-		}
-	]
+	cameras: [DEFAULT_CAMERA]
 }
 
 interface SceneCameraProps extends CameraProps {
@@ -78,14 +70,6 @@ interface SceneCameraProps extends CameraProps {
 	openingPose: RefObject<OpeningPose | null>
 }
 
-type CameraTransitionRuntime = {
-	flight: CameraFlight
-	startAtMs: number
-	durationMs: number
-	/** Reused every frame, so a flight allocates once. */
-	frame: CameraFlightFrame
-}
-
 export type ResolvedCameraSelection = {
 	cameraId: string
 	targetPosition: Vector3
@@ -96,78 +80,6 @@ export type ResolvedCameraSelection = {
 }
 
 const DEFAULT_TRANSITION_DURATION_MS = 1000
-
-function hasSerializableVector3(value: unknown): boolean {
-	return (
-		(Array.isArray(value) && value.length >= 3) ||
-		value instanceof Vector3 ||
-		(typeof value === 'object' &&
-			value !== null &&
-			'x' in value &&
-			'y' in value &&
-			'z' in value)
-	)
-}
-
-function toVector3(value: unknown, fallback = new Vector3(0, 0, 0)): Vector3 {
-	if (Array.isArray(value) && value.length >= 3) {
-		const [x, y, z] = value as Vector3Tuple
-		return new Vector3(Number(x) || 0, Number(y) || 0, Number(z) || 0)
-	}
-
-	if (
-		typeof value === 'object' &&
-		value !== null &&
-		'x' in value &&
-		'y' in value &&
-		'z' in value
-	) {
-		const vectorLike = value as { x: unknown; y: unknown; z: unknown }
-		return new Vector3(
-			Number(vectorLike.x) || 0,
-			Number(vectorLike.y) || 0,
-			Number(vectorLike.z) || 0
-		)
-	}
-
-	if (value instanceof Vector3) {
-		return value.clone()
-	}
-
-	return fallback.clone()
-}
-
-function toEuler(value: unknown): Euler {
-	if (Array.isArray(value) && value.length >= 3) {
-		const [x, y, z] = value as Vector3Tuple
-		return new Euler(Number(x) || 0, Number(y) || 0, Number(z) || 0)
-	}
-
-	if (
-		typeof value === 'object' &&
-		value !== null &&
-		'x' in value &&
-		'y' in value &&
-		'z' in value
-	) {
-		const eulerLike = value as { x: unknown; y: unknown; z: unknown }
-		return new Euler(
-			Number(eulerLike.x) || 0,
-			Number(eulerLike.y) || 0,
-			Number(eulerLike.z) || 0
-		)
-	}
-
-	if (value instanceof Euler) {
-		return value.clone()
-	}
-
-	if (value instanceof Vector3) {
-		return new Euler(value.x, value.y, value.z)
-	}
-
-	return new Euler(0, 0, 0)
-}
 
 function resolveTransition(
 	sceneTransition: CameraTransitionConfig | undefined
@@ -183,6 +95,10 @@ function resolveTransition(
 	}
 }
 
+/**
+ * The camera `activeCameraId` resolves to, posed (`resolveCameraPose`), with
+ * the transition the viewer flies to it with.
+ */
 export function resolveCameraSelection(
 	cameras: CameraProps['cameras'],
 	activeCameraId: CameraProps['activeCameraId'],
@@ -191,67 +107,24 @@ export function resolveCameraSelection(
 	sceneTransition?: CameraTransitionConfig,
 	openingPose: OpeningPose | null = null
 ): ResolvedCameraSelection {
-	const sceneCameras = cameras?.filter((c) => !c.kind || c.kind === 'scene')
-	const defaultCamera =
-		sceneCameras && sceneCameras.length > 0 ? sceneCameras[0] : cameras?.[0]
-
-	const foundCamera =
-		cameras?.find((camera) => camera.cameraId === activeCameraId) ??
-		cameras?.find((camera) => camera.initial) ??
-		defaultCamera ??
-		cameras?.[0] ??
-		defaultCameraOptions.cameras?.[0]
-	const selectedCamera =
-		foundCamera && withOpeningPose(foundCamera, openingPose)
-
-	const transition = selectedCamera
-		? resolveTransition(sceneTransition)
-		: ({ type: 'none' } as CameraTransitionConfig)
-
-	const rawTargetLookAt = toVector3(
-		(selectedCamera as Record<string, unknown> | undefined)?.target ??
-			(selectedCamera as Record<string, unknown> | undefined)?.lookAt,
-		currentControlsTarget
+	const pose = resolveCameraPose(
+		cameras,
+		activeCameraId,
+		{
+			position: sceneCamera.position,
+			target: currentControlsTarget,
+			fov: sceneCamera.fov
+		},
+		openingPose
 	)
-	const rawRotation = toEuler(selectedCamera?.rotation)
-	const hasPosition = hasSerializableVector3(selectedCamera?.position)
-	const hasTarget = hasSerializableVector3(
-		(selectedCamera as Record<string, unknown> | undefined)?.target ??
-			(selectedCamera as Record<string, unknown> | undefined)?.lookAt
-	)
-	const hasRotation = hasSerializableVector3(selectedCamera?.rotation)
-	const fallbackOrbitRadius = Math.max(
-		sceneCamera.position.distanceTo(currentControlsTarget),
-		1
-	)
-	const forward = new Vector3(0, 0, -1).applyEuler(rawRotation).normalize()
-
-	const targetPosition = hasPosition
-		? toVector3(selectedCamera?.position, sceneCamera.position)
-		: hasRotation
-			? rawTargetLookAt
-					.clone()
-					.sub(forward.clone().multiplyScalar(fallbackOrbitRadius))
-			: sceneCamera.position.clone()
-
-	const targetLookAt = hasTarget
-		? rawTargetLookAt
-		: hasPosition && hasRotation
-			? targetPosition
-					.clone()
-					.add(forward.clone().multiplyScalar(fallbackOrbitRadius))
-			: rawTargetLookAt
 
 	return {
-		cameraId: selectedCamera?.cameraId ?? 'default',
-		targetPosition: targetPosition,
-		targetRotation: rawRotation,
-		targetFov:
-			typeof selectedCamera?.fov === 'number'
-				? selectedCamera.fov
-				: sceneCamera.fov,
-		targetLookAt: targetLookAt,
-		transition
+		cameraId: pose.cameraId,
+		targetPosition: pose.position,
+		targetRotation: pose.rotation,
+		targetFov: pose.fov,
+		targetLookAt: pose.target,
+		transition: resolveTransition(sceneTransition)
 	}
 }
 
@@ -300,7 +173,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const previousControlsTarget = useRef<Vector3 | null>(null)
 	const stabilizationFrameCount = useRef(0)
 	const stabilizationStartedAt = useRef<number | null>(null)
-	const transitionRuntime = useRef<CameraTransitionRuntime | null>(null)
 	/** The camera in view, by whichever route it got there. */
 	const previousSelectionKey = useRef<string | null>(null)
 	/**
@@ -326,6 +198,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	// re-register the executor before the new model is framed.
 	const modelRef = useRef(model)
 	modelRef.current = model
+	const flight = useCameraFlight(modelRef)
 
 	const captureCameraSnapshot =
 		useCallback<SceneCameraSnapshotCapture>(async () => {
@@ -374,7 +247,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 
 	const startTransition = useCallback(
 		(selection: ResolvedCameraSelection) => {
-			const activeCamera = sceneCamera as PerspectiveCamera
 			const normalizedType: CameraTransitionType =
 				selection.transition.type ?? 'none'
 			const durationMs = Math.max(
@@ -388,44 +260,23 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 				durationMs === 0 ||
 				prefersReducedMotion()
 			) {
-				transitionRuntime.current = null
+				flight.stop()
 				applyCameraInstantly(selection)
 				return
 			}
 
-			const runtime: CameraTransitionRuntime = {
-				flight: {
-					type: normalizedType,
-					from: {
-						position: activeCamera.position.clone(),
-						target: controls?.target?.clone() ?? new Vector3(0, 0, 0),
-						fov: activeCamera.fov
-					},
-					to: {
-						position: selection.targetPosition.clone(),
-						target: selection.targetLookAt.clone(),
-						fov: selection.targetFov
-					},
-					easing: selection.transition.easing,
-					bounds: modelRef.current
-						? worldBounds(modelRef.current).getBoundingSphere(new Sphere())
-						: null
+			flight.start(
+				{
+					position: selection.targetPosition,
+					target: selection.targetLookAt,
+					fov: selection.targetFov
 				},
-				startAtMs:
-					typeof performance !== 'undefined' ? performance.now() : Date.now(),
+				normalizedType,
 				durationMs,
-				frame: {
-					position: new Vector3(),
-					target: new Vector3(),
-					fov: activeCamera.fov,
-					quaternion: new Quaternion()
-				}
-			}
-
-			transitionRuntime.current = runtime
-			invalidate()
+				selection.transition.easing
+			)
 		},
-		[applyCameraInstantly, controls?.target, invalidate, sceneCamera]
+		[applyCameraInstantly, flight]
 	)
 
 	const executeViewerCommand = useCallback(
@@ -617,40 +468,6 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	])
 
 	useFrame(() => {
-		if (transitionRuntime.current) {
-			const runtime = transitionRuntime.current
-			const activeCamera = sceneCamera as PerspectiveCamera
-			const now =
-				typeof performance !== 'undefined' ? performance.now() : Date.now()
-			const rawProgress = Math.min(
-				1,
-				Math.max(0, (now - runtime.startAtMs) / runtime.durationMs)
-			)
-			const frame = sampleCameraFlight(
-				runtime.flight,
-				rawProgress,
-				runtime.frame,
-				activeCamera.up
-			)
-
-			activeCamera.position.copy(frame.position)
-			activeCamera.quaternion.copy(frame.quaternion)
-			activeCamera.fov = frame.fov
-			activeCamera.updateProjectionMatrix()
-
-			// The target the frame was aimed at, so update()'s lookAt agrees.
-			if (controls?.target) {
-				controls.target.copy(frame.target)
-				controls.update?.()
-			}
-
-			if (rawProgress >= 1) {
-				transitionRuntime.current = null
-			}
-
-			invalidate()
-		}
-
 		if (
 			!isWaitingForStableFrame.current ||
 			hasInitialFramingCompleted.current

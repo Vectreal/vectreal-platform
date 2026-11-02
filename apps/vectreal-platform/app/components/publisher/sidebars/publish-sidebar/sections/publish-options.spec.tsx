@@ -14,6 +14,7 @@ import {
 	balancedPreset,
 	originalPreset
 } from '../../../../../constants/optimizations'
+import { STUDIO_FINISH_FAILURES } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import { bakePreviewAtom } from '../../../../../lib/stores/publisher-config-store'
 import {
 	dispatchSaveProgressAtom,
@@ -363,7 +364,7 @@ describe('the publish panel', () => {
 			ktx2: true
 		})
 		expect(request.draco).not.toHaveProperty('enabled')
-		expect(request.buffer).toBeInstanceOf(ArrayBuffer)
+		expect(request.glb).toBeInstanceOf(Uint8Array)
 
 		const [published] = mocks.publishSceneFromGlb.mock.calls[0]
 		expect(Array.from(published.glbData)).toEqual(Array.from(PUBLISHED))
@@ -544,7 +545,9 @@ describe('the publish panel', () => {
 		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
 		expect(mocks.toastWarning).toHaveBeenCalledWith(
 			"1 material could not take the studio finish's depth.",
-			{ description: 'wheel: its mesh is placed more than once' }
+			{
+				description: 'wheel: Used more than once. Make each copy its own mesh.'
+			}
 		)
 	})
 
@@ -552,7 +555,7 @@ describe('the publish panel', () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: PUBLISHED.slice().buffer,
 			geometryCodec: 'none',
-			occlusion: { failed: 'WebGL 2 is unavailable' }
+			occlusion: { failed: 'no-webgl', detail: 'Error creating WebGL context.' }
 		})
 		renderPanel(balancedPreset, (store) =>
 			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
@@ -562,7 +565,7 @@ describe('the publish panel', () => {
 		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
 		expect(mocks.toastWarning).toHaveBeenCalledWith(
 			'The studio finish could not add depth, so the scene was published without it.',
-			{ description: 'WebGL 2 is unavailable' }
+			{ description: STUDIO_FINISH_FAILURES['no-webgl'].message }
 		)
 	})
 
@@ -574,7 +577,10 @@ describe('the publish panel', () => {
 				return {
 					buffer: PUBLISHED.slice().buffer,
 					geometryCodec: 'none',
-					occlusion: { failed: 'The GPU reset while baking ambient occlusion' },
+					occlusion: {
+						failed: 'gpu-reset',
+						detail: 'GPU reset while baking body'
+					},
 					lights: { baked: ['body'], skipped: [] }
 				}
 			}
@@ -667,7 +673,7 @@ describe('the publish panel', () => {
 		mocks.runPublishExportInWorker.mockResolvedValue({
 			buffer: PUBLISHED.slice().buffer,
 			geometryCodec: 'none',
-			occlusion: { failed: 'WebGL 2 is unavailable' }
+			occlusion: { failed: 'no-webgl', detail: 'Error creating WebGL context.' }
 		})
 		mocks.publishSceneFromGlb.mockRejectedValue(new Error('network down'))
 		renderPanel(balancedPreset, (store) =>

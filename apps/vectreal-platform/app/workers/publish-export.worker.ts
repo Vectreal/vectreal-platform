@@ -22,9 +22,16 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
  * a frozen publisher.
  */
 
-import { bakeLightsIntoDocument } from '@vctrl/core/light-bake'
+import {
+	bakeLightsIntoDocument,
+	DEFAULT_LIGHT_BAKE_OPTIONS
+} from '@vctrl/core/light-bake'
 import { ModelExporter } from '@vctrl/core/model-exporter'
-import { bakeOcclusionIntoDocument } from '@vctrl/core/occlusion-bake'
+import {
+	bakeOcclusionIntoDocument,
+	bakeWithRecovery,
+	DEFAULT_OCCLUSION_BAKE_OPTIONS
+} from '@vctrl/core/occlusion-bake'
 import { WebGLRenderer } from 'three'
 
 import {
@@ -37,18 +44,6 @@ import type {
 	PublishExportOutcome,
 	PublishExportRequest
 } from './publish-export.worker.types'
-
-/** A failed bake publishes the model without it, so its error is reported, not thrown. */
-async function attempt<T>(
-	bake: () => Promise<T>,
-	fallback: string
-): Promise<T | { failed: string }> {
-	try {
-		return await bake()
-	} catch (error) {
-		return { failed: error instanceof Error ? error.message : fallback }
-	}
-}
 
 function post(message: PublishExportMessage, transfer: Transferable[] = []) {
 	self.postMessage(message, { transfer })
@@ -75,11 +70,12 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 
 	let occlusionReport: PublishExportOutcome['occlusion']
 	let lightsReport: PublishExportOutcome['lights']
-	// One renderer for both bakes, on a canvas nothing displays, made only
-	// when a bake has something to bake.
-	let renderer: WebGLRenderer | undefined
+	// On a canvas nothing displays. Each bake attempt makes its own, only when
+	// it has something to bake, and `bakeWithRecovery` disposes it, so a GPU
+	// reset in one bake never reaches the next. A failed bake publishes the
+	// model without it, so its reason is reported, not thrown.
 	const bakeRenderer = () =>
-		(renderer ??= new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) }))
+		new WebGLRenderer({ canvas: new OffscreenCanvas(1, 1) })
 	// Textures encode in workers of their own, several at once.
 	const encoders = ktx2
 		? createKtx2EncoderPool(
@@ -100,28 +96,30 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 						? async (document) => {
 								// Occlusion first: the light bake bakes past it.
 								if (occlusion) {
-									occlusionReport = await attempt(
-										() =>
+									occlusionReport = await bakeWithRecovery(
+										(renderer, options) =>
 											bakeOcclusionIntoDocument(
 												document,
-												bakeRenderer,
-												undefined,
+												renderer,
+												options,
 												bakeProgress('occlusion')
 											),
-										'Occlusion bake failed'
+										bakeRenderer,
+										DEFAULT_OCCLUSION_BAKE_OPTIONS
 									)
 								}
 								if (lights) {
-									lightsReport = await attempt(
-										() =>
+									lightsReport = await bakeWithRecovery(
+										(renderer, options) =>
 											bakeLightsIntoDocument(
 												document,
 												lights,
-												bakeRenderer,
-												undefined,
+												renderer,
+												options,
 												bakeProgress('lights')
 											),
-										'Light bake failed'
+										bakeRenderer,
+										DEFAULT_LIGHT_BAKE_OPTIONS
 									)
 								}
 							}
@@ -165,7 +163,6 @@ self.onmessage = async (event: MessageEvent<PublishExportRequest>) => {
 			message: error instanceof Error ? error.message : 'Publish export failed'
 		})
 	} finally {
-		renderer?.dispose()
 		encoders?.dispose()
 	}
 }

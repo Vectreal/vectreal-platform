@@ -16,12 +16,12 @@ import {
 	toUpgradeModalPayload
 } from '../../../../../lib/domain/billing/client/billing-limit-error'
 import { optimizationsMatch } from '../../../../../lib/domain/scene/client/optimization-inference'
+import { runPublishExportInWorker } from '../../../../../lib/domain/scene/client/publish-export'
+import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
 import {
 	lightBakeWarning,
-	occlusionBakeWarning,
-	runPublishExportInWorker
-} from '../../../../../lib/domain/scene/client/publish-export'
-import { publishSceneFromGlb } from '../../../../../lib/domain/scene/client/scene-publish'
+	occlusionBakeWarning
+} from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import {
 	shouldShowInfoPopover,
 	withCompressTexturesForGpu,
@@ -163,7 +163,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 					await exporterRef.current.exportDocumentGLB(document)
 				result = await runPublishExportInWorker(
 					{
-						buffer: workingGlb.slice().buffer as ArrayBuffer,
+						glb: workingGlb,
 						...publishExport.request
 					},
 					(progress) =>

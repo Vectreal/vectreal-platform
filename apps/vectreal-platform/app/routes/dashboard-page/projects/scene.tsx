@@ -7,7 +7,8 @@ import { Route } from './+types/scene'
 import {
 	InlineEditableMetadataField,
 	SceneAside,
-	ScenePreviewOverlay
+	ScenePreviewOverlay,
+	SceneRenderFailure
 } from '../../../components/dashboard'
 import { DetailPanelSection } from '../../../components/layout-components'
 import SceneEmbedViewer from '../../../components/scene-embed/scene-embed-viewer'
@@ -309,6 +310,17 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		navigate(publisherPath, { viewTransition: true })
 	}, [navigate, publisherPath])
 
+	// Stable, because the viewer is memoized.
+	const renderFailure = useCallback(
+		(retry: () => void) => (
+			<SceneRenderFailure
+				onRetry={retry}
+				onOpenPublisher={openPublisherForPublishing}
+			/>
+		),
+		[openPublisherForPublishing]
+	)
+
 	// Always from the server: the document's manifest signs its asset URLs for
 	// an hour or two, and a retry in a tab left open longer would replay them.
 	const retrySceneLoad = useCallback(() => {
@@ -388,6 +400,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 							  their system setting.
 							*/
 							theme={colorScheme}
+							renderFailure={renderFailure}
 						/>
 						<ScenePreviewOverlay previewPath={previewPath} />
 					</section>

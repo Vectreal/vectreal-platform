@@ -152,6 +152,9 @@ type EmbedEventMap = {
   animation_clip_finished: { clipId: string }
   environment_load_failed: { files: string[] }
   environment_loaded: { files: string[] }
+  context_lost: void
+  context_restored: void
+  render_failed: { reason: 'context_lost' }
   shadow_bake_skipped: {
     reason: 'touch_device' | 'over_budget'
     estimatedDraws: number

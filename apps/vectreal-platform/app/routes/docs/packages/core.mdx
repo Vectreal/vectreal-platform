@@ -50,6 +50,7 @@ to match:
 | Remote models | `@vctrl/core/model-loader` | A model at a URL, as the files a drop would give: `fetchModelFiles`, `ModelFetchError` |
 | Scene asset helpers | `@vctrl/core` | Free functions for asset URI, MIME type and base64 handling, plus the shared server payload types |
 | Scene lighting | `@vctrl/core` | How a scene is lit, as stored and as drawn: `LightingSettings`, `resolveLighting`, `MAX_SCENE_LIGHTS` |
+| Scene cameras | `@vctrl/core/scene-camera` | Which camera a scene opens on, what a stored camera resolves to, and the flight between two: `resolveCameraPose`, `sampleCameraFlight`, `isSceneCamera` |
 | Occlusion bake | `@vctrl/core/occlusion-bake` | Bake ambient occlusion into a model's own textures: `planOcclusionBake`, `bakeOcclusion`, `writeOcclusionBake` |
 
 ---
@@ -633,6 +634,35 @@ present packages/core/src/model-loader/baked-lightmap-plugin.ts params.lightMapI
 present packages/core/src/io-extensions.ts export const IO_EXTENSIONS = [...ALL_EXTENSIONS, VectrealLightmap]
 present packages/core/src/scene-lighting/baked-lights.ts export const BAKED_LIGHTMAP_USER_DATA = 'vectrealLightmap'
 */}
+
+---
+
+## Scene cameras
+
+The camera model the viewer runs on, without a renderer. It needs only `three`, and is published at `@vctrl/core/scene-camera` as well as the package root.
+
+| Export | What it answers |
+|---|---|
+| `isSceneCamera(camera)` | Whether a camera is one a scene opens on and switches between (a missing `kind` counts) rather than a hotspot's close-up |
+| `normalizeCameraSettings(camera)` | The stored settings with ids, names and the initial camera filled in |
+| `resolveCameraPose(cameras, cameraId, live, openingPose?)` | Where a stored camera puts the view. Missing parts of the pose are completed from `live`, the camera currently shown |
+| `sampleCameraFlight(flight, progress, out?, up?)` | The pose at one moment of the flight between two cameras, as the viewer flies it |
+| `easeFlightProgress(t, easing?)` | The flight's easing on its own |
+| `clampToOrbitLimits(position, target, up, limits)` | Where orbit controls with these limits would hold a position |
+| `resolveHotspotCameraTargets(cameras, hotspots)` | Hotspot cameras aimed at their hotspots, where the author set no target |
+| `cameraSelectionSignature(cameras, cameraId)` | A comparable string of what was stored for a camera, to tell an edit from a switch |
+
+```ts
+import { resolveCameraPose } from '@vctrl/core/scene-camera'
+import { Vector3 } from 'three'
+
+const pose = resolveCameraPose(scene.camera?.cameras, 'detail', {
+  position: new Vector3(0, 1, 4),
+  target: new Vector3(),
+  fov: 50
+})
+// pose.position, pose.target, pose.rotation, pose.fov
+```
 
 ---
 

@@ -34,6 +34,10 @@ import {
 	NormalizationOptions,
 	ShadowsProps
 } from '@vctrl/core'
+import {
+	resolveHotspotCameraTargets,
+	type OpeningPose
+} from '@vctrl/core/scene-camera'
 // import { Perf } from 'r3f-perf'
 import {
 	memo,
@@ -63,7 +67,6 @@ import {
 	SceneControls,
 	type ViewerView,
 	SceneEnvironment,
-	resolveHotspotCameraTargets,
 	resolveHotspotMarkers,
 	SceneHotspots,
 	SceneLights,
@@ -87,13 +90,13 @@ import {
 	resolveSceneViewCameras
 } from './components/scene/scene-view-return'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
+import { type ContextLossEvent } from './hooks/use-context-loss-recovery'
 import { useHeldExecutor } from './hooks/use-held-executor'
 import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useSrcModel } from './hooks/use-src-model'
 import { useViewerLoading } from './hooks/use-viewer-loading'
 
 import type { HotspotPositionSetter } from './components/scene'
-import type { OpeningPose } from './components/scene/opening-pose'
 import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type { SrcLoadOptions, SrcModel } from './load-src'
 import type {
@@ -495,6 +498,14 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	errorFallback?: React.ReactNode
 
 	/**
+	 * Drawn in place of the canvas when the browser took the WebGL context away
+	 * and the viewer gave up waiting for it (see `render_failed`). Receives a
+	 * `retry` that mounts a fresh canvas. Defaults to a one-line message with a
+	 * "Try again" button.
+	 */
+	renderFailure?: (retry: () => void) => React.ReactNode
+
+	/**
 	 * Optional thumbnail rendered as a blurred backdrop under the loader.
 	 */
 	loadingThumbnail?: ViewerLoadingThumbnail
@@ -611,6 +622,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		popover,
 		loadingThumbnail,
 		loader = <DefaultSpinner />,
+		renderFailure,
 		// Callbacks & events
 		onScreenshot,
 		onScreenshotCaptureReady,
@@ -1007,6 +1019,17 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
 		Boolean(loader)
 	)
+	// Giving up replaces the overlay, loader and all, with the failure state, so
+	// a loader caught mid-fade never reports the end of its fade. Without this
+	// the state stays `loaded` through "Try again" and every piece of chrome
+	// stays hidden on the scene that then draws.
+	const handleContextLossEvent = useCallback(
+		(event: ContextLossEvent) => {
+			if (event.type === 'render_failed') completeLoadingTransition()
+			handleInteractionEvent(event)
+		},
+		[completeLoadingTransition, handleInteractionEvent]
+	)
 	// Shadow maps are drawn for the lights, and the ground's bake needs the
 	// model to cast into it.
 	const shadowsEnabled =
@@ -1025,6 +1048,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 				theme={theme}
 				loadingState={loadingState}
 				onContainerChange={setContainer}
+				onContextLossEvent={handleContextLossEvent}
+				renderFailure={renderFailure}
 				overlay={
 					<Overlay
 						loadingState={loadingState}

@@ -12,6 +12,7 @@ declare global {
 			error?: string
 		}
 		__VIEWER_READY__?: boolean
+		__VIEWER_EVENTS__?: string[]
 		__HOOKS_E2E__?: { status: 'ok' | 'crashed'; error?: string }
 		__SRC_E2E__?: {
 			status: 'loaded' | 'error'

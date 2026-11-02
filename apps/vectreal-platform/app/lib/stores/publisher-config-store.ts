@@ -24,9 +24,8 @@ import type {
 	PublishExportOutcome,
 	PublishExportProgress
 } from '../../workers/publish-export.worker.types'
+import type { StudioFinishFailure } from '../domain/scene/client/studio-finish-reasons'
 import type { LightingSettings, SceneSettings } from '@vctrl/core'
-import type { LightBakeReport } from '@vctrl/core/light-bake'
-import type { OcclusionBakeReport } from '@vctrl/core/occlusion-bake'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
 import type { Object3D } from 'three'
 
@@ -318,10 +317,7 @@ interface BakePreview {
 	 * One per bake that ran. A bake that failed says why, while the other is
 	 * shown, as publishing ships it.
 	 */
-	reports?: {
-		occlusion?: OcclusionBakeReport | { failed: string }
-		lights?: LightBakeReport | { failed: string }
-	}
+	reports?: Pick<PublishExportOutcome, 'occlusion' | 'lights'>
 	/**
 	 * Once ready: the file exactly as publishing would ship it for `source`,
 	 * which publish uploads rather than exporting again.
@@ -330,7 +326,8 @@ interface BakePreview {
 	/** Restored from the finish saved with the scene, which has no `outcome`. */
 	restored?: true
 	durationMs?: number
-	error?: string
+	/** Once failed: why nothing was drawn. */
+	failure?: StudioFinishFailure
 }
 
 const bakePreviewAtom = atom<BakePreview | null>(null)

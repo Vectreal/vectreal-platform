@@ -199,6 +199,29 @@ describe('VectrealEmbed environment fallback', () => {
 	})
 })
 
+describe('VectrealEmbed lost context', () => {
+	// A blank canvas fails nothing on the host page, so these are its only sign.
+	it('passes on the loss, the restore and the give-up with its reason', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onLost = vi.fn()
+		const onRestored = vi.fn()
+		const onFailed = vi.fn()
+		embed.on('context_lost', onLost)
+		embed.on('context_restored', onRestored)
+		embed.on('render_failed', onFailed)
+
+		viewerEvent(own, { type: 'context_lost' })
+		viewerEvent(own, { type: 'context_restored' })
+		viewerEvent(own, { type: 'render_failed', reason: 'context_lost' })
+
+		expect(onLost).toHaveBeenCalledOnce()
+		expect(onRestored).toHaveBeenCalledOnce()
+		expect(onFailed).toHaveBeenCalledWith({ reason: 'context_lost' })
+		embed.destroy()
+	})
+})
+
 describe('VectrealEmbed skipped shadow bake', () => {
 	it('passes on why the viewer drew a contact shadow instead', () => {
 		const own = iframe('scene-a')

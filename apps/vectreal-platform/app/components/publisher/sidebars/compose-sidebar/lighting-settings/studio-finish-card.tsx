@@ -39,6 +39,8 @@ interface StudioFinishCardProps {
 	status: FinishStatus
 	/** How far the preview has drawn, while it draws. */
 	progress?: BakePreview['progress']
+	/** Why nothing took the finish, shown when there is nothing to finish. */
+	nothingCaption?: string
 	/** False until a model is loaded, and while an optimization pass runs. */
 	canPreview: boolean
 	isOptimizing: boolean
@@ -54,6 +56,7 @@ interface StudioFinishCardProps {
 export function StudioFinishCard({
 	status,
 	progress,
+	nothingCaption,
 	canPreview,
 	isOptimizing,
 	onAdd,
@@ -81,6 +84,9 @@ export function StudioFinishCard({
 				them at no cost.
 			</PanelCaption>
 
+			{status === 'nothing' && nothingCaption && (
+				<PanelCaption>{nothingCaption}</PanelCaption>
+			)}
 			{status === 'off' && (
 				<Button variant="brand" className="w-full" onClick={onAdd}>
 					Add studio finish

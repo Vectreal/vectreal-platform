@@ -19,7 +19,16 @@ const source = readFileSync(
 
 describe('the opening pose is wired into SceneCamera', () => {
 	it('applies it to the camera being selected', () => {
-		expect(source).toContain('withOpeningPose(foundCamera, openingPose)')
+		// The resolver's pose math moved to `@vctrl/core`'s scene-camera module.
+		const resolver = readFileSync(
+			join(
+				import.meta.dirname,
+				'../../../../core/src/scene-camera/camera-pose.ts'
+			),
+			'utf8'
+		)
+		expect(resolver).toContain('withOpeningPose(foundCamera, openingPose)')
+		expect(source).toContain('resolveCameraPose(')
 	})
 
 	it('records it once framing completes, by either route', () => {

@@ -21,6 +21,12 @@ import type { VectrealViewerProps } from '@vctrl/viewer'
 
 const captured: VectrealViewerProps[] = []
 
+// Rendered without a router; the report it would make is asserted in
+// `scene-embed-render-failure.spec.tsx`.
+vi.mock('../app/lib/observability/use-error-report', () => ({
+	useErrorReport: () => undefined
+}))
+
 vi.mock('../app/components/viewer/client-vectreal-viewer', () => ({
 	ClientVectrealViewer: (props: VectrealViewerProps) => {
 		captured.push(props)

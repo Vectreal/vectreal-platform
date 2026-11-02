@@ -160,6 +160,34 @@ export interface EnvironmentLoadedInteractionEvent {
 }
 
 /**
+ * Emitted when the browser takes the viewer's WebGL context away, which a
+ * phone does when the page runs short of graphics memory. The canvas is blank
+ * from this moment; `context_restored` follows if the browser hands a context
+ * back, and `render_failed` if it does not.
+ */
+export interface ContextLostInteractionEvent {
+	type: 'context_lost'
+}
+
+/**
+ * Emitted when the browser hands a WebGL context back after `context_lost`.
+ * The viewer redraws the scene it already holds, without loading it again.
+ */
+export interface ContextRestoredInteractionEvent {
+	type: 'context_restored'
+}
+
+/**
+ * Emitted when the viewer stops trying to draw and shows that the scene could
+ * not be shown: the context was not restored in time, or was lost again soon
+ * after a restore. A visitor can still ask for another try.
+ */
+export interface RenderFailedInteractionEvent {
+	type: 'render_failed'
+	reason: 'context_lost'
+}
+
+/**
  * Emitted when the viewer draws a contact shadow in place of baking the
  * ground shadow live, because the scene has no valid stored bake and the
  * viewer was asked to stay within budget (`liveShadowBake="within-budget"`).
@@ -201,11 +229,14 @@ export type ViewerInteractionEvent =
 	| AnimationStateChangedInteractionEvent
 	| AutoRotateChangedInteractionEvent
 	| CameraChangedInteractionEvent
+	| ContextLostInteractionEvent
+	| ContextRestoredInteractionEvent
 	| EnvironmentLoadFailedInteractionEvent
 	| EnvironmentLoadedInteractionEvent
 	| HotspotActivatedInteractionEvent
 	| InitialFramingCompletedInteractionEvent
 	| ModelLoadedInteractionEvent
+	| RenderFailedInteractionEvent
 	| ShadowBakeSkippedInteractionEvent
 	| ViewerReadyInteractionEvent
 

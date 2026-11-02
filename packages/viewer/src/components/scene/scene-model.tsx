@@ -24,13 +24,8 @@ import { resolveClipPlanes, type ClipExtentRegistry } from './clip-planes'
 import { useModelFrame, type ModelKey } from './model-frame'
 import { worldBounds } from './model-measurement'
 import { resolveCameraSelection } from './scene-camera'
-import {
-	buildCaptureCamera,
-	type CapturePose,
-	type OrbitLimits
-} from './screenshot-pose'
+import { buildCaptureCamera, type CapturePose } from './screenshot-pose'
 
-import type { OpeningPose } from './opening-pose'
 import type {
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
@@ -40,6 +35,7 @@ import type {
 	NormalizationOptions,
 	SceneBackdrop
 } from '@vctrl/core'
+import type { OpeningPose, OrbitLimits } from '@vctrl/core/scene-camera'
 
 /**
  * Anisotropic filtering keeps textures sharp on surfaces seen at a glancing

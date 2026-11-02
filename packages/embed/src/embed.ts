@@ -57,6 +57,19 @@ export type EmbedEventMap = {
 	/** The environment map has loaded, including after it failed once. */
 	environment_loaded: { files: string[] }
 	/**
+	 * The browser took the viewer's WebGL context away, which phones do when a
+	 * page runs short of graphics memory. The scene is blank until
+	 * `context_restored` or `render_failed` follows.
+	 */
+	context_lost: void
+	/** The browser handed the context back and the scene is drawn again. */
+	context_restored: void
+	/**
+	 * The viewer stopped trying and shows that the scene could not be shown on
+	 * this device. A visitor can still ask it to try again.
+	 */
+	render_failed: { reason: 'context_lost' }
+	/**
 	 * The viewer drew a contact shadow in place of baking the ground shadow
 	 * live, because the scene has no valid stored bake and this device or the
 	 * scene is over the live-bake budget. Publishing the scene again stores a
@@ -467,6 +480,15 @@ export class VectrealEmbed {
 				break
 			case 'environment_loaded':
 				this.emit('environment_loaded', { files: event.files })
+				break
+			case 'context_lost':
+				this.emit('context_lost', undefined as void)
+				break
+			case 'context_restored':
+				this.emit('context_restored', undefined as void)
+				break
+			case 'render_failed':
+				this.emit('render_failed', { reason: event.reason })
 				break
 			case 'shadow_bake_skipped':
 				this.emit('shadow_bake_skipped', {

@@ -35,6 +35,9 @@ present packages/viewer/src/components/scene/live-bake-budget.ts LIVE_BAKE_DRAW_
 present packages/viewer/src/hooks/use-animation-runtime.ts type: 'animation_state_changed',
 present packages/viewer/src/components/scene/scene-animation.tsx type: 'animation_clip_finished',
 present packages/viewer/src/vectreal-viewer.tsx type: 'environment_load_failed',
+present packages/viewer/src/hooks/use-context-loss-recovery.ts type: 'render_failed', reason: 'context_lost'
+present packages/viewer/src/hooks/use-context-loss-recovery.ts CONTEXT_RESTORE_TIMEOUT_MS = 3_000
+present packages/viewer/src/hooks/use-context-loss-recovery.ts REPEATED_CONTEXT_LOSS_WINDOW_MS = 60_000
 present packages/viewer/src/vectreal-viewer.tsx showAnimationControls?: boolean
 present packages/viewer/src/index.ts default as AnimationControls,
 exists packages/viewer/vitest.config.ts
@@ -146,6 +149,7 @@ present packages/viewer/src/components/animation-controls.tsx className={withHos
 | `popover` | `React.ReactNode` | No | Optional info popover slot. Its content is unmounted until the viewer reaches `ready`, after the loader's cross-fade |
 | `loader` | `React.ReactNode` | No | Custom loading UI, default is a built-in spinner. `loader={null}` renders no loader and skips the `loaded` cross-fade, taking the viewer from `loading` straight to `ready` |
 | `errorFallback` | `React.ReactNode` | No | Shown in place of `loader` when `src` could not be loaded. Default is a one-line message; `null` shows nothing |
+| `renderFailure` | `(retry: () => void) => React.ReactNode` | No | Drawn in place of the canvas when the browser took the WebGL context away and the viewer gave up waiting for it (`render_failed`). `retry` mounts a fresh canvas. Default is a one-line message with a **Try again** button |
 | `loadingThumbnail` | `ViewerLoadingThumbnail` | No | Optional blurred loading thumbnail |
 | `onScreenshot` | `(dataUrl: string) => void` | No | Called when a screenshot is captured |
 | `onScreenshotCaptureReady` | `(capture: SceneScreenshotCapture \| null) => void` | No | Receives capture function for on-demand screenshots |
@@ -233,10 +237,10 @@ Each camera entry extends `PerspectiveCameraProps` from Drei and adds viewer-spe
 
 ### Sampling a flight outside the viewer
 
-`sampleCameraFlight` is the flight between two cameras as a pure function of raw progress, the same one the viewer samples every frame. A renderer that draws frames itself, out of order or at a fixed rate, calls it per frame and gets the path the viewer flies. Import it from `@vctrl/viewer/camera-flight`, which needs only `three`, or from the package root.
+`sampleCameraFlight` is the flight between two cameras as a pure function of raw progress, the same one the viewer samples every frame. A renderer that draws frames itself, out of order or at a fixed rate, calls it per frame and gets the path the viewer flies. It is defined in `@vctrl/core/scene-camera`, which needs only `three`. The older `@vctrl/viewer/camera-flight` entry point and the viewer's root export still work, but are deprecated and may be removed in `@vctrl/viewer` 4.0.0.
 
 ```ts
-import { sampleCameraFlight } from '@vctrl/viewer/camera-flight'
+import { sampleCameraFlight } from '@vctrl/core/scene-camera'
 import { Sphere, Vector3 } from 'three'
 
 const flight = {
@@ -455,6 +459,9 @@ Current commands:
 | `animation_clip_finished` | `{ clipId: string }` | One animation clip ran to its end |
 | `environment_load_failed` | `{ files: string[] }` | The environment map could not be loaded; the scene is lit by a neutral room instead |
 | `environment_loaded` | `{ files: string[] }` | The environment map loaded, including after an earlier failure |
+| `context_lost` | none | The browser took the WebGL context away, as a phone does when the page runs short of graphics memory; the canvas is blank until one of the next two follows |
+| `context_restored` | none | The browser gave the context back; the viewer redraws the scene it holds without loading it again |
+| `render_failed` | `{ reason: 'context_lost' }` | The context did not come back within 3 seconds, or was lost again within a minute of a restore; the viewer shows that the scene could not be shown, with a **Try again** button |
 | `shadow_bake_skipped` | `{ reason: 'touch_device' \| 'over_budget'; estimatedDraws: number }` | With `liveShadowBake="within-budget"`, the viewer drew a contact shadow instead of baking the ground shadow live. Publishing the scene again stores a bake every device shows |
 
 `ViewerInteractionEvent` also declares `model_loaded` and `auto_rotate_changed`. Both belong to the union a handler has to narrow, and neither is emitted by the current runtime.

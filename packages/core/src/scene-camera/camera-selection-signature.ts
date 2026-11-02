@@ -1,4 +1,4 @@
-import type { CameraProps } from '@vctrl/core'
+import type { CameraProps } from '../types'
 
 /**
  * A signature only this module can mint.

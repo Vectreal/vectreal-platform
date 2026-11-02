@@ -6,13 +6,14 @@
  * during load, so any disagreement between the two shows up as a jump the
  * moment the scene appears.
  *
- * The `!kind || kind === 'scene'` test used to be written out at five call
- * sites. Having one definition is what keeps the thumbnail, the save-time
- * recapture, and the preview controls agreeing on which camera that is.
+ * Which cameras are scene cameras is `isSceneCamera` in `@vctrl/core`, the
+ * one definition the viewer and normalization use too. Sharing it is what
+ * keeps the thumbnail, the save-time recapture, and the preview controls
+ * agreeing on which camera that is.
  *
- * Isomorphic and dependency-free, so the server-side settings parser can share
- * it with the client.
+ * Isomorphic, so the server-side settings parser can share it with the client.
  */
+import { isSceneCamera } from '@vctrl/core'
 
 /**
  * Structural minimum for a camera entry.
@@ -30,14 +31,6 @@ export interface CameraLike {
 	lookAt?: unknown
 	fov?: unknown
 }
-
-/**
- * Scene cameras are the ones a viewer can open on. Entries with another `kind`
- * (annotation hotspots and the like) are navigational and never the default.
- * A missing `kind` predates the field and means "scene".
- */
-export const isSceneCamera = (entry: CameraLike): boolean =>
-	!entry.kind || entry.kind === 'scene'
 
 /** Id prefix the publisher mints every hotspot-paired camera with. */
 export const PAIRED_HOTSPOT_CAMERA_ID_PREFIX = 'hotspot-camera-'

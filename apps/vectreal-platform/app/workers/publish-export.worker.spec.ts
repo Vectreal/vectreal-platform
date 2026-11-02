@@ -21,26 +21,47 @@ const mocks = vi.hoisted(() => ({
 	bakeOcclusionIntoDocument: vi.fn(),
 	bakeLightsIntoDocument: vi.fn(),
 	createRenderer: vi.fn(),
-	disposeRenderer: vi.fn()
+	disposeRenderer: vi.fn(),
+	forceContextLoss: vi.fn()
 }))
+
+/** The options the worker bakes with, as core's defaults stand in the mock. */
+const OCCLUSION_OPTIONS = { resolution: 512, samples: 256, distance: 0.25 }
+const LIGHT_OPTIONS = { resolution: 512, samples: 128 }
+
+/** A renderer the mock made, whose context a test can lose. */
+interface FakeRenderer {
+	lost: boolean
+}
 
 vi.mock('@vctrl/core/model-exporter', () => ({
 	ModelExporter: class {
 		exportGlbForPublish = mocks.exportGlbForPublish
 	}
 }))
-vi.mock('@vctrl/core/occlusion-bake', () => ({
-	bakeOcclusionIntoDocument: mocks.bakeOcclusionIntoDocument
+// The real recovery, so these cover how the worker relies on it.
+vi.mock('@vctrl/core/occlusion-bake', async () => ({
+	bakeOcclusionIntoDocument: mocks.bakeOcclusionIntoDocument,
+	bakeWithRecovery: (
+		await vi.importActual<
+			typeof import('../../../../packages/core/src/occlusion-bake/bake-outcome')
+		>('../../../../packages/core/src/occlusion-bake/bake-outcome')
+	).bakeWithRecovery,
+	DEFAULT_OCCLUSION_BAKE_OPTIONS: OCCLUSION_OPTIONS
 }))
 vi.mock('@vctrl/core/light-bake', () => ({
-	bakeLightsIntoDocument: mocks.bakeLightsIntoDocument
+	bakeLightsIntoDocument: mocks.bakeLightsIntoDocument,
+	DEFAULT_LIGHT_BAKE_OPTIONS: LIGHT_OPTIONS
 }))
 vi.mock('three', () => ({
-	WebGLRenderer: class {
+	WebGLRenderer: class implements FakeRenderer {
+		lost = false
 		constructor() {
-			mocks.createRenderer()
+			mocks.createRenderer(this)
 		}
 		dispose = mocks.disposeRenderer
+		forceContextLoss = mocks.forceContextLoss
+		getContext = () => ({ isContextLost: () => this.lost })
 	}
 }))
 vi.mock('./ktx2-encoder-pool', () => ({
@@ -198,10 +219,11 @@ describe('the publish export worker', () => {
 		expect(mocks.bakeOcclusionIntoDocument).toHaveBeenCalledWith(
 			exportedDocument,
 			expect.any(Function),
-			undefined,
+			OCCLUSION_OPTIONS,
 			expect.any(Function)
 		)
 		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
+		expect(mocks.forceContextLoss).toHaveBeenCalledOnce()
 		expect(messages.at(-1)).toMatchObject({
 			type: 'done',
 			occlusion: occlusionReport
@@ -260,7 +282,7 @@ describe('the publish export worker', () => {
 		})
 	})
 
-	it('bakes the lights after the occlusion, on the same renderer, and reports both', async () => {
+	it('bakes the lights after the occlusion, each on a renderer of its own, and reports both', async () => {
 		const order: string[] = []
 		mocks.bakeOcclusionIntoDocument.mockImplementation(
 			async (_document: Document, renderer: () => unknown) => {
@@ -293,11 +315,11 @@ describe('the publish export worker', () => {
 			exportedDocument,
 			lighting,
 			expect.any(Function),
-			undefined,
+			LIGHT_OPTIONS,
 			expect.any(Function)
 		)
-		expect(mocks.createRenderer).toHaveBeenCalledOnce()
-		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
+		expect(mocks.createRenderer).toHaveBeenCalledTimes(2)
+		expect(mocks.disposeRenderer).toHaveBeenCalledTimes(2)
 		expect(messages.at(-1)).toMatchObject({
 			type: 'done',
 			occlusion: occlusionReport,
@@ -305,9 +327,12 @@ describe('the publish export worker', () => {
 		})
 	})
 
-	it('publishes without the lights when their bake fails, keeping the occlusion', async () => {
-		mocks.bakeLightsIntoDocument.mockRejectedValue(
-			new Error('The GPU reset while baking the studio lights')
+	it('publishes without the lights when the GPU resets on every try, keeping the occlusion', async () => {
+		mocks.bakeLightsIntoDocument.mockImplementation(
+			async (_d: Document, _l: unknown, renderer: () => FakeRenderer) => {
+				renderer().lost = true
+				throw new Error('The GPU reset while baking the studio lights')
+			}
 		)
 
 		const messages = await send({
@@ -320,15 +345,61 @@ describe('the publish export worker', () => {
 		expect(messages.at(-1)).toMatchObject({
 			type: 'done',
 			occlusion: occlusionReport,
-			lights: { failed: 'The GPU reset while baking the studio lights' }
+			lights: {
+				failed: 'gpu-reset',
+				detail: 'The GPU reset while baking the studio lights'
+			}
+		})
+		expect(mocks.bakeLightsIntoDocument).toHaveBeenCalledTimes(3)
+	})
+
+	it('gives the light bake a fresh renderer after the occlusion bake lost its own', async () => {
+		const occlusionRenderers: FakeRenderer[] = []
+		mocks.bakeOcclusionIntoDocument.mockImplementation(
+			async (_d: Document, renderer: () => FakeRenderer) => {
+				const current = renderer()
+				occlusionRenderers.push(current)
+				if (occlusionRenderers.length === 1) {
+					current.lost = true
+					throw new Error('The GPU reset while baking body')
+				}
+				return occlusionReport
+			}
+		)
+		let lightsRenderer: FakeRenderer | undefined
+		mocks.bakeLightsIntoDocument.mockImplementation(
+			async (_d: Document, _l: unknown, renderer: () => FakeRenderer) => {
+				lightsRenderer = renderer()
+				return lightsReport
+			}
+		)
+
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true,
+			lights: lighting
+		})
+
+		expect(lightsRenderer?.lost).toBe(false)
+		expect(occlusionRenderers).not.toContain(lightsRenderer)
+		expect(messages.at(-1)).toMatchObject({
+			type: 'done',
+			occlusion: { ...occlusionReport, recovered: 'retried' },
+			lights: lightsReport
 		})
 	})
 
-	it('publishes without occlusion when the bake fails, and says why', async () => {
+	it('bakes at lower detail after a second reset, and says so only in the report', async () => {
+		const options: unknown[] = []
 		mocks.bakeOcclusionIntoDocument.mockImplementation(
-			async (_document: Document, renderer: () => unknown) => {
-				renderer()
-				throw new Error('WebGL 2 is unavailable')
+			async (_d: Document, renderer: () => FakeRenderer, used: unknown) => {
+				options.push(used)
+				if (options.length < 3) {
+					renderer().lost = true
+					throw new Error('The GPU reset while baking body')
+				}
+				return occlusionReport
 			}
 		)
 
@@ -338,10 +409,41 @@ describe('the publish export worker', () => {
 			occlusion: true
 		})
 
-		expect(mocks.disposeRenderer).toHaveBeenCalledOnce()
+		expect(options).toEqual([
+			OCCLUSION_OPTIONS,
+			OCCLUSION_OPTIONS,
+			{ ...OCCLUSION_OPTIONS, resolution: 256, samples: 128 }
+		])
+		// The defaults the next bake starts from are as they were.
+		expect(OCCLUSION_OPTIONS).toEqual({
+			resolution: 512,
+			samples: 256,
+			distance: 0.25
+		})
 		expect(messages.at(-1)).toMatchObject({
 			type: 'done',
-			occlusion: { failed: 'WebGL 2 is unavailable' }
+			occlusion: { ...occlusionReport, recovered: 'lower-detail' }
+		})
+	})
+
+	it('publishes without occlusion when no renderer can be made, and does not retry', async () => {
+		mocks.createRenderer.mockImplementationOnce(() => {
+			throw new Error('Error creating WebGL context.')
+		})
+
+		const messages = await send({
+			dracoWorthApplying: true,
+			ktx2: false,
+			occlusion: true
+		})
+
+		expect(mocks.bakeOcclusionIntoDocument).toHaveBeenCalledOnce()
+		expect(messages.at(-1)).toMatchObject({
+			type: 'done',
+			occlusion: {
+				failed: 'no-webgl',
+				detail: 'Error creating WebGL context.'
+			}
 		})
 	})
 

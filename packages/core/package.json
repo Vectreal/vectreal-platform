@@ -61,6 +61,10 @@
 			"types": "./occlusion-bake/index.d.ts",
 			"default": "./occlusion-bake/index.js"
 		},
+		"./scene-camera": {
+			"types": "./scene-camera/index.d.ts",
+			"default": "./scene-camera/index.js"
+		},
 		"./node": {
 			"types": "./node/index.d.ts",
 			"default": "./node/index.js"

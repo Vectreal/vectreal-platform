@@ -159,6 +159,9 @@ or sending a host message. `destroy()` discards anything still queued.
 | `animation_clip_finished` | `{ clipId: string }` | A single clip ran to its end. |
 | `environment_load_failed` | `{ files: string[] }` | The scene's environment map could not be loaded, so the scene is lit by a neutral room instead. Nothing on the page fails; this is the only sign of it. |
 | `environment_loaded` | `{ files: string[] }` | The environment map loaded and lights the scene, including after an earlier `environment_load_failed`. |
+| `context_lost` | none | The browser took the viewer's WebGL context away, which phones do when a page runs short of graphics memory. The scene is blank until `context_restored` or `render_failed` follows. |
+| `context_restored` | none | The browser gave the context back and the scene is drawn again, without loading it again. |
+| `render_failed` | `{ reason: 'context_lost' }` | The viewer stopped trying and shows that the scene could not be shown on this device, with a **Try again** button. Sent when the context is not back within 3 seconds, or is lost again within a minute of a restore. |
 | `shadow_bake_skipped` | `{ reason: 'touch_device' \| 'over_budget', estimatedDraws: number }` | The scene has no valid stored shadow bake, and the viewer drew a soft contact shadow instead of baking one live, because the visitor is on a phone or tablet or the scene is too heavy. Publishing the scene again from the Publisher stores a bake every device shows. |
 | `auto_rotate_changed` | `{ enabled: boolean }` | Declared, but the viewer does not currently emit it. |
 | `interaction_event` | `{ eventName, interactionId?, payload? }` | A Publisher-configured `emit_custom_event` interaction fired. |

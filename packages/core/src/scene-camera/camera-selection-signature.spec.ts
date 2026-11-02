@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { cameraSelectionSignature } from './camera-selection-signature'
 
-import type { CameraConfig } from '@vctrl/core'
+import type { CameraConfig } from '../types'
 
 const camera = (overrides: Partial<CameraConfig> = {}): CameraConfig =>
 	({ cameraId: 'cam-a', name: 'A', ...overrides }) as CameraConfig
