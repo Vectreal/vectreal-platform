@@ -24,6 +24,15 @@ import type { Sphere } from 'three'
  *   model's bounding sphere is a floor on the distance from its center, never
  *   a reason to swing wide: the path only bends away where it would otherwise
  *   pass through the model.
+ *
+ * The lens zooms geometrically too, whatever the type: `tan(fov / 2)`, the
+ * width it frames per unit of distance, moves by equal ratios in equal time.
+ * The framed size the eye reads as zoom is distance times that width, so
+ * Smart's is one geometric curve from end to end wherever the path clears the
+ * model; where the floor pushes it out, the framed size widens with it. A
+ * field of view lerped in degrees fought the geometric distance, and a switch
+ * from a narrow lens to a wide one zoomed out past its destination halfway
+ * and came back.
  */
 
 export interface CameraFlightPose {
@@ -100,6 +109,18 @@ function shortestAngleDelta(a: number, b: number): number {
 function logLerp(a: number, b: number, t: number): number {
 	if (a < MIN_DISTANCE || b < MIN_DISTANCE) return a + (b - a) * t
 	return a * Math.pow(b / a, t)
+}
+
+const DEGREES = Math.PI / 180
+
+/** A vertical field of view, in degrees, part-way along the lens zoom. */
+function lensLerp(fromFov: number, toFov: number, t: number): number {
+	const halfWidth = logLerp(
+		Math.tan((fromFov * DEGREES) / 2),
+		Math.tan((toFov * DEGREES) / 2),
+		t
+	)
+	return (2 * Math.atan(halfWidth)) / DEGREES
 }
 
 /**
@@ -190,16 +211,22 @@ export function sampleCameraFlight(
 	const t = easeFlightProgress(rawProgress, flight.easing)
 
 	out.target.lerpVectors(from.target, to.target, t)
-	out.fov = from.fov + (to.fov - from.fov) * t
 
+	// The ends are copied: the lens's round trip through tan and atan is off
+	// by a rounding error, and a camera at rest must show its stored lens.
 	if (t <= 0) {
 		out.position.copy(from.position)
+		out.fov = from.fov
 	} else if (t >= 1) {
 		out.position.copy(to.position)
-	} else if (flight.type === 'object_avoidance') {
-		sampleOrbitPosition(flight, t, out.target, out.position)
+		out.fov = to.fov
 	} else {
-		out.position.lerpVectors(from.position, to.position, t)
+		out.fov = lensLerp(from.fov, to.fov, t)
+		if (flight.type === 'object_avoidance') {
+			sampleOrbitPosition(flight, t, out.target, out.position)
+		} else {
+			out.position.lerpVectors(from.position, to.position, t)
+		}
 	}
 
 	// A camera looks down its -z axis; Matrix4.lookAt with eye first matches

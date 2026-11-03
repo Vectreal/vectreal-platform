@@ -5,7 +5,8 @@ import {
 	easeFlightProgress,
 	sampleCameraFlight,
 	SMART_FLIGHT_CLEARANCE,
-	type CameraFlight
+	type CameraFlight,
+	type CameraFlightFrame
 } from './camera-flight'
 
 import type { CameraTransitionEasing } from '../types'
@@ -134,21 +135,87 @@ describe('sampleCameraFlight', () => {
 		expect(frame.target.toArray()).toEqual(
 			intoCloseUp.from.target.clone().lerp(intoCloseUp.to.target, 0.5).toArray()
 		)
-		expect(frame.fov).toBe(50)
+		expect(frame.fov).toBeCloseTo(50, 12)
+	})
+})
+
+describe('lens', () => {
+	const halfWidth = (fov: number) => Math.tan((fov * Math.PI) / 360)
+	/** The height framed at the target: what the eye reads as zoom. */
+	const framedHeight = (frame: CameraFlightFrame) =>
+		frame.position.distanceTo(frame.target) * halfWidth(frame.fov)
+
+	/** A narrow lens far out front to a wide one close at the side, as reported. */
+	const narrowToWide: CameraFlight = {
+		type: 'object_avoidance',
+		from: pose([0, 0.6, 5.5], [0, 0, 0], 30),
+		to: pose([2.2, 0.6, 0], [0, 0, 0], 70),
+		easing: 'ease_in_out',
+		bounds: unitModel
+	}
+	/** Two cameras framing the same height with different lenses: a dolly zoom. */
+	const dollyZoom: CameraFlight = {
+		type: 'object_avoidance',
+		from: pose([0, 0, 1.2 / halfWidth(30)], [0, 0, 0], 30),
+		to: pose([0, 0, 1.2 / halfWidth(70)], [0, 0, 0], 70),
+		easing: 'ease_in_out',
+		bounds: unitModel
+	}
+
+	const sampled = (flight: CameraFlight, count = 120) =>
+		Array.from({ length: count + 1 }, (_, index) =>
+			sampleCameraFlight(flight, index / count)
+		)
+
+	it("lands on each end's stored lens exactly", () => {
+		expect(sampleCameraFlight(narrowToWide, 0).fov).toBe(30)
+		expect(sampleCameraFlight(narrowToWide, 1).fov).toBe(70)
 	})
 
-	it('interpolates the field of view', () => {
-		const frame = sampleCameraFlight(
-			{
-				type: 'linear',
-				from: pose([0, 0, 3], [0, 0, 0], 40),
-				to: pose([0, 0, 3], [0, 0, 0], 60),
-				easing: 'linear'
-			},
-			0.25
-		)
-		expect(frame.fov).toBe(45)
+	it('zooms by equal ratios in equal time', () => {
+		const flight = {
+			...narrowToWide,
+			type: 'linear' as const,
+			easing: 'linear' as const
+		}
+		const ratio = halfWidth(70) / halfWidth(30)
+		for (const t of [0.25, 0.5, 0.75]) {
+			expect(halfWidth(sampleCameraFlight(flight, t).fov)).toBeCloseTo(
+				halfWidth(30) * Math.pow(ratio, t),
+				12
+			)
+		}
 	})
+
+	it.each(EASINGS)('never turns the lens back mid-flight (%s)', (easing) => {
+		for (const type of ['object_avoidance', 'linear'] as const) {
+			const fovs = sampled({ ...narrowToWide, type, easing }).map(
+				({ fov }) => fov
+			)
+			for (let i = 1; i < fovs.length; i++) {
+				expect(fovs[i]).toBeGreaterThanOrEqual(fovs[i - 1])
+			}
+		}
+	})
+
+	it.each(EASINGS)(
+		"moves Smart's framed size one way, never past either end (%s)",
+		(easing) => {
+			for (const flight of [narrowToWide, dollyZoom]) {
+				const heights = sampled({ ...flight, easing }).map(framedHeight)
+				const [first, last] = [heights[0], heights[heights.length - 1]]
+				const direction = Math.sign(last - first)
+				for (let i = 1; i < heights.length; i++) {
+					const step = heights[i] - heights[i - 1]
+					expect(step * direction).toBeGreaterThanOrEqual(-1e-9)
+					expect(heights[i]).toBeGreaterThanOrEqual(
+						Math.min(first, last) - 1e-9
+					)
+					expect(heights[i]).toBeLessThanOrEqual(Math.max(first, last) + 1e-9)
+				}
+			}
+		}
+	)
 })
 
 describe('Smart', () => {
