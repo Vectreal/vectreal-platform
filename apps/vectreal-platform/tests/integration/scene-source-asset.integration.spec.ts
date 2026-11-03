@@ -34,6 +34,16 @@ import type { SceneSettings } from '@vctrl/core'
 
 const deleteAssetsSpy = vi.fn()
 
+// The rows below have no storage objects behind them. The working manifest
+// reads the scene's glTF document, and a document that cannot be read fails
+// the manifest, so the read is answered here rather than by Supabase Storage.
+const GLTF_DOCUMENT = { asset: { version: '2.0' } }
+const downloadAssetSpy = vi.fn(async () => ({
+	data: new TextEncoder().encode(JSON.stringify(GLTF_DOCUMENT)),
+	mimeType: 'model/gltf+json',
+	fileName: 'scene.gltf'
+}))
+
 vi.mock(
 	'../../app/lib/domain/asset/asset-storage.server',
 	async (importOriginal) => {
@@ -41,7 +51,11 @@ vi.mock(
 			await importOriginal<
 				typeof import('../../app/lib/domain/asset/asset-storage.server')
 			>()
-		return { ...actual, deleteAssets: deleteAssetsSpy }
+		return {
+			...actual,
+			deleteAssets: deleteAssetsSpy,
+			downloadAsset: downloadAssetSpy
+		}
 	}
 )
 
@@ -151,6 +165,8 @@ describe('a scene that keeps its original', () => {
 			sceneId,
 			(assetId) => `/assets/${assetId}`
 		)
+		expect(downloadAssetSpy).toHaveBeenCalledWith(documentId)
+		expect(manifest.gltfJson).toEqual(GLTF_DOCUMENT)
 		expect(Object.keys(manifest.assetRefs ?? {})).toEqual([bufferId])
 		expect(manifest.assets?.map((asset) => asset.id).sort()).toEqual(
 			[documentId, bufferId].sort()
