@@ -526,21 +526,17 @@ class SceneSettingsService {
 	 * @returns Latest scene settings with associated assets and asset data
 	 */
 	async getSceneSettingsWithAssets(sceneId: string) {
-		let result: Awaited<ReturnType<typeof getSceneSettingsWithAssetsRow>>
 		let hotspots: import('@vctrl/core').HotspotDefinition[] = []
 
-		try {
-			result = await this.db.transaction(async (tx) => {
-				const row = await getSceneSettingsWithAssetsRow(tx, sceneId)
-				if (row) {
-					hotspots = await getHotspotsBySceneSettingsId(tx, row.settings.id)
-				}
-				return row
-			})
-		} catch (error) {
-			reportServerError(error, { properties: { sceneId } })
-			return null
-		}
+		// A failed read throws: answered as "no settings" it reached the client
+		// as a scene with no model data. The operation reports it and answers 500.
+		const result = await this.db.transaction(async (tx) => {
+			const row = await getSceneSettingsWithAssetsRow(tx, sceneId)
+			if (row) {
+				hotspots = await getHotspotsBySceneSettingsId(tx, row.settings.id)
+			}
+			return row
+		})
 
 		if (!result) return null
 
@@ -556,24 +552,32 @@ class SceneSettingsService {
 		// Download asset data from cloud storage
 		let gltfJson: ExtendedGLTFDocument | null = null
 		let assetDataMap: SceneAssetBinaryDataMap | null = null
+		const gltfAsset = sceneAssetsData.find(
+			(asset) => asset.mimeType === 'model/gltf+json'
+		)
 
 		if (assetIds.length > 0) {
+			// `downloadAssets` drops a failed download rather than throwing, so a
+			// textures-short scene still renders. The document is not optional
+			// like that: without it nothing renders, and answering `null` would
+			// say the scene has no model when its read failed.
 			try {
 				assetDataMap = await downloadAssets(assetIds)
-
-				// Find and parse the GLTF JSON asset
-				const gltfAsset = sceneAssetsData.find(
-					(asset) => asset.mimeType === 'model/gltf+json'
-				)
-
-				if (gltfAsset && assetDataMap.has(gltfAsset.id)) {
-					const gltfAssetData = assetDataMap.get(gltfAsset.id)
-					if (gltfAssetData) {
-						const jsonString = new TextDecoder().decode(gltfAssetData.data)
-						gltfJson = JSON.parse(jsonString) as ExtendedGLTFDocument
-					}
+				const gltfAssetData = gltfAsset && assetDataMap.get(gltfAsset.id)
+				if (gltfAsset && !gltfAssetData) {
+					throw new Error('the glTF document did not download')
+				}
+				if (gltfAssetData) {
+					const jsonString = new TextDecoder().decode(gltfAssetData.data)
+					gltfJson = JSON.parse(jsonString) as ExtendedGLTFDocument
 				}
 			} catch (error) {
+				if (gltfAsset) {
+					throw new Error(
+						`Failed to read the glTF document of scene ${sceneId}`,
+						{ cause: error }
+					)
+				}
 				// Continues without asset data rather than failing completely, so
 				// the caller renders a scene that is quietly missing pieces.
 				reportServerError(error, { properties: { sceneId } })
@@ -599,8 +603,9 @@ class SceneSettingsService {
 	 * editor glTF document, and downloading plus parsing it would be a storage
 	 * round-trip per embed load for bytes that are then discarded.
 	 *
-	 * `readErrors: 'throw'` lets a caller tell a failed read from a scene that
-	 * has no settings; by default a failure is reported and reads as null.
+	 * `readErrors: 'throw'` lets a caller tell a failed settings read from a
+	 * scene that has no settings; by default a failure is reported and reads as
+	 * null. A linked glTF document that cannot be read always throws.
 	 */
 	async getSceneSettingsWithAssetRefs(
 		sceneId: string,
@@ -633,6 +638,12 @@ class SceneSettingsService {
 			? sceneAssetsData.find((asset) => asset.mimeType === 'model/gltf+json')
 			: undefined
 
+		// A linked document that cannot be read is a failed read, never a scene
+		// without one: answering `gltfJson: null` here made a storage outage read
+		// as "this scene has no model data", and that body carried the same ETag
+		// as a good one, so a revalidating browser kept it. Throwing regardless
+		// of `readErrors` is deliberate: no caller wants a manifest without its
+		// document, and one with no document linked still gets `null` below.
 		if (gltfAsset) {
 			try {
 				const gltfAssetData = await downloadAsset(gltfAsset.id)
@@ -640,9 +651,10 @@ class SceneSettingsService {
 					new TextDecoder().decode(gltfAssetData.data)
 				) as ExtendedGLTFDocument
 			} catch (error) {
-				reportServerError(error, {
-					properties: { sceneId, assetId: gltfAsset.id }
-				})
+				throw new Error(
+					`Failed to read the glTF document of scene ${sceneId}`,
+					{ cause: error }
+				)
 			}
 		}
 

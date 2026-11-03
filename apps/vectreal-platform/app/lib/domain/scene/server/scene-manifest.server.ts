@@ -2,7 +2,6 @@ import { toLegacyLighting } from '@vctrl/core'
 
 import { shouldShowLoadingThumbnail } from '../scene-presentation'
 import { sceneSettingsService } from './scene-settings-service.server'
-import { reportServerError } from '../../../observability/report-server-error.server'
 import {
 	buildEmbedAssetRefs,
 	buildPublishedModelRef,
@@ -69,20 +68,23 @@ export async function buildSceneManifest(
 	const [sceneMetaResult, settingsResult, statsResult] =
 		await Promise.allSettled([
 			sceneSettingsService.getSceneMetadata(sceneId),
-			sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId),
+			sceneSettingsService.getSceneSettingsWithAssetRefs(sceneId, {
+				readErrors: 'throw'
+			}),
 			sceneSettingsService.getSceneStats(sceneId)
 		])
 
+	// The settings carry the model, so a failed read fails the manifest. A body
+	// built without them reads as a scene with nothing to load, under the same
+	// ETag a good body gets, which a revalidating browser would then keep.
+	// Meta and stats only decorate it, so they still degrade to null.
 	if (settingsResult.status === 'rejected') {
-		// The manifest is still returned, one segment short, so an embed renders
-		// something incomplete rather than failing visibly.
-		reportServerError(settingsResult.reason, { properties: { sceneId } })
+		throw settingsResult.reason
 	}
 
 	const sceneMeta =
 		sceneMetaResult.status === 'fulfilled' ? sceneMetaResult.value : null
-	const settingsData =
-		settingsResult.status === 'fulfilled' ? settingsResult.value : null
+	const settingsData = settingsResult.value
 	const stats = statsResult.status === 'fulfilled' ? statsResult.value : null
 
 	if (!settingsData) {

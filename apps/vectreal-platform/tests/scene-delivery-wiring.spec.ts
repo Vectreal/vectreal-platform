@@ -575,3 +575,17 @@ describe('uploaded marker artwork', () => {
 		)
 	})
 })
+
+describe('a failed working-manifest read', () => {
+	const route = read('routes/api/scenes.$sceneId.ts')
+
+	it('answers a fixed 500 with no ETag, never the error message', () => {
+		const memberCatch = route.match(
+			/properties: \{ sceneId, userId: authResult\.user\.id \}\s*\}\)([\s\S]*?)\n\t\}\n\}/
+		)
+		expect(memberCatch?.[1]).toMatch(
+			/return ApiResponse\.error\('Failed to load scene', 500\)/
+		)
+		expect(memberCatch?.[1]).not.toMatch(/error\.message|manifestResponse/)
+	})
+})

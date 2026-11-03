@@ -193,10 +193,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			request,
 			properties: { sceneId, userId: authResult.user.id }
 		})
-		return ApiResponse.error(
-			error instanceof Error ? error.message : 'Failed to load scene',
-			500
-		)
+		// Reported above with its detail. The message is not echoed: a failed
+		// read throws here, and a driver error's message carries its SQL.
+		return ApiResponse.error('Failed to load scene', 500)
 	}
 }
 
