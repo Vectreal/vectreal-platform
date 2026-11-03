@@ -261,8 +261,8 @@ export async function getSceneSettings(
 		reportServerError(error, {
 			properties: { sceneId: request.sceneId || null }
 		})
-		return ApiResponse.serverError(
-			error instanceof Error ? error.message : 'Failed to get scene settings'
-		)
+		// Reported above with its detail. The message is not echoed: a failed
+		// read throws here, and a driver error's message carries its SQL.
+		return ApiResponse.serverError('Failed to get scene settings')
 	}
 }
