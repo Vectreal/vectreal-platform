@@ -36,7 +36,10 @@ import type {
 	ViewerCommandExecutor,
 	ViewerInteractionEvent
 } from '../../types/viewer-interactions'
-import type { SceneCameraSnapshotCapture } from '../../types/viewer-types'
+import type {
+	SceneCameraSnapshot,
+	SceneCameraSnapshotCapture
+} from '../../types/viewer-types'
 
 /**
  * Default camera options for the VectrealViewer.
@@ -79,6 +82,12 @@ interface SceneCameraProps extends CameraProps {
 	 * `SceneModel`'s refit, which moves the camera outside this layer.
 	 */
 	framingReset?: RefObject<(() => void) | null>
+	/**
+	 * Filled here with a read of the view on screen as a camera stores it (the
+	 * camera snapshot), for `SceneModel`'s viewport capture, which renders that
+	 * pose fitted to its output.
+	 */
+	storedView?: RefObject<(() => SceneCameraSnapshot) | null>
 }
 
 export type ResolvedCameraSelection = {
@@ -155,6 +164,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		onCommandExecutorReady,
 		onInteractionEvent,
 		openingPose,
+		storedView,
 		transitionOverride
 	} = props
 	const { cameras, activeCameraId, sceneTransition } = {
@@ -251,34 +261,46 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 		syncDistanceLimits()
 	})
 
-	const captureCameraSnapshot =
-		useCallback<SceneCameraSnapshotCapture>(async () => {
-			const activeCamera = sceneCamera as PerspectiveCamera
-			const controlsTarget = controls?.target ?? new Vector3(0, 0, 0)
-			// As a camera stores it: without the fit on screen (`storedPose`).
-			const stored = framing.current?.storedPose(
-				activeCamera.position,
-				controlsTarget,
-				activeCamera.aspect,
-				flight.progress()
-			) ?? {
-				position: activeCamera.position,
-				framingAspect: activeCamera.aspect
-			}
+	const readStoredView = useCallback((): SceneCameraSnapshot => {
+		const activeCamera = sceneCamera as PerspectiveCamera
+		const controlsTarget = controls?.target ?? new Vector3(0, 0, 0)
+		// As a camera stores it: without the fit on screen (`storedPose`).
+		const stored = framing.current?.storedPose(
+			activeCamera.position,
+			controlsTarget,
+			activeCamera.aspect,
+			flight.progress()
+		) ?? {
+			position: activeCamera.position,
+			framingAspect: activeCamera.aspect
+		}
 
-			return {
-				position: [stored.position.x, stored.position.y, stored.position.z],
-				rotation: [
-					activeCamera.rotation.x,
-					activeCamera.rotation.y,
-					activeCamera.rotation.z
-				],
-				target: [controlsTarget.x, controlsTarget.y, controlsTarget.z],
-				fov: activeCamera.fov,
-				framingAspect: stored.framingAspect,
-				viewportAspect: activeCamera.aspect
-			}
-		}, [controls?.target, flight, sceneCamera])
+		return {
+			position: [stored.position.x, stored.position.y, stored.position.z],
+			rotation: [
+				activeCamera.rotation.x,
+				activeCamera.rotation.y,
+				activeCamera.rotation.z
+			],
+			target: [controlsTarget.x, controlsTarget.y, controlsTarget.z],
+			fov: activeCamera.fov,
+			framingAspect: stored.framingAspect,
+			viewportAspect: activeCamera.aspect
+		}
+	}, [controls?.target, flight, sceneCamera])
+
+	const captureCameraSnapshot = useCallback<SceneCameraSnapshotCapture>(
+		async () => readStoredView(),
+		[readStoredView]
+	)
+
+	useEffect(() => {
+		if (!storedView) return
+		storedView.current = readStoredView
+		return () => {
+			storedView.current = null
+		}
+	}, [readStoredView, storedView])
 
 	useEffect(() => {
 		onCameraSnapshotCaptureReady?.(captureCameraSnapshot)

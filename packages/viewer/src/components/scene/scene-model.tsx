@@ -1,7 +1,6 @@
 import { useBounds } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { resolveNormalizedScale } from '@vctrl/core'
-import { resolveCameraPose } from '@vctrl/core/scene-camera'
 import {
 	memo,
 	useCallback,
@@ -18,7 +17,8 @@ import {
 	PerspectiveCamera,
 	Sphere,
 	Texture,
-	Vector3
+	Vector3,
+	Vector4
 } from 'three'
 
 import { resolveClipPlanes, type ClipExtentRegistry } from './clip-planes'
@@ -26,11 +26,16 @@ import { useModelFrame, type ModelKey } from './model-frame'
 import { worldBounds } from './model-measurement'
 import {
 	buildCaptureCamera,
-	unfittedOrbitLimits,
-	type CapturePose
+	captureOrbitLimits,
+	centeredCaptureRegion,
+	resolveCapturePose,
+	viewCaptureCamera,
+	type CapturePose,
+	type CaptureRegion
 } from './screenshot-pose'
 
 import type {
+	SceneCameraSnapshot,
 	SceneScreenshotCapture,
 	SceneScreenshotOptions
 } from '../../types/viewer-types'
@@ -100,6 +105,11 @@ interface ModelProps {
 	/** The host's orbit distance limits, before the viewport fit scales them. */
 	distanceLimits?: OrbitDistanceLimits
 	/**
+	 * Filled by `SceneCamera` with a read of the view on screen as a camera
+	 * stores it. A viewport capture renders that pose fitted to its output.
+	 */
+	storedView?: RefObject<(() => SceneCameraSnapshot) | null>
+	/**
 	 * Resets the camera layer's viewport fit (see `SceneCamera`), called before
 	 * a refit here frames the model for this viewport.
 	 */
@@ -143,7 +153,8 @@ const AUTO_FIT_ELEVATION = 0.06
  */
 function solveAutoFitFraming(
 	object: Object3D,
-	camera: PerspectiveCamera
+	camera: PerspectiveCamera,
+	aspect: number
 ): null | { position: Vector3; target: Vector3 } {
 	// setFromObject reads matrixWorld off every descendant. A capture can be
 	// requested before the renderer has run a frame for the current state, so
@@ -157,10 +168,10 @@ function solveAutoFitFraming(
 	if (!(sphere.radius > 0)) return null
 
 	// Fit against the tighter of the two axes so nothing is cropped on a
-	// non-square viewport. getEffectiveFOV folds in camera.zoom, which is what
+	// non-square output. getEffectiveFOV folds in camera.zoom, which is what
 	// three actually renders with — `fov` alone would over-frame a zoomed camera.
 	const verticalFov = (camera.getEffectiveFOV() * Math.PI) / 180
-	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect)
+	const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * aspect)
 	const limitingFov = Math.min(verticalFov, horizontalFov)
 	const distance = (sphere.radius / Math.sin(limitingFov / 2)) * AUTO_FIT_MARGIN
 
@@ -184,6 +195,13 @@ function solveAutoFitFraming(
 
 const buildScreenshotDataUrl = async (
 	sourceCanvas: HTMLCanvasElement,
+	region: CaptureRegion,
+	/**
+	 * Whether the region was drawn as a viewport of the output's shape. The
+	 * viewer's CSS gradient then spans the image, as it spans a viewer of that
+	 * shape; a live frame cropped to the region shows the gradient cropped too.
+	 */
+	framedForOutput: boolean,
 	options: Required<Omit<SceneScreenshotOptions, 'targetCameraId'>>,
 	backdrop?: SceneBackdrop | null
 ): Promise<string> => {
@@ -196,38 +214,19 @@ const buildScreenshotDataUrl = async (
 		throw new Error('Failed to initialize screenshot canvas context')
 	}
 
-	const sourceWidth = sourceCanvas.width
-	const sourceHeight = sourceCanvas.height
-	const sourceAspect = sourceWidth / sourceHeight
-	const outputAspect = options.width / options.height
-
-	let cropWidth = sourceWidth
-	let cropHeight = sourceHeight
-	let cropX = 0
-	let cropY = 0
-
-	if (sourceAspect > outputAspect) {
-		cropWidth = sourceHeight * outputAspect
-		cropX = (sourceWidth - cropWidth) / 2
-	} else {
-		cropHeight = sourceWidth / outputAspect
-		cropY = (sourceHeight - cropHeight) / 2
-	}
-
 	if (backdrop) {
 		if (backdrop.type === 'color') {
 			context.fillStyle = backdrop.color
 		} else {
-			// The CSS gradient spans the whole viewer, and the capture is a crop
-			// of it, so the gradient runs between where the viewer's top and
-			// bottom edges land in the output rather than the output's own.
-			const scale = options.height / cropHeight
-			const gradient = context.createLinearGradient(
-				0,
-				-cropY * scale,
-				0,
-				(sourceHeight - cropY) * scale
-			)
+			const scale = options.height / region.height
+			const gradient = framedForOutput
+				? context.createLinearGradient(0, 0, 0, options.height)
+				: context.createLinearGradient(
+						0,
+						-region.y * scale,
+						0,
+						(sourceCanvas.height - region.y) * scale
+					)
 			gradient.addColorStop(0, backdrop.top)
 			gradient.addColorStop(1, backdrop.bottom)
 			context.fillStyle = gradient
@@ -237,10 +236,10 @@ const buildScreenshotDataUrl = async (
 
 	context.drawImage(
 		sourceCanvas,
-		cropX,
-		cropY,
-		cropWidth,
-		cropHeight,
+		region.x,
+		region.y,
+		region.width,
+		region.height,
 		0,
 		0,
 		options.width,
@@ -270,7 +269,8 @@ const SceneModel = memo((props: ModelProps) => {
 		clipExtents,
 		distanceLimits,
 		framingReset,
-		openingPose
+		openingPose,
+		storedView
 	} = props
 	const bounds = useBounds()
 	const { camera, controls, gl, invalidate, scene, size } = useThree(
@@ -372,10 +372,19 @@ const SceneModel = memo((props: ModelProps) => {
 			}
 
 			const activeCamera = camera as PerspectiveCamera
+			const outputAspect = options.width / options.height
+			const live = {
+				position: activeCamera.position,
+				target: controls?.target?.clone() ?? new Vector3(),
+				fov: activeCamera.fov
+			}
+			const limits = controls ?? null
 
-			// The pose the capture renders at. A posed capture renders through a
-			// camera of its own: see `buildCaptureCamera`. Viewport mode sets none
-			// and renders the live frame.
+			// The pose the capture renders at, through a camera of its own (see
+			// `buildCaptureCamera`) shaped like the output. A stored camera and
+			// the view on screen both resolve by the viewer's camera rule at the
+			// output's aspect (`resolveCapturePose`), so the image is what the
+			// viewer shows on a viewport of that shape.
 			let pose: CapturePose | null = null
 
 			if (options.targetCameraId && cameraOptions?.cameras) {
@@ -384,37 +393,36 @@ const SceneModel = memo((props: ModelProps) => {
 				)
 
 				if (targetCameraConfig) {
-					// Resolved by the viewer's camera rule, so fallbacks (a missing
-					// target, fov or position) read the live values at capture start,
-					// and a camera with no pose at all stands where the scene opened.
-					// Without a viewport aspect, so not fitted: the capture crops the
-					// frame to its own output, and a fit for the canvas would shrink
-					// the subject by however narrow the canvas happens to be.
-					const resolved = resolveCameraPose(
+					// Fallbacks (a missing target, fov or position) read the live
+					// values at capture start, and a camera with no pose at all
+					// stands where the scene opened.
+					pose = resolveCapturePose(
 						cameraOptions.cameras,
 						targetCameraConfig.cameraId,
-						{
-							position: activeCamera.position,
-							target: controls?.target?.clone() ?? new Vector3(),
-							fov: activeCamera.fov
-						},
-						openingPose.current
+						live,
+						outputAspect,
+						openingPose.current,
+						limits,
+						distanceLimits ?? {}
 					)
-
-					pose = controls?.target
-						? {
-								position: resolved.position,
-								fov: resolved.fov,
-								lookAt: resolved.target,
-								limits: unfittedOrbitLimits(controls, distanceLimits ?? {})
-							}
-						: {
-								position: resolved.position,
-								fov: resolved.fov,
-								rotation: resolved.rotation
-							}
 				}
-			} else if (options.mode === 'auto-fit') {
+			} else if (options.mode === 'viewport') {
+				// The view on screen as a camera stores it, without its fit for the
+				// canvas: the pose a "set as opening view" saves with this image.
+				const view = storedView?.current?.()
+				if (view) {
+					const viewCamera = viewCaptureCamera(view)
+					pose = resolveCapturePose(
+						[viewCamera],
+						viewCamera.cameraId,
+						live,
+						outputAspect,
+						null,
+						limits,
+						distanceLimits ?? {}
+					)
+				}
+			} else {
 				// Framed here rather than via drei's `bounds.fit()`, which animates
 				// the camera with damping over several frames. The old code called
 				// it and then immediately read `controls.target` and the camera
@@ -425,16 +433,17 @@ const SceneModel = memo((props: ModelProps) => {
 				//
 				// Solving for the distance directly is deterministic, which also
 				// makes a thumbnail reproducible instead of timing-dependent.
-				const framing = solveAutoFitFraming(object, activeCamera)
+				const framing = solveAutoFitFraming(object, activeCamera, outputAspect)
 
 				if (framing) {
-					// The distance was solved for this fov; hold it.
+					// The distance was solved for this fov and the output's shape;
+					// hold both.
 					pose = {
 						position: framing.position,
 						fov: activeCamera.fov,
 						lookAt: framing.target,
-						limits: controls
-							? unfittedOrbitLimits(controls, distanceLimits ?? {})
+						limits: limits
+							? captureOrbitLimits(limits, distanceLimits ?? {}, 1)
 							: undefined
 					}
 				}
@@ -446,25 +455,54 @@ const SceneModel = memo((props: ModelProps) => {
 			invalidate()
 			await waitForNextFrame()
 
+			const canvas = gl.domElement
+			const region = centeredCaptureRegion(
+				canvas.width,
+				canvas.height,
+				outputAspect
+			)
+			const viewport = gl.getViewport(new Vector4())
+
 			try {
 				if (pose) {
-					const captureCamera = buildCaptureCamera(activeCamera, pose)
+					const captureCamera = buildCaptureCamera(
+						activeCamera,
+						pose,
+						outputAspect
+					)
 					// The live camera's planes were solved for where it is; the pose
 					// needs its own, or a model nearer or farther is clipped away.
 					fitClipPlanes(captureCamera)
+					// Drawn into the region the image is read from, which has the
+					// output's shape, so the camera projects without stretching.
+					// The renderer's viewport is in CSS pixels; the region is in
+					// drawing-buffer ones, counted from the top, and WebGL counts
+					// its y from the bottom.
+					const pixelRatio = gl.getPixelRatio()
+					gl.setViewport(
+						region.x / pixelRatio,
+						(canvas.height - region.y - region.height) / pixelRatio,
+						region.width / pixelRatio,
+						region.height / pixelRatio
+					)
 					gl.render(scene, captureCamera)
 				} else {
+					// No pose to resolve (an unknown camera, an empty model): the
+					// live frame, cropped.
 					gl.render(scene, activeCamera)
 				}
 
 				const dataUrl = await buildScreenshotDataUrl(
-					gl.domElement,
+					canvas,
+					region,
+					pose !== null,
 					options,
 					backdrop
 				)
 				onScreenshot?.(dataUrl)
 				return dataUrl
 			} finally {
+				gl.setViewport(viewport)
 				// The render replaced the live frame with the capture's.
 				invalidate()
 			}
@@ -481,7 +519,8 @@ const SceneModel = memo((props: ModelProps) => {
 			object,
 			onScreenshot,
 			openingPose,
-			scene
+			scene,
+			storedView
 		]
 	)
 

@@ -482,6 +482,11 @@ The callback types are exported from `@vctrl/viewer` as `SceneScreenshotCapture`
 | `mode`           | `'auto-fit' \| 'viewport'`     | `'auto-fit'`    | Capture strategy                                                       |
 | `targetCameraId` | `string`                       | none            | Transition to this camera, capture, then return to the original camera |
 
+The image is the frame the viewer shows on a viewport shaped like the output. A camera is
+framed for `width / height` the way it is on any viewport (backed off on a narrower one), so a
+`viewport` capture or a `targetCameraId` capture at 1280x720 matches the viewer at 16:9,
+whatever shape the canvas it was taken from has.
+
 ---
 
 ## Scene components and defaults

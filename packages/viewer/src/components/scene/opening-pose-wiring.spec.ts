@@ -107,13 +107,23 @@ describe('the opening pose is shared with the capture', () => {
 		expect(source).not.toMatch(/useRef<OpeningPose/)
 	})
 
+	it('hands the capture the cameras the camera layer flies to', () => {
+		expect(element('SceneCamera')).toContain('cameras={aimedCameras}')
+		expect(element('SceneModel')).toContain(
+			'cameraOptions={captureCameraOptions}'
+		)
+		expect(viewer).toMatch(
+			/const captureCameraOptions = useMemo\(\s*\(\) => \(\{ \.\.\.cameraOptions, cameras: aimedCameras \}\)/
+		)
+	})
+
 	it('is read by the capture when it resolves its camera', () => {
 		const capture = model.slice(
 			model.indexOf('const captureScreenshot'),
 			model.indexOf('onScreenshotCaptureReady?.(captureScreenshot)')
 		)
 		expect(capture).toMatch(
-			/resolveCameraPose\(\s*cameraOptions\.cameras,\s*targetCameraConfig\.cameraId,[\s\S]*?openingPose\.current\s*\)/
+			/resolveCapturePose\(\s*cameraOptions\.cameras,\s*targetCameraConfig\.cameraId,\s*live,\s*outputAspect,\s*openingPose\.current,/
 		)
 	})
 })
