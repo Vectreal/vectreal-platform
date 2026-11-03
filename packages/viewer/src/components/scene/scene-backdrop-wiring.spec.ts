@@ -48,7 +48,12 @@ describe('the scene backdrop', () => {
 	it('is painted under a screenshot before the canvas is drawn over it', () => {
 		expect(viewer).toContain('backdrop={backdrop}')
 		expect(sceneModel).toMatch(
-			/buildScreenshotDataUrl\(\s*gl\.domElement,\s*options,\s*backdrop\s*\)/
+			/buildScreenshotDataUrl\(\s*canvas,\s*region,\s*pose !== null,\s*options,\s*backdrop\s*\)/
+		)
+		// A posed capture is a viewer of the output's shape, which the gradient
+		// spans top to bottom.
+		expect(sceneModel).toMatch(
+			/framedForOutput\s*\?\s*context\.createLinearGradient\(0, 0, 0, options\.height\)/
 		)
 		const fill = sceneModel.indexOf(
 			'context.fillRect(0, 0, options.width, options.height)'

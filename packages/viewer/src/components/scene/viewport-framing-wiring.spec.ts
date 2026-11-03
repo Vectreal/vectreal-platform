@@ -175,9 +175,13 @@ describe('the camera layer fits what it shows', () => {
 	it('stores what is on screen without its fit, in snapshots and the opening pose', () => {
 		const snapshot = slice(
 			camera,
-			'const captureCameraSnapshot =',
+			'const readStoredView =',
 			'onCameraSnapshotCaptureReady?.(captureCameraSnapshot)'
 		)
+		expect(snapshot).toMatch(
+			/const captureCameraSnapshot = useCallback<SceneCameraSnapshotCapture>\(\s*async \(\) => readStoredView\(\)/
+		)
+		expect(snapshot).toMatch(/storedView\.current = readStoredView/)
 		expect(snapshot).toMatch(
 			/framing\.current\?\.storedPose\(\s*activeCamera\.position,\s*controlsTarget,\s*activeCamera\.aspect,\s*flight\.progress\(\)\s*\)/
 		)
@@ -205,25 +209,25 @@ describe('the camera layer fits what it shows', () => {
 	})
 })
 
-describe('captures render the stored pose', () => {
+describe('captures render the pose the viewer shows at their aspect', () => {
 	const capture = slice(
 		model,
 		'if (options.targetCameraId && cameraOptions?.cameras) {',
 		'// Two frames let the scene settle'
 	)
 
-	it('resolves the camera without a viewport, so the pose is not fitted', () => {
-		const resolve = slice(capture, 'resolveCameraPose(', 'openingPose.current')
-		expect(resolve).not.toContain('viewportAspect')
+	// The rule itself is proven in screenshot-pose.spec.ts; this pins that
+	// the capture goes through it rather than resolving a pose of its own.
+	it('resolves every stored pose through resolveCapturePose, never the live rig', () => {
+		expect(capture).not.toContain('resolveCameraPose(')
 		expect(capture).not.toContain('resolveCameraSelection(')
+		expect(capture.match(/resolveCapturePose\(/g)).toHaveLength(2)
 	})
 
-	it('clamps against the host’s unscaled limits, in both capture modes', () => {
-		expect(
-			capture.match(
-				/unfittedOrbitLimits\(controls, distanceLimits \?\? \{\}\)/g
-			)
-		).toHaveLength(2)
+	it('never clamps against the live, view-fitted limits', () => {
 		expect(capture).not.toMatch(/limits: controls\s*[},]/)
+		expect(capture).toContain(
+			'captureOrbitLimits(limits, distanceLimits ?? {}, 1)'
+		)
 	})
 })

@@ -29,9 +29,9 @@ export interface LiveCameraState {
 	target: Vector3
 	fov: number
 	/**
-	 * The viewport's width over its height. With it, a stored position is
-	 * fitted to the viewport (`framingScale`); without it, as for a capture
-	 * that crops the frame itself, the pose is returned as stored.
+	 * The viewport's width over its height (for a capture, its output's). With
+	 * it, a stored position is fitted to the viewport (`framingScale`); without
+	 * it, the pose is returned as stored.
 	 */
 	viewportAspect?: number
 }

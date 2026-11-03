@@ -101,6 +101,7 @@ import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type { SrcLoadOptions, SrcModel } from './load-src'
 import type {
 	BakedShadow,
+	SceneCameraSnapshot,
 	SceneCameraSnapshotCapture,
 	SceneScreenshotCapture,
 	ShadowBakeCapture,
@@ -711,6 +712,12 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	  viewport whatever camera was in view.
 	*/
 	const resetCameraFraming = useRef<(() => void) | null>(null)
+	/*
+	  Filled by `SceneCamera` with a read of the view on screen as a camera
+	  stores it, for `SceneModel`'s viewport capture: the image a "set as
+	  opening view" saves then renders the pose it saves with it.
+	*/
+	const storedView = useRef<(() => SceneCameraSnapshot) | null>(null)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	// The markers this surface draws, by the same rule `SceneHotspots` draws
@@ -863,6 +870,12 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const aimedCameras = useMemo(
 		() => resolveHotspotCameraTargets(cameraOptions?.cameras, hotspots),
 		[cameraOptions?.cameras, hotspots]
+	)
+	// The capture resolves the same cameras the camera layer flies to, so a
+	// hotspot camera with no target of its own is aimed at its hotspot there too.
+	const captureCameraOptions = useMemo(
+		() => ({ ...cameraOptions, cameras: aimedCameras }),
+		[cameraOptions, aimedCameras]
 	)
 
 	/**
@@ -1183,6 +1196,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									transitionOverride={transitionOverride}
 									openingPose={openingPose}
 									framingReset={resetCameraFraming}
+									storedView={storedView}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									model={model}
@@ -1209,7 +1223,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 								{model && (
 									<Center top cacheKey={centerCacheKey}>
 										<SceneModel
-											cameraOptions={cameraOptions}
+											cameraOptions={captureCameraOptions}
 											onScreenshot={onScreenshot}
 											onScreenshotCaptureReady={onScreenshotCaptureReady}
 											backdrop={backdrop}
@@ -1223,6 +1237,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 											distanceLimits={orbitDistanceLimits}
 											framingReset={resetCameraFraming}
 											openingPose={openingPose}
+											storedView={storedView}
 										/>
 									</Center>
 								)}

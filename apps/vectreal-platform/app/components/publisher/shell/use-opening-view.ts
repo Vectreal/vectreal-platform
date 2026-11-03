@@ -24,8 +24,9 @@ import type { ViewerInteractionEvent } from '@vctrl/viewer'
  * Capture settings for the opening view.
  *
  * `mode: 'viewport'` is required, for two reasons. It is what makes the
- * thumbnail the live frame rather than a reframed one, and it avoids the
- * default `auto-fit` path, which animates the camera with damping while the
+ * thumbnail the view on screen, as the camera snapshot stores it and framed
+ * for 16:9 as the viewer frames it there, rather than a bounds fit; and it
+ * avoids the default `auto-fit` path, which animates the camera with damping while the
  * capture waits only two frames — shooting mid-transition and returning the
  * environment with the model still out of frame.
  */
