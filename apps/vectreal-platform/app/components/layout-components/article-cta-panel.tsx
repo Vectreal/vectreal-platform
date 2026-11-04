@@ -5,8 +5,10 @@ import { Link } from 'react-router'
 
 import { CtaPanel } from './cta-panel'
 import { ModelLinkRow } from './model-link-row'
+import { HOME_PAGE_COPY, MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import { buildTaskPrompt } from '../../lib/ai-handoff/ai-handoff-targets'
 import { CONVERT_INDEX_COPY } from '../../lib/convert/convert-pairs'
+import { MODEL_INTAKE_PATH } from '../../lib/domain/model-intake/model-intake-shared'
 import {
 	exampleSceneById,
 	publisherExampleHref
@@ -116,6 +118,24 @@ export const ArticleCtaPanel: FC<Props> = ({
 					<Button asChild>
 						<Link to={cta.to} onClick={() => onAction('primary')}>
 							Open the converters
+							<ArrowRight className="h-4 w-4" />
+						</Link>
+					</Button>
+				}
+			/>
+		)
+	}
+
+	if (cta.kind === 'free-model') {
+		return (
+			<CtaPanel
+				className={className}
+				heading={HOME_PAGE_COPY.pilot.heading}
+				description={MODEL_INTAKE_COPY.en.meta.description}
+				actions={
+					<Button asChild>
+						<Link to={MODEL_INTAKE_PATH} onClick={() => onAction('primary')}>
+							{HOME_PAGE_COPY.pilot.cta}
 							<ArrowRight className="h-4 w-4" />
 						</Link>
 					</Button>

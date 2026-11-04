@@ -6,6 +6,8 @@
   `constants/product-copy.ts`.
 */
 
+export const MODEL_INTAKE_PATH = '/free-model'
+
 export const MODEL_INTAKE_LOCALES = ['en', 'de'] as const
 export type ModelIntakeLocale = (typeof MODEL_INTAKE_LOCALES)[number]
 
@@ -274,7 +276,7 @@ export function buildIntakeUrl(
 	batch: (typeof MODEL_INTAKE_BATCHES)[number],
 	locale: ModelIntakeLocale
 ): string {
-	const url = new URL('/free-model', origin)
+	const url = new URL(MODEL_INTAKE_PATH, origin)
 	url.searchParams.set('b', batch)
 	if (locale === 'de') url.searchParams.set('lang', 'de')
 	return url.toString()
