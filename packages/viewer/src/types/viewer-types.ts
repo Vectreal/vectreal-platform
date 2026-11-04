@@ -101,7 +101,9 @@ export interface ViewerLoadingThumbnail {
 	scrim?: boolean
 	/**
 	 * `'contain'` fits the whole thumbnail into the canvas instead of filling it,
-	 * so nothing is cropped.
+	 * so nothing is cropped. The bands it leaves are filled with the image's own
+	 * edges stretched across them, unless `className` is set: a host that styles
+	 * the image itself gets plain contain.
 	 * @default 'cover'
 	 */
 	objectFit?: 'contain' | 'cover'
