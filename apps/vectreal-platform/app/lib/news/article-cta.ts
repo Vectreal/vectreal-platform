@@ -1,4 +1,5 @@
 import { CONVERT_INDEX_PATH, convertPairBySlug } from '../convert/convert-pairs'
+import { MODEL_INTAKE_PATH } from '../domain/model-intake/model-intake-shared'
 import {
 	exampleSceneById,
 	PUBLISHER_EXAMPLE_PARAM
@@ -20,6 +21,9 @@ import { SITE_URL } from '../seo'
  * the article showed, or a sample. The panel offers it as a shortcut beside the
  * main button, so a reader with nothing to hand still has a first step.
  *
+ * A free-model ask sends a buyer to the form that takes three photos of one
+ * of their products.
+ *
  * An agent ask hands the reader's next step to their own AI assistant instead:
  * `prompt` is the task, one sentence, which the panel wraps in a prompt that
  * points the assistant at the article first.
@@ -28,6 +32,7 @@ export type ArticleCta =
 	| { kind: 'publisher'; shortcut: ArticleCtaShortcut }
 	/** `to` is a same-origin path, ready for `<Link to>`. */
 	| { kind: 'convert'; to: string }
+	| { kind: 'free-model' }
 	| { kind: 'agent'; prompt: string }
 
 export interface ArticleCtaShortcut {
@@ -55,8 +60,9 @@ export const DEFAULT_ARTICLE_CTA: ArticleCta = {
 /**
  * Reads the `cta:` URL an author wrote, absolute on vectreal.com or a path,
  * as one of the destinations the panel knows how to present: the publisher,
- * optionally naming a sample or an example scene, or the converters,
- * optionally naming a pair. Or `agent`, with the task in `ctaPrompt`.
+ * optionally naming a sample or an example scene, the converters,
+ * optionally naming a pair, or the free-model form. Or `agent`, with the task
+ * in `ctaPrompt`.
  *
  * Returns null for anything else, including a sample, example or pair that
  * does not exist, which the manifest treats as invalid frontmatter: a typo'd
@@ -106,6 +112,7 @@ export function resolveArticleCta(
 	if (params.length > 0) return null
 
 	const to = url.pathname
+	if (to === MODEL_INTAKE_PATH) return { kind: 'free-model' }
 	if (to === CONVERT_INDEX_PATH) return { kind: 'convert', to }
 
 	const [, section, slug, ...rest] = to.split('/')

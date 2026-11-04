@@ -31,7 +31,8 @@ function renderPanel(cta: ArticleCta, onAction = vi.fn()) {
 			)
 		},
 		{ path: '/publisher', Component: Destination },
-		{ path: '/convert', Component: Destination }
+		{ path: '/convert', Component: Destination },
+		{ path: '/free-model', Component: Destination }
 	])
 	render(<Stub />)
 	return onAction
@@ -59,6 +60,14 @@ describe('ArticleCtaPanel', () => {
 		fireEvent.click(screen.getByRole('link', { name: /open the converters/i }))
 		expect(onAction).toHaveBeenCalledWith('primary')
 		expect(screen.getByText('at /convert')).toBeTruthy()
+	})
+
+	it('sends a buyer to the free-model form, and nowhere else', () => {
+		const onAction = renderPanel({ kind: 'free-model' })
+		expect(hrefs()).toEqual(['/free-model'])
+		fireEvent.click(screen.getByRole('link', { name: /request a free model/i }))
+		expect(onAction).toHaveBeenCalledWith('primary')
+		expect(screen.getByText('at /free-model')).toBeTruthy()
 	})
 
 	it('opens the shortcut model in the publisher and reports which', () => {

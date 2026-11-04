@@ -40,6 +40,21 @@ describe('resolveArticleCta', () => {
 		})
 	})
 
+	it('reads the free-model form, as a path or on vectreal.com', () => {
+		expect(resolveArticleCta('/free-model')).toEqual({ kind: 'free-model' })
+		expect(resolveArticleCta('https://vectreal.com/free-model')).toEqual({
+			kind: 'free-model'
+		})
+	})
+
+	it('rejects a free-model URL carrying a letter code, batch or language', () => {
+		expect(resolveArticleCta('/free-model?c=AB12CD')).toBeNull()
+		expect(resolveArticleCta('/free-model?b=2026-10-30-brands')).toBeNull()
+		expect(resolveArticleCta('/free-model?lang=de')).toBeNull()
+		expect(resolveArticleCta('/free-model/extra')).toBeNull()
+		expect(resolveArticleCta('https://example.com/free-model')).toBeNull()
+	})
+
 	it('rejects destinations the panel cannot present', () => {
 		expect(resolveArticleCta('https://example.com/publisher')).toBeNull()
 		expect(resolveArticleCta('https://vectreal.com/pricing')).toBeNull()
