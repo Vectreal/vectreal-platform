@@ -732,6 +732,8 @@ export const UPGRADE_FEATURE_HIGHLIGHT_KEYS: readonly EntitlementKey[] = [
 interface ModelIntakeCopy {
 	meta: { title: string; description: string }
 	hero: { heading: string; description: string }
+	/** Opens the hero for a visit from one of our letters; the organization comes from the letter's code. */
+	letterGreeting: (organization: string) => string
 	/** Switches to the other language; the batch code is kept. */
 	languageLink: string
 	fields: {
@@ -760,13 +762,18 @@ interface ModelIntakeCopy {
 		consentFollowUp: string
 		consentPhotos: string
 	}
-	privacyNote: string
+	privacyNote: (retentionDays: number) => string
 	privacyLink: string
 	/** Shown when bot verification cannot load; the address follows it as a link. */
 	turnstileFailed: string
 	submit: string
 	submitting: string
-	next: { heading: string; steps: readonly string[]; note: string }
+	next: {
+		heading: string
+		steps: readonly string[]
+		note: string
+		retention: (retentionDays: number) => string
+	}
 	fieldErrors: Record<ModelIntakeFieldErrorCode, (n?: number) => string>
 	formErrors: Record<ModelIntakeFormErrorCode, string>
 	success: {
@@ -798,6 +805,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			description:
 				"Send us three photos of one product. We look at them first and tell you whether we can make a model from them. If we can, we send it back as GLB and USDZ files for Shopify's own 3D slot."
 		},
+		letterGreeting: (organization) =>
+			`Welcome, ${organization}. Thanks for reading our letter.`,
 		languageLink: 'Deutsch',
 		fields: {
 			name: { label: 'Your name', placeholder: 'Jane Doe' },
@@ -837,8 +846,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			consentPhotos:
 				"I'm allowed to share these photos, and Vectreal may use them to make this model."
 		},
-		privacyNote:
-			'We store your details and photos to make your model, and delete them 90 days after we deliver it unless you book a pilot. The model stays private unless you agree otherwise. To have everything deleted sooner, email info@vectreal.com with your reference code.',
+		privacyNote: (days) =>
+			`We store your details and photos to make your model, and delete them ${days} days after we deliver it unless you book a pilot. The model stays private unless you agree otherwise. To have everything deleted sooner, email info@vectreal.com with your reference code.`,
 		privacyLink: 'Privacy policy',
 		turnstileFailed:
 			'Verification could not load, which is usually an extension or a network blocking it. Reload to try again, or email the photos to',
@@ -852,7 +861,9 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 				"You upload them to your product's own 3D slot in Shopify. Nothing to install.",
 				'If you like it, we can make five products as a paid pilot.'
 			],
-			note: 'A model made from photos approximates your product. You see it before anything goes live.'
+			note: 'A model made from photos approximates your product. You see it before anything goes live.',
+			retention: (days) =>
+				`We delete your photos and details ${days} days after we deliver the model, or ${days} days after you send them if we can't make one. A booked pilot follows its own agreement.`
 		},
 		fieldErrors: {
 			name: () => 'Please enter your name.',
@@ -905,6 +916,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			description:
 				'Schicken Sie uns drei Fotos eines Produkts. Wir sehen sie uns zuerst an und sagen Ihnen, ob wir daraus ein Modell erstellen können. Wenn ja, senden wir es Ihnen als GLB- und USDZ-Datei für den 3D-Platz in Shopify zurück.'
 		},
+		letterGreeting: (organization) =>
+			`Willkommen, ${organization}. Danke, dass Sie unseren Brief gelesen haben.`,
 		languageLink: 'English',
 		fields: {
 			name: { label: 'Ihr Name', placeholder: 'Erika Mustermann' },
@@ -946,8 +959,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			consentPhotos:
 				'Ich darf diese Fotos weitergeben, und Vectreal darf sie verwenden, um dieses Modell zu erstellen.'
 		},
-		privacyNote:
-			'Wir speichern Ihre Angaben und Fotos, um Ihr Modell zu erstellen, und löschen sie 90 Tage nach der Lieferung, sofern Sie keinen Pilot buchen. Das Modell bleibt privat, wenn Sie nichts anderes vereinbaren. Für eine frühere Löschung schreiben Sie mit Ihrer Referenznummer an info@vectreal.com.',
+		privacyNote: (days) =>
+			`Wir speichern Ihre Angaben und Fotos, um Ihr Modell zu erstellen, und löschen sie ${days} Tage nach der Lieferung, sofern Sie keinen Pilot buchen. Das Modell bleibt privat, wenn Sie nichts anderes vereinbaren. Für eine frühere Löschung schreiben Sie mit Ihrer Referenznummer an info@vectreal.com.`,
 		privacyLink: 'Datenschutzerklärung',
 		turnstileFailed:
 			'Die Prüfung konnte nicht geladen werden, meist weil eine Erweiterung oder das Netzwerk sie blockiert. Laden Sie die Seite neu oder senden Sie die Fotos an',
@@ -961,7 +974,9 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 				'Sie laden sie in den 3D-Platz Ihres Produkts in Shopify hoch. Nichts zu installieren.',
 				'Wenn es Ihnen gefällt, setzen wir fünf Produkte als bezahlten Pilot um.'
 			],
-			note: 'Ein Modell aus Fotos bildet Ihr Produkt näherungsweise ab. Sie sehen es, bevor etwas live geht.'
+			note: 'Ein Modell aus Fotos bildet Ihr Produkt näherungsweise ab. Sie sehen es, bevor etwas live geht.',
+			retention: (days) =>
+				`Wir löschen Ihre Fotos und Angaben ${days} Tage nach der Lieferung des Modells, oder ${days} Tage nach dem Senden, wenn wir keines erstellen können. Für einen gebuchten Pilot gilt dessen eigene Vereinbarung.`
 		},
 		fieldErrors: {
 			name: () => 'Bitte geben Sie Ihren Namen ein.',

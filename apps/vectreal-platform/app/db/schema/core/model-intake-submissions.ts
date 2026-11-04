@@ -33,6 +33,19 @@ export const modelIntakeEmailStatusEnum = pgEnum('model_intake_email_status', [
 ])
 
 /**
+ * One posted letter, by the code printed on its card. Only the organization is
+ * kept here, for the form's greeting and the internal page; the person it was
+ * addressed to stays in the CSV the QR script writes for the sender.
+ */
+export const modelIntakeLetters = pgTable('model_intake_letters', {
+	code: text('code').primaryKey(),
+	organization: text('organization').notNull(),
+	createdAt: timestamp('created_at', { withTimezone: true })
+		.notNull()
+		.defaultNow()
+}).enableRLS()
+
+/**
  * One free-model request: a brand's three photos and who sent them.
  *
  * Name, email, company and message are encrypted with `encryptSensitiveValue`,
@@ -49,6 +62,10 @@ export const modelIntakeSubmissions = pgTable(
 		referenceCode: text('reference_code').notNull().unique(),
 		locale: text('locale').notNull(),
 		batch: text('batch').notNull(),
+		/** The letter the link came from, when it carried a code we posted. */
+		letterCode: text('letter_code').references(() => modelIntakeLetters.code, {
+			onDelete: 'set null'
+		}),
 		productType: text('product_type').notNull(),
 		name: text('name').notNull(),
 		email: text('email').notNull(),

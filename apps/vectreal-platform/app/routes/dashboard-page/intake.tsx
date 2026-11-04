@@ -235,8 +235,11 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 				) : null}
 			</div>
 			<p className="text-muted-foreground text-body-sm">
-				{productType} · {describeSize(row)} · batch {row.batch} · {row.locale} ·
-				received {dateTime.format(new Date(row.createdAt))}
+				{productType} · {describeSize(row)} · batch {row.batch} ·{' '}
+				{row.letterCode
+					? `letter ${row.letterCode} (${row.letterOrganization}) · `
+					: ''}
+				{row.locale} · received {dateTime.format(new Date(row.createdAt))}
 			</p>
 
 			<div className="flex flex-wrap gap-3">

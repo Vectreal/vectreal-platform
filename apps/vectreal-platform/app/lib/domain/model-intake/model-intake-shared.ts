@@ -55,6 +55,18 @@ export function resolveIntakeBatch(raw: string | null): ModelIntakeBatch {
 		: 'direct'
 }
 
+/**
+ * `?c=<code>`: the one letter a link was printed for. Opaque on purpose, so the
+ * URL names no organization or person; the code is looked up on the server.
+ */
+export const MODEL_INTAKE_LETTER_PARAM = 'c'
+
+/** A printed letter code, typed as it reads under the QR code: upper case, case-insensitive on the way in. */
+export function normalizeIntakeLetterCode(raw: string | null): string | null {
+	const code = raw?.trim().toUpperCase() ?? ''
+	return /^[A-Z0-9]{6,12}$/.test(code) ? code : null
+}
+
 export const MODEL_INTAKE_PHOTO_COUNT = 3
 export const MODEL_INTAKE_MAX_PHOTO_BYTES = 15 * 1024 * 1024
 
@@ -276,6 +288,17 @@ export function buildIntakeUrl(
 ): string {
 	const url = new URL('/free-model', origin)
 	url.searchParams.set('b', batch)
+	if (locale === 'de') url.searchParams.set('lang', 'de')
+	return url.toString()
+}
+
+export function buildIntakeLetterUrl(
+	origin: string,
+	code: string,
+	locale: ModelIntakeLocale
+): string {
+	const url = new URL('/free-model', origin)
+	url.searchParams.set(MODEL_INTAKE_LETTER_PARAM, code)
 	if (locale === 'de') url.searchParams.set('lang', 'de')
 	return url.toString()
 }

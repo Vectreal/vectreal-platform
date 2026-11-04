@@ -3,10 +3,46 @@ import { desc, eq, lte, sql } from 'drizzle-orm'
 import {
 	addRetentionDays,
 	cleanupMinutesBetween,
-	type ModelIntakeOutcome
+	type ModelIntakeOutcome,
+	normalizeIntakeLetterCode
 } from './model-intake-shared'
 import { getDbClient } from '../../../db/client'
-import { modelIntakeSubmissions } from '../../../db/schema'
+import { modelIntakeLetters, modelIntakeSubmissions } from '../../../db/schema'
+
+export type ModelIntakeLetter = Pick<
+	typeof modelIntakeLetters.$inferSelect,
+	'code' | 'organization'
+>
+
+/** The letter a `?c=` names, or null for no code, a malformed one, or one we never posted. */
+export async function resolveIntakeLetter(
+	raw: string | null
+): Promise<ModelIntakeLetter | null> {
+	const code = normalizeIntakeLetterCode(raw)
+	if (!code) return null
+	const [row] = await getDbClient()
+		.select({
+			code: modelIntakeLetters.code,
+			organization: modelIntakeLetters.organization
+		})
+		.from(modelIntakeLetters)
+		.where(eq(modelIntakeLetters.code, code))
+	return row ?? null
+}
+
+/** Registers printed letters; a code printed again keeps its row and takes the new organization. */
+export async function upsertIntakeLetters(
+	letters: ModelIntakeLetter[]
+): Promise<void> {
+	if (letters.length === 0) return
+	await getDbClient()
+		.insert(modelIntakeLetters)
+		.values(letters)
+		.onConflictDoUpdate({
+			target: modelIntakeLetters.code,
+			set: { organization: sql`excluded.organization` }
+		})
+}
 
 export type ModelIntakeRow = typeof modelIntakeSubmissions.$inferSelect
 export type NewModelIntakeRow = typeof modelIntakeSubmissions.$inferInsert
@@ -39,6 +75,8 @@ export async function listIntakeSubmissions() {
 			referenceCode: modelIntakeSubmissions.referenceCode,
 			locale: modelIntakeSubmissions.locale,
 			batch: modelIntakeSubmissions.batch,
+			letterCode: modelIntakeSubmissions.letterCode,
+			letterOrganization: modelIntakeLetters.organization,
 			productType: modelIntakeSubmissions.productType,
 			heightCm: modelIntakeSubmissions.heightCm,
 			widthCm: modelIntakeSubmissions.widthCm,
@@ -55,6 +93,10 @@ export async function listIntakeSubmissions() {
 			createdAt: modelIntakeSubmissions.createdAt
 		})
 		.from(modelIntakeSubmissions)
+		.leftJoin(
+			modelIntakeLetters,
+			eq(modelIntakeSubmissions.letterCode, modelIntakeLetters.code)
+		)
 		.orderBy(desc(modelIntakeSubmissions.createdAt))
 }
 

@@ -18,8 +18,10 @@ import { PhotoSlots } from './photo-slots'
 import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import {
 	MODEL_INTAKE_HONEYPOT_FIELD,
+	MODEL_INTAKE_LETTER_PARAM,
 	MODEL_INTAKE_MAX_MESSAGE_LENGTH,
 	MODEL_INTAKE_PRODUCT_TYPES,
+	MODEL_INTAKE_RETENTION_DAYS,
 	MODEL_INTAKE_SIZE_FIELDS,
 	type ModelIntakeActionData,
 	type ModelIntakeBatch,
@@ -32,6 +34,8 @@ import { TurnstileWidget } from '../turnstile-widget'
 interface ModelIntakeFormProps {
 	locale: ModelIntakeLocale
 	batch: ModelIntakeBatch
+	/** The printed code of the letter this visit came from, once the server has recognized it. */
+	letterCode: string | null
 	turnstileSiteKey: string
 	turnstileToken: string | null
 	onTurnstileSuccess: (token: string) => void
@@ -59,6 +63,7 @@ function FieldError({
 export function ModelIntakeForm({
 	locale,
 	batch,
+	letterCode,
 	turnstileSiteKey,
 	turnstileToken,
 	onTurnstileSuccess,
@@ -96,6 +101,13 @@ export function ModelIntakeForm({
 			<AuthenticityTokenInput />
 			<input type="hidden" name="lang" value={locale} />
 			<input type="hidden" name="b" value={batch} />
+			{letterCode ? (
+				<input
+					type="hidden"
+					name={MODEL_INTAKE_LETTER_PARAM}
+					value={letterCode}
+				/>
+			) : null}
 			<input
 				type="hidden"
 				name="cf-turnstile-response"
@@ -308,7 +320,7 @@ export function ModelIntakeForm({
 					{isSubmitting ? copy.submitting : copy.submit}
 				</Button>
 				<p className="text-muted-foreground text-body-sm">
-					{copy.privacyNote}{' '}
+					{copy.privacyNote(MODEL_INTAKE_RETENTION_DAYS)}{' '}
 					<Link
 						to="/privacy-policy"
 						className="decoration-muted-foreground underline underline-offset-4"

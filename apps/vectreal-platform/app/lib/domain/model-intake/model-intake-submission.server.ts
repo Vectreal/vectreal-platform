@@ -4,6 +4,7 @@ import { prepareIntakePhotos } from './model-intake-photos.server'
 import {
 	deleteIntakeRow,
 	insertIntakeSubmission,
+	type ModelIntakeLetter,
 	setIntakeEmailStatus,
 	type NewModelIntakeRow
 } from './model-intake-repository.server'
@@ -127,11 +128,13 @@ export async function submitModelIntake(
 		formData: FormData
 		locale: ModelIntakeLocale
 		batch: ModelIntakeBatch
+		/** Resolved by the route; a code we never posted arrives as null. */
+		letter: ModelIntakeLetter | null
 		intakePageUrl: string
 	},
 	deps: ModelIntakeDeps = modelIntakeDeps
 ): Promise<ModelIntakeSubmitResult> {
-	const { formData, locale, batch } = args
+	const { formData, locale, batch, letter } = args
 	const fields = readFields(formData)
 
 	// Answered like a success so a bot learns nothing from the reply.
@@ -195,6 +198,7 @@ export async function submitModelIntake(
 		referenceCode,
 		locale,
 		batch,
+		letterCode: letter?.code ?? null,
 		productType: value.productType,
 		name: deps.encrypt(value.name),
 		email: deps.encrypt(value.email),
@@ -247,6 +251,7 @@ export async function submitModelIntake(
 		needsReview: value.productType === 'other',
 		size: describeSize(value.size),
 		batch,
+		letter: letter ? `${letter.code} (${letter.organization})` : '(none)',
 		locale,
 		message: value.message,
 		photoUrls,

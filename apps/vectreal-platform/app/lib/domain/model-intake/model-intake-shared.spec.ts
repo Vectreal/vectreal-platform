@@ -1,11 +1,16 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import {
 	addRetentionDays,
+	buildIntakeLetterUrl,
 	buildIntakeUrl,
 	cleanupMinutesBetween,
 	isIntakeBodyAcceptable,
 	MODEL_INTAKE_MAX_MESSAGE_LENGTH,
+	MODEL_INTAKE_RETENTION_DAYS,
+	normalizeIntakeLetterCode,
 	parseIntakeSizeCm,
 	resolveIntakeBatch,
 	resolveIntakeLocale,
@@ -95,6 +100,29 @@ describe('batches and locales', () => {
 	})
 })
 
+describe('letter codes', () => {
+	it('reads a printed code whatever its case and spacing', () => {
+		expect(normalizeIntakeLetterCode(' k7q2m9 ')).toBe('K7Q2M9')
+		expect(normalizeIntakeLetterCode('AB12CD34EF56')).toBe('AB12CD34EF56')
+	})
+
+	it.each([null, '', 'K7Q2M', 'AB12CD34EF567', 'K7Q-2M9', 'Brand GmbH'])(
+		'refuses %s',
+		(raw) => {
+			expect(normalizeIntakeLetterCode(raw)).toBeNull()
+		}
+	)
+
+	it('puts nothing in the URL but the code and the language', () => {
+		expect(buildIntakeLetterUrl('https://vectreal.com', 'K7Q2M9', 'de')).toBe(
+			'https://vectreal.com/free-model?c=K7Q2M9&lang=de'
+		)
+		expect(buildIntakeLetterUrl('https://vectreal.com', 'K7Q2M9', 'en')).toBe(
+			'https://vectreal.com/free-model?c=K7Q2M9'
+		)
+	})
+})
+
 describe('cleanup and retention arithmetic', () => {
 	it('counts whole minutes and never goes negative', () => {
 		const start = new Date('2026-10-20T10:00:00Z')
@@ -103,6 +131,17 @@ describe('cleanup and retention arithmetic', () => {
 		)
 		expect(cleanupMinutesBetween(start, new Date('2026-10-20T09:00:00Z'))).toBe(
 			0
+		)
+	})
+
+	// MDX takes no expression in running text, so the privacy policy keeps a literal held equal here.
+	it('states the purge period in the privacy policy', () => {
+		const policy = readFileSync(
+			new URL('../../../routes/privacy-policy-page.mdx', import.meta.url),
+			'utf8'
+		)
+		expect(policy).toContain(
+			`deleted ${MODEL_INTAKE_RETENTION_DAYS} days after we deliver the model, or ${MODEL_INTAKE_RETENTION_DAYS} days after we receive them`
 		)
 	})
 

@@ -7,6 +7,7 @@ import {
 } from './model-intake-submission.server'
 
 import type { IntakePhoto } from './model-intake-photos.server'
+import type { ModelIntakeLetter } from './model-intake-repository.server'
 
 const photo: IntakePhoto = {
 	bytes: Buffer.from('jpeg'),
@@ -63,7 +64,11 @@ function form(changes: Record<string, string | null> = {}): FormData {
 	return formData
 }
 
-function submit(formData: FormData, deps: ModelIntakeDeps) {
+function submit(
+	formData: FormData,
+	deps: ModelIntakeDeps,
+	letter: ModelIntakeLetter | null = null
+) {
 	return submitModelIntake(
 		{
 			request: new Request('https://vectreal.com/free-model', {
@@ -72,6 +77,7 @@ function submit(formData: FormData, deps: ModelIntakeDeps) {
 			formData,
 			locale: 'de',
 			batch: '2026-10-30-brands',
+			letter,
 			intakePageUrl: 'https://vectreal.com/dashboard/intake'
 		},
 		deps
@@ -79,6 +85,18 @@ function submit(formData: FormData, deps: ModelIntakeDeps) {
 }
 
 describe('submitModelIntake', () => {
+	it('stores the letter a reply came from and names it in the inbox copy', async () => {
+		const deps = fakes()
+		await submit(form(), deps, { code: 'K7Q2M9', organization: 'Brand GmbH' })
+
+		expect(deps.insertIntakeSubmission).toHaveBeenCalledWith(
+			expect.objectContaining({ letterCode: 'K7Q2M9' })
+		)
+		expect(deps.sendIntakeInternalNotification).toHaveBeenCalledWith(
+			expect.objectContaining({ letter: 'K7Q2M9 (Brand GmbH)' })
+		)
+	})
+
 	it('stores an encrypted row with consent, batch and retention, then notifies both sides', async () => {
 		const deps = fakes()
 		const result = await submit(form(), deps)
@@ -103,6 +121,7 @@ describe('submitModelIntake', () => {
 				referenceCode: 'VCTR-TEST',
 				locale: 'de',
 				batch: '2026-10-30-brands',
+				letterCode: null,
 				productType: 'other',
 				name: 'enc(Jane Doe)',
 				email: 'enc(jane@brand.de)',
