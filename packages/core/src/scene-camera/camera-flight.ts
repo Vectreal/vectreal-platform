@@ -20,19 +20,21 @@ import type { Sphere } from 'three'
  *   where the path puts it rather than sliding across the frame.
  * - **Smart flies in orbit space.** It interpolates the target linearly, the
  *   azimuth the short way round, the polar angle linearly and the distance
- *   geometrically, so a zoom feels constant rather than rushing at the end. The
- *   model's bounding sphere is a floor on the distance from its center, never
- *   a reason to swing wide: the path only bends away where it would otherwise
- *   pass through the model.
+ *   geometrically, so a zoom feels constant rather than rushing at the end.
+ *   Where that orbit would pass through the model, the whole flight pulls
+ *   back in one smooth hump, planned before the first frame (`orbitPath`).
+ *   A floor applied frame by frame bent the path at the moment it touched
+ *   the model and then slid the camera round the model's center, speeding up
+ *   five-fold where the orbit passed closest to it.
  *
  * The lens zooms geometrically too, whatever the type: `tan(fov / 2)`, the
  * width it frames per unit of distance, moves by equal ratios in equal time.
  * The framed size the eye reads as zoom is distance times that width, so
- * Smart's is one geometric curve from end to end wherever the path clears the
- * model; where the floor pushes it out, the framed size widens with it. A
- * field of view lerped in degrees fought the geometric distance, and a switch
- * from a narrow lens to a wide one zoomed out past its destination halfway
- * and came back.
+ * Smart's is one geometric curve from end to end wherever the orbit clears
+ * the model; where it pulls back, the framed size widens and narrows again
+ * with it. A field of view lerped in degrees fought the geometric distance,
+ * and a switch from a narrow lens to a wide one zoomed out past its
+ * destination halfway and came back.
  */
 
 export interface CameraFlightPose {
@@ -62,8 +64,38 @@ export interface CameraFlightFrame extends CameraFlightPose {
  */
 export const SMART_FLIGHT_CLEARANCE = 0.1
 
-/** Where the distance floor eases in and out, as a fraction of the floor. */
-const FLOOR_BLEND = 0.25
+/**
+ * Where Smart checks its clearance before it flies, and how far past the
+ * floor it aims mid-flight, as a fraction of it. The floor holds exactly at
+ * every check; between two checks the aim keeps the path within about half
+ * a percent of it (0.43% at worst over 20,000 random flights), well inside
+ * the clearance and never on the model.
+ */
+const CLEARANCE_SAMPLES = 64
+const CLEARANCE_MARGIN = 5e-3
+
+/**
+ * The most Smart pulls back from the target, as a ratio of the orbit's
+ * distance. A flight that needs more, or that the pull-back cannot clear,
+ * orbits the model's center instead (`orbitPath`).
+ */
+const MAX_LIFT = Math.log(3)
+
+/**
+ * How close to either end the hump may peak, as a fraction of the flight.
+ * It bounds how steeply the hump rises and falls: a shortfall that only a
+ * sharper hump would cover needs more than `MAX_LIFT` and orbits the
+ * center instead.
+ */
+const LIFT_PEAK_RANGE = 0.2
+
+/**
+ * The progress of check `index`, packed toward both ends: a shortfall that
+ * starts at an end, as one does leaving a close-up inside the clearance,
+ * grows from nothing there and would slip between evenly spaced checks.
+ */
+const clearanceCheck = (index: number) =>
+	(1 - Math.cos((Math.PI * index) / CLEARANCE_SAMPLES)) / 2
 
 const MIN_DISTANCE = 1e-6
 
@@ -124,19 +156,200 @@ function lensLerp(fromFov: number, toFov: number, t: number): number {
 }
 
 /**
- * The larger of `a` and `b`, rounded off over a band `k` wide so the switch
- * from one to the other carries no velocity jump. `k` of 0 is a plain max.
+ * Smart's orbit around the moving target, and how it pulls back to clear the
+ * model: by `lift` at most, as `log(distance / orbit distance)`, at progress
+ * `liftPeak` (`liftShape`).
  */
-function smoothMax(a: number, b: number, k: number): number {
-	if (k <= 0) return Math.max(a, b)
-	const h = Math.max(k - Math.abs(a - b), 0) / k
-	return Math.max(a, b) + (h * h * k) / 4
+interface OrbitPath {
+	theta: number
+	deltaTheta: number
+	phi: number
+	deltaPhi: number
+	fromRadius: number
+	toRadius: number
+	lift: number
+	liftPeak: number
+	/** Orbiting the model's center rather than the target. */
+	aroundCenter: boolean
 }
 
 const scratchFrom = new Spherical()
 const scratchTo = new Spherical()
 const scratchOffset = new Vector3()
+const scratchDirection = new Vector3()
 const scratchMatrix = new Matrix4()
+const scratchRadii = new Float64Array(CLEARANCE_SAMPLES)
+const scratchEntries = new Float64Array(CLEARANCE_SAMPLES)
+const scratchExits = new Float64Array(CLEARANCE_SAMPLES)
+const scratchRequired = new Float64Array(CLEARANCE_SAMPLES)
+const scratchPath: OrbitPath = {
+	theta: 0,
+	deltaTheta: 0,
+	phi: 0,
+	deltaPhi: 0,
+	fromRadius: 0,
+	toRadius: 0,
+	lift: 0,
+	liftPeak: 0.5,
+	aroundCenter: false
+}
+
+/** The unit direction from the target to the camera at eased progress `t`. */
+function orbitDirection(path: OrbitPath, t: number, out: Vector3): Vector3 {
+	return out.setFromSphericalCoords(
+		1,
+		path.phi + path.deltaPhi * t,
+		path.theta + path.deltaTheta * t
+	)
+}
+
+/**
+ * The hump the lift is spread over: 0 at both ends, rising to 1 at `peak`,
+ * and smooth everywhere between. It is `4u(1 - u)` with progress remapped by
+ * `t / (t + k(1 - t))`, which is a half at the peak. A late peak keeps the
+ * start of the flight nearly untouched, so a flight into a close-up does not
+ * back away first, and an early one leaves the landing alone the same way.
+ */
+function liftShape(t: number, peak: number): number {
+	const k = peak / (1 - peak)
+	const u = t / (t + k * (1 - t))
+	return 4 * u * (1 - u)
+}
+
+/** The orbit from `fromPivot` to `toPivot`, angles and distances, into `out`. */
+function orbitAround(
+	flight: CameraFlight,
+	fromPivot: Vector3,
+	toPivot: Vector3,
+	out: OrbitPath
+): void {
+	scratchFrom.setFromVector3(
+		scratchOffset.subVectors(flight.from.position, fromPivot)
+	)
+	scratchTo.setFromVector3(
+		scratchOffset.subVectors(flight.to.position, toPivot)
+	)
+	out.theta = scratchFrom.theta
+	out.deltaTheta = shortestAngleDelta(scratchFrom.theta, scratchTo.theta)
+	out.phi = scratchFrom.phi
+	out.deltaPhi = scratchTo.phi - scratchFrom.phi
+	out.fromRadius = scratchFrom.radius
+	out.toRadius = scratchTo.radius
+}
+
+/**
+ * Smart's orbit for `flight`, written to `out`, with the smallest pull-back
+ * that keeps it outside the model.
+ *
+ * The floor on the distance from the model's center is the clearance while
+ * both ends are outside it, and the deeper end's own distance when one of
+ * them is a close-up inside it: never deeper than the flight already goes,
+ * and an end inside the sphere is never pushed away from. At each check, the
+ * distance from the target that clears the floor along the orbit's direction
+ * is where that ray leaves the floor's sphere. The hump is placed and scaled
+ * to cover every check with the least lift. A flight that clears the model
+ * everywhere gets no lift and flies the plain orbit.
+ *
+ * Where no hump within `MAX_LIFT` clears every check, as when the target
+ * sits beside the model rather than in it, the flight orbits the model's
+ * center instead. Its distance from the center moves geometrically between
+ * the ends' own, so it never comes below the floor, and it is as smooth as
+ * the orbit around the target. It gives up only the framed size's single
+ * geometric curve.
+ *
+ * Planned whole, before any frame is placed, because the path has to start
+ * bending before it reaches the model to stay smooth: a floor met frame by
+ * frame can only bend it at the moment of contact.
+ */
+function orbitPath(flight: CameraFlight, out: OrbitPath): OrbitPath {
+	const { from, to, bounds } = flight
+	orbitAround(flight, from.target, to.target, out)
+	out.lift = 0
+	out.liftPeak = 0.5
+	out.aroundCenter = false
+	if (!bounds || bounds.isEmpty()) return out
+
+	const floor = Math.min(
+		bounds.radius * (1 + SMART_FLIGHT_CLEARANCE),
+		from.position.distanceTo(bounds.center),
+		to.position.distanceTo(bounds.center)
+	)
+	// Where each check's ray from the target crosses the floor's sphere.
+	let short = false
+	for (let i = 1; i < CLEARANCE_SAMPLES; i++) {
+		const t = clearanceCheck(i)
+		scratchRadii[i] = logLerp(out.fromRadius, out.toRadius, t)
+		scratchEntries[i] = scratchExits[i] = scratchRequired[i] = 0
+		const offset = scratchOffset
+			.lerpVectors(from.target, to.target, t)
+			.sub(bounds.center)
+		const along = offset.dot(orbitDirection(out, t, scratchDirection))
+		// Aimed past the floor mid-flight, and at it on an end sitting there.
+		const reach = floor * (1 + CLEARANCE_MARGIN * 4 * t * (1 - t))
+		const discriminant = along * along - offset.lengthSq() + reach * reach
+		if (discriminant <= 0 || scratchRadii[i] < MIN_DISTANCE) continue
+		scratchEntries[i] = -along - Math.sqrt(discriminant)
+		scratchExits[i] = -along + Math.sqrt(discriminant)
+		if (insideFloor(i, scratchRadii[i])) {
+			scratchRequired[i] = Math.log(scratchExits[i] / scratchRadii[i])
+			short = true
+		}
+	}
+	if (!short) return out
+
+	fitLift(out)
+	if (out.lift <= MAX_LIFT && !anyCheckInside(out)) return out
+
+	orbitAround(flight, bounds.center, bounds.center, out)
+	out.lift = 0
+	out.aroundCenter = true
+	return out
+}
+
+/**
+ * Whether check `i`, at distance `radius` from its target, is inside the
+ * floor. A hump fitted to land on a check's exit comes back within a
+ * rounding error of it, which is on the floor, not inside it.
+ */
+function insideFloor(i: number, radius: number): boolean {
+	return (
+		radius > scratchEntries[i] * (1 + 1e-9) &&
+		radius < scratchExits[i] * (1 - 1e-9)
+	)
+}
+
+/** Whether the lift leaves any check inside the floor, or carries one into it. */
+function anyCheckInside(path: OrbitPath): boolean {
+	for (let i = 1; i < CLEARANCE_SAMPLES; i++) {
+		const lifted =
+			scratchRadii[i] *
+			Math.exp(path.lift * liftShape(clearanceCheck(i), path.liftPeak))
+		if (insideFloor(i, lifted)) return true
+	}
+	return false
+}
+
+/** The hump that reaches every check's required ratio with the least lift. */
+function fitLift(path: OrbitPath): void {
+	path.lift = Infinity
+	for (let p = 1; p < CLEARANCE_SAMPLES; p++) {
+		const peak = clearanceCheck(p)
+		// A peak nearer an end than this falls to nothing in a frame or two.
+		if (peak < LIFT_PEAK_RANGE || peak > 1 - LIFT_PEAK_RANGE) continue
+		let lift = 0
+		for (let i = 1; i < CLEARANCE_SAMPLES && lift < path.lift; i++) {
+			if (scratchRequired[i] === 0) continue
+			lift = Math.max(
+				lift,
+				scratchRequired[i] / liftShape(clearanceCheck(i), peak)
+			)
+		}
+		if (lift < path.lift) {
+			path.lift = lift
+			path.liftPeak = peak
+		}
+	}
+}
 
 /**
  * Smart's position at eased progress `t`, written to `out`. `target` is the
@@ -148,48 +361,13 @@ function sampleOrbitPosition(
 	target: Vector3,
 	out: Vector3
 ): Vector3 {
-	const { from, to, bounds } = flight
-	scratchFrom.setFromVector3(
-		scratchOffset.subVectors(from.position, from.target)
-	)
-	scratchTo.setFromVector3(scratchOffset.subVectors(to.position, to.target))
-
-	const theta =
-		scratchFrom.theta +
-		shortestAngleDelta(scratchFrom.theta, scratchTo.theta) * t
-	const phi = scratchFrom.phi + (scratchTo.phi - scratchFrom.phi) * t
-	const radius = logLerp(scratchFrom.radius, scratchTo.radius, t)
-	out.setFromSphericalCoords(radius, phi, theta).add(target)
-
-	if (!bounds || bounds.isEmpty() || t <= 0 || t >= 1) return out
-
-	/*
-	  The floor on the distance from the model's center: outside the sphere
-	  while both ends are, and no deeper than the ends interpolate to when one
-	  of them is a close-up inside it. An end inside the sphere is never pushed
-	  away from, so the endpoints stay exact.
-	*/
-	const clear = bounds.radius * (1 + SMART_FLIGHT_CLEARANCE)
-	const floor = Math.min(
-		clear,
-		logLerp(
-			from.position.distanceTo(bounds.center),
-			to.position.distanceTo(bounds.center),
-			t
-		)
-	)
-	const offset = scratchOffset.subVectors(out, bounds.center)
-	const distance = offset.length()
-	// Rounded off mid-flight only; at the ends the band closes to a plain max.
-	const blend = floor * FLOOR_BLEND * 4 * t * (1 - t)
-	const clamped = smoothMax(distance, floor, blend)
-	if (clamped === distance) return out
-	if (distance < MIN_DISTANCE) {
-		// Dead center: push out along the start's side.
-		offset.subVectors(from.position, bounds.center)
-		if (offset.lengthSq() < MIN_DISTANCE) offset.set(0, 0, 1)
-	}
-	return out.copy(bounds.center).add(offset.setLength(clamped))
+	const path = orbitPath(flight, scratchPath)
+	const radius =
+		logLerp(path.fromRadius, path.toRadius, t) *
+		Math.exp(path.lift * liftShape(t, path.liftPeak))
+	return orbitDirection(path, t, out)
+		.multiplyScalar(radius)
+		.add(path.aroundCenter ? flight.bounds!.center : target)
 }
 
 /**
