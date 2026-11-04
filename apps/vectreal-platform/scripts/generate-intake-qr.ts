@@ -139,6 +139,13 @@ async function printLetters(listFile: string, origin: string, outDir: string) {
 
 	if (repository) {
 		await repository.insertIntakeLetters(letters)
+		// Asked again: a different letter registered with one of these codes since the first check would otherwise be kept silently.
+		const raced = await repository.findConflictingIntakeLetters(letters)
+		if (raced.length > 0) {
+			throw new Error(
+				`Registered meanwhile for a different letter: ${raced.join(', ')}. Do not post those letters; print them again with new codes.`
+			)
+		}
 		console.info('Registered %d letter(s) on %s.', letters.length, host)
 	} else {
 		console.info(
