@@ -24,6 +24,7 @@ export interface ModelIntakeInternalEmailProps {
 	needsReview: boolean
 	size: string
 	batch: string
+	letter: string
 	locale: string
 	message: string
 	photoUrls: string[]
@@ -44,6 +45,7 @@ export function ModelIntakeInternalEmail(props: ModelIntakeInternalEmailProps) {
 		],
 		['Size', props.size],
 		['Batch', props.batch],
+		['Letter', props.letter],
 		['Language', props.locale],
 		['Message', props.message || '(none)']
 	]

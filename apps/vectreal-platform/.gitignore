@@ -61,3 +61,6 @@ temp/
 *.tmp
 *.backup
 .react-router
+
+# generate-intake-qr output; letters.csv names the people we wrote to
+/intake-qr/

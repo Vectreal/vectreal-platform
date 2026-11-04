@@ -36,10 +36,32 @@ describe('/free-model action', () => {
 		expect(submit).toBeGreaterThan(turnstile)
 	})
 
+	it("reads the letter its own form carried without spending the visitor's lookups", () => {
+		expect(action).toContain('lookupIntakeLetter(')
+		expect(action).not.toContain('resolveIntakeLetter(')
+		expect(action.indexOf('lookupIntakeLetter(')).toBeGreaterThan(
+			action.indexOf('verifyTurnstileToken(')
+		)
+	})
+
 	it('refuses an oversized or undeclared body before parsing it', () => {
 		const check = action.indexOf('isIntakeBodyAcceptable(')
 		expect(check).toBeGreaterThan(0)
 		expect(check).toBeLessThan(action.indexOf('request.formData()'))
+	})
+})
+
+describe('/free-model page', () => {
+	const page = source(FORM)
+
+	it("keeps the URL's letter code even when the lookup missed", () => {
+		expect(exported(page, 'loader')).toContain(
+			'letterCode: normalizeIntakeLetterCode('
+		)
+		expect(page).toContain('letterCode={letterCode}')
+		expect(page).toContain(
+			'languageSearch.set(MODEL_INTAKE_LETTER_PARAM, letterCode)'
+		)
 	})
 })
 

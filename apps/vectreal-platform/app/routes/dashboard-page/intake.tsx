@@ -21,6 +21,7 @@ import { deleteIntakeById } from '../../lib/domain/model-intake/model-intake-del
 import {
 	finishIntakeCleanup,
 	listIntakeSubmissions,
+	summarizeIntakeLetters,
 	markIntakeDelivered,
 	markIntakePilotBooked,
 	setIntakeCleanupLog,
@@ -50,7 +51,10 @@ import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashb
 
 export async function loader({ request }: Route.LoaderArgs) {
 	await requireIntakeAdmin(request)
-	const rows = await listIntakeSubmissions()
+	const [rows, letters] = await Promise.all([
+		listIntakeSubmissions(),
+		summarizeIntakeLetters()
+	])
 	const requests = await Promise.all(
 		rows.map(async (row) => ({
 			...row,
@@ -64,7 +68,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 	for (const row of rows) {
 		perBatch.set(row.batch, (perBatch.get(row.batch) ?? 0) + 1)
 	}
-	return data({ requests, perBatch: [...perBatch.entries()] })
+	return data({ requests, perBatch: [...perBatch.entries()], letters })
 }
 
 type IntakeActionResult = { ok: true } | { error: string }
@@ -235,8 +239,11 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 				) : null}
 			</div>
 			<p className="text-muted-foreground text-body-sm">
-				{productType} · {describeSize(row)} · batch {row.batch} · {row.locale} ·
-				received {dateTime.format(new Date(row.createdAt))}
+				{productType} · {describeSize(row)} · batch {row.batch} ·{' '}
+				{row.letterCode
+					? `letter ${row.letterCode} (${row.letterOrganization}) · `
+					: ''}
+				{row.locale} · received {dateTime.format(new Date(row.createdAt))}
 			</p>
 
 			<div className="flex flex-wrap gap-3">
@@ -359,7 +366,7 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 }
 
 export default function IntakePage({ loaderData }: Route.ComponentProps) {
-	const { requests, perBatch } = loaderData
+	const { requests, perBatch, letters } = loaderData
 
 	return (
 		<div className="space-y-6">
@@ -369,6 +376,12 @@ export default function IntakePage({ loaderData }: Route.ComponentProps) {
 						? perBatch.map(([batch, count]) => `${batch}: ${count}`).join(' · ')
 						: 'No requests yet.'}
 				</p>
+				{letters.posted > 0 ? (
+					<p className="text-muted-foreground text-body-sm">
+						Letters: {letters.posted} registered · {letters.scanned} scanned ·{' '}
+						{letters.replied} replied
+					</p>
+				) : null}
 			</DetailPanelSection>
 			{requests.length === 0 ? (
 				<EmptyState

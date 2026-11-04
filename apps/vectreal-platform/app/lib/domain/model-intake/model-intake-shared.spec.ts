@@ -1,11 +1,20 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import {
 	addRetentionDays,
+	buildIntakeShortUrl,
 	buildIntakeUrl,
 	cleanupMinutesBetween,
+	intakeLetterDestination,
+	intakeLetterFormPath,
 	isIntakeBodyAcceptable,
+	mintIntakeLetterCode,
+	MODEL_INTAKE_CODE_ALPHABET,
 	MODEL_INTAKE_MAX_MESSAGE_LENGTH,
+	MODEL_INTAKE_RETENTION_DAYS,
+	normalizeIntakeLetterCode,
 	parseIntakeSizeCm,
 	resolveIntakeBatch,
 	resolveIntakeLocale,
@@ -95,6 +104,80 @@ describe('batches and locales', () => {
 	})
 })
 
+describe('letter codes', () => {
+	it('reads a printed code whatever its case and spacing', () => {
+		expect(normalizeIntakeLetterCode(' k7q2m9ab ')).toBe('K7Q2M9AB')
+	})
+
+	it.each([
+		null,
+		'',
+		'K7Q2M9A',
+		'K7Q2M9ABC',
+		'K7Q2M9A0',
+		'K7Q2M9AO',
+		'K7Q2M9A1',
+		'K7Q2M9AI',
+		'K7Q2M9AL',
+		'K7Q-2M9A'
+	])('refuses %s', (raw) => {
+		expect(normalizeIntakeLetterCode(raw)).toBeNull()
+	})
+
+	it('mints codes it reads back, from the whole alphabet and nothing else', () => {
+		const seen = new Set<string>()
+		for (let i = 0; i < 2000; i++) {
+			const code = mintIntakeLetterCode()
+			expect(normalizeIntakeLetterCode(code)).toBe(code)
+			for (const char of code) seen.add(char)
+		}
+		expect([...seen].sort().join('')).toBe(MODEL_INTAKE_CODE_ALPHABET)
+	})
+
+	it('puts nothing in an address but the code', () => {
+		expect(buildIntakeShortUrl('https://vectreal.com', 'K7Q2M9AB')).toBe(
+			'https://vectreal.com/c/K7Q2M9AB'
+		)
+		expect(intakeLetterFormPath('K7Q2M9AB', 'de')).toBe(
+			'/free-model?c=K7Q2M9AB&lang=de'
+		)
+		expect(intakeLetterFormPath('K7Q2M9AB', 'en')).toBe(
+			'/free-model?c=K7Q2M9AB'
+		)
+	})
+})
+
+describe('intakeLetterDestination', () => {
+	const letter = {
+		code: 'K7Q2M9AB',
+		category: 'shoes',
+		locale: 'de'
+	} as const
+
+	it('sends a code we never posted to the plain form', () => {
+		expect(intakeLetterDestination(null)).toBe('/free-model')
+	})
+
+	it('sends a letter to the form while its category has no store page', () => {
+		expect(intakeLetterDestination(letter, {})).toBe(
+			'/free-model?c=K7Q2M9AB&lang=de'
+		)
+		expect(
+			intakeLetterDestination(letter, {
+				furniture: 'https://store.example/products/chair'
+			})
+		).toBe('/free-model?c=K7Q2M9AB&lang=de')
+	})
+
+	it("sends a letter to its category's store page, carrying the code", () => {
+		expect(
+			intakeLetterDestination(letter, {
+				shoes: 'https://store.example/products/sneaker?variant=1'
+			})
+		).toBe('https://store.example/products/sneaker?variant=1&c=K7Q2M9AB')
+	})
+})
+
 describe('cleanup and retention arithmetic', () => {
 	it('counts whole minutes and never goes negative', () => {
 		const start = new Date('2026-10-20T10:00:00Z')
@@ -103,6 +186,17 @@ describe('cleanup and retention arithmetic', () => {
 		)
 		expect(cleanupMinutesBetween(start, new Date('2026-10-20T09:00:00Z'))).toBe(
 			0
+		)
+	})
+
+	// MDX takes no expression in running text, so the privacy policy keeps a literal held equal here.
+	it('states the purge period in the privacy policy', () => {
+		const policy = readFileSync(
+			new URL('../../../routes/privacy-policy-page.mdx', import.meta.url),
+			'utf8'
+		)
+		expect(policy).toContain(
+			`deleted ${MODEL_INTAKE_RETENTION_DAYS} days after we deliver the model, or ${MODEL_INTAKE_RETENTION_DAYS} days after we receive them`
 		)
 	})
 

@@ -1,12 +1,111 @@
-import { desc, eq, lte, sql } from 'drizzle-orm'
+import { count, countDistinct, desc, eq, inArray, lte, sql } from 'drizzle-orm'
 
 import {
 	addRetentionDays,
 	cleanupMinutesBetween,
-	type ModelIntakeOutcome
+	type ModelIntakeLocale,
+	type ModelIntakeOutcome,
+	type ModelIntakeProductType
 } from './model-intake-shared'
 import { getDbClient } from '../../../db/client'
-import { modelIntakeSubmissions } from '../../../db/schema'
+import {
+	modelIntakeLetterScans,
+	modelIntakeLetters,
+	modelIntakeSubmissions
+} from '../../../db/schema'
+
+export type ModelIntakeLetter = Omit<
+	typeof modelIntakeLetters.$inferSelect,
+	'createdAt'
+> & { category: ModelIntakeProductType; locale: ModelIntakeLocale }
+
+const letterColumns = {
+	code: modelIntakeLetters.code,
+	organization: modelIntakeLetters.organization,
+	category: modelIntakeLetters.category,
+	locale: modelIntakeLetters.locale
+}
+
+export async function findIntakeLetter(
+	code: string
+): Promise<ModelIntakeLetter | null> {
+	const [row] = await getDbClient()
+		.select(letterColumns)
+		.from(modelIntakeLetters)
+		.where(eq(modelIntakeLetters.code, code))
+	return (row as ModelIntakeLetter | undefined) ?? null
+}
+
+export async function recordIntakeLetterScan(
+	letterCode: string,
+	scannedAt: Date
+): Promise<void> {
+	await getDbClient()
+		.insert(modelIntakeLetterScans)
+		.values({ letterCode, scannedAt })
+}
+
+/**
+ * The codes among these already registered for a different letter. Asked
+ * before anything is printed or stored, so a reused code can never move
+ * earlier replies to another organization.
+ */
+export async function findConflictingIntakeLetters(
+	letters: ModelIntakeLetter[]
+): Promise<string[]> {
+	if (letters.length === 0) return []
+	const stored = await getDbClient()
+		.select(letterColumns)
+		.from(modelIntakeLetters)
+		.where(
+			inArray(
+				modelIntakeLetters.code,
+				letters.map((letter) => letter.code)
+			)
+		)
+	const byCode = new Map(stored.map((row) => [row.code, row]))
+	return letters
+		.filter((letter) => {
+			const row = byCode.get(letter.code)
+			return (
+				row !== undefined &&
+				(row.organization !== letter.organization ||
+					row.category !== letter.category ||
+					row.locale !== letter.locale)
+			)
+		})
+		.map((letter) => letter.code)
+}
+
+/** Records printed letters; one already registered, as a reprint is, stays as it was. */
+export async function insertIntakeLetters(
+	letters: ModelIntakeLetter[]
+): Promise<void> {
+	if (letters.length === 0) return
+	await getDbClient()
+		.insert(modelIntakeLetters)
+		.values(letters)
+		.onConflictDoNothing()
+}
+
+/** The mailing at a glance: letters registered, how many were opened, how many led to a request. */
+export async function summarizeIntakeLetters() {
+	const db = getDbClient()
+	const [[posted], [scanned], [replied]] = await Promise.all([
+		db.select({ total: count() }).from(modelIntakeLetters),
+		db
+			.select({ total: countDistinct(modelIntakeLetterScans.letterCode) })
+			.from(modelIntakeLetterScans),
+		db
+			.select({ total: countDistinct(modelIntakeSubmissions.letterCode) })
+			.from(modelIntakeSubmissions)
+	])
+	return {
+		posted: posted?.total ?? 0,
+		scanned: scanned?.total ?? 0,
+		replied: replied?.total ?? 0
+	}
+}
 
 export type ModelIntakeRow = typeof modelIntakeSubmissions.$inferSelect
 export type NewModelIntakeRow = typeof modelIntakeSubmissions.$inferInsert
@@ -39,6 +138,8 @@ export async function listIntakeSubmissions() {
 			referenceCode: modelIntakeSubmissions.referenceCode,
 			locale: modelIntakeSubmissions.locale,
 			batch: modelIntakeSubmissions.batch,
+			letterCode: modelIntakeSubmissions.letterCode,
+			letterOrganization: modelIntakeLetters.organization,
 			productType: modelIntakeSubmissions.productType,
 			heightCm: modelIntakeSubmissions.heightCm,
 			widthCm: modelIntakeSubmissions.widthCm,
@@ -55,6 +156,10 @@ export async function listIntakeSubmissions() {
 			createdAt: modelIntakeSubmissions.createdAt
 		})
 		.from(modelIntakeSubmissions)
+		.leftJoin(
+			modelIntakeLetters,
+			eq(modelIntakeSubmissions.letterCode, modelIntakeLetters.code)
+		)
 		.orderBy(desc(modelIntakeSubmissions.createdAt))
 }
 

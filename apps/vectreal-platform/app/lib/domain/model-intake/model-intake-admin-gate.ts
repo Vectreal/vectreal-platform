@@ -3,7 +3,9 @@
  *
  * There is no staff role in the app, so the internal page is gated the way
  * `billing-checkout` is: a PostHog flag evaluated on the server, where a
- * browser cannot claim the answer. Release it to Moritz's account by email.
+ * browser cannot claim the answer. The flag targets the "Internal / Test
+ * users" cohort, which matches on the person's `email` (or a stored
+ * `$internal_or_test_user`), so `email` is sent with every check.
  * Only an explicit `true` opens it; no client, a missing flag or a throw all
  * deny, and the route answers a denial with 404 so the page's existence is
  * not confirmed to anyone else.

@@ -8,8 +8,15 @@ import { routeErrorMeta } from '../components/not-found'
 import { MODEL_INTAKE_COPY } from '../constants/product-copy'
 import { captureServerEvent } from '../lib/domain/analytics/server-events.server'
 import {
+	lookupIntakeLetter,
+	resolveIntakeLetter
+} from '../lib/domain/model-intake/model-intake-letter.server'
+import {
 	isIntakeBodyAcceptable,
+	MODEL_INTAKE_LETTER_PARAM,
+	MODEL_INTAKE_RETENTION_DAYS,
 	type ModelIntakeActionData,
+	normalizeIntakeLetterCode,
 	resolveIntakeBatch,
 	resolveIntakeLocale
 } from '../lib/domain/model-intake/model-intake-shared'
@@ -23,11 +30,19 @@ import { shareCardMeta } from '../lib/share-cards'
 import type { Route } from './+types/free-model-page'
 import type { PostHogContext } from '../lib/posthog/posthog-middleware'
 
-export function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
 	return {
 		locale: resolveIntakeLocale(url.searchParams.get('lang')),
 		batch: resolveIntakeBatch(url.searchParams.get('b')),
+		/** Kept even when the lookup missed, so the submit and the language switch still carry it. */
+		letterCode: normalizeIntakeLetterCode(
+			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
+		),
+		letter: await resolveIntakeLetter(
+			request,
+			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
+		),
 		turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
 	}
 }
@@ -71,11 +86,17 @@ export async function action({ request, context }: Route.ActionArgs) {
 	}
 
 	try {
+		const c = formData.get(MODEL_INTAKE_LETTER_PARAM)
+		const letter = await lookupIntakeLetter(
+			request,
+			normalizeIntakeLetterCode(typeof c === 'string' ? c : null)
+		)
 		const result = await submitModelIntake({
 			request,
 			formData,
 			locale,
 			batch,
+			letter,
 			intakePageUrl: new URL('/dashboard/intake', request.url).toString()
 		})
 		captureServerEvent(posthog, request, distinctId, {
@@ -85,7 +106,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 					: result.outcome === 'honeypot' || result.outcome === 'rate_limit'
 						? 'model_intake_blocked'
 						: 'model_intake_submit_failed',
-			props: { outcome: result.outcome, batch, locale }
+			props: {
+				outcome: result.outcome,
+				batch,
+				locale,
+				from_letter: letter !== null
+			}
 		})
 		return data<ModelIntakeActionData>(result.body, { status: result.status })
 	} catch (error) {
@@ -111,7 +137,7 @@ export default function FreeModelPage({
 	loaderData,
 	actionData
 }: Route.ComponentProps) {
-	const { locale, batch, turnstileSiteKey } = loaderData
+	const { locale, batch, letterCode, letter, turnstileSiteKey } = loaderData
 	const copy = MODEL_INTAKE_COPY[locale]
 	const navigation = useNavigation()
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -130,6 +156,7 @@ export default function FreeModelPage({
 	const otherLocale = locale === 'de' ? 'en' : 'de'
 	const languageSearch = new URLSearchParams({ lang: otherLocale })
 	if (batch !== 'direct') languageSearch.set('b', batch)
+	if (letterCode) languageSearch.set(MODEL_INTAKE_LETTER_PARAM, letterCode)
 
 	const formError =
 		actionData?.status === 'error' && !actionData.fieldErrors
@@ -140,7 +167,11 @@ export default function FreeModelPage({
 		<main lang={locale}>
 			<PageHero
 				heading={copy.hero.heading}
-				description={copy.hero.description}
+				description={
+					letter
+						? `${copy.letterGreeting(letter.organization)} ${copy.hero.description}`
+						: copy.hero.description
+				}
 				actions={
 					<Link
 						to={`?${languageSearch.toString()}`}
@@ -175,6 +206,7 @@ export default function FreeModelPage({
 									<ModelIntakeForm
 										locale={locale}
 										batch={batch}
+										letterCode={letterCode}
 										turnstileSiteKey={turnstileSiteKey}
 										turnstileToken={turnstileToken}
 										onTurnstileSuccess={(next) => {
@@ -203,6 +235,9 @@ export default function FreeModelPage({
 							</ol>
 							<p className="text-muted-foreground text-body-sm">
 								{copy.next.note}
+							</p>
+							<p className="text-muted-foreground text-body-sm">
+								{copy.next.retention(MODEL_INTAKE_RETENTION_DAYS)}
 							</p>
 						</section>
 					</div>

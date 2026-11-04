@@ -36,6 +36,7 @@ describe('model intake emails', () => {
 				needsReview
 				size="H 12 cm"
 				batch="2026-10-30-brands"
+				letter="(none)"
 				locale="de"
 				message=""
 				photoUrls={['https://a', 'https://b', 'https://c']}
