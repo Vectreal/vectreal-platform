@@ -368,3 +368,170 @@ describe('Smart', () => {
 		expect(middle.z).toBeCloseTo(-3, 6)
 	})
 })
+
+describe("Smart's motion where it clears the model", () => {
+	/*
+	  Flights whose orbit around the target would pass through the model, so
+	  the clearance has to bend them. A floor met frame by frame bent each one
+	  at the moment of contact, then slid the camera round the model's center.
+	*/
+	const bending: Record<string, CameraFlight> = {
+		'close-ups on opposite sides': {
+			type: 'object_avoidance',
+			from: pose([0, 0, 1.4], [0, 0, 0.9]),
+			to: pose([0, 0, -1.4], [0, 0, -0.9]),
+			bounds: unitModel
+		},
+		'one hotspot side to the other': {
+			type: 'object_avoidance',
+			from: pose([1.6, 0.5, 0.6], [0.8, 0.2, 0.2]),
+			to: pose([-1.5, 0.3, -0.8], [-0.8, 0.1, -0.3]),
+			bounds: unitModel
+		},
+		'the overview into a close-up': intoCloseUp,
+		'tight close-ups straddling the center': {
+			type: 'object_avoidance',
+			from: pose([0, 0, 1.15], [0, 0, 1]),
+			to: pose([0, 0, -1.15], [0, 0, -1]),
+			bounds: unitModel
+		},
+		'a far camera into a close-up deep inside the clearance': {
+			type: 'object_avoidance',
+			from: pose([0.706, -2.82, -0.9836], [-0.5112, -0.4989, 0.7494]),
+			to: pose([-0.2325, 0.0436, -0.2331], [-0.824, 0.5584, -0.0724]),
+			bounds: unitModel
+		},
+		// Between two checks this one dips the furthest toward the floor.
+		'past the model between two far targets': {
+			type: 'object_avoidance',
+			from: pose([-1.5273, 0.4825, -0.9281], [-1.0307, 0.2395, -0.6132]),
+			to: pose([0.6291, -2.0091, 1.5159], [-0.9452, -1.0139, 0.9808]),
+			bounds: unitModel
+		},
+		'round a target beside the model': {
+			type: 'object_avoidance',
+			from: pose([2.1213, 0, 0.8787], [0, 0, 3]),
+			to: pose([-2.1213, 0, 0.8787], [0, 0, 3]),
+			bounds: unitModel
+		}
+	}
+	const cases = Object.entries(bending).flatMap(([name, flight]) =>
+		EASINGS.map((easing) => [name, easing, { ...flight, easing }] as const)
+	)
+
+	it.each(cases)(
+		'changes velocity and acceleration continuously: %s (%s)',
+		(_name, _easing, flight) => {
+			/*
+			  At a step of h, a smooth path's second difference of velocity
+			  shrinks with h cubed. A jump in velocity leaves it at the size of
+			  the jump, and a jump in acceleration at h squared times it, so
+			  either stands out by orders of magnitude against the top speed.
+			*/
+			const steps = 5000
+			const at = (index: number) =>
+				sampleCameraFlight(flight, index / steps).position.clone()
+			const velocities: Vector3[] = []
+			let previous = at(0)
+			for (let i = 1; i <= steps; i++) {
+				const position = at(i)
+				velocities.push(position.clone().sub(previous))
+				previous = position
+			}
+			const topSpeed = Math.max(...velocities.map((v) => v.length()))
+			for (let i = 2; i < velocities.length; i++) {
+				const change = velocities[i]
+					.clone()
+					.sub(velocities[i - 1])
+					.sub(velocities[i - 1].clone().sub(velocities[i - 2]))
+				expect(change.length() / topSpeed).toBeLessThan(1e-4)
+			}
+		}
+	)
+
+	it.each(Object.entries(bending))(
+		'never jolts between two frames at 60 fps, eased in and out: %s',
+		(_name, flight) => {
+			const path = frames({ ...flight, easing: 'ease_in_out' }).map(
+				({ position }) => position
+			)
+			const steps = path.slice(1).map((p, i) => p.clone().sub(path[i]))
+			const topStep = Math.max(...steps.map((step) => step.length()))
+			for (let i = 2; i < steps.length; i++) {
+				// How much the per-frame change in step changed from the last one.
+				const jolt = steps[i]
+					.clone()
+					.sub(steps[i - 1])
+					.sub(steps[i - 1].clone().sub(steps[i - 2]))
+				expect(jolt.length() / topStep).toBeLessThan(0.03)
+			}
+		}
+	)
+
+	it('orbits the model itself where pulling back from the target would take over 3x', () => {
+		// Orbiting the target would need 7x its distance as it crosses the center.
+		const flight = bending['tight close-ups straddling the center']
+		for (const progress of [0.25, 0.5, 0.75]) {
+			expect(
+				sampleCameraFlight(flight, progress).position.distanceTo(
+					unitModel.center
+				)
+			).toBeCloseTo(1.15, 9)
+		}
+	})
+
+	it('keeps a pull-back whose fit lands exactly on the floor', () => {
+		// Its binding check comes back a rounding error short of the floor.
+		const flight: CameraFlight = {
+			type: 'object_avoidance',
+			from: pose([-0.2238, 0.3351, -1.0442], [0.3605, 0.4318, -0.3029]),
+			to: pose([-1.1796, 0.0556, -0.2001], [-0.6504, 0.2736, -0.4731]),
+			bounds: unitModel
+		}
+		const [fromDistance, toDistance] = [flight.from, flight.to].map(
+			({ position }) => position.distanceTo(unitModel.center)
+		)
+		const middle = sampleCameraFlight(flight, 0.5)
+		const plain = sampleCameraFlight({ ...flight, bounds: null }, 0.5)
+		// Lifted off the target orbit, not swapped for the orbit round the center.
+		expect(middle.position.distanceTo(middle.target)).toBeGreaterThan(
+			plain.position.distanceTo(plain.target)
+		)
+		expect(middle.position.distanceTo(unitModel.center)).not.toBeCloseTo(
+			Math.sqrt(fromDistance * toDistance),
+			6
+		)
+	})
+
+	it('flies the plain orbit, untouched, when it never comes near the model', () => {
+		for (const progress of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+			expect(
+				sampleCameraFlight(frontToBack, progress).position.toArray()
+			).toEqual(
+				sampleCameraFlight(
+					{ ...frontToBack, bounds: null },
+					progress
+				).position.toArray()
+			)
+		}
+	})
+
+	it.each(Object.entries(bending))(
+		'stays outside the model between frames too: %s',
+		(_name, flight) => {
+			// No deeper than the deeper end, for a close-up inside the clearance.
+			const allowed = Math.min(
+				unitModel.radius * (1 + SMART_FLIGHT_CLEARANCE),
+				flight.from.position.distanceTo(unitModel.center),
+				flight.to.position.distanceTo(unitModel.center)
+			)
+			for (let i = 0; i <= 2000; i++) {
+				expect(
+					sampleCameraFlight(flight, i / 2000).position.distanceTo(
+						unitModel.center
+					)
+				).toBeGreaterThanOrEqual(allowed - 1e-9)
+			}
+		}
+	)
+})
