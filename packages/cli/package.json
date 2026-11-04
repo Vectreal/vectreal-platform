@@ -1,6 +1,6 @@
 {
 	"name": "@vctrl/cli",
-	"version": "3.3.0",
+	"version": "3.4.0",
 	"mcpName": "io.github.Vectreal/vectreal",
 	"description": "Sign in to Vectreal, link a directory to a project, and serve the Vectreal MCP tools to AI agents.",
 	"bugs": {

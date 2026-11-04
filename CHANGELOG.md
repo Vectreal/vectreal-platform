@@ -1,5 +1,51 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.3.0...workspace-v3.4.0) (2026-11-04)
+
+
+### Features
+
+* **core:** add a scene-camera module holding the viewer's camera math ([#1246](https://github.com/Vectreal/vectreal-platform/issues/1246)) ([ba34185](https://github.com/Vectreal/vectreal-platform/commit/ba341851cb2498750f5b1637f93a33903b0394bb))
+* **core:** bake studio lights into double-sided materials from their front ([#1270](https://github.com/Vectreal/vectreal-platform/issues/1270)) ([413c9e8](https://github.com/Vectreal/vectreal-platform/commit/413c9e814eec7c492a62281bfaeca483e77b041d))
+* **core:** bake the studio finish into a UV set laid out for it where a material's own UVs cannot take it ([#1261](https://github.com/Vectreal/vectreal-platform/issues/1261)) ([4d72ce5](https://github.com/Vectreal/vectreal-platform/commit/4d72ce5c50dd689271915d5f24047824999ffbf9))
+* **core:** pace the studio finish bake on GPU work where only the wall clock times it, and fail a slice the GPU never finishes as the new BakeFailureReason 'stalled' ([90c0336](https://github.com/Vectreal/vectreal-platform/commit/90c03366559207c560e707aea6191f55575f497c))
+* **core:** plan the light bake without baking, so the publisher says up front what the studio finish can take ([#1256](https://github.com/Vectreal/vectreal-platform/issues/1256)) ([5a7486d](https://github.com/Vectreal/vectreal-platform/commit/5a7486d9defa597b984fbf74fea4342811a75f20))
+* **core:** repair a studio bake after a GPU reset and say why one failed ([#1244](https://github.com/Vectreal/vectreal-platform/issues/1244)) ([fbc72ae](https://github.com/Vectreal/vectreal-platform/commit/fbc72ae08939c5c5419fdab0af1171ea1f1c1bab))
+* **dashboard:** ask to publish again when a scene's shadow is not stored ([#1258](https://github.com/Vectreal/vectreal-platform/issues/1258)) ([55271ad](https://github.com/Vectreal/vectreal-platform/commit/55271ad8ecfed8becefc7d9728cc7c1ca3871d09))
+* **intake:** one QR code per letter, with a short address that counts the scan and a form that greets by code ([#1280](https://github.com/Vectreal/vectreal-platform/issues/1280)) ([0cc89f8](https://github.com/Vectreal/vectreal-platform/commit/0cc89f8921e04cfce62cf042bdddf32600cb7010))
+* **news:** let an article end at the free-model form ([#1277](https://github.com/Vectreal/vectreal-platform/issues/1277)) ([69720c7](https://github.com/Vectreal/vectreal-platform/commit/69720c7eaf2f055305dc9ee883e8efbe531c8b05))
+* **newsroom:** schedule articles by publishedAt with a staging preview ([#1215](https://github.com/Vectreal/vectreal-platform/issues/1215)) ([019ba59](https://github.com/Vectreal/vectreal-platform/commit/019ba592e2214c5b37c14d2a8d8f143707f6c011))
+* **newsroom:** tell search engines when an article goes live ([#1241](https://github.com/Vectreal/vectreal-platform/issues/1241)) ([a806033](https://github.com/Vectreal/vectreal-platform/commit/a8060331fecf274b09665509ca33650b37e885bf))
+* **optimizer:** merge meshes that share a material into one draw ([#1257](https://github.com/Vectreal/vectreal-platform/issues/1257)) ([d25cde6](https://github.com/Vectreal/vectreal-platform/commit/d25cde63b76d55bffb782a0f422b409536306954))
+* **platform:** time generated models from photos to a Publisher scene ([#1281](https://github.com/Vectreal/vectreal-platform/issues/1281)) ([c770821](https://github.com/Vectreal/vectreal-platform/commit/c7708213cf0141f3f1590b0057a687a9f69b0ccc))
+* **publisher:** explain and repair a studio finish that did not apply ([#1247](https://github.com/Vectreal/vectreal-platform/issues/1247)) ([0fe2fda](https://github.com/Vectreal/vectreal-platform/commit/0fe2fda873d88c5ffb7eaaa3461259fa55452ce7))
+* **publisher:** name each mark on the lighting globe ([#1249](https://github.com/Vectreal/vectreal-platform/issues/1249)) ([e47e7e7](https://github.com/Vectreal/vectreal-platform/commit/e47e7e79f717616ff5dfd9c454c2d3ef67b1bb18))
+* **viewer:** fly Smart between cameras when a scene sets no transition ([#1267](https://github.com/Vectreal/vectreal-platform/issues/1267)) ([fd456df](https://github.com/Vectreal/vectreal-platform/commit/fd456df3185736d11d61b36f5ea6e8fa8911c946))
+* **viewer:** keep each camera's framed subject in view on any viewport ([#1255](https://github.com/Vectreal/vectreal-platform/issues/1255)) ([047d03d](https://github.com/Vectreal/vectreal-platform/commit/047d03d83caa99c7355e8d8994b242c9e5e7f93f))
+
+
+### Bug Fixes
+
+* **core:** plan Smart's clearance once per flight, so it never slides round the model ([#1279](https://github.com/Vectreal/vectreal-platform/issues/1279)) ([1e62344](https://github.com/Vectreal/vectreal-platform/commit/1e62344fa5621bdf557537a7e52c021ff28fc7d6))
+* **core:** zoom a camera flight's lens geometrically, so the framed size never overshoots ([#1272](https://github.com/Vectreal/vectreal-platform/issues/1272)) ([e8b4c1f](https://github.com/Vectreal/vectreal-platform/commit/e8b4c1f3fac2168a8072184b8d7f0c497a36f3d4))
+* **platform:** letterbox the viewer's loading thumbnail instead of cropping it ([#1275](https://github.com/Vectreal/vectreal-platform/issues/1275)) ([8ec5c26](https://github.com/Vectreal/vectreal-platform/commit/8ec5c26dda0b2a4ebd1d3055cb3f064643abe333))
+* **publisher:** stop a studio finish bake that stops reporting, and publish without it ([#1268](https://github.com/Vectreal/vectreal-platform/issues/1268)) ([b9f181c](https://github.com/Vectreal/vectreal-platform/commit/b9f181c31e7026e8d5725bc0cb899a25cbbd1680))
+* **publisher:** stop studio finish failures advising Depth alone ([#1271](https://github.com/Vectreal/vectreal-platform/issues/1271)) ([2fecc6d](https://github.com/Vectreal/vectreal-platform/commit/2fecc6d4f8b7ce5dabed22e95cf017a7da085107))
+* **publisher:** wrap studio finish report text in the sidebar ([#1243](https://github.com/Vectreal/vectreal-platform/issues/1243)) ([9da0474](https://github.com/Vectreal/vectreal-platform/commit/9da0474513cc23b50b3f66a22aad61d9d1ad81b8))
+* **scenes:** fail a scene read whose glTF document could not be read ([#1273](https://github.com/Vectreal/vectreal-platform/issues/1273)) ([006e96e](https://github.com/Vectreal/vectreal-platform/commit/006e96eb9eb739fb78fc82728d30bd91b80d09e5))
+* **viewer:** fill a contained loading thumbnail's bands with its own edges ([#1276](https://github.com/Vectreal/vectreal-platform/issues/1276)) ([a7c2b62](https://github.com/Vectreal/vectreal-platform/commit/a7c2b62259d34702ab288781d2758260cfa60af8))
+* **viewer:** filter the live ground shadow linearly so a close-up does not draw it as square blocks ([#1263](https://github.com/Vectreal/vectreal-platform/issues/1263)) ([fb6b006](https://github.com/Vectreal/vectreal-platform/commit/fb6b0061cd40fba49109723850b92bd20327933f))
+* **viewer:** frame scene thumbnails for their own aspect, as the viewer does ([#1274](https://github.com/Vectreal/vectreal-platform/issues/1274)) ([06baeb8](https://github.com/Vectreal/vectreal-platform/commit/06baeb8a7f736a10b9374855ddaf05b49791702e))
+* **viewer:** keep a camera flight playing when the host follows camera_changed ([#1265](https://github.com/Vectreal/vectreal-platform/issues/1265)) ([f29ace3](https://github.com/Vectreal/vectreal-platform/commit/f29ace302ceb7c2766bec6c3e09a71838f67240b))
+* **viewer:** keep stored shadow bakes and keep visitor surfaces off heavy live bakes ([#1250](https://github.com/Vectreal/vectreal-platform/issues/1250)) ([26c9e4a](https://github.com/Vectreal/vectreal-platform/commit/26c9e4a9d97f99b730ba61601d95179b3fe07364))
+* **viewer:** recover from a lost WebGL context or say the scene could not be shown ([#1248](https://github.com/Vectreal/vectreal-platform/issues/1248)) ([1948045](https://github.com/Vectreal/vectreal-platform/commit/1948045eccdbbed26fbd79d4d1aec9e8dc3e20cf))
+
+
+### Performance Improvements
+
+* **core:** bake the studio finish's depth with 64 rays per texel instead of 256 ([#1269](https://github.com/Vectreal/vectreal-platform/issues/1269)) ([203b93c](https://github.com/Vectreal/vectreal-platform/commit/203b93cfdf5d69a141d938602b3aa493d9d28623))
+* **publisher:** preload lighting thumbnails as content-hashed assets ([#1245](https://github.com/Vectreal/vectreal-platform/issues/1245)) ([ca80b85](https://github.com/Vectreal/vectreal-platform/commit/ca80b855e54678ff9c34b7dce6ea8cd31aa2aff2))
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.2.0...workspace-v3.3.0) (2026-11-01)
 
 
