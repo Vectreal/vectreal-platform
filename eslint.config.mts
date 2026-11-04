@@ -455,11 +455,11 @@ export default defineConfig(tseslint.configs.recommended, [
 	{
 		// The product-shot capture, home-hero and share-card bakes, lighting
 		// thumbnail render and model normalize scripts drive a browser with
-		// Playwright. They are run by hand against a local stack and never
-		// imported by the app, so
-		// Playwright is a tool of the repository, satisfied by the root
-		// devDependency, and not something the app depends on. Declaring it would
-		// list a test runner among the server's runtime dependencies.
+		// Playwright, and the timing run also talks to the CLI over MCP. They are
+		// run by hand against a local stack and never imported by the app, so
+		// Playwright and the MCP client are tools of the repository, satisfied by
+		// root devDependencies, and not something the app depends on. Declaring
+		// them would list a test runner among the server's runtime dependencies.
 		files: ['apps/vectreal-platform/package.json'],
 		rules: {
 			'@nx/dependency-checks': [
@@ -473,6 +473,8 @@ export default defineConfig(tseslint.configs.recommended, [
 						'{projectRoot}/scripts/bake-share-cards.ts',
 						'{projectRoot}/scripts/render-lighting-thumbnails.ts',
 						'{projectRoot}/scripts/normalize-generated-model.ts',
+						'{projectRoot}/scripts/normalize-in-browser.ts',
+						'{projectRoot}/scripts/timing-run.ts',
 						// The markdown-twin transform runs in the Vite config graph,
 						// imported by vite.config.ts and vitest.config.ts, so its remark
 						// packages are build tooling beside @mdx-js/rollup in the root
