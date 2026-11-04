@@ -13,7 +13,7 @@ export default function ModelIntakeInternalPreview() {
 			needsReview={false}
 			size="H 12 cm x W 30.5 cm"
 			batch="2026-10-30-brands"
-			letter="K7Q2M9 (Example GmbH)"
+			letter="K7Q2M9AB (Example GmbH)"
 			locale="de"
 			message="Matte black, with the logo on the heel."
 			photoUrls={[

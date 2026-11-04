@@ -7,7 +7,7 @@ import { ModelIntakeForm, ModelIntakeResult } from '../components/model-intake'
 import { routeErrorMeta } from '../components/not-found'
 import { MODEL_INTAKE_COPY } from '../constants/product-copy'
 import { captureServerEvent } from '../lib/domain/analytics/server-events.server'
-import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-repository.server'
+import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
 import {
 	isIntakeBodyAcceptable,
 	MODEL_INTAKE_LETTER_PARAM,
@@ -32,6 +32,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 		locale: resolveIntakeLocale(url.searchParams.get('lang')),
 		batch: resolveIntakeBatch(url.searchParams.get('b')),
 		letter: await resolveIntakeLetter(
+			request,
 			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 		),
 		turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
@@ -78,7 +79,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 	try {
 		const c = formData.get(MODEL_INTAKE_LETTER_PARAM)
-		const letter = await resolveIntakeLetter(typeof c === 'string' ? c : null)
+		const letter = await resolveIntakeLetter(
+			request,
+			typeof c === 'string' ? c : null
+		)
 		const result = await submitModelIntake({
 			request,
 			formData,

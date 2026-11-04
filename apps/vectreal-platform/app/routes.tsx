@@ -300,6 +300,8 @@ export default [
 		id: 'privacy-short-link'
 	}),
 	route('terms', './routes/legal-short-link.ts', { id: 'terms-short-link' }),
+	// The address printed on each free-model letter's card
+	route('c/:code', './routes/letter-short-link.ts'),
 
 	// Dashboard - each route handles its own data loading
 	...prefix('dashboard', [

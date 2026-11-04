@@ -1,5 +1,5 @@
 {
-  "id": "6eeaa26a-0b73-45fd-8d5a-af024140f465",
+  "id": "246b31b5-ee21-4ec5-b39f-62908e69d73d",
   "prevId": "bb231c20-eb52-4384-8bba-b63f1c230d0a",
   "version": "7",
   "dialect": "postgresql",
@@ -287,6 +287,69 @@
       "checkConstraints": {},
       "isRLSEnabled": true
     },
+    "public.model_intake_letter_scans": {
+      "name": "model_intake_letter_scans",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "letter_code": {
+          "name": "letter_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scanned_at": {
+          "name": "scanned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "model_intake_letter_scans_letter_code_idx": {
+          "name": "model_intake_letter_scans_letter_code_idx",
+          "columns": [
+            {
+              "expression": "letter_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "model_intake_letter_scans_letter_code_model_intake_letters_code_fk": {
+          "name": "model_intake_letter_scans_letter_code_model_intake_letters_code_fk",
+          "tableFrom": "model_intake_letter_scans",
+          "tableTo": "model_intake_letters",
+          "columnsFrom": [
+            "letter_code"
+          ],
+          "columnsTo": [
+            "code"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
     "public.model_intake_letters": {
       "name": "model_intake_letters",
       "schema": "",
@@ -299,6 +362,18 @@
         },
         "organization": {
           "name": "organization",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locale": {
+          "name": "locale",
           "type": "text",
           "primaryKey": false,
           "notNull": true

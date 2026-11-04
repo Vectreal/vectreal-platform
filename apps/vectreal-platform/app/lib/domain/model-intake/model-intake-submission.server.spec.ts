@@ -87,13 +87,18 @@ function submit(
 describe('submitModelIntake', () => {
 	it('stores the letter a reply came from and names it in the inbox copy', async () => {
 		const deps = fakes()
-		await submit(form(), deps, { code: 'K7Q2M9', organization: 'Brand GmbH' })
+		await submit(form(), deps, {
+			code: 'K7Q2M9AB',
+			organization: 'Brand GmbH',
+			category: 'shoes',
+			locale: 'de'
+		})
 
 		expect(deps.insertIntakeSubmission).toHaveBeenCalledWith(
-			expect.objectContaining({ letterCode: 'K7Q2M9' })
+			expect.objectContaining({ letterCode: 'K7Q2M9AB' })
 		)
 		expect(deps.sendIntakeInternalNotification).toHaveBeenCalledWith(
-			expect.objectContaining({ letter: 'K7Q2M9 (Brand GmbH)' })
+			expect.objectContaining({ letter: 'K7Q2M9AB (Brand GmbH)' })
 		)
 	})
 

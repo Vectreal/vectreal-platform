@@ -1,47 +1,102 @@
-import { desc, eq, lte, sql } from 'drizzle-orm'
+import { count, countDistinct, desc, eq, inArray, lte, sql } from 'drizzle-orm'
 
 import {
 	addRetentionDays,
 	cleanupMinutesBetween,
+	type ModelIntakeLocale,
 	type ModelIntakeOutcome,
-	normalizeIntakeLetterCode
+	type ModelIntakeProductType
 } from './model-intake-shared'
 import { getDbClient } from '../../../db/client'
-import { modelIntakeLetters, modelIntakeSubmissions } from '../../../db/schema'
+import {
+	modelIntakeLetterScans,
+	modelIntakeLetters,
+	modelIntakeSubmissions
+} from '../../../db/schema'
 
-export type ModelIntakeLetter = Pick<
+export type ModelIntakeLetter = Omit<
 	typeof modelIntakeLetters.$inferSelect,
-	'code' | 'organization'
->
+	'createdAt'
+> & { category: ModelIntakeProductType; locale: ModelIntakeLocale }
 
-/** The letter a `?c=` names, or null for no code, a malformed one, or one we never posted. */
-export async function resolveIntakeLetter(
-	raw: string | null
-): Promise<ModelIntakeLetter | null> {
-	const code = normalizeIntakeLetterCode(raw)
-	if (!code) return null
-	const [row] = await getDbClient()
-		.select({
-			code: modelIntakeLetters.code,
-			organization: modelIntakeLetters.organization
-		})
-		.from(modelIntakeLetters)
-		.where(eq(modelIntakeLetters.code, code))
-	return row ?? null
+const letterColumns = {
+	code: modelIntakeLetters.code,
+	organization: modelIntakeLetters.organization,
+	category: modelIntakeLetters.category,
+	locale: modelIntakeLetters.locale
 }
 
-/** Registers printed letters; a code printed again keeps its row and takes the new organization. */
-export async function upsertIntakeLetters(
-	letters: ModelIntakeLetter[]
+export async function findIntakeLetter(
+	code: string
+): Promise<ModelIntakeLetter | null> {
+	const [row] = await getDbClient()
+		.select(letterColumns)
+		.from(modelIntakeLetters)
+		.where(eq(modelIntakeLetters.code, code))
+	return (row as ModelIntakeLetter | undefined) ?? null
+}
+
+export async function recordIntakeLetterScan(
+	letterCode: string,
+	scannedAt: Date
 ): Promise<void> {
-	if (letters.length === 0) return
 	await getDbClient()
-		.insert(modelIntakeLetters)
-		.values(letters)
-		.onConflictDoUpdate({
-			target: modelIntakeLetters.code,
-			set: { organization: sql`excluded.organization` }
+		.insert(modelIntakeLetterScans)
+		.values({ letterCode, scannedAt })
+}
+
+/**
+ * Records printed letters. A code already registered stays as it was: the
+ * codes that come back are the ones whose stored letter differs, which the
+ * caller refuses, so a reused code can never move earlier replies to another
+ * organization.
+ */
+export async function registerIntakeLetters(
+	letters: ModelIntakeLetter[]
+): Promise<string[]> {
+	if (letters.length === 0) return []
+	const db = getDbClient()
+	await db.insert(modelIntakeLetters).values(letters).onConflictDoNothing()
+	const stored = await db
+		.select(letterColumns)
+		.from(modelIntakeLetters)
+		.where(
+			inArray(
+				modelIntakeLetters.code,
+				letters.map((letter) => letter.code)
+			)
+		)
+	const byCode = new Map(stored.map((row) => [row.code, row]))
+	return letters
+		.filter((letter) => {
+			const row = byCode.get(letter.code)
+			return (
+				!row ||
+				row.organization !== letter.organization ||
+				row.category !== letter.category ||
+				row.locale !== letter.locale
+			)
 		})
+		.map((letter) => letter.code)
+}
+
+/** The mailing at a glance: letters registered, how many were opened, how many led to a request. */
+export async function summarizeIntakeLetters() {
+	const db = getDbClient()
+	const [[posted], [scanned], [replied]] = await Promise.all([
+		db.select({ total: count() }).from(modelIntakeLetters),
+		db
+			.select({ total: countDistinct(modelIntakeLetterScans.letterCode) })
+			.from(modelIntakeLetterScans),
+		db
+			.select({ total: countDistinct(modelIntakeSubmissions.letterCode) })
+			.from(modelIntakeSubmissions)
+	])
+	return {
+		posted: posted?.total ?? 0,
+		scanned: scanned?.total ?? 0,
+		replied: replied?.total ?? 0
+	}
 }
 
 export type ModelIntakeRow = typeof modelIntakeSubmissions.$inferSelect

@@ -61,11 +61,44 @@ export function resolveIntakeBatch(raw: string | null): ModelIntakeBatch {
  */
 export const MODEL_INTAKE_LETTER_PARAM = 'c'
 
-/** A printed letter code, typed as it reads under the QR code: upper case, case-insensitive on the way in. */
+/**
+ * What a letter code is made of: no 0, O, 1, I or L, so a code read off the
+ * card is typed back the way it was printed. Eight of these are about 850
+ * billion codes, which no one walks through to learn whom we wrote to.
+ */
+export const MODEL_INTAKE_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
+export const MODEL_INTAKE_CODE_LENGTH = 8
+
+const LETTER_CODE_PATTERN = new RegExp(
+	`^[${MODEL_INTAKE_CODE_ALPHABET}]{${MODEL_INTAKE_CODE_LENGTH}}$`
+)
+
+/** A printed letter code as typed: case and surrounding spaces do not matter. */
 export function normalizeIntakeLetterCode(raw: string | null): string | null {
 	const code = raw?.trim().toUpperCase() ?? ''
-	return /^[A-Z0-9]{6,12}$/.test(code) ? code : null
+	return LETTER_CODE_PATTERN.test(code) ? code : null
 }
+
+/** A fresh code from the CSPRNG, by rejection so every character is equally likely. */
+export function mintIntakeLetterCode(): string {
+	const size = MODEL_INTAKE_CODE_ALPHABET.length
+	const ceiling = 256 - (256 % size)
+	let code = ''
+	while (code.length < MODEL_INTAKE_CODE_LENGTH) {
+		for (const byte of crypto.getRandomValues(new Uint8Array(16))) {
+			if (byte < ceiling && code.length < MODEL_INTAKE_CODE_LENGTH) {
+				code += MODEL_INTAKE_CODE_ALPHABET[byte % size]
+			}
+		}
+	}
+	return code
+}
+
+/**
+ * The short address a letter's QR code encodes and its card prints:
+ * `/c/<code>`, which records the scan and forwards the reader.
+ */
+export const MODEL_INTAKE_SHORT_LINK_PREFIX = '/c/'
 
 export const MODEL_INTAKE_PHOTO_COUNT = 3
 export const MODEL_INTAKE_MAX_PHOTO_BYTES = 15 * 1024 * 1024
@@ -292,13 +325,47 @@ export function buildIntakeUrl(
 	return url.toString()
 }
 
-export function buildIntakeLetterUrl(
-	origin: string,
+/** The form for one letter's reader: `/free-model?c=<code>`, in the letter's language. */
+export function intakeLetterFormPath(
 	code: string,
 	locale: ModelIntakeLocale
 ): string {
-	const url = new URL('/free-model', origin)
-	url.searchParams.set(MODEL_INTAKE_LETTER_PARAM, code)
-	if (locale === 'de') url.searchParams.set('lang', 'de')
-	return url.toString()
+	const search = new URLSearchParams({ [MODEL_INTAKE_LETTER_PARAM]: code })
+	if (locale === 'de') search.set('lang', 'de')
+	return `/free-model?${search.toString()}`
+}
+
+export function buildIntakeShortUrl(origin: string, code: string): string {
+	return new URL(`${MODEL_INTAKE_SHORT_LINK_PREFIX}${code}`, origin).toString()
+}
+
+/**
+ * The sample-store product page a letter's short address forwards to, per
+ * product category. Empty until the store exists: a category without a page
+ * forwards to the form instead. The store's own link to the form reads the
+ * `c` this forward appends.
+ */
+export const MODEL_INTAKE_STORE_PAGES: Partial<
+	Record<ModelIntakeProductType, string>
+> = {}
+
+/** Where `/c/<code>` sends a reader: the store page for the letter's category, else the form, else the plain form for a code we never posted. */
+export function intakeLetterDestination(
+	letter: {
+		code: string
+		category: ModelIntakeProductType
+		locale: ModelIntakeLocale
+	} | null,
+	storePages: Partial<
+		Record<ModelIntakeProductType, string>
+	> = MODEL_INTAKE_STORE_PAGES
+): string {
+	if (!letter) return '/free-model'
+	const storePage = storePages[letter.category]
+	if (storePage) {
+		const url = new URL(storePage)
+		url.searchParams.set(MODEL_INTAKE_LETTER_PARAM, letter.code)
+		return url.toString()
+	}
+	return intakeLetterFormPath(letter.code, letter.locale)
 }
