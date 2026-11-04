@@ -7,12 +7,16 @@ import { ModelIntakeForm, ModelIntakeResult } from '../components/model-intake'
 import { routeErrorMeta } from '../components/not-found'
 import { MODEL_INTAKE_COPY } from '../constants/product-copy'
 import { captureServerEvent } from '../lib/domain/analytics/server-events.server'
-import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
+import {
+	lookupIntakeLetter,
+	resolveIntakeLetter
+} from '../lib/domain/model-intake/model-intake-letter.server'
 import {
 	isIntakeBodyAcceptable,
 	MODEL_INTAKE_LETTER_PARAM,
 	MODEL_INTAKE_RETENTION_DAYS,
 	type ModelIntakeActionData,
+	normalizeIntakeLetterCode,
 	resolveIntakeBatch,
 	resolveIntakeLocale
 } from '../lib/domain/model-intake/model-intake-shared'
@@ -31,6 +35,10 @@ export async function loader({ request }: Route.LoaderArgs) {
 	return {
 		locale: resolveIntakeLocale(url.searchParams.get('lang')),
 		batch: resolveIntakeBatch(url.searchParams.get('b')),
+		/** Kept even when the lookup missed, so the submit and the language switch still carry it. */
+		letterCode: normalizeIntakeLetterCode(
+			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
+		),
 		letter: await resolveIntakeLetter(
 			request,
 			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
@@ -79,9 +87,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 	try {
 		const c = formData.get(MODEL_INTAKE_LETTER_PARAM)
-		const letter = await resolveIntakeLetter(
+		const letter = await lookupIntakeLetter(
 			request,
-			typeof c === 'string' ? c : null
+			normalizeIntakeLetterCode(typeof c === 'string' ? c : null)
 		)
 		const result = await submitModelIntake({
 			request,
@@ -129,7 +137,7 @@ export default function FreeModelPage({
 	loaderData,
 	actionData
 }: Route.ComponentProps) {
-	const { locale, batch, letter, turnstileSiteKey } = loaderData
+	const { locale, batch, letterCode, letter, turnstileSiteKey } = loaderData
 	const copy = MODEL_INTAKE_COPY[locale]
 	const navigation = useNavigation()
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -148,7 +156,7 @@ export default function FreeModelPage({
 	const otherLocale = locale === 'de' ? 'en' : 'de'
 	const languageSearch = new URLSearchParams({ lang: otherLocale })
 	if (batch !== 'direct') languageSearch.set('b', batch)
-	if (letter) languageSearch.set(MODEL_INTAKE_LETTER_PARAM, letter.code)
+	if (letterCode) languageSearch.set(MODEL_INTAKE_LETTER_PARAM, letterCode)
 
 	const formError =
 		actionData?.status === 'error' && !actionData.fieldErrors
@@ -198,7 +206,7 @@ export default function FreeModelPage({
 									<ModelIntakeForm
 										locale={locale}
 										batch={batch}
-										letterCode={letter?.code ?? null}
+										letterCode={letterCode}
 										turnstileSiteKey={turnstileSiteKey}
 										turnstileToken={turnstileToken}
 										onTurnstileSuccess={(next) => {

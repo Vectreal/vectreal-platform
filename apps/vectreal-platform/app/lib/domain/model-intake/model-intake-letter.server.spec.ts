@@ -1,11 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	followIntakeShortLink,
 	intakeLetterDeps,
+	lookupIntakeLetter,
 	resolveIntakeLetter,
 	type IntakeLetterDeps
 } from './model-intake-letter.server'
+import { __resetRateLimitsForTest } from '../../http/rate-limit.server'
 
 import type { ModelIntakeLetter } from './model-intake-repository.server'
 
@@ -60,6 +62,31 @@ describe('resolveIntakeLetter', () => {
 		const deps = fakes({ findIntakeLetter: vi.fn().mockRejectedValue(failure) })
 		expect(await resolveIntakeLetter(request, letter.code, deps)).toBeNull()
 		expect(deps.reportServerError).toHaveBeenCalledWith(failure, { request })
+	})
+})
+
+describe('lookupIntakeLetter', () => {
+	it("reads the code the form carried without spending the visitor's lookups", async () => {
+		const deps = fakes({ isRateLimited: vi.fn(() => true) })
+		expect(await lookupIntakeLetter(request, letter.code, deps)).toEqual(letter)
+		expect(deps.isRateLimited).not.toHaveBeenCalled()
+		expect(await lookupIntakeLetter(request, null, deps)).toBeNull()
+	})
+})
+
+describe('the lookup limit', () => {
+	afterEach(() => __resetRateLimitsForTest())
+
+	it('lets a reader through and stops an address after thirty lookups', () => {
+		const from = (ip: string) =>
+			new Request('https://vectreal.com/c/k7q2m9ab', {
+				headers: { 'cf-connecting-ip': ip }
+			})
+		for (let i = 0; i < 30; i++) {
+			expect(intakeLetterDeps.isRateLimited(from('203.0.113.7'))).toBe(false)
+		}
+		expect(intakeLetterDeps.isRateLimited(from('203.0.113.7'))).toBe(true)
+		expect(intakeLetterDeps.isRateLimited(from('203.0.113.8'))).toBe(false)
 	})
 })
 

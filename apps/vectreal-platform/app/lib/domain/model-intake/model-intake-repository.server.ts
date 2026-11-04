@@ -46,18 +46,15 @@ export async function recordIntakeLetterScan(
 }
 
 /**
- * Records printed letters. A code already registered stays as it was: the
- * codes that come back are the ones whose stored letter differs, which the
- * caller refuses, so a reused code can never move earlier replies to another
- * organization.
+ * The codes among these already registered for a different letter. Asked
+ * before anything is printed or stored, so a reused code can never move
+ * earlier replies to another organization.
  */
-export async function registerIntakeLetters(
+export async function findConflictingIntakeLetters(
 	letters: ModelIntakeLetter[]
 ): Promise<string[]> {
 	if (letters.length === 0) return []
-	const db = getDbClient()
-	await db.insert(modelIntakeLetters).values(letters).onConflictDoNothing()
-	const stored = await db
+	const stored = await getDbClient()
 		.select(letterColumns)
 		.from(modelIntakeLetters)
 		.where(
@@ -71,13 +68,24 @@ export async function registerIntakeLetters(
 		.filter((letter) => {
 			const row = byCode.get(letter.code)
 			return (
-				!row ||
-				row.organization !== letter.organization ||
-				row.category !== letter.category ||
-				row.locale !== letter.locale
+				row !== undefined &&
+				(row.organization !== letter.organization ||
+					row.category !== letter.category ||
+					row.locale !== letter.locale)
 			)
 		})
 		.map((letter) => letter.code)
+}
+
+/** Records printed letters; one already registered, as a reprint is, stays as it was. */
+export async function insertIntakeLetters(
+	letters: ModelIntakeLetter[]
+): Promise<void> {
+	if (letters.length === 0) return
+	await getDbClient()
+		.insert(modelIntakeLetters)
+		.values(letters)
+		.onConflictDoNothing()
 }
 
 /** The mailing at a glance: letters registered, how many were opened, how many led to a request. */

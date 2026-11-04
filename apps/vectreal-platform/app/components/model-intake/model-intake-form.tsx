@@ -34,7 +34,7 @@ import { TurnstileWidget } from '../turnstile-widget'
 interface ModelIntakeFormProps {
 	locale: ModelIntakeLocale
 	batch: ModelIntakeBatch
-	/** The printed code of the letter this visit came from, once the server has recognized it. */
+	/** The letter code this visit came with; the submit looks it up again. */
 	letterCode: string | null
 	turnstileSiteKey: string
 	turnstileToken: string | null

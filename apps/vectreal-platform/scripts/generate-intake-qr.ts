@@ -13,7 +13,7 @@
  *
  * Writes into `--out`:
  *   <code>.svg    the QR code, for print
- *   letters.csv   code, organization, recipient, category, the address to
+ *   letters.csv   code, organization, recipient, category, locale, the address to
  *                 print under the QR code, and the file. Refused if it exists,
  *                 because it is the only record of who got which code. Fed
  *                 back as `--letters`, it reprints the same codes.
@@ -21,7 +21,8 @@
  * `--register` records the letters in the database, which the forward, the
  * greeting and the stored reply all need. It asks for `--confirm-host` like
  * `purge-model-intake`, so the operator states which environment this is, and
- * it refuses a code already registered for a different letter.
+ * it refuses a code already registered for a different letter. A row's
+ * `locale` column, when present, wins over `--lang`.
  *
  * Without `--letters`, writes `<batch>.<lang>.svg` for every batch in
  * `MODEL_INTAKE_BATCHES`, in English and German.
@@ -85,15 +86,19 @@ function registrationHost(): string | null {
 	return host
 }
 
-/** Every check runs before the first file or row is written. */
+/**
+ * Every check runs before the first file is written, and the files before the
+ * first row: a run that fails while registering leaves a `letters.csv` that
+ * registers the same codes when fed back in.
+ */
 async function printLetters(listFile: string, origin: string, outDir: string) {
-	const parsed = parseIntakeLetterList(await readFile(listFile, 'utf8'))
-	if (!parsed.ok) throw new Error(parsed.errors.join('\n'))
-
-	const locale = flag('lang') ?? 'de'
-	if (!isIntakeLocale(locale)) {
+	const lang = flag('lang') ?? 'de'
+	if (!isIntakeLocale(lang)) {
 		throw new Error(`--lang must be one of ${MODEL_INTAKE_LOCALES.join(', ')}.`)
 	}
+	const parsed = parseIntakeLetterList(await readFile(listFile, 'utf8'), lang)
+	if (!parsed.ok) throw new Error(parsed.errors.join('\n'))
+
 	const mapping = path.join(outDir, 'letters.csv')
 	if (existsSync(mapping)) {
 		throw new Error(
@@ -101,25 +106,24 @@ async function printLetters(listFile: string, origin: string, outDir: string) {
 		)
 	}
 	const host = registrationHost()
-
-	if (host) {
-		// Loaded only here, so printing alone never needs a database.
-		const { registerIntakeLetters } =
-			await import('../app/lib/domain/model-intake/model-intake-repository.server')
-		const conflicts = await registerIntakeLetters(
-			parsed.letters.map(({ code, organization, category }) => ({
-				code,
-				organization,
-				category,
-				locale
-			}))
+	const letters = parsed.letters.map(
+		({ code, organization, category, locale }) => ({
+			code,
+			organization,
+			category,
+			locale
+		})
+	)
+	// Loaded only when registering, so printing alone never needs a database.
+	const repository = host
+		? await import('../app/lib/domain/model-intake/model-intake-repository.server')
+		: null
+	const conflicts =
+		(await repository?.findConflictingIntakeLetters(letters)) ?? []
+	if (conflicts.length > 0) {
+		throw new Error(
+			`Already registered for a different letter: ${conflicts.join(', ')}. Nothing was printed or registered.`
 		)
-		if (conflicts.length > 0) {
-			throw new Error(
-				`Already registered for a different letter: ${conflicts.join(', ')}. Nothing was printed; the other letters are registered.`
-			)
-		}
-		console.info('Registered %d letter(s) on %s.', parsed.letters.length, host)
 	}
 
 	await mkdir(outDir, { recursive: true })
@@ -133,7 +137,10 @@ async function printLetters(listFile: string, origin: string, outDir: string) {
 	await writeFile(mapping, formatIntakeLetterMapping(rows), { flag: 'wx' })
 	console.info('%s  code to recipient', path.relative(process.cwd(), mapping))
 
-	if (!host) {
+	if (repository) {
+		await repository.insertIntakeLetters(letters)
+		console.info('Registered %d letter(s) on %s.', letters.length, host)
+	} else {
 		console.info(
 			'Not registered: these codes forward to the plain form until a --register run.'
 		)

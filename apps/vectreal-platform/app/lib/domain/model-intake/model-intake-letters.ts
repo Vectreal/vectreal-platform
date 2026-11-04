@@ -1,7 +1,9 @@
 import {
 	isIntakeProductType,
 	mintIntakeLetterCode,
+	MODEL_INTAKE_LOCALES,
 	MODEL_INTAKE_PRODUCT_TYPES,
+	type ModelIntakeLocale,
 	type ModelIntakeProductType,
 	normalizeIntakeLetterCode
 } from './model-intake-shared'
@@ -13,15 +15,21 @@ import {
  *
  * Columns are found by name: `organization` (the brand or agency),
  * `recipient` (the person the envelope names), `category` (a product type,
- * which picks the sample-store page) and an optional `code`. A row without a
- * code gets a fresh one. The mapping the script writes carries all four, so
- * feeding it back in reprints the same codes.
+ * which picks the sample-store page), and optionally `code` and `locale`. A
+ * row without a code gets a fresh one; one without a locale takes the run's
+ * `--lang`. The mapping the script writes carries all of them, so feeding it
+ * back in reprints the same letters.
  */
 export interface IntakeLetterRow {
 	organization: string
 	recipient: string
 	category: ModelIntakeProductType
 	code: string
+	locale: ModelIntakeLocale
+}
+
+function isIntakeLocale(value: string): value is ModelIntakeLocale {
+	return MODEL_INTAKE_LOCALES.includes(value as ModelIntakeLocale)
 }
 
 /** Spreadsheet exports often begin with one. */
@@ -97,6 +105,7 @@ function parseCsv(text: string): { records: string[][] } | { error: string } {
  */
 export function parseIntakeLetterList(
 	text: string,
+	defaultLocale: ModelIntakeLocale,
 	mintCode: () => string = mintIntakeLetterCode
 ): { ok: true; letters: IntakeLetterRow[] } | { ok: false; errors: string[] } {
 	const parsed = parseCsv(text.replace(BYTE_ORDER_MARK, ''))
@@ -109,7 +118,7 @@ export function parseIntakeLetterList(
 		return {
 			ok: false,
 			errors: [
-				`The first line must name the columns ${REQUIRED_COLUMNS.join(',')} (and optionally code). Missing: ${missing.join(', ')}.`
+				`The first line must name the columns ${REQUIRED_COLUMNS.join(',')} (and optionally code, locale). Missing: ${missing.join(', ')}.`
 			]
 		}
 	}
@@ -125,6 +134,8 @@ export function parseIntakeLetterList(
 		const category = cell('category')
 		const rawCode = columns.includes('code') ? cell('code') : ''
 		const code = rawCode ? normalizeIntakeLetterCode(rawCode) : null
+		const locale =
+			(columns.includes('locale') && cell('locale')) || defaultLocale
 
 		if (cells.length !== columns.length) {
 			errors.push(`Line ${line}: expected ${columns.length} columns.`)
@@ -138,6 +149,10 @@ export function parseIntakeLetterList(
 			errors.push(
 				`Line ${line}: "${rawCode}" is not a letter code; leave it empty for a new one.`
 			)
+		} else if (!isIntakeLocale(locale)) {
+			errors.push(
+				`Line ${line}: "${locale}" is not a language (${MODEL_INTAKE_LOCALES.join(', ')}).`
+			)
 		} else if (code && taken.has(code)) {
 			errors.push(`Line ${line}: ${code} is already on an earlier line.`)
 		} else {
@@ -146,7 +161,8 @@ export function parseIntakeLetterList(
 				organization,
 				recipient: cell('recipient'),
 				category,
-				code: code ?? ''
+				code: code ?? '',
+				locale
 			})
 		}
 	})
@@ -175,12 +191,21 @@ export function formatIntakeLetterMapping(
 	rows: Array<IntakeLetterRow & { address: string; file: string }>
 ): string {
 	const lines = [
-		['code', 'organization', 'recipient', 'category', 'address', 'file'],
+		[
+			'code',
+			'organization',
+			'recipient',
+			'category',
+			'locale',
+			'address',
+			'file'
+		],
 		...rows.map((row) => [
 			row.code,
 			row.organization,
 			row.recipient,
 			row.category,
+			row.locale,
 			row.address,
 			row.file
 		])
