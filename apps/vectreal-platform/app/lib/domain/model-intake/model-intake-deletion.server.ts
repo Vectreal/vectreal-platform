@@ -1,7 +1,9 @@
 import {
+	deleteIntakeLetters,
 	deleteIntakeRow,
 	findIntakeByReference,
 	findIntakeForDeletion,
+	selectExpiredIntakeLetters,
 	selectExpiredIntakes
 } from './model-intake-repository.server'
 import { deleteIntakePhotos } from './model-intake-storage.server'
@@ -33,11 +35,24 @@ export async function deleteIntakeByReference(
 	return true
 }
 
-/** Every request past its `deleteAfter`. Returns how many were removed. */
-export async function purgeExpiredIntakes(now: Date): Promise<number> {
-	const expired = await selectExpiredIntakes(now)
-	for (const row of expired) {
+/**
+ * What a purge at `now` removes: requests past their `deleteAfter`, and the
+ * letters past retention that no remaining request names.
+ */
+export async function selectPurge(now: Date) {
+	const [requests, letters] = await Promise.all([
+		selectExpiredIntakes(now),
+		selectExpiredIntakeLetters(now)
+	])
+	return { requests, letters }
+}
+
+/** Removes what `selectPurge` names, requests first, and returns it. */
+export async function purgeExpiredIntakes(now: Date) {
+	const due = await selectPurge(now)
+	for (const row of due.requests) {
 		await deleteIntake(row)
 	}
-	return expired.length
+	await deleteIntakeLetters(due.letters.map((letter) => letter.code))
+	return due
 }

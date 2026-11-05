@@ -1,8 +1,21 @@
-import { count, countDistinct, desc, eq, inArray, lte, sql } from 'drizzle-orm'
+import {
+	and,
+	count,
+	countDistinct,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNull,
+	lte,
+	or,
+	sql
+} from 'drizzle-orm'
 
 import {
 	addRetentionDays,
 	cleanupMinutesBetween,
+	MODEL_INTAKE_RETENTION_DAYS,
 	type ModelIntakeLocale,
 	type ModelIntakeOutcome,
 	type ModelIntakeProductType
@@ -266,10 +279,49 @@ export async function selectExpiredIntakes(now: Date) {
 	return getDbClient()
 		.select({
 			id: modelIntakeSubmissions.id,
+			referenceCode: modelIntakeSubmissions.referenceCode,
 			photoPaths: modelIntakeSubmissions.photoPaths
 		})
 		.from(modelIntakeSubmissions)
 		.where(lte(modelIntakeSubmissions.deleteAfter, now))
+}
+
+/**
+ * Letters registered longer ago than the retention period that no request
+ * kept past `now` names. A request keeps its letter for as long as the request
+ * is kept, a booked pilot's included; a request due at `now` does not, so the
+ * letter goes in the same purge. Its scans go with it (`on delete cascade`).
+ */
+export async function selectExpiredIntakeLetters(now: Date) {
+	const registeredBefore = new Date(
+		now.getTime() - MODEL_INTAKE_RETENTION_DAYS * 86_400_000
+	)
+	return getDbClient()
+		.select({ code: modelIntakeLetters.code })
+		.from(modelIntakeLetters)
+		.leftJoin(
+			modelIntakeSubmissions,
+			and(
+				eq(modelIntakeSubmissions.letterCode, modelIntakeLetters.code),
+				or(
+					isNull(modelIntakeSubmissions.deleteAfter),
+					gt(modelIntakeSubmissions.deleteAfter, now)
+				)
+			)
+		)
+		.where(
+			and(
+				lte(modelIntakeLetters.createdAt, registeredBefore),
+				isNull(modelIntakeSubmissions.id)
+			)
+		)
+}
+
+export async function deleteIntakeLetters(codes: string[]): Promise<void> {
+	if (codes.length === 0) return
+	await getDbClient()
+		.delete(modelIntakeLetters)
+		.where(inArray(modelIntakeLetters.code, codes))
 }
 
 export async function deleteIntakeRow(id: string): Promise<void> {
