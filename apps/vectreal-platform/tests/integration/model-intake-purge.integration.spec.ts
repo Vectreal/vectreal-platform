@@ -107,9 +107,13 @@ describe('the free-model purge', () => {
 
 	afterAll(async () => {
 		const codes = Object.values(letters)
-		await db
-			.delete(schema.modelIntakeSubmissions)
-			.where(inArray(schema.modelIntakeSubmissions.letterCode, codes))
+		// By reference: a purge that dropped a letter nulled its code here.
+		await db.delete(schema.modelIntakeSubmissions).where(
+			inArray(
+				schema.modelIntakeSubmissions.referenceCode,
+				Object.values(requests).map((row) => row.referenceCode)
+			)
+		)
 		await db
 			.delete(schema.modelIntakeLetters)
 			.where(inArray(schema.modelIntakeLetters.code, codes))
