@@ -165,7 +165,7 @@ resource "cloudflare_ruleset" "cache_rules" {
   # Rule 3 — Signed embed assets: the published GLB, shadow bake and loading
   # thumbnail of an embed, addressed by a URL that an authorized manifest
   # signed (embed-asset-signature.server.ts). The URL carries no key and is
-  # shared by every visitor in the same hour, and the origin answers
+  # shared by every visitor on the same UTC day, and the origin answers
   # `public, s-maxage` for exactly as long as the signature stays valid.
   # The cache key keeps the query string, so the signature is part of it.
   rules {

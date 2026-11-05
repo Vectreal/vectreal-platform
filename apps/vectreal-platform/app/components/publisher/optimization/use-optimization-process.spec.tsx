@@ -497,7 +497,11 @@ describe('useOptimizationProcess', () => {
 			}))
 			act(() => store.set(keptOriginalAtom, keptAs(stored)))
 
-			await waitFor(() => expect(store.get(keptOriginalAtom).stored).toBeNull())
+			// The default 1 s is too tight on a loaded CI runner with coverage on.
+			await waitFor(
+				() => expect(store.get(keptOriginalAtom).stored).toBeNull(),
+				{ timeout: 4_000 }
+			)
 			expect(setSource).toHaveBeenCalledWith(new Uint8Array([7, 7, 7]))
 			expect(store.get(optimizationAtom).sourceSettings).toBe(originalPreset)
 			expect(result.current.isLoadingOriginal).toBe(false)

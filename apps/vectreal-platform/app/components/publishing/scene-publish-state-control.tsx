@@ -34,6 +34,7 @@ interface ScenePublishStateControlProps {
 	onPublish: () =>
 		Promise<ScenePublishStateResponse | void> | ScenePublishStateResponse | void
 	publishButtonText?: string
+	republishButtonText?: string
 	publishDialogTitle?: string
 	publishDialogDescription?: string
 	revokeDialogTitle?: string
@@ -50,6 +51,7 @@ export function ScenePublishStateControl({
 	publishState,
 	onPublish,
 	publishButtonText = 'Publish Scene',
+	republishButtonText = 'Republish Scene',
 	publishDialogTitle = 'Publish Scene?',
 	publishDialogDescription = 'This will create or update the published GLB asset for this scene.',
 	revokeDialogTitle = 'Revoke publication?',
@@ -120,10 +122,8 @@ export function ScenePublishStateControl({
 	const effectivePublishState = optimisticState ?? publishState
 
 	const isPublished = effectivePublishState.status === 'published'
-	const isMutationBusy =
-		revokeFetcherState !== 'idle' ||
-		isRunningPublishAction ||
-		isPublishActionPending
+	const isPublishBusy = isRunningPublishAction || isPublishActionPending
+	const isMutationBusy = revokeFetcherState !== 'idle' || isPublishBusy
 	const canPublish = !isPublishActionDisabled && !isMutationBusy
 
 	const statusLabel = isPublished ? 'Published' : 'Draft'
@@ -224,20 +224,28 @@ export function ScenePublishStateControl({
 			<div className="flex flex-col gap-2">
 				<Button
 					type="button"
-					onClick={() =>
-						isPublished ? setRevokeDialogOpen(true) : handleDraftAction()
-					}
-					disabled={isMutationBusy || (!isPublished && isPublishActionDisabled)}
-					variant={isPublished ? 'outline' : 'default'}
+					onClick={handleDraftAction}
+					disabled={isMutationBusy || isPublishActionDisabled}
 					className="w-full"
 				>
-					{isMutationBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-					{isPublished ? 'Revoke publication' : publishButtonText}
+					{isPublishBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+					{isPublished ? republishButtonText : publishButtonText}
 				</Button>
-				{!isPublished && publishDisabledReason && (
+				{publishDisabledReason && (
 					<p className="text-muted-foreground text-xs">
 						{publishDisabledReason}
 					</p>
+				)}
+				{isPublished && (
+					<Button
+						type="button"
+						onClick={() => setRevokeDialogOpen(true)}
+						disabled={isMutationBusy}
+						variant="outline"
+						className="w-full"
+					>
+						Revoke publication
+					</Button>
 				)}
 			</div>
 
@@ -259,7 +267,7 @@ export function ScenePublishStateControl({
 								onClick={() => void handleConfirmPublish()}
 								disabled={!canPublish}
 							>
-								{isRunningPublishAction || isPublishActionPending ? (
+								{isPublishBusy ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 										Publishing...

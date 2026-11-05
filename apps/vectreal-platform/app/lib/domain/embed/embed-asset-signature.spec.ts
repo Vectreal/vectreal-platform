@@ -9,7 +9,7 @@ import {
 
 const SECRET = 'test-signing-secret'
 const target = { sceneId: 'scene-1', assetId: 'glb-1' }
-const HOUR_MS = 3_600_000
+const DAY_MS = 86_400_000
 const at = (iso: string) => new Date(iso).getTime()
 
 /** Reads an emitted URL the way the asset route will. */
@@ -43,24 +43,24 @@ describe('signed embed asset URLs', () => {
 		expect(url).not.toMatch(/token|projectId|preview/)
 	})
 
-	it('are the same URL for every visitor in the same hour', () => {
+	it('are the same URL for every visitor on the same UTC day', () => {
 		expect(
-			buildSignedAssetUrl(target, SECRET, at('2026-10-03T12:59:59Z'))
+			buildSignedAssetUrl(target, SECRET, at('2026-10-03T23:59:59Z'))
 		).toBe(url)
 		expect(
-			buildSignedAssetUrl(target, SECRET, at('2026-10-03T13:00:00Z'))
+			buildSignedAssetUrl(target, SECRET, at('2026-10-04T00:00:00Z'))
 		).not.toBe(url)
 	})
 
-	it('stay valid for between one and two hours', () => {
+	it('stay valid for between one and two days', () => {
 		const expiry = signedAssetExpiry(issuedAt) * 1000
-		expect(expiry - issuedAt).toBeGreaterThan(HOUR_MS)
-		expect(expiry - issuedAt).toBeLessThanOrEqual(2 * HOUR_MS)
+		expect(expiry - issuedAt).toBeGreaterThan(DAY_MS)
+		expect(expiry - issuedAt).toBeLessThanOrEqual(2 * DAY_MS)
 	})
 
 	it('are accepted for the asset they were signed for', () => {
 		const check = verifySignedAsset(target, requestOf(url), SECRET, issuedAt)
-		expect(check).toEqual({ ok: true, secondsLeft: 6600 })
+		expect(check).toEqual({ ok: true, secondsLeft: 129_000 })
 	})
 
 	it('are refused once expired', () => {
@@ -187,13 +187,13 @@ describe('the URLs an embed manifest hands out', () => {
 	it('change version at expiry and when the secret is rotated', () => {
 		vi.stubEnv('EMBED_ASSET_SIGNING_SECRET', SECRET)
 		const { version } = createEmbedAssetUrls(params)
-		const sameHour = createEmbedAssetUrls({
+		const sameDay = createEmbedAssetUrls({
 			...params,
 			nowMs: params.nowMs + 60_000
 		})
-		const nextHour = createEmbedAssetUrls({
+		const nextDay = createEmbedAssetUrls({
 			...params,
-			nowMs: params.nowMs + HOUR_MS
+			nowMs: params.nowMs + DAY_MS
 		})
 		vi.stubEnv('EMBED_ASSET_SIGNING_SECRET', 'rotated-secret')
 		const rotated = createEmbedAssetUrls(params)
@@ -202,8 +202,8 @@ describe('the URLs an embed manifest hands out', () => {
 			new RegExp(`^${signedAssetExpiry(params.nowMs)}\\.`)
 		)
 		expect(version).not.toContain(SECRET)
-		expect(sameHour.version).toBe(version)
-		expect(nextHour.version).not.toBe(version)
+		expect(sameDay.version).toBe(version)
+		expect(nextDay.version).not.toBe(version)
 		expect(rotated.version).not.toBe(version)
 	})
 

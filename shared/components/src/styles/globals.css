@@ -1167,4 +1167,20 @@
 	.animate-fade-in {
 		animation: none;
 	}
+
+	/*
+	  Slowed rather than stopped: these report that work is still running, and
+	  a frozen spinner or bar reads as a hang.
+	*/
+	.animate-spin {
+		animation-duration: 3s;
+	}
+
+	.animate-loading-bar {
+		animation-duration: 4s;
+	}
+
+	.animate-loading-shimmer {
+		animation-duration: 4s;
+	}
 }
