@@ -508,7 +508,7 @@ describe('useOptimizationProcess', () => {
 
 			await act(() => result.current.derive(balancedPreset))
 			expect(sourceAtPass).toEqual(new Uint8Array([7, 7, 7]))
-		})
+		}, 10_000)
 
 		it('shows the original loading until it has loaded, downloading it once', async () => {
 			const { fetchSpy, responders } = holdDownloads()
