@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.3.0...core-v3.4.0) (2026-11-04)
+
+
+### Features
+
+* **core:** add a scene-camera module holding the viewer's camera math ([#1246](https://github.com/Vectreal/vectreal-platform/issues/1246)) ([ba34185](https://github.com/Vectreal/vectreal-platform/commit/ba341851cb2498750f5b1637f93a33903b0394bb))
+* **core:** bake studio lights into double-sided materials from their front ([#1270](https://github.com/Vectreal/vectreal-platform/issues/1270)) ([413c9e8](https://github.com/Vectreal/vectreal-platform/commit/413c9e814eec7c492a62281bfaeca483e77b041d))
+* **core:** bake the studio finish into a UV set laid out for it where a material's own UVs cannot take it ([#1261](https://github.com/Vectreal/vectreal-platform/issues/1261)) ([4d72ce5](https://github.com/Vectreal/vectreal-platform/commit/4d72ce5c50dd689271915d5f24047824999ffbf9))
+* **core:** pace the studio finish bake on GPU work where only the wall clock times it, and fail a slice the GPU never finishes as the new BakeFailureReason 'stalled' ([90c0336](https://github.com/Vectreal/vectreal-platform/commit/90c03366559207c560e707aea6191f55575f497c))
+* **core:** plan the light bake without baking, so the publisher says up front what the studio finish can take ([#1256](https://github.com/Vectreal/vectreal-platform/issues/1256)) ([5a7486d](https://github.com/Vectreal/vectreal-platform/commit/5a7486d9defa597b984fbf74fea4342811a75f20))
+* **core:** repair a studio bake after a GPU reset and say why one failed ([#1244](https://github.com/Vectreal/vectreal-platform/issues/1244)) ([fbc72ae](https://github.com/Vectreal/vectreal-platform/commit/fbc72ae08939c5c5419fdab0af1171ea1f1c1bab))
+* **optimizer:** merge meshes that share a material into one draw ([#1257](https://github.com/Vectreal/vectreal-platform/issues/1257)) ([d25cde6](https://github.com/Vectreal/vectreal-platform/commit/d25cde63b76d55bffb782a0f422b409536306954))
+* **viewer:** fly Smart between cameras when a scene sets no transition ([#1267](https://github.com/Vectreal/vectreal-platform/issues/1267)) ([fd456df](https://github.com/Vectreal/vectreal-platform/commit/fd456df3185736d11d61b36f5ea6e8fa8911c946))
+* **viewer:** keep each camera's framed subject in view on any viewport ([#1255](https://github.com/Vectreal/vectreal-platform/issues/1255)) ([047d03d](https://github.com/Vectreal/vectreal-platform/commit/047d03d83caa99c7355e8d8994b242c9e5e7f93f))
+
+
+### Bug Fixes
+
+* **core:** plan Smart's clearance once per flight, so it never slides round the model ([#1279](https://github.com/Vectreal/vectreal-platform/issues/1279)) ([1e62344](https://github.com/Vectreal/vectreal-platform/commit/1e62344fa5621bdf557537a7e52c021ff28fc7d6))
+* **core:** zoom a camera flight's lens geometrically, so the framed size never overshoots ([#1272](https://github.com/Vectreal/vectreal-platform/issues/1272)) ([e8b4c1f](https://github.com/Vectreal/vectreal-platform/commit/e8b4c1f3fac2168a8072184b8d7f0c497a36f3d4))
+* **viewer:** frame scene thumbnails for their own aspect, as the viewer does ([#1274](https://github.com/Vectreal/vectreal-platform/issues/1274)) ([06baeb8](https://github.com/Vectreal/vectreal-platform/commit/06baeb8a7f736a10b9374855ddaf05b49791702e))
+* **viewer:** keep stored shadow bakes and keep visitor surfaces off heavy live bakes ([#1250](https://github.com/Vectreal/vectreal-platform/issues/1250)) ([26c9e4a](https://github.com/Vectreal/vectreal-platform/commit/26c9e4a9d97f99b730ba61601d95179b3fe07364))
+
+
+### Performance Improvements
+
+* **core:** bake the studio finish's depth with 64 rays per texel instead of 256 ([#1269](https://github.com/Vectreal/vectreal-platform/issues/1269)) ([203b93c](https://github.com/Vectreal/vectreal-platform/commit/203b93cfdf5d69a141d938602b3aa493d9d28623))
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/core-v3.2.0...core-v3.3.0) (2026-11-01)
 
 

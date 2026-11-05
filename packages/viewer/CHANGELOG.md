@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.3.0...viewer-v3.4.0) (2026-11-04)
+
+
+### Features
+
+* **core:** add a scene-camera module holding the viewer's camera math ([#1246](https://github.com/Vectreal/vectreal-platform/issues/1246)) ([ba34185](https://github.com/Vectreal/vectreal-platform/commit/ba341851cb2498750f5b1637f93a33903b0394bb))
+* **optimizer:** merge meshes that share a material into one draw ([#1257](https://github.com/Vectreal/vectreal-platform/issues/1257)) ([d25cde6](https://github.com/Vectreal/vectreal-platform/commit/d25cde63b76d55bffb782a0f422b409536306954))
+* **viewer:** fly Smart between cameras when a scene sets no transition ([#1267](https://github.com/Vectreal/vectreal-platform/issues/1267)) ([fd456df](https://github.com/Vectreal/vectreal-platform/commit/fd456df3185736d11d61b36f5ea6e8fa8911c946))
+* **viewer:** keep each camera's framed subject in view on any viewport ([#1255](https://github.com/Vectreal/vectreal-platform/issues/1255)) ([047d03d](https://github.com/Vectreal/vectreal-platform/commit/047d03d83caa99c7355e8d8994b242c9e5e7f93f))
+
+
+### Bug Fixes
+
+* **platform:** letterbox the viewer's loading thumbnail instead of cropping it ([#1275](https://github.com/Vectreal/vectreal-platform/issues/1275)) ([8ec5c26](https://github.com/Vectreal/vectreal-platform/commit/8ec5c26dda0b2a4ebd1d3055cb3f064643abe333))
+* **viewer:** fill a contained loading thumbnail's bands with its own edges ([#1276](https://github.com/Vectreal/vectreal-platform/issues/1276)) ([a7c2b62](https://github.com/Vectreal/vectreal-platform/commit/a7c2b62259d34702ab288781d2758260cfa60af8))
+* **viewer:** filter the live ground shadow linearly so a close-up does not draw it as square blocks ([#1263](https://github.com/Vectreal/vectreal-platform/issues/1263)) ([fb6b006](https://github.com/Vectreal/vectreal-platform/commit/fb6b0061cd40fba49109723850b92bd20327933f))
+* **viewer:** frame scene thumbnails for their own aspect, as the viewer does ([#1274](https://github.com/Vectreal/vectreal-platform/issues/1274)) ([06baeb8](https://github.com/Vectreal/vectreal-platform/commit/06baeb8a7f736a10b9374855ddaf05b49791702e))
+* **viewer:** keep a camera flight playing when the host follows camera_changed ([#1265](https://github.com/Vectreal/vectreal-platform/issues/1265)) ([f29ace3](https://github.com/Vectreal/vectreal-platform/commit/f29ace302ceb7c2766bec6c3e09a71838f67240b))
+* **viewer:** keep stored shadow bakes and keep visitor surfaces off heavy live bakes ([#1250](https://github.com/Vectreal/vectreal-platform/issues/1250)) ([26c9e4a](https://github.com/Vectreal/vectreal-platform/commit/26c9e4a9d97f99b730ba61601d95179b3fe07364))
+* **viewer:** recover from a lost WebGL context or say the scene could not be shown ([#1248](https://github.com/Vectreal/vectreal-platform/issues/1248)) ([1948045](https://github.com/Vectreal/vectreal-platform/commit/1948045eccdbbed26fbd79d4d1aec9e8dc3e20cf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.4.0
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/viewer-v3.2.0...viewer-v3.3.0) (2026-11-01)
 
 

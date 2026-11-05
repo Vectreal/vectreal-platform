@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v3.3.0...embed-v3.4.0) (2026-11-04)
+
+
+### Bug Fixes
+
+* **viewer:** keep stored shadow bakes and keep visitor surfaces off heavy live bakes ([#1250](https://github.com/Vectreal/vectreal-platform/issues/1250)) ([26c9e4a](https://github.com/Vectreal/vectreal-platform/commit/26c9e4a9d97f99b730ba61601d95179b3fe07364))
+* **viewer:** recover from a lost WebGL context or say the scene could not be shown ([#1248](https://github.com/Vectreal/vectreal-platform/issues/1248)) ([1948045](https://github.com/Vectreal/vectreal-platform/commit/1948045eccdbbed26fbd79d4d1aec9e8dc3e20cf))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * devDependencies
+    * @vctrl/viewer bumped to 3.4.0
+
 ## [3.3.0](https://github.com/Vectreal/vectreal-platform/compare/embed-v3.2.0...embed-v3.3.0) (2026-11-01)
 
 
