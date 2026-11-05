@@ -8,6 +8,7 @@ import {
 	inArray,
 	isNull,
 	lte,
+	notExists,
 	or,
 	sql
 } from 'drizzle-orm'
@@ -287,20 +288,19 @@ export async function selectExpiredIntakes(now: Date) {
 }
 
 /**
- * Letters registered longer ago than the retention period that no request
+ * A letter registered longer ago than the retention period that no request
  * kept past `now` names. A request keeps its letter for as long as the request
  * is kept, a booked pilot's included; a request due at `now` does not, so the
  * letter goes in the same purge. Its scans go with it (`on delete cascade`).
  */
-export async function selectExpiredIntakeLetters(now: Date) {
+function isExpiredIntakeLetter(now: Date) {
 	const registeredBefore = new Date(
 		now.getTime() - MODEL_INTAKE_RETENTION_DAYS * 86_400_000
 	)
-	return getDbClient()
-		.select({ code: modelIntakeLetters.code })
-		.from(modelIntakeLetters)
-		.leftJoin(
-			modelIntakeSubmissions,
+	const keptRequest = getDbClient()
+		.select({ id: modelIntakeSubmissions.id })
+		.from(modelIntakeSubmissions)
+		.where(
 			and(
 				eq(modelIntakeSubmissions.letterCode, modelIntakeLetters.code),
 				or(
@@ -309,19 +309,28 @@ export async function selectExpiredIntakeLetters(now: Date) {
 				)
 			)
 		)
-		.where(
-			and(
-				lte(modelIntakeLetters.createdAt, registeredBefore),
-				isNull(modelIntakeSubmissions.id)
-			)
-		)
+	return and(
+		lte(modelIntakeLetters.createdAt, registeredBefore),
+		notExists(keptRequest)
+	)
 }
 
-export async function deleteIntakeLetters(codes: string[]): Promise<void> {
-	if (codes.length === 0) return
-	await getDbClient()
+export async function selectExpiredIntakeLetters(now: Date) {
+	return getDbClient()
+		.select({ code: modelIntakeLetters.code })
+		.from(modelIntakeLetters)
+		.where(isExpiredIntakeLetter(now))
+}
+
+/**
+ * Deletes by the rule rather than by a list read earlier, so a request that
+ * names a letter while the purge runs keeps it.
+ */
+export async function deleteExpiredIntakeLetters(now: Date) {
+	return getDbClient()
 		.delete(modelIntakeLetters)
-		.where(inArray(modelIntakeLetters.code, codes))
+		.where(isExpiredIntakeLetter(now))
+		.returning({ code: modelIntakeLetters.code })
 }
 
 export async function deleteIntakeRow(id: string): Promise<void> {

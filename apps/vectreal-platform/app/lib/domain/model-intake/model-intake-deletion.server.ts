@@ -1,5 +1,5 @@
 import {
-	deleteIntakeLetters,
+	deleteExpiredIntakeLetters,
 	deleteIntakeRow,
 	findIntakeByReference,
 	findIntakeForDeletion,
@@ -47,12 +47,15 @@ export async function selectPurge(now: Date) {
 	return { requests, letters }
 }
 
-/** Removes what `selectPurge` names, requests first, and returns it. */
+/**
+ * Removes requests past their `deleteAfter`, then the letters past retention
+ * that no remaining request names, and returns what went.
+ */
 export async function purgeExpiredIntakes(now: Date) {
-	const due = await selectPurge(now)
-	for (const row of due.requests) {
+	const requests = await selectExpiredIntakes(now)
+	for (const row of requests) {
 		await deleteIntake(row)
 	}
-	await deleteIntakeLetters(due.letters.map((letter) => letter.code))
-	return due
+	const letters = await deleteExpiredIntakeLetters(now)
+	return { requests, letters }
 }
