@@ -27,6 +27,10 @@ import type { UpdateSceneSettingsInput } from '@vctrl/sdk'
  * `presentation.compressTexturesForGpu` is recorded by the publisher against
  * the optimization preset, which the server does not decide.
  *
+ * `camera` and `hotspots` are stored as sent too: the save parser that checks
+ * them is the one that names their ids, defaults and links, so filling them
+ * here would be a second owner.
+ *
  * The result is unchecked; it goes through `parseSettingsData` like any save.
  */
 export function applySceneSettingsPatch(
@@ -50,6 +54,10 @@ export function applySceneSettingsPatch(
 		const shadows = normalizeShadowOptions(sent)
 		const baked = stored.shadows?.baked
 		merged.shadows = baked ? { ...shadows, baked } : shadows
+	}
+	if (patch.camera) merged.camera = patch.camera as SceneSettings['camera']
+	if (patch.hotspots) {
+		merged.hotspots = patch.hotspots as unknown as SceneSettings['hotspots']
 	}
 	if (patch.presentation) {
 		const { compressTexturesForGpu: _sent, ...sent } = patch.presentation

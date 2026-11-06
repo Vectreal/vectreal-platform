@@ -51,3 +51,73 @@ describe('the camera switcher setting on the save path', () => {
 		)
 	})
 })
+
+describe('a camera pose on the save path', () => {
+	const withCamera = (camera: Record<string, unknown>) =>
+		parse({ cameras: [{ ...CAMERAS[0], ...camera }] })
+
+	it('keeps a field of view the lens can draw', () => {
+		const [hero] = parsedCamera(withCamera({ fov: 35 })).cameras ?? []
+		expect(hero.fov).toBe(35)
+	})
+
+	it.each([0, 180, -10, 500, '45'])(
+		'refuses a field of view of %j',
+		async (fov) => {
+			const result = withCamera({ fov })
+			expect(result).toBeInstanceOf(Response)
+			expect(await (result as Response).text()).toContain(
+				'camera.cameras[0].fov must be a number of degrees between 0 and 180'
+			)
+		}
+	)
+
+	it('refuses a kind the viewer does not know', async () => {
+		const result = withCamera({ kind: 'overview' })
+		expect(result).toBeInstanceOf(Response)
+		expect(await (result as Response).text()).toContain(
+			"camera.cameras[0].kind must be 'scene' or 'hotspot'"
+		)
+	})
+})
+
+describe('camera vectors on the save path', () => {
+	const withCamera = (camera: Record<string, unknown>) =>
+		parse({ cameras: [{ ...CAMERAS[0], ...camera }] })
+
+	it.each([
+		['a tuple', [1, 2, 3]],
+		['an object', { x: 1, y: 2, z: 3 }]
+	])(
+		'stores position, target and rotation sent as %s as [x, y, z]',
+		(_form, vector) => {
+			const [hero] =
+				parsedCamera(
+					withCamera({ position: vector, target: vector, rotation: vector })
+				).cameras ?? []
+
+			expect(hero.position).toEqual([1, 2, 3])
+			expect(hero.target).toEqual([1, 2, 3])
+			expect(hero.rotation).toEqual([1, 2, 3])
+		}
+	)
+
+	it.each([
+		['position', [1, 2]],
+		['target', { x: 1, y: 2 }],
+		['rotation', [0, 0, 0, 'XYZ']],
+		['position', ['1', 2, 3]],
+		['target', [1, Infinity, 3]],
+		['position', null]
+	])(
+		'refuses a %s of %j, naming the camera and the field',
+		async (field, value) => {
+			const result = withCamera({ [field]: value })
+
+			expect(result).toBeInstanceOf(Response)
+			expect(await (result as Response).text()).toContain(
+				`Camera \\"Hero\\" has a ${field} that is not [x, y, z] or {x, y, z} of finite numbers (camera.cameras[0].${field})`
+			)
+		}
+	)
+})

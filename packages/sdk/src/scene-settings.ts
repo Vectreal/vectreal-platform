@@ -245,12 +245,15 @@ export type SceneSettingsDocument = z.infer<typeof sceneSettingsSchema>
  * `PATCH /api/v1/scenes/:sceneId/settings`: the sections to change. Each one
  * sent replaces the stored section whole; those left out stay as they are.
  *
- * Only the sections a save changes alone. When the publisher changes the
- * camera, hotspots, interactions, animation or normalization, it also derives
- * other state from the loaded model: a marker's own camera, clips matched to
- * the model's, positions moved to a new scale. The server has no model to
- * derive from, so those sections are read-only here, and sending one is
- * refused rather than ignored.
+ * `camera` and `hotspots` go through the publisher's save parser on the
+ * server, which refuses what a publisher save would: a hotspot or interaction
+ * naming a camera that is gone, a hotspot id that is not a UUID, artwork the
+ * scene does not link. Send both in one call to change a link from either end.
+ *
+ * Interactions, animation and normalization stay read-only. When the publisher
+ * changes them it derives other state from the loaded model (clips matched to
+ * the model's, positions moved to a new scale), which the server cannot, so
+ * sending one is refused rather than ignored.
  */
 export const updateSceneSettingsInputSchema = z.strictObject({
 	bounds: sceneBoundsSchema.optional(),
@@ -258,6 +261,8 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 	lighting: sceneLightingSchema.optional(),
 	environment: sceneEnvironmentSchema.optional(),
 	shadows: sceneShadowsSchema.optional(),
+	camera: section.optional(),
+	hotspots: z.array(section).optional(),
 	// The viewer's chrome. `compressTexturesForGpu` is accepted so a section
 	// read from `GET` can be sent back, and ignored: the publisher stores it
 	// against the optimization preset, which the server does not decide.

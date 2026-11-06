@@ -8,6 +8,7 @@ import { compareAssetIds } from './scene-settings-assets.server'
 import { findNewRemoteArtwork } from '../hotspot-artwork'
 import { isUrlServedSceneAsset } from '../scene-asset-roles'
 import {
+	findHotspotIdsOwnedElsewhere,
 	getHotspotsBySceneSettingsId,
 	getSceneAssetLinks,
 	getSceneSettingsBySceneId,
@@ -394,6 +395,19 @@ class SceneSettingsService {
 		if (remoteArtwork) {
 			throw new SceneSaveRefusedError(
 				`Marker "${remoteArtwork.name.trim()}" links artwork from another site. Upload the image instead (payloadUrl)`
+			)
+		}
+
+		// Refused before any write: a refusal is answered, not thrown, on the
+		// agent path, so the transaction around it commits.
+		const takenIds = await findHotspotIdsOwnedElsewhere(
+			tx,
+			(settings.hotspots ?? []).map((hotspot) => hotspot.id),
+			existingSettings?.id
+		)
+		if (takenIds.length > 0) {
+			throw new SceneSaveRefusedError(
+				`Another scene's marker already has the id ${takenIds.join(', ')}. Give each new marker a new id`
 			)
 		}
 

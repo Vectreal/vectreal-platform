@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, ne, notInArray, sql } from 'drizzle-orm'
 
 import { getDbClient } from '../../../../db/client'
 import * as dbSchema from '../../../../db/schema'
@@ -15,6 +15,7 @@ import {
 import { SCENE_ASSET_ROLE, sceneAssetRole } from '../scene-asset-roles'
 import { withSceneCameraKinds } from '../scene-camera'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
+import { withVectorTuples } from '../scene-vector'
 
 import type {
 	HotspotDefinition,
@@ -51,7 +52,9 @@ export function rowToSceneSettings(
 		animation: row.animation ?? undefined,
 		bounds: row.bounds ?? undefined,
 		// The embed manifest reads this, not `withSceneSettingsDefaults`.
-		camera: row.camera ? withSceneCameraKinds(row.camera) : undefined,
+		camera: row.camera
+			? withSceneCameraKinds(withVectorTuples(row.camera))
+			: undefined,
 		controls: row.controls ?? undefined,
 		environment: row.environment ?? undefined,
 		lighting: row.lighting ?? undefined,
@@ -299,6 +302,31 @@ export async function getHotspotsBySceneSettingsId(
 		occlusionEnabled: r.occlusionEnabled,
 		clickableWhenOccluded: r.clickableWhenOccluded
 	}))
+}
+
+/**
+ * The ids among `ids` that a hotspot of another scene already has. The key is
+ * global, so a marker copied from one scene into another arrives with an id
+ * that is taken.
+ */
+export async function findHotspotIdsOwnedElsewhere(
+	tx: SceneSettingsTransaction,
+	ids: string[],
+	sceneSettingsId: string | undefined
+): Promise<string[]> {
+	if (ids.length === 0) return []
+	const rows = await tx
+		.select({ id: sceneHotspots.id })
+		.from(sceneHotspots)
+		.where(
+			and(
+				inArray(sceneHotspots.id, ids),
+				sceneSettingsId === undefined
+					? undefined
+					: ne(sceneHotspots.sceneSettingsId, sceneSettingsId)
+			)
+		)
+	return rows.map((row) => row.id)
 }
 
 export async function replaceHotspots(
