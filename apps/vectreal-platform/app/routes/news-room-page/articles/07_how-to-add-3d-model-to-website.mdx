@@ -1,169 +1,118 @@
 ---
-title: "How to Add a 3D Model to Any Website - The Complete Options Map"
+title: "How to put an interactive 3D model on a website"
 slug: "how-to-add-3d-model-to-website"
-excerpt: "Four paths for getting an interactive 3D model live on a web page - from no-code publisher to React component to full engine - with a decision matrix that finds your fit."
+excerpt: "Without code, upload the model to a hosted viewer such as the Vectreal Publisher, Spline or Vectary and paste the embed it gives you into the page. With a few lines of HTML, Google's model-viewer shows a GLB you host yourself, and in a React app a component such as @vctrl/viewer or React Three Fiber does it. On Shopify, upload a GLB as product media and it appears in the product's own 3D slot."
 publishedAt: "2026-05-26"
-updatedAt: "2026-10-11"
+updatedAt: "2026-11-13"
 category: "guides"
 tags:
-- "embed"
-- "gltf"
-- "react"
-- "viewer"
+  - "embed"
+  - "glb"
+  - "viewer"
+  - "react"
 author:
     name: "Moritz Becker"
     role: "Founder at Vectreal"
     bio: "Building open infrastructure for practical 3D on the web."
     avatar: "/media/images/author-image.jpeg"
     linkedinUrl: "https://www.linkedin.com/in/moritz-becker-5751851a1"
-coverImage: "/media/images/newsroom/og-how-to-add-3d-model-to-website.webp"
 draft: false
+
+voice: A
+author_persona: moritz
+type: "Practical Guide"
+premise: capability
+pillar: Quality
+seo_cluster: "3D on the web / add 3D model to website"
+cta: https://vectreal.com/publisher
 sceneImage: "/media/images/newsroom/scene-how-to-add-3d-model-to-website.webp"
+coverImage: "/media/images/newsroom/og-how-to-add-3d-model-to-website.webp"
 ---
 
-{/* ## Blog Summary (80–120 words)
+| Route | What you do | Code | Who hosts the model | Fits |
+| --- | --- | --- | --- | --- |
+| A hosted viewer: Vectreal, Spline or Vectary | Upload the model, paste the embed it gives you | None | The service | Most pages, whoever builds them |
+| Google's `<model-viewer>` | Add a script tag and one HTML element | A few lines of HTML | You | A page you edit by hand, with one model |
+| A React component | Install `@vctrl/viewer` and give it the file's address | React | You | A React app |
+| React Three Fiber or three.js | Build the scene in code | A lot | You | Pages where the 3D is the product |
+| Shopify's own 3D slot | Upload a GLB as product media | None | Shopify | Shopify product pages |
 
-You have a 3D model. You want it interactive on a web page - rotating, zoomable, real. This guide maps every realistic path from file to live embed. Two axes matter: where the 3D content comes from (your existing model vs. content created inside the tool), and how deep the integration needs to go (iframe embed vs. React component vs. full engine). Some platforms span that second axis - Vectreal requires zero code to publish an embed from the Publisher UI, and also ships a React component and Node.js packages for teams that want full programmatic control. A decision matrix at the end maps all three dimensions to a concrete recommendation. */}
+## How do I embed a 3D model without code?
 
-{/*
-COVER IMAGE BRIEF - /media/images/newsroom/07/og-how-to-add-3d-model-to-website.webp
-Aspect ratio: 1200×630 (Open Graph standard).
-Composition: A horizontal spectrum bar running left-to-right across the image, labelled "No code" on the left and "Full engine" on the right. Brand orange (#FC6C18) gradient fills the bar. Above the bar, icons/labels for each path at their position on the spectrum: `<model-viewer>` at the far left, Vectreal Publisher just right of centre-left (with a bracket spanning from there to centre-right, labelled "@vctrl/viewer"), React Three Fiber at the far right. Below the bar, a separate row shows "Content creation tools (Spline, Vectary)" positioned at far left as a distinct track. Background: deep black (#0a0a0a). Font: DM Sans.
-Overlaid title text: "How to Add a 3D Model to Any Website".
-Mood: Structured, decision-oriented - communicates a spectrum, not a simple list.
+Upload it to a hosted viewer and paste the embed it gives you into your page. The service stores the model and draws it, and your page only holds the embed, so it goes wherever your site lets you paste HTML.
 
-THUMBNAIL BRIEF - /media/images/newsroom/07/thumbnail-how-to-add-3d-model-to-website.webp
-Aspect ratio: 4:3.
-Same spectrum composition, tighter crop focusing on the bar and labels. No overlaid text.
-*/}
+**The Vectreal Publisher** is the one I work on, and it's open source (AGPL-3.0).
 
-### Every Team Hits This Moment
+1. Drop a GLB, FBX or STL file into the [Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website), or the folder that holds a glTF or OBJ.
+2. Under **Optimize**, pick a preset. A new scene starts on Original, the file exactly as uploaded. With any of the other three, publishing compresses the model's textures and geometry for the web, and Balanced is the one most scenes want.
+3. Pick one of the eight lighting setups and, if you want one, a background. Frame the camera.
+4. Publish. You can try everything up to here without an account; saving and publishing need one.
+5. Copy the snippet from the **Embed** section. It picks an API key for you, or lets you create one.
 
-A product demo needs a 3D model on the landing page. A portfolio needs the artist's work rotating and interactive rather than flattened into a screenshot. A product detail page needs a viewer that lets the customer turn the object and examine the back.
+Paste it whole. It's an iframe in a sized box, with your project, scene and key already filled in, plus a one-line style rule that lets it fill the space in site builders such as Shopify. The only thing worth changing is the `400px` height:
 
-The file exists. The web page exists. Getting the first to work on the second turns out to be less obvious than expected - not because the technology is immature, but because there are several meaningfully different paths, each suited to a different combination of team, content, and integration depth. The important thing to know upfront: some of these paths require no code at all. Choosing the wrong one wastes hours. This guide maps the full picture.
+```html
+<style>
+  /* Lets the embed fill a bare flex parent, such as a Shopify Custom Liquid block. */
+  @layer { div:not([class]):not([style]):has(> .vctrl-embed) { flex-grow: 1; } }
+</style>
+<div class="vctrl-embed" style="width: 100%; max-width: 100%; height: 400px;">
+  <iframe
+    src="https://vectreal.com/embed/<projectId>/<sceneId>?token=<your key>"
+    style="width: 100%; height: 100%; border: 0;"
+    allow="autoplay; xr-spatial-tracking"
+    allowfullscreen
+  ></iframe>
+</div>
+```
 
----
+**Add your site's domain to the project's allowed domains before you ship.** The embed only renders on the domains listed there, and an empty list refuses every other site, even with a valid key. That's also why the key can sit in your page's source: on anybody else's site it doesn't work.
 
-### Two Axes, Not One
+**Spline and Vectary** both import GLB, glTF, FBX, OBJ and STL files, and both give you an embed. Spline publishes a scene as a public link on my.spline.design or as Spline Viewer embed code ([Spline FAQ](https://docs.spline.design/basics/faq.md), [importing content](https://docs.spline.design/importing-content/how-to-import-content)). In Vectary, **Share** and then **Share to Web** gives you a link or iframe code ([Vectary sharing](https://help.vectary.com/documentation/sharing-exporting-embedding/sharing.md), [import formats](https://help.vectary.com/documentation/importing/import-formats)). Both are 3D design tools that run in the browser, so they're also the place to build and animate a scene from scratch rather than show a model you already have.
 
-Most comparisons of 3D web tools treat this as a single spectrum from "easy" to "powerful." That framing misses the critical distinction.
-
-There are actually two separate questions, and they are independent of each other:
-
-**Where does the 3D content come from?**
-
-Some tools require you to create 3D content inside them - their pipeline is built around their own modelling environment. Others accept models you bring in from anywhere: Blender, Maya, Cinema 4D, CAD software, asset stores. These two groups are not interchangeable. A tool that cannot import your existing GLB is not a simpler version of one that can.
-
-**How deep does the integration need to go?**
-
-This is the code-vs-no-code question - but it is more granular than a binary. The spectrum runs from "paste an iframe into any page" (no code required) to "React component inside your component tree" (some code) to "build the rendering stack yourself" (significant code). Importantly, some platforms span this spectrum: they offer a no-code publisher path and a developer SDK path in the same product.
-
-The options map and decision matrix below follow both axes.
-
----
-
-### The Options Map
-
-| Tool | Bring your own model | No-code path | Developer path |
-|---|---|---|---|
-| `<model-viewer>` | Yes - you host it | Yes (HTML element) | - |
-| Vectreal | Yes - platform hosts it | Yes (Publisher UI → iframe) | Yes (`@vctrl/*` npm) |
-| React Three Fiber | Yes - you host it | - | Yes (full engine) |
-| Spline / Vectary | No - content made in-tool | Yes | Limited |
-
-The key observation: Vectreal is the only option in this set that is simultaneously no-code for non-developers and a full SDK for developers. Those are not two separate products - they are two access points into the same underlying pipeline.
-
----
-
-### Option 1 - The `<model-viewer>` Web Component
-
-Google's `model-viewer` is a custom HTML element that renders a GLB or glTF file in a browser with no JavaScript setup required. The full integration is a script tag, one HTML element, and a path to your model file:
+## How do I add a 3D model to a page with HTML?
 
 ```html
 <script type="module"
-  src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js">
+  src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.4.0/model-viewer.min.js">
 </script>
 
 <model-viewer
   src="/models/product.glb"
-  alt="Interactive 3D product view"
+  alt="A 3D view of the product"
   camera-controls
-  auto-rotate
   style="width: 100%; height: 480px;">
 </model-viewer>
 ```
 
-This works across every modern browser, requires no build step, and introduces no runtime dependencies into your codebase.
+Google's [`<model-viewer>`](https://modelviewer.dev/) is an open-source web component (Apache-2.0). One script tag and one element, and the page shows the GLB you point it at, turned by the visitor's drag. Version 4.4.0, from October 2026, is the current one on [npm](https://www.npmjs.com/package/@google/model-viewer). It's also what draws a 3D model in Shopify's own product gallery: Liquid's [`model_viewer_tag`](https://shopify.dev/docs/api/liquid/filters/model_viewer_tag) emits it.
 
-**When it is the right choice:** a static HTML page or CMS that accepts raw HTML, a single model that will not change frequently, and a team that wants to own the file hosting directly without routing through any platform.
+You host the file, and it shows the file as it is. It doesn't compress anything, so a model straight out of Blender or a CAD tool needs making web-ready first, which [why your 3D models are too large for the web](https://vectreal.com/news-room/optimize-3d-model-for-web?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website) goes into. The Publisher's **Download** panel also exports a Draco-compressed GLB you can host yourself.
 
-**What it leaves to you:** `<model-viewer>` renders a file it is pointed at. It does not optimize that file, version it, manage access control, or give a non-developer a way to update the scene without changing code. You are also responsible for making the file web-ready before it arrives - a raw Blender export can weigh 40–120 MB. For a personal project with one static model, those gaps are acceptable. For a team managing evolving content, they compound.
-
----
-
-### Option 2 - Vectreal: No-Code Publisher to Full SDK
-
-Vectreal is worth treating as its own category because it spans the spectrum that other tools occupy only partially. The starting point is the Publisher - a browser-based interface that requires no code whatsoever.
-
-**The no-code path (Publisher → iframe)**
-
-Open the [Vectreal Publisher](https://vectreal.com/publisher). Drag in a GLB, glTF, STL, FBX or OBJ file. A new scene starts on Original, the file exactly as uploaded. Pick one of the optimization presets and the Publisher re-encodes the textures to WebP, removes duplicate data, and applies Draco geometry compression when you publish. Configure the camera angle, environment lighting, and background. Set which domains are allowed to display the embed. Publish.
-
-What comes back is a stable scene URL and an iframe snippet:
-
-```html
-<iframe
-  src="https://vectreal.com/embed/[project-id]/[scene-id]?token=[preview-api-key]"
-  width="100%"
-  height="500"
-  frameborder="0"
-  allow="autoplay; fullscreen"
-  loading="lazy"
-  title="Interactive 3D scene">
-</iframe>
-```
-
-Paste it anywhere - a React component, a Webflow section, a Shopify product description, a Notion page, raw HTML. No JavaScript required on the embedding side. No account required to upload and preview; sign in to save and publish.
-
-This is as no-code as Spline or Vectary. The difference is that it works with models you already have, from any DCC tool, with their original materials and geometry intact. A 3D artist can go from a Blender export to a live, optimized embed on a production site without writing a line of code and without waiting for a developer.
-
-**The developer path (`@vctrl/viewer` → React component)**
-
-For teams that need the viewer inside the React component tree - sharing context, state, routing, and theming with the rest of the application - `@vctrl/viewer` wraps the same renderer as a standard React component:
+## How do I show a 3D model in a React app?
 
 ```tsx
 import { VectrealViewer } from '@vctrl/viewer'
 import '@vctrl/viewer/css'
 
-export function ProductViewer({ model }: { model: Object3D }) {
+export function ProductViewer() {
   return (
-    <VectrealViewer
-      model={model}
-      cameraOptions={{
-        cameras: [
-          { cameraId: 'default', name: 'Default', initial: true, position: [0, 1, 4] }
-        ]
-      }}
-      envOptions={{ preset: 'studio-natural' }}
-    />
+    <div style={{ height: 480 }}>
+      <VectrealViewer src="/models/product.glb" />
+    </div>
   )
 }
 ```
 
-The scene URL points to a published Vectreal scene. The pipeline - optimization, hosting, CDN delivery, access control - is the same one the Publisher uses. The developer gets component-level control over the viewer configuration without building or maintaining the underlying infrastructure.
+`@vctrl/viewer`, which I work on, is a React component built on three.js and React Three Fiber, for React 19. Give it the address of a GLB, glTF, STL, FBX or OBJ file, and it fetches it, parses it and draws it, with a loader in the meantime. It fills its parent, so give the parent a height. It also takes cameras, hotspots and animation clips as props. Install it with `npm install @vctrl/viewer`.
 
-For server-side use - programmatic optimization, format conversion, pipeline automation - `@vctrl/core` provides the same gltf-transform pipeline as a Node.js module. The [React Viewer Integration guide](https://vectreal.com/news-room/react-viewer-integration) covers the `@vctrl/viewer` setup in full. The [Publisher Walkthrough](https://vectreal.com/news-room/the-vectreal-publisher-walkthrough) covers the no-code path end-to-end.
+Two things to know before it goes live. If the file is on another domain, that server has to allow cross-origin reads. And a compressed model needs the Draco and KTX2 decoders, which the viewer looks for at `/draco/` and `/basis/` on your own site unless you point `srcOptions` somewhere else.
 
-**The open-source distinction**
+If the scene is already published in Vectreal, you don't need a component at all: the embed works in React like anywhere else, and [`@vctrl/embed`](https://vectreal.com/news-room/control-an-embedded-3d-scene-from-your-page?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website) lets your page switch its cameras and listen to its events. If you build with a coding agent, the Vectreal MCP server lets it publish the model and hand back the embed code: [publish 3D models from your AI agent](https://vectreal.com/news-room/publish-3d-models-from-your-ai-agent?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website).
 
-Vectreal's core packages and the platform application itself are open-source under AGPL-3.0. The code that runs the pipeline, the viewer, and the Publisher is in the public repository. This matters if code auditability, self-hosting, or freedom from vendor lock-in are requirements for the team.
+## When should I build it with React Three Fiber or three.js?
 
----
-
-### Option 3 - React Three Fiber
-
-React Three Fiber is a React renderer for Three.js. It gives a React application direct, declarative control over a 3D scene: geometry, materials, lighting, animation, camera, and post-processing - all as React components, with full access to the surrounding application's state and lifecycle.
+When the 3D is the product: a configurator, a walkthrough, a scene the rest of the page reacts to. [React Three Fiber](https://github.com/pmndrs/react-three-fiber) is a React renderer for three.js, and with its helper library drei a model takes a few lines:
 
 ```tsx
 import { Canvas } from '@react-three/fiber'
@@ -178,89 +127,43 @@ export function ProductViewer() {
   return (
     <Canvas camera={{ position: [0, 1, 4], fov: 45 }}>
       <Model />
-      <OrbitControls enableZoom enablePan={false} />
+      <OrbitControls enablePan={false} />
       <Environment preset="studio" />
     </Canvas>
   )
 }
 ```
 
-The ceiling for what this produces is as high as any 3D engine. It is the correct choice when 3D is the core product - a configurator, an architectural walkthrough, a data visualization where the 3D scene is the primary interface.
+The ceiling is as high as three.js goes. What it leaves to you is everything around the render: making the file web-ready, hosting it, shadows and lighting that suit the product, and a way for someone who doesn't write code to change the scene after launch.
 
-**What most tutorials do not show:** React Three Fiber is a rendering engine. It renders a model. It does not optimize the file, manage content versions, scope access by API key, provide a staging workflow, or give a non-developer a way to update the scene without a code deploy. Three.js also requires `window` - it needs lazy-loading behind `ssr: false` in any SSR framework to avoid hydration errors.
+## How do I put a 3D model on a Shopify product page?
 
-For teams building a 3D application, React Three Fiber is the right tool. For teams adding a viewer to an application that is not primarily about 3D, the overhead typically outweighs the control.
+Upload a GLB to the product's **Media** section in the Shopify admin, the way you'd upload a photo. Shopify shows it in the product gallery with its own viewer: no app and no code. It takes GLB and USDZ files up to 500 MB, and the theme has to support 3D models, which all of Shopify's own Online Store 2.0 themes do ([product media types](https://help.shopify.com/en/manual/products/product-media/product-media-types), [adding product media](https://help.shopify.com/en/manual/products/product-media/add-media)).
 
----
+<video src="/media/images/newsroom/12/shopify-gallery-glb.mp4" autoPlay muted loop playsInline aria-label="A shop product gallery showing a still product photo, which gives way to the same product as a 3D model being turned by hand, then returns to the photo."></video>
 
-### Option 4 - No-Code Design Tools (Spline, Vectary)
+If the file is well over the 4 MB or so that Shopify's [modeller checklist](https://help.shopify.com/partners/resources/creating-3d-models/3d-model-standards-checklist) aims for, export it from the Publisher's **Download** panel as a Draco-compressed GLB and upload that instead.
 
-Spline and Vectary are browser-based tools for creating 3D web experiences. You model, animate, and configure the scene inside the tool, then export an embed. The entire content creation workflow lives within their environment.
+Shopify's viewer draws the file and nothing else. The cameras, lighting and hotspots you set up for a scene don't travel with it, so for those, publish the scene and paste its embed into a **Custom Liquid** section below the product details. [3D on a Shopify product page](https://vectreal.com/news-room/3d-on-a-shopify-product-page?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website) walks through both, including the allowed domains a store needs: its myshopify.com host and its own domain.
 
-These tools are the right choice when a designer wants to build a 3D web experience from scratch - an animated hero section, a motion-rich brand moment, a stylised interactive scene - and the content does not exist yet as an external file.
+If you're still deciding whether to have a model made, [how to get a 3D model of your product](https://vectreal.com/news-room/how-to-get-a-3d-model-of-your-product?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website) compares the six ways to get one, from a phone scan to a 3D artist, and [what a 3D model of your product costs](https://vectreal.com/news-room/3d-product-model-cost?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website) has the prices that studios and freelancers publish.
 
-They are a poor fit for displaying a model that already exists: a product exported from Blender, a mechanical part from CAD software, a character asset from a pipeline. Their import support is limited by design - their format is optimized for content native to their tool. If you are bringing your own file, you are fighting the grain of the product.
+## What file should the model be?
 
-This is the fundamental difference from the Vectreal Publisher. Both are no-code. The distinction is that Vectreal publishes the model you have; Spline and Vectary help you build one you do not have yet.
+A GLB: one file that holds the mesh, the materials and the textures, and the format web viewers are built around. [The best 3D file formats for the web](https://vectreal.com/news-room/best-3d-file-formats-for-the-web?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website) explains why, and how much compressing it saves.
 
----
+An FBX, OBJ or STL turns into a GLB on the [converter pages](https://vectreal.com/convert?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website), in the browser and without an account. Keep it small enough for a phone: Shopify's modeller checklist aims for about 4 MB, with textures up to 2048 px.
 
-### The Decision Matrix
+## Which route should I pick?
 
-Two questions determine the right path.
+- **A Shopify product page:** the product's own 3D slot first, then an embed below it if you want the configured scene.
+- **No developer, or a site builder:** a hosted viewer's embed.
+- **One model on a page you edit by hand:** `<model-viewer>`.
+- **A React app:** a viewer component, or the embed if the scene lives in Vectreal.
+- **The 3D is the product:** React Three Fiber or three.js.
 
-**Question 1: Where does the 3D content come from?**
+## Try it
 
-If the model already exists - exported from Blender, Maya, Cinema 4D, a CAD tool, or downloaded as a GLB - the relevant options are `<model-viewer>`, Vectreal, or React Three Fiber. Spline and Vectary are not practical for this case.
+Drop your model into the [Publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website), set its lighting and camera, and publish to get the embed snippet. You can try it without an account and sign in when you want to save.
 
-If there is no model yet and a designer will build the scene inside a tool - go to Spline or Vectary.
-
-**Question 2: How deep does the viewer need to integrate with the surrounding site or application?**
-
-Work through this in order:
-
-*Does the viewer need to live inside a React component tree - sharing state, context, theme, or layout with the rest of the application?*
-
-Yes → `@vctrl/viewer`. This is Vectreal's developer path: component-level control, same pipeline as the Publisher, SSR-safe.
-
-No → continue.
-
-*Is this a 3D application - configurator, walkthrough, interactive visualization where 3D is the core user experience?*
-
-Yes → React Three Fiber. The full engine is the right tool when 3D is the product, not a feature of the product.
-
-No → continue.
-
-*Does the team need non-developers to update the 3D content, scene configuration, or camera settings after launch without a code deploy?*
-
-Yes → Vectreal Publisher. The dashboard lets anyone on the team update and re-publish a scene. The embed URL stays stable - no code change required on the site.
-
-No → continue.
-
-*Is the integration a single model on a page with no pipeline, hosting, or version management requirements?*
-
-Yes → `<model-viewer>`. Minimal, self-contained, no platform dependency.
-
-The majority of product and portfolio use cases resolve at the third step: a team with existing 3D assets that needs a production-quality viewer any team member can manage. That is what the Publisher was built for - and it requires no code to use.
-
----
-
-### File Preparation Applies to Every Path
-
-Whichever option you choose, the source 3D file needs to be web-ready before it reaches the viewer. A raw Blender or Maya export is sized for asset pipelines, not browser delivery. The paths differ only in who handles this step:
-
-| Path | Who optimizes the file |
-|---|---|
-| `<model-viewer>` | You - separately, before uploading to your CDN |
-| Vectreal Publisher | The platform - you pick a preset, it runs the pass |
-| `@vctrl/viewer` | The platform - via the same Publisher presets |
-| React Three Fiber | You - separately, before bundling or serving |
-| Spline / Vectary | The tool - content is created in a web-native format |
-
-If optimization is unfamiliar territory, the Publisher handles it as part of the standard upload flow - run the model through the presets, compare quality and file size, publish. No account required to try it, and the optimized GLB can be downloaded and used with any other path above.
-
----
-
-Whichever path fits your team, the Publisher is the fastest way to evaluate before you commit a line of code:
-
-Try it, no account needed: [vectreal.com/publisher](https://vectreal.com/publisher?utm_source=newsroom&utm_medium=article&utm_campaign=how-to-add-3d-model-to-website)
+*Sources checked on 5 November 2026.*

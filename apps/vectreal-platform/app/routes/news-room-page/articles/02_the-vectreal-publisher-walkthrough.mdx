@@ -3,7 +3,7 @@ title: "From Upload to Embed - The Vectreal Publisher Walkthrough"
 slug: "the-vectreal-publisher-walkthrough"
 excerpt: "A practical step-by-step guide to the Vectreal Publisher workflow, from first upload to production embed."
 publishedAt: "2026-04-07"
-updatedAt: "2026-10-12"
+updatedAt: "2026-11-13"
 category: "guides"
 tags:
 - "publisher"
@@ -99,15 +99,24 @@ For server-side optimization (via `@vctrl/core`), Sharp is used for texture comp
 
 Beyond file size, the Publisher gives you full control over how the scene looks and behaves.
 
-#### Lighting and Environment
+#### Lighting
 
-<video src="/media/images/newsroom/02/environment.mp4" poster="/media/images/newsroom/02/environment-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera on a dark, empty stage in the Publisher. The Environment panel opens and the background switches to a soft light studio behind the camera, lighting it from all sides."></video>
+Light and shadow live in one tool, **Lighting**. It has eight setups: **Soft studio**, **Product**, **Dramatic**, **Overhead**, **Daylight**, **Golden hour**, **Overcast** and **Night**, and a new scene starts on Soft studio. A setup sets the light and the shadow together: it's built on an environment map, with up to three studio lights, a key, a fill and a rim, placed to match it. **Turn** turns the whole lighting around the model, and the shadow swings with it.
 
-Choose from a set of HDR environment presets - including studio, golden hour, and overcast options - that determine ambient lighting, reflections, and image-based lighting (IBL). You can adjust lighting strength, toggle **Show as background**, and tune **Background Blur** and **Background Brightness**. With the background toggle off, the background stays transparent; there is no solid background color setting.
+- **Lights:** each light has its own **Strength**, **Softness**, **Direction**, **Height** and **Color**, and can be switched off.
+- **Environment:** another environment map from the Studio, Outdoor, Nature or Night groups, with **Brightness**, and **Resolution** at 1k or 4k.
+- **Ground shadow:** a floor under the model that catches the shadows its lights cast. Every setup turns it on; switch it off for a model that should float.
+- **Studio finish:** soft shadows and depth drawn into the model once, so they're there from every angle. It's off by default. Click **Add studio finish** and it's drawn in when you publish; **Preview it on the model** shows it before then.
 
-The viewer fits the camera to the loaded model automatically via its bounds logic. There is no user-facing margin control.
+[3D model shadows and lighting](https://vectreal.com/news-room/3d-model-shadows-and-lighting?utm_source=newsroom&utm_medium=article&utm_campaign=the-vectreal-publisher-walkthrough) goes through the setups with pictures.
+
+#### Background
+
+The background is its own tool, next to Lighting: **None**, **Color**, **Gradient** or **HDRI**. HDRI shows the environment behind the model, with a **Blur** slider marked Sharp, Soft and Blurred, and a **Brightness** slider marked Dim, Normal and Bright.
 
 #### Camera
+
+The viewer fits the camera to the loaded model automatically via its bounds logic. There is no user-facing margin control.
 
 <video src="/media/images/newsroom/02/camera-preview.mp4" poster="/media/images/newsroom/02/camera-preview-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera with a hotspot on its lens. The Camera panel opens and the view moves in close on the lens for that camera, then preview mode clears the tool rails and panels away and leaves the camera alone on the page."></video>
 
@@ -116,12 +125,6 @@ There are no x/y/z position inputs. Frame the shot in the viewport, then click *
 With two or more cameras saved, the published viewer draws a switcher along the bottom so visitors can step between them. **Camera switcher**, in the same tool, turns it off for scenes that should stay on one angle.
 
 **Auto Rotate:** in the **Interaction** tool, enable continuous orbit around the model and set the rotation speed. There is no pause-on-interaction delay.
-
-#### Shadows
-
-<video src="/media/images/newsroom/02/shadows.mp4" poster="/media/images/newsroom/02/shadows-poster.webp" autoPlay muted loop playsInline aria-label="A vintage camera in the Publisher. The Shadows panel opens, Cast shadows is switched on and the Studio preset chosen, then the Ground shadow sliders are adjusted while a shadow settles under the camera."></video>
-
-Shadows are off by default. The **Shadows** tool has a single **Cast shadows** toggle, then three presets (Soft, Studio, Dramatic) that each set a complete look, plus **Opacity**, **Darkness** and **Softness** sliders to adjust one. A separate **Ground shadow** section adds a soft pool under the model, and **Ambient occlusion** sits behind **Advanced**.
 
 #### Grid
 
@@ -250,7 +253,7 @@ Worth bookmarking for debugging:
 |---|---|---|
 | Upload | Drag file onto Publisher canvas | No |
 | Optimize | Select quality preset | No |
-| Configure | Adjust lighting, camera, shadows | No |
+| Configure | Adjust lighting, background and camera | No |
 | Save | Click Save | Yes (free) |
 | Publish | Click Publish Scene in Scene Info & Publish | Yes |
 | API Key | Create in Dashboard → API Keys | Yes |
