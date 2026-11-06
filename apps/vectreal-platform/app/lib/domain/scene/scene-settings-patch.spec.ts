@@ -7,6 +7,21 @@ import type { SceneSettings } from '@vctrl/core'
 
 const baked = { assetId: 'bake-1', signature: 'sig' }
 
+describe('a presentation patch', () => {
+	it('accepts alt text, and only as text', () => {
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { altText: 'A walnut lounge chair' }
+			}).success
+		).toBe(true)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { altText: 42 }
+			}).success
+		).toBe(false)
+	})
+})
+
 describe('a lighting patch', () => {
 	it('is accepted by the public contract', () => {
 		const parsed = updateSceneSettingsInputSchema.safeParse({

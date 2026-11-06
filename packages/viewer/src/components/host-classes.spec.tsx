@@ -86,7 +86,7 @@ describe("a host class on the viewer's root", () => {
 			/containerClassName=\{withHostClasses\(\s*'viewer vctrl-viewer[^']*',\s*className\s*\)\}/
 		)
 		expect(source('components', 'canvas-wrapper.tsx')).toMatch(
-			/className=\{withHostClasses\(\s*cn\('vv:outline-none', colorScheme\),\s*containerClassName\s*\)\}/
+			/className=\{withHostClasses\(\s*cn\('vv:outline-none', VIEWER_FOCUS_RING, colorScheme\),\s*containerClassName\s*\)\}/
 		)
 	})
 

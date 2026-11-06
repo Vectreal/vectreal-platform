@@ -13,7 +13,10 @@ import { useAnimationReconciliation } from '../../components/publisher/sidebars/
 import { useShownBake } from '../../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
 import { usePlanStudioFinish } from '../../components/publisher/sidebars/compose-sidebar/lighting-settings/use-studio-finish-plan'
 import { ClientVectrealViewer } from '../../components/viewer/client-vectreal-viewer'
-import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
+import {
+	resolveSceneAltText,
+	shouldShowSceneViewReturn
+} from '../../lib/domain/scene/scene-presentation'
 import {
 	currentSceneIdAtom,
 	failedEnvironmentFilesAtom,
@@ -314,6 +317,7 @@ const PublisherPage = () => {
 					  follows the viewer either way through `camera_changed` above.
 					*/
 					showCameraControls={isPreviewMode}
+					label={resolveSceneAltText(presentation, sceneMeta)}
 					onHotspotPositionSetterReady={registerHotspotPositionSetter}
 					normalizationOptions={normalization}
 					boundsOptions={bounds}

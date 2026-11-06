@@ -84,11 +84,16 @@ import {
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { prefersReducedMotion } from './components/scene/reduced-motion'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
+import SceneKeyboardControls from './components/scene/scene-keyboard-controls'
 import { litLights } from './components/scene/scene-lighting'
 import {
 	resolveHotspotViewName,
 	resolveSceneViewCameras
 } from './components/scene/scene-view-return'
+import {
+	describeViewerKeys,
+	resolveViewerKeys
+} from './components/scene/viewer-keys'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { type ContextLossEvent } from './hooks/use-context-loss-recovery'
 import { useHeldExecutor } from './hooks/use-held-executor'
@@ -196,6 +201,12 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * An optional className to apply to the outermost container of the viewer.
 	 */
 	className?: string
+
+	/**
+	 * What the scene shows, in a sentence: the viewer's accessible name, which
+	 * a screen reader announces as a 3D viewer along with the keys it takes.
+	 */
+	label?: string
 
 	/**
 	 * Theme for the viewer.
@@ -586,6 +597,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		animationOptions,
 		// Container & appearance
 		className,
+		label,
 		theme = 'system',
 		// Performance
 		enableViewportRendering = true,
@@ -996,6 +1008,35 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		return () => container.removeEventListener('keydown', handleKeyDown)
 	}, [container, showSceneViewReturn])
 
+	const viewerKeys = useMemo(
+		() =>
+			resolveViewerKeys(
+				{
+					// SceneControls spreads the scene's own `enabled` over the
+					// override, so it wins there and here alike.
+					enabled:
+						controlsOptions?.enabled ?? controlsEnabledOverride ?? undefined,
+					enableRotate: controlsOptions?.enableRotate,
+					enableZoom:
+						controlsOptionsOverride?.zoom ?? controlsOptions?.enableZoom,
+					enablePan: controlsOptionsOverride?.pan ?? controlsOptions?.enablePan
+				},
+				{ canReturnHome: activeCameraId !== null }
+			),
+		[
+			controlsEnabledOverride,
+			controlsOptions?.enabled,
+			controlsOptions?.enableRotate,
+			controlsOptions?.enableZoom,
+			controlsOptions?.enablePan,
+			controlsOptionsOverride,
+			activeCameraId
+		]
+	)
+	const returnHome = useCallback(() => {
+		if (activeCameraId !== null) activateCamera(activeCameraId)
+	}, [activeCameraId, activateCamera])
+
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
 			executeViewerCommand({ type: 'activate_camera', cameraId })
@@ -1077,6 +1118,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 				theme={theme}
 				loadingState={loadingState}
 				onContainerChange={setContainer}
+				label={label}
+				keyHelp={describeViewerKeys(viewerKeys)}
 				onContextLossEvent={handleContextLossEvent}
 				renderFailure={renderFailure}
 				overlay={
@@ -1187,6 +1230,11 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 											enablePan: controlsOptionsOverride.pan
 										}
 									: {})}
+							/>
+							<SceneKeyboardControls
+								container={container}
+								keys={viewerKeys}
+								onHome={returnHome}
 							/>
 							<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 								<SceneCamera

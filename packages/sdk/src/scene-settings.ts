@@ -266,7 +266,8 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 			showInfoPopover: z.boolean().optional(),
 			showSceneViewReturn: z.boolean().optional(),
 			showLoadingThumbnail: z.boolean().optional(),
-			compressTexturesForGpu: z.boolean().optional()
+			compressTexturesForGpu: z.boolean().optional(),
+			altText: z.string().optional()
 		})
 		.optional()
 })

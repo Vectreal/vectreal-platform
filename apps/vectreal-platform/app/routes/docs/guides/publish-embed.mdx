@@ -83,6 +83,15 @@ present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar
 present apps/vectreal-platform/app/components/scene-embed/scene-embed-viewer.tsx showSceneViewReturn={shouldShowSceneViewReturn(
 */}
 
+### Alt text and keyboard
+
+Screen readers announce the viewer as a 3D viewer, named by the **Alt text** field in the **Viewer** section, or by the scene's name and description while it is empty. Tab reaches the viewer, where the arrow keys orbit, Shift and the arrows pan, plus and minus zoom, and Home returns to the current camera, each only while that control is on.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Alt text"
+present packages/viewer/src/components/canvas-wrapper.tsx aria-roledescription="3D viewer"
+*/}
+
 ### Hotspots behind the model
 
 Each hotspot decides what happens when the model sits between the visitor and the marker. Pick it under **Behind the model** when you select the hotspot in the **Hotspots** tool:

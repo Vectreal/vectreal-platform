@@ -9,6 +9,8 @@ import {
 	type ComponentRef
 } from 'react'
 
+import { prefersReducedMotion } from './reduced-motion'
+
 /** Where the orbit camera looks from, in the lights' terms (degrees). */
 export interface ViewerView {
 	/** Around the vertical axis; 0 looks from +Z, 90 from +X. */
@@ -47,7 +49,9 @@ const SceneControls = memo((props: SceneControlsProps) => {
 	const { controlsTimeout, onViewChange, onChange, enabledOverride, ...rest } =
 		{
 			...defaultControlsOptions,
-			...props
+			...props,
+			// A model turning by itself is motion the visitor did not start.
+			autoRotate: props.autoRotate === true && !prefersReducedMotion()
 		}
 
 	const mountedRef = useRef(false)
