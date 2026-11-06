@@ -5,10 +5,17 @@ import {
 	applyDefaultCameraFlag,
 	resolveDefaultSceneCameraId
 } from '../scene-camera'
+import {
+	CAMERA_VECTOR_FIELDS,
+	toVector3Tuple,
+	type Vector3Tuple
+} from '../scene-vector'
 
 import type { CameraProps, CameraTransitionConfig } from '@vctrl/core'
 
 export type CameraEntry = NonNullable<CameraProps['cameras']>[number]
+
+type CameraVectorField = (typeof CAMERA_VECTOR_FIELDS)[number]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -87,6 +94,18 @@ export function parseCameraSettings(
 			)
 		}
 
+		const vectors: Partial<Record<CameraVectorField, Vector3Tuple>> = {}
+		for (const field of CAMERA_VECTOR_FIELDS) {
+			if (entry[field] === undefined) continue
+			const tuple = toVector3Tuple(entry[field])
+			if (!tuple) {
+				return ApiResponse.badRequest(
+					`Camera "${rawCameraName}" has a ${field} that is not [x, y, z] or {x, y, z} of finite numbers (camera.cameras[${cameraIndex}].${field})`
+				)
+			}
+			vectors[field] = tuple
+		}
+
 		if (seenCameraIds.has(rawCameraId)) {
 			return ApiResponse.badRequest(`Duplicate cameraId found: ${rawCameraId}`)
 		}
@@ -94,6 +113,7 @@ export function parseCameraSettings(
 
 		normalizedCameras.push({
 			...(entry as CameraEntry),
+			...vectors,
 			cameraId: rawCameraId,
 			name: rawCameraName
 		})

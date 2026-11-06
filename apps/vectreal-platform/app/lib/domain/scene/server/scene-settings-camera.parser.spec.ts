@@ -80,3 +80,44 @@ describe('a camera pose on the save path', () => {
 		)
 	})
 })
+
+describe('camera vectors on the save path', () => {
+	const withCamera = (camera: Record<string, unknown>) =>
+		parse({ cameras: [{ ...CAMERAS[0], ...camera }] })
+
+	it.each([
+		['a tuple', [1, 2, 3]],
+		['an object', { x: 1, y: 2, z: 3 }]
+	])(
+		'stores position, target and rotation sent as %s as [x, y, z]',
+		(_form, vector) => {
+			const [hero] =
+				parsedCamera(
+					withCamera({ position: vector, target: vector, rotation: vector })
+				).cameras ?? []
+
+			expect(hero.position).toEqual([1, 2, 3])
+			expect(hero.target).toEqual([1, 2, 3])
+			expect(hero.rotation).toEqual([1, 2, 3])
+		}
+	)
+
+	it.each([
+		['position', [1, 2]],
+		['target', { x: 1, y: 2 }],
+		['rotation', [0, 0, 0, 'XYZ']],
+		['position', ['1', 2, 3]],
+		['target', [1, Infinity, 3]],
+		['position', null]
+	])(
+		'refuses a %s of %j, naming the camera and the field',
+		async (field, value) => {
+			const result = withCamera({ [field]: value })
+
+			expect(result).toBeInstanceOf(Response)
+			expect(await (result as Response).text()).toContain(
+				`Camera \\"Hero\\" has a ${field} that is not [x, y, z] or {x, y, z} of finite numbers (camera.cameras[0].${field})`
+			)
+		}
+	)
+})

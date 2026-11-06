@@ -11,6 +11,7 @@ import {
 	MAX_HOTSPOT_BODY_LENGTH,
 	MAX_HOTSPOT_URL_LENGTH
 } from '../hotspot-urls'
+import { toVector3Tuple } from '../scene-vector'
 
 import type { CameraEntry } from './scene-settings-camera.parser.server'
 import type { SceneSettings } from '@vctrl/core'
@@ -135,13 +136,10 @@ export function normalizeHotspots(
 				)
 			}
 		}
-		if (
-			!Array.isArray(hotspot.worldPosition) ||
-			hotspot.worldPosition.length !== 3 ||
-			!(hotspot.worldPosition as unknown[]).every((v) => typeof v === 'number')
-		) {
+		const worldPosition = toVector3Tuple(hotspot.worldPosition)
+		if (!worldPosition) {
 			return ApiResponse.badRequest(
-				`hotspots[${i}].worldPosition must be [number, number, number]`
+				`${marker} has a worldPosition that is not [x, y, z] or {x, y, z} of finite numbers (hotspots[${i}].worldPosition)`
 			)
 		}
 		if (typeof hotspot.visible !== 'boolean') {
@@ -273,6 +271,7 @@ export function normalizeHotspots(
 
 		normalized.push({
 			...hotspot,
+			worldPosition,
 			body: text(hotspot.body),
 			linkUrl: text(hotspot.linkUrl)
 		} as NonNullable<SceneSettings['hotspots']>[number])

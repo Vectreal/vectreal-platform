@@ -433,3 +433,29 @@ describe('hotspot ceilings and payload URLs', () => {
 		}
 	})
 })
+
+describe('a hotspot world position', () => {
+	const stored = (result: unknown) => {
+		if (rejected(result)) throw new Error('expected the request')
+		return (
+			result as { settings?: { hotspots?: { worldPosition: unknown }[] } }
+		).settings?.hotspots?.[0]?.worldPosition
+	}
+
+	it('is stored as [x, y, z] when sent as {x, y, z}', () => {
+		expect(
+			stored(parse([hotspot({ worldPosition: { x: 1, y: 2, z: 3 } })]))
+		).toEqual([1, 2, 3])
+	})
+
+	it.each([[[1, 2]], [[1, Number.NaN, 3]], [{ x: 1, y: 2 }], ['1,2,3']])(
+		'refuses %j, naming the marker and the field',
+		async (worldPosition) => {
+			const body = await bodyOf(parse([hotspot({ worldPosition })]))
+
+			expect(body.error).toBe(
+				'Marker "Handle" has a worldPosition that is not [x, y, z] or {x, y, z} of finite numbers (hotspots[0].worldPosition)'
+			)
+		}
+	)
+})

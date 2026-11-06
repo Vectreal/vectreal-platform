@@ -15,6 +15,7 @@ import {
 import { SCENE_ASSET_ROLE, sceneAssetRole } from '../scene-asset-roles'
 import { withSceneCameraKinds } from '../scene-camera'
 import { columnBackedSceneSettings } from '../scene-settings-comparison'
+import { withVectorTuples } from '../scene-vector'
 
 import type {
 	HotspotDefinition,
@@ -51,7 +52,9 @@ export function rowToSceneSettings(
 		animation: row.animation ?? undefined,
 		bounds: row.bounds ?? undefined,
 		// The embed manifest reads this, not `withSceneSettingsDefaults`.
-		camera: row.camera ? withSceneCameraKinds(row.camera) : undefined,
+		camera: row.camera
+			? withSceneCameraKinds(withVectorTuples(row.camera))
+			: undefined,
 		controls: row.controls ?? undefined,
 		environment: row.environment ?? undefined,
 		lighting: row.lighting ?? undefined,
