@@ -83,6 +83,16 @@ present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar
 present apps/vectreal-platform/app/components/scene-embed/scene-embed-viewer.tsx showSceneViewReturn={shouldShowSceneViewReturn(
 */}
 
+### Show how to interact
+
+New scenes show visitors a short line on how to move the scene when it first appears, such as "Drag to rotate, pinch to zoom" on a phone, worded for touch, a mouse or the keyboard and for the controls you left on. It goes on the first touch, scroll or key, or after a few seconds, and appears once per page view. The info popover lists the same under **How to move**. Switch off **Show how to interact** in the **Viewer** section to leave it out; scenes saved before it existed start with it off. An embedding page can withhold it with [`?hint=0`](/docs/guides/embed-sdk#url-parameters) or `setInteractionHint(false)`.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Show how to interact"
+present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params.get('hint')
+present packages/embed/src/embed.ts setInteractionHint(enabled: boolean)
+*/}
+
 ### Full screen button
 
 Switch on **Full screen button** in the **Viewer** section to give visitors a button in the scene's bottom-right corner that shows it full screen. It is off by default, applies to embeds and preview links as soon as you save, and appears only where the browser allows it: the embed snippet's iframe carries `allowfullscreen`, and Safari on iPhone shows nothing, since it takes only video full screen.
@@ -374,6 +384,7 @@ Hosted preview iframes support a small `postMessage` protocol layered on top of 
 | `viewer_command`       | `command: { type: 'set_transition', transitionType: 'none' \| 'linear' \| 'object_avoidance', duration?: number, easing?: string }` | Overrides the transition used by subsequent camera switches                                   |
 | `viewer_command`       | `command: { type: 'set_auto_rotate', enabled: boolean, speed?: number }`                                                            | Toggles and configures auto-rotation                                                          |
 | `viewer_command`       | `command: { type: 'set_controls_options', zoom?: boolean, pan?: boolean }`                                                          | Enables or disables zoom and pan at runtime                                                   |
+| `viewer_command` | `command: { type: 'set_interaction_hint', enabled: boolean }` | Shows or withholds the first-time hint on how to move the scene |
 | `host_scroll_progress` | `progress: number`                                                                                                                  | Reports normalized host scroll progress used by persisted `host_scroll_progress` interactions |
 | `host_message`         | `message: string`                                                                                                                   | Triggers persisted `host_message` interactions by message name                                |
 

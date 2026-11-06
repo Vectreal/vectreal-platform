@@ -2,6 +2,7 @@ import {
 	InfoPopover,
 	InfoPopoverCloseButton,
 	InfoPopoverContent,
+	InfoPopoverHowToMove,
 	InfoPopoverText,
 	InfoPopoverTrigger
 } from '@vctrl/viewer'
@@ -36,6 +37,8 @@ const SceneEmbedInfoPopover = ({
 				) : (
 					<p className="opacity-50">No description provided for this scene.</p>
 				)}
+				{/* From the viewer it sits in, so a host's overrides are in it. */}
+				<InfoPopoverHowToMove />
 			</InfoPopoverText>
 		</InfoPopoverContent>
 	</InfoPopover>

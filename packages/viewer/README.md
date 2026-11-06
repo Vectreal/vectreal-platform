@@ -69,6 +69,7 @@ Or, with a model already hosted somewhere, give it the address:
 | `label` | `string` | No | The viewer's accessible name: what the scene shows, in a sentence. A screen reader announces it as a 3D viewer, with the keys it takes: while its controls are on, Tab reaches it, the arrows orbit, Shift and the arrows pan, plus and minus zoom, and Home returns to the camera in use |
 | `showSceneViewReturn` | `boolean` | No | Draws a "Back to scene view" control while the view stands at a camera a hotspot flew it to, and lets Escape inside the viewer do the same. Default `true`. Both return to the scene camera the visitor was on before, or the scene's default |
 | `showFullscreenButton` | `boolean` | No | Draws a button in the bottom-right corner, above any playback controls, that shows the viewer full screen, where the browser allows it (an iframe needs `allowfullscreen`). Default `false` |
+| `showInteractionHint` | `boolean` | No | Shows a short line on how to move the scene once it is ready, worded for touch, mouse or keys and the controls that are on, gone on the first interaction or after a few seconds, once per page view. Default `false`; `set_interaction_hint` withdraws it |
 | `animations` | `AnimationClip[]` | No | The model's animation clips, as parsed from the same glTF. Without them no animation runtime is mounted |
 | `animationOptions` | `AnimationSettings` | No | How those clips play: on or off, together or in sequence, autoplay, per-clip loop, speed and offset, and whether the viewer shows its playback controls |
 | `showAnimationControls` | `boolean` | No | Lets the viewer draw its playback controls when `animationOptions.showControls` asks for them. Default `true`. Set `false` to draw your own with the exported `AnimationControls` (it carries no placement: position it with `className`) or any UI, driven by `set_animation_playing` and `restart_animation` and following `animation_state_changed` |
@@ -249,6 +250,7 @@ Current commands:
 | `set_transition`       | `{ transitionType: 'none' \| 'linear' \| 'object_avoidance'; duration?: number; easing?: string }` | Overrides the active camera transition              |
 | `set_auto_rotate`      | `{ enabled: boolean; speed?: number }`                                                             | Toggles and configures auto-rotation                |
 | `set_controls_options` | `{ zoom?: boolean; pan?: boolean }`                                                                | Enables or disables zoom/pan interaction at runtime |
+| `set_interaction_hint` | `{ enabled: boolean }` | Shows or withholds the first-time hint on how to move the scene |
 
 ### Events
 
