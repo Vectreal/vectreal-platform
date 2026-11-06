@@ -51,3 +51,32 @@ describe('the camera switcher setting on the save path', () => {
 		)
 	})
 })
+
+describe('a camera pose on the save path', () => {
+	const withCamera = (camera: Record<string, unknown>) =>
+		parse({ cameras: [{ ...CAMERAS[0], ...camera }] })
+
+	it('keeps a field of view the lens can draw', () => {
+		const [hero] = parsedCamera(withCamera({ fov: 35 })).cameras ?? []
+		expect(hero.fov).toBe(35)
+	})
+
+	it.each([0, 180, -10, 500, '45'])(
+		'refuses a field of view of %j',
+		async (fov) => {
+			const result = withCamera({ fov })
+			expect(result).toBeInstanceOf(Response)
+			expect(await (result as Response).text()).toContain(
+				'camera.cameras[0].fov must be a number of degrees between 0 and 180'
+			)
+		}
+	)
+
+	it('refuses a kind the viewer does not know', async () => {
+		const result = withCamera({ kind: 'overview' })
+		expect(result).toBeInstanceOf(Response)
+		expect(await (result as Response).text()).toContain(
+			"camera.cameras[0].kind must be 'scene' or 'hotspot'"
+		)
+	})
+})

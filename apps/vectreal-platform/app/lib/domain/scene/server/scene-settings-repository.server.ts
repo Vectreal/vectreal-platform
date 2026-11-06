@@ -301,6 +301,17 @@ export async function getHotspotsBySceneSettingsId(
 	}))
 }
 
+/**
+ * A save refused for something the author can correct, answered as a 400
+ * naming what to fix rather than as a failure of the save itself.
+ */
+export class SceneSaveRefusedError extends Error {
+	constructor(message: string) {
+		super(message)
+		this.name = 'SceneSaveRefusedError'
+	}
+}
+
 export async function replaceHotspots(
 	tx: SceneSettingsTransaction,
 	sceneSettingsId: string,
@@ -379,8 +390,8 @@ export async function replaceHotspots(
 		const writtenIds = new Set(written.map((row) => row.id))
 		const collidedIds = survivingIds.filter((id) => !writtenIds.has(id))
 
-		throw new Error(
-			`Hotspot id(s) already belong to a different scene: ${collidedIds.join(', ')}`
+		throw new SceneSaveRefusedError(
+			`Hotspot id(s) already belong to a different scene: ${collidedIds.join(', ')}. Give each new marker a new id`
 		)
 	}
 }

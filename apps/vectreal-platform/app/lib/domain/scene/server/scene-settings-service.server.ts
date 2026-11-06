@@ -15,6 +15,7 @@ import {
 	replaceHotspots,
 	replaceSceneAssets,
 	rowToSceneSettings,
+	SceneSaveRefusedError,
 	type SceneSettingsTransaction,
 	upsertSceneSettings
 } from './scene-settings-repository.server'
@@ -1173,15 +1174,6 @@ class SceneSettingsService {
 	}
 }
 
-/**
- * A save refused for something the author can correct, answered as a 400
- * naming what to fix rather than as a failure of the save itself.
- */
-export class SceneSaveRefusedError extends Error {
-	constructor(message: string) {
-		super(message)
-		this.name = 'SceneSaveRefusedError'
-	}
-}
+export { SceneSaveRefusedError }
 
 export const sceneSettingsService = new SceneSettingsService()

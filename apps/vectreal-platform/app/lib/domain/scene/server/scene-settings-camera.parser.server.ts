@@ -62,6 +62,31 @@ export function parseCameraSettings(
 				? entry.name.trim()
 				: `Camera ${cameraIndex + 1}`
 
+		// The viewer sets a stored fov on its lens as it is, and draws nothing
+		// usable outside a perspective lens's open range.
+		if (
+			entry.fov !== undefined &&
+			!(
+				typeof entry.fov === 'number' &&
+				Number.isFinite(entry.fov) &&
+				entry.fov > 0 &&
+				entry.fov < 180
+			)
+		) {
+			return ApiResponse.badRequest(
+				`camera.cameras[${cameraIndex}].fov must be a number of degrees between 0 and 180`
+			)
+		}
+		if (
+			entry.kind !== undefined &&
+			entry.kind !== 'scene' &&
+			entry.kind !== 'hotspot'
+		) {
+			return ApiResponse.badRequest(
+				`camera.cameras[${cameraIndex}].kind must be 'scene' or 'hotspot'`
+			)
+		}
+
 		if (seenCameraIds.has(rawCameraId)) {
 			return ApiResponse.badRequest(`Duplicate cameraId found: ${rawCameraId}`)
 		}

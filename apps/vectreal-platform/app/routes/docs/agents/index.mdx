@@ -102,7 +102,7 @@ Tools that take a `projectId` use the linked project when the call names none.
 - **Delete anything.** Projects, folders and scenes are deleted in the dashboard only.
 - **Billing, members and organization settings.** None of these are open to agents.
 - **Interactions, animation and normalization.** An agent can read these settings, but changes go through the publisher for now.
-- **Thumbnails and baked shadows.** An agent's machine renders nothing, so a scene it creates has neither until you first open it in the publisher, which fills both automatically.
+- **Thumbnails and baked shadows.** An agent's machine renders nothing, so a scene it creates has neither until you first open it in the publisher, which fills both automatically. A scene whose opening camera an agent changes keeps its old thumbnail.
 - **Studio finish (baked ambient occlusion and lights).** Drawing it needs a GPU. An agent can set `lighting.occlusion.mode` to `baked` or `lighting.bake.lights` to `true`, but only publishing from the publisher bakes them. Until then embeds show no ambient occlusion, and draw the studio lights live.
 
 What an agent may do is also limited by your role in the organization: an agent never does more than you could do yourself.
