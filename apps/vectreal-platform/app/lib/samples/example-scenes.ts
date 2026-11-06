@@ -262,7 +262,8 @@ export const EXAMPLE_SCENES: ExampleScene[] = [
 				rotateSpeed: 0.5,
 				panSpeed: 0.5,
 				zoomSpeed: 0.4,
-				makeDefault: true
+				makeDefault: true,
+				focusOnDoubleClick: true
 			},
 			...STUDIO_STAGE
 		}

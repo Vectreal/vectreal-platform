@@ -194,6 +194,41 @@ test('the full screen button shows the viewer full screen and back', async ({
 		.toBeNull()
 })
 
+test('a double-click focuses the model, and on the background frames it again', async ({
+	page
+}) => {
+	test.setTimeout(60000)
+	await page.goto('/?src-case')
+	await page.waitForFunction(() => window.__SRC_READY__ === true, undefined, {
+		timeout: 30000
+	})
+
+	// A loaded model, no hotspots and nothing else animating, so the canvas
+	// changes only when the camera moves.
+	const canvas = page.getByTestId('src-viewer').locator('canvas')
+	// At rest the viewer accumulates samples for a few frames; compare frames
+	// it has finished drawing.
+	const settled = async () => {
+		let previous = await canvas.screenshot()
+		for (;;) {
+			await page.waitForTimeout(250)
+			const next = await canvas.screenshot()
+			if (next.equals(previous)) return next
+			previous = next
+		}
+	}
+	const opening = await settled()
+	await canvas.dblclick()
+	await expect
+		.poll(async () => (await canvas.screenshot()).equals(opening))
+		.toBe(false)
+
+	await canvas.dblclick({ position: { x: 8, y: 8 } })
+	await expect
+		.poll(async () => (await settled()).equals(opening), { timeout: 15000 })
+		.toBe(true)
+})
+
 test('a camera switch flies in a host that follows camera_changed', async ({
 	page
 }) => {

@@ -46,13 +46,19 @@ export const defaultControlsOptions = {
  * SceneControls component that enables orbit controls after a specified timeout.
  */
 const SceneControls = memo((props: SceneControlsProps) => {
-	const { controlsTimeout, onViewChange, onChange, enabledOverride, ...rest } =
-		{
-			...defaultControlsOptions,
-			...props,
-			// A model turning by itself is motion the visitor did not start.
-			autoRotate: props.autoRotate === true && !prefersReducedMotion()
-		}
+	const {
+		controlsTimeout,
+		focusOnDoubleClick: _viewerOwnsDoubleClick,
+		onViewChange,
+		onChange,
+		enabledOverride,
+		...rest
+	} = {
+		...defaultControlsOptions,
+		...props,
+		// A model turning by itself is motion the visitor did not start.
+		autoRotate: props.autoRotate === true && !prefersReducedMotion()
+	}
 
 	const mountedRef = useRef(false)
 	const [isControlsEnabled, setIsControlsEnabled] = useState(

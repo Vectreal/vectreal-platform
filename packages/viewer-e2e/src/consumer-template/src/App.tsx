@@ -127,9 +127,15 @@ function SrcCase() {
 				width: '100vw'
 			}}
 		>
-			<div data-testid="src-viewer">
+			{/*
+			  Each cell positioned, as a real host's box would be: the viewer's
+			  loader layer is anchored to it, and one still loading would
+			  otherwise cover its neighbours.
+			*/}
+			<div data-testid="src-viewer" style={{ position: 'relative' }}>
 				<VectrealViewer
 					src="/box.glb"
+					controlsOptions={{ focusOnDoubleClick: true }}
 					onLoad={({ model }) => {
 						let meshes = 0
 						model.traverse((object) => {
@@ -149,7 +155,7 @@ function SrcCase() {
 			  With children, which count as content of their own: the fallback
 			  must still show rather than the loader ending on the light alone.
 			*/}
-			<div data-testid="src-missing">
+			<div data-testid="src-missing" style={{ position: 'relative' }}>
 				<VectrealViewer
 					src="/not-a-model.glb"
 					onLoadError={() => {
@@ -163,7 +169,7 @@ function SrcCase() {
 				</VectrealViewer>
 			</div>
 			{/* A host that reports the failure itself. */}
-			<div data-testid="src-silent">
+			<div data-testid="src-silent" style={{ position: 'relative' }}>
 				<VectrealViewer
 					src="/not-a-model.glb"
 					errorFallback={null}

@@ -9,13 +9,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import SceneControls from './scene-controls'
 
-const received = vi.hoisted(() => ({ autoRotate: undefined as unknown }))
+const received = vi.hoisted(() => ({
+	autoRotate: undefined as unknown,
+	props: {} as Record<string, unknown>
+}))
 
 vi.mock('@react-three/drei', () => ({
 	OrbitControls: forwardRef(function OrbitControls(props: {
 		autoRotate?: boolean
 	}) {
 		received.autoRotate = props.autoRotate
+		received.props = props
 		return null
 	})
 }))
@@ -47,5 +51,13 @@ describe('SceneControls under reduced motion', () => {
 		prefersReducedMotion(true)
 		render(<SceneControls autoRotate />)
 		expect(received.autoRotate).toBe(false)
+	})
+})
+
+describe('SceneControls and the settings the viewer owns', () => {
+	it('keeps double-click to focus off OrbitControls', () => {
+		prefersReducedMotion(false)
+		render(<SceneControls focusOnDoubleClick />)
+		expect(received.props).not.toHaveProperty('focusOnDoubleClick')
 	})
 })
