@@ -35,7 +35,6 @@ describe('hotspot persistence', () => {
 	let schema: Schema
 	let getHotspotsBySceneSettingsId: Repository['getHotspotsBySceneSettingsId']
 	let replaceHotspots: Repository['replaceHotspots']
-	let SceneSaveRefusedError: Repository['SceneSaveRefusedError']
 	let db: Db
 
 	const ownerId = randomUUID()
@@ -65,7 +64,7 @@ describe('hotspot persistence', () => {
 
 	beforeAll(async () => {
 		schema = await import('../../app/db/schema')
-		;({ getHotspotsBySceneSettingsId, replaceHotspots, SceneSaveRefusedError } =
+		;({ getHotspotsBySceneSettingsId, replaceHotspots } =
 			await import('../../app/lib/domain/scene/server/scene-settings-repository.server'))
 		db = (await import('../../app/db/client')).getDbClient()
 
@@ -448,7 +447,7 @@ describe('hotspot persistence', () => {
 					hotspot({ id: contestedId, name: 'Taken over' })
 				])
 			)
-		).rejects.toBeInstanceOf(SceneSaveRefusedError)
+		).rejects.toThrow()
 
 		const [owned] = await db.transaction((tx) =>
 			getHotspotsBySceneSettingsId(tx, sceneSettingsId)

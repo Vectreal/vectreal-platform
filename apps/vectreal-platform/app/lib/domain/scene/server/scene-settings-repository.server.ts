@@ -1,4 +1,4 @@
-import { and, eq, notInArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, ne, notInArray, sql } from 'drizzle-orm'
 
 import { getDbClient } from '../../../../db/client'
 import * as dbSchema from '../../../../db/schema'
@@ -302,14 +302,28 @@ export async function getHotspotsBySceneSettingsId(
 }
 
 /**
- * A save refused for something the author can correct, answered as a 400
- * naming what to fix rather than as a failure of the save itself.
+ * The ids among `ids` that a hotspot of another scene already has. The key is
+ * global, so a marker copied from one scene into another arrives with an id
+ * that is taken.
  */
-export class SceneSaveRefusedError extends Error {
-	constructor(message: string) {
-		super(message)
-		this.name = 'SceneSaveRefusedError'
-	}
+export async function findHotspotIdsOwnedElsewhere(
+	tx: SceneSettingsTransaction,
+	ids: string[],
+	sceneSettingsId: string | undefined
+): Promise<string[]> {
+	if (ids.length === 0) return []
+	const rows = await tx
+		.select({ id: sceneHotspots.id })
+		.from(sceneHotspots)
+		.where(
+			and(
+				inArray(sceneHotspots.id, ids),
+				sceneSettingsId === undefined
+					? undefined
+					: ne(sceneHotspots.sceneSettingsId, sceneSettingsId)
+			)
+		)
+	return rows.map((row) => row.id)
 }
 
 export async function replaceHotspots(
@@ -390,8 +404,8 @@ export async function replaceHotspots(
 		const writtenIds = new Set(written.map((row) => row.id))
 		const collidedIds = survivingIds.filter((id) => !writtenIds.has(id))
 
-		throw new SceneSaveRefusedError(
-			`Hotspot id(s) already belong to a different scene: ${collidedIds.join(', ')}. Give each new marker a new id`
+		throw new Error(
+			`Hotspot id(s) already belong to a different scene: ${collidedIds.join(', ')}`
 		)
 	}
 }
