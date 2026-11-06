@@ -60,6 +60,7 @@ import {
 } from './components'
 import { CHROME_PLACEMENT } from './components/chrome-classes'
 import { withHostClasses } from './components/class-names'
+import FullscreenControl from './components/fullscreen-control'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -341,6 +342,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	showSceneViewReturn?: boolean
 	/**
+	 * Whether the viewer draws a button that shows it full screen. Default
+	 * false. Drawn only where the browser allows it, so an iframe needs
+	 * `allowfullscreen`. Full screen paints the theme's background behind a
+	 * scene that has none of its own, rather than the browser's black.
+	 */
+	showFullscreenButton?: boolean
+	/**
 	 * Whether the viewer draws its own animation playback controls. Default true.
 	 *
 	 * They appear only when the scene's `animationOptions.showControls` asks for
@@ -615,6 +623,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		showHotspotMarkers,
 		revealHotspotContent,
 		showSceneViewReturn = true,
+		showFullscreenButton = false,
 		showAnimationControls = true,
 		showCameraControls = true,
 		// Editor affordances
@@ -1111,7 +1120,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 				frameloop="always"
 				// `isolate` keeps the chrome's `z-[100]` inside the viewer, so it orders the viewer's own layers and never the host page's: without it the camera switcher drew over a dashboard sheet.
 				containerClassName={withHostClasses(
-					'viewer vctrl-viewer vv:isolate vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0',
+					'viewer vctrl-viewer vv:isolate vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0 vv:[&:fullscreen]:bg-background',
 					className
 				)}
 				containerBackground={backdrop ? sceneBackdropCss(backdrop) : undefined}
@@ -1130,7 +1139,6 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 						animationControls={
 							animation.showControls ? (
 								<AnimationControls
-									className={CHROME_PLACEMENT.animationControls}
 									playing={animation.status.playing}
 									complete={animation.status.complete}
 									onToggle={animation.toggle}
@@ -1159,6 +1167,11 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									onReturn={returnToSceneView}
 									focusOnLeave={container}
 								/>
+							) : null
+						}
+						fullscreenControl={
+							showFullscreenButton ? (
+								<FullscreenControl target={container} />
 							) : null
 						}
 						loader={loader}

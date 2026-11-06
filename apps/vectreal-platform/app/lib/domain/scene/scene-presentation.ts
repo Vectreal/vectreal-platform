@@ -45,7 +45,8 @@ export function normalizePresentationSettings(
 		showSceneViewReturn,
 		showLoadingThumbnail,
 		compressTexturesForGpu,
-		altText
+		altText,
+		showFullscreenButton
 	} = presentation as ScenePresentationSettings
 	const trimmedAltText = typeof altText === 'string' ? altText.trim() : ''
 	const normalized: ScenePresentationSettings = {
@@ -59,7 +60,10 @@ export function normalizePresentationSettings(
 		...(typeof compressTexturesForGpu === 'boolean'
 			? { compressTexturesForGpu }
 			: {}),
-		...(trimmedAltText ? { altText: trimmedAltText } : {})
+		...(trimmedAltText ? { altText: trimmedAltText } : {}),
+		...(typeof showFullscreenButton === 'boolean'
+			? { showFullscreenButton }
+			: {})
 	}
 
 	return Object.keys(normalized).length > 0 ? normalized : undefined
@@ -105,6 +109,16 @@ export function shouldShowSceneViewReturn(
 	presentation: ScenePresentationSettings | undefined | null
 ): boolean {
 	return presentation?.showSceneViewReturn !== false
+}
+
+/**
+ * Whether a published scene draws the viewer's full screen button. Absent
+ * means not shown; see `ScenePresentationSettings.showFullscreenButton`.
+ */
+export function shouldShowFullscreenButton(
+	presentation: ScenePresentationSettings | undefined | null
+): boolean {
+	return presentation?.showFullscreenButton === true
 }
 
 /**

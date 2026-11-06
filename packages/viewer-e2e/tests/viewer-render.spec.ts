@@ -166,6 +166,34 @@ test('a keyboard or screen reader user can find and turn the viewer', async ({
 		.toContain('camera_changed')
 })
 
+test('the full screen button shows the viewer full screen and back', async ({
+	page
+}) => {
+	await page.goto('/')
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+
+	const viewer = page.getByRole('application', { name: 'A blue box' })
+	await viewer.getByRole('button', { name: 'Full screen' }).click()
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				document.fullscreenElement?.getAttribute('aria-roledescription')
+			)
+		)
+		.toBe('3D viewer')
+
+	await viewer.getByRole('button', { name: 'Exit full screen' }).click()
+	await expect
+		.poll(() => page.evaluate(() => document.fullscreenElement))
+		.toBeNull()
+})
+
 test('a camera switch flies in a host that follows camera_changed', async ({
 	page
 }) => {

@@ -16,13 +16,14 @@ const Stage = ({ theme }: { theme: 'light' | 'dark' }) => {
 					: 'viewer light relative h-[240px] w-[360px] bg-zinc-100'
 			}
 		>
-			<AnimationControls
-				className={CHROME_PLACEMENT.animationControls}
-				playing={playing}
-				complete={false}
-				onToggle={() => setPlaying((current) => !current)}
-				onRestart={() => setPlaying(true)}
-			/>
+			<div className={CHROME_PLACEMENT.cornerStack}>
+				<AnimationControls
+					playing={playing}
+					complete={false}
+					onToggle={() => setPlaying((current) => !current)}
+					onRestart={() => setPlaying(true)}
+				/>
+			</div>
 		</div>
 	)
 }

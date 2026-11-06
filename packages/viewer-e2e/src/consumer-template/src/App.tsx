@@ -221,6 +221,7 @@ export default function App() {
 				<VectrealViewer
 					theme="dark"
 					label="A blue box"
+					showFullscreenButton
 					controlsOptions={{ autoRotate: false }}
 					hotspots={E2E_HOTSPOTS}
 					cameraOptions={E2E_CAMERAS}

@@ -614,6 +614,12 @@ export interface ScenePresentationSettings {
 	 * in.
 	 */
 	altText?: string
+	/**
+	 * Whether the viewer draws a button that shows the scene full screen.
+	 * Absent means not shown, so scenes saved before this field existed keep
+	 * the viewer they had.
+	 */
+	showFullscreenButton?: boolean
 }
 
 /**
