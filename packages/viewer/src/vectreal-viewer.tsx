@@ -49,7 +49,7 @@ import {
 	useRef,
 	useState
 } from 'react'
-import { AnimationClip, Object3D } from 'three'
+import { AnimationClip, Object3D, type Vector3 } from 'three'
 
 import {
 	AnimationControls,
@@ -84,6 +84,7 @@ import {
 } from './components/scene/live-bake-budget'
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { prefersReducedMotion } from './components/scene/reduced-motion'
+import SceneDoubleClickFocus from './components/scene/scene-double-click-focus'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
 import SceneKeyboardControls from './components/scene/scene-keyboard-controls'
 import { litLights } from './components/scene/scene-lighting'
@@ -739,6 +740,15 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	  opening view" saves then renders the pose it saves with it.
 	*/
 	const storedView = useRef<(() => SceneCameraSnapshot) | null>(null)
+	/* Filled by `SceneCamera` with a move of the orbit point, for double-click. */
+	const focusRequest = useRef<((point: Vector3) => void) | null>(null)
+	// What a double-click can focus on: the model on screen. Content passed as
+	// children is the host's own, and is never focused.
+	const shownModel = displayedModel ?? model
+	const focusOnPoint = useCallback(
+		(point: Vector3) => focusRequest.current?.(point),
+		[]
+	)
 	const cameraLayer = useHeldExecutor()
 	const hotspotLayer = useHeldExecutor()
 	// The markers this surface draws, by the same rule `SceneHotspots` draws
@@ -1249,6 +1259,13 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 								keys={viewerKeys}
 								onHome={returnHome}
 							/>
+							{controlsOptions?.focusOnDoubleClick === true && shownModel && (
+								<SceneDoubleClickFocus
+									model={shownModel}
+									onFocus={focusOnPoint}
+									onBackground={returnHome}
+								/>
+							)}
 							<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 								<SceneCamera
 									{...cameraOptions}
@@ -1258,6 +1275,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									openingPose={openingPose}
 									framingReset={resetCameraFraming}
 									storedView={storedView}
+									focusRequest={focusRequest}
 									boundsEnabled={boundsEnabled}
 									hasContent={hasContent}
 									model={model}
