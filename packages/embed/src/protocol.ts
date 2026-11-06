@@ -124,6 +124,7 @@ export function isViewerCommand(value: unknown): value is ViewerCommand {
 				typeof value.hotspotId === 'string' && value.hotspotId.trim().length > 0
 			)
 		case 'set_controls_enabled':
+		case 'set_interaction_hint':
 			return typeof value.enabled === 'boolean'
 		case 'set_auto_rotate':
 			return (

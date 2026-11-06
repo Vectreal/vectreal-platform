@@ -185,11 +185,36 @@ function SrcCase() {
 	)
 }
 
+/*
+  The first-time hint, on a page of its own: it sits over the canvas, so on
+  the main page it would change the very pixels other tests compare.
+*/
+function HintCase() {
+	return (
+		<div style={{ height: '100vh', width: '100vw' }}>
+			<VectrealViewer
+				showInteractionHint
+				controlsOptions={{ enablePan: false }}
+				onInteractionEvent={(event) => {
+					if (event.type === 'viewer_ready') window.__VIEWER_READY__ = true
+				}}
+			>
+				<ambientLight />
+				<mesh>
+					<boxGeometry args={[1, 1, 1]} />
+					<meshStandardMaterial color="#60a5fa" />
+				</mesh>
+			</VectrealViewer>
+		</div>
+	)
+}
+
 export default function App() {
 	const search = new URLSearchParams(window.location.search)
 	if (search.has('src-case')) return <SrcCase />
 	if (search.has('occlusion-bake')) return <OcclusionBakeCase />
 	if (search.has('camera-echo')) return <CameraEchoCase />
+	if (search.has('hint-case')) return <HintCase />
 
 	// Like a real host: an inline callback that re-renders the page on every
 	// viewer event, so each render hands the viewer a new function. A camera a

@@ -229,6 +229,28 @@ test('a double-click focuses the model, and on the background frames it again', 
 		.toBe(true)
 })
 
+test('the first-time hint says how to move, and goes on the first move', async ({
+	page
+}) => {
+	await page.goto('/?hint-case')
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+
+	// Panning is off in this scene, so the line leaves it out.
+	const hint = page.getByText('Drag to rotate, scroll to zoom', { exact: true })
+	await expect(hint).toBeVisible()
+
+	await page.mouse.move(640, 360)
+	await page.mouse.down()
+	await page.mouse.up()
+	await expect(hint).toHaveCount(0)
+})
+
 test('a camera switch flies in a host that follows camera_changed', async ({
 	page
 }) => {

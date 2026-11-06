@@ -46,7 +46,8 @@ export function normalizePresentationSettings(
 		showLoadingThumbnail,
 		compressTexturesForGpu,
 		altText,
-		showFullscreenButton
+		showFullscreenButton,
+		showInteractionHint
 	} = presentation as ScenePresentationSettings
 	const trimmedAltText = typeof altText === 'string' ? altText.trim() : ''
 	const normalized: ScenePresentationSettings = {
@@ -63,7 +64,8 @@ export function normalizePresentationSettings(
 		...(trimmedAltText ? { altText: trimmedAltText } : {}),
 		...(typeof showFullscreenButton === 'boolean'
 			? { showFullscreenButton }
-			: {})
+			: {}),
+		...(typeof showInteractionHint === 'boolean' ? { showInteractionHint } : {})
 	}
 
 	return Object.keys(normalized).length > 0 ? normalized : undefined
@@ -119,6 +121,16 @@ export function shouldShowFullscreenButton(
 	presentation: ScenePresentationSettings | undefined | null
 ): boolean {
 	return presentation?.showFullscreenButton === true
+}
+
+/**
+ * Whether a published scene shows the first-time hint on how to move it.
+ * Absent means not shown; see `ScenePresentationSettings.showInteractionHint`.
+ */
+export function shouldShowInteractionHint(
+	presentation: ScenePresentationSettings | undefined | null
+): boolean {
+	return presentation?.showInteractionHint === true
 }
 
 /**

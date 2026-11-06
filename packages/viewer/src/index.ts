@@ -28,3 +28,4 @@ export {
 } from './components/camera-controls'
 export * from './components/scene'
 export * from './components/info-popover'
+export { InfoPopoverHowToMove } from './components/info-popover-how-to-move'

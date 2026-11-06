@@ -9,7 +9,8 @@ import { useSceneEmbedScene } from './use-scene-embed-scene'
 import VectrealEmbedBadge from './vectreal-embed-badge'
 import {
 	resolveEmbedCameraControls,
-	resolveEmbedHotspotPresentation
+	resolveEmbedHotspotPresentation,
+	resolveEmbedInteractionHint
 } from '../../lib/domain/embed/embed-presentation'
 import { parseEmbedViewerTheme } from '../../lib/domain/embed/embed-viewer-theme'
 import { useHostedPreviewBridge } from '../../lib/domain/embed/hosted-preview-bridge'
@@ -114,6 +115,12 @@ function useEmbedCameraControls() {
 	return resolveEmbedCameraControls(searchParams)
 }
 
+/** Whether the embedding page left the first-time hint to the viewer. */
+function useEmbedInteractionHint() {
+	const [searchParams] = useSearchParams()
+	return resolveEmbedInteractionHint(searchParams)
+}
+
 /**
  * The full-viewport scene page shared by `/embed` and `/preview`.
  *
@@ -137,6 +144,7 @@ const SceneEmbedPage = ({
 	const initialCommands = useInitialCommands()
 	const hotspotPresentation = useHotspotPresentation()
 	const showCameraControls = useEmbedCameraControls()
+	const allowInteractionHint = useEmbedInteractionHint()
 	const embedTheme = useEmbedViewerTheme()
 	const bridge = useHostedPreviewBridge({
 		sceneId,
@@ -240,6 +248,7 @@ const SceneEmbedPage = ({
 				onInteractionEvent={onInteractionEvent}
 				hotspotPresentation={hotspotPresentation}
 				showCameraControls={showCameraControls}
+				allowInteractionHint={allowInteractionHint}
 				theme={theme ?? embedTheme}
 				branding={showsVectrealBranding ? <VectrealEmbedBadge /> : undefined}
 				/*

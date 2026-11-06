@@ -19,6 +19,7 @@ const POPOVER = <div>info popover</div>
 const CONTROLS = <div>playback controls</div>
 const CAMERAS = <div>camera switcher</div>
 const FULLSCREEN = <div>full screen button</div>
+const HINT = <div>interaction hint</div>
 
 function renderOverlay(loadingState: LoadingState) {
 	render(
@@ -29,6 +30,7 @@ function renderOverlay(loadingState: LoadingState) {
 			animationControls={CONTROLS}
 			cameraControls={CAMERAS}
 			fullscreenControl={FULLSCREEN}
+			interactionHint={HINT}
 		/>
 	)
 
@@ -37,17 +39,19 @@ function renderOverlay(loadingState: LoadingState) {
 		controls: screen.queryByText('playback controls'),
 		cameras: screen.queryByText('camera switcher'),
 		fullscreen: screen.queryByText('full screen button'),
+		hint: screen.queryByText('interaction hint'),
 		loader: screen.queryByText('loading spinner')
 	}
 }
 
 describe('Overlay', () => {
 	it('shows the loader alone while the scene is loading', () => {
-		const { popover, controls, cameras, fullscreen, loader } =
+		const { popover, controls, cameras, fullscreen, hint, loader } =
 			renderOverlay('loading')
 
 		expect(loader).not.toBeNull()
 		expect(fullscreen).toBeNull()
+		expect(hint).toBeNull()
 		// The defect: this popover used to be rendered outside the loader gate,
 		// and its `z-[100]` root painted over the spinner for the whole load.
 		expect(popover).toBeNull()
@@ -65,11 +69,12 @@ describe('Overlay', () => {
 	})
 
 	it('shows chrome and no loader once the scene is ready', () => {
-		const { popover, controls, cameras, fullscreen, loader } =
+		const { popover, controls, cameras, fullscreen, hint, loader } =
 			renderOverlay('ready')
 
 		expect(loader).toBeNull()
 		expect(fullscreen).not.toBeNull()
+		expect(hint).not.toBeNull()
 		expect(popover).not.toBeNull()
 		expect(controls).not.toBeNull()
 		expect(cameras).not.toBeNull()

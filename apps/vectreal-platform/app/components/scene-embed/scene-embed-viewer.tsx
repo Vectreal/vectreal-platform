@@ -6,6 +6,7 @@ import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-sh
 import {
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
+	shouldShowInteractionHint,
 	shouldShowSceneViewReturn
 } from '../../lib/domain/scene/scene-presentation'
 import { useErrorReport } from '../../lib/observability/use-error-report'
@@ -41,6 +42,11 @@ export interface SceneEmbedViewerProps {
 	 * (`?cameraControls=0`). Omitted, the viewer's default applies.
 	 */
 	showCameraControls?: boolean
+	/**
+	 * False where the embedding page withholds the first-time hint
+	 * (`?hint=0`). Omitted, the scene's own setting decides.
+	 */
+	allowInteractionHint?: boolean
 	/**
 	 * The Vectreal mark, when the owning plan has not bought its removal.
 	 *
@@ -97,6 +103,7 @@ const SceneEmbedViewer = memo(
 		popover,
 		hotspotPresentation,
 		showCameraControls,
+		allowInteractionHint = true,
 		branding,
 		theme,
 		environment,
@@ -189,6 +196,10 @@ const SceneEmbedViewer = memo(
 					showFullscreenButton={shouldShowFullscreenButton(
 						sceneData?.presentation
 					)}
+					showInteractionHint={
+						allowInteractionHint &&
+						shouldShowInteractionHint(sceneData?.presentation)
+					}
 					label={resolveSceneAltText(sceneData?.presentation, sceneData?.meta)}
 					shadowsOptions={shadowsOptions}
 					bakedShadow={bakedShadow}
