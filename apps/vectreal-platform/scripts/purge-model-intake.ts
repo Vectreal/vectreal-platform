@@ -62,18 +62,13 @@ async function main() {
 	const { requests, letters } = apply
 		? await purgeExpiredIntakes(now)
 		: await selectPurge(now)
-	const verb = apply ? 'Deleted' : 'Would delete'
+	// Counts only: the scheduled run's log is public, and a letter code opens
+	// a page that greets by the organization it was sent to.
 	console.info(
-		'%s %d request(s): %s',
-		verb,
+		'%s %d request(s) and %d letter(s) and their scans.',
+		apply ? 'Deleted' : 'Would delete',
 		requests.length,
-		requests.map((row) => row.referenceCode).join(', ') || '-'
-	)
-	console.info(
-		'%s %d letter(s) and their scans: %s',
-		verb,
-		letters.length,
-		letters.map((letter) => letter.code).join(', ') || '-'
+		letters.length
 	)
 	if (!apply) console.info('Re-run with --apply to delete.')
 }

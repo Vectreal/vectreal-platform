@@ -8,9 +8,10 @@ name: CD - Purge Free-Model Requests
 # only runs it once a day against production.
 #
 # It reports and deletes nothing until the production Environment's variable
-# MODEL_INTAKE_PURGE_APPLY is set to `true`. Each run's log names the reference
-# codes and letter codes it would delete (or did), so the first runs can be
-# read before deletion is switched on.
+# MODEL_INTAKE_PURGE_APPLY is set to `true`. Each run's log counts the requests
+# and letters it would delete (or did), so the first runs can be read before
+# deletion is switched on. Counts only: this repository is public, and so are
+# its run logs.
 
 on:
   schedule:
@@ -77,9 +78,12 @@ jobs:
           APPLY: ${{ vars.MODEL_INTAKE_PURGE_APPLY }}
         run: |
           set -euo pipefail
+          # The script prints its target host; GitHub masks whole secrets, not
+          # the host inside one, and these logs are public.
+          host=$(node -e 'console.log(new URL(process.env.DATABASE_URL).hostname)')
+          echo "::add-mask::$host"
           args=()
           if [ "$APPLY" = "true" ]; then
-            host=$(node -e 'console.log(new URL(process.env.DATABASE_URL).hostname)')
             args=(--apply "--confirm-host=$host")
           fi
           pnpm nx run vectreal-platform:purge-model-intake -- "${args[@]}"
