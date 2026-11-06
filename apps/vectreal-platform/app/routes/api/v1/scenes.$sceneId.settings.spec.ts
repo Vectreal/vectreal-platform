@@ -419,6 +419,65 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 		expect(mocks.recordAgentAudit).not.toHaveBeenCalled()
 	})
 
+	describe('cameras and hotspots', () => {
+		const MARKER = '5d1c9a7e-3b2f-4e6a-8c4d-7f9e0a1b2c3d'
+		const hero = {
+			cameraId: 'hero',
+			name: 'Hero',
+			kind: 'scene',
+			position: [2, 1.5, 3],
+			target: [0, 0.5, 0],
+			fov: 40
+		}
+		const detail = {
+			cameraId: 'detail',
+			name: 'Detail',
+			kind: 'hotspot',
+			position: [0.4, 0.6, 0.8],
+			target: [0, 0.5, 0],
+			fov: 30
+		}
+		const marker = {
+			id: MARKER,
+			name: 'Buckle',
+			worldPosition: [0, 0.5, 0.2],
+			visible: true,
+			internalOnly: false,
+			stylePreset: 'dot',
+			linkedCameraId: 'detail'
+		}
+
+		it('stores them through the save parser, opening on the first scene camera', async () => {
+			const response = await act(
+				patch({
+					camera: { activeCameraId: 'detail', cameras: [detail, hero] },
+					hotspots: [marker]
+				})
+			)
+
+			expect(response.status).toBe(200)
+			expect(savedSettings().camera?.activeCameraId).toBe('hero')
+			expect(savedSettings().camera?.cameras).toEqual([
+				{ ...detail, initial: false },
+				{ ...hero, initial: true }
+			])
+			expect(savedSettings().hotspots).toEqual([marker])
+		})
+
+		it('refuses a hotspot linked to a camera the scene does not have, and saves nothing', async () => {
+			const response = await act(
+				patch({ camera: { cameras: [hero] }, hotspots: [marker] })
+			)
+			const body = apiFailureSchema.parse(await response.json())
+
+			expect(response.status).toBe(400)
+			expect(body.error).toBe(
+				"hotspots[0].linkedCameraId references unknown camera 'detail'"
+			)
+			expect(mocks.saveSceneSettingsWithin).not.toHaveBeenCalled()
+		})
+	})
+
 	describe('hotspot artwork, re-saved with every PATCH', () => {
 		const LINKED = '0b7c1f9e-2d4a-4c8b-9e6f-1a2b3c4d5e6f'
 		const OTHER_SCENE = '9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b'
@@ -507,8 +566,6 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 		['a look value of the wrong type', { shadows: { opacity: 'dark' } }],
 		// The publisher derives other state from the model when these change.
 		['normalization', { normalization: { enabled: true } }],
-		['camera', { camera: { activeCameraId: 'default' } }],
-		['hotspots', { hotspots: [] }],
 		['interactions', { interactions: [] }],
 		['animation', { animation: {} }],
 		['an unknown presentation flag', { presentation: { showGrid: true } }],

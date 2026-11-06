@@ -53,3 +53,29 @@ describe('a lighting patch', () => {
 		expect(merged.lighting).toBe(stored.lighting)
 	})
 })
+
+describe('a camera or hotspots patch', () => {
+	const stored: SceneSettings = {
+		camera: { cameras: [{ cameraId: 'old', name: 'Old' }] },
+		hotspots: []
+	}
+
+	it('replaces the stored camera as sent and leaves the hotspots alone', () => {
+		const camera = { cameras: [{ cameraId: 'hero', name: 'Hero' }] }
+
+		const merged = applySceneSettingsPatch(stored, { camera })
+
+		expect(merged.camera).toEqual(camera)
+		expect(merged.hotspots).toBe(stored.hotspots)
+	})
+
+	it('replaces the stored hotspots, an empty list removing every marker', () => {
+		const merged = applySceneSettingsPatch(
+			{ ...stored, hotspots: [{ id: 'm' } as never] },
+			{ hotspots: [] }
+		)
+
+		expect(merged.hotspots).toEqual([])
+		expect(merged.camera).toBe(stored.camera)
+	})
+})
