@@ -9,10 +9,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
  * moves that authorization to the moment the manifest is built. The manifest
  * request proves the key; the URL it hands out proves the manifest.
  *
- * The URL carries no key and expires on an hour boundary, so every visitor of a
- * scene in the same hour asks for the same URL, and Cloudflare can serve it.
- * The cost is revocation lag. A URL works for anyone holding it until it
- * expires, two hours at most, and the key checks are not repeated: a revoked
+ * The URL carries no key and expires on a UTC day boundary, so every visitor of
+ * a scene on the same day asks for the same URL, and Cloudflare and a returning
+ * visitor's browser can serve it. The cost is revocation lag. A URL works for
+ * anyone holding it until it expires, two days at most, and the key checks are
+ * not repeated: a revoked
  * key or a narrowed domain list stops new URLs at once and leaves the issued
  * ones working.
  *
@@ -24,7 +25,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
  */
 
 const SIGNING_SECRET_ENV = 'EMBED_ASSET_SIGNING_SECRET'
-const WINDOW_SECONDS = 3600
+const WINDOW_SECONDS = 24 * 60 * 60
 
 export interface SignedAssetTarget {
 	sceneId: string
@@ -41,8 +42,8 @@ export function getAssetSigningSecret(): string | null {
 }
 
 /**
- * The end of the next hour, in epoch seconds. Shared by every request in the
- * current hour, and never less than an hour away.
+ * The end of the next window, in epoch seconds. Shared by every request in the
+ * current window, and never less than one window away.
  */
 export function signedAssetExpiry(nowMs: number): number {
 	return (Math.floor(nowMs / 1000 / WINDOW_SECONDS) + 2) * WINDOW_SECONDS

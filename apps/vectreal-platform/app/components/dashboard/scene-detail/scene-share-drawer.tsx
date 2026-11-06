@@ -57,6 +57,7 @@ export function SceneShareDrawer({
 					onPublish={onPublish}
 					draftActionMode="immediate"
 					publishButtonText="Open Publisher to Publish"
+					republishButtonText="Open Publisher to Republish"
 					publishDisabledReason="Publishing is managed in the Publisher workflow to ensure optimized output and texture consistency."
 					revokeDialogTitle="Revoke scene publication?"
 					revokeDialogDescription="This deletes the published GLB asset and returns this scene to draft state."
