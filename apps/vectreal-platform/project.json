@@ -70,7 +70,7 @@
 			"options": {
 				"cwd": "apps/vectreal-platform",
 				"envFile": ".env.development",
-				"command": "node server.mjs"
+				"command": "PORT=$(node -p 'new URL(process.env.VECTREAL_URL).port') node server.mjs"
 			},
 			"dependsOn": ["build"]
 		},
