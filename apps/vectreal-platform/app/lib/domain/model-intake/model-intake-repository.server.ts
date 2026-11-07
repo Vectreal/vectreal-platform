@@ -1,8 +1,22 @@
-import { count, countDistinct, desc, eq, inArray, lte, sql } from 'drizzle-orm'
+import {
+	and,
+	count,
+	countDistinct,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNull,
+	lte,
+	notExists,
+	or,
+	sql
+} from 'drizzle-orm'
 
 import {
 	addRetentionDays,
 	cleanupMinutesBetween,
+	MODEL_INTAKE_RETENTION_DAYS,
 	type ModelIntakeLocale,
 	type ModelIntakeOutcome,
 	type ModelIntakeProductType
@@ -266,10 +280,57 @@ export async function selectExpiredIntakes(now: Date) {
 	return getDbClient()
 		.select({
 			id: modelIntakeSubmissions.id,
+			referenceCode: modelIntakeSubmissions.referenceCode,
 			photoPaths: modelIntakeSubmissions.photoPaths
 		})
 		.from(modelIntakeSubmissions)
 		.where(lte(modelIntakeSubmissions.deleteAfter, now))
+}
+
+/**
+ * A letter registered longer ago than the retention period that no request
+ * kept past `now` names. A request keeps its letter for as long as the request
+ * is kept, a booked pilot's included; a request due at `now` does not, so the
+ * letter goes in the same purge. Its scans go with it (`on delete cascade`).
+ */
+function isExpiredIntakeLetter(now: Date) {
+	const registeredBefore = new Date(
+		now.getTime() - MODEL_INTAKE_RETENTION_DAYS * 86_400_000
+	)
+	const keptRequest = getDbClient()
+		.select({ id: modelIntakeSubmissions.id })
+		.from(modelIntakeSubmissions)
+		.where(
+			and(
+				eq(modelIntakeSubmissions.letterCode, modelIntakeLetters.code),
+				or(
+					isNull(modelIntakeSubmissions.deleteAfter),
+					gt(modelIntakeSubmissions.deleteAfter, now)
+				)
+			)
+		)
+	return and(
+		lte(modelIntakeLetters.createdAt, registeredBefore),
+		notExists(keptRequest)
+	)
+}
+
+export async function selectExpiredIntakeLetters(now: Date) {
+	return getDbClient()
+		.select({ code: modelIntakeLetters.code })
+		.from(modelIntakeLetters)
+		.where(isExpiredIntakeLetter(now))
+}
+
+/**
+ * Deletes by the rule rather than by a list read earlier, so a request that
+ * names a letter while the purge runs keeps it.
+ */
+export async function deleteExpiredIntakeLetters(now: Date) {
+	return getDbClient()
+		.delete(modelIntakeLetters)
+		.where(isExpiredIntakeLetter(now))
+		.returning({ code: modelIntakeLetters.code })
 }
 
 export async function deleteIntakeRow(id: string): Promise<void> {
