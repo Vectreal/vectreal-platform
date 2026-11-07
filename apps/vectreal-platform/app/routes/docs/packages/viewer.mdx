@@ -43,7 +43,7 @@ present packages/viewer/src/index.ts default as AnimationControls,
 exists packages/viewer/vitest.config.ts
 present packages/viewer/src/hooks/use-held-executor.ts heldRef.current.set(command.type, command)
 present packages/viewer/src/components/scene/scene-camera.tsx if (!isFramed) return
-present packages/viewer/src/components/canvas-wrapper.tsx cn('vv:outline-none', colorScheme),
+present packages/viewer/src/components/canvas-wrapper.tsx cn('vv:outline-none', VIEWER_FOCUS_RING, colorScheme),
 present packages/viewer/src/package.css @import '../../../shared/components/src/styles/theme.css'
 absent packages/viewer/src/styles.css font-family:
 absent packages/viewer/src/vectreal-viewer.tsx DM_Sans

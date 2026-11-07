@@ -19,9 +19,9 @@ import type { ScenePresentationSettings } from '@vctrl/core'
  * renders.
  *
  * Returns `undefined` for anything that is not an object or carries no field
- * it understands, and drops a field that is not a boolean rather than
- * coercing it: `"false"` is a string, and coercion would turn the author's off
- * into an on.
+ * it understands, and drops a field of the wrong type rather than coercing
+ * it: `"false"` is a string, and coercion would turn the author's off into an
+ * on. Alt text is trimmed, and left out when nothing is left of it.
  *
  * Dropped means "not written", not "cleared". Drizzle omits `undefined` from
  * the SET clause, so a scene that already stores `false` keeps it when a
@@ -44,8 +44,10 @@ export function normalizePresentationSettings(
 		showInfoPopover,
 		showSceneViewReturn,
 		showLoadingThumbnail,
-		compressTexturesForGpu
+		compressTexturesForGpu,
+		altText
 	} = presentation as ScenePresentationSettings
+	const trimmedAltText = typeof altText === 'string' ? altText.trim() : ''
 	const normalized: ScenePresentationSettings = {
 		...(typeof showInfoPopover === 'boolean' ? { showInfoPopover } : {}),
 		...(typeof showSceneViewReturn === 'boolean'
@@ -56,7 +58,8 @@ export function normalizePresentationSettings(
 			: {}),
 		...(typeof compressTexturesForGpu === 'boolean'
 			? { compressTexturesForGpu }
-			: {})
+			: {}),
+		...(trimmedAltText ? { altText: trimmedAltText } : {})
 	}
 
 	return Object.keys(normalized).length > 0 ? normalized : undefined
@@ -74,6 +77,23 @@ export function shouldShowInfoPopover(
 	presentation: ScenePresentationSettings | undefined
 ): boolean {
 	return presentation?.showInfoPopover !== false
+}
+
+/**
+ * The viewer's accessible name: the author's alt text, or else the scene's
+ * name and description, so a scene saved without alt text is still announced
+ * as something.
+ */
+export function resolveSceneAltText(
+	presentation: ScenePresentationSettings | undefined | null,
+	meta: { name?: string | null; description?: string | null } | undefined
+): string | undefined {
+	const altText = presentation?.altText?.trim()
+	if (altText) return altText
+	const fallback = [meta?.name?.trim(), meta?.description?.trim()]
+		.filter(Boolean)
+		.join('. ')
+	return fallback || undefined
 }
 
 /**

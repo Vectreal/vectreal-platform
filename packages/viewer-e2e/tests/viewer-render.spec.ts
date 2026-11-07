@@ -119,6 +119,53 @@ test('a visitor can leave the camera a hotspot flew them to', async ({
 	await expect(marker).toHaveAttribute('aria-expanded', 'false')
 })
 
+test('a keyboard or screen reader user can find and turn the viewer', async ({
+	page
+}) => {
+	test.setTimeout(60000)
+
+	await page.goto('/')
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+
+	const viewer = page.getByRole('application', { name: 'A blue box' })
+	await expect(viewer).toHaveAttribute('aria-roledescription', '3D viewer')
+	await expect(viewer).toHaveAccessibleDescription(
+		'Arrow keys rotate the view. Shift and arrow keys pan. Plus and minus zoom. Home resets the view.'
+	)
+
+	// The viewer comes before the markers drawn inside it.
+	await page.keyboard.press('Tab')
+	await expect(viewer).toBeFocused()
+
+	const canvas = viewer.locator('canvas')
+	const still = await canvas.screenshot()
+	await page.keyboard.press('ArrowLeft')
+	await expect
+		.poll(async () => (await canvas.screenshot()).equals(still))
+		.toBe(false)
+	await expect(viewer).toBeFocused()
+
+	// Home flies back to the camera in use, which the host hears about.
+	const eventsSoFar = await page.evaluate(
+		() => window.__VIEWER_EVENTS__?.length ?? 0
+	)
+	await page.keyboard.press('Home')
+	await expect
+		.poll(() =>
+			page.evaluate(
+				(from) => window.__VIEWER_EVENTS__?.slice(from) ?? [],
+				eventsSoFar
+			)
+		)
+		.toContain('camera_changed')
+})
+
 test('a camera switch flies in a host that follows camera_changed', async ({
 	page
 }) => {

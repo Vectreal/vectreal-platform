@@ -1,9 +1,10 @@
 import { PerformanceMonitor } from '@react-three/drei'
 import { CanvasProps, Canvas as ThreeCanvas } from '@react-three/fiber'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import { cn, withHostClasses } from './class-names'
 import ContextLossListener from './context-loss-listener'
+import { VIEWER_FOCUS_RING } from './focus-ring'
 import RenderFailure from './render-failure'
 import {
 	type ContextLossEvent,
@@ -60,6 +61,13 @@ interface CanvasComponentProps extends CanvasProps {
 	onContextLossEvent?: (event: ContextLossEvent) => void
 	/** Replaces the default failure state; receives the retry. */
 	renderFailure?: (retry: () => void) => React.ReactNode
+	/** The viewer's accessible name: what the scene shows. */
+	label?: string
+	/**
+	 * The keys the viewer answers, read out after its name. Empty when it
+	 * answers none, which also keeps it out of the tab order.
+	 */
+	keyHelp?: string
 }
 
 /**
@@ -91,8 +99,12 @@ const Canvas = ({
 	onContainerChange,
 	onContextLossEvent,
 	renderFailure,
+	label,
+	keyHelp,
 	...props
 }: CanvasComponentProps) => {
+	const keyHelpId = useId()
+	const operable = Boolean(keyHelp)
 	const getInitialPageVisibility = () =>
 		typeof document === 'undefined' ? true : !document.hidden
 
@@ -194,7 +206,7 @@ const Canvas = ({
 		<div
 			ref={setContainer}
 			className={withHostClasses(
-				cn('vv:outline-none', colorScheme),
+				cn('vv:outline-none', VIEWER_FOCUS_RING, colorScheme),
 				containerClassName
 			)}
 			style={
@@ -202,13 +214,26 @@ const Canvas = ({
 			}
 			data-theme={theme}
 			/*
-			  Focusable, never tabbable. A click on the canvas focuses the viewer
-			  rather than dropping focus to the page, so its keys (Escape out of a
-			  hotspot's camera) keep working after an orbit; and a control that
-			  removes itself has somewhere inside the viewer to hand focus to.
+			  An application while it takes keys, so a screen reader hands the
+			  arrows to it rather than reading on with them.
 			*/
-			tabIndex={-1}
+			role={operable ? 'application' : 'group'}
+			aria-roledescription="3D viewer"
+			aria-label={label}
+			aria-describedby={operable ? keyHelpId : undefined}
+			/*
+			  Always focusable, so a click on the canvas focuses the viewer rather
+			  than dropping focus to the page and its keys keep working after an
+			  orbit, and a control that removes itself has somewhere inside the
+			  viewer to hand focus to. Tabbable only while it has keys to offer.
+			*/
+			tabIndex={operable ? 0 : -1}
 		>
+			{operable && (
+				<span id={keyHelpId} hidden>
+					{keyHelp}
+				</span>
+			)}
 			{shouldRenderCanvas && (
 				<ThreeCanvas
 					{...props}

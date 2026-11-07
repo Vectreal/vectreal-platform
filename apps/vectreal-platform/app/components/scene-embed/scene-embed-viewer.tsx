@@ -3,7 +3,10 @@ import { memo, useCallback, useMemo, useState } from 'react'
 
 import { normalizeShadowOptions } from '../../constants/viewer-defaults'
 import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
-import { shouldShowSceneViewReturn } from '../../lib/domain/scene/scene-presentation'
+import {
+	resolveSceneAltText,
+	shouldShowSceneViewReturn
+} from '../../lib/domain/scene/scene-presentation'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 import CenteredSpinner from '../centered-spinner'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
@@ -182,6 +185,7 @@ const SceneEmbedViewer = memo(
 					showSceneViewReturn={shouldShowSceneViewReturn(
 						sceneData?.presentation
 					)}
+					label={resolveSceneAltText(sceneData?.presentation, sceneData?.meta)}
 					shadowsOptions={shadowsOptions}
 					bakedShadow={bakedShadow}
 					/*

@@ -17,6 +17,7 @@ import {
 import { STUDIO_FINISH_FAILURES } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import {
 	bakePreviewAtom,
+	sceneMetaAtom,
 	studioFinishPlanAtom
 } from '../../../../../lib/stores/publisher-config-store'
 import {
@@ -226,6 +227,30 @@ describe('the publish panel', () => {
 		expect(store.get(presentationAtom)).not.toHaveProperty(
 			'compressTexturesForGpu'
 		)
+	})
+
+	it('stores alt text for the viewer, and forgets it once cleared', () => {
+		const store = renderPanel(balancedPreset)
+		const field = screen.getByRole('textbox', { name: 'Alt text' })
+		fireEvent.change(field, { target: { value: 'A walnut lounge chair' } })
+		expect(store.get(presentationAtom).altText).toBe('A walnut lounge chair')
+		fireEvent.change(field, { target: { value: '' } })
+		expect(store.get(presentationAtom)).not.toHaveProperty('altText')
+	})
+
+	it('shows what is read instead while the alt text is empty', () => {
+		renderPanel(balancedPreset, (store) =>
+			store.set(sceneMetaAtom, {
+				name: 'Lounge chair',
+				description: 'Walnut and leather',
+				thumbnailUrl: ''
+			})
+		)
+		expect(
+			screen
+				.getByRole('textbox', { name: 'Alt text' })
+				.getAttribute('placeholder')
+		).toBe('Lounge chair. Walnut and leather')
 	})
 
 	it('leaves Draco unmeasured when the optimizer found it not worth applying', async () => {
