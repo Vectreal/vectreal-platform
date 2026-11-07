@@ -88,7 +88,16 @@ interface SceneCameraProps extends CameraProps {
 	 * pose fitted to its output.
 	 */
 	storedView?: RefObject<(() => SceneCameraSnapshot) | null>
+	/**
+	 * Filled here with a move of the orbit point to a spot on the model, for
+	 * double-click to focus: the camera keeps its distance and direction and
+	 * flies, or under reduced motion jumps, with the point.
+	 */
+	focusRequest?: RefObject<((point: Vector3) => void) | null>
 }
+
+/** A focus slides a short way, so it takes less time than a camera switch. */
+export const FOCUS_FLIGHT_MS = 450
 
 export type ResolvedCameraSelection = {
 	cameraId: string
@@ -156,6 +165,7 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 	const {
 		boundsEnabled = true,
 		distanceLimits,
+		focusRequest,
 		framingReset,
 		hasContent: hasModel = false,
 		model,
@@ -598,6 +608,35 @@ export const SceneCamera: React.FC<SceneCameraProps> = (props) => {
 			framingReset.current = null
 		}
 	}, [flight, framingReset, sceneCamera, syncDistanceLimits])
+
+	useEffect(() => {
+		if (!focusRequest || !controls?.target) return
+		const target = controls.target
+		focusRequest.current = (point) => {
+			const activeCamera = sceneCamera as PerspectiveCamera
+			const position = activeCamera.position.clone().add(point).sub(target)
+			const progress = flight.progress()
+			if (prefersReducedMotion()) {
+				flight.stop()
+				framing.current?.show(null, progress)
+				activeCamera.position.copy(position)
+				target.copy(point)
+				controls.update?.()
+				invalidate()
+				return
+			}
+			framing.current?.fly(null, progress)
+			flight.start(
+				{ position, target: point.clone(), fov: activeCamera.fov },
+				'linear',
+				FOCUS_FLIGHT_MS,
+				'ease_in_out'
+			)
+		}
+		return () => {
+			focusRequest.current = null
+		}
+	}, [controls, flight, focusRequest, invalidate, sceneCamera])
 
 	// The controls were recreated, or the host changed its limits: either way
 	// the controls now hold the host's raw limits, whether or not the fit moved.
