@@ -7,6 +7,21 @@ import type { SceneSettings } from '@vctrl/core'
 
 const baked = { assetId: 'bake-1', signature: 'sig' }
 
+describe('a presentation patch', () => {
+	it('accepts alt text, and only as text', () => {
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { altText: 'A walnut lounge chair' }
+			}).success
+		).toBe(true)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { altText: 42 }
+			}).success
+		).toBe(false)
+	})
+})
+
 describe('a lighting patch', () => {
 	it('is accepted by the public contract', () => {
 		const parsed = updateSceneSettingsInputSchema.safeParse({
@@ -51,5 +66,31 @@ describe('a lighting patch', () => {
 		})
 
 		expect(merged.lighting).toBe(stored.lighting)
+	})
+})
+
+describe('a camera or hotspots patch', () => {
+	const stored: SceneSettings = {
+		camera: { cameras: [{ cameraId: 'old', name: 'Old' }] },
+		hotspots: []
+	}
+
+	it('replaces the stored camera as sent and leaves the hotspots alone', () => {
+		const camera = { cameras: [{ cameraId: 'hero', name: 'Hero' }] }
+
+		const merged = applySceneSettingsPatch(stored, { camera })
+
+		expect(merged.camera).toEqual(camera)
+		expect(merged.hotspots).toBe(stored.hotspots)
+	})
+
+	it('replaces the stored hotspots, an empty list removing every marker', () => {
+		const merged = applySceneSettingsPatch(
+			{ ...stored, hotspots: [{ id: 'm' } as never] },
+			{ hotspots: [] }
+		)
+
+		expect(merged.hotspots).toEqual([])
+		expect(merged.camera).toBe(stored.camera)
 	})
 })

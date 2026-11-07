@@ -60,6 +60,7 @@ import {
 } from './components'
 import { CHROME_PLACEMENT } from './components/chrome-classes'
 import { withHostClasses } from './components/class-names'
+import FullscreenControl from './components/fullscreen-control'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -84,11 +85,16 @@ import {
 import { useModelFrame, type ModelKey } from './components/scene/model-frame'
 import { prefersReducedMotion } from './components/scene/reduced-motion'
 import { preloadEnvironmentFiles } from './components/scene/scene-environment'
+import SceneKeyboardControls from './components/scene/scene-keyboard-controls'
 import { litLights } from './components/scene/scene-lighting'
 import {
 	resolveHotspotViewName,
 	resolveSceneViewCameras
 } from './components/scene/scene-view-return'
+import {
+	describeViewerKeys,
+	resolveViewerKeys
+} from './components/scene/viewer-keys'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { type ContextLossEvent } from './hooks/use-context-loss-recovery'
 import { useHeldExecutor } from './hooks/use-held-executor'
@@ -196,6 +202,12 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * An optional className to apply to the outermost container of the viewer.
 	 */
 	className?: string
+
+	/**
+	 * What the scene shows, in a sentence: the viewer's accessible name, which
+	 * a screen reader announces as a 3D viewer along with the keys it takes.
+	 */
+	label?: string
 
 	/**
 	 * Theme for the viewer.
@@ -329,6 +341,13 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * `return_to_scene_view`, which works either way.
 	 */
 	showSceneViewReturn?: boolean
+	/**
+	 * Whether the viewer draws a button that shows it full screen. Default
+	 * false. Drawn only where the browser allows it, so an iframe needs
+	 * `allowfullscreen`. Full screen paints the theme's background behind a
+	 * scene that has none of its own, rather than the browser's black.
+	 */
+	showFullscreenButton?: boolean
 	/**
 	 * Whether the viewer draws its own animation playback controls. Default true.
 	 *
@@ -586,6 +605,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		animationOptions,
 		// Container & appearance
 		className,
+		label,
 		theme = 'system',
 		// Performance
 		enableViewportRendering = true,
@@ -603,6 +623,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		showHotspotMarkers,
 		revealHotspotContent,
 		showSceneViewReturn = true,
+		showFullscreenButton = false,
 		showAnimationControls = true,
 		showCameraControls = true,
 		// Editor affordances
@@ -996,6 +1017,35 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		return () => container.removeEventListener('keydown', handleKeyDown)
 	}, [container, showSceneViewReturn])
 
+	const viewerKeys = useMemo(
+		() =>
+			resolveViewerKeys(
+				{
+					// SceneControls spreads the scene's own `enabled` over the
+					// override, so it wins there and here alike.
+					enabled:
+						controlsOptions?.enabled ?? controlsEnabledOverride ?? undefined,
+					enableRotate: controlsOptions?.enableRotate,
+					enableZoom:
+						controlsOptionsOverride?.zoom ?? controlsOptions?.enableZoom,
+					enablePan: controlsOptionsOverride?.pan ?? controlsOptions?.enablePan
+				},
+				{ canReturnHome: activeCameraId !== null }
+			),
+		[
+			controlsEnabledOverride,
+			controlsOptions?.enabled,
+			controlsOptions?.enableRotate,
+			controlsOptions?.enableZoom,
+			controlsOptions?.enablePan,
+			controlsOptionsOverride,
+			activeCameraId
+		]
+	)
+	const returnHome = useCallback(() => {
+		if (activeCameraId !== null) activateCamera(activeCameraId)
+	}, [activeCameraId, activateCamera])
+
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
 			executeViewerCommand({ type: 'activate_camera', cameraId })
@@ -1070,13 +1120,15 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 				frameloop="always"
 				// `isolate` keeps the chrome's `z-[100]` inside the viewer, so it orders the viewer's own layers and never the host page's: without it the camera switcher drew over a dashboard sheet.
 				containerClassName={withHostClasses(
-					'viewer vctrl-viewer vv:isolate vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0',
+					'viewer vctrl-viewer vv:isolate vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0 vv:[&:fullscreen]:bg-background',
 					className
 				)}
 				containerBackground={backdrop ? sceneBackdropCss(backdrop) : undefined}
 				theme={theme}
 				loadingState={loadingState}
 				onContainerChange={setContainer}
+				label={label}
+				keyHelp={describeViewerKeys(viewerKeys)}
 				onContextLossEvent={handleContextLossEvent}
 				renderFailure={renderFailure}
 				overlay={
@@ -1087,7 +1139,6 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 						animationControls={
 							animation.showControls ? (
 								<AnimationControls
-									className={CHROME_PLACEMENT.animationControls}
 									playing={animation.status.playing}
 									complete={animation.status.complete}
 									onToggle={animation.toggle}
@@ -1116,6 +1167,11 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 									onReturn={returnToSceneView}
 									focusOnLeave={container}
 								/>
+							) : null
+						}
+						fullscreenControl={
+							showFullscreenButton ? (
+								<FullscreenControl target={container} />
 							) : null
 						}
 						loader={loader}
@@ -1187,6 +1243,11 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 											enablePan: controlsOptionsOverride.pan
 										}
 									: {})}
+							/>
+							<SceneKeyboardControls
+								container={container}
+								keys={viewerKeys}
+								onHome={returnHome}
 							/>
 							<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 								<SceneCamera

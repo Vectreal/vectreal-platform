@@ -57,7 +57,7 @@ export function useSceneEmbedScene({
 	useSceneModel(model, sceneSource)
 
 	// Always from the server: the document's manifest signs its asset URLs for
-	// an hour or two, and a retry in a tab left open longer would replay them.
+	// one to two days, and a retry in a tab left open longer would replay them.
 	const retrySceneLoad = useCallback(() => {
 		if (serverSource) void load(serverSource)
 	}, [load, serverSource])

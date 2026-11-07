@@ -131,3 +131,32 @@ describe('rowToSceneSettings camera kinds', () => {
 		)
 	})
 })
+
+describe('rowToSceneSettings camera vectors', () => {
+	it('reads a camera saved with {x, y, z} vectors as [x, y, z]', () => {
+		const row = {
+			...Object.fromEntries(
+				Object.keys(getTableColumns(sceneSettings)).map((column) => [
+					column,
+					null
+				])
+			),
+			camera: {
+				cameras: [
+					{
+						cameraId: 'hero',
+						name: 'Hero',
+						kind: 'scene',
+						position: { x: 1, y: 2, z: 3 },
+						target: { x: 0, y: 0.5, z: 0 }
+					}
+				]
+			}
+		} as unknown as Parameters<typeof rowToSceneSettings>[0]
+
+		const [hero] = rowToSceneSettings(row).camera?.cameras ?? []
+
+		expect(hero.position).toEqual([1, 2, 3])
+		expect(hero.target).toEqual([0, 0.5, 0])
+	})
+})

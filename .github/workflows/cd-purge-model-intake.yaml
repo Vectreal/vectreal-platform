@@ -1,0 +1,89 @@
+# .github/workflows/cd-purge-model-intake.yaml
+name: CD - Purge Free-Model Requests
+
+# Keeps the 90-day promise on /free-model and in the privacy policy: requests
+# and their photos are deleted 90 days after delivery, or after receipt when no
+# model is delivered, unless a pilot is booked. Letter codes and their scans
+# follow the same 90 days. `scripts/purge-model-intake.ts` owns the rules; this
+# only runs it once a day against production.
+#
+# It reports and deletes nothing until the production Environment's variable
+# MODEL_INTAKE_PURGE_APPLY is set to `true`. Each run's log counts the requests
+# and letters it would delete (or did), so the first runs can be read before
+# deletion is switched on. Counts only: this repository is public, and so are
+# its run logs.
+
+on:
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-purge-model-intake
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    name: Purge due requests and letters
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      NX_DAEMON: 'false'
+
+    steps:
+      # A secret the environment does not hold reaches the job as an empty
+      # string, so a missing one would otherwise surface as a script error.
+      - name: Check secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          for name in DATABASE_URL SUPABASE_URL SUPABASE_SECRET_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set in the 'production' environment."
+              exit 1
+            fi
+          done
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      # The credentials are set on the purge step only, so no dependency's
+      # install script runs with them in its environment.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The script's own guard wants the target host restated with --apply.
+      # This job is bound to production and the variable is the operator's
+      # statement, so the host is read from DATABASE_URL here.
+      - name: Purge
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          APPLY: ${{ vars.MODEL_INTAKE_PURGE_APPLY }}
+        run: |
+          set -euo pipefail
+          # The script prints its target host; GitHub masks whole secrets, not
+          # the host inside one, and these logs are public.
+          host=$(node -e 'console.log(new URL(process.env.DATABASE_URL).hostname)')
+          echo "::add-mask::$host"
+          args=()
+          if [ "$APPLY" = "true" ]; then
+            args=(--apply "--confirm-host=$host")
+          fi
+          pnpm nx run vectreal-platform:purge-model-intake -- "${args[@]}"

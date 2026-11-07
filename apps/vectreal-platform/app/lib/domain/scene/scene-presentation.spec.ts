@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	normalizePresentationSettings,
+	resolveSceneAltText,
+	shouldShowFullscreenButton,
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail,
@@ -171,5 +173,72 @@ describe('the GPU-compressed textures setting', () => {
 			)
 		).toEqual({ showInfoPopover: false })
 		expect(withCompressTexturesForGpu({}, false, original)).toEqual({})
+	})
+})
+
+describe('alt text', () => {
+	it('is stored trimmed, beside the other fields', () => {
+		expect(
+			normalizePresentationSettings({
+				showInfoPopover: false,
+				altText: '  A walnut lounge chair  '
+			})
+		).toEqual({ showInfoPopover: false, altText: 'A walnut lounge chair' })
+	})
+
+	it('is dropped when blank or not a string', () => {
+		expect(normalizePresentationSettings({ altText: '   ' })).toBeUndefined()
+		expect(normalizePresentationSettings({ altText: 42 })).toBeUndefined()
+	})
+
+	it("names the viewer, ahead of the scene's own name", () => {
+		expect(
+			resolveSceneAltText(
+				{ altText: 'A walnut lounge chair' },
+				{ name: 'Chair', description: 'Our bestseller' }
+			)
+		).toBe('A walnut lounge chair')
+	})
+
+	it("falls back to the scene's name and description", () => {
+		expect(
+			resolveSceneAltText(
+				{ altText: ' ' },
+				{ name: 'Chair ', description: 'Our bestseller' }
+			)
+		).toBe('Chair. Our bestseller')
+		expect(resolveSceneAltText(undefined, { name: 'Chair' })).toBe('Chair')
+		expect(resolveSceneAltText(null, { description: 'Our bestseller' })).toBe(
+			'Our bestseller'
+		)
+	})
+
+	it('leaves the viewer unnamed when the scene says nothing', () => {
+		expect(resolveSceneAltText({}, { name: '', description: '' })).toBe(
+			undefined
+		)
+		expect(resolveSceneAltText(undefined, undefined)).toBe(undefined)
+	})
+})
+
+describe('the full screen button', () => {
+	it('is kept as a boolean and dropped as anything else', () => {
+		expect(
+			normalizePresentationSettings({ showFullscreenButton: true })
+		).toEqual({ showFullscreenButton: true })
+		expect(
+			normalizePresentationSettings({ showFullscreenButton: 'true' })
+		).toBeUndefined()
+	})
+
+	it('is drawn only for an author who switched it on', () => {
+		expect(shouldShowFullscreenButton(undefined)).toBe(false)
+		expect(shouldShowFullscreenButton({})).toBe(false)
+		expect(shouldShowFullscreenButton({ showFullscreenButton: false })).toBe(
+			false
+		)
+		expect(shouldShowFullscreenButton({ showFullscreenButton: true })).toBe(
+			true
+		)
 	})
 })

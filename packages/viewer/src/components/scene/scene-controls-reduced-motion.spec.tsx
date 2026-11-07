@@ -1,0 +1,51 @@
+// @vitest-environment jsdom
+/**
+ * A visitor who asked for reduced motion gets a still model: auto-rotate stays
+ * off whatever the scene or a host asked for.
+ */
+import { render } from '@testing-library/react'
+import { forwardRef } from 'react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import SceneControls from './scene-controls'
+
+const received = vi.hoisted(() => ({ autoRotate: undefined as unknown }))
+
+vi.mock('@react-three/drei', () => ({
+	OrbitControls: forwardRef(function OrbitControls(props: {
+		autoRotate?: boolean
+	}) {
+		received.autoRotate = props.autoRotate
+		return null
+	})
+}))
+
+vi.mock('@react-three/fiber', () => ({
+	useThree: (select: (state: unknown) => unknown) =>
+		select({ events: { connected: null } })
+}))
+
+const prefersReducedMotion = (reduce: boolean) =>
+	vi.stubGlobal(
+		'matchMedia',
+		(query: string) =>
+			({
+				matches: reduce && query === '(prefers-reduced-motion: reduce)'
+			}) as MediaQueryList
+	)
+
+afterEach(() => vi.unstubAllGlobals())
+
+describe('SceneControls under reduced motion', () => {
+	it('turns the model when the visitor has not asked for less motion', () => {
+		prefersReducedMotion(false)
+		render(<SceneControls autoRotate />)
+		expect(received.autoRotate).toBe(true)
+	})
+
+	it('holds it still when they have', () => {
+		prefersReducedMotion(true)
+		render(<SceneControls autoRotate />)
+		expect(received.autoRotate).toBe(false)
+	})
+})

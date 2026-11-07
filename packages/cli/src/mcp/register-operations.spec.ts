@@ -144,7 +144,7 @@ describe('the vectreal MCP server', () => {
 
 		const result = await client.callTool({
 			name: 'update_scene_settings',
-			arguments: { sceneId: 's1', settings: { camera: {} } }
+			arguments: { sceneId: 's1', settings: { animation: {} } }
 		})
 
 		expect(result.isError).toBe(true)

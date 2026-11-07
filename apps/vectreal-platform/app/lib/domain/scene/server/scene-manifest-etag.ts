@@ -18,8 +18,10 @@ export interface ManifestPublication {
  * 2: cameras read untagged gain `kind: 'scene'` (`withSceneCameraKinds`).
  * 3: a scene saved with `lighting` gains the legacy `environment` and
  *    `shadows` derived from it (`toLegacyLighting`).
+ * 4: camera vectors read as `{x, y, z}` come out as `[x, y, z]`
+ *    (`withVectorTuples`).
  */
-const MANIFEST_FORMAT = 'v3'
+const MANIFEST_FORMAT = 'v4'
 
 /**
  * Returns a weak ETag for the scene manifest based on the scene ID and the

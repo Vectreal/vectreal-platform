@@ -1,11 +1,12 @@
 import { Button } from '@shared/components/ui/button'
+import { Textarea } from '@shared/components/ui/textarea'
 import { Toggle } from '@shared/components/ui/toggle'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
 import { Loader2, Sparkles } from 'lucide-react'
-import { useCallback, useRef, useState, type FC } from 'react'
+import { useCallback, useId, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
@@ -23,13 +24,16 @@ import {
 	occlusionBakeWarning
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import {
+	resolveSceneAltText,
+	shouldShowFullscreenButton,
 	shouldShowInfoPopover,
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
 import {
 	hasUnsavedChangesAtom,
-	processAtom
+	processAtom,
+	sceneMetaAtom
 } from '../../../../../lib/stores/publisher-config-store'
 import {
 	dispatchSaveProgressAtom,
@@ -55,7 +59,11 @@ import {
 	usePublishExport,
 	useShowPublishedFinish
 } from '../../compose-sidebar/lighting-settings/use-bake-preview'
-import { SidebarSection, SidebarSectionContent } from '../../sidebar-section'
+import {
+	SettingGroup,
+	SidebarSection,
+	SidebarSectionContent
+} from '../../sidebar-section'
 
 import type {
 	PublishSceneResponse,
@@ -93,6 +101,8 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const setUpgradeModal = useSetAtom(upgradeModalAtom)
 	const setProcessState = useSetAtom(processAtom)
 	const [presentation, setPresentation] = useAtom(presentationAtom)
+	const sceneMeta = useAtomValue(sceneMetaAtom)
+	const altTextId = useId()
 	const publishExport = usePublishExport()
 	// A preview of the current export is the file this publish would make.
 	const preview = useCurrentPreview()
@@ -346,6 +356,23 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation, isOriginalPreset]
 	)
 
+	const handleToggleFullscreenButton = useCallback(
+		(showFullscreenButton: boolean) => {
+			setPresentation((previous) => ({ ...previous, showFullscreenButton }))
+		},
+		[setPresentation]
+	)
+
+	const handleAltTextChange = useCallback(
+		(altText: string) => {
+			// Cleared, the field goes, so emptying it leaves the scene as saved.
+			setPresentation(({ altText: _previous, ...rest }) =>
+				altText ? { ...rest, altText } : rest
+			)
+		},
+		[setPresentation]
+	)
+
 	const handleToggleLoadingThumbnail = useCallback(
 		(showLoadingThumbnail: boolean) => {
 			setPresentation((previous) => ({ ...previous, showLoadingThumbnail }))
@@ -416,11 +443,30 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 								: 'Shown once a hotspot has its own camera.'
 						}
 					/>
+					<Toggle
+						checked={shouldShowFullscreenButton(presentation)}
+						onCheckedChange={handleToggleFullscreenButton}
+						label="Full screen button"
+						description="Adds a button that shows the scene full screen, where the visitor's browser allows it. Applies to embeds and preview links as soon as you save."
+					/>
 					<LoadingThumbnailToggle
 						checked={shouldShowLoadingThumbnail(presentation)}
 						onCheckedChange={handleToggleLoadingThumbnail}
 						appliesOn="save"
 					/>
+					<SettingGroup
+						label="Alt text"
+						htmlFor={altTextId}
+						description="What a screen reader announces for the viewer. Left empty, it reads the scene's name and description. Applies to embeds and preview links as soon as you save."
+					>
+						<Textarea
+							id={altTextId}
+							value={presentation.altText ?? ''}
+							onChange={(event) => handleAltTextChange(event.target.value)}
+							placeholder={resolveSceneAltText(undefined, sceneMeta)}
+							className="min-h-16 text-sm"
+						/>
+					</SettingGroup>
 				</SidebarSectionContent>
 			</SidebarSection>
 

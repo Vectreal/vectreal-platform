@@ -1,13 +1,15 @@
 /**
- * Deletes free-model requests and their photos once they are due, or one
- * request on a brand's deletion request.
+ * Deletes free-model requests and their photos once they are due, and the
+ * letter codes and their scans past the same retention, or one request on a
+ * brand's deletion request.
  *
  * Run via: pnpm nx run vectreal-platform:purge-model-intake -- [flags]
  *
  * Due means past `delete_after`: 90 days after delivery, or after receipt for
  * a request never delivered, and never for a booked pilot, whose agreement
- * governs instead. There is no scheduler in this deployment, so this runs by
- * hand, like `purge-orphaned-assets`.
+ * governs instead. A letter is due 90 days after it was registered, once no
+ * request kept past the run names it. `.github/workflows/cd-purge-model-intake.yaml`
+ * runs this daily against production.
  *
  * SAFETY. Reporting is the default. Deleting needs `--apply` together with
  * `--confirm-host`, which must equal the host in `DATABASE_URL`.
@@ -22,9 +24,9 @@
  */
 import {
 	deleteIntakeByReference,
-	purgeExpiredIntakes
+	purgeExpiredIntakes,
+	selectPurge
 } from '../app/lib/domain/model-intake/model-intake-deletion.server'
-import { selectExpiredIntakes } from '../app/lib/domain/model-intake/model-intake-repository.server'
 
 function flag(name: string): string | undefined {
 	const hit = process.argv.find((arg) => arg.startsWith(`--${name}=`))
@@ -57,12 +59,18 @@ async function main() {
 	}
 
 	const now = new Date()
-	if (!apply) {
-		const due = await selectExpiredIntakes(now)
-		console.info('%d request(s) due. Re-run with --apply.', due.length)
-		return
-	}
-	console.info('Deleted %d request(s).', await purgeExpiredIntakes(now))
+	const { requests, letters } = apply
+		? await purgeExpiredIntakes(now)
+		: await selectPurge(now)
+	// Counts only: the scheduled run's log is public, and a letter code opens
+	// a page that greets by the organization it was sent to.
+	console.info(
+		'%s %d request(s) and %d letter(s) and their scans.',
+		apply ? 'Deleted' : 'Would delete',
+		requests.length,
+		letters.length
+	)
+	if (!apply) console.info('Re-run with --apply to delete.')
 }
 
 main()

@@ -18,6 +18,7 @@ import type { LoadingState } from '../hooks/use-viewer-loading'
 const POPOVER = <div>info popover</div>
 const CONTROLS = <div>playback controls</div>
 const CAMERAS = <div>camera switcher</div>
+const FULLSCREEN = <div>full screen button</div>
 
 function renderOverlay(loadingState: LoadingState) {
 	render(
@@ -27,6 +28,7 @@ function renderOverlay(loadingState: LoadingState) {
 			popover={POPOVER}
 			animationControls={CONTROLS}
 			cameraControls={CAMERAS}
+			fullscreenControl={FULLSCREEN}
 		/>
 	)
 
@@ -34,15 +36,18 @@ function renderOverlay(loadingState: LoadingState) {
 		popover: screen.queryByText('info popover'),
 		controls: screen.queryByText('playback controls'),
 		cameras: screen.queryByText('camera switcher'),
+		fullscreen: screen.queryByText('full screen button'),
 		loader: screen.queryByText('loading spinner')
 	}
 }
 
 describe('Overlay', () => {
 	it('shows the loader alone while the scene is loading', () => {
-		const { popover, controls, cameras, loader } = renderOverlay('loading')
+		const { popover, controls, cameras, fullscreen, loader } =
+			renderOverlay('loading')
 
 		expect(loader).not.toBeNull()
+		expect(fullscreen).toBeNull()
 		// The defect: this popover used to be rendered outside the loader gate,
 		// and its `z-[100]` root painted over the spinner for the whole load.
 		expect(popover).toBeNull()
@@ -60,11 +65,20 @@ describe('Overlay', () => {
 	})
 
 	it('shows chrome and no loader once the scene is ready', () => {
-		const { popover, controls, cameras, loader } = renderOverlay('ready')
+		const { popover, controls, cameras, fullscreen, loader } =
+			renderOverlay('ready')
 
 		expect(loader).toBeNull()
+		expect(fullscreen).not.toBeNull()
 		expect(popover).not.toBeNull()
 		expect(controls).not.toBeNull()
 		expect(cameras).not.toBeNull()
+	})
+
+	it('stacks the full screen button above playback in one corner', () => {
+		const { fullscreen, controls } = renderOverlay('ready')
+
+		expect(fullscreen?.parentElement).toBe(controls?.parentElement)
+		expect(fullscreen?.nextElementSibling).toBe(controls)
 	})
 })

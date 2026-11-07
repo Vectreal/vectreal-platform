@@ -83,6 +83,25 @@ present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar
 present apps/vectreal-platform/app/components/scene-embed/scene-embed-viewer.tsx showSceneViewReturn={shouldShowSceneViewReturn(
 */}
 
+### Full screen button
+
+Switch on **Full screen button** in the **Viewer** section to give visitors a button in the scene's bottom-right corner that shows it full screen. It is off by default, applies to embeds and preview links as soon as you save, and appears only where the browser allows it: the embed snippet's iframe carries `allowfullscreen`, and Safari on iPhone shows nothing, since it takes only video full screen.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Full screen button"
+present apps/vectreal-platform/app/lib/domain/embed/embed-snippet.ts allowfullscreen
+present packages/viewer/src/components/fullscreen-control.tsx document.fullscreenEnabled
+*/}
+
+### Alt text and keyboard
+
+Screen readers announce the viewer as a 3D viewer, named by the **Alt text** field in the **Viewer** section, or by the scene's name and description while it is empty. Tab reaches the viewer, where the arrow keys orbit, Shift and the arrows pan, plus and minus zoom, and Home returns to the current camera, each only while that control is on.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Alt text"
+present packages/viewer/src/components/canvas-wrapper.tsx aria-roledescription="3D viewer"
+*/}
+
 ### Hotspots behind the model
 
 Each hotspot decides what happens when the model sits between the visitor and the marker. Pick it under **Behind the model** when you select the hotspot in the **Hotspots** tool:
@@ -167,7 +186,7 @@ Where a picker is on screen it greys those out with the reason. But the Embed se
 
 A preview key appearing somewhere public is not, by itself, a breach: it is in the `src` of every embed already, so being readable is how it works. What restricts it is the owning project's allowed domain list - but that list is enforced by the browser sending a `Referer`, not by the server proving one, so it does not stop a determined holder of the key from reading the published scenes it points at. Replace a key when you want the old value refused, not merely because it was seen.
 
-Refusal applies to everything an embed asks for from then on: the page and its scene. The files the scene points at (its model, its shadow and, when shown, its loading thumbnail) are fetched through signed URLs, handed out with the scene and cached by Cloudflare for every visitor. A signed URL carries no key, so it works for anyone who has it, from any site, until it expires, at most two hours after it was issued. Nothing you change reaches a URL already handed out: revoking or rotating a key, narrowing its allowed domains, **Revoke publication**, deleting the scene, or turning the loading thumbnail off all take effect for those files only once their URLs expire.
+Refusal applies to everything an embed asks for from then on: the page and its scene. The files the scene points at (its model, its shadow and, when shown, its loading thumbnail) are fetched through signed URLs, handed out with the scene and cached by Cloudflare for every visitor. A signed URL carries no key, so it works for anyone who has it, from any site, until it expires at the end of the next UTC day, so between 24 and 48 hours after it was issued. Nothing you change reaches a URL already handed out: revoking or rotating a key or narrowing its allowed domains takes effect for those files only once their URLs expire, which can take up to 48 hours. The model is held that long even after **Revoke publication** or deleting the scene. The shadow and the loading thumbnail are checked again every few minutes, so a scene that is no longer published, or a thumbnail turned off, stops being served within about five minutes.
 
 So the reason to replace one is that you want the old value refused - not that it was seen. **Rotate** rather than revoke: rotating issues a new secret for the same key, keeping its name, description, projects and expiry, so only the snippet has to change:
 

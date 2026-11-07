@@ -608,6 +608,18 @@ export interface ScenePresentationSettings {
 	 * preset, whose promise is that the published file is the upload.
 	 */
 	compressTexturesForGpu?: boolean
+	/**
+	 * What the scene shows, in a sentence, for visitors who cannot see it: the
+	 * viewer's accessible name. Absent, the scene's name and description stand
+	 * in.
+	 */
+	altText?: string
+	/**
+	 * Whether the viewer draws a button that shows the scene full screen.
+	 * Absent means not shown, so scenes saved before this field existed keep
+	 * the viewer they had.
+	 */
+	showFullscreenButton?: boolean
 }
 
 /**

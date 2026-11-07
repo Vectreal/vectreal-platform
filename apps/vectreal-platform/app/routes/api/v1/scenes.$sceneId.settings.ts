@@ -1,9 +1,10 @@
 /**
  * GET   /api/v1/scenes/:sceneId/settings  every settings section, defaults
  *                                         filled in. Needs `projects:read`.
- * PATCH /api/v1/scenes/:sceneId/settings  replaces the look sections the JSON
- *                                         body names (environment, controls,
- *                                         bounds, shadows, presentation); the
+ * PATCH /api/v1/scenes/:sceneId/settings  replaces the sections the JSON body
+ *                                         names (lighting, environment,
+ *                                         controls, bounds, shadows,
+ *                                         presentation, camera, hotspots); the
  *                                         others stay as stored. Needs
  *                                         `scenes:write` and an
  *                                         `Idempotency-Key`.

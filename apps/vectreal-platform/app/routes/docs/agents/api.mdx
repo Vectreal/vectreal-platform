@@ -42,7 +42,7 @@ No scope can delete anything, or touch billing, members or organization settings
 | `GET` | `/api/v1/projects/{projectId}/allowed-domains` | `embed:manage` | The domains the project's embeds work on |
 | `PUT` | `/api/v1/projects/{projectId}/allowed-domains` | `embed:manage` | Replaces that list: `{ "domains": ["..."] }` |
 | `GET` | `/api/v1/scenes/{sceneId}/settings` | `projects:read` | Every settings section, defaults filled in |
-| `PATCH` | `/api/v1/scenes/{sceneId}/settings` | `scenes:write` | Replaces the environment, controls, bounds, shadows or presentation sections sent |
+| `PATCH` | `/api/v1/scenes/{sceneId}/settings` | `scenes:write` | Replaces the lighting, environment, controls, bounds, shadows, presentation, camera or hotspots sections sent |
 | `POST` | `/api/v1/scenes/{sceneId}/publication` | `scenes:publish` | Publishes the GLB sent as multipart `file`, stored as sent: compress it first, as `publish_scene` does |
 | `DELETE` | `/api/v1/scenes/{sceneId}/publication` | `scenes:publish` | Takes the scene offline |
 | `GET` | `/api/v1/scenes/{sceneId}/embed` | `embed:manage` | The iframe snippet and preview URL for a published scene |
