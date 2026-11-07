@@ -332,6 +332,55 @@ Two things that do not work from inside that box:
 </div>
 ```
 
+### Shopify: a section that tours the scene on scroll
+
+`packages/embed/shopify/vectreal-scene-tour.liquid` is a theme section that embeds a published scene into a Shopify product page, below the product details. The product gallery, Shopify's own 3D slot included, stays as it is, and the section needs no other code in the theme.
+
+While the shopper scrolls through it, the scene stays pinned and the section calls `activateCamera` for each camera of the tour in turn. Orbiting is off during the tour (`setControlsEnabled(false)`), and controls that are off leave touch to the page, so a finger on the scene scrolls past it. Once the shopper stops scrolling for a second, a button in the scene offers to hand rotation over; scrolling on to the next camera takes it back. With reduced motion turned on, nothing moves on scroll: the scene shows its own camera switcher and the shopper turns it from the start. A poster shows until the scene is ready, and the scene starts loading only once the section is about to come into view.
+
+1. In the Shopify admin, open **Online Store → Themes → Edit code**, add a section named `vectreal-scene-tour`, and paste the file into it.
+2. Add the shop's hosts to the scene's project under [Allowed embed domains](#allowed-embed-domains): its `.myshopify.com` address, which the theme editor previews on, and its own domain.
+3. In the theme editor, open the product template, add **Vectreal 3D-Szene** below the product information, and fill in its settings.
+
+| Setting | Takes |
+| --- | --- |
+| Embed-URL der Szene | The scene's embed URL with its `?token=`, as the Embed panel's **Test embed URL** opens it. Left empty, the section reads the product metafield `vectreal.scene_url`, so one product template serves every product |
+| Kameras der Tour | Camera IDs in the order the tour visits them, separated by commas. Left empty, the tour visits every camera the scene reports, hotspot cameras included |
+| Vorschaubild | The image shown until the scene is ready |
+| Schaltfläche am Ende der Tour | The label of the hand-over button, `Selbst drehen` by default |
+
+Each **Station** block adds one stop to the tour: a camera ID, a heading and a short text. With stations, the tour visits their cameras in block order and shows each one's heading and text over the scene, and the scene's own hotspot markers are turned off, so the captions replace them. A station whose camera the scene does not have is skipped, and stations take precedence over **Kameras der Tour**. With reduced motion, the caption follows whichever camera the shopper picks.
+
+The section loads the [script-tag SDK](/docs/guides/embed-sdk) from unpkg at one pinned version with a Subresource Integrity hash, so a new SDK release reaches a shop only when its section file is updated.
+
+#### The same scene in the product gallery
+
+`packages/embed/shopify/vectreal-gallery-slide.liquid` adds the scene as one slide of the product gallery, beside the photos and Shopify's own 3D slot. Unlike the section it needs one line of theme code:
+
+1. Add a snippet named `vectreal-gallery-slide` and paste the file into it.
+2. In Dawn's `snippets/product-media-gallery.liquid`, add `{% render 'vectreal-gallery-slide', product: product %}` inside the `<ul id="Slider-Gallery-…">` list, after the first slide.
+3. Give each product a single-line text metafield `vectreal.scene_url` holding its embed URL. A product without one shows no slide.
+
+The slide shows in Dawn's **Stacked** and **2 columns** desktop layouts and in the mobile slider. The **Thumbnails** layouts show only slides that have a thumbnail, so there it appears on phones only.
+
+The slide shows a poster (the file metafield `vectreal.poster`, or else the product's featured image) with Dawn's 3D button, and starts loading the scene in the background once the page is idle, unless the shopper's browser asks to save data.
+
+{/* claims
+present packages/embed/shopify/vectreal-scene-tour.liquid activateCamera(camera)
+present packages/embed/shopify/vectreal-scene-tour.liquid setControlsEnabled(true)
+present packages/embed/shopify/vectreal-scene-tour.liquid prefers-reduced-motion: reduce
+present packages/viewer/src/components/scene/scene-controls.tsx element.style.touchAction = enabled ? 'none' : ''
+present packages/embed/shopify/vectreal-scene-tour.liquid SDK_INTEGRITY
+present packages/embed/shopify/vectreal-scene-tour.liquid "default": "Selbst drehen"
+present packages/embed/shopify/vectreal-scene-tour.liquid const IDLE_MS = 1000
+present packages/embed/shopify/vectreal-scene-tour.liquid "name": "Station"
+present packages/embed/shopify/vectreal-scene-tour.liquid this.showCaption(this.steps.find((step) => step.camera === cameraId)?.caption);
+present packages/embed/shopify/vectreal-scene-tour.liquid url.searchParams.set('hotspots', '0')
+present packages/embed/shopify/vectreal-scene-tour.liquid product.metafields.vectreal.scene_url.value
+present packages/embed/shopify/vectreal-gallery-slide.liquid product.metafields.vectreal.scene_url.value
+present packages/embed/shopify/vectreal-gallery-slide.liquid navigator.connection?.saveData
+*/}
+
 ---
 
 ## Advanced control
