@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	normalizePresentationSettings,
 	resolveSceneAltText,
+	shouldShowFullscreenButton,
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail,
@@ -217,5 +218,27 @@ describe('alt text', () => {
 			undefined
 		)
 		expect(resolveSceneAltText(undefined, undefined)).toBe(undefined)
+	})
+})
+
+describe('the full screen button', () => {
+	it('is kept as a boolean and dropped as anything else', () => {
+		expect(
+			normalizePresentationSettings({ showFullscreenButton: true })
+		).toEqual({ showFullscreenButton: true })
+		expect(
+			normalizePresentationSettings({ showFullscreenButton: 'true' })
+		).toBeUndefined()
+	})
+
+	it('is drawn only for an author who switched it on', () => {
+		expect(shouldShowFullscreenButton(undefined)).toBe(false)
+		expect(shouldShowFullscreenButton({})).toBe(false)
+		expect(shouldShowFullscreenButton({ showFullscreenButton: false })).toBe(
+			false
+		)
+		expect(shouldShowFullscreenButton({ showFullscreenButton: true })).toBe(
+			true
+		)
 	})
 })

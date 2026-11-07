@@ -1,3 +1,4 @@
+import { CHROME_PLACEMENT } from './chrome-classes'
 import { cn } from './class-names'
 import LoadingShadowPlane from './loading-shadow-plane'
 import LoadingThumbnailBackdrop from './loading-thumbnail-backdrop'
@@ -17,6 +18,8 @@ interface OverlayProps {
 	cameraControls?: React.ReactNode
 	/** The way back from a hotspot's camera. */
 	sceneViewReturn?: React.ReactNode
+	/** The full screen button, where the author asked for one. */
+	fullscreenControl?: React.ReactNode
 	loader?: React.ReactNode
 	loadingThumbnail?: ViewerLoadingThumbnail
 }
@@ -28,6 +31,7 @@ const Overlay = ({
 	animationControls,
 	cameraControls,
 	sceneViewReturn,
+	fullscreenControl,
 	loader,
 	loadingThumbnail
 }: OverlayProps) => {
@@ -89,7 +93,12 @@ const Overlay = ({
 			  `absolute inset-0` with no z-index of its own, so the popover won on
 			  stacking whatever the source order was.
 			*/}
-			{showChrome && animationControls}
+			{showChrome && (fullscreenControl || animationControls) && (
+				<div className={CHROME_PLACEMENT.cornerStack}>
+					{fullscreenControl}
+					{animationControls}
+				</div>
+			)}
 			{showChrome && cameraControls}
 			{showChrome && sceneViewReturn}
 			{showChrome && popover}

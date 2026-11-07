@@ -25,6 +25,7 @@ import {
 } from '../../../../../lib/domain/scene/client/studio-finish-reasons'
 import {
 	resolveSceneAltText,
+	shouldShowFullscreenButton,
 	shouldShowInfoPopover,
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
@@ -355,6 +356,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation, isOriginalPreset]
 	)
 
+	const handleToggleFullscreenButton = useCallback(
+		(showFullscreenButton: boolean) => {
+			setPresentation((previous) => ({ ...previous, showFullscreenButton }))
+		},
+		[setPresentation]
+	)
+
 	const handleAltTextChange = useCallback(
 		(altText: string) => {
 			// Cleared, the field goes, so emptying it leaves the scene as saved.
@@ -434,6 +442,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 								? 'Offers visitors a way back, by button or Escape, after a hotspot flies the camera to its own view. Applies to embeds and preview links as soon as you save.'
 								: 'Shown once a hotspot has its own camera.'
 						}
+					/>
+					<Toggle
+						checked={shouldShowFullscreenButton(presentation)}
+						onCheckedChange={handleToggleFullscreenButton}
+						label="Full screen button"
+						description="Adds a button that shows the scene full screen, where the visitor's browser allows it. Applies to embeds and preview links as soon as you save."
 					/>
 					<LoadingThumbnailToggle
 						checked={shouldShowLoadingThumbnail(presentation)}

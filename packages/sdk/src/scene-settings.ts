@@ -272,7 +272,8 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 			showSceneViewReturn: z.boolean().optional(),
 			showLoadingThumbnail: z.boolean().optional(),
 			compressTexturesForGpu: z.boolean().optional(),
-			altText: z.string().optional()
+			altText: z.string().optional(),
+			showFullscreenButton: z.boolean().optional()
 		})
 		.optional()
 })

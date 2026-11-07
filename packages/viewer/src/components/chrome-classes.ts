@@ -26,9 +26,15 @@ export const CHROME_BUTTON =
  * carry no placement, so a host drawing its own can put them anywhere. Playback
  * takes the bottom-right, clear of the info popover's bottom-left; the camera
  * switcher the bottom center, narrow enough to leave both corners free.
+ *
+ * Full screen stacks above playback in that corner (`cornerStack`), because
+ * every other place is taken somewhere: the top corners by `/preview`'s own
+ * chrome, the top-left by the Publisher's tool bar. Stacked, it never widens
+ * the bottom row the camera switcher shares.
  */
 export const CHROME_PLACEMENT = {
-	animationControls: 'vv:absolute vv:right-0 vv:bottom-0 vv:z-[100] vv:m-2',
+	cornerStack:
+		'vv:absolute vv:right-0 vv:bottom-0 vv:z-[100] vv:m-2 vv:flex vv:flex-col vv:items-end vv:gap-2',
 	cameraControls:
 		'vv:absolute vv:bottom-0 vv:left-1/2 vv:z-[100] vv:mb-2 vv:max-w-[calc(100%-10rem)] vv:-translate-x-1/2'
 } as const

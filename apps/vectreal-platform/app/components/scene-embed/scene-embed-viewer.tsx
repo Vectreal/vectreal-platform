@@ -5,6 +5,7 @@ import { normalizeShadowOptions } from '../../constants/viewer-defaults'
 import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 import {
 	resolveSceneAltText,
+	shouldShowFullscreenButton,
 	shouldShowSceneViewReturn
 } from '../../lib/domain/scene/scene-presentation'
 import { useErrorReport } from '../../lib/observability/use-error-report'
@@ -183,6 +184,9 @@ const SceneEmbedViewer = memo(
 					  draw a control the author switched off.
 					*/
 					showSceneViewReturn={shouldShowSceneViewReturn(
+						sceneData?.presentation
+					)}
+					showFullscreenButton={shouldShowFullscreenButton(
 						sceneData?.presentation
 					)}
 					label={resolveSceneAltText(sceneData?.presentation, sceneData?.meta)}

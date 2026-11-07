@@ -229,6 +229,14 @@ describe('the publish panel', () => {
 		)
 	})
 
+	it('offers a full screen button, off until the author turns it on', () => {
+		const store = renderPanel(balancedPreset)
+		const toggle = screen.getByRole('switch', { name: /Full screen button/ })
+		expect(toggle).not.toBeChecked()
+		fireEvent.click(toggle)
+		expect(store.get(presentationAtom).showFullscreenButton).toBe(true)
+	})
+
 	it('stores alt text for the viewer, and forgets it once cleared', () => {
 		const store = renderPanel(balancedPreset)
 		const field = screen.getByRole('textbox', { name: 'Alt text' })

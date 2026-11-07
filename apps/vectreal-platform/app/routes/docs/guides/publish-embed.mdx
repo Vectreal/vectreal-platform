@@ -83,6 +83,16 @@ present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar
 present apps/vectreal-platform/app/components/scene-embed/scene-embed-viewer.tsx showSceneViewReturn={shouldShowSceneViewReturn(
 */}
 
+### Full screen button
+
+Switch on **Full screen button** in the **Viewer** section to give visitors a button in the scene's bottom-right corner that shows it full screen. It is off by default, applies to embeds and preview links as soon as you save, and appears only where the browser allows it: the embed snippet's iframe carries `allowfullscreen`, and Safari on iPhone shows nothing, since it takes only video full screen.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Full screen button"
+present apps/vectreal-platform/app/lib/domain/embed/embed-snippet.ts allowfullscreen
+present packages/viewer/src/components/fullscreen-control.tsx document.fullscreenEnabled
+*/}
+
 ### Alt text and keyboard
 
 Screen readers announce the viewer as a 3D viewer, named by the **Alt text** field in the **Viewer** section, or by the scene's name and description while it is empty. Tab reaches the viewer, where the arrow keys orbit, Shift and the arrows pan, plus and minus zoom, and Home returns to the current camera, each only while that control is on.
