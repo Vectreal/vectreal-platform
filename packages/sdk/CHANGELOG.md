@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/sdk-v3.4.0...sdk-v3.5.0) (2026-11-07)
+
+
+### Features
+
+* **cli:** make cameras and hotspots writable through update_scene_settings ([#1288](https://github.com/Vectreal/vectreal-platform/issues/1288)) ([540b469](https://github.com/Vectreal/vectreal-platform/commit/540b469292818708e8fc1f7159007b880107b8e8))
+* **viewer:** accessible name, keyboard orbit and zoom, still auto-rotate under reduced motion ([#1290](https://github.com/Vectreal/vectreal-platform/issues/1290)) ([0683046](https://github.com/Vectreal/vectreal-platform/commit/06830460e14d29766378ce571f9a7f1c152f426f))
+* **viewer:** optional full screen button for published scenes ([#1291](https://github.com/Vectreal/vectreal-platform/issues/1291)) ([4795e89](https://github.com/Vectreal/vectreal-platform/commit/4795e8939d570f9f2087362481e5781b22c34f0c))
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/sdk-v3.3.0...sdk-v3.4.0) (2026-11-04)
 
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.4.0...cli-v3.5.0) (2026-11-07)
+
+
+### Features
+
+* **cli:** make cameras and hotspots writable through update_scene_settings ([#1288](https://github.com/Vectreal/vectreal-platform/issues/1288)) ([540b469](https://github.com/Vectreal/vectreal-platform/commit/540b469292818708e8fc1f7159007b880107b8e8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @vctrl/core bumped to 3.5.0
+    * @vctrl/sdk bumped to 3.5.0
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/cli-v3.3.0...cli-v3.4.0) (2026-11-04)
 
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.5.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.4.0...workspace-v3.5.0) (2026-11-07)
+
+
+### Features
+
+* **cli:** make cameras and hotspots writable through update_scene_settings ([#1288](https://github.com/Vectreal/vectreal-platform/issues/1288)) ([540b469](https://github.com/Vectreal/vectreal-platform/commit/540b469292818708e8fc1f7159007b880107b8e8))
+* **platform:** purge free-model requests and letters daily on the 90-day rule ([#1284](https://github.com/Vectreal/vectreal-platform/issues/1284)) ([90b9861](https://github.com/Vectreal/vectreal-platform/commit/90b986131bfd0dd863255be0963a1009dd745c1b))
+* **viewer:** accessible name, keyboard orbit and zoom, still auto-rotate under reduced motion ([#1290](https://github.com/Vectreal/vectreal-platform/issues/1290)) ([0683046](https://github.com/Vectreal/vectreal-platform/commit/06830460e14d29766378ce571f9a7f1c152f426f))
+* **viewer:** optional full screen button for published scenes ([#1291](https://github.com/Vectreal/vectreal-platform/issues/1291)) ([4795e89](https://github.com/Vectreal/vectreal-platform/commit/4795e8939d570f9f2087362481e5781b22c34f0c))
+
+
+### Bug Fixes
+
+* **platform:** republish a published scene in place, plus small fixes ([#1283](https://github.com/Vectreal/vectreal-platform/issues/1283)) ([2739883](https://github.com/Vectreal/vectreal-platform/commit/2739883f34a31697e03118b87a404455ce09171f))
+* **platform:** serve nx start at the local stack's app URL ([#1287](https://github.com/Vectreal/vectreal-platform/issues/1287)) ([7ada0a9](https://github.com/Vectreal/vectreal-platform/commit/7ada0a9fd666062c7637b32dda176ef8d11adae7))
+
 ## [3.4.0](https://github.com/Vectreal/vectreal-platform/compare/workspace-v3.3.0...workspace-v3.4.0) (2026-11-04)
 
 

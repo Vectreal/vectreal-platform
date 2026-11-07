@@ -1,9 +1,9 @@
 {
-	".": "3.4.0",
-	"packages/core": "3.4.0",
-	"packages/hooks": "3.4.0",
-	"packages/viewer": "3.4.0",
-	"packages/embed": "3.4.0",
-	"packages/sdk": "3.4.0",
-	"packages/cli": "3.4.0"
+	".": "3.5.0",
+	"packages/core": "3.5.0",
+	"packages/hooks": "3.5.0",
+	"packages/viewer": "3.5.0",
+	"packages/embed": "3.5.0",
+	"packages/sdk": "3.5.0",
+	"packages/cli": "3.5.0"
 }
