@@ -1,0 +1,252 @@
+<!doctype html>
+<html class="js" lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ product.title }} | Beispielshop</title>
+    <script src="/dawn/constants.js" defer="defer"></script>
+    <script src="/dawn/pubsub.js" defer="defer"></script>
+    <script src="/dawn/global.js" defer="defer"></script>
+    <script src="/dawn/media-gallery.js" defer="defer"></script>
+    <link rel="stylesheet" href="/compiled_assets/styles.css">
+    <script src="/compiled_assets/scripts.js" defer="defer"></script>
+    <style>
+      :root,
+      .color-scheme-1 {
+        --color-background: 255,255,255;
+        --color-foreground: 18,18,18;
+        --color-button: 18,18,18;
+        --color-button-text: 255,255,255;
+        --color-secondary-button: 255,255,255;
+        --color-secondary-button-text: 18,18,18;
+        --color-link: 18,18,18;
+        --color-badge-foreground: 18,18,18;
+        --color-badge-background: 255,255,255;
+        --color-badge-border: 18,18,18;
+        --color-shadow: 18,18,18;
+        --gradient-background: #ffffff;
+      }
+      :root {
+        --font-body-family: Helvetica, Arial, sans-serif;
+        --font-body-style: normal;
+        --font-body-weight: 400;
+        --font-body-weight-bold: 700;
+        --font-heading-family: Helvetica, Arial, sans-serif;
+        --font-heading-style: normal;
+        --font-heading-weight: 400;
+        --font-body-scale: 1;
+        --font-heading-scale: 1;
+        --media-padding: 0px;
+        --media-border-opacity: 0.05;
+        --media-border-width: 0px;
+        --media-radius: 20px;
+        --media-shadow-opacity: 0;
+        --media-shadow-horizontal-offset: 0px;
+        --media-shadow-vertical-offset: 0px;
+        --media-shadow-blur-radius: 0px;
+        --media-shadow-visible: 0;
+        --page-width: 120rem;
+        --page-width-margin: 0rem;
+        --badge-corner-radius: 4rem;
+        --spacing-sections-desktop: 0px;
+        --spacing-sections-mobile: 0px;
+        --grid-desktop-vertical-spacing: 8px;
+        --grid-desktop-horizontal-spacing: 8px;
+        --grid-mobile-vertical-spacing: 4px;
+        --grid-mobile-horizontal-spacing: 4px;
+        --text-boxes-border-opacity: 0.1;
+        --text-boxes-border-width: 0px;
+        --text-boxes-radius: 0px;
+        --buttons-radius: 0px;
+        --buttons-radius-outset: 0px;
+        --buttons-border-width: 1px;
+        --buttons-border-opacity: 1;
+        --buttons-shadow-opacity: 0;
+        --buttons-shadow-visible: 0;
+        --buttons-shadow-horizontal-offset: 0px;
+        --buttons-shadow-vertical-offset: 4px;
+        --buttons-shadow-blur-radius: 5px;
+        --buttons-border-offset: 0px;
+        --inputs-radius: 0px;
+        --inputs-border-width: 1px;
+        --inputs-border-opacity: 0.55;
+        --inputs-shadow-opacity: 0;
+        --inputs-shadow-horizontal-offset: 0px;
+        --inputs-margin-offset: 0px;
+        --inputs-shadow-vertical-offset: 4px;
+        --inputs-shadow-blur-radius: 5px;
+        --inputs-radius-outset: 0px;
+      }
+      *, *::before, *::after { box-sizing: inherit; }
+      html { box-sizing: border-box; font-size: calc(var(--font-body-scale) * 62.5%); height: 100%; }
+      body {
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        grid-template-columns: 100%;
+        min-height: 100%;
+        margin: 0;
+        font-size: 1.5rem;
+        letter-spacing: 0.06rem;
+        line-height: calc(1 + 0.8 / var(--font-body-scale));
+        font-family: var(--font-body-family);
+      }
+      body { color: rgba(var(--color-foreground), 0.75); background-color: rgb(var(--color-background)); }
+      .section-template--1__main-padding { padding-top: 27px; padding-bottom: 9px; }
+      @media screen and (min-width: 750px) {
+        .section-template--1__main-padding { padding-top: 36px; padding-bottom: 12px; }
+      }
+      .header-wrapper .harness-header { display: flex; justify-content: space-between; align-items: center; padding-block: 2rem; }
+      .harness-footer { padding: 6rem 0 12rem; }
+    </style>
+    <link rel="stylesheet" href="/dawn/base.css">
+    <link rel="stylesheet" href="/dawn/section-main-product.css">
+    <link rel="stylesheet" href="/dawn/component-accordion.css">
+    <link rel="stylesheet" href="/dawn/component-price.css">
+    <link rel="stylesheet" href="/dawn/component-slider.css">
+    <link rel="stylesheet" href="/dawn/component-deferred-media.css">
+  </head>
+
+  <body class="gradient">
+    <div class="section-header shopify-section-group-header-group shopify-section-header-sticky">
+      <div class="header-wrapper color-scheme-1 gradient header-wrapper--border-bottom">
+        <header class="header page-width harness-header">
+          <span class="h2">Beispielshop</span>
+          <span>Warenkorb</span>
+        </header>
+      </div>
+    </div>
+
+    <script>
+      const header = document.querySelector('.header-wrapper');
+      document.documentElement.style.setProperty('--header-height', `${header.offsetHeight}px`);
+    </script>
+
+    <main id="MainContent" class="content-for-layout focus-none" role="main" tabindex="-1">
+      <section id="shopify-section-template--1__main" class="shopify-section section">
+        <div class="section-template--1__main-padding gradient color-scheme-1">
+          <div class="page-width">
+            <div class="product product--medium product--left product--stacked product--mobile-hide grid grid--1-col grid--2-col-tablet">
+              <div class="grid__item product__media-wrapper">
+                <media-gallery id="MediaGallery-main" role="region" aria-label="Galerie" data-desktop-layout="stacked">
+                  <div id="GalleryStatus-main" class="visually-hidden" role="status"></div>
+                  <slider-component id="GalleryViewer-main" class="slider-mobile-gutter">
+                    <ul id="Slider-Gallery-main" class="product__media-list contains-media grid grid--peek list-unstyled slider slider--mobile" role="list">
+                      <li id="Slide-main-1" class="product__media-item grid__item slider__slide is-active" data-media-id="main-1">
+                        <div class="product-media-container media-type-image media-fit-contain global-media-settings gradient" style="--ratio: 1; --preview-ratio: 1;">
+                          <div class="product__media media media--transparent">
+                            <img src="/product-detail.jpg" width="1400" height="1400" alt="{{ product.title }}, Ansicht von vorn">
+                          </div>
+                        </div>
+                      </li>
+                      {% render 'vectreal-gallery-slide', product: product %}
+                      <li id="Slide-main-3" class="product__media-item grid__item slider__slide" data-media-id="main-3">
+                        <div class="product-media-container media-type-image media-fit-contain global-media-settings gradient" style="--ratio: 1; --preview-ratio: 1;">
+                          <div class="product__media media media--transparent">
+                            <img src="/product-context.jpg" width="1240" height="1240" alt="{{ product.title }}, Ansicht schräg von vorn" loading="lazy">
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="slider-buttons quick-add-hidden">
+                      <button type="button" class="slider-button slider-button--prev" name="previous" aria-label="Vorherige Folie">
+                        <span class="svg-wrapper"><svg class="icon icon-caret" viewBox="0 0 10 6"><path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 0 0-.708 0L5 4.293 1.354.646a.5.5 0 0 0-.708.708l4 4a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0 0-.708" clip-rule="evenodd"/></svg></span>
+                      </button>
+                      <div class="slider-counter caption">
+                        <span class="slider-counter--current">1</span>
+                        <span aria-hidden="true"> / </span>
+                        <span class="visually-hidden">von</span>
+                        <span class="slider-counter--total">3</span>
+                      </div>
+                      <button type="button" class="slider-button slider-button--next" name="next" aria-label="Nächste Folie">
+                        <span class="svg-wrapper"><svg class="icon icon-caret" viewBox="0 0 10 6"><path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 0 0-.708 0L5 4.293 1.354.646a.5.5 0 0 0-.708.708l4 4a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0 0-.708" clip-rule="evenodd"/></svg></span>
+                      </button>
+                    </div>
+                  </slider-component>
+                </media-gallery>
+              </div>
+
+              <div class="product__info-wrapper grid__item">
+                <section id="ProductInfo-main" class="product__info-container product__column-sticky">
+                  <p class="product__text inline-richtext caption-with-letter-spacing">Beispielmarke</p>
+                  <div class="product__title"><h1>{{ product.title }}</h1></div>
+                  <div id="price-main" role="status">
+                    <div class="price price--large">
+                      <div class="price__container">
+                        <div class="price__regular">
+                          <span class="visually-hidden visually-hidden--inline">Normaler Preis</span>
+                          <span class="price-item price-item--regular">€1.290,00 EUR</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="product__tax caption rte">inkl. MwSt. <a href="#">Versandkosten</a> werden beim Checkout berechnet.</div>
+                  <div class="product-form__input product-form__quantity">
+                    <label class="quantity__label form__label" for="Quantity-main">Anzahl</label>
+                    <quantity-input class="quantity">
+                      <button class="quantity__button" name="minus" type="button">
+                        <span class="visually-hidden">Anzahl verringern</span>
+                        <span class="svg-wrapper"><svg xmlns="http://www.w3.org/2000/svg" fill="none" class="icon icon-minus" viewBox="0 0 10 2"><path fill="currentColor" fill-rule="evenodd" d="M.5 1C.5.7.7.5 1 .5h8a.5.5 0 1 1 0 1H1A.5.5 0 0 1 .5 1" clip-rule="evenodd"/></svg></span>
+                      </button>
+                      <input class="quantity__input" id="Quantity-main" type="number" name="quantity" value="1" min="1" step="1" data-min="1">
+                      <button class="quantity__button" name="plus" type="button">
+                        <span class="visually-hidden">Anzahl erhöhen</span>
+                        <span class="svg-wrapper"><svg xmlns="http://www.w3.org/2000/svg" fill="none" class="icon icon-plus" viewBox="0 0 10 10"><path fill="currentColor" fill-rule="evenodd" d="M1 4.51a.5.5 0 0 0 0 1h3.5l.01 3.5a.5.5 0 0 0 1-.01V5.5l3.5-.01a.5.5 0 0 0-.01-1H5.5L5.49.99a.5.5 0 0 0-1 .01v3.5l-3.5.01z" clip-rule="evenodd"/></svg></span>
+                      </button>
+                    </quantity-input>
+                  </div>
+                  <div>
+                    <div class="product-form">
+                      <div class="product-form__buttons">
+                        <button type="button" class="product-form__submit button button--full-width button--secondary">In den Warenkorb</button>
+                        <button type="button" class="button button--full-width">Jetzt kaufen</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="product__description rte quick-add-hidden">
+                    <p>Ein Gehäuse aus Messing, schwarz lackiert und über Jahre in der Hand blank gegriffen. Jede Kante zeigt, wo die Kamera getragen wurde.</p>
+                    <p>Der Messsucher stellt scharf, ohne dass ein Spiegel klappt. Das Objektiv mit 50 mm Brennweite gehört dazu.</p>
+                  </div>
+                  <div class="product__accordion accordion quick-add-hidden">
+                    <details>
+                      <summary>
+                        <div class="summary__title"><h2 class="h4 accordion__title">Material</h2></div>
+                        <svg class="icon icon-caret" viewBox="0 0 10 6"><path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 0 0-.708 0L5 4.293 1.354.646a.5.5 0 0 0-.708.708l4 4a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0 0-.708" clip-rule="evenodd"/></svg>
+                      </summary>
+                      <div class="accordion__content rte"><p>Messing, schwarzer Lack mit Patina, Belederung aus genarbtem Vulkanit.</p></div>
+                    </details>
+                  </div>
+                  <div class="product__accordion accordion quick-add-hidden">
+                    <details>
+                      <summary>
+                        <div class="summary__title"><h2 class="h4 accordion__title">Maße</h2></div>
+                        <svg class="icon icon-caret" viewBox="0 0 10 6"><path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 0 0-.708 0L5 4.293 1.354.646a.5.5 0 0 0-.708.708l4 4a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0 0-.708" clip-rule="evenodd"/></svg>
+                      </summary>
+                      <div class="accordion__content rte"><p>138 × 77 × 33 mm ohne Objektiv, 580 g.</p></div>
+                    </details>
+                  </div>
+                  <div class="product__accordion accordion quick-add-hidden">
+                    <details>
+                      <summary>
+                        <div class="summary__title"><h2 class="h4 accordion__title">Versand und Rückgabe</h2></div>
+                        <svg class="icon icon-caret" viewBox="0 0 10 6"><path fill="currentColor" fill-rule="evenodd" d="M9.354.646a.5.5 0 0 0-.708 0L5 4.293 1.354.646a.5.5 0 0 0-.708.708l4 4a.5.5 0 0 0 .708 0l4-4a.5.5 0 0 0 0-.708" clip-rule="evenodd"/></svg>
+                      </summary>
+                      <div class="accordion__content rte"><p>Versand innerhalb von zwei Werktagen, 30 Tage Rückgabe.</p></div>
+                    </details>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {{ section_html }}
+    </main>
+
+    <footer class="footer harness-footer">
+      <div class="page-width">
+        <p>Beispielshop · Kontakt · Impressum · Datenschutz</p>
+      </div>
+    </footer>
+  </body>
+</html>

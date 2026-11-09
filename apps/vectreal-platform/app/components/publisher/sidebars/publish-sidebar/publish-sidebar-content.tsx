@@ -9,7 +9,10 @@ import { useState } from 'react'
 import { usePublisherSaveAction } from '../../../../hooks/use-publisher-save-action'
 import { isSaveActionBlocked } from '../../../../lib/domain/scene'
 import { isSavingAtom } from '../../../../lib/stores/publisher-config-store'
-import { useSizeExcludesTextureEncoding } from '../../optimization/use-publish-size-projection'
+import {
+	useEnvironmentMapBytes,
+	useSizeExcludesTextureEncoding
+} from '../../optimization/use-publish-size-projection'
 import { sidebarContentVariants } from '../animation'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../drill-down'
 import { KeepOriginalToggle } from './keep-original-toggle'
@@ -68,6 +71,7 @@ const PublishSidebarContent: FC = () => {
 	const sizeDeltaLabel = getSizeDeltaLabel(viewModel.sizeDeltaBytes)
 	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
 	const currentSceneBytes = viewModel.publishMetricSizeInfo.currentSceneBytes
+	const environmentMapBytes = useEnvironmentMapBytes()
 	const isAuthenticated = viewModel.isAuthenticated
 	const hasSavedScene = viewModel.hasSavedScene
 	const canAccessPublishFeatures = viewModel.canAccessPublishFeatures
@@ -92,7 +96,8 @@ const PublishSidebarContent: FC = () => {
 				>
 					<DrillDownView id="root" className="space-y-3">
 						<DeliverySummary
-							sceneBytes={currentSceneBytes}
+							modelBytes={currentSceneBytes}
+							environmentBytes={environmentMapBytes}
 							sizeReductionPercent={viewModel.sizeReductionPercent}
 							sizeDeltaLabel={sizeDeltaLabel}
 							sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}

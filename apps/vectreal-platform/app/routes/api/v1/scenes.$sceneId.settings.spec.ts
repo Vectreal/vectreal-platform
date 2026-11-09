@@ -464,6 +464,35 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 			expect(savedSettings().hotspots).toEqual([marker])
 		})
 
+		/**
+		 * The order of scene cameras is the order the switcher steps through,
+		 * and the first is the opening view, the same rule the Publisher's
+		 * camera list writes by. An agent reordering them gets that, whatever
+		 * `activeCameraId` it sends.
+		 */
+		it('keeps the scene cameras in the order sent, opening on the first', async () => {
+			const side = { ...hero, cameraId: 'side', name: 'Side' }
+			const response = await act(
+				patch({
+					camera: { activeCameraId: 'hero', cameras: [side, detail, hero] },
+					hotspots: [marker]
+				})
+			)
+
+			expect(response.status).toBe(200)
+			expect(savedSettings().camera?.activeCameraId).toBe('side')
+			expect(
+				savedSettings().camera?.cameras?.map(({ cameraId, initial }) => [
+					cameraId,
+					initial
+				])
+			).toEqual([
+				['side', true],
+				['detail', false],
+				['hero', false]
+			])
+		})
+
 		it('refuses a hotspot linked to a camera the scene does not have, and saves nothing', async () => {
 			const response = await act(
 				patch({ camera: { cameras: [hero] }, hotspots: [marker] })

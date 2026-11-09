@@ -14,6 +14,7 @@ import {
 	type ConsentChoices,
 	readConsentCookie
 } from '../../lib/consent/consent-cookie'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 
 export type { ConsentChoices }
 
@@ -43,6 +44,7 @@ interface ConsentProviderProps {
 
 export function ConsentProvider({ children }: ConsentProviderProps) {
 	const fetcher = useFetcher()
+	const posthog = usePostHog()
 	const [consent, setConsent] = useState<ConsentChoices | null>(null)
 	const [consentVersion, setConsentVersion] = useState<string | null>(null)
 	const [hydrated, setHydrated] = useState(false)
@@ -82,26 +84,25 @@ export function ConsentProvider({ children }: ConsentProviderProps) {
 	}, [fetcher.state, fetcher.data])
 
 	// Sync PostHog persistence and opt-in/out whenever analytics consent changes.
-	// null = first visit, no decision yet - entry.client opts out by default, so
+	// null = first visit, no decision yet - posthog-browser.ts opts out by default, so
 	//   leaving it alone keeps capturing off until the banner is answered.
 	// accepted → switch to localStorage+cookie persistence so the session
 	//   persists across pages, then opt in.
 	// rejected → stay in memory mode and opt out.
+	//
+	// PostHog loads after hydration; until it has, the client queues these
+	// calls and replays them in order (see `posthog-react.tsx`).
 	useEffect(() => {
-		if (typeof window === 'undefined') return
-		// posthog-js is loaded globally via PostHogProvider in entry.client
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const ph = (window as any).posthog
-		if (!ph) return
+		if (!posthog) return
 		if (consent === null) return
 		if (consent.analytics) {
-			ph.set_config({ persistence: 'localStorage+cookie' })
-			ph.opt_in_capturing()
+			posthog.set_config({ persistence: 'localStorage+cookie' })
+			posthog.opt_in_capturing()
 		} else {
-			ph.set_config({ persistence: 'memory' })
-			ph.opt_out_capturing()
+			posthog.set_config({ persistence: 'memory' })
+			posthog.opt_out_capturing()
 		}
-	}, [consent?.analytics, consent])
+	}, [consent?.analytics, consent, posthog])
 
 	const saveConsent = useCallback(
 		(choices: Omit<ConsentChoices, 'necessary'>) => {
@@ -109,17 +110,13 @@ export function ConsentProvider({ children }: ConsentProviderProps) {
 			// opting in: PostHog is opted out by default, so anything captured
 			// before opt_in_capturing() is dropped. A rejection is deliberately not
 			// captured - we have no consent to send an event about it.
-			if (typeof window !== 'undefined' && choices.analytics) {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const ph = (window as any).posthog
-				if (ph) {
-					ph.set_config({ persistence: 'localStorage+cookie' })
-					ph.opt_in_capturing()
-					ph.capture('cookie_consent_accepted', {
-						functional: choices.functional,
-						marketing: choices.marketing
-					})
-				}
+			if (posthog && choices.analytics) {
+				posthog.set_config({ persistence: 'localStorage+cookie' })
+				posthog.opt_in_capturing()
+				posthog.capture('cookie_consent_accepted', {
+					functional: choices.functional,
+					marketing: choices.marketing
+				})
 			}
 
 			// Optimistic update hides the banner immediately without waiting for
@@ -142,7 +139,7 @@ export function ConsentProvider({ children }: ConsentProviderProps) {
 				}
 			)
 		},
-		[fetcher, consent, consentVersion]
+		[fetcher, consent, consentVersion, posthog]
 	)
 
 	return (

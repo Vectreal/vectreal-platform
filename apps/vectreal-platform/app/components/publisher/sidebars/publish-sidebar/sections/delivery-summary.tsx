@@ -6,6 +6,7 @@ import {
 	DELIVERY_REFERENCE_LABEL,
 	estimateDeliveryTime
 } from '../../../../../lib/domain/scene/scene-delivery-estimate'
+import { sceneDownloadBytes } from '../../../../../lib/domain/scene/scene-environment-bytes'
 import { InfoTooltip } from '../../../../info-tooltip'
 
 import type { FC } from 'react'
@@ -14,7 +15,10 @@ const TEXTURE_ENCODING_EXPLANATION =
 	'GPU-compressed textures are encoded when you publish, so their size is only known then. The rest of this figure is exact.'
 
 interface DeliverySummaryProps {
-	sceneBytes?: null | number
+	/** The published model, or what publishing would ship. */
+	modelBytes?: null | number
+	/** The environment map at the scene's quality, when its size is known. */
+	environmentBytes?: null | number
 	sizeReductionPercent: null | number
 	sizeDeltaLabel: null | string
 	/** The size leaves out GPU texture encoding, which only publishing measures. */
@@ -40,14 +44,21 @@ interface DeliverySummaryProps {
  * it shrinks.
  */
 export const DeliverySummary: FC<DeliverySummaryProps> = ({
-	sceneBytes,
+	modelBytes,
+	environmentBytes = null,
 	sizeReductionPercent,
 	sizeDeltaLabel,
 	sizeExcludesTextureEncoding = false,
 	onOpenOptimization
 }) => {
+	// What a visitor downloads: the model and the map that lights it.
+	const sceneBytes = sceneDownloadBytes(modelBytes, environmentBytes)
 	const estimate = estimateDeliveryTime(sceneBytes)
 	const hasOptimized = sizeReductionPercent !== null
+	const includesMap =
+		environmentBytes === null
+			? ''
+			: ` Includes the ${formatFileSize(environmentBytes)} environment map.`
 
 	return (
 		<div className="space-y-3">
@@ -56,12 +67,14 @@ export const DeliverySummary: FC<DeliverySummaryProps> = ({
 				{sizeExcludesTextureEncoding ? (
 					<span className="text-muted-foreground text-label-xs flex items-center gap-1">
 						+ GPU textures
-						<InfoTooltip content={TEXTURE_ENCODING_EXPLANATION} />
+						<InfoTooltip content={TEXTURE_ENCODING_EXPLANATION + includesMap} />
 					</span>
 				) : estimate ? (
 					<span className="text-muted-foreground text-label-xs flex items-center gap-1">
 						{estimate.label} on {DELIVERY_REFERENCE_LABEL}
-						<InfoTooltip content={DELIVERY_ESTIMATE_EXPLANATION} />
+						<InfoTooltip
+							content={`${DELIVERY_ESTIMATE_EXPLANATION}.${includesMap}`}
+						/>
 					</span>
 				) : null}
 			</div>

@@ -18,6 +18,7 @@ import {
 	shouldShowSceneViewReturn
 } from '../../lib/domain/scene/scene-presentation'
 import {
+	comparedEnvironmentQualityAtom,
 	currentSceneIdAtom,
 	failedEnvironmentFilesAtom,
 	viewDirectionAtom,
@@ -25,7 +26,8 @@ import {
 	openHotspotInHotspotToolAtom,
 	openingFramedAtom,
 	sceneMetaAtom,
-	openComposeToolAtom
+	openComposeToolAtom,
+	stageLightingAtom
 } from '../../lib/stores/publisher-config-store'
 import { comparedModelAtom } from '../../lib/stores/scene-optimization-store'
 import {
@@ -84,6 +86,12 @@ const PublisherPage = () => {
 	// A held comparison only changes what is drawn: the camera, framing,
 	// shadows, animation and hotspots keep following the loaded model.
 	const comparedModel = useAtomValue(comparedModelAtom)
+	// The scene's lighting, at the other environment quality while the
+	// Lighting tool compares the two.
+	const lighting = useAtomValue(stageLightingAtom)
+	const comparedEnvironmentQuality = useAtomValue(
+		comparedEnvironmentQualityAtom
+	)
 	const setRawDiagonal = useSetAtom(rawModelDiagonalAtom)
 	const {
 		animation,
@@ -91,7 +99,6 @@ const PublisherPage = () => {
 		camera,
 		controls,
 		environment,
-		lighting,
 		shadows,
 		normalization,
 		hotspots
@@ -351,6 +358,23 @@ const PublisherPage = () => {
 						commandExecutor.current?.execute({ type: 'restart_animation' })
 					}
 				/>
+				{/*
+				  Says which map is on screen while the Lighting tool compares. The
+				  tool's own status announces the change, so this stays silent.
+				*/}
+				{comparedEnvironmentQuality && !comparedModel && (
+					<div
+						aria-hidden
+						className={cn(
+							'pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-3',
+							PUBLISHER_LAYER.compareLabel
+						)}
+					>
+						<p className="ds-overlay rounded-full px-3 py-1 text-xs font-medium">
+							Showing {comparedEnvironmentQuality}
+						</p>
+					</div>
+				)}
 				{comparedModel && (
 					<div
 						className={cn(

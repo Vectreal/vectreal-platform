@@ -49,6 +49,7 @@ export type {
 
 export {
 	ENVIRONMENT_PRESETS,
+	ENVIRONMENT_QUALITIES,
 	sceneBoundsSchema,
 	sceneControlsSchema,
 	SCENE_LIGHT_ROLES,

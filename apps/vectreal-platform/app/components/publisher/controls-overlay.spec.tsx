@@ -21,7 +21,10 @@ import type { PublisherLoaderData } from '../../types/api'
 
 const { model, probe, drawerFlow, sizeLabel } = vi.hoisted(() => ({
 	model: { status: 'empty' },
-	sizeLabel: { excludesTextureEncoding: false },
+	sizeLabel: {
+		excludesTextureEncoding: false,
+		environmentBytes: null as null | number
+	},
 	drawerFlow: { args: [] as { isOverSizeLimit: boolean }[] },
 	probe: (name: string) => () => <div data-testid={name} />
 }))
@@ -35,7 +38,6 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 vi.mock('@shared/components/hooks/use-mobile', () => ({
 	useIsMobile: () => false
 }))
-vi.mock('posthog-js', () => ({ default: { reset: vi.fn() } }))
 vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
 }))
@@ -67,14 +69,17 @@ vi.mock('./shell/empty-stage', () => ({
 vi.mock('./shell/tool-bar', () => ({ ToolBar: probe('tool-bar') }))
 vi.mock('./shell/publish-card', () => ({
 	PublishCard: ({
+		sceneBytes,
 		isSceneSizeLoading,
 		sizeExcludesTextureEncoding
 	}: {
+		sceneBytes: null | number
 		isSceneSizeLoading: boolean
 		sizeExcludesTextureEncoding: boolean
 	}) => (
 		<div
 			data-testid="publish-card"
+			data-bytes={String(sceneBytes)}
 			data-loading={String(isSceneSizeLoading)}
 			data-excludes-textures={String(sizeExcludesTextureEncoding)}
 		/>
@@ -93,7 +98,8 @@ vi.mock('./sidebars/use-scene-size-initializer', () => ({
 }))
 vi.mock('./optimization/use-publish-size-projection', () => ({
 	usePublishSizeProjection: () => undefined,
-	useSizeExcludesTextureEncoding: () => sizeLabel.excludesTextureEncoding
+	useSizeExcludesTextureEncoding: () => sizeLabel.excludesTextureEncoding,
+	useEnvironmentMapBytes: () => sizeLabel.environmentBytes
 }))
 vi.mock('../../hooks/use-publisher-scene', () => ({
 	usePublisherScene: () => ({
@@ -278,6 +284,27 @@ describe('the publisher shell', () => {
 
 		await screen.findByTestId('publish-card')
 		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(false)
+	})
+
+	it('shows the model and its environment map, and judges the model alone', async () => {
+		model.status = 'ready'
+		sizeLabel.environmentBytes = 200
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			optimizedSceneBytes: 900,
+			latestSceneStats: null
+		}))
+
+		renderShell({ ...loaderData, maxSceneBytes: 1000 })
+
+		const card = await screen.findByTestId('publish-card')
+		expect(card.dataset.bytes).toBe('1100')
+		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(false)
+		sizeLabel.environmentBytes = null
+		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+			...prev,
+			optimizedSceneBytes: null
+		}))
 	})
 
 	it('judges the size a publish stored', async () => {

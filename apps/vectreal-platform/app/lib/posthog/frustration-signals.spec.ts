@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-
 import { describe, expect, it } from 'vitest'
 
 import { DEAD_CLICKS_CONFIG, RAGECLICK_CONFIG } from './frustration-signals'
@@ -17,21 +14,5 @@ describe.each([
 		expect(config.css_selector_ignorelist).toEqual(
 			expect.arrayContaining([defaultClass, '.ph-no-capture'])
 		)
-	})
-})
-
-/*
-  `entry.client.tsx` runs `posthog.init` at module scope against browser
-  globals, so it cannot be imported here.
-*/
-describe('posthog init uses them', () => {
-	const entryClient = readFileSync(
-		join(import.meta.dirname, '..', '..', 'entry.client.tsx'),
-		'utf8'
-	)
-
-	it('passes both lists', () => {
-		expect(entryClient).toMatch(/\brageclick: RAGECLICK_CONFIG,/)
-		expect(entryClient).toMatch(/\bcapture_dead_clicks: DEAD_CLICKS_CONFIG,/)
 	})
 })

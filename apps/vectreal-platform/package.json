@@ -36,7 +36,6 @@
 		"remix-utils": "^10.0.0",
 		"sonner": "^2.0.8",
 		"stripe": "^23.0.0",
-		"@posthog/react": "^1.10.3",
 		"@tanstack/react-table": "^9.1.2",
 		"three": "catalog:",
 		"posthog-js": "^1.414.0",
