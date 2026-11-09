@@ -93,8 +93,14 @@ describe('resolveAgentActor', () => {
 	})
 
 	it('verifies with the publishable key and keeps no session between requests', async () => {
-		await resolveAgentActor(request())
-		await resolveAgentActor(request())
+		// The verifier is a module-level singleton an earlier test may have
+		// built already, so count from a fresh module rather than from history.
+		vi.resetModules()
+		const { resolveAgentActor: freshResolve } = await import(
+			'./agent-actor.server'
+		)
+		await freshResolve(request())
+		await freshResolve(request())
 
 		expect(createClient).toHaveBeenCalledTimes(1)
 		expect(createClient).toHaveBeenCalledWith(
