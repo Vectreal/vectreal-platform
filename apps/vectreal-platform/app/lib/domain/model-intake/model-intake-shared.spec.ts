@@ -18,6 +18,7 @@ import {
 	parseIntakeSizeCm,
 	resolveIntakeBatch,
 	resolveIntakeLocale,
+	intakeLetterAsksClientConsent,
 	validateIntakeFields,
 	type ModelIntakeTextInput
 } from './model-intake-shared'
@@ -32,7 +33,9 @@ const valid: ModelIntakeTextInput = {
 	depth: '',
 	message: '',
 	consentFollowUp: true,
-	consentPhotos: true
+	consentPhotos: true,
+	asksClientConsent: false,
+	consentClient: false
 }
 
 describe('validateIntakeFields', () => {
@@ -62,11 +65,29 @@ describe('validateIntakeFields', () => {
 		['size', { depth: '900' }],
 		['message', { message: 'x'.repeat(MODEL_INTAKE_MAX_MESSAGE_LENGTH + 1) }],
 		['consentFollowUp', { consentFollowUp: false }],
-		['consentPhotos', { consentPhotos: false }]
+		['consentPhotos', { consentPhotos: false }],
+		['consentClient', { asksClientConsent: true, consentClient: false }]
 	] as const)('refuses a bad %s', (field, change) => {
 		const result = validateIntakeFields({ ...valid, ...change })
 		expect(result.ok).toBe(false)
 		expect(result.ok ? {} : Object.keys(result.fieldErrors)).toEqual([field])
+	})
+})
+
+describe('client consent', () => {
+	it('is asked on agency letters only', () => {
+		expect(intakeLetterAsksClientConsent({ audience: 'agency' })).toBe(true)
+		expect(intakeLetterAsksClientConsent({ audience: 'brand' })).toBe(false)
+		expect(intakeLetterAsksClientConsent(null)).toBe(false)
+	})
+
+	it('accepts an agency request that confirms it', () => {
+		const result = validateIntakeFields({
+			...valid,
+			asksClientConsent: true,
+			consentClient: true
+		})
+		expect(result.ok).toBe(true)
 	})
 })
 

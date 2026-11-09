@@ -73,6 +73,14 @@ describe('lookupIntakeLetter', () => {
 		expect(deps.isRateLimited).not.toHaveBeenCalled()
 		expect(await lookupIntakeLetter(request, null, deps)).toBeNull()
 	})
+
+	it('throws when the letter cannot be read, so the submit is not filed as code-less', async () => {
+		const failure = new Error('db down')
+		const deps = fakes({ findIntakeLetter: vi.fn().mockRejectedValue(failure) })
+		await expect(lookupIntakeLetter(request, letter.code, deps)).rejects.toBe(
+			failure
+		)
+	})
 })
 
 describe('the lookup limit', () => {

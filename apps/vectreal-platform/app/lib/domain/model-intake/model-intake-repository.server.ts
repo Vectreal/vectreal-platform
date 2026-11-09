@@ -161,6 +161,7 @@ export async function listIntakeSubmissions() {
 			batch: modelIntakeSubmissions.batch,
 			letterCode: modelIntakeSubmissions.letterCode,
 			letterOrganization: modelIntakeLetters.organization,
+			consentClientAt: modelIntakeSubmissions.consentClientAt,
 			productType: modelIntakeSubmissions.productType,
 			heightCm: modelIntakeSubmissions.heightCm,
 			widthCm: modelIntakeSubmissions.widthCm,

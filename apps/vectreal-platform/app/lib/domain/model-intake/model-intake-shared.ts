@@ -69,6 +69,17 @@ export function isIntakeAudience(value: unknown): value is ModelIntakeAudience {
 	return MODEL_INTAKE_AUDIENCES.includes(value as ModelIntakeAudience)
 }
 
+/**
+ * An agency sends its client's photos, not its own, so a request from an
+ * agency letter also confirms the client agreed. Decided by the letter the
+ * server looked up, never by anything the form posts.
+ */
+export function intakeLetterAsksClientConsent(
+	letter: { audience: ModelIntakeAudience } | null
+): boolean {
+	return letter?.audience === 'agency'
+}
+
 /** The page an agency letter's short address opens. German only, like the agency letters. */
 export const MODEL_INTAKE_AGENCY_PAGE_PATH = '/agenturen'
 
@@ -148,10 +159,10 @@ export const MODEL_INTAKE_MAX_TEXT_LENGTH = 200
 export const MODEL_INTAKE_RETENTION_DAYS = 90
 
 /**
- * Bumped whenever the wording of either consent changes, so every stored
- * consent names the text it was given against.
+ * Bumped whenever the wording of any consent changes, or one is added, so every
+ * stored consent names the text it was given against.
  */
-export const MODEL_INTAKE_CONSENT_VERSION = '2026-10-19'
+export const MODEL_INTAKE_CONSENT_VERSION = '2026-11-10'
 
 export const MODEL_INTAKE_HONEYPOT_FIELD = 'website'
 
@@ -185,6 +196,7 @@ export interface ModelIntakeFieldErrors {
 	message?: ModelIntakeFieldErrorCode
 	consentFollowUp?: ModelIntakeFieldErrorCode
 	consentPhotos?: ModelIntakeFieldErrorCode
+	consentClient?: ModelIntakeFieldErrorCode
 }
 
 /** What a failed submit hands back so the form keeps what was typed. Photos cannot be refilled. */
@@ -228,6 +240,9 @@ export function parseIntakeSizeCm(raw: string): number | null | 'invalid' {
 export interface ModelIntakeTextInput extends ModelIntakeFields {
 	consentFollowUp: boolean
 	consentPhotos: boolean
+	/** Whether this request must carry `consentClient`: see `intakeLetterAsksClientConsent`. */
+	asksClientConsent: boolean
+	consentClient: boolean
 }
 
 export interface ModelIntakeValidated {
@@ -281,6 +296,9 @@ export function validateIntakeFields(
 	}
 	if (!input.consentFollowUp) fieldErrors.consentFollowUp = 'consent'
 	if (!input.consentPhotos) fieldErrors.consentPhotos = 'consent'
+	if (input.asksClientConsent && !input.consentClient) {
+		fieldErrors.consentClient = 'consent'
+	}
 
 	const height = parseIntakeSizeCm(input.height)
 	const width = parseIntakeSizeCm(input.width)

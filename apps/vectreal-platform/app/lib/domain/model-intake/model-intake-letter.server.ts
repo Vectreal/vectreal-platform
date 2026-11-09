@@ -33,22 +33,17 @@ export const intakeLetterDeps = {
 export type IntakeLetterDeps = typeof intakeLetterDeps
 
 /**
- * The letter a code names, or null for one we never posted or one that cannot
- * be read right now. Null only costs the greeting and the link to the letter:
- * the form works the same without it.
+ * The letter a submitted code names, or null for one we never posted. A read
+ * that fails throws rather than answering null: the letter decides whether an
+ * agency must confirm its client's OK, and a request filed as if it came with
+ * no letter would skip that question.
  */
 export async function lookupIntakeLetter(
 	request: Request,
 	code: string | null,
 	deps: IntakeLetterDeps = intakeLetterDeps
 ): Promise<ModelIntakeLetter | null> {
-	if (!code) return null
-	try {
-		return await deps.findIntakeLetter(code)
-	} catch (error) {
-		deps.reportServerError(error, { request })
-		return null
-	}
+	return code ? deps.findIntakeLetter(code) : null
 }
 
 /**
@@ -64,7 +59,14 @@ export async function resolveIntakeLetter(
 ): Promise<ModelIntakeLetter | null> {
 	const code = normalizeIntakeLetterCode(raw)
 	if (!code || deps.isRateLimited(request)) return null
-	return lookupIntakeLetter(request, code, deps)
+	// Here a failed read costs only the greeting and the link to the letter,
+	// and the submit reads the code again for itself.
+	try {
+		return await lookupIntakeLetter(request, code, deps)
+	} catch (error) {
+		deps.reportServerError(error, { request })
+		return null
+	}
 }
 
 /** `/c/<code>`: counts the scan of a letter we posted, then names where the reader goes. */

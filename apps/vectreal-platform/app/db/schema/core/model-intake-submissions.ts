@@ -105,6 +105,12 @@ export const modelIntakeSubmissions = pgTable(
 		consentPhotosAt: timestamp('consent_photos_at', {
 			withTimezone: true
 		}).notNull(),
+		/**
+		 * When an agency confirmed its client agreed to sharing the photos and
+		 * having the model made. Asked only on agency letters, so null means it
+		 * was never asked, not that it was refused: a refusal is never stored.
+		 */
+		consentClientAt: timestamp('consent_client_at', { withTimezone: true }),
 		emailStatus: modelIntakeEmailStatusEnum('email_status')
 			.notNull()
 			.default('queued'),
