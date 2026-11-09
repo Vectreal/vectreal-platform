@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Mail } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -35,6 +34,7 @@ import {
 import { ensureValidCsrfFormData } from '../lib/http/csrf.server'
 import { verifyTurnstileToken } from '../lib/http/turnstile.server'
 import { reportServerError } from '../lib/observability/report-server-error.server'
+import { usePostHog } from '../lib/posthog/posthog-react'
 import { buildPageMeta } from '../lib/seo'
 import { LEGAL_PAGE_SEO_BY_PATH } from '../lib/seo-registry'
 import { createSupabaseClient } from '../lib/supabase.server'

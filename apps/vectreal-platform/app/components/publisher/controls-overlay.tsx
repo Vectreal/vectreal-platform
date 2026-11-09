@@ -2,7 +2,6 @@ import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
-import posthog from 'posthog-js'
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
@@ -36,6 +35,7 @@ import { usePublisherScene } from '../../hooks/use-publisher-scene'
 import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
 import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
 import {
 	arePublisherActionsDisabledAtom,
@@ -69,6 +69,7 @@ const OverlayControls = ({
 }: PublisherLoaderData & { children: ReactNode }) => {
 	const navigate = useNavigate()
 	const submit = useSubmit()
+	const posthog = usePostHog()
 	/*
 	  The request hint only seeds the first paint. `/publisher` is `no-store` and
 	  never prerendered, so the user-agent is a real signal here — but it answers
@@ -314,7 +315,7 @@ const OverlayControls = ({
 	const handleLogout = useCallback(async () => {
 		posthog?.reset()
 		await submit(null, { method: 'post', action: '/auth/logout' })
-	}, [submit])
+	}, [posthog, submit])
 
 	const handlePublishPanelChange = useCallback(
 		(isOpen: boolean) => {
