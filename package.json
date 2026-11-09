@@ -15,7 +15,7 @@
 		"@gltf-transform/core": "catalog:",
 		"@gltf-transform/extensions": "catalog:",
 		"@gltf-transform/functions": "catalog:",
-		"@hookform/resolvers": "^5.7.1",
+		"@hookform/resolvers": "^5.9.2",
 		"@marsidev/react-turnstile": "^1.5.5",
 		"@mdx-js/rollup": "^3.1.1",
 		"@radix-ui/react-alert-dialog": "^1.1.23",
