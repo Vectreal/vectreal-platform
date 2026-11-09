@@ -5,7 +5,7 @@ import { Link } from 'react-router'
 import { PublicErrorBoundary } from '../components/errors'
 import { CtaPanel, PageHero, SheetFrame } from '../components/layout-components'
 import { routeErrorMeta } from '../components/not-found'
-import { AGENCY_PAGE_COPY as COPY } from '../constants/product-copy'
+import { AGENCY_PAGE_COPY as COPY } from '../constants/agency-page-copy'
 import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
 import {
 	intakeLetterFormPath,
