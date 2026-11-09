@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 import OptimizationDrawer from './optimization/optimization-drawer'
 import {
+	useEnvironmentMapBytes,
 	usePublishSizeProjection,
 	useSizeExcludesTextureEncoding
 } from './optimization/use-publish-size-projection'
@@ -34,6 +35,7 @@ import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { usePublisherScene } from '../../hooks/use-publisher-scene'
 import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
+import { sceneDownloadBytes } from '../../lib/domain/scene/scene-environment-bytes'
 import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
 import { usePostHog } from '../../lib/posthog/posthog-react'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
@@ -99,6 +101,7 @@ const OverlayControls = ({
 	useSceneSizeInitializer()
 	usePublishSizeProjection()
 	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
+	const environmentMapBytes = useEnvironmentMapBytes()
 
 	// Save location comes from the Jotai atom - initialized in publisher-layout
 	// and updated by the shell-level SceneNameAndLocation picker.
@@ -415,7 +418,10 @@ const OverlayControls = ({
 						>
 							<SaveProgressPanel onRetry={() => void handleSaveScene()} />
 							<PublishCard
-								sceneBytes={currentSceneBytes}
+								sceneBytes={sceneDownloadBytes(
+									currentSceneBytes,
+									environmentMapBytes
+								)}
 								isSceneSizeLoading={isSceneSizeComputing}
 								sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}
 								statusText={optimizerStatusText}

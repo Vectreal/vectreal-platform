@@ -19,16 +19,23 @@
  * disc of the same solid angle, and its share of the whole map's energy.
  * Only the upper hemisphere is read: a light below the horizon lights no
  * ground and no product shot.
+ *
+ * It also writes each map's irradiance, `ENVIRONMENT_IRRADIANCE`, which the
+ * viewer scales the studio lights by. The viewer measures a map it loads as
+ * an HDR itself, but a compressed map decodes on the GPU with no pixels to
+ * read, so it takes this figure, measured from the HDR exactly as the viewer
+ * would measure it.
  */
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import {
 	ENVIRONMENT_KEYS,
+	environmentIrradiance,
 	resolveEnvironmentFiles,
 	type EnvironmentKey
 } from '@vctrl/core'
-import { FloatType } from 'three'
+import { DataTexture, FloatType, HalfFloatType, RGBAFormat } from 'three'
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js'
 
 /** Regions kept per map, brightest first. */
@@ -75,20 +82,36 @@ function weightedPercentile(
 	return luminance[order[order.length - 1]]
 }
 
-async function measure(key: EnvironmentKey): Promise<Region[]> {
+async function measure(
+	key: EnvironmentKey
+): Promise<{ regions: Region[]; irradiance: number }> {
 	const url = resolveEnvironmentFiles({
 		preset: key,
 		environmentResolution: '1k'
 	}) as string
 	const response = await fetch(url)
 	if (!response.ok) throw new Error(`${url}: ${response.status}`)
+	const buffer = await response.arrayBuffer()
 	const { width, height, data } = new HDRLoader()
 		.setDataType(FloatType)
-		.parse(await response.arrayBuffer()) as unknown as {
+		.parse(buffer) as unknown as {
 		width: number
 		height: number
 		data: Float32Array
 	}
+	// Half floats, as the viewer loads an HDR, top row first, as it flags it.
+	const half = new HDRLoader()
+		.setDataType(HalfFloatType)
+		.parse(buffer) as unknown as { data: Uint16Array }
+	const halfMap = new DataTexture(
+		half.data,
+		width,
+		height,
+		RGBAFormat,
+		HalfFloatType
+	)
+	halfMap.flipY = true
+	const irradiance = environmentIrradiance(halfMap) as number
 
 	const horizon = height / 2
 	const luminance = new Float32Array(width * horizon)
@@ -162,17 +185,23 @@ async function measure(key: EnvironmentKey): Promise<Region[]> {
 		})
 	}
 
-	return regions
-		.sort((a, b) => b.energy - a.energy)
-		.filter((region) => region.share >= MIN_SHARE)
-		.slice(0, MAX_REGIONS)
-		.map(({ energy: _energy, ...region }) => region)
+	return {
+		regions: regions
+			.sort((a, b) => b.energy - a.energy)
+			.filter((region) => region.share >= MIN_SHARE)
+			.slice(0, MAX_REGIONS)
+			.map(({ energy: _energy, ...region }) => region),
+		irradiance
+	}
 }
 
 const entries: string[] = []
-for (const key of ENVIRONMENT_KEYS) {
-	const regions = await measure(key)
-	console.log(key, regions)
+const irradiances: string[] = []
+// Sorted by name, as the committed file reads, so a rerun changes nothing.
+for (const key of [...ENVIRONMENT_KEYS].sort()) {
+	const { regions, irradiance } = await measure(key)
+	console.log(key, irradiance, regions)
+	irradiances.push(`\t'${key}': ${round(irradiance, 4)}`)
 	entries.push(
 		`\t'${key}': [${regions
 			.map(
@@ -206,6 +235,16 @@ export interface EnvironmentLight {
 export const ENVIRONMENT_LIGHTS = {
 ${entries.join(',\n')}
 } as const satisfies Record<EnvironmentKey, readonly EnvironmentLight[]>
+
+/**
+ * The light each hosted map delivers to an up-facing surface, measured from
+ * its 1k HDR by \`environmentIrradiance\` as the viewer loads it. The viewer
+ * reads it for a map that decodes without pixels to measure, its compressed
+ * version.
+ */
+export const ENVIRONMENT_IRRADIANCE: Record<EnvironmentKey, number> = {
+${irradiances.join(',\n')}
+}
 `
 // The Nx target formats it with the repository's Prettier config.
 writeFileSync(OUTPUT, source)

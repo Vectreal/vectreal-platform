@@ -38,6 +38,7 @@ import {
 } from '../../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../../lib/domain/scene/client/use-scene-model'
 import { isPublishedShadowNotStored } from '../../../lib/domain/scene/ground-bake-note'
+import { sceneEnvironmentBytes } from '../../../lib/domain/scene/scene-environment-bytes'
 import { getDashboardSceneLoadErrorMessage } from '../../../lib/domain/scene/scene-load-error-messages'
 import { parseSceneRouteParams } from '../../../lib/domain/scene/scene-route-params'
 import { resolveSceneSizeBytes } from '../../../lib/domain/scene/scene-stored-size'
@@ -186,6 +187,11 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			publishedAssetId: publishedMeta?.publishedAssetId ?? null,
 			publishedAssetSizeBytes: publishedMeta?.publishedAssetSizeBytes ?? null
 		},
+		// Null when the settings could not be read: the model alone is shown.
+		environmentMapBytes:
+			settingsData instanceof EmbedSettingsReadFailure || !settingsData
+				? null
+				: sceneEnvironmentBytes(settingsData.settings ?? {}),
 		folderPath,
 		sceneDetails,
 		textureUrls: buildTextureThumbnailUrls(sceneAssets, (assetId) =>
@@ -241,6 +247,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 		sceneDetails,
 		textureUrls,
 		publishState,
+		environmentMapBytes,
 		presentation,
 		shadowNotStored,
 		canDeleteScene,
@@ -492,6 +499,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 					sceneId={sceneState.id}
 					projectId={project.id}
 					publishState={publishState}
+					environmentMapBytes={environmentMapBytes}
 					presentation={presentation}
 					canUpdateScene={canUpdateScene}
 					publisherPath={publisherPath}

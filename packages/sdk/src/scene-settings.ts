@@ -42,6 +42,9 @@ export const ENVIRONMENT_PRESETS = [
 	'studio-soft'
 ] as const
 
+/** How a hosted environment map is encoded: the gain map JPEG or the HDR. */
+export const ENVIRONMENT_QUALITIES = ['compressed', 'lossless'] as const
+
 export const sceneBoundsSchema = z.object({
 	enable: z.boolean().optional(),
 	fit: z.boolean().optional(),
@@ -84,6 +87,7 @@ const sceneStageSchema = z.discriminatedUnion('type', [
 export const sceneEnvironmentSchema = z.object({
 	preset: z.enum(ENVIRONMENT_PRESETS).optional(),
 	environmentResolution: z.enum(['1k', '4k']).optional(),
+	environmentQuality: z.enum(ENVIRONMENT_QUALITIES).optional(),
 	environmentIntensity: nonNegative.optional(),
 	background: z.boolean().optional(),
 	backgroundIntensity: nonNegative.optional(),
@@ -152,6 +156,13 @@ export const sceneLightingSchema = z.object({
 		.object({
 			map: z.enum(ENVIRONMENT_PRESETS).optional(),
 			resolution: z.enum(['1k', '4k']).optional(),
+			/**
+			 * `compressed` loads a gain map JPEG 7 to 25 times smaller than the HDR;
+			 * `lossless` loads the HDR. Absent reads as `lossless`. Night maps
+			 * with small colored lights have no compressed version and load
+			 * lossless either way.
+			 */
+			quality: z.enum(ENVIRONMENT_QUALITIES).optional(),
 			intensity: nonNegative.optional(),
 			rotation: finite.optional()
 		})

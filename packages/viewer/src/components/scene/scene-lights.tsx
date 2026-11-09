@@ -1,14 +1,16 @@
 import { useEnvironment } from '@react-three/drei'
+import { ENVIRONMENT_MAP_ROOT } from '@vctrl/core'
 import { memo, Suspense, useLayoutEffect, useMemo, useState } from 'react'
 import { Object3D } from 'three'
 
 import LoadFailureBoundary from '../load-failure-boundary'
 import { applyBakedLights, drawnLightsSignature } from './baked-lights'
+import { useCanvasEnvironmentFiles } from './scene-environment'
 import {
-	environmentIrradiance,
 	LIGHT_DISTANCE_FACTOR,
 	lightDirection,
 	litLights,
+	sceneIrradiance,
 	shadowFilterRadius
 } from './scene-lighting'
 import { useModelMetrics } from './scene-shadows'
@@ -91,10 +93,16 @@ SceneLights.displayName = 'SceneLights'
  * measuring it downloads nothing twice.
  */
 const MeasuredLightRig = ({ environmentFiles, ...props }: SceneLightsProps) => {
-	const texture = useEnvironment({ files: environmentFiles })
+	const texture = useEnvironment({
+		files: useCanvasEnvironmentFiles(environmentFiles)
+	})
+	// The table describes the hosted maps only, not a scene's own files.
+	const hostedMap = String(environmentFiles).startsWith(ENVIRONMENT_MAP_ROOT)
+		? props.lighting.environment.map
+		: null
 	const irradiance = useMemo(
-		() => environmentIrradiance(texture) ?? FALLBACK_IRRADIANCE,
-		[texture]
+		() => sceneIrradiance(texture, hostedMap) ?? FALLBACK_IRRADIANCE,
+		[texture, hostedMap]
 	)
 	return <LightRig {...props} irradiance={irradiance} />
 }

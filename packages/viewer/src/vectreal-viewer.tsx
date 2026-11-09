@@ -671,7 +671,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		envOptions?.files ??
 		resolveEnvironmentFiles({
 			preset: environment.map,
-			environmentResolution: environment.resolution
+			environmentResolution: environment.resolution,
+			environmentQuality: environment.quality
 		})
 	const sceneFilesKey = String(sceneFiles)
 	// Prefetched as soon as a surface says which environment it wants, which

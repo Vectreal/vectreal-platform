@@ -22,7 +22,12 @@ export {
 	type BakeSignatureOptions
 } from './ground-bake-signature'
 export { toLegacyLighting } from './to-legacy-lighting'
-export { ENVIRONMENT_LIGHTS, type EnvironmentLight } from './environment-lights'
+export {
+	ENVIRONMENT_IRRADIANCE,
+	ENVIRONMENT_LIGHTS,
+	type EnvironmentLight
+} from './environment-lights'
+export { environmentIrradiance } from './environment-irradiance'
 export {
 	DEFAULT_LIGHTING_SETUP,
 	LIGHTING_SETUPS,

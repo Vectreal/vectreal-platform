@@ -295,6 +295,17 @@
 				"command": "pnpm exec tsx scripts/measure-environment-lights.ts && pnpm exec prettier --write ../../packages/core/src/scene-lighting/environment-lights.ts"
 			}
 		},
+		"encode-environment-gainmaps": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"outputs": [
+				"{workspaceRoot}/packages/core/src/scene-environment/environment-map-bytes.ts"
+			],
+			"options": {
+				"cwd": "apps/vectreal-platform",
+				"command": "pnpm exec tsx scripts/encode-environment-gainmaps.ts && pnpm exec prettier --write ../../packages/core/src/scene-environment/environment-map-bytes.ts"
+			}
+		},
 		"render-lighting-thumbnails": {
 			"executor": "nx:run-commands",
 			"outputs": ["{projectRoot}/app/assets/lighting"],
