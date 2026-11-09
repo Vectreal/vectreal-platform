@@ -79,3 +79,12 @@ export function resolveEmbedHotspotPresentation(
 export function resolveEmbedCameraControls(params: URLSearchParams): boolean {
 	return isOn(params.get('cameraControls'))
 }
+
+/**
+ * Whether the viewer may show its first-time hint, from `?hint`. For a host
+ * that explains the controls itself; the scene's own setting still decides
+ * whether there is a hint to show.
+ */
+export function resolveEmbedInteractionHint(params: URLSearchParams): boolean {
+	return isOn(params.get('hint'))
+}

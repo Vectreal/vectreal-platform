@@ -11,6 +11,11 @@ interface SceneShareDrawerProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	/**
+	 * What the scene's environment map adds to a visitor's download, when
+	 * its size is known.
+	 */
+	environmentMapBytes: number | null
 	presentation: ScenePresentationSettings | null
 	canUpdateScene: boolean
 	/** Publishing happens in the publisher; this navigates there. */
@@ -37,6 +42,7 @@ export function SceneShareDrawer({
 	sceneId,
 	projectId,
 	publishState,
+	environmentMapBytes,
 	presentation,
 	canUpdateScene,
 	onPublish,
@@ -54,6 +60,7 @@ export function SceneShareDrawer({
 			<DetailPanelSection title="Publishing">
 				<ScenePublishStateControl
 					publishState={publishState}
+					environmentMapBytes={environmentMapBytes}
 					onPublish={onPublish}
 					draftActionMode="immediate"
 					publishButtonText="Open Publisher to Publish"

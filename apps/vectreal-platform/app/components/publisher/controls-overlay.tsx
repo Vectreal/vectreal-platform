@@ -2,13 +2,13 @@ import { useIsMobile } from '@shared/components/hooks/use-mobile'
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtomValue, useSetAtom } from 'jotai/react'
-import posthog from 'posthog-js'
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate, useNavigation, useSubmit } from 'react-router'
 import { toast } from 'sonner'
 
 import OptimizationDrawer from './optimization/optimization-drawer'
 import {
+	useEnvironmentMapBytes,
 	usePublishSizeProjection,
 	useSizeExcludesTextureEncoding
 } from './optimization/use-publish-size-projection'
@@ -35,7 +35,9 @@ import { usePublisherSaveAction } from '../../hooks/use-publisher-save-action'
 import { usePublisherScene } from '../../hooks/use-publisher-scene'
 import { useSampleDownload } from '../../hooks/use-sample-download'
 import { resolveSceneMetrics } from '../../lib/domain/scene'
+import { sceneDownloadBytes } from '../../lib/domain/scene/scene-environment-bytes'
 import { isSceneOverSizeLimit } from '../../lib/domain/scene/scene-size-limit'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { resolvePublisherSurface } from '../../lib/publisher/publisher-surface'
 import {
 	arePublisherActionsDisabledAtom,
@@ -69,6 +71,7 @@ const OverlayControls = ({
 }: PublisherLoaderData & { children: ReactNode }) => {
 	const navigate = useNavigate()
 	const submit = useSubmit()
+	const posthog = usePostHog()
 	/*
 	  The request hint only seeds the first paint. `/publisher` is `no-store` and
 	  never prerendered, so the user-agent is a real signal here — but it answers
@@ -98,6 +101,7 @@ const OverlayControls = ({
 	useSceneSizeInitializer()
 	usePublishSizeProjection()
 	const sizeExcludesTextureEncoding = useSizeExcludesTextureEncoding()
+	const environmentMapBytes = useEnvironmentMapBytes()
 
 	// Save location comes from the Jotai atom - initialized in publisher-layout
 	// and updated by the shell-level SceneNameAndLocation picker.
@@ -314,7 +318,7 @@ const OverlayControls = ({
 	const handleLogout = useCallback(async () => {
 		posthog?.reset()
 		await submit(null, { method: 'post', action: '/auth/logout' })
-	}, [submit])
+	}, [posthog, submit])
 
 	const handlePublishPanelChange = useCallback(
 		(isOpen: boolean) => {
@@ -414,7 +418,10 @@ const OverlayControls = ({
 						>
 							<SaveProgressPanel onRetry={() => void handleSaveScene()} />
 							<PublishCard
-								sceneBytes={currentSceneBytes}
+								sceneBytes={sceneDownloadBytes(
+									currentSceneBytes,
+									environmentMapBytes
+								)}
 								isSceneSizeLoading={isSceneSizeComputing}
 								sizeExcludesTextureEncoding={sizeExcludesTextureEncoding}
 								statusText={optimizerStatusText}

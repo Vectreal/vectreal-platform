@@ -17,13 +17,16 @@ import {
 	environmentLoadFailedAtom,
 	failedEnvironmentFilesAtom,
 	cameraToolOpenRequestAtom,
+	comparedEnvironmentQualityAtom,
 	exitPreviewModeAtom,
+	isComparingEnvironmentQualityAtom,
 	isPreviewModeAtom,
 	openCameraInCameraToolAtom,
 	openComposeToolAtom,
 	openHotspotInHotspotToolAtom,
 	processAtom,
-	processInitialState
+	processInitialState,
+	stageLightingAtom
 } from './publisher-config-store'
 import {
 	activeHotspotIdAtom,
@@ -354,5 +357,42 @@ describe('environmentLoadFailedAtom', () => {
 		store.set(failedEnvironmentFilesAtom, String([...files]))
 
 		expect(store.get(environmentLoadFailedAtom)).toBe(true)
+	})
+})
+
+describe('comparing environment qualities', () => {
+	const comparing = (map: 'studio-natural' | 'night-city') => {
+		const store = storeWith({
+			mode: 'compose',
+			activeComposeTool: 'lighting',
+			showSidebar: true
+		})
+		store.set(lightingAtom, {
+			environment: { map, quality: 'compressed' }
+		})
+		store.set(isComparingEnvironmentQualityAtom, true)
+		return store
+	}
+
+	it('shows the other quality on the stage, and saves the chosen one', () => {
+		const store = comparing('studio-natural')
+		expect(store.get(comparedEnvironmentQualityAtom)).toBe('lossless')
+		expect(store.get(stageLightingAtom).environment?.quality).toBe('lossless')
+		expect(store.get(lightingAtom).environment?.quality).toBe('compressed')
+	})
+
+	it('compares nothing on a map that loads lossless either way', () => {
+		const store = comparing('night-city')
+		expect(store.get(comparedEnvironmentQualityAtom)).toBeNull()
+		expect(store.get(stageLightingAtom)).toBe(store.get(lightingAtom))
+	})
+
+	it('ends with the Lighting tool: no other tool shows an unsaved quality', () => {
+		const store = comparing('studio-natural')
+		store.set(processAtom, (previous) => ({
+			...previous,
+			activeComposeTool: 'hotspots'
+		}))
+		expect(store.get(comparedEnvironmentQualityAtom)).toBeNull()
 	})
 })

@@ -22,6 +22,7 @@ describe('toLegacyLighting', () => {
 				environment: {
 					map: 'outdoor-overcast',
 					resolution: '4k',
+					quality: 'compressed',
 					intensity: 0.7
 				},
 				lights: [
@@ -41,6 +42,7 @@ describe('toLegacyLighting', () => {
 		expect(old.environment).toEqual({
 			map: 'outdoor-overcast',
 			resolution: '4k',
+			quality: 'compressed',
 			intensity: 0.7,
 			rotation: 0
 		})

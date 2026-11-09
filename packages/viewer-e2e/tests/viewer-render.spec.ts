@@ -232,6 +232,36 @@ test('a double-click focuses the model, and on the background frames it again', 
 		.toBe(true)
 })
 
+test('the first-time hint says how to move, and goes on the first move', async ({
+	page
+}) => {
+	test.setTimeout(60000)
+
+	await page.goto('/?hint-case')
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+
+	// Panning is off in this scene, so the line leaves it out.
+	// `viewer_ready` fires once the first view is framed, but the hint waits
+	// for the loader to finish fading out. Under software GL on a loaded
+	// runner the page can draw no frame at all for several seconds right
+	// after framing, which holds that fade, so the default five seconds is
+	// not enough to see it start. The hint's own five seconds only begin once
+	// it shows, so waiting longer cannot let it expire unseen.
+	const hint = page.getByText('Drag to rotate, scroll to zoom', { exact: true })
+	await expect(hint).toBeVisible({ timeout: 20000 })
+
+	await page.mouse.move(640, 360)
+	await page.mouse.down()
+	await page.mouse.up()
+	await expect(hint).toHaveCount(0)
+})
+
 test('a camera switch flies in a host that follows camera_changed', async ({
 	page
 }) => {

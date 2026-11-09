@@ -61,7 +61,7 @@ export function getPosthogClient(): null | PostHog {
  * The distinct id the browser is reporting under, if it told us.
  *
  * `posthog-js` injects this header on same-origin requests
- * (`__add_tracing_headers` in `entry.client.tsx`). Passing it through ties a
+ * (`__add_tracing_headers` in `posthog-browser.ts`). Passing it through ties a
  * server-side exception to the session that provoked it, which is the
  * difference between "something 500'd" and "this is what the user was doing".
  */

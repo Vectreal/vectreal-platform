@@ -4,6 +4,7 @@ import { ExternalLink, Rocket } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { SceneShareDrawer } from './scene-share-drawer'
+import { sceneDownloadBytes } from '../../../lib/domain/scene/scene-environment-bytes'
 import { DetailPanelSection } from '../../layout-components'
 import { SCENE_STATUS_DOT } from '../scene-status'
 
@@ -14,6 +15,11 @@ interface ScenePublishPanelProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	/**
+	 * What the scene's environment map adds to a visitor's download, when
+	 * its size is known.
+	 */
+	environmentMapBytes: number | null
 	presentation: ScenePresentationSettings | null
 	canUpdateScene: boolean
 	publisherPath: string
@@ -51,6 +57,7 @@ export function ScenePublishPanel({
 	sceneId,
 	projectId,
 	publishState,
+	environmentMapBytes,
 	presentation,
 	canUpdateScene,
 	publisherPath,
@@ -66,10 +73,13 @@ export function ScenePublishPanel({
 		publishedAt && !Number.isNaN(publishedAt.getTime())
 			? publishedAt.toLocaleDateString()
 			: null
+	// What a visitor downloads: the published model and its environment map.
+	const downloadBytes = sceneDownloadBytes(
+		publishState.publishedAssetSizeBytes,
+		environmentMapBytes
+	)
 	const publishedSize =
-		typeof publishState.publishedAssetSizeBytes === 'number'
-			? formatFileSize(publishState.publishedAssetSizeBytes)
-			: null
+		downloadBytes === null ? null : formatFileSize(downloadBytes)
 
 	return (
 		<DetailPanelSection
@@ -150,6 +160,7 @@ export function ScenePublishPanel({
 						sceneId={sceneId}
 						projectId={projectId}
 						publishState={publishState}
+						environmentMapBytes={environmentMapBytes}
 						presentation={presentation}
 						canUpdateScene={canUpdateScene}
 						onPublish={onPublish}

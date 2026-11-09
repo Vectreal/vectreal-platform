@@ -25,6 +25,16 @@ export interface SetAutoRotateViewerCommand {
 	speed?: number
 }
 
+/**
+ * Command that shows or withholds the first-time hint on how to move the
+ * scene. Off withdraws a hint already on screen; on shows it only if it has
+ * not been shown yet in this page view.
+ */
+export interface SetInteractionHintViewerCommand {
+	type: 'set_interaction_hint'
+	enabled: boolean
+}
+
 /** Command that toggles zoom and pan at runtime. */
 export interface SetControlsOptionsViewerCommand {
 	type: 'set_controls_options'
@@ -93,6 +103,7 @@ export type ViewerCommand =
 	| SetAutoRotateViewerCommand
 	| SetControlsEnabledViewerCommand
 	| SetControlsOptionsViewerCommand
+	| SetInteractionHintViewerCommand
 	| SetTransitionViewerCommand
 
 /** Emitted when the viewer command surface has been registered. */

@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
@@ -22,6 +21,7 @@ import { clearReferralAttribution } from '../../lib/domain/analytics/referral-at
 import { loadAuthenticatedUser } from '../../lib/domain/auth/auth-loader.server'
 import { getSafeNextPath } from '../../lib/domain/auth/auth-redirect.server'
 import { updateUserProfile } from '../../lib/domain/user/user-repository.server'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { buildMeta } from '../../lib/seo'
 
 export { AuthErrorBoundary as ErrorBoundary }

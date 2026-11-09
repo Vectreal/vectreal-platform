@@ -1,4 +1,3 @@
-import { useFeatureFlagEnabled, usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
 import {
 	Dialog,
@@ -50,6 +49,10 @@ import {
 	type BillingPeriod
 } from '../../lib/domain/billing/plan-price'
 import { countOrganizationMembers } from '../../lib/domain/organization/organization-repository.server'
+import {
+	useFeatureFlagEnabled,
+	usePostHog
+} from '../../lib/posthog/posthog-react'
 
 import type { BillingCheckoutOptions } from '../../lib/domain/dashboard/dashboard-types'
 import type { PostHogContext } from '../../lib/posthog/posthog-middleware'

@@ -12,9 +12,13 @@ import {
 	type CameraEntry
 } from './camera-state'
 import { defaultCameraOptions } from './constants'
+import { publishedSceneViewCameras } from './use-camera-switcher-setting'
 import {
+	applySceneCameraMove,
 	isLastSceneCamera,
-	resolveDefaultSceneCameraId
+	partitionSceneCameras,
+	resolveDefaultSceneCameraId,
+	type SceneCameraMove
 } from '../../../../../lib/domain/scene/scene-camera'
 import {
 	interactionSwitchesTo,
@@ -64,6 +68,20 @@ export function useSceneCameras() {
 		) ??
 		cameras[0]
 	const defaultCameraId = resolveDefaultSceneCameraId(cameras)
+	/** The cameras the published switcher steps through; the list orders only these. */
+	const viewIds = useMemo(
+		() =>
+			new Set(
+				publishedSceneViewCameras(normalizedCamera, hotspots).map(
+					(entry) => entry.cameraId
+				)
+			),
+		[normalizedCamera, hotspots]
+	)
+	const { sceneCameras, otherCameras } = useMemo(
+		() => partitionSceneCameras(cameras, viewIds),
+		[cameras, viewIds]
+	)
 	const editorTargetCameraId = resolveEditorTargetCameraId(
 		normalizedCamera,
 		selectedCameraId
@@ -273,25 +291,42 @@ export function useSceneCameras() {
 		]
 	)
 
-	/** The default camera is the first one, so pinning moves it to the front. */
-	const pinSelectedAsDefault = useCallback(() => {
-		const targetId = selectedCamera?.cameraId
-		if (!targetId) return
-
-		setCamera((prev) => {
-			const normalized = normalizeCameraState(prev)
-			const all = normalized.cameras ?? []
-			const target = all.find((entry) => entry.cameraId === targetId)
-			if (!target) {
-				return normalized
-			}
-
-			return withDefaultCameraFlag({
-				...normalized,
-				cameras: [target, ...all.filter((entry) => entry !== target)]
+	/**
+	 * Puts the scene cameras in a new order, which is the order the switcher
+	 * steps through; the first is where the scene opens. Resolves to where the
+	 * moved camera landed, or null when the order is not a move.
+	 *
+	 * The capture out of the updater is safe because `cameraAtom` is a jotai
+	 * primitive, whose write runs the updater once and synchronously. The
+	 * annotated type keeps TypeScript from narrowing `applied` to `never`
+	 * after its null guard, since it cannot see the updater run.
+	 */
+	const reorder = useCallback(
+		(order: string[], movedId: string): SceneCameraMove<CameraEntry> | null => {
+			let applied: SceneCameraMove<CameraEntry> | null = null
+			setCamera((prev) => {
+				const normalized = normalizeCameraState(prev)
+				applied = applySceneCameraMove(
+					normalized.cameras ?? [],
+					order,
+					movedId,
+					viewIds
+				)
+				return applied
+					? withDefaultCameraFlag({ ...normalized, cameras: applied.cameras })
+					: prev
 			})
-		})
-	}, [selectedCamera?.cameraId, setCamera])
+			return applied
+		},
+		[setCamera, viewIds]
+	)
+
+	/** "Move to top": the selected camera becomes the one the scene opens on. */
+	const moveSelectedToTop = useCallback(() => {
+		const targetId = selectedCamera?.cameraId
+		if (!targetId) return null
+		return reorder([targetId], targetId)
+	}, [reorder, selectedCamera?.cameraId])
 
 	/**
 	 * Pointing the default camera somewhere new moves the frame the scene opens
@@ -316,6 +351,8 @@ export function useSceneCameras() {
 
 	return {
 		cameras,
+		sceneCameras,
+		otherCameras,
 		selectedCamera,
 		defaultCameraId,
 		isEditingDefaultCamera,
@@ -325,7 +362,8 @@ export function useSceneCameras() {
 		add,
 		removeSelected,
 		renameSelected,
-		pinSelectedAsDefault,
+		reorder,
+		moveSelectedToTop,
 		setFov,
 		captureCurrentView
 	}

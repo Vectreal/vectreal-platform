@@ -21,7 +21,7 @@ const session = vi.hoisted(() => ({
 vi.mock('../../hooks/use-current-user', () => ({
 	useCurrentUser: () => ({ user: session.user })
 }))
-vi.mock('@posthog/react', () => ({ usePostHog: () => null }))
+vi.mock('../../lib/posthog/posthog-react', () => ({ usePostHog: () => null }))
 vi.mock('../theme-toggle-button', () => ({ ThemeToggleButton: () => null }))
 vi.mock('@shared/components/hooks/use-mobile', () => ({
 	useIsMobile: () => false

@@ -306,7 +306,8 @@ to change a shadow, change its light. The type and the migration rules live in
 
 | Field | What the viewer does with it |
 |---|---|
-| `environment.map`, `resolution` | Loads the hosted HDR that lights the model and gives it reflections |
+| `environment.map`, `resolution` | Loads the hosted map that lights the model and gives it reflections |
+| `environment.quality` | `compressed` loads the map as a gain map JPEG, 7 to 25 times smaller at 1k; `lossless` (or absent) loads the HDR. `nature-moonlit`, `night-city` and `night-building` have no compressed version and load the HDR either way |
 | `environment.intensity` | Brightness of the environment, and with it of every light |
 | `environment.rotation` | Turns the map, its reflections, the background and the lights together, in degrees |
 | `lights[]` | One directional light each, at most one per `role` (`key`, `fill`, `rim`). `azimuth` is degrees around the vertical axis (0 lights from +Z, 90 from +X, before the rotation), `elevation` degrees above the horizon |
@@ -451,6 +452,7 @@ Current commands:
 | `set_transition` | `{ transitionType: 'none' \| 'linear' \| 'object_avoidance'; duration?: number; easing?: string }` | Overrides the active camera transition |
 | `set_auto_rotate` | `{ enabled: boolean; speed?: number }` | Toggles and configures auto-rotation |
 | `set_controls_options` | `{ zoom?: boolean; pan?: boolean }` | Enables or disables zoom/pan interaction at runtime |
+| `set_interaction_hint` | `{ enabled: boolean }` | Shows or withholds the first-time hint on how to move the scene |
 
 ### Events
 

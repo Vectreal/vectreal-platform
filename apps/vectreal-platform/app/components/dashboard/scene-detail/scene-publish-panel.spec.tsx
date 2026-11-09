@@ -58,12 +58,16 @@ const PUBLISHED: ScenePublishStateResponse = {
 	publishedAssetSizeBytes: 2_202_009
 }
 
-function renderPanel(publishState: ScenePublishStateResponse) {
+function renderPanel(
+	publishState: ScenePublishStateResponse,
+	environmentMapBytes: number | null = null
+) {
 	return render(
 		<ScenePublishPanel
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={publishState}
+			environmentMapBytes={environmentMapBytes}
 			presentation={null}
 			canUpdateScene
 			publisherPath="/publisher/scene-1"
@@ -132,6 +136,13 @@ describe('a published scene', () => {
 		*/
 		expect(container.textContent).toContain('2.1 MB')
 		expect(container.textContent).toMatch(/Published\s/)
+	})
+
+	it('counts the environment map into the size a visitor downloads', () => {
+		const { container } = renderPanel(PUBLISHED, 73_838)
+
+		// 2,202,009 + 73,838 bytes.
+		expect(container.textContent).toContain('2.2 MB')
 	})
 
 	it('opens onto the snippet rather than prompting a publish', () => {

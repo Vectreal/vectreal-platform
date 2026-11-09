@@ -57,9 +57,10 @@ overrides:
   # server parses request bodies with it. Drop this once express requires 2.4.0.
   body-parser@>=2.0.0 <2.4.0: 2.4.0
   # @nx/web pulls in http-server, whose http-proxy resolves follow-redirects
-  # 1.16.0 (GHSA alerts 455 and 456, fixed in 1.16.1). Dev-only, but no nx 23.x
-  # release moves it. Drop this once the lockfile resolves 1.16.1 on its own.
-  follow-redirects@1.16.0: 1.16.1
+  # 1.16.x below 1.16.2 (alerts 455 and 456, then the high-severity alert 484,
+  # fixed in 1.16.2). Dev-only, but no nx 23.x release moves it. Drop this once
+  # the lockfile resolves 1.16.2 or later on its own.
+  follow-redirects@<1.16.2: 1.16.3
 
 onlyBuiltDependencies:
   - '@swc/core'

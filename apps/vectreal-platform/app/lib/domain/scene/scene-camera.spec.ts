@@ -2,9 +2,11 @@ import { isSceneCamera } from '@vctrl/core'
 
 import {
 	applyDefaultCameraFlag,
+	applySceneCameraMove,
 	buildDefaultCameraSignature,
 	isLastSceneCamera,
 	isPairedHotspotCamera,
+	partitionSceneCameras,
 	withSceneCameraKinds,
 	resolveDefaultSceneCameraId
 } from './scene-camera'
@@ -296,5 +298,173 @@ describe('withSceneCameraKinds', () => {
 	it('returns the same settings when nothing needed tagging', () => {
 		const camera = { cameras: [{ cameraId: 'default', kind: 'scene' }] }
 		expect(withSceneCameraKinds(camera)).toBe(camera)
+	})
+})
+
+describe('applySceneCameraMove', () => {
+	const front = { cameraId: 'front', kind: 'scene' }
+	const side = { cameraId: 'side', kind: 'scene' }
+	const top = { cameraId: 'top' }
+	const knob = { cameraId: 'knob', kind: 'hotspot' }
+	// A hotspot camera ahead of the scene cameras, as older scenes store it.
+	const cameras = [knob, front, side, top]
+	const ids = (list: CameraLike[]) => list.map((entry) => entry.cameraId)
+	// What `resolveSceneViewCameras` answers for `cameras` with no hotspot links.
+	const views = new Set(['front', 'side', 'top'])
+
+	it('makes the camera dragged to the top the one the scene opens on', () => {
+		const move = applySceneCameraMove(
+			cameras,
+			['side', 'front', 'top'],
+			'side',
+			views
+		)
+
+		expect(move?.position).toBe(1)
+		expect(move?.total).toBe(3)
+		expect(ids(move?.cameras ?? [])).toEqual(['side', 'front', 'top', 'knob'])
+		expect(resolveDefaultSceneCameraId(move?.cameras)).toBe('side')
+	})
+
+	it('makes the first view the opening one when a camera ahead of it opens the scene', () => {
+		const legacyPair = { cameraId: 'hotspot-camera-1712345678901-ab12' }
+		const move = applySceneCameraMove(
+			[legacyPair, front, side],
+			['front'],
+			'front',
+			new Set(['front', 'side'])
+		)
+
+		expect(ids(move?.cameras ?? [])).toEqual([
+			'front',
+			'side',
+			legacyPair.cameraId
+		])
+		expect(resolveDefaultSceneCameraId(move?.cameras)).toBe('front')
+	})
+
+	it('leaves a legacy opening camera alone when a drag lands where it began', () => {
+		const legacyPair = { cameraId: 'hotspot-camera-1712345678901-ab12' }
+
+		expect(
+			applySceneCameraMove(
+				[legacyPair, front, side],
+				['front', 'side'],
+				'side',
+				new Set(['front', 'side'])
+			)
+		).toBeNull()
+	})
+
+	it('keeps the order given as the scene cameras’ order', () => {
+		const move = applySceneCameraMove(
+			cameras,
+			['top', 'side', 'front'],
+			'front',
+			views
+		)
+
+		expect(move?.position).toBe(3)
+		expect(
+			ids(partitionSceneCameras(move?.cameras, views).sceneCameras)
+		).toEqual(['top', 'side', 'front'])
+	})
+
+	it('moves a camera below the top without touching the opening view', () => {
+		const move = applySceneCameraMove(
+			cameras,
+			['front', 'top', 'side'],
+			'top',
+			views
+		)
+
+		expect(move?.position).toBe(2)
+		expect(ids(move?.cameras ?? [])).toEqual(['front', 'top', 'side', 'knob'])
+		expect(resolveDefaultSceneCameraId(move?.cameras)).toBe('front')
+	})
+
+	it('keeps a hotspot’s camera out of the order, whatever the order names', () => {
+		const move = applySceneCameraMove(
+			cameras,
+			['knob', 'side', 'front', 'top'],
+			'side',
+			views
+		)
+
+		expect(ids(move?.cameras ?? [])).toEqual(['side', 'front', 'top', 'knob'])
+		expect(applySceneCameraMove(cameras, ['knob'], 'knob', views)).toBeNull()
+	})
+
+	it('keeps a scene camera the order leaves out, after the ones it names', () => {
+		const move = applySceneCameraMove(cameras, ['top'], 'top', views)
+
+		expect(ids(move?.cameras ?? [])).toEqual(['top', 'front', 'side', 'knob'])
+	})
+
+	it('is not a move when the scene cameras end up as they were stored', () => {
+		expect(
+			applySceneCameraMove(cameras, ['front', 'side', 'top'], 'side', views)
+		).toBeNull()
+		// The top row released in place: it already opens the scene.
+		expect(
+			applySceneCameraMove(cameras, ['front', 'side', 'top'], 'front', views)
+		).toBeNull()
+	})
+
+	it('is not a move when the order names none of these cameras', () => {
+		expect(
+			applySceneCameraMove(cameras, ['gone', 'also-gone'], 'gone', views)
+		).toBeNull()
+	})
+
+	it('is not a move when the camera being moved is gone', () => {
+		expect(
+			applySceneCameraMove(cameras, ['side', 'front'], 'gone', views)
+		).toBeNull()
+	})
+
+	/**
+	 * Which cameras are views is the viewer's link rule, passed in. A camera
+	 * the rule leaves out is never ordered, whatever its `kind`: an untagged
+	 * hotspot pair from before the tag existed reads as a scene camera to
+	 * `isSceneCamera`, but the switcher skips it.
+	 */
+	it('orders only the views it is given, and writes the rest after them', () => {
+		const legacyPair = { cameraId: 'hotspot-camera-1712345678901-ab12' }
+		const legacy = [legacyPair, front, side]
+		const legacyViews = new Set(['front', 'side'])
+
+		expect(
+			ids(partitionSceneCameras(legacy, legacyViews).sceneCameras)
+		).toEqual(['front', 'side'])
+		expect(
+			applySceneCameraMove(
+				legacy,
+				[legacyPair.cameraId],
+				legacyPair.cameraId,
+				legacyViews
+			)
+		).toBeNull()
+
+		const move = applySceneCameraMove(
+			legacy,
+			['side', 'front'],
+			'side',
+			legacyViews
+		)
+		expect(ids(move?.cameras ?? [])).toEqual([
+			'side',
+			'front',
+			legacyPair.cameraId
+		])
+		// The pair was the first scene camera, so it opened the scene; it no longer does.
+		expect(resolveDefaultSceneCameraId(legacy)).toBe(legacyPair.cameraId)
+		expect(resolveDefaultSceneCameraId(move?.cameras)).toBe('side')
+	})
+
+	it('does not mutate the input', () => {
+		const input = [...cameras]
+		applySceneCameraMove(input, ['side', 'front', 'top'], 'side', views)
+		expect(input).toEqual(cameras)
 	})
 })

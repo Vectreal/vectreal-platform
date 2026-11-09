@@ -56,6 +56,7 @@ export function toLegacyLighting(settings: SceneSettings): SceneSettings {
 	const environment: EnvironmentProps = {
 		preset: lighting.environment.map,
 		environmentResolution: lighting.environment.resolution,
+		environmentQuality: lighting.environment.quality,
 		environmentIntensity: lighting.environment.intensity,
 		background: background.type === 'environment',
 		...(background.type === 'environment'

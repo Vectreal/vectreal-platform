@@ -18,7 +18,10 @@
 import { ApiResponse } from '@shared/utils'
 import { createSceneInputSchema } from '@vctrl/sdk'
 
-import { withSceneSettingsDefaults } from '../../../constants/viewer-defaults'
+import {
+	defaultEnvOptions,
+	withSceneSettingsDefaults
+} from '../../../constants/viewer-defaults'
 import {
 	agentApiError,
 	agentBillingRefusal
@@ -151,7 +154,14 @@ export async function action({ request, params }: Route.ActionArgs) {
 					projectId,
 					userId: actor.userId,
 					meta: { name, description: '', thumbnailUrl: '' },
-					settings: withSceneSettingsDefaults({}),
+					// The look an agent's scene always had, with its map compressed as
+					// every new scene's is.
+					settings: withSceneSettingsDefaults({
+						environment: {
+							...defaultEnvOptions,
+							environmentQuality: 'compressed'
+						}
+					}),
 					sceneAssetIds: assetIds
 				})
 				await recordAgentAudit(tx, actor, 'scene:create', sceneId)

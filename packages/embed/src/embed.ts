@@ -248,6 +248,15 @@ export class VectrealEmbed {
 		this.sendCommand({ type: 'set_auto_rotate', enabled, speed })
 	}
 
+	/**
+	 * Show or withhold the first-time hint on how to move the scene. Off
+	 * removes a hint already on screen; `?hint=0` on the embed URL keeps it
+	 * from appearing at all.
+	 */
+	setInteractionHint(enabled: boolean): void {
+		this.sendCommand({ type: 'set_interaction_hint', enabled })
+	}
+
 	/** Toggle scroll-zoom. */
 	setZoomEnabled(enabled: boolean): void {
 		this.sendCommand({ type: 'set_controls_options', zoom: enabled })

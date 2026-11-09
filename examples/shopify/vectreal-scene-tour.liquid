@@ -1,0 +1,745 @@
+{%- comment -%}
+  A published Vectreal scene below the product details, toured by scrolling.
+
+  Install: Online Store > Themes > Edit code > Sections > Add a new section,
+  paste this file, then add "Vectreal 3D-Szene" to the product template in the
+  theme editor. The shop's domains must be on the scene's project in Vectreal
+  (Dashboard > Projects > Edit > Allowed embed domains).
+{%- endcomment -%}
+
+{%- liquid
+  assign scene_url = section.settings.scene_url | strip | default: product.metafields.vectreal.scene_url.value
+  assign cameras = section.settings.cameras | strip
+  assign stations = ''
+  for block in section.blocks
+    assign camera = block.settings.camera | strip
+    if camera != blank
+      assign stations = stations | append: ',' | append: camera
+    endif
+  endfor
+  if stations != blank
+    assign cameras = stations | remove_first: ','
+  endif
+  assign camera_count = cameras | split: ',' | size
+  if camera_count == 0
+    assign camera_count = 3
+  endif
+-%}
+
+<div class="vectreal-tour">
+  <vectreal-scene-tour
+    data-scene-url="{{ scene_url | strip | escape }}"
+    data-cameras="{{ cameras | escape }}"
+    data-mode="scroll"
+    data-control="tour"
+    style="--vectreal-tour-steps: {{ camera_count }};"
+  >
+    <span class="vectreal-tour__column page-width" aria-hidden="true"></span>
+    <div class="vectreal-tour__runway">
+      <div class="vectreal-tour__stage">
+        <div class="vectreal-tour__frame">
+          {%- if section.settings.poster -%}
+            <img
+              class="vectreal-tour__poster"
+              src="{{ section.settings.poster | image_url: width: 1600 }}"
+              srcset="
+                {{ section.settings.poster | image_url: width: 800 }} 800w,
+                {{ section.settings.poster | image_url: width: 1600 }} 1600w
+              "
+              sizes="100vw"
+              alt="{{ section.settings.poster.alt | escape }}"
+              loading="lazy"
+              decoding="async"
+            >
+          {%- endif -%}
+          <iframe
+            class="vectreal-tour__scene"
+            title="3D-Ansicht: {{ product.title | escape }}"
+            allow="autoplay; xr-spatial-tracking"
+            allowfullscreen
+          ></iframe>
+          {%- if stations != blank -%}
+            <div class="vectreal-tour__captions" aria-live="polite">
+              <span class="vectreal-tour__progress" aria-hidden="true"></span>
+              <div class="vectreal-tour__caption-stack">
+                {%- for block in section.blocks -%}
+                  {%- assign camera = block.settings.camera | strip -%}
+                  {%- if camera == blank -%}{%- continue -%}{%- endif -%}
+                  <div
+                    class="vectreal-tour__caption"
+                    data-camera="{{ camera | escape }}"
+                    data-state="next"
+                    {{ block.shopify_attributes }}
+                  >
+                    <p class="vectreal-tour__index"></p>
+                    <h3 class="vectreal-tour__heading">{{ block.settings.heading | escape }}</h3>
+                    {%- if block.settings.text != blank -%}
+                      <p class="vectreal-tour__text">{{ block.settings.text | escape }}</p>
+                    {%- endif -%}
+                  </div>
+                {%- endfor -%}
+              </div>
+            </div>
+          {%- endif -%}
+          <button type="button" class="vectreal-tour__handover" data-handover>
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9"/>
+              <path d="M13.5 2.5v2.6h-2.6"/>
+            </svg>
+            {{- section.settings.handover_label | default: 'Selbst drehen' | escape -}}
+          </button>
+        </div>
+      </div>
+    </div>
+  </vectreal-scene-tour>
+</div>
+
+{% stylesheet %}
+  vectreal-scene-tour {
+    display: block;
+    --vectreal-tour-step-length: 100svh;
+    --vectreal-tour-lead: 20svh;
+    --vectreal-tour-tail: 60svh;
+    --vectreal-tour-open: 0;
+    --vectreal-tour-rest: 0.88;
+    --vectreal-tour-radius: var(--media-radius, 24px);
+    --vectreal-tour-ink: #111;
+    --vectreal-tour-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .vectreal-tour__column {
+    display: block;
+    height: 0;
+  }
+
+  .vectreal-tour {
+    padding-top: 36px;
+  }
+
+  .vectreal-tour__stage {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+
+  vectreal-scene-tour[data-mode='static'] .vectreal-tour__stage {
+    padding-inline: calc((1 - var(--vectreal-tour-rest)) * 50%);
+  }
+
+  .vectreal-tour__frame {
+    position: relative;
+    height: min(72svh, 120vw);
+    overflow: hidden;
+    clip-path: inset(0 round var(--vectreal-tour-radius));
+    background: color-mix(in srgb, currentColor 4%, transparent);
+  }
+
+  vectreal-scene-tour[data-mode='scroll'] .vectreal-tour__runway {
+    margin-top: calc(-1 * var(--header-height, 0px));
+    pointer-events: none;
+    height: calc(
+      100svh + var(--vectreal-tour-lead) + var(--vectreal-tour-steps) * var(--vectreal-tour-step-length) +
+        var(--vectreal-tour-tail)
+    );
+  }
+
+  vectreal-scene-tour[data-mode='scroll'] .vectreal-tour__stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    padding: var(--header-height, 0px) 0 0;
+  }
+
+  vectreal-scene-tour[data-mode='scroll'] .vectreal-tour__frame {
+    --vectreal-tour-closed: calc(1 - var(--vectreal-tour-open));
+    flex: 1;
+    height: auto;
+    pointer-events: auto;
+    clip-path: inset(0 round calc(var(--vectreal-tour-radius) / var(--vectreal-tour-rest) * var(--vectreal-tour-closed)));
+    transform-origin: top center;
+    transform: scale(calc(1 - (1 - var(--vectreal-tour-rest)) * var(--vectreal-tour-closed)));
+  }
+
+  .vectreal-tour__frame > :is(img, iframe) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .vectreal-tour__scene {
+    inset: -2px;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    color-scheme: light;
+  }
+
+  .vectreal-tour__poster {
+    z-index: 1;
+    object-fit: cover;
+    pointer-events: none;
+    transition:
+      opacity 700ms var(--vectreal-tour-ease),
+      transform 700ms var(--vectreal-tour-ease);
+  }
+
+  vectreal-scene-tour[data-state='ready'] .vectreal-tour__poster {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+
+  .vectreal-tour__captions {
+    position: absolute;
+    z-index: 1;
+    top: clamp(56px, 9%, 112px);
+    left: clamp(20px, 5%, 72px);
+    width: min(26rem, calc(100% - 40px));
+    color: var(--vectreal-tour-ink);
+    pointer-events: none;
+  }
+
+  vectreal-scene-tour[data-mode='scroll'] .vectreal-tour__captions {
+    opacity: var(--vectreal-tour-open);
+  }
+
+  /* Under the model, above the hand-over button; with reduced motion the
+     viewer's own camera switcher sits there instead, so the captions go up. */
+  @media screen and (max-width: 749px) {
+    vectreal-scene-tour[data-mode='scroll'] .vectreal-tour__captions {
+      top: auto;
+      bottom: 72px;
+    }
+
+    vectreal-scene-tour[data-mode='static'] .vectreal-tour__captions {
+      top: 20px;
+    }
+  }
+
+  .vectreal-tour__progress {
+    position: relative;
+    display: block;
+    width: 120px;
+    height: 1px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .vectreal-tour__progress::before,
+  .vectreal-tour__progress::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+  }
+
+  .vectreal-tour__progress::before {
+    opacity: 0.14;
+  }
+
+  .vectreal-tour__progress::after {
+    transform: scaleX(var(--vectreal-tour-progress, 0));
+    transform-origin: left;
+  }
+
+  vectreal-scene-tour:not([data-mode='scroll']) .vectreal-tour__progress {
+    display: none;
+  }
+
+  .vectreal-tour__caption-stack {
+    display: grid;
+  }
+
+  .vectreal-tour__caption {
+    grid-area: 1 / 1;
+    visibility: hidden;
+    transition: visibility 0s 320ms;
+  }
+
+  .vectreal-tour__caption > * {
+    margin: 0;
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(6px);
+    transition:
+      opacity 320ms ease,
+      transform 320ms ease,
+      filter 320ms ease;
+  }
+
+  .vectreal-tour__caption[data-state='past'] > * {
+    transform: translateY(-12px);
+  }
+
+  .vectreal-tour__caption[data-state='active'] {
+    visibility: visible;
+    transition: none;
+  }
+
+  .vectreal-tour__caption[data-state='active'] > * {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition:
+      opacity 700ms var(--vectreal-tour-ease) var(--vectreal-tour-enter),
+      transform 900ms var(--vectreal-tour-ease) var(--vectreal-tour-enter),
+      filter 700ms var(--vectreal-tour-ease) var(--vectreal-tour-enter);
+  }
+
+  .vectreal-tour__caption > :nth-child(1) {
+    --vectreal-tour-enter: 280ms;
+  }
+
+  .vectreal-tour__caption > :nth-child(2) {
+    --vectreal-tour-enter: 360ms;
+  }
+
+  .vectreal-tour__caption > :nth-child(3) {
+    --vectreal-tour-enter: 460ms;
+  }
+
+  .vectreal-tour__index {
+    font: 500 11px/1 var(--font-body-family, system-ui), sans-serif;
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.55;
+  }
+
+  .vectreal-tour__heading {
+    margin-top: 14px;
+    font-family: var(--font-heading-family, inherit);
+    font-weight: var(--font-heading-weight, 400);
+    font-size: clamp(24px, 1.6vw + 14px, 38px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+  }
+
+  .vectreal-tour__text {
+    margin-top: 12px;
+    max-width: 32ch;
+    font: 400 15px/1.5 var(--font-body-family, system-ui), sans-serif;
+    letter-spacing: 0.01em;
+    opacity: 0.7;
+  }
+
+  .vectreal-tour__handover {
+    position: absolute;
+    z-index: 2;
+    bottom: 8px;
+    left: 50%;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid rgb(0 0 0 / 0.08);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.72);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 1px 8px rgb(0 0 0 / 0.06);
+    color: var(--vectreal-tour-ink);
+    font: 400 13px/1 var(--font-body-family, system-ui), sans-serif;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transform: translateX(-50%);
+    transition:
+      opacity 500ms var(--vectreal-tour-ease),
+      transform 500ms var(--vectreal-tour-ease),
+      visibility 0s;
+  }
+
+  .vectreal-tour__handover:focus-visible {
+    outline: 2px solid var(--vectreal-tour-ink);
+    outline-offset: 2px;
+  }
+
+  vectreal-scene-tour:is(
+      :not([data-mode='scroll']),
+      :not([data-state='ready']),
+      :not([data-idle]),
+      [data-control='shopper']
+    )
+    .vectreal-tour__handover {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate(-50%, 12px);
+    transition:
+      opacity 200ms,
+      transform 200ms,
+      visibility 0s 200ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vectreal-tour__poster,
+    .vectreal-tour__handover,
+    .vectreal-tour__caption,
+    .vectreal-tour__caption > *,
+    .vectreal-tour__caption[data-state='active'] > * {
+      transition: none;
+    }
+
+    vectreal-scene-tour[data-state='ready'] .vectreal-tour__poster {
+      transform: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    if (customElements.get('vectreal-scene-tour')) return;
+
+    const SDK_URL = 'https://unpkg.com/@vctrl/embed@3.4.0/vectreal-embed.umd.js';
+    const SDK_INTEGRITY = 'sha384-DEUqw8eAVwFVPNnVMt34/QC3t2M+qFUc0+vH61BaWCCVTYMxx5cXu/QXbA6S403r';
+    const READY_TIMEOUT_MS = 120000;
+    const TOUR_TRANSITION = { type: 'object_avoidance', duration: 2000, easing: 'ease_out' };
+    const OPEN_TIME_CONSTANT_MS = 200;
+    const IDLE_MS = 1000;
+    const smootherstep = (t) => t * t * t * (t * (6 * t - 15) + 10);
+    const clamp01 = (t) => Math.min(1, Math.max(0, t));
+
+    let sdk;
+    const loadSdk = () =>
+      (sdk ??= new Promise((resolve, reject) => {
+        if (window.VectrealEmbed) return resolve(window.VectrealEmbed);
+        const script = document.createElement('script');
+        script.src = SDK_URL;
+        script.integrity = SDK_INTEGRITY;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => resolve(window.VectrealEmbed);
+        script.onerror = (error) => {
+          script.remove();
+          sdk = undefined;
+          reject(error);
+        };
+        document.head.append(script);
+      }));
+
+    const listOf = (value) =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    class VectrealSceneTour extends HTMLElement {
+      connectedCallback() {
+        this.runway = this.querySelector('.vectreal-tour__runway');
+        this.column = this.querySelector('.vectreal-tour__column');
+        this.scene = this.querySelector('iframe');
+        this.handover = this.querySelector('[data-handover]');
+        this.captions = [...this.querySelectorAll('.vectreal-tour__caption')];
+        this.tour = listOf(this.dataset.cameras);
+        this.touring = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.steps = undefined;
+        this.step = -1;
+        this.shownCamera = this.tour[0];
+        this.pendingFrame = 0;
+        this.openFrame = 0;
+        this.open = 0;
+        delete this.dataset.state;
+        this.removeAttribute('data-idle');
+        this.dataset.control = this.touring ? 'tour' : 'shopper';
+
+        this.onHandover = () => this.handOver();
+        this.onScroll = () => {
+          // Read now, before this frame's style writes: in a frame callback
+          // it would force the layout those writes invalidated.
+          this.runwayTop = this.runway.getBoundingClientRect().top;
+          this.pendingFrame ||= requestAnimationFrame(() => {
+            this.pendingFrame = 0;
+            this.followScroll(this.runwayTop);
+          });
+          this.removeAttribute('data-idle');
+          clearTimeout(this.idleTimer);
+          this.idleTimer = setTimeout(() => {
+            this.toggleAttribute('data-idle', this.openTarget === 1);
+          }, IDLE_MS);
+        };
+
+        // Sizes are read here, after layout, never in a scroll frame.
+        this.resizes = new ResizeObserver(() => {
+          this.measureColumn();
+          this.measureRunway();
+          if (this.touring) this.onScroll();
+        });
+
+        this.handover.addEventListener('click', this.onHandover);
+        this.resizes.observe(this.runway);
+        this.loader = new IntersectionObserver(
+          ([entry]) => entry.isIntersecting && this.load(),
+          { rootMargin: '50% 0px' }
+        );
+        this.loader.observe(this);
+        this.applyMode();
+      }
+
+      disconnectedCallback() {
+        this.loader.disconnect();
+        this.handover.removeEventListener('click', this.onHandover);
+        this.resizes.disconnect();
+        this.stopFollowing();
+        this.loading = null;
+        this.embed?.destroy();
+        this.embed = undefined;
+      }
+
+      async load() {
+        this.loader.disconnect();
+        const loading = (this.loading = {});
+        const src = this.sceneSrc();
+        if (!src) return this.fail('set the scene URL in the theme editor.');
+        this.scene.src = src;
+
+        try {
+          const { VectrealEmbed } = await loadSdk();
+          if (this.loading !== loading) return;
+          this.embed = new VectrealEmbed(this.scene, { readyTimeout: READY_TIMEOUT_MS });
+          const { cameras } = await this.embed.ready();
+          if (this.loading === loading) this.start(cameras);
+        } catch (error) {
+          if (this.loading === loading) this.fail('the scene did not load.', error);
+        }
+      }
+
+      sceneSrc() {
+        try {
+          const url = new URL(this.dataset.sceneUrl);
+          url.searchParams.set('autoRotate', '0');
+          if (this.touring) url.searchParams.set('cameraControls', '0');
+          // The stations' captions say what the hotspots would.
+          if (this.captions.length > 0) url.searchParams.set('hotspots', '0');
+          if (this.tour.length > 0) url.searchParams.set('camera', this.tour[0]);
+          return url.href;
+        } catch {
+          return null;
+        }
+      }
+
+      fail(reason, error) {
+        console.warn(`Vectreal scene tour: ${reason}`, error ?? '');
+        this.embed?.destroy();
+        this.embed = undefined;
+        this.dataset.state = 'failed';
+        this.touring = false;
+        this.applyMode();
+      }
+
+      start(cameras) {
+        const sceneCameras = new Set(cameras.map((camera) => camera.id));
+        // A station carries its own camera, so two stations may share one.
+        const planned =
+          this.captions.length > 0
+            ? this.captions.map((caption) => ({ camera: caption.dataset.camera, caption }))
+            : (this.tour.length > 0 ? this.tour : [...sceneCameras]).map((camera) => ({ camera }));
+        const ids = planned.map((step) => step.camera);
+        const unknown = ids.filter((id) => !sceneCameras.has(id));
+        if (unknown.length > 0) {
+          console.warn(`Vectreal scene tour: the scene has no camera ${unknown.join(', ')}.`);
+        }
+        this.steps = planned.filter((step) => sceneCameras.has(step.camera));
+        const captioned = this.steps.filter((step) => step.caption);
+        captioned.forEach(({ caption }, index) => {
+          caption.querySelector('.vectreal-tour__index').textContent =
+            `${String(index + 1).padStart(2, '0')} / ${String(captioned.length).padStart(2, '0')}`;
+        });
+        this.showCaption(this.steps[0]?.caption);
+        this.style.setProperty('--vectreal-tour-steps', String(this.steps.length));
+        if (this.steps.length === 0) {
+          this.touring = false;
+          this.dataset.control = 'shopper';
+        }
+
+        this.embed.on('camera_changed', ({ cameraId }) => {
+          if (this.dataset.mode === 'static') {
+            this.showCaption(this.steps.find((step) => step.camera === cameraId)?.caption);
+          }
+        });
+        this.embed.setZoomEnabled(false);
+        this.embed.setControlsEnabled(this.dataset.control === 'shopper');
+        if (this.touring) this.embed.setTransition(TOUR_TRANSITION);
+        this.dataset.state = 'ready';
+        this.applyMode();
+      }
+
+      applyMode() {
+        this.dataset.mode = this.touring ? 'scroll' : 'static';
+        if (this.touring) {
+          window.addEventListener('scroll', this.onScroll, { passive: true });
+          this.measureRunway();
+          this.followScroll(this.runway.getBoundingClientRect().top);
+        } else {
+          this.stopFollowing();
+          this.style.removeProperty('--vectreal-tour-open');
+        }
+      }
+
+      stopFollowing() {
+        window.removeEventListener('scroll', this.onScroll);
+        cancelAnimationFrame(this.pendingFrame);
+        cancelAnimationFrame(this.openFrame);
+        clearTimeout(this.idleTimer);
+        this.removeAttribute('data-idle');
+        this.pendingFrame = 0;
+        this.openFrame = 0;
+      }
+
+      measureColumn() {
+        const column = getComputedStyle(this.column);
+        const columnWidth =
+          this.column.clientWidth - parseFloat(column.paddingLeft) - parseFloat(column.paddingRight);
+        const fullWidth = this.runway.clientWidth;
+        if (columnWidth < fullWidth) {
+          this.style.setProperty('--vectreal-tour-rest', (columnWidth / fullWidth).toFixed(4));
+        }
+      }
+
+      measureRunway() {
+        const stageHeight = this.runway.firstElementChild.offsetHeight;
+        // Hidden (a closed tab, say): nothing to follow until the observer sees a size.
+        if (stageHeight === 0) {
+          this.geometry = undefined;
+          return;
+        }
+        const style = getComputedStyle(this);
+        const svh = stageHeight / 100;
+        this.geometry = {
+          stageHeight,
+          travel: this.runway.offsetHeight - stageHeight,
+          lead: parseFloat(style.getPropertyValue('--vectreal-tour-lead')) * svh,
+          tail: parseFloat(style.getPropertyValue('--vectreal-tour-tail')) * svh,
+        };
+      }
+
+      /** `top` is the runway's top edge in the viewport. */
+      followScroll(top) {
+        if (!this.geometry) return;
+        const { stageHeight, travel, lead, tail } = this.geometry;
+
+        const opening = 1 - top / (stageHeight * 0.8);
+        const closing = (top + travel) / (tail * 0.7);
+        this.openTarget = smootherstep(clamp01(Math.min(opening, closing)));
+        this.followOpen();
+
+        if (!this.steps?.length) return;
+        const tourTravel = travel - lead - tail;
+        const progress = tourTravel > 0 ? clamp01((-top - lead) / tourTravel) : 0;
+        this.style.setProperty('--vectreal-tour-progress', progress.toFixed(3));
+        const step = Math.min(this.steps.length - 1, Math.floor(progress * this.steps.length));
+        if (step === this.step) return;
+        if (this.dataset.control === 'shopper') this.takeBack();
+        this.showStep(step);
+      }
+
+      followOpen() {
+        this.openFrame ||= requestAnimationFrame((now) => {
+          this.openFrame = 0;
+          const elapsed = Math.min(100, now - (this.openFrameTime ?? now));
+          this.openFrameTime = now;
+          const gap = this.openTarget - this.open;
+          const follow = 1 - Math.exp(-elapsed / OPEN_TIME_CONSTANT_MS);
+          this.open = Math.abs(gap) < 0.001 ? this.openTarget : this.open + gap * follow;
+          this.style.setProperty('--vectreal-tour-open', this.open.toFixed(3));
+          if (this.open !== this.openTarget) this.followOpen();
+          else this.openFrameTime = undefined;
+        });
+      }
+
+      showStep(step) {
+        this.step = step;
+        const { camera, caption } = this.steps[step];
+        if (camera !== this.shownCamera) this.embed.activateCamera(camera);
+        this.shownCamera = camera;
+        this.showCaption(caption);
+      }
+
+      /** Shows one station's caption, or none for a camera no station names. */
+      showCaption(shown) {
+        const active = shown ? this.captions.indexOf(shown) : this.captions.length;
+        this.captions.forEach((caption, index) => {
+          caption.dataset.state = index < active ? 'past' : index === active ? 'active' : 'next';
+        });
+      }
+
+      handOver() {
+        this.dataset.control = 'shopper';
+        this.shownCamera = undefined;
+        this.embed?.setControlsEnabled(true);
+        this.scene.focus({ preventScroll: true });
+      }
+
+      takeBack() {
+        this.dataset.control = 'tour';
+        this.embed?.setControlsEnabled(false);
+      }
+    }
+
+    customElements.define('vectreal-scene-tour', VectrealSceneTour);
+  })();
+{% endjavascript %}
+
+{% schema %}
+{
+  "name": "Vectreal 3D-Szene",
+  "tag": "section",
+  "class": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": [
+    {
+      "type": "text",
+      "id": "scene_url",
+      "label": "Embed-URL der Szene",
+      "info": "Aus dem Embed-Bereich der Szene in Vectreal: https://vectreal.com/embed/…?token=… Leer gelassen gilt das Metafeld vectreal.scene_url des Produkts."
+    },
+    {
+      "type": "text",
+      "id": "cameras",
+      "label": "Kameras der Tour",
+      "info": "Kamera-IDs in der Reihenfolge der Tour, durch Kommas getrennt. Leer lassen für alle Kameras der Szene. Stationen (Blöcke) haben Vorrang."
+    },
+    {
+      "type": "image_picker",
+      "id": "poster",
+      "label": "Vorschaubild",
+      "info": "Steht da, bis die 3D-Szene geladen ist."
+    },
+    {
+      "type": "text",
+      "id": "handover_label",
+      "label": "Schaltfläche am Ende der Tour",
+      "default": "Selbst drehen"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Station",
+      "settings": [
+        {
+          "type": "text",
+          "id": "camera",
+          "label": "Kamera-ID",
+          "info": "Die Kamera der Szene, die diese Station zeigt."
+        },
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Überschrift"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Text"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "Vectreal 3D-Szene"
+    }
+  ]
+}
+{% endschema %}

@@ -84,6 +84,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 | `?hotspots=0` | `0` to hide | Draws no markers. The hotspots stay reachable through `focusHotspot` and still appear in `ready()` |
 | `?hotspotContent=0` | `0` to suppress | Keeps the markers, and the clicks, but draws no card. A click still flies the camera and still emits `hotspot_activated`, which is how your own panel knows to open. `focusHotspot` draws no card in this mode either |
 | `?cameraControls=0` | `0` to hide | Draws no camera switcher. The viewer shows one when the scene has two or more scene cameras (a hotspot's own camera does not count) and the author has not turned it off (the Camera tool's **Camera switcher** setting); turn it off when your page switches cameras itself with `activateCamera`, so two controls do not compete |
+| `?hint=0` | `0` to hide | Shows no first-time hint on how to move the scene. The viewer shows one when the author left **Show how to interact** on; turn it off when your page explains the controls itself |
 | `?hotspotColor=<hex>` | A URL-encoded hex colour, e.g. `%23fc6c18` | Sets the marker fill. Hex only; any other CSS value is ignored. The step numeral stays dark ink, so a dark or saturated fill makes it unreadable and an iframe cannot override the ink token - keep the fill light |
 | `?theme=<mode>` | `light`, `dark`, `system` | Color scheme for the viewer's chrome. Defaults to `system`, which follows the visitor's browser setting - set it explicitly when your page forces a scheme of its own |
 
@@ -95,7 +96,7 @@ For zero-JavaScript initial configuration, add parameters to the iframe `src`:
 ></iframe>
 ```
 
-`?camera`, `?autoRotate` and `?transition` apply once, when the viewer loads and before `ready()` resolves, so a camera your page asks for afterwards replaces the one in the URL. `?theme`, `?cameraControls` and the three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
+`?camera`, `?autoRotate` and `?transition` apply once, when the viewer loads and before `ready()` resolves, so a camera your page asks for afterwards replaces the one in the URL. `?theme`, `?cameraControls`, `?hint` and the three hotspot parameters are not applied at a moment at all - they describe how the viewer renders for as long as it is loaded, which is why suppressing the markers does not make them flash on screen first.
 
 None of them persists to the stored scene configuration.
 
@@ -130,6 +131,7 @@ other origin are dropped.
 | `setAutoRotate` | `(enabled: boolean, speed?: number) => void` | Toggle auto-rotate. |
 | `setZoomEnabled` | `(enabled: boolean) => void` | Toggle scroll-zoom. |
 | `setPanEnabled` | `(enabled: boolean) => void` | Toggle right-click pan. |
+| `setInteractionHint` | `(enabled: boolean) => void` | Show or withhold the first-time hint on how to move the scene. Off removes one already on screen; on shows it only if it has not appeared yet. |
 | `setAnimationPlaying` | `(playing: boolean) => void` | Start or suspend animation playback. |
 | `restartAnimation` | `() => void` | Play the animation program from the beginning. |
 | `seekAnimationClip` | `(clipId: string, time: number) => void` | Move one clip to a time offset in seconds. Clip ids arrive with the `animation_state_changed` and `animation_clip_finished` events. A negative or non-finite time is dropped. |

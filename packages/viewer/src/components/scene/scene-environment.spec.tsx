@@ -25,6 +25,13 @@ const { Environment, clearEnvironment, useRoomEnvironment, room } = vi.hoisted(
 )
 
 let loadFiles: (files: unknown) => void = () => undefined
+/** The renderer of the canvas the environment is rendered in. */
+let canvasGl: object = {}
+
+vi.mock('@react-three/fiber', () => ({
+	useThree: (select: (state: { gl: object }) => unknown) =>
+		select({ gl: canvasGl })
+}))
 
 vi.mock('@react-three/drei', () => ({
 	Environment: (props: Record<string, unknown>) => {
@@ -127,6 +134,39 @@ afterEach(() => {
 })
 
 describe('SceneEnvironment', () => {
+	it('loads a compressed map under its own URL in every canvas after the first', () => {
+		// A gain map decodes into one renderer's render target, and drei caches
+		// a map by URL alone, so a second canvas must not share the entry.
+		const files = 'https://maps.example/studio_natural_1k.jpg'
+		const first = {}
+		const second = {}
+		canvasGl = first
+		const onLoaded = vi.fn()
+		// A new callback each time, so the memoized environment renders again.
+		const { rerenderWith } = renderEnvironment({ files, onLoaded })
+		canvasGl = second
+		rerenderWith({ files, onLoaded: (list) => onLoaded(list) })
+		canvasGl = first
+		rerenderWith({ files, onLoaded: (list) => onLoaded(list) })
+
+		const [inFirst, inSecond, inFirstAgain] = requestedFiles()
+		expect(inFirst).toBe(files)
+		expect(inSecond).toMatch(
+			/^https:\/\/maps\.example\/studio_natural_1k\.jpg\?canvas=\d+$/
+		)
+		expect(inFirstAgain).toBe(files)
+		// Callers hear of the map as the scene names it.
+		expect(onLoaded).toHaveBeenCalledWith([files])
+	})
+
+	it('loads an HDR under one URL in every canvas: its pixels upload anywhere', () => {
+		canvasGl = {}
+		const { rerenderWith } = renderEnvironment({ files: '/env/studio.hdr' })
+		canvasGl = {}
+		rerenderWith({ files: '/env/studio.hdr', onLoaded: () => undefined })
+		expect(new Set(requestedFiles())).toEqual(new Set(['/env/studio.hdr']))
+	})
+
 	it("loads the scene's own map with its backdrop, and no room", () => {
 		renderEnvironment({ files: '/env/studio.hdr', background: true })
 

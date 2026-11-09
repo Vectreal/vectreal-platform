@@ -24,7 +24,11 @@ const viewer = readFileSync(
 describe('environment prefetch', () => {
 	it('loads the scene environment from the shared URL rule', () => {
 		expect(environment).toContain(
-			'const files = resolveEnvironmentFiles(environment)'
+			'const sceneFiles = resolveEnvironmentFiles(environment)'
+		)
+		// The same URL in the first canvas; see useCanvasEnvironmentFiles.
+		expect(environment).toContain(
+			'const files = useCanvasEnvironmentFiles(sceneFiles)'
 		)
 		expect(environment).toContain('files={files}')
 	})
