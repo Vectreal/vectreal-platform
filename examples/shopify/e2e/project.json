@@ -1,8 +1,8 @@
 {
 	"name": "shopify-section-e2e",
-	"$schema": "../../node_modules/nx/schemas/project-schema.json",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
 	"projectType": "application",
-	"sourceRoot": "packages/shopify-section-e2e/src",
+	"sourceRoot": "examples/shopify/e2e/src",
 	"implicitDependencies": ["vctrl/embed"],
 	"tags": ["scope:e2e"],
 	"targets": {
@@ -10,7 +10,7 @@
 			"executor": "nx:run-commands",
 			"continuous": true,
 			"options": {
-				"command": "node --watch packages/shopify-section-e2e/src/server.ts",
+				"command": "node --watch examples/shopify/e2e/src/server.ts",
 				"cwd": "{workspaceRoot}",
 				"env": {
 					"SHOPIFY_HARNESS_LIVE": "1"
@@ -21,7 +21,7 @@
 			"executor": "nx:run-commands",
 			"cache": false,
 			"options": {
-				"command": "playwright test -c packages/shopify-section-e2e/playwright.config.ts",
+				"command": "playwright test -c examples/shopify/e2e/playwright.config.ts",
 				"cwd": "{workspaceRoot}"
 			}
 		},
@@ -30,9 +30,9 @@
 			"outputs": ["{options.outputFile}"],
 			"options": {
 				"lintFilePatterns": [
-					"packages/shopify-section-e2e/src/*.ts",
-					"packages/shopify-section-e2e/tests/**/*.ts",
-					"packages/shopify-section-e2e/*.ts"
+					"examples/shopify/e2e/src/*.ts",
+					"examples/shopify/e2e/tests/**/*.ts",
+					"examples/shopify/e2e/*.ts"
 				]
 			}
 		},
@@ -40,7 +40,7 @@
 			"executor": "nx:run-commands",
 			"outputs": [],
 			"options": {
-				"cwd": "packages/shopify-section-e2e",
+				"cwd": "examples/shopify/e2e",
 				"command": "tsc --noEmit -p tsconfig.json"
 			}
 		}

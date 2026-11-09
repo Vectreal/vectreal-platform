@@ -22,8 +22,8 @@ export default defineConfig({
 		trace: 'retain-on-failure'
 	},
 	webServer: {
-		command: 'node packages/shopify-section-e2e/src/server.ts',
-		cwd: join(__dirname, '../..'),
+		command: 'node examples/shopify/e2e/src/server.ts',
+		cwd: join(__dirname, '../../..'),
 		url: `http://127.0.0.1:${HARNESS_PORT}/`,
 		reuseExistingServer: true
 	},

@@ -7,7 +7,7 @@ import { Liquid, Tag, type TagToken, type TopLevelToken } from 'liquidjs'
 
 import { HARNESS_PORT, HARNESS_STEPS } from './harness.ts'
 
-const SHOPIFY_DIR = join(import.meta.dirname, '../../embed/shopify')
+const SHOPIFY_DIR = join(import.meta.dirname, '../..')
 const SECTION_FILE = join(SHOPIFY_DIR, 'vectreal-scene-tour.liquid')
 const SNIPPET_FILE = join(SHOPIFY_DIR, 'vectreal-gallery-slide.liquid')
 const PAGE_FILE = join(import.meta.dirname, 'product-page.liquid')
