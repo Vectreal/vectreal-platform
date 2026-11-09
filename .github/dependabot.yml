@@ -106,6 +106,14 @@ updates:
         update-types: ['version-update:semver-minor']
       - dependency-name: '@types/three'
         update-types: ['version-update:semver-minor']
+      # vite pins rolldown exactly, and every vite after 8.3.4 brings a
+      # rolldown whose chunking puts three.js on every route's first load via
+      # vendor-postprocessing (about 906 KB gz against a 395 KB budget). Held
+      # until the manualChunks rules in apps/vectreal-platform/vite.config.ts
+      # hold under it.
+      - dependency-name: 'vite'
+        update-types:
+          ['version-update:semver-patch', 'version-update:semver-minor']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
