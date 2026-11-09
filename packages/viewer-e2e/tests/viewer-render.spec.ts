@@ -143,12 +143,15 @@ test('a keyboard or screen reader user can find and turn the viewer', async ({
 	await page.keyboard.press('Tab')
 	await expect(viewer).toBeFocused()
 
-	const canvas = viewer.locator('canvas')
-	const still = await canvas.screenshot()
+	// Read from the camera, not from screenshots: a screenshot costs whatever
+	// the chrome over the canvas costs to composite, and under software GL on a
+	// CI runner one took longer than the poll.
+	const cameraPosition = () =>
+		page.evaluate(async () => (await window.__CAMERA__?.())?.position ?? null)
+	const still = await cameraPosition()
+	expect(still).not.toBeNull()
 	await page.keyboard.press('ArrowLeft')
-	await expect
-		.poll(async () => (await canvas.screenshot()).equals(still))
-		.toBe(false)
+	await expect.poll(cameraPosition).not.toEqual(still)
 	await expect(viewer).toBeFocused()
 
 	// Home flies back to the camera in use, which the host hears about.

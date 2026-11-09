@@ -231,6 +231,9 @@ export default function App() {
 					controlsOptions={{ autoRotate: false }}
 					hotspots={E2E_HOTSPOTS}
 					cameraOptions={E2E_CAMERAS}
+					onCameraSnapshotCaptureReady={(capture) => {
+						window.__CAMERA__ = capture ?? undefined
+					}}
 					onInteractionEvent={(event) => {
 						// The scene has framed and drawn: what the markers wait for.
 						if (event.type === 'viewer_ready') window.__VIEWER_READY__ = true

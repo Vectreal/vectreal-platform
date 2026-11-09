@@ -20,6 +20,7 @@ DNS records additionally require `cloudflare_zone_id` to be set.
 - Fly.io apps and deployments (see `apps/vectreal-platform/fly.toml` and the [Deployment docs](https://vectreal.com/docs/self-hosting/deployment))
 - Supabase project, database, and storage
 - Application secrets (synced to Fly.io by `scripts/setup-fly-secrets.sh`)
+- The public GCS bucket `environment-maps`, which hosts the HDR environment maps every scene loads. Its objects' encoding and caching are set by `scripts/compress-environment-maps.sh`
 
 There are no GCP resources (Cloud Run, GCS buckets, Artifact Registry, IAM, service accounts) provisioned by this configuration.
 

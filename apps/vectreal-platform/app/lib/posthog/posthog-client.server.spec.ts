@@ -112,10 +112,11 @@ describe('getPosthogClient', () => {
   `import.meta.env` whole makes Vite inline every VITE_ variable).
 */
 describe('the browser entry', () => {
+	// Behind the third-party check too: see `third-party-surface.ts`.
 	it('initializes PostHog only behind the shared switch', () => {
 		const source = readFileSync(join(APP_ROOT, 'app/entry.client.tsx'), 'utf8')
 		expect(source).toMatch(
-			/if \(\s*isPosthogEnabled\(\{\s*dev: import\.meta\.env\.DEV,\s*flag: import\.meta\.env\.VITE_PUBLIC_POSTHOG_ENABLED\s*\}\)\s*\)\s*\{\s*posthog\.init\(/
+			/if \(\s*!isThirdPartySurface\(window\.location\.pathname\) &&\s*isPosthogEnabled\(\{\s*dev: import\.meta\.env\.DEV,\s*flag: import\.meta\.env\.VITE_PUBLIC_POSTHOG_ENABLED\s*\}\)\s*\)\s*\{\s*posthog\.init\(/
 		)
 	})
 })
