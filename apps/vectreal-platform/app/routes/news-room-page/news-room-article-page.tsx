@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { ScrollArea } from '@shared/components/ui/scroll-area'
@@ -26,6 +25,7 @@ import {
 	getNewsArticle,
 	getRelatedNewsArticles
 } from '../../lib/news/news-manifest.server'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { buildPageMeta, SITE_URL } from '../../lib/seo'
 import {
 	buildAuthorPersonJsonLd,

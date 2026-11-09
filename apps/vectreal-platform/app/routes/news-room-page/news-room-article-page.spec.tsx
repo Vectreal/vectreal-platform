@@ -8,11 +8,24 @@ import {
 	getNewsArticles,
 	getRelatedNewsArticles
 } from '../../lib/news/news-manifest.server'
+import { PostHogProvider } from '../../lib/posthog/posthog-react'
 
 const capture = vi.fn()
 // One client, as the real hook returns: a fresh object would re-run every effect.
 const client = { capture }
-vi.mock('@posthog/react', () => ({ usePostHog: () => client }))
+// Set by the test that delivers PostHog late, through the real provider.
+let readsProvider = false
+vi.mock('../../lib/posthog/posthog-react', async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import('../../lib/posthog/posthog-react')>()
+	return {
+		...actual,
+		usePostHog: () => {
+			const provided = actual.usePostHog()
+			return readsProvider ? provided : client
+		}
+	}
+})
 // jsdom has no matchMedia; the table of contents rebuilds on the nav breakpoint.
 vi.mock('@shared/components/hooks/use-mobile', () => ({
 	useIsMobile: () => false
@@ -148,5 +161,61 @@ describe('a newsroom article followed from another', () => {
 				(props) => props.milestone_percent
 			)
 		).toEqual([25, 50, 75, 100])
+	})
+})
+
+/*
+  PostHog loads after hydration (`posthog-browser.ts`). What happened before
+  it arrived is reported when it does, not marked as seen and dropped.
+*/
+describe('a newsroom article read before PostHog has loaded', () => {
+	afterEach(() => {
+		cleanup()
+		readsProvider = false
+	})
+
+	it('reports the view and the milestones already passed, once', async () => {
+		capture.mockClear()
+		readsProvider = true
+		Object.defineProperty(document.documentElement, 'scrollHeight', {
+			configurable: true,
+			value: 2000
+		})
+		Object.defineProperty(window, 'innerHeight', {
+			configurable: true,
+			value: 1000
+		})
+		scrollTo(0)
+		const [article] = getNewsArticles()
+		let arrive: (value: typeof client) => void = () => {}
+		const loaded = new Promise<typeof client>((resolve) => {
+			arrive = resolve
+		})
+		const Stub = createRoutesStub([
+			{
+				path: '/news-room/:slug',
+				Component: NewsRoomArticlePage as never,
+				loader: loader as never
+			}
+		])
+
+		await act(async () => {
+			render(
+				<PostHogProvider client={loaded as never}>
+					<Stub initialEntries={[`/news-room/${article.slug}`]} />
+				</PostHogProvider>
+			)
+		})
+		act(() => scrollTo(300))
+		expect(capture).not.toHaveBeenCalled()
+
+		await act(async () => arrive(client))
+
+		expect(eventsFor('newsroom_article_viewed', article.slug)).toHaveLength(1)
+		expect(
+			eventsFor('newsroom_article_scroll_milestone', article.slug).map(
+				(props) => props.milestone_percent
+			)
+		).toEqual([25])
 	})
 })

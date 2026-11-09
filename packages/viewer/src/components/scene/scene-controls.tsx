@@ -1,4 +1,5 @@
 import { OrbitControls } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import { ControlsProps } from '@vctrl/core'
 import {
 	memo,
@@ -46,13 +47,19 @@ export const defaultControlsOptions = {
  * SceneControls component that enables orbit controls after a specified timeout.
  */
 const SceneControls = memo((props: SceneControlsProps) => {
-	const { controlsTimeout, onViewChange, onChange, enabledOverride, ...rest } =
-		{
-			...defaultControlsOptions,
-			...props,
-			// A model turning by itself is motion the visitor did not start.
-			autoRotate: props.autoRotate === true && !prefersReducedMotion()
-		}
+	const {
+		controlsTimeout,
+		focusOnDoubleClick: _viewerOwnsDoubleClick,
+		onViewChange,
+		onChange,
+		enabledOverride,
+		...rest
+	} = {
+		...defaultControlsOptions,
+		...props,
+		// A model turning by itself is motion the visitor did not start.
+		autoRotate: props.autoRotate === true && !prefersReducedMotion()
+	}
 
 	const mountedRef = useRef(false)
 	const [isControlsEnabled, setIsControlsEnabled] = useState(
@@ -113,10 +120,25 @@ const SceneControls = memo((props: SceneControlsProps) => {
 		[onChange, reportView]
 	)
 
+	const enabled = enabledOverride ?? isControlsEnabled
+
+	/*
+	  OrbitControls claims every touch on the element it connects to
+	  (`touch-action: none`), claims it again on every reconnect, and keeps the
+	  claim while disabled, so a host that turns the controls off to drive the
+	  camera itself still trapped the page's scroll. Controls that turn nothing
+	  hand the touch back, on whichever element drei connected them to.
+	*/
+	const connectedElement = useThree((state) => state.events.connected)
+	useEffect(() => {
+		const element = controlsRef.current?.domElement
+		if (element) element.style.touchAction = enabled ? 'none' : ''
+	}, [enabled, connectedElement])
+
 	return (
 		<OrbitControls
 			ref={controlsRef}
-			enabled={enabledOverride ?? isControlsEnabled}
+			enabled={enabled}
 			{...rest}
 			onChange={handleChange}
 		/>

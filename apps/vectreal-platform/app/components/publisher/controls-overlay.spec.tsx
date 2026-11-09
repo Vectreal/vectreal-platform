@@ -38,7 +38,6 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 vi.mock('@shared/components/hooks/use-mobile', () => ({
 	useIsMobile: () => false
 }))
-vi.mock('posthog-js', () => ({ default: { reset: vi.fn() } }))
 vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
 }))

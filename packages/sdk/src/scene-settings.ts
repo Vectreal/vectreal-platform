@@ -56,6 +56,7 @@ export const sceneBoundsSchema = z.object({
 
 export const sceneControlsSchema = z.object({
 	controlsTimeout: nonNegative.optional(),
+	focusOnDoubleClick: z.boolean().optional(),
 	makeDefault: z.boolean().optional(),
 	enableRotate: z.boolean().optional(),
 	enableZoom: z.boolean().optional(),

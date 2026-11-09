@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
@@ -18,6 +17,7 @@ import { Link, useLocation } from 'react-router'
 import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { isPaidPlan } from '../../constants/plan-config'
 import { PLAN_DISPLAY_NAMES } from '../../constants/product-copy'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { upgradeModalAtom } from '../../lib/stores/upgrade-modal-store'
 
 import type { UpgradeModalDenialReason } from '../../lib/stores/upgrade-modal-store'

@@ -4,7 +4,7 @@ import {
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
 import { useAtom } from 'jotai/react'
-import { Gauge, RotateCw, SlidersHorizontal, ZoomIn } from 'lucide-react'
+import { Focus, Gauge, RotateCw, SlidersHorizontal, ZoomIn } from 'lucide-react'
 import { memo, useCallback, useState } from 'react'
 
 import {
@@ -108,6 +108,15 @@ const InteractionControlsSettingsPanel = memo(() => {
 						icon={<RotateCw />}
 						checked={!!controls.autoRotate}
 						onCheckedChange={(enabled) => setControl('autoRotate', enabled)}
+					/>
+					<Toggle
+						layout="tile"
+						label="Double-click focus"
+						icon={<Focus />}
+						checked={!!controls.focusOnDoubleClick}
+						onCheckedChange={(enabled) =>
+							setControl('focusOnDoubleClick', enabled)
+						}
 					/>
 				</div>
 

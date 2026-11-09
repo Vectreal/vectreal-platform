@@ -58,6 +58,14 @@ jobs:
       SUPABASE_URL: https://build.invalid
       SUPABASE_KEY: build-only-supabase-key
       STRIPE_SECRET_KEY: sk_test_build_only
+      # The browser bundle inlines these, so without them `build-ci`'s route
+      # budget measures a smaller bundle than the Docker build ships: #1292
+      # passed here and failed the deploy by 0.1 KB. The hosts are the
+      # Dockerfile's defaults and the token is a placeholder the length of a
+      # real one; the deploy reads the real values from secrets.
+      VITE_PUBLIC_POSTHOG_TOKEN: phc_build0only0placeholder000000000000000000000
+      VITE_PUBLIC_POSTHOG_HOST: https://go.vectreal.com
+      VITE_PUBLIC_POSTHOG_UI_HOST: https://eu.posthog.com
     steps:
       - uses: actions/checkout@v7
         with:

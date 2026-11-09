@@ -85,7 +85,10 @@ export const defaultControlsOptions: ControlsProps = {
 	enableZoom: true,
 	enableDamping: true,
 	...INTERACTION_FEELS.balanced,
-	makeDefault: true
+	makeDefault: true,
+	// On for a new scene. One saved before it has controls without the field,
+	// which the viewer reads as off.
+	focusOnDoubleClick: true
 }
 
 /*
