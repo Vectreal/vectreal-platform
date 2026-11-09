@@ -20,6 +20,7 @@ describe('isViewerCommand', () => {
 		{ type: 'set_auto_rotate', enabled: true, speed: 0.5 },
 		{ type: 'set_controls_options', zoom: true },
 		{ type: 'set_controls_options', pan: false },
+		{ type: 'set_interaction_hint', enabled: false },
 		{ type: 'set_transition', transitionType: 'linear' },
 		{ type: 'set_animation_playing', playing: true },
 		{ type: 'set_animation_playing', playing: false },
@@ -41,6 +42,8 @@ describe('isViewerCommand', () => {
 		{ type: 'unknown_command' },
 		{ type: 'activate_camera', cameraId: '  ' },
 		{ type: 'set_transition', transitionType: 'warp' },
+		{ type: 'set_interaction_hint' },
+		{ type: 'set_interaction_hint', enabled: 'no' },
 		// Animation-specific rejections.
 		{ type: 'set_animation_playing' },
 		{ type: 'set_animation_playing', playing: 'yes' },

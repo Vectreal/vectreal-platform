@@ -17,6 +17,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFetcher } from 'react-router'
 import { toast } from 'sonner'
 
+import { sceneDownloadBytes } from '../../lib/domain/scene/scene-environment-bytes'
+
 import type { ScenePublishStateResponse } from '../../types/api'
 
 type MutationEnvelope = {
@@ -31,6 +33,11 @@ type MutationEnvelope = {
 
 interface ScenePublishStateControlProps {
 	publishState: ScenePublishStateResponse
+	/**
+	 * What the scene's environment map adds to a visitor's download, when its
+	 * size is known.
+	 */
+	environmentMapBytes?: number | null
 	onPublish: () =>
 		Promise<ScenePublishStateResponse | void> | ScenePublishStateResponse | void
 	publishButtonText?: string
@@ -49,6 +56,7 @@ interface ScenePublishStateControlProps {
 
 export function ScenePublishStateControl({
 	publishState,
+	environmentMapBytes = null,
 	onPublish,
 	publishButtonText = 'Publish Scene',
 	republishButtonText = 'Republish Scene',
@@ -122,6 +130,11 @@ export function ScenePublishStateControl({
 	const effectivePublishState = optimisticState ?? publishState
 
 	const isPublished = effectivePublishState.status === 'published'
+	// What a visitor downloads: the published model and its environment map.
+	const downloadBytes = sceneDownloadBytes(
+		effectivePublishState.publishedAssetSizeBytes,
+		environmentMapBytes
+	)
 	const isPublishBusy = isRunningPublishAction || isPublishActionPending
 	const isMutationBusy = revokeFetcherState !== 'idle' || isPublishBusy
 	const canPublish = !isPublishActionDisabled && !isMutationBusy
@@ -213,10 +226,13 @@ export function ScenePublishStateControl({
 						exit={{ opacity: 0, y: -2 }}
 						className="text-muted-foreground text-xs"
 					>
-						Published GLB size:{' '}
-						{typeof effectivePublishState.publishedAssetSizeBytes === 'number'
-							? formatFileSize(effectivePublishState.publishedAssetSizeBytes)
-							: '-'}
+						Download size:{' '}
+						{downloadBytes === null ? '-' : formatFileSize(downloadBytes)}
+						{environmentMapBytes !== null && downloadBytes !== null && (
+							<>
+								, with the {formatFileSize(environmentMapBytes)} environment map
+							</>
+						)}
 					</motion.p>
 				)}
 			</AnimatePresence>

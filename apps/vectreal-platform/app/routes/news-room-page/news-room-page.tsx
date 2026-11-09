@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { Button } from '@shared/components/ui/button'
 import { ArrowRight, Search, SearchX } from 'lucide-react'
 import { useEffect, useRef } from 'react'
@@ -20,6 +19,7 @@ import {
 	getNewsArticles,
 	getNewsCategories
 } from '../../lib/news/news-manifest.server'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { buildPageMeta, SITE_URL } from '../../lib/seo'
 import {
 	buildCollectionPageJsonLd,

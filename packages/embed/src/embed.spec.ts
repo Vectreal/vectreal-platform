@@ -115,6 +115,26 @@ describe('VectrealEmbed.returnToSceneView', () => {
 	})
 })
 
+describe('VectrealEmbed.setInteractionHint', () => {
+	it('sends a command the frame accepts', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		pong(own, 'scene-a')
+		viewerReady(own)
+
+		const post = vi.spyOn(own.contentWindow as Window, 'postMessage')
+		embed.setInteractionHint(false)
+
+		const message = post.mock.calls.at(-1)?.[0] as { command: unknown }
+		expect(message.command).toEqual({
+			type: 'set_interaction_hint',
+			enabled: false
+		})
+		expect(isViewerCommand(message.command)).toBe(true)
+		embed.destroy()
+	})
+})
+
 describe('VectrealEmbed.seekAnimationClip', () => {
 	it('sends a command the frame accepts', () => {
 		const own = iframe('scene-a')

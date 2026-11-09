@@ -475,6 +475,9 @@ export default defineConfig(tseslint.configs.recommended, [
 						'{projectRoot}/scripts/normalize-generated-model.ts',
 						'{projectRoot}/scripts/normalize-in-browser.ts',
 						'{projectRoot}/scripts/timing-run.ts',
+						// Encodes the environment gain maps in a page Vite serves.
+						'{projectRoot}/scripts/encode-environment-gainmaps.ts',
+						'{projectRoot}/scripts/encode-environment-gainmaps/encode-page.ts',
 						// The markdown-twin transform runs in the Vite config graph,
 						// imported by vite.config.ts and vitest.config.ts, so its remark
 						// packages are build tooling beside @mdx-js/rollup in the root

@@ -27,6 +27,7 @@ import {
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInfoPopover,
+	shouldShowInteractionHint,
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
@@ -51,7 +52,10 @@ import {
 import { InlineNotice } from '../../../../layout-components'
 import { LoadingThumbnailToggle } from '../../../../publishing/loading-thumbnail-toggle'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
-import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
+import {
+	useCompressesTexturesForGpu,
+	useEnvironmentMapBytes
+} from '../../../optimization/use-publish-size-projection'
 import { itemVariants } from '../../animation'
 import {
 	reusableFinish,
@@ -111,6 +115,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
 	const compressTextures = useCompressesTexturesForGpu()
+	// What visitors of the live scene download: an embed reads the saved
+	// settings, so an unsaved quality change is not what they get yet.
+	const environmentMapBytes = useEnvironmentMapBytes('saved')
 	const canPublish = Boolean(optimizer?.isReady)
 	// A save already running finishes before a publish starts.
 	const isSaveRunning = useAtomValue(runningOperationAtom) === 'save'
@@ -363,6 +370,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation]
 	)
 
+	const handleToggleInteractionHint = useCallback(
+		(showInteractionHint: boolean) => {
+			setPresentation((previous) => ({ ...previous, showInteractionHint }))
+		},
+		[setPresentation]
+	)
+
 	const handleAltTextChange = useCallback(
 		(altText: string) => {
 			// Cleared, the field goes, so emptying it leaves the scene as saved.
@@ -444,6 +458,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						}
 					/>
 					<Toggle
+						checked={shouldShowInteractionHint(presentation)}
+						onCheckedChange={handleToggleInteractionHint}
+						label="Show how to interact"
+						description="Tells visitors how to move the scene, briefly, when it first appears. Applies to embeds and preview links as soon as you save."
+					/>
+					<Toggle
 						checked={shouldShowFullscreenButton(presentation)}
 						onCheckedChange={handleToggleFullscreenButton}
 						label="Full screen button"
@@ -510,6 +530,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 			<ScenePublishStateControl
 				publishState={publishState}
+				environmentMapBytes={environmentMapBytes}
 				onPublish={handlePublish}
 				isPublishActionPending={isWorking}
 				isPublishActionDisabled={!canPublish || isSaveRunning}

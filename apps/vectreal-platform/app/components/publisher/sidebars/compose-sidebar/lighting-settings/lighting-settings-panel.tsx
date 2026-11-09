@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react'
 import { preload } from 'react-dom'
 
 import { BakeSection } from './bake-section'
+import { EnvironmentQualitySettings } from './environment-quality-settings'
 import {
 	LIGHT_CAPTIONS,
 	LIGHT_LABELS,
@@ -53,6 +54,7 @@ import {
 	environmentLoadFailedAtom,
 	viewDirectionAtom
 } from '../../../../../lib/stores/publisher-config-store'
+import { environmentAtom } from '../../../../../lib/stores/scene-settings-store'
 import { DrillDown, DrillDownTrigger, DrillDownView } from '../../drill-down'
 import { PanelCaption, SettingGroup } from '../../sidebar-section'
 
@@ -117,6 +119,7 @@ const LightingSettings = () => {
 	const draft = useLightingDraft()
 	const { lighting, commit, preview } = draft
 	const environmentLoadFailed = useAtomValue(environmentLoadFailedAtom)
+	const hasOwnEnvironmentFiles = useAtomValue(environmentAtom).files != null
 	const view = useAtomValue(viewDirectionAtom)
 	const [path, setPath] = useState<string[]>([])
 
@@ -348,6 +351,17 @@ const LightingSettings = () => {
 						))}
 					</ToggleGroup>
 				</SettingGroup>
+
+				<EnvironmentQualitySettings
+					environment={environment}
+					hasOwnFiles={hasOwnEnvironmentFiles}
+					onQualityChange={(quality) =>
+						commit((prev) => ({
+							...prev,
+							environment: { ...prev.environment, quality }
+						}))
+					}
+				/>
 			</DrillDownView>
 
 			<DrillDownView id="lights" title="Lights" caption={LIGHTS_CAPTION}>

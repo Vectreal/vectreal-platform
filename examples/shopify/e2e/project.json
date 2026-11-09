@@ -1,0 +1,48 @@
+{
+	"name": "shopify-section-e2e",
+	"$schema": "../../../node_modules/nx/schemas/project-schema.json",
+	"projectType": "application",
+	"sourceRoot": "examples/shopify/e2e/src",
+	"implicitDependencies": ["vctrl/embed"],
+	"tags": ["scope:e2e"],
+	"targets": {
+		"serve": {
+			"executor": "nx:run-commands",
+			"continuous": true,
+			"options": {
+				"command": "node --watch examples/shopify/e2e/src/server.ts",
+				"cwd": "{workspaceRoot}",
+				"env": {
+					"SHOPIFY_HARNESS_LIVE": "1"
+				}
+			}
+		},
+		"e2e": {
+			"executor": "nx:run-commands",
+			"cache": false,
+			"options": {
+				"command": "playwright test -c examples/shopify/e2e/playwright.config.ts",
+				"cwd": "{workspaceRoot}"
+			}
+		},
+		"lint": {
+			"executor": "@nx/eslint:lint",
+			"outputs": ["{options.outputFile}"],
+			"options": {
+				"lintFilePatterns": [
+					"examples/shopify/e2e/src/*.ts",
+					"examples/shopify/e2e/tests/**/*.ts",
+					"examples/shopify/e2e/*.ts"
+				]
+			}
+		},
+		"typecheck": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"cwd": "examples/shopify/e2e",
+				"command": "tsc --noEmit -p tsconfig.json"
+			}
+		}
+	}
+}

@@ -152,3 +152,18 @@ describe('double-click to focus', () => {
 		).toBeUndefined()
 	})
 })
+
+describe('the interaction hint', () => {
+	it('is on for a new scene', () => {
+		expect(withSceneSettingsDefaults({}).presentation.showInteractionHint).toBe(
+			true
+		)
+	})
+
+	it('stays off for a scene saved with a presentation before it existed', () => {
+		expect(
+			withSceneSettingsDefaults({ presentation: { showInfoPopover: true } })
+				.presentation.showInteractionHint
+		).toBeUndefined()
+	})
+})

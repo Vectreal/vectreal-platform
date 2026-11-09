@@ -14,8 +14,7 @@
  * exception left through a real PostHog client interface.
  */
 
-import { PostHogProvider } from '@posthog/react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { createRoutesStub } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -25,6 +24,7 @@ import {
 	DashboardErrorBoundary,
 	PublicErrorBoundary
 } from '../app/components/errors'
+import { PostHogProvider } from '../app/lib/posthog/posthog-react'
 
 import type { PostHog } from 'posthog-js'
 import type { ComponentType } from 'react'
@@ -48,7 +48,7 @@ function renderThrowing(Boundary: ComponentType, error: unknown) {
 	])
 
 	render(
-		<PostHogProvider client={posthog}>
+		<PostHogProvider client={Promise.resolve(posthog)}>
 			<Stub initialEntries={['/dashboard/projects/p1/s1']} />
 		</PostHogProvider>
 	)
@@ -76,6 +76,42 @@ describe('a rendered boundary reports', () => {
 			})
 		}
 	)
+
+	/*
+	  PostHog loads after hydration, so a boundary can render first. The error
+	  is reported when the client arrives, not dropped for having come early.
+	*/
+	it('reports an error caught before PostHog has loaded', async () => {
+		const posthog = fakePostHog()
+		let arrive: (client: PostHog) => void = () => {}
+		const client = new Promise<PostHog>((resolve) => {
+			arrive = resolve
+		})
+		const Stub = createRoutesStub([
+			{
+				path: '/',
+				Component: () => {
+					throw new Error('render blew up')
+				},
+				ErrorBoundary: DashboardErrorBoundary
+			}
+		])
+
+		render(
+			<PostHogProvider client={client}>
+				<Stub initialEntries={['/']} />
+			</PostHogProvider>
+		)
+		expect(await screen.findByText('render blew up')).toBeInTheDocument()
+
+		await act(async () => arrive(posthog))
+
+		await waitFor(() => {
+			expect(posthog.captureException).toHaveBeenCalled()
+		})
+		await act(async () => {})
+		expect(posthog.captureException).toHaveBeenCalledTimes(1)
+	})
 
 	it('still renders its fallback', async () => {
 		renderThrowing(DashboardErrorBoundary, new Error('render blew up'))
@@ -125,7 +161,7 @@ describe('a rendered boundary reports', () => {
 		])
 
 		render(
-			<PostHogProvider client={posthog}>
+			<PostHogProvider client={Promise.resolve(posthog)}>
 				<Stub initialEntries={['/']} />
 			</PostHogProvider>
 		)
@@ -149,7 +185,7 @@ describe('a rendered boundary reports', () => {
 		])
 
 		render(
-			<PostHogProvider client={posthog}>
+			<PostHogProvider client={Promise.resolve(posthog)}>
 				<Stub initialEntries={['/docs/moved-away']} />
 			</PostHogProvider>
 		)
@@ -192,7 +228,7 @@ describe('a rendered boundary reports', () => {
 		])
 
 		render(
-			<PostHogProvider client={fakePostHog()}>
+			<PostHogProvider client={Promise.resolve(fakePostHog())}>
 				<Stub initialEntries={['/']} />
 			</PostHogProvider>
 		)
@@ -228,7 +264,7 @@ describe('a rendered boundary reports', () => {
 
 		render(
 			<StrictMode>
-				<PostHogProvider client={posthog}>
+				<PostHogProvider client={Promise.resolve(posthog)}>
 					<Stub initialEntries={['/']} />
 				</PostHogProvider>
 			</StrictMode>

@@ -107,7 +107,7 @@ export function withSceneCameraKinds<Camera extends { cameras?: CameraLike[] }>(
 }
 
 export function resolveDefaultSceneCamera<Entry extends CameraLike>(
-	cameras: Entry[] | null | undefined
+	cameras: readonly Entry[] | null | undefined
 ): Entry | null {
 	if (!cameras?.length) return null
 	return cameras.find(isSceneCamera) ?? cameras[0] ?? null
@@ -117,6 +117,106 @@ export function resolveDefaultSceneCameraId(
 	cameras: CameraLike[] | null | undefined
 ): string | undefined {
 	return resolveDefaultSceneCamera(cameras)?.cameraId
+}
+
+/**
+ * A scene's cameras in the order the Publisher lists them: the switcher's
+ * views first, in saved order, then every other camera (a hotspot's close-up).
+ *
+ * `viewIds` are the cameras the viewer's switcher steps through, which the
+ * caller takes from `resolveSceneViewCameras` in `@vctrl/viewer`. That rule
+ * reads hotspot links as well as `kind` (an untagged camera a hotspot links is
+ * that hotspot's close-up), and it is passed in rather than restated here
+ * because this module is isomorphic and the server parser must not bundle the
+ * viewer. Using the switcher's own rule is what makes the list's order the
+ * switcher's order.
+ *
+ * Views are scene cameras, and every move writes them ahead of the rest, so
+ * after a move the first view is also the first scene camera: the opening view.
+ */
+export function partitionSceneCameras<Entry extends CameraLike>(
+	cameras: readonly Entry[] | null | undefined,
+	viewIds: ReadonlySet<string>
+): { sceneCameras: Entry[]; otherCameras: Entry[] } {
+	const isView = (entry: Entry) =>
+		entry.cameraId !== undefined && viewIds.has(entry.cameraId)
+
+	return {
+		sceneCameras: (cameras ?? []).filter(isView),
+		otherCameras: (cameras ?? []).filter((entry) => !isView(entry))
+	}
+}
+
+/** One move through the scene cameras' order, or `null` when it is not one. */
+export interface SceneCameraMove<Entry> {
+	/** Every camera: the scene cameras in their new order, then the rest. */
+	cameras: Entry[]
+	/** 1-based place the moved camera landed in; 1 means the opening view. */
+	position: number
+	/** How many scene cameras the order holds. */
+	total: number
+}
+
+/**
+ * Puts the switcher's views (see {@link partitionSceneCameras}) in the order
+ * given, ahead of every other camera. The first becomes the camera the scene
+ * opens on, because `resolveDefaultSceneCamera` reads the first scene camera
+ * and nothing else.
+ *
+ * A drag list is not trustworthy input, so the order is resolved against the
+ * cameras that exist: ids naming no scene camera, and repeats, take no place,
+ * and a scene camera the order leaves out (one added while a drag was in
+ * flight) keeps its relative place at the end rather than being dropped.
+ *
+ * Two orders are not moves: one that changes neither the views' order nor
+ * the opening camera (a drag released where it began), and one that names no scene camera
+ * here or not the moved one (a drag that outlived a scene load or the camera's
+ * deletion). Announcing either would describe a change that did not happen.
+ */
+export function applySceneCameraMove<Entry extends CameraLike>(
+	cameras: readonly Entry[],
+	orderedIds: readonly string[],
+	movedId: string,
+	viewIds: ReadonlySet<string>
+): SceneCameraMove<Entry> | null {
+	const { sceneCameras, otherCameras } = partitionSceneCameras(cameras, viewIds)
+	const byId = new Map(
+		sceneCameras.map((entry) => [entry.cameraId, entry] as const)
+	)
+
+	const placed = new Set<Entry>()
+	for (const id of orderedIds) {
+		const entry = byId.get(id)
+		if (entry) placed.add(entry)
+	}
+	if (placed.size === 0) return null
+	const moved = byId.get(movedId)
+	if (!moved || !placed.has(moved)) return null
+
+	const ordered = [
+		...placed,
+		...sceneCameras.filter((entry) => !placed.has(entry))
+	]
+	// A move changes what a visitor sees: the views' order, or the camera the
+	// scene opens on. The second counts on its own only in a legacy scene,
+	// where a camera that is not a view sits ahead of the views and opens the
+	// scene: moving the first view to the top then makes it the opening view.
+	// Only the moved camera can claim that, so a drag released in place on any
+	// other row stays a no-op, as does tidying the other cameras to the tail.
+	const next = [...ordered, ...otherCameras]
+	const sameViews = ordered.every(
+		(entry, index) => entry === sceneCameras[index]
+	)
+	const opensNow = resolveDefaultSceneCamera(next)
+	const claimsOpening =
+		opensNow === moved && opensNow !== resolveDefaultSceneCamera(cameras)
+	if (sameViews && !claimsOpening) return null
+
+	return {
+		cameras: next,
+		position: ordered.indexOf(moved) + 1,
+		total: ordered.length
+	}
 }
 
 /**

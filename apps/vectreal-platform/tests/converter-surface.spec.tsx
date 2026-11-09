@@ -380,7 +380,9 @@ const { capture, consentState } = vi.hoisted(() => ({
 	capture: vi.fn(),
 	consentState: { analytics: false }
 }))
-vi.mock('posthog-js/react', () => ({ usePostHog: () => ({ capture }) }))
+vi.mock('../app/lib/posthog/posthog-react', () => ({
+	usePostHog: () => ({ capture })
+}))
 
 vi.mock('../app/components/consent/consent-context', () => ({
 	useConsent: () => ({ consent: consentState })

@@ -99,7 +99,9 @@ export const defaultControlsOptions: ControlsProps = {
 */
 export const defaultPresentationOptions: ScenePresentationSettings = {
 	showInfoPopover: true,
-	showLoadingThumbnail: false
+	showLoadingThumbnail: false,
+	// On for a new scene; one saved before it lacks the field and reads off.
+	showInteractionHint: true
 }
 
 export const defaultEnvOptions: EnvironmentProps = {
@@ -204,10 +206,19 @@ export const defaultNormalizationOptions: Required<NormalizationOptions> = {
 	maxSize: NORMALIZATION_DEFAULT_MAX_SIZE
 }
 
-/** The lighting a new scene starts with: the default setup. */
-export const defaultLighting: LightingSettings = LIGHTING_SETUPS.find(
+const defaultSetup = LIGHTING_SETUPS.find(
 	({ id }) => id === DEFAULT_LIGHTING_SETUP
 )!.lighting
+
+/**
+ * The lighting a new scene starts with: the default setup, with its map
+ * compressed. Only a new scene: one saved before the choice existed has no
+ * quality and reads as lossless, the HDR it was published with.
+ */
+export const defaultLighting: LightingSettings = {
+	...defaultSetup,
+	environment: { ...defaultSetup.environment, quality: 'compressed' }
+}
 
 /**
  * A scene's settings with every absent group filled from the defaults above.
