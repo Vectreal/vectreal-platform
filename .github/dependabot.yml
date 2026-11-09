@@ -112,8 +112,6 @@ updates:
       # until the manualChunks rules in apps/vectreal-platform/vite.config.ts
       # hold under it.
       - dependency-name: 'vite'
-        update-types:
-          ['version-update:semver-patch', 'version-update:semver-minor']
       # nx 24 removes the `@nx/eslint:lint` executor 19 of our targets use, so
       # it needs `nx migrate`, not a bump. Members also clear the 14-day
       # cooldown on different days, which sent @nx/eslint 24 alone (#1298).
