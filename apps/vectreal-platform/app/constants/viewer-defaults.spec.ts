@@ -139,3 +139,16 @@ describe('withSceneSettingsDefaults lighting', () => {
 		expect(settings.lighting).toBeUndefined()
 	})
 })
+
+describe('double-click to focus', () => {
+	it('is on for a new scene', () => {
+		expect(withSceneSettingsDefaults({}).controls.focusOnDoubleClick).toBe(true)
+	})
+
+	it('stays off for a scene saved before it, whose controls lack the field', () => {
+		expect(
+			withSceneSettingsDefaults({ controls: { enableZoom: true } }).controls
+				.focusOnDoubleClick
+		).toBeUndefined()
+	})
+})
