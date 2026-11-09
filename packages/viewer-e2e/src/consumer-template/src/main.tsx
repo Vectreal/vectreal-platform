@@ -16,6 +16,7 @@ declare global {
 		__VIEWER_READY__?: boolean
 		__VIEWER_EVENTS__?: string[]
 		__CAMERA_ECHO__?: SceneCameraSnapshotCapture
+		__CAMERA__?: SceneCameraSnapshotCapture
 		__HOOKS_E2E__?: { status: 'ok' | 'crashed'; error?: string }
 		__SRC_E2E__?: {
 			status: 'loaded' | 'error'
