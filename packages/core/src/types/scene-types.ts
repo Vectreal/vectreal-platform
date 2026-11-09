@@ -642,6 +642,12 @@ export interface ScenePresentationSettings {
 	 * the viewer they had.
 	 */
 	showFullscreenButton?: boolean
+	/**
+	 * Whether the viewer shows a first-time line on how to move the scene.
+	 * Absent means not shown, so scenes saved before this field existed keep
+	 * the viewer they had; a new scene starts with it on.
+	 */
+	showInteractionHint?: boolean
 }
 
 /**

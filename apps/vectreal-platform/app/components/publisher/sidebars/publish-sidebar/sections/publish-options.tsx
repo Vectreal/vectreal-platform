@@ -27,6 +27,7 @@ import {
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInfoPopover,
+	shouldShowInteractionHint,
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
@@ -369,6 +370,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation]
 	)
 
+	const handleToggleInteractionHint = useCallback(
+		(showInteractionHint: boolean) => {
+			setPresentation((previous) => ({ ...previous, showInteractionHint }))
+		},
+		[setPresentation]
+	)
+
 	const handleAltTextChange = useCallback(
 		(altText: string) => {
 			// Cleared, the field goes, so emptying it leaves the scene as saved.
@@ -448,6 +456,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 								? 'Offers visitors a way back, by button or Escape, after a hotspot flies the camera to its own view. Applies to embeds and preview links as soon as you save.'
 								: 'Shown once a hotspot has its own camera.'
 						}
+					/>
+					<Toggle
+						checked={shouldShowInteractionHint(presentation)}
+						onCheckedChange={handleToggleInteractionHint}
+						label="Show how to interact"
+						description="Tells visitors how to move the scene, briefly, when it first appears. Applies to embeds and preview links as soon as you save."
 					/>
 					<Toggle
 						checked={shouldShowFullscreenButton(presentation)}

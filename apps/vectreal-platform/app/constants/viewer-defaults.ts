@@ -99,7 +99,9 @@ export const defaultControlsOptions: ControlsProps = {
 */
 export const defaultPresentationOptions: ScenePresentationSettings = {
 	showInfoPopover: true,
-	showLoadingThumbnail: false
+	showLoadingThumbnail: false,
+	// On for a new scene; one saved before it lacks the field and reads off.
+	showInteractionHint: true
 }
 
 export const defaultEnvOptions: EnvironmentProps = {
