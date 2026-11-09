@@ -49,6 +49,15 @@ const BUDGETS_KB: Record<string, number> = {
 	'routes/news-room-page/news-room-article-page': 405
 }
 
+/**
+ * The embed, which runs on merchants' pages, on phones, cold every time.
+ * Three.js is its job, so only the size is checked. Measured on 9 Nov 2026
+ * at 833.7 KB, once posthog-js left it and app code stopped sharing one
+ * catch-all chunk (`vite.config.ts`); 1,054 KB before.
+ */
+const EMBED_ROUTE = 'routes/embed-page/embed-scene'
+const EMBED_BUDGET_KB = 845
+
 /*
   Which chunk is a route's module comes from React Router's own manifest, not
   from file names: a shared chunk can carry a route's name, as a component
@@ -99,7 +108,10 @@ function main() {
 	const { entry, routes } = routeManifest()
 	const failures: string[] = []
 
-	for (const [route, budget] of Object.entries(BUDGETS_KB)) {
+	for (const [route, budget] of Object.entries({
+		...BUDGETS_KB,
+		[EMBED_ROUTE]: EMBED_BUDGET_KB
+	})) {
 		if (!routes[route]) {
 			failures.push(`${route}: no such route; was it renamed?`)
 			continue
@@ -117,6 +129,7 @@ function main() {
 			const source = readFileSync(path.join(ASSETS, file))
 			bytes += gzipSync(source).length
 			const text = source.toString('utf8')
+			if (route === EMBED_ROUTE) continue
 			for (const [what, marker] of Object.entries(FORBIDDEN))
 				if (!found.has(what) && marker.test(text)) found.set(what, file)
 		}
