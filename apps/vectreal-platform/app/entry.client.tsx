@@ -17,7 +17,7 @@ import {
 } from './lib/posthog/frustration-signals'
 import { isPosthogEnabled } from './lib/posthog/posthog-enabled'
 import { redactUrlSecretsFromProperties } from './lib/posthog/redact-url-secrets'
-import { isSessionReplayExcludedPath } from './lib/posthog/session-replay'
+import { isThirdPartySurface } from './lib/third-party-surface'
 
 /*
   Analytics may fail. The app may not.
@@ -49,7 +49,9 @@ import { isSessionReplayExcludedPath } from './lib/posthog/session-replay'
   which is what just failed.
 */
 try {
+	// Never on a customer's page: see `third-party-surface.ts`.
 	if (
+		!isThirdPartySurface(window.location.pathname) &&
 		isPosthogEnabled({
 			dev: import.meta.env.DEV,
 			flag: import.meta.env.VITE_PUBLIC_POSTHOG_ENABLED
@@ -74,19 +76,15 @@ try {
 			// opt_in_capturing() once the user accepts analytics.
 			persistence: 'memory',
 			capture_pageview: false,
-			// Never record an embed: its URL carries the API key, and a replay
-			// stores that URL where `before_send` cannot reach it (see below).
-			disable_session_recording: isSessionReplayExcludedPath(
-				window.location.pathname
-			),
 			// A drag on a 3D viewer is not a frustrated click: see the module.
 			rageclick: RAGECLICK_CONFIG,
 			capture_dead_clicks: DEAD_CLICKS_CONFIG,
 			/*
-			  An embed authenticates by a `token` query parameter, so on `/embed` the
-			  page URL contains a live API key - and PostHog attaches `$current_url`
-			  to every event, not just `$pageview`. Without this, each captured event
-			  from an embed carried the key out to a third party.
+			  An embed authenticates by a `token` query parameter, so an embed URL
+			  contains a live API key - and PostHog attaches URLs (`$current_url`,
+			  `$referrer`) to every event, not just `$pageview`. PostHog no longer
+			  starts on `/embed` itself; this still keeps a key from leaving in any
+			  URL an event carries from the rest of the site.
 
 			  Here rather than at a capture site: this runs for every event, including
 			  the properties PostHog adds itself, so there is no list of call sites to
@@ -100,7 +98,7 @@ try {
 				  carries a whole rrweb payload, and walking one on every snapshot
 				  would cost far more than the rest of this does on a normal event.
 				  So the one page whose URL holds a key is never recorded at all:
-				  `disable_session_recording` above refuses replay on `/embed`.
+				  PostHog does not start on `/embed` (see the condition above).
 				  Everywhere else replay follows the project's remote config.
 				*/
 				if (event.event === '$snapshot') return event

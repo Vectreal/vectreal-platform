@@ -21,7 +21,6 @@ import { ConsentPreferencesDialog } from './components/consent/consent-preferenc
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
 import { RouteErrorState, routeErrorMeta } from './components/not-found'
 import { ThemeController, ThemeScript } from './components/theme'
-import { shouldRenderConsentUi } from './lib/consent/consent-surfaces'
 import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
 import { isUnreachableAction } from './lib/navigation/dashboard-route-behavior'
 import { useErrorReport } from './lib/observability/use-error-report'
@@ -29,6 +28,7 @@ import { posthogMiddleware } from './lib/posthog/posthog-middleware'
 import { buildMeta } from './lib/seo'
 import { commitValidCsrfToken } from './lib/sessions/csrf-session.server'
 import { sessionCookieMiddleware } from './lib/sessions/session-cookie-middleware'
+import { isThirdPartySurface } from './lib/third-party-surface'
 
 import type { ShouldRevalidateFunction } from 'react-router'
 import '@shared/components/styles/globals.css'
@@ -222,7 +222,7 @@ export default function App({ loaderData }: Route.ComponentProps) {
 	// The provider still wraps everything so consent state resolves (denied by
 	// default) everywhere. Only the visible chrome is suppressed, and only where
 	// we are rendering inside somebody else's page.
-	const consentUiAllowed = shouldRenderConsentUi(pathname)
+	const consentUiAllowed = !isThirdPartySurface(pathname)
 
 	return (
 		<AuthenticityTokenProvider token={loaderData?.csrf}>
