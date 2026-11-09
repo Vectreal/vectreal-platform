@@ -1,6 +1,3 @@
-// @ts-expect-error n8ao ships no type declarations
-import { N8AOPostPass as UntypedN8AOPostPass } from 'n8ao'
-
 import type { Pass } from 'postprocessing'
 import type { Camera, Matrix4, Scene } from 'three'
 
@@ -43,7 +40,32 @@ export interface N8AOPostPass extends Pass {
 	): void
 }
 
-export const N8AOPostPass = UntypedN8AOPostPass as new (
+export type N8AOPostPassConstructor = new (
 	scene: Scene,
 	camera: Camera
 ) => N8AOPostPass
+
+let n8ao: Promise<N8AOPostPassConstructor> | null = null
+
+/**
+ * The N8AO pass, fetched the first time a scene asks for live AO.
+ *
+ * AO is off unless the author turns it on, and n8ao is about 75KB gzipped:
+ * imported statically it rode in the viewer's own chunk and every embed
+ * downloaded it before its first frame, AO or not. A failed import is
+ * forgotten, so the next scene that wants AO tries again.
+ */
+export function loadN8AOPostPass(): Promise<N8AOPostPassConstructor> {
+	n8ao ??= import(
+		// @ts-expect-error n8ao ships no type declarations
+		'n8ao'
+	).then(
+		(module: { N8AOPostPass: unknown }) =>
+			module.N8AOPostPass as N8AOPostPassConstructor,
+		(error: unknown) => {
+			n8ao = null
+			throw error
+		}
+	)
+	return n8ao
+}

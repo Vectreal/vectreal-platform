@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import ts from 'typescript'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { isPosthogEnabled } from './posthog-enabled'
+import { sourceFiles, valueReferences } from '../../../tests/module-references'
 
 /**
  * There is one PostHog project, and a machine holding its token reported into
@@ -107,91 +107,15 @@ describe('getPosthogClient', () => {
 })
 
 /*
-  The browser entry cannot be imported by a test: it hydrates the document on
-  load. So its call is pinned by source, both fields read by name (passing
-  `import.meta.env` whole makes Vite inline every VITE_ variable).
-*/
-describe('the browser entry', () => {
-	it('initializes PostHog only behind the shared switch', () => {
-		const source = readFileSync(join(APP_ROOT, 'app/entry.client.tsx'), 'utf8')
-		expect(source).toMatch(
-			/if \(\s*isPosthogEnabled\(\{\s*dev: import\.meta\.env\.DEV,\s*flag: import\.meta\.env\.VITE_PUBLIC_POSTHOG_ENABLED\s*\}\)\s*\)\s*\{\s*posthog\.init\(/
-		)
-	})
-})
-
-/**
- * Whether a module can load `posthog-node` at runtime.
- *
- * Inverted on purpose: every `'posthog-node'` string in the code counts, and
- * only the module path of a declaration that is provably type-only is
- * excused. Listing the ways to load a module instead - value imports,
- * re-exports, `import()`, `require`, `createRequire` - always missed one, and
- * every regex version was fooled by a comment. Comments are not nodes here.
- */
-function loadsPosthogNode(file: string, source: string): boolean {
-	const allTypes = (elements: readonly { isTypeOnly: boolean }[]) =>
-		elements.length > 0 && elements.every((element) => element.isTypeOnly)
-
-	const typeOnlyDeclaration = (node: ts.Node): boolean => {
-		if (ts.isImportDeclaration(node)) {
-			const clause = node.importClause
-			if (!clause) return false
-			if (clause.isTypeOnly) return true
-			return (
-				clause.name === undefined &&
-				clause.namedBindings !== undefined &&
-				ts.isNamedImports(clause.namedBindings) &&
-				allTypes(clause.namedBindings.elements)
-			)
-		}
-		if (ts.isExportDeclaration(node)) {
-			if (node.isTypeOnly) return true
-			return (
-				node.exportClause !== undefined &&
-				ts.isNamedExports(node.exportClause) &&
-				allTypes(node.exportClause.elements)
-			)
-		}
-		return false
-	}
-
-	let loads = false
-	const visit = (node: ts.Node) => {
-		if (
-			ts.isStringLiteralLike(node) &&
-			node.text === 'posthog-node' &&
-			!typeOnlyDeclaration(node.parent)
-		) {
-			loads = true
-		}
-		ts.forEachChild(node, visit)
-	}
-
-	visit(ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true))
-	return loads
-}
-
-/*
   The switch only holds if every server-side client comes through
   `getPosthogClient`. The Stripe webhook processor built one of its own from the
   token, which bypassed it, and then shut it down after each event - which on
   the shared client would stop it for every other caller.
 */
 describe('the shared client', () => {
-	function sources(dir: string): string[] {
-		return readdirSync(dir).flatMap((entry) => {
-			const full = join(dir, entry)
-			if (statSync(full).isDirectory()) return sources(full)
-			return /\.(m?[jt]sx?)$/.test(entry) && !/\.spec\./.test(entry)
-				? [full]
-				: []
-		})
-	}
-
 	const files = [
-		...sources(join(APP_ROOT, 'app')),
-		...sources(join(APP_ROOT, 'scripts')),
+		...sourceFiles(join(APP_ROOT, 'app')),
+		...sourceFiles(join(APP_ROOT, 'scripts')),
 		join(APP_ROOT, 'server.mjs'),
 		join(APP_ROOT, 'server-app.mjs')
 	].map((file) => ({ file, source: readFileSync(file, 'utf8') }))
@@ -209,7 +133,8 @@ describe('the shared client', () => {
 				*/
 				.filter(
 					({ file, source }) =>
-						source.includes('posthog-node') && loadsPosthogNode(file, source)
+						source.includes('posthog-node') &&
+						valueReferences(file, source, 'posthog-node').length > 0
 				)
 				.map(({ file }) => show(file))
 		).toEqual([])

@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { useLoadModel } from '@vctrl/hooks/use-load-model'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
@@ -6,6 +5,7 @@ import { useSearchParams } from 'react-router'
 import { sceneSourceFromManifest } from '../../lib/domain/scene/client/embed-manifest-payload'
 import { buildPreviewSceneEndpoint } from '../../lib/domain/scene/client/preview-scene-endpoint'
 import { useSceneModel } from '../../lib/domain/scene/client/use-scene-model'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { useConsent } from '../consent/consent-context'
 
 import type { SceneEmbedManifestResponse } from '../../types/api'

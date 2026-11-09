@@ -145,6 +145,12 @@ export interface ControlsProps extends OrbitControlsProps {
 	 * The timeout duration in milliseconds before enabling the controls.
 	 */
 	controlsTimeout?: number
+	/**
+	 * Whether a double-click (a double-tap on touch) on the model moves the
+	 * orbit point to that spot, and on the background frames the view again.
+	 * Absent means off, so scenes saved before it existed behave as they did.
+	 */
+	focusOnDoubleClick?: boolean
 }
 
 /**

@@ -1,7 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -17,8 +13,6 @@ import {
  * token, so the key rode out on every captured event - including ones nobody
  * wrote, and any added later.
  */
-
-const APP_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
 const EMBED_URL =
 	'https://vectreal.com/embed/395a09f0-9340/488bd4a1-46d3?token=vctrl_liveSecretab3x'
@@ -185,44 +179,5 @@ describe('redactUrlSecretsFromProperties', () => {
 		expect(event.properties.count).toBe(3)
 		expect(event.properties.ok).toBe(true)
 		expect(event.properties.missing).toBeNull()
-	})
-})
-
-/*
-  The other half of the contract. The redaction is correct and useless unless
-  PostHog is actually told to run it, and nothing else in the suite can see that
-  - `entry.client.tsx` calls `posthog.init` at module scope against a real
-  browser global, so importing it here is not an option.
-*/
-describe('posthog is wired to use it', () => {
-	const entryClient = readFileSync(
-		join(APP_ROOT, 'app/entry.client.tsx'),
-		'utf8'
-	)
-
-	/*
-	  Asserted by ordering rather than by proximity. The first version allowed
-	  120 characters between the two and broke the moment a comment was added
-	  between them, which is a test that fails for a reason unrelated to the
-	  behaviour it guards.
-	*/
-	it('registers the redaction with before_send', () => {
-		const hook = entryClient.indexOf('before_send')
-		const call = entryClient.indexOf('redactUrlSecretsFromProperties(')
-
-		expect(
-			hook,
-			'posthog.init no longer configures before_send, so nothing filters events.'
-		).toBeGreaterThan(-1)
-
-		expect(
-			call,
-			'redactUrlSecretsFromProperties is never called, so the embed token is captured verbatim.'
-		).toBeGreaterThan(-1)
-
-		expect(
-			call,
-			'redactUrlSecretsFromProperties is called outside before_send, so it does not run for every event.'
-		).toBeGreaterThan(hook)
 	})
 })

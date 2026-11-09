@@ -24,7 +24,6 @@ import {
 
 import { AccumulatePass } from './accumulate-pass'
 import { worldBounds } from './model-measurement'
-import { N8AOPostPass } from './n8ao'
 import {
 	computeSceneSignature,
 	createRenderActivity,
@@ -32,6 +31,9 @@ import {
 	type RenderActivity
 } from './render-activity'
 import { warmUpScene } from './shader-warmup'
+import { useN8AOPostPass } from './use-n8ao-post-pass'
+
+import type { N8AOPostPass, N8AOPostPassConstructor } from './n8ao'
 
 interface ScenePostProcessingProps {
 	/**
@@ -150,7 +152,7 @@ const isJitterable = (
 	camera instanceof PerspectiveCamera || camera instanceof OrthographicCamera
 
 /**
- * Builds the composer chain for one renderer, scene, camera and AO setting.
+ * Builds the composer chain for one renderer, scene, camera and AO pass.
  *
  * Only the scene render is jittered. The camera is restored before N8AO runs
  * and N8AO's record of the previous camera is brought level with it, so N8AO
@@ -162,10 +164,10 @@ const createPipeline = (
 	gl: WebGLRenderer,
 	scene: Scene,
 	camera: Camera,
-	ao: boolean,
+	AOPass: N8AOPostPassConstructor | null,
 	aoAtRest: boolean
 ) => {
-	const aoInMotion = ao && !aoAtRest
+	const aoInMotion = AOPass !== null && !aoAtRest
 	// The composer switches the renderer's autoClear off for good when it is
 	// handed the renderer. Everything else that renders into its own target -
 	// drei's ContactShadows among them - relies on the default, so the
@@ -206,8 +208,8 @@ const createPipeline = (
 	composer.addPass(new RenderPass(scene, camera))
 
 	let aoPass: N8AOPostPass | null = null
-	if (ao) {
-		aoPass = new N8AOPostPass(scene, camera)
+	if (AOPass) {
+		aoPass = new AOPass(scene, camera)
 		aoPass.setQualityMode('Performance')
 		Object.assign(aoPass.configuration, {
 			distanceFalloff: 1,
@@ -317,6 +319,10 @@ const ViewerComposer = ({
 	const dpr = useThree((state) => state.viewport.dpr)
 	const invalidate = useThree((state) => state.invalidate)
 	const radius = useModelRadius(model)
+	const AOPass = useN8AOPostPass(ao)
+	// Whether the effect below has a pipeline to build, so the warm-up waits
+	// for it rather than finding none and never running.
+	const pipelineReady = AOPass !== undefined
 
 	const activeRef = useRef(active ?? false)
 	activeRef.current = active ?? false
@@ -345,7 +351,8 @@ const ViewerComposer = ({
 		null
 	)
 	useLayoutEffect(() => {
-		const pipeline = createPipeline(gl, scene, camera, ao, aoAtRest)
+		if (!pipelineReady) return
+		const pipeline = createPipeline(gl, scene, camera, AOPass ?? null, aoAtRest)
 		if (pipeline.aoPass) {
 			Object.assign(pipeline.aoPass.configuration, aoConfigRef.current)
 		}
@@ -354,7 +361,7 @@ const ViewerComposer = ({
 			live.current = null
 			pipeline.dispose()
 		}
-	}, [ao, aoAtRest, camera, gl, scene])
+	}, [AOPass, aoAtRest, camera, gl, scene, pipelineReady])
 
 	useEffect(() => {
 		live.current?.pipeline.composer.setSize(size.width, size.height)
@@ -390,7 +397,7 @@ const ViewerComposer = ({
 		return () => {
 			cancelled = true
 		}
-	}, [model, camera, gl, scene, invalidate])
+	}, [model, camera, gl, scene, invalidate, pipelineReady])
 
 	useEffect(() => {
 		const aoPass = live.current?.pipeline.aoPass
@@ -407,6 +414,11 @@ const ViewerComposer = ({
 	const bufferSize = useMemo(() => new Vector2(), [])
 
 	useFrame((state, delta) => {
+		// Nothing while a viewer that opens with live AO waits for its pass: a
+		// direct draw now would compile every material for the canvas, and the
+		// composer compiles them again. The loader stays up meanwhile, since the
+		// warm-up has not run.
+		if (!pipelineReady) return
 		// Before a pipeline exists, or while one is being replaced, draw directly
 		// rather than leave the canvas blank: this subscriber's priority has
 		// already taken the render over from R3F.

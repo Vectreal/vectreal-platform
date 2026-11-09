@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
 import { useCallback } from 'react'
@@ -10,6 +9,7 @@ import { buildSceneUploadFailedAnalyticsProps } from '../../lib/domain/analytics
 import { getSceneNameFromFileName } from '../../lib/domain/scene'
 import { getUploadLoadErrorMessage } from '../../lib/domain/scene/scene-load-error-messages'
 import { clearPendingSceneDraft } from '../../lib/persistence/pending-scene-idb'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import {
 	currentSceneIdAtom,
 	sceneMetaAtom,

@@ -93,9 +93,6 @@ importers:
       '@mdx-js/rollup':
         specifier: ^3.1.1
         version: 3.1.1(rollup@4.62.4)
-      '@posthog/react':
-        specifier: ^1.10.3
-        version: 1.10.3(@types/react@19.2.18)(posthog-js@1.414.0)(react@19.2.8)
       '@radix-ui/react-alert-dialog':
         specifier: ^1.1.23
         version: 1.1.23(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -586,9 +583,6 @@ importers:
       '@marsidev/react-turnstile':
         specifier: ^1.5.5
         version: 1.5.5(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@posthog/react':
-        specifier: ^1.10.3
-        version: 1.10.3(@types/react@19.2.18)(posthog-js@1.414.0)(react@19.2.8)
       '@react-email/components':
         specifier: ^1.0.12
         version: 1.0.12(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -3629,16 +3623,6 @@ packages:
 
   '@posthog/core@1.46.9':
     resolution: {integrity: sha512-EXO6y5ih+jBkTCpUCuYgQmajuDZuvy6vMvflkub6pLQyi0GPlCPWVSvZZkOeQw9e2MxoD5GteeGCt9R8+UJ/yQ==}
-
-  '@posthog/react@1.10.3':
-    resolution: {integrity: sha512-Qu//fGQmVlX0B9kTA3LLg67e7AYLEmeuA0Bf1qSyUM0uUILcRQGjQezhNQPLYSTakOqvXEnl6fM2iQBF6Toxrw==}
-    peerDependencies:
-      '@types/react': '>=16.8.0'
-      posthog-js: '>=1.257.2'
-      react: 19.2.8
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
 
   '@posthog/types@1.402.2':
     resolution: {integrity: sha512-ZZTiS4dLwF4/D0YTzS3gGSLFnhuNOY5yu4d9VGS9trGe5GW6FjIXo20p18K5BPW2RZSYSld8sdnSAY3AUXleUQ==}
@@ -14358,13 +14342,6 @@ snapshots:
   '@posthog/core@1.46.9':
     dependencies:
       '@posthog/types': 1.402.2
-
-  '@posthog/react@1.10.3(@types/react@19.2.18)(posthog-js@1.414.0)(react@19.2.8)':
-    dependencies:
-      posthog-js: 1.414.0
-      react: 19.2.8
-    optionalDependencies:
-      '@types/react': 19.2.18
 
   '@posthog/types@1.402.2': {}
 

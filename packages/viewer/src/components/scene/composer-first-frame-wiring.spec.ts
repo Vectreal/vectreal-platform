@@ -22,7 +22,23 @@ const composer = readFileSync(
 describe('the composer pipeline', () => {
 	it('is built in a layout effect', () => {
 		expect(composer).toMatch(
-			/useLayoutEffect\(\(\) => \{\s*const pipeline = createPipeline\(/
+			/useLayoutEffect\(\(\) => \{\s*if \(!pipelineReady\) return\s*const pipeline = createPipeline\(/
+		)
+	})
+
+	// Live AO waits for its pass to download. A frame drawn meanwhile would be
+	// the canvas-output compile described above, for nothing.
+	it('draws nothing while the AO pass is still downloading', () => {
+		const frame = composer.slice(composer.indexOf('useFrame((state, delta)'))
+		expect(frame.indexOf('if (!pipelineReady) return')).toBeGreaterThan(-1)
+		expect(frame.indexOf('if (!pipelineReady) return')).toBeLessThan(
+			frame.indexOf('state.gl.render(state.scene, state.camera)')
+		)
+	})
+
+	it('warms the shaders up again once the pipeline exists', () => {
+		expect(composer).toMatch(
+			/warmed\.current = \{ model \}[\s\S]*?\}, \[[^\]]*pipelineReady\]\)/
 		)
 	})
 })
