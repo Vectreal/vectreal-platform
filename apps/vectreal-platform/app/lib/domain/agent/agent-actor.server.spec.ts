@@ -96,9 +96,8 @@ describe('resolveAgentActor', () => {
 		// The verifier is a module-level singleton an earlier test may have
 		// built already, so count from a fresh module rather than from history.
 		vi.resetModules()
-		const { resolveAgentActor: freshResolve } = await import(
-			'./agent-actor.server'
-		)
+		const { resolveAgentActor: freshResolve } =
+			await import('./agent-actor.server')
 		await freshResolve(request())
 		await freshResolve(request())
 
