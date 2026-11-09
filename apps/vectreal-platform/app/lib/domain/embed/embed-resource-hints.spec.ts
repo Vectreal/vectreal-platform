@@ -1,7 +1,9 @@
 import {
 	DRACO_DECODER_PATH,
 	KTX2_TRANSCODER_PATH,
-	resolveEnvironmentFiles
+	resolveEnvironmentFiles,
+	resolveLighting,
+	toLegacyLighting
 } from '@vctrl/core'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { describe, expect, it } from 'vitest'
@@ -46,6 +48,27 @@ describe('resolveEmbedResourceHints', () => {
 		const environment = resolveEnvironmentFiles({ preset: 'studio-soft' })
 		expect(hints.preload.map((hint) => hint.href)).toContain(environment)
 		expect(hints.preconnect).toEqual(['https://storage.googleapis.com'])
+	})
+
+	it('preloads the compressed map a lit scene loads, not its HDR', () => {
+		/*
+		  A manifest carries the scene's lighting and the legacy environment
+		  derived from it (scene-manifest.server.ts). The viewer loads from the
+		  lighting; the hint reads the derived keys, so both must name the file.
+		*/
+		const lighting = {
+			environment: { map: 'studio-soft', quality: 'compressed' }
+		} as const
+		const { environment } = resolveLighting({ lighting })
+		const viewerLoads = resolveEnvironmentFiles({
+			preset: environment.map,
+			environmentResolution: environment.resolution,
+			environmentQuality: environment.quality
+		})
+		const hints = hrefs(manifest({ settings: toLegacyLighting({ lighting }) }))
+		expect(viewerLoads).toMatch(/studio_soft_1k\.jpg$/)
+		expect(hints).toContain(viewerLoads)
+		expect(hints.some((href) => href.endsWith('.hdr'))).toBe(false)
 	})
 
 	it('preloads the default environment for a scene that names none', () => {

@@ -131,6 +131,7 @@ function open(
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={publishState}
+			environmentMapBytes={null}
 			presentation={{ showLoadingThumbnail: true }}
 			canUpdateScene={canUpdateScene}
 			onPublish={onPublish}

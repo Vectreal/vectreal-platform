@@ -179,6 +179,15 @@ export type EnvironmentType = 'nature' | 'night' | 'outdoor' | 'studio'
 export type EnvironmentResolution = '1k' | '4k'
 
 /**
+ * Which encoding of a hosted environment map a scene loads.
+ *
+ * `lossless` is the Radiance HDR. `compressed` is a gain map JPEG 7 to 25x
+ * smaller that decodes to nearly the same light; a map with no compressed
+ * version (`hasCompressedEnvironment`) loads lossless either way.
+ */
+export type EnvironmentQuality = 'compressed' | 'lossless'
+
+/**
  * Definition of an environment map with its properties.
  */
 export interface EnvironmentMap {
@@ -212,6 +221,8 @@ type InheritedEnvProps = Pick<
 export interface EnvironmentProps extends InheritedEnvProps {
 	preset?: EnvironmentKey
 	environmentResolution?: EnvironmentResolution
+	/** Absent means `lossless`, which is how every scene saved before it loads. */
+	environmentQuality?: EnvironmentQuality
 	/**
 	 * What the viewer paints behind the model while the environment map is not
 	 * shown as the {@link background}. The map still lights the model.
@@ -451,6 +462,11 @@ export interface LightingSettings {
 	environment?: {
 		map?: EnvironmentKey
 		resolution?: EnvironmentResolution
+		/**
+		 * Absent means `lossless`, which is how every scene saved before it
+		 * loads. A new scene starts `compressed`.
+		 */
+		quality?: EnvironmentQuality
 		/** Brightness of the environment, and with it of every light. */
 		intensity?: number
 		/** Degrees around the vertical axis; turns the lights with it. */

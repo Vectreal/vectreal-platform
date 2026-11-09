@@ -1,11 +1,12 @@
 import { Environment, useEnvironment } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import {
 	DEFAULT_ENVIRONMENT_PRESET,
 	EnvironmentProps,
 	resolveEnvironmentFiles
 } from '@vctrl/core'
 import { memo, useEffect, useMemo, useRef } from 'react'
-import { Euler } from 'three'
+import { Euler, type WebGLRenderer } from 'three'
 
 import LoadFailureBoundary from '../load-failure-boundary'
 import { useRoomEnvironment } from './room-environment'
@@ -49,6 +50,34 @@ export const forgetEnvironmentFiles = (files: string | string[]) => {
 		return
 	}
 }
+
+const rendererIndex = new WeakMap<WebGLRenderer, number>()
+let renderersSeen = 0
+
+/**
+ * The files to load a map from in this canvas.
+ *
+ * drei caches a loaded map by its URL alone, which is right for an HDR: its
+ * pixels upload to any renderer. A gain map JPEG decodes into a render target
+ * that belongs to the renderer that decoded it, so a second canvas handed the
+ * cached texture would light from nothing. Each canvas after the first loads
+ * a gain map under its own URL instead (GCS ignores the query); the first
+ * keeps the plain one, which is what a page preloads.
+ */
+export function useCanvasEnvironmentFiles<T extends string | string[] | null>(
+	files: T
+): T {
+	const gl = useThree((state) => state.gl)
+	if (typeof files !== 'string' || !GAINMAP_FILE.test(files)) return files
+	let index = rendererIndex.get(gl)
+	if (index === undefined) {
+		index = renderersSeen++
+		rendererIndex.set(gl, index)
+	}
+	return (index === 0 ? files : `${files}?canvas=${index}`) as T
+}
+
+const GAINMAP_FILE = /\.jpe?g$/i
 
 /** Lights the scene, without a backdrop, while its own map is unavailable. */
 const FallbackEnvironment = ({
@@ -123,8 +152,11 @@ const SceneEnvironment = memo(
 			environmentIntensity,
 			scene
 		} = environment
-		const files = resolveEnvironmentFiles(environment)
-		const fileList = Array.isArray(files) ? files : [files]
+		const sceneFiles = resolveEnvironmentFiles(environment)
+		// Said to the callbacks as the scene names them, not as this canvas
+		// loads them.
+		const fileList = Array.isArray(sceneFiles) ? sceneFiles : [sceneFiles]
+		const files = useCanvasEnvironmentFiles(sceneFiles)
 
 		return (
 			<LoadFailureBoundary

@@ -106,6 +106,7 @@ const lighting = {
 	environment: {
 		map: 'nature-park',
 		resolution: '1k',
+		quality: 'lossless',
 		intensity: 1,
 		rotation: 0
 	},

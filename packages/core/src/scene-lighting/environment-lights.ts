@@ -60,3 +60,27 @@ export const ENVIRONMENT_LIGHTS = {
 		{ azimuth: 120.1, elevation: 13.6, size: 4.4, share: 0.057 }
 	]
 } as const satisfies Record<EnvironmentKey, readonly EnvironmentLight[]>
+
+/**
+ * The light each hosted map delivers to an up-facing surface, measured from
+ * its 1k HDR by `environmentIrradiance` as the viewer loads it. The viewer
+ * reads it for a map that decodes without pixels to measure, its compressed
+ * version.
+ */
+export const ENVIRONMENT_IRRADIANCE: Record<EnvironmentKey, number> = {
+	'nature-moonlit': 1.0213,
+	'nature-park': 2.88,
+	'nature-park-overcast': 4.4546,
+	'nature-snow': 0.6669,
+	'night-building': 5.6112,
+	'night-city': 1.7816,
+	'night-pure-sky': 0.7636,
+	'night-stars': 1.0197,
+	'outdoor-golden-hour': 3.3124,
+	'outdoor-noon': 1.9249,
+	'outdoor-overcast': 3.6019,
+	'outdoor-sky': 1.1588,
+	'studio-key': 4.1105,
+	'studio-natural': 2.9603,
+	'studio-soft': 2.5727
+}

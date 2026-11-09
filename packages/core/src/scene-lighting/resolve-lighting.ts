@@ -6,6 +6,7 @@ import {
 import type {
 	AccumulativeShadowLight,
 	EnvironmentProps,
+	EnvironmentQuality,
 	SceneBackdrop,
 	SceneLight,
 	SceneLightingBackground,
@@ -22,6 +23,11 @@ export interface ResolvedLighting {
 	environment: {
 		map: NonNullable<EnvironmentProps['preset']>
 		resolution: NonNullable<EnvironmentProps['environmentResolution']>
+		/**
+		 * What the scene asks for. A map with no compressed version loads
+		 * lossless regardless; `loadedEnvironmentQuality` answers which loads.
+		 */
+		quality: EnvironmentQuality
 		intensity: number
 		rotation: number
 	}
@@ -38,6 +44,8 @@ export interface ResolvedLighting {
 const DEFAULT_ENVIRONMENT: ResolvedLighting['environment'] = {
 	map: DEFAULT_ENVIRONMENT_PRESET,
 	resolution: '1k',
+	// What a scene saved before the choice existed loads: the HDR.
+	quality: 'lossless',
 	intensity: 1,
 	rotation: 0
 }
@@ -200,6 +208,7 @@ function migrateLegacyLighting({
 			map: environment.preset ?? DEFAULT_ENVIRONMENT.map,
 			resolution:
 				environment.environmentResolution ?? DEFAULT_ENVIRONMENT.resolution,
+			quality: environment.environmentQuality ?? DEFAULT_ENVIRONMENT.quality,
 			intensity: environment.environmentIntensity ?? D.environmentIntensity,
 			rotation: 0
 		},

@@ -51,7 +51,10 @@ import {
 import { InlineNotice } from '../../../../layout-components'
 import { LoadingThumbnailToggle } from '../../../../publishing/loading-thumbnail-toggle'
 import { ScenePublishStateControl } from '../../../../publishing/scene-publish-state-control'
-import { useCompressesTexturesForGpu } from '../../../optimization/use-publish-size-projection'
+import {
+	useCompressesTexturesForGpu,
+	useEnvironmentMapBytes
+} from '../../../optimization/use-publish-size-projection'
 import { itemVariants } from '../../animation'
 import {
 	reusableFinish,
@@ -111,6 +114,9 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
 	const isOriginalPreset = optimizationsMatch(optimizations, originalPreset)
 	const compressTextures = useCompressesTexturesForGpu()
+	// What visitors of the live scene download: an embed reads the saved
+	// settings, so an unsaved quality change is not what they get yet.
+	const environmentMapBytes = useEnvironmentMapBytes('saved')
 	const canPublish = Boolean(optimizer?.isReady)
 	// A save already running finishes before a publish starts.
 	const isSaveRunning = useAtomValue(runningOperationAtom) === 'save'
@@ -510,6 +516,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 			<ScenePublishStateControl
 				publishState={publishState}
+				environmentMapBytes={environmentMapBytes}
 				onPublish={handlePublish}
 				isPublishActionPending={isWorking}
 				isPublishActionDisabled={!canPublish || isSaveRunning}

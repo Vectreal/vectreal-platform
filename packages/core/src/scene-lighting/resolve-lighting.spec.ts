@@ -17,6 +17,8 @@ describe('resolveLighting for a scene saved with lighting', () => {
 			environment: {
 				map: 'studio-natural',
 				resolution: '1k',
+				// Absent reads as the HDR every scene saved before it loads.
+				quality: 'lossless',
 				intensity: 1,
 				rotation: 0
 			},
@@ -120,6 +122,8 @@ describe('resolveLighting for a scene saved before lighting', () => {
 			environment: {
 				map: 'studio-natural',
 				resolution: '1k',
+				// Absent reads as the HDR every scene saved before it loads.
+				quality: 'lossless',
 				intensity: 1,
 				rotation: 0
 			},
@@ -137,12 +141,14 @@ describe('resolveLighting for a scene saved before lighting', () => {
 				environment: {
 					preset: 'outdoor-golden-hour',
 					environmentResolution: '4k',
+					environmentQuality: 'compressed',
 					environmentIntensity: 0.6
 				}
 			}).environment
 		).toEqual({
 			map: 'outdoor-golden-hour',
 			resolution: '4k',
+			quality: 'compressed',
 			intensity: 0.6,
 			rotation: 0
 		})

@@ -10,7 +10,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { action, loader } from './projects.$projectId.scenes'
 import { MAX_STORED_FILE_BYTES } from '../../../constants/utility-constants'
-import { withSceneSettingsDefaults } from '../../../constants/viewer-defaults'
+import {
+	defaultEnvOptions,
+	withSceneSettingsDefaults
+} from '../../../constants/viewer-defaults'
 import { EntitlementRequiredError } from '../../../lib/domain/billing/entitlement-required-error'
 import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
 
@@ -305,7 +308,10 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 			projectId: PROJECT,
 			userId: 'user-1',
 			meta: { name: 'Chair', description: '', thumbnailUrl: '' },
-			settings: withSceneSettingsDefaults({}),
+			// The legacy defaults, with the environment map compressed.
+			settings: withSceneSettingsDefaults({
+				environment: { ...defaultEnvOptions, environmentQuality: 'compressed' }
+			}),
 			sceneAssetIds: ['asset-gltf', 'asset-bin']
 		})
 		expect(mocks.recordAgentAudit).toHaveBeenCalledWith(

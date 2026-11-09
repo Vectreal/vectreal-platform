@@ -8,6 +8,7 @@ import {
 	projectPublishedGlbBytes,
 	resolvePublishGeometryOptions
 } from '../../../lib/domain/scene/client/publish-export'
+import { sceneEnvironmentBytes } from '../../../lib/domain/scene/scene-environment-bytes'
 import { shouldCompressTexturesForGpu } from '../../../lib/domain/scene/scene-presentation'
 import { bakesKey } from '../../../lib/domain/scene/studio-finish'
 import { lastSavedSettingsAtom } from '../../../lib/stores/publisher-config-store'
@@ -16,9 +17,26 @@ import {
 	optimizationRuntimeAtom
 } from '../../../lib/stores/scene-optimization-store'
 import {
+	environmentAtom,
 	lightingAtom,
 	presentationAtom
 } from '../../../lib/stores/scene-settings-store'
+
+/**
+ * What the scene's environment map adds to a visitor's download, at the
+ * quality the scene is set to (not one the Lighting tool is only comparing):
+ * as edited, or as last saved, which is what a live embed reads.
+ */
+export function useEnvironmentMapBytes(
+	settings: 'edited' | 'saved' = 'edited'
+): number | null {
+	const lighting = useAtomValue(lightingAtom)
+	const environment = useAtomValue(environmentAtom)
+	const lastSaved = useAtomValue(lastSavedSettingsAtom)
+	return sceneEnvironmentBytes(
+		settings === 'saved' && lastSaved ? lastSaved : { lighting, environment }
+	)
+}
 
 /**
  * Whether publish encodes this scene's textures for the GPU: the author's

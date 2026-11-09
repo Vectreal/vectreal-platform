@@ -1,4 +1,8 @@
-import { resolveEnvironmentFiles } from '@vctrl/core'
+import {
+	loadedEnvironmentQuality,
+	resolveEnvironmentFiles,
+	resolveLighting
+} from '@vctrl/core'
 import { atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 
@@ -26,7 +30,11 @@ import type {
 	StudioFinishPlan
 } from '../../workers/publish-export.worker.types'
 import type { StudioFinishFailure } from '../domain/scene/client/studio-finish-reasons'
-import type { LightingSettings, SceneSettings } from '@vctrl/core'
+import type {
+	EnvironmentQuality,
+	LightingSettings,
+	SceneSettings
+} from '@vctrl/core'
 import type { ModelFile } from '@vctrl/hooks/use-load-model'
 import type { Object3D } from 'three'
 
@@ -272,7 +280,7 @@ const failedEnvironmentFilesAtom = atom<null | string>(null)
 
 /**
  * Whether the map the scene's settings name right now is the one that failed.
- * A different preset or resolution is a different map, which may load; until
+ * A different preset, resolution or quality is a different map, which may load; until
  * the viewer says which, the panel claims nothing about it.
  */
 const environmentLoadFailedAtom = atom((get) => {
@@ -280,8 +288,51 @@ const environmentLoadFailedAtom = atom((get) => {
 	return (
 		failed !== null &&
 		failed ===
-			String(environmentFilesOf(get(environmentAtom), get(lightingAtom)))
+			String(environmentFilesOf(get(environmentAtom), get(stageLightingAtom)))
 	)
+})
+
+/**
+ * Whether the author asked the Lighting tool to show the environment's other
+ * quality on the stage. View state, never saved.
+ */
+const isComparingEnvironmentQualityAtom = atom(false)
+
+/**
+ * The environment quality the stage shows in place of the scene's while the
+ * author compares, or null. In effect only while the Lighting tool is open,
+ * so no other tool shows a scene the save would not.
+ */
+const comparedEnvironmentQualityAtom = atom<EnvironmentQuality | null>(
+	(get) => {
+		if (
+			!get(isComparingEnvironmentQualityAtom) ||
+			get(openComposeToolAtom) !== 'lighting'
+		) {
+			return null
+		}
+		const { map, quality } = resolveLighting({
+			lighting: get(lightingAtom)
+		}).environment
+		// A map that loads lossless either way has nothing to compare.
+		const canCompress =
+			loadedEnvironmentQuality({
+				preset: map,
+				environmentQuality: 'compressed',
+				files: get(environmentAtom).files
+			}) === 'compressed'
+		if (!canCompress) return null
+		return quality === 'compressed' ? 'lossless' : 'compressed'
+	}
+)
+
+/** The lighting the stage draws: the scene's, at the compared quality if any. */
+const stageLightingAtom = atom<LightingSettings>((get) => {
+	const lighting = get(lightingAtom)
+	const quality = get(comparedEnvironmentQualityAtom)
+	return quality
+		? { ...lighting, environment: { ...lighting.environment, quality } }
+		: lighting
 })
 
 /**
@@ -295,7 +346,8 @@ const environmentFilesOf = (
 	environment?.files ??
 	resolveEnvironmentFiles({
 		preset: lighting.environment?.map,
-		environmentResolution: lighting.environment?.resolution
+		environmentResolution: lighting.environment?.resolution,
+		environmentQuality: lighting.environment?.quality
 	})
 
 /**
@@ -360,6 +412,9 @@ export {
 	failedEnvironmentFilesAtom,
 	environmentLoadFailedAtom,
 	environmentFilesOf,
+	isComparingEnvironmentQualityAtom,
+	comparedEnvironmentQualityAtom,
+	stageLightingAtom,
 	bakePreviewAtom,
 	studioFinishPlanAtom,
 	viewDirectionAtom,
