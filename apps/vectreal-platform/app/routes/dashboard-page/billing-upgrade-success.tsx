@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import {
@@ -28,6 +27,7 @@ import {
 import { canPerformDashboardOperation } from '../../lib/domain/dashboard/dashboard-operations'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { reportServerError } from '../../lib/observability/report-server-error.server'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 
 import type { Route } from './+types/billing-upgrade-success'
 

@@ -6,7 +6,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { ExampleScene } from './example-scene'
 
 const capture = vi.fn()
-vi.mock('@posthog/react', () => ({ usePostHog: () => ({ capture }) }))
+vi.mock('../../lib/posthog/posthog-react', () => ({
+	usePostHog: () => ({ capture })
+}))
 vi.mock('../consent/consent-context', () => ({
 	useConsent: () => ({ consent: { analytics: true } })
 }))

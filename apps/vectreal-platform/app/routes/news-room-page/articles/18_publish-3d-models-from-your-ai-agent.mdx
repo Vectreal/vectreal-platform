@@ -3,7 +3,7 @@ title: "Publish 3D models from your AI agent"
 slug: "publish-3d-models-from-your-ai-agent"
 excerpt: "The Vectreal MCP server lets the coding agent you already work with, in Claude Code, Cursor or VS Code, upload a GLB, set its lighting and shadows, publish it compressed and hand back the embed code. It runs on your machine through the Vectreal CLI, and you sign in once in the browser and choose what the agent may do."
 publishedAt: "2026-11-02T18:00"
-updatedAt: "2026-11-02"
+updatedAt: "2026-11-09"
 category: "guides"
 tags:
   - "api"
@@ -52,7 +52,7 @@ The agent works it out from the server's tools:
 | --- | --- |
 | `describe_model` | Reads a local GLB's size, meshes, materials and animation clips without uploading anything |
 | `create_scene_from_file` | Uploads the GLB as a new draft scene |
-| `get_scene_settings`, `update_scene_settings` | Reads every setting; changes the lighting, environment, controls, bounds, shadows and presentation |
+| `get_scene_settings`, `update_scene_settings` | Reads every setting; changes the lighting, environment, controls, bounds, shadows, presentation, camera views and hotspots |
 | `publish_scene` | Compresses the GLB the way the Publisher does, Draco for geometry and KTX2 for textures, on your machine, and publishes it |
 | `get_embed_snippet` | Returns the iframe snippet and a preview link, creating an embed key if the project has none and adding the domains you name to its allowed list |
 | `list_projects`, `create_project`, `list_scenes`, `unpublish_scene`, `whoami` | Finds its way around your organization |
@@ -109,7 +109,7 @@ Not yet. It isn't a connector you switch on in Claude's settings. The server run
 
 Any agent can build a 3D viewer from scratch with three.js or React Three Fiber, with its own loading, environment and shadows. A lot can go wrong on the way, and what comes out isn't controlled or shareable unless someone puts the work in. With the scene, the compression and the embed handled by a few tool calls, the agent has far less to get right, and it can spend its effort on the page itself.
 
-The same scene opens in the Publisher whenever you want to take over by hand, to add [hotspots](https://vectreal.com/news-room/add-hotspots-to-a-3d-model?utm_source=newsroom&utm_medium=article&utm_campaign=publish-3d-models-from-your-ai-agent) or camera views.
+The same scene opens in the Publisher whenever you want to take over by hand, for example to place [hotspots](https://vectreal.com/news-room/add-hotspots-to-a-3d-model?utm_source=newsroom&utm_medium=article&utm_campaign=publish-3d-models-from-your-ai-agent) by eye or fine-tune a camera view.
 
 ## Hand it to your agent
 

@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -38,6 +37,7 @@ import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { buildMeta } from '../../lib/seo'
 
 import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
