@@ -89,6 +89,23 @@ updates:
       # cannot typecheck. Majors are upgraded by hand together with the pin.
       - dependency-name: 'stripe'
         update-types: ['version-update:semver-major']
+      # Parked majors. Each has a Vectreal Work Items row that removes its rule
+      # once the upgrade lands; until then the bump would only reopen the same
+      # failing pull request every week.
+      # TypeScript 7 is the native compiler and Nx plugins fail to load on it
+      # (#1199).
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      # Typed to match the Node 22 runtime; moves with the runtime, not alone
+      # (#1194).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # three is 0.x, so a minor is breaking: 0.187 changed the shader chunks
+      # the viewer's baked lights patch rewrites (#1297). Patches still arrive.
+      - dependency-name: 'three'
+        update-types: ['version-update:semver-minor']
+      - dependency-name: '@types/three'
+        update-types: ['version-update:semver-minor']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
