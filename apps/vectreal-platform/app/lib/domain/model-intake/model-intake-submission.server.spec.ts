@@ -90,6 +90,7 @@ describe('submitModelIntake', () => {
 		await submit(form(), deps, {
 			code: 'K7Q2M9AB',
 			organization: 'Brand GmbH',
+			audience: 'brand',
 			category: 'shoes',
 			locale: 'de'
 		})

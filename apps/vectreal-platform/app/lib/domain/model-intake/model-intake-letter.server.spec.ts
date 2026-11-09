@@ -14,6 +14,7 @@ import type { ModelIntakeLetter } from './model-intake-repository.server'
 const letter: ModelIntakeLetter = {
 	code: 'K7Q2M9AB',
 	organization: 'Brand GmbH',
+	audience: 'brand',
 	category: 'shoes',
 	locale: 'de'
 }

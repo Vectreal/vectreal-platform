@@ -17,6 +17,7 @@ import {
 	addRetentionDays,
 	cleanupMinutesBetween,
 	MODEL_INTAKE_RETENTION_DAYS,
+	type ModelIntakeAudience,
 	type ModelIntakeLocale,
 	type ModelIntakeOutcome,
 	type ModelIntakeProductType
@@ -31,11 +32,16 @@ import {
 export type ModelIntakeLetter = Omit<
 	typeof modelIntakeLetters.$inferSelect,
 	'createdAt'
-> & { category: ModelIntakeProductType; locale: ModelIntakeLocale }
+> & {
+	audience: ModelIntakeAudience
+	category: ModelIntakeProductType
+	locale: ModelIntakeLocale
+}
 
 const letterColumns = {
 	code: modelIntakeLetters.code,
 	organization: modelIntakeLetters.organization,
+	audience: modelIntakeLetters.audience,
 	category: modelIntakeLetters.category,
 	locale: modelIntakeLetters.locale
 }
@@ -84,6 +90,7 @@ export async function findConflictingIntakeLetters(
 			return (
 				row !== undefined &&
 				(row.organization !== letter.organization ||
+					row.audience !== letter.audience ||
 					row.category !== letter.category ||
 					row.locale !== letter.locale)
 			)

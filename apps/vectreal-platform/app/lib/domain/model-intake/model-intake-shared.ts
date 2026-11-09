@@ -58,6 +58,21 @@ export function resolveIntakeBatch(raw: string | null): ModelIntakeBatch {
 }
 
 /**
+ * Whom a letter was written to: a brand, whose code opens its category's
+ * sample-store page, or an agency, whose code opens the agency page. A closed
+ * list for the same reason as the batches.
+ */
+export const MODEL_INTAKE_AUDIENCES = ['brand', 'agency'] as const
+export type ModelIntakeAudience = (typeof MODEL_INTAKE_AUDIENCES)[number]
+
+export function isIntakeAudience(value: unknown): value is ModelIntakeAudience {
+	return MODEL_INTAKE_AUDIENCES.includes(value as ModelIntakeAudience)
+}
+
+/** The page an agency letter's short address opens. German only, like the agency letters. */
+export const MODEL_INTAKE_AGENCY_PAGE_PATH = '/agenturen'
+
+/**
  * `?c=<code>`: the one letter a link was printed for. Opaque on purpose, so the
  * URL names no organization or person; the code is looked up on the server.
  */
@@ -351,10 +366,16 @@ export const MODEL_INTAKE_STORE_PAGES: Partial<
 	Record<ModelIntakeProductType, string>
 > = {}
 
-/** Where `/c/<code>` sends a reader: the store page for the letter's category, else the form, else the plain form for a code we never posted. */
+/**
+ * Where `/c/<code>` sends a reader. An agency letter opens the agency page; a
+ * brand letter opens its category's store page, or the form while the
+ * category has none. Both carry the code on, so the form still greets the
+ * reader when they reach it. A code we never posted opens the plain form.
+ */
 export function intakeLetterDestination(
 	letter: {
 		code: string
+		audience: ModelIntakeAudience
 		category: ModelIntakeProductType
 		locale: ModelIntakeLocale
 	} | null,
@@ -363,6 +384,12 @@ export function intakeLetterDestination(
 	> = MODEL_INTAKE_STORE_PAGES
 ): string {
 	if (!letter) return '/free-model'
+	if (letter.audience === 'agency') {
+		const search = new URLSearchParams({
+			[MODEL_INTAKE_LETTER_PARAM]: letter.code
+		})
+		return `${MODEL_INTAKE_AGENCY_PAGE_PATH}?${search.toString()}`
+	}
 	const storePage = storePages[letter.category]
 	if (storePage) {
 		const url = new URL(storePage)

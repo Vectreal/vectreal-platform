@@ -150,6 +150,7 @@ describe('letter codes', () => {
 describe('intakeLetterDestination', () => {
 	const letter = {
 		code: 'K7Q2M9AB',
+		audience: 'brand',
 		category: 'shoes',
 		locale: 'de'
 	} as const
@@ -175,6 +176,16 @@ describe('intakeLetterDestination', () => {
 				shoes: 'https://store.example/products/sneaker?variant=1'
 			})
 		).toBe('https://store.example/products/sneaker?variant=1&c=K7Q2M9AB')
+	})
+
+	it('sends an agency letter to the agency page, carrying the code, store page or not', () => {
+		const agency = { ...letter, audience: 'agency' } as const
+		expect(intakeLetterDestination(agency, {})).toBe('/agenturen?c=K7Q2M9AB')
+		expect(
+			intakeLetterDestination(agency, {
+				shoes: 'https://store.example/products/sneaker'
+			})
+		).toBe('/agenturen?c=K7Q2M9AB')
 	})
 })
 
