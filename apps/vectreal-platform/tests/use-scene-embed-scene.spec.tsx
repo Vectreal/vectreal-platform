@@ -29,7 +29,7 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 	})
 }))
 
-vi.mock('@posthog/react', () => ({ usePostHog: () => null }))
+vi.mock('../app/lib/posthog/posthog-react', () => ({ usePostHog: () => null }))
 
 vi.mock('../app/components/consent/consent-context', () => ({
 	useConsent: () => ({ consent: null })

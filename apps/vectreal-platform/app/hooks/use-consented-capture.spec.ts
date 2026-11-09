@@ -6,7 +6,9 @@ import { useConsentedCapture } from './use-consented-capture'
 
 const capture = vi.fn()
 const consent = vi.hoisted(() => ({ analytics: false }))
-vi.mock('@posthog/react', () => ({ usePostHog: () => ({ capture }) }))
+vi.mock('../lib/posthog/posthog-react', () => ({
+	usePostHog: () => ({ capture })
+}))
 vi.mock('../components/consent/consent-context', () => ({
 	useConsent: () => ({ consent })
 }))

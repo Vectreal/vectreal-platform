@@ -74,7 +74,7 @@ export type ErrorReportContext = {
  * instead would put it straight back.
  *
  * `posthog-js` covers its own side through the `before_send` hook installed in
- * `entry.client.tsx`, which walks every property of every event. `posthog-node`
+ * `posthog-browser.ts`, which walks every property of every event. `posthog-node`
  * has no equivalent, and `captureException` serializes `message` and `stack`
  * itself rather than reading our property bag, so the only place to intervene
  * is the error object handed to it. Doing it here rather than in the server

@@ -9,7 +9,6 @@ import fileSaver from 'file-saver'
 import { useReducedMotion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
 import { Download, Loader2 } from 'lucide-react'
-import { usePostHog } from 'posthog-js/react'
 import {
 	useCallback,
 	useEffect,
@@ -59,6 +58,7 @@ import {
 	buildConvertModelResultProps
 } from '../../lib/domain/analytics/convert-events'
 import { persistPendingSceneDraftOrchestrator } from '../../lib/domain/scene/client/scene-draft-persistence'
+import { usePostHog } from '../../lib/posthog/posthog-react'
 import { sceneViewerSettingsAtom } from '../../lib/stores/scene-settings-store'
 import { useConsent } from '../consent/consent-context'
 import { ClientVectrealViewer } from '../viewer/client-vectreal-viewer'
