@@ -85,18 +85,17 @@ function IntakeProductScene({
 		if (!wanted || !iframe) return
 		let embed: { destroy: () => void } | null = null
 		let cancelled = false
-		void import('@vctrl/embed').then(({ VectrealEmbed }) => {
-			if (cancelled) return
-			const connection = new VectrealEmbed(iframe, { readyTimeout: 60_000 })
-			embed = connection
-			connection
-				.ready()
-				.then(() => {
+		import('@vctrl/embed')
+			.then(({ VectrealEmbed }) => {
+				if (cancelled) return
+				const connection = new VectrealEmbed(iframe, { readyTimeout: 60_000 })
+				embed = connection
+				return connection.ready().then(() => {
 					if (!cancelled) setLive(true)
 				})
-				// No viewer, no harm: the poster stays.
-				.catch(() => {})
-		})
+			})
+			// No SDK chunk or no viewer, no harm: the poster stays.
+			.catch(() => {})
 		return () => {
 			cancelled = true
 			embed?.destroy()
