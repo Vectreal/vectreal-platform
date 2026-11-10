@@ -144,6 +144,8 @@ export default [
 		route('pricing', './routes/pricing-page/pricing-page.tsx'),
 		route('contact', './routes/contact-page.tsx'),
 		route('free-model', './routes/free-model-page.tsx'),
+		// Where an agency letter's short address forwards; unlinked and noindex.
+		route('agenturen', './routes/agency-page.tsx'),
 
 		// Legal pages
 		layout('./routes/layouts/mdx-layout.tsx', { id: 'legal-mdx-layout' }, [

@@ -5,16 +5,17 @@
  * Run via: pnpm nx run vectreal-platform:generate-intake-qr -- [flags]
  *
  * With `--letters=<file.csv>` (columns `organization,recipient,category`, and
- * optionally `code`), each letter gets a code, and the QR code encodes its
- * short address, `https://vectreal.com/c/<code>`. That address counts the
- * scan and forwards to the sample-store page for the letter's category, or to
- * the form while the category has no page. The URL carries the opaque code
+ * optionally `audience`, `code` and `locale`), each letter gets a code, and the
+ * QR code encodes its short address, `https://vectreal.com/c/<code>`. That
+ * address counts the scan and forwards an agency letter to the agency page and
+ * a brand letter to the sample-store page for its category, or to the form
+ * while the category has no page. A row without an audience is a brand. The URL carries the opaque code
  * only: the person's name never leaves the files written here.
  *
  * Writes into `--out`:
  *   <code>.svg    the QR code, for print
- *   letters.csv   code, organization, recipient, category, locale, the address to
- *                 print under the QR code, and the file. Refused if it exists,
+ *   letters.csv   code, organization, recipient, audience, category, locale,
+ *                 the address to print under the QR code, and the file. Refused if it exists,
  *                 because it is the only record of who got which code. Fed
  *                 back as `--letters`, it reprints the same codes.
  *
@@ -107,9 +108,10 @@ async function printLetters(listFile: string, origin: string, outDir: string) {
 	}
 	const host = registrationHost()
 	const letters = parsed.letters.map(
-		({ code, organization, category, locale }) => ({
+		({ code, organization, audience, category, locale }) => ({
 			code,
 			organization,
+			audience,
 			category,
 			locale
 		})

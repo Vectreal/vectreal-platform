@@ -36,12 +36,14 @@ export const modelIntakeEmailStatusEnum = pgEnum('model_intake_email_status', [
  * One posted letter, by the code printed on its card. Only the organization is
  * kept here, for the form's greeting and the internal page; the person it was
  * addressed to stays in the CSV the QR script writes for the sender. The
- * category picks the sample-store page its short address forwards to, the
- * locale the form's language.
+ * audience picks between the agency page and the sample store, the category
+ * the store page, the locale the form's language. Letters registered before
+ * the audience existed all went to brands.
  */
 export const modelIntakeLetters = pgTable('model_intake_letters', {
 	code: text('code').primaryKey(),
 	organization: text('organization').notNull(),
+	audience: text('audience').notNull().default('brand'),
 	category: text('category').notNull(),
 	locale: text('locale').notNull(),
 	createdAt: timestamp('created_at', { withTimezone: true })
@@ -103,6 +105,12 @@ export const modelIntakeSubmissions = pgTable(
 		consentPhotosAt: timestamp('consent_photos_at', {
 			withTimezone: true
 		}).notNull(),
+		/**
+		 * When an agency confirmed its client agreed to sharing the photos and
+		 * having the model made. Asked only on agency letters, so null means it
+		 * was never asked, not that it was refused: a refusal is never stored.
+		 */
+		consentClientAt: timestamp('consent_client_at', { withTimezone: true }),
 		emailStatus: modelIntakeEmailStatusEnum('email_status')
 			.notNull()
 			.default('queued'),

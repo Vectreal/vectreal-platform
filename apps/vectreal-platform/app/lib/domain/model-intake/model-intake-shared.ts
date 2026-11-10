@@ -58,6 +58,32 @@ export function resolveIntakeBatch(raw: string | null): ModelIntakeBatch {
 }
 
 /**
+ * Whom a letter was written to: a brand, whose code opens its category's
+ * sample-store page, or an agency, whose code opens the agency page. A closed
+ * list for the same reason as the batches.
+ */
+export const MODEL_INTAKE_AUDIENCES = ['brand', 'agency'] as const
+export type ModelIntakeAudience = (typeof MODEL_INTAKE_AUDIENCES)[number]
+
+export function isIntakeAudience(value: unknown): value is ModelIntakeAudience {
+	return MODEL_INTAKE_AUDIENCES.includes(value as ModelIntakeAudience)
+}
+
+/**
+ * An agency sends its client's photos, not its own, so a request from an
+ * agency letter also confirms the client agreed. Decided by the letter the
+ * server looked up, never by anything the form posts.
+ */
+export function intakeLetterAsksClientConsent(
+	letter: { audience: ModelIntakeAudience } | null
+): boolean {
+	return letter?.audience === 'agency'
+}
+
+/** The page an agency letter's short address opens. German only, like the agency letters. */
+export const MODEL_INTAKE_AGENCY_PAGE_PATH = '/agenturen'
+
+/**
  * `?c=<code>`: the one letter a link was printed for. Opaque on purpose, so the
  * URL names no organization or person; the code is looked up on the server.
  */
@@ -133,10 +159,10 @@ export const MODEL_INTAKE_MAX_TEXT_LENGTH = 200
 export const MODEL_INTAKE_RETENTION_DAYS = 90
 
 /**
- * Bumped whenever the wording of either consent changes, so every stored
- * consent names the text it was given against.
+ * Bumped whenever the wording of any consent changes, or one is added, so every
+ * stored consent names the text it was given against.
  */
-export const MODEL_INTAKE_CONSENT_VERSION = '2026-10-19'
+export const MODEL_INTAKE_CONSENT_VERSION = '2026-11-10'
 
 export const MODEL_INTAKE_HONEYPOT_FIELD = 'website'
 
@@ -170,6 +196,7 @@ export interface ModelIntakeFieldErrors {
 	message?: ModelIntakeFieldErrorCode
 	consentFollowUp?: ModelIntakeFieldErrorCode
 	consentPhotos?: ModelIntakeFieldErrorCode
+	consentClient?: ModelIntakeFieldErrorCode
 }
 
 /** What a failed submit hands back so the form keeps what was typed. Photos cannot be refilled. */
@@ -213,6 +240,9 @@ export function parseIntakeSizeCm(raw: string): number | null | 'invalid' {
 export interface ModelIntakeTextInput extends ModelIntakeFields {
 	consentFollowUp: boolean
 	consentPhotos: boolean
+	/** Whether this request must carry `consentClient`: see `intakeLetterAsksClientConsent`. */
+	asksClientConsent: boolean
+	consentClient: boolean
 }
 
 export interface ModelIntakeValidated {
@@ -266,6 +296,9 @@ export function validateIntakeFields(
 	}
 	if (!input.consentFollowUp) fieldErrors.consentFollowUp = 'consent'
 	if (!input.consentPhotos) fieldErrors.consentPhotos = 'consent'
+	if (input.asksClientConsent && !input.consentClient) {
+		fieldErrors.consentClient = 'consent'
+	}
 
 	const height = parseIntakeSizeCm(input.height)
 	const width = parseIntakeSizeCm(input.width)
@@ -351,10 +384,16 @@ export const MODEL_INTAKE_STORE_PAGES: Partial<
 	Record<ModelIntakeProductType, string>
 > = {}
 
-/** Where `/c/<code>` sends a reader: the store page for the letter's category, else the form, else the plain form for a code we never posted. */
+/**
+ * Where `/c/<code>` sends a reader. An agency letter opens the agency page; a
+ * brand letter opens its category's store page, or the form while the
+ * category has none. Both carry the code on, so the form still greets the
+ * reader when they reach it. A code we never posted opens the plain form.
+ */
 export function intakeLetterDestination(
 	letter: {
 		code: string
+		audience: ModelIntakeAudience
 		category: ModelIntakeProductType
 		locale: ModelIntakeLocale
 	} | null,
@@ -363,6 +402,12 @@ export function intakeLetterDestination(
 	> = MODEL_INTAKE_STORE_PAGES
 ): string {
 	if (!letter) return '/free-model'
+	if (letter.audience === 'agency') {
+		const search = new URLSearchParams({
+			[MODEL_INTAKE_LETTER_PARAM]: letter.code
+		})
+		return `${MODEL_INTAKE_AGENCY_PAGE_PATH}?${search.toString()}`
+	}
 	const storePage = storePages[letter.category]
 	if (storePage) {
 		const url = new URL(storePage)
