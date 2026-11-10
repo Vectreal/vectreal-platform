@@ -92,6 +92,7 @@ describe('submitModelIntake', () => {
 			organization: 'Brand GmbH',
 			audience: 'brand',
 			category: 'shoes',
+			showcase: null,
 			locale: 'de'
 		})
 
@@ -109,6 +110,7 @@ describe('submitModelIntake', () => {
 			organization: 'Agentur GmbH',
 			audience: 'agency',
 			category: 'shoes',
+			showcase: null,
 			locale: 'de'
 		}
 

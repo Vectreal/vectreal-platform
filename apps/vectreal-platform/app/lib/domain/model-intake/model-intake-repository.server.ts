@@ -20,7 +20,8 @@ import {
 	type ModelIntakeAudience,
 	type ModelIntakeLocale,
 	type ModelIntakeOutcome,
-	type ModelIntakeProductType
+	type ModelIntakeProductType,
+	type ModelIntakeShowcase
 } from './model-intake-shared'
 import { getDbClient } from '../../../db/client'
 import {
@@ -35,6 +36,7 @@ export type ModelIntakeLetter = Omit<
 > & {
 	audience: ModelIntakeAudience
 	category: ModelIntakeProductType
+	showcase: ModelIntakeShowcase | null
 	locale: ModelIntakeLocale
 }
 
@@ -43,6 +45,7 @@ const letterColumns = {
 	organization: modelIntakeLetters.organization,
 	audience: modelIntakeLetters.audience,
 	category: modelIntakeLetters.category,
+	showcase: modelIntakeLetters.showcase,
 	locale: modelIntakeLetters.locale
 }
 
@@ -92,6 +95,7 @@ export async function findConflictingIntakeLetters(
 				(row.organization !== letter.organization ||
 					row.audience !== letter.audience ||
 					row.category !== letter.category ||
+					row.showcase !== letter.showcase ||
 					row.locale !== letter.locale)
 			)
 		})

@@ -63,6 +63,8 @@ pnpm nx run terraform:setup-fly-secrets-prod
 pnpm nx run terraform:verify-fly-secrets
 ```
 
+`MODEL_INTAKE_STORE_PAGES` is optional: the sample-store page each brand letter's QR code opens, by the showcase the letter shows, as `lamp=https://…,fire=https://…,coffee=https://…,furniture=https://…`. Every URL must be `https`, and a malformed value is ignored as a whole and reported. Unset, every letter code opens the free-model form. The CI sync reads it from a GitHub secret of the same name in each environment.
+
 ---
 
 ## CI/CD workflows
