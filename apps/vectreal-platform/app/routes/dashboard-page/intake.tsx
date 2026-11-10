@@ -245,6 +245,12 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 					: ''}
 				{row.locale} · received {dateTime.format(new Date(row.createdAt))}
 			</p>
+			{row.consentClientAt ? (
+				<p className="text-muted-foreground text-body-sm">
+					Agency confirmed its client&apos;s OK{' '}
+					{dateTime.format(new Date(row.consentClientAt))}
+				</p>
+			) : null}
 
 			<div className="flex flex-wrap gap-3">
 				{row.photoUrls.map((url, index) => (

@@ -15,6 +15,7 @@ import { Form, Link } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { PhotoSlots } from './photo-slots'
+import { MODEL_INTAKE_CLIENT_CONSENT_COPY } from '../../constants/model-intake-client-consent-copy'
 import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import {
 	MODEL_INTAKE_HONEYPOT_FIELD,
@@ -36,6 +37,8 @@ interface ModelIntakeFormProps {
 	batch: ModelIntakeBatch
 	/** The letter code this visit came with; the submit looks it up again. */
 	letterCode: string | null
+	/** An agency letter: the agency also confirms its client agreed. */
+	asksClientConsent: boolean
 	turnstileSiteKey: string
 	turnstileToken: string | null
 	onTurnstileSuccess: (token: string) => void
@@ -64,6 +67,7 @@ export function ModelIntakeForm({
 	locale,
 	batch,
 	letterCode,
+	asksClientConsent,
 	turnstileSiteKey,
 	turnstileToken,
 	onTurnstileSuccess,
@@ -78,6 +82,13 @@ export function ModelIntakeForm({
 	const errors = failed?.fieldErrors
 	const fields = failed?.fields
 	const [productType, setProductType] = useState(fields?.productType ?? '')
+	/*
+	  The server decides from its own lookup, so a refusal for the client's OK
+	  shows the box even if the page's lookup missed. Once shown it stays, so a
+	  later refusal for something else does not take it away again.
+	*/
+	const [showClientConsent, setShowClientConsent] = useState(asksClientConsent)
+	if (errors?.consentClient && !showClientConsent) setShowClientConsent(true)
 
 	const say = (code: ModelIntakeFieldErrorCode | undefined, n?: number) =>
 		code ? copy.fieldErrors[code](n) : undefined
@@ -269,7 +280,13 @@ export function ModelIntakeForm({
 			</div>
 
 			<div className="space-y-4">
-				{(['consentFollowUp', 'consentPhotos'] as const).map((name) => (
+				{(
+					[
+						'consentFollowUp',
+						'consentPhotos',
+						...(showClientConsent ? (['consentClient'] as const) : [])
+					] as const
+				).map((name) => (
 					<div key={name} className="space-y-1.5">
 						<div className="flex items-start gap-3">
 							<Checkbox
@@ -281,7 +298,9 @@ export function ModelIntakeForm({
 								aria-describedby={errors?.[name] ? `${name}-error` : undefined}
 							/>
 							<Label htmlFor={name} className="text-body-sm font-normal">
-								{copy.fields[name]}
+								{name === 'consentClient'
+									? MODEL_INTAKE_CLIENT_CONSENT_COPY[locale]
+									: copy.fields[name]}
 							</Label>
 						</div>
 						<FieldError id={`${name}-error`} message={say(errors?.[name])} />

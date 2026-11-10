@@ -1,0 +1,42 @@
+{%- comment -%}
+  A link to Vectreal's free-model form that keeps the letter code a shopper
+  arrived with, so a reply from a printed letter stays tied to that letter.
+
+  Install: Online Store > Themes > Edit code > Snippets > Add a new snippet
+  named vectreal-free-model-link, paste this file, then render it where the
+  link should show, for example below the buy buttons in Dawn's
+  sections/main-product.liquid:
+
+    {% render 'vectreal-free-model-link' %}
+
+  Both parameters are optional:
+
+    {% render 'vectreal-free-model-link', label: 'Free 3D model', lang: 'en' %}
+
+  label  the link text, "Kostenloses Modell anfragen" by default
+  lang   the form's language, de (default) or en
+
+  A letter's QR code opens the product page with ?c=CODE. On load the link
+  takes that code along to the form, but only a well-formed one: eight
+  characters from Vectreal's letter-code alphabet, in any case. Without one
+  the link stays plain.
+{%- endcomment -%}
+
+{%- liquid
+  assign label = label | default: 'Kostenloses Modell anfragen'
+  assign lang = lang | default: 'de'
+-%}
+
+<a class="vectreal-free-model-link link" href="https://vectreal.com/free-model?lang={{ lang | url_encode }}">
+  {{- label | escape -}}
+</a>
+<script>
+  (() => {
+    const link = document.currentScript.previousElementSibling;
+    const code = (new URLSearchParams(location.search).get('c') ?? '').trim().toUpperCase();
+    if (!/^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(code)) return;
+    const url = new URL(link.href);
+    url.searchParams.set('c', code);
+    link.href = url.href;
+  })();
+</script>
