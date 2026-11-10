@@ -8,6 +8,8 @@ import {
 	buildIntakeUrl,
 	cleanupMinutesBetween,
 	intakeLetterDestination,
+	intakeSceneFor,
+	parseIntakeScenes,
 	parseIntakeStorePages,
 	intakeLetterFormPath,
 	intakePageLocale,
@@ -297,5 +299,50 @@ describe('isIntakeBodyAcceptable', () => {
 		['a body over the cap', String(47 * 1024 * 1024)]
 	])('refuses %s', (_, header) => {
 		expect(isIntakeBodyAcceptable(header)).toBe(false)
+	})
+})
+
+describe('parseIntakeScenes', () => {
+	const P = '6f1c2a0e-1b7d-4c55-9a0e-0d3b9f6c1a11'
+	const S1 = '92aae012-e003-4b65-8bd8-dfd4dcd6399d'
+	const S2 = '4c5122c9-2058-4ac6-8b27-9d4b94a8be13'
+
+	it('reads nothing as no scene', () => {
+		expect(parseIntakeScenes(undefined)).toEqual({ ok: true, scenes: {} })
+		expect(parseIntakeScenes('')).toEqual({ ok: true, scenes: {} })
+	})
+
+	it('reads the embed URL the publisher copies, for the default and each showcase', () => {
+		expect(
+			parseIntakeScenes(
+				`default=https://vectreal.com/embed/${P}/${S1}?token=vctrl_a , lamp=https://vectreal.com/embed/${P}/${S2}?token=vctrl_b`
+			)
+		).toEqual({
+			ok: true,
+			scenes: {
+				default: { projectId: P, sceneId: S1, token: 'vctrl_a' },
+				lamp: { projectId: P, sceneId: S2, token: 'vctrl_b' }
+			}
+		})
+	})
+
+	it.each([
+		[`sofa=https://vectreal.com/embed/${P}/${S1}?token=t`],
+		[`default=https://vectreal.com/embed/${P}/${S1}`],
+		[`default=https://vectreal.com/preview/${P}/${S1}?token=t`],
+		[`default=https://vectreal.com/embed/${P}/not-a-scene?token=t`],
+		['default=not a url']
+	])('refuses the whole value over %s', (raw) => {
+		expect(parseIntakeScenes(`${raw},lamp=x`).ok).toBe(false)
+		expect(parseIntakeScenes(raw).ok).toBe(false)
+	})
+
+	it("picks the letter's showcase, and the default otherwise", () => {
+		const lamp = { projectId: P, sceneId: S2, token: 'b' }
+		const fallback = { projectId: P, sceneId: S1, token: 'a' }
+		expect(intakeSceneFor({ lamp, default: fallback }, 'lamp')).toBe(lamp)
+		expect(intakeSceneFor({ lamp, default: fallback }, 'fire')).toBe(fallback)
+		expect(intakeSceneFor({ lamp, default: fallback }, null)).toBe(fallback)
+		expect(intakeSceneFor({ lamp }, null)).toBeNull()
 	})
 })

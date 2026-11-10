@@ -3,10 +3,12 @@ import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { PublicErrorBoundary } from '../components/errors'
-import { CtaPanel, PageHero, SheetFrame } from '../components/layout-components'
+import { CtaPanel, SheetFrame } from '../components/layout-components'
+import { IntakeHero } from '../components/model-intake/intake-hero'
 import { routeErrorMeta } from '../components/not-found'
 import { AGENCY_PAGE_COPY as COPY } from '../constants/agency-page-copy'
 import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
+import { resolveIntakeScene } from '../lib/domain/model-intake/model-intake-scene.server'
 import {
 	intakeLetterFormPath,
 	MODEL_INTAKE_AGENCY_PAGE_PATH,
@@ -27,10 +29,12 @@ import type { Route } from './+types/agency-page'
 export async function loader({ request }: Route.LoaderArgs) {
 	const raw = new URL(request.url).searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 	const letterCode = normalizeIntakeLetterCode(raw)
-	return {
-		letterCode,
-		letter: await resolveIntakeLetter(request, raw)
-	}
+	// An agency letter shows no showcase, so the page turns the default scene.
+	const [letter, scene] = await Promise.all([
+		resolveIntakeLetter(request, raw),
+		resolveIntakeScene(request, null)
+	])
+	return { letterCode, letter, scene }
 }
 
 export function meta({ error }: Route.MetaArgs) {
@@ -62,20 +66,20 @@ const BAND = 'border-foreground/10 border-t'
 const PARAGRAPH = 'text-body text-muted-foreground max-w-3xl'
 
 export default function AgencyPage({ loaderData }: Route.ComponentProps) {
-	const { letterCode, letter } = loaderData
+	const { letterCode, letter, scene } = loaderData
 	const formPath = letterCode
 		? intakeLetterFormPath(letterCode, 'de')
 		: '/free-model?lang=de'
 
 	return (
 		<main lang="de">
-			<PageHero
+			<IntakeHero
+				greeting={letter ? COPY.letterGreeting(letter.organization) : null}
 				heading={COPY.hero.heading}
-				description={
-					letter
-						? `${COPY.letterGreeting(letter.organization)} ${COPY.hero.description}`
-						: COPY.hero.description
-				}
+				lead={COPY.hero.lead}
+				scene={scene}
+				sceneLabel={COPY.hero.sceneLabel}
+				action={<RequestButton to={formPath} />}
 			/>
 
 			<SheetFrame>

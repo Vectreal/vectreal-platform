@@ -731,7 +731,15 @@ export const UPGRADE_FEATURE_HIGHLIGHT_KEYS: readonly EntitlementKey[] = [
 /** One copy per locale, so a string missing from either is a compile error. */
 interface ModelIntakeCopy {
 	meta: { title: string; description: string }
-	hero: { heading: string; description: string }
+	hero: {
+		heading: string
+		description: string
+		/** The one sentence on the phone's first screen, beside the turning product. Moritz's "ich", like the letters. */
+		lead: string
+		sceneLabel: string
+		/** The hero's button, down to the form. */
+		action: string
+	}
 	/** Opens the hero for a visit from one of our letters; the organization comes from the letter's code. */
 	letterGreeting: (organization: string) => string
 	fields: {
@@ -801,7 +809,10 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		hero: {
 			heading: 'A free 3D model of one of your products',
 			description:
-				"Send us three photos of one product. We look at them first and tell you whether we can make a model from them. If we can, we send it back as GLB and USDZ files for Shopify's own 3D slot."
+				"Send us three photos of one product. We look at them first and tell you whether we can make a model from them. If we can, we send it back as GLB and USDZ files for Shopify's own 3D slot.",
+			lead: "Send me three photos of one product, and if they work, I'll make you a 3D model like this one for Shopify's own 3D slot.",
+			sceneLabel: 'An example product in 3D, to turn',
+			action: 'Send three photos'
 		},
 		letterGreeting: (organization) =>
 			`Welcome, ${organization}. Thanks for reading our letter.`,
@@ -911,7 +922,10 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		hero: {
 			heading: 'Ein kostenloses 3D-Modell eines Ihrer Produkte',
 			description:
-				'Schicken Sie uns drei Fotos eines Produkts. Wir sehen sie uns zuerst an und sagen Ihnen, ob wir daraus ein Modell erstellen können. Wenn ja, senden wir es Ihnen als GLB- und USDZ-Datei für den 3D-Platz in Shopify zurück.'
+				'Schicken Sie uns drei Fotos eines Produkts. Wir sehen sie uns zuerst an und sagen Ihnen, ob wir daraus ein Modell erstellen können. Wenn ja, senden wir es Ihnen als GLB- und USDZ-Datei für den 3D-Platz in Shopify zurück.',
+			lead: 'Schicken Sie mir drei Fotos eines Produkts, und wenn sie reichen, mache ich Ihnen daraus ein 3D-Modell wie dieses für den 3D-Platz in Shopify.',
+			sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen',
+			action: 'Drei Fotos senden'
 		},
 		letterGreeting: (organization) =>
 			`Willkommen, ${organization}. Danke, dass Sie unseren Brief gelesen haben.`,
