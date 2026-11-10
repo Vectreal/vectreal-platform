@@ -15,6 +15,8 @@ interface PhotoSlotsProps {
 		add: string
 		remove: (n: number) => string
 	}
+	/** A good photo for each slot, in slot order: front, side, back. */
+	examples?: readonly { src: string; label: string }[]
 	/** 1-based photo an error is about, or 0 for the whole set. */
 	invalidIndex?: number
 	describedBy?: string
@@ -40,12 +42,27 @@ interface PhotoSlotsProps {
  */
 export function PhotoSlots({
 	labels,
+	examples,
 	invalidIndex,
 	describedBy,
 	onTooLarge
 }: PhotoSlotsProps) {
 	return (
 		<div className="grid grid-cols-3 gap-3">
+			{/* Each example sits over the slot it shows, so the reader matches them by eye. */}
+			{examples?.map((example) => (
+				<figure key={example.src} className="space-y-1">
+					<img
+						src={example.src}
+						alt=""
+						loading="lazy"
+						className="ds-sunken aspect-square w-full rounded-xl object-contain"
+					/>
+					<figcaption className="text-label-xs text-muted-foreground text-center">
+						{example.label}
+					</figcaption>
+				</figure>
+			))}
 			{Array.from({ length: MODEL_INTAKE_PHOTO_COUNT }, (_, index) => (
 				<PhotoSlot
 					key={index}
@@ -179,7 +196,13 @@ function PhotoSlot({
 						<span className="text-label-xs text-muted-foreground">
 							{labels.slot(n)}
 						</span>
-						<span className="text-body-sm line-clamp-2 break-all">
+						{/* Only a file name may break anywhere; the label keeps its words whole. */}
+						<span
+							className={cn(
+								'text-body-sm line-clamp-2',
+								file ? 'break-all' : 'hyphens-auto'
+							)}
+						>
 							{file ? file.name : labels.add}
 						</span>
 					</>

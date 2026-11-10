@@ -755,6 +755,8 @@ interface ModelIntakeCopy {
 		photos: {
 			label: string
 			help: string
+			/** Captions the example photos over the slots, front to back. */
+			examples: readonly [string, string, string]
 			slot: (n: number) => string
 			add: string
 			remove: (n: number) => string
@@ -836,6 +838,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			photos: {
 				label: 'Three photos of the product',
 				help: 'Front, side and back work best, on a plain background. JPEG, PNG, WebP or HEIC, up to 15 MB each.',
+				examples: ['Front', 'Side', 'Back'],
 				slot: (n) => `Photo ${n}`,
 				add: 'Add photo',
 				remove: (n) => `Remove photo ${n}`
@@ -864,10 +867,9 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		next: {
 			heading: 'What happens next',
 			steps: [
-				'We look at your photos and tell you whether we can make a model from them.',
-				'If we can, we make it, check it by hand and email you GLB and USDZ files.',
-				"You upload them to your product's own 3D slot in Shopify. Nothing to install.",
-				'If you like it, we can make five products as a paid pilot.'
+				'I look at your photos and tell you whether they work.',
+				'If they do, I email you the model as GLB and USDZ files.',
+				"You upload them to your product's 3D slot in Shopify, with no app."
 			],
 			note: 'A model made from photos approximates your product. You see it before anything goes live.',
 			retention: (days) =>
@@ -951,6 +953,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			photos: {
 				label: 'Drei Fotos des Produkts',
 				help: 'Am besten von vorne, von der Seite und von hinten, vor einem ruhigen Hintergrund. JPEG, PNG, WebP oder HEIC, bis zu 15 MB pro Foto.',
+				examples: ['Vorne', 'Seite', 'Hinten'],
 				slot: (n) => `Foto ${n}`,
 				add: 'Foto hinzufügen',
 				remove: (n) => `Foto ${n} entfernen`
@@ -979,10 +982,9 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		next: {
 			heading: 'So geht es weiter',
 			steps: [
-				'Wir sehen uns Ihre Fotos an und sagen Ihnen, ob wir daraus ein Modell erstellen können.',
-				'Wenn ja, erstellen wir es, prüfen es von Hand und senden Ihnen GLB- und USDZ-Dateien per E-Mail.',
-				'Sie laden sie in den 3D-Platz Ihres Produkts in Shopify hoch. Nichts zu installieren.',
-				'Wenn es Ihnen gefällt, setzen wir fünf Produkte als bezahlten Pilot um.'
+				'Ich sehe mir Ihre Fotos an und sage Ihnen, ob sie reichen.',
+				'Reichen sie, schicke ich Ihnen das Modell als GLB- und USDZ-Datei.',
+				'Sie laden es in den 3D-Platz Ihres Produkts in Shopify, ohne App.'
 			],
 			note: 'Ein Modell aus Fotos bildet Ihr Produkt näherungsweise ab. Sie sehen es, bevor etwas live geht.',
 			retention: (days) =>
