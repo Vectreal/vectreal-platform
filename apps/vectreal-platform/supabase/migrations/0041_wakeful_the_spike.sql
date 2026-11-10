@@ -1,0 +1,1 @@
+ALTER TABLE "model_intake_submissions" ADD COLUMN "consent_client_at" timestamp with time zone;

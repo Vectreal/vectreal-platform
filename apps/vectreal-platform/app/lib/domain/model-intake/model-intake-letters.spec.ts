@@ -30,6 +30,7 @@ describe('parseIntakeLetterList', () => {
 				{
 					organization: 'Brand GmbH',
 					recipient: 'Erika Mustermann',
+					audience: 'brand',
 					category: 'shoes',
 					code: 'K7Q2M9AB',
 					locale: 'de'
@@ -37,6 +38,7 @@ describe('parseIntakeLetterList', () => {
 				{
 					organization: 'Müller, Schmidt & Co',
 					recipient: 'Jan "JJ" Beck',
+					audience: 'brand',
 					category: 'furniture',
 					code: 'NEWCQDE2',
 					locale: 'de'
@@ -58,6 +60,7 @@ describe('parseIntakeLetterList', () => {
 				{
 					organization: 'Shop AG',
 					recipient: 'Jan',
+					audience: 'brand',
 					category: 'bags',
 					code: 'AAAAAAAA',
 					locale: 'en'
@@ -65,6 +68,7 @@ describe('parseIntakeLetterList', () => {
 				{
 					organization: 'Laden GmbH',
 					recipient: 'Ina',
+					audience: 'brand',
 					category: 'shoes',
 					code: 'BBBBBBBB',
 					locale: 'de'
@@ -88,11 +92,12 @@ describe('parseIntakeLetterList', () => {
 		])
 	})
 
-	it('reads the mapping it writes, so a reprint keeps code and language', () => {
+	it('reads the mapping it writes, so a reprint keeps code, audience and language', () => {
 		const letter = {
 			code: 'K7Q2M9AB',
 			organization: 'Müller, Schmidt & Co',
 			recipient: 'Jan "JJ" Beck',
+			audience: 'agency',
 			category: 'furniture',
 			locale: 'en'
 		} as const
@@ -100,6 +105,32 @@ describe('parseIntakeLetterList', () => {
 			{ ...letter, address: 'vectreal.com/c/K7Q2M9AB', file: 'K7Q2M9AB.svg' }
 		])
 		expect(parse(mapping)).toEqual({ ok: true, letters: [letter] })
+	})
+
+	it('reads an audience per row, and a row without one is a brand', () => {
+		const result = parse(
+			'organization,recipient,category,audience\nStudio KG,Jan,shoes,agency\nLaden GmbH,Ina,shoes,\nShop AG,Eva,bags,brand',
+			'AAAAAAAA',
+			'BBBBBBBB',
+			'CCCCCCCC'
+		)
+		expect(
+			result.ok && result.letters.map((letter) => letter.audience)
+		).toEqual(['agency', 'brand', 'brand'])
+		expect(
+			parse('organization,recipient,category\nLaden GmbH,Ina,shoes', 'AAAAAAAA')
+		).toMatchObject({ ok: true, letters: [{ audience: 'brand' }] })
+	})
+
+	it('refuses an audience it does not know', () => {
+		expect(
+			parse(
+				'organization,recipient,category,audience\nStudio KG,Jan,shoes,agentur'
+			)
+		).toEqual({
+			ok: false,
+			errors: ['Line 2: "agentur" is not an audience (brand, agency).']
+		})
 	})
 
 	it('accepts the byte-order mark a spreadsheet export starts with', () => {
@@ -179,6 +210,7 @@ describe('formatIntakeLetterMapping', () => {
 					code: 'K7Q2M9AB',
 					organization: 'Müller, Schmidt & Co',
 					recipient: 'Jan "JJ" Beck',
+					audience: 'agency',
 					category: 'furniture',
 					locale: 'de',
 					address: 'vectreal.com/c/K7Q2M9AB',
@@ -186,8 +218,8 @@ describe('formatIntakeLetterMapping', () => {
 				}
 			])
 		).toBe(
-			'code,organization,recipient,category,locale,address,file\n' +
-				'K7Q2M9AB,"Müller, Schmidt & Co","Jan ""JJ"" Beck",furniture,de,vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg\n'
+			'code,organization,recipient,audience,category,locale,address,file\n' +
+				'K7Q2M9AB,"Müller, Schmidt & Co","Jan ""JJ"" Beck",agency,furniture,de,vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg\n'
 		)
 	})
 })

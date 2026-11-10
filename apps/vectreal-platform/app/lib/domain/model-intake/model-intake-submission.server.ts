@@ -10,6 +10,7 @@ import {
 } from './model-intake-repository.server'
 import {
 	addRetentionDays,
+	intakeLetterAsksClientConsent,
 	MODEL_INTAKE_CONSENT_VERSION,
 	MODEL_INTAKE_HONEYPOT_FIELD,
 	MODEL_INTAKE_PHOTO_COUNT,
@@ -136,6 +137,7 @@ export async function submitModelIntake(
 ): Promise<ModelIntakeSubmitResult> {
 	const { formData, locale, batch, letter } = args
 	const fields = readFields(formData)
+	const asksClientConsent = intakeLetterAsksClientConsent(letter)
 
 	// Answered like a success so a bot learns nothing from the reply.
 	if (text(formData, MODEL_INTAKE_HONEYPOT_FIELD).trim().length > 0) {
@@ -145,7 +147,9 @@ export async function submitModelIntake(
 	const validated = validateIntakeFields({
 		...fields,
 		consentFollowUp: formData.get('consentFollowUp') === 'on',
-		consentPhotos: formData.get('consentPhotos') === 'on'
+		consentPhotos: formData.get('consentPhotos') === 'on',
+		asksClientConsent,
+		consentClient: formData.get('consentClient') === 'on'
 	})
 	const files = readPhotos(formData)
 	const refuse = (fieldErrors: ModelIntakeFieldErrors) => ({
@@ -211,6 +215,7 @@ export async function submitModelIntake(
 		consentVersion: MODEL_INTAKE_CONSENT_VERSION,
 		consentFollowUpAt: now,
 		consentPhotosAt: now,
+		consentClientAt: asksClientConsent ? now : null,
 		// Undelivered requests are not kept indefinitely either.
 		deleteAfter: addRetentionDays(now)
 	}

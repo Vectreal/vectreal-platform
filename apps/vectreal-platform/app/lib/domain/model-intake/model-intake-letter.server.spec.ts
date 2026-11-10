@@ -14,6 +14,7 @@ import type { ModelIntakeLetter } from './model-intake-repository.server'
 const letter: ModelIntakeLetter = {
 	code: 'K7Q2M9AB',
 	organization: 'Brand GmbH',
+	audience: 'brand',
 	category: 'shoes',
 	locale: 'de'
 }
@@ -71,6 +72,14 @@ describe('lookupIntakeLetter', () => {
 		expect(await lookupIntakeLetter(request, letter.code, deps)).toEqual(letter)
 		expect(deps.isRateLimited).not.toHaveBeenCalled()
 		expect(await lookupIntakeLetter(request, null, deps)).toBeNull()
+	})
+
+	it('throws when the letter cannot be read, so the submit is not filed as code-less', async () => {
+		const failure = new Error('db down')
+		const deps = fakes({ findIntakeLetter: vi.fn().mockRejectedValue(failure) })
+		await expect(lookupIntakeLetter(request, letter.code, deps)).rejects.toBe(
+			failure
+		)
 	})
 })
 
