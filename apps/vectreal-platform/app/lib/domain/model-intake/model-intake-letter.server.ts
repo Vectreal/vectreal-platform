@@ -5,7 +5,8 @@ import {
 } from './model-intake-repository.server'
 import {
 	intakeLetterDestination,
-	normalizeIntakeLetterCode
+	normalizeIntakeLetterCode,
+	parseIntakeStorePages
 } from './model-intake-shared'
 import { recordRateLimitAttempt } from '../../http/rate-limit.server'
 import { reportServerError } from '../../observability/report-server-error.server'
@@ -27,7 +28,8 @@ export const intakeLetterDeps = {
 		recordRateLimitAttempt(request, LETTER_LOOKUP_RATE_LIMIT).limited,
 	findIntakeLetter,
 	recordIntakeLetterScan,
-	reportServerError
+	reportServerError,
+	storePages: () => parseIntakeStorePages(process.env.MODEL_INTAKE_STORE_PAGES)
 }
 
 export type IntakeLetterDeps = typeof intakeLetterDeps
@@ -81,5 +83,13 @@ export async function followIntakeShortLink(
 			.recordIntakeLetterScan(letter.code, deps.now())
 			.catch((error: unknown) => deps.reportServerError(error, { request }))
 	}
-	return intakeLetterDestination(letter)
+	const storePages = deps.storePages()
+	if (!storePages.ok) {
+		// A bad value must not strand a printed code: it opens the form instead.
+		deps.reportServerError(
+			new Error(`MODEL_INTAKE_STORE_PAGES: ${storePages.error}`),
+			{ request }
+		)
+	}
+	return intakeLetterDestination(letter, storePages.ok ? storePages.pages : {})
 }

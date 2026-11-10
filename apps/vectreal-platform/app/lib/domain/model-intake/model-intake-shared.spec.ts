@@ -8,6 +8,7 @@ import {
 	buildIntakeUrl,
 	cleanupMinutesBetween,
 	intakeLetterDestination,
+	parseIntakeStorePages,
 	intakeLetterFormPath,
 	isIntakeBodyAcceptable,
 	mintIntakeLetterCode,
@@ -172,31 +173,37 @@ describe('intakeLetterDestination', () => {
 	const letter = {
 		code: 'K7Q2M9AB',
 		audience: 'brand',
-		category: 'shoes',
+		showcase: 'lamp',
 		locale: 'de'
 	} as const
 
 	it('sends a code we never posted to the plain form', () => {
-		expect(intakeLetterDestination(null)).toBe('/free-model')
+		expect(intakeLetterDestination(null, {})).toBe('/free-model')
 	})
 
-	it('sends a letter to the form while its category has no store page', () => {
+	it('sends a brand letter to the form while its showcase has no store page', () => {
 		expect(intakeLetterDestination(letter, {})).toBe(
 			'/free-model?c=K7Q2M9AB&lang=de'
 		)
 		expect(
 			intakeLetterDestination(letter, {
-				furniture: 'https://store.example/products/chair'
+				fire: 'https://store.example/products/fire'
 			})
+		).toBe('/free-model?c=K7Q2M9AB&lang=de')
+		expect(
+			intakeLetterDestination(
+				{ ...letter, showcase: null },
+				{ lamp: 'https://store.example/products/lamp' }
+			)
 		).toBe('/free-model?c=K7Q2M9AB&lang=de')
 	})
 
-	it("sends a letter to its category's store page, carrying the code", () => {
+	it("sends a brand letter to its showcase's store page, carrying the code", () => {
 		expect(
 			intakeLetterDestination(letter, {
-				shoes: 'https://store.example/products/sneaker?variant=1'
+				lamp: 'https://store.example/products/lamp?variant=1'
 			})
-		).toBe('https://store.example/products/sneaker?variant=1&c=K7Q2M9AB')
+		).toBe('https://store.example/products/lamp?variant=1&c=K7Q2M9AB')
 	})
 
 	it('sends an agency letter to the agency page, carrying the code, store page or not', () => {
@@ -204,9 +211,40 @@ describe('intakeLetterDestination', () => {
 		expect(intakeLetterDestination(agency, {})).toBe('/agenturen?c=K7Q2M9AB')
 		expect(
 			intakeLetterDestination(agency, {
-				shoes: 'https://store.example/products/sneaker'
+				lamp: 'https://store.example/products/lamp'
 			})
 		).toBe('/agenturen?c=K7Q2M9AB')
+	})
+})
+
+describe('parseIntakeStorePages', () => {
+	it('reads nothing as no pages', () => {
+		expect(parseIntakeStorePages(undefined)).toEqual({ ok: true, pages: {} })
+		expect(parseIntakeStorePages(' ')).toEqual({ ok: true, pages: {} })
+	})
+
+	it('reads one page per showcase', () => {
+		expect(
+			parseIntakeStorePages(
+				' lamp = https://store.example/products/lamp?variant=1 ,coffee=https://store.example/products/coffee,'
+			)
+		).toEqual({
+			ok: true,
+			pages: {
+				lamp: 'https://store.example/products/lamp?variant=1',
+				coffee: 'https://store.example/products/coffee'
+			}
+		})
+	})
+
+	it.each([
+		['sofa=https://store.example/products/sofa'],
+		['https://store.example/products/lamp'],
+		['lamp=http://store.example/products/lamp'],
+		['lamp=store.example/products/lamp'],
+		['lamp=https://store.example/products/lamp,fire=']
+	])('refuses %s whole', (raw) => {
+		expect(parseIntakeStorePages(raw).ok).toBe(false)
 	})
 })
 

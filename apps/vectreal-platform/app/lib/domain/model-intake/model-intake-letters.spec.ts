@@ -32,6 +32,7 @@ describe('parseIntakeLetterList', () => {
 					recipient: 'Erika Mustermann',
 					audience: 'brand',
 					category: 'shoes',
+					showcase: null,
 					code: 'K7Q2M9AB',
 					locale: 'de'
 				},
@@ -40,6 +41,7 @@ describe('parseIntakeLetterList', () => {
 					recipient: 'Jan "JJ" Beck',
 					audience: 'brand',
 					category: 'furniture',
+					showcase: null,
 					code: 'NEWCQDE2',
 					locale: 'de'
 				}
@@ -62,6 +64,7 @@ describe('parseIntakeLetterList', () => {
 					recipient: 'Jan',
 					audience: 'brand',
 					category: 'bags',
+					showcase: null,
 					code: 'AAAAAAAA',
 					locale: 'en'
 				},
@@ -70,6 +73,7 @@ describe('parseIntakeLetterList', () => {
 					recipient: 'Ina',
 					audience: 'brand',
 					category: 'shoes',
+					showcase: null,
 					code: 'BBBBBBBB',
 					locale: 'de'
 				}
@@ -92,13 +96,14 @@ describe('parseIntakeLetterList', () => {
 		])
 	})
 
-	it('reads the mapping it writes, so a reprint keeps code, audience and language', () => {
+	it('reads the mapping it writes, so a reprint keeps code, audience, showcase and language', () => {
 		const letter = {
 			code: 'K7Q2M9AB',
 			organization: 'Müller, Schmidt & Co',
 			recipient: 'Jan "JJ" Beck',
 			audience: 'agency',
 			category: 'furniture',
+			showcase: 'lamp',
 			locale: 'en'
 		} as const
 		const mapping = formatIntakeLetterMapping([
@@ -120,6 +125,30 @@ describe('parseIntakeLetterList', () => {
 		expect(
 			parse('organization,recipient,category\nLaden GmbH,Ina,shoes', 'AAAAAAAA')
 		).toMatchObject({ ok: true, letters: [{ audience: 'brand' }] })
+	})
+
+	it('reads a showcase per row, and a row without one has none', () => {
+		const result = parse(
+			'organization,recipient,category,showcase\nLaden GmbH,Ina,shoes,lamp\nShop AG,Eva,bags,',
+			'AAAAAAAA',
+			'BBBBBBBB'
+		)
+		expect(
+			result.ok && result.letters.map((letter) => letter.showcase)
+		).toEqual(['lamp', null])
+	})
+
+	it('refuses a showcase it does not know', () => {
+		expect(
+			parse(
+				'organization,recipient,category,showcase\nLaden GmbH,Ina,shoes,sofa'
+			)
+		).toEqual({
+			ok: false,
+			errors: [
+				'Line 2: "sofa" is not a showcase (lamp, fire, coffee, furniture).'
+			]
+		})
 	})
 
 	it('refuses an audience it does not know', () => {
@@ -212,14 +241,15 @@ describe('formatIntakeLetterMapping', () => {
 					recipient: 'Jan "JJ" Beck',
 					audience: 'agency',
 					category: 'furniture',
+					showcase: null,
 					locale: 'de',
 					address: 'vectreal.com/c/K7Q2M9AB',
 					file: 'K7Q2M9AB.svg'
 				}
 			])
 		).toBe(
-			'code,organization,recipient,audience,category,locale,address,file\n' +
-				'K7Q2M9AB,"Müller, Schmidt & Co","Jan ""JJ"" Beck",agency,furniture,de,vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg\n'
+			'code,organization,recipient,audience,category,showcase,locale,address,file\n' +
+				'K7Q2M9AB,"Müller, Schmidt & Co","Jan ""JJ"" Beck",agency,furniture,,de,vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg\n'
 		)
 	})
 })

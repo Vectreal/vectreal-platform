@@ -70,6 +70,54 @@ export function isIntakeAudience(value: unknown): value is ModelIntakeAudience {
 }
 
 /**
+ * The sample-store product a brand letter's card shows and its QR code opens.
+ * Separate from the category, which is the form's product type: a shoe brand
+ * may well be shown the lamp.
+ */
+export const MODEL_INTAKE_SHOWCASES = [
+	'lamp',
+	'fire',
+	'coffee',
+	'furniture'
+] as const
+export type ModelIntakeShowcase = (typeof MODEL_INTAKE_SHOWCASES)[number]
+
+export function isIntakeShowcase(value: unknown): value is ModelIntakeShowcase {
+	return MODEL_INTAKE_SHOWCASES.includes(value as ModelIntakeShowcase)
+}
+
+export type IntakeStorePages = Partial<Record<ModelIntakeShowcase, string>>
+
+/**
+ * `MODEL_INTAKE_STORE_PAGES`, as `lamp=https://…,fire=https://…`: the store
+ * page for each showcase. Unset or empty is no pages, so every brand letter
+ * opens the form. Anything malformed refuses the whole value rather than
+ * routing some letters and not others.
+ */
+export function parseIntakeStorePages(
+	raw: string | undefined
+): { ok: true; pages: IntakeStorePages } | { ok: false; error: string } {
+	const pages: IntakeStorePages = {}
+	for (const entry of (raw ?? '').split(',')) {
+		if (entry.trim() === '') continue
+		const separator = entry.indexOf('=')
+		const showcase = entry.slice(0, separator).trim()
+		const page = entry.slice(separator + 1).trim()
+		if (separator < 0 || !isIntakeShowcase(showcase)) {
+			return {
+				ok: false,
+				error: `"${entry.trim()}" does not start with a showcase (${MODEL_INTAKE_SHOWCASES.join(', ')}) and "=".`
+			}
+		}
+		if (!URL.canParse(page) || new URL(page).protocol !== 'https:') {
+			return { ok: false, error: `The ${showcase} page is not an https URL.` }
+		}
+		pages[showcase] = page
+	}
+	return { ok: true, pages }
+}
+
+/**
  * An agency sends its client's photos, not its own, so a request from an
  * agency letter also confirms the client agreed. Decided by the letter the
  * server looked up, never by anything the form posts.
@@ -375,31 +423,20 @@ export function buildIntakeShortUrl(origin: string, code: string): string {
 }
 
 /**
- * The sample-store product page a letter's short address forwards to, per
- * product category. Empty until the store exists: a category without a page
- * forwards to the form instead. The store's own link to the form reads the
- * `c` this forward appends.
- */
-export const MODEL_INTAKE_STORE_PAGES: Partial<
-	Record<ModelIntakeProductType, string>
-> = {}
-
-/**
  * Where `/c/<code>` sends a reader. An agency letter opens the agency page; a
- * brand letter opens its category's store page, or the form while the
- * category has none. Both carry the code on, so the form still greets the
- * reader when they reach it. A code we never posted opens the plain form.
+ * brand letter opens its showcase's store page, or the form while it has none.
+ * Both carry the code on, so the form still greets the reader when they reach
+ * it; the store's own link to the form reads the `c` appended here. A code we
+ * never posted opens the plain form.
  */
 export function intakeLetterDestination(
 	letter: {
 		code: string
 		audience: ModelIntakeAudience
-		category: ModelIntakeProductType
+		showcase: ModelIntakeShowcase | null
 		locale: ModelIntakeLocale
 	} | null,
-	storePages: Partial<
-		Record<ModelIntakeProductType, string>
-	> = MODEL_INTAKE_STORE_PAGES
+	storePages: IntakeStorePages
 ): string {
 	if (!letter) return '/free-model'
 	if (letter.audience === 'agency') {
@@ -408,7 +445,7 @@ export function intakeLetterDestination(
 		})
 		return `${MODEL_INTAKE_AGENCY_PAGE_PATH}?${search.toString()}`
 	}
-	const storePage = storePages[letter.category]
+	const storePage = letter.showcase && storePages[letter.showcase]
 	if (storePage) {
 		const url = new URL(storePage)
 		url.searchParams.set(MODEL_INTAKE_LETTER_PARAM, letter.code)
