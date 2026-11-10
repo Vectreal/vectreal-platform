@@ -734,8 +734,6 @@ interface ModelIntakeCopy {
 	hero: { heading: string; description: string }
 	/** Opens the hero for a visit from one of our letters; the organization comes from the letter's code. */
 	letterGreeting: (organization: string) => string
-	/** Switches to the other language; the batch code is kept. */
-	languageLink: string
 	fields: {
 		name: { label: string; placeholder: string }
 		email: { label: string; placeholder: string }
@@ -807,7 +805,6 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		},
 		letterGreeting: (organization) =>
 			`Welcome, ${organization}. Thanks for reading our letter.`,
-		languageLink: 'Deutsch',
 		fields: {
 			name: { label: 'Your name', placeholder: 'Jane Doe' },
 			email: { label: 'Work email', placeholder: 'you@company.com' },
@@ -918,7 +915,6 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		},
 		letterGreeting: (organization) =>
 			`Willkommen, ${organization}. Danke, dass Sie unseren Brief gelesen haben.`,
-		languageLink: 'English',
 		fields: {
 			name: { label: 'Ihr Name', placeholder: 'Erika Mustermann' },
 			email: { label: 'Geschäftliche E-Mail', placeholder: 'sie@firma.de' },

@@ -3,6 +3,10 @@ import { Outlet, useLocation } from 'react-router'
 
 import { DocsTocProvider } from '../../components/docs/docs-toc-context'
 import { Footer } from '../../components/footer'
+import {
+	IntakeFooter,
+	IntakeHeader
+} from '../../components/model-intake/intake-chrome'
 import { Navigation } from '../../components/navigation'
 import { SiteStructuredData } from '../../components/site-structured-data'
 import { CurrentUserProvider } from '../../hooks/use-current-user'
@@ -50,6 +54,11 @@ const Layout = () => {
 				>
 					<Navigation />
 				</div>
+				{chrome.focused && (
+					<div data-material="object" data-site="marketing">
+						<IntakeHeader />
+					</div>
+				)}
 				{/* The publisher is nested here too, and its editor keeps the plate rims. */}
 				<div
 					data-material={chrome.brandPrimary ? 'object' : undefined}
@@ -66,6 +75,15 @@ const Layout = () => {
 					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
 				>
 					<Footer />
+				</div>
+			)}
+			{chrome.focused && (
+				<div
+					data-material="object"
+					data-site="marketing"
+					className="primary-brand contents"
+				>
+					<IntakeFooter />
 				</div>
 			)}
 		</CurrentUserProvider>
