@@ -42,6 +42,25 @@ export function meta({ error }: Route.MetaArgs) {
 	)
 }
 
+function RequestButton({ to }: { to: string }) {
+	return (
+		<Button
+			asChild
+			size="lg"
+			variant="brand"
+			className="tap-target w-full sm:w-fit"
+		>
+			<Link to={to}>
+				{COPY.action}
+				<ArrowRight aria-hidden="true" />
+			</Link>
+		</Button>
+	)
+}
+
+const BAND = 'border-foreground/10 border-t'
+const PARAGRAPH = 'text-body text-muted-foreground max-w-3xl'
+
 export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 	const { letterCode, letter } = loaderData
 	const formPath = letterCode
@@ -60,47 +79,84 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 			/>
 
 			<SheetFrame>
-				<div className="border-foreground/10 border-t">
+				<div className={BAND}>
 					<div className="mx-(--frame-x) grid lg:grid-cols-2">
 						<section className="border-foreground/10 space-y-4 py-16 lg:border-r lg:px-(--frame-pad) lg:py-24">
-							<h2 className="text-h4">{COPY.offer.heading}</h2>
-							<p className="text-body text-muted-foreground">
-								{COPY.offer.body}
-							</p>
+							<h2 className="text-h4">{COPY.audience.heading}</h2>
+							{COPY.audience.paragraphs.map((text) => (
+								<p key={text} className={PARAGRAPH}>
+									{text}
+								</p>
+							))}
 						</section>
 						<section className="border-foreground/10 space-y-4 border-t py-16 lg:border-t-0 lg:px-(--frame-pad) lg:py-24">
-							<h2 className="text-h4">{COPY.inStore.heading}</h2>
-							<p className="text-body text-muted-foreground">
-								{COPY.inStore.body}
-							</p>
-							<Link
-								to="/docs/guides/publish-embed"
-								className="text-body-sm decoration-muted-foreground hover:decoration-orange underline underline-offset-4 transition-colors duration-150"
-							>
-								{COPY.inStore.link}
-							</Link>
+							<h2 className="text-h4">{COPY.offer.heading}</h2>
+							{COPY.offer.paragraphs.map((text) => (
+								<p key={text} className={PARAGRAPH}>
+									{text}
+								</p>
+							))}
+							<div className="pt-2">
+								<RequestButton to={formPath} />
+							</div>
 						</section>
 					</div>
 				</div>
-				<div className="border-foreground/10 border-t">
-					<div className="mx-(--frame-x) py-16 lg:px-(--frame-pad) lg:py-24">
+
+				<section className={BAND}>
+					<div className="mx-(--frame-x) space-y-8 py-16 lg:px-(--frame-pad) lg:py-24">
+						<div className="space-y-4">
+							<h2 className="text-h4">{COPY.inStore.heading}</h2>
+							<p className={PARAGRAPH}>{COPY.inStore.intro}</p>
+						</div>
+						<div className="grid gap-8 lg:grid-cols-3">
+							{COPY.inStore.ways.map((way) => (
+								<div key={way.label} className="space-y-4">
+									{way.paragraphs.map((text, index) => (
+										<p key={text} className={PARAGRAPH}>
+											{index === 0 ? (
+												<strong className="text-foreground font-medium">
+													{way.label}{' '}
+												</strong>
+											) : null}
+											{text}
+										</p>
+									))}
+								</div>
+							))}
+						</div>
+						<p className={PARAGRAPH}>{COPY.inStore.closing}</p>
+						<Link
+							to={COPY.inStore.link.href}
+							className="text-body-sm decoration-muted-foreground hover:decoration-orange inline-block underline underline-offset-4 transition-colors duration-150"
+						>
+							{COPY.inStore.link.label}
+						</Link>
+					</div>
+				</section>
+
+				<section className={BAND}>
+					<div className="mx-(--frame-x) space-y-6 py-16 lg:px-(--frame-pad) lg:py-24">
+						<h2 className="text-h4">{COPY.terms.heading}</h2>
+						<ul className="text-body text-muted-foreground max-w-3xl list-disc space-y-2 pl-5">
+							{COPY.terms.items.map((item) => (
+								<li key={item}>{item}</li>
+							))}
+						</ul>
+						<p className={PARAGRAPH}>{COPY.terms.contact}</p>
+					</div>
+				</section>
+
+				<div className={BAND}>
+					<div className="mx-(--frame-x) space-y-6 py-16 lg:px-(--frame-pad) lg:py-24">
 						<CtaPanel
-							heading={COPY.cta.heading}
-							description={COPY.cta.description}
-							actions={
-								<Button
-									asChild
-									size="lg"
-									variant="brand"
-									className="tap-target w-full sm:w-fit"
-								>
-									<Link to={formPath}>
-										{COPY.cta.action}
-										<ArrowRight aria-hidden="true" />
-									</Link>
-								</Button>
-							}
+							heading={COPY.request.heading}
+							description={COPY.request.body}
+							actions={<RequestButton to={formPath} />}
 						/>
+						<p className="text-body text-muted-foreground">
+							{COPY.request.signature}
+						</p>
 					</div>
 				</div>
 			</SheetFrame>
