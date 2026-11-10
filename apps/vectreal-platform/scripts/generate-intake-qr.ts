@@ -4,9 +4,10 @@
  *
  * Run via: pnpm nx run vectreal-platform:generate-intake-qr -- [flags]
  *
- * With `--letters=<file.csv>` (columns `organization,recipient,category`, and
- * optionally `audience`, `showcase`, `code` and `locale`), each letter gets a
- * code, and the QR code encodes its short address,
+ * With `--letters=<file.csv>`, the Notion Letters export as it downloads
+ * (columns `Organization`, `Recipient`, `Category`, and optionally `Audience`,
+ * `Showcase`, `Code` and `Locale`, in any case), each letter keeps the code its
+ * row carries or gets a fresh one, and the QR code encodes its short address,
  * `https://vectreal.com/c/<code>`. That address counts the scan and forwards an
  * agency letter to the agency page and a brand letter to the sample-store page
  * for its showcase, or to the form while it has none. A row without an
@@ -16,7 +17,9 @@
  * Writes into `--out`:
  *   <code>.svg    the QR code, for print
  *   letters.csv   code, organization, recipient, audience, category, showcase, locale,
- *                 the address to print under the QR code, and the file. Refused if it exists,
+ *                 the address to print under the QR code, the file, and then
+ *                 every other column of the list under its own name, the
+ *                 postal `Address` as `postal_address`. Refused if it exists,
  *                 because it is the only record of who got which code. Fed
  *                 back as `--letters`, it reprints the same codes.
  *
@@ -138,7 +141,11 @@ async function printLetters(listFile: string, origin: string, outDir: string) {
 		await writeQr(path.join(outDir, file), url)
 		rows.push({ ...letter, address: url.replace(/^https?:\/\//, ''), file })
 	}
-	await writeFile(mapping, formatIntakeLetterMapping(rows), { flag: 'wx' })
+	await writeFile(
+		mapping,
+		formatIntakeLetterMapping(rows, parsed.passThrough),
+		{ flag: 'wx' }
+	)
 	console.info('%s  code to recipient', path.relative(process.cwd(), mapping))
 
 	if (repository) {
