@@ -1,7 +1,7 @@
-import { usePostHog } from '@posthog/react'
 import { useCallback } from 'react'
 
 import { useConsent } from '../components/consent/consent-context'
+import { usePostHog } from '../lib/posthog/posthog-react'
 
 /**
  * `posthog.capture`, sent only once the visitor has accepted analytics.

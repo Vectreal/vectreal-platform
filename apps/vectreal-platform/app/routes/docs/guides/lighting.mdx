@@ -25,8 +25,8 @@ thumbnail shows a chrome ball and a grey ball lit by it.
 | **Overcast** | A soft sky and no added lights, for an almost shadowless look |
 | **Night** | A dim city with a cool key and a warm rim |
 
-Picking a setup keeps the background, the environment's resolution and the
-studio finish you chose. Change any light, the environment or the ground
+Picking a setup keeps the background, the environment's resolution and quality,
+and the studio finish you chose. Change any light, the environment or the ground
 afterwards and the label above the grid reads **Custom**. Pick the setup again
 to go back to it.
 
@@ -51,6 +51,13 @@ and **Night**. Picking one keeps the lights where they are.
   light's strength is measured against the environment.
 - **Resolution** is 1k or 4k. 4k sharpens reflections on glossy models and takes
   longer to download.
+- **Quality** is **Compressed** or **Lossless**, each with what it downloads.
+  Compressed is a gain map JPEG 7 to 25 times smaller than the lossless
+  HDR, so the lighting shows seconds sooner on a phone, and it looks nearly the
+  same. **Compare** shows the other one on your model until you press it again.
+  New scenes start compressed; scenes made before the choice existed stay
+  lossless until you change them. Three night maps with small colored lights
+  (Moonlit, City and Building) have no compressed version and load lossless.
 
 If a map cannot be loaded, the scene is lit by a neutral room instead and the
 panel says so.

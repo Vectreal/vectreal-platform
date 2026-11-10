@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SceneControls from './scene-controls'
 
 const camera = vi.hoisted(() => ({
+	connected: { style: { touchAction: 'none' } },
 	azimuth: 0,
 	polar: Math.PI / 2,
 	onChange: undefined as undefined | ((event?: unknown) => void)
@@ -22,11 +23,17 @@ vi.mock('@react-three/drei', () => ({
 	) {
 		camera.onChange = props.onChange
 		useImperativeHandle(ref, () => ({
+			domElement: camera.connected,
 			getAzimuthalAngle: () => camera.azimuth,
 			getPolarAngle: () => camera.polar
 		}))
 		return null
 	})
+}))
+
+vi.mock('@react-three/fiber', () => ({
+	useThree: (select: (state: unknown) => unknown) =>
+		select({ events: { connected: camera.connected } })
 }))
 
 const RADIANS = Math.PI / 180
@@ -108,5 +115,25 @@ describe('SceneControls', () => {
 		expect(onViewChange).not.toHaveBeenCalled()
 		orbitTo(0.6, 0)
 		expect(onViewChange).toHaveBeenCalledTimes(1)
+	})
+
+	it('hands touch back to the page while the controls are off, and claims it again when they come back on', () => {
+		camera.connected = { style: { touchAction: 'none' } }
+		const { rerender } = render(<SceneControls enabledOverride={false} />)
+		expect(camera.connected.style.touchAction).toBe('')
+
+		rerender(<SceneControls enabledOverride />)
+		expect(camera.connected.style.touchAction).toBe('none')
+	})
+
+	it('hands touch back again after drei reconnects the controls to another element', () => {
+		camera.connected = { style: { touchAction: 'none' } }
+		const { rerender } = render(
+			<SceneControls enabledOverride={false} onViewChange={vi.fn()} />
+		)
+
+		camera.connected = { style: { touchAction: 'none' } }
+		rerender(<SceneControls enabledOverride={false} onViewChange={vi.fn()} />)
+		expect(camera.connected.style.touchAction).toBe('')
 	})
 })

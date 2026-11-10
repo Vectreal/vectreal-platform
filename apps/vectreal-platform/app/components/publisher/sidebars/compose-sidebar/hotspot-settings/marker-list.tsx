@@ -3,9 +3,9 @@ import { resolveHotspotMarkers } from '@vctrl/viewer/hotspots'
 import { Reorder, useReducedMotion } from 'framer-motion'
 import { useAtom, useSetAtom } from 'jotai/react'
 import { Locate, Plus } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
-import { HotspotRow, SequencedRow, type SequenceMoveDelta } from './hotspot-row'
+import { HotspotRow, SequencedRow } from './hotspot-row'
 import {
 	hotspotDisplayName,
 	sequencedFirst,
@@ -19,145 +19,63 @@ import {
 import { EmptyState } from '../../../../layout-components'
 import { useSidebarCoversCanvas } from '../../dynamic-sidebar'
 import { SidebarSection } from '../../sidebar-section'
+import { useReorderDraft } from '../reorder-list'
 
 import type { SequenceMove } from '../../../../../lib/domain/scene/scene-hotspot-sequence'
 import type { HotspotDefinition } from '@vctrl/core'
 
 /**
- * The order the list shows while a drag is in flight, and the commit that
- * writes it.
- *
- * `Reorder.Group` fires `onReorder` on every adjacent swap, and `hotspotsAtom`
- * is read by the editor scene, so committing each one would re-render the 3D
- * view for every pixel of the drag. The atom is written once, on release.
+ * The sequence's draft order, committed to `hotspotsAtom` on release.
+ * The drag and keyboard mechanics are `useReorderDraft`'s, shared with the
+ * camera list; what is hotspot-specific is the commit.
  */
 function useSequenceDraft(
 	inSequence: HotspotDefinition[],
 	announce: (message: string) => void
 ) {
 	const setHotspots = useSetAtom(hotspotsAtom)
-	const sequencedIds = useMemo(
+	const ids = useMemo(
 		() => inSequence.map((hotspot) => hotspot.id),
 		[inSequence]
 	)
-	const [draftOrder, setDraftOrder] = useState<string[]>(sequencedIds)
-	const draftOrderRef = useRef(sequencedIds)
-	/**
-	 * State, not a ref, so the re-seed below can see a drag end.
-	 *
-	 * As a ref it was invisible to the effect's dependencies: a write to the
-	 * store during a drag - the canvas gizmo under a second touch point, or a
-	 * scene load - ran the effect once, hit the guard, and nothing afterwards
-	 * could make it run again, so the draft stayed diverged from the store for
-	 * the life of the panel. One render at drag start is the whole cost.
-	 */
-	const [isDragging, setIsDragging] = useState(false)
 
-	/** Keeps the ref beside the state, so a commit outside React can read it. */
-	const applyDraftOrder = useCallback((order: string[]) => {
-		draftOrderRef.current = order
-		setDraftOrder(order)
-	}, [])
+	/*
+	  The annotated return type is load-bearing. TypeScript cannot see the
+	  updater run, so a value captured from inside it narrows to `never`
+	  after its own null guard and the announcement silently stops being
+	  type-checked. Declaring the type at the boundary keeps it.
 
-	useEffect(() => {
-		if (isDragging) return
-		draftOrderRef.current = sequencedIds
-		setDraftOrder(sequencedIds)
-	}, [isDragging, sequencedIds])
+	  Capturing at all is safe because `hotspotsAtom` is a jotai primitive:
+	  its write runs the updater once, synchronously, before the next
+	  statement. A derived atom would break that, which is why the whole
+	  decision lives in `applySequenceMove` rather than here. Do not copy
+	  the shape to a React `useState` updater, which StrictMode invokes
+	  twice in development - an impure one would then run twice too.
 
-	/**
-	 * Writes a new order, and says so once it is actually new.
-	 *
-	 * "Position" rather than "step": the step on a row is what a visitor is
-	 * shown, and `resolveHotspotMarkers` ranks that over the markers a visitor
-	 * can reach. This list is the authoring order and counts hidden members too,
-	 * so calling both of them "step" would announce a number that appears
-	 * nowhere on screen.
-	 */
-	const commitOrder = useCallback(
-		(order: string[], movedId: string, movedName: string) => {
-			/*
-			  The annotated return type is load-bearing. TypeScript cannot see the
-			  updater run, so a value captured from inside it narrows to `never`
-			  after its own null guard and the announcement below silently stops
-			  being type-checked. Declaring the type at the boundary keeps it.
+	  If the assumption ever does break, `applied` stays null and only the
+	  announcement is skipped; the reorder still commits.
 
-			  Capturing at all is safe because `hotspotsAtom` is a jotai primitive:
-			  its write runs the updater once, synchronously, before the next
-			  statement. A derived atom would break that, which is why the whole
-			  decision lives in `applySequenceMove` rather than here. Do not copy
-			  the shape to a React `useState` updater, which StrictMode invokes
-			  twice in development - an impure one would then run twice too.
+	  "Position" rather than "step" in what is announced: the step on a row is
+	  what a visitor is shown, and `resolveHotspotMarkers` ranks that over the
+	  markers a visitor can reach. This list is the authoring order and counts
+	  hidden members too, so calling both of them "step" would announce a
+	  number that appears nowhere on screen.
+	*/
+	const commit = useCallback(
+		(order: string[], movedId: string): SequenceMove | null => {
+			let applied: SequenceMove | null = null
 
-			  If the assumption ever does break, `applied` stays null and only the
-			  announcement is skipped; the reorder still commits.
-			*/
-			const move = ((): SequenceMove | null => {
-				let applied: SequenceMove | null = null
+			setHotspots((prev) => {
+				applied = applySequenceMove(prev, order, movedId)
+				return applied ? applied.hotspots : prev
+			})
 
-				setHotspots((prev) => {
-					applied = applySequenceMove(prev, order, movedId)
-					return applied ? applied.hotspots : prev
-				})
-
-				return applied
-			})()
-
-			if (!move) return
-
-			announce(
-				`${movedName} moved to position ${move.position} of ${move.total}.`
-			)
+			return applied
 		},
-		[announce, setHotspots]
+		[setHotspots]
 	)
 
-	const endDrag = useCallback(
-		(id: string, name: string) => {
-			setIsDragging(false)
-			commitOrder(draftOrderRef.current, id, name)
-		},
-		[commitOrder]
-	)
-
-	const moveByKeyboard = useCallback(
-		(id: string, name: string, delta: SequenceMoveDelta) => {
-			const from = draftOrder.indexOf(id)
-			if (from < 0) return
-
-			const to =
-				delta === 'first'
-					? 0
-					: delta === 'last'
-						? draftOrder.length - 1
-						: from + delta
-
-			// Silence at the ends is indistinguishable from a key that does
-			// nothing, so a refused move is announced rather than swallowed.
-			if (to < 0 || to >= draftOrder.length || to === from) {
-				// Named from the direction asked for, not from the index it started
-				// at: in a one-marker sequence `from` is always 0, so reading the
-				// index announced "already first" for a press asking to go last.
-				const towardsEnd = delta === 'last' || delta === 1
-				announce(`${name} is already ${towardsEnd ? 'last' : 'first'}.`)
-				return
-			}
-
-			const next = [...draftOrder]
-			next.splice(to, 0, ...next.splice(from, 1))
-			applyDraftOrder(next)
-			commitOrder(next, id, name)
-		},
-		[announce, applyDraftOrder, commitOrder, draftOrder]
-	)
-
-	return {
-		draftOrder,
-		applyDraftOrder,
-		startDrag: () => setIsDragging(true),
-		endDrag,
-		moveByKeyboard
-	}
+	return useReorderDraft({ ids, commit, announce })
 }
 
 /**

@@ -12,7 +12,10 @@ import {
 } from 'three'
 
 import LoadFailureBoundary from '../load-failure-boundary'
-import { forgetEnvironmentFiles } from './scene-environment'
+import {
+	forgetEnvironmentFiles,
+	useCanvasEnvironmentFiles
+} from './scene-environment'
 
 /**
  * Builds the PMREM three needs to light a scene with `texture`, by compiling a
@@ -73,8 +76,9 @@ const PrewarmEnvironmentTexture = ({ files }: { files: string | string[] }) => {
  * boundary is keyed on the files so that a later environment is prewarmed
  * after an earlier one failed.
  */
-const EnvironmentPrewarm = ({ files }: { files: string | string[] | null }) =>
-	files ? (
+const EnvironmentPrewarm = (props: { files: string | string[] | null }) => {
+	const files = useCanvasEnvironmentFiles(props.files)
+	return files ? (
 		<LoadFailureBoundary
 			key={String(files)}
 			onError={() => forgetEnvironmentFiles(files)}
@@ -84,5 +88,6 @@ const EnvironmentPrewarm = ({ files }: { files: string | string[] | null }) =>
 			</Suspense>
 		</LoadFailureBoundary>
 	) : null
+}
 
 export default EnvironmentPrewarm

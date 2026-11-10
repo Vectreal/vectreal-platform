@@ -89,6 +89,36 @@ updates:
       # cannot typecheck. Majors are upgraded by hand together with the pin.
       - dependency-name: 'stripe'
         update-types: ['version-update:semver-major']
+      # Parked majors. Each has a Vectreal Work Items row that removes its rule
+      # once the upgrade lands; until then the bump would only reopen the same
+      # failing pull request every week.
+      # TypeScript 7 is the native compiler and Nx plugins fail to load on it
+      # (#1199).
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+      # Typed to match the Node 22 runtime; moves with the runtime, not alone
+      # (#1194).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # three is 0.x, so a minor is breaking: 0.187 changed the shader chunks
+      # the viewer's baked lights patch rewrites (#1297). Patches still arrive.
+      - dependency-name: 'three'
+        update-types: ['version-update:semver-minor']
+      - dependency-name: '@types/three'
+        update-types: ['version-update:semver-minor']
+      # vite pins rolldown exactly, and every vite after 8.3.4 brings a
+      # rolldown whose chunking puts three.js on every route's first load via
+      # vendor-postprocessing (about 906 KB gz against a 395 KB budget). Held
+      # until the manualChunks rules in apps/vectreal-platform/vite.config.ts
+      # hold under it.
+      - dependency-name: 'vite'
+      # nx 24 removes the `@nx/eslint:lint` executor 19 of our targets use, so
+      # it needs `nx migrate`, not a bump. Members also clear the 14-day
+      # cooldown on different days, which sent @nx/eslint 24 alone (#1298).
+      - dependency-name: 'nx'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@nx/*'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: 'github-actions'
     directory: '/'

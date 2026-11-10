@@ -138,6 +138,7 @@ function renderAside(sceneDetails: SceneDetailsSummary = details()) {
 	return render(
 		<SceneAside
 			details={sceneDetails}
+			environmentMapBytes={null}
 			sceneId="scene-1"
 			projectId="project-1"
 			publishState={PUBLISH_STATE}

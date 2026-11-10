@@ -4,6 +4,7 @@ import {
 	normalizePresentationSettings,
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
+	shouldShowInteractionHint,
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail,
@@ -240,5 +241,22 @@ describe('the full screen button', () => {
 		expect(shouldShowFullscreenButton({ showFullscreenButton: true })).toBe(
 			true
 		)
+	})
+})
+
+describe('the interaction hint', () => {
+	it('is kept as a boolean and dropped as anything else', () => {
+		expect(
+			normalizePresentationSettings({ showInteractionHint: false })
+		).toEqual({ showInteractionHint: false })
+		expect(
+			normalizePresentationSettings({ showInteractionHint: 1 })
+		).toBeUndefined()
+	})
+
+	it('shows only where it is switched on, so older scenes keep their viewer', () => {
+		expect(shouldShowInteractionHint(undefined)).toBe(false)
+		expect(shouldShowInteractionHint({ showInfoPopover: true })).toBe(false)
+		expect(shouldShowInteractionHint({ showInteractionHint: true })).toBe(true)
 	})
 })

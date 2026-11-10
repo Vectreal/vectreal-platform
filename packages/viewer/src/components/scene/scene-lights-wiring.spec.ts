@@ -27,10 +27,12 @@ describe('the scene lights', () => {
 	})
 
 	it('measure the map from the loader cache the environment fills', () => {
-		expect(lights).toContain(
-			'const texture = useEnvironment({ files: environmentFiles })'
+		expect(lights).toMatch(
+			/const texture = useEnvironment\(\{\s*files: useCanvasEnvironmentFiles\(environmentFiles\)\s*\}\)/
 		)
-		expect(lights).toContain('environmentIrradiance(texture)')
+		expect(lights).toContain(
+			'sceneIrradiance(texture, hostedMap) ?? FALLBACK_IRRADIANCE'
+		)
 	})
 
 	it('scale each light by its strength, the measured map and its brightness', () => {

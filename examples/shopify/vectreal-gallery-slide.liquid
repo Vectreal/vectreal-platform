@@ -1,0 +1,132 @@
+{%- comment -%}
+  A published Vectreal scene as one slide of the product gallery, beside the
+  photos and Shopify's own 3D slot.
+
+  Install: Online Store > Themes > Edit code > Snippets > Add a new snippet
+  named vectreal-gallery-slide, paste this file, then in Dawn's
+  snippets/product-media-gallery.liquid add this line inside the
+  <ul id="Slider-Gallery-…"> list, after the first slide:
+
+    {% render 'vectreal-gallery-slide', product: product %}
+
+  The scene comes from the product metafield vectreal.scene_url (single line
+  text: the embed URL with its ?token=), and its poster from vectreal.poster
+  (file) or else the product's featured image. A product without the metafield
+  shows no slide.
+{%- endcomment -%}
+
+{%- liquid
+  assign scene_url = product.metafields.vectreal.scene_url.value | strip
+  assign poster = product.metafields.vectreal.poster.value | default: product.featured_media.preview_image
+-%}
+
+{%- if scene_url != blank -%}
+  <li
+    id="Slide-{{ section.id }}-vectreal-{{ product.id }}"
+    class="product__media-item grid__item slider__slide"
+    data-media-id="{{ section.id }}-vectreal-{{ product.id }}"
+  >
+    <div class="product-media-container media-type-model media-fit-cover global-media-settings gradient" style="--ratio: 1; --preview-ratio: 1;">
+      <vectreal-media class="media media--transparent" data-scene-url="{{ scene_url | escape }}">
+        <iframe
+          class="vectreal-slide__scene"
+          title="3D-Ansicht: {{ product.title | escape }}"
+          allow="autoplay; xr-spatial-tracking"
+          allowfullscreen
+          tabindex="-1"
+        ></iframe>
+        <button type="button" class="deferred-media__poster vectreal-slide__poster">
+          <span class="deferred-media__poster-button motion-reduce">
+            <span class="visually-hidden">3D-Ansicht öffnen</span>
+            <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round">
+              <path d="M10 2.5 16.5 6v8L10 17.5 3.5 14V6L10 2.5Z"/>
+              <path d="M3.5 6 10 9.5 16.5 6M10 9.5v8"/>
+            </svg>
+          </span>
+          {%- if poster -%}
+            {{ poster | image_url: width: 1600 | image_tag: loading: 'lazy', sizes: '(min-width: 750px) 55vw, 100vw', widths: '600, 1000, 1600', alt: '' }}
+          {%- endif -%}
+        </button>
+      </vectreal-media>
+    </div>
+  </li>
+{%- endif -%}
+
+{% stylesheet %}
+  vectreal-media {
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .vectreal-slide__scene {
+    border: 0;
+    color-scheme: light;
+  }
+
+  .vectreal-slide__poster {
+    z-index: 1;
+    transition: opacity 400ms ease;
+  }
+
+  .vectreal-slide__poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  vectreal-media[data-open] .vectreal-slide__poster {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vectreal-slide__poster {
+      transition: none;
+    }
+  }
+{% endstylesheet %}
+
+{% javascript %}
+  (() => {
+    if (customElements.get('vectreal-media')) return;
+
+    const whenIdle = window.requestIdleCallback ?? ((callback) => setTimeout(callback, 1500));
+    const cancelIdle = window.cancelIdleCallback ?? clearTimeout;
+
+    class VectrealMedia extends HTMLElement {
+      connectedCallback() {
+        this.scene = this.querySelector('iframe');
+        this.poster = this.querySelector('.vectreal-slide__poster');
+        this.onOpen = () => this.open();
+        this.poster.addEventListener('click', this.onOpen);
+
+        if (navigator.connection?.saveData) return;
+        this.preload = () =>
+          (this.idle = whenIdle(() => this.getClientRects().length > 0 && this.load(), { timeout: 4000 }));
+        if (document.readyState === 'complete') this.preload();
+        else window.addEventListener('load', this.preload, { once: true });
+      }
+
+      disconnectedCallback() {
+        window.removeEventListener('load', this.preload);
+        cancelIdle(this.idle);
+        this.poster.removeEventListener('click', this.onOpen);
+      }
+
+      load() {
+        this.scene.src ||= this.dataset.sceneUrl;
+      }
+
+      open() {
+        this.load();
+        this.setAttribute('data-open', '');
+        this.poster.inert = true;
+        this.scene.removeAttribute('tabindex');
+        this.scene.focus({ preventScroll: true });
+      }
+    }
+
+    customElements.define('vectreal-media', VectrealMedia);
+  })();
+{% endjavascript %}

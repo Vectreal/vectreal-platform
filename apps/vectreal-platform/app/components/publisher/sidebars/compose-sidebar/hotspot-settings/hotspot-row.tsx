@@ -1,18 +1,17 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { cn } from '@shared/utils'
-import { Reorder, useDragControls } from 'framer-motion'
-import {
-	ChevronRight,
-	EyeOff,
-	GripVertical,
-	SquarePen,
-	Trash2
-} from 'lucide-react'
+import { ChevronRight, EyeOff, SquarePen, Trash2 } from 'lucide-react'
 import { memo } from 'react'
 
 import { hotspotDisplayName } from './use-hotspot-edits'
 import { useDrillDownNavigation } from '../../drill-down'
+import {
+	ReorderHandle,
+	ReorderHandleSpacer,
+	ReorderItem,
+	type ReorderMoveDelta
+} from '../reorder-list'
 
 import type { HotspotDefinition } from '@vctrl/core'
 import type { DragControls } from 'framer-motion'
@@ -27,8 +26,6 @@ export const hotspotViewId = (id: string) => `hotspot:${id}`
 /** Id of the hint every reorder handle points at; the panel renders it once. */
 export const REORDER_HINT_ID = 'hotspot-reorder-hint'
 
-export type SequenceMoveDelta = number | 'first' | 'last'
-
 interface HotspotRowProps {
 	hotspot: HotspotDefinition
 	/** The step a visitor is shown, or null when this marker is outside the sequence. */
@@ -37,14 +34,7 @@ interface HotspotRowProps {
 	dragControls?: DragControls
 	onOpen: () => void
 	onDelete: () => void
-	onMove?: (delta: SequenceMoveDelta) => void
-}
-
-const MOVE_BY_KEY: Record<string, SequenceMoveDelta> = {
-	ArrowUp: -1,
-	ArrowDown: 1,
-	Home: 'first',
-	End: 'last'
+	onMove?: (delta: ReorderMoveDelta) => void
 }
 
 /**
@@ -70,24 +60,14 @@ export const HotspotRow = memo(
 		return (
 			<div className="shell-nested-interactive flex items-center gap-1 rounded-xl pr-1">
 				{dragControls && onMove ? (
-					<button
-						type="button"
-						aria-label={`Reorder ${name}`}
-						aria-keyshortcuts="ArrowUp ArrowDown Home End"
-						aria-describedby={REORDER_HINT_ID}
-						onPointerDown={(event) => dragControls.start(event)}
-						onKeyDown={(event) => {
-							const move = MOVE_BY_KEY[event.key]
-							if (move === undefined) return
-							event.preventDefault()
-							onMove(move)
-						}}
-						className="shell-focus text-muted-foreground hover:text-foreground ml-1 flex size-6 shrink-0 cursor-grab touch-none items-center justify-center rounded-md active:cursor-grabbing"
-					>
-						<GripVertical aria-hidden className="size-3.5" />
-					</button>
+					<ReorderHandle
+						name={name}
+						hintId={REORDER_HINT_ID}
+						dragControls={dragControls}
+						onMove={onMove}
+					/>
 				) : (
-					<span aria-hidden className="ml-1 size-6 shrink-0" />
+					<ReorderHandleSpacer />
 				)}
 
 				{step === null ? (
@@ -190,14 +170,7 @@ export const HotspotRow = memo(
 
 HotspotRow.displayName = 'HotspotRow'
 
-/**
- * A marker in the sequence, wrapped so it can be dragged.
- *
- * `useDragControls` is a hook, so it cannot be called inside the `map` that
- * renders the list; one row owning one controller is what lets the drag start
- * from the handle alone rather than from anywhere on the row, which would make
- * the row impossible to click.
- */
+/** A marker in the sequence, wrapped so it can be dragged. */
 export const SequencedRow = ({
 	reduceMotion,
 	onDragStart,
@@ -207,37 +180,13 @@ export const SequencedRow = ({
 	reduceMotion: boolean
 	onDragStart: () => void
 	onDragEnd: () => void
-}) => {
-	const dragControls = useDragControls()
-
-	return (
-		<Reorder.Item
-			value={rowProps.hotspot.id}
-			dragListener={false}
-			dragControls={dragControls}
-			onDragStart={onDragStart}
-			onDragEnd={onDragEnd}
-			/*
-			  `layout` stays on whatever the motion preference is, and the
-			  preference is honored by the transition instead.
-
-			  `undefined` was the bug: framer defaults the prop to `true`, so the
-			  reduced-motion branch was asking for *more* animation than the other
-			  one. `Reorder.Item` also registers with its group only from
-			  `onLayoutMeasure`, so turning layout off here is not obviously safe
-			  either - and there is no reason to, since the transition already
-			  carries the preference.
-			*/
-			layout="position"
-			transition={
-				reduceMotion
-					? { duration: 0 }
-					: { type: 'spring', stiffness: 600, damping: 40 }
-			}
-			whileDrag={reduceMotion ? undefined : { scale: 1.02 }}
-			className="rounded-xl"
-		>
-			<HotspotRow {...rowProps} dragControls={dragControls} />
-		</Reorder.Item>
-	)
-}
+}) => (
+	<ReorderItem
+		value={rowProps.hotspot.id}
+		reduceMotion={reduceMotion}
+		onDragStart={onDragStart}
+		onDragEnd={onDragEnd}
+	>
+		{(dragControls) => <HotspotRow {...rowProps} dragControls={dragControls} />}
+	</ReorderItem>
+)

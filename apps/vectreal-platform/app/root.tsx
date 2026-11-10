@@ -1,4 +1,3 @@
-import { usePostHog } from '@posthog/react'
 import { Toaster } from '@shared/components/ui/sonner'
 import { useEffect, type ReactNode } from 'react'
 import {
@@ -25,6 +24,7 @@ import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.s
 import { isUnreachableAction } from './lib/navigation/dashboard-route-behavior'
 import { useErrorReport } from './lib/observability/use-error-report'
 import { posthogMiddleware } from './lib/posthog/posthog-middleware'
+import { usePostHog } from './lib/posthog/posthog-react'
 import { buildMeta } from './lib/seo'
 import { commitValidCsrfToken } from './lib/sessions/csrf-session.server'
 import { sessionCookieMiddleware } from './lib/sessions/session-cookie-middleware'

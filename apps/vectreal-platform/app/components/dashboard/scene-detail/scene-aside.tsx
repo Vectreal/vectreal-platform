@@ -19,6 +19,11 @@ interface SceneAsideProps {
 	sceneId: string
 	projectId: string
 	publishState: ScenePublishStateResponse
+	/**
+	 * What the scene's environment map adds to a visitor's download, when
+	 * its size is known.
+	 */
+	environmentMapBytes: number | null
 	presentation: ScenePresentationSettings | null
 	canUpdateScene: boolean
 	publisherPath: string
@@ -68,6 +73,7 @@ export function SceneAside({
 	sceneId,
 	projectId,
 	publishState,
+	environmentMapBytes,
 	presentation,
 	canUpdateScene,
 	publisherPath,
@@ -110,6 +116,7 @@ export function SceneAside({
 				sceneId={sceneId}
 				projectId={projectId}
 				publishState={publishState}
+				environmentMapBytes={environmentMapBytes}
 				presentation={presentation}
 				canUpdateScene={canUpdateScene}
 				publisherPath={publisherPath}

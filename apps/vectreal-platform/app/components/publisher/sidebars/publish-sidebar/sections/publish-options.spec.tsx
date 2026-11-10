@@ -237,6 +237,14 @@ describe('the publish panel', () => {
 		expect(store.get(presentationAtom).showFullscreenButton).toBe(true)
 	})
 
+	it('shows visitors how to interact on a new scene, until the author turns it off', () => {
+		const store = renderPanel(balancedPreset)
+		const toggle = screen.getByRole('switch', { name: /Show how to interact/ })
+		expect(toggle).toBeChecked()
+		fireEvent.click(toggle)
+		expect(store.get(presentationAtom).showInteractionHint).toBe(false)
+	})
+
 	it('stores alt text for the viewer, and forgets it once cleared', () => {
 		const store = renderPanel(balancedPreset)
 		const field = screen.getByRole('textbox', { name: 'Alt text' })

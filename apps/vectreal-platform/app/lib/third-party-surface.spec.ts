@@ -42,9 +42,9 @@ describe('isThirdPartySurface', () => {
 })
 
 /*
-  The rule does nothing unless its readers use it. The PostHog gate in
-  `entry.client.tsx` is asserted beside the rest of that entry's PostHog
-  wiring, in `posthog/posthog-client.server.spec.ts`.
+  The rule does nothing unless its readers use it. The PostHog gate is
+  exercised beside the rest of the browser's PostHog setup, in
+  `posthog/posthog-browser.spec.ts`.
 */
 describe('its readers', () => {
 	it('keeps consent UI off a third-party surface', () => {

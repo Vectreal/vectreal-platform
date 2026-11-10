@@ -389,7 +389,8 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 		expect(response.status).toBe(200)
 		expect((await settingsRow()).presentation).toEqual({
 			showInfoPopover: true,
-			showLoadingThumbnail: false
+			showLoadingThumbnail: false,
+			showInteractionHint: true
 		})
 	})
 

@@ -80,7 +80,7 @@ export function getStripeClient(): Stripe {
 	cachedStripe = new Stripe(secretKey, {
 		// Pin to the API version tested in CI to prevent unexpected surface changes.
 		// Upgrade intentionally and update types when a new API version is adopted.
-		apiVersion: '2026-09-30.endive',
+		apiVersion: '2026-10-28.endive',
 		typescript: true
 	})
 

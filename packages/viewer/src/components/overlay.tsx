@@ -20,6 +20,8 @@ interface OverlayProps {
 	sceneViewReturn?: React.ReactNode
 	/** The full screen button, where the author asked for one. */
 	fullscreenControl?: React.ReactNode
+	/** The first-time line on how to move the scene. */
+	interactionHint?: React.ReactNode
 	loader?: React.ReactNode
 	loadingThumbnail?: ViewerLoadingThumbnail
 }
@@ -32,6 +34,7 @@ const Overlay = ({
 	cameraControls,
 	sceneViewReturn,
 	fullscreenControl,
+	interactionHint,
 	loader,
 	loadingThumbnail
 }: OverlayProps) => {
@@ -101,6 +104,7 @@ const Overlay = ({
 			)}
 			{showChrome && cameraControls}
 			{showChrome && sceneViewReturn}
+			{showChrome && interactionHint}
 			{showChrome && popover}
 		</>
 	)

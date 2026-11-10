@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	resolveEmbedCameraControls,
-	resolveEmbedHotspotPresentation
+	resolveEmbedHotspotPresentation,
+	resolveEmbedInteractionHint
 } from './embed-presentation'
 
 const resolve = (query: string) =>
@@ -133,5 +134,16 @@ describe('resolveEmbedCameraControls', () => {
 		expect(resolveControls('cameraControls=')).toBe(true)
 		expect(resolveControls('cameraControls=1')).toBe(true)
 		expect(resolveControls('cameraControls=0')).toBe(false)
+	})
+})
+
+describe('resolveEmbedInteractionHint', () => {
+	const hint = (query: string) =>
+		resolveEmbedInteractionHint(new URLSearchParams(query))
+
+	it('leaves the hint to the scene unless the host says 0', () => {
+		expect(hint('')).toBe(true)
+		expect(hint('hint=1')).toBe(true)
+		expect(hint('hint=0')).toBe(false)
 	})
 })
