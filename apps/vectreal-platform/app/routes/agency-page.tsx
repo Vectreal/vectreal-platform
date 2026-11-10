@@ -1,10 +1,16 @@
 import { Button } from '@shared/components/ui/button'
+import { Card } from '@shared/components/ui/card'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { PublicErrorBoundary } from '../components/errors'
 import { CtaPanel, SheetFrame } from '../components/layout-components'
 import { IntakeHero } from '../components/model-intake/intake-hero'
+import { IntakeLoop } from '../components/model-intake/intake-loop'
+import {
+	INTAKE_ACTION_ATTRIBUTE,
+	IntakeStickyAction
+} from '../components/model-intake/intake-sticky-action'
 import { routeErrorMeta } from '../components/not-found'
 import { AGENCY_PAGE_COPY as COPY } from '../constants/agency-page-copy'
 import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
@@ -46,13 +52,21 @@ export function meta({ error }: Route.MetaArgs) {
 	)
 }
 
-function RequestButton({ to }: { to: string }) {
+function RequestButton({
+	to,
+	sticky = false
+}: {
+	to: string
+	/** The sticky copy is the one the others hide; it does not count as one of them. */
+	sticky?: boolean
+}) {
 	return (
 		<Button
 			asChild
 			size="lg"
 			variant="brand"
 			className="tap-target w-full sm:w-fit"
+			{...(sticky ? {} : { [INTAKE_ACTION_ATTRIBUTE]: '' })}
 		>
 			<Link to={to}>
 				{COPY.action}
@@ -63,7 +77,16 @@ function RequestButton({ to }: { to: string }) {
 }
 
 const BAND = 'border-foreground/10 border-t'
+const SECTION = 'mx-(--frame-x) space-y-6 py-12 lg:px-(--frame-pad) lg:py-20'
 const PARAGRAPH = 'text-body text-muted-foreground max-w-3xl'
+const LINK =
+	'text-body-sm decoration-muted-foreground hover:decoration-orange inline-block underline underline-offset-4 transition-colors duration-150'
+
+/** The loops recorded from the Dawn harness, poster first. */
+const wayMedia = (id: string) => ({
+	src: `/media/agenturen/${id}.mp4`,
+	poster: `/media/agenturen/${id}.webp`
+})
 
 export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 	const { letterCode, letter, scene } = loaderData
@@ -83,76 +106,95 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 			/>
 
 			<SheetFrame>
-				<div className={BAND}>
-					<div className="mx-(--frame-x) grid lg:grid-cols-2">
-						<section className="border-foreground/10 space-y-4 py-16 lg:border-r lg:px-(--frame-pad) lg:py-24">
-							<h2 className="text-h4">{COPY.audience.heading}</h2>
-							{COPY.audience.paragraphs.map((text) => (
-								<p key={text} className={PARAGRAPH}>
-									{text}
-								</p>
+				<section className={BAND}>
+					<div className={SECTION}>
+						<h2 className="text-h4">{COPY.steps.heading}</h2>
+						<ol className="grid gap-6 lg:grid-cols-3">
+							{COPY.steps.items.map((step, index) => (
+								<li key={step} className="flex gap-4">
+									<span
+										aria-hidden="true"
+										className="ds-sunken text-body-sm flex size-8 shrink-0 items-center justify-center rounded-full font-medium"
+									>
+										{index + 1}
+									</span>
+									<p className="text-body">{step}</p>
+								</li>
 							))}
-						</section>
-						<section className="border-foreground/10 space-y-4 border-t py-16 lg:border-t-0 lg:px-(--frame-pad) lg:py-24">
-							<h2 className="text-h4">{COPY.offer.heading}</h2>
-							{COPY.offer.paragraphs.map((text) => (
-								<p key={text} className={PARAGRAPH}>
-									{text}
-								</p>
-							))}
-							<div className="pt-2">
-								<RequestButton to={formPath} />
-							</div>
-						</section>
+						</ol>
 					</div>
-				</div>
+				</section>
 
 				<section className={BAND}>
-					<div className="mx-(--frame-x) space-y-8 py-16 lg:px-(--frame-pad) lg:py-24">
-						<div className="space-y-4">
-							<h2 className="text-h4">{COPY.inStore.heading}</h2>
-							<p className={PARAGRAPH}>{COPY.inStore.intro}</p>
+					<div className={SECTION}>
+						<div className="space-y-2">
+							<h2 className="text-h4">{COPY.ways.heading}</h2>
+							<p className={PARAGRAPH}>{COPY.ways.intro}</p>
 						</div>
-						<div className="grid gap-8 lg:grid-cols-3">
-							{COPY.inStore.ways.map((way) => (
-								<div key={way.label} className="space-y-4">
-									{way.paragraphs.map((text, index) => (
-										<p key={text} className={PARAGRAPH}>
-											{index === 0 ? (
-												<strong className="text-foreground font-medium">
-													{way.label}{' '}
-												</strong>
-											) : null}
-											{text}
+						<ul className="grid gap-6 md:grid-cols-3">
+							{COPY.ways.items.map((way) => (
+								<li key={way.id}>
+									<Card className="h-full gap-4 p-4">
+										<IntakeLoop {...wayMedia(way.id)} label={way.video} />
+										<h3 className="text-body font-medium">{way.label}</h3>
+										<p className="text-body-sm text-muted-foreground">
+											{way.text}
 										</p>
-									))}
-								</div>
+									</Card>
+								</li>
 							))}
-						</div>
-						<p className={PARAGRAPH}>{COPY.inStore.closing}</p>
-						<Link
-							to={COPY.inStore.link.href}
-							className="text-body-sm decoration-muted-foreground hover:decoration-orange inline-block underline underline-offset-4 transition-colors duration-150"
-						>
-							{COPY.inStore.link.label}
+						</ul>
+						<Link to={COPY.ways.link.href} className={LINK}>
+							{COPY.ways.link.label}
 						</Link>
 					</div>
 				</section>
 
 				<section className={BAND}>
-					<div className="mx-(--frame-x) space-y-6 py-16 lg:px-(--frame-pad) lg:py-24">
-						<h2 className="text-h4">{COPY.terms.heading}</h2>
-						<ul className="text-body text-muted-foreground max-w-3xl list-disc space-y-2 pl-5">
-							{COPY.terms.items.map((item) => (
-								<li key={item}>{item}</li>
+					<div className={SECTION}>
+						<Card className="gap-4 p-6 md:p-8">
+							<h2 className="text-h4">{COPY.terms.heading}</h2>
+							<ul className="text-body grid list-disc gap-x-10 gap-y-2 pl-5 md:grid-cols-2">
+								{COPY.terms.items.map((item) => (
+									<li key={item}>{item}</li>
+								))}
+							</ul>
+							<p className="text-body-sm text-muted-foreground">
+								{COPY.terms.contact}
+							</p>
+						</Card>
+					</div>
+				</section>
+
+				<section className={BAND}>
+					<div className={SECTION}>
+						<h2 className="text-h4">{COPY.faq.heading}</h2>
+						<div className="divide-foreground/10 border-foreground/10 max-w-3xl divide-y border-y">
+							{COPY.faq.items.map((item) => (
+								<details key={item.question} className="py-4">
+									<summary className="text-body tap-target cursor-pointer font-medium">
+										{item.question}
+									</summary>
+									<div className="space-y-3 pt-3">
+										{item.answer.map((text) => (
+											<p key={text} className={PARAGRAPH}>
+												{text}
+											</p>
+										))}
+										{'link' in item && item.link ? (
+											<Link to={item.link.href} className={LINK}>
+												{item.link.label}
+											</Link>
+										) : null}
+									</div>
+								</details>
 							))}
-						</ul>
-						<p className={PARAGRAPH}>{COPY.terms.contact}</p>
+						</div>
 					</div>
 				</section>
 
 				<div className={BAND}>
-					<div className="mx-(--frame-x) space-y-6 py-16 lg:px-(--frame-pad) lg:py-24">
+					<div className={SECTION}>
 						<CtaPanel
 							heading={COPY.request.heading}
 							description={COPY.request.body}
@@ -164,6 +206,10 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 					</div>
 				</div>
 			</SheetFrame>
+
+			<IntakeStickyAction>
+				<RequestButton to={formPath} sticky />
+			</IntakeStickyAction>
 		</main>
 	)
 }
