@@ -20,6 +20,24 @@ describe('a presentation patch', () => {
 			}).success
 		).toBe(false)
 	})
+
+	it('accepts when interaction starts and the viewer language, from their known values only', () => {
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { interactionStart: 'tap', locale: 'de' }
+			}).success
+		).toBe(true)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { interactionStart: 'hover' }
+			}).success
+		).toBe(false)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { locale: 'fr' }
+			}).success
+		).toBe(false)
+	})
 })
 
 describe('a lighting patch', () => {

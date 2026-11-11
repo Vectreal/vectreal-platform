@@ -7,7 +7,8 @@ export const INTERACTION_HINT_MS = 5000
 
 const COARSE_POINTER = '(pointer: coarse)'
 
-const pointerInput = (): InteractionInput =>
+/** Touch on a coarse pointer, else a mouse. */
+export const pointerInput = (): InteractionInput =>
 	typeof window !== 'undefined' &&
 	typeof window.matchMedia === 'function' &&
 	window.matchMedia(COARSE_POINTER).matches

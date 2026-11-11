@@ -390,7 +390,8 @@ describe('/api/v1/scenes/:sceneId/settings', () => {
 		expect((await settingsRow()).presentation).toEqual({
 			showInfoPopover: true,
 			showLoadingThumbnail: false,
-			showInteractionHint: true
+			showInteractionHint: true,
+			interactionStart: 'tap'
 		})
 	})
 

@@ -13,6 +13,11 @@
   text: the embed URL with its ?token=), and its poster from vectreal.poster
   (file) or else the product's featured image. A product without the metafield
   shows no slide.
+
+  Publish the scene with Publish > Viewer > Start moving set to "After a tap":
+  the slide then shows the scene turning with "Zum Drehen tippen", and swipes
+  move the gallery until the shopper taps it. A scene that starts right away
+  takes every swipe on its slide.
 {%- endcomment -%}
 
 {%- liquid
@@ -115,14 +120,22 @@
       }
 
       load() {
-        this.scene.src ||= this.dataset.sceneUrl;
+        if (this.scene.src) return;
+        // The scene shows itself as soon as it is there: it waits for a tap
+        // of its own, so the poster need not.
+        this.scene.addEventListener('load', () => this.reveal(), { once: true });
+        this.scene.src = this.dataset.sceneUrl;
+      }
+
+      reveal() {
+        this.setAttribute('data-open', '');
+        this.poster.inert = true;
+        this.scene.removeAttribute('tabindex');
       }
 
       open() {
         this.load();
-        this.setAttribute('data-open', '');
-        this.poster.inert = true;
-        this.scene.removeAttribute('tabindex');
+        this.reveal();
         this.scene.focus({ preventScroll: true });
       }
     }

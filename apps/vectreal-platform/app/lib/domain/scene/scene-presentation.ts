@@ -1,4 +1,14 @@
-import type { ScenePresentationSettings } from '@vctrl/core'
+import type {
+	SceneInteractionStart,
+	SceneLocale,
+	ScenePresentationSettings
+} from '@vctrl/core'
+
+const INTERACTION_STARTS: readonly SceneInteractionStart[] = [
+	'immediate',
+	'tap'
+]
+const LOCALES: readonly SceneLocale[] = ['en', 'de']
 
 /**
  * The rules for `SceneSettings.presentation`, owned in one place because the
@@ -47,7 +57,9 @@ export function normalizePresentationSettings(
 		compressTexturesForGpu,
 		altText,
 		showFullscreenButton,
-		showInteractionHint
+		showInteractionHint,
+		interactionStart,
+		locale
 	} = presentation as ScenePresentationSettings
 	const trimmedAltText = typeof altText === 'string' ? altText.trim() : ''
 	const normalized: ScenePresentationSettings = {
@@ -65,7 +77,13 @@ export function normalizePresentationSettings(
 		...(typeof showFullscreenButton === 'boolean'
 			? { showFullscreenButton }
 			: {}),
-		...(typeof showInteractionHint === 'boolean' ? { showInteractionHint } : {})
+		...(typeof showInteractionHint === 'boolean'
+			? { showInteractionHint }
+			: {}),
+		...(INTERACTION_STARTS.includes(interactionStart as SceneInteractionStart)
+			? { interactionStart }
+			: {}),
+		...(LOCALES.includes(locale as SceneLocale) ? { locale } : {})
 	}
 
 	return Object.keys(normalized).length > 0 ? normalized : undefined
@@ -131,6 +149,16 @@ export function shouldShowInteractionHint(
 	presentation: ScenePresentationSettings | undefined | null
 ): boolean {
 	return presentation?.showInteractionHint === true
+}
+
+/**
+ * When visitors of a published scene can start moving it. Absent means
+ * `immediate`; see `ScenePresentationSettings.interactionStart`.
+ */
+export function resolveInteractionStart(
+	presentation: ScenePresentationSettings | undefined | null
+): SceneInteractionStart {
+	return presentation?.interactionStart === 'tap' ? 'tap' : 'immediate'
 }
 
 /**
