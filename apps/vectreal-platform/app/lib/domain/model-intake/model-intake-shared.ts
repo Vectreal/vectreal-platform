@@ -117,6 +117,75 @@ export function parseIntakeStorePages(
 	return { ok: true, pages }
 }
 
+/** The scene a page shows when no letter, or a letter without a showcase, opened it. */
+export const MODEL_INTAKE_DEFAULT_SCENE = 'default'
+export type IntakeSceneKey =
+	typeof MODEL_INTAKE_DEFAULT_SCENE | ModelIntakeShowcase
+
+/** A published scene on this deployment, as its embed URL names it. */
+export interface IntakeSceneRef {
+	projectId: string
+	sceneId: string
+	/** The embed key the URL carries; the embed accepts nothing else. */
+	token: string
+}
+
+export type IntakeScenes = Partial<Record<IntakeSceneKey, IntakeSceneRef>>
+
+const EMBED_PATH_PATTERN =
+	/^\/embed\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i
+
+/**
+ * `MODEL_INTAKE_SCENES`, as `default=<embed URL>,lamp=<embed URL>,…`: the
+ * published scene the intake pages turn at the top, by the showcase of the
+ * letter that opened them, and `default` for every other visit. Each value is
+ * the embed URL the publisher's embed panel copies, token included; only its
+ * path and token are read, so the scene must live on this deployment. Unset
+ * or empty is no scene, and the pages lead with their text. Anything
+ * malformed refuses the whole value, as `MODEL_INTAKE_STORE_PAGES` does.
+ */
+export function parseIntakeScenes(
+	raw: string | undefined
+): { ok: true; scenes: IntakeScenes } | { ok: false; error: string } {
+	const scenes: IntakeScenes = {}
+	for (const entry of (raw ?? '').split(',')) {
+		if (entry.trim() === '') continue
+		const separator = entry.indexOf('=')
+		const key = entry.slice(0, separator).trim()
+		const value = entry.slice(separator + 1).trim()
+		if (
+			separator < 0 ||
+			(key !== MODEL_INTAKE_DEFAULT_SCENE && !isIntakeShowcase(key))
+		) {
+			return {
+				ok: false,
+				error: `"${entry.trim()}" does not start with ${MODEL_INTAKE_DEFAULT_SCENE} or a showcase (${MODEL_INTAKE_SHOWCASES.join(', ')}) and "=".`
+			}
+		}
+		const url = URL.canParse(value) ? new URL(value) : null
+		const ids = url && EMBED_PATH_PATTERN.exec(url.pathname)
+		const token = url?.searchParams.get('token')?.trim()
+		if (!ids || !token) {
+			return {
+				ok: false,
+				error: `The ${key} scene is not an embed URL with a token.`
+			}
+		}
+		scenes[key] = { projectId: ids[1], sceneId: ids[2], token }
+	}
+	return { ok: true, scenes }
+}
+
+/** The scene for a visit: its letter's showcase if that has one, else the default. */
+export function intakeSceneFor(
+	scenes: IntakeScenes,
+	showcase: ModelIntakeShowcase | null
+): IntakeSceneRef | null {
+	return (
+		(showcase && scenes[showcase]) ?? scenes[MODEL_INTAKE_DEFAULT_SCENE] ?? null
+	)
+}
+
 /**
  * An agency sends its client's photos, not its own, so a request from an
  * agency letter also confirms the client agreed. Decided by the letter the

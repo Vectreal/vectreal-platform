@@ -21,7 +21,10 @@ export const AGENCY_PAGE_COPY = {
 	letterGreeting: (organization: string) => `Guten Tag, ${organization}.`,
 	hero: {
 		heading: '3D-Modelle für die Shopify-Shops Ihrer Kunden, unter Ihrem Namen',
-		description: LEAD
+		description: LEAD,
+		/** The hero's one sentence on the phone's first screen, beside the turning product. */
+		lead: 'Ich mache aus drei Fotos eines Produkts ein 3D-Modell, das Kundinnen und Kunden im Shop selbst drehen können.',
+		sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen'
 	},
 	audience: {
 		heading: 'Für Agenturen mit Shopify-Kunden',

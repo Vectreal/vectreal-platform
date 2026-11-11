@@ -1,9 +1,12 @@
+import { Button } from '@shared/components/ui/button'
+import { ArrowDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { data, useNavigation } from 'react-router'
 
 import { PublicErrorBoundary } from '../components/errors'
-import { PageHero, SheetFrame } from '../components/layout-components'
+import { SheetFrame } from '../components/layout-components'
 import { ModelIntakeForm, ModelIntakeResult } from '../components/model-intake'
+import { IntakeHero } from '../components/model-intake/intake-hero'
 import { routeErrorMeta } from '../components/not-found'
 import { MODEL_INTAKE_COPY } from '../constants/product-copy'
 import { captureServerEvent } from '../lib/domain/analytics/server-events.server'
@@ -11,6 +14,7 @@ import {
 	lookupIntakeLetter,
 	resolveIntakeLetter
 } from '../lib/domain/model-intake/model-intake-letter.server'
+import { resolveIntakeScene } from '../lib/domain/model-intake/model-intake-scene.server'
 import {
 	intakeLetterAsksClientConsent,
 	isIntakeBodyAcceptable,
@@ -45,6 +49,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 		),
 		letter,
+		// A brand letter's card shows one product; the page turns that one.
+		scene: await resolveIntakeScene(request, letter?.showcase ?? null),
 		asksClientConsent: intakeLetterAsksClientConsent(letter),
 		turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
 	}
@@ -136,6 +142,8 @@ export function meta({ error, loaderData }: Route.MetaArgs) {
 	})
 }
 
+const FORM_ID = 'photos'
+
 export default function FreeModelPage({
 	loaderData,
 	actionData
@@ -145,6 +153,7 @@ export default function FreeModelPage({
 		batch,
 		letterCode,
 		letter,
+		scene,
 		asksClientConsent,
 		turnstileSiteKey
 	} = loaderData
@@ -170,12 +179,24 @@ export default function FreeModelPage({
 
 	return (
 		<main lang={locale}>
-			<PageHero
+			<IntakeHero
+				greeting={letter ? copy.letterGreeting(letter.organization) : null}
 				heading={copy.hero.heading}
-				description={
-					letter
-						? `${copy.letterGreeting(letter.organization)} ${copy.hero.description}`
-						: copy.hero.description
+				lead={copy.hero.lead}
+				scene={scene}
+				sceneLabel={copy.hero.sceneLabel}
+				action={
+					<Button
+						asChild
+						size="lg"
+						variant="brand"
+						className="tap-target w-full sm:w-fit"
+					>
+						<a href={`#${FORM_ID}`}>
+							{copy.hero.action}
+							<ArrowDown aria-hidden="true" />
+						</a>
+					</Button>
 				}
 			/>
 
@@ -183,7 +204,10 @@ export default function FreeModelPage({
 			<SheetFrame>
 				<div className="border-foreground/10 border-t">
 					<div className="mx-(--frame-x) grid lg:grid-cols-[1.15fr_0.85fr]">
-						<section className="border-foreground/10 space-y-6 py-16 lg:border-r lg:px-(--frame-pad) lg:py-24">
+						<section
+							id={FORM_ID}
+							className="border-foreground/10 scroll-mt-4 space-y-6 py-16 lg:border-r lg:px-(--frame-pad) lg:py-24"
+						>
 							<h2 className="sr-only">{copy.submit}</h2>
 							{actionData?.status === 'success' && !showForm ? (
 								<ModelIntakeResult
