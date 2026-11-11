@@ -13,6 +13,50 @@ import { useState } from 'react'
 
 import { useConsent } from './consent-context'
 
+import type { ModelIntakeLocale } from '../../lib/domain/model-intake/model-intake-shared'
+
+/* German on the German letter pages, like the banner that opens it. */
+const DIALOG_COPY = {
+	en: {
+		title: 'Cookie preferences',
+		description:
+			'Manage which cookies and tracking technologies we use. Strictly necessary cookies cannot be disabled as they are required for the platform to work.',
+		necessary: 'Strictly necessary',
+		necessaryDescription:
+			'Essential for authentication, security (CSRF), and platform operation. Always active.',
+		functional: 'Functional',
+		functionalDescription:
+			'Remember your preferences such as theme and sidebar state across sessions.',
+		analytics: 'Analytics & performance',
+		analyticsDescription:
+			'Help us understand how you use Vectreal via aggregated, anonymised usage data (PostHog). No PII is shared.',
+		marketing: 'Marketing & personalisation',
+		marketingDescription:
+			'Allow us to personalise marketing communications and product-led growth experiments.',
+		save: 'Save preferences',
+		acceptAll: 'Accept all'
+	},
+	de: {
+		title: 'Cookie-Einstellungen',
+		description:
+			'Hier legen Sie fest, welche Cookies und Tracking-Technologien ich verwende. Notwendige Cookies lassen sich nicht abschalten, weil die Seite ohne sie nicht funktioniert.',
+		necessary: 'Notwendig',
+		necessaryDescription:
+			'Für Anmeldung, Sicherheit (CSRF) und den Betrieb der Seite. Immer aktiv.',
+		functional: 'Funktional',
+		functionalDescription:
+			'Merkt sich Ihre Einstellungen, etwa das Farbschema, über Besuche hinweg.',
+		analytics: 'Statistik und Leistung',
+		analyticsDescription:
+			'Zeigt mir über zusammengefasste, anonymisierte Nutzungsdaten (PostHog), wie Vectreal genutzt wird. Keine personenbezogenen Daten.',
+		marketing: 'Marketing und Personalisierung',
+		marketingDescription:
+			'Erlaubt mir, Marketing-Nachrichten und Produkttests auf Sie zuzuschneiden.',
+		save: 'Einstellungen speichern',
+		acceptAll: 'Alle akzeptieren'
+	}
+} as const satisfies Record<ModelIntakeLocale, Record<string, string>>
+
 interface CategoryRowProps {
 	label: string
 	description: string
@@ -40,7 +84,12 @@ function CategoryRow({
 	)
 }
 
-export function ConsentPreferencesDialog() {
+export function ConsentPreferencesDialog({
+	locale = 'en'
+}: {
+	locale?: ModelIntakeLocale
+}) {
+	const copy = DIALOG_COPY[locale]
 	const { consent, saveConsent, preferencesOpen, setPreferencesOpen } =
 		useConsent()
 
@@ -63,42 +112,38 @@ export function ConsentPreferencesDialog() {
 
 	return (
 		<Dialog open={preferencesOpen} onOpenChange={setPreferencesOpen}>
-			<DialogContent className="max-w-lg">
+			<DialogContent className="max-w-lg" lang={locale}>
 				<DialogHeader>
-					<DialogTitle>Cookie preferences</DialogTitle>
-					<DialogDescription>
-						Manage which cookies and tracking technologies we use. Strictly
-						necessary cookies cannot be disabled as they are required for the
-						platform to work.
-					</DialogDescription>
+					<DialogTitle>{copy.title}</DialogTitle>
+					<DialogDescription>{copy.description}</DialogDescription>
 				</DialogHeader>
 
 				<div className="divide-y">
 					<CategoryRow
-						label="Strictly necessary"
-						description="Essential for authentication, security (CSRF), and platform operation. Always active."
+						label={copy.necessary}
+						description={copy.necessaryDescription}
 						checked={true}
 						disabled
 						onCheckedChange={() => {}}
 					/>
 					<Separator />
 					<CategoryRow
-						label="Functional"
-						description="Remember your preferences such as theme and sidebar state across sessions."
+						label={copy.functional}
+						description={copy.functionalDescription}
 						checked={functional}
 						onCheckedChange={setFunctional}
 					/>
 					<Separator />
 					<CategoryRow
-						label="Analytics & performance"
-						description="Help us understand how you use Vectreal via aggregated, anonymised usage data (PostHog). No PII is shared."
+						label={copy.analytics}
+						description={copy.analyticsDescription}
 						checked={analytics}
 						onCheckedChange={setAnalytics}
 					/>
 					<Separator />
 					<CategoryRow
-						label="Marketing & personalisation"
-						description="Allow us to personalise marketing communications and product-led growth experiments."
+						label={copy.marketing}
+						description={copy.marketingDescription}
 						checked={marketing}
 						onCheckedChange={setMarketing}
 					/>
@@ -106,9 +151,9 @@ export function ConsentPreferencesDialog() {
 
 				<DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
 					<Button variant="secondary" onClick={handleSave}>
-						Save preferences
+						{copy.save}
 					</Button>
-					<Button onClick={handleAcceptAll}>Accept all</Button>
+					<Button onClick={handleAcceptAll}>{copy.acceptAll}</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
