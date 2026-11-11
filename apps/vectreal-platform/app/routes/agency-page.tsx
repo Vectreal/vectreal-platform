@@ -111,14 +111,23 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 						<ol className="grid gap-8 md:grid-cols-3">
 							{COPY.steps.items.map((step, index) => (
 								<li key={step.id} className="space-y-3">
-									<img
-										src={`${MEDIA}/step-${step.id}.webp`}
-										alt={step.image}
-										width={640}
-										height={480}
-										loading="lazy"
-										className="ds-sunken aspect-4/3 w-full rounded-xl object-cover"
-									/>
+									{step.video ? (
+										<IntakeLoop
+											src={`${MEDIA}/step-${step.id}.mp4`}
+											poster={`${MEDIA}/step-${step.id}.webp`}
+											label={step.video}
+											className="aspect-4/3"
+										/>
+									) : (
+										<img
+											src={`${MEDIA}/step-${step.id}.webp`}
+											alt={step.image}
+											width={640}
+											height={480}
+											loading="lazy"
+											className="ds-sunken aspect-4/3 w-full rounded-xl object-cover"
+										/>
+									)}
 									<p className="text-body flex gap-3">
 										<span aria-hidden="true" className="font-medium">
 											{index + 1}
@@ -159,19 +168,38 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 				<section className={BAND}>
 					<div className={SECTION}>
 						<h2 className="text-h2">{COPY.terms.heading}</h2>
-						<p
-							aria-hidden="true"
-							className="text-headline grid gap-2 md:grid-cols-3"
-						>
-							{COPY.terms.figures.map((figure) => (
-								<span key={figure}>{figure}</span>
-							))}
-						</p>
-						<ul className="text-body grid list-disc gap-2 pl-5">
-							{COPY.terms.lines.map((line) => (
-								<li key={line}>{line}</li>
-							))}
-						</ul>
+						<Card className="gap-8 p-6 md:p-8">
+							<div className="grid gap-6 md:auto-cols-fr md:grid-flow-col">
+								{COPY.terms.figures.map((figure) => (
+									<div key={figure.value} className="space-y-1">
+										{/* Without its own line, the number repeats one of the lines below, so a screen reader hears it once. */}
+										<p
+											aria-hidden={figure.line ? undefined : true}
+											className="text-headline"
+										>
+											{figure.value}
+										</p>
+										{figure.line ? (
+											<p className="text-body text-muted-foreground">
+												{figure.line}
+											</p>
+										) : null}
+									</div>
+								))}
+							</div>
+							<ul className="text-body grid list-disc gap-2 pl-5">
+								{COPY.terms.lines.map((line) => (
+									<li key={line}>{line}</li>
+								))}
+							</ul>
+							{COPY.terms.examples.length > 0 ? (
+								<ul className="text-body-sm text-muted-foreground grid gap-2">
+									{COPY.terms.examples.map((example) => (
+										<li key={example}>{example}</li>
+									))}
+								</ul>
+							) : null}
+						</Card>
 					</div>
 				</section>
 
