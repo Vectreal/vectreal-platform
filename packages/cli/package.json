@@ -35,7 +35,7 @@
 	},
 	"dependencies": {
 		"@gltf-transform/core": "catalog:",
-		"@modelcontextprotocol/server": "2.3.1",
+		"@modelcontextprotocol/server": "2.4.0",
 		"@napi-rs/keyring": "^2.1.2",
 		"@vctrl/core": "workspace:*",
 		"@vctrl/sdk": "workspace:*",
@@ -45,6 +45,6 @@
 	},
 	"devDependencies": {
 		"@gltf-transform/extensions": "catalog:",
-		"@modelcontextprotocol/client": "2.3.1"
+		"@modelcontextprotocol/client": "2.4.0"
 	}
 }
