@@ -260,7 +260,7 @@ Supported domain patterns:
 | `example.com`   | Exact host only                 |
 | `*.example.com` | All subdomains of `example.com` |
 
-Requests from unlisted domains receive a `403 Forbidden` response.
+Requests from unlisted domains receive a `403` response, and the iframe says so in place of the scene: it names the host that was refused and points back to this section, so the host it names is the one to add. If it names no host, the embedding page sent no `Referer` or `Origin` (a `no-referrer` policy, or `referrerpolicy="no-referrer"` on the iframe), and no entry on the list can match it. Let the page send its origin; the browser default, `strict-origin-when-cross-origin`, is enough.
 
 One host is exempt: a page served from the Vectreal instance being embedded is always allowed, whatever the list says. That is why opening an embed URL from the dashboard - including the Embed panel's **Test embed URL** control, the arrow above the snippet - proves the key and the published scene, but never the domain list. Only a request from your own site tests that.
 

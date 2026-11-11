@@ -59,6 +59,33 @@ export function routeErrorDetail(error: unknown): string | undefined {
 	return detail.length > 0 ? detail : undefined
 }
 
+/**
+ * Where the guide explains the allowed embed domains, written out as text
+ * because the embed frame never carries a link. The one address embed copy
+ * may name: it is ours, the same for every project, and says nothing about
+ * any project's list.
+ */
+export const EMBED_ALLOWED_DOMAINS_GUIDE =
+	'vectreal.com/docs/guides/publish-embed#allowed-embed-domains'
+
+/**
+ * What a refused domain tells the person looking at the frame: which host was
+ * refused, that the key is fine, and where the owner adds the host. The host is
+ * the requesting page's own, so it discloses nothing that page did not know.
+ * It reaches the page as React text, which escapes it.
+ *
+ * With no host, the page sent neither `Referer` nor `Origin`, and no entry on
+ * the list can match a request that names no host. So that copy sends the
+ * owner to the page's referrer policy instead of the list.
+ */
+export function domainNotAllowedDescription(host: string | null): string {
+	const guide = `The guide covers it at ${EMBED_ALLOWED_DOMAINS_GUIDE}.`
+	if (host === null) {
+		return `This page did not say which site it is on, so it cannot be matched against this project's allowed embed domains. The key is valid. If you own the page, let it send its address: a no-referrer policy on the page or on the iframe blocks it. ${guide}`
+	}
+	return `${host} is not on this project's allowed embed domains. The key is valid. If you own the project, add ${host} to Allowed embed domains in the project's settings on the Vectreal dashboard. ${guide}`
+}
+
 export type EmbedErrorKind =
 	'not_available' | 'domain_not_allowed' | 'busy' | 'load_failed'
 
@@ -76,14 +103,13 @@ export const EMBED_ERROR_COPY: Record<EmbedErrorKind, EmbedErrorCopy> = {
 	domain_not_allowed: {
 		heading: 'This site is not allowed to show this embed',
 		/*
-		  Says the key is valid so nobody rotates a working key, and names the
-		  fix without naming the list: echoing the allowed domains would hand an
-		  unknown visitor the inventory of every site the owner embeds on. Only
-		  reachable after a live key matched this project, and before the scene
-		  is looked up, so it discloses nothing about whether the scene exists.
+		  The host-less form, for a request that sent no `Referer` or `Origin`;
+		  `domainNotAllowedDescription` names the host when there is one. Both
+		  say the key is valid so nobody rotates a working key, and neither
+		  names the list: echoing the allowed domains would hand an
+		  unknown visitor the inventory of every site the owner embeds on.
 		*/
-		description:
-			'The key is valid, but this page is not on the allowed domain list for this project. If you own it, add this site to its allowed domains in the Vectreal dashboard.',
+		description: domainNotAllowedDescription(null),
 		retryable: false
 	},
 	busy: {
@@ -110,4 +136,14 @@ export function embedErrorKind(error: unknown): EmbedErrorKind {
 		if (error.status < 500) return 'not_available'
 	}
 	return 'load_failed'
+}
+
+/**
+ * The host a domain refusal named, or `null` for any other error, so a host
+ * is only ever shown beside the copy that explains it.
+ */
+export function embedRefusedHost(error: unknown): string | null {
+	if (embedErrorKind(error) !== 'domain_not_allowed') return null
+	const host = (error as { data: { host?: unknown } }).data.host
+	return typeof host === 'string' && host.length > 0 ? host : null
 }

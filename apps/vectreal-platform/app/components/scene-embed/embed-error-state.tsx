@@ -1,6 +1,7 @@
 import { Button } from '@shared/components/ui/button'
 
 import {
+	domainNotAllowedDescription,
 	EMBED_ERROR_COPY,
 	type EmbedErrorKind
 } from '../../lib/errors/error-state-copy'
@@ -17,18 +18,25 @@ import { ErrorState } from '../error-state'
  */
 export function EmbedErrorState({
 	kind,
+	refusedHost = null,
 	onRetry
 }: {
 	kind: EmbedErrorKind
+	/** The host a domain refusal named; read only for that kind. */
+	refusedHost?: string | null
 	onRetry?: () => void
 }) {
 	const copy = EMBED_ERROR_COPY[kind]
+	const description =
+		kind === 'domain_not_allowed'
+			? domainNotAllowedDescription(refusedHost)
+			: copy.description
 
 	return (
 		<ErrorState
 			size="frame"
 			heading={copy.heading}
-			description={copy.description}
+			description={description}
 			action={
 				copy.retryable && onRetry ? (
 					<Button type="button" onClick={onRetry}>

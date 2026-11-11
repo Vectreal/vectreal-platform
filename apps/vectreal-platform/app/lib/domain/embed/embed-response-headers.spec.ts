@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { embedRefusal } from './embed-refusal'
+import { embedDomainRefusal, embedRefusal } from './embed-refusal'
 import {
 	EMBED_RESPONSE_HEADERS,
 	mergeEmbedResponseHeaders
@@ -32,7 +32,7 @@ function sentHeaders(init: ResponseInit | null) {
 const EVERY_RESPONSE = [
 	['a 404', embedRefusal('not_available').init],
 	['a malformed URL', embedRefusal('not_available', 400).init],
-	['a refused domain', embedRefusal('domain_not_allowed').init],
+	['a refused domain', embedDomainRefusal('shop.example.com').init],
 	['a rate limit', embedRefusal('busy').init],
 	['the scene', { headers: EMBED_RESPONSE_HEADERS }]
 ] as const
