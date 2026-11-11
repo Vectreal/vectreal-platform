@@ -66,7 +66,7 @@ describe('the buttons', () => {
 
 	it('fades in only where motion is welcome', () => {
 		render(<TapToActivateButton text="Tap to rotate" onActivate={vi.fn()} />)
-		expect(screen.getByRole('button').className).toContain(
+		expect(screen.getByRole('button').parentElement?.className).toContain(
 			'vv:motion-reduce:transition-none'
 		)
 	})

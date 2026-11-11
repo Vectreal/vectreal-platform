@@ -47,10 +47,13 @@ export function tapToActivateWords(
 }
 
 const classes = {
+	startRoot: cn(
+		'vctrl-viewer-tap-to-activate shell-panel vv:absolute vv:top-1/2 vv:left-1/2 vv:z-[100] vv:max-w-[calc(100%-2rem)] vv:-translate-x-1/2 vv:-translate-y-1/2 vv:p-1',
+		'vv:transition-opacity vv:duration-300 vv:ease-out vv:starting:opacity-0 vv:motion-reduce:transition-none'
+	),
 	start: cn(
 		CHROME_BUTTON,
-		'vctrl-viewer-tap-to-activate shell-panel vv:absolute vv:top-1/2 vv:left-1/2 vv:z-[100] vv:max-w-[calc(100%-2rem)] vv:-translate-x-1/2 vv:-translate-y-1/2 vv:rounded-full vv:px-4 vv:py-2 vv:text-sm vv:font-medium vv:text-foreground',
-		'vv:transition-opacity vv:duration-300 vv:ease-out vv:starting:opacity-0 vv:motion-reduce:transition-none'
+		'vv:rounded-full vv:px-4 vv:py-2 vv:text-sm vv:font-medium vv:text-foreground'
 	),
 	doneRoot: 'vctrl-viewer-tap-to-deactivate shell-panel vv:p-1',
 	done: cn(
@@ -71,9 +74,11 @@ export const TapToActivateButton = ({
 	text: string
 	onActivate: () => void
 }) => (
-	<button type="button" className={classes.start} onClick={onActivate}>
-		{text}
-	</button>
+	<div className={classes.startRoot}>
+		<button type="button" className={classes.start} onClick={onActivate}>
+			{text}
+		</button>
+	</div>
 )
 
 /**
