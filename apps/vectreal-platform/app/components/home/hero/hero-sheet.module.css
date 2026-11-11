@@ -75,12 +75,12 @@
 	container-type: inline-size;
 }
 /*
-  The headline is three sentences set one to a line, and the breaks are the
-  design, so the type yields to the column rather than a sentence breaking:
-  its longest line needs about 7.6 times the type size.
+  The headline is set one phrase to a line, and the breaks are the design, so
+  the type yields to the column rather than a line breaking: its longest line,
+  "from three photos.", needs about 8.1 times the type size.
 */
 .copy h1 {
-	font-size: min(var(--text-display), 12.5cqi);
+	font-size: min(var(--text-display), 11.5cqi);
 }
 
 .figure {
