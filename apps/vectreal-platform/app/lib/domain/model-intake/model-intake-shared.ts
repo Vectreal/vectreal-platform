@@ -469,3 +469,21 @@ export function intakeLetterDestination(
 	}
 	return intakeLetterFormPath(letter.code, letter.locale)
 }
+
+/**
+ * The requests each letter led to, by its code, in the order given: the
+ * internal page's letters list links each letter to them.
+ */
+export function intakeRequestsByLetter<
+	T extends { letterCode: string | null; referenceCode: string }
+>(requests: readonly T[]): Map<string, T[]> {
+	const byLetter = new Map<string, T[]>()
+	for (const request of requests) {
+		if (!request.letterCode) continue
+		byLetter.set(request.letterCode, [
+			...(byLetter.get(request.letterCode) ?? []),
+			request
+		])
+	}
+	return byLetter
+}
