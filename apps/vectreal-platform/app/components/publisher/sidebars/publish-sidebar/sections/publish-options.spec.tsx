@@ -245,6 +245,16 @@ describe('the publish panel', () => {
 		expect(store.get(presentationAtom).showInteractionHint).toBe(false)
 	})
 
+	it('unloads the scene off-screen by default, until the author keeps it loaded', () => {
+		const store = renderPanel(balancedPreset)
+		const toggle = screen.getByRole('switch', {
+			name: /Unload when off-screen/
+		})
+		expect(toggle).toBeChecked()
+		fireEvent.click(toggle)
+		expect(store.get(presentationAtom).unloadWhenOffscreen).toBe(false)
+	})
+
 	it('stores alt text for the viewer, and forgets it once cleared', () => {
 		const store = renderPanel(balancedPreset)
 		const field = screen.getByRole('textbox', { name: 'Alt text' })

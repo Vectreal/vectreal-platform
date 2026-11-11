@@ -286,7 +286,8 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 			compressTexturesForGpu: z.boolean().optional(),
 			altText: z.string().optional(),
 			showFullscreenButton: z.boolean().optional(),
-			showInteractionHint: z.boolean().optional()
+			showInteractionHint: z.boolean().optional(),
+			unloadWhenOffscreen: z.boolean().optional()
 		})
 		.optional()
 })

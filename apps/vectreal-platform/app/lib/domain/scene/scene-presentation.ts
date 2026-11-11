@@ -47,7 +47,8 @@ export function normalizePresentationSettings(
 		compressTexturesForGpu,
 		altText,
 		showFullscreenButton,
-		showInteractionHint
+		showInteractionHint,
+		unloadWhenOffscreen
 	} = presentation as ScenePresentationSettings
 	const trimmedAltText = typeof altText === 'string' ? altText.trim() : ''
 	const normalized: ScenePresentationSettings = {
@@ -65,7 +66,10 @@ export function normalizePresentationSettings(
 		...(typeof showFullscreenButton === 'boolean'
 			? { showFullscreenButton }
 			: {}),
-		...(typeof showInteractionHint === 'boolean' ? { showInteractionHint } : {})
+		...(typeof showInteractionHint === 'boolean'
+			? { showInteractionHint }
+			: {}),
+		...(typeof unloadWhenOffscreen === 'boolean' ? { unloadWhenOffscreen } : {})
 	}
 
 	return Object.keys(normalized).length > 0 ? normalized : undefined
@@ -131,6 +135,16 @@ export function shouldShowInteractionHint(
 	presentation: ScenePresentationSettings | undefined | null
 ): boolean {
 	return presentation?.showInteractionHint === true
+}
+
+/**
+ * Whether a published viewer frees its WebGL context off-screen. Absent means
+ * on; see `ScenePresentationSettings.unloadWhenOffscreen`.
+ */
+export function shouldUnloadWhenOffscreen(
+	presentation: ScenePresentationSettings | undefined | null
+): boolean {
+	return presentation?.unloadWhenOffscreen !== false
 }
 
 /**

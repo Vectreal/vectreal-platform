@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { cn, withHostClasses } from './class-names'
 import ContextLossListener from './context-loss-listener'
 import { VIEWER_FOCUS_RING } from './focus-ring'
+import { FirstFrameWatch, LastFrame, LastFrameCapture } from './last-frame'
 import RenderFailure from './render-failure'
 import {
 	type ContextLossEvent,
@@ -48,6 +49,12 @@ interface CanvasComponentProps extends CanvasProps {
 	 * Default: true
 	 */
 	enableViewportRendering?: boolean
+	/**
+	 * What viewport rendering does off-screen: `unload` (the default) unmounts
+	 * the canvas and frees its WebGL context, showing the last frame on return
+	 * until the canvas draws again; `pause` keeps it mounted and stops drawing.
+	 */
+	offscreen?: 'unload' | 'pause'
 	/**
 	 * Viewer loading lifecycle state used to synchronize loader/model cross-fade.
 	 */
@@ -95,6 +102,7 @@ const Canvas = ({
 	theme = 'system',
 	overlay,
 	enableViewportRendering = true,
+	offscreen = 'unload',
 	loadingState = 'loading',
 	onContainerChange,
 	onContextLossEvent,
@@ -151,7 +159,34 @@ const Canvas = ({
 	// Three.js state — camera position, transition runtime, controls target — which
 	// causes camera drift when the tab regains focus. isInViewport still gates the
 	// full unmount because off-screen viewers should free the WebGL context.
-	const shouldRenderCanvas = isReady && isInViewport && !contextLoss.failed
+	const unloads = offscreen === 'unload'
+	/*
+	  Leaving, an unloading canvas stays for the frame that copies what it
+	  shows, which stands in for it on return until it draws again. Without it
+	  the stage showed bare between the remount and the first new frame.
+	*/
+	const [lastFrame, setLastFrame] = useState<HTMLCanvasElement | null>(null)
+	const [leaving, setLeaving] = useState(false)
+	const [wasInViewport, setWasInViewport] = useState(isInViewport)
+	if (wasInViewport !== isInViewport) {
+		setWasInViewport(isInViewport)
+		setLeaving(!isInViewport && unloads && loadingState !== 'loading')
+	}
+	useEffect(() => {
+		if (!leaving) return
+		// A hidden page draws no frame to copy.
+		const timer = setTimeout(() => setLeaving(false), 500)
+		return () => clearTimeout(timer)
+	}, [leaving])
+	const captureLastFrame = useCallback((frame: HTMLCanvasElement | null) => {
+		setLastFrame(frame)
+		setLeaving(false)
+	}, [])
+	const dropLastFrame = useCallback(() => setLastFrame(null), [])
+
+	const shouldRenderCanvas =
+		isReady && (isInViewport || leaving || !unloads) && !contextLoss.failed
+	const isPaused = !isPageVisible || (!unloads && !isInViewport)
 	const shouldShowCanvasContent = loadingState !== 'loading'
 
 	useEffect(() => {
@@ -234,6 +269,7 @@ const Canvas = ({
 					{keyHelp}
 				</span>
 			)}
+			{lastFrame && <LastFrame frame={lastFrame} />}
 			{shouldRenderCanvas && (
 				<ThreeCanvas
 					{...props}
@@ -241,10 +277,13 @@ const Canvas = ({
 					// lost context comes back or on a retry.
 					key={contextLoss.canvasKey}
 					dpr={props.dpr ?? [MIN_DPR, dprCap]}
-					frameloop={!isPageVisible ? 'never' : (props.frameloop ?? 'demand')}
+					frameloop={isPaused ? 'never' : (props.frameloop ?? 'demand')}
 					className={cn(
 						'vv:h-full vv:w-full vv:opacity-0 vv:transition-opacity vv:ease-out',
-						canvasVisible && shouldShowCanvasContent && 'vv:opacity-100'
+						// Over the last frame it shows at once: nothing to fade from.
+						(canvasVisible || lastFrame) &&
+							shouldShowCanvasContent &&
+							'vv:opacity-100'
 					)}
 					style={{
 						transitionDuration: `${VIEWER_MODEL_FADE_DURATION_MS}ms`
@@ -283,6 +322,10 @@ const Canvas = ({
 						onContextRestored={contextLoss.onContextRestored}
 						onUnmount={contextLoss.onCanvasUnmount}
 					/>
+					{leaving && <LastFrameCapture onCapture={captureLastFrame} />}
+					{lastFrame && isInViewport && (
+						<FirstFrameWatch onDrawn={dropLastFrame} />
+					)}
 					{children}
 				</ThreeCanvas>
 			)}

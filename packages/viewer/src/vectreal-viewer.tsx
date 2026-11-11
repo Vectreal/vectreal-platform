@@ -232,6 +232,14 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	enableViewportRendering?: boolean
 
 	/**
+	 * With viewport rendering, whether the viewer frees its WebGL context while
+	 * out of view. On (the default), it unmounts the canvas and shows its last
+	 * frame on return until it draws again; off keeps the scene in memory and
+	 * only stops drawing, so it is back at once.
+	 */
+	unloadWhenOffscreen?: boolean
+
+	/**
 	 * Whether the viewer renders through its composer: ambient occlusion, and
 	 * supersampling that converges while the camera is still, after which a
 	 * still viewer draws nothing until something changes. Disable it to render
@@ -622,6 +630,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		theme = 'system',
 		// Performance
 		enableViewportRendering = true,
+		unloadWhenOffscreen = true,
 		enablePostProcessing = true,
 		// Scene configuration
 		boundsOptions,
@@ -1227,6 +1236,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 						/>
 					}
 					enableViewportRendering={enableViewportRendering}
+					offscreen={unloadWhenOffscreen ? 'unload' : 'pause'}
 					// 'percentage' = PCFShadowMap, which three 0.185 softens by each
 					// light's `shadow.radius`; the ground bake softens its own shadow by
 					// jittering its lights. (A bare `shadows` would ask for the deprecated

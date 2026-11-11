@@ -22,6 +22,21 @@ describe('a presentation patch', () => {
 	})
 })
 
+describe('unloading off-screen, through a presentation patch', () => {
+	it('is accepted as a boolean only', () => {
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { unloadWhenOffscreen: false }
+			}).success
+		).toBe(true)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { unloadWhenOffscreen: 'no' }
+			}).success
+		).toBe(false)
+	})
+})
+
 describe('a lighting patch', () => {
 	it('is accepted by the public contract', () => {
 		const parsed = updateSceneSettingsInputSchema.safeParse({

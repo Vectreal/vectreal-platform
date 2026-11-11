@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
+import sharp from 'sharp'
 
 // These assertions run against a throwaway Vite app that installed
 // @vctrl/viewer from the local Verdaccio registry (i.e. the real published
@@ -261,6 +262,51 @@ test('the first-time hint says how to move, and goes on the first move', async (
 	await page.mouse.up()
 	await expect(hint).toHaveCount(0)
 })
+
+/** The color at the middle of the viewer, which fills the top 60% of the page. */
+async function viewerCenter(page: Page) {
+	const shot = await page.screenshot({
+		clip: { x: 638, y: 214, width: 4, height: 4 },
+		timeout: 5000
+	})
+	const { data } = await sharp(shot).raw().toBuffer({ resolveWithObject: true })
+	return [data[0], data[1], data[2]]
+}
+
+const isPageWhite = ([r, g, b]: number[]) => r > 240 && g > 240 && b > 240
+
+for (const [query, unloads] of [
+	['offscreen-case', true],
+	['offscreen-case=pause', false]
+] as const) {
+	test(`scrolled back into view, a viewer that ${unloads ? 'unloads' : 'pauses'} off-screen shows its scene at once`, async ({
+		page
+	}) => {
+		test.setTimeout(60000)
+		await page.goto(`/?${query}`)
+		await page.waitForFunction(
+			() => window.__VIEWER_READY__ === true,
+			undefined,
+			{
+				timeout: 30000
+			}
+		)
+		await expect
+			.poll(() => viewerCenter(page).then(isPageWhite), { timeout: 20000 })
+			.toBe(false)
+
+		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+		// Out by more than the viewer's own margin, so an unloading canvas goes.
+		await expect
+			.poll(() => page.locator('canvas[data-engine]').count(), {
+				timeout: 10000
+			})
+			.toBe(unloads ? 0 : 1)
+
+		await page.evaluate(() => window.scrollTo(0, 0))
+		expect(isPageWhite(await viewerCenter(page))).toBe(false)
+	})
+}
 
 test('a camera switch flies in a host that follows camera_changed', async ({
 	page
