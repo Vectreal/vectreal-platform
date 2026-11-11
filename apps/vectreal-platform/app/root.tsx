@@ -224,6 +224,7 @@ export default function App({ loaderData }: Route.ComponentProps) {
 	// default) everywhere. Only the visible chrome is suppressed, and only where
 	// we are rendering inside somebody else's page.
 	const consentUiAllowed = !isThirdPartySurface(pathname)
+	const intakeLocale = intakePageLocale(pathname, search)
 
 	return (
 		<AuthenticityTokenProvider token={loaderData?.csrf}>
@@ -232,9 +233,10 @@ export default function App({ loaderData }: Route.ComponentProps) {
 				{consentUiAllowed ? (
 					<>
 						<ConsentBanner
-							locale={intakePageLocale(pathname, search) ?? 'en'}
+							locale={intakeLocale ?? 'en'}
+							compact={intakeLocale !== null}
 						/>
-						<ConsentPreferencesDialog />
+						<ConsentPreferencesDialog locale={intakeLocale ?? 'en'} />
 					</>
 				) : null}
 			</ConsentProvider>

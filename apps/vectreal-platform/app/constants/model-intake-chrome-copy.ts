@@ -13,18 +13,21 @@ export const MODEL_INTAKE_CHROME_COPY: Record<
 		home: string
 		imprint: string
 		privacy: string
+		cookies: string
 	}
 > = {
 	en: {
 		languageLink: 'Deutsch',
 		home: 'Vectreal home',
 		imprint: 'Imprint',
-		privacy: 'Privacy'
+		privacy: 'Privacy',
+		cookies: 'Cookie settings'
 	},
 	de: {
 		languageLink: 'English',
 		home: 'Vectreal Startseite',
 		imprint: 'Impressum',
-		privacy: 'Datenschutz'
+		privacy: 'Datenschutz',
+		cookies: 'Cookie-Einstellungen'
 	}
 }

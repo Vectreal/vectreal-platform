@@ -7,6 +7,7 @@ import {
 	intakePageLocale,
 	MODEL_INTAKE_PATH
 } from '../../lib/domain/model-intake/model-intake-shared'
+import { useConsent } from '../consent/consent-context'
 
 const LINK_CLASS =
 	'text-muted-foreground hover:text-orange-ink focus-visible:text-orange-ink text-body-sm tap-target relative underline-offset-4 transition-colors'
@@ -55,9 +56,10 @@ export function IntakeHeader() {
 	)
 }
 
-/** The funnel's footer: the two pages German law asks every page to reach. */
+/** The funnel's footer: the two pages German law asks every page to reach, and the cookie settings. */
 export function IntakeFooter() {
 	const { locale, copy } = useIntakeChrome()
+	const { setPreferencesOpen } = useConsent()
 
 	return (
 		<footer lang={locale} className="bg-background w-full">
@@ -68,6 +70,13 @@ export function IntakeFooter() {
 				<Link to="/privacy-policy" className={LINK_CLASS}>
 					{copy.privacy}
 				</Link>
+				<button
+					type="button"
+					onClick={() => setPreferencesOpen(true)}
+					className={cn(LINK_CLASS, 'cursor-pointer')}
+				>
+					{copy.cookies}
+				</button>
 			</nav>
 		</footer>
 	)
