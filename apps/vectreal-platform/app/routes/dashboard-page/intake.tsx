@@ -77,7 +77,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	)
 	const perBatch = new Map<string, number>()
 	for (const row of rows) {
-		perBatch.set(row.batch, (perBatch.get(row.batch) ?? 0) + 1)
+		const source = row.letterCode ? 'letters' : row.batch
+		perBatch.set(source, (perBatch.get(source) ?? 0) + 1)
 	}
 	const requestsByLetter = intakeRequestsByLetter(rows)
 	const letterList = letterRows.map((letter) => ({
@@ -316,10 +317,11 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 				) : null}
 			</div>
 			<p className="text-muted-foreground text-body-sm">
-				{productType} · {describeSize(row)} · batch {row.batch} ·{' '}
+				{productType} · {describeSize(row)} ·{' '}
+				{/* A letter names its source; "batch direct" beside it read as a contradiction. */}
 				{row.letterCode
 					? `letter ${row.letterCode} (${row.letterOrganization}) · `
-					: ''}
+					: `batch ${row.batch} · `}
 				{row.locale} · received {dateTime.format(new Date(row.createdAt))}
 			</p>
 			{row.consentClientAt ? (
