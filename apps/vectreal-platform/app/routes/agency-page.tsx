@@ -137,8 +137,8 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 						<ul className="grid gap-6 md:grid-cols-3">
 							{COPY.ways.items.map((way) => (
 								<li key={way.id}>
-									<Card className={cn('gap-4 p-4', 'video' in way && 'h-full')}>
-										{'video' in way ? (
+									<Card className={cn('gap-4 p-4', way.video && 'h-full')}>
+										{way.video ? (
 											<IntakeLoop
 												src={`${MEDIA}/${way.id}.mp4`}
 												poster={`${MEDIA}/${way.id}.webp`}
