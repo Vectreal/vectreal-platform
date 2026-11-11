@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { IntakeFooter, IntakeHeader } from './intake-chrome'
+
+const setPreferencesOpen = vi.fn()
+vi.mock('../consent/consent-context', () => ({
+	useConsent: () => ({ setPreferencesOpen })
+}))
 
 function renderAt(entry: string) {
 	return render(
@@ -45,5 +50,13 @@ describe('the letter funnel chrome', () => {
 		renderAt('/agenturen?c=ABCDEFGH')
 		expect(screen.queryByRole('link', { name: 'English' })).toBeNull()
 		expect(screen.getByRole('link', { name: 'Impressum' })).toBeTruthy()
+	})
+
+	it('opens the cookie settings from the footer, in the page language', () => {
+		renderAt('/agenturen')
+		fireEvent.click(
+			screen.getByRole('button', { name: 'Cookie-Einstellungen' })
+		)
+		expect(setPreferencesOpen).toHaveBeenCalledWith(true)
 	})
 })
