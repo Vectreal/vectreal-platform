@@ -13,6 +13,7 @@ import {
 	parseIntakeStorePages,
 	intakeLetterFormPath,
 	intakePageLocale,
+	intakeRequestsByLetter,
 	isIntakeBodyAcceptable,
 	mintIntakeLetterCode,
 	MODEL_INTAKE_CODE_ALPHABET,
@@ -344,5 +345,18 @@ describe('parseIntakeScenes', () => {
 		expect(intakeSceneFor({ lamp, default: fallback }, 'fire')).toBe(fallback)
 		expect(intakeSceneFor({ lamp, default: fallback }, null)).toBe(fallback)
 		expect(intakeSceneFor({ lamp }, null)).toBeNull()
+	})
+})
+
+describe('intakeRequestsByLetter', () => {
+	it('groups the requests under the letter that led to them, and skips the rest', () => {
+		const a = { letterCode: 'K7Q2M9AB', referenceCode: 'FM-1' }
+		const b = { letterCode: null, referenceCode: 'FM-2' }
+		const c = { letterCode: 'K7Q2M9AB', referenceCode: 'FM-3' }
+		const d = { letterCode: 'H4RT6WXY', referenceCode: 'FM-4' }
+		const byLetter = intakeRequestsByLetter([a, b, c, d])
+		expect(byLetter.get('K7Q2M9AB')).toEqual([a, c])
+		expect(byLetter.get('H4RT6WXY')).toEqual([d])
+		expect(byLetter.size).toBe(2)
 	})
 })

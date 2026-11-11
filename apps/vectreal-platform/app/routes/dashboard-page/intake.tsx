@@ -1,6 +1,14 @@
 import { Badge } from '@shared/components/ui/badge'
 import { Button } from '@shared/components/ui/button'
 import { Input } from '@shared/components/ui/input'
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow
+} from '@shared/components/ui/table'
 import { Inbox } from 'lucide-react'
 import { useState } from 'react'
 import { data, useFetcher } from 'react-router'
@@ -20,6 +28,7 @@ import { requireIntakeAdmin } from '../../lib/domain/model-intake/model-intake-a
 import { deleteIntakeById } from '../../lib/domain/model-intake/model-intake-deletion.server'
 import {
 	finishIntakeCleanup,
+	listIntakeLetters,
 	listIntakeSubmissions,
 	summarizeIntakeLetters,
 	markIntakeDelivered,
@@ -28,6 +37,7 @@ import {
 	startIntakeCleanup
 } from '../../lib/domain/model-intake/model-intake-repository.server'
 import {
+	intakeRequestsByLetter,
 	isIntakeProductType,
 	MODEL_INTAKE_OUTCOMES,
 	type ModelIntakeOutcome,
@@ -51,9 +61,10 @@ import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashb
 
 export async function loader({ request }: Route.LoaderArgs) {
 	await requireIntakeAdmin(request)
-	const [rows, letters] = await Promise.all([
+	const [rows, letters, letterRows] = await Promise.all([
 		listIntakeSubmissions(),
-		summarizeIntakeLetters()
+		summarizeIntakeLetters(),
+		listIntakeLetters()
 	])
 	const requests = await Promise.all(
 		rows.map(async (row) => ({
@@ -66,9 +77,22 @@ export async function loader({ request }: Route.LoaderArgs) {
 	)
 	const perBatch = new Map<string, number>()
 	for (const row of rows) {
-		perBatch.set(row.batch, (perBatch.get(row.batch) ?? 0) + 1)
+		const source = row.letterCode ? 'letters' : row.batch
+		perBatch.set(source, (perBatch.get(source) ?? 0) + 1)
 	}
-	return data({ requests, perBatch: [...perBatch.entries()], letters })
+	const requestsByLetter = intakeRequestsByLetter(rows)
+	const letterList = letterRows.map((letter) => ({
+		...letter,
+		requests: (requestsByLetter.get(letter.code) ?? []).map(
+			(row) => row.referenceCode
+		)
+	}))
+	return data({
+		requests,
+		perBatch: [...perBatch.entries()],
+		letters,
+		letterList
+	})
 }
 
 type IntakeActionResult = { ok: true } | { error: string }
@@ -210,6 +234,57 @@ function IntakeActionButton({
 	)
 }
 
+/** Where a letter in the letters list links to the request it led to. */
+const requestAnchor = (referenceCode: string) => `request-${referenceCode}`
+
+type IntakeLetterRow = Route.ComponentProps['loaderData']['letterList'][number]
+
+/** Each posted letter: whom it went to, whether its code was scanned, and whether a request came. */
+function LettersTable({ letters }: { letters: IntakeLetterRow[] }) {
+	return (
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead>Code</TableHead>
+					<TableHead>Organization</TableHead>
+					<TableHead>Audience</TableHead>
+					<TableHead>Scans</TableHead>
+					<TableHead>Request</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody>
+				{letters.map((letter) => (
+					<TableRow key={letter.code}>
+						<TableCell className="font-mono">{letter.code}</TableCell>
+						<TableCell>{letter.organization}</TableCell>
+						<TableCell>{letter.audience}</TableCell>
+						<TableCell>
+							{letter.scans === 0
+								? 'Not scanned'
+								: `${letter.scans} · last ${dateTime.format(new Date(letter.lastScanAt ?? 0))}`}
+						</TableCell>
+						<TableCell>
+							{letter.requests.length === 0
+								? 'None'
+								: letter.requests.map((referenceCode, index) => (
+										<span key={referenceCode}>
+											{index > 0 ? ', ' : null}
+											<a
+												href={`#${requestAnchor(referenceCode)}`}
+												className="underline underline-offset-4"
+											>
+												{referenceCode}
+											</a>
+										</span>
+									))}
+						</TableCell>
+					</TableRow>
+				))}
+			</TableBody>
+		</Table>
+	)
+}
+
 function IntakeRow({ row }: { row: IntakeRequest }) {
 	const logFetcher = useFetcher<IntakeActionResult>()
 	const deleteFetcher = useFetcher<IntakeActionResult>()
@@ -229,7 +304,10 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 	}
 
 	return (
-		<li className="ds-raised space-y-4 rounded-2xl p-5">
+		<li
+			id={requestAnchor(row.referenceCode)}
+			className="ds-raised scroll-mt-4 space-y-4 rounded-2xl p-5"
+		>
 			<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 				<span className="text-body font-medium">{row.referenceCode}</span>
 				<Badge variant="secondary">{STATUS_LABEL[row.status]}</Badge>
@@ -239,10 +317,11 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 				) : null}
 			</div>
 			<p className="text-muted-foreground text-body-sm">
-				{productType} · {describeSize(row)} · batch {row.batch} ·{' '}
+				{productType} · {describeSize(row)} ·{' '}
+				{/* A letter names its source; "batch direct" beside it read as a contradiction. */}
 				{row.letterCode
 					? `letter ${row.letterCode} (${row.letterOrganization}) · `
-					: ''}
+					: `batch ${row.batch} · `}
 				{row.locale} · received {dateTime.format(new Date(row.createdAt))}
 			</p>
 			{row.consentClientAt ? (
@@ -372,7 +451,7 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 }
 
 export default function IntakePage({ loaderData }: Route.ComponentProps) {
-	const { requests, perBatch, letters } = loaderData
+	const { requests, perBatch, letters, letterList } = loaderData
 
 	return (
 		<div className="space-y-6">
@@ -389,6 +468,11 @@ export default function IntakePage({ loaderData }: Route.ComponentProps) {
 					</p>
 				) : null}
 			</DetailPanelSection>
+			{letterList.length > 0 ? (
+				<DetailPanelSection title="Letters">
+					<LettersTable letters={letterList} />
+				</DetailPanelSection>
+			) : null}
 			{requests.length === 0 ? (
 				<EmptyState
 					icon={Inbox}
