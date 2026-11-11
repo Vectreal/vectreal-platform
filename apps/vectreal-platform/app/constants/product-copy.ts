@@ -822,11 +822,11 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		meta: {
 			title: 'A free 3D model of your product - Vectreal',
 			description:
-				"Send me three photos of one product. If I can make a 3D model from them, you get it back ready for Shopify's own 3D slot."
+				"Three photos of one product are enough. If they work for a 3D model, it comes back ready for Shopify's own 3D slot."
 		},
 		hero: {
 			heading: 'A free 3D model of one of your products',
-			lead: "Send me three photos of one product, and I'll make a model of it that your customers turn themselves in Shopify's own 3D slot.",
+			lead: "Three photos of one product become a model your customers turn themselves in Shopify's own 3D slot.",
 			sceneLabel: 'An example product in 3D, to turn',
 			action: 'Send three photos'
 		},
@@ -846,7 +846,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 					ceramics: 'Ceramics and kitchenware (no glass, enamel or cast iron)',
 					other: 'Something else'
 				},
-				otherHint: "I'll look at it first and tell you whether I can make it."
+				otherHint: "You'll hear first whether a model of it is possible."
 			},
 			photos: {
 				label: 'Three photos of the product',
@@ -866,7 +866,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 				help: "So the model has your product's real size."
 			},
 			message: {
-				label: 'Anything I should know? (optional)',
+				label: 'Anything else to know? (optional)',
 				placeholder: 'Colors, materials, or a link to the product page.'
 			},
 			consentFollowUp:
@@ -875,7 +875,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 				"I'm allowed to share these photos, and Vectreal may use them to make this model."
 		},
 		privacyNote: (days) =>
-			`I store your details and photos to make your model, and delete them ${days} days after I deliver it unless you book a pilot. The model stays private unless you agree otherwise. To have everything deleted sooner, email info@vectreal.com with your reference code.`,
+			`Your details and photos are stored to make your model and deleted ${days} days after delivery, unless you book a pilot. The model stays private unless you agree otherwise. To have everything deleted sooner, email info@vectreal.com with your reference code.`,
 		privacyLink: 'Privacy policy',
 		turnstileFailed:
 			'Verification could not load, which is usually an extension or a network blocking it. Reload to try again, or email the photos to',
@@ -884,13 +884,13 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		next: {
 			heading: 'What happens next',
 			steps: [
-				'I look at your photos and tell you whether I can make a model from them.',
-				'If I can, you have it by email within two working days, as GLB and USDZ files, checked by hand.',
+				'Your photos are looked at first, and you hear whether a model can be made from them.',
+				'If so, it arrives by email within two working days, as GLB and USDZ files, checked by hand.',
 				"You upload it to your product's own 3D slot in Shopify. Nothing to install."
 			],
-			note: 'A model made from photos approximates your product. You see it before anything goes live, and if you like it, I can make five products as a paid pilot.',
+			note: 'A model made from photos approximates your product. You see it before anything goes live, and if you like it, five products can follow as a paid pilot.',
 			retention: (days) =>
-				`I delete your photos and details ${days} days after I deliver the model, or ${days} days after you send them if I can't make one. A booked pilot follows its own agreement.`
+				`Your photos and details are deleted ${days} days after the model is delivered, or ${days} days after you send them if no model can be made. A booked pilot follows its own agreement.`
 		},
 		fieldErrors: {
 			name: () => 'Please enter your name.',
@@ -911,21 +911,21 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			rateLimit:
 				'Too many requests from this address. Please wait a few minutes and try again.',
 			server:
-				"I couldn't receive your photos right now. Please email them to info@vectreal.com."
+				"Your photos couldn't be received right now. Please email them to info@vectreal.com."
 		},
 		success: {
 			heading: 'Photos received',
 			body: (code) =>
-				`I'll look at your photos and email you. Your reference code is ${code}.`,
+				`You'll hear back by email once your photos have been looked at. Your reference code is ${code}.`,
 			confirmationFailed:
 				"Your photos arrived, but the confirmation email couldn't be sent. Keep your reference code.",
 			again: 'Send another product'
 		},
 		confirmationEmail: {
 			subject: (code) => `Your photos arrived (${code})`,
-			preview: "I'm looking at your photos.",
+			preview: 'Your photos are being looked at.',
 			greeting: (name) => `Hi ${name},`,
-			body: "Thanks for sending three photos of your product. I'll look at them and email you whether I can make a 3D model from them. If I can, you get the GLB and USDZ files within two working days.",
+			body: "Thanks for sending three photos of your product. You'll hear by email whether a 3D model can be made from them. If it can, the GLB and USDZ files follow within two working days.",
 			reference: 'Your reference code',
 			deletion:
 				'To have your photos and details deleted, reply to this email with your reference code.',
@@ -936,11 +936,11 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		meta: {
 			title: 'Ein kostenloses 3D-Modell Ihres Produkts - Vectreal',
 			description:
-				'Schicken Sie mir drei Fotos eines Produkts. Kann ich daraus ein 3D-Modell machen, bekommen Sie es zurück, bereit für Shopifys eigenen 3D-Platz.'
+				'Drei Fotos eines Produkts genügen. Reichen sie für ein 3D-Modell, kommt es zurück, bereit für Shopifys eigenen 3D-Platz.'
 		},
 		hero: {
 			heading: 'Ein kostenloses 3D-Modell eines Ihrer Produkte',
-			lead: 'Schicken Sie mir drei Fotos eines Produkts, und ich mache daraus ein Modell, das Ihre Kundinnen und Kunden im 3D-Platz Ihrer Shopify-Produktgalerie selbst drehen.',
+			lead: 'Aus drei Fotos eines Produkts wird ein Modell, das Ihre Kundinnen und Kunden im 3D-Platz Ihrer Shopify-Produktgalerie selbst drehen.',
 			sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen',
 			action: 'Drei Fotos senden'
 		},
@@ -961,8 +961,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 						'Keramik und Küchenware (kein Glas, Emaille oder Gusseisen)',
 					other: 'Etwas anderes'
 				},
-				otherHint:
-					'Ich sehe es mir zuerst an und sage Ihnen, ob ich es machen kann.'
+				otherHint: 'Vorab erfahren Sie, ob sich davon ein Modell machen lässt.'
 			},
 			photos: {
 				label: 'Drei Fotos des Produkts',
@@ -985,7 +984,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 				help: 'Damit das Modell die echte Größe Ihres Produkts hat.'
 			},
 			message: {
-				label: 'Was sollte ich wissen? (optional)',
+				label: 'Noch etwas Wichtiges? (optional)',
 				placeholder: 'Farben, Materialien oder ein Link zur Produktseite.'
 			},
 			consentFollowUp:
@@ -994,7 +993,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 				'Ich darf diese Fotos weitergeben, und Vectreal darf sie verwenden, um dieses Modell zu erstellen.'
 		},
 		privacyNote: (days) =>
-			`Ich speichere Ihre Angaben und Fotos, um Ihr Modell zu machen, und lösche sie ${days} Tage nach der Lieferung, sofern Sie keinen Pilot buchen. Das Modell bleibt privat, wenn Sie nichts anderes vereinbaren. Für eine frühere Löschung schreiben Sie mit Ihrer Referenznummer an info@vectreal.com.`,
+			`Ihre Angaben und Fotos werden gespeichert, um Ihr Modell zu machen, und ${days} Tage nach der Lieferung gelöscht, sofern Sie keinen Pilot buchen. Das Modell bleibt privat, wenn Sie nichts anderes vereinbaren. Für eine frühere Löschung schreiben Sie mit Ihrer Referenznummer an info@vectreal.com.`,
 		privacyLink: 'Datenschutzerklärung',
 		turnstileFailed:
 			'Die Prüfung konnte nicht geladen werden, meist weil eine Erweiterung oder das Netzwerk sie blockiert. Laden Sie die Seite neu oder senden Sie die Fotos an',
@@ -1003,13 +1002,13 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 		next: {
 			heading: 'So geht es weiter',
 			steps: [
-				'Ich sehe mir Ihre Fotos an und sage Ihnen, ob ich daraus ein Modell machen kann.',
-				'Wenn ja, haben Sie es in zwei Werktagen per E-Mail, als GLB- und USDZ-Datei und von Hand geprüft.',
+				'Ihre Fotos werden zuerst angesehen, und Sie erfahren, ob sich daraus ein Modell machen lässt.',
+				'Wenn ja, kommt es in zwei Werktagen per E-Mail, als GLB- und USDZ-Datei und von Hand geprüft.',
 				'Sie laden es in den 3D-Platz Ihres Produkts in Shopify, ohne App.'
 			],
-			note: 'Ein Modell aus Fotos bildet Ihr Produkt nach. Sie sehen es, bevor etwas live geht, und gefällt es Ihnen, mache ich fünf Produkte als bezahlten Pilot.',
+			note: 'Ein Modell aus Fotos bildet Ihr Produkt nach. Sie sehen es, bevor etwas live geht, und gefällt es Ihnen, können fünf Produkte als bezahlter Pilot folgen.',
 			retention: (days) =>
-				`Ich lösche Ihre Fotos und Angaben ${days} Tage nach der Lieferung des Modells, oder ${days} Tage nach dem Senden, wenn ich keines machen kann. Für einen gebuchten Pilot gilt dessen eigene Vereinbarung.`
+				`Ihre Fotos und Angaben werden ${days} Tage nach der Lieferung des Modells gelöscht, oder ${days} Tage nach dem Senden, wenn sich keines machen lässt. Für einen gebuchten Pilot gilt dessen eigene Vereinbarung.`
 		},
 		fieldErrors: {
 			name: () => 'Bitte geben Sie Ihren Namen ein.',
@@ -1030,24 +1029,24 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			rateLimit:
 				'Zu viele Anfragen von dieser Adresse. Bitte warten Sie einige Minuten und versuchen Sie es erneut.',
 			server:
-				'Ich konnte Ihre Fotos gerade nicht empfangen. Bitte senden Sie sie an info@vectreal.com.'
+				'Ihre Fotos konnten gerade nicht empfangen werden. Bitte senden Sie sie an info@vectreal.com.'
 		},
 		success: {
 			heading: 'Fotos erhalten',
 			body: (code) =>
-				`Ich sehe mir Ihre Fotos an und melde mich per E-Mail. Ihre Referenznummer lautet ${code}.`,
+				`Nach einem Blick auf Ihre Fotos bekommen Sie eine E-Mail. Ihre Referenznummer lautet ${code}.`,
 			confirmationFailed:
 				'Ihre Fotos sind angekommen, aber die Bestätigung per E-Mail ging nicht raus. Bitte notieren Sie Ihre Referenznummer.',
 			again: 'Weiteres Produkt senden'
 		},
 		confirmationEmail: {
 			subject: (code) => `Ihre Fotos sind angekommen (${code})`,
-			preview: 'Ich sehe mir Ihre Fotos an.',
+			preview: 'Ihre Fotos werden angesehen.',
 			greeting: (name) => `Guten Tag ${name},`,
-			body: 'vielen Dank für Ihre drei Produktfotos. Ich sehe sie mir an und schreibe Ihnen, ob ich daraus ein 3D-Modell machen kann. Wenn ja, bekommen Sie in zwei Werktagen die GLB- und USDZ-Datei.',
+			body: 'vielen Dank für Ihre drei Produktfotos. Per E-Mail erfahren Sie, ob sich daraus ein 3D-Modell machen lässt. Wenn ja, kommen die GLB- und USDZ-Datei in zwei Werktagen.',
 			reference: 'Ihre Referenznummer',
 			deletion:
-				'Wenn ich Ihre Fotos und Angaben löschen soll, antworten Sie auf diese E-Mail mit Ihrer Referenznummer.',
+				'Sollen Ihre Fotos und Angaben gelöscht werden, antworten Sie auf diese E-Mail mit Ihrer Referenznummer.',
 			signature: 'Moritz Becker, Vectreal, Hamburg'
 		}
 	}
