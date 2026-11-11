@@ -4,10 +4,10 @@
 // Where an agency letter's short address forwards. German only, like the
 // agency letters, and Moritz's own voice.
 //
-// The funnel-polish copy of 11 Nov (the "German agency page" Work Item), with
-// the steps cut to about eight words and the terms led by their numbers, as
-// the 11 Nov review asked. The claims are those approved on 10 Nov; changes go
-// through a PR.
+// The funnel-polish copy of 11 Nov (the "German agency page" Work Item), not
+// yet read by Moritz, who approves it through the PR's screenshots. Card 1
+// (Shopify's own 3D slot) is left out with its loop, and the terms lead with
+// their numbers, as the 11 Nov review asked. Changes go through a PR.
 //
 // Its own module rather than a block in `product-copy.ts`, which every
 // marketing page bundles: only this route should pay for these strings.
@@ -40,25 +40,23 @@ export const AGENCY_PAGE_COPY = {
 		items: [
 			{
 				id: 'photos',
-				text: 'Drei Fotos eines Kundenprodukts, mit dem OK Ihres Kunden.',
+				text: 'Sie schicken drei Fotos eines Kundenprodukts und bestätigen, dass Ihr Kunde einverstanden ist.',
 				image: 'Ein Produkt von vorn, von der Seite und von hinten.'
 			},
 			{
 				id: 'model',
-				text: 'In zwei Werktagen ist das Modell fertig, kostenlos.',
+				text: 'Reichen die Fotos, haben Sie das Modell in zwei Werktagen, kostenlos.',
 				image: 'Das 3D-Modell des Produkts im Viewer.'
 			},
 			{
 				id: 'store',
-				text: 'Sie und Ihr Kunde entscheiden, bevor es live geht.',
+				text: 'Sie und Ihr Kunde entscheiden, ob es gut genug ist, bevor etwas live geht.',
 				image: 'Das Produkt auf einer Produktseite im Beispielshop.'
 			}
 		]
 	},
 	ways: {
-		heading: 'So sieht die Szene im Shop aus',
-		intro:
-			'Die GLB- und USDZ-Datei kommt in Shopifys eigenen 3D-Platz. Die 3D-Szene zeigt das Modell zusätzlich so:',
+		heading: 'Zwei Wege in den Shop',
 		items: [
 			{
 				id: 'scene-tour',
@@ -83,14 +81,13 @@ export const AGENCY_PAGE_COPY = {
 	},
 	terms: {
 		heading: 'Konditionen',
-		figures: [
-			{ value: '120 €', label: 'pro Produkt' },
-			{ value: '30 Produkte', label: 'im Paket über sechs Monate' },
-			{ value: '5 Arbeitstage', label: 'bis zur GLB- und USDZ-Datei' }
-		],
+		/** Set large above the lines, which say the same in words. */
+		figures: ['120 €', '30 Produkte', '5 Arbeitstage'],
 		lines: [
+			'120 € pro Produkt, 30 Produkte über sechs Monate',
+			'fertig in fünf Arbeitstagen, als GLB und USDZ',
 			'White-Label für die Modelldateien',
-			'Gefällt ein Modell nicht: neu oder kostenlos'
+			'gefällt ein Modell nicht: neu oder kostenlos'
 		]
 	},
 	faq: {

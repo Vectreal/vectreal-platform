@@ -132,12 +132,7 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 
 				<section className={BAND}>
 					<div className={SECTION}>
-						<div className="space-y-3">
-							<h2 className="text-h2">{COPY.ways.heading}</h2>
-							<p className="text-body text-muted-foreground max-w-3xl">
-								{COPY.ways.intro}
-							</p>
-						</div>
+						<h2 className="text-h2">{COPY.ways.heading}</h2>
 						<ul className="grid gap-6 md:grid-cols-2">
 							{COPY.ways.items.map((way) => (
 								<li key={way.id}>
@@ -161,16 +156,14 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 				<section className={BAND}>
 					<div className={SECTION}>
 						<h2 className="text-h2">{COPY.terms.heading}</h2>
-						<dl className="grid gap-8 md:grid-cols-3">
+						<p
+							aria-hidden="true"
+							className="text-headline grid gap-2 md:grid-cols-3"
+						>
 							{COPY.terms.figures.map((figure) => (
-								<div key={figure.value} className="space-y-1">
-									<dt className="text-headline">{figure.value}</dt>
-									<dd className="text-body text-muted-foreground">
-										{figure.label}
-									</dd>
-								</div>
+								<span key={figure}>{figure}</span>
 							))}
-						</dl>
+						</p>
 						<ul className="text-body grid list-disc gap-2 pl-5">
 							{COPY.terms.lines.map((line) => (
 								<li key={line}>{line}</li>
