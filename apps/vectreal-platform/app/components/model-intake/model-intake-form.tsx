@@ -15,10 +15,6 @@ import { Form, Link } from 'react-router'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 
 import { PhotoSlots } from './photo-slots'
-// Placeholders until the timing run's photos of one real product exist.
-import exampleFrontUrl from '../../assets/models/camera-hero-preview.webp?url'
-import exampleSideUrl from '../../assets/models/camera-telephoto-preview.webp?url'
-import exampleBackUrl from '../../assets/models/camera-wide-preview.webp?url'
 import { MODEL_INTAKE_CLIENT_CONSENT_COPY } from '../../constants/model-intake-client-consent-copy'
 import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import {
@@ -67,6 +63,15 @@ function FieldError({
 	) : null
 }
 
+/**
+ * Front, side and back of one product, faint in the empty slots. Renders of
+ * the sample camera until the timing run's photos of a real product exist.
+ */
+const EXAMPLE_PHOTOS = [
+	'/media/free-model/example-front.webp',
+	'/media/free-model/example-side.webp',
+	'/media/free-model/example-back.webp'
+] as const
 export function ModelIntakeForm({
 	locale,
 	batch,
@@ -227,9 +232,10 @@ export function ModelIntakeForm({
 				</p>
 				<PhotoSlots
 					labels={copy.fields.photos}
-					examples={[exampleFrontUrl, exampleSideUrl, exampleBackUrl].map(
-						(src, index) => ({ src, label: copy.fields.photos.examples[index] })
-					)}
+					examples={EXAMPLE_PHOTOS.map((src, index) => ({
+						src,
+						label: copy.fields.photos.examples[index]
+					}))}
 					invalidIndex={photosInvalidIndex}
 					describedBy={photosError ? 'photos-error' : 'photos-help'}
 					onTooLarge={(n, tooLarge) =>

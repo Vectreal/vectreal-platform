@@ -15,7 +15,10 @@ interface PhotoSlotsProps {
 		add: string
 		remove: (n: number) => string
 	}
-	/** A good photo for each slot, in slot order: front, side, back. */
+	/**
+	 * A good photo for each slot, in slot order (front, side, back), shown
+	 * faintly inside the empty slot until a photo is picked.
+	 */
 	examples?: readonly { src: string; label: string }[]
 	/** 1-based photo an error is about, or 0 for the whole set. */
 	invalidIndex?: number
@@ -49,25 +52,12 @@ export function PhotoSlots({
 }: PhotoSlotsProps) {
 	return (
 		<div className="grid grid-cols-3 gap-3">
-			{/* Each example sits over the slot it shows, so the reader matches them by eye. */}
-			{examples?.map((example) => (
-				<figure key={example.src} className="space-y-1">
-					<img
-						src={example.src}
-						alt=""
-						loading="lazy"
-						className="ds-sunken aspect-square w-full rounded-xl object-contain"
-					/>
-					<figcaption className="text-label-xs text-muted-foreground text-center">
-						{example.label}
-					</figcaption>
-				</figure>
-			))}
 			{Array.from({ length: MODEL_INTAKE_PHOTO_COUNT }, (_, index) => (
 				<PhotoSlot
 					key={index}
 					n={index + 1}
 					labels={labels}
+					example={examples?.[index]}
 					invalid={invalidIndex === 0 || invalidIndex === index + 1}
 					describedBy={describedBy}
 					onTooLarge={onTooLarge}
@@ -100,12 +90,14 @@ function drawCovering(context: CanvasRenderingContext2D, bitmap: ImageBitmap) {
 function PhotoSlot({
 	n,
 	labels,
+	example,
 	invalid,
 	describedBy,
 	onTooLarge
 }: {
 	n: number
 	labels: PhotoSlotsProps['labels']
+	example?: { src: string; label: string }
 	invalid: boolean
 	describedBy?: string
 	onTooLarge: PhotoSlotsProps['onTooLarge']
@@ -189,17 +181,26 @@ function PhotoSlot({
 				/>
 				{previewShown ? null : (
 					<>
-						<ImagePlus
-							aria-hidden="true"
-							className="text-muted-foreground h-5 w-5"
-						/>
-						<span className="text-label-xs text-muted-foreground">
-							{labels.slot(n)}
+						{example && !file ? (
+							<img
+								src={example.src}
+								alt=""
+								loading="lazy"
+								className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-25"
+							/>
+						) : (
+							<ImagePlus
+								aria-hidden="true"
+								className="text-muted-foreground h-5 w-5"
+							/>
+						)}
+						<span className="text-label-xs text-muted-foreground relative">
+							{example?.label ?? labels.slot(n)}
 						</span>
 						{/* Only a file name may break anywhere; the label keeps its words whole. */}
 						<span
 							className={cn(
-								'text-body-sm line-clamp-2',
+								'text-body-sm relative line-clamp-2',
 								file ? 'break-all' : 'hyphens-auto'
 							)}
 						>
