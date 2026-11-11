@@ -52,6 +52,8 @@ export interface NewsArticleFrontmatter {
 	ctaPrompt?: string
 	/** Never shown outside the dev server, whatever `publishedAt` says. */
 	draft?: boolean
+	/** Listed above every unpinned article on /news-room, newest pinned first. Changes nothing else. */
+	pinned?: boolean
 }
 
 export interface NewsArticle {
@@ -77,6 +79,7 @@ export interface NewsArticle {
 	heroImage?: string
 	cta: ArticleCta
 	draft: boolean
+	pinned: boolean
 	readingTimeMinutes: number
 	sourcePath: string
 	/** Which body chunk to load: opaque, so no bundle names an article. */
@@ -91,4 +94,18 @@ export function formatNewsDate(dateValue: string): string {
 	}
 
 	return formatShortDate(parsed)
+}
+
+/**
+ * The newsroom listing's order: pinned articles first, each group keeping the
+ * order it came in. Only the listing reads it, so previous and next, the
+ * sitemap and `llms.txt` stay newest first.
+ */
+export function pinnedFirst<T extends Pick<NewsArticle, 'pinned'>>(
+	articles: readonly T[]
+): T[] {
+	return [
+		...articles.filter((article) => article.pinned),
+		...articles.filter((article) => !article.pinned)
+	]
 }

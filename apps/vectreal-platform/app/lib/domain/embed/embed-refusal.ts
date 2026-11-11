@@ -8,9 +8,11 @@ import type { EmbedRefusalReason } from '../../errors/error-state-copy'
  * The status each refusal answers with. A malformed URL is the one exception,
  * answering 400 with the same `not_available` body as every 404.
  */
-const EMBED_REFUSAL_STATUS: Record<EmbedRefusalReason, number> = {
+const EMBED_REFUSAL_STATUS: Record<
+	Exclude<EmbedRefusalReason, 'domain_not_allowed'>,
+	number
+> = {
 	not_available: 404,
-	domain_not_allowed: 403,
 	busy: 429
 }
 
@@ -32,8 +34,26 @@ const EMBED_REFUSAL_STATUS: Record<EmbedRefusalReason, number> = {
  * `getDbClient()` on import and no spec can load it without a database.
  */
 export function embedRefusal(
-	reason: EmbedRefusalReason,
+	reason: Exclude<EmbedRefusalReason, 'domain_not_allowed'>,
 	status: number = EMBED_REFUSAL_STATUS[reason]
 ) {
 	return data({ reason }, { status, headers: EMBED_RESPONSE_HEADERS })
+}
+
+/**
+ * The one refusal that says more than its reason: it also names the host that
+ * was refused, so the owner setting up an embed reads which site to add rather
+ * than a blank frame.
+ *
+ * Echoing the host tells the requesting page only its own address. It is
+ * reached only after a live key matched the project, and before the scene is
+ * looked up, so it says nothing about whether the scene exists, and it never
+ * names the allowed list. `null` when the request carried no `Referer` or
+ * `Origin`, so there is no host to name.
+ */
+export function embedDomainRefusal(host: string | null) {
+	return data(
+		{ reason: 'domain_not_allowed' as const, host },
+		{ status: 403, headers: EMBED_RESPONSE_HEADERS }
+	)
 }

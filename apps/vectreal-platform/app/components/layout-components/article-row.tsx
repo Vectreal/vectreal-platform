@@ -50,6 +50,10 @@ export function ArticleRow({ article, className }: ArticleRowProps) {
 					publishedAt={article.publishedAt}
 					className="text-muted-foreground text-label-xs mt-2"
 				/>
+				{/* Says why a pinned row sits above newer ones, as the featured block says "Featured". */}
+				{article.pinned && (
+					<p className="text-muted-foreground text-label-xs mt-2">Pinned</p>
+				)}
 			</div>
 
 			<span className="text-muted-foreground text-eyebrow order-3 md:order-none md:pt-1 md:text-right">
