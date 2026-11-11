@@ -413,6 +413,25 @@ present examples/shopify/vectreal-gallery-slide.liquid product.metafields.vectre
 present examples/shopify/vectreal-gallery-slide.liquid navigator.connection?.saveData
 */}
 
+#### A free-model link that keeps the letter code
+
+[`vectreal-free-model-link.liquid`](https://raw.githubusercontent.com/Vectreal/vectreal-platform/main/examples/shopify/vectreal-free-model-link.liquid) is a snippet that renders a link to Vectreal's [free-model form](/free-model), in German by default. A printed letter's QR code can open a product page with `?c=` and the letter's code; the link takes that code along to the form, so a reply stays tied to its letter. Only a well-formed code is passed on, eight characters from the letter-code alphabet in any case, written in capitals. Without one the link stays plain.
+
+1. Add a snippet named `vectreal-free-model-link` and paste the file's contents into it.
+2. Render it where the link should show, for example below the buy buttons in Dawn's `sections/main-product.liquid`: `{% render 'vectreal-free-model-link' %}`.
+3. Optionally pass `label` for the link text (`Kostenloses Modell anfragen` by default) and `lang: 'en'` for the English form.
+
+{/* claims
+present examples/shopify/vectreal-free-model-link.liquid https://vectreal.com/free-model?lang=
+present examples/shopify/vectreal-free-model-link.liquid assign lang = lang | default: 'de'
+present examples/shopify/vectreal-free-model-link.liquid assign label = label | default: 'Kostenloses Modell anfragen'
+present examples/shopify/vectreal-free-model-link.liquid /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{8}$/.test(code)
+present examples/shopify/vectreal-free-model-link.liquid url.searchParams.set('c', code)
+present apps/vectreal-platform/app/lib/domain/model-intake/model-intake-shared.ts MODEL_INTAKE_CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'
+present apps/vectreal-platform/app/lib/domain/model-intake/model-intake-shared.ts MODEL_INTAKE_CODE_LENGTH = 8
+present apps/vectreal-platform/app/lib/domain/model-intake/model-intake-shared.ts MODEL_INTAKE_LETTER_PARAM = 'c'
+*/}
+
 ---
 
 ## Advanced control

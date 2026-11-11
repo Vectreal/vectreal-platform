@@ -8,6 +8,7 @@ import {
 	inArray,
 	isNull,
 	lte,
+	max,
 	notExists,
 	or,
 	sql
@@ -17,9 +18,11 @@ import {
 	addRetentionDays,
 	cleanupMinutesBetween,
 	MODEL_INTAKE_RETENTION_DAYS,
+	type ModelIntakeAudience,
 	type ModelIntakeLocale,
 	type ModelIntakeOutcome,
-	type ModelIntakeProductType
+	type ModelIntakeProductType,
+	type ModelIntakeShowcase
 } from './model-intake-shared'
 import { getDbClient } from '../../../db/client'
 import {
@@ -31,12 +34,19 @@ import {
 export type ModelIntakeLetter = Omit<
 	typeof modelIntakeLetters.$inferSelect,
 	'createdAt'
-> & { category: ModelIntakeProductType; locale: ModelIntakeLocale }
+> & {
+	audience: ModelIntakeAudience
+	category: ModelIntakeProductType
+	showcase: ModelIntakeShowcase | null
+	locale: ModelIntakeLocale
+}
 
 const letterColumns = {
 	code: modelIntakeLetters.code,
 	organization: modelIntakeLetters.organization,
+	audience: modelIntakeLetters.audience,
 	category: modelIntakeLetters.category,
+	showcase: modelIntakeLetters.showcase,
 	locale: modelIntakeLetters.locale
 }
 
@@ -84,7 +94,9 @@ export async function findConflictingIntakeLetters(
 			return (
 				row !== undefined &&
 				(row.organization !== letter.organization ||
+					row.audience !== letter.audience ||
 					row.category !== letter.category ||
+					row.showcase !== letter.showcase ||
 					row.locale !== letter.locale)
 			)
 		})
@@ -121,6 +133,35 @@ export async function summarizeIntakeLetters() {
 	}
 }
 
+/**
+ * Every registered letter with how often its code was scanned and when last,
+ * newest letters first, for the internal page. Which request a letter led to
+ * comes from the requests that page already lists.
+ */
+export async function listIntakeLetters() {
+	const db = getDbClient()
+	const scans = db
+		.select({
+			letterCode: modelIntakeLetterScans.letterCode,
+			total: count().as('scan_total'),
+			lastScanAt: max(modelIntakeLetterScans.scannedAt).as('last_scan_at')
+		})
+		.from(modelIntakeLetterScans)
+		.groupBy(modelIntakeLetterScans.letterCode)
+		.as('letter_scans')
+	return db
+		.select({
+			code: modelIntakeLetters.code,
+			organization: modelIntakeLetters.organization,
+			audience: modelIntakeLetters.audience,
+			scans: sql<number>`coalesce(${scans.total}, 0)`.mapWith(Number),
+			lastScanAt: scans.lastScanAt
+		})
+		.from(modelIntakeLetters)
+		.leftJoin(scans, eq(scans.letterCode, modelIntakeLetters.code))
+		.orderBy(desc(modelIntakeLetters.createdAt), modelIntakeLetters.code)
+}
+
 export type ModelIntakeRow = typeof modelIntakeSubmissions.$inferSelect
 export type NewModelIntakeRow = typeof modelIntakeSubmissions.$inferInsert
 
@@ -154,6 +195,7 @@ export async function listIntakeSubmissions() {
 			batch: modelIntakeSubmissions.batch,
 			letterCode: modelIntakeSubmissions.letterCode,
 			letterOrganization: modelIntakeLetters.organization,
+			consentClientAt: modelIntakeSubmissions.consentClientAt,
 			productType: modelIntakeSubmissions.productType,
 			heightCm: modelIntakeSubmissions.heightCm,
 			widthCm: modelIntakeSubmissions.widthCm,

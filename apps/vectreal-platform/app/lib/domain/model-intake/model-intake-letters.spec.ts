@@ -1,5 +1,6 @@
 import {
 	formatIntakeLetterMapping,
+	type IntakeLetterRow,
 	parseIntakeLetterList
 } from './model-intake-letters'
 
@@ -26,20 +27,27 @@ describe('parseIntakeLetterList', () => {
 			)
 		).toEqual({
 			ok: true,
+			passThrough: [],
 			letters: [
 				{
 					organization: 'Brand GmbH',
 					recipient: 'Erika Mustermann',
+					audience: 'brand',
 					category: 'shoes',
+					showcase: null,
 					code: 'K7Q2M9AB',
-					locale: 'de'
+					locale: 'de',
+					passThrough: []
 				},
 				{
 					organization: 'Müller, Schmidt & Co',
 					recipient: 'Jan "JJ" Beck',
+					audience: 'brand',
 					category: 'furniture',
+					showcase: null,
 					code: 'NEWCQDE2',
-					locale: 'de'
+					locale: 'de',
+					passThrough: []
 				}
 			]
 		})
@@ -54,20 +62,27 @@ describe('parseIntakeLetterList', () => {
 			)
 		).toEqual({
 			ok: true,
+			passThrough: [],
 			letters: [
 				{
 					organization: 'Shop AG',
 					recipient: 'Jan',
+					audience: 'brand',
 					category: 'bags',
+					showcase: null,
 					code: 'AAAAAAAA',
-					locale: 'en'
+					locale: 'en',
+					passThrough: []
 				},
 				{
 					organization: 'Laden GmbH',
 					recipient: 'Ina',
+					audience: 'brand',
 					category: 'shoes',
+					showcase: null,
 					code: 'BBBBBBBB',
-					locale: 'de'
+					locale: 'de',
+					passThrough: []
 				}
 			]
 		})
@@ -88,18 +103,194 @@ describe('parseIntakeLetterList', () => {
 		])
 	})
 
-	it('reads the mapping it writes, so a reprint keeps code and language', () => {
-		const letter = {
+	it('reads the Notion Letters export: headers in any case, its codes kept, every other column passed through', () => {
+		const result = parse(
+			[
+				'Organization,Recipient,Salutation,Address,Audience,Category,Showcase,Code,Batch,First line',
+				'Brand GmbH,Erika Mustermann,Sehr geehrte Frau Mustermann,"Hafenstr. 2, 20457 Hamburg",brand,shoes,lamp,k7q2m9ab,2026-11, Ihre Schuhe ',
+				'Studio KG,Jan Beck,Hallo Jan,"Musterweg 1, 20095 Hamburg",agency,furniture,,,2026-11,Kurz gesagt'
+			].join('\n'),
+			'NEWCQDE2'
+		)
+		expect(result).toEqual({
+			ok: true,
+			passThrough: ['Salutation', 'postal_address', 'Batch', 'First line'],
+			letters: [
+				{
+					organization: 'Brand GmbH',
+					recipient: 'Erika Mustermann',
+					audience: 'brand',
+					category: 'shoes',
+					showcase: 'lamp',
+					code: 'K7Q2M9AB',
+					locale: 'de',
+					passThrough: [
+						'Sehr geehrte Frau Mustermann',
+						'Hafenstr. 2, 20457 Hamburg',
+						'2026-11',
+						' Ihre Schuhe '
+					]
+				},
+				{
+					organization: 'Studio KG',
+					recipient: 'Jan Beck',
+					audience: 'agency',
+					category: 'furniture',
+					showcase: null,
+					code: 'NEWCQDE2',
+					locale: 'de',
+					passThrough: [
+						'Hallo Jan',
+						'Musterweg 1, 20095 Hamburg',
+						'2026-11',
+						'Kurz gesagt'
+					]
+				}
+			]
+		})
+	})
+
+	it('writes the postal Address as postal_address, keeping address for the short URL', () => {
+		const result = parse(
+			'organization,recipient,category,code,Address\nBrand GmbH,Erika,shoes,K7Q2M9AB,Hafenstr. 2'
+		)
+		if (!result.ok) throw new Error(result.errors.join())
+		const mapping = formatIntakeLetterMapping(
+			result.letters.map((letter) => ({
+				...letter,
+				address: 'vectreal.com/c/K7Q2M9AB',
+				file: 'K7Q2M9AB.svg'
+			})),
+			result.passThrough
+		)
+		expect(mapping.split('\n')[0]).toBe(
+			'code,organization,recipient,audience,category,showcase,locale,address,file,postal_address'
+		)
+		expect(mapping.split('\n')[1]).toContain(
+			'vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg,Hafenstr. 2'
+		)
+	})
+
+	it("passes an export's Address through as postal_address, beside its other columns", () => {
+		expect(
+			parse(
+				'Organization,Recipient,Category,Address,Notes\nBrand GmbH,Erika,shoes,Hafenstr. 2,x',
+				'AAAAAAAA'
+			)
+		).toMatchObject({ ok: true, passThrough: ['postal_address', 'Notes'] })
+	})
+
+	it.each([
+		[
+			'Organization,Recipient,Category,Address,file\nBrand GmbH,Erika,shoes,Hafenstr. 2,a.pdf',
+			'file'
+		],
+		[
+			'Organization,Recipient,Category,Address,File\nBrand GmbH,Erika,shoes,Hafenstr. 2,a.pdf',
+			'File'
+		],
+		[
+			'Organization,Recipient,Category,Address,Postal_Address\nBrand GmbH,Erika,shoes,Hafenstr. 2,x',
+			'Postal_Address'
+		],
+		[
+			'Organization,Recipient,Category,Notes,notes\nBrand GmbH,Erika,shoes,x,y',
+			'notes'
+		]
+	])(
+		'refuses a list whose column would appear twice in letters.csv',
+		(text, column) => {
+			expect(parse(text)).toEqual({
+				ok: false,
+				errors: [
+					`The column "${column}" would appear twice in letters.csv. Rename it in the list.`
+				]
+			})
+		}
+	)
+
+	it('writes its own address and file afresh when a mapping from before postal_address is fed back', () => {
+		expect(
+			parse(
+				'code,organization,recipient,audience,category,locale,address,file\nK7Q2M9AB,Brand GmbH,Erika,brand,shoes,de,vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg'
+			)
+		).toMatchObject({
+			ok: true,
+			passThrough: [],
+			letters: [{ passThrough: [] }]
+		})
+	})
+
+	it('reads the mapping it writes, so a reprint keeps code, audience, showcase and language', () => {
+		const letter: IntakeLetterRow = {
 			code: 'K7Q2M9AB',
 			organization: 'Müller, Schmidt & Co',
 			recipient: 'Jan "JJ" Beck',
+			audience: 'agency',
 			category: 'furniture',
-			locale: 'en'
-		} as const
-		const mapping = formatIntakeLetterMapping([
-			{ ...letter, address: 'vectreal.com/c/K7Q2M9AB', file: 'K7Q2M9AB.svg' }
-		])
-		expect(parse(mapping)).toEqual({ ok: true, letters: [letter] })
+			showcase: 'lamp',
+			locale: 'en',
+			passThrough: ['Musterweg 1, 20095 Hamburg', 'Sehr geehrter Herr Beck,']
+		}
+		const mapping = formatIntakeLetterMapping(
+			[{ ...letter, address: 'vectreal.com/c/K7Q2M9AB', file: 'K7Q2M9AB.svg' }],
+			['postal_address', 'Salutation']
+		)
+		expect(parse(mapping)).toEqual({
+			ok: true,
+			letters: [letter],
+			passThrough: ['postal_address', 'Salutation']
+		})
+	})
+
+	it('reads an audience per row, and a row without one is a brand', () => {
+		const result = parse(
+			'organization,recipient,category,audience\nStudio KG,Jan,shoes,agency\nLaden GmbH,Ina,shoes,\nShop AG,Eva,bags,brand',
+			'AAAAAAAA',
+			'BBBBBBBB',
+			'CCCCCCCC'
+		)
+		expect(
+			result.ok && result.letters.map((letter) => letter.audience)
+		).toEqual(['agency', 'brand', 'brand'])
+		expect(
+			parse('organization,recipient,category\nLaden GmbH,Ina,shoes', 'AAAAAAAA')
+		).toMatchObject({ ok: true, letters: [{ audience: 'brand' }] })
+	})
+
+	it('reads a showcase per row, and a row without one has none', () => {
+		const result = parse(
+			'organization,recipient,category,showcase\nLaden GmbH,Ina,shoes,lamp\nShop AG,Eva,bags,',
+			'AAAAAAAA',
+			'BBBBBBBB'
+		)
+		expect(
+			result.ok && result.letters.map((letter) => letter.showcase)
+		).toEqual(['lamp', null])
+	})
+
+	it('refuses a showcase it does not know', () => {
+		expect(
+			parse(
+				'organization,recipient,category,showcase\nLaden GmbH,Ina,shoes,sofa'
+			)
+		).toEqual({
+			ok: false,
+			errors: [
+				'Line 2: "sofa" is not a showcase (lamp, fire, coffee, furniture).'
+			]
+		})
+	})
+
+	it('refuses an audience it does not know', () => {
+		expect(
+			parse(
+				'organization,recipient,category,audience\nStudio KG,Jan,shoes,agentur'
+			)
+		).toEqual({
+			ok: false,
+			errors: ['Line 2: "agentur" is not an audience (brand, agency).']
+		})
 	})
 
 	it('accepts the byte-order mark a spreadsheet export starts with', () => {
@@ -174,20 +365,26 @@ describe('parseIntakeLetterList', () => {
 describe('formatIntakeLetterMapping', () => {
 	it('writes the address to print and escapes what needs it', () => {
 		expect(
-			formatIntakeLetterMapping([
-				{
-					code: 'K7Q2M9AB',
-					organization: 'Müller, Schmidt & Co',
-					recipient: 'Jan "JJ" Beck',
-					category: 'furniture',
-					locale: 'de',
-					address: 'vectreal.com/c/K7Q2M9AB',
-					file: 'K7Q2M9AB.svg'
-				}
-			])
+			formatIntakeLetterMapping(
+				[
+					{
+						code: 'K7Q2M9AB',
+						organization: 'Müller, Schmidt & Co',
+						recipient: 'Jan "JJ" Beck',
+						audience: 'agency',
+						category: 'furniture',
+						showcase: null,
+						locale: 'de',
+						passThrough: ['Musterweg 1, 20095 Hamburg'],
+						address: 'vectreal.com/c/K7Q2M9AB',
+						file: 'K7Q2M9AB.svg'
+					}
+				],
+				['postal_address']
+			)
 		).toBe(
-			'code,organization,recipient,category,locale,address,file\n' +
-				'K7Q2M9AB,"Müller, Schmidt & Co","Jan ""JJ"" Beck",furniture,de,vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg\n'
+			'code,organization,recipient,audience,category,showcase,locale,address,file,postal_address\n' +
+				'K7Q2M9AB,"Müller, Schmidt & Co","Jan ""JJ"" Beck",agency,furniture,,de,vectreal.com/c/K7Q2M9AB,K7Q2M9AB.svg,"Musterweg 1, 20095 Hamburg"\n'
 		)
 	})
 })

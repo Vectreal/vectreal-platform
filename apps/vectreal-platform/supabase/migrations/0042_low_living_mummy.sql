@@ -1,0 +1,1 @@
+ALTER TABLE "model_intake_letters" ADD COLUMN "showcase" text;

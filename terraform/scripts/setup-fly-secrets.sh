@@ -227,6 +227,9 @@ FLY_SECRETS_OPTIONAL=(
   "IMG_TO_3D_RUNTIME_BASE_URL"
   "IMG_TO_3D_RUNTIME_PROXY_KEY"
   "IMG_TO_3D_RUNTIME_PROXY_SECRET"
+  # Genuinely degrades: without it every brand letter's code opens the
+  # free-model form instead of a sample-store page (model-intake-shared.ts).
+  "MODEL_INTAKE_STORE_PAGES"
 )
 
 # Sent to Fly. One value covers both environments.

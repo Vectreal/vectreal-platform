@@ -14,7 +14,9 @@ import type { ModelIntakeLetter } from './model-intake-repository.server'
 const letter: ModelIntakeLetter = {
 	code: 'K7Q2M9AB',
 	organization: 'Brand GmbH',
+	audience: 'brand',
 	category: 'shoes',
+	showcase: 'lamp',
 	locale: 'de'
 }
 const scannedAt = new Date('2026-11-20T09:00:00Z')
@@ -30,6 +32,7 @@ function fakes(overrides: Partial<IntakeLetterDeps> = {}): IntakeLetterDeps {
 		),
 		recordIntakeLetterScan: vi.fn(async () => {}),
 		reportServerError: vi.fn(),
+		storePages: () => ({ ok: true, pages: {} }),
 		...overrides
 	}
 }
@@ -72,6 +75,14 @@ describe('lookupIntakeLetter', () => {
 		expect(deps.isRateLimited).not.toHaveBeenCalled()
 		expect(await lookupIntakeLetter(request, null, deps)).toBeNull()
 	})
+
+	it('throws when the letter cannot be read, so the submit is not filed as code-less', async () => {
+		const failure = new Error('db down')
+		const deps = fakes({ findIntakeLetter: vi.fn().mockRejectedValue(failure) })
+		await expect(lookupIntakeLetter(request, letter.code, deps)).rejects.toBe(
+			failure
+		)
+	})
 })
 
 describe('the lookup limit', () => {
@@ -91,6 +102,43 @@ describe('the lookup limit', () => {
 })
 
 describe('followIntakeShortLink', () => {
+	it("forwards a brand letter to its showcase's store page from the configuration", async () => {
+		const deps = fakes({
+			storePages: () => ({
+				ok: true,
+				pages: { lamp: 'https://store.example/products/lamp' }
+			})
+		})
+		expect(await followIntakeShortLink(request, letter.code, deps)).toBe(
+			'https://store.example/products/lamp?c=K7Q2M9AB'
+		)
+	})
+
+	it('reports a bad configuration and keeps the code opening the form', async () => {
+		const deps = fakes({
+			storePages: () => ({ ok: false, error: 'bad' })
+		})
+		expect(await followIntakeShortLink(request, letter.code, deps)).toBe(
+			'/free-model?c=K7Q2M9AB&lang=de'
+		)
+		expect(deps.reportServerError).toHaveBeenCalledWith(
+			new Error('MODEL_INTAKE_STORE_PAGES: bad'),
+			{ request }
+		)
+	})
+
+	it('reads the store pages from MODEL_INTAKE_STORE_PAGES', () => {
+		vi.stubEnv(
+			'MODEL_INTAKE_STORE_PAGES',
+			'fire=https://store.example/products/fire'
+		)
+		expect(intakeLetterDeps.storePages()).toEqual({
+			ok: true,
+			pages: { fire: 'https://store.example/products/fire' }
+		})
+		vi.unstubAllEnvs()
+	})
+
 	it('counts the scan of a posted letter and forwards to its form', async () => {
 		const deps = fakes()
 		expect(await followIntakeShortLink(request, 'k7q2m9ab', deps)).toBe(

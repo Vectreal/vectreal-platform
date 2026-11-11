@@ -58,6 +58,80 @@ export function resolveIntakeBatch(raw: string | null): ModelIntakeBatch {
 }
 
 /**
+ * Whom a letter was written to: a brand, whose code opens its category's
+ * sample-store page, or an agency, whose code opens the agency page. A closed
+ * list for the same reason as the batches.
+ */
+export const MODEL_INTAKE_AUDIENCES = ['brand', 'agency'] as const
+export type ModelIntakeAudience = (typeof MODEL_INTAKE_AUDIENCES)[number]
+
+export function isIntakeAudience(value: unknown): value is ModelIntakeAudience {
+	return MODEL_INTAKE_AUDIENCES.includes(value as ModelIntakeAudience)
+}
+
+/**
+ * The sample-store product a brand letter's card shows and its QR code opens.
+ * Separate from the category, which is the form's product type: a shoe brand
+ * may well be shown the lamp.
+ */
+export const MODEL_INTAKE_SHOWCASES = [
+	'lamp',
+	'fire',
+	'coffee',
+	'furniture'
+] as const
+export type ModelIntakeShowcase = (typeof MODEL_INTAKE_SHOWCASES)[number]
+
+export function isIntakeShowcase(value: unknown): value is ModelIntakeShowcase {
+	return MODEL_INTAKE_SHOWCASES.includes(value as ModelIntakeShowcase)
+}
+
+export type IntakeStorePages = Partial<Record<ModelIntakeShowcase, string>>
+
+/**
+ * `MODEL_INTAKE_STORE_PAGES`, as `lamp=https://…,fire=https://…`: the store
+ * page for each showcase. Unset or empty is no pages, so every brand letter
+ * opens the form. Anything malformed refuses the whole value rather than
+ * routing some letters and not others.
+ */
+export function parseIntakeStorePages(
+	raw: string | undefined
+): { ok: true; pages: IntakeStorePages } | { ok: false; error: string } {
+	const pages: IntakeStorePages = {}
+	for (const entry of (raw ?? '').split(',')) {
+		if (entry.trim() === '') continue
+		const separator = entry.indexOf('=')
+		const showcase = entry.slice(0, separator).trim()
+		const page = entry.slice(separator + 1).trim()
+		if (separator < 0 || !isIntakeShowcase(showcase)) {
+			return {
+				ok: false,
+				error: `"${entry.trim()}" does not start with a showcase (${MODEL_INTAKE_SHOWCASES.join(', ')}) and "=".`
+			}
+		}
+		if (!URL.canParse(page) || new URL(page).protocol !== 'https:') {
+			return { ok: false, error: `The ${showcase} page is not an https URL.` }
+		}
+		pages[showcase] = page
+	}
+	return { ok: true, pages }
+}
+
+/**
+ * An agency sends its client's photos, not its own, so a request from an
+ * agency letter also confirms the client agreed. Decided by the letter the
+ * server looked up, never by anything the form posts.
+ */
+export function intakeLetterAsksClientConsent(
+	letter: { audience: ModelIntakeAudience } | null
+): boolean {
+	return letter?.audience === 'agency'
+}
+
+/** The page an agency letter's short address opens. German only, like the agency letters. */
+export const MODEL_INTAKE_AGENCY_PAGE_PATH = '/agenturen'
+
+/**
  * `?c=<code>`: the one letter a link was printed for. Opaque on purpose, so the
  * URL names no organization or person; the code is looked up on the server.
  */
@@ -133,10 +207,10 @@ export const MODEL_INTAKE_MAX_TEXT_LENGTH = 200
 export const MODEL_INTAKE_RETENTION_DAYS = 90
 
 /**
- * Bumped whenever the wording of either consent changes, so every stored
- * consent names the text it was given against.
+ * Bumped whenever the wording of any consent changes, or one is added, so every
+ * stored consent names the text it was given against.
  */
-export const MODEL_INTAKE_CONSENT_VERSION = '2026-10-19'
+export const MODEL_INTAKE_CONSENT_VERSION = '2026-11-10'
 
 export const MODEL_INTAKE_HONEYPOT_FIELD = 'website'
 
@@ -170,6 +244,7 @@ export interface ModelIntakeFieldErrors {
 	message?: ModelIntakeFieldErrorCode
 	consentFollowUp?: ModelIntakeFieldErrorCode
 	consentPhotos?: ModelIntakeFieldErrorCode
+	consentClient?: ModelIntakeFieldErrorCode
 }
 
 /** What a failed submit hands back so the form keeps what was typed. Photos cannot be refilled. */
@@ -213,6 +288,9 @@ export function parseIntakeSizeCm(raw: string): number | null | 'invalid' {
 export interface ModelIntakeTextInput extends ModelIntakeFields {
 	consentFollowUp: boolean
 	consentPhotos: boolean
+	/** Whether this request must carry `consentClient`: see `intakeLetterAsksClientConsent`. */
+	asksClientConsent: boolean
+	consentClient: boolean
 }
 
 export interface ModelIntakeValidated {
@@ -266,6 +344,9 @@ export function validateIntakeFields(
 	}
 	if (!input.consentFollowUp) fieldErrors.consentFollowUp = 'consent'
 	if (!input.consentPhotos) fieldErrors.consentPhotos = 'consent'
+	if (input.asksClientConsent && !input.consentClient) {
+		fieldErrors.consentClient = 'consent'
+	}
 
 	const height = parseIntakeSizeCm(input.height)
 	const width = parseIntakeSizeCm(input.width)
@@ -342,32 +423,51 @@ export function buildIntakeShortUrl(origin: string, code: string): string {
 }
 
 /**
- * The sample-store product page a letter's short address forwards to, per
- * product category. Empty until the store exists: a category without a page
- * forwards to the form instead. The store's own link to the form reads the
- * `c` this forward appends.
+ * Where `/c/<code>` sends a reader. An agency letter opens the agency page; a
+ * brand letter opens its showcase's store page, or the form while it has none.
+ * Both carry the code on, so the form still greets the reader when they reach
+ * it; the store's own link to the form reads the `c` appended here. A code we
+ * never posted opens the plain form.
  */
-export const MODEL_INTAKE_STORE_PAGES: Partial<
-	Record<ModelIntakeProductType, string>
-> = {}
-
-/** Where `/c/<code>` sends a reader: the store page for the letter's category, else the form, else the plain form for a code we never posted. */
 export function intakeLetterDestination(
 	letter: {
 		code: string
-		category: ModelIntakeProductType
+		audience: ModelIntakeAudience
+		showcase: ModelIntakeShowcase | null
 		locale: ModelIntakeLocale
 	} | null,
-	storePages: Partial<
-		Record<ModelIntakeProductType, string>
-	> = MODEL_INTAKE_STORE_PAGES
+	storePages: IntakeStorePages
 ): string {
 	if (!letter) return '/free-model'
-	const storePage = storePages[letter.category]
+	if (letter.audience === 'agency') {
+		const search = new URLSearchParams({
+			[MODEL_INTAKE_LETTER_PARAM]: letter.code
+		})
+		return `${MODEL_INTAKE_AGENCY_PAGE_PATH}?${search.toString()}`
+	}
+	const storePage = letter.showcase && storePages[letter.showcase]
 	if (storePage) {
 		const url = new URL(storePage)
 		url.searchParams.set(MODEL_INTAKE_LETTER_PARAM, letter.code)
 		return url.toString()
 	}
 	return intakeLetterFormPath(letter.code, letter.locale)
+}
+
+/**
+ * The requests each letter led to, by its code, in the order given: the
+ * internal page's letters list links each letter to them.
+ */
+export function intakeRequestsByLetter<
+	T extends { letterCode: string | null; referenceCode: string }
+>(requests: readonly T[]): Map<string, T[]> {
+	const byLetter = new Map<string, T[]>()
+	for (const request of requests) {
+		if (!request.letterCode) continue
+		byLetter.set(request.letterCode, [
+			...(byLetter.get(request.letterCode) ?? []),
+			request
+		])
+	}
+	return byLetter
 }

@@ -90,7 +90,9 @@ describe('submitModelIntake', () => {
 		await submit(form(), deps, {
 			code: 'K7Q2M9AB',
 			organization: 'Brand GmbH',
+			audience: 'brand',
 			category: 'shoes',
+			showcase: null,
 			locale: 'de'
 		})
 
@@ -100,6 +102,57 @@ describe('submitModelIntake', () => {
 		expect(deps.sendIntakeInternalNotification).toHaveBeenCalledWith(
 			expect.objectContaining({ letter: 'K7Q2M9AB (Brand GmbH)' })
 		)
+	})
+
+	describe('the client consent on agency letters', () => {
+		const agencyLetter: ModelIntakeLetter = {
+			code: 'A7Q2M9AB',
+			organization: 'Agentur GmbH',
+			audience: 'agency',
+			category: 'shoes',
+			showcase: null,
+			locale: 'de'
+		}
+
+		it('refuses an agency request without it, before anything is stored', async () => {
+			const deps = fakes()
+			const result = await submit(form(), deps, agencyLetter)
+			expect(result.status).toBe(400)
+			expect(result.body).toMatchObject({
+				status: 'error',
+				fieldErrors: { consentClient: 'consent' }
+			})
+			expect(deps.insertIntakeSubmission).not.toHaveBeenCalled()
+			expect(deps.uploadIntakePhotos).not.toHaveBeenCalled()
+		})
+
+		it('stores when an agency confirmed it', async () => {
+			const deps = fakes()
+			const result = await submit(
+				form({ consentClient: 'on' }),
+				deps,
+				agencyLetter
+			)
+			expect(result.outcome).toBe('submitted')
+			expect(deps.insertIntakeSubmission).toHaveBeenCalledWith(
+				expect.objectContaining({
+					letterCode: 'A7Q2M9AB',
+					consentClientAt: new Date('2026-10-20T10:00:00Z')
+				})
+			)
+		})
+
+		it('asks nothing of a brand letter, even when the box is posted', async () => {
+			const deps = fakes()
+			const result = await submit(form({ consentClient: 'on' }), deps, {
+				...agencyLetter,
+				audience: 'brand'
+			})
+			expect(result.outcome).toBe('submitted')
+			expect(deps.insertIntakeSubmission).toHaveBeenCalledWith(
+				expect.objectContaining({ consentClientAt: null })
+			)
+		})
 	})
 
 	it('stores an encrypted row with consent, batch and retention, then notifies both sides', async () => {
@@ -135,7 +188,8 @@ describe('submitModelIntake', () => {
 				heightCm: 12,
 				widthCm: null,
 				photoPaths: ['id-1/1.jpg', 'id-1/2.jpg', 'id-1/3.jpg'],
-				consentVersion: '2026-10-19',
+				consentVersion: '2026-11-10',
+				consentClientAt: null,
 				consentFollowUpAt: new Date('2026-10-20T10:00:00Z'),
 				deleteAfter: new Date('2027-01-18T10:00:00Z')
 			})

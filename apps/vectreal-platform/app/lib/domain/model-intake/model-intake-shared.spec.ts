@@ -8,7 +8,9 @@ import {
 	buildIntakeUrl,
 	cleanupMinutesBetween,
 	intakeLetterDestination,
+	parseIntakeStorePages,
 	intakeLetterFormPath,
+	intakeRequestsByLetter,
 	isIntakeBodyAcceptable,
 	mintIntakeLetterCode,
 	MODEL_INTAKE_CODE_ALPHABET,
@@ -18,6 +20,7 @@ import {
 	parseIntakeSizeCm,
 	resolveIntakeBatch,
 	resolveIntakeLocale,
+	intakeLetterAsksClientConsent,
 	validateIntakeFields,
 	type ModelIntakeTextInput
 } from './model-intake-shared'
@@ -32,7 +35,9 @@ const valid: ModelIntakeTextInput = {
 	depth: '',
 	message: '',
 	consentFollowUp: true,
-	consentPhotos: true
+	consentPhotos: true,
+	asksClientConsent: false,
+	consentClient: false
 }
 
 describe('validateIntakeFields', () => {
@@ -62,11 +67,29 @@ describe('validateIntakeFields', () => {
 		['size', { depth: '900' }],
 		['message', { message: 'x'.repeat(MODEL_INTAKE_MAX_MESSAGE_LENGTH + 1) }],
 		['consentFollowUp', { consentFollowUp: false }],
-		['consentPhotos', { consentPhotos: false }]
+		['consentPhotos', { consentPhotos: false }],
+		['consentClient', { asksClientConsent: true, consentClient: false }]
 	] as const)('refuses a bad %s', (field, change) => {
 		const result = validateIntakeFields({ ...valid, ...change })
 		expect(result.ok).toBe(false)
 		expect(result.ok ? {} : Object.keys(result.fieldErrors)).toEqual([field])
+	})
+})
+
+describe('client consent', () => {
+	it('is asked on agency letters only', () => {
+		expect(intakeLetterAsksClientConsent({ audience: 'agency' })).toBe(true)
+		expect(intakeLetterAsksClientConsent({ audience: 'brand' })).toBe(false)
+		expect(intakeLetterAsksClientConsent(null)).toBe(false)
+	})
+
+	it('accepts an agency request that confirms it', () => {
+		const result = validateIntakeFields({
+			...valid,
+			asksClientConsent: true,
+			consentClient: true
+		})
+		expect(result.ok).toBe(true)
 	})
 })
 
@@ -150,31 +173,79 @@ describe('letter codes', () => {
 describe('intakeLetterDestination', () => {
 	const letter = {
 		code: 'K7Q2M9AB',
-		category: 'shoes',
+		audience: 'brand',
+		showcase: 'lamp',
 		locale: 'de'
 	} as const
 
 	it('sends a code we never posted to the plain form', () => {
-		expect(intakeLetterDestination(null)).toBe('/free-model')
+		expect(intakeLetterDestination(null, {})).toBe('/free-model')
 	})
 
-	it('sends a letter to the form while its category has no store page', () => {
+	it('sends a brand letter to the form while its showcase has no store page', () => {
 		expect(intakeLetterDestination(letter, {})).toBe(
 			'/free-model?c=K7Q2M9AB&lang=de'
 		)
 		expect(
 			intakeLetterDestination(letter, {
-				furniture: 'https://store.example/products/chair'
+				fire: 'https://store.example/products/fire'
 			})
+		).toBe('/free-model?c=K7Q2M9AB&lang=de')
+		expect(
+			intakeLetterDestination(
+				{ ...letter, showcase: null },
+				{ lamp: 'https://store.example/products/lamp' }
+			)
 		).toBe('/free-model?c=K7Q2M9AB&lang=de')
 	})
 
-	it("sends a letter to its category's store page, carrying the code", () => {
+	it("sends a brand letter to its showcase's store page, carrying the code", () => {
 		expect(
 			intakeLetterDestination(letter, {
-				shoes: 'https://store.example/products/sneaker?variant=1'
+				lamp: 'https://store.example/products/lamp?variant=1'
 			})
-		).toBe('https://store.example/products/sneaker?variant=1&c=K7Q2M9AB')
+		).toBe('https://store.example/products/lamp?variant=1&c=K7Q2M9AB')
+	})
+
+	it('sends an agency letter to the agency page, carrying the code, store page or not', () => {
+		const agency = { ...letter, audience: 'agency' } as const
+		expect(intakeLetterDestination(agency, {})).toBe('/agenturen?c=K7Q2M9AB')
+		expect(
+			intakeLetterDestination(agency, {
+				lamp: 'https://store.example/products/lamp'
+			})
+		).toBe('/agenturen?c=K7Q2M9AB')
+	})
+})
+
+describe('parseIntakeStorePages', () => {
+	it('reads nothing as no pages', () => {
+		expect(parseIntakeStorePages(undefined)).toEqual({ ok: true, pages: {} })
+		expect(parseIntakeStorePages(' ')).toEqual({ ok: true, pages: {} })
+	})
+
+	it('reads one page per showcase', () => {
+		expect(
+			parseIntakeStorePages(
+				' lamp = https://store.example/products/lamp?variant=1 ,coffee=https://store.example/products/coffee,'
+			)
+		).toEqual({
+			ok: true,
+			pages: {
+				lamp: 'https://store.example/products/lamp?variant=1',
+				coffee: 'https://store.example/products/coffee'
+			}
+		})
+	})
+
+	it.each([
+		['sofa=https://store.example/products/sofa'],
+		['https://store.example/products/lamp'],
+		['lamp=http://store.example/products/lamp'],
+		['lamp=store.example/products/lamp'],
+		['lamp=https://store.example/products/lamp,fire=']
+	])('refuses %s whole', (raw) => {
+		expect(parseIntakeStorePages(raw).ok).toBe(false)
 	})
 })
 
@@ -218,5 +289,18 @@ describe('isIntakeBodyAcceptable', () => {
 		['a body over the cap', String(47 * 1024 * 1024)]
 	])('refuses %s', (_, header) => {
 		expect(isIntakeBodyAcceptable(header)).toBe(false)
+	})
+})
+
+describe('intakeRequestsByLetter', () => {
+	it('groups the requests under the letter that led to them, and skips the rest', () => {
+		const a = { letterCode: 'K7Q2M9AB', referenceCode: 'FM-1' }
+		const b = { letterCode: null, referenceCode: 'FM-2' }
+		const c = { letterCode: 'K7Q2M9AB', referenceCode: 'FM-3' }
+		const d = { letterCode: 'H4RT6WXY', referenceCode: 'FM-4' }
+		const byLetter = intakeRequestsByLetter([a, b, c, d])
+		expect(byLetter.get('K7Q2M9AB')).toEqual([a, c])
+		expect(byLetter.get('H4RT6WXY')).toEqual([d])
+		expect(byLetter.size).toBe(2)
 	})
 })

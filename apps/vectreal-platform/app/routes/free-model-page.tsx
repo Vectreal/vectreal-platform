@@ -12,6 +12,7 @@ import {
 	resolveIntakeLetter
 } from '../lib/domain/model-intake/model-intake-letter.server'
 import {
+	intakeLetterAsksClientConsent,
 	isIntakeBodyAcceptable,
 	MODEL_INTAKE_LETTER_PARAM,
 	MODEL_INTAKE_RETENTION_DAYS,
@@ -32,6 +33,10 @@ import type { PostHogContext } from '../lib/posthog/posthog-middleware'
 
 export async function loader({ request }: Route.LoaderArgs) {
 	const url = new URL(request.url)
+	const letter = await resolveIntakeLetter(
+		request,
+		url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
+	)
 	return {
 		locale: resolveIntakeLocale(url.searchParams.get('lang')),
 		batch: resolveIntakeBatch(url.searchParams.get('b')),
@@ -39,10 +44,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 		letterCode: normalizeIntakeLetterCode(
 			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 		),
-		letter: await resolveIntakeLetter(
-			request,
-			url.searchParams.get(MODEL_INTAKE_LETTER_PARAM)
-		),
+		letter,
+		asksClientConsent: intakeLetterAsksClientConsent(letter),
 		turnstileSiteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY ?? ''
 	}
 }
@@ -137,7 +140,14 @@ export default function FreeModelPage({
 	loaderData,
 	actionData
 }: Route.ComponentProps) {
-	const { locale, batch, letterCode, letter, turnstileSiteKey } = loaderData
+	const {
+		locale,
+		batch,
+		letterCode,
+		letter,
+		asksClientConsent,
+		turnstileSiteKey
+	} = loaderData
 	const copy = MODEL_INTAKE_COPY[locale]
 	const navigation = useNavigation()
 	const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
@@ -207,6 +217,7 @@ export default function FreeModelPage({
 										locale={locale}
 										batch={batch}
 										letterCode={letterCode}
+										asksClientConsent={asksClientConsent}
 										turnstileSiteKey={turnstileSiteKey}
 										turnstileToken={turnstileToken}
 										onTurnstileSuccess={(next) => {

@@ -10,6 +10,7 @@ import { HARNESS_PORT, HARNESS_STEPS } from './harness.ts'
 const SHOPIFY_DIR = join(import.meta.dirname, '../..')
 const SECTION_FILE = join(SHOPIFY_DIR, 'vectreal-scene-tour.liquid')
 const SNIPPET_FILE = join(SHOPIFY_DIR, 'vectreal-gallery-slide.liquid')
+const LINK_FILE = join(SHOPIFY_DIR, 'vectreal-free-model-link.liquid')
 const PAGE_FILE = join(import.meta.dirname, 'product-page.liquid')
 const IMAGES = [
 	'poster.jpg',
@@ -167,7 +168,7 @@ const fetchDawnFile = (name: string) => {
 
 const livePages = new Set<ServerResponse>()
 if (LIVE_RELOAD) {
-	for (const file of [SECTION_FILE, SNIPPET_FILE, PAGE_FILE]) {
+	for (const file of [SECTION_FILE, SNIPPET_FILE, LINK_FILE, PAGE_FILE]) {
 		watch(file, () => {
 			for (const page of livePages) page.write('data: reload\n\n')
 		})
