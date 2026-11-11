@@ -119,6 +119,17 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: '@nx/*'
         update-types: ['version-update:semver-major']
+      # react 19.3 adds about 9.6 KB gz to the embed route (847.5 against its
+      # 845 KB budget, measured in #1336). Held at 19.2 until the embed has
+      # room for it; patches still arrive.
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-minor']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-minor']
+      - dependency-name: '@types/react'
+        update-types: ['version-update:semver-minor']
+      - dependency-name: '@types/react-dom'
+        update-types: ['version-update:semver-minor']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
