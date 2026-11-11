@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------
 
 const HERO_SENTENCE =
-	'Aus drei Fotos wird ein 3D-Modell, das Kundinnen und Kunden im Shop selbst drehen.'
+	'Aus drei Fotos wird unter Ihrem Namen ein 3D-Modell, das Kundinnen und Kunden im Shop selbst drehen.'
 
 const GUIDE_HREF =
 	'/docs/guides/publish-embed#shopify-a-section-that-tours-the-scene-on-scroll'
