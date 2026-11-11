@@ -34,7 +34,8 @@ async function showSlideAgain(page: Page, scrollLeft: number) {
  * it. Chromium only: WebKit has no way to synthesize one.
  */
 async function swipeAcrossSlide(page: Page) {
-	const box = await slide(page).boundingBox()
+	// The frame's box: the custom element around it reports no width.
+	const box = await scene(page).boundingBox()
 	if (!box) throw new Error('the slide is not on screen')
 	const session = await page.context().newCDPSession(page)
 	await session.send('Input.synthesizeScrollGesture', {
@@ -46,7 +47,7 @@ async function swipeAcrossSlide(page: Page) {
 		speed: 800
 	})
 	await session.detach()
-	await page.waitForTimeout(800)
+	await page.waitForTimeout(1_500)
 }
 
 test('the gallery slide shows its poster, then the scene once loaded, waiting for a tap', async ({

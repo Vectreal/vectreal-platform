@@ -31,6 +31,11 @@ describe('tap to activate is wired into the viewer', () => {
 	it('locks the pointer, the keys and double-click focus until started', () => {
 		expect(source).toContain('inputLocked={inputLocked}')
 		expect(source).toContain('keys={liveKeys}')
+		// Not announced as operable until then, so the button is what is reached.
+		expect(source).toContain('keyHelp={describeViewerKeys(liveKeys)}')
+		expect(source).toMatch(
+			/setTapStarted\(false\)\s*transitionOverride\.current = null/
+		)
 		expect(source).toMatch(
 			/focusOnDoubleClick === true &&\s*shownModel &&\s*!inputLocked/
 		)

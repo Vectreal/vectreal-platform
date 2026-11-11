@@ -823,6 +823,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
+			setTapStarted(false)
 			transitionOverride.current = null
 		}
 	}, [hasContent])
@@ -1227,7 +1228,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 					loadingState={loadingState}
 					onContainerChange={setContainer}
 					label={label}
-					keyHelp={describeViewerKeys(viewerKeys)}
+					// Nothing to announce until the tap: the start button is what to reach.
+					keyHelp={describeViewerKeys(liveKeys)}
 					onContextLossEvent={handleContextLossEvent}
 					renderFailure={renderFailure}
 					overlay={

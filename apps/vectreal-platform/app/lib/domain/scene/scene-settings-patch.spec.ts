@@ -40,6 +40,32 @@ describe('a presentation patch', () => {
 	})
 })
 
+describe('when interaction starts, through a presentation patch', () => {
+	it("keeps the stored choice, or an older scene's immediate start, when the patch leaves it out", () => {
+		expect(
+			applySceneSettingsPatch(
+				{ presentation: { interactionStart: 'tap' } },
+				{ presentation: { altText: 'A chair' } }
+			).presentation?.interactionStart
+		).toBe('tap')
+		expect(
+			applySceneSettingsPatch(
+				{ presentation: { showInfoPopover: true } },
+				{ presentation: { altText: 'A chair' } }
+			).presentation
+		).not.toHaveProperty('interactionStart')
+	})
+
+	it('takes the start the patch sends', () => {
+		expect(
+			applySceneSettingsPatch(
+				{ presentation: { interactionStart: 'tap' } },
+				{ presentation: { interactionStart: 'immediate' } }
+			).presentation?.interactionStart
+		).toBe('immediate')
+	})
+})
+
 describe('a lighting patch', () => {
 	it('is accepted by the public contract', () => {
 		const parsed = updateSceneSettingsInputSchema.safeParse({

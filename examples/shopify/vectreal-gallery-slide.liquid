@@ -128,9 +128,11 @@
       }
 
       reveal() {
+        const hadFocus = document.activeElement === this.poster;
         this.setAttribute('data-open', '');
         this.poster.inert = true;
         this.scene.removeAttribute('tabindex');
+        if (hadFocus) this.scene.focus({ preventScroll: true });
       }
 
       open() {
