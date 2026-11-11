@@ -4,13 +4,12 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { embedRefusal } from './embed-refusal'
+import { embedDomainRefusal, embedRefusal } from './embed-refusal'
 import { EMBED_RESPONSE_HEADERS } from './embed-response-headers'
 
 describe('embedRefusal', () => {
 	it.each([
 		['not_available', 404],
-		['domain_not_allowed', 403],
 		['busy', 429]
 	] as const)('answers %s with %i', (reason, status) => {
 		expect(embedRefusal(reason).init?.status).toBe(status)
@@ -27,7 +26,7 @@ describe('embedRefusal', () => {
 		expect(malformed.data).toEqual(embedRefusal('not_available').data)
 	})
 
-	it.each(['not_available', 'domain_not_allowed', 'busy'] as const)(
+	it.each(['not_available', 'busy'] as const)(
 		'puts nothing in a %s body but the reason',
 		(reason) => {
 			expect(embedRefusal(reason).data).toEqual({ reason })
@@ -38,6 +37,27 @@ describe('embedRefusal', () => {
 		expect(
 			Object.fromEntries(new Headers(embedRefusal('busy').init?.headers))
 		).toEqual(Object.fromEntries(new Headers(EMBED_RESPONSE_HEADERS)))
+	})
+})
+
+describe('embedDomainRefusal', () => {
+	it('answers 403 with the embed header contract', () => {
+		const refusal = embedDomainRefusal('shop.example.com')
+		expect(refusal.init?.status).toBe(403)
+		expect(Object.fromEntries(new Headers(refusal.init?.headers))).toEqual(
+			Object.fromEntries(new Headers(EMBED_RESPONSE_HEADERS))
+		)
+	})
+
+	it('names the refused host and nothing else', () => {
+		expect(embedDomainRefusal('shop.example.com').data).toEqual({
+			reason: 'domain_not_allowed',
+			host: 'shop.example.com'
+		})
+		expect(embedDomainRefusal(null).data).toEqual({
+			reason: 'domain_not_allowed',
+			host: null
+		})
 	})
 })
 
@@ -57,7 +77,7 @@ describe('the embed loader', () => {
 	)
 
 	it('throws every refusal and returns none', () => {
-		expect(layout).not.toMatch(/return\s+embedRefusal/)
+		expect(layout).not.toMatch(/return\s+embed(Domain)?Refusal/)
 		expect(layout.match(/throw embedRefusal\(/g)?.length).toBeGreaterThan(4)
 	})
 
@@ -67,13 +87,11 @@ describe('the embed loader', () => {
 	  retry, or the owner's one actionable message.
 	*/
 	it.each([
-		["'rate_limited'", 'busy'],
-		["'domain_not_allowed'", 'domain_not_allowed']
-	])('answers %s with %s', (error, reason) => {
+		["'rate_limited'", "embedRefusal\\('busy'\\)"],
+		["'domain_not_allowed'", 'embedDomainRefusal\\(']
+	])('answers %s with %s', (error, refusal) => {
 		expect(layout).toMatch(
-			new RegExp(
-				`authResult\\.error === ${error}\\) \\{[^}]*throw embedRefusal\\('${reason}'\\)`
-			)
+			new RegExp(`authResult\\.error === ${error}\\) \\{[^}]*throw ${refusal}`)
 		)
 	})
 

@@ -4,12 +4,18 @@ import { Route } from './+types/embed-layout'
 import { EmbedErrorState } from '../../components/scene-embed/embed-error-state'
 import { validatePreviewApiKeyForProject } from '../../lib/domain/auth/preview-api-key-auth.server'
 import { hasEntitlement } from '../../lib/domain/billing/entitlement-service.server'
-import { hasPreviewTokenCredential } from '../../lib/domain/embed/embed-access-policy'
+import {
+	hasPreviewTokenCredential,
+	resolveRequestHostContext
+} from '../../lib/domain/embed/embed-access-policy'
 import {
 	resolveEmbedBranding,
 	shouldShowVectrealBranding
 } from '../../lib/domain/embed/embed-branding-policy'
-import { embedRefusal } from '../../lib/domain/embed/embed-refusal'
+import {
+	embedDomainRefusal,
+	embedRefusal
+} from '../../lib/domain/embed/embed-refusal'
 import {
 	EMBED_RESPONSE_HEADERS,
 	mergeEmbedResponseHeaders
@@ -21,7 +27,10 @@ import {
 import { parseSceneRouteParams } from '../../lib/domain/scene/scene-route-params'
 import { readEmbedSceneSettings } from '../../lib/domain/scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../../lib/domain/scene/server/scene-preview-repository.server'
-import { embedErrorKind } from '../../lib/errors/error-state-copy'
+import {
+	embedErrorKind,
+	embedRefusedHost
+} from '../../lib/errors/error-state-copy'
 import { useErrorReport } from '../../lib/observability/use-error-report'
 import { buildMeta } from '../../lib/seo'
 
@@ -74,9 +83,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 			  reached after a live key matched this project, so the caller has
 			  already proved they hold it - and it fires before the scene is looked
 			  up, so it discloses nothing about whether that scene exists. The
-			  others stay a flat 404 for exactly that reason.
+			  others stay a flat 404 for exactly that reason. The host it names is
+			  the one the access check refused, the requesting page's own.
 			*/
-			throw embedRefusal('domain_not_allowed')
+			throw embedDomainRefusal(resolveRequestHostContext(request).host)
 		}
 
 		throw embedRefusal('not_available')
@@ -171,6 +181,7 @@ export function ErrorBoundary() {
 	return (
 		<EmbedErrorState
 			kind={embedErrorKind(error)}
+			refusedHost={embedRefusedHost(error)}
 			onRetry={() => window.location.reload()}
 		/>
 	)

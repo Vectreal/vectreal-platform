@@ -209,19 +209,25 @@ export const PLAN_TAGLINES: Record<Plan, string> = {
 	enterprise: 'Custom limits and a dedicated support channel'
 }
 
-// Primary CTA button text for each plan on the public pricing page.
+/*
+  Primary CTA button text for each plan on the public pricing page.
+
+  Pro and Business are a conversation, not a checkout, until Stripe is live in
+  production. When it is, they go back to "Start with Pro" and "Start with
+  Business", and their hrefs below back to null.
+*/
 export const PLAN_CTA: Record<Plan, string> = {
 	free: 'Get started free',
-	pro: 'Start with Pro',
-	business: 'Start with Business',
+	pro: 'Talk to us',
+	business: 'Talk to us',
 	enterprise: 'Contact sales'
 }
 
 // CTA link destination. null = computed checkout URL.
 export const PLAN_CTA_HREF: Record<Plan, string | null> = {
 	free: '/sign-up',
-	pro: null,
-	business: null,
+	pro: '/contact',
+	business: '/contact',
 	enterprise: '/contact'
 }
 
@@ -394,13 +400,19 @@ const TEAM_PLAN =
 
 export const HOME_PAGE_COPY = {
 	hero: {
-		/** One sentence per line, set as written: the breaks are part of the headline. */
-		heading: ['Publish your vision.'],
-		/** What Vectreal does, then who it is for. */
-		lead: 'Convert, optimize, manage and embed your 3D models. Vectreal helps creators, developers and businesses create interactive 3D experiences on their websites, with one platform to manage them.',
+		/** One phrase per line, set as written: the breaks are part of the headline. */
+		heading: ['A free 3D model', 'from three photos.'],
+		/**
+		  The brand offer the letters make, in their words: the free model first,
+		  in two working days ("in zwei Werktagen"), then the paid five. It claims
+		  nothing `/free-model` does not: we look at the photos first, and the
+		  model is a service we perform.
+		*/
+		lead: "Send us three photos of one product. If they're enough, we make the model and you have it in two working days, as GLB and USDZ files for Shopify's own 3D slot. If you like it, a paid pilot makes five products for that slot, plus a 3D scene embedded on your page.",
+		/** Into the free-model intake, the same door as the offer band below. */
+		primaryCta: 'Request a free model',
 		/** Into the publisher, where a visitor brings their own file. */
-		primaryCta: 'Try it out',
-		secondaryCta: 'Get in touch',
+		secondaryCta: 'Try the publisher',
 		/** For a visitor with no model at hand: the camera on the page, untouched, in the publisher. */
 		sampleCta: 'No file at hand? Open this camera in the publisher',
 		/** The fold's cue, a link to the first section below. */
