@@ -39,17 +39,17 @@ export const AGENCY_PAGE_COPY = {
 		items: [
 			{
 				id: 'photos',
-				text: 'Sie schicken drei Fotos eines Kundenprodukts und bestätigen, dass Ihr Kunde einverstanden ist.',
+				text: 'Sie schicken drei Fotos, mit dem Einverständnis Ihres Kunden.',
 				image: 'Ein Produkt von vorn, von der Seite und von hinten.'
 			},
 			{
 				id: 'model',
-				text: 'Reichen die Fotos, haben Sie das Modell in zwei Werktagen, kostenlos.',
+				text: 'Reichen die Fotos, kommt das Modell in zwei Werktagen.',
 				image: 'Das 3D-Modell des Produkts im Viewer.'
 			},
 			{
 				id: 'store',
-				text: 'Sie und Ihr Kunde entscheiden, ob es gut genug ist, bevor etwas live geht.',
+				text: 'Erst wenn es passt, geht es im Shop live.',
 				image: 'Das Produkt auf einer Produktseite im Beispielshop.'
 			}
 		]
