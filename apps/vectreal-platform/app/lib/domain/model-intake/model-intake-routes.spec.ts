@@ -59,9 +59,7 @@ describe('/free-model page', () => {
 			'letterCode: normalizeIntakeLetterCode('
 		)
 		expect(page).toContain('letterCode={letterCode}')
-		expect(page).toContain(
-			'languageSearch.set(MODEL_INTAKE_LETTER_PARAM, letterCode)'
-		)
+		// The language switch keeps it too: see `intake-chrome.spec.tsx`.
 	})
 })
 

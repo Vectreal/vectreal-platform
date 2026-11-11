@@ -20,6 +20,7 @@ import { ConsentPreferencesDialog } from './components/consent/consent-preferenc
 import { GlobalNavigationLoader } from './components/global-navigation-loader'
 import { RouteErrorState, routeErrorMeta } from './components/not-found'
 import { ThemeController, ThemeScript } from './components/theme'
+import { intakePageLocale } from './lib/domain/model-intake/model-intake-shared'
 import { isAnonymousCacheableRequest } from './lib/http/cacheable-public-paths.server'
 import { isUnreachableAction } from './lib/navigation/dashboard-route-behavior'
 import { useErrorReport } from './lib/observability/use-error-report'
@@ -217,12 +218,13 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
 }
 
 export default function App({ loaderData }: Route.ComponentProps) {
-	const { pathname } = useLocation()
+	const { pathname, search } = useLocation()
 
 	// The provider still wraps everything so consent state resolves (denied by
 	// default) everywhere. Only the visible chrome is suppressed, and only where
 	// we are rendering inside somebody else's page.
 	const consentUiAllowed = !isThirdPartySurface(pathname)
+	const intakeLocale = intakePageLocale(pathname, search)
 
 	return (
 		<AuthenticityTokenProvider token={loaderData?.csrf}>
@@ -230,8 +232,11 @@ export default function App({ loaderData }: Route.ComponentProps) {
 				<Outlet />
 				{consentUiAllowed ? (
 					<>
-						<ConsentBanner />
-						<ConsentPreferencesDialog />
+						<ConsentBanner
+							locale={intakeLocale ?? 'en'}
+							compact={intakeLocale !== null}
+						/>
+						<ConsentPreferencesDialog locale={intakeLocale ?? 'en'} />
 					</>
 				) : null}
 			</ConsentProvider>

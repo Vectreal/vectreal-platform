@@ -17,6 +17,11 @@
  * now, which is what lets the URL alone decide again.
  */
 
+import {
+	MODEL_INTAKE_AGENCY_PAGE_PATH,
+	MODEL_INTAKE_PATH
+} from '../domain/model-intake/model-intake-shared'
+
 export interface PageChrome {
 	nav: boolean
 	footer: boolean
@@ -28,9 +33,17 @@ export interface PageChrome {
 	 * nav would split it.
 	 */
 	brandNavPrimary: boolean
+	/**
+	 * The letter funnel's own chrome in place of the nav and the footer: the
+	 * logo, the language switch and the legal links, in the page's language.
+	 * A reader who scanned a letter has one thing to do, and the site nav and
+	 * its English labels compete with it.
+	 */
+	focused: boolean
 }
 
 const PUBLISHER_PATH = '/publisher'
+const INTAKE_PATHS = new Set([MODEL_INTAKE_PATH, MODEL_INTAKE_AGENCY_PAGE_PATH])
 const HOME_PATHS = new Set(['/', '/home'])
 
 export function routePageChrome(pathname: string): PageChrome {
@@ -42,7 +55,18 @@ export function routePageChrome(pathname: string): PageChrome {
 			nav: false,
 			footer: false,
 			brandPrimary: false,
-			brandNavPrimary: false
+			brandNavPrimary: false,
+			focused: false
+		}
+	}
+
+	if (INTAKE_PATHS.has(pathname)) {
+		return {
+			nav: false,
+			footer: false,
+			brandPrimary: true,
+			brandNavPrimary: true,
+			focused: true
 		}
 	}
 
@@ -50,6 +74,7 @@ export function routePageChrome(pathname: string): PageChrome {
 		nav: true,
 		footer: true,
 		brandPrimary: true,
-		brandNavPrimary: !HOME_PATHS.has(pathname)
+		brandNavPrimary: !HOME_PATHS.has(pathname),
+		focused: false
 	}
 }

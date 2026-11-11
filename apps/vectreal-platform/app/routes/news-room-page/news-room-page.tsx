@@ -15,6 +15,7 @@ import {
 import { ArticleRow } from '../../components/layout-components/article-row'
 import { FeaturedArticle } from '../../components/layout-components/featured-article'
 import { routeErrorMeta } from '../../components/not-found'
+import { pinnedFirst } from '../../lib/news/news-article'
 import {
 	getNewsArticles,
 	getNewsCategories
@@ -90,8 +91,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	}
 
 	return data({
-		// Newest first, as the manifest orders them.
-		articles,
+		// Pinned first, then newest first, as the manifest orders them.
+		articles: pinnedFirst(articles),
 		/*
 		  The unfiltered total. `articles` above is already narrowed by query,
 		  category and tag, so a hero reading `${articles.length} articles` said

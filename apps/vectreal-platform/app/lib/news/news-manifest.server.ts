@@ -270,6 +270,7 @@ const allArticles: NewsArticle[] = Object.entries(articleModules)
 			...(frontmatter?.heroImage ? { heroImage: frontmatter.heroImage } : {}),
 			cta,
 			draft: Boolean(frontmatter?.draft),
+			pinned: frontmatter?.pinned === true,
 			readingTimeMinutes: calculateReadingTimeMinutes(
 				extractTextFromReactNode(body)
 			),

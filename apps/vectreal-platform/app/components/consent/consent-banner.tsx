@@ -1,4 +1,5 @@
 import { Button } from '@shared/components/ui/button'
+import { cn } from '@shared/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router'
 
@@ -6,7 +7,52 @@ import { useConsent, useNeedsBanner } from './consent-context'
 import { CONSENT_POLICY_VERSION } from '../../constants/consent-policy'
 import { duration } from '../../lib/motion/motion-tokens'
 
-export function ConsentBanner() {
+import type { ModelIntakeLocale } from '../../lib/domain/model-intake/model-intake-shared'
+
+/*
+  English everywhere but the German letter pages, where an English banner over
+  a German page was the first thing a reader saw. On the letter pages a phone
+  gets the short text: the full one covered a third of the first screen.
+*/
+const BANNER_COPY = {
+	en: {
+		label: 'Cookie consent',
+		body: 'We use cookies and similar technologies to operate our platform and, with your consent, to understand how you use it. Read our',
+		short: 'Cookies to run the site and, with your consent, for analytics.',
+		policy: 'Privacy Policy',
+		after: 'to learn more.',
+		manage: 'Manage preferences',
+		manageLabel: 'Manage cookie preferences',
+		reject: 'Reject all',
+		rejectLabel: 'Reject all non-essential cookies',
+		accept: 'Accept all',
+		acceptLabel: 'Accept all cookies'
+	},
+	de: {
+		label: 'Cookie-Einwilligung',
+		body: 'Ich verwende Cookies und ähnliche Technologien, um diese Seite zu betreiben und, mit Ihrer Einwilligung, zu verstehen, wie Sie sie nutzen. Mehr dazu in der',
+		short:
+			'Cookies für den Betrieb und, mit Ihrer Einwilligung, für Statistik.',
+		policy: 'Datenschutzerklärung',
+		after: '',
+		manage: 'Einstellungen',
+		manageLabel: 'Cookie-Einstellungen verwalten',
+		reject: 'Alle ablehnen',
+		rejectLabel: 'Alle nicht notwendigen Cookies ablehnen',
+		accept: 'Alle akzeptieren',
+		acceptLabel: 'Alle Cookies akzeptieren'
+	}
+} as const satisfies Record<ModelIntakeLocale, Record<string, string>>
+
+export function ConsentBanner({
+	locale = 'en',
+	compact = false
+}: {
+	locale?: ModelIntakeLocale
+	/** The short text on a phone: the letter pages, where the first screen is the page's whole case. */
+	compact?: boolean
+}) {
+	const copy = BANNER_COPY[locale]
 	const { saveConsent, setPreferencesOpen } = useConsent()
 	const showBanner = useNeedsBanner(CONSENT_POLICY_VERSION)
 
@@ -27,47 +73,76 @@ export function ConsentBanner() {
 					animate={{ y: 0, opacity: 1 }}
 					exit={{ y: 80, opacity: 0 }}
 					transition={{ duration: duration.base, ease: 'easeOut' }}
-					className="ds-overlay z-nav fixed right-0 bottom-0 left-0 border-t py-4 shadow-lg backdrop-blur-sm"
+					className={cn(
+						'ds-overlay z-nav fixed right-0 bottom-0 left-0 border-t shadow-lg backdrop-blur-sm',
+						compact ? 'py-2.5 sm:py-4' : 'py-4'
+					)}
 					role="dialog"
 					aria-modal="false"
-					aria-label="Cookie consent"
+					aria-label={copy.label}
+					lang={locale}
 				>
-					<div className="container-page flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-						<p className="flex-1 text-sm leading-relaxed text-balance">
-							We use cookies and similar technologies to operate our platform
-							and, with your consent, to understand how you use it. Read our{' '}
+					<div
+						className={cn(
+							'container-page flex flex-col sm:flex-row sm:items-center sm:gap-6',
+							compact ? 'gap-2' : 'gap-4'
+						)}
+					>
+						{compact ? (
+							<p className="text-sm leading-snug text-balance sm:hidden">
+								{copy.short}{' '}
+								<Link
+									to="/privacy-policy"
+									className="hover:text-foreground underline underline-offset-2"
+								>
+									{copy.policy}
+								</Link>
+							</p>
+						) : null}
+						<p
+							className={cn(
+								'flex-1 text-sm leading-relaxed text-balance',
+								compact && 'hidden sm:block'
+							)}
+						>
+							{copy.body}{' '}
 							<Link
 								to="/privacy-policy"
 								className="hover:text-foreground underline underline-offset-2"
 							>
-								Privacy Policy
-							</Link>{' '}
-							to learn more.
+								{copy.policy}
+							</Link>
+							{copy.after ? ` ${copy.after}` : '.'}
 						</p>
 
-						<div className="flex shrink-0 flex-wrap gap-2">
+						<div
+							className={cn(
+								'flex shrink-0 flex-wrap',
+								compact ? 'gap-1 sm:gap-2' : 'gap-2'
+							)}
+						>
 							<Button
 								variant="ghost"
 								size="sm"
 								onClick={() => setPreferencesOpen(true)}
-								aria-label="Manage cookie preferences"
+								aria-label={copy.manageLabel}
 							>
-								Manage preferences
+								{copy.manage}
 							</Button>
 							<Button
 								variant="ghost"
 								size="sm"
 								onClick={handleRejectAll}
-								aria-label="Reject all non-essential cookies"
+								aria-label={copy.rejectLabel}
 							>
-								Reject all
+								{copy.reject}
 							</Button>
 							<Button
 								size="sm"
 								onClick={handleAcceptAll}
-								aria-label="Accept all cookies"
+								aria-label={copy.acceptLabel}
 							>
-								Accept all
+								{copy.accept}
 							</Button>
 						</div>
 					</div>
