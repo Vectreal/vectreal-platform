@@ -33,7 +33,7 @@ export function ErrorState(props: ErrorStateProps) {
 		return (
 			<main className="bg-background flex h-dvh w-full flex-col items-center justify-center gap-2 p-6 text-center">
 				<h1 className="text-h4 max-w-sm">{props.heading}</h1>
-				<p className="text-muted-foreground text-body-sm max-w-sm">
+				<p className="text-muted-foreground text-body-sm max-w-sm break-words">
 					{props.description}
 				</p>
 				{props.action && <div className="pt-3">{props.action}</div>}
