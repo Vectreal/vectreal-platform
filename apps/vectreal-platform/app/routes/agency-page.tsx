@@ -13,9 +13,12 @@ import {
 	intakeLetterFormPath,
 	MODEL_INTAKE_AGENCY_PAGE_PATH,
 	MODEL_INTAKE_LETTER_PARAM,
+	type ModelIntakeShowcase,
 	normalizeIntakeLetterCode
 } from '../lib/domain/model-intake/model-intake-shared'
 import { buildPageMeta } from '../lib/seo'
+
+const AGENCY_PAGE_SHOWCASE = 'lamp' satisfies ModelIntakeShowcase
 
 import type { Route } from './+types/agency-page'
 
@@ -29,10 +32,11 @@ import type { Route } from './+types/agency-page'
 export async function loader({ request }: Route.LoaderArgs) {
 	const raw = new URL(request.url).searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 	const letterCode = normalizeIntakeLetterCode(raw)
-	// An agency letter shows no showcase, so the page turns the default scene.
+	// An agency's letter names no product, so the page shows the lamp: the
+	// showcase closest to most agencies' clients, decided 11 Nov.
 	const [letter, scene] = await Promise.all([
 		resolveIntakeLetter(request, raw),
-		resolveIntakeScene(request, null)
+		resolveIntakeScene(request, AGENCY_PAGE_SHOWCASE)
 	])
 	return { letterCode, letter, scene }
 }
