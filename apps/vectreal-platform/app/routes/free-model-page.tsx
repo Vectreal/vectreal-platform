@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { data, Link, useNavigation } from 'react-router'
+import { data, useNavigation } from 'react-router'
 
 import { PublicErrorBoundary } from '../components/errors'
 import { PageHero, SheetFrame } from '../components/layout-components'
@@ -163,11 +163,6 @@ export default function FreeModelPage({
 		setTurnstileResetNonce((current) => current + 1)
 	}, [actionData])
 
-	const otherLocale = locale === 'de' ? 'en' : 'de'
-	const languageSearch = new URLSearchParams({ lang: otherLocale })
-	if (batch !== 'direct') languageSearch.set('b', batch)
-	if (letterCode) languageSearch.set(MODEL_INTAKE_LETTER_PARAM, letterCode)
-
 	const formError =
 		actionData?.status === 'error' && !actionData.fieldErrors
 			? copy.formErrors[actionData.formError]
@@ -181,15 +176,6 @@ export default function FreeModelPage({
 					letter
 						? `${copy.letterGreeting(letter.organization)} ${copy.hero.description}`
 						: copy.hero.description
-				}
-				actions={
-					<Link
-						to={`?${languageSearch.toString()}`}
-						hrefLang={otherLocale}
-						className="text-body-sm decoration-muted-foreground underline underline-offset-4"
-					>
-						{copy.languageLink}
-					</Link>
 				}
 			/>
 

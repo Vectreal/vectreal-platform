@@ -132,6 +132,22 @@ export function intakeLetterAsksClientConsent(
 export const MODEL_INTAKE_AGENCY_PAGE_PATH = '/agenturen'
 
 /**
+ * The language of an intake page, read from its address alone so the server
+ * render and the first client render agree: the agency page is German only,
+ * the form follows `?lang`. Null for every page that is not an intake page.
+ */
+export function intakePageLocale(
+	pathname: string,
+	search: string
+): ModelIntakeLocale | null {
+	if (pathname === MODEL_INTAKE_AGENCY_PAGE_PATH) return 'de'
+	if (pathname === MODEL_INTAKE_PATH) {
+		return resolveIntakeLocale(new URLSearchParams(search).get('lang'))
+	}
+	return null
+}
+
+/**
  * `?c=<code>`: the one letter a link was printed for. Opaque on purpose, so the
  * URL names no organization or person; the code is looked up on the server.
  */

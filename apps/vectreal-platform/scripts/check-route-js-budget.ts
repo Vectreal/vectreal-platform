@@ -46,7 +46,10 @@ const BUDGETS_KB: Record<string, number> = {
 	'routes/contact-page': 400,
 	'routes/docs/index': 395,
 	'routes/news-room-page/news-room-page': 395,
-	'routes/news-room-page/news-room-article-page': 405
+	'routes/news-room-page/news-room-article-page': 405,
+	// The letter funnel: every visit is a phone scan, often on a slow network.
+	'routes/free-model-page': 395,
+	'routes/agency-page': 395
 }
 
 /**
