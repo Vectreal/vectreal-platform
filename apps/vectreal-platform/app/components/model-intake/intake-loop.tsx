@@ -46,6 +46,8 @@ export function IntakeLoop({
 					muted
 					loop
 					playsInline
+					// Without controls a video is often skipped; as an image its label is still read.
+					role="img"
 					aria-label={label}
 					className="absolute inset-0 h-full w-full object-cover"
 				/>
