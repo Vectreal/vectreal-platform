@@ -30,7 +30,7 @@ const BANNER_COPY = {
 	},
 	de: {
 		label: 'Cookie-Einwilligung',
-		body: 'Diese Website verwendet Cookies und ähnliche Technologien, um sie zu betreiben und, mit Ihrer Einwilligung, zu verstehen, wie sie genutzt wird. Mehr dazu in der',
+		body: 'Ich verwende Cookies und ähnliche Technologien, um diese Seite zu betreiben und, mit Ihrer Einwilligung, zu verstehen, wie Sie sie nutzen. Mehr dazu in der',
 		short:
 			'Cookies für den Betrieb und, mit Ihrer Einwilligung, für Statistik.',
 		policy: 'Datenschutzerklärung',

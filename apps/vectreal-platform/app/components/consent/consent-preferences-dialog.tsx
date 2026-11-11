@@ -39,7 +39,7 @@ const DIALOG_COPY = {
 	de: {
 		title: 'Cookie-Einstellungen',
 		description:
-			'Hier legen Sie fest, welche Cookies und Tracking-Technologien diese Website verwenden darf. Notwendige Cookies lassen sich nicht abschalten, weil die Seite ohne sie nicht funktioniert.',
+			'Hier legen Sie fest, welche Cookies und Tracking-Technologien ich verwende. Notwendige Cookies lassen sich nicht abschalten, weil die Seite ohne sie nicht funktioniert.',
 		necessary: 'Notwendig',
 		necessaryDescription:
 			'Für Anmeldung, Sicherheit (CSRF) und den Betrieb der Seite. Immer aktiv.',
@@ -48,10 +48,10 @@ const DIALOG_COPY = {
 			'Merkt sich Ihre Einstellungen, etwa das Farbschema, über Besuche hinweg.',
 		analytics: 'Statistik und Leistung',
 		analyticsDescription:
-			'Damit lässt sich über zusammengefasste, anonymisierte Nutzungsdaten (PostHog) erkennen, wie Vectreal genutzt wird. Keine personenbezogenen Daten.',
+			'Zeigt mir über zusammengefasste, anonymisierte Nutzungsdaten (PostHog), wie Vectreal genutzt wird. Keine personenbezogenen Daten.',
 		marketing: 'Marketing und Personalisierung',
 		marketingDescription:
-			'Damit lassen sich Marketing-Nachrichten und Produkttests auf Sie zuschneiden.',
+			'Erlaubt mir, Marketing-Nachrichten und Produkttests auf Sie zuzuschneiden.',
 		save: 'Einstellungen speichern',
 		acceptAll: 'Alle akzeptieren'
 	}
