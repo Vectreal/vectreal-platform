@@ -51,7 +51,7 @@ export const AGENCY_PAGE_COPY = {
 				text: 'Erst wenn es passt, geht es im Shop live.',
 				image: 'Das Produkt auf einer Produktseite im Beispielshop.'
 			}
-		] satisfies readonly {
+		] as readonly {
 			id: string
 			text: string
 			/** Describes the step's still, which is also a loop's poster. */
@@ -111,7 +111,7 @@ export const AGENCY_PAGE_COPY = {
 		],
 		/** Worked examples under the lines, such as what a delivery of five costs. */
 		examples: []
-	} satisfies {
+	} as {
 		heading: string
 		figures: readonly { value: string; line?: string }[]
 		lines: readonly string[]
