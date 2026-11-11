@@ -103,7 +103,7 @@ While a visitor scrolls the scene out of view, the viewer frees the graphics mem
 {/* claims
 present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Unload when off-screen"
 present apps/vectreal-platform/app/lib/domain/scene/scene-presentation.ts presentation?.unloadWhenOffscreen !== false
-present packages/viewer/src/components/canvas-wrapper.tsx {lastFrame && <LastFrame frame={lastFrame} />}
+present packages/viewer/src/components/canvas-wrapper.tsx <LastFrameCapture onCapture={captureLastFrame} />
 present packages/sdk/src/scene-settings.ts unloadWhenOffscreen: z.boolean().optional()
 */}
 

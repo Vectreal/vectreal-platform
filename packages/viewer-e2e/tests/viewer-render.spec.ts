@@ -302,6 +302,11 @@ for (const [query, unloads] of [
 				timeout: 10000
 			})
 			.toBe(unloads ? 0 : 1)
+		// Unloaded, it holds a copy of its last frame, which is what shows on
+		// return until the new canvas draws.
+		expect(await page.locator('canvas:not([data-engine])').count()).toBe(
+			unloads ? 1 : 0
+		)
 
 		await page.evaluate(() => window.scrollTo(0, 0))
 		expect(isPageWhite(await viewerCenter(page))).toBe(false)

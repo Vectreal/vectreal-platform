@@ -15,7 +15,10 @@ import {
 	type ViewerTheme,
 	useViewerColorScheme
 } from '../hooks/use-viewer-color-scheme'
-import { useViewportDetection } from '../hooks/use-viewport-detection'
+import {
+	useMostlyVisible,
+	useViewportDetection
+} from '../hooks/use-viewport-detection'
 import { VIEWER_MODEL_FADE_DURATION_MS } from '../hooks/viewer-loading.constants'
 
 import type { LoadingState } from '../hooks/use-viewer-loading'
@@ -161,31 +164,67 @@ const Canvas = ({
 	// full unmount because off-screen viewers should free the WebGL context.
 	const unloads = offscreen === 'unload'
 	/*
-	  Leaving, an unloading canvas stays for the frame that copies what it
-	  shows, which stands in for it on return until it draws again. Without it
-	  the stage showed bare between the remount and the first new frame.
+	  An unloading canvas copies what it shows on its way out, while it is
+	  still half in view: once it is out, a cross-origin frame gets no more
+	  animation frames to copy one in. The copy stands in for a canvas that
+	  went, on return, until the new one has drawn. Without it the stage
+	  showed bare between the remount and the first new frame.
 	*/
+	const isMostlyVisible = useMostlyVisible(
+		containerRef,
+		enableViewportRendering && unloads
+	)
 	const [lastFrame, setLastFrame] = useState<HTMLCanvasElement | null>(null)
+	// Set while a copy stands in for a canvas that has not drawn yet.
+	const [awaitingFirstFrame, setAwaitingFirstFrame] = useState(false)
+	// One copy per way out; back in view, the next exit takes a new one.
+	const [captured, setCaptured] = useState(false)
+	if (captured && isMostlyVisible) setCaptured(false)
+	/*
+	  A jump straight out skips the half-way point. A same-origin page keeps
+	  drawing off-screen, so the canvas stays until it has copied its frame,
+	  or for half a second where nothing draws.
+	*/
 	const [leaving, setLeaving] = useState(false)
 	const [wasInViewport, setWasInViewport] = useState(isInViewport)
 	if (wasInViewport !== isInViewport) {
 		setWasInViewport(isInViewport)
-		setLeaving(!isInViewport && unloads && loadingState !== 'loading')
+		setLeaving(!isInViewport && unloads && !captured && !awaitingFirstFrame)
 	}
 	useEffect(() => {
 		if (!leaving) return
-		// A hidden page draws no frame to copy.
 		const timer = setTimeout(() => setLeaving(false), 500)
 		return () => clearTimeout(timer)
 	}, [leaving])
+	// A canvas back too briefly to draw has nothing to copy: the copy it
+	// stands on stays.
+	const capturing =
+		unloads &&
+		!captured &&
+		!awaitingFirstFrame &&
+		loadingState !== 'loading' &&
+		((!isMostlyVisible && isInViewport) || leaving)
 	const captureLastFrame = useCallback((frame: HTMLCanvasElement | null) => {
-		setLastFrame(frame)
+		if (frame) setLastFrame(frame)
+		setCaptured(true)
 		setLeaving(false)
 	}, [])
-	const dropLastFrame = useCallback(() => setLastFrame(null), [])
+	const dropLastFrame = useCallback(() => {
+		setLastFrame(null)
+		setAwaitingFirstFrame(false)
+	}, [])
 
 	const shouldRenderCanvas =
 		isReady && (isInViewport || leaving || !unloads) && !contextLoss.failed
+	const [hadCanvas, setHadCanvas] = useState(shouldRenderCanvas)
+	if (hadCanvas !== shouldRenderCanvas) {
+		setHadCanvas(shouldRenderCanvas)
+		// Gone with a copy: the copy waits for the next canvas's first frame.
+		if (!shouldRenderCanvas && lastFrame) setAwaitingFirstFrame(true)
+	}
+	const showsLastFrame = Boolean(
+		lastFrame && (!shouldRenderCanvas || awaitingFirstFrame)
+	)
 	const isPaused = !isPageVisible || (!unloads && !isInViewport)
 	const shouldShowCanvasContent = loadingState !== 'loading'
 
@@ -269,7 +308,7 @@ const Canvas = ({
 					{keyHelp}
 				</span>
 			)}
-			{lastFrame && <LastFrame frame={lastFrame} />}
+			{showsLastFrame && lastFrame && <LastFrame frame={lastFrame} />}
 			{shouldRenderCanvas && (
 				<ThreeCanvas
 					{...props}
@@ -281,7 +320,7 @@ const Canvas = ({
 					className={cn(
 						'vv:h-full vv:w-full vv:opacity-0 vv:transition-opacity vv:ease-out',
 						// Over the last frame it shows at once: nothing to fade from.
-						(canvasVisible || lastFrame) &&
+						(canvasVisible || showsLastFrame) &&
 							shouldShowCanvasContent &&
 							'vv:opacity-100'
 					)}
@@ -322,10 +361,8 @@ const Canvas = ({
 						onContextRestored={contextLoss.onContextRestored}
 						onUnmount={contextLoss.onCanvasUnmount}
 					/>
-					{leaving && <LastFrameCapture onCapture={captureLastFrame} />}
-					{lastFrame && isInViewport && (
-						<FirstFrameWatch onDrawn={dropLastFrame} />
-					)}
+					{capturing && <LastFrameCapture onCapture={captureLastFrame} />}
+					{awaitingFirstFrame && <FirstFrameWatch onDrawn={dropLastFrame} />}
 					{children}
 				</ThreeCanvas>
 			)}

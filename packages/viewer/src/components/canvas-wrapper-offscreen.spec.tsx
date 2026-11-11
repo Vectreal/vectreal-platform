@@ -47,11 +47,27 @@ vi.mock('./last-frame', () => ({
 	LastFrame: () => <span data-testid="last-frame" />
 }))
 
-let intersect: (isIntersecting: boolean) => void = () => undefined
+const observers: IntersectionObserverCallback[] = []
+/** Every observer hears the viewer at `ratio` of itself on screen. */
+const intersect = (isIntersecting: boolean, ratio = isIntersecting ? 1 : 0) =>
+	act(() =>
+		observers.forEach((callback) =>
+			callback(
+				[
+					{
+						isIntersecting,
+						intersectionRatio: ratio
+					} as IntersectionObserverEntry
+				],
+				{} as IntersectionObserver
+			)
+		)
+	)
 
 beforeEach(() => {
 	frames.capture = undefined
 	frames.drawn = undefined
+	observers.length = 0
 	vi.stubGlobal('matchMedia', () => ({
 		matches: false,
 		addEventListener: () => undefined,
@@ -61,13 +77,7 @@ beforeEach(() => {
 		'IntersectionObserver',
 		class {
 			constructor(callback: IntersectionObserverCallback) {
-				intersect = (isIntersecting) =>
-					act(() =>
-						callback(
-							[{ isIntersecting } as IntersectionObserverEntry],
-							this as unknown as IntersectionObserver
-						)
-					)
+				observers.push(callback)
 			}
 			observe() {}
 			disconnect() {}
@@ -101,6 +111,33 @@ describe('an unloading viewer off-screen', () => {
 		expect(screen.queryByTestId('last-frame')).not.toBeNull()
 		act(() => frames.drawn?.())
 		expect(screen.queryByTestId('last-frame')).toBeNull()
+	})
+
+	it('copies its frame while still half in view, where a cross-origin frame still draws', () => {
+		viewer()
+		intersect(true)
+		intersect(true, 0.3)
+		expect(screen.queryByTestId('capturing')).not.toBeNull()
+		act(() => frames.capture?.(document.createElement('canvas')))
+		expect(screen.queryByTestId('capturing')).toBeNull()
+
+		intersect(false)
+		expect(webgl()).toBeNull()
+		expect(screen.queryByTestId('last-frame')).not.toBeNull()
+	})
+
+	it('keeps its copy when it leaves again before the new canvas has drawn', () => {
+		viewer()
+		intersect(true)
+		intersect(true, 0.3)
+		act(() => frames.capture?.(document.createElement('canvas')))
+		intersect(false)
+
+		intersect(true)
+		intersect(true, 0.3)
+		expect(screen.queryByTestId('capturing')).toBeNull()
+		intersect(false)
+		expect(screen.queryByTestId('last-frame')).not.toBeNull()
 	})
 
 	it('still lets the canvas go when no frame comes to copy', () => {
