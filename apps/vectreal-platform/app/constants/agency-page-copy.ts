@@ -5,9 +5,8 @@
 // agency letters, and Moritz's own voice.
 //
 // The funnel-polish copy of 11 Nov (the "German agency page" Work Item), not
-// yet read by Moritz, who approves it through the PR's screenshots. Card 1
-// (Shopify's own 3D slot) is left out with its loop, and the terms lead with
-// their numbers, as the 11 Nov review asked. Changes go through a PR.
+// yet read by Moritz, who approves it through the PR's screenshots. The terms
+// lead with their numbers, as the 11 Nov review asked. Changes go through a PR.
 //
 // Its own module rather than a block in `product-copy.ts`, which every
 // marketing page bundles: only this route should pay for these strings.
@@ -19,8 +18,8 @@ const HERO_SENTENCE =
 const GUIDE_HREF =
 	'/docs/guides/publish-embed#shopify-a-section-that-tours-the-scene-on-scroll'
 
-/** The ways the scene reaches a client's store, each shown by a loop from the Shopify test page. */
-export type AgencyWayId = 'scene-tour' | 'gallery-slide'
+/** The ways the model reaches a client's store, each shown by a loop from a Shopify store. */
+export type AgencyWayId = 'shopify-slot' | 'scene-tour' | 'gallery-slide'
 
 export const AGENCY_PAGE_COPY = {
 	meta: {
@@ -56,8 +55,15 @@ export const AGENCY_PAGE_COPY = {
 		]
 	},
 	ways: {
-		heading: 'Zwei Wege in den Shop',
+		heading: 'Drei Wege in den Shop',
 		items: [
+			{
+				// Text only until the sample store exists: its capture then goes in as
+				// `shopify-slot.mp4` and `.webp`, with a `video` line like the others.
+				id: 'shopify-slot',
+				label: 'Shopifys eigener 3D-Platz',
+				text: 'Das Modell kommt wie ein Foto in die Galerie, ohne App und bei Shopifys eigenen Themes ohne Theme-Änderung.'
+			},
 			{
 				id: 'scene-tour',
 				label: 'Als Szene mit Kamerafahrt',
@@ -76,7 +82,8 @@ export const AGENCY_PAGE_COPY = {
 			id: AgencyWayId
 			label: string
 			text: string
-			video: string
+			/** What the card's loop shows, for a screen reader; a card without one has no loop yet. */
+			video?: string
 		}[]
 	},
 	terms: {

@@ -1,5 +1,6 @@
 import { Button } from '@shared/components/ui/button'
 import { Card } from '@shared/components/ui/card'
+import { cn } from '@shared/utils'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router'
 
@@ -133,15 +134,17 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 				<section className={BAND}>
 					<div className={SECTION}>
 						<h2 className="text-h2">{COPY.ways.heading}</h2>
-						<ul className="grid gap-6 md:grid-cols-2">
+						<ul className="grid gap-6 md:grid-cols-3">
 							{COPY.ways.items.map((way) => (
 								<li key={way.id}>
-									<Card className="h-full gap-4 p-4">
-										<IntakeLoop
-											src={`${MEDIA}/${way.id}.mp4`}
-											poster={`${MEDIA}/${way.id}.webp`}
-											label={way.video}
-										/>
+									<Card className={cn('gap-4 p-4', 'video' in way && 'h-full')}>
+										{'video' in way ? (
+											<IntakeLoop
+												src={`${MEDIA}/${way.id}.mp4`}
+												poster={`${MEDIA}/${way.id}.webp`}
+												label={way.video}
+											/>
+										) : null}
 										<h3 className="text-h4">{way.label}</h3>
 										<p className="text-body-sm text-muted-foreground">
 											{way.text}
