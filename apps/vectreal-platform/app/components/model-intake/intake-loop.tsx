@@ -1,3 +1,4 @@
+import { cn } from '@shared/utils'
 import { useRef } from 'react'
 
 import { prefersReducedMotion } from '../../lib/motion/motion-tokens'
@@ -11,12 +12,18 @@ import { useMountWhenVisibleAndIdle } from '../home/hero/use-mount-when-visible-
 export function IntakeLoop({
 	src,
 	poster,
-	label
+	label,
+	className,
+	priority = false
 }: {
 	src: string
 	poster: string
 	/** What the loop shows, for a screen reader. */
 	label: string
+	/** The frame's shape, when not the clips' 4:5. */
+	className?: string
+	/** At the top of the page: the poster loads first rather than lazily. */
+	priority?: boolean
 }) {
 	const frameRef = useRef<HTMLDivElement>(null)
 	const visible = useMountWhenVisibleAndIdle(frameRef)
@@ -26,7 +33,10 @@ export function IntakeLoop({
 	return (
 		<div
 			ref={frameRef}
-			className="ds-sunken relative aspect-4/5 w-full min-w-0 overflow-hidden rounded-xl"
+			className={cn(
+				'ds-sunken relative aspect-4/5 w-full min-w-0 overflow-hidden rounded-xl',
+				className
+			)}
 		>
 			{plays ? (
 				<video
@@ -43,7 +53,8 @@ export function IntakeLoop({
 				<img
 					src={poster}
 					alt={label}
-					loading="lazy"
+					loading={priority ? 'eager' : 'lazy'}
+					fetchPriority={priority ? 'high' : undefined}
 					className="absolute inset-0 h-full w-full object-cover"
 				/>
 			)}

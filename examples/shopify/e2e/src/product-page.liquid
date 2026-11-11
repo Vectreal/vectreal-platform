@@ -169,17 +169,8 @@
                 <section id="ProductInfo-main" class="product__info-container product__column-sticky">
                   <p class="product__text inline-richtext caption-with-letter-spacing">Beispielmarke</p>
                   <div class="product__title"><h1>{{ product.title }}</h1></div>
-                  <div id="price-main" role="status">
-                    <div class="price price--large">
-                      <div class="price__container">
-                        <div class="price__regular">
-                          <span class="visually-hidden visually-hidden--inline">Normaler Preis</span>
-                          <span class="price-item price-item--regular">€1.290,00 EUR</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="product__tax caption rte">inkl. MwSt. <a href="#">Versandkosten</a> werden beim Checkout berechnet.</div>
+                  {%- comment -%} An example product: no price, and nothing that suggests one. {%- endcomment -%}
+                  <p id="price-main" class="price price--large">Beispiel, nicht verfügbar</p>
                   <div class="product-form__input product-form__quantity">
                     <label class="quantity__label form__label" for="Quantity-main">Anzahl</label>
                     <quantity-input class="quantity">

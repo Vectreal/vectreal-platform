@@ -14,19 +14,15 @@ import {
 import { routeErrorMeta } from '../components/not-found'
 import { AGENCY_PAGE_COPY as COPY } from '../constants/agency-page-copy'
 import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
-import { resolveIntakeScene } from '../lib/domain/model-intake/model-intake-scene.server'
 import {
 	intakeLetterFormPath,
 	MODEL_INTAKE_AGENCY_PAGE_PATH,
 	MODEL_INTAKE_LETTER_PARAM,
-	type ModelIntakeShowcase,
 	normalizeIntakeLetterCode
 } from '../lib/domain/model-intake/model-intake-shared'
 import { buildPageMeta } from '../lib/seo'
 
 import type { Route } from './+types/agency-page'
-
-const AGENCY_PAGE_SHOWCASE = 'lamp' satisfies ModelIntakeShowcase
 
 /*
   Where an agency letter's short address forwards. It greets the agency by the
@@ -38,13 +34,8 @@ const AGENCY_PAGE_SHOWCASE = 'lamp' satisfies ModelIntakeShowcase
 export async function loader({ request }: Route.LoaderArgs) {
 	const raw = new URL(request.url).searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 	const letterCode = normalizeIntakeLetterCode(raw)
-	// An agency's letter names no product, so the page shows the lamp: the
-	// showcase closest to most agencies' clients, decided 11 Nov.
-	const [letter, scene] = await Promise.all([
-		resolveIntakeLetter(request, raw),
-		resolveIntakeScene(request, AGENCY_PAGE_SHOWCASE)
-	])
-	return { letterCode, letter, scene }
+	const letter = await resolveIntakeLetter(request, raw)
+	return { letterCode, letter }
 }
 
 export function meta({ error }: Route.MetaArgs) {
@@ -81,19 +72,14 @@ function RequestButton({
 }
 
 const BAND = 'border-foreground/10 border-t'
-const SECTION = 'mx-(--frame-x) space-y-6 py-12 lg:px-(--frame-pad) lg:py-20'
-const PARAGRAPH = 'text-body text-muted-foreground max-w-3xl'
+const SECTION = 'mx-(--frame-x) space-y-8 py-12 lg:px-(--frame-pad) lg:py-20'
 const LINK =
 	'text-body-sm decoration-muted-foreground hover:decoration-orange inline-block underline underline-offset-4 transition-colors duration-150'
 
-/** The loops recorded from the Dawn harness, poster first. */
-const wayMedia = (id: string) => ({
-	src: `/media/agenturen/${id}.mp4`,
-	poster: `/media/agenturen/${id}.webp`
-})
+const MEDIA = '/media/agenturen'
 
 export default function AgencyPage({ loaderData }: Route.ComponentProps) {
-	const { letterCode, letter, scene } = loaderData
+	const { letterCode, letter } = loaderData
 	const formPath = letterCode
 		? intakeLetterFormPath(letterCode, 'de')
 		: '/free-model?lang=de'
@@ -104,25 +90,40 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 				greeting={letter ? COPY.letterGreeting(letter.organization) : null}
 				heading={COPY.hero.heading}
 				lead={COPY.hero.lead}
-				scene={scene}
-				sceneLabel={COPY.hero.sceneLabel}
+				media={
+					// The test page on a phone. A phone shows the middle of it, where the product turns, so the button stays on the first screen.
+					<IntakeLoop
+						src={`${MEDIA}/agentur-hero.mp4`}
+						poster={`${MEDIA}/agentur-hero.webp`}
+						label={COPY.hero.video}
+						priority
+						className="border-foreground/15 aspect-square rounded-3xl border-4 lg:mx-auto lg:aspect-390/844 lg:max-w-xs"
+					/>
+				}
 				action={<RequestButton to={formPath} />}
 			/>
 
 			<SheetFrame>
 				<section className={BAND}>
 					<div className={SECTION}>
-						<h2 className="text-h4">{COPY.steps.heading}</h2>
-						<ol className="grid gap-6 lg:grid-cols-3">
+						<h2 className="text-h2">{COPY.steps.heading}</h2>
+						<ol className="grid gap-8 md:grid-cols-3">
 							{COPY.steps.items.map((step, index) => (
-								<li key={step} className="flex gap-4">
-									<span
-										aria-hidden="true"
-										className="ds-sunken text-body-sm flex size-8 shrink-0 items-center justify-center rounded-full font-medium"
-									>
-										{index + 1}
-									</span>
-									<p className="text-body">{step}</p>
+								<li key={step.id} className="space-y-3">
+									<img
+										src={`${MEDIA}/step-${step.id}.webp`}
+										alt={step.image}
+										width={640}
+										height={480}
+										loading="lazy"
+										className="ds-sunken aspect-4/3 w-full rounded-xl object-cover"
+									/>
+									<p className="text-body flex gap-3">
+										<span aria-hidden="true" className="font-medium">
+											{index + 1}
+										</span>
+										{step.text}
+									</p>
 								</li>
 							))}
 						</ol>
@@ -131,16 +132,22 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 
 				<section className={BAND}>
 					<div className={SECTION}>
-						<div className="space-y-2">
-							<h2 className="text-h4">{COPY.ways.heading}</h2>
-							<p className={PARAGRAPH}>{COPY.ways.intro}</p>
+						<div className="space-y-3">
+							<h2 className="text-h2">{COPY.ways.heading}</h2>
+							<p className="text-body text-muted-foreground max-w-3xl">
+								{COPY.ways.intro}
+							</p>
 						</div>
-						<ul className="grid gap-6 md:grid-cols-3">
+						<ul className="grid gap-6 md:grid-cols-2">
 							{COPY.ways.items.map((way) => (
 								<li key={way.id}>
 									<Card className="h-full gap-4 p-4">
-										<IntakeLoop {...wayMedia(way.id)} label={way.video} />
-										<h3 className="text-body font-medium">{way.label}</h3>
+										<IntakeLoop
+											src={`${MEDIA}/${way.id}.mp4`}
+											poster={`${MEDIA}/${way.id}.webp`}
+											label={way.video}
+										/>
+										<h3 className="text-h4">{way.label}</h3>
 										<p className="text-body-sm text-muted-foreground">
 											{way.text}
 										</p>
@@ -148,40 +155,45 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 								</li>
 							))}
 						</ul>
-						<Link to={COPY.ways.link.href} className={LINK}>
-							{COPY.ways.link.label}
-						</Link>
 					</div>
 				</section>
 
 				<section className={BAND}>
 					<div className={SECTION}>
-						<Card className="gap-4 p-6 md:p-8">
-							<h2 className="text-h4">{COPY.terms.heading}</h2>
-							<ul className="text-body grid list-disc gap-x-10 gap-y-2 pl-5 md:grid-cols-2">
-								{COPY.terms.items.map((item) => (
-									<li key={item}>{item}</li>
-								))}
-							</ul>
-							<p className="text-body-sm text-muted-foreground">
-								{COPY.terms.contact}
-							</p>
-						</Card>
+						<h2 className="text-h2">{COPY.terms.heading}</h2>
+						<dl className="grid gap-8 md:grid-cols-3">
+							{COPY.terms.figures.map((figure) => (
+								<div key={figure.value} className="space-y-1">
+									<dt className="text-headline">{figure.value}</dt>
+									<dd className="text-body text-muted-foreground">
+										{figure.label}
+									</dd>
+								</div>
+							))}
+						</dl>
+						<ul className="text-body grid list-disc gap-2 pl-5">
+							{COPY.terms.lines.map((line) => (
+								<li key={line}>{line}</li>
+							))}
+						</ul>
 					</div>
 				</section>
 
 				<section className={BAND}>
 					<div className={SECTION}>
-						<h2 className="text-h4">{COPY.faq.heading}</h2>
-						<div className="divide-foreground/10 border-foreground/10 max-w-3xl divide-y border-y">
+						<h2 className="text-h2">{COPY.faq.heading}</h2>
+						<div className="grid gap-x-12 md:grid-cols-2">
 							{COPY.faq.items.map((item) => (
-								<details key={item.question} className="py-4">
+								<details
+									key={item.question}
+									className="border-foreground/10 border-b py-4"
+								>
 									<summary className="text-body tap-target cursor-pointer font-medium">
 										{item.question}
 									</summary>
 									<div className="space-y-3 pt-3">
 										{item.answer.map((text) => (
-											<p key={text} className={PARAGRAPH}>
+											<p key={text} className="text-body text-muted-foreground">
 												{text}
 											</p>
 										))}
@@ -201,7 +213,7 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 					<div className={SECTION}>
 						<CtaPanel
 							heading={COPY.request.heading}
-							description={COPY.request.body}
+							description={COPY.request.contact}
 							actions={<RequestButton to={formPath} />}
 						/>
 						<p className="text-body text-muted-foreground">
