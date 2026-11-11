@@ -729,6 +729,11 @@ export const UPGRADE_FEATURE_HIGHLIGHT_KEYS: readonly EntitlementKey[] = [
 // ---------------------------------------------------------------------------
 
 /** One copy per locale, so a string missing from either is a compile error. */
+interface ExamplePhoto {
+	view: string
+	hint: string
+}
+
 interface ModelIntakeCopy {
 	meta: { title: string; description: string }
 	hero: {
@@ -754,8 +759,8 @@ interface ModelIntakeCopy {
 		photos: {
 			label: string
 			help: string
-			/** Captions the example photos over the slots, front to back. */
-			examples: readonly [string, string, string]
+			/** The example photos, front to back: a view named inside its empty slot, and why under it. */
+			examples: readonly [ExamplePhoto, ExamplePhoto, ExamplePhoto]
 			slot: (n: number) => string
 			add: string
 			remove: (n: number) => string
@@ -813,7 +818,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			sceneLabel: 'An example product in 3D, to turn',
 			action: 'Send three photos'
 		},
-		letterGreeting: (organization) => `Hello, ${organization}.`,
+		letterGreeting: (organization) =>
+			`Hello, ${organization}. Thanks for reading my letter.`,
 		fields: {
 			name: { label: 'Your name', placeholder: 'Jane Doe' },
 			email: { label: 'Work email', placeholder: 'you@company.com' },
@@ -834,7 +840,11 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			photos: {
 				label: 'Three photos of the product',
 				help: 'Front, side and back work best, on a plain background. JPEG, PNG, WebP or HEIC, up to 15 MB each.',
-				examples: ['Front', 'Side', 'Back'],
+				examples: [
+					{ view: 'Front', hint: 'the whole product in frame' },
+					{ view: 'Side', hint: 'against the same plain background' },
+					{ view: 'Back', hint: "so the model doesn't have to guess it" }
+				],
 				slot: (n) => `Photo ${n}`,
 				add: 'Add photo',
 				remove: (n) => `Remove photo ${n}`
@@ -923,7 +933,8 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen',
 			action: 'Drei Fotos senden'
 		},
-		letterGreeting: (organization) => `Guten Tag, ${organization}.`,
+		letterGreeting: (organization) =>
+			`Guten Tag, ${organization}. Danke, dass Sie meinen Brief gelesen haben.`,
 		fields: {
 			name: { label: 'Ihr Name', placeholder: 'Erika Mustermann' },
 			email: { label: 'Geschäftliche E-Mail', placeholder: 'sie@firma.de' },
@@ -946,7 +957,14 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			photos: {
 				label: 'Drei Fotos des Produkts',
 				help: 'Am besten von vorne, von der Seite und von hinten, vor einem ruhigen Hintergrund. JPEG, PNG, WebP oder HEIC, bis zu 15 MB pro Foto.',
-				examples: ['Von vorn', 'Von der Seite', 'Von hinten'],
+				examples: [
+					{ view: 'Von vorn', hint: 'das ganze Produkt im Bild' },
+					{ view: 'Von der Seite', hint: 'vor demselben ruhigen Hintergrund' },
+					{
+						view: 'Von hinten',
+						hint: 'damit das Modell die Rückseite nicht raten muss'
+					}
+				],
 				slot: (n) => `Foto ${n}`,
 				add: 'Foto hinzufügen',
 				remove: (n) => `Foto ${n} entfernen`

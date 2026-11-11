@@ -234,7 +234,7 @@ export function ModelIntakeForm({
 					labels={copy.fields.photos}
 					examples={EXAMPLE_PHOTOS.map((src, index) => ({
 						src,
-						label: copy.fields.photos.examples[index]
+						...copy.fields.photos.examples[index]
 					}))}
 					invalidIndex={photosInvalidIndex}
 					describedBy={photosError ? 'photos-error' : 'photos-help'}

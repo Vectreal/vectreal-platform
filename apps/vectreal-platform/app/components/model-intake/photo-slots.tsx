@@ -19,7 +19,7 @@ interface PhotoSlotsProps {
 	 * A good photo for each slot, in slot order (front, side, back), shown
 	 * faintly inside the empty slot until a photo is picked.
 	 */
-	examples?: readonly { src: string; label: string }[]
+	examples?: readonly { src: string; view: string; hint: string }[]
 	/** 1-based photo an error is about, or 0 for the whole set. */
 	invalidIndex?: number
 	describedBy?: string
@@ -97,7 +97,7 @@ function PhotoSlot({
 }: {
 	n: number
 	labels: PhotoSlotsProps['labels']
-	example?: { src: string; label: string }
+	example?: { src: string; view: string; hint: string }
 	invalid: boolean
 	describedBy?: string
 	onTooLarge: PhotoSlotsProps['onTooLarge']
@@ -195,7 +195,7 @@ function PhotoSlot({
 							/>
 						)}
 						<span className="text-label-xs text-muted-foreground relative">
-							{example?.label ?? labels.slot(n)}
+							{example?.view ?? labels.slot(n)}
 						</span>
 						{/* Only a file name may break anywhere; the label keeps its words whole. */}
 						<span
@@ -209,6 +209,11 @@ function PhotoSlot({
 					</>
 				)}
 			</label>
+			{example ? (
+				<p className="text-label-xs text-muted-foreground mt-1.5 hyphens-auto">
+					{example.hint}
+				</p>
+			) : null}
 			{file ? (
 				<Button
 					type="button"
