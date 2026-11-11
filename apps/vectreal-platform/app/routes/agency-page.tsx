@@ -15,15 +15,20 @@ import {
 import { routeErrorMeta } from '../components/not-found'
 import { AGENCY_PAGE_COPY as COPY } from '../constants/agency-page-copy'
 import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
+import { resolveIntakeScene } from '../lib/domain/model-intake/model-intake-scene.server'
 import {
 	intakeLetterFormPath,
 	MODEL_INTAKE_AGENCY_PAGE_PATH,
 	MODEL_INTAKE_LETTER_PARAM,
+	type ModelIntakeShowcase,
 	normalizeIntakeLetterCode
 } from '../lib/domain/model-intake/model-intake-shared'
 import { buildPageMeta } from '../lib/seo'
 
 import type { Route } from './+types/agency-page'
+
+/** An agency's letter names no product, so the page turns the showcase closest to most agencies' clients. */
+const AGENCY_PAGE_SHOWCASE = 'lamp' satisfies ModelIntakeShowcase
 
 /*
   Where an agency letter's short address forwards. It greets the agency by the
@@ -35,8 +40,11 @@ import type { Route } from './+types/agency-page'
 export async function loader({ request }: Route.LoaderArgs) {
 	const raw = new URL(request.url).searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 	const letterCode = normalizeIntakeLetterCode(raw)
-	const letter = await resolveIntakeLetter(request, raw)
-	return { letterCode, letter }
+	const [letter, scene] = await Promise.all([
+		resolveIntakeLetter(request, raw),
+		resolveIntakeScene(request, AGENCY_PAGE_SHOWCASE)
+	])
+	return { letterCode, letter, scene }
 }
 
 export function meta({ error }: Route.MetaArgs) {
@@ -80,7 +88,7 @@ const LINK =
 const MEDIA = '/media/agenturen'
 
 export default function AgencyPage({ loaderData }: Route.ComponentProps) {
-	const { letterCode, letter } = loaderData
+	const { letterCode, letter, scene } = loaderData
 	const formPath = letterCode
 		? intakeLetterFormPath(letterCode, 'de')
 		: '/free-model?lang=de'
@@ -91,16 +99,8 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 				greeting={letter ? COPY.letterGreeting(letter.organization) : null}
 				heading={COPY.hero.heading}
 				lead={COPY.hero.lead}
-				media={
-					// The test page on a phone. A phone shows the middle of it, where the product turns, so the button stays on the first screen.
-					<IntakeLoop
-						src={`${MEDIA}/agentur-hero.mp4`}
-						poster={`${MEDIA}/agentur-hero.webp`}
-						label={COPY.hero.video}
-						priority
-						className="border-foreground/15 aspect-square rounded-3xl border-4 lg:mx-auto lg:aspect-390/844 lg:max-w-xs"
-					/>
-				}
+				scene={scene}
+				sceneLabel={COPY.hero.sceneLabel}
 				action={<RequestButton to={formPath} />}
 			/>
 

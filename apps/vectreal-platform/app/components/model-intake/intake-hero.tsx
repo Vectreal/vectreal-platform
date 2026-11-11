@@ -5,36 +5,31 @@ import { useMountWhenVisibleAndIdle } from '../home/hero/use-mount-when-visible-
 
 import type { IntakeScene } from '../../lib/domain/model-intake/model-intake-scene.server'
 
-type IntakeHeroProps = {
+interface IntakeHeroProps {
 	/** Opens the hero for a visit from one of our letters. */
 	greeting?: string | null
 	heading: ReactNode
 	/** One sentence. */
 	lead: ReactNode
+	scene: IntakeScene | null
+	/** Names the scene for a screen reader when the scene has no name of its own. */
+	sceneLabel: string
 	action: ReactNode
-} & (
-	| {
-			scene: IntakeScene | null
-			/** Names the scene for a screen reader when the scene has no name of its own. */
-			sceneLabel: string
-	  }
-	/** Something else in the product's place, such as a recorded loop. */
-	| { media: ReactNode }
-)
+}
 
 /**
  * The top of a letter page, built for the phone the letter was scanned with:
  * the headline, one sentence, the product turning and the button all fit the
  * first screen at 390 px. On a wide screen the product moves beside the text.
  */
-export function IntakeHero(props: IntakeHeroProps) {
-	const { greeting, heading, lead, action } = props
-	const media =
-		'media' in props ? (
-			props.media
-		) : props.scene ? (
-			<IntakeProductScene scene={props.scene} label={props.sceneLabel} />
-		) : null
+export function IntakeHero({
+	greeting,
+	heading,
+	lead,
+	scene,
+	sceneLabel,
+	action
+}: IntakeHeroProps) {
 	return (
 		<section className="container-page grid gap-5 pt-16 pb-12 lg:grid-cols-2 lg:items-center lg:gap-x-16 lg:pt-32 lg:pb-20">
 			<div className="space-y-3 lg:col-start-1">
@@ -46,9 +41,9 @@ export function IntakeHero(props: IntakeHeroProps) {
 					{lead}
 				</p>
 			</div>
-			{media ? (
+			{scene ? (
 				<div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
-					{media}
+					<IntakeProductScene scene={scene} label={sceneLabel} />
 				</div>
 			) : null}
 			<div className="flex flex-wrap items-center gap-3 lg:col-start-1">
