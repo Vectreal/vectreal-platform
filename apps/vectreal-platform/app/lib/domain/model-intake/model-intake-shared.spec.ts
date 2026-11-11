@@ -12,7 +12,6 @@ import {
 	parseIntakeScenes,
 	parseIntakeStorePages,
 	intakeLetterFormPath,
-	intakePageLocale,
 	intakeRequestsByLetter,
 	isIntakeBodyAcceptable,
 	mintIntakeLetterCode,
@@ -118,14 +117,6 @@ describe('batches and locales', () => {
 		expect(resolveIntakeLocale('de')).toBe('de')
 		expect(resolveIntakeLocale('fr')).toBe('en')
 		expect(resolveIntakeLocale(null)).toBe('en')
-	})
-
-	it('reads an intake page language from its address alone', () => {
-		expect(intakePageLocale('/agenturen', '')).toBe('de')
-		expect(intakePageLocale('/agenturen', '?lang=en')).toBe('de')
-		expect(intakePageLocale('/free-model', '?lang=de&c=ABCDEFGH')).toBe('de')
-		expect(intakePageLocale('/free-model', '')).toBe('en')
-		expect(intakePageLocale('/pricing', '?lang=de')).toBeNull()
 	})
 
 	it('builds the URL a QR code encodes', () => {

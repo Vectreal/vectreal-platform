@@ -4,11 +4,10 @@ import { RedditLogo } from '@shared/components/assets/icons/reddit-logo'
 import { VectrealLogoAnimated } from '@shared/components/assets/icons/vectreal-logo-animated'
 import { XLogo } from '@shared/components/assets/icons/x-logo'
 import { YoutubeLogo } from '@shared/components/assets/icons/youtube-logo'
-import { Link, useLocation } from 'react-router'
+import { Link } from 'react-router'
 
 import { useConsent } from './consent/consent-context'
 import { ThemeToggleButton } from './theme-toggle-button'
-import { intakePageLocale } from '../lib/domain/model-intake/model-intake-shared'
 import {
 	COMMUNITY,
 	FOOTER,
@@ -55,9 +54,6 @@ const FooterLink = ({ link }: { link: SiteLink }) =>
  */
 export const Footer = () => {
 	const { setPreferencesOpen } = useConsent()
-	const { pathname, search } = useLocation()
-	// A German letter page opens the cookie settings in German, as its banner does.
-	const german = intakePageLocale(pathname, search) === 'de'
 
 	return (
 		<footer className="bg-background w-full">
@@ -115,7 +111,7 @@ export const Footer = () => {
 							className="text-body-sm hover:text-foreground tap-target relative transition-colors"
 							onClick={() => setPreferencesOpen(true)}
 						>
-							{german ? 'Cookie-Einstellungen' : 'Cookie preferences'}
+							Cookie preferences
 						</button>
 						<ThemeToggleButton />
 					</div>

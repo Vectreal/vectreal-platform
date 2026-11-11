@@ -25,28 +25,6 @@ vi.mock('./consent/consent-context', () => ({
 vi.mock('./theme-toggle-button', () => ({ ThemeToggleButton: () => null }))
 
 describe('the footer', () => {
-	it('names the cookie settings in German on a German letter page', () => {
-		render(
-			<MemoryRouter initialEntries={['/free-model?lang=de']}>
-				<Footer />
-			</MemoryRouter>
-		)
-		expect(
-			screen.getByRole('button', { name: 'Cookie-Einstellungen' })
-		).toBeTruthy()
-	})
-
-	it('keeps them in English everywhere else', () => {
-		render(
-			<MemoryRouter initialEntries={['/free-model']}>
-				<Footer />
-			</MemoryRouter>
-		)
-		expect(
-			screen.getByRole('button', { name: 'Cookie preferences' })
-		).toBeTruthy()
-	})
-
 	it('links every page in the site map, under its one name', () => {
 		render(
 			<MemoryRouter>
