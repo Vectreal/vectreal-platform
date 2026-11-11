@@ -15,6 +15,11 @@ interface PhotoSlotsProps {
 		add: string
 		remove: (n: number) => string
 	}
+	/**
+	 * A good photo for each slot, in slot order (front, side, back), shown
+	 * faintly inside the empty slot until a photo is picked.
+	 */
+	examples?: readonly { src: string; view: string; hint: string }[]
 	/** 1-based photo an error is about, or 0 for the whole set. */
 	invalidIndex?: number
 	describedBy?: string
@@ -40,6 +45,7 @@ interface PhotoSlotsProps {
  */
 export function PhotoSlots({
 	labels,
+	examples,
 	invalidIndex,
 	describedBy,
 	onTooLarge
@@ -51,6 +57,7 @@ export function PhotoSlots({
 					key={index}
 					n={index + 1}
 					labels={labels}
+					example={examples?.[index]}
 					invalid={invalidIndex === 0 || invalidIndex === index + 1}
 					describedBy={describedBy}
 					onTooLarge={onTooLarge}
@@ -83,12 +90,14 @@ function drawCovering(context: CanvasRenderingContext2D, bitmap: ImageBitmap) {
 function PhotoSlot({
 	n,
 	labels,
+	example,
 	invalid,
 	describedBy,
 	onTooLarge
 }: {
 	n: number
 	labels: PhotoSlotsProps['labels']
+	example?: { src: string; view: string; hint: string }
 	invalid: boolean
 	describedBy?: string
 	onTooLarge: PhotoSlotsProps['onTooLarge']
@@ -172,19 +181,39 @@ function PhotoSlot({
 				/>
 				{previewShown ? null : (
 					<>
-						<ImagePlus
-							aria-hidden="true"
-							className="text-muted-foreground h-5 w-5"
-						/>
-						<span className="text-label-xs text-muted-foreground">
-							{labels.slot(n)}
+						{example && !file ? (
+							<img
+								src={example.src}
+								alt=""
+								loading="lazy"
+								className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-25"
+							/>
+						) : (
+							<ImagePlus
+								aria-hidden="true"
+								className="text-muted-foreground h-5 w-5"
+							/>
+						)}
+						<span className="text-label-xs text-muted-foreground relative">
+							{example?.view ?? labels.slot(n)}
 						</span>
-						<span className="text-body-sm line-clamp-2 break-all">
+						{/* Only a file name may break anywhere; the label keeps its words whole. */}
+						<span
+							className={cn(
+								'text-body-sm relative line-clamp-2',
+								file ? 'break-all' : 'hyphens-auto'
+							)}
+						>
 							{file ? file.name : labels.add}
 						</span>
 					</>
 				)}
 			</label>
+			{example ? (
+				<p className="text-label-xs text-muted-foreground mt-1.5 hyphens-auto">
+					{example.hint}
+				</p>
+			) : null}
 			{file ? (
 				<Button
 					type="button"
