@@ -18,9 +18,9 @@ import {
 } from '../lib/domain/model-intake/model-intake-shared'
 import { buildPageMeta } from '../lib/seo'
 
-const AGENCY_PAGE_SHOWCASE = 'lamp' satisfies ModelIntakeShowcase
-
 import type { Route } from './+types/agency-page'
+
+const AGENCY_PAGE_SHOWCASE = 'lamp' satisfies ModelIntakeShowcase
 
 /*
   Where an agency letter's short address forwards. It greets the agency by the
