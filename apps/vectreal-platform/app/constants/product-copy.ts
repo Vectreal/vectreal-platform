@@ -818,8 +818,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			sceneLabel: 'An example product in 3D, to turn',
 			action: 'Send three photos'
 		},
-		letterGreeting: (organization) =>
-			`Hello, ${organization}. Thanks for reading my letter.`,
+		letterGreeting: (organization) => `Hello, ${organization}.`,
 		fields: {
 			name: { label: 'Your name', placeholder: 'Jane Doe' },
 			email: { label: 'Work email', placeholder: 'you@company.com' },
@@ -933,8 +932,7 @@ export const MODEL_INTAKE_COPY: Record<ModelIntakeLocale, ModelIntakeCopy> = {
 			sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen',
 			action: 'Drei Fotos senden'
 		},
-		letterGreeting: (organization) =>
-			`Guten Tag, ${organization}. Danke, dass Sie meinen Brief gelesen haben.`,
+		letterGreeting: (organization) => `Guten Tag, ${organization}.`,
 		fields: {
 			name: { label: 'Ihr Name', placeholder: 'Erika Mustermann' },
 			email: { label: 'Geschäftliche E-Mail', placeholder: 'sie@firma.de' },
