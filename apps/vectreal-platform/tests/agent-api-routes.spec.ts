@@ -34,8 +34,12 @@ vi.mock('../app/lib/domain/agent/agent-request.server', () => ({
 	authorizeAgentRequest
 }))
 
-/** Public by design: the CLI asks it before it has a token. */
-const PUBLIC_ROUTES = new Set(['/api/v1/cli/client'])
+const PUBLIC_ROUTES = new Set([
+	// Public by design: the CLI asks it before it has a token.
+	'/api/v1/cli/client',
+	// Serves nothing: a path no route answers, coded 404 by the layout.
+	'/api/v1/*'
+])
 
 interface ServedRoute {
 	path: string
@@ -87,7 +91,8 @@ describe('agent API routes', () => {
 				'/api/v1/scenes/:sceneid/publication',
 				'/api/v1/scenes/:sceneid/embed',
 				'/api/v1/scenes/:sceneid/settings',
-				'/api/v1/cli/client'
+				'/api/v1/cli/client',
+				'/api/v1/*'
 			])
 		)
 	})

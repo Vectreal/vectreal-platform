@@ -33,7 +33,10 @@ describe('the API reference', () => {
 	})
 
 	it('lists every /api/v1 route the app serves', async () => {
-		const v1 = paths(await routes).filter((path) => path.startsWith('api/v1/'))
+		const v1 = paths(await routes).filter(
+			// The catch-all serves nothing to document.
+			(path) => path.startsWith('api/v1/') && path !== 'api/v1/*'
+		)
 		expect(v1.length).toBeGreaterThan(0)
 		for (const path of v1) {
 			// As an endpoint table row, not a mention in the prose.
