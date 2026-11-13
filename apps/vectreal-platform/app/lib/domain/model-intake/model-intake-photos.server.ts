@@ -20,7 +20,9 @@ const OUTPUT_BY_FORMAT = {
 } as const
 
 /**
- * Turns the three uploads into the files that are stored.
+ * Turns the uploads into the files that are stored. Whether there are enough
+ * of them is the submission's rule (`isIntakePhotoCountAcceptable`), since it
+ * depends on the link; this only refuses more than the form has slots for.
  *
  * The format is read from the bytes, never from the name or the browser's
  * type, so a renamed file is refused for what it is. Every photo is
@@ -36,7 +38,7 @@ export async function prepareIntakePhotos(
 	| { ok: true; photos: IntakePhoto[] }
 	| { ok: false; fieldErrors: ModelIntakeFieldErrors }
 > {
-	if (files.length !== MODEL_INTAKE_PHOTO_COUNT) {
+	if (files.length > MODEL_INTAKE_PHOTO_COUNT) {
 		return { ok: false, fieldErrors: { photos: 'photosCount' } }
 	}
 
