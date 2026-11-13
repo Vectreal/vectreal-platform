@@ -32,9 +32,13 @@ on:
       - 'packages/viewer/**'
       - 'apps/vectreal-platform/app/components/**'
 
+# Each kind of event gets its own group. A shared one let any unrelated label
+# (each fires its own `labeled` run, skipped by the job's `if`) cancel the PR's
+# one automatic upload or a requested `chromatic` build while it ran. Only main
+# cancels in progress, since its next build covers the newer merge anyway.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-chromatic
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.label.name || github.event.action || 'push' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 permissions:
   actions: write
