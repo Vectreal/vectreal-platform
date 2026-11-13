@@ -1,5 +1,6 @@
 import { Vector3 } from 'three'
 
+import type { ViewerMessages } from '../../locales/en'
 import type { OrbitControls } from '@react-three/drei'
 import type { ControlsProps } from '@vctrl/core'
 import type { ComponentRef } from 'react'
@@ -60,15 +61,21 @@ export function resolveViewerKeys(
 	}
 }
 
+const KEY_HELP: Record<keyof ViewerKeys, keyof ViewerMessages> = {
+	rotate: 'keyHelpRotate',
+	pan: 'keyHelpPan',
+	zoom: 'keyHelpZoom',
+	home: 'keyHelpHome'
+}
+
 /** What a screen reader announces after the viewer's name. */
-export function describeViewerKeys(keys: ViewerKeys): string {
-	return [
-		keys.rotate && 'Arrow keys rotate the view.',
-		keys.pan && 'Shift and arrow keys pan.',
-		keys.zoom && 'Plus and minus zoom.',
-		keys.home && 'Home resets the view.'
-	]
-		.filter(Boolean)
+export function describeViewerKeys(
+	keys: ViewerKeys,
+	messages: ViewerMessages
+): string {
+	return (['rotate', 'pan', 'zoom', 'home'] as const)
+		.filter((key) => keys[key])
+		.map((key) => messages[KEY_HELP[key]])
 		.join(' ')
 }
 

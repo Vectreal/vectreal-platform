@@ -1,3 +1,4 @@
+import type { ViewerMessages } from '../locales/en'
 import type { ViewerKeys } from './scene/viewer-keys'
 
 /** How the visitor is moving the scene, which decides how a hint is worded. */
@@ -5,22 +6,19 @@ export type InteractionInput = 'mouse' | 'touch' | 'keys'
 
 type Action = 'rotate' | 'zoom' | 'pan'
 
-const PHRASES: Record<InteractionInput, Record<Action, string>> = {
-	mouse: {
-		rotate: 'drag to rotate',
-		zoom: 'scroll to zoom',
-		pan: 'right-drag to pan'
-	},
-	touch: {
-		rotate: 'drag to rotate',
-		zoom: 'pinch to zoom',
-		pan: 'drag with two fingers to pan'
-	},
-	keys: {
-		rotate: 'arrow keys rotate',
-		zoom: 'plus and minus zoom',
-		pan: 'Shift and the arrows pan'
-	}
+const PHRASES: Record<
+	InteractionInput,
+	Record<Action, keyof ViewerMessages>
+> = {
+	mouse: { rotate: 'mouseRotate', zoom: 'mouseZoom', pan: 'mousePan' },
+	touch: { rotate: 'touchRotate', zoom: 'touchZoom', pan: 'touchPan' },
+	keys: { rotate: 'keysRotate', zoom: 'keysZoom', pan: 'keysPan' }
+}
+
+const INPUT_NAMES: Record<InteractionInput, keyof ViewerMessages> = {
+	mouse: 'howToMoveMouse',
+	touch: 'howToMoveTouch',
+	keys: 'howToMoveKeys'
 }
 
 const ACTIONS: Action[] = ['rotate', 'zoom', 'pan']
@@ -31,27 +29,28 @@ const ACTIONS: Action[] = ['rotate', 'zoom', 'pan']
  */
 export function describeInteraction(
 	keys: Pick<ViewerKeys, Action>,
-	input: InteractionInput
+	input: InteractionInput,
+	messages: ViewerMessages
 ): string {
 	const line = ACTIONS.filter((action) => keys[action])
-		.map((action) => PHRASES[input][action])
+		.map((action) => messages[PHRASES[input][action]])
 		.join(', ')
 	return line && line[0].toUpperCase() + line.slice(1)
 }
 
-/** Every input's line, for help a visitor opens rather than one shown to them. */
+/**
+ * The "How to move" heading and every input's line, for help a visitor opens
+ * rather than one shown to them.
+ */
 export function describeHowToMove(
-	keys: Pick<ViewerKeys, Action>
-): { input: string; text: string }[] {
-	const labels: Record<InteractionInput, string> = {
-		mouse: 'Mouse',
-		touch: 'Touch',
-		keys: 'Keyboard'
-	}
-	return (Object.keys(labels) as InteractionInput[])
+	keys: Pick<ViewerKeys, Action>,
+	messages: ViewerMessages
+): { heading: string; lines: { input: string; text: string }[] } {
+	const lines = (Object.keys(INPUT_NAMES) as InteractionInput[])
 		.map((input) => ({
-			input: labels[input],
-			text: describeInteraction(keys, input)
+			input: messages[INPUT_NAMES[input]],
+			text: describeInteraction(keys, input, messages)
 		}))
 		.filter(({ text }) => text)
+	return { heading: messages.howToMove, lines }
 }

@@ -1,4 +1,5 @@
-import { updateSceneSettingsInputSchema } from '@vctrl/sdk'
+import { VIEWER_LOCALES as CORE_VIEWER_LOCALES } from '@vctrl/core'
+import { updateSceneSettingsInputSchema, VIEWER_LOCALES } from '@vctrl/sdk'
 import { describe, expect, it } from 'vitest'
 
 import { applySceneSettingsPatch } from './scene-settings-patch'
@@ -37,6 +38,20 @@ describe('a presentation patch', () => {
 				presentation: { locale: 'fr' }
 			}).success
 		).toBe(false)
+	})
+
+	it('accepts a language tag by its language, and the same languages core does', () => {
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { locale: 'de-AT' }
+			}).success
+		).toBe(true)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { locale: 'not a tag' }
+			}).success
+		).toBe(false)
+		expect(VIEWER_LOCALES).toEqual(CORE_VIEWER_LOCALES)
 	})
 })
 
