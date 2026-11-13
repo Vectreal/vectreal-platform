@@ -151,3 +151,53 @@ describe('the bands a contained thumbnail leaves', () => {
 		expect(container.querySelector('canvas')).toBeNull()
 	})
 })
+
+describe('the loading thumbnail never shows as a broken image', () => {
+	const renderBackdrop = (src = '/thumb.webp') =>
+		render(
+			<LoadingThumbnailBackdrop
+				thumbnail={{ src, alt: 'Scene loading thumbnail' }}
+				isLoaded={false}
+			/>
+		)
+
+	it('stays invisible until the image has loaded, then shows', () => {
+		const { container } = renderBackdrop()
+		const image = container.querySelector('img')
+		expect(classesOf(image)).toContain('vv:invisible')
+
+		fireEvent.load(image as HTMLImageElement)
+		expect(classesOf(container.querySelector('img'))).not.toContain(
+			'vv:invisible'
+		)
+	})
+
+	it('leaves the image out when it fails to load', () => {
+		const { container } = renderBackdrop()
+		fireEvent.error(container.querySelector('img') as HTMLImageElement)
+		expect(container.querySelector('img')).toBeNull()
+	})
+
+	it('hides again while a new thumbnail loads, and tries one that replaced a failure', () => {
+		const { container, rerender } = renderBackdrop('/a.webp')
+		fireEvent.load(container.querySelector('img') as HTMLImageElement)
+
+		rerender(
+			<LoadingThumbnailBackdrop
+				thumbnail={{ src: '/b.webp', alt: 'Scene loading thumbnail' }}
+				isLoaded={false}
+			/>
+		)
+		expect(classesOf(container.querySelector('img'))).toContain('vv:invisible')
+		fireEvent.error(container.querySelector('img') as HTMLImageElement)
+		expect(container.querySelector('img')).toBeNull()
+
+		rerender(
+			<LoadingThumbnailBackdrop
+				thumbnail={{ src: '/c.webp', alt: 'Scene loading thumbnail' }}
+				isLoaded={false}
+			/>
+		)
+		expect(container.querySelector('img')?.getAttribute('src')).toBe('/c.webp')
+	})
+})
