@@ -24,14 +24,14 @@ jobs:
   # project, since a called workflow has no affected range).
   #
   # One green run for this SHA is not enough: a push run checks only what is
-  # affected since the previous push, so a failed or cancelled run earlier on
-  # main leaves that commit's changes unchecked behind a later green one. So
-  # the check walks every commit since the last successful production deploy
-  # (by SHA, from the compare API) and requires that none has a CI - Quality
-  # push run without a success, and that this commit has a green one. A commit
-  # with no run is one CI - Quality's push paths skip, or an inner commit of a
-  # multi-commit push the tip's run covered. Anything else, an API error
-  # included, falls through to the full gate.
+  # affected since the previous push, so a failed, cancelled or missing run
+  # earlier on main leaves that commit's changes unchecked behind a later green
+  # one. So the check walks every commit since the last successful production
+  # deploy (by SHA, from the compare API) and requires a green CI - Quality
+  # push run on main for each one, looked up by its exact SHA. Anything else,
+  # an API error included, falls through to the full gate. That includes the
+  # inner commits of a multi-commit push, which have no run of their own:
+  # main takes squash merges, so that costs a rare extra full gate.
   main-gate-status:
     name: Check main's gate for this commit
     runs-on: ubuntu-latest
@@ -62,17 +62,16 @@ jobs:
           status=$(jq -r .status <<<"$compare")
           [[ "$status" == ahead || "$status" == identical ]] || verdict false "$SHA does not descend from the last production deploy ($last); running the full gate."
           [[ $(jq '.total_commits == (.commits | length)' <<<"$compare") == true ]] || verdict false "Too many commits since the last production deploy to check; running the full gate."
-          since=$(gh api "repos/$REPO/commits/$last" --jq .commit.committer.date)
-          runs=$(gh api --paginate "repos/$REPO/actions/workflows/ci-quality.yaml/runs?event=push&branch=main&created=>=$since&per_page=100" --jq '.workflow_runs[] | [.head_sha, (.conclusion // "pending")] | @tsv')
-
           for commit in $(jq -r '.commits[].sha' <<<"$compare"); do
-            conclusions=$(awk -v c="$commit" '$1 == c { print $2 }' <<<"$runs")
-            if [[ -n "$conclusions" ]] && ! grep -qx success <<<"$conclusions"; then
-              verdict false "CI - Quality on main has no green run for $commit ($(paste -sd, - <<<"$conclusions")); running the full gate."
-            fi
+            conclusions=$(gh api "repos/$REPO/actions/workflows/ci-quality.yaml/runs?head_sha=$commit&event=push&branch=main" --jq '.workflow_runs[] | (.conclusion // "pending")')
+            grep -qx success <<<"$conclusions" \
+              || verdict false "CI - Quality on main has no green run for $commit (${conclusions:-no run}); running the full gate."
           done
-          awk -v c="$SHA" '$1 == c && $2 == "success"' <<<"$runs" | grep -q . \
-            || verdict false "No green CI - Quality push run for $SHA yet; running the full gate."
+          if [[ "$status" == identical ]]; then
+            conclusions=$(gh api "repos/$REPO/actions/workflows/ci-quality.yaml/runs?head_sha=$SHA&event=push&branch=main" --jq '.workflow_runs[] | (.conclusion // "pending")')
+            grep -qx success <<<"$conclusions" \
+              || verdict false "No green CI - Quality push run for $SHA; running the full gate."
+          fi
           verdict true "Every CI - Quality push run on main from $last to $SHA passed; skipping the gate."
 
   quality-gate:

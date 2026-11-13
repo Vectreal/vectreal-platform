@@ -13,43 +13,24 @@ on:
   merge_group:
     branches:
       - 'main'
+  # No paths filter here either. A push run checks only what is affected since
+  # the previous push, so a commit the filter skipped was never checked by any
+  # run, and the production deploy can skip its own gate only when every main
+  # commit has a green run (cd-platform-production.yaml).
   push:
     branches:
       - 'main'
-    paths:
-      - 'apps/vectreal-platform/**'
-      - 'apps/img-to-3d-runtime/**'
-      - 'packages/core/**'
-      - 'packages/embed/**'
-      - 'packages/hooks/**'
-      - 'packages/sdk/**'
-      - 'packages/viewer/**'
-      - 'packages/viewer-e2e/**'
-      - 'shared/**'
-      - 'storybook/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'nx.json'
-      - 'eslint.config.mts'
-      - 'vitest.shared.mts'
-      - 'vitest.setup.mts'
-      - 'tsconfig.base.json'
-      - '.github/workflows/ci-quality.yaml'
-      - '.github/workflows/cd-platform-staging.yaml'
-      - '.github/workflows/cd-platform-production.yaml'
 
 permissions:
   contents: read
 
-# A push to main gets a group of its own commit, so it is never cancelled. Each
-# push run checks only what is affected since the previous push, so a cancelled
-# one left that commit's changes unchecked behind the next green run, and the
-# production deploy can only skip its gate when every main commit since the
-# last deploy has a green run of its own (cd-platform-production.yaml). Pull
-# requests still cancel superseded runs.
+# A push to main gets a group of its own commit, so it is never cancelled: a
+# cancelled push run leaves its commit unchecked behind the next green one, for
+# the same reason as the missing paths filter above. Pull requests still cancel
+# superseded runs. A called run sees its caller's event, never `workflow_call`,
+# so the production gate falls to the ref group, which nothing else shares now.
 concurrency:
-  group: ${{ github.event_name == 'workflow_call' && format('ci-quality-called-{0}', github.run_id) || github.event_name == 'push' && format('ci-quality-push-{0}', github.sha) || format('ci-quality-{0}', github.event.pull_request.number || github.ref) }}
+  group: ${{ github.event_name == 'push' && format('ci-quality-push-{0}', github.sha) || format('ci-quality-{0}', github.event.pull_request.number || github.ref) }}
   cancel-in-progress: true
 
 jobs:
