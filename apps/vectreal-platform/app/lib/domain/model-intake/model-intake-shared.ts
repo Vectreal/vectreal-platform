@@ -274,6 +274,109 @@ export const MODEL_INTAKE_MAX_TEXT_LENGTH = 200
 /** Longer than any share link a cloud drive or planner portal hands out, short of a pasted essay. */
 export const MODEL_INTAKE_MAX_LINK_LENGTH = 2048
 
+/**
+ * What staff may attach to a request after downloading it from the brand's
+ * link: CAD and 3D formats, video, archives, images and PDFs. A closed list,
+ * so the private bucket never holds a page a browser would run.
+ */
+export const MODEL_INTAKE_ATTACHMENT_EXTENSIONS = [
+	// CAD and 3D
+	'step',
+	'stp',
+	'iges',
+	'igs',
+	'stl',
+	'obj',
+	'mtl',
+	'fbx',
+	'glb',
+	'gltf',
+	'usdz',
+	'usd',
+	'3dm',
+	'3ds',
+	'dae',
+	'dwg',
+	'dxf',
+	'skp',
+	'blend',
+	'ply',
+	'ifc',
+	'sldprt',
+	'sldasm',
+	'x_t',
+	'x_b',
+	'f3d',
+	'ipt',
+	'iam',
+	'3mf',
+	// video
+	'mp4',
+	'mov',
+	'm4v',
+	'webm',
+	// archives
+	'zip',
+	'7z',
+	'rar',
+	// images and documents
+	'jpg',
+	'jpeg',
+	'png',
+	'webp',
+	'heic',
+	'heif',
+	'tif',
+	'tiff',
+	'pdf'
+] as const
+
+/**
+ * The largest attachment, about a 4K minute of video. Supabase's project-wide
+ * upload limit applies on top, so production's must be at least this.
+ */
+export const MODEL_INTAKE_MAX_ATTACHMENT_BYTES = 1024 * 1024 * 1024
+
+/** What the file input offers. The server checks the name and size again. */
+export const MODEL_INTAKE_ATTACHMENT_ACCEPT =
+	MODEL_INTAKE_ATTACHMENT_EXTENSIONS.map((extension) => `.${extension}`).join(
+		','
+	)
+
+const MAX_ATTACHMENT_NAME_LENGTH = 120
+
+/**
+ * The name an attachment is stored under, or null when its type is not
+ * allowed. Anything but letters, digits, dot, dash and underscore becomes a
+ * dash, so the name is one path segment the bucket and a download both accept.
+ */
+export function intakeAttachmentName(raw: string): string | null {
+	const extension = raw.split('.').pop()?.toLowerCase() ?? ''
+	if (
+		!raw.includes('.') ||
+		!MODEL_INTAKE_ATTACHMENT_EXTENSIONS.includes(
+			extension as (typeof MODEL_INTAKE_ATTACHMENT_EXTENSIONS)[number]
+		)
+	) {
+		return null
+	}
+	const stem = raw
+		.slice(0, raw.length - extension.length - 1)
+		.replace(/[^A-Za-z0-9._-]+/g, '-')
+		.replace(/^[.-]+/, '')
+		.slice(0, MAX_ATTACHMENT_NAME_LENGTH - extension.length - 1)
+	return `${stem || 'file'}.${extension}`
+}
+
+/** Whether a declared attachment size is one the bucket should take. */
+export function isIntakeAttachmentSizeAcceptable(bytes: number): boolean {
+	return (
+		Number.isInteger(bytes) &&
+		bytes > 0 &&
+		bytes <= MODEL_INTAKE_MAX_ATTACHMENT_BYTES
+	)
+}
+
 /** Deletion runs this long after delivery, or after receipt while undelivered. */
 export const MODEL_INTAKE_RETENTION_DAYS = 90
 
