@@ -3,9 +3,11 @@
  * The save panel reports how a save went, so the save action toasts only what
  * the panel cannot show: a failure while the publish panel covers it.
  */
+import { format } from 'node:util'
+
 import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePublisherSaveAction } from './use-publisher-save-action'
 import {
@@ -15,6 +17,7 @@ import {
 import { dispatchSaveProgressAtom } from '../lib/stores/save-progress-store'
 
 import type { ReactNode } from 'react'
+import type { MockInstance } from 'vitest'
 
 const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
 
@@ -57,9 +60,17 @@ const runFailingSave = async ({
 	await act(() => result.current.handleSaveScene())
 }
 
+let consoleError: MockInstance<typeof console.error>
 beforeEach(() => {
 	toastError.mockReset()
-	vi.spyOn(console, 'error').mockImplementation(() => {})
+	consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+	/* A failed save is logged. That, and nothing else. */
+	for (const args of consoleError.mock.calls) {
+		expect(format(...args)).toMatch(/^Error saving scene settings:/)
+	}
 })
 
 describe('usePublisherSaveAction', () => {

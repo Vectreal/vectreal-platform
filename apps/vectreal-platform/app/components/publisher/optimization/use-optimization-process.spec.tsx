@@ -568,7 +568,7 @@ describe('useOptimizationProcess', () => {
 		})
 
 		it('falls back to the saved version when it cannot be read, and tries again on the next opening', async () => {
-			vi.spyOn(console, 'warn').mockImplementation(() => {})
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 			const fetchSpy = vi.fn(async () => new Response(null, { status: 500 }))
 			vi.stubGlobal('fetch', fetchSpy)
 			const { result, store } = renderProcess()
@@ -587,6 +587,11 @@ describe('useOptimizationProcess', () => {
 			act(() => rerenderHook.current())
 
 			await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
+			// Each failed read says so, and nothing else warns.
+			expect(warn).toHaveBeenCalled()
+			for (const [message] of warn.mock.calls) {
+				expect(message).toBe('[optimization] the kept original did not load')
+			}
 		})
 
 		it('never states an older original after a newer one has loaded', async () => {

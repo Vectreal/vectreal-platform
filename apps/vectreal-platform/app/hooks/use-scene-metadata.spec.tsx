@@ -15,6 +15,8 @@
  * resetting `status` on every revalidation, or only on a name change or only
  * on another scene, reddens a save-result case.
  */
+import { format } from 'node:util'
+
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -97,7 +99,9 @@ describe('useSceneMetadata drafts', () => {
 			'fetch',
 			vi.fn(async () => Response.json({ error: 'nope' }, { status: 500 }))
 		)
-		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const logged = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => undefined)
 		const { result, rerender } = renderMetadata()
 
 		act(() => {
@@ -111,6 +115,10 @@ describe('useSceneMetadata drafts', () => {
 
 		rerender({ scene: { ...stored, name: 'Renamed elsewhere' } })
 		expect(result.current.status).toBe('idle')
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(/^Failed to update scene metadata:/)
+		}
 	})
 
 	it.each([
@@ -121,7 +129,9 @@ describe('useSceneMetadata drafts', () => {
 			'fetch',
 			vi.fn(async () => Response.json({ error: 'nope' }, { status: 500 }))
 		)
-		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const logged = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => undefined)
 		const { result, rerender } = renderMetadata()
 
 		act(() => {
@@ -132,6 +142,10 @@ describe('useSceneMetadata drafts', () => {
 
 		rerender({ scene: { ...stored, ...change } })
 		expect(result.current.status).toBe('idle')
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(/^Failed to update scene metadata:/)
+		}
 	})
 
 	it('resets both drafts when the page moves to another scene', () => {

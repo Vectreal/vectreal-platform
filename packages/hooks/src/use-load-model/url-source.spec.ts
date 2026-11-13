@@ -214,7 +214,7 @@ describe("load({ kind: 'url' })", () => {
 	})
 
 	it('still reports a parse failure that follows a late abort', async () => {
-		vi.spyOn(console, 'error').mockImplementation(() => {})
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		stubFetch(async () => new Response(GLB))
 		const controller = new AbortController()
 		let fail = (_error: Error) => {}
@@ -229,8 +229,9 @@ describe("load({ kind: 'url' })", () => {
 				init: { signal: controller.signal }
 			})
 		})
-		await vi.waitFor(() => expect(loader.contexts).toHaveLength(1))
-		controller.abort()
+		// Inside act: the loader reports its first progress while this waits.
+		await act(() => vi.waitFor(() => expect(loader.contexts).toHaveLength(1)))
+		await act(async () => controller.abort())
 		await act(async () => {
 			fail(new Error('not a valid glTF'))
 			await loading
@@ -238,6 +239,12 @@ describe("load({ kind: 'url' })", () => {
 
 		expect((await loading).status).toBe('error')
 		expect(result.current.status).toBe('error')
+		expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (url):',
+			expect.objectContaining({
+				message: expect.stringContaining('not a valid glTF')
+			})
+		)
 	})
 
 	it('aborts the fetch on reset', async () => {

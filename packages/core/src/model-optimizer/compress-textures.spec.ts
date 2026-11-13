@@ -11,6 +11,8 @@
  * `toFormat`, `resize`, `toBuffer` - and can fail chosen textures, by the order
  * they are encoded in, or be held open so a race can be ordered.
  */
+import { format } from 'node:util'
+
 import { Document, WebIO } from '@gltf-transform/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -343,12 +345,19 @@ describe('ModelOptimizer.compressTextures', () => {
 			throw new Error('sharp is not installed here')
 		})
 		const optimizer = await loaded()
-		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const logged = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
 		await optimizer.compressTextures({ targetFormat: 'webp' })
 
 		expect(optimizer.getAppliedOptimizations()).toEqual([
 			'basic texture optimization'
+		])
+		// The encoder that failed, then the fallback that ran instead.
+		expect(logged.mock.calls.map((args) => format(...args))).toEqual([
+			expect.stringMatching(
+				/^Sharp-based compression failed, applying basic optimization:/
+			),
+			expect.stringMatching(/^Applied basic texture optimization/)
 		])
 	})
 
