@@ -287,6 +287,7 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 			altText: z.string().optional(),
 			showFullscreenButton: z.boolean().optional(),
 			showInteractionHint: z.boolean().optional(),
+			unloadWhenOffscreen: z.boolean().optional(),
 			interactionStart: z.enum(['immediate', 'tap']).optional(),
 			locale: z.enum(['en', 'de']).optional()
 		})

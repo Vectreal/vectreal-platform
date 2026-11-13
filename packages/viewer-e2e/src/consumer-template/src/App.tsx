@@ -4,6 +4,7 @@ import { Component, useEffect, useState, type ReactNode } from 'react'
 
 import { CameraEchoCase } from './CameraEchoCase'
 import { OcclusionBakeCase } from './OcclusionBakeCase'
+import { OffscreenCase } from './OffscreenCase'
 import { TapCase } from './TapCase'
 
 /*
@@ -216,6 +217,8 @@ export default function App() {
 	if (search.has('occlusion-bake')) return <OcclusionBakeCase />
 	if (search.has('camera-echo')) return <CameraEchoCase />
 	if (search.has('hint-case')) return <HintCase />
+	if (search.has('offscreen-case'))
+		return <OffscreenCase unload={search.get('offscreen-case') !== 'pause'} />
 	if (search.has('tap-case'))
 		return (
 			<TapCase
