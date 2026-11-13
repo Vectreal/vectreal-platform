@@ -251,14 +251,14 @@ describe('the publish panel', () => {
 		expect(store.get(presentationAtom).showInteractionHint).toBe(false)
 	})
 
-	it('waits for a tap on a new scene, and asks the button language only then', () => {
+	it('waits for a tap on a new scene, and asks the viewer language whatever the start', () => {
 		const store = renderPanel(balancedPreset)
 		const start = screen.getByRole('radiogroup', { name: 'Start moving' })
 		expect(
 			within(start).getByRole('radio', { name: 'After a tap' })
 		).toBeChecked()
 
-		const language = screen.getByRole('radiogroup', { name: 'Button language' })
+		const language = screen.getByRole('radiogroup', { name: 'Viewer language' })
 		fireEvent.click(within(language).getByRole('radio', { name: 'Deutsch' }))
 		expect(store.get(presentationAtom).locale).toBe('de')
 		fireEvent.click(within(language).getByRole('radio', { name: 'Browser' }))
@@ -267,8 +267,8 @@ describe('the publish panel', () => {
 		fireEvent.click(within(start).getByRole('radio', { name: 'Right away' }))
 		expect(store.get(presentationAtom).interactionStart).toBe('immediate')
 		expect(
-			screen.queryByRole('radiogroup', { name: 'Button language' })
-		).toBeNull()
+			screen.getByRole('radiogroup', { name: 'Viewer language' })
+		).toBeTruthy()
 	})
 
 	it('stores alt text for the viewer, and forgets it once cleared', () => {

@@ -2,11 +2,10 @@ import { CHROME_BUTTON } from './chrome-classes'
 import { cn } from './class-names'
 
 import type { InteractionInput } from './interaction-help'
-
-type Language = 'en' | 'de'
+import type { ViewerLanguage } from './viewer-language'
 
 const WORDS: Record<
-	Language,
+	ViewerLanguage,
 	{ touch: string; mouse: string; done: string; doneLabel: string }
 > = {
 	en: {
@@ -23,19 +22,9 @@ const WORDS: Record<
 	}
 }
 
-/**
- * The language of the viewer's own words: the scene's locale when it names
- * one, else the visitor's browser. German for any `de`, English otherwise.
- */
-export function resolveViewerLanguage(locale: string | undefined): Language {
-	const tag =
-		locale ?? (typeof navigator !== 'undefined' ? navigator.language : '')
-	return tag.toLowerCase().startsWith('de') ? 'de' : 'en'
-}
-
 /** What the start button and the way back say, for a language and an input. */
 export function tapToActivateWords(
-	language: Language,
+	language: ViewerLanguage,
 	input: InteractionInput
 ): { start: string; done: string; doneLabel: string } {
 	const words = WORDS[language]

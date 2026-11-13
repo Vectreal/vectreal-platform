@@ -657,8 +657,9 @@ export interface ScenePresentationSettings {
 	 */
 	interactionStart?: SceneInteractionStart
 	/**
-	 * The language of the words the viewer itself shows a visitor, such as
-	 * "Zum Drehen tippen". Absent, the visitor's browser language decides.
+	 * The language of the words the viewer itself shows a visitor: the tap
+	 * button ("Zum Drehen tippen"), the first-time hint and "How to move".
+	 * Absent, the visitor's browser language decides.
 	 */
 	locale?: SceneLocale
 }

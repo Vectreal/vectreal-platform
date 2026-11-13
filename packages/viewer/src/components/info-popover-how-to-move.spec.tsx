@@ -1,22 +1,27 @@
 // @vitest-environment jsdom
 /**
  * The popover's "How to move" lines follow the keys the viewer takes now,
- * not the scene's saved controls, so a host's override is in them.
+ * not the scene's saved controls, so a host's override is in them, and speak
+ * the viewer's language.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import { InfoPopoverHowToMove } from './info-popover-how-to-move'
 import { ViewerKeysContext } from './viewer-keys-context'
+import { ViewerLanguageContext } from './viewer-language'
 
 import type { ViewerKeys } from './scene/viewer-keys'
+import type { ViewerLanguage } from './viewer-language'
 
 const NONE: ViewerKeys = { rotate: false, zoom: false, pan: false, home: false }
 
-const renderIn = (keys: ViewerKeys | null) =>
+const renderIn = (keys: ViewerKeys | null, language: ViewerLanguage = 'en') =>
 	render(
 		<ViewerKeysContext.Provider value={keys}>
-			<InfoPopoverHowToMove />
+			<ViewerLanguageContext.Provider value={language}>
+				<InfoPopoverHowToMove />
+			</ViewerLanguageContext.Provider>
 		</ViewerKeysContext.Provider>
 	)
 
@@ -27,6 +32,13 @@ describe('InfoPopoverHowToMove', () => {
 		expect(screen.getByText('Keyboard')).toBeTruthy()
 		expect(screen.getByText('Arrow keys rotate')).toBeTruthy()
 		expect(screen.queryByText(/zoom/)).toBeNull()
+	})
+
+	it("speaks the viewer's language", () => {
+		renderIn({ ...NONE, rotate: true }, 'de')
+		expect(screen.getByText('Bedienung')).toBeTruthy()
+		expect(screen.getByText('Tastatur')).toBeTruthy()
+		expect(screen.getByText('Pfeiltasten drehen')).toBeTruthy()
 	})
 
 	it('says nothing when nothing moves, as when a host turned the controls off', () => {

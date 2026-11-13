@@ -32,9 +32,13 @@ describe('the interaction hint is wired into the viewer', () => {
 		)
 	})
 
-	it('words it from the keys the viewer takes', () => {
+	it("words it from the keys the viewer takes, in the scene's language", () => {
+		expect(source).toMatch(/const language = resolveViewerLanguage\(locale\)/)
 		expect(source).toMatch(
-			/describeInteraction\(\s*viewerKeys,\s*interactionHint\.input\s*\)/
+			/describeInteraction\(\s*viewerKeys,\s*interactionHint\.input,\s*language\s*\)/
+		)
+		expect(source).toMatch(
+			/<ViewerLanguageContext\.Provider value=\{language\}>/
 		)
 	})
 
