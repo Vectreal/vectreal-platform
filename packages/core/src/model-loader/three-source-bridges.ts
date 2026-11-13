@@ -103,6 +103,14 @@ const parseSTL: ThreeSourceBridge = async (bytes) => {
 	const geometry = new STLLoader().parse(toArrayBuffer(bytes))
 
 	/*
+	  The facet normal an STL stores is redundant with its vertex order, and
+	  many writers leave it at 0 0 0. Kept, those zeros reached the exporter,
+	  which swapped each for (1, 0, 0) and lit the part from the side. The
+	  geometry is unindexed, so this is one normal per facet from its winding.
+	*/
+	geometry.computeVertexNormals()
+
+	/*
 	  STL to glTF is a change of up axis, and skipping it writes a broken file
 	  rather than an oddly framed preview.
 
