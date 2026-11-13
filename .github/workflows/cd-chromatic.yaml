@@ -1,7 +1,15 @@
 name: CD - Publish Storybook to Chromatic
 
 # Paths mirror the `stories` globs in storybook/.storybook/main.ts. A story
-# directory left out here never gets a PR build when only its own files change.
+# directory left out here never gets a build when only its own files change.
+#
+# Main builds on every merge that touches them. That is what keeps TurboSnap's
+# baseline valid: a build's ancestor is the most recent commit in git history
+# with a Chromatic build, and squash merges never carry a PR's builds onto
+# main. Without main builds, every PR would diff against an ever older commit
+# until a package or Storybook config change in that diff forced a full
+# re-snapshot of every story, which is what burned the quota from 20 October to
+# 7 November.
 on:
   push:
     branches:
@@ -12,10 +20,12 @@ on:
       - 'packages/viewer/**'
       - 'apps/vectreal-platform/app/components/**'
       - '.github/workflows/cd-chromatic.yaml'
+  # A PR uploads at most once on its own: when it is opened ready for review, or
+  # when a draft is marked ready, and only if it changes the design system or
+  # app components (see the scope step). Pushes after that do not upload. The
+  # `chromatic` label uploads once on demand and is removed after the build.
   pull_request:
-    # `labeled` lets adding the `chromatic` label start a build on a PR whose
-    # last push did not upload.
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, ready_for_review, labeled]
     paths:
       - 'storybook/**'
       - 'shared/components/**'
@@ -29,6 +39,8 @@ concurrency:
 permissions:
   actions: write
   contents: read
+  # Removing the `chromatic` label after a labeled build.
+  pull-requests: write
 
 jobs:
   chromatic:
@@ -41,10 +53,13 @@ jobs:
     # 248 runs and about half the billed snapshots between 2026-09-08 and
     # 2026-10-14, while changing nothing that renders.
     #
-    # Adding any other label is not a new commit, so it builds nothing.
+    # A draft is not uploaded; marking it ready is. Adding any other label is
+    # not a new commit, so it builds nothing.
     if: >-
       ${{ !startsWith(github.head_ref, 'release-please--') &&
-      (github.event.action != 'labeled' || github.event.label.name == 'chromatic') }}
+      (github.event_name == 'push' ||
+       (github.event.action == 'labeled' && github.event.label.name == 'chromatic') ||
+       (github.event.action != 'labeled' && !github.event.pull_request.draft)) }}
 
     # One Chromatic project for the whole workspace. The upload is skipped when
     # no token is configured, so the build and typecheck still run either way.
@@ -52,10 +67,41 @@ jobs:
       CHROMATIC_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN_1 }}
 
     steps:
+      # On pull_request GitHub checks out a synthetic merge commit that exists
+      # in no branch. Build #728 ran on one (e256fef); Chromatic could not find
+      # it in git afterwards, fell back to an October build, and every main
+      # build re-snapshotted all stories for two and a half weeks. Build the PR
+      # head itself, as Chromatic's GitHub Actions docs prescribe.
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: 🎯 Decide whether this build uploads
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" = "push" ] || [ "$ACTION" = "labeled" ]; then
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Opened or marked ready: upload only for the shared design system and
+          # app components. Viewer, Publisher and Storybook-host changes upload
+          # on the `chromatic` label. Manifests and docs render nothing.
+          if git diff --name-only "$BASE_SHA"...HEAD \
+            | grep -E '^(shared/components/|apps/vectreal-platform/app/components/)' \
+            | grep -vE '^apps/vectreal-platform/app/components/publisher/' \
+            | grep -vE '(package\.json|\.md)$' \
+            | grep -q .; then
+            echo "upload=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "upload=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No design-system or app-component change. Add the chromatic label to publish this PR's Storybook for visual review."
+          fi
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v6
@@ -77,21 +123,19 @@ jobs:
         run: |
           echo "::notice::CHROMATIC_PROJECT_TOKEN_1 is not set. Storybook was built but not published."
 
-      # Every PR builds and type-checks Storybook above, but only a PR labeled
-      # `chromatic` uploads. Builds on every PR push were about 880 billed
-      # snapshots in five weeks against a 5,000 monthly allowance, and none of
-      # them could fail the PR (exitZeroOnChanges). Main always uploads, so the
-      # baselines a labeled PR compares against stay current.
-      - name: ⏭️ Chromatic upload not requested
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'chromatic')
-        run: |
-          echo "::notice::Storybook was built but not published. Add the chromatic label to this PR to publish it."
-
+      # Never a required check, and never able to fail the job: on the free plan
+      # Chromatic pauses testing once the month's snapshots are used up, and a
+      # paused or refused upload must not read as a broken PR. A Storybook that
+      # does not build still fails the step above.
       - name: ⚡ Publish to Chromatic
-        if: >-
-          env.CHROMATIC_TOKEN != '' &&
-          (github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'chromatic'))
+        id: chromatic
+        if: env.CHROMATIC_TOKEN != '' && steps.scope.outputs.upload == 'true'
+        continue-on-error: true
         uses: chromaui/action@v18
+        env:
+          CHROMATIC_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          CHROMATIC_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CHROMATIC_SLUG: ${{ github.repository }}
         with:
           projectToken: ${{ env.CHROMATIC_TOKEN }}
           workingDir: storybook
@@ -104,3 +148,22 @@ jobs:
           exitZeroOnChanges: ${{ github.event_name == 'pull_request' }}
           exitOnceUploaded: true
           onlyChanged: true
+          # A package.json change re-snapshots every story, and in this
+          # workspace most of them (release bumps, manifests of projects
+          # Storybook never imports) render nothing. Dependency versions are
+          # still traced through pnpm-lock.yaml.
+          untraced: '**/package.json'
+
+      - name: ⚠️ Chromatic upload did not complete
+        if: steps.chromatic.outcome == 'failure'
+        run: |
+          echo "::warning::Chromatic did not accept this build (snapshot limit reached, or the service refused it). Storybook built; visual review is unavailable for this run."
+
+      - name: 🏷️ Remove the chromatic label
+        if: always() && github.event.action == 'labeled'
+        # A fork's token is read-only; a label left in place must not fail the job.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label chromatic
