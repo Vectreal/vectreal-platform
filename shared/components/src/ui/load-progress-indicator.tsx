@@ -50,33 +50,40 @@ export const LoadProgressIndicator: FC<LoadProgressIndicatorProps> = ({
 	)
 
 	return (
-		<div
-			className={cn(
-				'flex flex-col items-center justify-center gap-3 text-center',
-				!visible && 'invisible',
-				className
-			)}
-		>
-			<span
-				role="progressbar"
-				aria-label={title}
-				aria-valuemin={0}
-				aria-valuemax={100}
-				aria-valuenow={percent ?? undefined}
-				aria-valuetext={detail ?? undefined}
-			>
-				<ProgressRing value={percent} className="text-orange size-7" />
-			</span>
-			{/* Drawn for the eye; the progress bar above carries both lines for a screen reader. */}
-			<span aria-hidden className="grid gap-0.5">
-				<span className="text-sm font-medium">{title}</span>
-				<span className="text-muted-foreground min-h-4 text-xs tabular-nums">
-					{detail}
-				</span>
-			</span>
+		<>
+			{/*
+			  Outside the delayed root and mounted from the start, so a screen
+			  reader already knows the region when its first title arrives; a
+			  region that appears and fills in one commit is often not read.
+			*/}
 			<span aria-live="polite" className="sr-only">
 				{visible ? title : ''}
 			</span>
-		</div>
+			<div
+				className={cn(
+					'flex flex-col items-center justify-center gap-3 text-center',
+					!visible && 'invisible',
+					className
+				)}
+			>
+				<span
+					role="progressbar"
+					aria-label={title}
+					aria-valuemin={0}
+					aria-valuemax={100}
+					aria-valuenow={percent ?? undefined}
+					aria-valuetext={detail ?? undefined}
+				>
+					<ProgressRing value={percent} className="text-orange size-7" />
+				</span>
+				{/* Drawn for the eye; the progress bar above carries both lines for a screen reader. */}
+				<span aria-hidden className="grid gap-0.5">
+					<span className="text-sm font-medium">{title}</span>
+					<span className="text-muted-foreground min-h-4 text-xs tabular-nums">
+						{detail}
+					</span>
+				</span>
+			</div>
+		</>
 	)
 }

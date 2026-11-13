@@ -12,7 +12,10 @@
  *  - round instead of floor and the 99.6% test goes red;
  *  - drop the effect's early `setVisible(true)` and the shortened-delay test
  *    goes red;
- *  - drop `aria-valuetext` and the numbers test goes red.
+ *  - drop `aria-valuetext` and the numbers test goes red;
+ *  - drop the effect's `clearTimeout`, or count `remaining` from the change
+ *    instead of from mount, and a `useDelayedVisible` test goes red;
+ *  - fill the live region before the delay ends and the fast-load test goes red.
  */
 import {
 	describeLoadProgress,
@@ -101,6 +104,27 @@ describe('useDelayedVisible', () => {
 		expect(result.current).toBe(true)
 	})
 
+	it('counts a lengthened delay from mount, not from the change', () => {
+		vi.useFakeTimers()
+		const { result, rerender } = renderHook(
+			({ delay }) => useDelayedVisible(delay),
+			{ initialProps: { delay: 300 } }
+		)
+		act(() => vi.advanceTimersByTime(200))
+		rerender({ delay: 500 })
+		act(() => vi.advanceTimersByTime(299))
+		expect(result.current).toBe(false)
+		act(() => vi.advanceTimersByTime(1))
+		expect(result.current).toBe(true)
+	})
+
+	it('leaves no timer behind when it unmounts first', () => {
+		vi.useFakeTimers()
+		const { unmount } = renderHook(() => useDelayedVisible(300))
+		unmount()
+		expect(vi.getTimerCount()).toBe(0)
+	})
+
 	it('shows at once when the delay is shortened past the time waited', () => {
 		vi.useFakeTimers()
 		const { result, rerender } = renderHook(
@@ -158,9 +182,14 @@ describe('LoadProgressIndicator', () => {
 			<LoadProgressIndicator progress={{ phase: 'parsing' }} />
 		)
 
-		const root = container.firstElementChild as HTMLElement
+		const root = container.querySelector('div') as HTMLElement
+		const live = container.querySelector('[aria-live="polite"]')
 		expect(root.className).toContain('invisible')
+		// Mounted, so the reader knows it, and empty, so a fast load says nothing.
+		expect(live?.textContent).toBe('')
+		expect(root.contains(live)).toBe(false)
 		act(() => vi.advanceTimersByTime(300))
 		expect(root.className).not.toContain('invisible')
+		expect(live?.textContent).toBe(LOAD_PROGRESS_WORDS.parsing)
 	})
 })
