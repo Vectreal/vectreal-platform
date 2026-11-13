@@ -47,6 +47,17 @@ describe('findCliClient', () => {
 		await expect(findCliClient()).resolves.toBeNull()
 	})
 
+	it('is null when no client is registered at all', async () => {
+		// GoTrue drops an empty `clients` array from the body, and auth-js
+		// spreads that body into `data`, so the key is simply missing.
+		listClients.mockResolvedValue({
+			data: { nextPage: null, lastPage: 0, total: 0 },
+			error: null
+		})
+
+		await expect(findCliClient()).resolves.toBeNull()
+	})
+
 	it('fails rather than reporting no client when the lookup fails', async () => {
 		listClients.mockResolvedValue({
 			data: { clients: [] },
