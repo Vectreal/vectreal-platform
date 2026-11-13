@@ -20,7 +20,7 @@ vi.mock('../embed/inline-embed-manifest.server', () => ({
 const P = '6f1c2a0e-1b7d-4c55-9a0e-0d3b9f6c1a11'
 const DEFAULT = '92aae012-e003-4b65-8bd8-dfd4dcd6399d'
 const LAMP = '4c5122c9-2058-4ac6-8b27-9d4b94a8be13'
-const OPTIONS = 'autoRotate=1&cameraControls=0&hotspots=0&hint=0'
+const OPTIONS = 'cameraControls=0&hotspots=0&hint=0'
 const request = new Request('https://vectreal.com/free-model?c=K7Q2M9AB')
 
 function fakes(overrides: Partial<IntakeSceneDeps> = {}): IntakeSceneDeps {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type RefObject, useEffect, useRef, useState } from 'react'
 
 /**
  * Hook to detect if an element is visible in the viewport using Intersection Observer.
@@ -41,4 +41,30 @@ export function useViewportDetection(
 	}, [enabled, options])
 
 	return [elementRef, isInViewport] as const
+}
+
+/**
+ * Whether at least half of the element is on screen, against the top-level
+ * viewport even from inside a cross-origin frame. True until measured.
+ */
+export function useMostlyVisible(
+	elementRef: RefObject<HTMLElement | null>,
+	enabled: boolean
+): boolean {
+	const [isMostlyVisible, setIsMostlyVisible] = useState(true)
+
+	useEffect(() => {
+		const element = elementRef.current
+		if (!enabled || !element || typeof IntersectionObserver === 'undefined') {
+			return
+		}
+		const observer = new IntersectionObserver(
+			([entry]) => setIsMostlyVisible(entry.intersectionRatio >= 0.5),
+			{ threshold: [0.5] }
+		)
+		observer.observe(element)
+		return () => observer.disconnect()
+	}, [elementRef, enabled])
+
+	return isMostlyVisible
 }

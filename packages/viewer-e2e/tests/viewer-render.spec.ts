@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
+import sharp from 'sharp'
 
 // These assertions run against a throwaway Vite app that installed
 // @vctrl/viewer from the local Verdaccio registry (i.e. the real published
@@ -260,6 +261,148 @@ test('the first-time hint says how to move, and goes on the first move', async (
 	await page.mouse.down()
 	await page.mouse.up()
 	await expect(hint).toHaveCount(0)
+})
+
+/** The color at the middle of the viewer, which fills the top 60% of the page. */
+async function viewerCenter(page: Page) {
+	const shot = await page.screenshot({
+		clip: { x: 638, y: 214, width: 4, height: 4 },
+		timeout: 5000
+	})
+	const { data } = await sharp(shot).raw().toBuffer({ resolveWithObject: true })
+	return [data[0], data[1], data[2]]
+}
+
+const isPageWhite = ([r, g, b]: number[]) => r > 240 && g > 240 && b > 240
+
+for (const [query, unloads] of [
+	['offscreen-case', true],
+	['offscreen-case=pause', false]
+] as const) {
+	test(`scrolled back into view, a viewer that ${unloads ? 'unloads' : 'pauses'} off-screen shows its scene at once`, async ({
+		page
+	}) => {
+		test.setTimeout(60000)
+		await page.goto(`/?${query}`)
+		await page.waitForFunction(
+			() => window.__VIEWER_READY__ === true,
+			undefined,
+			{
+				timeout: 30000
+			}
+		)
+		await expect
+			.poll(() => viewerCenter(page).then(isPageWhite), { timeout: 20000 })
+			.toBe(false)
+
+		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+		// Out by more than the viewer's own margin, so an unloading canvas goes.
+		await expect
+			.poll(() => page.locator('canvas[data-engine]').count(), {
+				timeout: 10000
+			})
+			.toBe(unloads ? 0 : 1)
+		// Unloaded, it holds a copy of its last frame, which is what shows on
+		// return until the new canvas draws.
+		expect(await page.locator('canvas:not([data-engine])').count()).toBe(
+			unloads ? 1 : 0
+		)
+
+		await page.evaluate(() => window.scrollTo(0, 0))
+		expect(isPageWhite(await viewerCenter(page))).toBe(false)
+	})
+}
+
+async function openTapCase(page: Page, query: string) {
+	await page.goto(`/?${query}`)
+	await page.waitForFunction(
+		() => window.__VIEWER_READY__ === true,
+		undefined,
+		{
+			timeout: 30000
+		}
+	)
+}
+
+const azimuth = (page: Page) =>
+	page.evaluate(() => window.__VIEW_AZIMUTH__ ?? 0)
+
+/** A drag across the middle of the viewer, which fills the top 60% of the page. */
+async function dragAcross(page: Page) {
+	await page.mouse.move(500, 200)
+	await page.mouse.down()
+	await page.mouse.move(800, 200, { steps: 8 })
+	await page.mouse.up()
+}
+
+test('a scene that waits for a tap lets the page scroll, starts on the button, and gives scrolling back', async ({
+	page
+}) => {
+	test.setTimeout(60000)
+	await openTapCase(page, 'tap-case')
+
+	// The button comes with the rest of the chrome, after the loader's fade.
+	const start = page.getByRole('button', { name: 'Click to rotate' })
+	await expect(start).toBeVisible({ timeout: 20000 })
+
+	const before = await azimuth(page)
+	await dragAcross(page)
+	expect(await azimuth(page)).toBeCloseTo(before)
+
+	await page.mouse.move(640, 200)
+	await page.mouse.wheel(0, 300)
+	await expect
+		.poll(() => page.evaluate(() => window.scrollY))
+		.toBeGreaterThan(0)
+	await page.evaluate(() => window.scrollTo(0, 0))
+
+	await start.click()
+	await expect(start).toHaveCount(0)
+	await dragAcross(page)
+	await expect.poll(() => azimuth(page)).not.toBeCloseTo(before, 0)
+	await page.mouse.move(640, 200)
+	await page.mouse.wheel(0, 300)
+	await page.waitForTimeout(300)
+	expect(await page.evaluate(() => window.scrollY)).toBe(0)
+
+	await page
+		.getByRole('button', { name: 'Done rotating, back to scrolling' })
+		.click()
+	await expect(start).toBeVisible()
+	const parked = await azimuth(page)
+	await dragAcross(page)
+	expect(await azimuth(page)).toBeCloseTo(parked)
+})
+
+test('a scene that starts immediately takes a drag at once, with no button', async ({
+	page
+}) => {
+	test.setTimeout(60000)
+	await openTapCase(page, 'tap-case=immediate')
+	// Ready means framed; the loader still fades before input reaches the canvas.
+	await page.waitForTimeout(1500)
+
+	const before = await azimuth(page)
+	await dragAcross(page)
+	await expect.poll(() => azimuth(page)).not.toBeCloseTo(before, 0)
+	await expect(
+		page.getByRole('button', { name: 'Click to rotate' })
+	).toHaveCount(0)
+})
+
+test('a scene that waits for a tap keeps auto-rotating before it', async ({
+	page
+}) => {
+	test.setTimeout(60000)
+	await openTapCase(page, 'tap-case&spin')
+	await expect(
+		page.getByRole('button', { name: 'Click to rotate' })
+	).toBeVisible({ timeout: 20000 })
+
+	const before = await azimuth(page)
+	await expect
+		.poll(() => azimuth(page), { timeout: 10000 })
+		.not.toBeCloseTo(before, 0)
 })
 
 test('a camera switch flies in a host that follows camera_changed', async ({
@@ -550,6 +693,7 @@ declare global {
 		__VIEWER_E2E__?: { status: 'mounted' | 'crashed'; error?: string }
 		__HOOKS_E2E__?: { status: 'ok' | 'crashed'; error?: string }
 		__VIEWER_READY__?: boolean
+		__VIEW_AZIMUTH__?: number
 		__SRC_E2E__?: {
 			status: 'loaded' | 'error'
 			meshes?: number
