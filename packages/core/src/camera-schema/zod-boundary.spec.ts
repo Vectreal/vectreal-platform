@@ -29,7 +29,7 @@ function sourceFiles(dir: string): string[] {
 // inside a comment only makes the guard stricter.
 const referencesIn = (source: string) =>
 	[
-		...source.matchAll(/\b(?:from|import|require)\s*\(?\s*['"]([^'"]+)['"]/g)
+		...source.matchAll(/\b(?:from|import|require)\s*\(?\s*['"`]([^'"`]+)['"`]/g)
 	].map(([, specifier]) => specifier)
 
 const isZod = (specifier: string) =>
@@ -77,7 +77,8 @@ describe('the zod boundary in @vctrl/core', () => {
 		['index.ts', "export * from './camera-schema'"],
 		['index.ts', "export * from './camera-schema/'"],
 		['scene-camera/a.ts', "await import('../camera-schema/index.js')"],
-		['scene-camera/a.ts', "import '@vctrl/core/camera-schema'"]
+		['scene-camera/a.ts', "import '@vctrl/core/camera-schema'"],
+		['scene-camera/a.ts', 'await import(`../camera-schema`)']
 	])('recognizes %s referencing the schema as %s', (file, source) => {
 		expect(referencesIn(source).some((s) => namesSchema(file, s))).toBe(true)
 	})
