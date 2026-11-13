@@ -34,37 +34,31 @@ const Layout = () => {
 		<CurrentUserProvider>
 			<SiteStructuredData />
 			{/*
-			  The nav and the page each take their own `--primary` scope, because
-			  on the home page only the page's is the brand. The page's wrappers
-			  are `contents`, so they add a scope without adding a box: nothing
-			  below lays out against them.
+			  The nav, the page and the footer each mark themselves as the marketing
+			  surface. The page's wrappers are `contents`, so they add the marks
+			  without adding a box: nothing below lays out against them. Which
+			  action is the brand is each page's own call (Button `variant="brand"`),
+			  never a scope's.
 			*/}
 			<DocsTocProvider>
 				<div
 					data-material="object"
 					data-site="marketing"
-					className={cn(
-						!chrome.nav && 'hidden',
-						chrome.brandNavPrimary && 'primary-brand'
-					)}
+					className={cn(!chrome.nav && 'hidden')}
 				>
 					<Navigation />
 				</div>
 				{/* The publisher is nested here too, and its editor keeps the plate rims. */}
 				<div
-					data-material={chrome.brandPrimary ? 'object' : undefined}
-					data-site={chrome.brandPrimary ? 'marketing' : undefined}
-					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
+					data-material={chrome.nav ? 'object' : undefined}
+					data-site={chrome.nav ? 'marketing' : undefined}
+					className="contents"
 				>
 					<Outlet />
 				</div>
 			</DocsTocProvider>
 			{chrome.footer && (
-				<div
-					data-material="object"
-					data-site="marketing"
-					className={cn('contents', chrome.brandPrimary && 'primary-brand')}
-				>
+				<div data-material="object" data-site="marketing" className="contents">
 					<Footer />
 				</div>
 			)}

@@ -346,7 +346,7 @@ export default function NewsRoomPage({ loaderData }: Route.ComponentProps) {
 							description="Create a free account to publish your first scene and keep shipping faster with Vectreal."
 							actions={
 								<>
-									<Button asChild>
+									<Button variant="brand" asChild>
 										<Link to="/sign-up">
 											Start free
 											<ArrowRight className="h-4 w-4" />

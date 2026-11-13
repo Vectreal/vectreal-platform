@@ -55,6 +55,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				className={cn(buttonVariants({ variant, size, className }))}
 				ref={ref}
 				{...props}
+				// Which variant, readable without the classes: tests find a page's brand actions by it.
+				// After the spread, so a Slot parent's own data-variant cannot replace it.
+				data-variant={variant ?? 'default'}
 			/>
 		)
 	}
