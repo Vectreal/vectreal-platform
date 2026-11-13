@@ -50,6 +50,15 @@ export interface DashboardActor {
 	avatarUrl: string | null
 }
 
+/**
+ * The internal pages this user may open, each as that page's own gate
+ * answered: the sidebar links only to these.
+ */
+export interface DashboardInternalPages {
+	readonly generations: boolean
+	readonly intake: boolean
+}
+
 export interface OrganizationMemberWithUser {
 	membership: typeof organizationMemberships.$inferSelect
 	user: Pick<typeof users.$inferSelect, 'id' | 'email' | 'name'>

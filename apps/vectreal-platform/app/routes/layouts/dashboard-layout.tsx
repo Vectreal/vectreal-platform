@@ -34,13 +34,18 @@ import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
+import { isImgTo3dEnabledFor } from '../../lib/domain/img-to-3d/img-to-3d-access.server'
+import { isIntakeAdmin } from '../../lib/domain/model-intake/model-intake-admin.server'
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
 import { getUserOrganizations } from '../../lib/domain/user/user-repository.server'
 import { shouldRevalidateWithinScope } from '../../lib/navigation/dashboard-route-behavior'
 import { usePostHog } from '../../lib/posthog/posthog-react'
 import { buildMeta } from '../../lib/seo'
 
-import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
+import type {
+	DashboardActor,
+	DashboardInternalPages
+} from '../../lib/domain/dashboard/dashboard-types'
 import type { ShouldRevalidateFunction } from 'react-router'
 
 export const meta: MetaFunction = () =>
@@ -53,12 +58,41 @@ export const meta: MetaFunction = () =>
 		{ private: true }
 	)
 
+/** How long the sidebar waits on a gate before leaving its link out. */
+const INTERNAL_LINK_GATE_MS = 800
+
+/**
+ * The gate's answer, or no if it has not answered in time. Safe in that
+ * direction only: a link left out costs a click through the URL, while the
+ * page still asks its own gate, so no link ever leads to a refusal.
+ */
+function answeredInTime(gate: Promise<boolean>): Promise<boolean> {
+	return Promise.race([
+		gate,
+		new Promise<boolean>((resolve) =>
+			setTimeout(() => resolve(false), INTERNAL_LINK_GATE_MS)
+		)
+	])
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
 	const { user } = await loadAuthenticatedSession(request)
-	const [sidebarProjects, orgs] = await Promise.all([
-		getSidebarProjects(user.id, 3),
-		getUserOrganizations(user.id)
-	])
+	/*
+	  The internal pages each page's own gate would let this user open, asked
+	  here only so the sidebar never links to a page that answers 404. Both
+	  gates are PostHog flags evaluated over the network, so they run alongside
+	  the queries, and each gets `INTERNAL_LINK_GATE_MS` before it counts as a
+	  no: a slow PostHog costs a few internal accounts their links, never every
+	  account its dashboard. Neither gate throws.
+	*/
+	const [sidebarProjects, orgs, canGenerate, canOpenIntake] = await Promise.all(
+		[
+			getSidebarProjects(user.id, 3),
+			getUserOrganizations(user.id),
+			answeredInTime(isImgTo3dEnabledFor(user)),
+			answeredInTime(isIntakeAdmin(user))
+		]
+	)
 
 	// Safety net: if the user has no org yet (e.g. bypassed onboarding), send them
 	// through onboarding which calls initializeUserDefaults and creates the org.
@@ -95,7 +129,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 		avatarUrl: (user.user_metadata?.avatar_url as string | undefined) ?? null
 	}
 
-	return data({ actor, sidebarProjects, plan })
+	const internalPages: DashboardInternalPages = {
+		generations: canGenerate,
+		intake: canOpenIntake
+	}
+
+	return data({ actor, sidebarProjects, plan, internalPages })
 }
 
 /**
@@ -125,7 +164,8 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
  */
 
 const DashboardLayout = () => {
-	const { actor, sidebarProjects, plan } = useLoaderData<typeof loader>()
+	const { actor, sidebarProjects, plan, internalPages } =
+		useLoaderData<typeof loader>()
 	const { consent } = useConsent()
 	const posthog = usePostHog()
 	const location = useLocation()
@@ -192,6 +232,7 @@ const DashboardLayout = () => {
 						actor={actor}
 						sidebarProjects={sidebarProjects}
 						plan={plan}
+						internalPages={internalPages}
 					/>
 				</LogoSidebar>
 				{/*
