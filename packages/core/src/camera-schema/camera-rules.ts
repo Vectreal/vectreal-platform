@@ -86,6 +86,17 @@ export function repairCameraEntry<Entry extends Record<string, unknown>>(
 			repairs.push({ cameraIndex, field })
 		}
 	}
+	// The viewer reads `target ?? lookAt` and ignores both when that value is
+	// unreadable. Dropping an unreadable `target` alone would hand the viewer a
+	// legacy `lookAt` it never used, so the pair goes together.
+	if (
+		entry['target'] != null &&
+		entry['lookAt'] !== undefined &&
+		repairs.some(({ field }) => field === 'target') &&
+		!repairs.some(({ field }) => field === 'lookAt')
+	) {
+		repairs.push({ cameraIndex, field: 'lookAt' })
+	}
 	if (repairs.length === 0) return { entry, repairs }
 
 	const repaired: Record<string, unknown> = { ...entry }
