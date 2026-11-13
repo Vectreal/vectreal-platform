@@ -6,6 +6,7 @@ import {
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInteractionHint,
+	shouldUnloadWhenOffscreen,
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail,
@@ -259,6 +260,25 @@ describe('the interaction hint', () => {
 		expect(shouldShowInteractionHint(undefined)).toBe(false)
 		expect(shouldShowInteractionHint({ showInfoPopover: true })).toBe(false)
 		expect(shouldShowInteractionHint({ showInteractionHint: true })).toBe(true)
+	})
+})
+
+describe('unloading when off-screen', () => {
+	it('is kept as a boolean and dropped as anything else', () => {
+		expect(
+			normalizePresentationSettings({ unloadWhenOffscreen: false })
+		).toEqual({ unloadWhenOffscreen: false })
+		expect(
+			normalizePresentationSettings({ unloadWhenOffscreen: 'no' })
+		).toBeUndefined()
+	})
+
+	it('is on unless the author turned it off, as every older scene did', () => {
+		expect(shouldUnloadWhenOffscreen(undefined)).toBe(true)
+		expect(shouldUnloadWhenOffscreen({ showInfoPopover: true })).toBe(true)
+		expect(shouldUnloadWhenOffscreen({ unloadWhenOffscreen: false })).toBe(
+			false
+		)
 	})
 })
 

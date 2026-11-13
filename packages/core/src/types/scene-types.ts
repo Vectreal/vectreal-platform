@@ -649,6 +649,13 @@ export interface ScenePresentationSettings {
 	 */
 	showInteractionHint?: boolean
 	/**
+	 * Whether the viewer frees its WebGL context while it is scrolled out of
+	 * view, showing its last frame on return until it draws again. Off keeps
+	 * the scene in memory and only stops drawing. Absent means on, which is
+	 * what every scene saved before this field existed did.
+	 */
+	unloadWhenOffscreen?: boolean
+	/**
 	 * When visitors can start moving the scene: `immediate`, as the page
 	 * loads, or `tap`, once they press the viewer's "Tap to rotate" button.
 	 * Until then touches and the wheel scroll the page around the viewer and

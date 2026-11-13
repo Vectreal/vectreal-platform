@@ -15,8 +15,7 @@ describe('routePageChrome', () => {
 				nav: true,
 				footer: true,
 				brandPrimary: true,
-				brandNavPrimary: true,
-				focused: false
+				brandNavPrimary: true
 			})
 		}
 	})
@@ -31,8 +30,7 @@ describe('routePageChrome', () => {
 				nav: true,
 				footer: true,
 				brandPrimary: true,
-				brandNavPrimary: false,
-				focused: false
+				brandNavPrimary: false
 			})
 		}
 	})
@@ -47,15 +45,13 @@ describe('routePageChrome', () => {
 			nav: false,
 			footer: false,
 			brandPrimary: false,
-			brandNavPrimary: false,
-			focused: false
+			brandNavPrimary: false
 		})
 		expect(routePageChrome('/publisher/')).toEqual({
 			nav: false,
 			footer: false,
 			brandPrimary: false,
-			brandNavPrimary: false,
-			focused: false
+			brandNavPrimary: false
 		})
 	})
 
@@ -69,8 +65,7 @@ describe('routePageChrome', () => {
 			nav: false,
 			footer: false,
 			brandPrimary: false,
-			brandNavPrimary: false,
-			focused: false
+			brandNavPrimary: false
 		})
 	})
 
@@ -79,25 +74,22 @@ describe('routePageChrome', () => {
 			nav: true,
 			footer: true,
 			brandPrimary: true,
-			brandNavPrimary: true,
-			focused: false
+			brandNavPrimary: true
 		})
 	})
 
 	/*
-	  A letter's reader lands here from a phone scan with one thing to do, so
-	  the site nav and footer give way to the funnel's own header and footer.
+	  A letter's reader is a visitor like any other, and the site's own nav and
+	  footer let them go on to the rest of it.
 	*/
-	it('gives the letter funnel its own focused chrome', () => {
+	it('gives the letter funnel the site nav and footer', () => {
 		for (const pathname of ['/free-model', '/agenturen']) {
 			expect(routePageChrome(pathname)).toEqual({
-				nav: false,
-				footer: false,
+				nav: true,
+				footer: true,
 				brandPrimary: true,
-				brandNavPrimary: true,
-				focused: true
+				brandNavPrimary: true
 			})
 		}
-		expect(routePageChrome('/free-model-guide').focused).toBe(false)
 	})
 })

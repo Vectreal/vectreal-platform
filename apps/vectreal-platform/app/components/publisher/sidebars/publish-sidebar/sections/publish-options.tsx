@@ -29,6 +29,7 @@ import {
 	shouldShowFullscreenButton,
 	shouldShowInfoPopover,
 	shouldShowInteractionHint,
+	shouldUnloadWhenOffscreen,
 	withCompressTexturesForGpu,
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
@@ -371,6 +372,13 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		[setPresentation]
 	)
 
+	const handleToggleUnloadWhenOffscreen = useCallback(
+		(unloadWhenOffscreen: boolean) => {
+			setPresentation((previous) => ({ ...previous, unloadWhenOffscreen }))
+		},
+		[setPresentation]
+	)
+
 	const handleToggleInteractionHint = useCallback(
 		(showInteractionHint: boolean) => {
 			setPresentation((previous) => ({ ...previous, showInteractionHint }))
@@ -473,6 +481,12 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						onCheckedChange={handleToggleFullscreenButton}
 						label="Full screen button"
 						description="Adds a button that shows the scene full screen, where the visitor's browser allows it. Applies to embeds and preview links as soon as you save."
+					/>
+					<Toggle
+						checked={shouldUnloadWhenOffscreen(presentation)}
+						onCheckedChange={handleToggleUnloadWhenOffscreen}
+						label="Unload when off-screen"
+						description="Frees the visitor's graphics memory while the scene is scrolled out of view. Off keeps it loaded and only pauses it, for a page that scrolls back to it often. Applies to embeds and preview links as soon as you save."
 					/>
 					<LoadingThumbnailToggle
 						checked={shouldShowLoadingThumbnail(presentation)}

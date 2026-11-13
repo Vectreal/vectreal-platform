@@ -2,7 +2,8 @@
 // Agency page (`/agenturen`)
 //
 // Where an agency letter's short address forwards. German only, like the
-// agency letters, and Moritz's own voice.
+// agency letters. The page speaks without "ich" or "wir", unlike the letters
+// (Moritz, 11 Nov): the product, the model, "Sie" and plain statements.
 //
 // The funnel-polish copy of 11 Nov (the "German agency page" Work Item), not
 // yet read by Moritz, who approves it through the PR's screenshots. The terms
@@ -31,8 +32,7 @@ export const AGENCY_PAGE_COPY = {
 	hero: {
 		heading: '3D-Modelle für Ihre Shopify-Kunden',
 		lead: HERO_SENTENCE,
-		video:
-			'Ein Handy zeigt eine Produktseite im Beispielshop. Beim Scrollen fährt die 3D-Szene ihre Kameras an, zu jeder Station eine Überschrift.'
+		sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen'
 	},
 	steps: {
 		heading: "So geht's",
@@ -52,7 +52,14 @@ export const AGENCY_PAGE_COPY = {
 				text: 'Erst wenn es passt, geht es im Shop live.',
 				image: 'Das Produkt auf einer Produktseite im Beispielshop.'
 			}
-		]
+		] as readonly {
+			id: string
+			text: string
+			/** Describes the step's still, which is also a loop's poster. */
+			image: string
+			/** What the step's loop shows, for a screen reader; a step without one shows its still. */
+			video?: string
+		}[]
 	},
 	ways: {
 		heading: 'Drei Wege in den Shop',
@@ -88,14 +95,28 @@ export const AGENCY_PAGE_COPY = {
 	},
 	terms: {
 		heading: 'Konditionen',
-		/** Set large above the lines, which say the same in words. */
-		figures: ['120 €', '30 Produkte', '5 Arbeitstage'],
+		/**
+		 * Set large, each with its own line once it has one; until then the
+		 * lines below say the same in words.
+		 */
+		figures: [
+			{ value: '120 €' },
+			{ value: '30 Produkte' },
+			{ value: '5 Arbeitstage' }
+		],
 		lines: [
 			'120 € pro Produkt, 30 Produkte über sechs Monate',
 			'fertig in fünf Arbeitstagen, als GLB und USDZ',
 			'White-Label für die Modelldateien',
 			'gefällt ein Modell nicht: neu oder kostenlos'
-		]
+		],
+		/** Worked examples under the lines, such as what a delivery of five costs. */
+		examples: []
+	} as {
+		heading: string
+		figures: readonly { value: string; line?: string }[]
+		lines: readonly string[]
+		examples: readonly string[]
 	},
 	faq: {
 		heading: 'Häufige Fragen',
@@ -103,7 +124,7 @@ export const AGENCY_PAGE_COPY = {
 			{
 				question: 'Was kostet die 3D-Szene, und steht Vectreal darauf?',
 				answer: [
-					'Die Dateien im 3D-Platz gehören Ihrem Kunden, Shopify hostet sie. Die Szene läuft bei Vectreal, bis zu drei veröffentlichte Szenen kostenlos mit Vectreal-Hinweis; ohne Hinweis und für mehr sprechen Sie mich an.'
+					'Die Dateien im 3D-Platz gehören Ihrem Kunden, Shopify hostet sie. Die Szene läuft bei Vectreal: bis zu drei veröffentlichte Szenen kostenlos mit Vectreal-Hinweis, ohne Hinweis und für mehr Szenen auf Anfrage.'
 				]
 			},
 			{
@@ -122,19 +143,19 @@ export const AGENCY_PAGE_COPY = {
 			{
 				question: 'Geht das auch mit Shopware?',
 				answer: [
-					'Abschnitt und Galerie-Ansicht sind für Shopify gebaut. Für Shopware mache ich auf Wunsch einen Test mit Ihnen.'
+					'Abschnitt und Galerie-Ansicht sind für Shopify gebaut. Für Shopware ist auf Wunsch ein Test mit Ihnen möglich.'
 				]
 			},
 			{
 				question: 'Welche Produkte eignen sich?',
 				answer: [
-					'Am besten feste Oberflächen wie Möbel, Leuchten oder Küchenware. Glas, Emaille und Gusseisen sind schwierig; ich sage Ihnen vorher, ob es geht.'
+					'Am besten feste Oberflächen wie Möbel, Leuchten oder Küchenware. Glas, Emaille und Gusseisen sind schwierig; ob ein Produkt geht, erfahren Sie vor dem Start.'
 				]
 			},
 			{
-				question: 'Schreiben Sie auch Marken direkt an?',
+				question: 'Bekommen auch Marken direkt Post?',
 				answer: [
-					'Einigen Marken habe ich direkt geschrieben. Betreuen Sie eine davon, sagen Sie es mir: dann läuft alles Weitere über Sie.'
+					'Einige Marken haben einen Brief von Vectreal bekommen. Betreut Ihre Agentur eine davon, genügt eine kurze Nachricht: Dann läuft alles Weitere über Sie.'
 				]
 			}
 		] satisfies readonly {
@@ -145,10 +166,10 @@ export const AGENCY_PAGE_COPY = {
 	},
 	request: {
 		heading:
-			'Drei Fotos und das Einverständnis Ihres Kunden: Mehr brauche ich für das erste Modell nicht.',
+			'Drei Fotos und das Einverständnis Ihres Kunden: Mehr braucht es für das erste Modell nicht.',
 		contact:
-			'Ich antworte werktags innerhalb eines Tages per E-Mail; ein Telefonat machen wir gern aus.',
-		signature: 'Moritz Becker, Hamburg'
+			'Antwort werktags innerhalb eines Tages per E-Mail; ein Telefonat lässt sich gern vereinbaren.',
+		signature: 'Vectreal, Hamburg'
 	},
 	action: 'Kostenloses Modell anfragen'
 } as const
