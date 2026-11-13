@@ -80,6 +80,20 @@ export function describeFinishSource({
 	})
 }
 
+/**
+ * What a stored studio finish was made from, as `describeFinishSource` writes
+ * it. A finish saved as a published file was recorded against the whole
+ * publish source; its codecs say how that file was encoded, not what was
+ * baked, so only its model and bakes are kept.
+ */
+export function storedFinishSource(source: string): string {
+	const { model, bakes } = JSON.parse(source) as {
+		model?: unknown
+		bakes?: unknown
+	}
+	return JSON.stringify({ model, bakes })
+}
+
 /** The ids standing in for the model document; see `describePublishSource`. */
 function modelAssetIds(
 	assets: readonly { id: string; name: string; mimeType: string | null }[]

@@ -948,8 +948,8 @@ describe('restoring the finish saved with the scene', () => {
 		vi.unstubAllGlobals()
 	})
 
-	// The server retires such a finish on a codec switch, so the screen must too.
-	it('drops a finish saved as a published file once publishing would encode otherwise', async () => {
+	// As the server finds it: what it baked is right whatever its codecs.
+	it('keeps a finish saved as a published file through a codec switch', async () => {
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(async () => new Response(new ArrayBuffer(8)))
@@ -961,6 +961,7 @@ describe('restoring the finish saved with the scene', () => {
 			)
 		})
 		await waitFor(() => expect(shown.result.current).not.toBeNull())
+		const restored = shown.result.current
 
 		act(() =>
 			store.set(presentationAtom, (prev) => ({
@@ -969,7 +970,7 @@ describe('restoring the finish saved with the scene', () => {
 			}))
 		)
 
-		expect(shown.result.current).toBeNull()
+		expect(shown.result.current).toBe(restored)
 		vi.unstubAllGlobals()
 	})
 

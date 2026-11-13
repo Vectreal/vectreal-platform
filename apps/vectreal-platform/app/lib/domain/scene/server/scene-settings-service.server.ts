@@ -52,7 +52,8 @@ import { optimizationsMatch } from '../client/optimization-inference'
 import {
 	describeFinishSource,
 	describePublishSource,
-	publishSourceMatches
+	publishSourceMatches,
+	storedFinishSource
 } from '../publish-source'
 import { haveSceneSettingsChanged } from '../scene-settings-comparison'
 
@@ -85,17 +86,11 @@ async function readPublishSource(
 	})
 }
 
-/**
- * What a studio finish of the saved scene would be made from: the source an
- * unencoded finish is recorded against, and the publish source for one saved
- * as a published file. See `SavedStudioFinish`.
- */
+/** What a studio finish of the saved scene would be made from; see `describeFinishSource`. */
 async function readFinishSource(
 	tx: SceneSettingsTransaction,
-	sceneId: string,
-	{ unencoded }: { unencoded: boolean }
+	sceneId: string
 ): Promise<string | null> {
-	if (!unencoded) return readPublishSource(tx, sceneId)
 	const saved = await getSceneSettingsWithAssetsRow(tx, sceneId)
 	return saved
 		? describeFinishSource({
@@ -518,10 +513,7 @@ class SceneSettingsService {
 				.update(sceneSettings)
 				.set({
 					studioFinish: studioFinish && {
-						source:
-							(await readFinishSource(tx, updatedScene.id, {
-								unencoded: studioFinish.unencoded === true
-							})) ?? '',
+						source: (await readFinishSource(tx, updatedScene.id)) ?? '',
 						reports: studioFinish.reports,
 						...(studioFinish.unencoded ? { unencoded: true as const } : {})
 					}
@@ -898,15 +890,15 @@ class SceneSettingsService {
 			const saved = await getSceneSettingsWithAssetsRow(tx, sceneId)
 			const finish = saved?.settings.studioFinish
 			if (!saved?.finishAsset || !finish) return null
-			const unencoded = finish.unencoded === true
-			const current = await readFinishSource(tx, sceneId, { unencoded })
-			if (finish.source !== current) return null
+			const current = await readFinishSource(tx, sceneId)
+			if (!current || !finish.source) return null
+			if (storedFinishSource(finish.source) !== current) return null
 			const { bakes = null } = JSON.parse(current) as { bakes?: string | null }
 			return {
 				asset: saved.finishAsset,
 				reports: finish.reports,
 				bakes,
-				unencoded
+				unencoded: finish.unencoded === true
 			}
 		})
 	}

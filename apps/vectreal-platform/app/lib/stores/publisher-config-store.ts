@@ -381,13 +381,6 @@ interface BakePreview {
 	uvLayoutFailure?: string
 	/** Restored from the finish saved with the scene, which a save keeps as stored. */
 	restored?: true
-	/**
-	 * For a restored finish saved as a published file: the codecs it was
-	 * encoded with, as `usePublishExport().codecsKey` writes them. The server
-	 * retires such a finish once publish would encode otherwise, so it goes
-	 * stale here then too.
-	 */
-	codecs?: string
 	durationMs?: number
 	/** Once failed: why nothing was drawn. */
 	failure?: StudioFinishFailure

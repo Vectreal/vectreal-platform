@@ -12,12 +12,13 @@ import type { LightingSettings } from '@vctrl/core'
  * from, so it is shown only while the scene still is that, and what each bake
  * did, which decides whether there is anything to show.
  *
- * A finish is the model with its bakes drawn in and no codec applied
- * (`unencoded`), recorded against `describeFinishSource`: publish encodes it
- * with the codecs asked for then, so a codec switch leaves it current. One
- * saved before that is a whole published file, Draco and KTX2 included,
- * recorded against `describePublishSource`, and retires once publish would
- * encode the scene in any other way.
+ * Every finish is current while its model and bakes are, as
+ * `describeFinishSource` and `storedFinishSource` read them, so a codec
+ * switch leaves it in place. One saved now is the model with its bakes drawn
+ * in and no codec applied (`unencoded`), which publish encodes with the
+ * codecs asked for then. One saved before is a whole published file, Draco
+ * and KTX2 included: still the right bake to show, but publish bakes again
+ * rather than encode a file that is already encoded.
  */
 export interface SavedStudioFinish {
 	source: string

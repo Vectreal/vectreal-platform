@@ -73,7 +73,6 @@ export function usePublishExport() {
 			finishKey: JSON.stringify(bakesKey(lighting)),
 			/** The codecs publish encodes the finish, or the model, with. */
 			request: { ...geometry, ktx2, occlusion: false, lights: false as const },
-			codecsKey: JSON.stringify({ ...geometry, ktx2 }),
 			bakesAnything: bakes.occlusion || Boolean(bakes.lights),
 			/** Whether the lighting asks for any bake, whether or not it can run. */
 			asksAnything: asked.occlusion || Boolean(asked.lights)
@@ -91,13 +90,12 @@ export function useCurrentPreview(): BakePreview | null {
 	const preview = useAtomValue(bakePreviewAtom)
 	const { optimizer } = useModelContext(true)
 	const { passRevision } = useAtomValue(optimizationRuntimeAtom)
-	const { finishKey, codecsKey } = usePublishExport()
+	const { finishKey } = usePublishExport()
 	const document = optimizer?._getDocument?.()
 	return preview &&
 		preview.source.document === document &&
 		preview.source.passRevision === passRevision &&
-		preview.source.bakes === finishKey &&
-		(preview.codecs === undefined || preview.codecs === codecsKey)
+		preview.source.bakes === finishKey
 		? preview
 		: null
 }
@@ -236,7 +234,7 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 	)
 	const hasUnsavedChanges = useAtomValue(hasUnsavedChangesAtom)
 	const lighting = useAtomValue(lightingAtom)
-	const { finishKey, codecsKey } = usePublishExport()
+	const { finishKey } = usePublishExport()
 	const loader = useMemo(() => new ModelLoader(), [])
 	const attemptedRef = useRef(false)
 	const document = optimizer?._getDocument?.()
@@ -277,8 +275,7 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 						shown: true,
 						model: scene,
 						reports: saved.reports,
-						// The server opened it under the codecs on screen now.
-						...(saved.unencoded ? { file } : { codecs: codecsKey }),
+						...(saved.unencoded ? { file } : {}),
 						restored: true
 					}
 				})
@@ -294,7 +291,6 @@ export function useRestoreSavedFinish(saved: SavedFinishRef | null) {
 		asSaved,
 		passRevision,
 		finishKey,
-		codecsKey,
 		loader,
 		setPreview
 	])

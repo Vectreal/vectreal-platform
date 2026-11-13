@@ -154,6 +154,29 @@ describe('the studio finish a draft keeps', () => {
 			{ lighting: baked },
 			{ assetId: finishId, reports, ...(encoded ? {} : { unencoded: true }) }
 		)
+		if (encoded) {
+			// As a release before the fix recorded it: against the whole
+			// publish source, codecs included.
+			const [row] = await db
+				.select({ studioFinish: schema.sceneSettings.studioFinish })
+				.from(schema.sceneSettings)
+				.where(eq(schema.sceneSettings.sceneId, sceneId))
+			const { model: ids, bakes } = JSON.parse(row.studioFinish!.source)
+			await db
+				.update(schema.sceneSettings)
+				.set({
+					studioFinish: {
+						...row.studioFinish!,
+						source: JSON.stringify({
+							model: ids,
+							draco: { method: 'edgebreaker' },
+							gpuTextures: true,
+							bakes
+						})
+					}
+				})
+				.where(eq(schema.sceneSettings.sceneId, sceneId))
+		}
 		return { sceneId, model, finishId }
 	}
 
@@ -190,16 +213,40 @@ describe('the studio finish a draft keeps', () => {
 		).toMatchObject({ asset: { id: finishId }, unencoded: true })
 	})
 
-	it('retires a finish saved as a published file once publishing would encode it otherwise', async () => {
-		const { sceneId, model } = await draftWithFinish({ encoded: true })
-		expect(
-			await sceneSettingsService.resolveSceneFinish(sceneId)
-		).toMatchObject({ unencoded: false })
+	// Finishes hidden by a codec switch before the fix are found again.
+	it('finds a finish saved as a published file again after a codec switch', async () => {
+		const { sceneId, model, finishId } = await draftWithFinish({
+			encoded: true
+		})
 
 		await save(sceneId, model, {
 			lighting: baked,
 			presentation: { compressTexturesForGpu: false }
 		})
+
+		expect(
+			await sceneSettingsService.resolveSceneFinish(sceneId)
+		).toMatchObject({ asset: { id: finishId }, unencoded: false })
+	})
+
+	it('stays through the GPU switch turned on and back off, saved each time', async () => {
+		const { sceneId, model, finishId } = await draftWithFinish()
+
+		for (const compressTexturesForGpu of [true, false]) {
+			await save(sceneId, model, {
+				lighting: baked,
+				presentation: { compressTexturesForGpu }
+			})
+			expect(
+				await sceneSettingsService.resolveSceneFinish(sceneId)
+			).toMatchObject({ asset: { id: finishId } })
+		}
+	})
+
+	it('retires a finish saved as a published file once its model changes', async () => {
+		const { sceneId } = await draftWithFinish({ encoded: true })
+
+		await save(sceneId, [await makeAsset('scene.gltf')], { lighting: baked })
 
 		expect(await sceneSettingsService.resolveSceneFinish(sceneId)).toBeNull()
 	})
