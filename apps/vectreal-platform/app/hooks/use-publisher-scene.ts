@@ -1,7 +1,7 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { useCallback, useEffect, useRef } from 'react'
-import { useRevalidator } from 'react-router'
+import { useRevalidator, useSearchParams } from 'react-router'
 
 import { usePrepareGltfDocument } from './scene-loader/use-scene-document-export'
 import { useSceneDraft } from './scene-loader/use-scene-draft'
@@ -14,6 +14,7 @@ import {
 	studioFinishToSave,
 	useCurrentPreview
 } from '../components/publisher/sidebars/compose-sidebar/lighting-settings/use-bake-preview'
+import { IMG_TO_3D_OPEN_PARAM } from '../lib/domain/img-to-3d/img-to-3d-contract'
 import { createSceneRequestId as createRequestId } from '../lib/domain/scene/client/scene-request-id'
 import {
 	recordSavedOriginal,
@@ -85,8 +86,10 @@ export function usePublisherScene({
 	const openSceneId = sceneManifest ? sceneId : null
 
 	const { isRestoringDraft, persistPendingSceneDraft } = useSceneDraft()
+	const [searchParams] = useSearchParams()
 	const { retry: retrySceneLoad } = useSceneSource({
 		routeSceneId: sceneId,
+		routeGenerationId: searchParams.get(IMG_TO_3D_OPEN_PARAM),
 		openSceneId,
 		sceneManifest,
 		isRestoringDraft

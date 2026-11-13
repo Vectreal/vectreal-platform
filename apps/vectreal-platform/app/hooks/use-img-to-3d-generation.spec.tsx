@@ -1,23 +1,35 @@
 // @vitest-environment jsdom
 /**
- * The client half of generation: submit, poll each variant until it ends,
- * open one. What these hold is that a variant always ends - a refusal stops
- * its polling instead of leaving it "Queued" for as long as the tab is open -
- * and that only a kind, never server text, reaches the panel.
+ * The client half of generation. Polling: a variant always ends - a refusal
+ * stops its polling instead of leaving it "Queued" for as long as the tab is
+ * open - and only a kind, never server text, reaches the screen. Opening: the
+ * variant the URL names is opened once, named as the server named it.
  */
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
+import { createMemoryRouter, RouterProvider, useParams } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	MAX_CONSECUTIVE_POLL_FAILURES,
-	useImgTo3dGeneration
+	useImgTo3dBatchStates,
+	useImgTo3dGeneration,
+	type ImgTo3dGeneration
 } from './use-img-to-3d-generation'
+import {
+	imgTo3dContentDisposition,
+	type ImgTo3dListedBatch
+} from '../lib/domain/img-to-3d/img-to-3d-contract'
 
 vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
 }))
 
+const toastError = vi.hoisted(() => vi.fn())
+vi.mock('sonner', () => ({ toast: { error: toastError } }))
+
 const JOB = '00000000-0000-4000-8000-000000000002'
+const SECOND = '00000000-0000-4000-8000-000000000003'
 
 type Route = (url: string, init?: RequestInit) => Response
 let route: Route
@@ -33,9 +45,9 @@ function refusal(error: string, status: number): Response {
 	return Response.json({ success: false, error }, { status })
 }
 
-function jobState(status: string) {
+function jobState(status: string, jobId = JOB) {
 	return {
-		jobId: JOB,
+		jobId,
 		status,
 		progress: status === 'processing' ? 50 : null,
 		message: null,
@@ -44,47 +56,55 @@ function jobState(status: string) {
 	}
 }
 
-// A body reads once, so every submit gets a fresh one.
-const submitted = () =>
-	envelope(
-		{
-			batchId: 'batch',
-			jobs: [{ jobId: JOB, seed: 7, status: 'queued', error: null }]
-		},
-		202
-	)
-
-function polls(): number {
-	return fetchMock.mock.calls.filter(([url]) => url.endsWith(JOB)).length
+function batch(
+	jobId: string,
+	overrides: Partial<ImgTo3dListedBatch> = {}
+): ImgTo3dListedBatch {
+	return {
+		batchId: `batch-${jobId}`,
+		sourceName: 'chair',
+		createdByName: 'Moritz',
+		createdAt: '2026-11-13T10:00:00.000Z',
+		keptUntil: '2026-11-20T10:00:00.000Z',
+		expired: false,
+		variants: [
+			{ jobId, seed: 7, status: 'queued', progress: null, error: null }
+		],
+		...overrides
+	}
 }
 
-async function startOne(
-	loadModel: (files: File[]) => Promise<{ status: string }> = async () => ({
-		status: 'ready'
-	})
-) {
-	const hook = renderHook(() => useImgTo3dGeneration(loadModel))
-	await act(() =>
-		hook.result.current.generate(
-			new File([new Uint8Array(1)], 'chair.png', { type: 'image/png' }),
-			{
-				resolution: 1024,
-				textureSize: 2048,
-				decimationTarget: 200_000,
-				seedCount: 1
-			}
-		)
-	)
-	return hook
+function pollsOf(jobId: string): number {
+	return fetchMock.mock.calls.filter(([url]) => url.endsWith(jobId)).length
 }
 
 async function pollOnce() {
 	await act(() => vi.advanceTimersByTimeAsync(2_000))
 }
 
+/** The states hook over a fixed list, and the one variant's state in it. */
+function watch(batches: readonly ImgTo3dListedBatch[]) {
+	const hook = renderHook(({ list }) => useImgTo3dBatchStates(list), {
+		initialProps: { list: batches }
+	})
+	return {
+		...hook,
+		state: (jobId = JOB) => {
+			const variant = batches
+				.flatMap((b) => b.variants)
+				.find((v) => v.jobId === jobId)
+			if (!variant) throw new Error(`no variant ${jobId}`)
+			return hook.result.current(variant)
+		}
+	}
+}
+
 beforeEach(() => {
-	vi.useFakeTimers()
-	fetchMock.mockClear()
+	// Reset, not cleared: a test that holds its downloads replaces the implementation.
+	fetchMock.mockReset()
+	fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
+		route(url, init)
+	)
 	vi.stubGlobal('fetch', fetchMock)
 })
 
@@ -93,147 +113,109 @@ afterEach(() => {
 	vi.unstubAllGlobals()
 })
 
-describe('useImgTo3dGeneration', () => {
+describe('useImgTo3dBatchStates', () => {
+	beforeEach(() => vi.useFakeTimers())
+
 	it('polls a variant until it succeeds, then stops', async () => {
 		let state = 'processing'
-		route = (url) =>
-			url.endsWith(JOB) ? envelope(jobState(state)) : submitted()
-		const { result } = await startOne()
+		route = () => envelope(jobState(state))
+		const { state: stateOf } = watch([batch(JOB)])
 
 		await pollOnce()
-		expect(result.current.candidates[0]).toMatchObject({
-			status: 'processing',
-			progress: 50
-		})
+		expect(stateOf()).toMatchObject({ status: 'processing', progress: 50 })
 
 		state = 'succeeded'
 		await pollOnce()
-		expect(result.current.candidates[0]).toMatchObject({
-			status: 'succeeded',
-			error: null
-		})
+		expect(stateOf()).toMatchObject({ status: 'succeeded', error: null })
 
-		const settled = polls()
+		const settled = pollsOf(JOB)
 		await pollOnce()
 		await pollOnce()
-		expect(polls()).toBe(settled)
+		expect(pollsOf(JOB)).toBe(settled)
 	})
 
-	it('polls a newly submitted variant at the default pace, whatever the others asked for', async () => {
-		const SECOND = '00000000-0000-4000-8000-000000000003'
-		let submits = 0
-		route = (url) => {
-			if (url.endsWith(JOB) || url.endsWith(SECOND)) {
-				// The runtime asks for a slow pace on everything it is running.
-				return envelope({ ...jobState('processing'), pollAfterMs: 30_000 })
-			}
-			submits += 1
-			return submits === 1
-				? submitted()
-				: envelope(
-						{
-							batchId: 'batch-2',
-							jobs: [{ jobId: SECOND, seed: 8, status: 'queued', error: null }]
-						},
-						202
-					)
-		}
-		const hook = await startOne()
-		await pollOnce()
+	it('never polls a variant the list already has an end for, or an expired batch', async () => {
+		route = () => envelope(jobState('processing'))
+		const done = batch(JOB, {
+			variants: [
+				{ jobId: JOB, seed: 7, status: 'succeeded', progress: 100, error: null }
+			]
+		})
+		const expired = batch(SECOND, { expired: true })
+		watch([done, expired])
 
-		await act(() =>
-			hook.result.current.generate(
-				new File([new Uint8Array(1)], 'lamp.png', { type: 'image/png' }),
-				{
-					resolution: 1024,
-					textureSize: 2048,
-					decimationTarget: 200_000,
-					seedCount: 1
-				}
-			)
-		)
 		await pollOnce()
-
-		expect(
-			fetchMock.mock.calls.filter(([url]) => url.endsWith(SECOND))
-		).toHaveLength(1)
+		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
 	it('shows a failed generation as its kind, not the runtime’s words', async () => {
-		route = (url) =>
-			url.endsWith(JOB)
-				? envelope({ ...jobState('failed'), message: 'CUDA out of memory' })
-				: submitted()
-		const { result } = await startOne()
+		route = () =>
+			envelope({ ...jobState('failed'), message: 'CUDA out of memory' })
+		const { state } = watch([batch(JOB)])
 
 		await pollOnce()
-		expect(result.current.candidates[0]).toMatchObject({
+		expect(state()).toMatchObject({
 			status: 'failed',
 			error: 'generation_failed'
 		})
 	})
 
 	it('ends a variant the runtime does not know at once', async () => {
-		route = (url) =>
-			url.endsWith(JOB) ? refusal('runtime_rejected', 404) : submitted()
-		const { result } = await startOne()
+		route = () => refusal('runtime_rejected', 404)
+		const { state } = watch([batch(JOB)])
 
 		await pollOnce()
-		expect(result.current.candidates[0]).toMatchObject({
+		expect(state()).toMatchObject({
 			status: 'failed',
 			error: 'runtime_rejected'
 		})
 
-		const settled = polls()
+		const settled = pollsOf(JOB)
 		await pollOnce()
-		expect(polls()).toBe(settled)
+		expect(pollsOf(JOB)).toBe(settled)
 	})
 
 	it('rides out a gate 404, which a failed flag evaluation also produces', async () => {
 		let answer: Response | null = refusal('Not found', 404)
-		route = (url) => {
-			if (!url.endsWith(JOB)) return submitted()
+		route = () => {
 			const next = answer ?? envelope(jobState('processing'))
 			answer = null
 			return next
 		}
-		const { result } = await startOne()
+		const { state } = watch([batch(JOB)])
 
 		await pollOnce()
-		expect(result.current.candidates[0].status).toBe('queued')
+		expect(state().status).toBe('queued')
 
 		await pollOnce()
-		expect(result.current.candidates[0].status).toBe('processing')
+		expect(state().status).toBe('processing')
 	})
 
 	it('gives a variant up after too many failed polls in a row, and stops', async () => {
-		route = (url) =>
-			url.endsWith(JOB) ? refusal('runtime_unavailable', 503) : submitted()
-		const { result } = await startOne()
+		route = () => refusal('runtime_unavailable', 503)
+		const { state } = watch([batch(JOB)])
 
 		for (let i = 1; i < MAX_CONSECUTIVE_POLL_FAILURES; i++) await pollOnce()
-		expect(result.current.candidates[0].status).toBe('queued')
+		expect(state().status).toBe('queued')
 
 		await pollOnce()
-		expect(result.current.candidates[0]).toMatchObject({
+		expect(state()).toMatchObject({
 			status: 'failed',
 			error: 'runtime_unavailable'
 		})
 
-		const settled = polls()
+		const settled = pollsOf(JOB)
 		await pollOnce()
-		expect(polls()).toBe(settled)
+		expect(pollsOf(JOB)).toBe(settled)
 	})
 
 	it('counts only failures in a row: a good poll starts the count again', async () => {
 		let failing = true
-		route = (url) => {
-			if (!url.endsWith(JOB)) return submitted()
-			return failing
+		route = () =>
+			failing
 				? refusal('runtime_unavailable', 503)
 				: envelope(jobState('processing'))
-		}
-		const { result } = await startOne()
+		const { state } = watch([batch(JOB)])
 
 		for (let i = 1; i < MAX_CONSECUTIVE_POLL_FAILURES; i++) await pollOnce()
 		failing = false
@@ -241,7 +223,7 @@ describe('useImgTo3dGeneration', () => {
 		failing = true
 		for (let i = 1; i < MAX_CONSECUTIVE_POLL_FAILURES; i++) await pollOnce()
 
-		expect(result.current.candidates[0].status).toBe('processing')
+		expect(state().status).toBe('processing')
 	})
 
 	it.each([
@@ -250,84 +232,329 @@ describe('useImgTo3dGeneration', () => {
 		['a brief auth failure', 'Unauthorized', 401]
 	])('keeps polling through %s', async (_, error, status) => {
 		let answer: Response | null = refusal(error, status)
-		route = (url) => {
-			if (!url.endsWith(JOB)) return submitted()
+		route = () => {
 			const next = answer ?? envelope(jobState('processing'))
 			answer = null
 			return next
 		}
-		const { result } = await startOne()
+		const { state } = watch([batch(JOB)])
 
 		await pollOnce()
-		expect(result.current.candidates[0]).toMatchObject({
-			status: 'queued',
-			error: null
+		expect(state()).toMatchObject({ status: 'queued', error: null })
+
+		await pollOnce()
+		expect(state().status).toBe('processing')
+	})
+
+	it('polls a newly listed variant at the default pace, whatever the others asked for', async () => {
+		// The runtime asks for a slow pace on everything it is running.
+		route = (url) =>
+			envelope({
+				...jobState('processing', url.endsWith(SECOND) ? SECOND : JOB),
+				pollAfterMs: 30_000
+			})
+		const first = [batch(JOB)]
+		const hook = watch(first)
+		await pollOnce()
+
+		hook.rerender({ list: [batch(SECOND), ...first] })
+		await pollOnce()
+
+		expect(pollsOf(SECOND)).toBe(1)
+	})
+
+	it('starts a revalidated list from its own states, not an older poll', async () => {
+		route = () => envelope(jobState('processing'))
+		const hook = watch([batch(JOB)])
+		await pollOnce()
+		expect(hook.state().status).toBe('processing')
+
+		const fresher = [
+			batch(JOB, {
+				variants: [
+					{
+						jobId: JOB,
+						seed: 7,
+						status: 'succeeded',
+						progress: 100,
+						error: null
+					}
+				]
+			})
+		]
+		hook.rerender({ list: fresher })
+
+		expect(hook.result.current(fresher[0].variants[0]).status).toBe('succeeded')
+	})
+
+	it('keeps a polled state through a revalidation that knows nothing newer', async () => {
+		route = () => envelope(jobState('succeeded'))
+		const hook = watch([batch(JOB)])
+		await pollOnce()
+
+		// The publisher's list never asks the runtime: every state comes back null.
+		const unasked = [
+			batch(JOB, {
+				variants: [
+					{ jobId: JOB, seed: 7, status: null, progress: null, error: null }
+				]
+			})
+		]
+		hook.rerender({ list: unasked })
+
+		expect(hook.result.current(unasked[0].variants[0]).status).toBe('succeeded')
+	})
+
+	it('asks about unknown states first, and only a few at a time', async () => {
+		route = (url) => envelope(jobState('processing', url.split('/').pop()))
+		const running = Array.from({ length: 15 }, (_, index) =>
+			batch(`running-${index}`)
+		)
+		const unknown = batch('unknown', {
+			variants: [
+				{ jobId: 'unknown', seed: 1, status: null, progress: null, error: null }
+			]
+		})
+		watch([...running, unknown])
+
+		await pollOnce()
+		expect(fetchMock).toHaveBeenCalledTimes(12)
+		expect(pollsOf('unknown')).toBe(1)
+	})
+})
+
+describe('useImgTo3dGeneration', () => {
+	// Cleared on every mount, so no test can act on an earlier test's hook.
+	let latest: ImgTo3dGeneration | null = null
+	const current = () => {
+		if (!latest) throw new Error('the probe has not rendered')
+		return latest
+	}
+	let loads = 0
+
+	function Probe({
+		loadModel
+	}: {
+		loadModel: (files: File[]) => Promise<{ status: string }>
+	}) {
+		const { sceneId } = useParams()
+		latest = useImgTo3dGeneration(loadModel, sceneId ?? null)
+		return null
+	}
+
+	function mount(
+		url: string,
+		{
+			loadModel = async () => ({ status: 'ready' })
+		}: {
+			loadModel?: (files: File[]) => Promise<{ status: string }>
+		} = {}
+	) {
+		loads = 0
+		latest = null
+		const router = createMemoryRouter(
+			[
+				{
+					path: '/publisher/:sceneId?',
+					loader: () => {
+						loads += 1
+						return null
+					},
+					element: <Probe loadModel={loadModel} />
+				}
+			],
+			{ initialEntries: [url] }
+		)
+		// StrictMode mounts twice, which is what would download a variant twice.
+		render(
+			<StrictMode>
+				<RouterProvider router={router} />
+			</StrictMode>
+		)
+		return router
+	}
+
+	const glb = () =>
+		new Response('glb', {
+			headers: {
+				'Content-Disposition': imgTo3dContentDisposition('chair-7.glb')
+			}
 		})
 
-		await pollOnce()
-		expect(result.current.candidates[0].status).toBe('processing')
-	})
-
-	it('names a refused submit by its kind', async () => {
-		route = () => refusal('runtime_unavailable', 503)
-		const { result } = await startOne()
-
-		expect(result.current.submitError).toBe('runtime_unavailable')
-		expect(result.current.candidates).toEqual([])
-	})
-
-	it('opens a ready variant as a GLB file named after its image and seed', async () => {
+	it('opens the variant the URL names, named as the server names it', async () => {
 		route = (url) =>
-			url.endsWith('/artifact')
-				? new Response('glb')
-				: url.endsWith(JOB)
-					? envelope(jobState('succeeded'))
-					: submitted()
+			url.endsWith(`${JOB}/artifact`) ? glb() : refusal('x', 500)
 		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
-		const { result } = await startOne(loadModel)
-		await pollOnce()
+		mount(`/publisher?generation=${JOB}`, { loadModel })
 
-		await act(() => result.current.loadCandidate(JOB))
-
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
 		const [[files]] = loadModel.mock.calls
 		expect(files[0].name).toBe('chair-7.glb')
 		expect(files[0].type).toBe('model/gltf-binary')
+		await waitFor(() => expect(current().opening).toBeNull())
+	})
+
+	/** An artifact request that answers only when told to. */
+	function heldArtifacts() {
+		const held = new Map<string, () => void>()
+		fetchMock.mockImplementation(
+			(url: string, init?: RequestInit) =>
+				new Promise<Response>((resolve, reject) => {
+					init?.signal?.addEventListener('abort', () =>
+						reject(new DOMException('Aborted', 'AbortError'))
+					)
+					held.set(url.split('/').at(-2) ?? '', () => resolve(glb()))
+				})
+		)
+		return held
+	}
+
+	it('opens nothing over a saved scene, which Save would then overwrite', async () => {
+		route = () => glb()
+		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
+		mount(`/publisher/scene-1?generation=${JOB}`, { loadModel })
+		await waitFor(() => expect(latest).not.toBeNull())
+		// A few turns more, so the open effect has had every chance to run.
+		await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+
+		expect(fetchMock).not.toHaveBeenCalled()
+		expect(loadModel).not.toHaveBeenCalled()
+	})
+
+	it('drops a download the URL has left, so Back is not overtaken by it', async () => {
+		const held = heldArtifacts()
+		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
+		const router = mount(`/publisher?generation=${JOB}`, { loadModel })
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		await act(() => router.navigate('/publisher'))
+		await act(async () => held.get(JOB)?.())
+
+		expect(loadModel).not.toHaveBeenCalled()
+		expect(current().opening).toBeNull()
+	})
+
+	it('loads only the latest of two quick opens', async () => {
+		const held = heldArtifacts()
+		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
+		const router = mount(`/publisher?generation=${JOB}`, { loadModel })
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		await act(() => router.navigate(`/publisher?generation=${SECOND}`))
+		await waitFor(() => expect(held.has(SECOND)).toBe(true))
+		await act(async () => {
+			held.get(JOB)?.()
+			held.get(SECOND)?.()
+		})
+
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+		expect(current().opening).toBeNull()
+	})
+
+	it('never reopens on a revalidation, which would load over unsaved edits', async () => {
+		route = () => glb()
+		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
+		const router = mount(`/publisher?generation=${JOB}`, { loadModel })
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+
+		await act(() => router.revalidate())
+
+		expect(loads).toBe(2)
+		expect(loadModel).toHaveBeenCalledTimes(1)
+	})
+
+	it('opens again on a retry, after a failed open', async () => {
+		// A body reads once, so every request gets a fresh one.
+		let failing = true
+		route = () => (failing ? refusal('runtime_unavailable', 503) : glb())
+		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
+		mount(`/publisher?generation=${JOB}`, { loadModel })
+		await waitFor(() =>
+			expect(current().opening?.error).toBe('runtime_unavailable')
+		)
+
+		failing = false
+		await act(async () => current().retryOpen())
+
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+		await waitFor(() => expect(current().opening).toBeNull())
+	})
+
+	it('opens it again after the URL left it and came back', async () => {
+		route = () => glb()
+		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
+		const router = mount(`/publisher?generation=${JOB}`, { loadModel })
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+
+		await act(() => router.navigate('/publisher'))
+		await act(() => router.navigate(`/publisher?generation=${JOB}`))
+
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(2))
+	})
+
+	it('shows a download that failed by its kind', async () => {
+		route = () => refusal('runtime_unavailable', 503)
+		mount(`/publisher?generation=${JOB}`)
+
+		await waitFor(() =>
+			expect(current().opening).toEqual({
+				jobId: JOB,
+				error: 'runtime_unavailable'
+			})
+		)
+		// Said aloud: the variant a link names may not be in the panel's list.
+		expect(toastError).toHaveBeenCalledWith(
+			'The generation runtime is not reachable. Trying again usually works.'
+		)
 	})
 
 	it('shows a load the publisher refused as a failed open', async () => {
-		route = (url) =>
-			url.endsWith('/artifact')
-				? new Response('glb')
-				: url.endsWith(JOB)
-					? envelope(jobState('succeeded'))
-					: submitted()
-		const { result } = await startOne(async () => ({ status: 'error' }))
-		await pollOnce()
-
-		await act(() => result.current.loadCandidate(JOB))
-
-		expect(result.current.candidates[0]).toMatchObject({
-			status: 'succeeded',
-			error: 'open_failed'
+		route = () => glb()
+		mount(`/publisher?generation=${JOB}`, {
+			loadModel: async () => ({ status: 'error' })
 		})
+
+		await waitFor(() =>
+			expect(current().opening).toEqual({ jobId: JOB, error: 'open_failed' })
+		)
 	})
 
-	it('clears a failed open once the variant is opened again', async () => {
-		let artifact = refusal('runtime_unavailable', 503)
-		route = (url) =>
-			url.endsWith('/artifact')
-				? artifact
-				: url.endsWith(JOB)
-					? envelope(jobState('succeeded'))
-					: submitted()
-		const { result } = await startOne()
-		await pollOnce()
+	const image = () =>
+		new File([new Uint8Array(1)], 'chair.png', { type: 'image/png' })
+	const params = {
+		resolution: 1024,
+		textureSize: 2048,
+		decimationTarget: 200_000,
+		seedCount: 1
+	} as const
 
-		await act(() => result.current.loadCandidate(JOB))
-		expect(result.current.candidates[0].error).toBe('runtime_unavailable')
+	it('reloads the list once a submit is accepted, so the new batch is in it', async () => {
+		route = () =>
+			envelope(
+				{
+					batchId: 'batch',
+					jobs: [{ jobId: JOB, seed: 7, status: 'queued', error: null }]
+				},
+				202
+			)
+		mount('/publisher')
+		await waitFor(() => expect(latest).not.toBeNull())
 
-		artifact = new Response('glb')
-		await act(() => result.current.loadCandidate(JOB))
-		expect(result.current.candidates[0].error).toBeNull()
+		await act(() => current().generate(image(), params))
+
+		expect(loads).toBe(2)
+		expect(current().submitError).toBeNull()
+		expect(current().isSubmitting).toBe(false)
+	})
+
+	it('names a refused submit by its kind, and reloads nothing', async () => {
+		route = () => refusal('runtime_unavailable', 503)
+		mount('/publisher')
+		await waitFor(() => expect(latest).not.toBeNull())
+
+		await act(() => current().generate(image(), params))
+
+		expect(current().submitError).toBe('runtime_unavailable')
+		expect(loads).toBe(1)
 	})
 })
