@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	normalizePresentationSettings,
+	resolveInteractionStart,
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInteractionHint,
@@ -278,5 +279,22 @@ describe('unloading when off-screen', () => {
 		expect(shouldUnloadWhenOffscreen({ unloadWhenOffscreen: false })).toBe(
 			false
 		)
+	})
+})
+
+describe('when interaction starts', () => {
+	it('keeps a known start and locale and drops anything else', () => {
+		expect(
+			normalizePresentationSettings({ interactionStart: 'tap', locale: 'de' })
+		).toEqual({ interactionStart: 'tap', locale: 'de' })
+		expect(
+			normalizePresentationSettings({ interactionStart: 'hover', locale: 'fr' })
+		).toBeUndefined()
+	})
+
+	it('starts immediately unless the author chose a tap, so older scenes keep their viewer', () => {
+		expect(resolveInteractionStart(undefined)).toBe('immediate')
+		expect(resolveInteractionStart({ showInfoPopover: true })).toBe('immediate')
+		expect(resolveInteractionStart({ interactionStart: 'tap' })).toBe('tap')
 	})
 })

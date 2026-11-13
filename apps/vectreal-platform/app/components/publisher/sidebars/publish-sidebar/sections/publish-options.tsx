@@ -10,6 +10,7 @@ import { useCallback, useId, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
 import { toast } from 'sonner'
 
+import { InteractionStartSetting } from './interaction-start-setting'
 import { useSceneViewReturnSetting } from './use-scene-view-return-setting'
 import { originalPreset } from '../../../../../constants/optimizations'
 import {
@@ -470,6 +471,10 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 						onCheckedChange={handleToggleInteractionHint}
 						label="Show how to interact"
 						description="Tells visitors how to move the scene, briefly, when it first appears. Applies to embeds and preview links as soon as you save."
+					/>
+					<InteractionStartSetting
+						presentation={presentation}
+						onChange={setPresentation}
 					/>
 					<Toggle
 						checked={shouldShowFullscreenButton(presentation)}

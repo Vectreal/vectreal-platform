@@ -655,7 +655,26 @@ export interface ScenePresentationSettings {
 	 * what every scene saved before this field existed did.
 	 */
 	unloadWhenOffscreen?: boolean
+	/**
+	 * When visitors can start moving the scene: `immediate`, as the page
+	 * loads, or `tap`, once they press the viewer's "Tap to rotate" button.
+	 * Until then touches and the wheel scroll the page around the viewer and
+	 * an auto-rotating scene keeps turning. Absent means `immediate`, so
+	 * scenes saved before this field existed keep the viewer they had.
+	 */
+	interactionStart?: SceneInteractionStart
+	/**
+	 * The language of the words the viewer itself shows a visitor, such as
+	 * "Zum Drehen tippen". Absent, the visitor's browser language decides.
+	 */
+	locale?: SceneLocale
 }
+
+/** When visitors can start moving a scene; see `interactionStart`. */
+export type SceneInteractionStart = 'immediate' | 'tap'
+
+/** The languages the viewer's own words come in. */
+export type SceneLocale = 'en' | 'de'
 
 /**
  * Scene settings containing viewer configuration.

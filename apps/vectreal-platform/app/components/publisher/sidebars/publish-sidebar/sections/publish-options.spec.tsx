@@ -5,7 +5,13 @@
  * covers the wiring between them and the panel.
  */
 import { Document } from '@gltf-transform/core'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within
+} from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -253,6 +259,26 @@ describe('the publish panel', () => {
 		expect(toggle).toBeChecked()
 		fireEvent.click(toggle)
 		expect(store.get(presentationAtom).unloadWhenOffscreen).toBe(false)
+	})
+
+	it('waits for a tap on a new scene, and asks the button language only then', () => {
+		const store = renderPanel(balancedPreset)
+		const start = screen.getByRole('radiogroup', { name: 'Start moving' })
+		expect(
+			within(start).getByRole('radio', { name: 'After a tap' })
+		).toBeChecked()
+
+		const language = screen.getByRole('radiogroup', { name: 'Button language' })
+		fireEvent.click(within(language).getByRole('radio', { name: 'Deutsch' }))
+		expect(store.get(presentationAtom).locale).toBe('de')
+		fireEvent.click(within(language).getByRole('radio', { name: 'Browser' }))
+		expect(store.get(presentationAtom)).not.toHaveProperty('locale')
+
+		fireEvent.click(within(start).getByRole('radio', { name: 'Right away' }))
+		expect(store.get(presentationAtom).interactionStart).toBe('immediate')
+		expect(
+			screen.queryByRole('radiogroup', { name: 'Button language' })
+		).toBeNull()
 	})
 
 	it('stores alt text for the viewer, and forgets it once cleared', () => {

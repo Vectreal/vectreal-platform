@@ -4,6 +4,7 @@ import { memo, useCallback, useMemo, useState } from 'react'
 import { normalizeShadowOptions } from '../../constants/viewer-defaults'
 import { resolveBakedShadowSource } from '../../lib/domain/scene/client/baked-shadow-source'
 import {
+	resolveInteractionStart,
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInteractionHint,
@@ -204,6 +205,8 @@ const SceneEmbedViewer = memo(
 					unloadWhenOffscreen={shouldUnloadWhenOffscreen(
 						sceneData?.presentation
 					)}
+					interactionStart={resolveInteractionStart(sceneData?.presentation)}
+					locale={sceneData?.presentation?.locale}
 					label={resolveSceneAltText(sceneData?.presentation, sceneData?.meta)}
 					shadowsOptions={shadowsOptions}
 					bakedShadow={bakedShadow}

@@ -13,17 +13,23 @@ const camera = vi.hoisted(() => ({
 	connected: { style: { touchAction: 'none' } },
 	azimuth: 0,
 	polar: Math.PI / 2,
-	onChange: undefined as undefined | ((event?: unknown) => void)
+	onChange: undefined as undefined | ((event?: unknown) => void),
+	props: {} as Record<string, unknown>,
+	frame: undefined as undefined | (() => void),
+	update: vi.fn()
 }))
 
 vi.mock('@react-three/drei', () => ({
 	OrbitControls: forwardRef(function OrbitControls(
-		props: { onChange?: (event?: unknown) => void },
+		props: { onChange?: (event?: unknown) => void; autoRotate?: boolean },
 		ref
 	) {
 		camera.onChange = props.onChange
+		camera.props = props
 		useImperativeHandle(ref, () => ({
 			domElement: camera.connected,
+			autoRotate: props.autoRotate,
+			update: camera.update,
 			getAzimuthalAngle: () => camera.azimuth,
 			getPolarAngle: () => camera.polar
 		}))
@@ -32,6 +38,9 @@ vi.mock('@react-three/drei', () => ({
 }))
 
 vi.mock('@react-three/fiber', () => ({
+	useFrame: (callback: () => void) => {
+		camera.frame = callback
+	},
 	useThree: (select: (state: unknown) => unknown) =>
 		select({ events: { connected: camera.connected } })
 }))
@@ -135,5 +144,32 @@ describe('SceneControls', () => {
 		camera.connected = { style: { touchAction: 'none' } }
 		rerender(<SceneControls enabledOverride={false} onViewChange={vi.fn()} />)
 		expect(camera.connected.style.touchAction).toBe('')
+	})
+
+	it('takes no input while locked, hands touch to the page, and keeps auto-rotate turning', () => {
+		camera.connected = { style: { touchAction: 'none' } }
+		camera.update.mockClear()
+		const { rerender } = render(<SceneControls inputLocked autoRotate />)
+		expect(camera.props.enabled).toBe(false)
+		expect(camera.connected.style.touchAction).toBe('')
+		camera.frame?.()
+		expect(camera.update).toHaveBeenCalledTimes(1)
+
+		rerender(<SceneControls autoRotate />)
+		expect(camera.props.enabled).toBe(true)
+		expect(camera.connected.style.touchAction).toBe('none')
+		camera.update.mockClear()
+		camera.frame?.()
+		// drei steps enabled controls itself.
+		expect(camera.update).not.toHaveBeenCalled()
+	})
+
+	it('steps nothing while locked when the scene does not auto-rotate, or a host turned the controls off', () => {
+		camera.update.mockClear()
+		const { rerender } = render(<SceneControls inputLocked />)
+		camera.frame?.()
+		rerender(<SceneControls inputLocked autoRotate enabledOverride={false} />)
+		camera.frame?.()
+		expect(camera.update).not.toHaveBeenCalled()
 	})
 })

@@ -5,6 +5,7 @@ import { Component, useEffect, useState, type ReactNode } from 'react'
 import { CameraEchoCase } from './CameraEchoCase'
 import { OcclusionBakeCase } from './OcclusionBakeCase'
 import { OffscreenCase } from './OffscreenCase'
+import { TapCase } from './TapCase'
 
 /*
   Three hotspots covering the visibility contract, so a real browser proves what
@@ -218,6 +219,15 @@ export default function App() {
 	if (search.has('hint-case')) return <HintCase />
 	if (search.has('offscreen-case'))
 		return <OffscreenCase unload={search.get('offscreen-case') !== 'pause'} />
+	if (search.has('tap-case'))
+		return (
+			<TapCase
+				interactionStart={
+					search.get('tap-case') === 'immediate' ? 'immediate' : 'tap'
+				}
+				spin={search.has('spin')}
+			/>
+		)
 
 	// Like a real host: an inline callback that re-renders the page on every
 	// viewer event, so each render hands the viewer a new function. A camera a

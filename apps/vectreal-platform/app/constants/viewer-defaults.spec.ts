@@ -167,3 +167,18 @@ describe('the interaction hint', () => {
 		).toBeUndefined()
 	})
 })
+
+describe('when interaction starts', () => {
+	it('waits for a tap on a new scene', () => {
+		expect(withSceneSettingsDefaults({}).presentation.interactionStart).toBe(
+			'tap'
+		)
+	})
+
+	it('stays immediate for a scene saved with a presentation before it existed', () => {
+		expect(
+			withSceneSettingsDefaults({ presentation: { showInfoPopover: true } })
+				.presentation.interactionStart
+		).toBeUndefined()
+	})
+})
