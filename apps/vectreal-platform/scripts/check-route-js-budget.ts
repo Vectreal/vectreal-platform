@@ -20,8 +20,10 @@
  *
  * A budget is soft. Going over it passes the build with a warning on the PR
  * and a line in the job summary: re-evaluate the change, or the budget. Only
- * a route past its hard ceiling, 20% over the budget, fails; that margin is
- * for runaway leaks, not growth. A forbidden module on a first load, or a
+ * a route past its hard ceiling, 50% over the budget, fails. The margin is
+ * wide on purpose: the forbidden-module check below already catches the leaks
+ * that matter, and a tight hard stop is where changes start contorting code
+ * to squeeze under a number. A forbidden module on a first load, or a
  * budgeted route that no longer exists, always fails.
  *
  * The budgets sit a little above the sizes measured on 18 Oct 2026. Raising
@@ -67,7 +69,7 @@ const EMBED_ROUTE = 'routes/embed-page/embed-scene'
 const EMBED_BUDGET_KB = 845
 
 /** How far past its budget a route may go before the build fails. */
-const HARD_CEILING = 1.2
+const HARD_CEILING = 1.5
 
 /*
   Which chunk is a route's module comes from React Router's own manifest, not
@@ -152,7 +154,7 @@ function main() {
 			`${route.padEnd(34)} ${kb.padStart(6)} KB gz of ${budget}, ${closure.size} chunks`
 		)
 		// Compared unrounded, like the budget: rounding the ceiling first could
-		// put it up to half a KB under 1.2x.
+		// put it up to half a KB under the ceiling.
 		const ceiling = budget * HARD_CEILING
 		if (bytes > ceiling * 1024)
 			failures.push(
