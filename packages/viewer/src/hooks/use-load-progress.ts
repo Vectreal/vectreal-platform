@@ -1,5 +1,5 @@
 import { useProgress } from '@react-three/drei'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { ViewerInteractionEvent } from '../types/viewer-interactions'
 import type { LoadProgress } from '@vctrl/core'
@@ -32,22 +32,42 @@ export function useViewerLoadProgress({
 	hostProgress: LoadProgress | null | undefined
 }): LoadProgress | null {
 	const preparing = hasContent && isLoading
-	// A key rather than the store, so a page loading textures elsewhere does
-	// not re-render the viewer once it is ready.
-	const files = useProgress((state) =>
-		preparing && state.active && state.total > 0
-			? `${state.loaded}/${state.total}`
-			: ''
+	/*
+	  A key rather than the store, so a page loading textures elsewhere does
+	  not re-render the viewer once it is ready. Outside preparing it changes
+	  only when the manager finishes a period, which is what the baseline
+	  below needs to see.
+	*/
+	const reading = useProgress((state) =>
+		preparing
+			? `${state.active ? 'active' : 'idle'}:${state.loaded}/${state.total}`
+			: state.active
+				? 'idle-busy'
+				: `idle:${state.total}/${state.total}`
 	)
+	const [activity, counts] = reading.split(':')
+	const [loaded, total] = (counts ?? '0/0').split('/').map(Number)
+
+	/*
+	  three's manager never resets its counters, so a second period counts on
+	  from the first. What it had finished when it was last idle is the
+	  baseline this load's files are counted from. Set during render, as
+	  derived state, so the count is right on the render it changes in.
+	*/
+	const [baseline, setBaseline] = useState(0)
+	if (activity === 'idle' && total !== baseline) setBaseline(total)
 
 	// One object per change, so an effect keyed on it runs per change.
 	return useMemo(() => {
 		if (!isLoading) return null
 		if (!hasContent) return hostProgress ?? null
-		if (!files) return { phase: 'preparing' }
-		const [loaded, total] = files.split('/').map(Number)
-		return { phase: 'preparing', items: { loaded, total } }
-	}, [files, hasContent, hostProgress, isLoading])
+		if (activity !== 'active' || total <= baseline)
+			return { phase: 'preparing' }
+		return {
+			phase: 'preparing',
+			items: { loaded: loaded - baseline, total: total - baseline }
+		}
+	}, [activity, baseline, hasContent, hostProgress, isLoading, loaded, total])
 }
 
 /** How often `load_progress` may repeat within one phase. */
@@ -74,23 +94,47 @@ export function useLoadEvents({
 		emitRef.current = emit
 	})
 
-	// Remembered across StrictMode's second mount, so it still fires once.
+	// Remembered across StrictMode's second mount, so it still fires once;
+	// forgotten when the model goes, so the same model coming back is news.
 	const announced = useRef<unknown>(null)
 	useEffect(() => {
-		if (!modelIdentity || announced.current === modelIdentity) return
+		if (!modelIdentity) {
+			announced.current = null
+			return
+		}
+		if (announced.current === modelIdentity) return
 		announced.current = modelIdentity
 		emitRef.current({ type: 'model_loaded' })
 	}, [modelIdentity])
 
 	const last = useRef<{ phase: string; at: number } | null>(null)
+	// A value held back by the interval, sent when it ends or before anything else.
+	const held = useRef<{
+		progress: LoadProgress
+		timer: ReturnType<typeof setTimeout>
+	} | null>(null)
+	const send = (value: LoadProgress) => {
+		last.current = { phase: value.phase, at: Date.now() }
+		emitRef.current({ type: 'load_progress', progress: value })
+	}
+	const sendRef = useRef(send)
 	useEffect(() => {
+		sendRef.current = send
+	})
+
+	useEffect(() => {
+		const pending = held.current
+		if (pending) {
+			clearTimeout(pending.timer)
+			held.current = null
+			// The last word of a phase that is ending, or of a load that ended.
+			if (!progress || progress.phase !== pending.progress.phase) {
+				sendRef.current(pending.progress)
+			}
+		}
 		if (!progress) {
 			last.current = null
 			return
-		}
-		const send = () => {
-			last.current = { phase: progress.phase, at: Date.now() }
-			emitRef.current({ type: 'load_progress', progress })
 		}
 		const previous = last.current
 		const wait =
@@ -98,11 +142,22 @@ export function useLoadEvents({
 				? previous.at + LOAD_PROGRESS_EVENT_INTERVAL_MS - Date.now()
 				: 0
 		if (wait <= 0) {
-			send()
+			sendRef.current(progress)
 			return
 		}
-		// A newer value replaces this one before it is sent.
-		const timer = setTimeout(send, wait)
-		return () => clearTimeout(timer)
+		held.current = {
+			progress,
+			timer: setTimeout(() => {
+				held.current = null
+				sendRef.current(progress)
+			}, wait)
+		}
 	}, [progress])
+
+	useEffect(
+		() => () => {
+			if (held.current) clearTimeout(held.current.timer)
+		},
+		[]
+	)
 }

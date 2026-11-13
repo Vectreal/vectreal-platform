@@ -1230,11 +1230,22 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
 		typeof loaderSlot === 'function' || Boolean(loaderSlot)
 	)
-	// When the loader last came up, for its delay; see `ViewerLoadClockContext`.
-	const [loadStartedAt, setLoadStartedAt] = useState(() => Date.now())
-	useEffect(() => {
-		if (loadingState === 'loading') setLoadStartedAt(Date.now())
-	}, [loadingState])
+	/*
+	  When the loader last came up, for its delay; see `ViewerLoadClockContext`.
+	  Set during render, as derived state, so the loader that mounts in the
+	  same render as a new load already reads that load's start.
+	*/
+	const [loadClock, setLoadClock] = useState(() => ({
+		state: loadingState,
+		startedAt: Date.now()
+	}))
+	if (loadClock.state !== loadingState) {
+		setLoadClock({
+			state: loadingState,
+			startedAt: loadingState === 'loading' ? Date.now() : loadClock.startedAt
+		})
+	}
+	const loadStartedAt = loadClock.startedAt
 
 	const loadProgressNow = useViewerLoadProgress({
 		hasContent,

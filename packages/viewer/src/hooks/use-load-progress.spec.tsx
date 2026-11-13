@@ -15,7 +15,11 @@
  *  - key `model_loaded` on nothing and the once-per-model test goes red;
  *  - drop the once-guard and the StrictMode test goes red;
  *  - drop the trailing send and the newest-value test goes red;
- *  - drop `state.active` from the selector and the finished-manager test goes red.
+ *  - drop `state.active` from the selector, or the baseline, and the
+ *    finished-manager test goes red;
+ *  - send nothing held back on a phase change and the held-back test goes red;
+ *  - keep the announced identity when the model goes and the comes-back test
+ *    goes red.
  */
 import { useProgress } from '@react-three/drei'
 import { act, renderHook } from '@testing-library/react'
@@ -76,7 +80,14 @@ describe('useViewerLoadProgress', () => {
 			})
 		)
 		expect(result.current).toEqual({ phase: 'preparing' })
-		act(() => useProgress.setState({ loaded: 0, total: 0 }))
+
+		// three never resets its counters: this load's one file is 6 of 6 there.
+		act(() => useProgress.setState({ active: true, loaded: 5, total: 6 }))
+		expect(result.current).toEqual({
+			phase: 'preparing',
+			items: { loaded: 0, total: 1 }
+		})
+		act(() => useProgress.setState({ active: false, loaded: 0, total: 0 }))
 	})
 
 	it('is nothing once the loader is gone', () => {
@@ -116,7 +127,9 @@ describe('useLoadEvents', () => {
 		vi.advanceTimersByTime(250)
 		rerender({ progress: { phase: 'parsing', items: { loaded: 1, total: 3 } } })
 
+		// The held-back fetching value goes out before parsing starts.
 		expect(emit.mock.calls.map(([event]) => event.progress.phase)).toEqual([
+			'fetching',
 			'fetching',
 			'parsing',
 			'parsing'
@@ -148,6 +161,55 @@ describe('useLoadEvents', () => {
 		expect(
 			emit.mock.calls.map(([event]) => event.progress.bytes.loaded)
 		).toEqual([1, 10])
+	})
+
+	it('sends a held-back value before the next phase, and when the load ends', () => {
+		vi.useFakeTimers()
+		const emit = vi.fn()
+		const { rerender } = renderHook(
+			({ progress }) => useLoadEvents({ progress, modelIdentity: null, emit }),
+			{
+				initialProps: {
+					progress: {
+						phase: 'fetching',
+						bytes: { loaded: 4, total: 10 }
+					} as LoadProgress | null
+				}
+			}
+		)
+		rerender({
+			progress: { phase: 'fetching', bytes: { loaded: 10, total: 10 } }
+		})
+		rerender({
+			progress: { phase: 'preparing', items: { loaded: 2, total: 3 } }
+		})
+		rerender({
+			progress: { phase: 'preparing', items: { loaded: 3, total: 3 } }
+		})
+		rerender({ progress: null })
+
+		expect(
+			emit.mock.calls.map(([event]) =>
+				JSON.stringify(event.progress.bytes ?? event.progress.items)
+			)
+		).toEqual([
+			'{"loaded":4,"total":10}',
+			'{"loaded":10,"total":10}',
+			'{"loaded":2,"total":3}',
+			'{"loaded":3,"total":3}'
+		])
+	})
+
+	it('says model_loaded again when the same model comes back', () => {
+		const emit = vi.fn()
+		const { rerender } = renderHook(
+			({ identity }) =>
+				useLoadEvents({ progress: null, modelIdentity: identity, emit }),
+			{ initialProps: { identity: 'scene-a' as string | null } }
+		)
+		rerender({ identity: null })
+		rerender({ identity: 'scene-a' })
+		expect(types(emit)).toEqual(['model_loaded', 'model_loaded'])
 	})
 
 	it('says model_loaded once under StrictMode too', () => {

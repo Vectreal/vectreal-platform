@@ -49,6 +49,10 @@ describe('load progress is wired into the viewer', () => {
 		expect(source).toContain(
 			'<ViewerLoadClockContext.Provider value={loadStartedAt}>'
 		)
+		// During render, so a loader mounting with a new load reads its start.
+		expect(source).toMatch(
+			/if \(loadClock\.state !== loadingState\) \{\s*setLoadClock\(\{\s*state: loadingState,\s*startedAt:\s*loadingState === 'loading' \? Date\.now\(\) : loadClock\.startedAt/
+		)
 	})
 
 	it("measures src's own load", () => {
