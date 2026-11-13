@@ -131,22 +131,25 @@ const OverlayControls = ({
 	  below and the chrome around it both read it, so they cannot disagree.
 	*/
 	const navigation = useNavigation()
+	// Here, not in the empty stage, which opening a variant unmounts.
+	const imgTo3d = useImgTo3dGeneration(uploadFiles, sceneId)
 	const surface = resolvePublisherSurface({
 		status,
 		hasScene: Boolean(openSceneId),
 		// Navigating within the publisher (to a scene just saved, or between
 		// scenes) is a load, and so is reading a signed-in draft back out of
-		// IndexedDB: in both, a model is on its way and the stage should wait.
+		// IndexedDB, and so is downloading a generated variant before the
+		// loader is handed it: in each, a model is on its way and the stage
+		// should wait.
 		isNavigating:
 			isRestoringDraft ||
+			(imgTo3d.opening !== null && imgTo3d.opening.error === null) ||
 			(navigation.state === 'loading' &&
 				Boolean(navigation.location?.pathname?.startsWith('/publisher')))
 	})
 	// Here rather than in the empty stage, which a revalidation unmounts mid-download: see its `sampleDownload`.
 	const sampleDownload = useSampleDownload()
 	const openExampleScene = useOpenExampleScene(uploadFiles)
-	// Here for the same reason: opening a variant unmounts the empty stage.
-	const imgTo3d = useImgTo3dGeneration(uploadFiles, sceneId)
 	/*
 	  The rail, the publish card, the sidebars and the header's scene controls
 	  act on a scene, so an empty stage has none of them: nothing on screen is a

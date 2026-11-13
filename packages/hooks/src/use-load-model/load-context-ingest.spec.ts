@@ -5,13 +5,16 @@
  * load": a newer drop that fails puts the earlier model back, which must still
  * reach the optimizer, while a load retired before it published never may.
  */
+import { format } from 'node:util'
+
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import useLoadModel from './use-load-model'
 
 import type { LoadContext } from './load-context'
 import type { LoadedModel } from './types'
+import type { MockInstance } from 'vitest'
 
 const contexts = vi.hoisted(() => [] as LoadContext[])
 const parsed = vi.hoisted(
@@ -63,9 +66,17 @@ function setup(optimizer?: Parameters<typeof useLoadModel>[0]) {
 	return { result, start, publish }
 }
 
+let consoleError: MockInstance<typeof console.error>
 beforeEach(() => {
 	contexts.length = 0
-	vi.spyOn(console, 'error').mockImplementation(() => {})
+	consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+	/* A failed load is logged once, with its source. That, and nothing else. */
+	for (const args of consoleError.mock.calls) {
+		expect(format(...args)).toMatch(/^Model load failed \(/)
+	}
 })
 
 describe('LoadContext.mayIngest', () => {

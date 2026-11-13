@@ -36,6 +36,7 @@ function renderScenePage() {
 			*/
 			id: 'parent',
 			path: '/',
+			HydrateFallback: () => null,
 			loader: async () => {
 				await fetch('/parent.data')
 				return null

@@ -26,6 +26,8 @@ vi.mock('../app/lib/posthog/posthog-client.server', () => ({
 */
 import { reportServerError } from '../app/lib/observability/report-server-error.server'
 
+import type { MockInstance } from 'vitest'
+
 /** The context a call site inside a request handler passes. */
 const serving = (url: string, init?: RequestInit) => ({
 	request: new Request(url, init)
@@ -33,16 +35,16 @@ const serving = (url: string, init?: RequestInit) => ({
 
 describe('reportServerError', () => {
 	/*
-	  Spied once and cleared per test, not re-spied per test: `vi.spyOn` on an
-	  already-spied method hands back the same mock with its history intact, so
-	  re-spying in `beforeEach` leaves earlier tests' calls in place and a
-	  call-count assertion counts the whole file.
+	  Spied per test. `vitest.setup.mts` puts its own console.error in place
+	  before each test, so a spy made once at the top would be replaced before
+	  the first test ran; each spy here wraps a fresh method and starts empty.
+	  Every case logs, which is the behavior "still logs" pins.
 	*/
-	const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+	let logged: MockInstance<typeof console.error>
 
 	beforeEach(() => {
 		captureException.mockClear()
-		logged.mockClear()
+		logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 	})
 
 	it('captures an error thrown while serving a request', () => {

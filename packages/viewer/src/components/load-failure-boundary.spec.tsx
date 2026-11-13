@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { format } from 'node:util'
+
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -10,7 +12,9 @@ const FailedLoad = (): never => {
 
 describe('LoadFailureBoundary', () => {
 	it('contains a failed load and reports it', () => {
-		vi.spyOn(console, 'error').mockImplementation(() => undefined)
+		const logged = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => undefined)
 		const onError = vi.fn()
 
 		const { container } = render(
@@ -23,5 +27,10 @@ describe('LoadFailureBoundary', () => {
 
 		expect(container.querySelector('[data-testid="scene"]')).not.toBeNull()
 		expect(onError).toHaveBeenCalledOnce()
+		expect(logged).toHaveBeenCalled()
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(/404/)
+		}
 	})
 })

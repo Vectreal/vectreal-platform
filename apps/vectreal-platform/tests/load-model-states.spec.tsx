@@ -57,6 +57,7 @@ describe('useLoadModel state', () => {
 	})
 
 	it('reports an empty file list as an error rather than loading forever', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const { result } = renderHook(() => useLoadModel())
 
 		const state = await act(() =>
@@ -66,9 +67,14 @@ describe('useLoadModel state', () => {
 		expect(state.status).toBe('error')
 		expect(state.error?.code).toBe('unsupported_format')
 		await waitFor(() => expect(result.current.status).toBe('error'))
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (files):',
+			expect.objectContaining({ code: 'unsupported_format' })
+		)
 	})
 
 	it('rejects a folder holding more than one model, and says which', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const { result } = renderHook(() => useLoadModel())
 
 		const state = await act(() =>
@@ -81,9 +87,14 @@ describe('useLoadModel state', () => {
 		expect(state.status).toBe('error')
 		expect(state.error?.code).toBe('multiple_models')
 		expect(state.error?.message).toContain('a.gltf')
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (files):',
+			expect.objectContaining({ code: 'multiple_models' })
+		)
 	})
 
 	it('reports unsupported files as an error', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const { result } = renderHook(() => useLoadModel())
 
 		const state = await act(() =>
@@ -92,6 +103,10 @@ describe('useLoadModel state', () => {
 
 		expect(state.status).toBe('error')
 		expect(state.error?.code).toBe('unsupported_format')
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (files):',
+			expect.objectContaining({ code: 'unsupported_format' })
+		)
 	})
 
 	it('surfaces a model, and keeps status and file in agreement', async () => {
@@ -110,6 +125,7 @@ describe('useLoadModel state', () => {
 	})
 
 	it('reports the failure without reporting the previous model as loaded', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const { result } = renderHook(() => useLoadModel())
 
 		await act(() =>
@@ -121,9 +137,14 @@ describe('useLoadModel state', () => {
 
 		expect(failed.status).toBe('error')
 		expect(failed.file).toBeNull()
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (files):',
+			expect.objectContaining({ code: 'unsupported_format' })
+		)
 	})
 
 	it('leaves the model that was on screen alone when an upload fails', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const { result } = renderHook(() => useLoadModel())
 
 		await act(() =>
@@ -139,9 +160,14 @@ describe('useLoadModel state', () => {
 			expect(result.current.status).toBe('ready')
 			expect(result.current.file?.name).toBe('model.glb')
 		})
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (files):',
+			expect.objectContaining({ code: 'unsupported_format' })
+		)
 	})
 
 	it('keeps the model on screen when a drop fails while another is loading', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		/*
 		  THE DEFECT. `modelOnScreen` was read from the current state and required
 		  `ready` - but a load commits a blanking `loading` state on its way in, so
@@ -182,9 +208,14 @@ describe('useLoadModel state', () => {
 		await act(async () => {
 			await slow
 		})
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (files):',
+			expect.objectContaining({ code: 'unsupported_format' })
+		)
 	})
 
 	it('surfaces a failed scene load rather than leaving the previous scene up', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(async () => ({
@@ -208,6 +239,10 @@ describe('useLoadModel state', () => {
 		expect(result.current.file).toBeNull()
 
 		vi.unstubAllGlobals()
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (server):',
+			expect.objectContaining({ code: 'server_load_failed' })
+		)
 	})
 
 	it('lets the newer load win when two overlap, and tells the loser', async () => {

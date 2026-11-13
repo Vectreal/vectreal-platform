@@ -36,6 +36,12 @@ export const streamTimeout = 5_000
 export { isUnpublishedNewsPath } from './lib/news/news-manifest.server'
 
 /*
+  Also read by `server.mjs`: `createServerApp` runs every logged URL through it,
+  so an embed's `?token=` never reaches the request log.
+*/
+export { redactUrlSecrets } from './lib/posthog/redact-url-secrets'
+
+/*
   Also read by `server.mjs`, which starts it once listening: it tells search
   engines when an article goes live. See `news-indexnow.server.ts`.
 */

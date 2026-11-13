@@ -13,6 +13,7 @@ describe('ingestIntoOptimizer', () => {
 	})
 
 	it('runs no fallback for a load retired while it ingested', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		let current = true
 		const fallback = vi.fn(async () => undefined)
 		await ingestIntoOptimizer(
@@ -24,6 +25,11 @@ describe('ingestIntoOptimizer', () => {
 			fallback
 		)
 		expect(fallback).not.toHaveBeenCalled()
+		// The ingest still failed, and says so; only the fallback is skipped.
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			'Optimizer ingest failed.',
+			expect.objectContaining({ message: 'broken' })
+		)
 	})
 
 	it('runs no fallback once the optimizer refused the load', async () => {

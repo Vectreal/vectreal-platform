@@ -31,6 +31,7 @@ function renderSignIn(): { submitted: () => string | null } {
 	const Stub = createRoutesStub([
 		{
 			path: '/sign-in',
+			HydrateFallback: () => null,
 			Component: () => (
 				<Outlet context={{ turnstileToken: null, hasTurnstile: false }} />
 			),
@@ -110,6 +111,7 @@ describe('the sign-up form keeps its return path', () => {
 		const Stub = createRoutesStub([
 			{
 				path: '/sign-up',
+				HydrateFallback: () => null,
 				Component: () => (
 					<Outlet context={{ turnstileToken: null, hasTurnstile: false }} />
 				),
