@@ -100,6 +100,8 @@ export type ModelSource =
 			 * endpoint may send none. Measures `bytes.total` while fetching.
 			 */
 			expectedBytes?: number
+			/** The model file's name, over the URL's: a hashed asset, a download endpoint. */
+			fileName?: string
 	  }
 	/**
 	 * A scene payload the caller already has in memory (route aggregate, IDB

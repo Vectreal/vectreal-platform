@@ -72,6 +72,13 @@ export interface FetchModelFilesOptions {
 	 * and a download endpoint may send none.
 	 */
 	expectedBytes?: number
+	/**
+	 * What to name the model file, when the caller knows better than the URL:
+	 * a hashed build asset (`rocket-3f9a1c.glb`) or a download endpoint. It
+	 * must name a format the loader reads; a `.gltf` still finds its references
+	 * beside the URL.
+	 */
+	fileName?: string
 }
 
 /**
@@ -138,11 +145,11 @@ type FileProgress = Pick<
 async function readModelFiles(
 	modelUrl: URL,
 	init: RequestInit | undefined,
-	progress: FileProgress
+	progress: FileProgress & Pick<FetchModelFilesOptions, 'fileName'>
 ): Promise<File[]> {
 	const model = await readFile(
 		modelUrl,
-		modelFileName(modelUrl),
+		named(progress.fileName) ?? modelFileName(modelUrl),
 		init,
 		progress
 	)
@@ -262,6 +269,13 @@ function withPath(file: File, path: string): File {
 		})
 	}
 	return file
+}
+
+/** A caller's name for the file, when it names a format the loader reads. */
+function named(fileName: string | undefined): string | null {
+	return fileName && modelFormatForFileName(fileName)?.canImport
+		? fileName
+		: null
 }
 
 /**

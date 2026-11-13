@@ -326,6 +326,19 @@ describe('fetchModelFiles', () => {
 		expect(bytes.at(-1)).toEqual({ loaded: GLB_BYTES.byteLength, total: null })
 	})
 
+	it("names the file by the caller's name over a hashed URL", async () => {
+		stubFetch({
+			'https://a.com/assets/rocket-3f9a1c.glb': () => new Response(GLB_BYTES)
+		})
+
+		const [file] = await fetchModelFiles(
+			'https://a.com/assets/rocket-3f9a1c.glb',
+			{ fileName: 'rocket.glb' }
+		)
+
+		expect(file.name).toBe('rocket.glb')
+	})
+
 	it('names a file from a download endpoint by its Content-Disposition', async () => {
 		stubFetch({
 			'https://a.com/jobs/1/artifact': () =>
