@@ -52,21 +52,37 @@ export function vctrlSourcePlugin(packages: readonly string[]): Plugin {
 	}
 }
 
+const isCI = Boolean(process.env['GITHUB_ACTIONS'])
+
 /**
  * Baseline merged into every project's vitest.config.ts via mergeConfig.
- * Keep array-valued options (include, exclude, setupFiles, coverage.include)
- * out of here: mergeConfig concatenates arrays, so a base entry can never be
- * overridden per project. `reporters` is the deliberate exception.
+ * Keep project-specific array options (include, exclude, coverage.include) out
+ * of here: mergeConfig concatenates arrays, so a base entry can never be
+ * overridden per project. `setupFiles` is shared on purpose: every project
+ * gets the base setup and adds its own after it. `reporters` and
+ * `coverage.reporter` are the other exceptions.
  */
 export default defineConfig({
 	test: {
 		watch: false,
 		globals: true,
-		reporters: ['default'],
+		// Console output of a passing test is dropped; a failing one keeps it.
+		silent: 'passed-only',
+		setupFiles: [fileURLToPath(new URL('vitest.setup.mts', import.meta.url))],
+		/*
+		  CI prints failures only (`minimal`) and annotates them on the pull
+		  request (`github-actions`). Locally the default reporter stays, so a
+		  run still shows progress.
+		*/
+		reporters: isCI ? ['minimal', 'github-actions'] : ['default'],
 		coverage: {
 			enabled: true,
 			provider: 'v8',
-			reporter: ['text', 'html', 'lcov', 'json-summary'],
+			/*
+			  `text-summary` is four lines; `text` was a table of every file.
+			  The full report is in `html`, uploaded by ci-quality.yaml.
+			*/
+			reporter: ['text-summary', 'html', 'lcov', 'json-summary'],
 			reportOnFailure: true
 		}
 	}
