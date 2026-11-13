@@ -14,6 +14,7 @@ declare global {
 			error?: string
 		}
 		__VIEWER_READY__?: boolean
+		__VIEW_AZIMUTH__?: number
 		__VIEWER_EVENTS__?: string[]
 		__CAMERA_ECHO__?: SceneCameraSnapshotCapture
 		__CAMERA__?: SceneCameraSnapshotCapture

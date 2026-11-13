@@ -101,7 +101,10 @@ export const defaultPresentationOptions: ScenePresentationSettings = {
 	showInfoPopover: true,
 	showLoadingThumbnail: false,
 	// On for a new scene; one saved before it lacks the field and reads off.
-	showInteractionHint: true
+	showInteractionHint: true,
+	// A new scene waits for a tap, so a page or gallery around it keeps
+	// scrolling; one saved before it lacks the field and starts at once.
+	interactionStart: 'tap'
 }
 
 export const defaultEnvOptions: EnvironmentProps = {

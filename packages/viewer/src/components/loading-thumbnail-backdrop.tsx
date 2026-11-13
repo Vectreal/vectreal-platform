@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { cn, withHostClasses } from './class-names'
 import { useThumbnailEdgeBands } from '../hooks/use-thumbnail-edge-bands'
@@ -33,6 +33,30 @@ const LoadingThumbnailBackdrop = ({
 	// filter or position), so a styled image keeps plain contain.
 	const fillsBands = isContained && !thumbnail.className
 	useThumbnailEdgeBands(bandsRef, imageRef, fillsBands, thumbnail.src)
+
+	/*
+	  Which source has settled, and how. Until the current one has loaded the
+	  image is invisible: Safari draws its alt text and a broken-image icon
+	  for an image that is still on its way, not only for one that failed.
+	  One that fails is left out, so the loader shows over the stage alone.
+	*/
+	const [settled, setSettled] = useState<null | {
+		src: string
+		loaded: boolean
+	}>(null)
+	const status =
+		settled?.src !== thumbnail.src
+			? 'loading'
+			: settled.loaded
+				? 'loaded'
+				: 'failed'
+	// A cached image can finish before React attaches its `load` listener.
+	useLayoutEffect(() => {
+		const image = imageRef.current
+		if (image?.complete && image.naturalWidth > 0) {
+			setSettled({ src: thumbnail.src, loaded: true })
+		}
+	}, [thumbnail.src])
 
 	useEffect(() => {
 		const frameId = requestAnimationFrame(() => {
@@ -88,12 +112,16 @@ const LoadingThumbnailBackdrop = ({
 					)}
 				/>
 			)}
-			<img
-				ref={imageRef}
-				src={thumbnail.src}
-				alt={thumbnail.alt || 'Viewer loading thumbnail'}
-				className={imageClassName}
-			/>
+			{status !== 'failed' && (
+				<img
+					ref={imageRef}
+					src={thumbnail.src}
+					alt={thumbnail.alt || 'Viewer loading thumbnail'}
+					className={cn(imageClassName, status === 'loading' && 'vv:invisible')}
+					onLoad={() => setSettled({ src: thumbnail.src, loaded: true })}
+					onError={() => setSettled({ src: thumbnail.src, loaded: false })}
+				/>
+			)}
 			{thumbnail.scrim !== false && (
 				<>
 					<div className="vv:bg-background/35 vv:absolute vv:inset-0" />

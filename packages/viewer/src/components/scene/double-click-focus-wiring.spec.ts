@@ -17,9 +17,9 @@ const viewer = read('..', '..', 'vectreal-viewer.tsx')
 const camera = read('scene-camera.tsx')
 
 describe('double-click to focus is wired into the viewer', () => {
-	it('listens only where the scene turned it on, and reads absent as off', () => {
+	it('listens only where the scene turned it on, reads absent as off, and waits for a tap', () => {
 		expect(viewer).toMatch(
-			/controlsOptions\?\.focusOnDoubleClick === true && shownModel && \(\s*<SceneDoubleClickFocus\s*model=\{shownModel\}/
+			/controlsOptions\?\.focusOnDoubleClick === true &&\s*shownModel &&\s*!inputLocked && \(\s*<SceneDoubleClickFocus\s*model=\{shownModel\}/
 		)
 		expect(viewer).toContain('const shownModel = displayedModel ?? model')
 	})
