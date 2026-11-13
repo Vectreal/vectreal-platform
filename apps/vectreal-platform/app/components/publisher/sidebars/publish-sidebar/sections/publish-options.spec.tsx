@@ -41,6 +41,7 @@ import {
 	presentationAtom
 } from '../../../../../lib/stores/scene-settings-store'
 
+import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { Optimizations } from '@vctrl/core'
 
 const mocks = vi.hoisted(() => ({
@@ -151,6 +152,12 @@ describe('the publish panel', () => {
 			response: {},
 			publishState: { sceneId: 'scene-1', status: 'published' }
 		})
+		/*
+		  Every test that bakes loads the baked model for the preview. Without a
+		  default here, only tests that ran after one stubbing it got a model;
+		  the earlier ones had the preview fail on `undefined.catch` and passed.
+		*/
+		mocks.loadToThreeJS.mockResolvedValue({ scene: {} })
 	})
 
 	it('compresses textures by default on an optimizing preset', () => {
@@ -643,12 +650,16 @@ describe('the publish panel', () => {
 				skipped: [{ material: 'wheel', reason: 'shared-geometry' }]
 			}
 		})
-		renderPanel(balancedPreset, (store) =>
+		const store = renderPanel(balancedPreset, (store) =>
 			store.set(lightingAtom, { occlusion: { mode: 'baked' } })
 		)
 		fireEvent.click(screen.getByRole('button', { name: 'Publish Scene' }))
 
 		await waitFor(() => expect(mocks.publishSceneFromGlb).toHaveBeenCalled())
+		// The baked model reaches the stage, rather than the preview failing.
+		await waitFor(() =>
+			expect(store.get(bakePreviewAtom)?.status).toBe('ready')
+		)
 		expect(mocks.toastWarning).toHaveBeenCalledWith(
 			"1 material could not take the studio finish's depth.",
 			{
@@ -743,7 +754,15 @@ describe('the publish panel', () => {
 			buffer: PUBLISHED.slice().buffer,
 			geometryCodec: 'none',
 			occlusion: { baked: ['body'], skipped: [] },
-			lights: { failed: 'The GPU reset while baking the studio lights' }
+			/*
+			  A reason the worker can send. Free text here made the publish's
+			  own warning throw, so the publish reported failed while this test
+			  passed.
+			*/
+			lights: {
+				failed: 'unexpected',
+				detail: 'The GPU reset while baking the studio lights'
+			} satisfies BakePassOutcome
 		})
 		const store = renderPanel(balancedPreset, (store) =>
 			store.set(lightingAtom, {
@@ -762,6 +781,10 @@ describe('the publish panel', () => {
 			expect(mocks.publishSceneFromGlb).toHaveBeenCalledTimes(2)
 		)
 		expect(mocks.runPublishExportInWorker).toHaveBeenCalledTimes(2)
+		// The failed light bake is a warning on a publish that shipped.
+		await waitFor(() =>
+			expect(store.get(savePanelAtom)?.status).toBe('published')
+		)
 	})
 
 	it('leaves the model as it is when the publish bakes nothing', async () => {
