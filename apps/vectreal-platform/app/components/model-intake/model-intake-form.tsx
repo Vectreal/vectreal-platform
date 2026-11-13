@@ -20,6 +20,7 @@ import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import {
 	MODEL_INTAKE_HONEYPOT_FIELD,
 	MODEL_INTAKE_LETTER_PARAM,
+	MODEL_INTAKE_MAX_LINK_LENGTH,
 	MODEL_INTAKE_MAX_MESSAGE_LENGTH,
 	MODEL_INTAKE_PRODUCT_TYPES,
 	MODEL_INTAKE_RETENTION_DAYS,
@@ -91,6 +92,9 @@ export function ModelIntakeForm({
 	const errors = failed?.fieldErrors
 	const fields = failed?.fields
 	const [productType, setProductType] = useState(fields?.productType ?? '')
+	// With a link the photos are optional, so their required state follows the field as it is typed.
+	const [link, setLink] = useState(fields?.link ?? '')
+	const photosRequired = link.trim() === ''
 	/*
 	  The server decides from its own lookup, so a refusal for the client's OK
 	  shows the box even if the page's lookup missed. Once shown it stays, so a
@@ -223,9 +227,34 @@ export function ModelIntakeForm({
 				</div>
 			</div>
 
+			<div className="space-y-2">
+				<Label htmlFor="link">{copy.fields.link.label}</Label>
+				<Input
+					id="link"
+					name="link"
+					type="url"
+					inputMode="url"
+					autoComplete="off"
+					maxLength={MODEL_INTAKE_MAX_LINK_LENGTH}
+					value={link}
+					onChange={(event) => setLink(event.target.value)}
+					placeholder="https://"
+					aria-invalid={Boolean(errors?.link) || undefined}
+					aria-describedby={errors?.link ? 'link-error' : 'link-help'}
+				/>
+				{errors?.link ? (
+					<FieldError id="link-error" message={say(errors.link)} />
+				) : (
+					<p id="link-help" className="text-muted-foreground text-body-sm">
+						{copy.fields.link.help}
+					</p>
+				)}
+			</div>
+
 			<fieldset className="space-y-2">
 				<legend className="text-sm leading-none font-medium">
 					{copy.fields.photos.label}
+					{photosRequired ? null : ' (optional)'}
 				</legend>
 				<p id="photos-help" className="text-muted-foreground text-body-sm">
 					{copy.fields.photos.help}
@@ -237,6 +266,7 @@ export function ModelIntakeForm({
 						...copy.fields.photos.examples[index]
 					}))}
 					invalidIndex={photosInvalidIndex}
+					required={photosRequired}
 					describedBy={photosError ? 'photos-error' : 'photos-help'}
 					onTooLarge={(n, tooLarge) =>
 						setTooLargeIndex((current) =>

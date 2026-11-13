@@ -189,6 +189,7 @@ export default function FreeModelPage({
 				greeting={letter ? copy.letterGreeting(letter.organization) : null}
 				heading={copy.hero.heading}
 				lead={copy.hero.lead}
+				leadNote={copy.hero.alternatives}
 				scene={scene}
 				sceneLabel={copy.hero.sceneLabel}
 				action={

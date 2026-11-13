@@ -1,5 +1,5 @@
 {
-  "id": "c81de9fd-e69a-4622-8416-c6e39ef4a385",
+  "id": "9191982b-55ff-4d66-b188-1d535e830e95",
   "prevId": "c0dfc14b-7eaa-4520-ae6f-96e249488fa4",
   "version": "7",
   "dialect": "postgresql",
@@ -468,6 +468,12 @@
         },
         "message": {
           "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "link": {
+          "name": "link",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -4637,12 +4643,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        },
-        "source_name": {
-          "name": "source_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
