@@ -4,6 +4,7 @@ import { assets, sceneSettings } from '../db/schema'
 
 import type { ProcessState, SceneMetaState } from './publisher-config'
 import type { SceneSummary } from '../components/dashboard/scene-card'
+import type { ImgTo3dListedBatch } from '../lib/domain/img-to-3d/img-to-3d-contract'
 import type { SavedStudioFinish } from '../lib/domain/scene/studio-finish'
 import type { JSONDocument } from '@gltf-transform/core'
 import type { User } from '@supabase/supabase-js'
@@ -302,8 +303,12 @@ export interface PublisherLoaderData {
 	readonly maxSceneBytes: number | null
 	/** Signed in with no scene open: the scenes to offer on the empty stage. Empty otherwise. */
 	readonly recentScenes: readonly SceneSummary[]
-	/** Signed in with no scene open, and allowed to generate a model from an image. */
-	readonly imgTo3dEnabled: boolean
+	/**
+	 * Signed in with no scene open, and allowed to generate a model from an
+	 * image: the organization's recent batches, states unasked. Null when the
+	 * panel is not offered.
+	 */
+	readonly imgTo3dBatches: readonly ImgTo3dListedBatch[] | null
 	/** The open scene's saved studio finish while it is current; null otherwise. */
 	readonly savedFinish: SavedFinishRef | null
 }

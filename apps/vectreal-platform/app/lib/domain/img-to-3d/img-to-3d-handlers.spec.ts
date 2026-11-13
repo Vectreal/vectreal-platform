@@ -652,7 +652,7 @@ describe('listImgTo3dGenerations', () => {
 			listing(uuid(21), uuid(20), 5)
 		])
 
-		const batches = await listImgTo3dGenerations('org-1', deps, NOW)
+		const batches = await listImgTo3dGenerations('org-1', deps, { now: NOW })
 
 		expect(jobs.listForOrganization).toHaveBeenCalledWith(
 			'org-1',
@@ -691,7 +691,7 @@ describe('listImgTo3dGenerations', () => {
 			new ImgTo3dRuntimeError('runtime_rejected', 404, 'Job not found')
 		)
 
-		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+		const [batch] = await listImgTo3dGenerations('org-1', deps, { now: NOW })
 
 		expect(batch.variants[0]).toMatchObject({
 			status: 'failed',
@@ -706,7 +706,7 @@ describe('listImgTo3dGenerations', () => {
 			new ImgTo3dRuntimeError('runtime_unavailable', 503)
 		)
 
-		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+		const [batch] = await listImgTo3dGenerations('org-1', deps, { now: NOW })
 
 		expect(batch.variants[0]).toMatchObject({ status: null, error: null })
 	})
@@ -719,7 +719,7 @@ describe('listImgTo3dGenerations', () => {
 		})
 		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
 
-		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+		const [batch] = await listImgTo3dGenerations('org-1', deps, { now: NOW })
 
 		expect(batch.variants[0]).toMatchObject({ status: null })
 	})
@@ -728,11 +728,9 @@ describe('listImgTo3dGenerations', () => {
 		const { deps, jobs, runtime } = harness()
 		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
 
-		const [batch] = await listImgTo3dGenerations(
-			'org-1',
-			deps,
-			new Date('2026-11-08T10:00:00.000Z')
-		)
+		const [batch] = await listImgTo3dGenerations('org-1', deps, {
+			now: new Date('2026-11-08T10:00:00.000Z')
+		})
 
 		// Polling its state would keep that alive while the GLB expires on its own.
 		expect(runtime.status).not.toHaveBeenCalled()
@@ -747,7 +745,7 @@ describe('listImgTo3dGenerations', () => {
 			new ImgTo3dRuntimeError('runtime_rejected', 401, 'Bad proxy token')
 		)
 
-		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+		const [batch] = await listImgTo3dGenerations('org-1', deps, { now: NOW })
 
 		expect(batch.variants[0]).toMatchObject({ status: null, error: null })
 	})
@@ -776,12 +774,27 @@ describe('listImgTo3dGenerations', () => {
 			}
 		})
 
-		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+		const [batch] = await listImgTo3dGenerations('org-1', deps, { now: NOW })
 
 		expect(runtime.status).toHaveBeenCalledTimes(20)
 		expect(most).toBeGreaterThan(1)
 		expect(most).toBeLessThanOrEqual(6)
 		expect(batch.variants.every((v) => v.status === 'succeeded')).toBe(true)
+	})
+
+	it('asks the runtime nothing when told not to, and limits the batches', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
+
+		const [batch] = await listImgTo3dGenerations('org-1', deps, {
+			now: NOW,
+			batchLimit: 5,
+			askRuntime: false
+		})
+
+		expect(jobs.listForOrganization).toHaveBeenCalledWith('org-1', 5)
+		expect(runtime.status).not.toHaveBeenCalled()
+		expect(batch.variants[0]).toMatchObject({ status: null })
 	})
 
 	it('never passes a failed job’s runtime detail on', async () => {
@@ -796,7 +809,7 @@ describe('listImgTo3dGenerations', () => {
 			pollAfterMs: 0
 		})
 
-		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+		const [batch] = await listImgTo3dGenerations('org-1', deps, { now: NOW })
 
 		expect(batch.variants[0]).toEqual({
 			jobId: uuid(11),
