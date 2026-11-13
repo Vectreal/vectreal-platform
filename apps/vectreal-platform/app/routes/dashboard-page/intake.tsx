@@ -144,14 +144,16 @@ async function startAttachment(id: string, formData: FormData) {
 			{ status: 400 }
 		)
 	}
-	if (!(await findIntakeForDeletion(id))) {
+	// The stored id names the folder: storage keys are case-sensitive where a uuid match is not.
+	const row = await findIntakeForDeletion(id)
+	if (!row) {
 		return data<IntakeActionResult>(
 			{ error: 'Request not found.' },
 			{ status: 404 }
 		)
 	}
 	try {
-		const uploadUrl = await createIntakeAttachmentUpload(id, name)
+		const uploadUrl = await createIntakeAttachmentUpload(row.id, name)
 		return uploadUrl === 'exists'
 			? data<IntakeActionResult>(
 					{ error: `${name} is already attached.` },
@@ -172,14 +174,16 @@ async function removeAttachment(id: string, formData: FormData) {
 	if (raw === '' || intakeAttachmentName(raw) !== raw) {
 		return data<IntakeActionResult>({ error: 'No such file.' }, { status: 400 })
 	}
-	if (!(await findIntakeForDeletion(id))) {
+	// The stored id names the folder: storage keys are case-sensitive where a uuid match is not.
+	const row = await findIntakeForDeletion(id)
+	if (!row) {
 		return data<IntakeActionResult>(
 			{ error: 'Request not found.' },
 			{ status: 404 }
 		)
 	}
 	try {
-		await deleteIntakeAttachment(id, raw)
+		await deleteIntakeAttachment(row.id, raw)
 	} catch {
 		return data<IntakeActionResult>(
 			{ error: 'The file could not be deleted. Try again.' },

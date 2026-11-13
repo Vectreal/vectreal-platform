@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { deleteIntakeFolder } from './model-intake-storage.server'
+import {
+	deleteIntakeFolder,
+	listIntakeFolderIds
+} from './model-intake-storage.server'
 
 /*
   An in-memory bucket that answers like Supabase Storage: `list` returns one
@@ -19,8 +22,10 @@ const listLevel = vi.hoisted(
 	() => (prefix: string, limit: number, offset: number) => {
 		const children = new Map<string, string | null>()
 		for (const path of bucket.stored) {
-			if (!path.startsWith(`${prefix}/`)) continue
-			const [name, ...rest] = path.slice(prefix.length + 1).split('/')
+			// The bucket's root is listed as ''.
+			const start = prefix === '' ? '' : `${prefix}/`
+			if (!path.startsWith(start)) continue
+			const [name, ...rest] = path.slice(start.length).split('/')
 			children.set(name, rest.length > 0 ? null : `id-${path}`)
 		}
 		return [...children.entries()]
@@ -110,5 +115,26 @@ describe('deleteIntakeFolder', () => {
 		bucket.listFails = true
 		await expect(deleteIntakeFolder('req-1')).rejects.toThrow('storage down')
 		expect(stored.has('req-1/1.jpg')).toBe(true)
+	})
+})
+
+describe('listIntakeFolderIds', () => {
+	const uuid = (n: number) =>
+		`00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+
+	it('names every request folder across pages, and nothing else at the root', async () => {
+		for (let n = 0; n < 1200; n++) stored.add(`${uuid(n)}/1.jpg`)
+		stored.add('stray.txt')
+		// A file, not a folder, though its name is a uuid.
+		stored.add(uuid(999_999))
+		stored.add('not-a-request/1.jpg')
+		stored.add('AAAAAAAA-0000-4000-8000-000000000000/1.jpg')
+
+		const ids = await listIntakeFolderIds()
+
+		expect(ids).toHaveLength(1200)
+		expect(new Set(ids)).toEqual(
+			new Set(Array.from({ length: 1200 }, (_, n) => uuid(n)))
+		)
 	})
 })

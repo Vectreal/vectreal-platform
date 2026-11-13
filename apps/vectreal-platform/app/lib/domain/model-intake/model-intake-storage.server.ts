@@ -252,8 +252,9 @@ async function walkStorageFolder(
 	}
 }
 
+/** Lowercase, as Postgres writes a uuid and as every folder is named from one. */
 const UUID_PATTERN =
-	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** The request ids that have a folder in the bucket. */
 export async function listIntakeFolderIds(): Promise<string[]> {
