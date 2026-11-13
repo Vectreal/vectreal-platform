@@ -19,33 +19,61 @@ concurrency:
 
 jobs:
   # A production deploy ships a commit that is already on main, and every push
-  # to main runs CI - Quality. When that run passed for this exact commit, the
-  # gate below would repeat it (about 5.5 minutes, every target on every
-  # project, since a called workflow has no affected range). Matched by SHA,
-  # never by branch: a commit pushed after the green one is a different SHA
-  # and runs the gate here. No green run, a run still in progress, or a commit
-  # whose paths CI - Quality skips all fall through to the full gate.
+  # to main runs CI - Quality. When those runs already cover this commit, the
+  # gate below would repeat them (5 to 7 minutes, every target on every
+  # project, since a called workflow has no affected range).
+  #
+  # One green run for this SHA is not enough: a push run checks only what is
+  # affected since the previous push, so a failed or cancelled run earlier on
+  # main leaves that commit's changes unchecked behind a later green one. So
+  # the check walks every commit since the last successful production deploy
+  # (by SHA, from the compare API) and requires that none has a CI - Quality
+  # push run without a success, and that this commit has a green one. A commit
+  # with no run is one CI - Quality's push paths skip, or an inner commit of a
+  # multi-commit push the tip's run covered. Anything else, an API error
+  # included, falls through to the full gate.
   main-gate-status:
     name: Check main's gate for this commit
     runs-on: ubuntu-latest
     permissions:
       actions: read
+      contents: read
     outputs:
       passed: ${{ steps.lookup.outputs.passed }}
     steps:
-      - name: Look up a successful CI - Quality push run
+      - name: Check CI - Quality push runs since the last production deploy
         id: lookup
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
-          count=$(gh api "repos/${{ github.repository }}/actions/workflows/ci-quality.yaml/runs?head_sha=${{ github.sha }}&event=push&status=success&per_page=1" --jq '.total_count')
-          if [[ "$count" -gt 0 ]]; then
-            echo "passed=true" >> "$GITHUB_OUTPUT"
-            echo "CI - Quality already passed on main for ${{ github.sha }}." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "passed=false" >> "$GITHUB_OUTPUT"
-            echo "No successful CI - Quality push run for ${{ github.sha }}; running the full gate." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          verdict() {
+            echo "passed=$1" >> "$GITHUB_OUTPUT"
+            echo "$2" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+          trap 'verdict false "A GitHub API call failed; running the full gate."' ERR
+          set -o pipefail
+
+          last=$(gh api "repos/$REPO/actions/workflows/cd-platform-production.yaml/runs?status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty')
+          [[ -n "$last" ]] || verdict false "No earlier successful production deploy; running the full gate."
+          compare=$(gh api "repos/$REPO/compare/$last...$SHA")
+          status=$(jq -r .status <<<"$compare")
+          [[ "$status" == ahead || "$status" == identical ]] || verdict false "$SHA does not descend from the last production deploy ($last); running the full gate."
+          [[ $(jq '.total_commits == (.commits | length)' <<<"$compare") == true ]] || verdict false "Too many commits since the last production deploy to check; running the full gate."
+          since=$(gh api "repos/$REPO/commits/$last" --jq .commit.committer.date)
+          runs=$(gh api --paginate "repos/$REPO/actions/workflows/ci-quality.yaml/runs?event=push&branch=main&created=>=$since&per_page=100" --jq '.workflow_runs[] | [.head_sha, (.conclusion // "pending")] | @tsv')
+
+          for commit in $(jq -r '.commits[].sha' <<<"$compare"); do
+            conclusions=$(awk -v c="$commit" '$1 == c { print $2 }' <<<"$runs")
+            if [[ -n "$conclusions" ]] && ! grep -qx success <<<"$conclusions"; then
+              verdict false "CI - Quality on main has no green run for $commit ($(paste -sd, - <<<"$conclusions")); running the full gate."
+            fi
+          done
+          awk -v c="$SHA" '$1 == c && $2 == "success"' <<<"$runs" | grep -q . \
+            || verdict false "No green CI - Quality push run for $SHA yet; running the full gate."
+          verdict true "Every CI - Quality push run on main from $last to $SHA passed; skipping the gate."
 
   quality-gate:
     name: CI Quality Gate

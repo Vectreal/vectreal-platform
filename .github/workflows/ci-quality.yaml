@@ -42,8 +42,14 @@ on:
 permissions:
   contents: read
 
+# A push to main gets a group of its own commit, so it is never cancelled. Each
+# push run checks only what is affected since the previous push, so a cancelled
+# one left that commit's changes unchecked behind the next green run, and the
+# production deploy can only skip its gate when every main commit since the
+# last deploy has a green run of its own (cd-platform-production.yaml). Pull
+# requests still cancel superseded runs.
 concurrency:
-  group: ${{ github.event_name == 'workflow_call' && format('ci-quality-called-{0}', github.run_id) || format('ci-quality-{0}', github.event.pull_request.number || github.ref) }}
+  group: ${{ github.event_name == 'workflow_call' && format('ci-quality-called-{0}', github.run_id) || github.event_name == 'push' && format('ci-quality-push-{0}', github.sha) || format('ci-quality-{0}', github.event.pull_request.number || github.ref) }}
   cancel-in-progress: true
 
 jobs:
