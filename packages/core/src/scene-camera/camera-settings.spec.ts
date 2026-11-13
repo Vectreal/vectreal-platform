@@ -80,29 +80,18 @@ describe('normalizeCameraSettings repairs what a stored camera cannot use', () =
 		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('keeps every vector shape the viewer reads, exactly as stored', () => {
+	it('carries every vector exactly as stored, readable or not', () => {
+		// The opening pose and a hotspot camera's aim read any stored vector as
+		// "this camera has a pose", so a repair here would move the camera.
 		const stored = {
 			position: { x: 1, y: 2, z: 3 },
-			target: ['0', '1', '0'],
+			target: 'origin',
 			rotation: [0.1, 0.2, 0.3, 'XYZ'],
-			lookAt: { x: 0, y: 0, z: 0, order: 'XYZ' }
+			lookAt: [0, 1]
 		}
 		const { camera, onRepair } = normalizeOne(stored)
 		expect(camera).toMatchObject(stored)
 		expect(onRepair).not.toHaveBeenCalled()
-	})
-
-	it('drops a vector the viewer cannot read', () => {
-		const { camera, onRepair } = normalizeOne({
-			position: [0, 5],
-			target: 'origin'
-		})
-		expect(camera).not.toHaveProperty('position')
-		expect(camera).not.toHaveProperty('target')
-		expect(onRepair).toHaveBeenCalledWith([
-			{ cameraIndex: 0, field: 'position' },
-			{ cameraIndex: 0, field: 'target' }
-		])
 	})
 
 	it('carries the fields the viewer already reads every value of', () => {

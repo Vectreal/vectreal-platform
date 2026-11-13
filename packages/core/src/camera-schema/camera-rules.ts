@@ -37,20 +37,6 @@ export const CAMERA_VECTOR_FIELDS = [
 	'lookAt'
 ] as const
 
-/**
- * Whether the viewer can read `value` as a vector: an array of at least three
- * entries, or anything with `x`, `y` and `z` (a three.js `Vector3` or `Euler`
- * included). The viewer coerces each component, so older saves such as an
- * Euler's `[x, y, z, order]` or `{ x, y, z, order }` stay readable.
- */
-export const isReadableCameraVector = (value: unknown): boolean =>
-	(Array.isArray(value) && value.length >= 3) ||
-	(typeof value === 'object' &&
-		value !== null &&
-		'x' in value &&
-		'y' in value &&
-		'z' in value)
-
 /** One stored value `repairCameraEntry` dropped, for whoever logs it. */
 export interface CameraRepair {
 	cameraIndex: number
@@ -58,16 +44,16 @@ export interface CameraRepair {
 }
 
 /**
- * What a read checks, field by field: only values the viewer would otherwise
- * draw wrong. Everything else is carried exactly as stored, because the
- * reader already gives every value of it a defined meaning.
+ * What a read checks, field by field: only the numbers the viewer would
+ * otherwise draw wrong. Everything else is carried exactly as stored. A
+ * vector in particular is never touched: the viewer's reader already falls
+ * back for one it cannot read, while the camera's other readers (the opening
+ * pose, a hotspot camera's aim) treat any stored vector as "this camera has a
+ * pose", so dropping one would change where the camera points.
  */
 const READ_RULES: Record<string, (value: unknown) => boolean> = {
 	fov: isCameraFov,
-	framingAspect: isFramingAspect,
-	...Object.fromEntries(
-		CAMERA_VECTOR_FIELDS.map((field) => [field, isReadableCameraVector])
-	)
+	framingAspect: isFramingAspect
 }
 
 /**
@@ -85,17 +71,6 @@ export function repairCameraEntry<Entry extends Record<string, unknown>>(
 		if (entry[field] !== undefined && !readable(entry[field])) {
 			repairs.push({ cameraIndex, field })
 		}
-	}
-	// The viewer reads `target ?? lookAt` and ignores both when that value is
-	// unreadable. Dropping an unreadable `target` alone would hand the viewer a
-	// legacy `lookAt` it never used, so the pair goes together.
-	if (
-		entry['target'] != null &&
-		entry['lookAt'] !== undefined &&
-		repairs.some(({ field }) => field === 'target') &&
-		!repairs.some(({ field }) => field === 'lookAt')
-	) {
-		repairs.push({ cameraIndex, field: 'lookAt' })
 	}
 	if (repairs.length === 0) return { entry, repairs }
 

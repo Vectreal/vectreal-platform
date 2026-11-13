@@ -23,17 +23,33 @@ function sourceFiles(dir: string): string[] {
 	})
 }
 
-const importsOf = (file: string) =>
+// Every module reference a file makes: static, side-effect and dynamic
+// imports, re-exports and requires. It matches only the `from '...'` /
+// `import('...')` tail, so nothing earlier in a clause can hide one; a match
+// inside a comment only makes the guard stricter.
+const referencesIn = (source: string) =>
 	[
-		...readFileSync(file, 'utf8').matchAll(
-			/(?:^|\n)\s*(?:import|export)[^'"]*?from\s+['"]([^'"]+)['"]/g
-		)
+		...source.matchAll(/\b(?:from|import|require)\s*\(?\s*['"]([^'"]+)['"]/g)
 	].map(([, specifier]) => specifier)
+
+const isZod = (specifier: string) =>
+	specifier === 'zod' || specifier.startsWith('zod/')
+
+/** Whether `specifier`, written in `file`, names the schema module. */
+const namesSchema = (file: string, specifier: string) => {
+	if (specifier === '@vctrl/core/camera-schema') return true
+	if (!specifier.startsWith('.')) return false
+	const target = join(dirname(file), specifier)
+		.replace(/\/$/, '')
+		.replace(/(\/index)?\.[cm]?[jt]sx?$/, '')
+		.replace(/\/index$/, '')
+	return target === 'camera-schema'
+}
 
 describe('the zod boundary in @vctrl/core', () => {
 	const files = sourceFiles(SRC).map((file) => ({
 		file: relative(SRC, file),
-		imports: importsOf(file)
+		imports: referencesIn(readFileSync(file, 'utf8'))
 	}))
 
 	it('finds the source it guards', () => {
@@ -43,24 +59,26 @@ describe('the zod boundary in @vctrl/core', () => {
 
 	it('lets only the camera-schema subpath import zod', () => {
 		expect(
-			files
-				.filter(({ imports }) => imports.includes('zod'))
-				.map(({ file }) => file)
+			files.filter(({ imports }) => imports.some(isZod)).map(({ file }) => file)
 		).toEqual([SCHEMA_MODULE])
 	})
 
 	it('has no other core module import the schema module', () => {
-		const resolvesToSchema = (file: string, specifier: string) =>
-			specifier.startsWith('.') &&
-			['camera-schema', 'camera-schema/index'].includes(
-				join(dirname(file), specifier)
-			)
 		expect(
 			files
 				.filter(({ file, imports }) =>
-					imports.some((specifier) => resolvesToSchema(file, specifier))
+					imports.some((specifier) => namesSchema(file, specifier))
 				)
 				.map(({ file }) => file)
 		).toEqual([])
+	})
+
+	it.each([
+		['index.ts', "export * from './camera-schema'"],
+		['index.ts', "export * from './camera-schema/'"],
+		['scene-camera/a.ts', "await import('../camera-schema/index.js')"],
+		['scene-camera/a.ts', "import '@vctrl/core/camera-schema'"]
+	])('recognizes %s referencing the schema as %s', (file, source) => {
+		expect(referencesIn(source).some((s) => namesSchema(file, s))).toBe(true)
 	})
 })

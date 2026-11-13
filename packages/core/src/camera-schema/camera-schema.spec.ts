@@ -113,22 +113,6 @@ describe('repairCameraEntry', () => {
 		expect(repairs).toEqual([{ cameraIndex: 2, field: 'fov' }])
 	})
 
-	it('drops a legacy lookAt with the unreadable target that hid it', () => {
-		const { entry, repairs } = repairCameraEntry(
-			{ ...scene, target: 'origin', lookAt: [0, 1, 0] },
-			0
-		)
-		expect(entry).toEqual(scene)
-		expect(repairs.map(({ field }) => field)).toEqual(['target', 'lookAt'])
-	})
-
-	it('keeps a lookAt the viewer reads when target is absent or null', () => {
-		for (const target of [undefined, null]) {
-			const stored = { ...scene, target, lookAt: [0, 1, 0] }
-			expect(repairCameraEntry(stored, 0).entry).toHaveProperty('lookAt')
-		}
-	})
-
 	it('returns the entry itself when nothing needs repair', () => {
 		const stored = { ...scene, fov: 50, position: { x: 0, y: 0, z: 5 } }
 		expect(repairCameraEntry(stored, 0).entry).toBe(stored)

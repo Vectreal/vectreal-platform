@@ -58,7 +58,7 @@ export const DEFAULT_SCENE_TRANSITION: Readonly<
  * 3. Fills missing camera ids/names
  * 4. Keeps `initial` flag aligned with the active camera
  * 5. Drops each stored value the viewer cannot use (`repairCameraEntry`:
- *    an fov outside (0, 180), an unreadable vector or `framingAspect`),
+ *    an fov outside (0, 180) or a malformed `framingAspect`),
  *    and reports what it dropped to `onRepair`, a console warning by default.
  *    A read repairs rather than refuses, so a published scene keeps opening.
  *
