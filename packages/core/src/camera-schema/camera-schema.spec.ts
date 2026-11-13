@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	cameraFovSchema,
 	cameraSettingsSchema,
+	cameraTransitionSchema,
 	isCameraFov,
 	repairCameraEntry
 } from '.'
@@ -108,5 +109,31 @@ describe('repairCameraEntry', () => {
 		)
 		expect(entry).toEqual({ ...scene, kind: 'scene', position: [0, 0, 5] })
 		expect(repairs).toEqual([{ cameraIndex: 2, field: 'fov' }])
+	})
+
+	it('returns the entry itself when nothing needs repair', () => {
+		const stored = { ...scene, fov: 50, position: { x: 0, y: 0, z: 5 } }
+		expect(repairCameraEntry(stored, 0).entry).toBe(stored)
+	})
+})
+
+describe('cameraTransitionSchema', () => {
+	it('reads avoidance settings only for the type that uses them', () => {
+		const malformed = { samples: 1 }
+		expect(
+			cameraTransitionSchema.safeParse({
+				type: 'linear',
+				objectAvoidance: malformed
+			}).success
+		).toBe(true)
+		expect(
+			cameraTransitionSchema.safeParse({
+				type: 'object_avoidance',
+				objectAvoidance: malformed
+			}).error?.issues[0]
+		).toMatchObject({
+			path: ['objectAvoidance', 'samples'],
+			message: 'must be a number >= 2'
+		})
 	})
 })

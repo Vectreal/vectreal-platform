@@ -1,6 +1,5 @@
 import { Euler, Vector3, type Vector3Tuple } from 'three'
 
-import { isCameraFov } from '../camera-schema'
 import { DEFAULT_CAMERA, isSceneCamera } from './camera-settings'
 import { withOpeningPose } from './opening-pose'
 import {
@@ -8,6 +7,7 @@ import {
 	resolveFramingAspect,
 	scaleOrbitOffset
 } from './viewport-framing'
+import { isCameraFov } from '../camera-schema/camera-rules'
 
 import type { OpeningPose } from './opening-pose'
 import type { ViewportFraming } from './viewport-framing'

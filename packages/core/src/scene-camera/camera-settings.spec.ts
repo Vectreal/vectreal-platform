@@ -80,20 +80,46 @@ describe('normalizeCameraSettings repairs what a stored camera cannot use', () =
 		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('reads a vector sent as { x, y, z } as the tuple, and drops one that is neither', () => {
-		const { camera, onRepair } = normalizeOne({
+	it('keeps every vector shape the viewer reads, exactly as stored', () => {
+		const stored = {
 			position: { x: 1, y: 2, z: 3 },
-			target: [0, 'up', 0]
-		})
-		expect(camera?.['position']).toEqual([1, 2, 3])
-		expect(camera).not.toHaveProperty('target')
-		expect(onRepair).toHaveBeenCalledWith([{ cameraIndex: 0, field: 'target' }])
+			target: ['0', '1', '0'],
+			rotation: [0.1, 0.2, 0.3, 'XYZ'],
+			lookAt: { x: 0, y: 0, z: 0, order: 'XYZ' }
+		}
+		const { camera, onRepair } = normalizeOne(stored)
+		expect(camera).toMatchObject(stored)
+		expect(onRepair).not.toHaveBeenCalled()
 	})
 
-	it('drops a kind it does not know, so the camera reads as a scene camera', () => {
-		const { camera } = normalizeOne({ kind: 'drone' })
-		expect(camera).not.toHaveProperty('kind')
-		expect(camera?.['initial']).toBe(true)
+	it('drops a vector the viewer cannot read', () => {
+		const { camera, onRepair } = normalizeOne({
+			position: [0, 5],
+			target: 'origin'
+		})
+		expect(camera).not.toHaveProperty('position')
+		expect(camera).not.toHaveProperty('target')
+		expect(onRepair).toHaveBeenCalledWith([
+			{ cameraIndex: 0, field: 'position' },
+			{ cameraIndex: 0, field: 'target' }
+		])
+	})
+
+	it('carries the fields the viewer already reads every value of', () => {
+		const stored = {
+			cameraId: 7,
+			kind: 'drone',
+			transition: { type: 'teleport' }
+		}
+		const { camera, onRepair } = normalizeOne(stored)
+		expect(camera).toMatchObject(stored)
+		expect(onRepair).not.toHaveBeenCalled()
+	})
+
+	it('repairs a list with no scene camera too', () => {
+		const { camera, onRepair } = normalizeOne({ kind: 'hotspot', fov: 0 })
+		expect(camera).not.toHaveProperty('fov')
+		expect(onRepair).toHaveBeenCalledOnce()
 	})
 
 	it('warns once per read by default, naming every value it dropped', () => {

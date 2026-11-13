@@ -1,6 +1,6 @@
-import { isSceneCamera, repairCameraEntry } from '../camera-schema'
+import { isSceneCamera, repairCameraEntry } from '../camera-schema/camera-rules'
 
-import type { CameraRepair } from '../camera-schema'
+import type { CameraRepair } from '../camera-schema/camera-rules'
 import type {
 	CameraConfig,
 	CameraProps,
@@ -57,8 +57,8 @@ export const DEFAULT_SCENE_TRANSITION: Readonly<
  * 2. Resolves a stable `activeCameraId` that points to the first scene camera
  * 3. Fills missing camera ids/names
  * 4. Keeps `initial` flag aligned with the active camera
- * 5. Drops each stored value that fails its rule in `@vctrl/core/camera-schema`
- *    (an fov outside (0, 180), a malformed vector, kind or `framingAspect`),
+ * 5. Drops each stored value the viewer cannot use (`repairCameraEntry`:
+ *    an fov outside (0, 180), an unreadable vector or `framingAspect`),
  *    and reports what it dropped to `onRepair`, a console warning by default.
  *    A read repairs rather than refuses, so a published scene keeps opening.
  *
@@ -96,7 +96,7 @@ export function normalizeCameraSettings(
 	const firstSceneCameraId = normalizedCameras.find(isSceneCamera)?.cameraId
 
 	if (!firstSceneCameraId) {
-		return camera
+		return { ...camera, cameras: normalizedCameras }
 	}
 
 	return {
