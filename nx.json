@@ -3,6 +3,7 @@
 	"namedInputs": {
 		"sharedGlobals": [
 			"{workspaceRoot}/vitest.shared.mts",
+			"{workspaceRoot}/vitest.setup.mts",
 			"{workspaceRoot}/vite.library.mts"
 		],
 		"default": ["{projectRoot}/**/*", "sharedGlobals"],
