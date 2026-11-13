@@ -3,6 +3,7 @@ import PlayIcon from './assets/play-icon'
 import RestartIcon from './assets/restart-icon'
 import { CHROME_BUTTON } from './chrome-classes'
 import { cn, withHostClasses } from './class-names'
+import { useViewerMessages } from './viewer-messages'
 
 export interface AnimationControlsProps {
 	playing: boolean
@@ -43,34 +44,37 @@ const AnimationControls = ({
 	onToggle,
 	onRestart,
 	className
-}: AnimationControlsProps) => (
-	<div
-		className={withHostClasses(controlClasses.root, className)}
-		role="group"
-		aria-label="Animation playback"
-	>
-		<button
-			type="button"
-			className={controlClasses.button}
-			onClick={onToggle}
-			aria-label={playing ? 'Pause animation' : 'Play animation'}
+}: AnimationControlsProps) => {
+	const messages = useViewerMessages()
+	return (
+		<div
+			className={withHostClasses(controlClasses.root, className)}
+			role="group"
+			aria-label={messages.animationPlayback}
 		>
-			{playing ? (
-				<PauseIcon className={controlClasses.icon} />
-			) : (
-				<PlayIcon className={controlClasses.icon} />
-			)}
-		</button>
-		<button
-			type="button"
-			className={controlClasses.button}
-			onClick={onRestart}
-			aria-label="Restart animation"
-			data-complete={complete || undefined}
-		>
-			<RestartIcon className={controlClasses.icon} />
-		</button>
-	</div>
-)
+			<button
+				type="button"
+				className={controlClasses.button}
+				onClick={onToggle}
+				aria-label={playing ? messages.pauseAnimation : messages.playAnimation}
+			>
+				{playing ? (
+					<PauseIcon className={controlClasses.icon} />
+				) : (
+					<PlayIcon className={controlClasses.icon} />
+				)}
+			</button>
+			<button
+				type="button"
+				className={controlClasses.button}
+				onClick={onRestart}
+				aria-label={messages.restartAnimation}
+				data-complete={complete || undefined}
+			>
+				<RestartIcon className={controlClasses.icon} />
+			</button>
+		</div>
+	)
+}
 
 export default AnimationControls

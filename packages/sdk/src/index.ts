@@ -59,7 +59,8 @@ export {
 	sceneNormalizationSchema,
 	sceneSettingsSchema,
 	sceneShadowsSchema,
-	updateSceneSettingsInputSchema
+	updateSceneSettingsInputSchema,
+	VIEWER_LOCALES
 } from './scene-settings'
 export type {
 	SceneLook,

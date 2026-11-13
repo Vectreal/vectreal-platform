@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test'
 
 /*
   SHOPIFY_HARNESS_EMBED_URL names a scene published with Start moving set to
-  "After a tap" and the button language Deutsch, as the slide asks.
+  "After a tap" and the viewer language Deutsch, as the slide asks.
 */
 
 const slide = (page: Page) => page.locator('vectreal-media')

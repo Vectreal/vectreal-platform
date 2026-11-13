@@ -1,3 +1,4 @@
+import { readdirSync } from 'fs'
 import path from 'path'
 
 import tailwindcss from '@tailwindcss/vite'
@@ -41,6 +42,18 @@ export default defineConfig({
 				'camera-flight': path.resolve(
 					import.meta.dirname,
 					'src/camera-flight.ts'
+				),
+				// Each language its own file, `@vctrl/viewer/locales/de`, which the
+				// viewer also loads on demand: a page gets only the one it shows.
+				...Object.fromEntries(
+					readdirSync(path.resolve(import.meta.dirname, 'src/locales'))
+						.filter(
+							(file) => /^[\w-]+\.ts$/.test(file) && !file.includes('.spec')
+						)
+						.map((file) => [
+							`locales/${file.slice(0, -3)}`,
+							path.resolve(import.meta.dirname, 'src/locales', file)
+						])
 				)
 			},
 			name: '@vctrl/viewer',

@@ -100,12 +100,15 @@ import {
 	resolveViewerKeys
 } from './components/scene/viewer-keys'
 import {
-	resolveViewerLanguage,
 	TapToActivateButton,
 	TapToDeactivateButton,
 	tapToActivateWords
 } from './components/tap-to-activate'
 import { ViewerKeysContext } from './components/viewer-keys-context'
+import {
+	useResolvedViewerMessages,
+	ViewerMessagesContext
+} from './components/viewer-messages'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { type ContextLossEvent } from './hooks/use-context-loss-recovery'
 import { useHeldExecutor } from './hooks/use-held-executor'
@@ -117,6 +120,7 @@ import { useViewerLoading } from './hooks/use-viewer-loading'
 import type { HotspotPositionSetter } from './components/scene'
 import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type { SrcLoadOptions, SrcModel } from './load-src'
+import type { ViewerMessages } from './locales/en'
 import type {
 	BakedShadow,
 	SceneCameraSnapshot,
@@ -387,10 +391,18 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	interactionStart?: SceneInteractionStart
 	/**
-	 * The language of the words the viewer shows a visitor, as a language tag:
-	 * German for any `de`, English otherwise. Defaults to the browser's.
+	 * The language of the words the viewer shows and announces, as a BCP 47
+	 * tag: `de` or `de-AT` loads the German catalog the first time it is
+	 * needed, and English shows meanwhile and for a language with no catalog.
+	 * Defaults to the browser's language.
 	 */
 	locale?: string
+	/**
+	 * Words to show instead of the catalog's, by key: change one wording, or
+	 * pass every key of `ViewerMessages` to show a language the viewer has no
+	 * catalog for. Keys left out come from the catalog `locale` picked.
+	 */
+	messages?: Partial<ViewerMessages>
 	/**
 	 * Whether the viewer draws its own animation playback controls. Default true.
 	 *
@@ -671,6 +683,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		showInteractionHint = false,
 		interactionStart = 'immediate',
 		locale,
+		messages: messageOverrides,
 		showAnimationControls = true,
 		showCameraControls = true,
 		// Editor affordances
@@ -805,13 +818,15 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	// The markers this surface draws, by the same rule `SceneHotspots` draws
 	// them, so a hidden or internal hotspot's camera is never a hotspot view,
 	// and a hidden or internal hotspot's clip never mounts the animation runtime.
+	const messages = useResolvedViewerMessages(locale, messageOverrides)
 	const hotspotMarkers = useMemo(
 		() =>
 			resolveHotspotMarkers(hotspots, {
 				includeInternal: showInternalHotspots,
-				includeHidden: showHiddenHotspots
+				includeHidden: showHiddenHotspots,
+				messages
 			}),
-		[hotspots, showInternalHotspots, showHiddenHotspots]
+		[hotspots, showInternalHotspots, showHiddenHotspots, messages]
 	)
 
 	const animation = useAnimationRuntime({
@@ -1199,10 +1214,11 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	})
 	const interactionHintText = describeInteraction(
 		viewerKeys,
-		interactionHint.input
+		interactionHint.input,
+		messages
 	)
 	const tapWords = waitsForTap
-		? tapToActivateWords(resolveViewerLanguage(locale), pointerInput())
+		? tapToActivateWords(messages, pointerInput())
 		: null
 	// Giving up replaces the overlay, loader and all, with the failure state, so
 	// a loader caught mid-fade never reports the end of its fade. Without this
@@ -1222,278 +1238,282 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const aoEnabled = occlusion.mode === 'live'
 	return (
 		<ViewerKeysContext.Provider value={viewerKeys}>
-			<Suspense fallback={loader}>
-				<Canvas
-					frameloop="always"
-					// `isolate` keeps the chrome's `z-[100]` inside the viewer, so it orders the viewer's own layers and never the host page's: without it the camera switcher drew over a dashboard sheet.
-					containerClassName={withHostClasses(
-						'viewer vctrl-viewer vv:isolate vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0 vv:[&:fullscreen]:bg-background',
-						className
-					)}
-					containerBackground={
-						backdrop ? sceneBackdropCss(backdrop) : undefined
-					}
-					theme={theme}
-					loadingState={loadingState}
-					onContainerChange={setContainer}
-					label={label}
-					// Nothing to announce until the tap: the start button is what to reach.
-					keyHelp={describeViewerKeys(liveKeys)}
-					onContextLossEvent={handleContextLossEvent}
-					renderFailure={renderFailure}
-					overlay={
-						<Overlay
-							loadingState={loadingState}
-							onLoaderFadeOutComplete={completeLoadingTransition}
-							popover={popover}
-							animationControls={
-								animation.showControls ? (
-									<AnimationControls
-										playing={animation.status.playing}
-										complete={animation.status.complete}
-										onToggle={animation.toggle}
-										onRestart={animation.restart}
-									/>
-								) : null
-							}
-							cameraControls={
-								showCameraSwitcher ? (
-									<CameraControls
-										className={CHROME_PLACEMENT.cameraControls}
-										cameras={sceneViewCameras}
-										activeCameraId={activeCameraId}
-										offListLabel={resolveHotspotViewName(
-											activeCameraId,
-											hotspots ?? []
-										)}
-										onSelect={activateCamera}
-									/>
-								) : null
-							}
-							sceneViewReturn={
-								showSceneViewReturn ? (
-									<SceneViewReturn
-										hotspotName={sceneViewReturn.hotspot?.name ?? null}
-										onReturn={returnToSceneView}
-										focusOnLeave={container}
-									/>
-								) : null
-							}
-							fullscreenControl={
-								showFullscreenButton ? (
-									<FullscreenControl target={container} />
-								) : null
-							}
-							interactionHint={
-								interactionHint.visible && interactionHintText ? (
-									<InteractionHint text={interactionHintText} />
-								) : null
-							}
-							tapToActivate={
-								tapWords && inputLocked ? (
-									<TapToActivateButton
-										text={tapWords.start}
-										onActivate={() => setTapStartedAndFocus(true)}
-									/>
-								) : null
-							}
-							tapToDeactivate={
-								tapWords && !inputLocked ? (
-									<TapToDeactivateButton
-										text={tapWords.done}
-										label={tapWords.doneLabel}
-										onDeactivate={() => setTapStartedAndFocus(false)}
-									/>
-								) : null
-							}
-							loader={loader}
-							loadingThumbnail={loadingThumbnail}
-						/>
-					}
-					enableViewportRendering={enableViewportRendering}
-					offscreen={unloadWhenOffscreen ? 'unload' : 'pause'}
-					// 'percentage' = PCFShadowMap, which three 0.185 softens by each
-					// light's `shadow.radius`; the ground bake softens its own shadow by
-					// jittering its lights. (A bare `shadows` would ask for the deprecated
-					// PCFSoftShadowMap.)
-					shadows={shadowsEnabled ? 'percentage' : false}
-					// The composer antialiases inside its own buffers and presents a
-					// full-screen quad, so a multisampled canvas would only cost memory
-					// (four samples of color and depth at full size). Without the composer
-					// the renderer draws the scene straight to the canvas and needs it.
-					// Read once, when the context is created.
-					gl={{
-						antialias: !enablePostProcessing,
-						powerPreference: 'low-power'
-					}}
-				>
-					<EnvironmentPrewarm files={environmentFiles} />
-					<Suspense fallback={null}>
-						{hasContent && (
-							<>
-								<SceneEnvironment
-									files={sceneFiles}
-									environmentIntensity={environment.intensity}
-									rotation={environment.rotation}
-									background={background.type === 'environment'}
-									backgroundIntensity={
-										background.type === 'environment'
-											? background.intensity
-											: undefined
-									}
-									backgroundBlurriness={
-										background.type === 'environment'
-											? background.blur
-											: undefined
-									}
-									scene={envOptions?.scene}
-									onLoadFailed={handleEnvironmentLoadFailed}
-									onLoaded={handleEnvironmentLoaded}
-								/>
-								{/* <Perf /> */}
-								<ScenePostProcessing
-									enabled={enablePostProcessing}
-									ao={aoEnabled}
-									aoIntensity={occlusion.live.intensity}
-									aoAtRest={occlusion.live.atRest}
-									model={model}
-									active={animation.status.active}
-									onShadersReady={handleShadersReady}
-								/>
-								<SceneControls
-									{...controlsOptions}
-									enabledOverride={controlsEnabledOverride}
-									inputLocked={inputLocked}
-									onViewChange={onViewChange}
-									{...(autoRotateOverride !== null
-										? {
-												autoRotate: autoRotateOverride.enabled,
-												autoRotateSpeed: autoRotateOverride.speed
-											}
-										: {})}
-									{...(controlsOptionsOverride !== null
-										? {
-												enableZoom: controlsOptionsOverride.zoom,
-												enablePan: controlsOptionsOverride.pan
-											}
-										: {})}
-								/>
-								<SceneKeyboardControls
-									container={container}
-									keys={liveKeys}
-									onHome={returnHome}
-								/>
-								{controlsOptions?.focusOnDoubleClick === true &&
-									shownModel &&
-									!inputLocked && (
-										<SceneDoubleClickFocus
-											model={shownModel}
-											onFocus={focusOnPoint}
-											onBackground={returnHome}
+			<ViewerMessagesContext.Provider value={messages}>
+				<Suspense fallback={loader}>
+					<Canvas
+						frameloop="always"
+						// `isolate` keeps the chrome's `z-[100]` inside the viewer, so it orders the viewer's own layers and never the host page's: without it the camera switcher drew over a dashboard sheet.
+						containerClassName={withHostClasses(
+							'viewer vctrl-viewer vv:isolate vv:h-full vv:w-full vv:overflow-clip vv:text-base vv:[&_a]:text-inherit vv:[&_a]:no-underline vv:[&_button]:border-0 vv:[&_p]:m-0 vv:[&:fullscreen]:bg-background',
+							className
+						)}
+						containerBackground={
+							backdrop ? sceneBackdropCss(backdrop) : undefined
+						}
+						theme={theme}
+						loadingState={loadingState}
+						onContainerChange={setContainer}
+						label={label}
+						// Nothing to announce until the tap: the start button is what to reach.
+						keyHelp={describeViewerKeys(liveKeys, messages)}
+						onContextLossEvent={handleContextLossEvent}
+						renderFailure={renderFailure}
+						overlay={
+							<Overlay
+								loadingState={loadingState}
+								onLoaderFadeOutComplete={completeLoadingTransition}
+								popover={popover}
+								animationControls={
+									animation.showControls ? (
+										<AnimationControls
+											playing={animation.status.playing}
+											complete={animation.status.complete}
+											onToggle={animation.toggle}
+											onRestart={animation.restart}
 										/>
-									)}
-								<SceneBounds {...boundsOptions} enable={boundsEnabled}>
-									<SceneCamera
-										{...cameraOptions}
-										cameras={aimedCameras}
-										distanceLimits={orbitDistanceLimits}
-										transitionOverride={transitionOverride}
-										openingPose={openingPose}
-										framingReset={resetCameraFraming}
-										storedView={storedView}
-										focusRequest={focusRequest}
-										boundsEnabled={boundsEnabled}
-										hasContent={hasContent}
+									) : null
+								}
+								cameraControls={
+									showCameraSwitcher ? (
+										<CameraControls
+											className={CHROME_PLACEMENT.cameraControls}
+											cameras={sceneViewCameras}
+											activeCameraId={activeCameraId}
+											offListLabel={resolveHotspotViewName(
+												activeCameraId,
+												hotspots ?? []
+											)}
+											onSelect={activateCamera}
+										/>
+									) : null
+								}
+								sceneViewReturn={
+									showSceneViewReturn ? (
+										<SceneViewReturn
+											hotspotName={sceneViewReturn.hotspot?.name ?? null}
+											onReturn={returnToSceneView}
+											focusOnLeave={container}
+										/>
+									) : null
+								}
+								fullscreenControl={
+									showFullscreenButton ? (
+										<FullscreenControl target={container} />
+									) : null
+								}
+								interactionHint={
+									interactionHint.visible && interactionHintText ? (
+										<InteractionHint text={interactionHintText} />
+									) : null
+								}
+								tapToActivate={
+									tapWords && inputLocked ? (
+										<TapToActivateButton
+											text={tapWords.start}
+											onActivate={() => setTapStartedAndFocus(true)}
+										/>
+									) : null
+								}
+								tapToDeactivate={
+									tapWords && !inputLocked ? (
+										<TapToDeactivateButton
+											text={tapWords.done}
+											label={tapWords.doneLabel}
+											onDeactivate={() => setTapStartedAndFocus(false)}
+										/>
+									) : null
+								}
+								loader={loader}
+								loadingThumbnail={loadingThumbnail}
+							/>
+						}
+						enableViewportRendering={enableViewportRendering}
+						offscreen={unloadWhenOffscreen ? 'unload' : 'pause'}
+						// 'percentage' = PCFShadowMap, which three 0.185 softens by each
+						// light's `shadow.radius`; the ground bake softens its own shadow by
+						// jittering its lights. (A bare `shadows` would ask for the deprecated
+						// PCFSoftShadowMap.)
+						shadows={shadowsEnabled ? 'percentage' : false}
+						// The composer antialiases inside its own buffers and presents a
+						// full-screen quad, so a multisampled canvas would only cost memory
+						// (four samples of color and depth at full size). Without the composer
+						// the renderer draws the scene straight to the canvas and needs it.
+						// Read once, when the context is created.
+						gl={{
+							antialias: !enablePostProcessing,
+							powerPreference: 'low-power'
+						}}
+					>
+						<EnvironmentPrewarm files={environmentFiles} />
+						<Suspense fallback={null}>
+							{hasContent && (
+								<>
+									<SceneEnvironment
+										files={sceneFiles}
+										environmentIntensity={environment.intensity}
+										rotation={environment.rotation}
+										background={background.type === 'environment'}
+										backgroundIntensity={
+											background.type === 'environment'
+												? background.intensity
+												: undefined
+										}
+										backgroundBlurriness={
+											background.type === 'environment'
+												? background.blur
+												: undefined
+										}
+										scene={envOptions?.scene}
+										onLoadFailed={handleEnvironmentLoadFailed}
+										onLoaded={handleEnvironmentLoaded}
+									/>
+									{/* <Perf /> */}
+									<ScenePostProcessing
+										enabled={enablePostProcessing}
+										ao={aoEnabled}
+										aoIntensity={occlusion.live.intensity}
+										aoAtRest={occlusion.live.atRest}
 										model={model}
-										onCameraSnapshotCaptureReady={onCameraSnapshotCaptureReady}
-										onCommandExecutorReady={cameraLayer.register}
-										onInitialFramingComplete={handleInitialFramingComplete}
-										onInteractionEvent={handleInteractionEvent}
+										active={animation.status.active}
+										onShadersReady={handleShadersReady}
 									/>
-									{model && animations && animation.shouldMount && (
-										<SceneAnimation
+									<SceneControls
+										{...controlsOptions}
+										enabledOverride={controlsEnabledOverride}
+										inputLocked={inputLocked}
+										onViewChange={onViewChange}
+										{...(autoRotateOverride !== null
+											? {
+													autoRotate: autoRotateOverride.enabled,
+													autoRotateSpeed: autoRotateOverride.speed
+												}
+											: {})}
+										{...(controlsOptionsOverride !== null
+											? {
+													enableZoom: controlsOptionsOverride.zoom,
+													enablePan: controlsOptionsOverride.pan
+												}
+											: {})}
+									/>
+									<SceneKeyboardControls
+										container={container}
+										keys={liveKeys}
+										onHome={returnHome}
+									/>
+									{controlsOptions?.focusOnDoubleClick === true &&
+										shownModel &&
+										!inputLocked && (
+											<SceneDoubleClickFocus
+												model={shownModel}
+												onFocus={focusOnPoint}
+												onBackground={returnHome}
+											/>
+										)}
+									<SceneBounds {...boundsOptions} enable={boundsEnabled}>
+										<SceneCamera
+											{...cameraOptions}
+											cameras={aimedCameras}
+											distanceLimits={orbitDistanceLimits}
+											transitionOverride={transitionOverride}
+											openingPose={openingPose}
+											framingReset={resetCameraFraming}
+											storedView={storedView}
+											focusRequest={focusRequest}
+											boundsEnabled={boundsEnabled}
+											hasContent={hasContent}
 											model={model}
-											animations={animations}
-											options={animationOptions}
-											onCommandExecutorReady={animation.registerExecutor}
+											onCameraSnapshotCaptureReady={
+												onCameraSnapshotCaptureReady
+											}
+											onCommandExecutorReady={cameraLayer.register}
+											onInitialFramingComplete={handleInitialFramingComplete}
 											onInteractionEvent={handleInteractionEvent}
-											onPlaybackStatusChange={animation.setStatus}
 										/>
-									)}
-									{/*
+										{model && animations && animation.shouldMount && (
+											<SceneAnimation
+												model={model}
+												animations={animations}
+												options={animationOptions}
+												onCommandExecutorReady={animation.registerExecutor}
+												onInteractionEvent={handleInteractionEvent}
+												onPlaybackStatusChange={animation.setStatus}
+											/>
+										)}
+										{/*
 								  Only around a model: content passed as children is not
 								  centered, and an empty Center measures an empty box and
 								  writes a NaN offset into the scene graph.
 								*/}
-									{model && (
-										<Center top cacheKey={centerCacheKey}>
-											<SceneModel
-												cameraOptions={captureCameraOptions}
-												onScreenshot={onScreenshot}
-												onScreenshotCaptureReady={onScreenshotCaptureReady}
-												backdrop={backdrop}
-												object={model}
-												displayedObject={displayedModel}
-												modelKey={modelKey}
-												enableShadows={shadowsEnabled}
-												normalizationOptions={normalizationOptions}
-												onRawDiagonalComputed={onRawDiagonalComputed}
-												clipExtents={clipExtents}
-												distanceLimits={orbitDistanceLimits}
-												framingReset={resetCameraFraming}
-												openingPose={openingPose}
-												storedView={storedView}
-											/>
-										</Center>
-									)}
-									<SceneLights
-										lighting={resolvedLighting}
-										environmentFiles={sceneFiles}
-										model={model}
-										displayedModel={displayedModel}
-										normalizationOptions={normalizationOptions}
-									/>
-									<SceneShadows
-										lighting={resolvedLighting}
-										model={model}
-										displayedModel={displayedModel}
-										normalizationOptions={normalizationOptions}
-										isModelAnimating={animation.status.active}
-										lightEditable={shadowLightEditable}
-										editableLightRole={editableLightRole}
-										onLightChange={onShadowLightChange}
-										staticBake={staticShadowBake}
-										bakedShadow={bakedShadow}
-										onShadowBakeReady={onShadowBakeReady}
-										liveBake={liveShadowBake}
-										onLiveBakeSkipped={handleLiveBakeSkipped}
-										clipExtents={clipExtents}
-									/>
-									<SceneHotspots
-										hotspots={hotspots}
-										model={model}
-										includeInternal={showInternalHotspots}
-										includeHidden={showHiddenHotspots}
-										color={hotspotColor}
-										showMarkers={showHotspotMarkers}
-										revealContent={revealHotspotContent}
-										selectedId={selectedHotspotId}
-										revealedId={revealedHotspotId}
-										activeCameraId={activeCameraId}
-										onActivateCamera={handleActivateHotspotCamera}
-										onPlayClip={handlePlayHotspotClip}
-										onSelect={onHotspotSelect}
-										onHotspotActivated={handleHotspotActivated}
-										onCommandExecutorReady={hotspotLayer.register}
-										onPositionSetterReady={onHotspotPositionSetterReady}
-									/>
-									{children}
-								</SceneBounds>
-							</>
-						)}
-					</Suspense>
-				</Canvas>
-			</Suspense>
+										{model && (
+											<Center top cacheKey={centerCacheKey}>
+												<SceneModel
+													cameraOptions={captureCameraOptions}
+													onScreenshot={onScreenshot}
+													onScreenshotCaptureReady={onScreenshotCaptureReady}
+													backdrop={backdrop}
+													object={model}
+													displayedObject={displayedModel}
+													modelKey={modelKey}
+													enableShadows={shadowsEnabled}
+													normalizationOptions={normalizationOptions}
+													onRawDiagonalComputed={onRawDiagonalComputed}
+													clipExtents={clipExtents}
+													distanceLimits={orbitDistanceLimits}
+													framingReset={resetCameraFraming}
+													openingPose={openingPose}
+													storedView={storedView}
+												/>
+											</Center>
+										)}
+										<SceneLights
+											lighting={resolvedLighting}
+											environmentFiles={sceneFiles}
+											model={model}
+											displayedModel={displayedModel}
+											normalizationOptions={normalizationOptions}
+										/>
+										<SceneShadows
+											lighting={resolvedLighting}
+											model={model}
+											displayedModel={displayedModel}
+											normalizationOptions={normalizationOptions}
+											isModelAnimating={animation.status.active}
+											lightEditable={shadowLightEditable}
+											editableLightRole={editableLightRole}
+											onLightChange={onShadowLightChange}
+											staticBake={staticShadowBake}
+											bakedShadow={bakedShadow}
+											onShadowBakeReady={onShadowBakeReady}
+											liveBake={liveShadowBake}
+											onLiveBakeSkipped={handleLiveBakeSkipped}
+											clipExtents={clipExtents}
+										/>
+										<SceneHotspots
+											hotspots={hotspots}
+											model={model}
+											includeInternal={showInternalHotspots}
+											includeHidden={showHiddenHotspots}
+											color={hotspotColor}
+											showMarkers={showHotspotMarkers}
+											revealContent={revealHotspotContent}
+											selectedId={selectedHotspotId}
+											revealedId={revealedHotspotId}
+											activeCameraId={activeCameraId}
+											onActivateCamera={handleActivateHotspotCamera}
+											onPlayClip={handlePlayHotspotClip}
+											onSelect={onHotspotSelect}
+											onHotspotActivated={handleHotspotActivated}
+											onCommandExecutorReady={hotspotLayer.register}
+											onPositionSetterReady={onHotspotPositionSetterReady}
+										/>
+										{children}
+									</SceneBounds>
+								</>
+							)}
+						</Suspense>
+					</Canvas>
+				</Suspense>
+			</ViewerMessagesContext.Provider>
 		</ViewerKeysContext.Provider>
 	)
 })

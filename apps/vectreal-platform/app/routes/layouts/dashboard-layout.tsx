@@ -32,6 +32,7 @@ import {
 } from '../../components/dashboard'
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
+import { useDashboardInternalPages } from '../../hooks/use-dashboard-internal-pages'
 import { loadAuthenticatedSession } from '../../lib/domain/auth/auth-loader.server'
 import { getOrgSubscription } from '../../lib/domain/billing/entitlement-service.server'
 import { getSidebarProjects } from '../../lib/domain/project/project-repository.server'
@@ -126,6 +127,7 @@ export const shouldRevalidate: ShouldRevalidateFunction = ({
 
 const DashboardLayout = () => {
 	const { actor, sidebarProjects, plan } = useLoaderData<typeof loader>()
+	const internalPages = useDashboardInternalPages()
 	const { consent } = useConsent()
 	const posthog = usePostHog()
 	const location = useLocation()
@@ -192,6 +194,7 @@ const DashboardLayout = () => {
 						actor={actor}
 						sidebarProjects={sidebarProjects}
 						plan={plan}
+						internalPages={internalPages}
 					/>
 				</LogoSidebar>
 				{/*

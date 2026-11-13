@@ -12,6 +12,7 @@ import CrossIcon from './assets/cross-icon'
 import InfoIcon from './assets/info-icon'
 import { CHROME_BUTTON } from './chrome-classes'
 import { cn, withHostClasses } from './class-names'
+import { useViewerMessages } from './viewer-messages'
 
 interface IPopoverContext {
 	isOpen: boolean
@@ -63,6 +64,7 @@ export const InfoPopoverTrigger = ({
 	className
 }: PropsWithChildrenAndClass) => {
 	const { isOpen, setIsOpen } = useContext(PopoverContext)
+	const messages = useViewerMessages()
 
 	return (
 		<div className={withHostClasses(popoverClasses.triggerRoot, className)}>
@@ -72,7 +74,7 @@ export const InfoPopoverTrigger = ({
 				aria-haspopup="dialog"
 				aria-expanded={isOpen}
 				aria-controls="info-popover"
-				aria-label="Open information popover"
+				aria-label={messages.openInfo}
 			>
 				<InfoIcon className="vv:h-4 vv:w-4" />
 			</button>
@@ -163,11 +165,12 @@ export const InfoPopoverCloseButton = ({
 	className
 }: PropsWithChildrenAndClass) => {
 	const { setIsOpen } = useContext(PopoverContext)
+	const messages = useViewerMessages()
 
 	return (
 		<button
 			onClick={() => setIsOpen(false)}
-			aria-label="Close information popover"
+			aria-label={messages.closeInfo}
 			className={withHostClasses(popoverClasses.closeButton, className)}
 		>
 			<CrossIcon className="vv:h-4 vv:w-4" />

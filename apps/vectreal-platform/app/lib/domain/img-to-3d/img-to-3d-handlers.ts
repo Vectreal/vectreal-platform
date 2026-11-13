@@ -5,6 +5,7 @@ import {
 	IMG_TO_3D_LIST_BATCH_LIMIT,
 	IMG_TO_3D_MAX_IMAGE_BYTES,
 	IMG_TO_3D_RETENTION_MS,
+	imgTo3dContentDisposition,
 	imgTo3dSourceName,
 	imgTo3dVariantFileName,
 	parseImgTo3dSubmission,
@@ -228,22 +229,6 @@ async function admitToJob(
 	return { ...admitted, job }
 }
 
-/**
- * RFC 6266: an ASCII fallback, quotes and backslashes removed, for clients
- * that read only `filename`, and the exact name, percent-encoded, in
- * `filename*`. The name comes from the uploaded photo, so it is never
- * written into the header raw.
- */
-function contentDisposition(fileName: string): string {
-	const fallback = fileName.replace(/[^\x20-\x7e]|["\\]/g, '_')
-	// `encodeURIComponent` leaves these four, which RFC 5987 does not allow.
-	const exact = encodeURIComponent(fileName).replace(
-		/['()*]/g,
-		(char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
-	)
-	return `attachment; filename="${fallback}"; filename*=UTF-8''${exact}`
-}
-
 /** A variant's state for the list, or null when the runtime could not say. */
 async function listedState(
 	runtime: ImgTo3dRuntime | null,
@@ -458,7 +443,7 @@ export async function handleImgTo3dGenerationArtifact(
 				headers: {
 					'Content-Type': 'model/gltf-binary',
 					'Cache-Control': 'no-store',
-					'Content-Disposition': contentDisposition(fileName)
+					'Content-Disposition': imgTo3dContentDisposition(fileName)
 				}
 			}),
 			admitted.headers
@@ -469,29 +454,36 @@ export async function handleImgTo3dGenerationArtifact(
 }
 
 /**
- * The Generations page: an organization's recent batches, each variant with
- * its state as the runtime reports it now. A variant the runtime could not be
- * asked about comes back with a null status, and the page polls it.
+ * An organization's recent batches, each variant with its state as the
+ * runtime reports it now. A variant the runtime could not be asked about comes
+ * back with a null status, and the caller polls it.
  *
- * Takes an organization rather than a request: the page's loader admits the
- * caller with `resolveImgTo3dAccess`, the same rule the job routes apply.
+ * `askRuntime: false` skips the runtime entirely, every state null: the
+ * publisher lists its few recent batches that way, so its own load never
+ * waits on the GPU service.
+ *
+ * Takes an organization rather than a request: the loader admits the caller
+ * with `resolveImgTo3dAccess`, the same rule the job routes apply.
  */
 export async function listImgTo3dGenerations(
 	organizationId: string,
 	deps: Pick<ImgTo3dHandlerDeps, 'jobs' | 'runtime'>,
-	now: Date = new Date()
+	{
+		now = new Date(),
+		batchLimit = IMG_TO_3D_LIST_BATCH_LIMIT,
+		askRuntime = true
+	}: { now?: Date; batchLimit?: number; askRuntime?: boolean } = {}
 ): Promise<ImgTo3dListedBatch[]> {
-	const jobs = await deps.jobs.listForOrganization(
-		organizationId,
-		IMG_TO_3D_LIST_BATCH_LIMIT
-	)
+	const jobs = await deps.jobs.listForOrganization(organizationId, batchLimit)
 	if (jobs.length === 0) return []
 
 	let runtime: ImgTo3dRuntime | null = null
-	try {
-		runtime = deps.runtime()
-	} catch (error) {
-		console.error('[img-to-3d] runtime unavailable for the list', error)
+	if (askRuntime) {
+		try {
+			runtime = deps.runtime()
+		} catch (error) {
+			console.error('[img-to-3d] runtime unavailable for the list', error)
+		}
 	}
 	const keptUntil = (job: ImgTo3dJobListing) =>
 		job.createdAt.getTime() + IMG_TO_3D_RETENTION_MS
@@ -507,7 +499,7 @@ export async function listImgTo3dGenerations(
 		Array.from({ length: LIST_STATUS_CONCURRENCY }, async () => {
 			while (next < jobs.length) {
 				const index = next++
-				if (!isExpired(jobs[index])) {
+				if (runtime && !isExpired(jobs[index])) {
 					states[index] = await listedState(runtime, jobs[index].id)
 				}
 			}

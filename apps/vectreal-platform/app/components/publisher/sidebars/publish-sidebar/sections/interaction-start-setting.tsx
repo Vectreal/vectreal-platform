@@ -2,6 +2,7 @@ import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
+import { matchViewerLocale } from '@vctrl/core'
 
 import { resolveInteractionStart } from '../../../../../lib/domain/scene/scene-presentation'
 import { SettingGroup } from '../../sidebar-section'
@@ -31,8 +32,8 @@ interface InteractionStartSettingProps {
 }
 
 /**
- * When visitors can start moving the scene, and, when that waits for a tap,
- * the language of the button they tap.
+ * When visitors can start moving the scene, and the language of the viewer's
+ * own words: the tap button, the first-time hint and "How to move".
  */
 export const InteractionStartSetting = ({
 	presentation,
@@ -69,32 +70,31 @@ export const InteractionStartSetting = ({
 					))}
 				</ToggleGroup>
 			</SettingGroup>
-			{start === 'tap' && (
-				<SettingGroup
-					label="Button language"
-					description={`"Tap to rotate" or "Zum Drehen tippen". Browser picks by each visitor's language.`}
+			<SettingGroup
+				label="Viewer language"
+				description={`The viewer's own words: the tap button ("Tap to rotate" or "Zum Drehen tippen"), the first-time hint and How to move. Browser picks by each visitor's language.`}
+			>
+				<ToggleGroup
+					type="single"
+					aria-label="Viewer language"
+					// A tag set through the API, such as `de-AT`, shows as its language.
+					value={matchViewerLocale(presentation.locale) ?? 'browser'}
+					onValueChange={(value) => {
+						if (!value) return
+						onChange(({ locale: _previous, ...rest }) =>
+							value === 'browser'
+								? rest
+								: { ...rest, locale: value as SceneLocale }
+						)
+					}}
 				>
-					<ToggleGroup
-						type="single"
-						aria-label="Button language"
-						value={presentation.locale ?? 'browser'}
-						onValueChange={(value) => {
-							if (!value) return
-							onChange(({ locale: _previous, ...rest }) =>
-								value === 'browser'
-									? rest
-									: { ...rest, locale: value as SceneLocale }
-							)
-						}}
-					>
-						{LANGUAGES.map(({ value, label }) => (
-							<ToggleGroupItem key={value} value={value}>
-								{label}
-							</ToggleGroupItem>
-						))}
-					</ToggleGroup>
-				</SettingGroup>
-			)}
+					{LANGUAGES.map(({ value, label }) => (
+						<ToggleGroupItem key={value} value={value}>
+							{label}
+						</ToggleGroupItem>
+					))}
+				</ToggleGroup>
+			</SettingGroup>
 		</>
 	)
 }

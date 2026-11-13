@@ -20,6 +20,9 @@ export * from './types'
 // The accepted-format set. Pure data with no imports; see the module header.
 export * from './model-formats'
 
+// The viewer's languages. Pure data and one Intl call; see the module.
+export * from './viewer-locale'
+
 // Export all core services
 export * from './model-loader'
 export * from './model-optimizer'

@@ -17,6 +17,7 @@ export {
 	type VectrealViewerProps
 } from './vectreal-viewer'
 export type { SrcLoadOptions, SrcModel } from './load-src'
+export type { ViewerMessages } from './locales/en'
 export {
 	default as AnimationControls,
 	type AnimationControlsProps

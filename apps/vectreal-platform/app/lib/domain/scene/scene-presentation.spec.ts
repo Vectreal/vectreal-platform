@@ -292,6 +292,18 @@ describe('when interaction starts', () => {
 		).toBeUndefined()
 	})
 
+	it('keeps a language tag the viewer has, in its canonical form', () => {
+		expect(normalizePresentationSettings({ locale: 'de-at' })).toEqual({
+			locale: 'de-AT'
+		})
+		expect(normalizePresentationSettings({ locale: 'en' })).toEqual({
+			locale: 'en'
+		})
+		expect(
+			normalizePresentationSettings({ locale: 'not a tag' })
+		).toBeUndefined()
+	})
+
 	it('starts immediately unless the author chose a tap, so older scenes keep their viewer', () => {
 		expect(resolveInteractionStart(undefined)).toBe('immediate')
 		expect(resolveInteractionStart({ showInfoPopover: true })).toBe('immediate')

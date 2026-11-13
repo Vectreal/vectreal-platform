@@ -664,8 +664,10 @@ export interface ScenePresentationSettings {
 	 */
 	interactionStart?: SceneInteractionStart
 	/**
-	 * The language of the words the viewer itself shows a visitor, such as
-	 * "Zum Drehen tippen". Absent, the visitor's browser language decides.
+	 * The language of the words the viewer itself shows a visitor, as a BCP 47
+	 * tag whose language the viewer has (`VIEWER_LOCALES`): `de` or `de-AT`
+	 * shows "Zum Drehen tippen". Absent, the visitor's browser language
+	 * decides.
 	 */
 	locale?: SceneLocale
 }
@@ -673,8 +675,11 @@ export interface ScenePresentationSettings {
 /** When visitors can start moving a scene; see `interactionStart`. */
 export type SceneInteractionStart = 'immediate' | 'tap'
 
-/** The languages the viewer's own words come in. */
-export type SceneLocale = 'en' | 'de'
+/**
+ * A BCP 47 language tag; `normalizeSceneLocale` keeps only those whose
+ * language is in `VIEWER_LOCALES`.
+ */
+export type SceneLocale = string
 
 /**
  * Scene settings containing viewer configuration.

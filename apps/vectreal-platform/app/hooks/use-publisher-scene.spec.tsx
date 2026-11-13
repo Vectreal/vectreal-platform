@@ -52,7 +52,8 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 }))
 
 vi.mock('react-router', () => ({
-	useRevalidator: () => ({ revalidate: vi.fn() })
+	useRevalidator: () => ({ revalidate: vi.fn() }),
+	useSearchParams: () => [new URLSearchParams()]
 }))
 
 vi.mock('./scene-loader/use-scene-draft', () => ({
