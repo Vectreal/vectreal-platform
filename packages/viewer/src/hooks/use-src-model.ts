@@ -1,14 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { SrcLoadOptions, SrcModel } from '../load-src'
+import type { LoadProgress } from '@vctrl/core'
 
 export type SrcModelState =
-	| { status: 'idle' | 'loading'; model: null; error: null }
+	| { status: 'idle'; model: null; error: null }
+	/** `progress` is null until the download reports. */
+	| {
+			status: 'loading'
+			model: null
+			error: null
+			progress: LoadProgress | null
+	  }
 	| ({ status: 'ready'; error: null } & SrcModel)
 	| { status: 'error'; model: null; error: unknown }
 
 const IDLE: SrcModelState = { status: 'idle', model: null, error: null }
-const LOADING: SrcModelState = { status: 'loading', model: null, error: null }
+const LOADING: Extract<SrcModelState, { status: 'loading' }> = {
+	status: 'loading',
+	model: null,
+	error: null,
+	progress: null
+}
+
+/*
+  A download reports every chunk, hundreds for a large model; the loader shows
+  whole steps. One render per whole percent, per 256 KB with no known size, or
+  per phase or file count change.
+*/
+const progressKey = ({ phase, bytes, items }: LoadProgress) =>
+	bytes
+		? bytes.total
+			? `${phase}:${Math.floor((bytes.loaded / bytes.total) * 100)}`
+			: `${phase}:~${Math.floor(bytes.loaded / (256 * 1024))}`
+		: `${phase}:${items?.loaded ?? ''}/${items?.total ?? ''}`
 
 export interface SrcModelCallbacks {
 	onLoad?: (result: SrcModel) => void
@@ -54,12 +79,23 @@ export function useSrcModel(
 		callerSignal?.addEventListener('abort', abort, { once: true })
 
 		setState(LOADING)
+		let shown = ''
+		const onProgress = (progress: LoadProgress) => {
+			const key = progressKey(progress)
+			if (superseded || key === shown) return
+			shown = key
+			setState({ ...LOADING, progress })
+		}
 		import('../load-src')
 			.then(({ loadSrcModel }) =>
-				loadSrcModel(address, {
-					...options,
-					init: { ...options.init, signal: controller.signal }
-				})
+				loadSrcModel(
+					address,
+					{
+						...options,
+						init: { ...options.init, signal: controller.signal }
+					},
+					onProgress
+				)
 			)
 			.then(
 				(loaded) => {

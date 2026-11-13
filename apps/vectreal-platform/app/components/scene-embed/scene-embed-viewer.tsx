@@ -32,6 +32,8 @@ export interface SceneEmbedViewerProps {
 	/** Sizing for the wrapper. The viewer always fills it. */
 	className?: string
 	loadingThumbnail?: ViewerLoadingThumbnail
+	/** The model's download and parse while `file` is still on its way. */
+	loadProgress?: VectrealViewerProps['loadProgress']
 	/** Usually `<SceneEmbedInfoPopover>`; omitted where the surface has its own. */
 	popover?: ReactNode
 	/**
@@ -102,6 +104,7 @@ const SceneEmbedViewer = memo(
 		sceneData,
 		className,
 		loadingThumbnail,
+		loadProgress,
 		popover,
 		hotspotPresentation,
 		showCameraControls,
@@ -218,6 +221,7 @@ const SceneEmbedViewer = memo(
 					*/
 					liveShadowBake="within-budget"
 					loadingThumbnail={loadingThumbnail}
+					loadProgress={loadProgress}
 					popover={
 						popover || branding ? (
 							<>

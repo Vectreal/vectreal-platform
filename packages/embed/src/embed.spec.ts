@@ -171,6 +171,25 @@ function viewerEvent(from: HTMLIFrameElement, event: object) {
 	)
 }
 
+describe('VectrealEmbed load progress', () => {
+	it('passes on where the load is and that the model arrived', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onProgress = vi.fn()
+		const onModel = vi.fn()
+		embed.on('load_progress', onProgress)
+		embed.on('model_loaded', onModel)
+
+		const progress = { phase: 'fetching', bytes: { loaded: 4, total: 10 } }
+		viewerEvent(own, { type: 'load_progress', progress })
+		viewerEvent(own, { type: 'model_loaded' })
+
+		expect(onProgress).toHaveBeenCalledWith(progress)
+		expect(onModel).toHaveBeenCalledTimes(1)
+		embed.destroy()
+	})
+})
+
 describe('VectrealEmbed environment fallback', () => {
 	it('passes on which map loaded', () => {
 		const own = iframe('scene-a')

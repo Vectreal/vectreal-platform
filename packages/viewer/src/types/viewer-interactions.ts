@@ -1,3 +1,5 @@
+import type { LoadProgress } from '@vctrl/core'
+
 /** Command that requests a transition to one of the configured viewer cameras. */
 export interface ActivateCameraViewerCommand {
 	type: 'activate_camera'
@@ -111,9 +113,22 @@ export interface ViewerReadyInteractionEvent {
 	type: 'viewer_ready'
 }
 
-/** Emitted once the model file finishes loading (before initial framing). */
+/**
+ * Emitted once per model, the moment it reaches the viewer: parsed, before
+ * the environment, shaders and framing that `viewer_ready` waits on.
+ */
 export interface ModelLoadedInteractionEvent {
 	type: 'model_loaded'
+}
+
+/**
+ * Where the load is while the loader is on screen: the host's download and
+ * parse (`loadProgress`, or `src`'s own), then the viewer's `preparing`.
+ * Emitted on every phase change and at most every 250 ms within one.
+ */
+export interface LoadProgressInteractionEvent {
+	type: 'load_progress'
+	progress: LoadProgress
 }
 
 /** Emitted after the viewer finishes its initial framing/stabilization pass. */
@@ -246,6 +261,7 @@ export type ViewerInteractionEvent =
 	| EnvironmentLoadedInteractionEvent
 	| HotspotActivatedInteractionEvent
 	| InitialFramingCompletedInteractionEvent
+	| LoadProgressInteractionEvent
 	| ModelLoadedInteractionEvent
 	| RenderFailedInteractionEvent
 	| ShadowBakeSkippedInteractionEvent

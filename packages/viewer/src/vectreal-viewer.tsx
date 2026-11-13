@@ -15,7 +15,6 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 import { Center } from '@react-three/drei'
-import { LoadingSpinner as DefaultSpinner } from '@shared/components/ui/loading-spinner'
 import {
 	resolveEnvironmentFiles,
 	resolveLighting,
@@ -64,6 +63,7 @@ import { withHostClasses } from './components/class-names'
 import FullscreenControl from './components/fullscreen-control'
 import { describeInteraction } from './components/interaction-help'
 import InteractionHint from './components/interaction-hint'
+import { ViewerLoadProgress } from './components/load-progress'
 import {
 	SceneAnimation,
 	SceneBounds,
@@ -113,6 +113,7 @@ import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { type ContextLossEvent } from './hooks/use-context-loss-recovery'
 import { useHeldExecutor } from './hooks/use-held-executor'
 import { pointerInput, useInteractionHint } from './hooks/use-interaction-hint'
+import { useLoadEvents, useViewerLoadProgress } from './hooks/use-load-progress'
 import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useSrcModel } from './hooks/use-src-model'
 import { useViewerLoading } from './hooks/use-viewer-loading'
@@ -132,6 +133,7 @@ import type {
 	ViewerInteractionEvent,
 	ViewerLoadingThumbnail
 } from './types/viewer-types'
+import type { LoadProgress } from '@vctrl/core'
 
 export type {
 	BakedShadow,
@@ -561,9 +563,22 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	popover?: React.ReactNode
 
 	/**
-	 * JSX element to render while the model is loading.
+	 * Drawn while the scene loads. A node, or a function of where the load is
+	 * (see `loadProgress`), so a host can draw its own progress. Defaults to
+	 * the viewer's progress ring with the phase and its numbers; `null` draws
+	 * nothing.
 	 */
-	loader?: React.ReactNode
+	loader?:
+		React.ReactNode | ((progress: LoadProgress | null) => React.ReactNode)
+
+	/**
+	 * Where the host's own load of `model` is, while it has none to pass yet:
+	 * the download's bytes and the parse's files, as `useLoadModel` reports
+	 * them. The loader and the `load_progress` event show it until the model
+	 * arrives, then the viewer's own `preparing`. Ignored for `src`, which the
+	 * viewer measures itself.
+	 */
+	loadProgress?: LoadProgress | null
 
 	/**
 	 * Shown in place of `loader` when `src` could not be loaded. Defaults to a
@@ -650,6 +665,11 @@ export interface VectrealViewerProps extends PropsWithChildren {
  *   );
  * };
  */
+/** The viewer's own loader: where the load is, in the viewer's language. */
+const defaultLoader = (progress: LoadProgress | null) => (
+	<ViewerLoadProgress progress={progress} />
+)
+
 const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const {
 		// Content
@@ -703,7 +723,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		// Slots
 		popover,
 		loadingThumbnail,
-		loader = <DefaultSpinner />,
+		loader: loaderSlot = defaultLoader,
+		loadProgress,
 		renderFailure,
 		// Callbacks & events
 		onScreenshot,
@@ -1203,8 +1224,21 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const { loadingState, completeLoadingTransition } = useViewerLoading(
 		hasContent,
 		isInitialFramingComplete && (areShadersReady || !enablePostProcessing),
-		Boolean(loader)
+		loaderSlot !== null && loaderSlot !== undefined
 	)
+
+	const loadProgressNow = useViewerLoadProgress({
+		hasContent,
+		isLoading: loadingState === 'loading',
+		hostProgress: loadProgress
+	})
+	useLoadEvents({
+		progress: loadProgressNow,
+		modelIdentity: model ? (modelKey ?? model) : null,
+		emit: handleInteractionEvent
+	})
+	const loader =
+		typeof loaderSlot === 'function' ? loaderSlot(loadProgressNow) : loaderSlot
 
 	const interactionHint = useInteractionHint({
 		enabled: interactionHintOverride ?? showInteractionHint,
@@ -1551,6 +1585,7 @@ const VectrealViewer = memo(
 		return (
 			<ViewerScene
 				{...props}
+				loadProgress={loaded.status === 'loading' ? loaded.progress : null}
 				model={loaded.model ?? undefined}
 				// Withheld until the model is there: children alone count as
 				// content, and would end the loader before `src` had loaded.
