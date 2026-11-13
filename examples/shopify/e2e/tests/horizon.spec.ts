@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 
 /*
   The gallery slide and the tour section in Horizon, the theme Savor runs
@@ -38,6 +38,22 @@ const contents = (items: ReturnType<Page['locator']>) =>
 		)
 	)
 
+/**
+ * Whether the gallery shows this slide: lined up with the carousel's edge,
+ * or, in the desktop grid, at least half on screen. A desktop slide can be
+ * taller than the window, so this does not ask for all of it.
+ */
+const onScreen = (item: Locator) =>
+	item.evaluate((element) => {
+		const box = element.getBoundingClientRect()
+		const carousel = element.closest('slideshow-slides')
+		if (carousel) {
+			return Math.abs(box.left - carousel.getBoundingClientRect().left) < 2
+		}
+		const visible = Math.min(box.bottom, innerHeight) - Math.max(box.top, 0)
+		return visible > box.height / 2 && box.left >= 0 && box.right <= innerWidth
+	})
+
 /** Brings the scene's slide into view with the gallery's own controls. */
 async function showSlide(page: Page, presentation: string) {
 	if (presentation === 'grid' && isDesktop(page)) {
@@ -54,7 +70,7 @@ async function showSlide(page: Page, presentation: string) {
 			.last()
 			.click()
 	}
-	await expect(slide(page)).toBeInViewport({ ratio: 0.9 })
+	await expect.poll(() => onScreen(slide(page))).toBe(true)
 }
 
 /**
@@ -190,19 +206,26 @@ test('thumbnails point at their own media, and the scene’s at the scene', asyn
 	).toBeAttached()
 
 	for (const index of [3, 0, 2, 1, 3]) {
-		// Horizon now and then drops a click that lands during a jump of
-		// several slides, between photos as much as to the scene; a shopper
-		// clicks again.
+		// By content, not position: Horizon moves slides around in the DOM
+		// while it animates a jump of several.
+		const target = slides(page).filter({
+			has: page.locator(
+				index < MEDIA.length
+					? `.product-media[data-media-id="${MEDIA[index].id}"]`
+					: 'vectreal-media'
+			)
+		})
+		// During a jump of several slides Horizon ignores clicks until it has
+		// put its slides back (`#disabled` in slideshow.js); a shopper clicks
+		// again.
 		await expect(async () => {
 			await thumbnails.nth(index).click()
-			await expect(slides(page).nth(index)).toHaveAttribute(
-				'aria-hidden',
-				'false',
-				{ timeout: 3_000 }
-			)
+			await expect(target).toHaveAttribute('aria-hidden', 'false', {
+				timeout: 3_000
+			})
+			await expect.poll(() => onScreen(target), { timeout: 3_000 }).toBe(true)
 		}).toPass()
 		await expect(thumbnails.nth(index)).toHaveAttribute('aria-selected', 'true')
-		await expect(slides(page).nth(index)).toBeInViewport({ ratio: 0.9 })
 		await settled(page)
 	}
 	await page.screenshot({
@@ -221,7 +244,7 @@ test('with a single photo, the slide follows it and Horizon shows no controls', 
 		await scroller(page).evaluate((list) =>
 			list.scrollTo({ left: list.scrollWidth, behavior: 'instant' })
 		)
-		await expect(slide(page)).toBeInViewport({ ratio: 0.9 })
+		await expect.poll(() => onScreen(slide(page))).toBe(true)
 	}
 })
 

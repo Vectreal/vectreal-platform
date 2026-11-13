@@ -166,7 +166,8 @@ function createEngine(roots: string[], globals: object = {}) {
 	engine.registerFilter(
 		'image_tag',
 		(src: string, ...options: [string, string][]) => {
-			const attributes = options
+			// A later option of the same name wins, as Horizon's double `ref:` expects.
+			const attributes = [...new Map(options).entries()]
 				.filter(([name, value]) => name !== 'widths' && value != null)
 				.map(([name, value]) => ` ${name.replaceAll('_', '-')}="${value}"`)
 				.join('')

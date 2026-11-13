@@ -42,23 +42,23 @@ export default defineConfig({
 	projects: [
 		{
 			name: 'iphone-webkit',
-			testIgnore: /horizon/,
+			testIgnore: /horizon\.spec\.ts$/,
 			use: { ...devices['iPhone 15'] }
 		},
 		{
 			name: 'android-chromium-throttled',
-			testIgnore: /horizon/,
+			testIgnore: /horizon\.spec\.ts$/,
 			use: { ...devices['Pixel 6a'], launchOptions: { args: CHROMIUM_ARGS } }
 		},
 		// Horizon (Savor's theme) at the 390 px of a small phone, and on desktop.
 		{
 			name: 'horizon-iphone-webkit',
-			testMatch: /horizon/,
+			testMatch: /horizon\.spec\.ts$/,
 			use: { ...devices['iPhone 15'], viewport: PHONE }
 		},
 		{
 			name: 'horizon-android-chromium',
-			testMatch: /horizon/,
+			testMatch: /horizon\.spec\.ts$/,
 			use: {
 				...devices['Pixel 6a'],
 				viewport: PHONE,
@@ -67,7 +67,7 @@ export default defineConfig({
 		},
 		{
 			name: 'horizon-desktop-chromium',
-			testMatch: /horizon/,
+			testMatch: /horizon\.spec\.ts$/,
 			use: {
 				...devices['Desktop Chrome'],
 				viewport: { width: 1440, height: 900 },
