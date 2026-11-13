@@ -326,6 +326,8 @@ describe('useImgTo3dBatchStates', () => {
 describe('useImgTo3dGeneration', () => {
 	// Cleared on every mount, so no test can act on an earlier test's hook.
 	let latest: ImgTo3dGeneration | null = null
+	// Every render's value, in order, for what a single frame showed.
+	let rendered: ImgTo3dGeneration[] = []
 	const current = () => {
 		if (!latest) throw new Error('the probe has not rendered')
 		return latest
@@ -339,6 +341,7 @@ describe('useImgTo3dGeneration', () => {
 	}) {
 		const { sceneId } = useParams()
 		latest = useImgTo3dGeneration(loadModel, sceneId ?? null)
+		rendered.push(latest)
 		return null
 	}
 
@@ -352,10 +355,12 @@ describe('useImgTo3dGeneration', () => {
 	) {
 		loads = 0
 		latest = null
+		rendered = []
 		const router = createMemoryRouter(
 			[
 				{
 					path: '/publisher/:sceneId?',
+					HydrateFallback: () => null,
 					loader: () => {
 						loads += 1
 						return null
@@ -408,6 +413,22 @@ describe('useImgTo3dGeneration', () => {
 		)
 		return held
 	}
+
+	/*
+	  The publisher holds its loading surface on this. Set by the open effect
+	  instead, it was null for the first render, and on the server, and the
+	  empty stage showed in that gap.
+	*/
+	it('reports the variant as opening from the first render, before any download', async () => {
+		const held = heldArtifacts()
+		mount(`/publisher?generation=${JOB}`)
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(rendered.length).toBeGreaterThan(0)
+		for (const value of rendered) {
+			expect(value.opening).toEqual({ jobId: JOB, error: null })
+		}
+	})
 
 	it('opens nothing over a saved scene, which Save would then overwrite', async () => {
 		route = () => glb()
@@ -478,6 +499,54 @@ describe('useImgTo3dGeneration', () => {
 
 		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
 		await waitFor(() => expect(current().opening).toBeNull())
+	})
+
+	it('reads as opening again while a retry downloads, not as the failure before it', async () => {
+		route = () => refusal('runtime_unavailable', 503)
+		mount(`/publisher?generation=${JOB}`)
+		await waitFor(() =>
+			expect(current().opening?.error).toBe('runtime_unavailable')
+		)
+
+		const held = heldArtifacts()
+		await act(async () => current().retryOpen())
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(current().opening).toEqual({ jobId: JOB, error: null })
+	})
+
+	it('reads as opening again after the URL left a variant it opened and came back', async () => {
+		route = () => glb()
+		const router = mount(`/publisher?generation=${JOB}`)
+		await waitFor(() => expect(current().opening).toBeNull())
+
+		const held = heldArtifacts()
+		await act(() => router.navigate('/publisher'))
+		await act(() => router.navigate(`/publisher?generation=${JOB}`))
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(current().opening).toEqual({ jobId: JOB, error: null })
+	})
+
+	it('forgets a load that finished after the URL left it, so a revisit reads as opening', async () => {
+		route = () => glb()
+		let finishLoad: () => void = () => undefined
+		const loadModel = vi.fn(
+			() =>
+				new Promise<{ status: string }>((resolve) => {
+					finishLoad = () => resolve({ status: 'ready' })
+				})
+		)
+		const router = mount(`/publisher?generation=${JOB}`, { loadModel })
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+
+		await act(() => router.navigate('/publisher'))
+		await act(async () => finishLoad())
+		const held = heldArtifacts()
+		await act(() => router.navigate(`/publisher?generation=${JOB}`))
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(current().opening).toEqual({ jobId: JOB, error: null })
 	})
 
 	it('opens it again after the URL left it and came back', async () => {

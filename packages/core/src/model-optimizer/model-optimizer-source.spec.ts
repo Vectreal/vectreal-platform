@@ -135,12 +135,17 @@ describe('ModelOptimizer source', () => {
 	// The failed load retired the previous model; keeping it would have it
 	// optimized and saved under the failed model's name.
 	it('leaves no model after a load that failed', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 		const optimizer = new ModelOptimizer()
 		await optimizer.loadFromBuffer(await glb())
 
 		await expect(
 			optimizer.loadFromBuffer(new Uint8Array([1, 2, 3]))
 		).rejects.toThrow()
+		expect(error).toHaveBeenCalledExactlyOnceWith(
+			'Invalid buffer format:',
+			expect.objectContaining({ byteLength: 3 })
+		)
 
 		expect(optimizer.hasModel()).toBe(false)
 		expect(optimizer.hasSource()).toBe(false)
@@ -804,6 +809,7 @@ describe('ModelOptimizer with the document replaced mid-operation', () => {
 
 	// Each step commits, so the sequence asks only whether its model is held.
 	it('runs every step of a sequence on the document the last one left', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 		const optimizer = new ModelOptimizer()
 		await optimizer.loadFromBuffer(await glb())
 
@@ -814,6 +820,10 @@ describe('ModelOptimizer with the document replaced mid-operation', () => {
 		})
 
 		expect(optimizer.getAppliedOptimizations()).toContain('quantization')
+		// On a model this small, normals do not pay for themselves and revert.
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			expect.stringMatching(/^normals optimization made no improvement/)
+		)
 	})
 })
 

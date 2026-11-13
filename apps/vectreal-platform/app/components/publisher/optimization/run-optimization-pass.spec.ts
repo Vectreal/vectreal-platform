@@ -3,7 +3,7 @@ import {
 	TextureCompressionError
 } from '@vctrl/core/model-optimizer'
 import { toast } from 'sonner'
-import { beforeEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 
 import { LOAD_GEOMETRY_STEP, PREPARE_STEP, SYNC_STEP } from './model'
 import { runOptimizationPass } from './run-optimization-pass'
@@ -121,6 +121,39 @@ function createDeps(
 
 	return { deps, steps, model, runtime, filtered }
 }
+
+/*
+  A pass reports its own failures on the console: a failed step, a partial
+  texture pass, a baseline it could not measure, and an original it could not
+  put back or show. Those, and nothing else; a test that pins one spies on it
+  too, which reuses these spies.
+*/
+const PASS_REPORTS = [
+	'Error during optimization:',
+	'Some textures could not be compressed:',
+	'[optimization] Could not measure the baseline scene size:',
+	'Could not restore the original after a failure:',
+	'Could not show the original after a failure:'
+]
+let consoleError: ReturnType<typeof spyConsole>
+let consoleWarn: ReturnType<typeof spyConsole>
+function spyConsole(method: 'error' | 'warn') {
+	return vi.spyOn(console, method).mockImplementation(() => {})
+}
+
+beforeEach(() => {
+	consoleError = spyConsole('error')
+	consoleWarn = spyConsole('warn')
+})
+
+afterEach(() => {
+	for (const [message] of [
+		...consoleError.mock.calls,
+		...consoleWarn.mock.calls
+	]) {
+		expect(PASS_REPORTS).toContain(message)
+	}
+})
 
 beforeEach(() => {
 	vi.clearAllMocks()

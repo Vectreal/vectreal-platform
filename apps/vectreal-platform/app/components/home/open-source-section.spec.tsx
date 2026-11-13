@@ -9,8 +9,10 @@
  * the Result pane mounts `snippet-result-client.tsx`, and these tests hold the
  * snippet to that module and to the viewer's manifest.
  */
+
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { format } from 'node:util'
 
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
@@ -18,6 +20,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { OpenSourceSection } from './open-source-section'
 import { HOME_PAGE_COPY } from '../../constants/product-copy'
+
+import type { MockInstance } from 'vitest'
 
 const COPY = HOME_PAGE_COPY.openSource.result
 
@@ -51,13 +55,18 @@ const VIEWER_MANIFEST = JSON.parse(
 	)
 ) as { peerDependencies: Record<string, string> }
 
+let consoleError: MockInstance<typeof console.error>
 beforeEach(() => {
 	run.loaded = false
 	run.failure = null
-	vi.spyOn(console, 'error').mockImplementation(() => {})
+	consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 })
 
 afterEach(() => {
+	/* A failed fetch of the repository stats is logged. That, and nothing else. */
+	for (const args of consoleError.mock.calls) {
+		expect(format(...args)).toMatch(/network error/)
+	}
 	vi.restoreAllMocks()
 })
 

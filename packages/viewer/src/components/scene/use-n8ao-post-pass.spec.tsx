@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useN8AOPostPass } from './use-n8ao-post-pass'
 
 import type { N8AOPostPassConstructor } from './n8ao'
+import type { MockInstance } from 'vitest'
 
 const Pass = class {} as unknown as N8AOPostPassConstructor
 
@@ -25,9 +26,16 @@ function pendingFetch() {
 }
 
 describe('useN8AOPostPass', () => {
+	let consoleWarn: MockInstance<typeof console.warn>
 	beforeEach(() => {
 		load.mockReset()
-		vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+		consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+	})
+	afterEach(() => {
+		// A pass that fails to load says so, and nothing else warns.
+		for (const [message] of consoleWarn.mock.calls) {
+			expect(message).toBe('Ambient occlusion is unavailable:')
+		}
 	})
 
 	it('fetches nothing and builds without AO while AO is off', () => {

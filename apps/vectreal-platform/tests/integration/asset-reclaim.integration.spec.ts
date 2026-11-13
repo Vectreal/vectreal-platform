@@ -262,6 +262,7 @@ describe('asset reclaim', () => {
 	})
 
 	it('reclaims the batch when the save operation itself is rejected', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		// The premise of this whole module, and the one path that was never
 		// exercised: uploads land in their own requests, so a commit rejected
 		// afterwards leaves them linked to nothing. Driving the real operation
@@ -295,6 +296,13 @@ describe('asset reclaim', () => {
 
 		expect(response.ok).toBe(false)
 		expect(await exists(stranded)).toBe(false)
+		// The rejection is reported, as every swallowed server failure is.
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			expect.objectContaining({
+				message: expect.stringContaining('uploaded assets are missing')
+			}),
+			expect.anything()
+		)
 	})
 
 	it('keeps the original a save uploaded in its own batch', async () => {
@@ -404,6 +412,7 @@ describe('asset reclaim', () => {
 	})
 
 	it('swallows a failure in its own candidate lookup', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		// These run after the save or publish has committed, and one runs from a
 		// `finally`, where a throw discards the pending return and turns a landed
 		// publish into a 500 with its idempotency record stuck pending. A broken
@@ -416,6 +425,11 @@ describe('asset reclaim', () => {
 		await expect(
 			reclaimStaleProjectAssets({ projectId: 'not-a-uuid' })
 		).resolves.toEqual([])
+		// Swallowed, not silent: each says so.
+		expect(warn).toHaveBeenCalledTimes(2)
+		for (const [message] of warn.mock.calls) {
+			expect(message).toBe('[asset-reclaim] reclaim failed')
+		}
 	})
 
 	it('removes the storage object alongside the row', async () => {

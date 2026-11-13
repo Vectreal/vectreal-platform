@@ -8,7 +8,7 @@
 import { ChoiceList } from '@shared/components/ui/choice-list'
 import { Slider } from '@shared/components/ui/slider'
 import { Toggle } from '@shared/components/ui/toggle'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
@@ -128,7 +128,7 @@ describe('Slider', () => {
 
 		fireEvent.keyDown(thumb, { key: 'Enter' })
 		const field = screen.getByLabelText('Intensity value')
-		field.focus()
+		act(() => field.focus())
 		fireEvent.change(field, { target: { value: '3' } })
 		/*
 		  Spied rather than read from `activeElement`: Chrome lets a focus() made
@@ -136,7 +136,7 @@ describe('Slider', () => {
 		  does not, so here the thumb would lose the race it wins in a browser.
 		*/
 		const focusThumb = vi.spyOn(thumb, 'focus')
-		screen.getByLabelText('Elsewhere').focus()
+		act(() => screen.getByLabelText('Elsewhere').focus())
 
 		expect(onChange).toHaveBeenLastCalledWith(3)
 		expect(focusThumb).not.toHaveBeenCalled()
