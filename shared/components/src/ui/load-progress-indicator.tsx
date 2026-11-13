@@ -1,4 +1,5 @@
 import { cn } from '@shared/utils'
+import { useEffect, useState } from 'react'
 
 import {
 	describeLoadProgress,
@@ -43,6 +44,10 @@ export const LoadProgressIndicator: FC<LoadProgressIndicatorProps> = ({
 	className
 }) => {
 	const visible = useDelayedVisible(delayMs)
+	// One commit after mount at the earliest, so the region exists before its
+	// first title even with no delay.
+	const [regionMounted, setRegionMounted] = useState(false)
+	useEffect(() => setRegionMounted(true), [])
 	const { title, detail, percent } = describeLoadProgress(
 		progress,
 		words,
@@ -57,7 +62,7 @@ export const LoadProgressIndicator: FC<LoadProgressIndicatorProps> = ({
 			  region that appears and fills in one commit is often not read.
 			*/}
 			<span aria-live="polite" className="sr-only">
-				{visible ? title : ''}
+				{visible && regionMounted ? title : ''}
 			</span>
 			<div
 				className={cn(
