@@ -231,10 +231,12 @@ describe('useOptimizationProcess', () => {
 		})
 		const { result, store, derivedFrom } = renderProcess()
 		// A source that already embodies settings, as a reopened scene's does.
-		store.set(optimizationAtom, (prev) => ({
-			...prev,
-			sourceSettings: smallestPreset
-		}))
+		act(() => {
+			store.set(optimizationAtom, (prev) => ({
+				...prev,
+				sourceSettings: smallestPreset
+			}))
+		})
 
 		// Records `balanced`, so the failure below has to replace it.
 		await act(() => result.current.derive(balancedPreset))
@@ -268,10 +270,12 @@ describe('useOptimizationProcess', () => {
 			dracoReport: null
 		})
 		const { result, store, derivedFrom } = renderProcess()
-		store.set(optimizationAtom, (prev) => ({
-			...prev,
-			sourceSettings: smallestPreset
-		}))
+		act(() => {
+			store.set(optimizationAtom, (prev) => ({
+				...prev,
+				sourceSettings: smallestPreset
+			}))
+		})
 
 		await act(() => result.current.derive(originalPreset))
 
@@ -491,10 +495,12 @@ describe('useOptimizationProcess', () => {
 				return { succeeded: true, dracoReport: null }
 			})
 			const { result, store } = renderProcess()
-			store.set(optimizationAtom, (prev) => ({
-				...prev,
-				sourceSettings: smallestPreset
-			}))
+			act(() => {
+				store.set(optimizationAtom, (prev) => ({
+					...prev,
+					sourceSettings: smallestPreset
+				}))
+			})
 			act(() => store.set(keptOriginalAtom, keptAs(stored)))
 
 			// The default 1 s is too tight on a loaded CI runner with coverage on.
@@ -522,10 +528,20 @@ describe('useOptimizationProcess', () => {
 
 			expect(fetchSpy).toHaveBeenCalledOnce()
 			expect(result.current.isLoadingOriginal).toBe(true)
+			/*
+			  One act around the answer and its outcome: reading the body and
+			  stating the source take several ticks. It waits on the store, not
+			  on the hook, which act renders only once it ends.
+			*/
 			await act(async () => {
 				responders[0](new Response(new Uint8Array([7, 7, 7])))
+				// The 4 s the case above needs on a loaded CI runner.
+				await vi.waitFor(
+					() => expect(store.get(keptOriginalAtom).stored).toBeNull(),
+					{ timeout: 4_000 }
+				)
 			})
-			await waitFor(() => expect(result.current.isLoadingOriginal).toBe(false))
+			expect(result.current.isLoadingOriginal).toBe(false)
 		})
 
 		it('never loads while the drawer is closed', () => {
@@ -580,10 +596,15 @@ describe('useOptimizationProcess', () => {
 			// The scene hydrates again and states its original anew.
 			act(() => store.set(keptOriginalAtom, keptAs({ ...stored })))
 
+			// One act around the answer and its outcome, as above.
 			await act(async () => {
 				responders[1](new Response(new Uint8Array([2, 2, 2])))
+				// The 4 s the case above needs on a loaded CI runner.
+				await vi.waitFor(
+					() => expect(store.get(keptOriginalAtom).stored).toBeNull(),
+					{ timeout: 4_000 }
+				)
 			})
-			await settle()
 			await act(async () => {
 				responders[0](new Response(new Uint8Array([1, 1, 1])))
 			})

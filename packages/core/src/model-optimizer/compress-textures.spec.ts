@@ -157,6 +157,7 @@ describe('ModelOptimizer.compressTextures', () => {
 	})
 
 	it('commits, names and records the textures that compressed when others fail', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 		const optimizer = await loaded()
 
 		const pass = optimizer.compressTextures({
@@ -173,6 +174,10 @@ describe('ModelOptimizer.compressTextures', () => {
 			{ mimeType: 'image/webp', name: 'Glass_baseColor.webp' }
 		])
 		expect(recorded(optimizer)).toHaveLength(1)
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			'Failed to compress texture 1:',
+			expect.any(Error)
+		)
 	})
 
 	// An export or a save can read the document while a pass runs.
@@ -215,6 +220,7 @@ describe('ModelOptimizer.compressTextures', () => {
 	})
 
 	it('changes nothing when no texture compressed', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 		const optimizer = await loaded()
 		const before = optimizer.document
 
@@ -229,6 +235,11 @@ describe('ModelOptimizer.compressTextures', () => {
 		expect(error.isPartial).toBe(false)
 		expect(optimizer.document).toBe(before)
 		expect(recorded(optimizer)).toEqual([])
+		expect(warn.mock.calls.map(([message]) => message)).toEqual([
+			'Failed to compress texture 0:',
+			'Failed to compress texture 1:',
+			'Failed to compress texture 2:'
+		])
 	})
 
 	it('commits nothing into a document restored while it ran', async () => {

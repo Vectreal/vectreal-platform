@@ -69,7 +69,11 @@ const renderHold = (
 		...view,
 		props,
 		compared: () => store.get(comparedModelAtom),
-		press: () => act(() => view.result.current.holdProps.onPointerDown()),
+		// Async, so a hold whose model is already built commits inside act.
+		press: () =>
+			act(async () => {
+				view.result.current.holdProps.onPointerDown()
+			}),
 		lift: () =>
 			act(() => {
 				window.dispatchEvent(new Event('pointerup'))
@@ -82,7 +86,7 @@ const pressKey = (
 	init: KeyboardEventInit = {},
 	target?: Element
 ) =>
-	act(() => {
+	act(async () => {
 		;(target ?? window).dispatchEvent(
 			new KeyboardEvent('keydown', { key, bubbles: true, ...init })
 		)

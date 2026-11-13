@@ -356,6 +356,7 @@ describe('useImgTo3dGeneration', () => {
 			[
 				{
 					path: '/publisher/:sceneId?',
+					HydrateFallback: () => null,
 					loader: () => {
 						loads += 1
 						return null

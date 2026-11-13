@@ -49,6 +49,7 @@ describe('useDashboardHeaderData during a pending navigation', () => {
 			[
 				{
 					path: '/dashboard/projects/:projectId/:sceneId',
+					HydrateFallback: () => null,
 					loader: () => ({
 						scene: { id: SCENE_ID, name: 'Kitchen Chair', description: null },
 						project: { id: PROJECT_ID, name: 'Showroom' },
@@ -65,6 +66,7 @@ describe('useDashboardHeaderData during a pending navigation', () => {
 					  `navigation.state` at `loading` for the rest of the test.
 					*/
 					path: '/publisher/:sceneId',
+					HydrateFallback: () => null,
 					loader: () => publisherLoader,
 					Component: HeaderProbe
 				}
