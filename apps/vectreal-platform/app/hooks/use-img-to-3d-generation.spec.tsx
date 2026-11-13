@@ -148,6 +148,46 @@ describe('useImgTo3dBatchStates', () => {
 		expect(fetchMock).not.toHaveBeenCalled()
 	})
 
+	it('polls a newly submitted variant at the default pace, whatever the others asked for', async () => {
+		const SECOND = '00000000-0000-4000-8000-000000000003'
+		let submits = 0
+		route = (url) => {
+			if (url.endsWith(JOB) || url.endsWith(SECOND)) {
+				// The runtime asks for a slow pace on everything it is running.
+				return envelope({ ...jobState('processing'), pollAfterMs: 30_000 })
+			}
+			submits += 1
+			return submits === 1
+				? submitted()
+				: envelope(
+						{
+							batchId: 'batch-2',
+							jobs: [{ jobId: SECOND, seed: 8, status: 'queued', error: null }]
+						},
+						202
+					)
+		}
+		const hook = await startOne()
+		await pollOnce()
+
+		await act(() =>
+			hook.result.current.generate(
+				new File([new Uint8Array(1)], 'lamp.png', { type: 'image/png' }),
+				{
+					resolution: 1024,
+					textureSize: 2048,
+					decimationTarget: 200_000,
+					seedCount: 1
+				}
+			)
+		)
+		await pollOnce()
+
+		expect(
+			fetchMock.mock.calls.filter(([url]) => url.endsWith(SECOND))
+		).toHaveLength(1)
+	})
+
 	it('shows a failed generation as its kind, not the runtime’s words', async () => {
 		route = () =>
 			envelope({ ...jobState('failed'), message: 'CUDA out of memory' })
