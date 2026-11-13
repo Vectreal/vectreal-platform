@@ -197,19 +197,24 @@ edit.
    makes one of them the source of truth. One source of truth beats one more
    flag, guard or special case.
 3. Before editing, query the open Work Items (the query under Work items below)
-   for rows in the same area, and read the ones that might share the cause.
+   for rows in the same area or with the same `Cause`, and read the ones that
+   might share it.
 4. Fix it where the cause lives, with a test that fails before the fix for the
    stated reason (the mutation gate, required for every bug fix).
 5. The PR's Root cause section says what the cause was, why it existed (the
    design gap, not just the line) and what else shares it, or where you looked
    and found nothing.
+6. The report names a **cause tag**: a few words for the cause (for example
+   "fetcher state read as arrival"), reusing an existing `Cause` value from
+   Work Items when one fits. The lead sets the `Cause` field from it; sessions
+   do not write that field themselves.
 
 **Several bugs** - a backlog pass, or a brief that names more than one:
 
 1. **Survey.** For each, find the code path and why it exists, as above.
 2. **Group.** Cluster by shared cause, not by symptom or file. File any new bug
    the survey turns up as its own row.
-3. **Report, then wait.** Send the clusters, the cause of each, and the fix you
+3. **Report, then wait.** Send the clusters, the cause tag of each, and the fix you
    propose at the level of the cause. A question about a pattern - the design
    system, a UX pattern, how a layer is built - goes to Moritz before any code.
 4. **Fix** one cluster per PR once the report is answered.
