@@ -14,12 +14,28 @@
  *
  * The purge runs at a `now` in the year 2000, so the only rows due at it are
  * the ones made here, and every row it creates is dropped in `afterAll`.
+ *
+ * Storage is not part of this job's stack, so the bucket is a stand-in that
+ * holds one folder per request id; what the purge does with folders is
+ * proven against Storage's own listing in `model-intake-storage.server.spec.ts`.
  */
 
 import { randomUUID } from 'node:crypto'
 
 import { inArray } from 'drizzle-orm'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+
+const bucket = vi.hoisted(() => ({ folders: new Set<string>() }))
+
+vi.mock(
+	'../../app/lib/domain/model-intake/model-intake-storage.server',
+	() => ({
+		listIntakeFolderIds: async () => [...bucket.folders],
+		deleteIntakeFolder: async (id: string) => {
+			bucket.folders.delete(id)
+		}
+	})
+)
 
 type Schema = typeof import('../../app/db/schema')
 type Deletion =
@@ -49,6 +65,7 @@ describe('the free-model purge', () => {
 	}
 
 	const request = (letterCode: string, deleteAfter: Date | null) => ({
+		id: randomUUID(),
 		referenceCode: `VCTR-${randomUUID().slice(0, 8)}`,
 		locale: 'en',
 		batch: 'test',
@@ -71,6 +88,9 @@ describe('the free-model purge', () => {
 		mixedDue: request(letters.oneDueOneKept, daysFromNow(-1)),
 		mixedKept: request(letters.oneDueOneKept, daysFromNow(1))
 	}
+
+	/** A folder whose request is gone, as an upload that finished after a delete leaves. */
+	const orphanFolder = randomUUID()
 
 	const mine = new Set([
 		...Object.values(letters),
@@ -103,6 +123,8 @@ describe('the free-model purge', () => {
 		await db
 			.insert(schema.modelIntakeSubmissions)
 			.values(Object.values(requests))
+		for (const row of Object.values(requests)) bucket.folders.add(row.id)
+		bucket.folders.add(orphanFolder)
 	})
 
 	afterAll(async () => {
@@ -127,6 +149,9 @@ describe('the free-model purge', () => {
 
 	it('names due requests, and old letters no kept request still needs', async () => {
 		const due = await deletion.selectPurge(now)
+
+		expect(due.orphans).toContain(orphanFolder)
+		expect(due.orphans).not.toContain(requests.pilot.id)
 
 		expect(ours(due.requests, (row) => row.referenceCode)).toEqual(dueRequests)
 		expect(ours(due.letters, (letter) => letter.code)).toEqual(dueLetters)
@@ -175,5 +200,12 @@ describe('the free-model purge', () => {
 				inArray(schema.modelIntakeLetterScans.letterCode, [letters.unanswered])
 			)
 		expect(scans).toEqual([])
+
+		// Due requests and the orphan lose their folders; kept requests keep theirs.
+		expect(bucket.folders.has(orphanFolder)).toBe(false)
+		expect(bucket.folders.has(requests.replyDue.id)).toBe(false)
+		expect(bucket.folders.has(requests.mixedDue.id)).toBe(false)
+		expect(bucket.folders.has(requests.pilot.id)).toBe(true)
+		expect(bucket.folders.has(requests.replyKept.id)).toBe(true)
 	})
 })

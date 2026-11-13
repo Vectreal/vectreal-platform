@@ -4,6 +4,8 @@
  * releasing shows the optimized model again. Nothing outside a hold may leave
  * the source on screen: a save would capture it as the scene's thumbnail.
  */
+import { format } from 'node:util'
+
 import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -69,7 +71,11 @@ const renderHold = (
 		...view,
 		props,
 		compared: () => store.get(comparedModelAtom),
-		press: () => act(() => view.result.current.holdProps.onPointerDown()),
+		// Async, so a hold whose model is already built commits inside act.
+		press: () =>
+			act(async () => {
+				view.result.current.holdProps.onPointerDown()
+			}),
 		lift: () =>
 			act(() => {
 				window.dispatchEvent(new Event('pointerup'))
@@ -82,7 +88,7 @@ const pressKey = (
 	init: KeyboardEventInit = {},
 	target?: Element
 ) =>
-	act(() => {
+	act(async () => {
 		;(target ?? window).dispatchEvent(
 			new KeyboardEvent('keydown', { key, bubbles: true, ...init })
 		)
@@ -257,7 +263,7 @@ describe('useHoldToCompare', () => {
 	})
 
 	it('tries a failed build again on the next hold', async () => {
-		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const logged = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		const { model } = builtModel()
 		loadToThreeJS
 			.mockRejectedValueOnce(new Error('decoder'))
@@ -271,6 +277,13 @@ describe('useHoldToCompare', () => {
 		await settle()
 
 		expect(hold.compared()?.model).toBe(model)
+		expect(logged).toHaveBeenCalled()
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(
+				/^\[optimization\] the source could not be shown/
+			)
+		}
 	})
 
 	// Option and AltGr type a backslash on some layouts.
@@ -303,7 +316,7 @@ describe('useHoldToCompare', () => {
 	})
 
 	it('stops preparing when the source cannot be built mid-hold', async () => {
-		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		const logged = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		loadToThreeJS.mockRejectedValue(new Error('decoder'))
 		const hold = renderHold()
 
@@ -312,6 +325,13 @@ describe('useHoldToCompare', () => {
 
 		expect(hold.result.current.isPreparing).toBe(false)
 		expect(hold.compared()).toBeNull()
+		expect(logged).toHaveBeenCalled()
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(
+				/^\[optimization\] the source could not be shown/
+			)
+		}
 	})
 
 	it('hears a key even when a handler stops it on its way up', async () => {

@@ -150,7 +150,8 @@ describe("load({ kind: 'url' })", () => {
 				url: 'https://a.com/first.glb'
 			})
 		})
-		await vi.waitFor(() => expect(loader.contexts).toHaveLength(1))
+		// Inside act: the loader reports its first progress while this waits.
+		await act(() => vi.waitFor(() => expect(loader.contexts).toHaveLength(1)))
 		act(() => {
 			void result.current.load({ kind: 'url', url: 'https://a.com/second.glb' })
 		})
@@ -159,8 +160,10 @@ describe("load({ kind: 'url' })", () => {
 		act(() => reportParse(loader.contexts[0], 80))
 
 		expect(result.current.progress).toBe(0)
-		release()
-		await act(() => first)
+		await act(async () => {
+			release()
+			await first
+		})
 	})
 
 	it('aborts the fetch when a newer load starts', async () => {
@@ -211,7 +214,7 @@ describe("load({ kind: 'url' })", () => {
 	})
 
 	it('still reports a parse failure that follows a late abort', async () => {
-		vi.spyOn(console, 'error').mockImplementation(() => {})
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		stubFetch(async () => new Response(GLB))
 		const controller = new AbortController()
 		let fail = (_error: Error) => {}
@@ -226,8 +229,9 @@ describe("load({ kind: 'url' })", () => {
 				init: { signal: controller.signal }
 			})
 		})
-		await vi.waitFor(() => expect(loader.contexts).toHaveLength(1))
-		controller.abort()
+		// Inside act: the loader reports its first progress while this waits.
+		await act(() => vi.waitFor(() => expect(loader.contexts).toHaveLength(1)))
+		await act(async () => controller.abort())
 		await act(async () => {
 			fail(new Error('not a valid glTF'))
 			await loading
@@ -235,6 +239,12 @@ describe("load({ kind: 'url' })", () => {
 
 		expect((await loading).status).toBe('error')
 		expect(result.current.status).toBe('error')
+		expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (url):',
+			expect.objectContaining({
+				message: expect.stringContaining('not a valid glTF')
+			})
+		)
 	})
 
 	it('aborts the fetch on reset', async () => {
@@ -266,7 +276,7 @@ describe("load({ kind: 'url' })", () => {
 		const sent = fetchMock.mock.calls[0][1]
 		expect(sent?.headers).toEqual({ 'X-Key': 'k' })
 
-		controller.abort()
+		await act(async () => controller.abort())
 		expect(sent?.signal?.aborted).toBe(true)
 	})
 
@@ -335,6 +345,7 @@ describe("load({ kind: 'url' })", () => {
 	})
 
 	it('keeps the model on screen when a link fails, and says why', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		stubFetch(async (url) =>
 			url.endsWith('gone.glb')
 				? new Response('missing', { status: 404 })
@@ -358,9 +369,14 @@ describe("load({ kind: 'url' })", () => {
 		})
 		expect(result.current.status).toBe('ready')
 		expect(result.current.file?.name).toBe('a.glb')
+		expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (url):',
+			expect.objectContaining({ code: 'url_http' })
+		)
 	})
 
 	it('reports a failed link as the state when nothing was on screen', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		stubFetch(async () => {
 			throw new TypeError('Failed to fetch')
 		})
@@ -372,5 +388,9 @@ describe("load({ kind: 'url' })", () => {
 
 		expect(result.current.status).toBe('error')
 		expect(result.current.error).toMatchObject({ code: 'url_unreachable' })
+		expect(consoleError).toHaveBeenCalledExactlyOnceWith(
+			'Model load failed (url):',
+			expect.objectContaining({ code: 'url_unreachable' })
+		)
 	})
 })

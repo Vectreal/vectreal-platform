@@ -11,13 +11,15 @@ import {
 	KHRMaterialsVolume,
 	KHRNodeVisibility
 } from '@gltf-transform/extensions'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ModelOptimizer } from './model-optimizer'
 import { placeStillParts } from './transform-passes'
 import { IO_EXTENSIONS } from '../io-extensions'
 import { Lightmap, VectrealLightmap } from '../light-bake/extension'
 import { LIGHTMAP_EXTENSION } from '../scene-lighting/baked-lights'
+
+import type { MockInstance } from 'vitest'
 
 /** A one-pixel PNG, for a texture loading has to read. */
 const PIXEL_PNG = Uint8Array.from(
@@ -265,7 +267,21 @@ async function merged(glb: Uint8Array) {
 	}
 }
 
+const REVERTED = /^mesh merging made no improvement worth keeping \(/
+
 describe('mesh merging', () => {
+	/*
+	  A merge that saves nothing is reverted, and the optimizer says so on
+	  console.warn. That is the only warning this pass may give.
+	*/
+	let warn: MockInstance<typeof console.warn>
+	beforeEach(() => {
+		warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+	})
+	afterEach(() => {
+		for (const [message] of warn.mock.calls) expect(message).toMatch(REVERTED)
+	})
+
 	it('joins parts that share a material into one draw each', async () => {
 		const { document, applied, beforeDrawCalls } = await merged(
 			await partsGlb()
@@ -317,6 +333,7 @@ describe('mesh merging', () => {
 		const { document, applied } = await merged(glb)
 
 		expect(applied).toEqual([])
+		expect(warn).toHaveBeenCalledWith(expect.stringMatching(REVERTED))
 		for (const primitive of ['paint', 'chrome'].flatMap((name) =>
 			nodeNamed(document, name)!.getMesh()!.listPrimitives()
 		)) {
@@ -335,6 +352,7 @@ describe('mesh merging', () => {
 		await twice.loadFromBuffer(mergedGlb)
 		await twice.mergeMeshes()
 
+		expect(warn).toHaveBeenCalledWith(expect.stringMatching(REVERTED))
 		expect(drawCalls(twice.document)).toBe(drawCalls(once.document))
 		expectSameVertices(
 			worldVertices(twice.document),
