@@ -48,6 +48,11 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       NX_DAEMON: 'false'
+      # Nx 23 keeps its cache and the database that indexes it in a per-user
+      # directory under $HOME by default. Pinning both inside the workspace
+      # makes them one path the cache step below can save and restore.
+      NX_CACHE_DIRECTORY: .nx/cache
+      NX_WORKSPACE_DATA_DIRECTORY: .nx/workspace-data
     steps:
       - uses: actions/checkout@v7
         with:
@@ -62,11 +67,16 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
+      # One entry per commit, so every run saves what it computed and the next
+      # run restores the newest one for this ref, then main's. A key that only
+      # changed with the lockfile hit on its primary key and never saved again.
+      # The path is all of `.nx`: the cache index is a database under
+      # `.nx/workspace-data`, and Nx ignores artifacts it has no row for.
       - name: Restore Nx local cache
         uses: actions/cache@v6
         with:
-          path: .nx/cache
-          key: ${{ runner.os }}-nx-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json', '**/project.json', 'tsconfig.base.json') }}
+          path: .nx
+          key: ${{ runner.os }}-nx-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-nx-${{ github.ref_name }}-
             ${{ runner.os }}-nx-main-
