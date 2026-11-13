@@ -31,8 +31,7 @@ export const AGENCY_PAGE_COPY = {
 	hero: {
 		heading: '3D-Modelle für Ihre Shopify-Kunden',
 		lead: HERO_SENTENCE,
-		video:
-			'Ein Handy zeigt eine Produktseite im Beispielshop. Beim Scrollen fährt die 3D-Szene ihre Kameras an, zu jeder Station eine Überschrift.'
+		sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen'
 	},
 	steps: {
 		heading: "So geht's",

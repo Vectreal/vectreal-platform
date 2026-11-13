@@ -11,8 +11,8 @@ import { buildInlineEmbedManifest } from '../embed/inline-embed-manifest.server'
 import { readEmbedSceneSettings } from '../scene/server/scene-manifest.server'
 import { getPublishedScenePreview } from '../scene/server/scene-preview-repository.server'
 
+// The turn and its speed are the scene's own, set when it is published.
 const HERO_EMBED_OPTIONS = [
-	['autoRotate', '1'],
 	['cameraControls', '0'],
 	['hotspots', '0'],
 	['hint', '0']
