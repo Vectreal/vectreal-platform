@@ -53,7 +53,9 @@ export function MadeForYouSection() {
 					<p className="text-eyebrow text-muted-foreground">
 						{COPY.pilot.label}
 					</p>
-					<p className="text-h2 text-foreground tabular-nums">{euros(PILOT_PRICE)}</p>
+					<p className="text-h2 text-foreground tabular-nums">
+						{euros(PILOT_PRICE)}
+					</p>
 					<p className="text-body">{COPY.pilot.body}</p>
 					<p className="text-muted-foreground text-body-sm max-w-md">
 						{COPY.pilot.terms}
