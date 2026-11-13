@@ -12,54 +12,67 @@
  * Resolution only: nothing is imported, so no module's top-level code runs.
  */
 import { readdirSync, readFileSync } from 'node:fs'
-import { builtinModules } from 'node:module'
+import { builtinModules, createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'server')
 
 /*
-  Static and dynamic imports as Rollup emits them: double-quoted, one static
-  import per line. A relative specifier is a chunk of this build.
+  Imports as the bundler emits them: double-quoted, one static import or
+  re-export per line. A relative specifier is a chunk of this build. Bundled
+  CommonJS reaches an external package through `require`, which resolves with
+  different export conditions, so those are kept apart.
 */
 const IMPORTS = [
 	/^import\s[^;]*?from\s*"([^"]+)";?$/gm,
 	/^import\s*"([^"]+)";?$/gm,
+	/^export\s[^;]*?from\s*"([^"]+)";?$/gm,
 	/\bimport\(\s*"([^"]+)"\s*\)/g
 ]
+const REQUIRES = /\b(?:__)?require\(\s*"([^"]+)"\s*\)/g
 
 function serverFiles(dir) {
 	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
 		const file = path.join(dir, entry.name)
 		if (entry.isDirectory()) return serverFiles(file)
-		return file.endsWith('.js') ? [file] : []
+		return /\.[cm]?js$/.test(file) ? [file] : []
 	})
 }
 
-const specifiers = new Set()
+const isPackage = (specifier) =>
+	!specifier.startsWith('.') &&
+	!specifier.startsWith('node:') &&
+	!builtinModules.includes(specifier)
+
+const imports = new Set()
+const requires = new Set()
 for (const file of serverFiles(SERVER)) {
 	const source = readFileSync(file, 'utf8')
 	for (const pattern of IMPORTS)
 		for (const [, specifier] of source.matchAll(pattern))
-			if (
-				!specifier.startsWith('.') &&
-				!specifier.startsWith('node:') &&
-				!builtinModules.includes(specifier)
-			)
-				specifiers.add(specifier)
+			if (isPackage(specifier)) imports.add(specifier)
+	for (const [, specifier] of source.matchAll(REQUIRES))
+		if (isPackage(specifier)) requires.add(specifier)
 }
 
-const missing = [...specifiers].filter((specifier) => {
-	try {
-		import.meta.resolve(specifier)
-		return false
-	} catch {
-		return true
-	}
-})
+const unresolved = (specifiers, resolve) =>
+	[...specifiers].filter((specifier) => {
+		try {
+			resolve(specifier)
+			return false
+		} catch {
+			return true
+		}
+	})
+const require = createRequire(import.meta.url)
+const missing = [
+	...unresolved(imports, (specifier) => import.meta.resolve(specifier)),
+	...unresolved(requires, (specifier) => require.resolve(specifier))
+]
 
 console.log(
-	`server bundle: ${specifiers.size} package imports, ${missing.length} unresolved`
+	`server bundle: ${imports.size} package imports, ${requires.size} requires, ${missing.length} unresolved`
 )
 if (missing.length) {
 	console.error(
