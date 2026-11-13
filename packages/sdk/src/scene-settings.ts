@@ -34,14 +34,17 @@ export const VIEWER_LOCALES = ['en', 'de'] as const
 const viewerLocale = z
 	.string()
 	.trim()
-	.refine((tag) => {
-	try {
-		const language = Intl.getCanonicalLocales(tag)[0]?.split('-')[0]
-		return (VIEWER_LOCALES as readonly string[]).includes(language ?? '')
-	} catch {
-		return false
-	}
-}, `a BCP 47 language tag in ${VIEWER_LOCALES.join(' or ')}`)
+	.refine(
+		(tag) => {
+			try {
+				const language = Intl.getCanonicalLocales(tag)[0]?.split('-')[0]
+				return (VIEWER_LOCALES as readonly string[]).includes(language ?? '')
+			} catch {
+				return false
+			}
+		},
+		`a BCP 47 language tag in ${VIEWER_LOCALES.join(' or ')}`
+	)
 
 /** The hosted environment maps, named `<type>-<label>`. */
 export const ENVIRONMENT_PRESETS = [

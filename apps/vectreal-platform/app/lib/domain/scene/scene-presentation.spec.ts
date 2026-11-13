@@ -299,7 +299,9 @@ describe('when interaction starts', () => {
 		expect(normalizePresentationSettings({ locale: 'en' })).toEqual({
 			locale: 'en'
 		})
-		expect(normalizePresentationSettings({ locale: 'not a tag' })).toBeUndefined()
+		expect(
+			normalizePresentationSettings({ locale: 'not a tag' })
+		).toBeUndefined()
 	})
 
 	it('starts immediately unless the author chose a tap, so older scenes keep their viewer', () => {
