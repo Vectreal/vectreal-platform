@@ -39,3 +39,24 @@ it('sends the primary action to the free-model intake and the second to the publ
 		screen.getByRole('link', { name: HERO.secondaryCta }).getAttribute('href')
 	).toBe('/publisher')
 })
+
+/*
+  Two arrivals for Moritz to choose between: the drawing by default, and the
+  rendered still under `?hero=still`, whose label names no face it does not show.
+*/
+it.each([
+	['', 'drawing', `${HOME_PAGE_COPY.stage.figure} · Front elevation`],
+	['?hero=still', 'still', HOME_PAGE_COPY.stage.figure]
+])('with "%s" the hero arrives as the %s', (search, variant, label) => {
+	window.history.replaceState(null, '', `/${search}`)
+	const { container } = render(
+		<MemoryRouter>
+			<HeroSheet />
+		</MemoryRouter>
+	)
+	expect(
+		container.querySelector('[data-variant]')?.getAttribute('data-variant')
+	).toBe(variant)
+	expect(screen.getByText(label, { exact: true })).toBeTruthy()
+	window.history.replaceState(null, '', '/')
+})

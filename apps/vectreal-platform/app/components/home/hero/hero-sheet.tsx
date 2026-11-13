@@ -12,7 +12,7 @@ import {
 } from 'react'
 import { Link } from 'react-router'
 
-import { HERO_POSTERS } from './hero-assets'
+import { HERO_POSTERS, HERO_STILLS } from './hero-assets'
 import { ArrowLink } from '../arrow-link'
 import { FigureLabel, Readout } from './hero-readout'
 import styles from './hero-sheet.module.css'
@@ -25,7 +25,7 @@ import {
 } from '../../../lib/samples/sample-models'
 import { StageBoundary } from '../stage/stage-boundary'
 
-import type { HeroStageElements } from './hero-stage-client'
+import type { HeroStageElements, HeroVariant } from './hero-stage-client'
 
 const HeroStageClient = lazy(() => import('./hero-stage-client'))
 
@@ -44,8 +44,28 @@ const SHEET_VARS = {
 				String(v)
 			])
 		])
+	),
+	...Object.fromEntries(
+		Object.entries(HERO_STILLS).map(([framing, url]) => [
+			`--still-${framing}`,
+			`url("${url}")`
+		])
 	)
 } as CSSProperties
+
+/*
+  `?hero=still` shows the still variant, for Moritz to compare with the drawing.
+  Read after hydration because the home page is prerendered, so its first
+  paint is the drawing either way; whichever he picks will be the only one.
+*/
+function useHeroVariant(): HeroVariant {
+	const [variant, setVariant] = useState<HeroVariant>('drawing')
+	useEffect(() => {
+		if (new URLSearchParams(window.location.search).get('hero') === 'still')
+			setVariant('still')
+	}, [])
+	return variant
+}
 
 /**
  * The home page's first fold: the headline beside a drawing sheet on which the
@@ -71,6 +91,7 @@ export function HeroSheet() {
 	const scaleRef = useRef<HTMLSpanElement>(null)
 	const captionRef = useRef<HTMLElement>(null)
 	const stageWanted = useMountWhenVisibleAndIdle(stageRef)
+	const variant = useHeroVariant()
 
 	// The stage runs on under the readout row to the fold's edge, so the floor does. How far that is depends on the readout's type, so it is measured; the stylesheet's default holds until then.
 	useEffect(() => {
@@ -148,12 +169,18 @@ export function HeroSheet() {
 				</div>
 
 				<figure className={styles.figure}>
-					<div ref={stageRef} className={styles.stage} data-phase="poster">
+					<div
+						ref={stageRef}
+						className={styles.stage}
+						data-phase="poster"
+						data-variant={variant}
+					>
 						<div className={styles.art}>
 							<div ref={frameRef} className={styles.frame}>
 								<div className={styles.pencil} />
 								<div className={styles.poster} />
 								<div className={styles.front} />
+								<div className={styles.still} />
 							</div>
 							{/* eslint-disable-next-line no-restricted-syntax -- an empty surface the stage engine draws the dimension lines into, not an icon */}
 							<svg ref={dimsRef} className={styles.dims} aria-hidden="true" />
@@ -166,7 +193,7 @@ export function HeroSheet() {
 					</div>
 
 					<div className={styles.meta}>
-						<FigureLabel store={store} />
+						<FigureLabel store={store} variant={variant} />
 						<span
 							ref={scaleRef}
 							className={cn('text-eyebrow tabular-nums', styles.scale)}
@@ -196,7 +223,11 @@ export function HeroSheet() {
 				{elements && (
 					<StageBoundary onError={stageFailed}>
 						<Suspense fallback={null}>
-							<HeroStageClient store={store} elements={elements} />
+							<HeroStageClient
+								store={store}
+								elements={elements}
+								variant={variant}
+							/>
 						</Suspense>
 					</StageBoundary>
 				)}

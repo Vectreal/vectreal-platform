@@ -655,6 +655,26 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		}
 	}
 
+	/* The drawing is done with: the object is the reader's to turn. */
+	function handOver() {
+		turned = true
+		el.dims?.setAttribute('data-gone', '')
+		el.scale?.setAttribute('data-gone', '')
+		controls.target.copy(target)
+		controls.update()
+		controls.enabled = true
+	}
+
+	function renderObjectPng() {
+		const reveal = uniforms.uReveal.value
+		uniforms.uReveal.value = 1.02 // past the sweep: nothing inked, nothing erased
+		bakingObject = true
+		frame()
+		bakingObject = false
+		uniforms.uReveal.value = reveal
+		return cropToFrame()
+	}
+
 	return {
 		/** Draws a GLB as its front elevation, framed on its poster when it has one. Its shadow is baked unless one is given. */
 		async show(
@@ -695,13 +715,8 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			return new Promise((resolve) => {
 				const u = uniforms.uReveal
 				const turn = () => {
-					turned = true
-					el.dims?.setAttribute('data-gone', '')
-					el.scale?.setAttribute('data-gone', '')
 					// Yours the moment it is an object: the turn runs, but a grab takes over from it.
-					controls.target.copy(target)
-					controls.update()
-					controls.enabled = true
+					handOver()
 					resolve()
 					if (reducedMotion) {
 						pose(object())
@@ -752,14 +767,22 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			return cropToFrame()
 		},
 		/** Bake mode only: the rendered object in the drawing's exact framing, so the two can be laid over each other. */
-		objectPng() {
-			const reveal = uniforms.uReveal.value
-			uniforms.uReveal.value = 1.02 // past the sweep: nothing inked, nothing erased
-			bakingObject = true
+		objectPng: renderObjectPng,
+		/** Bake mode only: the rendered object as the reader is handed it, turned, in the same framing: the still `settle` takes over from. */
+		turnedPng() {
+			pose(object())
+			const png = renderObjectPng()
+			pose(elevation())
+			return png
+		},
+		/** Straight to the object, turned and in the reader's hands, with no sweep or turn: for a page that showed it as a still first. */
+		settle() {
+			running?.cancel()
+			uniforms.uReveal.value = 1.02
+			handOver()
+			pose(object())
+			controls.update()
 			frame()
-			bakingObject = false
-			uniforms.uReveal.value = reveal
-			return cropToFrame()
 		},
 		dispose() {
 			if (disposed) return

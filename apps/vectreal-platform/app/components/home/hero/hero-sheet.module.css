@@ -175,6 +175,7 @@
 .frame {
 	/* The poster and its ink bounds come in per framing from the component; the fold picks its own below. */
 	--poster: var(--poster-sheet);
+	--still: var(--still-sheet);
 	--ink-l: var(--ink-l-sheet);
 	--ink-r: var(--ink-r-sheet);
 	--ink-t: var(--ink-t-sheet);
@@ -187,6 +188,28 @@
 .poster {
 	clip-path: inset(0 calc(100% - var(--at)) 0 0);
 }
+/*
+  The still variant: the rendered object from the first paint instead of the
+  drawing, and nothing of the drawing around it. The live canvas draws the
+  same frame before the still goes, so the swap shows nothing.
+*/
+/* The image is named only in the variant, so no browser fetches it otherwise. */
+.still {
+	position: absolute;
+	inset: 0;
+	display: none;
+}
+.stage[data-variant='still'] .still {
+	display: block;
+	background: var(--still) center / 100% 100% no-repeat;
+}
+.stage[data-variant='still'] :is(.pencil, .poster, .front, .dims) {
+	display: none;
+}
+.stage[data-variant='still'][data-phase='live'] .still {
+	visibility: hidden;
+}
+
 /* Once the live canvas has drawn the model, it is the drawing; the poster steps aside. */
 .stage:not([data-phase='poster']) .poster,
 .stage:not([data-phase='poster']) .pencil {
@@ -511,6 +534,7 @@
 		--box: min(100cqh, 75cqw);
 		--cx: 50cqw;
 		--poster: var(--poster-fold);
+		--still: var(--still-fold);
 		--ink-l: var(--ink-l-fold);
 		--ink-r: var(--ink-r-fold);
 		--ink-t: var(--ink-t-fold);

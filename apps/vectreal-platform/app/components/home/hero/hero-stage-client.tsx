@@ -20,9 +20,18 @@ export interface HeroStageElements {
 	scale: HTMLElement
 }
 
+/**
+ * How the hero arrives. `drawing`: the elevation plots in as the file loads,
+ * then sweeps into the object and turns. `still`: a rendered still of the
+ * turned object stands from the first paint, and the live stage takes over
+ * from it unseen. Two versions for Moritz to choose between; the loser goes.
+ */
+export type HeroVariant = 'drawing' | 'still'
+
 interface Props {
 	store: HeroStore
 	elements: HeroStageElements
+	variant: HeroVariant
 }
 
 /** How long the drawing stands as a drawing before the sweep: long enough to read as one, short enough not to read as a wait. */
@@ -84,7 +93,7 @@ async function fetchWithProgress(
 	return buffer.buffer
 }
 
-export default function HeroStageClient({ store, elements }: Props) {
+export default function HeroStageClient({ store, elements, variant }: Props) {
 	useEffect(() => {
 		const reducedMotion = prefersReducedMotion()
 		const baking = bakeMode()
@@ -115,6 +124,20 @@ export default function HeroStageClient({ store, elements }: Props) {
 		 * The model on the stage: shown as its elevation, held long enough to read
 		 * as a drawing, swept into an object, then turned and handed over.
 		 */
+		/** The still stands until the live stage has drawn the same frame, then steps aside. */
+		async function takeOverFromStill(
+			buffer: ArrayBuffer,
+			show: Parameters<typeof engine.show>[1]
+		) {
+			await engine.show(buffer, show)
+			if (abort.signal.aborted) return
+			engine.settle()
+			setPhase('live')
+			stage.setAttribute('data-turnable', '')
+			store.set({ status: 'live', busy: false, view: 'live' })
+			markHeroSettled()
+		}
+
 		async function drawThenReveal(
 			buffer: ArrayBuffer,
 			show: Parameters<typeof engine.show>[1]
@@ -158,12 +181,14 @@ export default function HeroStageClient({ store, elements }: Props) {
 					__heroBake: {
 						shadow: engine.bakedShadowPng,
 						poster: engine.posterPng,
-						object: engine.objectPng
+						object: engine.objectPng,
+						turned: engine.turnedPng
 					}
 				})
 				return
 			}
-			await drawThenReveal(buffer, { bakedShadow: await shadow, poster: true })
+			const arrive = variant === 'still' ? takeOverFromStill : drawThenReveal
+			await arrive(buffer, { bakedShadow: await shadow, poster: true })
 		}
 
 		run().catch((error: unknown) => {
@@ -182,7 +207,7 @@ export default function HeroStageClient({ store, elements }: Props) {
 			for (const timer of timers) window.clearTimeout(timer)
 			engine.dispose()
 		}
-	}, [store, elements])
+	}, [store, elements, variant])
 
 	return null
 }
