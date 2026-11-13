@@ -1,19 +1,24 @@
 import {
 	deleteExpiredIntakeLetters,
 	deleteIntakeRow,
+	findExistingIntakeIds,
 	findIntakeByReference,
 	findIntakeForDeletion,
 	selectExpiredIntakeLetters,
 	selectExpiredIntakes
 } from './model-intake-repository.server'
-import { deleteIntakePhotos } from './model-intake-storage.server'
+import {
+	deleteIntakeFolder,
+	listIntakeFolderIds
+} from './model-intake-storage.server'
 
 /**
- * Removes one request: photos first, then the row. A failed photo delete
- * throws before the row goes, so the row still names what is left to retry.
+ * Removes one request: its whole folder first (photos and anything attached
+ * from its link), then the row. A failed delete throws before the row goes,
+ * so the next purge finds the request again and retries.
  */
-async function deleteIntake(row: { id: string; photoPaths: string[] }) {
-	await deleteIntakePhotos(row.photoPaths)
+async function deleteIntake(row: { id: string }) {
+	await deleteIntakeFolder(row.id)
 	await deleteIntakeRow(row.id)
 }
 
@@ -36,20 +41,35 @@ export async function deleteIntakeByReference(
 }
 
 /**
- * What a purge at `now` removes: requests past their `deleteAfter`, and the
- * letters past retention that no remaining request names.
+ * Request folders in the bucket with no row. A row is always written before
+ * anything is stored for it, so a folder without one is left over: most
+ * often a file staff attached whose upload finished after the request was
+ * deleted. Nothing else would ever find it.
+ */
+async function selectOrphanFolders(): Promise<string[]> {
+	const ids = await listIntakeFolderIds()
+	const existing = await findExistingIntakeIds(ids)
+	return ids.filter((id) => !existing.has(id))
+}
+
+/**
+ * What a purge at `now` removes: requests past their `deleteAfter`, the
+ * letters past retention that no remaining request names, and folders whose
+ * request is gone.
  */
 export async function selectPurge(now: Date) {
-	const [requests, letters] = await Promise.all([
+	const [requests, letters, orphans] = await Promise.all([
 		selectExpiredIntakes(now),
-		selectExpiredIntakeLetters(now)
+		selectExpiredIntakeLetters(now),
+		selectOrphanFolders()
 	])
-	return { requests, letters }
+	return { requests, letters, orphans }
 }
 
 /**
  * Removes requests past their `deleteAfter`, then the letters past retention
- * that no remaining request names, and returns what went.
+ * that no remaining request names, then folders whose request is gone, and
+ * returns what went.
  */
 export async function purgeExpiredIntakes(now: Date) {
 	const requests = await selectExpiredIntakes(now)
@@ -57,5 +77,9 @@ export async function purgeExpiredIntakes(now: Date) {
 		await deleteIntake(row)
 	}
 	const letters = await deleteExpiredIntakeLetters(now)
-	return { requests, letters }
+	const orphans = await selectOrphanFolders()
+	for (const id of orphans) {
+		await deleteIntakeFolder(id)
+	}
+	return { requests, letters, orphans }
 }

@@ -14,10 +14,12 @@
  * exception left through a real PostHog client interface.
  */
 
+import { format } from 'node:util'
+
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { createRoutesStub } from 'react-router'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	AuthErrorBoundary,
@@ -28,6 +30,7 @@ import { PostHogProvider } from '../app/lib/posthog/posthog-react'
 
 import type { PostHog } from 'posthog-js'
 import type { ComponentType } from 'react'
+import type { MockInstance } from 'vitest'
 
 function fakePostHog() {
 	return { captureException: vi.fn() } as unknown as PostHog & {
@@ -63,6 +66,20 @@ const BOUNDARIES: [string, ComponentType][] = [
 ]
 
 describe('a rendered boundary reports', () => {
+	/*
+	  A boundary that catches a render error logs it, and so does React. Every
+	  console error here carries the error a test threw, and nothing else.
+	*/
+	let consoleError: MockInstance<typeof console.error>
+	beforeEach(() => {
+		consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		for (const args of consoleError.mock.calls) {
+			expect(format(...args)).toMatch(/render blew up|boom/)
+		}
+	})
+
 	it.each(BOUNDARIES)(
 		'%s captures the error it catches',
 		async (_, Boundary) => {
@@ -152,6 +169,7 @@ describe('a rendered boundary reports', () => {
 		const Stub = createRoutesStub([
 			{
 				path: '/',
+				HydrateFallback: () => null,
 				loader() {
 					throw new Response('nope', { status: 404 })
 				},
@@ -176,6 +194,7 @@ describe('a rendered boundary reports', () => {
 		const Stub = createRoutesStub([
 			{
 				path: '/docs/moved-away',
+				HydrateFallback: () => null,
 				loader() {
 					throw new Response('Not Found', { status: 404 })
 				},
@@ -221,6 +240,7 @@ describe('a rendered boundary reports', () => {
 		const Stub = createRoutesStub([
 			{
 				path: '/',
+				HydrateFallback: () => null,
 				loader,
 				Component: () => null,
 				ErrorBoundary: PublicErrorBoundary

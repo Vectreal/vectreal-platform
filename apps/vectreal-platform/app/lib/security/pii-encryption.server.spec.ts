@@ -1,9 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
 	decryptSensitiveValue,
 	encryptSensitiveValue
 } from './pii-encryption.server'
+
+/*
+  A configured key, as every deployed environment has. Unset, the module
+  falls back to its development key and says so, which is not what this
+  file is about.
+*/
+vi.stubEnv('CONTACT_DATA_ENCRYPTION_KEY', 'pii-encryption-spec-key')
 
 describe('decryptSensitiveValue', () => {
 	it('reads back what encryptSensitiveValue wrote', () => {

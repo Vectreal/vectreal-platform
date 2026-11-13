@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { format } from 'node:util'
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	IMG_TO_3D_DAILY_JOB_LIMIT,
@@ -19,6 +21,7 @@ import {
 } from './img-to-3d-handlers'
 
 import type { User } from '@supabase/supabase-js'
+import type { MockInstance } from 'vitest'
 
 const ENDPOINT = 'https://vectreal.test/api/img-to-3d/generations'
 const OTHER_ORG_JOB = '99999999-9999-4999-8999-999999999999'
@@ -138,10 +141,18 @@ async function readBody(response: Response) {
 	}
 }
 
+let consoleError: MockInstance<typeof console.error>
 beforeEach(() => {
 	// The handlers log every runtime failure with its detail; that is asserted
 	// where it matters and silenced everywhere else.
-	vi.spyOn(console, 'error').mockImplementation(() => undefined)
+	consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+	/* The handlers log every runtime failure under their own prefix. That, and nothing else. */
+	for (const args of consoleError.mock.calls) {
+		expect(format(...args)).toMatch(/^\[img-to-3d\] /)
+	}
 })
 
 describe('a caller the gate refuses', () => {
