@@ -23,7 +23,7 @@ export async function resolveImgTo3dAccess(
 	return { organizationId: organization.id }
 }
 
-/** Whether the panel is drawn; the routes ask `resolveImgTo3dAccess`. */
+/** The flag half of `resolveImgTo3dAccess`, which every caller goes through. */
 export async function isImgTo3dEnabledFor(user: User): Promise<boolean> {
 	if (isImgTo3dMockMode()) {
 		return true

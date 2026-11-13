@@ -176,6 +176,18 @@ export const IMG_TO_3D_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 /** Batches the Generations page lists, newest first. */
 export const IMG_TO_3D_LIST_BATCH_LIMIT = 50
 
+/** Batches the publisher's empty stage lists under the generate form. */
+export const IMG_TO_3D_PUBLISHER_BATCH_LIMIT = 5
+
+/**
+ * The publisher's search param naming a variant to open. It stays in the URL
+ * while the variant is open, so Back leaves it and returns to the list.
+ */
+export const IMG_TO_3D_OPEN_PARAM = 'generation'
+
+export const imgTo3dOpenHref = (jobId: string) =>
+	`/publisher?${IMG_TO_3D_OPEN_PARAM}=${encodeURIComponent(jobId)}`
+
 const MAX_SOURCE_NAME_LENGTH = 120
 
 /**
@@ -198,18 +210,75 @@ export function imgTo3dVariantFileName(
 	return `${sourceName ?? 'generated'}-${seed}.glb`
 }
 
-/** One variant of a listed batch, with its state when the page was loaded. */
-export interface ImgTo3dListedVariant {
-	readonly jobId: string
-	readonly seed: number
+/**
+ * The artifact route's `Content-Disposition` (RFC 6266): an ASCII fallback,
+ * quotes and backslashes removed, for clients that read only `filename`, and
+ * the exact name, percent-encoded, in `filename*`. The name comes from the
+ * uploaded photo, so it is never written into the header raw.
+ */
+export function imgTo3dContentDisposition(fileName: string): string {
+	const fallback = fileName.replace(/[^\x20-\x7e]|["\\]/g, '_')
+	// `encodeURIComponent` leaves these four, which RFC 5987 does not allow.
+	const exact = encodeURIComponent(fileName).replace(
+		/['()*]/g,
+		(char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+	)
+	return `attachment; filename="${fallback}"; filename*=UTF-8''${exact}`
+}
+
+/**
+ * The file name `imgTo3dContentDisposition` wrote, read back: how the
+ * publisher names a variant it opens by id alone. Null for anything else.
+ */
+export function imgTo3dFileNameFromDisposition(
+	header: string | null
+): string | null {
+	const encoded = header ? /filename\*=UTF-8''([^;]+)/.exec(header)?.[1] : null
+	if (!encoded) return null
+	try {
+		return decodeURIComponent(encoded)
+	} catch {
+		return null
+	}
+}
+
+/** A variant's state as last heard. */
+export interface ImgTo3dVariantState {
 	/**
-	 * Null when the runtime could not be asked, and the page polls it; also
-	 * null in an expired batch, which is not asked at all.
+	 * Null until the runtime has been asked: the list could not reach it, or
+	 * was told not to, and polling fills it in. Also null in an expired batch,
+	 * which is never asked.
 	 */
 	readonly status: ImgTo3dJobStatus | null
 	readonly progress: number | null
 	readonly error: ImgTo3dErrorKind | null
 }
+
+/** One variant of a listed batch, with its state when it was listed. */
+export interface ImgTo3dListedVariant extends ImgTo3dVariantState {
+	readonly jobId: string
+	readonly seed: number
+}
+
+/** A variant's state in words, the same on every surface that lists it. */
+export function describeImgTo3dVariant(state: ImgTo3dVariantState): string {
+	switch (state.status) {
+		case null:
+			return 'Checking'
+		case 'queued':
+			return 'Queued'
+		case 'processing':
+			return state.progress === null
+				? 'Generating'
+				: `Generating, ${state.progress}%`
+		case 'succeeded':
+			return 'Ready'
+		case 'failed':
+			return IMG_TO_3D_ERROR_COPY[state.error ?? 'generation_failed']
+	}
+}
+
+export const IMG_TO_3D_EXPIRED_COPY = 'Expired: models are kept for 7 days'
 
 /** The variants generated from one photo in one request. */
 export interface ImgTo3dListedBatch {

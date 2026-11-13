@@ -20,25 +20,33 @@ import { Link } from 'react-router'
 
 import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import {
+	useImgTo3dBatchStates,
+	type ImgTo3dGeneration
+} from '../../../hooks/use-img-to-3d-generation'
+import {
 	DEFAULT_IMG_TO_3D_PARAMS,
 	IMG_TO_3D_DECIMATION_TARGET,
 	IMG_TO_3D_ERROR_COPY,
 	IMG_TO_3D_IMAGE_TYPES,
 	IMG_TO_3D_RESOLUTIONS,
 	IMG_TO_3D_SEED_COUNT,
+	IMG_TO_3D_EXPIRED_COPY,
 	IMG_TO_3D_TEXTURE_SIZES,
+	describeImgTo3dVariant,
+	imgTo3dOpenHref,
+	imgTo3dVariantFileName,
 	isTerminalImgTo3dStatus,
+	type ImgTo3dListedBatch,
+	type ImgTo3dListedVariant,
 	type ImgTo3dResolution,
-	type ImgTo3dTextureSize
+	type ImgTo3dTextureSize,
+	type ImgTo3dVariantState
 } from '../../../lib/domain/img-to-3d/img-to-3d-contract'
-
-import type {
-	ImgTo3dCandidate,
-	ImgTo3dGeneration
-} from '../../../hooks/use-img-to-3d-generation'
 
 interface Props {
 	generation: ImgTo3dGeneration
+	/** The organization's recent batches, from the loader. */
+	batches: readonly ImgTo3dListedBatch[]
 	className?: string
 }
 
@@ -52,24 +60,17 @@ function formatElapsed(ms: number): string {
 	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-function describe(candidate: ImgTo3dCandidate, now: number): string {
-	switch (candidate.status) {
-		case 'queued':
-			// A cold GPU takes minutes to boot, and this is where that time shows.
-			return `Queued, ${formatElapsed(now - candidate.submittedAt)}`
-		case 'processing':
-			return candidate.progress === null
-				? 'Generating'
-				: `Generating, ${candidate.progress}%`
-		case 'succeeded':
-		case 'failed':
-			// On a succeeded job an error is a failed open; the model is still ready.
-			return candidate.error
-				? IMG_TO_3D_ERROR_COPY[candidate.error]
-				: candidate.status === 'succeeded'
-					? 'Ready'
-					: IMG_TO_3D_ERROR_COPY.generation_failed
+function describe(
+	batch: ImgTo3dListedBatch,
+	state: ImgTo3dVariantState,
+	now: number
+): string {
+	if (batch.expired) return IMG_TO_3D_EXPIRED_COPY
+	// A cold GPU takes minutes to boot, and this is where that time shows.
+	if (state.status === 'queued') {
+		return `Queued, ${formatElapsed(now - Date.parse(batch.createdAt))}`
 	}
+	return describeImgTo3dVariant(state)
 }
 
 /** A clock that ticks only while something is waiting, for the elapsed times. */
@@ -91,8 +92,13 @@ function useNowWhile(active: boolean): number {
  * A chosen variant opens like a dropped file, so optimization, hotspots and
  * publishing work on it unchanged.
  */
-export const GenerateFromImage = ({ generation, className }: Props) => {
-	const { candidates, isSubmitting, submitError, loadingJobId } = generation
+export const GenerateFromImage = ({
+	generation,
+	batches,
+	className
+}: Props) => {
+	const { isSubmitting, submitError, opening } = generation
+	const stateOf = useImgTo3dBatchStates(batches)
 
 	const [image, setImage] = useState<File | null>(null)
 	const imageInput = useRef<HTMLInputElement>(null)
@@ -110,7 +116,14 @@ export const GenerateFromImage = ({ generation, className }: Props) => {
 	)
 
 	const now = useNowWhile(
-		candidates.some((candidate) => !isTerminalImgTo3dStatus(candidate.status))
+		batches.some(
+			(batch) =>
+				!batch.expired &&
+				batch.variants.some((variant) => {
+					const { status } = stateOf(variant)
+					return status !== null && !isTerminalImgTo3dStatus(status)
+				})
+		)
 	)
 
 	const triangles = Number(decimationTarget)
@@ -279,43 +292,90 @@ export const GenerateFromImage = ({ generation, className }: Props) => {
 				</div>
 			</form>
 
-			{candidates.length > 0 && (
-				<ul aria-label="Generated variants" className="mt-5 grid gap-2">
-					{candidates.map((candidate) => (
-						<li
-							key={candidate.jobId}
-							className="ds-raised flex items-center justify-between gap-3 rounded-lg px-3 py-2"
-						>
-							<div className="min-w-0">
-								<p className="truncate text-sm font-medium">
-									{candidate.sourceName}, seed {candidate.seed}
-								</p>
-								<p
-									className={cn(
-										'truncate text-xs',
-										candidate.error
-											? 'text-destructive'
-											: 'text-muted-foreground'
-									)}
-									aria-live="polite"
-								>
-									{describe(candidate, now)}
-								</p>
-							</div>
-							{candidate.status === 'succeeded' && (
-								<Button
-									size="sm"
-									variant="outline"
-									disabled={loadingJobId !== null}
-									onClick={() => void generation.loadCandidate(candidate.jobId)}
-								>
-									{loadingJobId === candidate.jobId ? 'Opening' : 'Open'}
-								</Button>
-							)}
-						</li>
-					))}
+			{batches.length > 0 && (
+				<ul aria-label="Recent generations" className="mt-5 grid gap-2">
+					{batches.flatMap((batch) =>
+						batch.variants.map((variant) => (
+							<VariantRow
+								key={variant.jobId}
+								batch={batch}
+								variant={variant}
+								state={stateOf(variant)}
+								opening={opening?.jobId === variant.jobId ? opening : null}
+								onRetryOpen={generation.retryOpen}
+								now={now}
+							/>
+						))
+					)}
 				</ul>
 			)}
 		</section>
+	)
+}
+
+function VariantRow({
+	batch,
+	variant,
+	state,
+	opening,
+	onRetryOpen,
+	now
+}: {
+	batch: ImgTo3dListedBatch
+	variant: ImgTo3dListedVariant
+	state: ImgTo3dVariantState
+	opening: ImgTo3dGeneration['opening']
+	onRetryOpen: () => void
+	now: number
+}) {
+	const ready = !batch.expired && state.status === 'succeeded'
+	// On a ready variant an error is a failed open; the model is still there.
+	const error = opening?.error ?? (state.status === 'failed' && !batch.expired)
+	const fileName = imgTo3dVariantFileName(batch.sourceName, variant.seed)
+
+	return (
+		<li className="ds-raised flex items-center justify-between gap-3 rounded-lg px-3 py-2">
+			<div className="min-w-0">
+				<p className="truncate text-sm font-medium">
+					{batch.sourceName ?? 'Untitled photo'}, seed {variant.seed}
+				</p>
+				<p
+					className={cn(
+						'truncate text-xs',
+						error ? 'text-destructive' : 'text-muted-foreground'
+					)}
+					aria-live="polite"
+				>
+					{opening?.error
+						? IMG_TO_3D_ERROR_COPY[opening.error]
+						: opening
+							? 'Opening'
+							: describe(batch, state, now)}
+				</p>
+			</div>
+			{ready && (
+				<div className="flex shrink-0 gap-2">
+					<Button asChild size="sm" variant="ghost">
+						<a
+							href={`/api/img-to-3d/generations/${encodeURIComponent(variant.jobId)}/artifact`}
+							download={fileName}
+							aria-label={`Download ${fileName}`}
+						>
+							Download
+						</a>
+					</Button>
+					{/* Its URL is already the one open, so a link would go nowhere. */}
+					{opening?.error ? (
+						<Button size="sm" variant="outline" onClick={onRetryOpen}>
+							Try again
+						</Button>
+					) : (
+						<Button asChild size="sm" variant="outline">
+							<Link to={imgTo3dOpenHref(variant.jobId)}>Open</Link>
+						</Button>
+					)}
+				</div>
+			)}
+		</li>
 	)
 }

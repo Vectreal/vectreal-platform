@@ -141,7 +141,7 @@ const loaderData: PublisherLoaderData = {
 	sceneManifest: null,
 	publishedMeta: null,
 	maxSceneBytes: null,
-	imgTo3dEnabled: false,
+	imgTo3dBatches: null,
 	recentScenes: [
 		{
 			id: 'scene-1',
@@ -201,7 +201,7 @@ describe('the publisher shell', () => {
 	})
 
 	it('hands the stage the generation panel when the loader allows it', async () => {
-		renderShell({ ...loaderData, imgTo3dEnabled: true })
+		renderShell({ ...loaderData, imgTo3dBatches: [] })
 		expect((await screen.findByTestId('empty-stage')).dataset.generate).toBe(
 			'true'
 		)

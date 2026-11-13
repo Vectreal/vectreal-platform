@@ -66,7 +66,7 @@ const OverlayControls = ({
 	publishedMeta,
 	maxSceneBytes,
 	recentScenes,
-	imgTo3dEnabled,
+	imgTo3dBatches,
 	children
 }: PublisherLoaderData & { children: ReactNode }) => {
 	const navigate = useNavigate()
@@ -146,7 +146,7 @@ const OverlayControls = ({
 	const sampleDownload = useSampleDownload()
 	const openExampleScene = useOpenExampleScene(uploadFiles)
 	// Here for the same reason: opening a variant unmounts the empty stage.
-	const imgTo3d = useImgTo3dGeneration(uploadFiles)
+	const imgTo3d = useImgTo3dGeneration(uploadFiles, sceneId)
 	/*
 	  The rail, the publish card, the sidebars and the header's scene controls
 	  act on a scene, so an empty stage has none of them: nothing on screen is a
@@ -372,7 +372,11 @@ const OverlayControls = ({
 						sampleDownload={sampleDownload}
 						onOpenExample={openExampleScene}
 						recentScenes={recentScenes}
-						imgTo3d={imgTo3dEnabled ? imgTo3d : undefined}
+						imgTo3d={
+							imgTo3dBatches
+								? { generation: imgTo3d, batches: imgTo3dBatches }
+								: undefined
+						}
 					/>
 				) : (
 					/*
