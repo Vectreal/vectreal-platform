@@ -44,6 +44,32 @@ describe('the studio finish on a commit', () => {
 		).toEqual({ assetId: FINISH_ID, reports })
 	})
 
+	// A finish from before codecs left it carries no mark, and stays strict.
+	it('carries whether the finish is the bake before any codec', () => {
+		expect(
+			finishOf(
+				commit({
+					studioFinish: JSON.stringify({
+						assetId: FINISH_ID,
+						reports,
+						unencoded: true
+					})
+				})
+			)
+		).toEqual({ assetId: FINISH_ID, reports, unencoded: true })
+		expect(
+			refused(
+				commit({
+					studioFinish: JSON.stringify({
+						assetId: FINISH_ID,
+						reports,
+						unencoded: 'true'
+					})
+				})
+			)
+		).toBe(true)
+	})
+
 	it('tells dropping the finish apart from leaving it alone', () => {
 		expect(finishOf(commit({ studioFinish: 'null' }))).toBeNull()
 		expect(finishOf(commit({}))).toBeUndefined()

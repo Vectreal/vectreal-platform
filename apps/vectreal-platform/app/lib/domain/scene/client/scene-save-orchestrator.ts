@@ -776,7 +776,8 @@ export const executeSceneSaveOrchestrator = async ({
 			) {
 				studioFinish = {
 					assetId: existingFinish.assetId,
-					reports: finish.reports
+					reports: finish.reports,
+					unencoded: true
 				}
 				onProgress?.({
 					type: 'file-done',
@@ -810,7 +811,8 @@ export const executeSceneSaveOrchestrator = async ({
 				)
 				studioFinish = {
 					assetId: uploadedFinish.assetId as string,
-					reports: finish.reports
+					reports: finish.reports,
+					unencoded: true
 				}
 			}
 		} catch (error) {

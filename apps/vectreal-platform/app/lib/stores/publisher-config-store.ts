@@ -372,12 +372,22 @@ interface BakePreview {
 	 */
 	reports?: Pick<PublishExportOutcome, 'occlusion' | 'lights'>
 	/**
-	 * Once ready: the file exactly as publishing would ship it for `source`,
-	 * which publish uploads rather than exporting again.
+	 * Once ready: the model with its bakes drawn in and no codec applied,
+	 * which publish encodes rather than baking again. A finish restored from
+	 * before codecs left it has none, so publish bakes again.
 	 */
-	outcome?: PublishExportOutcome
-	/** Restored from the finish saved with the scene, which has no `outcome`. */
+	file?: ArrayBuffer
+	/** Why the UV set laid out for the bakes failed, for error tracking. */
+	uvLayoutFailure?: string
+	/** Restored from the finish saved with the scene, which a save keeps as stored. */
 	restored?: true
+	/**
+	 * For a restored finish saved as a published file: the codecs it was
+	 * encoded with, as `usePublishExport().codecsKey` writes them. The server
+	 * retires such a finish once publish would encode otherwise, so it goes
+	 * stale here then too.
+	 */
+	codecs?: string
 	durationMs?: number
 	/** Once failed: why nothing was drawn. */
 	failure?: StudioFinishFailure

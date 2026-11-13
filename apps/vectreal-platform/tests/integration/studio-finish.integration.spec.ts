@@ -64,7 +64,11 @@ describe('the studio finish a draft keeps', () => {
 		sceneId: string,
 		sceneAssetIds: string[],
 		settings: Partial<SceneSettings> = {},
-		studioFinish?: { assetId: string; reports: typeof reports } | null
+		studioFinish?: {
+			assetId: string
+			reports: typeof reports
+			unencoded?: true
+		} | null
 	) =>
 		sceneSettingsService.saveSceneSettingsFromAssetIds({
 			sceneId,
@@ -132,8 +136,12 @@ describe('the studio finish a draft keeps', () => {
 		bake: { lights: true }
 	}
 
-	/** A saved draft with a finish made for its baked lighting. */
-	const draftWithFinish = async () => {
+	/**
+	 * A saved draft with a finish made for its baked lighting: a bake before
+	 * any codec, unless `encoded` says it is a whole published file, as every
+	 * finish saved before the codecs left it was.
+	 */
+	const draftWithFinish = async ({ encoded = false } = {}) => {
 		const sceneId = randomUUID()
 		const model = [
 			await makeAsset('scene.gltf'),
@@ -144,7 +152,7 @@ describe('the studio finish a draft keeps', () => {
 			sceneId,
 			model,
 			{ lighting: baked },
-			{ assetId: finishId, reports }
+			{ assetId: finishId, reports, ...(encoded ? {} : { unencoded: true }) }
 		)
 		return { sceneId, model, finishId }
 	}
@@ -163,6 +171,34 @@ describe('the studio finish a draft keeps', () => {
 
 		await save(sceneId, model, {
 			lighting: { ...baked, lights: [{ role: 'key', azimuth: 31 }] }
+		})
+
+		expect(await sceneSettingsService.resolveSceneFinish(sceneId)).toBeNull()
+	})
+
+	// The trigger of the lost finish: Publish > GPU-compressed textures.
+	it('stays through a change to how publishing encodes the textures', async () => {
+		const { sceneId, model, finishId } = await draftWithFinish()
+
+		await save(sceneId, model, {
+			lighting: baked,
+			presentation: { compressTexturesForGpu: false }
+		})
+
+		expect(
+			await sceneSettingsService.resolveSceneFinish(sceneId)
+		).toMatchObject({ asset: { id: finishId }, unencoded: true })
+	})
+
+	it('retires a finish saved as a published file once publishing would encode it otherwise', async () => {
+		const { sceneId, model } = await draftWithFinish({ encoded: true })
+		expect(
+			await sceneSettingsService.resolveSceneFinish(sceneId)
+		).toMatchObject({ unencoded: false })
+
+		await save(sceneId, model, {
+			lighting: baked,
+			presentation: { compressTexturesForGpu: false }
 		})
 
 		expect(await sceneSettingsService.resolveSceneFinish(sceneId)).toBeNull()

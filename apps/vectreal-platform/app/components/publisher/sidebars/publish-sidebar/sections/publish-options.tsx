@@ -76,6 +76,7 @@ import type {
 	ScenePublishStateResponse
 } from '../../../../../types/api'
 import type { SaveSceneFn } from '../../../../../types/publisher-scene'
+import type { PublishExportProgress } from '../../../../../workers/publish-export.worker.types'
 
 type PublishStatus = 'idle' | 'saving' | 'publishing' | 'success' | 'error'
 
@@ -173,44 +174,56 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			setPublishStatus('publishing')
 			dispatchProgress({ type: 'publish-step', key: 'export' })
 
-			// A current preview already is the file this publish would make,
-			// unless a bake in it failed, which baking again may well not.
-			let result = reusableFinish(preview)
-			if (!result) {
-				const { data: workingGlb } =
-					await exporterRef.current.exportDocumentGLB(document)
-				result = await runPublishExportInWorker(
-					{
-						glb: workingGlb,
-						...publishExport.request
-					},
-					(progress) =>
-						dispatchProgress(
-							progress.stage === 'uvs'
-								? { type: 'publish-step', key: 'uvs' }
-								: progress.stage === 'textures'
-									? {
-											type: 'publish-step',
-											key: 'textures',
-											done: progress.texturesDone,
-											total: progress.texturesTotal
-										}
-									: {
-											type: 'publish-step',
-											key: progress.stage,
-											done: progress.fraction,
-											total: 1
-										}
-						)
+			const onExportProgress = (progress: PublishExportProgress) =>
+				dispatchProgress(
+					progress.stage === 'uvs'
+						? { type: 'publish-step', key: 'uvs' }
+						: progress.stage === 'textures'
+							? {
+									type: 'publish-step',
+									key: 'textures',
+									done: progress.texturesDone,
+									total: progress.texturesTotal
+								}
+							: {
+									type: 'publish-step',
+									key: progress.stage,
+									done: progress.fraction,
+									total: 1
+								}
 				)
+			// A current finish is encoded as it is, unless a bake in it failed,
+			// which baking again may well not. Otherwise the bake runs first, on
+			// its own, so the finish shown afterwards is one a save can keep.
+			let finish = reusableFinish(preview)
+			let glb: Uint8Array
+			if (finish) {
+				glb = new Uint8Array(finish.bytes)
+			} else {
+				;({ data: glb } = await exporterRef.current.exportDocumentGLB(document))
 				if (publishExport.bakesAnything) {
+					const baked = await runPublishExportInWorker(
+						{ glb, ...publishExport.finishRequest },
+						onExportProgress
+					)
 					// Shown on the model too, so the publisher shows what shipped.
 					void showPublishedFinish(
-						{ document, passRevision, bakes: publishExport.key },
-						result
+						{ document, passRevision, bakes: publishExport.finishKey },
+						baked
 					)
+					finish = {
+						bytes: baked.buffer,
+						reports: { occlusion: baked.occlusion, lights: baked.lights }
+					}
+					glb = new Uint8Array(baked.buffer)
 				}
 			}
+			const encoded = await runPublishExportInWorker(
+				{ glb, ...publishExport.request },
+				onExportProgress
+			)
+			// The encode bakes nothing; what shipped baked is the finish's.
+			const result = { ...encoded, ...finish?.reports }
 			const glbData = new Uint8Array(result.buffer)
 			// It ships without a bake that failed, so that row must not read as done.
 			for (const key of ['occlusion', 'lights'] as const) {
