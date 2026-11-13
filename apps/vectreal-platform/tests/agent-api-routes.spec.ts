@@ -15,6 +15,7 @@ import { join } from 'node:path'
 
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { agentApiEnvelopeMiddleware } from '../app/lib/domain/agent/agent-api-envelope'
 import routes from '../app/routes'
 
 import type { RouteConfigEntry } from '@react-router/dev/routes'
@@ -91,15 +92,31 @@ describe('agent API routes', () => {
 		)
 	})
 
+	it.each(v1Routes)(
+		'$path answers its refusals in the coded envelope',
+		async ({ path, ancestors }) => {
+			const middleware = await Promise.all(
+				ancestors.map(async (owner) => (await importRoute(owner)).middleware)
+			)
+			expect(middleware.flat(), path).toContain(agentApiEnvelopeMiddleware)
+		}
+	)
+
 	it.each(gated)(
 		'$path answers every export with the gate refusal',
 		async ({ path, file, ancestors }) => {
 			// Middleware runs before the loader, outside the gate, on this module
 			// and every layout above it; a v1 request has nothing to do before it
-			// knows who is asking.
+			// knows who is asking. The envelope middleware is the one exception:
+			// it only reads the response `next()` returns.
 			for (const owner of [...ancestors, file]) {
 				const { middleware } = await importRoute(owner)
-				expect(middleware, `${path}: middleware in ${owner}`).toBeUndefined()
+				expect(
+					(middleware ?? []).filter(
+						(fn: unknown) => fn !== agentApiEnvelopeMiddleware
+					),
+					`${path}: middleware in ${owner}`
+				).toEqual([])
 			}
 
 			const module = await importRoute(file)
