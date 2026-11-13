@@ -24,8 +24,9 @@ describe('load progress is wired into the viewer', () => {
 	})
 
 	it("reads the host's progress while there is no model, then its own", () => {
+		// Through the fade too: `loaded` still shows the loader.
 		expect(source).toMatch(
-			/useViewerLoadProgress\(\{\s*hasContent,\s*isLoading: loadingState === 'loading',\s*hostProgress: loadProgress\s*\}\)/
+			/useViewerLoadProgress\(\{\s*hasContent,\s*isLoading: loadingState !== 'ready',\s*hostProgress: loadProgress\s*\}\)/
 		)
 	})
 
@@ -35,9 +36,18 @@ describe('load progress is wired into the viewer', () => {
 		)
 	})
 
-	it('draws a function loader from the progress, and a node as it is', () => {
+	it('draws a function loader as an element, so its fade can end', () => {
+		expect(source).toMatch(
+			/<ProgressLoader render=\{loaderSlot\} progress=\{loadProgressNow\} \/>/
+		)
 		expect(source).toContain(
-			"typeof loaderSlot === 'function' ? loaderSlot(loadProgressNow) : loaderSlot"
+			"typeof loaderSlot === 'function' || Boolean(loaderSlot)"
+		)
+	})
+
+	it('counts the loader delay from the load, across its two mounts', () => {
+		expect(source).toContain(
+			'<ViewerLoadClockContext.Provider value={loadStartedAt}>'
 		)
 	})
 

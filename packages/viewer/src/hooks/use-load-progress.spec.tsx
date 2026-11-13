@@ -12,10 +12,14 @@
  *    test goes red;
  *  - drop the phase comparison from the throttle and the phase-change test
  *    goes red;
- *  - key `model_loaded` on nothing and the once-per-model test goes red.
+ *  - key `model_loaded` on nothing and the once-per-model test goes red;
+ *  - drop the once-guard and the StrictMode test goes red;
+ *  - drop the trailing send and the newest-value test goes red;
+ *  - drop `state.active` from the selector and the finished-manager test goes red.
  */
 import { useProgress } from '@react-three/drei'
 import { act, renderHook } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { useLoadEvents, useViewerLoadProgress } from './use-load-progress'
@@ -62,6 +66,19 @@ describe('useViewerLoadProgress', () => {
 		act(() => useProgress.setState({ active: false, loaded: 0, total: 0 }))
 	})
 
+	it("ignores counts drei's store kept from a load that finished", () => {
+		act(() => useProgress.setState({ active: false, loaded: 5, total: 5 }))
+		const { result } = renderHook(() =>
+			useViewerLoadProgress({
+				hasContent: true,
+				isLoading: true,
+				hostProgress: null
+			})
+		)
+		expect(result.current).toEqual({ phase: 'preparing' })
+		act(() => useProgress.setState({ loaded: 0, total: 0 }))
+	})
+
 	it('is nothing once the loader is gone', () => {
 		const { result } = renderHook(() =>
 			useViewerLoadProgress({
@@ -104,6 +121,42 @@ describe('useLoadEvents', () => {
 			'parsing',
 			'parsing'
 		])
+	})
+
+	it('sends the newest value of a phase when the interval ends', () => {
+		vi.useFakeTimers()
+		const emit = vi.fn()
+		const { rerender } = renderHook(
+			({ progress }) => useLoadEvents({ progress, modelIdentity: null, emit }),
+			{
+				initialProps: {
+					progress: {
+						phase: 'fetching',
+						bytes: { loaded: 1, total: 10 }
+					} as LoadProgress
+				}
+			}
+		)
+		rerender({
+			progress: { phase: 'fetching', bytes: { loaded: 4, total: 10 } }
+		})
+		rerender({
+			progress: { phase: 'fetching', bytes: { loaded: 10, total: 10 } }
+		})
+		act(() => vi.advanceTimersByTime(250))
+
+		expect(
+			emit.mock.calls.map(([event]) => event.progress.bytes.loaded)
+		).toEqual([1, 10])
+	})
+
+	it('says model_loaded once under StrictMode too', () => {
+		const emit = vi.fn()
+		renderHook(
+			() => useLoadEvents({ progress: null, modelIdentity: 'model', emit }),
+			{ wrapper: StrictMode }
+		)
+		expect(types(emit)).toEqual(['model_loaded'])
 	})
 
 	it('says model_loaded once per model', () => {

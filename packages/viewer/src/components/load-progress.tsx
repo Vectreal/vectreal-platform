@@ -1,7 +1,9 @@
 import {
 	describeLoadProgress,
+	LOAD_PROGRESS_DELAY_MS,
 	useDelayedVisible
 } from '@shared/components/ui/load-progress'
+import { createContext, useContext, useState } from 'react'
 
 import { cn } from './class-names'
 import { useViewerMessages } from './viewer-messages'
@@ -9,10 +11,28 @@ import { formatMessage } from '../locales/en'
 
 import type { LoadProgressWords } from '@shared/components/ui/load-progress'
 import type { LoadProgress } from '@vctrl/core'
-import type { FC } from 'react'
+import type { FC, ReactNode } from 'react'
 
 const RADIUS = 9
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+
+/**
+ * When the viewer's current load began. The loader is mounted twice in one
+ * load, as the canvas's Suspense fallback and then in the overlay, so its
+ * delay counts from here rather than from its own mount, or the second mount
+ * would hide it again for another delay.
+ */
+export const ViewerLoadClockContext = createContext<number | null>(null)
+
+/**
+ * A function `loader`, drawn as an element: the overlay keeps its fade
+ * container whatever the function returns, `null` included, so the fade
+ * still ends and the viewer's chrome still appears.
+ */
+export const ProgressLoader: FC<{
+	render: (progress: LoadProgress | null) => ReactNode
+	progress: LoadProgress | null
+}> = ({ render, progress }) => <>{render(progress)}</>
 
 /**
  * The viewer's default loader: the same reading of a load as the app's
@@ -27,7 +47,13 @@ export const ViewerLoadProgress: FC<{ progress: LoadProgress | null }> = ({
 	progress
 }) => {
 	const messages = useViewerMessages()
-	const visible = useDelayedVisible()
+	const startedAt = useContext(ViewerLoadClockContext)
+	const [delayMs] = useState(() =>
+		startedAt === null
+			? LOAD_PROGRESS_DELAY_MS
+			: startedAt + LOAD_PROGRESS_DELAY_MS - Date.now()
+	)
+	const visible = useDelayedVisible(delayMs)
 	const words: LoadProgressWords = {
 		loading: messages.loading,
 		fetching: () => messages.loadDownloading,

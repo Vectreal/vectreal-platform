@@ -10,12 +10,16 @@ import type { LoadProgress } from '@vctrl/core'
  * Before there is a model it is the host's word (`loadProgress`: the
  * download and the parse, which happen outside the viewer) or `src`'s. Once
  * the model is here and the first frame is still being prepared, it is the
- * viewer's own `preparing`, counting the environment's files.
+ * viewer's own `preparing`, counting the environment's files. It holds
+ * through the loader's fade, so the loader does not change words on its way
+ * out, and is null once the loader is gone.
  *
  * The count comes from drei's `useProgress`, which reads three's global
  * `DefaultLoadingManager`. A model's own parse runs through a manager of its
  * own (`ModelLoader`), so what is counted there is the environment and any
- * texture the scene loads, which is what preparing waits on.
+ * texture the scene loads, which is what preparing waits on. Only while that
+ * manager is active: its counters are never reset, so after a load they still
+ * read the last one's total.
  */
 export function useViewerLoadProgress({
 	hasContent,
@@ -23,7 +27,7 @@ export function useViewerLoadProgress({
 	hostProgress
 }: {
 	hasContent: boolean
-	/** Whether the loader is on screen. */
+	/** Whether the loader is on screen, its fade included. */
 	isLoading: boolean
 	hostProgress: LoadProgress | null | undefined
 }): LoadProgress | null {
@@ -31,7 +35,9 @@ export function useViewerLoadProgress({
 	// A key rather than the store, so a page loading textures elsewhere does
 	// not re-render the viewer once it is ready.
 	const files = useProgress((state) =>
-		preparing && state.total > 0 ? `${state.loaded}/${state.total}` : ''
+		preparing && state.active && state.total > 0
+			? `${state.loaded}/${state.total}`
+			: ''
 	)
 
 	// One object per change, so an effect keyed on it runs per change.
@@ -50,7 +56,8 @@ export const LOAD_PROGRESS_EVENT_INTERVAL_MS = 250
 /**
  * Tells the host where the load is: `model_loaded` once per model, the moment
  * it reaches the viewer, and `load_progress` on every phase change and at
- * most every quarter second within a phase.
+ * most every quarter second within a phase. A value held back by the
+ * interval is sent when it ends, so the last word of a phase always arrives.
  */
 export function useLoadEvents({
 	progress,
@@ -63,10 +70,16 @@ export function useLoadEvents({
 	emit: (event: ViewerInteractionEvent) => void
 }) {
 	const emitRef = useRef(emit)
-	emitRef.current = emit
-
 	useEffect(() => {
-		if (modelIdentity) emitRef.current({ type: 'model_loaded' })
+		emitRef.current = emit
+	})
+
+	// Remembered across StrictMode's second mount, so it still fires once.
+	const announced = useRef<unknown>(null)
+	useEffect(() => {
+		if (!modelIdentity || announced.current === modelIdentity) return
+		announced.current = modelIdentity
+		emitRef.current({ type: 'model_loaded' })
 	}, [modelIdentity])
 
 	const last = useRef<{ phase: string; at: number } | null>(null)
@@ -75,16 +88,21 @@ export function useLoadEvents({
 			last.current = null
 			return
 		}
-		const now = Date.now()
+		const send = () => {
+			last.current = { phase: progress.phase, at: Date.now() }
+			emitRef.current({ type: 'load_progress', progress })
+		}
 		const previous = last.current
-		if (
-			previous &&
-			previous.phase === progress.phase &&
-			now - previous.at < LOAD_PROGRESS_EVENT_INTERVAL_MS
-		) {
+		const wait =
+			previous && previous.phase === progress.phase
+				? previous.at + LOAD_PROGRESS_EVENT_INTERVAL_MS - Date.now()
+				: 0
+		if (wait <= 0) {
+			send()
 			return
 		}
-		last.current = { phase: progress.phase, at: now }
-		emitRef.current({ type: 'load_progress', progress })
+		// A newer value replaces this one before it is sent.
+		const timer = setTimeout(send, wait)
+		return () => clearTimeout(timer)
 	}, [progress])
 }
