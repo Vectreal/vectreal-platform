@@ -4,6 +4,7 @@ import EnterFullscreenIcon from './assets/enter-fullscreen-icon'
 import ExitFullscreenIcon from './assets/exit-fullscreen-icon'
 import { CHROME_BUTTON } from './chrome-classes'
 import { cn, withHostClasses } from './class-names'
+import { useViewerMessages } from './viewer-messages'
 
 export interface FullscreenControlProps {
 	/** The element shown full screen: the viewer's own container. */
@@ -29,6 +30,7 @@ const classes = {
  * Escape leaves full screen on its own; the browser handles that key.
  */
 const FullscreenControl = ({ target, className }: FullscreenControlProps) => {
+	const messages = useViewerMessages()
 	const [supported, setSupported] = useState(false)
 	const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -57,7 +59,9 @@ const FullscreenControl = ({ target, className }: FullscreenControlProps) => {
 				type="button"
 				className={classes.button}
 				onClick={toggle}
-				aria-label={isFullscreen ? 'Exit full screen' : 'Full screen'}
+				aria-label={
+					isFullscreen ? messages.exitFullscreen : messages.enterFullscreen
+				}
 			>
 				{isFullscreen ? (
 					<ExitFullscreenIcon className={classes.icon} />

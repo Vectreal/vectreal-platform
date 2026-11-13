@@ -377,6 +377,18 @@ export async function deleteExpiredIntakeLetters(now: Date) {
 		.returning({ code: modelIntakeLetters.code })
 }
 
+/** Which of these request ids still have a row. */
+export async function findExistingIntakeIds(
+	ids: string[]
+): Promise<Set<string>> {
+	if (ids.length === 0) return new Set()
+	const rows = await getDbClient()
+		.select({ id: modelIntakeSubmissions.id })
+		.from(modelIntakeSubmissions)
+		.where(inArray(modelIntakeSubmissions.id, ids))
+	return new Set(rows.map((row) => row.id))
+}
+
 export async function deleteIntakeRow(id: string): Promise<void> {
 	await getDbClient()
 		.delete(modelIntakeSubmissions)

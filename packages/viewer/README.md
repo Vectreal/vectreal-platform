@@ -72,7 +72,8 @@ Or, with a model already hosted somewhere, give it the address:
 | `showInteractionHint` | `boolean` | No | Shows a short line on how to move the scene once it is ready, worded for touch, mouse or keys and the controls that are on, gone on the first interaction or after a few seconds, once per page view. Default `false`; `set_interaction_hint` withdraws it |
 | `unloadWhenOffscreen` | `boolean` | No | With viewport rendering on, frees the WebGL context while the viewer is out of view and shows its last frame on return until it draws again. `false` keeps the scene in memory and only stops drawing off-screen. Default `true` |
 | `interactionStart` | `'immediate' \| 'tap'` | No | `tap` holds every input until the visitor presses a "Tap to rotate" button in the middle of the scene: until then touches, swipes and the wheel scroll the page, and auto-rotate keeps turning. Once started, a "Done" button in the bottom-right corner hands scrolling back. A host's `set_controls_enabled` takes over from the button. Default `immediate` |
-| `locale` | `string` | No | The language of the viewer's own words, such as the tap button's ("Zum Drehen tippen"): German for any `de` tag, English otherwise. Default: the browser's language |
+| `locale` | `string` | No | A BCP 47 tag for the language of the viewer's own words: its buttons, the first-time hint, "How to move" and what screen readers hear. `de` or `de-AT` loads the German catalog the first time it is needed, and English shows meanwhile and for a language with no catalog. Default: the browser's language. See [Languages](#languages) |
+| `messages` | `Partial<ViewerMessages>` | No | Words to show instead of the catalog's, by key. Keys left out come from the catalog `locale` picked. See [Languages](#languages) |
 | `animations` | `AnimationClip[]` | No | The model's animation clips, as parsed from the same glTF. Without them no animation runtime is mounted |
 | `animationOptions` | `AnimationSettings` | No | How those clips play: on or off, together or in sequence, autoplay, per-clip loop, speed and offset, and whether the viewer shows its playback controls |
 | `showAnimationControls` | `boolean` | No | Lets the viewer draw its playback controls when `animationOptions.showControls` asks for them. Default `true`. Set `false` to draw your own with the exported `AnimationControls` (it carries no placement: position it with `className`) or any UI, driven by `set_animation_playing` and `restart_animation` and following `animation_state_changed` |
@@ -124,6 +125,31 @@ The editor affordances exist for editing surfaces such as the Publisher: `static
 `shadowLightEditable`, `editableLightRole` and `onShadowLightChange` are deprecated and go in the next major version: a light aimed on its own leaves the environment's bright region it was set against. Turn `lighting.environment.rotation` instead, which moves every light with the environment.
 
 ---
+
+## Languages
+
+Every word the viewer shows or announces sits behind a key in one catalog,
+`ViewerMessages`. English is built in. Each other language is a separate file
+that loads only when a viewer needs it, so a page downloads just the one it
+shows. The viewer has English and German (`en`, `de`).
+
+```tsx
+// Follows the browser, or set a tag: German loads on demand.
+<VectrealViewer model={model} locale="de-AT" />
+
+// Change one wording.
+<VectrealViewer model={model} messages={{ tapToRotate: 'Tap to spin' }} />
+
+// A language the viewer has no catalog for: pass every key.
+import type { ViewerMessages } from '@vctrl/viewer'
+const fr: ViewerMessages = { tapToRotate: 'Touchez pour tourner' /* , ... */ }
+<VectrealViewer model={model} locale="fr" messages={fr} />
+```
+
+To bundle a catalog instead of loading it, import it and pass it as
+`messages`: `import { de } from '@vctrl/viewer/locales/de'`. Messages with
+placeholders, such as `hotspotStep` (`{name}, step {step} of {count}`), keep
+them in every language.
 
 ## Camera options (`CameraProps`)
 
