@@ -13,26 +13,17 @@
  */
 
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ScenePublishPanel } from './scene-publish-panel'
 
 import type { ScenePublishStateResponse } from '../../../types/api'
 
-vi.mock('react-router', () => ({
-	Link: ({
-		to,
-		children,
-		...rest
-	}: {
-		to: string
-		children: React.ReactNode
-	} & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-		<a href={to} {...rest}>
-			{children}
-		</a>
-	)
-}))
+/*
+  The real Link, in a memory router. A hand-rolled stub spread every prop onto
+  the anchor, so React warned about react-router's own `viewTransition`.
+*/
 
 /*
   The door has its own spec. Here it only has to be present or absent, and a
@@ -72,7 +63,8 @@ function renderPanel(
 			canUpdateScene
 			publisherPath="/publisher/scene-1"
 			onPublish={vi.fn()}
-		/>
+		/>,
+		{ wrapper: MemoryRouter }
 	)
 }
 
