@@ -63,7 +63,7 @@
  *    a handoff, reddens the case for each.
  */
 import { formatFileSize } from '@shared/utils'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import {
 	SupersededError,
 	TextureCompressionError
@@ -157,7 +157,7 @@ const publish = (next: Record<string, unknown>) => {
  * scenario, and it cannot be produced by awaiting them as they were made.
  */
 const settle = (index: number, file: LoaderFile, ingested = true) =>
-	pending[index]?.resolve(file, ingested)
+	act(async () => pending[index]?.resolve(file, ingested))
 
 /**
  * Puts a load's model on the stage without letting `load` resolve.
@@ -169,14 +169,14 @@ const settle = (index: number, file: LoaderFile, ingested = true) =>
  * what it says while the two disagree.
  */
 const reachStage = (index: number, file: LoaderFile) =>
-	pending[index]?.publish(file)
+	act(async () => pending[index]?.publish(file))
 
 /**
  * Refuses the load that is `index`, the way the hook does: the model already on
  * screen is left exactly where it is, and only the outcome carries the failure.
  */
 const refuse = (index: number, code = 'unsupported_format') =>
-	pending[index]?.reject({ code, message: 'nope' })
+	act(async () => pending[index]?.reject({ code, message: 'nope' }))
 
 const exported = {
 	data: new Uint8Array(0),
@@ -514,7 +514,7 @@ async function modelOnStage(
 	const view = render(<ConverterSurface pair={pair} />)
 	drop([gltfFile(name)])
 	await waitFor(() => expect(loadCalls).toHaveLength(1))
-	settle(0, loadedFile({ name, sourcePackageBytes: bytes }))
+	await settle(0, loadedFile({ name, sourcePackageBytes: bytes }))
 	await screen.findByTestId('stage')
 	return view
 }
@@ -594,7 +594,7 @@ describe('an option the browser cannot carry out is not offered', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile())
+		await settle(0, loadedFile())
 		await screen.findByTestId('stage')
 
 		expect(screen.getByRole('checkbox', { name: /Draco/i })).toBeTruthy()
@@ -603,7 +603,7 @@ describe('an option the browser cannot carry out is not offered', () => {
 })
 
 describe('the samples it offers', () => {
-	it("offers only the two that make a pass visible, not the publisher's whole shelf", () => {
+	it("offers only the two that make a pass visible, not the publisher's whole shelf", async () => {
 		render(<ConverterSurface pair={convertPairBySlug('glb-to-gltf')!} />)
 
 		expect(
@@ -611,6 +611,8 @@ describe('the samples it offers', () => {
 				.getByRole('button', { name: 'sample' })
 				.getAttribute('data-samples')
 		).toBe('rocket camera')
+		// Lets the mount's async checks settle inside act, after the assertion.
+		await act(async () => {})
 	})
 })
 
@@ -626,7 +628,7 @@ describe('a sample on its way down', () => {
 		await waitFor(() =>
 			expect(tiles.getAttribute('data-downloading')).toBe('rocket')
 		)
-		release()
+		await act(async () => release())
 	})
 })
 
@@ -647,7 +649,7 @@ describe('the size a conversion is measured against', () => {
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
 
-		settle(
+		await settle(
 			0,
 			loadedFile({
 				sourcePackageBytes: 5_200_000,
@@ -682,7 +684,7 @@ describe('the size a conversion is measured against', () => {
 		drop([gltfFile('chair.gltf', 4_096)])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
 
-		settle(0, loadedFile())
+		await settle(0, loadedFile())
 		await screen.findByTestId('stage')
 
 		exported.data = new Uint8Array(2_048)
@@ -710,7 +712,7 @@ describe('a document that was just read is not read again', () => {
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
 
-		settle(0, loadedFile({ sourcePackageBytes: 1_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 1_000 }))
 		await screen.findByTestId('stage')
 
 		exported.data = new Uint8Array(900)
@@ -738,7 +740,7 @@ describe('a USDZ result says when its glass was flattened', () => {
 
 			drop([gltfFile()])
 			await waitFor(() => expect(loadCalls).toHaveLength(1))
-			settle(0, loadedFile({ sourcePackageBytes: 1_000 }))
+			await settle(0, loadedFile({ sourcePackageBytes: 1_000 }))
 			await screen.findByTestId('stage')
 
 			exported.data = new Uint8Array(900)
@@ -777,7 +779,7 @@ describe('a USDZ conversion reads the model on the stage, not the document', () 
 		render(<ConverterSurface pair={convertPairBySlug('gltf-to-usdz')!} />)
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		reachStage(0, loadedFile())
+		await reachStage(0, loadedFile())
 		await screen.findByTestId('stage')
 
 		fireEvent.click(convertButton())
@@ -800,7 +802,7 @@ describe('a model the optimizer could not take in', () => {
 		render(<ConverterSurface pair={gltfToGlb} />)
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile(), false)
+		await settle(0, loadedFile(), false)
 		await screen.findByTestId('stage')
 	}
 
@@ -853,8 +855,14 @@ describe('a load that lost does not describe the page', () => {
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
 
 		/* The second drop wins, then the first one finally comes back. */
-		settle(1, loadedFile({ name: 'fast.gltf', sourcePackageBytes: 1_000_000 }))
-		settle(0, loadedFile({ name: 'slow.gltf', sourcePackageBytes: 9_000_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'fast.gltf', sourcePackageBytes: 1_000_000 })
+		)
+		await settle(
+			0,
+			loadedFile({ name: 'slow.gltf', sourcePackageBytes: 9_000_000 })
+		)
 		await screen.findByTestId('stage')
 
 		exported.data = new Uint8Array(500_000)
@@ -879,7 +887,10 @@ describe('a load that lost does not describe the page', () => {
 
 		drop([gltfFile('first.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 }))
+		await settle(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 })
+		)
 		await screen.findByTestId('stage')
 
 		blockExports()
@@ -889,12 +900,12 @@ describe('a load that lost does not describe the page', () => {
 		/* A second file lands while the first conversion is still encoding. */
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(
+		await settle(
 			1,
 			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000_000 })
 		)
 
-		releaseExport()
+		await act(async () => releaseExport())
 
 		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
 		expect(screen.queryByRole('button', { name: /^Download/ })).toBeNull()
@@ -919,12 +930,12 @@ describe('a refused drop does not retire the model it left on screen', () => {
 
 		drop([gltfFile('chair.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'chair.gltf', sourcePackageBytes: 900 }))
+		await settle(0, loadedFile({ name: 'chair.gltf', sourcePackageBytes: 900 }))
 		await screen.findByTestId('stage')
 
 		drop([new File(['x'], 'notes.txt')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		refuse(1)
+		await refuse(1)
 		await screen.findByRole('alert')
 
 		exported.data = new Uint8Array(400)
@@ -948,7 +959,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 	const refuseANote = async (loads: number) => {
 		drop([new File(['x'], 'notes.txt')])
 		await waitFor(() => expect(loadCalls).toHaveLength(loads))
-		refuse(loads - 1)
+		await refuse(loads - 1)
 		await screen.findByRole('alert')
 	}
 
@@ -1042,7 +1053,10 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
 		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
 		fireEvent.click(convertButton())
 
@@ -1172,8 +1186,11 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		await waitFor(() => expect(optimizer.restoreSource).toHaveBeenCalled())
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
-		releaseRestore()
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
+		await act(async () => releaseRestore())
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1199,11 +1216,11 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		await waitFor(() => expect(optimizer.restoreSource).toHaveBeenCalled())
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		reachStage(
+		await reachStage(
 			1,
 			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
 		)
-		releaseRestore()
+		await act(async () => releaseRestore())
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1228,8 +1245,11 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		)
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
-		releasePass()
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
+		await act(async () => releasePass())
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1250,8 +1270,11 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
-		releasePass()
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
+		await act(async () => releasePass())
 		await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1))
 
 		fireEvent.click(convertButton())
@@ -1271,7 +1294,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		)
 
 		await refuseANote(2)
-		releasePass()
+		await act(async () => releasePass())
 
 		expect(await downloadButton()).toBeTruthy()
 		expect(toast.error).not.toHaveBeenCalled()
@@ -1286,7 +1309,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		fireEvent.click(convertButton())
 		await waitFor(() => expect(optimizer.restoreSource).toHaveBeenCalled())
 		await refuseANote(2)
-		releaseRestore()
+		await act(async () => releaseRestore())
 
 		expect(await downloadButton()).toBeTruthy()
 		expect(toast.error).not.toHaveBeenCalled()
@@ -1316,7 +1339,7 @@ describe('a destructive pass is undone from the optimizer, not the file', () => 
 		)
 
 		expect(screen.getByRole('button', { name: /publisher/i })).toBeDisabled()
-		releasePass()
+		await act(async () => releasePass())
 		await downloadButton()
 	})
 })
@@ -1338,7 +1361,7 @@ describe('the page describes the model that is on the stage', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 5_200_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 5_200_000 }))
 
 		/*
 		  Read off the row rather than with `findByText`. Before a conversion
@@ -1356,7 +1379,7 @@ describe('the page describes the model that is on the stage', () => {
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		reachStage(
+		await reachStage(
 			1,
 			loadedFile({ name: 'second.gltf', sourcePackageBytes: 1_000 })
 		)
@@ -1378,7 +1401,7 @@ describe('the page describes the model that is on the stage', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		blockExports()
@@ -1388,9 +1411,12 @@ describe('the page describes the model that is on the stage', () => {
 		// A newer file lands while the encode is still running.
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
 
-		releaseExport()
+		await act(async () => releaseExport())
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1416,7 +1442,7 @@ describe('the page describes the model that is on the stage', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		/* A pass has to be ticked for there to be a slow await to land inside. */
@@ -1430,10 +1456,13 @@ describe('the page describes the model that is on the stage', () => {
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
 
 		optimizer._getDocument.mockClear()
-		releasePass()
+		await act(async () => releasePass())
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1458,7 +1487,7 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		reachStage(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await reachStage(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		exported.data = new Uint8Array(1_000)
@@ -1466,7 +1495,7 @@ describe('the optimizer is read only for the model it holds', () => {
 		await yieldToPage()
 		expect(toast.error).not.toHaveBeenCalled()
 
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 
 		expect(
 			await screen.findByRole('button', { name: /^Download/ })
@@ -1480,12 +1509,15 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([gltfFile('first.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await settle(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 })
+		)
 		await screen.findByTestId('stage')
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		reachStage(
+		await reachStage(
 			1,
 			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
 		)
@@ -1495,7 +1527,10 @@ describe('the optimizer is read only for the model it holds', () => {
 		await yieldToPage()
 		expect(documentsRead).toEqual([])
 
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
 
 		expect(
 			await screen.findByRole('button', { name: /^Download/ })
@@ -1513,7 +1548,10 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([gltfFile('first.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		reachStage(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await reachStage(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 })
+		)
 		await screen.findByTestId('stage')
 
 		fireEvent.click(convertButton())
@@ -1521,9 +1559,15 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
 		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await settle(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 })
+		)
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1543,25 +1587,31 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([gltfFile('first.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await settle(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 })
+		)
 		await screen.findByTestId('stage')
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		reachStage(
+		await reachStage(
 			1,
 			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
 		)
 		drop([new File(['x'], 'notes.txt')])
 		await waitFor(() => expect(loadCalls).toHaveLength(3))
-		refuse(2)
+		await refuse(2)
 		await screen.findByRole('alert')
 
 		fireEvent.click(convertButton())
 		await yieldToPage()
 		expect(documentsRead).toEqual([])
 
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
 		expect(
 			await screen.findByRole('button', { name: /^Download/ })
 		).toBeTruthy()
@@ -1579,7 +1629,7 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		blockExports()
@@ -1589,10 +1639,10 @@ describe('the optimizer is read only for the model it holds', () => {
 
 		drop([new File(['x'], 'notes.txt')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		refuse(1)
+		await refuse(1)
 		await screen.findByRole('alert')
 
-		releaseExport()
+		await act(async () => releaseExport())
 
 		expect(
 			await screen.findByRole('button', { name: /^Download/ })
@@ -1616,7 +1666,7 @@ describe('the handoff to the publisher', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		blockDraft()
@@ -1624,9 +1674,12 @@ describe('the handoff to the publisher', () => {
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 3_000 })
+		)
 
-		releaseDraft()
+		await act(async () => releaseDraft())
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1641,12 +1694,15 @@ describe('the handoff to the publisher', () => {
 
 		drop([gltfFile('first.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await settle(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 })
+		)
 		await screen.findByTestId('stage')
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		reachStage(
+		await reachStage(
 			1,
 			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
 		)
@@ -1656,7 +1712,10 @@ describe('the handoff to the publisher', () => {
 		await yieldToPage()
 		expect(documentsRead).toEqual([])
 
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
 
 		await waitFor(() => expect(navigated).toHaveLength(1))
 		expect(documentsRead).toEqual([{ name: 'second.gltf' }])
@@ -1667,7 +1726,10 @@ describe('the handoff to the publisher', () => {
 
 		drop([gltfFile('first.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		reachStage(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await reachStage(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 })
+		)
 		await screen.findByTestId('stage')
 
 		fireEvent.click(openButton())
@@ -1675,9 +1737,15 @@ describe('the handoff to the publisher', () => {
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(1, loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 }))
+		await settle(
+			1,
+			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000 })
+		)
 		await waitFor(() => expect(screen.getByText(/second\.gltf/)).toBeTruthy())
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 }))
+		await settle(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000 })
+		)
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1746,7 +1814,7 @@ describe('the handoff to the publisher', () => {
 		fireEvent.click(openButton())
 
 		await waitFor(() => expect(convertButton()).toBeDisabled())
-		releaseDraft()
+		await act(async () => releaseDraft())
 	})
 
 	it('cannot be cleared out from under itself', async () => {
@@ -1760,7 +1828,7 @@ describe('the handoff to the publisher', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		blockDraft()
@@ -1771,7 +1839,7 @@ describe('the handoff to the publisher', () => {
 		})
 		await waitFor(() => expect(startOver).toBeDisabled())
 
-		releaseDraft()
+		await act(async () => releaseDraft())
 	})
 })
 
@@ -1791,7 +1859,7 @@ describe('the funnel continues past arrival', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 5_200_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 5_200_000 }))
 		await screen.findByTestId('stage')
 
 		exported.data = new Uint8Array(4_500_000)
@@ -1814,7 +1882,7 @@ describe('the funnel continues past arrival', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		exported.data = new Uint8Array(1_000_000)
@@ -1832,7 +1900,10 @@ describe('the funnel continues past arrival', () => {
 
 		drop([gltfFile('first.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 }))
+		await settle(
+			0,
+			loadedFile({ name: 'first.gltf', sourcePackageBytes: 9_000_000 })
+		)
 		await screen.findByTestId('stage')
 
 		blockExports()
@@ -1841,11 +1912,11 @@ describe('the funnel continues past arrival', () => {
 
 		drop([gltfFile('second.gltf')])
 		await waitFor(() => expect(loadCalls).toHaveLength(2))
-		settle(
+		await settle(
 			1,
 			loadedFile({ name: 'second.gltf', sourcePackageBytes: 2_000_000 })
 		)
-		releaseExport()
+		await act(async () => releaseExport())
 
 		await waitFor(() =>
 			expect(toast.error).toHaveBeenCalledWith(
@@ -1860,7 +1931,7 @@ describe('the funnel continues past arrival', () => {
 
 		drop([gltfFile()])
 		await waitFor(() => expect(loadCalls).toHaveLength(1))
-		settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
+		await settle(0, loadedFile({ sourcePackageBytes: 2_000_000 }))
 		await screen.findByTestId('stage')
 
 		exported.data = new Uint8Array(1_000)

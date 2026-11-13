@@ -187,6 +187,7 @@
 	"scripts": {
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
+		"test:brief": "vitest run --reporter=minimal --coverage.enabled=false",
 		"vectreal": "tsx --tsconfig packages/cli/tsconfig.lib.json packages/cli/src/main.ts"
 	}
 }
