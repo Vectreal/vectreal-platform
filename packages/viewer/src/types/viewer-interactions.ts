@@ -1,5 +1,3 @@
-import type { LoadProgress } from '@vctrl/core'
-
 /** Command that requests a transition to one of the configured viewer cameras. */
 export interface ActivateCameraViewerCommand {
 	type: 'activate_camera'
@@ -128,7 +126,15 @@ export interface ModelLoadedInteractionEvent {
  */
 export interface LoadProgressInteractionEvent {
 	type: 'load_progress'
-	progress: LoadProgress
+	/*
+	  `LoadProgress` from `@vctrl/core`, written out: this file ships inside
+	  `@vctrl/embed` as is and may import nothing. A spec holds the two equal.
+	*/
+	progress: {
+		phase: 'fetching' | 'parsing' | 'preparing'
+		bytes?: { loaded: number; total: number | null }
+		items?: { loaded: number; total: number }
+	}
 }
 
 /** Emitted after the viewer finishes its initial framing/stabilization pass. */

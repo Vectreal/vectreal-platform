@@ -16,11 +16,14 @@
  */
 import { act, renderHook } from '@testing-library/react'
 import { StrictMode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 
 import { useLoadEvents, useViewerLoadProgress } from './use-load-progress'
 
-import type { ViewerInteractionEvent } from '../types/viewer-interactions'
+import type {
+	LoadProgressInteractionEvent,
+	ViewerInteractionEvent
+} from '../types/viewer-interactions'
 import type { LoadProgress } from '@vctrl/core'
 
 afterEach(() => {
@@ -67,6 +70,14 @@ describe('useViewerLoadProgress', () => {
 })
 
 const PARSING: LoadProgress = { phase: 'parsing' }
+
+describe('the load_progress event', () => {
+	it("carries core's LoadProgress, written out so the embed protocol stands alone", () => {
+		expectTypeOf<
+			LoadProgressInteractionEvent['progress']
+		>().toEqualTypeOf<LoadProgress>()
+	})
+})
 
 describe('useLoadEvents', () => {
 	const types = (emit: ReturnType<typeof vi.fn>) =>
