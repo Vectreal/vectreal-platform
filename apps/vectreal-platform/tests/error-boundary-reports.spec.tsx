@@ -167,6 +167,10 @@ describe('a rendered boundary reports', () => {
 		expect(
 			await screen.findByText('This project was archived.')
 		).toBeInTheDocument()
+		// A refusal, not a fault: the heading does not blame the server.
+		expect(
+			screen.getByText('This request could not be completed')
+		).toBeInTheDocument()
 	})
 
 	/*

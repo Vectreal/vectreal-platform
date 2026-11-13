@@ -25,7 +25,9 @@ describe('publicErrorKind', () => {
 		[response(404), 'not_found'],
 		[response(403), 'forbidden'],
 		[response(500), 'server_error'],
-		[response(400), 'server_error'],
+		[response(400), 'request_refused'],
+		[response(410), 'request_refused'],
+		[response(429), 'request_refused'],
 		[new Error('boom'), 'server_error'],
 		['a string', 'server_error']
 	])('maps %o to %s', (error, kind) => {
