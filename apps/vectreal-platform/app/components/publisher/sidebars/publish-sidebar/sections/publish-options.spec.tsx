@@ -6,6 +6,7 @@
  */
 import { Document } from '@gltf-transform/core'
 import {
+	act,
 	fireEvent,
 	render,
 	screen,
@@ -13,7 +14,7 @@ import {
 	within
 } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PublishOptions } from './publish-options'
 import {
@@ -43,6 +44,7 @@ import {
 
 import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { Optimizations } from '@vctrl/core'
+import type { MockInstance } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
 	getDocument: vi.fn(),
@@ -134,7 +136,24 @@ const textureSwitch = () =>
 	screen.getByRole('switch', { name: /GPU-compressed textures/ })
 
 describe('the publish panel', () => {
+	/*
+	  A publish that fails logs the error, and a studio finish that fails warns
+	  with its reason. Those two lines, and no other console output.
+	*/
+	let consoleError: MockInstance<typeof console.error>
+	let consoleWarn: MockInstance<typeof console.warn>
+	afterEach(() => {
+		for (const [message] of consoleError.mock.calls) {
+			expect(message).toBe('Failed to publish scene:')
+		}
+		for (const [message] of consoleWarn.mock.calls) {
+			expect(message).toBe('Studio finish failed:')
+		}
+	})
+
 	beforeEach(() => {
+		consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+		consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		vi.clearAllMocks()
 		const document = new Document()
 		mocks.getDocument.mockImplementation(() => document)
@@ -823,10 +842,12 @@ describe('the publish panel', () => {
 				store.get(optimizationRuntimeAtom).publishedEncoding
 			).not.toBeNull()
 		)
-		store.set(optimizationRuntimeAtom, (prev) => ({
-			...prev,
-			latestSceneStats: { currentSceneBytes: 8 } as never
-		}))
+		act(() => {
+			store.set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				latestSceneStats: { currentSceneBytes: 8 } as never
+			}))
+		})
 
 		fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
 
@@ -846,10 +867,12 @@ describe('the publish panel', () => {
 				store.get(optimizationRuntimeAtom).publishedEncoding
 			).not.toBeNull()
 		)
-		store.set(optimizationRuntimeAtom, (prev) => ({
-			...prev,
-			latestSceneStats: { currentSceneBytes: 8 } as never
-		}))
+		act(() => {
+			store.set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				latestSceneStats: { currentSceneBytes: 8 } as never
+			}))
+		})
 		const before = store.get(optimizationRuntimeAtom)
 
 		fireEvent.click(screen.getByRole('button', { name: 'Report published' }))
@@ -864,12 +887,14 @@ describe('the publish panel', () => {
 	// Without a publish this session, the figure on screen is a pass's own.
 	it('keeps a pass’s size when a publication it never shipped is revoked', () => {
 		const store = renderPanel(balancedPreset)
-		store.set(optimizationRuntimeAtom, (prev) => ({
-			...prev,
-			optimizedSceneBytes: 5,
-			publishedEncoding: null,
-			latestSceneStats: { currentSceneBytes: 8 } as never
-		}))
+		act(() => {
+			store.set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				optimizedSceneBytes: 5,
+				publishedEncoding: null,
+				latestSceneStats: { currentSceneBytes: 8 } as never
+			}))
+		})
 
 		fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
 

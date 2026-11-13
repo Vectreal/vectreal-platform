@@ -290,12 +290,14 @@ describe('the test button', () => {
 })
 
 describe('the split copy button', () => {
-	it('copies the view you are looking at', () => {
+	it('copies the view you are looking at', async () => {
 		withLiveKey()
 		renderPanel()
 
 		selectTab(EMBED_COPY.tabSdk)
 		fireEvent.click(button(EMBED_COPY.copySdk))
+		// The copy writes, then marks the button copied: let it finish.
+		await act(async () => {})
 
 		/*
 		  The SDK snippet, not the HTML one. A button hardcoded to one view reads
@@ -305,7 +307,7 @@ describe('the split copy button', () => {
 		expect(writeText.mock.calls[0][0]).toContain('VectrealEmbed')
 	})
 
-	it('copies just the URL from the menu without leaving the tab', () => {
+	it('copies just the URL from the menu without leaving the tab', async () => {
 		/*
 		  This is what replaced the separate `Embed URL` section: the URL is a view
 		  of the one artifact, so taking only it is a menu item rather than a
@@ -319,6 +321,8 @@ describe('the split copy button', () => {
 			item.textContent?.includes(EMBED_COPY.copyUrl)
 		)
 		fireEvent.click(copyUrl as HTMLElement)
+		// The copy writes, then marks the button copied: let it finish.
+		await act(async () => {})
 
 		const copied = writeText.mock.calls[0][0] as string
 		expect(copied).toContain(`token=${LIVE_KEY.value}`)

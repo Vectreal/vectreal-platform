@@ -59,16 +59,17 @@ async function main() {
 	}
 
 	const now = new Date()
-	const { requests, letters } = apply
+	const { requests, letters, orphans } = apply
 		? await purgeExpiredIntakes(now)
 		: await selectPurge(now)
 	// Counts only: the scheduled run's log is public, and a letter code opens
 	// a page that greets by the organization it was sent to.
 	console.info(
-		'%s %d request(s) and %d letter(s) and their scans.',
+		'%s %d request(s), %d letter(s) and their scans, and %d folder(s) left without a request.',
 		apply ? 'Deleted' : 'Would delete',
 		requests.length,
-		letters.length
+		letters.length,
+		orphans.length
 	)
 	if (!apply) console.info('Re-run with --apply to delete.')
 }

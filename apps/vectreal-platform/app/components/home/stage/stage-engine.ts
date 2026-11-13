@@ -12,6 +12,7 @@ import {
 	quadVert
 } from './stage-shaders'
 import { SHADOW, createShadowBaker } from './stage-shadow'
+import { pageHidden, warmPrograms, withMaterial } from './warm-programs'
 import {
 	createCssColorProbe,
 	observeTheme
@@ -88,11 +89,6 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	renderer.shadowMap.type = THREE.PCFShadowMap // the jittered samples supply the softness
 
 	const scene = new THREE.Scene()
-	const pmrem = new THREE.PMREMGenerator(renderer)
-	const room = new RoomEnvironment()
-	scene.environment = pmrem.fromScene(room, 0.04).texture
-	room.dispose()
-	pmrem.dispose()
 	const key = new THREE.DirectionalLight(0xffffff, 1.6)
 	key.position.copy(SHADOW.key)
 	scene.add(key)
@@ -142,6 +138,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		bakeDirectional,
 		bakeContact,
 		densityPng,
+		warm: warmShadowPasses,
 		dispose: disposeShadowBaker
 	} = createShadowBaker(renderer, scene, passCam)
 
@@ -573,6 +570,91 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 	const resizeObserver = new ResizeObserver(resize)
 	resizeObserver.observe(el.stage)
 
+	/*
+	  Everything the stage draws that does not depend on the file, compiled
+	  while the file downloads, so no first draw waits on the driver. The room
+	  is lit into an environment once its own programs are built; the model's
+	  materials are compiled against that environment, so they wait for it.
+	*/
+	async function prepareEnvironment() {
+		const room = new RoomEnvironment()
+		await warmPrograms(renderer, room, camera, {
+			offscreen: true,
+			lightsFrom: room
+		})
+		if (!disposed) {
+			const pmrem = new THREE.PMREMGenerator(renderer)
+			environment = pmrem.fromScene(room, 0.04)
+			scene.environment = environment.texture
+			pmrem.dispose()
+		}
+		room.dispose()
+	}
+	let environment: THREE.WebGLRenderTarget | null = null
+	const prepared = Promise.all([
+		prepareEnvironment(),
+		warmPrograms(renderer, quadScene, passCam),
+		warmPrograms(renderer, ground, camera, { lightsFrom: scene }),
+		sceneFloor?.warm()
+	])
+	// `show` awaits it and reports a failure; a stage torn down before any file arrives never does.
+	prepared.catch(() => {})
+
+	/* The file's own programs, compiled as each pass draws them, then its textures uploaded. */
+	async function warmModel(object: THREE.Object3D) {
+		const materials: THREE.Material[] = []
+		object.traverse((o) => {
+			const mesh = o as THREE.Mesh
+			if (mesh.isMesh) materials.push(...[mesh.material].flat())
+		})
+		await Promise.all([
+			warmPrograms(renderer, object, camera, { lightsFrom: scene }),
+			warmPrograms(renderer, withMaterial(object, normalMat), camera, {
+				offscreen: true,
+				lightsFrom: scene
+			}),
+			warmShadowPasses(object)
+		])
+		/*
+		  A transmissive material (the camera's lens) makes three draw the model
+		  once more first, into a target of its own: untoned, and the transmissive
+		  faces back side only. `compile` builds neither, so that pass is warmed
+		  as three draws it, sides flipped the same way and restored.
+		*/
+		const transmissive = materials.filter(
+			(m) => ((m as THREE.MeshPhysicalMaterial).transmission ?? 0) > 0
+		)
+		if (transmissive.length === 0 || disposed) return warmTextures(materials)
+		const flipped = transmissive.filter((m) => m.side === THREE.DoubleSide)
+		const setSide = (side: THREE.Side) => {
+			for (const m of flipped) {
+				m.side = side
+				m.needsUpdate = true
+			}
+		}
+		setSide(THREE.BackSide)
+		const behind = warmPrograms(renderer, object, camera, {
+			offscreen: true,
+			lightsFrom: scene
+		})
+		setSide(THREE.DoubleSide)
+		await behind
+		return warmTextures(materials)
+	}
+
+	/* Uploaded together on the first draw, the textures were one long task; one per task, none is. A timer rather than a frame, so a hidden tab still gets there. */
+	async function warmTextures(materials: THREE.Material[]) {
+		const textures = new Set<THREE.Texture>()
+		for (const material of materials)
+			for (const value of Object.values(material))
+				if (value instanceof THREE.Texture) textures.add(value)
+		for (const texture of textures) {
+			if (disposed) return
+			renderer.initTexture(texture)
+			if (!pageHidden()) await new Promise((resolve) => setTimeout(resolve))
+		}
+	}
+
 	return {
 		/** Draws a GLB as its front elevation, framed on its poster when it has one. Its shadow is baked unless one is given. */
 		async show(
@@ -584,7 +666,9 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 		) {
 			// Parsed before anything on the stage changes, so a file that will not parse leaves the stage as it was.
 			const gltf = await loader.parseAsync(buffer, '')
-			// Torn down while it parsed: placing it now would build render targets on a renderer that is gone.
+			if (!disposed) await prepared
+			if (!disposed) await warmModel(gltf.scene)
+			// Torn down while it parsed or compiled: placing it now would build render targets on a renderer that is gone.
 			if (disposed) {
 				release(gltf.scene)
 				bakedShadow?.dispose()
@@ -691,6 +775,7 @@ export function createStageEngine(el: StageElements, options: StageOptions) {
 			contactTarget?.dispose()
 			bakeTarget?.dispose()
 			loadedShadow?.dispose()
+			environment?.dispose()
 			disposeShadowBaker()
 			renderer.dispose()
 		}

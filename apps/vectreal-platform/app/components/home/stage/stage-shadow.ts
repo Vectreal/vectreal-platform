@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import { blurFragment, quadVert } from './stage-shaders'
+import { warmPrograms, withMaterial } from './warm-programs'
 
 /*
   The ground shadow is two layers, both stored as density (alpha) so strength is
@@ -185,6 +186,12 @@ export function createShadowBaker(
 	}
 
 	/* Contact: look up from the ground; anything within reach darkens with nearness, then blur. */
+	const contact = new THREE.ShaderMaterial({
+		side: THREE.DoubleSide,
+		uniforms: { uReach: { value: 1 } },
+		vertexShader: `varying float vH; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vH = w.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
+		fragmentShader: `varying float vH; uniform float uReach; void main(){ float d = clamp(1.0 - vH / uReach, 0.0, 1.0); gl_FragColor = vec4(0.0, 0.0, 0.0, d * d); }`
+	})
 	function bakeContact(center: THREE.Vector3, extent: number, reach: number) {
 		const rt = new THREE.WebGLRenderTarget(1024, 1024, {
 			type: THREE.HalfFloatType
@@ -200,20 +207,14 @@ export function createShadowBaker(
 		cam.up.set(0, 0, -1)
 		cam.position.set(center.x, -reach * 0.001, center.z)
 		cam.lookAt(center.x, 1, center.z)
-		const near = new THREE.ShaderMaterial({
-			side: THREE.DoubleSide,
-			uniforms: { uReach: { value: reach } },
-			vertexShader: `varying float vH; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vH = w.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
-			fragmentShader: `varying float vH; uniform float uReach; void main(){ float d = clamp(1.0 - vH / uReach, 0.0, 1.0); gl_FragColor = vec4(0.0, 0.0, 0.0, d * d); }`
-		})
+		contact.uniforms.uReach.value = reach
 		renderer.setRenderTarget(rt)
 		renderer.setClearColor(0, 0)
 		renderer.clear()
-		scene.overrideMaterial = near
+		scene.overrideMaterial = contact
 		renderer.render(scene, cam)
 		scene.overrideMaterial = null
 		renderer.setRenderTarget(null)
-		near.dispose()
 		blurDensity(rt, SHADOW.contactBlur, SHADOW.contactPasses)
 		return rt
 	}
@@ -248,11 +249,24 @@ export function createShadowBaker(
 		return c.toDataURL('image/png')
 	}
 
-	/** Releases what outlives a bake: the shared quad and the blur pass. */
+	/** Compiles the bakes' passes off the main thread: the blur, and the contact pass over this model. */
+	function warm(model: THREE.Object3D) {
+		return Promise.all([
+			warmPrograms(renderer, blurScene, passCam, { offscreen: true }),
+			// Drawn as an override over the stage's scene, so with its lights.
+			warmPrograms(renderer, withMaterial(model, contact), passCam, {
+				offscreen: true,
+				lightsFrom: scene
+			})
+		])
+	}
+
+	/** Releases what outlives a bake: the shared quad, the blur pass and the contact pass. */
 	function dispose() {
 		quadGeometry.dispose()
 		blurPass.dispose()
+		contact.dispose()
 	}
 
-	return { bakeDirectional, bakeContact, densityPng, dispose }
+	return { bakeDirectional, bakeContact, densityPng, warm, dispose }
 }

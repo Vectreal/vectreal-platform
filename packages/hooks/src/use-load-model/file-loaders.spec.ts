@@ -513,6 +513,7 @@ describe('a retired load is not ingested', () => {
 	})
 
 	it('stops the asset fallback retired while it read the files', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		const { gltf, ctx } = gltfRetiredOn('arrayBuffer')
 		const optimizer = {
 			loadFromServerSceneData: vi.fn(async () => {
@@ -530,6 +531,10 @@ describe('a retired load is not ingested', () => {
 		expect(optimizer.loadFromServerSceneData).toHaveBeenCalledOnce()
 		expect(optimizer.loadFromGLTFWithAssets).not.toHaveBeenCalled()
 		expect(optimizer.load).not.toHaveBeenCalled()
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			'Failed to initialize optimizer from source GLTF payload; trying direct asset load.',
+			expect.objectContaining({ message: 'broken scene data' })
+		)
 	})
 })
 
