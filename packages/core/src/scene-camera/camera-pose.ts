@@ -1,5 +1,6 @@
 import { Euler, Vector3, type Vector3Tuple } from 'three'
 
+import { isCameraFov } from '../camera-schema'
 import { DEFAULT_CAMERA, isSceneCamera } from './camera-settings'
 import { withOpeningPose } from './opening-pose'
 import {
@@ -199,7 +200,8 @@ export function resolveCameraPose(
 		position,
 		rotation: rawRotation,
 		target,
-		fov: typeof selectedCamera.fov === 'number' ? selectedCamera.fov : live.fov,
+		// A stored fov the lens cannot take keeps the live one.
+		fov: isCameraFov(selectedCamera.fov) ? selectedCamera.fov : live.fov,
 		framing
 	}
 }

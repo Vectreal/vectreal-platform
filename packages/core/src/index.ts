@@ -30,6 +30,8 @@ export * from './model-exporter'
 export * from './scene-animation'
 export * from './scene-asset'
 export * from './scene-camera'
+// The camera rules. Imports only zod; see the module header.
+export * from './camera-schema'
 export * from './scene-environment'
 export * from './scene-interaction'
 export * from './scene-lighting'
