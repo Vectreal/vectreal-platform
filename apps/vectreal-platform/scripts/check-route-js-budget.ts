@@ -151,10 +151,12 @@ function main() {
 		console.log(
 			`${route.padEnd(34)} ${kb.padStart(6)} KB gz of ${budget}, ${closure.size} chunks`
 		)
-		const ceiling = Math.round(budget * HARD_CEILING)
+		// Compared unrounded, like the budget: rounding the ceiling first could
+		// put it up to half a KB under 1.2x.
+		const ceiling = budget * HARD_CEILING
 		if (bytes > ceiling * 1024)
 			failures.push(
-				`${route}: ${kb} KB gz is past its ${ceiling} KB hard ceiling (budget ${budget} KB)`
+				`${route}: ${kb} KB gz is past its ${ceiling.toFixed(1)} KB hard ceiling (budget ${budget} KB)`
 			)
 		else if (bytes > budget * 1024)
 			overBudget.push(`${route}: ${kb} KB gz is over its ${budget} KB budget`)
