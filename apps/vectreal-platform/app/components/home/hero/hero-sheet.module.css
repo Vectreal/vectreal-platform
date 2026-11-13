@@ -14,7 +14,7 @@
   label runs along the bottom line, where a drawing keeps its title block.
 
   This file is the single owner of where the model is framed. The frame box is
-  placed here, by CSS, so the server-rendered poster is in the right place at
+  placed here, by CSS, so the server-rendered still is in the right place at
   first paint; the stage engine reads the box back rather than computing it.
 */
 
@@ -50,7 +50,7 @@
 	--gap: clamp(32px, 4vw, 80px);
 	--frame-top: 64px; /* the nav's bottom edge: the nav sits on the frame's top rule */
 	--frame-bottom: 32px;
-	/* How far below the first row the fold runs: measured by the component, this is the wide layout's value so the server-rendered poster is already in place. */
+	/* How far below the first row the fold runs: measured by the component, this is the wide layout's value so the server-rendered still is already in place. */
 	--below: 232px;
 
 	position: relative;
@@ -139,9 +139,8 @@
 }
 
 /*
-  Everything drawn on the stage besides the live canvas (the poster, the
-  dimensions) fades out where it reaches under the copy, in the same zone the
-  shader fades the live frame.
+  The still, and the live canvas over it, fade out where they reach under the
+  copy: the still by this mask, the canvas by its shader, over the same zone.
 */
 .art {
 	position: absolute;
@@ -154,80 +153,26 @@
 	);
 }
 
-/*
-  The poster: the line drawing as a mask, filled with the ink color, so one
-  asset serves both themes. It is there from the first paint, in pencil, and the
-  plot inks it left to right as the model's bytes arrive. The front and the ink
-  travel only across the drawing (`--ink-*`, measured when the poster was baked).
-*/
-.poster,
-.pencil {
-	position: absolute;
-	inset: 0;
-	background: var(--foreground);
-	mask-image: var(--poster);
-	mask-size: 100% 100%;
-	transition: opacity var(--duration-base);
-}
-.pencil {
-	opacity: 0.16;
-}
 .frame {
-	/* The poster and its ink bounds come in per framing from the component; the fold picks its own below. */
-	--poster: var(--poster-sheet);
-	--still: var(--still-sheet);
+	/* The model's drawn width per framing, which holds the frame to the room beside the copy; the fold picks its own below. */
 	--ink-l: var(--ink-l-sheet);
 	--ink-r: var(--ink-r-sheet);
-	--ink-t: var(--ink-t-sheet);
-	--ink-b: var(--ink-b-sheet);
-	--plot: 0;
-	--at: calc(
-		(var(--ink-l) + var(--plot) * (var(--ink-r) - var(--ink-l))) * 100%
-	);
 }
-.poster {
-	clip-path: inset(0 calc(100% - var(--at)) 0 0);
-}
+
 /*
-  The still variant: the rendered object from the first paint instead of the
-  drawing, and nothing of the drawing around it. The live canvas draws the
-  same frame before the still goes, so the swap shows nothing.
+  The model as it first shows, from the first paint, in the frame the live
+  canvas draws into. The canvas draws this same frame before the still goes,
+  so the swap shows nothing.
 */
-/* The image is named only in the variant, so no browser fetches it otherwise. */
-.still {
+.still,
+.still img {
 	position: absolute;
 	inset: 0;
-	display: none;
+	width: 100%;
+	height: 100%;
 }
-.stage[data-variant='still'] .still {
-	display: block;
-	background: var(--still) center / 100% 100% no-repeat;
-}
-.stage[data-variant='still'] :is(.pencil, .poster, .front, .dims) {
-	display: none;
-}
-.stage[data-variant='still'][data-phase='live'] .still {
+.stage[data-phase='live'] .still {
 	visibility: hidden;
-}
-
-/* Once the live canvas has drawn the model, it is the drawing; the poster steps aside. */
-.stage:not([data-phase='poster']) .poster,
-.stage:not([data-phase='poster']) .pencil {
-	opacity: 0;
-}
-
-.front {
-	position: absolute;
-	top: calc(var(--ink-t) * 100% - 16px);
-	bottom: calc((1 - var(--ink-b)) * 100% - 16px);
-	left: var(--at);
-	width: 1px;
-	background: var(--orange);
-	opacity: 0;
-	transition: opacity var(--duration-slow) var(--ease-out);
-}
-.stage[data-receiving] .front {
-	opacity: 1;
 }
 
 /* Sized explicitly: an absolutely positioned SVG keeps its 300 by 150 default under inset: 0. */
@@ -243,48 +188,7 @@
 	cursor: grabbing;
 }
 
-.dims {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	overflow: visible;
-	transition: opacity 500ms;
-}
-.dims[data-gone] {
-	opacity: 0;
-}
-.dims line {
-	stroke: var(--muted-foreground);
-	stroke-width: 1;
-	vector-effect: non-scaling-stroke;
-}
-.dims text {
-	fill: var(--muted-foreground);
-	font: 500 11px var(--font-sans);
-	font-variant-numeric: tabular-nums;
-	letter-spacing: 0.02em;
-	opacity: 0;
-	animation: fade 400ms 800ms forwards;
-}
-/* `draw` is written by the engine into the SVG, outside the module's scoping. */
-.dims :global(.draw) {
-	stroke-dasharray: var(--len);
-	stroke-dashoffset: var(--len);
-	animation: draw 1100ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
-}
-@keyframes draw {
-	to {
-		stroke-dashoffset: 0;
-	}
-}
-@keyframes fade {
-	to {
-		opacity: 1;
-	}
-}
-
-/* The figure's label and scale share one row on the bottom rule, where a drawing keeps its title block; the top rule is the nav's. */
+/* The figure's label on the bottom rule, where a drawing keeps its title block; the top rule is the nav's. */
 .meta {
 	position: absolute;
 	bottom: calc(var(--frame-bottom) - 6px);
@@ -296,13 +200,6 @@
 	color: var(--muted-foreground);
 	transition: color var(--duration-fast);
 }
-.scale {
-	transition: opacity 500ms;
-}
-.scale[data-gone] {
-	opacity: 0;
-}
-
 /* Under the model: the way in for a visitor with no file, then what the file holds. */
 .caption {
 	grid-area: 2 / 2;
@@ -533,12 +430,8 @@
 		/* No copy beside it, so no room to hold it to. */
 		--box: min(100cqh, 75cqw);
 		--cx: 50cqw;
-		--poster: var(--poster-fold);
-		--still: var(--still-fold);
 		--ink-l: var(--ink-l-fold);
 		--ink-r: var(--ink-r-fold);
-		--ink-t: var(--ink-t-fold);
-		--ink-b: var(--ink-b-fold);
 	}
 	.art {
 		mask-image: none;
@@ -591,22 +484,10 @@
 	.status .value {
 		justify-content: flex-end;
 	}
-	.scale {
-		display: none;
-	}
 }
 
 @media (min-width: 48rem) and (max-width: 899px) {
 	.sheet {
 		padding-inline: var(--space-6);
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.dims :global(.draw),
-	.dims text {
-		animation: none;
-		stroke-dashoffset: 0;
-		opacity: 1;
 	}
 }

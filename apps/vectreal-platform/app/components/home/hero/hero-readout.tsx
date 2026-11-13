@@ -6,7 +6,6 @@ import { HOME_PAGE_COPY } from '../../../constants/product-copy'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
 import { inUnitOf } from '../in-unit-of'
 
-import type { HeroVariant } from './hero-stage-client'
 import type { ReactNode } from 'react'
 
 /*
@@ -17,21 +16,10 @@ import type { ReactNode } from 'react'
 
 const COPY = HOME_PAGE_COPY.stage
 
-/** The still variant shows the turned object, not the elevation, so until it is live the label names no face. */
-export function FigureLabel({
-	store,
-	variant
-}: {
-	store: HeroStore
-	variant: HeroVariant
-}) {
+/** Until the stage is live the figure is a still, which names no view. */
+export function FigureLabel({ store }: { store: HeroStore }) {
 	const view = useHeroState(store, (s) => s.view)
-	const face =
-		view === 'live'
-			? COPY.liveView
-			: variant === 'drawing'
-				? HERO_MODEL.view
-				: null
+	const face = view === 'live' ? COPY.liveView : null
 	return (
 		<span className="text-eyebrow">
 			{COPY.figure}
