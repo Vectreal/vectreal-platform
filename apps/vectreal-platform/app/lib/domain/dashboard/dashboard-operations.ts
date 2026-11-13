@@ -61,11 +61,15 @@ export type DashboardOperation =
  * Modelled as a set of operations rather than a fourth role, because "creator"
  * is a property of one resource, not of the membership.
  */
-const RESOURCE_OWNER_OPERATIONS: ReadonlySet<DashboardOperation> = new Set([
+const RESOURCE_OWNER_OPERATION_LIST = [
 	'scene-folder:update',
 	'scene-folder:move',
 	'scene-folder:delete'
-])
+] as const satisfies readonly DashboardOperation[]
+
+const RESOURCE_OWNER_OPERATIONS: ReadonlySet<DashboardOperation> = new Set(
+	RESOURCE_OWNER_OPERATION_LIST
+)
 
 /**
  * Role -> operation table.
@@ -130,6 +134,22 @@ export const DASHBOARD_OPERATION_ROLES: Record<
 
 	/** Checkout, the billing portal, and confirming a completed checkout. */
 	'billing:manage': ['owner', 'admin']
+}
+
+/**
+ * The roles that may perform `operation`, for a filter that cannot call
+ * `canPerformDashboardOperation` row by row: a SQL `where`, say.
+ *
+ * Refuses the resource-owner operations at compile time. For those, a role
+ * list under-grants: a member who created a folder may still change it.
+ */
+export function rolesFor(
+	operation: Exclude<
+		DashboardOperation,
+		(typeof RESOURCE_OWNER_OPERATION_LIST)[number]
+	>
+): readonly MembershipRole[] {
+	return DASHBOARD_OPERATION_ROLES[operation]
 }
 
 export interface DashboardActorContext {
