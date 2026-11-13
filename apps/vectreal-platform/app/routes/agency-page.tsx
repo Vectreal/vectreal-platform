@@ -15,15 +15,20 @@ import {
 import { routeErrorMeta } from '../components/not-found'
 import { AGENCY_PAGE_COPY as COPY } from '../constants/agency-page-copy'
 import { resolveIntakeLetter } from '../lib/domain/model-intake/model-intake-letter.server'
+import { resolveIntakeScene } from '../lib/domain/model-intake/model-intake-scene.server'
 import {
 	intakeLetterFormPath,
 	MODEL_INTAKE_AGENCY_PAGE_PATH,
 	MODEL_INTAKE_LETTER_PARAM,
+	type ModelIntakeShowcase,
 	normalizeIntakeLetterCode
 } from '../lib/domain/model-intake/model-intake-shared'
 import { buildPageMeta } from '../lib/seo'
 
 import type { Route } from './+types/agency-page'
+
+/** An agency's letter names no product, so the page turns the showcase closest to most agencies' clients. */
+const AGENCY_PAGE_SHOWCASE = 'lamp' satisfies ModelIntakeShowcase
 
 /*
   Where an agency letter's short address forwards. It greets the agency by the
@@ -35,8 +40,11 @@ import type { Route } from './+types/agency-page'
 export async function loader({ request }: Route.LoaderArgs) {
 	const raw = new URL(request.url).searchParams.get(MODEL_INTAKE_LETTER_PARAM)
 	const letterCode = normalizeIntakeLetterCode(raw)
-	const letter = await resolveIntakeLetter(request, raw)
-	return { letterCode, letter }
+	const [letter, scene] = await Promise.all([
+		resolveIntakeLetter(request, raw),
+		resolveIntakeScene(request, AGENCY_PAGE_SHOWCASE)
+	])
+	return { letterCode, letter, scene }
 }
 
 export function meta({ error }: Route.MetaArgs) {
@@ -80,7 +88,7 @@ const LINK =
 const MEDIA = '/media/agenturen'
 
 export default function AgencyPage({ loaderData }: Route.ComponentProps) {
-	const { letterCode, letter } = loaderData
+	const { letterCode, letter, scene } = loaderData
 	const formPath = letterCode
 		? intakeLetterFormPath(letterCode, 'de')
 		: '/free-model?lang=de'
@@ -91,16 +99,8 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 				greeting={letter ? COPY.letterGreeting(letter.organization) : null}
 				heading={COPY.hero.heading}
 				lead={COPY.hero.lead}
-				media={
-					// The test page on a phone. A phone shows the middle of it, where the product turns, so the button stays on the first screen.
-					<IntakeLoop
-						src={`${MEDIA}/agentur-hero.mp4`}
-						poster={`${MEDIA}/agentur-hero.webp`}
-						label={COPY.hero.video}
-						priority
-						className="border-foreground/15 aspect-square rounded-3xl border-4 lg:mx-auto lg:aspect-390/844 lg:max-w-xs"
-					/>
-				}
+				scene={scene}
+				sceneLabel={COPY.hero.sceneLabel}
 				action={<RequestButton to={formPath} />}
 			/>
 
@@ -111,14 +111,23 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 						<ol className="grid gap-8 md:grid-cols-3">
 							{COPY.steps.items.map((step, index) => (
 								<li key={step.id} className="space-y-3">
-									<img
-										src={`${MEDIA}/step-${step.id}.webp`}
-										alt={step.image}
-										width={640}
-										height={480}
-										loading="lazy"
-										className="ds-sunken aspect-4/3 w-full rounded-xl object-cover"
-									/>
+									{step.video ? (
+										<IntakeLoop
+											src={`${MEDIA}/step-${step.id}.mp4`}
+											poster={`${MEDIA}/step-${step.id}.webp`}
+											label={step.video}
+											className="aspect-4/3"
+										/>
+									) : (
+										<img
+											src={`${MEDIA}/step-${step.id}.webp`}
+											alt={step.image}
+											width={640}
+											height={480}
+											loading="lazy"
+											className="ds-sunken aspect-4/3 w-full rounded-xl object-cover"
+										/>
+									)}
 									<p className="text-body flex gap-3">
 										<span aria-hidden="true" className="font-medium">
 											{index + 1}
@@ -159,19 +168,38 @@ export default function AgencyPage({ loaderData }: Route.ComponentProps) {
 				<section className={BAND}>
 					<div className={SECTION}>
 						<h2 className="text-h2">{COPY.terms.heading}</h2>
-						<p
-							aria-hidden="true"
-							className="text-headline grid gap-2 md:grid-cols-3"
-						>
-							{COPY.terms.figures.map((figure) => (
-								<span key={figure}>{figure}</span>
-							))}
-						</p>
-						<ul className="text-body grid list-disc gap-2 pl-5">
-							{COPY.terms.lines.map((line) => (
-								<li key={line}>{line}</li>
-							))}
-						</ul>
+						<Card className="gap-8 p-6 md:p-8">
+							<div className="grid gap-6 md:auto-cols-fr md:grid-flow-col">
+								{COPY.terms.figures.map((figure) => (
+									<div key={figure.value} className="space-y-1">
+										{/* Without its own line, the number repeats one of the lines below, so a screen reader hears it once. */}
+										<p
+											aria-hidden={figure.line ? undefined : true}
+											className="text-headline"
+										>
+											{figure.value}
+										</p>
+										{figure.line ? (
+											<p className="text-body text-muted-foreground">
+												{figure.line}
+											</p>
+										) : null}
+									</div>
+								))}
+							</div>
+							<ul className="text-body grid list-disc gap-2 pl-5">
+								{COPY.terms.lines.map((line) => (
+									<li key={line}>{line}</li>
+								))}
+							</ul>
+							{COPY.terms.examples.length > 0 ? (
+								<ul className="text-body-sm text-muted-foreground grid gap-2">
+									{COPY.terms.examples.map((example) => (
+										<li key={example}>{example}</li>
+									))}
+								</ul>
+							) : null}
+						</Card>
 					</div>
 				</section>
 

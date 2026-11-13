@@ -58,6 +58,7 @@ export function normalizePresentationSettings(
 		altText,
 		showFullscreenButton,
 		showInteractionHint,
+		unloadWhenOffscreen,
 		interactionStart,
 		locale
 	} = presentation as ScenePresentationSettings
@@ -79,6 +80,9 @@ export function normalizePresentationSettings(
 			: {}),
 		...(typeof showInteractionHint === 'boolean'
 			? { showInteractionHint }
+			: {}),
+		...(typeof unloadWhenOffscreen === 'boolean'
+			? { unloadWhenOffscreen }
 			: {}),
 		...(INTERACTION_STARTS.includes(interactionStart as SceneInteractionStart)
 			? { interactionStart }
@@ -149,6 +153,16 @@ export function shouldShowInteractionHint(
 	presentation: ScenePresentationSettings | undefined | null
 ): boolean {
 	return presentation?.showInteractionHint === true
+}
+
+/**
+ * Whether a published viewer frees its WebGL context off-screen. Absent means
+ * on; see `ScenePresentationSettings.unloadWhenOffscreen`.
+ */
+export function shouldUnloadWhenOffscreen(
+	presentation: ScenePresentationSettings | undefined | null
+): boolean {
+	return presentation?.unloadWhenOffscreen !== false
 }
 
 /**

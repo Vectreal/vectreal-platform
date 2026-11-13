@@ -8,6 +8,7 @@ import {
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInteractionHint,
+	shouldUnloadWhenOffscreen,
 	shouldShowSceneViewReturn
 } from '../../lib/domain/scene/scene-presentation'
 import { useErrorReport } from '../../lib/observability/use-error-report'
@@ -201,6 +202,9 @@ const SceneEmbedViewer = memo(
 						allowInteractionHint &&
 						shouldShowInteractionHint(sceneData?.presentation)
 					}
+					unloadWhenOffscreen={shouldUnloadWhenOffscreen(
+						sceneData?.presentation
+					)}
 					interactionStart={resolveInteractionStart(sceneData?.presentation)}
 					locale={sceneData?.presentation?.locale}
 					label={resolveSceneAltText(sceneData?.presentation, sceneData?.meta)}

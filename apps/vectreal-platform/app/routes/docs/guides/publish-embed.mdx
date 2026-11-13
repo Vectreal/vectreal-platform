@@ -96,6 +96,17 @@ present apps/vectreal-platform/app/lib/domain/embed/embed-presentation.ts params
 present packages/embed/src/embed.ts setInteractionHint(enabled: boolean)
 */}
 
+### Unload when off-screen
+
+While a visitor scrolls the scene out of view, the viewer frees the graphics memory it holds, so a page with several scenes stays light on a phone. Scrolling back, it shows the last frame it drew until the scene is drawn again. Switch off **Unload when off-screen** in the **Viewer** section to keep the scene loaded instead: off-screen it only pauses, and it is back the moment it scrolls into view. That suits a page that scrolls back to the scene often. It is on for every scene unless switched off, applies to embeds and preview links as soon as you save, and is `presentation.unloadWhenOffscreen` through the API or the MCP server.
+
+{/* claims
+present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Unload when off-screen"
+present apps/vectreal-platform/app/lib/domain/scene/scene-presentation.ts presentation?.unloadWhenOffscreen !== false
+present packages/viewer/src/components/canvas-wrapper.tsx <LastFrameCapture onCapture={captureLastFrame} />
+present packages/sdk/src/scene-settings.ts unloadWhenOffscreen: z.boolean().optional()
+*/}
+
 ### Start moving
 
 **Start moving** in the **Viewer** section decides when visitors can move the scene. **Right away** lets them drag it as soon as it appears. **After a tap** shows one button in the middle of the scene, **Tap to rotate** on a phone and **Click to rotate** with a mouse, or **Zum Drehen tippen** and **Zum Drehen klicken** in German. Until it is pressed, touches, swipes and the mouse wheel go to the page around the scene, so the page scrolls and a product gallery swipes past it, and a scene set to turn by itself keeps turning (unless the visitor asked their device for reduced motion). Once pressed, the scene moves as usual, and a **Done** (**Fertig**) button in the bottom-right corner hands scrolling back. Choose it for a scene inside a page that scrolls, above all on phones, where a scene filling the screen would otherwise catch every swipe.

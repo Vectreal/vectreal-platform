@@ -251,6 +251,16 @@ describe('the publish panel', () => {
 		expect(store.get(presentationAtom).showInteractionHint).toBe(false)
 	})
 
+	it('unloads the scene off-screen by default, until the author keeps it loaded', () => {
+		const store = renderPanel(balancedPreset)
+		const toggle = screen.getByRole('switch', {
+			name: /Unload when off-screen/
+		})
+		expect(toggle).toBeChecked()
+		fireEvent.click(toggle)
+		expect(store.get(presentationAtom).unloadWhenOffscreen).toBe(false)
+	})
+
 	it('waits for a tap on a new scene, and asks the viewer language whatever the start', () => {
 		const store = renderPanel(balancedPreset)
 		const start = screen.getByRole('radiogroup', { name: 'Start moving' })
