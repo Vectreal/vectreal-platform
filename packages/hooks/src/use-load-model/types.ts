@@ -20,13 +20,20 @@ import { AnimationClip, Object3D } from 'three'
 import { useOptimizeModel } from '../use-optimize-model'
 
 import type {
+	ByteProgress,
+	ItemProgress,
+	LoadPhase,
 	ServerOptions,
 	ServerSceneData,
 	ServerScenePayload
 } from '@vctrl/core'
 
 export type {
+	ByteProgress,
 	ExtendedGLTFDocument,
+	ItemProgress,
+	LoadPhase,
+	LoadProgress,
 	SceneAssetDataEntry,
 	SerializedSceneAssetDataMap as SceneAssetDataMap,
 	ServerSceneData,
@@ -83,7 +90,17 @@ export type ModelSource =
 	 * and the load resolves `empty`; what is on screen is then theirs to decide.
 	 * Once the files have all arrived the parse runs to the end.
 	 */
-	| { kind: 'url'; url: string | URL; init?: RequestInit }
+	| {
+			kind: 'url'
+			url: string | URL
+			init?: RequestInit
+			/**
+			 * The model file's size, when the caller knows it: a gzipped
+			 * response's `Content-Length` counts compressed bytes, and a download
+			 * endpoint may send none. Measures `bytes.total` while fetching.
+			 */
+			expectedBytes?: number
+	  }
 	/**
 	 * A scene payload the caller already has in memory (route aggregate, IDB
 	 * draft). Binary assets may be referenced rather than inlined; the loader
@@ -115,6 +132,11 @@ export type ModelSourceKind = ModelSource['kind']
  * without narrowing; only their types change.
  */
 interface ModelStateShape {
+	/**
+	 * @deprecated A percentage that mixes measured bytes with fixed steps for
+	 * parsing, so it stalls and jumps. Read `phase`, `bytes` and `items` on a
+	 * loading state instead.
+	 */
 	progress: number
 	/** The scene payload the model came from, for sources that have one. */
 	sceneData?: ServerSceneData
@@ -133,6 +155,12 @@ export type ModelState =
 			file: null
 			error: null
 			source: ModelSourceKind
+			/** Where the load is: `fetching` the bytes, or `parsing` them. */
+			phase: Exclude<LoadPhase, 'preparing'>
+			/** Bytes arrived, while fetching. Absent before the first one. */
+			bytes?: ByteProgress
+			/** Files the parse has loaded, while parsing. Absent before the first. */
+			items?: ItemProgress
 	  })
 	| (ModelStateShape & {
 			status: 'ready'

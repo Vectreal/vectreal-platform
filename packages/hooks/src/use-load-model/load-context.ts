@@ -1,5 +1,6 @@
 import type { LoadedModel } from './types'
 import type { useOptimizeModel } from '../use-optimize-model'
+import type { ByteProgress } from '@vctrl/core'
 import type { ModelLoader } from '@vctrl/core/model-loader'
 
 export type Optimizer = ReturnType<typeof useOptimizeModel> | undefined
@@ -16,6 +17,8 @@ export interface LoadContext {
 	optimizer: Optimizer
 	publish: (loaded: LoadedModel) => void
 	onProgress: (progress: number) => void
+	/** Bytes of this load's download as they arrive; moves the load to `fetching`. */
+	onBytes: (bytes: ByteProgress) => void
 	/**
 	 * Whether this load's model is the one on screen, which is the only model
 	 * the optimizer may hold. Not whether it is the newest load: a newer drop
