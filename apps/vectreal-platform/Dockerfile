@@ -15,8 +15,9 @@ FROM base AS manifests
 ARG PNPM_VERSION
 WORKDIR /app
 
-# Enable corepack and prepare pnpm
-RUN corepack enable
+# Enable corepack and prepare pnpm, before the manifests so a manifest change
+# does not download pnpm again
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -27,8 +28,6 @@ COPY packages/sdk/package.json ./packages/sdk/
 COPY packages/viewer/package.json ./packages/viewer/
 COPY shared/components/package.json ./shared/components/
 COPY shared/utils/package.json ./shared/utils/
-
-RUN corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Every dependency, dev included: the build needs Vite, React Router's CLI and Nx
 FROM manifests AS deps
@@ -70,11 +69,14 @@ ENV VITE_PUBLIC_POSTHOG_ENABLED=${BUILD_VITE_PUBLIC_POSTHOG_ENABLED}
 
 # Copy source and build application artifacts inside Docker. The client bundle
 # is built here rather than reused from CI because Vite bakes the PostHog build
-# args above into it, and CI builds with placeholders. `react-router build`, not
-# `build-ci`: the route budget and newsroom chunk checks are properties of the
-# source, which CI - Quality already ran them on before any deploy.
+# args above into it, and CI builds with placeholders. Not `build-ci`: its route
+# budget is a property of the source, which CI - Quality already checked before
+# any deploy. The newsroom chunk check stays, because it is about this build:
+# server.mjs withholds a scheduled article by the chunk names this build emits.
 COPY . .
-RUN cd apps/vectreal-platform && pnpm exec react-router build
+RUN cd apps/vectreal-platform && \
+    pnpm exec react-router build && \
+    pnpm exec tsx scripts/check-news-body-chunks.ts
 
 # Runner stage
 FROM base AS runner
@@ -115,6 +117,12 @@ COPY --from=prod-deps --chown=nodejs:nodejs /app/package.json ./package.json
 COPY --from=build --chown=nodejs:nodejs /app/build/apps/vectreal-platform ./build/apps/vectreal-platform
 COPY --chown=nodejs:nodejs apps/vectreal-platform/server.mjs ./apps/vectreal-platform/server.mjs
 COPY --chown=nodejs:nodejs apps/vectreal-platform/server-app.mjs ./apps/vectreal-platform/server-app.mjs
+
+# Every package the server bundle imports has to resolve from the production
+# dependencies above. Mounted beside the build rather than copied, so the check
+# resolves from the server's own directories and leaves nothing in the image.
+RUN --mount=type=bind,source=apps/vectreal-platform/scripts/check-server-imports.mjs,target=/app/build/apps/vectreal-platform/check-server-imports.mjs \
+    node /app/build/apps/vectreal-platform/check-server-imports.mjs
 
 USER nodejs
 
