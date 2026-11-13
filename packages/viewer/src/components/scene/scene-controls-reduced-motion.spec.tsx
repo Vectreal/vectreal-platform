@@ -25,6 +25,7 @@ vi.mock('@react-three/drei', () => ({
 }))
 
 vi.mock('@react-three/fiber', () => ({
+	useFrame: () => undefined,
 	useThree: (select: (state: unknown) => unknown) =>
 		select({ events: { connected: null } })
 }))

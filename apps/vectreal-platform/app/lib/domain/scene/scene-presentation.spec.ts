@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import {
 	normalizePresentationSettings,
+	resolveInteractionStart,
 	resolveSceneAltText,
 	shouldShowFullscreenButton,
 	shouldShowInteractionHint,
+	shouldUnloadWhenOffscreen,
 	shouldCompressTexturesForGpu,
 	shouldShowInfoPopover,
 	shouldShowLoadingThumbnail,
@@ -258,5 +260,41 @@ describe('the interaction hint', () => {
 		expect(shouldShowInteractionHint(undefined)).toBe(false)
 		expect(shouldShowInteractionHint({ showInfoPopover: true })).toBe(false)
 		expect(shouldShowInteractionHint({ showInteractionHint: true })).toBe(true)
+	})
+})
+
+describe('unloading when off-screen', () => {
+	it('is kept as a boolean and dropped as anything else', () => {
+		expect(
+			normalizePresentationSettings({ unloadWhenOffscreen: false })
+		).toEqual({ unloadWhenOffscreen: false })
+		expect(
+			normalizePresentationSettings({ unloadWhenOffscreen: 'no' })
+		).toBeUndefined()
+	})
+
+	it('is on unless the author turned it off, as every older scene did', () => {
+		expect(shouldUnloadWhenOffscreen(undefined)).toBe(true)
+		expect(shouldUnloadWhenOffscreen({ showInfoPopover: true })).toBe(true)
+		expect(shouldUnloadWhenOffscreen({ unloadWhenOffscreen: false })).toBe(
+			false
+		)
+	})
+})
+
+describe('when interaction starts', () => {
+	it('keeps a known start and locale and drops anything else', () => {
+		expect(
+			normalizePresentationSettings({ interactionStart: 'tap', locale: 'de' })
+		).toEqual({ interactionStart: 'tap', locale: 'de' })
+		expect(
+			normalizePresentationSettings({ interactionStart: 'hover', locale: 'fr' })
+		).toBeUndefined()
+	})
+
+	it('starts immediately unless the author chose a tap, so older scenes keep their viewer', () => {
+		expect(resolveInteractionStart(undefined)).toBe('immediate')
+		expect(resolveInteractionStart({ showInfoPopover: true })).toBe('immediate')
+		expect(resolveInteractionStart({ interactionStart: 'tap' })).toBe('tap')
 	})
 })

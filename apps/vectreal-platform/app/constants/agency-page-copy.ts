@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------------
 
 const HERO_SENTENCE =
-	'Aus drei Fotos mache ich ein 3D-Modell, das Kundinnen und Kunden im Shop selbst drehen.'
+	'Aus drei Fotos wird unter Ihrem Namen ein 3D-Modell, das Kundinnen und Kunden im Shop selbst drehen.'
 
 const GUIDE_HREF =
 	'/docs/guides/publish-embed#shopify-a-section-that-tours-the-scene-on-scroll'
@@ -29,10 +29,9 @@ export const AGENCY_PAGE_COPY = {
 	/** Opens the hero for a visit from one of our letters; the organization comes from the letter's code. */
 	letterGreeting: (organization: string) => `Guten Tag, ${organization}.`,
 	hero: {
-		heading: '3D-Modelle für die Shopify-Shops Ihrer Kunden, unter Ihrem Namen',
+		heading: '3D-Modelle für Ihre Shopify-Kunden',
 		lead: HERO_SENTENCE,
-		video:
-			'Ein Handy zeigt eine Produktseite im Beispielshop. Beim Scrollen fährt die 3D-Szene ihre Kameras an, zu jeder Station eine Überschrift.'
+		sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen'
 	},
 	steps: {
 		heading: "So geht's",
@@ -52,7 +51,14 @@ export const AGENCY_PAGE_COPY = {
 				text: 'Erst wenn es passt, geht es im Shop live.',
 				image: 'Das Produkt auf einer Produktseite im Beispielshop.'
 			}
-		]
+		] as readonly {
+			id: string
+			text: string
+			/** Describes the step's still, which is also a loop's poster. */
+			image: string
+			/** What the step's loop shows, for a screen reader; a step without one shows its still. */
+			video?: string
+		}[]
 	},
 	ways: {
 		heading: 'Drei Wege in den Shop',
@@ -88,14 +94,28 @@ export const AGENCY_PAGE_COPY = {
 	},
 	terms: {
 		heading: 'Konditionen',
-		/** Set large above the lines, which say the same in words. */
-		figures: ['120 €', '30 Produkte', '5 Arbeitstage'],
+		/**
+		 * Set large, each with its own line once it has one; until then the
+		 * lines below say the same in words.
+		 */
+		figures: [
+			{ value: '120 €' },
+			{ value: '30 Produkte' },
+			{ value: '5 Arbeitstage' }
+		],
 		lines: [
 			'120 € pro Produkt, 30 Produkte über sechs Monate',
 			'fertig in fünf Arbeitstagen, als GLB und USDZ',
 			'White-Label für die Modelldateien',
 			'gefällt ein Modell nicht: neu oder kostenlos'
-		]
+		],
+		/** Worked examples under the lines, such as what a delivery of five costs. */
+		examples: []
+	} as {
+		heading: string
+		figures: readonly { value: string; line?: string }[]
+		lines: readonly string[]
+		examples: readonly string[]
 	},
 	faq: {
 		heading: 'Häufige Fragen',

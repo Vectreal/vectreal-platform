@@ -25,13 +25,14 @@ describe('the viewer is named and takes keys', () => {
 	it('hands its name and its key help to the container', () => {
 		const canvas = between('<Canvas', 'overlay={')
 		expect(canvas).toContain('label={label}')
-		expect(canvas).toContain('keyHelp={describeViewerKeys(viewerKeys)}')
+		// `liveKeys` is `viewerKeys`, or none while the scene waits for a tap.
+		expect(canvas).toContain('keyHelp={describeViewerKeys(liveKeys)}')
 	})
 
 	it('listens on the container, with the same keys it describes', () => {
 		const keyboard = between('<SceneKeyboardControls', '/>')
 		expect(keyboard).toContain('container={container}')
-		expect(keyboard).toContain('keys={viewerKeys}')
+		expect(keyboard).toContain('keys={liveKeys}')
 		expect(keyboard).toContain('onHome={returnHome}')
 	})
 

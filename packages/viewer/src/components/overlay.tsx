@@ -22,6 +22,10 @@ interface OverlayProps {
 	fullscreenControl?: React.ReactNode
 	/** The first-time line on how to move the scene. */
 	interactionHint?: React.ReactNode
+	/** A scene that waits for a tap: its start button, in the middle. */
+	tapToActivate?: React.ReactNode
+	/** Its way back to scrolling once started, on top of the corner stack. */
+	tapToDeactivate?: React.ReactNode
 	loader?: React.ReactNode
 	loadingThumbnail?: ViewerLoadingThumbnail
 }
@@ -35,6 +39,8 @@ const Overlay = ({
 	sceneViewReturn,
 	fullscreenControl,
 	interactionHint,
+	tapToActivate,
+	tapToDeactivate,
 	loader,
 	loadingThumbnail
 }: OverlayProps) => {
@@ -96,15 +102,18 @@ const Overlay = ({
 			  `absolute inset-0` with no z-index of its own, so the popover won on
 			  stacking whatever the source order was.
 			*/}
-			{showChrome && (fullscreenControl || animationControls) && (
-				<div className={CHROME_PLACEMENT.cornerStack}>
-					{fullscreenControl}
-					{animationControls}
-				</div>
-			)}
+			{showChrome &&
+				(tapToDeactivate || fullscreenControl || animationControls) && (
+					<div className={CHROME_PLACEMENT.cornerStack}>
+						{tapToDeactivate}
+						{fullscreenControl}
+						{animationControls}
+					</div>
+				)}
 			{showChrome && cameraControls}
 			{showChrome && sceneViewReturn}
 			{showChrome && interactionHint}
+			{showChrome && tapToActivate}
 			{showChrome && popover}
 		</>
 	)

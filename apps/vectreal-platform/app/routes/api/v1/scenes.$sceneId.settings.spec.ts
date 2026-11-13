@@ -356,7 +356,7 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 		}
 	)
 
-	it('replaces presentation over the defaults, so an empty one resets every flag', async () => {
+	it('replaces presentation over the defaults, so an empty one resets every flag but when to start', async () => {
 		mocks.readSceneSettingsWithin.mockResolvedValue({
 			...stored,
 			settings: {
@@ -367,7 +367,10 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 
 		await act(patch({ presentation: {} }))
 
-		expect(savedSettings().presentation).toEqual(defaultPresentationOptions)
+		// A scene saved before `interactionStart` keeps starting right away.
+		const { interactionStart: _newScenesOnly, ...defaults } =
+			defaultPresentationOptions
+		expect(savedSettings().presentation).toEqual(defaults)
 	})
 
 	it('holds the scene write lock around the whole save', async () => {
