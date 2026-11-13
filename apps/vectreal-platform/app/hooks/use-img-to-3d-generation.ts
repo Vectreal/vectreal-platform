@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRevalidator, useSearchParams } from 'react-router'
 import { useAuthenticityToken } from 'remix-utils/csrf/react'
-import { toast } from 'sonner'
 
 import {
 	IMG_TO_3D_ERROR_COPY,
 	IMG_TO_3D_FIELDS,
 	IMG_TO_3D_OPEN_PARAM,
 	imgTo3dErrorKind,
-	imgTo3dFileNameFromDisposition,
-	imgTo3dVariantFileName,
 	isTerminalImgTo3dStatus,
 	type ImgTo3dErrorKind,
 	type ImgTo3dGenerationParams,
@@ -20,6 +17,9 @@ import {
 	type ImgTo3dSubmitResponse,
 	type ImgTo3dVariantState
 } from '../lib/domain/img-to-3d/img-to-3d-contract'
+
+import type { useSceneUpload } from './scene-loader/use-scene-upload'
+import type { StructuredLoadError } from '@vctrl/hooks/use-load-model'
 
 const ENDPOINT = '/api/img-to-3d/generations'
 /** Used until the runtime says how long to wait. */
@@ -62,6 +62,32 @@ class ImgTo3dRequestError extends Error {
 /** Anything thrown, as the kind to show: a network failure is `fallback`. */
 function kindOf(error: unknown, fallback: ImgTo3dErrorKind): ImgTo3dErrorKind {
 	return error instanceof ImgTo3dRequestError ? error.kind : fallback
+}
+
+/**
+ * Why a variant did not open, in the panel's words. The download goes through
+ * the loader, which reads a failed response's status and not its body, so the
+ * runtime's own kind is not known here: a server error is the runtime being
+ * unreachable, anything else the model not opening. Both say to try again.
+ */
+function variantOpenErrorKind(
+	error: StructuredLoadError | null
+): ImgTo3dErrorKind {
+	const status = error?.context?.status
+	return error?.code === 'url_unreachable' ||
+		(typeof status === 'number' && status >= 500)
+		? 'runtime_unavailable'
+		: 'open_failed'
+}
+
+/*
+  Said aloud, because the variant a link names may not be in the panel's list.
+  A model the loader refused is said in the loader's words, as a drop's is;
+  the route's own failures in generation's.
+*/
+function variantFailureMessage(error: StructuredLoadError | null) {
+	const kind = variantOpenErrorKind(error)
+	return kind === 'open_failed' ? null : IMG_TO_3D_ERROR_COPY[kind]
 }
 
 async function readEnvelope<T>(response: Response): Promise<T> {
@@ -284,8 +310,8 @@ const POLLED_AT_ONCE = 12
  * takes, so it arrives as a new scene with its optimization baseline.
  */
 export function useImgTo3dGeneration(
-	/** `uploadFiles`, which reports a failed load in its result rather than throwing. */
-	loadModel: (files: File[]) => Promise<{ readonly status: string }>,
+	/** `openModel`, which reports a failed load in its result rather than throwing. */
+	openModel: ReturnType<typeof useSceneUpload>['openModel'],
 	/**
 	 * The saved scene the route has open. A variant opens only where none is:
 	 * loading one over a saved scene would let Save write it into that scene.
@@ -304,9 +330,9 @@ export function useImgTo3dGeneration(
 	} | null>(null)
 	// Bumped by `retryOpen`, which reruns the open below for the same URL.
 	const [openAttempt, setOpenAttempt] = useState(0)
-	const loadModelRef = useRef(loadModel)
+	const openModelRef = useRef(openModel)
 	useEffect(() => {
-		loadModelRef.current = loadModel
+		openModelRef.current = openModel
 	})
 
 	const generate = useCallback(
@@ -359,36 +385,28 @@ export function useImgTo3dGeneration(
 		const { signal } = controller
 
 		void (async () => {
-			try {
-				const response = await fetch(
-					`${ENDPOINT}/${encodeURIComponent(jobId)}/artifact`,
-					{ signal }
-				)
-				if (!response.ok) {
-					await readEnvelope(response)
-				}
-				const fileName =
-					imgTo3dFileNameFromDisposition(
-						response.headers.get('Content-Disposition')
-					) ?? imgTo3dVariantFileName(null, 0)
-				const file = new File([await response.blob()], fileName, {
-					type: 'model/gltf-binary'
-				})
-				if (signal.aborted) return
-				const result = await loadModelRef.current([file])
-				// `uploadFiles` has already said why in a toast.
-				if (result.status !== 'ready') throw new Error('open_failed')
-				// A load the URL left mid-way: the cleanup already reset the outcome.
-				if (signal.aborted) return
+			/*
+			  Through the loader, download included, so the publisher shows one
+			  loading state with the download's progress, and Back (a reset) or
+			  a newer open retires it at any point, parse included. The file is
+			  named by the route's Content-Disposition.
+			*/
+			const result = await openModelRef.current(
+				{
+					kind: 'url',
+					url: `${ENDPOINT}/${encodeURIComponent(jobId)}/artifact`,
+					init: { signal }
+				},
+				{ failureMessage: variantFailureMessage }
+			)
+			// Left mid-way, or superseded: the cleanup already reset the outcome.
+			if (signal.aborted || !result.stillCurrent()) return
+			if (result.status === 'ready') {
 				setSettled({ jobId, error: null })
-			} catch (error) {
-				if (signal.aborted) return
-				const kind = kindOf(error, 'open_failed')
-				setSettled({ jobId, error: kind })
-				// A link can name a variant the panel does not list, so a failed
-				// download is said here too. A failed load already was, by `uploadFiles`.
-				if (kind !== 'open_failed') toast.error(IMG_TO_3D_ERROR_COPY[kind])
+				return
 			}
+			// `openModel` has already said why in a toast.
+			setSettled({ jobId, error: variantOpenErrorKind(result.error) })
 		})()
 
 		return () => {

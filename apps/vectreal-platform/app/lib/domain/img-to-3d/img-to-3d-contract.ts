@@ -211,7 +211,9 @@ export function imgTo3dVariantFileName(
 }
 
 /**
- * The artifact route's `Content-Disposition` (RFC 6266): an ASCII fallback,
+ * The artifact route's `Content-Disposition` (RFC 6266), which the publisher's
+ * loader reads back to name the variant (`dispositionFileName` in
+ * `@vctrl/core`): an ASCII fallback,
  * quotes and backslashes removed, for clients that read only `filename`, and
  * the exact name, percent-encoded, in `filename*`. The name comes from the
  * uploaded photo, so it is never written into the header raw.
@@ -224,22 +226,6 @@ export function imgTo3dContentDisposition(fileName: string): string {
 		(char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
 	)
 	return `attachment; filename="${fallback}"; filename*=UTF-8''${exact}`
-}
-
-/**
- * The file name `imgTo3dContentDisposition` wrote, read back: how the
- * publisher names a variant it opens by id alone. Null for anything else.
- */
-export function imgTo3dFileNameFromDisposition(
-	header: string | null
-): string | null {
-	const encoded = header ? /filename\*=UTF-8''([^;]+)/.exec(header)?.[1] : null
-	if (!encoded) return null
-	try {
-		return decodeURIComponent(encoded)
-	} catch {
-		return null
-	}
 }
 
 /** A variant's state as last heard. */

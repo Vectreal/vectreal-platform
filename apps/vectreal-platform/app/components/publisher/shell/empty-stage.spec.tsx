@@ -26,9 +26,11 @@ import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { EmptyStage } from './empty-stage'
-import { useSampleDownload } from '../../../hooks/use-sample-download'
 import { exampleSceneById } from '../../../lib/samples/example-scenes'
-import { sampleModelById } from '../../../lib/samples/sample-models'
+import {
+	sampleModelById,
+	sampleModelSource
+} from '../../../lib/samples/sample-models'
 
 import type { ExampleScene } from '../../../lib/samples/example-scenes'
 import type { ComponentProps } from 'react'
@@ -48,13 +50,17 @@ beforeEach(() => {
 	}))
 })
 
-/** The empty stage as the shell renders it, holding the sample download above it. */
+type OpenModel = ComponentProps<typeof EmptyStage>['onOpenModel']
+
+/** The empty stage as the shell renders it. */
 function ShellStage({
 	onUpload,
+	onOpenModel = vi.fn() as unknown as OpenModel,
 	onOpenExample = vi.fn().mockResolvedValue(undefined),
 	isMobile
 }: {
 	onUpload: (files: unknown) => Promise<unknown>
+	onOpenModel?: OpenModel
 	onOpenExample?: ComponentProps<typeof EmptyStage>['onOpenExample']
 	isMobile?: boolean
 }) {
@@ -62,7 +68,7 @@ function ShellStage({
 		<EmptyStage
 			isMobile={isMobile}
 			onUpload={onUpload}
-			sampleDownload={useSampleDownload()}
+			onOpenModel={onOpenModel}
 			onOpenExample={onOpenExample}
 		/>
 	)
@@ -70,11 +76,16 @@ function ShellStage({
 
 function renderStage(
 	onUpload = vi.fn().mockResolvedValue(undefined),
-	isMobile?: boolean
+	isMobile?: boolean,
+	onOpenModel = vi.fn()
 ) {
 	const view = render(
 		<MemoryRouter>
-			<ShellStage onUpload={onUpload} isMobile={isMobile} />
+			<ShellStage
+				onUpload={onUpload}
+				isMobile={isMobile}
+				onOpenModel={onOpenModel as unknown as OpenModel}
+			/>
 		</MemoryRouter>
 	)
 
@@ -84,6 +95,7 @@ function renderStage(
 
 	return {
 		onUpload,
+		onOpenModel,
 		inputs,
 		fileInput: inputs.find((input) => !input.hasAttribute('webkitdirectory')),
 		directoryInput: inputs.find((input) =>
@@ -251,24 +263,10 @@ describe('choosing a model', () => {
 	})
 })
 
-/** A response body that hands over `chunks`, each only once `gate` lets it through. */
-function bodyOf(chunks: Uint8Array[], gate = () => Promise.resolve()) {
-	return {
-		getReader: () => ({
-			read: async () => {
-				await gate()
-				return chunks.length
-					? { done: false, value: chunks.shift() }
-					: { done: true, value: undefined }
-			}
-		})
-	}
-}
-
 /*
-  A sample is a real download, 18 MB for the camera, and a click with nothing
-  after it reads on a slow connection as a click that missed. The tile says
-  how far it is until the publisher's own loading surface takes over.
+  A sample is a real download, 18 MB for the camera. It is opened through the
+  loader by its URL, so the publisher's loading surface shows the download from
+  the click, rather than the tile holding a second progress of its own.
 */
 describe('the samples it offers', () => {
 	it('offers every sample, the chair and the car beside the two pass samples', () => {
@@ -281,89 +279,16 @@ describe('the samples it offers', () => {
 	})
 })
 
-describe('a sample on its way down', () => {
-	/** Half the rocket arrives at once; the rest waits for the returned release. */
-	function holdRocketHalfway() {
-		let release = () => {}
-		const held = new Promise<void>((resolve) => (release = resolve))
-		const rocketHalf = new Uint8Array(
-			Math.ceil((sampleModelById('rocket')?.bytes ?? 0) / 2)
-		)
-		let reads = 0
-		globalThis.fetch = vi.fn().mockResolvedValue({
-			ok: true,
-			body: bodyOf([rocketHalf, new Uint8Array(4)], () =>
-				reads++ === 0 ? Promise.resolve() : held
-			)
-		})
-		return () => release()
-	}
+describe('a sample', () => {
+	it('opens through the loader by its URL, named for the loading surface', () => {
+		const { onOpenModel } = renderStage()
 
-	it('shows how far it is, takes no second click, and hands the file over', async () => {
-		const release = holdRocketHalfway()
-		const { onUpload } = renderStage()
-		const rocket = screen.getAllByRole('button', { name: /Rocket/ })[0]
-
-		fireEvent.click(rocket)
-		await waitFor(() =>
-			expect(rocket.textContent).toContain('Downloading, 50%')
-		)
-		expect(rocket.getAttribute('aria-busy')).toBe('true')
-		expect(screen.getByText('Downloading Rocket')).toBeTruthy()
-
-		fireEvent.click(rocket)
-		fireEvent.click(screen.getAllByRole('button', { name: /Camera/ })[0])
-		expect(globalThis.fetch).toHaveBeenCalledTimes(1)
-
-		release()
-		await waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1))
-		await waitFor(() => expect(rocket.getAttribute('aria-busy')).toBeNull())
-	})
-
-	it('still says so after the shell swaps the stage out and back', async () => {
-		/*
-		  What a link naming a sample does: taking the param off the URL
-		  revalidates the publisher, whose loading surface replaces this screen
-		  for a moment while the download runs on.
-		*/
-		const release = holdRocketHalfway()
-		const onUpload = vi.fn().mockResolvedValue(undefined)
-		function Shell({ shown }: { shown: boolean }) {
-			const sampleDownload = useSampleDownload()
-			return shown ? (
-				<EmptyStage
-					onUpload={onUpload}
-					sampleDownload={sampleDownload}
-					onOpenExample={vi.fn()}
-				/>
-			) : null
-		}
-		const view = render(
-			<MemoryRouter>
-				<Shell shown />
-			</MemoryRouter>
-		)
 		fireEvent.click(screen.getAllByRole('button', { name: /Rocket/ })[0])
-		await waitFor(() =>
-			expect(screen.getByText('Downloading Rocket')).toBeTruthy()
-		)
 
-		view.rerender(
-			<MemoryRouter>
-				<Shell shown={false} />
-			</MemoryRouter>
-		)
-		view.rerender(
-			<MemoryRouter>
-				<Shell shown />
-			</MemoryRouter>
-		)
-
-		const rocket = screen.getAllByRole('button', { name: /Rocket/ })[0]
-		expect(rocket.getAttribute('aria-busy')).toBe('true')
-		expect(rocket.textContent).toContain('Downloading, 50%')
-		release()
-		await waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1))
+		const rocket = sampleModelById('rocket')!
+		expect(onOpenModel).toHaveBeenCalledWith(sampleModelSource(rocket), {
+			label: rocket.label
+		})
 	})
 })
 
@@ -383,7 +308,7 @@ describe('recent scenes', () => {
 			return (
 				<EmptyStage
 					onUpload={vi.fn()}
-					sampleDownload={useSampleDownload()}
+					onOpenModel={vi.fn()}
 					onOpenExample={vi.fn()}
 					recentScenes={recentScenes}
 				/>
@@ -432,41 +357,6 @@ describe('recent scenes', () => {
 		)
 	})
 
-	it('opens none while a sample is still downloading', () => {
-		function LocationProbe() {
-			return <output data-testid="path">{useLocation().pathname}</output>
-		}
-		render(
-			<MemoryRouter initialEntries={['/publisher']}>
-				<EmptyStage
-					onUpload={vi.fn()}
-					sampleDownload={{
-						download: { id: 'rocket', percent: 50 },
-						openSample: vi.fn(),
-						openExample: vi.fn()
-					}}
-					onOpenExample={vi.fn()}
-					recentScenes={[
-						{
-							id: 'scene-1',
-							name: 'Chair',
-							projectId: 'project-1',
-							projectName: 'Shop',
-							status: 'draft',
-							updatedAt: '2026-09-25T00:00:00.000Z'
-						}
-					]}
-				/>
-				<LocationProbe />
-			</MemoryRouter>
-		)
-
-		const link = screen.getByRole('link', { name: /Chair/ })
-		expect(link.getAttribute('aria-disabled')).toBe('true')
-		fireEvent.click(link)
-		expect(screen.getByTestId('path').textContent).toBe('/publisher')
-	})
-
 	it('offers nothing when there are none, rather than an empty heading', () => {
 		renderWith([])
 
@@ -480,30 +370,28 @@ describe('a sample named by the link', () => {
 	}
 
 	function renderAt(search: string) {
-		const onUpload = vi.fn().mockResolvedValue(undefined)
+		const onOpenModel = vi.fn()
 		const onOpenExample = vi.fn().mockResolvedValue(undefined)
 		render(
 			<MemoryRouter initialEntries={[`/publisher${search}`]}>
-				<ShellStage onUpload={onUpload} onOpenExample={onOpenExample} />
+				<ShellStage
+					onUpload={vi.fn()}
+					onOpenModel={onOpenModel as unknown as OpenModel}
+					onOpenExample={onOpenExample}
+				/>
 				<LocationProbe />
 			</MemoryRouter>
 		)
-		return Object.assign(onUpload, { onOpenExample })
+		return Object.assign(onOpenModel, { onOpenExample })
 	}
 
-	beforeEach(() => {
-		// `fetchSampleModel` reads only these two; jsdom's Blob cannot go through Node's Response.
-		globalThis.fetch = vi
-			.fn()
-			.mockResolvedValue({ ok: true, body: bodyOf([new Uint8Array(4)]) })
-	})
-
 	it('opens that sample and takes the param off the URL', async () => {
-		const onUpload = renderAt('?sample=rocket')
+		const onOpenModel = renderAt('?sample=rocket')
 
-		await waitFor(() => expect(onUpload).toHaveBeenCalledTimes(1))
-		const [files] = onUpload.mock.calls[0] as [File[]]
-		expect(files[0].name).toBe('rocket.glb')
+		await waitFor(() => expect(onOpenModel).toHaveBeenCalledTimes(1))
+		expect(onOpenModel.mock.calls[0][0]).toEqual(
+			sampleModelSource(sampleModelById('rocket')!)
+		)
 		expect(screen.getByTestId('search').textContent).toBe('')
 	})
 
@@ -511,22 +399,23 @@ describe('a sample named by the link', () => {
 		const { onOpenExample } = renderAt('?example=camera-shadows')
 
 		await waitFor(() => expect(onOpenExample).toHaveBeenCalledTimes(1))
-		const [example, file] = onOpenExample.mock.calls[0] as [ExampleScene, File]
+		const [example] = onOpenExample.mock.calls[0] as [ExampleScene]
 		expect(example).toBe(exampleSceneById('camera-shadows'))
-		expect(file.name).toBe('camera.glb')
 		expect(screen.getByTestId('search').textContent).toBe('')
 	})
 
 	it('opens the example when a link names both, and only that', async () => {
-		const onUpload = renderAt('?sample=rocket&example=camera-shadows')
+		const onOpenModel = renderAt('?sample=rocket&example=camera-shadows')
 
-		await waitFor(() => expect(onUpload.onOpenExample).toHaveBeenCalledTimes(1))
-		expect(onUpload).not.toHaveBeenCalled()
+		await waitFor(() =>
+			expect(onOpenModel.onOpenExample).toHaveBeenCalledTimes(1)
+		)
+		expect(onOpenModel).not.toHaveBeenCalled()
 		expect(screen.getByTestId('search').textContent).toBe('')
 	})
 
 	it('opens nothing for an example it does not know, and says nothing either', async () => {
-		const onUpload = renderAt('?example=not-an-example')
+		const onOpenModel = renderAt('?example=not-an-example')
 
 		await waitFor(() =>
 			expect(screen.getByTestId('search').textContent).toBe('')
@@ -535,17 +424,17 @@ describe('a sample named by the link', () => {
 		// an empty stage, not an error about an example that never existed.
 		await new Promise((resolve) => setTimeout(resolve, 20))
 		expect(toast.error).not.toHaveBeenCalled()
-		expect(onUpload.onOpenExample).not.toHaveBeenCalled()
-		expect(onUpload).not.toHaveBeenCalled()
+		expect(onOpenModel.onOpenExample).not.toHaveBeenCalled()
+		expect(onOpenModel).not.toHaveBeenCalled()
 	})
 
 	it('opens nothing for a sample it does not know', async () => {
-		const onUpload = renderAt('?sample=not-a-sample')
+		const onOpenModel = renderAt('?sample=not-a-sample')
 
 		await waitFor(() =>
 			expect(screen.getByTestId('search').textContent).toBe('')
 		)
-		expect(onUpload).not.toHaveBeenCalled()
+		expect(onOpenModel).not.toHaveBeenCalled()
 	})
 })
 
@@ -563,11 +452,7 @@ describe('before the page is running', () => {
 			<MemoryRouter>
 				<Stage
 					onUpload={vi.fn()}
-					sampleDownload={{
-						download: null,
-						openSample: vi.fn(),
-						openExample: vi.fn()
-					}}
+					onOpenModel={vi.fn()}
 					onOpenExample={vi.fn()}
 				/>
 			</MemoryRouter>

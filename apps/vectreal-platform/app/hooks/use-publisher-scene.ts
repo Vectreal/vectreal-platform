@@ -57,6 +57,10 @@ export interface PublisherScene {
 	openSceneId: null | string
 	isRestoringDraft: boolean
 	uploadFiles: ReturnType<typeof useSceneUpload>['uploadFiles']
+	/** Adds a model from files or a URL; see `useSceneUpload`. */
+	openModel: ReturnType<typeof useSceneUpload>['openModel']
+	/** What `openModel` is opening, for the loading surface's title. */
+	openingSubject: ReturnType<typeof useSceneUpload>['subject']
 	retrySceneLoad: () => void
 	saveSceneSettings: ReturnType<typeof useSceneSaveFlow>['saveSceneSettings']
 	saveAvailability: ReturnType<typeof useSceneSaveFlow>['saveAvailability']
@@ -94,7 +98,7 @@ export function usePublisherScene({
 		sceneManifest,
 		isRestoringDraft
 	})
-	const { uploadFiles } = useSceneUpload()
+	const { uploadFiles, openModel, subject: openingSubject } = useSceneUpload()
 
 	const [currentSceneId, setCurrentSceneId] = useAtom(currentSceneIdAtom)
 	const [sceneMetaState, setSceneMetaState] = useAtom(sceneMetaAtom)
@@ -263,6 +267,8 @@ export function usePublisherScene({
 		openSceneId,
 		isRestoringDraft,
 		uploadFiles,
+		openModel,
+		openingSubject,
 		retrySceneLoad,
 		saveSceneSettings,
 		saveAvailability,

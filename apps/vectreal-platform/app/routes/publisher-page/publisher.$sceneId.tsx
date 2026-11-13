@@ -1,3 +1,4 @@
+import { LoadProgressIndicator } from '@shared/components/ui/load-progress-indicator'
 import { cn } from '@shared/utils'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
@@ -6,7 +7,6 @@ import { useCallback, useMemo, useState } from 'react'
 import AnimationPlaybackBar from '../../components/publisher/animation-playback-bar'
 import { PublisherEditorScene } from '../../components/publisher/publisher-editor-scene'
 import { usePublisherViewerCapture } from '../../components/publisher/publisher-viewer-capture-context'
-import { PublisherLoading } from '../../components/publisher/shell/publisher-loading'
 import { PUBLISHER_LAYER } from '../../components/publisher/shell/shell-layout'
 import { useAutomaticOpeningView } from '../../components/publisher/shell/use-opening-view'
 import { useAnimationReconciliation } from '../../components/publisher/sidebars/compose-sidebar/animation-settings'
@@ -43,6 +43,8 @@ import { toViewerLoadingThumbnail } from '../../lib/viewer/viewer-loading-thumbn
 
 import type { ViewerInteractionEvent } from '@vctrl/viewer'
 import type { ShouldRevalidateFunction } from 'react-router'
+
+const PREPARING = { phase: 'preparing' } as const
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({
 	currentUrl,
@@ -329,13 +331,23 @@ const PublisherPage = () => {
 					normalizationOptions={normalization}
 					boundsOptions={bounds}
 					loadingThumbnail={loadingThumbnail}
-					loader={<PublisherLoading />}
 					onScreenshotCaptureReady={registerSceneScreenshotCapture}
 					onCameraSnapshotCaptureReady={registerSceneCameraSnapshotCapture}
 					onCommandExecutorReady={registerCommandExecutor}
 					onRawDiagonalComputed={setRawDiagonal}
 					onInteractionEvent={handleInteractionEvent}
-					fallback={<PublisherLoading />}
+					/*
+					  While the viewer's code arrives the model is already here, so
+					  this is preparing; at once, since the stage's own indicator
+					  was on screen until a moment ago.
+					*/
+					fallback={
+						<LoadProgressIndicator
+							progress={PREPARING}
+							delayMs={0}
+							className="h-full"
+						/>
+					}
 				>
 					{file?.model && <PublisherEditorScene />}
 				</ClientVectrealViewer>
