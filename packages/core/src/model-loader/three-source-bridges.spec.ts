@@ -37,7 +37,15 @@ import {
 	Object3D,
 	Texture
 } from 'three'
-import { beforeAll, describe, expect, it } from 'vitest'
+import {
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi
+} from 'vitest'
 
 import { IMPORTABLE_FORMAT_IDS, MODEL_FORMATS } from '../model-formats'
 import { readFbxFacts } from './fbx-file-facts'
@@ -65,6 +73,7 @@ import {
 import type { ModelFormatId } from '../model-formats'
 import type { Light } from '@gltf-transform/extensions'
 import type { LoadingManager } from 'three'
+import type { MockInstance } from 'vitest'
 
 /**
  * `GLTFExporter` assembles the GLB through a `FileReader`, which Node does not
@@ -195,6 +204,23 @@ function positionCount(
 		.listMeshes()
 		.flatMap((mesh) => mesh.listPrimitives())
 		.map((primitive) => primitive.getAttribute('POSITION')?.getCount() ?? 0)
+}
+
+/**
+ * FBXLoader announces every Z-up file it turns upright, and the bridge
+ * expects that turn (`liftUpAxisCorrection` moves it onto the root). A block
+ * that loads FBX files takes that notice and fails on any other warning.
+ */
+function expectOnlyZUpNotices() {
+	let warn: MockInstance<typeof console.warn>
+	beforeEach(() => {
+		warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+	})
+	afterEach(() => {
+		for (const [message] of warn.mock.calls) {
+			expect(message).toMatch(/^THREE\.FBXLoader: .*Z-UP coordinate system/)
+		}
+	})
 }
 
 describe('an STL loads as geometry, whichever spelling it arrives in', () => {
@@ -969,6 +995,8 @@ function expectRotation(
 }
 
 describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
+	expectOnlyZUpNotices()
+
 	it.each([
 		['binary', binaryFBX],
 		['ASCII', asciiFBX]
@@ -1342,6 +1370,8 @@ describe('an FBX loads as a scene, whichever spelling it arrives in', () => {
   deliberately run without one.
 */
 describe('what the FBX states is read from the file', () => {
+	expectOnlyZUpNotices()
+
 	it.each([
 		['binary 7400', (scene: FbxScene) => binaryFBX(scene)],
 		[
@@ -2445,6 +2475,8 @@ describe('what an alpha channel asks of the surface', () => {
   branches.
 */
 describe('an FBX material keeps its shininess through the conversion', () => {
+	expectOnlyZUpNotices()
+
 	function onlyMaterial(
 		loaded: Awaited<ReturnType<ModelLoader['loadFromBuffer']>>
 	) {

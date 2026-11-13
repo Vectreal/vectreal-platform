@@ -23,7 +23,15 @@
 import { randomUUID } from 'node:crypto'
 
 import { and, count, eq, inArray, isNull } from 'drizzle-orm'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi
+} from 'vitest'
 
 import { QuotaExceededError } from '../../app/lib/domain/billing/quota-exceeded-error'
 
@@ -630,6 +638,7 @@ describe('plan limits refuse at the boundary', () => {
 	// Measured only once the asset is known to be the project's own, so a
 	// refusal never reports the size of a file the caller could not publish.
 	it('refuses a GLB from another project before measuring it', async () => {
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		await setLimit('storage_bytes_per_scene', 1000)
 		const { sizeProjectId } = await freshProject()
 		const { sizeFolderId: otherFolderId } = await freshProject()
@@ -640,5 +649,11 @@ describe('plan limits refuse at the boundary', () => {
 
 		expect(response.status).toBe(500)
 		expect(await countPublishedInProject(sizeProjectId)).toBe(0)
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			expect.objectContaining({
+				message: expect.stringContaining('do not belong to the target project')
+			}),
+			expect.anything()
+		)
 	})
 })

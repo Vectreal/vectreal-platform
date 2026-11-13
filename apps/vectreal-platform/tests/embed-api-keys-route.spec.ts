@@ -112,6 +112,13 @@ const submitCreate = () => action(routeArgs(createRequest()))
  */
 const decryptSpy = vi.spyOn(embedTokenCipher, 'decryptEmbedToken')
 
+/*
+  A configured key, as every deployed environment has. Unset, the cipher falls
+  back to its development key and says so, which is a different case from the
+  one this file is about.
+*/
+vi.stubEnv('EMBED_TOKEN_ENCRYPTION_KEY', 'embed-api-keys-route-spec-key')
+
 beforeEach(() => {
 	vi.clearAllMocks()
 	vi.mocked(getAllUserApiKeys).mockResolvedValue([])

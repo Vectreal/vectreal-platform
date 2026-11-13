@@ -20,9 +20,14 @@ describe('verifyTurnstileToken', () => {
 		process.env.NODE_ENV = 'development'
 		delete process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
 
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
 		const result = await verifyTurnstileToken('')
 
 		expect(result).toEqual({ success: true })
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			expect.stringContaining('CLOUDFLARE_TURNSTILE_SECRET_KEY is not set')
+		)
 	})
 
 	it('returns failure when token is missing and secret exists', async () => {
@@ -66,12 +71,18 @@ describe('verifyTurnstileToken', () => {
 			})
 		} as Response)
 
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
 		const result = await verifyTurnstileToken('token')
 
 		expect(result).toEqual({
 			success: false,
 			errorCodes: ['invalid-input-response']
 		})
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			'[turnstile] verification failed',
+			{ errorCodes: ['invalid-input-response'] }
+		)
 	})
 
 	it('returns failure when Cloudflare reports a hostname mismatch', async () => {

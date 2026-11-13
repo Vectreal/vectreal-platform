@@ -4,9 +4,11 @@
  * and pass it was planned from, and how it decides which bakes run. The
  * planning itself runs in the publish worker, mocked here.
  */
+import { format } from 'node:util'
+
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePublishExport } from './use-bake-preview'
 import {
@@ -19,6 +21,7 @@ import { lightingAtom } from '../../../../../lib/stores/scene-settings-store'
 
 import type { StudioFinishPlan } from '../../../../../workers/publish-export.worker.types'
 import type { ReactNode } from 'react'
+import type { MockInstance } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
 	document: {} as object | null,
@@ -96,12 +99,20 @@ function setup() {
 	return { store, hook, setPassRevision }
 }
 
+let consoleWarn: MockInstance<typeof console.warn>
 beforeEach(() => {
 	vi.clearAllMocks()
 	mocks.document = {}
 	mocks.exportDocumentGLB.mockResolvedValue({ data: new Uint8Array(4) })
 	mocks.planStudioFinishInWorker.mockResolvedValue(depthOnly)
-	vi.spyOn(console, 'warn').mockImplementation(() => {})
+	consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+	/* A plan that fails is logged. That, and nothing else. */
+	for (const args of consoleWarn.mock.calls) {
+		expect(format(...args)).toMatch(/^Planning the studio finish failed:/)
+	}
 })
 
 describe('planning the studio finish', () => {

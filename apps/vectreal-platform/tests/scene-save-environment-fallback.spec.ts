@@ -146,9 +146,14 @@ describe('a save after the environment map fell back', () => {
 	})
 
 	it('says nothing when no new preview was stored', async () => {
+		const logged = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		await save({ fallback: true, thumbnailUpload: 'fails' })
 
 		expect(warning).not.toHaveBeenCalled()
 		expect(error).toHaveBeenCalled()
+		expect(logged).toHaveBeenCalledExactlyOnceWith(
+			'[scene-settings] thumbnail upload failed',
+			expect.objectContaining({ sceneId: 's1' })
+		)
 	})
 })

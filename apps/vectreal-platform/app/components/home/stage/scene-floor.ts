@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 
+import { warmPrograms } from './warm-programs'
+
 /** The swell's drift, in noise units a second: the drafting terrain's idle rate. */
 const DRIFT = 0.03
 /** The floor only ever moves slowly, so 20 frames a second is enough for it. */
@@ -165,6 +167,8 @@ void main() {
 
 	return {
 		render,
+		/** Compiles the floor's program off the main thread, before its first frame. */
+		warm: () => warmPrograms(renderer, scene, view),
 		/** Matches the stage canvas, pixel for pixel, so the shared screen-space uniforms mean the same here. */
 		resize(width: number, height: number, pixelRatio: number) {
 			renderer.setPixelRatio(pixelRatio)

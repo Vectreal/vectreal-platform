@@ -3,6 +3,8 @@
  * A failure is reported as one: never as the null that means "no model", and
  * never by leaving the optimizer loading with no error to show for it.
  */
+import { format } from 'node:util'
+
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -35,7 +37,6 @@ describe('useOptimizeModel getModel', () => {
 		optimizer.hasModel = true
 		const failure = new Error('writeBinary failed')
 		optimizer.export.mockRejectedValueOnce(failure)
-		vi.spyOn(console, 'error').mockImplementation(() => {})
 		const { result } = renderHook(() => useOptimizeModel())
 
 		await expect(result.current.getModel()).rejects.toBe(failure)
@@ -52,7 +53,7 @@ describe('useOptimizeModel getModel', () => {
 
 describe('useOptimizeModel loadFromServerSceneData', () => {
 	it('ends the load with an error when the scene has no glTF document', async () => {
-		vi.spyOn(console, 'error').mockImplementation(() => {})
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const { result } = renderHook(() => useOptimizeModel())
 		const published = { gltfJson: null } as unknown as ServerSceneData
 
@@ -64,5 +65,12 @@ describe('useOptimizeModel loadFromServerSceneData', () => {
 
 		expect(result.current.loading).toBe(false)
 		expect(result.current.error?.message).toMatch('no glTF document')
+		expect(logged).toHaveBeenCalled()
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(
+				/^Error loading server scene into optimizer:/
+			)
+		}
 	})
 })

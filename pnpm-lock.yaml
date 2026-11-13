@@ -574,6 +574,9 @@ importers:
       vitest:
         specifier: 4.1.11
         version: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@30.1.3(@noble/hashes@1.8.0)(canvas@3.2.3))(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.15)(yaml@2.9.0))
+      vitest-fail-on-console:
+        specifier: 0.10.1
+        version: 0.10.1(@vitest/utils@4.1.11)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.15)(yaml@2.9.0))(vitest@4.1.11)
 
   apps/vectreal-platform:
     dependencies:
@@ -6601,6 +6604,10 @@ packages:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
 
+  chalk@5.6.2:
+    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
   character-entities-html4@2.1.0:
     resolution: {integrity: sha512-1v7fgQRj6hnSwFpq1Eu0ynr/CDEw0rXo2B61qXrLNdHZmPKgb7fqS1a2JwF0rISo9q77jDI8VMEHoApn8qDoZA==}
 
@@ -11233,6 +11240,13 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  vitest-fail-on-console@0.10.1:
+    resolution: {integrity: sha512-Xjy2SpgND547qSy0s0zYVnh1G/WyGtdjAbi4PFV8mkYRmTq+6NzRUJYdc08BHrw7HJLpO2kMxHFB8PWn7FOVsg==}
+    peerDependencies:
+      '@vitest/utils': '>=0.26.2'
+      vite: '>=4.5.2'
+      vitest: '>=0.26.2'
 
   vitest@4.1.11:
     resolution: {integrity: sha512-fhACrNXUidIbGSBr5FlbuBkO7VWC1ZyLl0DO4CU2DrQoAPxX84Ysxs+HeGQpii5lZWV1Q4gBZTTu49mF+A6Edw==}
@@ -17255,6 +17269,8 @@ snapshots:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
 
+  chalk@5.6.2: {}
+
   character-entities-html4@2.1.0: {}
 
   character-entities-legacy@3.0.0: {}
@@ -22821,6 +22837,13 @@ snapshots:
       terser: 5.46.1
       tsx: 4.23.15
       yaml: 2.9.0
+
+  vitest-fail-on-console@0.10.1(@vitest/utils@4.1.11)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.15)(yaml@2.9.0))(vitest@4.1.11):
+    dependencies:
+      '@vitest/utils': 4.1.11
+      chalk: 5.6.2
+      vite: 8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.15)(yaml@2.9.0)
+      vitest: 4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@30.1.3(@noble/hashes@1.8.0)(canvas@3.2.3))(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.15)(yaml@2.9.0))
 
   vitest@4.1.11(@opentelemetry/api@1.9.1)(@types/node@22.20.5)(@vitest/coverage-v8@4.1.11)(@vitest/ui@4.1.11)(jsdom@30.1.3(@noble/hashes@1.8.0)(canvas@3.2.3))(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.46.1)(tsx@4.23.15)(yaml@2.9.0)):
     dependencies:

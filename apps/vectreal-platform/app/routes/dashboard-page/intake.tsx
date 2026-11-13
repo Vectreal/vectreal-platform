@@ -22,11 +22,16 @@ import {
 	DetailPanelSection,
 	EmptyState
 } from '../../components/layout-components'
+import {
+	IntakeAttachments,
+	type IntakeAttachmentActionResult
+} from '../../components/model-intake/intake-attachments'
 import { ConfirmDestructiveDialog } from '../../components/shared/confirm-destructive-dialog'
 import { MODEL_INTAKE_COPY } from '../../constants/product-copy'
 import { requireIntakeAdmin } from '../../lib/domain/model-intake/model-intake-admin.server'
 import { deleteIntakeById } from '../../lib/domain/model-intake/model-intake-deletion.server'
 import {
+	findIntakeForDeletion,
 	finishIntakeCleanup,
 	listIntakeLetters,
 	listIntakeSubmissions,
@@ -37,13 +42,18 @@ import {
 	startIntakeCleanup
 } from '../../lib/domain/model-intake/model-intake-repository.server'
 import {
+	intakeAttachmentName,
 	intakeRequestsByLetter,
+	isIntakeAttachmentSizeAcceptable,
 	isIntakeProductType,
 	MODEL_INTAKE_OUTCOMES,
 	type ModelIntakeOutcome,
 	type ModelIntakeStatus
 } from '../../lib/domain/model-intake/model-intake-shared'
 import {
+	createIntakeAttachmentUpload,
+	deleteIntakeAttachment,
+	listIntakeAttachments,
 	MODEL_INTAKE_PAGE_LINK_SECONDS,
 	signIntakePhotoUrls
 } from '../../lib/domain/model-intake/model-intake-storage.server'
@@ -86,7 +96,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 			photoUrls: await signIntakePhotoUrls(
 				row.photoPaths,
 				MODEL_INTAKE_PAGE_LINK_SECONDS
-			).catch(() => [])
+			).catch(() => []),
+			attachments: await listIntakeAttachments(
+				row.id,
+				MODEL_INTAKE_PAGE_LINK_SECONDS
+			).catch(() => null)
 		}))
 	)
 	const perBatch = new Map<string, number>()
@@ -109,7 +123,75 @@ export async function loader({ request }: Route.LoaderArgs) {
 	})
 }
 
-type IntakeActionResult = { ok: true } | { error: string }
+type IntakeActionResult = IntakeAttachmentActionResult
+
+/**
+ * Mints the URL the browser uploads one attachment to, after the same checks
+ * the browser made: the request exists, the type is allowed, the declared
+ * size is under the cap. Storage then holds the upload to the bucket.
+ */
+async function startAttachment(id: string, formData: FormData) {
+	const name = intakeAttachmentName(String(formData.get('fileName') ?? ''))
+	if (!name) {
+		return data<IntakeActionResult>(
+			{ error: 'This file type cannot be attached.' },
+			{ status: 400 }
+		)
+	}
+	if (!isIntakeAttachmentSizeAcceptable(Number(formData.get('fileSize')))) {
+		return data<IntakeActionResult>(
+			{ error: 'This file is too large to attach.' },
+			{ status: 400 }
+		)
+	}
+	// The stored id names the folder: storage keys are case-sensitive where a uuid match is not.
+	const row = await findIntakeForDeletion(id)
+	if (!row) {
+		return data<IntakeActionResult>(
+			{ error: 'Request not found.' },
+			{ status: 404 }
+		)
+	}
+	try {
+		const uploadUrl = await createIntakeAttachmentUpload(row.id, name)
+		return uploadUrl === 'exists'
+			? data<IntakeActionResult>(
+					{ error: `${name} is already attached.` },
+					{ status: 409 }
+				)
+			: data<IntakeActionResult>({ ok: true, uploadUrl })
+	} catch {
+		return data<IntakeActionResult>(
+			{ error: 'An upload could not be prepared. Try again.' },
+			{ status: 500 }
+		)
+	}
+}
+
+/** Only a stored name is accepted, so the path cannot leave the request's folder. */
+async function removeAttachment(id: string, formData: FormData) {
+	const raw = String(formData.get('name') ?? '')
+	if (raw === '' || intakeAttachmentName(raw) !== raw) {
+		return data<IntakeActionResult>({ error: 'No such file.' }, { status: 400 })
+	}
+	// The stored id names the folder: storage keys are case-sensitive where a uuid match is not.
+	const row = await findIntakeForDeletion(id)
+	if (!row) {
+		return data<IntakeActionResult>(
+			{ error: 'Request not found.' },
+			{ status: 404 }
+		)
+	}
+	try {
+		await deleteIntakeAttachment(row.id, raw)
+	} catch {
+		return data<IntakeActionResult>(
+			{ error: 'The file could not be deleted. Try again.' },
+			{ status: 500 }
+		)
+	}
+	return data<IntakeActionResult>({ ok: true })
+}
 
 export async function action({ request }: Route.ActionArgs) {
 	// The gate first, so anyone it refuses gets the same 404 as the loader
@@ -129,6 +211,8 @@ export async function action({ request }: Route.ActionArgs) {
 
 	const now = new Date()
 	const intent = formData.get('intent')
+	if (intent === 'attach-start') return startAttachment(id, formData)
+	if (intent === 'attach-delete') return removeAttachment(id, formData)
 	let found: boolean | 'not_started'
 	switch (intent) {
 		case 'start-cleanup':
@@ -311,7 +395,8 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 	const deletePlan: DashboardConfirmationPlan = {
 		tier: 'acknowledge',
 		title: `Delete ${row.referenceCode}?`,
-		description: 'The request and its photos are removed now.',
+		description:
+			'The request, its photos and its attached files are removed now.',
 		consequences: ['This cannot be undone'],
 		confirmLabel: 'Delete request',
 		token: null
@@ -372,6 +457,7 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 					</a>
 				))}
 			</div>
+			<IntakeAttachments id={row.id} attachments={row.attachments} />
 
 			<div className="flex flex-wrap items-center gap-2">
 				<IntakeActionButton

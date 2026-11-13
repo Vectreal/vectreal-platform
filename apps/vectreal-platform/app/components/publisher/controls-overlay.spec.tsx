@@ -9,7 +9,7 @@
  * Every child is a probe, so this reads the shell's own decisions and nothing
  * the children decide for themselves.
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { getDefaultStore } from 'jotai'
 import { createRoutesStub } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -297,10 +297,12 @@ describe('the publisher shell', () => {
 		const card = await screen.findByTestId('publish-card')
 		expect(card.dataset.loading).toBe('true')
 		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(false)
-		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
-			...prev,
-			isProjectingSceneBytes: false
-		}))
+		act(() => {
+			getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				isProjectingSceneBytes: false
+			}))
+		})
 	})
 
 	it('tells the card when its size leaves out GPU textures', async () => {
@@ -346,10 +348,12 @@ describe('the publisher shell', () => {
 		expect(card.dataset.bytes).toBe('1100')
 		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(false)
 		sizeLabel.environmentBytes = null
-		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
-			...prev,
-			optimizedSceneBytes: null
-		}))
+		act(() => {
+			getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				optimizedSceneBytes: null
+			}))
+		})
 	})
 
 	it('judges the size a publish stored', async () => {
@@ -364,9 +368,11 @@ describe('the publisher shell', () => {
 
 		await screen.findByTestId('publish-card')
 		expect(drawerFlow.args.at(-1)?.isOverSizeLimit).toBe(true)
-		getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
-			...prev,
-			latestSceneStats: null
-		}))
+		act(() => {
+			getDefaultStore().set(optimizationRuntimeAtom, (prev) => ({
+				...prev,
+				latestSceneStats: null
+			}))
+		})
 	})
 })
