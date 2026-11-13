@@ -3,8 +3,10 @@
 
   Install: Online Store > Themes > Edit code > Sections > Add a new section,
   paste this file, then add "Vectreal 3D-Szene" to the product template in the
-  theme editor. The shop's domains must be on the scene's project in Vectreal
-  (Dashboard > Projects > Edit > Allowed embed domains).
+  theme editor. The same file works in Dawn and in Horizon and the themes
+  built on it, such as Savor: in either, the frame settles to the width of
+  the product details above it. The shop's domains must be on the scene's
+  project in Vectreal (Dashboard > Projects > Edit > Allowed embed domains).
 {%- endcomment -%}
 
 {%- liquid
@@ -107,13 +109,23 @@
     --vectreal-tour-ease: cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  /*
+    The product page's content column, which the frame settles to. Dawn's
+    .page-width gives this span that width. Horizon has no .page-width: its
+    body carries the column as --page-content-width and --page-margin, which
+    Dawn does not set, so there the width below stays the full 100%.
+  */
   .vectreal-tour__column {
     display: block;
     height: 0;
+    width: min(var(--page-content-width, 100%), 100% - var(--page-margin, 0px) * 2);
+    margin-inline: auto;
   }
 
   .vectreal-tour {
     padding-top: 36px;
+    /* Horizon lays a .section out as a grid with the page width in the middle column. */
+    grid-column: 1 / -1;
   }
 
   .vectreal-tour__stage {

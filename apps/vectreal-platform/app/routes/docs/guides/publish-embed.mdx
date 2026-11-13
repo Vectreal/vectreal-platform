@@ -389,6 +389,8 @@ While the shopper scrolls through it, the scene stays pinned and the section cal
 2. Add the shop's hosts to the scene's project under [Allowed embed domains](#allowed-embed-domains): its `.myshopify.com` address, which the theme editor previews on, and its own domain.
 3. In the theme editor, open the product template, add **Vectreal 3D-Szene** below the product information, and fill in its settings.
 
+The same file works in Dawn and in Horizon and the themes built on it, such as Savor, with the same three steps. In either theme the frame starts the width of the screen and settles to the width of the page's content column as the tour begins: Dawn's `.page-width`, or the content width and page margin Horizon sets for the whole page.
+
 | Setting | Takes |
 | --- | --- |
 | Embed-URL der Szene | The scene's embed URL with its `?token=`, as the Embed panel's **Test embed URL** opens it. Left empty, the section reads the product metafield `vectreal.scene_url`, so one product template serves every product |
@@ -410,6 +412,22 @@ The section loads the [script-tag SDK](/docs/guides/embed-sdk) from unpkg at one
 
 The slide shows in Dawn's **Stacked** and **2 columns** desktop layouts and in the mobile slider. The **Thumbnails** layouts show only slides that have a thumbnail, so there it appears on phones only.
 
+**In Savor, or another theme built on Horizon,** step 2 is two lines in `snippets/product-media-gallery-content.liquid`, where Horizon builds both of its gallery presentations:
+
+- Inside `{% capture slides %}`, right after the `{% endfor %}` that closes the slides, for the carousel (and the phone view of the grid):
+
+  ```liquid
+  {% render 'vectreal-gallery-slide', product: selected_product, layout: 'horizon-carousel', index: sorted_media.size, class: product_media_container_class, block_settings: block_settings %}
+  ```
+
+- Inside `<ul class="media-gallery__grid …">`, right after the `{% endfor %}` that closes its items, for the desktop grid:
+
+  ```liquid
+  {% render 'vectreal-gallery-slide', product: selected_product, layout: 'horizon-grid', class: product_media_container_class, block_settings: block_settings %}
+  ```
+
+In Horizon the slide comes last, after the photos and Shopify's own 3D slot, so none of their dots, thumbnails or zoom positions move. The slide adds its own dot or thumbnail to the gallery's controls, or one more to its counter, with the scene's poster as the thumbnail. Horizon shows no gallery controls for a product with a single photo, so there the slide is reached by swiping on a phone.
+
 The slide shows a poster (the file metafield `vectreal.poster`, or else the product's featured image) with Dawn's 3D button, and starts loading the scene in the background once the page is idle, unless the shopper's browser asks to save data. Once the scene has loaded it replaces the poster. Publish the scene with **Start moving** set to **After a tap** (see [Start moving](#start-moving)): swipes then move the gallery past it until the shopper taps **Zum Drehen tippen**, and **Fertig** hands the swipes back. A scene that starts right away takes every swipe on its slide.
 
 {/* claims
@@ -426,6 +444,10 @@ present examples/shopify/vectreal-scene-tour.liquid url.searchParams.set('hotspo
 present examples/shopify/vectreal-scene-tour.liquid product.metafields.vectreal.scene_url.value
 present examples/shopify/vectreal-gallery-slide.liquid product.metafields.vectreal.scene_url.value
 present examples/shopify/vectreal-gallery-slide.liquid navigator.connection?.saveData
+present examples/shopify/vectreal-gallery-slide.liquid {%- when 'horizon-carousel' -%}
+present examples/shopify/vectreal-gallery-slide.liquid {%- when 'horizon-grid' -%}
+present examples/shopify/vectreal-gallery-slide.liquid const thumbnail = copyLast(controls, '.slideshow-controls__thumbnail');
+present examples/shopify/vectreal-scene-tour.liquid width: min(var(--page-content-width, 100%), 100% - var(--page-margin, 0px) * 2);
 */}
 
 #### A free-model link that keeps the letter code
@@ -433,7 +455,7 @@ present examples/shopify/vectreal-gallery-slide.liquid navigator.connection?.sav
 [`vectreal-free-model-link.liquid`](https://raw.githubusercontent.com/Vectreal/vectreal-platform/main/examples/shopify/vectreal-free-model-link.liquid) is a snippet that renders a link to Vectreal's [free-model form](/free-model), in German by default. A printed letter's QR code can open a product page with `?c=` and the letter's code; the link takes that code along to the form, so a reply stays tied to its letter. Only a well-formed code is passed on, eight characters from the letter-code alphabet in any case, written in capitals. Without one the link stays plain.
 
 1. Add a snippet named `vectreal-free-model-link` and paste the file's contents into it.
-2. Render it where the link should show, for example below the buy buttons in Dawn's `sections/main-product.liquid`: `{% render 'vectreal-free-model-link' %}`.
+2. Render it where the link should show, for example below the buy buttons in Dawn's `sections/main-product.liquid`: `{% render 'vectreal-free-model-link' %}`. In Savor, or another theme built on Horizon, no theme code is needed: in the theme editor, open the product template's **Product information** section, add a **Custom Liquid** block under **Buy buttons**, and put `{% render 'vectreal-free-model-link' %}` in it.
 3. Optionally pass `label` for the link text (`Kostenloses Modell anfragen` by default) and `lang: 'en'` for the English form.
 
 {/* claims

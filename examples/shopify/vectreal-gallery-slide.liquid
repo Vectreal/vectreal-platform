@@ -3,11 +3,30 @@
   photos and Shopify's own 3D slot.
 
   Install: Online Store > Themes > Edit code > Snippets > Add a new snippet
-  named vectreal-gallery-slide, paste this file, then in Dawn's
-  snippets/product-media-gallery.liquid add this line inside the
+  named vectreal-gallery-slide and paste this file. Then add the lines for
+  your theme.
+
+  Dawn: in snippets/product-media-gallery.liquid, inside the
   <ul id="Slider-Gallery-…"> list, after the first slide:
 
     {% render 'vectreal-gallery-slide', product: product %}
+
+  Horizon and the themes built on it, such as Savor: in
+  snippets/product-media-gallery-content.liquid, two lines. The first goes
+  inside {% capture slides %}, right after the {% endfor %} that closes the
+  slides:
+
+    {% render 'vectreal-gallery-slide', product: selected_product, layout: 'horizon-carousel', index: sorted_media.size, class: product_media_container_class, block_settings: block_settings %}
+
+  The second goes inside <ul class="media-gallery__grid …">, right after the
+  {% endfor %} that closes its <li> items:
+
+    {% render 'vectreal-gallery-slide', product: selected_product, layout: 'horizon-grid', class: product_media_container_class, block_settings: block_settings %}
+
+  In Horizon the slide comes last, so no photo's dot, thumbnail or zoom
+  changes place. It adds a dot, a thumbnail or a higher count of its own to
+  the gallery's controls. A product with a single photo shows no controls in
+  Horizon, so there the slide is reached by swiping, on a phone.
 
   The scene comes from the product metafield vectreal.scene_url (single line
   text: the embed URL with its ?token=), and its poster from vectreal.poster
@@ -23,38 +42,90 @@
 {%- liquid
   assign scene_url = product.metafields.vectreal.scene_url.value | strip
   assign poster = product.metafields.vectreal.poster.value | default: product.featured_media.preview_image
+  assign horizon = false
+  if layout == 'horizon-carousel' or layout == 'horizon-grid'
+    assign horizon = true
+    assign ratio = 1.0
+    if block_settings.aspect_ratio == 'adapt' and poster.aspect_ratio
+      assign ratio = poster.aspect_ratio
+    endif
+  endif
 -%}
 
 {%- if scene_url != blank -%}
-  <li
-    id="Slide-{{ section.id }}-vectreal-{{ product.id }}"
-    class="product__media-item grid__item slider__slide"
-    data-media-id="{{ section.id }}-vectreal-{{ product.id }}"
-  >
-    <div class="product-media-container media-type-model media-fit-cover global-media-settings gradient" style="--ratio: 1; --preview-ratio: 1;">
-      <vectreal-media class="media media--transparent" data-scene-url="{{ scene_url | escape }}">
-        <iframe
-          class="vectreal-slide__scene"
-          title="3D-Ansicht: {{ product.title | escape }}"
-          allow="autoplay; xr-spatial-tracking"
-          allowfullscreen
-          tabindex="-1"
-        ></iframe>
-        <button type="button" class="deferred-media__poster vectreal-slide__poster">
-          <span class="deferred-media__poster-button motion-reduce">
-            <span class="visually-hidden">3D-Ansicht öffnen</span>
-            <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round">
-              <path d="M10 2.5 16.5 6v8L10 17.5 3.5 14V6L10 2.5Z"/>
-              <path d="M3.5 6 10 9.5 16.5 6M10 9.5v8"/>
-            </svg>
-          </span>
-          {%- if poster -%}
-            {{ poster | image_url: width: 1600 | image_tag: loading: 'lazy', sizes: '(min-width: 750px) 55vw, 100vw', widths: '600, 1000, 1600', alt: '' }}
-          {%- endif -%}
-        </button>
-      </vectreal-media>
-    </div>
-  </li>
+  {%- capture scene -%}
+    <vectreal-media
+      class="{% if horizon %}vectreal-slide--horizon{% else %}media media--transparent{% endif %}"
+      data-scene-url="{{ scene_url | escape }}"
+    >
+      <iframe
+        class="vectreal-slide__scene"
+        title="3D-Ansicht: {{ product.title | escape }}"
+        allow="autoplay; xr-spatial-tracking"
+        allowfullscreen
+        tabindex="-1"
+      ></iframe>
+      <button type="button" class="{% if horizon %}button-unstyled{% else %}deferred-media__poster{% endif %} vectreal-slide__poster">
+        <span class="{% if horizon %}vectreal-slide__icon{% else %}deferred-media__poster-button motion-reduce{% endif %}">
+          <span class="visually-hidden">3D-Ansicht öffnen</span>
+          <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round">
+            <path d="M10 2.5 16.5 6v8L10 17.5 3.5 14V6L10 2.5Z"/>
+            <path d="M3.5 6 10 9.5 16.5 6M10 9.5v8"/>
+          </svg>
+        </span>
+        {%- if poster -%}
+          {{ poster | image_url: width: 1600 | image_tag: loading: 'lazy', sizes: '(min-width: 750px) 55vw, 100vw', widths: '600, 1000, 1600', alt: '' }}
+        {%- endif -%}
+      </button>
+    </vectreal-media>
+  {%- endcapture -%}
+
+  {%- if horizon -%}
+    {%- capture media -%}
+      {%- if block_settings.aspect_ratio != 'adapt' and block_settings.constrain_to_viewport -%}
+        <div class="product-media-constraint-wrapper">
+          <div class="product-media vectreal-slide__media" style="--ratio: {{ ratio }};">{{ scene }}</div>
+        </div>
+      {%- else -%}
+        <div class="product-media vectreal-slide__media" style="--ratio: {{ ratio }};">{{ scene }}</div>
+      {%- endif -%}
+    {%- endcapture -%}
+    {%- liquid
+      assign slide_class = class | append: ' product-media-container--vectreal'
+      assign slide_style = ''
+      if block_settings.aspect_ratio == 'adapt'
+        assign slide_style = '--media-preview-ratio: ' | append: ratio | append: ';'
+      endif
+    -%}
+  {%- endif -%}
+
+  {%- case layout -%}
+    {%- when 'horizon-carousel' -%}
+      {%- render 'slideshow-slide',
+        index: index,
+        children: media,
+        class: slide_class,
+        style: slide_style,
+        media_fit: block_settings.media_fit
+      -%}
+    {%- when 'horizon-grid' -%}
+      <li
+        class="{{ slide_class }}{% unless block_settings.aspect_ratio == 'adapt' %} product-media-container--force-aspect{% endunless %}"
+        style="{{ slide_style }} --media-radius: {{ block_settings.media_radius }}px;"
+      >
+        {{ media }}
+      </li>
+    {%- else -%}
+      <li
+        id="Slide-{{ section.id }}-vectreal-{{ product.id }}"
+        class="product__media-item grid__item slider__slide"
+        data-media-id="{{ section.id }}-vectreal-{{ product.id }}"
+      >
+        <div class="product-media-container media-type-model media-fit-cover global-media-settings gradient" style="--ratio: 1; --preview-ratio: 1;">
+          {{ scene }}
+        </div>
+      </li>
+  {%- endcase -%}
 {%- endif -%}
 
 {% stylesheet %}
@@ -78,6 +149,42 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* Horizon: the slide sizes .product-media, and the scene and poster fill it. */
+  .vectreal-slide__media {
+    position: relative;
+    width: 100%;
+  }
+
+  vectreal-media.vectreal-slide--horizon,
+  .vectreal-slide--horizon > .vectreal-slide__scene,
+  .vectreal-slide--horizon > .vectreal-slide__poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .vectreal-slide--horizon > .vectreal-slide__poster {
+    display: block;
+    cursor: pointer;
+  }
+
+  .vectreal-slide__icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.92);
+    color: #121212;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+    transform: translate(-50%, -50%);
   }
 
   vectreal-media[data-open] .vectreal-slide__poster {
@@ -105,6 +212,8 @@
         this.poster = this.querySelector('.vectreal-slide__poster');
         this.onOpen = () => this.open();
         this.poster.addEventListener('click', this.onOpen);
+        const slide = this.closest('slideshow-slide');
+        if (slide) this.addControls(slide);
 
         if (navigator.connection?.saveData) return;
         this.preload = () =>
@@ -133,6 +242,65 @@
         this.poster.inert = true;
         this.scene.removeAttribute('tabindex');
         if (hadFocus) this.scene.focus({ preventScroll: true });
+      }
+
+      /**
+       * Horizon counts its dots, thumbnails and counter from the product's
+       * media, which the slide is not one of. It comes last, so it gets one
+       * of each after the photos' own, and their indexes stay as they are.
+       */
+      addControls(slide) {
+        const slideshow = slide.closest('slideshow-component');
+        const scroller = slide.parentElement;
+        const index = [...scroller.children].filter((child) => child.localName === 'slideshow-slide').indexOf(slide);
+        if (!slideshow || index < 1 || slideshow.querySelector('[data-vectreal-control]')) return;
+
+        const copyLast = (controls, selector) => {
+          const all = controls.querySelectorAll(selector);
+          if (all.length !== index) return;
+          const last = all[index - 1];
+          const copy = last.cloneNode(true);
+          const button = copy.matches('button') ? copy : copy.querySelector('button');
+          button.setAttribute('on:click', `/select/${index}`);
+          button.setAttribute('aria-label', '3D-Ansicht');
+          button.setAttribute('aria-selected', 'false');
+          button.setAttribute('data-vectreal-control', '');
+          last.after(copy);
+          return button;
+        };
+
+        for (const controls of slideshow.querySelectorAll('slideshow-controls')) {
+          const dot = copyLast(controls, '.slideshow-controls__dots > li');
+          if (dot) {
+            dot.style.animationTimeline = `--slide-${index}`;
+            dot.textContent = `${index + 1}`;
+          }
+
+          const thumbnail = copyLast(controls, '.slideshow-controls__thumbnail');
+          if (thumbnail) {
+            const image = this.poster.querySelector('img')?.cloneNode();
+            image?.setAttribute('sizes', '144px');
+            const badge = document.createElement('span');
+            badge.className = 'slideshow-controls__thumbnail-badge';
+            const icon = this.poster.querySelector('svg').cloneNode(true);
+            icon.classList.add('icon');
+            // Horizon fills badge icons; this one is an outline.
+            icon.style.fill = 'none';
+            badge.append(icon);
+            thumbnail.replaceChildren(...[image, badge].filter(Boolean));
+          }
+
+          const count = controls.querySelector('.slideshow-controls__counter')?.lastChild;
+          if (count?.nodeType === Node.TEXT_NODE && Number(count.textContent) === index) {
+            count.textContent = `${index + 1}`;
+            count.parentElement.setAttribute('data-vectreal-control', '');
+          }
+        }
+
+        const timelines = slideshow.style.getPropertyValue('--slideshow-timeline').trim();
+        slideshow.style.setProperty('--slideshow-timeline', [timelines, `--slide-${index}`].filter(Boolean).join(', '));
+        // Horizon reads its refs again on a mutation once it is idle; this is sooner.
+        slideshow.updatedCallback?.();
       }
 
       open() {
