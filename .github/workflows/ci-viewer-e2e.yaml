@@ -53,6 +53,9 @@ jobs:
       # makes them one path the cache step below can save and restore.
       NX_CACHE_DIRECTORY: .nx/cache
       NX_WORKSPACE_DATA_DIRECTORY: .nx/workspace-data
+      # Each run restores the previous entry and adds to it; Nx evicts the
+      # oldest artifacts past this size, so the chain cannot grow unbounded.
+      NX_MAX_CACHE_SIZE: 500MB
     steps:
       - uses: actions/checkout@v7
         with:
