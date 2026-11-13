@@ -71,7 +71,7 @@ export const InteractionStartSetting = ({
 			</SettingGroup>
 			<SettingGroup
 				label="Viewer language"
-				description={`The viewer's own words, such as "Tap to rotate" or "Zum Drehen tippen" and the hint on how to move. Browser picks by each visitor's language.`}
+				description={`The viewer's own words: the tap button ("Tap to rotate" or "Zum Drehen tippen"), the first-time hint and How to move. Browser picks by each visitor's language.`}
 			>
 				<ToggleGroup
 					type="single"

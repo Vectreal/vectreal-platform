@@ -1235,7 +1235,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 						onContainerChange={setContainer}
 						label={label}
 						// Nothing to announce until the tap: the start button is what to reach.
-						keyHelp={describeViewerKeys(liveKeys)}
+						keyHelp={describeViewerKeys(liveKeys, language)}
 						onContextLossEvent={handleContextLossEvent}
 						renderFailure={renderFailure}
 						overlay={

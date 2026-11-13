@@ -175,15 +175,21 @@ describe('resolveViewerKeys', () => {
 
 describe('describeViewerKeys', () => {
 	it('names every key on offer', () => {
-		expect(describeViewerKeys(ALL)).toBe(
+		expect(describeViewerKeys(ALL, 'en')).toBe(
 			'Arrow keys rotate the view. Shift and arrow keys pan. Plus and minus zoom. Home resets the view.'
 		)
 	})
 
+	it('speaks German for a German scene', () => {
+		expect(describeViewerKeys(ALL, 'de')).toBe(
+			'Die Pfeiltasten drehen die Ansicht. Umschalt und Pfeiltasten verschieben die Ansicht. Plus und Minus zoomen. Pos1 setzt die Ansicht zurück.'
+		)
+	})
+
 	it('names only the keys on offer', () => {
-		expect(describeViewerKeys({ ...NONE, zoom: true })).toBe(
+		expect(describeViewerKeys({ ...NONE, zoom: true }, 'en')).toBe(
 			'Plus and minus zoom.'
 		)
-		expect(describeViewerKeys(NONE)).toBe('')
+		expect(describeViewerKeys(NONE, 'de')).toBe('')
 	})
 })

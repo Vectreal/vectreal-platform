@@ -25,11 +25,11 @@ describe('describeInteraction', () => {
 		],
 		[
 			'touch',
-			'Zum Drehen ziehen, zum Zoomen zwei Finger spreizen, zum Verschieben mit zwei Fingern ziehen'
+			'Zum Drehen ziehen, zum Zoomen zwei Finger auf- oder zuziehen, zum Verschieben mit zwei Fingern ziehen'
 		],
 		[
 			'keys',
-			'Pfeiltasten drehen, Plus und Minus zoomen, Umschalt und Pfeiltasten verschieben'
+			'Mit den Pfeiltasten drehen, mit Plus und Minus zoomen, mit Umschalt und Pfeiltasten verschieben'
 		]
 	] as const)('words it in German for %s', (input, line) => {
 		expect(describeInteraction(ALL, input, 'de')).toBe(line)
@@ -63,7 +63,7 @@ describe('describeHowToMove', () => {
 		expect(help.lines).toEqual([
 			{ input: 'Maus', text: 'Zum Drehen ziehen' },
 			{ input: 'Touch', text: 'Zum Drehen ziehen' },
-			{ input: 'Tastatur', text: 'Pfeiltasten drehen' }
+			{ input: 'Tastatur', text: 'Mit den Pfeiltasten drehen' }
 		])
 	})
 

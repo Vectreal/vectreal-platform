@@ -38,7 +38,7 @@ describe('InfoPopoverHowToMove', () => {
 		renderIn({ ...NONE, rotate: true }, 'de')
 		expect(screen.getByText('Bedienung')).toBeTruthy()
 		expect(screen.getByText('Tastatur')).toBeTruthy()
-		expect(screen.getByText('Pfeiltasten drehen')).toBeTruthy()
+		expect(screen.getByText('Mit den Pfeiltasten drehen')).toBeTruthy()
 	})
 
 	it('says nothing when nothing moves, as when a host turned the controls off', () => {

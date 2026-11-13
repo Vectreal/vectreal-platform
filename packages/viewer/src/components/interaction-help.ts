@@ -35,13 +35,13 @@ const PHRASES: Record<
 		},
 		touch: {
 			rotate: 'zum Drehen ziehen',
-			zoom: 'zum Zoomen zwei Finger spreizen',
+			zoom: 'zum Zoomen zwei Finger auf- oder zuziehen',
 			pan: 'zum Verschieben mit zwei Fingern ziehen'
 		},
 		keys: {
-			rotate: 'Pfeiltasten drehen',
-			zoom: 'Plus und Minus zoomen',
-			pan: 'Umschalt und Pfeiltasten verschieben'
+			rotate: 'mit den Pfeiltasten drehen',
+			zoom: 'mit Plus und Minus zoomen',
+			pan: 'mit Umschalt und Pfeiltasten verschieben'
 		}
 	}
 }
