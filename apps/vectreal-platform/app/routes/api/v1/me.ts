@@ -11,6 +11,7 @@
 
 import { ApiResponse } from '@shared/utils'
 
+import { agentApiError } from '../../../lib/domain/agent/agent-api-response'
 import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
 import { getOrgSubscription } from '../../../lib/domain/billing/entitlement-service.server'
 
@@ -40,4 +41,12 @@ export async function loader({ request }: Route.LoaderArgs) {
 		200,
 		{ headers: { 'Cache-Control': 'no-store' } }
 	)
+}
+
+// Gated anyway, so the route never tells a caller without a token anything.
+export async function action({ request }: Route.ActionArgs) {
+	await authorizeAgentRequest(request, { scope: 'any' })
+	return agentApiError(405, 'method_not_allowed', 'This route answers GET.', {
+		headers: { Allow: 'GET' }
+	})
 }

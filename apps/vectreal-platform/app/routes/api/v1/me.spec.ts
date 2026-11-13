@@ -1,7 +1,7 @@
-import { apiSuccessSchema, meSchema } from '@vctrl/sdk'
+import { apiFailureSchema, apiSuccessSchema, meSchema } from '@vctrl/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { loader } from './me'
+import { action, loader } from './me'
 
 import type { Route } from './+types/me'
 
@@ -55,5 +55,31 @@ describe('GET /api/v1/me', () => {
 		expect(authorizeAgentRequest).toHaveBeenCalledWith(request, {
 			scope: 'any'
 		})
+	})
+})
+
+describe('/api/v1/me, any other method', () => {
+	it('answers 405 behind the gate', async () => {
+		const post = new Request(request.url, { method: 'POST' })
+
+		const response = await action({ request: post } as Route.ActionArgs)
+
+		expect(response.status).toBe(405)
+		expect(response.headers.get('Allow')).toBe('GET')
+		expect(apiFailureSchema.parse(await response.json()).code).toBe(
+			'method_not_allowed'
+		)
+		expect(authorizeAgentRequest).toHaveBeenCalledWith(post, { scope: 'any' })
+	})
+
+	it('answers a caller without a token with the gate refusal, not 405', async () => {
+		const gate = new Response(null, { status: 401 })
+		authorizeAgentRequest.mockRejectedValue(gate)
+
+		await expect(
+			action({
+				request: new Request(request.url, { method: 'POST' })
+			} as Route.ActionArgs)
+		).rejects.toBe(gate)
 	})
 })
