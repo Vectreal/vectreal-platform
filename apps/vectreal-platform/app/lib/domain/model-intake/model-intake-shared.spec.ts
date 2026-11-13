@@ -11,12 +11,15 @@ import {
 	intakeSceneFor,
 	parseIntakeScenes,
 	parseIntakeStorePages,
+	intakeAttachmentName,
 	intakeLetterFormPath,
 	intakeRequestsByLetter,
+	isIntakeAttachmentSizeAcceptable,
 	isIntakeBodyAcceptable,
 	isIntakePhotoCountAcceptable,
 	mintIntakeLetterCode,
 	MODEL_INTAKE_CODE_ALPHABET,
+	MODEL_INTAKE_MAX_ATTACHMENT_BYTES,
 	MODEL_INTAKE_MAX_LINK_LENGTH,
 	MODEL_INTAKE_MAX_MESSAGE_LENGTH,
 	MODEL_INTAKE_RETENTION_DAYS,
@@ -397,5 +400,49 @@ describe('intakeRequestsByLetter', () => {
 		expect(byLetter.get('K7Q2M9AB')).toEqual([a, c])
 		expect(byLetter.get('H4RT6WXY')).toEqual([d])
 		expect(byLetter.size).toBe(2)
+	})
+})
+
+describe('intakeAttachmentName', () => {
+	it.each([
+		['Lamp CAD v2.STEP', 'Lamp-CAD-v2.step'],
+		['walk around.mp4', 'walk-around.mp4'],
+		['../../etc/passwd.zip', 'etc-passwd.zip'],
+		['folder/inner.glb', 'folder-inner.glb'],
+		['.zip', 'file.zip']
+	])('stores %s as %s', (raw, stored) => {
+		expect(intakeAttachmentName(raw)).toBe(stored)
+	})
+
+	it.each([['page.html'], ['script.js'], ['image.svg'], ['no-extension']])(
+		'refuses %s',
+		(raw) => {
+			expect(intakeAttachmentName(raw)).toBeNull()
+		}
+	)
+
+	it('keeps a stored name as it is, which the delete relies on', () => {
+		const stored = intakeAttachmentName('Lamp CAD v2.STEP') as string
+		expect(intakeAttachmentName(stored)).toBe(stored)
+	})
+
+	it('caps the length and keeps the extension', () => {
+		const stored = intakeAttachmentName(`${'a'.repeat(300)}.zip`) as string
+		expect(stored.length).toBeLessThanOrEqual(120)
+		expect(stored.endsWith('.zip')).toBe(true)
+	})
+})
+
+describe('isIntakeAttachmentSizeAcceptable', () => {
+	it('takes up to the cap, and nothing empty or over it', () => {
+		expect(isIntakeAttachmentSizeAcceptable(1)).toBe(true)
+		expect(
+			isIntakeAttachmentSizeAcceptable(MODEL_INTAKE_MAX_ATTACHMENT_BYTES)
+		).toBe(true)
+		expect(isIntakeAttachmentSizeAcceptable(0)).toBe(false)
+		expect(
+			isIntakeAttachmentSizeAcceptable(MODEL_INTAKE_MAX_ATTACHMENT_BYTES + 1)
+		).toBe(false)
+		expect(isIntakeAttachmentSizeAcceptable(Number.NaN)).toBe(false)
 	})
 })

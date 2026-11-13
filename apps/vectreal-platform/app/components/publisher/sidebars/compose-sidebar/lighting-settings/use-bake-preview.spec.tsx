@@ -3,10 +3,12 @@
  * How a preview of the publish bake is made, kept to its document, and shown.
  * The bake itself runs in the publish worker, mocked here.
  */
+import { format } from 'node:util'
+
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { Group } from 'three'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	drawingLabel,
@@ -33,6 +35,7 @@ import { WorkerRunError } from '../../../../../workers/run-worker'
 
 import type { BakePassOutcome } from '../../../../../workers/publish-export.worker.types'
 import type { ReactNode } from 'react'
+import type { MockInstance } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
 	document: {} as object | null,
@@ -111,6 +114,7 @@ function setup(
 	return { store, hook, rendered }
 }
 
+let consoleWarn: MockInstance<typeof console.warn>
 beforeEach(() => {
 	vi.clearAllMocks()
 	mocks.document = {}
@@ -120,7 +124,14 @@ beforeEach(() => {
 		occlusion: report
 	})
 	mocks.loadToThreeJS.mockImplementation(async () => ({ scene: new Group() }))
-	vi.spyOn(console, 'warn').mockImplementation(() => {})
+	consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+	/* A finish that fails is logged with its reason. That, and nothing else. */
+	for (const args of consoleWarn.mock.calls) {
+		expect(format(...args)).toMatch(/^Studio finish failed:/)
+	}
 })
 
 describe('the bake preview', () => {

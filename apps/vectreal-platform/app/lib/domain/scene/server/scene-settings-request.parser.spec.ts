@@ -1,6 +1,9 @@
+import { format } from 'node:util'
+
 import { SceneSettingsParser } from './scene-settings.parser.server'
 
 import type { SceneSettingsRequest } from '../../../../types/api'
+import type { MockInstance } from 'vitest'
 
 /**
  * The request envelope around the settings: which actions need what, and how
@@ -38,11 +41,18 @@ async function refusal(result: SceneSettingsRequest | Response) {
 	return ((await response.json()) as { error: string }).error
 }
 
+let consoleWarn: MockInstance<typeof console.warn>
 beforeEach(() => {
-	vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+	consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 })
 
 afterEach(() => {
+	/* A malformed field is logged by name. That, and nothing else. */
+	for (const args of consoleWarn.mock.calls) {
+		expect(format(...args)).toMatch(
+			/^(Invalid settings format:|Failed to parse [\w ]+:)/
+		)
+	}
 	vi.restoreAllMocks()
 })
 
