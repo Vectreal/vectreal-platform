@@ -49,4 +49,46 @@ export interface OperationProgress {
 	progress: number
 	/** Additional details about the current operation */
 	details?: string
+	/**
+	 * Files the parse has finished and started, from the three.js
+	 * `LoadingManager` the parse runs through: textures and buffers. The total
+	 * grows as the parser discovers more, so it is a count, not a fraction.
+	 */
+	items?: ItemProgress
+}
+
+/**
+ * Where a model load is, in the words every surface uses.
+ *
+ * - `fetching`: bytes are on their way. The only phase with a real measure.
+ * - `parsing`: the bytes are here and become a three.js scene, decoding
+ *   Draco, meshopt and KTX2 on the way. Not split further: decoding happens
+ *   inside `GLTFLoader.parse` and cannot be watched apart from it.
+ * - `preparing`: the viewer has the scene and is loading its environment,
+ *   compiling shaders and framing the first view.
+ */
+export type LoadPhase = 'fetching' | 'parsing' | 'preparing'
+
+/** Bytes arrived, and the size expected; `total` is null when nothing says. */
+export interface ByteProgress {
+	loaded: number
+	total: number | null
+}
+
+/** Files done out of files started. */
+export interface ItemProgress {
+	loaded: number
+	total: number
+}
+
+/**
+ * One load's progress, shared by `@vctrl/hooks` (fetching, parsing) and
+ * `@vctrl/viewer` (preparing), so a host can draw both with one indicator.
+ */
+export interface LoadProgress {
+	phase: LoadPhase
+	/** Only while fetching. */
+	bytes?: ByteProgress
+	/** Only while parsing or preparing, and only once a file has started. */
+	items?: ItemProgress
 }

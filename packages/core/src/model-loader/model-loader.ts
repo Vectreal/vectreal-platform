@@ -97,6 +97,7 @@ async function siblingsFromFiles(
 export class ModelLoader {
 	private io: WebIO
 	private progressCallback?: (progress: OperationProgress) => void
+	private lastProgress = 0
 	private dracoDecoderPath: string
 	private ktx2TranscoderPath: string
 	private codecs: GeometryCodecs
@@ -135,7 +136,15 @@ export class ModelLoader {
 					: null
 			])
 
-		const loader = new GLTFLoader(manager)
+		/*
+		  Every parse runs through a manager of its own, which is what lets the
+		  textures and buffers it loads be counted for this load alone. Without
+		  one, GLTFLoader uses three's global `DefaultLoadingManager`, which every
+		  loader on the page shares.
+		*/
+		const tracked = manager ?? new (await import('three')).LoadingManager()
+		this.reportItems(tracked)
+		const loader = new GLTFLoader(tracked)
 		registerNonColorVertexColors(loader)
 		registerBakedLightmap(loader)
 		loader.setDRACOLoader(dracoLoader)
@@ -918,8 +927,26 @@ export class ModelLoader {
 		progress: number,
 		details?: string
 	): void {
+		this.lastProgress = progress
 		if (this.progressCallback) {
 			this.progressCallback({ operation, progress, details })
+		}
+	}
+
+	/*
+	  Reports the files a parse's manager loads as they finish. The percentage
+	  stays where the last step left it: a count whose total grows as the
+	  parser finds more files is not a fraction of anything.
+	*/
+	private reportItems(manager: LoadingManager): void {
+		const previous = manager.onProgress
+		manager.onProgress = (url, loaded, total) => {
+			previous?.(url, loaded, total)
+			this.progressCallback?.({
+				operation: 'Loading model files',
+				progress: this.lastProgress,
+				items: { loaded, total }
+			})
 		}
 	}
 }
