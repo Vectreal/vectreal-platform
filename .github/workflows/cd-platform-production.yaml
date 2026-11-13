@@ -7,20 +7,63 @@ permissions:
 
 on:
   workflow_dispatch:
+    inputs:
+      full_gate:
+        description: Run the full quality gate even if this commit already passed it on main
+        type: boolean
+        default: false
 
 concurrency:
   group: cd-platform-production-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # A production deploy ships a commit that is already on main, and every push
+  # to main runs CI - Quality. When that run passed for this exact commit, the
+  # gate below would repeat it (about 5.5 minutes, every target on every
+  # project, since a called workflow has no affected range). Matched by SHA,
+  # never by branch: a commit pushed after the green one is a different SHA
+  # and runs the gate here. No green run, a run still in progress, or a commit
+  # whose paths CI - Quality skips all fall through to the full gate.
+  main-gate-status:
+    name: Check main's gate for this commit
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      passed: ${{ steps.lookup.outputs.passed }}
+    steps:
+      - name: Look up a successful CI - Quality push run
+        id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count=$(gh api "repos/${{ github.repository }}/actions/workflows/ci-quality.yaml/runs?head_sha=${{ github.sha }}&event=push&status=success&per_page=1" --jq '.total_count')
+          if [[ "$count" -gt 0 ]]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+            echo "CI - Quality already passed on main for ${{ github.sha }}." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "No successful CI - Quality push run for ${{ github.sha }}; running the full gate." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   quality-gate:
     name: CI Quality Gate
+    needs: main-gate-status
+    if: ${{ inputs.full_gate || needs.main-gate-status.outputs.passed != 'true' }}
     uses: ./.github/workflows/ci-quality.yaml
 
   migrate-production:
     name: Migrate Production Database
-    needs: quality-gate
-    if: ${{ needs.quality-gate.result == 'success' }}
+    needs: [main-gate-status, quality-gate]
+    # `!cancelled()` because a skipped `needs` job otherwise skips this one too.
+    if: >-
+      ${{ !cancelled()
+        && needs.main-gate-status.result == 'success'
+        && (needs.quality-gate.result == 'success'
+          || (needs.quality-gate.result == 'skipped'
+            && !inputs.full_gate
+            && needs.main-gate-status.outputs.passed == 'true')) }}
     uses: ./.github/workflows/shared-supabase-migrate.yaml
     with:
       environment: production
@@ -32,7 +75,8 @@ jobs:
   deploy-production:
     name: Deploy to Production Environment
     needs: migrate-production
-    if: ${{ needs.migrate-production.result == 'success' }}
+    # `!cancelled()` again: a skipped gate further up would skip this job too.
+    if: ${{ !cancelled() && needs.migrate-production.result == 'success' }}
     uses: ./.github/workflows/shared-fly-deploy.yaml
     with:
       app_name: vectreal-platform
