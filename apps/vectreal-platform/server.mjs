@@ -10,11 +10,14 @@ const BUILD_DIR = path.join(ROOT, 'build', 'apps', 'vectreal-platform')
 
 const build = await import(path.join(BUILD_DIR, 'server', 'index.js'))
 
-// Exported by `entry.server.tsx`. Refusing to start without it is the point:
-// a server without the gate would serve scheduled articles early.
-const { isUnpublishedNewsPath, startIndexNowSubmissions } = build.entry.module
+// Exported by `entry.server.tsx`. Refusing to start without them is the
+// point: a server without the gate would serve scheduled articles early, and
+// one without the redaction would log live embed keys.
+const { isUnpublishedNewsPath, redactUrlSecrets, startIndexNowSubmissions } =
+	build.entry.module
 for (const [name, value] of Object.entries({
 	isUnpublishedNewsPath,
+	redactUrlSecrets,
 	startIndexNowSubmissions
 })) {
 	if (typeof value !== 'function') {
@@ -27,7 +30,8 @@ for (const [name, value] of Object.entries({
 const app = createServerApp({
 	clientDir: path.join(BUILD_DIR, 'client'),
 	handleRequest: createRequestHandler({ build, mode: process.env.NODE_ENV }),
-	isUnpublishedNewsPath
+	isUnpublishedNewsPath,
+	redactUrlSecrets
 })
 
 const port = Number(process.env.PORT) || 3000
