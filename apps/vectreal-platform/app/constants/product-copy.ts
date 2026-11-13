@@ -341,6 +341,25 @@ export const PLAN_OFFER_DESCRIPTIONS: Record<Plan, string> = {
 // Pricing page copy
 // ---------------------------------------------------------------------------
 
+/*
+  What a brand pays for models we make, in euros. PLACEHOLDERS from the
+  "Offer and pricing" proposal (Notion), decided on Sun 15 Nov: change them
+  here and the pricing page follows. The pilot is five standard models plus
+  the setup, so its price is derived, never typed twice.
+*/
+export const MADE_FOR_YOU_PRICES = {
+	free: 0,
+	standard: 150,
+	/** A range, quoted per product. */
+	artist: { from: 250, to: 400 },
+	setup: 240,
+	pilotModels: 5
+} as const
+
+export const PILOT_PRICE =
+	MADE_FOR_YOU_PRICES.pilotModels * MADE_FOR_YOU_PRICES.standard +
+	MADE_FOR_YOU_PRICES.setup
+
 export const PRICING_PAGE_COPY = {
 	heading: 'Start free. Pay when your scenes go live.',
 	description:
@@ -350,6 +369,40 @@ export const PRICING_PAGE_COPY = {
 		'Every entitlement, across all four plans. Limits are per organization.',
 	// The "every entitlement" claim above is pinned by product-copy.spec.ts,
 	// which fails when an entitlement key is added without a row in the grid.
+	/** Models we make for a brand, before the software plans: the offer the letters and the home page lead to. */
+	madeForYou: {
+		heading: 'Models made for you',
+		lead: 'We make the 3D models and place them in your Shopify store. Start with one free model.',
+		pilot: {
+			label: 'Pilot',
+			body: 'Five standard models, set up in your store.',
+			terms:
+				'Nothing up front: half when you approve the preview, half when the models are live.'
+		},
+		rowsLabel: 'What each part costs',
+		rows: {
+			free: {
+				title: 'Free model',
+				body: 'One product, from your 3D or CAD data, a short video, or three photos. GLB and USDZ files in two working days.'
+			},
+			standard: {
+				title: 'Standard model',
+				body: 'One product, one revision round. Up to five per delivery, in five working days.'
+			},
+			artist: {
+				title: 'Artist model',
+				body: 'A complex product, modelled by a vetted 3D artist. A preview to approve first, two revision rounds.',
+				byQuote: 'By quote, typically'
+			},
+			setup: {
+				title: 'Setup',
+				body: "Your models in Shopify's own 3D slot, plus the 3D scene on your product page.",
+				once: 'once'
+			}
+		},
+		cta: 'Request a free model',
+		pilotCta: 'Ask about a pilot'
+	},
 	enterpriseHeading: 'Enterprise',
 	enterpriseDescription:
 		'Custom limits and a direct line to the team. Tell us what you need and we will price it.'
