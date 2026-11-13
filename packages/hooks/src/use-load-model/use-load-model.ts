@@ -278,7 +278,12 @@ function useLoadModel<
 			*/
 			let downloadAborted = false
 			const fetchFiles = (
-				{ url, init, expectedBytes }: Extract<ModelSource, { kind: 'url' }>,
+				{
+					url,
+					init,
+					expectedBytes,
+					fileName
+				}: Extract<ModelSource, { kind: 'url' }>,
 				{ onProgress }: LoadContext
 			) => {
 				const controller = new AbortController()
@@ -291,7 +296,8 @@ function useLoadModel<
 					init: { ...init, signal: controller.signal },
 					onProgress: (fraction) => onProgress(fraction * 90),
 					onBytes,
-					expectedBytes
+					expectedBytes,
+					fileName
 				})
 					.catch((error: unknown) => {
 						downloadAborted = controller.signal.aborted
