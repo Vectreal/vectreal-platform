@@ -22,9 +22,9 @@ function fakes(overrides: Partial<ModelIntakeDeps> = {}): ModelIntakeDeps {
 		newId: () => 'id-1',
 		newReferenceCode: () => 'VCTR-TEST',
 		isRateLimited: () => false,
-		prepareIntakePhotos: vi.fn(async () => ({
+		prepareIntakePhotos: vi.fn(async (files: File[]) => ({
 			ok: true as const,
-			photos: [photo, photo, photo]
+			photos: files.map(() => photo)
 		})),
 		uploadIntakePhotos: vi.fn(async () => {}),
 		signIntakePhotoUrls: vi.fn(async () => ['u1', 'u2', 'u3']),
@@ -39,7 +39,10 @@ function fakes(overrides: Partial<ModelIntakeDeps> = {}): ModelIntakeDeps {
 	}
 }
 
-function form(changes: Record<string, string | null> = {}): FormData {
+function form(
+	changes: Record<string, string | null> = {},
+	photoCount = 3
+): FormData {
 	const entries: Record<string, string | null> = {
 		name: 'Jane Doe',
 		email: 'jane@brand.de',
@@ -58,7 +61,7 @@ function form(changes: Record<string, string | null> = {}): FormData {
 	for (const [key, value] of Object.entries(entries)) {
 		if (value !== null) formData.set(key, value)
 	}
-	for (let i = 0; i < 3; i++) {
+	for (let i = 0; i < photoCount; i++) {
 		formData.append('photos', new File([`p${i}`], `p${i}.jpg`))
 	}
 	return formData
@@ -142,6 +145,21 @@ describe('submitModelIntake', () => {
 			)
 		})
 
+		it('still refuses a link-only agency request without it', async () => {
+			const deps = fakes()
+			const result = await submit(
+				form({ link: 'https://cad.example.com/lamp' }, 0),
+				deps,
+				agencyLetter
+			)
+			expect(result.status).toBe(400)
+			expect(result.body).toMatchObject({
+				fieldErrors: { consentClient: 'consent' }
+			})
+			expect(result.body).not.toHaveProperty('fieldErrors.photos')
+			expect(deps.insertIntakeSubmission).not.toHaveBeenCalled()
+		})
+
 		it('asks nothing of a brand letter, even when the box is posted', async () => {
 			const deps = fakes()
 			const result = await submit(form({ consentClient: 'on' }), deps, {
@@ -188,7 +206,8 @@ describe('submitModelIntake', () => {
 				heightCm: 12,
 				widthCm: null,
 				photoPaths: ['id-1/1.jpg', 'id-1/2.jpg', 'id-1/3.jpg'],
-				consentVersion: '2026-11-10',
+				link: null,
+				consentVersion: '2026-11-13',
 				consentClientAt: null,
 				consentFollowUpAt: new Date('2026-10-20T10:00:00Z'),
 				deleteAfter: new Date('2027-01-18T10:00:00Z')
@@ -208,6 +227,99 @@ describe('submitModelIntake', () => {
 			referenceCode: 'VCTR-TEST'
 		})
 		expect(deps.setIntakeEmailStatus).toHaveBeenCalledWith('id-1', 'sent')
+	})
+
+	describe('the link and the photos', () => {
+		const link = 'https://cad.example.com/share/lamp'
+
+		it('takes a link with no photos, stored encrypted', async () => {
+			const deps = fakes()
+			const result = await submit(form({ link }, 0), deps)
+			expect(result.outcome).toBe('submitted')
+			expect(deps.insertIntakeSubmission).toHaveBeenCalledWith(
+				expect.objectContaining({ link: `enc(${link})`, photoPaths: [] })
+			)
+			expect(deps.uploadIntakePhotos).toHaveBeenCalledWith('id-1', [])
+			expect(deps.sendIntakeInternalNotification).toHaveBeenCalledWith(
+				expect.objectContaining({ link })
+			)
+		})
+
+		it('takes three photos with no link', async () => {
+			const deps = fakes()
+			const result = await submit(form(), deps)
+			expect(result.outcome).toBe('submitted')
+			expect(deps.insertIntakeSubmission).toHaveBeenCalledWith(
+				expect.objectContaining({ link: null })
+			)
+		})
+
+		it('takes a link and photos together', async () => {
+			const deps = fakes()
+			const result = await submit(form({ link }, 3), deps)
+			expect(result.outcome).toBe('submitted')
+			expect(deps.insertIntakeSubmission).toHaveBeenCalledWith(
+				expect.objectContaining({
+					link: `enc(${link})`,
+					photoPaths: ['id-1/1.jpg', 'id-1/2.jpg', 'id-1/3.jpg']
+				})
+			)
+		})
+
+		it('refuses neither, before anything is stored', async () => {
+			const deps = fakes()
+			const result = await submit(form({}, 0), deps)
+			expect(result.status).toBe(400)
+			expect(result.body).toMatchObject({
+				fieldErrors: { photos: 'photosCount' }
+			})
+			expect(deps.prepareIntakePhotos).not.toHaveBeenCalled()
+			expect(deps.insertIntakeSubmission).not.toHaveBeenCalled()
+		})
+
+		it('refuses an invalid link, and it does not excuse the photos', async () => {
+			const deps = fakes()
+			const result = await submit(
+				form({ link: 'javascript:alert(1)' }, 0),
+				deps
+			)
+			expect(result.status).toBe(400)
+			expect(result.body).toMatchObject({
+				fieldErrors: { link: 'link', photos: 'photosCount' },
+				fields: { link: 'javascript:alert(1)' }
+			})
+			expect(deps.insertIntakeSubmission).not.toHaveBeenCalled()
+		})
+
+		it('names the slot of a bad photo when earlier slots are empty', async () => {
+			const deps = fakes({
+				prepareIntakePhotos: vi.fn(async () => ({
+					ok: false as const,
+					fieldErrors: { photos: 'photoType' as const, photoIndex: 1 }
+				}))
+			})
+			const formData = form({ link }, 0)
+			formData.append('photos', new File([], ''))
+			formData.append('photos', new File([], ''))
+			formData.append('photos', new File(['pdf'], 'renamed.jpg'))
+			const result = await submit(formData, deps)
+			expect(deps.prepareIntakePhotos).toHaveBeenCalledWith([
+				expect.objectContaining({ name: 'renamed.jpg' })
+			])
+			expect(result.body).toMatchObject({
+				fieldErrors: { photos: 'photoType', photoIndex: 3 }
+			})
+		})
+
+		it('refuses an invalid link even with three photos', async () => {
+			const deps = fakes()
+			const result = await submit(
+				form({ link: 'http://cad.example.com/lamp' }),
+				deps
+			)
+			expect(result.body).toMatchObject({ fieldErrors: { link: 'link' } })
+			expect(deps.insertIntakeSubmission).not.toHaveBeenCalled()
+		})
 	})
 
 	it('answers a filled honeypot like a success and stores nothing', async () => {

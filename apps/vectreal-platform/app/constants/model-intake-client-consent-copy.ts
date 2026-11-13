@@ -10,6 +10,6 @@ export const MODEL_INTAKE_CLIENT_CONSENT_COPY: Record<
 	ModelIntakeLocale,
 	string
 > = {
-	en: 'My client agrees that I share these photos and that a 3D model of their product is made from them.',
-	de: 'Mein Kunde ist einverstanden, dass ich die Fotos teile und daraus ein 3D-Modell seines Produkts entsteht.'
+	en: 'My client agrees that I share these photos or data and that a 3D model of their product is made from them.',
+	de: 'Mein Kunde ist einverstanden, dass ich die Fotos oder Daten teile und daraus ein 3D-Modell seines Produkts entsteht.'
 }
