@@ -61,7 +61,7 @@ function insertAfterLoop(
 ) {
 	const start = source.indexOf(from)
 	const loop = new RegExp(
-		`\\{% endfor %\\}(?=\\s*${to.replace(/[{}%]/g, '\\$&')})`,
+		`\\{% endfor %\\}(?=\\s*${to.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
 		'g'
 	)
 	loop.lastIndex = start
