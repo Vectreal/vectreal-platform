@@ -44,7 +44,7 @@ export const AGENCY_PAGE_COPY = {
 			},
 			{
 				id: 'model',
-				text: 'Reichen die Fotos, kommt das Modell in zwei Werktagen.',
+				text: 'Reicht das Material, kommt das Modell in zwei Werktagen.',
 				image: 'Das 3D-Modell des Produkts im Viewer.'
 			},
 			{
@@ -153,6 +153,12 @@ export const AGENCY_PAGE_COPY = {
 				]
 			},
 			{
+				question: 'Geht es auch ohne Fotos?',
+				answer: [
+					'Ja: am besten mit vorhandenen 3D- oder CAD-Daten, etwa für Planer, sonst mit einem einminütigen Video einmal um das Produkt herum, beides als Link im Formular. Bei einfachen Produkten reichen drei Fotos.'
+				]
+			},
+			{
 				question: 'Bekommen auch Marken direkt Post?',
 				answer: [
 					'Einige Marken haben einen Brief von Vectreal bekommen. Betreut Ihre Agentur eine davon, genügt eine kurze Nachricht: Dann läuft alles Weitere über Sie.'
@@ -166,7 +172,7 @@ export const AGENCY_PAGE_COPY = {
 	},
 	request: {
 		heading:
-			'Drei Fotos und das Einverständnis Ihres Kunden: Mehr braucht es für das erste Modell nicht.',
+			'Ein Link oder drei Fotos und das Einverständnis Ihres Kunden: Mehr braucht es für das erste Modell nicht.',
 		contact:
 			'Antwort werktags innerhalb eines Tages per E-Mail; ein Telefonat lässt sich gern vereinbaren.',
 		signature: 'Vectreal, Hamburg'

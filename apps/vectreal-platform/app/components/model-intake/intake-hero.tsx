@@ -11,6 +11,8 @@ interface IntakeHeroProps {
 	heading: ReactNode
 	/** One sentence. */
 	lead: ReactNode
+	/** A quieter line under the lead, for what else is accepted. */
+	leadNote?: ReactNode
 	scene: IntakeScene | null
 	/** Names the scene for a screen reader when the scene has no name of its own. */
 	sceneLabel: string
@@ -26,6 +28,7 @@ export function IntakeHero({
 	greeting,
 	heading,
 	lead,
+	leadNote,
 	scene,
 	sceneLabel,
 	action
@@ -40,6 +43,11 @@ export function IntakeHero({
 				<p className="text-muted-foreground text-body max-w-2xl lg:text-[length:var(--text-body-lg)]">
 					{lead}
 				</p>
+				{leadNote ? (
+					<p className="text-muted-foreground text-body-sm max-w-2xl">
+						{leadNote}
+					</p>
+				) : null}
 			</div>
 			{scene ? (
 				<div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
