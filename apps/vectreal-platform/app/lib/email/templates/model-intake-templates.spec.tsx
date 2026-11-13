@@ -39,6 +39,7 @@ describe('model intake emails', () => {
 				letter="(none)"
 				locale="de"
 				message=""
+				link="https://cad.example.com/share/lamp"
 				photoUrls={['https://a', 'https://b', 'https://c']}
 				intakePageUrl="https://vectreal.com/dashboard/intake"
 			/>,
@@ -48,5 +49,6 @@ describe('model intake emails', () => {
 		expect(text).toContain('Something else (review first)')
 		expect(text).toContain('2026-10-30-brands')
 		expect(text.match(/Photo \d/g)).toEqual(['Photo 1', 'Photo 2', 'Photo 3'])
+		expect(text).toContain('https://cad.example.com/share/lamp')
 	})
 })

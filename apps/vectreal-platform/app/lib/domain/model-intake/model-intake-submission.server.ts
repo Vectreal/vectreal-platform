@@ -11,9 +11,10 @@ import {
 import {
 	addRetentionDays,
 	intakeLetterAsksClientConsent,
+	isIntakePhotoCountAcceptable,
+	parseIntakeLink,
 	MODEL_INTAKE_CONSENT_VERSION,
 	MODEL_INTAKE_HONEYPOT_FIELD,
-	MODEL_INTAKE_PHOTO_COUNT,
 	MODEL_INTAKE_SIZE_FIELDS,
 	type ModelIntakeActionData,
 	type ModelIntakeFieldErrors,
@@ -90,6 +91,7 @@ function readFields(formData: FormData): ModelIntakeFields {
 		email: text(formData, 'email'),
 		company: text(formData, 'company'),
 		productType: text(formData, 'productType'),
+		link: text(formData, 'link'),
 		height: text(formData, 'height'),
 		width: text(formData, 'width'),
 		depth: text(formData, 'depth'),
@@ -97,11 +99,20 @@ function readFields(formData: FormData): ModelIntakeFields {
 	}
 }
 
-/** Empty file inputs arrive as zero-byte files; they are not photos. */
-function readPhotos(formData: FormData): File[] {
+/**
+ * The picked photos, each with its 1-based slot. Empty file inputs arrive as
+ * zero-byte files; they are not photos. With a link some slots may stay
+ * empty, so an error names the slot rather than the position among the files.
+ */
+function readPhotos(formData: FormData): { file: File; slot: number }[] {
 	return formData
 		.getAll('photos')
-		.filter((entry): entry is File => entry instanceof File && entry.size > 0)
+		.map((entry, index) => ({ entry, slot: index + 1 }))
+		.filter(
+			(item): item is { entry: File; slot: number } =>
+				item.entry instanceof File && item.entry.size > 0
+		)
+		.map(({ entry, slot }) => ({ file: entry, slot }))
 }
 
 function describeSize(size: ModelIntakeSize): string {
@@ -113,7 +124,7 @@ function describeSize(size: ModelIntakeSize): string {
 }
 
 /**
- * Records one free-model request: checks it, stores the photos and the row,
+ * Records one free-model request: checks it, stores the photos, the link and the row,
  * then tells the inbox and the brand.
  *
  * Bot verification and CSRF are the route's, before this runs. The row is
@@ -164,13 +175,19 @@ export async function submitModelIntake(
 	})
 
 	// The typed fields are checked before anything costly, and so is the photo
-	// count, which needs no decoding.
-	if (!validated.ok) {
+	// count, which needs no decoding. Photos are required only without a
+	// link, and a link that fails its own check does not excuse them.
+	const link = parseIntakeLink(fields.link)
+	const photosCountError = isIntakePhotoCountAcceptable(
+		files.length,
+		link !== null && link !== 'invalid'
+	)
+		? {}
+		: { photos: 'photosCount' as const }
+	if (!validated.ok || 'photos' in photosCountError) {
 		return refuse({
-			...validated.fieldErrors,
-			...(files.length === MODEL_INTAKE_PHOTO_COUNT
-				? {}
-				: { photos: 'photosCount' as const })
+			...(validated.ok ? {} : validated.fieldErrors),
+			...photosCountError
 		})
 	}
 
@@ -184,8 +201,16 @@ export async function submitModelIntake(
 		}
 	}
 
-	const photos = await deps.prepareIntakePhotos(files)
-	if (!photos.ok) return refuse(photos.fieldErrors)
+	const photos = await deps.prepareIntakePhotos(files.map(({ file }) => file))
+	if (!photos.ok) {
+		const { photoIndex } = photos.fieldErrors
+		return refuse({
+			...photos.fieldErrors,
+			...(photoIndex === undefined
+				? {}
+				: { photoIndex: files[photoIndex - 1].slot })
+		})
+	}
 
 	const value = validated.value
 	const id = deps.newId()
@@ -208,6 +233,7 @@ export async function submitModelIntake(
 		email: deps.encrypt(value.email),
 		company: deps.encrypt(value.company),
 		message: value.message ? deps.encrypt(value.message) : null,
+		link: value.link ? deps.encrypt(value.link) : null,
 		heightCm: value.size.heightCm,
 		widthCm: value.size.widthCm,
 		depthCm: value.size.depthCm,
@@ -259,6 +285,7 @@ export async function submitModelIntake(
 		letter: letter ? `${letter.code} (${letter.organization})` : '(none)',
 		locale,
 		message: value.message,
+		link: value.link,
 		photoUrls,
 		intakePageUrl: args.intakePageUrl
 	})

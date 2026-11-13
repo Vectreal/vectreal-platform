@@ -22,6 +22,8 @@ interface PhotoSlotsProps {
 	examples?: readonly { src: string; view: string; hint: string }[]
 	/** 1-based photo an error is about, or 0 for the whole set. */
 	invalidIndex?: number
+	/** Whether the photos must be sent: they need not be once a link is given. */
+	required: boolean
 	describedBy?: string
 	/**
 	 * Reports, per slot (1-based), whether its last pick was refused for size.
@@ -47,6 +49,7 @@ export function PhotoSlots({
 	labels,
 	examples,
 	invalidIndex,
+	required,
 	describedBy,
 	onTooLarge
 }: PhotoSlotsProps) {
@@ -59,6 +62,7 @@ export function PhotoSlots({
 					labels={labels}
 					example={examples?.[index]}
 					invalid={invalidIndex === 0 || invalidIndex === index + 1}
+					required={required}
 					describedBy={describedBy}
 					onTooLarge={onTooLarge}
 				/>
@@ -92,6 +96,7 @@ function PhotoSlot({
 	labels,
 	example,
 	invalid,
+	required,
 	describedBy,
 	onTooLarge
 }: {
@@ -99,6 +104,7 @@ function PhotoSlot({
 	labels: PhotoSlotsProps['labels']
 	example?: { src: string; view: string; hint: string }
 	invalid: boolean
+	required: boolean
 	describedBy?: string
 	onTooLarge: PhotoSlotsProps['onTooLarge']
 }) {
@@ -164,6 +170,7 @@ function PhotoSlot({
 					name="photos"
 					accept={MODEL_INTAKE_PHOTO_ACCEPT}
 					className="sr-only"
+					required={required}
 					aria-invalid={invalid || undefined}
 					aria-describedby={describedBy}
 					onChange={(event) => pick(event.target.files?.[0] ?? null)}
