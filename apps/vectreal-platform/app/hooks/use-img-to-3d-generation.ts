@@ -4,6 +4,8 @@ import { useAuthenticityToken } from 'remix-utils/csrf/react'
 import {
 	IMG_TO_3D_FIELDS,
 	imgTo3dErrorKind,
+	imgTo3dSourceName,
+	imgTo3dVariantFileName,
 	isTerminalImgTo3dStatus,
 	type ImgTo3dErrorKind,
 	type ImgTo3dGenerationParams,
@@ -82,8 +84,111 @@ async function readEnvelope<T>(response: Response): Promise<T> {
 	return payload.data
 }
 
-function baseName(fileName: string): string {
-	return fileName.replace(/\.[^.]+$/, '') || 'generated'
+/** A job's state as polling last saw it. */
+export type ImgTo3dJobUpdate = Pick<
+	ImgTo3dCandidate,
+	'status' | 'progress' | 'error'
+>
+
+/**
+ * Polls each of `pendingIds` until it ends, and hands every round's changes to
+ * `onUpdates`. A job ends on a terminal status, on a refusal that asking again
+ * would only repeat, or after `MAX_CONSECUTIVE_POLL_FAILURES` failed polls in
+ * a row; each of those arrives as a terminal status, and the caller drops the
+ * job from `pendingIds` once it has one.
+ *
+ * Shared by the publisher's panel and the dashboard's Generations page, so a
+ * variant ends the same way wherever it is watched.
+ */
+export function useImgTo3dJobPolling(
+	pendingIds: readonly string[],
+	onUpdates: (updates: ReadonlyMap<string, Partial<ImgTo3dJobUpdate>>) => void
+) {
+	const [pollAfterMs, setPollAfterMs] = useState(DEFAULT_POLL_MS)
+	// Bumped after each round, so the effect below schedules the next one.
+	const [pollRound, setPollRound] = useState(0)
+	// Failed polls in a row, per job; a successful one clears its count.
+	const pollFailures = useRef(new Map<string, number>())
+	// Every job polled so far, to tell a newly added one apart.
+	const seenIds = useRef(new Set<string>())
+	// Read when a round starts, so a new callback each render does not
+	// restart the timer.
+	const onUpdatesRef = useRef(onUpdates)
+	useEffect(() => {
+		onUpdatesRef.current = onUpdates
+	})
+
+	/*
+	  A string, so the effect below restarts when the set of pending jobs
+	  changes rather than whenever the caller passes a new array, which every
+	  progress update makes.
+	*/
+	const pendingKey = pendingIds.join(',')
+
+	useEffect(() => {
+		if (!pendingKey) return
+		const ids = pendingKey.split(',')
+		const controller = new AbortController()
+		// A job just added gets its first answer at the default pace, not the
+		// pace the runtime last asked for on the others.
+		const hasNewcomer = ids.some((id) => !seenIds.current.has(id))
+		for (const id of ids) seenIds.current.add(id)
+
+		const timer = setTimeout(
+			async () => {
+				// Taken as the round starts: if the caller's data changes while the
+				// requests are out, the answers go to the callback they were asked for.
+				const onUpdates = onUpdatesRef.current
+				const updates = new Map<string, Partial<ImgTo3dJobUpdate>>()
+				const nextDelays: number[] = []
+				await Promise.all(
+					ids.map(async (jobId) => {
+						try {
+							const state = await readEnvelope<ImgTo3dJobState>(
+								await fetch(`${ENDPOINT}/${encodeURIComponent(jobId)}`, {
+									signal: controller.signal
+								})
+							)
+							updates.set(jobId, {
+								status: state.status,
+								progress: state.progress,
+								error: state.status === 'failed' ? 'generation_failed' : null
+							})
+							if (state.pollAfterMs > 0) nextDelays.push(state.pollAfterMs)
+							pollFailures.current.delete(jobId)
+						} catch (error) {
+							if (controller.signal.aborted) return
+							// A poll that may pass leaves the job pending, until too many
+							// in a row; a refusal ends it at once.
+							const failures = (pollFailures.current.get(jobId) ?? 0) + 1
+							pollFailures.current.set(jobId, failures)
+							const final =
+								error instanceof ImgTo3dRequestError && error.isFinal
+							if (final || failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+								updates.set(jobId, {
+									status: 'failed',
+									error: kindOf(error, 'runtime_unavailable')
+								})
+							}
+						}
+					})
+				)
+				if (controller.signal.aborted) return
+
+				onUpdates(updates)
+				setPollAfterMs(
+					nextDelays.length > 0 ? Math.min(...nextDelays) : DEFAULT_POLL_MS
+				)
+				setPollRound((round) => round + 1)
+			},
+			hasNewcomer ? DEFAULT_POLL_MS : pollAfterMs
+		)
+
+		return () => {
+			controller.abort()
+			clearTimeout(timer)
+		}
+	}, [pendingKey, pollRound, pollAfterMs])
 }
 
 /**
@@ -106,80 +211,18 @@ export function useImgTo3dGeneration(
 	const [isSubmitting, setIsSubmitting] = useState(false)
 	const [submitError, setSubmitError] = useState<ImgTo3dErrorKind | null>(null)
 	const [loadingJobId, setLoadingJobId] = useState<string | null>(null)
-	const [pollAfterMs, setPollAfterMs] = useState(DEFAULT_POLL_MS)
-	// Bumped after each round, so the effect below schedules the next one.
-	const [pollRound, setPollRound] = useState(0)
-	// Failed polls in a row, per job; a successful one clears its count.
-	const pollFailures = useRef(new Map<string, number>())
-
-	/*
-	  A string, so the effect below restarts when the set of pending jobs
-	  changes rather than whenever `candidates` is a new array, which every
-	  progress update makes it.
-	*/
-	const pendingKey = candidates
+	const pendingIds = candidates
 		.filter((candidate) => !isTerminalImgTo3dStatus(candidate.status))
 		.map((candidate) => candidate.jobId)
-		.join(',')
 
-	useEffect(() => {
-		if (!pendingKey) return
-		const pendingIds = pendingKey.split(',')
-		const controller = new AbortController()
-
-		const timer = setTimeout(async () => {
-			const updates = new Map<string, Partial<ImgTo3dCandidate>>()
-			const nextDelays: number[] = []
-			await Promise.all(
-				pendingIds.map(async (jobId) => {
-					try {
-						const state = await readEnvelope<ImgTo3dJobState>(
-							await fetch(`${ENDPOINT}/${encodeURIComponent(jobId)}`, {
-								signal: controller.signal
-							})
-						)
-						updates.set(jobId, {
-							status: state.status,
-							progress: state.progress,
-							error: state.status === 'failed' ? 'generation_failed' : null
-						})
-						if (state.pollAfterMs > 0) nextDelays.push(state.pollAfterMs)
-						pollFailures.current.delete(jobId)
-					} catch (error) {
-						if (controller.signal.aborted) return
-						// A poll that may pass leaves the job pending, until too many
-						// in a row; a refusal ends it at once.
-						const failures = (pollFailures.current.get(jobId) ?? 0) + 1
-						pollFailures.current.set(jobId, failures)
-						const final = error instanceof ImgTo3dRequestError && error.isFinal
-						if (final || failures >= MAX_CONSECUTIVE_POLL_FAILURES) {
-							updates.set(jobId, {
-								status: 'failed',
-								error: kindOf(error, 'runtime_unavailable')
-							})
-						}
-					}
-				})
-			)
-			if (controller.signal.aborted) return
-
-			setCandidates((current) =>
-				current.map((candidate) => {
-					const update = updates.get(candidate.jobId)
-					return update ? { ...candidate, ...update } : candidate
-				})
-			)
-			setPollAfterMs(
-				nextDelays.length > 0 ? Math.min(...nextDelays) : DEFAULT_POLL_MS
-			)
-			setPollRound((round) => round + 1)
-		}, pollAfterMs)
-
-		return () => {
-			controller.abort()
-			clearTimeout(timer)
-		}
-	}, [pendingKey, pollRound, pollAfterMs])
+	useImgTo3dJobPolling(pendingIds, (updates) =>
+		setCandidates((current) =>
+			current.map((candidate) => {
+				const update = updates.get(candidate.jobId)
+				return update ? { ...candidate, ...update } : candidate
+			})
+		)
+	)
 
 	const generate = useCallback(
 		async (
@@ -204,7 +247,6 @@ export function useImgTo3dGeneration(
 					await fetch(ENDPOINT, { method: 'POST', body })
 				)
 				const submittedAt = Date.now()
-				setPollAfterMs(DEFAULT_POLL_MS)
 				setCandidates((current) => [
 					...result.jobs.map((job) => ({
 						jobId: job.jobId,
@@ -213,7 +255,7 @@ export function useImgTo3dGeneration(
 						progress: null,
 						error: job.error,
 						submittedAt,
-						sourceName: baseName(image.name)
+						sourceName: imgTo3dSourceName(image.name)
 					})),
 					...current
 				])
@@ -245,7 +287,7 @@ export function useImgTo3dGeneration(
 				const blob = await response.blob()
 				const file = new File(
 					[blob],
-					`${candidate.sourceName}-${candidate.seed}.glb`,
+					imgTo3dVariantFileName(candidate.sourceName, candidate.seed),
 					{ type: 'model/gltf-binary' }
 				)
 				const result = await loadModel([file])

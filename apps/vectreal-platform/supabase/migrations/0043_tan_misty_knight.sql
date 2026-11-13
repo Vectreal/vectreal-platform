@@ -1,0 +1,1 @@
+ALTER TABLE "img_to_3d_jobs" ADD COLUMN "source_name" text;

@@ -16,7 +16,9 @@ import {
 	type DragEvent,
 	type FormEvent
 } from 'react'
+import { Link } from 'react-router'
 
+import { DASHBOARD_ROUTES } from '../../../constants/dashboard'
 import {
 	DEFAULT_IMG_TO_3D_PARAMS,
 	IMG_TO_3D_DECIMATION_TARGET,
@@ -158,12 +160,21 @@ export const GenerateFromImage = ({ generation, className }: Props) => {
 			onDragOver={claimDrag}
 			onDrop={handleDrop}
 		>
-			<p
-				id="generate-from-image-label"
-				className="text-muted-foreground text-eyebrow"
-			>
-				Generate from an image (internal)
-			</p>
+			<div className="flex items-baseline justify-between gap-3">
+				<p
+					id="generate-from-image-label"
+					className="text-muted-foreground text-eyebrow"
+				>
+					Generate from an image (internal)
+				</p>
+				{/* Every batch, including ones started in another tab or before a reload. */}
+				<Link
+					to={DASHBOARD_ROUTES.GENERATIONS}
+					className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
+				>
+					All generations
+				</Link>
+			</div>
 
 			<form onSubmit={handleSubmit} className="mt-4 grid gap-4 sm:grid-cols-2">
 				<div className="grid gap-2 sm:col-span-2">

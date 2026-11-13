@@ -2,11 +2,17 @@ import { ApiResponse } from '@shared/utils'
 
 import {
 	IMG_TO_3D_DAILY_JOB_LIMIT,
+	IMG_TO_3D_LIST_BATCH_LIMIT,
 	IMG_TO_3D_MAX_IMAGE_BYTES,
+	IMG_TO_3D_RETENTION_MS,
+	imgTo3dSourceName,
+	imgTo3dVariantFileName,
 	parseImgTo3dSubmission,
 	type ImgTo3dErrorKind,
 	type ImgTo3dGenerationParams,
 	type ImgTo3dJobState,
+	type ImgTo3dListedBatch,
+	type ImgTo3dListedVariant,
 	type ImgTo3dSubmitResponse,
 	type ImgTo3dSubmittedJob
 } from './img-to-3d-contract'
@@ -69,6 +75,24 @@ export interface ImgTo3dJobRecord {
 	readonly batchId: string
 	readonly seed: number
 	readonly params: ImgTo3dGenerationParams
+	readonly sourceName: string
+}
+
+/** A job as the Generations page lists it. */
+export interface ImgTo3dJobListing {
+	readonly id: string
+	readonly batchId: string
+	readonly seed: number
+	readonly sourceName: string | null
+	readonly createdAt: Date
+	readonly createdByName: string | null
+}
+
+/** What a job's own routes need to know about it. */
+export interface ImgTo3dOwnedJob {
+	readonly id: string
+	readonly seed: number
+	readonly sourceName: string | null
 }
 
 export interface ImgTo3dJobStore {
@@ -85,7 +109,15 @@ export interface ImgTo3dJobStore {
 	findForOrganization(
 		jobId: string,
 		organizationId: string
-	): Promise<{ id: string } | null>
+	): Promise<ImgTo3dOwnedJob | null>
+	/**
+	 * Every job of the `batchLimit` most recent batches in `organizationId`,
+	 * newest first.
+	 */
+	listForOrganization(
+		organizationId: string,
+		batchLimit: number
+	): Promise<readonly ImgTo3dJobListing[]>
 	remove(jobId: string): Promise<void>
 }
 
@@ -193,8 +225,57 @@ async function admitToJob(
 		return withAuthHeaders(ApiResponse.notFound(NOT_FOUND), admitted.headers)
 	}
 
-	return { ...admitted, jobId: job.id }
+	return { ...admitted, job }
 }
+
+/**
+ * RFC 6266: an ASCII fallback, quotes and backslashes removed, for clients
+ * that read only `filename`, and the exact name, percent-encoded, in
+ * `filename*`. The name comes from the uploaded photo, so it is never
+ * written into the header raw.
+ */
+function contentDisposition(fileName: string): string {
+	const fallback = fileName.replace(/[^\x20-\x7e]|["\\]/g, '_')
+	// `encodeURIComponent` leaves these four, which RFC 5987 does not allow.
+	const exact = encodeURIComponent(fileName).replace(
+		/['()*]/g,
+		(char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+	)
+	return `attachment; filename="${fallback}"; filename*=UTF-8''${exact}`
+}
+
+/** A variant's state for the list, or null when the runtime could not say. */
+async function listedState(
+	runtime: ImgTo3dRuntime | null,
+	jobId: string
+): Promise<Pick<ImgTo3dListedVariant, 'status' | 'progress' | 'error'>> {
+	const unknown = { status: null, progress: null, error: null }
+	if (!runtime) return unknown
+	try {
+		const state = withoutFailureDetail(await runtime.status(jobId))
+		return {
+			status: state.status,
+			progress: state.progress,
+			error: state.status === 'failed' ? 'generation_failed' : null
+		}
+	} catch (error) {
+		// The runtime does not know the job. Other refusals (a rotated token's
+		// 401, a 429) may pass, so they stay unknown and are polled, as the
+		// publisher's polling treats them.
+		if (
+			error instanceof ImgTo3dRuntimeError &&
+			error.kind === 'runtime_rejected' &&
+			error.status === 404
+		) {
+			return { status: 'failed', progress: null, error: 'runtime_rejected' }
+		}
+		console.error(`[img-to-3d] job ${jobId} status unavailable`, error)
+		return unknown
+	}
+}
+
+/** Status requests the Generations page's loader keeps in flight at once. */
+const LIST_STATUS_CONCURRENCY = 6
 
 function distinctSeeds(count: number, newSeed: () => number): number[] {
 	const seeds = new Set<number>()
@@ -262,7 +343,8 @@ export async function handleSubmitImgTo3dGeneration(
 		createdBy: admitted.user.id,
 		batchId,
 		seed,
-		params
+		params,
+		sourceName: imgTo3dSourceName(image.name)
 	}))
 	// Nothing is sent unless every job was recorded within the limit.
 	const reserved = await deps.jobs.insertWithinDailyLimit(
@@ -340,7 +422,7 @@ export async function handleImgTo3dGenerationStatus(
 	if (admitted instanceof Response) return admitted
 
 	try {
-		const state = await deps.runtime().status(admitted.jobId)
+		const state = await deps.runtime().status(admitted.job.id)
 		return withAuthHeaders(
 			ApiResponse.success(withoutFailureDetail(state)),
 			admitted.headers
@@ -350,7 +432,12 @@ export async function handleImgTo3dGenerationStatus(
 	}
 }
 
-/** `GET /api/img-to-3d/generations/:jobId/artifact`: the GLB, streamed through. */
+/**
+ * `GET /api/img-to-3d/generations/:jobId/artifact`: the GLB, streamed through.
+ *
+ * Named as an attachment, so a plain link saves it as a file; `fetch`, which
+ * is how the publisher opens a variant, ignores the header.
+ */
 export async function handleImgTo3dGenerationArtifact(
 	request: Request,
 	jobId: string | undefined,
@@ -360,13 +447,18 @@ export async function handleImgTo3dGenerationArtifact(
 	if (admitted instanceof Response) return admitted
 
 	try {
-		const artifact = await deps.runtime().artifact(admitted.jobId)
+		const artifact = await deps.runtime().artifact(admitted.job.id)
+		const fileName = imgTo3dVariantFileName(
+			admitted.job.sourceName,
+			admitted.job.seed
+		)
 		return withAuthHeaders(
 			new Response(artifact.body, {
 				status: 200,
 				headers: {
 					'Content-Type': 'model/gltf-binary',
-					'Cache-Control': 'no-store'
+					'Cache-Control': 'no-store',
+					'Content-Disposition': contentDisposition(fileName)
 				}
 			}),
 			admitted.headers
@@ -374,4 +466,73 @@ export async function handleImgTo3dGenerationArtifact(
 	} catch (error) {
 		return withAuthHeaders(runtimeFailure(error), admitted.headers)
 	}
+}
+
+/**
+ * The Generations page: an organization's recent batches, each variant with
+ * its state as the runtime reports it now. A variant the runtime could not be
+ * asked about comes back with a null status, and the page polls it.
+ *
+ * Takes an organization rather than a request: the page's loader admits the
+ * caller with `resolveImgTo3dAccess`, the same rule the job routes apply.
+ */
+export async function listImgTo3dGenerations(
+	organizationId: string,
+	deps: Pick<ImgTo3dHandlerDeps, 'jobs' | 'runtime'>,
+	now: Date = new Date()
+): Promise<ImgTo3dListedBatch[]> {
+	const jobs = await deps.jobs.listForOrganization(
+		organizationId,
+		IMG_TO_3D_LIST_BATCH_LIMIT
+	)
+	if (jobs.length === 0) return []
+
+	let runtime: ImgTo3dRuntime | null = null
+	try {
+		runtime = deps.runtime()
+	} catch (error) {
+		console.error('[img-to-3d] runtime unavailable for the list', error)
+	}
+	const keptUntil = (job: ImgTo3dJobListing) =>
+		job.createdAt.getTime() + IMG_TO_3D_RETENTION_MS
+	const isExpired = (job: ImgTo3dJobListing) => keptUntil(job) <= now.getTime()
+
+	// A few requests at a time, so a long list cannot fan out to the runtime
+	// all at once; expired jobs are not asked about at all.
+	const states = new Array<
+		Pick<ImgTo3dListedVariant, 'status' | 'progress' | 'error'>
+	>(jobs.length).fill({ status: null, progress: null, error: null })
+	let next = 0
+	await Promise.all(
+		Array.from({ length: LIST_STATUS_CONCURRENCY }, async () => {
+			while (next < jobs.length) {
+				const index = next++
+				if (!isExpired(jobs[index])) {
+					states[index] = await listedState(runtime, jobs[index].id)
+				}
+			}
+		})
+	)
+
+	const batches = new Map<
+		string,
+		ImgTo3dListedBatch & { variants: ImgTo3dListedVariant[] }
+	>()
+	jobs.forEach((job, index) => {
+		let batch = batches.get(job.batchId)
+		if (!batch) {
+			batch = {
+				batchId: job.batchId,
+				sourceName: job.sourceName,
+				createdByName: job.createdByName,
+				createdAt: job.createdAt.toISOString(),
+				keptUntil: new Date(keptUntil(job)).toISOString(),
+				expired: isExpired(job),
+				variants: []
+			}
+			batches.set(job.batchId, batch)
+		}
+		batch.variants.push({ jobId: job.id, seed: job.seed, ...states[index] })
+	})
+	return [...batches.values()]
 }

@@ -204,6 +204,10 @@ export const getRouteContext = (
 		return 'connected-agents'
 	}
 
+	if (view === 'generations') {
+		return 'generations'
+	}
+
 	// Dashboard home
 	return 'dashboard'
 }

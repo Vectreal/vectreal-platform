@@ -8,6 +8,7 @@
  * ignores shows that no drop escapes it.
  */
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GenerateFromImage } from './generate-from-image'
@@ -27,9 +28,11 @@ describe('GenerateFromImage', () => {
 	it('keeps a drop on the panel from reaching the stage behind it', () => {
 		const stageDrop = vi.fn()
 		render(
-			<div onDrop={stageDrop} onDragOver={stageDrop} onDragEnter={stageDrop}>
-				<GenerateFromImage generation={generation} />
-			</div>
+			<MemoryRouter>
+				<div onDrop={stageDrop} onDragOver={stageDrop} onDragEnter={stageDrop}>
+					<GenerateFromImage generation={generation} />
+				</div>
+			</MemoryRouter>
 		)
 		const panel = screen.getByRole('region', {
 			name: 'Generate from an image (internal)'
@@ -44,5 +47,16 @@ describe('GenerateFromImage', () => {
 
 		expect(stageDrop).not.toHaveBeenCalled()
 		expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled()
+	})
+	it('leads to every generation, not only the ones this tab started', () => {
+		render(
+			<MemoryRouter>
+				<GenerateFromImage generation={generation} />
+			</MemoryRouter>
+		)
+
+		expect(
+			screen.getByRole('link', { name: 'All generations' })
+		).toHaveAttribute('href', '/dashboard/generations')
 	})
 })
