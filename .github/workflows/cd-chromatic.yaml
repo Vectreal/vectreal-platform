@@ -20,6 +20,11 @@ on:
       - 'packages/viewer/**'
       - 'apps/vectreal-platform/app/components/**'
       - '.github/workflows/cd-chromatic.yaml'
+      # Negations must follow the patterns they exclude. A Release Please merge
+      # touches only manifests, changelogs and the root release manifest, so it
+      # starts no build.
+      - '!**/package.json'
+      - '!**/CHANGELOG.md'
   # A PR uploads at most once on its own: when it is opened ready for review, or
   # when a draft is marked ready, and only if it changes the design system or
   # app components (see the scope step). Pushes after that do not upload. The
@@ -31,6 +36,8 @@ on:
       - 'shared/components/**'
       - 'packages/viewer/**'
       - 'apps/vectreal-platform/app/components/**'
+      - '!**/package.json'
+      - '!**/CHANGELOG.md'
 
 # Each kind of event gets its own group. A shared one let any unrelated label
 # (each fires its own `labeled` run, skipped by the job's `if`) cancel the PR's
