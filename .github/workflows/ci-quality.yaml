@@ -33,6 +33,7 @@ on:
       - 'nx.json'
       - 'eslint.config.mts'
       - 'vitest.shared.mts'
+      - 'vitest.setup.mts'
       - 'tsconfig.base.json'
       - '.github/workflows/ci-quality.yaml'
       - '.github/workflows/cd-platform-staging.yaml'
@@ -53,6 +54,11 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       NX_DAEMON: 'false'
+      # Plain logs. Both, because tools disagree: tinyrainbow (vitest) and
+      # picocolors (nx) read NO_COLOR, chalk's supports-color reads only
+      # FORCE_COLOR.
+      NO_COLOR: '1'
+      FORCE_COLOR: '0'
       CSRF_SECRET: build-only-csrf-secret
       DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
       SUPABASE_URL: https://build.invalid
@@ -175,6 +181,9 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       NX_DAEMON: 'false'
+      # See the Quality Gate job.
+      NO_COLOR: '1'
+      FORCE_COLOR: '0'
     services:
       # Supabase's own image, not stock postgres. The migrations create policies
       # `TO authenticated` over `auth.uid()`, and Postgres resolves both at
