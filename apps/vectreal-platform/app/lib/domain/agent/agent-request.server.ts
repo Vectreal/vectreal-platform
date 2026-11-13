@@ -26,8 +26,11 @@ export const AGENT_API_RATE_LIMIT = {
 /**
  * Per address, and counting refused tokens only: before a token resolves
  * there is no grant to key on, and every refusal costs a JWKS check, an Auth
- * lookup or a grant query. Counting only refusals keeps one office NAT from
- * pooling the agents behind it, the way the embed key check does.
+ * lookup or a grant query. Agents whose tokens resolve never spend it, the way
+ * the embed key check counts failures only, so busy agents behind one office
+ * NAT do not fill it. Refusals do pool: once one address has spent it, every
+ * request from there waits out the window, valid tokens included, because the
+ * check runs before the token is read. That is the price of not resolving.
  */
 export const AGENT_TOKEN_REFUSAL_LIMIT = {
 	bucket: 'agent-api-refused-token',
@@ -70,7 +73,9 @@ export async function authorizeAgentRequest(
 	}
 
 	const actor = await resolveAgentActor(request).catch((error: unknown) => {
-		if (error instanceof Response) {
+		// A refused token only: a malformed request (a token beside a session
+		// cookie, 400) cost no lookup and names no credential to guess at.
+		if (error instanceof Response && error.status === 401) {
 			recordRateLimitAttempt(request, AGENT_TOKEN_REFUSAL_LIMIT)
 		}
 		throw error

@@ -266,6 +266,21 @@ describe('agent API routes', () => {
 	)
 
 	it.each(gated)(
+		'$path has a handler for every method it declares',
+		async (route) => {
+			// A declared method with no handler clears the gate and then gets
+			// React Router's own 405, which names no allowed methods.
+			const module = await importRoute(route.file)
+			for (const method of Object.keys(ACCESS[route.path])) {
+				const handler = method === 'GET' ? 'loader' : 'action'
+				expect(typeof module[handler], `${route.path} ${method}`).toBe(
+					'function'
+				)
+			}
+		}
+	)
+
+	it.each(gated)(
 		'$path runs no other middleware ahead of its handlers',
 		async (route) => {
 			const ancestorMiddleware = (

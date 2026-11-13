@@ -2,7 +2,6 @@ import { apiFailureSchema } from '@vctrl/sdk'
 import { RouterContextProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-
 import { agentActorFrom } from './agent-actor-context'
 import {
 	AGENT_API_RATE_LIMIT,
@@ -190,6 +189,26 @@ describe('refused tokens', () => {
 		await spend(AGENT_TOKEN_REFUSAL_LIMIT.maxRequests + 1, () =>
 			requestFrom('192.0.2.50')
 		)
+	})
+})
+
+describe('a malformed request', () => {
+	it('spends no refused-token budget', async () => {
+		resolveAgentActor.mockImplementation(async () => {
+			throw new Response(null, { status: 400 })
+		})
+		for (
+			let call = 0;
+			call <= AGENT_TOKEN_REFUSAL_LIMIT.maxRequests;
+			call += 1
+		) {
+			await refusal(authorizeAgentRequest(requestFrom(), { scope: 'any' }))
+		}
+
+		resolveAgentActor.mockResolvedValue(actor)
+		await expect(
+			authorizeAgentRequest(requestFrom(), { scope: 'any' })
+		).resolves.toEqual(actor)
 	})
 })
 
