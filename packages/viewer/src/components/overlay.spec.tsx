@@ -20,6 +20,8 @@ const CONTROLS = <div>playback controls</div>
 const CAMERAS = <div>camera switcher</div>
 const FULLSCREEN = <div>full screen button</div>
 const HINT = <div>interaction hint</div>
+const TAP_START = <div>tap to rotate</div>
+const TAP_DONE = <div>done</div>
 
 function renderOverlay(loadingState: LoadingState) {
 	render(
@@ -31,6 +33,8 @@ function renderOverlay(loadingState: LoadingState) {
 			cameraControls={CAMERAS}
 			fullscreenControl={FULLSCREEN}
 			interactionHint={HINT}
+			tapToActivate={TAP_START}
+			tapToDeactivate={TAP_DONE}
 		/>
 	)
 
@@ -40,6 +44,8 @@ function renderOverlay(loadingState: LoadingState) {
 		cameras: screen.queryByText('camera switcher'),
 		fullscreen: screen.queryByText('full screen button'),
 		hint: screen.queryByText('interaction hint'),
+		tapStart: screen.queryByText('tap to rotate'),
+		tapDone: screen.queryByText('done'),
 		loader: screen.queryByText('loading spinner')
 	}
 }
@@ -85,5 +91,17 @@ describe('Overlay', () => {
 
 		expect(fullscreen?.parentElement).toBe(controls?.parentElement)
 		expect(fullscreen?.nextElementSibling).toBe(controls)
+	})
+
+	it('shows the tap-to-rotate button only once the scene is ready', () => {
+		expect(renderOverlay('loading').tapStart).toBeNull()
+	})
+
+	it('puts the way back to scrolling on top of the corner stack', () => {
+		const { tapStart, tapDone, fullscreen } = renderOverlay('ready')
+
+		expect(tapStart).not.toBeNull()
+		expect(tapDone?.parentElement).toBe(fullscreen?.parentElement)
+		expect(tapDone?.nextElementSibling).toBe(fullscreen)
 	})
 })

@@ -13,7 +13,7 @@
 // ---------------------------------------------------------------------------
 
 const HERO_SENTENCE =
-	'Aus drei Fotos mache ich ein 3D-Modell, das Kundinnen und Kunden im Shop selbst drehen.'
+	'Aus drei Fotos wird unter Ihrem Namen ein 3D-Modell, das Kundinnen und Kunden im Shop selbst drehen.'
 
 const GUIDE_HREF =
 	'/docs/guides/publish-embed#shopify-a-section-that-tours-the-scene-on-scroll'
@@ -29,7 +29,7 @@ export const AGENCY_PAGE_COPY = {
 	/** Opens the hero for a visit from one of our letters; the organization comes from the letter's code. */
 	letterGreeting: (organization: string) => `Guten Tag, ${organization}.`,
 	hero: {
-		heading: '3D-Modelle für die Shopify-Shops Ihrer Kunden, unter Ihrem Namen',
+		heading: '3D-Modelle für Ihre Shopify-Kunden',
 		lead: HERO_SENTENCE,
 		sceneLabel: 'Ein Beispielprodukt in 3D, zum Drehen'
 	},
