@@ -10,8 +10,8 @@ ARG PNPM_VERSION=10.28.0
 WORKDIR /app
 ENV PNPM_HOME=/usr/local/bin
 
-# Dependencies stage
-FROM base AS deps
+# Workspace manifests: what both dependency installs below read
+FROM base AS manifests
 ARG PNPM_VERSION
 WORKDIR /app
 
@@ -28,9 +28,17 @@ COPY packages/viewer/package.json ./packages/viewer/
 COPY shared/components/package.json ./shared/components/
 COPY shared/utils/package.json ./shared/utils/
 
-# Install dependencies
-RUN corepack prepare pnpm@${PNPM_VERSION} --activate && \
-    pnpm install --frozen-lockfile --prod=false
+RUN corepack prepare pnpm@${PNPM_VERSION} --activate
+
+# Every dependency, dev included: the build needs Vite, React Router's CLI and Nx
+FROM manifests AS deps
+RUN pnpm install --frozen-lockfile --prod=false
+
+# Production dependencies only: what the runner ships. The server bundle
+# resolves its imports from here at runtime; the build tooling never runs in
+# the image after the build stage, so the runner does not carry it.
+FROM manifests AS prod-deps
+RUN pnpm install --frozen-lockfile --prod
 
 # Build stage
 FROM deps AS build
@@ -60,9 +68,13 @@ ENV VITE_PUBLIC_POSTHOG_HOST=${BUILD_VITE_PUBLIC_POSTHOG_HOST}
 ENV VITE_PUBLIC_POSTHOG_UI_HOST=${BUILD_VITE_PUBLIC_POSTHOG_UI_HOST}
 ENV VITE_PUBLIC_POSTHOG_ENABLED=${BUILD_VITE_PUBLIC_POSTHOG_ENABLED}
 
-# Copy source and build application artifacts inside Docker
+# Copy source and build application artifacts inside Docker. The client bundle
+# is built here rather than reused from CI because Vite bakes the PostHog build
+# args above into it, and CI builds with placeholders. `react-router build`, not
+# `build-ci`: the route budget and newsroom chunk checks are properties of the
+# source, which CI - Quality already ran them on before any deploy.
 COPY . .
-RUN pnpx nx build-ci vectreal-platform
+RUN cd apps/vectreal-platform && pnpm exec react-router build
 
 # Runner stage
 FROM base AS runner
@@ -95,11 +107,11 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Copy runtime dependencies and application artifacts from build stages.
-COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 # The repo is a pnpm workspace, so a dependency declared by the app installs
 # into the app's own node_modules rather than the root one.
-COPY --from=deps --chown=nodejs:nodejs /app/apps/vectreal-platform/node_modules ./apps/vectreal-platform/node_modules
-COPY --from=deps --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=prod-deps --chown=nodejs:nodejs /app/apps/vectreal-platform/node_modules ./apps/vectreal-platform/node_modules
+COPY --from=prod-deps --chown=nodejs:nodejs /app/package.json ./package.json
 COPY --from=build --chown=nodejs:nodejs /app/build/apps/vectreal-platform ./build/apps/vectreal-platform
 COPY --chown=nodejs:nodejs apps/vectreal-platform/server.mjs ./apps/vectreal-platform/server.mjs
 COPY --chown=nodejs:nodejs apps/vectreal-platform/server-app.mjs ./apps/vectreal-platform/server-app.mjs
