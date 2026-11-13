@@ -19,7 +19,6 @@ import {
 	CAMERA_VECTOR_FIELDS,
 	isSceneCamera
 } from './camera-rules'
-import { isFramingAspect } from '../scene-camera/viewport-framing'
 
 export * from './camera-rules'
 
@@ -107,32 +106,33 @@ export const cameraTransitionSchema = z
 		}
 	})
 
-/**
- * The fields of one camera that have a rule. A field without one (a three.js
- * prop such as `near`) is carried as stored.
- */
-const CAMERA_FIELD_SCHEMAS = {
-	cameraId: z.string({ error: 'must be a string' }),
-	name: z.string({ error: 'must be a string' }),
-	kind: cameraKindSchema,
-	initial: z.boolean({ error: 'must be a boolean' }),
-	fov: cameraFovSchema,
-	framingAspect: z.custom<number>(isFramingAspect, {
-		message: 'must be a positive finite number'
-	}),
-	transition: cameraTransitionSchema,
-	...Object.fromEntries(
-		CAMERA_VECTOR_FIELDS.map((field) => [field, cameraVectorSchema])
-	)
-} as Record<string, z.ZodType>
+const vector = cameraVectorSchema.optional()
 
+/**
+ * One camera. Every field with a rule is held to it; a field without one (a
+ * three.js prop such as `near`) is carried as stored.
+ */
 export const cameraEntrySchema = z.looseObject(
-	Object.fromEntries(
-		Object.entries(CAMERA_FIELD_SCHEMAS).map(([field, schema]) => [
-			field,
-			schema.optional()
-		])
-	),
+	{
+		cameraId: z.string({ error: 'must be a string' }).optional(),
+		name: z.string({ error: 'must be a string' }).optional(),
+		kind: cameraKindSchema.optional(),
+		initial: z.boolean({ error: 'must be a boolean' }).optional(),
+		fov: cameraFovSchema.optional(),
+		// `isFramingAspect` as a write rule, spelled out so it has a JSON Schema
+		// (an MCP tool's input is one).
+		framingAspect: z
+			.number({ error: 'must be a positive finite number' })
+			.gt(0, { error: 'must be a positive finite number' })
+			.optional(),
+		transition: cameraTransitionSchema.optional(),
+		position: vector,
+		target: vector,
+		rotation: vector,
+		/** The legacy name for `target`. */
+		lookAt: vector
+	} satisfies Record<(typeof CAMERA_VECTOR_FIELDS)[number], unknown> &
+		Record<string, z.ZodType>,
 	{ error: 'must be an object' }
 )
 

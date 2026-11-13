@@ -81,6 +81,23 @@ describe('a camera pose on the save path', () => {
 	})
 })
 
+describe('the camera list on the save path', () => {
+	it('refuses a list with no scene camera for the scene to open on', async () => {
+		const result = parse({
+			cameras: [{ cameraId: 'pin', name: 'Pin', kind: 'hotspot' }]
+		})
+		expect(result).toBeInstanceOf(Response)
+		expect(await (result as Response).text()).toContain(
+			'camera.cameras must contain at least one scene camera'
+		)
+	})
+
+	it('names only the path for a camera without a name', async () => {
+		const result = parse({ cameras: [{ cameraId: 'hero', fov: 0 }] })
+		expect(await (result as Response).text()).toContain('between 0 and 180"')
+	})
+})
+
 describe('camera vectors on the save path', () => {
 	const withCamera = (camera: Record<string, unknown>) =>
 		parse({ cameras: [{ ...CAMERAS[0], ...camera }] })
@@ -116,7 +133,7 @@ describe('camera vectors on the save path', () => {
 
 			expect(result).toBeInstanceOf(Response)
 			expect(await (result as Response).text()).toContain(
-				`Camera \\"Hero\\" has a ${field} that is not [x, y, z] or {x, y, z} of finite numbers (camera.cameras[0].${field})`
+				`camera.cameras[0].${field} must be [x, y, z] or {x, y, z} of finite numbers (camera \\"Hero\\")`
 			)
 		}
 	)

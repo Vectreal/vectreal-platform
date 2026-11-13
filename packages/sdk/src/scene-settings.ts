@@ -1,3 +1,4 @@
+import { cameraSettingsSchema } from '@vctrl/core/camera-schema'
 import { z } from 'zod'
 
 /*
@@ -280,7 +281,10 @@ export type SceneSettingsDocument = z.infer<typeof sceneSettingsSchema>
  * `PATCH /api/v1/scenes/:sceneId/settings`: the sections to change. Each one
  * sent replaces the stored section whole; those left out stay as they are.
  *
- * `camera` and `hotspots` go through the publisher's save parser on the
+ * `camera` is checked here against `@vctrl/core`'s camera rules, the same
+ * ones the server applies, so a camera the server would refuse (an fov
+ * outside (0, 180), no scene camera to open on) fails before it is sent.
+ * `camera` and `hotspots` then go through the publisher's save parser on the
  * server, which refuses what a publisher save would: a hotspot or interaction
  * naming a camera that is gone, a hotspot id that is not a UUID, artwork the
  * scene does not link. Send both in one call to change a link from either end.
@@ -296,7 +300,7 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 	lighting: sceneLightingSchema.optional(),
 	environment: sceneEnvironmentSchema.optional(),
 	shadows: sceneShadowsSchema.optional(),
-	camera: section.optional(),
+	camera: cameraSettingsSchema.optional(),
 	hotspots: z.array(section).optional(),
 	// The viewer's chrome. `compressTexturesForGpu` is accepted so a section
 	// read from `GET` can be sent back, and ignored: the publisher stores it
