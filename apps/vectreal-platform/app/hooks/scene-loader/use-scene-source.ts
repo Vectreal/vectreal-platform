@@ -39,6 +39,11 @@ interface UseSceneSourceArgs {
 	/** The scene the URL points at, whether or not it could be read. */
 	routeSceneId: null | string
 	/**
+	 * The generated variant the URL names (`?generation=`), open as an unsaved
+	 * scene. Leaving it is leaving a scene, as far as the stage is concerned.
+	 */
+	routeGenerationId: null | string
+	/**
 	 * The scene actually open in the publisher: a route id the loader shipped a
 	 * manifest for. An id alone is not one, since a signed-out or expired
 	 * session leaves the id in the URL with nothing behind it.
@@ -62,8 +67,32 @@ interface UseSceneSourceArgs {
  * manifest for the same scene, and re-applying saved state then would overwrite
  * whatever the user has changed since.
  */
+interface RouteSource {
+	readonly sceneId: null | string
+	readonly generationId: null | string
+}
+
+/**
+ * Whether the URL just left whatever it had open for the bare `/publisher`.
+ *
+ * The one publisher transition that unmounts nothing: /publisher,
+ * /publisher/:sceneId and /publisher?generation= are one route, so without a
+ * reset the previous model stays on screen where an upload should be. Back
+ * from a generated variant is the same transition, and would otherwise hide
+ * the list it was opened from.
+ */
+export function leavesForEmptyStage(
+	previous: RouteSource,
+	current: RouteSource
+): boolean {
+	const hadSource = Boolean(previous.sceneId || previous.generationId)
+	const hasSource = Boolean(current.sceneId || current.generationId)
+	return hadSource && !hasSource
+}
+
 export function useSceneSource({
 	routeSceneId,
+	routeGenerationId,
 	openSceneId,
 	sceneManifest,
 	isRestoringDraft
@@ -84,10 +113,13 @@ export function useSceneSource({
 	// user did; a manifest that stops arriving is a session going stale, and
 	// tearing the open scene down for that would lose their work on a blip.
 	const previousRouteSceneIdRef = useRef<null | string>(routeSceneId)
+	const previousRouteGenerationIdRef = useRef<null | string>(routeGenerationId)
 
 	useEffect(() => {
 		const previousRouteSceneId = previousRouteSceneIdRef.current
 		previousRouteSceneIdRef.current = routeSceneId
+		const previousRouteGenerationId = previousRouteGenerationIdRef.current
+		previousRouteGenerationIdRef.current = routeGenerationId
 
 		setCurrentSceneId(openSceneId)
 		// The just-saved marker is consumed by the navigation it was written for.
@@ -96,10 +128,15 @@ export function useSceneSource({
 			previous === openSceneId ? previous : null
 		)
 
-		// Leaving a scene for the base route is the one publisher transition that
-		// unmounts nothing: /publisher and /publisher/:sceneId are one route. Without
-		// this the previous scene stays on screen where an upload should be.
-		if (previousRouteSceneId && !routeSceneId) {
+		if (
+			leavesForEmptyStage(
+				{
+					sceneId: previousRouteSceneId,
+					generationId: previousRouteGenerationId
+				},
+				{ sceneId: routeSceneId, generationId: routeGenerationId }
+			)
+		) {
 			resetModel()
 			resetSceneState()
 		}
@@ -107,6 +144,7 @@ export function useSceneSource({
 		openSceneId,
 		resetModel,
 		resetSceneState,
+		routeGenerationId,
 		routeSceneId,
 		setCurrentSceneId,
 		setLastSavedSceneId

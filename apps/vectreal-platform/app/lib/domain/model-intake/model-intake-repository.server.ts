@@ -184,7 +184,8 @@ export async function setIntakeEmailStatus(
 /**
  * What the internal page lists. Name, email, company and message stay
  * encrypted and are not selected: the notification email already carried them
- * to the inbox, and the page has no reason to decrypt them again.
+ * to the inbox, and the page has no reason to decrypt them again. The link is
+ * selected, still encrypted, because opening it is the work the page is for.
  */
 export async function listIntakeSubmissions() {
 	return getDbClient()
@@ -201,6 +202,7 @@ export async function listIntakeSubmissions() {
 			widthCm: modelIntakeSubmissions.widthCm,
 			depthCm: modelIntakeSubmissions.depthCm,
 			photoPaths: modelIntakeSubmissions.photoPaths,
+			link: modelIntakeSubmissions.link,
 			status: modelIntakeSubmissions.status,
 			emailStatus: modelIntakeSubmissions.emailStatus,
 			cleanupStartedAt: modelIntakeSubmissions.cleanupStartedAt,

@@ -14,6 +14,7 @@ import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
 import { type ImgTo3dGeneration } from '../../../hooks/use-img-to-3d-generation'
 import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
 import { type SampleDownloader } from '../../../hooks/use-sample-download'
+import { type ImgTo3dListedBatch } from '../../../lib/domain/img-to-3d/img-to-3d-contract'
 import { PUBLISHER_EXAMPLE_PARAM } from '../../../lib/samples/example-scenes'
 import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
 import { RelativeTime } from '../../dashboard/relative-time'
@@ -44,7 +45,10 @@ interface Props {
 	 * Image-to-3D generation, present only when the loader's gate let this
 	 * account in. Owned by the shell for the reason `sampleDownload` is.
 	 */
-	imgTo3d?: ImgTo3dGeneration
+	imgTo3d?: {
+		readonly generation: ImgTo3dGeneration
+		readonly batches: readonly ImgTo3dListedBatch[]
+	}
 }
 
 /*
@@ -310,7 +314,8 @@ export const EmptyStage = ({
 
 					{imgTo3d && (
 						<GenerateFromImage
-							generation={imgTo3d}
+							generation={imgTo3d.generation}
+							batches={imgTo3d.batches}
 							className={cn('max-w-xl', arriveWhenReady)}
 						/>
 					)}

@@ -1,4 +1,9 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto'
+import {
+	createCipheriv,
+	createDecipheriv,
+	createHash,
+	randomBytes
+} from 'node:crypto'
 
 const ENCRYPTION_PREFIX = 'enc:v1'
 const ENCRYPTION_KEY_ENV = 'CONTACT_DATA_ENCRYPTION_KEY'
@@ -74,4 +79,28 @@ export function encryptSensitiveValue(plaintext: string): string {
 		tag.toString('base64'),
 		encrypted.toString('base64')
 	].join(':')
+}
+
+/**
+ * The inverse of `encryptSensitiveValue`, for the one stored value a staff
+ * page has to show: a free-model request's link. Throws on anything that is
+ * not a value this key wrote, since GCM's tag refuses a tampered one.
+ */
+export function decryptSensitiveValue(stored: string): string {
+	const [prefix, version, iv, tag, ciphertext] = stored.split(':')
+	if (`${prefix}:${version}` !== ENCRYPTION_PREFIX || !iv || !tag) {
+		throw new Error('Not an encrypted value.')
+	}
+	const decipher = createDecipheriv(
+		'aes-256-gcm',
+		deriveAesKey(),
+		Buffer.from(iv, 'base64'),
+		// Without it Node accepts a truncated tag, which is far easier to forge.
+		{ authTagLength: 16 }
+	)
+	decipher.setAuthTag(Buffer.from(tag, 'base64'))
+	return Buffer.concat([
+		decipher.update(Buffer.from(ciphertext ?? '', 'base64')),
+		decipher.final()
+	]).toString('utf8')
 }

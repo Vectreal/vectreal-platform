@@ -70,11 +70,12 @@ export const modelIntakeLetterScans = pgTable(
 ).enableRLS()
 
 /**
- * One free-model request: a brand's three photos and who sent them.
+ * One free-model request: a brand's photos or a link to its data, and who sent them.
  *
- * Name, email, company and message are encrypted with `encryptSensitiveValue`,
+ * Name, email, company, message and link are encrypted with `encryptSensitiveValue`,
  * as contact submissions are. The photos live in the private `model-intake`
- * bucket under `<id>/`, and `photoPaths` names them. `deleteAfter` is when the
+ * bucket under `<id>/`, and `photoPaths` names them; a request with a link
+ * may have none. `deleteAfter` is when the
  * purge script removes the row and its photos: receipt plus the retention
  * period, moved to delivery plus the period on delivery, and cleared when a
  * pilot is booked, because the pilot agreement then governs.
@@ -95,6 +96,8 @@ export const modelIntakeSubmissions = pgTable(
 		email: text('email').notNull(),
 		company: text('company').notNull(),
 		message: text('message'),
+		/** An https link to 3D or CAD data or a walk-around video; null when none was given. */
+		link: text('link'),
 		heightCm: real('height_cm'),
 		widthCm: real('width_cm'),
 		depthCm: real('depth_cm'),

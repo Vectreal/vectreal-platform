@@ -13,7 +13,10 @@ import { useRestoreSavedFinish } from '../../components/publisher/sidebars/compo
 import { UpgradeModal } from '../../components/upgrade/upgrade-modal'
 import { useAuthResumeRevalidation } from '../../hooks/use-auth-resume-revalidation'
 import { getQuotaLimit } from '../../lib/domain/billing/entitlement-service.server'
-import { isImgTo3dEnabledFor } from '../../lib/domain/img-to-3d/img-to-3d-access.server'
+import { resolveImgTo3dAccess } from '../../lib/domain/img-to-3d/img-to-3d-access.server'
+import { IMG_TO_3D_PUBLISHER_BATCH_LIMIT } from '../../lib/domain/img-to-3d/img-to-3d-contract'
+import { imgTo3dServerDeps } from '../../lib/domain/img-to-3d/img-to-3d-deps.server'
+import { listImgTo3dGenerations } from '../../lib/domain/img-to-3d/img-to-3d-handlers'
 import { getProject } from '../../lib/domain/project/project-repository.server'
 import {
 	getRecentScenesForUser,
@@ -99,11 +102,31 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 	/*
 	  Generating from an image is offered on the empty stage, so it is only
 	  asked about there. The routes ask the same question themselves; this only
-	  decides whether the panel is drawn. The gate never throws: anything but an
-	  explicit yes from the flag is a no.
+	  decides whether the panel is drawn, and lists its recent batches. Their
+	  states are left for the panel to poll: asking the runtime here would put
+	  the GPU service on the publisher's load path. A failure costs the panel,
+	  not the page.
 	*/
-	const imgTo3dEnabledPromise: Promise<boolean> =
-		!sceneId && user ? isImgTo3dEnabledFor(user) : Promise.resolve(false)
+	const imgTo3dBatchesPromise: Promise<PublisherLoaderData['imgTo3dBatches']> =
+		!sceneId && user
+			? resolveImgTo3dAccess(user)
+					.then((access) =>
+						access
+							? listImgTo3dGenerations(
+									access.organizationId,
+									imgTo3dServerDeps,
+									{
+										batchLimit: IMG_TO_3D_PUBLISHER_BATCH_LIMIT,
+										askRuntime: false
+									}
+								)
+							: null
+					)
+					.catch((error: unknown) => {
+						reportServerError(error, { request })
+						return null
+					})
+			: Promise.resolve(null)
 
 	/*
 	  Offered on the empty stage, so only where there is one: signed in, with no
@@ -188,10 +211,10 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		}
 	}
 
-	const [maxSceneBytes, recentScenes, imgTo3dEnabled] = await Promise.all([
+	const [maxSceneBytes, recentScenes, imgTo3dBatches] = await Promise.all([
 		maxSceneBytesPromise,
 		recentScenesPromise,
-		imgTo3dEnabledPromise
+		imgTo3dBatchesPromise
 	])
 
 	const loaderData = {
@@ -209,7 +232,7 @@ export const loader = async ({ request, params }: Route.LoaderArgs) => {
 		publishedMeta,
 		maxSceneBytes,
 		recentScenes,
-		imgTo3dEnabled,
+		imgTo3dBatches,
 		savedFinish
 	}
 

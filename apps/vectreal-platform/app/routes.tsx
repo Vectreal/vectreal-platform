@@ -50,6 +50,10 @@ export default [
 	),
 	route('api/scenes/:sceneId?', './routes/api/scenes.$sceneId.ts'),
 	route('api/scene-location-options', './routes/api/scene-location-options.ts'),
+	route(
+		'api/dashboard/internal-pages',
+		'./routes/api/dashboard.internal-pages.ts'
+	),
 	route('api/img-to-3d/generations', './routes/api/img-to-3d.generations.ts'),
 	route(
 		'api/img-to-3d/generations/:jobId',
@@ -359,6 +363,7 @@ export default [
 			),
 			route('settings', './routes/dashboard-page/settings.tsx'),
 			route('connected-agents', './routes/dashboard-page/connected-agents.tsx'),
+			route('generations', './routes/dashboard-page/generations.tsx'),
 			route('intake', './routes/dashboard-page/intake.tsx')
 		])
 	])

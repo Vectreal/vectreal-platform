@@ -4,10 +4,14 @@
 
   Install: Online Store > Themes > Edit code > Snippets > Add a new snippet
   named vectreal-free-model-link, paste this file, then render it where the
-  link should show, for example below the buy buttons in Dawn's
-  sections/main-product.liquid:
+  link should show:
 
     {% render 'vectreal-free-model-link' %}
+
+  Dawn: below the buy buttons in sections/main-product.liquid.
+  Horizon and the themes built on it, such as Savor: no theme code. In the
+  theme editor, open the product template's Product information section,
+  add a Custom Liquid block under Buy buttons, and put the line above in it.
 
   Both parameters are optional:
 

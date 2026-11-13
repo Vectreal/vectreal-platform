@@ -1,11 +1,12 @@
 /**
  * The image-to-3D job store, against real rows.
  *
- * Two rules live in its SQL rather than in the handlers the unit specs cover:
- * a job is visible only to its own organization, which is all that keeps one
- * account polling or downloading another's model, and the daily limit counts
- * one person's jobs over the last 24 hours, which is all that bounds their GPU
- * spend. A fake store can only agree with itself on either.
+ * Three rules live in its SQL rather than in the handlers the unit specs
+ * cover: a job is visible only to its own organization, which is all that
+ * keeps one account polling, downloading or listing another's model; the
+ * daily limit counts one person's jobs over the last 24 hours, which is all
+ * that bounds their GPU spend; and the Generations page lists whole batches,
+ * newest first. A fake store can only agree with itself on any of them.
  *
  * Opt-in, because it writes to whatever `DATABASE_URL` points at:
  *
@@ -54,7 +55,8 @@ describe('image-to-3D job store', () => {
 		createdBy,
 		batchId,
 		seed: 1,
-		params: PARAMS
+		params: PARAMS,
+		sourceName: 'chair'
 	})
 
 	beforeAll(async () => {
@@ -171,9 +173,61 @@ describe('image-to-3D job store', () => {
 
 	it('finds a job only for the organization that owns it', async () => {
 		expect(await jobs.findForOrganization(recent[0], orgId)).toEqual({
-			id: recent[0]
+			id: recent[0],
+			seed: 1,
+			sourceName: 'chair'
 		})
 		expect(await jobs.findForOrganization(othersJob, orgId)).toBeNull()
+	})
+
+	it('lists whole batches of one organization, newest first, up to the limit', async () => {
+		// Stamped ahead of every other row, so these two are the newest batches.
+		const older = { batchId: randomUUID(), at: Date.now() + 60_000 }
+		const newer = { batchId: randomUUID(), at: Date.now() + 120_000 }
+		const ids = [randomUUID(), randomUUID(), randomUUID()]
+		await db.insert(schema.imgTo3dJobs).values([
+			{
+				...row(ids[0], userId, orgId),
+				batchId: older.batchId,
+				createdAt: new Date(older.at)
+			},
+			{
+				...row(ids[1], userId, orgId),
+				batchId: newer.batchId,
+				seed: 2,
+				createdAt: new Date(newer.at)
+			},
+			{
+				...row(ids[2], userId, orgId),
+				batchId: newer.batchId,
+				seed: 1,
+				createdAt: new Date(newer.at)
+			}
+		])
+
+		const newest = await jobs.listForOrganization(orgId, 1)
+		expect(newest.map(({ id, seed }) => ({ id, seed }))).toEqual([
+			{ id: ids[2], seed: 1 },
+			{ id: ids[1], seed: 2 }
+		])
+		expect(newest[0]).toMatchObject({
+			batchId: newer.batchId,
+			sourceName: 'chair',
+			createdByName: 'Generator'
+		})
+
+		const all = await jobs.listForOrganization(orgId, 10)
+		expect(new Set(all.map((job) => job.batchId))).toEqual(
+			new Set([newer.batchId, older.batchId, batchId])
+		)
+		expect(all.map((job) => job.id)).not.toContain(othersJob)
+		expect(all.slice(0, 3).map((job) => job.id)).toEqual([
+			ids[2],
+			ids[1],
+			ids[0]
+		])
+
+		await Promise.all(ids.map((id) => jobs.remove(id)))
 	})
 
 	it('removes a job', async () => {

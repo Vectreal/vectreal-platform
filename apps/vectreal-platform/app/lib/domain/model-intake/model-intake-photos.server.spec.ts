@@ -147,10 +147,12 @@ describe('prepareIntakePhotos', () => {
 		}
 	})
 
-	it('refuses anything other than exactly three photos', async () => {
+	it('refuses more photos than the form has slots for', async () => {
 		const jpeg = await jpegWithGps()
 		expect(
-			await prepareIntakePhotos([file(jpeg, 'a.jpg'), file(jpeg, 'b.jpg')])
+			await prepareIntakePhotos(
+				['a', 'b', 'c', 'd'].map((name) => file(jpeg, `${name}.jpg`))
+			)
 		).toEqual({ ok: false, fieldErrors: { photos: 'photosCount' } })
 	})
 

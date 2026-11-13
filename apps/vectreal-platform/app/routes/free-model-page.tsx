@@ -1,7 +1,7 @@
 import { Button } from '@shared/components/ui/button'
 import { ArrowDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { data, useNavigation } from 'react-router'
+import { data, Link, useNavigation } from 'react-router'
 
 import { PublicErrorBoundary } from '../components/errors'
 import { SheetFrame } from '../components/layout-components'
@@ -172,6 +172,12 @@ export default function FreeModelPage({
 		setTurnstileResetNonce((current) => current + 1)
 	}, [actionData])
 
+	// The site nav has no language switch, so the page keeps its own, carrying the letter along.
+	const otherLocale = locale === 'de' ? 'en' : 'de'
+	const languageSearch = new URLSearchParams({ lang: otherLocale })
+	if (batch !== 'direct') languageSearch.set('b', batch)
+	if (letterCode) languageSearch.set(MODEL_INTAKE_LETTER_PARAM, letterCode)
+
 	const formError =
 		actionData?.status === 'error' && !actionData.fieldErrors
 			? copy.formErrors[actionData.formError]
@@ -183,20 +189,31 @@ export default function FreeModelPage({
 				greeting={letter ? copy.letterGreeting(letter.organization) : null}
 				heading={copy.hero.heading}
 				lead={copy.hero.lead}
+				leadNote={copy.hero.alternatives}
 				scene={scene}
 				sceneLabel={copy.hero.sceneLabel}
 				action={
-					<Button
-						asChild
-						size="lg"
-						variant="brand"
-						className="tap-target w-full sm:w-fit"
-					>
-						<a href={`#${FORM_ID}`}>
-							{copy.hero.action}
-							<ArrowDown aria-hidden="true" />
-						</a>
-					</Button>
+					<>
+						<Button
+							asChild
+							size="lg"
+							variant="brand"
+							className="tap-target w-full sm:w-fit"
+						>
+							<a href={`#${FORM_ID}`}>
+								{copy.hero.action}
+								<ArrowDown aria-hidden="true" />
+							</a>
+						</Button>
+						<Link
+							to={`?${languageSearch.toString()}`}
+							hrefLang={otherLocale}
+							lang={otherLocale}
+							className="text-body-sm decoration-muted-foreground underline underline-offset-4"
+						>
+							{copy.languageLink}
+						</Link>
+					</>
 				}
 			/>
 

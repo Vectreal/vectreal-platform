@@ -12,14 +12,16 @@ import {
 	parseIntakeScenes,
 	parseIntakeStorePages,
 	intakeLetterFormPath,
-	intakePageLocale,
 	intakeRequestsByLetter,
 	isIntakeBodyAcceptable,
+	isIntakePhotoCountAcceptable,
 	mintIntakeLetterCode,
 	MODEL_INTAKE_CODE_ALPHABET,
+	MODEL_INTAKE_MAX_LINK_LENGTH,
 	MODEL_INTAKE_MAX_MESSAGE_LENGTH,
 	MODEL_INTAKE_RETENTION_DAYS,
 	normalizeIntakeLetterCode,
+	parseIntakeLink,
 	parseIntakeSizeCm,
 	resolveIntakeBatch,
 	resolveIntakeLocale,
@@ -33,6 +35,7 @@ const valid: ModelIntakeTextInput = {
 	email: ' Jane@Brand.DE ',
 	company: 'Brand GmbH',
 	productType: 'shoes',
+	link: '',
 	height: '12',
 	width: '30,5',
 	depth: '',
@@ -53,6 +56,7 @@ describe('validateIntakeFields', () => {
 				email: 'jane@brand.de',
 				company: 'Brand GmbH',
 				productType: 'shoes',
+				link: null,
 				size: { heightCm: 12, widthCm: 30.5, depthCm: null },
 				message: ''
 			}
@@ -67,6 +71,7 @@ describe('validateIntakeFields', () => {
 		['email', { email: 'not-an-email' }],
 		['company', { company: ' ' }],
 		['productType', { productType: 'glassware' }],
+		['link', { link: 'http://cad.example.com/lamp' }],
 		['size', { depth: '900' }],
 		['message', { message: 'x'.repeat(MODEL_INTAKE_MAX_MESSAGE_LENGTH + 1) }],
 		['consentFollowUp', { consentFollowUp: false }],
@@ -76,6 +81,48 @@ describe('validateIntakeFields', () => {
 		const result = validateIntakeFields({ ...valid, ...change })
 		expect(result.ok).toBe(false)
 		expect(result.ok ? {} : Object.keys(result.fieldErrors)).toEqual([field])
+	})
+})
+
+describe('parseIntakeLink', () => {
+	it('is no link when empty', () => {
+		expect(parseIntakeLink('  ')).toBeNull()
+	})
+
+	it('accepts an https link and returns it as the parser writes it', () => {
+		expect(parseIntakeLink(' https://Drive.Example.com/s/abc?dl=1 ')).toBe(
+			'https://drive.example.com/s/abc?dl=1'
+		)
+	})
+
+	it.each([
+		['plain http', 'http://cad.example.com/lamp'],
+		['a script', 'javascript:alert(1)'],
+		['a data URL', 'data:text/html,hi'],
+		['a bare host', 'cad.example.com/lamp'],
+		['credentials', 'https://user:secret@cad.example.com/lamp'],
+		['a user name', 'https://user@cad.example.com/lamp'],
+		[
+			'more than the cap',
+			`https://cad.example.com/${'a'.repeat(MODEL_INTAKE_MAX_LINK_LENGTH)}`
+		]
+	])('refuses %s', (_, raw) => {
+		expect(parseIntakeLink(raw)).toBe('invalid')
+	})
+})
+
+describe('isIntakePhotoCountAcceptable', () => {
+	it('needs exactly three photos without a link', () => {
+		expect(isIntakePhotoCountAcceptable(3, false)).toBe(true)
+		expect(isIntakePhotoCountAcceptable(0, false)).toBe(false)
+		expect(isIntakePhotoCountAcceptable(2, false)).toBe(false)
+	})
+
+	it('takes none to three photos beside a link', () => {
+		expect(isIntakePhotoCountAcceptable(0, true)).toBe(true)
+		expect(isIntakePhotoCountAcceptable(1, true)).toBe(true)
+		expect(isIntakePhotoCountAcceptable(3, true)).toBe(true)
+		expect(isIntakePhotoCountAcceptable(4, true)).toBe(false)
 	})
 })
 
@@ -118,14 +165,6 @@ describe('batches and locales', () => {
 		expect(resolveIntakeLocale('de')).toBe('de')
 		expect(resolveIntakeLocale('fr')).toBe('en')
 		expect(resolveIntakeLocale(null)).toBe('en')
-	})
-
-	it('reads an intake page language from its address alone', () => {
-		expect(intakePageLocale('/agenturen', '')).toBe('de')
-		expect(intakePageLocale('/agenturen', '?lang=en')).toBe('de')
-		expect(intakePageLocale('/free-model', '?lang=de&c=ABCDEFGH')).toBe('de')
-		expect(intakePageLocale('/free-model', '')).toBe('en')
-		expect(intakePageLocale('/pricing', '?lang=de')).toBeNull()
 	})
 
 	it('builds the URL a QR code encodes', () => {

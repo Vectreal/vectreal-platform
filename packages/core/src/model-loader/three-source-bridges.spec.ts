@@ -218,6 +218,32 @@ describe('an STL loads as geometry, whichever spelling it arrives in', () => {
 		}
 	})
 
+	it('gives a facet the normal its winding implies, not the zeros it stored', async () => {
+		/*
+		  Many STL writers leave the facet normal at 0 0 0, as BINARY_STL does,
+		  and STL defines the normal by the vertex order anyway. Passed through,
+		  the exporter replaced each zero normal with (1, 0, 0), so the part was
+		  lit from the side.
+		*/
+		const result = await new ModelLoader().loadFromBuffer(
+			BINARY_STL,
+			'part.stl'
+		)
+
+		const normals = result.data
+			.getRoot()
+			.listMeshes()
+			.flatMap((mesh) => mesh.listPrimitives())
+			.map((primitive) => primitive.getAttribute('NORMAL'))
+		expect(normals).toHaveLength(1)
+		const normal = normals[0]!
+		for (let index = 0; index < normal.getCount(); index += 1) {
+			// The triangle faces +Z in the file, which is +Y once stood up.
+			const element = normal.getElement(index, [0, 0, 0])
+			expect(element.map((value) => Math.round(value))).toEqual([0, 1, 0])
+		}
+	})
+
 	it('hands back the GLB it converted the STL into', async () => {
 		const result = await new ModelLoader().loadFromBuffer(
 			BINARY_STL,

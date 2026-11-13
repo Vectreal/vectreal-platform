@@ -37,14 +37,20 @@ import {
 	Folder,
 	FolderOpen,
 	Gauge,
+	ImageUp,
+	Inbox,
 	LayoutDashboard,
 	ArrowUpCircleIcon
 } from 'lucide-react'
 import { Link, useFetcher } from 'react-router'
 
+import { DASHBOARD_ROUTES } from '../../constants/dashboard'
 import { useIsClientMounted } from '../../hooks/use-is-client-mounted'
 
-import type { DashboardActor } from '../../lib/domain/dashboard/dashboard-types'
+import type {
+	DashboardActor,
+	DashboardInternalPages
+} from '../../lib/domain/dashboard/dashboard-types'
 
 interface SidebarLinkItem {
 	title: string
@@ -79,6 +85,34 @@ const manageLinks: SidebarLinkItem[] = [
 	}
 ]
 
+/*
+	Our own tools, not the product: each shown only to someone its page's gate
+	lets in, and labelled "(internal)" as the publisher labels its generate
+	panel, so nobody mistakes one for a feature.
+*/
+function internalLinks(pages: DashboardInternalPages): SidebarLinkItem[] {
+	return [
+		...(pages.generations
+			? [
+					{
+						title: 'Generations (internal)',
+						url: DASHBOARD_ROUTES.GENERATIONS,
+						icon: ImageUp
+					}
+				]
+			: []),
+		...(pages.intake
+			? [
+					{
+						title: 'Model intake (internal)',
+						url: '/dashboard/intake',
+						icon: Inbox
+					}
+				]
+			: [])
+	]
+}
+
 const quickLinks: SidebarLinkItem[] = [
 	{
 		title: 'Dashboard',
@@ -96,12 +130,14 @@ interface DashboardSidebarContentProps {
 	actor: DashboardActor
 	sidebarProjects: Array<{ id: string; name: string; organizationId: string }>
 	plan: string
+	internalPages: DashboardInternalPages
 }
 
 const DashboardSidebarContent = ({
 	actor,
 	sidebarProjects,
-	plan
+	plan,
+	internalPages
 }: DashboardSidebarContentProps) => {
 	const { submit } = useFetcher()
 	const { toggleSidebar, openMobile } = useSidebar()
@@ -209,7 +245,7 @@ const DashboardSidebarContent = ({
 					<SidebarGroupLabel>Manage</SidebarGroupLabel>
 					<SidebarGroupContent>
 						<SidebarMenu>
-							{manageLinks.map((item) => (
+							{[...manageLinks, ...internalLinks(internalPages)].map((item) => (
 								<SidebarMenuItem key={item.title}>
 									<SidebarMenuButton onClick={handleSidebarClose} asChild>
 										<Link

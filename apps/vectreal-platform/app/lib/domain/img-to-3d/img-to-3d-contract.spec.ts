@@ -6,7 +6,11 @@ import {
 	IMG_TO_3D_FIELDS,
 	IMG_TO_3D_MAX_IMAGE_BYTES,
 	imgTo3dErrorKind,
-	parseImgTo3dSubmission
+	parseImgTo3dSubmission,
+	imgTo3dContentDisposition,
+	imgTo3dFileNameFromDisposition,
+	imgTo3dSourceName,
+	imgTo3dVariantFileName
 } from './img-to-3d-contract'
 
 function png(bytes = 16, type = 'image/png'): File {
@@ -140,5 +144,45 @@ describe('imgTo3dErrorKind', () => {
 		for (const kind of IMG_TO_3D_ERROR_KINDS) {
 			expect(IMG_TO_3D_ERROR_COPY[kind].trim()).not.toBe('')
 		}
+	})
+})
+
+describe('imgTo3dSourceName', () => {
+	it('names a variant after the photo, without its extension', () => {
+		expect(imgTo3dSourceName('red chair.final.png')).toBe('red chair.final')
+		expect(imgTo3dVariantFileName('red chair.final', 7)).toBe(
+			'red chair.final-7.glb'
+		)
+	})
+
+	it('bounds what is stored', () => {
+		expect(imgTo3dSourceName(`${'a'.repeat(500)}.png`)).toHaveLength(120)
+	})
+
+	it('falls back when nothing is left of the name', () => {
+		expect(imgTo3dSourceName('.png')).toBe('generated')
+		expect(imgTo3dSourceName('   .jpg')).toBe('generated')
+		expect(imgTo3dVariantFileName(null, 3)).toBe('generated-3.glb')
+	})
+})
+
+describe('the download name, written by the server and read back by the publisher', () => {
+	it.each([
+		'chair-7.glb',
+		'Red Chair-1377488089.glb',
+		`Stühl "x"\\y (2)*'s-3.glb`,
+		'椅子-9.glb'
+	])('survives the round trip: %s', (name) => {
+		expect(
+			imgTo3dFileNameFromDisposition(imgTo3dContentDisposition(name))
+		).toBe(name)
+	})
+
+	it('reads nothing from a header it did not write', () => {
+		expect(imgTo3dFileNameFromDisposition(null)).toBeNull()
+		expect(imgTo3dFileNameFromDisposition('inline')).toBeNull()
+		expect(
+			imgTo3dFileNameFromDisposition("attachment; filename*=UTF-8''%E0%A4%A")
+		).toBeNull()
 	})
 })

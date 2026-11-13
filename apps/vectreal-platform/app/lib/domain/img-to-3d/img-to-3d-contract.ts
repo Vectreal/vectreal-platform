@@ -162,6 +162,144 @@ export function isTerminalImgTo3dStatus(status: ImgTo3dJobStatus): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Listing
+// ---------------------------------------------------------------------------
+
+/**
+ * How long a finished model can be counted on. The runtime keeps each GLB in
+ * a Modal Dict, which drops an entry after 7 days with no read or write, so a
+ * variant nobody downloads is gone about a week after it finished. Counted
+ * from submission, which is earlier, so the date shown is never late.
+ */
+export const IMG_TO_3D_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Batches the Generations page lists, newest first. */
+export const IMG_TO_3D_LIST_BATCH_LIMIT = 50
+
+/** Batches the publisher's empty stage lists under the generate form. */
+export const IMG_TO_3D_PUBLISHER_BATCH_LIMIT = 5
+
+/**
+ * The publisher's search param naming a variant to open. It stays in the URL
+ * while the variant is open, so Back leaves it and returns to the list.
+ */
+export const IMG_TO_3D_OPEN_PARAM = 'generation'
+
+export const imgTo3dOpenHref = (jobId: string) =>
+	`/publisher?${IMG_TO_3D_OPEN_PARAM}=${encodeURIComponent(jobId)}`
+
+const MAX_SOURCE_NAME_LENGTH = 120
+
+/**
+ * The photo's file name without its extension: what a variant is named
+ * after, in the publisher and as a download. Bounded, since it is stored.
+ */
+export function imgTo3dSourceName(fileName: string): string {
+	const name = fileName
+		.replace(/\.[^.]+$/, '')
+		.trim()
+		.slice(0, MAX_SOURCE_NAME_LENGTH)
+	return name || 'generated'
+}
+
+/** A variant's file name, the same whether it is opened or downloaded. */
+export function imgTo3dVariantFileName(
+	sourceName: string | null,
+	seed: number
+): string {
+	return `${sourceName ?? 'generated'}-${seed}.glb`
+}
+
+/**
+ * The artifact route's `Content-Disposition` (RFC 6266): an ASCII fallback,
+ * quotes and backslashes removed, for clients that read only `filename`, and
+ * the exact name, percent-encoded, in `filename*`. The name comes from the
+ * uploaded photo, so it is never written into the header raw.
+ */
+export function imgTo3dContentDisposition(fileName: string): string {
+	const fallback = fileName.replace(/[^\x20-\x7e]|["\\]/g, '_')
+	// `encodeURIComponent` leaves these four, which RFC 5987 does not allow.
+	const exact = encodeURIComponent(fileName).replace(
+		/['()*]/g,
+		(char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+	)
+	return `attachment; filename="${fallback}"; filename*=UTF-8''${exact}`
+}
+
+/**
+ * The file name `imgTo3dContentDisposition` wrote, read back: how the
+ * publisher names a variant it opens by id alone. Null for anything else.
+ */
+export function imgTo3dFileNameFromDisposition(
+	header: string | null
+): string | null {
+	const encoded = header ? /filename\*=UTF-8''([^;]+)/.exec(header)?.[1] : null
+	if (!encoded) return null
+	try {
+		return decodeURIComponent(encoded)
+	} catch {
+		return null
+	}
+}
+
+/** A variant's state as last heard. */
+export interface ImgTo3dVariantState {
+	/**
+	 * Null until the runtime has been asked: the list could not reach it, or
+	 * was told not to, and polling fills it in. Also null in an expired batch,
+	 * which is never asked.
+	 */
+	readonly status: ImgTo3dJobStatus | null
+	readonly progress: number | null
+	readonly error: ImgTo3dErrorKind | null
+}
+
+/** One variant of a listed batch, with its state when it was listed. */
+export interface ImgTo3dListedVariant extends ImgTo3dVariantState {
+	readonly jobId: string
+	readonly seed: number
+}
+
+/** A variant's state in words, the same on every surface that lists it. */
+export function describeImgTo3dVariant(state: ImgTo3dVariantState): string {
+	switch (state.status) {
+		case null:
+			return 'Checking'
+		case 'queued':
+			return 'Queued'
+		case 'processing':
+			return state.progress === null
+				? 'Generating'
+				: `Generating, ${state.progress}%`
+		case 'succeeded':
+			return 'Ready'
+		case 'failed':
+			return IMG_TO_3D_ERROR_COPY[state.error ?? 'generation_failed']
+	}
+}
+
+export const IMG_TO_3D_EXPIRED_COPY = 'Expired: models are kept for 7 days'
+
+/** The variants generated from one photo in one request. */
+export interface ImgTo3dListedBatch {
+	readonly batchId: string
+	readonly sourceName: string | null
+	readonly createdByName: string | null
+	/** ISO 8601. */
+	readonly createdAt: string
+	/** ISO 8601: `createdAt` plus `IMG_TO_3D_RETENTION_MS`. */
+	readonly keptUntil: string
+	/**
+	 * Past `keptUntil`. Its models are treated as gone without asking: the
+	 * runtime keeps a job's state and its GLB in separate Dicts, and polling
+	 * the state keeps that one alive, so "succeeded" proves nothing about the
+	 * file by then.
+	 */
+	readonly expired: boolean
+	readonly variants: readonly ImgTo3dListedVariant[]
+}
+
+// ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
 

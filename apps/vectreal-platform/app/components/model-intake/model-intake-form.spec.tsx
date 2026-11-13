@@ -122,3 +122,53 @@ describe('ModelIntakeForm, the client consent', () => {
 		).toBeInTheDocument()
 	})
 })
+
+describe('ModelIntakeForm, the link and the photos', () => {
+	const photoInputs = () =>
+		Array.from(
+			document.querySelectorAll<HTMLInputElement>('input[name="photos"]')
+		)
+
+	it('requires the three photos while no link is given', () => {
+		renderForm(false)
+		expect(photoInputs()).toHaveLength(3)
+		for (const input of photoInputs()) expect(input).toBeRequired()
+	})
+
+	it('stops requiring the photos once a link is typed, and requires them again when it is cleared', () => {
+		renderForm(false)
+		const link = screen.getByRole('textbox', { name: /Link zu 3D/ })
+		fireEvent.change(link, { target: { value: 'https://cad.example.com' } })
+		for (const input of photoInputs()) expect(input).not.toBeRequired()
+		expect(
+			screen.getByText(/Drei Fotos des Produkts \(optional\)/)
+		).toBeInTheDocument()
+
+		fireEvent.change(link, { target: { value: '' } })
+		for (const input of photoInputs()) expect(input).toBeRequired()
+	})
+
+	it('names a refused link and keeps what was typed', () => {
+		renderForm(false, {
+			status: 'error',
+			formError: 'validation',
+			fieldErrors: { link: 'link' },
+			fields: {
+				name: '',
+				email: '',
+				company: '',
+				productType: '',
+				link: 'http://cad.example.com',
+				height: '',
+				width: '',
+				depth: '',
+				message: ''
+			}
+		})
+		const link = screen.getByRole('textbox', { name: /Link zu 3D/ })
+		expect(link).toHaveValue('http://cad.example.com')
+		expect(link).toHaveAccessibleDescription(
+			'Bitte geben Sie einen gültigen Link ein.'
+		)
+	})
+})

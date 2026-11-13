@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{{ product.title }} | Beispielshop (Horizon)</title>
+    <script>
+      window.Shopify = { designMode: false, locale: 'de', routes: { root: '/' }, loadFeatures() {} };
+    </script>
+    {%- render 'stylesheets' -%}
+    {%- render 'scripts' -%}
+    {%- render 'theme-styles-variables' -%}
+    {%- render 'color-palette' -%}
+    <link rel="stylesheet" href="/horizon/compiled_assets/styles.css">
+    <script src="/horizon/compiled_assets/scripts.js" defer="defer"></script>
+    <style>
+      .harness-header { display: flex; justify-content: space-between; align-items: center; padding-block: 20px; }
+      .harness-details { display: flex; flex-direction: column; gap: 16px; padding-block: 24px; }
+      .harness-details h1 { margin: 0; }
+      .harness-footer { padding-block: 96px 192px; }
+    </style>
+  </head>
+
+  <body class="page-width-{{ settings.page_width }}">
+    <div id="header-group">
+      <div class="shopify-section header-section">
+        <div class="section section--page-width">
+          <header id="header-component" class="harness-header">
+            <span class="h3">Beispielshop</span>
+            <span>Warenkorb</span>
+          </header>
+        </div>
+      </div>
+    </div>
+
+    <main id="MainContent" class="content-for-layout" role="main">
+      {%- capture media_gallery -%}
+        {% render 'product-media-gallery-content',
+          media_presentation: gallery_settings.media_presentation,
+          block_settings: gallery_settings,
+          block_id: block.id,
+          block_shopify_attributes: '',
+          block: block,
+          section: section
+        %}
+      {%- endcapture -%}
+      {%- capture product_details -%}
+        <div id="ProductInformation-{{ section.id }}" class="product-details">
+          <div class="harness-details">
+            <p>Beispielmarke</p>
+            <h1>{{ product.title }}</h1>
+            {%- comment -%} An example product: no price, and nothing that suggests one. {%- endcomment -%}
+            <p>Beispiel, nicht verfügbar</p>
+            <button type="button" class="button button-secondary">In den Warenkorb</button>
+            <button type="button" class="button">Jetzt kaufen</button>
+            <div>{% render 'vectreal-free-model-link' %}</div>
+            <p>Ein Gehäuse aus Messing, schwarz lackiert und über Jahre in der Hand blank gegriffen. Jede Kante zeigt, wo die Kamera getragen wurde.</p>
+            <p>Der Messsucher stellt scharf, ohne dass ein Spiegel klappt. Das Objektiv mit 50 mm Brennweite gehört dazu.</p>
+          </div>
+        </div>
+      {%- endcapture -%}
+      <div id="shopify-section-{{ section.id }}" class="shopify-section">
+        {% render 'product-information-content',
+          product: product,
+          section_id: section.id,
+          settings: section_settings,
+          media_gallery: media_gallery,
+          product_details: product_details
+        %}
+      </div>
+
+      {{ section_html }}
+    </main>
+
+    <footer class="section section--page-width harness-footer">
+      <p>Beispielshop · Kontakt · Impressum · Datenschutz</p>
+    </footer>
+  </body>
+</html>

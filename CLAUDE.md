@@ -65,6 +65,8 @@ pnpm nx lint vectreal-platform
 pnpm nx affected --target=lint          # only affected projects
 
 # Tests
+pnpm test:brief                         # every project's unit tests; prints only failures, with file and line
+pnpm test:brief apps/vectreal-platform/tests/foo.spec.ts   # one file (any vitest filter works)
 pnpm nx test vectreal-platform          # unit tests (coverage always written to coverage/)
 pnpm nx run vectreal-platform:test-integration  # DB integration tests; needs the supabase-start target below
 pnpm nx affected --target=test          # only affected projects
@@ -93,6 +95,9 @@ pnpm nx run vectreal-platform:supabase-db-push-prod
 ```
 
 Always run tasks via `nx` rather than the underlying tool (e.g. use `nx lint`, not `eslint` directly).
+`pnpm test:brief` is the one exception: it runs the root `vitest.config.mts`, which loads
+every project's own config, so it covers the same specs without Nx's per-project output.
+Coverage is off there; CI's Quality Gate stays the gate.
 
 ## Monorepo Structure
 

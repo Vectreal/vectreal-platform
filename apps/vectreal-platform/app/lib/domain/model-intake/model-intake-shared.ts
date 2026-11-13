@@ -201,22 +201,6 @@ export function intakeLetterAsksClientConsent(
 export const MODEL_INTAKE_AGENCY_PAGE_PATH = '/agenturen'
 
 /**
- * The language of an intake page, read from its address alone so the server
- * render and the first client render agree: the agency page is German only,
- * the form follows `?lang`. Null for every page that is not an intake page.
- */
-export function intakePageLocale(
-	pathname: string,
-	search: string
-): ModelIntakeLocale | null {
-	if (pathname === MODEL_INTAKE_AGENCY_PAGE_PATH) return 'de'
-	if (pathname === MODEL_INTAKE_PATH) {
-		return resolveIntakeLocale(new URLSearchParams(search).get('lang'))
-	}
-	return null
-}
-
-/**
  * `?c=<code>`: the one letter a link was printed for. Opaque on purpose, so the
  * URL names no organization or person; the code is looked up on the server.
  */
@@ -287,6 +271,8 @@ export const MODEL_INTAKE_MIN_SIZE_CM = 1
 export const MODEL_INTAKE_MAX_SIZE_CM = 500
 export const MODEL_INTAKE_MAX_MESSAGE_LENGTH = 2000
 export const MODEL_INTAKE_MAX_TEXT_LENGTH = 200
+/** Longer than any share link a cloud drive or planner portal hands out, short of a pasted essay. */
+export const MODEL_INTAKE_MAX_LINK_LENGTH = 2048
 
 /** Deletion runs this long after delivery, or after receipt while undelivered. */
 export const MODEL_INTAKE_RETENTION_DAYS = 90
@@ -295,7 +281,7 @@ export const MODEL_INTAKE_RETENTION_DAYS = 90
  * Bumped whenever the wording of any consent changes, or one is added, so every
  * stored consent names the text it was given against.
  */
-export const MODEL_INTAKE_CONSENT_VERSION = '2026-11-10'
+export const MODEL_INTAKE_CONSENT_VERSION = '2026-11-13'
 
 export const MODEL_INTAKE_HONEYPOT_FIELD = 'website'
 
@@ -307,6 +293,7 @@ export type ModelIntakeFieldErrorCode =
 	| 'email'
 	| 'company'
 	| 'productType'
+	| 'link'
 	| 'photosCount'
 	| 'photoType'
 	| 'photoSize'
@@ -322,6 +309,7 @@ export interface ModelIntakeFieldErrors {
 	email?: ModelIntakeFieldErrorCode
 	company?: ModelIntakeFieldErrorCode
 	productType?: ModelIntakeFieldErrorCode
+	link?: ModelIntakeFieldErrorCode
 	/** The photo a per-file error is about, 1-based, travels in `photoIndex`. */
 	photos?: ModelIntakeFieldErrorCode
 	photoIndex?: number
@@ -338,6 +326,7 @@ export interface ModelIntakeFields {
 	email: string
 	company: string
 	productType: string
+	link: string
 	height: string
 	width: string
 	depth: string
@@ -383,8 +372,46 @@ export interface ModelIntakeValidated {
 	email: string
 	company: string
 	productType: ModelIntakeProductType
+	/** A link to 3D or CAD data or a video, normalized; null when none was given. */
+	link: string | null
 	size: ModelIntakeSize
 	message: string
+}
+
+/**
+ * The optional link to the brand's 3D or CAD data or a walk-around video.
+ * Empty is no link. Otherwise an absolute https URL with no credentials in it,
+ * returned as the URL parser writes it, so the internal page links exactly
+ * what was checked. https only, because the link is opened from the internal
+ * page and the notification email: no `javascript:`, no plain http.
+ */
+export function parseIntakeLink(raw: string): string | null | 'invalid' {
+	const trimmed = raw.trim()
+	if (trimmed === '') return null
+	if (trimmed.length > MODEL_INTAKE_MAX_LINK_LENGTH) return 'invalid'
+	const url = URL.canParse(trimmed) ? new URL(trimmed) : null
+	if (
+		!url ||
+		url.protocol !== 'https:' ||
+		url.username !== '' ||
+		url.password !== ''
+	) {
+		return 'invalid'
+	}
+	return url.href
+}
+
+/**
+ * Whether a request carries enough to look at: three photos, or a link with
+ * up to three photos beside it. The photos are required only without a link.
+ */
+export function isIntakePhotoCountAcceptable(
+	count: number,
+	hasLink: boolean
+): boolean {
+	return hasLink
+		? count <= MODEL_INTAKE_PHOTO_COUNT
+		: count === MODEL_INTAKE_PHOTO_COUNT
 }
 
 /**
@@ -424,6 +451,8 @@ export function validateIntakeFields(
 	if (!isIntakeProductType(input.productType)) {
 		fieldErrors.productType = 'productType'
 	}
+	const link = parseIntakeLink(input.link)
+	if (link === 'invalid') fieldErrors.link = 'link'
 	if (message.length > MODEL_INTAKE_MAX_MESSAGE_LENGTH) {
 		fieldErrors.message = 'message'
 	}
@@ -451,6 +480,7 @@ export function validateIntakeFields(
 			email,
 			company,
 			productType: input.productType as ModelIntakeProductType,
+			link: link as string | null,
 			size: {
 				heightCm: height as number | null,
 				widthCm: width as number | null,
