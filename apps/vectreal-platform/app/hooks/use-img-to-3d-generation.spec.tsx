@@ -324,7 +324,12 @@ describe('useImgTo3dBatchStates', () => {
 })
 
 describe('useImgTo3dGeneration', () => {
-	let latest: ImgTo3dGeneration
+	// Cleared on every mount, so no test can act on an earlier test's hook.
+	let latest: ImgTo3dGeneration | null = null
+	const current = () => {
+		if (!latest) throw new Error('the probe has not rendered')
+		return latest
+	}
 	let loads = 0
 
 	function Probe({
@@ -346,6 +351,7 @@ describe('useImgTo3dGeneration', () => {
 		} = {}
 	) {
 		loads = 0
+		latest = null
 		const router = createMemoryRouter(
 			[
 				{
@@ -385,7 +391,7 @@ describe('useImgTo3dGeneration', () => {
 		const [[files]] = loadModel.mock.calls
 		expect(files[0].name).toBe('chair-7.glb')
 		expect(files[0].type).toBe('model/gltf-binary')
-		await waitFor(() => expect(latest.opening).toBeNull())
+		await waitFor(() => expect(current().opening).toBeNull())
 	})
 
 	/** An artifact request that answers only when told to. */
@@ -407,7 +413,7 @@ describe('useImgTo3dGeneration', () => {
 		route = () => glb()
 		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
 		mount(`/publisher/scene-1?generation=${JOB}`, { loadModel })
-		await waitFor(() => expect(loads).toBe(1))
+		await waitFor(() => expect(latest).not.toBeNull())
 		// A few turns more, so the open effect has had every chance to run.
 		await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
 
@@ -425,7 +431,7 @@ describe('useImgTo3dGeneration', () => {
 		await act(async () => held.get(JOB)?.())
 
 		expect(loadModel).not.toHaveBeenCalled()
-		expect(latest.opening).toBeNull()
+		expect(current().opening).toBeNull()
 	})
 
 	it('loads only the latest of two quick opens', async () => {
@@ -442,7 +448,7 @@ describe('useImgTo3dGeneration', () => {
 		})
 
 		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
-		expect(latest.opening).toBeNull()
+		expect(current().opening).toBeNull()
 	})
 
 	it('never reopens on a revalidation, which would load over unsaved edits', async () => {
@@ -464,14 +470,14 @@ describe('useImgTo3dGeneration', () => {
 		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
 		mount(`/publisher?generation=${JOB}`, { loadModel })
 		await waitFor(() =>
-			expect(latest.opening?.error).toBe('runtime_unavailable')
+			expect(current().opening?.error).toBe('runtime_unavailable')
 		)
 
 		failing = false
-		await act(async () => latest.retryOpen())
+		await act(async () => current().retryOpen())
 
 		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
-		await waitFor(() => expect(latest.opening).toBeNull())
+		await waitFor(() => expect(current().opening).toBeNull())
 	})
 
 	it('opens it again after the URL left it and came back', async () => {
@@ -491,7 +497,7 @@ describe('useImgTo3dGeneration', () => {
 		mount(`/publisher?generation=${JOB}`)
 
 		await waitFor(() =>
-			expect(latest.opening).toEqual({
+			expect(current().opening).toEqual({
 				jobId: JOB,
 				error: 'runtime_unavailable'
 			})
@@ -509,7 +515,7 @@ describe('useImgTo3dGeneration', () => {
 		})
 
 		await waitFor(() =>
-			expect(latest.opening).toEqual({ jobId: JOB, error: 'open_failed' })
+			expect(current().opening).toEqual({ jobId: JOB, error: 'open_failed' })
 		)
 	})
 
@@ -532,23 +538,23 @@ describe('useImgTo3dGeneration', () => {
 				202
 			)
 		mount('/publisher')
-		await waitFor(() => expect(loads).toBe(1))
+		await waitFor(() => expect(latest).not.toBeNull())
 
-		await act(() => latest.generate(image(), params))
+		await act(() => current().generate(image(), params))
 
 		expect(loads).toBe(2)
-		expect(latest.submitError).toBeNull()
-		expect(latest.isSubmitting).toBe(false)
+		expect(current().submitError).toBeNull()
+		expect(current().isSubmitting).toBe(false)
 	})
 
 	it('names a refused submit by its kind, and reloads nothing', async () => {
 		route = () => refusal('runtime_unavailable', 503)
 		mount('/publisher')
-		await waitFor(() => expect(loads).toBe(1))
+		await waitFor(() => expect(latest).not.toBeNull())
 
-		await act(() => latest.generate(image(), params))
+		await act(() => current().generate(image(), params))
 
-		expect(latest.submitError).toBe('runtime_unavailable')
+		expect(current().submitError).toBe('runtime_unavailable')
 		expect(loads).toBe(1)
 	})
 })
