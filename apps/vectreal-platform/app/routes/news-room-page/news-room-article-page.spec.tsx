@@ -98,6 +98,7 @@ describe('a newsroom article followed from another', () => {
 		const Stub = createRoutesStub([
 			{
 				path: '/news-room/:slug',
+				HydrateFallback: () => null,
 				Component: NewsRoomArticlePage as never,
 				loader: loader as never
 			}
@@ -117,9 +118,18 @@ describe('a newsroom article followed from another', () => {
 
 		const card = document.querySelector(`a[href$="/news-room/${second.slug}"]`)
 		if (!card) throw new Error('no link to the related article')
+		/*
+		  The card asks for a view transition, which jsdom cannot run, and React
+		  Router says so on the first navigation of the run. That notice only.
+		*/
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 		await act(async () => {
 			fireEvent.click(card)
 		})
+		for (const [message] of warn.mock.calls) {
+			expect(message).toMatch(/provided the `viewTransition` option/)
+		}
+		warn.mockRestore()
 		// The card shows the title too; the page heading is what says it arrived.
 		expect(pageHeading()).toBe(second.title)
 
@@ -194,6 +204,7 @@ describe('a newsroom article read before PostHog has loaded', () => {
 		const Stub = createRoutesStub([
 			{
 				path: '/news-room/:slug',
+				HydrateFallback: () => null,
 				Component: NewsRoomArticlePage as never,
 				loader: loader as never
 			}

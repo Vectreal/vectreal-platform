@@ -9,7 +9,7 @@ import {
 	KHRMaterialsUnlit,
 	KHRTextureBasisu
 } from '@gltf-transform/extensions'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
 	bakeLightsIntoDocument,
@@ -51,6 +51,7 @@ describe('VECTREAL_lightmap', () => {
 	})
 
 	it('is dropped by a reader that has not registered it', async () => {
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 		const glb = await new NodeIO()
 			.registerExtensions(IO_EXTENSIONS)
 			.writeBinary(documentWithLightmap())
@@ -60,6 +61,10 @@ describe('VECTREAL_lightmap', () => {
 
 		const [material] = read.getRoot().listMaterials()
 		expect(material.getExtension(LIGHTMAP_EXTENSION)).toBeNull()
+		// glTF Transform says what it dropped.
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			expect.stringContaining('Missing optional extension, "VECTREAL_lightmap"')
+		)
 	})
 
 	it('stays a loadable KTX2 texture once the textures are encoded', async () => {

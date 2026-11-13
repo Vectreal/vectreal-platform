@@ -184,7 +184,10 @@ describe('HotspotsSettingsPanel adding', () => {
 		render(<HotspotsSettingsPanel />)
 
 		fireEvent.click(screen.getByRole('button', { name: 'Add marker' }))
-		await vi.waitFor(() => expect(store.get(hotspotsAtom)).toHaveLength(1))
+		// Inside act: adding renders the list again once the marker lands.
+		await act(() =>
+			vi.waitFor(() => expect(store.get(hotspotsAtom)).toHaveLength(1))
+		)
 
 		const [added] = store.get(hotspotsAtom)
 		const camera = store
@@ -200,7 +203,10 @@ describe('HotspotsSettingsPanel adding', () => {
 		render(<HotspotsSettingsPanel />)
 
 		fireEvent.click(screen.getByRole('button', { name: 'Add marker' }))
-		await vi.waitFor(() => expect(store.get(hotspotsAtom)).toHaveLength(1))
+		// Inside act: adding renders the list again once the marker lands.
+		await act(() =>
+			vi.waitFor(() => expect(store.get(hotspotsAtom)).toHaveLength(1))
+		)
 
 		const camera = store.get(cameraAtom).cameras?.[0]
 		expect(camera).not.toHaveProperty('position')
