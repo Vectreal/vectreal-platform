@@ -1,5 +1,4 @@
-import { useProgress } from '@react-three/drei'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import type { ViewerInteractionEvent } from '../types/viewer-interactions'
 import type { LoadProgress } from '@vctrl/core'
@@ -10,16 +9,13 @@ import type { LoadProgress } from '@vctrl/core'
  * Before there is a model it is the host's word (`loadProgress`: the
  * download and the parse, which happen outside the viewer) or `src`'s. Once
  * the model is here and the first frame is still being prepared, it is the
- * viewer's own `preparing`, counting the environment's files. It holds
- * through the loader's fade, so the loader does not change words on its way
- * out, and is null once the loader is gone.
+ * viewer's own `preparing`. It holds through the loader's fade, so the loader
+ * does not change words on its way out, and is null once the loader is gone.
  *
- * The count comes from drei's `useProgress`, which reads three's global
- * `DefaultLoadingManager`. A model's own parse runs through a manager of its
- * own (`ModelLoader`), so what is counted there is the environment and any
- * texture the scene loads, which is what preparing waits on. Only while that
- * manager is active: its counters are never reset, so after a load they still
- * read the last one's total.
+ * Preparing carries no count. The only counter for what it waits on is
+ * three's `DefaultLoadingManager`, which is global to the page and never
+ * resets, so no load can be told its own files from it; and the one file it
+ * mostly waits on, the environment map, makes a count of one.
  */
 export function useViewerLoadProgress({
 	hasContent,
@@ -31,44 +27,15 @@ export function useViewerLoadProgress({
 	isLoading: boolean
 	hostProgress: LoadProgress | null | undefined
 }): LoadProgress | null {
-	const preparing = hasContent && isLoading
-	/*
-	  A key rather than the store, so a page loading textures elsewhere does
-	  not re-render the viewer once it is ready. Outside preparing it changes
-	  only when the manager finishes a period, which is what the baseline
-	  below needs to see.
-	*/
-	const reading = useProgress((state) =>
-		preparing
-			? `${state.active ? 'active' : 'idle'}:${state.loaded}/${state.total}`
-			: state.active
-				? 'idle-busy'
-				: `idle:${state.total}/${state.total}`
-	)
-	const [activity, counts] = reading.split(':')
-	const [loaded, total] = (counts ?? '0/0').split('/').map(Number)
-
-	/*
-	  three's manager never resets its counters, so a second period counts on
-	  from the first. What it had finished when it was last idle is the
-	  baseline this load's files are counted from. Set during render, as
-	  derived state, so the count is right on the render it changes in.
-	*/
-	const [baseline, setBaseline] = useState(0)
-	if (activity === 'idle' && total !== baseline) setBaseline(total)
-
 	// One object per change, so an effect keyed on it runs per change.
 	return useMemo(() => {
 		if (!isLoading) return null
 		if (!hasContent) return hostProgress ?? null
-		if (activity !== 'active' || total <= baseline)
-			return { phase: 'preparing' }
-		return {
-			phase: 'preparing',
-			items: { loaded: loaded - baseline, total: total - baseline }
-		}
-	}, [activity, baseline, hasContent, hostProgress, isLoading, loaded, total])
+		return PREPARING
+	}, [hasContent, hostProgress, isLoading])
 }
+
+const PREPARING: LoadProgress = { phase: 'preparing' }
 
 /** How often `load_progress` may repeat within one phase. */
 export const LOAD_PROGRESS_EVENT_INTERVAL_MS = 250
@@ -122,7 +89,12 @@ export function useLoadEvents({
 		sendRef.current = send
 	})
 
+	// The value last handled, so StrictMode's second run of the effect for the
+	// same value does not send it again.
+	const handled = useRef<LoadProgress | null>(null)
 	useEffect(() => {
+		if (progress && progress === handled.current) return
+		handled.current = progress
 		const pending = held.current
 		if (pending) {
 			clearTimeout(pending.timer)

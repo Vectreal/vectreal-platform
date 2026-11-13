@@ -2,26 +2,18 @@
 /**
  * Where the viewer's load is, and what its host is told about it.
  *
- * The environment's files come from drei's `useProgress` store, set here
- * directly: under Vitest drei loads a different build of three than the
- * spec does, so driving the real `DefaultLoadingManager` would reach another
- * instance. In the browser bundle both are the same ESM module.
- *
  * Mutation gates, executed:
  *  - return the host's progress after the model arrived and the preparing
  *    test goes red;
  *  - drop the phase comparison from the throttle and the phase-change test
  *    goes red;
  *  - key `model_loaded` on nothing and the once-per-model test goes red;
- *  - drop the once-guard and the StrictMode test goes red;
+ *  - drop the once-guards and the StrictMode tests go red;
  *  - drop the trailing send and the newest-value test goes red;
- *  - drop `state.active` from the selector, or the baseline, and the
- *    finished-manager test goes red;
  *  - send nothing held back on a phase change and the held-back test goes red;
  *  - keep the announced identity when the model goes and the comes-back test
  *    goes red.
  */
-import { useProgress } from '@react-three/drei'
 import { act, renderHook } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -51,7 +43,7 @@ describe('useViewerLoadProgress', () => {
 		expect(result.current).toBe(host)
 	})
 
-	it("is the viewer's own preparing once the model is here, counting the environment", () => {
+	it("is the viewer's own preparing once the model is here, with no count", () => {
 		const { result } = renderHook(() =>
 			useViewerLoadProgress({
 				hasContent: true,
@@ -60,34 +52,6 @@ describe('useViewerLoadProgress', () => {
 			})
 		)
 		expect(result.current).toEqual({ phase: 'preparing' })
-
-		act(() => useProgress.setState({ active: true, loaded: 1, total: 2 }))
-		expect(result.current).toEqual({
-			phase: 'preparing',
-			items: { loaded: 1, total: 2 }
-		})
-
-		act(() => useProgress.setState({ active: false, loaded: 0, total: 0 }))
-	})
-
-	it("ignores counts drei's store kept from a load that finished", () => {
-		act(() => useProgress.setState({ active: false, loaded: 5, total: 5 }))
-		const { result } = renderHook(() =>
-			useViewerLoadProgress({
-				hasContent: true,
-				isLoading: true,
-				hostProgress: null
-			})
-		)
-		expect(result.current).toEqual({ phase: 'preparing' })
-
-		// three never resets its counters: this load's one file is 6 of 6 there.
-		act(() => useProgress.setState({ active: true, loaded: 5, total: 6 }))
-		expect(result.current).toEqual({
-			phase: 'preparing',
-			items: { loaded: 0, total: 1 }
-		})
-		act(() => useProgress.setState({ active: false, loaded: 0, total: 0 }))
 	})
 
 	it('is nothing once the loader is gone', () => {
@@ -101,6 +65,8 @@ describe('useViewerLoadProgress', () => {
 		expect(result.current).toBeNull()
 	})
 })
+
+const PARSING: LoadProgress = { phase: 'parsing' }
 
 describe('useLoadEvents', () => {
 	const types = (emit: ReturnType<typeof vi.fn>) =>
@@ -210,6 +176,22 @@ describe('useLoadEvents', () => {
 		rerender({ identity: null })
 		rerender({ identity: 'scene-a' })
 		expect(types(emit)).toEqual(['model_loaded', 'model_loaded'])
+	})
+
+	it('sends a phase once under StrictMode too', () => {
+		vi.useFakeTimers()
+		const emit = vi.fn()
+		renderHook(
+			() =>
+				useLoadEvents({
+					progress: PARSING,
+					modelIdentity: null,
+					emit
+				}),
+			{ wrapper: StrictMode }
+		)
+		act(() => vi.advanceTimersByTime(500))
+		expect(emit).toHaveBeenCalledTimes(1)
 	})
 
 	it('says model_loaded once under StrictMode too', () => {
