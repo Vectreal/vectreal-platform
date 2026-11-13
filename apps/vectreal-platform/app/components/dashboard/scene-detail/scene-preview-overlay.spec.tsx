@@ -10,28 +10,21 @@
  */
 
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
+import { describe, expect, it } from 'vitest'
 
 import { ScenePreviewOverlay } from './scene-preview-overlay'
 
-vi.mock('react-router', () => ({
-	Link: ({
-		to,
-		children,
-		...rest
-	}: {
-		to: string
-		children: React.ReactNode
-	} & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-		<a href={to} {...rest}>
-			{children}
-		</a>
-	)
-}))
+/*
+  The real Link, in a memory router. A hand-rolled stub spread every prop onto
+  the anchor, so React warned about react-router's own `viewTransition`.
+*/
 
 describe('the preview overlay', () => {
 	it('points at the internal preview for this scene', () => {
-		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />, {
+			wrapper: MemoryRouter
+		})
 
 		/*
 		  The preview route, not the embed one. They are deliberately distinct -
@@ -48,7 +41,9 @@ describe('the preview overlay', () => {
 		  A button with an onClick would swallow middle-click and cmd-click, which
 		  is exactly how someone compares the preview against the scene beside it.
 		*/
-		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />, {
+			wrapper: MemoryRouter
+		})
 
 		expect(screen.getByRole('link', { name: /preview/i }).tagName).toBe('A')
 	})
@@ -60,7 +55,9 @@ describe('the preview overlay', () => {
 		  solid chip would be a hole punched in a model whose colour belongs to
 		  the user.
 		*/
-		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />, {
+			wrapper: MemoryRouter
+		})
 
 		const link = screen.getByRole('link', { name: /preview/i })
 		expect(link.className).toContain('absolute')
@@ -75,7 +72,9 @@ describe('the preview overlay', () => {
 		  viewer's top-centre "Back to scene view". Hidden, not removed: it is the
 		  link's accessible name.
 		*/
-		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />)
+		render(<ScenePreviewOverlay previewPath="/preview/project-1/scene-1" />, {
+			wrapper: MemoryRouter
+		})
 
 		const word = screen.getByText('Preview')
 		expect(word.className).toContain('sr-only')

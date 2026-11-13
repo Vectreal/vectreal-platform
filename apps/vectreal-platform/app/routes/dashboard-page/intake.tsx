@@ -48,6 +48,7 @@ import {
 	signIntakePhotoUrls
 } from '../../lib/domain/model-intake/model-intake-storage.server'
 import { ensureValidCsrfFormData } from '../../lib/http/csrf.server'
+import { decryptSensitiveValue } from '../../lib/security/pii-encryption.server'
 
 import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashboard-confirmation'
 
@@ -55,9 +56,21 @@ import type { DashboardConfirmationPlan } from '../../lib/domain/dashboard/dashb
   The free-model requests, for the team making the models. Internal: behind
   the `model-intake-admin` flag, English only, and it never shows the brand's
   name, email, company or message, which stay encrypted. The notification
-  email carried those to the inbox; this page carries the work: photos, the
-  cleanup clock, the outcome and the retention date.
+  email carried those to the inbox; this page carries the work: the link and
+  photos, the cleanup clock, the outcome and the retention date.
 */
+
+/**
+ * One request's link, or `unreadable` when it was written under another key:
+ * one such row must not take the whole page, and every other request, down.
+ */
+function readLink(stored: string): string | 'unreadable' {
+	try {
+		return decryptSensitiveValue(stored)
+	} catch {
+		return 'unreadable'
+	}
+}
 
 export async function loader({ request }: Route.LoaderArgs) {
 	await requireIntakeAdmin(request)
@@ -67,8 +80,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 		listIntakeLetters()
 	])
 	const requests = await Promise.all(
-		rows.map(async (row) => ({
+		rows.map(async ({ link, ...row }) => ({
 			...row,
+			link: link ? readLink(link) : null,
 			photoUrls: await signIntakePhotoUrls(
 				row.photoPaths,
 				MODEL_INTAKE_PAGE_LINK_SECONDS
@@ -297,7 +311,7 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 	const deletePlan: DashboardConfirmationPlan = {
 		tier: 'acknowledge',
 		title: `Delete ${row.referenceCode}?`,
-		description: 'The request and its three photos are removed now.',
+		description: 'The request and its photos are removed now.',
 		consequences: ['This cannot be undone'],
 		confirmLabel: 'Delete request',
 		token: null
@@ -332,6 +346,20 @@ function IntakeRow({ row }: { row: IntakeRequest }) {
 			) : null}
 
 			<div className="flex flex-wrap gap-3">
+				{row.link === 'unreadable' ? (
+					<span className="text-destructive text-body-sm">
+						Link stored but unreadable with this key
+					</span>
+				) : row.link ? (
+					<a
+						href={row.link}
+						target="_blank"
+						rel="noreferrer"
+						className="text-body-sm max-w-full truncate underline underline-offset-4"
+					>
+						{row.link}
+					</a>
+				) : null}
 				{row.photoUrls.map((url, index) => (
 					<a
 						key={url || index}

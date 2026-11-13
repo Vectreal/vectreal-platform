@@ -13,7 +13,8 @@ import * as React from 'react'
 /**
  * The inbox's copy of a free-model request. Internal, so English only, and the
  * one place the brand's details are shown in plain text: the internal page
- * deliberately never decrypts them.
+ * deliberately never decrypts them. The link is the exception, shown on both,
+ * because it is the work rather than a detail about the sender.
  */
 export interface ModelIntakeInternalEmailProps {
 	referenceCode: string
@@ -27,6 +28,8 @@ export interface ModelIntakeInternalEmailProps {
 	letter: string
 	locale: string
 	message: string
+	/** The brand's link to 3D or CAD data or a video, https only; null when none was given. */
+	link: string | null
 	photoUrls: string[]
 	intakePageUrl: string
 }
@@ -66,6 +69,12 @@ export function ModelIntakeInternalEmail(props: ModelIntakeInternalEmailProps) {
 						))}
 					</Section>
 					<Section>
+						{props.link ? (
+							<Text style={s.row}>
+								<strong>Link:</strong>{' '}
+								<Link href={props.link}>{props.link}</Link>
+							</Text>
+						) : null}
 						{props.photoUrls.map((url, index) => (
 							<Text key={url} style={s.row}>
 								<Link href={url}>Photo {index + 1}</Link> (link valid for 7
