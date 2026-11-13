@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { format } from 'node:util'
+
 import { render } from '@testing-library/react'
 import {
 	type ComponentProps,
@@ -14,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SceneEnvironment from './scene-environment'
 
 import type { EnvironmentProps } from '@vctrl/core'
+import type { MockInstance } from 'vitest'
 
 const { Environment, clearEnvironment, useRoomEnvironment, room } = vi.hoisted(
 	() => ({
@@ -109,8 +112,9 @@ const renderEnvironment = (props: SceneEnvironmentProps) => {
 const requestedFiles = () =>
 	Environment.mock.calls.map(([props]) => String(props.files))
 
+let consoleError: MockInstance<typeof console.error>
 beforeEach(() => {
-	vi.spyOn(console, 'error').mockImplementation(() => undefined)
+	consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
 	failing.clear()
 	cachedFailures.clear()
 	litAtWarmUp.length = 0
@@ -127,6 +131,10 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+	/* An environment map that cannot be fetched is logged. That, and nothing else. */
+	for (const args of consoleError.mock.calls) {
+		expect(format(...args)).toMatch(/Could not load .+: Failed to fetch/)
+	}
 	Environment.mockClear()
 	clearEnvironment.mockClear()
 	useRoomEnvironment.mockClear()

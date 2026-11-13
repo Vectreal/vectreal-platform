@@ -26,7 +26,16 @@ function dracoTriangleGlb(): Uint8Array {
 		extensionsRequired: [draco],
 		buffers: [{ byteLength: 4 }],
 		bufferViews: [{ buffer: 0, byteLength: 4 }],
-		accessors: [{ componentType: 5126, count: 3, type: 'VEC3' }],
+		// min and max are required on POSITION; three warns without them.
+		accessors: [
+			{
+				componentType: 5126,
+				count: 3,
+				type: 'VEC3',
+				min: [0, 0, 0],
+				max: [1, 1, 0]
+			}
+		],
 		meshes: [
 			{
 				primitives: [

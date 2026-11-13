@@ -49,6 +49,7 @@ function renderBoundary(thrown: ThrownRefusal) {
 	const Stub = createRoutesStub([
 		{
 			path: '/',
+			HydrateFallback: () => null,
 			loader: () => {
 				throw new Response(JSON.stringify(thrown.data), {
 					status: thrown.init.status,
