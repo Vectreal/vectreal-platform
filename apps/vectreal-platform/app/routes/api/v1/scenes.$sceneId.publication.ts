@@ -52,7 +52,12 @@ export async function action({ request, params }: Route.ActionArgs) {
 			: request.method === 'DELETE'
 				? 'scene:unpublish'
 				: null
-	if (!operation) return methodNotAllowed()
+	if (!operation) {
+		// Gated anyway, so the route never tells a caller without a token
+		// anything. No operation means no scope to ask for beyond a valid token.
+		await authorizeAgentRequest(request, { scope: 'any' })
+		return methodNotAllowed()
+	}
 
 	const actor = await authorizeAgentRequest(request, {
 		scope: AGENT_OPERATION_SCOPES[operation]

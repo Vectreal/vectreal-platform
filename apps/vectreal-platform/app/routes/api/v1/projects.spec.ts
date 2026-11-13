@@ -152,15 +152,25 @@ describe('POST /api/v1/projects', () => {
 		})
 	})
 
-	it('answers a method other than POST with 405 and an Allow header, before the gate', async () => {
-		const response = await act(post({ name: 'Chairs' }, 'PUT'))
+	it('answers a method other than POST with 405 and an Allow header, behind the gate', async () => {
+		const request = post({ name: 'Chairs' }, 'PUT')
+		const response = await act(request)
 
 		expect(response.status).toBe(405)
 		expect(response.headers.get('Allow')).toBe('GET, POST')
 		expect(apiFailureSchema.parse(await response.json()).code).toBe(
 			'method_not_allowed'
 		)
-		expect(authorizeAgentRequest).not.toHaveBeenCalled()
+		expect(authorizeAgentRequest).toHaveBeenCalledWith(request, {
+			scope: 'projects:write'
+		})
+	})
+
+	it('answers a method other than POST without a token with the gate refusal, not 405', async () => {
+		const gate = new Response(null, { status: 401 })
+		authorizeAgentRequest.mockRejectedValue(gate)
+
+		await expect(act(post({ name: 'Chairs' }, 'PUT'))).rejects.toBe(gate)
 	})
 
 	it('answers the gate refusal and creates nothing', async () => {

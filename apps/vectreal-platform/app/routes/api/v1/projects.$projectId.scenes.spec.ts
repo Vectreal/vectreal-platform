@@ -352,12 +352,19 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 		})
 	})
 
-	it('answers a method other than POST with 405, before the gate', async () => {
+	it('answers a method other than POST with 405, behind the gate', async () => {
 		const response = await act(new Request(url, { method: 'PUT' }))
 
 		expect(response.status).toBe(405)
 		expect(response.headers.get('Allow')).toBe('GET, POST')
-		expect(mocks.authorizeAgentRequest).not.toHaveBeenCalled()
+		expect(mocks.authorizeAgentRequest).toHaveBeenCalledOnce()
+	})
+
+	it('answers a method other than POST without a token with the gate refusal, not 405', async () => {
+		const gate = new Response(null, { status: 401 })
+		mocks.authorizeAgentRequest.mockRejectedValue(gate)
+
+		await expect(act(new Request(url, { method: 'PUT' }))).rejects.toBe(gate)
 	})
 
 	it('answers the gate refusal and stores nothing', async () => {

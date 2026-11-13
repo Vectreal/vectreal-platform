@@ -400,12 +400,22 @@ describe('/api/v1/scenes/:sceneId/publication, either method', () => {
 	it.each([
 		['PUT', 'PUT'],
 		['PATCH', 'PATCH']
-	])('answers %s with 405, before the gate', async (_, method) => {
-		const response = await act(new Request(url, { method }))
+	])('answers %s with 405, behind the gate', async (_, method) => {
+		const request = new Request(url, { method })
+		const response = await act(request)
 
 		expect(response.status).toBe(405)
 		expect(response.headers.get('Allow')).toBe('POST, DELETE')
-		expect(mocks.authorizeAgentRequest).not.toHaveBeenCalled()
+		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
+			scope: 'any'
+		})
+	})
+
+	it('answers an unknown method without a token with the gate refusal, not 405', async () => {
+		const gate = new Response(null, { status: 401 })
+		mocks.authorizeAgentRequest.mockRejectedValue(gate)
+
+		await expect(act(new Request(url, { method: 'PUT' }))).rejects.toBe(gate)
 	})
 
 	it('answers a GET with 405 behind the gate', async () => {

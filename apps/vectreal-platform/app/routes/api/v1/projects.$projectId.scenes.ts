@@ -73,11 +73,12 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-	if (request.method !== 'POST') return methodNotAllowed()
-
+	// Gated before the method is read, so a caller without a token learns
+	// nothing about the route.
 	const actor = await authorizeAgentRequest(request, {
 		scope: AGENT_OPERATION_SCOPES['scene:create']
 	})
+	if (request.method !== 'POST') return methodNotAllowed()
 
 	const { projectId } = await resolveAgentProject(
 		params.projectId,

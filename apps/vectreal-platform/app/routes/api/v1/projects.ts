@@ -40,6 +40,11 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
+	// Gated before the method is read, so a caller without a token learns
+	// nothing about the route.
+	const actor = await authorizeAgentRequest(request, {
+		scope: AGENT_OPERATION_SCOPES['project:create']
+	})
 	if (request.method !== 'POST') {
 		return agentApiError(
 			405,
@@ -48,10 +53,6 @@ export async function action({ request }: Route.ActionArgs) {
 			{ headers: { Allow: 'GET, POST' } }
 		)
 	}
-
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['project:create']
-	})
 
 	// The scope says what the agent may do; the role, what the user may.
 	if (!canPerformDashboardOperation('project:create', { role: actor.role })) {
