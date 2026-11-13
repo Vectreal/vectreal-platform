@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { cn, withHostClasses } from './class-names'
+import { useViewerMessages } from './viewer-messages'
 import { useThumbnailEdgeBands } from '../hooks/use-thumbnail-edge-bands'
 
 import type { ViewerLoadingThumbnail } from '../types/viewer-types'
@@ -24,6 +25,7 @@ const LoadingThumbnailBackdrop = ({
 	thumbnail,
 	isLoaded
 }: LoadingThumbnailBackdropProps) => {
+	const messages = useViewerMessages()
 	const [isEntered, setIsEntered] = useState(false)
 	const bandsRef = useRef<HTMLCanvasElement>(null)
 	const imageRef = useRef<HTMLImageElement>(null)
@@ -116,7 +118,7 @@ const LoadingThumbnailBackdrop = ({
 				<img
 					ref={imageRef}
 					src={thumbnail.src}
-					alt={thumbnail.alt || 'Viewer loading thumbnail'}
+					alt={thumbnail.alt || messages.loadingThumbnailAlt}
 					className={cn(imageClassName, status === 'loading' && 'vv:invisible')}
 					onLoad={() => setSettled({ src: thumbnail.src, loaded: true })}
 					onError={() => setSettled({ src: thumbnail.src, loaded: false })}

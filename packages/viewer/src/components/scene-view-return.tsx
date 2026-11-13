@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { formatMessage } from '../locales/en'
 import ChevronLeftIcon from './assets/chevron-left-icon'
 import { CHROME_BUTTON } from './chrome-classes'
 import { cn } from './class-names'
+import { useViewerMessages } from './viewer-messages'
 
 interface SceneViewReturnProps {
 	/** The hotspot the view is standing at, or null when it is not at one. */
@@ -29,6 +31,7 @@ const ReturnButton = ({
 	onReturn,
 	focusOnLeave
 }: Omit<SceneViewReturnProps, 'hotspotName'>) => {
+	const messages = useViewerMessages()
 	const buttonRef = useRef<HTMLButtonElement>(null)
 	const focusOnLeaveRef = useRef(focusOnLeave)
 	focusOnLeaveRef.current = focusOnLeave
@@ -53,7 +56,7 @@ const ReturnButton = ({
 				onClick={onReturn}
 			>
 				<ChevronLeftIcon className={classes.icon} />
-				Back to scene view
+				{messages.backToSceneView}
 			</button>
 		</div>
 	)
@@ -75,14 +78,20 @@ const SceneViewReturn = ({
 	onReturn,
 	focusOnLeave
 }: SceneViewReturnProps) => {
+	// Read through a ref, so words arriving later never re-announce a view.
+	const wordsNow = useViewerMessages()
+	const messages = useRef(wordsNow)
+	messages.current = wordsNow
 	const [announcement, setAnnouncement] = useState('')
 	const previousName = useRef(hotspotName)
 
 	useEffect(() => {
 		if (hotspotName) {
-			setAnnouncement(`Viewing ${hotspotName}`)
+			setAnnouncement(
+				formatMessage(messages.current.viewingHotspot, { name: hotspotName })
+			)
 		} else if (previousName.current) {
-			setAnnouncement('Back to scene view')
+			setAnnouncement(messages.current.backToSceneView)
 		}
 		previousName.current = hotspotName
 	}, [hotspotName])

@@ -111,12 +111,12 @@ present packages/sdk/src/scene-settings.ts unloadWhenOffscreen: z.boolean().opti
 
 **Start moving** in the **Viewer** section decides when visitors can move the scene. **Right away** lets them drag it as soon as it appears. **After a tap** shows one button in the middle of the scene, **Tap to rotate** on a phone and **Click to rotate** with a mouse, or **Zum Drehen tippen** and **Zum Drehen klicken** in German. Until it is pressed, touches, swipes and the mouse wheel go to the page around the scene, so the page scrolls and a product gallery swipes past it, and a scene set to turn by itself keeps turning (unless the visitor asked their device for reduced motion). Once pressed, the scene moves as usual, and a **Done** (**Fertig**) button in the bottom-right corner hands scrolling back. Choose it for a scene inside a page that scrolls, above all on phones, where a scene filling the screen would otherwise catch every swipe.
 
-**Viewer language** sets the language of the viewer's own words, whichever start you chose: those buttons, the first-time hint and "How to move" in the info popover: **English**, **Deutsch**, or **Browser**, which follows each visitor's browser language. New scenes start with **After a tap**; scenes saved before the setting existed start right away. The setting is saved with the scene, so a plain embed snippet follows it, and applies to embeds and preview links as soon as you save. An embedding page that sends `setControlsEnabled`, like the [scroll tour section](#shopify-a-section-that-tours-the-scene-on-scroll), takes over from the button. Through the API or the MCP server, set `presentation.interactionStart` to `immediate` or `tap`, and `presentation.locale` to `en` or `de`.
+**Viewer language** sets the language of the viewer's own words, whichever start you chose: those buttons, the first-time hint, "How to move" in the info popover and the labels screen readers hear: **English**, **Deutsch**, or **Browser**, which follows each visitor's browser language. An embed loads only the language it shows. New scenes start with **After a tap**; scenes saved before the setting existed start right away. The setting is saved with the scene, so a plain embed snippet follows it, and applies to embeds and preview links as soon as you save. An embedding page that sends `setControlsEnabled`, like the [scroll tour section](#shopify-a-section-that-tours-the-scene-on-scroll), takes over from the button. Through the API or the MCP server, set `presentation.interactionStart` to `immediate` or `tap`, and `presentation.locale` to a language tag in English or German, such as `en`, `de` or `de-AT`.
 
 {/* claims
 present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/interaction-start-setting.tsx label="Start moving"
-present packages/viewer/src/components/tap-to-activate.tsx touch: 'Zum Drehen tippen'
-present packages/viewer/src/components/tap-to-activate.tsx done: 'Fertig'
+present packages/viewer/src/locales/de.ts tapToRotate: 'Zum Drehen tippen'
+present packages/viewer/src/locales/de.ts doneRotating: 'Fertig'
 present packages/viewer/src/vectreal-viewer.tsx controlsEnabledOverride === null &&
 present packages/sdk/src/scene-settings.ts interactionStart: z.enum(['immediate', 'tap'])
 present apps/vectreal-platform/app/constants/viewer-defaults.ts interactionStart: 'tap'
@@ -138,7 +138,7 @@ Screen readers announce the viewer as a 3D viewer, named by the **Alt text** fie
 
 {/* claims
 present apps/vectreal-platform/app/components/publisher/sidebars/publish-sidebar/sections/publish-options.tsx label="Alt text"
-present packages/viewer/src/components/canvas-wrapper.tsx aria-roledescription="3D viewer"
+present packages/viewer/src/locales/en.ts viewerRole: '3D viewer'
 */}
 
 ### Hotspots behind the model

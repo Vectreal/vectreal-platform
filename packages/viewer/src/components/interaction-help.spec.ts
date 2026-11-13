@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { describeHowToMove, describeInteraction } from './interaction-help'
+import { de } from '../locales/de'
+import { en } from '../locales/en'
 
 const ALL = { rotate: true, zoom: true, pan: true }
 const NONE = { rotate: false, zoom: false, pan: false }
@@ -15,7 +17,7 @@ describe('describeInteraction', () => {
 		['touch', 'Drag to rotate, pinch to zoom, drag with two fingers to pan'],
 		['keys', 'Arrow keys rotate, plus and minus zoom, Shift and the arrows pan']
 	] as const)('words it for %s', (input, line) => {
-		expect(describeInteraction(ALL, input, 'en')).toBe(line)
+		expect(describeInteraction(ALL, input, en)).toBe(line)
 	})
 
 	it.each([
@@ -32,23 +34,23 @@ describe('describeInteraction', () => {
 			'Mit den Pfeiltasten drehen, mit Plus und Minus zoomen, mit Umschalt und Pfeiltasten verschieben'
 		]
 	] as const)('words it in German for %s', (input, line) => {
-		expect(describeInteraction(ALL, input, 'de')).toBe(line)
+		expect(describeInteraction(ALL, input, de)).toBe(line)
 	})
 
 	it('leaves out what is switched off', () => {
-		expect(describeInteraction({ ...NONE, zoom: true }, 'touch', 'en')).toBe(
+		expect(describeInteraction({ ...NONE, zoom: true }, 'touch', en)).toBe(
 			'Pinch to zoom'
 		)
 	})
 
 	it('says nothing when nothing moves', () => {
-		expect(describeInteraction(NONE, 'mouse', 'de')).toBe('')
+		expect(describeInteraction(NONE, 'mouse', de)).toBe('')
 	})
 })
 
 describe('describeHowToMove', () => {
 	it('gives every input its line', () => {
-		const help = describeHowToMove({ ...NONE, rotate: true }, 'en')
+		const help = describeHowToMove({ ...NONE, rotate: true }, en)
 		expect(help.heading).toBe('How to move')
 		expect(help.lines.map(({ input }) => input)).toEqual([
 			'Mouse',
@@ -58,7 +60,7 @@ describe('describeHowToMove', () => {
 	})
 
 	it('speaks German for a German scene', () => {
-		const help = describeHowToMove({ ...NONE, rotate: true }, 'de')
+		const help = describeHowToMove({ ...NONE, rotate: true }, de)
 		expect(help.heading).toBe('Bedienung')
 		expect(help.lines).toEqual([
 			{ input: 'Maus', text: 'Zum Drehen ziehen' },
@@ -68,6 +70,6 @@ describe('describeHowToMove', () => {
 	})
 
 	it('is empty when nothing moves', () => {
-		expect(describeHowToMove(NONE, 'en').lines).toEqual([])
+		expect(describeHowToMove(NONE, en).lines).toEqual([])
 	})
 })

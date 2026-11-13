@@ -7,6 +7,7 @@ import ContextLossListener from './context-loss-listener'
 import { VIEWER_FOCUS_RING } from './focus-ring'
 import { FirstFrameWatch, LastFrame, LastFrameCapture } from './last-frame'
 import RenderFailure from './render-failure'
+import { useViewerMessages } from './viewer-messages'
 import {
 	type ContextLossEvent,
 	useContextLossRecovery
@@ -114,6 +115,7 @@ const Canvas = ({
 	keyHelp,
 	...props
 }: CanvasComponentProps) => {
+	const messages = useViewerMessages()
 	const keyHelpId = useId()
 	const operable = Boolean(keyHelp)
 	const getInitialPageVisibility = () =>
@@ -292,7 +294,7 @@ const Canvas = ({
 			  arrows to it rather than reading on with them.
 			*/
 			role={operable ? 'application' : 'group'}
-			aria-roledescription="3D viewer"
+			aria-roledescription={messages.viewerRole}
 			aria-label={label}
 			aria-describedby={operable ? keyHelpId : undefined}
 			/*

@@ -23,6 +23,26 @@ const nonNegative = finite.min(0)
 const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i)
 const vector3 = z.tuple([finite, finite, finite])
 
+/**
+  The languages the viewer has words in, by language subtag. The same list as
+  `VIEWER_LOCALES` in `@vctrl/core`, which this package does not depend on;
+  the platform's settings spec holds the two together.
+*/
+export const VIEWER_LOCALES = ['en', 'de'] as const
+
+/** A BCP 47 tag whose language the viewer has: `de`, `de-AT`, `en-GB`. */
+const viewerLocale = z
+	.string()
+	.trim()
+	.refine((tag) => {
+	try {
+		const language = Intl.getCanonicalLocales(tag)[0]?.split('-')[0]
+		return (VIEWER_LOCALES as readonly string[]).includes(language ?? '')
+	} catch {
+		return false
+	}
+}, `a BCP 47 language tag in ${VIEWER_LOCALES.join(' or ')}`)
+
 /** The hosted environment maps, named `<type>-<label>`. */
 export const ENVIRONMENT_PRESETS = [
 	'nature-moonlit',
@@ -289,7 +309,7 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 			showInteractionHint: z.boolean().optional(),
 			unloadWhenOffscreen: z.boolean().optional(),
 			interactionStart: z.enum(['immediate', 'tap']).optional(),
-			locale: z.enum(['en', 'de']).optional()
+			locale: viewerLocale.optional()
 		})
 		.optional()
 })

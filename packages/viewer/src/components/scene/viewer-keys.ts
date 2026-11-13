@@ -1,6 +1,6 @@
 import { Vector3 } from 'three'
 
-import type { ViewerLanguage } from '../viewer-language'
+import type { ViewerMessages } from '../../locales/en'
 import type { OrbitControls } from '@react-three/drei'
 import type { ControlsProps } from '@vctrl/core'
 import type { ComponentRef } from 'react'
@@ -61,30 +61,21 @@ export function resolveViewerKeys(
 	}
 }
 
-const KEY_HELP: Record<ViewerLanguage, Record<keyof ViewerKeys, string>> = {
-	en: {
-		rotate: 'Arrow keys rotate the view.',
-		pan: 'Shift and arrow keys pan.',
-		zoom: 'Plus and minus zoom.',
-		home: 'Home resets the view.'
-	},
-	de: {
-		rotate: 'Die Pfeiltasten drehen die Ansicht.',
-		pan: 'Umschalt und Pfeiltasten verschieben die Ansicht.',
-		zoom: 'Plus und Minus zoomen.',
-		home: 'Pos1 setzt die Ansicht zurück.'
-	}
+const KEY_HELP: Record<keyof ViewerKeys, keyof ViewerMessages> = {
+	rotate: 'keyHelpRotate',
+	pan: 'keyHelpPan',
+	zoom: 'keyHelpZoom',
+	home: 'keyHelpHome'
 }
 
-/** What a screen reader announces after the viewer's name, in `language`. */
+/** What a screen reader announces after the viewer's name. */
 export function describeViewerKeys(
 	keys: ViewerKeys,
-	language: ViewerLanguage
+	messages: ViewerMessages
 ): string {
-	const words = KEY_HELP[language]
 	return (['rotate', 'pan', 'zoom', 'home'] as const)
 		.filter((key) => keys[key])
-		.map((key) => words[key])
+		.map((key) => messages[KEY_HELP[key]])
 		.join(' ')
 }
 

@@ -9,19 +9,20 @@ import { describe, expect, it } from 'vitest'
 
 import { InfoPopoverHowToMove } from './info-popover-how-to-move'
 import { ViewerKeysContext } from './viewer-keys-context'
-import { ViewerLanguageContext } from './viewer-language'
+import { ViewerMessagesContext } from './viewer-messages'
+import { de } from '../locales/de'
+import { en } from '../locales/en'
 
 import type { ViewerKeys } from './scene/viewer-keys'
-import type { ViewerLanguage } from './viewer-language'
 
 const NONE: ViewerKeys = { rotate: false, zoom: false, pan: false, home: false }
 
-const renderIn = (keys: ViewerKeys | null, language: ViewerLanguage = 'en') =>
+const renderIn = (keys: ViewerKeys | null, messages = en) =>
 	render(
 		<ViewerKeysContext.Provider value={keys}>
-			<ViewerLanguageContext.Provider value={language}>
+			<ViewerMessagesContext.Provider value={messages}>
 				<InfoPopoverHowToMove />
-			</ViewerLanguageContext.Provider>
+			</ViewerMessagesContext.Provider>
 		</ViewerKeysContext.Provider>
 	)
 
@@ -35,7 +36,7 @@ describe('InfoPopoverHowToMove', () => {
 	})
 
 	it("speaks the viewer's language", () => {
-		renderIn({ ...NONE, rotate: true }, 'de')
+		renderIn({ ...NONE, rotate: true }, de)
 		expect(screen.getByText('Bedienung')).toBeTruthy()
 		expect(screen.getByText('Tastatur')).toBeTruthy()
 		expect(screen.getByText('Mit den Pfeiltasten drehen')).toBeTruthy()

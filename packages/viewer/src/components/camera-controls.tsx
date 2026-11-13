@@ -8,11 +8,13 @@ import {
 	useState
 } from 'react'
 
+import { formatMessage, type ViewerMessages } from '../locales/en'
 import CheckIcon from './assets/check-icon'
 import ChevronLeftIcon from './assets/chevron-left-icon'
 import ChevronRightIcon from './assets/chevron-right-icon'
 import { CHROME_BUTTON } from './chrome-classes'
 import { cn, withHostClasses } from './class-names'
+import { useViewerMessages } from './viewer-messages'
 
 export interface CameraControlsOption {
 	cameraId: string
@@ -57,8 +59,10 @@ const classes = {
 	icon: 'vv:h-3.5 vv:w-3.5 vv:shrink-0'
 } as const
 
-const cameraName = (camera: CameraControlsOption | null | undefined) =>
-	camera?.name?.trim() || 'Unnamed camera'
+const cameraName = (
+	camera: CameraControlsOption | null | undefined,
+	messages: ViewerMessages
+) => camera?.name?.trim() || messages.unnamedCamera
 
 /**
  * `‹ Camera name  2/5 ›`, the viewer's switcher between scene cameras.
@@ -81,6 +85,7 @@ const CameraControls = ({
 	offListLabel,
 	className
 }: CameraControlsProps) => {
+	const messages = useViewerMessages()
 	// Falling back to the first camera keeps the control labelled before the
 	// viewer has reported which camera it opened on.
 	const activeIndex = useMemo(() => {
@@ -117,8 +122,8 @@ const CameraControls = ({
 	// With one camera, the arrows still lead back onto it from off the list.
 	const isCyclable = cameras.length > 1 || (isOffList && cameras.length > 0)
 	const activeName = isOffList
-		? offListLabel?.trim() || 'Hotspot view'
-		: cameraName(cameras[activeIndex])
+		? offListLabel?.trim() || messages.hotspotView
+		: cameraName(cameras[activeIndex], messages)
 
 	const label = (
 		<>
@@ -138,14 +143,14 @@ const CameraControls = ({
 		<div
 			className={withHostClasses(classes.root, className)}
 			role="group"
-			aria-label="Cameras"
+			aria-label={messages.cameras}
 		>
 			<button
 				type="button"
 				className={classes.arrow}
 				onClick={() => cycle(-1)}
 				disabled={!isCyclable}
-				aria-label="Previous camera"
+				aria-label={messages.previousCamera}
 			>
 				<ChevronLeftIcon className={classes.icon} />
 			</button>
@@ -168,7 +173,7 @@ const CameraControls = ({
 				className={classes.arrow}
 				onClick={() => cycle(1)}
 				disabled={!isCyclable}
-				aria-label="Next camera"
+				aria-label={messages.nextCamera}
 			>
 				<ChevronRightIcon className={classes.icon} />
 			</button>
@@ -210,6 +215,7 @@ const CameraList = ({
 	onSelect,
 	children
 }: CameraListProps) => {
+	const messages = useViewerMessages()
 	const [isOpen, setIsOpen] = useState(false)
 	const listId = useId()
 	const rootRef = useRef<HTMLDivElement>(null)
@@ -303,7 +309,7 @@ const CameraList = ({
 				aria-haspopup="listbox"
 				aria-expanded={isOpen}
 				aria-controls={isOpen ? listId : undefined}
-				aria-label={`Camera: ${activeName}. Choose a camera`}
+				aria-label={formatMessage(messages.chooseCamera, { name: activeName })}
 			>
 				{children}
 			</button>
@@ -312,7 +318,7 @@ const CameraList = ({
 				<div
 					id={listId}
 					role="listbox"
-					aria-label="Cameras"
+					aria-label={messages.cameras}
 					className={classes.list}
 					onMouseDown={keepFocus}
 				>
@@ -337,7 +343,9 @@ const CameraList = ({
 									close(true)
 								}}
 							>
-								<span className="vv:truncate">{cameraName(camera)}</span>
+								<span className="vv:truncate">
+									{cameraName(camera, messages)}
+								</span>
 								{isActive ? (
 									<CheckIcon className={cn(classes.icon, 'vv:ml-auto')} />
 								) : null}

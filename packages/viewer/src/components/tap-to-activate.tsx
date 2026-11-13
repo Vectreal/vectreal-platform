@@ -2,36 +2,17 @@ import { CHROME_BUTTON } from './chrome-classes'
 import { cn } from './class-names'
 
 import type { InteractionInput } from './interaction-help'
-import type { ViewerLanguage } from './viewer-language'
+import type { ViewerMessages } from '../locales/en'
 
-const WORDS: Record<
-	ViewerLanguage,
-	{ touch: string; mouse: string; done: string; doneLabel: string }
-> = {
-	en: {
-		touch: 'Tap to rotate',
-		mouse: 'Click to rotate',
-		done: 'Done',
-		doneLabel: 'Done rotating, back to scrolling'
-	},
-	de: {
-		touch: 'Zum Drehen tippen',
-		mouse: 'Zum Drehen klicken',
-		done: 'Fertig',
-		doneLabel: 'Fertig gedreht, zurück zum Scrollen'
-	}
-}
-
-/** What the start button and the way back say, for a language and an input. */
+/** What the start button and the way back say, for an input. */
 export function tapToActivateWords(
-	language: ViewerLanguage,
+	messages: ViewerMessages,
 	input: InteractionInput
 ): { start: string; done: string; doneLabel: string } {
-	const words = WORDS[language]
 	return {
-		start: input === 'touch' ? words.touch : words.mouse,
-		done: words.done,
-		doneLabel: words.doneLabel
+		start: input === 'touch' ? messages.tapToRotate : messages.clickToRotate,
+		done: messages.doneRotating,
+		doneLabel: messages.doneRotatingLabel
 	}
 }
 

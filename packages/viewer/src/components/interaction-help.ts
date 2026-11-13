@@ -1,5 +1,5 @@
+import type { ViewerMessages } from '../locales/en'
 import type { ViewerKeys } from './scene/viewer-keys'
-import type { ViewerLanguage } from './viewer-language'
 
 /** How the visitor is moving the scene, which decides how a hint is worded. */
 export type InteractionInput = 'mouse' | 'touch' | 'keys'
@@ -7,73 +7,33 @@ export type InteractionInput = 'mouse' | 'touch' | 'keys'
 type Action = 'rotate' | 'zoom' | 'pan'
 
 const PHRASES: Record<
-	ViewerLanguage,
-	Record<InteractionInput, Record<Action, string>>
+	InteractionInput,
+	Record<Action, keyof ViewerMessages>
 > = {
-	en: {
-		mouse: {
-			rotate: 'drag to rotate',
-			zoom: 'scroll to zoom',
-			pan: 'right-drag to pan'
-		},
-		touch: {
-			rotate: 'drag to rotate',
-			zoom: 'pinch to zoom',
-			pan: 'drag with two fingers to pan'
-		},
-		keys: {
-			rotate: 'arrow keys rotate',
-			zoom: 'plus and minus zoom',
-			pan: 'Shift and the arrows pan'
-		}
-	},
-	de: {
-		mouse: {
-			rotate: 'zum Drehen ziehen',
-			zoom: 'zum Zoomen scrollen',
-			pan: 'zum Verschieben mit rechter Maustaste ziehen'
-		},
-		touch: {
-			rotate: 'zum Drehen ziehen',
-			zoom: 'zum Zoomen zwei Finger auf- oder zuziehen',
-			pan: 'zum Verschieben mit zwei Fingern ziehen'
-		},
-		keys: {
-			rotate: 'mit den Pfeiltasten drehen',
-			zoom: 'mit Plus und Minus zoomen',
-			pan: 'mit Umschalt und Pfeiltasten verschieben'
-		}
-	}
+	mouse: { rotate: 'mouseRotate', zoom: 'mouseZoom', pan: 'mousePan' },
+	touch: { rotate: 'touchRotate', zoom: 'touchZoom', pan: 'touchPan' },
+	keys: { rotate: 'keysRotate', zoom: 'keysZoom', pan: 'keysPan' }
 }
 
-const HOW_TO_MOVE: Record<
-	ViewerLanguage,
-	{ heading: string; inputs: Record<InteractionInput, string> }
-> = {
-	en: {
-		heading: 'How to move',
-		inputs: { mouse: 'Mouse', touch: 'Touch', keys: 'Keyboard' }
-	},
-	de: {
-		heading: 'Bedienung',
-		inputs: { mouse: 'Maus', touch: 'Touch', keys: 'Tastatur' }
-	}
+const INPUT_NAMES: Record<InteractionInput, keyof ViewerMessages> = {
+	mouse: 'howToMoveMouse',
+	touch: 'howToMoveTouch',
+	keys: 'howToMoveKeys'
 }
 
 const ACTIONS: Action[] = ['rotate', 'zoom', 'pan']
 
 /**
  * One line naming what the visitor can do with `input`, from the controls
- * that are on, in `language`: "Drag to rotate, scroll to zoom". Empty when
- * none are.
+ * that are on: "Drag to rotate, scroll to zoom". Empty when none are.
  */
 export function describeInteraction(
 	keys: Pick<ViewerKeys, Action>,
 	input: InteractionInput,
-	language: ViewerLanguage
+	messages: ViewerMessages
 ): string {
 	const line = ACTIONS.filter((action) => keys[action])
-		.map((action) => PHRASES[language][input][action])
+		.map((action) => messages[PHRASES[input][action]])
 		.join(', ')
 	return line && line[0].toUpperCase() + line.slice(1)
 }
@@ -84,14 +44,13 @@ export function describeInteraction(
  */
 export function describeHowToMove(
 	keys: Pick<ViewerKeys, Action>,
-	language: ViewerLanguage
+	messages: ViewerMessages
 ): { heading: string; lines: { input: string; text: string }[] } {
-	const { heading, inputs } = HOW_TO_MOVE[language]
-	const lines = (Object.keys(inputs) as InteractionInput[])
+	const lines = (Object.keys(INPUT_NAMES) as InteractionInput[])
 		.map((input) => ({
-			input: inputs[input],
-			text: describeInteraction(keys, input, language)
+			input: messages[INPUT_NAMES[input]],
+			text: describeInteraction(keys, input, messages)
 		}))
 		.filter(({ text }) => text)
-	return { heading, lines }
+	return { heading: messages.howToMove, lines }
 }

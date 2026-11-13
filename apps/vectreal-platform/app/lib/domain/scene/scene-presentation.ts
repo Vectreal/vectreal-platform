@@ -1,6 +1,7 @@
+import { normalizeSceneLocale } from '@vctrl/core'
+
 import type {
 	SceneInteractionStart,
-	SceneLocale,
 	ScenePresentationSettings
 } from '@vctrl/core'
 
@@ -8,7 +9,6 @@ const INTERACTION_STARTS: readonly SceneInteractionStart[] = [
 	'immediate',
 	'tap'
 ]
-const LOCALES: readonly SceneLocale[] = ['en', 'de']
 
 /**
  * The rules for `SceneSettings.presentation`, owned in one place because the
@@ -62,6 +62,7 @@ export function normalizePresentationSettings(
 		interactionStart,
 		locale
 	} = presentation as ScenePresentationSettings
+	const sceneLocale = normalizeSceneLocale(locale)
 	const trimmedAltText = typeof altText === 'string' ? altText.trim() : ''
 	const normalized: ScenePresentationSettings = {
 		...(typeof showInfoPopover === 'boolean' ? { showInfoPopover } : {}),
@@ -87,7 +88,7 @@ export function normalizePresentationSettings(
 		...(INTERACTION_STARTS.includes(interactionStart as SceneInteractionStart)
 			? { interactionStart }
 			: {}),
-		...(LOCALES.includes(locale as SceneLocale) ? { locale } : {})
+		...(sceneLocale ? { locale: sceneLocale } : {})
 	}
 
 	return Object.keys(normalized).length > 0 ? normalized : undefined

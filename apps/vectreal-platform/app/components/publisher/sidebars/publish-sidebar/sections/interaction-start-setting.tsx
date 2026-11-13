@@ -2,6 +2,7 @@ import {
 	ToggleGroup,
 	ToggleGroupItem
 } from '@shared/components/ui/toggle-group'
+import { matchViewerLocale } from '@vctrl/core'
 
 import { resolveInteractionStart } from '../../../../../lib/domain/scene/scene-presentation'
 import { SettingGroup } from '../../sidebar-section'
@@ -76,7 +77,8 @@ export const InteractionStartSetting = ({
 				<ToggleGroup
 					type="single"
 					aria-label="Viewer language"
-					value={presentation.locale ?? 'browser'}
+					// A tag set through the API, such as `de-AT`, shows as its language.
+					value={matchViewerLocale(presentation.locale) ?? 'browser'}
 					onValueChange={(value) => {
 						if (!value) return
 						onChange(({ locale: _previous, ...rest }) =>

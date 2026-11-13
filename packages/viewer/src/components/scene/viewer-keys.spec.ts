@@ -14,6 +14,8 @@ import {
 	ZOOM_STEP,
 	type ViewerKeys
 } from './viewer-keys'
+import { de } from '../../locales/de'
+import { en } from '../../locales/en'
 
 const ALL: ViewerKeys = { rotate: true, zoom: true, pan: true, home: true }
 const NONE: ViewerKeys = { rotate: false, zoom: false, pan: false, home: false }
@@ -175,21 +177,21 @@ describe('resolveViewerKeys', () => {
 
 describe('describeViewerKeys', () => {
 	it('names every key on offer', () => {
-		expect(describeViewerKeys(ALL, 'en')).toBe(
+		expect(describeViewerKeys(ALL, en)).toBe(
 			'Arrow keys rotate the view. Shift and arrow keys pan. Plus and minus zoom. Home resets the view.'
 		)
 	})
 
 	it('speaks German for a German scene', () => {
-		expect(describeViewerKeys(ALL, 'de')).toBe(
+		expect(describeViewerKeys(ALL, de)).toBe(
 			'Die Pfeiltasten drehen die Ansicht. Umschalt und Pfeiltasten verschieben die Ansicht. Plus und Minus zoomen. Pos1 setzt die Ansicht zurück.'
 		)
 	})
 
 	it('names only the keys on offer', () => {
-		expect(describeViewerKeys({ ...NONE, zoom: true }, 'en')).toBe(
+		expect(describeViewerKeys({ ...NONE, zoom: true }, en)).toBe(
 			'Plus and minus zoom.'
 		)
-		expect(describeViewerKeys(NONE, 'de')).toBe('')
+		expect(describeViewerKeys(NONE, de)).toBe('')
 	})
 })

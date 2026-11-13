@@ -106,9 +106,9 @@ import {
 } from './components/tap-to-activate'
 import { ViewerKeysContext } from './components/viewer-keys-context'
 import {
-	resolveViewerLanguage,
-	ViewerLanguageContext
-} from './components/viewer-language'
+	useResolvedViewerMessages,
+	ViewerMessagesContext
+} from './components/viewer-messages'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { type ContextLossEvent } from './hooks/use-context-loss-recovery'
 import { useHeldExecutor } from './hooks/use-held-executor'
@@ -120,6 +120,7 @@ import { useViewerLoading } from './hooks/use-viewer-loading'
 import type { HotspotPositionSetter } from './components/scene'
 import type { ViewerTheme } from './hooks/use-viewer-color-scheme'
 import type { SrcLoadOptions, SrcModel } from './load-src'
+import type { ViewerMessages } from './locales/en'
 import type {
 	BakedShadow,
 	SceneCameraSnapshot,
@@ -390,10 +391,18 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 */
 	interactionStart?: SceneInteractionStart
 	/**
-	 * The language of the words the viewer shows a visitor, as a language tag:
-	 * German for any `de`, English otherwise. Defaults to the browser's.
+	 * The language of the words the viewer shows and announces, as a BCP 47
+	 * tag: `de` or `de-AT` loads the German catalog the first time it is
+	 * needed, and English shows meanwhile and for a language with no catalog.
+	 * Defaults to the browser's language.
 	 */
 	locale?: string
+	/**
+	 * Words to show instead of the catalog's, by key: change one wording, or
+	 * pass every key of `ViewerMessages` to show a language the viewer has no
+	 * catalog for. Keys left out come from the catalog `locale` picked.
+	 */
+	messages?: Partial<ViewerMessages>
 	/**
 	 * Whether the viewer draws its own animation playback controls. Default true.
 	 *
@@ -674,6 +683,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		showInteractionHint = false,
 		interactionStart = 'immediate',
 		locale,
+		messages: messageOverrides,
 		showAnimationControls = true,
 		showCameraControls = true,
 		// Editor affordances
@@ -808,13 +818,15 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	// The markers this surface draws, by the same rule `SceneHotspots` draws
 	// them, so a hidden or internal hotspot's camera is never a hotspot view,
 	// and a hidden or internal hotspot's clip never mounts the animation runtime.
+	const messages = useResolvedViewerMessages(locale, messageOverrides)
 	const hotspotMarkers = useMemo(
 		() =>
 			resolveHotspotMarkers(hotspots, {
 				includeInternal: showInternalHotspots,
-				includeHidden: showHiddenHotspots
+				includeHidden: showHiddenHotspots,
+				messages
 			}),
-		[hotspots, showInternalHotspots, showHiddenHotspots]
+		[hotspots, showInternalHotspots, showHiddenHotspots, messages]
 	)
 
 	const animation = useAnimationRuntime({
@@ -1200,14 +1212,13 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		ready: loadingState === 'ready' && !inputLocked,
 		container
 	})
-	const language = resolveViewerLanguage(locale)
 	const interactionHintText = describeInteraction(
 		viewerKeys,
 		interactionHint.input,
-		language
+		messages
 	)
 	const tapWords = waitsForTap
-		? tapToActivateWords(language, pointerInput())
+		? tapToActivateWords(messages, pointerInput())
 		: null
 	// Giving up replaces the overlay, loader and all, with the failure state, so
 	// a loader caught mid-fade never reports the end of its fade. Without this
@@ -1227,7 +1238,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const aoEnabled = occlusion.mode === 'live'
 	return (
 		<ViewerKeysContext.Provider value={viewerKeys}>
-			<ViewerLanguageContext.Provider value={language}>
+			<ViewerMessagesContext.Provider value={messages}>
 				<Suspense fallback={loader}>
 					<Canvas
 						frameloop="always"
@@ -1244,7 +1255,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 						onContainerChange={setContainer}
 						label={label}
 						// Nothing to announce until the tap: the start button is what to reach.
-						keyHelp={describeViewerKeys(liveKeys, language)}
+						keyHelp={describeViewerKeys(liveKeys, messages)}
 						onContextLossEvent={handleContextLossEvent}
 						renderFailure={renderFailure}
 						overlay={
@@ -1502,7 +1513,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 						</Suspense>
 					</Canvas>
 				</Suspense>
-			</ViewerLanguageContext.Provider>
+			</ViewerMessagesContext.Provider>
 		</ViewerKeysContext.Provider>
 	)
 })

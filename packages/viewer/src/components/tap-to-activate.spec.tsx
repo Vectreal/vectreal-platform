@@ -7,20 +7,22 @@ import {
 	TapToDeactivateButton,
 	tapToActivateWords
 } from './tap-to-activate'
+import { de } from '../locales/de'
+import { en } from '../locales/en'
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('tapToActivateWords', () => {
 	it('says tap on a touch screen and click with a mouse, in either language', () => {
-		expect(tapToActivateWords('de', 'touch').start).toBe('Zum Drehen tippen')
-		expect(tapToActivateWords('en', 'touch').start).toBe('Tap to rotate')
-		expect(tapToActivateWords('de', 'mouse').start).toBe('Zum Drehen klicken')
-		expect(tapToActivateWords('en', 'mouse').start).toBe('Click to rotate')
+		expect(tapToActivateWords(de, 'touch').start).toBe('Zum Drehen tippen')
+		expect(tapToActivateWords(en, 'touch').start).toBe('Tap to rotate')
+		expect(tapToActivateWords(de, 'mouse').start).toBe('Zum Drehen klicken')
+		expect(tapToActivateWords(en, 'mouse').start).toBe('Click to rotate')
 	})
 
 	it('names the way back', () => {
-		expect(tapToActivateWords('de', 'touch').done).toBe('Fertig')
-		expect(tapToActivateWords('en', 'mouse').done).toBe('Done')
+		expect(tapToActivateWords(de, 'touch').done).toBe('Fertig')
+		expect(tapToActivateWords(en, 'mouse').done).toBe('Done')
 	})
 })
 
