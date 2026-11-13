@@ -4,6 +4,8 @@
  * resolve, so `applyOptimization(simplifyOptimization)`, the pattern the
  * README shows, could never report one.
  */
+import { format } from 'node:util'
+
 import { renderHook } from '@testing-library/react'
 import { ModelOptimizer } from '@vctrl/core/model-optimizer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -26,11 +28,18 @@ describe('useOptimizeModel geometry passes', () => {
 		const { result } = renderHook(() => useOptimizeModel())
 		// After the render, which would otherwise read a document there is not.
 		vi.spyOn(ModelOptimizer.prototype, 'hasModel').mockReturnValue(true)
-		vi.spyOn(console, 'error').mockImplementation(() => {})
+		const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const error = new Error(`${method} failed`)
 		vi.spyOn(ModelOptimizer.prototype, method).mockRejectedValue(error)
 
 		await expect(result.current[pass]()).rejects.toBe(error)
+		expect(logged).toHaveBeenCalled()
+		// What this failure logs, and nothing else.
+		for (const args of logged.mock.calls) {
+			expect(format(...args)).toMatch(
+				/^(Simplification|Deduplication|Quantization|Normals optimization) failed:/
+			)
+		}
 	})
 
 	it.each(PASSES)(

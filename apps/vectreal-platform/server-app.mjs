@@ -89,7 +89,8 @@ function collectMovedMedia(dir, base) {
 export function createServerApp({
 	clientDir,
 	handleRequest,
-	isUnpublishedNewsPath
+	isUnpublishedNewsPath,
+	redactUrlSecrets
 }) {
 	const app = express()
 
@@ -180,7 +181,29 @@ export function createServerApp({
 		)
 	}
 	app.use(express.static(clientDir, { redirect: false }))
-	app.use(morgan('tiny'))
+	/*
+	  Morgan's `tiny` format, with the URL passed through the app's
+	  `redactUrlSecrets` (read from the server build, like the news gate above).
+	  An embed authenticates with `?token=` because an iframe cannot set a
+	  header, so the raw URL would put a live embed key in every log line and in
+	  every log store that keeps them.
+	*/
+	app.use(
+		morgan((tokens, req, res) =>
+			[
+				tokens.method(req, res),
+				redactUrlSecrets(tokens.url(req, res) ?? ''),
+				tokens.status(req, res),
+				tokens.res(req, res, 'content-length'),
+				'-',
+				tokens['response-time'](req, res),
+				'ms'
+			]
+				// What morgan's own formats print for a token with no value.
+				.map((part) => part ?? '-')
+				.join(' ')
+		)
+	)
 
 	app.all('/{*splat}', handleRequest)
 

@@ -44,8 +44,14 @@ describe('the shared KTX2 loader', () => {
 		expect(dispose).toHaveBeenCalledOnce()
 
 		await expect(prepareThreeKtx2Transcoder(path)).resolves.toBeUndefined()
-		expect(await getThreeKtx2Loader(path)).not.toBe(failed)
+		const recovered = await getThreeKtx2Loader(path)
+		expect(recovered).not.toBe(failed)
 		expect(fetch).toHaveBeenCalledTimes(4)
+		/*
+		  three warns when a second KTX2Loader starts while one is active, which
+		  the next case would otherwise do. Each path here is its own cache entry.
+		*/
+		recovered.dispose()
 	})
 
 	it('keeps one loader once its transcoder is ready', async () => {
@@ -58,6 +64,7 @@ describe('the shared KTX2 loader', () => {
 
 		expect(await getThreeKtx2Loader(path)).toBe(ready)
 		expect(fetch).toHaveBeenCalledTimes(2)
+		ready.dispose()
 	})
 
 	it('transcodes to RGBA where no GPU format can be detected', async () => {

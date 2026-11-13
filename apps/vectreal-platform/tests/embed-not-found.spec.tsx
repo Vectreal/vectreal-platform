@@ -22,6 +22,7 @@ describe('the embed not-found route', () => {
 		const Stub = createRoutesStub([
 			{
 				path: '/embed/*',
+				HydrateFallback: () => null,
 				loader,
 				Component: () => null,
 				ErrorBoundary
