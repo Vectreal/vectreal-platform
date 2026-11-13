@@ -20,11 +20,11 @@ The user can revoke an approval under **Connected agents** in the dashboard, whi
 
 | Scope | Lets the agent |
 |---|---|
-| `projects:read` | See projects, folders, scenes and their settings. Always granted. |
-| `projects:write` | Create projects, folders and scenes (uploading a GLB as a new scene is this), and rename or move them. |
-| `scenes:write` | Change scene settings. |
+| `projects:read` | List your projects with their scenes and read each scene's settings. Always granted. |
+| `projects:write` | Create projects and upload a model as a new scene. |
+| `scenes:write` | Change a scene's settings. |
 | `scenes:publish` | Publish scenes and take them offline again. |
-| `embed:manage` | Create embed keys and edit the domains they work on. |
+| `embed:manage` | Edit the domains embeds work on, create embed keys and read their embed snippets. |
 
 No scope can delete anything, or touch billing, members or organization settings. A scope never lets an agent do more than the user's role in the organization allows: both have to agree.
 

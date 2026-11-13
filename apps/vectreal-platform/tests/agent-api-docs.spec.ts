@@ -4,6 +4,8 @@ import { resolve } from 'node:path'
 import { API_ERROR_CODES } from '@vctrl/sdk'
 import { describe, expect, it } from 'vitest'
 
+import { describeAgentScope } from '../app/lib/domain/agent/agent-operation-scopes'
+import { AGENT_SCOPES } from '../app/lib/domain/agent/agent-scopes'
 import routes from '../app/routes'
 
 import type { RouteConfigEntry } from '@react-router/dev/routes'
@@ -26,6 +28,12 @@ const paths = (entries: RouteConfigEntry[]): string[] =>
 	])
 
 describe('the API reference', () => {
+	it('says what each scope grants in the words the consent page uses', () => {
+		for (const scope of AGENT_SCOPES) {
+			expect(page).toContain(`| \`${scope}\` | ${describeAgentScope(scope)}`)
+		}
+	})
+
 	it('names every error code the SDK knows', () => {
 		for (const code of API_ERROR_CODES) {
 			expect(page).toContain(`| \`${code}\` |`)
