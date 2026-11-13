@@ -66,5 +66,3 @@ return ApiResponse.success({ classes, sizeText })
 ## License
 
 AGPL-3.0-only, covered by the repository-root [LICENSE.md](../../LICENSE.md).
-
-<!-- temporary: exercises the Nx cache in CI, reverted in the next commit -->
