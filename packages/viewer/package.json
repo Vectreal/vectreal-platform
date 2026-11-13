@@ -47,6 +47,10 @@
 			"types": "./camera-flight.d.ts",
 			"default": "./camera-flight.js"
 		},
+		"./locales/*": {
+			"types": "./locales/*.d.ts",
+			"default": "./locales/*.js"
+		},
 		"./css": "./style.css"
 	},
 	"dependencies": {

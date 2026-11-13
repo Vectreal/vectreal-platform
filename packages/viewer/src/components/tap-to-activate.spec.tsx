@@ -3,41 +3,26 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
-	resolveViewerLanguage,
 	TapToActivateButton,
 	TapToDeactivateButton,
 	tapToActivateWords
 } from './tap-to-activate'
+import { de } from '../locales/de'
+import { en } from '../locales/en'
 
 afterEach(() => vi.unstubAllGlobals())
 
-describe('resolveViewerLanguage', () => {
-	it("takes the scene's locale over the browser's", () => {
-		vi.stubGlobal('navigator', { language: 'en-US' })
-		expect(resolveViewerLanguage('de')).toBe('de')
-		vi.stubGlobal('navigator', { language: 'de-DE' })
-		expect(resolveViewerLanguage('en')).toBe('en')
-	})
-
-	it('follows the browser when the scene names none, and English for any language it lacks', () => {
-		vi.stubGlobal('navigator', { language: 'de-AT' })
-		expect(resolveViewerLanguage(undefined)).toBe('de')
-		vi.stubGlobal('navigator', { language: 'fr-FR' })
-		expect(resolveViewerLanguage(undefined)).toBe('en')
-	})
-})
-
 describe('tapToActivateWords', () => {
 	it('says tap on a touch screen and click with a mouse, in either language', () => {
-		expect(tapToActivateWords('de', 'touch').start).toBe('Zum Drehen tippen')
-		expect(tapToActivateWords('en', 'touch').start).toBe('Tap to rotate')
-		expect(tapToActivateWords('de', 'mouse').start).toBe('Zum Drehen klicken')
-		expect(tapToActivateWords('en', 'mouse').start).toBe('Click to rotate')
+		expect(tapToActivateWords(de, 'touch').start).toBe('Zum Drehen tippen')
+		expect(tapToActivateWords(en, 'touch').start).toBe('Tap to rotate')
+		expect(tapToActivateWords(de, 'mouse').start).toBe('Zum Drehen klicken')
+		expect(tapToActivateWords(en, 'mouse').start).toBe('Click to rotate')
 	})
 
 	it('names the way back', () => {
-		expect(tapToActivateWords('de', 'touch').done).toBe('Fertig')
-		expect(tapToActivateWords('en', 'mouse').done).toBe('Done')
+		expect(tapToActivateWords(de, 'touch').done).toBe('Fertig')
+		expect(tapToActivateWords(en, 'mouse').done).toBe('Done')
 	})
 })
 

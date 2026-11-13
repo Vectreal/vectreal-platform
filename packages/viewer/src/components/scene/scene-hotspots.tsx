@@ -12,6 +12,7 @@ import { resolveOpenHotspotId } from './open-hotspot'
 import { resolveHotspotMarkers } from './resolve-hotspot-markers'
 import { resolveHotspotPopoverContent } from './resolve-hotspot-popover'
 import { leftOpenHotspotView } from './scene-view-return'
+import { useViewerMessages } from '../viewer-messages'
 
 import type { isRayBlocked as IsRayBlocked } from './occlusion-raycast'
 import type { ViewerCommandExecutor } from '../../types/viewer-interactions'
@@ -161,9 +162,15 @@ const SceneHotspots = ({
 		setOpenId(null)
 	}
 
+	const messages = useViewerMessages()
 	const markers = useMemo(
-		() => resolveHotspotMarkers(hotspots, { includeInternal, includeHidden }),
-		[hotspots, includeInternal, includeHidden]
+		() =>
+			resolveHotspotMarkers(hotspots, {
+				includeInternal,
+				includeHidden,
+				messages
+			}),
+		[hotspots, includeInternal, includeHidden, messages]
 	)
 
 	/**

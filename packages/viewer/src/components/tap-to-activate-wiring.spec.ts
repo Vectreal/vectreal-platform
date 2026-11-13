@@ -32,7 +32,7 @@ describe('tap to activate is wired into the viewer', () => {
 		expect(source).toContain('inputLocked={inputLocked}')
 		expect(source).toContain('keys={liveKeys}')
 		// Not announced as operable until then, so the button is what is reached.
-		expect(source).toContain('keyHelp={describeViewerKeys(liveKeys)}')
+		expect(source).toContain('keyHelp={describeViewerKeys(liveKeys, messages)}')
 		expect(source).toMatch(
 			/setTapStarted\(false\)\s*transitionOverride\.current = null/
 		)

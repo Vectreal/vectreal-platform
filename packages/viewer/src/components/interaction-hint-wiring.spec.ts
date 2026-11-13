@@ -32,9 +32,15 @@ describe('the interaction hint is wired into the viewer', () => {
 		)
 	})
 
-	it('words it from the keys the viewer takes', () => {
+	it("words it from the keys the viewer takes, in the viewer's words", () => {
 		expect(source).toMatch(
-			/describeInteraction\(\s*viewerKeys,\s*interactionHint\.input\s*\)/
+			/const messages = useResolvedViewerMessages\(locale, messageOverrides\)/
+		)
+		expect(source).toMatch(
+			/describeInteraction\(\s*viewerKeys,\s*interactionHint\.input,\s*messages\s*\)/
+		)
+		expect(source).toMatch(
+			/<ViewerMessagesContext\.Provider value=\{messages\}>/
 		)
 	})
 

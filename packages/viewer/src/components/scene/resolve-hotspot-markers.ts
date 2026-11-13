@@ -1,3 +1,5 @@
+import { en, formatMessage, type ViewerMessages } from '../../locales/en'
+
 import type { HotspotDefinition, HotspotStylePreset } from '@vctrl/core'
 
 /**
@@ -84,6 +86,8 @@ export interface ResolveHotspotMarkersOptions {
 	 * nor `includeInternal` changes a single step number - see below.
 	 */
 	includeHidden?: boolean
+	/** The words for an unnamed hotspot and its accessible name. English by default. */
+	messages?: Pick<ViewerMessages, 'hotspot' | 'hotspotHidden' | 'hotspotStep'>
 }
 
 /** A trimmed string, or null for anything that is not a usable string. */
@@ -161,7 +165,8 @@ export function resolveHotspotMarkers(
 	hotspots: readonly HotspotDefinition[] | undefined,
 	{
 		includeInternal = false,
-		includeHidden = false
+		includeHidden = false,
+		messages = en
 	}: ResolveHotspotMarkersOptions = {}
 ): HotspotMarker[] {
 	if (!Array.isArray(hotspots)) return []
@@ -237,10 +242,12 @@ export function resolveHotspotMarkers(
 	const markers: HotspotMarker[] = []
 	let step = 0
 	for (const { entry } of sequenced) {
-		markers.push(toMarker(entry, entry.published ? ++step : null, stepCount))
+		markers.push(
+			toMarker(entry, entry.published ? ++step : null, stepCount, messages)
+		)
 	}
 	for (const entry of unsequenced) {
-		markers.push(toMarker(entry, null, stepCount))
+		markers.push(toMarker(entry, null, stepCount, messages))
 	}
 
 	return markers
@@ -249,15 +256,16 @@ export function resolveHotspotMarkers(
 function toMarker(
 	{ hotspot, id, position, hidden, internal }: DrawableEntry,
 	step: number | null,
-	stepCount: number
+	stepCount: number,
+	messages: NonNullable<ResolveHotspotMarkersOptions['messages']>
 ): HotspotMarker {
-	const name = text(hotspot.name) ?? 'Hotspot'
+	const name = text(hotspot.name) ?? messages.hotspot
 	const payloadUrl = text(hotspot.payloadUrl)
 
 	return {
 		id,
 		name,
-		accessibleName: accessibleName(name, step, stepCount, hidden),
+		accessibleName: accessibleName(name, step, stepCount, hidden, messages),
 		body: text(hotspot.body),
 		linkUrl: text(hotspot.linkUrl),
 		position,
@@ -297,8 +305,11 @@ function accessibleName(
 	name: string,
 	step: number | null,
 	stepCount: number,
-	hidden: boolean
+	hidden: boolean,
+	messages: NonNullable<ResolveHotspotMarkersOptions['messages']>
 ): string {
-	if (hidden) return `${name}, hidden`
-	return step === null ? name : `${name}, step ${step} of ${stepCount}`
+	if (hidden) return formatMessage(messages.hotspotHidden, { name })
+	return step === null
+		? name
+		: formatMessage(messages.hotspotStep, { name, step, count: stepCount })
 }
