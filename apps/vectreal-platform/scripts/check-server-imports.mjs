@@ -76,7 +76,8 @@ console.log(
 )
 if (missing.length) {
 	console.error(
-		`Not in the runner's production dependencies:\n${missing.join('\n')}`
+		`Not in the runner's production dependencies:\n${missing.join('\n')}\n` +
+			'The match is textual, so an import in a code sample the bundle carries as text (a docs page, say) counts too.'
 	)
 	process.exit(1)
 }
