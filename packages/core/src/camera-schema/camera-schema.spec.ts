@@ -73,6 +73,18 @@ describe('cameraSettingsSchema', () => {
 		expect(result.error?.issues[0]?.path).toEqual(path)
 	})
 
+	it.each([
+		[{ fov: 0 }, 'must be a number of degrees between 0 and 180'],
+		[{ fov: '60' }, 'must be a number of degrees between 0 and 180'],
+		[{ kind: 'drone' }, "must be 'scene' or 'hotspot'"],
+		[{ position: [1, 2] }, 'must be [x, y, z] or {x, y, z} of finite numbers']
+	])('says what %o must be, in the words a refusal shows', (field, message) => {
+		const result = cameraSettingsSchema.safeParse({
+			cameras: [{ ...scene, ...field }]
+		})
+		expect(result.error?.issues[0]?.message).toBe(message)
+	})
+
 	it('refuses an empty list, a malformed transition and a non-boolean switcher', () => {
 		expect(cameraSettingsSchema.safeParse({ cameras: [] }).success).toBe(false)
 		expect(

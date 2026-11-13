@@ -21,32 +21,42 @@ import { isFramingAspect } from '../scene-camera/viewport-framing'
 export const isSceneCamera = (camera: { kind?: string }): boolean =>
 	!camera.kind || camera.kind === 'scene'
 
-// zod 4 refuses Infinity and NaN for any number already.
-const finite = z.number()
+// zod 4 refuses Infinity and NaN for any number already. Each rule carries
+// the words a refusal shows, written for whoever sent the value.
+const finite = z.number({ error: 'must be a number' })
 
 /**
  * A perspective lens's vertical field of view, in degrees. Outside the open
  * range the projection is degenerate or inverted, and the viewer draws
  * nothing usable.
  */
-export const cameraFovSchema = finite.gt(0).lt(180)
+const FOV_RANGE = 'must be a number of degrees between 0 and 180'
+export const cameraFovSchema = z
+	.number({ error: FOV_RANGE })
+	.gt(0, { error: FOV_RANGE })
+	.lt(180, { error: FOV_RANGE })
 
 /** Whether `value` is a field of view the viewer can set on its lens. */
 export const isCameraFov = (value: unknown): value is number =>
 	cameraFovSchema.safeParse(value).success
 
-export const cameraKindSchema = z.enum(['scene', 'hotspot'])
+export const cameraKindSchema = z.enum(['scene', 'hotspot'], {
+	error: "must be 'scene' or 'hotspot'"
+})
 
 /**
  * A 3D vector as `[x, y, z]`, or as the `{ x, y, z }` three.js objects
  * serialize to. Both read as the tuple.
  */
-export const cameraVectorSchema = z.union([
-	z.tuple([finite, finite, finite]),
-	z
-		.strictObject({ x: finite, y: finite, z: finite })
-		.transform(({ x, y, z }): [number, number, number] => [x, y, z])
-])
+export const cameraVectorSchema = z.union(
+	[
+		z.tuple([finite, finite, finite]),
+		z
+			.strictObject({ x: finite, y: finite, z: finite })
+			.transform(({ x, y, z }): [number, number, number] => [x, y, z])
+	],
+	{ error: 'must be [x, y, z] or {x, y, z} of finite numbers' }
+)
 
 /** The camera fields that hold a vector. `lookAt` is the legacy `target`. */
 export const CAMERA_VECTOR_FIELDS = [
@@ -56,30 +66,50 @@ export const CAMERA_VECTOR_FIELDS = [
 	'lookAt'
 ] as const
 
-export const cameraTransitionSchema = z.looseObject({
-	type: z.enum(['linear', 'object_avoidance', 'none']),
-	duration: finite.min(0).optional(),
-	easing: z.enum(['linear', 'ease_in', 'ease_out', 'ease_in_out']).optional(),
-	/** Ignored by the viewer; still refused when malformed, as it always was. */
-	objectAvoidance: z
-		.looseObject({
-			clearance: finite.optional(),
-			arcHeight: finite.optional(),
-			samples: finite.min(2).optional(),
-			tension: finite.optional()
-		})
-		.optional()
-})
+const NON_NEGATIVE = 'must be a non-negative number'
+
+export const cameraTransitionSchema = z.looseObject(
+	{
+		type: z.enum(['linear', 'object_avoidance', 'none'], {
+			error: 'must be one of linear, object_avoidance, none'
+		}),
+		duration: z
+			.number({ error: NON_NEGATIVE })
+			.min(0, { error: NON_NEGATIVE })
+			.optional(),
+		easing: z
+			.enum(['linear', 'ease_in', 'ease_out', 'ease_in_out'], {
+				error: 'must be one of linear, ease_in, ease_out, ease_in_out'
+			})
+			.optional(),
+		/** Ignored by the viewer; still refused when malformed, as it always was. */
+		objectAvoidance: z
+			.looseObject(
+				{
+					clearance: finite.optional(),
+					arcHeight: finite.optional(),
+					samples: z
+						.number({ error: 'must be a number >= 2' })
+						.min(2, { error: 'must be a number >= 2' })
+						.optional(),
+					tension: finite.optional()
+				},
+				{ error: 'must be an object when provided' }
+			)
+			.optional()
+	},
+	{ error: 'must be an object' }
+)
 
 /**
  * The fields of one camera that have a rule. A field without one (a three.js
  * prop such as `near`) is carried as stored.
  */
 const CAMERA_FIELD_SCHEMAS = {
-	cameraId: z.string(),
-	name: z.string(),
+	cameraId: z.string({ error: 'must be a string' }),
+	name: z.string({ error: 'must be a string' }),
 	kind: cameraKindSchema,
-	initial: z.boolean(),
+	initial: z.boolean({ error: 'must be a boolean' }),
 	fov: cameraFovSchema,
 	framingAspect: z.custom<number>(isFramingAspect, {
 		message: 'must be a positive finite number'
@@ -96,7 +126,8 @@ export const cameraEntrySchema = z.looseObject(
 			field,
 			schema.optional()
 		])
-	)
+	),
+	{ error: 'must be an object' }
 )
 
 /**
@@ -104,16 +135,16 @@ export const cameraEntrySchema = z.looseObject(
  * of them a scene camera to open on, every field that has a rule within it.
  */
 export const cameraSettingsSchema = z.looseObject({
-	activeCameraId: z.string().optional(),
+	activeCameraId: z.string({ error: 'must be a string' }).optional(),
 	cameras: z
-		.array(cameraEntrySchema)
-		.min(1)
+		.array(cameraEntrySchema, { error: 'must be a non-empty array' })
+		.min(1, { error: 'must be a non-empty array' })
 		.refine((cameras) => cameras.some(isSceneCamera), {
 			message: 'must contain at least one scene camera'
 		}),
 	sceneTransition: cameraTransitionSchema.optional(),
 	/** The viewer hides its switcher only for a literal `false`. */
-	showControls: z.boolean().optional()
+	showControls: z.boolean({ error: 'must be a boolean' }).optional()
 })
 
 /** One stored value `repairCameraEntry` dropped, for whoever logs it. */
