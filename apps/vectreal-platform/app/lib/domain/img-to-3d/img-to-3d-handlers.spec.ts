@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	IMG_TO_3D_DAILY_JOB_LIMIT,
 	IMG_TO_3D_FIELDS,
+	IMG_TO_3D_LIST_BATCH_LIMIT,
 	type ImgTo3dJobState
 } from './img-to-3d-contract'
 import {
@@ -10,7 +11,9 @@ import {
 	handleImgTo3dGenerationStatus,
 	handleSubmitImgTo3dGeneration,
 	ImgTo3dRuntimeError,
+	listImgTo3dGenerations,
 	type ImgTo3dHandlerDeps,
+	type ImgTo3dJobListing,
 	type ImgTo3dJobRecord,
 	type ImgTo3dRuntime
 } from './img-to-3d-handlers'
@@ -34,7 +37,8 @@ function harness(overrides: Partial<ImgTo3dHandlerDeps> = {}) {
 				createdBy: 'user-2',
 				batchId: uuid(900),
 				seed: 1,
-				params: { resolution: 1024, textureSize: 2048, decimationTarget: 1e5 }
+				params: { resolution: 1024, textureSize: 2048, decimationTarget: 1e5 },
+				sourceName: 'lamp'
 			}
 		]
 	])
@@ -71,8 +75,17 @@ function harness(overrides: Partial<ImgTo3dHandlerDeps> = {}) {
 				return true
 			}
 		),
-		findForOrganization: vi.fn(async (jobId: string, organizationId: string) =>
-			rows.get(jobId)?.organizationId === organizationId ? { id: jobId } : null
+		findForOrganization: vi.fn(
+			async (jobId: string, organizationId: string) => {
+				const row = rows.get(jobId)
+				return row?.organizationId === organizationId
+					? { id: jobId, seed: row.seed, sourceName: row.sourceName }
+					: null
+			}
+		),
+		// Listing has its own describe block, which supplies the rows.
+		listForOrganization: vi.fn(
+			async (): Promise<readonly ImgTo3dJobListing[]> => []
 		),
 		remove: vi.fn(async (jobId: string) => {
 			rows.delete(jobId)
@@ -99,11 +112,11 @@ function harness(overrides: Partial<ImgTo3dHandlerDeps> = {}) {
 	return { deps, rows, runtime, jobs }
 }
 
-function submission(seedCount = '3'): Request {
+function submission(seedCount = '3', fileName = 'chair.png'): Request {
 	const body = new FormData()
 	body.set(
 		IMG_TO_3D_FIELDS.image,
-		new File([new Uint8Array(16)], 'chair.png', { type: 'image/png' })
+		new File([new Uint8Array(16)], fileName, { type: 'image/png' })
 	)
 	body.set(IMG_TO_3D_FIELDS.resolution, '1024')
 	body.set(IMG_TO_3D_FIELDS.textureSize, '2048')
@@ -303,7 +316,12 @@ describe('handleSubmitImgTo3dGeneration', () => {
 			createdBy: 'user-1',
 			batchId: uuid(1),
 			seed: 101,
-			params: { resolution: 1024, textureSize: 2048, decimationTarget: 200_000 }
+			params: {
+				resolution: 1024,
+				textureSize: 2048,
+				decimationTarget: 200_000
+			},
+			sourceName: 'chair'
 		})
 		expect(runtime.submit).toHaveBeenCalledTimes(3)
 		expect(runtime.submit).toHaveBeenCalledWith(
@@ -568,5 +586,224 @@ describe('handleImgTo3dGenerationArtifact', () => {
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
 		expect(response.headers.getSetCookie()).toHaveLength(2)
 		expect(await response.text()).toBe('glb-bytes')
+	})
+
+	it('names the download after the photo and the seed', async () => {
+		const { deps } = harness()
+		await handleSubmitImgTo3dGeneration(submission('1'), deps)
+
+		const response = await handleImgTo3dGenerationArtifact(
+			new Request(ENDPOINT),
+			uuid(2),
+			deps
+		)
+
+		expect(response.headers.get('Content-Disposition')).toBe(
+			`attachment; filename="chair-101.glb"; filename*=UTF-8''chair-101.glb`
+		)
+	})
+
+	it('never writes a photo name into the header raw', async () => {
+		const { deps } = harness()
+		await handleSubmitImgTo3dGeneration(
+			submission('1', 'Stühl "x"\\y.png'),
+			deps
+		)
+
+		const response = await handleImgTo3dGenerationArtifact(
+			new Request(ENDPOINT),
+			uuid(2),
+			deps
+		)
+
+		const header = response.headers.get('Content-Disposition') ?? ''
+		const fallback = /filename="([^"]*)"/.exec(header)?.[1]
+		const exact = /filename\*=UTF-8''(.*)$/.exec(header)?.[1]
+		expect(fallback).toBe('St_hl _x__y-101.glb')
+		expect(decodeURIComponent(exact ?? '')).toBe('Stühl "x"\\y-101.glb')
+	})
+})
+
+describe('listImgTo3dGenerations', () => {
+	const CREATED = new Date('2026-11-01T10:00:00.000Z')
+	// A day after CREATED: well inside the 7 days a model is kept.
+	const NOW = new Date('2026-11-02T10:00:00.000Z')
+
+	function listing(
+		id: string,
+		batchId: string,
+		seed: number
+	): ImgTo3dJobListing {
+		return {
+			id,
+			batchId,
+			seed,
+			sourceName: 'chair',
+			createdAt: CREATED,
+			createdByName: 'Moritz'
+		}
+	}
+
+	it('groups the organization’s jobs into batches, in the order listed', async () => {
+		const { deps, jobs } = harness()
+		jobs.listForOrganization.mockResolvedValue([
+			listing(uuid(11), uuid(10), 1),
+			listing(uuid(12), uuid(10), 2),
+			listing(uuid(21), uuid(20), 5)
+		])
+
+		const batches = await listImgTo3dGenerations('org-1', deps, NOW)
+
+		expect(jobs.listForOrganization).toHaveBeenCalledWith(
+			'org-1',
+			IMG_TO_3D_LIST_BATCH_LIMIT
+		)
+		expect(batches.map((batch) => batch.batchId)).toEqual([uuid(10), uuid(20)])
+		expect(batches[0]).toMatchObject({
+			sourceName: 'chair',
+			createdByName: 'Moritz',
+			createdAt: '2026-11-01T10:00:00.000Z',
+			keptUntil: '2026-11-08T10:00:00.000Z',
+			expired: false
+		})
+		expect(batches[0].variants).toEqual([
+			{
+				jobId: uuid(11),
+				seed: 1,
+				status: 'processing',
+				progress: 40,
+				error: null
+			},
+			{
+				jobId: uuid(12),
+				seed: 2,
+				status: 'processing',
+				progress: 40,
+				error: null
+			}
+		])
+	})
+
+	it('shows a job the runtime no longer knows as failed by that kind', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
+		runtime.status.mockRejectedValue(
+			new ImgTo3dRuntimeError('runtime_rejected', 404, 'Job not found')
+		)
+
+		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+
+		expect(batch.variants[0]).toMatchObject({
+			status: 'failed',
+			error: 'runtime_rejected'
+		})
+	})
+
+	it('leaves a state it could not read unknown, for the page to poll', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
+		runtime.status.mockRejectedValue(
+			new ImgTo3dRuntimeError('runtime_unavailable', 503)
+		)
+
+		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+
+		expect(batch.variants[0]).toMatchObject({ status: null, error: null })
+	})
+
+	it('still lists every batch when the runtime is not configured', async () => {
+		const { deps, jobs } = harness({
+			runtime: () => {
+				throw new Error('IMG_TO_3D_RUNTIME_BASE_URL is not set')
+			}
+		})
+		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
+
+		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+
+		expect(batch.variants[0]).toMatchObject({ status: null })
+	})
+
+	it('treats a batch past its 7 days as expired without asking the runtime', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
+
+		const [batch] = await listImgTo3dGenerations(
+			'org-1',
+			deps,
+			new Date('2026-11-08T10:00:00.000Z')
+		)
+
+		// Polling its state would keep that alive while the GLB expires on its own.
+		expect(runtime.status).not.toHaveBeenCalled()
+		expect(batch.expired).toBe(true)
+		expect(batch.variants[0]).toMatchObject({ status: null })
+	})
+
+	it('polls on, rather than ending, a variant the runtime refused for another reason', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
+		runtime.status.mockRejectedValue(
+			new ImgTo3dRuntimeError('runtime_rejected', 401, 'Bad proxy token')
+		)
+
+		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+
+		expect(batch.variants[0]).toMatchObject({ status: null, error: null })
+	})
+
+	it('keeps only a few status requests in flight at once', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.listForOrganization.mockResolvedValue(
+			Array.from({ length: 20 }, (_, index) =>
+				listing(uuid(100 + index), uuid(10), index)
+			)
+		)
+		let inFlight = 0
+		let most = 0
+		runtime.status.mockImplementation(async (jobId) => {
+			inFlight += 1
+			most = Math.max(most, inFlight)
+			await new Promise((resolve) => setTimeout(resolve, 1))
+			inFlight -= 1
+			return {
+				jobId,
+				status: 'succeeded',
+				progress: 100,
+				message: null,
+				artifactReady: true,
+				pollAfterMs: 0
+			}
+		})
+
+		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+
+		expect(runtime.status).toHaveBeenCalledTimes(20)
+		expect(most).toBeGreaterThan(1)
+		expect(most).toBeLessThanOrEqual(6)
+		expect(batch.variants.every((v) => v.status === 'succeeded')).toBe(true)
+	})
+
+	it('never passes a failed job’s runtime detail on', async () => {
+		const { deps, jobs, runtime } = harness()
+		jobs.listForOrganization.mockResolvedValue([listing(uuid(11), uuid(10), 1)])
+		runtime.status.mockResolvedValue({
+			jobId: uuid(11),
+			status: 'failed',
+			progress: null,
+			message: 'CUDA out of memory',
+			artifactReady: false,
+			pollAfterMs: 0
+		})
+
+		const [batch] = await listImgTo3dGenerations('org-1', deps, NOW)
+
+		expect(batch.variants[0]).toEqual({
+			jobId: uuid(11),
+			seed: 1,
+			status: 'failed',
+			progress: null,
+			error: 'generation_failed'
+		})
 	})
 })

@@ -359,6 +359,7 @@ export default [
 			),
 			route('settings', './routes/dashboard-page/settings.tsx'),
 			route('connected-agents', './routes/dashboard-page/connected-agents.tsx'),
+			route('generations', './routes/dashboard-page/generations.tsx'),
 			route('intake', './routes/dashboard-page/intake.tsx')
 		])
 	])

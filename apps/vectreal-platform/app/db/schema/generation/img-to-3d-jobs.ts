@@ -3,6 +3,7 @@ import {
 	integer,
 	jsonb,
 	pgTable,
+	text,
 	timestamp,
 	uuid
 } from 'drizzle-orm/pg-core'
@@ -39,6 +40,12 @@ export const imgTo3dJobs = pgTable(
 		batchId: uuid('batch_id').notNull(),
 		seed: integer('seed').notNull(),
 		params: jsonb('params').$type<ImgTo3dGenerationParams>().notNull(),
+		/**
+		 * The photo's file name without its extension, so a variant can be named
+		 * and downloaded after the tab that submitted it is gone. Null on jobs
+		 * submitted before it was recorded.
+		 */
+		sourceName: text('source_name'),
 		createdAt: timestamp('created_at', { withTimezone: true })
 			.notNull()
 			.defaultNow()

@@ -202,7 +202,8 @@ const MOCK_ARTIFACT_PATH = join(
 /**
  * Fakes the runtime's lifecycle in-process: queued, then processing with
  * rising progress, then succeeded with a fixture model. State is per process,
- * so a dev-server restart forgets its jobs, which then report as failed.
+ * so a dev-server restart forgets its jobs, which it then refuses as unknown,
+ * as the live runtime does a job it never saw or no longer keeps.
  */
 export function createMockImgTo3dRuntime(
 	now: () => number = Date.now
@@ -212,15 +213,8 @@ export function createMockImgTo3dRuntime(
 	function stateOf(jobId: string): ImgTo3dJobState {
 		const startedAt = jobs.get(jobId)
 		if (startedAt === undefined) {
-			return {
-				jobId,
-				status: 'failed',
-				progress: null,
-				// Logged, then stripped, like any runtime failure detail.
-				message: 'Unknown to the mock runtime (was the dev server restarted?)',
-				artifactReady: false,
-				pollAfterMs: 0
-			}
+			// The live runtime's answer to an id it does not hold: 404, `web.py`.
+			throw new ImgTo3dRuntimeError('runtime_rejected', 404, 'Job not found')
 		}
 
 		const elapsed = now() - startedAt

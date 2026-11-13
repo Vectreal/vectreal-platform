@@ -36,6 +36,7 @@ export const DASHBOARD_ROUTES = {
 	BILLING_UPGRADE_CANCELED: '/dashboard/billing/upgrade-canceled',
 	SETTINGS: '/dashboard/settings',
 	CONNECTED_AGENTS: '/dashboard/connected-agents',
+	GENERATIONS: '/dashboard/generations',
 	PROJECT_DETAIL: (projectId: string) => `/dashboard/projects/${projectId}`,
 	FOLDER_DETAIL: (projectId: string, folderId: string) =>
 		`/dashboard/projects/${projectId}/folder/${folderId}`,
@@ -161,6 +162,11 @@ export const DASHBOARD_CONTENT: Record<RouteContext, DashboardContentConfig> = {
 	'connected-agents': {
 		title: 'Connected agents',
 		description: 'Tools you signed in to Vectreal, and what each may do',
+		actionVariant: undefined
+	},
+	generations: {
+		title: 'Generations',
+		description: 'Models generated from a photo, kept for 7 days',
 		actionVariant: undefined
 	}
 } as const

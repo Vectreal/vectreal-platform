@@ -162,6 +162,75 @@ export function isTerminalImgTo3dStatus(status: ImgTo3dJobStatus): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Listing
+// ---------------------------------------------------------------------------
+
+/**
+ * How long a finished model can be counted on. The runtime keeps each GLB in
+ * a Modal Dict, which drops an entry after 7 days with no read or write, so a
+ * variant nobody downloads is gone about a week after it finished. Counted
+ * from submission, which is earlier, so the date shown is never late.
+ */
+export const IMG_TO_3D_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Batches the Generations page lists, newest first. */
+export const IMG_TO_3D_LIST_BATCH_LIMIT = 50
+
+const MAX_SOURCE_NAME_LENGTH = 120
+
+/**
+ * The photo's file name without its extension: what a variant is named
+ * after, in the publisher and as a download. Bounded, since it is stored.
+ */
+export function imgTo3dSourceName(fileName: string): string {
+	const name = fileName
+		.replace(/\.[^.]+$/, '')
+		.trim()
+		.slice(0, MAX_SOURCE_NAME_LENGTH)
+	return name || 'generated'
+}
+
+/** A variant's file name, the same whether it is opened or downloaded. */
+export function imgTo3dVariantFileName(
+	sourceName: string | null,
+	seed: number
+): string {
+	return `${sourceName ?? 'generated'}-${seed}.glb`
+}
+
+/** One variant of a listed batch, with its state when the page was loaded. */
+export interface ImgTo3dListedVariant {
+	readonly jobId: string
+	readonly seed: number
+	/**
+	 * Null when the runtime could not be asked, and the page polls it; also
+	 * null in an expired batch, which is not asked at all.
+	 */
+	readonly status: ImgTo3dJobStatus | null
+	readonly progress: number | null
+	readonly error: ImgTo3dErrorKind | null
+}
+
+/** The variants generated from one photo in one request. */
+export interface ImgTo3dListedBatch {
+	readonly batchId: string
+	readonly sourceName: string | null
+	readonly createdByName: string | null
+	/** ISO 8601. */
+	readonly createdAt: string
+	/** ISO 8601: `createdAt` plus `IMG_TO_3D_RETENTION_MS`. */
+	readonly keptUntil: string
+	/**
+	 * Past `keptUntil`. Its models are treated as gone without asking: the
+	 * runtime keeps a job's state and its GLB in separate Dicts, and polling
+	 * the state keeps that one alive, so "succeeded" proves nothing about the
+	 * file by then.
+	 */
+	readonly expired: boolean
+	readonly variants: readonly ImgTo3dListedVariant[]
+}
+
+// ---------------------------------------------------------------------------
 // Errors
 // ---------------------------------------------------------------------------
 

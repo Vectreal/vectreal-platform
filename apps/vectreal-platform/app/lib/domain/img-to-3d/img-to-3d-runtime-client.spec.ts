@@ -73,9 +73,16 @@ describe('the mock runtime', () => {
 		expect(new TextDecoder().decode(bytes.subarray(0, 4))).toBe('glTF')
 	})
 
-	it('reports a job it never saw as failed, as after a dev-server restart', async () => {
+	it('refuses a job it never saw as the live runtime does, as after a dev-server restart', async () => {
 		const { runtime } = clocked()
-		expect(await runtime.status(JOB)).toMatchObject({ status: 'failed' })
+		await expect(runtime.status(JOB)).rejects.toMatchObject({
+			kind: 'runtime_rejected',
+			status: 404
+		})
+		await expect(runtime.artifact(JOB)).rejects.toMatchObject({
+			kind: 'runtime_rejected',
+			status: 404
+		})
 	})
 })
 
