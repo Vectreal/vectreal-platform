@@ -22,6 +22,8 @@ export interface ErrorCopy {
 
 export type PublicErrorKind = 'not_found' | 'forbidden' | 'server_error'
 
+/** Also what the dashboard's route boundary says: one set of words per kind. */
+
 export const PUBLIC_ERROR_COPY: Record<PublicErrorKind, ErrorCopy> = {
 	not_found: {
 		heading: 'This page does not exist',

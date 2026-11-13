@@ -27,14 +27,21 @@ describe('getDashboardSceneLoadErrorMessage', () => {
 		)
 	})
 
-	it('falls back to structured error message for other codes', () => {
-		const message = getDashboardSceneLoadErrorMessage({
-			code: 'gltf_load_failed',
-			message: 'Custom failure',
-			source: 'local-upload'
-		})
-
-		expect(message).toBe('Custom failure')
+	it.each([
+		[
+			'a structured error with an unmapped code',
+			{
+				code: 'gltf_load_failed',
+				message: 'raw failure',
+				source: 'local-upload'
+			}
+		],
+		['a thrown Error', new Error('raw failure')],
+		['a bare string', 'raw failure']
+	])('never shows the raw text of %s', (_, error) => {
+		expect(getDashboardSceneLoadErrorMessage(error)).toBe(
+			'Failed to load scene.'
+		)
 	})
 
 	it('falls back to default for unknown values', () => {

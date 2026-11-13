@@ -119,7 +119,9 @@ describe('a rendered boundary reports', () => {
 				<Stub initialEntries={['/']} />
 			</PostHogProvider>
 		)
-		expect(await screen.findByText('render blew up')).toBeInTheDocument()
+		expect(
+			await screen.findByText('Something went wrong on our side')
+		).toBeInTheDocument()
 
 		await act(async () => arrive(posthog))
 
@@ -130,9 +132,41 @@ describe('a rendered boundary reports', () => {
 		expect(posthog.captureException).toHaveBeenCalledTimes(1)
 	})
 
-	it('still renders its fallback', async () => {
-		renderThrowing(DashboardErrorBoundary, new Error('render blew up'))
-		expect(await screen.findByText('render blew up')).toBeInTheDocument()
+	it('still renders its fallback, without the error it caught', async () => {
+		const error = new Error('render blew up')
+		error.stack = 'Error: render blew up\n    at secret-module.ts:1:1'
+		renderThrowing(DashboardErrorBoundary, error)
+
+		expect(
+			await screen.findByText('Something went wrong on our side')
+		).toBeInTheDocument()
+		// Written for a trace, not a reader: it can name a module or carry a token.
+		expect(screen.queryByText(/render blew up/)).toBeNull()
+		expect(screen.queryByText(/secret-module/)).toBeNull()
+	})
+
+	it('shows the words a loader threw on purpose', async () => {
+		const Stub = createRoutesStub([
+			{
+				path: '/',
+				HydrateFallback: () => null,
+				loader() {
+					throw new Response('This project was archived.', { status: 410 })
+				},
+				Component: () => null,
+				ErrorBoundary: DashboardErrorBoundary
+			}
+		])
+
+		render(
+			<PostHogProvider client={Promise.resolve(fakePostHog())}>
+				<Stub initialEntries={['/']} />
+			</PostHogProvider>
+		)
+
+		expect(
+			await screen.findByText('This project was archived.')
+		).toBeInTheDocument()
 	})
 
 	/*
@@ -155,7 +189,7 @@ describe('a rendered boundary reports', () => {
 
 	/*
 	  A 404 is the product working. Reporting one would bury the real failures
-	  under routine traffic, and a boundary that renders "Page Not Found" is the
+	  under routine traffic, and a boundary that renders a not-found page is the
 	  most common boundary render there is.
 
 	  Thrown from a loader rather than from render, because that is the only
@@ -184,7 +218,9 @@ describe('a rendered boundary reports', () => {
 			</PostHogProvider>
 		)
 
-		expect(await screen.findByText('Page Not Found')).toBeInTheDocument()
+		expect(
+			await screen.findByText('This page does not exist')
+		).toBeInTheDocument()
 		expect(posthog.captureException).not.toHaveBeenCalled()
 	})
 
