@@ -202,7 +202,7 @@ export const ProductWindow = () => {
 					if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false)
 				}}
 			>
-				{/* The steps as a list beside the app, the active one's explanation under it; the app stands in a lit panel, flush to its right and bottom edges. */}
+				{/* The steps as a list beside the app, the active one's explanation under it; the app stands inside a lit panel, clear of its rim on every side. */}
 				<div
 					data-reveal
 					className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-center lg:gap-16"
@@ -266,51 +266,48 @@ export const ProductWindow = () => {
 							))}
 						</div>
 					</div>
-					<div className="ds-lit rounded-3xl">
-						{/* The app sits in the pane's top-left padding, flush to its right and bottom edges; this wrapper rounds its corner to the pane's. Clipping here, not on the panel, which would cut off the light behind it. */}
-						<div className="overflow-hidden rounded-3xl pt-8 pl-6 sm:pt-12 sm:pl-12">
-							<div
-								ref={sceneRef}
-								// Below `sm` the screenshots are drawn at 2.1 times the pane's width and cropped to their top-left, where each step's panel sits, so they can be read; the pane clips the rest.
-								className="ds-raised relative grid overflow-hidden rounded-tl-2xl max-sm:w-[210%]"
-							>
-								{VIEW_ORDER.map((one) => (
-									<div
-										key={one}
-										aria-hidden={one !== view}
-										// Invisible rather than hidden: the product page's gallery is measured while it waits.
-										// The chosen view fades in over the one it replaces; the rest stay invisible, still laid out.
-										className={cn(
-											'transition-opacity duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] motion-reduce:transition-none',
-											// The shop page is a drawing, legible at any size, and its point is the live camera in the middle of it: below `sm` it takes the pane's own width (1 / 2.1 of the scene) and the screenshots' height, a page shaped like a phone's, rather than a crop.
-											one === 'embed' && 'max-sm:w-[calc(100%/2.1)]',
-											one === view && 'z-1 opacity-100',
-											one === previous && 'opacity-100',
-											one !== view && one !== previous && 'invisible opacity-0'
-										)}
-									>
-										{one === 'embed' ? (
-											<ProductPageSketch
-												className="max-sm:aspect-auto max-sm:h-full"
-												gallery={
-													<div
-														ref={embedSlotRef}
-														className="absolute inset-0"
-													/>
-												}
-											/>
-										) : (
-											<ThemedShot view={one} />
-										)}
-									</div>
-								))}
-								<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
-									<ProductStage
-										visible={!offscreen}
-										place={stagePlace}
-										hint={view === 'embed'}
-									/>
+					{/*
+					  The app sits inside the panel's padding on every side, so the
+					  panel's rim is never covered where the app would dock against it.
+					  Whole at every width, never cropped: the live camera in the
+					  middle of each view is the point, and a crop to the side panel
+					  dropped it on a phone.
+					*/}
+					<div className="ds-lit rounded-3xl p-4 sm:p-10">
+						<div
+							ref={sceneRef}
+							className="ds-raised relative grid overflow-hidden rounded-2xl"
+						>
+							{VIEW_ORDER.map((one) => (
+								<div
+									key={one}
+									aria-hidden={one !== view}
+									// Invisible rather than hidden: the product page's gallery is measured while it waits.
+									// The chosen view fades in over the one it replaces; the rest stay invisible, still laid out.
+									className={cn(
+										'transition-opacity duration-(--duration-slow) ease-(--ease-out) [grid-area:1/1] motion-reduce:transition-none',
+										one === view && 'z-1 opacity-100',
+										one === previous && 'opacity-100',
+										one !== view && one !== previous && 'invisible opacity-0'
+									)}
+								>
+									{one === 'embed' ? (
+										<ProductPageSketch
+											gallery={
+												<div ref={embedSlotRef} className="absolute inset-0" />
+											}
+										/>
+									) : (
+										<ThemedShot view={one} />
+									)}
 								</div>
+							))}
+							<div className="pointer-events-none absolute inset-0 z-2 *:pointer-events-auto">
+								<ProductStage
+									visible={!offscreen}
+									place={stagePlace}
+									hint={view === 'embed'}
+								/>
 							</div>
 						</div>
 					</div>
