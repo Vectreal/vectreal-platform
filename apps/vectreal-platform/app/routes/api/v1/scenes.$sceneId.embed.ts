@@ -11,9 +11,10 @@
 import { ApiResponse } from '@shared/utils'
 
 import { resolveDeploymentOrigin } from '../../../lib/deployment-origin'
+import { agentActorFrom } from '../../../lib/domain/agent/agent-actor-context'
 import { agentApiError } from '../../../lib/domain/agent/agent-api-response'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
-import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { agentGate } from '../../../lib/domain/agent/agent-request.server'
 import { resolveAgentScene } from '../../../lib/domain/agent/agent-resource.server'
 import { getAllUserApiKeys } from '../../../lib/domain/auth/api-key-repository.server'
 import { resolveApiKeyValue } from '../../../lib/domain/auth/api-key-value.server'
@@ -34,10 +35,14 @@ import { sceneSettingsService } from '../../../lib/domain/scene/server/scene-set
 import type { Route } from './+types/scenes.$sceneId.embed'
 import type { SceneEmbed } from '@vctrl/sdk'
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['api-key:read']
+export const middleware = [
+	agentGate({
+		GET: AGENT_OPERATION_SCOPES['api-key:read']
 	})
+]
+
+export async function loader({ request, params, context }: Route.LoaderArgs) {
+	const actor = agentActorFrom(context)
 	const { sceneId, projectId } = await resolveAgentScene(
 		params.sceneId,
 		actor,
@@ -120,14 +125,4 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 		200,
 		{ headers: { 'Cache-Control': 'no-store' } }
 	)
-}
-
-// Gated anyway, so the route never tells a caller without a token anything.
-export async function action({ request }: Route.ActionArgs) {
-	await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['api-key:read']
-	})
-	return agentApiError(405, 'method_not_allowed', 'This route answers GET.', {
-		headers: { Allow: 'GET' }
-	})
 }

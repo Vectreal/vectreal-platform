@@ -3,6 +3,7 @@ import {
 	apiSuccessSchema,
 	sceneSettingsSchema
 } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { action, loader } from './scenes.$sceneId.settings'
@@ -13,6 +14,7 @@ import {
 	defaultPresentationOptions,
 	normalizeShadowOptions
 } from '../../../constants/viewer-defaults'
+import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 
 import type { Route } from './+types/scenes.$sceneId.settings'
 import type { SceneSettings } from '@vctrl/core'
@@ -21,7 +23,6 @@ const mocks = vi.hoisted(() => {
 	class SceneSaveRefusedError extends Error {}
 	return {
 		SceneSaveRefusedError,
-		authorizeAgentRequest: vi.fn(),
 		recordAgentAudit: vi.fn(),
 		withIdempotency: vi.fn(),
 		resolveSceneMembership: vi.fn(),
@@ -31,9 +32,14 @@ const mocks = vi.hoisted(() => {
 	}
 })
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest: mocks.authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../../lib/domain/agent/agent-audit.server', () => ({
 	recordAgentAudit: mocks.recordAgentAudit
 }))
@@ -86,19 +92,24 @@ const stored = {
 	sourceAssetId: 'asset-source'
 }
 
-const patch = (body: unknown, method = 'PATCH') =>
+const patch = (body: unknown) =>
 	new Request(url, {
-		method,
+		method: 'PATCH',
 		headers: { 'Content-Type': 'application/json' },
 		body: typeof body === 'string' ? body : JSON.stringify(body)
 	})
 
 const act = (request: Request, sceneId = SCENE) =>
-	action({ request, params: { sceneId } } as unknown as Route.ActionArgs)
+	action({
+		request,
+		params: { sceneId },
+		context: contextFor(actor)
+	} as unknown as Route.ActionArgs)
 const read = (sceneId = SCENE) =>
 	loader({
 		request: new Request(url),
-		params: { sceneId }
+		params: { sceneId },
+		context: contextFor(actor)
 	} as unknown as Route.LoaderArgs)
 
 async function refusal(promise: Promise<unknown>) {
@@ -118,7 +129,6 @@ beforeEach(() => {
 	for (const fn of Object.values(mocks)) {
 		if (typeof fn === 'function' && 'mockReset' in fn) fn.mockReset()
 	}
-	mocks.authorizeAgentRequest.mockResolvedValue(actor)
 	mocks.resolveSceneMembership.mockResolvedValue({
 		organizationId: 'org-1',
 		projectId: PROJECT,
@@ -141,13 +151,9 @@ beforeEach(() => {
 })
 
 describe('GET /api/v1/scenes/:sceneId/settings', () => {
-	it('answers the stored settings with defaults filled in, behind projects:read', async () => {
+	it('answers the stored settings with defaults filled in', async () => {
 		const response = await read()
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(
-			expect.any(Request),
-			{ scope: 'projects:read' }
-		)
 		expect(mocks.resolveSceneMembership).toHaveBeenCalledWith(SCENE, 'user-1')
 		expect(mocks.readSceneSettingsWithin).toHaveBeenCalledWith(tx, SCENE)
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
@@ -222,9 +228,6 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 
 		const response = await act(request)
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'scenes:write'
-		})
 		expect(mocks.withIdempotency).toHaveBeenCalledWith(
 			{
 				grantId: 'grant-1',
@@ -617,31 +620,6 @@ describe('PATCH /api/v1/scenes/:sceneId/settings', () => {
 })
 
 describe('/api/v1/scenes/:sceneId/settings, either handler', () => {
-	it.each(['POST', 'PUT', 'DELETE'])(
-		'answers %s with 405 behind the gate',
-		async (method) => {
-			const request = new Request(url, { method })
-
-			const response = await act(request)
-
-			expect(response.status).toBe(405)
-			expect(response.headers.get('Allow')).toBe('GET, PATCH')
-			expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-				scope: 'scenes:write'
-			})
-		}
-	)
-
-	it('answers the gate refusal before resolving the scene or reading the body', async () => {
-		const gate = new Response(null, { status: 401 })
-		mocks.authorizeAgentRequest.mockRejectedValue(gate)
-
-		await expect(act(patch({ controls: {} }))).rejects.toBe(gate)
-		await expect(read()).rejects.toBe(gate)
-		expect(mocks.resolveSceneMembership).not.toHaveBeenCalled()
-		expect(mocks.withIdempotency).not.toHaveBeenCalled()
-	})
-
 	it('answers 404 for a scene id that is not a uuid, without a query', async () => {
 		const { response } = await refusal(act(patch({}), 'not-a-uuid'))
 

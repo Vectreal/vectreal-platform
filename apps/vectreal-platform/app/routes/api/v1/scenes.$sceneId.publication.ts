@@ -15,15 +15,13 @@
 
 import { ApiResponse } from '@shared/utils'
 
-import {
-	agentApiError,
-	agentBillingRefusal
-} from '../../../lib/domain/agent/agent-api-response'
+import { agentActorFrom } from '../../../lib/domain/agent/agent-actor-context'
+import { agentBillingRefusal } from '../../../lib/domain/agent/agent-api-response'
 import { recordAgentAudit } from '../../../lib/domain/agent/agent-audit.server'
 import { readAgentGlbUpload } from '../../../lib/domain/agent/agent-glb-upload.server'
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
-import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { agentGate } from '../../../lib/domain/agent/agent-request.server'
 import { resolveAgentScene } from '../../../lib/domain/agent/agent-resource.server'
 import { reclaimUploadBatch } from '../../../lib/domain/asset/asset-reclaim.server'
 import { type DashboardOperation } from '../../../lib/domain/dashboard/dashboard-operations'
@@ -38,25 +36,19 @@ import type { Route } from './+types/scenes.$sceneId.publication'
 import type { AgentActor } from '../../../lib/domain/agent/agent-actor.server'
 import type { ScenePublication } from '@vctrl/sdk'
 
-// Reading a publication is not served yet. Gated anyway, so the route never
-// tells a caller without a token anything.
-export async function loader({ request }: Route.LoaderArgs) {
-	await authorizeAgentRequest(request, { scope: 'projects:read' })
-	return methodNotAllowed()
-}
-
-export async function action({ request, params }: Route.ActionArgs) {
-	const operation: DashboardOperation | null =
-		request.method === 'POST'
-			? 'scene:publish'
-			: request.method === 'DELETE'
-				? 'scene:unpublish'
-				: null
-	if (!operation) return methodNotAllowed()
-
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES[operation]
+export const middleware = [
+	agentGate({
+		POST: AGENT_OPERATION_SCOPES['scene:publish'],
+		DELETE: AGENT_OPERATION_SCOPES['scene:unpublish']
 	})
+]
+
+export async function action({ request, params, context }: Route.ActionArgs) {
+	// The gate answers any other method.
+	const operation: DashboardOperation =
+		request.method === 'POST' ? 'scene:publish' : 'scene:unpublish'
+
+	const actor = agentActorFrom(context)
 	const scene = await resolveAgentScene(params.sceneId, actor, operation)
 
 	return operation === 'scene:publish'
@@ -188,13 +180,4 @@ function publicationResponse(
 	return ApiResponse.success({ publication } satisfies ScenePublication, 200, {
 		headers: { 'Cache-Control': 'no-store' }
 	})
-}
-
-function methodNotAllowed(): Response {
-	return agentApiError(
-		405,
-		'method_not_allowed',
-		'This route answers POST and DELETE.',
-		{ headers: { Allow: 'POST, DELETE' } }
-	)
 }

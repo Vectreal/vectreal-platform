@@ -22,6 +22,7 @@ import {
 	defaultEnvOptions,
 	withSceneSettingsDefaults
 } from '../../../constants/viewer-defaults'
+import { agentActorFrom } from '../../../lib/domain/agent/agent-actor-context'
 import {
 	agentApiError,
 	agentBillingRefusal
@@ -30,7 +31,7 @@ import { recordAgentAudit } from '../../../lib/domain/agent/agent-audit.server'
 import { readAgentGlbUpload } from '../../../lib/domain/agent/agent-glb-upload.server'
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
-import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { agentGate } from '../../../lib/domain/agent/agent-request.server'
 import { resolveAgentProject } from '../../../lib/domain/agent/agent-resource.server'
 import { reclaimUploadBatch } from '../../../lib/domain/asset/asset-reclaim.server'
 import { uploadSceneAssets } from '../../../lib/domain/asset/asset-storage.server'
@@ -45,10 +46,15 @@ import { prepareSceneUpload } from '../../../lib/domain/scene/server/scene-uploa
 import type { Route } from './+types/projects.$projectId.scenes'
 import type { CreatedScene, SceneList } from '@vctrl/sdk'
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['project:read']
+export const middleware = [
+	agentGate({
+		GET: AGENT_OPERATION_SCOPES['project:read'],
+		POST: AGENT_OPERATION_SCOPES['scene:create']
 	})
+]
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+	const actor = agentActorFrom(context)
 	const { projectId } = await resolveAgentProject(
 		params.projectId,
 		actor,
@@ -72,12 +78,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 	)
 }
 
-export async function action({ request, params }: Route.ActionArgs) {
-	if (request.method !== 'POST') return methodNotAllowed()
-
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['scene:create']
-	})
+export async function action({ request, params, context }: Route.ActionArgs) {
+	const actor = agentActorFrom(context)
 
 	const { projectId } = await resolveAgentProject(
 		params.projectId,
@@ -176,14 +178,5 @@ export async function action({ request, params }: Route.ActionArgs) {
 				await reclaimUploadBatch({ requestId: claimId, projectId })
 			}
 		}
-	)
-}
-
-function methodNotAllowed(): Response {
-	return agentApiError(
-		405,
-		'method_not_allowed',
-		'This route answers GET and POST.',
-		{ headers: { Allow: 'GET, POST' } }
 	)
 }

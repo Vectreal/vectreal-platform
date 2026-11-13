@@ -6,6 +6,7 @@ import {
 	createdSceneSchema,
 	sceneListSchema
 } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { action, loader } from './projects.$projectId.scenes'
@@ -14,6 +15,7 @@ import {
 	defaultEnvOptions,
 	withSceneSettingsDefaults
 } from '../../../constants/viewer-defaults'
+import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 import { EntitlementRequiredError } from '../../../lib/domain/billing/entitlement-required-error'
 import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
 
@@ -21,7 +23,6 @@ import type { Route } from './+types/projects.$projectId.scenes'
 import type { StagedMutation } from '../../../lib/domain/agent/agent-idempotency.server'
 
 const mocks = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
 	recordAgentAudit: vi.fn(),
 	withIdempotency: vi.fn(),
 	resolveProjectMembership: vi.fn(),
@@ -39,9 +40,14 @@ vi.mock(
 	})
 )
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest: mocks.authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../../lib/domain/agent/agent-audit.server', () => ({
 	recordAgentAudit: mocks.recordAgentAudit
 }))
@@ -122,7 +128,11 @@ function post(
 }
 
 const act = (request: Request, projectId = PROJECT) =>
-	action({ request, params: { projectId } } as unknown as Route.ActionArgs)
+	action({
+		request,
+		params: { projectId },
+		context: contextFor(actor)
+	} as unknown as Route.ActionArgs)
 
 async function refusal(promise: Promise<unknown>) {
 	const thrown = await promise.then(
@@ -139,7 +149,6 @@ let undone: unknown[]
 
 beforeEach(() => {
 	for (const fn of Object.values(mocks)) fn.mockReset()
-	mocks.authorizeAgentRequest.mockResolvedValue(actor)
 	mocks.resolveProjectMembership.mockResolvedValue({
 		organizationId: 'org-1',
 		projectId: PROJECT,
@@ -180,10 +189,11 @@ describe('GET /api/v1/projects/:projectId/scenes', () => {
 	const list = (projectId = PROJECT) =>
 		loader({
 			request: new Request(url),
-			params: { projectId }
+			params: { projectId },
+			context: contextFor(actor)
 		} as unknown as Route.LoaderArgs)
 
-	it('lists the project’s scenes as the user sees them, behind projects:read', async () => {
+	it('lists the project’s scenes as the user sees them', async () => {
 		const updatedAt = new Date('2026-10-20T08:00:00.000Z')
 		mocks.getProjectsScenes.mockResolvedValue(
 			new Map([
@@ -204,10 +214,6 @@ describe('GET /api/v1/projects/:projectId/scenes', () => {
 
 		const response = await list()
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(
-			expect.any(Request),
-			{ scope: 'projects:read' }
-		)
 		expect(mocks.resolveProjectMembership).toHaveBeenCalledWith(
 			PROJECT,
 			'user-1'
@@ -249,14 +255,6 @@ describe('GET /api/v1/projects/:projectId/scenes', () => {
 		expect(body.code).toBe('not_found')
 		expect(mocks.getProjectsScenes).not.toHaveBeenCalled()
 	})
-
-	it('answers the gate refusal before resolving the project', async () => {
-		const gate = new Response(null, { status: 401 })
-		mocks.authorizeAgentRequest.mockRejectedValue(gate)
-
-		await expect(list()).rejects.toBe(gate)
-		expect(mocks.resolveProjectMembership).not.toHaveBeenCalled()
-	})
 })
 
 describe('POST /api/v1/projects/:projectId/scenes', () => {
@@ -265,9 +263,6 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 
 		const response = await act(request)
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'projects:write'
-		})
 		expect(mocks.withIdempotency).toHaveBeenCalledWith(
 			{
 				grantId: 'grant-1',
@@ -350,23 +345,6 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 			requestId: 'claim-7',
 			projectId: PROJECT
 		})
-	})
-
-	it('answers a method other than POST with 405, before the gate', async () => {
-		const response = await act(new Request(url, { method: 'PUT' }))
-
-		expect(response.status).toBe(405)
-		expect(response.headers.get('Allow')).toBe('GET, POST')
-		expect(mocks.authorizeAgentRequest).not.toHaveBeenCalled()
-	})
-
-	it('answers the gate refusal and stores nothing', async () => {
-		const gate = new Response(null, { status: 403 })
-		mocks.authorizeAgentRequest.mockRejectedValue(gate)
-
-		await expect(act(post())).rejects.toBe(gate)
-		expect(mocks.resolveProjectMembership).not.toHaveBeenCalled()
-		expect(mocks.withIdempotency).not.toHaveBeenCalled()
 	})
 
 	it.each([

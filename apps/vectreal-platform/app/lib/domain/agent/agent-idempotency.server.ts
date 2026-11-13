@@ -45,7 +45,7 @@ export const STALE_CLAIM_MS = 2 * 60 * 1000
  * `StagedMutation`): storage cannot join the transaction, so the files are
  * written first and taken back if it does not commit.
  *
- * Call it after `authorizeAgentRequest`, so a refusal there never takes a key.
+ * Runs in a handler, after `agentGate`, so a refusal there never takes a key.
  */
 export async function withIdempotency<Prepared>(
 	{
