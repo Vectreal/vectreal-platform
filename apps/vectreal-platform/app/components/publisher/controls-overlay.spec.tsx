@@ -12,7 +12,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { getDefaultStore } from 'jotai'
 import { createRoutesStub } from 'react-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import OverlayControls from './controls-overlay'
 import { optimizationRuntimeAtom } from '../../lib/stores/scene-optimization-store'
@@ -154,7 +154,10 @@ const loaderData: PublisherLoaderData = {
 	]
 }
 
-function renderShell(data: PublisherLoaderData = loaderData) {
+function renderShell(
+	data: PublisherLoaderData = loaderData,
+	url = '/publisher'
+) {
 	const Stub = createRoutesStub([
 		{
 			path: '/publisher',
@@ -165,7 +168,7 @@ function renderShell(data: PublisherLoaderData = loaderData) {
 			)
 		}
 	])
-	render(<Stub initialEntries={['/publisher']} />)
+	render(<Stub initialEntries={[url]} />)
 }
 
 const SCENE_CHROME = [
@@ -205,6 +208,48 @@ describe('the publisher shell', () => {
 		expect((await screen.findByTestId('empty-stage')).dataset.generate).toBe(
 			'true'
 		)
+	})
+
+	/*
+	  Opening a variant downloads it before the loader is handed it, so the
+	  loader still reads empty. The stage waits on the URL instead: an empty
+	  stage in that gap flashed the drop zone and the variant list between the
+	  navigation's loading surface and the loader's.
+	*/
+	describe('opening a generated variant', () => {
+		const JOB = '00000000-0000-4000-8000-000000000002'
+		const url = `/publisher?generation=${JOB}`
+
+		afterEach(() => vi.unstubAllGlobals())
+
+		it('shows the loading surface, not the empty stage, while it downloads', async () => {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(() => new Promise<Response>(() => undefined))
+			)
+			renderShell({ ...loaderData, imgTo3dBatches: [] }, url)
+
+			expect(await screen.findByTestId('fallback')).toBeTruthy()
+			expect(screen.queryByTestId('empty-stage')).toBeNull()
+			await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+			expect(screen.queryByTestId('empty-stage')).toBeNull()
+		})
+
+		it('returns to the empty stage, where a retry is offered, when it fails', async () => {
+			vi.stubGlobal(
+				'fetch',
+				vi.fn(async () =>
+					Response.json(
+						{ success: false, error: 'runtime_unavailable' },
+						{ status: 503 }
+					)
+				)
+			)
+			renderShell({ ...loaderData, imgTo3dBatches: [] }, url)
+
+			expect(await screen.findByTestId('empty-stage')).toBeTruthy()
+			expect(screen.queryByTestId('fallback')).toBeNull()
+		})
 	})
 
 	it('brings the scene controls with the model, under the same header', async () => {
