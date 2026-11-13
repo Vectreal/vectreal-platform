@@ -32,6 +32,7 @@ import {
 	LightingSettings,
 	SceneLightRole,
 	NormalizationOptions,
+	SceneInteractionStart,
 	ShadowsProps
 } from '@vctrl/core'
 import {
@@ -98,11 +99,17 @@ import {
 	describeViewerKeys,
 	resolveViewerKeys
 } from './components/scene/viewer-keys'
+import {
+	resolveViewerLanguage,
+	TapToActivateButton,
+	TapToDeactivateButton,
+	tapToActivateWords
+} from './components/tap-to-activate'
 import { ViewerKeysContext } from './components/viewer-keys-context'
 import { useAnimationRuntime } from './hooks/use-animation-runtime'
 import { type ContextLossEvent } from './hooks/use-context-loss-recovery'
 import { useHeldExecutor } from './hooks/use-held-executor'
-import { useInteractionHint } from './hooks/use-interaction-hint'
+import { pointerInput, useInteractionHint } from './hooks/use-interaction-hint'
 import { useSceneViewReturn } from './hooks/use-scene-view-return'
 import { useSrcModel } from './hooks/use-src-model'
 import { useViewerLoading } from './hooks/use-viewer-loading'
@@ -361,6 +368,21 @@ export interface VectrealViewerProps extends PropsWithChildren {
 	 * `set_interaction_hint`.
 	 */
 	showInteractionHint?: boolean
+	/**
+	 * When visitors can start moving the scene. `immediate` (the default) as
+	 * it appears; `tap` once they press a "Tap to rotate" button in its middle.
+	 * Until then touches, swipes and the wheel go to the page, so it scrolls
+	 * and a gallery swipes past the scene, while auto-rotate keeps turning it.
+	 * Started, a "Done" button gives the page its scrolling back.
+	 *
+	 * A host that sends `set_controls_enabled` takes over from the button.
+	 */
+	interactionStart?: SceneInteractionStart
+	/**
+	 * The language of the words the viewer shows a visitor, as a language tag:
+	 * German for any `de`, English otherwise. Defaults to the browser's.
+	 */
+	locale?: string
 	/**
 	 * Whether the viewer draws its own animation playback controls. Default true.
 	 *
@@ -638,6 +660,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		showSceneViewReturn = true,
 		showFullscreenButton = false,
 		showInteractionHint = false,
+		interactionStart = 'immediate',
+		locale,
 		showAnimationControls = true,
 		showCameraControls = true,
 		// Editor affordances
@@ -727,6 +751,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 	const [interactionHintOverride, setInteractionHintOverride] = useState<
 		null | boolean
 	>(null)
+	const [tapStarted, setTapStarted] = useState(false)
 	const [controlsOptionsOverride, setControlsOptionsOverride] = useState<{
 		zoom?: boolean
 		pan?: boolean
@@ -798,6 +823,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 			setControlsEnabledOverride(null)
 			setAutoRotateOverride(null)
 			setControlsOptionsOverride(null)
+			setTapStarted(false)
 			transitionOverride.current = null
 		}
 	}, [hasContent])
@@ -1076,6 +1102,33 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 		if (activeCameraId !== null) activateCamera(activeCameraId)
 	}, [activeCameraId, activateCamera])
 
+	/*
+	  A scene that waits for a tap holds its controls until the button is
+	  pressed. Not where nothing would move anyway, and not once a host sets
+	  the controls itself: the scroll tour hands over control on its own.
+	*/
+	const waitsForTap =
+		interactionStart === 'tap' &&
+		controlsEnabledOverride === null &&
+		(viewerKeys.rotate || viewerKeys.zoom || viewerKeys.pan)
+	const inputLocked = waitsForTap && !tapStarted
+	const liveKeys = useMemo(
+		() =>
+			inputLocked
+				? { rotate: false, zoom: false, pan: false, home: false }
+				: viewerKeys,
+		[inputLocked, viewerKeys]
+	)
+	const setTapStartedAndFocus = useCallback(
+		(started: boolean) => {
+			setTapStarted(started)
+			// The button pressed leaves; focus stays in the viewer, where the
+			// keys now work, rather than falling to the page.
+			container?.focus({ preventScroll: true })
+		},
+		[container]
+	)
+
 	const handleActivateHotspotCamera = useCallback(
 		(cameraId: string) => {
 			executeViewerCommand({ type: 'activate_camera', cameraId })
@@ -1131,13 +1184,17 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 
 	const interactionHint = useInteractionHint({
 		enabled: interactionHintOverride ?? showInteractionHint,
-		ready: loadingState === 'ready',
+		// After the tap, when the drag it describes works.
+		ready: loadingState === 'ready' && !inputLocked,
 		container
 	})
 	const interactionHintText = describeInteraction(
 		viewerKeys,
 		interactionHint.input
 	)
+	const tapWords = waitsForTap
+		? tapToActivateWords(resolveViewerLanguage(locale), pointerInput())
+		: null
 	// Giving up replaces the overlay, loader and all, with the failure state, so
 	// a loader caught mid-fade never reports the end of its fade. Without this
 	// the state stays `loaded` through "Try again" and every piece of chrome
@@ -1171,7 +1228,8 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 					loadingState={loadingState}
 					onContainerChange={setContainer}
 					label={label}
-					keyHelp={describeViewerKeys(viewerKeys)}
+					// Nothing to announce until the tap: the start button is what to reach.
+					keyHelp={describeViewerKeys(liveKeys)}
 					onContextLossEvent={handleContextLossEvent}
 					renderFailure={renderFailure}
 					overlay={
@@ -1220,6 +1278,23 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 							interactionHint={
 								interactionHint.visible && interactionHintText ? (
 									<InteractionHint text={interactionHintText} />
+								) : null
+							}
+							tapToActivate={
+								tapWords && inputLocked ? (
+									<TapToActivateButton
+										text={tapWords.start}
+										onActivate={() => setTapStartedAndFocus(true)}
+									/>
+								) : null
+							}
+							tapToDeactivate={
+								tapWords && !inputLocked ? (
+									<TapToDeactivateButton
+										text={tapWords.done}
+										label={tapWords.doneLabel}
+										onDeactivate={() => setTapStartedAndFocus(false)}
+									/>
 								) : null
 							}
 							loader={loader}
@@ -1278,6 +1353,7 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 								<SceneControls
 									{...controlsOptions}
 									enabledOverride={controlsEnabledOverride}
+									inputLocked={inputLocked}
 									onViewChange={onViewChange}
 									{...(autoRotateOverride !== null
 										? {
@@ -1294,16 +1370,18 @@ const ViewerScene = memo(({ model, ...props }: SceneProps) => {
 								/>
 								<SceneKeyboardControls
 									container={container}
-									keys={viewerKeys}
+									keys={liveKeys}
 									onHome={returnHome}
 								/>
-								{controlsOptions?.focusOnDoubleClick === true && shownModel && (
-									<SceneDoubleClickFocus
-										model={shownModel}
-										onFocus={focusOnPoint}
-										onBackground={returnHome}
-									/>
-								)}
+								{controlsOptions?.focusOnDoubleClick === true &&
+									shownModel &&
+									!inputLocked && (
+										<SceneDoubleClickFocus
+											model={shownModel}
+											onFocus={focusOnPoint}
+											onBackground={returnHome}
+										/>
+									)}
 								<SceneBounds {...boundsOptions} enable={boundsEnabled}>
 									<SceneCamera
 										{...cameraOptions}

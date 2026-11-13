@@ -62,9 +62,15 @@ export function applySceneSettingsPatch(
 	if (patch.presentation) {
 		const { compressTexturesForGpu: _sent, ...sent } = patch.presentation
 		const compress = stored.presentation?.compressTexturesForGpu
+		// Not from the new-scene default: a patch that leaves it out would
+		// otherwise make an older scene wait for a tap. Absent stays immediate.
+		const { interactionStart: _newSceneStart, ...presentationDefaults } =
+			defaultPresentationOptions
+		const start = sent.interactionStart ?? stored.presentation?.interactionStart
 		merged.presentation = {
-			...defaultPresentationOptions,
+			...presentationDefaults,
 			...sent,
+			...(start === undefined ? {} : { interactionStart: start }),
 			...(compress === undefined ? {} : { compressTexturesForGpu: compress })
 		}
 	}

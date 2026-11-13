@@ -20,6 +20,50 @@ describe('a presentation patch', () => {
 			}).success
 		).toBe(false)
 	})
+
+	it('accepts when interaction starts and the viewer language, from their known values only', () => {
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { interactionStart: 'tap', locale: 'de' }
+			}).success
+		).toBe(true)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { interactionStart: 'hover' }
+			}).success
+		).toBe(false)
+		expect(
+			updateSceneSettingsInputSchema.safeParse({
+				presentation: { locale: 'fr' }
+			}).success
+		).toBe(false)
+	})
+})
+
+describe('when interaction starts, through a presentation patch', () => {
+	it("keeps the stored choice, or an older scene's immediate start, when the patch leaves it out", () => {
+		expect(
+			applySceneSettingsPatch(
+				{ presentation: { interactionStart: 'tap' } },
+				{ presentation: { altText: 'A chair' } }
+			).presentation?.interactionStart
+		).toBe('tap')
+		expect(
+			applySceneSettingsPatch(
+				{ presentation: { showInfoPopover: true } },
+				{ presentation: { altText: 'A chair' } }
+			).presentation
+		).not.toHaveProperty('interactionStart')
+	})
+
+	it('takes the start the patch sends', () => {
+		expect(
+			applySceneSettingsPatch(
+				{ presentation: { interactionStart: 'tap' } },
+				{ presentation: { interactionStart: 'immediate' } }
+			).presentation?.interactionStart
+		).toBe('immediate')
+	})
 })
 
 describe('a lighting patch', () => {

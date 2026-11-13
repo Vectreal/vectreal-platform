@@ -1,5 +1,5 @@
 import { OrbitControls } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { ControlsProps } from '@vctrl/core'
 import {
 	memo,
@@ -22,6 +22,11 @@ export interface ViewerView {
 
 interface SceneControlsProps extends ControlsProps {
 	enabledOverride?: boolean | null
+	/**
+	 * Visitors cannot move the camera yet (the scene waits for a tap), while
+	 * auto-rotate keeps turning it. Touches and the wheel go to the page.
+	 */
+	inputLocked?: boolean
 	onViewChange?: (view: ViewerView) => void
 }
 
@@ -53,6 +58,7 @@ const SceneControls = memo((props: SceneControlsProps) => {
 		onViewChange,
 		onChange,
 		enabledOverride,
+		inputLocked = false,
 		...rest
 	} = {
 		...defaultControlsOptions,
@@ -121,6 +127,17 @@ const SceneControls = memo((props: SceneControlsProps) => {
 	)
 
 	const enabled = enabledOverride ?? isControlsEnabled
+	const takesInput = enabled && !inputLocked
+
+	/*
+	  drei updates the controls only while they are enabled, and a locked scene
+	  disables them, so its auto-rotate is stepped here. `update` turns the
+	  camera whatever `enabled` says.
+	*/
+	useFrame(() => {
+		const controls = controlsRef.current
+		if (inputLocked && enabled && controls?.autoRotate) controls.update()
+	})
 
 	/*
 	  OrbitControls claims every touch on the element it connects to
@@ -132,14 +149,15 @@ const SceneControls = memo((props: SceneControlsProps) => {
 	const connectedElement = useThree((state) => state.events.connected)
 	useEffect(() => {
 		const element = controlsRef.current?.domElement
-		if (element) element.style.touchAction = enabled ? 'none' : ''
-	}, [enabled, connectedElement])
+		if (element) element.style.touchAction = takesInput ? 'none' : ''
+	}, [takesInput, connectedElement])
 
 	return (
 		<OrbitControls
 			ref={controlsRef}
 			enabled={enabled}
 			{...rest}
+			{...(inputLocked ? { enabled: false } : {})}
 			onChange={handleChange}
 		/>
 	)

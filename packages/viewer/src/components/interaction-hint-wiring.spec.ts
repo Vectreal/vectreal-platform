@@ -22,10 +22,10 @@ describe('the interaction hint is wired into the viewer', () => {
 		expect(source).toContain('showInteractionHint = false,')
 	})
 
-	it('waits for the scene, and lets a host command decide over the prop', () => {
+	it('waits for the scene and its tap, and lets a host command decide over the prop', () => {
 		const hook = source.slice(source.indexOf('useInteractionHint({'))
 		expect(hook).toMatch(
-			/enabled: interactionHintOverride \?\? showInteractionHint,\s*ready: loadingState === 'ready',\s*container/
+			/enabled: interactionHintOverride \?\? showInteractionHint,[^]*?ready: loadingState === 'ready' && !inputLocked,\s*container/
 		)
 		expect(source).toMatch(
 			/case 'set_interaction_hint':\s*setInteractionHintOverride\(command\.enabled\)/

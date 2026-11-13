@@ -286,7 +286,9 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 			compressTexturesForGpu: z.boolean().optional(),
 			altText: z.string().optional(),
 			showFullscreenButton: z.boolean().optional(),
-			showInteractionHint: z.boolean().optional()
+			showInteractionHint: z.boolean().optional(),
+			interactionStart: z.enum(['immediate', 'tap']).optional(),
+			locale: z.enum(['en', 'de']).optional()
 		})
 		.optional()
 })
