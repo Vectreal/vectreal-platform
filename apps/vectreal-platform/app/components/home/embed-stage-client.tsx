@@ -15,7 +15,9 @@ import type { FrameRect } from './product-stage'
  * object the way a product page would: no drawing and no sweep, so it takes the
  * engine's reduced-motion path, which goes straight to the turned object, and
  * no dissolve at the stage's edges, since it sits inside a page, not on the
- * sheet.
+ * sheet. It is not turnable: the screenshots around it are pictures, and a
+ * camera that could be grabbed made each one read as a 3D object. The
+ * section's one interaction is its steps.
  *
  * The canvas fills the window; the frame box it aims at is the caller's, and
  * glides between places. While it moves the camera is refitted every frame, so
@@ -49,7 +51,7 @@ export default function EmbedStageClient({
 		if (!stage || !frame || !canvas) return
 		const engine = createStageEngine(
 			{ stage, frame, canvas },
-			{ reducedMotion: true, edgeFade: false }
+			{ reducedMotion: true, edgeFade: false, turnable: false }
 		)
 		engineRef.current = engine
 		const abort = new AbortController()

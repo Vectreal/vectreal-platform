@@ -170,6 +170,11 @@ beforeEach(() => {
 	] as unknown as Awaited<ReturnType<typeof getAllUserApiKeys>>)
 })
 
+const shownOrgIds = (data: Record<string, unknown>) =>
+	(data.organizations as Array<{ organization: { id: string } }>).map(
+		(o) => o.organization.id
+	)
+
 const firstRow = (data: Record<string, unknown>) => {
 	const { keysByOrg } = data as {
 		keysByOrg: Record<string, Array<Record<string, unknown>>>
@@ -243,21 +248,12 @@ describe('the api keys loader payload', () => {
 		])
 	})
 
-	it('asks the permission table before resolving any value', async () => {
+	it('asks the permission table which organizations it shows at all', async () => {
 		/*
-		  The check this whole file is here for, and the one that was missing.
-
 		  Mocked at the predicate rather than driven by a role, because no role
-		  currently distinguishes the two rules: `api-key:read` is owner|admin and
-		  so is the `adminOrgs` filter above it. That coincidence is exactly the
-		  problem - it means a role-driven test would pass without the loader ever
-		  consulting the table, which is what this page did before.
-
-		  Note what deleting this filter did *before* the change: nothing.
-		  `getAllUserApiKeys` carries its own hardcoded
-		  `inArray(role, ['admin', 'owner'])`, so every admin kept getting every
-		  row however the operation table was set - and once the loader started
-		  decrypting, that would have meant every plaintext.
+		  distinguishes the rules today: `api-key:read` is owner|admin. A role-
+		  driven test would pass with the page keeping its own list of roles,
+		  which it did, beside a second copy in `getAllUserApiKeys`' SQL.
 		*/
 		const real = vi.mocked(canPerformDashboardOperation).getMockImplementation()
 
@@ -266,10 +262,9 @@ describe('the api keys loader payload', () => {
 		)
 
 		try {
-			expect(firstRow((await load()).data)?.value).toEqual({
-				readable: false,
-				reason: 'withheld'
-			})
+			const loaded = (await load()).data
+			expect(shownOrgIds(loaded)).toEqual([])
+			expect(firstRow(loaded)).toBeUndefined()
 			expect(decryptEmbedToken).not.toHaveBeenCalled()
 		} finally {
 			// Restored by hand: `clearAllMocks` resets recorded calls, not the
@@ -279,11 +274,33 @@ describe('the api keys loader payload', () => {
 		}
 	})
 
+	it('shows an organization to any role the table lets read keys', async () => {
+		vi.mocked(getUserOrganizations).mockResolvedValueOnce([
+			{
+				organization: { id: ORG_ID, name: 'Acme' },
+				membership: { role: 'member' }
+			}
+		] as unknown as Awaited<ReturnType<typeof getUserOrganizations>>)
+		const real = vi.mocked(canPerformDashboardOperation).getMockImplementation()
+		vi.mocked(canPerformDashboardOperation).mockImplementation(
+			(operation, actor) =>
+				operation === 'api-key:read' || real!(operation, actor)
+		)
+
+		try {
+			const loaded = (await load()).data
+			expect(shownOrgIds(loaded)).toEqual([ORG_ID])
+			expect(firstRow(loaded)).toBeDefined()
+		} finally {
+			vi.mocked(canPerformDashboardOperation).mockImplementation(real!)
+		}
+	})
+
 	it('drops the rows of an organization it does not render at all', async () => {
 		/*
-		  A member never reaches the permission check above: `adminOrgs` has
-		  already decided the organization gets no tab, so its rows leave the
-		  payload entirely rather than arriving marked unreadable.
+		  A member may not read keys by the table, so the organization gets no
+		  tab and its rows leave the payload entirely rather than arriving
+		  marked unreadable.
 		*/
 		vi.mocked(getUserOrganizations).mockResolvedValueOnce([
 			{

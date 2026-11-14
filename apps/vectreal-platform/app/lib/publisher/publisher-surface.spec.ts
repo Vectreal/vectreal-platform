@@ -29,6 +29,16 @@ describe('resolvePublisherSurface', () => {
 		)
 	})
 
+	it('waits for a model on its way after a failed upload, rather than keep the stage', () => {
+		expect(
+			resolvePublisherSurface({
+				status: 'error',
+				hasScene: false,
+				isNavigating: true
+			})
+		).toBe('loading')
+	})
+
 	it('reports a scene that failed to load as an error', () => {
 		expect(resolvePublisherSurface({ status: 'error', hasScene: true })).toBe(
 			'error'

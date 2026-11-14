@@ -1,26 +1,46 @@
 import { ApiResponse } from '@shared/utils'
 import { normalizeCameraSettings } from '@vctrl/core'
+import { cameraSettingsSchema } from '@vctrl/core/camera-schema'
 
 import {
 	applyDefaultCameraFlag,
 	resolveDefaultSceneCameraId
 } from '../scene-camera'
-import {
-	CAMERA_VECTOR_FIELDS,
-	toVector3Tuple,
-	type Vector3Tuple
-} from '../scene-vector'
 
-import type { CameraProps, CameraTransitionConfig } from '@vctrl/core'
+import type { CameraProps } from '@vctrl/core'
 
 export type CameraEntry = NonNullable<CameraProps['cameras']>[number]
 
-type CameraVectorField = (typeof CAMERA_VECTOR_FIELDS)[number]
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value)
+/**
+ * Where a refused value sits, as the sender wrote it, with the camera's name
+ * when it has one: `camera.cameras[0].fov`, `(camera "Hero")`.
+ */
+function describeIssue(
+	camera: CameraProps,
+	{ path, message }: { path: readonly PropertyKey[]; message: string }
+): string {
+	const where = path.reduce<string>(
+		(out, key) =>
+			typeof key === 'number' ? `${out}[${key}]` : `${out}.${String(key)}`,
+		'camera'
+	)
+	const name =
+		path[0] === 'cameras' && typeof path[1] === 'number'
+			? (camera.cameras?.[path[1]] as { name?: unknown } | undefined)?.name
+			: undefined
+	return typeof name === 'string' && name.trim()
+		? `${where} ${message} (camera "${name.trim()}")`
+		: `${where} ${message}`
 }
 
+/**
+ * A camera section as a save stores it, or the refusal to send.
+ *
+ * Every rule a camera value follows is `@vctrl/core/camera-schema`'s, the
+ * same one the SDK contract, hydration and the viewer use; this adds only
+ * what needs the whole list: default ids and names, unique ids, and the
+ * first scene camera as the one the scene opens on.
+ */
 export function parseCameraSettings(
 	camera?: CameraProps
 ): CameraProps | undefined | Response {
@@ -28,223 +48,32 @@ export function parseCameraSettings(
 		return camera
 	}
 
-	if (!Array.isArray(camera.cameras) || camera.cameras.length === 0) {
-		return ApiResponse.badRequest('camera.cameras must be a non-empty array')
-	}
-
-	// Validate scene-global transition if provided. It is stored as sent.
-	if (camera.sceneTransition !== undefined) {
-		const transitionRefusal = validateTransitionConfig(
-			camera.sceneTransition,
-			'camera.sceneTransition'
-		)
-		if (transitionRefusal) {
-			return transitionRefusal
-		}
-	}
-
-	// The viewer hides its switcher only for a literal `false`, so anything
-	// else that is not a boolean would read as "shown" and drop the setting.
-	if (
-		camera.showControls !== undefined &&
-		typeof camera.showControls !== 'boolean'
-	) {
-		return ApiResponse.badRequest('camera.showControls must be a boolean')
+	const parsed = cameraSettingsSchema.safeParse(camera)
+	if (!parsed.success) {
+		return ApiResponse.badRequest(describeIssue(camera, parsed.error.issues[0]))
 	}
 
 	const normalizedCameras: CameraEntry[] = []
 	const seenCameraIds = new Set<string>()
 
-	for (const [cameraIndex, entry] of camera.cameras.entries()) {
-		if (!isRecord(entry)) {
-			return ApiResponse.badRequest('Each camera must be a valid object')
-		}
+	for (const [cameraIndex, entry] of (
+		parsed.data.cameras as CameraEntry[]
+	).entries()) {
+		const cameraId = entry.cameraId?.trim() || `camera-${cameraIndex + 1}`
+		const name = entry.name?.trim() || `Camera ${cameraIndex + 1}`
 
-		const rawCameraId =
-			typeof entry.cameraId === 'string' && entry.cameraId.trim()
-				? entry.cameraId.trim()
-				: `camera-${cameraIndex + 1}`
-		const rawCameraName =
-			typeof entry.name === 'string' && entry.name.trim()
-				? entry.name.trim()
-				: `Camera ${cameraIndex + 1}`
-
-		// The viewer sets a stored fov on its lens as it is, and draws nothing
-		// usable outside a perspective lens's open range.
-		if (
-			entry.fov !== undefined &&
-			!(
-				typeof entry.fov === 'number' &&
-				Number.isFinite(entry.fov) &&
-				entry.fov > 0 &&
-				entry.fov < 180
-			)
-		) {
-			return ApiResponse.badRequest(
-				`camera.cameras[${cameraIndex}].fov must be a number of degrees between 0 and 180`
-			)
+		if (seenCameraIds.has(cameraId)) {
+			return ApiResponse.badRequest(`Duplicate cameraId found: ${cameraId}`)
 		}
-		if (
-			entry.kind !== undefined &&
-			entry.kind !== 'scene' &&
-			entry.kind !== 'hotspot'
-		) {
-			return ApiResponse.badRequest(
-				`camera.cameras[${cameraIndex}].kind must be 'scene' or 'hotspot'`
-			)
-		}
+		seenCameraIds.add(cameraId)
 
-		const vectors: Partial<Record<CameraVectorField, Vector3Tuple>> = {}
-		for (const field of CAMERA_VECTOR_FIELDS) {
-			if (entry[field] === undefined) continue
-			const tuple = toVector3Tuple(entry[field])
-			if (!tuple) {
-				return ApiResponse.badRequest(
-					`Camera "${rawCameraName}" has a ${field} that is not [x, y, z] or {x, y, z} of finite numbers (camera.cameras[${cameraIndex}].${field})`
-				)
-			}
-			vectors[field] = tuple
-		}
-
-		if (seenCameraIds.has(rawCameraId)) {
-			return ApiResponse.badRequest(`Duplicate cameraId found: ${rawCameraId}`)
-		}
-		seenCameraIds.add(rawCameraId)
-
-		normalizedCameras.push({
-			...(entry as CameraEntry),
-			...vectors,
-			cameraId: rawCameraId,
-			name: rawCameraName
-		})
+		normalizedCameras.push({ ...entry, cameraId, name })
 	}
 
-	const defaultSceneCameraId = resolveDefaultSceneCameraId(normalizedCameras)
-
-	if (!defaultSceneCameraId) {
-		return ApiResponse.badRequest(
-			'camera.cameras must contain at least one scene camera'
-		)
-	}
-
-	const normalizedWithDefault = {
-		...camera,
-		// Always use first scene camera as the active camera
-		activeCameraId: defaultSceneCameraId,
+	return normalizeCameraSettings({
+		...(parsed.data as CameraProps),
+		// The first scene camera, or the first camera when none is.
+		activeCameraId: resolveDefaultSceneCameraId(normalizedCameras),
 		cameras: applyDefaultCameraFlag(normalizedCameras)
-	}
-
-	// Apply canonical normalization (which will re-enforce the implicit default)
-	return normalizeCameraSettings(normalizedWithDefault)
-}
-
-/**
- * Refuses a transition the viewer cannot play, and accepts anything else as
- * sent.
- *
- * A validator, not a normalizer. It used to build a copy with object-avoidance
- * defaults filled in, and its caller only ever checked that copy for a refusal
- * and stored the original. The viewer owns those defaults where it plays the
- * transition, so filling them in here would only have created a second owner.
- */
-function validateTransitionConfig(
-	transition: CameraTransitionConfig | undefined,
-	path: string
-): Response | null {
-	if (!transition) {
-		return null
-	}
-
-	if (!isRecord(transition)) {
-		return ApiResponse.badRequest(`${path} must be an object`)
-	}
-
-	const type = transition.type
-	if (type !== 'linear' && type !== 'object_avoidance' && type !== 'none') {
-		return ApiResponse.badRequest(
-			`${path}.type must be one of linear, object_avoidance, none`
-		)
-	}
-
-	if (typeof transition.duration !== 'undefined') {
-		if (
-			typeof transition.duration !== 'number' ||
-			!Number.isFinite(transition.duration) ||
-			transition.duration < 0
-		) {
-			return ApiResponse.badRequest(
-				`${path}.duration must be a non-negative number`
-			)
-		}
-	}
-
-	if (
-		typeof transition.easing !== 'undefined' &&
-		transition.easing !== 'linear' &&
-		transition.easing !== 'ease_in' &&
-		transition.easing !== 'ease_out' &&
-		transition.easing !== 'ease_in_out'
-	) {
-		return ApiResponse.badRequest(
-			`${path}.easing must be one of linear, ease_in, ease_out, ease_in_out`
-		)
-	}
-
-	if (type === 'object_avoidance') {
-		if (
-			typeof transition.objectAvoidance !== 'undefined' &&
-			!isRecord(transition.objectAvoidance)
-		) {
-			return ApiResponse.badRequest(
-				`${path}.objectAvoidance must be an object when provided`
-			)
-		}
-
-		const objectAvoidance = isRecord(transition.objectAvoidance)
-			? transition.objectAvoidance
-			: {}
-
-		const clearance = objectAvoidance.clearance
-		const arcHeight = objectAvoidance.arcHeight
-		const samples = objectAvoidance.samples
-		const tension = objectAvoidance.tension
-
-		if (
-			typeof clearance !== 'undefined' &&
-			(typeof clearance !== 'number' || !Number.isFinite(clearance))
-		) {
-			return ApiResponse.badRequest(
-				`${path}.objectAvoidance.clearance must be a number`
-			)
-		}
-
-		if (
-			typeof arcHeight !== 'undefined' &&
-			(typeof arcHeight !== 'number' || !Number.isFinite(arcHeight))
-		) {
-			return ApiResponse.badRequest(
-				`${path}.objectAvoidance.arcHeight must be a number`
-			)
-		}
-
-		if (
-			typeof samples !== 'undefined' &&
-			(typeof samples !== 'number' || !Number.isFinite(samples) || samples < 2)
-		) {
-			return ApiResponse.badRequest(
-				`${path}.objectAvoidance.samples must be a number >= 2`
-			)
-		}
-
-		if (
-			typeof tension !== 'undefined' &&
-			(typeof tension !== 'number' || !Number.isFinite(tension))
-		) {
-			return ApiResponse.badRequest(
-				`${path}.objectAvoidance.tension must be a number`
-			)
-		}
-	}
-
-	return null
+	})
 }

@@ -36,7 +36,9 @@ export const API_ERROR_CODES = [
 	/** This Idempotency-Key was first sent with a different request. Use a new one. */
 	'idempotency_key_reused',
 	/** The first request with this Idempotency-Key is still running. Retry shortly. */
-	'idempotency_in_progress'
+	'idempotency_in_progress',
+	/** The server failed. Nothing is promised about what happened; retry shortly. */
+	'internal_error'
 ] as const
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number]

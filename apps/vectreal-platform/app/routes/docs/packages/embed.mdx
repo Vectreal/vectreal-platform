@@ -17,6 +17,8 @@ present packages/embed/package.json "type": "module"
 absent packages/embed/package.json "require"
 present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (acceptsCommandsRef.current && parentOriginRef.current) {
 present apps/vectreal-platform/app/lib/domain/embed/hosted-preview-bridge.ts if (pinsOrigin) flushOutboundQueue(event.origin)
+present packages/embed/src/embed.ts this.on('load_progress', waitAgain)
+present packages/embed/src/embed.ts this.on('load_failed', onFailed)
 */}
 
 **CDN (script tag):** the package also ships a classic script that any npm CDN can serve. It defines one global, `VectrealEmbed`, a namespace object holding the entry point's named exports, so the class is reached as `VectrealEmbed.VectrealEmbed`. The file keeps the name `vectreal-embed.umd.js` from when it was a UMD build, so existing snippets keep working.
@@ -44,7 +46,7 @@ const embed = new VectrealEmbed(iframeElement, options?)
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `iframeOrigin` | `string` | Detected from `iframe.src` | Override the expected iframe origin for postMessage security. |
-| `readyTimeout` | `number` | `15000` | Milliseconds before `ready()` rejects if the scene has not loaded. Queued commands still run once it does. |
+| `readyTimeout` | `number` | `15000` | Milliseconds of silence before `ready()` rejects: each `load_progress` starts the wait again, so a large scene on a slow network is not given up on while it is still arriving. An iframe older than `load_progress` sends none, so there it is the total time. Queued commands still run once the scene does load. |
 
 The constructor throws when it cannot determine a target origin, which happens when
 `iframeOrigin` is omitted and the iframe's `src` is empty or unparseable. Construct the
@@ -55,7 +57,7 @@ other origin are dropped.
 
 | Method | Returns | Description |
 |---|---|---|
-| `ready()` | `Promise<EmbedReadyInfo>` | Resolves with `{ sceneId, cameras, hotspots }` when the viewer is ready. |
+| `ready()` | `Promise<EmbedReadyInfo>` | Resolves with `{ sceneId, cameras, hotspots }` when the viewer is ready. Rejects at once when the scene fails to load (`load_failed`), and after `readyTimeout` with no progress. |
 | `activateCamera(cameraId)` | `void` | Switch to a named camera. |
 | `focusHotspot(hotspotId)` | `void` | Reveal a hotspot's content and fly its camera. |
 | `returnToSceneView()` | `void` | Leave a hotspot's camera for the scene camera the visitor was on before. |
@@ -142,6 +144,12 @@ interface SetTransitionOptions {
 type EmbedEventMap = {
   viewer_ready: void
   model_loaded: void
+  load_progress: {
+    phase: 'fetching' | 'parsing' | 'preparing'
+    bytes?: { loaded: number; total: number | null }
+    items?: { loaded: number; total: number }
+  }
+  load_failed: { code: string; recoverable: boolean }
   camera_changed: { cameraId: string }
   hotspot_activated: { hotspotId: string; cameraId: string | null }
   animation_state_changed: {
@@ -170,7 +178,15 @@ type EmbedEventMap = {
 
 `model_loaded` is translated from the viewer's `initial_framing_completed`, so it fires
 once per load, when the scene is actually visible rather than when the file finishes
-downloading. `auto_rotate_changed` is declared but the viewer does not currently emit it.
+downloading.
+
+`load_progress` arrives while the frame shows its loader: `fetching` with the model's
+bytes, `parsing`, then `preparing` (environment, shaders, framing), on every phase change
+and at most every 250 ms within one. `bytes.total` is `null` when the server did not say
+how large the file is. `load_failed` means the scene could not be loaded and the frame
+shows an error with a **Try again** button; `code` is the loader's error code, such as
+`url_http` or `gltf_load_failed`, and `recoverable` says whether trying again can help.
+Neither event comes from an iframe deployed before it existed. `auto_rotate_changed` is declared but the viewer does not currently emit it.
 
 ---
 
@@ -190,6 +206,7 @@ import type {
   EmbedCameraDescriptor,
   EmbedHotspotDescriptor,
   HostedPreviewIncomingMessage,
+  HostedPreviewLoadFailedMessage,
   HostedPreviewOutgoingMessage,
   HostedPreviewPingMessage,
   HostedPreviewPongMessage,

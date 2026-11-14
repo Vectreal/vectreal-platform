@@ -1,3 +1,4 @@
+import { cameraSettingsSchema } from '@vctrl/core/camera-schema'
 import { z } from 'zod'
 
 /*
@@ -280,7 +281,11 @@ export type SceneSettingsDocument = z.infer<typeof sceneSettingsSchema>
  * `PATCH /api/v1/scenes/:sceneId/settings`: the sections to change. Each one
  * sent replaces the stored section whole; those left out stay as they are.
  *
- * `camera` and `hotspots` go through the publisher's save parser on the
+ * `camera` is held to `@vctrl/core`'s camera schema, the one the server
+ * applies: a camera it would refuse (an fov outside (0, 180), no scene camera
+ * to open on) fails this schema's parse, which the CLI runs before sending.
+ * `client.updateSceneSettings` sends what it is given and the server refuses.
+ * `camera` and `hotspots` then go through the publisher's save parser on the
  * server, which refuses what a publisher save would: a hotspot or interaction
  * naming a camera that is gone, a hotspot id that is not a UUID, artwork the
  * scene does not link. Send both in one call to change a link from either end.
@@ -296,7 +301,7 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 	lighting: sceneLightingSchema.optional(),
 	environment: sceneEnvironmentSchema.optional(),
 	shadows: sceneShadowsSchema.optional(),
-	camera: section.optional(),
+	camera: cameraSettingsSchema.optional(),
 	hotspots: z.array(section).optional(),
 	// The viewer's chrome. `compressTexturesForGpu` is accepted so a section
 	// read from `GET` can be sent back, and ignored: the publisher stores it
@@ -317,6 +322,16 @@ export const updateSceneSettingsInputSchema = z.strictObject({
 		.optional()
 })
 
-export type UpdateSceneSettingsInput = z.infer<
-	typeof updateSceneSettingsInputSchema
->
+export type UpdateSceneSettingsInput = Omit<
+	z.infer<typeof updateSceneSettingsInputSchema>,
+	'camera'
+> & {
+	/**
+	 * Typed as the schema takes it (vectors as `[x, y, z]` or `{ x, y, z }`),
+	 * or as `getSceneSettings` returns it, so a camera read can be sent back
+	 * changed. Either way the server holds it to the schema.
+	 */
+	camera?:
+		| z.input<typeof updateSceneSettingsInputSchema>['camera']
+		| Record<string, unknown>
+}

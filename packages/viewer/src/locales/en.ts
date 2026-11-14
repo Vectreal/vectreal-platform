@@ -66,7 +66,15 @@ export const en = {
 	renderFailed: "This scene couldn't be shown on this device.",
 	tryAgain: 'Try again',
 
-	loadingThumbnailAlt: 'Viewer loading thumbnail'
+	loadingThumbnailAlt: 'Viewer loading thumbnail',
+
+	/** The default loader's title per phase, and the numbers under it. */
+	loading: 'Loading',
+	loadDownloading: 'Downloading',
+	loadReading: 'Reading the model',
+	loadPreparing: 'Preparing the scene',
+	loadBytes: '{loaded} of {total}',
+	loadFiles: '{loaded} of {total} files'
 }
 
 /** The viewer's words in one language; see `en`. */

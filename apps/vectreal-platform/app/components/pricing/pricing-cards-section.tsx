@@ -278,7 +278,8 @@ function PlanCell({
 					<Button
 						asChild
 						className="w-full"
-						variant={highlighted ? 'default' : 'secondary'}
+						// The highlighted plan is the page's one next step.
+						variant={highlighted ? 'brand' : 'secondary'}
 					>
 						<Link
 							to={

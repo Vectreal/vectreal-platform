@@ -21,3 +21,4 @@ export {
 	type FetchManifestAssetsOptions
 } from './utils/fetch-manifest-assets'
 export * from './model-context'
+export { useLoadProgress } from './use-load-progress'

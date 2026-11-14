@@ -5,9 +5,11 @@ import {
 	apiSuccessSchema,
 	scenePublicationSchema
 } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { action, loader } from './scenes.$sceneId.publication'
+import { action } from './scenes.$sceneId.publication'
+import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 import { EntitlementRequiredError } from '../../../lib/domain/billing/entitlement-required-error'
 import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
 
@@ -15,7 +17,6 @@ import type { Route } from './+types/scenes.$sceneId.publication'
 import type { StagedMutation } from '../../../lib/domain/agent/agent-idempotency.server'
 
 const mocks = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
 	recordAgentAudit: vi.fn(),
 	withIdempotency: vi.fn(),
 	resolveSceneMembership: vi.fn(),
@@ -28,9 +29,14 @@ const mocks = vi.hoisted(() => ({
 	collectUnreferencedAssets: vi.fn()
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest: mocks.authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../../lib/domain/agent/agent-audit.server', () => ({
 	recordAgentAudit: mocks.recordAgentAudit
 }))
@@ -106,7 +112,11 @@ const post = (file: Blob | string | null = new Blob([glbBytes()])) => {
 const del = () => new Request(url, { method: 'DELETE' })
 
 const act = (request: Request, sceneId = SCENE) =>
-	action({ request, params: { sceneId } } as unknown as Route.ActionArgs)
+	action({
+		request,
+		params: { sceneId },
+		context: contextFor(actor)
+	} as unknown as Route.ActionArgs)
 
 async function refusal(promise: Promise<unknown>) {
 	const thrown = await promise.then(
@@ -141,7 +151,6 @@ async function runMutation(
 
 beforeEach(() => {
 	for (const fn of Object.values(mocks)) fn.mockReset()
-	mocks.authorizeAgentRequest.mockResolvedValue(actor)
 	mocks.resolveSceneMembership.mockResolvedValue({
 		organizationId: 'org-1',
 		projectId: PROJECT,
@@ -174,9 +183,6 @@ describe('POST /api/v1/scenes/:sceneId/publication', () => {
 
 		const response = await act(request)
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'scenes:publish'
-		})
 		expect(mocks.withIdempotency).toHaveBeenCalledWith(
 			{
 				grantId: 'grant-1',
@@ -354,9 +360,6 @@ describe('DELETE /api/v1/scenes/:sceneId/publication', () => {
 
 		const response = await act(request)
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'scenes:publish'
-		})
 		expect(mocks.withIdempotency).toHaveBeenCalledWith(
 			{ grantId: 'grant-1', request, payload: { sceneId: SCENE } },
 			expect.any(Function)
@@ -397,40 +400,6 @@ describe('DELETE /api/v1/scenes/:sceneId/publication', () => {
 })
 
 describe('/api/v1/scenes/:sceneId/publication, either method', () => {
-	it.each([
-		['PUT', 'PUT'],
-		['PATCH', 'PATCH']
-	])('answers %s with 405, before the gate', async (_, method) => {
-		const response = await act(new Request(url, { method }))
-
-		expect(response.status).toBe(405)
-		expect(response.headers.get('Allow')).toBe('POST, DELETE')
-		expect(mocks.authorizeAgentRequest).not.toHaveBeenCalled()
-	})
-
-	it('answers a GET with 405 behind the gate', async () => {
-		const request = new Request(url)
-
-		const response = await loader({ request } as Route.LoaderArgs)
-
-		expect(response.status).toBe(405)
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'projects:read'
-		})
-	})
-
-	it.each([post, del])(
-		'answers the gate refusal and touches nothing',
-		async (make) => {
-			const gate = new Response(null, { status: 403 })
-			mocks.authorizeAgentRequest.mockRejectedValue(gate)
-
-			await expect(act(make())).rejects.toBe(gate)
-			expect(mocks.resolveSceneMembership).not.toHaveBeenCalled()
-			expect(mocks.withIdempotency).not.toHaveBeenCalled()
-		}
-	)
-
 	it.each([
 		['the user cannot see', null, SCENE],
 		[

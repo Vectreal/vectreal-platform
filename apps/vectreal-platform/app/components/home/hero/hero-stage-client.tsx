@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { TextureLoader, type Texture } from 'three'
 
 import { HERO_SHADOW_URL } from './hero-assets'
-import { fallBackToPoster } from './hero-store'
+import { fallBackToStill } from './hero-store'
 import { prefersReducedMotion } from '../../../lib/motion/motion-tokens'
 import { HERO_MODEL } from '../../../lib/samples/sample-models'
 import { markHeroSettled } from '../stage/hero-settled'
@@ -16,17 +16,12 @@ export interface HeroStageElements {
 	stage: HTMLElement
 	frame: HTMLElement
 	canvas: HTMLCanvasElement
-	dims: SVGSVGElement
-	scale: HTMLElement
 }
 
 interface Props {
 	store: HeroStore
 	elements: HeroStageElements
 }
-
-/** How long the drawing stands as a drawing before the sweep: long enough to read as one, short enough not to read as a wait. */
-const DRAWN_HOLD_MS = 600
 
 /*
   Bake mode, for `scripts/bake-home-hero.ts` against the dev server only: the
@@ -39,7 +34,7 @@ const bakeMode = () =>
 
 /**
  * Streams a file with its progress, gliding toward the latest byte count each
- * frame so uneven chunks do not step the counter or the plot front. Resolves
+ * frame so uneven chunks do not step the counter. Resolves
  * once the glide has landed, so what follows starts from a finished figure.
  */
 async function fetchWithProgress(
@@ -89,7 +84,6 @@ export default function HeroStageClient({ store, elements }: Props) {
 		const reducedMotion = prefersReducedMotion()
 		const baking = bakeMode()
 		const abort = new AbortController()
-		const timers: number[] = []
 		const { stage, frame } = elements
 
 		const engine = createStageEngine(
@@ -97,45 +91,30 @@ export default function HeroStageClient({ store, elements }: Props) {
 				stage,
 				frame,
 				copy: elements.copy,
-				canvas: elements.canvas,
-				dims: elements.dims,
-				scale: elements.scale
+				canvas: elements.canvas
 			},
 			{ reducedMotion, posterMode: baking, floor: true }
 		)
 
-		const setPhase = (phase: 'poster' | 'drawn' | 'live') =>
-			stage.setAttribute('data-phase', phase)
-		const hold = (ms: number) =>
-			new Promise<void>((resolve) =>
-				timers.push(window.setTimeout(resolve, ms))
-			)
-
 		/**
-		 * The model on the stage: shown as its elevation, held long enough to read
-		 * as a drawing, swept into an object, then turned and handed over.
+		 * The still stands from the first paint. The live stage draws the same
+		 * frame, the still steps aside in that task, so the swap shows nothing,
+		 * and the stage turns the object into place, handed to the reader.
 		 */
-		async function drawThenReveal(
+		async function takeOver(
 			buffer: ArrayBuffer,
 			show: Parameters<typeof engine.show>[1]
 		) {
 			await engine.show(buffer, show)
 			if (abort.signal.aborted) return
-			setPhase('drawn')
-			store.set({ status: 'drawn' })
-			await hold(reducedMotion ? 0 : DRAWN_HOLD_MS)
-			if (abort.signal.aborted) return
-			store.set({ status: 'rendering' })
-			await engine.reveal()
-			if (abort.signal.aborted) return
-			setPhase('live')
+			engine.settle()
+			stage.setAttribute('data-phase', 'live')
 			stage.setAttribute('data-turnable', '')
 			store.set({ status: 'live', busy: false, view: 'live' })
 			markHeroSettled()
 		}
 
 		async function run() {
-			stage.setAttribute('data-receiving', '')
 			const shadow: Promise<Texture | null> = baking
 				? Promise.resolve(null)
 				: new TextureLoader().loadAsync(HERO_SHADOW_URL).catch(() => null)
@@ -144,12 +123,10 @@ export default function HeroStageClient({ store, elements }: Props) {
 				abort.signal,
 				(shown, total) => {
 					// As a fraction of the file's own size: a compressed response reports its compressed length.
-					frame.style.setProperty('--plot', (shown / total).toFixed(4))
 					store.set({ shownBytes: (shown / total) * HERO_MODEL.bytes })
 				},
 				reducedMotion
 			)
-			stage.removeAttribute('data-receiving')
 			if (abort.signal.aborted) return
 
 			if (baking) {
@@ -158,28 +135,27 @@ export default function HeroStageClient({ store, elements }: Props) {
 					__heroBake: {
 						shadow: engine.bakedShadowPng,
 						poster: engine.posterPng,
-						object: engine.objectPng
+						object: engine.objectPng,
+						still: engine.stillPng
 					}
 				})
 				return
 			}
-			await drawThenReveal(buffer, { bakedShadow: await shadow, poster: true })
+			await takeOver(buffer, { bakedShadow: await shadow, poster: true })
 		}
 
 		run().catch((error: unknown) => {
 			if (abort.signal.aborted) return
-			// The poster and the readout still stand, and the poster is drawn from the file; the stage steps back to them.
+			// The still and the readout stand; the stage steps back to them.
 			console.error('Hero stage failed', error)
-			stage.removeAttribute('data-receiving')
-			setPhase('poster')
-			fallBackToPoster(store, frame)
-			// Done with the GPU: the floor stops drifting under the poster. Unmount's dispose is then a no-op.
+			stage.setAttribute('data-phase', 'still')
+			fallBackToStill(store)
+			// Done with the GPU: the floor stops drifting under the still. Unmount's dispose is then a no-op.
 			engine.dispose()
 		})
 
 		return () => {
 			abort.abort()
-			for (const timer of timers) window.clearTimeout(timer)
 			engine.dispose()
 		}
 	}, [store, elements])

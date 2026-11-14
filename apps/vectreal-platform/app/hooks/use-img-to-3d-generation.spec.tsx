@@ -6,7 +6,8 @@
  * variant the URL names is opened once, named as the server named it.
  */
 import { act, render, renderHook, waitFor } from '@testing-library/react'
-import { StrictMode } from 'react'
+import { dispositionFileName } from '@vctrl/core/model-loader'
+import { StrictMode, useState } from 'react'
 import { createMemoryRouter, RouterProvider, useParams } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -20,6 +21,11 @@ import {
 	imgTo3dContentDisposition,
 	type ImgTo3dListedBatch
 } from '../lib/domain/img-to-3d/img-to-3d-contract'
+
+import type { useSceneUpload } from './scene-loader/use-scene-upload'
+
+type OpenModel = ReturnType<typeof useSceneUpload>['openModel']
+type LoadModel = (files: File[]) => Promise<{ status: string }>
 
 vi.mock('remix-utils/csrf/react', () => ({
 	useAuthenticityToken: () => 'csrf-token'
@@ -326,19 +332,58 @@ describe('useImgTo3dBatchStates', () => {
 describe('useImgTo3dGeneration', () => {
 	// Cleared on every mount, so no test can act on an earlier test's hook.
 	let latest: ImgTo3dGeneration | null = null
+	// Every render's value, in order, for what a single frame showed.
+	let rendered: ImgTo3dGeneration[] = []
 	const current = () => {
 		if (!latest) throw new Error('the probe has not rendered')
 		return latest
 	}
 	let loads = 0
 
-	function Probe({
-		loadModel
-	}: {
-		loadModel: (files: File[]) => Promise<{ status: string }>
-	}) {
+	// Every source the hook handed the loader, in order.
+	let opened: unknown[] = []
+
+	/*
+	  `openModel` as far as this hook can tell: it fetches the URL source the
+	  way the loader does (so the routes above answer it), says a failure in
+	  the caller's words where it gives some, and hands a downloaded model to
+	  `loadModel`, which stands for the parse.
+	*/
+	function loaderOver(loadModel: LoadModel): OpenModel {
+		return (async (source, options) => {
+			opened.push(source)
+			const outcome = (status: string, error: unknown = null) => ({
+				status,
+				error,
+				stillCurrent: () => true
+			})
+			if (source.kind !== 'url') throw new Error('only URLs here')
+			let response: Response
+			try {
+				response = await fetch(String(source.url), source.init)
+			} catch {
+				return outcome('empty')
+			}
+			// As a real fetch does: an aborted request never hands its body over.
+			if (source.init?.signal?.aborted) return outcome('empty')
+			if (!response.ok) {
+				const error = { code: 'url_http', context: { status: response.status } }
+				toastError(options?.failureMessage?.(error as never) ?? 'loader')
+				return outcome('error', error)
+			}
+			const name =
+				dispositionFileName(response.headers.get('Content-Disposition')) ??
+				'model.glb'
+			const { status } = await loadModel([new File(['glb'], name)])
+			return outcome(status, status === 'error' ? { code: 'parse' } : null)
+		}) as OpenModel
+	}
+
+	function Probe({ loadModel }: { loadModel: LoadModel }) {
 		const { sceneId } = useParams()
-		latest = useImgTo3dGeneration(loadModel, sceneId ?? null)
+		const [openModel] = useState(() => loaderOver(loadModel))
+		latest = useImgTo3dGeneration(openModel, sceneId ?? null)
+		rendered.push(latest)
 		return null
 	}
 
@@ -347,11 +392,13 @@ describe('useImgTo3dGeneration', () => {
 		{
 			loadModel = async () => ({ status: 'ready' })
 		}: {
-			loadModel?: (files: File[]) => Promise<{ status: string }>
+			loadModel?: LoadModel
 		} = {}
 	) {
 		loads = 0
+		opened = []
 		latest = null
+		rendered = []
 		const router = createMemoryRouter(
 			[
 				{
@@ -382,16 +429,21 @@ describe('useImgTo3dGeneration', () => {
 			}
 		})
 
-	it('opens the variant the URL names, named as the server names it', async () => {
+	it('opens the variant the URL names through the loader, by its artifact URL', async () => {
 		route = (url) =>
 			url.endsWith(`${JOB}/artifact`) ? glb() : refusal('x', 500)
 		const loadModel = vi.fn(async (_files: File[]) => ({ status: 'ready' }))
 		mount(`/publisher?generation=${JOB}`, { loadModel })
 
 		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+		// The loader's own download, so the publisher shows its progress.
+		expect(opened.at(-1)).toMatchObject({
+			kind: 'url',
+			url: `/api/img-to-3d/generations/${JOB}/artifact`
+		})
+		// Named by the route's Content-Disposition, which the loader reads.
 		const [[files]] = loadModel.mock.calls
 		expect(files[0].name).toBe('chair-7.glb')
-		expect(files[0].type).toBe('model/gltf-binary')
 		await waitFor(() => expect(current().opening).toBeNull())
 	})
 
@@ -409,6 +461,22 @@ describe('useImgTo3dGeneration', () => {
 		)
 		return held
 	}
+
+	/*
+	  The publisher holds its loading surface on this. Set by the open effect
+	  instead, it was null for the first render, and on the server, and the
+	  empty stage showed in that gap.
+	*/
+	it('reports the variant as opening from the first render, before any download', async () => {
+		const held = heldArtifacts()
+		mount(`/publisher?generation=${JOB}`)
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(rendered.length).toBeGreaterThan(0)
+		for (const value of rendered) {
+			expect(value.opening).toEqual({ jobId: JOB, error: null })
+		}
+	})
 
 	it('opens nothing over a saved scene, which Save would then overwrite', async () => {
 		route = () => glb()
@@ -479,6 +547,54 @@ describe('useImgTo3dGeneration', () => {
 
 		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
 		await waitFor(() => expect(current().opening).toBeNull())
+	})
+
+	it('reads as opening again while a retry downloads, not as the failure before it', async () => {
+		route = () => refusal('runtime_unavailable', 503)
+		mount(`/publisher?generation=${JOB}`)
+		await waitFor(() =>
+			expect(current().opening?.error).toBe('runtime_unavailable')
+		)
+
+		const held = heldArtifacts()
+		await act(async () => current().retryOpen())
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(current().opening).toEqual({ jobId: JOB, error: null })
+	})
+
+	it('reads as opening again after the URL left a variant it opened and came back', async () => {
+		route = () => glb()
+		const router = mount(`/publisher?generation=${JOB}`)
+		await waitFor(() => expect(current().opening).toBeNull())
+
+		const held = heldArtifacts()
+		await act(() => router.navigate('/publisher'))
+		await act(() => router.navigate(`/publisher?generation=${JOB}`))
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(current().opening).toEqual({ jobId: JOB, error: null })
+	})
+
+	it('forgets a load that finished after the URL left it, so a revisit reads as opening', async () => {
+		route = () => glb()
+		let finishLoad: () => void = () => undefined
+		const loadModel = vi.fn(
+			() =>
+				new Promise<{ status: string }>((resolve) => {
+					finishLoad = () => resolve({ status: 'ready' })
+				})
+		)
+		const router = mount(`/publisher?generation=${JOB}`, { loadModel })
+		await waitFor(() => expect(loadModel).toHaveBeenCalledTimes(1))
+
+		await act(() => router.navigate('/publisher'))
+		await act(async () => finishLoad())
+		const held = heldArtifacts()
+		await act(() => router.navigate(`/publisher?generation=${JOB}`))
+		await waitFor(() => expect(held.has(JOB)).toBe(true))
+
+		expect(current().opening).toEqual({ jobId: JOB, error: null })
 	})
 
 	it('opens it again after the URL left it and came back', async () => {

@@ -136,6 +136,34 @@ including `catalog:`. Trust it over hand-editing. A package that deliberately
 bundles a dependency declares that as an `ignoredDependencies` entry in
 `eslint.config.mts` with a reason.
 
+The build enforces the other direction. The published `@vctrl/*` configs never
+list externals by hand: `manifestExternals` in `vite.library.mts` externalizes
+exactly what `dependencies` and `peerDependencies` declare, subpaths included,
+and fails the build when a declared package is inlined anyway. A hand-written
+name list is how `@vctrl/viewer@1.0.0` shipped React's JSX runtime inlined:
+`react/jsx-runtime` is not `react`. Declare a package to keep it out of the
+build; anything undeclared, or only a `devDependency`, is bundled. `pnpm
+publish` rewrites `workspace:` and `catalog:` ranges while packing, from the
+directory each package names in `publishConfig.directory`.
+
+## Billing flow
+
+`orgSubscriptions` is the single source of truth for plan state, and
+`syncSubscriptionFromStripe()` upserts it by `organizationId`.
+
+- Checkout (`app/routes/api/billing/checkout.ts`) answers `{ redirectUrl }`. An
+  org with `billingState === 'active'` and a `stripeSubscriptionId` is updated
+  in place with `stripe.subscriptions.update()` (proration); anything else gets
+  a Stripe Checkout session.
+- The success page (`billing-upgrade-success.tsx`) takes `?session_id=` for the
+  Checkout path, which calls `syncCompletedCheckout()`, or
+  `?plan_id=&billing_period=&from_plan=` for the direct update, where the
+  database is already synced.
+- Webhooks arrive at `app/routes/api/billing/webhook.ts` and delegate to
+  `processStripeWebhookEvent` in
+  `app/lib/domain/billing/stripe-webhook-processor.server.ts`, as the async
+  fallback.
+
 ## Plan limits: count the rows, never a usage counter
 
 Enforce with `assertWithinQuota` (`app/lib/domain/billing/quota-enforcement.server.ts`),
@@ -203,7 +231,7 @@ matching nothing still exits 0, so a typo turns a gate into a silent pass.
 
 ## Source of truth
 
-- `CLAUDE.md`
+- `AGENTS.md`
 - `apps/vectreal-platform/app/routes.tsx`
 - `apps/vectreal-platform/app/lib/domain/dashboard/dashboard-operations.ts`
 - `apps/vectreal-platform/app/lib/domain/dashboard/dashboard-permissions.server.ts`

@@ -1,4 +1,4 @@
-import { useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel, useLoadProgress } from '@vctrl/hooks/use-load-model'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 
@@ -83,6 +83,8 @@ export function useSceneEmbedScene({
 		file,
 		sceneData,
 		loadError: error,
+		/** The model's download and parse, for the viewer's loader and its host. */
+		loadProgress: useLoadProgress(model),
 		retrySceneLoad
 	}
 }

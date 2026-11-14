@@ -1,6 +1,6 @@
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { useSetAtom } from 'jotai/react'
-import { useCallback } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { useResetSceneState } from './use-scene-settings'
@@ -16,32 +16,83 @@ import {
 	sceneMetaInitialState
 } from '../../lib/stores/publisher-config-store'
 
-import type { InputFileOrDirectory } from '@vctrl/hooks/use-load-model'
+import type {
+	InputFileOrDirectory,
+	ModelSource,
+	StructuredLoadError
+} from '@vctrl/hooks/use-load-model'
+
+/** What a person can add to an empty stage: their own files, or a model at a URL. */
+export type AddedModelSource = Extract<ModelSource, { kind: 'files' | 'url' }>
 
 /**
- * Everything that happens when a user drops a model in.
+ * Everything that happens when a model is added to the stage: dropped,
+ * picked, or opened from a URL (a sample, an example scene, a generated
+ * variant).
  *
  * Written as one function on purpose. Before, these steps were spread across
  * four subscriptions to a global event bus, and a load that ended early (no
  * supported file, two models in one folder) simply skipped the ones that would
  * have cleared the loading flag. Here the order is the order you read.
+ *
+ * A URL goes to the loader as a URL, not fetched here first: the download is
+ * then the loader's `fetching` phase, so the stage shows one loading state
+ * from the click on, and a newer load or a reset cancels it like any other.
  */
 export function useSceneUpload() {
-	const { load } = useModelContext()
+	const model = useModelContext()
+	const { load } = model
 	const posthog = usePostHog()
 	const { consent } = useConsent()
 	const resetSceneState = useResetSceneState()
 	const setSceneMeta = useSetAtom(sceneMetaAtom)
 	const setCurrentSceneId = useSetAtom(currentSceneIdAtom)
 
-	const uploadFiles = useCallback(
-		async (files: InputFileOrDirectory) => {
+	/** What is being opened, for the loading surface's title; null for a drop. */
+	const [opening, setOpening] = useState<{
+		readonly label: string
+		readonly kind: AddedModelSource['kind']
+	} | null>(null)
+	// Which open the subject belongs to, so only that open clears it.
+	const lastOpen = useRef(0)
+
+	const openModel = useCallback(
+		async (
+			source: AddedModelSource,
+			{
+				label,
+				failureMessage
+			}: {
+				/** What is being opened, for the loading surface: "Downloading Rocket". */
+				label?: string
+				/** The caller's own words for a failure it knows more about; null for the loader's. */
+				failureMessage?: (error: StructuredLoadError | null) => string | null
+			} = {}
+		) => {
 			const startedAt = Date.now()
 
-			const result = await load({ kind: 'files', files })
+			const thisOpen = ++lastOpen.current
+			setOpening(label ? { label, kind: source.kind } : null)
+			const result = await load(source)
+			// Before the currency check: a newer open has set its own, and a
+			// saved scene's load, which does not come through here, has none.
+			if (lastOpen.current === thisOpen) setOpening(null)
+
+			/*
+			  A newer load took the stage: a scene opened from the list while a
+			  sample downloaded, a second drop. Everything below would describe
+			  this model over that one, so none of it runs.
+			*/
+			if (!result.stillCurrent()) return result
+
+			// Cancelled by a reset or the caller's signal: nothing went wrong,
+			// so nothing is said.
+			if (result.status === 'empty') return result
 
 			if (result.status !== 'ready') {
-				const message = getUploadLoadErrorMessage(result.error)
+				const message =
+					failureMessage?.(result.error) ??
+					getUploadLoadErrorMessage(result.error)
 				toast.error(message)
 
 				if (consent?.analytics && result.error) {
@@ -93,5 +144,20 @@ export function useSceneUpload() {
 		]
 	)
 
-	return { uploadFiles }
+	const uploadFiles = useCallback(
+		(files: InputFileOrDirectory) => openModel({ kind: 'files', files }),
+		[openModel]
+	)
+
+	/*
+	  Named only while the loader is loading that kind of source. A saved
+	  scene's load supersedes an open without coming through here, and the
+	  open it replaced can still be parsing: its name must not title the scene.
+	*/
+	const subject =
+		opening && model.status === 'loading' && model.source === opening.kind
+			? opening.label
+			: null
+
+	return { openModel, uploadFiles, subject }
 }

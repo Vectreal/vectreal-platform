@@ -449,6 +449,7 @@ const SigninPage = ({ actionData, loaderData }: Route.ComponentProps) => {
 					animate="visible"
 				>
 					<Button
+						variant="brand"
 						type="submit"
 						className="w-full"
 						disabled={isSubmitting || (hasTurnstile && !turnstileToken)}

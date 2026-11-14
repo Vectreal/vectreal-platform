@@ -9,15 +9,15 @@ import { readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
 	HERO_MODEL,
-	fetchSampleModel,
 	HERO_SOURCE_SAMPLE_ID,
 	PASS_SAMPLES,
 	SAMPLE_MODELS,
-	sampleModelById
+	sampleModelById,
+	sampleModelSource
 } from '../app/lib/samples/sample-models'
 
 const MODELS_DIR = join(
@@ -95,40 +95,20 @@ describe('sample models', () => {
 })
 
 /*
-  The download reports how far it is, so a tile can show it. Progress is
-  measured against the declared size, which is the size on disk, and the file
-  that arrives is every chunk the stream delivered.
+  A sample opens by its URL through the loader, so the loader measures the
+  download. Against the declared size, because a gzipped response's
+  `Content-Length` would understate it, and under its own name rather than the
+  build's hashed one.
 */
-describe('fetching a sample', () => {
-	afterEach(() => {
-		vi.unstubAllGlobals()
-	})
+describe('a sample as the loader opens it', () => {
+	it('is its URL, named by its own file name and measured by its size', () => {
+		const sample = SAMPLE_MODELS[0]
 
-	it('reports progress against its size and delivers every byte', async () => {
-		const chunks = [new Uint8Array(2), new Uint8Array(6)]
-		vi.stubGlobal(
-			'fetch',
-			vi.fn().mockResolvedValue({
-				ok: true,
-				body: {
-					getReader: () => ({
-						read: async () =>
-							chunks.length
-								? { done: false, value: chunks.shift() }
-								: { done: true, value: undefined }
-					})
-				}
-			})
-		)
-		const progress: number[] = []
-
-		const file = await fetchSampleModel(
-			{ ...SAMPLE_MODELS[0], bytes: 8 },
-			(fraction) => progress.push(fraction)
-		)
-
-		expect(progress).toEqual([0.25, 1])
-		expect(file.size).toBe(8)
-		expect(file.name).toBe(SAMPLE_MODELS[0].fileName)
+		expect(sampleModelSource(sample)).toEqual({
+			kind: 'url',
+			url: sample.url,
+			fileName: sample.fileName,
+			expectedBytes: sample.bytes
+		})
 	})
 })

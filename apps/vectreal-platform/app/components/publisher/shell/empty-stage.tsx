@@ -7,21 +7,27 @@ import { FolderUp, Upload } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Link, useSearchParams } from 'react-router'
-import { toast } from 'sonner'
 
 import { GenerateFromImage } from './generate-from-image'
 import { useAcceptPattern } from '../../../hooks/use-accept-pattern'
 import { type ImgTo3dGeneration } from '../../../hooks/use-img-to-3d-generation'
 import { useIsClientMounted } from '../../../hooks/use-is-client-mounted'
-import { type SampleDownloader } from '../../../hooks/use-sample-download'
 import { type ImgTo3dListedBatch } from '../../../lib/domain/img-to-3d/img-to-3d-contract'
-import { PUBLISHER_EXAMPLE_PARAM } from '../../../lib/samples/example-scenes'
-import { PUBLISHER_SAMPLE_PARAM } from '../../../lib/samples/sample-models'
+import {
+	exampleSceneById,
+	PUBLISHER_EXAMPLE_PARAM
+} from '../../../lib/samples/example-scenes'
+import {
+	PUBLISHER_SAMPLE_PARAM,
+	sampleModelById,
+	sampleModelSource
+} from '../../../lib/samples/sample-models'
 import { RelativeTime } from '../../dashboard/relative-time'
 import { SceneThumbnail } from '../../dashboard/scene-thumbnail'
 import { DraftingBackdrop } from '../../layout-components/drafting-backdrop'
 import { SampleTiles } from '../../layout-components/sample-tiles'
 
+import type { useSceneUpload } from '../../../hooks/scene-loader/use-scene-upload'
 import type { ExampleScene } from '../../../lib/samples/example-scenes'
 import type { SceneSummary } from '../../dashboard/scene-card'
 
@@ -30,20 +36,19 @@ interface Props {
 	/** Loads the dropped files and takes care of everything a new scene needs. */
 	onUpload: (files: InputFileOrDirectory) => Promise<unknown>
 	/**
-	 * The sample download, owned by the shell rather than by this stage. A link
-	 * that names a sample takes the param off the URL, and that navigation
-	 * revalidates the publisher, which shows its loading surface and unmounts
-	 * this one while the download runs on. Held in here, the state went with it
-	 * and the tiles came back idle and clickable halfway through 18 MB.
+	 * Opens a model from a URL the way a drop is loaded, the download
+	 * included: from the click on, the publisher shows its loading surface
+	 * with the download's progress, so this stage holds no state for it.
 	 */
-	sampleDownload: SampleDownloader
+	onOpenModel: ReturnType<typeof useSceneUpload>['openModel']
 	/** Loads an example scene's model and applies its settings, from `useOpenExampleScene`. */
-	onOpenExample: (example: ExampleScene, file: File) => Promise<void>
+	onOpenExample: (example: ExampleScene) => Promise<void>
 	/** The signed-in user's latest scenes, from the loader; none signed out. */
 	recentScenes?: readonly SceneSummary[]
 	/**
 	 * Image-to-3D generation, present only when the loader's gate let this
-	 * account in. Owned by the shell for the reason `sampleDownload` is.
+	 * account in. Owned by the shell, which outlives this stage: opening a
+	 * variant unmounts it.
 	 */
 	imgTo3d?: {
 		readonly generation: ImgTo3dGeneration
@@ -104,7 +109,7 @@ const arrivalDelay = (step: number) => ({
 export const EmptyStage = ({
 	isMobile,
 	onUpload,
-	sampleDownload,
+	onOpenModel,
 	onOpenExample,
 	recentScenes = [],
 	imgTo3d
@@ -112,8 +117,8 @@ export const EmptyStage = ({
 	const acceptPattern = useAcceptPattern(isMobile)
 
 	/*
-	  Once per page load. Coming back here from a scene, or remounting while a
-	  sample downloads (see `sampleDownload`), shows a stage already seen, and
+	  Once per page load. Coming back here from a scene, or after a sample that
+	  failed to open, shows a stage already seen, and
 	  playing its entrance again would only slow the way out of it.
 	*/
 	const [arriving] = useState(() => !stageHasArrived)
@@ -159,37 +164,26 @@ export const EmptyStage = ({
 		[onUpload]
 	)
 
-	const {
-		download,
-		openSample: downloadSample,
-		openExample: downloadExample
-	} = sampleDownload
+	/*
+	  Failures are said by `openModel` in the loader's own words, as a failed
+	  drop's are.
+	*/
 	const openSample = useCallback(
-		async (id: string) => {
-			try {
-				await downloadSample(id, (file) =>
-					onUpload([file] as InputFileOrDirectory)
-				)
-			} catch {
-				toast.error(
-					'The sample could not be opened. Try your own file instead.'
-				)
+		(id: string) => {
+			const sample = sampleModelById(id)
+			if (sample) {
+				void onOpenModel(sampleModelSource(sample), { label: sample.label })
 			}
 		},
-		[downloadSample, onUpload]
+		[onOpenModel]
 	)
 
 	const openExample = useCallback(
-		async (id: string) => {
-			try {
-				await downloadExample(id, onOpenExample)
-			} catch {
-				toast.error(
-					'The example could not be opened. Try your own file instead.'
-				)
-			}
+		(id: string) => {
+			const example = exampleSceneById(id)
+			if (example) void onOpenExample(example)
 		},
-		[downloadExample, onOpenExample]
+		[onOpenExample]
 	)
 
 	/*
@@ -215,8 +209,8 @@ export const EmptyStage = ({
 			{ replace: true, preventScrollReset: true }
 		)
 		// An example is a model with settings on top, so it wins when both are named.
-		if (linkedExample) void openExample(linkedExample)
-		else if (linkedSample) void openSample(linkedSample)
+		if (linkedExample) openExample(linkedExample)
+		else if (linkedSample) openSample(linkedSample)
 	}, [linkedExample, linkedSample, openExample, openSample, setSearchParams])
 
 	/*
@@ -331,10 +325,6 @@ export const EmptyStage = ({
 						{/*
 						  Before the samples: someone with work of their own is more likely
 						  back for it than for a demo model.
-
-						  Held while a sample downloads, like the tiles: the download
-						  outlives a navigation inside the publisher and would load the
-						  sample over the scene just opened.
 						*/}
 						{recentScenes.length > 0 && (
 							<div
@@ -355,16 +345,7 @@ export const EmptyStage = ({
 										<li key={scene.id}>
 											<Link
 												to={`/publisher/${scene.id}`}
-												aria-disabled={download ? true : undefined}
-												onClick={(event) => {
-													if (download) event.preventDefault()
-												}}
-												className={cn(
-													'block h-full rounded-xl p-3 transition-[background-color,box-shadow,opacity]',
-													download
-														? 'ds-raised cursor-default opacity-50'
-														: 'ds-raised-interactive'
-												)}
+												className="ds-raised-interactive block h-full rounded-xl p-3 transition-[background-color,box-shadow]"
 											>
 												<SceneThumbnail
 													src={scene.thumbnailUrl}
@@ -405,11 +386,7 @@ export const EmptyStage = ({
 							className={cn('w-full sm:w-92', arriveWhenReady)}
 							style={arrivalDelay(recentScenes.length > 0 ? 3 : 2)}
 						>
-							<SampleTiles
-								label="Or open a sample"
-								onOpen={(id) => void openSample(id)}
-								download={download}
-							/>
+							<SampleTiles label="Or open a sample" onOpen={openSample} />
 						</div>
 					</div>
 

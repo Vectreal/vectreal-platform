@@ -194,12 +194,8 @@ export default function FreeModelPage({
 				sceneLabel={copy.hero.sceneLabel}
 				action={
 					<>
-						<Button
-							asChild
-							size="lg"
-							variant="brand"
-							className="tap-target w-full sm:w-fit"
-						>
+						{/* Down to the form, whose submit is the page's one brand action. */}
+						<Button asChild size="lg" className="tap-target w-full sm:w-fit">
 							<a href={`#${FORM_ID}`}>
 								{copy.hero.action}
 								<ArrowDown aria-hidden="true" />

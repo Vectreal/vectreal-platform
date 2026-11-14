@@ -88,6 +88,21 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {}
 
 /**
+ * The default loader while the host is still loading the model: no model and
+ * no children, so the viewer shows the host's `loadProgress`. Once a model
+ * arrives the loader moves to the viewer's own "Preparing the scene".
+ */
+export const LoadingProgress: Story = {
+	args: {
+		loadProgress: {
+			phase: 'fetching',
+			bytes: { loaded: 4.2 * 1024 * 1024, total: 13 * 1024 * 1024 }
+		}
+	},
+	render: (args) => <VectrealViewer {...args} />
+}
+
+/**
  * Stacked blocks give ambient occlusion creases to darken and a footprint for
  * the ground bake, so both read at the opening view. One instance per story,
  * built at module scope: a stable identity for the same reason as the animated
