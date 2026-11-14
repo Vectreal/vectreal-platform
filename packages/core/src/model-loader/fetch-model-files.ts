@@ -2,6 +2,8 @@ import { readWithProgress } from './read-with-progress'
 import { referencedUris } from './referenced-assets'
 import { modelFormatForFileName } from '../model-formats'
 
+import type { ByteProgress } from '../types'
+
 /**
  * Why a link could not be read.
  *
@@ -56,8 +58,27 @@ export interface FetchModelFilesOptions {
 	 * that needs them other than the browser's defaults.
 	 */
 	init?: RequestInit
-	/** How much of the model file has arrived, from 0 to 1, when its host says how large it is. */
+	/** How much of the model file has arrived, from 0 to 1, when its size is known. */
 	onProgress?: (fraction: number) => void
+	/**
+	 * The model file's bytes as they arrive, with the size it is expected to
+	 * have, or null when nothing says. Called for every chunk, so throttle it
+	 * before rendering from it.
+	 */
+	onBytes?: (bytes: ByteProgress) => void
+	/**
+	 * The model file's size, when the caller knows it better than the host:
+	 * `Content-Length` counts compressed bytes when the response is gzipped,
+	 * and a download endpoint may send none.
+	 */
+	expectedBytes?: number
+	/**
+	 * What to name the model file, when the caller knows better than the URL:
+	 * a hashed build asset (`rocket-3f9a1c.glb`) or a download endpoint. It
+	 * must name a format the loader reads; a `.gltf` still finds its references
+	 * beside the URL.
+	 */
+	fileName?: string
 }
 
 /**
@@ -78,12 +99,16 @@ export interface FetchModelFilesOptions {
  * abort through `init.signal`, at any point including while a glTF's files
  * download, rejects with the signal's reason.
  *
- * `onProgress` follows the model file alone: a `.gltf`'s buffers and images
- * download after it without reporting.
+ * `onProgress` and `onBytes` follow the model file alone: a `.gltf`'s buffers
+ * and images download after it without reporting.
+ *
+ * The file is named by the URL when its last segment names a format, then by
+ * the response's `Content-Disposition`, then `model.glb` when the bytes are a
+ * GLB. A download endpoint is how a named file most often arrives.
  */
 export async function fetchModelFiles(
 	url: string | URL,
-	{ init, onProgress }: FetchModelFilesOptions = {}
+	{ init, ...progress }: FetchModelFilesOptions = {}
 ): Promise<File[]> {
 	/*
 	  An abort wins, wherever it lands: checked before anything starts, after
@@ -103,7 +128,7 @@ export async function fetchModelFiles(
 
 	let files: File[]
 	try {
-		files = await readModelFiles(modelUrl, init, onProgress)
+		files = await readModelFiles(modelUrl, init, progress)
 	} catch (error) {
 		signal?.throwIfAborted()
 		throw error
@@ -112,16 +137,21 @@ export async function fetchModelFiles(
 	return files
 }
 
+type FileProgress = Pick<
+	FetchModelFilesOptions,
+	'onProgress' | 'onBytes' | 'expectedBytes'
+>
+
 async function readModelFiles(
 	modelUrl: URL,
-	init?: RequestInit,
-	onProgress?: (fraction: number) => void
+	init: RequestInit | undefined,
+	progress: FileProgress & Pick<FetchModelFilesOptions, 'fileName'>
 ): Promise<File[]> {
 	const model = await readFile(
 		modelUrl,
-		modelFileName(modelUrl),
+		named(progress.fileName) ?? modelFileName(modelUrl),
 		init,
-		onProgress
+		progress
 	)
 	if (!model.name.toLowerCase().endsWith('.gltf')) return [model]
 
@@ -151,7 +181,7 @@ async function readFile(
 	url: URL,
 	name: string | null,
 	init?: RequestInit,
-	onProgress?: (fraction: number) => void
+	{ onProgress, onBytes, expectedBytes }: FileProgress = {}
 ): Promise<File> {
 	let response: Response
 	try {
@@ -165,12 +195,21 @@ async function readFile(
 	// A success with nothing in it, such as a 204, is not a model either.
 	if (!response.body) throw new ModelFetchError('unrecognized', url.href)
 
+	const total =
+		expectedBytes || Number(response.headers.get('Content-Length')) || null
 	let chunks: Uint8Array<ArrayBuffer>[]
 	try {
 		chunks = await readWithProgress(
 			response.body,
-			Number(response.headers.get('Content-Length')) || undefined,
-			onProgress
+			total ?? undefined,
+			onProgress,
+			/*
+			  A declared size the body outgrows was the compressed size, so it
+			  stops being a total rather than reading past 100%.
+			*/
+			onBytes &&
+				((loaded) =>
+					onBytes({ loaded, total: total && loaded > total ? null : total }))
 		)
 	} catch (cause) {
 		if (init?.signal?.aborted) throw cause
@@ -181,6 +220,7 @@ async function readFile(
 	const blob = new Blob(chunks)
 	const resolvedName =
 		name ??
+		dispositionFileName(response.headers.get('Content-Disposition')) ??
 		(isGlb(new Uint8Array(await blob.slice(0, 4).arrayBuffer()))
 			? 'model.glb'
 			: null)
@@ -231,6 +271,13 @@ function withPath(file: File, path: string): File {
 	return file
 }
 
+/** A caller's name for the file, when it names a format the loader reads. */
+function named(fileName: string | undefined): string | null {
+	return fileName && modelFormatForFileName(fileName)?.canImport
+		? fileName
+		: null
+}
+
 /**
  * The model's file name, read off the URL. `null` when the last segment names
  * no format the loader reads, which is ordinary for presigned links.
@@ -238,6 +285,29 @@ function withPath(file: File, path: string): File {
 function modelFileName(url: URL): string | null {
 	const name = urlFilePath(url).split('/').pop() ?? ''
 	return modelFormatForFileName(name)?.canImport ? name : null
+}
+
+/**
+ * The file name a `Content-Disposition` header gives, when it names a format
+ * the loader reads. `filename*` (RFC 6266, percent-encoded UTF-8) wins over
+ * `filename`, as browsers rank them. Only the last path segment is kept, so a
+ * header cannot place the file in a folder of its choosing.
+ */
+export function dispositionFileName(header: string | null): string | null {
+	if (!header) return null
+	const extended = /filename\*\s*=\s*[^']*'[^']*'([^;]+)/i.exec(header)?.[1]
+	const plain = /filename\s*=\s*(?:"([^"]*)"|([^;]+))/i.exec(header)
+	const named = (raw: string | undefined) => {
+		const name = raw?.trim().split(/[\\/]/).pop()
+		return name && modelFormatForFileName(name)?.canImport ? name : null
+	}
+	let decoded: string | undefined
+	try {
+		decoded = extended && decodeURIComponent(extended)
+	} catch {
+		// Not UTF-8: the plain `filename` is the fallback the header carries.
+	}
+	return named(decoded) ?? named(plain?.[1] ?? plain?.[2])
 }
 
 /** The four bytes every binary glTF starts with: `glTF`. */

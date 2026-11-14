@@ -28,6 +28,7 @@ import { loadModelFromSceneData, loadModelFromServer } from './scene-loaders'
 import {
 	emptyModelState,
 	errorModelState,
+	initialLoadPhase,
 	loadingModelState,
 	readyModelState,
 	supportedFileTypes
@@ -43,7 +44,10 @@ import {
 
 import type { LoadContext } from './load-context'
 import type { useOptimizeModel } from '../use-optimize-model'
-import type { OperationProgress } from '@vctrl/core'
+import type { ByteProgress, OperationProgress } from '@vctrl/core'
+
+/** How far a download of unknown size moves before the state shows it again. */
+const BYTES_STEP_UNKNOWN_TOTAL = 256 * 1024
 
 /**
  * Loads and holds one 3D model, from files, from a scene payload, or from the API.
@@ -197,15 +201,45 @@ function useLoadModel<
 			*/
 			let parseRange: [number, number] = [0, 100]
 			const loadLoader = new ModelLoader()
+			/*
+			  The loader only reports while it parses, so its first report is
+			  where `fetching` ends: the bytes are dropped with it, since they
+			  describe a download that is over.
+			*/
 			loadLoader.onProgress((progress: OperationProgress) => {
 				if (!isCurrent()) return
 				const [start, width] = parseRange
+				setState((prev) => {
+					if (prev.status !== 'loading') return prev
+					return {
+						...prev,
+						phase: 'parsing',
+						bytes: undefined,
+						items: progress.items ?? prev.items,
+						progress: start + (progress.progress * width) / 100
+					}
+				})
+			})
+
+			/*
+			  A download reports every chunk, hundreds for a large model. One
+			  render per whole percent, or per 256 KB when nothing says how large
+			  the file is, is all a bar can show.
+			*/
+			let shownBytes: string | null = null
+			const onBytes = (bytes: ByteProgress) => {
+				if (!isCurrent()) return
+				const key = bytes.total
+					? `${Math.floor((bytes.loaded / bytes.total) * 100)}`
+					: `~${Math.floor(bytes.loaded / BYTES_STEP_UNKNOWN_TOTAL)}`
+				if (key === shownBytes) return
+				shownBytes = key
 				setState((prev) =>
 					prev.status === 'loading'
-						? { ...prev, progress: start + (progress.progress * width) / 100 }
+						? { ...prev, phase: 'fetching', bytes }
 						: prev
 				)
-			})
+			}
 
 			const context: LoadContext = {
 				modelLoader: loadLoader,
@@ -226,7 +260,8 @@ function useLoadModel<
 							prev.status === 'loading' ? { ...prev, progress } : prev
 						)
 					}
-				}
+				},
+				onBytes
 			}
 
 			/*
@@ -243,7 +278,12 @@ function useLoadModel<
 			*/
 			let downloadAborted = false
 			const fetchFiles = (
-				{ url, init }: Extract<ModelSource, { kind: 'url' }>,
+				{
+					url,
+					init,
+					expectedBytes,
+					fileName
+				}: Extract<ModelSource, { kind: 'url' }>,
 				{ onProgress }: LoadContext
 			) => {
 				const controller = new AbortController()
@@ -254,7 +294,10 @@ function useLoadModel<
 				callerSignal?.addEventListener('abort', abort, { once: true })
 				return fetchModelFiles(url, {
 					init: { ...init, signal: controller.signal },
-					onProgress: (fraction) => onProgress(fraction * 90)
+					onProgress: (fraction) => onProgress(fraction * 90),
+					onBytes,
+					expectedBytes,
+					fileName
 				})
 					.catch((error: unknown) => {
 						downloadAborted = controller.signal.aborted
@@ -270,7 +313,7 @@ function useLoadModel<
 					})
 			}
 
-			commit(loadingModelState(source.kind))
+			commit(loadingModelState(source.kind, 0, initialLoadPhase(source)))
 
 			try {
 				const loaded =

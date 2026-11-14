@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { fetchModelFiles, ModelFetchError } from './fetch-model-files'
+import {
+	dispositionFileName,
+	fetchModelFiles,
+	ModelFetchError
+} from './fetch-model-files'
 
 const GLB_BYTES = new TextEncoder().encode('glTF\u0002\u0000\u0000\u0000rest')
 
@@ -277,5 +281,97 @@ describe('fetchModelFiles', () => {
 		})
 
 		expect(progress.at(-1)).toBe(1)
+	})
+
+	it("reports bytes against the caller's size over the declared length", async () => {
+		stubFetch({
+			'https://a.com/chair.glb': () =>
+				new Response(GLB_BYTES, {
+					// A gzipped response declares fewer bytes than it delivers.
+					headers: { 'Content-Length': '3' }
+				})
+		})
+		const bytes: { loaded: number; total: number | null }[] = []
+
+		await fetchModelFiles(new URL('https://a.com/chair.glb'), {
+			expectedBytes: 100,
+			onBytes: (progress) => bytes.push(progress)
+		})
+
+		expect(bytes.at(-1)).toEqual({ loaded: GLB_BYTES.byteLength, total: 100 })
+	})
+
+	it('drops a declared size the body outgrows, rather than read past it', async () => {
+		stubFetch({
+			'https://a.com/chair.glb': () =>
+				new Response(GLB_BYTES, { headers: { 'Content-Length': '3' } })
+		})
+		const bytes: { loaded: number; total: number | null }[] = []
+
+		await fetchModelFiles(new URL('https://a.com/chair.glb'), {
+			onBytes: (progress) => bytes.push(progress)
+		})
+
+		expect(bytes.at(-1)).toEqual({ loaded: GLB_BYTES.byteLength, total: null })
+	})
+
+	it('reports bytes with no total when nothing says how large the file is', async () => {
+		stubFetch({ 'https://a.com/chair.glb': () => new Response(GLB_BYTES) })
+		const bytes: { loaded: number; total: number | null }[] = []
+
+		await fetchModelFiles(new URL('https://a.com/chair.glb'), {
+			onBytes: (progress) => bytes.push(progress)
+		})
+
+		expect(bytes.at(-1)).toEqual({ loaded: GLB_BYTES.byteLength, total: null })
+	})
+
+	it("names the file by the caller's name over a hashed URL", async () => {
+		stubFetch({
+			'https://a.com/assets/rocket-3f9a1c.glb': () => new Response(GLB_BYTES)
+		})
+
+		const [file] = await fetchModelFiles(
+			'https://a.com/assets/rocket-3f9a1c.glb',
+			{ fileName: 'rocket.glb' }
+		)
+
+		expect(file.name).toBe('rocket.glb')
+	})
+
+	it('names a file from a download endpoint by its Content-Disposition', async () => {
+		stubFetch({
+			'https://a.com/jobs/1/artifact': () =>
+				new Response(GLB_BYTES, {
+					headers: {
+						'Content-Disposition': 'attachment; filename="lamp-42.glb"'
+					}
+				})
+		})
+
+		const [file] = await fetchModelFiles('https://a.com/jobs/1/artifact')
+
+		expect(file.name).toBe('lamp-42.glb')
+	})
+})
+
+describe('dispositionFileName', () => {
+	it.each([
+		['attachment; filename="chair.glb"', 'chair.glb'],
+		['attachment; filename=chair.glb', 'chair.glb'],
+		[
+			'attachment; filename="fallback.glb"; filename*=UTF-8\'\'St%C3%BChl.glb',
+			'Stühl.glb'
+		],
+		['attachment; filename="../../etc/chair.glb"', 'chair.glb'],
+		[
+			'attachment; filename="cafe.glb"; filename*=ISO-8859-1\'\'caf%E9.glb',
+			'cafe.glb'
+		],
+		['attachment; filename="notes.txt"', null],
+		['attachment', null],
+		[null, null]
+	])('reads %s as %s', (header, expected) => {
+		expect(dispositionFileName(header)).toBe(expected)
 	})
 })
