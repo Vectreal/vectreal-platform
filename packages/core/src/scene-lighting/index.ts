@@ -12,6 +12,12 @@ export {
 	LIGHTMAP_EXTENSION,
 	type BakedLightmapInfo
 } from './baked-lights'
+export {
+	applyBakedLights,
+	bakedLightsShaderMatchesThree,
+	drawnLightsSignature,
+	patchBakedLightsShader
+} from './baked-lights-material'
 export { lightDirection, litLights } from './light-direction'
 export {
 	computeBakeSignature,

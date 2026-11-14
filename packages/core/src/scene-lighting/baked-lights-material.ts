@@ -1,10 +1,4 @@
 import {
-	BAKED_LIGHTMAP_USER_DATA,
-	bakedLightsSignature,
-	type BakedLightmapInfo,
-	type ResolvedLighting
-} from '@vctrl/core'
-import {
 	ShaderChunk,
 	type IUniform,
 	type Material,
@@ -13,9 +7,17 @@ import {
 	type WebGLProgramParametersWithUniforms
 } from 'three'
 
+import {
+	BAKED_LIGHTMAP_USER_DATA,
+	bakedLightsSignature,
+	type BakedLightmapInfo
+} from './baked-lights'
+
+import type { ResolvedLighting } from './resolve-lighting'
+
 /*
   The two lines of three's lighting a baked map replaces, matched exactly: a
-  three upgrade that rewrites either fails `baked-lights.spec.ts` rather than
+  three upgrade that rewrites either fails `baked-lights-material.spec.ts` rather than
   leaving the live lights doubled on top of the map.
 */
 const LIVE_DIRECT_DIFFUSE =
