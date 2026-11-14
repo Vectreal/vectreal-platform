@@ -1,3 +1,4 @@
+import { DRAFTING_LINE } from './drafting-line'
 import { createCssColorProbe, observeTheme } from '../../lib/theme/theme-probe'
 
 /**
@@ -82,8 +83,6 @@ const FLOW_MAX = 0.3
 const FLOW_TAU = 0.5
 
 /* Ink. */
-const LINE_WIDTH = 0.5
-const LINE_ALPHA = { light: 0.26, dark: 0.34 }
 const ACCENT_ALPHA = 0.85
 /** A light on the floor, kept low: at full strength it read as sweetened. */
 const LIGHT_STRENGTH = { light: 0.3, dark: 0.42 }
@@ -414,7 +413,8 @@ export function createDraftingBackdrop(
 		const dark = 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5
 		ink.line = rgb('--foreground')
 		ink.accent = rgb('--orange')
-		ink.lineAlpha = (dark ? LINE_ALPHA.dark : LINE_ALPHA.light) * mood.ink
+		ink.lineAlpha =
+			(dark ? DRAFTING_LINE.alpha.dark : DRAFTING_LINE.alpha.light) * mood.ink
 		ink.light = dark ? LIGHT_STRENGTH.dark : LIGHT_STRENGTH.light
 		render()
 	}
@@ -552,7 +552,7 @@ export function createDraftingBackdrop(
 
 		context!.setTransform(dpr, 0, 0, dpr, 0, 0)
 		context!.clearRect(0, 0, width, height)
-		context!.lineWidth = LINE_WIDTH
+		context!.lineWidth = DRAFTING_LINE.width
 		context!.lineCap = 'round'
 		paths.forEach((path, index) => {
 			const level = (index % BUCKETS) / (BUCKETS - 1)

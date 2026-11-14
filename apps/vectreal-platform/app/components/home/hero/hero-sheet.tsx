@@ -65,23 +65,22 @@ export function HeroSheet() {
 	const stageRef = useRef<HTMLDivElement>(null)
 	const frameRef = useRef<HTMLDivElement>(null)
 	const canvasRef = useRef<HTMLCanvasElement>(null)
-	const captionRef = useRef<HTMLElement>(null)
+	const rowRef = useRef<HTMLDivElement>(null)
 	const stageWanted = useMountWhenVisibleAndIdle(stageRef)
 
-	// The stage runs on under the readout row to the fold's edge, so the floor does. How far that is depends on the readout's type, so it is measured; the stylesheet's default holds until then.
+	// The stage runs on under the sample row to the fold's edge, so the floor does. How far that is depends on the row's type, so it is measured; the stylesheet's default holds until then.
 	useEffect(() => {
 		const sheet = sheetRef.current
-		const caption = captionRef.current
-		if (!sheet || !caption) return
+		const row = rowRef.current
+		if (!sheet || !row) return
 		const measure = () => {
 			const below =
-				sheet.getBoundingClientRect().bottom -
-				caption.getBoundingClientRect().top
+				sheet.getBoundingClientRect().bottom - row.getBoundingClientRect().top
 			sheet.style.setProperty('--below', `${Math.round(below)}px`)
 		}
 		const observer = new ResizeObserver(measure)
 		observer.observe(sheet)
-		observer.observe(caption)
+		observer.observe(row)
 		return () => observer.disconnect()
 	}, [])
 
@@ -168,12 +167,16 @@ export function HeroSheet() {
 						/>
 					</div>
 
-					<div className={styles.meta}>
+					{/* The figure's title block: what it shows, then what the file holds. */}
+					<figcaption className={styles.caption}>
 						<FigureLabel store={store} />
-					</div>
+						<div className={styles.readout}>
+							<Readout store={store} />
+						</div>
+					</figcaption>
 
-					{/* Above what the file holds: a visitor with no file of their own can open this one. */}
-					<figcaption ref={captionRef} className={styles.caption}>
+					{/* Under the model: a visitor with no file of their own can open this one. */}
+					<div ref={rowRef} className={styles.sample}>
 						<ArrowLink
 							to={publisherSampleHref(HERO_SOURCE_SAMPLE_ID)}
 							viewTransition
@@ -181,10 +184,7 @@ export function HeroSheet() {
 						>
 							{HERO.sampleCta}
 						</ArrowLink>
-						<div className={styles.readout}>
-							<Readout store={store} />
-						</div>
-					</figcaption>
+					</div>
 				</figure>
 
 				<a href="#product-heading" className={styles.cue}>
