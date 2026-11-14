@@ -1,5 +1,5 @@
 import { Button } from '@shared/components/ui/button'
-import { useLoadModel } from '@vctrl/hooks/use-load-model'
+import { useLoadModel, useLoadProgress } from '@vctrl/hooks/use-load-model'
 import { useCallback, useMemo } from 'react'
 import { data, useNavigate } from 'react-router'
 
@@ -260,6 +260,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 
 	const model = useLoadModel()
 	const { file, sceneData, load } = model
+	const loadProgress = useLoadProgress(model)
 	const serverSource = useMemo<ModelSource>(
 		() => ({
 			kind: 'server',
@@ -407,6 +408,7 @@ const ScenePage = ({ loaderData }: Route.ComponentProps) => {
 						<SceneEmbedViewer
 							file={file}
 							sceneData={sceneData}
+							loadProgress={loadProgress}
 							loadingThumbnail={loadingThumbnail}
 							/*
 							  The app's own scheme, not the visitor's OS. This panel sits on

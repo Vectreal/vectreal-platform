@@ -26,7 +26,8 @@ vi.mock('@vctrl/hooks/use-load-model', () => ({
 		sceneData: null,
 		error: null,
 		load
-	})
+	}),
+	useLoadProgress: () => null
 }))
 
 vi.mock('../app/lib/posthog/posthog-react', () => ({ usePostHog: () => null }))

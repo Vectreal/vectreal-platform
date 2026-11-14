@@ -38,6 +38,16 @@ export interface SetTransitionOptions {
 export type EmbedEventMap = {
 	viewer_ready: void
 	model_loaded: void
+	/**
+	 * Where the scene's load is while it shows its loader: `fetching` with the
+	 * model's bytes, `parsing`, then `preparing` (environment, shaders,
+	 * framing). On every phase change and at most every 250 ms within one;
+	 * from an iframe older than this SDK, never.
+	 */
+	load_progress: Extract<
+		ViewerInteractionEvent,
+		{ type: 'load_progress' }
+	>['progress']
 	camera_changed: { cameraId: string }
 	auto_rotate_changed: { enabled: boolean }
 	animation_state_changed: {
@@ -460,7 +470,15 @@ export class VectrealEmbed {
 				this.emit('viewer_ready', undefined as void)
 				break
 			case 'model_loaded':
-				this.emit('model_loaded', undefined as void)
+				/*
+				  The viewer's own, which fires when the model reaches it, before
+				  framing. This SDK's `model_loaded` has always meant the scene is
+				  visible and is sent for `initial_framing_completed` below, so
+				  passing this one on too would fire it twice, the first time early.
+				*/
+				break
+			case 'load_progress':
+				this.emit('load_progress', event.progress)
 				break
 			case 'camera_changed':
 				this.emit('camera_changed', { cameraId: event.cameraId })

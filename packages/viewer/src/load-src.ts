@@ -5,6 +5,7 @@ import {
 	ModelLoader
 } from '@vctrl/core/model-loader'
 
+import type { LoadProgress } from '@vctrl/core'
 import type { AnimationClip, Object3D } from 'three'
 
 export interface SrcLoadOptions {
@@ -35,10 +36,21 @@ export interface SrcModel {
  */
 export async function loadSrcModel(
 	src: string | URL,
-	{ init, dracoDecoderPath, ktx2TranscoderPath }: SrcLoadOptions
+	{ init, dracoDecoderPath, ktx2TranscoderPath }: SrcLoadOptions,
+	/** Where the load is: the download's bytes, then the parse's files. */
+	onProgress?: (progress: LoadProgress) => void
 ): Promise<SrcModel> {
-	const [file, ...siblings] = await fetchModelFiles(src, { init })
+	const [file, ...siblings] = await fetchModelFiles(src, {
+		init,
+		onBytes: onProgress && ((bytes) => onProgress({ phase: 'fetching', bytes }))
+	})
+	onProgress?.({ phase: 'parsing' })
 	const loader = new ModelLoader({ dracoDecoderPath, ktx2TranscoderPath })
+	if (onProgress) {
+		loader.onProgress(({ items }) => {
+			if (items) onProgress({ phase: 'parsing', items })
+		})
+	}
 	const format = modelFormatForFileName(file.name)
 
 	const result =

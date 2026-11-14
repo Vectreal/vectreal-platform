@@ -171,6 +171,35 @@ function viewerEvent(from: HTMLIFrameElement, event: object) {
 	)
 }
 
+describe('VectrealEmbed load progress', () => {
+	it('passes on where the load is', () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onProgress = vi.fn()
+		embed.on('load_progress', onProgress)
+
+		const progress = { phase: 'fetching', bytes: { loaded: 4, total: 10 } }
+		viewerEvent(own, { type: 'load_progress', progress })
+
+		expect(onProgress).toHaveBeenCalledWith(progress)
+		embed.destroy()
+	})
+
+	// The SDK's model_loaded means the scene is visible, as it always has.
+	it("says model_loaded once, when the scene is framed, not when the viewer's model arrives", () => {
+		const own = iframe('scene-a')
+		const embed = new VectrealEmbed(own)
+		const onModel = vi.fn()
+		embed.on('model_loaded', onModel)
+
+		viewerEvent(own, { type: 'model_loaded' })
+		expect(onModel).not.toHaveBeenCalled()
+		viewerEvent(own, { type: 'initial_framing_completed', cameraId: null })
+		expect(onModel).toHaveBeenCalledTimes(1)
+		embed.destroy()
+	})
+})
+
 describe('VectrealEmbed environment fallback', () => {
 	it('passes on which map loaded', () => {
 		const own = iframe('scene-a')

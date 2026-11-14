@@ -55,5 +55,12 @@ export const de: ViewerMessages = {
 	renderFailed: 'Diese Szene kann auf diesem Gerät nicht angezeigt werden.',
 	tryAgain: 'Erneut versuchen',
 
-	loadingThumbnailAlt: 'Vorschaubild, während der Viewer lädt'
+	loadingThumbnailAlt: 'Vorschaubild, während der Viewer lädt',
+
+	loading: 'Wird geladen',
+	loadDownloading: 'Wird heruntergeladen',
+	loadReading: 'Modell wird gelesen',
+	loadPreparing: 'Szene wird vorbereitet',
+	loadBytes: '{loaded} von {total}',
+	loadFiles: '{loaded} von {total} Dateien'
 }
