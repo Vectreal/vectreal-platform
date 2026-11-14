@@ -3,14 +3,15 @@ import {
 	apiSuccessSchema,
 	sceneEmbedSchema
 } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { action, loader } from './scenes.$sceneId.embed'
+import { loader } from './scenes.$sceneId.embed'
+import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 
 import type { Route } from './+types/scenes.$sceneId.embed'
 
 const mocks = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
 	resolveSceneMembership: vi.fn(),
 	getAllUserApiKeys: vi.fn(),
 	resolveApiKeyValue: vi.fn(),
@@ -18,9 +19,14 @@ const mocks = vi.hoisted(() => ({
 	isScenePublished: vi.fn()
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest: mocks.authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../../lib/domain/dashboard/dashboard-permissions.server', () => ({
 	resolveSceneMembership: mocks.resolveSceneMembership
 }))
@@ -77,7 +83,8 @@ const load = (query = '', sceneId = SCENE) =>
 		request: new Request(
 			`https://attacker.example/api/v1/scenes/${sceneId}/embed${query}`
 		),
-		params: { sceneId }
+		params: { sceneId },
+		context: contextFor(actor)
 	} as unknown as Route.LoaderArgs)
 
 async function refusal(promise: Promise<unknown>) {
@@ -93,7 +100,6 @@ async function refusal(promise: Promise<unknown>) {
 beforeEach(() => {
 	for (const fn of Object.values(mocks)) fn.mockReset()
 	vi.stubEnv('APPLICATION_URL', ORIGIN)
-	mocks.authorizeAgentRequest.mockResolvedValue(actor)
 	mocks.resolveSceneMembership.mockResolvedValue({
 		organizationId: 'org-1',
 		projectId: PROJECT,
@@ -125,10 +131,6 @@ describe('GET /api/v1/scenes/:sceneId/embed', () => {
 	it("answers with the best usable key's URL and snippets, on the deployment's origin", async () => {
 		const response = await load()
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(
-			expect.any(Request),
-			{ scope: 'embed:manage' }
-		)
 		expect(response.status).toBe(200)
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
 		const { embed } = apiSuccessSchema(sceneEmbedSchema).parse(
@@ -256,22 +258,5 @@ describe('the scene and the role', () => {
 		expect(response.status).toBe(403)
 		expect(body.code).toBe('insufficient_role')
 		expect(mocks.getAllUserApiKeys).not.toHaveBeenCalled()
-	})
-
-	it('answers 405 to anything but GET, after the gate', async () => {
-		const request = new Request(`${ORIGIN}/api/v1/scenes/${SCENE}/embed`, {
-			method: 'POST'
-		})
-
-		const response = await action({
-			request,
-			params: { sceneId: SCENE }
-		} as unknown as Route.ActionArgs)
-
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'embed:manage'
-		})
-		expect(response.status).toBe(405)
-		expect(response.headers.get('Allow')).toBe('GET')
 	})
 })

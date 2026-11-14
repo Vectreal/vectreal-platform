@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { count, eq, inArray, sql } from 'drizzle-orm'
+import { RouterContextProvider } from 'react-router'
 import {
 	afterAll,
 	beforeAll,
@@ -28,16 +29,22 @@ import {
 	type Mock
 } from 'vitest'
 
+import { agentActorContext } from '../../app/lib/domain/agent/agent-actor-context'
+
 import type { AgentActor } from '../../app/lib/domain/agent/agent-actor.server'
 
-const { authorizeAgentRequest, storage } = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
+const { storage } = vi.hoisted(() => ({
 	storage: { uploaded: [] as string[], removed: [] as string[] }
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../app/lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../app/lib/domain/agent/agent-audit.server', async (original) => {
 	const actual =
 		await original<
@@ -102,7 +109,6 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 		key: string,
 		{ name = 'Box', glb = BOX, project = projectId } = {}
 	) {
-		authorizeAgentRequest.mockResolvedValue(actor)
 		const form = new FormData()
 		form.set('name', name)
 		form.set('file', new Blob([glb]))
@@ -112,7 +118,11 @@ describe('POST /api/v1/projects/:projectId/scenes', () => {
 		)
 		// The route throws refusals; read them like the framework does.
 		const response = await route
-			.action({ request, params: { projectId: project }, context: {} } as never)
+			.action({
+				request,
+				params: { projectId: project },
+				context: contextFor(actor)
+			} as never)
 			.catch((error: unknown) => {
 				if (error instanceof Response) return error
 				throw error

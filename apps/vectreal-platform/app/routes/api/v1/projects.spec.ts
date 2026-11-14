@@ -4,30 +4,35 @@ import {
 	createdProjectSchema,
 	projectListSchema
 } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { action, loader } from './projects'
+import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 import { QuotaExceededError } from '../../../lib/domain/billing/quota-exceeded-error'
 
 import type { Route } from './+types/projects'
 
 const {
-	authorizeAgentRequest,
 	listOrganizationProjects,
 	createProject,
 	recordAgentAudit,
 	withIdempotency
 } = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
 	listOrganizationProjects: vi.fn(),
 	createProject: vi.fn(),
 	recordAgentAudit: vi.fn(),
 	withIdempotency: vi.fn()
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../../lib/domain/project/project-repository.server', () => ({
 	listOrganizationProjects,
 	createProject
@@ -41,11 +46,9 @@ vi.mock('../../../lib/domain/agent/agent-idempotency.server', () => ({
 
 const request = new Request('https://vectreal.com/api/v1/projects')
 
+const reader = { organizationId: 'org-from-grant', scopes: ['projects:read'] }
+
 beforeEach(() => {
-	authorizeAgentRequest.mockReset().mockResolvedValue({
-		organizationId: 'org-from-grant',
-		scopes: ['projects:read']
-	})
 	listOrganizationProjects
 		.mockReset()
 		.mockResolvedValue([{ id: 'project-1', name: 'Chairs' }])
@@ -53,11 +56,11 @@ beforeEach(() => {
 
 describe('GET /api/v1/projects', () => {
 	it("lists the grant's organization in the shape the SDK reads, without caching", async () => {
-		const response = await loader({ request } as Route.LoaderArgs)
+		const response = await loader({
+			request,
+			context: contextFor(reader)
+		} as unknown as Route.LoaderArgs)
 
-		expect(authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'projects:read'
-		})
 		expect(listOrganizationProjects).toHaveBeenCalledWith('org-from-grant')
 		expect(response.status).toBe(200)
 		expect(response.headers.get('Cache-Control')).toBe('no-store')
@@ -66,14 +69,6 @@ describe('GET /api/v1/projects', () => {
 		expect(body.data).toEqual({
 			projects: [{ id: 'project-1', name: 'Chairs' }]
 		})
-	})
-
-	it('answers the gate refusal and reads nothing', async () => {
-		const refusal = new Response(null, { status: 403 })
-		authorizeAgentRequest.mockRejectedValue(refusal)
-
-		await expect(loader({ request } as Route.LoaderArgs)).rejects.toBe(refusal)
-		expect(listOrganizationProjects).not.toHaveBeenCalled()
 	})
 })
 
@@ -86,16 +81,22 @@ describe('POST /api/v1/projects', () => {
 		scopes: ['projects:read', 'projects:write']
 	}
 
-	const post = (body: unknown, method = 'POST') =>
+	const post = (body: unknown) =>
 		new Request('https://vectreal.com/api/v1/projects', {
-			method,
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: typeof body === 'string' ? body : JSON.stringify(body)
 		})
 
 	const tx = { transaction: 'tx' }
 
-	const act = (request: Request) => action({ request } as Route.ActionArgs)
+	let actingAs: unknown = actor
+
+	const act = (request: Request) =>
+		action({
+			request,
+			context: contextFor(actingAs)
+		} as unknown as Route.ActionArgs)
 
 	async function refusal(promise: Promise<unknown>) {
 		const thrown = await promise.then(
@@ -108,7 +109,7 @@ describe('POST /api/v1/projects', () => {
 	}
 
 	beforeEach(() => {
-		authorizeAgentRequest.mockReset().mockResolvedValue(actor)
+		actingAs = actor
 		createProject
 			.mockReset()
 			.mockResolvedValue({ id: 'project-9', name: 'Chairs', slug: 'x' })
@@ -125,9 +126,6 @@ describe('POST /api/v1/projects', () => {
 
 		const response = await act(request)
 
-		expect(authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'projects:write'
-		})
 		expect(withIdempotency).toHaveBeenCalledWith(
 			{ grantId: 'grant-1', request, payload: { name: 'Chairs' } },
 			expect.any(Function)
@@ -152,30 +150,10 @@ describe('POST /api/v1/projects', () => {
 		})
 	})
 
-	it('answers a method other than POST with 405 and an Allow header, before the gate', async () => {
-		const response = await act(post({ name: 'Chairs' }, 'PUT'))
-
-		expect(response.status).toBe(405)
-		expect(response.headers.get('Allow')).toBe('GET, POST')
-		expect(apiFailureSchema.parse(await response.json()).code).toBe(
-			'method_not_allowed'
-		)
-		expect(authorizeAgentRequest).not.toHaveBeenCalled()
-	})
-
-	it('answers the gate refusal and creates nothing', async () => {
-		const gate = new Response(null, { status: 403 })
-		authorizeAgentRequest.mockRejectedValue(gate)
-
-		await expect(act(post({ name: 'Chairs' }))).rejects.toBe(gate)
-		expect(withIdempotency).not.toHaveBeenCalled()
-		expect(createProject).not.toHaveBeenCalled()
-	})
-
 	it("refuses with 403 when the user's role may not create, whatever the scope", async () => {
 		// Every role may create today; a role outside the table stands in for
 		// the first one that may not, to hold the check in place.
-		authorizeAgentRequest.mockResolvedValue({ ...actor, role: 'guest' })
+		actingAs = { ...actor, role: 'guest' }
 
 		const { response, body } = await refusal(act(post({ name: 'Chairs' })))
 

@@ -9,6 +9,7 @@
 import { ApiResponse } from '@shared/utils'
 import { createProjectInputSchema } from '@vctrl/sdk'
 
+import { agentActorFrom } from '../../../lib/domain/agent/agent-actor-context'
 import {
 	agentApiError,
 	agentBillingRefusal
@@ -16,7 +17,7 @@ import {
 import { recordAgentAudit } from '../../../lib/domain/agent/agent-audit.server'
 import { withIdempotency } from '../../../lib/domain/agent/agent-idempotency.server'
 import { AGENT_OPERATION_SCOPES } from '../../../lib/domain/agent/agent-operation-scopes'
-import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { agentGate } from '../../../lib/domain/agent/agent-request.server'
 import {
 	canPerformDashboardOperation,
 	describeDashboardOperationDenial
@@ -29,8 +30,15 @@ import {
 import type { Route } from './+types/projects'
 import type { CreatedProject, ProjectList } from '@vctrl/sdk'
 
-export async function loader({ request }: Route.LoaderArgs) {
-	const actor = await authorizeAgentRequest(request, { scope: 'projects:read' })
+export const middleware = [
+	agentGate({
+		GET: 'projects:read',
+		POST: AGENT_OPERATION_SCOPES['project:create']
+	})
+]
+
+export async function loader({ context }: Route.LoaderArgs) {
+	const actor = agentActorFrom(context)
 
 	const projects = await listOrganizationProjects(actor.organizationId)
 
@@ -39,19 +47,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 	})
 }
 
-export async function action({ request }: Route.ActionArgs) {
-	if (request.method !== 'POST') {
-		return agentApiError(
-			405,
-			'method_not_allowed',
-			'This route answers GET and POST.',
-			{ headers: { Allow: 'GET, POST' } }
-		)
-	}
-
-	const actor = await authorizeAgentRequest(request, {
-		scope: AGENT_OPERATION_SCOPES['project:create']
-	})
+export async function action({ request, context }: Route.ActionArgs) {
+	const actor = agentActorFrom(context)
 
 	// The scope says what the agent may do; the role, what the user may.
 	if (!canPerformDashboardOperation('project:create', { role: actor.role })) {

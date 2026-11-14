@@ -1,44 +1,107 @@
 /**
- * Every `/api/v1` route that acts for an agent enters through
- * `authorizeAgentRequest`, which holds it to the grant's rate limit and a
- * scope. A route calling `resolveAgentActor` itself type-checks and works, and
- * its own spec mocks whatever it imports, so nothing else would notice it
- * skipping both.
+ * The `/api/v1` request pipeline, held over every registered v1 route.
  *
- * Behavioral rather than textual: the gate is replaced by one that refuses,
- * and every loader and action each route module exports must answer with
- * that refusal before it does anything else. The routes come from the real
- * config, so a route is held to this by being registered, however it is
- * written there.
+ * A request passes the layout's envelope middleware and then the route's
+ * `agentGate`, and only then reaches a handler. The gate checks the token
+ * before it reads the method, rate-limits, enforces the scope the route
+ * declared for that method, answers any undeclared method 405, and leaves
+ * the actor in context. Handlers never authorize anything themselves.
+ *
+ * Behavioral rather than textual: each route's real middleware chain runs
+ * with only the token resolver replaced, and what each method needs is read
+ * back from what the chain does. The routes come from the real config, so a
+ * route is held to this by being registered, however it is written there.
  */
 import { join } from 'node:path'
 
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { apiFailureSchema } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
+import {
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi
+} from 'vitest'
 
+import { agentActorFrom } from '../app/lib/domain/agent/agent-actor-context'
 import { agentApiEnvelopeMiddleware } from '../app/lib/domain/agent/agent-api-envelope'
+import { agentApiError } from '../app/lib/domain/agent/agent-api-response'
+import { __resetRateLimitsForTest } from '../app/lib/http/rate-limit.server'
 import routes from '../app/routes'
 
+import type { AgentActor } from '../app/lib/domain/agent/agent-actor.server'
 import type { RouteConfigEntry } from '@react-router/dev/routes'
 
-const { authorizeAgentRequest, GATE_REFUSAL } = vi.hoisted(() => {
-	const GATE_REFUSAL = new Response('gate', { status: 418 })
-	return {
-		GATE_REFUSAL,
-		authorizeAgentRequest: vi.fn(async () => {
-			throw GATE_REFUSAL
-		})
-	}
-})
+const resolveAgentActor = vi.hoisted(() => vi.fn())
 
-vi.mock('../app/lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest
+vi.mock('../app/lib/domain/agent/agent-actor.server', () => ({
+	resolveAgentActor
 }))
+
+/**
+ * What every gated v1 route lets each method do, and nothing else. A method
+ * absent here must be answered 405. Changing what a route accepts means
+ * changing this table, which is the point: it is the agent API's surface.
+ */
+const ACCESS: Record<string, Record<string, string>> = {
+	'/api/v1/me': { GET: 'any' },
+	'/api/v1/projects': { GET: 'projects:read', POST: 'projects:write' },
+	'/api/v1/projects/:projectid/scenes': {
+		GET: 'projects:read',
+		POST: 'projects:write'
+	},
+	'/api/v1/projects/:projectid/embed-keys': {
+		GET: 'embed:manage',
+		POST: 'embed:manage'
+	},
+	'/api/v1/projects/:projectid/allowed-domains': {
+		GET: 'embed:manage',
+		PUT: 'embed:manage'
+	},
+	'/api/v1/scenes/:sceneid/publication': {
+		POST: 'scenes:publish',
+		DELETE: 'scenes:publish'
+	},
+	'/api/v1/scenes/:sceneid/embed': { GET: 'embed:manage' },
+	'/api/v1/scenes/:sceneid/settings': {
+		GET: 'projects:read',
+		PATCH: 'scenes:write'
+	},
+	'/api/v1/session': { DELETE: 'any' }
+}
 
 const PUBLIC_ROUTES = new Set([
 	// Public by design: the CLI asks it before it has a token.
 	'/api/v1/cli/client',
 	// Serves nothing: a path no route answers, coded 404 by the layout.
 	'/api/v1/*'
+])
+
+const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const
+
+const NO_TOKEN = agentApiError(401, 'invalid_token', 'No token')
+
+const actorWith = (scopes: string[]) =>
+	({
+		userId: 'user-1',
+		email: null,
+		clientId: 'client-1',
+		grantId: `grant-${scopes.join('+') || 'none'}`,
+		organizationId: 'org-1',
+		organizationName: 'Acme',
+		role: 'owner',
+		scopes
+	}) as AgentActor
+
+const EVERY_SCOPE = actorWith([
+	'projects:read',
+	'projects:write',
+	'scenes:write',
+	'scenes:publish',
+	'embed:manage'
 ])
 
 interface ServedRoute {
@@ -74,26 +137,77 @@ const gated = v1Routes.filter(({ path }) => !PUBLIC_ROUTES.has(path))
 const importRoute = (file: string) =>
 	import(join(import.meta.dirname, '../app', file))
 
+type Middleware = (
+	args: { request: Request; context: RouterContextProvider },
+	next: () => Promise<Response>
+) => Promise<Response | undefined>
+
+async function chainOf({ file, ancestors }: ServedRoute) {
+	const owners = await Promise.all([...ancestors, file].map(importRoute))
+	return owners.flatMap(({ middleware }) => (middleware ?? []) as Middleware[])
+}
+
+/**
+ * The chain as React Router runs it, ending in a handler that records the
+ * actor it was given.
+ */
+async function run(route: ServedRoute, method: string) {
+	const chain = await chainOf(route)
+	const reached: AgentActor[] = []
+	const context = new RouterContextProvider()
+	const request = new Request(`https://vectreal.com${route.path}`, {
+		method,
+		headers: { Authorization: 'Bearer a.b.c' }
+	})
+
+	const call = async (index: number): Promise<Response> => {
+		const middleware = chain[index]
+		if (!middleware) {
+			reached.push(agentActorFrom(context))
+			return Response.json({ success: true, data: {} })
+		}
+		return (await middleware({ request, context }, () =>
+			call(index + 1)
+		)) as Response
+	}
+
+	return { response: await call(0), reached }
+}
+
+/** What the chain does with a method: who may make it, or that it is refused. */
+async function accessFor(route: ServedRoute, method: string) {
+	resolveAgentActor.mockResolvedValue(EVERY_SCOPE)
+	const full = await run(route, method)
+	if (full.response.status === 405) return null
+	expect(full.reached, `${route.path} ${method}`).toEqual([EVERY_SCOPE])
+
+	resolveAgentActor.mockResolvedValue(actorWith([]))
+	const bare = await run(route, method)
+	if (bare.reached.length) return 'any'
+
+	const refusal = apiFailureSchema.parse(await bare.response.json())
+	expect(refusal.code).toBe('insufficient_scope')
+	return refusal.scope as string
+}
+
 beforeAll(() => {
-	// Module scope builds a client; the gate refuses before any query runs.
+	// Module scope builds a client; nothing here reaches a query.
 	vi.stubEnv('DATABASE_URL', 'postgresql://gate:gate@127.0.0.1:1/gate')
+})
+
+beforeEach(() => {
+	__resetRateLimitsForTest()
+	resolveAgentActor.mockReset()
+})
+
+afterEach(() => {
+	__resetRateLimitsForTest()
 })
 
 describe('agent API routes', () => {
 	it('finds the registered v1 routes', () => {
-		expect(v1Routes.map((route) => route.path)).toEqual(
-			expect.arrayContaining([
-				'/api/v1/me',
-				'/api/v1/projects',
-				'/api/v1/projects/:projectid/scenes',
-				'/api/v1/projects/:projectid/embed-keys',
-				'/api/v1/projects/:projectid/allowed-domains',
-				'/api/v1/scenes/:sceneid/publication',
-				'/api/v1/scenes/:sceneid/embed',
-				'/api/v1/scenes/:sceneid/settings',
-				'/api/v1/cli/client',
-				'/api/v1/*'
-			])
+		expect(v1Routes.map((route) => route.path).sort()).toEqual(
+			[...Object.keys(ACCESS), ...PUBLIC_ROUTES].sort()
 		)
 	})
 
@@ -108,44 +222,74 @@ describe('agent API routes', () => {
 	)
 
 	it.each(gated)(
-		'$path answers every export with the gate refusal',
-		async ({ path, file, ancestors }) => {
-			// Middleware runs before the loader, outside the gate, on this module
-			// and every layout above it; a v1 request has nothing to do before it
-			// knows who is asking. The envelope middleware is the one exception:
-			// it only reads the response `next()` returns.
-			for (const owner of [...ancestors, file]) {
-				const { middleware } = await importRoute(owner)
-				expect(
-					(middleware ?? []).filter(
-						(fn: unknown) => fn !== agentApiEnvelopeMiddleware
-					),
-					`${path}: middleware in ${owner}`
-				).toEqual([])
+		'$path answers a caller without a token before reading the method',
+		async (route) => {
+			resolveAgentActor.mockRejectedValue(NO_TOKEN)
+
+			for (const method of METHODS) {
+				const { response, reached } = await run(route, method)
+				expect(response, `${route.path} ${method}`).toBe(NO_TOKEN)
+				expect(reached, `${route.path} ${method}`).toEqual([])
 			}
+		}
+	)
 
-			const module = await importRoute(file)
+	it.each(gated)(
+		'$path lets each method do what the table says, and no more',
+		async (route) => {
+			const observed: Record<string, string> = {}
+			for (const method of METHODS) {
+				const scope = await accessFor(route, method)
+				if (scope) observed[method] = scope
+			}
+			expect(observed).toEqual(ACCESS[route.path])
+		}
+	)
 
-			const handlers = (['loader', 'action'] as const).filter(
-				(name) => typeof module[name] === 'function'
-			)
-			expect(handlers.length, path).toBeGreaterThan(0)
+	it.each(gated)(
+		'$path answers an undeclared method 405, naming the ones it takes',
+		async (route) => {
+			const declared = Object.keys(ACCESS[route.path])
+			const undeclared = METHODS.filter((method) => !declared.includes(method))
+			resolveAgentActor.mockResolvedValue(EVERY_SCOPE)
 
-			for (const name of handlers) {
-				authorizeAgentRequest.mockClear()
-				const request = new Request(`https://vectreal.com${path}`, {
-					method: name === 'loader' ? 'GET' : 'POST'
-				})
+			for (const method of undeclared) {
+				const { response, reached } = await run(route, method)
+				expect(response.status, `${route.path} ${method}`).toBe(405)
+				expect(response.headers.get('Allow')).toBe(declared.join(', '))
+				expect(apiFailureSchema.parse(await response.json()).code).toBe(
+					'method_not_allowed'
+				)
+				expect(reached).toEqual([])
+			}
+		}
+	)
 
-				await expect(
-					module[name]({ request, params: {}, context: {} }),
-					`${path} ${name}`
-				).rejects.toBe(GATE_REFUSAL)
-				expect(authorizeAgentRequest, `${path} ${name}`).toHaveBeenCalledWith(
-					request,
-					expect.anything()
+	it.each(gated)(
+		'$path has a handler for every method it declares',
+		async (route) => {
+			// A declared method with no handler clears the gate and then gets
+			// React Router's own 405, which names no allowed methods.
+			const module = await importRoute(route.file)
+			for (const method of Object.keys(ACCESS[route.path])) {
+				const handler = method === 'GET' ? 'loader' : 'action'
+				expect(typeof module[handler], `${route.path} ${method}`).toBe(
+					'function'
 				)
 			}
+		}
+	)
+
+	it.each(gated)(
+		'$path runs no other middleware ahead of its handlers',
+		async (route) => {
+			const ancestorMiddleware = (
+				await Promise.all(route.ancestors.map(importRoute))
+			).flatMap(({ middleware }) => middleware ?? [])
+			// Only the envelope, which acts on the response `next()` returns.
+			expect(ancestorMiddleware).toEqual([agentApiEnvelopeMiddleware])
+			// And the gate, alone: nothing of the route's runs before it.
+			expect((await importRoute(route.file)).middleware).toHaveLength(1)
 		}
 	)
 })

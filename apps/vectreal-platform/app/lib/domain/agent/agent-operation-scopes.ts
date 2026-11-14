@@ -7,7 +7,7 @@ import type { DashboardOperation } from '../dashboard/dashboard-operations'
  *
  * Total over `DashboardOperation`, so a new operation does not compile until
  * someone decides whether agents get it. `as const` keeps each value's
- * literal type, so passing a `null` entry to `authorizeAgentRequest` is a
+ * literal type, so declaring a `null` entry in a route's `agentGate` is a
  * compile error rather than a route that can never be called.
  *
  * Nothing destructive is grantable: an agent that can publish but never

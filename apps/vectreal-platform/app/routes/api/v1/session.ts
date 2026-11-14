@@ -13,36 +13,22 @@
 
 import { ApiResponse } from '@shared/utils'
 
-import { agentApiError } from '../../../lib/domain/agent/agent-api-response'
-import { authorizeAgentRequest } from '../../../lib/domain/agent/agent-request.server'
+import { agentGate } from '../../../lib/domain/agent/agent-request.server'
 import { endAgentSession } from '../../../lib/domain/agent/agent-session.server'
 
 import type { Route } from './+types/session'
 import type { EndedSession } from '@vctrl/sdk'
 
-export async function loader({ request }: Route.LoaderArgs) {
-	await authorizeAgentRequest(request, { scope: 'any' })
-	return methodNotAllowed()
-}
+export const middleware = [
+	agentGate({
+		DELETE: 'any'
+	})
+]
 
 export async function action({ request }: Route.ActionArgs) {
-	await authorizeAgentRequest(request, { scope: 'any' })
-	if (request.method !== 'DELETE') return methodNotAllowed()
-
 	await endAgentSession(request)
 
 	return ApiResponse.success({ signedOut: true } satisfies EndedSession, 200, {
 		headers: { 'Cache-Control': 'no-store' }
 	})
-}
-
-function methodNotAllowed(): Response {
-	return agentApiError(
-		405,
-		'method_not_allowed',
-		'This route answers DELETE.',
-		{
-			headers: { Allow: 'DELETE' }
-		}
-	)
 }

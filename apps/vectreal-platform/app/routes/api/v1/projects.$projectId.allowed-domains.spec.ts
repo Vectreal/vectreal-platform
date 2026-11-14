@@ -3,14 +3,15 @@ import {
 	apiFailureSchema,
 	apiSuccessSchema
 } from '@vctrl/sdk'
+import { RouterContextProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { action, loader } from './projects.$projectId.allowed-domains'
+import { agentActorContext } from '../../../lib/domain/agent/agent-actor-context'
 
 import type { Route } from './+types/projects.$projectId.allowed-domains'
 
 const mocks = vi.hoisted(() => ({
-	authorizeAgentRequest: vi.fn(),
 	recordAgentAudit: vi.fn(),
 	withIdempotency: vi.fn(),
 	resolveProjectMembership: vi.fn(),
@@ -18,9 +19,14 @@ const mocks = vi.hoisted(() => ({
 	updateProject: vi.fn()
 }))
 
+// The gate is held to every route by tests/agent-api-routes.spec.ts; a
+// handler here runs on the actor the gate would have put in context.
 vi.mock('../../../lib/domain/agent/agent-request.server', () => ({
-	authorizeAgentRequest: mocks.authorizeAgentRequest
+	agentGate: vi.fn()
 }))
+
+const contextFor = (actor: unknown) =>
+	new RouterContextProvider(new Map([[agentActorContext, actor]]))
 vi.mock('../../../lib/domain/agent/agent-audit.server', () => ({
 	recordAgentAudit: mocks.recordAgentAudit
 }))
@@ -53,11 +59,16 @@ const put = (body: unknown) =>
 		body: typeof body === 'string' ? body : JSON.stringify(body)
 	})
 const act = (request: Request, projectId = PROJECT) =>
-	action({ request, params: { projectId } } as unknown as Route.ActionArgs)
+	action({
+		request,
+		params: { projectId },
+		context: contextFor(actor)
+	} as unknown as Route.ActionArgs)
 const load = (projectId = PROJECT) =>
 	loader({
 		request: new Request(url),
-		params: { projectId }
+		params: { projectId },
+		context: contextFor(actor)
 	} as unknown as Route.LoaderArgs)
 
 async function refusal(promise: Promise<unknown>) {
@@ -77,7 +88,6 @@ async function domainsOf(response: Response) {
 
 beforeEach(() => {
 	for (const fn of Object.values(mocks)) fn.mockReset()
-	mocks.authorizeAgentRequest.mockResolvedValue(actor)
 	mocks.resolveProjectMembership.mockResolvedValue({
 		organizationId: 'org-1',
 		projectId: PROJECT,
@@ -99,9 +109,6 @@ describe('PUT /api/v1/projects/:projectId/allowed-domains', () => {
 
 		const response = (await act(request)) as Response
 
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'embed:manage'
-		})
 		expect(mocks.withIdempotency).toHaveBeenCalledWith(
 			{
 				grantId: 'grant-1',
@@ -165,18 +172,6 @@ describe('PUT /api/v1/projects/:projectId/allowed-domains', () => {
 
 		expect(response.status).toBe(400)
 		expect(mocks.withIdempotency).not.toHaveBeenCalled()
-	})
-
-	it('answers 405 to any other method, after the gate', async () => {
-		const request = new Request(url, { method: 'POST' })
-
-		const response = (await act(request)) as Response
-
-		expect(mocks.authorizeAgentRequest).toHaveBeenCalledWith(request, {
-			scope: 'embed:manage'
-		})
-		expect(response.status).toBe(405)
-		expect(response.headers.get('Allow')).toBe('GET, PUT')
 	})
 })
 
