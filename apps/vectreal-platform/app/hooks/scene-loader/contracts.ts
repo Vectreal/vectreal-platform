@@ -36,6 +36,8 @@ export interface ScenePersistenceState {
 	suppressDirtyDetection: boolean
 	/** The author changed whether the scene keeps its original since the last save. */
 	hasUnsavedOriginalChoice: boolean
+	/** A studio finish is drawing, or was drawn since the last save sent one. */
+	hasUnsavedFinish: boolean
 }
 
 export interface SceneOptimizationSaveState {
@@ -60,8 +62,15 @@ export interface SceneSaveFlowActions {
 	prepareGltfDocumentForUpload: () => Promise<unknown>
 	captureSceneThumbnail: (targetCameraId?: string) => Promise<null | string>
 	captureShadowBake: () => Promise<ShadowBakeResult | null>
-	/** The studio finish this save sends, read when it starts; none keeps the stored one. */
-	captureStudioFinish: () => StudioFinishToSave | undefined
+	/**
+	 * The studio finish this save sends for the lighting it writes, once any
+	 * bake in flight settles; none keeps the stored one.
+	 */
+	captureStudioFinish: (
+		lighting: SceneSettings['lighting']
+	) => Promise<StudioFinishToSave | undefined>
+	/** Records that the finish the last capture returned is now stored. */
+	markFinishSaved: () => void
 	/** What this save does with the scene's original, read when it starts. */
 	resolveSource: () => SourceToSave
 	/**

@@ -4,7 +4,7 @@ import { Toggle } from '@shared/components/ui/toggle'
 import { ModelExporter } from '@vctrl/core/model-exporter'
 import { useModelContext } from '@vctrl/hooks/use-load-model'
 import { motion } from 'framer-motion'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai/react'
+import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai/react'
 import { Loader2, Sparkles } from 'lucide-react'
 import { useCallback, useId, useRef, useState, type FC } from 'react'
 import { useNavigate, useRevalidator } from 'react-router'
@@ -34,6 +34,7 @@ import {
 	shouldShowLoadingThumbnail
 } from '../../../../../lib/domain/scene/scene-presentation'
 import {
+	bakePreviewAtom,
 	hasUnsavedChangesAtom,
 	processAtom,
 	sceneMetaAtom
@@ -61,7 +62,7 @@ import {
 import { itemVariants } from '../../animation'
 import {
 	reusableFinish,
-	useCurrentPreview,
+	settledPreview,
 	usePublishExport,
 	useShowPublishedFinish
 } from '../../compose-sidebar/lighting-settings/use-bake-preview'
@@ -111,8 +112,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 	const sceneMeta = useAtomValue(sceneMetaAtom)
 	const altTextId = useId()
 	const publishExport = usePublishExport()
-	// A preview of the current export is the file this publish would make.
-	const preview = useCurrentPreview()
+	const store = useStore()
 	const showPublishedFinish = useShowPublishedFinish()
 	const sceneViewReturn = useSceneViewReturnSetting()
 	const exporterRef = useRef<ModelExporter>(new ModelExporter())
@@ -144,16 +144,74 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 
 		setPublishStatus('saving')
 		setPublishError(null)
-		const requiresSaveBeforePublish = !sceneId || hasUnsavedChanges
-		dispatchProgress({
-			type: 'publish-started',
-			saves: requiresSaveBeforePublish
-		})
+		const onExportProgress = (progress: PublishExportProgress) =>
+			dispatchProgress(
+				progress.stage === 'uvs'
+					? { type: 'publish-step', key: 'uvs' }
+					: progress.stage === 'textures'
+						? {
+								type: 'publish-step',
+								key: 'textures',
+								done: progress.texturesDone,
+								total: progress.texturesTotal
+							}
+						: {
+								type: 'publish-step',
+								key: progress.stage,
+								done: progress.fraction,
+								total: 1
+							}
+			)
 		try {
-			let targetSceneId = sceneId
+			// A bake still drawing is the finish this publish ships, so it is
+			// waited for rather than baked a second time beside it. The panel
+			// shows the publish meanwhile, and it saves: the bake is unsaved.
+			if (store.get(bakePreviewAtom)?.status === 'baking') {
+				dispatchProgress({ type: 'publish-started', saves: true })
+			}
+			const current = await settledPreview(
+				store,
+				document,
+				publishExport.finishKey
+			)
+			// A current finish is encoded as it is, unless a bake in it failed,
+			// which baking again may well not.
+			let finish = reusableFinish(current)
+			const bakes = !finish && publishExport.bakesAnything
+			// A finish baked here is saved with the scene, like one drawn in the
+			// Lighting tool, so it outlives this publish.
+			const requiresSaveBeforePublish = !sceneId || hasUnsavedChanges || bakes
+			dispatchProgress({
+				type: 'publish-started',
+				saves: requiresSaveBeforePublish
+			})
+			let glb: Uint8Array
+			if (finish) {
+				glb = new Uint8Array(finish.bytes)
+			} else {
+				dispatchProgress({ type: 'publish-step', key: 'export' })
+				;({ data: glb } = await exporterRef.current.exportDocumentGLB(document))
+			}
+			if (bakes) {
+				const baked = await runPublishExportInWorker(
+					{ glb, ...publishExport.finishRequest },
+					onExportProgress
+				)
+				// Shown on the model, so the publisher shows what shipped, and
+				// in place before the save below, which takes it from there.
+				await showPublishedFinish(
+					{ document, passRevision, bakes: publishExport.finishKey },
+					baked
+				)
+				finish = {
+					bytes: baked.buffer,
+					reports: { occlusion: baked.occlusion, lights: baked.lights }
+				}
+				glb = new Uint8Array(baked.buffer)
+			}
 
+			let targetSceneId = sceneId
 			if (requiresSaveBeforePublish) {
-				setPublishStatus('saving')
 				const saveResult = await saveSceneSettings()
 				targetSceneId =
 					typeof saveResult === 'object' &&
@@ -172,52 +230,6 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 			}
 
 			setPublishStatus('publishing')
-			dispatchProgress({ type: 'publish-step', key: 'export' })
-
-			const onExportProgress = (progress: PublishExportProgress) =>
-				dispatchProgress(
-					progress.stage === 'uvs'
-						? { type: 'publish-step', key: 'uvs' }
-						: progress.stage === 'textures'
-							? {
-									type: 'publish-step',
-									key: 'textures',
-									done: progress.texturesDone,
-									total: progress.texturesTotal
-								}
-							: {
-									type: 'publish-step',
-									key: progress.stage,
-									done: progress.fraction,
-									total: 1
-								}
-				)
-			// A current finish is encoded as it is, unless a bake in it failed,
-			// which baking again may well not. Otherwise the bake runs first, on
-			// its own, so the finish shown afterwards is one a save can keep.
-			let finish = reusableFinish(preview)
-			let glb: Uint8Array
-			if (finish) {
-				glb = new Uint8Array(finish.bytes)
-			} else {
-				;({ data: glb } = await exporterRef.current.exportDocumentGLB(document))
-				if (publishExport.bakesAnything) {
-					const baked = await runPublishExportInWorker(
-						{ glb, ...publishExport.finishRequest },
-						onExportProgress
-					)
-					// Shown on the model too, so the publisher shows what shipped.
-					void showPublishedFinish(
-						{ document, passRevision, bakes: publishExport.finishKey },
-						baked
-					)
-					finish = {
-						bytes: baked.buffer,
-						reports: { occlusion: baked.occlusion, lights: baked.lights }
-					}
-					glb = new Uint8Array(baked.buffer)
-				}
-			}
 			const encoded = await runPublishExportInWorker(
 				{ glb, ...publishExport.request },
 				onExportProgress
@@ -352,7 +364,7 @@ export const PublishOptions: FC<PublishOptionsProps> = ({
 		setOptimizationRuntime,
 		setUpgradeModal,
 		file,
-		preview,
+		store,
 		publishExport,
 		showPublishedFinish,
 		isOptimizing,
