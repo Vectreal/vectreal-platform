@@ -85,6 +85,7 @@ export default [
 	route('api/contact/webhook', './routes/api/contact/webhook.ts'),
 	route('api/consent', './routes/api/consent.ts'),
 	route('api/theme', './routes/api/theme.ts'),
+	route('api/home-tour', './routes/api/home-tour.ts'),
 	// Agent API: bearer tokens only, through each route's agentGate.
 	// Its layout keeps every refusal in the coded envelope the SDK reads.
 	layout('./routes/api/v1/layout.ts', [
